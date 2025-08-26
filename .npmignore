@@ -1,0 +1,40 @@
+# Source files
+src/
+
+# Development files
+.git/
+.github/
+.gitignore
+.prettierrc
+.editorconfig
+.eslintrc*
+tsconfig.json
+rollup.config.js
+jest.config.js
+
+# Dependencies
+node_modules/
+
+# Test files
+tests/
+__tests__/
+*.test.*
+*.spec.*
+
+# Documentation build
+docs/
+
+# Environment files
+.env
+.env.local
+.env.example
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

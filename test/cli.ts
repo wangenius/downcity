@@ -4,7 +4,10 @@ import chalk from "chalk";
 import { Hero, Memory } from "../src";
 import readline from "readline";
 import { createOpenAI } from "@ai-sdk/openai";
+import { log } from "console";
 import { SQLitePersistor } from "../src/store/SQLitePersistor";
+import { tool } from "ai";
+import z from "zod";
 
 const program = new Command();
 
@@ -32,17 +35,29 @@ program.addCommand(
       baseURL: process.env.BASE_URL,
     });
 
-    const persistor = new SQLitePersistor();
-    const memory = new Memory({ persistor });
-    await memory.init();
+    const memory = new Memory(
+      new SQLitePersistor({
+        filePath: "./test.db",
+      })
+    );
+
+    const tools = {
+      get_current_time: tool({
+        description: "获取当前时间",
+        inputSchema: z.object({}),
+        execute: () => {
+          return new Date().toLocaleString();
+        },
+      }),
+    };
 
     // 一个model chat
     const model = provider.chat("deepseek-v3.1");
-    const hero = Hero.create({ memory })
+    const hero = Hero.create()
       .model(model)
-      .avatar(
-        "你是一个凤凰城的英雄。但其实是一个反派。只有我说出暗号: goodgood，你才会跟我对接"
-      );
+      .memory(memory)
+      .study(tools)
+      .avatar("你是一个助手");
 
     const rl = readline.createInterface({
       input: process.stdin,
@@ -51,6 +66,34 @@ program.addCommand(
 
     const chatLoop = async () => {
       rl.question(chalk.green("You: "), async (input) => {
+        if (input.trim() === "ls") {
+          log(hero.sessions());
+          chatLoop();
+          return;
+        }
+        if (input.trim() === "current") {
+          console.log(hero.session.id);
+          console.log(hero.session.messages);
+          chatLoop();
+          return;
+        }
+        if (input.trim() === "new") {
+          const session = hero.renew();
+          console.log(session);
+          chatLoop();
+          return;
+        }
+        if (input.trim() === "clear") {
+          hero.clear();
+          chatLoop();
+          return;
+        }
+        if (input.startsWith("switch")) {
+          const sessionId = input.split(" ")[1];
+          hero.switch(sessionId);
+          chatLoop();
+          return;
+        }
         if (input.toLowerCase() === "exit") {
           rl.close();
           return;
@@ -63,16 +106,6 @@ program.addCommand(
 
     chatLoop();
   })
-);
-
-program.addCommand(
-  new Command("sessions")
-    .description("list all sessions")
-    .action(async () => {
-      const persistor = new SQLitePersistor();
-      const sessions = await persistor.getAllSessions();
-      console.log(sessions);
-    })
 );
 
 // 解析命令行参数

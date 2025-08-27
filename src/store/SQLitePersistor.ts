@@ -50,11 +50,17 @@ export class SQLitePersistor extends Persistor {
     return undefined;
   }
 
+  /**
+   * 删除会话
+   */
   delete(id: string): void {
     const stmt = this.db.prepare("DELETE FROM sessions WHERE id = ?");
     stmt.run(id);
   }
 
+  /**
+   * 获取所有会话
+   */
   getAll(): Session[] {
     const stmt = this.db.prepare("SELECT * FROM sessions");
     const rows: any[] = stmt.all();
@@ -62,6 +68,19 @@ export class SQLitePersistor extends Persistor {
     return rows.map((row) => ({
       id: row.id,
       messages: JSON.parse(row.messages),
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+    }));
+  }
+
+  getAllSessionsInfo() {
+    const stmt = this.db.prepare(
+      "SELECT id, createdAt, updatedAt FROM sessions"
+    );
+    const rows: any[] = stmt.all();
+
+    return rows.map((row) => ({
+      id: row.id,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }));

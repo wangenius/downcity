@@ -72,10 +72,25 @@ export class Memory {
    * 获取所有会话
    */
   getAllSessions(): Session[] {
+    if (this.persistor) {
+      const persistedSessions = this.persistor.getAll();
+      for (const session of persistedSessions) {
+        if (!this.sessions.has(session.id)) {
+          this.sessions.set(session.id, session);
+        }
+      }
+    }
     const sessions = Array.from(this.sessions.values());
     return sessions.sort(
       (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
     );
+  }
+
+  getAllSessionsInfo() {
+    if (this.persistor) {
+      return this.persistor.getAllSessionsInfo();
+    }
+    return [];
   }
 
   /**

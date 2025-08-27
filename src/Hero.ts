@@ -1,24 +1,21 @@
-import { LanguageModel, generateText, generateObject, Tool, stepCountIs } from "ai";
+import {
+  LanguageModel,
+  generateText,
+  generateObject,
+  Tool,
+  stepCountIs,
+  ModelMessage,
+} from "ai";
 import { Memory } from "./Memory.js";
 import { createOpenAI } from "@ai-sdk/openai";
-
-export interface Session {
-  id: string;
-  messages: Array<{
-    role: "user" | "assistant" | "system";
-    content: string;
-    timestamp: Date;
-  }>;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import z from "zod";
 
 export class Hero {
   private _model: LanguageModel = createOpenAI().chat("gpt-4o");
   private _system: string = "你是一个智能助手";
   private _tools: Record<string, Tool> = {};
   private _memory?: Memory;
-  private _currentSession?: Session;
+  private _currentSessionId?: string;
 
   private constructor() {}
 
@@ -62,10 +59,19 @@ export class Hero {
   }
 
   /**
-   * 设置当前会话
+   * 切换到指定的会话
    */
-  session(session: Session): Hero {
-    this._currentSession = session;
+  session(sessionId: string): Hero {
+    if (!this._memory) {
+      throw new Error("请先设置记忆系统");
+    }
+    
+    const session = this._memory.getSession(sessionId);
+    if (!session) {
+      throw new Error(`会话 ${sessionId} 不存在`);
+    }
+    
+    this._currentSessionId = sessionId;
     return this;
   }
 
@@ -78,33 +84,54 @@ export class Hero {
     }
 
     try {
-      // 添加消息到当前会话
-      if (this._currentSession) {
-        this._currentSession.messages.push({
+      let messages: ModelMessage[] = [];
+
+      // 如果有记忆系统，获取当前会话并添加消息
+      if (this._memory) {
+        const session = this._currentSessionId 
+          ? this._memory.getSession(this._currentSessionId)! 
+          : this._memory.lastSession();
+
+        // 添加用户消息到当前会话
+        const userMessage: ModelMessage = {
           role: "user",
           content: message,
-          timestamp: new Date(),
-        });
-        this._currentSession.updatedAt = new Date();
+        };
+        session.messages.push(userMessage);
+        session.updatedAt = new Date();
+
+        // 构建消息历史，用于保持对话上下文
+        messages = [...session.messages];
+      } else {
+        // 如果没有记忆系统，只使用当前消息
+        messages = [
+          {
+            role: "user",
+            content: message,
+          },
+        ];
       }
 
-      // 调用AI生成回复，启用多步调用来自动处理工具调用
+      // 调用AI生成回复，传递完整的对话历史以保持上下文记忆
       const result = await generateText({
         model: this._model,
         system: this._system,
-        prompt: message,
+        messages: messages,
         tools: this._tools,
         stopWhen: stepCountIs(5), // 允许最多5步的工具调用
       });
 
-      // 添加回复到当前会话
-      if (this._currentSession) {
-        this._currentSession.messages.push({
+      // 如果有记忆系统，添加回复到当前会话
+      if (this._memory) {
+        const session = this._currentSessionId 
+          ? this._memory.getSession(this._currentSessionId)! 
+          : this._memory.lastSession();
+        const assistantMessage: ModelMessage = {
           role: "assistant",
           content: result.text,
-          timestamp: new Date(),
-        });
-        this._currentSession.updatedAt = new Date();
+        };
+        session.messages.push(assistantMessage);
+        session.updatedAt = new Date();
       }
 
       return result.text;
@@ -117,7 +144,7 @@ export class Hero {
   /**
    * 生成JSON对象
    */
-  async json<T>(prompt: string, schema: any): Promise<T> {
+  async json<T>(prompt: string, schema: z.Schema<T>): Promise<T> {
     if (!this._model) {
       throw new Error("请先设置语言模型");
     }
@@ -126,7 +153,7 @@ export class Hero {
       const { object } = await generateObject({
         model: this._model,
         system: this._system,
-        prompt,
+        prompt: `${prompt}\n\n请根据以上提示生成符合要求的JSON对象。`,
         schema,
       });
 
@@ -169,7 +196,7 @@ export class Hero {
     console.log(`🏰 DownCity Hero is ready on port ${port}`);
     console.log(`🦸 Avatar: ${this._system}`);
     console.log(`🧠 Model: ${this._model ? "Configured" : "Not configured"}`);
-    console.log(`🛠️  Tools: ${this._tools.length} tools loaded`);
+    console.log(`🛠️  Tools: ${Object.keys(this._tools).length} tools loaded`);
   }
 
   // Getters for debugging and inspection
@@ -179,9 +206,5 @@ export class Hero {
 
   get tools(): string[] {
     return Object.keys(this._tools);
-  }
-
-  get currentSession(): Session | undefined {
-    return this._currentSession;
   }
 }

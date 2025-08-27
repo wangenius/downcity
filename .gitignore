@@ -4,5 +4,5 @@ dist
 *.log
 cache
 .env
-.package-lock.json
+package-lock.json
 yarn.lock

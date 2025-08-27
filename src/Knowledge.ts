@@ -1,4 +1,4 @@
-import { embed, tool, Tool } from "ai";
+import { embed, EmbeddingModel, LanguageModel, tool, Tool } from "ai";
 import z from "zod";
 import * as fs from "fs/promises";
 import { ChromaClient, Collection, OpenAIEmbeddingFunction } from "chromadb";
@@ -128,14 +128,8 @@ export class Knowledge {
   /**
    * 配置向量模型
    */
-  model(config: VectorModelConfig): Knowledge {
-    this.options.vectorModel = { ...this.options.vectorModel, ...config };
-
-    // 设置embedding模型
-    if (config.model) {
-      this.embeddingModel = config.model;
-    }
-
+  model(model: EmbeddingModel): Knowledge {
+    this.embeddingModel = model;
     return this;
   }
 

@@ -1,4 +1,4 @@
-import { Session } from "./Hero.js";
+import { Session } from "./Session.js";
 
 export interface MemoryOptions {
   maxSessions?: number;
@@ -15,7 +15,7 @@ export class Memory {
     this.options = {
       maxSessions: 100,
       persistToFile: false,
-      ...options
+      ...options,
     };
   }
 
@@ -28,7 +28,7 @@ export class Memory {
       id: sessionId,
       messages: [],
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.sessions.set(sessionId, session);
@@ -63,8 +63,9 @@ export class Memory {
    * 获取所有会话
    */
   getAllSessions(): Session[] {
-    return Array.from(this.sessions.values())
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    return Array.from(this.sessions.values()).sort(
+      (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+    );
   }
 
   /**
@@ -75,7 +76,8 @@ export class Memory {
     if (deleted && this.lastSessionId === id) {
       // 如果删除的是最后一个会话，更新lastSessionId
       const allSessions = this.getAllSessions();
-      this.lastSessionId = allSessions.length > 0 ? allSessions[0].id : undefined;
+      this.lastSessionId =
+        allSessions.length > 0 ? allSessions[0].id : undefined;
     }
     return deleted;
   }
@@ -110,7 +112,7 @@ export class Memory {
     return {
       totalSessions,
       totalMessages,
-      lastActivity
+      lastActivity,
     };
   }
 
@@ -127,7 +129,7 @@ export class Memory {
   private cleanupOldSessions(): void {
     const sessions = this.getAllSessions();
     const maxSessions = this.options.maxSessions || 100;
-    
+
     if (sessions.length > maxSessions) {
       const sessionsToDelete = sessions.slice(maxSessions);
       for (const session of sessionsToDelete) {
@@ -143,7 +145,7 @@ export class Memory {
     return {
       sessions: Array.from(this.sessions.entries()),
       lastSessionId: this.lastSessionId,
-      exportedAt: new Date().toISOString()
+      exportedAt: new Date().toISOString(),
     };
   }
 
@@ -155,16 +157,16 @@ export class Memory {
       this.sessions.clear();
       for (const [id, session] of data.sessions) {
         // 确保日期对象正确转换
-        if (session.createdAt && typeof session.createdAt === 'string') {
+        if (session.createdAt && typeof session.createdAt === "string") {
           session.createdAt = new Date(session.createdAt);
         }
-        if (session.updatedAt && typeof session.updatedAt === 'string') {
+        if (session.updatedAt && typeof session.updatedAt === "string") {
           session.updatedAt = new Date(session.updatedAt);
         }
         // 转换消息中的时间戳
         if (session.messages) {
           session.messages.forEach((msg: any) => {
-            if (msg.timestamp && typeof msg.timestamp === 'string') {
+            if (msg.timestamp && typeof msg.timestamp === "string") {
               msg.timestamp = new Date(msg.timestamp);
             }
           });

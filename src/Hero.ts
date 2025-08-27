@@ -12,13 +12,21 @@ import z from "zod";
 import { Session } from "./Session.js";
 
 export class Hero {
+  // 模型
   private _model: LanguageModel = createOpenAI().chat("gpt-4o");
+  // 系统提示词
   private _system: string = "你是一个智能助手";
+  // 工具
   private _tools: Record<string, Tool> = {};
-  private _memory: Memory = new Memory();
-  private _session: Session = new Session();
+  // 持久记忆
+  private _memory: Memory;
+  // 会话
+  private _session: Session;
 
-  private constructor() {}
+  private constructor() {
+    this._memory = new Memory();
+    this._session = this._memory.createSession();
+  }
 
   /**
    * 创建一个新的英雄实例
@@ -60,24 +68,10 @@ export class Hero {
   }
 
   /**
-   * 切换到指定的会话
-   */
-  session(sessionId: string): Hero {
-    const session = this._memory.getSession(sessionId);
-    if (!session) {
-      throw new Error(`会话 ${sessionId} 不存在`);
-    }
-    this._session = session;
-    return this;
-  }
-
-  /**
    * 与英雄对话
    */
   async chat(message: string): Promise<string> {
     try {
-      let messages: ModelMessage[] = [];
-
       // 添加用户消息到当前会话
       const userMessage: ModelMessage = {
         role: "user",
@@ -168,6 +162,54 @@ export class Hero {
     console.log(`🛠️  Tools: ${Object.keys(this._tools).length} tools loaded`);
   }
 
+  /**
+   * 新建会话并切换
+   */
+  renew(): Session {
+    const newSession = this._memory.createSession();
+    this._session = newSession;
+    return newSession;
+  }
+
+  /**
+   * 切换会话
+   */
+  switch(id: string): boolean {
+    const session = this._memory.getSession(id);
+    if (session) {
+      this._session = session;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 获取所有会话
+   */
+  sessions(): Session[] {
+    return this._memory.getAllSessions();
+  }
+
+  /**
+   * 删除会话
+   */
+  remove(id: string): boolean {
+    if (this._session.id === id) {
+      // 如果删除的是当前会话，则切换到一个新的会话
+      this.renew();
+    }
+    return this._memory.deleteSession(id);
+  }
+
+  /**
+   * 清空所有会話
+   */
+  clear(): void {
+    this._memory.clear();
+    // 清空后，创建一个新的默认会话
+    this._session = this._memory.createSession();
+  }
+
   // Getters for debugging and inspection
   get systemPrompt(): string {
     return this._system;
@@ -182,5 +224,9 @@ export class Hero {
 
   get tools(): string[] {
     return Object.keys(this._tools);
+  }
+
+  get session(): Session {
+    return this._session;
   }
 }

@@ -1,7 +1,7 @@
-import { embed, EmbeddingModel, LanguageModel, tool, Tool } from "ai";
-import z from "zod";
-import * as fs from "fs/promises";
+import { embed, EmbeddingModel, tool, Tool } from "ai";
 import { ChromaClient, Collection, OpenAIEmbeddingFunction } from "chromadb";
+import * as fs from "fs/promises";
+import z from "zod";
 
 export interface VectorModelConfig {
   model: any; // ai-sdk模型实例

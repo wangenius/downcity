@@ -1,11 +1,11 @@
 import { Command } from "commander";
-import pkg from "../package.json";
+import pkg from "../package.json" with { type: "json" };
 import chalk from "chalk";
-import { Hero, Memory } from "../src";
+import { Hero, Memory } from "./index.js";
 import readline from "readline";
 import { createOpenAI } from "@ai-sdk/openai";
 import { log } from "console";
-import { SQLitePersistor } from "../src/store/SQLitePersistor";
+import { SQLitePersistor } from "./store/SQLitePersistor.js";
 import { tool } from "ai";
 import z from "zod";
 
@@ -13,8 +13,8 @@ const program = new Command();
 
 // 设置基本信息
 program
-  .name("vibecape")
-  .description("vibecape - develop and ship your idea in 10 minutes")
+  .name("downcity")
+  .description("downcity - talk with your hero")
   // 支持 -v (小写) 与 --version，便于用户输入
   .version(pkg.version, "-v, --version", "显示版本号");
 
@@ -22,7 +22,7 @@ program
 program.addHelpText(
   "before",
   chalk.blue.bold(`
-🚀 Vibecape : make your idea come true in 10 minutes
+🚀 DownCity : make your idea come true in 10 minutes
 `)
 );
 

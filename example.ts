@@ -109,8 +109,11 @@ async function main() {
       console.log(`  ${index + 1}. ${s.id} (${s.messages.length} 条消息, 创建于 ${s.createdAt.toLocaleString('zh-CN')})`);
     });
     
-    // 测试会话切换
-    console.log("\n🔀 测试会话切换...");
+    // 测试会话切换和currentSessionId功能
+    console.log("\n🔀 测试会话切换和currentSessionId功能...");
+    
+    // 显示原始Hero的当前会话ID
+    console.log(`\n📍 原始Hero当前会话ID: ${hero.currentSessionId || '未设置(使用默认)'}`);    
     
     // 使用session方法切换到特定会话
     console.log("\n📍 切换到session2进行对话...");
@@ -120,6 +123,7 @@ async function main() {
       .memory(memory)
       .session(session2.id);
     
+    console.log(`📍 heroWithSession2当前会话ID: ${heroWithSession2.currentSessionId}`);
     const session2Response = await heroWithSession2.chat("你好，我是在session2中的用户，我叫李四");
     console.log(`Session2助手回复: ${session2Response}`);
     
@@ -131,11 +135,20 @@ async function main() {
       .memory(memory)
       .session(session3.id);
     
+    console.log(`📍 heroWithSession3当前会话ID: ${heroWithSession3.currentSessionId}`);
     const session3Response = await heroWithSession3.chat("你好，我是在session3中的用户，我叫王五");
     console.log(`Session3助手回复: ${session3Response}`);
     
+    // 验证每个Hero实例的会话ID独立性
+    console.log("\n🔍 验证Hero实例会话ID独立性:");
+    console.log(`- 原始Hero会话ID: ${hero.currentSessionId || '未设置(使用默认)'}`);    
+    console.log(`- heroWithSession2会话ID: ${heroWithSession2.currentSessionId}`);
+    console.log(`- heroWithSession3会话ID: ${heroWithSession3.currentSessionId}`);
+    
     // 验证会话隔离 - 回到原始会话
     console.log("\n🔄 验证会话隔离 - 回到原始会话...");
+    // 需要显式切换回原始会话
+    hero.session(session.id);
     const backToOriginal = await hero.chat("我刚才告诉你我叫什么名字？");
     console.log(`原始会话助手回复: ${backToOriginal}`);
     

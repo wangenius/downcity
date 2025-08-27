@@ -65,13 +65,16 @@ export class Hero {
     if (!this._memory) {
       throw new Error("请先设置记忆系统");
     }
-    
+
+    // 验证会话是否存在
     const session = this._memory.getSession(sessionId);
     if (!session) {
       throw new Error(`会话 ${sessionId} 不存在`);
     }
-    
+
+    // 设置当前Hero实例的会话ID
     this._currentSessionId = sessionId;
+
     return this;
   }
 
@@ -88,9 +91,10 @@ export class Hero {
 
       // 如果有记忆系统，获取当前会话并添加消息
       if (this._memory) {
-        const session = this._currentSessionId 
-          ? this._memory.getSession(this._currentSessionId)! 
-          : this._memory.lastSession();
+        // 使用Hero实例的当前会话ID，如果没有则使用Memory的最后会话
+        const session = this._currentSessionId
+          ? this._memory.getSession(this._currentSessionId)!
+          : this._memory.newSession();
 
         // 添加用户消息到当前会话
         const userMessage: ModelMessage = {
@@ -123,9 +127,10 @@ export class Hero {
 
       // 如果有记忆系统，添加回复到当前会话
       if (this._memory) {
-        const session = this._currentSessionId 
-          ? this._memory.getSession(this._currentSessionId)! 
-          : this._memory.lastSession();
+        // 使用Hero实例的当前会话ID，如果没有则使用Memory的最后会话
+        const session = this._currentSessionId
+          ? this._memory.getSession(this._currentSessionId)!
+          : this._memory.newSession();
         const assistantMessage: ModelMessage = {
           role: "assistant",
           content: result.text,
@@ -202,6 +207,13 @@ export class Hero {
   // Getters for debugging and inspection
   get systemPrompt(): string {
     return this._system;
+  }
+
+  /**
+   * 获取当前会话ID
+   */
+  get currentSessionId(): string | undefined {
+    return this._currentSessionId;
   }
 
   get tools(): string[] {

@@ -8,7 +8,6 @@ export interface MemoryOptions {
 
 export class Memory {
   private sessions: Map<string, Session> = new Map();
-  private lastSessionId?: string;
   private options: MemoryOptions;
 
   constructor(options: MemoryOptions = {}) {
@@ -32,7 +31,6 @@ export class Memory {
     };
 
     this.sessions.set(sessionId, session);
-    this.lastSessionId = sessionId;
 
     // 如果会话数量超过限制，删除最旧的会话
     if (this.sessions.size > (this.options.maxSessions || 100)) {
@@ -40,16 +38,6 @@ export class Memory {
     }
 
     return session;
-  }
-
-  /**
-   * 获取最后一个会话，如果不存在则创建新会话
-   */
-  lastSession(): Session {
-    if (this.lastSessionId && this.sessions.has(this.lastSessionId)) {
-      return this.sessions.get(this.lastSessionId)!;
-    }
-    return this.newSession();
   }
 
   /**
@@ -72,14 +60,7 @@ export class Memory {
    * 删除会话
    */
   deleteSession(id: string): boolean {
-    const deleted = this.sessions.delete(id);
-    if (deleted && this.lastSessionId === id) {
-      // 如果删除的是最后一个会话，更新lastSessionId
-      const allSessions = this.getAllSessions();
-      this.lastSessionId =
-        allSessions.length > 0 ? allSessions[0].id : undefined;
-    }
-    return deleted;
+    return this.sessions.delete(id);
   }
 
   /**
@@ -87,7 +68,6 @@ export class Memory {
    */
   clear(): void {
     this.sessions.clear();
-    this.lastSessionId = undefined;
   }
 
   /**
@@ -144,7 +124,6 @@ export class Memory {
   export(): any {
     return {
       sessions: Array.from(this.sessions.entries()),
-      lastSessionId: this.lastSessionId,
       exportedAt: new Date().toISOString(),
     };
   }
@@ -173,7 +152,6 @@ export class Memory {
         }
         this.sessions.set(id, session);
       }
-      this.lastSessionId = data.lastSessionId;
     }
   }
 }

@@ -1,4 +1,6 @@
 import { Session } from "./Session.js";
+import { v4 } from "uuid";
+import { Persistor } from "./Persistor.js";
 
 export interface MemoryOptions {
   maxSessions?: number;
@@ -6,36 +8,50 @@ export interface MemoryOptions {
   filePath?: string;
 }
 
+/**
+ * 会话
+ * 历史
+ * 统计
+ */
 export class Memory {
   private sessions: Map<string, Session> = new Map();
   private options: MemoryOptions;
+  private persistor?: Persistor;
 
   constructor(options: MemoryOptions = {}) {
     this.options = {
       maxSessions: 100,
       persistToFile: false,
+      filePath: "./sessions.json",
       ...options,
     };
+
+    if (this.options.persistToFile && this.options.filePath) {
+      this.persistor = new Persistor({ filePath: this.options.filePath });
+      this.load().catch(console.error);
+    }
   }
 
   /**
    * 创建新的会话
    */
-  newSession(id?: string): Session {
-    const sessionId = id || this.generateSessionId();
+  newSession(): Session {
     const session: Session = {
-      id: sessionId,
+      id: v4(),
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    this.sessions.set(sessionId, session);
+    this.sessions.set(session.id, session);
 
     // 如果会话数量超过限制，删除最旧的会话
     if (this.sessions.size > (this.options.maxSessions || 100)) {
       this.cleanupOldSessions();
     }
+
+    // 自动保存
+    this.save().catch(console.error);
 
     return session;
   }
@@ -45,6 +61,20 @@ export class Memory {
    */
   getSession(id: string): Session | undefined {
     return this.sessions.get(id);
+  }
+
+  /**
+   * 更新会话（当消息变更时调用）
+   */
+  updateSession(session: Session): boolean {
+    if (this.sessions.has(session.id)) {
+      session.updatedAt = new Date();
+      this.sessions.set(session.id, session);
+      // 自动保存
+      this.save().catch(console.error);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -60,7 +90,12 @@ export class Memory {
    * 删除会话
    */
   deleteSession(id: string): boolean {
-    return this.sessions.delete(id);
+    const result = this.sessions.delete(id);
+    if (result) {
+      // 自动保存
+      this.save().catch(console.error);
+    }
+    return result;
   }
 
   /**
@@ -68,6 +103,8 @@ export class Memory {
    */
   clear(): void {
     this.sessions.clear();
+    // 自动保存
+    this.save().catch(console.error);
   }
 
   /**
@@ -94,13 +131,6 @@ export class Memory {
       totalMessages,
       lastActivity,
     };
-  }
-
-  /**
-   * 生成唯一的会话ID
-   */
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
@@ -151,6 +181,28 @@ export class Memory {
           });
         }
         this.sessions.set(id, session);
+      }
+    }
+  }
+
+  /**
+   * 手动触发保存（公共方法）
+   */
+  async save(): Promise<void> {
+    if (this.persistor) {
+      const data = this.export();
+      await this.persistor.save(data);
+    }
+  }
+
+  /**
+   * 手动触发加载（公共方法）
+   */
+  async load(): Promise<void> {
+    if (this.persistor) {
+      const data = await this.persistor.load();
+      if (data) {
+        this.import(data);
       }
     }
   }

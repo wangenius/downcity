@@ -9,13 +9,14 @@ import {
 import { Memory } from "./Memory.js";
 import { createOpenAI } from "@ai-sdk/openai";
 import z from "zod";
+import { Session } from "./Session.js";
 
 export class Hero {
   private _model: LanguageModel = createOpenAI().chat("gpt-4o");
   private _system: string = "你是一个智能助手";
   private _tools: Record<string, Tool> = {};
-  private _memory?: Memory;
-  private _currentSessionId?: string;
+  private _memory: Memory = new Memory();
+  private _session: Session = new Session();
 
   private constructor() {}
 
@@ -62,19 +63,11 @@ export class Hero {
    * 切换到指定的会话
    */
   session(sessionId: string): Hero {
-    if (!this._memory) {
-      throw new Error("请先设置记忆系统");
-    }
-
-    // 验证会话是否存在
     const session = this._memory.getSession(sessionId);
     if (!session) {
       throw new Error(`会话 ${sessionId} 不存在`);
     }
-
-    // 设置当前Hero实例的会话ID
-    this._currentSessionId = sessionId;
-
+    this._session = session;
     return this;
   }
 
@@ -82,62 +75,33 @@ export class Hero {
    * 与英雄对话
    */
   async chat(message: string): Promise<string> {
-    if (!this._model) {
-      throw new Error("请先设置语言模型");
-    }
-
     try {
       let messages: ModelMessage[] = [];
 
-      // 如果有记忆系统，获取当前会话并添加消息
-      if (this._memory) {
-        // 使用Hero实例的当前会话ID，如果没有则使用Memory的最后会话
-        const session = this._currentSessionId
-          ? this._memory.getSession(this._currentSessionId)!
-          : this._memory.newSession();
-
-        // 添加用户消息到当前会话
-        const userMessage: ModelMessage = {
-          role: "user",
-          content: message,
-        };
-        session.messages.push(userMessage);
-        session.updatedAt = new Date();
-
-        // 构建消息历史，用于保持对话上下文
-        messages = [...session.messages];
-      } else {
-        // 如果没有记忆系统，只使用当前消息
-        messages = [
-          {
-            role: "user",
-            content: message,
-          },
-        ];
-      }
+      // 添加用户消息到当前会话
+      const userMessage: ModelMessage = {
+        role: "user",
+        content: message,
+      };
+      this._session.messages.push(userMessage);
+      this._session.updatedAt = new Date();
 
       // 调用AI生成回复，传递完整的对话历史以保持上下文记忆
       const result = await generateText({
         model: this._model,
         system: this._system,
-        messages: messages,
+        messages: this._session.messages,
         tools: this._tools,
         stopWhen: stepCountIs(5), // 允许最多5步的工具调用
       });
 
-      // 如果有记忆系统，添加回复到当前会话
-      if (this._memory) {
-        // 使用Hero实例的当前会话ID，如果没有则使用Memory的最后会话
-        const session = this._currentSessionId
-          ? this._memory.getSession(this._currentSessionId)!
-          : this._memory.newSession();
-        const assistantMessage: ModelMessage = {
-          role: "assistant",
-          content: result.text,
-        };
-        session.messages.push(assistantMessage);
-        session.updatedAt = new Date();
-      }
+      const assistantMessage: ModelMessage = {
+        role: "assistant",
+        content: result.text,
+      };
+      this._session.messages.push(assistantMessage);
+      this._session.updatedAt = new Date();
+      this._memory.updateSession(this._session);
 
       return result.text;
     } catch (error) {
@@ -213,7 +177,7 @@ export class Hero {
    * 获取当前会话ID
    */
   get currentSessionId(): string | undefined {
-    return this._currentSessionId;
+    return this._session.id;
   }
 
   get tools(): string[] {

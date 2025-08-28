@@ -1,6 +1,6 @@
-import { Session } from "./Session.js";
+import { Session } from "../Session.js";
 import { v4 } from "uuid";
-import { Persistor } from "./store/Persistor.js";
+import { Persistor } from "./Persistor.js";
 
 export class Memory {
   private persistor?: Persistor;

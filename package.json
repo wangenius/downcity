@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "downcity": "./dist/cli.js"
+    "downcity": "./dist/cli/index.js"
   },
   "files": [
     "dist",

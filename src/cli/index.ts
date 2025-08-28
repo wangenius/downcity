@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
-import pkg from "../package.json" with { type: "json" };
+import pkg from "../../package.json" with { type: "json" };
 import chalk from "chalk";
-import { Hero, Memory } from "./index.js";
+import { Hero, Memory } from "../index.js";
 import readline from "readline";
 import { createOpenAI } from "@ai-sdk/openai";
 import { log } from "console";
-import { SQLitePersistor } from "./store/SQLitePersistor.js";
+import { SQLitePersistor } from "../memory/SQLitePersistor.js";
 import { tool } from "ai";
 import z from "zod";
 

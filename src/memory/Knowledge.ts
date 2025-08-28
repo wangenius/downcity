@@ -2,7 +2,7 @@ import { embed, EmbeddingModel, tool, Tool } from "ai";
 import { ChromaClient, Collection, OpenAIEmbeddingFunction } from "chromadb";
 import * as fs from "fs/promises";
 import z from "zod";
-import { KNOWLEDGE_FILE_PATH, KNOWLEDGE_PATH } from "./const.js";
+import { KNOWLEDGE_FILE_PATH, KNOWLEDGE_PATH } from "../const.js";
 
 export interface VectorModelConfig {
   model: any; // ai-sdk模型实例
@@ -42,7 +42,7 @@ export class Knowledge {
   private options: KnowledgeOptions;
   private chromaClient?: ChromaClient;
   private collection?: Collection;
-  private embeddingModel?: any; // ai-sdk模型实例
+  private embeddingModel?: any;
   private embeddingFunction?: OpenAIEmbeddingFunction;
 
   constructor(options: KnowledgeOptions = {}) {

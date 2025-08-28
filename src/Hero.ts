@@ -6,11 +6,11 @@ import {
   stepCountIs,
   ModelMessage,
 } from "ai";
-import { Memory } from "./Memory.js";
+import { Memory } from "./memory/Memory.js";
 import { createOpenAI } from "@ai-sdk/openai";
 import z from "zod";
 import { Session } from "./Session.js";
-import { SessionInfo } from "./store/Persistor.js";
+import { SessionInfo } from "./memory/Persistor.js";
 
 export class Hero {
   // 模型

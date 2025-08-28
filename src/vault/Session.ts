@@ -45,10 +45,13 @@ export class Session {
     this._meta.updatedAt = new Date();
   }
 
-  replace(messages: ModelMessage[], updatedAt?: Date, createdAt?: Date) {
-    this._data.messages = messages;
-    this._meta.updatedAt = updatedAt ?? new Date();
-    this._meta.createdAt = createdAt ?? this._meta.createdAt;
+  replace(data: SessionData, meta: SessionMeta) {
+    this._data = data;
+    this._meta = meta;
+  }
+
+  title(title: string) {
+    this._meta.title = title;
   }
 
   get meta(): SessionMeta {

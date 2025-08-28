@@ -62,8 +62,8 @@ export class Hero {
   /**
    * 设置记忆系统
    */
-  vault(memory: Vault): Hero {
-    this._vault = memory;
+  vault(vault: Vault): Hero {
+    this._vault = vault;
     return this;
   }
 
@@ -78,6 +78,18 @@ export class Hero {
         content: message,
       };
       this._session.push(userMessage);
+
+      if (!this._session.title) {
+        const title = await generateText({
+          model: this._model,
+          system: "base on the user message, generate a title for the session",
+          messages: [userMessage],
+        });
+
+        if (title.text) {
+          this._session.title(title.text);
+        }
+      }
 
       // 调用AI生成回复，传递完整的对话历史以保持上下文记忆
       const result = await generateText({

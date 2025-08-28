@@ -64,6 +64,8 @@ export class Hero {
    */
   vault(vault: Vault): Hero {
     this._vault = vault;
+    // 重新创建session，使用新的vault
+    this._session = this._vault.createSession();
     return this;
   }
 
@@ -82,12 +84,12 @@ export class Hero {
       if (!this._session.title) {
         const title = await generateText({
           model: this._model,
-          system: "base on the user message, generate a title for the session",
+          system: "你是一个专业的会话标题生成助手。请根据用户的消息内容，生成一个简洁、准确、有意义的会话标题。标题应该：1. 不超过20个字符 2. 准确概括用户的主要意图或问题 3. 使用中文 4. 避免使用标点符号 5. 直接输出标题内容，不需要额外说明",
           messages: [userMessage],
         });
 
         if (title.text) {
-          this._session.title(title.text);
+          this._session.setTitle(title.text);
         }
       }
 

@@ -50,8 +50,12 @@ export class Session {
     this._meta = meta;
   }
 
-  title(title: string) {
+  setTitle(title: string) {
     this._meta.title = title;
+  }
+
+  get title(): string {
+    return this._meta.title;
   }
 
   get meta(): SessionMeta {

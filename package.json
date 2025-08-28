@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A npm package for downcity agent framework",
   "type": "module",
   "main": "dist/index.js",
@@ -24,7 +24,7 @@
     "docs:preview": "vitepress preview docs",
     "prepublishOnly": "npm run build",
     "publish": "./publish.sh",
-    "test": "npm run build && npm i -g . && downcity --help"
+    "test": "npm run build && npm i -g . && downcity enter"
   },
   "keywords": [
     "agent framework",

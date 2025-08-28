@@ -76,7 +76,6 @@ export class Vault {
   updateSession(session: Session): boolean {
     this.sessions.set(session.id, session);
     if (this.persistor) {
-      log("updateSession", session.id, session.meta, session.data);
       this.persistor.update(session.id, session.meta, session.data);
     }
     return true;

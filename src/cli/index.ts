@@ -16,7 +16,6 @@ const program = new Command();
 program
   .name("downcity")
   .description("downcity - An open world productive game in terminal")
-  // 支持 -v (小写) 与 --version，便于用户输入
   .version(pkg.version, "-v, --version", "显示版本号");
 
 // 添加欢迎信息

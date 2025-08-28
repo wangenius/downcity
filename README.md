@@ -120,9 +120,9 @@ const hero2 = Hero.create().memory(memory2);
 const persistor = new LibPersistor({
   filePath: "./memory.db",
 });
+
 const memory = new Memory(persistor);
 hero.memory(memory);
-
 ```
 
 当持久化存储的时候， 会将 session 存储到对应的持久化数据库中。

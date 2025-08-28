@@ -15,7 +15,7 @@ const program = new Command();
 // 设置基本信息
 program
   .name("downcity")
-  .description("downcity - talk with your hero")
+  .description("downcity - An open world productive game in terminal")
   // 支持 -v (小写) 与 --version，便于用户输入
   .version(pkg.version, "-v, --version", "显示版本号");
 
@@ -23,13 +23,27 @@ program
 program.addHelpText(
   "before",
   chalk.blue.bold(`
-🚀 DownCity : make your idea come true in 10 minutes
-`)
+🚀 DownCity : An open world productive game in terminal
+`, chalk.blue.bold("Version: " + pkg.version))
 );
 
 // 注册命令
 program.addCommand(
-  new Command("chat").description("chat with the bot").action(async () => {
+  new Command("enter").description("enter in this game").action(async () => {
+
+    console.log("welcome to downcity!");
+    console.log("letus punk!");    
+
+    if (!process.env.API_KEY) {
+      console.log(chalk.red("请设置 API_KEY 环境变量"));
+      return;
+    }
+
+    if (!process.env.BASE_URL) {
+      console.log(chalk.red("请设置 BASE_URL 环境变量"));
+      return;
+    }
+
     // 创建一个provider
     const provider = createOpenAI({
       apiKey: process.env.API_KEY,
@@ -37,9 +51,7 @@ program.addCommand(
     });
 
     const memory = new Memory(
-      new SQLitePersistor({
-        filePath: "./test.db",
-      })
+      new SQLitePersistor()
     );
 
     const tools = {
@@ -53,7 +65,7 @@ program.addCommand(
     };
 
     // 一个model chat
-    const model = provider.chat("deepseek-v3.1");
+    const model = provider.chat("qwen-turbo");
     const hero = Hero.create()
       .model(model)
       .memory(memory)

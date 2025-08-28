@@ -1,17 +1,40 @@
 import { Database } from "bun:sqlite";
 import { Persistor } from "./Persistor.js";
 import { Session } from "../Session.js";
+import path from "path";
+import { BASE_PATH } from "../const.js";
+import { mkdirSync } from "fs";
 
 export interface SQLitePersistorOptions {
-  filePath: string;
+  dir: string;
+  name: string;
 }
 
 export class SQLitePersistor extends Persistor {
   private db: Database;
 
-  constructor(options: SQLitePersistorOptions) {
+  /**
+   * 构造函数，初始化SQLite数据库持久化器
+   * @param options 配置选项，包含目录和文件名
+   */
+  constructor(
+    options: SQLitePersistorOptions = {
+      dir: BASE_PATH,
+      name: "sqlite.db",
+    }
+  ) {
     super();
-    this.db = new Database(options.filePath, { create: true });
+    
+    // 确保目录存在
+    try {
+      mkdirSync(options.dir, { recursive: true });
+    } catch (error) {
+      // 目录已存在时忽略错误
+    }
+    
+    this.db = new Database(path.join(options.dir, options.name), {
+      create: true,
+    });
     this.db.run(`
       CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,

@@ -2,6 +2,7 @@ import { embed, EmbeddingModel, tool, Tool } from "ai";
 import { ChromaClient, Collection, OpenAIEmbeddingFunction } from "chromadb";
 import * as fs from "fs/promises";
 import z from "zod";
+import { KNOWLEDGE_FILE_PATH, KNOWLEDGE_PATH } from "./const.js";
 
 export interface VectorModelConfig {
   model: any; // ai-sdk模型实例
@@ -52,9 +53,9 @@ export class Knowledge {
       similarityThreshold: 0.7,
       chroma: {
         collection: "downcity_knowledge",
-        persistPath: "./chroma_db",
+        persistPath: KNOWLEDGE_PATH,
       },
-      localFile: "./knowledge.json",
+      localFile: KNOWLEDGE_FILE_PATH,
       ...options,
     };
 

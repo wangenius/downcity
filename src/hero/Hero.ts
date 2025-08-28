@@ -6,11 +6,10 @@ import {
   stepCountIs,
   ModelMessage,
 } from "ai";
-import { Memory } from "./memory/Memory.js";
+import { Vault } from "../vault/Vault.js";
 import { createOpenAI } from "@ai-sdk/openai";
 import z from "zod";
-import { Session } from "./Session.js";
-import { SessionInfo } from "./memory/Persistor.js";
+import { Session, SessionMeta } from "../vault/Session.js";
 
 export class Hero {
   // 模型
@@ -19,14 +18,14 @@ export class Hero {
   private _system: string = "你是一个智能助手";
   // 工具
   private _tools: Record<string, Tool> = {};
-  // 持久记忆
-  private _memory: Memory;
+  // 持久记忆库
+  private _vault: Vault;
   // 会话
   private _session: Session;
 
   private constructor() {
-    this._memory = new Memory();
-    this._session = this._memory.createSession();
+    this._vault = new Vault();
+    this._session = this._vault.createSession();
   }
 
   /**
@@ -63,8 +62,8 @@ export class Hero {
   /**
    * 设置记忆系统
    */
-  memory(memory: Memory): Hero {
-    this._memory = memory;
+  vault(memory: Vault): Hero {
+    this._vault = memory;
     return this;
   }
 
@@ -78,8 +77,7 @@ export class Hero {
         role: "user",
         content: message,
       };
-      this._session.messages.push(userMessage);
-      this._session.updatedAt = new Date();
+      this._session.push(userMessage);
 
       // 调用AI生成回复，传递完整的对话历史以保持上下文记忆
       const result = await generateText({
@@ -94,9 +92,8 @@ export class Hero {
         role: "assistant",
         content: result.text,
       };
-      this._session.messages.push(assistantMessage);
-      this._session.updatedAt = new Date();
-      this._memory.updateSession(this._session);
+      this._session.push(assistantMessage);
+      this._vault.updateSession(this._session);
 
       return result.text;
     } catch (error) {
@@ -167,7 +164,7 @@ export class Hero {
    * 新建会话并切换
    */
   renew(): Session {
-    const newSession = this._memory.createSession();
+    const newSession = this._vault.createSession();
     this._session = newSession;
     return newSession;
   }
@@ -176,7 +173,7 @@ export class Hero {
    * 切换会话
    */
   switch(id: string): boolean {
-    const session = this._memory.getSession(id);
+    const session = this._vault.getSession(id);
     if (session) {
       this._session = session;
       return true;
@@ -187,8 +184,8 @@ export class Hero {
   /**
    * 获取所有会话
    */
-  sessions(): SessionInfo[] {
-    return this._memory.getAllSessionsInfo();
+  sessions(): { id: string; meta: SessionMeta }[] {
+    return this._vault.getSessionsList();
   }
 
   /**
@@ -199,16 +196,16 @@ export class Hero {
       // 如果删除的是当前会话，则切换到一个新的会话
       this.renew();
     }
-    return this._memory.deleteSession(id);
+    return this._vault.deleteSession(id);
   }
 
   /**
    * 清空所有会話
    */
   clear(): void {
-    this._memory.clear();
+    this._vault.clear();
     // 清空后，创建一个新的默认会话
-    this._session = this._memory.createSession();
+    this._session = this._vault.createSession();
   }
 
   // Getters for debugging and inspection
@@ -227,6 +224,9 @@ export class Hero {
     return Object.keys(this._tools);
   }
 
+  /**
+   * 获取当前会话
+   */
   get session(): Session {
     return this._session;
   }

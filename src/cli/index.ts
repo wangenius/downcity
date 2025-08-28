@@ -2,13 +2,13 @@
 import { Command } from "commander";
 import pkg from "../../package.json" with { type: "json" };
 import chalk from "chalk";
-import { Hero, Memory } from "../index.js";
+import { Hero, Vault } from "../index.js";
 import readline from "readline";
 import { createOpenAI } from "@ai-sdk/openai";
 import { log } from "console";
-import { SQLitePersistor } from "../memory/SQLitePersistor.js";
 import { tool } from "ai";
 import z from "zod";
+import { SQLiteVaultPersistor } from "../vault/Vault.js";
 
 const program = new Command();
 
@@ -30,7 +30,6 @@ program.addHelpText(
 // 注册命令
 program.addCommand(
   new Command("enter").description("enter in this game").action(async () => {
-
     console.log("welcome to downcity!");
     console.log("letus punk!");    
 
@@ -49,9 +48,12 @@ program.addCommand(
       apiKey: process.env.API_KEY,
       baseURL: process.env.BASE_URL,
     });
+    // 一个model chat
+    const model = provider.chat("qwen-turbo");
 
-    const memory = new Memory(
-      new SQLitePersistor()
+    // 创建一个vault: 用来控制session
+    const vault = new Vault(
+      new SQLiteVaultPersistor()
     );
 
     const tools = {
@@ -64,11 +66,9 @@ program.addCommand(
       }),
     };
 
-    // 一个model chat
-    const model = provider.chat("qwen-turbo");
     const hero = Hero.create()
       .model(model)
-      .memory(memory)
+      .vault(vault)
       .study(tools)
       .avatar("你是一个助手");
 

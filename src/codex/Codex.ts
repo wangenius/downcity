@@ -2,7 +2,7 @@ import { embed, EmbeddingModel, tool, Tool } from "ai";
 import { ChromaClient, Collection, OpenAIEmbeddingFunction } from "chromadb";
 import * as fs from "fs/promises";
 import z from "zod";
-import { KNOWLEDGE_FILE_PATH, KNOWLEDGE_PATH } from "../const.js";
+import { CODEX_FILE_PATH, CODEX_PATH } from "../const.js";
 
 export interface VectorModelConfig {
   model: any; // ai-sdk模型实例
@@ -36,7 +36,7 @@ export interface KnowledgeItem {
   updatedAt: Date;
 }
 
-export class Knowledge {
+export class Codex {
   private knowledgeBase: Map<string, KnowledgeItem> = new Map();
   private categories: Set<string> = new Set();
   private options: KnowledgeOptions;
@@ -53,9 +53,9 @@ export class Knowledge {
       similarityThreshold: 0.7,
       chroma: {
         collection: "downcity_knowledge",
-        persistPath: KNOWLEDGE_PATH,
+        persistPath: CODEX_PATH,
       },
-      localFile: KNOWLEDGE_FILE_PATH,
+      localFile: CODEX_FILE_PATH,
       ...options,
     };
 
@@ -74,8 +74,8 @@ export class Knowledge {
   /**
    * 创建Knowledge实例
    */
-  static create(options?: KnowledgeOptions): Knowledge {
-    return new Knowledge(options);
+  static create(options?: KnowledgeOptions): Codex {
+    return new Codex(options);
   }
 
   /**
@@ -129,7 +129,7 @@ export class Knowledge {
   /**
    * 配置向量模型
    */
-  model(model: EmbeddingModel): Knowledge {
+  model(model: EmbeddingModel): Codex {
     this.embeddingModel = model;
     return this;
   }

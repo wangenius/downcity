@@ -3,8 +3,8 @@ import path from "path";
 
 export const BASE_PATH = path.join(homedir(), "downcity");
 
-export const KNOWLEDGE_PATH = path.join(BASE_PATH, "base", "base_db");
-export const KNOWLEDGE_FILE_PATH = path.join(
+export const CODEX_PATH = path.join(BASE_PATH, "codex", "codex_db");
+export const CODEX_FILE_PATH = path.join(
   BASE_PATH,
   "base",
   "knowledge.json"

@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A npm package for downcity agent framework",
   "type": "module",
   "main": "dist/index.js",

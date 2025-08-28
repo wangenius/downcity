@@ -1,7 +1,9 @@
 // 导出主要的类
-export { Hero } from "./Hero.js";
-export { Memory } from "./memory/Memory.js";
-export { Knowledge } from "./memory/Knowledge.js";
-export { Session } from "./Session.js";
+export { Hero } from "./hero/Hero.js";
 
-export type { KnowledgeOptions, KnowledgeItem } from "./memory/Knowledge.js";
+// 导出历史记录管理器
+export { Vault } from "./vault/Vault.js";
+export { SQLitePersistor as SQLitePersistor } from "./utils/persistor/SQLitePersistor.js";
+export { Codex } from "./codex/Codex.js";
+export { Session } from "./vault/Session.js";
+export type { KnowledgeOptions, KnowledgeItem } from "./codex/Codex.js";

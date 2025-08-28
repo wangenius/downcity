@@ -128,3 +128,6 @@ hero.memory(memory);
 当持久化存储的时候， 会将 session 存储到对应的持久化数据库中。
 
 此时 Memory 不会提前加载所有的数据库中的 session。 只会打开对应的 session 到内存中。 并且超过 20 个的时候，会关掉之前的。
+
+
+# cli 工具

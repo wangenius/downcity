@@ -5,9 +5,9 @@ import chalk from "chalk";
 import { Hero, Room } from "../index.js";
 import readline from "readline";
 import { log } from "console";
-import { tool } from "ai";
 import z from "zod";
 import { SQLiteRoomPersistor } from "../room/Room.js";
+import { skill } from "../skill/Skill.js";
 
 const program = new Command();
 
@@ -46,8 +46,8 @@ program.addCommand(
       new SQLiteRoomPersistor()
     );
 
-    const tools = {
-      get_current_time: tool({
+    const skills = {
+      get_current_time: skill({
         description: "获取当前时间",
         inputSchema: z.object({}),
         execute: () => {
@@ -58,7 +58,7 @@ program.addCommand(
 
     const hero = Hero.create()
       .room(room)
-      .study(tools)
+      .study(skills)
 
     const rl = readline.createInterface({
       input: process.stdin,
@@ -99,7 +99,7 @@ program.addCommand(
           rl.close();
           return;
         }
-        const response = await hero.chat(input);
+        const response = await hero.text(input);
         console.log(chalk.blue("Bot:"), response);
         chatLoop();
       });

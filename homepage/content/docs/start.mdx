@@ -109,18 +109,17 @@ hero.chat();
 shot 表示 一个会话。 在一个 shot 内， 管理 messages。
 
 ```ts title="index.ts"
-hero.room.shot(); // 创建一个 shot
-hero.room.shot("id"); // 切换到对应的shot
-hero.room.current();
-room.clear();
+hero.createShot(); // 创建一个 shot
+hero.shot("id"); // 切换到对应的shot
+hero.current(); // 当前状态： room， shot， skill
+room.clear(); // 清理room中的会话
 ```
 
 ### 历史
 
 ```ts
 const codex = new Codex();
-
-hero.study(codex);
+hero.study(codex.lesson());
 ```
 
-hero 学习了codex（知识库）
+hero 学习了 codex（知识库）, 如果在需要的时候，可以调用 对应的 方法来获取 codex 中的内容。

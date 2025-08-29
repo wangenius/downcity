@@ -2,7 +2,6 @@ import {
   LanguageModel,
   generateText,
   generateObject,
-  Tool,
   stepCountIs,
   ModelMessage,
 } from "ai";
@@ -10,6 +9,7 @@ import { Room } from "../room/Room.js";
 import { Shot, ShotMeta } from "../room/Shot.js";
 import z from "zod";
 import { DEFAULT_MODEL } from "../model/model.js";
+import { Skill } from "../skill/Skill.js";
 
 export class Hero {
   // 模型
@@ -17,7 +17,7 @@ export class Hero {
   // 系统提示词
   private _system: string = "你是一个DownCity中的英雄。";
   // 工具
-  private _tools: Record<string, Tool> = {};
+  private _skills: Record<string, Skill> = {};
   // 持久记忆库
   private _room: Room;
   // 会话
@@ -52,10 +52,10 @@ export class Hero {
   }
 
   /**
-   * 学习工具
+   * learn 方法是学习工具
    */
-  study(tools: Record<string, Tool>): Hero {
-    this._tools = { ...this._tools, ...tools };
+  study(skill: Record<string, Skill>): Hero {
+    this._skills = { ...this._skills, ...skill };
     return this;
   }
 
@@ -70,9 +70,9 @@ export class Hero {
   }
 
   /**
-   * 与英雄对话
+   * hero.text() 与英雄对话
    */
-  async chat(message: string): Promise<string> {
+  async text(message: string): Promise<string> {
     try {
       // 添加用户消息到当前会话
       const userMessage: ModelMessage = {
@@ -80,14 +80,14 @@ export class Hero {
         content: message,
       };
       this._shot.push(userMessage);
-      await this.generateTitle(message);
+      await this.generate_title(message);
 
       // 调用AI生成回复，传递完整的对话历史以保持上下文记忆
       const result = await generateText({
         model: this._model,
         system: this._system,
         messages: this._shot.messages,
-        tools: this._tools,
+        tools: this._skills,
         stopWhen: stepCountIs(5), // 允许最多5步的工具调用
       });
 
@@ -160,7 +160,7 @@ export class Hero {
     console.log(`🏰 DownCity Hero is ready on port ${port}`);
     console.log(`🦸 Avatar: ${this._system}`);
     console.log(`🧠 Model: ${this._model ? "Configured" : "Not configured"}`);
-    console.log(`🛠️  Tools: ${Object.keys(this._tools).length} tools loaded`);
+    console.log(`🛠️  Tools: ${Object.keys(this._skills).length} tools loaded`);
   }
 
   /**
@@ -184,7 +184,7 @@ export class Hero {
     return false;
   }
 
-  async generateTitle(userMessage: string) {
+  private async generate_title(userMessage: string) {
     if (!this._shot.title) {
       const title = await generateText({
         model: this._model,
@@ -239,7 +239,7 @@ export class Hero {
   }
 
   get tools(): string[] {
-    return Object.keys(this._tools);
+    return Object.keys(this._skills);
   }
 
   /**

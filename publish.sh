@@ -27,7 +27,7 @@ print_error() {
 }
 
 get_current_version() {
-  node -p "require('./package.json').version"
+  node -p "require('./package/package.json').version"
 }
 
 check_git_status() {
@@ -121,7 +121,9 @@ main() {
   print_status "执行发布..."
   
   # 5. 执行版本提升
+  cd package
   npm version "$bump_level" --no-git-tag-version
+  cd ..
   local new_version
   new_version=$(get_current_version)
   

@@ -20,12 +20,18 @@ jobs:
         registry-url: 'https://registry.npmjs.org'
 
     - name: Install dependencies
-      run: npm install --legacy-peer-deps
+      run: |
+        cd package
+        npm install --legacy-peer-deps
         
-    - run: npm run build
+    - name: Build package
+      run: |
+        cd package
+        npm run build
     
     - name: Check version and publish
       run: |
+        cd package
         VERSION=$(node -p "require('./package.json').version")
         if ! npm view . versions | grep -q "\"$VERSION\""; then
           npm publish

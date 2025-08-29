@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A npm package for downcity agent framework",
   "type": "module",
   "main": "dist/index.js",
@@ -16,14 +16,6 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "example": "node run-example.js",
-    "example:ts": "node --loader ts-node/esm example.ts",
-    "example:js": "npm run build && node dist/example.js",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs",
-    "prepublishOnly": "npm run build",
-    "publish": "./publish.sh",
     "test": "npm run build && npm i -g . && downcity enter"
   },
   "keywords": [

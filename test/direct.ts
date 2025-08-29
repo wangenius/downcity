@@ -1,8 +1,6 @@
 import "dotenv/config";
 import { Codex } from "../src/codex/Codex";
 import { createOpenAI } from "@ai-sdk/openai";
-import { cwd } from "process";
-import { ChromaClient } from "chromadb";
 
 async function main() {
   console.log("Running direct test for Codex...");
@@ -32,7 +30,9 @@ async function main() {
     );
 
     // 2. 搜索数据
-    const results = await volume.search("What is Downcity?", 1);
+    const results = await volume.search("What is Downcity?", {
+      limit: 1,
+    });
     console.log(results);
   } catch (error) {
     console.error("An error occurred during the test:", error);

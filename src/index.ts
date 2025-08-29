@@ -2,8 +2,7 @@
 export { Hero } from "./hero/Hero.js";
 
 // 导出历史记录管理器
-export { Vault } from "./vault/Vault.js";
-export { Session } from "./vault/Session.js";
+export { Room } from "./room/Room.js";
+export { Shot } from "./room/Shot.js";
 export { SQLitePersistor } from "./utils/persistor/SQLitePersistor.js";
 export { Codex } from "./codex/Codex.js";
-export type { KnowledgeOptions, KnowledgeItem } from "./codex/Codex.js";

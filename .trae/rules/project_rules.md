@@ -2,4 +2,4 @@
 2. 测试使用 bun 来本地测试。
 3. 除非特别强调，不要随意更改类中的方法。
 4. 测试方法放在 test 文件夹中。
-5. 文档在homepage文件夹下，是一个nextjs的fumadocs项目。
+5. 文档在homepage文件夹下，是一个nextjs的fumadocs项目。 如果用户让你、或者你要创建文档的时候，请在fumadocs中的对应位置创建。

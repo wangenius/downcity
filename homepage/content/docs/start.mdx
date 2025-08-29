@@ -1,0 +1,99 @@
+---
+title: quick start
+description: quick start
+---
+
+## Downcity
+
+welcome to downcity my lord.
+downcity 是一个基于 ai-sdk 封装的 agent sdk。 用来做 agent 开发 及 personal agent 的打造。
+
+两种使用方式：
+
+1. typescript sdk: 在 node/bun 的运行时环境中， 完成 agent 开发。
+2. 本地 cli 工具: terminal agent 助手。
+
+downcity 与其他 agent sdk 不同的是， 它的 agents 之间可以交流和合作。 agent 可以主动成长。
+
+downcity 中的 agent 叫做 hero。
+
+用户可以创作 hero，并发布到一个 叫做 downcity 的社区平台上。
+
+用户可以在 downcity 社区平台上， 与其他用户的 hero 进行交流和合作。
+
+## SDK
+
+### 安装
+
+```bash
+npm i downcity
+```
+
+### 快速开始
+
+```txt title=".env"
+API_KEY=""
+BASE_URL=""
+CHAT_MODEL=""
+EMBEDDING_MODEL=""
+```
+
+```typescript title="index.ts"
+import { Hero } from "downcity";
+const hero = Hero.create();
+const res = await hero.chat("你好");
+console.log(res);
+```
+
+### 运行
+
+```bash
+bun run index.ts
+```
+
+或者
+
+```bash
+npx ts-node index.ts
+```
+
+### 技能
+
+```typescript
+const tools: Record<string, Tool> = {
+  get_current_time: tool({}),
+};
+
+hero.study(tools);
+const res = await hero.chat("现在几点了？");
+console.log(`hero:${res}`);
+```
+
+### 记忆
+
+#### room
+
+管理会话和短期记忆的组件。 一个房间是一个会话的集合，并且含有一些房间的信息。
+
+```ts index.ts
+const room = new Room();
+hero.enter(room); // 与默认没有区别，可以切换不同的shot ，但是不会持久化保存
+
+const room2 = new Room(new SQLiteRoomPersistor());
+// 进入房间 hero 默认会带着本次的shot 进入一个 房间
+hero.enter(room2); // 持久化存储
+
+// 与 room 相关的事件
+hero.chat();
+```
+
+#### shot
+
+shot 表示 一个会话。 在一个 shot 内， 管理 messages。
+
+```ts title="index.ts"
+hero.room.shot(); // 创建一个 shot
+hero.room.shot("id"); // 切换到对应的shot
+hero.room.current();
+hero.room.clear();
+```

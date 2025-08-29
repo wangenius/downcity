@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { Persistor } from "./Persistor.js";
 import path from "path";
-import { BASE_PATH } from "../../const.js";
+import { BASE_PATH } from "../../cli/const.js";
 import { mkdirSync } from "fs";
 
 export interface SQLitePersistorOptions {
@@ -55,7 +55,7 @@ export class SQLitePersistor<
 
   /**
    * 保存会话
-   * @param session 会话对象
+   * @param shot 会话对象
    */
   insert(id: string, meta: META, data: DATA): void {
     const stmt = this.db.prepare(

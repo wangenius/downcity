@@ -1,22 +1,22 @@
 import { ModelMessage } from "ai";
 import { v4 } from "uuid";
 
-export interface SessionMeta {
+export interface ShotMeta {
   title: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface SessionData {
+export interface ShotData {
   messages: ModelMessage[];
 }
 
-export class Session {
+export class Shot {
   private readonly _id: string;
-  private _data: SessionData;
-  private _meta: SessionMeta;
+  private _data: ShotData;
+  private _meta: ShotMeta;
 
-  constructor(id: string, meta: SessionMeta, data: SessionData) {
+  constructor(id: string, meta: ShotMeta, data: ShotData) {
     this._id = id;
     this._data = data;
     this._meta = meta;
@@ -27,7 +27,7 @@ export class Session {
   }
 
   static create() {
-    return new Session(
+    return new Shot(
       v4(),
       {
         title: "",
@@ -45,7 +45,7 @@ export class Session {
     this._meta.updatedAt = new Date();
   }
 
-  replace(data: SessionData, meta: SessionMeta) {
+  replace(data: ShotData, meta: ShotMeta) {
     this._data = data;
     this._meta = meta;
   }
@@ -58,7 +58,7 @@ export class Session {
     return this._meta.title;
   }
 
-  get meta(): SessionMeta {
+  get meta(): ShotMeta {
     return this._meta;
   }
 
@@ -66,7 +66,7 @@ export class Session {
     return this._data.messages;
   }
 
-  get data(): SessionData {
+  get data(): ShotData {
     return this._data;
   }
 }

@@ -2,13 +2,12 @@
 import { Command } from "commander";
 import pkg from "../../package.json" with { type: "json" };
 import chalk from "chalk";
-import { Hero, Vault } from "../index.js";
+import { Hero, Room } from "../index.js";
 import readline from "readline";
-import { createOpenAI } from "@ai-sdk/openai";
 import { log } from "console";
 import { tool } from "ai";
 import z from "zod";
-import { SQLiteVaultPersistor } from "../vault/Vault.js";
+import { SQLiteRoomPersistor } from "../room/Room.js";
 
 const program = new Command();
 
@@ -42,17 +41,9 @@ program.addCommand(
       return;
     }
 
-    // 创建一个provider
-    const provider = createOpenAI({
-      apiKey: process.env.API_KEY,
-      baseURL: process.env.BASE_URL,
-    });
-    // 一个model chat
-    const model = provider.chat("qwen-turbo");
-
-    // 创建一个vault: 用来控制session
-    const vault = new Vault(
-      new SQLiteVaultPersistor()
+    // 创建一个room: 用来控制shot
+    const room = new Room(
+      new SQLiteRoomPersistor()
     );
 
     const tools = {
@@ -66,10 +57,8 @@ program.addCommand(
     };
 
     const hero = Hero.create()
-      .model(model)
-      .vault(vault)
+      .room(room)
       .study(tools)
-      .avatar("你是一个助手");
 
     const rl = readline.createInterface({
       input: process.stdin,
@@ -79,19 +68,19 @@ program.addCommand(
     const chatLoop = async () => {
       rl.question(chalk.green("You: "), async (input) => {
         if (input.trim() === "ls") {
-          log(hero.sessions());
+          log(hero.shots());
           chatLoop();
           return;
         }
         if (input.trim() === "current") {
-          console.log(hero.session.id);
-          console.log(hero.session.messages);
+          console.log(hero.shot.id);
+          console.log(hero.shot.messages);
           chatLoop();
           return;
         }
         if (input.trim() === "new") {
-          const session = hero.renew();
-          console.log(session);
+          const shot = hero.renew();
+          console.log(shot);
           chatLoop();
           return;
         }
@@ -101,8 +90,8 @@ program.addCommand(
           return;
         }
         if (input.startsWith("switch")) {
-          const sessionId = input.split(" ")[1];
-          hero.switch(sessionId);
+          const shotId = input.split(" ")[1];
+          hero.switch(shotId);
           chatLoop();
           return;
         }

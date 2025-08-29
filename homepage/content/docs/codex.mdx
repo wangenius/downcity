@@ -1,0 +1,262 @@
+---
+title: Codex 类
+description: 向量数据库管理类，用于管理和检索向量化信息
+---
+
+# Codex 类
+
+Codex 类是 DownCity 的核心组件，用于管理和检索向量化信息。它内部使用 LanceDB 进行数据存储，提供了完整的向量数据库功能。
+
+## 基本概念
+
+- **Codex**: 向量数据库管理器，负责连接和管理数据库
+- **Volume**: 数据卷，类似于数据库中的表，用于存储特定类型的向量数据
+- **向量化**: 将文本内容转换为数学向量的过程
+- **相似性搜索**: 基于向量距离查找相似内容
+
+## 快速开始
+
+```typescript
+import { Codex } from '@downcity/codex';
+import { openai } from 'ai';
+
+// 创建 Codex 实例
+const codex = await Codex.create({
+  model: openai.embedding('text-embedding-3-small'),
+  path: './my-vector-db' // 可选，默认存储在用户目录
+});
+
+// 获取或创建一个数据卷
+const volume = await codex.volume('knowledge');
+
+// 存储文本内容
+const id = await volume.embedding('这是一段需要存储的知识内容', {
+  type: 'knowledge',
+  category: 'documentation'
+});
+
+// 搜索相似内容
+const results = await volume.search('查找相关知识', {
+  limit: 5,
+  where: { type: 'knowledge' }
+});
+
+console.log(results);
+
+// 关闭连接
+codex.close();
+```
+
+## API 参考
+
+### 构造函数
+
+#### `Codex.create(config: CodexConfig): Promise<Codex>`
+
+创建并初始化一个 Codex 实例。
+
+**参数:**
+- `config.model` (EmbeddingModel): AI SDK 的嵌入模型实例
+- `config.path` (string, 可选): 数据库存储路径，默认为 `~/.downcity/codex/lancedb`
+
+**返回:** `Promise<Codex>`
+
+**示例:**
+```typescript
+const codex = await Codex.create({
+  model: openai.embedding('text-embedding-3-small'),
+  path: './custom-db-path'
+});
+```
+
+### 实例方法
+
+#### `close(): void`
+
+关闭数据库连接并清理资源。
+
+```typescript
+codex.close();
+```
+
+#### `list(): Promise<string[]>`
+
+列出所有可用的表（volumes）。
+
+**返回:** `Promise<string[]>` - 表名列表
+
+```typescript
+const tables = await codex.list();
+console.log('可用的数据卷:', tables);
+```
+
+#### `hasTable(name: string): Promise<boolean>`
+
+检查指定的表是否存在。
+
+**参数:**
+- `name` (string): 表名
+
+**返回:** `Promise<boolean>`
+
+```typescript
+const exists = await codex.hasTable('knowledge');
+if (exists) {
+  console.log('knowledge 表已存在');
+}
+```
+
+#### `dropTable(name: string): Promise<void>`
+
+删除指定的表。
+
+**参数:**
+- `name` (string): 要删除的表名
+
+```typescript
+await codex.dropTable('old-table');
+```
+
+#### `volume(name?: string): Promise<Volume>`
+
+获取或创建一个 Volume 实例。
+
+**参数:**
+- `name` (string, 可选): Volume 名称，默认为 'default'
+
+**返回:** `Promise<Volume>`
+
+```typescript
+// 获取默认数据卷
+const defaultVolume = await codex.volume();
+
+// 获取命名数据卷
+const knowledgeVolume = await codex.volume('knowledge');
+```
+
+### 索引管理
+
+#### `createIndex(params: CreateIndexParams): Promise<void>`
+
+为指定表创建向量索引以提高搜索性能。
+
+**参数:**
+- `params.tableName` (string): 表名
+- `params.indexName` (string): 索引名
+- `params.dimension` (number): 向量维度
+- `params.metric` (string, 可选): 距离度量方式，支持 'cosine'、'euclidean'、'dotproduct'
+- `params.indexConfig` (IndexConfig, 可选): 高级索引配置
+
+```typescript
+await codex.createIndex({
+  tableName: 'knowledge',
+  indexName: 'vector_idx',
+  dimension: 1536,
+  metric: 'cosine'
+});
+```
+
+#### `listIndexes(tableName: string): Promise<IndexConfig[]>`
+
+列出表的所有索引。
+
+**参数:**
+- `tableName` (string): 表名
+
+**返回:** `Promise<IndexConfig[]>`
+
+```typescript
+const indexes = await codex.listIndexes('knowledge');
+console.log('索引列表:', indexes);
+```
+
+#### `getIndexStats(tableName: string, indexName: string): Promise<IndexStats>`
+
+获取索引统计信息。
+
+**参数:**
+- `tableName` (string): 表名
+- `indexName` (string): 索引名
+
+**返回:** `Promise<IndexStats>`
+
+```typescript
+const stats = await codex.getIndexStats('knowledge', 'vector_idx');
+console.log('索引统计:', stats);
+```
+
+#### `dropIndex(tableName: string, indexName: string): Promise<void>`
+
+删除指定索引。
+
+**参数:**
+- `tableName` (string): 表名
+- `indexName` (string): 索引名
+
+```typescript
+await codex.dropIndex('knowledge', 'vector_idx');
+```
+
+## 类型定义
+
+### CodexConfig
+
+```typescript
+interface CodexConfig {
+  model: EmbeddingModel;  // AI SDK 嵌入模型
+  path?: string;          // 数据库路径
+}
+```
+
+### CreateIndexParams
+
+```typescript
+interface CreateIndexParams {
+  tableName: string;
+  indexName: string;
+  dimension: number;
+  metric?: "cosine" | "euclidean" | "dotproduct";
+  indexConfig?: IndexConfig;
+}
+```
+
+### IndexStats
+
+```typescript
+interface IndexStats {
+  dimension: number;
+  metric?: "cosine" | "euclidean" | "dotproduct";
+  count: number;
+}
+```
+
+## 错误处理
+
+Codex 使用自定义的 `CodexError` 类进行错误处理，所有方法都可能抛出此类型的错误。
+
+```typescript
+try {
+  const codex = await Codex.create({ model });
+  // 使用 codex...
+} catch (error) {
+  if (error instanceof CodexError) {
+    console.error('Codex 错误:', error.message);
+    console.error('错误详情:', error.details);
+  } else {
+    console.error('未知错误:', error);
+  }
+}
+```
+
+## 最佳实践
+
+1. **资源管理**: 始终在使用完毕后调用 `close()` 方法
+2. **索引优化**: 对于大量数据，创建索引可以显著提高搜索性能
+3. **数据组织**: 使用不同的 Volume 来组织不同类型的数据
+4. **元数据设计**: 合理设计元数据结构以支持复杂的过滤查询
+
+## 下一步
+
+- 了解 [Volume 类](./volume) 的详细用法
+- 查看 [错误处理](./error) 指南
+- 探索 [高级用法](./advanced) 示例

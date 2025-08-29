@@ -6,26 +6,26 @@ import {
   stepCountIs,
   ModelMessage,
 } from "ai";
-import { Vault } from "../vault/Vault.js";
-import { createOpenAI } from "@ai-sdk/openai";
+import { Room } from "../room/Room.js";
+import { Shot, ShotMeta } from "../room/Shot.js";
 import z from "zod";
-import { Session, SessionMeta } from "../vault/Session.js";
+import { DEFAULT_MODEL } from "../model/model.js";
 
 export class Hero {
   // 模型
-  private _model: LanguageModel = createOpenAI().chat("gpt-4o");
+  private _model: LanguageModel = DEFAULT_MODEL;
   // 系统提示词
-  private _system: string = "你是一个智能助手";
+  private _system: string = "你是一个DownCity中的英雄。";
   // 工具
   private _tools: Record<string, Tool> = {};
   // 持久记忆库
-  private _vault: Vault;
+  private _room: Room;
   // 会话
-  private _session: Session;
+  private _shot: Shot;
 
   private constructor() {
-    this._vault = new Vault();
-    this._session = this._vault.createSession();
+    this._room = new Room();
+    this._shot = this._room.createShot();
   }
 
   /**
@@ -62,10 +62,10 @@ export class Hero {
   /**
    * 设置记忆系统
    */
-  vault(vault: Vault): Hero {
-    this._vault = vault;
-    // 重新创建session，使用新的vault
-    this._session = this._vault.createSession();
+  room(room: Room): Hero {
+    this._room = room;
+    // 重新创建shot，使用新的room
+    this._shot = this._room.createShot();
     return this;
   }
 
@@ -79,14 +79,14 @@ export class Hero {
         role: "user",
         content: message,
       };
-      this._session.push(userMessage);
+      this._shot.push(userMessage);
       await this.generateTitle(message);
 
       // 调用AI生成回复，传递完整的对话历史以保持上下文记忆
       const result = await generateText({
         model: this._model,
         system: this._system,
-        messages: this._session.messages,
+        messages: this._shot.messages,
         tools: this._tools,
         stopWhen: stepCountIs(5), // 允许最多5步的工具调用
       });
@@ -95,8 +95,8 @@ export class Hero {
         role: "assistant",
         content: result.text,
       };
-      this._session.push(assistantMessage);
-      this._vault.updateSession(this._session);
+      this._shot.push(assistantMessage);
+      this._room.updateShot(this._shot);
 
       return result.text;
     } catch (error) {
@@ -166,26 +166,26 @@ export class Hero {
   /**
    * 新建会话并切换
    */
-  renew(): Session {
-    const newSession = this._vault.createSession();
-    this._session = newSession;
-    return newSession;
+  renew(): Shot {
+    const newShot = this._room.createShot();
+    this._shot = newShot;
+    return newShot;
   }
 
   /**
    * 切换会话
    */
   switch(id: string): boolean {
-    const session = this._vault.getSession(id);
-    if (session) {
-      this._session = session;
+    const shot = this._room.getShot(id);
+    if (shot) {
+      this._shot = shot;
       return true;
     }
     return false;
   }
 
   async generateTitle(userMessage: string) {
-    if (!this._session.title) {
+    if (!this._shot.title) {
       const title = await generateText({
         model: this._model,
         system:
@@ -194,7 +194,7 @@ export class Hero {
       });
 
       if (title.text) {
-        this._session.setTitle(title.text);
+        this._shot.setTitle(title.text);
       }
     }
   }
@@ -202,28 +202,28 @@ export class Hero {
   /**
    * 获取所有会话
    */
-  sessions(): { id: string; meta: SessionMeta }[] {
-    return this._vault.getSessionsList();
+  shots(): { id: string; meta: ShotMeta }[] {
+    return this._room.getShotsList();
   }
 
   /**
    * 删除会话
    */
   remove(id: string): boolean {
-    if (this._session.id === id) {
+    if (this._shot.id === id) {
       // 如果删除的是当前会话，则切换到一个新的会话
       this.renew();
     }
-    return this._vault.deleteSession(id);
+    return this._room.deleteShot(id);
   }
 
   /**
    * 清空所有会話
    */
   clear(): void {
-    this._vault.clear();
+    this._room.clear();
     // 清空后，创建一个新的默认会话
-    this._session = this._vault.createSession();
+    this._shot = this._room.createShot();
   }
 
   // Getters for debugging and inspection
@@ -234,8 +234,8 @@ export class Hero {
   /**
    * 获取当前会话ID
    */
-  get currentSessionId(): string | undefined {
-    return this._session.id;
+  get currentShotId(): string | undefined {
+    return this._shot.id;
   }
 
   get tools(): string[] {
@@ -245,7 +245,7 @@ export class Hero {
   /**
    * 获取当前会话
    */
-  get session(): Session {
-    return this._session;
+  get shot(): Shot {
+    return this._shot;
   }
 }

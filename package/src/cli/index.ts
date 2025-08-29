@@ -31,13 +31,13 @@ program.addCommand(
     console.log("welcome to downcity!");
     console.log("letus punk!");    
 
-    if (!process.env.API_KEY) {
-      console.log(chalk.red("请设置 API_KEY 环境变量"));
+    if (!process.env.DOWNCITY_API_KEY) {
+      console.log(chalk.red("请设置 DOWNCITY_API_KEY 环境变量"));
       return;
     }
 
-    if (!process.env.BASE_URL) {
-      console.log(chalk.red("请设置 BASE_URL 环境变量"));
+    if (!process.env.DOWNCITY_BASE_URL) {
+      console.log(chalk.red("请设置 DOWNCITY_BASE_URL 环境变量"));
       return;
     }
 

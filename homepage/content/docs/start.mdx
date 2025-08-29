@@ -57,6 +57,25 @@ bun run index.ts
 npx ts-node index.ts
 ```
 
+### 英雄
+
+```ts
+const hero = Hero.create();
+
+// 和 hero 在 终端 发起一轮对话
+hero.chat();
+
+// 让 hero 执行某个任务
+const res = await hero.act("你好");
+
+const res = await hero.stream();
+// 流式返回
+const res = await hero.json();
+// json 格式返回
+const res = await hero.text();
+// 文本格式返回
+```
+
 ### 技能
 
 ```typescript
@@ -69,9 +88,7 @@ const res = await hero.chat("现在几点了？");
 console.log(`hero:${res}`);
 ```
 
-### 记忆
-
-#### room
+### 房间
 
 管理会话和短期记忆的组件。 一个房间是一个会话的集合，并且含有一些房间的信息。
 
@@ -95,5 +112,15 @@ shot 表示 一个会话。 在一个 shot 内， 管理 messages。
 hero.room.shot(); // 创建一个 shot
 hero.room.shot("id"); // 切换到对应的shot
 hero.room.current();
-hero.room.clear();
+room.clear();
 ```
+
+### 历史
+
+```ts
+const codex = new Codex();
+
+hero.study(codex);
+```
+
+hero 学习了codex（知识库）

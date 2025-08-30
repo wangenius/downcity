@@ -1,0 +1,481 @@
+---
+title: Create Your First Agent
+description: Step-by-step tutorial to build a complete AI agent with downcity
+---
+
+# Create Your First Agent
+
+In this tutorial, you'll build a complete AI agent that can have conversations, remember information, and learn from a knowledge base. We'll start simple and gradually add more sophisticated features.
+
+## Prerequisites
+
+Before starting, make sure you have:
+- [Installed downcity](/docs/getting-started/installation)
+- [Completed the quick start](/docs/getting-started/quick-start)
+- An OpenAI API key configured
+
+## Step 1: Basic Agent
+
+Let's start with a simple conversational agent.
+
+### Create the Agent File
+
+Create `src/my-first-agent.ts`:
+
+```typescript title="src/my-first-agent.ts"
+import 'dotenv/config';
+import { Hero } from 'downcity';
+
+async function createBasicAgent() {
+  console.log("🤖 Creating your first agent...\n");
+
+  // Create a Hero with a specific personality
+  const hero = Hero.create()
+    .avatar(`You are Alex, a friendly and knowledgeable assistant. 
+             You love helping people learn new things and always respond 
+             with enthusiasm and clear explanations.`);
+
+  return hero;
+}
+
+async function main() {
+  const agent = await createBasicAgent();
+
+  // Have a conversation
+  console.log("Starting conversation...\n");
+  
+  const greeting = await agent.chat("Hi there! What's your name?");
+  console.log("Agent:", greeting);
+  
+  const question = await agent.chat("Can you explain what you can do?");
+  console.log("Agent:", question);
+  
+  const followUp = await agent.chat("That sounds great! What's your favorite programming language?");
+  console.log("Agent:", followUp);
+}
+
+main().catch(console.error);
+```
+
+### Run Your Agent
+
+```bash
+npm run dev
+```
+
+**Expected Output:**
+```
+🤖 Creating your first agent...
+
+Starting conversation...
+
+Agent: Hi! I'm Alex, your friendly assistant! I'm excited to help you with anything you need...
+Agent: I can help you with a wide variety of tasks! I love answering questions, explaining concepts...
+Agent: That's a great question! I really enjoy TypeScript because it brings type safety to JavaScript...
+```
+
+## Step 2: Add Memory Persistence
+
+Now let's give your agent the ability to remember conversations across sessions.
+
+### Update Your Agent
+
+Modify `src/my-first-agent.ts`:
+
+```typescript title="src/my-first-agent.ts"
+import 'dotenv/config';
+import { Hero, SQLitePersistor } from 'downcity';
+
+async function createAgentWithMemory() {
+  console.log("🧠 Creating agent with persistent memory...\n");
+
+  // Create a persistor for memory storage
+  const persistor = new SQLitePersistor('./alex-memory.db');
+
+  // Create Hero with memory
+  const hero = Hero.create()
+    .avatar(`You are Alex, a friendly assistant who remembers previous conversations.
+             Always acknowledge what you remember about the user when appropriate.`)
+    .memory(persistor);
+
+  return hero;
+}
+
+async function demonstrateMemory() {
+  const agent = await createAgentWithMemory();
+
+  console.log("=== First Conversation ===");
+  
+  // First conversation - introduce yourself
+  let response = await agent.chat("Hi Alex! My name is Sarah and I'm learning TypeScript.");
+  console.log("Agent:", response);
+  
+  response = await agent.chat("I'm working on a web application project.");
+  console.log("Agent:", response);
+  
+  console.log("\n=== Simulating New Session ===");
+  
+  // Create a new agent instance (simulating a new session)
+  const newSessionAgent = await createAgentWithMemory();
+  
+  // The agent should remember previous conversation
+  response = await newSessionAgent.chat("Hi Alex, it's me again. Do you remember what I'm working on?");
+  console.log("Agent:", response);
+  
+  response = await newSessionAgent.chat("Can you give me some TypeScript tips for my project?");
+  console.log("Agent:", response);
+}
+
+async function main() {
+  await demonstrateMemory();
+}
+
+main().catch(console.error);
+```
+
+### Test Memory Persistence
+
+Run the agent twice to see memory in action:
+
+```bash
+# First run
+npm run dev
+
+# Wait a moment, then run again
+npm run dev
+```
+
+The agent should remember information from the previous session!
+
+## Step 3: Add Knowledge Base
+
+Let's give your agent access to a knowledge base using Codex.
+
+### Create Knowledge-Enhanced Agent
+
+Create `src/smart-agent.ts`:
+
+```typescript title="src/smart-agent.ts"
+import 'dotenv/config';
+import { Hero, Codex, SQLitePersistor } from 'downcity';
+
+async function setupKnowledgeBase() {
+  console.log("📚 Setting up knowledge base...\n");
+
+  // Create a Codex instance for knowledge storage
+  const codex = Codex.create({
+    tableName: "alex_knowledge"
+  });
+
+  // Add programming knowledge
+  await codex.add("TypeScript is a strongly typed programming language that builds on JavaScript", {
+    category: "programming",
+    topic: "typescript",
+    difficulty: "beginner"
+  });
+
+  await codex.add("React is a JavaScript library for building user interfaces, especially web applications", {
+    category: "programming", 
+    topic: "react",
+    difficulty: "beginner"
+  });
+
+  await codex.add("Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine", {
+    category: "programming",
+    topic: "nodejs", 
+    difficulty: "beginner"
+  });
+
+  await codex.add("Async/await is a syntax that makes it easier to work with promises in JavaScript", {
+    category: "programming",
+    topic: "javascript",
+    difficulty: "intermediate"
+  });
+
+  await codex.add("REST APIs use HTTP methods like GET, POST, PUT, DELETE to perform operations", {
+    category: "programming",
+    topic: "api",
+    difficulty: "intermediate"
+  });
+
+  return codex;
+}
+
+async function createSmartAgent() {
+  console.log("🎓 Creating intelligent agent with knowledge base...\n");
+
+  // Set up knowledge base
+  const codex = await setupKnowledgeBase();
+  
+  // Create memory persistor
+  const persistor = new SQLitePersistor('./smart-alex-memory.db');
+
+  // Create Hero with both memory and knowledge
+  const hero = Hero.create()
+    .avatar(`You are Alex, an expert programming tutor. You have access to a knowledge base
+             and can remember previous conversations. Always provide helpful, accurate information
+             and reference your knowledge when answering questions.`)
+    .memory(persistor)
+    .study(codex);
+
+  return { hero, codex };
+}
+
+async function demonstrateSmartAgent() {
+  const { hero: agent, codex } = await createSmartAgent();
+
+  console.log("=== Testing Knowledge-Based Responses ===\n");
+
+  // Ask questions that will trigger knowledge base searches
+  let response = await agent.chat("Hi Alex! I'm new to web development. Can you explain what TypeScript is?");
+  console.log("Agent:", response);
+  console.log("\n" + "=".repeat(50) + "\n");
+
+  response = await agent.chat("That's helpful! What about React? How does it relate to TypeScript?");
+  console.log("Agent:", response);
+  console.log("\n" + "=".repeat(50) + "\n");
+
+  response = await agent.chat("I want to build a web API. What should I know about REST APIs?");
+  console.log("Agent:", response);
+  console.log("\n" + "=".repeat(50) + "\n");
+
+  response = await agent.chat("Can you remember what I said I'm new to? Give me a learning path.");
+  console.log("Agent:", response);
+
+  // Clean up
+  codex.close();
+}
+
+async function main() {
+  await demonstrateSmartAgent();
+}
+
+main().catch(console.error);
+```
+
+### Run the Smart Agent
+
+```bash
+npx tsx src/smart-agent.ts
+```
+
+**Expected Behavior:**
+- The agent uses knowledge base information to answer questions
+- Responses are more accurate and detailed
+- The agent remembers the conversation context
+- Knowledge is retrieved automatically based on question relevance
+
+## Step 4: Advanced Features
+
+Let's add some advanced features to make your agent even more capable.
+
+### Multi-Session Agent with Skills
+
+Create `src/advanced-agent.ts`:
+
+```typescript title="src/advanced-agent.ts"
+import 'dotenv/config';
+import { Hero, Codex, SQLitePersistor } from 'downcity';
+
+class AdvancedAgent {
+  private hero: Hero;
+  private codex: Codex;
+  private persistor: SQLitePersistor;
+
+  constructor() {
+    this.persistor = new SQLitePersistor('./advanced-agent.db');
+    this.codex = Codex.create({ tableName: "advanced_knowledge" });
+    this.hero = Hero.create();
+  }
+
+  async initialize() {
+    console.log("🚀 Initializing advanced agent...\n");
+
+    // Set up knowledge base with more comprehensive information
+    await this.setupKnowledge();
+
+    // Configure the hero
+    this.hero
+      .avatar(`You are Alex, an advanced AI assistant with the following capabilities:
+               - Expert knowledge in programming and web development
+               - Ability to remember conversations across sessions
+               - Access to a comprehensive knowledge base
+               - Helpful, patient, and encouraging personality
+               
+               Always:
+               - Provide practical, actionable advice
+               - Reference specific examples when helpful
+               - Remember user preferences and previous discussions
+               - Ask clarifying questions when needed`)
+      .memory(this.persistor)
+      .study(this.codex);
+
+    return this;
+  }
+
+  private async setupKnowledge() {
+    const knowledge = [
+      {
+        content: "JavaScript closures allow inner functions to access outer function variables",
+        metadata: { category: "javascript", difficulty: "intermediate", topic: "closures" }
+      },
+      {
+        content: "Git is a distributed version control system for tracking changes in source code",
+        metadata: { category: "tools", difficulty: "beginner", topic: "git" }
+      },
+      {
+        content: "Docker containers package applications with their dependencies for consistent deployment",
+        metadata: { category: "devops", difficulty: "intermediate", topic: "docker" }
+      },
+      {
+        content: "Database indexing improves query performance by creating efficient data structures",
+        metadata: { category: "database", difficulty: "intermediate", topic: "optimization" }
+      }
+    ];
+
+    for (const item of knowledge) {
+      await this.codex.add(item.content, item.metadata);
+    }
+  }
+
+  async chat(message: string): Promise<string> {
+    return await this.hero.chat(message);
+  }
+
+  async startNewSession(): Promise<void> {
+    // Create a new shot (conversation session)
+    this.hero.newShot();
+    console.log(`📝 Started new session: ${this.hero.getCurrentShotId()}\n`);
+  }
+
+  async listSessions(): Promise<void> {
+    const sessions = this.hero.getAllShots();
+    console.log("📋 Available sessions:");
+    sessions.forEach(session => {
+      console.log(`  - ${session.id}: ${session.meta.title || 'Untitled'}`);
+    });
+    console.log();
+  }
+
+  cleanup(): void {
+    this.codex.close();
+  }
+}
+
+async function demonstrateAdvancedFeatures() {
+  const agent = await new AdvancedAgent().initialize();
+
+  console.log("=== Session 1: Learning JavaScript ===\n");
+  
+  let response = await agent.chat("Hi Alex! I'm learning JavaScript and I keep hearing about closures. Can you explain them?");
+  console.log("Agent:", response);
+  console.log("\n" + "=".repeat(50) + "\n");
+
+  response = await agent.chat("Can you give me a practical example of when I'd use closures?");
+  console.log("Agent:", response);
+  console.log("\n" + "=".repeat(50) + "\n");
+
+  // Start a new session
+  await agent.startNewSession();
+  console.log("=== Session 2: Development Tools ===\n");
+
+  response = await agent.chat("Now I want to learn about development tools. What's Git and why should I use it?");
+  console.log("Agent:", response);
+  console.log("\n" + "=".repeat(50) + "\n");
+
+  response = await agent.chat("Do you remember what I was learning about before? Can you connect Git to that topic?");
+  console.log("Agent:", response);
+  console.log("\n" + "=".repeat(50) + "\n");
+
+  // List all sessions
+  await agent.listSessions();
+
+  agent.cleanup();
+}
+
+async function main() {
+  await demonstrateAdvancedFeatures();
+}
+
+main().catch(console.error);
+```
+
+## Understanding Your Agent
+
+### Architecture Overview
+
+Your agent now has three key components:
+
+1. **Hero**: The main AI agent that handles conversations
+2. **Room/Shot**: Memory management system
+   - **Shot**: Current conversation context
+   - **Room**: Persistent memory across sessions
+3. **Codex**: Knowledge base for information retrieval
+
+### Memory Hierarchy
+
+```
+Shot (Current conversation)
+  ↓
+Room (Session memory)  
+  ↓
+Codex (Long-term knowledge)
+```
+
+### Data Flow
+
+1. User sends message
+2. Hero processes message with current Shot context
+3. Hero searches Codex for relevant knowledge
+4. Hero generates response using context + knowledge
+5. Conversation is saved to Room for persistence
+
+## Next Steps
+
+Congratulations! You've built a sophisticated AI agent. Here's what you can explore next:
+
+### Immediate Improvements
+- Add error handling and retry logic
+- Implement conversation summarization
+- Add user preference learning
+- Create specialized agent personalities
+
+### Advanced Features
+- Multi-agent coordination
+- Custom skill development
+- Integration with external APIs
+- Real-time conversation streaming
+
+### Learn More
+- [Core Concepts](/docs/core-concepts) - Deep dive into the architecture
+- [Memory Management Guide](/docs/guides/memory-management) - Advanced memory patterns
+- [API Reference](/docs/api-reference) - Complete method documentation
+- [Examples](/docs/examples) - More complex implementations
+
+## Troubleshooting
+
+### Common Issues
+
+**Agent doesn't remember across sessions:**
+- Check that SQLitePersistor is properly configured
+- Verify the database file is being created
+- Ensure you're using the same persistor instance
+
+**Knowledge base not working:**
+- Confirm Codex is properly initialized
+- Check that knowledge was added successfully
+- Verify the agent is configured with `.study(codex)`
+
+**Slow responses:**
+- Consider using faster models for development
+- Implement response caching
+- Optimize knowledge base queries
+
+### Performance Tips
+
+- Use appropriate model sizes for your use case
+- Implement conversation summarization for long sessions
+- Clean up old sessions periodically
+- Monitor API usage and costs
+
+Your first agent is now complete and ready for real-world use!

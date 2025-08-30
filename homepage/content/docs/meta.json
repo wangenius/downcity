@@ -1,0 +1,12 @@
+{
+  "title": "Documentation",
+  "description": "Complete guide to building intelligent AI agents",
+  "pages": [
+    "index",
+    "getting-started",
+    "core-concepts",
+    "guides",
+    "api-reference",
+    "examples"
+  ]
+}

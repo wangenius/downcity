@@ -1,0 +1,11 @@
+{
+  "title": "Getting Started",
+  "description": "Install downcity and create your first AI agent",
+  "icon": "🚀",
+  "pages": [
+    "index",
+    "installation",
+    "quick-start",
+    "first-agent"
+  ]
+}

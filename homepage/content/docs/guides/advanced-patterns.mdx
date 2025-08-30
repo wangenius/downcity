@@ -1,0 +1,412 @@
+---
+title: Advanced Patterns
+description: Complex implementation patterns and enterprise-scale architectures with downcity
+---
+
+# Advanced Patterns
+
+This guide explores sophisticated implementation patterns for building enterprise-scale AI systems with downcity. Learn how to implement multi-agent coordination, distributed architectures, and advanced AI workflows.
+
+## Multi-Agent Systems
+
+### Agent Coordination
+
+Build systems where multiple AI agents work together:
+
+```typescript
+interface AgentRole {
+  name: string;
+  avatar: string;
+  capabilities: string[];
+  priority: number;
+}
+
+class MultiAgentCoordinator {
+  private agents: Map<string, Hero> = new Map();
+  private taskQueue: Array<{
+    id: string;
+    task: string;
+    requiredCapabilities: string[];
+    priority: number;
+    assignedTo?: string;
+  }> = [];
+  private sharedMemory: Room;
+  private sharedKnowledge: Codex;
+
+  constructor() {
+    // Shared resources for all agents
+    this.sharedMemory = new Room(new SQLitePersistor('./multi-agent-memory.db'));
+    this.sharedKnowledge = Codex.create({ tableName: "shared_knowledge" });
+  }
+
+  async createAgent(role: AgentRole): Promise<string> {
+    const agentId = `agent_${role.name.toLowerCase()}_${Date.now()}`;
+    
+    const agent = Hero.create()
+      .avatar(`${role.avatar}
+               
+               Your capabilities: ${role.capabilities.join(', ')}
+               Your role: ${role.name}
+               Priority level: ${role.priority}
+               
+               You work as part of a multi-agent system. When you receive tasks:
+               1. Assess if you have the required capabilities
+               2. If not capable, suggest which agent type should handle it
+               3. Share relevant information with other agents through shared memory
+               4. Coordinate with other agents when needed`)
+      .memory(this.sharedMemory)
+      .study(this.sharedKnowledge);
+
+    this.agents.set(agentId, agent);
+    
+    // Announce new agent to the system
+    await agent.chat(`I am ${role.name} joining the multi-agent system. My capabilities are: ${role.capabilities.join(', ')}`);
+    
+    console.log(`Created agent: ${role.name} (${agentId})`);
+    return agentId;
+  }
+
+  async assignTask(task: string, requiredCapabilities: string[], priority = 1): Promise<{
+    taskId: string;
+    assignedAgent?: string;
+    status: 'assigned' | 'queued' | 'no_capable_agent';
+  }> {
+    const taskId = `task_${Date.now()}`;
+    
+    // Find capable agent
+    const capableAgent = this.findCapableAgent(requiredCapabilities);
+    
+    if (capableAgent) {
+      const result = await this.executeTask(capableAgent, task, taskId);
+      return {
+        taskId,
+        assignedAgent: capableAgent,
+        status: 'assigned'
+      };
+    } else {
+      // Queue task for later
+      this.taskQueue.push({
+        id: taskId,
+        task,
+        requiredCapabilities,
+        priority,
+      });
+      
+      return {
+        taskId,
+        status: this.agents.size > 0 ? 'queued' : 'no_capable_agent'
+      };
+    }
+  }
+
+  private findCapableAgent(requiredCapabilities: string[]): string | null {
+    for (const [agentId, agent] of this.agents) {
+      // In practice, store agent capabilities in metadata
+      const agentCapabilities = this.getAgentCapabilities(agentId);
+      
+      const hasAllCapabilities = requiredCapabilities.every(cap =>
+        agentCapabilities.some(agentCap => 
+          agentCap.toLowerCase().includes(cap.toLowerCase())
+        )
+      );
+      
+      if (hasAllCapabilities) {
+        return agentId;
+      }
+    }
+    return null;
+  }
+
+  private getAgentCapabilities(agentId: string): string[] {
+    // In practice, store this in agent metadata
+    const capabilityMap: Record<string, string[]> = {
+      'researcher': ['research', 'analysis', 'data_gathering'],
+      'writer': ['writing', 'editing', 'content_creation'],
+      'coder': ['programming', 'debugging', 'code_review'],
+      'analyst': ['analysis', 'reporting', 'data_interpretation']
+    };
+    
+    const agentType = agentId.split('_')[1];
+    return capabilityMap[agentType] || [];
+  }
+
+  private async executeTask(agentId: string, task: string, taskId: string): Promise<string> {
+    const agent = this.agents.get(agentId);
+    if (!agent) throw new Error(`Agent ${agentId} not found`);
+
+    // Create task context
+    const taskContext = `Task ID: ${taskId}
+Task: ${task}
+
+Please complete this task and report your results. If you need help from other agents, mention their required capabilities.`;
+
+    const response = await agent.chat(taskContext);
+    
+    // Check if agent needs help from others
+    if (this.needsCollaboration(response)) {
+      return await this.handleCollaboration(agentId, task, response);
+    }
+    
+    return response;
+  }
+
+  private needsCollaboration(response: string): boolean {
+    const collaborationKeywords = [
+      'need help', 'require assistance', 'another agent', 
+      'collaborate', 'work together', 'need someone'
+    ];
+    
+    return collaborationKeywords.some(keyword => 
+      response.toLowerCase().includes(keyword)
+    );
+  }
+
+  private async handleCollaboration(initiatorId: string, originalTask: string, response: string): Promise<string> {
+    // Extract required capabilities from response
+    const requiredCapabilities = this.extractRequiredCapabilities(response);
+    
+    // Find collaborating agent
+    const collaboratorId = this.findCapableAgent(requiredCapabilities);
+    
+    if (collaboratorId && collaboratorId !== initiatorId) {
+      const collaborator = this.agents.get(collaboratorId);
+      const initiator = this.agents.get(initiatorId);
+      
+      if (collaborator && initiator) {
+        // Facilitate collaboration
+        const collaborationRequest = `Collaboration request from ${initiatorId}:
+Original task: ${originalTask}
+Their response: ${response}
+
+Please provide assistance with your expertise in: ${requiredCapabilities.join(', ')}`;
+
+        const collaboratorResponse = await collaborator.chat(collaborationRequest);
+        
+        // Send collaborator's response back to initiator
+        const finalResponse = await initiator.chat(`Collaboration response: ${collaboratorResponse}
+
+Please integrate this assistance and provide the final result for the original task.`);
+
+        return finalResponse;
+      }
+    }
+    
+    return response; // Return original if no collaboration possible
+  }
+
+  private extractRequiredCapabilities(response: string): string[] {
+    // Simple extraction - in practice, use NLP
+    const capabilityKeywords = ['research', 'writing', 'programming', 'analysis', 'design'];
+    
+    return capabilityKeywords.filter(capability =>
+      response.toLowerCase().includes(capability)
+    );
+  }
+
+  async getSystemStatus(): Promise<{
+    agents: number;
+    queuedTasks: number;
+    completedTasks: number;
+    activeCollaborations: number;
+  }> {
+    return {
+      agents: this.agents.size,
+      queuedTasks: this.taskQueue.length,
+      completedTasks: 0, // Track in practice
+      activeCollaborations: 0 // Track in practice
+    };
+  }
+
+  cleanup() {
+    this.sharedKnowledge.close();
+  }
+}
+
+// Usage
+const coordinator = new MultiAgentCoordinator();
+
+// Create specialized agents
+const researcherId = await coordinator.createAgent({
+  name: 'Researcher',
+  avatar: 'You are a research specialist who excels at gathering and analyzing information.',
+  capabilities: ['research', 'analysis', 'data_gathering'],
+  priority: 1
+});
+
+const writerId = await coordinator.createAgent({
+  name: 'Writer',
+  avatar: 'You are a content creation specialist who excels at writing and editing.',
+  capabilities: ['writing', 'editing', 'content_creation'],
+  priority: 1
+});
+
+// Assign tasks
+const task1 = await coordinator.assignTask(
+  "Research the latest trends in AI and write a summary report",
+  ['research', 'writing'],
+  2
+);
+
+console.log("Task assignment:", task1);
+```
+
+## Distributed Architecture
+
+### Microservices Pattern
+
+Implement downcity agents as microservices:
+
+```typescript
+import express from 'express';
+
+interface ServiceConfig {
+  name: string;
+  port: number;
+  capabilities: string[];
+  dependencies: string[];
+}
+
+class AgentMicroservice {
+  private app: express.Application;
+  private hero: Hero;
+  private config: ServiceConfig;
+
+  constructor(config: ServiceConfig) {
+    this.config = config;
+    this.app = express();
+    this.setupMiddleware();
+    this.setupRoutes();
+  }
+
+  async initialize() {
+    const codex = Codex.create({ tableName: `${this.config.name}_knowledge` });
+    const persistor = new SQLitePersistor(`./services/${this.config.name}-memory.db`);
+    
+    this.hero = Hero.create()
+      .avatar(`You are a microservice agent named ${this.config.name}.
+               Your capabilities: ${this.config.capabilities.join(', ')}`)
+      .memory(persistor)
+      .study(codex);
+
+    console.log(`${this.config.name} microservice initialized`);
+  }
+
+  private setupMiddleware() {
+    this.app.use(express.json());
+  }
+
+  private setupRoutes() {
+    this.app.get('/health', (req, res) => {
+      res.json({
+        service: this.config.name,
+        status: 'healthy',
+        capabilities: this.config.capabilities
+      });
+    });
+
+    this.app.post('/process', async (req, res) => {
+      try {
+        const { message } = req.body;
+        const response = await this.hero.chat(message);
+        res.json({ success: true, response });
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+  }
+
+  start() {
+    this.app.listen(this.config.port, () => {
+      console.log(`${this.config.name} running on port ${this.config.port}`);
+    });
+  }
+}
+```
+
+## Performance Optimization
+
+### Intelligent Caching
+
+```typescript
+class IntelligentAICache {
+  private cache: Map<string, any> = new Map();
+  private maxSize: number;
+  private hitRatio: number = 0;
+
+  constructor(maxSize = 1000) {
+    this.maxSize = maxSize;
+  }
+
+  generateKey(input: string): string {
+    // Create semantic key
+    const normalizedInput = input.toLowerCase().trim();
+    return this.createSemanticHash(normalizedInput);
+  }
+
+  private createSemanticHash(text: string): string {
+    const words = text.split(/\W+/).filter(w => w.length > 2);
+    const sortedWords = words.sort();
+    return sortedWords.slice(0, 10).join('_');
+  }
+
+  async get(key: string): Promise<string | null> {
+    const entry = this.cache.get(key);
+    return entry ? entry.value : null;
+  }
+
+  async set(key: string, value: string): Promise<void> {
+    if (this.cache.size >= this.maxSize) {
+      this.evictLeastUsed();
+    }
+    
+    this.cache.set(key, {
+      value,
+      timestamp: new Date(),
+      hits: 0
+    });
+  }
+
+  private evictLeastUsed(): void {
+    let leastUsedKey = '';
+    let leastHits = Infinity;
+    
+    for (const [key, entry] of this.cache) {
+      if (entry.hits < leastHits) {
+        leastHits = entry.hits;
+        leastUsedKey = key;
+      }
+    }
+    
+    if (leastUsedKey) {
+      this.cache.delete(leastUsedKey);
+    }
+  }
+}
+```
+
+## Best Practices Summary
+
+### 1. Architecture Design
+- **Modular Components**: Design loosely coupled, reusable components
+- **Scalability Planning**: Plan for horizontal and vertical scaling
+- **Error Resilience**: Implement comprehensive error handling
+- **Monitoring**: Add extensive logging and monitoring
+
+### 2. Performance Optimization
+- **Intelligent Caching**: Cache responses based on semantic similarity
+- **Load Balancing**: Distribute requests across multiple instances
+- **Resource Management**: Monitor memory and CPU usage
+- **Async Processing**: Use asynchronous patterns
+
+### 3. Multi-Agent Coordination
+- **Clear Responsibilities**: Define clear roles for each agent
+- **Communication Protocols**: Establish standard patterns
+- **Conflict Resolution**: Handle conflicts gracefully
+- **Shared Resources**: Manage shared memory efficiently
+
+## Next Steps
+
+- [API Reference](/docs/api-reference) - Complete API documentation
+- [Examples](/docs/examples) - Practical implementation examples
+- [Building a Chatbot](/docs/guides/building-chatbot) - Practical chatbot implementation
+- [Memory Management](/docs/guides/memory-management) - Advanced memory strategies

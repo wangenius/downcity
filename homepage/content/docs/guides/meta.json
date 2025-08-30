@@ -1,0 +1,11 @@
+{
+  "title": "Guides",
+  "description": "Step-by-step guides for building real-world applications",
+  "icon": "📚",
+  "pages": [
+    "building-chatbot",
+    "memory-management",
+    "knowledge-integration",
+    "advanced-patterns"
+  ]
+}

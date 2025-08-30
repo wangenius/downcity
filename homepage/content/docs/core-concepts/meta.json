@@ -1,0 +1,13 @@
+{
+  "title": "Core Concepts",
+  "description": "Understand the fundamental components of downcity",
+  "icon": "🧠",
+  "pages": [
+    "overview",
+    "hero",
+    "memory-system",
+    "room",
+    "shot",
+    "codex"
+  ]
+}

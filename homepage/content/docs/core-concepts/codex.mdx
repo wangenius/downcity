@@ -1,0 +1,823 @@
+---
+title: Codex - Knowledge Base
+description: Understanding the Codex component for vector-based knowledge storage and retrieval
+---
+
+# Codex - Knowledge Base
+
+The **Codex** is downcity's intelligent knowledge storage and retrieval system. It uses vector embeddings to store information semantically, enabling AI agents to find and use relevant knowledge through natural language queries. Think of it as the "long-term memory" and "knowledge library" of your AI agent.
+
+## What is a Codex?
+
+A Codex provides:
+- **Semantic Storage**: Store information with vector embeddings for semantic similarity
+- **Intelligent Retrieval**: Find relevant information using natural language queries
+- **Metadata Filtering**: Organize and filter knowledge with rich metadata
+- **RAG Integration**: Enable Retrieval Augmented Generation for AI agents
+- **Knowledge Management**: Add, update, and organize domain-specific information
+
+## Basic Usage
+
+### Creating a Codex
+
+```typescript
+import { Codex } from 'downcity';
+
+// Create a basic codex
+const codex = Codex.create({
+  tableName: "my_knowledge"
+});
+
+// Create with custom configuration
+const advancedCodex = Codex.create({
+  tableName: "advanced_knowledge",
+  model: "text-embedding-ada-002",
+  dimensions: 1536
+});
+```
+
+### Adding Knowledge
+
+```typescript
+// Add simple knowledge
+await codex.add("TypeScript is a typed superset of JavaScript");
+
+// Add knowledge with metadata
+await codex.add("React is a JavaScript library for building user interfaces", {
+  category: "programming",
+  topic: "react",
+  difficulty: "beginner",
+  source: "documentation"
+});
+
+// Add multiple pieces of knowledge
+const knowledge = [
+  {
+    content: "Node.js is a JavaScript runtime built on Chrome's V8 engine",
+    metadata: { category: "backend", topic: "nodejs", difficulty: "beginner" }
+  },
+  {
+    content: "Express.js is a minimal web framework for Node.js",
+    metadata: { category: "backend", topic: "express", difficulty: "intermediate" }
+  }
+];
+
+for (const item of knowledge) {
+  await codex.add(item.content, item.metadata);
+}
+```
+
+### Searching Knowledge
+
+```typescript
+// Simple search
+const results = await codex.search("What is TypeScript?");
+console.log("Found:", results.length, "results");
+
+results.forEach(result => {
+  console.log("Content:", result.content);
+  console.log("Relevance:", result.distance);
+  console.log("Metadata:", result.metadata);
+});
+
+// Advanced search with options
+const advancedResults = await codex.search("JavaScript frameworks", {
+  limit: 5,
+  distanceThreshold: 0.8,
+  metadata: { category: "programming" }
+});
+```
+
+## Core Methods
+
+### `add(content: string, metadata?: Record<string, any>): Promise<void>`
+
+Adds knowledge to the codex:
+
+```typescript
+// Basic addition
+await codex.add("Python is a high-level programming language");
+
+// With metadata
+await codex.add("Django is a Python web framework", {
+  category: "web_development",
+  language: "python",
+  type: "framework",
+  difficulty: "intermediate",
+  popularity: "high"
+});
+
+// With rich metadata
+await codex.add("Machine learning is a subset of artificial intelligence", {
+  category: "ai_ml",
+  subcategory: "machine_learning",
+  concepts: ["supervised_learning", "unsupervised_learning"],
+  prerequisites: ["statistics", "programming"],
+  difficulty: "advanced",
+  last_updated: new Date().toISOString()
+});
+```
+
+### `search(query: string, options?: SearchOptions): Promise<SearchResult[]>`
+
+Searches for relevant knowledge:
+
+```typescript
+// Basic search
+const results = await codex.search("web development frameworks");
+
+// Search with limit
+const limitedResults = await codex.search("database concepts", {
+  limit: 3
+});
+
+// Search with distance threshold
+const preciseResults = await codex.search("TypeScript interfaces", {
+  distanceThreshold: 0.7 // Only very relevant results
+});
+
+// Search with metadata filtering
+const filteredResults = await codex.search("programming concepts", {
+  limit: 10,
+  metadata: {
+    difficulty: "beginner",
+    category: "programming"
+  }
+});
+```
+
+### `close(): void`
+
+Closes the codex connection:
+
+```typescript
+// Always close when done
+codex.close();
+
+// Or use try-finally
+try {
+  await codex.add("Some knowledge");
+  const results = await codex.search("query");
+} finally {
+  codex.close();
+}
+```
+
+## Configuration Options
+
+### Codex Creation Options
+
+```typescript
+interface CodexOptions {
+  tableName: string;           // Table name for storage
+  model?: string;              // Embedding model to use
+  dimensions?: number;         // Vector dimensions
+  distanceMetric?: string;     // Distance calculation method
+}
+
+const codex = Codex.create({
+  tableName: "specialized_knowledge",
+  model: "text-embedding-ada-002",
+  dimensions: 1536,
+  distanceMetric: "cosine"
+});
+```
+
+### Search Options
+
+```typescript
+interface SearchOptions {
+  limit?: number;                    // Maximum results to return
+  distanceThreshold?: number;        // Minimum similarity threshold
+  metadata?: Record<string, any>;    // Metadata filters
+}
+
+const results = await codex.search("query", {
+  limit: 5,
+  distanceThreshold: 0.8,
+  metadata: { 
+    category: "programming",
+    difficulty: ["beginner", "intermediate"]
+  }
+});
+```
+
+## Advanced Usage Patterns
+
+### Knowledge Organization
+
+Organize knowledge with hierarchical metadata:
+
+```typescript
+class OrganizedCodex {
+  private codex: Codex;
+
+  constructor(tableName: string) {
+    this.codex = Codex.create({ tableName });
+  }
+
+  async addProgrammingConcept(
+    content: string, 
+    language: string, 
+    topic: string, 
+    difficulty: 'beginner' | 'intermediate' | 'advanced'
+  ) {
+    await this.codex.add(content, {
+      category: 'programming',
+      language: language.toLowerCase(),
+      topic: topic.toLowerCase(),
+      difficulty,
+      domain: 'software_development',
+      added_at: new Date().toISOString()
+    });
+  }
+
+  async addBusinessConcept(
+    content: string,
+    department: string,
+    priority: 'low' | 'medium' | 'high'
+  ) {
+    await this.codex.add(content, {
+      category: 'business',
+      department: department.toLowerCase(),
+      priority,
+      domain: 'business_operations',
+      added_at: new Date().toISOString()
+    });
+  }
+
+  async searchByDomain(query: string, domain: string) {
+    return await this.codex.search(query, {
+      metadata: { domain },
+      limit: 10
+    });
+  }
+
+  async searchByDifficulty(query: string, difficulty: string) {
+    return await this.codex.search(query, {
+      metadata: { difficulty },
+      limit: 10
+    });
+  }
+
+  close() {
+    this.codex.close();
+  }
+}
+
+// Usage
+const organizedCodex = new OrganizedCodex("organized_knowledge");
+
+await organizedCodex.addProgrammingConcept(
+  "Async/await makes asynchronous code look synchronous",
+  "JavaScript",
+  "asynchronous_programming",
+  "intermediate"
+);
+
+await organizedCodex.addBusinessConcept(
+  "Customer retention is more cost-effective than acquisition",
+  "marketing",
+  "high"
+);
+
+const programmingResults = await organizedCodex.searchByDomain(
+  "asynchronous programming",
+  "software_development"
+);
+```
+
+### Document Processing
+
+Process and store large documents:
+
+```typescript
+class DocumentProcessor {
+  private codex: Codex;
+  private chunkSize: number;
+
+  constructor(tableName: string, chunkSize = 500) {
+    this.codex = Codex.create({ tableName });
+    this.chunkSize = chunkSize;
+  }
+
+  async processDocument(
+    content: string, 
+    metadata: {
+      title: string;
+      author?: string;
+      source?: string;
+      type: string;
+    }
+  ) {
+    const chunks = this.chunkDocument(content);
+    
+    for (let i = 0; i < chunks.length; i++) {
+      await this.codex.add(chunks[i], {
+        ...metadata,
+        chunk_index: i,
+        total_chunks: chunks.length,
+        chunk_id: `${metadata.title}_chunk_${i}`,
+        processed_at: new Date().toISOString()
+      });
+    }
+
+    console.log(`Processed document "${metadata.title}" into ${chunks.length} chunks`);
+  }
+
+  private chunkDocument(content: string): string[] {
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    for (const sentence of sentences) {
+      if (currentChunk.length + sentence.length > this.chunkSize) {
+        if (currentChunk) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+        }
+      }
+      currentChunk += sentence + '. ';
+    }
+
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
+    }
+
+    return chunks;
+  }
+
+  async searchDocument(query: string, documentTitle: string) {
+    return await this.codex.search(query, {
+      metadata: { title: documentTitle },
+      limit: 5
+    });
+  }
+
+  async searchByType(query: string, type: string) {
+    return await this.codex.search(query, {
+      metadata: { type },
+      limit: 10
+    });
+  }
+
+  close() {
+    this.codex.close();
+  }
+}
+
+// Usage
+const processor = new DocumentProcessor("document_knowledge");
+
+const documentContent = `
+TypeScript is a programming language developed by Microsoft. 
+It is a strict syntactical superset of JavaScript and adds optional static type checking.
+TypeScript is designed for the development of large applications and transpiles to JavaScript.
+`;
+
+await processor.processDocument(documentContent, {
+  title: "TypeScript Overview",
+  author: "Microsoft",
+  source: "official_documentation",
+  type: "technical_documentation"
+});
+
+const results = await processor.searchDocument(
+  "What is TypeScript?",
+  "TypeScript Overview"
+);
+```
+
+### Knowledge Validation and Quality Control
+
+Implement quality control for knowledge additions:
+
+```typescript
+class QualityControlledCodex {
+  private codex: Codex;
+  private minContentLength = 10;
+  private maxContentLength = 2000;
+  private requiredFields = ['category', 'topic'];
+
+  constructor(tableName: string) {
+    this.codex = Codex.create({ tableName });
+  }
+
+  async addValidatedKnowledge(
+    content: string, 
+    metadata: Record<string, any>
+  ): Promise<boolean> {
+    // Validate content
+    if (!this.validateContent(content)) {
+      console.error("Content validation failed");
+      return false;
+    }
+
+    // Validate metadata
+    if (!this.validateMetadata(metadata)) {
+      console.error("Metadata validation failed");
+      return false;
+    }
+
+    // Check for duplicates
+    const isDuplicate = await this.checkForDuplicates(content);
+    if (isDuplicate) {
+      console.warn("Duplicate content detected, skipping");
+      return false;
+    }
+
+    // Add quality score
+    const qualityScore = this.calculateQualityScore(content, metadata);
+    const enhancedMetadata = {
+      ...metadata,
+      quality_score: qualityScore,
+      validated: true,
+      added_at: new Date().toISOString()
+    };
+
+    await this.codex.add(content, enhancedMetadata);
+    console.log(`Added knowledge with quality score: ${qualityScore}`);
+    return true;
+  }
+
+  private validateContent(content: string): boolean {
+    if (content.length < this.minContentLength) {
+      console.error(`Content too short: ${content.length} < ${this.minContentLength}`);
+      return false;
+    }
+
+    if (content.length > this.maxContentLength) {
+      console.error(`Content too long: ${content.length} > ${this.maxContentLength}`);
+      return false;
+    }
+
+    // Check for meaningful content
+    const words = content.split(/\s+/).filter(word => word.length > 2);
+    if (words.length < 3) {
+      console.error("Content lacks meaningful words");
+      return false;
+    }
+
+    return true;
+  }
+
+  private validateMetadata(metadata: Record<string, any>): boolean {
+    for (const field of this.requiredFields) {
+      if (!metadata[field]) {
+        console.error(`Missing required field: ${field}`);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private async checkForDuplicates(content: string): Promise<boolean> {
+    const results = await this.codex.search(content, {
+      limit: 1,
+      distanceThreshold: 0.95 // Very high similarity threshold
+    });
+
+    return results.length > 0;
+  }
+
+  private calculateQualityScore(content: string, metadata: Record<string, any>): number {
+    let score = 0.5; // Base score
+
+    // Content quality factors
+    const words = content.split(/\s+/);
+    if (words.length > 20) score += 0.1;
+    if (words.length > 50) score += 0.1;
+
+    // Metadata richness
+    const metadataKeys = Object.keys(metadata);
+    if (metadataKeys.length > 3) score += 0.1;
+    if (metadataKeys.length > 5) score += 0.1;
+
+    // Specific quality indicators
+    if (metadata.source) score += 0.1;
+    if (metadata.difficulty) score += 0.05;
+    if (metadata.examples) score += 0.1;
+
+    return Math.min(1.0, score);
+  }
+
+  async getHighQualityKnowledge(query: string, minQuality = 0.7) {
+    const allResults = await this.codex.search(query, { limit: 20 });
+    
+    return allResults.filter(result => 
+      result.metadata.quality_score >= minQuality
+    );
+  }
+
+  close() {
+    this.codex.close();
+  }
+}
+
+// Usage
+const qualityCodex = new QualityControlledCodex("quality_knowledge");
+
+const success = await qualityCodex.addValidatedKnowledge(
+  "React hooks allow you to use state and lifecycle features in functional components",
+  {
+    category: "programming",
+    topic: "react",
+    difficulty: "intermediate",
+    source: "official_docs",
+    examples: true
+  }
+);
+
+if (success) {
+  const highQualityResults = await qualityCodex.getHighQualityKnowledge(
+    "React hooks",
+    0.8
+  );
+  console.log("High quality results:", highQualityResults.length);
+}
+```
+
+### Knowledge Analytics
+
+Analyze and monitor your knowledge base:
+
+```typescript
+class CodexAnalytics {
+  private codex: Codex;
+
+  constructor(codex: Codex) {
+    this.codex = codex;
+  }
+
+  async getKnowledgeStats() {
+    // This would require additional methods in the actual Codex implementation
+    // For demonstration purposes, we'll show the concept
+    
+    const sampleResults = await this.codex.search("", { limit: 1000 });
+    
+    const stats = {
+      totalEntries: sampleResults.length,
+      categories: this.analyzeCategoriesFromResults(sampleResults),
+      averageContentLength: this.calculateAverageLength(sampleResults),
+      topTopics: this.getTopTopics(sampleResults),
+      qualityDistribution: this.analyzeQuality(sampleResults)
+    };
+
+    return stats;
+  }
+
+  private analyzeCategoriesFromResults(results: any[]) {
+    const categories = new Map<string, number>();
+    
+    results.forEach(result => {
+      const category = result.metadata?.category || 'uncategorized';
+      categories.set(category, (categories.get(category) || 0) + 1);
+    });
+
+    return Object.fromEntries(categories);
+  }
+
+  private calculateAverageLength(results: any[]): number {
+    if (results.length === 0) return 0;
+    
+    const totalLength = results.reduce((sum, result) => 
+      sum + result.content.length, 0
+    );
+    
+    return totalLength / results.length;
+  }
+
+  private getTopTopics(results: any[], limit = 10) {
+    const topics = new Map<string, number>();
+    
+    results.forEach(result => {
+      const topic = result.metadata?.topic;
+      if (topic) {
+        topics.set(topic, (topics.get(topic) || 0) + 1);
+      }
+    });
+
+    return Array.from(topics.entries())
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, limit)
+      .map(([topic, count]) => ({ topic, count }));
+  }
+
+  private analyzeQuality(results: any[]) {
+    const qualityRanges = {
+      high: 0,    // 0.8+
+      medium: 0,  // 0.5-0.8
+      low: 0      // <0.5
+    };
+
+    results.forEach(result => {
+      const quality = result.metadata?.quality_score || 0.5;
+      
+      if (quality >= 0.8) qualityRanges.high++;
+      else if (quality >= 0.5) qualityRanges.medium++;
+      else qualityRanges.low++;
+    });
+
+    return qualityRanges;
+  }
+
+  async findKnowledgeGaps(topics: string[]) {
+    const gaps = [];
+    
+    for (const topic of topics) {
+      const results = await this.codex.search(topic, { limit: 5 });
+      
+      if (results.length < 3) {
+        gaps.push({
+          topic,
+          currentEntries: results.length,
+          needsMoreContent: true
+        });
+      }
+    }
+
+    return gaps;
+  }
+
+  async suggestRelatedTopics(topic: string) {
+    const results = await this.codex.search(topic, { limit: 20 });
+    const relatedTopics = new Set<string>();
+
+    results.forEach(result => {
+      const metadata = result.metadata;
+      if (metadata.topic && metadata.topic !== topic) {
+        relatedTopics.add(metadata.topic);
+      }
+      if (metadata.tags) {
+        metadata.tags.forEach((tag: string) => relatedTopics.add(tag));
+      }
+    });
+
+    return Array.from(relatedTopics).slice(0, 10);
+  }
+}
+
+// Usage
+const analytics = new CodexAnalytics(codex);
+
+const stats = await analytics.getKnowledgeStats();
+console.log("Knowledge Base Statistics:", stats);
+
+const gaps = await analytics.findKnowledgeGaps([
+  'typescript', 'react', 'nodejs', 'python', 'machine_learning'
+]);
+console.log("Knowledge Gaps:", gaps);
+
+const relatedTopics = await analytics.suggestRelatedTopics('typescript');
+console.log("Related Topics:", relatedTopics);
+```
+
+## Integration with Hero
+
+### Basic Integration
+
+```typescript
+const codex = Codex.create({ tableName: "agent_knowledge" });
+
+// Add knowledge
+await codex.add("TypeScript provides static type checking for JavaScript", {
+  category: "programming",
+  topic: "typescript"
+});
+
+// Create hero with knowledge access
+const hero = Hero.create()
+  .avatar("You are a programming expert with access to a knowledge base")
+  .study(codex);
+
+// Hero can now use the knowledge
+const response = await hero.chat("What are the benefits of TypeScript?");
+console.log(response); // Will include information from the knowledge base
+```
+
+### Advanced Integration
+
+```typescript
+class KnowledgeableAgent {
+  private hero: Hero;
+  private codex: Codex;
+  private room: Room;
+
+  constructor() {
+    this.codex = Codex.create({ tableName: "comprehensive_knowledge" });
+    this.room = new Room(new SQLitePersistor('./agent-memory.db'));
+    
+    this.hero = Hero.create()
+      .avatar(`You are an intelligent assistant with access to a comprehensive knowledge base.
+               Always cite your sources when using knowledge base information.
+               If you're not sure about something, search your knowledge base first.`)
+      .memory(this.room)
+      .study(this.codex);
+  }
+
+  async chat(message: string): Promise<string> {
+    return await this.hero.chat(message);
+  }
+
+  async teachAgent(information: string, metadata: Record<string, any>) {
+    // Add to knowledge base
+    await this.codex.add(information, {
+      ...metadata,
+      source: 'user_teaching',
+      learned_at: new Date().toISOString()
+    });
+
+    // Inform the agent about the new knowledge
+    await this.hero.chat(
+      `I've learned something new: ${information}. ` +
+      `This information is now part of my knowledge base and I can use it to help others.`
+    );
+  }
+
+  async getKnowledgeAbout(topic: string) {
+    return await this.codex.search(topic, { limit: 5 });
+  }
+
+  cleanup() {
+    this.codex.close();
+  }
+}
+
+// Usage
+const agent = new KnowledgeableAgent();
+
+// Teach the agent
+await agent.teachAgent(
+  "The company's main product is a CRM system called 'CustomerPro'",
+  { category: "company_info", importance: "high" }
+);
+
+// Agent can now use this knowledge
+const response = await agent.chat("What does our company do?");
+console.log(response);
+
+agent.cleanup();
+```
+
+## Best Practices
+
+### 1. Knowledge Organization
+- **Consistent Metadata**: Use consistent metadata schemas across your knowledge base
+- **Hierarchical Categories**: Implement hierarchical categorization for better organization
+- **Rich Metadata**: Include as much relevant metadata as possible for better filtering
+
+### 2. Content Quality
+- **Chunk Size**: Keep content chunks at optimal size (200-800 characters)
+- **Clear Content**: Write clear, concise, and factual content
+- **Source Attribution**: Always include source information in metadata
+
+### 3. Performance
+- **Batch Operations**: Add multiple pieces of knowledge in batches when possible
+- **Appropriate Limits**: Use reasonable limits in search operations
+- **Distance Thresholds**: Set appropriate distance thresholds for relevance
+
+### 4. Maintenance
+- **Regular Updates**: Keep knowledge base content current and accurate
+- **Duplicate Detection**: Implement duplicate detection to avoid redundancy
+- **Quality Monitoring**: Monitor and maintain knowledge quality over time
+
+## Common Use Cases
+
+### Technical Documentation
+```typescript
+const techCodex = Codex.create({ tableName: "tech_docs" });
+await techCodex.add("API endpoints should use RESTful conventions", {
+  category: "api_design",
+  topic: "rest",
+  type: "best_practice"
+});
+```
+
+### Customer Support Knowledge
+```typescript
+const supportCodex = Codex.create({ tableName: "support_kb" });
+await supportCodex.add("To reset password, click 'Forgot Password' on login page", {
+  category: "troubleshooting",
+  topic: "authentication",
+  priority: "high"
+});
+```
+
+### Educational Content
+```typescript
+const eduCodex = Codex.create({ tableName: "curriculum" });
+await eduCodex.add("Variables in JavaScript can be declared with var, let, or const", {
+  category: "programming",
+  subject: "javascript",
+  level: "beginner",
+  lesson: "variables"
+});
+```
+
+## Next Steps
+
+- [Memory Management Guide](/docs/guides/memory-management) - Advanced memory and knowledge patterns
+- [Knowledge Integration Guide](/docs/guides/knowledge-integration) - Practical knowledge base implementation
+- [Building a Chatbot](/docs/guides/building-chatbot) - Complete implementation example
+- [API Reference](/docs/api-reference/codex-api) - Complete Codex API documentation

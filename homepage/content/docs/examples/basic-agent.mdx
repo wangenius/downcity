@@ -1,0 +1,535 @@
+---
+title: Basic Agent Example
+description: Complete example of building a simple AI agent with downcity
+---
+
+# Basic Agent Example
+
+This example demonstrates how to create a simple AI agent using the downcity framework. You'll learn the fundamentals of Hero creation, basic conversation handling, and essential patterns for agent development.
+
+## Overview
+
+We'll build a basic conversational agent that can:
+- Respond to user queries
+- Maintain conversation context
+- Handle different types of interactions
+- Demonstrate core downcity concepts
+
+## Prerequisites
+
+Before starting, ensure you have:
+- Node.js 18+ installed
+- downcity package installed (`npm install downcity`)
+- Basic TypeScript/JavaScript knowledge
+
+## Complete Example
+
+Here's a fully functional basic agent:
+
+```typescript
+import { Hero } from 'downcity';
+
+class BasicAgent {
+  private hero: Hero;
+  
+  constructor() {
+    // Initialize Hero with basic configuration
+    this.hero = new Hero({
+      model: 'gpt-3.5-turbo',
+      temperature: 0.7,
+      systemPrompt: `You are a helpful AI assistant. You provide clear, 
+      concise answers and maintain a friendly, professional tone. 
+      If you don't know something, you admit it honestly.`
+    });
+  }
+  
+  async chat(userMessage: string): Promise<string> {
+    try {
+      // Send message to Hero and get response
+      const response = await this.hero.query(userMessage);
+      return response;
+    } catch (error) {
+      console.error('Error in chat:', error);
+      return "I'm sorry, I encountered an error. Please try again.";
+    }
+  }
+  
+  async startConversation(): Promise<void> {
+    console.log('🤖 Basic Agent started! Type "quit" to exit.\n');
+    
+    // Simple conversation loop (in real apps, use proper input handling)
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    const askQuestion = () => {
+      rl.question('You: ', async (userInput: string) => {
+        if (userInput.toLowerCase() === 'quit') {
+          console.log('👋 Goodbye!');
+          rl.close();
+          return;
+        }
+        
+        console.log('🤖 Thinking...');
+        const response = await this.chat(userInput);
+        console.log(`Agent: ${response}\n`);
+        
+        askQuestion(); // Continue conversation
+      });
+    };
+    
+    askQuestion();
+  }
+}
+
+// Usage
+async function main() {
+  const agent = new BasicAgent();
+  await agent.startConversation();
+}
+
+// Run the agent
+if (require.main === module) {
+  main().catch(console.error);
+}
+```
+
+## Step-by-Step Breakdown
+
+### Step 1: Import and Setup
+
+```typescript
+import { Hero } from 'downcity';
+
+class BasicAgent {
+  private hero: Hero;
+  
+  constructor() {
+    this.hero = new Hero({
+      model: 'gpt-3.5-turbo',
+      temperature: 0.7,
+      systemPrompt: `You are a helpful AI assistant...`
+    });
+  }
+}
+```
+
+**Key Points:**
+- Import the `Hero` class from downcity
+- Create a private `hero` instance
+- Configure the Hero with model, temperature, and system prompt
+- The system prompt defines the agent's personality and behavior
+
+### Step 2: Basic Chat Method
+
+```typescript
+async chat(userMessage: string): Promise<string> {
+  try {
+    const response = await this.hero.query(userMessage);
+    return response;
+  } catch (error) {
+    console.error('Error in chat:', error);
+    return "I'm sorry, I encountered an error. Please try again.";
+  }
+}
+```
+
+**Key Points:**
+- Use `hero.query()` to send messages and get responses
+- Always wrap in try-catch for error handling
+- Provide user-friendly error messages
+- Return type is `Promise<string>` for async operations
+
+### Step 3: Conversation Loop
+
+```typescript
+async startConversation(): Promise<void> {
+  console.log('🤖 Basic Agent started! Type "quit" to exit.\n');
+  
+  const readline = require('readline');
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+  const askQuestion = () => {
+    rl.question('You: ', async (userInput: string) => {
+      if (userInput.toLowerCase() === 'quit') {
+        console.log('👋 Goodbye!');
+        rl.close();
+        return;
+      }
+      
+      const response = await this.chat(userInput);
+      console.log(`Agent: ${response}\n`);
+      
+      askQuestion(); // Continue conversation
+    });
+  };
+  
+  askQuestion();
+}
+```
+
+**Key Points:**
+- Use Node.js readline for console input/output
+- Implement recursive conversation loop
+- Handle exit condition gracefully
+- Provide visual feedback with emojis and formatting
+
+## Running the Example
+
+### 1. Save the Code
+
+Create a file called `basic-agent.ts` (or `.js` for JavaScript):
+
+```bash
+# Create project directory
+mkdir my-basic-agent
+cd my-basic-agent
+
+# Initialize npm project
+npm init -y
+
+# Install dependencies
+npm install downcity
+npm install -D typescript @types/node
+
+# Create the agent file
+touch basic-agent.ts
+```
+
+### 2. Add the Code
+
+Copy the complete example code into `basic-agent.ts`.
+
+### 3. Run the Agent
+
+```bash
+# If using TypeScript
+npx ts-node basic-agent.ts
+
+# If using JavaScript (save as .js file)
+node basic-agent.js
+```
+
+### 4. Interact with Your Agent
+
+```
+🤖 Basic Agent started! Type "quit" to exit.
+
+You: Hello, how are you?
+🤖 Thinking...
+Agent: Hello! I'm doing well, thank you for asking. I'm here and ready to help you with any questions or tasks you might have. How are you doing today?
+
+You: What can you help me with?
+🤖 Thinking...
+Agent: I can help you with a wide variety of tasks! Here are some examples:
+
+- Answering questions on various topics
+- Explaining concepts and providing information
+- Helping with problem-solving and brainstorming
+- Writing and editing assistance
+- Code explanations and programming help
+- General conversation and discussion
+
+Is there something specific you'd like help with today?
+
+You: quit
+👋 Goodbye!
+```
+
+## Customization Options
+
+### Different Personalities
+
+```typescript
+// Professional Assistant
+const professionalHero = new Hero({
+  model: 'gpt-3.5-turbo',
+  temperature: 0.3,
+  systemPrompt: `You are a professional business assistant. 
+  Provide formal, structured responses with clear action items 
+  when appropriate. Always maintain a professional tone.`
+});
+
+// Creative Helper
+const creativeHero = new Hero({
+  model: 'gpt-3.5-turbo',
+  temperature: 0.9,
+  systemPrompt: `You are a creative writing assistant. 
+  Help with brainstorming, storytelling, and creative projects. 
+  Be imaginative and inspiring in your responses.`
+});
+
+// Technical Expert
+const technicalHero = new Hero({
+  model: 'gpt-4',
+  temperature: 0.2,
+  systemPrompt: `You are a technical expert specializing in 
+  software development. Provide accurate, detailed technical 
+  information with code examples when relevant.`
+});
+```
+
+### Enhanced Error Handling
+
+```typescript
+class RobustBasicAgent extends BasicAgent {
+  private retryCount = 0;
+  private maxRetries = 3;
+  
+  async chat(userMessage: string): Promise<string> {
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        const response = await this.hero.query(userMessage);
+        this.retryCount = 0; // Reset on success
+        return response;
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed:`, error);
+        
+        if (attempt === this.maxRetries) {
+          return `I'm experiencing technical difficulties. Please try again later. (Error after ${this.maxRetries} attempts)`;
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+    
+    return "Unexpected error occurred.";
+  }
+}
+```
+
+### Message History Tracking
+
+```typescript
+class HistoryTrackingAgent extends BasicAgent {
+  private messageHistory: Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }> = [];
+  
+  async chat(userMessage: string): Promise<string> {
+    // Add user message to history
+    this.messageHistory.push({
+      role: 'user',
+      content: userMessage,
+      timestamp: new Date()
+    });
+    
+    try {
+      const response = await this.hero.query(userMessage);
+      
+      // Add assistant response to history
+      this.messageHistory.push({
+        role: 'assistant',
+        content: response,
+        timestamp: new Date()
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('Error in chat:', error);
+      return "I'm sorry, I encountered an error. Please try again.";
+    }
+  }
+  
+  getConversationHistory(): string {
+    return this.messageHistory
+      .map(msg => `[${msg.timestamp.toLocaleTimeString()}] ${msg.role}: ${msg.content}`)
+      .join('\n');
+  }
+  
+  saveConversation(filename: string): void {
+    const fs = require('fs');
+    fs.writeFileSync(filename, this.getConversationHistory());
+    console.log(`Conversation saved to ${filename}`);
+  }
+}
+```
+
+## Common Patterns
+
+### Input Validation
+
+```typescript
+private validateInput(input: string): { valid: boolean; message?: string } {
+  if (!input || input.trim().length === 0) {
+    return { valid: false, message: "Please enter a message." };
+  }
+  
+  if (input.length > 1000) {
+    return { valid: false, message: "Message too long. Please keep it under 1000 characters." };
+  }
+  
+  // Check for potentially harmful content
+  const harmfulPatterns = [/hack/i, /exploit/i, /malware/i];
+  if (harmfulPatterns.some(pattern => pattern.test(input))) {
+    return { valid: false, message: "Please avoid potentially harmful requests." };
+  }
+  
+  return { valid: true };
+}
+
+async chat(userMessage: string): Promise<string> {
+  const validation = this.validateInput(userMessage);
+  if (!validation.valid) {
+    return validation.message!;
+  }
+  
+  // Continue with normal processing...
+}
+```
+
+### Response Formatting
+
+```typescript
+private formatResponse(response: string): string {
+  // Add markdown-style formatting
+  response = response.replace(/\*\*(.*?)\*\*/g, '🔸 $1'); // Bold to bullet
+  response = response.replace(/\*(.*?)\*/g, '📝 $1');     // Italic to note
+  
+  // Add line breaks for better readability
+  response = response.replace(/\. /g, '.\n');
+  
+  return response;
+}
+```
+
+### Conversation Context
+
+```typescript
+class ContextAwareAgent extends BasicAgent {
+  private conversationContext: string[] = [];
+  private maxContextLength = 5;
+  
+  async chat(userMessage: string): Promise<string> {
+    // Add current message to context
+    this.conversationContext.push(`User: ${userMessage}`);
+    
+    // Build context-aware prompt
+    const contextPrompt = this.conversationContext
+      .slice(-this.maxContextLength)
+      .join('\n') + `\nUser: ${userMessage}`;
+    
+    try {
+      const response = await this.hero.query(contextPrompt);
+      
+      // Add response to context
+      this.conversationContext.push(`Assistant: ${response}`);
+      
+      // Trim context if too long
+      if (this.conversationContext.length > this.maxContextLength * 2) {
+        this.conversationContext = this.conversationContext.slice(-this.maxContextLength);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Error in chat:', error);
+      return "I'm sorry, I encountered an error. Please try again.";
+    }
+  }
+}
+```
+
+## Testing Your Agent
+
+### Unit Tests
+
+```typescript
+// basic-agent.test.ts
+import { BasicAgent } from './basic-agent';
+
+describe('BasicAgent', () => {
+  let agent: BasicAgent;
+  
+  beforeEach(() => {
+    agent = new BasicAgent();
+  });
+  
+  test('should respond to simple greeting', async () => {
+    const response = await agent.chat('Hello');
+    expect(response).toBeTruthy();
+    expect(typeof response).toBe('string');
+    expect(response.length).toBeGreaterThan(0);
+  });
+  
+  test('should handle empty input gracefully', async () => {
+    const response = await agent.chat('');
+    expect(response).toContain('error');
+  });
+  
+  test('should maintain consistent personality', async () => {
+    const responses = await Promise.all([
+      agent.chat('How are you?'),
+      agent.chat('What can you do?'),
+      agent.chat('Tell me about yourself')
+    ]);
+    
+    responses.forEach(response => {
+      expect(response).toBeTruthy();
+      expect(response.length).toBeGreaterThan(10);
+    });
+  });
+});
+```
+
+### Integration Tests
+
+```typescript
+// integration.test.ts
+describe('BasicAgent Integration', () => {
+  test('should handle conversation flow', async () => {
+    const agent = new BasicAgent();
+    
+    const greeting = await agent.chat('Hello, I need help with programming');
+    expect(greeting).toContain('help');
+    
+    const followUp = await agent.chat('Can you explain variables?');
+    expect(followUp).toContain('variable');
+    
+    const thanks = await agent.chat('Thank you');
+    expect(thanks).toContain('welcome');
+  });
+});
+```
+
+## Next Steps
+
+Once you have your basic agent working, consider exploring:
+
+1. **[Persistent Memory Example](/docs/examples/persistent-memory)** - Add memory with Room and Shot
+2. **[Knowledge Base Example](/docs/examples/knowledge-base)** - Integrate Codex for knowledge retrieval
+3. **[Memory Management Guide](/docs/guides/memory-management)** - Advanced memory patterns
+4. **[Building Chatbot Guide](/docs/guides/building-chatbot)** - Production-ready chatbot patterns
+
+## Troubleshooting
+
+### Common Issues
+
+**Agent doesn't respond:**
+- Check your API keys are set correctly
+- Verify network connectivity
+- Check console for error messages
+
+**Responses are inconsistent:**
+- Adjust temperature setting (lower = more consistent)
+- Refine your system prompt
+- Add input validation
+
+**Memory usage grows over time:**
+- Implement conversation history limits
+- Clear context periodically
+- Monitor memory usage in production
+
+**Rate limiting errors:**
+- Add retry logic with exponential backoff
+- Implement request queuing
+- Consider using different models for different use cases
+
+## Related Examples
+
+- [Persistent Memory](/docs/examples/persistent-memory) - Adding memory to your agent
+- [Knowledge Base](/docs/examples/knowledge-base) - Integrating external knowledge
+- [Advanced Patterns](/docs/guides/advanced-patterns) - Complex agent architectures

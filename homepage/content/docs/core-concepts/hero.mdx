@@ -1,0 +1,480 @@
+---
+title: Hero - AI Agent
+description: Understanding the Hero component - your intelligent AI agent
+---
+
+# Hero - AI Agent
+
+The **Hero** is the core component of downcity - your intelligent AI agent that handles conversations, manages context, and integrates with memory and knowledge systems. Think of it as the "brain" of your AI application.
+
+## What is a Hero?
+
+A Hero is an AI agent that:
+- Maintains conversation context and personality
+- Integrates with memory systems for persistence
+- Accesses knowledge bases for informed responses
+- Manages multiple conversation sessions
+- Provides a consistent interface for AI interactions
+
+## Basic Usage
+
+### Creating a Hero
+
+The simplest way to create a Hero:
+
+```typescript
+import { Hero } from 'downcity';
+
+const hero = Hero.create();
+const response = await hero.chat("Hello!");
+```
+
+### Setting Personality with Avatar
+
+Define your agent's personality and behavior:
+
+```typescript
+const hero = Hero.create()
+  .avatar(`You are Alex, a friendly and knowledgeable programming tutor.
+           You explain concepts clearly and provide practical examples.
+           You're patient and encouraging with beginners.`);
+
+const response = await hero.chat("Can you help me learn TypeScript?");
+```
+
+## Configuration Methods
+
+### `.avatar(prompt: string)`
+
+Sets the system prompt that defines the agent's personality and behavior.
+
+```typescript
+const hero = Hero.create()
+  .avatar("You are a helpful customer service representative");
+```
+
+**Best Practices:**
+- Be specific about personality traits
+- Include behavioral guidelines
+- Specify the agent's role and expertise
+- Keep prompts focused and clear
+
+### `.memory(persistor: RoomPersistor)`
+
+Adds persistent memory capabilities:
+
+```typescript
+import { SQLitePersistor } from 'downcity';
+
+const persistor = new SQLitePersistor('./agent-memory.db');
+const hero = Hero.create()
+  .avatar("You are a helpful assistant with memory")
+  .memory(persistor);
+```
+
+### `.study(codex: Codex)`
+
+Integrates a knowledge base:
+
+```typescript
+import { Codex } from 'downcity';
+
+const codex = Codex.create({ tableName: "knowledge" });
+await codex.add("Important information...", { category: "facts" });
+
+const hero = Hero.create()
+  .avatar("You are a knowledgeable assistant")
+  .study(codex);
+```
+
+## Core Methods
+
+### `chat(message: string): Promise<string>`
+
+Send a message to the agent and get a response:
+
+```typescript
+const hero = Hero.create().avatar("You are a helpful assistant");
+
+const response = await hero.chat("What's the weather like?");
+console.log(response);
+
+// Continue the conversation
+const followUp = await hero.chat("What about tomorrow?");
+console.log(followUp);
+```
+
+### Session Management
+
+#### `newShot(): Shot`
+
+Create a new conversation session:
+
+```typescript
+const hero = Hero.create().avatar("You are a helpful assistant");
+
+// First conversation
+await hero.chat("Hi, I'm working on a React project");
+
+// Start a new session
+hero.newShot();
+
+// This is a fresh conversation
+await hero.chat("Hi, I'm working on a Vue project");
+```
+
+#### `switchShot(shotId: string): boolean`
+
+Switch to an existing conversation session:
+
+```typescript
+const hero = Hero.create().memory(persistor);
+
+// Get all available sessions
+const sessions = hero.getAllShots();
+console.log("Available sessions:", sessions);
+
+// Switch to a specific session
+const success = hero.switchShot(sessions[0].id);
+if (success) {
+  console.log("Switched to session:", sessions[0].id);
+}
+```
+
+#### `getCurrentShotId(): string`
+
+Get the current session ID:
+
+```typescript
+const currentId = hero.getCurrentShotId();
+console.log("Current session:", currentId);
+```
+
+#### `getCurrentShot(): Shot`
+
+Get the current session object:
+
+```typescript
+const currentShot = hero.getCurrentShot();
+console.log("Session messages:", currentShot.getMessages());
+```
+
+#### `getAllShots(): Array<{id: string, meta: ShotMeta}>`
+
+Get all available sessions:
+
+```typescript
+const sessions = hero.getAllShots();
+sessions.forEach(session => {
+  console.log(`Session ${session.id}: ${session.meta.title || 'Untitled'}`);
+});
+```
+
+#### `deleteShot(shotId: string): boolean`
+
+Delete a specific session:
+
+```typescript
+const sessions = hero.getAllShots();
+const deleted = hero.deleteShot(sessions[0].id);
+console.log("Session deleted:", deleted);
+```
+
+#### `clearAllShots(): void`
+
+Delete all sessions:
+
+```typescript
+hero.clearAllShots();
+console.log("All sessions cleared");
+```
+
+## Advanced Usage Patterns
+
+### Multi-Personality Agent
+
+Create agents with different personalities for different contexts:
+
+```typescript
+class MultiPersonalityAgent {
+  private heroes: Map<string, Hero> = new Map();
+  private persistor = new SQLitePersistor('./multi-agent.db');
+
+  createPersonality(name: string, avatar: string) {
+    const hero = Hero.create()
+      .avatar(avatar)
+      .memory(this.persistor);
+    
+    this.heroes.set(name, hero);
+    return hero;
+  }
+
+  async chatAs(personality: string, message: string) {
+    const hero = this.heroes.get(personality);
+    if (!hero) throw new Error(`Personality ${personality} not found`);
+    
+    return await hero.chat(message);
+  }
+}
+
+// Usage
+const agent = new MultiPersonalityAgent();
+
+agent.createPersonality('tutor', 'You are a patient programming tutor');
+agent.createPersonality('reviewer', 'You are a thorough code reviewer');
+
+const tutorResponse = await agent.chatAs('tutor', 'Explain closures');
+const reviewResponse = await agent.chatAs('reviewer', 'Review this code...');
+```
+
+### Context-Aware Agent
+
+Build agents that adapt based on conversation context:
+
+```typescript
+class ContextAwareAgent {
+  private hero: Hero;
+  private context: Map<string, any> = new Map();
+
+  constructor() {
+    this.hero = Hero.create()
+      .avatar(`You are an adaptive assistant. Pay attention to context clues
+               and adjust your responses accordingly.`)
+      .memory(new SQLitePersistor('./context-agent.db'));
+  }
+
+  async chat(message: string, context?: Record<string, any>) {
+    // Update context
+    if (context) {
+      Object.entries(context).forEach(([key, value]) => {
+        this.context.set(key, value);
+      });
+    }
+
+    // Add context to message
+    const contextualMessage = this.buildContextualMessage(message);
+    return await this.hero.chat(contextualMessage);
+  }
+
+  private buildContextualMessage(message: string): string {
+    const contextInfo = Array.from(this.context.entries())
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+
+    return contextInfo 
+      ? `Context: ${contextInfo}\n\nUser: ${message}`
+      : message;
+  }
+}
+
+// Usage
+const agent = new ContextAwareAgent();
+
+await agent.chat("Help me with this code", {
+  language: "TypeScript",
+  project: "React App",
+  experience: "beginner"
+});
+```
+
+### Knowledge-Enhanced Agent
+
+Create agents that learn and update their knowledge:
+
+```typescript
+class LearningAgent {
+  private hero: Hero;
+  private codex: Codex;
+
+  constructor() {
+    this.codex = Codex.create({ tableName: "learning_knowledge" });
+    this.hero = Hero.create()
+      .avatar(`You are a learning assistant. When you learn new information,
+               acknowledge it and use it in future conversations.`)
+      .memory(new SQLitePersistor('./learning-agent.db'))
+      .study(this.codex);
+  }
+
+  async chat(message: string): Promise<string> {
+    return await this.hero.chat(message);
+  }
+
+  async teach(information: string, metadata: Record<string, any> = {}) {
+    // Add to knowledge base
+    await this.codex.add(information, {
+      ...metadata,
+      learned_at: new Date().toISOString(),
+      source: 'user_teaching'
+    });
+
+    // Inform the agent
+    return await this.hero.chat(
+      `I want to teach you something new: ${information}. 
+       Please acknowledge that you've learned this.`
+    );
+  }
+
+  async getKnowledge(query: string) {
+    return await this.codex.search(query, { limit: 5 });
+  }
+}
+
+// Usage
+const agent = new LearningAgent();
+
+// Teach the agent
+await agent.teach("The company's main product is a CRM system", {
+  category: "company_info",
+  importance: "high"
+});
+
+// The agent will now use this knowledge
+const response = await agent.chat("What does our company do?");
+```
+
+## Error Handling
+
+### Basic Error Handling
+
+```typescript
+const hero = Hero.create().avatar("You are a helpful assistant");
+
+try {
+  const response = await hero.chat("Hello!");
+  console.log(response);
+} catch (error) {
+  console.error("Chat error:", error);
+  // Handle error appropriately
+}
+```
+
+### Robust Error Handling with Retries
+
+```typescript
+class RobustHero {
+  private hero: Hero;
+  private maxRetries = 3;
+
+  constructor(avatar: string) {
+    this.hero = Hero.create().avatar(avatar);
+  }
+
+  async chat(message: string, retries = 0): Promise<string> {
+    try {
+      return await this.hero.chat(message);
+    } catch (error) {
+      if (retries < this.maxRetries) {
+        console.log(`Retry ${retries + 1}/${this.maxRetries}`);
+        await this.delay(1000 * (retries + 1)); // Exponential backoff
+        return this.chat(message, retries + 1);
+      }
+      throw error;
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+```
+
+## Performance Optimization
+
+### Conversation Summarization
+
+For long conversations, implement summarization:
+
+```typescript
+class OptimizedHero {
+  private hero: Hero;
+  private messageCount = 0;
+  private readonly MAX_MESSAGES = 20;
+
+  constructor(avatar: string) {
+    this.hero = Hero.create().avatar(avatar);
+  }
+
+  async chat(message: string): Promise<string> {
+    this.messageCount++;
+
+    // Summarize if conversation gets too long
+    if (this.messageCount > this.MAX_MESSAGES) {
+      await this.summarizeConversation();
+      this.messageCount = 0;
+    }
+
+    return await this.hero.chat(message);
+  }
+
+  private async summarizeConversation() {
+    const summary = await this.hero.chat(
+      "Please provide a brief summary of our conversation so far, " +
+      "highlighting the key points and context that should be remembered."
+    );
+
+    // Start new session with summary as context
+    this.hero.newShot();
+    await this.hero.chat(
+      `Previous conversation summary: ${summary}\n\n` +
+      "Continue our conversation from here."
+    );
+  }
+}
+```
+
+## Best Practices
+
+### 1. Avatar Design
+- Be specific about the agent's role and expertise
+- Include personality traits and communication style
+- Specify how the agent should handle different situations
+- Keep prompts focused and avoid conflicting instructions
+
+### 2. Memory Management
+- Use descriptive session metadata
+- Implement appropriate cleanup policies
+- Monitor memory usage and performance
+- Consider conversation summarization for long sessions
+
+### 3. Error Handling
+- Always wrap chat calls in try-catch blocks
+- Implement retry logic for transient failures
+- Provide meaningful error messages to users
+- Log errors for debugging and monitoring
+
+### 4. Performance
+- Monitor response times and optimize as needed
+- Use appropriate model sizes for your use case
+- Implement caching for frequently accessed information
+- Consider conversation length and token usage
+
+## Common Patterns
+
+### Stateful Conversation Agent
+```typescript
+const agent = Hero.create()
+  .avatar("You are a helpful assistant")
+  .memory(new SQLitePersistor('./agent.db'));
+```
+
+### Knowledge-Based Expert
+```typescript
+const expert = Hero.create()
+  .avatar("You are a domain expert")
+  .study(domainKnowledgeCodex);
+```
+
+### Full-Featured Agent
+```typescript
+const fullAgent = Hero.create()
+  .avatar("You are an intelligent assistant")
+  .memory(new SQLitePersistor('./agent.db'))
+  .study(knowledgeCodex);
+```
+
+## Next Steps
+
+- [Memory System](/docs/core-concepts/memory-system) - Understanding how memory works
+- [Room Component](/docs/core-concepts/room) - Persistent memory management
+- [Shot Component](/docs/core-concepts/shot) - Session context details
+- [Building a Chatbot](/docs/guides/building-chatbot) - Practical implementation guide

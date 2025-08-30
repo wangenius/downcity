@@ -1,0 +1,849 @@
+---
+title: Room API Reference
+description: Complete API reference for the Room class - persistent memory management
+---
+
+# Room API Reference
+
+The Room class manages persistent memory storage for AI agents, handling multiple conversation sessions (Shots) and providing cross-session continuity. This reference covers all public methods and usage patterns.
+
+## Class Overview
+
+```typescript
+class Room {
+  constructor(persistor?: RoomPersistor, options?: RoomOptions)
+  createShot(): Shot
+  getShot(id: string): Shot | undefined
+  updateShot(shot: Shot): boolean
+  getShotsList(): Array<{id: string, meta: ShotMeta}>
+  deleteShot(id: string): boolean
+  clear(): void
+}
+```
+
+## Constructor
+
+### `new Room(persistor?, options?)`
+
+Creates a new Room instance for managing conversation sessions.
+
+**Parameters:**
+- `persistor` (RoomPersistor, optional): Storage backend for persistence. If not provided, uses in-memory storage
+- `options` (RoomOptions, optional): Configuration options for the room
+
+**Example:**
+```typescript
+import { Room, SQLitePersistor } from 'downcity';
+
+// With persistence
+const persistor = new SQLitePersistor('./agent-memory.db');
+const room = new Room(persistor);
+
+// In-memory only (no persistence)
+const memoryRoom = new Room();
+
+// With options
+const configuredRoom = new Room(persistor, {
+  maxShots: 50,
+  cleanupInterval: 3600, // 1 hour
+  retentionDays: 30
+});
+```
+
+## Core Methods
+
+### `createShot(): Shot`
+
+Creates a new conversation session and returns the Shot instance.
+
+**Returns:** `Shot` - The newly created Shot instance
+
+**Example:**
+```typescript
+const room = new Room(persistor);
+
+// Create a new conversation session
+const shot = room.createShot();
+console.log("New shot ID:", shot.getId());
+
+// Add messages to the shot
+shot.addMessage({
+  role: 'user',
+  content: 'Hello, how are you?',
+  timestamp: new Date().toISOString()
+});
+
+shot.addMessage({
+  role: 'assistant',
+  content: 'Hello! I\'m doing well, thank you for asking.',
+  timestamp: new Date().toISOString()
+});
+
+// Shot is automatically persisted
+```
+
+**Usage Patterns:**
+
+**Basic Session Creation:**
+```typescript
+const shot = room.createShot();
+shot.setMetadata({
+  title: 'Customer Support Session',
+  category: 'support',
+  priority: 'high'
+});
+```
+
+**Batch Session Creation:**
+```typescript
+const sessions = [];
+for (let i = 0; i < 5; i++) {
+  const shot = room.createShot();
+  shot.setMetadata({
+    title: `Session ${i + 1}`,
+    category: 'batch_created'
+  });
+  sessions.push(shot);
+}
+```
+
+### `getShot(id: string): Shot | undefined`
+
+Retrieves a specific conversation session by its ID.
+
+**Parameters:**
+- `id` (string): The unique identifier of the shot to retrieve
+
+**Returns:** `Shot | undefined` - The Shot instance if found, undefined otherwise
+
+**Example:**
+```typescript
+const room = new Room(persistor);
+
+// Create and store a shot
+const originalShot = room.createShot();
+const shotId = originalShot.getId();
+
+// Later, retrieve the shot
+const retrievedShot = room.getShot(shotId);
+
+if (retrievedShot) {
+  console.log("Found shot:", retrievedShot.getId());
+  console.log("Messages:", retrievedShot.getMessages().length);
+  
+  // Continue the conversation
+  retrievedShot.addMessage({
+    role: 'user',
+    content: 'Continuing our previous conversation',
+    timestamp: new Date().toISOString()
+  });
+} else {
+  console.log("Shot not found");
+}
+```
+
+**Error Handling:**
+```typescript
+function safeGetShot(room: Room, shotId: string): Shot | null {
+  try {
+    const shot = room.getShot(shotId);
+    return shot || null;
+  } catch (error) {
+    console.error(`Error retrieving shot ${shotId}:`, error);
+    return null;
+  }
+}
+```
+
+### `updateShot(shot: Shot): boolean`
+
+Updates an existing shot in storage with current data.
+
+**Parameters:**
+- `shot` (Shot): The Shot instance to update
+
+**Returns:** `boolean` - `true` if update was successful, `false` otherwise
+
+**Example:**
+```typescript
+const room = new Room(persistor);
+const shot = room.getShot('existing-shot-id');
+
+if (shot) {
+  // Modify the shot
+  shot.addMessage({
+    role: 'user',
+    content: 'New message',
+    timestamp: new Date().toISOString()
+  });
+  
+  // Update metadata
+  shot.setMetadata({
+    ...shot.getMetadata(),
+    lastActivity: new Date().toISOString(),
+    messageCount: shot.getMessages().length
+  });
+  
+  // Persist changes
+  const updated = room.updateShot(shot);
+  console.log("Update successful:", updated);
+}
+```
+
+**Batch Updates:**
+```typescript
+const shots = room.getShotsList();
+let updatedCount = 0;
+
+for (const shotInfo of shots) {
+  const shot = room.getShot(shotInfo.id);
+  if (shot) {
+    // Update metadata for all shots
+    shot.updateMetadata({
+      lastChecked: new Date().toISOString()
+    });
+    
+    if (room.updateShot(shot)) {
+      updatedCount++;
+    }
+  }
+}
+
+console.log(`Updated ${updatedCount} shots`);
+```
+
+### `getShotsList(): Array<{id: string, meta: ShotMeta}>`
+
+Retrieves metadata for all shots in the room without loading full shot data.
+
+**Returns:** `Array<{id: string, meta: ShotMeta}>` - Array of shot information
+
+**Example:**
+```typescript
+const room = new Room(persistor);
+const shotsList = room.getShotsList();
+
+console.log(`Total shots: ${shotsList.length}`);
+
+shotsList.forEach(shotInfo => {
+  console.log(`Shot ${shotInfo.id}:`);
+  console.log(`  Title: ${shotInfo.meta.title || 'Untitled'}`);
+  console.log(`  Created: ${shotInfo.meta.createdAt}`);
+  console.log(`  Category: ${shotInfo.meta.category || 'None'}`);
+});
+```
+
+**Filtering and Sorting:**
+```typescript
+const shotsList = room.getShotsList();
+
+// Filter by category
+const supportShots = shotsList.filter(shot => 
+  shot.meta.category === 'support'
+);
+
+// Sort by creation date (newest first)
+const sortedShots = shotsList.sort((a, b) => 
+  new Date(b.meta.createdAt).getTime() - new Date(a.meta.createdAt).getTime()
+);
+
+// Get recent shots (last 7 days)
+const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+const recentShots = shotsList.filter(shot => 
+  new Date(shot.meta.createdAt) > weekAgo
+);
+
+console.log("Support shots:", supportShots.length);
+console.log("Recent shots:", recentShots.length);
+```
+
+**Pagination:**
+```typescript
+function getPaginatedShots(room: Room, page: number, pageSize: number) {
+  const allShots = room.getShotsList();
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  
+  return {
+    shots: allShots.slice(startIndex, endIndex),
+    totalShots: allShots.length,
+    totalPages: Math.ceil(allShots.length / pageSize),
+    currentPage: page
+  };
+}
+
+// Usage
+const page1 = getPaginatedShots(room, 1, 10);
+console.log("Page 1:", page1);
+```
+
+### `deleteShot(id: string): boolean`
+
+Removes a shot from the room permanently.
+
+**Parameters:**
+- `id` (string): The ID of the shot to delete
+
+**Returns:** `boolean` - `true` if deletion was successful, `false` if shot not found
+
+**Example:**
+```typescript
+const room = new Room(persistor);
+
+// Delete a specific shot
+const shotId = 'shot-to-delete';
+const deleted = room.deleteShot(shotId);
+
+if (deleted) {
+  console.log(`Shot ${shotId} deleted successfully`);
+} else {
+  console.log(`Shot ${shotId} not found`);
+}
+```
+
+**Bulk Deletion:**
+```typescript
+function deleteOldShots(room: Room, daysOld: number): number {
+  const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+  const shots = room.getShotsList();
+  let deletedCount = 0;
+  
+  for (const shotInfo of shots) {
+    const createdDate = new Date(shotInfo.meta.createdAt);
+    if (createdDate < cutoffDate) {
+      if (room.deleteShot(shotInfo.id)) {
+        deletedCount++;
+      }
+    }
+  }
+  
+  return deletedCount;
+}
+
+// Delete shots older than 30 days
+const deletedCount = deleteOldShots(room, 30);
+console.log(`Deleted ${deletedCount} old shots`);
+```
+
+**Conditional Deletion:**
+```typescript
+function deleteByCategory(room: Room, category: string): number {
+  const shots = room.getShotsList();
+  let deletedCount = 0;
+  
+  for (const shotInfo of shots) {
+    if (shotInfo.meta.category === category) {
+      if (room.deleteShot(shotInfo.id)) {
+        deletedCount++;
+      }
+    }
+  }
+  
+  return deletedCount;
+}
+
+// Delete all test shots
+const testShotsDeleted = deleteByCategory(room, 'test');
+console.log(`Deleted ${testShotsDeleted} test shots`);
+```
+
+### `clear(): void`
+
+Removes all shots from the room. This operation is irreversible.
+
+**Returns:** `void`
+
+**Example:**
+```typescript
+const room = new Room(persistor);
+
+// Get count before clearing
+const beforeCount = room.getShotsList().length;
+console.log(`Shots before clear: ${beforeCount}`);
+
+// Clear all shots
+room.clear();
+
+// Verify clearing
+const afterCount = room.getShotsList().length;
+console.log(`Shots after clear: ${afterCount}`); // Should be 0
+```
+
+**Safe Clear with Confirmation:**
+```typescript
+function safeClear(room: Room, confirm: boolean = false): boolean {
+  if (!confirm) {
+    console.warn('Clear operation requires confirmation');
+    return false;
+  }
+  
+  const shotCount = room.getShotsList().length;
+  room.clear();
+  
+  console.log(`Cleared ${shotCount} shots from room`);
+  return true;
+}
+
+// Usage
+safeClear(room, true); // Explicitly confirm
+```
+
+## Configuration Options
+
+### RoomOptions Interface
+
+```typescript
+interface RoomOptions {
+  maxShots?: number;        // Maximum number of shots to keep
+  cleanupInterval?: number; // Auto-cleanup interval in seconds
+  retentionDays?: number;   // Days to retain shots
+}
+```
+
+**Example:**
+```typescript
+const room = new Room(persistor, {
+  maxShots: 100,           // Keep up to 100 conversations
+  cleanupInterval: 3600,   // Clean up every hour
+  retentionDays: 30        // Keep conversations for 30 days
+});
+```
+
+## Advanced Usage Patterns
+
+### Room Analytics
+
+```typescript
+class RoomAnalytics {
+  constructor(private room: Room) {}
+
+  getStatistics() {
+    const shots = this.room.getShotsList();
+    const now = new Date();
+    
+    const stats = {
+      totalShots: shots.length,
+      categories: new Map<string, number>(),
+      dailyActivity: new Map<string, number>(),
+      averageAge: 0,
+      oldestShot: null as any,
+      newestShot: null as any
+    };
+
+    let totalAge = 0;
+    let oldestDate = now;
+    let newestDate = new Date(0);
+
+    for (const shotInfo of shots) {
+      // Category analysis
+      const category = shotInfo.meta.category || 'uncategorized';
+      stats.categories.set(category, (stats.categories.get(category) || 0) + 1);
+
+      // Daily activity
+      const date = new Date(shotInfo.meta.createdAt).toDateString();
+      stats.dailyActivity.set(date, (stats.dailyActivity.get(date) || 0) + 1);
+
+      // Age analysis
+      const createdDate = new Date(shotInfo.meta.createdAt);
+      const age = now.getTime() - createdDate.getTime();
+      totalAge += age;
+
+      if (createdDate < oldestDate) {
+        oldestDate = createdDate;
+        stats.oldestShot = shotInfo;
+      }
+
+      if (createdDate > newestDate) {
+        newestDate = createdDate;
+        stats.newestShot = shotInfo;
+      }
+    }
+
+    stats.averageAge = shots.length > 0 ? totalAge / shots.length : 0;
+
+    return {
+      ...stats,
+      categories: Object.fromEntries(stats.categories),
+      dailyActivity: Object.fromEntries(stats.dailyActivity),
+      averageAgeDays: stats.averageAge / (1000 * 60 * 60 * 24)
+    };
+  }
+
+  getHealthReport() {
+    const stats = this.getStatistics();
+    const issues = [];
+    const recommendations = [];
+
+    // Check for issues
+    if (stats.totalShots > 1000) {
+      issues.push('High shot count may impact performance');
+      recommendations.push('Consider implementing regular cleanup');
+    }
+
+    if (stats.averageAgeDays > 90) {
+      issues.push('Average shot age is very high');
+      recommendations.push('Review retention policies');
+    }
+
+    const uncategorized = stats.categories['uncategorized'] || 0;
+    if (uncategorized > stats.totalShots * 0.5) {
+      issues.push('Many shots lack categorization');
+      recommendations.push('Implement better metadata management');
+    }
+
+    return {
+      healthy: issues.length === 0,
+      issues,
+      recommendations,
+      statistics: stats
+    };
+  }
+}
+
+// Usage
+const analytics = new RoomAnalytics(room);
+const stats = analytics.getStatistics();
+const health = analytics.getHealthReport();
+
+console.log("Room Statistics:", stats);
+console.log("Health Report:", health);
+```
+
+### Room Search and Filtering
+
+```typescript
+class RoomSearch {
+  constructor(private room: Room) {}
+
+  searchByContent(query: string): Array<{shot: Shot, relevance: number}> {
+    const shots = this.room.getShotsList();
+    const results = [];
+
+    for (const shotInfo of shots) {
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) continue;
+
+      const relevance = this.calculateRelevance(shot, query);
+      if (relevance > 0) {
+        results.push({ shot, relevance });
+      }
+    }
+
+    return results.sort((a, b) => b.relevance - a.relevance);
+  }
+
+  private calculateRelevance(shot: Shot, query: string): number {
+    const queryLower = query.toLowerCase();
+    let relevance = 0;
+
+    // Check metadata
+    const metadata = shot.getMetadata();
+    if (metadata.title?.toLowerCase().includes(queryLower)) {
+      relevance += 0.5;
+    }
+    if (metadata.category?.toLowerCase().includes(queryLower)) {
+      relevance += 0.3;
+    }
+
+    // Check messages
+    const messages = shot.getMessages();
+    for (const message of messages) {
+      if (message.content.toLowerCase().includes(queryLower)) {
+        relevance += 0.1;
+      }
+    }
+
+    return relevance;
+  }
+
+  filterShots(criteria: {
+    category?: string;
+    dateRange?: { start: Date; end: Date };
+    minMessages?: number;
+    tags?: string[];
+  }) {
+    const shots = this.room.getShotsList();
+    
+    return shots.filter(shotInfo => {
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) return false;
+
+      const metadata = shot.getMetadata();
+
+      // Category filter
+      if (criteria.category && metadata.category !== criteria.category) {
+        return false;
+      }
+
+      // Date range filter
+      if (criteria.dateRange) {
+        const createdAt = new Date(metadata.createdAt);
+        if (createdAt < criteria.dateRange.start || createdAt > criteria.dateRange.end) {
+          return false;
+        }
+      }
+
+      // Message count filter
+      if (criteria.minMessages) {
+        const messageCount = shot.getMessages().length;
+        if (messageCount < criteria.minMessages) {
+          return false;
+        }
+      }
+
+      // Tags filter
+      if (criteria.tags && criteria.tags.length > 0) {
+        const shotTags = metadata.tags || [];
+        const hasAllTags = criteria.tags.every(tag => shotTags.includes(tag));
+        if (!hasAllTags) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+}
+
+// Usage
+const search = new RoomSearch(room);
+
+// Search for content
+const searchResults = search.searchByContent('typescript');
+console.log("Search results:", searchResults.length);
+
+// Filter shots
+const recentSupportShots = search.filterShots({
+  category: 'support',
+  dateRange: {
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    end: new Date()
+  },
+  minMessages: 5
+});
+
+console.log("Recent support shots:", recentSupportShots.length);
+```
+
+### Room Backup and Migration
+
+```typescript
+class RoomBackup {
+  constructor(private room: Room) {}
+
+  async exportToJSON(): Promise<string> {
+    const shots = this.room.getShotsList();
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+      totalShots: shots.length,
+      shots: []
+    };
+
+    for (const shotInfo of shots) {
+      const shot = this.room.getShot(shotInfo.id);
+      if (shot) {
+        exportData.shots.push({
+          id: shot.getId(),
+          metadata: shot.getMetadata(),
+          messages: shot.getMessages(),
+          createdAt: shot.getCreatedAt().toISOString()
+        });
+      }
+    }
+
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  async importFromJSON(jsonData: string): Promise<{
+    imported: number;
+    skipped: number;
+    errors: string[];
+  }> {
+    const data = JSON.parse(jsonData);
+    const results = { imported: 0, skipped: 0, errors: [] };
+
+    for (const shotData of data.shots) {
+      try {
+        // Check if shot already exists
+        const existingShot = this.room.getShot(shotData.id);
+        if (existingShot) {
+          results.skipped++;
+          continue;
+        }
+
+        // Create new shot
+        const shot = this.room.createShot();
+        
+        // Set metadata
+        shot.setMetadata(shotData.metadata);
+        
+        // Add messages
+        for (const message of shotData.messages) {
+          shot.addMessage(message);
+        }
+
+        // Update shot in room
+        this.room.updateShot(shot);
+        results.imported++;
+
+      } catch (error) {
+        results.errors.push(`Failed to import shot ${shotData.id}: ${error.message}`);
+      }
+    }
+
+    return results;
+  }
+
+  async migrateToNewRoom(targetRoom: Room): Promise<{
+    migrated: number;
+    errors: string[];
+  }> {
+    const shots = this.room.getShotsList();
+    const results = { migrated: 0, errors: [] };
+
+    for (const shotInfo of shots) {
+      try {
+        const sourceShot = this.room.getShot(shotInfo.id);
+        if (!sourceShot) continue;
+
+        // Create shot in target room
+        const targetShot = targetRoom.createShot();
+        
+        // Copy metadata
+        targetShot.setMetadata(sourceShot.getMetadata());
+        
+        // Copy messages
+        const messages = sourceShot.getMessages();
+        for (const message of messages) {
+          targetShot.addMessage(message);
+        }
+
+        // Update target room
+        targetRoom.updateShot(targetShot);
+        results.migrated++;
+
+      } catch (error) {
+        results.errors.push(`Failed to migrate shot ${shotInfo.id}: ${error.message}`);
+      }
+    }
+
+    return results;
+  }
+}
+
+// Usage
+const backup = new RoomBackup(room);
+
+// Export to JSON
+const exportData = await backup.exportToJSON();
+console.log("Export completed, size:", exportData.length);
+
+// Import from JSON
+const importResults = await backup.importFromJSON(exportData);
+console.log("Import results:", importResults);
+
+// Migrate to new room
+const newRoom = new Room(new SQLitePersistor('./new-memory.db'));
+const migrationResults = await backup.migrateToNewRoom(newRoom);
+console.log("Migration results:", migrationResults);
+```
+
+## Type Definitions
+
+### ShotMeta Interface
+
+```typescript
+interface ShotMeta {
+  title?: string;
+  createdAt: string;
+  lastActivity?: string;
+  messageCount?: number;
+  category?: string;
+  tags?: string[];
+  importance?: number;
+  [key: string]: any;
+}
+```
+
+### RoomPersistor Interface
+
+```typescript
+interface RoomPersistor {
+  insert(id: string, meta: ShotMeta, data: ShotData): void;
+  find(id: string): { meta: ShotMeta; data: ShotData } | undefined;
+  remove(id: string): void;
+  update(id: string, meta: ShotMeta, data: ShotData): void;
+  list(): { id: string; meta: ShotMeta }[];
+}
+```
+
+## Error Handling
+
+### Common Errors
+
+```typescript
+try {
+  const shot = room.getShot('invalid-id');
+  if (!shot) {
+    console.log('Shot not found');
+  }
+} catch (error) {
+  console.error('Error accessing shot:', error);
+}
+
+// Safe operations
+function safeRoomOperation<T>(operation: () => T, fallback: T): T {
+  try {
+    return operation();
+  } catch (error) {
+    console.error('Room operation failed:', error);
+    return fallback;
+  }
+}
+
+const shotCount = safeRoomOperation(
+  () => room.getShotsList().length,
+  0
+);
+```
+
+## Performance Considerations
+
+### Memory Management
+
+```typescript
+// Monitor room size
+const shots = room.getShotsList();
+if (shots.length > 1000) {
+  console.warn('Room has many shots, consider cleanup');
+}
+
+// Efficient shot access
+const shotCache = new Map<string, Shot>();
+
+function getCachedShot(room: Room, id: string): Shot | undefined {
+  if (shotCache.has(id)) {
+    return shotCache.get(id);
+  }
+  
+  const shot = room.getShot(id);
+  if (shot) {
+    shotCache.set(id, shot);
+  }
+  
+  return shot;
+}
+```
+
+## Related APIs
+
+- [Hero API](/docs/api-reference/hero-api) - AI agent interface
+- [Shot API](/docs/api-reference/shot-api) - Session context management
+- [Codex API](/docs/api-reference/codex-api) - Knowledge base integration
+
+## Examples
+
+- [Persistent Memory](/docs/examples/persistent-memory) - Room usage examples
+- [Memory Management](/docs/guides/memory-management) - Advanced memory patterns
+- [Building a Chatbot](/docs/guides/building-chatbot) - Practical Room integration

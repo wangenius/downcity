@@ -1,0 +1,652 @@
+---
+title: Hero API Reference
+description: Complete API reference for the Hero class - your AI agent interface
+---
+
+# Hero API Reference
+
+The Hero class is the main interface for creating and interacting with AI agents in downcity. This reference covers all public methods, properties, and usage patterns.
+
+## Class Overview
+
+```typescript
+class Hero {
+  static create(): Hero
+  avatar(prompt: string): Hero
+  memory(persistor: RoomPersistor): Hero
+  study(codex: Codex): Hero
+  chat(message: string): Promise<string>
+  newShot(): Shot
+  switchShot(shotId: string): boolean
+  getCurrentShotId(): string
+  getCurrentShot(): Shot
+  getAllShots(): Array<{id: string, meta: ShotMeta}>
+  deleteShot(shotId: string): boolean
+  clearAllShots(): void
+}
+```
+
+## Static Methods
+
+### `Hero.create()`
+
+Creates a new Hero instance.
+
+**Returns:** `Hero` - A new Hero instance
+
+**Example:**
+```typescript
+import { Hero } from 'downcity';
+
+const hero = Hero.create();
+```
+
+## Configuration Methods
+
+### `avatar(prompt: string): Hero`
+
+Sets the system prompt that defines the agent's personality and behavior.
+
+**Parameters:**
+- `prompt` (string): The system prompt that defines the agent's role, personality, and behavior guidelines
+
+**Returns:** `Hero` - The Hero instance for method chaining
+
+**Example:**
+```typescript
+const hero = Hero.create()
+  .avatar(`You are a helpful programming assistant with expertise in TypeScript.
+           Always provide clear explanations and practical examples.
+           Be encouraging and patient with beginners.`);
+```
+
+**Best Practices:**
+- Be specific about the agent's role and expertise
+- Include behavioral guidelines and communication style
+- Specify how the agent should handle different situations
+- Keep prompts focused and avoid conflicting instructions
+
+### `memory(persistor: RoomPersistor): Hero`
+
+Configures persistent memory for the agent using a Room persistor.
+
+**Parameters:**
+- `persistor` (RoomPersistor): A persistor instance for storing conversation history
+
+**Returns:** `Hero` - The Hero instance for method chaining
+
+**Example:**
+```typescript
+import { Hero, SQLitePersistor } from 'downcity';
+
+const persistor = new SQLitePersistor('./agent-memory.db');
+const hero = Hero.create()
+  .avatar("You are a helpful assistant")
+  .memory(persistor);
+```
+
+**Available Persistors:**
+- `SQLitePersistor` - SQLite database storage
+- Custom persistors implementing the `RoomPersistor` interface
+
+### `study(codex: Codex): Hero`
+
+Integrates a knowledge base with the agent for enhanced responses.
+
+**Parameters:**
+- `codex` (Codex): A Codex instance containing domain knowledge
+
+**Returns:** `Hero` - The Hero instance for method chaining
+
+**Example:**
+```typescript
+import { Hero, Codex } from 'downcity';
+
+const codex = Codex.create({ tableName: "programming_knowledge" });
+await codex.add("TypeScript is a typed superset of JavaScript", {
+  category: "programming",
+  topic: "typescript"
+});
+
+const hero = Hero.create()
+  .avatar("You are a programming expert")
+  .study(codex);
+```
+
+## Communication Methods
+
+### `chat(message: string): Promise<string>`
+
+Sends a message to the agent and receives a response.
+
+**Parameters:**
+- `message` (string): The user's message or query
+
+**Returns:** `Promise<string>` - The agent's response
+
+**Throws:** 
+- `Error` - If the API call fails or the agent encounters an error
+
+**Example:**
+```typescript
+const hero = Hero.create()
+  .avatar("You are a helpful assistant");
+
+try {
+  const response = await hero.chat("Hello, how are you?");
+  console.log("Agent:", response);
+} catch (error) {
+  console.error("Chat error:", error);
+}
+```
+
+**Usage Patterns:**
+
+**Basic Conversation:**
+```typescript
+const response1 = await hero.chat("What is TypeScript?");
+const response2 = await hero.chat("Can you give me an example?");
+// Context is maintained automatically
+```
+
+**Structured Queries:**
+```typescript
+const response = await hero.chat(`
+  Please analyze this code and provide feedback:
+  
+  function greet(name: string): string {
+    return "Hello " + name;
+  }
+`);
+```
+
+**JSON Responses:**
+```typescript
+const hero = Hero.create()
+  .avatar("You are a data analyst. Always respond with valid JSON.");
+
+const response = await hero.chat("Analyze the sales data: [100, 200, 150]");
+// Response will be in JSON format
+```
+
+## Session Management Methods
+
+### `newShot(): Shot`
+
+Creates a new conversation session, preserving the previous session in memory.
+
+**Returns:** `Shot` - The new Shot instance
+
+**Example:**
+```typescript
+const hero = Hero.create()
+  .avatar("You are a helpful assistant");
+
+// First conversation
+await hero.chat("Hi, I'm working on a React project");
+await hero.chat("I need help with state management");
+
+// Start new conversation session
+const newShot = hero.newShot();
+console.log("New session ID:", newShot.getId());
+
+// This is a fresh conversation context
+await hero.chat("Hi, I'm working on a Vue project");
+```
+
+**Use Cases:**
+- Starting a new topic while preserving previous conversations
+- Organizing conversations by project or context
+- Implementing conversation boundaries in applications
+
+### `switchShot(shotId: string): boolean`
+
+Switches to an existing conversation session.
+
+**Parameters:**
+- `shotId` (string): The ID of the session to switch to
+
+**Returns:** `boolean` - `true` if the switch was successful, `false` if the session doesn't exist
+
+**Example:**
+```typescript
+const hero = Hero.create().memory(persistor);
+
+// Get available sessions
+const sessions = hero.getAllShots();
+console.log("Available sessions:", sessions);
+
+// Switch to a specific session
+const success = hero.switchShot(sessions[0].id);
+if (success) {
+  console.log("Switched to session:", sessions[0].id);
+  // Continue previous conversation
+  await hero.chat("Let's continue where we left off");
+} else {
+  console.log("Failed to switch session");
+}
+```
+
+### `getCurrentShotId(): string`
+
+Gets the ID of the current conversation session.
+
+**Returns:** `string` - The current session ID
+
+**Example:**
+```typescript
+const currentId = hero.getCurrentShotId();
+console.log("Current session:", currentId);
+
+// Use for logging or session tracking
+const response = await hero.chat("Hello");
+console.log(`Response from session ${currentId}:`, response);
+```
+
+### `getCurrentShot(): Shot`
+
+Gets the current Shot instance for direct manipulation.
+
+**Returns:** `Shot` - The current Shot instance
+
+**Example:**
+```typescript
+const currentShot = hero.getCurrentShot();
+
+// Access shot metadata
+const metadata = currentShot.getMetadata();
+console.log("Session metadata:", metadata);
+
+// Get message history
+const messages = currentShot.getMessages();
+console.log("Message count:", messages.length);
+
+// Update metadata
+currentShot.setMetadata({
+  ...metadata,
+  topic: "TypeScript Help",
+  priority: "high"
+});
+```
+
+### `getAllShots(): Array<{id: string, meta: ShotMeta}>`
+
+Gets information about all available conversation sessions.
+
+**Returns:** `Array<{id: string, meta: ShotMeta}>` - Array of session information
+
+**Example:**
+```typescript
+const sessions = hero.getAllShots();
+
+sessions.forEach(session => {
+  console.log(`Session ${session.id}:`);
+  console.log(`  Title: ${session.meta.title || 'Untitled'}`);
+  console.log(`  Created: ${session.meta.createdAt}`);
+  console.log(`  Messages: ${session.meta.messageCount || 0}`);
+});
+
+// Find sessions by criteria
+const recentSessions = sessions.filter(session => {
+  const created = new Date(session.meta.createdAt);
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return created > dayAgo;
+});
+```
+
+### `deleteShot(shotId: string): boolean`
+
+Deletes a specific conversation session.
+
+**Parameters:**
+- `shotId` (string): The ID of the session to delete
+
+**Returns:** `boolean` - `true` if deletion was successful, `false` if the session doesn't exist
+
+**Example:**
+```typescript
+const sessions = hero.getAllShots();
+
+// Delete old sessions
+const oldSessions = sessions.filter(session => {
+  const created = new Date(session.meta.createdAt);
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  return created < weekAgo;
+});
+
+oldSessions.forEach(session => {
+  const deleted = hero.deleteShot(session.id);
+  console.log(`Deleted session ${session.id}: ${deleted}`);
+});
+```
+
+### `clearAllShots(): void`
+
+Deletes all conversation sessions.
+
+**Returns:** `void`
+
+**Example:**
+```typescript
+// Clear all conversation history
+hero.clearAllShots();
+
+const remainingSessions = hero.getAllShots();
+console.log("Remaining sessions:", remainingSessions.length); // Should be 0
+
+// Start fresh
+await hero.chat("Starting with a clean slate");
+```
+
+**⚠️ Warning:** This operation is irreversible. All conversation history will be permanently deleted.
+
+## Advanced Usage Patterns
+
+### Method Chaining
+
+Hero methods support fluent chaining for clean configuration:
+
+```typescript
+const hero = Hero.create()
+  .avatar("You are a specialized assistant")
+  .memory(new SQLitePersistor('./memory.db'))
+  .study(knowledgeCodex);
+
+// Immediately ready to use
+const response = await hero.chat("Hello!");
+```
+
+### Error Handling
+
+Implement robust error handling for production use:
+
+```typescript
+class RobustHero {
+  private hero: Hero;
+  private maxRetries = 3;
+
+  constructor(config: any) {
+    this.hero = Hero.create()
+      .avatar(config.avatar)
+      .memory(config.persistor)
+      .study(config.codex);
+  }
+
+  async chat(message: string, retries = 0): Promise<string> {
+    try {
+      return await this.hero.chat(message);
+    } catch (error) {
+      if (retries < this.maxRetries) {
+        console.log(`Retry ${retries + 1}/${this.maxRetries}`);
+        await this.delay(1000 * (retries + 1));
+        return this.chat(message, retries + 1);
+      }
+      throw error;
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+```
+
+### Session Management
+
+Implement sophisticated session management:
+
+```typescript
+class SessionManager {
+  private hero: Hero;
+
+  constructor(hero: Hero) {
+    this.hero = hero;
+  }
+
+  async createNamedSession(name: string): Promise<string> {
+    const shot = this.hero.newShot();
+    const shotId = shot.getId();
+    
+    // Set session metadata
+    shot.setMetadata({
+      title: name,
+      createdAt: new Date().toISOString(),
+      category: 'user_created'
+    });
+
+    return shotId;
+  }
+
+  async findSessionByName(name: string): Promise<string | null> {
+    const sessions = this.hero.getAllShots();
+    
+    for (const session of sessions) {
+      if (session.meta.title === name) {
+        return session.id;
+      }
+    }
+    
+    return null;
+  }
+
+  async switchToNamedSession(name: string): Promise<boolean> {
+    const sessionId = await this.findSessionByName(name);
+    
+    if (sessionId) {
+      return this.hero.switchShot(sessionId);
+    }
+    
+    // Create new session if it doesn't exist
+    await this.createNamedSession(name);
+    return true;
+  }
+
+  getSessionStats(): {
+    total: number;
+    active: string;
+    recent: Array<{id: string, title: string, age: number}>;
+  } {
+    const sessions = this.hero.getAllShots();
+    const currentId = this.hero.getCurrentShotId();
+    
+    const recent = sessions
+      .map(session => ({
+        id: session.id,
+        title: session.meta.title || 'Untitled',
+        age: Math.floor((Date.now() - new Date(session.meta.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      }))
+      .sort((a, b) => a.age - b.age)
+      .slice(0, 5);
+
+    return {
+      total: sessions.length,
+      active: currentId,
+      recent
+    };
+  }
+}
+
+// Usage
+const sessionManager = new SessionManager(hero);
+
+await sessionManager.switchToNamedSession("TypeScript Project");
+await hero.chat("Let's work on TypeScript");
+
+await sessionManager.switchToNamedSession("React Project");
+await hero.chat("Now let's work on React");
+
+const stats = sessionManager.getSessionStats();
+console.log("Session statistics:", stats);
+```
+
+### Context-Aware Responses
+
+Enhance responses with context awareness:
+
+```typescript
+class ContextAwareHero {
+  private hero: Hero;
+  private context: Map<string, any> = new Map();
+
+  constructor(avatar: string) {
+    this.hero = Hero.create().avatar(avatar);
+  }
+
+  setContext(key: string, value: any): void {
+    this.context.set(key, value);
+  }
+
+  getContext(key: string): any {
+    return this.context.get(key);
+  }
+
+  async chat(message: string): Promise<string> {
+    // Add context to message
+    const contextualMessage = this.buildContextualMessage(message);
+    return await this.hero.chat(contextualMessage);
+  }
+
+  private buildContextualMessage(message: string): string {
+    if (this.context.size === 0) {
+      return message;
+    }
+
+    const contextInfo = Array.from(this.context.entries())
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+
+    return `Context: ${contextInfo}\n\nUser: ${message}`;
+  }
+
+  // Delegate other methods
+  newShot() { return this.hero.newShot(); }
+  switchShot(id: string) { return this.hero.switchShot(id); }
+  getCurrentShotId() { return this.hero.getCurrentShotId(); }
+  getAllShots() { return this.hero.getAllShots(); }
+}
+
+// Usage
+const contextHero = new ContextAwareHero("You are a helpful assistant");
+
+contextHero.setContext("project", "E-commerce website");
+contextHero.setContext("technology", "React + TypeScript");
+contextHero.setContext("experience", "beginner");
+
+const response = await contextHero.chat("How should I structure my components?");
+// Response will consider the project context
+```
+
+## Type Definitions
+
+### ShotMeta Interface
+
+```typescript
+interface ShotMeta {
+  title?: string;
+  createdAt: string;
+  lastActivity?: string;
+  messageCount?: number;
+  category?: string;
+  tags?: string[];
+  importance?: number;
+  [key: string]: any; // Allow custom metadata
+}
+```
+
+### RoomPersistor Interface
+
+```typescript
+interface RoomPersistor {
+  insert(id: string, meta: ShotMeta, data: ShotData): void;
+  find(id: string): { meta: ShotMeta; data: ShotData } | undefined;
+  remove(id: string): void;
+  update(id: string, meta: ShotMeta, data: ShotData): void;
+  list(): { id: string; meta: ShotMeta }[];
+}
+```
+
+## Error Handling
+
+### Common Errors
+
+**Configuration Errors:**
+```typescript
+// Missing avatar
+const hero = Hero.create(); // No avatar set
+await hero.chat("Hello"); // May produce generic responses
+
+// Invalid persistor
+const hero = Hero.create()
+  .memory(null); // Will throw error
+```
+
+**Runtime Errors:**
+```typescript
+try {
+  const response = await hero.chat("Hello");
+} catch (error) {
+  if (error.message.includes('API key')) {
+    console.error('OpenAI API key not configured');
+  } else if (error.message.includes('rate limit')) {
+    console.error('Rate limit exceeded, please wait');
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+### Best Practices
+
+1. **Always set an avatar** for consistent behavior
+2. **Handle API errors gracefully** with try-catch blocks
+3. **Implement retry logic** for transient failures
+4. **Validate inputs** before sending to the agent
+5. **Monitor session count** to prevent memory issues
+6. **Use meaningful session metadata** for organization
+
+## Performance Considerations
+
+### Memory Usage
+
+```typescript
+// Monitor session count
+const sessions = hero.getAllShots();
+if (sessions.length > 100) {
+  console.warn('High session count, consider cleanup');
+}
+
+// Cleanup old sessions
+const oldSessions = sessions.filter(s => {
+  const age = Date.now() - new Date(s.meta.createdAt).getTime();
+  return age > 7 * 24 * 60 * 60 * 1000; // Older than 7 days
+});
+
+oldSessions.forEach(s => hero.deleteShot(s.id));
+```
+
+### Response Time
+
+```typescript
+// Measure response times
+const startTime = Date.now();
+const response = await hero.chat("Hello");
+const responseTime = Date.now() - startTime;
+
+console.log(`Response time: ${responseTime}ms`);
+
+if (responseTime > 5000) {
+  console.warn('Slow response detected');
+}
+```
+
+## Related APIs
+
+- [Room API](/docs/api-reference/room-api) - Persistent memory management
+- [Shot API](/docs/api-reference/shot-api) - Session context management  
+- [Codex API](/docs/api-reference/codex-api) - Knowledge base integration
+
+## Examples
+
+- [Basic Agent](/docs/examples/basic-agent) - Simple Hero usage
+- [Persistent Memory](/docs/examples/persistent-memory) - Memory integration
+- [Knowledge Base](/docs/examples/knowledge-base) - Codex integration

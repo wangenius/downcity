@@ -1,0 +1,155 @@
+---
+title: downcity Documentation
+description: Complete guide to building intelligent AI agents with persistent memory and knowledge integration
+---
+
+# downcity Documentation
+
+Welcome to the complete documentation for downcity, a powerful framework for building intelligent AI agents with persistent memory and knowledge integration capabilities.
+
+## Quick Navigation
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+  <div className="border border-fd-border rounded-lg p-6 hover:bg-fd-muted/50 transition-colors">
+    <h3 className="text-lg font-semibold mb-2">🚀 Getting Started</h3>
+    <p className="text-fd-muted-foreground mb-4">
+      New to downcity? Start here to install the framework and create your first AI agent.
+    </p>
+    <div className="space-y-2">
+      <a href="/docs/getting-started/installation" className="block text-sm text-fd-primary hover:underline">
+        → Installation Guide
+      </a>
+      <a href="/docs/getting-started/quick-start" className="block text-sm text-fd-primary hover:underline">
+        → Quick Start
+      </a>
+      <a href="/docs/getting-started/first-agent" className="block text-sm text-fd-primary hover:underline">
+        → Your First Agent
+      </a>
+    </div>
+  </div>
+
+  <div className="border border-fd-border rounded-lg p-6 hover:bg-fd-muted/50 transition-colors">
+    <h3 className="text-lg font-semibold mb-2">🧠 Core Concepts</h3>
+    <p className="text-fd-muted-foreground mb-4">
+      Understand the fundamental components and architecture of downcity.
+    </p>
+    <div className="space-y-2">
+      <a href="/docs/core-concepts/overview" className="block text-sm text-fd-primary hover:underline">
+        → Framework Overview
+      </a>
+      <a href="/docs/core-concepts/hero" className="block text-sm text-fd-primary hover:underline">
+        → Hero (AI Agents)
+      </a>
+      <a href="/docs/core-concepts/memory-system" className="block text-sm text-fd-primary hover:underline">
+        → Memory System
+      </a>
+    </div>
+  </div>
+
+  <div className="border border-fd-border rounded-lg p-6 hover:bg-fd-muted/50 transition-colors">
+    <h3 className="text-lg font-semibold mb-2">📚 Practical Guides</h3>
+    <p className="text-fd-muted-foreground mb-4">
+      Step-by-step guides for building real-world applications with downcity.
+    </p>
+    <div className="space-y-2">
+      <a href="/docs/guides/building-chatbot" className="block text-sm text-fd-primary hover:underline">
+        → Building a Chatbot
+      </a>
+      <a href="/docs/guides/memory-management" className="block text-sm text-fd-primary hover:underline">
+        → Memory Management
+      </a>
+      <a href="/docs/guides/knowledge-integration" className="block text-sm text-fd-primary hover:underline">
+        → Knowledge Integration
+      </a>
+    </div>
+  </div>
+
+  <div className="border border-fd-border rounded-lg p-6 hover:bg-fd-muted/50 transition-colors">
+    <h3 className="text-lg font-semibold mb-2">⚡ Examples</h3>
+    <p className="text-fd-muted-foreground mb-4">
+      Complete working examples you can run and modify for your own projects.
+    </p>
+    <div className="space-y-2">
+      <a href="/docs/examples/basic-agent" className="block text-sm text-fd-primary hover:underline">
+        → Basic Agent
+      </a>
+      <a href="/docs/examples/persistent-memory" className="block text-sm text-fd-primary hover:underline">
+        → Persistent Memory
+      </a>
+      <a href="/docs/examples/knowledge-base" className="block text-sm text-fd-primary hover:underline">
+        → Knowledge Base
+      </a>
+    </div>
+  </div>
+</div>
+
+## Framework Architecture
+
+downcity is built around four core components that work together to create intelligent AI agents:
+
+### 🤖 Hero
+The AI agent interface that handles conversations and decision-making. Heroes can be configured with different models, personalities, and capabilities.
+
+### 🏠 Room  
+Persistent memory storage that maintains context across sessions. Rooms contain multiple conversation threads and long-term memory.
+
+### 💬 Shot
+Individual conversation sessions within a Room. Shots manage message history and session-specific context.
+
+### 📖 Codex
+Vector-based knowledge storage for semantic search and retrieval. Codex enables agents to access external knowledge and documents.
+
+## Memory Hierarchy
+
+```
+Codex (Knowledge Base)
+    ↓
+Room (Persistent Memory)
+    ↓
+Shot (Session Context)
+    ↓
+Hero (AI Agent)
+```
+
+This three-tier memory system allows agents to:
+- Access immediate conversation context (Shot)
+- Remember past interactions (Room) 
+- Leverage external knowledge (Codex)
+
+## API Reference
+
+Need to look up a specific method or parameter? Check our comprehensive API documentation:
+
+- **[Hero API](/docs/api-reference/hero-api)** - AI agent methods and configuration
+- **[Room API](/docs/api-reference/room-api)** - Persistent memory management
+- **[Shot API](/docs/api-reference/shot-api)** - Session context handling
+- **[Codex API](/docs/api-reference/codex-api)** - Knowledge base operations
+
+## Community & Support
+
+- **GitHub**: [wangenius/downcity](https://github.com/wangenius/downcity)
+- **Issues**: Report bugs and request features
+- **Discussions**: Ask questions and share your projects
+
+## What's Next?
+
+Ready to start building? Here are some recommended paths:
+
+**For Beginners:**
+1. [Install downcity](/docs/getting-started/installation)
+2. [Create your first agent](/docs/getting-started/first-agent)
+3. [Try the basic agent example](/docs/examples/basic-agent)
+
+**For Experienced Developers:**
+1. [Understand the architecture](/docs/core-concepts/overview)
+2. [Explore memory management](/docs/guides/memory-management)
+3. [Build a knowledge-enhanced agent](/docs/examples/knowledge-base)
+
+**For Advanced Use Cases:**
+1. [Advanced patterns](/docs/guides/advanced-patterns)
+2. [Knowledge integration](/docs/guides/knowledge-integration)
+3. [API reference](/docs/api-reference/hero-api)
+
+---
+
+*Happy building! 🚀*

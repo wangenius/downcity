@@ -1,0 +1,238 @@
+---
+title: Quick Start
+description: Get up and running with downcity in minutes
+---
+
+# Quick Start
+
+This guide will help you set up a basic downcity project and create your first AI agent in just a few minutes.
+
+## Project Setup
+
+### 1. Initialize Your Project
+
+Create a new directory and initialize your project:
+
+```bash
+mkdir my-downcity-app
+cd my-downcity-app
+npm init -y
+```
+
+### 2. Install Dependencies
+
+Install downcity and required dependencies:
+
+```bash
+npm install downcity dotenv
+npm install -D typescript tsx @types/node
+```
+
+### 3. Configure Environment
+
+Create a `.env` file with your OpenAI API key:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+<Callout type="warning">
+  Never commit your API keys to version control. Add `.env` to your `.gitignore` file.
+</Callout>
+
+### 4. Create TypeScript Config
+
+Create a `tsconfig.json` file:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+### 5. Update Package.json
+
+Add scripts to your `package.json`:
+
+```json title="package.json"
+{
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  }
+}
+```
+
+## Create Your First Agent
+
+### 1. Basic Agent Setup
+
+Create `src/index.ts`:
+
+```typescript title="src/index.ts"
+import 'dotenv/config';
+import { Hero } from 'downcity';
+
+async function main() {
+  // Create a new Hero (AI agent)
+  const hero = Hero.create()
+    .avatar("You are a helpful assistant that provides clear, concise answers.");
+
+  // Start a conversation
+  const response = await hero.chat("Hello! What can you help me with?");
+  console.log("Agent:", response);
+
+  // Continue the conversation
+  const followUp = await hero.chat("Tell me a fun fact about TypeScript");
+  console.log("Agent:", followUp);
+}
+
+main().catch(console.error);
+```
+
+### 2. Run Your Agent
+
+Execute your first agent:
+
+```bash
+npm run dev
+```
+
+You should see output similar to:
+
+```
+Agent: Hello! I'm here to help you with any questions or tasks you might have...
+Agent: Here's a fun fact about TypeScript: TypeScript was created by Anders Hejlsberg...
+```
+
+## Understanding the Code
+
+Let's break down what's happening:
+
+### Hero Creation
+```typescript
+const hero = Hero.create()
+  .avatar("You are a helpful assistant...");
+```
+
+- `Hero.create()` creates a new AI agent instance
+- `.avatar()` sets the system prompt that defines the agent's personality and behavior
+
+### Conversation
+```typescript
+const response = await hero.chat("Hello! What can you help me with?");
+```
+
+- `.chat()` sends a message to the agent and returns the response
+- Each call maintains conversation context automatically
+
+## Next Steps
+
+### Add Memory Persistence
+
+Enhance your agent with persistent memory:
+
+```typescript title="src/persistent-agent.ts"
+import 'dotenv/config';
+import { Hero, SQLitePersistor } from 'downcity';
+
+async function main() {
+  // Create a hero with persistent memory
+  const hero = Hero.create()
+    .avatar("You are a helpful assistant with memory.")
+    .memory(new SQLitePersistor('./agent-memory.db'));
+
+  // The agent will remember previous conversations
+  const response = await hero.chat("Remember that my name is Alex");
+  console.log("Agent:", response);
+
+  // In a later session, the agent will remember
+  const greeting = await hero.chat("What's my name?");
+  console.log("Agent:", greeting);
+}
+
+main().catch(console.error);
+```
+
+### Add Knowledge Base
+
+Integrate a knowledge base using Codex:
+
+```typescript title="src/knowledge-agent.ts"
+import 'dotenv/config';
+import { Hero, Codex } from 'downcity';
+
+async function main() {
+  // Create a knowledge base
+  const codex = Codex.create({
+    tableName: "my_knowledge"
+  });
+
+  // Add some knowledge
+  await codex.add("TypeScript is a superset of JavaScript", {
+    category: "programming",
+    topic: "typescript"
+  });
+
+  // Create a hero that can use the knowledge base
+  const hero = Hero.create()
+    .avatar("You are a programming expert. Use the knowledge base to answer questions.")
+    .study(codex);
+
+  // Ask questions that will use the knowledge base
+  const response = await hero.chat("What is TypeScript?");
+  console.log("Agent:", response);
+
+  codex.close();
+}
+
+main().catch(console.error);
+```
+
+## Verification Steps
+
+To ensure everything is working correctly:
+
+1. **Basic Functionality**: Your agent responds to messages
+2. **Memory**: Conversations maintain context within the same session
+3. **Persistence**: Memory persists across different runs (if configured)
+4. **Knowledge**: Agent can access and use knowledge base information
+
+## Common Issues
+
+### Environment Variables Not Loading
+- Ensure `.env` is in your project root
+- Verify the file contains `OPENAI_API_KEY=your_key`
+- Check that `dotenv/config` is imported
+
+### Module Resolution Errors
+- Confirm `"type": "module"` is in `package.json`
+- Use `.mjs` extensions if needed
+- Check your Node.js version (16+ required)
+
+### API Errors
+- Verify your OpenAI API key is valid
+- Check your account has sufficient credits
+- Ensure you have access to the required models
+
+## What's Next?
+
+Now that you have a working setup:
+
+1. [Create Your First Agent](/docs/getting-started/first-agent) - Detailed tutorial
+2. [Core Concepts](/docs/core-concepts) - Learn the framework architecture
+3. [Guides](/docs/guides) - Practical implementation patterns
+4. [Examples](/docs/examples) - Complete working examples

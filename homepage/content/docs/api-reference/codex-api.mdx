@@ -1,0 +1,421 @@
+---
+title: Codex API Reference
+description: Complete API reference for the Codex class - vector-based knowledge storage and retrieval
+---
+
+# Codex API Reference
+
+The Codex class provides vector-based knowledge storage and semantic search capabilities for AI agents. This reference covers all public methods and advanced usage patterns for building intelligent knowledge systems.
+
+## Class Overview
+
+```typescript
+class Codex {
+  static create(options: CodexOptions): Codex
+  add(content: string, metadata?: Record<string, any>): Promise<void>
+  search(query: string, options?: SearchOptions): Promise<SearchResult[]>
+  close(): void
+}
+```
+
+## Static Methods
+
+### `Codex.create(options: CodexOptions): Codex`
+
+Creates a new Codex instance with the specified configuration.
+
+**Parameters:**
+- `options` (CodexOptions): Configuration options for the Codex
+
+**Returns:** `Codex` - A new Codex instance
+
+**CodexOptions Interface:**
+```typescript
+interface CodexOptions {
+  tableName: string;           // Table name for vector storage
+  model?: string;              // Embedding model (default: "text-embedding-ada-002")
+  dimensions?: number;         // Vector dimensions (default: 1536)
+  distanceMetric?: string;     // Distance calculation method (default: "cosine")
+}
+```
+
+**Example:**
+```typescript
+import { Codex } from 'downcity';
+
+// Basic Codex creation
+const codex = Codex.create({
+  tableName: "my_knowledge_base"
+});
+
+// Advanced configuration
+const advancedCodex = Codex.create({
+  tableName: "specialized_knowledge",
+  model: "text-embedding-ada-002",
+  dimensions: 1536,
+  distanceMetric: "cosine"
+});
+```
+
+## Core Methods
+
+### `add(content: string, metadata?: Record<string, any>): Promise<void>`
+
+Adds content to the knowledge base with optional metadata.
+
+**Parameters:**
+- `content` (string): The text content to store
+- `metadata` (`Record<string, any>`, optional): Associated metadata for filtering and organization
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```typescript
+const codex = Codex.create({ tableName: "programming_knowledge" });
+
+// Basic content addition
+await codex.add("TypeScript is a typed superset of JavaScript that compiles to plain JavaScript.");
+
+// Content with metadata
+await codex.add(
+  "React hooks allow you to use state and lifecycle features in functional components.",
+  {
+    category: "programming",
+    topic: "react",
+    difficulty: "intermediate",
+    language: "javascript",
+    source: "official_docs"
+  }
+);
+```
+
+### `search(query: string, options?: SearchOptions): Promise<SearchResult[]>`
+
+Searches the knowledge base for content semantically similar to the query.
+
+**Parameters:**
+- `query` (string): The search query
+- `options` (SearchOptions, optional): Search configuration options
+
+**Returns:** `Promise<SearchResult[]>` - Array of search results ordered by relevance
+
+**SearchOptions Interface:**
+```typescript
+interface SearchOptions {
+  limit?: number;                    // Maximum results to return (default: 10)
+  distanceThreshold?: number;        // Minimum similarity threshold (0-1)
+  metadata?: Record<string, any>;    // Metadata filters
+}
+```
+
+**SearchResult Interface:**
+```typescript
+interface SearchResult {
+  content: string;                   // The matched content
+  metadata: Record<string, any>;     // Associated metadata
+  distance: number;                  // Similarity score (lower = more similar)
+}
+```
+
+**Example:**
+```typescript
+// Basic search
+const results = await codex.search("JavaScript UI frameworks");
+
+// Advanced search with options
+const filteredResults = await codex.search("React hooks", {
+  limit: 5,
+  distanceThreshold: 0.3,
+  metadata: { 
+    category: "programming",
+    difficulty: "beginner" 
+  }
+});
+```
+
+### `close(): void`
+
+Closes the Codex instance and releases resources.
+
+**Returns:** `void`
+
+**Example:**
+```typescript
+const codex = Codex.create({ tableName: "temp_knowledge" });
+
+try {
+  await codex.add("Some knowledge");
+  const results = await codex.search("query");
+} finally {
+  codex.close();
+}
+```
+
+## Advanced Usage Patterns
+
+### Knowledge Quality Control
+
+```typescript
+class QualityControlledCodex {
+  private codex: Codex;
+  private qualityThreshold: number;
+  
+  constructor(tableName: string, qualityThreshold = 0.7) {
+    this.codex = Codex.create({ tableName });
+    this.qualityThreshold = qualityThreshold;
+  }
+  
+  async addWithQualityCheck(content: string, metadata: Record<string, any> = {}): Promise<{
+    added: boolean;
+    quality: number;
+    issues: string[];
+  }> {
+    const quality = this.assessQuality(content, metadata);
+    const issues = this.identifyIssues(content, metadata, quality);
+    
+    if (quality >= this.qualityThreshold) {
+      await this.codex.add(content, {
+        ...metadata,
+        quality_score: quality,
+        validated: true,
+        added_at: new Date().toISOString()
+      });
+      
+      return { added: true, quality, issues };
+    } else {
+      return { added: false, quality, issues };
+    }
+  }
+  
+  private assessQuality(content: string, metadata: Record<string, any>): number {
+    let score = 0.5; // Base score
+    
+    // Content length factor
+    if (content.length > 20 && content.length < 2000) {
+      score += 0.2;
+    }
+    
+    // Metadata richness
+    const metadataKeys = Object.keys(metadata);
+    if (metadataKeys.length > 2) score += 0.1;
+    if (metadataKeys.length > 5) score += 0.1;
+    
+    // Source attribution
+    if (metadata.source) score += 0.1;
+    
+    // Category classification
+    if (metadata.category) score += 0.1;
+    
+    return Math.min(1.0, score);
+  }
+  
+  private identifyIssues(content: string, metadata: Record<string, any>, quality: number): string[] {
+    const issues = [];
+    
+    if (content.length < 10) {
+      issues.push('Content too short');
+    }
+    
+    if (content.length > 5000) {
+      issues.push('Content too long, consider chunking');
+    }
+    
+    if (!metadata.category) {
+      issues.push('Missing category classification');
+    }
+    
+    if (!metadata.source) {
+      issues.push('Missing source attribution');
+    }
+    
+    if (quality < this.qualityThreshold) {
+      issues.push(`Quality score ${quality.toFixed(2)} below threshold ${this.qualityThreshold}`);
+    }
+    
+    return issues;
+  }
+  
+  close(): void {
+    this.codex.close();
+  }
+}
+```
+
+### Integration with Hero
+
+```typescript
+import { Hero, Codex } from 'downcity';
+
+class KnowledgeEnhancedHero {
+  private hero: Hero;
+  private codex: Codex;
+  
+  constructor(heroConfig: any, codexTableName: string) {
+    this.hero = new Hero(heroConfig);
+    this.codex = Codex.create({ tableName: codexTableName });
+  }
+  
+  async enhancedQuery(userQuery: string): Promise<string> {
+    // Search knowledge base for relevant context
+    const knowledgeResults = await this.codex.search(userQuery, {
+      limit: 3,
+      distanceThreshold: 0.3
+    });
+    
+    // Build context from search results
+    const context = knowledgeResults
+      .map(result => result.content)
+      .join('\n\n');
+    
+    // Create enhanced prompt with context
+    const enhancedPrompt = context 
+      ? `Context: ${context}\n\nUser Query: ${userQuery}`
+      : userQuery;
+    
+    // Get response from Hero
+    const response = await this.hero.query(enhancedPrompt);
+    
+    return response;
+  }
+  
+  async learnFromConversation(userMessage: string, assistantResponse: string): Promise<void> {
+    // Extract key information and add to knowledge base
+    const conversationSummary = `User asked: ${userMessage}\nAssistant responded: ${assistantResponse}`;
+    
+    await this.codex.add(conversationSummary, {
+      type: 'conversation',
+      timestamp: new Date().toISOString(),
+      category: 'learned_interaction'
+    });
+  }
+  
+  close(): void {
+    this.codex.close();
+  }
+}
+```
+
+## Type Definitions
+
+### CodexOptions Interface
+
+```typescript
+interface CodexOptions {
+  tableName: string;           // Table name for vector storage
+  model?: string;              // Embedding model (default: "text-embedding-ada-002")
+  dimensions?: number;         // Vector dimensions (default: 1536)
+  distanceMetric?: string;     // Distance calculation method (default: "cosine")
+}
+```
+
+### SearchOptions Interface
+
+```typescript
+interface SearchOptions {
+  limit?: number;                    // Maximum results to return (default: 10)
+  distanceThreshold?: number;        // Minimum similarity threshold (0-1)
+  metadata?: Record<string, any>;    // Metadata filters
+}
+```
+
+### SearchResult Interface
+
+```typescript
+interface SearchResult {
+  content: string;                   // The matched content
+  metadata: Record<string, any>;     // Associated metadata
+  distance: number;                  // Similarity score (lower = more similar)
+}
+```
+
+## Error Handling
+
+```typescript
+// Safe Codex operations with error handling
+async function safeCodexAdd(codex: Codex, content: string, metadata?: Record<string, any>): Promise<boolean> {
+  try {
+    if (!content || content.trim().length === 0) {
+      console.error('Cannot add empty content to Codex');
+      return false;
+    }
+    
+    await codex.add(content, metadata);
+    return true;
+  } catch (error) {
+    console.error('Error adding content to Codex:', error);
+    return false;
+  }
+}
+
+async function safeCodexSearch(codex: Codex, query: string, options?: SearchOptions): Promise<SearchResult[]> {
+  try {
+    if (!query || query.trim().length === 0) {
+      console.warn('Empty search query provided');
+      return [];
+    }
+    
+    return await codex.search(query, options);
+  } catch (error) {
+    console.error('Error searching Codex:', error);
+    return [];
+  }
+}
+```
+
+## Performance Considerations
+
+### Batch Operations
+
+```typescript
+class BatchCodexManager {
+  private codex: Codex;
+  private batchSize: number;
+  private pendingItems: Array<{ content: string; metadata?: Record<string, any> }> = [];
+  
+  constructor(codex: Codex, batchSize = 10) {
+    this.codex = codex;
+    this.batchSize = batchSize;
+  }
+  
+  async addToBatch(content: string, metadata?: Record<string, any>): Promise<void> {
+    this.pendingItems.push({ content, metadata });
+    
+    if (this.pendingItems.length >= this.batchSize) {
+      await this.flushBatch();
+    }
+  }
+  
+  async flushBatch(): Promise<void> {
+    if (this.pendingItems.length === 0) return;
+    
+    const promises = this.pendingItems.map(item => 
+      this.codex.add(item.content, item.metadata)
+    );
+    
+    try {
+      await Promise.all(promises);
+      console.log(`Successfully added ${this.pendingItems.length} items`);
+    } catch (error) {
+      console.error('Batch operation failed:', error);
+    }
+    
+    this.pendingItems = [];
+  }
+  
+  async finalize(): Promise<void> {
+    await this.flushBatch();
+  }
+}
+```
+
+## Related APIs
+
+- [Hero API](/docs/api-reference/hero-api) - AI agent interface
+- [Room API](/docs/api-reference/room-api) - Persistent memory management  
+- [Shot API](/docs/api-reference/shot-api) - Session context management
+
+## Examples
+
+- [Knowledge Base](/docs/examples/knowledge-base) - Complete Codex integration example
+- [Knowledge Integration](/docs/guides/knowledge-integration) - Advanced Codex usage patterns
+- [Building Chatbot](/docs/guides/building-chatbot) - Codex with conversational AI

@@ -1,0 +1,676 @@
+---
+title: Room - Persistent Memory
+description: Understanding the Room component for cross-session memory management
+---
+
+# Room - Persistent Memory
+
+The **Room** is downcity's persistent memory manager that maintains conversation history and context across multiple sessions. It acts as the bridge between temporary conversation context (Shot) and long-term knowledge storage (Codex).
+
+## What is a Room?
+
+A Room is responsible for:
+- **Session Management**: Creating, storing, and retrieving conversation sessions (Shots)
+- **Memory Persistence**: Ensuring conversations survive application restarts
+- **Context Continuity**: Providing relevant historical context for new conversations
+- **Lifecycle Management**: Automatically cleaning up old or irrelevant sessions
+
+## Basic Usage
+
+### Creating a Room
+
+```typescript
+import { Room, SQLitePersistor } from 'downcity';
+
+// Create a Room with SQLite persistence
+const persistor = new SQLitePersistor('./my-agent-memory.db');
+const room = new Room(persistor);
+
+// Use with Hero
+const hero = Hero.create()
+  .avatar("You are a helpful assistant with memory")
+  .memory(room);
+```
+
+### Direct Room Operations
+
+```typescript
+// Create a new shot
+const shot = room.createShot();
+console.log("Created shot:", shot.getId());
+
+// Get a specific shot
+const retrievedShot = room.getShot(shot.getId());
+if (retrievedShot) {
+  console.log("Shot found:", retrievedShot.getId());
+}
+
+// List all shots
+const allShots = room.getShotsList();
+console.log("Total shots:", allShots.length);
+
+// Delete a shot
+const deleted = room.deleteShot(shot.getId());
+console.log("Shot deleted:", deleted);
+```
+
+## Core Methods
+
+### `createShot(): Shot`
+
+Creates a new conversation session:
+
+```typescript
+const room = new Room(persistor);
+
+// Create a new shot
+const newShot = room.createShot();
+console.log("New shot ID:", newShot.getId());
+
+// Shot is automatically persisted
+const shots = room.getShotsList();
+console.log("Total shots:", shots.length);
+```
+
+### `getShot(id: string): Shot | undefined`
+
+Retrieves a specific shot by ID:
+
+```typescript
+const shotId = "shot-123";
+const shot = room.getShot(shotId);
+
+if (shot) {
+  console.log("Found shot:", shot.getId());
+  console.log("Messages:", shot.getMessages().length);
+} else {
+  console.log("Shot not found");
+}
+```
+
+### `updateShot(shot: Shot): boolean`
+
+Updates an existing shot in storage:
+
+```typescript
+const shot = room.getShot("shot-123");
+if (shot) {
+  // Modify the shot
+  shot.setMetadata({ 
+    title: "Updated conversation",
+    lastModified: new Date().toISOString()
+  });
+  
+  // Save changes
+  const updated = room.updateShot(shot);
+  console.log("Shot updated:", updated);
+}
+```
+
+### `getShotsList(): Array<{id: string, meta: ShotMeta}>`
+
+Lists all available shots with metadata:
+
+```typescript
+const shots = room.getShotsList();
+
+shots.forEach(shot => {
+  console.log(`Shot ${shot.id}:`);
+  console.log(`  Title: ${shot.meta.title || 'Untitled'}`);
+  console.log(`  Created: ${shot.meta.createdAt}`);
+  console.log(`  Messages: ${shot.meta.messageCount || 0}`);
+});
+```
+
+### `deleteShot(id: string): boolean`
+
+Removes a shot from storage:
+
+```typescript
+const shotId = "old-shot-123";
+const deleted = room.deleteShot(shotId);
+
+if (deleted) {
+  console.log("Shot deleted successfully");
+} else {
+  console.log("Shot not found or deletion failed");
+}
+```
+
+### `clear(): void`
+
+Removes all shots from the room:
+
+```typescript
+// Clear all conversations
+room.clear();
+console.log("All shots cleared");
+
+// Verify
+const remaining = room.getShotsList();
+console.log("Remaining shots:", remaining.length); // Should be 0
+```
+
+## Configuration Options
+
+### Room Constructor
+
+```typescript
+class Room {
+  constructor(
+    persistor?: RoomPersistor,
+    options?: {
+      maxShots?: number;        // Maximum shots to keep (default: 20)
+      cleanupInterval?: number; // Auto-cleanup interval in seconds
+      retentionDays?: number;   // Days to keep shots
+    }
+  )
+}
+```
+
+### Example with Configuration
+
+```typescript
+const room = new Room(persistor, {
+  maxShots: 50,           // Keep up to 50 conversations
+  cleanupInterval: 3600,  // Clean up every hour
+  retentionDays: 30       // Keep conversations for 30 days
+});
+```
+
+## Persistor Types
+
+### SQLitePersistor
+
+The default persistor using SQLite database:
+
+```typescript
+import { SQLitePersistor } from 'downcity';
+
+const persistor = new SQLitePersistor('./agent-memory.db', {
+  // Optional configuration
+  tableName: 'custom_shots',
+  indexes: [
+    'CREATE INDEX IF NOT EXISTS idx_created_at ON shots(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_metadata ON shots(metadata)'
+  ]
+});
+```
+
+### Custom Persistor
+
+Implement your own persistor for different storage backends:
+
+```typescript
+import { Persistor } from 'downcity';
+
+class PostgreSQLPersistor extends Persistor<ShotData, ShotMeta> {
+  constructor(private connectionString: string) {
+    super();
+  }
+
+  insert(id: string, meta: ShotMeta, data: ShotData): void {
+    // Implement PostgreSQL insertion
+  }
+
+  find(id: string): { meta: ShotMeta; data: ShotData } | undefined {
+    // Implement PostgreSQL retrieval
+  }
+
+  remove(id: string): void {
+    // Implement PostgreSQL deletion
+  }
+
+  update(id: string, meta: ShotMeta, data: ShotData): void {
+    // Implement PostgreSQL update
+  }
+
+  list(): { id: string; meta: ShotMeta }[] {
+    // Implement PostgreSQL listing
+  }
+}
+
+// Usage
+const persistor = new PostgreSQLPersistor('postgresql://...');
+const room = new Room(persistor);
+```
+
+## Advanced Usage Patterns
+
+### Smart Memory Management
+
+Implement intelligent memory management based on conversation importance:
+
+```typescript
+class SmartRoom {
+  private room: Room;
+  private importanceThreshold = 0.7;
+
+  constructor(persistor: RoomPersistor) {
+    this.room = new Room(persistor);
+  }
+
+  async createImportantShot(metadata: { importance?: number } = {}): Promise<Shot> {
+    const shot = this.room.createShot();
+    
+    // Set importance metadata
+    shot.setMetadata({
+      ...shot.getMetadata(),
+      importance: metadata.importance || 0.5,
+      createdAt: new Date().toISOString()
+    });
+
+    this.room.updateShot(shot);
+    return shot;
+  }
+
+  async cleanupByImportance(): Promise<void> {
+    const shots = this.room.getShotsList();
+    
+    for (const shotInfo of shots) {
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) continue;
+
+      const importance = shot.getMetadata().importance || 0;
+      const age = this.calculateAge(shot.getMetadata().createdAt);
+
+      // Remove low importance, old conversations
+      if (importance < this.importanceThreshold && age > 7) {
+        this.room.deleteShot(shotInfo.id);
+        console.log(`Cleaned up low-importance shot: ${shotInfo.id}`);
+      }
+    }
+  }
+
+  private calculateAge(createdAt: string): number {
+    const created = new Date(createdAt);
+    const now = new Date();
+    return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+  }
+}
+```
+
+### Conversation Categorization
+
+Organize conversations by topic or purpose:
+
+```typescript
+class CategorizedRoom {
+  private room: Room;
+  private categories = new Map<string, string[]>();
+
+  constructor(persistor: RoomPersistor) {
+    this.room = new Room(persistor);
+  }
+
+  createCategorizedShot(category: string, title?: string): Shot {
+    const shot = this.room.createShot();
+    
+    shot.setMetadata({
+      ...shot.getMetadata(),
+      category: category,
+      title: title || `${category} conversation`,
+      createdAt: new Date().toISOString()
+    });
+
+    // Track category
+    if (!this.categories.has(category)) {
+      this.categories.set(category, []);
+    }
+    this.categories.get(category)!.push(shot.getId());
+
+    this.room.updateShot(shot);
+    return shot;
+  }
+
+  getShotsByCategory(category: string): Shot[] {
+    const shots = this.room.getShotsList();
+    return shots
+      .filter(shotInfo => {
+        const shot = this.room.getShot(shotInfo.id);
+        return shot?.getMetadata().category === category;
+      })
+      .map(shotInfo => this.room.getShot(shotInfo.id)!)
+      .filter(Boolean);
+  }
+
+  getCategories(): string[] {
+    const shots = this.room.getShotsList();
+    const categories = new Set<string>();
+    
+    shots.forEach(shotInfo => {
+      const shot = this.room.getShot(shotInfo.id);
+      const category = shot?.getMetadata().category;
+      if (category) categories.add(category);
+    });
+
+    return Array.from(categories);
+  }
+
+  getCategoryStats(): Record<string, number> {
+    const categories = this.getCategories();
+    const stats: Record<string, number> = {};
+
+    categories.forEach(category => {
+      stats[category] = this.getShotsByCategory(category).length;
+    });
+
+    return stats;
+  }
+}
+
+// Usage
+const categorizedRoom = new CategorizedRoom(persistor);
+
+// Create categorized conversations
+const workShot = categorizedRoom.createCategorizedShot('work', 'Project Discussion');
+const personalShot = categorizedRoom.createCategorizedShot('personal', 'Weekend Plans');
+
+// Retrieve by category
+const workConversations = categorizedRoom.getShotsByCategory('work');
+console.log("Work conversations:", workConversations.length);
+
+// Get statistics
+const stats = categorizedRoom.getCategoryStats();
+console.log("Category stats:", stats);
+```
+
+### Memory Search and Retrieval
+
+Implement search functionality across stored conversations:
+
+```typescript
+class SearchableRoom {
+  private room: Room;
+
+  constructor(persistor: RoomPersistor) {
+    this.room = new Room(persistor);
+  }
+
+  searchConversations(query: string, options: {
+    limit?: number;
+    category?: string;
+    dateRange?: { start: Date; end: Date };
+  } = {}): Array<{ shot: Shot; relevance: number }> {
+    const shots = this.room.getShotsList();
+    const results: Array<{ shot: Shot; relevance: number }> = [];
+
+    for (const shotInfo of shots) {
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) continue;
+
+      // Apply filters
+      if (options.category && shot.getMetadata().category !== options.category) {
+        continue;
+      }
+
+      if (options.dateRange) {
+        const createdAt = new Date(shot.getMetadata().createdAt);
+        if (createdAt < options.dateRange.start || createdAt > options.dateRange.end) {
+          continue;
+        }
+      }
+
+      // Calculate relevance
+      const relevance = this.calculateRelevance(shot, query);
+      if (relevance > 0) {
+        results.push({ shot, relevance });
+      }
+    }
+
+    // Sort by relevance and apply limit
+    results.sort((a, b) => b.relevance - a.relevance);
+    return results.slice(0, options.limit || 10);
+  }
+
+  private calculateRelevance(shot: Shot, query: string): number {
+    const queryLower = query.toLowerCase();
+    let relevance = 0;
+
+    // Check metadata
+    const metadata = shot.getMetadata();
+    if (metadata.title?.toLowerCase().includes(queryLower)) {
+      relevance += 0.5;
+    }
+    if (metadata.category?.toLowerCase().includes(queryLower)) {
+      relevance += 0.3;
+    }
+
+    // Check messages
+    const messages = shot.getMessages();
+    for (const message of messages) {
+      if (message.content.toLowerCase().includes(queryLower)) {
+        relevance += 0.1;
+      }
+    }
+
+    return relevance;
+  }
+
+  findSimilarConversations(referenceShot: Shot, limit = 5): Shot[] {
+    const shots = this.room.getShotsList();
+    const similarities: Array<{ shot: Shot; similarity: number }> = [];
+
+    const referenceKeywords = this.extractKeywords(referenceShot);
+
+    for (const shotInfo of shots) {
+      if (shotInfo.id === referenceShot.getId()) continue;
+
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) continue;
+
+      const similarity = this.calculateSimilarity(referenceKeywords, shot);
+      if (similarity > 0.1) {
+        similarities.push({ shot, similarity });
+      }
+    }
+
+    return similarities
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit)
+      .map(item => item.shot);
+  }
+
+  private extractKeywords(shot: Shot): string[] {
+    const messages = shot.getMessages();
+    const text = messages.map(m => m.content).join(' ');
+    
+    // Simple keyword extraction (in practice, use NLP libraries)
+    return text
+      .toLowerCase()
+      .split(/\W+/)
+      .filter(word => word.length > 3)
+      .slice(0, 20); // Top 20 keywords
+  }
+
+  private calculateSimilarity(keywords1: string[], shot2: Shot): number {
+    const keywords2 = this.extractKeywords(shot2);
+    const intersection = keywords1.filter(k => keywords2.includes(k));
+    const union = [...new Set([...keywords1, ...keywords2])];
+    
+    return intersection.length / union.length; // Jaccard similarity
+  }
+}
+
+// Usage
+const searchableRoom = new SearchableRoom(persistor);
+
+// Search conversations
+const results = searchableRoom.searchConversations('typescript project', {
+  limit: 5,
+  category: 'work'
+});
+
+console.log(`Found ${results.length} relevant conversations`);
+results.forEach(result => {
+  console.log(`- ${result.shot.getMetadata().title} (relevance: ${result.relevance})`);
+});
+
+// Find similar conversations
+const currentShot = room.createShot();
+const similarShots = searchableRoom.findSimilarConversations(currentShot);
+console.log(`Found ${similarShots.length} similar conversations`);
+```
+
+## Memory Analytics
+
+### Conversation Statistics
+
+Track and analyze conversation patterns:
+
+```typescript
+class RoomAnalytics {
+  private room: Room;
+
+  constructor(room: Room) {
+    this.room = room;
+  }
+
+  getOverallStats() {
+    const shots = this.room.getShotsList();
+    const totalShots = shots.length;
+    
+    let totalMessages = 0;
+    let totalCharacters = 0;
+    const categories = new Map<string, number>();
+    const dailyActivity = new Map<string, number>();
+
+    shots.forEach(shotInfo => {
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) return;
+
+      const messages = shot.getMessages();
+      totalMessages += messages.length;
+      
+      messages.forEach(msg => {
+        totalCharacters += msg.content.length;
+      });
+
+      // Category stats
+      const category = shot.getMetadata().category || 'uncategorized';
+      categories.set(category, (categories.get(category) || 0) + 1);
+
+      // Daily activity
+      const date = new Date(shot.getMetadata().createdAt).toDateString();
+      dailyActivity.set(date, (dailyActivity.get(date) || 0) + 1);
+    });
+
+    return {
+      totalShots,
+      totalMessages,
+      totalCharacters,
+      averageMessagesPerShot: totalMessages / totalShots || 0,
+      averageCharactersPerMessage: totalCharacters / totalMessages || 0,
+      categories: Object.fromEntries(categories),
+      dailyActivity: Object.fromEntries(dailyActivity)
+    };
+  }
+
+  getActivityTrends(days = 30) {
+    const shots = this.room.getShotsList();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const recentShots = shots.filter(shotInfo => {
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) return false;
+      
+      const createdAt = new Date(shot.getMetadata().createdAt);
+      return createdAt >= cutoffDate;
+    });
+
+    const dailyStats = new Map<string, { shots: number; messages: number }>();
+
+    recentShots.forEach(shotInfo => {
+      const shot = this.room.getShot(shotInfo.id);
+      if (!shot) return;
+
+      const date = new Date(shot.getMetadata().createdAt).toDateString();
+      const messages = shot.getMessages().length;
+
+      const current = dailyStats.get(date) || { shots: 0, messages: 0 };
+      dailyStats.set(date, {
+        shots: current.shots + 1,
+        messages: current.messages + messages
+      });
+    });
+
+    return Object.fromEntries(dailyStats);
+  }
+
+  getMostActiveCategories(limit = 5) {
+    const stats = this.getOverallStats();
+    return Object.entries(stats.categories)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, limit)
+      .map(([category, count]) => ({ category, count }));
+  }
+}
+
+// Usage
+const analytics = new RoomAnalytics(room);
+
+const stats = analytics.getOverallStats();
+console.log("Overall Statistics:", stats);
+
+const trends = analytics.getActivityTrends(7); // Last 7 days
+console.log("Weekly Activity:", trends);
+
+const topCategories = analytics.getMostActiveCategories();
+console.log("Most Active Categories:", topCategories);
+```
+
+## Best Practices
+
+### 1. Memory Organization
+- **Use Metadata**: Add meaningful metadata to shots for better organization
+- **Categorization**: Implement category systems for different conversation types
+- **Naming**: Use descriptive titles for important conversations
+
+### 2. Performance Optimization
+- **Indexing**: Create database indexes for frequently queried fields
+- **Cleanup**: Implement regular cleanup of old, irrelevant conversations
+- **Pagination**: Use pagination for large conversation lists
+
+### 3. Data Management
+- **Backup**: Regularly backup your memory database
+- **Migration**: Plan for schema migrations as your application evolves
+- **Monitoring**: Monitor storage usage and performance
+
+### 4. Privacy and Security
+- **Encryption**: Encrypt sensitive conversation data
+- **Access Control**: Implement proper access controls
+- **Data Retention**: Follow privacy regulations for data retention
+
+## Common Use Cases
+
+### Personal Assistant Memory
+```typescript
+const personalRoom = new Room(new SQLitePersistor('./personal-assistant.db'), {
+  maxShots: 100,
+  retentionDays: 365 // Keep for a year
+});
+```
+
+### Customer Support History
+```typescript
+const supportRoom = new Room(new SQLitePersistor('./customer-support.db'), {
+  maxShots: 1000,
+  retentionDays: 90 // Keep for 3 months
+});
+```
+
+### Educational Progress Tracking
+```typescript
+const educationRoom = new Room(new SQLitePersistor('./student-progress.db'), {
+  maxShots: 200,
+  retentionDays: 180 // Keep for 6 months
+});
+```
+
+## Next Steps
+
+- [Shot Component](/docs/core-concepts/shot) - Understanding session context
+- [Codex Component](/docs/core-concepts/codex) - Knowledge base integration
+- [Memory Management Guide](/docs/guides/memory-management) - Advanced memory patterns
+- [API Reference](/docs/api-reference/room-api) - Complete Room API documentation

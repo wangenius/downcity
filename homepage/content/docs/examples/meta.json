@@ -1,0 +1,10 @@
+{
+  "title": "Examples",
+  "description": "Complete working examples you can run and modify",
+  "icon": "💡",
+  "pages": [
+    "basic-agent",
+    "persistent-memory",
+    "knowledge-base"
+  ]
+}

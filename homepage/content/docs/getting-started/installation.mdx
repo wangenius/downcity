@@ -1,0 +1,142 @@
+---
+title: Installation
+description: Install downcity and set up your development environment
+---
+
+# Installation
+
+Get started with downcity by installing the package and setting up your development environment.
+
+## System Requirements
+
+Before installing downcity, make sure your system meets these requirements:
+
+- **Node.js**: Version 16.0.0 or higher
+- **npm**: Version 7.0.0 or higher (or yarn equivalent)
+- **TypeScript**: Version 5.0.0 or higher (recommended)
+
+## Install downcity
+
+Install downcity using your preferred package manager:
+
+<Tabs items={['npm', 'yarn', 'pnpm']}>
+  <Tab value="npm">
+    ```bash
+    npm install downcity
+    ```
+  </Tab>
+  <Tab value="yarn">
+    ```bash
+    yarn add downcity
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash
+    pnpm add downcity
+    ```
+  </Tab>
+</Tabs>
+
+## Environment Setup
+
+### 1. Create Environment File
+
+Create a `.env` file in your project root:
+
+```bash
+# OpenAI API Key (required for AI functionality)
+DOWNCITY_API_KEY=your_openai_api_key_here
+
+# Optional: Custom model configuration
+DOWNCITY_MODEL=gpt-4
+DOWNCITY_EMBEDDING_MODEL=text-embedding-ada-002
+```
+
+### 2. TypeScript Configuration
+
+If you're using TypeScript, ensure your `tsconfig.json` includes:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true
+  }
+}
+```
+
+## Verify Installation
+
+Create a simple test file to verify your installation:
+
+```typescript title="test-installation.ts"
+import { Hero } from 'downcity';
+
+async function testInstallation() {
+  try {
+    const hero = Hero.create();
+    console.log('✅ downcity installed successfully!');
+    console.log('Hero instance created:', hero.getCurrentShotId());
+  } catch (error) {
+    console.error('❌ Installation test failed:', error);
+  }
+}
+
+testInstallation();
+```
+
+Run the test:
+
+```bash
+npx tsx test-installation.ts
+# or
+node --loader tsx test-installation.ts
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Module Resolution Errors
+
+If you encounter module resolution errors:
+
+1. Ensure you're using Node.js 16+ with ES modules support
+2. Add `"type": "module"` to your `package.json`
+3. Use `.mjs` file extensions or configure your bundler properly
+
+#### API Key Issues
+
+If you get authentication errors:
+
+1. Verify your OpenAI API key is correct
+2. Check that the `.env` file is in the correct location
+3. Ensure your API key has sufficient credits and permissions
+
+#### TypeScript Errors
+
+For TypeScript-related issues:
+
+1. Install type definitions: `npm install -D @types/node`
+2. Update your TypeScript version to 5.0+
+3. Check your `tsconfig.json` configuration
+
+### Getting Help
+
+If you're still having issues:
+
+- Check the [GitHub Issues](https://github.com/wangenius/downcity/issues)
+- Review the [API Reference](/docs/api-reference)
+- Join our community discussions
+
+## Next Steps
+
+Now that you have downcity installed, you can:
+
+1. [Quick Start Guide](/docs/getting-started/quick-start) - Set up your first project
+2. [Create Your First Agent](/docs/getting-started/first-agent) - Build a simple AI agent
+3. [Core Concepts](/docs/core-concepts) - Learn about the framework architecture

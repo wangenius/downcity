@@ -23,7 +23,7 @@ export class Hero {
   // 会话
   private _shot: Shot;
 
-  private constructor() {
+  constructor() {
     this._room = new Room();
     this._shot = this._room.createShot();
   }

@@ -22,7 +22,7 @@ import { stopCommand } from "./Stop.js";
 import {
   getServiceRootCommandNames,
   registerAllServicesForCli,
-} from "../../core/services/Registry.js";
+} from "../service/Registry.js";
 
 // 在 ES 模块中获取 __dirname
 const __filename = fileURLToPath(import.meta.url);

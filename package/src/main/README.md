@@ -19,7 +19,10 @@
    - `Config.ts` 读取 `.env` + `ship.json` 并解析 `${ENV}` 占位符。
    - `Paths.ts` 提供 `.ship/*` 路径约定，作为全项目统一事实来源。
 4. `service/`
+   - `Registry.ts` / `ServiceRegistry.ts` 提供 service 注册契约与运行态调度入口。
+   - `CliRegistry.ts` / `ServerRegistry.ts` 适配 commander 与 Hono 的注册接口。
    - `ServiceRuntimeDependencies.ts` 与 `types/` 提供 service 依赖注入端口。
+   - `ProcessBindings.ts` 负责把 services 具体实现注入进程 bindings。
    - `ChatQueueWorker.ts` 在进程侧消费 chat queue，串联 context 写入与 agent 执行。
 5. `types/constants/utils/ui`
    - 放置进程层协议类型、常量、CLI 输出与 Web UI 辅助实现。
@@ -34,6 +37,8 @@
 - `runtime/Client.ts`
 - `runtime/Manager.ts`
 - `project/Config.ts`
+- `service/Registry.ts`
+- `service/ServiceRegistry.ts`
 - `service/ChatQueueWorker.ts`
 
 ## 启动链路（简化）

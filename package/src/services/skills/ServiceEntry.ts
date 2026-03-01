@@ -25,7 +25,7 @@ import type {
   SkillPinnedListResponse,
   SkillUnloadResponse,
 } from "./types/SkillCommand.js";
-import type { SmaService } from "../../core/services/ServiceRegistry.js";
+import type { SmaService } from "../../main/service/ServiceRegistry.js";
 import type { JsonObject } from "../../types/Json.js";
 
 function parsePortOption(value: string): number {

@@ -3,7 +3,7 @@
  *
  * 分层约束（中文）
  * - server 负责编排与依赖注入，可调用 core / services。
- * - 不把 server 状态反向泄露给 core/services。
+ * - 不把 server 状态反向泄露给 service 业务层。
  * - 路由层只做协议适配，业务逻辑下沉到模块注册与调度器。
  */
 
@@ -27,7 +27,7 @@ import {
   listServiceRuntimes,
   registerAllServicesForServer,
   runServiceCommand,
-} from "../../core/services/Registry.js";
+} from "../service/Registry.js";
 
 /**
  * 启动参数。

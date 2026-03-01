@@ -2,7 +2,7 @@
 
 ## 模块定位
 
-`core/` 是运行时内核层，负责 Agent 执行、上下文管理、Prompt 组装、工具协议与服务注册契约。  
+`core/` 是运行时内核层，负责 Agent 执行、上下文管理、Prompt 组装、工具协议与模型调用抽象。  
 这一层追求“可复用 + 可组合”，不承载 chat/skill/task 等具体业务语义。
 
 ## 实现概览
@@ -20,10 +20,7 @@
 4. `llm/`
    - `CreateModel` 统一构建 Anthropic/OpenAI/OpenAI Compatible 模型实例。
    - 内置 API Key 解析（含 `${ENV}`）与 LLM 请求日志接入。
-5. `services/`
-   - 定义 `SmaService` 契约与 CLI/HTTP registry 抽象。
-   - `Registry` 统一注册服务入口、运行态生命周期（start/stop/restart/status）与 command 转发。
-6. `types/`
+5. `types/`
    - 承载 core 内核抽象（Agent、ContextMessage、SystemPromptProvider、Shell 输入输出类型等）。
 
 ## 关键文件
@@ -33,8 +30,6 @@
 - `prompts/SystemProvider.ts`
 - `shell/Tool.ts`
 - `llm/CreateModel.ts`
-- `services/Registry.ts`
-- `services/ServiceRegistry.ts`
 
 ## 典型调用链
 

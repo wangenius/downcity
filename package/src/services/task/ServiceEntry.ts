@@ -28,7 +28,7 @@ import type {
   TaskUpdateResponse,
   TaskSetStatusResponse,
 } from "./types/TaskCommand.js";
-import type { SmaService } from "../../core/services/ServiceRegistry.js";
+import type { SmaService } from "../../main/service/ServiceRegistry.js";
 import type { ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "../../types/Json.js";
 import {

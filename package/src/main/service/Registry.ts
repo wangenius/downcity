@@ -8,7 +8,7 @@
 
 import type { Command } from "commander";
 import type { Hono } from "hono";
-import type { ServiceRuntimeDependencies } from "../../main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
 import type { JsonValue } from "../../types/Json.js";
 import "./ProcessBindings.js";
 import type {

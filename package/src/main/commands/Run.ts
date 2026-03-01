@@ -21,7 +21,7 @@ import { logger } from "../../utils/logger/Logger.js";
 import {
   startAllServiceRuntimes,
   stopAllServiceRuntimes,
-} from "../../core/services/Registry.js";
+} from "../service/Registry.js";
 
 /**
  * `shipmyagent run` 命令入口。

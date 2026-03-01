@@ -1,14 +1,14 @@
 /**
- * Core 服务注册契约类型。
+ * Service 注册契约类型（main/service）。
  *
  * 关键点（中文）
- * - 该类型属于 core/service 领域，作为核心注册层的事实来源
+ * - 该类型属于进程编排层，用于承接 service runtime 注册与调度
  * - services 由 registry 统一加载，避免散落硬编码
  */
 
 import type { Command } from "commander";
 import type { Handler, Hono } from "hono";
-import type { ServiceRuntimeDependencies } from "../../main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
 import type { JsonValue } from "../../types/Json.js";
 
 /**

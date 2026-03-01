@@ -2,7 +2,7 @@
  * Task cron 触发引擎。
  *
  * 关键点（中文）
- * - 该模块仅服务于 task service，不放在 core/services。
+ * - 该模块仅服务于 task service，不放在 core。
  * - 只提供 cron 注册与调度，不承载 task 业务语义。
  */
 

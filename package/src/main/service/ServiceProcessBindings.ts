@@ -6,7 +6,7 @@ import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js"
  *
  * 关键点（中文）
  * - process 仅通过该绑定调用服务能力。
- * - 具体实现由 core/services 在启动阶段注入。
+ * - 具体实现由 main/service 在启动阶段注入。
  */
 export type ProcessServiceBindings = {
   pickLastSuccessfulChatSendText(

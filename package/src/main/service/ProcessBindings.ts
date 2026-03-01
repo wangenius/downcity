@@ -1,20 +1,20 @@
 import {
   clearSystemPromptProviders,
   registerSystemPromptProvider,
-} from "../prompts/SystemProvider.js";
+} from "../../core/prompts/SystemProvider.js";
 import { runContextMemoryMaintenance } from "../../services/memory/runtime/Service.js";
 import { memorySystemPromptProvider } from "../../services/memory/runtime/SystemProvider.js";
 import { createSkillsSystemPromptProvider } from "../../services/skills/runtime/SystemProvider.js";
 import { pickLastSuccessfulChatSendText } from "../../services/chat/runtime/UserVisibleText.js";
 import { sendChatTextByContextId } from "../../services/chat/Service.js";
 import { getChatSender } from "../../services/chat/runtime/ChatSendRegistry.js";
-import { setProcessServiceBindings } from "../../main/service/ServiceProcessBindings.js";
+import { setProcessServiceBindings } from "./ServiceProcessBindings.js";
 
 /**
  * 绑定 process 所需的具体服务实现。
  *
  * 关键点（中文）
- * - 具体实现只出现在 core/services 层，process 不直接依赖 services/*。
+ * - 具体实现只出现在 main/service 层，process 不直接依赖 services/*。
  * - 所有 process -> services 的能力访问都经由抽象 bindings。
  */
 setProcessServiceBindings({

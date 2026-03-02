@@ -330,8 +330,6 @@ export class AgentServer {
         // [阶段2] 上下文注入：构造 contextId，并写入一条 user 消息到上下文消息。
         const contextId = `api:chat:${chatId}`;
         const runtime = getRuntimeState();
-        const messageId =
-          typeof body?.messageId === "string" ? body.messageId : undefined;
         await runtime.contextManager.appendUserMessage({
           contextId,
           text: String(instructions),
@@ -343,9 +341,6 @@ export class AgentServer {
         const result = await withContextRequestContext(
           {
             contextId,
-            targetId: chatId,
-            actorId: actorId,
-            messageId,
           },
           () =>
             runtime.contextManager.getAgent(contextId).run({

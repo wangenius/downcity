@@ -21,8 +21,10 @@
    - `Registry.ts` / `ServiceRegistry.ts` 提供 service 注册契约与运行态调度入口。
    - `CliRegistry.ts` / `ServerRegistry.ts` 适配 commander 与 Hono 的注册接口。
    - `ServiceRuntimeDependencies.ts` 与 `types/` 提供 service 依赖注入端口。
+   - `RequestContext.ts` 仅透传最小请求上下文（`contextId`）。
    - `ProcessBindings.ts` 负责把 services 具体实现注入进程 bindings。
    - `ChatQueueWorker.ts` 在进程侧消费 chat queue，串联 context 写入与 agent 执行。
+   - 详细约束见 `service/README.md`（含 typing 心跳与 shell env 透传约定）。
 5. `types/constants/utils/ui`
    - 放置进程层协议类型、常量、CLI 输出与 Web UI 辅助实现。
 
@@ -38,7 +40,9 @@
 - `project/Config.ts`
 - `service/Registry.ts`
 - `service/ServiceRegistry.ts`
+- `service/RequestContext.ts`
 - `service/ChatQueueWorker.ts`
+- `service/README.md`
 
 ## 启动链路（简化）
 

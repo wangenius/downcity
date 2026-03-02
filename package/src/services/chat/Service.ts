@@ -68,35 +68,19 @@ export function resolveChatContextSnapshot(input?: {
       : undefined;
   const envContextId = readEnvString("SMA_CTX_CONTEXT_ID");
   const envChatKey = readEnvString("SMA_CTX_CHAT_KEY");
-
-  const channel =
-    (typeof requestCtx?.channel === "string" && requestCtx.channel.trim()
-      ? requestCtx.channel.trim()
-      : readEnvString("SMA_CTX_CHANNEL")) || undefined;
+  const channel = readEnvString("SMA_CTX_CHANNEL") || undefined;
   const chatId =
-    (typeof requestCtx?.targetId === "string" && requestCtx.targetId.trim()
-      ? requestCtx.targetId.trim()
-      : readEnvString("SMA_CTX_TARGET_ID") ||
-        readEnvString("SMA_CTX_CHAT_ID")) || undefined;
+    readEnvString("SMA_CTX_TARGET_ID") || readEnvString("SMA_CTX_CHAT_ID");
   const messageThreadId =
-    typeof requestCtx?.threadId === "number"
-      ? requestCtx.threadId
-      : readEnvNumber("SMA_CTX_THREAD_ID") ||
-        readEnvNumber("SMA_CTX_MESSAGE_THREAD_ID");
+    readEnvNumber("SMA_CTX_THREAD_ID") ||
+    readEnvNumber("SMA_CTX_MESSAGE_THREAD_ID");
   const chatType =
-    (typeof requestCtx?.targetType === "string" && requestCtx.targetType.trim()
-      ? requestCtx.targetType.trim()
-      : readEnvString("SMA_CTX_TARGET_TYPE") ||
-        readEnvString("SMA_CTX_CHAT_TYPE")) || undefined;
+    readEnvString("SMA_CTX_TARGET_TYPE") ||
+    readEnvString("SMA_CTX_CHAT_TYPE");
   const userId =
-    (typeof requestCtx?.actorId === "string" && requestCtx.actorId.trim()
-      ? requestCtx.actorId.trim()
-      : readEnvString("SMA_CTX_ACTOR_ID") ||
-        readEnvString("SMA_CTX_USER_ID")) || undefined;
-  const messageId =
-    (typeof requestCtx?.messageId === "string" && requestCtx.messageId.trim()
-      ? requestCtx.messageId.trim()
-      : readEnvString("SMA_CTX_MESSAGE_ID")) || undefined;
+    readEnvString("SMA_CTX_ACTOR_ID") ||
+    readEnvString("SMA_CTX_USER_ID");
+  const messageId = readEnvString("SMA_CTX_MESSAGE_ID");
   const requestId =
     (typeof llmCtx?.requestId === "string" && llmCtx.requestId.trim()
       ? llmCtx.requestId.trim()

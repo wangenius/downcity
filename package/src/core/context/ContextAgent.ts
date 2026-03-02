@@ -25,7 +25,6 @@ import {
 import { createModel } from "@core/llm/CreateModel.js";
 import type { AgentRunInput, AgentResult } from "@core/types/Agent.js";
 import type { Logger } from "@utils/logger/Logger.js";
-import { contextRequestContext } from "@/main/service/RequestContext.js";
 import { openai } from "@ai-sdk/openai";
 import type {
   ShipContextMessageV1,
@@ -461,23 +460,13 @@ export class ContextAgent {
    * 构建运行时 system message。
    *
    * 关键点（中文）
-   * - 将 context request-context（target/user）注入到 system prompt。
+   * - 注入运行所需的最小上下文：projectRoot/contextId/requestId。
    */
   private buildRuntimeSystemMessages(input: {
     projectRoot: string;
     contextId: string;
     requestId: string;
   }): SystemModelMessage[] {
-    const contextCtx = contextRequestContext.getStore();
-    const runtimeExtraContextLines: string[] = [];
-
-    if (contextCtx?.targetId)
-      runtimeExtraContextLines.push(`- TargetId: ${contextCtx.targetId}`);
-    if (contextCtx?.actorId)
-      runtimeExtraContextLines.push(`- UserId: ${contextCtx.actorId}`);
-    if (contextCtx?.actorName)
-      runtimeExtraContextLines.push(`- Username: ${contextCtx.actorName}`);
-
     return [
       {
         role: "system",
@@ -485,7 +474,6 @@ export class ContextAgent {
           projectRoot: input.projectRoot,
           contextId: input.contextId,
           requestId: input.requestId,
-          extraContextLines: runtimeExtraContextLines,
         }),
       },
     ];

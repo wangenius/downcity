@@ -25,8 +25,9 @@ import type {
   SkillPinnedListResponse,
   SkillUnloadResponse,
 } from "./types/SkillCommand.js";
-import type { SmaService } from "@main/service/ServiceRegistry.js";
+import type { Service } from "@main/service/ServiceRegistry.js";
 import type { JsonObject } from "@/types/Json.js";
+import { createSkillsSystemPromptProvider } from "./runtime/SystemProvider.js";
 
 function parsePortOption(value: string): number {
   const port = Number.parseInt(value, 10);
@@ -212,7 +213,7 @@ async function callSkillPinned(options: SkillRemoteCliOptions): Promise<void> {
   });
 }
 
-function setupCli(registry: Parameters<SmaService["registerCli"]>[0]): void {
+function setupCli(registry: Parameters<Service["registerCli"]>[0]): void {
   registry.group("skill", "Skills 管理（模块化命令）", (group) => {
     group.command("find <query>", "查找 skills（等价于 npx skills find）", (command: Command) => {
       command.action(async (query: string) => {
@@ -275,8 +276,8 @@ function setupCli(registry: Parameters<SmaService["registerCli"]>[0]): void {
 }
 
 function setupServer(
-  registry: Parameters<SmaService["registerServer"]>[0],
-  context: Parameters<SmaService["registerServer"]>[1],
+  registry: Parameters<Service["registerServer"]>[0],
+  context: Parameters<Service["registerServer"]>[1],
 ): void {
   registry.get("/api/skill/list", (c) => {
     const result = listSkills(context.rootPath);
@@ -346,8 +347,11 @@ function setupServer(
   });
 }
 
-export const skillsService: SmaService = {
+export const skillsService: Service = {
   name: "skill",
+  systemPromptProviders: ({ getContext }) => [
+    createSkillsSystemPromptProvider(getContext),
+  ],
   registerCli(registry) {
     setupCli(registry);
   },

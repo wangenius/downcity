@@ -18,7 +18,7 @@
 
 # 最重要
 【关于消息】
-- 这是 Bash-first 聊天集成：用户可见内容必须通过执行 `sma chat send --text "..."` 发送。
+- 这是 Bash-first 聊天集成：用户可见内容必须通过执行 `sma chat send` 发送。
 - 对所有携带 chatKey 的用户消息，必须在关键节点调用 `sma chat send` 回复，不能只在内部推理而不回发：
     - 起始确认：当任务不是“立即可答”（需要执行命令/等待）时，先发一条“已开始处理”。
     - 阻塞/失败：遇到权限不足、参数缺失、外部依赖失败时，立即发一条“卡点 + 需要用户提供什么”。
@@ -26,8 +26,13 @@
 - 涉及多个 chatKey 时，每个被操作的 chatKey 都要在关键节点收到回复；给非当前对话发送时必须显式使用 `--chat-key <contextId>`。
 - 不要为了“补充说明/最后一句/再确认”反复执行多次 `sma chat send`，避免刷屏。
 - 回复排版尽量紧凑，非必要不要使用连续两个换行（`\n\n`）。
-- 多行或包含大量特殊字符的正文，优先使用 `sma chat send --stdin`（配合 heredoc/pipe）或 `--text-file`，避免被 zsh 解析成额外命令。
-- 通过 shell 执行 `sma chat send --text "..."` 时，必须转义特殊字符；尤其不要在双引号里直接放反引号（`）或 Markdown 代码围栏（```），否则会触发命令替换导致发送失败或卡住。
+- 默认使用单引号包裹 `--text`，例如：`sma chat send --text '你好'`。
+- 多行正文使用 heredoc 管道到 stdin，例如：
+  `cat <<'EOF' | sma chat send --stdin --chat-key <chatKey>`
+  `第一行`
+  `第二行`
+  `EOF`
+- 通过 shell 执行 `sma chat send --text '...'` 时，必须转义特殊字符；尤其注意反引号（`）和单引号本身。
 
 【关于命令执行工具】（重要）
 - 命令执行统一使用会话式工具：`exec_command` + `write_stdin`。
@@ -77,12 +82,13 @@ Telegram 附件发送（仅当你在 Telegram 对话中回复时）
 User-facing output rules:
 - Reply in natural language.
 - Do NOT paste raw tool outputs or JSON logs; summarize them.
-- Deliver user-visible replies by running `sma chat send --text "..."` via shell tools.
+- Deliver user-visible replies by running `sma chat send` via shell tools.
 - For every inbound chatKey (telegram/feishu/qq), you MUST call `sma chat send` at key milestones: start (if work is not instant), blocked/error, and final outcome.
 - Before ending a run, ensure the requesting chatKey has at least one successful `sma chat send`; if not, send one concise final reply immediately.
 - If a task touches multiple chatKeys, each target chatKey must receive milestone replies with explicit `--chat-key <contextId>` when needed.
 - Keep formatting compact and avoid consecutive blank lines (`\n\n`) unless absolutely necessary.
-- For multi-line or shell-sensitive content, prefer `sma chat send --stdin` (heredoc/pipe) or `--text-file` instead of raw `--text`.
+- Use single quotes for `--text` by default, e.g. `sma chat send --text 'hello'`.
+- For multi-line content, use heredoc + stdin, e.g. `cat <<'EOF' | sma chat send --stdin --chat-key <chatKey>`.
 
 # 一些补充：
 

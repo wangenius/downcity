@@ -11,6 +11,7 @@ import type { Logger } from "@utils/logger/Logger.js";
 import type { ContextManager } from "@core/context/ContextManager.js";
 import { withContextRequestContext } from "./RequestContext.js";
 import type { ContextRequestContext } from "./RequestContext.js";
+import { getProcessServiceBindings } from "./ServiceProcessBindings.js";
 import type { AgentResult } from "@core/types/Agent.js";
 import type { ShipContextUserMessageV1 } from "@core/types/ContextMessage.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
@@ -22,6 +23,8 @@ import {
   clearChatQueueLane,
   getChatQueueLaneSize,
 } from "@services/chat/runtime/ChatQueue.js";
+
+const TYPING_ACTION_INTERVAL_MS = 4_000;
 
 type WorkerConfig = {
   maxConcurrency: number;
@@ -170,6 +173,51 @@ export class ChatQueueWorker {
     return false;
   }
 
+  /**
+   * 在单次执行期间维持“正在输入”心跳。
+   *
+   * 关键点（中文）
+   * - 仅对 chat 渠道生效（telegram/feishu/qq）
+   * - 先发送一次，再按固定间隔续发
+   * - 发送失败不影响主执行流程（best-effort）
+   */
+  private startTypingHeartbeat(item: ChatQueueItem): { stop: () => void } {
+    const chatId = String(item.targetId || "").trim();
+    if (!chatId) return { stop: () => {} };
+
+    const bindings = getProcessServiceBindings();
+    const sendOnce = async () => {
+      try {
+        await bindings.sendChatAction({
+          channel: item.channel,
+          chatId,
+          action: "typing",
+          ...(typeof item.threadId === "number"
+            ? { messageThreadId: item.threadId }
+            : {}),
+          ...(typeof item.targetType === "string" && item.targetType
+            ? { chatType: item.targetType }
+            : {}),
+          ...(typeof item.messageId === "string" && item.messageId
+            ? { messageId: item.messageId }
+            : {}),
+        });
+      } catch {
+        // ignore
+      }
+    };
+
+    void sendOnce();
+    const timer = setInterval(() => {
+      void sendOnce();
+    }, TYPING_ACTION_INTERVAL_MS);
+    if (typeof timer.unref === "function") timer.unref();
+
+    return {
+      stop: () => clearInterval(timer),
+    };
+  }
+
   private async processOne(laneKey: string, first: ChatQueueItem): Promise<void> {
     if (first.kind === "control") {
       this.handleControl(first);
@@ -185,14 +233,7 @@ export class ChatQueueWorker {
     }
 
     const ctx: ContextRequestContext = {
-      channel: first.channel,
-      targetId: first.targetId,
       contextId: first.contextId,
-      actorId: first.actorId,
-      actorName: first.actorName,
-      targetType: first.targetType,
-      threadId: first.threadId,
-      messageId: first.messageId,
     };
 
     let clearRequested = false;
@@ -226,24 +267,23 @@ export class ChatQueueWorker {
           }
         }
 
-        // 更新 request context 元数据（以最新消息为准）
-        ctx.messageId = item.messageId ?? ctx.messageId;
-        ctx.actorId = item.actorId ?? ctx.actorId;
-        ctx.actorName = item.actorName ?? ctx.actorName;
-        ctx.targetType = item.targetType ?? ctx.targetType;
-        ctx.threadId = item.threadId ?? ctx.threadId;
       }
       return mergedExecMessages;
     };
 
+    const typing = this.startTypingHeartbeat(first);
     let result: AgentResult;
-    result = await withContextRequestContext(ctx, () =>
-      agent.run({
-        contextId: first.contextId,
-        query: first.text,
-        onStepCallback,
-      }),
-    );
+    try {
+      result = await withContextRequestContext(ctx, () =>
+        agent.run({
+          contextId: first.contextId,
+          query: first.text,
+          onStepCallback,
+        }),
+      );
+    } finally {
+      typing.stop();
+    }
 
     if (clearRequested) {
       this.contextManager.clearAgent(first.contextId);

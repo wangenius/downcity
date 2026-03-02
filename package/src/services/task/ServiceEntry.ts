@@ -28,7 +28,7 @@ import type {
   TaskUpdateResponse,
   TaskSetStatusResponse,
 } from "./types/TaskCommand.js";
-import type { SmaService } from "@main/service/ServiceRegistry.js";
+import type { Service } from "@main/service/ServiceRegistry.js";
 import type { ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import {
@@ -552,7 +552,7 @@ async function runTaskSetStatusCommand(params: {
   });
 }
 
-function setupCli(registry: Parameters<SmaService["registerCli"]>[0]): void {
+function setupCli(registry: Parameters<Service["registerCli"]>[0]): void {
   registry.group("task", "Task 管理（模块化命令）", (group) => {
     group.command("list", "列出任务", (command: Command) => {
       command
@@ -720,8 +720,8 @@ function setupCli(registry: Parameters<SmaService["registerCli"]>[0]): void {
 }
 
 function setupServer(
-  registry: Parameters<SmaService["registerServer"]>[0],
-  context: Parameters<SmaService["registerServer"]>[1],
+  registry: Parameters<Service["registerServer"]>[0],
+  context: Parameters<Service["registerServer"]>[1],
 ): void {
   registry.get("/api/task/list", async (c) => {
     const statusRaw = String(c.req.query("status") || "").trim();
@@ -894,8 +894,10 @@ function setupServer(
   });
 }
 
-export const taskService: SmaService = {
+export const taskService: Service = {
   name: "task",
+  // 关键点（中文）：task service 当前不注入额外 system prompt。
+  systemPromptProviders: () => [],
   registerCli(registry) {
     setupCli(registry);
   },

@@ -13,21 +13,19 @@ import type { JsonValue } from "@/types/Json.js";
 import "./ProcessBindings.js";
 import type {
   ServerRouteRegistry,
-  SmaService,
-  SmaServiceCommandResult,
-  SmaServiceRuntimeState,
+  Service,
+  ServiceCommandResult,
+  ServiceRuntimeState,
 } from "./ServiceRegistry.js";
 import { createCliCommandRegistry } from "./CliRegistry.js";
 import { createServerRouteRegistry } from "./ServerRegistry.js";
-import { chatService } from "@services/chat/ServiceEntry.js";
-import { skillsService } from "@services/skills/ServiceEntry.js";
-import { taskService } from "@services/task/ServiceEntry.js";
+import { getRegisteredSmaServices } from "./Services.js";
 
-const SERVICES: SmaService[] = [chatService, skillsService, taskService];
+const SERVICES: Service[] = getRegisteredSmaServices();
 
 type ServiceRuntimeRecord = {
-  service: SmaService;
-  state: SmaServiceRuntimeState;
+  service: Service;
+  state: ServiceRuntimeState;
   updatedAt: number;
   lastError?: string;
   lastCommand?: string;
@@ -37,7 +35,7 @@ type ServiceRuntimeRecord = {
 
 export type ServiceRuntimeSnapshot = {
   name: string;
-  state: SmaServiceRuntimeState;
+  state: ServiceRuntimeState;
   updatedAt: number;
   lastError?: string;
   lastCommand?: string;
@@ -60,13 +58,13 @@ function nowMs(): number {
   return Date.now();
 }
 
-function resolveServiceByName(name: string): SmaService | null {
+function resolveServiceByName(name: string): Service | null {
   const key = String(name || "").trim();
   if (!key) return null;
   return SERVICES.find((service) => service.name === key) || null;
 }
 
-function ensureServiceRuntimeRecord(service: SmaService): ServiceRuntimeRecord {
+function ensureServiceRuntimeRecord(service: Service): ServiceRuntimeRecord {
   const key = String(service.name || "").trim();
   const existing = serviceRuntimeRecords.get(key);
   if (existing) return existing;
@@ -109,7 +107,7 @@ async function runSerialByService(
 
 function markRuntimeState(
   record: ServiceRuntimeRecord,
-  state: SmaServiceRuntimeState,
+  state: ServiceRuntimeState,
   error?: string,
 ): void {
   record.state = state;
@@ -127,7 +125,7 @@ function markServiceCommand(record: ServiceRuntimeRecord, command: string): void
   record.updatedAt = nowMs();
 }
 
-export function getSmaServices(): SmaService[] {
+export function getSmaServices(): Service[] {
   return [...SERVICES];
 }
 
@@ -151,7 +149,7 @@ export function isServiceRuntimeRunning(serviceName: string): boolean {
 }
 
 async function startServiceRuntimeInternal(
-  service: SmaService,
+  service: Service,
   context: ServiceRuntimeDependencies,
 ): Promise<ServiceRuntimeControlResult> {
   const record = ensureServiceRuntimeRecord(service);
@@ -181,7 +179,7 @@ async function startServiceRuntimeInternal(
 }
 
 async function stopServiceRuntimeInternal(
-  service: SmaService,
+  service: Service,
   context: ServiceRuntimeDependencies,
 ): Promise<ServiceRuntimeControlResult> {
   const record = ensureServiceRuntimeRecord(service);
@@ -249,7 +247,7 @@ export async function runServiceCommand(params: {
   command: string;
   payload?: JsonValue;
   context: ServiceRuntimeDependencies;
-}): Promise<SmaServiceCommandResult & { service?: ServiceRuntimeSnapshot }> {
+}): Promise<ServiceCommandResult & { service?: ServiceRuntimeSnapshot }> {
   const service = resolveServiceByName(params.serviceName);
   if (!service) {
     return {

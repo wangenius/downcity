@@ -252,11 +252,7 @@ async function runAgentRound(params: {
   const agent = getServiceContextManager(params.context).getAgent(params.contextId);
   const result = await getServiceRequestContextBridge(params.context).withContextRequestContext(
     {
-      channel: "scheduler",
-      targetId: params.taskId,
       contextId: params.contextId,
-      actorId: params.actorId,
-      actorName: params.actorName,
     },
     () =>
       agent.run({

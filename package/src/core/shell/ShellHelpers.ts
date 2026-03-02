@@ -151,15 +151,6 @@ function setEnvString(
   env[key] = trimmed;
 }
 
-function setEnvNumber(
-  env: NodeJS.ProcessEnv,
-  key: string,
-  value: number | undefined,
-): void {
-  if (typeof value !== "number" || !Number.isFinite(value)) return;
-  env[key] = String(Math.trunc(value));
-}
-
 /**
  * 构建子进程环境变量。
  *
@@ -172,12 +163,6 @@ export function buildShellContextEnv(): NodeJS.ProcessEnv {
   const llmCtx = llmRequestContext.getStore();
 
   setEnvString(env, "SMA_CTX_CONTEXT_ID", contextCtx?.contextId);
-  setEnvString(env, "SMA_CTX_CHANNEL", contextCtx?.channel);
-  setEnvString(env, "SMA_CTX_TARGET_ID", contextCtx?.targetId);
-  setEnvString(env, "SMA_CTX_TARGET_TYPE", contextCtx?.targetType);
-  setEnvString(env, "SMA_CTX_ACTOR_ID", contextCtx?.actorId);
-  setEnvString(env, "SMA_CTX_MESSAGE_ID", contextCtx?.messageId);
-  setEnvNumber(env, "SMA_CTX_THREAD_ID", contextCtx?.threadId);
   setEnvString(env, "SMA_CTX_REQUEST_ID", llmCtx?.requestId);
 
   // 关键点（中文）：把当前 server 地址透传给子进程，便于 `sma message/skill/task` 自动命中本地服务。

@@ -20,7 +20,7 @@ import { createFeishuBot } from "./adapters/feishu/Feishu.js";
 import { createQQBot } from "./adapters/qq/QQ.js";
 import { callServer } from "@main/runtime/Client.js";
 import { printResult } from "@main/utils/CliOutput.js";
-import type { SmaService } from "@main/service/ServiceRegistry.js";
+import type { Service } from "@main/service/ServiceRegistry.js";
 import type { ChatSendResponse } from "./types/ChatCommand.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
@@ -251,7 +251,7 @@ async function runChatSendCommand(options: ChatSendCliOptions): Promise<void> {
     printSendFailed({
       asJson: options.json,
       error:
-        "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CONTEXT_ID (or SMA_CTX_CHANNEL + SMA_CTX_TARGET_ID) is injected in current shell context.",
+        "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CONTEXT_ID is injected in current shell context.",
     });
     return;
   }
@@ -305,8 +305,10 @@ function runChatContextCommand(opts: { chatKey?: string; json?: boolean }): void
   });
 }
 
-export const chatService: SmaService = {
+export const chatService: Service = {
   name: "chat",
+  // 关键点（中文）：chat service 当前不注入额外 system prompt。
+  systemPromptProviders: () => [],
 
   registerCli(registry) {
     registry.group("chat", "Chat 服务命令（Bash-first）", (group) => {

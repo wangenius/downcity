@@ -34,9 +34,10 @@
 ## 统一服务模式
 
 1. `ServiceEntry.ts` 注册 CLI 命令与 server 路由。
-2. `Service.ts` 承载参数归一化、校验与业务流程。
-3. `runtime/` 承载状态管理、调度与工具函数。
-4. `types/` 定义服务输入输出协议，供 CLI 与 HTTP 共用。
+2. `ServiceEntry.ts` 可选声明 `systemPromptProviders` 字段，用于暴露该 service 的 prompt providers。
+3. `Service.ts` 承载参数归一化、校验与业务流程。
+4. `runtime/` 承载状态管理、调度与工具函数。
+5. `types/` 定义服务输入输出协议，供 CLI 与 HTTP 共用。
 
 ## 边界约束
 

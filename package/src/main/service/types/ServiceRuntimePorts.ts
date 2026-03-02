@@ -16,17 +16,10 @@ import type { AgentResult, AgentRunInput } from "@core/types/Agent.js";
  * 会话请求上下文。
  *
  * 关键点（中文）
- * - 这是跨 service 共享的最小上下文字段集合。
+ * - 这是跨 service 共享的最小上下文字段集合（仅 contextId）。
  */
 export type ServiceContextRequestContext = {
-  channel?: "telegram" | "feishu" | "qq" | "cli" | "scheduler" | "api";
   contextId?: string;
-  targetId?: string;
-  targetType?: string;
-  threadId?: number;
-  actorId?: string;
-  actorName?: string;
-  messageId?: string;
 };
 
 /**

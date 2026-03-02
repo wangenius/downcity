@@ -4,11 +4,11 @@ import {
 } from "@core/prompts/SystemProvider.js";
 import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
 import { memorySystemPromptProvider } from "@services/memory/runtime/SystemProvider.js";
-import { createSkillsSystemPromptProvider } from "@services/skills/runtime/SystemProvider.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { sendChatTextByContextId } from "@services/chat/Service.js";
 import { getChatSender } from "@services/chat/runtime/ChatSendRegistry.js";
 import { setProcessServiceBindings } from "./ServiceProcessBindings.js";
+import { getRegisteredSmaServices } from "./Services.js";
 
 /**
  * 绑定 process 所需的具体服务实现。
@@ -46,9 +46,26 @@ setProcessServiceBindings({
   runMemoryMaintenance: runContextMemoryMaintenance,
   registerSystemPromptProviders: (params) => {
     clearSystemPromptProviders();
-    registerSystemPromptProvider(
-      createSkillsSystemPromptProvider(params.getContext),
-    );
+
+    // 关键点（中文）
+    // - 每个 service 在自身模块声明 `systemPromptProviders`。
+    // - 进程层只负责统一注册，避免把 provider 硬编码在 main。
+    for (const service of getRegisteredSmaServices()) {
+      const provide = service.systemPromptProviders;
+      if (typeof provide !== "function") continue;
+      try {
+        let providers = provide({ getContext: params.getContext });
+        if (!Array.isArray(providers)) providers = [];
+        for (const provider of providers) {
+          if (!provider || typeof provider !== "object") continue;
+          registerSystemPromptProvider(provider);
+        }
+      } catch {
+        // fail-open：单个 service 的 prompt provider 失败不阻断启动
+      }
+    }
+
+    // memory 当前不属于 SmaService（无 ServiceEntry），保留独立注册。
     registerSystemPromptProvider(memorySystemPromptProvider);
   },
 });

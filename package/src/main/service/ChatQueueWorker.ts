@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 消费 services/chat 的队列模块
  * - 负责写入 context history + 驱动 core agent
- * - 支持 step 边界合并（drainLaneMerged）
+ * - 支持 step 边界合并（同 lane 新消息可插入当前 run）
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
@@ -12,6 +12,7 @@ import type { ContextManager } from "@core/context/ContextManager.js";
 import { withContextRequestContext } from "./RequestContext.js";
 import type { ContextRequestContext } from "./RequestContext.js";
 import type { AgentResult } from "@core/types/Agent.js";
+import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
   onChatQueueEnqueue,
@@ -152,15 +153,8 @@ export class ChatQueueWorker {
   private async appendHistory(item: ChatQueueItem): Promise<void> {
     if (!this.shouldAppendHistory(item)) return;
     await this.contextManager.appendUserMessage({
-      channel: item.channel,
-      targetId: item.targetId,
       contextId: item.contextId,
       text: item.text,
-      actorId: item.actorId,
-      actorName: item.actorName,
-      messageId: item.messageId,
-      threadId: item.threadId,
-      targetType: item.targetType,
       extra: item.extra,
     });
   }
@@ -202,14 +196,10 @@ export class ChatQueueWorker {
     };
 
     let clearRequested = false;
-    const drainLaneMerged = async (): Promise<{
-      drained: number;
-      messages: Array<{ text: string }>;
-    } | null> => {
+    const pullMergedUserMessages = async (): Promise<ShipContextMessageV1[]> => {
       const drainedItems = drainChatQueueLane(laneKey);
-      if (drainedItems.length === 0) return null;
-
-      const execMessages: Array<{ text: string }> = [];
+      if (drainedItems.length === 0) return [];
+      const mergedExecMessages: ShipContextMessageV1[] = [];
       for (const item of drainedItems) {
         if (item.kind === "control") {
           if (item.control?.type === "clear") clearRequested = true;
@@ -219,7 +209,21 @@ export class ChatQueueWorker {
         await this.appendHistory(item);
         if (item.kind === "exec") {
           const text = String(item.text ?? "").trim();
-          if (text) execMessages.push({ text });
+          if (text) {
+            mergedExecMessages.push({
+              id: `u:${item.contextId}:${item.id}`,
+              role: "user",
+              metadata: {
+                v: 1,
+                ts: Date.now(),
+                contextId: item.contextId,
+                source: "ingress",
+                kind: "normal",
+                ...(item.extra ? { extra: item.extra } : {}),
+              },
+              parts: [{ type: "text", text }],
+            });
+          }
         }
 
         // 更新 request context 元数据（以最新消息为准）
@@ -229,11 +233,7 @@ export class ChatQueueWorker {
         ctx.targetType = item.targetType ?? ctx.targetType;
         ctx.threadId = item.threadId ?? ctx.threadId;
       }
-
-      return {
-        drained: drainedItems.length,
-        messages: execMessages,
-      };
+      return mergedExecMessages;
     };
 
     let result: AgentResult;
@@ -241,7 +241,7 @@ export class ChatQueueWorker {
       agent.run({
         contextId: first.contextId,
         query: first.text,
-        drainLaneMerged,
+        pullMergedUserMessages,
       }),
     );
 

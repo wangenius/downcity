@@ -15,7 +15,7 @@ import { withContextRequestContext } from "@main/service/RequestContext.js";
 import http from "node:http";
 import fs from "fs-extra";
 import path from "path";
-import { getShipPublicDirPath } from "@main/project/Paths.js";
+import { getShipPublicDirPath } from "@/main/runtime/Paths.js";
 import type { ShipContextMetadataV1 } from "@core/types/ContextMessage.js";
 import {
   getServiceRuntimeState,
@@ -333,11 +333,7 @@ export class AgentServer {
         const messageId =
           typeof body?.messageId === "string" ? body.messageId : undefined;
         await runtime.contextManager.appendUserMessage({
-          channel: "api",
-          targetId: chatId,
           contextId,
-          actorId: actorId,
-          messageId,
           text: String(instructions),
         });
 
@@ -373,10 +369,6 @@ export class AgentServer {
           } else if (userVisible && userVisible.trim()) {
             const metadata: Omit<ShipContextMetadataV1, "v" | "ts"> = {
               contextId,
-              channel: "api",
-              targetId: chatId,
-              actorId: "bot",
-              messageId,
               extra: {
                 via: "api_execute",
                 note: "assistant_message_missing",

@@ -76,15 +76,8 @@ export type ServiceContextManager = {
   clearAgent(contextId?: string): void;
   afterContextUpdatedAsync(contextId: string): Promise<void>;
   appendUserMessage(params: {
-    channel: string;
-    targetId: string;
     contextId: string;
     text: string;
-    actorId?: string;
-    actorName?: string;
-    messageId?: string;
-    threadId?: number;
-    targetType?: string;
     requestId?: string;
     extra?: ShipContextMetadataV1["extra"];
   }): Promise<void>;

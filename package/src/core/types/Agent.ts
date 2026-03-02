@@ -17,15 +17,12 @@ export interface AgentResult {
 export interface AgentRunInput {
   contextId: string;
   query: string;
-  drainLaneMerged?: () => Promise<{
-    drained: number;
-    messages: Array<{
-      text: string;
-      messageId?: string;
-      actorId?: string;
-      actorName?: string;
-      targetType?: string;
-      threadId?: number;
-    }>;
-  } | null>;
+  /**
+   * 在 tool-loop 的 step 边界拉取同 lane 新增的用户消息（UIMessage）。
+   *
+   * 关键点（中文）
+   * - 返回值仅包含“需要并入当前 run 的 user UIMessage”
+   * - 返回空数组表示当前无新增消息
+   */
+  pullMergedUserMessages?: () => Promise<ShipContextMessageV1[]>;
 }

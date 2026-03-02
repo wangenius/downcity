@@ -12,8 +12,8 @@ import {
   type DaemonJsonApiCallParams,
   type DaemonJsonApiCallResult,
 } from "./Api.js";
-import { getShipJsonPath } from "@main/project/Paths.js";
-import { loadShipConfig } from "@main/project/Config.js";
+import { getShipJsonPath } from "@/main/runtime/Paths.js";
+import { loadShipConfig } from "@/main/runtime/Config.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**

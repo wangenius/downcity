@@ -4,6 +4,7 @@ import type { Logger } from "@utils/logger/Logger.js";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
+import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
 
 type AdapterUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -79,6 +80,35 @@ export abstract class BaseChatAdapter extends PlatformAdapter {
   }
 
   /**
+   * 维护 contextId 对应的 chat 路由元信息。
+   *
+   * 关键点（中文）
+   * - 由 chat 服务在入站阶段维护，不依赖 core message metadata
+   * - 仅做 best-effort，不阻塞主链路
+   */
+  private async updateChatMeta(params: {
+    contextId: string;
+    chatId: string;
+    targetType?: string;
+    threadId?: number;
+    messageId?: string;
+    actorId?: string;
+    actorName?: string;
+  }): Promise<void> {
+    await upsertChatMetaByContextId({
+      context: this.context,
+      contextId: params.contextId,
+      channel: this.channel,
+      chatId: params.chatId,
+      targetType: params.targetType,
+      threadId: params.threadId,
+      messageId: params.messageId,
+      actorId: params.actorId,
+      actorName: params.actorName,
+    });
+  }
+
+  /**
    * 入站消息写入队列（审计用途，不触发执行）。
    *
    * 说明（中文）
@@ -101,6 +131,15 @@ export abstract class BaseChatAdapter extends PlatformAdapter {
         : undefined;
     const chatType = typeof meta.chatType === "string" ? meta.chatType : undefined;
     const extra = stripUndefinedMeta(meta);
+    await this.updateChatMeta({
+      contextId: params.chatKey,
+      chatId: params.chatId,
+      targetType: chatType,
+      threadId: messageThreadId,
+      messageId: params.messageId,
+      actorId: params.userId,
+      actorName: username,
+    });
     enqueueChatQueue({
       kind: "audit",
       channel: this.channel,
@@ -131,6 +170,16 @@ export abstract class BaseChatAdapter extends PlatformAdapter {
       chatType: msg.chatType,
       messageThreadId: msg.messageThreadId,
       messageId: msg.messageId,
+    });
+
+    await this.updateChatMeta({
+      contextId: chatKey,
+      chatId: msg.chatId,
+      targetType: msg.chatType,
+      threadId: msg.messageThreadId,
+      messageId: msg.messageId,
+      actorId: msg.userId,
+      actorName: msg.username,
     });
 
     const { lanePosition } = enqueueChatQueue({

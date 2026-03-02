@@ -34,19 +34,6 @@ export class ContextManager {
   private readonly runMemoryMaintenance?: (contextId: string) => Promise<void>;
 
   /**
-   * 归一化 channel 字段为 metadata 可接受值。
-   */
-  private toContextChannel(channel: string): ShipContextMetadataV1["channel"] {
-    const normalized = String(channel || "").trim();
-    if (normalized === "telegram") return "telegram";
-    if (normalized === "feishu") return "feishu";
-    if (normalized === "qq") return "qq";
-    if (normalized === "cli") return "cli";
-    if (normalized === "scheduler") return "scheduler";
-    return "api";
-  }
-
-  /**
    * 构造函数：装配可选回调。
    *
    * 关键点（中文）
@@ -156,15 +143,8 @@ export class ContextManager {
    * - 写入成功后异步触发 memory 维护（不阻塞主流程）。
    */
   async appendUserMessage(params: {
-    channel: string;
-    targetId: string;
     contextId: string;
     text: string;
-    actorId?: string;
-    actorName?: string;
-    messageId?: string;
-    threadId?: number;
-    targetType?: string;
     requestId?: string;
     extra?: JsonObject;
   }): Promise<void> {
@@ -176,13 +156,6 @@ export class ContextManager {
         text: params.text,
         metadata: {
           contextId,
-          channel: this.toContextChannel(params.channel),
-          targetId: params.targetId,
-          actorId: params.actorId,
-          actorName: params.actorName,
-          messageId: params.messageId,
-          threadId: params.threadId,
-          targetType: params.targetType,
           requestId: params.requestId,
           extra: params.extra,
         } as Omit<ShipContextMetadataV1, "v" | "ts">,

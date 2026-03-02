@@ -15,7 +15,7 @@ import {
   loadProjectDotenv,
   loadShipConfig,
   type ShipConfig,
-} from "@main/project/Config.js";
+} from "@/main/runtime/Config.js";
 import {
   getAgentMdPath,
   getCacheDirPath,
@@ -29,7 +29,7 @@ import {
   getShipProfileDirPath,
   getShipPublicDirPath,
   getShipTasksDirPath,
-} from "@main/project/Paths.js";
+} from "@/main/runtime/Paths.js";
 import fs from "fs-extra";
 import path from "path";
 

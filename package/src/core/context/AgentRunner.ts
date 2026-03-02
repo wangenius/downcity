@@ -8,6 +8,7 @@
  */
 
 import {
+  isTextUIPart,
   streamText,
   stepCountIs,
   Tool,
@@ -29,7 +30,6 @@ import {
 } from "@/main/service/RequestContext.js";
 import { openai } from "@ai-sdk/openai";
 import type {
-  ShipContextChannel,
   ShipContextMessageV1,
   ShipContextMetadataV1,
 } from "@core/types/ContextMessage.js";
@@ -40,18 +40,8 @@ import {
 import type { ContextAgent } from "@core/types/ContextAgent.js";
 import { collectSystemPromptProviderResult } from "@core/prompts/SystemProvider.js";
 import type { ContextStore } from "./ContextStore.js";
-import { loadProjectDotenv } from "@main/project/Config.js";
+import { loadProjectDotenv } from "@/main/runtime/Config.js";
 import { shellTools } from "@core/shell/Tool.js";
-
-function resolveChannelFromContextId(contextId: string): ShipContextChannel {
-  const key = String(contextId || "").trim();
-  if (key.startsWith("telegram-chat-")) return "telegram";
-  if (key.startsWith("feishu-chat-")) return "feishu";
-  if (/^qq-[^-\s]+-/.test(key)) return "qq";
-  if (key.startsWith("task-run:")) return "scheduler";
-  if (key.startsWith("api:")) return "api";
-  return "api";
-}
 
 export class ContextAgentRunner implements ContextAgent {
   // 是否初始化
@@ -115,7 +105,7 @@ export class ContextAgentRunner implements ContextAgent {
    * 3) 进入 tool-loop 主流程
    */
   async run(input: AgentRunInput): Promise<AgentResult> {
-    const { query, contextId, drainLaneMerged } = input;
+    const { query, contextId, pullMergedUserMessages } = input;
     const startTime = Date.now();
     const requestId = generateId();
     const logger = this.getLogger();
@@ -130,7 +120,7 @@ export class ContextAgentRunner implements ContextAgent {
     if (this.initialized) {
       return this.runWithToolLoopAgent(query, startTime, contextId, {
         requestId,
-        drainLaneMerged,
+        pullMergedUserMessages,
       });
     }
 
@@ -187,13 +177,13 @@ export class ContextAgentRunner implements ContextAgent {
     opts?: {
       retryAttempts?: number;
       requestId?: string;
-      drainLaneMerged?: AgentRunInput["drainLaneMerged"];
+      pullMergedUserMessages?: AgentRunInput["pullMergedUserMessages"];
     },
   ): Promise<AgentResult> {
     let contextStore: ContextStore | null = null;
     const retryAttempts = opts?.retryAttempts ?? 0;
     const requestId = opts?.requestId || "";
-    const drainLaneMerged = opts?.drainLaneMerged;
+    const pullMergedUserMessages = opts?.pullMergedUserMessages;
     const logger = this.getLogger();
     if (!this.initialized) {
       throw new Error("Agent not initialized");
@@ -273,58 +263,30 @@ export class ContextAgentRunner implements ContextAgent {
       });
 
       // 关键点（中文）
-      // - 在 step 边界尝试合并新消息，保证下一步使用最新输入。
+      // - 在 step 边界尝试合并同 lane 的新增用户消息，保证当前 run 可见最新输入。
       // - 保留 tool-loop 的 in-flight 后缀消息（工具调用链）。
       let lastAppliedBasePrefixLen = baseModelMessages.length;
-      let needsLaneResync = false;
-
-      const appendMergedLaneMessages = (
-        messages: Array<{ text: string }> | undefined,
-      ): { added: number } => {
-        if (!Array.isArray(messages) || messages.length === 0)
-          return { added: 0 };
+      const appendMergedUserMessages = (
+        messages: ShipContextMessageV1[],
+      ): number => {
+        if (!Array.isArray(messages) || messages.length === 0) return 0;
         const toAppend: ModelMessage[] = [];
         for (const m of messages) {
-          const text = String(m?.text ?? "").trim();
+          if (!m || typeof m !== "object") continue;
+          if (m.role !== "user") continue;
+          const parts = Array.isArray(m.parts) ? m.parts : [];
+          const text = parts
+            .filter(isTextUIPart)
+            .map((p) => String(p.text ?? ""))
+            .join("\n")
+            .trim();
           if (!text) continue;
           toAppend.push({ role: "user", content: text });
         }
         if (toAppend.length > 0) {
           baseModelMessages = [...baseModelMessages, ...toAppend];
         }
-        return { added: toAppend.length };
-      };
-
-      const reloadModelMessages = async (
-        trigger: string,
-      ): Promise<{ reloaded: boolean; drained?: number; added?: number }> => {
-        if (typeof drainLaneMerged !== "function") return { reloaded: false };
-        try {
-          const r = await drainLaneMerged();
-          const drained = r && typeof r.drained === "number" ? r.drained : 0;
-          if (drained <= 0) return { reloaded: false, drained: 0 };
-          const mergedMessages = Array.isArray(r?.messages) ? r.messages : [];
-          const appended = appendMergedLaneMessages(mergedMessages);
-          needsLaneResync = true;
-          void logger.log(
-            "debug",
-            "Lane merged messages detected; appended queued user messages for next step",
-            {
-              contextId,
-              requestId,
-              trigger,
-              drained,
-              appended: appended.added,
-            },
-          );
-          return {
-            reloaded: true,
-            drained,
-            added: appended.added,
-          };
-        } catch {
-          return { reloaded: false };
-        }
+        return toAppend.length;
       };
 
       // phase 2（中文）：进入 tool-loop。
@@ -342,18 +304,26 @@ export class ContextAgentRunner implements ContextAgent {
                 incomingMessages.length >= lastAppliedBasePrefixLen
                   ? incomingMessages.slice(lastAppliedBasePrefixLen)
                   : [];
-
-              await reloadModelMessages("before_step");
-
               let outMessages: ModelMessage[] | undefined;
-              if (needsLaneResync) {
-                outMessages = [...baseModelMessages, ...suffix];
-                needsLaneResync = false;
-                lastAppliedBasePrefixLen = Array.isArray(baseModelMessages)
-                  ? baseModelMessages.length
-                  : 0;
+              if (typeof pullMergedUserMessages === "function") {
+                try {
+                  const mergedMessages = await pullMergedUserMessages();
+                  const added = appendMergedUserMessages(
+                    Array.isArray(mergedMessages) ? mergedMessages : [],
+                  );
+                  if (added > 0) {
+                    outMessages = [...baseModelMessages, ...suffix];
+                    lastAppliedBasePrefixLen = baseModelMessages.length;
+                    void logger.log(
+                      "debug",
+                      "Lane merged messages detected; appended queued user messages for next step",
+                      { contextId, requestId, added },
+                    );
+                  }
+                } catch {
+                  // ignore merge hook failures
+                }
               }
-
               const stepOverrides: {
                 system?: Array<SystemModelMessage>;
                 activeTools?: string[];
@@ -384,21 +354,10 @@ export class ContextAgentRunner implements ContextAgent {
       // 关键点（中文）：用 ai-sdk v6 的 UIMessage 流来生成最终 assistant UIMessage（包含 tool parts），避免手工拼装。
       let finalAssistantUiMessage: ShipContextMessageV1 | null = null;
       try {
-        const ctx = contextRequestContext.getStore();
-        const channel = resolveChannelFromContextId(contextId);
-        const targetId = String(ctx?.targetId || contextId);
         const md: ShipContextMetadataV1 = {
           v: 1,
           ts: Date.now(),
           contextId,
-          channel,
-          targetId,
-          actorId: "bot",
-          actorName: ctx?.actorName,
-          messageId: ctx?.messageId,
-          threadId:
-            typeof ctx?.threadId === "number" ? ctx.threadId : undefined,
-          targetType: ctx?.targetType,
           requestId,
           source: "egress",
           kind: "normal",
@@ -484,7 +443,7 @@ export class ContextAgentRunner implements ContextAgent {
         return this.runWithToolLoopAgent(userText, startTime, contextId, {
           retryAttempts: retryAttempts + 1,
           requestId,
-          drainLaneMerged,
+          pullMergedUserMessages,
         });
       }
 
@@ -552,18 +511,8 @@ export class ContextAgentRunner implements ContextAgent {
     contextStore?: ContextStore | null;
     note: string;
   }): ShipContextMessageV1 {
-    const ctx = contextRequestContext.getStore();
-    const channel = resolveChannelFromContextId(params.contextId);
-    const targetId = String(ctx?.targetId || params.contextId);
     const metadata: Omit<ShipContextMetadataV1, "v" | "ts"> = {
       contextId: params.contextId,
-      channel,
-      targetId,
-      actorId: "bot",
-      actorName: ctx?.actorName,
-      messageId: ctx?.messageId,
-      threadId: typeof ctx?.threadId === "number" ? ctx.threadId : undefined,
-      targetType: ctx?.targetType,
       requestId: params.requestId,
       extra: { note: params.note },
     };

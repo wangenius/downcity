@@ -15,7 +15,6 @@
    - `AgentServer.ts` 承载 HTTP API、静态资源服务与 service 路由挂载。
    - `Client.ts` 实现 CLI -> daemon API 的统一调用与 endpoint 解析。
    - `Manager.ts` 负责后台 daemon 进程 PID/日志/启停管理。
-3. `project/`
    - `Config.ts` 读取 `.env` + `ship.json` 并解析 `${ENV}` 占位符。
    - `Paths.ts` 提供 `.ship/*` 路径约定，作为全项目统一事实来源。
 4. `service/`

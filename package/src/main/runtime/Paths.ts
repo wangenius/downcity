@@ -144,3 +144,25 @@ export function getShipTasksDirPath(cwd: string): string {
 export function getShipDebugDirPath(cwd: string): string {
   return path.join(getShipDirPath(cwd), ".debug");
 }
+
+/**
+ * Chat 元信息目录（由 services/chat 维护）。
+ *
+ * 关键点（中文）
+ * - 该目录存放 `contextId -> chat` 的最近映射快照
+ * - 与 core context messages 分离，避免把平台路由细节耦合进 core
+ */
+export function getShipChatDirPath(cwd: string): string {
+  return path.join(getShipDirPath(cwd), "chat");
+}
+
+export function getShipChatMetaDirPath(cwd: string): string {
+  return path.join(getShipChatDirPath(cwd), "meta");
+}
+
+export function getShipChatMetaPath(cwd: string, contextId: string): string {
+  return path.join(
+    getShipChatMetaDirPath(cwd),
+    `${encodeURIComponent(String(contextId || "").trim())}.json`,
+  );
+}

@@ -9,14 +9,6 @@ import type { JsonObject } from "@/types/Json.js";
  * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
  */
 
-export type ShipContextChannel =
-  | "telegram"
-  | "feishu"
-  | "qq"
-  | "api"
-  | "cli"
-  | "scheduler";
-
 export type ShipContextMessageKind = "normal" | "summary";
 export type ShipContextMessageSource = "ingress" | "egress" | "compact";
 
@@ -33,20 +25,6 @@ export type ShipContextMetadataV1 = {
   ts: number;
   /** 会话 ID */
   contextId: string;
-  /** 渠道类型 */
-  channel: ShipContextChannel;
-  /** 渠道侧目标 ID（chatId 等） */
-  targetId: string;
-  /** 发起人 ID */
-  actorId?: string;
-  /** 发起人昵称 */
-  actorName?: string;
-  /** 平台原始消息 ID */
-  messageId?: string;
-  /** 线程/话题 ID */
-  threadId?: number;
-  /** 目标类型（group/private/topic 等） */
-  targetType?: string;
   /** 请求链路 ID */
   requestId?: string;
   /** normal/summary */

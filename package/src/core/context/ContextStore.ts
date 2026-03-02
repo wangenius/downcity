@@ -25,7 +25,7 @@ import {
   getShipContextMessagesMetaPath,
   getShipContextMessagesPath,
   getShipContextMessagesDirPath,
-} from "@main/project/Paths.js";
+} from "@/main/runtime/Paths.js";
 import { generateId } from "@main/utils/Id.js";
 import type { ShipContextMetadataV1, ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { ShipContextMessagesMetaV1 } from "@core/types/ContextMessagesMeta.js";
@@ -440,9 +440,7 @@ export class ContextStore {
       source: "ingress",
       kind: "normal",
     };
-    const id =
-      params.id ||
-      (md.messageId ? `u:${this.contextId}:${String(md.messageId)}` : `u:${this.contextId}:${generateId()}`);
+    const id = params.id || `u:${this.contextId}:${generateId()}`;
     return {
       id,
       role: "user",
@@ -605,8 +603,6 @@ export class ContextStore {
       text: summary,
       metadata: {
         contextId: this.contextId,
-        channel: kept[kept.length - 1]?.metadata?.channel || "api",
-        targetId: kept[kept.length - 1]?.metadata?.targetId || this.contextId,
       },
       kind: "summary",
       source: "compact",

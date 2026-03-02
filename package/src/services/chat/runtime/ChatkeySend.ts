@@ -3,7 +3,7 @@
  *
  * 设计动机（中文）
  * - Task runner / scheduler 需要在“非当前对话上下文”向指定 chatKey 投递消息
- * - 复用现有 dispatcher 与 chat context 消息（尤其 QQ 的被动回复依赖 messageId）
+ * - 复用现有 dispatcher 与 chat meta（尤其 QQ 的被动回复依赖 messageId）
  *
  * 注意
  * - 这里是运行时内部能力（不是 tool）；tool `chat_contact_send` 也会复用本实现
@@ -11,10 +11,8 @@
 
 import { getChatSender } from "./ChatSendRegistry.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
-import type { JsonObject } from "@/types/Json.js";
-import { getServiceContextManager } from "@main/service/ServiceRuntimeDependencies.js";
+import { readChatMetaByContextId } from "./ChatMetaStore.js";
 
 type DispatchableChannel = "telegram" | "feishu" | "qq";
 
@@ -67,59 +65,64 @@ export function parseChatKeyForDispatch(chatKey: string): {
 }
 
 /**
- * 从历史消息逆序提取最近 user 元数据。
+ * 解析实际分发目标。
  *
- * 算法（中文）
- * - 从尾到头扫描，遇到首个带元数据的 user 消息即返回。
- * - 这样可尽量命中“当前对话最近一次有效入站消息”的上下文。
+ * 规则（中文）
+ * - 优先显式 chatKey 解析结果
+ * - parse 失败时回退到 services/chat 维护的 chat meta
  */
-function pickLatestUserMetaFromMessages(messages: ShipContextMessageV1[]): {
+async function resolveDispatchTarget(params: {
+  context: ServiceRuntimeDependencies;
+  chatKey: string;
+}): Promise<{
+  channel: ChatDispatchChannel;
+  chatId: string;
   chatType?: string;
   messageThreadId?: number;
   messageId?: string;
-} {
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const m = messages[i];
-    if (!m || typeof m !== "object") continue;
-    if (m.role !== "user") continue;
-    const md = m.metadata;
-    const extra = md?.extra;
-    const extraObj =
-      extra && typeof extra === "object" && !Array.isArray(extra)
-        ? (extra as JsonObject)
+} | null> {
+  const parsed = parseChatKeyForDispatch(params.chatKey);
+  const storedMeta = await readChatMetaByContextId({
+    context: params.context,
+    contextId: params.chatKey,
+  });
+
+  const channel = parsed?.channel || storedMeta?.channel;
+  const chatId = String(parsed?.chatId || storedMeta?.chatId || "").trim();
+  if (!channel || !chatId) return null;
+
+  const chatType =
+    typeof storedMeta?.targetType === "string" && storedMeta.targetType
+      ? storedMeta.targetType
+      : typeof parsed?.chatType === "string"
+        ? parsed.chatType
         : undefined;
-    const chatType =
-      typeof md?.targetType === "string"
-        ? md.targetType.trim()
-        : typeof extraObj?.chatType === "string"
-          ? extraObj.chatType.trim()
-          : undefined;
-    const messageThreadId =
-      typeof md?.threadId === "number" && Number.isFinite(md.threadId)
-        ? md.threadId
-        : typeof extraObj?.messageThreadId === "number" &&
-            Number.isFinite(extraObj.messageThreadId)
-          ? extraObj.messageThreadId
-          : undefined;
-    const messageId =
-      typeof md?.messageId === "string" ? md.messageId.trim() : undefined;
-    if (chatType || messageThreadId || messageId) {
-      return {
-        ...(chatType ? { chatType } : {}),
-        ...(typeof messageThreadId === "number" ? { messageThreadId } : {}),
-        ...(messageId ? { messageId } : {}),
-      };
-    }
-  }
-  return {};
+  const messageThreadId =
+    typeof storedMeta?.threadId === "number" && Number.isFinite(storedMeta.threadId)
+      ? storedMeta.threadId
+      : typeof parsed?.messageThreadId === "number"
+        ? parsed.messageThreadId
+        : undefined;
+  const messageId =
+    typeof storedMeta?.messageId === "string" && storedMeta.messageId
+      ? storedMeta.messageId
+      : undefined;
+
+  return {
+    channel: channel as ChatDispatchChannel,
+    chatId,
+    ...(typeof chatType === "string" && chatType ? { chatType } : {}),
+    ...(typeof messageThreadId === "number" ? { messageThreadId } : {}),
+    ...(typeof messageId === "string" && messageId ? { messageId } : {}),
+  };
 }
 
 /**
  * 按 chatKey 发送文本到对应平台。
  *
  * 流程（中文）
- * 1) 解析 chatKey 并定位 channel dispatcher
- * 2) 从 context 消息回填 chatType/threadId/messageId
+ * 1) 解析 chatKey（失败时回退 chat meta）并定位 channel dispatcher
+ * 2) 从 chat meta 回填 chatType/threadId/messageId
  * 3) 合并参数后调用 dispatcher 发送
  */
 export async function sendTextByChatKey(params: {
@@ -133,50 +136,32 @@ export async function sendTextByChatKey(params: {
   if (!chatKey) return { success: false, error: "Missing chatKey" };
   if (!text.trim()) return { success: true };
 
-  const parsed = parseChatKeyForDispatch(chatKey);
-  if (!parsed) {
-    return { success: false, error: `Unsupported chatKey format: ${chatKey}` };
+  const target = await resolveDispatchTarget({ context, chatKey });
+  if (!target) {
+    return {
+      success: false,
+      error: `Unsupported chatKey/contextId for dispatch: ${chatKey}`,
+    };
   }
 
-  const channel = parsed.channel as ChatDispatchChannel;
-  const chatId = String(parsed.chatId || "").trim();
-  if (!chatId) return { success: false, error: "Missing chatId (from chatKey)" };
+  const channel = target.channel;
+  const chatId = target.chatId;
 
   const dispatcher = getChatSender(channel);
   if (!dispatcher) {
     return { success: false, error: `No dispatcher registered for channel: ${channel}` };
   }
 
-  // 关键点（中文）：尽量从 context 的最近 user message 拿到 chatType/messageThreadId/messageId（尤其 QQ 需要）。
-  const contextStore = getServiceContextManager(context).getContextStore(chatKey);
-  let messages: ShipContextMessageV1[] = [];
-  try {
-    messages = await contextStore.loadAll();
-  } catch {
-    messages = [];
-  }
-  const meta = pickLatestUserMetaFromMessages(messages);
-
-  const chatType =
-    typeof meta.chatType === "string"
-      ? meta.chatType
-      : typeof parsed.chatType === "string"
-        ? parsed.chatType
-        : undefined;
-  const messageThreadId =
-    typeof meta.messageThreadId === "number"
-      ? meta.messageThreadId
-      : typeof parsed.messageThreadId === "number"
-        ? parsed.messageThreadId
-        : undefined;
-  const messageId = typeof meta.messageId === "string" ? meta.messageId : undefined;
+  const chatType = target.chatType;
+  const messageThreadId = target.messageThreadId;
+  const messageId = target.messageId;
 
   if (channel === "qq") {
     if (!chatType || !messageId) {
       return {
         success: false,
         error:
-          "QQ requires chatType + messageId to send a reply. Ask the target user to send a message first so ShipMyAgent can record the latest messageId in context messages.",
+          "QQ requires chatType + messageId to send a reply. Ask the target user to send a message first so ShipMyAgent can record latest chat meta.",
       };
     }
   }

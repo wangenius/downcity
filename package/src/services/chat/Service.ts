@@ -302,18 +302,9 @@ export async function sendChatTextByContextId(params: {
     };
   }
 
-  const chatKey = mapContextIdToChatKey(contextId);
-  if (!chatKey) {
-    return {
-      success: false,
-      contextId,
-      error: `Context is not chat-addressable: ${contextId}`,
-    };
-  }
-
   const result = await sendChatTextByChatKey({
     context: params.context,
-    chatKey,
+    chatKey: contextId,
     text: params.text,
   });
   return {

@@ -1,14 +1,14 @@
 import WebSocket, { type RawData } from "ws";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { BaseChatAdapter } from "../BaseChatAdapter.js";
+import { BaseChatAdapter } from "@services/chat/adapters/BaseChatAdapter.js";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
 import type {
   AdapterChatKeyParams,
   AdapterSendTextParams,
-} from "../PlatformAdapter.js";
-import type { ServiceRuntimeDependencies } from "../../../../main/service/types/ServiceRuntimeTypes.js";
-import type { JsonObject, JsonValue } from "../../../../types/Json.js";
+} from "@services/chat/adapters/PlatformAdapter.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
  * QQ official bot adapter (WebSocket gateway).

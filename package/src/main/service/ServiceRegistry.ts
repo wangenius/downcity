@@ -9,7 +9,7 @@
 import type { Command } from "commander";
 import type { Handler, Hono } from "hono";
 import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
-import type { JsonValue } from "../../types/Json.js";
+import type { JsonValue } from "@/types/Json.js";
 
 /**
  * CLI 命令注册抽象。

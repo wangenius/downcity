@@ -1,6 +1,6 @@
 import { llmRequestContext, type LlmRequestContext } from "./Context.js";
 import { parseFetchRequestForLog, type ProviderFetch } from "./Format.js";
-import type { JsonObject } from "../../types/Json.js";
+import type { JsonObject } from "@/types/Json.js";
 
 export function createLlmLoggingFetch(args: {
   logger: {

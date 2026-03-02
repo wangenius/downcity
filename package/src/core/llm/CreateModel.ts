@@ -10,9 +10,9 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { type LanguageModel } from "ai";
-import { createLlmLoggingFetch } from "../../utils/logger/Fetch.js";
-import { getLogger } from "../../utils/logger/Logger.js";
-import type { ShipConfig } from "../../main/project/Config.js";
+import { createLlmLoggingFetch } from "@utils/logger/Fetch.js";
+import { getLogger } from "@utils/logger/Logger.js";
+import type { ShipConfig } from "@main/project/Config.js";
 
 /**
  * 创建 LanguageModel 实例。

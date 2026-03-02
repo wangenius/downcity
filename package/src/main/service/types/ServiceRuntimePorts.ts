@@ -1,7 +1,7 @@
 import type { LanguageModel } from "ai";
-import type { ShipConfig } from "../../types/ShipConfig.js";
-import type { ShipContextMetadataV1, ShipContextMessageV1 } from "../../../core/types/ContextMessage.js";
-import type { AgentResult, AgentRunInput } from "../../../core/types/Agent.js";
+import type { ShipConfig } from "@main/types/ShipConfig.js";
+import type { ShipContextMetadataV1, ShipContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { AgentResult, AgentRunInput } from "@core/types/Agent.js";
 
 /**
  * Service 运行时端口类型。
@@ -19,7 +19,7 @@ import type { AgentResult, AgentRunInput } from "../../../core/types/Agent.js";
  * - 这是跨 service 共享的最小上下文字段集合。
  */
 export type ServiceContextRequestContext = {
-  chat?: "telegram" | "feishu" | "qq" | "cli" | "scheduler" | "api";
+  channel?: "telegram" | "feishu" | "qq" | "cli" | "scheduler" | "api";
   contextId?: string;
   targetId?: string;
   targetType?: string;

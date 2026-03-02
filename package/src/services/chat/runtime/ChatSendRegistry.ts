@@ -8,7 +8,7 @@
 import type {
   ChatDispatchChannel,
   ChatDispatcher,
-} from "../types/ChatDispatcher.js";
+} from "@services/chat/types/ChatDispatcher.js";
 
 const dispatchers = new Map<ChatDispatchChannel, ChatDispatcher>();
 

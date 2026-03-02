@@ -1,5 +1,5 @@
-import type { ClaudeSkill } from "../types/ClaudeSkill.js";
-import type { LoadedSkillV1 } from "../types/LoadedSkill.js";
+import type { ClaudeSkill } from "@services/skills/types/ClaudeSkill.js";
+import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 
 /**
  * Context skills state 对外快照。

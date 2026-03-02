@@ -9,12 +9,12 @@
 
 import { z } from "zod";
 import { tool } from "ai";
-import { getRuntimeState } from "../../main/runtime/RuntimeState.js";
+import { getRuntimeState } from "@main/runtime/RuntimeState.js";
 import type {
   ShellCloseInput,
   ShellCommandInput,
   ShellWriteInput,
-} from "../types/Shell.js";
+} from "@core/types/Shell.js";
 import {
   DEFAULT_SHELL_COMMAND_YIELD_MS,
   DEFAULT_WRITE_STDIN_YIELD_MS,

@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs-extra";
-import { Logger } from "../../../../utils/logger/Logger.js";
-import { getCacheDirPath } from "../../../../main/project/Paths.js";
+import { Logger } from "@utils/logger/Logger.js";
+import { getCacheDirPath } from "@main/project/Paths.js";
 import {
   guessMimeType,
   parseTelegramAttachments,
@@ -10,7 +10,7 @@ import {
   type TelegramApiResponse,
   type TelegramAttachmentType,
 } from "./Shared.js";
-import type { ChatDispatchAction } from "../../types/ChatDispatcher.js";
+import type { ChatDispatchAction } from "@services/chat/types/ChatDispatcher.js";
 
 
 /**

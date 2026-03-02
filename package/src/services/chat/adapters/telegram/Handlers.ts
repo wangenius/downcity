@@ -1,4 +1,4 @@
-import type { Logger } from "../../../../utils/logger/Logger.js";
+import type { Logger } from "@utils/logger/Logger.js";
 import type { TelegramUpdate, TelegramUser } from "./Shared.js";
 
 /**

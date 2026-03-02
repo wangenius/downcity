@@ -1,4 +1,4 @@
-import type { Logger } from "../../../../utils/logger/Logger.js";
+import type { Logger } from "@utils/logger/Logger.js";
 
 /**
  * Telegram 访问控制辅助函数。

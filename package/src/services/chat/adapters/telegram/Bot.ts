@@ -1,11 +1,11 @@
 // Telegram adapter implementation (moved into submodule for maintainability).
 import path from "path";
-import { BaseChatAdapter } from "../BaseChatAdapter.js";
+import { BaseChatAdapter } from "@services/chat/adapters/BaseChatAdapter.js";
 import type {
   AdapterChatKeyParams,
   AdapterSendTextParams,
-} from "../PlatformAdapter.js";
-import type { AdapterSendActionParams } from "../PlatformAdapter.js";
+} from "@services/chat/adapters/PlatformAdapter.js";
+import type { AdapterSendActionParams } from "@services/chat/adapters/PlatformAdapter.js";
 import { isTelegramAdmin } from "./Access.js";
 import { TelegramApiClient } from "./ApiClient.js";
 import {
@@ -20,7 +20,7 @@ import {
   type TelegramUser,
 } from "./Shared.js";
 import { TelegramStateStore } from "./StateStore.js";
-import type { ServiceRuntimeDependencies } from "../../../../main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 
 /**
  * Telegram 平台适配器。

@@ -6,8 +6,8 @@
  * - 该模块是 task service 内部实现细节，core 只通过 service lifecycle 间接调用。
  */
 
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
-import { registerTaskCronJobs } from "../Scheduler.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import { registerTaskCronJobs } from "@services/task/Scheduler.js";
 import { TaskCronTriggerEngine } from "./CronTrigger.js";
 
 type TaskCronRegisterResult = {

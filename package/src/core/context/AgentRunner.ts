@@ -15,39 +15,42 @@ import {
   type ModelMessage,
   type SystemModelMessage,
 } from "ai";
-import { withLlmRequestContext } from "../../utils/logger/Context.js";
-import { generateId } from "../../main/utils/Id.js";
+import { withLlmRequestContext } from "@utils/logger/Context.js";
+import { generateId } from "@main/utils/Id.js";
 import {
   buildContextSystemPrompt,
   transformPromptsIntoSystemMessages,
-} from "../prompts/System.js";
-import { createModel } from "../llm/CreateModel.js";
-import type { AgentRunInput, AgentResult } from "../types/Agent.js";
-import type { Logger } from "../../utils/logger/Logger.js";
+} from "@core/prompts/System.js";
+import { createModel } from "@core/llm/CreateModel.js";
+import type { AgentRunInput, AgentResult } from "@core/types/Agent.js";
+import type { Logger } from "@utils/logger/Logger.js";
 import {
   contextRequestContext,
-  type ContextRequestContext,
-} from "./RequestContext.js";
+} from "@/main/service/RequestContext.js";
 import { openai } from "@ai-sdk/openai";
 import type {
   ShipContextChannel,
   ShipContextMessageV1,
   ShipContextMetadataV1,
-} from "../types/ContextMessage.js";
+} from "@core/types/ContextMessage.js";
 import {
   getRuntimeState,
   getRuntimeStateBase,
-} from "../../main/runtime/RuntimeState.js";
-import type { ContextAgent } from "../types/ContextAgent.js";
-import { collectSystemPromptProviderResult } from "../prompts/SystemProvider.js";
+} from "@main/runtime/RuntimeState.js";
+import type { ContextAgent } from "@core/types/ContextAgent.js";
+import { collectSystemPromptProviderResult } from "@core/prompts/SystemProvider.js";
 import type { ContextStore } from "./ContextStore.js";
-import { loadProjectDotenv } from "../../main/project/Config.js";
-import { shellTools } from "../shell/Tool.js";
+import { loadProjectDotenv } from "@main/project/Config.js";
+import { shellTools } from "@core/shell/Tool.js";
 
-function toShipContextChannel(
-  chat: ContextRequestContext["chat"] | undefined,
-): ShipContextChannel {
-  return chat ?? "api";
+function resolveChannelFromContextId(contextId: string): ShipContextChannel {
+  const key = String(contextId || "").trim();
+  if (key.startsWith("telegram-chat-")) return "telegram";
+  if (key.startsWith("feishu-chat-")) return "feishu";
+  if (/^qq-[^-\s]+-/.test(key)) return "qq";
+  if (key.startsWith("task-run:")) return "scheduler";
+  if (key.startsWith("api:")) return "api";
+  return "api";
 }
 
 export class ContextAgentRunner implements ContextAgent {
@@ -382,7 +385,7 @@ export class ContextAgentRunner implements ContextAgent {
       let finalAssistantUiMessage: ShipContextMessageV1 | null = null;
       try {
         const ctx = contextRequestContext.getStore();
-        const channel = toShipContextChannel(ctx?.chat);
+        const channel = resolveChannelFromContextId(contextId);
         const targetId = String(ctx?.targetId || contextId);
         const md: ShipContextMetadataV1 = {
           v: 1,
@@ -505,7 +508,7 @@ export class ContextAgentRunner implements ContextAgent {
    * 构建运行时 system message。
    *
    * 关键点（中文）
-   * - 将 context request-context（channel/target/user）注入到 system prompt。
+   * - 将 context request-context（target/user）注入到 system prompt。
    */
   private buildRuntimeSystemMessages(input: {
     projectRoot: string;
@@ -515,8 +518,6 @@ export class ContextAgentRunner implements ContextAgent {
     const contextCtx = contextRequestContext.getStore();
     const runtimeExtraContextLines: string[] = [];
 
-    if (contextCtx?.chat)
-      runtimeExtraContextLines.push(`- Channel: ${contextCtx.chat}`);
     if (contextCtx?.targetId)
       runtimeExtraContextLines.push(`- TargetId: ${contextCtx.targetId}`);
     if (contextCtx?.actorId)
@@ -552,7 +553,7 @@ export class ContextAgentRunner implements ContextAgent {
     note: string;
   }): ShipContextMessageV1 {
     const ctx = contextRequestContext.getStore();
-    const channel = toShipContextChannel(ctx?.chat);
+    const channel = resolveChannelFromContextId(params.contextId);
     const targetId = String(ctx?.targetId || params.contextId);
     const metadata: Omit<ShipContextMetadataV1, "v" | "ts"> = {
       contextId: params.contextId,

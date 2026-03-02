@@ -8,20 +8,20 @@
  * - 后台常驻启动请使用 `shipmyagent start`（daemon 模式），并用 `shipmyagent stop|restart` 管理。
  */
 
-import { AgentServer } from "../runtime/AgentServer.js";
-import { createInteractiveServer } from "../ui/WebUIClient.js";
+import { AgentServer } from "@main/runtime/AgentServer.js";
+import { createInteractiveServer } from "@main/ui/WebUIClient.js";
 
 import {
   getServiceRuntimeState,
   getRuntimeState,
   initRuntimeState,
-} from "../runtime/RuntimeState.js";
-import type { StartOptions } from "../types/Start.js";
-import { logger } from "../../utils/logger/Logger.js";
+} from "@main/runtime/RuntimeState.js";
+import type { StartOptions } from "@main/types/Start.js";
+import { logger } from "@utils/logger/Logger.js";
 import {
   startAllServiceRuntimes,
   stopAllServiceRuntimes,
-} from "../service/Registry.js";
+} from "@main/service/Registry.js";
 
 /**
  * `shipmyagent run` 命令入口。

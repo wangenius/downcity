@@ -1,5 +1,5 @@
 import type { UIMessage } from "ai";
-import type { JsonObject } from "../../types/Json.js";
+import type { JsonObject } from "@/types/Json.js";
 /**
  * Context 消息：以 UIMessage[] 作为唯一事实源。
  *

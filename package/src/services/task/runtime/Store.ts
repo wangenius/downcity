@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { ShipTaskDefinitionV1, ShipTaskFrontmatterV1 } from "../types/Task.js";
+import type { ShipTaskDefinitionV1, ShipTaskFrontmatterV1 } from "@services/task/types/Task.js";
 import { parseTaskMarkdown, buildTaskMarkdown } from "./Model.js";
 import {
   getTaskDir,

@@ -16,17 +16,17 @@ import {
   loadSkill,
   unloadSkill,
 } from "./Service.js";
-import { resolveContextId } from "../../main/service/ContextId.js";
-import { callServer } from "../../main/runtime/Client.js";
-import { printResult } from "../../main/utils/CliOutput.js";
+import { resolveContextId } from "@main/service/ContextId.js";
+import { callServer } from "@main/runtime/Client.js";
+import { printResult } from "@main/utils/CliOutput.js";
 import type {
   SkillListResponse,
   SkillLoadResponse,
   SkillPinnedListResponse,
   SkillUnloadResponse,
 } from "./types/SkillCommand.js";
-import type { SmaService } from "../../main/service/ServiceRegistry.js";
-import type { JsonObject } from "../../types/Json.js";
+import type { SmaService } from "@main/service/ServiceRegistry.js";
+import type { JsonObject } from "@/types/Json.js";
 
 function parsePortOption(value: string): number {
   const port = Number.parseInt(value, 10);

@@ -1,13 +1,13 @@
 import {
   clearSystemPromptProviders,
   registerSystemPromptProvider,
-} from "../../core/prompts/SystemProvider.js";
-import { runContextMemoryMaintenance } from "../../services/memory/runtime/Service.js";
-import { memorySystemPromptProvider } from "../../services/memory/runtime/SystemProvider.js";
-import { createSkillsSystemPromptProvider } from "../../services/skills/runtime/SystemProvider.js";
-import { pickLastSuccessfulChatSendText } from "../../services/chat/runtime/UserVisibleText.js";
-import { sendChatTextByContextId } from "../../services/chat/Service.js";
-import { getChatSender } from "../../services/chat/runtime/ChatSendRegistry.js";
+} from "@core/prompts/SystemProvider.js";
+import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
+import { memorySystemPromptProvider } from "@services/memory/runtime/SystemProvider.js";
+import { createSkillsSystemPromptProvider } from "@services/skills/runtime/SystemProvider.js";
+import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
+import { sendChatTextByContextId } from "@services/chat/Service.js";
+import { getChatSender } from "@services/chat/runtime/ChatSendRegistry.js";
 import { setProcessServiceBindings } from "./ServiceProcessBindings.js";
 
 /**

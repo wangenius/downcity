@@ -13,7 +13,7 @@ import type {
   SystemPromptLoadedSkill,
   SystemPromptProviderOutput,
   SystemPromptProviderResult,
-} from "../types/SystemPromptProvider.js";
+} from "@core/types/SystemPromptProvider.js";
 
 const systemPromptProviders = new Map<string, SystemPromptProvider>();
 

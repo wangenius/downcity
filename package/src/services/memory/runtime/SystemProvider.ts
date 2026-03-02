@@ -7,12 +7,12 @@
  */
 
 import fs from "fs-extra";
-import type { SystemPromptProvider } from "../../../core/types/SystemPromptProvider.js";
+import type { SystemPromptProvider } from "@core/types/SystemPromptProvider.js";
 import {
   getShipProfileOtherPath,
   getShipProfilePrimaryPath,
   getShipContextMemoryPrimaryPath,
-} from "../../../main/project/Paths.js";
+} from "@main/project/Paths.js";
 
 async function readOptionalMarkdown(filePath: string): Promise<string> {
   try {

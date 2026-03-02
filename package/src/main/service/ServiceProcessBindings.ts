@@ -1,4 +1,4 @@
-import type { ShipContextMessageV1 } from "../../core/types/ContextMessage.js";
+import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
 
 /**

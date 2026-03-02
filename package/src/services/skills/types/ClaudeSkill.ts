@@ -7,7 +7,7 @@
  */
 
 import type { SkillRootSource } from "./SkillRoot.js";
-import type { JsonValue } from "../../../types/Json.js";
+import type { JsonValue } from "@/types/Json.js";
 
 export type ClaudeSkill = {
   /** skill id（目录名） */

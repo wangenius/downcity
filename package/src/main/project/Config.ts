@@ -9,8 +9,8 @@
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
-import type { ShipConfig } from "../types/ShipConfig.js";
-import type { JsonObject, JsonValue } from "../../types/Json.js";
+import type { ShipConfig } from "@main/types/ShipConfig.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { getShipJsonPath } from "./Paths.js";
 
 export type { ShipConfig };

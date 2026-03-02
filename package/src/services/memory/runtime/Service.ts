@@ -1,10 +1,10 @@
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type { LanguageModel } from "ai";
-import { getLogger } from "../../../utils/logger/Logger.js";
+import { getLogger } from "@utils/logger/Logger.js";
 import {
   getServiceContextManager,
   getServiceModelFactory,
-} from "../../../main/service/ServiceRuntimeDependencies.js";
+} from "@main/service/ServiceRuntimeDependencies.js";
 import { MemoryManager } from "./Manager.js";
 import { compressMemory, extractMemoryFromContextMessages } from "./Extractor.js";
 

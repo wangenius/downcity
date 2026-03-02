@@ -12,10 +12,10 @@
 import path from "path";
 import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getAgentMdPath, getShipJsonPath } from "../project/Paths.js";
-import { startDaemonProcess } from "../runtime/Manager.js";
-import { buildRunArgsFromOptions } from "../runtime/CliArgs.js";
-import type { StartOptions } from "../types/Start.js";
+import { getAgentMdPath, getShipJsonPath } from "@main/project/Paths.js";
+import { startDaemonProcess } from "@main/runtime/Manager.js";
+import { buildRunArgsFromOptions } from "@main/runtime/CliArgs.js";
+import type { StartOptions } from "@main/types/Start.js";
 
 /**
  * start 命令入口。

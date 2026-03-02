@@ -8,7 +8,7 @@
     "sma": "./bin/main/commands/index.js"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-built-in-skills.mjs && node scripts/copy-prompt-assets.mjs",
+    "build": "tsc && tsc-alias && node scripts/copy-built-in-skills.mjs && node scripts/copy-prompt-assets.mjs",
     "dev": "tsc --watch",
     "start": "node bin/start.js",
     "typecheck": "tsc --noEmit",
@@ -56,6 +56,7 @@
     "@types/node-cron": "^3.0.0",
     "@types/prompts": "^2.4.0",
     "@types/ws": "^8.18.1",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.7.0"
   }
 }

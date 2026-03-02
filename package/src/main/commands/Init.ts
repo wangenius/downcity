@@ -32,12 +32,12 @@ import {
   getShipDebugDirPath,
   getShipPublicDirPath,
   getShipTasksDirPath,
-} from "../project/Paths.js";
-import { ensureDir, saveJson } from "../project/Storage.js";
-import type { ShipConfig } from "../project/Config.js";
-import { SHIP_JSON_SCHEMA } from "../constants/ShipSchema.js";
-import { MODEL_CONFIGS } from "../constants/Model.js";
-import { DEFAULT_SHIP_JSON } from "../constants/Ship.js";
+} from "@main/project/Paths.js";
+import { ensureDir, saveJson } from "@main/project/Storage.js";
+import type { ShipConfig } from "@main/project/Config.js";
+import { SHIP_JSON_SCHEMA } from "@main/constants/ShipSchema.js";
+import { MODEL_CONFIGS } from "@main/constants/Model.js";
+import { DEFAULT_SHIP_JSON } from "@main/constants/Ship.js";
 
 type InitPromptResponse = {
   name?: string;

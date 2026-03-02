@@ -6,7 +6,7 @@
  * - 同步计算 activeTools 白名单，交给上层执行器约束。
  */
 
-import type { LoadedSkillV1 } from "../types/LoadedSkill.js";
+import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 
 /**
  * 生成 active skills 的 system prompt。

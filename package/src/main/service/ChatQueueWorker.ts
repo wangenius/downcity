@@ -7,12 +7,12 @@
  * - 支持 step 边界合并（drainLaneMerged）
  */
 
-import type { Logger } from "../../utils/logger/Logger.js";
-import type { ContextManager } from "../../core/context/ContextManager.js";
-import { withContextRequestContext } from "../../core/context/RequestContext.js";
-import type { ContextRequestContext } from "../../core/context/RequestContext.js";
-import type { AgentResult } from "../../core/types/Agent.js";
-import type { ChatQueueItem } from "../../services/chat/types/ChatQueue.js";
+import type { Logger } from "@utils/logger/Logger.js";
+import type { ContextManager } from "@core/context/ContextManager.js";
+import { withContextRequestContext } from "./RequestContext.js";
+import type { ContextRequestContext } from "./RequestContext.js";
+import type { AgentResult } from "@core/types/Agent.js";
+import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
   onChatQueueEnqueue,
   shiftChatQueueItem,
@@ -20,7 +20,7 @@ import {
   listChatQueueLanes,
   clearChatQueueLane,
   getChatQueueLaneSize,
-} from "../../services/chat/runtime/ChatQueue.js";
+} from "@services/chat/runtime/ChatQueue.js";
 
 type WorkerConfig = {
   maxConcurrency: number;
@@ -191,7 +191,7 @@ export class ChatQueueWorker {
     }
 
     const ctx: ContextRequestContext = {
-      chat: first.channel,
+      channel: first.channel,
       targetId: first.targetId,
       contextId: first.contextId,
       actorId: first.actorId,

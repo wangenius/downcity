@@ -6,8 +6,8 @@
  * - core 不负责也不感知 skill/memory 业务状态
  */
 
-import type { ClaudeSkill } from "../types/ClaudeSkill.js";
-import type { LoadedSkillV1 } from "../types/LoadedSkill.js";
+import type { ClaudeSkill } from "@services/skills/types/ClaudeSkill.js";
+import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 import type {
   ContextSkillStateInternal,
   ContextSkillStateSnapshot,

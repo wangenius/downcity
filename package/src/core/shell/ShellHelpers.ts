@@ -8,14 +8,14 @@
 
 import path from "path";
 import { randomBytes } from "crypto";
-import { getRuntimeState } from "../../main/runtime/RuntimeState.js";
-import { contextRequestContext } from "../context/RequestContext.js";
-import { llmRequestContext } from "../../utils/logger/Context.js";
+import { getRuntimeState } from "@main/runtime/RuntimeState.js";
+import { contextRequestContext } from "@main/service/RequestContext.js";
+import { llmRequestContext } from "@utils/logger/Context.js";
 import type {
   ShellContext,
   ShellOutputPage,
   OutputLimits,
-} from "../types/Shell.js";
+} from "@core/types/Shell.js";
 
 export const DEFAULT_MAX_OUTPUT_CHARS = 12_000;
 export const DEFAULT_MAX_OUTPUT_LINES = 200;
@@ -172,7 +172,7 @@ export function buildShellContextEnv(): NodeJS.ProcessEnv {
   const llmCtx = llmRequestContext.getStore();
 
   setEnvString(env, "SMA_CTX_CONTEXT_ID", contextCtx?.contextId);
-  setEnvString(env, "SMA_CTX_CHANNEL", contextCtx?.chat);
+  setEnvString(env, "SMA_CTX_CHANNEL", contextCtx?.channel);
   setEnvString(env, "SMA_CTX_TARGET_ID", contextCtx?.targetId);
   setEnvString(env, "SMA_CTX_TARGET_TYPE", contextCtx?.targetType);
   setEnvString(env, "SMA_CTX_ACTOR_ID", contextCtx?.actorId);

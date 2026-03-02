@@ -11,7 +11,7 @@ import type {
   ChatQueueEnqueueParams,
   ChatQueueEnqueueResult,
   ChatQueueItem,
-} from "../types/ChatQueue.js";
+} from "@services/chat/types/ChatQueue.js";
 
 type EnqueueListener = (laneKey: string) => void;
 

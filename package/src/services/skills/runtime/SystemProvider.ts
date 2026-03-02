@@ -1,13 +1,13 @@
 import fs from "fs-extra";
 import path from "node:path";
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
-import { getServiceContextManager } from "../../../main/service/ServiceRuntimeDependencies.js";
-import type { LoadedSkillV1 } from "../types/LoadedSkill.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import { getServiceContextManager } from "@main/service/ServiceRuntimeDependencies.js";
+import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 import type {
   SystemPromptProvider,
   SystemPromptProviderContext,
   SystemPromptProviderOutput,
-} from "../../../core/types/SystemPromptProvider.js";
+} from "@core/types/SystemPromptProvider.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
 import { buildLoadedSkillsSystemText } from "./ActiveSkillsPrompt.js";
@@ -15,7 +15,7 @@ import {
   setContextAvailableSkills,
   setContextLoadedSkills,
 } from "./Store.js";
-import type { JsonValue } from "../../../types/Json.js";
+import type { JsonValue } from "@/types/Json.js";
 
 /**
  * 归一化 allowed tools。

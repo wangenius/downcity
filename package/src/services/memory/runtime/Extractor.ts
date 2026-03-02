@@ -10,10 +10,10 @@ import type {
   MemoryEntry,
   MemoryExtractParams,
   MemoryCompressParams,
-} from "../types/Memory.js";
-import { getLogger } from "../../../utils/logger/Logger.js";
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
-import { getServiceContextManager } from "../../../main/service/ServiceRuntimeDependencies.js";
+} from "@services/memory/types/Memory.js";
+import { getLogger } from "@utils/logger/Logger.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import { getServiceContextManager } from "@main/service/ServiceRuntimeDependencies.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
 

@@ -11,7 +11,7 @@ import type {
   CloseShellContextResult,
   CreateShellContextInput,
   ShellContext,
-} from "../types/Shell.js";
+} from "@core/types/Shell.js";
 import {
   appendContextOutput,
   buildShellContextEnv,

@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs-extra";
-import { getCacheDirPath } from "../../../../main/project/Paths.js";
-import type { JsonObject } from "../../../../types/Json.js";
+import { getCacheDirPath } from "@main/project/Paths.js";
+import type { JsonObject } from "@/types/Json.js";
 
 /**
  * Telegram 轮询模式的持久化状态存储。

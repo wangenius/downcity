@@ -7,16 +7,16 @@
  * - 在上下文更新后触发 memory 维护钩子
  */
 
-import type { ContextAgent } from "../types/ContextAgent.js";
+import type { ContextAgent } from "@core/types/ContextAgent.js";
 import { ContextStore } from "./ContextStore.js";
-import type { ShipContextMetadataV1 } from "../types/ContextMessage.js";
-import { getRuntimeStateBase } from "../../main/runtime/RuntimeState.js";
+import type { ShipContextMetadataV1 } from "@core/types/ContextMessage.js";
+import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
 import path from "node:path";
-import type { JsonObject } from "../../types/Json.js";
+import type { JsonObject } from "@/types/Json.js";
 import {
   parseTaskRunContextId,
   getTaskRunDir,
-} from "../../services/task/runtime/Paths.js";
+} from "@services/task/runtime/Paths.js";
 import { ContextAgentRunner } from "./AgentRunner.js";
 
 /**

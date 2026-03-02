@@ -12,10 +12,10 @@ import { discoverClaudeSkillsSync } from "./runtime/Discovery.js";
 import {
   getShipContextMessagesMetaPath,
   getShipContextMessagesDirPath,
-} from "../../main/project/Paths.js";
-import { loadShipConfig } from "../../main/project/Config.js";
+} from "@main/project/Paths.js";
+import { loadShipConfig } from "@main/project/Config.js";
 import type { ClaudeSkill } from "./types/ClaudeSkill.js";
-import type { JsonObject, JsonValue } from "../../types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type {
   SkillListResponse,
   SkillLoadRequest,

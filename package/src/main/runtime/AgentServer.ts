@@ -10,24 +10,24 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { logger as server_logger } from "../../utils/logger/Logger.js";
-import { withContextRequestContext } from "../../core/context/RequestContext.js";
+import { logger as server_logger } from "@utils/logger/Logger.js";
+import { withContextRequestContext } from "@main/service/RequestContext.js";
 import http from "node:http";
 import fs from "fs-extra";
 import path from "path";
-import { getShipPublicDirPath } from "../project/Paths.js";
-import type { ShipContextMetadataV1 } from "../../core/types/ContextMessage.js";
+import { getShipPublicDirPath } from "@main/project/Paths.js";
+import type { ShipContextMetadataV1 } from "@core/types/ContextMessage.js";
 import {
   getServiceRuntimeState,
   getRuntimeState,
 } from "./RuntimeState.js";
-import { getProcessServiceBindings } from "../service/ServiceProcessBindings.js";
+import { getProcessServiceBindings } from "@main/service/ServiceProcessBindings.js";
 import {
   controlServiceRuntime,
   listServiceRuntimes,
   registerAllServicesForServer,
   runServiceCommand,
-} from "../service/Registry.js";
+} from "@main/service/Registry.js";
 
 /**
  * 启动参数。

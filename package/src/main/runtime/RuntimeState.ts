@@ -1,21 +1,21 @@
-import { DEFAULT_SHIP_PROMPTS } from "../../core/prompts/System.js";
-import { logger as defaultLogger, type Logger } from "../../utils/logger/Logger.js";
-import { ContextManager } from "../../core/context/ContextManager.js";
-import { ChatQueueWorker } from "../service/ChatQueueWorker.js";
+import { DEFAULT_SHIP_PROMPTS } from "@core/prompts/System.js";
+import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
+import { ContextManager } from "@core/context/ContextManager.js";
+import { ChatQueueWorker } from "@main/service/ChatQueueWorker.js";
 import {
   contextRequestContext,
   withContextRequestContext,
-} from "../../core/context/RequestContext.js";
-import { createModel } from "../../core/llm/CreateModel.js";
+} from "@main/service/RequestContext.js";
+import { createModel } from "@core/llm/CreateModel.js";
 import {
   getProcessServiceBindings,
-} from "../service/ServiceProcessBindings.js";
-import type { ServiceRuntimeDependencies } from "../service/types/ServiceRuntimeTypes.js";
+} from "@main/service/ServiceProcessBindings.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import {
   loadProjectDotenv,
   loadShipConfig,
   type ShipConfig,
-} from "../project/Config.js";
+} from "@main/project/Config.js";
 import {
   getAgentMdPath,
   getCacheDirPath,
@@ -29,7 +29,7 @@ import {
   getShipProfileDirPath,
   getShipPublicDirPath,
   getShipTasksDirPath,
-} from "../project/Paths.js";
+} from "@main/project/Paths.js";
 import fs from "fs-extra";
 import path from "path";
 

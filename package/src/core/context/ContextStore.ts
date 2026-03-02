@@ -25,12 +25,12 @@ import {
   getShipContextMessagesMetaPath,
   getShipContextMessagesPath,
   getShipContextMessagesDirPath,
-} from "../../main/project/Paths.js";
-import { generateId } from "../../main/utils/Id.js";
-import type { ShipContextMetadataV1, ShipContextMessageV1 } from "../types/ContextMessage.js";
-import type { ShipContextMessagesMetaV1 } from "../types/ContextMessagesMeta.js";
-import { getLogger } from "../../utils/logger/Logger.js";
-import { getRuntimeStateBase } from "../../main/runtime/RuntimeState.js";
+} from "@main/project/Paths.js";
+import { generateId } from "@main/utils/Id.js";
+import type { ShipContextMetadataV1, ShipContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ShipContextMessagesMetaV1 } from "@core/types/ContextMessagesMeta.js";
+import { getLogger } from "@utils/logger/Logger.js";
+import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
 
 /**
  * ContextStore：基于 UIMessage 的会话上下文存储（per contextId）。

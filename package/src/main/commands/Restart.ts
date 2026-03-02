@@ -5,10 +5,10 @@
 import path from "path";
 import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getAgentMdPath, getShipJsonPath } from "../project/Paths.js";
-import { buildRunArgsFromOptions } from "../runtime/CliArgs.js";
-import { startDaemonProcess, stopDaemonProcess } from "../runtime/Manager.js";
-import type { StartOptions } from "../types/Start.js";
+import { getAgentMdPath, getShipJsonPath } from "@main/project/Paths.js";
+import { buildRunArgsFromOptions } from "@main/runtime/CliArgs.js";
+import { startDaemonProcess, stopDaemonProcess } from "@main/runtime/Manager.js";
+import type { StartOptions } from "@main/types/Start.js";
 
 /**
  * restart 命令执行流程。

@@ -1,9 +1,9 @@
 import { PlatformAdapter } from "./PlatformAdapter.js";
-import type { ChatDispatchChannel } from "../types/ChatDispatcher.js";
-import type { Logger } from "../../../utils/logger/Logger.js";
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
-import type { JsonObject, JsonValue } from "../../../types/Json.js";
-import { enqueueChatQueue } from "../runtime/ChatQueue.js";
+import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import type { Logger } from "@utils/logger/Logger.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
+import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 
 type AdapterUserMessageMeta = {
   [key: string]: JsonValue | undefined;

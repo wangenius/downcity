@@ -9,7 +9,7 @@
 import type { Command } from "commander";
 import type { Hono } from "hono";
 import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
-import type { JsonValue } from "../../types/Json.js";
+import type { JsonValue } from "@/types/Json.js";
 import "./ProcessBindings.js";
 import type {
   ServerRouteRegistry,
@@ -19,9 +19,9 @@ import type {
 } from "./ServiceRegistry.js";
 import { createCliCommandRegistry } from "./CliRegistry.js";
 import { createServerRouteRegistry } from "./ServerRegistry.js";
-import { chatService } from "../../services/chat/ServiceEntry.js";
-import { skillsService } from "../../services/skills/ServiceEntry.js";
-import { taskService } from "../../services/task/ServiceEntry.js";
+import { chatService } from "@services/chat/ServiceEntry.js";
+import { skillsService } from "@services/skills/ServiceEntry.js";
+import { taskService } from "@services/task/ServiceEntry.js";
 
 const SERVICES: SmaService[] = [chatService, skillsService, taskService];
 

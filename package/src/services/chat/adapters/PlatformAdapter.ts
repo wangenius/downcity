@@ -1,11 +1,11 @@
-import { registerChatSender } from "../runtime/ChatSendRegistry.js";
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
+import { registerChatSender } from "@services/chat/runtime/ChatSendRegistry.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type {
   ChatDispatchAction,
   ChatDispatchChannel,
   ChatDispatchSendActionParams,
   ChatDispatcher,
-} from "../types/ChatDispatcher.js";
+} from "@services/chat/types/ChatDispatcher.js";
 
 /**
  * 适配器 chatKey 计算入参。

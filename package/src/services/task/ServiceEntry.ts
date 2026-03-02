@@ -16,9 +16,9 @@ import {
   updateTaskDefinition,
   setTaskStatus,
 } from "./Service.js";
-import { callServer } from "../../main/runtime/Client.js";
-import { printResult } from "../../main/utils/CliOutput.js";
-import { resolveContextId } from "../../main/service/ContextId.js";
+import { callServer } from "@main/runtime/Client.js";
+import { printResult } from "@main/utils/CliOutput.js";
+import { resolveContextId } from "@main/service/ContextId.js";
 import type {
   TaskCreateRequest,
   TaskCreateResponse,
@@ -28,9 +28,9 @@ import type {
   TaskUpdateResponse,
   TaskSetStatusResponse,
 } from "./types/TaskCommand.js";
-import type { SmaService } from "../../main/service/ServiceRegistry.js";
+import type { SmaService } from "@main/service/ServiceRegistry.js";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { JsonObject, JsonValue } from "../../types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
 import {
   restartTaskCronRuntime,
   startTaskCronRuntime,

@@ -9,9 +9,9 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { Logger } from "../../../../utils/logger/Logger.js";
-import { getCacheDirPath } from "../../../../main/project/Paths.js";
-import type { QqInboundDedupeSnapshotV1 } from "../../types/QqInboundDedupe.js";
+import type { Logger } from "@utils/logger/Logger.js";
+import { getCacheDirPath } from "@main/project/Paths.js";
+import type { QqInboundDedupeSnapshotV1 } from "@services/chat/types/QqInboundDedupe.js";
 
 /**
  * QqInboundDedupeStore：QQ 入站消息去重存储器。

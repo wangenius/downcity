@@ -4,11 +4,11 @@ import { AsyncLocalStorage } from "node:async_hooks";
  * ContextRequestContext（单次请求上下文）。
  *
  * 关键点（中文）
- * - core 只认 context 概念，不认 chat 语义。
+ * - 这是进程编排层的请求作用域上下文，不属于 core 内核。
  * - `targetId/targetType/threadId` 是平台无关的“目标端点信息”。
  */
 export type ContextRequestContext = {
-  chat?: "telegram" | "feishu" | "qq" | "cli" | "scheduler" | "api";
+  channel?: "telegram" | "feishu" | "qq" | "cli" | "scheduler" | "api";
   contextId?: string;
   targetId?: string;
   targetType?: string;
@@ -23,7 +23,7 @@ export type ContextRequestContext = {
  *
  * 关键点（中文）
  * - 同一条异步调用链内可读取到一致的 `ContextRequestContext`。
- * - 用于把 channel/target/context 等信息从入口透传到深层模块。
+ * - 用于把 channel/target/context 等信息从入口透传到服务层与工具层。
  */
 export const contextRequestContext =
   new AsyncLocalStorage<ContextRequestContext>();

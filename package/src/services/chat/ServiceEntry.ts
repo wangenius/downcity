@@ -18,12 +18,12 @@ import {
 import { createTelegramBot } from "./adapters/telegram/Bot.js";
 import { createFeishuBot } from "./adapters/feishu/Feishu.js";
 import { createQQBot } from "./adapters/qq/QQ.js";
-import { callServer } from "../../main/runtime/Client.js";
-import { printResult } from "../../main/utils/CliOutput.js";
-import type { SmaService } from "../../main/service/ServiceRegistry.js";
+import { callServer } from "@main/runtime/Client.js";
+import { printResult } from "@main/utils/CliOutput.js";
+import type { SmaService } from "@main/service/ServiceRegistry.js";
 import type { ChatSendResponse } from "./types/ChatCommand.js";
-import type { JsonObject } from "../../types/Json.js";
-import type { ServiceRuntimeDependencies } from "../../main/service/types/ServiceRuntimeTypes.js";
+import type { JsonObject } from "@/types/Json.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type { TelegramBot } from "./adapters/telegram/Bot.js";
 import type { FeishuBot } from "./adapters/feishu/Feishu.js";
 import type { QQBot } from "./adapters/qq/QQ.js";

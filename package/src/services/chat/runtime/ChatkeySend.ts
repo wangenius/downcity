@@ -10,11 +10,11 @@
  */
 
 import { getChatSender } from "./ChatSendRegistry.js";
-import type { ChatDispatchChannel } from "../types/ChatDispatcher.js";
-import type { ShipContextMessageV1 } from "../../../core/types/ContextMessage.js";
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
-import type { JsonObject } from "../../../types/Json.js";
-import { getServiceContextManager } from "../../../main/service/ServiceRuntimeDependencies.js";
+import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { JsonObject } from "@/types/Json.js";
+import { getServiceContextManager } from "@main/service/ServiceRuntimeDependencies.js";
 
 type DispatchableChannel = "telegram" | "feishu" | "qq";
 

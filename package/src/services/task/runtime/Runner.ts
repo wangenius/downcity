@@ -14,8 +14,8 @@ import {
   getServiceChatRuntimeBridge,
   getServiceRequestContextBridge,
   getServiceContextManager,
-} from "../../../main/service/ServiceRuntimeDependencies.js";
-import type { ServiceRuntimeDependencies } from "../../../main/service/types/ServiceRuntimeTypes.js";
+} from "@main/service/ServiceRuntimeDependencies.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type {
   ShipTaskFrontmatterV1,
   ShipTaskRunExecutionStatusV1,
@@ -23,9 +23,9 @@ import type {
   ShipTaskRunResultStatusV1,
   ShipTaskRunStatusV1,
   ShipTaskRunTriggerV1,
-} from "../types/Task.js";
-import type { AgentResult } from "../../../core/types/Agent.js";
-import type { JsonObject } from "../../../types/Json.js";
+} from "@services/task/types/Task.js";
+import type { AgentResult } from "@core/types/Agent.js";
+import type { JsonObject } from "@/types/Json.js";
 import {
   createTaskRunContextId,
   formatTaskRunTimestamp,
@@ -252,7 +252,7 @@ async function runAgentRound(params: {
   const agent = getServiceContextManager(params.context).getAgent(params.contextId);
   const result = await getServiceRequestContextBridge(params.context).withContextRequestContext(
     {
-      chat: "scheduler",
+      channel: "scheduler",
       targetId: params.taskId,
       contextId: params.contextId,
       actorId: params.actorId,

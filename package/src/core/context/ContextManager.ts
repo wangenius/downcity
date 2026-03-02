@@ -7,7 +7,6 @@
  * - 在上下文更新后触发 memory 维护钩子
  */
 
-import type { ContextAgent } from "@core/types/ContextAgent.js";
 import { ContextStore } from "./ContextStore.js";
 import type { ShipContextMetadataV1 } from "@core/types/ContextMessage.js";
 import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
@@ -17,7 +16,7 @@ import {
   parseTaskRunContextId,
   getTaskRunDir,
 } from "@services/task/runtime/Paths.js";
-import { ContextAgentRunner } from "./AgentRunner.js";
+import { ContextAgent } from "./ContextAgent.js";
 
 /**
  * ContextManager：统一会话运行管理容器。
@@ -98,7 +97,7 @@ export class ContextManager {
     }
     const existing = this.agentsByContextId.get(key);
     if (existing) return existing;
-    const created = new ContextAgentRunner();
+    const created = new ContextAgent();
     this.agentsByContextId.set(key, created);
     return created;
   }

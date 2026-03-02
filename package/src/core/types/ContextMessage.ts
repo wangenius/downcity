@@ -38,3 +38,6 @@ export type ShipContextMetadataV1 = {
 };
 
 export type ShipContextMessageV1 = UIMessage<ShipContextMetadataV1>;
+export type ShipContextUserMessageV1 = ShipContextMessageV1 & {
+  role: "user";
+};

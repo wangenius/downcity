@@ -25,9 +25,7 @@ import {
 import { createModel } from "@core/llm/CreateModel.js";
 import type { AgentRunInput, AgentResult } from "@core/types/Agent.js";
 import type { Logger } from "@utils/logger/Logger.js";
-import {
-  contextRequestContext,
-} from "@/main/service/RequestContext.js";
+import { contextRequestContext } from "@/main/service/RequestContext.js";
 import { openai } from "@ai-sdk/openai";
 import type {
   ShipContextMessageV1,
@@ -37,13 +35,12 @@ import {
   getRuntimeState,
   getRuntimeStateBase,
 } from "@main/runtime/RuntimeState.js";
-import type { ContextAgent } from "@core/types/ContextAgent.js";
 import { collectSystemPromptProviderResult } from "@core/prompts/SystemProvider.js";
 import type { ContextStore } from "./ContextStore.js";
 import { loadProjectDotenv } from "@/main/runtime/Config.js";
 import { shellTools } from "@core/shell/Tool.js";
 
-export class ContextAgentRunner implements ContextAgent {
+export class ContextAgent {
   // 是否初始化
   private initialized: boolean = false;
   // 模型
@@ -105,7 +102,7 @@ export class ContextAgentRunner implements ContextAgent {
    * 3) 进入 tool-loop 主流程
    */
   async run(input: AgentRunInput): Promise<AgentResult> {
-    const { query, contextId, pullMergedUserMessages } = input;
+    const { query, contextId, onStepCallback } = input;
     const startTime = Date.now();
     const requestId = generateId();
     const logger = this.getLogger();
@@ -120,15 +117,14 @@ export class ContextAgentRunner implements ContextAgent {
     if (this.initialized) {
       return this.runWithToolLoopAgent(query, startTime, contextId, {
         requestId,
-        pullMergedUserMessages,
+        onStepCallback,
       });
     }
 
     let contextStore: ContextStore | null = null;
     try {
-      contextStore = getRuntimeState().contextManager.getContextStore(
-        contextId,
-      );
+      contextStore =
+        getRuntimeState().contextManager.getContextStore(contextId);
     } catch {
       contextStore = null;
     }
@@ -138,8 +134,7 @@ export class ContextAgentRunner implements ContextAgent {
         contextId,
         requestId,
         contextStore,
-        text:
-          "LLM is not configured (or runtime not initialized). Please configure `ship.json.llm` (model + apiKey) and restart.",
+        text: "LLM is not configured (or runtime not initialized). Please configure `ship.json.llm` (model + apiKey) and restart.",
         note: "agent_not_initialized",
       }),
     };
@@ -177,13 +172,13 @@ export class ContextAgentRunner implements ContextAgent {
     opts?: {
       retryAttempts?: number;
       requestId?: string;
-      pullMergedUserMessages?: AgentRunInput["pullMergedUserMessages"];
+      onStepCallback?: AgentRunInput["onStepCallback"];
     },
   ): Promise<AgentResult> {
     let contextStore: ContextStore | null = null;
     const retryAttempts = opts?.retryAttempts ?? 0;
     const requestId = opts?.requestId || "";
-    const pullMergedUserMessages = opts?.pullMergedUserMessages;
+    const onStepCallback = opts?.onStepCallback;
     const logger = this.getLogger();
     if (!this.initialized) {
       throw new Error("Agent not initialized");
@@ -305,9 +300,9 @@ export class ContextAgentRunner implements ContextAgent {
                   ? incomingMessages.slice(lastAppliedBasePrefixLen)
                   : [];
               let outMessages: ModelMessage[] | undefined;
-              if (typeof pullMergedUserMessages === "function") {
+              if (typeof onStepCallback === "function") {
                 try {
-                  const mergedMessages = await pullMergedUserMessages();
+                  const mergedMessages = await onStepCallback();
                   const added = appendMergedUserMessages(
                     Array.isArray(mergedMessages) ? mergedMessages : [],
                   );
@@ -433,8 +428,7 @@ export class ContextAgentRunner implements ContextAgent {
               contextId,
               requestId,
               contextStore,
-              text:
-                "Context length exceeded and retries failed. Please resend your question (or tune context.messages.* compaction settings).",
+              text: "Context length exceeded and retries failed. Please resend your question (or tune context.messages.* compaction settings).",
               note: "context_length_exceeded",
             }),
           };
@@ -443,7 +437,7 @@ export class ContextAgentRunner implements ContextAgent {
         return this.runWithToolLoopAgent(userText, startTime, contextId, {
           retryAttempts: retryAttempts + 1,
           requestId,
-          pullMergedUserMessages,
+          onStepCallback,
         });
       }
 

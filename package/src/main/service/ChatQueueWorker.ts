@@ -12,7 +12,7 @@ import type { ContextManager } from "@core/context/ContextManager.js";
 import { withContextRequestContext } from "./RequestContext.js";
 import type { ContextRequestContext } from "./RequestContext.js";
 import type { AgentResult } from "@core/types/Agent.js";
-import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ShipContextUserMessageV1 } from "@core/types/ContextMessage.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
   onChatQueueEnqueue,
@@ -196,10 +196,10 @@ export class ChatQueueWorker {
     };
 
     let clearRequested = false;
-    const pullMergedUserMessages = async (): Promise<ShipContextMessageV1[]> => {
+    const onStepCallback = async (): Promise<ShipContextUserMessageV1[]> => {
       const drainedItems = drainChatQueueLane(laneKey);
       if (drainedItems.length === 0) return [];
-      const mergedExecMessages: ShipContextMessageV1[] = [];
+      const mergedExecMessages: ShipContextUserMessageV1[] = [];
       for (const item of drainedItems) {
         if (item.kind === "control") {
           if (item.control?.type === "clear") clearRequested = true;
@@ -241,7 +241,7 @@ export class ChatQueueWorker {
       agent.run({
         contextId: first.contextId,
         query: first.text,
-        pullMergedUserMessages,
+        onStepCallback,
       }),
     );
 

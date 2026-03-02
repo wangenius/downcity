@@ -14,6 +14,8 @@ ShipMyAgent 当前支持 **Claude Code-compatible skills**。本页解释：skil
 - 项目内：`<project>/.ship/skills`
 - 用户目录：`~/.ship/skills`
 
+在运行中的 `shipmyagent run` / `shipmyagent start` 进程里，skills 目录和 `SKILL.md` 变更会自动热重载；下一次请求会使用最新内容。
+
 此外，你还可以通过 `ship.json.services.skills.paths` 增加额外 roots。`sma init` 会默认在 `ship.json` 写入 `services.skills.paths: [".claude/skills"]`，并创建 `./.claude/skills/` 目录，用于兼容社区常见布局。
 
 项目内 skills 目录结构示例（推荐放在项目根目录下的 `.ship/skills`）：

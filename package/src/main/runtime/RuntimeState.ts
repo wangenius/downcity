@@ -30,8 +30,10 @@ import {
   getShipPublicDirPath,
   getShipTasksDirPath,
 } from "@/main/runtime/Paths.js";
+import { getClaudeSkillSearchRoots } from "@services/skills/runtime/Paths.js";
 import fs from "fs-extra";
 import path from "path";
+import { watch, type FSWatcher } from "node:fs";
 
 /**
  * RuntimeState：ShipMyAgent 进程级运行时状态（单例）。
@@ -64,8 +66,242 @@ export type RuntimeState = RuntimeStateBase & {
   contextManager: ContextManager;
 };
 
+const DEFAULT_AGENT_PROFILE = `# Agent Role
+You are a helpful project assistant.`;
+const HOT_RELOAD_DEBOUNCE_MS = 300;
+
 let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
+let stopRuntimeHotReloadWatcher: (() => void) | null = null;
+
+/**
+ * 读取 Agent.md（含默认兜底）。
+ */
+function loadAgentProfileText(rootPath: string): string {
+  let agentProfile = DEFAULT_AGENT_PROFILE;
+  try {
+    const content = fs.readFileSync(getAgentMdPath(rootPath), "utf-8").trim();
+    if (content) agentProfile = content;
+  } catch {
+    // ignore
+  }
+  return agentProfile;
+}
+
+/**
+ * 构建静态系统提示列表。
+ */
+function buildStaticSystems(agentProfile: string): string[] {
+  return [agentProfile, DEFAULT_SHIP_PROMPTS].filter(Boolean);
+}
+
+function systemsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * 原子更新 runtime.systems（同时覆盖 base + ready）。
+ *
+ * 关键点（中文）
+ * - `setRuntimeStateBase` 会清空 ready，因此必须先抓取旧 ready 再恢复。
+ */
+function applyRuntimeSystems(nextSystems: string[]): void {
+  const currentBase = getRuntimeStateBase();
+  const currentReady = ready;
+  setRuntimeStateBase({
+    ...currentBase,
+    systems: nextSystems,
+  });
+  if (currentReady) {
+    setRuntimeState({
+      ...currentReady,
+      systems: nextSystems,
+    });
+  }
+}
+
+/**
+ * 刷新 Agent.md 对应的静态系统提示。
+ */
+function reloadAgentMdSystems(reason: string): void {
+  const runtime = getRuntimeStateBase();
+  const nextSystems = buildStaticSystems(loadAgentProfileText(runtime.rootPath));
+  if (systemsEqual(runtime.systems, nextSystems)) return;
+
+  applyRuntimeSystems(nextSystems);
+  runtime.logger.info("Agent.md hot reloaded", {
+    reason,
+    agentMdPath: getAgentMdPath(runtime.rootPath),
+  });
+}
+
+/**
+ * 刷新 system prompt providers。
+ *
+ * 关键点（中文）
+ * - skills 变更后重建 providers，确保后续请求立即读取最新技能状态。
+ */
+function reloadSystemPromptProviders(reason: string): void {
+  const runtime = getRuntimeStateBase();
+  try {
+    getProcessServiceBindings().registerSystemPromptProviders({
+      getContext: () => getServiceRuntimeState(),
+    });
+    runtime.logger.info("System prompt providers hot reloaded", { reason });
+  } catch (error) {
+    runtime.logger.warn("System prompt providers hot reload failed", {
+      reason,
+      error: String(error),
+    });
+  }
+}
+
+/**
+ * 停止 runtime 文件热重载监听。
+ */
+export function stopRuntimeHotReload(): void {
+  if (!stopRuntimeHotReloadWatcher) return;
+  stopRuntimeHotReloadWatcher();
+  stopRuntimeHotReloadWatcher = null;
+}
+
+/**
+ * 启动 runtime 文件热重载监听（Agent.md + skills roots）。
+ *
+ * 监听策略（中文）
+ * - Agent.md：监听项目根目录并过滤目标文件名，兼容 rename/replace。
+ * - skills：优先监听技能根目录（递归）；失败时回退到监听父目录。
+ * - 所有回调都做 debounce，避免编辑器连续写入造成重复刷新。
+ */
+function startRuntimeHotReload(): void {
+  stopRuntimeHotReload();
+
+  const runtime = getRuntimeState();
+  const watchers: FSWatcher[] = [];
+  const timers = new Map<string, NodeJS.Timeout>();
+
+  const clearAllTimers = (): void => {
+    for (const timer of timers.values()) {
+      clearTimeout(timer);
+    }
+    timers.clear();
+  };
+
+  const schedule = (key: string, task: () => void): void => {
+    const prev = timers.get(key);
+    if (prev) clearTimeout(prev);
+    const next = setTimeout(() => {
+      timers.delete(key);
+      task();
+    }, HOT_RELOAD_DEBOUNCE_MS);
+    timers.set(key, next);
+  };
+
+  const attachWatcher = (
+    watchPath: string,
+    options: { recursive?: boolean },
+    onChange: (eventType: string, filename: string) => void,
+  ): boolean => {
+    try {
+      const watcher = watch(
+        watchPath,
+        { recursive: Boolean(options.recursive) },
+        (eventType, filename) => {
+          const normalized = filename
+            ? Buffer.isBuffer(filename)
+              ? filename.toString("utf-8")
+              : String(filename)
+            : "";
+          onChange(eventType, normalized);
+        },
+      );
+      watcher.on("error", (error) => {
+        runtime.logger.warn("Hot reload watcher runtime error", {
+          watchPath,
+          error: String(error),
+        });
+      });
+      watchers.push(watcher);
+      return true;
+    } catch (error) {
+      runtime.logger.warn("Hot reload watcher attach failed", {
+        watchPath,
+        error: String(error),
+      });
+      return false;
+    }
+  };
+
+  // Agent.md：监听项目根目录（文件替换/重命名也能捕获）。
+  attachWatcher(runtime.rootPath, {}, (_eventType, filename) => {
+    if (filename && path.basename(filename) !== "Agent.md") return;
+    schedule("agent-md", () => reloadAgentMdSystems("agent_md_changed"));
+  });
+
+  // skills：监听扫描 roots；若 root 不可监听则回退父目录。
+  const skillRoots = getClaudeSkillSearchRoots(runtime.rootPath, runtime.config);
+  const allowExternalSkills = Boolean(runtime.config.services?.skills?.allowExternalPaths);
+  const watchedRootPaths = new Set<string>();
+  const parentWatchTargets = new Map<string, Set<string>>();
+  for (const root of skillRoots) {
+    if (root.source === "config" && !allowExternalSkills) continue;
+
+    const rootPath = path.normalize(root.resolved);
+    if (!rootPath || watchedRootPaths.has(rootPath)) continue;
+    watchedRootPaths.add(rootPath);
+
+    const onSkillsChanged = () => {
+      schedule("skills", () => reloadSystemPromptProviders("skills_changed"));
+    };
+
+    let attached = false;
+    try {
+      if (fs.existsSync(rootPath) && fs.statSync(rootPath).isDirectory()) {
+        attached =
+          attachWatcher(rootPath, { recursive: true }, onSkillsChanged) ||
+          attachWatcher(rootPath, {}, onSkillsChanged);
+      }
+    } catch {
+      attached = false;
+    }
+    if (attached) continue;
+
+    const parentDir = path.dirname(rootPath);
+    const targetName = path.basename(rootPath);
+    if (!parentDir) continue;
+    const existing = parentWatchTargets.get(parentDir) || new Set<string>();
+    existing.add(targetName);
+    parentWatchTargets.set(parentDir, existing);
+  }
+
+  for (const [parentDir, targetNames] of parentWatchTargets.entries()) {
+    attachWatcher(parentDir, {}, (_eventType, filename) => {
+      if (filename && !targetNames.has(path.basename(filename))) return;
+      schedule("skills", () => reloadSystemPromptProviders("skills_changed"));
+    });
+  }
+
+  stopRuntimeHotReloadWatcher = () => {
+    clearAllTimers();
+    for (const watcher of watchers) {
+      try {
+        watcher.close();
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  runtime.logger.info("Runtime hot reload enabled", {
+    agentMdPath: getAgentMdPath(runtime.rootPath),
+    skillRoots: skillRoots.map((item) => item.resolved),
+    watchers: watchers.length,
+  });
+}
 
 /**
  * service 请求上下文桥接实现。
@@ -223,6 +459,8 @@ export function getRuntimeState(): RuntimeState {
  */
 
 export async function initRuntimeState(cwd: string): Promise<void> {
+  stopRuntimeHotReload();
+
   const resolvedCwd = String(cwd || "").trim() || ".";
   const rootPath = path.resolve(resolvedCwd);
 
@@ -247,17 +485,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems: [],
   });
 
-  // Agent.md（用户可编辑的 system prompt）在启动时读取并缓存。
-  let agentProfiles = `# Agent Role
-You are a helpful project assistant.`;
-  try {
-    const content = fs.readFileSync(getAgentMdPath(rootPath), "utf-8").trim();
-    if (content) agentProfiles = content;
-  } catch {
-    // ignore
-  }
-
-  const systems = [agentProfiles, DEFAULT_SHIP_PROMPTS].filter(Boolean);
+  const systems = buildStaticSystems(loadAgentProfileText(rootPath));
 
   // 关键点（中文）：systems 在启动时确认后写回 base runtime state，供后续模块读取。
   setRuntimeStateBase({
@@ -296,6 +524,7 @@ You are a helpful project assistant.`;
   getProcessServiceBindings().registerSystemPromptProviders({
     getContext: () => getServiceRuntimeState(),
   });
+  startRuntimeHotReload();
 
 }
 

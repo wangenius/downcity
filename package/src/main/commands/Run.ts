@@ -15,6 +15,7 @@ import {
   getServiceRuntimeState,
   getRuntimeState,
   initRuntimeState,
+  stopRuntimeHotReload,
 } from "@main/runtime/RuntimeState.js";
 import type { StartOptions } from "@main/types/Start.js";
 import { logger } from "@utils/logger/Logger.js";
@@ -111,6 +112,9 @@ export async function runCommand(
     isShuttingDown = true;
 
     logger.info(`Received ${signal} signal, shutting down...`);
+
+    // 先停掉文件监听，避免关停阶段触发额外重载。
+    stopRuntimeHotReload();
 
     // Stop service runtimes
     try {

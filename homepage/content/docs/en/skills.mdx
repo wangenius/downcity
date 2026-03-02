@@ -14,6 +14,8 @@ By default ShipMyAgent scans 2 skill root types:
 - Project: `<project>/.ship/skills`
 - Home (global): `~/.ship/skills`
 
+In a running `shipmyagent run` / `shipmyagent start` process, changes under skill directories (including `SKILL.md`) are hot-reloaded automatically and applied on the next request.
+
 You can add extra roots via `ship.json.services.skills.paths`. By default `sma init` writes `services.skills.paths: [".claude/skills"]` and creates `./.claude/skills/` to stay compatible with common community layouts.
 
 Project skills layout example (recommended under `.ship/skills`):

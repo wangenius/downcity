@@ -1,7 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
-import { getServiceContextManager } from "@main/service/ServiceRuntimeDependencies.js";
 import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 import type {
   SystemPromptProvider,
@@ -68,7 +67,13 @@ async function buildSkillsProviderOutput(
   ctx: SystemPromptProviderContext,
 ): Promise<SystemPromptProviderOutput> {
   const runtime = getContext();
-  const contextStore = getServiceContextManager(runtime).getContextStore(ctx.contextId);
+  const contextManager = runtime.contextManager;
+  if (!contextManager) {
+    throw new Error(
+      "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
+    );
+  }
+  const contextStore = contextManager.getContextStore(ctx.contextId);
   const discoveredSkills = discoverClaudeSkillsSync(runtime.rootPath, runtime.config);
   setContextAvailableSkills(ctx.contextId, discoveredSkills);
 

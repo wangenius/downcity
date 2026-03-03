@@ -1,19 +1,16 @@
 /**
- * ChatQueueWorker：进程侧 chat 队列执行器。
+ * ChatQueueWorker：chat service 侧队列执行器。
  *
  * 关键点（中文）
  * - 消费 services/chat 的队列模块
- * - 负责写入 context history + 驱动 core agent
+ * - 通过 service host 端口访问 request context（避免直接依赖 core/main 实现细节）
  * - 支持 step 边界合并（同 lane 新消息可插入当前 run）
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ContextManager } from "@core/context/ContextManager.js";
-import { withContextRequestContext } from "./RequestContext.js";
-import type { ContextRequestContext } from "./RequestContext.js";
-import { getProcessServiceBindings } from "./ServiceProcessBindings.js";
 import type { AgentResult } from "@core/types/Agent.js";
 import type { ShipContextUserMessageV1 } from "@core/types/ContextMessage.js";
+import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
   onChatQueueEnqueue,
@@ -22,7 +19,8 @@ import {
   listChatQueueLanes,
   clearChatQueueLane,
   getChatQueueLaneSize,
-} from "@services/chat/runtime/ChatQueue.js";
+} from "./ChatQueue.js";
+import { getChatSender } from "./ChatSendRegistry.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
 
@@ -45,7 +43,7 @@ function normalizeConfig(input?: Partial<WorkerConfig>): WorkerConfig {
 
 export class ChatQueueWorker {
   private readonly logger: Logger;
-  private readonly contextManager: ContextManager;
+  private readonly context: ServiceRuntimeDependencies;
   private readonly config: WorkerConfig;
 
   private readonly lanes: Map<string, LaneState> = new Map();
@@ -57,11 +55,11 @@ export class ChatQueueWorker {
 
   constructor(params: {
     logger: Logger;
-    contextManager: ContextManager;
+    context: ServiceRuntimeDependencies;
     config?: Partial<WorkerConfig>;
   }) {
     this.logger = params.logger;
-    this.contextManager = params.contextManager;
+    this.context = params.context;
     this.config = normalizeConfig(params.config);
   }
 
@@ -155,7 +153,7 @@ export class ChatQueueWorker {
 
   private async appendHistory(item: ChatQueueItem): Promise<void> {
     if (!this.shouldAppendHistory(item)) return;
-    await this.contextManager.appendUserMessage({
+    await this.requireContextManager().appendUserMessage({
       contextId: item.contextId,
       text: item.text,
       extra: item.extra,
@@ -166,7 +164,7 @@ export class ChatQueueWorker {
     const control = item.control;
     if (!control) return false;
     if (control.type === "clear") {
-      this.contextManager.clearAgent(item.contextId);
+      this.requireContextManager().clearAgent(item.contextId);
       clearChatQueueLane(item.contextId);
       return true;
     }
@@ -177,7 +175,7 @@ export class ChatQueueWorker {
    * 在单次执行期间维持“正在输入”心跳。
    *
    * 关键点（中文）
-   * - 仅对 chat 渠道生效（telegram/feishu/qq）
+   * - 通过 services/chat 的 dispatcher 发送动作（不经过 main bindings）
    * - 先发送一次，再按固定间隔续发
    * - 发送失败不影响主执行流程（best-effort）
    */
@@ -185,11 +183,15 @@ export class ChatQueueWorker {
     const chatId = String(item.targetId || "").trim();
     if (!chatId) return { stop: () => {} };
 
-    const bindings = getProcessServiceBindings();
+    const dispatcher = getChatSender(item.channel);
+    const sendAction = dispatcher?.sendAction;
+    if (typeof sendAction !== "function") {
+      return { stop: () => {} };
+    }
+
     const sendOnce = async () => {
       try {
-        await bindings.sendChatAction({
-          channel: item.channel,
+        await sendAction({
           chatId,
           action: "typing",
           ...(typeof item.threadId === "number"
@@ -227,14 +229,11 @@ export class ChatQueueWorker {
     await this.appendHistory(first);
     if (first.kind === "audit") return;
 
-    const agent = this.contextManager.getAgent(first.contextId);
+    const contextManager = this.requireContextManager();
+    const agent = contextManager.getAgent(first.contextId);
     if (!agent.isInitialized()) {
       await agent.initialize();
     }
-
-    const ctx: ContextRequestContext = {
-      contextId: first.contextId,
-    };
 
     let clearRequested = false;
     const onStepCallback = async (): Promise<ShipContextUserMessageV1[]> => {
@@ -266,7 +265,6 @@ export class ChatQueueWorker {
             });
           }
         }
-
       }
       return mergedExecMessages;
     };
@@ -274,31 +272,59 @@ export class ChatQueueWorker {
     const typing = this.startTypingHeartbeat(first);
     let result: AgentResult;
     try {
-      result = await withContextRequestContext(ctx, () =>
-        agent.run({
-          contextId: first.contextId,
-          query: first.text,
-          onStepCallback,
-        }),
+      result = await this.requireHost().withRequestContext(
+        { contextId: first.contextId },
+        () =>
+          agent.run({
+            contextId: first.contextId,
+            query: first.text,
+            onStepCallback,
+          }),
       );
     } finally {
       typing.stop();
     }
 
     if (clearRequested) {
-      this.contextManager.clearAgent(first.contextId);
+      contextManager.clearAgent(first.contextId);
       clearChatQueueLane(first.contextId);
     }
 
     try {
-      const store = this.contextManager.getContextStore(first.contextId);
+      const store = contextManager.getContextStore(first.contextId);
       const assistantMessage = result.assistantMessage;
       if (assistantMessage && typeof assistantMessage === "object") {
         await store.append(assistantMessage);
-        void this.contextManager.afterContextUpdatedAsync(first.contextId);
+        void contextManager.afterContextUpdatedAsync(first.contextId);
       }
     } catch {
       // ignore
     }
+  }
+
+  /**
+   * 读取 context manager 端口。
+   *
+   * 关键点（中文）
+   * - 在使用点显式校验，避免隐藏依赖来源。
+   */
+  private requireContextManager() {
+    const manager = this.context.contextManager;
+    if (manager) return manager;
+    throw new Error(
+      "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
+    );
+  }
+
+  /**
+   * 读取 host 端口。
+   *
+   * 关键点（中文）
+   * - 在使用点显式校验，避免隐藏依赖来源。
+   */
+  private requireHost() {
+    const host = this.context.host;
+    if (host) return host;
+    throw new Error("Service host is required but missing.");
   }
 }

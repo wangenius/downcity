@@ -3,13 +3,10 @@
  *
  * 关键点（中文）
  * - chat 语义（chatKey 与 contextId 映射）统一收口在本模块
- * - 内部通过注入的 request context bridge 做映射读取
+ * - 内部通过注入的 host 端口读取 request context
  */
 
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
-import {
-  getServiceRequestContextBridge,
-} from "@main/service/ServiceRuntimeDependencies.js";
 import { parseChatKeyForDispatch, sendTextByChatKey } from "./runtime/ChatkeySend.js";
 import { llmRequestContext } from "@utils/logger/Context.js";
 import type {
@@ -47,7 +44,7 @@ function readEnvNumber(name: string): number | undefined {
  *
  * 优先级（中文）
  * 1) 显式参数
- * 2) request context bridge（server 注入）
+ * 2) host.getRequestContext（server 注入）
  * 3) 环境变量回退
  */
 export function resolveChatContextSnapshot(input?: {
@@ -55,8 +52,11 @@ export function resolveChatContextSnapshot(input?: {
   chatKey?: string;
   context?: ServiceRuntimeDependencies;
 }): ChatContextSnapshot {
+  if (input?.context && !input.context.host) {
+    throw new Error("Service host is required but missing.");
+  }
   const requestCtx = input?.context
-    ? getServiceRequestContextBridge(input.context).getCurrentContextRequestContext()
+    ? input.context.host.getRequestContext()
     : undefined;
   const llmCtx = llmRequestContext.getStore();
 

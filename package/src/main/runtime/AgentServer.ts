@@ -21,7 +21,7 @@ import {
   getServiceRuntimeState,
   getRuntimeState,
 } from "./RuntimeState.js";
-import { getProcessServiceBindings } from "@main/service/ServiceProcessBindings.js";
+import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import {
   controlServiceRuntime,
   listServiceRuntimes,
@@ -351,9 +351,7 @@ export class AgentServer {
 
         // [阶段3] 结果提取：优先拿 chat_send 的最终文本，其次回退到 message 文本。
         const userVisible =
-          getProcessServiceBindings().pickLastSuccessfulChatSendText(
-            result.assistantMessage,
-          );
+          pickLastSuccessfulChatSendText(result.assistantMessage);
         try {
           // [阶段3] 上下文消息落盘：优先 append assistantMessage；缺失时生成文本消息兜底。
           const store = runtime.contextManager.getContextStore(contextId);
@@ -444,9 +442,9 @@ export class AgentServer {
         server_logger.info("  POST /api/services/control - Service runtime control");
         server_logger.info("  POST /api/services/command - Service command bridge");
         server_logger.info("  POST /api/execute - Execute instruction");
-        server_logger.info("  POST /api/chat/send - Chat service");
-        server_logger.info("  POST /api/skill/load - Skill service");
-        server_logger.info("  POST /api/task/create - Task service");
+        server_logger.info("  POST /service/chat/send - Chat service");
+        server_logger.info("  POST /service/skill/load - Skill service");
+        server_logger.info("  POST /service/task/create - Task service");
         resolve();
       });
     });

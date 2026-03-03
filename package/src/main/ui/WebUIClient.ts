@@ -287,6 +287,6 @@ export class WebUIClient {
   }
 }
 
-export function createInteractiveServer(context: InteractiveServerContext): WebUIClient {
+export function createWebUIClient(context: InteractiveServerContext): WebUIClient {
   return new WebUIClient(context);
 }

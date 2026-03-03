@@ -2,9 +2,9 @@
  * Chat service。
  *
  * 关键点（中文）
- * - CLI：`sma chat send/context`
- * - Server：`/api/chat/send`、`/api/chat/context`
- * - 只保留最小注册层，业务逻辑下沉到 service/runtime
+ * - 使用统一 actions 模型声明 CLI/API/执行逻辑
+ * - API 默认路由为 `/service/chat/<action>`
+ * - 业务逻辑下沉到 `services/chat/Service.ts`
  */
 
 import path from "node:path";
@@ -15,37 +15,39 @@ import {
   resolveChatKey,
   sendChatTextByChatKey,
 } from "./Service.js";
+import { pickLastSuccessfulChatSendText } from "./runtime/UserVisibleText.js";
 import { createTelegramBot } from "./adapters/telegram/Bot.js";
 import { createFeishuBot } from "./adapters/feishu/Feishu.js";
 import { createQQBot } from "./adapters/qq/QQ.js";
-import { callServer } from "@main/runtime/Client.js";
-import { printResult } from "@main/utils/CliOutput.js";
-import type { Service } from "@main/service/ServiceRegistry.js";
-import type { ChatSendResponse } from "./types/ChatCommand.js";
-import type { JsonObject } from "@/types/Json.js";
+import type {
+  Service,
+  ServiceActionCommandInput,
+} from "@main/service/ServiceRegistry.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { TelegramBot } from "./adapters/telegram/Bot.js";
 import type { FeishuBot } from "./adapters/feishu/Feishu.js";
 import type { QQBot } from "./adapters/qq/QQ.js";
-
-/**
- * 解析端口参数。
- *
- * 关键点（中文）
- * - 统一校验范围 1~65535，避免各命令重复实现。
- */
-function parsePortOption(value: string): number {
-  const port = Number.parseInt(value, 10);
-  if (!Number.isFinite(port) || Number.isNaN(port) || !Number.isInteger(port) || port <= 0 || port > 65535) {
-    throw new Error(`Invalid port: ${value}`);
-  }
-  return port;
-}
 
 type ChatAdapterState = {
   telegram: TelegramBot | null;
   feishu: FeishuBot | null;
   qq: QQBot | null;
+};
+
+type ChatSendActionPayload = {
+  text: string;
+  chatKey?: string;
+};
+
+type ChatContextActionPayload = {
+  chatKey?: string;
+  contextId?: string;
+};
+
+type ChatExtractTextPayload = {
+  assistantMessage?: JsonObject | null;
 };
 
 let adapterState: ChatAdapterState = {
@@ -163,202 +165,194 @@ async function stopChatAdapters(): Promise<void> {
   }
 }
 
-type ChatSendCliOptions = {
-  text?: string;
-  stdin?: boolean;
-  textFile?: string;
-  chatKey?: string;
-  path?: string;
-  host?: string;
-  port?: number;
-  json?: boolean;
-};
+function getStringOpt(opts: Record<string, JsonValue>, key: string): string {
+  return typeof opts[key] === "string" ? String(opts[key]).trim() : "";
+}
 
-function printSendFailed(params: {
-  asJson?: boolean;
-  chatKey?: string;
-  error: string;
-}): void {
-  printResult({
-    asJson: params.asJson,
-    success: false,
-    title: "chat send failed",
-    payload: {
-      ...(params.chatKey ? { chatKey: params.chatKey } : {}),
-      error: params.error,
-    },
-  });
+function getBooleanOpt(opts: Record<string, JsonValue>, key: string): boolean {
+  return opts[key] === true;
 }
 
 /**
- * CLI: `chat send`。
+ * 解析 `chat send` 的命令输入。
  *
- * 流程（中文）
- * 1) 解析 chatKey（显式参数优先）
- * 2) 通过 daemon API 转发到 server
- * 3) 标准化输出 JSON/文本结果
+ * 关键点（中文）
+ * - `--text / --stdin / --text-file` 三选一
+ * - 文本读取失败直接抛错，由上层统一输出
  */
-async function runChatSendCommand(options: ChatSendCliOptions): Promise<void> {
-  const projectRoot = path.resolve(String(options.path || "."));
-  const explicitText = String(options.text || "");
-  const useStdin = Boolean(options.stdin);
-  const textFile = String(options.textFile || "").trim();
+async function mapChatSendCommandInput(
+  input: ServiceActionCommandInput,
+): Promise<ChatSendActionPayload> {
+  const explicitText = getStringOpt(input.opts, "text");
+  const useStdin = getBooleanOpt(input.opts, "stdin");
+  const textFile = getStringOpt(input.opts, "textFile");
   const inputSourcesCount =
     (explicitText ? 1 : 0) + (useStdin ? 1 : 0) + (textFile ? 1 : 0);
 
   if (inputSourcesCount !== 1) {
-    printSendFailed({
-      asJson: options.json,
-      error:
-        "Exactly one text source is required: use one of --text, --stdin, or --text-file.",
-    });
-    return;
+    throw new Error(
+      "Exactly one text source is required: use one of --text, --stdin, or --text-file.",
+    );
   }
 
   let text = explicitText;
   if (useStdin) {
     const chunks: Buffer[] = [];
-    try {
-      for await (const chunk of process.stdin) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-      }
-    } catch (error) {
-      printSendFailed({
-        asJson: options.json,
-        error: `Failed to read stdin: ${String(error)}`,
-      });
-      return;
+    for await (const chunk of process.stdin) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
     }
     text = Buffer.concat(chunks).toString("utf8");
   } else if (textFile) {
-    const filePath = path.isAbsolute(textFile)
-      ? textFile
-      : path.resolve(projectRoot, textFile);
-    try {
-      text = await fs.readFile(filePath, "utf8");
-    } catch (error) {
-      printSendFailed({
-        asJson: options.json,
-        error: `Failed to read --text-file: ${filePath}. ${String(error)}`,
-      });
-      return;
-    }
+    const filePath = path.resolve(process.cwd(), textFile);
+    text = await fs.readFile(filePath, "utf8");
   }
 
-  const chatKey = resolveChatKey({ chatKey: options.chatKey });
-
+  const chatKey = resolveChatKey({
+    chatKey: getStringOpt(input.opts, "chatKey"),
+  });
   if (!chatKey) {
-    printSendFailed({
-      asJson: options.json,
-      error:
-        "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CONTEXT_ID is injected in current shell context.",
-    });
-    return;
+    throw new Error(
+      "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CHAT_KEY is injected in current shell context.",
+    );
   }
 
-  const remote = await callServer<ChatSendResponse>({
-    projectRoot,
-    path: "/api/chat/send",
-    method: "POST",
-    host: options.host,
-    port: options.port,
-    body: { text, chatKey },
-  });
-
-  if (!remote.success || !remote.data) {
-    // 兜底（中文）：当本地 server 不可达时，给出明确错误，提示先启动服务。
-    printSendFailed({
-      asJson: options.json,
-      chatKey,
-      error:
-        remote.error ||
-        "Agent server is not reachable. Start service via `sma start` or run in foreground via `sma run`.",
-    });
-    return;
-  }
-
-  const data = remote.data;
-  printResult({
-    asJson: options.json,
-    success: Boolean(data.success),
-    title: data.success ? "chat sent" : "chat send failed",
-    payload: {
-      chatKey: data.chatKey || chatKey,
-      ...(data.success ? {} : { error: data.error || "chat send failed" }),
-    },
-  });
+  return {
+    text,
+    chatKey,
+  };
 }
 
-/**
- * CLI: `chat context`。
- *
- * 关键点（中文）
- * - 只读取上下文快照，不做任何写操作。
- */
-function runChatContextCommand(opts: { chatKey?: string; json?: boolean }): void {
-  const snapshot = resolveChatContextSnapshot({ chatKey: opts.chatKey });
-  printResult({
-    asJson: opts.json,
-    success: true,
-    title: "chat context",
-    payload: { context: snapshot },
+function mapChatSendApiInput(body: JsonValue): ChatSendActionPayload {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error("Invalid JSON body");
+  }
+  const payload = body as JsonObject;
+  return {
+    text: String(payload.text ?? ""),
+    chatKey:
+      typeof payload.chatKey === "string" ? payload.chatKey.trim() : undefined,
+  };
+}
+
+async function executeChatSendAction(params: {
+  context: ServiceRuntimeDependencies;
+  payload: ChatSendActionPayload;
+}) {
+  const chatKey = resolveChatKey({
+    chatKey: params.payload.chatKey,
+    context: params.context,
   });
+  if (!chatKey) {
+    return {
+      success: false,
+      error: "Missing chatKey",
+    };
+  }
+
+  const result = await sendChatTextByChatKey({
+    context: params.context,
+    chatKey,
+    text: String(params.payload.text || ""),
+  });
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error || "chat send failed",
+    };
+  }
+  return {
+    success: true,
+    data: {
+      chatKey: result.chatKey || chatKey,
+    },
+  };
 }
 
 export const chatService: Service = {
   name: "chat",
   // 关键点（中文）：chat service 当前不注入额外 system prompt。
   systemPromptProviders: () => [],
-
-  registerCli(registry) {
-    registry.group("chat", "Chat 服务命令（Bash-first）", (group) => {
-      group.command("send", "发送消息到目标 chatKey", (command: Command) => {
-        command
-          .option("--text <text>", "消息正文")
-          .option("--stdin", "从标准输入读取消息正文", false)
-          .option("--text-file <file>", "从文件读取消息正文（相对路径基于 --path）")
-          .option("--chat-key <chatKey>", "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）")
-          .option("--path <path>", "项目根目录（默认当前目录）", ".")
-          .option("--host <host>", "Server host（覆盖自动解析）")
-          .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
-          .option("--json [enabled]", "以 JSON 输出", true)
-          .action(runChatSendCommand);
-      });
-
-      group.command("context", "查看当前会话上下文快照", (command: Command) => {
-        command
-          .option("--chat-key <chatKey>", "显式覆盖 chatKey")
-          .option("--json [enabled]", "以 JSON 输出", true)
-          .action(runChatContextCommand);
-      });
-    });
-  },
-
-  registerServer(registry, context) {
-    registry.get("/api/chat/context", (c) => {
-      return c.json({
-        success: true,
-        context: resolveChatContextSnapshot({ context }),
-      });
-    });
-
-    registry.post("/api/chat/send", async (c) => {
-      const body = (await c.req.json().catch(() => null)) as JsonObject | null;
-      if (!body || typeof body !== "object") {
-        return c.json({ success: false, error: "Invalid JSON body" }, 400);
-      }
-
-      const text = String(body.text ?? "");
-      const chatKey = String(body.chatKey || "").trim();
-      if (!chatKey) return c.json({ success: false, error: "Missing chatKey" }, 400);
-
-      const result = await sendChatTextByChatKey({
-        context,
-        chatKey,
-        text,
-      });
-      return c.json(result, result.success ? 200 : 400);
-    });
+  actions: {
+    send: {
+      command: {
+        description: "发送消息到目标 chatKey",
+        configure(command: Command) {
+          command
+            .option("--text <text>", "消息正文")
+            .option("--stdin", "从标准输入读取消息正文", false)
+            .option("--text-file <file>", "从文件读取消息正文（相对当前目录）")
+            .option(
+              "--chat-key <chatKey>",
+              "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）",
+            );
+        },
+        mapInput: mapChatSendCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatSendApiInput(await c.req.json());
+        },
+      },
+      async execute(params) {
+        return executeChatSendAction({
+          context: params.context,
+          payload: params.payload as ChatSendActionPayload,
+        });
+      },
+    },
+    context: {
+      command: {
+        description: "查看当前会话上下文快照",
+        configure(command: Command) {
+          command.option("--chat-key <chatKey>", "显式覆盖 chatKey");
+        },
+        mapInput(input) {
+          const chatKey = getStringOpt(input.opts, "chatKey");
+          return {
+            ...(chatKey ? { chatKey } : {}),
+          };
+        },
+      },
+      api: {
+        method: "GET",
+        mapInput(c) {
+          const chatKey = String(c.req.query("chatKey") || "").trim();
+          const contextId = String(c.req.query("contextId") || "").trim();
+          return {
+            ...(chatKey ? { chatKey } : {}),
+            ...(contextId ? { contextId } : {}),
+          };
+        },
+      },
+      async execute(params) {
+        const payload = params.payload as ChatContextActionPayload;
+        const snapshot = resolveChatContextSnapshot({
+          context: params.context,
+          ...(payload.chatKey ? { chatKey: payload.chatKey } : {}),
+          ...(payload.contextId ? { contextId: payload.contextId } : {}),
+        });
+        return {
+          success: true,
+          data: {
+            context: snapshot,
+          },
+        };
+      },
+    },
+    extract_text: {
+      async execute(params) {
+        const payload = params.payload as ChatExtractTextPayload;
+        return {
+          success: true,
+          data: {
+            text: pickLastSuccessfulChatSendText(
+              (payload.assistantMessage || null) as ShipContextMessageV1 | null,
+            ),
+          },
+        };
+      },
+    },
   },
   lifecycle: {
     async start(context) {

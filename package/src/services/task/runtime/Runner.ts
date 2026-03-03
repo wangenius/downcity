@@ -10,11 +10,6 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import {
-  getServiceChatRuntimeBridge,
-  getServiceRequestContextBridge,
-  getServiceContextManager,
-} from "@main/service/ServiceRuntimeDependencies.js";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type {
   ShipTaskFrontmatterV1,
@@ -75,6 +70,32 @@ type DialogueRoundRecord = {
 };
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
+
+/**
+ * 读取 context manager 端口。
+ *
+ * 关键点（中文）
+ * - 在使用点显式校验，避免隐藏依赖来源。
+ */
+function requireContextManager(context: ServiceRuntimeDependencies) {
+  const manager = context.contextManager;
+  if (manager) return manager;
+  throw new Error(
+    "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
+  );
+}
+
+/**
+ * 读取 host 端口。
+ *
+ * 关键点（中文）
+ * - 在使用点显式校验，避免隐藏依赖来源。
+ */
+function requireHost(context: ServiceRuntimeDependencies) {
+  const host = context.host;
+  if (host) return host;
+  throw new Error("Service host is required but missing.");
+}
 
 /**
  * 从文本中提取 JSON 对象（支持 ```json 代码块）。
@@ -249,8 +270,9 @@ async function runAgentRound(params: {
   actorId: string;
   actorName: string;
 }): Promise<{ outputText: string; rawResult: AgentResult }> {
-  const agent = getServiceContextManager(params.context).getAgent(params.contextId);
-  const result = await getServiceRequestContextBridge(params.context).withContextRequestContext(
+  const agent = requireContextManager(params.context).getAgent(params.contextId);
+  const host = requireHost(params.context);
+  const result = await host.withRequestContext(
     {
       contextId: params.contextId,
     },
@@ -260,9 +282,23 @@ async function runAgentRound(params: {
         query: params.query,
       }),
   );
-  const outputText = getServiceChatRuntimeBridge(
-    params.context,
-  ).pickLastSuccessfulChatSendText(result.assistantMessage);
+  const pickText = await host.dispatch({
+    service: "chat",
+    action: "extract_text",
+    payload: {
+      assistantMessage:
+        result.assistantMessage && typeof result.assistantMessage === "object"
+          ? (result.assistantMessage as unknown as JsonObject)
+          : null,
+    },
+  });
+
+  let outputText = "";
+  if (pickText.success && pickText.data && typeof pickText.data === "object" && !Array.isArray(pickText.data)) {
+    const textRaw = (pickText.data as JsonObject).text;
+    outputText = typeof textRaw === "string" ? textRaw : "";
+  }
+
   return {
     outputText,
     rawResult: result,
@@ -278,7 +314,7 @@ async function appendExecutorAssistantMessage(params: {
   taskId: string;
   rawResult: AgentResult;
 }): Promise<void> {
-  const store = getServiceContextManager(params.context).getContextStore(
+  const store = requireContextManager(params.context).getContextStore(
     params.runContextId,
   );
   const assistantMessage = params.rawResult?.assistantMessage;
@@ -812,9 +848,13 @@ export async function runTaskNow(params: {
       textLines.push("");
       textLines.push(`error: ${summarizeText(errorText, 500)}`);
     }
-    const send = await getServiceChatRuntimeBridge(context).sendTextByContextId({
-      contextId: task.frontmatter.contextId,
-      text: textLines.join("\n"),
+    const send = await requireHost(context).dispatch({
+      service: "chat",
+      action: "send",
+      payload: {
+        chatKey: task.frontmatter.contextId,
+        text: textLines.join("\n"),
+      },
     });
     if (!send.success) {
       notified = false;

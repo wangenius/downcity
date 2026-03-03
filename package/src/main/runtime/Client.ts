@@ -61,7 +61,7 @@ function parseErrorMessageFromPayload(data: JsonValue | null): string | null {
  * 3) `ship.json.start`
  * 4) 默认 `127.0.0.1:3000`
  */
-export function resolveDaemonEndpoint(params: {
+function resolveDaemonEndpoint(params: {
   projectRoot: string;
   host?: string;
   port?: number;

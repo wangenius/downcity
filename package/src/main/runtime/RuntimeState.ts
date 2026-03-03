@@ -1,16 +1,17 @@
 import { DEFAULT_SHIP_PROMPTS } from "@core/prompts/System.js";
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
 import { ContextManager } from "@core/context/ContextManager.js";
-import { ChatQueueWorker } from "@main/service/ChatQueueWorker.js";
+import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";
 import {
   contextRequestContext,
   withContextRequestContext,
 } from "@main/service/RequestContext.js";
 import { createModel } from "@core/llm/CreateModel.js";
-import {
-  getProcessServiceBindings,
-} from "@main/service/ServiceProcessBindings.js";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import {
+  clearSystemPromptProviders,
+  registerSystemPromptProvider,
+} from "@core/prompts/SystemProvider.js";
 import {
   loadProjectDotenv,
   loadShipConfig,
@@ -30,7 +31,12 @@ import {
   getShipPublicDirPath,
   getShipTasksDirPath,
 } from "@/main/runtime/Paths.js";
+import { SERVICES } from "@main/service/Services.js";
 import { getClaudeSkillSearchRoots } from "@services/skills/runtime/Paths.js";
+import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
+import { memorySystemPromptProvider } from "@services/memory/runtime/SystemProvider.js";
+import { runServiceCommand } from "@main/service/Registry.js";
+import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
 import path from "path";
 import { watch, type FSWatcher } from "node:fs";
@@ -148,7 +154,7 @@ function reloadAgentMdSystems(reason: string): void {
 function reloadSystemPromptProviders(reason: string): void {
   const runtime = getRuntimeStateBase();
   try {
-    getProcessServiceBindings().registerSystemPromptProviders({
+    registerAllServiceSystemPromptProviders({
       getContext: () => getServiceRuntimeState(),
     });
     runtime.logger.info("System prompt providers hot reloaded", { reason });
@@ -158,6 +164,37 @@ function reloadSystemPromptProviders(reason: string): void {
       error: String(error),
     });
   }
+}
+
+/**
+ * 注册所有 service 的 system prompt providers。
+ *
+ * 关键点（中文）
+ * - service 自己声明 provider，runtime 统一聚合注册
+ * - 单个 service 失败不阻断整体初始化
+ */
+function registerAllServiceSystemPromptProviders(params: {
+  getContext: () => ServiceRuntimeDependencies;
+}): void {
+  clearSystemPromptProviders();
+
+  for (const service of SERVICES) {
+    const provide = service.systemPromptProviders;
+    if (typeof provide !== "function") continue;
+    try {
+      let providers = provide({ getContext: params.getContext });
+      if (!Array.isArray(providers)) providers = [];
+      for (const provider of providers) {
+        if (!provider || typeof provider !== "object") continue;
+        registerSystemPromptProvider(provider);
+      }
+    } catch {
+      // fail-open：单个 service provider 失败不阻断启动
+    }
+  }
+
+  // memory 当前不属于 SmaService（无 ServiceEntry），保留独立注册。
+  registerSystemPromptProvider(memorySystemPromptProvider);
 }
 
 /**
@@ -304,14 +341,53 @@ function startRuntimeHotReload(): void {
 }
 
 /**
- * service 请求上下文桥接实现。
+ * service host 端口实现。
  *
  * 关键点（中文）
- * - server 负责把 core 的 request-context 能力适配为 infra 端口。
+ * - services 通过 host 与 main 交互（请求上下文 + action 分发）。
+ * - 统一入口避免为每个能力新增固定 bridge 字段。
  */
-const serviceRequestContextBridge = {
-  getCurrentContextRequestContext: () => contextRequestContext.getStore(),
-  withContextRequestContext,
+const serviceHostPort = {
+  getRequestContext: () => contextRequestContext.getStore(),
+  withRequestContext: withContextRequestContext,
+  async dispatch(params: {
+    service: string;
+    action: string;
+    payload?: JsonValue;
+  }) {
+    const serviceName = String(params.service || "").trim();
+    const action = String(params.action || "").trim();
+    if (!serviceName) {
+      return {
+        success: false,
+        error: "dispatch.service is required",
+      };
+    }
+    if (!action) {
+      return {
+        success: false,
+        error: "dispatch.action is required",
+      };
+    }
+
+    const result = await runServiceCommand({
+      serviceName,
+      command: action,
+      payload: params.payload,
+      context: getServiceRuntimeState(),
+    });
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.message || "service dispatch failed",
+      };
+    }
+
+    return {
+      success: true,
+      ...(result.data !== undefined ? { data: result.data } : {}),
+    };
+  },
 };
 
 /**
@@ -319,31 +395,6 @@ const serviceRequestContextBridge = {
  */
 const serviceModelFactory = {
   createModel,
-};
-
-/**
- * service chat 运行时桥接实现。
- *
- * 关键点（中文）
- * - 通过 `getServiceRuntimeState()` 延迟获取依赖，确保拿到最新 runtime。
- */
-const serviceChatRuntimeBridge = {
-  pickLastSuccessfulChatSendText: (
-    message: Parameters<
-      ReturnType<typeof getProcessServiceBindings>["pickLastSuccessfulChatSendText"]
-    >[0],
-  ) => getProcessServiceBindings().pickLastSuccessfulChatSendText(message),
-  sendTextByContextId: async (params: { contextId: string; text: string }) => {
-    const result = await getProcessServiceBindings().sendTextByContextId({
-      context: getServiceRuntimeState(),
-      contextId: params.contextId,
-      text: params.text,
-    });
-    return {
-      success: Boolean(result.success),
-      ...(result.success ? {} : { error: result.error || "chat send failed" }),
-    };
-  },
 };
 
 /**
@@ -361,8 +412,7 @@ function buildServiceRuntimeStateBase(
     logger: input.logger,
     config: input.config,
     systems: input.systems,
-    chatRuntimeBridge: serviceChatRuntimeBridge,
-    requestContextBridge: serviceRequestContextBridge,
+    host: serviceHostPort,
     modelFactory: serviceModelFactory,
   };
 }
@@ -496,19 +546,22 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems,
   });
 
-  const bindings = getProcessServiceBindings();
   let contextManager: ContextManager;
   contextManager = new ContextManager({
     runMemoryMaintenance: async (contextId) =>
-      bindings.runMemoryMaintenance({
+      runContextMemoryMaintenance({
         context: getServiceRuntimeState(),
         contextId,
       }),
   });
 
+  const chatWorkerRuntime: ServiceRuntimeDependencies = {
+    ...buildServiceRuntimeStateBase(getRuntimeStateBase()),
+    contextManager,
+  };
   const chatQueueWorker = new ChatQueueWorker({
     logger: defaultLogger,
-    contextManager,
+    context: chatWorkerRuntime,
     config: config.services?.chat?.queue,
   });
   chatQueueWorker.start();
@@ -521,7 +574,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems,
     contextManager,
   });
-  getProcessServiceBindings().registerSystemPromptProviders({
+  registerAllServiceSystemPromptProviders({
     getContext: () => getServiceRuntimeState(),
   });
   startRuntimeHotReload();

@@ -1,10 +1,6 @@
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
 import type { LanguageModel } from "ai";
 import { getLogger } from "@utils/logger/Logger.js";
-import {
-  getServiceContextManager,
-  getServiceModelFactory,
-} from "@main/service/ServiceRuntimeDependencies.js";
 import { MemoryManager } from "./Manager.js";
 import { compressMemory, extractMemoryFromContextMessages } from "./Extractor.js";
 
@@ -48,7 +44,13 @@ export async function runContextMemoryMaintenance(params: {
   const extractMinEntries = config?.extractMinEntries ?? 40;
 
   try {
-    const store = getServiceContextManager(context).getContextStore(contextId);
+    const contextManager = context.contextManager;
+    if (!contextManager) {
+      throw new Error(
+        "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
+      );
+    }
+    const store = contextManager.getContextStore(contextId);
     const totalEntries = await store.getTotalMessageCount();
 
     const memoryManager = getMemoryManager(context, contextId);
@@ -84,7 +86,13 @@ async function extractAndSaveMemory(params: {
       entryRange: [startIndex, endIndex],
     });
 
-    const model = await getServiceModelFactory(context).createModel({
+    const modelFactory = context.modelFactory;
+    if (!modelFactory) {
+      throw new Error(
+        "Service modelFactory is required but missing. Ensure server injects model factory before invoking this capability.",
+      );
+    }
+    const model = await modelFactory.createModel({
       config: context.config,
     });
 

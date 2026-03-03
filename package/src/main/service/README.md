@@ -6,16 +6,26 @@
 它负责三件事：
 
 1. 进程侧请求上下文（`RequestContext`）的最小透传
-2. chat 队列消费与 Agent 驱动（`ChatQueueWorker`）
-3. process bindings（`ServiceProcessBindings`）与 services 能力对接
+2. main 对 services 的直接能力调用与聚合
+3. service `actions` 的统一注册与调度（CLI + HTTP）
 
 ## Service Prompt 注册约定
 
 每个 `services/<name>/ServiceEntry.ts` 都可以声明 `systemPromptProviders` 字段。  
 该字段返回当前 service 需要注册的 `SystemPromptProvider[]`。
 
-进程层在 `ProcessBindings.registerSystemPromptProviders` 中统一遍历 services 并注册，
+进程层在 `RuntimeState` 中统一遍历 services 并注册，
 避免在 `main` 侧硬编码某个具体 service 的 provider 细节。
+
+## Service Action 约定
+
+`Service` 使用 `actions` 对象声明能力：
+
+- `command`：CLI 参数定义与 `mapInput`
+- `api`：HTTP method/path 与 `mapInput`
+- `execute`：统一执行入口
+
+默认 HTTP 路由规则为：`/service/<service>/<action>`（可在 action.api.path 覆盖）。
 
 ## 请求上下文约定
 
@@ -28,19 +38,16 @@
 - chat 适配细节留在 `services/chat` 侧处理（chatKey + chat meta）
 - 降低跨模块耦合，避免 `main` 层被平台字段污染
 
-## ChatQueueWorker 执行语义
+## ChatQueueWorker 所属边界
 
-`ChatQueueWorker` 负责消费 `services/chat/runtime/ChatQueue` 的 lane 队列，并串联：
+`ChatQueueWorker` 已下沉到 `services/chat/runtime/ChatQueueWorker.ts`。  
+`main/service` 不再承载 chat 平台执行细节（如 channel/action）。
 
-1. 入站消息写入 `ContextStore`
-2. 获取（或初始化）`ContextAgent`
-3. 在 `withContextRequestContext({ contextId })` 下执行 `agent.run`
-4. 回写 assistant 消息到 `ContextStore`
+设计目的（中文）：
 
-补充机制（中文）：
-
-- 保留 step 边界消息合并（同 lane 新消息并入当前 run）
-- 保留 Telegram/Feishu/QQ 的 `typing` 心跳（通过 `sendChatAction` best-effort 发送）
+- 把 chat 队列消费逻辑收口在 `services/chat`
+- 避免 `main` 层出现 channel/platform 业务字段
+- 让 `main/service` 仅保留通用桥接职责
 
 ## Shell 环境变量透传
 

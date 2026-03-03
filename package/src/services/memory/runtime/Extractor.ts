@@ -13,7 +13,6 @@ import type {
 } from "@services/memory/types/Memory.js";
 import { getLogger } from "@utils/logger/Logger.js";
 import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
-import { getServiceContextManager } from "@main/service/ServiceRuntimeDependencies.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
 
@@ -39,7 +38,13 @@ export async function extractMemoryFromContextMessages(
   const logger = getLogger(context.rootPath, "info");
 
   try {
-    const contextStore = getServiceContextManager(context).getContextStore(contextId);
+    const contextManager = context.contextManager;
+    if (!contextManager) {
+      throw new Error(
+        "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
+      );
+    }
+    const contextStore = contextManager.getContextStore(contextId);
     const messages = await contextStore.loadRange(startIndex, endIndex);
 
     const messagesText = (() => {

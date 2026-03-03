@@ -3,42 +3,14 @@
  *
  * 关键点（中文）
  * - 该类型属于进程编排层，用于承接 service runtime 注册与调度
- * - services 由 registry 统一加载，避免散落硬编码
+ * - 一个 service 由多个 action 组成，main 只做统一注册与分发
  */
 
 import type { Command } from "commander";
-import type { Handler, Hono } from "hono";
 import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { SystemPromptProvider } from "@core/types/SystemPromptProvider.js";
-
-/**
- * CLI 命令注册抽象。
- */
-export interface CliCommandRegistry {
-  command(
-    name: string,
-    description: string,
-    configure: (command: Command) => void,
-  ): Command;
-  group(
-    name: string,
-    description: string,
-    configure: (group: CliCommandRegistry, groupCommand: Command) => void,
-  ): Command;
-  raw(): Command;
-}
-
-/**
- * HTTP 路由注册抽象。
- */
-export interface ServerRouteRegistry {
-  get(path: string, handler: Handler): void;
-  post(path: string, handler: Handler): void;
-  put(path: string, handler: Handler): void;
-  del(path: string, handler: Handler): void;
-  raw(): Hono;
-}
+import type { Context as HonoContext } from "hono";
 
 /**
  * 服务运行状态。
@@ -60,6 +32,69 @@ export type ServiceCommandResult = {
 };
 
 /**
+ * Action 执行结果。
+ */
+export type ServiceActionResult<R extends JsonValue = JsonValue> = {
+  success: boolean;
+  data?: R;
+  error?: string;
+};
+
+/**
+ * Action 命令输入。
+ */
+export type ServiceActionCommandInput = {
+  args: string[];
+  opts: Record<string, JsonValue>;
+};
+
+/**
+ * Action CLI 定义。
+ */
+export type ServiceActionCommand<P extends JsonValue = JsonValue> = {
+  description: string;
+  configure?: (command: Command) => void;
+  mapInput: (input: ServiceActionCommandInput) => P | Promise<P>;
+};
+
+/**
+ * Action HTTP 定义。
+ */
+export type ServiceActionApi<P extends JsonValue = JsonValue> = {
+  method?: "GET" | "POST" | "PUT" | "DELETE";
+  path?: string;
+  mapInput?: (ctx: HonoContext) => P | Promise<P>;
+};
+
+/**
+ * Service action 定义。
+ */
+export type ServiceAction<
+  P extends JsonValue = JsonValue,
+  R extends JsonValue = JsonValue,
+> = {
+  command?: ServiceActionCommand<P>;
+  api?: ServiceActionApi<P>;
+  execute: (params: {
+    context: ServiceRuntimeDependencies;
+    payload: P;
+    serviceName: string;
+    actionName: string;
+  }) => Promise<ServiceActionResult<R>> | ServiceActionResult<R>;
+};
+
+/**
+ * Service actions 映射（对象结构）。
+ *
+ * 关键点（中文）
+ * - key 即 action 名称
+ * - 不使用数组，便于直接按名称索引与调度
+ */
+export type ServiceActions = {
+  [actionName: string]: ServiceAction<JsonValue, JsonValue>;
+};
+
+/**
  * 服务生命周期扩展能力。
  */
 export interface ServiceLifecycle {
@@ -77,11 +112,14 @@ export interface ServiceLifecycle {
  */
 export interface Service {
   name: string;
-  registerCli(registry: CliCommandRegistry): void;
-  registerServer(
-    registry: ServerRouteRegistry,
-    context: ServiceRuntimeDependencies,
-  ): void;
+  /**
+   * action 模型（唯一模型）。
+   *
+   * 关键点（中文）
+   * - 一个 service 对应多个 action
+   * - main 自动注册 CLI 与 HTTP 路由（默认 `/service/<service>/<action>`）
+   */
+  actions: ServiceActions;
   /**
    * service 级 system prompt providers（可选）。
    *

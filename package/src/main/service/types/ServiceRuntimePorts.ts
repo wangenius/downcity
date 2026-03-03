@@ -2,6 +2,7 @@ import type { LanguageModel } from "ai";
 import type { ShipConfig } from "@main/types/ShipConfig.js";
 import type { ShipContextMetadataV1, ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { AgentResult, AgentRunInput } from "@core/types/Agent.js";
+import type { JsonValue } from "@/types/Json.js";
 
 /**
  * Service 运行时端口类型。
@@ -22,15 +23,31 @@ export type ServiceContextRequestContext = {
   contextId?: string;
 };
 
+export type ServiceHostDispatchParams = {
+  service: string;
+  action: string;
+  payload?: JsonValue;
+};
+
+export type ServiceHostDispatchResult = {
+  success: boolean;
+  data?: JsonValue;
+  error?: string;
+};
+
 /**
- * 请求上下文桥接端口。
+ * Host 端口（services -> main 通信入口）。
+ *
+ * 关键点（中文）
+ * - 所有 services 统一通过该端口访问 main 侧能力。
+ * - 不再为每个能力维护固定 bridge 字段，避免类型不断膨胀。
  */
-export type ServiceContextRequestContextBridge = {
-  getCurrentContextRequestContext(): ServiceContextRequestContext | undefined;
-  withContextRequestContext<T>(
-    ctx: ServiceContextRequestContext,
-    fn: () => T,
-  ): T;
+export type ServiceHostPort = {
+  getRequestContext(): ServiceContextRequestContext | undefined;
+  withRequestContext<T>(ctx: ServiceContextRequestContext, fn: () => T): T;
+  dispatch(
+    params: ServiceHostDispatchParams,
+  ): Promise<ServiceHostDispatchResult>;
 };
 
 /**
@@ -57,6 +74,8 @@ export type ServiceContextStore = {
  * 会话 Agent 端口。
  */
 export type ServiceContextAgent = {
+  isInitialized(): boolean;
+  initialize(): Promise<void>;
   run(params: AgentRunInput): Promise<AgentResult>;
 };
 

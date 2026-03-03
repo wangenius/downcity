@@ -9,7 +9,7 @@
  */
 
 import { AgentServer } from "@main/runtime/AgentServer.js";
-import { createInteractiveServer } from "@main/ui/WebUIClient.js";
+import { createWebUIClient } from "@main/ui/WebUIClient.js";
 
 import {
   getServiceRuntimeState,
@@ -84,7 +84,7 @@ export async function runCommand(
   }
 
   const host = (options.host ?? shipConfig.start?.host ?? "0.0.0.0").trim();
-  const interactiveWeb =
+  const webui_client =
     parseBoolean(options.interactiveWeb) ??
     shipConfig.start?.interactiveWeb ??
     false;
@@ -96,10 +96,10 @@ export async function runCommand(
   const server = new AgentServer();
 
   // 创建交互式 Web 服务器（如果已启用）
-  let interactiveServer = null;
-  if (interactiveWeb) {
+  let webui = null;
+  if (webui_client) {
     logger.info("交互式 Web 界面已启用");
-    interactiveServer = createInteractiveServer({
+    webui = createWebUIClient({
       agentApiUrl: `http://${host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host}:${port}`,
     });
   }
@@ -124,8 +124,8 @@ export async function runCommand(
     }
 
     // 停止交互式 Web 服务器
-    if (interactiveServer) {
-      await interactiveServer.stop();
+    if (webui) {
+      await webui.stop();
     }
 
     // 停止服务器
@@ -162,8 +162,8 @@ export async function runCommand(
   });
 
   // 启动交互式 Web 服务器（如果已启用）
-  if (interactiveServer) {
-    await interactiveServer.start({
+  if (webui) {
+    await webui.start({
       port: interactivePort ?? 3001,
       host,
     });

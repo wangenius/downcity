@@ -11,6 +11,7 @@ import type { Logger } from "@utils/logger/Logger.js";
 import type { AgentResult } from "@core/types/Agent.js";
 import type { ShipContextUserMessageV1 } from "@core/types/ContextMessage.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { JsonObject } from "@/types/Json.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
@@ -149,7 +150,25 @@ export class ChatQueueWorker {
   }
 
   private shouldAppendHistory(item: ChatQueueItem): boolean {
-    return item.kind === "exec" || item.kind === "audit";
+    return item.kind === "exec";
+  }
+
+  /**
+   * 统一补齐入站消息分类标记。
+   *
+   * 关键点（中文）
+   * - `ingressKind` 用于区分 audit/exec。
+   * - 后续在模型装载上下文时可过滤 audit，避免把审计噪声喂给模型。
+   */
+  private buildIngressExtra(
+    item: ChatQueueItem,
+    ingressKind: "audit" | "exec",
+  ): JsonObject {
+    const base = item.extra && typeof item.extra === "object" ? item.extra : {};
+    return {
+      ...base,
+      ingressKind,
+    };
   }
 
   private async appendHistory(item: ChatQueueItem): Promise<void> {
@@ -157,7 +176,7 @@ export class ChatQueueWorker {
     await this.requireContext().appendUserMessage({
       contextId: item.contextId,
       text: item.text,
-      extra: item.extra,
+      extra: this.buildIngressExtra(item, "exec"),
     });
   }
 
@@ -260,7 +279,7 @@ export class ChatQueueWorker {
                 contextId: item.contextId,
                 source: "ingress",
                 kind: "normal",
-                ...(item.extra ? { extra: item.extra } : {}),
+                extra: this.buildIngressExtra(item, "exec"),
               },
               parts: [{ type: "text", text }],
             });

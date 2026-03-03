@@ -120,7 +120,8 @@ export class TelegramBot extends BaseChatAdapter {
               (!!this.botUsername &&
                 typeof from?.username === "string" &&
                 from.username.toLowerCase() === this.botUsername.toLowerCase());
-            if (fromIsBot) continue;
+            const isGroup = this.isGroupChat(message.chat.type);
+            if (fromIsBot && !isGroup) continue;
 
             const rawText =
               typeof message.text === "string"
@@ -133,7 +134,6 @@ export class TelegramBot extends BaseChatAdapter {
               (Array.isArray(message.photo) && message.photo.length > 0) ||
               !!message.voice ||
               !!message.audio;
-            if (!rawText && !hasIncomingAttachment) continue;
 
             const messageId =
               typeof message.message_id === "number"
@@ -154,6 +154,7 @@ export class TelegramBot extends BaseChatAdapter {
                 chatType: message.chat.type,
                 messageThreadId,
                 username: from?.username,
+                fromIsBot,
               },
             });
           } else if (update.callback_query?.from?.id) {
@@ -329,7 +330,7 @@ export class TelegramBot extends BaseChatAdapter {
   }): string {
     const rawText = String(params.rawText ?? "");
     if (rawText.trim()) return rawText;
-    if (!params.hasIncomingAttachment) return "";
+    if (!params.hasIncomingAttachment) return "[message] (no_text_or_supported_attachment)";
 
     const types: string[] = [];
     const message = params.message;
@@ -551,6 +552,14 @@ export class TelegramBot extends BaseChatAdapter {
       (Array.isArray(message.photo) && message.photo.length > 0) ||
       !!message.voice ||
       !!message.audio;
+    const messageId =
+      typeof message.message_id === "number"
+        ? String(message.message_id)
+        : undefined;
+    const messageThreadId =
+      typeof message.message_thread_id === "number"
+        ? message.message_thread_id
+        : undefined;
     const from = message.from;
     const fromIsBot =
       from?.is_bot === true ||
@@ -560,31 +569,45 @@ export class TelegramBot extends BaseChatAdapter {
       (!!this.botUsername &&
         typeof from?.username === "string" &&
         from.username.toLowerCase() === this.botUsername.toLowerCase());
+    const actorId = from?.id ? String(from.id) : undefined;
+    const actorName = getActorName(from);
+    const isGroup = this.isGroupChat(message.chat.type);
+    const chatKey = this.buildChatKey(chatId, messageThreadId);
+
+    const enqueueGroupAudit = async (params: {
+      reason: string;
+      kind?: string;
+    }): Promise<void> => {
+      if (!isGroup) return;
+      await this.enqueueAuditMessage({
+        chatId,
+        chatKey,
+        messageId,
+        userId: actorId,
+        text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
+        meta: {
+          chatType: message.chat.type,
+          messageThreadId,
+          username: from?.username,
+          actorName,
+          reason: params.reason,
+          ...(params.kind ? { kind: params.kind } : {}),
+          ...(fromIsBot ? { fromIsBot: true } : {}),
+        },
+      });
+    };
+
     if (fromIsBot) {
+      await enqueueGroupAudit({ reason: "bot_originated" });
       this.logger.debug("Ignored bot-originated message", {
         chatId,
         chatType: message.chat.type,
-        messageId:
-          typeof message.message_id === "number"
-            ? String(message.message_id)
-            : undefined,
+        messageId,
         fromId: from?.id,
         fromUsername: from?.username,
       });
       return;
     }
-    const messageId =
-      typeof message.message_id === "number"
-        ? String(message.message_id)
-        : undefined;
-    const messageThreadId =
-      typeof message.message_thread_id === "number"
-        ? message.message_thread_id
-        : undefined;
-    const actorId = from?.id ? String(from.id) : undefined;
-    const actorName = getActorName(from);
-    const isGroup = this.isGroupChat(message.chat.type);
-    const chatKey = this.buildChatKey(chatId, messageThreadId);
     const replyToFrom = message.reply_to_message?.from;
     const isReplyToBot =
       (!!this.botId && replyToFrom?.id === this.botId) ||
@@ -613,7 +636,10 @@ export class TelegramBot extends BaseChatAdapter {
       });
 
       // If neither text/caption nor attachments exist, ignore.
-      if (!rawText && !hasIncomingAttachment) return;
+      if (!rawText && !hasIncomingAttachment) {
+        await enqueueGroupAudit({ reason: "empty_payload" });
+        return;
+      }
 
       // Check if it's a command
       if (rawText.startsWith("/")) {
@@ -661,21 +687,13 @@ export class TelegramBot extends BaseChatAdapter {
         const shouldConsider = isGroup ? (explicit || inWindow) : true;
 
         if (isGroup) {
-          if (!actorId) return;
+          if (!actorId) {
+            await enqueueGroupAudit({ reason: "missing_actor" });
+            return;
+          }
 
           if (!shouldConsider) {
-            await this.enqueueAuditMessage({
-              chatId,
-              chatKey,
-              messageId,
-              userId: actorId,
-              text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
-              meta: {
-                chatType: message.chat.type,
-                messageThreadId,
-                username: from?.username,
-              },
-            });
+            await enqueueGroupAudit({ reason: "not_addressed" });
             this.logger.debug(
               "Ignored group message (no mention/reply/window)",
               { chatId, messageId, chatKey },
@@ -685,18 +703,7 @@ export class TelegramBot extends BaseChatAdapter {
 
           const ok = await this.isAllowedGroupActor(chatKey, chatId, actorId);
           if (!ok) {
-            await this.enqueueAuditMessage({
-              chatId,
-              chatKey,
-              messageId,
-              userId: actorId,
-              text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
-              meta: {
-                chatType: message.chat.type,
-                messageThreadId,
-                username: from?.username,
-              },
-            });
+            await enqueueGroupAudit({ reason: "permission_denied" });
             await this.sendMessage(
               chatId,
               "⛔️ 仅发起人或群管理员可以与我对话。",
@@ -707,25 +714,17 @@ export class TelegramBot extends BaseChatAdapter {
         }
 
         const cleaned = isGroup ? this.stripBotMention(rawText) : rawText;
-        if (!cleaned && !hasIncomingAttachment) return;
+        if (!cleaned && !hasIncomingAttachment) {
+          await enqueueGroupAudit({ reason: "empty_after_clean" });
+          return;
+        }
 
         if (isGroup && actorId) {
           // Follow-up messages inside the window still need intent confirmation.
           if (!explicit && inWindow && cleaned) {
             const okIntent = this.isLikelyAddressedToBot(cleaned);
             if (!okIntent) {
-              await this.enqueueAuditMessage({
-                chatId,
-                chatKey,
-                messageId,
-                userId: actorId,
-                text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
-                meta: {
-                  chatType: message.chat.type,
-                  messageThreadId,
-                  username: from?.username,
-                },
-              });
+              await enqueueGroupAudit({ reason: "intent_gate_rejected" });
               this.logger.debug(
                 "Ignored follow-up (intent gate: not addressed to bot)",
                 { chatId, messageId, chatKey },

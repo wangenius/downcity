@@ -5,6 +5,7 @@ import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
+import { appendInboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
 
 type AdapterUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -109,10 +110,55 @@ export abstract class BaseChatAdapter extends PlatformAdapter {
   }
 
   /**
+   * 记录入站 chat 事件（审计流）。
+   *
+   * 关键点（中文）
+   * - 跟 context message history 分离，写入 `.ship/chat/<contextId>/history.jsonl`。
+   * - 写入失败不阻塞主链路，但会记录 warning。
+   */
+  private async appendInboundHistory(params: {
+    contextId: string;
+    chatId: string;
+    ingressKind: "audit" | "exec";
+    text: string;
+    targetType?: string;
+    threadId?: number;
+    messageId?: string;
+    actorId?: string;
+    actorName?: string;
+    extra?: JsonObject;
+  }): Promise<void> {
+    try {
+      await appendInboundChatHistory({
+        context: this.context,
+        contextId: params.contextId,
+        channel: this.channel,
+        chatId: params.chatId,
+        ingressKind: params.ingressKind,
+        text: params.text,
+        targetType: params.targetType,
+        threadId: params.threadId,
+        messageId: params.messageId,
+        actorId: params.actorId,
+        actorName: params.actorName,
+        extra: params.extra,
+      });
+    } catch (error) {
+      this.logger.warn("Failed to append inbound chat history", {
+        error: String(error),
+        channel: this.channel,
+        contextId: params.contextId,
+        chatId: params.chatId,
+        ingressKind: params.ingressKind,
+      });
+    }
+  }
+
+  /**
    * 入站消息写入队列（审计用途，不触发执行）。
    *
    * 说明（中文）
-   * - 不直接写 history，由 process 负责落盘
+   * - 先落 `chat history`（审计流），再入队
    * - channel/targetId/contextId 三元组由适配层统一补齐
    */
   protected async enqueueAuditMessage(params: {
@@ -131,6 +177,18 @@ export abstract class BaseChatAdapter extends PlatformAdapter {
         : undefined;
     const chatType = typeof meta.chatType === "string" ? meta.chatType : undefined;
     const extra = stripUndefinedMeta(meta);
+    await this.appendInboundHistory({
+      contextId: params.chatKey,
+      chatId: params.chatId,
+      ingressKind: "audit",
+      text: params.text,
+      targetType: chatType,
+      threadId: messageThreadId,
+      messageId: params.messageId,
+      actorId: params.userId,
+      actorName: username,
+      extra,
+    });
     await this.updateChatMeta({
       contextId: params.chatKey,
       chatId: params.chatId,
@@ -170,6 +228,18 @@ export abstract class BaseChatAdapter extends PlatformAdapter {
       chatType: msg.chatType,
       messageThreadId: msg.messageThreadId,
       messageId: msg.messageId,
+    });
+
+    await this.appendInboundHistory({
+      contextId: chatKey,
+      chatId: msg.chatId,
+      ingressKind: "exec",
+      text: msg.text,
+      targetType: msg.chatType,
+      threadId: msg.messageThreadId,
+      messageId: msg.messageId,
+      actorId: msg.userId,
+      actorName: msg.username,
     });
 
     await this.updateChatMeta({

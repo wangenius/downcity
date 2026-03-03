@@ -1,0 +1,327 @@
+# Chat 消息入站到出站全链路说明（TG / QQ）
+
+## 1. 目标与范围
+
+本文说明当前代码中，**一条聊天消息**从平台入站（Telegram / QQ）到 Agent 执行，再到平台出站回复的完整路径。
+
+覆盖范围：
+
+- 运行时启动与 chat 服务装配
+- TG / QQ 入站处理差异
+- 队列调度、上下文持久化、Agent 执行
+- `sma chat send` 出站回包链路
+- 关键存储落点与当前限制
+
+不覆盖：Feishu 细节、前端展示层。
+
+---
+
+## 2. 总体架构（一句话）
+
+当前是一个“**适配器入站 -> ChatQueue 分 lane 串行 -> ContextAgent tool-loop -> `sma chat send` 回平台**”的架构，且 `contextId(chatKey)` 是主链路上的统一键。
+
+---
+
+## 3. 启动阶段：谁先起来
+
+### 3.1 运行入口
+
+- `runCommand` 启动时先 `initRuntimeState(cwd)`，再启动 HTTP server 与 service runtimes。  
+  参考：`package/src/main/commands/Run.ts:37`、`package/src/main/commands/Run.ts:144`
+
+### 3.2 Runtime 初始化关键步骤
+
+`initRuntimeState` 的关键顺序：
+
+1. 加载配置/模型/ContextManager
+2. 创建并启动 `ChatQueueWorker`
+3. 注册 service system prompt providers
+
+参考：`package/src/main/runtime/RuntimeState.ts:518`
+
+### 3.3 chat adapters 启动
+
+`chat` service 的 lifecycle `start()` 会启动各平台适配器（telegram/feishu/qq）。  
+参考：`package/src/services/chat/ServiceEntry.ts:360`
+
+另外，QQ 的群权限默认值在这里被归一到 `anyone`（除非显式配置 `initiator_or_admin`）。  
+参考：`package/src/services/chat/ServiceEntry.ts:116`
+
+---
+
+## 4. 入站阶段：平台消息如何进入系统
+
+## 4.1 共同入口抽象（BaseChatAdapter）
+
+所有聊天适配器都继承 `BaseChatAdapter`，核心做两件事：
+
+1. `enqueueAuditMessage`：仅审计入队（`kind=audit`），不触发 Agent 执行
+2. `enqueueMessage`：执行入队（`kind=exec`），后续会触发 Agent
+
+两者在入队前都会先落盘 chat history（`.ship/chat/<contextId>/history.jsonl`），再维护 `ChatMeta`。  
+参考：`package/src/services/chat/adapters/BaseChatAdapter.ts:118`、`package/src/services/chat/runtime/ChatHistoryStore.ts:1`
+
+## 4.2 Telegram 入站规则
+
+主处理在 `handleMessage`：`package/src/services/chat/adapters/telegram/Bot.ts:537`
+
+关键行为：
+
+1. 计算 chatKey：
+- 普通：`telegram-chat-<chatId>`
+- topic：`telegram-chat-<chatId>-topic-<threadId>`
+
+参考：`package/src/services/chat/adapters/telegram/Bot.ts:210`
+
+2. 群聊触发判定：
+- 满足 `@bot` 或 `reply bot`，或在 follow-up window 内，才考虑触发执行
+- 未触发执行的群消息，仍会走 `enqueueAuditMessage` 入库（reason 会记录）
+
+参考：`package/src/services/chat/adapters/telegram/Bot.ts:681`
+
+3. 群聊权限门禁：
+- `anyone` 或 `initiator_or_admin`
+- 不通过时会给群内发拒绝提示，并保留审计记录
+
+参考：`package/src/services/chat/adapters/telegram/Bot.ts:389`
+
+4. pending updates 处理：
+- 启动或 webhook 冲突时，会先 drain 历史 pending updates 到 audit 队列，只入库不执行
+
+参考：`package/src/services/chat/adapters/telegram/Bot.ts:78`
+
+## 4.3 QQ 入站规则
+
+主处理在 `handleGroupMessage`：`package/src/services/chat/adapters/qq/QQ.ts:803`
+
+关键行为：
+
+1. chatKey 格式：`qq-<chatType>-<chatId>`  
+参考：`package/src/services/chat/adapters/qq/QQ.ts:201`
+
+2. 群聊触发判定与 TG 对齐：
+- `@bot` 或 `reply bot` 或 follow-up window 内，才触发执行
+- 未触发执行的群消息仍 `audit` 持久化
+
+参考：`package/src/services/chat/adapters/qq/QQ.ts:876`
+
+3. 群聊权限门禁：
+- 默认 `anyone`
+- `initiator_or_admin` 模式下，首个触发者成为 initiator，后续仅 initiator 或管理员可触发
+
+参考：`package/src/services/chat/adapters/qq/QQ.ts:1296`
+
+4. 入站去重：
+- QQ 会基于 `eventType:messageId` 做持久化去重，避免网关重放导致重复执行
+
+参考：`package/src/services/chat/adapters/qq/QQInboundDedupe.ts:1`
+
+---
+
+## 5. 队列阶段：如何调度与合并
+
+## 5.1 ChatQueue 结构
+
+`ChatQueue` 是进程内共享队列，按 `contextId` 分 lane。  
+同 lane 串行，不同 lane 可并发。  
+参考：`package/src/services/chat/runtime/ChatQueue.ts:18`
+
+item 三种类型：
+
+- `exec`：执行消息
+- `audit`：审计消息
+- `control`：控制消息（目前 `clear`）
+
+参考：`package/src/services/chat/types/ChatQueue.ts:11`
+
+## 5.2 ChatQueueWorker 消费逻辑
+
+worker 在 runtime 初始化时启动，监听入队事件并拉起消费。  
+参考：`package/src/main/runtime/RuntimeState.ts:581`、`package/src/services/chat/runtime/ChatQueueWorker.ts:70`
+
+单条处理核心：
+
+1. `control`：执行 clear（清 agent + 清 lane）
+2. `audit`：仅消费并结束，不写 context message history
+3. `exec`：先 `appendUserMessage` 到 context messages，再初始化/复用 agent 执行 tool-loop
+
+参考：`package/src/services/chat/runtime/ChatQueueWorker.ts:224`
+
+## 5.3 onStep 合并机制
+
+当一个 `exec` 正在跑时，新消息进同 lane：
+
+- worker 在 step 边界 `drainChatQueueLane`
+- `exec` 追加进 context messages，`audit` 只消费不入 context messages
+- 把新增 `exec` 转成 user message 合并进下一 step
+
+参考：`package/src/services/chat/runtime/ChatQueueWorker.ts:240`
+
+这保证“同一会话连续发多条消息”在一次运行窗口内可被及时吸收。
+
+## 5.4 typing 心跳
+
+执行期间会尝试通过 dispatcher 发 `typing`（best effort，不影响主流程）。  
+参考：`package/src/services/chat/runtime/ChatQueueWorker.ts:183`
+
+---
+
+## 6. 上下文持久化：消息到底写到哪里
+
+## 6.1 chat history（平台事件流）
+
+路径：`.ship/chat/<encodedContextId>/history.jsonl`  
+用途：记录入站平台消息（`audit/exec`）的审计流，不直接作为模型输入。  
+参考：`package/src/services/chat/runtime/ChatHistoryStore.ts:1`、`package/src/main/runtime/Paths.ts:169`
+
+## 6.2 context messages（执行上下文）
+
+路径：`.ship/context/<encodedContextId>/messages/messages.jsonl`  
+参考：`package/src/main/runtime/Paths.ts:63`
+
+`appendUserMessage` 会创建标准 user UIMessage（`source=ingress`, `kind=normal`）并 append。  
+当前仅 `exec` 入队消息会进入这里。  
+参考：`package/src/core/context/ContextManager.ts:144`、`package/src/services/chat/runtime/ChatQueueWorker.ts:151`
+
+## 6.3 assistant 消息持久化
+
+`ChatQueueWorker` 在 agent.run 返回后，会把 `assistantMessage` append 到同一个 context store。  
+参考：`package/src/services/chat/runtime/ChatQueueWorker.ts:294`
+
+## 6.4 chat 路由元信息（ChatMeta）
+
+路径：`.ship/chat/meta/<encodedContextId>.json`  
+用于出站时通过 contextId 反查 channel/chatId/thread/messageId。  
+参考：`package/src/services/chat/runtime/ChatMetaStore.ts:1`、`package/src/main/runtime/Paths.ts:148`
+
+## 6.5 audit 与 exec 的区分标记
+
+context message history 里的入站 user 消息会写入 `metadata.extra.ingressKind`：
+
+- `exec`：可触发执行的用户输入
+- `audit`：仅审计入库（不触发执行）
+
+参考：`package/src/services/chat/runtime/ChatQueueWorker.ts:155`
+
+---
+
+## 7. Agent 执行阶段：为什么会走 `sma chat send`
+
+`ContextAgent` 的 system prompt 明确要求用户可见回复通过 shell 执行 `sma chat send`。  
+参考：`package/src/core/prompts/System.ts:39`
+
+`ContextAgent` 使用 `shellTools`（`exec_command` / `write_stdin` / `close_shell`）执行工具调用。  
+参考：`package/src/core/context/ContextAgent.ts:80`
+
+执行 shell 时会注入：
+
+- `SMA_CTX_CONTEXT_ID`
+- `SMA_CTX_REQUEST_ID`
+- `SMA_CTX_SERVER_HOST`
+- `SMA_CTX_SERVER_PORT`
+
+参考：`package/src/core/shell/ShellHelpers.ts:160`
+
+这让 `sma chat send` 即使不显式传 `--chat-key`，也能从上下文/环境推导目标会话。
+
+另外，模型装载上下文时会过滤 `ingressKind=audit` 的 user 消息（用于兼容历史数据），避免审计噪声进入推理输入。  
+参考：`package/src/core/context/ContextStore.ts:666`
+
+---
+
+## 8. 出站阶段：`sma chat send` 如何回到平台
+
+## 8.1 CLI 到 server bridge
+
+`chat send` 命令是 service action，CLI 不直接发平台，而是调用本地 server `/api/services/command`。  
+参考：
+
+- `package/src/main/service/Registry.ts:603`
+- `package/src/main/runtime/AgentServer.ts:225`
+
+## 8.2 chat service 执行发送
+
+`chat.send.execute` -> `sendChatTextByChatKey` -> `sendTextByChatKey`。  
+参考：`package/src/services/chat/ServiceEntry.ts:240`、`package/src/services/chat/Service.ts:239`
+
+`sendTextByChatKey` 会：
+
+1. 先 parse chatKey
+2. parse 失败则回退读 ChatMeta
+3. 找到 channel 对应 dispatcher 并发送
+
+参考：`package/src/services/chat/runtime/ChatkeySend.ts:74`
+
+## 8.3 dispatcher 到平台 API
+
+dispatcher 由各平台适配器在构造时注册。  
+参考：`package/src/services/chat/adapters/PlatformAdapter.ts:50`
+
+最终调用各平台 `sendTextToPlatform`：
+
+- TG：`sendMessage(chatId, text, thread)`
+- QQ：`sendMessage(chatId, chatType, messageId, text, msg_seq)`
+
+QQ 强依赖 `chatType + messageId`（被动回复约束）。  
+参考：`package/src/services/chat/runtime/ChatkeySend.ts:159`
+
+---
+
+## 9. 两条典型时序
+
+## 9.1 Telegram 群消息（未@bot）
+
+1. TG update 到达 `handleMessage`
+2. 判定不满足 mention/reply/follow-up
+3. 先写 `chat history`（`ingressKind=audit`）
+4. `enqueueAuditMessage(reason=not_addressed)`
+5. worker 消费 `audit`，不进入 context message history
+6. 不触发 agent，不出站回复
+
+## 9.2 QQ 群消息（@bot）
+
+1. QQ dispatch 到达 `handleGroupMessage`
+2. `isMentioned=true`，通过权限门禁
+3. 先写 `chat history`（`ingressKind=exec`）
+4. `enqueueMessage(kind=exec)`
+5. worker 先 `appendUserMessage` 到 context message history
+6. worker 调 `agent.run`
+7. 模型通过 shell 执行 `sma chat send`
+8. chat service 解析 chatKey + ChatMeta，路由 dispatcher
+9. QQ API 发出被动回复
+10. worker append `assistantMessage` 到 context
+
+---
+
+## 10. 失败与边界语义
+
+1. 平台发送失败：
+- 适配器发送异常会被收敛为 `{success:false,error}` 返回上层
+
+参考：`package/src/services/chat/adapters/PlatformAdapter.ts:79`
+
+2. 空文本发送：
+- `sendToolText` 视为幂等 no-op，返回 success
+
+参考：`package/src/services/chat/adapters/PlatformAdapter.ts:85`
+
+3. QQ 无 `chatType/messageId`：
+- 出站直接失败，提示需先收到该用户新消息以记录 meta
+
+参考：`package/src/services/chat/runtime/ChatkeySend.ts:160`
+
+4. 已存在但未接线的出站幂等：
+- `EgressIdempotency.ts` 已实现 claim/mark/release，但当前主发送链路尚未调用
+
+参考：`package/src/services/chat/runtime/EgressIdempotency.ts:1`
+
+---
+
+## 11. 关键结论（针对“消息是否都入库”）
+
+在当前实现里：
+
+1. **TG/QQ 群聊消息都会持久化至少一份**（先写 `.ship/chat/<contextId>/history.jsonl`）。
+2. 触发条件只影响“是否执行 agent”，不影响“是否入库”。
+3. `context message history` 只承载执行上下文（`exec user + assistant + summary`）。
+4. 真正的用户可见回复以 `sma chat send` 为准，平台回包依赖 `chatKey + ChatMeta + dispatcher`。

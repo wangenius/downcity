@@ -11,6 +11,7 @@ import type { JsonObject } from "@/types/Json.js";
 
 export type ShipContextMessageKind = "normal" | "summary";
 export type ShipContextMessageSource = "ingress" | "egress" | "compact";
+export type ShipContextIngressKind = "exec" | "audit";
 
 export type ShipMessageSourceRangeV1 = {
   fromId: string;
@@ -34,6 +35,12 @@ export type ShipContextMetadataV1 = {
   /** compact 来源范围 */
   sourceRange?: ShipMessageSourceRangeV1;
   /** 扩展元信息 */
+  /**
+   * 约定（中文）
+   * - 对 `source=ingress` 的 user 消息，可选写入 `extra.ingressKind`：
+   *   - `exec`：可触发 agent 执行的输入
+   *   - `audit`：仅审计入库，不参与模型推理输入
+   */
   extra?: JsonObject;
 };
 

@@ -65,12 +65,34 @@ type QQAuthor = {
   permission?: string;
 };
 
+type QQMentionUser = {
+  id?: string;
+  user_id?: string;
+  member_openid?: string;
+  user_openid?: string;
+};
+
+type QQMessageReference = {
+  message_id?: string;
+  msg_id?: string;
+  id?: string;
+};
+
+type QQReplyToMessage = {
+  id?: string;
+  author?: QQAuthor;
+};
+
 type QQMessageData = {
   id?: string;
   group_openid?: string;
   channel_id?: string;
   content?: string;
   author?: QQAuthor;
+  mentions?: QQMentionUser[];
+  message_reference?: QQMessageReference;
+  reference?: QQMessageReference;
+  reply_to_message?: QQReplyToMessage;
 };
 
 type QQSendMessageBody = {
@@ -98,6 +120,8 @@ const EventType = {
   RESUMED: "RESUMED",
   // 群聊 @机器人 消息
   GROUP_AT_MESSAGE_CREATE: "GROUP_AT_MESSAGE_CREATE",
+  // 群聊普通消息（若能力开通会下发）
+  GROUP_MESSAGE_CREATE: "GROUP_MESSAGE_CREATE",
   // C2C 私聊消息
   C2C_MESSAGE_CREATE: "C2C_MESSAGE_CREATE",
   // 频道消息（可选支持）
@@ -138,6 +162,10 @@ export class QQBot extends BaseChatAdapter {
   private useSandbox: boolean = false;
   private readonly groupAccess: "initiator_or_admin" | "anyone";
   private readonly groupInitiatorByChatKey: Map<string, string> = new Map();
+  private readonly followupWindowMs: number = 10 * 60 * 1000;
+  private readonly followupExpiryByActorAndChatKey: Map<string, number> =
+    new Map();
+  private readonly botOutboundMessageIds: Map<string, number> = new Map();
   private msgSeqByMessageKey: Map<string, number> = new Map();
   private readonly qqEventCapture: QQEventCaptureConfig;
   private readonly inboundDedupeStore: QqInboundDedupeStore;
@@ -162,7 +190,7 @@ export class QQBot extends BaseChatAdapter {
     this.appSecret = appSecret;
     this.useSandbox = useSandbox;
     this.groupAccess =
-      groupAccess === "anyone" ? "anyone" : "initiator_or_admin";
+      groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone";
     this.qqEventCapture = getQqEventCaptureConfig(this.rootPath);
     this.inboundDedupeStore = new QqInboundDedupeStore({
       rootPath: this.rootPath,
@@ -740,7 +768,18 @@ export class QQBot extends BaseChatAdapter {
 
       case EventType.GROUP_AT_MESSAGE_CREATE:
         // 群聊 @机器人 消息
-        await this.handleGroupMessage(data as QQMessageData);
+        await this.handleGroupMessage({
+          eventType: EventType.GROUP_AT_MESSAGE_CREATE,
+          data: data as QQMessageData,
+        });
+        break;
+
+      case EventType.GROUP_MESSAGE_CREATE:
+        // 群聊普通消息（需要按 mention/reply/window 判定是否触发）
+        await this.handleGroupMessage({
+          eventType: EventType.GROUP_MESSAGE_CREATE,
+          data: data as QQMessageData,
+        });
         break;
 
       case EventType.C2C_MESSAGE_CREATE:
@@ -761,14 +800,19 @@ export class QQBot extends BaseChatAdapter {
   /**
    * 处理群聊消息
    */
-  private async handleGroupMessage(data: QQMessageData): Promise<void> {
+  private async handleGroupMessage(params: {
+    eventType: string;
+    data: QQMessageData;
+  }): Promise<void> {
+    const eventType = String(params.eventType || "").trim();
+    const data = params.data;
     const { id: messageId, group_openid: groupId, content, author } = data;
     if (!groupId || !messageId) return;
     const chatType = "group";
     const chatKey = this.getChatKey({ chatId: groupId, chatType });
     if (
       await this.shouldSkipDuplicatedInboundMessage(
-        EventType.GROUP_AT_MESSAGE_CREATE,
+        eventType || EventType.GROUP_MESSAGE_CREATE,
         messageId,
       )
     ) {
@@ -776,10 +820,49 @@ export class QQBot extends BaseChatAdapter {
     }
 
     // 提取纯文本内容（去除 @机器人 的部分）
-    const userMessage = this.extractTextContent(String(content || ""));
+    const rawContent = String(content || "");
+    const userMessage = this.extractTextContent(rawContent);
     const actor = this.extractAuthorIdentity(author);
 
+    const enqueueGroupAudit = async (params: {
+      reason: string;
+      kind?: string;
+      isMentioned?: boolean;
+      isReplyToBot?: boolean;
+      inWindow?: boolean;
+    }): Promise<void> => {
+      await this.enqueueAuditMessage({
+        chatId: groupId,
+        chatKey,
+        messageId,
+        userId: actor.userId,
+        text: this.buildGroupAuditText({
+          rawContent,
+          userMessage,
+        }),
+        meta: {
+          chatType,
+          username: actor.username,
+          eventType,
+          reason: params.reason,
+          ...(params.kind ? { kind: params.kind } : {}),
+          ...(typeof params.isMentioned === "boolean"
+            ? { isMentioned: params.isMentioned }
+            : {}),
+          ...(typeof params.isReplyToBot === "boolean"
+            ? { isReplyToBot: params.isReplyToBot }
+            : {}),
+          ...(typeof params.inWindow === "boolean"
+            ? { inWindow: params.inWindow }
+            : {}),
+        },
+      });
+    };
+
     if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
+      await enqueueGroupAudit({
+        reason: "bot_originated",
+      });
       this.logger.debug("忽略机器人自身消息（group）", {
         messageId,
         groupId,
@@ -790,11 +873,49 @@ export class QQBot extends BaseChatAdapter {
 
     this.logger.info(`收到群聊消息 [${groupId}]: ${userMessage}`);
 
+    const isMentioned =
+      eventType === EventType.GROUP_AT_MESSAGE_CREATE ||
+      this.isBotMentionedInMessage(String(content || ""), data);
+    const isReplyToBot = this.isReplyToBot(data);
+    const inWindow = this.isWithinFollowupWindow(chatKey, actor.userId);
+    const shouldConsider = isMentioned || isReplyToBot || inWindow;
+
+    // 关键点（中文）：群聊只在 @bot / 回复bot / follow-up 窗口内触发执行。
+    if (!shouldConsider) {
+      await enqueueGroupAudit({
+        reason: "not_addressed",
+        isMentioned,
+        isReplyToBot,
+        inWindow,
+      });
+      this.logger.debug("忽略群聊消息（未@机器人/未回复机器人/不在follow-up窗口）", {
+        messageId,
+        groupId,
+        chatKey,
+      });
+      return;
+    }
+
     // 关键点（中文）：与 Telegram 对齐，纯 @ 空消息不触发执行。
-    if (!userMessage) return;
+    if (!userMessage) {
+      await enqueueGroupAudit({
+        reason: "empty_after_extract",
+        isMentioned,
+        isReplyToBot,
+        inWindow,
+      });
+      return;
+    }
 
     // 检查是否是命令
     if (userMessage.startsWith("/")) {
+      await enqueueGroupAudit({
+        reason: "command_received",
+        kind: "command",
+        isMentioned,
+        isReplyToBot,
+        inWindow,
+      });
       const cmdName = (userMessage.trim().split(/\s+/)[0] || "")
         .split("@")[0]
         ?.toLowerCase();
@@ -807,6 +928,12 @@ export class QQBot extends BaseChatAdapter {
           author,
         })
       ) {
+        await enqueueGroupAudit({
+          reason: "permission_denied",
+          isMentioned,
+          isReplyToBot,
+          inWindow,
+        });
         await this.sendMessage(
           groupId,
           "group",
@@ -815,6 +942,7 @@ export class QQBot extends BaseChatAdapter {
         );
         return;
       }
+      if (actor.userId) this.touchFollowupWindow(chatKey, actor.userId);
       await this.handleCommand(groupId, "group", messageId, userMessage);
     } else {
       if (
@@ -824,6 +952,12 @@ export class QQBot extends BaseChatAdapter {
           author,
         })
       ) {
+        await enqueueGroupAudit({
+          reason: "permission_denied",
+          isMentioned,
+          isReplyToBot,
+          inWindow,
+        });
         await this.sendMessage(
           groupId,
           "group",
@@ -832,6 +966,7 @@ export class QQBot extends BaseChatAdapter {
         );
         return;
       }
+      if (actor.userId) this.touchFollowupWindow(chatKey, actor.userId);
       await this.executeAndReply(
         groupId,
         "group",
@@ -1002,6 +1137,131 @@ export class QQBot extends BaseChatAdapter {
       .replace(/<@!\d+>/g, "")
       .replace(/<@\d+>/g, "")
       .trim();
+  }
+
+  /**
+   * 构造 QQ 群聊审计文本（保证非空，便于上下文回溯）。
+   */
+  private buildGroupAuditText(params: {
+    rawContent: string;
+    userMessage: string;
+  }): string {
+    const raw = String(params.rawContent || "").trim();
+    if (raw) return raw;
+    const extracted = String(params.userMessage || "").trim();
+    if (extracted) return extracted;
+    return "[group_message] (no_text_content)";
+  }
+
+  /**
+   * 判断消息是否 @ 机器人（best-effort）。
+   */
+  private isBotMentionedInMessage(content: string, data: QQMessageData): boolean {
+    const botUserId = String(this.botUserId || "").trim();
+    const mentionCandidates = Array.isArray(data.mentions) ? data.mentions : [];
+
+    const mentionUserIds = mentionCandidates
+      .flatMap((m) => [
+        m?.id,
+        m?.user_id,
+        m?.member_openid,
+        m?.user_openid,
+      ])
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .filter(Boolean);
+    if (botUserId && mentionUserIds.includes(botUserId)) return true;
+
+    // 兜底：从富文本标签中提取 @id，再与 botUserId 比较。
+    // 示例：<@123> / <@!123>
+    if (botUserId) {
+      const ids = Array.from(
+        content.matchAll(/<@!?([^>\s]+)>/g),
+        (m) => String(m[1] || "").trim(),
+      ).filter(Boolean);
+      if (ids.includes(botUserId)) return true;
+    }
+
+    return false;
+  }
+
+  private getFollowupKey(chatKey: string, actorId: string): string {
+    return `${chatKey}|${actorId}`;
+  }
+
+  private isWithinFollowupWindow(chatKey: string, actorId?: string): boolean {
+    const actor = String(actorId || "").trim();
+    if (!actor) return false;
+    const key = this.getFollowupKey(chatKey, actor);
+    const exp = this.followupExpiryByActorAndChatKey.get(key);
+    if (!exp) return false;
+    if (Date.now() > exp) {
+      this.followupExpiryByActorAndChatKey.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  private touchFollowupWindow(chatKey: string, actorId?: string): void {
+    const actor = String(actorId || "").trim();
+    if (!actor) return;
+    const key = this.getFollowupKey(chatKey, actor);
+    this.followupExpiryByActorAndChatKey.set(
+      key,
+      Date.now() + this.followupWindowMs,
+    );
+  }
+
+  /**
+   * 记录机器人出站消息 ID，用于识别“回复机器人”场景。
+   */
+  private trackBotOutboundMessageId(messageId: string | undefined): void {
+    const id = String(messageId || "").trim();
+    if (!id) return;
+    this.botOutboundMessageIds.set(id, Date.now() + 30 * 60 * 1000);
+
+    // 关键点（中文）：顺手做过期清理，防止 map 无界增长。
+    if (this.botOutboundMessageIds.size <= 5000) return;
+    const now = Date.now();
+    for (const [k, exp] of this.botOutboundMessageIds.entries()) {
+      if (exp <= now) this.botOutboundMessageIds.delete(k);
+      if (this.botOutboundMessageIds.size <= 3000) break;
+    }
+  }
+
+  /**
+   * 判断当前消息是否“回复机器人消息”（best-effort）。
+   */
+  private isReplyToBot(data: QQMessageData): boolean {
+    const replyAuthor = this.extractAuthorIdentity(data.reply_to_message?.author);
+    if (
+      replyAuthor.userId &&
+      this.botUserId &&
+      replyAuthor.userId === this.botUserId
+    ) {
+      return true;
+    }
+
+    const referenceCandidates = [
+      data.reply_to_message?.id,
+      data.message_reference?.message_id,
+      data.message_reference?.msg_id,
+      data.message_reference?.id,
+      data.reference?.message_id,
+      data.reference?.msg_id,
+      data.reference?.id,
+    ]
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .filter(Boolean);
+    if (referenceCandidates.length === 0) return false;
+
+    const now = Date.now();
+    for (const refId of referenceCandidates) {
+      const exp = this.botOutboundMessageIds.get(refId);
+      if (!exp) continue;
+      if (exp > now) return true;
+      this.botOutboundMessageIds.delete(refId);
+    }
+    return false;
   }
 
   /**
@@ -1199,6 +1459,32 @@ export class QQBot extends BaseChatAdapter {
         throw new Error(
           `QQ send failed: HTTP ${response.status}: ${responseText}`,
         );
+      }
+
+      try {
+        const parsed = JSON.parse(responseText) as {
+          id?: string;
+          message_id?: string;
+          msg_id?: string;
+          data?: {
+            id?: string;
+            message_id?: string;
+            msg_id?: string;
+          };
+        };
+        const outboundMessageId =
+          (typeof parsed.id === "string" && parsed.id.trim()) ||
+          (typeof parsed.message_id === "string" && parsed.message_id.trim()) ||
+          (typeof parsed.msg_id === "string" && parsed.msg_id.trim()) ||
+          (typeof parsed.data?.id === "string" && parsed.data.id.trim()) ||
+          (typeof parsed.data?.message_id === "string" &&
+            parsed.data.message_id.trim()) ||
+          (typeof parsed.data?.msg_id === "string" &&
+            parsed.data.msg_id.trim()) ||
+          "";
+        this.trackBotOutboundMessageId(outboundMessageId);
+      } catch {
+        // ignore parse failure
       }
 
       // 成功也保留一点响应内容，便于排查“返回成功但用户侧不可见”的边界情况

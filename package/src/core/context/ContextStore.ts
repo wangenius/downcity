@@ -33,6 +33,28 @@ import { getLogger } from "@utils/logger/Logger.js";
 import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
 
 /**
+ * 判断一条消息是否应进入模型输入。
+ *
+ * 关键点（中文）
+ * - 保留所有 assistant/user 正常消息。
+ * - 仅过滤明确标记为 `ingressKind=audit` 的 user 入站消息。
+ * - 历史旧数据（无 ingressKind）保持兼容，不做激进过滤。
+ */
+function shouldIncludeForModelInput(message: ShipContextMessageV1): boolean {
+  if (!message || typeof message !== "object") return false;
+  if (message.role !== "user") return true;
+
+  const metadata = message.metadata;
+  if (!metadata || typeof metadata !== "object") return true;
+  if (metadata.source !== "ingress") return true;
+
+  const extra = metadata.extra;
+  if (!extra || typeof extra !== "object" || Array.isArray(extra)) return true;
+  const ingressKind = extra.ingressKind;
+  return ingressKind !== "audit";
+}
+
+/**
  * ContextStore：基于 UIMessage 的会话上下文存储（per contextId）。
  *
  * 设计目标（中文）
@@ -665,8 +687,9 @@ export class ContextStore {
   */
   async toModelMessages(params: { tools?: ToolSet }): Promise<ModelMessage[]> {
     const msgs = await this.loadAll();
+    const modelMsgs = msgs.filter(shouldIncludeForModelInput);
     // convertToModelMessages 需要的是“没有 id 的 UIMessage”
-    const input: Array<Omit<ShipContextMessageV1, "id">> = msgs.map((m) => {
+    const input: Array<Omit<ShipContextMessageV1, "id">> = modelMsgs.map((m) => {
       const { id: _id, ...rest } = m;
       return rest;
     });

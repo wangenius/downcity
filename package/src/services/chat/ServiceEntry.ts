@@ -115,14 +115,17 @@ async function startChatAdapters(context: ServiceRuntime): Promise<void> {
 
   if (adapters.qq?.enabled) {
     context.logger.info("QQ adapter enabled");
+    const envQqGroupAccess = (process.env.QQ_GROUP_ACCESS || "")
+      .trim()
+      .toLowerCase();
     const qqGroupAccess: "initiator_or_admin" | "anyone" | undefined =
       adapters.qq?.groupAccess === "anyone"
         ? "anyone"
         : adapters.qq?.groupAccess === "initiator_or_admin"
           ? "initiator_or_admin"
-          : (process.env.QQ_GROUP_ACCESS || "").toLowerCase() === "anyone"
-            ? "anyone"
-            : undefined;
+          : envQqGroupAccess === "initiator_or_admin"
+            ? "initiator_or_admin"
+            : "anyone";
     const qqConfig = {
       enabled: true,
       appId:

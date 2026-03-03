@@ -166,3 +166,28 @@ export function getShipChatMetaPath(cwd: string, contextId: string): string {
     `${encodeURIComponent(String(contextId || "").trim())}.json`,
   );
 }
+
+/**
+ * Chat 会话目录（按 contextId 组织）。
+ *
+ * 关键点（中文）
+ * - 用于存放聊天事件流（history.jsonl）等审计向数据。
+ * - 与 `chat/meta` 分离，避免路由快照与事件流混在一起。
+ */
+export function getShipChatContextDirPath(cwd: string, contextId: string): string {
+  return path.join(
+    getShipChatDirPath(cwd),
+    encodeURIComponent(String(contextId || "").trim()),
+  );
+}
+
+/**
+ * Chat 事件流文件路径（JSONL）。
+ *
+ * 关键点（中文）
+ * - 每行一条 chat 事件（当前为 inbound）。
+ * - 设计为 append-only，便于审计与回放。
+ */
+export function getShipChatHistoryPath(cwd: string, contextId: string): string {
+  return path.join(getShipChatContextDirPath(cwd, contextId), "history.jsonl");
+}

@@ -14,8 +14,6 @@ import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { readChatMetaByContextId } from "./ChatMetaStore.js";
 
-type DispatchableChannel = "telegram" | "feishu" | "qq";
-
 /**
  * 解析 chatKey 为 dispatch 参数。
  *
@@ -26,7 +24,7 @@ type DispatchableChannel = "telegram" | "feishu" | "qq";
  * - qq-<chatType>-<chatId>
  */
 export function parseChatKeyForDispatch(chatKey: string): {
-  channel: DispatchableChannel;
+  channel: string;
   chatId: string;
   chatType?: string;
   messageThreadId?: number;
@@ -98,7 +96,8 @@ async function resolveDispatchTarget(params: {
         ? parsed.chatType
         : undefined;
   const messageThreadId =
-    typeof storedMeta?.threadId === "number" && Number.isFinite(storedMeta.threadId)
+    typeof storedMeta?.threadId === "number" &&
+    Number.isFinite(storedMeta.threadId)
       ? storedMeta.threadId
       : typeof parsed?.messageThreadId === "number"
         ? parsed.messageThreadId
@@ -149,7 +148,10 @@ export async function sendTextByChatKey(params: {
 
   const dispatcher = getChatSender(channel);
   if (!dispatcher) {
-    return { success: false, error: `No dispatcher registered for channel: ${channel}` };
+    return {
+      success: false,
+      error: `No dispatcher registered for channel: ${channel}`,
+    };
   }
 
   const chatType = target.chatType;

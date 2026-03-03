@@ -25,7 +25,7 @@ import type {
 } from "@main/service/ServiceRegistry.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { TelegramBot } from "./adapters/telegram/Bot.js";
 import type { FeishuBot } from "./adapters/feishu/Feishu.js";
 import type { QQBot } from "./adapters/qq/QQ.js";
@@ -274,7 +274,7 @@ async function executeChatSendAction(params: {
 export const chatService: Service = {
   name: "chat",
   // 关键点（中文）：chat service 当前不注入额外 system prompt。
-  systemPromptProviders: () => [],
+  system: () => () => "",
   actions: {
     send: {
       command: {
@@ -350,7 +350,7 @@ export const chatService: Service = {
           success: true,
           data: {
             text: pickLastSuccessfulChatSendText(
-              (payload.assistantMessage || null) as ShipContextMessageV1 | null,
+              (payload.assistantMessage || null) as ContextMessageV1 | null,
             ),
           },
         };

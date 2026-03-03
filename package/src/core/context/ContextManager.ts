@@ -8,7 +8,7 @@
  */
 
 import { ContextStore } from "./ContextStore.js";
-import type { ShipContextMetadataV1 } from "@core/types/ContextMessage.js";
+import type { ContextMetadataV1 } from "@core/types/ContextMessage.js";
 import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
 import path from "node:path";
 import type { JsonObject } from "@/types/Json.js";
@@ -157,7 +157,7 @@ export class ContextManager {
           contextId,
           requestId: params.requestId,
           extra: params.extra,
-        } as Omit<ShipContextMetadataV1, "v" | "ts">,
+        } as Omit<ContextMetadataV1, "v" | "ts">,
       });
       await store.append(msg);
       void this.afterContextUpdatedAsync(contextId);

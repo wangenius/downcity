@@ -1,7 +1,7 @@
 import type { LanguageModel } from "ai";
 import type {
-  ShipContextMetadataV1,
-  ShipContextMessageV1,
+  ContextMetadataV1,
+  ContextMessageV1,
 } from "@core/types/ContextMessage.js";
 import type { AgentResult, AgentRunInput } from "@core/types/Agent.js";
 import type { JsonValue } from "@/types/Json.js";
@@ -44,23 +44,23 @@ export type ServiceInvokePort = {
  * 会话存储端口。
  */
 export type ServiceContextStore = {
-  loadAll(): Promise<ShipContextMessageV1[]>;
+  loadAll(): Promise<ContextMessageV1[]>;
   loadRange(
     startIndex: number,
     endIndex: number,
-  ): Promise<ShipContextMessageV1[]>;
-  append(message: ShipContextMessageV1): Promise<void>;
+  ): Promise<ContextMessageV1[]>;
+  append(message: ContextMessageV1): Promise<void>;
   getTotalMessageCount(): Promise<number>;
   loadMeta(): Promise<{ pinnedSkillIds?: string[] }>;
   setPinnedSkillIds(skillIds: string[]): Promise<void>;
   createAssistantTextMessage(params: {
     text: string;
-    metadata: Omit<ShipContextMetadataV1, "v" | "ts"> &
-      Partial<Pick<ShipContextMetadataV1, "ts">>;
+    metadata: Omit<ContextMetadataV1, "v" | "ts"> &
+      Partial<Pick<ContextMetadataV1, "ts">>;
     id?: string;
     kind?: "normal" | "summary";
     source?: "egress" | "compact";
-  }): ShipContextMessageV1;
+  }): ContextMessageV1;
 };
 
 /**
@@ -89,7 +89,7 @@ export type ServiceContext = {
     contextId: string;
     text: string;
     requestId?: string;
-    extra?: ShipContextMetadataV1["extra"];
+    extra?: ContextMetadataV1["extra"];
   }): Promise<void>;
   model: LanguageModel;
 };

@@ -18,7 +18,7 @@ import {
 import { resolveContextId } from "@/main/runtime/ContextId.js";
 import type { Service } from "@main/service/ServiceRegistry.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import { createSkillsSystemPromptProvider } from "./runtime/SystemProvider.js";
+import { createSkillsSystemBuilder } from "./runtime/SystemProvider.js";
 
 type SkillFindPayload = {
   query: string;
@@ -80,9 +80,7 @@ function resolveContextIdForCommand(input?: string): string {
 
 export const skillsService: Service = {
   name: "skill",
-  systemPromptProviders: ({ getContext }) => [
-    createSkillsSystemPromptProvider(getContext),
-  ],
+  system: ({ getContext }) => createSkillsSystemBuilder(getContext),
   actions: {
     find: {
       command: {

@@ -8,13 +8,13 @@
  */
 
 import type {
-  ShipContextMessageV1,
+  ContextMessageV1,
   ShipContextUserMessageV1,
 } from "./ContextMessage.js";
 
 export interface AgentResult {
   success: boolean;
-  assistantMessage: ShipContextMessageV1;
+  assistantMessage: ContextMessageV1;
 }
 
 export interface AgentRunInput {

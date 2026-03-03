@@ -27,7 +27,7 @@ import {
   getShipContextMessagesDirPath,
 } from "@/main/runtime/Paths.js";
 import { generateId } from "@main/utils/Id.js";
-import type { ShipContextMetadataV1, ShipContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ContextMetadataV1, ContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { ShipContextMessagesMetaV1 } from "@core/types/ContextMessagesMeta.js";
 import { getLogger } from "@utils/logger/Logger.js";
 import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
@@ -369,7 +369,7 @@ export class ContextStore {
    * - append 看起来是简单写入，但仍需与 compact 共享同一把锁。
    * - 否则 compact rewrite 与 append 并发会造成丢行/覆盖。
    */
-  async append(message: ShipContextMessageV1): Promise<void> {
+  async append(message: ContextMessageV1): Promise<void> {
     await this.withWriteLock(async () => {
       await fs.appendFile(this.getMessagesFilePath(), JSON.stringify(message) + "\n", "utf8");
     });
@@ -382,20 +382,20 @@ export class ContextStore {
    * - 只接收 role=user|assistant 且 parts 合法的行。
    * - 非法 JSON 行采用容错跳过，避免单行损坏导致整体不可读。
    */
-  async loadAll(): Promise<ShipContextMessageV1[]> {
+  async loadAll(): Promise<ContextMessageV1[]> {
     await this.ensureLayout();
     const file = this.getMessagesFilePath();
     const raw = await fs.readFile(file, "utf8");
     const lines = raw.split("\n").filter(Boolean);
-    const out: ShipContextMessageV1[] = [];
+    const out: ContextMessageV1[] = [];
     for (const line of lines) {
       try {
-        const obj = JSON.parse(line) as Partial<ShipContextMessageV1>;
+        const obj = JSON.parse(line) as Partial<ContextMessageV1>;
         if (!obj || typeof obj !== "object") continue;
         const role = String(obj.role || "");
         if (role !== "user" && role !== "assistant") continue;
         if (!Array.isArray(obj.parts)) continue;
-        out.push(obj as ShipContextMessageV1);
+        out.push(obj as ContextMessageV1);
       } catch {
         // ignore invalid lines
       }
@@ -417,7 +417,7 @@ export class ContextStore {
    * 关键点（中文）
    * - 统一做 floor + 边界裁剪，保证调用方传异常值也不会抛错。
    */
-  async loadRange(startIndex: number, endIndex: number): Promise<ShipContextMessageV1[]> {
+  async loadRange(startIndex: number, endIndex: number): Promise<ContextMessageV1[]> {
     const msgs = await this.loadAll();
     const start = Math.max(0, Math.floor(startIndex));
     const end = Math.max(start, Math.floor(endIndex));
@@ -429,11 +429,11 @@ export class ContextStore {
    */
   createUserTextMessage(params: {
     text: string;
-    metadata: Omit<ShipContextMetadataV1, "v" | "ts"> & Partial<Pick<ShipContextMetadataV1, "ts">>;
+    metadata: Omit<ContextMetadataV1, "v" | "ts"> & Partial<Pick<ContextMetadataV1, "ts">>;
     id?: string;
-  }): ShipContextMessageV1 {
+  }): ContextMessageV1 {
     const { ts, ...metadata } = params.metadata;
-    const md: ShipContextMetadataV1 = {
+    const md: ContextMetadataV1 = {
       v: 1,
       ts: typeof ts === "number" ? ts : Date.now(),
       ...metadata,
@@ -454,14 +454,14 @@ export class ContextStore {
    */
   createAssistantTextMessage(params: {
     text: string;
-    metadata: Omit<ShipContextMetadataV1, "v" | "ts"> & Partial<Pick<ShipContextMetadataV1, "ts">>;
+    metadata: Omit<ContextMetadataV1, "v" | "ts"> & Partial<Pick<ContextMetadataV1, "ts">>;
     id?: string;
     kind?: "normal" | "summary";
     source?: "egress" | "compact";
-    sourceRange?: ShipContextMetadataV1["sourceRange"];
-  }): ShipContextMessageV1 {
+    sourceRange?: ContextMetadataV1["sourceRange"];
+  }): ContextMessageV1 {
     const { ts, ...metadata } = params.metadata;
-    const md: ShipContextMetadataV1 = {
+    const md: ContextMetadataV1 = {
       v: 1,
       ts: typeof ts === "number" ? ts : Date.now(),
       ...metadata,
@@ -498,7 +498,7 @@ export class ContextStore {
    * - 统一把 user/assistant 内容线性化，作为 compact 摘要输入。
    * - tool 原始结构不会原样输出，避免把噪声日志喂给摘要模型。
    */
-  private extractPlainTextFromMessages(messages: ShipContextMessageV1[]): string {
+  private extractPlainTextFromMessages(messages: ContextMessageV1[]): string {
     const lines: string[] = [];
     for (const m of messages) {
       if (!m || typeof m !== "object") continue;
@@ -534,7 +534,7 @@ export class ContextStore {
     // phase 1：snapshot（短锁）
     // - 仅负责拿一致性快照，不做耗时的模型调用。
     // - 目的是把锁持有时间降到最低。
-    let snapshot: ShipContextMessageV1[] = [];
+    let snapshot: ContextMessageV1[] = [];
     let snapshotTailId = "";
     await this.withWriteLock(async () => {
       snapshot = await this.loadAll();
@@ -666,7 +666,7 @@ export class ContextStore {
   async toModelMessages(params: { tools?: ToolSet }): Promise<ModelMessage[]> {
     const msgs = await this.loadAll();
     // convertToModelMessages 需要的是“没有 id 的 UIMessage”
-    const input: Array<Omit<ShipContextMessageV1, "id">> = msgs.map((m) => {
+    const input: Array<Omit<ContextMessageV1, "id">> = msgs.map((m) => {
       const { id: _id, ...rest } = m;
       return rest;
     });

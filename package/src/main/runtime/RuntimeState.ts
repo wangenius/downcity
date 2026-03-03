@@ -8,10 +8,7 @@ import type {
   ServiceContext,
   ServiceInvokePort,
 } from "@/main/service/ServiceRuntime.js";
-import {
-  clearSystemPromptProviders,
-  registerSystemPromptProvider,
-} from "@core/prompts/SystemProvider.js";
+import type { ServiceSystemBuilder } from "@main/service/ServiceRegistry.js";
 import {
   loadProjectDotenv,
   loadShipConfig,
@@ -34,7 +31,7 @@ import {
 import { SERVICES } from "@main/service/Services.js";
 import { getClaudeSkillSearchRoots } from "@services/skills/runtime/Paths.js";
 import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
-import { memorySystemPromptProvider } from "@services/memory/runtime/SystemProvider.js";
+import { createMemorySystemBuilder } from "@services/memory/runtime/SystemProvider.js";
 import { runServiceCommand } from "@main/service/Registry.js";
 import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
@@ -81,6 +78,11 @@ let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
 let stopRuntimeHotReloadWatcher: (() => void) | null = null;
 let serviceModel: LanguageModel | null = null;
+let serviceSystemBuilders: ServiceSystemBuilder[] = [];
+
+function normalizeSystemText(input: string | null | undefined): string {
+  return String(input || "").trim();
+}
 
 /**
  * 读取 service 运行时模型（必填）。
@@ -163,20 +165,20 @@ function reloadAgentMdSystems(reason: string): void {
 }
 
 /**
- * 刷新 system prompt providers。
+ * 刷新 service system 构建器。
  *
  * 关键点（中文）
- * - skills 变更后重建 providers，确保后续请求立即读取最新技能状态。
+ * - skills 变更后重建 system 构建函数，确保后续请求读取最新技能状态。
  */
-function reloadSystemPromptProviders(reason: string): void {
+function reloadServiceSystemBuilders(reason: string): void {
   const runtime = getRuntimeStateBase();
   try {
-    registerAllServiceSystemPromptProviders({
+    registerAllServiceSystemBuilders({
       getContext: () => getServiceRuntimeState(),
     });
-    runtime.logger.info("System prompt providers hot reloaded", { reason });
+    runtime.logger.info("Service system builders hot reloaded", { reason });
   } catch (error) {
-    runtime.logger.warn("System prompt providers hot reload failed", {
+    runtime.logger.warn("Service system builders hot reload failed", {
       reason,
       error: String(error),
     });
@@ -184,34 +186,57 @@ function reloadSystemPromptProviders(reason: string): void {
 }
 
 /**
- * 注册所有 service 的 system prompt providers。
+ * 注册所有 service 的 system 构建函数。
  *
  * 关键点（中文）
- * - service 自己声明 provider，runtime 统一聚合注册
+ * - service 自己声明 system 构建器，runtime 统一聚合注册
  * - 单个 service 失败不阻断整体初始化
  */
-function registerAllServiceSystemPromptProviders(params: {
+function registerAllServiceSystemBuilders(params: {
   getContext: () => ServiceRuntime;
 }): void {
-  clearSystemPromptProviders();
+  const nextBuilders: ServiceSystemBuilder[] = [];
 
   for (const service of SERVICES) {
-    const provide = service.systemPromptProviders;
-    if (typeof provide !== "function") continue;
+    const declareSystem = service.system;
+    if (typeof declareSystem !== "function") continue;
     try {
-      let providers = provide({ getContext: params.getContext });
-      if (!Array.isArray(providers)) providers = [];
-      for (const provider of providers) {
-        if (!provider || typeof provider !== "object") continue;
-        registerSystemPromptProvider(provider);
-      }
+      const buildSystem = declareSystem({ getContext: params.getContext });
+      if (typeof buildSystem === "function") nextBuilders.push(buildSystem);
     } catch {
-      // fail-open：单个 service provider 失败不阻断启动
+      // fail-open：单个 service system 声明失败不阻断启动
     }
   }
 
-  // memory 当前不属于 SmaService（无 ServiceEntry），保留独立注册。
-  registerSystemPromptProvider(memorySystemPromptProvider);
+  // memory 当前不属于 ServiceEntry，保留独立注入。
+  try {
+    nextBuilders.push(createMemorySystemBuilder(params.getContext));
+  } catch {
+    // ignore
+  }
+
+  serviceSystemBuilders = nextBuilders;
+}
+
+/**
+ * 收集所有 service 的 system 文本。
+ *
+ * 关键点（中文）
+ * - 按注册顺序执行，逐段拼接。
+ * - 单个 service 失败走 fail-open，不阻断主链路。
+ */
+export async function collectServiceSystemTexts(): Promise<string[]> {
+  const out: string[] = [];
+  for (const buildSystem of serviceSystemBuilders) {
+    try {
+      const text = normalizeSystemText(await buildSystem());
+      if (!text) continue;
+      out.push(text);
+    } catch {
+      // fail-open
+    }
+  }
+  return out;
 }
 
 /**
@@ -314,7 +339,7 @@ function startRuntimeHotReload(): void {
     watchedRootPaths.add(rootPath);
 
     const onSkillsChanged = () => {
-      schedule("skills", () => reloadSystemPromptProviders("skills_changed"));
+      schedule("skills", () => reloadServiceSystemBuilders("skills_changed"));
     };
 
     let attached = false;
@@ -340,7 +365,7 @@ function startRuntimeHotReload(): void {
   for (const [parentDir, targetNames] of parentWatchTargets.entries()) {
     attachWatcher(parentDir, {}, (_eventType, filename) => {
       if (filename && !targetNames.has(path.basename(filename))) return;
-      schedule("skills", () => reloadSystemPromptProviders("skills_changed"));
+      schedule("skills", () => reloadServiceSystemBuilders("skills_changed"));
     });
   }
 
@@ -512,7 +537,7 @@ export function getRuntimeState(): RuntimeState {
  * 2) 校验关键文件并确保 `.ship` 目录结构
  * 3) 加载 dotenv + ship.json，建立 base runtime state
  * 4) 初始化 ContextManager + ChatQueueWorker，建立 ready runtime state
- * 5) 注册 service system prompt providers
+ * 5) 注册 service system 构建器
  */
 
 export async function initRuntimeState(cwd: string): Promise<void> {
@@ -593,7 +618,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems,
     contextManager,
   });
-  registerAllServiceSystemPromptProviders({
+  registerAllServiceSystemBuilders({
     getContext: () => getServiceRuntimeState(),
   });
   startRuntimeHotReload();

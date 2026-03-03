@@ -7,7 +7,7 @@
  * - 因此需要一个稳定的、与 Agent 解耦的提取逻辑（属于 chat/egress 语义）
  */
 
-import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ContextMessageV1 } from "@core/types/ContextMessage.js";
 import {
   extractTextFromUiMessage,
   extractToolCallsFromUiMessage,
@@ -21,7 +21,7 @@ import {
  * - 若无 tool call，则回退到 message 文本内容。
  */
 export function pickLastSuccessfulChatSendText(
-  message: ShipContextMessageV1 | null | undefined,
+  message: ContextMessageV1 | null | undefined,
 ): string {
   const toolCalls = extractToolCallsFromUiMessage(message);
   // 关键点（中文）：优先从 chat_send 的 input.text 还原"用户可见回复"。

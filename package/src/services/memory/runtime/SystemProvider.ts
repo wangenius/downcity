@@ -1,5 +1,5 @@
 /**
- * Memory system provider。
+ * Memory system 文本构建器。
  *
  * 关键点（中文）
  * - 仅负责把 Primary.md 内容转为 system prompt 片段。
@@ -7,7 +7,9 @@
  */
 
 import fs from "fs-extra";
-import type { SystemPromptProvider } from "@core/types/SystemPromptProvider.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { ServiceSystemBuilder } from "@main/service/ServiceRegistry.js";
+import { requestContext } from "@/main/service/RequestContext.js";
 import {
   getShipProfileOtherPath,
   getShipProfilePrimaryPath,
@@ -23,52 +25,59 @@ async function readOptionalMarkdown(filePath: string): Promise<string> {
   }
 }
 
+function getCurrentContextId(): string {
+  const request = requestContext.getStore();
+  return String(request?.contextId || "").trim();
+}
+
 /**
- * memory provider 定义。
+ * 构建 memory system 文本。
  *
  * 关键点（中文）
- * - memory 的“加载/组装”位于 services，core 只消费最终 system message。
- * - 若 Primary.md 缺失或为空，则返回空消息列表。
+ * - memory 的“加载/组装”位于 services，core 只消费最终 system 文本。
+ * - 若 Primary.md 缺失或为空，则忽略该段。
  * - 读取失败走容错，不阻断主流程。
  */
-export const memorySystemPromptProvider: SystemPromptProvider = {
-  id: "memory",
-  order: 300,
-  async provide(ctx) {
-    const messages: Array<{ role: "system"; content: string }> = [];
+async function buildMemorySystemText(
+  getContext: () => ServiceRuntime,
+): Promise<string> {
+  const runtime = getContext();
+  const sections: string[] = [];
 
-    const profilePrimary = await readOptionalMarkdown(
-      getShipProfilePrimaryPath(ctx.projectRoot),
-    );
-    if (profilePrimary) {
-      messages.push({
-        role: "system",
-        content: ["# Profile / Primary", profilePrimary].join("\n\n"),
-      });
-    }
+  const profilePrimary = await readOptionalMarkdown(
+    getShipProfilePrimaryPath(runtime.rootPath),
+  );
+  if (profilePrimary) {
+    sections.push(["# Profile / Primary", profilePrimary].join("\n\n"));
+  }
 
-    const profileOther = await readOptionalMarkdown(
-      getShipProfileOtherPath(ctx.projectRoot),
-    );
-    if (profileOther) {
-      messages.push({
-        role: "system",
-        content: ["# Profile / Other", profileOther].join("\n\n"),
-      });
-    }
+  const profileOther = await readOptionalMarkdown(
+    getShipProfileOtherPath(runtime.rootPath),
+  );
+  if (profileOther) {
+    sections.push(["# Profile / Other", profileOther].join("\n\n"));
+  }
 
+  const contextId = getCurrentContextId();
+  if (contextId) {
     const contextMemoryPrimary = await readOptionalMarkdown(
-      getShipContextMemoryPrimaryPath(ctx.projectRoot, ctx.contextId),
+      getShipContextMemoryPrimaryPath(runtime.rootPath, contextId),
     );
     if (contextMemoryPrimary) {
-      messages.push({
-        role: "system",
-        content: ["# Context Memory / Primary", contextMemoryPrimary].join(
-          "\n\n",
-        ),
-      });
+      sections.push(
+        ["# Context Memory / Primary", contextMemoryPrimary].join("\n\n"),
+      );
     }
+  }
 
-    return { messages };
-  },
-};
+  return sections.join("\n\n").trim();
+}
+
+/**
+ * memory service system 构建器。
+ */
+export function createMemorySystemBuilder(
+  getContext: () => ServiceRuntime,
+): ServiceSystemBuilder {
+  return () => buildMemorySystemText(getContext);
+}

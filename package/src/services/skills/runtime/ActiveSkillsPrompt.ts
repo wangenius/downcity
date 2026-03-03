@@ -3,7 +3,6 @@
  *
  * 关键点（中文）
  * - 将已加载 skills 渲染为强约束 system prompt。
- * - 同步计算 activeTools 白名单，交给上层执行器约束。
  */
 
 import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
@@ -13,21 +12,19 @@ import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
  *
  * 关键点（中文）
  * - 这是 skills service 的运行时实现细节，不属于 core/prompts
- * - 除 prompt 文本外，还负责计算 activeTools 约束
+ * - 只负责渲染提示词文本，不做执行层工具白名单约束
  */
 /**
- * 构建 active skills system 文本与 tool 白名单。
+ * 构建 active skills system 文本。
  *
  * 算法（中文）
  * 1) 按 loaded skills 逐个拼接强约束说明
- * 2) 汇总 `allowedTools` 并并入命令执行基础工具
- * 3) 与 `allToolNames` 求交集，避免注入不存在工具
+ * 2) 保留每个 skill 的工具限制描述（文本约束）
  */
 export function buildLoadedSkillsSystemText(params: {
   loaded: Map<string, LoadedSkillV1>;
-  allToolNames: string[];
-}): { systemText: string; activeTools?: string[] } | null {
-  const { loaded, allToolNames } = params;
+}): string | null {
+  const { loaded } = params;
   if (!loaded || loaded.size === 0) return null;
 
   const skills = Array.from(loaded.values());
@@ -39,19 +36,12 @@ export function buildLoadedSkillsSystemText(params: {
   );
   lines.push("");
 
-  const unionAllowedTools = new Set<string>();
-  let hasAnyAllowedTools = false;
-
   for (const skill of skills) {
     lines.push(`## Skill: ${skill.name}`);
     lines.push(`**ID:** ${skill.id}`);
     lines.push(`**Path:** ${skill.skillMdPath}`);
 
     if (Array.isArray(skill.allowedTools) && skill.allowedTools.length > 0) {
-      hasAnyAllowedTools = true;
-      for (const toolName of skill.allowedTools) {
-        unionAllowedTools.add(String(toolName));
-      }
       lines.push(
         `**Tool Restriction:** You can ONLY use these tools: ${skill.allowedTools.join(", ")} (plus exec_command/write_stdin/close_shell for command workflow)`,
       );
@@ -73,21 +63,8 @@ export function buildLoadedSkillsSystemText(params: {
   );
   lines.push("2. If multiple skills are active, follow all their constraints");
   lines.push(
-    "3. Tool restrictions are ENFORCED — attempting to use forbidden tools will fail",
+    "3. Tool restrictions are strict requirements in these instructions",
   );
 
-  const activeTools = hasAnyAllowedTools
-    ? Array.from(
-        new Set([
-          "exec_command",
-          "write_stdin",
-          "close_shell",
-          ...Array.from(unionAllowedTools),
-        ]),
-      )
-        .filter((toolName) => allToolNames.includes(toolName))
-        .slice(0, 2000)
-    : undefined;
-
-  return { systemText: lines.join("\n").trim(), activeTools };
+  return lines.join("\n").trim();
 }

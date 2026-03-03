@@ -12,8 +12,7 @@
    - `ContextStore` 负责消息与元数据落盘（含 compact/archive）。
    - `AgentRunner` 负责 system prompt 组装、tool loop 调用、重试与结果回写。
 2. `prompts/`
-   - `SystemProvider` 提供可扩展的 provider 注册与聚合机制。
-   - 按 `order` 稳定排序执行，provider 单点失败采用 fail-open。
+   - `System` 负责运行时系统提示模板与默认 prompt 加载。
 3. `shell/`
    - 暴露 `exec_command`、`write_stdin`、`close_shell` 三个会话式工具。
    - 通过 `ShellContextManager` 管理多会话状态，输出分页与 token 限制由 `ShellHelpers` 统一处理。
@@ -21,13 +20,13 @@
    - `CreateModel` 统一构建 Anthropic/OpenAI/OpenAI Compatible 模型实例。
    - 内置 API Key 解析（含 `${ENV}`）与 LLM 请求日志接入。
 5. `types/`
-   - 承载 core 内核抽象（Agent、ContextMessage、SystemPromptProvider、Shell 输入输出类型等）。
+   - 承载 core 内核抽象（Agent、ContextMessage、Shell 输入输出类型等）。
 
 ## 关键文件
 
 - `context/AgentRunner.ts`
 - `context/ContextManager.ts`
-- `prompts/SystemProvider.ts`
+- `prompts/System.ts`
 - `shell/Tool.ts`
 - `llm/CreateModel.ts`
 

@@ -2,7 +2,7 @@
  * ContextAgentRunner：单会话 Agent 执行器。
  *
  * 关键职责（中文）
- * - 组装 system prompt（运行时上下文 + providers）。
+ * - 组装 system prompt（运行时上下文 + 静态模板 + service system）。
  * - 执行 tool-loop，并把 assistant/tool 调用结果回写 context 消息。
  * - 在上下文超窗时按策略逐步收紧 compact 参数并重试。
  */
@@ -27,14 +27,14 @@ import type { AgentRunInput, AgentResult } from "@core/types/Agent.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import { openai } from "@ai-sdk/openai";
 import type {
-  ShipContextMessageV1,
-  ShipContextMetadataV1,
+  ContextMessageV1,
+  ContextMetadataV1,
 } from "@core/types/ContextMessage.js";
 import {
+  collectServiceSystemTexts,
   getRuntimeState,
   getRuntimeStateBase,
 } from "@main/runtime/RuntimeState.js";
-import { collectSystemPromptProviderResult } from "@core/prompts/SystemProvider.js";
 import type { ContextStore } from "./ContextStore.js";
 import { loadProjectDotenv } from "@/main/runtime/Config.js";
 import { shellTools } from "@core/shell/Tool.js";
@@ -161,7 +161,7 @@ export class ContextAgent {
    * 算法步骤（中文）
    * - 绑定 contextId，防止一个实例跨会话串线。
    * - 读取/补齐用户消息到 context store（防止入口未写入）。
-   * - 收集 system prompt providers，得到 activeTools 与附加系统消息。
+   * - 收集 service system 文本，和运行时/静态 system 一起拼装。
    * - 执行模型调用；若超窗则按 compact policy 递进重试。
    */
   private async runWithToolLoopAgent(
@@ -199,16 +199,13 @@ export class ContextAgent {
       const staticSystemMessages = transformPromptsIntoSystemMessages([
         ...runtime.systems,
       ]);
-      let currentProviderResult = await collectSystemPromptProviderResult({
-        projectRoot: runtime.rootPath,
-        contextId,
-        requestId,
-        allToolNames: Object.keys(this.tools),
-      });
+      let serviceSystemMessages = transformPromptsIntoSystemMessages(
+        await collectServiceSystemTexts(),
+      );
       let currentBaseSystemMessages: SystemModelMessage[] = [
         ...runtimeSystemMessages,
         ...staticSystemMessages,
-        ...currentProviderResult.messages,
+        ...serviceSystemMessages,
       ];
 
       const compactPolicy = this.resolveCompactPolicy(retryAttempts);
@@ -226,17 +223,14 @@ export class ContextAgent {
         // ignore compact failure; fallback to un-compacted context messages
       }
       if (compacted) {
-        // 关键点（中文）：compact 后重新聚合 provider，保证 prompt 与 activeTools 同步最新状态。
-        currentProviderResult = await collectSystemPromptProviderResult({
-          projectRoot: runtime.rootPath,
-          contextId,
-          requestId,
-          allToolNames: Object.keys(this.tools),
-        });
+        // 关键点（中文）：compact 后重新收集 service system，保证提示词与最新状态一致。
+        serviceSystemMessages = transformPromptsIntoSystemMessages(
+          await collectServiceSystemTexts(),
+        );
         currentBaseSystemMessages = [
           ...runtimeSystemMessages,
           ...staticSystemMessages,
-          ...currentProviderResult.messages,
+          ...serviceSystemMessages,
         ];
       }
 
@@ -261,7 +255,7 @@ export class ContextAgent {
       // - 保留 tool-loop 的 in-flight 后缀消息（工具调用链）。
       let lastAppliedBasePrefixLen = baseModelMessages.length;
       const appendMergedUserMessages = (
-        messages: ShipContextMessageV1[],
+        messages: ContextMessageV1[],
       ): number => {
         if (!Array.isArray(messages) || messages.length === 0) return 0;
         const toAppend: ModelMessage[] = [];
@@ -320,16 +314,9 @@ export class ContextAgent {
               }
               const stepOverrides: {
                 system?: Array<SystemModelMessage>;
-                activeTools?: string[];
               } = {
                 system: currentBaseSystemMessages,
               };
-              if (
-                Array.isArray(currentProviderResult.activeTools) &&
-                currentProviderResult.activeTools.length > 0
-              ) {
-                stepOverrides.activeTools = currentProviderResult.activeTools;
-              }
               return {
                 ...stepOverrides,
                 ...(Array.isArray(outMessages)
@@ -346,9 +333,9 @@ export class ContextAgent {
 
       // phase 3（中文）：把 stream 结果固化为最终 assistant UIMessage。
       // 关键点（中文）：用 ai-sdk v6 的 UIMessage 流来生成最终 assistant UIMessage（包含 tool parts），避免手工拼装。
-      let finalAssistantUiMessage: ShipContextMessageV1 | null = null;
+      let finalAssistantUiMessage: ContextMessageV1 | null = null;
       try {
-        const md: ShipContextMetadataV1 = {
+        const md: ContextMetadataV1 = {
           v: 1,
           ts: Date.now(),
           contextId,
@@ -358,7 +345,7 @@ export class ContextAgent {
           extra: { note: "ai_sdk_ui_message" },
         };
 
-        const uiStream = result.toUIMessageStream<ShipContextMessageV1>({
+        const uiStream = result.toUIMessageStream<ContextMessageV1>({
           sendReasoning: false,
           sendSources: false,
           generateMessageId: () => `a:${contextId}:${generateId()}`,
@@ -492,8 +479,8 @@ export class ContextAgent {
     requestId?: string;
     contextStore?: ContextStore | null;
     note: string;
-  }): ShipContextMessageV1 {
-    const metadata: Omit<ShipContextMetadataV1, "v" | "ts"> = {
+  }): ContextMessageV1 {
+    const metadata: Omit<ContextMetadataV1, "v" | "ts"> = {
       contextId: params.contextId,
       requestId: params.requestId,
       extra: { note: params.note },
@@ -508,7 +495,7 @@ export class ContextAgent {
         source: "egress",
       });
     }
-    const md: ShipContextMetadataV1 = {
+    const md: ContextMetadataV1 = {
       v: 1,
       ts: Date.now(),
       ...metadata,

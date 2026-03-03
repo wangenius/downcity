@@ -9,7 +9,6 @@
 import type { Command } from "commander";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
-import type { SystemPromptProvider } from "@core/types/SystemPromptProvider.js";
 import type { Context as HonoContext } from "hono";
 
 /**
@@ -95,6 +94,15 @@ export type ServiceActions = {
 };
 
 /**
+ * service system 文本构建函数。
+ *
+ * 关键点（中文）
+ * - 每次 Agent 执行前会调用一次，返回要附加的 system 文本片段。
+ * - 返回空串表示当前 service 无额外 system 注入。
+ */
+export type ServiceSystemBuilder = () => string | Promise<string>;
+
+/**
  * 服务生命周期扩展能力。
  */
 export interface ServiceLifecycle {
@@ -121,14 +129,14 @@ export interface Service {
    */
   actions: ServiceActions;
   /**
-   * service 级 system prompt providers（可选）。
+   * service 级 system 文本构建器（可选）。
    *
    * 关键点（中文）
-   * - 由 service 自己声明 provider，进程层统一注册。
-   * - 返回空数组表示该 service 无额外 prompt 注入。
+   * - 由 service 声明一个 `system` 字段，统一返回 `() => string` 构建函数。
+   * - 进程层统一注册，core 只消费最终文本，不感知业务细节。
    */
-  systemPromptProviders?: (params: {
+  system?: (params: {
     getContext: () => ServiceRuntime;
-  }) => SystemPromptProvider[];
+  }) => ServiceSystemBuilder;
   lifecycle?: ServiceLifecycle;
 }

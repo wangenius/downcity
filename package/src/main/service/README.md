@@ -11,11 +11,11 @@
 
 ## Service Prompt 注册约定
 
-每个 `services/<name>/ServiceEntry.ts` 都可以声明 `systemPromptProviders` 字段。  
-该字段返回当前 service 需要注册的 `SystemPromptProvider[]`。
+每个 `services/<name>/ServiceEntry.ts` 都可以声明 `system` 字段。  
+该字段返回 `() => string` 形式的 system 文本构建函数。
 
 进程层在 `RuntimeState` 中统一遍历 services 并注册，
-避免在 `main` 侧硬编码某个具体 service 的 provider 细节。
+避免在 `main` 侧硬编码某个具体 service 的 system 细节。
 
 ## Service Action 约定
 

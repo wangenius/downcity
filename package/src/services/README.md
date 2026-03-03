@@ -34,7 +34,7 @@
 ## 统一服务模式
 
 1. `ServiceEntry.ts` 声明 `actions`（command/api/execute）。
-2. `ServiceEntry.ts` 可选声明 `systemPromptProviders` 字段，用于暴露该 service 的 prompt providers。
+2. `ServiceEntry.ts` 可选声明 `system` 字段，用于暴露该 service 的 system 文本构建函数。
 3. `Service.ts` 承载参数归一化、校验与业务流程。
 4. `runtime/` 承载状态管理、调度与工具函数。
 5. `types/` 定义服务输入输出协议，供 CLI 与 HTTP 共用。

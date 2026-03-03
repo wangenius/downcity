@@ -16,7 +16,7 @@ import http from "node:http";
 import fs from "fs-extra";
 import path from "path";
 import { getShipPublicDirPath } from "@/main/runtime/Paths.js";
-import type { ShipContextMetadataV1 } from "@core/types/ContextMessage.js";
+import type { ContextMetadataV1 } from "@core/types/ContextMessage.js";
 import {
   getServiceRuntimeState,
   getRuntimeState,
@@ -360,7 +360,7 @@ export class AgentServer {
             await store.append(assistantMessage);
             void runtime.contextManager.afterContextUpdatedAsync(contextId);
           } else if (userVisible && userVisible.trim()) {
-            const metadata: Omit<ShipContextMetadataV1, "v" | "ts"> = {
+            const metadata: Omit<ContextMetadataV1, "v" | "ts"> = {
               contextId,
               extra: {
                 via: "api_execute",

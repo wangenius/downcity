@@ -19,7 +19,7 @@ export type ShipMessageSourceRangeV1 = {
   count: number;
 };
 
-export type ShipContextMetadataV1 = {
+export type ContextMetadataV1 = {
   /** schema 版本 */
   v: 1;
   /** 记录时间戳（ms） */
@@ -44,7 +44,7 @@ export type ShipContextMetadataV1 = {
   extra?: JsonObject;
 };
 
-export type ShipContextMessageV1 = UIMessage<ShipContextMetadataV1>;
-export type ShipContextUserMessageV1 = ShipContextMessageV1 & {
+export type ContextMessageV1 = UIMessage<ContextMetadataV1>;
+export type ShipContextUserMessageV1 = ContextMessageV1 & {
   role: "user";
 };

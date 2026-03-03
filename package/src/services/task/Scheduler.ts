@@ -6,10 +6,10 @@
  * - cron 调度执行器由 server 注入，service 不依赖具体实现。
  */
 
-import type { ServiceCronEngine } from "@main/service/types/ServiceRuntimePorts.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { listTasks, readTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
+import { ServiceCronEngine } from "./types/Cron.js";
 
 function normalizeCronExpression(raw: string): string | null {
   const value = String(raw || "").trim();
@@ -83,13 +83,17 @@ export async function registerTaskCronJobs(params: {
               status: result.status,
               executionStatus: result.executionStatus,
               resultStatus: result.resultStatus,
-              ...(result.resultErrors.length > 0 ? { resultErrors: result.resultErrors } : {}),
+              ...(result.resultErrors.length > 0
+                ? { resultErrors: result.resultErrors }
+                : {}),
               dialogueRounds: result.dialogueRounds,
               userSimulatorSatisfied: result.userSimulatorSatisfied,
               timestamp: result.timestamp,
               runDir: result.runDirRel,
               notified: result.notified,
-              ...(result.notifyError ? { notifyError: result.notifyError } : {}),
+              ...(result.notifyError
+                ? { notifyError: result.notifyError }
+                : {}),
             });
           } catch (error) {
             void logger.log("error", "Task run failed (scheduler)", {

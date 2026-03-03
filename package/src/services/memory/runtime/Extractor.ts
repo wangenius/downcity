@@ -12,7 +12,7 @@ import type {
   MemoryCompressParams,
 } from "@services/memory/types/Memory.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
 

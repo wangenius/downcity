@@ -6,7 +6,7 @@ import {
   getShipContextMemoryMetaPath,
 } from "@/main/runtime/Paths.js";
 import type { MemoryEntry } from "@services/memory/types/Memory.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 
 /**
  * MemoryManager：管理单个 context 的记忆文件（memory/Primary.md）。

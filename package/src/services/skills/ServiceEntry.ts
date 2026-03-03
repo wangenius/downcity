@@ -15,7 +15,7 @@ import {
   loadSkill,
   unloadSkill,
 } from "./Service.js";
-import { resolveContextId } from "@/main/service/utils/ContextId.js";
+import { resolveContextId } from "@/main/runtime/ContextId.js";
 import type { Service } from "@main/service/ServiceRegistry.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { createSkillsSystemPromptProvider } from "./runtime/SystemProvider.js";

@@ -10,7 +10,7 @@ import path from "node:path";
 import type { Command } from "commander";
 import type { Context as HonoContext, Hono } from "hono";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { ServiceCommandResponse } from "@main/types/Services.js";
 import { callServer } from "@main/runtime/Client.js";
 import { printResult } from "@main/utils/CliOutput.js";

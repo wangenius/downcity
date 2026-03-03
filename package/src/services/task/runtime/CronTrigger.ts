@@ -8,13 +8,14 @@
 
 import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
-import type {
+import {
   ServiceCronEngine,
   ServiceCronTriggerDefinition,
-} from "@main/service/types/ServiceRuntimePorts.js";
+} from "../types/Cron.js";
 
 export class TaskCronTriggerEngine implements ServiceCronEngine {
-  private readonly definitions: Map<string, ServiceCronTriggerDefinition> = new Map();
+  private readonly definitions: Map<string, ServiceCronTriggerDefinition> =
+    new Map();
   private readonly scheduledJobs: Map<string, ScheduledTask> = new Map();
   private started = false;
 
@@ -23,7 +24,8 @@ export class TaskCronTriggerEngine implements ServiceCronEngine {
     if (!id) throw new Error("ServiceCronTriggerDefinition.id is required");
 
     const expression = String(definition.expression || "").trim();
-    if (!expression) throw new Error(`Cron expression is required for job: ${id}`);
+    if (!expression)
+      throw new Error(`Cron expression is required for job: ${id}`);
     if (!cron.validate(expression)) {
       throw new Error(`Invalid cron expression for job ${id}: ${expression}`);
     }

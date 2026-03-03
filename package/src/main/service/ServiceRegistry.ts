@@ -7,7 +7,7 @@
  */
 
 import type { Command } from "commander";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { SystemPromptProvider } from "@core/types/SystemPromptProvider.js";
 import type { Context as HonoContext } from "hono";

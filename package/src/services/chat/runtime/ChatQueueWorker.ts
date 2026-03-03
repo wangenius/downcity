@@ -10,7 +10,7 @@
 import type { Logger } from "@utils/logger/Logger.js";
 import type { AgentResult } from "@core/types/Agent.js";
 import type { ShipContextUserMessageV1 } from "@core/types/ContextMessage.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {

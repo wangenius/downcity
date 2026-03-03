@@ -24,7 +24,7 @@ import type {
   ServiceActionCommandInput,
 } from "@main/service/ServiceRegistry.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { TelegramBot } from "./adapters/telegram/Bot.js";
 import type { FeishuBot } from "./adapters/feishu/Feishu.js";

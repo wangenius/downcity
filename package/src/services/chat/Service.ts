@@ -6,7 +6,7 @@
  * - 通过 RequestContext（ALS）读取当前请求上下文
  */
 
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { requestContext } from "@main/service/RequestContext.js";
 import { parseChatKeyForDispatch, sendTextByChatKey } from "./runtime/ChatkeySend.js";
 import { llmRequestContext } from "@utils/logger/Context.js";

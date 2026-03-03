@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 /**
- * ContextRequestContext（单次请求上下文）。
+ * RequestContext（单次请求上下文）。
  *
  * 关键点（中文）
  * - 这是进程编排层的请求作用域上下文，不属于 core 内核。
@@ -27,9 +27,6 @@ export const requestContext = new AsyncLocalStorage<RequestContext>();
  * - 仅对 `fn` 执行期间及其派生异步任务生效。
  * - 退出 `fn` 后自动恢复上层上下文。
  */
-export function withRequestContext<T>(
-  ctx: RequestContext,
-  fn: () => T,
-): T {
+export function withRequestContext<T>(ctx: RequestContext, fn: () => T): T {
   return requestContext.run(ctx, fn);
 }

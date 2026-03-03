@@ -1,5 +1,5 @@
 import { registerChatSender } from "@services/chat/runtime/ChatSendRegistry.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type {
   ChatDispatchAction,
   ChatDispatchChannel,

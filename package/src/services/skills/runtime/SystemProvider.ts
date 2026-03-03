@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 import type {
   SystemPromptProvider,

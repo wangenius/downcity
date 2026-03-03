@@ -10,7 +10,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
 import type {
   ShipTaskFrontmatterV1,

@@ -11,7 +11,7 @@
 
 import { getChatSender } from "./ChatSendRegistry.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { readChatMetaByContextId } from "./ChatMetaStore.js";
 
 type DispatchableChannel = "telegram" | "feishu" | "qq";

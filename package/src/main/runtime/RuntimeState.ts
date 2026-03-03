@@ -7,7 +7,7 @@ import type {
   ServiceRuntime,
   ServiceContext,
   ServiceInvokePort,
-} from "@main/service/types/ServiceRuntimePorts.js";
+} from "@/main/service/ServiceRuntime.js";
 import {
   clearSystemPromptProviders,
   registerSystemPromptProvider,

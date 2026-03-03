@@ -1,4 +1,4 @@
-import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { LanguageModel } from "ai";
 import { getLogger } from "@utils/logger/Logger.js";
 import { MemoryManager } from "./Manager.js";

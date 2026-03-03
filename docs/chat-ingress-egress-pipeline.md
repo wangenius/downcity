@@ -74,14 +74,16 @@
 参考：`package/src/services/chat/adapters/telegram/Bot.ts:210`
 
 2. 群聊触发判定：
-- 满足 `@bot` 或 `reply bot`，或在 follow-up window 内，才考虑触发执行
-- 未触发执行的群消息，仍会走 `enqueueAuditMessage` 入库（reason 会记录）
+- 群聊中非空消息默认可触发执行（不再硬依赖 `@bot/reply bot`）
+- follow-up window 仍保留并采用“会话级优先”判定，用于增强连续对话
+- 显式 `@bot/reply bot` 的空消息不会执行，但会激活 follow-up window，便于下一条消息直接触发
+- 未执行消息（例如空消息、权限不通过）仍会走 `enqueueAuditMessage` 入库（reason 会记录）
 
 参考：`package/src/services/chat/adapters/telegram/Bot.ts:681`
 
 3. 群聊权限门禁：
 - `anyone` 或 `initiator_or_admin`
-- 不通过时会给群内发拒绝提示，并保留审计记录
+- 不通过时会保留审计记录；显式点名 bot（或 follow-up 窗口）时会给群内发拒绝提示
 
 参考：`package/src/services/chat/adapters/telegram/Bot.ts:389`
 
@@ -100,8 +102,10 @@
 参考：`package/src/services/chat/adapters/qq/QQ.ts:201`
 
 2. 群聊触发判定与 TG 对齐：
-- `@bot` 或 `reply bot` 或 follow-up window 内，才触发执行
-- 未触发执行的群消息仍 `audit` 持久化
+- 群聊中非空消息默认可触发执行（不再硬依赖 `@bot/reply bot`）
+- follow-up window 采用“会话级优先”判定，用于增强连续对话
+- 显式 `@bot/reply bot` 的空消息不会执行，但会激活 follow-up window
+- 未执行消息（例如空消息、权限不通过）仍 `audit` 持久化
 
 参考：`package/src/services/chat/adapters/qq/QQ.ts:876`
 
@@ -199,7 +203,6 @@ worker 在 runtime 初始化时启动，监听入队事件并拉起消费。
 context message history 里的入站 user 消息会写入 `metadata.extra.ingressKind`：
 
 - `exec`：可触发执行的用户输入
-- `audit`：仅审计入库（不触发执行）
 
 参考：`package/src/services/chat/runtime/ChatQueueWorker.ts:155`
 
@@ -223,9 +226,6 @@ context message history 里的入站 user 消息会写入 `metadata.extra.ingres
 参考：`package/src/core/shell/ShellHelpers.ts:160`
 
 这让 `sma chat send` 即使不显式传 `--chat-key`，也能从上下文/环境推导目标会话。
-
-另外，模型装载上下文时会过滤 `ingressKind=audit` 的 user 消息（用于兼容历史数据），避免审计噪声进入推理输入。  
-参考：`package/src/core/context/ContextStore.ts:666`
 
 ---
 
@@ -269,19 +269,19 @@ QQ 强依赖 `chatType + messageId`（被动回复约束）。
 
 ## 9. 两条典型时序
 
-## 9.1 Telegram 群消息（未@bot）
+## 9.1 Telegram 群消息（普通文本）
 
 1. TG update 到达 `handleMessage`
-2. 判定不满足 mention/reply/follow-up
+2. 文本非空，且通过权限门禁
 3. 先写 `chat history`（`ingressKind=audit`）
-4. `enqueueAuditMessage(reason=not_addressed)`
-5. worker 消费 `audit`，不进入 context message history
-6. 不触发 agent，不出站回复
+4. `enqueueMessage(kind=exec)`
+5. worker 消费 `exec`，先写 context message history（user）
+6. 调用 agent 执行并出站回复，再写 assistant history
 
-## 9.2 QQ 群消息（@bot）
+## 9.2 QQ 群消息（普通文本）
 
 1. QQ dispatch 到达 `handleGroupMessage`
-2. `isMentioned=true`，通过权限门禁
+2. 文本非空，通过权限门禁（不再要求 `isMentioned=true`）
 3. 先写 `chat history`（`ingressKind=exec`）
 4. `enqueueMessage(kind=exec)`
 5. worker 先 `appendUserMessage` 到 context message history

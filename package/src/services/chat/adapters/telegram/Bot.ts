@@ -27,7 +27,7 @@ import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
  *
  * 关键职责（中文）
  * - 轮询拉取 updates，并转换为统一会话输入
- * - 维护 follow-up 窗口与群聊访问策略，降低误触发
+ * - 维护 follow-up 窗口与群聊访问策略，提升群内连续对话体验
  * - 统一走 BaseChatAdapter 入队（history 由 process 写入），确保调度语义一致
  */
 export class TelegramBot extends BaseChatAdapter {
@@ -49,6 +49,7 @@ export class TelegramBot extends BaseChatAdapter {
   private botId?: number;
   private clearedWebhookOnce: boolean = false;
   private followupExpiryByActorAndThread: Map<string, number> = new Map();
+  private followupExpiryByThread: Map<string, number> = new Map();
 
   constructor(
     context: ServiceRuntime,
@@ -257,42 +258,21 @@ export class TelegramBot extends BaseChatAdapter {
     return `${threadKey}|${actorId}`;
   }
 
-  private isLikelyAddressedToBot(text: string): boolean {
-    const t = (text || "").trim();
-    if (!t) return false;
+  private isWithinFollowupWindow(threadKey: string, actorId?: string): boolean {
+    const now = Date.now();
 
-    // If user explicitly mentions someone else, it's less likely to be for the bot.
-    if (
-      /@[a-zA-Z0-9_]{2,}/.test(t) &&
-      !(
-        this.botUsername &&
-        new RegExp(`@${this.escapeRegExp(this.botUsername)}\\b`, "i").test(t)
-      )
-    ) {
-      return false;
+    // 会话级窗口：同一群/话题内更容易续聊，不要求同一 actor。
+    const threadExp = this.followupExpiryByThread.get(threadKey);
+    if (typeof threadExp === "number") {
+      if (now <= threadExp) return true;
+      this.followupExpiryByThread.delete(threadKey);
     }
 
-    // Strong signals
-    if (/[?？]/.test(t)) return true;
-    if (/(^|\s)(you|u|bot|agent|ai)(\s|$)/i.test(t)) return true;
-    if (/(你|您|机器人|助理|AI|同学|能不能|可以|帮我|帮忙)/.test(t))
-      return true;
-
-    // Short follow-ups like "继续/再来/然后呢/why/how"
-    if (
-      /^(继续|再来|然后呢|为啥|为什么|怎么|如何|what|why|how|help)\b/i.test(t)
-    )
-      return true;
-
-    return false;
-  }
-
-  private isWithinFollowupWindow(threadKey: string, actorId?: string): boolean {
     if (!actorId) return false;
     const key = this.getFollowupKey(threadKey, actorId);
-    const exp = this.followupExpiryByActorAndThread.get(key);
-    if (!exp) return false;
-    if (Date.now() > exp) {
+    const actorExp = this.followupExpiryByActorAndThread.get(key);
+    if (!actorExp) return false;
+    if (now > actorExp) {
       this.followupExpiryByActorAndThread.delete(key);
       return false;
     }
@@ -300,12 +280,12 @@ export class TelegramBot extends BaseChatAdapter {
   }
 
   private touchFollowupWindow(threadKey: string, actorId?: string): void {
+    const expiry = Date.now() + this.followupWindowMs;
+    this.followupExpiryByThread.set(threadKey, expiry);
+
     if (!actorId) return;
     const key = this.getFollowupKey(threadKey, actorId);
-    this.followupExpiryByActorAndThread.set(
-      key,
-      Date.now() + this.followupWindowMs,
-    );
+    this.followupExpiryByActorAndThread.set(key, expiry);
   }
 
   private escapeRegExp(text: string): string {
@@ -320,7 +300,7 @@ export class TelegramBot extends BaseChatAdapter {
    * 将“所有入站消息”统一转成可落盘的文本形式（用于审计/回溯）。
    *
    * 关键点（中文）
-   * - 即使消息不会触发 agent 执行（例如：群里未 @bot），也应当入队
+   * - 即使消息最终不执行（例如：空消息或无权限），也应当先入队落盘
    * - 但纯附件消息可能没有 text/caption，这里会生成一个稳定的占位文本
    */
   private buildAuditText(params: {
@@ -679,12 +659,12 @@ export class TelegramBot extends BaseChatAdapter {
         await this.handleCommand(chatId, rawText, from, messageThreadId);
       } else {
         // 关键点（中文）：群聊“是否触发 bot” 与 “是否入队” 解耦。
-        // - 触发 bot：仍然按 mention/reply/window + 权限门禁
+        // - 触发 bot：群聊非空内容默认可触发（权限门禁仍生效）
         // - 入队：所有入站消息都应落盘（审计/回溯）
         const isMentioned = isGroup ? this.isBotMentioned(rawText, entities) : false;
         const inWindow = isGroup ? this.isWithinFollowupWindow(chatKey, actorId) : false;
         const explicit = isGroup ? (isMentioned || isReplyToBot) : true;
-        const shouldConsider = isGroup ? (explicit || inWindow) : true;
+        const isAddressed = isGroup ? (explicit || inWindow) : true;
 
         if (isGroup) {
           if (!actorId) {
@@ -692,50 +672,35 @@ export class TelegramBot extends BaseChatAdapter {
             return;
           }
 
-          if (!shouldConsider) {
-            await enqueueGroupAudit({ reason: "not_addressed" });
-            this.logger.debug(
-              "Ignored group message (no mention/reply/window)",
-              { chatId, messageId, chatKey },
-            );
-            return;
-          }
-
           const ok = await this.isAllowedGroupActor(chatKey, chatId, actorId);
           if (!ok) {
             await enqueueGroupAudit({ reason: "permission_denied" });
-            await this.sendMessage(
-              chatId,
-              "⛔️ 仅发起人或群管理员可以与我对话。",
-              { messageThreadId },
-            );
+            // 关键点（中文）：未显式点名 bot 时静默拒绝，避免群里刷屏。
+            if (isAddressed) {
+              await this.sendMessage(
+                chatId,
+                "⛔️ 仅发起人或群管理员可以与我对话。",
+                { messageThreadId },
+              );
+            }
             return;
           }
         }
 
         const cleaned = isGroup ? this.stripBotMention(rawText) : rawText;
         if (!cleaned && !hasIncomingAttachment) {
+          // 关键点（中文）：显式 @bot / 回复bot 的“空消息”也可激活 follow-up 窗口，
+          // 便于用户先点名机器人，再发送下一条具体内容。
+          if (isGroup && actorId && explicit) {
+            this.touchFollowupWindow(chatKey, actorId);
+          }
           await enqueueGroupAudit({ reason: "empty_after_clean" });
           return;
         }
 
         if (isGroup && actorId) {
-          // Follow-up messages inside the window still need intent confirmation.
-          if (!explicit && inWindow && cleaned) {
-            const okIntent = this.isLikelyAddressedToBot(cleaned);
-            if (!okIntent) {
-              await enqueueGroupAudit({ reason: "intent_gate_rejected" });
-              this.logger.debug(
-                "Ignored follow-up (intent gate: not addressed to bot)",
-                { chatId, messageId, chatKey },
-              );
-              return;
-            }
-          }
-
-          // Only (re)open the follow-up window when we actually handle a message.
-          // Avoid opening a window for empty pings like "@bot".
-          if (explicit || inWindow) this.touchFollowupWindow(chatKey, actorId);
+          // 处理到这里说明已有有效内容（文本或附件），可以续期开窗。
+          this.touchFollowupWindow(chatKey, actorId);
         }
 
         const attachmentLines: string[] = [];

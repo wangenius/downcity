@@ -157,17 +157,13 @@ export class ChatQueueWorker {
    * 统一补齐入站消息分类标记。
    *
    * 关键点（中文）
-   * - `ingressKind` 用于区分 audit/exec。
-   * - 后续在模型装载上下文时可过滤 audit，避免把审计噪声喂给模型。
+   * - 当前 message history 仅写入 `exec`，所以固定写 `ingressKind=exec`。
    */
-  private buildIngressExtra(
-    item: ChatQueueItem,
-    ingressKind: "audit" | "exec",
-  ): JsonObject {
+  private buildIngressExtra(item: ChatQueueItem): JsonObject {
     const base = item.extra && typeof item.extra === "object" ? item.extra : {};
     return {
       ...base,
-      ingressKind,
+      ingressKind: "exec",
     };
   }
 
@@ -176,7 +172,7 @@ export class ChatQueueWorker {
     await this.requireContext().appendUserMessage({
       contextId: item.contextId,
       text: item.text,
-      extra: this.buildIngressExtra(item, "exec"),
+      extra: this.buildIngressExtra(item),
     });
   }
 
@@ -279,7 +275,7 @@ export class ChatQueueWorker {
                 contextId: item.contextId,
                 source: "ingress",
                 kind: "normal",
-                extra: this.buildIngressExtra(item, "exec"),
+                extra: this.buildIngressExtra(item),
               },
               parts: [{ type: "text", text }],
             });

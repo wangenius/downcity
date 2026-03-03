@@ -163,6 +163,7 @@ export class QQBot extends BaseChatAdapter {
   private readonly groupAccess: "initiator_or_admin" | "anyone";
   private readonly groupInitiatorByChatKey: Map<string, string> = new Map();
   private readonly followupWindowMs: number = 10 * 60 * 1000;
+  private readonly followupExpiryByChatKey: Map<string, number> = new Map();
   private readonly followupExpiryByActorAndChatKey: Map<string, number> =
     new Map();
   private readonly botOutboundMessageIds: Map<string, number> = new Map();
@@ -775,7 +776,7 @@ export class QQBot extends BaseChatAdapter {
         break;
 
       case EventType.GROUP_MESSAGE_CREATE:
-        // 群聊普通消息（需要按 mention/reply/window 判定是否触发）
+        // 群聊普通消息（非空内容默认可触发，权限门禁仍生效）
         await this.handleGroupMessage({
           eventType: EventType.GROUP_MESSAGE_CREATE,
           data: data as QQMessageData,
@@ -878,26 +879,15 @@ export class QQBot extends BaseChatAdapter {
       this.isBotMentionedInMessage(String(content || ""), data);
     const isReplyToBot = this.isReplyToBot(data);
     const inWindow = this.isWithinFollowupWindow(chatKey, actor.userId);
-    const shouldConsider = isMentioned || isReplyToBot || inWindow;
-
-    // 关键点（中文）：群聊只在 @bot / 回复bot / follow-up 窗口内触发执行。
-    if (!shouldConsider) {
-      await enqueueGroupAudit({
-        reason: "not_addressed",
-        isMentioned,
-        isReplyToBot,
-        inWindow,
-      });
-      this.logger.debug("忽略群聊消息（未@机器人/未回复机器人/不在follow-up窗口）", {
-        messageId,
-        groupId,
-        chatKey,
-      });
-      return;
-    }
+    const isAddressed = isMentioned || isReplyToBot || inWindow;
 
     // 关键点（中文）：与 Telegram 对齐，纯 @ 空消息不触发执行。
     if (!userMessage) {
+      // 关键点（中文）：显式 @bot / 回复bot 的空消息也可激活 follow-up 窗口，
+      // 便于用户先点名机器人，再发送下一条具体内容。
+      if (actor.userId && (isMentioned || isReplyToBot)) {
+        this.touchFollowupWindow(chatKey, actor.userId);
+      }
       await enqueueGroupAudit({
         reason: "empty_after_extract",
         isMentioned,
@@ -958,12 +948,15 @@ export class QQBot extends BaseChatAdapter {
           isReplyToBot,
           inWindow,
         });
-        await this.sendMessage(
-          groupId,
-          "group",
-          messageId,
-          "⛔️ 仅发起人或群管理员可以与我对话。",
-        );
+        // 关键点（中文）：未显式点名 bot 时静默拒绝，避免群里刷屏。
+        if (isAddressed) {
+          await this.sendMessage(
+            groupId,
+            "group",
+            messageId,
+            "⛔️ 仅发起人或群管理员可以与我对话。",
+          );
+        }
         return;
       }
       if (actor.userId) this.touchFollowupWindow(chatKey, actor.userId);
@@ -1189,12 +1182,21 @@ export class QQBot extends BaseChatAdapter {
   }
 
   private isWithinFollowupWindow(chatKey: string, actorId?: string): boolean {
+    const now = Date.now();
+
+    // 会话级窗口：同一群内更容易续聊，不要求同一 actor。
+    const chatExp = this.followupExpiryByChatKey.get(chatKey);
+    if (typeof chatExp === "number") {
+      if (now <= chatExp) return true;
+      this.followupExpiryByChatKey.delete(chatKey);
+    }
+
     const actor = String(actorId || "").trim();
     if (!actor) return false;
     const key = this.getFollowupKey(chatKey, actor);
     const exp = this.followupExpiryByActorAndChatKey.get(key);
     if (!exp) return false;
-    if (Date.now() > exp) {
+    if (now > exp) {
       this.followupExpiryByActorAndChatKey.delete(key);
       return false;
     }
@@ -1202,13 +1204,13 @@ export class QQBot extends BaseChatAdapter {
   }
 
   private touchFollowupWindow(chatKey: string, actorId?: string): void {
+    const expiry = Date.now() + this.followupWindowMs;
+    this.followupExpiryByChatKey.set(chatKey, expiry);
+
     const actor = String(actorId || "").trim();
     if (!actor) return;
     const key = this.getFollowupKey(chatKey, actor);
-    this.followupExpiryByActorAndChatKey.set(
-      key,
-      Date.now() + this.followupWindowMs,
-    );
+    this.followupExpiryByActorAndChatKey.set(key, expiry);
   }
 
   /**

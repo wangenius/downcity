@@ -3,10 +3,11 @@
  *
  * 关键点（中文）
  * - chat 语义（chatKey 与 contextId 映射）统一收口在本模块
- * - 内部通过注入的 host 端口读取 request context
+ * - 通过 RequestContext（ALS）读取当前请求上下文
  */
 
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import { requestContext } from "@main/service/RequestContext.js";
 import { parseChatKeyForDispatch, sendTextByChatKey } from "./runtime/ChatkeySend.js";
 import { llmRequestContext } from "@utils/logger/Context.js";
 import type {
@@ -44,20 +45,15 @@ function readEnvNumber(name: string): number | undefined {
  *
  * 优先级（中文）
  * 1) 显式参数
- * 2) host.getRequestContext（server 注入）
+ * 2) RequestContext（ALS）
  * 3) 环境变量回退
  */
 export function resolveChatContextSnapshot(input?: {
   contextId?: string;
   chatKey?: string;
-  context?: ServiceRuntimeDependencies;
+  context?: ServiceRuntime;
 }): ChatContextSnapshot {
-  if (input?.context && !input.context.host) {
-    throw new Error("Service host is required but missing.");
-  }
-  const requestCtx = input?.context
-    ? input.context.host.getRequestContext()
-    : undefined;
+  const requestCtx = requestContext.getStore();
   const llmCtx = llmRequestContext.getStore();
 
   const explicitContextId = String(input?.contextId || "").trim();
@@ -177,7 +173,7 @@ export function mapContextIdToChatKey(contextId?: string): string | undefined {
 export function resolveContextId(input?: {
   contextId?: string;
   chatKey?: string;
-  context?: ServiceRuntimeDependencies;
+  context?: ServiceRuntime;
 }): string | undefined {
   const snapshot = resolveChatContextSnapshot({
     contextId: input?.contextId,
@@ -194,7 +190,7 @@ export function resolveContextId(input?: {
 export function resolveChatKey(input?: {
   chatKey?: string;
   contextId?: string;
-  context?: ServiceRuntimeDependencies;
+  context?: ServiceRuntime;
 }): string | undefined {
   const snapshot = resolveChatContextSnapshot({
     chatKey: input?.chatKey,
@@ -241,7 +237,7 @@ function normalizeChatSendText(raw: string): string {
  * - 返回统一结构，便于上层链路做可观测与错误汇总。
  */
 export async function sendChatTextByChatKey(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   chatKey: string;
   text: string;
 }): Promise<ChatSendResponse> {
@@ -273,7 +269,7 @@ export async function sendChatTextByChatKey(params: {
  * - contextId -> chatKey 映射关系只在 chat service 内部维护。
  */
 export async function sendChatTextByContextId(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   contextId: string;
   text: string;
 }): Promise<{ success: boolean; contextId: string; error?: string }> {

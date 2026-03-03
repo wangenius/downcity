@@ -7,7 +7,7 @@ import type {
   AdapterChatKeyParams,
   AdapterSendTextParams,
 } from "@services/chat/adapters/PlatformAdapter.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
@@ -151,7 +151,7 @@ export class QQBot extends BaseChatAdapter {
   private botUserId: string = "";
 
   constructor(
-    context: ServiceRuntimeDependencies,
+    context: ServiceRuntime,
     appId: string,
     appSecret: string,
     useSandbox: boolean = false,
@@ -1235,7 +1235,7 @@ export class QQBot extends BaseChatAdapter {
  */
 export async function createQQBot(
   config: QQConfig,
-  context: ServiceRuntimeDependencies,
+  context: ServiceRuntime,
 ): Promise<QQBot | null> {
   if (!config.enabled || !config.appId || !config.appSecret) {
     return null;

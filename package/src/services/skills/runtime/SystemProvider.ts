@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 import path from "node:path";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 import type {
   SystemPromptProvider,
@@ -63,17 +63,12 @@ function toLoadedSkill(params: {
  * 4) 输出系统提示片段 + activeTools 收敛结果
  */
 async function buildSkillsProviderOutput(
-  getContext: () => ServiceRuntimeDependencies,
+  getContext: () => ServiceRuntime,
   ctx: SystemPromptProviderContext,
 ): Promise<SystemPromptProviderOutput> {
   const runtime = getContext();
-  const contextManager = runtime.contextManager;
-  if (!contextManager) {
-    throw new Error(
-      "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
-    );
-  }
-  const contextStore = contextManager.getContextStore(ctx.contextId);
+  const serviceContext = runtime.context;
+  const contextStore = serviceContext.getContextStore(ctx.contextId);
   const discoveredSkills = discoverClaudeSkillsSync(runtime.rootPath, runtime.config);
   setContextAvailableSkills(ctx.contextId, discoveredSkills);
 
@@ -185,7 +180,7 @@ async function buildSkillsProviderOutput(
  * - core/runtime 只消费 provider 输出
  */
 export function createSkillsSystemPromptProvider(
-  getContext: () => ServiceRuntimeDependencies,
+  getContext: () => ServiceRuntime,
 ): SystemPromptProvider {
   return {
     id: "skills",

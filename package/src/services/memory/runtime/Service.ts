@@ -1,4 +1,4 @@
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { LanguageModel } from "ai";
 import { getLogger } from "@utils/logger/Logger.js";
 import { MemoryManager } from "./Manager.js";
@@ -7,17 +7,17 @@ import { compressMemory, extractMemoryFromContextMessages } from "./Extractor.js
 const memoryManagers: Map<string, MemoryManager> = new Map();
 
 function getMemoryManager(
-  context: ServiceRuntimeDependencies,
+  runtime: ServiceRuntime,
   contextId: string,
 ): MemoryManager {
   const key = String(contextId || "").trim();
   if (!key) {
     throw new Error("Memory service requires a non-empty contextId");
   }
-  const cacheKey = `${context.rootPath}::${key}`;
+  const cacheKey = `${runtime.rootPath}::${key}`;
   const existing = memoryManagers.get(cacheKey);
   if (existing) return existing;
-  const created = new MemoryManager(context, key);
+  const created = new MemoryManager(runtime, key);
   memoryManagers.set(cacheKey, created);
   return created;
 }
@@ -30,30 +30,25 @@ function getMemoryManager(
  * - core 只在“消息追加后”触发，不关心具体提取/压缩细节
  */
 export async function runContextMemoryMaintenance(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   contextId: string;
 }): Promise<void> {
   const contextId = String(params.contextId || "").trim();
   if (!contextId) return;
 
-  const context = params.context;
-  const config = context.config?.context?.memory;
+  const runtime = params.context;
+  const config = runtime.config?.context?.memory;
   const enabled = config?.autoExtractEnabled ?? true;
   if (!enabled) return;
 
   const extractMinEntries = config?.extractMinEntries ?? 40;
 
   try {
-    const contextManager = context.contextManager;
-    if (!contextManager) {
-      throw new Error(
-        "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
-      );
-    }
-    const store = contextManager.getContextStore(contextId);
+    const serviceContext = runtime.context;
+    const store = serviceContext.getContextStore(contextId);
     const totalEntries = await store.getTotalMessageCount();
 
-    const memoryManager = getMemoryManager(context, contextId);
+    const memoryManager = getMemoryManager(runtime, contextId);
     const meta = await memoryManager.loadMeta();
     const lastMemorizedEntryCount = meta.lastMemorizedEntryCount ?? 0;
     const unmemorizedCount = totalEntries - lastMemorizedEntryCount;
@@ -61,7 +56,7 @@ export async function runContextMemoryMaintenance(params: {
     if (unmemorizedCount < extractMinEntries) return;
 
     void extractAndSaveMemory({
-      context,
+      context: runtime,
       contextId,
       startIndex: lastMemorizedEntryCount,
       endIndex: totalEntries,
@@ -72,13 +67,13 @@ export async function runContextMemoryMaintenance(params: {
 }
 
 async function extractAndSaveMemory(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   contextId: string;
   startIndex: number;
   endIndex: number;
 }): Promise<void> {
-  const { context, contextId, startIndex, endIndex } = params;
-  const logger = getLogger(context.rootPath, "info");
+  const { context: runtime, contextId, startIndex, endIndex } = params;
+  const logger = getLogger(runtime.rootPath, "info");
 
   try {
     await logger.log("info", "Memory extraction started (async)", {
@@ -86,24 +81,16 @@ async function extractAndSaveMemory(params: {
       entryRange: [startIndex, endIndex],
     });
 
-    const modelFactory = context.modelFactory;
-    if (!modelFactory) {
-      throw new Error(
-        "Service modelFactory is required but missing. Ensure server injects model factory before invoking this capability.",
-      );
-    }
-    const model = await modelFactory.createModel({
-      config: context.config,
-    });
+    const model = runtime.context.model;
 
     const memoryEntry = await extractMemoryFromContextMessages({
-      context,
+      context: runtime,
       contextId,
       entryRange: [startIndex, endIndex],
       model,
     });
 
-    const memoryManager = getMemoryManager(context, contextId);
+    const memoryManager = getMemoryManager(runtime, contextId);
     await memoryManager.append(memoryEntry);
 
     const meta = await memoryManager.loadMeta();
@@ -113,7 +100,7 @@ async function extractAndSaveMemory(params: {
       lastExtractedAt: Date.now(),
     });
 
-    await checkAndCompressMemory(context, contextId, model);
+    await checkAndCompressMemory(runtime, contextId, model);
 
     await logger.log("info", "Memory extraction completed (async)", {
       contextId,
@@ -128,19 +115,19 @@ async function extractAndSaveMemory(params: {
 }
 
 async function checkAndCompressMemory(
-  context: ServiceRuntimeDependencies,
+  runtime: ServiceRuntime,
   contextId: string,
   model: LanguageModel,
 ): Promise<void> {
-  const logger = getLogger(context.rootPath, "info");
+  const logger = getLogger(runtime.rootPath, "info");
 
   try {
-    const config = context.config?.context?.memory;
+    const config = runtime.config?.context?.memory;
     const compressEnabled = config?.compressOnOverflow ?? true;
     if (!compressEnabled) return;
 
     const maxChars = config?.maxPrimaryChars ?? 15000;
-    const memoryManager = getMemoryManager(context, contextId);
+    const memoryManager = getMemoryManager(runtime, contextId);
     const currentSize = await memoryManager.getSize();
 
     if (currentSize <= maxChars) return;
@@ -163,7 +150,7 @@ async function checkAndCompressMemory(
     const currentContent = await memoryManager.load();
     const targetChars = Math.floor(maxChars * 0.8);
     const compressed = await compressMemory({
-      context,
+      context: runtime,
       contextId,
       currentContent,
       targetChars,

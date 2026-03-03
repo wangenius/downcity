@@ -1,7 +1,7 @@
 import { PlatformAdapter } from "./PlatformAdapter.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
@@ -49,7 +49,7 @@ export abstract class BaseChatAdapter extends PlatformAdapter {
 
   protected constructor(params: {
     channel: ChatDispatchChannel;
-    context: ServiceRuntimeDependencies;
+    context: ServiceRuntime;
   }) {
     super({
       channel: params.channel,

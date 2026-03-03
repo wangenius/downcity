@@ -20,7 +20,7 @@
 4. `service/`
    - `Registry.ts` / `ServiceRegistry.ts` 提供 service 注册契约与运行态调度入口。
    - service 采用 `actions` 对象模型：由 `Registry.ts` 自动注册 CLI 与 HTTP 路由（默认 `/service/<service>/<action>`）。
-   - `types/` 提供 service 依赖注入端口类型定义（`ServiceRuntimeDependencies` 等）。
+   - `types/` 提供 service 依赖注入端口类型定义（`ServiceRuntime` 等）。
    - `RequestContext.ts` 仅透传最小请求上下文（`contextId`）。
    - `RuntimeState.ts` 直接聚合 services 能力并注入运行时桥接。
    - chat 队列执行器已下沉到 `services/chat/runtime/ChatQueueWorker.ts`。

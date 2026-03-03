@@ -6,7 +6,7 @@ import {
   getShipContextMemoryMetaPath,
 } from "@/main/runtime/Paths.js";
 import type { MemoryEntry } from "@services/memory/types/Memory.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 
 /**
  * MemoryManager：管理单个 context 的记忆文件（memory/Primary.md）。
@@ -20,7 +20,7 @@ export class MemoryManager {
   readonly contextId: string;
   private readonly filePath: string;
 
-  constructor(context: ServiceRuntimeDependencies, contextId: string) {
+  constructor(context: ServiceRuntime, contextId: string) {
     const rootPath = String(context.rootPath || "").trim();
     if (!rootPath) throw new Error("MemoryManager requires a non-empty rootPath");
     const key = String(contextId || "").trim();

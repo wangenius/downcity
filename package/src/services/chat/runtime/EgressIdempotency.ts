@@ -10,11 +10,11 @@ import path from "path";
 import fs from "fs-extra";
 import { getCacheDirPath } from "@/main/runtime/Paths.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { JsonObject } from "@/types/Json.js";
 
 export async function tryClaimChatEgressChatSend(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   channel: ChatDispatchChannel;
   chatId: string;
   messageId: string;

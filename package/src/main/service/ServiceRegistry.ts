@@ -7,7 +7,7 @@
  */
 
 import type { Command } from "commander";
-import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { SystemPromptProvider } from "@core/types/SystemPromptProvider.js";
 import type { Context as HonoContext } from "hono";
@@ -76,7 +76,7 @@ export type ServiceAction<
   command?: ServiceActionCommand<P>;
   api?: ServiceActionApi<P>;
   execute: (params: {
-    context: ServiceRuntimeDependencies;
+    context: ServiceRuntime;
     payload: P;
     serviceName: string;
     actionName: string;
@@ -98,10 +98,10 @@ export type ServiceActions = {
  * 服务生命周期扩展能力。
  */
 export interface ServiceLifecycle {
-  start?(context: ServiceRuntimeDependencies): Promise<void> | void;
-  stop?(context: ServiceRuntimeDependencies): Promise<void> | void;
+  start?(context: ServiceRuntime): Promise<void> | void;
+  stop?(context: ServiceRuntime): Promise<void> | void;
   command?(params: {
-    context: ServiceRuntimeDependencies;
+    context: ServiceRuntime;
     command: string;
     payload?: JsonValue;
   }): Promise<ServiceCommandResult> | ServiceCommandResult;
@@ -128,7 +128,7 @@ export interface Service {
    * - 返回空数组表示该 service 无额外 prompt 注入。
    */
   systemPromptProviders?: (params: {
-    getContext: () => ServiceRuntimeDependencies;
+    getContext: () => ServiceRuntime;
   }) => SystemPromptProvider[];
   lifecycle?: ServiceLifecycle;
 }

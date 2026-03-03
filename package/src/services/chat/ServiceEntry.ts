@@ -24,7 +24,7 @@ import type {
   ServiceActionCommandInput,
 } from "@main/service/ServiceRegistry.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { ShipContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { TelegramBot } from "./adapters/telegram/Bot.js";
 import type { FeishuBot } from "./adapters/feishu/Feishu.js";
@@ -69,7 +69,7 @@ function isPlaceholder(value?: string): boolean {
   return value === "${}";
 }
 
-async function startChatAdapters(context: ServiceRuntimeDependencies): Promise<void> {
+async function startChatAdapters(context: ServiceRuntime): Promise<void> {
   if (adapterState.telegram || adapterState.feishu || adapterState.qq) {
     await stopChatAdapters();
   }
@@ -235,7 +235,7 @@ function mapChatSendApiInput(body: JsonValue): ChatSendActionPayload {
 }
 
 async function executeChatSendAction(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   payload: ChatSendActionPayload;
 }) {
   const chatKey = resolveChatKey({

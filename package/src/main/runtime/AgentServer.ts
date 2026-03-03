@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { logger as server_logger } from "@utils/logger/Logger.js";
-import { withContextRequestContext } from "@main/service/RequestContext.js";
+import { withRequestContext } from "@main/service/RequestContext.js";
 import http from "node:http";
 import fs from "fs-extra";
 import path from "path";
@@ -338,7 +338,7 @@ export class AgentServer {
         // [阶段2] 执行：在 withContextRequestContext 下运行 agent，保证下游可读取会话上下文。
         // API 场景同样会落盘 context messages，但它不是“平台消息回发”场景：
         // - 不提供 dispatcher 回发能力（响应通过 HTTP body 返回）
-        const result = await withContextRequestContext(
+        const result = await withRequestContext(
           {
             contextId,
           },

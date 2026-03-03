@@ -7,7 +7,7 @@ import type {
   AdapterChatKeyParams,
   AdapterSendTextParams,
 } from "@services/chat/adapters/PlatformAdapter.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { JsonObject } from "@/types/Json.js";
 
 /**
@@ -98,7 +98,7 @@ export class FeishuBot extends BaseChatAdapter {
     new Map();
 
   constructor(
-    context: ServiceRuntimeDependencies,
+    context: ServiceRuntime,
     appId: string,
     appSecret: string,
     domain: string | undefined,
@@ -669,7 +669,7 @@ Available commands:
 
 export async function createFeishuBot(
   config: FeishuConfig,
-  context: ServiceRuntimeDependencies,
+  context: ServiceRuntime,
 ): Promise<FeishuBot | null> {
   if (!config.enabled || !config.appId || !config.appSecret) {
     return null;

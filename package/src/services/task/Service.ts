@@ -9,7 +9,7 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { JsonValue } from "@/types/Json.js";
 import {
   isValidTaskId,
@@ -304,7 +304,7 @@ export async function updateTaskDefinition(params: {
 }
 
 export async function runTaskDefinition(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   projectRoot: string;
   request: TaskRunRequest;
 }): Promise<TaskRunResponse> {

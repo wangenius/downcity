@@ -1,5 +1,5 @@
 import { registerChatSender } from "@services/chat/runtime/ChatSendRegistry.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type {
   ChatDispatchAction,
   ChatDispatchChannel,
@@ -38,11 +38,11 @@ export type AdapterSendActionParams = AdapterChatKeyParams & {
  */
 export abstract class PlatformAdapter {
   readonly channel: ChatDispatchChannel;
-  protected readonly context: ServiceRuntimeDependencies;
+  protected readonly context: ServiceRuntime;
 
   protected constructor(params: {
     channel: ChatDispatchChannel;
-    context: ServiceRuntimeDependencies;
+    context: ServiceRuntime;
   }) {
     this.channel = params.channel;
     this.context = params.context;

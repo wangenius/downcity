@@ -2,12 +2,12 @@ import { DEFAULT_SHIP_PROMPTS } from "@core/prompts/System.js";
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
 import { ContextManager } from "@core/context/ContextManager.js";
 import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";
-import {
-  contextRequestContext,
-  withContextRequestContext,
-} from "@main/service/RequestContext.js";
 import { createModel } from "@core/llm/CreateModel.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type {
+  ServiceRuntime,
+  ServiceContext,
+  ServiceInvokePort,
+} from "@main/service/types/ServiceRuntimePorts.js";
 import {
   clearSystemPromptProviders,
   registerSystemPromptProvider,
@@ -40,6 +40,7 @@ import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
 import path from "path";
 import { watch, type FSWatcher } from "node:fs";
+import type { LanguageModel } from "ai";
 
 /**
  * RuntimeState：ShipMyAgent 进程级运行时状态（单例）。
@@ -79,6 +80,20 @@ const HOT_RELOAD_DEBOUNCE_MS = 300;
 let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
 let stopRuntimeHotReloadWatcher: (() => void) | null = null;
+let serviceModel: LanguageModel | null = null;
+
+/**
+ * 读取 service 运行时模型（必填）。
+ *
+ * 关键点（中文）
+ * - `ServiceContext.model` 是必需能力；若缺失则视为启动链路异常。
+ */
+function requireServiceModel(): LanguageModel {
+  if (serviceModel) return serviceModel;
+  throw new Error(
+    "Service runtime model is not initialized. Ensure initRuntimeState() completed successfully.",
+  );
+}
 
 /**
  * 读取 Agent.md（含默认兜底）。
@@ -135,7 +150,9 @@ function applyRuntimeSystems(nextSystems: string[]): void {
  */
 function reloadAgentMdSystems(reason: string): void {
   const runtime = getRuntimeStateBase();
-  const nextSystems = buildStaticSystems(loadAgentProfileText(runtime.rootPath));
+  const nextSystems = buildStaticSystems(
+    loadAgentProfileText(runtime.rootPath),
+  );
   if (systemsEqual(runtime.systems, nextSystems)) return;
 
   applyRuntimeSystems(nextSystems);
@@ -174,7 +191,7 @@ function reloadSystemPromptProviders(reason: string): void {
  * - 单个 service 失败不阻断整体初始化
  */
 function registerAllServiceSystemPromptProviders(params: {
-  getContext: () => ServiceRuntimeDependencies;
+  getContext: () => ServiceRuntime;
 }): void {
   clearSystemPromptProviders();
 
@@ -280,8 +297,13 @@ function startRuntimeHotReload(): void {
   });
 
   // skills：监听扫描 roots；若 root 不可监听则回退父目录。
-  const skillRoots = getClaudeSkillSearchRoots(runtime.rootPath, runtime.config);
-  const allowExternalSkills = Boolean(runtime.config.services?.skills?.allowExternalPaths);
+  const skillRoots = getClaudeSkillSearchRoots(
+    runtime.rootPath,
+    runtime.config,
+  );
+  const allowExternalSkills = Boolean(
+    runtime.config.services?.skills?.allowExternalPaths,
+  );
   const watchedRootPaths = new Set<string>();
   const parentWatchTargets = new Map<string, Set<string>>();
   for (const root of skillRoots) {
@@ -341,16 +363,14 @@ function startRuntimeHotReload(): void {
 }
 
 /**
- * service host 端口实现。
+ * service 调用端口实现。
  *
  * 关键点（中文）
- * - services 通过 host 与 main 交互（请求上下文 + action 分发）。
- * - 统一入口避免为每个能力新增固定 bridge 字段。
+ * - services 通过 invoke 调用其他 service action。
+ * - main 侧负责分发与错误语义统一。
  */
-const serviceHostPort = {
-  getRequestContext: () => contextRequestContext.getStore(),
-  withRequestContext: withContextRequestContext,
-  async dispatch(params: {
+const serviceInvokePort: ServiceInvokePort = {
+  async invoke(params: {
     service: string;
     action: string;
     payload?: JsonValue;
@@ -360,13 +380,13 @@ const serviceHostPort = {
     if (!serviceName) {
       return {
         success: false,
-        error: "dispatch.service is required",
+        error: "invoke.service is required",
       };
     }
     if (!action) {
       return {
         success: false,
-        error: "dispatch.action is required",
+        error: "invoke.action is required",
       };
     }
 
@@ -379,7 +399,7 @@ const serviceHostPort = {
     if (!result.success) {
       return {
         success: false,
-        error: result.message || "service dispatch failed",
+        error: result.message || "service invoke failed",
       };
     }
 
@@ -391,59 +411,46 @@ const serviceHostPort = {
 };
 
 /**
- * service 模型工厂桥接实现。
+ * 构建 service context（会话管理 + 模型）。
+ *
+ * 关键点（中文）
+ * - `context` 字段是 service 侧访问会话与模型能力的唯一入口。
+ * - 这里不直接暴露 ContextManager 实例，避免上层依赖具体实现细节。
  */
-const serviceModelFactory = {
-  createModel,
-};
+function buildServiceContext(input: RuntimeState): ServiceContext {
+  return {
+    getAgent: (contextId) => input.contextManager.getAgent(contextId),
+    getContextStore: (contextId) =>
+      input.contextManager.getContextStore(contextId),
+    clearAgent: (contextId) => input.contextManager.clearAgent(contextId),
+    afterContextUpdatedAsync: (contextId) =>
+      input.contextManager.afterContextUpdatedAsync(contextId),
+    appendUserMessage: (params) =>
+      input.contextManager.appendUserMessage(params),
+    model: requireServiceModel(),
+  };
+}
 
 /**
- * 构建基础 service runtime state（不含 contextManager）。
- *
- * 场景（中文）
- * - runtime 尚未 ready（例如 ContextManager 初始化阶段）也可安全使用。
+ * 构建 service runtime。
  */
-function buildServiceRuntimeStateBase(
-  input: RuntimeStateBase,
-): ServiceRuntimeDependencies {
+function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
   return {
     cwd: input.cwd,
     rootPath: input.rootPath,
     logger: input.logger,
     config: input.config,
     systems: input.systems,
-    host: serviceHostPort,
-    modelFactory: serviceModelFactory,
+    context: buildServiceContext(input),
+    invoke: serviceInvokePort,
   };
-}
-
-/**
- * 构建 ready service runtime state。
- *
- * 关键点（中文）
- * - runtime 已完成初始化，可安全用于 services
- */
-function buildServiceRuntimeStateReady(
-  input: RuntimeState,
-): ServiceRuntimeDependencies {
-  return {
-    ...buildServiceRuntimeStateBase(input),
-    contextManager: input.contextManager,
-  };
-}
-
-/**
- * 获取基础 service runtime state。
- */
-export function getServiceRuntimeStateBase(): ServiceRuntimeDependencies {
-  return buildServiceRuntimeStateBase(getRuntimeStateBase());
 }
 
 /**
  * 获取完整 service runtime state。
  */
-export function getServiceRuntimeState(): ServiceRuntimeDependencies {
-  return buildServiceRuntimeStateReady(getRuntimeState());
+export function getServiceRuntimeState(): ServiceRuntime {
+  return buildServiceRuntime(getRuntimeState());
 }
 
 /**
@@ -546,6 +553,11 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems,
   });
 
+  // 关键点（中文）：模型实例在 main 启动时创建一次，并注入给 services 复用。
+  // 模型是 ServiceContext 必需能力，初始化失败直接中断启动（fail-fast）。
+  serviceModel = null;
+  serviceModel = await createModel({ config });
+
   let contextManager: ContextManager;
   contextManager = new ContextManager({
     runMemoryMaintenance: async (contextId) =>
@@ -555,10 +567,17 @@ export async function initRuntimeState(cwd: string): Promise<void> {
       }),
   });
 
-  const chatWorkerRuntime: ServiceRuntimeDependencies = {
-    ...buildServiceRuntimeStateBase(getRuntimeStateBase()),
+  const runtimeStateForServices: RuntimeState = {
+    cwd: resolvedCwd,
+    rootPath,
+    logger: defaultLogger,
+    config,
+    systems,
     contextManager,
   };
+  const chatWorkerRuntime: ServiceRuntime = buildServiceRuntime(
+    runtimeStateForServices,
+  );
   const chatQueueWorker = new ChatQueueWorker({
     logger: defaultLogger,
     context: chatWorkerRuntime,
@@ -578,7 +597,6 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     getContext: () => getServiceRuntimeState(),
   });
   startRuntimeHotReload();
-
 }
 
 /**

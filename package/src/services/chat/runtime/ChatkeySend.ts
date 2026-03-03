@@ -11,7 +11,7 @@
 
 import { getChatSender } from "./ChatSendRegistry.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import { readChatMetaByContextId } from "./ChatMetaStore.js";
 
 type DispatchableChannel = "telegram" | "feishu" | "qq";
@@ -72,7 +72,7 @@ export function parseChatKeyForDispatch(chatKey: string): {
  * - parse 失败时回退到 services/chat 维护的 chat meta
  */
 async function resolveDispatchTarget(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   chatKey: string;
 }): Promise<{
   channel: ChatDispatchChannel;
@@ -126,7 +126,7 @@ async function resolveDispatchTarget(params: {
  * 3) 合并参数后调用 dispatcher 发送
  */
 export async function sendTextByChatKey(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   chatKey: string;
   text: string;
 }): Promise<{ success: boolean; error?: string }> {

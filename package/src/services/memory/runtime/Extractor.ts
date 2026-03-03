@@ -12,7 +12,7 @@ import type {
   MemoryCompressParams,
 } from "@services/memory/types/Memory.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
 
@@ -29,22 +29,17 @@ function toUiParts(message: { parts?: AnyUiMessagePart[] } | null | undefined): 
  */
 export async function extractMemoryFromContextMessages(
   params: MemoryExtractParams & {
-    context: ServiceRuntimeDependencies;
+    context: ServiceRuntime;
     model: LanguageModel;
   },
 ): Promise<MemoryEntry> {
-  const { context, contextId, entryRange, model } = params;
+  const { context: runtime, contextId, entryRange, model } = params;
   const [startIndex, endIndex] = entryRange;
-  const logger = getLogger(context.rootPath, "info");
+  const logger = getLogger(runtime.rootPath, "info");
 
   try {
-    const contextManager = context.contextManager;
-    if (!contextManager) {
-      throw new Error(
-        "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
-      );
-    }
-    const contextStore = contextManager.getContextStore(contextId);
+    const serviceContext = runtime.context;
+    const contextStore = serviceContext.getContextStore(contextId);
     const messages = await contextStore.loadRange(startIndex, endIndex);
 
     const messagesText = (() => {
@@ -187,12 +182,12 @@ ${messagesText}
  */
 export async function compressMemory(
   params: MemoryCompressParams & {
-    context: ServiceRuntimeDependencies;
+    context: ServiceRuntime;
     model: LanguageModel;
   },
 ): Promise<string> {
-  const { context, contextId, currentContent, targetChars, model } = params;
-  const logger = getLogger(context.rootPath, "info");
+  const { context: runtime, contextId, currentContent, targetChars, model } = params;
+  const logger = getLogger(runtime.rootPath, "info");
 
   try {
     const result = await generateText({

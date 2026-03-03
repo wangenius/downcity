@@ -20,7 +20,7 @@ import {
   type TelegramUser,
 } from "./Shared.js";
 import { TelegramStateStore } from "./StateStore.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 
 /**
  * Telegram 平台适配器。
@@ -51,7 +51,7 @@ export class TelegramBot extends BaseChatAdapter {
   private followupExpiryByActorAndThread: Map<string, number> = new Map();
 
   constructor(
-    context: ServiceRuntimeDependencies,
+    context: ServiceRuntime,
     botToken: string,
     chatId: string | undefined,
     followupWindowMs: number | undefined,
@@ -948,7 +948,7 @@ export class TelegramBot extends BaseChatAdapter {
 
 export function createTelegramBot(
   config: TelegramConfig,
-  context: ServiceRuntimeDependencies,
+  context: ServiceRuntime,
 ): TelegramBot | null {
   if (!config.enabled || !config.botToken || config.botToken === "${}") {
     return null;

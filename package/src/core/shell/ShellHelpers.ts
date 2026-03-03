@@ -9,7 +9,7 @@
 import path from "path";
 import { randomBytes } from "crypto";
 import { getRuntimeState } from "@main/runtime/RuntimeState.js";
-import { contextRequestContext } from "@main/service/RequestContext.js";
+import { requestContext } from "@main/service/RequestContext.js";
 import { llmRequestContext } from "@utils/logger/Context.js";
 import type {
   ShellContext,
@@ -159,7 +159,7 @@ function setEnvString(
  */
 export function buildShellContextEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
-  const contextCtx = contextRequestContext.getStore();
+  const contextCtx = requestContext.getStore();
   const llmCtx = llmRequestContext.getStore();
 
   setEnvString(env, "SMA_CTX_CONTEXT_ID", contextCtx?.contextId);

@@ -42,4 +42,4 @@
 ## 边界约束
 
 - `services` 可以使用 `core` 抽象，但不应把业务策略回灌到 `core`。
-- 服务间协作优先通过运行时依赖端口（`ServiceRuntimeDependencies`）而非隐式全局状态。
+- 服务间协作优先通过运行时依赖端口（`ServiceRuntime`）而非隐式全局状态。

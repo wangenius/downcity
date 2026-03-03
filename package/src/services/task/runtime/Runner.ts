@@ -10,7 +10,8 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
+import { withRequestContext } from "@main/service/RequestContext.js";
 import type {
   ShipTaskFrontmatterV1,
   ShipTaskRunExecutionStatusV1,
@@ -72,29 +73,24 @@ type DialogueRoundRecord = {
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
 
 /**
- * 读取 context manager 端口。
- *
- * 关键点（中文）
- * - 在使用点显式校验，避免隐藏依赖来源。
+ * 读取 service context 端口。
  */
-function requireContextManager(context: ServiceRuntimeDependencies) {
-  const manager = context.contextManager;
-  if (manager) return manager;
-  throw new Error(
-    "Service contextManager is required but missing. Ensure server injects contextManager before invoking this capability.",
-  );
+function requireContext(runtime: ServiceRuntime) {
+  return runtime.context;
 }
 
 /**
- * 读取 host 端口。
+ * 读取 invoke 端口。
  *
  * 关键点（中文）
  * - 在使用点显式校验，避免隐藏依赖来源。
  */
-function requireHost(context: ServiceRuntimeDependencies) {
-  const host = context.host;
-  if (host) return host;
-  throw new Error("Service host is required but missing.");
+function requireInvoke(context: ServiceRuntime) {
+  const invoke = context.invoke;
+  if (invoke) return invoke;
+  throw new Error(
+    "Service invoke is required but missing. Ensure server injects invoke before invoking this capability.",
+  );
 }
 
 /**
@@ -263,16 +259,15 @@ function buildUserSimulatorQuery(params: {
  * 执行一轮 agent.run。
  */
 async function runAgentRound(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   contextId: string;
   taskId: string;
   query: string;
   actorId: string;
   actorName: string;
 }): Promise<{ outputText: string; rawResult: AgentResult }> {
-  const agent = requireContextManager(params.context).getAgent(params.contextId);
-  const host = requireHost(params.context);
-  const result = await host.withRequestContext(
+  const agent = requireContext(params.context).getAgent(params.contextId);
+  const result = await withRequestContext(
     {
       contextId: params.contextId,
     },
@@ -282,7 +277,7 @@ async function runAgentRound(params: {
         query: params.query,
       }),
   );
-  const pickText = await host.dispatch({
+  const pickText = await requireInvoke(params.context).invoke({
     service: "chat",
     action: "extract_text",
     payload: {
@@ -309,12 +304,12 @@ async function runAgentRound(params: {
  * 把 executor 的 assistant 消息落盘到 run context store。
  */
 async function appendExecutorAssistantMessage(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   runContextId: string;
   taskId: string;
   rawResult: AgentResult;
 }): Promise<void> {
-  const store = requireContextManager(params.context).getContextStore(
+  const store = requireContext(params.context).getContextStore(
     params.runContextId,
   );
   const assistantMessage = params.rawResult?.assistantMessage;
@@ -395,7 +390,7 @@ async function validateTaskResult(params: {
  * - `notified`/`notifyError`：回传 chat 通知状态。
  */
 export async function runTaskNow(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   taskId: string;
   trigger: ShipTaskRunTriggerV1;
   projectRoot?: string;
@@ -848,7 +843,7 @@ export async function runTaskNow(params: {
       textLines.push("");
       textLines.push(`error: ${summarizeText(errorText, 500)}`);
     }
-    const send = await requireHost(context).dispatch({
+    const send = await requireInvoke(context).invoke({
       service: "chat",
       action: "send",
       payload: {

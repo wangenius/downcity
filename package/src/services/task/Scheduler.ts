@@ -7,7 +7,7 @@
  */
 
 import type { ServiceCronEngine } from "@main/service/types/ServiceRuntimePorts.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import { listTasks, readTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 
@@ -24,7 +24,7 @@ function normalizeCronExpression(raw: string): string | null {
 }
 
 export async function registerTaskCronJobs(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   engine: ServiceCronEngine;
 }): Promise<{ tasksFound: number; jobsScheduled: number }> {
   const runtime = params.context;

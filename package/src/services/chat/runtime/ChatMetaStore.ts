@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import { getShipChatMetaDirPath, getShipChatMetaPath } from "@/main/runtime/Paths.js";
-import type { ServiceRuntimeDependencies } from "@main/service/types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 
@@ -25,7 +25,7 @@ function normalizeChatId(chatId: string): string {
  * 读取指定 contextId 的 chat meta。
  */
 export async function readChatMetaByContextId(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   contextId: string;
 }): Promise<ChatMetaV1 | null> {
   const rootPath = String(params.context.rootPath || "").trim();
@@ -73,7 +73,7 @@ export async function readChatMetaByContextId(params: {
  * 更新指定 contextId 的 chat meta（全量覆盖最近快照）。
  */
 export async function upsertChatMetaByContextId(params: {
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
   contextId: string;
   channel: ChatDispatchChannel;
   chatId: string;

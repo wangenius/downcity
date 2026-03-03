@@ -10,11 +10,9 @@ import path from "node:path";
 import type { Command } from "commander";
 import type { Context as HonoContext, Hono } from "hono";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceRuntimeDependencies } from "./types/ServiceRuntimeTypes.js";
+import type { ServiceRuntime } from "@main/service/types/ServiceRuntimePorts.js";
 import type { ServiceCommandResponse } from "@main/types/Services.js";
-import {
-  callServer,
-} from "@main/runtime/Client.js";
+import { callServer } from "@main/runtime/Client.js";
 import { printResult } from "@main/utils/CliOutput.js";
 import { parsePortOption } from "../utils/Checker.js";
 import type {
@@ -94,8 +92,8 @@ function ensureServiceRuntimeRecord(service: Service): ServiceRuntimeRecord {
 }
 
 function hasCommandActions(service: Service): boolean {
-  return Object.values(service.actions).some(
-    (action) => Boolean(action.command),
+  return Object.values(service.actions).some((action) =>
+    Boolean(action.command),
   );
 }
 
@@ -113,7 +111,8 @@ function toRuntimeSnapshot(
       ? { lastCommandAt: record.lastCommandAt }
       : {}),
     supportsLifecycle: Boolean(lifecycle?.start || lifecycle?.stop),
-    supportsCommand: Boolean(lifecycle?.command) || hasCommandActions(record.service),
+    supportsCommand:
+      Boolean(lifecycle?.command) || hasCommandActions(record.service),
   };
 }
 
@@ -165,7 +164,7 @@ async function invokeServiceAction(params: {
   service: Service;
   actionName: string;
   payload?: JsonValue;
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
 }): Promise<ServiceActionResult<JsonValue>> {
   const action = resolveServiceAction(params.service, params.actionName);
   if (!action) {
@@ -215,7 +214,7 @@ export function isServiceRuntimeRunning(serviceName: string): boolean {
 
 async function startServiceRuntimeInternal(
   service: Service,
-  context: ServiceRuntimeDependencies,
+  context: ServiceRuntime,
 ): Promise<ServiceRuntimeControlResult> {
   const record = ensureServiceRuntimeRecord(service);
   try {
@@ -245,7 +244,7 @@ async function startServiceRuntimeInternal(
 
 async function stopServiceRuntimeInternal(
   service: Service,
-  context: ServiceRuntimeDependencies,
+  context: ServiceRuntime,
 ): Promise<ServiceRuntimeControlResult> {
   const record = ensureServiceRuntimeRecord(service);
   try {
@@ -276,7 +275,7 @@ async function stopServiceRuntimeInternal(
 export async function controlServiceRuntime(params: {
   serviceName: string;
   action: ServiceRuntimeControlAction;
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
 }): Promise<ServiceRuntimeControlResult> {
   const service = resolveServiceByName(params.serviceName);
   if (!service) {
@@ -311,7 +310,7 @@ export async function runServiceCommand(params: {
   serviceName: string;
   command: string;
   payload?: JsonValue;
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
 }): Promise<ServiceCommandResult & { service?: ServiceRuntimeSnapshot }> {
   const service = resolveServiceByName(params.serviceName);
   if (!service) {
@@ -428,7 +427,7 @@ export async function runServiceCommand(params: {
 }
 
 export async function startAllServiceRuntimes(
-  context: ServiceRuntimeDependencies,
+  context: ServiceRuntime,
 ): Promise<{
   success: boolean;
   results: ServiceRuntimeControlResult[];
@@ -449,9 +448,7 @@ export async function startAllServiceRuntimes(
   };
 }
 
-export async function stopAllServiceRuntimes(
-  context: ServiceRuntimeDependencies,
-): Promise<{
+export async function stopAllServiceRuntimes(context: ServiceRuntime): Promise<{
   success: boolean;
   results: ServiceRuntimeControlResult[];
 }> {
@@ -478,7 +475,8 @@ function resolveProjectRoot(pathInput?: string): string {
 function toJsonValue(input: unknown): JsonValue | undefined {
   if (input === null) return null;
   if (typeof input === "string") return input;
-  if (typeof input === "number") return Number.isFinite(input) ? input : undefined;
+  if (typeof input === "number")
+    return Number.isFinite(input) ? input : undefined;
   if (typeof input === "boolean") return input;
 
   if (Array.isArray(input)) {
@@ -493,7 +491,9 @@ function toJsonValue(input: unknown): JsonValue | undefined {
 
   if (typeof input === "object" && input) {
     const output: JsonObject = {};
-    for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(
+      input as Record<string, unknown>,
+    )) {
       const normalized = toJsonValue(value);
       if (normalized === undefined) continue;
       output[key] = normalized;
@@ -536,8 +536,8 @@ function toServiceActionCommandArgs(values: unknown[]): string[] {
 function isCommanderCommandLike(value: unknown): value is Command {
   return Boolean(
     value &&
-      typeof value === "object" &&
-      typeof (value as { opts?: unknown }).opts === "function",
+    typeof value === "object" &&
+    typeof (value as { opts?: unknown }).opts === "function",
   );
 }
 
@@ -550,10 +550,11 @@ function registerServiceActionCommand(params: {
   const commandSpec = params.action.command;
   if (!commandSpec) return;
 
-  const serviceCommand = params.program.commands.find(
-    (item) => item.name() === params.service.name,
-  )
-    || params.program
+  const serviceCommand =
+    params.program.commands.find(
+      (item) => item.name() === params.service.name,
+    ) ||
+    params.program
       .command(params.service.name)
       .description(`${params.service.name} service actions`)
       .helpOption("--help", "display help for command");
@@ -576,7 +577,7 @@ function registerServiceActionCommand(params: {
       commandLike ? rawArgs.slice(0, -1) : rawArgs,
     );
     const allOptions = commandLike
-      ? ((commandLike.opts() as Record<string, unknown>) || {})
+      ? (commandLike.opts() as Record<string, unknown>) || {}
       : {};
     const actionOptions = toServiceActionCommandOpts(allOptions);
     const bridgeOptions = toServiceCliBridgeOptions(allOptions);
@@ -714,7 +715,7 @@ function registerServiceActionApiRoute(params: {
   service: Service;
   actionName: string;
   action: ServiceAction<JsonValue, JsonValue>;
-  context: ServiceRuntimeDependencies;
+  context: ServiceRuntime;
 }): void {
   const api = params.action.api;
   if (!api) return;
@@ -784,7 +785,7 @@ export function registerAllServicesForCli(program: Command): void {
 
 export function registerAllServicesForServer(
   app: Hono,
-  context: ServiceRuntimeDependencies,
+  context: ServiceRuntime,
 ): void {
   for (const service of SERVICES) {
     ensureServiceRuntimeRecord(service);

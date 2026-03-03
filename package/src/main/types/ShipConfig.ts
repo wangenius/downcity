@@ -92,9 +92,9 @@ export interface ShipConfig {
           followupWindowMs?: number;
           /**
            * Who can interact with the bot in group chats.
-           * - "initiator_or_admin" (default): only the first person who talked to the bot in that chat/topic,
+           * - "anyone" (default): all group members can talk to the bot.
+           * - "initiator_or_admin": only the first person who talked to the bot in that chat/topic,
            *   or group admins, can use it.
-           * - "anyone": all group members can talk to the bot (when addressed).
            */
           groupAccess?: "initiator_or_admin" | "anyone";
         };
@@ -113,6 +113,11 @@ export interface ShipConfig {
           appId?: string; // 机器人ID
           appSecret?: string; // 密钥
           sandbox?: boolean; // 是否使用沙箱环境
+          /**
+           * 群聊权限门禁：
+           * - "anyone"（默认）：群成员都可触发机器人。
+           * - "initiator_or_admin"：仅发起人或管理员可触发机器人。
+           */
           groupAccess?: "initiator_or_admin" | "anyone";
         };
       };

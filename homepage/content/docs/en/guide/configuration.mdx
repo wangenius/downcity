@@ -44,7 +44,7 @@ description: Deep dive into ship.json and Agent.md configuration
           "botToken": "${TELEGRAM_BOT_TOKEN}",
           "chatId": "${TELEGRAM_CHAT_ID}",
           "followupWindowMs": 600000,
-          "groupAccess": "initiator_or_admin"
+          "groupAccess": "anyone"
         },
         "feishu": {
           "enabled": true,
@@ -102,7 +102,7 @@ Configure chat adapters for various platforms to deploy your Agent on different 
 - **botToken**: Bot Token, supports environment variables
 - **chatId**: (Optional) Specify allowed chat ID
 - **followupWindowMs**: (Optional) Followup window duration, default 10 minutes
-- **groupAccess**: (Optional) Group chat access control, `"initiator_or_admin"` or `"anyone"`
+- **groupAccess**: (Optional) Group chat access control, `"anyone"` (default) or `"initiator_or_admin"`
 - **Typing indicator**: While the Agent is executing, the bot will show Telegram “typing…” status (auto-refreshed until completion).
 
 **feishu** (Feishu/Lark Bot)
@@ -117,7 +117,7 @@ Configure chat adapters for various platforms to deploy your Agent on different 
 - **appId**: QQ application ID
 - **appSecret**: QQ application secret
 - **sandbox**: (Optional) Whether to use sandbox environment, default `false`
-- **groupAccess**: (Optional) Group chat access control, `"initiator_or_admin"` (default) or `"anyone"`
+- **groupAccess**: (Optional) Group chat access control, `"anyone"` (default) or `"initiator_or_admin"`
 
 > For detailed configuration and service guides, please refer to [Service Guide](/en/docs/guide/services).
 

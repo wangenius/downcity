@@ -125,7 +125,7 @@ Edit `services.chat.adapters.qq` in `ship.json`:
           "enabled": true,
           "appId": "your_app_id_here",
           "appSecret": "your_app_secret_here",
-          "groupAccess": "initiator_or_admin"
+          "groupAccess": "anyone"
         }
       }
     }
@@ -135,8 +135,8 @@ Edit `services.chat.adapters.qq` in `ship.json`:
 
 `groupAccess`:
 
-- `initiator_or_admin` (default): only the group initiator (first user who talks to the bot) or admins can keep triggering the bot
-- `anyone`: any group member can trigger the bot
+- `anyone` (default): any group member can trigger the bot
+- `initiator_or_admin`: only the group initiator (first user who talks to the bot) or admins can keep triggering the bot
 
 > 🔒 **Security Tip**: Keep your App Secret secure. Never commit it to version control. Consider using environment variables.
 

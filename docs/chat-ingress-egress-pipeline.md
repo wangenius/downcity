@@ -44,8 +44,8 @@
 `chat` service 的 lifecycle `start()` 会启动各平台适配器（telegram/feishu/qq）。  
 参考：`package/src/services/chat/ServiceEntry.ts:360`
 
-另外，QQ 的群权限默认值在这里被归一到 `anyone`（除非显式配置 `initiator_or_admin`）。  
-参考：`package/src/services/chat/ServiceEntry.ts:116`
+另外，Telegram / QQ 的群权限默认值都为 `anyone`（除非显式配置 `initiator_or_admin`）。  
+参考：`package/src/services/chat/adapters/telegram/Bot.ts:69`、`package/src/services/chat/ServiceEntry.ts:116`
 
 ---
 

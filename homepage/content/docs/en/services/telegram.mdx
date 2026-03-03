@@ -7,7 +7,7 @@ description: Chat with your agent and receive notifications on Telegram
 
 > ⚠️ **Simplified mode (2026-02-03)**: the current `shipmyagent` package disables approvals (full-permission execution). Mentions of “approval prompts” in older docs may be outdated.
 
-Use Telegram to chat with ShipMyAgent (DM or group mention).
+Use Telegram to chat with ShipMyAgent (DM or group chat).
 
 > Want the internal flow? See: [/docs/services/telegram-message-flow](/docs/services/telegram-message-flow)
 
@@ -47,11 +47,11 @@ Enable Telegram in `ship.json`:
 
 > ShipMyAgent uses a tool-strict chat mode: the agent should use the `chat_send` tool to decide when/how to send replies (multiple/staged messages are allowed).
 
-### Optional: allow anyone in a group
+### Optional: restrict group access
 
-By default, group chats are restricted to the initiator (the first person who talks to the bot in that chat/topic) or group admins.
+By default, `groupAccess` is `anyone`, so all group members can talk to the bot.
 
-To allow **any group member** to talk to the bot (when they mention it / reply to it), set:
+If you want a stricter policy (only the initiator or group admins), set:
 
 ```json
 {
@@ -61,7 +61,7 @@ To allow **any group member** to talk to the bot (when they mention it / reply t
         "telegram": {
           "enabled": true,
           "botToken": "${TELEGRAM_BOT_TOKEN}",
-          "groupAccess": "anyone"
+          "groupAccess": "initiator_or_admin"
         }
       }
     }

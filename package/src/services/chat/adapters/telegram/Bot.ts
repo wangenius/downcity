@@ -67,7 +67,7 @@ export class TelegramBot extends BaseChatAdapter {
         ? (followupWindowMs as number)
         : 10 * 60 * 1000;
     this.groupAccess =
-      groupAccess === "anyone" ? "anyone" : "initiator_or_admin";
+      groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone";
     this.api = new TelegramApiClient({
       botToken,
       projectRoot: this.rootPath,

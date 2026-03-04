@@ -665,8 +665,21 @@ export class ContextStore {
   */
   async toModelMessages(params: { tools?: ToolSet }): Promise<ModelMessage[]> {
     const msgs = await this.loadAll();
+    // 关键点（中文）：仅保留 text part，避免把历史 tool-call/tool-result 重放到 responses 导致引用链断裂。
+    const sanitizedMessages = msgs
+      .map((m) => {
+        const parts = Array.isArray(m.parts)
+          ? m.parts.filter((part) => part?.type === "text")
+          : [];
+        return {
+          ...m,
+          parts,
+        };
+      })
+      .filter((m) => Array.isArray(m.parts) && m.parts.length > 0);
+
     // convertToModelMessages 需要的是“没有 id 的 UIMessage”
-    const input: Array<Omit<ContextMessageV1, "id">> = msgs.map((m) => {
+    const input: Array<Omit<ContextMessageV1, "id">> = sanitizedMessages.map((m) => {
       const { id: _id, ...rest } = m;
       return rest;
     });

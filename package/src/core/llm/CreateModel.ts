@@ -72,16 +72,15 @@ export async function createModel(input: {
     return anthropicProvider(resolvedModel);
   }
 
-  // custom provider 默认走 OpenAI Chat Completions（中文）：
-  // - 避免 Responses 在复杂 tool history 下的 item_reference 对齐约束。
-  // - 对多数 OpenAI-compatible 网关兼容性更高。
+  // custom provider 走 OpenAI Responses 协议（中文）：
+  // - 兼容仅支持 `/v1/responses` 的网关。
   if (provider === "custom") {
     const customProvider = createOpenAI({
       apiKey: resolvedApiKey,
       baseURL: resolvedBaseUrl || "https://api.openai.com/v1",
       fetch: loggingFetch as typeof fetch,
     });
-    return customProvider.chat(resolvedModel);
+    return customProvider(resolvedModel);
   }
 
   const openaiProvider = createOpenAI({

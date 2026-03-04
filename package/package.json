@@ -1,6 +1,6 @@
 {
   "name": "shipmyagent",
-  "version": "1.0.169",
+  "version": "1.0.170",
   "type": "module",
   "description": "把一个代码仓库，启动成一个可对话、可审计的 Agent Runtime",
   "bin": {
@@ -11,6 +11,9 @@
     "build": "tsc && tsc-alias && node scripts/copy-built-in-skills.mjs && node scripts/copy-prompt-assets.mjs",
     "dev": "tsc --watch",
     "start": "node bin/start.js",
+    "test": "npm run build && node --test test/**/*.test.mjs",
+    "test:model": "npm run build && node --test test/model/create-model.test.mjs",
+    "test:model:smoke": "node test/test-model.mjs",
     "typecheck": "tsc --noEmit",
     "lint:boundaries": "node scripts/lint-import-boundaries.mjs",
     "lint": "npm run lint:boundaries"

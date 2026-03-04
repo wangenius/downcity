@@ -176,24 +176,22 @@ function formatMessagesForLog(
 ): string[] {
   const out: string[] = [];
 
-  for (let index = 0; index < messages.length; index++) {
-    const message = messages[index];
+  for (const message of messages) {
     const role = resolveMessageRoleLabel(message);
     const name = getStringField(message, "name");
     const toolCallId = getStringField(message, "tool_call_id");
     const callId = getStringField(message, "call_id");
     const output = summarizeValue(message.output);
     const outputText = summarizeValue(message.output_text);
+    const segments: string[] = [];
 
-    out.push(formatLogField(`msg.${index}.role`, role));
-    if (name) out.push(formatLogField(`msg.${index}.name`, name));
-    if (toolCallId) out.push(formatLogField(`msg.${index}.tool_call_id`, toolCallId));
-    if (callId) out.push(formatLogField(`msg.${index}.call_id`, callId));
+    if (name) segments.push(`name=${name}`);
+    if (toolCallId) segments.push(`tool_call_id=${toolCallId}`);
+    if (callId) segments.push(`call_id=${callId}`);
 
     const toolCalls = formatToolCalls(message.tool_calls, opts.maxToolArgsChars);
     if (toolCalls) {
-      for (let toolIndex = 0; toolIndex < toolCalls.length; toolIndex++) {
-        const toolCall = toolCalls[toolIndex];
+      for (const toolCall of toolCalls) {
         const label = [
           toolCall.id ? `id=${toolCall.id}` : "",
           toolCall.type ? `type=${toolCall.type}` : "",
@@ -202,44 +200,22 @@ function formatMessagesForLog(
         ]
           .filter(Boolean)
           .join("; ");
-        if (label) {
-          out.push(
-            formatLogField(
-              `msg.${index}.tool.${toolIndex}`,
-              toInlineLogValue(label, opts.maxToolArgsChars),
-            ),
-          );
-        }
+        if (label) segments.push(`tool{${label}}`);
       }
     }
 
     if ("content" in message) {
       const contentText = contentToText(message.content, opts.maxContentChars);
-      if (contentText) {
-        out.push(
-          formatLogField(
-            `msg.${index}.content`,
-            toInlineLogValue(contentText, opts.maxContentChars),
-          ),
-        );
-      }
+      if (contentText) segments.push(contentText);
     }
-    if (outputText) {
-      out.push(
-        formatLogField(
-          `msg.${index}.output_text`,
-          toInlineLogValue(outputText, opts.maxContentChars),
-        ),
-      );
-    }
-    if (output) {
-      out.push(
-        formatLogField(
-          `msg.${index}.output`,
-          toInlineLogValue(output, opts.maxContentChars),
-        ),
-      );
-    }
+    if (outputText) segments.push(`output_text=${outputText}`);
+    if (output) segments.push(`output=${output}`);
+
+    const summary = toInlineLogValue(
+      segments.filter(Boolean).join(" | ") || "-",
+      opts.maxContentChars,
+    );
+    out.push(`[${role}]: ${summary}`);
   }
 
   return out;

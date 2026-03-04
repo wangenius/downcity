@@ -118,13 +118,24 @@ Language Model configuration.
     "provider": "custom",
     "model": "custom-model",
     "baseUrl": "https://your-api.com/v1",
-    "apiKey": "${CUSTOM_API_KEY}",
-    "headers": {
-      "X-Custom-Header": "value"
-    }
+    "apiKey": "${CUSTOM_API_KEY}"
   }
 }
 ```
+
+> Note: `custom` now uses OpenAI Responses protocol by default (`/v1/responses`), which matches gateways like GMN that only support Responses.
+> Minimal GMN example:
+>
+> ```json
+> {
+>   "llm": {
+>     "provider": "custom",
+>     "model": "gpt-5.2",
+>     "baseUrl": "https://gmn.chuangzuoli.com/v1",
+>     "apiKey": "${LLM_API_KEY}"
+>   }
+> }
+> ```
 
 #### context (object, optional)
 

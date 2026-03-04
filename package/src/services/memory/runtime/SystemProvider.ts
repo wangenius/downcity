@@ -8,7 +8,6 @@
 
 import fs from "fs-extra";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import type { ServiceSystemBuilder } from "@main/service/ServiceRegistry.js";
 import { requestContext } from "@/main/service/RequestContext.js";
 import {
   getShipProfileOtherPath,
@@ -38,10 +37,9 @@ function getCurrentContextId(): string {
  * - 若 Primary.md 缺失或为空，则忽略该段。
  * - 读取失败走容错，不阻断主流程。
  */
-async function buildMemorySystemText(
-  getContext: () => ServiceRuntime,
+export async function buildMemorySystemText(
+  runtime: ServiceRuntime,
 ): Promise<string> {
-  const runtime = getContext();
   const sections: string[] = [];
 
   const profilePrimary = await readOptionalMarkdown(
@@ -71,13 +69,4 @@ async function buildMemorySystemText(
   }
 
   return sections.join("\n\n").trim();
-}
-
-/**
- * memory service system 构建器。
- */
-export function createMemorySystemBuilder(
-  getContext: () => ServiceRuntime,
-): ServiceSystemBuilder {
-  return () => buildMemorySystemText(getContext);
 }

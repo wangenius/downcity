@@ -12,9 +12,9 @@
 ## Service Prompt 注册约定
 
 每个 `services/<name>/ServiceEntry.ts` 都可以声明 `system` 字段。  
-该字段返回 `() => string` 形式的 system 文本构建函数。
+该字段签名为 `system(context) => string`，直接返回 system 文本。
 
-进程层在 `RuntimeState` 中统一遍历 services 并注册，
+运行时在每次请求前动态遍历 services 并收集 system，
 避免在 `main` 侧硬编码某个具体 service 的 system 细节。
 
 ## Service Action 约定

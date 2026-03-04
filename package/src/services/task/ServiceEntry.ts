@@ -420,7 +420,7 @@ function mapTaskStatusApiInput(body: JsonObject): TaskSetStatusRequest {
 export const taskService: Service = {
   name: "task",
   // 关键点（中文）：task service 当前不注入额外 system prompt。
-  system: () => () => "",
+  system: () => "",
   actions: {
     list: {
       command: {

@@ -8,7 +8,6 @@
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { type LanguageModel } from "ai";
 import { createLlmLoggingFetch } from "@utils/logger/Fetch.js";
 import { getLogger } from "@utils/logger/Logger.js";
@@ -73,14 +72,16 @@ export async function createModel(input: {
     return anthropicProvider(resolvedModel);
   }
 
+  // custom provider 统一走 OpenAI Responses 协议（中文）：
+  // - 便于对接仅支持 /v1/responses 的网关（如 GMN）。
+  // - 不再走 legacy chat/completions 路径。
   if (provider === "custom") {
-    const compatProvider = createOpenAICompatible({
-      name: "custom",
+    const customProvider = createOpenAI({
       apiKey: resolvedApiKey,
       baseURL: resolvedBaseUrl || "https://api.openai.com/v1",
       fetch: loggingFetch as typeof fetch,
-    });
-    return compatProvider(resolvedModel);
+    }); 
+    return customProvider(resolvedModel);
   }
 
   const openaiProvider = createOpenAI({

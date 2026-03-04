@@ -8,7 +8,6 @@ import type {
   ServiceContext,
   ServiceInvokePort,
 } from "@/main/service/ServiceRuntime.js";
-import type { ServiceSystemBuilder } from "@main/service/ServiceRegistry.js";
 import {
   loadProjectDotenv,
   loadShipConfig,
@@ -29,9 +28,8 @@ import {
   getShipTasksDirPath,
 } from "@/main/runtime/Paths.js";
 import { SERVICES } from "@main/service/Services.js";
-import { getClaudeSkillSearchRoots } from "@services/skills/runtime/Paths.js";
 import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
-import { createMemorySystemBuilder } from "@services/memory/runtime/SystemProvider.js";
+import { buildMemorySystemText } from "@services/memory/runtime/SystemProvider.js";
 import { runServiceCommand } from "@main/service/Registry.js";
 import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
@@ -78,7 +76,6 @@ let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
 let stopRuntimeHotReloadWatcher: (() => void) | null = null;
 let serviceModel: LanguageModel | null = null;
-let serviceSystemBuilders: ServiceSystemBuilder[] = [];
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
@@ -165,77 +162,33 @@ function reloadAgentMdSystems(reason: string): void {
 }
 
 /**
- * 刷新 service system 构建器。
- *
- * 关键点（中文）
- * - skills 变更后重建 system 构建函数，确保后续请求读取最新技能状态。
- */
-function reloadServiceSystemBuilders(reason: string): void {
-  const runtime = getRuntimeStateBase();
-  try {
-    registerAllServiceSystemBuilders({
-      getContext: () => getServiceRuntimeState(),
-    });
-    runtime.logger.info("Service system builders hot reloaded", { reason });
-  } catch (error) {
-    runtime.logger.warn("Service system builders hot reload failed", {
-      reason,
-      error: String(error),
-    });
-  }
-}
-
-/**
- * 注册所有 service 的 system 构建函数。
- *
- * 关键点（中文）
- * - service 自己声明 system 构建器，runtime 统一聚合注册
- * - 单个 service 失败不阻断整体初始化
- */
-function registerAllServiceSystemBuilders(params: {
-  getContext: () => ServiceRuntime;
-}): void {
-  const nextBuilders: ServiceSystemBuilder[] = [];
-
-  for (const service of SERVICES) {
-    const declareSystem = service.system;
-    if (typeof declareSystem !== "function") continue;
-    try {
-      const buildSystem = declareSystem({ getContext: params.getContext });
-      if (typeof buildSystem === "function") nextBuilders.push(buildSystem);
-    } catch {
-      // fail-open：单个 service system 声明失败不阻断启动
-    }
-  }
-
-  // memory 当前不属于 ServiceEntry，保留独立注入。
-  try {
-    nextBuilders.push(createMemorySystemBuilder(params.getContext));
-  } catch {
-    // ignore
-  }
-
-  serviceSystemBuilders = nextBuilders;
-}
-
-/**
  * 收集所有 service 的 system 文本。
  *
  * 关键点（中文）
- * - 按注册顺序执行，逐段拼接。
+ * - 每次请求时动态遍历 services，避免额外注册层。
  * - 单个 service 失败走 fail-open，不阻断主链路。
  */
 export async function collectServiceSystemTexts(): Promise<string[]> {
+  const runtime = getServiceRuntimeState();
   const out: string[] = [];
-  for (const buildSystem of serviceSystemBuilders) {
+  for (const service of SERVICES) {
+    if (typeof service.system !== "function") continue;
     try {
-      const text = normalizeSystemText(await buildSystem());
+      const text = normalizeSystemText(await service.system(runtime));
       if (!text) continue;
       out.push(text);
     } catch {
       // fail-open
     }
   }
+
+  try {
+    const memoryText = normalizeSystemText(await buildMemorySystemText(runtime));
+    if (memoryText) out.push(memoryText);
+  } catch {
+    // fail-open
+  }
+
   return out;
 }
 
@@ -249,11 +202,10 @@ export function stopRuntimeHotReload(): void {
 }
 
 /**
- * 启动 runtime 文件热重载监听（Agent.md + skills roots）。
+ * 启动 runtime 文件热重载监听（Agent.md）。
  *
  * 监听策略（中文）
  * - Agent.md：监听项目根目录并过滤目标文件名，兼容 rename/replace。
- * - skills：优先监听技能根目录（递归）；失败时回退到监听父目录。
  * - 所有回调都做 debounce，避免编辑器连续写入造成重复刷新。
  */
 function startRuntimeHotReload(): void {
@@ -321,54 +273,6 @@ function startRuntimeHotReload(): void {
     schedule("agent-md", () => reloadAgentMdSystems("agent_md_changed"));
   });
 
-  // skills：监听扫描 roots；若 root 不可监听则回退父目录。
-  const skillRoots = getClaudeSkillSearchRoots(
-    runtime.rootPath,
-    runtime.config,
-  );
-  const allowExternalSkills = Boolean(
-    runtime.config.services?.skills?.allowExternalPaths,
-  );
-  const watchedRootPaths = new Set<string>();
-  const parentWatchTargets = new Map<string, Set<string>>();
-  for (const root of skillRoots) {
-    if (root.source === "config" && !allowExternalSkills) continue;
-
-    const rootPath = path.normalize(root.resolved);
-    if (!rootPath || watchedRootPaths.has(rootPath)) continue;
-    watchedRootPaths.add(rootPath);
-
-    const onSkillsChanged = () => {
-      schedule("skills", () => reloadServiceSystemBuilders("skills_changed"));
-    };
-
-    let attached = false;
-    try {
-      if (fs.existsSync(rootPath) && fs.statSync(rootPath).isDirectory()) {
-        attached =
-          attachWatcher(rootPath, { recursive: true }, onSkillsChanged) ||
-          attachWatcher(rootPath, {}, onSkillsChanged);
-      }
-    } catch {
-      attached = false;
-    }
-    if (attached) continue;
-
-    const parentDir = path.dirname(rootPath);
-    const targetName = path.basename(rootPath);
-    if (!parentDir) continue;
-    const existing = parentWatchTargets.get(parentDir) || new Set<string>();
-    existing.add(targetName);
-    parentWatchTargets.set(parentDir, existing);
-  }
-
-  for (const [parentDir, targetNames] of parentWatchTargets.entries()) {
-    attachWatcher(parentDir, {}, (_eventType, filename) => {
-      if (filename && !targetNames.has(path.basename(filename))) return;
-      schedule("skills", () => reloadServiceSystemBuilders("skills_changed"));
-    });
-  }
-
   stopRuntimeHotReloadWatcher = () => {
     clearAllTimers();
     for (const watcher of watchers) {
@@ -382,7 +286,6 @@ function startRuntimeHotReload(): void {
 
   runtime.logger.info("Runtime hot reload enabled", {
     agentMdPath: getAgentMdPath(runtime.rootPath),
-    skillRoots: skillRoots.map((item) => item.resolved),
     watchers: watchers.length,
   });
 }
@@ -537,7 +440,6 @@ export function getRuntimeState(): RuntimeState {
  * 2) 校验关键文件并确保 `.ship` 目录结构
  * 3) 加载 dotenv + ship.json，建立 base runtime state
  * 4) 初始化 ContextManager + ChatQueueWorker，建立 ready runtime state
- * 5) 注册 service system 构建器
  */
 
 export async function initRuntimeState(cwd: string): Promise<void> {
@@ -617,9 +519,6 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     config,
     systems,
     contextManager,
-  });
-  registerAllServiceSystemBuilders({
-    getContext: () => getServiceRuntimeState(),
   });
   startRuntimeHotReload();
 }

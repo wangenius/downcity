@@ -118,13 +118,24 @@ your-project/
     "provider": "custom",
     "model": "custom-model",
     "baseUrl": "https://your-api.com/v1",
-    "apiKey": "${CUSTOM_API_KEY}",
-    "headers": {
-      "X-Custom-Header": "value"
-    }
+    "apiKey": "${CUSTOM_API_KEY}"
   }
 }
 ```
+
+> 提示：`custom` 现在默认按 OpenAI Responses 协议发请求（`/v1/responses`），适合 GMN 这类仅支持 Responses 的网关。
+> 最简 GMN 示例：
+>
+> ```json
+> {
+>   "llm": {
+>     "provider": "custom",
+>     "model": "gpt-5.2",
+>     "baseUrl": "https://gmn.chuangzuoli.com/v1",
+>     "apiKey": "${LLM_API_KEY}"
+>   }
+> }
+> ```
 
 #### context (object, 可选)
 

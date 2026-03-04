@@ -2,7 +2,6 @@ import fs from "fs-extra";
 import path from "node:path";
 import { requestContext } from "@/main/service/RequestContext.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import type { ServiceSystemBuilder } from "@main/service/ServiceRegistry.js";
 import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
@@ -64,10 +63,9 @@ function getCurrentContextId(): string {
  * 3) 清理失效 pin 并更新 runtime 状态快照
  * 4) 将 overview + active skills 文本合并为最终 system
  */
-async function buildSkillsSystemText(
-  getContext: () => ServiceRuntime,
+export async function buildSkillsSystemText(
+  runtime: ServiceRuntime,
 ): Promise<string> {
-  const runtime = getContext();
   const contextId = getCurrentContextId();
   const discoveredSkills = discoverClaudeSkillsSync(runtime.rootPath, runtime.config);
   if (contextId) {
@@ -152,17 +150,4 @@ async function buildSkillsSystemText(
   }
 
   return sections.join("\n\n").trim();
-}
-
-/**
- * skills service system 构建器。
- *
- * 关键点（中文）
- * - service 暴露单一 `system` 字段：`() => string`
- * - 运行时每次请求前调用，拿到当前会话的 skills system 文本
- */
-export function createSkillsSystemBuilder(
-  getContext: () => ServiceRuntime,
-): ServiceSystemBuilder {
-  return () => buildSkillsSystemText(getContext);
 }

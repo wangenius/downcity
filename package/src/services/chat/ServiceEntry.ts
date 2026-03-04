@@ -274,7 +274,7 @@ async function executeChatSendAction(params: {
 export const chatService: Service = {
   name: "chat",
   // 关键点（中文）：chat service 当前不注入额外 system prompt。
-  system: () => () => "",
+  system: () => "",
   actions: {
     send: {
       command: {

@@ -138,6 +138,18 @@ function extractExecCommandCmd(part: JsonObject): string | undefined {
   return getStringField(inputObj, "cmd");
 }
 
+function extractFunctionCallExecCommandCmd(message: JsonObject): string | undefined {
+  const itemType = getStringField(message, "type");
+  if (itemType !== "function_call") return undefined;
+
+  const name = getStringField(message, "name");
+  if (name !== "exec_command") return undefined;
+
+  const argsObj = parsePossibleJsonObject(message.arguments);
+  if (!argsObj) return undefined;
+  return getStringField(argsObj, "cmd");
+}
+
 function extractMessages(payload: JsonObject): JsonObject[] | null {
   const messages = getArrayField(payload, "messages");
   if (Array.isArray(messages)) {
@@ -222,6 +234,11 @@ function formatMessagesForLog(
     if (name) segments.push(`name=${name}`);
     if (toolCallId) segments.push(`tool_call_id=${toolCallId}`);
     if (callId) segments.push(`call_id=${callId}`);
+    const functionCallExecCmd = extractFunctionCallExecCommandCmd(message);
+    // 关键点（中文）：Responses API 的 item:function_call 里把 exec_command 的 cmd 打出来，便于直接排障。
+    if (functionCallExecCmd) {
+      segments.push(`cmd=${truncate(functionCallExecCmd, opts.maxToolArgsChars)}`);
+    }
 
     const toolCalls = formatToolCalls(message.tool_calls, opts.maxToolArgsChars);
     if (toolCalls) {

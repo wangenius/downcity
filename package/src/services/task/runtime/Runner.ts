@@ -273,6 +273,10 @@ async function runAgentRound(params: {
   actorName: string;
 }): Promise<{ outputText: string; rawResult: AgentResult }> {
   const agent = requireContext(params.context).getAgent(params.contextId);
+  // 关键点（中文）：task 执行路径需要显式初始化 agent，和 chat/api 保持一致，避免未初始化直接返回 fallback 错误。
+  if (!agent.isInitialized()) {
+    await agent.initialize();
+  }
   const result = await withRequestContext(
     {
       contextId: params.contextId,

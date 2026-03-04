@@ -46,3 +46,31 @@ test("parseFetchRequestForLog formats messages with compact role labels", () => 
   assert.match(requestText, /\[item:function_call_output\]:/);
 });
 
+test("parseFetchRequestForLog prints exec_command cmd for item:function_call", () => {
+  const payload = {
+    model: "gpt-5.2",
+    input: [
+      {
+        type: "function_call",
+        name: "exec_command",
+        call_id: "call_123",
+        arguments: JSON.stringify({
+          cmd: "ls -la .ship/task",
+          yield_time_ms: 1000,
+        }),
+      },
+    ],
+  };
+
+  const parsed = parseFetchRequestForLog("https://example.com/v1/responses", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  assert.ok(parsed);
+  const requestText = parsed.requestText;
+  assert.match(requestText, /\[item:function_call\]:/);
+  assert.match(requestText, /name=exec_command/);
+  assert.match(requestText, /call_id=call_123/);
+  assert.match(requestText, /cmd=ls -la \.ship\/task/);
+});

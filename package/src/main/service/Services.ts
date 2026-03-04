@@ -7,8 +7,8 @@
  */
 
 import type { Service } from "./ServiceRegistry.js";
-import { chatService } from "@services/chat/ServiceEntry.js";
-import { skillsService } from "@services/skills/ServiceEntry.js";
-import { taskService } from "@services/task/ServiceEntry.js";
+import { chatService } from "@services/chat/Index.js";
+import { skillsService } from "@services/skills/Index.js";
+import { taskService } from "@services/task/Index.js";
 
 export const SERVICES: Service[] = [chatService, skillsService, taskService];

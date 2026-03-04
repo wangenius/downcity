@@ -56,11 +56,11 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                 chatSendIdempotency: { type: "boolean" },
               },
             },
-            adapters: {
+            channels: {
               type: "object",
               additionalProperties: true,
               description:
-                "Chat platform adapters (Telegram / Feishu / QQ...).",
+                "Chat platform channels (Telegram / Feishu / QQ...).",
               properties: {
                 telegram: {
                   type: "object",

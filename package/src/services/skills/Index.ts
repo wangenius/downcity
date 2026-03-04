@@ -15,7 +15,7 @@ import {
   listSkills,
   loadSkill,
   unloadSkill,
-} from "./Service.js";
+} from "./Action.js";
 import { resolveContextId } from "@/main/runtime/ContextId.js";
 import type { Service } from "@main/service/ServiceRegistry.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";

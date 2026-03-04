@@ -26,7 +26,7 @@ export interface ShipConfig {
    *
    * 关键点（中文）
    * - 所有服务相关配置统一收敛到 `services` 下，避免顶层散落字段。
-   * - 例如：`services.skills`、`services.chat.adapters`。
+   * - 例如：`services.skills`、`services.chat.channels`。
    */
   services?: {
     /**
@@ -76,9 +76,9 @@ export interface ShipConfig {
         chatSendIdempotency?: boolean;
       };
       /**
-       * 消息平台适配器配置。
+       * 消息平台 channel 配置。
        */
-      adapters?: {
+      channels?: {
         telegram?: {
           enabled: boolean;
           botToken?: string;

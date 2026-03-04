@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 使用统一 actions 模型声明 CLI/API/执行逻辑
  * - API 默认路由为 `/service/chat/<action>`
- * - 业务逻辑下沉到 `services/chat/Service.ts`
+ * - 业务逻辑下沉到 `services/chat/Action.ts`
  */
 
 import path from "node:path";
@@ -15,11 +15,11 @@ import {
   resolveChatContextSnapshot,
   resolveChatKey,
   sendChatTextByChatKey,
-} from "./Service.js";
+} from "./Action.js";
 import { pickLastSuccessfulChatSendText } from "./runtime/UserVisibleText.js";
-import { createTelegramBot } from "./adapters/telegram/Bot.js";
-import { createFeishuBot } from "./adapters/feishu/Feishu.js";
-import { createQQBot } from "./adapters/qq/QQ.js";
+import { createTelegramBot } from "./channels/telegram/Bot.js";
+import { createFeishuBot } from "./channels/feishu/Feishu.js";
+import { createQQBot } from "./channels/qq/QQ.js";
 import type {
   Service,
   ServiceActionCommandInput,
@@ -27,11 +27,11 @@ import type {
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { ContextMessageV1 } from "@core/types/ContextMessage.js";
-import type { TelegramBot } from "./adapters/telegram/Bot.js";
-import type { FeishuBot } from "./adapters/feishu/Feishu.js";
-import type { QQBot } from "./adapters/qq/QQ.js";
+import type { TelegramBot } from "./channels/telegram/Bot.js";
+import type { FeishuBot } from "./channels/feishu/Feishu.js";
+import type { QQBot } from "./channels/qq/QQ.js";
 
-type ChatAdapterState = {
+type ChatChannelState = {
   telegram: TelegramBot | null;
   feishu: FeishuBot | null;
   qq: QQBot | null;
@@ -53,14 +53,14 @@ type ChatExtractTextPayload = {
 
 const CHAT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
 const TELEGRAM_PROMPT_FILE_URL = new URL(
-  "./adapters/telegram/PROMPT.txt",
+  "./channels/telegram/PROMPT.txt",
   import.meta.url,
 );
 const FEISHU_PROMPT_FILE_URL = new URL(
-  "./adapters/feishu/PROMPT.txt",
+  "./channels/feishu/PROMPT.txt",
   import.meta.url,
 );
-const QQ_PROMPT_FILE_URL = new URL("./adapters/qq/PROMPT.txt", import.meta.url);
+const QQ_PROMPT_FILE_URL = new URL("./channels/qq/PROMPT.txt", import.meta.url);
 
 /**
  * 加载 chat service 使用说明提示词。
@@ -82,57 +82,57 @@ function loadChatServicePrompt(): string {
 const CHAT_SERVICE_PROMPT = loadChatServicePrompt();
 
 /**
- * 加载单个 adapter 提示词。
+ * 加载单个 channel 提示词。
  *
  * 关键点（中文）
- * - adapter 提示词属于强依赖资产，缺失时直接抛错，避免运行时悄悄丢失规则。
+ * - channel 提示词属于强依赖资产，缺失时直接抛错，避免运行时悄悄丢失规则。
  */
-function loadChatAdapterPrompt(fileUrl: URL, adapterName: string): string {
+function loadChatChannelPrompt(fileUrl: URL, channelName: string): string {
   try {
     return readFileSync(fileUrl, "utf-8").trim();
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `failed to load ${adapterName} chat adapter prompt from ${fileUrl.pathname}: ${reason}`,
+      `failed to load ${channelName} chat channel prompt from ${fileUrl.pathname}: ${reason}`,
     );
   }
 }
 
-const CHAT_ADAPTER_PROMPTS: Record<"telegram" | "feishu" | "qq", string> = {
-  telegram: loadChatAdapterPrompt(TELEGRAM_PROMPT_FILE_URL, "telegram"),
-  feishu: loadChatAdapterPrompt(FEISHU_PROMPT_FILE_URL, "feishu"),
-  qq: loadChatAdapterPrompt(QQ_PROMPT_FILE_URL, "qq"),
+const CHAT_CHANNEL_PROMPTS: Record<"telegram" | "feishu" | "qq", string> = {
+  telegram: loadChatChannelPrompt(TELEGRAM_PROMPT_FILE_URL, "telegram"),
+  feishu: loadChatChannelPrompt(FEISHU_PROMPT_FILE_URL, "feishu"),
+  qq: loadChatChannelPrompt(QQ_PROMPT_FILE_URL, "qq"),
 };
 
 /**
- * 构建当前启用 adapter 的提示词片段。
+ * 构建当前启用 channel 的提示词片段。
  *
  * 关键点（中文）
- * - 仅注入已启用 adapter，避免给模型引入未接入平台的噪音规则。
+ * - 仅注入已启用 channel，避免给模型引入未接入平台的噪音规则。
  */
-function buildEnabledAdapterPrompts(context: ServiceRuntime): string[] {
+function buildEnabledChannelPrompts(context: ServiceRuntime): string[] {
   const prompts: string[] = [];
-  const adapters = context.config.services?.chat?.adapters || {};
-  if (adapters.telegram?.enabled) {
-    prompts.push(CHAT_ADAPTER_PROMPTS.telegram);
+  const channels = context.config.services?.chat?.channels || {};
+  if (channels.telegram?.enabled) {
+    prompts.push(CHAT_CHANNEL_PROMPTS.telegram);
   }
-  if (adapters.feishu?.enabled) {
-    prompts.push(CHAT_ADAPTER_PROMPTS.feishu);
+  if (channels.feishu?.enabled) {
+    prompts.push(CHAT_CHANNEL_PROMPTS.feishu);
   }
-  if (adapters.qq?.enabled) {
-    prompts.push(CHAT_ADAPTER_PROMPTS.qq);
+  if (channels.qq?.enabled) {
+    prompts.push(CHAT_CHANNEL_PROMPTS.qq);
   }
   return prompts;
 }
 
-let adapterState: ChatAdapterState = {
+let channelState: ChatChannelState = {
   telegram: null,
   feishu: null,
   qq: null,
 };
 
-function resetAdapterState(): void {
-  adapterState = {
+function resetChannelState(): void {
+  channelState = {
     telegram: null,
     feishu: null,
     qq: null,
@@ -144,59 +144,59 @@ function isPlaceholder(value?: string): boolean {
   return value === "${}";
 }
 
-async function startChatAdapters(context: ServiceRuntime): Promise<void> {
-  if (adapterState.telegram || adapterState.feishu || adapterState.qq) {
-    await stopChatAdapters();
+async function startChatChannels(context: ServiceRuntime): Promise<void> {
+  if (channelState.telegram || channelState.feishu || channelState.qq) {
+    await stopChatChannels();
   }
-  const adapters = context.config.services?.chat?.adapters || {};
+  const channels = context.config.services?.chat?.channels || {};
 
-  if (adapters.telegram?.enabled) {
-    context.logger.info("Telegram adapter enabled");
-    adapterState.telegram = createTelegramBot(adapters.telegram, context);
-    if (adapterState.telegram) {
-      await adapterState.telegram.start();
+  if (channels.telegram?.enabled) {
+    context.logger.info("Telegram channel enabled");
+    channelState.telegram = createTelegramBot(channels.telegram, context);
+    if (channelState.telegram) {
+      await channelState.telegram.start();
     }
   }
 
-  if (adapters.feishu?.enabled) {
-    context.logger.info("Feishu adapter enabled");
-    const feishuAdapter = adapters.feishu as typeof adapters.feishu & {
+  if (channels.feishu?.enabled) {
+    context.logger.info("Feishu channel enabled");
+    const feishuChannel = channels.feishu as typeof channels.feishu & {
       adminUserIds?: string[];
     };
     const feishuConfig = {
       enabled: true,
       appId:
-        (adapters.feishu?.appId && !isPlaceholder(adapters.feishu.appId)
-          ? adapters.feishu.appId
+        (channels.feishu?.appId && !isPlaceholder(channels.feishu.appId)
+          ? channels.feishu.appId
           : undefined) ||
         process.env.FEISHU_APP_ID ||
         "",
       appSecret:
-        (adapters.feishu?.appSecret && !isPlaceholder(adapters.feishu.appSecret)
-          ? adapters.feishu.appSecret
+        (channels.feishu?.appSecret && !isPlaceholder(channels.feishu.appSecret)
+          ? channels.feishu.appSecret
           : undefined) ||
         process.env.FEISHU_APP_SECRET ||
         "",
-      domain: feishuAdapter?.domain || "https://open.feishu.cn",
-      adminUserIds: Array.isArray(feishuAdapter?.adminUserIds)
-        ? feishuAdapter.adminUserIds
+      domain: feishuChannel?.domain || "https://open.feishu.cn",
+      adminUserIds: Array.isArray(feishuChannel?.adminUserIds)
+        ? feishuChannel.adminUserIds
         : undefined,
     };
-    adapterState.feishu = await createFeishuBot(feishuConfig, context);
-    if (adapterState.feishu) {
-      await adapterState.feishu.start();
+    channelState.feishu = await createFeishuBot(feishuConfig, context);
+    if (channelState.feishu) {
+      await channelState.feishu.start();
     }
   }
 
-  if (adapters.qq?.enabled) {
-    context.logger.info("QQ adapter enabled");
+  if (channels.qq?.enabled) {
+    context.logger.info("QQ channel enabled");
     const envQqGroupAccess = (process.env.QQ_GROUP_ACCESS || "")
       .trim()
       .toLowerCase();
     const qqGroupAccess: "initiator_or_admin" | "anyone" | undefined =
-      adapters.qq?.groupAccess === "anyone"
+      channels.qq?.groupAccess === "anyone"
         ? "anyone"
-        : adapters.qq?.groupAccess === "initiator_or_admin"
+        : channels.qq?.groupAccess === "initiator_or_admin"
           ? "initiator_or_admin"
           : envQqGroupAccess === "initiator_or_admin"
             ? "initiator_or_admin"
@@ -204,33 +204,33 @@ async function startChatAdapters(context: ServiceRuntime): Promise<void> {
     const qqConfig = {
       enabled: true,
       appId:
-        (adapters.qq?.appId && !isPlaceholder(adapters.qq.appId)
-          ? adapters.qq.appId
+        (channels.qq?.appId && !isPlaceholder(channels.qq.appId)
+          ? channels.qq.appId
           : undefined) ||
         process.env.QQ_APP_ID ||
         "",
       appSecret:
-        (adapters.qq?.appSecret && !isPlaceholder(adapters.qq.appSecret)
-          ? adapters.qq.appSecret
+        (channels.qq?.appSecret && !isPlaceholder(channels.qq.appSecret)
+          ? channels.qq.appSecret
           : undefined) ||
         process.env.QQ_APP_SECRET ||
         "",
       sandbox:
-        typeof adapters.qq?.sandbox === "boolean"
-          ? adapters.qq.sandbox
+        typeof channels.qq?.sandbox === "boolean"
+          ? channels.qq.sandbox
           : (process.env.QQ_SANDBOX || "").toLowerCase() === "true",
       groupAccess: qqGroupAccess,
     };
-    adapterState.qq = await createQQBot(qqConfig, context);
-    if (adapterState.qq) {
-      await adapterState.qq.start();
+    channelState.qq = await createQQBot(qqConfig, context);
+    if (channelState.qq) {
+      await channelState.qq.start();
     }
   }
 }
 
-async function stopChatAdapters(): Promise<void> {
-  const current = adapterState;
-  resetAdapterState();
+async function stopChatChannels(): Promise<void> {
+  const current = channelState;
+  resetChannelState();
 
   if (current.telegram) {
     await current.telegram.stop();
@@ -349,7 +349,7 @@ async function executeChatSendAction(params: {
 export const chatService: Service = {
   name: "chat",
   system: (context) =>
-    [CHAT_SERVICE_PROMPT, ...buildEnabledAdapterPrompts(context)]
+    [CHAT_SERVICE_PROMPT, ...buildEnabledChannelPrompts(context)]
       .filter(Boolean)
       .join("\n\n"),
   actions: {
@@ -436,10 +436,10 @@ export const chatService: Service = {
   },
   lifecycle: {
     async start(context) {
-      await startChatAdapters(context);
+      await startChatChannels(context);
     },
     async stop() {
-      await stopChatAdapters();
+      await stopChatChannels();
     },
   },
 };

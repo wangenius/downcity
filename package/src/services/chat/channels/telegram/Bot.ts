@@ -1,11 +1,11 @@
 // Telegram adapter implementation (moved into submodule for maintainability).
 import path from "path";
-import { BaseChatAdapter } from "@services/chat/adapters/BaseChatAdapter.js";
+import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import type {
-  AdapterChatKeyParams,
-  AdapterSendTextParams,
-} from "@services/chat/adapters/PlatformAdapter.js";
-import type { AdapterSendActionParams } from "@services/chat/adapters/PlatformAdapter.js";
+  ChannelChatKeyParams,
+  ChannelSendTextParams,
+  ChannelSendActionParams,
+} from "@services/chat/channels/BaseChatChannel.js";
 import { isTelegramAdmin } from "./Access.js";
 import { TelegramApiClient } from "./ApiClient.js";
 import {
@@ -28,9 +28,9 @@ import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
  * 关键职责（中文）
  * - 轮询拉取 updates，并转换为统一会话输入
  * - 维护 follow-up 窗口与群聊访问策略，提升群内连续对话体验
- * - 统一走 BaseChatAdapter 入队（history 由 process 写入），确保调度语义一致
+ * - 统一走 BaseChatChannel 入队（history 由 process 写入），确保调度语义一致
  */
-export class TelegramBot extends BaseChatAdapter {
+export class TelegramBot extends BaseChatChannel {
   private botToken: string;
   private chatId?: string;
   private followupWindowMs: number;
@@ -219,12 +219,12 @@ export class TelegramBot extends BaseChatAdapter {
     return `telegram-chat-${chatId}`;
   }
 
-  protected getChatKey(params: AdapterChatKeyParams): string {
+  protected getChatKey(params: ChannelChatKeyParams): string {
     return this.buildChatKey(params.chatId, params.messageThreadId);
   }
 
   protected async sendTextToPlatform(
-    params: AdapterSendTextParams,
+    params: ChannelSendTextParams,
   ): Promise<void> {
     await this.sendMessage(params.chatId, params.text, {
       messageThreadId: params.messageThreadId,
@@ -235,7 +235,7 @@ export class TelegramBot extends BaseChatAdapter {
    * Telegram 支持 chat action（typing 等），用于在执行期间展示“正在处理”状态。
    */
   protected async sendActionToPlatform(
-    params: AdapterSendActionParams,
+    params: ChannelSendActionParams,
   ): Promise<void> {
     if (params.action !== "typing") return;
     await this.api.sendChatAction(params.chatId, "typing", {

@@ -455,7 +455,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   ensureContextFiles(rootPath);
   ensureShipDirectories(rootPath);
 
-  // 在启动时加载 dotenv，确保后续 config / adapters 可读取环境变量。
+  // 在启动时加载 dotenv，确保后续 config / channels 可读取环境变量。
   loadProjectDotenv(rootPath);
 
   const config = loadShipConfig(rootPath);

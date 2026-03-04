@@ -2,22 +2,22 @@ import * as Lark from "@larksuiteoapi/node-sdk";
 import fs from "fs-extra";
 import path from "path";
 import { getCacheDirPath } from "@/main/runtime/Paths.js";
-import { BaseChatAdapter } from "@services/chat/adapters/BaseChatAdapter.js";
+import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import type {
-  AdapterChatKeyParams,
-  AdapterSendTextParams,
-} from "@services/chat/adapters/PlatformAdapter.js";
+  ChannelChatKeyParams,
+  ChannelSendTextParams,
+} from "@services/chat/channels/BaseChatChannel.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 
 /**
- * Feishu (Lark) chat adapter.
+ * Feishu (Lark) chat channel.
  *
  * Responsibilities:
  * - Receive Feishu message events and translate them into AgentRuntime inputs
  * - Enforce basic access policy (optional admin allowlist)
  * - Relay tool-strict replies back to Feishu via dispatcher + `chat_send` tool
- * - Persist chat logs through UIMessage history via BaseChatAdapter helpers
+ * - Persist chat logs through UIMessage history via BaseChatChannel helpers
  */
 
 /**
@@ -81,7 +81,7 @@ function sanitizeChatText(text: string): string {
   return out;
 }
 
-export class FeishuBot extends BaseChatAdapter {
+export class FeishuBot extends BaseChatChannel {
   private appId: string;
   private appSecret: string;
   private domain?: string;
@@ -125,12 +125,12 @@ export class FeishuBot extends BaseChatAdapter {
     return `feishu-chat-${chatId}`;
   }
 
-  protected getChatKey(params: AdapterChatKeyParams): string {
+  protected getChatKey(params: ChannelChatKeyParams): string {
     return this.buildChatKey(params.chatId);
   }
 
   protected async sendTextToPlatform(
-    params: AdapterSendTextParams,
+    params: ChannelSendTextParams,
   ): Promise<void> {
     const chatType =
       typeof params.chatType === "string" ? params.chatType : "p2p";

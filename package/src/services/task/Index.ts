@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 使用统一 actions 模型声明 CLI/API/执行逻辑
  * - API 默认路由为 `/service/task/<action>`
- * - 任务执行与定义管理统一收口到 `services/task/Service.ts`
+ * - 任务执行与定义管理统一收口到 `services/task/Action.ts`
  */
 
 import type { Command } from "commander";
@@ -15,7 +15,7 @@ import {
   runTaskDefinition,
   updateTaskDefinition,
   setTaskStatus,
-} from "./Service.js";
+} from "./Action.js";
 import { resolveContextId } from "@/main/runtime/ContextId.js";
 import type { Service } from "@main/service/ServiceRegistry.js";
 import type { ShipTaskStatus } from "./types/Task.js";

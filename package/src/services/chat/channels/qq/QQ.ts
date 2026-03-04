@@ -1,12 +1,12 @@
 import WebSocket, { type RawData } from "ws";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { BaseChatAdapter } from "@services/chat/adapters/BaseChatAdapter.js";
+import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
 import type {
-  AdapterChatKeyParams,
-  AdapterSendTextParams,
-} from "@services/chat/adapters/PlatformAdapter.js";
+  ChannelChatKeyParams,
+  ChannelSendTextParams,
+} from "@services/chat/channels/BaseChatChannel.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
@@ -17,7 +17,7 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
  * - Maintain WS connection + heartbeats + reconnection
  * - Translate inbound group/private messages into AgentRuntime runs
  * - Deliver outbound tool-strict replies via dispatcher + `chat_send`
- * - Persist inbound/outbound logs via UIMessage history through BaseChatAdapter
+ * - Persist inbound/outbound logs via UIMessage history through BaseChatChannel
  */
 
 interface QQConfig {
@@ -136,7 +136,7 @@ const EventType = {
  * - 处理 WS 事件并映射为统一会话入站
  * - 按平台约束发送文本（群聊/C2C/频道）
  */
-export class QQBot extends BaseChatAdapter {
+export class QQBot extends BaseChatChannel {
   private appId: string;
   private appSecret: string;
   private ws: WebSocket | null = null;
@@ -199,7 +199,7 @@ export class QQBot extends BaseChatAdapter {
     });
   }
 
-  protected getChatKey(params: AdapterChatKeyParams): string {
+  protected getChatKey(params: ChannelChatKeyParams): string {
     const chatType =
       typeof params.chatType === "string" && params.chatType
         ? params.chatType
@@ -208,7 +208,7 @@ export class QQBot extends BaseChatAdapter {
   }
 
   protected async sendTextToPlatform(
-    params: AdapterSendTextParams,
+    params: ChannelSendTextParams,
   ): Promise<void> {
     const chatType = typeof params.chatType === "string" ? params.chatType : "";
     const messageId =

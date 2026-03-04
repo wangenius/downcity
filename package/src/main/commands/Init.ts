@@ -6,7 +6,7 @@
  * - 通过交互式问题收集必要配置（模型、Adapters 等）
  *
  * 设计要点
- * - Chat adapters 支持多选：仅写入用户选择的 adapters（未选择的不出现在 `ship.json`）
+ * - Chat channels 支持多选：仅写入用户选择的 channels（未选择的不出现在 `ship.json`）
  * - 避免写入无意义的默认值：能省则省，保持配置简洁
  */
 
@@ -42,7 +42,7 @@ import { DEFAULT_SHIP_JSON } from "@main/constants/Ship.js";
 type InitPromptResponse = {
   name?: string;
   model?: string;
-  adapters?: string[];
+  channels?: string[];
   qqSandbox?: boolean;
   skillsToInstall?: string[];
 };
@@ -166,7 +166,7 @@ export async function initCommand(
   }
 
   // Collect configuration information
-  // 交互采集（中文）：模型 + adapters + 推荐 skills，最小化首启配置成本。
+  // 交互采集（中文）：模型 + channels + 推荐 skills，最小化首启配置成本。
   const response = (await prompts([
     {
       type: "text",
@@ -193,10 +193,10 @@ export async function initCommand(
       initial: 0,
     },
     {
-      // 关键交互: Chat adapters 允许多选，未选择的就不写入 ship.json
+      // 关键交互: Chat channels 允许多选，未选择的就不写入 ship.json
       type: "multiselect",
-      name: "adapters",
-      message: "Select chat adapters (multi-select)",
+      name: "channels",
+      message: "Select chat channels (multi-select)",
       choices: [
         { title: "Telegram", value: "telegram" },
         { title: "Feishu", value: "feishu" },
@@ -205,7 +205,7 @@ export async function initCommand(
     },
     {
       type: (prev, values) =>
-        Array.isArray(values.adapters) && values.adapters.includes("qq")
+        Array.isArray(values.channels) && values.channels.includes("qq")
           ? "confirm"
           : null,
       name: "qqSandbox",
@@ -272,31 +272,31 @@ Help users understand and work with their codebase by exploring, analyzing, and 
     temperature: 0.7,
   };
 
-  const selectedAdapters = new Set<string>(
-    Array.isArray(response.adapters) ? (response.adapters as string[]) : [],
+  const selectedChannels = new Set<string>(
+    Array.isArray(response.channels) ? (response.channels as string[]) : [],
   );
 
-  const adaptersConfig: NonNullable<
-    NonNullable<NonNullable<ShipConfig["services"]>["chat"]>["adapters"]
+  const channelsConfig: NonNullable<
+    NonNullable<NonNullable<ShipConfig["services"]>["chat"]>["channels"]
   > = {};
-  if (selectedAdapters.has("telegram")) {
-    adaptersConfig.telegram = {
+  if (selectedChannels.has("telegram")) {
+    channelsConfig.telegram = {
       enabled: true,
       botToken: TELEGRAM_BOT_TOKEN,
       // 关键点（中文）：chatId 可选，允许通过环境变量注入（避免把 chatId 写进 ship.json）
       chatId: TELEGRAM_CHAT_ID,
     };
   }
-  if (selectedAdapters.has("feishu")) {
-    adaptersConfig.feishu = {
+  if (selectedChannels.has("feishu")) {
+    channelsConfig.feishu = {
       enabled: true,
       appId: FEISHU_APP_ID,
       appSecret: FEISHU_APP_SECRET,
       domain: "https://open.feishu.cn",
     };
   }
-  if (selectedAdapters.has("qq")) {
-    adaptersConfig.qq = {
+  if (selectedChannels.has("qq")) {
+    channelsConfig.qq = {
       enabled: true,
       appId: QQ_APP_ID,
       appSecret: QQ_APP_SECRET,
@@ -319,10 +319,10 @@ Help users understand and work with their codebase by exploring, analyzing, and 
     services: {
       // 默认额外支持 `.claude/skills`（兼容社区/工具链习惯），同时仍保留 `.ship/skills` 作为默认 root
       skills: { paths: [".claude/skills"] },
-      ...(Object.keys(adaptersConfig).length > 0
+      ...(Object.keys(channelsConfig).length > 0
         ? {
             chat: {
-              adapters: adaptersConfig,
+              channels: channelsConfig,
             },
           }
         : {}),
@@ -358,7 +358,7 @@ Help users understand and work with their codebase by exploring, analyzing, and 
     );
   }
 
-  if (selectedAdapters.has("telegram")) {
+  if (selectedChannels.has("telegram")) {
     envLines.push(
       "",
       "# Telegram",
@@ -368,11 +368,11 @@ Help users understand and work with their codebase by exploring, analyzing, and 
     );
   }
 
-  if (selectedAdapters.has("feishu")) {
+  if (selectedChannels.has("feishu")) {
     envLines.push("", "# Feishu", "FEISHU_APP_ID=", "FEISHU_APP_SECRET=");
   }
 
-  if (selectedAdapters.has("qq")) {
+  if (selectedChannels.has("qq")) {
     envLines.push(
       "",
       "# QQ",
@@ -489,28 +489,28 @@ Help users understand and work with their codebase by exploring, analyzing, and 
   console.log(`📦 Current model: ${llmConfig.provider} / ${llmConfig.model}`);
   console.log(`🌐 API URL: ${llmConfig.baseUrl}\n`);
 
-  if (selectedAdapters.has("feishu")) {
-    console.log("📱 Feishu chat adapter enabled");
+  if (selectedChannels.has("feishu")) {
+    console.log("📱 Feishu chat channel enabled");
     console.log(
-      "   Please configure FEISHU_APP_ID and FEISHU_APP_SECRET in ship.json (services.chat.adapters.feishu)",
+      "   Please configure FEISHU_APP_ID and FEISHU_APP_SECRET in ship.json (services.chat.channels.feishu)",
     );
     console.log(
       "   or set environment variables: FEISHU_APP_ID and FEISHU_APP_SECRET\n",
     );
   }
-  if (selectedAdapters.has("telegram")) {
-    console.log("📱 Telegram chat adapter enabled");
+  if (selectedChannels.has("telegram")) {
+    console.log("📱 Telegram chat channel enabled");
     console.log(
-      "   Please configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID (optional) in ship.json (services.chat.adapters.telegram)",
+      "   Please configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID (optional) in ship.json (services.chat.channels.telegram)",
     );
     console.log(
       "   or set environment variables: TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID\n",
     );
   }
-  if (selectedAdapters.has("qq")) {
-    console.log("📱 QQ chat adapter enabled");
+  if (selectedChannels.has("qq")) {
+    console.log("📱 QQ chat channel enabled");
     console.log(
-      "   Please configure QQ_APP_ID and QQ_APP_SECRET in ship.json (services.chat.adapters.qq)",
+      "   Please configure QQ_APP_ID and QQ_APP_SECRET in ship.json (services.chat.channels.qq)",
     );
     console.log(
       "   or set environment variables: QQ_APP_ID and QQ_APP_SECRET\n",
@@ -525,19 +525,19 @@ Help users understand and work with their codebase by exploring, analyzing, and 
     "Edit ship.json to modify LLM configuration (baseUrl, apiKey, temperature, etc.)",
   ];
 
-  if (selectedAdapters.has("telegram")) {
+  if (selectedChannels.has("telegram")) {
     nextSteps.push(
-      "Configure services.chat.adapters.telegram (Bot Token and optional Chat ID)",
+      "Configure services.chat.channels.telegram (Bot Token and optional Chat ID)",
     );
   }
-  if (selectedAdapters.has("feishu")) {
+  if (selectedChannels.has("feishu")) {
     nextSteps.push(
-      "Configure services.chat.adapters.feishu (App ID and App Secret)",
+      "Configure services.chat.channels.feishu (App ID and App Secret)",
     );
   }
-  if (selectedAdapters.has("qq")) {
+  if (selectedChannels.has("qq")) {
     nextSteps.push(
-      "Configure services.chat.adapters.qq (App ID and App Secret)",
+      "Configure services.chat.channels.qq (App ID and App Secret)",
     );
   }
   nextSteps.push('Run "shipmyagent start" to start the agent');

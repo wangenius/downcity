@@ -95,7 +95,18 @@ function contentToText(content: JsonValue | undefined, maxChars: number): string
           return `Approval requested: ${String(toolName ?? "")}`;
         }
         if (partType === "tool-call") {
-          return `Tool call: ${String(getStringField(part, "toolName") ?? "")}`;
+          const toolName = String(getStringField(part, "toolName") ?? "");
+          if (!toolName) return "Tool call:";
+
+          // 关键点（中文）：在 function call 日志中补充 exec_command 的 cmd，便于直接定位执行命令。
+          if (toolName === "exec_command") {
+            const execCmd = extractExecCommandCmd(part);
+            return execCmd
+              ? `Tool call: ${toolName} cmd=${truncate(execCmd, Math.max(64, Math.floor(maxChars / 2)))}`
+              : `Tool call: ${toolName}`;
+          }
+
+          return `Tool call: ${toolName}`;
         }
         if (partType === "tool-result") {
           return `Tool result: ${String(getStringField(part, "toolName") ?? "")}`;
@@ -111,6 +122,20 @@ function contentToText(content: JsonValue | undefined, maxChars: number): string
   }
   if (isJsonObject(content)) return stringifyCompact(content, maxChars);
   return truncate(String(content ?? ""), maxChars);
+}
+
+function parsePossibleJsonObject(value: JsonValue | undefined): JsonObject | undefined {
+  if (isJsonObject(value)) return value;
+  if (typeof value !== "string") return undefined;
+  const parsed = safeJsonParse(value);
+  return isJsonObject(parsed) ? parsed : undefined;
+}
+
+function extractExecCommandCmd(part: JsonObject): string | undefined {
+  const inputValue = part.input ?? part.rawInput ?? part.arguments;
+  const inputObj = parsePossibleJsonObject(inputValue);
+  if (!inputObj) return undefined;
+  return getStringField(inputObj, "cmd");
 }
 
 function extractMessages(payload: JsonObject): JsonObject[] | null {

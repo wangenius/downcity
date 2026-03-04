@@ -42,7 +42,7 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
       queue: {
         maxConcurrency: 2,
       },
-      adapters: {
+      channels: {
         telegram: {
           enabled: false,
           botToken: undefined,

@@ -7,6 +7,7 @@
  */
 
 export type ShipTaskStatus = "enabled" | "paused" | "disabled";
+export type ShipTaskKind = "agent" | "script";
 
 export type ShipTaskFrontmatterV1 = {
   /** 任务标题（展示给用户） */
@@ -17,6 +18,10 @@ export type ShipTaskFrontmatterV1 = {
   description: string;
   /** 执行结果回发目标（contextId） */
   contextId: string;
+  /** 任务执行类型（agent=交给 agent 执行；script=直接执行 task 正文脚本） */
+  kind?: ShipTaskKind;
+  /** 单次计划执行时间（ISO8601 字符串）；到点执行一次后自动清空并置为 paused */
+  time?: string;
   /** 启停状态 */
   status: ShipTaskStatus;
   /** 可选时区（IANA，如 Asia/Shanghai） */
@@ -44,6 +49,7 @@ export type ShipTaskDefinitionV1 = {
 
 export type ShipTaskRunTriggerV1 =
   | { type: "cron" }
+  | { type: "time" }
   | { type: "manual"; reason?: string };
 
 export type ShipTaskRunStatusV1 = "success" | "failure" | "skipped";

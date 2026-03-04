@@ -7,6 +7,7 @@
  */
 
 import type {
+  ShipTaskKind,
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunResultStatusV1,
   ShipTaskRunStatusV1,
@@ -19,6 +20,8 @@ export type TaskCreateRequest = {
   cron: string;
   description: string;
   contextId: string;
+  kind?: ShipTaskKind;
+  time?: string;
   status?: ShipTaskStatus;
   timezone?: string;
   requiredArtifacts?: string[];
@@ -41,6 +44,9 @@ export type TaskUpdateRequest = {
   cron?: string;
   description?: string;
   contextId?: string;
+  kind?: ShipTaskKind;
+  time?: string;
+  clearTime?: boolean;
   status?: ShipTaskStatus;
   timezone?: string;
   clearTimezone?: boolean;
@@ -68,6 +74,8 @@ export type TaskListItemView = {
   cron: string;
   status: string;
   contextId: string;
+  kind?: ShipTaskKind;
+  time?: string;
   timezone?: string;
   requiredArtifacts?: string[];
   minOutputChars?: number;

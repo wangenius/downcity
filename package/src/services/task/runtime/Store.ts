@@ -29,6 +29,8 @@ export type TaskListItem = {
   cron: string;
   status: string;
   contextId: string;
+  kind?: "agent" | "script";
+  time?: string;
   timezone?: string;
   requiredArtifacts?: string[];
   minOutputChars?: number;
@@ -113,6 +115,8 @@ export async function listTasks(projectRoot: string): Promise<TaskListItem[]> {
       cron: parsed.task.frontmatter.cron,
       status: parsed.task.frontmatter.status,
       contextId: parsed.task.frontmatter.contextId,
+      kind: parsed.task.frontmatter.kind || "agent",
+      ...(parsed.task.frontmatter.time ? { time: parsed.task.frontmatter.time } : {}),
       ...(parsed.task.frontmatter.timezone ? { timezone: parsed.task.frontmatter.timezone } : {}),
       ...(Array.isArray(parsed.task.frontmatter.requiredArtifacts) &&
       parsed.task.frontmatter.requiredArtifacts.length > 0

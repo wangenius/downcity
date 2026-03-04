@@ -10,9 +10,11 @@
 
 import fs from "fs-extra";
 import path from "node:path";
+import { execa } from "execa";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
 import type {
+  ShipTaskKind,
   ShipTaskFrontmatterV1,
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunMetaV1,
@@ -71,6 +73,10 @@ type DialogueRoundRecord = {
 };
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
+
+type ScriptExecutionResult = {
+  outputText: string;
+};
 
 /**
  * 读取 service context 端口。
@@ -294,9 +300,54 @@ async function runAgentRound(params: {
     outputText = typeof textRaw === "string" ? textRaw : "";
   }
 
+  // 关键点（中文）：agent.run 可能返回 success=false 但不抛异常；这里必须转为执行失败，避免误判为“多轮不满意”。
+  if (!result.success) {
+    const reason = outputText || "agent run returned success=false";
+    throw new Error(reason);
+  }
+
   return {
     outputText,
     rawResult: result,
+  };
+}
+
+/**
+ * 执行 script 类型任务。
+ *
+ * 关键点（中文）
+ * - 在任务配置的 contextId 语义下执行，透传 `SMA_CTX_CONTEXT_ID`
+ * - 仅允许执行项目内 `.sh` 文件
+ */
+async function runScriptTask(params: {
+  runDirAbs: string;
+  contextId: string;
+  scriptBody: string;
+}): Promise<ScriptExecutionResult> {
+  const body = String(params.scriptBody || "");
+  if (!body.trim()) throw new Error("script task body cannot be empty");
+
+  const scriptAbs = path.join(params.runDirAbs, "task-script.sh");
+  await fs.writeFile(scriptAbs, body.endsWith("\n") ? body : `${body}\n`, "utf-8");
+
+  const execResult = await withRequestContext(
+    { contextId: params.contextId },
+    () =>
+      execa("sh", [scriptAbs], {
+        cwd: params.runDirAbs,
+        reject: true,
+        env: {
+          ...process.env,
+          SMA_CTX_CONTEXT_ID: params.contextId,
+        },
+      }),
+  );
+
+  const stdout = String(execResult.stdout || "").trim();
+  const stderr = String(execResult.stderr || "").trim();
+  const combined = [stdout, stderr].filter(Boolean).join("\n");
+  return {
+    outputText: combined,
   };
 }
 
@@ -438,6 +489,7 @@ export async function runTaskNow(params: {
     task.frontmatter.maxDialogueRounds > 0
       ? task.frontmatter.maxDialogueRounds
       : DEFAULT_MAX_DIALOGUE_ROUNDS;
+  const taskKind: ShipTaskKind = task.frontmatter.kind || "agent";
 
   // input.md：把 frontmatter 摘要 + 正文快照写入 run 目录，方便审计。
   await fs.writeFile(
@@ -450,6 +502,8 @@ export async function runTaskNow(params: {
       `- cron: \`${task.frontmatter.cron}\``,
       `- status: \`${task.frontmatter.status}\``,
       `- contextId: \`${task.frontmatter.contextId}\``,
+      `- kind: \`${taskKind}\``,
+      task.frontmatter.time ? `- time: \`${task.frontmatter.time}\`` : null,
       task.frontmatter.timezone ? `- timezone: \`${task.frontmatter.timezone}\`` : null,
       Array.isArray(task.frontmatter.requiredArtifacts) && task.frontmatter.requiredArtifacts.length > 0
         ? `- requiredArtifacts: \`${task.frontmatter.requiredArtifacts.join(", ")}\``
@@ -486,162 +540,212 @@ export async function runTaskNow(params: {
   let errorText = "";
   const dialogueRecords: DialogueRoundRecord[] = [];
 
-  // phase 1：双 agent 多轮对话（executor <-> user-simulator）
-  // 关键点（中文）：直到“规则校验通过 + 模拟用户满意”或达到最大轮数。
-  let lastRoundRuleErrors: string[] = [];
-  let lastRoundDecision: UserSimulatorDecision | null = null;
-  let lastFeedback = "";
-  executionStatus = "success";
-
-  for (let round = 1; round <= maxDialogueRounds; round++) {
-    dialogueRounds = round;
-    let executorRoundOutput = "";
-
+  // phase 1：执行任务（按 kind 分支）
+  if (taskKind === "script") {
+    dialogueRounds = 1;
+    executionStatus = "success";
     try {
-      const executorQuery = buildExecutorRoundQuery({
-        taskBody: task.body,
-        round,
-        ...(outputText ? { lastOutputText: outputText } : {}),
-        ...(lastFeedback ? { lastFeedback } : {}),
+      const scriptResult = await runScriptTask({
+        runDirAbs,
+        contextId: task.frontmatter.contextId,
+        scriptBody: task.body,
       });
-      const executorRound = await runAgentRound({
-        context,
-        contextId: runContextId,
-        taskId: task.taskId,
-        query: executorQuery,
-        actorId: "scheduler",
-        actorName: "scheduler",
+      outputText = scriptResult.outputText;
+      const plannedArtifacts = new Set<string>([
+        "input.md",
+        "output.md",
+        "result.md",
+        "run.json",
+        "dialogue.md",
+        "dialogue.json",
+      ]);
+      const validation = await validateTaskResult({
+        frontmatter: task.frontmatter,
+        runDirAbs,
+        outputText,
+        plannedArtifacts,
       });
-      executorRoundOutput = executorRound.outputText;
-      outputText = executorRound.outputText;
-
-      // executor assistant 消息写入 runDir 对应的 context store（messages.jsonl）。
-      try {
-        await appendExecutorAssistantMessage({
-          context,
-          runContextId,
-          taskId: task.taskId,
-          rawResult: executorRound.rawResult,
-        });
-      } catch {
-        // ignore
+      if (validation.errors.length === 0) {
+        ok = true;
+        status = "success";
+        resultStatus = "valid";
+        resultErrors = [];
+        userSimulatorSatisfied = true;
+      } else {
+        ok = false;
+        status = "failure";
+        resultStatus = "invalid";
+        resultErrors = [...validation.errors];
+        errorText = [
+          "Script task result validation failed.",
+          ...resultErrors.map((x) => `- ${x}`),
+        ].join("\n");
       }
     } catch (e) {
       executionStatus = "failure";
-      errorText = `Executor agent failed at round ${round}: ${String(e)}`;
-      break;
-    }
-
-    const plannedArtifacts = new Set<string>([
-      "input.md",
-      "output.md",
-      "result.md",
-      "run.json",
-      "dialogue.md",
-      "dialogue.json",
-    ]);
-    const validation = await validateTaskResult({
-      frontmatter: task.frontmatter,
-      runDirAbs,
-      outputText: executorRoundOutput,
-      plannedArtifacts,
-    });
-    lastRoundRuleErrors = [...validation.errors];
-
-    let decision: UserSimulatorDecision = {
-      satisfied: false,
-      reply: "",
-      reason: "user simulator did not run",
-      raw: "",
-    };
-    try {
-      const simulatorQuery = buildUserSimulatorQuery({
-        taskTitle: task.frontmatter.title,
-        taskDescription: task.frontmatter.description,
-        taskBody: task.body,
-        round,
-        maxRounds: maxDialogueRounds,
-        executorOutputText: executorRoundOutput,
-        ruleErrors: validation.errors,
-      });
-      const simulatorRound = await runAgentRound({
-        context,
-        contextId: userSimulatorContextId,
-        taskId: task.taskId,
-        query: simulatorQuery,
-        actorId: "user_simulator",
-        actorName: "user_simulator",
-      });
-      decision = parseUserSimulatorDecision(simulatorRound.outputText);
-    } catch (e) {
-      decision = {
-        satisfied: false,
-        reply: "",
-        reason: `user simulator failed: ${String(e)}`,
-        raw: String(e),
-      };
-    }
-
-    // 关键点（中文）：系统规则校验失败时，强制判定不满意。
-    const roundSatisfied = decision.satisfied && validation.errors.length === 0;
-    userSimulatorSatisfied = roundSatisfied;
-    userSimulatorReply = decision.reply;
-    userSimulatorReason = decision.reason;
-    userSimulatorScore = decision.score;
-    lastRoundDecision = decision;
-
-    dialogueRecords.push({
-      round,
-      executorOutput: executorRoundOutput,
-      ruleErrors: [...validation.errors],
-      userSimulator: {
-        ...decision,
-        satisfied: roundSatisfied,
-      },
-    });
-
-    if (roundSatisfied) {
-      ok = true;
-      status = "success";
-      resultStatus = "valid";
-      resultErrors = [];
-      break;
-    }
-
-    const feedbackLines: string[] = [];
-    if (validation.errors.length > 0) {
-      feedbackLines.push("系统规则校验失败：");
-      for (const item of validation.errors) feedbackLines.push(`- ${item}`);
-    }
-    if (decision.reply) {
-      feedbackLines.push("模拟用户回复：");
-      feedbackLines.push(decision.reply);
-    }
-    if (decision.reason) {
-      feedbackLines.push(`模拟用户理由：${decision.reason}`);
-    }
-    lastFeedback = feedbackLines.join("\n").trim();
-  }
-
-  if (!ok) {
-    if (executionStatus === "failure") {
       status = "failure";
       resultStatus = "not_checked";
       resultErrors = [];
-    } else {
-      status = "failure";
-      resultStatus = "invalid";
-      resultErrors = [
-        ...lastRoundRuleErrors,
-        ...(lastRoundDecision?.reason
-          ? [`user simulator unsatisfied: ${lastRoundDecision.reason}`]
-          : ["user simulator unsatisfied"]),
-        `max dialogue rounds reached: ${maxDialogueRounds}`,
-      ];
-      errorText = [
-        "Task result not satisfied after dialogue rounds.",
-        ...resultErrors.map((x) => `- ${x}`),
-      ].join("\n");
+      errorText = `Script task execution failed: ${String(e)}`;
+    }
+  } else {
+    // phase 1（agent）：双 agent 多轮对话（executor <-> user-simulator）
+    // 关键点（中文）：直到“规则校验通过 + 模拟用户满意”或达到最大轮数。
+    let lastRoundRuleErrors: string[] = [];
+    let lastRoundDecision: UserSimulatorDecision | null = null;
+    let lastFeedback = "";
+    executionStatus = "success";
+
+    for (let round = 1; round <= maxDialogueRounds; round++) {
+      dialogueRounds = round;
+      let executorRoundOutput = "";
+
+      try {
+        const executorQuery = buildExecutorRoundQuery({
+          taskBody: task.body,
+          round,
+          ...(outputText ? { lastOutputText: outputText } : {}),
+          ...(lastFeedback ? { lastFeedback } : {}),
+        });
+        const executorRound = await runAgentRound({
+          context,
+          contextId: runContextId,
+          taskId: task.taskId,
+          query: executorQuery,
+          actorId: "scheduler",
+          actorName: "scheduler",
+        });
+        executorRoundOutput = executorRound.outputText;
+        outputText = executorRound.outputText;
+
+        // executor assistant 消息写入 runDir 对应的 context store（messages.jsonl）。
+        try {
+          await appendExecutorAssistantMessage({
+            context,
+            runContextId,
+            taskId: task.taskId,
+            rawResult: executorRound.rawResult,
+          });
+        } catch {
+          // ignore
+        }
+      } catch (e) {
+        executionStatus = "failure";
+        errorText = `Executor agent failed at round ${round}: ${String(e)}`;
+        break;
+      }
+
+      const plannedArtifacts = new Set<string>([
+        "input.md",
+        "output.md",
+        "result.md",
+        "run.json",
+        "dialogue.md",
+        "dialogue.json",
+      ]);
+      const validation = await validateTaskResult({
+        frontmatter: task.frontmatter,
+        runDirAbs,
+        outputText: executorRoundOutput,
+        plannedArtifacts,
+      });
+      lastRoundRuleErrors = [...validation.errors];
+
+      let decision: UserSimulatorDecision = {
+        satisfied: false,
+        reply: "",
+        reason: "user simulator did not run",
+        raw: "",
+      };
+      try {
+        const simulatorQuery = buildUserSimulatorQuery({
+          taskTitle: task.frontmatter.title,
+          taskDescription: task.frontmatter.description,
+          taskBody: task.body,
+          round,
+          maxRounds: maxDialogueRounds,
+          executorOutputText: executorRoundOutput,
+          ruleErrors: validation.errors,
+        });
+        const simulatorRound = await runAgentRound({
+          context,
+          contextId: userSimulatorContextId,
+          taskId: task.taskId,
+          query: simulatorQuery,
+          actorId: "user_simulator",
+          actorName: "user_simulator",
+        });
+        decision = parseUserSimulatorDecision(simulatorRound.outputText);
+      } catch (e) {
+        decision = {
+          satisfied: false,
+          reply: "",
+          reason: `user simulator failed: ${String(e)}`,
+          raw: String(e),
+        };
+      }
+
+      // 关键点（中文）：系统规则校验失败时，强制判定不满意。
+      const roundSatisfied = decision.satisfied && validation.errors.length === 0;
+      userSimulatorSatisfied = roundSatisfied;
+      userSimulatorReply = decision.reply;
+      userSimulatorReason = decision.reason;
+      userSimulatorScore = decision.score;
+      lastRoundDecision = decision;
+
+      dialogueRecords.push({
+        round,
+        executorOutput: executorRoundOutput,
+        ruleErrors: [...validation.errors],
+        userSimulator: {
+          ...decision,
+          satisfied: roundSatisfied,
+        },
+      });
+
+      if (roundSatisfied) {
+        ok = true;
+        status = "success";
+        resultStatus = "valid";
+        resultErrors = [];
+        break;
+      }
+
+      const feedbackLines: string[] = [];
+      if (validation.errors.length > 0) {
+        feedbackLines.push("系统规则校验失败：");
+        for (const item of validation.errors) feedbackLines.push(`- ${item}`);
+      }
+      if (decision.reply) {
+        feedbackLines.push("模拟用户回复：");
+        feedbackLines.push(decision.reply);
+      }
+      if (decision.reason) {
+        feedbackLines.push(`模拟用户理由：${decision.reason}`);
+      }
+      lastFeedback = feedbackLines.join("\n").trim();
+    }
+
+    if (!ok) {
+      if (executionStatus === "failure") {
+        status = "failure";
+        resultStatus = "not_checked";
+        resultErrors = [];
+      } else {
+        status = "failure";
+        resultStatus = "invalid";
+        resultErrors = [
+          ...lastRoundRuleErrors,
+          ...(lastRoundDecision?.reason
+            ? [`user simulator unsatisfied: ${lastRoundDecision.reason}`]
+            : ["user simulator unsatisfied"]),
+          `max dialogue rounds reached: ${maxDialogueRounds}`,
+        ];
+        errorText = [
+          "Task result not satisfied after dialogue rounds.",
+          ...resultErrors.map((x) => `- ${x}`),
+        ].join("\n");
+      }
     }
   }
 
@@ -824,6 +928,7 @@ export async function runTaskNow(params: {
     const textLines: string[] = [];
     textLines.push(`[Task] ${task.frontmatter.title}`);
     textLines.push(`taskId: ${task.taskId}`);
+    textLines.push(`kind: ${taskKind}`);
     textLines.push(`status: ${status}`);
     textLines.push(`executionStatus: ${executionStatus}`);
     textLines.push(`resultStatus: ${resultStatus}`);

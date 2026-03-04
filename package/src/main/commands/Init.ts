@@ -147,13 +147,14 @@ export async function initCommand(
   const existingAgentMd = fs.existsSync(getAgentMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
 
-  if (existingAgentMd || existingShipJson) {
+  // 关键点（中文）：已存在的 Agent.md 永远不覆盖，只在 ship.json 已存在时询问覆盖。
+  if (existingShipJson) {
     if (!allowOverwrite) {
       const confirmResponse = (await prompts({
         type: "confirm",
         name: "overwrite",
         message:
-          "Project already initialized. Overwrite existing configuration files?",
+          "ship.json already exists. Overwrite existing ship.json and continue?",
         initial: false,
       })) as { overwrite?: boolean };
 
@@ -254,8 +255,12 @@ Help users understand and work with their codebase by exploring, analyzing, and 
 - Only modify files when explicitly requested
 `;
 
-  await fs.writeFile(agentMdPath, defaultAgentMd);
-  console.log(`✅ Created Agent.md`);
+  if (existingAgentMd) {
+    console.log("⏭️  Skipped existing Agent.md");
+  } else {
+    await fs.writeFile(agentMdPath, defaultAgentMd);
+    console.log(`✅ Created Agent.md`);
+  }
 
   // Save ship.json
   // Build LLM configuration

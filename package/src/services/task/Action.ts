@@ -19,6 +19,8 @@ import {
   normalizeMaxDialogueRounds,
   normalizeMinOutputChars,
   normalizeRequiredArtifacts,
+  normalizeTaskKind,
+  normalizeTaskTime,
   normalizeTaskStatus,
 } from "./runtime/Model.js";
 import { listTasks, readTask, writeTask } from "./runtime/Store.js";
@@ -74,6 +76,8 @@ export async function listTaskDefinitions(params: {
       cron: task.cron,
       status: task.status,
       contextId: task.contextId,
+      kind: task.kind || "agent",
+      ...(task.time ? { time: task.time } : {}),
       ...(task.timezone ? { timezone: task.timezone } : {}),
       ...(Array.isArray(task.requiredArtifacts) && task.requiredArtifacts.length > 0
         ? { requiredArtifacts: task.requiredArtifacts }
@@ -102,14 +106,22 @@ export async function createTaskDefinition(params: {
   const description = String(req.description || "").trim();
   const cron = String(req.cron || "@manual").trim() || "@manual";
   const contextId = String(req.contextId || "").trim();
+  const kind = normalizeTaskKind(req.kind);
+  const timeNormalized = normalizeTaskTime(req.time);
 
   if (!title) return { success: false, error: "Missing title" };
   if (!description) return { success: false, error: "Missing description" };
   if (!contextId) return { success: false, error: "Missing contextId" };
+  if (!timeNormalized.ok) return { success: false, error: timeNormalized.error };
 
   const status = resolveTaskStatus(req.status, "paused");
   const timezone = typeof req.timezone === "string" ? req.timezone.trim() : "";
-  const body = typeof req.body === "string" && req.body.trim() ? req.body.trim() : buildDefaultTaskBody();
+  const body =
+    typeof req.body === "string" && req.body.trim()
+      ? req.body.trim()
+      : kind === "script"
+        ? ""
+        : buildDefaultTaskBody();
   const requiredArtifactsNormalized = normalizeRequiredArtifacts(req.requiredArtifacts);
   if (!requiredArtifactsNormalized.ok) return { success: false, error: requiredArtifactsNormalized.error };
   const minOutputCharsNormalized = normalizeMinOutputChars(req.minOutputChars);
@@ -127,6 +139,8 @@ export async function createTaskDefinition(params: {
         description,
         cron,
         contextId,
+        kind,
+        ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
         status,
         ...(timezone ? { timezone } : {}),
         ...(requiredArtifactsNormalized.value.length > 0
@@ -179,6 +193,9 @@ export async function updateTaskDefinition(params: {
   if (req.body !== undefined && req.clearBody) {
     return { success: false, error: "`body` conflicts with `clearBody`" };
   }
+  if (req.time !== undefined && req.clearTime) {
+    return { success: false, error: "`time` conflicts with `clearTime`" };
+  }
 
   try {
     const current = await readTask({
@@ -203,6 +220,16 @@ export async function updateTaskDefinition(params: {
     const contextId =
       typeof req.contextId === "string" ? req.contextId.trim() : current.frontmatter.contextId;
     if (!contextId) return { success: false, error: "contextId cannot be empty" };
+    const kind = normalizeTaskKind(
+      req.kind === undefined ? current.frontmatter.kind : req.kind,
+    );
+    const timeInput = req.clearTime
+      ? undefined
+      : req.time !== undefined
+        ? req.time
+        : current.frontmatter.time;
+    const timeNormalized = normalizeTaskTime(timeInput);
+    if (!timeNormalized.ok) return { success: false, error: timeNormalized.error };
 
     const status =
       req.status === undefined
@@ -281,6 +308,8 @@ export async function updateTaskDefinition(params: {
         description,
         cron,
         contextId,
+        kind,
+        ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
         status,
         ...(timezone ? { timezone } : {}),
         ...(requiredArtifacts.length > 0 ? { requiredArtifacts } : {}),

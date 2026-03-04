@@ -10,7 +10,12 @@
 import yaml from "js-yaml";
 import path from "node:path";
 import { parseFrontMatter } from "./Frontmatter.js";
-import type { ShipTaskDefinitionV1, ShipTaskFrontmatterV1, ShipTaskStatus } from "@services/task/types/Task.js";
+import type {
+  ShipTaskDefinitionV1,
+  ShipTaskFrontmatterV1,
+  ShipTaskKind,
+  ShipTaskStatus,
+} from "@services/task/types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
@@ -38,6 +43,38 @@ export function normalizeTaskStatus(input: TaskRawValue): ShipTaskStatus | null 
   if (s === "paused") return "paused";
   if (s === "disabled") return "disabled";
   return null;
+}
+
+/**
+ * 归一化 task 执行类型。
+ *
+ * 关键点（中文）
+ * - 缺省值为 `agent`，保证历史任务兼容
+ */
+export function normalizeTaskKind(input: TaskRawValue): ShipTaskKind {
+  const s = typeof input === "string" ? input.trim().toLowerCase() : "";
+  if (s === "script") return "script";
+  return "agent";
+}
+
+/**
+ * 归一化单次计划时间。
+ *
+ * 关键点（中文）
+ * - 输入为空时返回 undefined
+ * - 统一序列化为 ISO8601，避免时区歧义
+ */
+export function normalizeTaskTime(
+  input: TaskRawValue,
+): { ok: true; value?: string } | { ok: false; error: string } {
+  if (input === undefined || input === null) return { ok: true, value: undefined };
+  const raw = String(input || "").trim();
+  if (!raw) return { ok: true, value: undefined };
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms) || Number.isNaN(ms)) {
+    return { ok: false, error: `Invalid time: "${raw}" (expected ISO8601 datetime)` };
+  }
+  return { ok: true, value: new Date(ms).toISOString() };
 }
 
 /**
@@ -196,6 +233,15 @@ export function parseTaskMarkdown(params: {
       error: `Invalid status: "${String(meta.status)}" (expected: enabled|paused|disabled)`,
     };
   }
+  const kind = normalizeTaskKind(meta.kind);
+  const timeNormalized = normalizeTaskTime(meta.time);
+  if (!timeNormalized.ok) {
+    return { ok: false, error: timeNormalized.error };
+  }
+  const bodyText = String(body ?? "").trim();
+  if (kind === "script" && !bodyText) {
+    return { ok: false, error: "script task body cannot be empty" };
+  }
 
   const requiredArtifactsNormalized = normalizeRequiredArtifacts(meta.requiredArtifacts);
   if (!requiredArtifactsNormalized.ok) {
@@ -216,6 +262,8 @@ export function parseTaskMarkdown(params: {
     cron: String(meta.cron).trim(),
     description: String(meta.description).trim(),
     contextId: String(meta.contextId).trim(),
+    kind,
+    ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
     status,
     ...(typeof meta.timezone === "string" && meta.timezone.trim()
       ? { timezone: meta.timezone.trim() }
@@ -272,11 +320,23 @@ export function buildTaskMarkdown(params: {
     throw new Error(maxDialogueRoundsNormalized.error);
   }
 
+  const kind = normalizeTaskKind(frontmatter.kind);
+  const timeNormalized = normalizeTaskTime(frontmatter.time);
+  if (!timeNormalized.ok) {
+    throw new Error(timeNormalized.error);
+  }
+  const bodyText = String(body ?? "").trim();
+  if (kind === "script" && !bodyText) {
+    throw new Error("script task body cannot be empty");
+  }
+
   const meta = {
     title: String(frontmatter.title || "").trim(),
     cron: String(frontmatter.cron || "").trim(),
     description: String(frontmatter.description || "").trim(),
     contextId: String(frontmatter.contextId || "").trim(),
+    kind,
+    ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
     status: String(frontmatter.status || "").trim(),
     ...(typeof frontmatter.timezone === "string" && frontmatter.timezone.trim()
       ? { timezone: frontmatter.timezone.trim() }
@@ -298,6 +358,6 @@ export function buildTaskMarkdown(params: {
     noRefs: true,
   });
 
-  const bodyText = String(body ?? "").trim() ? String(body ?? "").trim() + "\n" : "";
-  return `---\n${yamlText}---\n\n${bodyText}`;
+  const bodyWithTrailingLf = bodyText ? bodyText + "\n" : "";
+  return `---\n${yamlText}---\n\n${bodyWithTrailingLf}`;
 }

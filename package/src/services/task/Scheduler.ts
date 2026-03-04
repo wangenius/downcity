@@ -7,7 +7,7 @@
  */
 
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import { listTasks, readTask } from "./runtime/Store.js";
+import { listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import { ServiceCronEngine } from "./types/Cron.js";
 
@@ -23,6 +23,14 @@ function normalizeCronExpression(raw: string): string | null {
   return value;
 }
 
+function parsePlannedTimeMs(raw: string | undefined): number | null {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  const ms = Date.parse(s);
+  if (!Number.isFinite(ms) || Number.isNaN(ms)) return null;
+  return ms;
+}
+
 export async function registerTaskCronJobs(params: {
   context: ServiceRuntime;
   engine: ServiceCronEngine;
@@ -35,51 +43,143 @@ export async function registerTaskCronJobs(params: {
   let jobsScheduled = 0;
 
   for (const item of tasks) {
-    const expr = normalizeCronExpression(item.cron);
-    if (!expr || expr === "@manual") continue;
     if (String(item.status).toLowerCase() !== "enabled") continue;
 
+    const expr = normalizeCronExpression(item.cron);
     let timezone: string | undefined;
+    let timeRaw: string | undefined;
     try {
       const task = await readTask({
         taskId: item.taskId,
         projectRoot: runtime.rootPath,
       });
       timezone = task.frontmatter.timezone;
+      timeRaw = task.frontmatter.time;
     } catch {
       timezone = item.timezone;
+      timeRaw = item.time;
     }
+
+    if (expr && expr !== "@manual") {
+      try {
+        params.engine.register({
+          id: `task:${item.taskId}`,
+          expression: expr,
+          ...(timezone ? { timezone } : {}),
+          execute: async () => {
+            const taskId = String(item.taskId || "").trim();
+            if (!taskId) return;
+
+            // 关键点（中文）：同一 taskId 串行；重叠触发时跳过，避免并发执行污染 run 目录。
+            if (runningByTaskId.has(taskId)) {
+              void logger.log("warn", "Task skipped (already running)", {
+                taskId,
+                via: "cron",
+              });
+              return;
+            }
+
+            runningByTaskId.add(taskId);
+            try {
+              const result = await runTaskNow({
+                context: runtime,
+                taskId,
+                projectRoot: runtime.rootPath,
+                trigger: { type: "cron" },
+              });
+
+              void logger.log("info", "Task run finished", {
+                taskId,
+                via: "cron",
+                status: result.status,
+                executionStatus: result.executionStatus,
+                resultStatus: result.resultStatus,
+                ...(result.resultErrors.length > 0
+                  ? { resultErrors: result.resultErrors }
+                  : {}),
+                dialogueRounds: result.dialogueRounds,
+                userSimulatorSatisfied: result.userSimulatorSatisfied,
+                timestamp: result.timestamp,
+                runDir: result.runDirRel,
+                notified: result.notified,
+                ...(result.notifyError
+                  ? { notifyError: result.notifyError }
+                  : {}),
+              });
+            } catch (error) {
+              void logger.log("error", "Task run failed (scheduler)", {
+                taskId,
+                via: "cron",
+                error: String(error),
+              });
+            } finally {
+              runningByTaskId.delete(taskId);
+            }
+          },
+        });
+
+        jobsScheduled += 1;
+      } catch {
+        void logger.log("warn", "Invalid task cron; skipped", {
+          taskId: item.taskId,
+          cron: item.cron,
+        });
+      }
+    }
+
+    const plannedTimeMs = parsePlannedTimeMs(timeRaw);
+    if (timeRaw && plannedTimeMs === null) {
+      void logger.log("warn", "Invalid task time; skipped", {
+        taskId: item.taskId,
+        time: timeRaw,
+      });
+      continue;
+    }
+    if (plannedTimeMs === null) continue;
 
     try {
       params.engine.register({
-        id: `task:${item.taskId}`,
-        expression: expr,
-        ...(timezone ? { timezone } : {}),
+        id: `task-time:${item.taskId}`,
+        expression: "* * * * *",
         execute: async () => {
           const taskId = String(item.taskId || "").trim();
           if (!taskId) return;
+
+          // 到点前不执行；进程重启后若已过点，将在下一分钟补执行一次。
+          if (Date.now() < plannedTimeMs) return;
 
           // 关键点（中文）：同一 taskId 串行；重叠触发时跳过，避免并发执行污染 run 目录。
           if (runningByTaskId.has(taskId)) {
             void logger.log("warn", "Task skipped (already running)", {
               taskId,
-              via: "cron",
+              via: "time",
             });
             return;
           }
 
+          let shouldDeactivateOneShot = false;
           runningByTaskId.add(taskId);
           try {
+            const latest = await readTask({
+              taskId,
+              projectRoot: runtime.rootPath,
+            });
+            if (String(latest.frontmatter.status).toLowerCase() !== "enabled") return;
+            const latestPlannedMs = parsePlannedTimeMs(latest.frontmatter.time);
+            if (latestPlannedMs === null) return;
+            if (Date.now() < latestPlannedMs) return;
+
+            shouldDeactivateOneShot = true;
             const result = await runTaskNow({
               context: runtime,
               taskId,
               projectRoot: runtime.rootPath,
-              trigger: { type: "cron" },
+              trigger: { type: "time" },
             });
 
             void logger.log("info", "Task run finished", {
               taskId,
-              via: "cron",
+              via: "time",
               status: result.status,
               executionStatus: result.executionStatus,
               resultStatus: result.resultStatus,
@@ -98,10 +198,38 @@ export async function registerTaskCronJobs(params: {
           } catch (error) {
             void logger.log("error", "Task run failed (scheduler)", {
               taskId,
-              via: "cron",
+              via: "time",
               error: String(error),
             });
           } finally {
+            if (shouldDeactivateOneShot) {
+              try {
+                const latest = await readTask({
+                  taskId,
+                  projectRoot: runtime.rootPath,
+                });
+                const { time: _time, ...frontmatterWithoutTime } = latest.frontmatter;
+                await writeTask({
+                  projectRoot: runtime.rootPath,
+                  taskId,
+                  overwrite: true,
+                  frontmatter: {
+                    ...frontmatterWithoutTime,
+                    status: "paused",
+                  },
+                  body: latest.body,
+                });
+                void logger.log("info", "One-shot task deactivated after execution", {
+                  taskId,
+                  status: "paused",
+                });
+              } catch (e) {
+                void logger.log("warn", "Failed to deactivate one-shot task", {
+                  taskId,
+                  error: String(e),
+                });
+              }
+            }
             runningByTaskId.delete(taskId);
           }
         },
@@ -109,9 +237,9 @@ export async function registerTaskCronJobs(params: {
 
       jobsScheduled += 1;
     } catch {
-      void logger.log("warn", "Invalid task cron; skipped", {
+      void logger.log("warn", "Invalid task time trigger; skipped", {
         taskId: item.taskId,
-        cron: item.cron,
+        time: timeRaw,
       });
     }
   }

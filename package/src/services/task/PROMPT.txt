@@ -1,17 +1,164 @@
-# Task Service 使用说明
+# Task Service 使用说明（完整）
 
-你可以通过 `task` service 管理任务定义、执行与状态控制。
+你可以通过 `task` service 管理任务定义、执行、调度与状态控制。
+
+本说明面向“调用 task service 的智能体”，目标是：
+- 让任务定义可审计、可复现、可维护。
+- 让执行结果可追踪（成功/失败原因清晰）。
+- 降低误操作（尤其是状态切换与更新字段冲突）。
+
+## 任务模型
+
+每个任务由 `./.ship/task/<taskId>/task.md` 定义，包含：
+- frontmatter（结构化字段）
+- body（任务正文）
+
+执行时会产生 run 目录：
+- `./.ship/task/<taskId>/<timestamp>/`
+
+常见产物：
+- `input.md`：本次执行输入快照
+- `output.md`：本次执行输出
+- `result.md`：结果摘要
+- `run.json`：结构化执行元数据
+- `dialogue.md` / `dialogue.json`：agent 多轮执行信息（agent 类型）
+- `error.md`：失败摘要（失败时）
+
+## 执行类型（kind）
+
+`task` 支持两种执行类型：
+
+1. `kind=agent`
+- 把 `task.md` 正文作为任务输入交给 agent 执行。
+- 支持最大多轮对话（`maxDialogueRounds`），带规则校验与模拟用户满意度判定。
+- 适合研究、分析、生成报告类任务。
+
+2. `kind=script`
+- 直接执行 `task.md` 正文脚本（`sh` 语义）。
+- 适合固定流程自动化任务。
+- 正文必须是可执行脚本内容；不要只写自然语言目标。
 
 ## 可用 action
-- `list`：列出任务，可按状态过滤。
-- `create`：创建任务定义。
-- `run`：手动触发任务执行。
-- `update`：更新任务定义字段。
-- `status`：直接设置任务状态（`enabled|paused|disabled`）。
-- `enable`：将任务设为启用。
-- `disable`：将任务设为禁用。
 
-## 使用规范
-- 修改型操作（`create` / `update` / `status` / `enable` / `disable`）前先确认 `taskId` 与目标状态。
-- `run` 用于即时执行，不应替代任务配置管理。
-- 返回结果需包含关键标识（如 `taskId`）与成功/失败原因，便于追踪。
+- `list`：列出任务（可按状态过滤）
+- `create`：创建任务定义
+- `run`：手动触发任务执行
+- `update`：更新任务定义字段
+- `status`：直接设置状态（`enabled|paused|disabled`）
+- `enable`：将状态设为 `enabled`
+- `disable`：将状态设为 `disabled`
+
+## 状态语义
+
+- `enabled`：可被 cron 调度执行
+- `paused`：保留定义但不触发调度
+- `disabled`：禁用
+
+注意：
+- `run` 是手动立即执行，与状态无关。
+- 生产环境切换状态前，先确认 `taskId` 与目标状态。
+
+## 字段约束与推荐
+
+### 核心字段
+- `title`：任务标题（必填）
+- `description`：任务描述（必填）
+- `cron`：cron 表达式（必填，支持 `@manual`）
+- `contextId`：结果回发目标（必填）
+- `status`：`enabled|paused|disabled`（必填）
+- `kind`：`agent|script`（可选，默认 `agent`）
+- `time`：单次计划时间（可选，ISO8601；到点执行一次）
+
+### 可选字段
+- `timezone`：IANA 时区（如 `Asia/Shanghai`）
+- `requiredArtifacts`：要求 run 目录中必须出现的相对路径文件
+- `minOutputChars`：最小输出字符数（默认 1，设 0 表示允许空输出）
+- `maxDialogueRounds`：仅 `agent` 类型有效，默认 3
+
+### 冲突与校验
+- 更新时所有 `set` 与 `clear` 选项必须互斥。
+- `time` 适合“单次计划”；触发后系统会自动将任务置为 `paused` 并清空 `time`。
+- `kind=script` 时，正文不能为空且应为脚本；不要配置成空 body。
+- `requiredArtifacts` 应是 run 目录内相对路径。
+
+## 调用策略（智能体必须遵循）
+
+1. 创建前先判定意图
+- 需要推理/生成：优先 `kind=agent`
+- 需要确定性自动化：优先 `kind=script`
+
+2. 修改前先读取上下文
+- 对未知任务先 `list`（必要时再 `run` 验证）
+- 变更前明确 `taskId`
+
+3. 变更要最小化
+- `update` 仅改必要字段，不要顺带改无关字段
+
+4. 返回结果必须可追踪
+- 成功时带 `taskId`（和关键状态）
+- 失败时给出明确错误原因（字段缺失/校验失败/执行失败）
+
+## 典型流程
+
+### 新建任务
+- 明确需求（频率、执行类型、回发目标）
+- `create`
+- （可选）`run` 做验收
+- 验收通过后 `enable`
+
+### 调整任务
+- `update` 修改字段
+- 必要时手动 `run` 验证
+- 根据结果决定 `enable/disable`
+
+### 紧急止损
+- 出现异常重复触发、错误推送、成本异常时：`disable`
+
+## 执行结果解读
+
+`run` 返回中重点看：
+- `status`：最终状态（success/failure/skipped）
+- `executionStatus`：执行阶段是否成功
+- `resultStatus`：结果校验是否通过（valid/invalid/not_checked）
+- `resultErrors`：校验失败原因
+- `runDirRel`：本次执行产物目录
+- `notifyError`：回发失败原因（如有）
+
+### 快速判断
+- `executionStatus=failure`：执行本身失败（如运行时错误、模型未就绪、脚本异常）
+- `executionStatus=success + resultStatus=invalid`：执行成功但结果不满足约束
+
+## 文案与交互规范
+
+当你把结果回复给用户时：
+- 先给结论（成功/失败）
+- 再给关键标识（`taskId`、必要时 `runDirRel`）
+- 最后给下一步建议（例如是否 `enable`、是否补字段）
+
+避免：
+- 只说“失败了”但不给原因
+- 大段堆叠底层日志
+- 没有 `taskId` 导致用户无法追踪
+
+## 建议模板（可复用）
+
+### create 成功
+- 已创建任务：`<taskId>`
+- 类型：`<kind>`
+- 调度：`<cron>`（`<timezone>`）
+- 回发：`<contextId>`
+- 当前状态：`<status>`
+
+### run 失败
+- 任务执行失败：`<taskId>`
+- 执行状态：`<executionStatus>`
+- 结果状态：`<resultStatus>`
+- 原因：`<error 或 resultErrors>`
+- 排查目录：`<runDirRel>`
+
+## 关键原则（必须遵循）
+
+1. 先准确，再自动化。
+2. 修改型操作要保守，避免误改。
+3. 所有返回都要带可追踪标识。
+4. 对 `script` 任务，正文即脚本，不要混入无关自然语言说明。

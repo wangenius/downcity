@@ -18,7 +18,7 @@ import {
 } from "./Action.js";
 import { resolveContextId } from "@/main/runtime/ContextId.js";
 import type { Service } from "@main/service/ServiceRegistry.js";
-import type { ShipTaskStatus } from "./types/Task.js";
+import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type {
   TaskCreateRequest,
@@ -133,6 +133,17 @@ function getOptionalTaskStatusField(
   return undefined;
 }
 
+function getOptionalTaskKindField(
+  body: JsonObject,
+  key: string,
+): ShipTaskKind | undefined {
+  const value = body[key];
+  if (value === "agent" || value === "script") {
+    return value;
+  }
+  return undefined;
+}
+
 function getStringOpt(
   opts: Record<string, JsonValue>,
   key: string,
@@ -174,6 +185,14 @@ function readTaskStatusOrThrow(value?: string): ShipTaskStatus | undefined {
   throw new Error(`Invalid task status: ${value}`);
 }
 
+function readTaskKindOrThrow(value?: string): ShipTaskKind | undefined {
+  if (!value) return undefined;
+  if (value === "agent" || value === "script") {
+    return value;
+  }
+  throw new Error(`Invalid task kind: ${value}`);
+}
+
 function resolveContextIdOrThrow(input?: string): string {
   const contextId = resolveContextId({ contextId: input });
   if (!contextId) {
@@ -196,6 +215,7 @@ function mapTaskCreateCommandInput(opts: Record<string, JsonValue>): TaskCreateR
   if (!description) throw new Error("Missing description");
 
   const contextId = resolveContextIdOrThrow(getStringOpt(opts, "contextId"));
+  const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
   const requiredArtifacts = getStringArrayOpt(opts, "requiredArtifact");
 
@@ -205,6 +225,10 @@ function mapTaskCreateCommandInput(opts: Record<string, JsonValue>): TaskCreateR
     cron: String(getStringOpt(opts, "cron") || "@manual").trim() || "@manual",
     description,
     contextId,
+    ...(kind ? { kind } : {}),
+    ...(typeof getStringOpt(opts, "time") === "string"
+      ? { time: getStringOpt(opts, "time") }
+      : {}),
     ...(status ? { status } : {}),
     ...(getStringOpt(opts, "timezone")
       ? { timezone: getStringOpt(opts, "timezone") }
@@ -230,6 +254,7 @@ function mapTaskUpdateCommandInput(params: {
   opts: Record<string, JsonValue>;
 }): TaskUpdateRequest {
   const opts = params.opts;
+  const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
   const requiredArtifacts = getStringArrayOpt(opts, "requiredArtifact");
 
@@ -257,6 +282,9 @@ function mapTaskUpdateCommandInput(params: {
   if (typeof getStringOpt(opts, "body") === "string" && getBooleanOpt(opts, "clearBody")) {
     conflicts.push("`--body` conflicts with `--clear-body`");
   }
+  if (typeof getStringOpt(opts, "time") === "string" && getBooleanOpt(opts, "clearTime")) {
+    conflicts.push("`--time` conflicts with `--clear-time`");
+  }
   if (conflicts.length > 0) {
     throw new Error(conflicts.join("; "));
   }
@@ -266,6 +294,9 @@ function mapTaskUpdateCommandInput(params: {
     typeof getStringOpt(opts, "cron") === "string" ||
     typeof getStringOpt(opts, "description") === "string" ||
     typeof getStringOpt(opts, "contextId") === "string" ||
+    typeof kind === "string" ||
+    typeof getStringOpt(opts, "time") === "string" ||
+    getBooleanOpt(opts, "clearTime") === true ||
     typeof status === "string" ||
     typeof getStringOpt(opts, "timezone") === "string" ||
     getBooleanOpt(opts, "clearTimezone") === true ||
@@ -295,6 +326,13 @@ function mapTaskUpdateCommandInput(params: {
       : {}),
     ...(typeof getStringOpt(opts, "contextId") === "string"
       ? { contextId: getStringOpt(opts, "contextId") }
+      : {}),
+    ...(typeof kind === "string" ? { kind } : {}),
+    ...(typeof getStringOpt(opts, "time") === "string"
+      ? { time: getStringOpt(opts, "time") }
+      : {}),
+    ...(getBooleanOpt(opts, "clearTime")
+      ? { clearTime: true }
       : {}),
     ...(typeof status === "string" ? { status } : {}),
     ...(typeof getStringOpt(opts, "timezone") === "string"
@@ -350,6 +388,8 @@ function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
     cron: getStringField(body, "cron"),
     description: getStringField(body, "description"),
     contextId: getStringField(body, "contextId"),
+    kind: getOptionalTaskKindField(body, "kind"),
+    time: getOptionalStringField(body, "time"),
     status: getOptionalTaskStatusField(body, "status"),
     timezone: getOptionalStringField(body, "timezone"),
     body: getOptionalStringField(body, "body"),
@@ -383,6 +423,15 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
       : {}),
     ...(getOptionalStringField(body, "contextId")
       ? { contextId: getOptionalStringField(body, "contextId") }
+      : {}),
+    ...(getOptionalTaskKindField(body, "kind")
+      ? { kind: getOptionalTaskKindField(body, "kind") }
+      : {}),
+    ...(getOptionalStringField(body, "time")
+      ? { time: getOptionalStringField(body, "time") }
+      : {}),
+    ...(getBooleanField(body, "clearTime")
+      ? { clearTime: true }
       : {}),
     ...(getOptionalTaskStatusField(body, "status")
       ? { status: getOptionalTaskStatusField(body, "status") }
@@ -482,6 +531,8 @@ export const taskService: Service = {
             .requiredOption("--description <description>", "任务描述")
             .option("--task-id <taskId>", "任务 ID（不传则自动生成）")
             .option("--cron <cron>", "cron 表达式（默认 @manual）", "@manual")
+            .option("--kind <kind>", "执行类型（agent|script）", "agent")
+            .option("--time <time>", "单次计划时间（ISO8601，例如 2026-03-05T01:00:00Z）")
             .option(
               "--context-id <contextId>",
               "通知目标 contextId（不传尝试使用 SMA_CTX_CONTEXT_ID）",
@@ -591,6 +642,9 @@ export const taskService: Service = {
             .option("--title <title>", "任务标题")
             .option("--description <description>", "任务描述")
             .option("--cron <cron>", "cron 表达式")
+            .option("--kind <kind>", "执行类型（agent|script）")
+            .option("--time <time>", "单次计划时间（ISO8601）")
+            .option("--clear-time", "清空 time", false)
             .option("--context-id <contextId>", "通知目标 contextId")
             .option("--status <status>", "状态（enabled|paused|disabled）")
             .option("--timezone <timezone>", "IANA 时区")

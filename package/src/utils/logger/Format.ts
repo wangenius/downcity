@@ -8,6 +8,15 @@ type FormattedToolCall = {
   arguments?: string;
 };
 
+/**
+ * 按会话记录“上次已打印的消息数”。
+ *
+ * 关键点（中文）
+ * - 用于 LLM 请求日志的增量打印，避免每轮都重复输出全量历史 messages。
+ * - key 建议使用 contextId；无 key 时保持原有行为（全量打印）。
+ */
+const lastLoggedMessagesCountByKey = new Map<string, number>();
+
 function isJsonObject(value: JsonValue | null | undefined): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -248,6 +257,9 @@ export type ProviderFetch = (
 export function parseFetchRequestForLog(
   input: string | URL | Request,
   init?: RequestInit,
+  opts?: {
+    incrementalKey?: string;
+  },
 ): {
   url: string;
   method: string;
@@ -332,10 +344,18 @@ export function parseFetchRequestForLog(
   }
 
   if (messages && Array.isArray(messages)) {
-    messageTextParts.push(...formatMessagesForLog(messages, {
+    const incrementalKey = String(opts?.incrementalKey || "").trim();
+    const selectedMessages = selectMessagesForIncrementalLog(
+      messages,
+      incrementalKey,
+    );
+    messageTextParts.push(...formatMessagesForLog(selectedMessages, {
       maxContentChars: 2000,
       maxToolArgsChars: 1200,
     }));
+    if (selectedMessages.length === 0) {
+      messageTextParts.push(formatLogField("messages", "no incremental items"));
+    }
   } else {
     messageTextParts.push(...formatPayloadSummaryLines(payload, maxChars));
   }
@@ -365,4 +385,26 @@ export function parseFetchRequestForLog(
       ...(includePayload ? { payload } : {}),
     },
   };
+}
+
+function selectMessagesForIncrementalLog(
+  messages: JsonObject[],
+  incrementalKey: string,
+): JsonObject[] {
+  if (!incrementalKey) return messages;
+
+  const prevCount = lastLoggedMessagesCountByKey.get(incrementalKey) ?? 0;
+  const currentCount = messages.length;
+  lastLoggedMessagesCountByKey.set(incrementalKey, currentCount);
+
+  if (currentCount > prevCount) {
+    return messages.slice(prevCount);
+  }
+
+  // 关键点（中文）：当消息数回退（compact/rewrite）时，打印最近两条作为对齐点。
+  if (currentCount < prevCount) {
+    return messages.slice(Math.max(0, currentCount - 2));
+  }
+
+  return [];
 }

@@ -9,6 +9,7 @@
 
 import path from "node:path";
 import fs from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import {
   resolveChatContextSnapshot,
@@ -49,6 +50,80 @@ type ChatContextActionPayload = {
 type ChatExtractTextPayload = {
   assistantMessage?: JsonObject | null;
 };
+
+const CHAT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
+const TELEGRAM_PROMPT_FILE_URL = new URL(
+  "./adapters/telegram/PROMPT.txt",
+  import.meta.url,
+);
+const FEISHU_PROMPT_FILE_URL = new URL(
+  "./adapters/feishu/PROMPT.txt",
+  import.meta.url,
+);
+const QQ_PROMPT_FILE_URL = new URL("./adapters/qq/PROMPT.txt", import.meta.url);
+
+/**
+ * 加载 chat service 使用说明提示词。
+ *
+ * 关键点（中文）
+ * - 启动阶段即加载，缺失时直接抛错，避免静默失效。
+ */
+function loadChatServicePrompt(): string {
+  try {
+    return readFileSync(CHAT_PROMPT_FILE_URL, "utf-8").trim();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `failed to load chat service prompt from ${CHAT_PROMPT_FILE_URL.pathname}: ${reason}`,
+    );
+  }
+}
+
+const CHAT_SERVICE_PROMPT = loadChatServicePrompt();
+
+/**
+ * 加载单个 adapter 提示词。
+ *
+ * 关键点（中文）
+ * - adapter 提示词属于强依赖资产，缺失时直接抛错，避免运行时悄悄丢失规则。
+ */
+function loadChatAdapterPrompt(fileUrl: URL, adapterName: string): string {
+  try {
+    return readFileSync(fileUrl, "utf-8").trim();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `failed to load ${adapterName} chat adapter prompt from ${fileUrl.pathname}: ${reason}`,
+    );
+  }
+}
+
+const CHAT_ADAPTER_PROMPTS: Record<"telegram" | "feishu" | "qq", string> = {
+  telegram: loadChatAdapterPrompt(TELEGRAM_PROMPT_FILE_URL, "telegram"),
+  feishu: loadChatAdapterPrompt(FEISHU_PROMPT_FILE_URL, "feishu"),
+  qq: loadChatAdapterPrompt(QQ_PROMPT_FILE_URL, "qq"),
+};
+
+/**
+ * 构建当前启用 adapter 的提示词片段。
+ *
+ * 关键点（中文）
+ * - 仅注入已启用 adapter，避免给模型引入未接入平台的噪音规则。
+ */
+function buildEnabledAdapterPrompts(context: ServiceRuntime): string[] {
+  const prompts: string[] = [];
+  const adapters = context.config.services?.chat?.adapters || {};
+  if (adapters.telegram?.enabled) {
+    prompts.push(CHAT_ADAPTER_PROMPTS.telegram);
+  }
+  if (adapters.feishu?.enabled) {
+    prompts.push(CHAT_ADAPTER_PROMPTS.feishu);
+  }
+  if (adapters.qq?.enabled) {
+    prompts.push(CHAT_ADAPTER_PROMPTS.qq);
+  }
+  return prompts;
+}
 
 let adapterState: ChatAdapterState = {
   telegram: null,
@@ -273,8 +348,10 @@ async function executeChatSendAction(params: {
 
 export const chatService: Service = {
   name: "chat",
-  // 关键点（中文）：chat service 当前不注入额外 system prompt。
-  system: () => "",
+  system: (context) =>
+    [CHAT_SERVICE_PROMPT, ...buildEnabledAdapterPrompts(context)]
+      .filter(Boolean)
+      .join("\n\n"),
   actions: {
     send: {
       command: {

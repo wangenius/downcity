@@ -15,8 +15,10 @@ export function createLlmLoggingFetch(args: {
   return async (input, init) => {
     if (args.enabled) {
       try {
-        const parsed = parseFetchRequestForLog(input, init);
         const ctx: LlmRequestContext | undefined = llmRequestContext.getStore();
+        const parsed = parseFetchRequestForLog(input, init, {
+          incrementalKey: ctx?.contextId,
+        });
 
         if (parsed) {
           const contextId = ctx?.contextId;

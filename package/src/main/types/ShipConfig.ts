@@ -165,7 +165,7 @@ export interface ShipConfig {
        * - 这里是近似值，用于在调用 provider 前提前触发 compact
        * - 实际超窗仍会被 provider 拒绝并进入 retry（更激进 compact）
        *
-       * 默认：16000
+       * 默认：128000
        */
       maxInputTokensApprox?: number;
       /**

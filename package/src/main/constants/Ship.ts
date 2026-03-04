@@ -20,7 +20,7 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
   context: {
     messages: {
       keepLastMessages: 30,
-      maxInputTokensApprox: 16000,
+      maxInputTokensApprox: 128000,
       archiveOnCompact: true,
     },
   },

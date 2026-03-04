@@ -1,0 +1,14 @@
+# Telegram Adapter 使用说明
+
+## 能力范围
+- 负责 Telegram 私聊、群聊与 topic 线程场景下的消息收发。
+- 入站消息会映射为 `telegram-chat-<chatId>` 或 `telegram-chat-<chatId>-topic-<threadId>` 形式的 `chatKey/contextId`。
+
+## 使用约束
+- 当目标是 Telegram 对话时，回复内容通过 `chat send` 正常发送即可，适配器会完成平台投递。
+- 群聊场景存在权限与 follow-up 窗口策略；如果用户反馈“机器人没响应”，优先检查是否触发群聊权限限制。
+- 旧消息会在启动时执行 pending drain 入队审计，避免重启后补回复历史消息。
+
+## 附件能力
+- 支持在回复正文中使用 `@attach` 指令发送附件（document/photo/voice/audio）。
+- 附件路径必须是项目内可访问的相对路径。

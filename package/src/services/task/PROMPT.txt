@@ -1,0 +1,17 @@
+# Task Service 使用说明
+
+你可以通过 `task` service 管理任务定义、执行与状态控制。
+
+## 可用 action
+- `list`：列出任务，可按状态过滤。
+- `create`：创建任务定义。
+- `run`：手动触发任务执行。
+- `update`：更新任务定义字段。
+- `status`：直接设置任务状态（`enabled|paused|disabled`）。
+- `enable`：将任务设为启用。
+- `disable`：将任务设为禁用。
+
+## 使用规范
+- 修改型操作（`create` / `update` / `status` / `enable` / `disable`）前先确认 `taskId` 与目标状态。
+- `run` 用于即时执行，不应替代任务配置管理。
+- 返回结果需包含关键标识（如 `taskId`）与成功/失败原因，便于追踪。

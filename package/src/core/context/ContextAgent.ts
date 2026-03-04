@@ -38,6 +38,7 @@ import {
 import type { ContextStore } from "./ContextStore.js";
 import { loadProjectDotenv } from "@/main/runtime/Config.js";
 import { shellTools } from "@core/shell/Tool.js";
+import { compactContextMessageIfNeeded } from "./Compact.js";
 
 export class ContextAgent {
   // 是否初始化
@@ -106,7 +107,6 @@ export class ContextAgent {
     const requestId = generateId();
     const logger = this.getLogger();
 
-    await logger.log("debug", `ContextId: ${contextId}`);
     await logger.log("info", "Agent request started", {
       requestId,
       contextId,
@@ -189,6 +189,7 @@ export class ContextAgent {
       const runtime = getRuntimeState();
       // phase 0（中文）：装配 context store 与 runtime/system prompt 基础上下文。
       contextStore = runtime.contextManager.getContextStore(contextId);
+      const activeContextStore = contextStore;
 
       const runtimeSystemMessages = this.buildRuntimeSystemMessages({
         projectRoot: runtime.rootPath,
@@ -211,13 +212,35 @@ export class ContextAgent {
       const compactPolicy = this.resolveCompactPolicy(retryAttempts);
       let compacted = false;
       try {
-        const compactResult = await contextStore.compactIfNeeded({
-          model: this.model,
-          system: currentBaseSystemMessages,
-          keepLastMessages: compactPolicy.keepLastMessages,
-          maxInputTokensApprox: compactPolicy.maxInputTokensApprox,
-          archiveOnCompact: compactPolicy.archiveOnCompact,
-        });
+        const compactResult = await compactContextMessageIfNeeded(
+          {
+            rootPath: activeContextStore.rootPath,
+            contextId: activeContextStore.contextId,
+            withWriteLock: (fn) => activeContextStore.withWriteLock(fn),
+            loadAll: () => activeContextStore.loadAll(),
+            createSummaryMessage: ({ text, sourceRange }) =>
+              activeContextStore.createAssistantTextMessage({
+                text,
+                metadata: {
+                  contextId: activeContextStore.contextId,
+                },
+                kind: "summary",
+                source: "compact",
+                ...(sourceRange ? { sourceRange } : {}),
+              }),
+            getArchiveDirPath: () => activeContextStore.getArchiveDirPath(),
+            getMessagesFilePath: () => activeContextStore.getMessagesFilePath(),
+            readMetaUnsafe: () => activeContextStore.readMetaUnsafe(),
+            writeMetaUnsafe: (next) => activeContextStore.writeMetaUnsafe(next),
+          },
+          {
+            model: this.model,
+            system: currentBaseSystemMessages,
+            keepLastMessages: compactPolicy.keepLastMessages,
+            maxInputTokensApprox: compactPolicy.maxInputTokensApprox,
+            archiveOnCompact: compactPolicy.archiveOnCompact,
+          },
+        );
         compacted = Boolean(compactResult.compacted);
       } catch {
         // ignore compact failure; fallback to un-compacted context messages
@@ -235,20 +258,12 @@ export class ContextAgent {
       }
 
       let baseModelMessages: ModelMessage[] =
-        await contextStore.toModelMessages({
+        await activeContextStore.toModelMessages({
           tools: this.tools,
         });
       if (!Array.isArray(baseModelMessages) || baseModelMessages.length === 0) {
         baseModelMessages = [{ role: "user", content: userText }];
       }
-
-      await logger.log("debug", "Context selected", {
-        contextId,
-        historySource: "messages_jsonl",
-        modelMessages: baseModelMessages.length,
-        keepLastMessages: compactPolicy.keepLastMessages,
-        maxInputTokensApprox: compactPolicy.maxInputTokensApprox,
-      });
 
       // 关键点（中文）
       // - 在 step 边界尝试合并同 lane 的新增用户消息，保证当前 run 可见最新输入。
@@ -302,11 +317,6 @@ export class ContextAgent {
                   if (added > 0) {
                     outMessages = [...baseModelMessages, ...suffix];
                     lastAppliedBasePrefixLen = baseModelMessages.length;
-                    void logger.log(
-                      "debug",
-                      "Lane merged messages detected; appended queued user messages for next step",
-                      { contextId, requestId, added },
-                    );
                   }
                 } catch {
                   // ignore merge hook failures
@@ -558,7 +568,7 @@ export class ContextAgent {
               Math.floor(contextMessagesConfig.maxInputTokensApprox),
             ),
           )
-        : 16000;
+        : 128000;
 
     // 关键点（中文）：当 provider 报错超窗时，会进入 retry；此时需要更激进的 compact。
     const retryFactor = Math.max(1, Math.pow(2, retryAttempts));

@@ -8,6 +8,7 @@
  */
 
 import type { Command } from "commander";
+import { readFileSync } from "node:fs";
 import { skillAddCommand, skillFindCommand } from "./Command.js";
 import {
   listPinnedSkills,
@@ -45,6 +46,27 @@ type SkillPinnedPayload = {
   contextId: string;
 };
 
+const SKILLS_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
+
+/**
+ * 加载 skills service 使用说明提示词。
+ *
+ * 关键点（中文）
+ * - 文件缺失时直接失败，避免 system 提示词静默为空。
+ */
+function loadSkillsServicePrompt(): string {
+  try {
+    return readFileSync(SKILLS_PROMPT_FILE_URL, "utf-8").trim();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `failed to load skills service prompt from ${SKILLS_PROMPT_FILE_URL.pathname}: ${reason}`,
+    );
+  }
+}
+
+const SKILLS_SERVICE_PROMPT = loadSkillsServicePrompt();
+
 function readJsonObject(value: JsonValue): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Invalid JSON body");
@@ -80,7 +102,10 @@ function resolveContextIdForCommand(input?: string): string {
 
 export const skillsService: Service = {
   name: "skill",
-  system: (context) => buildSkillsSystemText(context),
+  async system(context) {
+    const dynamicText = String(await buildSkillsSystemText(context)).trim();
+    return [SKILLS_SERVICE_PROMPT, dynamicText].filter(Boolean).join("\n\n");
+  },
   actions: {
     find: {
       command: {

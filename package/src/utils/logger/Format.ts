@@ -7,13 +7,6 @@ type FormattedToolCall = {
   name?: string;
   arguments?: string;
 };
-type FormattedMessage = {
-  role: string;
-  name?: string;
-  tool_call_id?: string;
-  content?: string;
-  tool_calls?: FormattedToolCall[];
-};
 
 function isJsonObject(value: JsonValue | null | undefined): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -69,6 +62,14 @@ function stringifyCompact(
   }
 }
 
+function toInlineLogValue(value: string, maxChars: number): string {
+  return truncate(String(value || ""), maxChars).replace(/\r?\n/g, "\\n");
+}
+
+function formatLogField(key: string, value: string): string {
+  return `[${key}]: ${value}`;
+}
+
 function contentToText(content: JsonValue | undefined, maxChars: number): string {
   if (typeof content === "string") return truncate(content, maxChars);
   if (Array.isArray(content)) {
@@ -115,13 +116,6 @@ function extractMessages(payload: JsonObject): JsonObject[] | null {
   return null;
 }
 
-function indentBlock(text: string, indent: string): string {
-  return text
-    .split("\n")
-    .map((line) => `${indent}${line}`)
-    .join("\n");
-}
-
 function formatToolCalls(
   toolCalls: JsonValue | undefined,
   maxArgsChars: number,
@@ -154,37 +148,120 @@ function formatToolCalls(
   return out.length > 0 ? out : null;
 }
 
+function resolveMessageRoleLabel(message: JsonObject): string {
+  const role = getStringField(message, "role");
+  if (role) return role;
+  const itemType = getStringField(message, "type");
+  if (itemType) return `item:${itemType}`;
+  return "item";
+}
+
+function summarizeValue(value: JsonValue | undefined): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) return `[array:${value.length}]`;
+  if (isJsonObject(value)) return `[object:${Object.keys(value).length}]`;
+  return String(value);
+}
+
 function formatMessagesForLog(
   messages: JsonObject[],
   opts: {
     maxContentChars: number;
     maxToolArgsChars: number;
   },
-): FormattedMessage[] {
-  const out: FormattedMessage[] = [];
+): string[] {
+  const out: string[] = [];
 
-  for (const message of messages) {
-    const role = getStringField(message, "role") ?? "unknown";
+  for (let index = 0; index < messages.length; index++) {
+    const message = messages[index];
+    const role = resolveMessageRoleLabel(message);
     const name = getStringField(message, "name");
     const toolCallId = getStringField(message, "tool_call_id");
+    const callId = getStringField(message, "call_id");
+    const output = summarizeValue(message.output);
+    const outputText = summarizeValue(message.output_text);
 
-    const formatted: FormattedMessage = {
-      role,
-      ...(name ? { name } : {}),
-      ...(toolCallId ? { tool_call_id: toolCallId } : {}),
-    };
-
-    if ("content" in message) {
-      formatted.content = contentToText(message.content, opts.maxContentChars);
-    }
+    out.push(formatLogField(`msg.${index}.role`, role));
+    if (name) out.push(formatLogField(`msg.${index}.name`, name));
+    if (toolCallId) out.push(formatLogField(`msg.${index}.tool_call_id`, toolCallId));
+    if (callId) out.push(formatLogField(`msg.${index}.call_id`, callId));
 
     const toolCalls = formatToolCalls(message.tool_calls, opts.maxToolArgsChars);
-    if (toolCalls) formatted.tool_calls = toolCalls;
+    if (toolCalls) {
+      for (let toolIndex = 0; toolIndex < toolCalls.length; toolIndex++) {
+        const toolCall = toolCalls[toolIndex];
+        const label = [
+          toolCall.id ? `id=${toolCall.id}` : "",
+          toolCall.type ? `type=${toolCall.type}` : "",
+          toolCall.name ? `name=${toolCall.name}` : "",
+          toolCall.arguments ? `args=${toolCall.arguments}` : "",
+        ]
+          .filter(Boolean)
+          .join("; ");
+        if (label) {
+          out.push(
+            formatLogField(
+              `msg.${index}.tool.${toolIndex}`,
+              toInlineLogValue(label, opts.maxToolArgsChars),
+            ),
+          );
+        }
+      }
+    }
 
-    out.push(formatted);
+    if ("content" in message) {
+      const contentText = contentToText(message.content, opts.maxContentChars);
+      if (contentText) {
+        out.push(
+          formatLogField(
+            `msg.${index}.content`,
+            toInlineLogValue(contentText, opts.maxContentChars),
+          ),
+        );
+      }
+    }
+    if (outputText) {
+      out.push(
+        formatLogField(
+          `msg.${index}.output_text`,
+          toInlineLogValue(outputText, opts.maxContentChars),
+        ),
+      );
+    }
+    if (output) {
+      out.push(
+        formatLogField(
+          `msg.${index}.output`,
+          toInlineLogValue(output, opts.maxContentChars),
+        ),
+      );
+    }
   }
 
   return out;
+}
+
+function formatPayloadSummaryLines(
+  payload: ParsedPayload,
+  maxChars: number,
+): string[] {
+  if (Array.isArray(payload)) {
+    return [formatLogField("payload", `[array:${payload.length}]`)];
+  }
+  const keys = Object.keys(payload);
+  const lines: string[] = [formatLogField("payload.keys", keys.join(",") || "-")];
+  for (const key of keys.slice(0, 12)) {
+    const summary = summarizeValue(payload[key]);
+    if (!summary) continue;
+    lines.push(
+      formatLogField(`payload.${key}`, toInlineLogValue(summary, maxChars)),
+    );
+  }
+  return lines;
 }
 
 export type ProviderFetch = (
@@ -239,7 +316,13 @@ export function parseFetchRequestForLog(
         messages: null,
         system: undefined,
         toolsCount: 0,
-        requestText: `===== LLM REQUEST BEGIN =====\nmethod: ${method}\nurl: ${url}\n(non-JSON body)\n===== LLM REQUEST END =====`,
+        requestText: [
+          "===== LLM REQUEST BEGIN =====",
+          formatLogField("method", method),
+          formatLogField("url", url),
+          formatLogField("body", "non-json"),
+          "===== LLM REQUEST END =====",
+        ].join("\n"),
         meta: { kind: "llm_request", url, method },
       };
     }
@@ -259,33 +342,26 @@ export function parseFetchRequestForLog(
 
   const headerLines: string[] = [
     "===== LLM REQUEST BEGIN =====",
-    `method: ${method}`,
-    `url: ${url}`,
-    ...(model ? [`model: ${model}`] : []),
-    ...(toolsCount ? [`tools: ${toolsCount}`] : []),
+    formatLogField("method", method),
+    formatLogField("url", url),
+    ...(model ? [formatLogField("model", model)] : []),
+    ...(toolsCount ? [formatLogField("tools", String(toolsCount))] : []),
   ];
 
-  const messageTextParts: string[] = [headerLines.join("\n")];
+  const messageTextParts: string[] = [...headerLines];
   if (typeof system === "string" && system.trim()) {
     messageTextParts.push(
-      ["system:", indentBlock(truncate(system, 4000), "  ")].join("\n"),
+      formatLogField("system", toInlineLogValue(system, 4000)),
     );
   }
 
   if (messages && Array.isArray(messages)) {
-    const formattedMessages = formatMessagesForLog(messages, {
+    messageTextParts.push(...formatMessagesForLog(messages, {
       maxContentChars: 2000,
       maxToolArgsChars: 1200,
-    });
-    messageTextParts.push(
-      `messages: ${JSON.stringify(formattedMessages, null, 2)}`,
-    );
+    }));
   } else {
-    messageTextParts.push(
-      ["payload:", indentBlock(stringifyCompact(payload, maxChars), "  ")].join(
-        "\n",
-      ),
-    );
+    messageTextParts.push(...formatPayloadSummaryLines(payload, maxChars));
   }
   messageTextParts.push("===== LLM REQUEST END =====");
 

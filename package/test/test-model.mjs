@@ -139,25 +139,17 @@ function normalizeBaseUrl(baseUrl) {
   return normalized.replace(/\/+$/, "");
 }
 
-function extractOpenAIResponsesText(payload) {
-  if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
-  if (Array.isArray(payload?.output)) {
-    const lines = [];
-    for (const item of payload.output) {
-      if (!item || typeof item !== "object") continue;
-      if (!Array.isArray(item.content)) continue;
-      for (const part of item.content) {
-        if (!part || typeof part !== "object") continue;
-        if (typeof part.text === "string" && part.text.trim()) {
-          lines.push(part.text.trim());
-        }
-      }
+function extractOpenAIChatText(payload) {
+  if (!Array.isArray(payload?.choices)) return "";
+  const lines = [];
+  for (const choice of payload.choices) {
+    if (!choice || typeof choice !== "object") continue;
+    const content = choice?.message?.content;
+    if (typeof content === "string" && content.trim()) {
+      lines.push(content.trim());
     }
-    if (lines.length > 0) return lines.join("\n");
   }
-  return "";
+  return lines.join("\n");
 }
 
 function extractAnthropicText(payload) {
@@ -173,8 +165,8 @@ function extractAnthropicText(payload) {
   return lines.join("\n");
 }
 
-async function requestOpenAIResponses(params) {
-  const endpoint = `${normalizeBaseUrl(params.baseUrl)}/responses`;
+async function requestOpenAIChatCompletions(params) {
+  const endpoint = `${normalizeBaseUrl(params.baseUrl)}/chat/completions`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -183,13 +175,10 @@ async function requestOpenAIResponses(params) {
     },
     body: JSON.stringify({
       model: params.model,
-      input: [
-        {
-          role: "user",
-          content: [{ type: "input_text", text: params.prompt }],
-        },
+      messages: [
+        { role: "user", content: params.prompt },
       ],
-      max_output_tokens: params.maxOutputTokens,
+      max_tokens: params.maxOutputTokens,
       stream: false,
     }),
   });
@@ -213,7 +202,7 @@ async function requestOpenAIResponses(params) {
   }
 
   return {
-    text: extractOpenAIResponsesText(payload),
+    text: extractOpenAIChatText(payload),
   };
 }
 
@@ -305,7 +294,7 @@ async function run() {
               prompt: options.prompt,
               maxOutputTokens: options.maxOutputTokens,
             })
-          : await requestOpenAIResponses({
+          : await requestOpenAIChatCompletions({
               baseUrl,
               apiKey,
               model,

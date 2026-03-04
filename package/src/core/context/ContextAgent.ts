@@ -9,6 +9,7 @@
 
 import {
   isTextUIPart,
+  type ProviderMetadata,
   streamText,
   stepCountIs,
   Tool,
@@ -38,6 +39,8 @@ import {
 import type { ContextStore } from "./ContextStore.js";
 import { loadProjectDotenv } from "@/main/runtime/Config.js";
 import { shellTools } from "@core/shell/Tool.js";
+
+const OPENAI_RESPONSE_ID_META_KEY = "openaiResponseId";
 
 export class ContextAgent {
   // 是否初始化
@@ -242,12 +245,29 @@ export class ContextAgent {
         baseModelMessages = [{ role: "user", content: userText }];
       }
 
+      // 关键点（中文）：优先使用 Responses 的 previousResponseId 续接，避免本地重放历史 tool 链造成 item_reference 断链。
+      const previousOpenAIResponseId = this.extractLatestOpenAIResponseId(
+        await contextStore.loadAll(),
+      );
+      const shouldUseResponsesContinuation =
+        this.shouldUseOpenAIResponsesContinuation() &&
+        typeof previousOpenAIResponseId === "string" &&
+        previousOpenAIResponseId.length > 0;
+      if (shouldUseResponsesContinuation) {
+        // 关键点（中文）：有 previousResponseId 时，只发送本轮用户增量，历史由 provider store 管理。
+        baseModelMessages = [{ role: "user", content: userText }];
+      }
+
       await logger.log("debug", "Context selected", {
         contextId,
         historySource: "messages_jsonl",
         modelMessages: baseModelMessages.length,
         keepLastMessages: compactPolicy.keepLastMessages,
         maxInputTokensApprox: compactPolicy.maxInputTokensApprox,
+        usePreviousResponseId: shouldUseResponsesContinuation,
+        previousResponseId: shouldUseResponsesContinuation
+          ? previousOpenAIResponseId
+          : undefined,
       });
 
       // 关键点（中文）
@@ -326,6 +346,11 @@ export class ContextAgent {
             },
             messages: baseModelMessages,
             tools: this.tools,
+            providerOptions: this.buildOpenAIResponsesProviderOptions({
+              previousResponseId: shouldUseResponsesContinuation
+                ? previousOpenAIResponseId
+                : undefined,
+            }),
             stopWhen: [stepCountIs(30)],
           });
         },
@@ -363,6 +388,10 @@ export class ContextAgent {
         finalAssistantUiMessage = null;
       }
 
+      const openAIResponseId = this.extractOpenAIResponseIdFromProviderMetadata(
+        await result.providerMetadata,
+      );
+
       // phase 4（中文）：统计结果并返回标准 AgentResult。
       const duration = Date.now() - startTime;
       await logger.log("info", "Agent execution completed", {
@@ -384,6 +413,12 @@ export class ContextAgent {
           text: assistantText || "Execution completed",
           note: "assistant_message_fallback",
         });
+      }
+      if (openAIResponseId) {
+        finalAssistantUiMessage = this.attachOpenAIResponseId(
+          finalAssistantUiMessage,
+          openAIResponseId,
+        );
       }
       return {
         success: true,
@@ -441,6 +476,117 @@ export class ContextAgent {
         }),
       };
     }
+  }
+
+  /**
+   * 是否启用 OpenAI Responses 的 previousResponseId 续接模式。
+   */
+  private shouldUseOpenAIResponsesContinuation(): boolean {
+    const provider = String(getRuntimeState().config.llm.provider || "")
+      .trim()
+      .toLowerCase();
+    return provider === "openai" || provider === "custom";
+  }
+
+  /**
+   * 构建 OpenAI providerOptions。
+   *
+   * 关键点（中文）
+   * - 显式设置 store=true，确保 provider 端可引用历史 item。
+   * - previousResponseId 仅在已拿到有效 id 时注入。
+   */
+  private buildOpenAIResponsesProviderOptions(input: {
+    previousResponseId?: string;
+  }): {
+    openai: {
+      store: boolean;
+      previousResponseId?: string;
+    };
+  } {
+    const id = String(input.previousResponseId || "").trim();
+    return {
+      openai: {
+        store: true,
+        ...(id ? { previousResponseId: id } : {}),
+      },
+    };
+  }
+
+  /**
+   * 从 provider metadata 提取 OpenAI responseId。
+   */
+  private extractOpenAIResponseIdFromProviderMetadata(
+    providerMetadata: ProviderMetadata | undefined,
+  ): string | undefined {
+    const metadata =
+      providerMetadata && typeof providerMetadata === "object"
+        ? (providerMetadata as Record<string, unknown>)
+        : undefined;
+    const openai =
+      metadata && typeof metadata.openai === "object" && metadata.openai
+        ? (metadata.openai as Record<string, unknown>)
+        : undefined;
+    const responseId =
+      openai && typeof openai.responseId === "string"
+        ? openai.responseId.trim()
+        : "";
+    return responseId || undefined;
+  }
+
+  /**
+   * 从上下文消息中读取最近一次 OpenAI responseId。
+   */
+  private extractLatestOpenAIResponseId(
+    messages: ContextMessageV1[],
+  ): string | undefined {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const message = messages[i];
+      if (!message || message.role !== "assistant") continue;
+      const metadata =
+        message.metadata && typeof message.metadata === "object"
+          ? message.metadata
+          : undefined;
+      const extra =
+        metadata?.extra && typeof metadata.extra === "object"
+          ? (metadata.extra as Record<string, unknown>)
+          : undefined;
+      const responseId =
+        extra && typeof extra[OPENAI_RESPONSE_ID_META_KEY] === "string"
+          ? String(extra[OPENAI_RESPONSE_ID_META_KEY]).trim()
+          : "";
+      if (responseId) return responseId;
+    }
+    return undefined;
+  }
+
+  /**
+   * 把 OpenAI responseId 写入 assistant metadata.extra。
+   */
+  private attachOpenAIResponseId(
+    message: ContextMessageV1,
+    responseId: string,
+  ): ContextMessageV1 {
+    const id = String(responseId || "").trim();
+    if (!id) return message;
+    const metadata =
+      message.metadata && typeof message.metadata === "object"
+        ? message.metadata
+        : undefined;
+    if (!metadata) return message;
+    const extra =
+      metadata.extra && typeof metadata.extra === "object"
+        ? (metadata.extra as Record<string, unknown>)
+        : {};
+    return {
+      ...message,
+      metadata: {
+        ...metadata,
+        extra: {
+          ...extra,
+          [OPENAI_RESPONSE_ID_META_KEY]: id,
+        },
+      },
+    };
   }
 
   /**

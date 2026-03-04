@@ -16,6 +16,18 @@ type LogDetails = {
   [key: string]: JsonObject[keyof JsonObject] | undefined;
 };
 
+const ANSI_RESET = "\x1b[0m";
+const ANSI_BOLD = "\x1b[1m";
+const ANSI_DIM = "\x1b[2m";
+const BRACKET_COLOR_PALETTE = [
+  "\x1b[36m", // cyan
+  "\x1b[32m", // green
+  "\x1b[35m", // magenta
+  "\x1b[34m", // blue
+  "\x1b[33m", // yellow
+  "\x1b[96m", // bright cyan
+];
+
 function normalizeLogDetails(details?: LogDetails): JsonObject | undefined {
   if (!details) return undefined;
   const normalized: JsonObject = {};
@@ -25,6 +37,34 @@ function normalizeLogDetails(details?: LogDetails): JsonObject | undefined {
     }
   }
   return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function hashText(input: string): number {
+  let hash = 0;
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash * 31 + input.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function colorizeBracketedPrefix(label: string): string {
+  const color = BRACKET_COLOR_PALETTE[hashText(label) % BRACKET_COLOR_PALETTE.length];
+  return `${color}[${label}]${ANSI_RESET}`;
+}
+
+function colorizeLeadingBracketTokens(line: string): string {
+  if (!line) return line;
+  return line.replace(/^\[([^\]]+)\]/, (_match, label: string) => {
+    return colorizeBracketedPrefix(String(label || "").trim());
+  });
+}
+
+function colorizeMessageBracketPrefixes(message: string): string {
+  // 关键点（中文）：仅给每行“行首 [] 标签”着色，正文不染色，避免可读性下降。
+  return String(message || "")
+    .split("\n")
+    .map((line) => colorizeLeadingBracketTokens(line))
+    .join("\n");
 }
 
 /**
@@ -162,22 +202,25 @@ export class Logger {
   private printLog(entry: LogEntry): void {
     const timestamp = new Date(entry.timestamp).toLocaleTimeString("zh-CN");
     const level = entry.type.toUpperCase().padEnd(7);
-    const message = `[${timestamp}] [${level}] ${entry.message}`;
+    const timestampToken = `${ANSI_DIM}[${timestamp}]${ANSI_RESET}`;
+    const levelToken = `${ANSI_BOLD}${colorizeBracketedPrefix(level)}${ANSI_RESET}`;
+    const body = colorizeMessageBracketPrefixes(entry.message);
+    const message = `${timestampToken} ${levelToken} ${body}`;
 
     switch (entry.type) {
       case "error":
-        console.error(`\x1b[31m${message}\x1b[0m`);
+        console.error(`\x1b[31m${message}${ANSI_RESET}`);
         break;
       case "warn":
-        console.warn(`\x1b[33m${message}\x1b[0m`);
+        console.warn(`\x1b[33m${message}${ANSI_RESET}`);
         break;
       case "debug":
         if (this.logLevel === "debug") {
-          console.log(`\x1b[90m${message}\x1b[0m`);
+          console.log(`\x1b[90m${message}${ANSI_RESET}`);
         }
         break;
       case "action":
-        console.log(`\x1b[36m${message}\x1b[0m`);
+        console.log(`\x1b[36m${message}${ANSI_RESET}`);
         break;
       default:
         console.log(message);

@@ -69,18 +69,20 @@ function normalizeOutputChunk(raw: string): string {
  * 关键点（中文）
  * - 历史上模型会把长文本直接拼进多行 shell 命令，导致后续行被 zsh 当作独立命令解析。
  * - 这会出现“前面已发送，后面才报错”的副作用（用户看到重复/异常消息）。
- * - 多行正文请通过 `--stdin`（here-doc/pipe）或 `--text-file` 传入，避免内容被 shell 当成命令语法。
+ * - 默认建议多行正文通过 `--stdin`（here-doc/pipe）或 `--text-file` 传入。
+ * - 兼容需求：若显式使用 `--text`，允许命令中包含真实换行。
  */
 export function validateChatSendCommand(cmd: string): string | null {
   const source = String(cmd ?? "");
   if (!/\bsma\s+chat\s+send\b/.test(source)) return null;
   if (!/[\r\n]/.test(source)) return null;
   if (/\bsma\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) return null;
+  if (/\bsma\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) return null;
   if (/\bsma\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source))
     return null;
   return [
     "Unsafe `sma chat send` command: real newlines are not allowed.",
-    "If your message is multi-line, use `sma chat send --stdin` (with heredoc/pipe) or `--text-file`.",
+    "If your message is multi-line, use `sma chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
   ].join(" ");
 }
 

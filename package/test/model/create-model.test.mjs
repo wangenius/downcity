@@ -31,7 +31,7 @@ function resolveRequestUrl(input) {
   return input.url;
 }
 
-test("createModel: custom provider can generate text with mocked responses endpoint", async () => {
+test("createModel: custom provider can generate text with mocked chat completions endpoint", async () => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -44,28 +44,23 @@ test("createModel: custom provider can generate text with mocked responses endpo
 
     return new Response(
       JSON.stringify({
-        id: "resp_1",
-        object: "response",
-        created_at: Math.floor(Date.now() / 1000),
-        status: "completed",
+        id: "chatcmpl_1",
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
         model: "gpt-5.2",
-        output: [
+        choices: [
           {
-            id: "msg_1",
-            type: "message",
-            role: "assistant",
-            content: [
-              {
-                type: "output_text",
-                text: "OK",
-                annotations: [],
-              },
-            ],
+            index: 0,
+            message: {
+              role: "assistant",
+              content: "OK",
+            },
+            finish_reason: "stop",
           },
         ],
         usage: {
-          input_tokens: 1,
-          output_tokens: 1,
+          prompt_tokens: 1,
+          completion_tokens: 1,
           total_tokens: 2,
         },
       }),
@@ -86,7 +81,10 @@ test("createModel: custom provider can generate text with mocked responses endpo
 
     assert.equal(result.text.trim(), "OK");
     assert.equal(mockFetchCalls.length, 1);
-    assert.equal(mockFetchCalls[0].url, "https://example.com/v1/responses");
+    assert.equal(
+      mockFetchCalls[0].url,
+      "https://example.com/v1/chat/completions",
+    );
     assert.match(mockFetchCalls[0].body, /"model":"gpt-5\.2"/);
   } finally {
     globalThis.fetch = originalFetch;

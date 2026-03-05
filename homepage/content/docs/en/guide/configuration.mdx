@@ -23,11 +23,34 @@ description: Deep dive into ship.json and PROFILE.md configuration
     "webport": 3001
   },
   "llm": {
-    "provider": "custom",
-    "model": "${LLM_MODEL}",
-    "baseUrl": "${LLM_BASE_URL}",
-    "apiKey": "${LLM_API_KEY}",
-    "temperature": 0.7
+    "activeModel": "quality",
+    "providers": {
+      "google": {
+        "type": "gemini",
+        "apiKey": "${GEMINI_API_KEY}"
+      },
+      "compat_gateway": {
+        "type": "open-compatible",
+        "baseUrl": "https://your-api.com/v1",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "quality": {
+        "provider": "google",
+        "name": "gemini-2.5-pro",
+        "temperature": 0.7
+      },
+      "fast": {
+        "provider": "google",
+        "name": "gemini-2.5-flash"
+      },
+      "fallback": {
+        "provider": "compat_gateway",
+        "name": "gpt-4o-mini"
+      }
+    },
+    "logMessages": true
   },
   "services": {
     "skills": {
@@ -87,11 +110,22 @@ Controls the Agent service startup parameters:
 
 #### `llm` (Language Model)
 
-- **provider**: LLM provider, options: `anthropic`, `openai`, `deepseek`, `custom`.
-- **model**: Specific model name, supports environment variable `${LLM_MODEL}`.
-- **baseUrl**: API base URL, supports environment variable `${LLM_BASE_URL}`.
-- **apiKey**: API key, **strongly recommended** to use `${ENV_VAR}` to reference environment variables to avoid leakage.
-- **temperature**: Temperature parameter, controls generation randomness (between 0-1, default `0.7`).
+- **activeModel**: Active model key, must exist in `llm.models`.
+- **providers**: Provider connection map, key is user-defined (for example: `google`, `openai_main`).
+  - **type** options: `anthropic`, `openai`, `deepseek`, `gemini`, `open-compatible`, `open-responses`, `moonshot`, `xai`, `huggingface`, `openrouter`.
+  - **baseUrl**: Optional. If omitted, the runtime uses the default URL by provider type.
+  - **apiKey**: API key, **strongly recommended** to use `${ENV_VAR}` to reference environment variables.
+- **models**: Model map, key is user-defined (for example: `quality`, `fast`).
+  - **provider**: Provider key (must exist in `llm.providers`).
+  - **name**: Upstream model name.
+  - Optional sampling fields: `temperature`, `maxTokens`, `topP`, `frequencyPenalty`, `presencePenalty`.
+- **logMessages**: Whether to log outbound LLM request payloads (default `true`).
+
+> Notes:
+> - `open-compatible` uses Chat Completions-compatible flow (`/chat/completions`).
+> - `moonshot` uses Moonshot (Kimi) official Chat Completions-compatible endpoint.
+> - `open-responses`, `openai`, and `deepseek` use Responses-compatible flow (`/responses`).
+> - `gemini` uses native Google Generative AI endpoint (`/v1beta/models/*:generateContent`).
 
 #### `services.chat.adapters` (Chat Adapters)
 

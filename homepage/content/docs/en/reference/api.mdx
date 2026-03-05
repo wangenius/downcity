@@ -212,19 +212,32 @@ interface ShipConfig {
 }
 
 interface LLMConfig {
-  provider: 'anthropic' | 'openai' | 'deepseek' | 'custom';
-  model: string;
-  baseUrl?: string;
-  apiKey: string;
-  temperature?: number;
-  maxTokens?: number;
-  timeout?: number;
-  streaming?: boolean;
-  fallback?: Array<{
-    provider: string;
-    model: string;
-    apiKey: string;
+  activeModel: string;
+  providers: Record<string, {
+    type:
+      | 'anthropic'
+      | 'openai'
+      | 'deepseek'
+      | 'gemini'
+      | 'open-compatible'
+      | 'open-responses'
+      | 'moonshot'
+      | 'xai'
+      | 'huggingface'
+      | 'openrouter';
+    baseUrl?: string;
+    apiKey?: string;
   }>;
+  models: Record<string, {
+    provider: string;
+    name: string;
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+    frequencyPenalty?: number;
+    presencePenalty?: number;
+  }>;
+  logMessages?: boolean;
 }
 
 interface PermissionConfig {

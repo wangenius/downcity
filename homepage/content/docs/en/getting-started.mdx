@@ -407,36 +407,78 @@ shipmyagent generate task performance-scan
 
 For non-standard setups:
 
-**Custom LLM endpoint**:
+**Open-compatible gateway (Chat Completions)**:
 
 ```json
 {
   "llm": {
-    "provider": "custom",
-    "baseUrl": "https://your-api.com/v1",
-    "apiKey": "${CUSTOM_API_KEY}",
-    "headers": {
-      "X-Custom-Header": "value"
+    "activeModel": "default",
+    "providers": {
+      "gateway": {
+        "type": "open-compatible",
+        "baseUrl": "https://your-api.com/v1",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "gateway",
+        "name": "gpt-4o-mini"
+      }
     }
   }
 }
 ```
 
-**Multiple LLMs with fallback**:
+**Open-responses gateway**:
 
 ```json
 {
   "llm": {
-    "primary": {
-      "provider": "anthropic",
-      "model": "claude-3-5-sonnet-20241022"
-    },
-    "fallback": [
-      {
-        "provider": "openai",
-        "model": "gpt-4o"
+    "activeModel": "default",
+    "providers": {
+      "gateway": {
+        "type": "open-responses",
+        "baseUrl": "https://your-api.com/v1",
+        "apiKey": "${LLM_API_KEY}"
       }
-    ]
+    },
+    "models": {
+      "default": {
+        "provider": "gateway",
+        "name": "gpt-5.2"
+      }
+    }
+  }
+}
+```
+
+**Multiple models in one project**:
+
+```json
+{
+  "llm": {
+    "activeModel": "quality",
+    "providers": {
+      "anthropic_main": {
+        "type": "anthropic",
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      },
+      "google": {
+        "type": "gemini",
+        "apiKey": "${GEMINI_API_KEY}"
+      }
+    },
+    "models": {
+      "quality": {
+        "provider": "anthropic_main",
+        "name": "claude-sonnet-4-5"
+      },
+      "fast": {
+        "provider": "google",
+        "name": "gemini-2.5-flash"
+      }
+    }
   }
 }
 ```

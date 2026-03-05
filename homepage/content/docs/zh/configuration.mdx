@@ -142,20 +142,40 @@ your-project/
   }
 }
 
-// 自定义端点
+// Open-compatible 端点（Chat Completions）
 {
   "llm": {
-    "activeModel": "custom_main",
+    "activeModel": "compat_main",
     "providers": {
-      "custom_gateway": {
-        "type": "custom",
+      "compat_gateway": {
+        "type": "open-compatible",
         "baseUrl": "https://your-api.com/v1",
         "apiKey": "${LLM_API_KEY}"
       }
     },
     "models": {
-      "custom_main": {
-        "provider": "custom_gateway",
+      "compat_main": {
+        "provider": "compat_gateway",
+        "name": "gpt-4o-mini"
+      }
+    }
+  }
+}
+
+// Open-responses 端点
+{
+  "llm": {
+    "activeModel": "responses_main",
+    "providers": {
+      "responses_gateway": {
+        "type": "open-responses",
+        "baseUrl": "https://your-api.com/v1",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "responses_main": {
+        "provider": "responses_gateway",
         "name": "gpt-5.2"
       }
     }
@@ -163,7 +183,10 @@ your-project/
 }
 ```
 
-> 提示：`custom`、`openai`、`deepseek`、`gemini` 都走 OpenAI Responses 兼容链路（`/responses`）。
+> 提示：`open-responses`、`openai`、`deepseek` 走 OpenAI Responses 兼容链路（`/responses`）。
+> `open-compatible` 走 Chat Completions 兼容链路（`/chat/completions`）。
+> `moonshot` 走 Moonshot(Kimi) 官方 Chat Completions 兼容接口。
+> `gemini` 走 Google 原生接口（`/v1beta/models/*:generateContent`）。
 > 最简 GMN 示例：
 >
 > ```json
@@ -172,7 +195,7 @@ your-project/
 >     "activeModel": "default",
 >     "providers": {
 >       "gmn": {
->         "type": "custom",
+>         "type": "open-responses",
 >         "baseUrl": "https://gmn.chuangzuoli.com/v1",
 >         "apiKey": "${LLM_API_KEY}"
 >       }
@@ -609,7 +632,19 @@ TELEGRAM_BOT_TOKEN=123456:...
 ```json
 {
   "llm": {
-    "apiKey": "${ANTHROPIC_API_KEY}"  // 引用环境变量
+    "activeModel": "default",
+    "providers": {
+      "anthropic_main": {
+        "type": "anthropic",
+        "apiKey": "${ANTHROPIC_API_KEY}"  // 引用环境变量
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "anthropic_main",
+        "name": "claude-sonnet-4-5"
+      }
+    }
   },
   "services": {
     "chat": {

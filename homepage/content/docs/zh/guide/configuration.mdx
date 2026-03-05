@@ -23,11 +23,34 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
     "webport": 3001
   },
   "llm": {
-    "provider": "custom",
-    "model": "${LLM_MODEL}",
-    "baseUrl": "${LLM_BASE_URL}",
-    "apiKey": "${LLM_API_KEY}",
-    "temperature": 0.7
+    "activeModel": "quality",
+    "providers": {
+      "google": {
+        "type": "gemini",
+        "apiKey": "${GEMINI_API_KEY}"
+      },
+      "compat_gateway": {
+        "type": "open-compatible",
+        "baseUrl": "https://your-api.com/v1",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "quality": {
+        "provider": "google",
+        "name": "gemini-2.5-pro",
+        "temperature": 0.7
+      },
+      "fast": {
+        "provider": "google",
+        "name": "gemini-2.5-flash"
+      },
+      "fallback": {
+        "provider": "compat_gateway",
+        "name": "gpt-4o-mini"
+      }
+    },
+    "logMessages": true
   },
   "services": {
     "skills": {
@@ -87,11 +110,22 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
 
 #### `llm` (语言模型)
 
-- **provider**: LLM 提供商，可选值：`anthropic`、`openai`、`deepseek`、`custom`。
-- **model**: 具体模型名称，支持环境变量 `${LLM_MODEL}`。
-- **baseUrl**: API 基础地址，支持环境变量 `${LLM_BASE_URL}`。
-- **apiKey**: API 密钥，**强烈建议**使用 `${ENV_VAR}` 引用环境变量，避免泄露。
-- **temperature**: 温度参数，控制生成的随机性（0-1 之间，默认 `0.7`）。
+- **activeModel**: 当前激活模型 key，必须存在于 `llm.models`。
+- **providers**: Provider 连接配置表，key 由你自定义（例如：`google`、`openai_main`）。
+  - **type** 可选值：`anthropic`、`openai`、`deepseek`、`gemini`、`open-compatible`、`open-responses`、`moonshot`、`xai`、`huggingface`、`openrouter`。
+  - **baseUrl**: 可选。不填时按 provider 类型使用内置默认地址。
+  - **apiKey**: API 密钥，**强烈建议**使用 `${ENV_VAR}` 环境变量引用。
+- **models**: 模型配置表，key 由你自定义（例如：`quality`、`fast`）。
+  - **provider**: Provider key（必须存在于 `llm.providers`）。
+  - **name**: 上游模型名称。
+  - 可选采样字段：`temperature`、`maxTokens`、`topP`、`frequencyPenalty`、`presencePenalty`。
+- **logMessages**: 是否记录发给 LLM 的请求 payload（默认 `true`）。
+
+> 说明：
+> - `open-compatible` 走 Chat Completions 兼容链路（`/chat/completions`）。
+> - `moonshot` 走 Moonshot(Kimi) 官方 Chat Completions 兼容接口。
+> - `open-responses`、`openai`、`deepseek` 走 Responses 兼容链路（`/responses`）。
+> - `gemini` 走 Google 原生接口（`/v1beta/models/*:generateContent`）。
 
 #### `services.chat.adapters` (聊天适配器)
 

@@ -82,7 +82,7 @@ Language Model configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `provider` | string | Yes | - | LLM provider: `anthropic`, `openai`, `deepseek`, `custom` |
+| `provider` | string | Yes | - | LLM provider: `anthropic`, `openai`, `deepseek`, `gemini`, `custom` |
 | `model` | string | Yes | - | Model name (e.g., `claude-3-5-sonnet-20241022`) |
 | `baseUrl` | string | No | Provider default | API endpoint URL |
 | `apiKey` | string | Yes | - | API key (use environment variable!) |
@@ -111,6 +111,16 @@ Language Model configuration.
     "model": "gpt-4o",
     "baseUrl": "https://api.openai.com/v1",
     "apiKey": "${OPENAI_API_KEY}"
+  }
+}
+
+// Gemini (Google)
+{
+  "llm": {
+    "provider": "gemini",
+    "model": "gemini-2.5-pro",
+    "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "apiKey": "${GEMINI_API_KEY}"
   }
 }
 

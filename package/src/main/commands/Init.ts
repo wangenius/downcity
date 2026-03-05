@@ -199,6 +199,8 @@ export async function initCommand(
         { title: "GPT-4o", value: "gpt-4o" },
         { title: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
         { title: "DeepSeek Chat", value: "deepseek-chat" },
+        { title: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
+        { title: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
         { title: "Custom model", value: "custom" },
       ],
       initial: 0,

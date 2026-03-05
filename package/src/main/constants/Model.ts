@@ -38,6 +38,15 @@ export const MODEL_CONFIGS = {
     provider: "deepseek",
     baseUrl: "https://api.deepseek.com/v1",
   },
+  // Gemini（Google OpenAI-compatible endpoint）
+  "gemini-2.5-pro": {
+    provider: "gemini",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+  },
+  "gemini-2.5-flash": {
+    provider: "gemini",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+  },
   // 自定义模型
   custom: {
     provider: "custom",

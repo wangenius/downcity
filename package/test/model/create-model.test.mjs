@@ -25,6 +25,20 @@ function createBaseConfig() {
   };
 }
 
+function createGeminiConfig() {
+  return {
+    name: "test-agent",
+    version: "1.0.0",
+    llm: {
+      provider: "gemini",
+      model: "gemini-2.5-pro",
+      baseUrl: "",
+      apiKey: "test-gemini-key",
+      logMessages: false,
+    },
+  };
+}
+
 function resolveRequestUrl(input) {
   if (typeof input === "string") return input;
   if (input instanceof URL) return input.toString();
@@ -91,6 +105,71 @@ test("createModel: custom provider can generate text with mocked responses endpo
       "https://example.com/v1/responses",
     );
     assert.match(mockFetchCalls[0].body, /"model":"gpt-5\.2"/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createModel: gemini provider uses google openai-compatible default endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const mockFetchCalls = [];
+
+  globalThis.fetch = async (input, init) => {
+    mockFetchCalls.push({
+      url: resolveRequestUrl(input),
+      method: init?.method || "POST",
+      body: typeof init?.body === "string" ? init.body : "",
+    });
+
+    return new Response(
+      JSON.stringify({
+        id: "resp_1",
+        object: "response",
+        created_at: Math.floor(Date.now() / 1000),
+        status: "completed",
+        model: "gemini-2.5-pro",
+        output: [
+          {
+            id: "msg_1",
+            type: "message",
+            role: "assistant",
+            content: [
+              {
+                type: "output_text",
+                text: "OK",
+                annotations: [],
+              },
+            ],
+          },
+        ],
+        usage: {
+          input_tokens: 1,
+          output_tokens: 1,
+          total_tokens: 2,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    const model = await createModel({ config: createGeminiConfig() });
+    const result = await generateText({
+      model,
+      prompt: "reply OK",
+      maxOutputTokens: 16,
+    });
+
+    assert.equal(result.text.trim(), "OK");
+    assert.equal(mockFetchCalls.length, 1);
+    assert.equal(
+      mockFetchCalls[0].url,
+      "https://generativelanguage.googleapis.com/v1beta/openai/responses",
+    );
+    assert.match(mockFetchCalls[0].body, /"model":"gemini-2\.5-pro"/);
   } finally {
     globalThis.fetch = originalFetch;
   }

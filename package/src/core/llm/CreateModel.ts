@@ -48,12 +48,20 @@ export async function createModel(input: {
     resolvedApiKey = process.env[envVar];
   }
 
-  // 兜底策略（中文）：兼容常见环境变量命名。
+  // 兜底策略（中文）：按 provider 优先读取对应生态的常见环境变量。
   if (!resolvedApiKey) {
-    resolvedApiKey =
-      process.env.ANTHROPIC_API_KEY ||
-      process.env.OPENAI_API_KEY ||
-      process.env.API_KEY;
+    if (provider === "gemini") {
+      resolvedApiKey =
+        process.env.GEMINI_API_KEY ||
+        process.env.GOOGLE_API_KEY ||
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+        process.env.API_KEY;
+    } else {
+      resolvedApiKey =
+        process.env.ANTHROPIC_API_KEY ||
+        process.env.OPENAI_API_KEY ||
+        process.env.API_KEY;
+    }
   }
 
   if (!resolvedApiKey) {
@@ -77,6 +85,17 @@ export async function createModel(input: {
       fetch: loggingFetch as typeof fetch,
     });
     return anthropicProvider(resolvedModel);
+  }
+
+  // Gemini provider（中文）：
+  // - 统一复用 OpenAI-compatible SDK 路径，默认指向 Google OpenAI-compatible endpoint。
+  if (provider === "gemini") {
+    const geminiProvider = createOpenAI({
+      apiKey: resolvedApiKey,
+      baseURL: resolvedBaseUrl || "https://generativelanguage.googleapis.com/v1beta/openai",
+      fetch: loggingFetch as typeof fetch,
+    });
+    return geminiProvider(resolvedModel);
   }
 
   // custom provider 走 OpenAI Responses 协议（中文）：

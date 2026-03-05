@@ -18,8 +18,8 @@ export interface ShipConfig {
   start?: {
     port?: number;
     host?: string;
-    interactiveWeb?: boolean;
-    interactivePort?: number;
+    webui?: boolean;
+    webport?: number;
   };
   /**
    * services 配置。

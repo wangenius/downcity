@@ -19,8 +19,8 @@ description: Deep dive into ship.json and Agent.md configuration
   "start": {
     "port": 3000,
     "host": "0.0.0.0",
-    "interactiveWeb": false,
-    "interactivePort": 3001
+    "webui": false,
+    "webport": 3001
   },
   "llm": {
     "provider": "custom",
@@ -82,8 +82,8 @@ Controls the Agent service startup parameters:
 
 - **port**: Port number for the Agent service to listen on (default `3000`).
 - **host**: Host address to bind the service, `0.0.0.0` means allow external access.
-- **interactiveWeb**: Whether to enable interactive web interface (default `false`).
-- **interactivePort**: Port for the interactive web interface (default `3001`).
+- **webui**: Whether to enable interactive web interface (default `false`).
+- **webport**: Port for the interactive web interface (default `3001`).
 
 #### `llm` (Language Model)
 

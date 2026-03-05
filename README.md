@@ -156,8 +156,8 @@ You are the maintainer agent of this repository.
   "start": {
     "port": 3000,
     "host": "0.0.0.0",
-    "interactiveWeb": false,
-    "interactivePort": 3001
+    "webui": false,
+    "webport": 3001
   }
 }
 ```

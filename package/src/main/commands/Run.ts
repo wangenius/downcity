@@ -72,21 +72,22 @@ export async function runCommand(
 
   // Resolve startup options: CLI flags override ship.json, then built-in defaults.
   let port: number;
-  let interactivePort: number | undefined;
+  let webport: number | undefined;
   try {
     port = parsePort(options.port, "port") ?? shipConfig.start?.port ?? 3000;
-    interactivePort =
-      parsePort(options.interactivePort, "interactivePort") ??
-      shipConfig.start?.interactivePort;
+    webport =
+      parsePort(options.webport, "webport") ??
+      shipConfig.start?.webport;
   } catch (error) {
     console.error("❌ Invalid start options:", error);
     process.exit(1);
   }
 
   const host = (options.host ?? shipConfig.start?.host ?? "0.0.0.0").trim();
+  const accessibleHost = host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
   const webui_client =
-    parseBoolean(options.interactiveWeb) ??
-    shipConfig.start?.interactiveWeb ??
+    parseBoolean(options.webui) ??
+    shipConfig.start?.webui ??
     false;
 
   process.env.SMA_SERVER_PORT = String(port);
@@ -100,7 +101,7 @@ export async function runCommand(
   if (webui_client) {
     logger.info("交互式 Web 界面已启用");
     webui = createWebUIClient({
-      agentApiUrl: `http://${host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host}:${port}`,
+      agentApiUrl: `http://${accessibleHost}:${port}`,
     });
   }
 
@@ -163,10 +164,13 @@ export async function runCommand(
 
   // 启动交互式 Web 服务器（如果已启用）
   if (webui) {
+    const resolvedWebPort = webport ?? 3001;
     await webui.start({
-      port: interactivePort ?? 3001,
+      port: resolvedWebPort,
       host,
     });
+    // 关键点（中文）：统一打印可直接访问的前端地址，避免 0.0.0.0 在浏览器中不可直连。
+    logger.info(`🌐 Web UI: http://${accessibleHost}:${resolvedWebPort}`);
   }
 
   logger.info("=== ShipMyAgent Started ===");

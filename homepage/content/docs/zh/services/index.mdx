@@ -44,7 +44,7 @@ ShipMyAgent 内置了一个交互式 Web 界面，让你在浏览器中轻松管
 
 ```bash
 # 启动交互式 Web 界面（默认 3001 端口）
-shipmyagent start --interactive-web
+shipmyagent start --webui
 ```
 
 也可以把启动参数写进 `ship.json` 的 `start` 字段，然后直接运行 `shipmyagent .` / `shipmyagent start`：
@@ -54,8 +54,8 @@ shipmyagent start --interactive-web
   "start": {
     "port": 3000,
     "host": "0.0.0.0",
-    "interactiveWeb": true,
-    "interactivePort": 3001
+    "webui": true,
+    "webport": 3001
   }
 }
 ```
@@ -68,20 +68,20 @@ shipmyagent start --interactive-web
 
 ```bash
 # 自定义 Web 界面端口
-shipmyagent start --interactive-web --interactive-port 9001
+shipmyagent start --webui --webport 9001
 
 # 同时自定义两个端口
-shipmyagent start -p 8080 --interactive-web --interactive-port 8081
+shipmyagent start -p 8080 --webui --webport 8081
 ```
 
 #### 自定义主机
 
 ```bash
 # 监听所有网络接口（团队访问）
-shipmyagent start -h 0.0.0.0 --interactive-web
+shipmyagent start -h 0.0.0.0 --webui
 
 # 只监听本地（开发环境）
-shipmyagent start -h 127.0.0.1 --interactive-web
+shipmyagent start -h 127.0.0.1 --webui
 ```
 
 ### 架构说明
@@ -149,7 +149,7 @@ server {
 
 ```bash
 # 使用 PM2 启动
-pm2 start "shipmyagent start --interactive-web" --name shipmyagent
+pm2 start "shipmyagent start --webui" --name shipmyagent
 
 # 查看状态
 pm2 status
@@ -175,7 +175,7 @@ After=network.target
 Type=simple
 User=youruser
 WorkingDirectory=/path/to/your/project
-ExecStart=/usr/local/bin/shipmyagent start --interactive-web
+ExecStart=/usr/local/bin/shipmyagent start --webui
 Restart=always
 RestartSec=10
 

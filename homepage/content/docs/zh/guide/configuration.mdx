@@ -19,8 +19,8 @@ description: 深入了解 ship.json 和 Agent.md 配置
   "start": {
     "port": 3000,
     "host": "0.0.0.0",
-    "interactiveWeb": false,
-    "interactivePort": 3001
+    "webui": false,
+    "webport": 3001
   },
   "llm": {
     "provider": "custom",
@@ -82,8 +82,8 @@ description: 深入了解 ship.json 和 Agent.md 配置
 
 - **port**: Agent 服务监听的端口号（默认 `3000`）。
 - **host**: 服务绑定的主机地址，`0.0.0.0` 表示允许外部访问。
-- **interactiveWeb**: 是否启用交互式 Web 界面（默认 `false`）。
-- **interactivePort**: 交互式 Web 界面的端口（默认 `3001`）。
+- **webui**: 是否启用交互式 Web 界面（默认 `false`）。
+- **webport**: 交互式 Web 界面的端口（默认 `3001`）。
 
 #### `llm` (语言模型)
 

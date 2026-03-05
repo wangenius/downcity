@@ -316,8 +316,8 @@ Help users understand and work with their codebase by exploring, analyzing, and 
     start: {
       port: 3000,
       host: "0.0.0.0",
-      interactiveWeb: false,
-      interactivePort: 3001,
+      webui: false,
+      webport: 3001,
     },
     llm: llmConfig,
     // 关键点（中文）：所有服务相关配置统一放入 `services`。

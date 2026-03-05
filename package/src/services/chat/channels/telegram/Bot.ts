@@ -20,6 +20,7 @@ import {
   type TelegramUser,
 } from "./Shared.js";
 import { TelegramStateStore } from "./StateStore.js";
+import { appendOutboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 
 /**
@@ -890,6 +891,12 @@ export class TelegramBot extends BaseChatChannel {
     opts?: { messageThreadId?: number },
   ): Promise<void> {
     await this.api.sendMessage(chatId, text, opts);
+    await this.appendBotOutboundHistory({
+      chatId,
+      text,
+      messageThreadId: opts?.messageThreadId,
+      source: "telegram_send_message",
+    });
   }
 
   async sendMessageWithInlineKeyboard(
@@ -899,6 +906,57 @@ export class TelegramBot extends BaseChatChannel {
     opts?: { messageThreadId?: number },
   ): Promise<void> {
     await this.api.sendMessageWithInlineKeyboard(chatId, text, buttons, opts);
+    await this.appendBotOutboundHistory({
+      chatId,
+      text,
+      messageThreadId: opts?.messageThreadId,
+      source: "telegram_send_inline_keyboard",
+    });
+  }
+
+  /**
+   * 记录 Telegram 出站消息到 chat history（best-effort）。
+   *
+   * 关键点（中文）
+   * - 仅落审计文件，不会入执行队列，避免形成回环执行。
+   * - contextId 使用 chatKey（含 topic lane），便于与入站历史对齐查询。
+   */
+  private async appendBotOutboundHistory(params: {
+    chatId: string;
+    text: string;
+    messageThreadId?: number;
+    source: string;
+  }): Promise<void> {
+    const chatId = String(params.chatId || "").trim();
+    const text = String(params.text ?? "");
+    if (!chatId || !text.trim()) return;
+
+    const contextId = this.buildChatKey(chatId, params.messageThreadId);
+    try {
+      await appendOutboundChatHistory({
+        context: this.context,
+        contextId,
+        channel: "telegram",
+        chatId,
+        text,
+        ...(typeof params.messageThreadId === "number"
+          ? { threadId: params.messageThreadId }
+          : {}),
+        ...(typeof this.botId === "number" ? { actorId: String(this.botId) } : {}),
+        ...(typeof this.botUsername === "string" && this.botUsername.trim()
+          ? { actorName: this.botUsername.trim() }
+          : {}),
+        extra: {
+          source: params.source,
+        },
+      });
+    } catch (error) {
+      this.logger.warn("Failed to append outbound Telegram chat history", {
+        error: String(error),
+        contextId,
+        chatId,
+      });
+    }
   }
 
   async stop(): Promise<void> {

@@ -7,8 +7,8 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
   start: {
     port: 3000,
     host: "0.0.0.0",
-    interactiveWeb: false,
-    interactivePort: 3001,
+    webui: false,
+    webport: 3001,
   },
   llm: {
     provider: "anthropic",

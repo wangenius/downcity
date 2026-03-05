@@ -77,13 +77,13 @@ const run = program
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
   .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
   .option(
-    "--interactive-web [enabled]",
-    "启动交互式 Web 界面（可在 ship.json 的 start.interactiveWeb 配置）",
+    "--webui [enabled]",
+    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
     parseBoolean,
   )
   .option(
-    "--interactive-port <port>",
-    "交互式 Web 界面端口（可在 ship.json 的 start.interactivePort 配置）",
+    "--webport <port>",
+    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
     parsePort,
   )
   .helpOption("--help", "display help for command")
@@ -95,13 +95,13 @@ const start = program
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
   .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
   .option(
-    "--interactive-web [enabled]",
-    "启动交互式 Web 界面（可在 ship.json 的 start.interactiveWeb 配置）",
+    "--webui [enabled]",
+    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
     parseBoolean,
   )
   .option(
-    "--interactive-port <port>",
-    "交互式 Web 界面端口（可在 ship.json 的 start.interactivePort 配置）",
+    "--webport <port>",
+    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
     parsePort,
   )
   .helpOption("--help", "display help for command")
@@ -119,13 +119,13 @@ const restart = program
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
   .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
   .option(
-    "--interactive-web [enabled]",
-    "启动交互式 Web 界面（可在 ship.json 的 start.interactiveWeb 配置）",
+    "--webui [enabled]",
+    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
     parseBoolean,
   )
   .option(
-    "--interactive-port <port>",
-    "交互式 Web 界面端口（可在 ship.json 的 start.interactivePort 配置）",
+    "--webport <port>",
+    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
     parsePort,
   )
   .helpOption("--help", "display help for command")

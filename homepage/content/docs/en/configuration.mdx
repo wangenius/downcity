@@ -60,16 +60,16 @@ Startup options (read by `shipmyagent .` / `shipmyagent start`). Explicit CLI fl
 |-------|------|---------|-------------|
 | `port` | number | 3000 | Main API server port |
 | `host` | string | 0.0.0.0 | Bind host |
-| `interactiveWeb` | boolean | false | Enable interactive web UI |
-| `interactivePort` | number | 3001 | Interactive web UI port |
+| `webui` | boolean | false | Enable interactive web UI |
+| `webport` | number | 3001 | Interactive web UI port |
 
 ```json
 {
   "start": {
     "port": 3000,
     "host": "0.0.0.0",
-    "interactiveWeb": true,
-    "interactivePort": 3001
+    "webui": true,
+    "webport": 3001
   }
 }
 ```

@@ -15,6 +15,7 @@ Complete reference for all ShipMyAgent CLI commands.
 | `shipmyagent .` / `shipmyagent run` | Start in foreground (current terminal) |
 | `shipmyagent start` | Start in background (daemon) |
 | `shipmyagent alias` | Install shell alias `sma` |
+| `shipmyagent config` | Read/update `ship.json` and `llm` provider/model config |
 | `shipmyagent stop` | Stop the background agent server |
 | `shipmyagent restart` | Restart the background agent server |
 | `shipmyagent services` | Manage service runtimes |
@@ -30,6 +31,31 @@ Complete reference for all ShipMyAgent CLI commands.
 ## Bash-first Service Commands
 
 Starting from this version, `chat / skill / task` are registered as service commands and are designed to be invoked directly from shell tools.
+
+### `sma config`
+
+```bash
+sma config get [keyPath] [--path <projectRoot>]
+sma config set <keyPath> <value> [--path <projectRoot>]
+sma config unset <keyPath> [--path <projectRoot>]
+
+sma config llm provider list
+sma config llm provider add <providerId> --type <type> [--base-url <url>] [--api-key <key>]
+sma config llm provider update <providerId> [--type <type>] [--base-url <url>] [--api-key <key>] [--clear-base-url] [--clear-api-key]
+sma config llm provider remove <providerId>
+
+sma config llm model list
+sma config llm model add <modelId> --provider <providerId> --name <modelName> [--temperature <n>] [--max-tokens <n>]
+sma config llm model update <modelId> [--provider <providerId>] [--name <modelName>] [--temperature <n>] [--max-tokens <n>]
+sma config llm model activate <modelId>
+sma config llm model remove <modelId>
+```
+
+Notes:
+- Default output is JSON (script-friendly); use `--json false` for human-readable output
+- `config set` parses JSON literals first (`true`, `123`, `{...}`, `[...]`), then falls back to plain string
+- Provider removal is blocked when referenced by any model
+- Active model cannot be removed until you activate another model
 
 ### `sma chat`
 

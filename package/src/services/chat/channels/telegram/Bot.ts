@@ -41,6 +41,8 @@ export class TelegramBot extends BaseChatChannel {
   private isRunning: boolean = false;
   private pollInFlight: boolean = false;
   private lastDrainAttemptAt: number = 0;
+  private consecutivePollErrors: number = 0;
+  private nextPollAllowedAt: number = 0;
 
   private readonly api: TelegramApiClient;
   private readonly stateStore: TelegramStateStore;
@@ -75,6 +77,41 @@ export class TelegramBot extends BaseChatChannel {
       logger: this.logger,
     });
     this.stateStore = new TelegramStateStore(this.rootPath);
+  }
+
+  /**
+   * 轮询错误是否属于“超时”。
+   *
+   * 说明（中文）
+   * - getUpdates 长轮询超时是正常行为，不应计入失败重试。
+   */
+  private isPollingTimeoutError(message: string): boolean {
+    return /timeout/i.test(String(message || ""));
+  }
+
+  /**
+   * 粗粒度识别网络波动类错误。
+   *
+   * 说明（中文）
+   * - 仅用于日志分级（warn/error），不影响功能语义。
+   */
+  private isLikelyNetworkError(message: string): boolean {
+    return /fetch failed|network|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket hang up|TLS/i.test(
+      String(message || ""),
+    );
+  }
+
+  /**
+   * 计算轮询失败后的退避时间。
+   *
+   * 说明（中文）
+   * - 指数退避：1s -> 2s -> 4s ...，上限 30s
+   * - 降低网络抖动时的日志噪声与无效请求洪峰
+   */
+  private computePollBackoffMs(failureCount: number): number {
+    const safeFailureCount = Number.isFinite(failureCount) ? failureCount : 1;
+    const exponent = Math.max(0, safeFailureCount - 1);
+    return Math.min(30_000, 1_000 * Math.pow(2, exponent));
   }
 
   private async drainPendingUpdatesToHistory(params: {
@@ -471,6 +508,8 @@ export class TelegramBot extends BaseChatChannel {
     await this.drainPendingUpdatesToHistory({ reason: "startup" });
 
     // Start polling
+    this.consecutivePollErrors = 0;
+    this.nextPollAllowedAt = 0;
     this.pollingInterval = setInterval(() => this.pollUpdates(), 1000);
     this.logger.info("Telegram Bot started");
 
@@ -487,6 +526,7 @@ export class TelegramBot extends BaseChatChannel {
   private async pollUpdates(): Promise<void> {
     if (!this.isRunning) return;
     if (this.pollInFlight) return;
+    if (Date.now() < this.nextPollAllowedAt) return;
     this.pollInFlight = true;
 
     try {
@@ -495,6 +535,14 @@ export class TelegramBot extends BaseChatChannel {
         limit: 10,
         timeout: 30,
       });
+
+      if (this.consecutivePollErrors > 0) {
+        this.logger.info(
+          `Telegram polling recovered after ${this.consecutivePollErrors} failed attempt(s)`,
+        );
+      }
+      this.consecutivePollErrors = 0;
+      this.nextPollAllowedAt = 0;
 
       // 更新 lastUpdateId
       for (const update of updates) {
@@ -519,7 +567,7 @@ export class TelegramBot extends BaseChatChannel {
     } catch (error) {
       // Polling timeout is normal
       const msg = (error as Error)?.message || String(error);
-      if (!msg.includes("timeout")) {
+      if (!this.isPollingTimeoutError(msg)) {
         // Self-heal common setup issue: webhook enabled while using getUpdates polling.
         const looksLikeWebhookConflict =
           /webhook/i.test(msg) ||
@@ -536,6 +584,8 @@ export class TelegramBot extends BaseChatChannel {
               { error: msg },
             );
             await this.drainPendingUpdatesToHistory({ reason: "webhook_conflict" });
+            this.consecutivePollErrors = 0;
+            this.nextPollAllowedAt = 0;
             return;
           } catch (e) {
             this.logger.error(
@@ -545,7 +595,20 @@ export class TelegramBot extends BaseChatChannel {
           }
         }
 
-        this.logger.error("Telegram polling error", { error: msg });
+        this.consecutivePollErrors += 1;
+        const backoffMs = this.computePollBackoffMs(this.consecutivePollErrors);
+        this.nextPollAllowedAt = Date.now() + backoffMs;
+        const retryInSeconds = Math.ceil(backoffMs / 1000);
+
+        if (this.isLikelyNetworkError(msg)) {
+          this.logger.warn(
+            `Telegram polling network error, retrying in ${retryInSeconds}s: ${msg}`,
+          );
+        } else {
+          this.logger.error(
+            `Telegram polling error, retrying in ${retryInSeconds}s: ${msg}`,
+          );
+        }
       }
     } finally {
       this.pollInFlight = false;
@@ -1001,6 +1064,8 @@ export class TelegramBot extends BaseChatChannel {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
     }
+    this.consecutivePollErrors = 0;
+    this.nextPollAllowedAt = 0;
     this.logger.info("Telegram Bot stopped");
   }
 }

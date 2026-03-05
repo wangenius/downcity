@@ -4,7 +4,7 @@
  * CLI 程序入口模块。
  *
  * 职责说明：
- * 1. 组装所有一级命令（init/run/start/stop/restart/alias/services）。
+ * 1. 组装所有一级命令（init/run/start/stop/restart/alias/config/services）。
  * 2. 统一处理命令行参数解析规则（端口、布尔值）。
  * 3. 处理默认命令回退：未指定已知一级命令时自动转发到 run。
  */
@@ -13,6 +13,7 @@ import { basename, dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Command } from "commander";
 import { aliasCommand } from "./Alias.js";
+import { registerConfigCommand } from "./Config.js";
 import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
 import { runCommand } from "./Run.js";
@@ -140,6 +141,8 @@ program
   .helpOption("--help", "display help for command")
   .action(aliasCommand);
 
+registerConfigCommand(program);
+
 registerServicesCommand(program);
 
 // 服务命令统一注册（chat / skill / task / future services）
@@ -154,6 +157,7 @@ const staticRootCommands = [
   stop.name(),
   restart.name(),
   "alias",
+  "config",
   "services",
   "service",
   "help",

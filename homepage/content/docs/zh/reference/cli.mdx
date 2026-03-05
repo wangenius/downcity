@@ -15,6 +15,7 @@ description: ShipMyAgent 命令行界面完整参考
 | `shipmyagent .` / `shipmyagent run` | 前台启动（当前终端运行） |
 | `shipmyagent start` | 后台启动（终端关闭也保持运行） |
 | `shipmyagent alias` | 安装 shell alias `sma` |
+| `shipmyagent config` | 读取/更新 `ship.json` 与 `llm` provider/model 配置 |
 | `shipmyagent stop` | 停止后台 agent 服务器 |
 | `shipmyagent restart` | 重启后台 agent 服务器 |
 | `shipmyagent services` | 管理 service runtime |
@@ -31,6 +32,31 @@ description: ShipMyAgent 命令行界面完整参考
 ## Bash-first 模块命令
 
 从本版本开始，`chat / skill / task` 统一按模块命令注册，适合在 agent 的 shell 工具中直接执行。
+
+### `sma config`
+
+```bash
+sma config get [keyPath] [--path <projectRoot>]
+sma config set <keyPath> <value> [--path <projectRoot>]
+sma config unset <keyPath> [--path <projectRoot>]
+
+sma config llm provider list
+sma config llm provider add <providerId> --type <type> [--base-url <url>] [--api-key <key>]
+sma config llm provider update <providerId> [--type <type>] [--base-url <url>] [--api-key <key>] [--clear-base-url] [--clear-api-key]
+sma config llm provider remove <providerId>
+
+sma config llm model list
+sma config llm model add <modelId> --provider <providerId> --name <modelName> [--temperature <n>] [--max-tokens <n>]
+sma config llm model update <modelId> [--provider <providerId>] [--name <modelName>] [--temperature <n>] [--max-tokens <n>]
+sma config llm model activate <modelId>
+sma config llm model remove <modelId>
+```
+
+说明：
+- 默认输出 JSON（便于脚本消费），可通过 `--json false` 切换成人类可读输出
+- `config set` 会优先按 JSON 字面量解析（如 `true`、`123`、`{...}`、`[...]`），解析失败再按普通字符串写入
+- 当 provider 被任意 model 引用时，不允许删除该 provider
+- 当前 activeModel 不允许删除，需先切换到其他 model
 
 ### `sma chat`
 

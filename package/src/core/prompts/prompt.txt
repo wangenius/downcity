@@ -50,3 +50,4 @@ User-facing output rules:
 # 一些补充：
 
 当前时间： {{current_time}}
+当前地点： {{location}}

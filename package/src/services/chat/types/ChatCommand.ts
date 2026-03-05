@@ -22,6 +22,7 @@ export type ChatSendRequest = {
   text: string;
   chatKey?: string;
   delayMs?: number;
+  sendAtMs?: number;
 };
 
 export type ChatSendResponse = {

@@ -257,6 +257,85 @@ h3, h4, h5 { font-size: 13px; }
   font-size: 12px;
 }
 
+.message.group .group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.assistant-body-wrap {
+  border: 1px solid #2a3b57;
+  border-radius: 8px;
+  background: #0f1a2b;
+  overflow: hidden;
+}
+
+.assistant-body-wrap.user-inline {
+  border-color: #30527d;
+}
+
+.assistant-label {
+  padding: 5px 8px;
+  border-bottom: 1px solid #24324a;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b9c9e3;
+  background: #121f33;
+}
+
+.tool-item {
+  border: 1px solid #2c3f5e;
+  border-radius: 8px;
+  background: #0e1828;
+  overflow: hidden;
+}
+
+.tool-item.call {
+  border-left: 3px solid var(--yellow);
+}
+
+.tool-item.result {
+  border-left: 3px solid #ff8a3c;
+}
+
+.tool-item summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid #233248;
+}
+
+.tool-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.tool-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f3dca4;
+}
+
+.tool-item.result .tool-label {
+  color: #ffc7a2;
+}
+
+.tool-preview {
+  font-size: 11px;
+  color: #98a9c5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tool-body {
+  max-height: 360px;
+  overflow: auto;
+}
+
 .composer {
   border-top: 1px solid var(--border);
   padding: 10px;

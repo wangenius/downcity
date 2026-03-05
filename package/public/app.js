@@ -73,6 +73,31 @@ function toRenderableText(input) {
   return value || "(empty)";
 }
 
+function normalizeForPreview(text) {
+  return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function toMessageGroupKey(msg) {
+  return String(msg?.id || "").replace(/:\d+$/, "");
+}
+
+function groupMessagesForRender(messages) {
+  const groups = [];
+  for (const msg of messages) {
+    const key = toMessageGroupKey(msg);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.items.push(msg);
+      continue;
+    }
+    groups.push({
+      key,
+      items: [msg],
+    });
+  }
+  return groups;
+}
+
 function showToast(message, type = "info") {
   refs.toast.className = `toast ${type} show`;
   refs.toast.innerHTML = escapeHtml(message);
@@ -153,30 +178,82 @@ function renderMessages() {
     return;
   }
 
-  refs.messageList.innerHTML = state.messages
-    .map((msg) => {
-      const role = String(msg.role || "assistant");
-      const roleMap = {
-        user: "USER",
-        "tool-call": "TOOL CALL",
-        "tool-result": "TOOL RESULT",
-        assistant: "ASSISTANT",
-      };
-      const roleClass = ["user", "assistant", "tool-call", "tool-result"].includes(role)
-        ? role
-        : "assistant";
-      const roleText = roleMap[role] || "ASSISTANT";
-      const text = toRenderableText(msg.text);
-      const toolName = String(msg.toolName || "").trim();
-      const roleLabel = toolName ? `${roleText} · ${toolName}` : roleText;
+  const groups = groupMessagesForRender(state.messages);
+  refs.messageList.innerHTML = groups
+    .map((group) => {
+      const items = Array.isArray(group.items) ? group.items : [];
+      if (!items.length) return "";
+
+      // 单条 user 消息：独立卡片
+      if (items.length === 1 && String(items[0]?.role || "") === "user") {
+        const msg = items[0];
+        const text = toRenderableText(msg.text);
+        return `
+          <article class="message user">
+            <div class="message-head">
+              <span class="role">USER</span>
+              <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
+              <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
+            </div>
+            <pre class="message-body">${escapeHtml(text)}</pre>
+          </article>
+        `;
+      }
+
+      // 助手轮次卡片：聚合 tool call/result + assistant
+      const head = items.find((x) => String(x.role || "") === "assistant") || items[0];
+      const sections = items
+        .map((msg) => {
+          const role = String(msg.role || "");
+          const text = toRenderableText(msg.text);
+          const toolName = String(msg.toolName || "").trim();
+
+          if (role === "tool-call" || role === "tool-result") {
+            const label = role === "tool-call" ? "TOOL CALL" : "TOOL RESULT";
+            const preview = shortText(normalizeForPreview(text), 180);
+            const detailClass = role === "tool-call" ? "tool-item call" : "tool-item result";
+            return `
+              <details class="${detailClass}">
+                <summary>
+                  <span class="tool-label">${escapeHtml(toolName ? `${label} · ${toolName}` : label)}</span>
+                  <span class="tool-preview">${escapeHtml(preview)}</span>
+                </summary>
+                <pre class="message-body tool-body">${escapeHtml(text)}</pre>
+              </details>
+            `;
+          }
+
+          if (role === "assistant") {
+            return `
+              <div class="assistant-body-wrap">
+                <div class="assistant-label">ASSISTANT</div>
+                <pre class="message-body">${escapeHtml(text)}</pre>
+              </div>
+            `;
+          }
+
+          if (role === "user") {
+            return `
+              <div class="assistant-body-wrap user-inline">
+                <div class="assistant-label">USER</div>
+                <pre class="message-body">${escapeHtml(text)}</pre>
+              </div>
+            `;
+          }
+
+          return "";
+        })
+        .filter(Boolean)
+        .join("");
+
       return `
-        <article class="message ${roleClass}">
+        <article class="message assistant group">
           <div class="message-head">
-            <span class="role">${escapeHtml(roleLabel)}</span>
-            <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
-            <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
+            <span class="role">ASSISTANT ROUND</span>
+            <span class="time">${escapeHtml(formatTime(head.ts))}</span>
+            <span class="meta">${escapeHtml(head.kind || "normal")}/${escapeHtml(head.source || "-")}</span>
           </div>
-          <pre class="message-body">${escapeHtml(text)}</pre>
+          <div class="group-body">${sections}</div>
         </article>
       `;
     })

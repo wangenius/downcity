@@ -9,6 +9,8 @@
 
 import fs from "node:fs";
 import { SystemModelMessage } from "ai";
+import { resolvePromptGeoContext } from "@core/prompts/runtime/GeoContext.js";
+import type { PromptTemplateVariables } from "@core/prompts/types/PromptVariables.js";
 
 /**
  * 构建一次运行的运行时 system prompt。
@@ -66,11 +68,38 @@ export function buildContextSystemPrompt(input: {
 }
 
 /**
- * 获取当前时间字符串（ISO8601）。
+ * 获取当前时间字符串（指定时区）。
  */
-function getCurrentTimeString(): string {
-  // 使用 ISO 时间，避免 locale 造成不可预测的格式差异
-  return new Date().toISOString();
+function getCurrentTimeString(timezone: string): string {
+  try {
+    // 关键点（中文）：使用固定格式，确保模型读取时区信息时稳定。
+    const formatted = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+      .format(new Date())
+      .replace(" ", "T");
+    return `${formatted} (${timezone})`;
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
+async function buildPromptTemplateVariables(options?: {
+  projectPath?: string;
+}): Promise<PromptTemplateVariables> {
+  const geo = await resolvePromptGeoContext();
+  return {
+    currentTime: getCurrentTimeString(geo.timezone),
+    location: geo.location,
+    projectPath: options?.projectPath,
+  };
 }
 
 /**
@@ -78,10 +107,26 @@ function getCurrentTimeString(): string {
  *
  * 当前支持（中文）
  * - `{{current_time}}`
+ * - `{{location}}`
+ * - `{{project_path}}`
  */
-export function replaceVariablesInPrompts(prompt: string): string {
+export async function replaceVariablesInPrompts(
+  prompt: string,
+  options?: {
+    projectPath?: string;
+  },
+): Promise<string> {
   if (!prompt) return prompt;
-  return prompt.replaceAll("{{current_time}}", getCurrentTimeString());
+  const variables = await buildPromptTemplateVariables(options);
+
+  let result = prompt
+    .replaceAll("{{current_time}}", variables.currentTime)
+    .replaceAll("{{location}}", variables.location);
+
+  if (variables.projectPath) {
+    result = result.replaceAll("{{project_path}}", variables.projectPath);
+  }
+  return result;
 }
 
 /**
@@ -89,15 +134,19 @@ export function replaceVariablesInPrompts(prompt: string): string {
  *
  * - 自动过滤空串并执行变量替换。
  */
-export function transformPromptsIntoSystemMessages(
+export async function transformPromptsIntoSystemMessages(
   prompts: string[],
-): SystemModelMessage[] {
-  const result: SystemModelMessage[] = [];
-  prompts.forEach((item) => {
-    if (item.length > 0)
-      result.push({ role: "system", content: replaceVariablesInPrompts(item) });
-  });
-  return result;
+  options?: {
+    projectPath?: string;
+  },
+): Promise<SystemModelMessage[]> {
+  const nonEmptyPrompts = prompts.filter((item) => item.length > 0);
+  return Promise.all(
+    nonEmptyPrompts.map(async (item) => ({
+      role: "system" as const,
+      content: await replaceVariablesInPrompts(item, options),
+    })),
+  );
 }
 
 /**

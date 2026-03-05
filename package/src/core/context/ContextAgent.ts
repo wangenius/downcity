@@ -206,15 +206,21 @@ export class ContextAgent {
         requestId,
       });
 
-      const staticSystemMessages = transformPromptsIntoSystemMessages(
+      const staticSystemMessages = await transformPromptsIntoSystemMessages(
         this.resolveStaticSystemPrompts({
           systems: this.deps.getStaticSystemPrompts(),
         }),
+        {
+          projectPath: this.deps.projectRoot,
+        },
       );
-      let serviceSystemMessages = transformPromptsIntoSystemMessages(
+      let serviceSystemMessages = await transformPromptsIntoSystemMessages(
         await this.deps.getServiceSystemPrompts({
           disabledServiceNames: this.system.disableServiceSystems,
         }),
+        {
+          projectPath: this.deps.projectRoot,
+        },
       );
       let currentBaseSystemMessages: SystemModelMessage[] = [
         ...runtimeSystemMessages,
@@ -260,10 +266,13 @@ export class ContextAgent {
       }
       if (compacted) {
         // 关键点（中文）：compact 后重新收集 service system，保证提示词与最新状态一致。
-        serviceSystemMessages = transformPromptsIntoSystemMessages(
+        serviceSystemMessages = await transformPromptsIntoSystemMessages(
           await this.deps.getServiceSystemPrompts({
             disabledServiceNames: this.system.disableServiceSystems,
           }),
+          {
+            projectPath: this.deps.projectRoot,
+          },
         );
         currentBaseSystemMessages = [
           ...runtimeSystemMessages,

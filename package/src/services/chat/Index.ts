@@ -42,6 +42,7 @@ type ChatSendActionPayload = {
   text: string;
   chatKey?: string;
   delayMs?: number;
+  sendAtMs?: number;
 };
 
 type ChatContextActionPayload = {
@@ -281,6 +282,37 @@ function parseNonNegativeIntOptionOrThrow(value: string, fieldName: string): num
   return parsed;
 }
 
+/**
+ * 解析定时发送时间。
+ *
+ * 支持格式（中文）
+ * - Unix 时间戳：秒或毫秒（纯数字）
+ * - ISO 时间字符串：例如 `2026-03-05T20:30:00+08:00`
+ */
+function parseSendTimeOptionOrThrow(value: string, fieldName: string): number {
+  const text = String(value || "").trim();
+  if (!text) {
+    throw new Error(`${fieldName} is required`);
+  }
+
+  if (/^\d+$/.test(text)) {
+    const parsed = Number.parseInt(text, 10);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+      throw new Error(`Invalid ${fieldName}: ${value}`);
+    }
+    // 关键点（中文）：10 位通常是秒级时间戳，统一转换为毫秒。
+    return parsed < 1_000_000_000_000 ? parsed * 1000 : parsed;
+  }
+
+  const parsed = Date.parse(text);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+    throw new Error(
+      `Invalid ${fieldName}: ${value}. Use Unix timestamp (seconds/ms) or ISO datetime.`,
+    );
+  }
+  return parsed;
+}
+
 function parseOptionalTimestampOrThrow(
   value: string,
   fieldName: string,
@@ -426,9 +458,14 @@ async function mapChatSendCommandInput(
     chatKey: getStringOpt(input.opts, "chatKey"),
   });
   const delayRaw = getStringOpt(input.opts, "delay");
+  const timeRaw = getStringOpt(input.opts, "time");
   const delayMs = delayRaw
     ? parseNonNegativeIntOptionOrThrow(delayRaw, "delay")
     : undefined;
+  const sendAtMs = timeRaw ? parseSendTimeOptionOrThrow(timeRaw, "time") : undefined;
+  if (typeof delayMs === "number" && typeof sendAtMs === "number") {
+    throw new Error("`--delay` and `--time` cannot be used together.");
+  }
   if (!chatKey) {
     throw new Error(
       "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CHAT_KEY is injected in current shell context.",
@@ -439,6 +476,7 @@ async function mapChatSendCommandInput(
     text,
     chatKey,
     ...(typeof delayMs === "number" ? { delayMs } : {}),
+    ...(typeof sendAtMs === "number" ? { sendAtMs } : {}),
   };
 }
 
@@ -448,18 +486,30 @@ function mapChatSendApiInput(body: JsonValue): ChatSendActionPayload {
   }
   const payload = body as JsonObject;
   const delayRaw = payload.delayMs ?? payload.delay;
+  const timeRaw = payload.sendAtMs ?? payload.sendAt ?? payload.time;
   const delayText =
     typeof delayRaw === "string" || typeof delayRaw === "number"
       ? String(delayRaw).trim()
       : "";
+  const timeText =
+    typeof timeRaw === "string" || typeof timeRaw === "number"
+      ? String(timeRaw).trim()
+      : "";
   const delayMs = delayText
     ? parseNonNegativeIntOptionOrThrow(delayText, "delayMs")
     : undefined;
+  const sendAtMs = timeText
+    ? parseSendTimeOptionOrThrow(timeText, "sendAtMs")
+    : undefined;
+  if (typeof delayMs === "number" && typeof sendAtMs === "number") {
+    throw new Error("`delayMs` and `sendAtMs` cannot be used together.");
+  }
   return {
     text: String(payload.text ?? ""),
     chatKey:
       typeof payload.chatKey === "string" ? payload.chatKey.trim() : undefined,
     ...(typeof delayMs === "number" ? { delayMs } : {}),
+    ...(typeof sendAtMs === "number" ? { sendAtMs } : {}),
   };
 }
 
@@ -483,6 +533,7 @@ async function executeChatSendAction(params: {
     chatKey,
     text: String(params.payload.text || ""),
     delayMs: params.payload.delayMs,
+    sendAtMs: params.payload.sendAtMs,
   });
   if (!result.success) {
     return {
@@ -514,6 +565,10 @@ export const chatService: Service = {
             .option("--stdin", "从标准输入读取消息正文", false)
             .option("--text-file <file>", "从文件读取消息正文（相对当前目录）")
             .option("--delay <ms>", "延迟发送毫秒数（非负整数）")
+            .option(
+              "--time <time>",
+              "定时发送时间（Unix 时间戳秒/毫秒或 ISO 时间）",
+            )
             .option(
               "--chat-key <chatKey>",
               "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）",

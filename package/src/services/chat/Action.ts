@@ -231,14 +231,30 @@ function normalizeChatSendText(raw: string): string {
  * 发送前延迟。
  *
  * 关键点（中文）
- * - 仅用于 `chat send` 的显式延迟参数
- * - 毫秒值由上游校验为非负整数
+ * - 支持延迟毫秒（delayMs）或绝对时间（sendAtMs）
+ * - 超长等待按分片 setTimeout，避免超出 Node 单次定时器上限
  */
-async function waitBeforeSend(delayMs: number): Promise<void> {
-  if (!Number.isFinite(delayMs) || Number.isNaN(delayMs) || delayMs <= 0) return;
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, delayMs);
-  });
+async function waitBeforeSend(params: {
+  delayMs: number;
+  sendAtMs?: number;
+}): Promise<void> {
+  const delayMs = params.delayMs;
+  const sendAtMs = params.sendAtMs;
+  const targetWaitMs =
+    typeof sendAtMs === "number" ? Math.max(0, sendAtMs - Date.now()) : delayMs;
+  if (!Number.isFinite(targetWaitMs) || Number.isNaN(targetWaitMs) || targetWaitMs <= 0) {
+    return;
+  }
+
+  const MAX_TIMEOUT_MS = 2_147_483_647;
+  let remaining = Math.trunc(targetWaitMs);
+  while (remaining > 0) {
+    const chunk = Math.min(remaining, MAX_TIMEOUT_MS);
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, chunk);
+    });
+    remaining -= chunk;
+  }
 }
 
 /**
@@ -253,6 +269,7 @@ export async function sendChatTextByChatKey(params: {
   chatKey: string;
   text: string;
   delayMs?: number;
+  sendAtMs?: number;
 }): Promise<ChatSendResponse> {
   const chatKey = String(params.chatKey || "").trim();
   const text = normalizeChatSendText(String(params.text ?? ""));
@@ -260,14 +277,25 @@ export async function sendChatTextByChatKey(params: {
     typeof params.delayMs === "number" && Number.isFinite(params.delayMs)
       ? Math.max(0, Math.trunc(params.delayMs))
       : 0;
+  const sendAtMs =
+    typeof params.sendAtMs === "number" && Number.isFinite(params.sendAtMs)
+      ? Math.max(0, Math.trunc(params.sendAtMs))
+      : undefined;
   if (!chatKey) {
     return {
       success: false,
       error: "Missing chatKey",
     };
   }
+  if (delayMs > 0 && typeof sendAtMs === "number") {
+    return {
+      success: false,
+      chatKey,
+      error: "delayMs and sendAtMs cannot be used together",
+    };
+  }
 
-  await waitBeforeSend(delayMs);
+  await waitBeforeSend({ delayMs, sendAtMs });
 
   const result = await sendTextByChatKey({
     context: params.context,
@@ -292,6 +320,7 @@ export async function sendChatTextByContextId(params: {
   contextId: string;
   text: string;
   delayMs?: number;
+  sendAtMs?: number;
 }): Promise<{ success: boolean; contextId: string; error?: string }> {
   const contextId = String(params.contextId || "").trim();
   if (!contextId) {
@@ -307,6 +336,7 @@ export async function sendChatTextByContextId(params: {
     chatKey: contextId,
     text: params.text,
     delayMs: params.delayMs,
+    sendAtMs: params.sendAtMs,
   });
   return {
     success: Boolean(result.success),

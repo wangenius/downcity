@@ -111,6 +111,8 @@ shipmyagent init [选项]
 - `.env.example` 和 `.env`
 - `.ship/`（运行时数据 + schemas）
 
+默认模板支持 `{{...}}` 变量；初始化时会渲染内置变量 `{{agent_name}}`（取交互输入的 Agent 名称，若为空则回退为当前目录名）。
+
 **选项**：
 
 | 选项 | 简写 | 描述 |

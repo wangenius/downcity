@@ -44,6 +44,7 @@ import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
   DEFAULT_USER_MD_TEMPLATE,
+  renderInitTemplate,
 } from "@main/constants/InitTemplates.js";
 
 type InitPromptResponse = {
@@ -243,6 +244,12 @@ export async function initCommand(
     },
   ])) as InitPromptResponse;
 
+  // 关键点（中文）：agent_name 同时用于 `ship.json.name` 与 init 模板变量渲染，避免两处来源不一致。
+  const agentName = String(response.name || "").trim() || path.basename(projectRoot);
+  const initTemplateVariables = {
+    agent_name: agentName,
+  };
+
   // Create configuration files
   const profileMdPath = getProfileMdPath(projectRoot);
   const soulMdPath = getSoulMdPath(projectRoot);
@@ -253,19 +260,22 @@ export async function initCommand(
       filename: "PROFILE.md",
       exists: existingProfileMd,
       filePath: profileMdPath,
-      content: DEFAULT_PROFILE_MD_TEMPLATE,
+      content: renderInitTemplate(
+        DEFAULT_PROFILE_MD_TEMPLATE,
+        initTemplateVariables,
+      ),
     },
     {
       filename: "SOUL.md",
       exists: existingSoulMd,
       filePath: soulMdPath,
-      content: DEFAULT_SOUL_MD_TEMPLATE,
+      content: renderInitTemplate(DEFAULT_SOUL_MD_TEMPLATE, initTemplateVariables),
     },
     {
       filename: "USER.md",
       exists: existingUserMd,
       filePath: userMdPath,
-      content: DEFAULT_USER_MD_TEMPLATE,
+      content: renderInitTemplate(DEFAULT_USER_MD_TEMPLATE, initTemplateVariables),
     },
   ] as const;
 
@@ -328,7 +338,7 @@ export async function initCommand(
 
   const shipConfig: ShipConfig = {
     $schema: DEFAULT_SHIP_JSON.$schema,
-    name: response.name || path.basename(projectRoot),
+    name: agentName,
     version: "1.0.0",
     start: {
       port: 3000,

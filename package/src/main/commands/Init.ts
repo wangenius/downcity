@@ -44,8 +44,8 @@ import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
   DEFAULT_USER_MD_TEMPLATE,
-  renderInitTemplate,
 } from "@main/constants/InitTemplates.js";
+import { renderTemplateVariables } from "@/utils/Template.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -260,7 +260,7 @@ export async function initCommand(
       filename: "PROFILE.md",
       exists: existingProfileMd,
       filePath: profileMdPath,
-      content: renderInitTemplate(
+      content: renderTemplateVariables(
         DEFAULT_PROFILE_MD_TEMPLATE,
         initTemplateVariables,
       ),
@@ -269,13 +269,19 @@ export async function initCommand(
       filename: "SOUL.md",
       exists: existingSoulMd,
       filePath: soulMdPath,
-      content: renderInitTemplate(DEFAULT_SOUL_MD_TEMPLATE, initTemplateVariables),
+      content: renderTemplateVariables(
+        DEFAULT_SOUL_MD_TEMPLATE,
+        initTemplateVariables,
+      ),
     },
     {
       filename: "USER.md",
       exists: existingUserMd,
       filePath: userMdPath,
-      content: renderInitTemplate(DEFAULT_USER_MD_TEMPLATE, initTemplateVariables),
+      content: renderTemplateVariables(
+        DEFAULT_USER_MD_TEMPLATE,
+        initTemplateVariables,
+      ),
     },
   ] as const;
 

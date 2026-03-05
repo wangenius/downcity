@@ -4,7 +4,6 @@
  * 职责说明（中文）
  * - 统一管理 `shipmyagent init` 生成的 `PROFILE.md` / `SOUL.md` / `USER.md` 默认内容。
  * - 模板内容存放在独立 txt 文件，避免在 TS 中内联长文本。
- * - 提供 `{{variable}}` 占位符替换能力，供 init 写文件前渲染。
  */
 
 import { readFileSync } from "node:fs";
@@ -13,8 +12,14 @@ const PROFILE_TEMPLATE_FILE_URL = new URL(
   "./templates/PROFILE.md.txt",
   import.meta.url,
 );
-const SOUL_TEMPLATE_FILE_URL = new URL("./templates/SOUL.md.txt", import.meta.url);
-const USER_TEMPLATE_FILE_URL = new URL("./templates/USER.md.txt", import.meta.url);
+const SOUL_TEMPLATE_FILE_URL = new URL(
+  "./templates/SOUL.md.txt",
+  import.meta.url,
+);
+const USER_TEMPLATE_FILE_URL = new URL(
+  "./templates/USER.md.txt",
+  import.meta.url,
+);
 
 /**
  * 从 txt 资源加载 init 模板。
@@ -32,25 +37,6 @@ function loadInitTemplate(fileUrl: URL, label: string): string {
       `failed to load init template ${label} from ${fileUrl.pathname}: ${reason}`,
     );
   }
-}
-
-/**
- * 渲染 init 模板中的 `{{variable}}` 占位符。
- *
- * 关键点（中文）
- * - 支持 `{{agent_name}}` 这类变量名（允许前后空格）。
- * - 未提供值的变量保持原样，便于排查模板问题。
- */
-export function renderInitTemplate(
-  template: string,
-  variables: Record<string, string>,
-): string {
-  if (!template) return template;
-  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
-    return Object.prototype.hasOwnProperty.call(variables, key)
-      ? String(variables[key])
-      : match;
-  });
 }
 
 /**

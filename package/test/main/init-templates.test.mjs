@@ -8,21 +8,19 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  DEFAULT_PROFILE_MD_TEMPLATE,
-  renderInitTemplate,
-} from "../../bin/main/constants/InitTemplates.js";
+import { DEFAULT_PROFILE_MD_TEMPLATE } from "../../bin/main/constants/InitTemplates.js";
+import { renderTemplateVariables } from "../../bin/utils/Template.js";
 
-test("renderInitTemplate replaces agent_name placeholder", () => {
-  const rendered = renderInitTemplate(DEFAULT_PROFILE_MD_TEMPLATE, {
+test("renderTemplateVariables replaces agent_name placeholder", () => {
+  const rendered = renderTemplateVariables(DEFAULT_PROFILE_MD_TEMPLATE, {
     agent_name: "demo-agent",
   });
   assert.equal(rendered.includes("{{agent_name}}"), false);
   assert.equal(rendered.includes("# 你叫 demo-agent"), true);
 });
 
-test("renderInitTemplate keeps unknown placeholders untouched", () => {
-  const rendered = renderInitTemplate("hello {{unknown_key}}", {
+test("renderTemplateVariables keeps unknown placeholders untouched", () => {
+  const rendered = renderTemplateVariables("hello {{unknown_key}}", {
     agent_name: "demo-agent",
   });
   assert.equal(rendered, "hello {{unknown_key}}");

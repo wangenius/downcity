@@ -11,6 +11,7 @@ import fs from "node:fs";
 import { SystemModelMessage } from "ai";
 import { resolvePromptGeoContext } from "@core/prompts/runtime/GeoContext.js";
 import type { PromptTemplateVariables } from "@core/prompts/types/PromptVariables.js";
+import { renderTemplateVariables } from "@/utils/Template.js";
 
 /**
  * 构建一次运行的运行时 system prompt。
@@ -119,12 +120,11 @@ export async function replaceVariablesInPrompts(
 ): Promise<string> {
   if (!prompt) return prompt;
   const variables = await buildPromptTemplateVariables(options);
-
-  let result = prompt
-    .replaceAll("{{current_time}}", variables.currentTime)
-    .replaceAll("{{location}}", variables.location)
-    .replaceAll("{{project_path}}", variables.projectPath);
-  return result;
+  return renderTemplateVariables(prompt, {
+    current_time: variables.currentTime,
+    location: variables.location,
+    project_path: variables.projectPath,
+  });
 }
 
 /**

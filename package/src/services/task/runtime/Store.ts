@@ -158,6 +158,31 @@ export async function readTask(params: { taskId: string; projectRoot: string }):
 }
 
 /**
+ * 删除单个任务目录（包含 task.md 与历史 run 产物）。
+ */
+export async function deleteTask(params: {
+  taskId: string;
+  projectRoot: string;
+}): Promise<{ taskId: string; taskDirPath: string }> {
+  const root = String(params.projectRoot || "").trim();
+  if (!root) throw new Error("projectRoot is required");
+  const taskId = normalizeTaskId(params.taskId);
+
+  const taskMdPath = getTaskMdPath(root, taskId);
+  const exists = await fs.pathExists(taskMdPath);
+  if (!exists) {
+    throw new Error(`Task not found: ${taskId}`);
+  }
+
+  const taskDir = getTaskDir(root, taskId);
+  await fs.remove(taskDir);
+  return {
+    taskId,
+    taskDirPath: path.relative(root, taskDir).split(path.sep).join("/"),
+  };
+}
+
+/**
  * 写入任务定义（创建或覆盖 task.md）。
  *
  * 关键点（中文）

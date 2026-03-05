@@ -125,3 +125,14 @@ export type TaskSetStatusResponse = {
   status?: ShipTaskStatus;
   error?: string;
 };
+
+export type TaskDeleteRequest = {
+  taskId: string;
+};
+
+export type TaskDeleteResponse = {
+  success: boolean;
+  taskId?: string;
+  taskDirPath?: string;
+  error?: string;
+};

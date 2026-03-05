@@ -23,11 +23,13 @@ import {
   normalizeTaskTime,
   normalizeTaskStatus,
 } from "./runtime/Model.js";
-import { listTasks, readTask, writeTask } from "./runtime/Store.js";
+import { deleteTask, listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import type {
   TaskCreateRequest,
   TaskCreateResponse,
+  TaskDeleteRequest,
+  TaskDeleteResponse,
   TaskListResponse,
   TaskRunRequest,
   TaskRunResponse,
@@ -416,6 +418,31 @@ export async function setTaskStatus(params: {
       success: true,
       taskId,
       status,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: String(error),
+    };
+  }
+}
+
+export async function deleteTaskDefinition(params: {
+  projectRoot: string;
+  request: TaskDeleteRequest;
+}): Promise<TaskDeleteResponse> {
+  const root = path.resolve(params.projectRoot);
+  const taskId = normalizeTaskId(String(params.request.taskId || "").trim());
+
+  try {
+    const deleted = await deleteTask({
+      projectRoot: root,
+      taskId,
+    });
+    return {
+      success: true,
+      taskId: deleted.taskId,
+      taskDirPath: deleted.taskDirPath,
     };
   } catch (error) {
     return {

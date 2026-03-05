@@ -37,11 +37,15 @@ description: ShipMyAgent 命令行界面完整参考
 ```bash
 sma chat send --text "已完成" [--chat-key <chatKey>]
 sma chat context
+sma chat history [--chat-key <chatKey>] [--context-id <contextId>]
+  [--limit <n>] [--direction all|inbound|outbound]
+  [--before-ts <ms>] [--after-ts <ms>]
 ```
 
 说明：
 - `--chat-key` 可省略。解析优先级：`--chat-key` > `SMA_CTX_CONTEXT_ID` > `SMA_CTX_CHAT_KEY` > 由 `SMA_CTX_CHANNEL + SMA_CTX_TARGET_ID`（以及可选 thread/type）派生
 - 典型场景：Agent 通过 `exec_command` 执行 `sma chat send` 回发消息
+- `sma chat history` 默认返回最近 `30` 条事件，并支持按方向/时间窗口过滤
 
 ### `sma skill`
 
@@ -60,6 +64,7 @@ sma skill pinned [--chat-key <chatKey>]
 sma task list [--status enabled|paused|disabled]
 sma task create --title "..." --description "..." [--chat-key <chatKey>]
 sma task run <taskId>
+sma task delete <taskId>
 sma task enable <taskId>
 sma task disable <taskId>
 ```

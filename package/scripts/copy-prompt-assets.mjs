@@ -3,13 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Copy prompt txt assets required by runtime.
+ * Copy txt assets required by runtime.
  *
  * 关键点（中文）
  * - `tsc` 不会复制 txt 资源文件，运行时又依赖这些文件，必须在 build 后补复制。
- * - 复制范围：
- *   1) `src/core/prompts/*.txt`
- *   2) `src/services` 目录下递归匹配文件名为 `PROMPT.txt` / `TASK.prompt.txt` 的文件
+ * - 统一规则：复制 `src/` 下所有 `.txt` 文件到 `bin/` 对应相对路径。
  */
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,39 +41,21 @@ async function collectFiles(params) {
   return out;
 }
 
-const copyJobs = [];
-
-const corePromptDir = path.join(packageRoot, "src", "core", "prompts");
-const corePromptFiles = await collectFiles({
-  rootDir: corePromptDir,
-  matcher: (filePath) =>
-    path.dirname(filePath) === corePromptDir && filePath.endsWith(".txt"),
+const srcRoot = path.join(packageRoot, "src");
+const txtFiles = await collectFiles({
+  rootDir: srcRoot,
+  matcher: (filePath) => filePath.endsWith(".txt"),
 });
-for (const srcPath of corePromptFiles) {
-  const relPath = path.relative(path.join(packageRoot, "src"), srcPath);
-  copyJobs.push({
+const copyJobs = txtFiles.map((srcPath) => {
+  const relPath = path.relative(srcRoot, srcPath);
+  return {
     srcPath,
     dstPath: path.join(packageRoot, "bin", relPath),
-  });
-}
-
-const servicesRoot = path.join(packageRoot, "src", "services");
-const servicePromptFiles = await collectFiles({
-  rootDir: servicesRoot,
-  matcher: (filePath) =>
-    path.basename(filePath) === "PROMPT.txt" ||
-    path.basename(filePath) === "TASK.prompt.txt",
+  };
 });
-for (const srcPath of servicePromptFiles) {
-  const relPath = path.relative(path.join(packageRoot, "src"), srcPath);
-  copyJobs.push({
-    srcPath,
-    dstPath: path.join(packageRoot, "bin", relPath),
-  });
-}
 
 if (copyJobs.length === 0) {
-  console.log("[copy-prompt-assets] skip: no prompt txt assets found");
+  console.log("[copy-prompt-assets] skip: no txt assets found under src/");
   process.exit(0);
 }
 

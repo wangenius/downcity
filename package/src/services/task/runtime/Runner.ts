@@ -138,6 +138,67 @@ function tryExtractJsonObject(text: string): JsonObject | null {
   return null;
 }
 
+function parsePossibleJsonObject(value: unknown): JsonObject | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as JsonObject;
+  }
+  if (typeof value !== "string") return null;
+  return tryExtractJsonObject(value);
+}
+
+function extractTextFromAssistantMessageParts(parts: unknown): string {
+  if (!Array.isArray(parts)) return "";
+  const texts: string[] = [];
+  for (const part of parts) {
+    if (!part || typeof part !== "object") continue;
+    const p = part as { type?: unknown; text?: unknown };
+    // 关键点（中文）：兼容 text/input_text 两种文本 part。
+    if (p.type !== "text" && p.type !== "input_text") continue;
+    if (typeof p.text !== "string") continue;
+    const value = p.text.trim();
+    if (!value) continue;
+    texts.push(value);
+  }
+  return texts.join("\n").trim();
+}
+
+function pickLastChatSendToolInputText(parts: unknown): string {
+  if (!Array.isArray(parts)) return "";
+  for (let i = parts.length - 1; i >= 0; i -= 1) {
+    const part = parts[i];
+    if (!part || typeof part !== "object") continue;
+    const p = part as {
+      type?: unknown;
+      toolName?: unknown;
+      tool?: unknown;
+      input?: unknown;
+      rawInput?: unknown;
+      arguments?: unknown;
+    };
+    if (p.type !== "tool-call") continue;
+    const toolName = String(p.toolName ?? p.tool ?? "").trim();
+    if (toolName !== "chat_send") continue;
+    const inputObject = parsePossibleJsonObject(
+      p.input ?? p.rawInput ?? p.arguments,
+    );
+    if (!inputObject) continue;
+    const text = String(inputObject.text ?? "").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
+function pickAgentOutputText(assistantMessage: AgentResult["assistantMessage"]): string {
+  // 关键点（中文）：优先取 chat_send 的输入文本，回退到普通文本 part。
+  const toolText = pickLastChatSendToolInputText(
+    (assistantMessage as { parts?: unknown } | null)?.parts,
+  );
+  if (toolText) return toolText;
+  return extractTextFromAssistantMessageParts(
+    (assistantMessage as { parts?: unknown } | null)?.parts,
+  );
+}
+
 /**
  * 解析模拟用户 agent 的判定结果。
  *
@@ -289,22 +350,7 @@ async function runAgentRound(params: {
         query: params.query,
       }),
   );
-  const pickText = await requireInvoke(params.context).invoke({
-    service: "chat",
-    action: "extract_text",
-    payload: {
-      assistantMessage:
-        result.assistantMessage && typeof result.assistantMessage === "object"
-          ? (result.assistantMessage as unknown as JsonObject)
-          : null,
-    },
-  });
-
-  let outputText = "";
-  if (pickText.success && pickText.data && typeof pickText.data === "object" && !Array.isArray(pickText.data)) {
-    const textRaw = (pickText.data as JsonObject).text;
-    outputText = typeof textRaw === "string" ? textRaw : "";
-  }
+  const outputText = pickAgentOutputText(result.assistantMessage);
 
   // 关键点（中文）：agent.run 可能返回 success=false 但不抛异常；这里必须转为执行失败，避免误判为“多轮不满意”。
   if (!result.success) {

@@ -43,6 +43,7 @@
 - `list`：列出任务（可按状态过滤）
 - `create`：创建任务定义
 - `run`：手动触发任务执行
+- `delete`：删除任务定义与历史运行目录
 - `update`：更新任务定义字段
 - `status`：直接设置状态（`enabled|paused|disabled`）
 - `enable`：将状态设为 `enabled`
@@ -54,6 +55,7 @@
   - `sma task list [--status enabled|paused|disabled]`
   - `sma task create --title '...' --description '...' --context-id <contextId> [--cron '@manual'] [--kind agent|script]`
   - `sma task run <taskId> [--reason '...']`
+  - `sma task delete <taskId>`
   - `sma task update <taskId> [--title ...] [--description ...] [--cron ...] [--status ...] [--context-id ...]`
   - `sma task status <taskId> <enabled|paused|disabled>`
   - `sma task enable <taskId>`

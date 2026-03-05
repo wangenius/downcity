@@ -28,3 +28,14 @@ export type ChatSendResponse = {
   chatKey?: string;
   error?: string;
 };
+
+export type ChatHistoryDirection = "all" | "inbound" | "outbound";
+
+export type ChatHistoryRequest = {
+  chatKey?: string;
+  contextId?: string;
+  limit?: number;
+  direction?: ChatHistoryDirection;
+  beforeTs?: number;
+  afterTs?: number;
+};

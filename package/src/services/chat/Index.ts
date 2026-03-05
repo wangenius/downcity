@@ -16,7 +16,7 @@ import {
   resolveChatKey,
   sendChatTextByChatKey,
 } from "./Action.js";
-import { pickLastSuccessfulChatSendText } from "./runtime/UserVisibleText.js";
+import { readChatHistory } from "./runtime/ChatHistoryStore.js";
 import { createTelegramBot } from "./channels/telegram/Bot.js";
 import { createFeishuBot } from "./channels/feishu/Feishu.js";
 import { createQQBot } from "./channels/qq/QQ.js";
@@ -26,7 +26,8 @@ import type {
 } from "@main/service/ServiceManager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import type { ContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ChatHistoryEventV1 } from "./types/ChatHistory.js";
+import type { ChatHistoryRequest } from "./types/ChatCommand.js";
 import type { TelegramBot } from "./channels/telegram/Bot.js";
 import type { FeishuBot } from "./channels/feishu/Feishu.js";
 import type { QQBot } from "./channels/qq/QQ.js";
@@ -47,9 +48,7 @@ type ChatContextActionPayload = {
   contextId?: string;
 };
 
-type ChatExtractTextPayload = {
-  assistantMessage?: JsonObject | null;
-};
+type ChatHistoryActionPayload = ChatHistoryRequest;
 
 const CHAT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
 const TELEGRAM_PROMPT_FILE_URL = new URL(
@@ -251,6 +250,128 @@ function getBooleanOpt(opts: Record<string, JsonValue>, key: string): boolean {
   return opts[key] === true;
 }
 
+function parsePositiveIntOptionOrThrow(value: string, fieldName: string): number {
+  const text = String(value || "").trim();
+  if (!text) {
+    throw new Error(`${fieldName} is required`);
+  }
+  if (!/^\d+$/.test(text)) {
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
+  const parsed = Number.parseInt(text, 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
+  return parsed;
+}
+
+function parseOptionalTimestampOrThrow(
+  value: string,
+  fieldName: string,
+): number | undefined {
+  const text = String(value || "").trim();
+  if (!text) return undefined;
+  return parsePositiveIntOptionOrThrow(text, fieldName);
+}
+
+function readHistoryDirectionOrThrow(
+  value: string,
+): "all" | "inbound" | "outbound" | undefined {
+  const text = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (!text) return undefined;
+  if (text === "all" || text === "inbound" || text === "outbound") {
+    return text;
+  }
+  throw new Error(`Invalid direction: ${value}. Use all|inbound|outbound.`);
+}
+
+function mapChatHistoryCommandInput(
+  input: ServiceActionCommandInput,
+): ChatHistoryActionPayload {
+  const chatKey = getStringOpt(input.opts, "chatKey");
+  const contextId = getStringOpt(input.opts, "contextId");
+  const direction = readHistoryDirectionOrThrow(
+    getStringOpt(input.opts, "direction"),
+  );
+  const limitRaw = getStringOpt(input.opts, "limit");
+  const beforeTs = parseOptionalTimestampOrThrow(
+    getStringOpt(input.opts, "beforeTs"),
+    "beforeTs",
+  );
+  const afterTs = parseOptionalTimestampOrThrow(
+    getStringOpt(input.opts, "afterTs"),
+    "afterTs",
+  );
+  const limit = limitRaw ? parsePositiveIntOptionOrThrow(limitRaw, "limit") : undefined;
+
+  if (
+    typeof beforeTs === "number" &&
+    typeof afterTs === "number" &&
+    afterTs >= beforeTs
+  ) {
+    throw new Error("Invalid range: afterTs must be less than beforeTs.");
+  }
+
+  return {
+    ...(chatKey ? { chatKey } : {}),
+    ...(contextId ? { contextId } : {}),
+    ...(typeof limit === "number" ? { limit } : {}),
+    ...(direction ? { direction } : {}),
+    ...(typeof beforeTs === "number" ? { beforeTs } : {}),
+    ...(typeof afterTs === "number" ? { afterTs } : {}),
+  };
+}
+
+function mapChatHistoryApiInput(query: {
+  chatKey?: string;
+  contextId?: string;
+  limit?: string;
+  direction?: string;
+  beforeTs?: string;
+  afterTs?: string;
+}): ChatHistoryActionPayload {
+  const direction = readHistoryDirectionOrThrow(String(query.direction || ""));
+  const limitText = String(query.limit || "").trim();
+  const limit = limitText
+    ? parsePositiveIntOptionOrThrow(limitText, "limit")
+    : undefined;
+  const beforeTs = parseOptionalTimestampOrThrow(
+    String(query.beforeTs || ""),
+    "beforeTs",
+  );
+  const afterTs = parseOptionalTimestampOrThrow(
+    String(query.afterTs || ""),
+    "afterTs",
+  );
+  if (
+    typeof beforeTs === "number" &&
+    typeof afterTs === "number" &&
+    afterTs >= beforeTs
+  ) {
+    throw new Error("Invalid range: afterTs must be less than beforeTs.");
+  }
+
+  const chatKey = String(query.chatKey || "").trim();
+  const contextId = String(query.contextId || "").trim();
+  return {
+    ...(chatKey ? { chatKey } : {}),
+    ...(contextId ? { contextId } : {}),
+    ...(typeof limit === "number" ? { limit } : {}),
+    ...(direction ? { direction } : {}),
+    ...(typeof beforeTs === "number" ? { beforeTs } : {}),
+    ...(typeof afterTs === "number" ? { afterTs } : {}),
+  };
+}
+
+function toChatHistoryView(events: ChatHistoryEventV1[]): JsonObject[] {
+  return events.map((event) => ({
+    ...event,
+    isoTime: new Date(event.ts).toISOString(),
+  })) as JsonObject[];
+}
+
 /**
  * 解析 `chat send` 的命令输入。
  *
@@ -420,15 +541,77 @@ export const chatService: Service = {
         };
       },
     },
-    extract_text: {
+    history: {
+      command: {
+        description: "读取 chat 历史消息（默认最近 30 条）",
+        configure(command: Command) {
+          command
+            .option("--chat-key <chatKey>", "显式覆盖 chatKey")
+            .option("--context-id <contextId>", "显式覆盖 contextId")
+            .option("--limit <n>", "返回最近 N 条（默认 30）")
+            .option(
+              "--direction <direction>",
+              "方向过滤（all|inbound|outbound）",
+            )
+            .option("--before-ts <ts>", "仅返回 ts 小于该值的记录（毫秒）")
+            .option("--after-ts <ts>", "仅返回 ts 大于该值的记录（毫秒）");
+        },
+        mapInput: mapChatHistoryCommandInput,
+      },
+      api: {
+        method: "GET",
+        mapInput(c) {
+          return mapChatHistoryApiInput({
+            chatKey: c.req.query("chatKey"),
+            contextId: c.req.query("contextId"),
+            limit: c.req.query("limit"),
+            direction: c.req.query("direction"),
+            beforeTs: c.req.query("beforeTs"),
+            afterTs: c.req.query("afterTs"),
+          });
+        },
+      },
       async execute(params) {
-        const payload = params.payload as ChatExtractTextPayload;
+        const payload = params.payload as ChatHistoryActionPayload;
+        const snapshot = resolveChatContextSnapshot({
+          context: params.context,
+          ...(payload.chatKey ? { chatKey: payload.chatKey } : {}),
+          ...(payload.contextId ? { contextId: payload.contextId } : {}),
+        });
+        const explicitContextId = String(payload.contextId || "").trim();
+        const explicitChatKey = String(payload.chatKey || "").trim();
+        // 关键点（中文）：history 查询优先显式参数，避免被当前请求上下文的 contextId 覆盖。
+        const contextId = String(
+          explicitContextId || explicitChatKey || snapshot.contextId || "",
+        ).trim();
+        if (!contextId) {
+          return {
+            success: false,
+            error:
+              "Missing contextId. Provide --context-id/--chat-key or ensure SMA_CTX_CONTEXT_ID is injected.",
+          };
+        }
+
+        const historyResult = await readChatHistory({
+          context: params.context,
+          contextId,
+          limit: payload.limit,
+          direction: payload.direction || "all",
+          beforeTs: payload.beforeTs,
+          afterTs: payload.afterTs,
+        });
+        const historyPath = path
+          .relative(params.context.rootPath, historyResult.historyPath)
+          .split(path.sep)
+          .join("/");
+
         return {
           success: true,
           data: {
-            text: pickLastSuccessfulChatSendText(
-              (payload.assistantMessage || null) as ContextMessageV1 | null,
-            ),
+            context: snapshot,
+            historyPath,
+            count: historyResult.events.length,
+            events: toChatHistoryView(historyResult.events),
           },
         };
       },

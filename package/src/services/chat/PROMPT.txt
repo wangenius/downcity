@@ -5,7 +5,7 @@
 ## 可用 action
 - `send`：发送文本到目标 `chatKey`。
 - `context`：读取当前会话快照（可按 `chatKey` 或 `contextId` 查询）。
-- `extract_text`：从 assistant 消息结构中提取用户可见文本。
+- `history`：读取会话历史事件（按 `contextId`/`chatKey`，支持方向与时间窗口过滤）。
 
 ## 操作方法（命令）
 - 常用 action（CLI）：
@@ -14,8 +14,9 @@
   - `sma chat send --text-file <file> --chat-key <contextId>`
   - `sma chat context`
   - `sma chat context --chat-key <chatKey>`
-- `extract_text` 没有独立 CLI action，使用 command bridge：
-  - `sma service command chat extract_text --payload '{"assistantMessage":{...}}'`
+  - `sma chat history --limit 30`
+  - `sma chat history --chat-key <chatKey> --direction inbound`
+  - `sma chat history --context-id <contextId> --after-ts <ts> --before-ts <ts>`
 - runtime 管理：
   - `sma service status chat`
   - `sma service restart chat`
@@ -38,7 +39,6 @@
   `EOF`
 - 通过 shell 执行 `sma chat send --text '...'` 时，必须转义特殊字符，尤其是反引号和单引号本身。
 - `context` 只用于读取会话路由信息，不要伪造或覆盖真实平台信息。
-- `extract_text` 仅做提取，不应改变原始消息语义。
 
 ## 路由与标识
 - `channel` 表示平台接入渠道：`telegram` / `feishu` / `qq`（以及内部的 `api` / `cli` / `scheduler`）。

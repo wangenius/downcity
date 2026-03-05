@@ -11,6 +11,7 @@ import type { Command } from "commander";
 import { readFileSync } from "node:fs";
 import {
   createTaskDefinition,
+  deleteTaskDefinition,
   listTaskDefinitions,
   runTaskDefinition,
   updateTaskDefinition,
@@ -22,6 +23,7 @@ import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type {
   TaskCreateRequest,
+  TaskDeleteRequest,
   TaskRunRequest,
   TaskSetStatusRequest,
   TaskUpdateRequest,
@@ -379,6 +381,12 @@ function mapTaskSetStatusCommandInput(params: {
   };
 }
 
+function mapTaskDeleteCommandInput(taskIdInput: string): TaskDeleteRequest {
+  const taskId = String(taskIdInput || "").trim();
+  if (!taskId) throw new Error("Missing taskId");
+  return { taskId };
+}
+
 function mapTaskListApiInput(query: { status?: string }): TaskListPayload {
   const status = readTaskStatusOrThrow(
     typeof query.status === "string" ? query.status.trim() : undefined,
@@ -491,6 +499,14 @@ function mapTaskStatusApiInput(body: JsonObject): TaskSetStatusRequest {
     taskId: getStringField(body, "taskId"),
     status,
   };
+}
+
+function mapTaskDeleteApiInput(body: JsonObject): TaskDeleteRequest {
+  const taskId = getStringField(body, "taskId");
+  if (!String(taskId || "").trim()) {
+    throw new Error("Missing taskId");
+  }
+  return { taskId };
 }
 
 export const taskService: Service = {
@@ -630,6 +646,41 @@ export const taskService: Service = {
           return {
             success: false,
             error: result.error || "task run failed",
+          };
+        }
+        return {
+          success: true,
+          data: result,
+        };
+      },
+    },
+    delete: {
+      command: {
+        description: "删除任务定义与历史运行目录",
+        configure(command: Command) {
+          command.argument("<taskId>");
+        },
+        mapInput({ args }) {
+          return mapTaskDeleteCommandInput(String(args[0] || ""));
+        },
+      },
+      api: {
+        method: "DELETE",
+        async mapInput(c) {
+          const body = parseJsonBodyObject(await c.req.json());
+          return mapTaskDeleteApiInput(body);
+        },
+      },
+      async execute(params) {
+        const payload = params.payload as TaskDeleteRequest;
+        const result = await deleteTaskDefinition({
+          projectRoot: params.context.rootPath,
+          request: payload,
+        });
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || "task delete failed",
           };
         }
         return {

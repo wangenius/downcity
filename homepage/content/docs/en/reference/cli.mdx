@@ -36,12 +36,16 @@ Starting from this version, `chat / skill / task` are registered as service comm
 ```bash
 sma chat send --text "Done" [--chat-key <chatKey>]
 sma chat context
+sma chat history [--chat-key <chatKey>] [--context-id <contextId>]
+  [--limit <n>] [--direction all|inbound|outbound]
+  [--before-ts <ms>] [--after-ts <ms>]
 ```
 
 Notes:
 - `--chat-key` is optional. Resolution order: `--chat-key` > `SMA_CTX_CONTEXT_ID` > `SMA_CTX_CHAT_KEY` > derived from `SMA_CTX_CHANNEL + SMA_CTX_TARGET_ID` (plus thread/type when available)
 - Typical flow: the agent calls `sma chat send` via `exec_command`
 - `sma chat` calls local daemon API; start runtime first via `sma start` or `sma run`
+- `sma chat history` returns the latest `30` events by default and supports direction/time-window filters
 
 ### `sma skill`
 
@@ -70,6 +74,7 @@ sma task update <taskId> [--title ...] [--description ...] [--cron ...]
   [--max-dialogue-rounds <n>|--clear-max-dialogue-rounds]
   [--body ...|--clear-body]
 sma task run <taskId>
+sma task delete <taskId>
 sma task enable <taskId>
 sma task disable <taskId>
 ```

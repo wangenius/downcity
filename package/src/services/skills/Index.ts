@@ -11,9 +11,11 @@ import type { Command } from "commander";
 import { readFileSync } from "node:fs";
 import { skillAddCommand, skillFindCommand } from "./Command.js";
 import {
+  findLearnedSkillExact,
   listPinnedSkills,
   listSkills,
   loadSkill,
+  searchLearnedSkills,
   unloadSkill,
 } from "./Action.js";
 import { resolveContextId } from "@/main/runtime/ContextId.js";
@@ -100,6 +102,27 @@ function resolveContextIdForCommand(input?: string): string {
   return contextId;
 }
 
+/**
+ * 从 add spec 推断候选 skill 标识。
+ *
+ * 关键点（中文）
+ * - 优先取 `repo@skill-id` 的 `skill-id`
+ * - 对仅有 `owner/repo` 这种 spec 不做猜测，避免误判“已学会”
+ */
+function inferSkillQueryFromSpec(spec: string): string {
+  const raw = String(spec || "").trim();
+  if (!raw) return "";
+  const normalized = raw.split(/[?#]/, 1)[0]?.trim() || raw;
+
+  const atIndex = normalized.lastIndexOf("@");
+  if (atIndex > 0 && atIndex < normalized.length - 1) {
+    return normalized.slice(atIndex + 1).trim();
+  }
+
+  if (!normalized.includes("/")) return normalized;
+  return "";
+}
+
 export const skillsService: Service = {
   name: "skill",
   async system(context) {
@@ -109,7 +132,7 @@ export const skillsService: Service = {
   actions: {
     find: {
       command: {
-        description: "查找 skills（等价于 npx skills find）",
+        description: "查找未学会 skills（下一步通常 add）",
         configure(command: Command) {
           command.argument("<query>");
         },
@@ -121,18 +144,40 @@ export const skillsService: Service = {
       },
       async execute(params) {
         const payload = params.payload as SkillFindPayload;
+        const rootPath = params.context.rootPath;
+        const exactLearned = findLearnedSkillExact(rootPath, payload.query);
+        if (exactLearned) {
+          return {
+            success: true,
+            data: {
+              query: payload.query,
+              message: "该技能已学会，请直接执行 load。",
+              workflow: ["find", "add", "load"],
+              nextAction: "load",
+              learnedSkill: exactLearned,
+              learnedHints: [],
+            },
+          };
+        }
+
+        const learnedHints = searchLearnedSkills(rootPath, payload.query, 5);
         await skillFindCommand(payload.query);
         return {
           success: true,
           data: {
             query: payload.query,
+            message: "已执行未学会技能检索，下一步可 add 后再 load。",
+            workflow: ["find", "add", "load"],
+            nextAction: "add",
+            learnedSkill: null,
+            learnedHints,
           },
         };
       },
     },
     add: {
       command: {
-        description: "安装 skills（等价于 npx skills add）",
+        description: "下载/学习未学会 skill（完成后可 load）",
         configure(command: Command) {
           command
             .argument("<spec>")
@@ -153,22 +198,60 @@ export const skillsService: Service = {
       },
       async execute(params) {
         const payload = params.payload as SkillAddPayload;
+        const rootPath = params.context.rootPath;
+        const queryFromSpec = inferSkillQueryFromSpec(payload.spec);
+        const beforeList = listSkills(rootPath).skills;
+        const beforeIds = new Set(beforeList.map((item) => item.id));
+
+        const learnedBefore =
+          findLearnedSkillExact(rootPath, queryFromSpec) ||
+          findLearnedSkillExact(rootPath, payload.spec);
+        if (learnedBefore) {
+          return {
+            success: true,
+            data: {
+              spec: payload.spec,
+              skipped: true,
+              message: "技能已学会，无需 add。请直接执行 load。",
+              workflow: ["find", "add", "load"],
+              nextAction: "load",
+              queryFromSpec,
+              addedSkills: [],
+              learnedSkill: learnedBefore,
+            },
+          };
+        }
+
         await skillAddCommand(payload.spec, {
           global: payload.global,
           yes: payload.yes,
           agent: payload.agent,
         });
+        const afterList = listSkills(rootPath).skills;
+        const addedSkills = afterList.filter((item) => !beforeIds.has(item.id));
+        const learnedAfter =
+          findLearnedSkillExact(rootPath, queryFromSpec) ||
+          findLearnedSkillExact(rootPath, payload.spec) ||
+          (addedSkills.length === 1 ? addedSkills[0] : undefined);
+
         return {
           success: true,
           data: {
             spec: payload.spec,
+            message: "技能学习完成。请执行 load 将技能挂载到当前会话。",
+            workflow: ["find", "add", "load"],
+            nextAction: "load",
+            skipped: false,
+            queryFromSpec,
+            addedSkills,
+            learnedSkill: learnedAfter || null,
           },
         };
       },
     },
     list: {
       command: {
-        description: "列出当前项目可发现的 skills",
+        description: "列出当前已学会（本地可发现）的 skills",
         mapInput() {
           return {};
         },
@@ -186,7 +269,7 @@ export const skillsService: Service = {
     },
     load: {
       command: {
-        description: "给当前 contextId 加载 skill",
+        description: "给当前 contextId 加载已学会 skill，并启用其指令",
         configure(command: Command) {
           command
             .argument("<name>")
@@ -229,7 +312,11 @@ export const skillsService: Service = {
         }
         return {
           success: true,
-          data: result,
+          data: {
+            ...result,
+            message: "技能已加载，当前会话将按该 SKILL.md 指令执行。",
+            workflow: ["find", "add", "load"],
+          },
         };
       },
     },

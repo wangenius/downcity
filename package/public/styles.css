@@ -215,6 +215,22 @@ h3, h4, h5 { font-size: 13px; }
   border-left: 3px solid var(--green);
 }
 
+.message.tool-call {
+  border-left: 3px solid var(--yellow);
+}
+
+.message.tool-result {
+  border-left: 3px solid #ff8a3c;
+}
+
+.message.tool-call .message-head {
+  background: #2a2214;
+}
+
+.message.tool-result .message-head {
+  background: #2b1f17;
+}
+
 .message-head {
   font-size: 11px;
   color: var(--muted);

@@ -10,6 +10,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import type { Hono } from "hono";
+import { getToolName, isTextUIPart, isToolUIPart, type UIMessagePart } from "ai";
 import type { ContextMessageV1, ContextMetadataV1 } from "@core/types/ContextMessage.js";
 import type { JsonObject } from "@/types/Json.js";
 import {
@@ -27,11 +28,28 @@ import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { isValidTaskId } from "@services/task/runtime/Paths.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
+import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;
 const TASK_RUN_DIR_REGEX = /^\d{8}-\d{6}-\d{3}$/;
+type TuiMessageRole = "user" | "assistant" | "tool-call" | "tool-result" | "system";
+type AnyUiPart = UIMessagePart<Record<string, never>, Record<string, never>>;
+type ToolPartCompatShape = {
+  type?: unknown;
+  toolName?: unknown;
+  tool?: unknown;
+  state?: unknown;
+  input?: unknown;
+  rawInput?: unknown;
+  arguments?: unknown;
+  output?: unknown;
+  result?: unknown;
+  errorText?: unknown;
+  error?: unknown;
+  approval?: { reason?: unknown } | null;
+};
 
 function toLimit(raw: string | undefined, fallback = DEFAULT_LIMIT): number {
   const n = Number.parseInt(String(raw || "").trim(), 10);
@@ -48,6 +66,29 @@ function truncateText(text: string, maxChars: number): string {
   const normalized = String(text || "");
   if (normalized.length <= maxChars) return normalized;
   return normalized.slice(0, Math.max(0, maxChars - 3)) + "...";
+}
+
+function stringifyForDisplay(input: unknown, maxChars = 2400): string {
+  if (input === undefined) return "";
+  if (input === null) return "null";
+  if (typeof input === "string") {
+    const value = input.trim();
+    if (!value) return "";
+    try {
+      const parsed = JSON.parse(value);
+      return truncateText(JSON.stringify(parsed, null, 2), maxChars);
+    } catch {
+      return truncateText(value, maxChars);
+    }
+  }
+  if (typeof input === "number" || typeof input === "boolean") {
+    return truncateText(String(input), maxChars);
+  }
+  try {
+    return truncateText(JSON.stringify(input, null, 2), maxChars);
+  } catch {
+    return truncateText(String(input), maxChars);
+  }
 }
 
 function decodeMaybe(value: string): string {
@@ -73,23 +114,230 @@ function extractMessageText(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function toUiMessage(message: ContextMessageV1): {
+function extractAssistantToolSummary(message: ContextMessageV1): string {
+  const toolCalls = extractToolCallsFromUiMessage(message);
+  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return "";
+  const toolNames = Array.from(new Set(toolCalls.map((item) => String(item.tool || "").trim()).filter(Boolean)));
+  if (toolNames.length === 0) return "";
+  return `[tool] ${toolNames.join(", ")}`;
+}
+
+function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string {
+  const fromAi = String(aiToolName || "").trim();
+  if (fromAi) return fromAi;
+  const fromField = typeof part.toolName === "string" ? part.toolName.trim() : "";
+  if (fromField) return fromField;
+  const fromTool = typeof part.tool === "string" ? part.tool.trim() : "";
+  if (fromTool) return fromTool;
+  const rawType = typeof part.type === "string" ? part.type.trim() : "";
+  if (
+    rawType.startsWith("tool-") &&
+    rawType !== "tool-call" &&
+    rawType !== "tool-result" &&
+    rawType !== "tool-error" &&
+    rawType !== "tool-approval-request"
+  ) {
+    return rawType.slice("tool-".length);
+  }
+  return "unknown_tool";
+}
+
+function extractToolCallInput(part: ToolPartCompatShape): unknown {
+  return part.input ?? part.rawInput ?? part.arguments ?? undefined;
+}
+
+function extractToolResultOutput(part: ToolPartCompatShape): unknown {
+  const state = typeof part.state === "string" ? part.state.trim() : "";
+  if (state === "output-available") return part.output;
+  if (state === "output-error") {
+    return { error: part.errorText ?? part.error ?? "tool_error" };
+  }
+  if (state === "output-denied") {
+    return {
+      error: "tool_denied",
+      reason: part.approval?.reason ?? "",
+    };
+  }
+  if (state === "input-available" || state === "input-streaming" || state === "output-streaming") {
+    return undefined;
+  }
+  if (part.type === "tool-result" || part.type === "tool-error") {
+    return part.result ?? part.output ?? part.errorText ?? part.error ?? "";
+  }
+  return undefined;
+}
+
+function toUiMessageEvent(params: {
+  message: ContextMessageV1;
+  role: TuiMessageRole;
+  text: string;
+  sequence: number;
+  toolName?: string;
+}): {
   id: string;
-  role: "user" | "assistant" | "system";
+  role: TuiMessageRole;
   ts?: number;
   kind?: string;
   source?: string;
   text: string;
+  toolName?: string;
 } {
+  const { message, role, text, sequence, toolName } = params;
   const metadata = (message.metadata || null) as ContextMetadataV1 | null;
   return {
-    id: String(message.id || ""),
-    role: message.role,
+    id: `${String(message.id || "")}:${sequence}`,
+    role,
     ...(typeof metadata?.ts === "number" ? { ts: metadata.ts } : {}),
     ...(typeof metadata?.kind === "string" ? { kind: metadata.kind } : {}),
     ...(typeof metadata?.source === "string" ? { source: metadata.source } : {}),
-    text: extractMessageText(message.parts),
+    text,
+    ...(toolName ? { toolName } : {}),
   };
+}
+
+/**
+ * 提取 TUI 展示文本（用户可见优先）。
+ *
+ * 关键点（中文）
+ * - assistant 可能是 tool-only 消息，`parts.text` 为空。
+ * - 先尝试 `chat_send` 可见文本，再回退到工具摘要，避免界面出现整屏空白。
+ */
+function resolveUiMessageText(message: ContextMessageV1): string {
+  const plainText = extractMessageText(message.parts);
+  if (plainText) return plainText;
+
+  if (message.role !== "assistant") return "";
+
+  const userVisible = pickLastSuccessfulChatSendText(message).trim();
+  if (userVisible) return userVisible;
+
+  return extractAssistantToolSummary(message);
+}
+
+function toUiMessageTimeline(message: ContextMessageV1): Array<{
+  id: string;
+  role: TuiMessageRole;
+  ts?: number;
+  kind?: string;
+  source?: string;
+  text: string;
+  toolName?: string;
+}> {
+  if (message.role !== "assistant") {
+    return [
+      toUiMessageEvent({
+        message,
+        role: message.role,
+        text: resolveUiMessageText(message),
+        sequence: 0,
+      }),
+    ];
+  }
+
+  const parts = Array.isArray(message.parts) ? (message.parts as AnyUiPart[]) : [];
+  const events: Array<{
+    id: string;
+    role: TuiMessageRole;
+    ts?: number;
+    kind?: string;
+    source?: string;
+    text: string;
+    toolName?: string;
+  }> = [];
+  let sequence = 0;
+
+  for (const part of parts) {
+    if (!part || typeof part !== "object") continue;
+    const partObject = part as ToolPartCompatShape;
+
+    if (isTextUIPart(part)) {
+      const text = String(part.text || "").trim();
+      if (!text) continue;
+      events.push(
+        toUiMessageEvent({
+          message,
+          role: "assistant",
+          text,
+          sequence,
+        }),
+      );
+      sequence += 1;
+      continue;
+    }
+
+    if (isToolUIPart(part)) {
+      const toolName = resolveToolName(partObject, String(getToolName(part) || ""));
+      const inputText = stringifyForDisplay(extractToolCallInput(partObject));
+      events.push(
+        toUiMessageEvent({
+          message,
+          role: "tool-call",
+          text: inputText || "(empty)",
+          sequence,
+          toolName,
+        }),
+      );
+      sequence += 1;
+
+      const output = extractToolResultOutput(partObject);
+      if (output !== undefined) {
+        events.push(
+          toUiMessageEvent({
+            message,
+            role: "tool-result",
+            text: stringifyForDisplay(output) || "(empty)",
+            sequence,
+            toolName,
+          }),
+        );
+        sequence += 1;
+      }
+      continue;
+    }
+
+    const legacyType = typeof partObject.type === "string" ? partObject.type.trim() : "";
+    if (legacyType === "tool-call") {
+      const toolName = resolveToolName(partObject);
+      events.push(
+        toUiMessageEvent({
+          message,
+          role: "tool-call",
+          text: stringifyForDisplay(extractToolCallInput(partObject)) || "(empty)",
+          sequence,
+          toolName,
+        }),
+      );
+      sequence += 1;
+      continue;
+    }
+    if (legacyType === "tool-result" || legacyType === "tool-error") {
+      const toolName = resolveToolName(partObject);
+      events.push(
+        toUiMessageEvent({
+          message,
+          role: "tool-result",
+          text: stringifyForDisplay(extractToolResultOutput(partObject)) || "(empty)",
+          sequence,
+          toolName,
+        }),
+      );
+      sequence += 1;
+    }
+  }
+
+  // 关键点（中文）：assistant 若没有文本 part，也要保留一条可见事件，避免 TUI 空白。
+  if (events.length === 0) {
+    events.push(
+      toUiMessageEvent({
+        message,
+        role: "assistant",
+        text: resolveUiMessageText(message),
+        sequence: 0,
+      }),
+    );
+  }
+
+  return events;
 }
 
 async function loadContextMessagesFromFile(filePath: string): Promise<ContextMessageV1[]> {
@@ -157,7 +405,7 @@ async function listContextSummaries(params: {
       messageCount: messages.length,
       ...(typeof updatedAt === "number" ? { updatedAt } : {}),
       ...(last?.role ? { lastRole: last.role } : {}),
-      ...(last ? { lastText: truncateText(extractMessageText(last.parts), 180) } : {}),
+      ...(last ? { lastText: truncateText(resolveUiMessageText(last), 180) } : {}),
     });
   }
 
@@ -350,7 +598,7 @@ async function readTaskRunDetail(params: {
       dialogue: await readText("dialogue.md"),
       error: await readText("error.md"),
     },
-    messages: messages.slice(-120).map(toUiMessage),
+    messages: messages.slice(-120).flatMap((message) => toUiMessageTimeline(message)),
   };
 }
 
@@ -501,11 +749,12 @@ export function registerTuiApiRoutes(params: {
 
       const filePath = getShipContextMessagesPath(runtime.rootPath, contextId);
       const messages = await loadContextMessagesFromFile(filePath);
-      const sliced = messages.slice(-limit).map(toUiMessage);
+      const sliced = messages.slice(-limit).flatMap((message) => toUiMessageTimeline(message));
       return c.json({
         success: true,
         contextId,
-        total: messages.length,
+        total: sliced.length,
+        rawTotal: messages.length,
         messages: sliced,
       });
     } catch (error) {

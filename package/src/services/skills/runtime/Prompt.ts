@@ -32,9 +32,10 @@ export function renderClaudeSkillsPromptSection(
   lines.push("Skills are specialized instruction sets (SKILL.md files) that define workflows, constraints, and best practices for specific tasks. When you load a skill, you MUST strictly follow its instructions as Standard Operating Procedures (SOPs).");
   lines.push("");
   lines.push("## When to Use Skills");
-  lines.push("- **Proactively load** skills when the task matches a skill's description");
-  lines.push("- Use `sma skill list` (via shell tools) to discover available skills");
-  lines.push("- Use `sma skill load <name>` to activate a skill by name or id");
+  lines.push("- `sma skill list` shows skills you have already learned locally");
+  lines.push("- Use `sma skill find <query>` to search skills you have NOT learned yet (delegates to `npx skills find`)");
+  lines.push("- Use `sma skill add <spec>` to learn/install missing skills (delegates to `npx skills add`)");
+  lines.push("- Use `sma skill load <name>` to activate a learned skill by name or id");
   lines.push("- Once loaded, skills persist across messages in this conversation");
   lines.push("");
   lines.push("## Available Skills");

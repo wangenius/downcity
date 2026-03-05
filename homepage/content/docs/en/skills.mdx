@@ -75,6 +75,8 @@ Typical flow:
 2. Call `skills_load` to read the full instructions
 3. Follow the `SKILL.md` steps using other tools as needed (tool access may be restricted by `allowed-tools`)
 
+If the target skill is not present in local `skills_list`, use the CLI learning flow first: `find -> add -> load`.
+
 ## Skills section in the system prompt
 
 `shipmyagent start` and the chat adapters now include a “skills summary section” in the final system prompt (the composed `Agent.md`). This helps the model know from the start:
@@ -97,6 +99,9 @@ This skill is Claude Code compatible and can be discovered via `skills_list` and
 
 ShipMyAgent provides a thin wrapper around `npx skills`:
 
-- Find: `sma skill find react|nextjs|design`
-- Add: `sma skill add vercel-labs/agent-skills@vercel-react-best-practices` (syncs into `~/.ship/skills`)
-- List discoverable skills for a project: `sma skill list`
+- `sma skill list`: list skills you have already learned locally
+- `sma skill find <query>`: search skills you have not learned yet
+- `sma skill add <spec>`: download/learn missing skills (syncs into `~/.ship/skills`)
+- `sma skill load <name> --context-id <contextId>`: load a learned skill into the current context
+
+Recommended order: `find -> add -> load`. If `list` already shows the skill, skip `add` and load it directly.

@@ -147,13 +147,24 @@ function renderMessages() {
 
   refs.messageList.innerHTML = state.messages
     .map((msg) => {
-      const role = msg.role === "assistant" ? "assistant" : "user";
-      const roleText = role === "assistant" ? "ASSISTANT" : "USER";
+      const role = String(msg.role || "assistant");
+      const roleMap = {
+        user: "USER",
+        "tool-call": "TOOL CALL",
+        "tool-result": "TOOL RESULT",
+        assistant: "ASSISTANT",
+      };
+      const roleClass = ["user", "assistant", "tool-call", "tool-result"].includes(role)
+        ? role
+        : "assistant";
+      const roleText = roleMap[role] || "ASSISTANT";
       const text = String(msg.text || "").trim() || "(empty)";
+      const toolName = String(msg.toolName || "").trim();
+      const roleLabel = toolName ? `${roleText} · ${toolName}` : roleText;
       return `
-        <article class="message ${role}">
+        <article class="message ${roleClass}">
           <div class="message-head">
-            <span class="role">${roleText}</span>
+            <span class="role">${escapeHtml(roleLabel)}</span>
             <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
             <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
           </div>

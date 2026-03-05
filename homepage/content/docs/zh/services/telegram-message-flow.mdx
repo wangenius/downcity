@@ -114,6 +114,33 @@ ShipMyAgent 的聊天集成采用 tool-strict：
 - 优先用 `parse_mode=Markdown`，失败则回退纯文本
 - 解析输出中的 `@attach ...` 并以真正的 Telegram 附件形式发送（支持本地路径或 URL）
 
+### 4.3 `reply_to_message` 与 `chat react` 的执行细节
+
+#### 出站回复关联（`reply_to_message_id`）
+
+当 `chat send` 触发发送时，默认是普通消息。
+只有显式启用 reply（例如 `sma chat send --reply`）时，runtime 才会尝试解析目标 `messageId` 并映射到 Telegram `reply_to_message_id`。
+
+优先级：
+1. 调用时显式传入的 `messageId`
+2. 当前 `chatKey` 的 chat meta 中记录的最近入站 `messageId`
+
+结果分支：
+- 有合法数字 `messageId`：按“回复某条消息”发送
+- 无合法 `messageId`：降级为普通发送（不阻塞 `chat send`）
+
+#### 贴表情（`sma chat react`）
+
+`chat react` 走 Telegram `setMessageReaction`，规则如下：
+- 默认 emoji：`👍`
+- 可通过 `--emoji` 覆盖
+- 可通过 `--big` 打开 `is_big`
+- 必须能拿到合法 `messageId`（显式或回填），否则返回错误
+
+这意味着：
+- `chat send` 在无 `messageId` 时可继续工作（只是没有 reply 关联）
+- `chat react` 在无 `messageId` 时不能执行（因为必须贴到某条现有消息）
+
 ## 5）用户可能收到的“各种消息”
 
 以一次完整交互为例，用户可能看到：

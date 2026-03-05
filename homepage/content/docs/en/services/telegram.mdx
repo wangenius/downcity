@@ -107,8 +107,60 @@ Notes:
 - In groups, ShipMyAgent may restrict who can talk to the bot (e.g. initiator/admin), depending on the runtime’s policy.
 - For file messages in groups, the mention (if needed) must be in the **caption**, or send the file as a reply to the bot.
 - While the agent is running, Telegram shows a periodic **typing** indicator (`sendChatAction`) until the result is sent.
-- If a `messageId` is available in chat context, ShipMyAgent automatically uses Telegram `reply_to_message` for outbound sends.
-- For lightweight acknowledgement/attitude, use `sma chat react --emoji '👍'` (supports `--big`).
+
+## Reply-to and Reaction Logic (Important)
+
+This section explains:
+- when outbound sends use `reply_to_message`
+- when to use `chat react` instead of a full text reply
+
+### 1) How `reply_to_message` is decided
+
+When the agent runs `sma chat send`, default behavior is a normal non-reply send.
+Runtime only attempts `reply_to_message_id` when reply mode is explicitly enabled (for example `sma chat send --reply`).
+
+`messageId` source priority:
+1. explicit input argument (for example `--message-id <id>`)
+2. latest inbound message metadata stored for the same `chatKey` (chat meta)
+
+Behavior:
+- valid numeric `messageId` exists: send with `reply_to_message_id`
+- no valid `messageId`: still sends as a normal message (without reply link)
+- same rule applies to text and attachments
+
+### 2) How `chat react` works
+
+Use `chat react` for lightweight acknowledgement/attitude, e.g.:
+- "got it"
+- "agree"
+- quick encouragement
+
+Examples:
+
+```bash
+# default 👍
+sma chat react
+
+# custom emoji
+sma chat react --emoji '🔥'
+
+# explicit target message
+sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxxx
+```
+
+Behavior:
+- default emoji: `👍`
+- `--big` enables Telegram `is_big`
+- if `--message-id` is missing, runtime tries latest inbound `messageId` from the same `chatKey`
+- if no valid `messageId` is available, `chat react` fails (reactions must target an existing message)
+
+### 3) Recommended usage
+
+- Use `sma chat send` for actual user-facing answers.
+- Use `sma chat react` for short acknowledgement/attitude only.
+- Use `sma chat send --reply` only when you explicitly need thread-style targeting in busy chats.
+- For cross-chat actions, always pass `--chat-key`.
+- In a brand-new chat with no inbound message yet, ask the user to send one message first before reply/react targeting.
 
 ## Troubleshooting
 

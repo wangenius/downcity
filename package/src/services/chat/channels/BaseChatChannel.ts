@@ -90,6 +90,7 @@ export type ChannelChatKeyParams = {
 
 export type ChannelSendTextParams = ChannelChatKeyParams & {
   text: string;
+  replyToMessage?: boolean;
 };
 
 export type ChannelSendActionParams = ChannelChatKeyParams & {

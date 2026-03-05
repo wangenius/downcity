@@ -107,6 +107,33 @@ Telegram executes `agentRuntime.run(...)` for the current `chatKey`.
 - Fallback: if the model forgets to call `chat_send`, the adapter sends the final plain-text output.
 - Messages are chunked for Telegram size limits; Markdown is attempted first, then it falls back to plain text.
 
+### Reply targeting and reactions (`reply_to_message` + `chat react`)
+
+#### Outbound reply targeting (`reply_to_message_id`)
+
+For `chat send`, default behavior is non-reply delivery.
+Runtime only tries `reply_to_message_id` when reply mode is explicitly enabled (for example `sma chat send --reply`).
+
+Priority:
+1. explicit `messageId` provided by the caller
+2. latest inbound `messageId` from chat meta for the same `chatKey`
+
+Result:
+- valid numeric id exists: send as a reply-to message
+- no valid id: send normally (no reply link), `chat send` still succeeds
+
+#### Reactions (`sma chat react`)
+
+`chat react` uses Telegram `setMessageReaction`:
+- default emoji is `👍`
+- `--emoji` overrides emoji
+- `--big` sets Telegram `is_big`
+- a valid target `messageId` is required (explicit or backfilled), otherwise the command fails
+
+So in practice:
+- `chat send` can degrade gracefully without `messageId`
+- `chat react` cannot, because Telegram reactions must point to an existing message
+
 ### On-demand history loading (optional)
 
 If the model decides it needs more context than the in-memory session provides, it can call `chat_load_history` to fetch earlier messages from `.ship/chat/<chatKey>/conversations/messages.jsonl` and inject them into the current in-flight context (before the current user message).

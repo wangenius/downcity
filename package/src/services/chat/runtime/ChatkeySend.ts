@@ -131,6 +131,7 @@ export async function sendTextByChatKey(params: {
   context: ServiceRuntime;
   chatKey: string;
   text: string;
+  replyToMessage?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   const context = params.context;
   const chatKey = String(params.chatKey || "").trim();
@@ -160,6 +161,7 @@ export async function sendTextByChatKey(params: {
   const chatType = target.chatType;
   const messageThreadId = target.messageThreadId;
   const messageId = target.messageId;
+  const shouldReplyToMessage = params.replyToMessage === true;
 
   if (channel === "qq") {
     if (!chatType || !messageId) {
@@ -177,6 +179,7 @@ export async function sendTextByChatKey(params: {
     ...(typeof messageThreadId === "number" ? { messageThreadId } : {}),
     ...(typeof chatType === "string" && chatType ? { chatType } : {}),
     ...(typeof messageId === "string" && messageId ? { messageId } : {}),
+    ...(shouldReplyToMessage ? { replyToMessage: true } : {}),
   });
 }
 

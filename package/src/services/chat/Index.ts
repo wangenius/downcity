@@ -44,6 +44,7 @@ type ChatSendActionPayload = {
   chatKey?: string;
   delayMs?: number;
   sendAtMs?: number;
+  replyToMessage?: boolean;
 };
 
 type ChatContextActionPayload = {
@@ -461,6 +462,7 @@ async function mapChatSendCommandInput(
   });
   const delayRaw = getStringOpt(input.opts, "delay");
   const timeRaw = getStringOpt(input.opts, "time");
+  const replyToMessage = getBooleanOpt(input.opts, "reply");
   const delayMs = delayRaw
     ? parseNonNegativeIntOptionOrThrow(delayRaw, "delay")
     : undefined;
@@ -479,6 +481,7 @@ async function mapChatSendCommandInput(
     chatKey,
     ...(typeof delayMs === "number" ? { delayMs } : {}),
     ...(typeof sendAtMs === "number" ? { sendAtMs } : {}),
+    ...(replyToMessage ? { replyToMessage: true } : {}),
   };
 }
 
@@ -489,6 +492,7 @@ function mapChatSendApiInput(body: JsonValue): ChatSendActionPayload {
   const payload = body as JsonObject;
   const delayRaw = payload.delayMs ?? payload.delay;
   const timeRaw = payload.sendAtMs ?? payload.sendAt ?? payload.time;
+  const replyRaw = payload.replyToMessage ?? payload.reply;
   const delayText =
     typeof delayRaw === "string" || typeof delayRaw === "number"
       ? String(delayRaw).trim()
@@ -512,6 +516,7 @@ function mapChatSendApiInput(body: JsonValue): ChatSendActionPayload {
       typeof payload.chatKey === "string" ? payload.chatKey.trim() : undefined,
     ...(typeof delayMs === "number" ? { delayMs } : {}),
     ...(typeof sendAtMs === "number" ? { sendAtMs } : {}),
+    ...(replyRaw === true ? { replyToMessage: true } : {}),
   };
 }
 
@@ -536,6 +541,7 @@ async function executeChatSendAction(params: {
     text: String(params.payload.text || ""),
     delayMs: params.payload.delayMs,
     sendAtMs: params.payload.sendAtMs,
+    replyToMessage: params.payload.replyToMessage === true,
   });
   if (!result.success) {
     return {
@@ -658,6 +664,7 @@ export const chatService: Service = {
               "--time <time>",
               "定时发送时间（Unix 时间戳秒/毫秒或 ISO 时间）",
             )
+            .option("--reply", "显式使用 reply_to_message 回复目标消息", false)
             .option(
               "--chat-key <chatKey>",
               "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）",

@@ -227,7 +227,10 @@ export class TelegramBot extends BaseChatChannel {
   protected async sendTextToPlatform(
     params: ChannelSendTextParams,
   ): Promise<void> {
-    const replyToMessageId = this.parseTelegramMessageId(params.messageId);
+    const replyToMessageId =
+      params.replyToMessage === true
+        ? this.parseTelegramMessageId(params.messageId)
+        : undefined;
     await this.sendMessage(params.chatId, params.text, {
       messageThreadId: params.messageThreadId,
       ...(typeof replyToMessageId === "number"

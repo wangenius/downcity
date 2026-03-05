@@ -39,6 +39,7 @@ User-facing output rules:
   - `sma chat send --text '你好'`
   - `sma chat send --text '3 秒后发送' --delay 3000`
   - `sma chat send --text '今晚八点发送' --time '2026-03-05T20:00:00+08:00'`
+  - `sma chat send --text '这条会以 reply 形式发送' --reply`
   - `sma chat send --stdin --chat-key <contextId>`
   - `sma chat send --text-file <file> --chat-key <contextId>`
   - `sma chat react --emoji '👍'`
@@ -58,6 +59,8 @@ User-facing output rules:
 - 当只需表达“已收到/认可/态度”时，可优先使用 `react`，避免发送冗余文本。
 - 调用 `send` 时必须保证 `chatKey` 可解析（显式传参或可从上下文推导）。
 - 调用 `react` 时尽量提供（或确保可回填）`messageId`，这样平台可精确贴到目标消息。
+- `send` 默认不会挂 `reply_to_message`；只有显式传 `--reply` 时才尝试按 `messageId` 发送为回复。
+- 不要滥用 `--reply`：仅在消息密集、需要把回复明确挂到某条消息时再使用。
 - 默认使用单引号包裹 `--text`，例如：`sma chat send --text '你好'`。
 - `send` 支持 `--delay <ms>`（非负整数，毫秒）用于延迟发送。
 - `send` 支持 `--time <time>`（Unix 时间戳秒/毫秒或 ISO 时间）用于定时发送。

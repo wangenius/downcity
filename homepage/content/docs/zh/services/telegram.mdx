@@ -107,8 +107,60 @@ shipmyagent start
 - 群聊场景下，运行时可能会限制可对话的人（例如仅发起人/群管理员），以避免被滥用。
 - 群里发送文件时，如需 `@bot`，请把 `@bot` 写在 **caption** 里，或直接用“回复 bot 消息”的方式发送文件。
 - Agent 执行期间会周期性发送 `sendChatAction(typing)`，你会看到 Telegram 的“正在输入”提示，直到结果发出。
-- 发送侧如果带有 `messageId`（来自 chat 上下文），ShipMyAgent 会自动使用 `reply_to_message`，在 Telegram 里形成明确的“回复某条消息”。
-- 轻量确认可使用 `sma chat react --emoji '👍'` 给目标消息贴表情（支持 `--big`）。
+
+## 回复关联与贴表情逻辑（重点）
+
+这一段解释两件事：
+- 什么时候会走 `reply_to_message`
+- 什么时候适合用 `chat react` 贴表情而不是发文本
+
+### 1）`reply_to_message` 是怎么决定的
+
+当 Agent 执行 `sma chat send` 时，默认是普通发送，不会自动挂 reply。
+只有显式传了 `--reply`，运行时才会尝试附带 `reply_to_message_id`。
+
+`messageId` 的来源优先级：
+1. 显式参数（例如你在 `sma chat react --message-id <id>` 里指定）
+2. 当前 `chatKey` 最近一次入站消息元信息（chat meta 自动维护）
+
+行为规则：
+- 能拿到合法数字 `messageId`：发送时附带 `reply_to_message_id`，Telegram 显示为“回复某条消息”
+- 拿不到 `messageId`：仍会发送成功，但作为普通消息发送（不挂回复关系）
+- 这个规则对文本和附件都生效（附件也会尝试带 `reply_to_message_id`）
+
+### 2）`chat react` 是怎么工作的
+
+`chat react` 适合“轻量确认/表达态度”场景，例如：
+- “收到”
+- “同意”
+- “赞同/鼓励”
+
+示例：
+
+```bash
+# 默认 👍
+sma chat react
+
+# 指定表情
+sma chat react --emoji '🔥'
+
+# 显式指定目标消息
+sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxxx
+```
+
+行为规则：
+- 默认表情是 `👍`
+- `--big` 会启用 Telegram 的 `is_big` 效果
+- 如果没有显式 `--message-id`，会尝试从当前 `chatKey` 的最新入站消息回填
+- 如果最终拿不到合法 `messageId`，`chat react` 会失败并提示需要消息 ID（因为反应必须贴到具体消息）
+
+### 3）建议实践
+
+- 需要明确答复用户（结论/下一步）时：用 `sma chat send`
+- 只需快速确认态度时：优先用 `sma chat react`
+- 只有在消息很多、你希望“明确挂在某条消息下”时，再用 `sma chat send --reply`
+- 跨会话操作时：显式传 `--chat-key`，避免贴错会话
+- 刚建新会话还没有入站消息时：先让对方发一条消息，再做 reply/react
 
 ## 常见问题排查
 

@@ -16,6 +16,7 @@ export type ChatDispatchSendTextParams = {
   messageThreadId?: number;
   chatType?: string;
   messageId?: string;
+  replyToMessage?: boolean;
 };
 
 export type ChatDispatchSendActionParams = {

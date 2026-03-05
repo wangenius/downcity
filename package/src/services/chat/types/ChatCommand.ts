@@ -23,6 +23,7 @@ export type ChatSendRequest = {
   chatKey?: string;
   delayMs?: number;
   sendAtMs?: number;
+  replyToMessage?: boolean;
 };
 
 export type ChatSendResponse = {

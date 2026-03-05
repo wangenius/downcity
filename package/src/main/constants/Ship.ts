@@ -11,11 +11,21 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
     webport: 3001,
   },
   llm: {
-    provider: "anthropic",
-    model: "claude-sonnet-4-20250514",
-    baseUrl: "https://api.anthropic.com/v1",
-    apiKey: "${API_KEY}",
-    temperature: 0.7,
+    activeModel: "default",
+    providers: {
+      default: {
+        type: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1",
+        apiKey: "${API_KEY}",
+      },
+    },
+    models: {
+      default: {
+        provider: "default",
+        name: "claude-sonnet-4-20250514",
+        temperature: 0.7,
+      },
+    },
   },
   context: {
     messages: {

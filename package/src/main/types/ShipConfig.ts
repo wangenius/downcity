@@ -5,6 +5,7 @@
  * - 作为全局共享类型，不再挂在 main/server 目录下。
  * - 供 main/core/services 多层复用，避免反向类型依赖。
  */
+import type { LlmConfig } from "@main/types/LlmConfig.js";
 
 export interface ShipConfig {
   $schema?: string;
@@ -123,23 +124,15 @@ export interface ShipConfig {
       };
     };
   };
-  // LLM 配置
-  llm: {
-    provider: string;
-    model: string;
-    baseUrl: string;
-    apiKey?: string;
-    // Debug: log every request payload sent to the LLM
-    logMessages?: boolean;
-    // 模型参数
-    temperature?: number;
-    maxTokens?: number;
-    topP?: number;
-    frequencyPenalty?: number;
-    presencePenalty?: number;
-    // 特定模型配置
-    anthropicVersion?: string;
-  };
+  /**
+   * LLM 配置。
+   *
+   * 关键点（中文）
+   * - 通过 `activeModel` 选择当前模型。
+   * - `providers` 存连接信息（type/baseUrl/apiKey）。
+   * - `models` 存模型名称与采样参数。
+   */
+  llm: LlmConfig;
   /**
    * 上下文管理（工程向配置）。
    *

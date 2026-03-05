@@ -123,8 +123,21 @@ You are the maintainer agent of this repository.
 {
   "name": "my-project-agent",
   "llm": {
-    "provider": "anthropic",
-    "model": "claude-sonnet-4-5"
+    "activeModel": "default",
+    "providers": {
+      "default": {
+        "type": "anthropic",
+        "baseUrl": "https://api.anthropic.com/v1",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "default",
+        "name": "claude-sonnet-4-5",
+        "temperature": 0.7
+      }
+    }
   },
   "permissions": {
     "exec_command": {

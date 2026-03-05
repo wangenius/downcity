@@ -38,7 +38,10 @@ import {
 import { ensureDir, saveJson } from "@/main/runtime/Storage.js";
 import type { ShipConfig } from "@/main/runtime/Config.js";
 import { SHIP_JSON_SCHEMA } from "@main/constants/ShipSchema.js";
-import { MODEL_CONFIGS } from "@main/constants/Model.js";
+import {
+  MODEL_PRESETS,
+  PROVIDER_DEFAULT_BASE_URLS,
+} from "@main/constants/Model.js";
 import { DEFAULT_SHIP_JSON } from "@main/constants/Ship.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
@@ -301,15 +304,31 @@ export async function initCommand(
   // Build LLM configuration
   const selectedModel = response.model || "claude-sonnet-4-5";
   const modelTemplate =
-    MODEL_CONFIGS[selectedModel as keyof typeof MODEL_CONFIGS] ||
-    MODEL_CONFIGS.custom;
+    MODEL_PRESETS[selectedModel as keyof typeof MODEL_PRESETS] ||
+    MODEL_PRESETS.custom;
+  const activeModelId = "default";
+  const providerId = "default";
 
-  const llmConfig = {
-    provider: modelTemplate.provider,
-    model: selectedModel === "custom" ? LLM_MODEL : selectedModel, // custom needs env
-    baseUrl: selectedModel === "custom" ? LLM_BASE_URL : modelTemplate.baseUrl,
-    apiKey: LLM_API_KEY,
-    temperature: 0.7,
+  // 关键点（中文）：init 默认生成“1 provider + 1 model”的多模型结构，后续用户可按需扩展。
+  const llmConfig: ShipConfig["llm"] = {
+    activeModel: activeModelId,
+    providers: {
+      [providerId]: {
+        type: modelTemplate.providerType,
+        baseUrl:
+          selectedModel === "custom"
+            ? LLM_BASE_URL
+            : PROVIDER_DEFAULT_BASE_URLS[modelTemplate.providerType],
+        apiKey: LLM_API_KEY,
+      },
+    },
+    models: {
+      [activeModelId]: {
+        provider: providerId,
+        name: selectedModel === "custom" ? LLM_MODEL : selectedModel,
+        temperature: 0.7,
+      },
+    },
   };
 
   const selectedChannels = new Set<string>(
@@ -526,8 +545,12 @@ export async function initCommand(
   }
 
   console.log("\n🎉 Initialization complete!\n");
-  console.log(`📦 Current model: ${llmConfig.provider} / ${llmConfig.model}`);
-  console.log(`🌐 API URL: ${llmConfig.baseUrl}\n`);
+  const activeModelConfig = llmConfig.models[llmConfig.activeModel];
+  const activeProviderConfig = llmConfig.providers[activeModelConfig.provider];
+  console.log(
+    `📦 Current model: ${activeProviderConfig.type} / ${activeModelConfig.name}`,
+  );
+  console.log(`🌐 API URL: ${activeProviderConfig.baseUrl || "-"}\n`);
 
   if (selectedChannels.has("feishu")) {
     console.log("📱 Feishu chat channel enabled");
@@ -564,7 +587,7 @@ export async function initCommand(
     "Edit PROFILE.md to customize agent behavior",
     "Edit SOUL.md to customize your core operating principles",
     "Edit USER.md to define user goals and communication preferences",
-    "Edit ship.json to modify LLM configuration (baseUrl, apiKey, temperature, etc.)",
+    "Edit ship.json to modify llm.activeModel / llm.models / llm.providers",
   ];
 
   if (selectedChannels.has("telegram")) {
@@ -590,7 +613,7 @@ export async function initCommand(
   }
   console.log("");
   console.log(
-    "💡 Tip: API Key is recommended to use environment variables (e.g. ${ANTHROPIC_API_KEY} or ${OPENAI_API_KEY})\n",
+    "💡 Tip: API Key is recommended to use environment variables (e.g. ${LLM_API_KEY}, ${OPENAI_API_KEY}, ${GEMINI_API_KEY})\n",
   );
   console.log(
     "To switch models or modify configuration, edit the llm field in ship.json directly.\n",

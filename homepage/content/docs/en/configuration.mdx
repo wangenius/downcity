@@ -82,69 +82,107 @@ Language Model configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `provider` | string | Yes | - | LLM provider: `anthropic`, `openai`, `deepseek`, `gemini`, `custom` |
-| `model` | string | Yes | - | Model name (e.g., `claude-3-5-sonnet-20241022`) |
-| `baseUrl` | string | No | Provider default | API endpoint URL |
-| `apiKey` | string | Yes | - | API key (use environment variable!) |
-| `temperature` | number | No | 0.5 | Response randomness (0-1) |
-| `maxTokens` | number | No | 4096 | Maximum response tokens |
-| `timeout` | number | No | 30000 | Request timeout in milliseconds |
-| `streaming` | boolean | No | false | Enable streaming responses |
+| `activeModel` | string | Yes | - | Active model key (must exist in `llm.models`) |
+| `providers` | object | Yes | - | Provider map (credentials + base URL by key) |
+| `models` | object | Yes | - | Model map (model name + provider reference by key) |
+| `logMessages` | boolean | No | true | Whether to log LLM request payloads |
 
 **Example configurations**:
 
 ```json
-// Anthropic (Claude)
+// Single-model setup (Anthropic)
 {
   "llm": {
-    "provider": "anthropic",
-    "model": "claude-3-5-sonnet-20241022",
-    "baseUrl": "https://api.anthropic.com/v1",
-    "apiKey": "${ANTHROPIC_API_KEY}"
+    "activeModel": "default",
+    "providers": {
+      "default": {
+        "type": "anthropic",
+        "baseUrl": "https://api.anthropic.com/v1",
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "default",
+        "name": "claude-sonnet-4-5",
+        "temperature": 0.7
+      }
+    }
   }
 }
 
-// OpenAI (GPT)
+// Multi-model setup (Gemini + OpenAI)
 {
   "llm": {
-    "provider": "openai",
-    "model": "gpt-4o",
-    "baseUrl": "https://api.openai.com/v1",
-    "apiKey": "${OPENAI_API_KEY}"
+    "activeModel": "quality",
+    "providers": {
+      "google": {
+        "type": "gemini",
+        "apiKey": "${GEMINI_API_KEY}"
+      },
+      "openai_main": {
+        "type": "openai",
+        "apiKey": "${OPENAI_API_KEY}"
+      }
+    },
+    "models": {
+      "quality": {
+        "provider": "google",
+        "name": "gemini-2.5-pro"
+      },
+      "fast": {
+        "provider": "google",
+        "name": "gemini-2.5-flash"
+      },
+      "fallback": {
+        "provider": "openai_main",
+        "name": "gpt-4o"
+      }
+    }
   }
 }
 
-// Gemini (Google)
+// Custom endpoint (OpenAI-compatible)
 {
   "llm": {
-    "provider": "gemini",
-    "model": "gemini-2.5-pro",
-    "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
-    "apiKey": "${GEMINI_API_KEY}"
-  }
-}
-
-// Custom endpoint
-{
-  "llm": {
-    "provider": "custom",
-    "model": "custom-model",
-    "baseUrl": "https://your-api.com/v1",
-    "apiKey": "${CUSTOM_API_KEY}"
+    "activeModel": "custom_main",
+    "providers": {
+      "custom_gateway": {
+        "type": "custom",
+        "baseUrl": "https://your-api.com/v1",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "custom_main": {
+        "provider": "custom_gateway",
+        "name": "gpt-5.2"
+      }
+    }
   }
 }
 ```
 
-> Note: `custom` now uses OpenAI Responses protocol by default (`/v1/responses`), which matches gateways like GMN that only support Responses.
+> Note: `custom`, `openai`, `deepseek`, and `gemini` use OpenAI Responses-compatible flow (`/responses`).
 > Minimal GMN example:
 >
 > ```json
 > {
 >   "llm": {
->     "provider": "custom",
->     "model": "gpt-5.2",
->     "baseUrl": "https://gmn.chuangzuoli.com/v1",
->     "apiKey": "${LLM_API_KEY}"
+>     "activeModel": "default",
+>     "providers": {
+>       "gmn": {
+>         "type": "custom",
+>         "baseUrl": "https://gmn.chuangzuoli.com/v1",
+>         "apiKey": "${LLM_API_KEY}"
+>       }
+>     },
+>     "models": {
+>       "default": {
+>         "provider": "gmn",
+>         "name": "gpt-5.2"
+>       }
+>     }
 >   }
 > }
 > ```

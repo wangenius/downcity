@@ -82,69 +82,107 @@ your-project/
 
 | 字段 | 类型 | 必需 | 默认值 | 描述 |
 |------|------|------|--------|------|
-| `provider` | string | 是 | - | LLM 提供商：`anthropic`、`openai`、`deepseek`、`gemini`、`custom` |
-| `model` | string | 是 | - | 模型名称（例如 `claude-3-5-sonnet-20241022`）|
-| `baseUrl` | string | 否 | 提供商默认 | API 端点 URL |
-| `apiKey` | string | 是 | - | API key（使用环境变量！）|
-| `temperature` | number | 否 | 0.5 | 响应随机性（0-1）|
-| `maxTokens` | number | 否 | 4096 | 最大响应 token 数 |
-| `timeout` | number | 否 | 30000 | 请求超时（毫秒）|
-| `streaming` | boolean | 否 | false | 启用流式响应 |
+| `activeModel` | string | 是 | - | 当前激活模型 key（必须存在于 `llm.models`） |
+| `providers` | object | 是 | - | Provider 映射（按 key 配置凭据和 baseUrl） |
+| `models` | object | 是 | - | 模型映射（按 key 配置模型名并引用 provider） |
+| `logMessages` | boolean | 否 | true | 是否记录 LLM 请求 payload |
 
 **配置示例**：
 
 ```json
-// Anthropic (Claude)
+// 单模型配置（Anthropic）
 {
   "llm": {
-    "provider": "anthropic",
-    "model": "claude-3-5-sonnet-20241022",
-    "baseUrl": "https://api.anthropic.com/v1",
-    "apiKey": "${ANTHROPIC_API_KEY}"
+    "activeModel": "default",
+    "providers": {
+      "default": {
+        "type": "anthropic",
+        "baseUrl": "https://api.anthropic.com/v1",
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "default",
+        "name": "claude-sonnet-4-5",
+        "temperature": 0.7
+      }
+    }
   }
 }
 
-// OpenAI (GPT)
+// 多模型配置（Gemini + OpenAI）
 {
   "llm": {
-    "provider": "openai",
-    "model": "gpt-4o",
-    "baseUrl": "https://api.openai.com/v1",
-    "apiKey": "${OPENAI_API_KEY}"
-  }
-}
-
-// Gemini (Google)
-{
-  "llm": {
-    "provider": "gemini",
-    "model": "gemini-2.5-pro",
-    "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
-    "apiKey": "${GEMINI_API_KEY}"
+    "activeModel": "quality",
+    "providers": {
+      "google": {
+        "type": "gemini",
+        "apiKey": "${GEMINI_API_KEY}"
+      },
+      "openai_main": {
+        "type": "openai",
+        "apiKey": "${OPENAI_API_KEY}"
+      }
+    },
+    "models": {
+      "quality": {
+        "provider": "google",
+        "name": "gemini-2.5-pro"
+      },
+      "fast": {
+        "provider": "google",
+        "name": "gemini-2.5-flash"
+      },
+      "fallback": {
+        "provider": "openai_main",
+        "name": "gpt-4o"
+      }
+    }
   }
 }
 
 // 自定义端点
 {
   "llm": {
-    "provider": "custom",
-    "model": "custom-model",
-    "baseUrl": "https://your-api.com/v1",
-    "apiKey": "${CUSTOM_API_KEY}"
+    "activeModel": "custom_main",
+    "providers": {
+      "custom_gateway": {
+        "type": "custom",
+        "baseUrl": "https://your-api.com/v1",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "custom_main": {
+        "provider": "custom_gateway",
+        "name": "gpt-5.2"
+      }
+    }
   }
 }
 ```
 
-> 提示：`custom` 现在默认按 OpenAI Responses 协议发请求（`/v1/responses`），适合 GMN 这类仅支持 Responses 的网关。
+> 提示：`custom`、`openai`、`deepseek`、`gemini` 都走 OpenAI Responses 兼容链路（`/responses`）。
 > 最简 GMN 示例：
 >
 > ```json
 > {
 >   "llm": {
->     "provider": "custom",
->     "model": "gpt-5.2",
->     "baseUrl": "https://gmn.chuangzuoli.com/v1",
->     "apiKey": "${LLM_API_KEY}"
+>     "activeModel": "default",
+>     "providers": {
+>       "gmn": {
+>         "type": "custom",
+>         "baseUrl": "https://gmn.chuangzuoli.com/v1",
+>         "apiKey": "${LLM_API_KEY}"
+>       }
+>     },
+>     "models": {
+>       "default": {
+>         "provider": "gmn",
+>         "name": "gpt-5.2"
+>       }
+>     }
 >   }
 > }
 > ```

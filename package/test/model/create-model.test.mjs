@@ -16,10 +16,20 @@ function createBaseConfig() {
     name: "test-agent",
     version: "1.0.0",
     llm: {
-      provider: "custom",
-      model: "gpt-5.2",
-      baseUrl: "https://example.com/v1",
-      apiKey: "test-api-key",
+      activeModel: "default",
+      providers: {
+        default: {
+          type: "custom",
+          baseUrl: "https://example.com/v1",
+          apiKey: "test-api-key",
+        },
+      },
+      models: {
+        default: {
+          provider: "default",
+          name: "gpt-5.2",
+        },
+      },
       logMessages: false,
     },
   };
@@ -30,10 +40,20 @@ function createGeminiConfig() {
     name: "test-agent",
     version: "1.0.0",
     llm: {
-      provider: "gemini",
-      model: "gemini-2.5-pro",
-      baseUrl: "",
-      apiKey: "test-gemini-key",
+      activeModel: "quality",
+      providers: {
+        google: {
+          type: "gemini",
+          baseUrl: "",
+          apiKey: "test-gemini-key",
+        },
+      },
+      models: {
+        quality: {
+          provider: "google",
+          name: "gemini-2.5-pro",
+        },
+      },
       logMessages: false,
     },
   };
@@ -177,16 +197,16 @@ test("createModel: gemini provider uses google openai-compatible default endpoin
 
 test("createModel: throws when model is missing", async () => {
   const config = createBaseConfig();
-  config.llm.model = "${}";
+  config.llm.models.default.name = "${}";
   await assert.rejects(
     () => createModel({ config }),
-    /no LLM Model Configured/i,
+    /No LLM model name configured/i,
   );
 });
 
 test("createModel: throws when api key is missing and env fallback is empty", async () => {
   const config = createBaseConfig();
-  delete config.llm.apiKey;
+  delete config.llm.providers.default.apiKey;
 
   const oldAnthropic = process.env.ANTHROPIC_API_KEY;
   const oldOpenAI = process.env.OPENAI_API_KEY;

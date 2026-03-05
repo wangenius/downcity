@@ -139,6 +139,15 @@ function normalizeBaseUrl(baseUrl) {
   return normalized.replace(/\/+$/, "");
 }
 
+function defaultBaseUrlByProvider(provider) {
+  if (provider === "anthropic") return "https://api.anthropic.com/v1";
+  if (provider === "openai") return "https://api.openai.com/v1";
+  if (provider === "deepseek") return "https://api.deepseek.com/v1";
+  if (provider === "gemini") return "https://generativelanguage.googleapis.com/v1beta/openai";
+  if (provider === "custom") return "https://api.openai.com/v1";
+  return "";
+}
+
 function extractOpenAIResponsesText(payload) {
   if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
     return payload.output_text.trim();
@@ -274,18 +283,28 @@ async function run() {
   const rawConfig = JSON.parse(fs.readFileSync(shipJsonPath, "utf-8"));
   const config = resolveEnvPlaceholdersDeep(rawConfig);
   const llm = config?.llm || {};
-  const provider = String(llm.provider || "").trim();
-  const model = String(llm.model || "").trim();
-  const apiKey = String(llm.apiKey || "").trim();
-  const baseUrl = String(llm.baseUrl || "").trim();
+  const activeModel = String(llm.activeModel || "").trim();
+  const modelConfig = activeModel ? llm?.models?.[activeModel] : undefined;
+  const providerKey = String(modelConfig?.provider || "").trim();
+  const providerConfig = providerKey ? llm?.providers?.[providerKey] : undefined;
 
-  if (!provider || !model || !apiKey) {
-    console.error("[error]: missing llm.provider / llm.model / llm.apiKey in resolved config");
+  const provider = String(providerConfig?.type || "").trim();
+  const model = String(modelConfig?.name || "").trim();
+  const apiKey = String(providerConfig?.apiKey || "").trim();
+  const baseUrl =
+    String(providerConfig?.baseUrl || "").trim() || defaultBaseUrlByProvider(provider);
+
+  if (!provider || !model || !apiKey || !activeModel) {
+    console.error(
+      "[error]: missing llm.activeModel / llm.models / llm.providers fields in resolved config",
+    );
     process.exit(1);
   }
 
   console.log(`[test-model]: project=${projectRoot}`);
-  console.log(`[model]: provider=${provider} name=${model} baseUrl=${baseUrl || "-"}`);
+  console.log(
+    `[model]: active=${activeModel} provider=${provider} name=${model} baseUrl=${baseUrl || "-"}`,
+  );
   console.log(
     `[settings]: attempts=${options.attempts} maxOutputTokens=${options.maxOutputTokens}`,
   );

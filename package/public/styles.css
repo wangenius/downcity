@@ -233,7 +233,7 @@ h3, h4, h5 { font-size: 13px; }
 
 .message-head {
   font-size: 11px;
-  color: var(--muted);
+  color: #9fb0cf;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -244,12 +244,13 @@ h3, h4, h5 { font-size: 13px; }
 
 .message-head .role {
   font-weight: 700;
-  color: var(--text);
+  color: #eef4ff;
 }
 
 .message-body {
   margin: 0;
   padding: 8px;
+  color: #e6eeff;
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.5;

@@ -41,6 +41,7 @@ type ChatChannelState = {
 type ChatSendActionPayload = {
   text: string;
   chatKey?: string;
+  delayMs?: number;
 };
 
 type ChatContextActionPayload = {
@@ -265,6 +266,21 @@ function parsePositiveIntOptionOrThrow(value: string, fieldName: string): number
   return parsed;
 }
 
+function parseNonNegativeIntOptionOrThrow(value: string, fieldName: string): number {
+  const text = String(value || "").trim();
+  if (!text) {
+    throw new Error(`${fieldName} is required`);
+  }
+  if (!/^\d+$/.test(text)) {
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
+  const parsed = Number.parseInt(text, 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
+  return parsed;
+}
+
 function parseOptionalTimestampOrThrow(
   value: string,
   fieldName: string,
@@ -409,6 +425,10 @@ async function mapChatSendCommandInput(
   const chatKey = resolveChatKey({
     chatKey: getStringOpt(input.opts, "chatKey"),
   });
+  const delayRaw = getStringOpt(input.opts, "delay");
+  const delayMs = delayRaw
+    ? parseNonNegativeIntOptionOrThrow(delayRaw, "delay")
+    : undefined;
   if (!chatKey) {
     throw new Error(
       "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CHAT_KEY is injected in current shell context.",
@@ -418,6 +438,7 @@ async function mapChatSendCommandInput(
   return {
     text,
     chatKey,
+    ...(typeof delayMs === "number" ? { delayMs } : {}),
   };
 }
 
@@ -426,10 +447,19 @@ function mapChatSendApiInput(body: JsonValue): ChatSendActionPayload {
     throw new Error("Invalid JSON body");
   }
   const payload = body as JsonObject;
+  const delayRaw = payload.delayMs ?? payload.delay;
+  const delayText =
+    typeof delayRaw === "string" || typeof delayRaw === "number"
+      ? String(delayRaw).trim()
+      : "";
+  const delayMs = delayText
+    ? parseNonNegativeIntOptionOrThrow(delayText, "delayMs")
+    : undefined;
   return {
     text: String(payload.text ?? ""),
     chatKey:
       typeof payload.chatKey === "string" ? payload.chatKey.trim() : undefined,
+    ...(typeof delayMs === "number" ? { delayMs } : {}),
   };
 }
 
@@ -452,6 +482,7 @@ async function executeChatSendAction(params: {
     context: params.context,
     chatKey,
     text: String(params.payload.text || ""),
+    delayMs: params.payload.delayMs,
   });
   if (!result.success) {
     return {
@@ -482,6 +513,7 @@ export const chatService: Service = {
             .option("--text <text>", "消息正文")
             .option("--stdin", "从标准输入读取消息正文", false)
             .option("--text-file <file>", "从文件读取消息正文（相对当前目录）")
+            .option("--delay <ms>", "延迟发送毫秒数（非负整数）")
             .option(
               "--chat-key <chatKey>",
               "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）",

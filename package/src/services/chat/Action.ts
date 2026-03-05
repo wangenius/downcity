@@ -228,6 +228,20 @@ function normalizeChatSendText(raw: string): string {
 }
 
 /**
+ * 发送前延迟。
+ *
+ * 关键点（中文）
+ * - 仅用于 `chat send` 的显式延迟参数
+ * - 毫秒值由上游校验为非负整数
+ */
+async function waitBeforeSend(delayMs: number): Promise<void> {
+  if (!Number.isFinite(delayMs) || Number.isNaN(delayMs) || delayMs <= 0) return;
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+/**
  * 按 chatKey 发送文本。
  *
  * 关键点（中文）
@@ -238,15 +252,22 @@ export async function sendChatTextByChatKey(params: {
   context: ServiceRuntime;
   chatKey: string;
   text: string;
+  delayMs?: number;
 }): Promise<ChatSendResponse> {
   const chatKey = String(params.chatKey || "").trim();
   const text = normalizeChatSendText(String(params.text ?? ""));
+  const delayMs =
+    typeof params.delayMs === "number" && Number.isFinite(params.delayMs)
+      ? Math.max(0, Math.trunc(params.delayMs))
+      : 0;
   if (!chatKey) {
     return {
       success: false,
       error: "Missing chatKey",
     };
   }
+
+  await waitBeforeSend(delayMs);
 
   const result = await sendTextByChatKey({
     context: params.context,
@@ -270,6 +291,7 @@ export async function sendChatTextByContextId(params: {
   context: ServiceRuntime;
   contextId: string;
   text: string;
+  delayMs?: number;
 }): Promise<{ success: boolean; contextId: string; error?: string }> {
   const contextId = String(params.contextId || "").trim();
   if (!contextId) {
@@ -284,6 +306,7 @@ export async function sendChatTextByContextId(params: {
     context: params.context,
     chatKey: contextId,
     text: params.text,
+    delayMs: params.delayMs,
   });
   return {
     success: Boolean(result.success),

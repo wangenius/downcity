@@ -65,6 +65,14 @@ function shortText(text, maxChars = 120) {
   return value.slice(0, Math.max(0, maxChars - 3)) + "...";
 }
 
+function toRenderableText(input) {
+  const raw = String(input ?? "");
+  const noAnsi = raw.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "");
+  const cleaned = noAnsi.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "");
+  const value = cleaned.trim();
+  return value || "(empty)";
+}
+
 function showToast(message, type = "info") {
   refs.toast.className = `toast ${type} show`;
   refs.toast.innerHTML = escapeHtml(message);
@@ -158,7 +166,7 @@ function renderMessages() {
         ? role
         : "assistant";
       const roleText = roleMap[role] || "ASSISTANT";
-      const text = String(msg.text || "").trim() || "(empty)";
+      const text = toRenderableText(msg.text);
       const toolName = String(msg.toolName || "").trim();
       const roleLabel = toolName ? `${roleText} · ${toolName}` : roleText;
       return `

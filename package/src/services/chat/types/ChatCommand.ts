@@ -21,6 +21,7 @@ export type ChatContextSnapshot = {
 export type ChatSendRequest = {
   text: string;
   chatKey?: string;
+  delayMs?: number;
 };
 
 export type ChatSendResponse = {

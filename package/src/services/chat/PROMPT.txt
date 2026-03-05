@@ -10,6 +10,7 @@
 ## 操作方法（命令）
 - 常用 action（CLI）：
   - `sma chat send --text '你好'`
+  - `sma chat send --text '3 秒后发送' --delay 3000`
   - `sma chat send --stdin --chat-key <contextId>`
   - `sma chat send --text-file <file> --chat-key <contextId>`
   - `sma chat context`
@@ -32,6 +33,7 @@
 - 优先使用 `send` 输出用户可见结果，正文应简洁、可直接发送。
 - 调用 `send` 时必须保证 `chatKey` 可解析（显式传参或可从上下文推导）。
 - 默认使用单引号包裹 `--text`，例如：`sma chat send --text '你好'`。
+- `send` 支持 `--delay <ms>`（非负整数，毫秒）用于延迟发送。
 - 多行正文使用 heredoc 管道到 stdin，例如：
   `cat <<'EOF' | sma chat send --stdin --chat-key <chatKey>`
   `第一行`

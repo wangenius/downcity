@@ -48,6 +48,22 @@
 - `enable`：将状态设为 `enabled`
 - `disable`：将状态设为 `disabled`
 
+## 操作方法（命令）
+
+- 常用 action（CLI）：
+  - `sma task list [--status enabled|paused|disabled]`
+  - `sma task create --title '...' --description '...' --context-id <contextId> [--cron '@manual'] [--kind agent|script]`
+  - `sma task run <taskId> [--reason '...']`
+  - `sma task update <taskId> [--title ...] [--description ...] [--cron ...] [--status ...] [--context-id ...]`
+  - `sma task status <taskId> <enabled|paused|disabled>`
+  - `sma task enable <taskId>`
+  - `sma task disable <taskId>`
+- runtime 管理：
+  - `sma service status task`
+  - `sma service restart task`
+- 调度重载命令（task lifecycle command）：
+  - `sma service command task reschedule`
+
 ## 状态语义
 
 - `enabled`：可被 cron 调度执行

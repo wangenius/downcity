@@ -17,6 +17,7 @@ description: ShipMyAgent 命令行界面完整参考
 | `shipmyagent alias` | 安装 shell alias `sma` |
 | `shipmyagent stop` | 停止后台 agent 服务器 |
 | `shipmyagent restart` | 重启后台 agent 服务器 |
+| `shipmyagent services` | 管理 service runtime |
 | `shipmyagent chat` | 向 agent 发送消息 |
 | `shipmyagent validate` | 验证配置 |
 | `shipmyagent doctor` | 运行健康诊断 |
@@ -62,6 +63,22 @@ sma task run <taskId>
 sma task enable <taskId>
 sma task disable <taskId>
 ```
+
+### `sma services`
+
+```bash
+sma services list
+sma services status <serviceName>
+sma services start <serviceName>
+sma services stop <serviceName>
+sma services restart <serviceName>
+sma services command <serviceName> <command> [--payload <json>]
+```
+
+说明：
+- `sma services` 仅在本地 runtime 已启动时可用（`sma start` 或 `sma run`）
+- `sma service` 是 `sma services` 的别名（例如：`sma service restart chat`）
+- 内建 command bridge 支持 `status|start|stop|restart`
 
 ---
 

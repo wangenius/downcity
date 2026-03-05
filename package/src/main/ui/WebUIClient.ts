@@ -46,11 +46,12 @@ export class WebUIClient {
 
   constructor(context: InteractiveServerContext) {
     this.context = context;
-    this.publicDir = path.join(__dirname, '../../public');
+    // 关键点（中文）：src/main/ui 与 bin/main/ui 都统一回到 package/public。
+    this.publicDir = path.join(__dirname, "../../../public");
     this.app = new Hono();
 
     try {
-      const pkg = fs.readJsonSync(path.join(__dirname, '../../package.json')) as {
+      const pkg = fs.readJsonSync(path.join(__dirname, "../../../package.json")) as {
         version?: string;
       };
       if (pkg && typeof pkg.version === 'string') this.version = pkg.version;
@@ -262,10 +263,10 @@ export class WebUIClient {
       server.listen(port, host, () => {
         console.log(`\n🌐 交互式 Web 界面已启动: http://${host}:${port}`);
         console.log('📌 可用功能:');
-        console.log('   - Agent 对话');
-        console.log('   - 审批管理');
-        console.log('   - 系统状态监控');
-        console.log('   - 日志查看');
+        console.log('   - 多 Context 消息历史');
+        console.log('   - Services 运行状态');
+        console.log('   - Tasks 执行过程与产物');
+        console.log('   - 实时日志查看');
         console.log('');
         resolve();
       });

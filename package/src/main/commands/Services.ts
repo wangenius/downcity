@@ -176,6 +176,7 @@ async function runServiceCommandBridge(params: {
 export function registerServicesCommand(program: Command): void {
   const services = program
     .command("services")
+    .alias("service")
     .description("Service runtime 管理命令")
     .helpOption("--help", "display help for command");
 

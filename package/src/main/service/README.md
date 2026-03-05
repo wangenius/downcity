@@ -17,6 +17,10 @@
 运行时在每次请求前动态遍历 services 并收集 system，
 避免在 `main` 侧硬编码某个具体 service 的 system 细节。
 
+另外，`main/service/PROMPT.txt` 作为全局 service system 提示词，
+由 runtime 在收集 service system 时优先注入，再拼接各 service 的 `system(context)` 结果。
+建议把“所有 service 共用的规则”放在该文件中，把“单个 service 细节规则”放在 `services/<name>/PROMPT.txt`。
+
 ## Service Action 约定
 
 `Service` 使用 `actions` 对象声明能力：

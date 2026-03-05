@@ -155,6 +155,7 @@ const staticRootCommands = [
   restart.name(),
   "alias",
   "services",
+  "service",
   "help",
 ];
 const serviceRootCommands = getServiceRootCommandNames();

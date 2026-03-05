@@ -33,10 +33,13 @@ ShipMyAgent 内置了一个交互式 Web 界面，让你在浏览器中轻松管
 
 ### 功能特性
 
-- 💬 **Agent 对话** - 通过 Web 界面与 Agent 进行自然语言对话
-- 📋 **审批管理** - 查看和处理 Agent 的待审批操作（批准/拒绝）
-- 📊 **系统状态** - 实时查看 Agent 运行状态、任务数量、待审批数量
-- 📝 **日志查看** - 查看最近的运行日志
+- 💬 **Context 对话与历史** - 在多个 `contextId` 之间切换，查看完整消息历史并继续对话
+- 🧭 **多 Context 管理** - 一屏查看每个 context 的最新消息、更新时间与消息数量
+- ⚙️ **Services 状态** - 查看 service runtime 状态，并执行 `start/stop/restart`
+- 🗂️ **Task 可观测性** - 查看任务列表、执行记录、run 详情（`run.json / dialogue / result`）
+- 📝 **日志查看** - 查看最近运行日志，定位 task/service 问题
+
+> 当前版本默认全权限执行，Web 界面不再提供审批面板。
 
 ### 快速开始
 

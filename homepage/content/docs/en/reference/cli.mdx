@@ -95,6 +95,7 @@ sma services command <serviceName> <command> [--payload <json>]
 
 Notes:
 - `sma services` is daemon-only and requires an active local runtime (`sma start` or `sma run`)
+- `sma service` is an alias of `sma services` (for example: `sma service restart chat`)
 - Built-in command bridge supports `status|start|stop|restart` for every service
 - Service-specific command handling is optional; unsupported commands return a structured error
 

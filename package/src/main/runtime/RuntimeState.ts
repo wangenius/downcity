@@ -79,6 +79,10 @@ export type RuntimeState = RuntimeStateBase & {
 const DEFAULT_AGENT_PROFILE = `# Agent Role
 You are a helpful project assistant.`;
 const HOT_RELOAD_DEBOUNCE_MS = 300;
+const MAIN_SERVICE_PROMPT_FILE_URL = new URL(
+  "../service/PROMPT.txt",
+  import.meta.url,
+);
 
 let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
@@ -88,6 +92,26 @@ let serviceModel: LanguageModel | null = null;
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
 }
+
+/**
+ * 加载 main/service 全局提示词。
+ *
+ * 关键点（中文）
+ * - 这是所有 service 的共享行为约束，统一在 main 层收口。
+ * - 资产缺失时直接抛错，避免运行时静默丢失关键规则。
+ */
+function loadMainServicePrompt(): string {
+  try {
+    return fs.readFileSync(MAIN_SERVICE_PROMPT_FILE_URL, "utf-8").trim();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `failed to load main service prompt from ${MAIN_SERVICE_PROMPT_FILE_URL.pathname}: ${reason}`,
+    );
+  }
+}
+
+const MAIN_SERVICE_PROMPT = loadMainServicePrompt();
 
 /**
  * 读取 service 运行时模型（必填）。
@@ -181,6 +205,11 @@ export async function collectServiceSystemTexts(params?: {
 }): Promise<string[]> {
   const runtime = getServiceRuntimeState();
   const out: string[] = [];
+  const mainServicePrompt = normalizeSystemText(MAIN_SERVICE_PROMPT);
+  if (mainServicePrompt) {
+    // 关键点（中文）：先注入全局 service 规则，再注入具体 service 规则。
+    out.push(mainServicePrompt);
+  }
   const disabledServiceNamesInput = Array.isArray(params?.disabledServiceNames)
     ? params.disabledServiceNames
     : undefined;

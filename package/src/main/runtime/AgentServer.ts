@@ -28,6 +28,7 @@ import {
   registerAllServicesForServer,
   runServiceCommand,
 } from "@main/service/Manager.js";
+import { registerTuiApiRoutes } from "@main/runtime/TuiApi.js";
 
 /**
  * 启动参数。
@@ -194,6 +195,13 @@ export class AgentServer {
         success: true,
         services: listServiceRuntimes(),
       });
+    });
+
+    // TUI / WebUI API
+    registerTuiApiRoutes({
+      app: this.app,
+      getRuntimeState: () => getRuntimeState(),
+      getServiceRuntimeState: () => getServiceRuntimeState(),
     });
 
     // service runtime control

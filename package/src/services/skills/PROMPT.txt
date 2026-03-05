@@ -10,6 +10,18 @@
 - `unload`：给指定 `contextId` 卸载技能。
 - `pinned`：查看指定 `contextId` 已固定技能。
 
+## 操作方法（命令）
+- 常用 action（CLI）：
+  - `sma skill find <query>`
+  - `sma skill add <spec> [--global] [--yes] [--agent <agent>]`
+  - `sma skill list`
+  - `sma skill load <name> --context-id <contextId>`
+  - `sma skill unload <name> --context-id <contextId>`
+  - `sma skill pinned --context-id <contextId>`
+- runtime 管理：
+  - `sma service status skill`
+  - `sma service restart skill`
+
 ## 使用规范
 - 涉及会话级操作时（`load` / `unload` / `pinned`）必须提供有效 `contextId`。
 - 安装前优先 `find` 或 `list`，避免重复安装或错误 spec。

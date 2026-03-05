@@ -7,6 +7,19 @@
 - `context`：读取当前会话快照（可按 `chatKey` 或 `contextId` 查询）。
 - `extract_text`：从 assistant 消息结构中提取用户可见文本。
 
+## 操作方法（命令）
+- 常用 action（CLI）：
+  - `sma chat send --text '你好'`
+  - `sma chat send --stdin --chat-key <contextId>`
+  - `sma chat send --text-file <file> --chat-key <contextId>`
+  - `sma chat context`
+  - `sma chat context --chat-key <chatKey>`
+- `extract_text` 没有独立 CLI action，使用 command bridge：
+  - `sma service command chat extract_text --payload '{"assistantMessage":{...}}'`
+- runtime 管理：
+  - `sma service status chat`
+  - `sma service restart chat`
+
 ## 使用规范
 - 这是 Bash-first 聊天集成：用户可见内容必须通过执行 `sma chat send` 发送。
 - 对所有携带 chatKey 的用户消息，必须在关键节点调用 `sma chat send` 回复，不能只在内部推理而不回发：

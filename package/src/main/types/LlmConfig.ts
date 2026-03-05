@@ -11,14 +11,21 @@
  * Provider 类型枚举。
  *
  * 说明（中文）
- * - `custom` 表示 OpenAI-compatible 网关。
+ * - `open-compatible` 表示 OpenAI 兼容（Chat Completions）网关。
+ * - `open-responses` 表示 OpenAI Responses 兼容网关。
+ * - `moonshot` 表示 Moonshot(Kimi) 官方 OpenAI 兼容网关。
  */
 export type LlmProviderType =
   | "anthropic"
   | "openai"
   | "deepseek"
   | "gemini"
-  | "custom";
+  | "open-compatible"
+  | "open-responses"
+  | "moonshot"
+  | "xai"
+  | "huggingface"
+  | "openrouter";
 
 /**
  * 单个 provider 连接配置。
@@ -107,4 +114,3 @@ export interface LlmConfig {
    */
   logMessages?: boolean;
 }
-

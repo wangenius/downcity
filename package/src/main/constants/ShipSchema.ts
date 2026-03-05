@@ -121,7 +121,18 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
             properties: {
               type: {
                 type: "string",
-                enum: ["anthropic", "openai", "deepseek", "gemini", "custom"],
+                enum: [
+                  "anthropic",
+                  "openai",
+                  "deepseek",
+                  "gemini",
+                  "open-compatible",
+                  "open-responses",
+                  "moonshot",
+                  "xai",
+                  "huggingface",
+                  "openrouter",
+                ],
               },
               baseUrl: { type: "string" },
               apiKey: { type: "string" },

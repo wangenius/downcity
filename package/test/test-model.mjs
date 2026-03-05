@@ -143,8 +143,13 @@ function defaultBaseUrlByProvider(provider) {
   if (provider === "anthropic") return "https://api.anthropic.com/v1";
   if (provider === "openai") return "https://api.openai.com/v1";
   if (provider === "deepseek") return "https://api.deepseek.com/v1";
-  if (provider === "gemini") return "https://generativelanguage.googleapis.com/v1beta/openai";
-  if (provider === "custom") return "https://api.openai.com/v1";
+  if (provider === "gemini") return "https://generativelanguage.googleapis.com/v1beta";
+  if (provider === "open-compatible") return "https://api.openai.com/v1";
+  if (provider === "open-responses") return "https://api.openai.com/v1";
+  if (provider === "moonshot") return "https://api.moonshot.ai/v1";
+  if (provider === "xai") return "https://api.x.ai/v1";
+  if (provider === "huggingface") return "https://router.huggingface.co/v1";
+  if (provider === "openrouter") return "https://openrouter.ai/api/v1";
   return "";
 }
 
@@ -226,6 +231,60 @@ async function requestOpenAIResponses(params) {
   };
 }
 
+function extractOpenAIChatCompletionsText(payload) {
+  const choice = Array.isArray(payload?.choices) ? payload.choices[0] : undefined;
+  const content = choice?.message?.content;
+  if (typeof content === "string" && content.trim()) return content.trim();
+  if (Array.isArray(content)) {
+    const lines = [];
+    for (const part of content) {
+      if (!part || typeof part !== "object") continue;
+      if (typeof part.text === "string" && part.text.trim()) lines.push(part.text.trim());
+    }
+    return lines.join("\n").trim();
+  }
+  return "";
+}
+
+async function requestOpenAIChatCompletions(params) {
+  const endpoint = `${normalizeBaseUrl(params.baseUrl)}/chat/completions`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${params.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: params.model,
+      messages: [{ role: "user", content: params.prompt }],
+      max_tokens: params.maxOutputTokens,
+      stream: false,
+    }),
+  });
+
+  const rawText = await response.text();
+  let payload = null;
+  try {
+    payload = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      [
+        `http_status=${response.status}`,
+        `cfRay=${response.headers.get("cf-ray") || "-"}`,
+        `message=${toInlineText(rawText || response.statusText, 240)}`,
+      ].join(" "),
+    );
+  }
+
+  return {
+    text: extractOpenAIChatCompletionsText(payload),
+  };
+}
+
 async function requestAnthropic(params) {
   const baseUrlRaw = String(params.baseUrl || "").trim();
   const baseUrl = baseUrlRaw ? baseUrlRaw.replace(/\/+$/, "") : "https://api.anthropic.com/v1";
@@ -264,6 +323,63 @@ async function requestAnthropic(params) {
 
   return {
     text: extractAnthropicText(payload),
+  };
+}
+
+function extractGeminiText(payload) {
+  const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
+  const lines = [];
+  for (const candidate of candidates) {
+    const parts = candidate?.content?.parts;
+    if (!Array.isArray(parts)) continue;
+    for (const part of parts) {
+      if (typeof part?.text === "string" && part.text.trim()) lines.push(part.text.trim());
+    }
+  }
+  return lines.join("\n");
+}
+
+async function requestGemini(params) {
+  const endpoint = `${normalizeBaseUrl(params.baseUrl)}/models/${params.model}:generateContent`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-goog-api-key": params.apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: params.prompt }],
+        },
+      ],
+      generationConfig: {
+        maxOutputTokens: params.maxOutputTokens,
+      },
+    }),
+  });
+
+  const rawText = await response.text();
+  let payload = null;
+  try {
+    payload = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      [
+        `http_status=${response.status}`,
+        `cfRay=${response.headers.get("cf-ray") || "-"}`,
+        `message=${toInlineText(rawText || response.statusText, 240)}`,
+      ].join(" "),
+    );
+  }
+
+  return {
+    text: extractGeminiText(payload),
   };
 }
 
@@ -324,6 +440,24 @@ async function run() {
               prompt: options.prompt,
               maxOutputTokens: options.maxOutputTokens,
             })
+          : provider === "gemini"
+            ? await requestGemini({
+                baseUrl,
+                apiKey,
+                model,
+                prompt: options.prompt,
+                maxOutputTokens: options.maxOutputTokens,
+              })
+            : provider === "open-compatible" ||
+                provider === "openrouter" ||
+                provider === "moonshot"
+              ? await requestOpenAIChatCompletions({
+                  baseUrl,
+                  apiKey,
+                  model,
+                  prompt: options.prompt,
+                  maxOutputTokens: options.maxOutputTokens,
+                })
           : await requestOpenAIResponses({
               baseUrl,
               apiKey,

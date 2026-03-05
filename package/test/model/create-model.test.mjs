@@ -19,7 +19,7 @@ function createBaseConfig() {
       activeModel: "default",
       providers: {
         default: {
-          type: "custom",
+          type: "open-responses",
           baseUrl: "https://example.com/v1",
           apiKey: "test-api-key",
         },
@@ -28,6 +28,30 @@ function createBaseConfig() {
         default: {
           provider: "default",
           name: "gpt-5.2",
+        },
+      },
+      logMessages: false,
+    },
+  };
+}
+
+function createOpenCompatibleConfig() {
+  return {
+    name: "test-agent",
+    version: "1.0.0",
+    llm: {
+      activeModel: "default",
+      providers: {
+        default: {
+          type: "open-compatible",
+          baseUrl: "https://compatible.example.com/v1",
+          apiKey: "test-api-key",
+        },
+      },
+      models: {
+        default: {
+          provider: "default",
+          name: "gpt-4o-mini",
         },
       },
       logMessages: false,
@@ -59,13 +83,37 @@ function createGeminiConfig() {
   };
 }
 
+function createMoonshotConfig() {
+  return {
+    name: "test-agent",
+    version: "1.0.0",
+    llm: {
+      activeModel: "default",
+      providers: {
+        moonshot: {
+          type: "moonshot",
+          baseUrl: "",
+          apiKey: "test-moonshot-key",
+        },
+      },
+      models: {
+        default: {
+          provider: "moonshot",
+          name: "moonshot-v1-8k",
+        },
+      },
+      logMessages: false,
+    },
+  };
+}
+
 function resolveRequestUrl(input) {
   if (typeof input === "string") return input;
   if (input instanceof URL) return input.toString();
   return input.url;
 }
 
-test("createModel: custom provider can generate text with mocked responses endpoint", async () => {
+test("createModel: open-responses provider can generate text with mocked responses endpoint", async () => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -73,6 +121,7 @@ test("createModel: custom provider can generate text with mocked responses endpo
     mockFetchCalls.push({
       url: resolveRequestUrl(input),
       method: init?.method || "POST",
+      headers: init?.headers,
       body: typeof init?.body === "string" ? init.body : "",
     });
 
@@ -130,7 +179,7 @@ test("createModel: custom provider can generate text with mocked responses endpo
   }
 });
 
-test("createModel: gemini provider uses google openai-compatible default endpoint", async () => {
+test("createModel: open-compatible provider uses chat completions endpoint", async () => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -143,29 +192,143 @@ test("createModel: gemini provider uses google openai-compatible default endpoin
 
     return new Response(
       JSON.stringify({
-        id: "resp_1",
-        object: "response",
-        created_at: Math.floor(Date.now() / 1000),
-        status: "completed",
-        model: "gemini-2.5-pro",
-        output: [
+        id: "chatcmpl_1",
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: "gpt-4o-mini",
+        choices: [
           {
-            id: "msg_1",
-            type: "message",
-            role: "assistant",
-            content: [
-              {
-                type: "output_text",
-                text: "OK",
-                annotations: [],
-              },
-            ],
+            index: 0,
+            message: { role: "assistant", content: "OK" },
+            finish_reason: "stop",
           },
         ],
         usage: {
-          input_tokens: 1,
-          output_tokens: 1,
+          prompt_tokens: 1,
+          completion_tokens: 1,
           total_tokens: 2,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    const model = await createModel({ config: createOpenCompatibleConfig() });
+    const result = await generateText({
+      model,
+      prompt: "reply OK",
+      maxOutputTokens: 16,
+    });
+
+    assert.equal(result.text.trim(), "OK");
+    assert.equal(mockFetchCalls.length, 1);
+    assert.equal(
+      mockFetchCalls[0].url,
+      "https://compatible.example.com/v1/chat/completions",
+    );
+    assert.match(mockFetchCalls[0].body, /"model":"gpt-4o-mini"/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createModel: moonshot provider uses chat completions endpoint with default base url", async () => {
+  const originalFetch = globalThis.fetch;
+  const mockFetchCalls = [];
+
+  globalThis.fetch = async (input, init) => {
+    mockFetchCalls.push({
+      url: resolveRequestUrl(input),
+      method: init?.method || "POST",
+      headers: init?.headers,
+      body: typeof init?.body === "string" ? init.body : "",
+    });
+
+    return new Response(
+      JSON.stringify({
+        id: "chatcmpl_1",
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: "moonshot-v1-8k",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "OK" },
+            finish_reason: "stop",
+          },
+        ],
+        usage: {
+          prompt_tokens: 1,
+          completion_tokens: 1,
+          total_tokens: 2,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    const model = await createModel({ config: createMoonshotConfig() });
+    const result = await generateText({
+      model,
+      prompt: "reply OK",
+      maxOutputTokens: 16,
+    });
+
+    assert.equal(result.text.trim(), "OK");
+    assert.equal(mockFetchCalls.length, 1);
+    assert.equal(
+      mockFetchCalls[0].url,
+      "https://api.moonshot.ai/v1/chat/completions",
+    );
+    const requestHeaders = mockFetchCalls[0].headers || {};
+    const normalizedHeaders =
+      requestHeaders instanceof Headers
+        ? Object.fromEntries(requestHeaders.entries())
+        : requestHeaders;
+    assert.equal(normalizedHeaders.authorization, "Bearer test-moonshot-key");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createModel: gemini provider uses native google endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const mockFetchCalls = [];
+
+  globalThis.fetch = async (input, init) => {
+    mockFetchCalls.push({
+      url: resolveRequestUrl(input),
+      method: init?.method || "POST",
+      headers: init?.headers,
+      body: typeof init?.body === "string" ? init.body : "",
+    });
+
+    return new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: "OK",
+                },
+              ],
+            },
+            finishReason: "STOP",
+          },
+        ],
+        usageMetadata: {
+          promptTokenCount: 1,
+          candidatesTokenCount: 1,
+          totalTokenCount: 2,
         },
       }),
       {
@@ -185,11 +348,16 @@ test("createModel: gemini provider uses google openai-compatible default endpoin
 
     assert.equal(result.text.trim(), "OK");
     assert.equal(mockFetchCalls.length, 1);
-    assert.equal(
+    assert.match(
       mockFetchCalls[0].url,
-      "https://generativelanguage.googleapis.com/v1beta/openai/responses",
+      /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-2\.5-pro:generateContent$/,
     );
-    assert.match(mockFetchCalls[0].body, /"model":"gemini-2\.5-pro"/);
+    const requestHeaders = mockFetchCalls[0].headers || {};
+    const normalizedHeaders =
+      requestHeaders instanceof Headers
+        ? Object.fromEntries(requestHeaders.entries())
+        : requestHeaders;
+    assert.equal(normalizedHeaders["x-goog-api-key"], "test-gemini-key");
   } finally {
     globalThis.fetch = originalFetch;
   }

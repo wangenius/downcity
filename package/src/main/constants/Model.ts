@@ -2,25 +2,10 @@
  * LLM 预设常量。
  *
  * 关键点（中文）
- * - 管理 provider 默认 baseUrl 与 init 模型预设清单。
- * - 供 init 与运行时共享，避免散落硬编码。
+ * - 管理 init 模型预设清单。
+ * - 避免模型与 providerType 的映射散落硬编码。
  */
 import type { LlmProviderType } from "@main/types/LlmConfig.js";
-
-/**
- * Provider 默认 baseUrl。
- *
- * 关键点（中文）
- * - 仅在用户未显式配置 `llm.providers.<id>.baseUrl` 时兜底使用。
- * - `custom` 默认走 OpenAI 官方地址，便于快速接入 OpenAI-compatible 网关。
- */
-export const PROVIDER_DEFAULT_BASE_URLS: Record<LlmProviderType, string> = {
-  anthropic: "https://api.anthropic.com/v1",
-  openai: "https://api.openai.com/v1",
-  deepseek: "https://api.deepseek.com/v1",
-  gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
-  custom: "https://api.openai.com/v1",
-};
 
 /**
  * Init 可选模型预设。
@@ -84,9 +69,34 @@ export const MODEL_PRESETS: Record<
     title: "Gemini 2.5 Flash",
     providerType: "gemini",
   },
-  // 自定义模型（name/baseUrl 由环境变量填充）
-  custom: {
-    title: "Custom model",
-    providerType: "custom",
+  // xAI
+  "grok-3": {
+    title: "xAI Grok 3",
+    providerType: "xai",
+  },
+  // HuggingFace Router
+  "meta-llama/Llama-3.1-8B-Instruct": {
+    title: "HF Llama 3.1 8B",
+    providerType: "huggingface",
+  },
+  // OpenRouter
+  "openrouter/auto": {
+    title: "OpenRouter Auto",
+    providerType: "openrouter",
+  },
+  // Moonshot(Kimi)
+  "moonshot-v1-8k": {
+    title: "Moonshot v1 8k",
+    providerType: "moonshot",
+  },
+  // OpenAI-compatible（Chat Completions）
+  "open-compatible": {
+    title: "Open-compatible model",
+    providerType: "open-compatible",
+  },
+  // OpenAI-compatible（Responses）
+  "open-responses": {
+    title: "Open-responses model",
+    providerType: "open-responses",
   },
 };

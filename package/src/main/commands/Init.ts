@@ -40,7 +40,6 @@ import type { ShipConfig } from "@/main/runtime/Config.js";
 import { SHIP_JSON_SCHEMA } from "@main/constants/ShipSchema.js";
 import {
   MODEL_PRESETS,
-  PROVIDER_DEFAULT_BASE_URLS,
 } from "@main/constants/Model.js";
 import { DEFAULT_SHIP_JSON } from "@main/constants/Ship.js";
 import {
@@ -204,7 +203,12 @@ export async function initCommand(
         { title: "DeepSeek Chat", value: "deepseek-chat" },
         { title: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
         { title: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
-        { title: "Custom model", value: "custom" },
+        { title: "xAI Grok 3", value: "grok-3" },
+        { title: "HF Llama 3.1 8B", value: "meta-llama/Llama-3.1-8B-Instruct" },
+        { title: "OpenRouter Auto", value: "openrouter/auto" },
+        { title: "Moonshot v1 8k", value: "moonshot-v1-8k" },
+        { title: "Open-compatible model", value: "open-compatible" },
+        { title: "Open-responses model", value: "open-responses" },
       ],
       initial: 0,
     },
@@ -305,9 +309,11 @@ export async function initCommand(
   const selectedModel = response.model || "claude-sonnet-4-5";
   const modelTemplate =
     MODEL_PRESETS[selectedModel as keyof typeof MODEL_PRESETS] ||
-    MODEL_PRESETS.custom;
+    MODEL_PRESETS["open-compatible"];
   const activeModelId = "default";
   const providerId = "default";
+  const useCustomModelName =
+    selectedModel === "open-compatible" || selectedModel === "open-responses";
 
   // 关键点（中文）：init 默认生成“1 provider + 1 model”的多模型结构，后续用户可按需扩展。
   const llmConfig: ShipConfig["llm"] = {
@@ -315,17 +321,14 @@ export async function initCommand(
     providers: {
       [providerId]: {
         type: modelTemplate.providerType,
-        baseUrl:
-          selectedModel === "custom"
-            ? LLM_BASE_URL
-            : PROVIDER_DEFAULT_BASE_URLS[modelTemplate.providerType],
+        ...(useCustomModelName ? { baseUrl: LLM_BASE_URL } : {}),
         apiKey: LLM_API_KEY,
       },
     },
     models: {
       [activeModelId]: {
         provider: providerId,
-        name: selectedModel === "custom" ? LLM_MODEL : selectedModel,
+        name: useCustomModelName ? LLM_MODEL : selectedModel,
         temperature: 0.7,
       },
     },
@@ -408,10 +411,10 @@ export async function initCommand(
     "LLM_API_KEY=",
   ];
 
-  if (selectedModel === "custom") {
+  if (useCustomModelName) {
     envLines.push(
       "",
-      "# Custom model（OpenAI-compatible）",
+      "# Open-compatible / Open-responses model",
       "LLM_MODEL=",
       "LLM_BASE_URL=",
     );

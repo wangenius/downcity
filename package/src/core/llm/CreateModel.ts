@@ -8,7 +8,14 @@
  */
 
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createHuggingFace } from "@ai-sdk/huggingface";
+import { createMoonshotAI } from "@ai-sdk/moonshotai";
+import { createOpenResponses } from "@ai-sdk/open-responses";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createXai } from "@ai-sdk/xai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { type LanguageModel } from "ai";
 import { createLlmLoggingFetch } from "@utils/logger/Fetch.js";
 import { getLogger } from "@utils/logger/Logger.js";
@@ -20,13 +27,21 @@ type ModelLogContext = {
   requestId?: string;
 };
 
-const DEFAULT_BASE_URL_BY_PROVIDER: Record<LlmProviderType, string> = {
-  anthropic: "https://api.anthropic.com/v1",
-  openai: "https://api.openai.com/v1",
-  deepseek: "https://api.deepseek.com/v1",
-  gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
-  custom: "https://api.openai.com/v1",
-};
+function buildResponsesUrl(baseUrl?: string): string {
+  const trimmed = String(baseUrl || "")
+    .trim()
+    .replace(/\/+$/, "");
+  if (!trimmed) return "https://api.openai.com/v1/responses";
+  if (trimmed.endsWith("/responses")) return trimmed;
+  return `${trimmed}/responses`;
+}
+
+function normalizeOptionalBaseUrl(value: string | undefined): string | undefined {
+  const trimmed = String(value || "")
+    .trim()
+    .replace(/\/+$/, "");
+  return trimmed || undefined;
+}
 
 function resolveEnvPlaceholder(value: string | undefined): string | undefined {
   if (!value) return value;
@@ -56,6 +71,26 @@ function resolveApiKeyFallback(providerType: LlmProviderType): string | undefine
       process.env.API_KEY
     );
   }
+  if (providerType === "xai") {
+    return process.env.XAI_API_KEY || process.env.API_KEY;
+  }
+  if (providerType === "huggingface") {
+    return (
+      process.env.HUGGINGFACE_API_KEY ||
+      process.env.HF_TOKEN ||
+      process.env.API_KEY
+    );
+  }
+  if (providerType === "openrouter") {
+    return process.env.OPENROUTER_API_KEY || process.env.API_KEY;
+  }
+  if (providerType === "moonshot") {
+    return (
+      process.env.MOONSHOT_API_KEY ||
+      process.env.KIMI_API_KEY ||
+      process.env.API_KEY
+    );
+  }
   return process.env.OPENAI_API_KEY || process.env.API_KEY;
 }
 
@@ -64,7 +99,12 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
   if (value === "openai") return value;
   if (value === "deepseek") return value;
   if (value === "gemini") return value;
-  if (value === "custom") return value;
+  if (value === "open-compatible") return value;
+  if (value === "open-responses") return value;
+  if (value === "moonshot") return value;
+  if (value === "xai") return value;
+  if (value === "huggingface") return value;
+  if (value === "openrouter") return value;
   return null;
 }
 
@@ -120,10 +160,9 @@ export async function createModel(input: {
     throw Error("No LLM model name configured");
   }
 
-  const resolvedBaseUrlRaw = resolveEnvPlaceholder(selectedProviderConfig.baseUrl);
-  const resolvedBaseUrl = String(
-    resolvedBaseUrlRaw || DEFAULT_BASE_URL_BY_PROVIDER[providerType],
-  ).trim();
+  const resolvedBaseUrl = normalizeOptionalBaseUrl(
+    resolveEnvPlaceholder(selectedProviderConfig.baseUrl),
+  );
 
   let resolvedApiKey = resolveEnvPlaceholder(selectedProviderConfig.apiKey);
   if (!resolvedApiKey) {
@@ -147,13 +186,80 @@ export async function createModel(input: {
   if (providerType === "anthropic") {
     const anthropicProvider = createAnthropic({
       apiKey: resolvedApiKey,
+      baseURL: resolvedBaseUrl,
       fetch: loggingFetch as typeof fetch,
     });
     return anthropicProvider(resolvedModel);
   }
 
+  if (providerType === "gemini") {
+    const googleProvider = createGoogleGenerativeAI({
+      apiKey: resolvedApiKey,
+      baseURL: resolvedBaseUrl,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return googleProvider(resolvedModel);
+  }
+
+  if (providerType === "open-responses") {
+    const responsesProvider = createOpenResponses({
+      url: buildResponsesUrl(resolvedBaseUrl),
+      name: providerKey,
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return responsesProvider(resolvedModel);
+  }
+
+  if (providerType === "open-compatible") {
+    const compatibleBaseUrl = resolvedBaseUrl || "https://api.openai.com/v1";
+    const compatibleProvider = createOpenAICompatible({
+      name: providerKey,
+      baseURL: compatibleBaseUrl,
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return compatibleProvider(resolvedModel);
+  }
+
+  if (providerType === "moonshot") {
+    const moonshotProvider = createMoonshotAI({
+      baseURL: resolvedBaseUrl,
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return moonshotProvider(resolvedModel);
+  }
+
+  if (providerType === "xai") {
+    const xaiProvider = createXai({
+      baseURL: resolvedBaseUrl,
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return xaiProvider(resolvedModel);
+  }
+
+  if (providerType === "huggingface") {
+    const huggingFaceProvider = createHuggingFace({
+      baseURL: resolvedBaseUrl,
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return huggingFaceProvider(resolvedModel);
+  }
+
+  if (providerType === "openrouter") {
+    const openRouterProvider = createOpenRouter({
+      baseURL: resolvedBaseUrl,
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return openRouterProvider(resolvedModel);
+  }
+
   // OpenAI-compatible providers（中文）：
-  // - openai / deepseek / gemini / custom 统一走 Responses 协议适配层。
+  // - openai / deepseek 统一走 OpenAI SDK（Responses/Completions 由 SDK 自适配）。
   const openaiCompatibleProvider = createOpenAI({
     apiKey: resolvedApiKey,
     baseURL: resolvedBaseUrl,

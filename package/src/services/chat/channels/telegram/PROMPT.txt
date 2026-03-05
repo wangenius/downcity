@@ -6,9 +6,17 @@
 
 ## 使用约束
 - 当目标是 Telegram 对话时，回复内容通过 `chat send` 正常发送即可，适配器会完成平台投递。
+- 若上下文里存在 `messageId`，`chat send` 会自动走 `reply_to_message`，优先形成“回复某条消息”的结构。
+- 轻量确认（如“收到/认可/态度”）可使用 `chat react` 贴表情，而不是发送冗余文本。
 - 群聊场景存在权限与 follow-up 窗口策略；如果用户反馈“机器人没响应”，优先检查是否触发群聊权限限制。
 - 旧消息会在启动时执行 pending drain 入队审计，避免重启后补回复历史消息。
 
 ## 附件能力
 - 支持在回复正文中使用 `@attach` 指令发送附件（document/photo/voice/audio）。
 - 附件路径必须是项目内可访问的相对路径。
+- 常用格式：
+  - `@attach document <相对路径> | 可选说明`
+  - `@attach photo <相对路径> | 可选说明`
+  - `@attach voice <相对路径> | 可选说明`
+  - `@attach audio <相对路径> | 可选说明`
+- 如果回复中包含多个附件，按行写多个 `@attach` 指令。

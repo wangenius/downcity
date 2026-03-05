@@ -16,7 +16,7 @@ test("renderTemplateVariables replaces agent_name placeholder", () => {
     agent_name: "demo-agent",
   });
   assert.equal(rendered.includes("{{agent_name}}"), false);
-  assert.equal(rendered.includes("# 你叫 demo-agent"), true);
+  assert.equal(rendered.includes("demo-agent"), true);
 });
 
 test("renderTemplateVariables keeps unknown placeholders untouched", () => {

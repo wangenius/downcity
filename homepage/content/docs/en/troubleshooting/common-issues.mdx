@@ -125,6 +125,16 @@ nvm use 20
    shipmyagent test-llm
    ```
 
+### "Agent stops immediately after a runtime error"
+
+**Problem**: You want the Agent to continue execution after an error, instead of stopping right away.
+
+**Current behavior**:
+
+1. Runtime now hands the error back to the Agent as a follow-up message and asks it to continue.
+2. To avoid infinite loops, error handover is capped (currently 2 rounds); after that, the run returns failure.
+3. `context length` errors still use the dedicated compaction retry flow.
+
 ### "Port 3000 already in use"
 
 **Problem**: The default port is occupied by another service.

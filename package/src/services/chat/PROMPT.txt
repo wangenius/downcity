@@ -2,8 +2,35 @@
 
 你可以通过 `chat` service 完成聊天通道发送与会话上下文读取。
 
+## Runtime context
+- Project root: {{project_root}}
+- ContextId: {{context_id}}
+- Request ID: {{request_id}}
+
+User-facing output rules:
+- Reply in natural language.
+- Do NOT paste raw tool outputs or JSON logs; summarize them.
+- Deliver user-visible replies by running `sma chat send` via shell tools.
+- For lightweight acknowledgement/attitude (e.g., "收到", "同意", "赞同"), you MAY use `sma chat react` instead of sending a full text.
+- For every inbound chatKey (telegram/feishu/qq), you MUST call `sma chat send` at key milestones: start (if work is not instant), blocked/error (with required user input), and final outcome.
+- Before ending a run, verify the requesting chatKey has at least one successful `sma chat send`; if not, send one concise final reply immediately.
+- If a task involves multiple chatKeys, every targeted chatKey must receive milestone replies; use `--chat-key <contextId>` for non-current contexts.
+- IMPORTANT: For a single user message, prefer a single `sma chat send` command unless user asks for follow-ups.
+- IMPORTANT: Keep replies compact and avoid consecutive blank lines (`\n\n`) whenever possible.
+- IMPORTANT: Use single quotes for `--text` by default, e.g. `sma chat send --text 'hello'`.
+- IMPORTANT: For multi-line content, use `cat <<'EOF' | sma chat send --stdin [--chat-key <contextId>] ... EOF`.
+- IMPORTANT: Escape shell-sensitive characters in `--text` (especially backticks and single quotes).
+
+## 入站消息结构（仅供内部理解）
+- 每条入队的用户消息都带有如下结构：
+  - 顶部是 `<info>...</info>`，可能包含渠道、contextId、chatId、userId、username、messageId 等元信息。
+  - 底部是用户正文。
+- `<info>` 仅用于帮助你理解上下文来源与路由信息。
+- 不要把 `<info>` 原样回传给用户；对外只输出用户可读结论。
+
 ## 可用 action
 - `send`：发送文本到目标 `chatKey`。
+- `react`：给目标消息贴表情（当前主要用于 Telegram）。
 - `context`：读取当前会话快照（可按 `chatKey` 或 `contextId` 查询）。
 - `history`：读取会话历史事件（按 `contextId`/`chatKey`，支持方向与时间窗口过滤）。
 
@@ -14,6 +41,8 @@
   - `sma chat send --text '今晚八点发送' --time '2026-03-05T20:00:00+08:00'`
   - `sma chat send --stdin --chat-key <contextId>`
   - `sma chat send --text-file <file> --chat-key <contextId>`
+  - `sma chat react --emoji '👍'`
+  - `sma chat react --emoji '🔥' --chat-key <contextId> --message-id <id>`
   - `sma chat context`
   - `sma chat context --chat-key <chatKey>`
   - `sma chat history --limit 30`
@@ -25,14 +54,10 @@
 
 ## 使用规范
 - 这是 Bash-first 聊天集成：用户可见内容必须通过执行 `sma chat send` 发送。
-- 对所有携带 chatKey 的用户消息，必须在关键节点调用 `sma chat send` 回复，不能只在内部推理而不回发：
-  - 起始确认：当任务不是立即可答（需要执行命令或等待）时，先发一条已开始处理。
-  - 阻塞或失败：遇到权限不足、参数缺失、外部依赖失败时，立即告知卡点和需要用户提供的信息。
-  - 最终结果：任务完成后必须发送最终结论；若本轮尚未成功回发，结束前必须补发一次简明结果。
-- 涉及多个 `chatKey` 时，每个被操作的 `chatKey` 都要在关键节点收到回复；给非当前对话发送时必须显式使用 `--chat-key <contextId>`。
-- 不要为了补充说明重复多次执行 `sma chat send`，避免刷屏。
 - 优先使用 `send` 输出用户可见结果，正文应简洁、可直接发送。
+- 当只需表达“已收到/认可/态度”时，可优先使用 `react`，避免发送冗余文本。
 - 调用 `send` 时必须保证 `chatKey` 可解析（显式传参或可从上下文推导）。
+- 调用 `react` 时尽量提供（或确保可回填）`messageId`，这样平台可精确贴到目标消息。
 - 默认使用单引号包裹 `--text`，例如：`sma chat send --text '你好'`。
 - `send` 支持 `--delay <ms>`（非负整数，毫秒）用于延迟发送。
 - `send` 支持 `--time <time>`（Unix 时间戳秒/毫秒或 ISO 时间）用于定时发送。
@@ -51,11 +76,3 @@
 - `contextId` 是系统内部唯一定位符（跨会话投递唯一 key），通常由 `channel + targetId (+ 线程信息)` 生成。
 - 给当前对话回复可直接使用 `sma chat send --text '...'`（可不传 `--chat-key`，优先读取 `SMA_CTX_CONTEXT_ID`）。
 - 给其他 context 发送时，使用 `sma chat send --chat-key <contextId> --text '...'`。
-
-## Telegram 附件
-- 在 Telegram 对话中可使用附件指令发送文件：
-  - `@attach document <相对路径> | 可选说明`
-  - `@attach photo <相对路径> | 可选说明`
-  - `@attach voice <相对路径> | 可选说明`
-  - `@attach audio <相对路径> | 可选说明`
-- 附件路径必须位于项目目录内。

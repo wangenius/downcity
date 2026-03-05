@@ -17,4 +17,7 @@ export interface PromptTemplateVariables {
   currentTime: string;
   location: string;
   projectPath: string;
+  projectRoot: string;
+  contextId: string;
+  requestId: string;
 }

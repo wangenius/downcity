@@ -10,7 +10,6 @@ import {
   type TelegramApiResponse,
   type TelegramAttachmentType,
 } from "./Shared.js";
-import type { ChatDispatchAction } from "@services/chat/types/ChatDispatcher.js";
 
 
 /**
@@ -159,13 +158,17 @@ export class TelegramApiClient {
   async sendMessage(
     chatId: string,
     text: string,
-    opts?: { messageThreadId?: number },
+    opts?: { messageThreadId?: number; replyToMessageId?: number },
   ): Promise<void> {
     const parsed = parseTelegramAttachments(sanitizeChatText(text));
     const chunks = splitTelegramMessage(parsed.text);
     const message_thread_id =
       typeof opts?.messageThreadId === "number"
         ? opts.messageThreadId
+        : undefined;
+    const reply_to_message_id =
+      typeof opts?.replyToMessageId === "number" && opts.replyToMessageId > 0
+        ? opts.replyToMessageId
         : undefined;
     for (const chunk of chunks) {
       if (!chunk) continue;
@@ -175,6 +178,7 @@ export class TelegramApiClient {
           text: chunk,
           parse_mode: "Markdown",
           ...(message_thread_id ? { message_thread_id } : {}),
+          ...(reply_to_message_id ? { reply_to_message_id } : {}),
         });
       } catch {
         // Fallback to plain text (Markdown is strict and often fails)
@@ -183,6 +187,7 @@ export class TelegramApiClient {
             chat_id: chatId,
             text: chunk,
             ...(message_thread_id ? { message_thread_id } : {}),
+            ...(reply_to_message_id ? { reply_to_message_id } : {}),
           });
         } catch (error2) {
           this.logger.error(`Failed to send message: ${String(error2)}`);
@@ -194,6 +199,7 @@ export class TelegramApiClient {
       try {
         await this.sendAttachment(chatId, att, {
           messageThreadId: message_thread_id,
+          replyToMessageId: reply_to_message_id,
         });
       } catch (e) {
         try {
@@ -201,6 +207,7 @@ export class TelegramApiClient {
             chat_id: chatId,
             text: `❌ Failed to send ${att.type}: ${String(e)}`,
             ...(message_thread_id ? { message_thread_id } : {}),
+            ...(reply_to_message_id ? { reply_to_message_id } : {}),
           });
         } catch (e2) {
           this.logger.error(
@@ -246,7 +253,7 @@ export class TelegramApiClient {
    */
   async sendChatAction(
     chatId: string,
-    action: ChatDispatchAction,
+    action: "typing",
     opts?: { messageThreadId?: number },
   ): Promise<void> {
     const message_thread_id =
@@ -260,14 +267,41 @@ export class TelegramApiClient {
     });
   }
 
+  /**
+   * 给指定消息贴表情反应。
+   *
+   * 关键点（中文）
+   * - 当前仅支持 emoji 反应类型（Telegram `type=emoji`）。
+   */
+  async setMessageReaction(
+    chatId: string,
+    messageId: number,
+    opts?: { emoji?: string; isBig?: boolean },
+  ): Promise<void> {
+    const emoji =
+      typeof opts?.emoji === "string" && opts.emoji.trim()
+        ? opts.emoji.trim()
+        : "👍";
+    await this.requestJson("setMessageReaction", {
+      chat_id: chatId,
+      message_id: messageId,
+      reaction: [{ type: "emoji", emoji }],
+      ...(opts?.isBig === true ? { is_big: true } : {}),
+    });
+  }
+
   private async sendAttachment(
     chatId: string,
     att: { type: TelegramAttachmentType; pathOrUrl: string; caption?: string },
-    opts?: { messageThreadId?: number },
+    opts?: { messageThreadId?: number; replyToMessageId?: number },
   ): Promise<void> {
     const message_thread_id =
       typeof opts?.messageThreadId === "number"
         ? opts.messageThreadId
+        : undefined;
+    const reply_to_message_id =
+      typeof opts?.replyToMessageId === "number" && opts.replyToMessageId > 0
+        ? opts.replyToMessageId
         : undefined;
     const caption =
       typeof att.caption === "string" && att.caption.trim()
@@ -300,6 +334,7 @@ export class TelegramApiClient {
         [field]: src,
         ...(caption ? { caption } : {}),
         ...(message_thread_id ? { message_thread_id } : {}),
+        ...(reply_to_message_id ? { reply_to_message_id } : {}),
       });
       return;
     }
@@ -324,6 +359,8 @@ export class TelegramApiClient {
     if (caption) form.set("caption", caption);
     if (message_thread_id)
       form.set("message_thread_id", String(message_thread_id));
+    if (reply_to_message_id)
+      form.set("reply_to_message_id", String(reply_to_message_id));
 
     const method =
       att.type === "photo"

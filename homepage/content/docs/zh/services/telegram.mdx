@@ -107,6 +107,8 @@ shipmyagent start
 - 群聊场景下，运行时可能会限制可对话的人（例如仅发起人/群管理员），以避免被滥用。
 - 群里发送文件时，如需 `@bot`，请把 `@bot` 写在 **caption** 里，或直接用“回复 bot 消息”的方式发送文件。
 - Agent 执行期间会周期性发送 `sendChatAction(typing)`，你会看到 Telegram 的“正在输入”提示，直到结果发出。
+- 发送侧如果带有 `messageId`（来自 chat 上下文），ShipMyAgent 会自动使用 `reply_to_message`，在 Telegram 里形成明确的“回复某条消息”。
+- 轻量确认可使用 `sma chat react --emoji '👍'` 给目标消息贴表情（支持 `--big`）。
 
 ## 常见问题排查
 

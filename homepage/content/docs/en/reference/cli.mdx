@@ -35,6 +35,7 @@ Starting from this version, `chat / skill / task` are registered as service comm
 
 ```bash
 sma chat send --text "Done" [--chat-key <chatKey>] [--delay <ms>] [--time <time>]
+sma chat react [--emoji <emoji>] [--message-id <id>] [--big] [--chat-key <chatKey>]
 sma chat context
 sma chat history [--chat-key <chatKey>] [--context-id <contextId>]
   [--limit <n>] [--direction all|inbound|outbound]
@@ -46,6 +47,8 @@ Notes:
 - `--delay <ms>` is optional and must be a non-negative integer; message dispatch is delayed by that many milliseconds
 - `--time <time>` is optional for scheduled send; supports Unix timestamp (seconds/ms) or ISO datetime string
 - `--delay` and `--time` are mutually exclusive
+- `sma chat react` adds an emoji reaction (currently mainly for Telegram); default `--emoji` is `👍`
+- `--message-id` is optional for `sma chat react`; when omitted, runtime tries the latest inbound `messageId` from that `chatKey`
 - Typical flow: the agent calls `sma chat send` via `exec_command`
 - `sma chat` calls local daemon API; start runtime first via `sma start` or `sma run`
 - `sma chat history` returns the latest `30` events by default and supports direction/time-window filters

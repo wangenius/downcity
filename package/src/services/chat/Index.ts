@@ -14,6 +14,7 @@ import type { Command } from "commander";
 import {
   resolveChatContextSnapshot,
   resolveChatKey,
+  sendChatActionByChatKey,
   sendChatTextByChatKey,
 } from "./Action.js";
 import { readChatHistory } from "./runtime/ChatHistoryStore.js";
@@ -27,7 +28,7 @@ import type {
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { ChatHistoryEventV1 } from "./types/ChatHistory.js";
-import type { ChatHistoryRequest } from "./types/ChatCommand.js";
+import type { ChatHistoryRequest, ChatReactRequest } from "./types/ChatCommand.js";
 import type { TelegramBot } from "./channels/telegram/Bot.js";
 import type { FeishuBot } from "./channels/feishu/Feishu.js";
 import type { QQBot } from "./channels/qq/QQ.js";
@@ -51,6 +52,7 @@ type ChatContextActionPayload = {
 };
 
 type ChatHistoryActionPayload = ChatHistoryRequest;
+type ChatReactActionPayload = ChatReactRequest;
 
 const CHAT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
 const TELEGRAM_PROMPT_FILE_URL = new URL(
@@ -549,6 +551,93 @@ async function executeChatSendAction(params: {
   };
 }
 
+function mapChatReactCommandInput(
+  input: ServiceActionCommandInput,
+): ChatReactActionPayload {
+  const chatKey = resolveChatKey({
+    chatKey: getStringOpt(input.opts, "chatKey"),
+  });
+  if (!chatKey) {
+    throw new Error(
+      "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CHAT_KEY is injected in current shell context.",
+    );
+  }
+
+  const emoji = getStringOpt(input.opts, "emoji");
+  const messageId = getStringOpt(input.opts, "messageId");
+  const big = getBooleanOpt(input.opts, "big");
+  return {
+    chatKey,
+    ...(emoji ? { emoji } : {}),
+    ...(messageId ? { messageId } : {}),
+    ...(big ? { big: true } : {}),
+  };
+}
+
+function mapChatReactApiInput(body: JsonValue): ChatReactActionPayload {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error("Invalid JSON body");
+  }
+  const payload = body as JsonObject;
+  const chatKey =
+    typeof payload.chatKey === "string" ? payload.chatKey.trim() : undefined;
+  const emoji = typeof payload.emoji === "string" ? payload.emoji.trim() : undefined;
+  const messageId =
+    typeof payload.messageId === "string" || typeof payload.messageId === "number"
+      ? String(payload.messageId).trim()
+      : undefined;
+  const big = payload.big === true;
+  return {
+    ...(chatKey ? { chatKey } : {}),
+    ...(emoji ? { emoji } : {}),
+    ...(messageId ? { messageId } : {}),
+    ...(big ? { big: true } : {}),
+  };
+}
+
+async function executeChatReactAction(params: {
+  context: ServiceRuntime;
+  payload: ChatReactActionPayload;
+}) {
+  const chatKey = resolveChatKey({
+    chatKey: params.payload.chatKey,
+    context: params.context,
+  });
+  if (!chatKey) {
+    return {
+      success: false,
+      error: "Missing chatKey",
+    };
+  }
+
+  const messageId = String(params.payload.messageId || "").trim() || undefined;
+  const result = await sendChatActionByChatKey({
+    context: params.context,
+    chatKey,
+    action: "react",
+    messageId,
+    reactionEmoji: params.payload.emoji,
+    reactionIsBig: params.payload.big === true,
+  });
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error || "chat react failed",
+    };
+  }
+  return {
+    success: true,
+    data: {
+      chatKey: result.chatKey || chatKey,
+      ...(messageId ? { messageId } : {}),
+      ...(typeof params.payload.emoji === "string" && params.payload.emoji.trim()
+        ? { emoji: params.payload.emoji.trim() }
+        : {}),
+      ...(params.payload.big === true ? { big: true } : {}),
+    },
+  };
+}
+
 export const chatService: Service = {
   name: "chat",
   system: (context) =>
@@ -586,6 +675,34 @@ export const chatService: Service = {
         return executeChatSendAction({
           context: params.context,
           payload: params.payload as ChatSendActionPayload,
+        });
+      },
+    },
+    react: {
+      command: {
+        description: "给目标消息贴表情（当前仅 Telegram 支持）",
+        configure(command: Command) {
+          command
+            .option("--emoji <emoji>", "表情字符（默认 👍）")
+            .option("--big", "使用大表情效果（Telegram is_big）", false)
+            .option("--message-id <id>", "目标消息 ID（默认尝试从 chat meta 回填）")
+            .option(
+              "--chat-key <chatKey>",
+              "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）",
+            );
+        },
+        mapInput: mapChatReactCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatReactApiInput(await c.req.json());
+        },
+      },
+      async execute(params) {
+        return executeChatReactAction({
+          context: params.context,
+          payload: params.payload as ChatReactActionPayload,
         });
       },
     },

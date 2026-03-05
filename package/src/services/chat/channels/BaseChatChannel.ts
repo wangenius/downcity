@@ -25,6 +25,56 @@ function stripUndefinedMeta(meta: ChannelUserMessageMeta): JsonObject {
 }
 
 /**
+ * 规范化 `<info>` 字段值，避免换行/标签字符破坏结构。
+ */
+function normalizeInfoValue(value: unknown): string {
+  const text = String(value ?? "").replace(/\r?\n/g, " ").trim();
+  if (!text) return "";
+  return text.replace(/</g, "&#60;").replace(/>/g, "&#62;");
+}
+
+/**
+ * 构造“入队 user message”文本：
+ * - 顶部 `<info>...</info>`：供 Agent 了解上下文元信息
+ * - 下方正文：用户原始消息
+ *
+ * 关键点（中文）
+ * - 仅用于执行类入队（exec），确保模型始终能读取统一元信息。
+ * - `<info>` 是内部语义，不应在对外回复中原样复述。
+ */
+function buildQueuedUserMessageWithInfo(params: {
+  channel: ChatDispatchChannel;
+  contextId: string;
+  chatKey: string;
+  chatId: string;
+  chatType?: string;
+  threadId?: number;
+  messageId?: string;
+  userId?: string;
+  username?: string;
+  text: string;
+}): string {
+  const infoLines = [
+    `channel: ${normalizeInfoValue(params.channel)}`,
+    `context_id: ${normalizeInfoValue(params.contextId)}`,
+    `chat_key: ${normalizeInfoValue(params.chatKey)}`,
+    `chat_id: ${normalizeInfoValue(params.chatId)}`,
+    `chat_type: ${normalizeInfoValue(params.chatType || "unknown")}`,
+    `thread_id: ${normalizeInfoValue(
+      typeof params.threadId === "number" ? String(params.threadId) : "none",
+    )}`,
+    `message_id: ${normalizeInfoValue(params.messageId || "unknown")}`,
+    `user_id: ${normalizeInfoValue(params.userId || "unknown")}`,
+    `username: ${normalizeInfoValue(params.username || "unknown")}`,
+    `received_at: ${new Date().toISOString()}`,
+  ];
+  const infoBlock = `<info>\n${infoLines.join("\n")}\n</info>`;
+  const body = String(params.text ?? "").trim();
+  if (!body) return infoBlock;
+  return `${infoBlock}\n\n${body}`;
+}
+
+/**
  * Channel chatKey 计算入参。
  *
  * 说明（中文）
@@ -44,6 +94,8 @@ export type ChannelSendTextParams = ChannelChatKeyParams & {
 
 export type ChannelSendActionParams = ChannelChatKeyParams & {
   action: ChatDispatchAction;
+  reactionEmoji?: string;
+  reactionIsBig?: boolean;
 };
 
 /**
@@ -160,6 +212,8 @@ export abstract class BaseChatChannel {
         messageThreadId: params.messageThreadId,
         chatType: params.chatType,
         messageId: params.messageId,
+        reactionEmoji: params.reactionEmoji,
+        reactionIsBig: params.reactionIsBig,
       });
       return { success: true };
     } catch (e) {
@@ -336,11 +390,24 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
     });
 
+    const queuedText = buildQueuedUserMessageWithInfo({
+      channel: this.channel,
+      contextId: chatKey,
+      chatKey,
+      chatId: msg.chatId,
+      chatType: msg.chatType,
+      threadId: msg.messageThreadId,
+      messageId: msg.messageId,
+      userId: msg.userId,
+      username: msg.username,
+      text: msg.text,
+    });
+
     await this.appendInboundHistory({
       contextId: chatKey,
       chatId: msg.chatId,
       ingressKind: "exec",
-      text: msg.text,
+      text: queuedText,
       targetType: msg.chatType,
       threadId: msg.messageThreadId,
       messageId: msg.messageId,
@@ -363,7 +430,7 @@ export abstract class BaseChatChannel {
       channel: this.channel,
       targetId: msg.chatId,
       contextId: chatKey,
-      text: msg.text,
+      text: queuedText,
       targetType: msg.chatType,
       threadId: msg.messageThreadId,
       messageId: msg.messageId,

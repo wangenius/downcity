@@ -10,7 +10,10 @@
  */
 
 import { getChatSender } from "./ChatSendRegistry.js";
-import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import type {
+  ChatDispatchAction,
+  ChatDispatchChannel,
+} from "@services/chat/types/ChatDispatcher.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { readChatMetaByContextId } from "./ChatMetaStore.js";
 
@@ -174,5 +177,60 @@ export async function sendTextByChatKey(params: {
     ...(typeof messageThreadId === "number" ? { messageThreadId } : {}),
     ...(typeof chatType === "string" && chatType ? { chatType } : {}),
     ...(typeof messageId === "string" && messageId ? { messageId } : {}),
+  });
+}
+
+/**
+ * 按 chatKey 发送平台动作（typing/react）。
+ *
+ * 流程（中文）
+ * 1) 解析 chatKey（失败时回退 chat meta）并定位 channel dispatcher
+ * 2) 合并目标元信息与显式参数（显式 messageId 优先）
+ * 3) 调用 dispatcher.sendAction
+ */
+export async function sendActionByChatKey(params: {
+  context: ServiceRuntime;
+  chatKey: string;
+  action: ChatDispatchAction;
+  messageId?: string;
+  reactionEmoji?: string;
+  reactionIsBig?: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+  const context = params.context;
+  const chatKey = String(params.chatKey || "").trim();
+  if (!chatKey) return { success: false, error: "Missing chatKey" };
+  if (!params.action) return { success: false, error: "Missing action" };
+
+  const target = await resolveDispatchTarget({ context, chatKey });
+  if (!target) {
+    return {
+      success: false,
+      error: `Unsupported chatKey/contextId for dispatch: ${chatKey}`,
+    };
+  }
+
+  const dispatcher = getChatSender(target.channel);
+  if (!dispatcher || typeof dispatcher.sendAction !== "function") {
+    return {
+      success: false,
+      error: `No action dispatcher registered for channel: ${target.channel}`,
+    };
+  }
+
+  const messageId = String(params.messageId || "").trim() || target.messageId;
+  return dispatcher.sendAction({
+    chatId: target.chatId,
+    action: params.action,
+    ...(typeof target.messageThreadId === "number"
+      ? { messageThreadId: target.messageThreadId }
+      : {}),
+    ...(typeof target.chatType === "string" && target.chatType
+      ? { chatType: target.chatType }
+      : {}),
+    ...(typeof messageId === "string" && messageId ? { messageId } : {}),
+    ...(typeof params.reactionEmoji === "string" && params.reactionEmoji.trim()
+      ? { reactionEmoji: params.reactionEmoji.trim() }
+      : {}),
+    ...(params.reactionIsBig === true ? { reactionIsBig: true } : {}),
   });
 }

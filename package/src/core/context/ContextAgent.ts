@@ -36,6 +36,8 @@ import type { ContextStore } from "./ContextStore.js";
 import { shellTools } from "@core/shell/Tool.js";
 import { compactContextMessageIfNeeded } from "./Compact.js";
 
+const MAX_ERROR_HANDOVER_ATTEMPTS = 2;
+
 export type ContextAgentDependencies = {
   model: LanguageModel;
   logger: Logger;
@@ -183,12 +185,16 @@ export class ContextAgent {
     contextId: string,
     opts?: {
       retryAttempts?: number;
+      errorHandoverAttempts?: number;
+      errorForAgent?: string;
       requestId?: string;
       onStepCallback?: AgentRunInput["onStepCallback"];
     },
   ): Promise<AgentResult> {
     let contextStore: ContextStore | null = null;
     const retryAttempts = opts?.retryAttempts ?? 0;
+    const errorHandoverAttempts = opts?.errorHandoverAttempts ?? 0;
+    const errorForAgent = String(opts?.errorForAgent ?? "").trim();
     const requestId = opts?.requestId || "";
     const onStepCallback = opts?.onStepCallback;
     const logger = this.getLogger();
@@ -288,6 +294,19 @@ export class ContextAgent {
       if (!Array.isArray(baseModelMessages) || baseModelMessages.length === 0) {
         baseModelMessages = [{ role: "user", content: userText }];
       }
+      if (errorForAgent) {
+        // 关键点（中文）：把错误作为“新用户补充”交还给 Agent，要求其继续执行而非终止。
+        baseModelMessages = [
+          ...baseModelMessages,
+          {
+            role: "user",
+            content: this.buildErrorHandoverUserMessage(
+              errorForAgent,
+              errorHandoverAttempts,
+            ),
+          },
+        ];
+      }
 
       // 关键点（中文）
       // - 在 step 边界尝试合并同 lane 的新增用户消息，保证当前 run 可见最新输入。
@@ -367,6 +386,7 @@ export class ContextAgent {
       // phase 3（中文）：把 stream 结果固化为最终 assistant UIMessage。
       // 关键点（中文）：用 ai-sdk v6 的 UIMessage 流来生成最终 assistant UIMessage（包含 tool parts），避免手工拼装。
       let finalAssistantUiMessage: ContextMessageV1 | null = null;
+      let uiStreamError: unknown | null = null;
       try {
         const md: ContextMetadataV1 = {
           v: 1,
@@ -392,8 +412,13 @@ export class ContextAgent {
         for await (const _ of uiStream) {
           // ignore chunks
         }
-      } catch {
+      } catch (error) {
+        uiStreamError = error;
         finalAssistantUiMessage = null;
+      }
+      if (uiStreamError !== null) {
+        // 关键点（中文）：流式阶段出现异常必须上抛，统一走失败返回，避免“看似成功但已中断”。
+        throw uiStreamError;
       }
 
       // phase 4（中文）：统计结果并返回标准 AgentResult。
@@ -455,6 +480,22 @@ export class ContextAgent {
 
         return this.runWithToolLoopAgent(userText, startTime, contextId, {
           retryAttempts: retryAttempts + 1,
+          errorHandoverAttempts,
+          errorForAgent,
+          requestId,
+          onStepCallback,
+        });
+      }
+      if (errorHandoverAttempts < MAX_ERROR_HANDOVER_ATTEMPTS) {
+        await logger.log("warn", "Agent run failed, hand over error back to agent", {
+          contextId,
+          error: errorMsg,
+          errorHandoverAttempts,
+        });
+        return this.runWithToolLoopAgent(userText, startTime, contextId, {
+          retryAttempts,
+          errorHandoverAttempts: errorHandoverAttempts + 1,
+          errorForAgent: errorMsg,
           requestId,
           onStepCallback,
         });
@@ -490,6 +531,26 @@ export class ContextAgent {
         store: false,
       },
     };
+  }
+
+  /**
+   * 构造“错误交接给 Agent”的补充用户消息。
+   *
+   * 关键点（中文）
+   * - 明确要求 Agent 基于错误继续推进，而不是停止在报错结论。
+   * - 截断错误文本，避免把超长堆栈直接塞回上下文。
+   */
+  private buildErrorHandoverUserMessage(
+    errorMsg: string,
+    handoverAttempt: number,
+  ): string {
+    const normalizedError = String(errorMsg || "").trim().slice(0, 1200);
+    return [
+      "上一轮执行出现错误，请不要结束，继续推进当前任务。",
+      `错误信息：${normalizedError || "(empty error)"}`,
+      "要求：分析错误原因，调整执行步骤，并继续调用需要的工具直到任务完成。",
+      `错误交接轮次：${handoverAttempt + 1}`,
+    ].join("\n");
   }
 
   /**

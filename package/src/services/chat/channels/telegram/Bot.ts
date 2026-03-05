@@ -227,8 +227,12 @@ export class TelegramBot extends BaseChatChannel {
   protected async sendTextToPlatform(
     params: ChannelSendTextParams,
   ): Promise<void> {
+    const replyToMessageId = this.parseTelegramMessageId(params.messageId);
     await this.sendMessage(params.chatId, params.text, {
       messageThreadId: params.messageThreadId,
+      ...(typeof replyToMessageId === "number"
+        ? { replyToMessageId }
+        : {}),
     });
   }
 
@@ -238,10 +242,40 @@ export class TelegramBot extends BaseChatChannel {
   protected async sendActionToPlatform(
     params: ChannelSendActionParams,
   ): Promise<void> {
-    if (params.action !== "typing") return;
-    await this.api.sendChatAction(params.chatId, "typing", {
-      messageThreadId: params.messageThreadId,
+    if (params.action === "typing") {
+      await this.api.sendChatAction(params.chatId, "typing", {
+        messageThreadId: params.messageThreadId,
+      });
+      return;
+    }
+    if (params.action !== "react") return;
+
+    const messageId = this.parseTelegramMessageId(params.messageId);
+    if (!messageId) {
+      throw new Error(
+        "Telegram reaction requires a numeric messageId. Provide --message-id or ensure chat meta has latest messageId.",
+      );
+    }
+    await this.api.setMessageReaction(params.chatId, messageId, {
+      emoji: params.reactionEmoji,
+      isBig: params.reactionIsBig === true,
     });
+  }
+
+  /**
+   * 解析 Telegram 消息 ID。
+   *
+   * 关键点（中文）
+   * - Telegram `message_id` 为正整数；无效值返回 undefined。
+   */
+  private parseTelegramMessageId(messageId?: string): number | undefined {
+    const raw = String(messageId || "").trim();
+    if (!raw || !/^\d+$/.test(raw)) return undefined;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+      return undefined;
+    }
+    return parsed;
   }
 
   /**
@@ -888,7 +922,7 @@ export class TelegramBot extends BaseChatChannel {
   async sendMessage(
     chatId: string,
     text: string,
-    opts?: { messageThreadId?: number },
+    opts?: { messageThreadId?: number; replyToMessageId?: number },
   ): Promise<void> {
     await this.api.sendMessage(chatId, text, opts);
     await this.appendBotOutboundHistory({

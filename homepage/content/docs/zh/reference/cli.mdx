@@ -36,6 +36,7 @@ description: ShipMyAgent 命令行界面完整参考
 
 ```bash
 sma chat send --text "已完成" [--chat-key <chatKey>] [--delay <ms>] [--time <time>]
+sma chat react [--emoji <emoji>] [--message-id <id>] [--big] [--chat-key <chatKey>]
 sma chat context
 sma chat history [--chat-key <chatKey>] [--context-id <contextId>]
   [--limit <n>] [--direction all|inbound|outbound]
@@ -47,6 +48,8 @@ sma chat history [--chat-key <chatKey>] [--context-id <contextId>]
 - `--delay <ms>` 为可选非负整数，按毫秒延迟后再发送消息
 - `--time <time>` 为可选定时发送时间，支持 Unix 时间戳（秒/毫秒）或 ISO 时间字符串
 - `--delay` 与 `--time` 互斥，不能同时使用
+- `sma chat react` 用于给消息贴表情（当前主要用于 Telegram），`--emoji` 默认 `👍`
+- `sma chat react` 的 `--message-id` 可选；不传时会尝试使用该 `chatKey` 最近一次入站消息的 `messageId`
 - 典型场景：Agent 通过 `exec_command` 执行 `sma chat send` 回发消息
 - `sma chat history` 默认返回最近 `30` 条事件，并支持按方向/时间窗口过滤
 

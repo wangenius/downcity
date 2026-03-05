@@ -8,9 +8,15 @@
 
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { requestContext } from "@main/service/RequestContext.js";
-import { parseChatKeyForDispatch, sendTextByChatKey } from "./runtime/ChatkeySend.js";
+import {
+  parseChatKeyForDispatch,
+  sendActionByChatKey,
+  sendTextByChatKey,
+} from "./runtime/ChatkeySend.js";
+import type { ChatDispatchAction } from "./types/ChatDispatcher.js";
 import type {
   ChatContextSnapshot,
+  ChatReactResponse,
   ChatSendResponse,
 } from "./types/ChatCommand.js";
 
@@ -306,6 +312,45 @@ export async function sendChatTextByChatKey(params: {
     success: Boolean(result.success),
     chatKey,
     ...(result.success ? {} : { error: result.error || "chat send failed" }),
+  };
+}
+
+/**
+ * 按 chatKey 发送平台动作（typing/react）。
+ *
+ * 关键点（中文）
+ * - 动作分发与文本发送复用同一 chatKey 解析与 channel dispatcher。
+ */
+export async function sendChatActionByChatKey(params: {
+  context: ServiceRuntime;
+  chatKey: string;
+  action: ChatDispatchAction;
+  messageId?: string;
+  reactionEmoji?: string;
+  reactionIsBig?: boolean;
+}): Promise<ChatReactResponse> {
+  const chatKey = String(params.chatKey || "").trim();
+  if (!chatKey) {
+    return {
+      success: false,
+      error: "Missing chatKey",
+    };
+  }
+
+  const result = await sendActionByChatKey({
+    context: params.context,
+    chatKey,
+    action: params.action,
+    messageId: params.messageId,
+    reactionEmoji: params.reactionEmoji,
+    reactionIsBig: params.reactionIsBig,
+  });
+  const messageId = String(params.messageId || "").trim();
+  return {
+    success: Boolean(result.success),
+    chatKey,
+    ...(messageId ? { messageId } : {}),
+    ...(result.success ? {} : { error: result.error || "chat action failed" }),
   };
 }
 

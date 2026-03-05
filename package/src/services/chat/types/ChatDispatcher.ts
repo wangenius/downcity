@@ -8,7 +8,7 @@
 
 export type ChatDispatchChannel = "telegram" | "feishu" | "qq";
 
-export type ChatDispatchAction = "typing";
+export type ChatDispatchAction = "typing" | "react";
 
 export type ChatDispatchSendTextParams = {
   chatId: string;
@@ -24,6 +24,8 @@ export type ChatDispatchSendActionParams = {
   messageThreadId?: number;
   chatType?: string;
   messageId?: string;
+  reactionEmoji?: string;
+  reactionIsBig?: boolean;
 };
 
 export interface ChatDispatcher {

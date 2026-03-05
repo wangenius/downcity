@@ -107,6 +107,8 @@ Notes:
 - In groups, ShipMyAgent may restrict who can talk to the bot (e.g. initiator/admin), depending on the runtime’s policy.
 - For file messages in groups, the mention (if needed) must be in the **caption**, or send the file as a reply to the bot.
 - While the agent is running, Telegram shows a periodic **typing** indicator (`sendChatAction`) until the result is sent.
+- If a `messageId` is available in chat context, ShipMyAgent automatically uses Telegram `reply_to_message` for outbound sends.
+- For lightweight acknowledgement/attitude, use `sma chat react --emoji '👍'` (supports `--big`).
 
 ## Troubleshooting
 

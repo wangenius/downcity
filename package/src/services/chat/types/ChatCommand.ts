@@ -31,6 +31,20 @@ export type ChatSendResponse = {
   error?: string;
 };
 
+export type ChatReactRequest = {
+  chatKey?: string;
+  messageId?: string;
+  emoji?: string;
+  big?: boolean;
+};
+
+export type ChatReactResponse = {
+  success: boolean;
+  chatKey?: string;
+  messageId?: string;
+  error?: string;
+};
+
 export type ChatHistoryDirection = "all" | "inbound" | "outbound";
 
 export type ChatHistoryRequest = {

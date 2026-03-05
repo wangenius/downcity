@@ -1,5 +1,4 @@
 import type { ClaudeSkill } from "@services/skills/types/ClaudeSkill.js";
-import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 
 /**
  * Context skills state 对外快照。
@@ -11,7 +10,6 @@ import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 export type ContextSkillStateSnapshot = {
   contextId: string;
   allSkills: ClaudeSkill[];
-  loadedSkills: LoadedSkillV1[];
   updatedAt: number;
 };
 
@@ -20,6 +18,5 @@ export type ContextSkillStateSnapshot = {
  */
 export type ContextSkillStateInternal = {
   allSkillsById: Map<string, ClaudeSkill>;
-  loadedSkillsById: Map<string, LoadedSkillV1>;
   updatedAt: number;
 };

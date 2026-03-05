@@ -53,10 +53,12 @@ sma chat history [--chat-key <chatKey>] [--context-id <contextId>]
 sma skill list [path]
 sma skill find <query>
 sma skill add <spec>
-sma skill load <name> [--chat-key <chatKey>]
-sma skill unload <name> [--chat-key <chatKey>]
-sma skill pinned [--chat-key <chatKey>]
+sma skill load <name>
 ```
+
+说明：
+- `sma skill` 依赖本地 runtime（`sma start` 或 `sma run`）。
+- `sma skill load` 为无状态读取，直接返回 `SKILL.md` 内容。
 
 ### `sma task`
 

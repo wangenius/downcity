@@ -22,32 +22,11 @@ export type SkillListResponse = {
 
 export type SkillLoadRequest = {
   name: string;
-  contextId: string;
 };
 
 export type SkillLoadResponse = {
   success: boolean;
   skill?: SkillSummary;
-  contextId?: string;
-  error?: string;
-};
-
-export type SkillUnloadRequest = {
-  name: string;
-  contextId: string;
-};
-
-export type SkillUnloadResponse = {
-  success: boolean;
-  contextId?: string;
-  removedSkillId?: string;
-  pinnedSkillIds?: string[];
-  error?: string;
-};
-
-export type SkillPinnedListResponse = {
-  success: boolean;
-  contextId?: string;
-  pinnedSkillIds?: string[];
+  content?: string;
   error?: string;
 };

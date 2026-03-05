@@ -39,7 +39,7 @@ During discovery, ShipMyAgent reads YAML front matter from `SKILL.md`:
 - `description`: human-readable description
 - `allowed-tools` (or `allowedTools` / `allowed_tools`): “allowed tools” hint
 
-> `allowed-tools` is enforced **after a skill is loaded** in the current run: ShipMyAgent limits the model’s callable tools to the union of the loaded skill(s)’ `allowed-tools` (with `chat_send` always allowed so the agent can reply).
+> `allowed-tools` is a tool-constraint declaration in the skill. It should be followed strictly when executing the skill.
 
 ## Skill roots configuration
 
@@ -67,13 +67,15 @@ Key rules:
 Skills are exposed to the model via two built-in tools:
 
 - `skills_list`: list available skills (`id/name/description/allowedTools`)
-- `skills_load`: find a skill by `id`/`name` and return the full `SKILL.md`
+- `skills_load`: find a skill by `id`/`name` and return the raw `SKILL.md`
 
 Typical flow:
 
 1. Call `skills_list` to discover what exists
-2. Call `skills_load` to read the full instructions
+2. Call `skills_load` to read the raw instructions
 3. Follow the `SKILL.md` steps using other tools as needed (tool access may be restricted by `allowed-tools`)
+
+`skills_load` is stateless: it returns `SKILL.md` as the current tool result and does not pin to the conversation.
 
 If the target skill is not present in local `skills_list`, use the CLI learning flow first: `find -> add -> load`.
 
@@ -102,6 +104,6 @@ ShipMyAgent provides a thin wrapper around `npx skills`:
 - `sma skill list`: list skills you have already learned locally
 - `sma skill find <query>`: search skills you have not learned yet
 - `sma skill add <spec>`: download/learn missing skills (syncs into `~/.ship/skills`)
-- `sma skill load <name> --context-id <contextId>`: load a learned skill into the current context
+- `sma skill load <name>`: read the `SKILL.md` content of a learned skill
 
 Recommended order: `find -> add -> load`. If `list` already shows the skill, skip `add` and load it directly.

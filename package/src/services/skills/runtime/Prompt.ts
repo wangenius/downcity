@@ -35,8 +35,8 @@ export function renderClaudeSkillsPromptSection(
   lines.push("- `sma skill list` shows skills you have already learned locally");
   lines.push("- Use `sma skill find <query>` to search skills you have NOT learned yet (delegates to `npx skills find`)");
   lines.push("- Use `sma skill add <spec>` to learn/install missing skills (delegates to `npx skills add`)");
-  lines.push("- Use `sma skill load <name>` to activate a learned skill by name or id");
-  lines.push("- Once loaded, skills persist across messages in this conversation");
+  lines.push("- Use `sma skill load <name>` to read the full SKILL.md content for a learned skill");
+  lines.push("- `load` is stateless: it returns content directly and does not pin to the conversation");
   lines.push("");
   lines.push("## Available Skills");
   lines.push(`Found ${skills.length} skill(s):`);
@@ -58,9 +58,9 @@ export function renderClaudeSkillsPromptSection(
 
   lines.push("");
   lines.push("## Important Rules");
-  lines.push("1. When a skill is loaded, you MUST follow its instructions strictly");
+  lines.push("1. When `load` returns a skill, treat its instructions as mandatory SOPs for the current task");
   lines.push("2. If a skill defines `allowedTools`, you can ONLY use those tools (plus exec_command/write_stdin/close_shell)");
   lines.push("3. Skills take priority over general instructions when there's a conflict");
-  lines.push("4. Load skills proactively when task matches skill description — don't wait to be asked");
+  lines.push("4. Read skills proactively when task matches skill description — don't wait to be asked");
   return lines.join("\n");
 }

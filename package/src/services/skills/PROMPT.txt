@@ -1,29 +1,25 @@
 # Skills Service 使用说明
 
-你可以通过 `skill` service 管理技能发现、安装与会话级挂载。
+你可以通过 `skill` service 管理技能发现、安装与内容读取。
 
 ## 可用 action
 - `list`：列出当前已经学会（本地可发现）的技能。
 - `find`：查找当前未学会的技能（底层调用 `npx skills find`）。
 - `add`：下载/学习未学会技能（底层调用 `npx skills add`，支持仓库 spec）。
-- `load`：给指定 `contextId` 加载已学会技能，并启用 SKILL.md 指令。
-- `unload`：给指定 `contextId` 卸载技能。
-- `pinned`：查看指定 `contextId` 已固定技能。
+- `load`：读取已学会技能的 `SKILL.md` 内容并直接返回（无 pin 持久化）。
 
 ## 操作方法（命令）
 - 常用 action（CLI）：
   - `sma skill find <query>`
   - `sma skill add <spec> [--global] [--yes] [--agent <agent>]`
   - `sma skill list`
-  - `sma skill load <name> --context-id <contextId>`
-  - `sma skill unload <name> --context-id <contextId>`
-  - `sma skill pinned --context-id <contextId>`
+  - `sma skill load <name>`
 - runtime 管理：
   - `sma service status skill`
   - `sma service restart skill`
 
 ## 使用规范
-- 涉及会话级操作时（`load` / `unload` / `pinned`）必须提供有效 `contextId`。
 - `find` 的目标是“未学会技能检索”；如果目标已在 `list` 中，应提示直接 `load`。
 - `add` 的目标是“学习未学会技能”；执行后会同步到本地 skills 目录供后续加载。
-- 对用户反馈时应明确技能状态变化：已安装、已加载、已卸载或失败原因。
+- `load` 返回的是技能原文（tool-result）；是否执行由当前任务上下文决定。
+- 对用户反馈时应明确技能状态变化：已安装、已读取或失败原因。

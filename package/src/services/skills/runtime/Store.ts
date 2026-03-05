@@ -7,7 +7,6 @@
  */
 
 import type { ClaudeSkill } from "@services/skills/types/ClaudeSkill.js";
-import type { LoadedSkillV1 } from "@services/skills/types/LoadedSkill.js";
 import type {
   ContextSkillStateInternal,
   ContextSkillStateSnapshot,
@@ -39,7 +38,6 @@ function getOrCreateState(contextId: string): ContextSkillStateInternal {
 
   const created: ContextSkillStateInternal = {
     allSkillsById: new Map(),
-    loadedSkillsById: new Map(),
     updatedAt: Date.now(),
   };
   contextSkillStateStore.set(key, created);
@@ -67,38 +65,6 @@ export function setContextAvailableSkills(contextId: string, skills: ClaudeSkill
 }
 
 /**
- * 设置会话已加载技能集合。
- *
- * 支持输入（中文）
- * - `Map<string, LoadedSkillV1>`：直接复制
- * - `LoadedSkillV1[]`：按 `id` 重建索引
- */
-export function setContextLoadedSkills(
-  contextId: string,
-  loaded: Map<string, LoadedSkillV1> | LoadedSkillV1[],
-): void {
-  const state = getOrCreateState(contextId);
-  const next = new Map<string, LoadedSkillV1>();
-
-  if (loaded instanceof Map) {
-    for (const [id, skill] of loaded.entries()) {
-      const key = String(id || "").trim();
-      if (!key || !skill) continue;
-      next.set(key, skill);
-    }
-  } else {
-    for (const skill of Array.isArray(loaded) ? loaded : []) {
-      const id = String(skill?.id || "").trim();
-      if (!id) continue;
-      next.set(id, skill);
-    }
-  }
-
-  state.loadedSkillsById = next;
-  state.updatedAt = Date.now();
-}
-
-/**
  * 获取会话技能状态快照。
  */
 export function getContextSkillState(contextId: string): ContextSkillStateSnapshot {
@@ -109,7 +75,6 @@ export function getContextSkillState(contextId: string): ContextSkillStateSnapsh
     return {
       contextId: key,
       allSkills: [],
-      loadedSkills: [],
       updatedAt: 0,
     };
   }
@@ -117,7 +82,6 @@ export function getContextSkillState(contextId: string): ContextSkillStateSnapsh
   return {
     contextId: key,
     allSkills: Array.from(state.allSkillsById.values()),
-    loadedSkills: Array.from(state.loadedSkillsById.values()),
     updatedAt: state.updatedAt,
   };
 }

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 使用统一 actions 模型声明 CLI/API/执行逻辑
  * - API 默认路由为 `/service/skill/<action>`
- * - load/unload/pinned 统一基于 contextId
+ * - load 无状态返回 SKILL.md 内容，避免会话 pin 复杂度
  */
 
 import type { Command } from "commander";
@@ -12,13 +12,10 @@ import { readFileSync } from "node:fs";
 import { skillAddCommand, skillFindCommand } from "./Command.js";
 import {
   findLearnedSkillExact,
-  listPinnedSkills,
   listSkills,
   loadSkill,
   searchLearnedSkills,
-  unloadSkill,
 } from "./Action.js";
-import { resolveContextId } from "@/main/runtime/ContextId.js";
 import type { Service } from "@main/service/ServiceManager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { buildSkillsSystemText } from "./runtime/SystemProvider.js";
@@ -36,16 +33,6 @@ type SkillAddPayload = {
 
 type SkillLoadPayload = {
   name: string;
-  contextId: string;
-};
-
-type SkillUnloadPayload = {
-  name: string;
-  contextId: string;
-};
-
-type SkillPinnedPayload = {
-  contextId: string;
 };
 
 const SKILLS_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
@@ -90,16 +77,6 @@ function getBooleanOpt(
 ): boolean | undefined {
   const value = opts[key];
   return typeof value === "boolean" ? value : undefined;
-}
-
-function resolveContextIdForCommand(input?: string): string {
-  const contextId = resolveContextId({ contextId: input });
-  if (!contextId) {
-    throw new Error(
-      "Missing contextId. Provide --context-id or ensure SMA_CTX_CONTEXT_ID is available.",
-    );
-  }
-  return contextId;
 }
 
 /**
@@ -238,7 +215,7 @@ export const skillsService: Service = {
           success: true,
           data: {
             spec: payload.spec,
-            message: "技能学习完成。请执行 load 将技能挂载到当前会话。",
+            message: "技能学习完成。请执行 load 读取该技能的 SKILL.md 内容。",
             workflow: ["find", "add", "load"],
             nextAction: "load",
             skipped: false,
@@ -269,19 +246,14 @@ export const skillsService: Service = {
     },
     load: {
       command: {
-        description: "给当前 contextId 加载已学会 skill，并启用其指令",
+        description: "读取已学会 skill 内容（SKILL.md）",
         configure(command: Command) {
-          command
-            .argument("<name>")
-            .option("--context-id <contextId>", "目标 contextId");
+          command.argument("<name>");
         },
-        mapInput({ args, opts }): SkillLoadPayload {
+        mapInput({ args }): SkillLoadPayload {
           const name = String(args[0] || "").trim();
           if (!name) throw new Error("Missing name");
-          return {
-            name,
-            contextId: resolveContextIdForCommand(getStringOpt(opts, "contextId")),
-          };
+          return { name };
         },
       },
       api: {
@@ -289,10 +261,8 @@ export const skillsService: Service = {
         async mapInput(c): Promise<SkillLoadPayload> {
           const body = readJsonObject(await c.req.json());
           const name = String(body.name || "").trim();
-          const contextId = String(body.contextId || "").trim();
           if (!name) throw new Error("Missing name");
-          if (!contextId) throw new Error("Missing contextId");
-          return { name, contextId };
+          return { name };
         },
       },
       async execute(params) {
@@ -301,7 +271,6 @@ export const skillsService: Service = {
           projectRoot: params.context.rootPath,
           request: {
             name: payload.name,
-            contextId: payload.contextId,
           },
         });
         if (!result.success) {
@@ -314,96 +283,8 @@ export const skillsService: Service = {
           success: true,
           data: {
             ...result,
-            message: "技能已加载，当前会话将按该 SKILL.md 指令执行。",
-            workflow: ["find", "add", "load"],
+            message: "已返回 SKILL.md 内容，请按该技能指令执行。",
           },
-        };
-      },
-    },
-    unload: {
-      command: {
-        description: "给当前 contextId 卸载 skill",
-        configure(command: Command) {
-          command
-            .argument("<name>")
-            .option("--context-id <contextId>", "目标 contextId");
-        },
-        mapInput({ args, opts }): SkillUnloadPayload {
-          const name = String(args[0] || "").trim();
-          if (!name) throw new Error("Missing name");
-          return {
-            name,
-            contextId: resolveContextIdForCommand(getStringOpt(opts, "contextId")),
-          };
-        },
-      },
-      api: {
-        method: "POST",
-        async mapInput(c): Promise<SkillUnloadPayload> {
-          const body = readJsonObject(await c.req.json());
-          const name = String(body.name || "").trim();
-          const contextId = String(body.contextId || "").trim();
-          if (!name) throw new Error("Missing name");
-          if (!contextId) throw new Error("Missing contextId");
-          return { name, contextId };
-        },
-      },
-      async execute(params) {
-        const payload = params.payload as SkillUnloadPayload;
-        const result = await unloadSkill({
-          projectRoot: params.context.rootPath,
-          request: {
-            name: payload.name,
-            contextId: payload.contextId,
-          },
-        });
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || "skill unload failed",
-          };
-        }
-        return {
-          success: true,
-          data: result,
-        };
-      },
-    },
-    pinned: {
-      command: {
-        description: "查看 contextId 已固定的 skillIds",
-        configure(command: Command) {
-          command.option("--context-id <contextId>", "目标 contextId");
-        },
-        mapInput({ opts }): SkillPinnedPayload {
-          return {
-            contextId: resolveContextIdForCommand(getStringOpt(opts, "contextId")),
-          };
-        },
-      },
-      api: {
-        method: "GET",
-        mapInput(c): SkillPinnedPayload {
-          const contextId = String(c.req.query("contextId") || "").trim();
-          if (!contextId) throw new Error("Missing contextId");
-          return { contextId };
-        },
-      },
-      async execute(params) {
-        const payload = params.payload as SkillPinnedPayload;
-        const result = await listPinnedSkills({
-          projectRoot: params.context.rootPath,
-          contextId: payload.contextId,
-        });
-        if (!result.success) {
-          return {
-            success: false,
-            error: result.error || "skill pinned failed",
-          };
-        }
-        return {
-          success: true,
-          data: result,
         };
       },
     },

@@ -53,13 +53,12 @@ Notes:
 sma skill list [path]
 sma skill find <query>
 sma skill add <spec>
-sma skill load <name> [--chat-key <chatKey>]
-sma skill unload <name> [--chat-key <chatKey>]
-sma skill pinned [--chat-key <chatKey>]
+sma skill load <name>
 ```
 
 Notes:
 - `sma skill` is daemon-only and requires an active local runtime (`sma start` or `sma run`)
+- `sma skill load` is stateless and directly returns the `SKILL.md` content
 
 ### `sma task`
 

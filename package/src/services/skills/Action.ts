@@ -3,27 +3,20 @@
  *
  * 关键点（中文）
  * - 与 runtime tool 解耦：CLI / Server 统一走这里
- * - skill pin/unpin 直接落盘到 `messages/meta.json.pinnedSkillIds`
+ * - `load` 采用无状态实现：直接返回 SKILL.md 内容，不做 pin 持久化
  */
 
 import fs from "fs-extra";
 import path from "node:path";
 import { discoverClaudeSkillsSync } from "./runtime/Discovery.js";
-import {
-  getShipContextMessagesMetaPath,
-  getShipContextMessagesDirPath,
-} from "@/main/runtime/Paths.js";
 import { loadShipConfig } from "@/main/runtime/Config.js";
 import type { ClaudeSkill } from "./types/ClaudeSkill.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
+import type { JsonValue } from "@/types/Json.js";
 import type {
   SkillListResponse,
   SkillLoadRequest,
   SkillLoadResponse,
-  SkillPinnedListResponse,
   SkillSummary,
-  SkillUnloadRequest,
-  SkillUnloadResponse,
 } from "./types/SkillCommand.js";
 
 function normalizeAllowedTools(input: JsonValue | undefined): string[] {
@@ -113,56 +106,6 @@ export function searchLearnedSkills(
   return matched.slice(0, Math.max(1, limit)).map(toSkillSummary);
 }
 
-async function readPinnedSkillIds(projectRoot: string, contextId: string): Promise<string[]> {
-  const metaPath = getShipContextMessagesMetaPath(projectRoot, contextId);
-  try {
-    const raw = (await fs.readJson(metaPath)) as JsonObject;
-    if (!raw || typeof raw !== "object" || !Array.isArray(raw.pinnedSkillIds)) {
-      return [];
-    }
-
-    const ids: string[] = [];
-    for (const item of raw.pinnedSkillIds) {
-      const id = typeof item === "string" ? item.trim() : "";
-      if (!id) continue;
-      ids.push(id);
-    }
-    return Array.from(new Set(ids));
-  } catch {
-    return [];
-  }
-}
-
-async function writePinnedSkillIds(params: {
-  projectRoot: string;
-  contextId: string;
-  pinnedSkillIds: string[];
-}): Promise<void> {
-  const { projectRoot, contextId } = params;
-  const pinnedSkillIds = Array.from(new Set(params.pinnedSkillIds.map((id) => id.trim()).filter(Boolean)));
-
-  const messagesDir = getShipContextMessagesDirPath(projectRoot, contextId);
-  const metaPath = getShipContextMessagesMetaPath(projectRoot, contextId);
-  await fs.ensureDir(messagesDir);
-
-  let prev: JsonObject = {};
-  try {
-    const raw = (await fs.readJson(metaPath)) as JsonObject;
-    if (raw && typeof raw === "object") prev = raw;
-  } catch {
-    prev = {};
-  }
-
-  const next = {
-    ...prev,
-    v: 1,
-    contextId,
-    updatedAt: Date.now(),
-    pinnedSkillIds,
-  };
-  await fs.writeJson(metaPath, next, { spaces: 2 });
-}
-
 function getSkills(projectRoot: string): ClaudeSkill[] {
   const root = path.resolve(projectRoot);
   const config = loadShipConfig(root);
@@ -182,96 +125,31 @@ export async function loadSkill(params: {
   request: SkillLoadRequest;
 }): Promise<SkillLoadResponse> {
   const root = path.resolve(params.projectRoot);
-  const contextId = String(params.request.contextId || "").trim();
-  if (!contextId) {
-    return {
-      success: false,
-      error: "Missing contextId",
-    };
-  }
-
   const skills = getSkills(root);
   const target = findSkill(skills, params.request.name);
   if (!target) {
     return {
       success: false,
-      contextId,
       error: `Skill not found: ${params.request.name}`,
     };
   }
 
-  const pinned = await readPinnedSkillIds(root, contextId);
-  const nextPinned = Array.from(new Set([...pinned, target.id]));
-  await writePinnedSkillIds({
-    projectRoot: root,
-    contextId,
-    pinnedSkillIds: nextPinned,
-  });
+  let content = "";
+  try {
+    content = String(await fs.readFile(target.skillMdPath, "utf-8")).trim();
+  } catch {
+    content = "";
+  }
+  if (!content) {
+    return {
+      success: false,
+      error: `Skill content is empty: ${target.id}`,
+    };
+  }
 
   return {
     success: true,
-    contextId,
     skill: toSkillSummary(target),
-  };
-}
-
-export async function unloadSkill(params: {
-  projectRoot: string;
-  request: SkillUnloadRequest;
-}): Promise<SkillUnloadResponse> {
-  const root = path.resolve(params.projectRoot);
-  const contextId = String(params.request.contextId || "").trim();
-  if (!contextId) {
-    return {
-      success: false,
-      error: "Missing contextId",
-    };
-  }
-
-  const skills = getSkills(root);
-  const target = findSkill(skills, params.request.name);
-  if (!target) {
-    return {
-      success: false,
-      contextId,
-      error: `Skill not found: ${params.request.name}`,
-    };
-  }
-
-  const pinned = await readPinnedSkillIds(root, contextId);
-  const nextPinned = pinned.filter((id) => id !== target.id);
-
-  await writePinnedSkillIds({
-    projectRoot: root,
-    contextId,
-    pinnedSkillIds: nextPinned,
-  });
-
-  return {
-    success: true,
-    contextId,
-    removedSkillId: target.id,
-    pinnedSkillIds: nextPinned,
-  };
-}
-
-export async function listPinnedSkills(params: {
-  projectRoot: string;
-  contextId: string;
-}): Promise<SkillPinnedListResponse> {
-  const root = path.resolve(params.projectRoot);
-  const contextId = String(params.contextId || "").trim();
-  if (!contextId) {
-    return {
-      success: false,
-      error: "Missing contextId",
-    };
-  }
-
-  const pinnedSkillIds = await readPinnedSkillIds(root, contextId);
-  return {
-    success: true,
-    contextId,
-    pinnedSkillIds,
+    content,
   };
 }

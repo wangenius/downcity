@@ -21,7 +21,7 @@ import {
   buildContextSystemPrompt,
   DEFAULT_SHIP_PROMPTS,
   transformPromptsIntoSystemMessages,
-} from "@core/prompts/System.js";
+} from "@main/prompts/System.js";
 import type { AgentRunInput, AgentResult } from "@core/types/Agent.js";
 import type {
   AgentSystemConfig,

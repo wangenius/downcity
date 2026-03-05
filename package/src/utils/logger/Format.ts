@@ -162,6 +162,21 @@ function extractMessages(payload: JsonObject): JsonObject[] | null {
   return null;
 }
 
+function extractSystemForLog(payload: JsonObject | undefined): JsonValue | undefined {
+  if (!payload) return undefined;
+
+  const system = payload.system;
+  if (typeof system === "string" && system.trim()) return system;
+
+  // 关键点（中文）：OpenAI Responses 请求把 system prompt 放在 `instructions` 字段。
+  const instructions = getStringField(payload, "instructions");
+  if (typeof instructions === "string" && instructions.trim()) {
+    return instructions;
+  }
+
+  return system;
+}
+
 function formatToolCalls(
   toolCalls: JsonValue | undefined,
   maxArgsChars: number,
@@ -361,7 +376,7 @@ export function parseFetchRequestForLog(
 
   const payloadObject = isJsonObject(payload) ? payload : undefined;
   const model = payloadObject ? getStringField(payloadObject, "model") : undefined;
-  const system = payloadObject ? payloadObject.system : undefined;
+  const system = extractSystemForLog(payloadObject);
   const messages = payloadObject ? extractMessages(payloadObject) : null;
   const tools = payloadObject ? payloadObject.tools : undefined;
   const toolsCount = Array.isArray(tools)

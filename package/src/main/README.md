@@ -17,6 +17,9 @@
    - `Manager.ts` 负责后台 daemon 进程 PID/日志/启停管理。
    - `Config.ts` 读取 `.env` + `ship.json` 并解析 `${ENV}` 占位符。
    - `Paths.ts` 提供 `.ship/*` 路径约定，作为全项目统一事实来源。
+3. `prompts/`
+   - `System.ts` 负责运行时系统提示模板、变量替换与默认 prompt 资产加载。
+   - `runtime/GeoContext.ts` 负责地理上下文解析与缓存，供 prompt 变量填充复用。
 4. `service/`
    - `Manager.ts` / `ServiceManager.ts` 提供 service 注册契约与运行态调度入口。
    - service 采用 `actions` 对象模型：由 `Manager.ts` 自动注册 CLI 与 HTTP 路由（默认 `/service/<service>/<action>`）。
@@ -37,6 +40,7 @@
 - `runtime/AgentServer.ts`
 - `runtime/Client.ts`
 - `runtime/Manager.ts`
+- `prompts/System.ts`
 - `project/Config.ts`
 - `service/Manager.ts`
 - `service/ServiceManager.ts`

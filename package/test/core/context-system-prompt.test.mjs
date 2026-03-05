@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildContextSystemPrompt } from "../../bin/core/prompts/System.js";
+import { buildContextSystemPrompt } from "../../bin/main/prompts/System.js";
 
 test("buildContextSystemPrompt returns empty text for chat mode", () => {
   const prompt = buildContextSystemPrompt({

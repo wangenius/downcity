@@ -9,8 +9,8 @@
 
 import fs from "node:fs";
 import { SystemModelMessage } from "ai";
-import { resolvePromptGeoContext } from "@core/prompts/runtime/GeoContext.js";
-import type { PromptTemplateVariables } from "@core/prompts/types/PromptVariables.js";
+import { resolvePromptGeoContext } from "@main/prompts/runtime/GeoContext.js";
+import type { PromptTemplateVariables } from "@main/prompts/types/PromptVariables.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
 
 /**

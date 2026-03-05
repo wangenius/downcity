@@ -74,3 +74,26 @@ test("parseFetchRequestForLog prints exec_command cmd for item:function_call", (
   assert.match(requestText, /call_id=call_123/);
   assert.match(requestText, /cmd=ls -la \.ship\/task/);
 });
+
+test("parseFetchRequestForLog prints instructions as system for responses payload", () => {
+  const payload = {
+    model: "gpt-5.2",
+    instructions: "你是一个严格执行规则的助手",
+    input: [
+      {
+        role: "user",
+        content: [{ type: "input_text", text: "hi" }],
+      },
+    ],
+  };
+
+  const parsed = parseFetchRequestForLog("https://example.com/v1/responses", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  assert.ok(parsed);
+  const requestText = parsed.requestText;
+  assert.match(requestText, /\[system\]: 你是一个严格执行规则的助手/);
+  assert.equal(parsed.system, "你是一个严格执行规则的助手");
+});

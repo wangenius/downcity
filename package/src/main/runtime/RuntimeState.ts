@@ -1,4 +1,4 @@
-import { DEFAULT_SHIP_PROMPTS } from "@core/prompts/System.js";
+import { DEFAULT_SHIP_PROMPTS } from "@main/prompts/System.js";
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
 import { ContextManager } from "@core/context/ContextManager.js";
 import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";

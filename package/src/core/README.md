@@ -2,7 +2,7 @@
 
 ## 模块定位
 
-`core/` 是运行时内核层，负责 Agent 执行、上下文管理、Prompt 组装、工具协议与模型调用抽象。  
+`core/` 是运行时内核层，负责 Agent 执行、上下文管理、工具协议与模型调用抽象。  
 这一层追求“可复用 + 可组合”，不承载 chat/skill/task 等具体业务语义。
 
 ## 实现概览
@@ -11,22 +11,19 @@
    - `ContextManager` 维护 `contextId -> Agent/ContextStore` 的生命周期缓存。
    - `ContextStore` 负责消息与元数据落盘（含 compact/archive）。
    - `AgentRunner` 负责 system prompt 组装、tool loop 调用、重试与结果回写。
-2. `prompts/`
-   - `System` 负责运行时系统提示模板与默认 prompt 加载。
-3. `shell/`
+2. `shell/`
    - 暴露 `exec_command`、`write_stdin`、`close_shell` 三个会话式工具。
    - 通过 `ShellContextManager` 管理多会话状态，输出分页与 token 限制由 `ShellHelpers` 统一处理。
-4. `llm/`
+3. `llm/`
    - `CreateModel` 统一构建 Anthropic/OpenAI/OpenAI Compatible 模型实例。
    - 内置 API Key 解析（含 `${ENV}`）与 LLM 请求日志接入。
-5. `types/`
+4. `types/`
    - 承载 core 内核抽象（Agent、ContextMessage、Shell 输入输出类型等）。
 
 ## 关键文件
 
 - `context/AgentRunner.ts`
 - `context/ContextManager.ts`
-- `prompts/System.ts`
 - `shell/Tool.ts`
 - `llm/CreateModel.ts`
 

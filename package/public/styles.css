@@ -195,145 +195,126 @@ h3, h4, h5 { font-size: 13px; }
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(58, 128, 232, 0.08), transparent 42%),
+    linear-gradient(180deg, #0b1422 0%, #0b121d 100%);
+}
+
+.turn {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.message {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+.turn-user,
+.turn-event {
+  border: 1px solid #22324a;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #121d2e 0%, #0f1827 100%);
   overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
 }
 
-.message.user {
-  border-left: 3px solid var(--blue);
+.turn-user {
+  border-left: 4px solid #4ea9ff;
 }
 
-.message.assistant {
-  border-left: 3px solid var(--green);
+.turn-events {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.message.tool-call {
-  border-left: 3px solid var(--yellow);
+.turn-event.assistant {
+  border-left: 4px solid #3fd08f;
 }
 
-.message.tool-result {
-  border-left: 3px solid #ff8a3c;
+.turn-event.tool-call {
+  border-left: 4px solid #f0c05a;
+  background: linear-gradient(180deg, #1a1d28 0%, #151a24 100%);
 }
 
-.message.tool-call .message-head {
-  background: #2a2214;
+.turn-event.tool-result {
+  border-left: 4px solid #ff9b55;
+  background: linear-gradient(180deg, #1d1926 0%, #171623 100%);
 }
 
-.message.tool-result .message-head {
-  background: #2b1f17;
-}
-
-.message-head {
+.turn-head {
   font-size: 11px;
-  color: #9fb0cf;
+  color: #a8bbda;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  background: #111a2a;
+  padding: 8px 10px;
+  border-bottom: 1px solid #22324a;
+  background: rgba(13, 22, 37, 0.75);
 }
 
-.message-head .role {
+.turn-head .role {
   font-weight: 700;
-  color: #eef4ff;
+  color: #f4f8ff;
 }
 
-.message-body {
-  margin: 0;
-  padding: 8px;
-  color: #e6eeff;
+.turn-head .role.role-user {
+  color: #bee2ff;
+}
+
+.turn-head .time {
+  color: #95a9ca;
+}
+
+.turn-head .meta {
+  color: #879ab8;
+  margin-left: auto;
+}
+
+.turn-preview {
+  padding: 7px 10px;
+  font-size: 11px;
+  color: #a3b5d3;
+  border-bottom: 1px solid #1f2f47;
+  background: rgba(10, 18, 32, 0.55);
+}
+
+.turn-body {
+  padding: 10px 12px;
+  color: #e8f0ff;
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.5;
+  line-height: 1.55;
   font-size: 12px;
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-.message.group .group-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
+.turn-body.code {
+  max-height: 320px;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
-.assistant-body-wrap {
-  border: 1px solid #2a3b57;
-  border-radius: 8px;
-  background: #0f1a2b;
-  overflow: hidden;
-}
-
-.assistant-body-wrap.user-inline {
-  border-color: #30527d;
-}
-
-.assistant-label {
-  padding: 5px 8px;
-  border-bottom: 1px solid #24324a;
-  font-size: 11px;
-  font-weight: 700;
-  color: #b9c9e3;
-  background: #121f33;
-}
-
-.tool-item {
-  border: 1px solid #2c3f5e;
-  border-radius: 8px;
-  background: #0e1828;
-  overflow: hidden;
-}
-
-.tool-item.call {
-  border-left: 3px solid var(--yellow);
-}
-
-.tool-item.result {
-  border-left: 3px solid #ff8a3c;
-}
-
-.tool-item summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-bottom: 1px solid #233248;
-}
-
-.tool-item summary::-webkit-details-marker {
+.turn-event.is-collapsed .turn-body {
   display: none;
 }
 
-.tool-label {
+.turn-toggle {
+  margin-left: 8px;
+  border: 1px solid #36517b;
+  background: #14233a;
+  color: #d7e5ff;
+  border-radius: 6px;
+  padding: 2px 8px;
   font-size: 11px;
-  font-weight: 700;
-  color: #f3dca4;
+  line-height: 1.35;
+  cursor: pointer;
 }
 
-.tool-item.result .tool-label {
-  color: #ffc7a2;
-}
-
-.tool-preview {
-  font-size: 11px;
-  color: #98a9c5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tool-body {
-  max-height: 360px;
-  overflow: auto;
+.turn-toggle:hover {
+  border-color: #4f75ad;
+  background: #183154;
 }
 
 .composer {

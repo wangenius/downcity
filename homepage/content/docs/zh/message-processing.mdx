@@ -20,11 +20,12 @@ ShipMyAgent 使用 lane scheduler 按 `chatKey` 隔离调度：
 
 实现：`package/src/core/runtime/lane-scheduler.ts`。
 
-## 0.1) 默认 system（Agent.md + DefaultPrompt）
+## 0.1) 默认 system（Agent.md + Soul.md（可选）+ DefaultPrompt）
 
 从 v2 开始，AgentRuntime 的 system message 由两部分拼成：
 
 - `Agent.md`：项目/仓库的长期指令（人类写给 agent 的规则与偏好）
+- `Soul.md`（可选）：稳定的执行原则（工作风格、风险边界、质量标准）
 - `DefaultPrompt`：运行时上下文 + 输出规则（包括要求用 `chat_send` 回发；不允许给 user 文本加前缀）
 
 历史上下文来自该 `chatKey` 的 history（`UIMessage[]`，落盘在 `.ship/chat/<encodedChatKey>/messages/messages.jsonl`），并在接近上下文窗口时自动 compact。
@@ -134,4 +135,4 @@ export interface AgentResult {
 
 更完整的“场景化（Telegram 群聊/topic）+ 调用顺序 + 依赖分层”请看：`docs/message-ingress-and-processing.md`。
 
-当前实现的“简化版运行逻辑（system = Agent.md + DefaultPrompt、无 simulation、按需加载历史）”说明见：`docs/runtime-simplified.md`。
+当前实现的“简化版运行逻辑（system = Agent.md + Soul.md（可选） + DefaultPrompt、无 simulation、按需加载历史）”说明见：`docs/runtime-simplified.md`。

@@ -17,6 +17,8 @@ import {
   getAgentMdPath,
   getCacheDirPath,
   getLogsDirPath,
+  getSoulMdCandidatePaths,
+  getSoulMdPath,
   getShipContextRootDirPath,
   getShipConfigDirPath,
   getShipDataDirPath,
@@ -141,10 +143,42 @@ function loadAgentProfileText(rootPath: string): string {
 }
 
 /**
+ * 解析 Soul.md 的实际文件路径（支持多种大小写）。
+ */
+function resolveSoulMdPath(rootPath: string): string | null {
+  const candidates = getSoulMdCandidatePaths(rootPath);
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return candidate;
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+/**
+ * 读取 Soul.md（可选）。
+ *
+ * 关键点（中文）
+ * - Soul.md 缺失不报错，按“可选增强”处理。
+ * - 与 Agent.md 并行注入静态 system prompt。
+ */
+function loadSoulProfileText(rootPath: string): string {
+  const soulPath = resolveSoulMdPath(rootPath);
+  if (!soulPath) return "";
+  try {
+    return fs.readFileSync(soulPath, "utf-8").trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
  * 构建静态系统提示列表。
  */
-function buildStaticSystems(agentProfile: string): string[] {
-  return [agentProfile, DEFAULT_SHIP_PROMPTS].filter(Boolean);
+function buildStaticSystems(agentProfile: string, soulProfile: string): string[] {
+  return [agentProfile, soulProfile, DEFAULT_SHIP_PROMPTS].filter(Boolean);
 }
 
 function systemsEqual(a: string[], b: string[]): boolean {
@@ -177,19 +211,22 @@ function applyRuntimeSystems(nextSystems: string[]): void {
 }
 
 /**
- * 刷新 Agent.md 对应的静态系统提示。
+ * 刷新静态系统提示（Agent.md / Soul.md）。
  */
-function reloadAgentMdSystems(reason: string): void {
+function reloadStaticPromptSystems(reason: string, filename?: string): void {
   const runtime = getRuntimeStateBase();
   const nextSystems = buildStaticSystems(
     loadAgentProfileText(runtime.rootPath),
+    loadSoulProfileText(runtime.rootPath),
   );
   if (systemsEqual(runtime.systems, nextSystems)) return;
 
   applyRuntimeSystems(nextSystems);
-  runtime.logger.info("Agent.md hot reloaded", {
+  runtime.logger.info("Static prompts hot reloaded", {
     reason,
+    filename: filename || undefined,
     agentMdPath: getAgentMdPath(runtime.rootPath),
+    soulMdPath: resolveSoulMdPath(runtime.rootPath) || getSoulMdPath(runtime.rootPath),
   });
 }
 
@@ -252,10 +289,10 @@ export function stopRuntimeHotReload(): void {
 }
 
 /**
- * 启动 runtime 文件热重载监听（Agent.md）。
+ * 启动 runtime 文件热重载监听（Agent.md / Soul.md）。
  *
  * 监听策略（中文）
- * - Agent.md：监听项目根目录并过滤目标文件名，兼容 rename/replace。
+ * - Agent.md / Soul.md：监听项目根目录并过滤目标文件名，兼容 rename/replace。
  * - 所有回调都做 debounce，避免编辑器连续写入造成重复刷新。
  */
 function startRuntimeHotReload(): void {
@@ -317,10 +354,22 @@ function startRuntimeHotReload(): void {
     }
   };
 
-  // Agent.md：监听项目根目录（文件替换/重命名也能捕获）。
+  const soulMdFileNames = new Set(
+    getSoulMdCandidatePaths(runtime.rootPath).map((item) => path.basename(item)),
+  );
+
+  // Agent.md / Soul.md：监听项目根目录（文件替换/重命名也能捕获）。
   attachWatcher(runtime.rootPath, {}, (_eventType, filename) => {
-    if (filename && path.basename(filename) !== "Agent.md") return;
-    schedule("agent-md", () => reloadAgentMdSystems("agent_md_changed"));
+    const basename = filename ? path.basename(filename) : "";
+    const isAgentMd = basename === "Agent.md";
+    const isSoulMd = soulMdFileNames.has(basename);
+    if (!isAgentMd && !isSoulMd) return;
+    schedule("static-prompts", () =>
+      reloadStaticPromptSystems(
+        isAgentMd ? "agent_md_changed" : "soul_md_changed",
+        basename,
+      ),
+    );
   });
 
   stopRuntimeHotReloadWatcher = () => {
@@ -336,6 +385,7 @@ function startRuntimeHotReload(): void {
 
   runtime.logger.info("Runtime hot reload enabled", {
     agentMdPath: getAgentMdPath(runtime.rootPath),
+    soulMdPath: resolveSoulMdPath(runtime.rootPath) || getSoulMdPath(runtime.rootPath),
     watchers: watchers.length,
   });
 }
@@ -519,7 +569,10 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems: [],
   });
 
-  const systems = buildStaticSystems(loadAgentProfileText(rootPath));
+  const systems = buildStaticSystems(
+    loadAgentProfileText(rootPath),
+    loadSoulProfileText(rootPath),
+  );
 
   // 关键点（中文）：systems 在启动时确认后写回 base runtime state，供后续模块读取。
   setRuntimeStateBase({

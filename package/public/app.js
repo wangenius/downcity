@@ -77,25 +77,32 @@ function normalizeForPreview(text) {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
 
-function toMessageGroupKey(msg) {
-  return String(msg?.id || "").replace(/:\d+$/, "");
+function formatMessageAsHtml(text) {
+  return escapeHtml(String(text || "")).replace(/\n/g, "<br>");
 }
 
-function groupMessagesForRender(messages) {
-  const groups = [];
+function splitMessagesIntoTurns(messages) {
+  const turns = [];
   for (const msg of messages) {
-    const key = toMessageGroupKey(msg);
-    const last = groups[groups.length - 1];
-    if (last && last.key === key) {
-      last.items.push(msg);
+    const role = String(msg?.role || "");
+    const lastTurn = turns[turns.length - 1];
+    if (role === "user") {
+      turns.push({
+        user: msg,
+        events: [],
+      });
       continue;
     }
-    groups.push({
-      key,
-      items: [msg],
-    });
+    if (!lastTurn) {
+      turns.push({
+        user: null,
+        events: [msg],
+      });
+      continue;
+    }
+    lastTurn.events.push(msg);
   }
-  return groups;
+  return turns;
 }
 
 function showToast(message, type = "info") {
@@ -178,88 +185,100 @@ function renderMessages() {
     return;
   }
 
-  const groups = groupMessagesForRender(state.messages);
-  refs.messageList.innerHTML = groups
-    .map((group) => {
-      const items = Array.isArray(group.items) ? group.items : [];
-      if (!items.length) return "";
+  const previousScrollTop = refs.messageList.scrollTop;
+  const distanceToBottom =
+    refs.messageList.scrollHeight - refs.messageList.clientHeight - refs.messageList.scrollTop;
+  // 关键点（中文）：只有用户本来就在底部附近时，刷新后才自动跟随到底部。
+  const shouldStickToBottom = distanceToBottom <= 48;
 
-      // 单条 user 消息：独立卡片
-      if (items.length === 1 && String(items[0]?.role || "") === "user") {
-        const msg = items[0];
-        const text = toRenderableText(msg.text);
-        return `
-          <article class="message user">
-            <div class="message-head">
-              <span class="role">USER</span>
-              <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
-              <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
+  const turns = splitMessagesIntoTurns(state.messages);
+  refs.messageList.innerHTML = turns
+    .map((turn) => {
+      const user = turn.user;
+      const userHtml = user
+        ? `
+          <article class="turn-user">
+            <div class="turn-head">
+              <span class="role role-user">USER</span>
+              <span class="time">${escapeHtml(formatTime(user.ts))}</span>
+              <span class="meta">${escapeHtml(user.kind || "normal")}/${escapeHtml(user.source || "-")}</span>
             </div>
-            <pre class="message-body">${escapeHtml(text)}</pre>
+            <div class="turn-body">${formatMessageAsHtml(toRenderableText(user.text))}</div>
           </article>
-        `;
-      }
+        `
+        : "";
 
-      // 助手轮次卡片：聚合 tool call/result + assistant
-      const head = items.find((x) => String(x.role || "") === "assistant") || items[0];
-      const sections = items
-        .map((msg) => {
-          const role = String(msg.role || "");
-          const text = toRenderableText(msg.text);
-          const toolName = String(msg.toolName || "").trim();
+      const eventsHtml = Array.isArray(turn.events)
+        ? turn.events
+            .map((msg) => {
+              const role = String(msg.role || "");
+              const toolName = String(msg.toolName || "").trim();
+              const roleText =
+                role === "assistant"
+                  ? "ASSISTANT"
+                  : role === "tool-call"
+                    ? "TOOL CALL"
+                    : role === "tool-result"
+                      ? "TOOL RESULT"
+                      : role.toUpperCase();
+              const eventClass =
+                role === "assistant"
+                  ? "assistant"
+                  : role === "tool-call"
+                    ? "tool-call"
+                    : role === "tool-result"
+                      ? "tool-result"
+                      : "assistant";
+              const normalizedText = toRenderableText(msg.text);
+              const preview = shortText(normalizeForPreview(normalizedText), 140);
+              const roleLabel = toolName ? `${roleText} · ${toolName}` : roleText;
 
-          if (role === "tool-call" || role === "tool-result") {
-            const label = role === "tool-call" ? "TOOL CALL" : "TOOL RESULT";
-            const preview = shortText(normalizeForPreview(text), 180);
-            const detailClass = role === "tool-call" ? "tool-item call" : "tool-item result";
-            return `
-              <details class="${detailClass}">
-                <summary>
-                  <span class="tool-label">${escapeHtml(toolName ? `${label} · ${toolName}` : label)}</span>
-                  <span class="tool-preview">${escapeHtml(preview)}</span>
-                </summary>
-                <pre class="message-body tool-body">${escapeHtml(text)}</pre>
-              </details>
-            `;
-          }
+              // 关键点（中文）：tool 事件默认折叠，先展示摘要，避免消息区被工具日志挤满。
+              if (role === "tool-call" || role === "tool-result") {
+                return `
+                  <article class="turn-event ${eventClass} is-collapsed">
+                    <div class="turn-head">
+                      <span class="role">${escapeHtml(roleLabel)}</span>
+                      <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
+                      <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
+                      <button class="turn-toggle" type="button" data-turn-toggle="true">展开</button>
+                    </div>
+                    <div class="turn-preview">${escapeHtml(preview)}</div>
+                    <div class="turn-body code">${formatMessageAsHtml(normalizedText)}</div>
+                  </article>
+                `;
+              }
 
-          if (role === "assistant") {
-            return `
-              <div class="assistant-body-wrap">
-                <div class="assistant-label">ASSISTANT</div>
-                <pre class="message-body">${escapeHtml(text)}</pre>
-              </div>
-            `;
-          }
-
-          if (role === "user") {
-            return `
-              <div class="assistant-body-wrap user-inline">
-                <div class="assistant-label">USER</div>
-                <pre class="message-body">${escapeHtml(text)}</pre>
-              </div>
-            `;
-          }
-
-          return "";
-        })
-        .filter(Boolean)
-        .join("");
+              return `
+                <article class="turn-event ${eventClass}">
+                  <div class="turn-head">
+                    <span class="role">${escapeHtml(roleLabel)}</span>
+                    <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
+                    <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
+                  </div>
+                  <div class="turn-preview">${escapeHtml(preview)}</div>
+                  <div class="turn-body code">${formatMessageAsHtml(normalizedText)}</div>
+                </article>
+              `;
+            })
+            .join("")
+        : "";
 
       return `
-        <article class="message assistant group">
-          <div class="message-head">
-            <span class="role">ASSISTANT ROUND</span>
-            <span class="time">${escapeHtml(formatTime(head.ts))}</span>
-            <span class="meta">${escapeHtml(head.kind || "normal")}/${escapeHtml(head.source || "-")}</span>
-          </div>
-          <div class="group-body">${sections}</div>
-        </article>
+        <section class="turn">
+          ${userHtml}
+          <div class="turn-events">${eventsHtml}</div>
+        </section>
       `;
     })
     .join("");
 
-  refs.messageList.scrollTop = refs.messageList.scrollHeight;
+  if (shouldStickToBottom) {
+    refs.messageList.scrollTop = refs.messageList.scrollHeight;
+  } else {
+    // 关键点（中文）：用户正在看历史时，刷新后保持阅读位置，避免跳到底部。
+    refs.messageList.scrollTop = previousScrollTop;
+  }
 }
 
 function renderServices() {
@@ -671,6 +690,16 @@ function bindEvents() {
       event.preventDefault();
       void sendToCurrentContext();
     }
+  });
+
+  refs.messageList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-turn-toggle='true']");
+    if (!button) return;
+    const card = button.closest(".turn-event");
+    if (!card) return;
+    const isCollapsed = card.classList.contains("is-collapsed");
+    card.classList.toggle("is-collapsed", !isCollapsed);
+    button.textContent = isCollapsed ? "收起" : "展开";
   });
 
   refs.refreshServicesBtn.addEventListener("click", () => {

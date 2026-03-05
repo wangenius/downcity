@@ -122,6 +122,7 @@ shipmyagent init
 ```
 your-project/
 ├── Agent.md           # Agent 系统提示词
+├── Soul.md            # 可选：核心原则提示词
 ├── ship.json          # 配置文件
 ├── .claude/           # Claude 兼容目录
 │   └── skills/        # Skills 存放位置
@@ -193,7 +194,7 @@ shipmyagent test-llm
 
 ### 步骤 4：自定义您的 Agent
 
-编辑 `Agent.md` 以定义 agent 的角色：
+编辑 `Agent.md` 以定义 agent 的角色（可选再编辑 `Soul.md` 定义稳定执行原则）：
 
 ```markdown
 # Agent 角色
@@ -422,7 +423,7 @@ curl https://api.anthropic.com/v1/messages
 
 - **Agent**：管理您仓库的 AI 助手
 - **Task**：自动运行的定时作业（通过 cron）
-- **Prompt**：给 LLM 的指令（在 Agent.md 或任务中）
+- **Prompt**：给 LLM 的指令（在 Agent.md / Soul.md / 任务中）
 - **Service**：外部服务连接（Telegram、GitHub 等）
 - **Permission**：控制 agent 可以做什么的规则
 - **Approval**：敏感操作需要的人工确认

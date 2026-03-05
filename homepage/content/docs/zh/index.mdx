@@ -17,7 +17,7 @@ ShipMyAgent 是一个让你可以快速将任意代码仓库转变为**Agentic W
 ## 核心特性
 
 - **本地优先**：直接在你的本地代码库中运行，无需上传代码到第三方服务器。
-- **简单配置**：通过 `Agent.md` 定义智能体的人设，通过 `ship.json` 配置权限和工具。
+- **简单配置**：通过 `Agent.md` 定义智能体人设，通过 `Soul.md` 定义稳定执行原则，通过 `ship.json` 配置权限和工具。
 - **模型无关**：支持 Claude 3.5 Sonnet, GPT-4o, DeepSeek 等多种模型，支持切换。
 - **任务调度**：内置 Cron 调度器，支持定时执行复杂的维护任务。
 - **人机协作**：主要设计用于辅助开发者，所有高风险操作均需人工审批。
@@ -27,7 +27,7 @@ ShipMyAgent 是一个让你可以快速将任意代码仓库转变为**Agentic W
 ShipMyAgent 在你的项目中运行一个轻量级的 Agent Server。它通过内置工具集连接 LLM 和你的代码库。
 
 1. **Init**: 在项目根目录运行 `shipmyagent init` 生成配置文件。
-2. **Config**: 编辑 `Agent.md` 告诉 AI 它应该做什么。
+2. **Config**: 编辑 `Agent.md`（可选再编辑 `Soul.md`）告诉 AI 它应该做什么。
 3. **Start**: `shipmyagent .` 前台启动（当前终端运行）；`shipmyagent start [path]` 后台启动（终端关闭也保持运行）。
 
 ## 下一步

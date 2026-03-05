@@ -113,7 +113,7 @@ interface Tool {
 
 当前 runtime 采用更可预测、更低成本的上下文策略：
 
-- 每次请求拼一个 **system**：`Agent.md + DefaultPrompt`
+- 每次请求拼静态 **system**：`Agent.md`（可选再加 `Soul.md`）+ `DefaultPrompt`
 - **user** 消息保持原文（不加前缀）
 - 每个 `chatKey` 都有一份持续增长的 history（`UIMessage[]`，落盘在 `.ship/chat/<encodedChatKey>/messages/messages.jsonl`）
 - 每次请求直接把该 history 转成 `messages` 送给模型（不再把历史折叠成字符串块，也不需要“加载历史”工具）

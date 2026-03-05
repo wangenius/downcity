@@ -5,11 +5,11 @@ description: Complete reference for ShipMyAgent configuration files
 
 # Configuration
 
-Complete guide to configuring ShipMyAgent via `ship.json` and `Agent.md`.
+Complete guide to configuring ShipMyAgent via `ship.json`, `Agent.md`, and `Soul.md`.
 
 ## Overview
 
-ShipMyAgent uses two main configuration files:
+ShipMyAgent uses three main configuration files:
 
 ```
 your-project/
@@ -17,6 +17,7 @@ your-project/
 ├── .env               # Local environment variables (do not commit)
 ├── ship.json          # Main configuration (LLM, services)
 ├── Agent.md           # Agent personality and behavior
+├── Soul.md            # Optional core principles / operating style
 └── .ship/             # Runtime data (logs, cache, tasks)
 ```
 
@@ -311,6 +312,7 @@ Server configuration.
 
 Defines the agent's personality, goals, constraints, and behavior. This is the **system prompt** for your LLM.
 In a running `shipmyagent run` / `shipmyagent start` process, saving `Agent.md` triggers hot reload automatically (no restart required).
+If `Soul.md` exists at project root, it is injected as an additional static system prompt and also hot-reloads on save.
 
 ### Structure
 
@@ -434,6 +436,24 @@ This improves:
 - Maintainability
 - Performance (fewer re-renders)
 - Developer experience
+```
+
+## Soul.md (Optional)
+
+`Soul.md` is an optional static prompt file at project root. It is loaded together with `Agent.md` and can define stable principles such as execution style, risk boundaries, and quality bar.
+
+Example:
+
+```markdown
+# Soul
+
+You are a reliable and auditable engineering agent.
+
+## Principles
+
+- Clarify goals before execution
+- Prefer correctness over speed
+- State uncertainty explicitly
 ```
 
 ### Agent Templates

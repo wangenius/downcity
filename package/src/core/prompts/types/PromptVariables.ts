@@ -16,5 +16,5 @@ export interface PromptGeoContext {
 export interface PromptTemplateVariables {
   currentTime: string;
   location: string;
-  projectPath?: string;
+  projectPath: string;
 }

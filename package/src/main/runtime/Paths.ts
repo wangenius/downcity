@@ -12,6 +12,27 @@ export function getAgentMdPath(cwd: string): string {
   return path.join(cwd, "Agent.md");
 }
 
+/**
+ * Soul.md 候选文件名（按优先级从高到低）。
+ *
+ * 关键点（中文）
+ * - 兼容社区常见写法：`Soul.md` / `soul.md` / `SOUL.md`。
+ * - 统一由 Paths 模块暴露，避免调用方散落硬编码。
+ */
+export const SOUL_MD_FILE_CANDIDATES = [
+  "Soul.md",
+  "soul.md",
+  "SOUL.md",
+] as const;
+
+export function getSoulMdPath(cwd: string): string {
+  return path.join(cwd, SOUL_MD_FILE_CANDIDATES[0]);
+}
+
+export function getSoulMdCandidatePaths(cwd: string): string[] {
+  return SOUL_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
+}
+
 export function getShipJsonPath(cwd: string): string {
   return path.join(cwd, "ship.json");
 }

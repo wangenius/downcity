@@ -2,7 +2,7 @@
  * `shipmyagent init`：在目标目录生成最小可用的 ShipMyAgent 工程骨架与配置文件。
  *
  * 目标
- * - 生成 `Agent.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
+ * - 生成 `Agent.md` / `Soul.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
  * - 通过交互式问题收集必要配置（模型、Adapters 等）
  *
  * 设计要点
@@ -18,6 +18,7 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import {
   getAgentMdPath,
+  getSoulMdPath,
   getShipJsonPath,
   getShipDirPath,
   getLogsDirPath,
@@ -145,6 +146,7 @@ export async function initCommand(
 
   // Check if core initialization files already exist
   const existingAgentMd = fs.existsSync(getAgentMdPath(projectRoot));
+  const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
 
   // 关键点（中文）：已存在的 Agent.md 永远不覆盖，只在 ship.json 已存在时询问覆盖。
@@ -236,6 +238,7 @@ export async function initCommand(
 
   // Create configuration files
   const agentMdPath = getAgentMdPath(projectRoot);
+  const soulMdPath = getSoulMdPath(projectRoot);
   const shipJsonPath = getShipJsonPath(projectRoot);
 
   // Save Agent.md (default user identity definition)
@@ -260,6 +263,31 @@ Help users understand and work with their codebase by exploring, analyzing, and 
   } else {
     await fs.writeFile(agentMdPath, defaultAgentMd);
     console.log(`✅ Created Agent.md`);
+  }
+
+  const defaultSoulMd = `# Soul
+
+你是一个可靠、审慎、可审计的工程代理。
+
+## 核心价值
+
+- 先澄清目标，再执行
+- 优先正确性与可维护性
+- 对不确定信息明确标注
+- 输出简洁、可执行的结论
+
+## 行为约束
+
+- 不伪造结果，不隐藏失败
+- 不执行高风险操作，除非用户明确要求
+- 变更前先评估影响范围
+`;
+
+  if (existingSoulMd) {
+    console.log("⏭️  Skipped existing Soul.md");
+  } else {
+    await fs.writeFile(soulMdPath, defaultSoulMd);
+    console.log(`✅ Created Soul.md`);
   }
 
   // Save ship.json
@@ -527,6 +555,7 @@ Help users understand and work with their codebase by exploring, analyzing, and 
 
   const nextSteps: string[] = [
     "Edit Agent.md to customize agent behavior",
+    "Edit Soul.md to customize your core operating principles",
     "Edit ship.json to modify LLM configuration (baseUrl, apiKey, temperature, etc.)",
   ];
 

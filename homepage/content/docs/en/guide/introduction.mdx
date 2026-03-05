@@ -11,19 +11,23 @@ Before using ShipMyAgent, understanding these core concepts will help you better
 
 Agent Runtime is the core engine of ShipMyAgent. It is responsible for:
 
-- Loading the System Prompt from `Agent.md`.
+- Loading system prompts from `Agent.md` (and optional `Soul.md`).
 - Managing the LLM's context window.
 - Distributing and executing Tool Calls.
 - Handling file system read/write permissions.
 
 ## 2. Configuration Files
 
-ShipMyAgent uses two main files to define the Agent's behavior:
+ShipMyAgent uses three main files to define the Agent's behavior:
 
 ### Agent.md
 
 This is the Agent's "Brain". Here you use natural language to define the Agent's role, goals, constraints, and behavior guidelines.
 For example, you can tell the Agent: "You are a strict code reviewer, focusing specifically on TypeScript type safety."
+
+### Soul.md (Optional)
+
+This is the Agent's "Operating Principles". Use it for stable rules like execution style, risk boundaries, and quality bar.
 
 ### ship.json
 

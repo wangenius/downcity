@@ -17,7 +17,7 @@ With simple configuration, you can let an AI maintainer:
 ## Core Features
 
 - **Local First**: Runs directly in your local codebase, no need to upload code to third-party servers.
-- **Simple Configuration**: Define agent persona via `Agent.md`, add stable operating principles via `Soul.md`, and configure permissions/tools via `ship.json`.
+- **Simple Configuration**: Define agent persona via `PROFILE.md`, add stable principles via `SOUL.md`, capture user preferences via `USER.md`, and configure permissions/tools via `ship.json`.
 - **Model Agnostic**: Supports Claude 3.5 Sonnet, GPT-4o, DeepSeek, etc., and supports switching.
 - **Task Scheduling**: Built-in Cron scheduler to execute complex maintenance tasks periodically.
 - **Human-AI Collaboration**: Designed primarily to assist developers, all high-risk operations require human approval.
@@ -27,7 +27,7 @@ With simple configuration, you can let an AI maintainer:
 ShipMyAgent runs a lightweight Agent Server in your project. It connects the LLM and your codebase through a built-in toolset.
 
 1. **Init**: Run `shipmyagent init` in the project root to generate config files.
-2. **Config**: Edit `Agent.md` (and optionally `Soul.md`) to tell the AI what it should do.
+2. **Config**: Edit `PROFILE.md` (and optionally `SOUL.md` + `USER.md`) to tell the AI what it should do.
 3. **Start**: `shipmyagent .` runs in foreground (current terminal); `shipmyagent start [path]` runs in background (daemon).
 
 ## Next Steps

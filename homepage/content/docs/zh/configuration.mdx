@@ -5,19 +5,20 @@ description: ShipMyAgent 配置文件完整参考
 
 # 配置
 
-通过 `ship.json`、`Agent.md` 和 `Soul.md` 配置 ShipMyAgent 的完整指南。
+通过 `ship.json`、`PROFILE.md`、`SOUL.md` 和 `USER.md` 配置 ShipMyAgent 的完整指南。
 
 ## 概述
 
-ShipMyAgent 使用三个主要配置文件：
+ShipMyAgent 使用四个主要配置文件：
 
 ```
 your-project/
 ├── .env.example       # 环境变量模板（推荐提交）
 ├── .env               # 本地环境变量（不要提交）
 ├── ship.json          # 主配置（LLM、services）
-├── Agent.md           # Agent 个性和行为
-├── Soul.md            # 可选：核心原则/执行风格
+├── PROFILE.md           # Agent 个性和行为
+├── SOUL.md            # 可选：核心原则/执行风格
+├── USER.md            # 可选：用户画像/偏好
 └── .ship/             # 运行时数据（日志、缓存、任务）
 ```
 
@@ -291,11 +292,11 @@ LLM 请求日志（通常包含 system + messages）可通过 `ship.json` 控制
 
 ---
 
-## Agent.md
+## PROFILE.md
 
 定义 agent 的个性、目标、约束和行为。这是您 LLM 的**系统提示**。
-在运行中的 `shipmyagent run` / `shipmyagent start` 进程里，保存 `Agent.md` 后会自动热重载，无需重启服务。
-如果项目根目录存在 `Soul.md`，会作为额外静态 system prompt 一并注入，并在保存时自动热重载。
+在运行中的 `shipmyagent run` / `shipmyagent start` 进程里，保存 `PROFILE.md` 后会自动热重载，无需重启服务。
+如果项目根目录存在 `SOUL.md` / `USER.md`，会作为额外静态 system prompt 一并注入，并在保存时自动热重载。
 
 ### 结构
 
@@ -421,9 +422,9 @@ const data = useContext(MyContext);
 - 开发体验
 ```
 
-## Soul.md（可选）
+## SOUL.md（可选）
 
-`Soul.md` 是项目根目录下的可选静态提示词文件。它会与 `Agent.md` 一起加载，用于定义更稳定的执行原则，例如工作风格、风险边界和质量标准。
+`SOUL.md` 是项目根目录下的可选静态提示词文件。它会与 `PROFILE.md` 一起加载，用于定义更稳定的执行原则，例如工作风格、风险边界和质量标准。
 
 示例：
 
@@ -437,6 +438,22 @@ const data = useContext(MyContext);
 - 先澄清目标，再执行
 - 优先正确性而非速度
 - 对不确定信息明确标注
+```
+
+## USER.md（可选）
+
+`USER.md` 是项目根目录下的可选静态提示词文件。它会和 `PROFILE.md` / `SOUL.md` 一起加载，适合承载用户的稳定偏好，例如沟通风格、输出格式、决策优先级。
+
+示例：
+
+```markdown
+# User
+
+## 偏好
+
+- 使用简洁条目回复
+- 先给结论，再给理由
+- 优先正确性而非速度
 ```
 
 ### Agent 模板

@@ -54,7 +54,7 @@ shipmyagent init
 
 这会创建以下文件：
 
-- `Agent.md` - Agent 宪法 / 行为规范
+- `PROFILE.md` - Agent 宪法 / 行为规范
 - `ship.json` - Runtime 配置
 - `.ship/` - Agent 运行时目录
 
@@ -73,7 +73,7 @@ Agent 将启动并监听配置的通信渠道（如 Telegram Bot）。
 ```
 your-project/
 ├─ src/                  # 你的业务代码
-├─ Agent.md              # Agent 宪法（必选）
+├─ PROFILE.md              # Agent 宪法（必选）
 ├─ ship.json             # Runtime 配置
 ├─ .ship/
 │   ├─ routes/           # 对外接口（webhook / command）
@@ -93,7 +93,7 @@ your-project/
 
 ## 配置说明
 
-### Agent.md - Agent 宪法
+### PROFILE.md - Agent 宪法
 
 定义 Agent 的角色、行为边界和决策原则：
 

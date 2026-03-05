@@ -64,7 +64,7 @@ export const CodePreviewSection: FC = () => {
                   <IconFileText className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h4 className="font-semibold">Agent.md</h4>
+                  <h4 className="font-semibold">PROFILE.md</h4>
                   <p className="text-sm text-muted-foreground">
                     {t("features:codePreview.agentMdDesc")}
                   </p>
@@ -104,7 +104,7 @@ export const CodePreviewSection: FC = () => {
                   onClick={() => setActiveTab("agent")}
                 >
                   <IconFileText size={14} className="text-blue-400" />
-                  Agent.md
+                  PROFILE.md
                 </div>
                 <div
                   className={cn(

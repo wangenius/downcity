@@ -2,7 +2,7 @@
  * `shipmyagent init`：在目标目录生成最小可用的 ShipMyAgent 工程骨架与配置文件。
  *
  * 目标
- * - 生成 `Agent.md` / `Soul.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
+ * - 生成 `PROFILE.md` / `SOUL.md` / `USER.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
  * - 通过交互式问题收集必要配置（模型、Adapters 等）
  *
  * 设计要点
@@ -17,8 +17,9 @@ import { execa } from "execa";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import {
-  getAgentMdPath,
+  getProfileMdPath,
   getSoulMdPath,
+  getUserMdPath,
   getShipJsonPath,
   getShipDirPath,
   getLogsDirPath,
@@ -39,6 +40,11 @@ import type { ShipConfig } from "@/main/runtime/Config.js";
 import { SHIP_JSON_SCHEMA } from "@main/constants/ShipSchema.js";
 import { MODEL_CONFIGS } from "@main/constants/Model.js";
 import { DEFAULT_SHIP_JSON } from "@main/constants/Ship.js";
+import {
+  DEFAULT_PROFILE_MD_TEMPLATE,
+  DEFAULT_SOUL_MD_TEMPLATE,
+  DEFAULT_USER_MD_TEMPLATE,
+} from "@main/constants/InitTemplates.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -145,11 +151,12 @@ export async function initCommand(
   console.log(`🚀 Initializing ShipMyAgent project: ${projectRoot}`);
 
   // Check if core initialization files already exist
-  const existingAgentMd = fs.existsSync(getAgentMdPath(projectRoot));
+  const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
+  const existingUserMd = fs.existsSync(getUserMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
 
-  // 关键点（中文）：已存在的 Agent.md 永远不覆盖，只在 ship.json 已存在时询问覆盖。
+  // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 ship.json 已存在时询问覆盖。
   if (existingShipJson) {
     if (!allowOverwrite) {
       const confirmResponse = (await prompts({
@@ -237,57 +244,39 @@ export async function initCommand(
   ])) as InitPromptResponse;
 
   // Create configuration files
-  const agentMdPath = getAgentMdPath(projectRoot);
+  const profileMdPath = getProfileMdPath(projectRoot);
   const soulMdPath = getSoulMdPath(projectRoot);
+  const userMdPath = getUserMdPath(projectRoot);
   const shipJsonPath = getShipJsonPath(projectRoot);
+  const staticPromptFiles = [
+    {
+      filename: "PROFILE.md",
+      exists: existingProfileMd,
+      filePath: profileMdPath,
+      content: DEFAULT_PROFILE_MD_TEMPLATE,
+    },
+    {
+      filename: "SOUL.md",
+      exists: existingSoulMd,
+      filePath: soulMdPath,
+      content: DEFAULT_SOUL_MD_TEMPLATE,
+    },
+    {
+      filename: "USER.md",
+      exists: existingUserMd,
+      filePath: userMdPath,
+      content: DEFAULT_USER_MD_TEMPLATE,
+    },
+  ] as const;
 
-  // Save Agent.md (default user identity definition)
-  const defaultAgentMd = `# Agent Role
-
-You are a helpful project assistant.
-
-## Your Purpose
-
-Help users understand and work with their codebase by exploring, analyzing, and providing insights.
-
-## Your Approach
-
-- Read and analyze code to answer questions
-- Provide specific, actionable guidance
-- Explain what you find in the project
-- Only modify files when explicitly requested
-`;
-
-  if (existingAgentMd) {
-    console.log("⏭️  Skipped existing Agent.md");
-  } else {
-    await fs.writeFile(agentMdPath, defaultAgentMd);
-    console.log(`✅ Created Agent.md`);
-  }
-
-  const defaultSoulMd = `# Soul
-
-你是一个可靠、审慎、可审计的工程代理。
-
-## 核心价值
-
-- 先澄清目标，再执行
-- 优先正确性与可维护性
-- 对不确定信息明确标注
-- 输出简洁、可执行的结论
-
-## 行为约束
-
-- 不伪造结果，不隐藏失败
-- 不执行高风险操作，除非用户明确要求
-- 变更前先评估影响范围
-`;
-
-  if (existingSoulMd) {
-    console.log("⏭️  Skipped existing Soul.md");
-  } else {
-    await fs.writeFile(soulMdPath, defaultSoulMd);
-    console.log(`✅ Created Soul.md`);
+  // 关键点（中文）：静态 prompt 文件统一走同一套写入逻辑，仅通过文件名与模板区分。
+  for (const file of staticPromptFiles) {
+    if (file.exists) {
+      console.log(`⏭️  Skipped existing ${file.filename}`);
+      continue;
+    }
+    await fs.writeFile(file.filePath, file.content);
+    console.log(`✅ Created ${file.filename}`);
   }
 
   // Save ship.json
@@ -554,8 +543,9 @@ Help users understand and work with their codebase by exploring, analyzing, and 
   }
 
   const nextSteps: string[] = [
-    "Edit Agent.md to customize agent behavior",
-    "Edit Soul.md to customize your core operating principles",
+    "Edit PROFILE.md to customize agent behavior",
+    "Edit SOUL.md to customize your core operating principles",
+    "Edit USER.md to define user goals and communication preferences",
     "Edit ship.json to modify LLM configuration (baseUrl, apiKey, temperature, etc.)",
   ];
 

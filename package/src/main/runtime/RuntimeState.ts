@@ -14,11 +14,14 @@ import {
   type ShipConfig,
 } from "@/main/runtime/Config.js";
 import {
-  getAgentMdPath,
+  getProfileMdCandidatePaths,
+  getProfileMdPath,
   getCacheDirPath,
   getLogsDirPath,
   getSoulMdCandidatePaths,
   getSoulMdPath,
+  getUserMdCandidatePaths,
+  getUserMdPath,
   getShipContextRootDirPath,
   getShipConfigDirPath,
   getShipDataDirPath,
@@ -78,8 +81,6 @@ export type RuntimeState = RuntimeStateBase & {
   contextManager: ContextManager;
 };
 
-const DEFAULT_AGENT_PROFILE = `# Agent Role
-You are a helpful project assistant.`;
 const HOT_RELOAD_DEBOUNCE_MS = 300;
 const MAIN_SERVICE_PROMPT_FILE_URL = new URL(
   "../service/PROMPT.txt",
@@ -129,24 +130,51 @@ function requireServiceModel(): LanguageModel {
 }
 
 /**
- * 读取 Agent.md（含默认兜底）。
+ * 静态 prompt 文件规范。
+ *
+ * 关键点（中文）
+ * - PROFILE.md / SOUL.md / USER.md 统一走同一加载与热重载逻辑。
+ * - 文件差异通过配置描述（文件名、候选名、默认兜底）表达。
  */
-function loadAgentProfileText(rootPath: string): string {
-  let agentProfile = DEFAULT_AGENT_PROFILE;
-  try {
-    const content = fs.readFileSync(getAgentMdPath(rootPath), "utf-8").trim();
-    if (content) agentProfile = content;
-  } catch {
-    // ignore
-  }
-  return agentProfile;
-}
+type StaticPromptFileSpec = {
+  key: "profile" | "soul" | "user";
+  reloadReason: "profile_md_changed" | "soul_md_changed" | "user_md_changed";
+  defaultPath: (rootPath: string) => string;
+  candidatePaths: (rootPath: string) => string[];
+  fallbackText?: string;
+};
+
+const STATIC_PROMPT_FILES: StaticPromptFileSpec[] = [
+  {
+    key: "profile",
+    reloadReason: "profile_md_changed",
+    defaultPath: getProfileMdPath,
+    candidatePaths: getProfileMdCandidatePaths,
+    fallbackText: `# Agent Role
+You are a helpful project assistant.`,
+  },
+  {
+    key: "soul",
+    reloadReason: "soul_md_changed",
+    defaultPath: getSoulMdPath,
+    candidatePaths: getSoulMdCandidatePaths,
+  },
+  {
+    key: "user",
+    reloadReason: "user_md_changed",
+    defaultPath: getUserMdPath,
+    candidatePaths: getUserMdCandidatePaths,
+  },
+];
 
 /**
- * 解析 Soul.md 的实际文件路径（支持多种大小写）。
+ * 解析静态 prompt 文件路径（支持候选名）。
  */
-function resolveSoulMdPath(rootPath: string): string | null {
-  const candidates = getSoulMdCandidatePaths(rootPath);
+function resolveStaticPromptPath(
+  rootPath: string,
+  spec: StaticPromptFileSpec,
+): string | null {
+  const candidates = spec.candidatePaths(rootPath);
   for (const candidate of candidates) {
     try {
       if (fs.existsSync(candidate)) return candidate;
@@ -158,27 +186,35 @@ function resolveSoulMdPath(rootPath: string): string | null {
 }
 
 /**
- * 读取 Soul.md（可选）。
- *
- * 关键点（中文）
- * - Soul.md 缺失不报错，按“可选增强”处理。
- * - 与 Agent.md 并行注入静态 system prompt。
+ * 读取所有静态 prompt 文件。
  */
-function loadSoulProfileText(rootPath: string): string {
-  const soulPath = resolveSoulMdPath(rootPath);
-  if (!soulPath) return "";
-  try {
-    return fs.readFileSync(soulPath, "utf-8").trim();
-  } catch {
-    return "";
-  }
+function loadStaticPromptProfiles(rootPath: string): Array<{
+  spec: StaticPromptFileSpec;
+  resolvedPath: string | null;
+  text: string;
+}> {
+  return STATIC_PROMPT_FILES.map((spec) => {
+    const resolvedPath = resolveStaticPromptPath(rootPath, spec);
+    let text = "";
+    if (resolvedPath) {
+      try {
+        text = fs.readFileSync(resolvedPath, "utf-8").trim();
+      } catch {
+        text = "";
+      }
+    }
+    if (!text && spec.fallbackText) {
+      text = spec.fallbackText;
+    }
+    return { spec, resolvedPath, text };
+  });
 }
 
 /**
  * 构建静态系统提示列表。
  */
-function buildStaticSystems(agentProfile: string, soulProfile: string): string[] {
-  return [agentProfile, soulProfile, DEFAULT_SHIP_PROMPTS].filter(Boolean);
+function buildStaticSystems(staticProfiles: string[]): string[] {
+  return [...staticProfiles, DEFAULT_SHIP_PROMPTS].filter(Boolean);
 }
 
 function systemsEqual(a: string[], b: string[]): boolean {
@@ -211,22 +247,28 @@ function applyRuntimeSystems(nextSystems: string[]): void {
 }
 
 /**
- * 刷新静态系统提示（Agent.md / Soul.md）。
+ * 刷新静态系统提示（PROFILE.md / SOUL.md / USER.md）。
  */
 function reloadStaticPromptSystems(reason: string, filename?: string): void {
   const runtime = getRuntimeStateBase();
-  const nextSystems = buildStaticSystems(
-    loadAgentProfileText(runtime.rootPath),
-    loadSoulProfileText(runtime.rootPath),
-  );
+  const staticProfiles = loadStaticPromptProfiles(runtime.rootPath);
+  const nextSystems = buildStaticSystems(staticProfiles.map((item) => item.text));
   if (systemsEqual(runtime.systems, nextSystems)) return;
 
+  const pathByKey = new Map<string, string>();
+  for (const profile of staticProfiles) {
+    pathByKey.set(
+      profile.spec.key,
+      profile.resolvedPath || profile.spec.defaultPath(runtime.rootPath),
+    );
+  }
   applyRuntimeSystems(nextSystems);
   runtime.logger.info("Static prompts hot reloaded", {
     reason,
     filename: filename || undefined,
-    agentMdPath: getAgentMdPath(runtime.rootPath),
-    soulMdPath: resolveSoulMdPath(runtime.rootPath) || getSoulMdPath(runtime.rootPath),
+    profileMdPath: pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
+    soulMdPath: pathByKey.get("soul") || getSoulMdPath(runtime.rootPath),
+    userMdPath: pathByKey.get("user") || getUserMdPath(runtime.rootPath),
   });
 }
 
@@ -289,10 +331,10 @@ export function stopRuntimeHotReload(): void {
 }
 
 /**
- * 启动 runtime 文件热重载监听（Agent.md / Soul.md）。
+ * 启动 runtime 文件热重载监听（PROFILE.md / SOUL.md / USER.md）。
  *
  * 监听策略（中文）
- * - Agent.md / Soul.md：监听项目根目录并过滤目标文件名，兼容 rename/replace。
+ * - PROFILE.md / SOUL.md / USER.md：监听项目根目录并过滤目标文件名，兼容 rename/replace。
  * - 所有回调都做 debounce，避免编辑器连续写入造成重复刷新。
  */
 function startRuntimeHotReload(): void {
@@ -354,24 +396,34 @@ function startRuntimeHotReload(): void {
     }
   };
 
-  const soulMdFileNames = new Set(
-    getSoulMdCandidatePaths(runtime.rootPath).map((item) => path.basename(item)),
-  );
+  const staticPromptFileNameToReason = new Map<string, string>();
+  for (const spec of STATIC_PROMPT_FILES) {
+    for (const candidatePath of spec.candidatePaths(runtime.rootPath)) {
+      staticPromptFileNameToReason.set(
+        path.basename(candidatePath),
+        spec.reloadReason,
+      );
+    }
+  }
 
-  // Agent.md / Soul.md：监听项目根目录（文件替换/重命名也能捕获）。
+  // PROFILE.md / SOUL.md / USER.md：监听项目根目录（文件替换/重命名也能捕获）。
   attachWatcher(runtime.rootPath, {}, (_eventType, filename) => {
     const basename = filename ? path.basename(filename) : "";
-    const isAgentMd = basename === "Agent.md";
-    const isSoulMd = soulMdFileNames.has(basename);
-    if (!isAgentMd && !isSoulMd) return;
+    const changedReason = staticPromptFileNameToReason.get(basename);
+    if (!changedReason) return;
     schedule("static-prompts", () =>
-      reloadStaticPromptSystems(
-        isAgentMd ? "agent_md_changed" : "soul_md_changed",
-        basename,
-      ),
+      reloadStaticPromptSystems(changedReason, basename),
     );
   });
 
+  const staticProfiles = loadStaticPromptProfiles(runtime.rootPath);
+  const pathByKey = new Map<string, string>();
+  for (const profile of staticProfiles) {
+    pathByKey.set(
+      profile.spec.key,
+      profile.resolvedPath || profile.spec.defaultPath(runtime.rootPath),
+    );
+  }
   stopRuntimeHotReloadWatcher = () => {
     clearAllTimers();
     for (const watcher of watchers) {
@@ -384,8 +436,9 @@ function startRuntimeHotReload(): void {
   };
 
   runtime.logger.info("Runtime hot reload enabled", {
-    agentMdPath: getAgentMdPath(runtime.rootPath),
-    soulMdPath: resolveSoulMdPath(runtime.rootPath) || getSoulMdPath(runtime.rootPath),
+    profileMdPath: pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
+    soulMdPath: pathByKey.get("soul") || getSoulMdPath(runtime.rootPath),
+    userMdPath: pathByKey.get("user") || getUserMdPath(runtime.rootPath),
     watchers: watchers.length,
   });
 }
@@ -569,10 +622,8 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems: [],
   });
 
-  const systems = buildStaticSystems(
-    loadAgentProfileText(rootPath),
-    loadSoulProfileText(rootPath),
-  );
+  const staticProfiles = loadStaticPromptProfiles(rootPath);
+  const systems = buildStaticSystems(staticProfiles.map((item) => item.text));
 
   // 关键点（中文）：systems 在启动时确认后写回 base runtime state，供后续模块读取。
   setRuntimeStateBase({
@@ -660,7 +711,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
  */
 function ensureContextFiles(projectRoot: string): void {
   // Check if initialized（启动入口一次性确认工程根目录与关键文件）
-  if (!fs.existsSync(getAgentMdPath(projectRoot))) {
+  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
       '❌ Project not initialized. Please run "shipmyagent init" first',
     );

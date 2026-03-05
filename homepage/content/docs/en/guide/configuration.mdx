@@ -1,6 +1,6 @@
 ---
 title: Configuration
-description: Deep dive into ship.json and Agent.md configuration
+description: Deep dive into ship.json and PROFILE.md configuration
 ---
 
 # Configuration
@@ -146,9 +146,9 @@ Controls how much "conversation history" is injected at each execution and Chat 
   - **archiveOnCompact**: Whether to archive collapsed original segments during compact (default `true`)
 - **services.chat.queue**: Scheduler divided by `chatKey` lanes (serial for same chatKey, concurrent for different chatKeys; merges new messages at step boundaries during a run).
 
-## Agent.md
+## PROFILE.md
 
-`Agent.md` is the carrier of the System Prompt. It determines the Agent's "Personality" and "Professional Ethics".
+`PROFILE.md` is the carrier of the System Prompt. It determines the Agent's "Personality" and "Professional Ethics".
 
 ### Writing Tips
 
@@ -182,4 +182,4 @@ You are a senior frontend architect, focusing on React performance optimization.
 
 #### 4. Provide Context
 
-You can write important project specifications and code style guides directly in `Agent.md`, and the Agent will bear these rules in mind during every conversation.
+You can write important project specifications and code style guides directly in `PROFILE.md`, and the Agent will bear these rules in mind during every conversation.

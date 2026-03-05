@@ -521,7 +521,7 @@ export class ContextAgent {
    *
    * 关键点（中文）
    * - task 执行上下文替换默认 core prompt（`DEFAULT_SHIP_PROMPTS`）为 task 专用提示词。
-   * - Agent.md / Soul.md 等其他静态系统提示保持不变。
+   * - PROFILE.md / SOUL.md / USER.md 等其他静态系统提示保持不变。
    */
   private resolveStaticSystemPrompts(input: {
     systems: string[];

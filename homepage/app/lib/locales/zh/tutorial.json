@@ -3,7 +3,7 @@
   "description": "在几分钟内将您的代码仓库转换为 AI Agent",
   "step1": {
     "title": "初始化配置",
-    "description": "在项目根目录运行初始化命令。系统会自动生成 `Agent.md`（Agent Instruction）与配置文件，为你的代码仓库赋予独特的人格与权限边界。",
+    "description": "在项目根目录运行初始化命令。系统会自动生成 `PROFILE.md`（Agent Instruction）与配置文件，为你的代码仓库赋予独特的人格与权限边界。",
     "command": "shipmyagent init"
   },
   "step2": {
@@ -23,7 +23,7 @@
       "windowTitle": "bash — 80x24",
       "step1": {
         "initializing": "正在初始化 ShipMyAgent...",
-        "agentMdCreated": "✔ 已生成 Agent.md",
+        "agentMdCreated": "✔ 已生成 PROFILE.md",
         "shipJsonCreated": "✔ 已生成 ship.json",
         "ready": "准备起航。"
       },

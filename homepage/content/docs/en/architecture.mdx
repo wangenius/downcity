@@ -205,7 +205,7 @@ Cron Trigger
 
 The current runtime uses a minimal, predictable context strategy:
 
-- Per request, the runtime builds static **system** prompts from `Agent.md` (and optional `Soul.md`) plus `DefaultPrompt`
+- Per request, the runtime builds static **system** prompts from `PROFILE.md` (and optional `SOUL.md` / `USER.md`) plus `DefaultPrompt`
 - The **user** message stays raw (no prefixes)
 - Recent context comes from an in-memory session history scoped by `chatKey` (trimmed to a fixed bound)
 - When more detail is needed, the model can call `chat_load_history` to load and inject earlier messages from `.ship/chat/<chatKey>/conversations/messages.jsonl`

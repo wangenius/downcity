@@ -30,9 +30,9 @@ description: 有效和安全地使用 ShipMyAgent 的指南
 4. **使用示例** - 展示所需的输出格式
 5. **迭代改进** - 根据结果优化提示
 
-### 编写有效的 Agent.md
+### 编写有效的 PROFILE.md
 
-**良好的 Agent.md 结构**：
+**良好的 PROFILE.md 结构**：
 
 ```markdown
 # 角色
@@ -276,7 +276,7 @@ DATABASE_URL=postgres://...
 #### 4. 验证用户输入
 
 ```markdown
-# Agent.md
+# PROFILE.md
 
 ## 安全规则
 
@@ -388,7 +388,7 @@ shipmyagent logs --level error  # 定期查看这些！
 
 - [ ] 安装 ShipMyAgent
 - [ ] 配置 LLM API key
-- [ ] 创建初始 Agent.md
+- [ ] 创建初始 PROFILE.md
 - [ ] 设置 Telegram（可选）
 - [ ] 运行测试任务
 - [ ] 审查和调整提示
@@ -396,7 +396,7 @@ shipmyagent logs --level error  # 定期查看这些！
 
 #### 第 3-5 天：迭代和文档
 
-1. **根据试点反馈优化 Agent.md**
+1. **根据试点反馈优化 PROFILE.md**
 2. **记录常见任务**
 3. **创建团队特定指南**
 4. **设置共享资源**
@@ -427,7 +427,7 @@ shipmyagent logs --level error  # 定期查看这些！
 ## 议程：开始使用
 
 1. 安装和设置（15 分钟）
-2. 编写第一个 Agent.md（15 分钟）
+2. 编写第一个 PROFILE.md（15 分钟）
 3. 创建和运行任务（15 分钟）
 4. 审查和故障排查（15 分钟）
 
@@ -538,7 +538,7 @@ shipmyagent report --month > monthly-report.txt
 
 **问题**：
 ```markdown
-# Agent.md
+# PROFILE.md
 
 你是一个有帮助的助手。帮助我处理代码。
 ```
@@ -551,7 +551,7 @@ shipmyagent report --month > monthly-report.txt
 
 **✅ 更好的方法**：
 ```markdown
-# Agent.md
+# PROFILE.md
 
 你是一位专注于性能优化的高级 React 工程师。
 
@@ -638,7 +638,7 @@ cron: "0 9 * * 1"  # 每周深入分析
 
 **问题**：
 ```markdown
-# 对所有内容使用相同的 Agent.md
+# 对所有内容使用相同的 PROFILE.md
 ```
 
 **为什么不好**：
@@ -648,7 +648,7 @@ cron: "0 9 * * 1"  # 每周深入分析
 
 **✅ 更好的方法**：
 ```markdown
-# Agent.md - 通用目的
+# PROFILE.md - 通用目的
 # Agent.code-review.md - 专门用于审查
 # Agent.docs.md - 专门用于文档
 # Agent.tests.md - 专门用于测试
@@ -678,7 +678,7 @@ cron: "0 9 * * 1"  # 每周深入分析
 
 # .gitinclude
 .ship/tasks/
-Agent.md
+PROFILE.md
 ship.json.example
 ```
 

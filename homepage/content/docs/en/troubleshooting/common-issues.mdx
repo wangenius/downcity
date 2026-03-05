@@ -53,7 +53,7 @@ nvm use 20
 
 ### "Permission denied when creating files"
 
-**Problem**: Cannot create `Agent.md`, `ship.json`, or `.ship/` directory.
+**Problem**: Cannot create `PROFILE.md`, `ship.json`, or `.ship/` directory.
 
 **Solutions**:
 
@@ -149,17 +149,17 @@ nvm use 20
    }
    ```
 
-### "Agent.md not found"
+### "PROFILE.md not found"
 
-**Problem**: Missing or misplaced `Agent.md` file.
+**Problem**: Missing or misplaced `PROFILE.md` file.
 
 **Solution**:
 ```bash
-# Ensure Agent.md is in the project root
-ls Agent.md
+# Ensure PROFILE.md is in the project root
+ls PROFILE.md
 
 # If missing, recreate it
-cat > Agent.md << 'EOF'
+cat > PROFILE.md << 'EOF'
 # Agent Role
 
 You are a helpful AI coding assistant.

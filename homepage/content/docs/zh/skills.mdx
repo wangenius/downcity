@@ -81,7 +81,7 @@ skills 通过两个内置工具提供给模型：
 
 ## system prompt 中的 skills section
 
-当前 `shipmyagent start` 与聊天适配器默认都会把 skills 摘要 section 拼进 system prompt（`Agent.md` + 可选 `Soul.md` 拼接结果），让模型在对话一开始就知道：
+当前 `shipmyagent start` 与聊天适配器默认都会把 skills 摘要 section 拼进 system prompt（`PROFILE.md` + 可选 `SOUL.md` / `USER.md` 拼接结果），让模型在对话一开始就知道：
 
 - skills roots 是哪些
 - 应优先用 `skills_list / skills_load` 来发现与加载 skills

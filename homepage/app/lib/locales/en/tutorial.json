@@ -3,7 +3,7 @@
   "description": "Transform your repository into an AI agent in minutes",
   "step1": {
     "title": "Initialize Config",
-    "description": "Run the init command at your project root. This generates `Agent.md` (Agent Instructions) and config files, giving your repository a unique personality and permission boundaries.",
+    "description": "Run the init command at your project root. This generates `PROFILE.md` (Agent Instructions) and config files, giving your repository a unique personality and permission boundaries.",
     "command": "shipmyagent init"
   },
   "step2": {
@@ -23,7 +23,7 @@
       "windowTitle": "bash — 80x24",
       "step1": {
         "initializing": "Initializing ShipMyAgent...",
-        "agentMdCreated": "✔ Agent.md created",
+        "agentMdCreated": "✔ PROFILE.md created",
         "shipJsonCreated": "✔ ship.json created",
         "ready": "Ready to ship."
       },

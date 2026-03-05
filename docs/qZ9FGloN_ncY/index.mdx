@@ -194,7 +194,7 @@ package/src/services
 主流程见 run 命令：
 
 1. initShipRuntimeContext(cwd) 初始化运行时上下文。
-2. 读取 Agent.md + DEFAULT_SHIP_PROMPTS 形成 systems。
+2. 读取 PROFILE.md + DEFAULT_SHIP_PROMPTS 形成 systems。
 3. 初始化 McpManager。
 4. 初始化 ContextManager（并注入 memory maintenance 回调）。
 5. 注册 service 的 system prompt providers（skills + memory）。
@@ -229,7 +229,7 @@ package/src/services
 
 1. 参数与日志初始化（requestId、contextId）。
 2. 单实例单会话绑定（防串线）。
-3. 构建 system messages：运行时上下文 prompt启动时静态 prompts（Agent.md + DEFAULT）providers 输出（skills/memory 等）
+3. 构建 system messages：运行时上下文 prompt启动时静态 prompts（PROFILE.md + DEFAULT）providers 输出（skills/memory 等）
 4. 从 history 生成 model messages（必要时先 compact）。
 5. streamText 执行 tool-loop，支持最多 30 steps。
 6. 消费 UIMessageStream 产出最终 assistantMessage。

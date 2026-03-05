@@ -3,7 +3,7 @@
  *
  * 这里主要做两件事：
  * 1) 生成每次请求的“运行时 system prompt”（包含 contextId/requestId/来源渠道等）
- * 2) 把 `Agent.md` / `Soul.md` / 内置 prompts / skills 概览等“瓶装 system prompts”统一转换为 system messages，
+ * 2) 把 `PROFILE.md` / `SOUL.md` / `USER.md` / 内置 prompts / skills 概览等“瓶装 system prompts”统一转换为 system messages，
  *    并支持模板变量替换（例如 `{{current_time}}`）
  */
 

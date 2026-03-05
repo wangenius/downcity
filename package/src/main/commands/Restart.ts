@@ -5,7 +5,7 @@
 import path from "path";
 import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getAgentMdPath, getShipJsonPath } from "@/main/runtime/Paths.js";
+import { getProfileMdPath, getShipJsonPath } from "@/main/runtime/Paths.js";
 import { buildRunArgsFromOptions } from "@main/runtime/CliArgs.js";
 import { startDaemonProcess, stopDaemonProcess } from "@main/runtime/Manager.js";
 import type { StartOptions } from "@main/types/Start.js";
@@ -24,7 +24,7 @@ export async function restartCommand(
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
 
-  if (!fs.existsSync(getAgentMdPath(projectRoot))) {
+  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
       '❌ Project not initialized. Please run "shipmyagent init" first',
     );

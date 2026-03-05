@@ -12,7 +12,7 @@
 import path from "path";
 import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getAgentMdPath, getShipJsonPath } from "@/main/runtime/Paths.js";
+import { getProfileMdPath, getShipJsonPath } from "@/main/runtime/Paths.js";
 import { startDaemonProcess } from "@main/runtime/Manager.js";
 import { buildRunArgsFromOptions } from "@main/runtime/CliArgs.js";
 import type { StartOptions } from "@main/types/Start.js";
@@ -32,7 +32,7 @@ export async function startCommand(
   const projectRoot = path.resolve(cwd);
 
   // 启动前先做最基本的工程校验，避免起了一个立刻报错退出的 daemon。
-  if (!fs.existsSync(getAgentMdPath(projectRoot))) {
+  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
       '❌ Project not initialized. Please run "shipmyagent init" first',
     );

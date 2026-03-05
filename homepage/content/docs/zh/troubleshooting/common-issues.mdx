@@ -53,7 +53,7 @@ nvm use 20
 
 ### "创建文件时权限被拒绝"
 
-**问题**: 无法创建 `Agent.md`、`ship.json` 或 `.ship/` 目录。
+**问题**: 无法创建 `PROFILE.md`、`ship.json` 或 `.ship/` 目录。
 
 **解决方案**：
 
@@ -149,17 +149,17 @@ nvm use 20
    }
    ```
 
-### "未找到 Agent.md"
+### "未找到 PROFILE.md"
 
-**问题**: 缺少或 `Agent.md` 文件位置错误。
+**问题**: 缺少或 `PROFILE.md` 文件位置错误。
 
 **解决方案**：
 ```bash
-# 确保 Agent.md 在项目根目录
-ls Agent.md
+# 确保 PROFILE.md 在项目根目录
+ls PROFILE.md
 
 # 如果缺失，重新创建
-cat > Agent.md << 'EOF'
+cat > PROFILE.md << 'EOF'
 # Agent 角色
 
 你是一个有帮助的 AI 编程助手。

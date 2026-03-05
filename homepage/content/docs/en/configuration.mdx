@@ -5,19 +5,20 @@ description: Complete reference for ShipMyAgent configuration files
 
 # Configuration
 
-Complete guide to configuring ShipMyAgent via `ship.json`, `Agent.md`, and `Soul.md`.
+Complete guide to configuring ShipMyAgent via `ship.json`, `PROFILE.md`, `SOUL.md`, and `USER.md`.
 
 ## Overview
 
-ShipMyAgent uses three main configuration files:
+ShipMyAgent uses four main configuration files:
 
 ```
 your-project/
 ├── .env.example       # Environment variables template (recommended)
 ├── .env               # Local environment variables (do not commit)
 ├── ship.json          # Main configuration (LLM, services)
-├── Agent.md           # Agent personality and behavior
-├── Soul.md            # Optional core principles / operating style
+├── PROFILE.md           # Agent personality and behavior
+├── SOUL.md            # Optional core principles / operating style
+├── USER.md            # Optional user profile / preference prompt
 └── .ship/             # Runtime data (logs, cache, tasks)
 ```
 
@@ -308,11 +309,11 @@ Server configuration.
 
 ---
 
-## Agent.md
+## PROFILE.md
 
 Defines the agent's personality, goals, constraints, and behavior. This is the **system prompt** for your LLM.
-In a running `shipmyagent run` / `shipmyagent start` process, saving `Agent.md` triggers hot reload automatically (no restart required).
-If `Soul.md` exists at project root, it is injected as an additional static system prompt and also hot-reloads on save.
+In a running `shipmyagent run` / `shipmyagent start` process, saving `PROFILE.md` triggers hot reload automatically (no restart required).
+If `SOUL.md` / `USER.md` exists at project root, each is injected as an additional static system prompt and hot-reloads on save.
 
 ### Structure
 
@@ -438,9 +439,9 @@ This improves:
 - Developer experience
 ```
 
-## Soul.md (Optional)
+## SOUL.md (Optional)
 
-`Soul.md` is an optional static prompt file at project root. It is loaded together with `Agent.md` and can define stable principles such as execution style, risk boundaries, and quality bar.
+`SOUL.md` is an optional static prompt file at project root. It is loaded together with `PROFILE.md` and can define stable principles such as execution style, risk boundaries, and quality bar.
 
 Example:
 
@@ -454,6 +455,22 @@ You are a reliable and auditable engineering agent.
 - Clarify goals before execution
 - Prefer correctness over speed
 - State uncertainty explicitly
+```
+
+## USER.md (Optional)
+
+`USER.md` is an optional static prompt file at project root. It is loaded with `PROFILE.md`/`SOUL.md` and is intended for stable user preferences such as communication style, output format, and priorities.
+
+Example:
+
+```markdown
+# User
+
+## Preferences
+
+- Reply in concise bullet points
+- Put conclusions first
+- Prioritize correctness over speed
 ```
 
 ### Agent Templates

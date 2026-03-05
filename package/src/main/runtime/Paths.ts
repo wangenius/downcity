@@ -8,22 +8,31 @@
  */
 import path from "path";
 
-export function getAgentMdPath(cwd: string): string {
-  return path.join(cwd, "Agent.md");
+/**
+ * PROFILE.md 候选文件名（按优先级从高到低）。
+ *
+ * 关键点（中文）
+ * - 统一使用大写文件名：`PROFILE.md`。
+ * - 与 SOUL/USER 一起作为静态 prompt 入口。
+ */
+export const PROFILE_MD_FILE_CANDIDATES = ["PROFILE.md"] as const;
+
+export function getProfileMdPath(cwd: string): string {
+  return path.join(cwd, PROFILE_MD_FILE_CANDIDATES[0]);
+}
+
+export function getProfileMdCandidatePaths(cwd: string): string[] {
+  return PROFILE_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
 }
 
 /**
- * Soul.md 候选文件名（按优先级从高到低）。
+ * SOUL.md 候选文件名（按优先级从高到低）。
  *
  * 关键点（中文）
- * - 兼容社区常见写法：`Soul.md` / `soul.md` / `SOUL.md`。
+ * - 统一使用大写文件名：`SOUL.md`。
  * - 统一由 Paths 模块暴露，避免调用方散落硬编码。
  */
-export const SOUL_MD_FILE_CANDIDATES = [
-  "Soul.md",
-  "soul.md",
-  "SOUL.md",
-] as const;
+export const SOUL_MD_FILE_CANDIDATES = ["SOUL.md"] as const;
 
 export function getSoulMdPath(cwd: string): string {
   return path.join(cwd, SOUL_MD_FILE_CANDIDATES[0]);
@@ -31,6 +40,23 @@ export function getSoulMdPath(cwd: string): string {
 
 export function getSoulMdCandidatePaths(cwd: string): string[] {
   return SOUL_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
+}
+
+/**
+ * USER.md 候选文件名（按优先级从高到低）。
+ *
+ * 关键点（中文）
+ * - 统一使用大写文件名：`USER.md`。
+ * - 用于注入“用户画像与偏好”类静态提示词。
+ */
+export const USER_MD_FILE_CANDIDATES = ["USER.md"] as const;
+
+export function getUserMdPath(cwd: string): string {
+  return path.join(cwd, USER_MD_FILE_CANDIDATES[0]);
+}
+
+export function getUserMdCandidatePaths(cwd: string): string[] {
+  return USER_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
 }
 
 export function getShipJsonPath(cwd: string): string {

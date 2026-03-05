@@ -9,14 +9,15 @@
 
 import { ContextStore } from "./ContextStore.js";
 import type { ContextMetadataV1 } from "@core/types/ContextMessage.js";
-import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
-import path from "node:path";
+import type {
+  ContextStorePathOverrides,
+  ResolveContextStorePathOverrides,
+} from "@core/types/ContextStore.js";
 import type { JsonObject } from "@/types/Json.js";
 import {
-  parseTaskRunContextId,
-  getTaskRunDir,
-} from "@services/task/runtime/Paths.js";
-import { ContextAgent } from "./ContextAgent.js";
+  ContextAgent,
+  type ContextAgentDependencies,
+} from "./ContextAgent.js";
 
 /**
  * ContextManager：统一会话运行管理容器。
@@ -30,7 +31,13 @@ export class ContextManager {
   private readonly contextStoresByContextId: Map<string, ContextStore> =
     new Map();
 
+  private readonly rootPath: string;
   private readonly runMemoryMaintenance?: (contextId: string) => Promise<void>;
+  private readonly agentDependencies?: Omit<
+    ContextAgentDependencies,
+    "getContextStore"
+  >;
+  private readonly resolveContextStorePaths?: ResolveContextStorePathOverrides;
 
   /**
    * 构造函数：装配可选回调。
@@ -38,10 +45,20 @@ export class ContextManager {
    * 关键点（中文）
    * - `runMemoryMaintenance` 由 service 注入，core 只负责触发。
    */
-  constructor(params?: {
+  constructor(params: {
+    rootPath: string;
     runMemoryMaintenance?: (contextId: string) => Promise<void>;
+    agentDependencies?: Omit<ContextAgentDependencies, "getContextStore">;
+    resolveContextStorePaths?: ResolveContextStorePathOverrides;
   }) {
-    this.runMemoryMaintenance = params?.runMemoryMaintenance;
+    const rootPath = String(params.rootPath || "").trim();
+    if (!rootPath) {
+      throw new Error("ContextManager requires a non-empty rootPath");
+    }
+    this.rootPath = rootPath;
+    this.runMemoryMaintenance = params.runMemoryMaintenance;
+    this.agentDependencies = params.agentDependencies;
+    this.resolveContextStorePaths = params.resolveContextStorePaths;
   }
 
   /**
@@ -49,7 +66,7 @@ export class ContextManager {
    *
    * 算法说明（中文）
    * - 常规 context：使用默认 `.ship/context/.../messages/*` 路径。
-   * - task run context：重定向到 `.ship/task/<taskId>/<timestamp>/`，实现任务执行审计隔离。
+   * - 若外部注入了 `resolveContextStorePaths`，则优先使用注入的路径覆盖。
    */
   getContextStore(contextId: string): ContextStore {
     const key = String(contextId || "").trim();
@@ -61,24 +78,16 @@ export class ContextManager {
 
     const existing = this.contextStoresByContextId.get(key);
     if (existing) return existing;
-
-    const parsedRun = parseTaskRunContextId(key);
-    const created = parsedRun
-      ? (() => {
-          const runDir = getTaskRunDir(
-            getRuntimeStateBase().rootPath,
-            parsedRun.taskId,
-            parsedRun.timestamp,
-          );
-          return new ContextStore(key, {
-            contextDirPath: runDir,
-            messagesDirPath: runDir,
-            messagesFilePath: path.join(runDir, "messages.jsonl"),
-            metaFilePath: path.join(runDir, "meta.json"),
-            archiveDirPath: path.join(runDir, "archive"),
-          });
-        })()
-      : new ContextStore(key);
+    const overrides = this.resolveContextStorePaths?.(key);
+    const normalizedOverrides: ContextStorePathOverrides | undefined =
+      overrides && typeof overrides === "object"
+        ? { ...overrides }
+        : undefined;
+    const created = new ContextStore({
+      rootPath: this.rootPath,
+      contextId: key,
+      ...(normalizedOverrides ? { paths: normalizedOverrides } : {}),
+    });
 
     this.contextStoresByContextId.set(key, created);
     return created;
@@ -97,7 +106,15 @@ export class ContextManager {
     }
     const existing = this.agentsByContextId.get(key);
     if (existing) return existing;
-    const created = new ContextAgent();
+    if (!this.agentDependencies) {
+      throw new Error(
+        "ContextManager agent dependencies are missing. Ensure runtime injects model/logger/system providers before calling getAgent().",
+      );
+    }
+    const created = new ContextAgent({
+      ...this.agentDependencies,
+      getContextStore: (id) => this.getContextStore(id),
+    });
     this.agentsByContextId.set(key, created);
     return created;
   }

@@ -18,8 +18,8 @@
    - `Config.ts` 读取 `.env` + `ship.json` 并解析 `${ENV}` 占位符。
    - `Paths.ts` 提供 `.ship/*` 路径约定，作为全项目统一事实来源。
 4. `service/`
-   - `Registry.ts` / `ServiceRegistry.ts` 提供 service 注册契约与运行态调度入口。
-   - service 采用 `actions` 对象模型：由 `Registry.ts` 自动注册 CLI 与 HTTP 路由（默认 `/service/<service>/<action>`）。
+   - `Manager.ts` / `ServiceManager.ts` 提供 service 注册契约与运行态调度入口。
+   - service 采用 `actions` 对象模型：由 `Manager.ts` 自动注册 CLI 与 HTTP 路由（默认 `/service/<service>/<action>`）。
    - `types/` 提供 service 依赖注入端口类型定义（`ServiceRuntime` 等）。
    - `RequestContext.ts` 仅透传最小请求上下文（`contextId`）。
    - `RuntimeState.ts` 直接聚合 services 能力并注入运行时桥接。
@@ -38,8 +38,8 @@
 - `runtime/Client.ts`
 - `runtime/Manager.ts`
 - `project/Config.ts`
-- `service/Registry.ts`
-- `service/ServiceRegistry.ts`
+- `service/Manager.ts`
+- `service/ServiceManager.ts`
 - `service/RequestContext.ts`
 - `service/README.md`
 

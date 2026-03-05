@@ -27,7 +27,7 @@ import {
   listServiceRuntimes,
   registerAllServicesForServer,
   runServiceCommand,
-} from "@main/service/Registry.js";
+} from "@main/service/Manager.js";
 
 /**
  * 启动参数。
@@ -335,11 +335,6 @@ export class AgentServer {
           text: String(instructions),
         });
         const agent = runtime.contextManager.getAgent(contextId);
-        // API 执行路径补齐初始化（中文）：
-        // - 与 chat queue 路径保持一致，确保首次请求即可触发真实 LLM 调用。
-        if (!agent.isInitialized()) {
-          await agent.initialize();
-        }
 
         // [阶段2] 执行：在 withContextRequestContext 下运行 agent，保证下游可读取会话上下文。
         // API 场景同样会落盘 context messages，但它不是“平台消息回发”场景：

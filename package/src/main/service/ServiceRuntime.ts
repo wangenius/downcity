@@ -4,6 +4,7 @@ import type {
   ContextMessageV1,
 } from "@core/types/ContextMessage.js";
 import type { AgentResult, AgentRunInput } from "@core/types/Agent.js";
+import type { AgentSystemConfig } from "@core/types/AgentSystem.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@main/types/ShipConfig.js";
@@ -67,8 +68,8 @@ export type ServiceContextStore = {
  * 会话 Agent 端口。
  */
 export type ServiceContextAgent = {
-  isInitialized(): boolean;
-  initialize(): Promise<void>;
+  setSystem(config: AgentSystemConfig): void;
+  resetSystem(): void;
   run(params: AgentRunInput): Promise<AgentResult>;
 };
 

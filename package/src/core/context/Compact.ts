@@ -15,7 +15,7 @@ import {
   type LanguageModel,
   type SystemModelMessage,
 } from "ai";
-import { generateId } from "@main/utils/Id.js";
+import { generateId } from "@utils/Id.js";
 import { getLogger } from "@utils/logger/Logger.js";
 import type {
   ContextMessageV1,

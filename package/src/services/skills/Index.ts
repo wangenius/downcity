@@ -17,7 +17,7 @@ import {
   unloadSkill,
 } from "./Action.js";
 import { resolveContextId } from "@/main/runtime/ContextId.js";
-import type { Service } from "@main/service/ServiceRegistry.js";
+import type { Service } from "@main/service/ServiceManager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { buildSkillsSystemText } from "./runtime/SystemProvider.js";
 

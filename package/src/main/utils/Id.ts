@@ -1,11 +1,9 @@
 /**
- * 标识符工具模块。
+ * 兼容层：保留旧路径导出。
  *
- * 职责说明：
- * 1. 提供统一 ID 生成策略，避免各模块自行选择实现。
+ * 关键点（中文）
+ * - 新代码应改用 `@utils/Id`。
+ * - 这里仅保留转发，避免老引用立即报错。
  */
-import { nanoid } from "nanoid";
 
-export function generateId(): string {
-  return nanoid(16);
-}
+export { generateId } from "@utils/Id.js";

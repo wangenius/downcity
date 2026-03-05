@@ -11,6 +11,12 @@ import { listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import { ServiceCronEngine } from "./types/Cron.js";
 
+const TASK_LOG_PREFIX = "[TASK]";
+
+function formatTaskLogMessage(message: string): string {
+  return `${TASK_LOG_PREFIX} ${message}`;
+}
+
 function normalizeCronExpression(raw: string): string | null {
   const value = String(raw || "").trim();
   if (!value) return null;
@@ -72,7 +78,7 @@ export async function registerTaskCronJobs(params: {
 
             // 关键点（中文）：同一 taskId 串行；重叠触发时跳过，避免并发执行污染 run 目录。
             if (runningByTaskId.has(taskId)) {
-              void logger.log("warn", "Task skipped (already running)", {
+              void logger.log("warn", formatTaskLogMessage("Task skipped (already running)"), {
                 taskId,
                 via: "cron",
               });
@@ -88,7 +94,7 @@ export async function registerTaskCronJobs(params: {
                 trigger: { type: "cron" },
               });
 
-              void logger.log("info", "Task run finished", {
+              void logger.log("info", formatTaskLogMessage("Task run finished"), {
                 taskId,
                 via: "cron",
                 status: result.status,
@@ -107,7 +113,7 @@ export async function registerTaskCronJobs(params: {
                   : {}),
               });
             } catch (error) {
-              void logger.log("error", "Task run failed (scheduler)", {
+              void logger.log("error", formatTaskLogMessage("Task run failed (scheduler)"), {
                 taskId,
                 via: "cron",
                 error: String(error),
@@ -120,7 +126,7 @@ export async function registerTaskCronJobs(params: {
 
         jobsScheduled += 1;
       } catch {
-        void logger.log("warn", "Invalid task cron; skipped", {
+        void logger.log("warn", formatTaskLogMessage("Invalid task cron; skipped"), {
           taskId: item.taskId,
           cron: item.cron,
         });
@@ -129,7 +135,7 @@ export async function registerTaskCronJobs(params: {
 
     const plannedTimeMs = parsePlannedTimeMs(timeRaw);
     if (timeRaw && plannedTimeMs === null) {
-      void logger.log("warn", "Invalid task time; skipped", {
+      void logger.log("warn", formatTaskLogMessage("Invalid task time; skipped"), {
         taskId: item.taskId,
         time: timeRaw,
       });
@@ -150,7 +156,7 @@ export async function registerTaskCronJobs(params: {
 
           // 关键点（中文）：同一 taskId 串行；重叠触发时跳过，避免并发执行污染 run 目录。
           if (runningByTaskId.has(taskId)) {
-            void logger.log("warn", "Task skipped (already running)", {
+            void logger.log("warn", formatTaskLogMessage("Task skipped (already running)"), {
               taskId,
               via: "time",
             });
@@ -177,7 +183,7 @@ export async function registerTaskCronJobs(params: {
               trigger: { type: "time" },
             });
 
-            void logger.log("info", "Task run finished", {
+            void logger.log("info", formatTaskLogMessage("Task run finished"), {
               taskId,
               via: "time",
               status: result.status,
@@ -196,7 +202,7 @@ export async function registerTaskCronJobs(params: {
                 : {}),
             });
           } catch (error) {
-            void logger.log("error", "Task run failed (scheduler)", {
+            void logger.log("error", formatTaskLogMessage("Task run failed (scheduler)"), {
               taskId,
               via: "time",
               error: String(error),
@@ -219,12 +225,12 @@ export async function registerTaskCronJobs(params: {
                   },
                   body: latest.body,
                 });
-                void logger.log("info", "One-shot task deactivated after execution", {
+                void logger.log("info", formatTaskLogMessage("One-shot task deactivated after execution"), {
                   taskId,
                   status: "paused",
                 });
               } catch (e) {
-                void logger.log("warn", "Failed to deactivate one-shot task", {
+                void logger.log("warn", formatTaskLogMessage("Failed to deactivate one-shot task"), {
                   taskId,
                   error: String(e),
                 });
@@ -237,7 +243,7 @@ export async function registerTaskCronJobs(params: {
 
       jobsScheduled += 1;
     } catch {
-      void logger.log("warn", "Invalid task time trigger; skipped", {
+      void logger.log("warn", formatTaskLogMessage("Invalid task time trigger; skipped"), {
         taskId: item.taskId,
         time: timeRaw,
       });

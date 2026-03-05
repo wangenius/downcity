@@ -23,7 +23,7 @@ import { createQQBot } from "./channels/qq/QQ.js";
 import type {
   Service,
   ServiceActionCommandInput,
-} from "@main/service/ServiceRegistry.js";
+} from "@main/service/ServiceManager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { ContextMessageV1 } from "@core/types/ContextMessage.js";

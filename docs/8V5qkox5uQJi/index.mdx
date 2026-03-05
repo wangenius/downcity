@@ -241,7 +241,7 @@ context message history 里的入站 user 消息会写入 `metadata.extra.ingres
 `chat send` 命令是 service action，CLI 不直接发平台，而是调用本地 server `/api/services/command`。  
 参考：
 
-- `package/src/main/service/Registry.ts:603`
+- `package/src/main/service/Manager.ts:603`
 - `package/src/main/runtime/AgentServer.ts:225`
 
 ## 8.2 chat service 执行发送

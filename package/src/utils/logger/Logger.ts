@@ -19,6 +19,7 @@ type LogDetails = {
 const ANSI_RESET = "\x1b[0m";
 const ANSI_BOLD = "\x1b[1m";
 const ANSI_DIM = "\x1b[2m";
+const TASK_BRACKET_COLOR = "\x1b[95m"; // bright magenta
 const BRACKET_COLOR_PALETTE = [
   "\x1b[36m", // cyan
   "\x1b[32m", // green
@@ -48,6 +49,11 @@ function hashText(input: string): number {
 }
 
 function colorizeBracketedPrefix(label: string): string {
+  const normalized = String(label || "").trim().toUpperCase();
+  // 关键点（中文）：task 日志标签使用固定高可见色，避免随机色导致辨识度不稳定。
+  if (normalized === "TASK") {
+    return `${TASK_BRACKET_COLOR}[${label}]${ANSI_RESET}`;
+  }
   const color = BRACKET_COLOR_PALETTE[hashText(label) % BRACKET_COLOR_PALETTE.length];
   return `${color}[${label}]${ANSI_RESET}`;
 }

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
  * - `tsc` 不会复制 txt 资源文件，运行时又依赖这些文件，必须在 build 后补复制。
  * - 复制范围：
  *   1) `src/core/prompts/*.txt`
- *   2) `src/services` 目录下递归匹配文件名为 `PROMPT.txt` 的文件
+ *   2) `src/services` 目录下递归匹配文件名为 `PROMPT.txt` / `TASK.prompt.txt` 的文件
  */
 
 const __filename = fileURLToPath(import.meta.url);
@@ -62,7 +62,9 @@ for (const srcPath of corePromptFiles) {
 const servicesRoot = path.join(packageRoot, "src", "services");
 const servicePromptFiles = await collectFiles({
   rootDir: servicesRoot,
-  matcher: (filePath) => path.basename(filePath) === "PROMPT.txt",
+  matcher: (filePath) =>
+    path.basename(filePath) === "PROMPT.txt" ||
+    path.basename(filePath) === "TASK.prompt.txt",
 });
 for (const srcPath of servicePromptFiles) {
   const relPath = path.relative(path.join(packageRoot, "src"), srcPath);

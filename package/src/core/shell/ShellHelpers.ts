@@ -10,7 +10,6 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { getRuntimeState } from "@main/runtime/RuntimeState.js";
 import { requestContext } from "@main/service/RequestContext.js";
-import { llmRequestContext } from "@utils/logger/Context.js";
 import type {
   ShellContext,
   ShellOutputPage,
@@ -162,10 +161,9 @@ function setEnvString(
 export function buildShellContextEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   const contextCtx = requestContext.getStore();
-  const llmCtx = llmRequestContext.getStore();
 
   setEnvString(env, "SMA_CTX_CONTEXT_ID", contextCtx?.contextId);
-  setEnvString(env, "SMA_CTX_REQUEST_ID", llmCtx?.requestId);
+  setEnvString(env, "SMA_CTX_REQUEST_ID", contextCtx?.requestId);
 
   // 关键点（中文）：把当前 server 地址透传给子进程，便于 `sma message/skill/task` 自动命中本地服务。
   setEnvString(env, "SMA_CTX_SERVER_HOST", process.env.SMA_SERVER_HOST);

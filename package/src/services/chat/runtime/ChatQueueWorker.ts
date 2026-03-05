@@ -247,9 +247,6 @@ export class ChatQueueWorker {
 
     const serviceContext = this.requireContext();
     const agent = serviceContext.getAgent(first.contextId);
-    if (!agent.isInitialized()) {
-      await agent.initialize();
-    }
 
     let clearRequested = false;
     const onStepCallback = async (): Promise<ShipContextUserMessageV1[]> => {

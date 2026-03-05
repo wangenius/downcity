@@ -1,5 +1,5 @@
 /**
- * Service registry entrypoint.
+ * Service manager entrypoint.
  *
  * 关键点（中文）
  * - 所有 services 统一在这里声明、启动、调度
@@ -21,7 +21,7 @@ import type {
   ServiceActionResult,
   ServiceCommandResult,
   ServiceRuntimeState,
-} from "./ServiceRegistry.js";
+} from "./ServiceManager.js";
 import { SERVICES } from "./Services.js";
 
 type ServiceRuntimeRecord = {

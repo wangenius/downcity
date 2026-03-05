@@ -13,6 +13,7 @@ import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
+import type { AgentSystemConfig } from "@core/types/AgentSystem.js";
 import type {
   ShipTaskKind,
   ShipTaskFrontmatterV1,
@@ -30,6 +31,7 @@ import {
   getTaskRunDir,
 } from "./Paths.js";
 import { ensureRunDir, readTask } from "./Store.js";
+import { TASK_AGENT_SYSTEM_PROMPT } from "./TaskPrompt.js";
 
 /**
  * 把相对路径渲染为 markdown 行内链接文本。
@@ -271,11 +273,11 @@ async function runAgentRound(params: {
   query: string;
   actorId: string;
   actorName: string;
+  systemConfig?: AgentSystemConfig;
 }): Promise<{ outputText: string; rawResult: AgentResult }> {
   const agent = requireContext(params.context).getAgent(params.contextId);
-  // 关键点（中文）：task 执行路径需要显式初始化 agent，和 chat/api 保持一致，避免未初始化直接返回 fallback 错误。
-  if (!agent.isInitialized()) {
-    await agent.initialize();
+  if (params.systemConfig) {
+    agent.setSystem(params.systemConfig);
   }
   const result = await withRequestContext(
     {
@@ -595,6 +597,11 @@ export async function runTaskNow(params: {
   } else {
     // phase 1（agent）：双 agent 多轮对话（executor <-> user-simulator）
     // 关键点（中文）：直到“规则校验通过 + 模拟用户满意”或达到最大轮数。
+    const taskAgentSystemConfig: AgentSystemConfig = {
+      mode: "task",
+      replaceDefaultCorePrompt: TASK_AGENT_SYSTEM_PROMPT,
+      disableServiceSystems: ["chat"],
+    };
     let lastRoundRuleErrors: string[] = [];
     let lastRoundDecision: UserSimulatorDecision | null = null;
     let lastFeedback = "";
@@ -618,6 +625,7 @@ export async function runTaskNow(params: {
           query: executorQuery,
           actorId: "scheduler",
           actorName: "scheduler",
+          systemConfig: taskAgentSystemConfig,
         });
         executorRoundOutput = executorRound.outputText;
         outputText = executorRound.outputText;
@@ -678,6 +686,7 @@ export async function runTaskNow(params: {
           query: simulatorQuery,
           actorId: "user_simulator",
           actorName: "user_simulator",
+          systemConfig: taskAgentSystemConfig,
         });
         decision = parseUserSimulatorDecision(simulatorRound.outputText);
       } catch (e) {
@@ -930,7 +939,7 @@ export async function runTaskNow(params: {
   let notifyError: string | undefined;
   try {
     const textLines: string[] = [];
-    textLines.push(`[Task] ${task.frontmatter.title}`);
+    textLines.push(`[TASK] ${task.frontmatter.title}`);
     textLines.push(`taskId: ${task.taskId}`);
     textLines.push(`kind: ${taskKind}`);
     textLines.push(`status: ${status}`);

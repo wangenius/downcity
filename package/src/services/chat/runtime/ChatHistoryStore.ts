@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { generateId } from "@main/utils/Id.js";
+import { generateId } from "@utils/Id.js";
 import { getShipChatHistoryPath } from "@/main/runtime/Paths.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";

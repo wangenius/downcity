@@ -1,6 +1,10 @@
-import { llmRequestContext, type LlmRequestContext } from "./Context.js";
 import { parseFetchRequestForLog, type ProviderFetch } from "./Format.js";
 import type { JsonObject } from "@/types/Json.js";
+
+export type LlmLogContext = {
+  contextId?: string;
+  requestId?: string;
+};
 
 export function createLlmLoggingFetch(args: {
   logger: {
@@ -8,6 +12,7 @@ export function createLlmLoggingFetch(args: {
   };
   enabled: boolean;
   maxChars?: number;
+  getRequestContext?: () => LlmLogContext | undefined;
 }): ProviderFetch {
   const baseFetch: ProviderFetch = globalThis.fetch.bind(globalThis);
   const maxChars = args.maxChars ?? 99999999;
@@ -15,7 +20,7 @@ export function createLlmLoggingFetch(args: {
   return async (input, init) => {
     if (args.enabled) {
       try {
-        const ctx: LlmRequestContext | undefined = llmRequestContext.getStore();
+        const ctx = args.getRequestContext?.();
         const parsed = parseFetchRequestForLog(input, init, {
           incrementalKey: ctx?.contextId,
         });

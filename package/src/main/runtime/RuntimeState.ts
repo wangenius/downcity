@@ -30,7 +30,15 @@ import {
 import { SERVICES } from "@main/service/Services.js";
 import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
 import { buildMemorySystemText } from "@services/memory/runtime/SystemProvider.js";
-import { runServiceCommand } from "@main/service/Registry.js";
+import {
+  getTaskRunDir,
+  parseTaskRunContextId,
+} from "@services/task/runtime/Paths.js";
+import { runServiceCommand } from "@main/service/Manager.js";
+import {
+  getRequestContext,
+  withRequestContext,
+} from "@main/service/RequestContext.js";
 import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
 import path from "path";
@@ -168,11 +176,24 @@ function reloadAgentMdSystems(reason: string): void {
  * - 每次请求时动态遍历 services，避免额外注册层。
  * - 单个 service 失败走 fail-open，不阻断主链路。
  */
-export async function collectServiceSystemTexts(): Promise<string[]> {
+export async function collectServiceSystemTexts(params?: {
+  disabledServiceNames?: string[];
+}): Promise<string[]> {
   const runtime = getServiceRuntimeState();
   const out: string[] = [];
+  const disabledServiceNamesInput = Array.isArray(params?.disabledServiceNames)
+    ? params.disabledServiceNames
+    : undefined;
+  const disabledServiceNames = Array.isArray(disabledServiceNamesInput)
+    ? new Set(
+        disabledServiceNamesInput
+          .map((item) => String(item || "").trim())
+          .filter(Boolean),
+      )
+    : new Set<string>();
   for (const service of SERVICES) {
     if (typeof service.system !== "function") continue;
+    if (disabledServiceNames.has(service.name)) continue;
     try {
       const text = normalizeSystemText(await service.system(runtime));
       if (!text) continue;
@@ -483,15 +504,44 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   // 关键点（中文）：模型实例在 main 启动时创建一次，并注入给 services 复用。
   // 模型是 ServiceContext 必需能力，初始化失败直接中断启动（fail-fast）。
   serviceModel = null;
-  serviceModel = await createModel({ config });
+  serviceModel = await createModel({
+    config,
+    getRequestContext,
+  });
 
   let contextManager: ContextManager;
   contextManager = new ContextManager({
+    rootPath,
     runMemoryMaintenance: async (contextId) =>
       runContextMemoryMaintenance({
         context: getServiceRuntimeState(),
         contextId,
       }),
+    resolveContextStorePaths: (contextId) => {
+      const parsedRun = parseTaskRunContextId(contextId);
+      if (!parsedRun) return null;
+      const runDir = getTaskRunDir(rootPath, parsedRun.taskId, parsedRun.timestamp);
+      return {
+        contextDirPath: runDir,
+        messagesDirPath: runDir,
+        messagesFilePath: path.join(runDir, "messages.jsonl"),
+        metaFilePath: path.join(runDir, "meta.json"),
+        archiveDirPath: path.join(runDir, "archive"),
+      };
+    },
+    agentDependencies: {
+      model: requireServiceModel(),
+      logger: defaultLogger,
+      projectRoot: rootPath,
+      withRequestContext,
+      getStaticSystemPrompts: () => getRuntimeStateBase().systems,
+      getServiceSystemPrompts: (params) => collectServiceSystemTexts(params),
+      compact: {
+        keepLastMessages: config.context?.messages?.keepLastMessages,
+        maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
+        archiveOnCompact: config.context?.messages?.archiveOnCompact,
+      },
+    },
   });
 
   const runtimeStateForServices: RuntimeState = {

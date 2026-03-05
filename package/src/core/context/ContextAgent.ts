@@ -16,37 +16,60 @@ import {
   type ModelMessage,
   type SystemModelMessage,
 } from "ai";
-import { withLlmRequestContext } from "@utils/logger/Context.js";
-import { generateId } from "@main/utils/Id.js";
+import { generateId } from "@utils/Id.js";
 import {
   buildContextSystemPrompt,
+  DEFAULT_SHIP_PROMPTS,
   transformPromptsIntoSystemMessages,
 } from "@core/prompts/System.js";
-import { createModel } from "@core/llm/CreateModel.js";
 import type { AgentRunInput, AgentResult } from "@core/types/Agent.js";
+import type {
+  AgentSystemConfig,
+  ResolvedAgentSystemConfig,
+} from "@core/types/AgentSystem.js";
 import type { Logger } from "@utils/logger/Logger.js";
-import { openai } from "@ai-sdk/openai";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
 } from "@core/types/ContextMessage.js";
-import {
-  collectServiceSystemTexts,
-  getRuntimeState,
-  getRuntimeStateBase,
-} from "@main/runtime/RuntimeState.js";
 import type { ContextStore } from "./ContextStore.js";
-import { loadProjectDotenv } from "@/main/runtime/Config.js";
 import { shellTools } from "@core/shell/Tool.js";
 import { compactContextMessageIfNeeded } from "./Compact.js";
 
+export type ContextAgentDependencies = {
+  model: LanguageModel;
+  logger: Logger;
+  projectRoot: string;
+  withRequestContext?: <T>(
+    ctx: { contextId?: string; requestId?: string },
+    fn: () => T,
+  ) => T;
+  getContextStore: (contextId: string) => ContextStore;
+  getStaticSystemPrompts: () => string[];
+  getServiceSystemPrompts: (params?: {
+    disabledServiceNames?: string[];
+  }) => Promise<string[]>;
+  compact?: {
+    keepLastMessages?: number;
+    maxInputTokensApprox?: number;
+    archiveOnCompact?: boolean;
+  };
+};
+
 export class ContextAgent {
-  // 是否初始化
-  private initialized: boolean = false;
-  // 模型
-  private model: LanguageModel = openai("gpt-5.2");
+  private readonly deps: ContextAgentDependencies;
+  private readonly model: LanguageModel;
 
   private tools: Record<string, Tool> = {};
+  /**
+   * Agent system 配置（可由调用方覆盖）。
+   *
+   * 关键点（中文）
+   * - 默认按 chat 会话模式运行。
+   * - task 等非聊天场景可通过 `setSystem` 覆盖默认行为。
+   */
+  private system: ResolvedAgentSystemConfig =
+    ContextAgent.createDefaultSystemConfig();
   /**
    * contextId 绑定检查。
    *
@@ -56,41 +79,52 @@ export class ContextAgent {
    */
   private boundContextId: string | null = null;
 
-  constructor() {}
+  constructor(deps: ContextAgentDependencies) {
+    this.deps = deps;
+    this.model = deps.model;
+    this.tools = { ...shellTools };
+  }
+
+  /**
+   * 创建默认 system 配置。
+   */
+  private static createDefaultSystemConfig(): ResolvedAgentSystemConfig {
+    return {
+      mode: "chat",
+      disableServiceSystems: [],
+    };
+  }
+
+  /**
+   * 归一化外部传入的 system 配置。
+   */
+  private normalizeSystemConfig(
+    input: AgentSystemConfig,
+  ): ResolvedAgentSystemConfig {
+    const mode = input.mode === "task" ? "task" : "chat";
+    const replaceDefaultCorePrompt = String(
+      input.replaceDefaultCorePrompt || "",
+    ).trim();
+    const disableServiceSystems = Array.isArray(input.disableServiceSystems)
+      ? [...new Set(
+          input.disableServiceSystems
+            .map((item) => String(item || "").trim())
+            .filter(Boolean),
+        )]
+      : [];
+
+    return {
+      mode,
+      ...(replaceDefaultCorePrompt ? { replaceDefaultCorePrompt } : {}),
+      disableServiceSystems,
+    };
+  }
 
   /**
    * 获取运行时 logger。
    */
   getLogger(): Logger {
-    return getRuntimeStateBase().logger;
-  }
-
-  /**
-   * 初始化 Agent 运行依赖。
-   *
-   * 流程（中文）
-   * 1) 构建工具集合
-   * 2) 根据 ship.json 创建模型实例
-   * 3) 标记 initialized=true
-   */
-  async initialize(): Promise<void> {
-    try {
-      // 注意：不要在模块顶层读取 runtime state，否则像 `sma -v` 这种只打印版本号的场景也会因为未初始化而崩溃
-      const runtime = getRuntimeState();
-      loadProjectDotenv(runtime.rootPath);
-      this.tools = { ...shellTools };
-
-      this.model = await createModel({
-        config: getRuntimeState().config,
-      });
-
-      this.initialized = true;
-    } catch (error) {
-      const logger = this.getLogger();
-      await logger.log("error", "Agent Runtime initialization failed", {
-        error: String(error),
-      });
-    }
+    return this.deps.logger;
   }
 
   /**
@@ -98,8 +132,7 @@ export class ContextAgent {
    *
    * 流程（中文）
    * 1) 记录 requestId 与日志
-   * 2) 检查初始化状态
-   * 3) 进入 tool-loop 主流程
+   * 2) 进入 tool-loop 主流程
    */
   async run(input: AgentRunInput): Promise<AgentResult> {
     const { query, contextId, onStepCallback } = input;
@@ -111,32 +144,12 @@ export class ContextAgent {
       requestId,
       contextId,
       instructionsPreview: query?.slice(0, 200),
-      rootPath: getRuntimeState().rootPath,
+      rootPath: this.deps.projectRoot,
     });
-    if (this.initialized) {
-      return this.runWithToolLoopAgent(query, startTime, contextId, {
-        requestId,
-        onStepCallback,
-      });
-    }
-
-    let contextStore: ContextStore | null = null;
-    try {
-      contextStore =
-        getRuntimeState().contextManager.getContextStore(contextId);
-    } catch {
-      contextStore = null;
-    }
-    return {
-      success: false,
-      assistantMessage: this.buildFallbackAssistantMessage({
-        contextId,
-        requestId,
-        contextStore,
-        text: "LLM is not configured (or runtime not initialized). Please configure `ship.json.llm` (model + apiKey) and restart.",
-        note: "agent_not_initialized",
-      }),
-    };
+    return this.runWithToolLoopAgent(query, startTime, contextId, {
+      requestId,
+      onStepCallback,
+    });
   }
 
   /**
@@ -179,29 +192,29 @@ export class ContextAgent {
     const requestId = opts?.requestId || "";
     const onStepCallback = opts?.onStepCallback;
     const logger = this.getLogger();
-    if (!this.initialized) {
-      throw new Error("Agent not initialized");
-    }
 
     try {
       this.bindContextId(contextId);
 
-      const runtime = getRuntimeState();
       // phase 0（中文）：装配 context store 与 runtime/system prompt 基础上下文。
-      contextStore = runtime.contextManager.getContextStore(contextId);
+      contextStore = this.deps.getContextStore(contextId);
       const activeContextStore = contextStore;
 
       const runtimeSystemMessages = this.buildRuntimeSystemMessages({
-        projectRoot: runtime.rootPath,
+        projectRoot: this.deps.projectRoot,
         contextId,
         requestId,
       });
 
-      const staticSystemMessages = transformPromptsIntoSystemMessages([
-        ...runtime.systems,
-      ]);
+      const staticSystemMessages = transformPromptsIntoSystemMessages(
+        this.resolveStaticSystemPrompts({
+          systems: this.deps.getStaticSystemPrompts(),
+        }),
+      );
       let serviceSystemMessages = transformPromptsIntoSystemMessages(
-        await collectServiceSystemTexts(),
+        await this.deps.getServiceSystemPrompts({
+          disabledServiceNames: this.system.disableServiceSystems,
+        }),
       );
       let currentBaseSystemMessages: SystemModelMessage[] = [
         ...runtimeSystemMessages,
@@ -248,7 +261,9 @@ export class ContextAgent {
       if (compacted) {
         // 关键点（中文）：compact 后重新收集 service system，保证提示词与最新状态一致。
         serviceSystemMessages = transformPromptsIntoSystemMessages(
-          await collectServiceSystemTexts(),
+          await this.deps.getServiceSystemPrompts({
+            disabledServiceNames: this.system.disableServiceSystems,
+          }),
         );
         currentBaseSystemMessages = [
           ...runtimeSystemMessages,
@@ -293,54 +308,52 @@ export class ContextAgent {
       };
 
       // phase 2（中文）：进入 tool-loop。
-      const result = await withLlmRequestContext(
-        { contextId, requestId },
-        () => {
-          return streamText({
-            model: this.model,
-            system: currentBaseSystemMessages,
-            prepareStep: async ({ messages }) => {
-              const incomingMessages: ModelMessage[] = Array.isArray(messages)
-                ? messages
+      const runStreamText = () =>
+        streamText({
+          model: this.model,
+          system: currentBaseSystemMessages,
+          prepareStep: async ({ messages }) => {
+            const incomingMessages: ModelMessage[] = Array.isArray(messages)
+              ? messages
+              : [];
+            const suffix =
+              incomingMessages.length >= lastAppliedBasePrefixLen
+                ? incomingMessages.slice(lastAppliedBasePrefixLen)
                 : [];
-              const suffix =
-                incomingMessages.length >= lastAppliedBasePrefixLen
-                  ? incomingMessages.slice(lastAppliedBasePrefixLen)
-                  : [];
-              let outMessages: ModelMessage[] | undefined;
-              if (typeof onStepCallback === "function") {
-                try {
-                  const mergedMessages = await onStepCallback();
-                  const added = appendMergedUserMessages(
-                    Array.isArray(mergedMessages) ? mergedMessages : [],
-                  );
-                  if (added > 0) {
-                    outMessages = [...baseModelMessages, ...suffix];
-                    lastAppliedBasePrefixLen = baseModelMessages.length;
-                  }
-                } catch {
-                  // ignore merge hook failures
+            let outMessages: ModelMessage[] | undefined;
+            if (typeof onStepCallback === "function") {
+              try {
+                const mergedMessages = await onStepCallback();
+                const added = appendMergedUserMessages(
+                  Array.isArray(mergedMessages) ? mergedMessages : [],
+                );
+                if (added > 0) {
+                  outMessages = [...baseModelMessages, ...suffix];
+                  lastAppliedBasePrefixLen = baseModelMessages.length;
                 }
+              } catch {
+                // ignore merge hook failures
               }
-              const stepOverrides: {
-                system?: Array<SystemModelMessage>;
-              } = {
-                system: currentBaseSystemMessages,
-              };
-              return {
-                ...stepOverrides,
-                ...(Array.isArray(outMessages)
-                  ? { messages: outMessages }
-                  : {}),
-              };
-            },
-            messages: baseModelMessages,
-            tools: this.tools,
-            providerOptions: this.buildOpenAIResponsesProviderOptions(),
-            stopWhen: [stepCountIs(30)],
-          });
-        },
-      );
+            }
+            const stepOverrides: {
+              system?: Array<SystemModelMessage>;
+            } = {
+              system: currentBaseSystemMessages,
+            };
+            return {
+              ...stepOverrides,
+              ...(Array.isArray(outMessages) ? { messages: outMessages } : {}),
+            };
+          },
+          messages: baseModelMessages,
+          tools: this.tools,
+          providerOptions: this.buildOpenAIResponsesProviderOptions(),
+          stopWhen: [stepCountIs(30)],
+        });
+
+      const result = this.deps.withRequestContext
+        ? await this.deps.withRequestContext({ contextId, requestId }, runStreamText)
+        : runStreamText();
 
       // phase 3（中文）：把 stream 结果固化为最终 assistant UIMessage。
       // 关键点（中文）：用 ai-sdk v6 的 UIMessage 流来生成最终 assistant UIMessage（包含 tool parts），避免手工拼装。
@@ -488,9 +501,28 @@ export class ContextAgent {
           projectRoot: input.projectRoot,
           contextId: input.contextId,
           requestId: input.requestId,
+          mode: this.system.mode,
         }),
       },
     ];
+  }
+
+  /**
+   * 解析静态 system prompts。
+   *
+   * 关键点（中文）
+   * - task 执行上下文替换默认 core prompt（`DEFAULT_SHIP_PROMPTS`）为 task 专用提示词。
+   * - Agent.md 等其他静态系统提示保持不变。
+   */
+  private resolveStaticSystemPrompts(input: {
+    systems: string[];
+  }): string[] {
+    const base = Array.isArray(input.systems) ? [...input.systems] : [];
+    const replacement = String(this.system.replaceDefaultCorePrompt || "").trim();
+    if (!replacement) return base;
+
+    const filtered = base.filter((item) => item !== DEFAULT_SHIP_PROMPTS);
+    return [...filtered, replacement];
   }
 
   /**
@@ -549,8 +581,7 @@ export class ContextAgent {
     maxInputTokensApprox: number;
     archiveOnCompact: boolean;
   } {
-    const runtime = getRuntimeState();
-    const contextMessagesConfig = runtime.config.context?.messages;
+    const contextMessagesConfig = this.deps.compact;
 
     const baseKeepLastMessages =
       typeof contextMessagesConfig?.keepLastMessages === "number"
@@ -593,9 +624,19 @@ export class ContextAgent {
   }
 
   /**
-   * 是否已完成初始化。
+   * 设置当前 Agent 的 system 配置。
+   *
+   * 关键点（中文）
+   * - 由上游调用方（如 task runner）按场景覆盖默认 chat system。
    */
-  isInitialized(): boolean {
-    return this.initialized;
+  setSystem(config: AgentSystemConfig): void {
+    this.system = this.normalizeSystemConfig(config);
+  }
+
+  /**
+   * 重置为默认 chat system 配置。
+   */
+  resetSystem(): void {
+    this.system = ContextAgent.createDefaultSystemConfig();
   }
 }

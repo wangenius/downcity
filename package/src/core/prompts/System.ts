@@ -21,9 +21,11 @@ export function buildContextSystemPrompt(input: {
   projectRoot: string;
   contextId: string;
   requestId: string;
+  mode?: "chat" | "task";
   extraContextLines?: string[];
 }): string {
   const { projectRoot, contextId, requestId, extraContextLines } = input;
+  const mode = input.mode === "task" ? "task" : "chat";
 
   const runtimeContextLines: string[] = [
     "Runtime context:",
@@ -36,20 +38,29 @@ export function buildContextSystemPrompt(input: {
     runtimeContextLines.push(...extraContextLines);
   }
 
-  const outputRules = [
-    "User-facing output rules:",
-    "- Reply in natural language.",
-    "- Do NOT paste raw tool outputs or JSON logs; summarize them.",
-    "- Deliver user-visible replies by running `sma chat send` via shell tools.",
-    "- For every inbound chatKey (telegram/feishu/qq), you MUST call `sma chat send` at key milestones: start (if work is not instant), blocked/error (with required user input), and final outcome.",
-    "- Before ending a run, verify the requesting chatKey has at least one successful `sma chat send`; if not, send one concise final reply immediately.",
-    "- If a task involves multiple chatKeys, every targeted chatKey must receive milestone replies; use `--chat-key <contextId>` for non-current contexts.",
-    "- IMPORTANT: For a single user message, prefer a single `sma chat send` command unless user asks for follow-ups.",
-    "- IMPORTANT: Keep replies compact and avoid consecutive blank lines (`\\n\\n`) whenever possible.",
-    "- IMPORTANT: Use single quotes for `--text` by default, e.g. `sma chat send --text 'hello'`.",
-    "- IMPORTANT: For multi-line content, use `cat <<'EOF' | sma chat send --stdin [--chat-key <contextId>] ... EOF`.",
-    "- IMPORTANT: Escape shell-sensitive characters in `--text` (especially backticks and single quotes).",
-  ].join("\n");
+  const outputRules =
+    mode === "task"
+      ? [
+          "Task-run output rules:",
+          "- This is a task execution context, not an interactive chat turn.",
+          "- Do NOT send external channel messages via `sma chat send` unless explicitly required by the task itself.",
+          "- Reply with result-oriented content; do NOT paste raw tool outputs or JSON logs.",
+          "- Keep output compact and avoid unnecessary conversational fillers.",
+        ].join("\n")
+      : [
+          "User-facing output rules:",
+          "- Reply in natural language.",
+          "- Do NOT paste raw tool outputs or JSON logs; summarize them.",
+          "- Deliver user-visible replies by running `sma chat send` via shell tools.",
+          "- For every inbound chatKey (telegram/feishu/qq), you MUST call `sma chat send` at key milestones: start (if work is not instant), blocked/error (with required user input), and final outcome.",
+          "- Before ending a run, verify the requesting chatKey has at least one successful `sma chat send`; if not, send one concise final reply immediately.",
+          "- If a task involves multiple chatKeys, every targeted chatKey must receive milestone replies; use `--chat-key <contextId>` for non-current contexts.",
+          "- IMPORTANT: For a single user message, prefer a single `sma chat send` command unless user asks for follow-ups.",
+          "- IMPORTANT: Keep replies compact and avoid consecutive blank lines (`\\n\\n`) whenever possible.",
+          "- IMPORTANT: Use single quotes for `--text` by default, e.g. `sma chat send --text 'hello'`.",
+          "- IMPORTANT: For multi-line content, use `cat <<'EOF' | sma chat send --stdin [--chat-key <contextId>] ... EOF`.",
+          "- IMPORTANT: Escape shell-sensitive characters in `--text` (especially backticks and single quotes).",
+        ].join("\n");
 
   return [runtimeContextLines.join("\n"), "", outputRules].join("\n");
 }

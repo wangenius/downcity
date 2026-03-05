@@ -15,18 +15,42 @@ import {
   type ModelMessage,
   type ToolSet,
 } from "ai";
-import {
-  getShipContextDirPath,
-  getShipContextMessagesArchiveDirPath,
-  getShipContextMessagesMetaPath,
-  getShipContextMessagesPath,
-  getShipContextMessagesDirPath,
-} from "@/main/runtime/Paths.js";
-import { generateId } from "@main/utils/Id.js";
+import { generateId } from "@utils/Id.js";
 import type { ContextMetadataV1, ContextMessageV1 } from "@core/types/ContextMessage.js";
 import type { ShipContextMessagesMetaV1 } from "@core/types/ContextMessagesMeta.js";
+import type { ContextStorePathOverrides } from "@core/types/ContextStore.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import { getRuntimeStateBase } from "@main/runtime/RuntimeState.js";
+
+function getShipDirPath(rootPath: string): string {
+  return path.join(rootPath, ".ship");
+}
+
+function getShipContextRootDirPath(rootPath: string): string {
+  return path.join(getShipDirPath(rootPath), "context");
+}
+
+function getShipContextDirPath(rootPath: string, contextId: string): string {
+  return path.join(getShipContextRootDirPath(rootPath), encodeURIComponent(contextId));
+}
+
+function getShipContextMessagesDirPath(rootPath: string, contextId: string): string {
+  return path.join(getShipContextDirPath(rootPath, contextId), "messages");
+}
+
+function getShipContextMessagesPath(rootPath: string, contextId: string): string {
+  return path.join(getShipContextMessagesDirPath(rootPath, contextId), "messages.jsonl");
+}
+
+function getShipContextMessagesMetaPath(rootPath: string, contextId: string): string {
+  return path.join(getShipContextMessagesDirPath(rootPath, contextId), "meta.json");
+}
+
+function getShipContextMessagesArchiveDirPath(
+  rootPath: string,
+  contextId: string,
+): string {
+  return path.join(getShipContextMessagesDirPath(rootPath, contextId), "archive");
+}
 
 /**
  * ContextStore：基于 UIMessage 的会话上下文存储（per contextId）。
@@ -50,37 +74,18 @@ export class ContextStore {
   private readonly overrideMetaFilePath?: string;
   private readonly overrideArchiveDirPath?: string;
 
-  constructor(
-    contextId: string,
-    options?: {
-      /**
-       * override: context directory path (debug/inspection only; messages paths are used for writes)
-       */
-      contextDirPath?: string;
-      /**
-       * override: directory containing messages/meta/archive (e.g. a task run directory)
-       */
-      messagesDirPath?: string;
-      /**
-       * override: messages.jsonl file path
-       */
-      messagesFilePath?: string;
-      /**
-       * override: meta.json file path
-       */
-      metaFilePath?: string;
-      /**
-       * override: archive directory path
-       */
-      archiveDirPath?: string;
-    },
-  ) {
-    const rootPath = String(getRuntimeStateBase().rootPath || "").trim();
+  constructor(params: {
+    rootPath: string;
+    contextId: string;
+    paths?: ContextStorePathOverrides;
+  }) {
+    const rootPath = String(params.rootPath || "").trim();
     if (!rootPath) throw new Error("ContextStore requires a non-empty rootPath");
-    const key = String(contextId || "").trim();
+    const key = String(params.contextId || "").trim();
     if (!key) throw new Error("ContextStore requires a non-empty contextId");
     this.rootPath = rootPath;
     this.contextId = key;
+    const options = params.paths;
     this.overrideContextDirPath =
       options?.contextDirPath && String(options.contextDirPath).trim()
         ? String(options.contextDirPath).trim()

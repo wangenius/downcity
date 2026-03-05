@@ -9,7 +9,6 @@
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { requestContext } from "@main/service/RequestContext.js";
 import { parseChatKeyForDispatch, sendTextByChatKey } from "./runtime/ChatkeySend.js";
-import { llmRequestContext } from "@utils/logger/Context.js";
 import type {
   ChatContextSnapshot,
   ChatSendResponse,
@@ -54,7 +53,6 @@ export function resolveChatContextSnapshot(input?: {
   context?: ServiceRuntime;
 }): ChatContextSnapshot {
   const requestCtx = requestContext.getStore();
-  const llmCtx = llmRequestContext.getStore();
 
   const explicitContextId = String(input?.contextId || "").trim();
   const explicitChatKey = String(input?.chatKey || "").trim();
@@ -78,8 +76,8 @@ export function resolveChatContextSnapshot(input?: {
     readEnvString("SMA_CTX_USER_ID");
   const messageId = readEnvString("SMA_CTX_MESSAGE_ID");
   const requestId =
-    (typeof llmCtx?.requestId === "string" && llmCtx.requestId.trim()
-      ? llmCtx.requestId.trim()
+    (typeof requestCtx?.requestId === "string" && requestCtx.requestId.trim()
+      ? requestCtx.requestId.trim()
       : readEnvString("SMA_CTX_REQUEST_ID")) || undefined;
 
   const derivedFromChannel = deriveChatKeyFromSnapshot({

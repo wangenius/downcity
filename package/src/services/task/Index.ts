@@ -17,7 +17,7 @@ import {
   setTaskStatus,
 } from "./Action.js";
 import { resolveContextId } from "@/main/runtime/ContextId.js";
-import type { Service } from "@main/service/ServiceRegistry.js";
+import type { Service } from "@main/service/ServiceManager.js";
 import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type {
@@ -37,6 +37,11 @@ type TaskListPayload = {
 };
 
 const TASK_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
+const TASK_LOG_PREFIX = "[TASK]";
+
+function formatTaskLogMessage(message: string): string {
+  return `${TASK_LOG_PREFIX} ${message}`;
+}
 
 /**
  * 加载 task service 使用说明提示词。
@@ -818,13 +823,15 @@ export const taskService: Service = {
       const result = await startTaskCronRuntime(context);
       if (!result) return;
       context.logger.info(
-        `Task cron trigger started (tasks=${result.tasksFound}, jobs=${result.jobsScheduled})`,
+        formatTaskLogMessage(
+          `Task cron trigger started (tasks=${result.tasksFound}, jobs=${result.jobsScheduled})`,
+        ),
       );
     },
     async stop(context) {
       const stopped = await stopTaskCronRuntime();
       if (!stopped) return;
-      context.logger.info("Task cron trigger stopped");
+      context.logger.info(formatTaskLogMessage("Task cron trigger stopped"));
     },
     async command({ context, command }) {
       if (command !== "reschedule" && command !== "reload") {
@@ -836,7 +843,9 @@ export const taskService: Service = {
 
       const result = await restartTaskCronRuntime(context);
       context.logger.info(
-        `Task cron trigger reloaded (tasks=${result.tasksFound}, jobs=${result.jobsScheduled})`,
+        formatTaskLogMessage(
+          `Task cron trigger reloaded (tasks=${result.tasksFound}, jobs=${result.jobsScheduled})`,
+        ),
       );
       return {
         success: true,

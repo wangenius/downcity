@@ -13,6 +13,11 @@ import { createLlmLoggingFetch } from "@utils/logger/Fetch.js";
 import { getLogger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@/main/runtime/Config.js";
 
+type ModelLogContext = {
+  contextId?: string;
+  requestId?: string;
+};
+
 /**
  * 创建 LanguageModel 实例。
  *
@@ -23,6 +28,7 @@ import type { ShipConfig } from "@/main/runtime/Config.js";
  */
 export async function createModel(input: {
   config: ShipConfig;
+  getRequestContext?: () => ModelLogContext | undefined;
 }): Promise<LanguageModel> {
   const logger = getLogger();
 
@@ -62,6 +68,7 @@ export async function createModel(input: {
   const loggingFetch = createLlmLoggingFetch({
     logger,
     enabled: logLlmMessages,
+    getRequestContext: input.getRequestContext,
   });
 
   if (provider === "anthropic") {

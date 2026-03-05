@@ -22,7 +22,7 @@ import { logger } from "@utils/logger/Logger.js";
 import {
   startAllServiceRuntimes,
   stopAllServiceRuntimes,
-} from "@main/service/Registry.js";
+} from "@main/service/Manager.js";
 
 /**
  * `shipmyagent run` 命令入口。

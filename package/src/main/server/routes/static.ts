@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import fs from "fs-extra";
 import path from "path";
 import { getShipPublicDirPath } from "@/main/server/env/Paths.js";
-import { getRuntimeState } from "@main/context/RuntimeState.js";
+import { getRuntimeState } from "@main/context/manager/RuntimeState.js";
 
 /**
  * 静态资源路由。

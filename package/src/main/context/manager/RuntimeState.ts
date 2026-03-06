@@ -1,5 +1,6 @@
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
-import { ContextManager } from "@main/context/ContextManager.js";
+import { ContextManager } from "@main/context/manager/ContextManager.js";
+import { ContextAgentDispatcher } from "@main/context/context-agent/ContextAgentDispatcher.js";
 import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";
 import { createModel } from "@main/model/CreateModel.js";
 import type {
@@ -19,12 +20,11 @@ import {
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@main/service/Manager.js";
 import { setShellToolRuntime, shellTools } from "@main/tools/shell/Tool.js";
-import { getRequestContext } from "@main/context/RequestContext.js";
-import { FilePersistor } from "@main/context/components/FilePersistor.js";
-import { SummaryCompactor } from "@main/context/components/SummaryCompactor.js";
-import { RuntimeOrchestrator } from "@main/context/components/RuntimeOrchestrator.js";
-import { PromptSystemer } from "@main/prompts/system/PromptSystemer.js";
-import { ensureRuntimeProjectReady } from "@/main/context/ProjectRuntimeSetup.js";
+import { getRequestContext } from "@main/context/manager/RequestContext.js";
+import { FilePersistor } from "@/main/context/context-agent/components/FilePersistor.js";
+import { SummaryCompactor } from "@/main/context/context-agent/components/SummaryCompactor.js";
+import { PromptSystem } from "@main/prompts/system/PromptSystem.js";
+import { ensureRuntimeProjectReady } from "@main/server/daemon/ProjectSetup.js";
 import {
   loadStaticSystems,
   PromptRuntime,
@@ -347,17 +347,16 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
     archiveOnCompact: config.context?.messages?.archiveOnCompact,
   });
-  const orchestrator = new RuntimeOrchestrator({
-    getTools: () => shellTools,
-  });
   // 关键点（中文）：system 域逻辑全部收敛到 prompts/system，runtime 这里只做依赖注入。
-  const systemer = new PromptSystemer({
+  const system = new PromptSystem({
     projectRoot: rootPath,
     getStaticSystemPrompts: () => getRuntimeStateBase().systems,
     getRuntime: () => getServiceRuntimeState(),
     profile: "chat",
   });
-  contextManager = new ContextManager({
+  const dispatcher = new ContextAgentDispatcher({
+    model: requireServiceModel(),
+    logger: defaultLogger,
     createPersistor: (contextId) => {
       const parsedRun = parseTaskRunContextId(contextId);
       const paths = parsedRun
@@ -382,11 +381,12 @@ export async function initRuntimeState(cwd: string): Promise<void> {
         ...(paths ? { paths } : {}),
       });
     },
-    agentModel: requireServiceModel(),
-    agentLogger: defaultLogger,
     compactor,
-    orchestrator,
-    systemer,
+    system,
+    getTools: () => shellTools,
+  });
+  contextManager = new ContextManager({
+    dispatcher,
     runAfterContextUpdated: async (contextId) =>
       runContextMemoryMaintenance({
         context: getServiceRuntimeState(),

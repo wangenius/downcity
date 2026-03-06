@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { getRuntimeState } from "@main/context/RuntimeState.js";
+import { getRuntimeState } from "@main/context/manager/RuntimeState.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 
 /**

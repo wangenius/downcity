@@ -19,7 +19,7 @@ import type {
   ContextMetadataV1,
 } from "@main/types/ContextMessage.js";
 import type { JsonObject } from "@/types/Json.js";
-import type { RuntimeState } from "@/main/context/RuntimeState.js";
+import type { RuntimeState } from "@/main/context/manager/RuntimeState.js";
 import {
   getLogsDirPath,
   getShipContextMessagesPath,

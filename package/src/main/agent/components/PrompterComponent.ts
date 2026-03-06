@@ -1,5 +1,5 @@
 /**
- * SystemerComponent：system 管理组件抽象。
+ * PrompterComponent：system 管理组件抽象。
  *
  * 关键点（中文）
  * - 专职负责“会话上下文 -> system messages”解析。
@@ -12,7 +12,7 @@ import { AgentComponent } from "./AgentComponent.js";
 /**
  * system 解析输入。
  */
-export type SystemerResolveInput = {
+export type PrompterResolveInput = {
   /**
    * 当前会话 ID。
    */
@@ -25,9 +25,9 @@ export type SystemerResolveInput = {
 };
 
 /**
- * Systemer 组件抽象类。
+ * Prompter 组件抽象类。
  */
-export abstract class SystemerComponent extends AgentComponent {
+export abstract class PrompterComponent extends AgentComponent {
   /**
    * 组件名（由具体实现声明）。
    */
@@ -36,5 +36,5 @@ export abstract class SystemerComponent extends AgentComponent {
   /**
    * 解析本轮 system messages。
    */
-  abstract resolve(input: SystemerResolveInput): Promise<SystemModelMessage[]>;
+  abstract resolve(input: PrompterResolveInput): Promise<SystemModelMessage[]>;
 }

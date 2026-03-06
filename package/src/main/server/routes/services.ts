@@ -15,7 +15,7 @@ import {
   runServiceCommand,
 } from "@/main/service/Manager.js";
 import type { ServiceRuntimeControlAction } from "@/main/service/Manager.js";
-import { getServiceRuntimeState } from "@/main/context/RuntimeState.js";
+import { getServiceRuntimeState } from "@/main/context/manager/RuntimeState.js";
 
 /**
  * Service 路由。

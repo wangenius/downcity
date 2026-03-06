@@ -15,18 +15,16 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import {
-  convertToModelMessages, type ModelMessage,
-  type SystemModelMessage,
   type Tool,
-  type ToolSet
 } from "ai";
 import { generateId } from "@utils/Id.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import { compactContextMessageIfNeeded } from "@/main/context/components/SummaryCompact.js";
+import { compactContextMessageIfNeeded } from "@/main/context/context-agent/components/SummaryCompact.js";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
 } from "@main/types/ContextMessage.js";
+import type { ContextSystemMessage } from "@main/types/ContextSystemMessage.js";
 import type { ShipContextMessagesMetaV1 } from "@main/types/ContextMessagesMeta.js";
 import type { PersistorPathOverrides } from "@main/types/PersistorPaths.js";
 import {
@@ -275,7 +273,7 @@ export class FilePersistor extends PersistorComponent {
     }
   }
 
-  private normalizeSystem(system: SystemModelMessage[]): SystemModelMessage[] {
+  private normalizeSystem(system: ContextSystemMessage[]): ContextSystemMessage[] {
     if (!Array.isArray(system)) return [];
     return system.filter((item) => item && typeof item === "object");
   }
@@ -284,14 +282,12 @@ export class FilePersistor extends PersistorComponent {
     return tools && typeof tools === "object" ? { ...tools } : {};
   }
 
-  private readUserModelMessageText(message: ModelMessage): string {
+  private readUserContextMessageText(message: ContextMessageV1): string {
     if (!message || typeof message !== "object" || message.role !== "user") {
       return "";
     }
-    const content = (message as { content?: unknown }).content;
-    if (typeof content === "string") return content.trim();
-    if (!Array.isArray(content)) return "";
-    return content
+    const parts = Array.isArray(message.parts) ? message.parts : [];
+    return parts
       .map((part) => {
         if (!part || typeof part !== "object") return "";
         const candidate = part as { type?: unknown; text?: unknown };
@@ -305,7 +301,7 @@ export class FilePersistor extends PersistorComponent {
   }
 
   private hasTrailingUserQuery(
-    messages: ModelMessage[],
+    messages: ContextMessageV1[],
     query: string,
   ): boolean {
     const target = String(query || "").trim();
@@ -314,37 +310,24 @@ export class FilePersistor extends PersistorComponent {
       const item = messages[index];
       if (!item || typeof item !== "object") continue;
       if (item.role !== "user") continue;
-      return this.readUserModelMessageText(item) === target;
+      return this.readUserContextMessageText(item) === target;
     }
     return false;
   }
 
-  private async toModelMessages(params: {
-    tools?: ToolSet;
-  }): Promise<ModelMessage[]> {
-    const msgs = await this.list();
-    const sanitizedMessages = msgs
-      .map((m) => {
-        const parts = Array.isArray(m.parts)
-          ? m.parts.filter((part) => part?.type === "text")
+  private sanitizeMessages(messages: ContextMessageV1[]): ContextMessageV1[] {
+    if (!Array.isArray(messages)) return [];
+    return messages
+      .map((message) => {
+        const parts = Array.isArray(message.parts)
+          ? message.parts.filter((part) => part?.type === "text")
           : [];
         return {
-          ...m,
+          ...message,
           parts,
         };
       })
-      .filter((m) => Array.isArray(m.parts) && m.parts.length > 0);
-
-    const input: Array<Omit<ContextMessageV1, "id">> = sanitizedMessages.map(
-      (m) => {
-        const { id: _id, ...rest } = m;
-        return rest;
-      },
-    );
-    return await convertToModelMessages(input, {
-      ...(params.tools ? { tools: params.tools } : {}),
-      ignoreIncompleteToolCalls: true,
-    });
+      .filter((message) => Array.isArray(message.parts) && message.parts.length > 0);
   }
 
   async compact(input: PersistorCompactInput): Promise<{
@@ -385,21 +368,34 @@ export class FilePersistor extends PersistorComponent {
     );
   }
 
-  async prepare(input: PersistorPrepareInput): Promise<ModelMessage[]> {
+  async prepare(input: PersistorPrepareInput): Promise<ContextMessageV1[]> {
     const query = String(input.query || "").trim();
     const tools = this.normalizeTools(input.tools);
+    void tools;
 
-    let baseModelMessages = await this.toModelMessages({ tools });
-    if (!Array.isArray(baseModelMessages) || baseModelMessages.length === 0) {
-      baseModelMessages = query ? [{ role: "user", content: query }] : [];
-    }
-    if (query && !this.hasTrailingUserQuery(baseModelMessages, query)) {
-      baseModelMessages = [
-        ...baseModelMessages,
-        { role: "user", content: query },
+    let baseMessages = this.sanitizeMessages(await this.list());
+    if ((!Array.isArray(baseMessages) || baseMessages.length === 0) && query) {
+      baseMessages = [
+        this.userText({
+          text: query,
+          metadata: {
+            contextId: this.contextId,
+          },
+        }),
       ];
     }
-    return baseModelMessages;
+    if (query && !this.hasTrailingUserQuery(baseMessages, query)) {
+      baseMessages = [
+        ...baseMessages,
+        this.userText({
+          text: query,
+          metadata: {
+            contextId: this.contextId,
+          },
+        }),
+      ];
+    }
+    return baseMessages;
   }
 
   async append(message: ContextMessageV1): Promise<void> {

@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import { requestContext } from "@main/context/RequestContext.js";
+import { requestContext } from "@main/context/manager/RequestContext.js";
 import {
   getShipProfileOtherPath,
   getShipProfilePrimaryPath,

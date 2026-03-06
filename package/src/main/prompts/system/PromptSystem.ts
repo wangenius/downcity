@@ -1,5 +1,5 @@
 /**
- * PromptSystemer：system 解析组件默认实现。
+ * PromptSystem：system 解析组件默认实现。
  *
  * 关键点（中文）
  * - 该实现归属 prompts 层，统一负责 system 解析入口。
@@ -7,16 +7,16 @@
  */
 
 import {
-  SystemerComponent,
-  type SystemerResolveInput,
-} from "@main/agent/components/SystemerComponent.js";
+  PrompterComponent,
+  type PrompterResolveInput,
+} from "@main/agent/components/PrompterComponent.js";
 import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
 import {
   resolveAgentSystemMessages,
   type SystemProfile,
 } from "@main/prompts/system/SystemDomain.js";
 
-type PromptSystemerOptions = {
+type PromptSystemOptions = {
   /**
    * 项目根目录，用于渲染运行时 system 模板。
    */
@@ -39,21 +39,21 @@ type PromptSystemerOptions = {
 };
 
 /**
- * PromptSystemer 默认实现。
+ * PromptSystem 默认实现。
  */
-export class PromptSystemer extends SystemerComponent {
-  readonly name = "prompt_systemer";
+export class PromptSystem extends PrompterComponent {
+  readonly name = "prompt_system";
 
   private readonly projectRoot: string;
-  private readonly getStaticSystemPrompts: PromptSystemerOptions["getStaticSystemPrompts"];
-  private readonly getRuntime: PromptSystemerOptions["getRuntime"];
+  private readonly getStaticSystemPrompts: PromptSystemOptions["getStaticSystemPrompts"];
+  private readonly getRuntime: PromptSystemOptions["getRuntime"];
   private readonly profile: SystemProfile;
 
-  constructor(options: PromptSystemerOptions) {
+  constructor(options: PromptSystemOptions) {
     super();
     const projectRoot = String(options.projectRoot || "").trim();
     if (!projectRoot) {
-      throw new Error("PromptSystemer requires a non-empty projectRoot");
+      throw new Error("PromptSystem requires a non-empty projectRoot");
     }
     this.projectRoot = projectRoot;
     this.getStaticSystemPrompts = options.getStaticSystemPrompts;
@@ -61,14 +61,14 @@ export class PromptSystemer extends SystemerComponent {
     this.profile = options.profile === "task" ? "task" : "chat";
   }
 
-  async resolve(input: SystemerResolveInput) {
+  async resolve(input: PrompterResolveInput) {
     const contextId = String(input.contextId || "").trim();
     if (!contextId) {
-      throw new Error("PromptSystemer.resolve requires a non-empty contextId");
+      throw new Error("PromptSystem.resolve requires a non-empty contextId");
     }
     const requestId = String(input.requestId || "").trim();
     if (!requestId) {
-      throw new Error("PromptSystemer.resolve requires a non-empty requestId");
+      throw new Error("PromptSystem.resolve requires a non-empty requestId");
     }
     return await resolveAgentSystemMessages({
       projectRoot: this.projectRoot,

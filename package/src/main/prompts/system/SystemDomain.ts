@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 收敛 system 的资产加载、上下文档位判定、service prompt 收集、messages 组装。
- * - `PromptSystemer` 只做组件适配；核心逻辑统一在本文件。
+ * - `PromptSystem` 只做组件适配；核心逻辑统一在本文件。
  */
 
 import fs from "fs-extra";
@@ -150,7 +150,7 @@ type ResolvedSystemContextProfile = {
  * System 档位。
  *
  * 关键点（中文）
- * - 由外部创建 systemer 时显式指定，避免在 system 域猜测业务上下文。
+ * - 由外部创建 system 时显式指定，避免在 system 域猜测业务上下文。
  */
 export type SystemProfile = "chat" | "task";
 

@@ -10,7 +10,7 @@ import { generateId } from "@utils/Id.js";
 import {
   requestContext,
   type RequestContext,
-} from "@main/context/RequestContext.js";
+} from "@main/context/manager/RequestContext.js";
 import { OrchestratorComponent } from "@main/agent/components/OrchestratorComponent.js";
 import type {
   OrchestratorComposeInput,

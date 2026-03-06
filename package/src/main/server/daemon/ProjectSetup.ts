@@ -1,5 +1,5 @@
 /**
- * ProjectRuntimeSetup：runtime 启动前项目结构准备模块。
+ * ProjectSetup：runtime 启动前项目结构准备模块。
  *
  * 关键点（中文）
  * - 统一校验初始化必要文件（PROFILE.md / ship.json）。

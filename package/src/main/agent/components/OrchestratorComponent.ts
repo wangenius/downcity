@@ -1,9 +1,9 @@
 /**
- * OrchestratorComponent：本轮运行编排组件抽象。
+ * OrchestratorComponent：单次 Agent run 编排组件抽象。
  *
  * 关键点（中文）
- * - 统一编排 requestId/tools/onStepCallback。
- * - system 解析由 SystemerComponent 专职负责。
+ * - 负责 requestId/tools/onStepCallback 等运行时编排。
+ * - 不负责历史读写，不负责 system 解析，不负责 compact。
  */
 
 import type { Tool } from "ai";
@@ -50,14 +50,9 @@ export abstract class OrchestratorComponent extends AgentComponent {
   abstract readonly name: string;
 
   /**
-   * 组装一次 run 所需上下文。
+   * 组装一次 run 所需运行态。
    */
   abstract compose(
     input: OrchestratorComposeInput,
   ): Promise<OrchestratorComposeResult>;
-
-  /**
-   * 可选初始化钩子。
-   */
-  // 生命周期沿用 AgentComponent 默认实现。
 }

@@ -8,7 +8,6 @@ import type { JsonObject } from "@/types/Json.js";
  * - 默认只存 `role=user|assistant`
  * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
  */
-
 export type ShipContextMessageKind = "normal" | "summary";
 export type ShipContextMessageSource = "ingress" | "egress" | "compact";
 export type ShipContextIngressKind = "exec";

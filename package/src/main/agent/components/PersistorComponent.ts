@@ -6,16 +6,12 @@
  * - 不负责模型调用，不负责执行编排。
  */
 
-import type {
-  LanguageModel,
-  ModelMessage,
-  SystemModelMessage,
-  Tool,
-} from "ai";
+import type { LanguageModel, Tool } from "ai";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
 } from "@main/types/ContextMessage.js";
+import type { ContextSystemMessage } from "@main/types/ContextSystemMessage.js";
 import { AgentComponent } from "./AgentComponent.js";
 
 /**
@@ -35,7 +31,7 @@ export type PersistorPrepareInput = {
   /**
    * 当前轮 system messages。
    */
-  system: SystemModelMessage[];
+  system: ContextSystemMessage[];
 
   /**
    * 当前模型实例。
@@ -60,7 +56,7 @@ export type PersistorCompactInput = {
   /**
    * 当前轮 system messages。
    */
-  system: SystemModelMessage[];
+  system: ContextSystemMessage[];
 
   /**
    * 保留最近消息条数。
@@ -95,7 +91,7 @@ export abstract class PersistorComponent extends AgentComponent {
   /**
    * 为本轮 Agent 执行准备模型输入消息。
    */
-  abstract prepare(input: PersistorPrepareInput): Promise<ModelMessage[]>;
+  abstract prepare(input: PersistorPrepareInput): Promise<ContextMessageV1[]>;
 
   /**
    * 执行一次 compact（best-effort）。

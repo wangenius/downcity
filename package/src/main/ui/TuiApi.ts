@@ -11,7 +11,7 @@ import {
   listServiceRuntimes,
   runServiceCommand,
 } from "@main/service/Manager.js";
-import type { RuntimeState } from "@/main/context/RuntimeState.js";
+import type { RuntimeState } from "@/main/context/manager/RuntimeState.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { isValidTaskId } from "@services/task/runtime/Paths.js";

@@ -17,7 +17,7 @@ import {
   updateTaskDefinition,
   setTaskStatus,
 } from "./Action.js";
-import { resolveContextId } from "@main/context/ContextId.js";
+import { resolveContextId } from "@main/context/manager/ContextId.js";
 import type { Service } from "@main/service/ServiceManager.js";
 import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";

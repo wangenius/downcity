@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 仅定义最小公共生命周期能力，避免演化为“万能基类”。
- * - 业务行为由子类自行定义（Persistor/Compactor/Orchestrator/Systemer）。
+ * - 业务行为由子类自行定义（Persistor/Compactor/Orchestrator/Prompter）。
  */
 export abstract class AgentComponent {
   /**

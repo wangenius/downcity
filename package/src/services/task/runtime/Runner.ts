@@ -12,8 +12,13 @@ import fs from "fs-extra";
 import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import { Agent } from "@main/agent/Agent.js";
 import { withRequestContext } from "@main/runtime/RequestContext.js";
-import type { AgentSystemConfig } from "@main/types/AgentSystem.js";
+import { FilePersistor } from "@main/runtime/components/FilePersistor.js";
+import { SummaryCompactor } from "@main/runtime/components/SummaryCompactor.js";
+import { RuntimeOrchestrator } from "@main/runtime/components/RuntimeOrchestrator.js";
+import { PromptSystemer } from "@main/prompts/system/PromptSystemer.js";
+import { shellTools } from "@main/tools/shell/Tool.js";
 import type {
   ShipTaskKind,
   ShipTaskFrontmatterV1,
@@ -31,7 +36,6 @@ import {
   getTaskRunDir,
 } from "./Paths.js";
 import { ensureRunDir, readTask } from "./Store.js";
-import { TASK_AGENT_SYSTEM_PROMPT } from "./TaskPrompt.js";
 
 /**
  * 把相对路径渲染为 markdown 行内链接文本。
@@ -80,11 +84,100 @@ type ScriptExecutionResult = {
   outputText: string;
 };
 
+type TaskAgentRuntime = {
+  getAgent(contextId: string): Agent;
+  getPersistor(contextId: string): FilePersistor;
+};
+
 /**
- * 读取 service context 端口。
+ * 构建 task 专用 Agent 运行时（独立于 ContextManager 的 Agent 缓存）。
+ *
+ * 关键点（中文）
+ * - task 场景使用独立 Agent 实例，不复用 `context.run/getAgent`。
+ * - system 档位固定为 `task`，避免在 system 域根据 contextId 推断。
  */
-function requireContext(runtime: ServiceRuntime) {
-  return runtime.context;
+function createTaskAgentRuntime(params: {
+  runtime: ServiceRuntime;
+  runDirAbs: string;
+  runContextId: string;
+  userSimulatorContextId: string;
+}): TaskAgentRuntime {
+  const { runtime, runDirAbs, runContextId, userSimulatorContextId } = params;
+  const compactor = new SummaryCompactor({
+    keepLastMessages: runtime.config.context?.messages?.keepLastMessages,
+    maxInputTokensApprox: runtime.config.context?.messages?.maxInputTokensApprox,
+    archiveOnCompact: runtime.config.context?.messages?.archiveOnCompact,
+  });
+  const orchestrator = new RuntimeOrchestrator({
+    getTools: () => shellTools,
+  });
+  const systemer = new PromptSystemer({
+    projectRoot: runtime.rootPath,
+    getStaticSystemPrompts: () => runtime.systems,
+    getRuntime: () => runtime,
+    profile: "task",
+  });
+  const persistorsByContextId = new Map<string, FilePersistor>();
+  const agentsByContextId = new Map<string, Agent>();
+
+  const resolveTaskPersistor = (contextId: string): FilePersistor => {
+    const existing = persistorsByContextId.get(contextId);
+    if (existing) return existing;
+
+    const key = String(contextId || "").trim();
+    if (!key) {
+      throw new Error("TaskAgentRuntime requires a non-empty contextId");
+    }
+    const runMessagesDirPath =
+      key === runContextId
+        ? runDirAbs
+        : key === userSimulatorContextId
+          ? path.join(runDirAbs, "user-simulator")
+          : undefined;
+
+    const created = new FilePersistor({
+      rootPath: runtime.rootPath,
+      contextId: key,
+      ...(runMessagesDirPath
+        ? {
+            paths: {
+              contextDirPath: runMessagesDirPath,
+              messagesDirPath: runMessagesDirPath,
+              messagesFilePath: path.join(runMessagesDirPath, "messages.jsonl"),
+              metaFilePath: path.join(runMessagesDirPath, "meta.json"),
+              archiveDirPath: path.join(runMessagesDirPath, "archive"),
+            },
+          }
+        : {}),
+    });
+    persistorsByContextId.set(key, created);
+    return created;
+  };
+
+  return {
+    getPersistor(contextId: string): FilePersistor {
+      return resolveTaskPersistor(contextId);
+    },
+    getAgent(contextId: string): Agent {
+      const key = String(contextId || "").trim();
+      if (!key) {
+        throw new Error("TaskAgentRuntime.getAgent requires a non-empty contextId");
+      }
+      const existing = agentsByContextId.get(key);
+      if (existing) return existing;
+
+      const created = new Agent({
+        model: runtime.context.model,
+        logger: runtime.logger,
+        persistor: resolveTaskPersistor(key),
+        compactor,
+        orchestrator,
+        systemer,
+      });
+      agentsByContextId.set(key, created);
+      return created;
+    },
+  };
 }
 
 /**
@@ -328,30 +421,19 @@ function buildUserSimulatorQuery(params: {
  * 执行一轮 agent.run。
  */
 async function runAgentRound(params: {
-  context: ServiceRuntime;
+  taskAgentRuntime: TaskAgentRuntime;
   contextId: string;
   taskId: string;
   query: string;
   actorId: string;
   actorName: string;
-  systemConfig?: AgentSystemConfig;
 }): Promise<{ outputText: string; rawResult: AgentResult }> {
-  const agent = requireContext(params.context).getAgent(params.contextId);
-  if (params.systemConfig) {
-    agent.setSystem(params.systemConfig);
-  }
-  const runContext = await requireContext(
-    params.context,
-  ).createAgentRunContext(params.contextId);
   const result = await withRequestContext(
     {
       contextId: params.contextId,
     },
     () =>
-      agent.run({
-        requestId: runContext.requestId,
-        system: runContext.system,
-        tools: runContext.tools,
+      params.taskAgentRuntime.getAgent(params.contextId).run({
         query: params.query,
       }),
   );
@@ -412,14 +494,12 @@ async function runScriptTask(params: {
  * 把 executor 的 assistant 消息落盘到 run context persistor。
  */
 async function appendExecutorAssistantMessage(params: {
-  context: ServiceRuntime;
+  taskAgentRuntime: TaskAgentRuntime;
   runContextId: string;
   taskId: string;
   rawResult: AgentResult;
 }): Promise<void> {
-  const persistor = requireContext(params.context).getContextPersistor(
-    params.runContextId,
-  );
+  const persistor = params.taskAgentRuntime.getPersistor(params.runContextId);
   const assistantMessage = params.rawResult?.assistantMessage;
   if (assistantMessage && typeof assistantMessage === "object") {
     await persistor.append(assistantMessage);
@@ -582,6 +662,12 @@ export async function runTaskNow(params: {
 
   const runContextId = createTaskRunContextId(task.taskId, timestamp);
   const userSimulatorContextId = `task-user-sim:${task.taskId}:${timestamp}`;
+  const taskAgentRuntime = createTaskAgentRuntime({
+    runtime: context,
+    runDirAbs,
+    runContextId,
+    userSimulatorContextId,
+  });
 
   let ok = false;
   let status: ShipTaskRunStatusV1 = "failure";
@@ -648,11 +734,6 @@ export async function runTaskNow(params: {
   } else {
     // phase 1（agent）：双 agent 多轮对话（executor <-> user-simulator）
     // 关键点（中文）：直到“规则校验通过 + 模拟用户满意”或达到最大轮数。
-    const taskAgentSystemConfig: AgentSystemConfig = {
-      mode: "task",
-      replaceDefaultCorePrompt: TASK_AGENT_SYSTEM_PROMPT,
-      disableServiceSystems: ["chat"],
-    };
     let lastRoundRuleErrors: string[] = [];
     let lastRoundDecision: UserSimulatorDecision | null = null;
     let lastFeedback = "";
@@ -670,13 +751,12 @@ export async function runTaskNow(params: {
           ...(lastFeedback ? { lastFeedback } : {}),
         });
         const executorRound = await runAgentRound({
-          context,
+          taskAgentRuntime,
           contextId: runContextId,
           taskId: task.taskId,
           query: executorQuery,
           actorId: "scheduler",
           actorName: "scheduler",
-          systemConfig: taskAgentSystemConfig,
         });
         executorRoundOutput = executorRound.outputText;
         outputText = executorRound.outputText;
@@ -684,7 +764,7 @@ export async function runTaskNow(params: {
         // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
         try {
           await appendExecutorAssistantMessage({
-            context,
+            taskAgentRuntime,
             runContextId,
             taskId: task.taskId,
             rawResult: executorRound.rawResult,
@@ -731,13 +811,12 @@ export async function runTaskNow(params: {
           ruleErrors: validation.errors,
         });
         const simulatorRound = await runAgentRound({
-          context,
+          taskAgentRuntime,
           contextId: userSimulatorContextId,
           taskId: task.taskId,
           query: simulatorQuery,
           actorId: "user_simulator",
           actorName: "user_simulator",
-          systemConfig: taskAgentSystemConfig,
         });
         decision = parseUserSimulatorDecision(simulatorRound.outputText);
       } catch (e) {

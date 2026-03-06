@@ -1,10 +1,10 @@
 /**
- * MainContextPersistor：main 层 ContextPersistor 落盘实现。
+ * FilePersistor：基于 JSONL 的会话持久化组件实现。
  *
  * 关键点（中文）
- * - persistor 自身直接负责消息与 meta 落盘。
- * - agent 只依赖 ContextPersistor 抽象，不感知具体文件结构。
- * - 通过 modules 组合 `history + compactor`，并统一处理并发写锁。
+ * - 以 `.ship/context/<contextId>/messages/messages.jsonl` 为事实源。
+ * - append 与 compact 共用同一把文件锁，避免并发覆盖。
+ * - 对 Agent 暴露统一的 Persistor 组件接口。
  */
 
 import fs from "fs-extra";
@@ -24,29 +24,23 @@ import {
 } from "ai";
 import { generateId } from "@utils/Id.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import {
-  ContextPersistor,
-  type PrepareRunMessagesInput,
-} from "@main/agent/ContextPersistor.js";
+import { compactContextMessageIfNeeded } from "@main/runtime/components/compact/SummaryCompact.js";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
 } from "@main/types/ContextMessage.js";
 import type { ShipContextMessagesMetaV1 } from "@main/types/ContextMessagesMeta.js";
-import type { ContextPersistorPathOverrides } from "@main/types/ContextPersistor.js";
-import type {
-  MainContextCompactorModule,
-  MainContextCompactorModuleConfig,
-  MainContextHistoryModuleConfig,
-  MainContextPersistorModules,
-} from "@main/types/ContextModules.js";
-import { defaultContextCompactorModule } from "@main/runtime/modules/DefaultContextCompactorModule.js";
+import type { PersistorPathOverrides } from "@main/types/PersistorPaths.js";
+import {
+  PersistorComponent,
+  type PersistorCompactInput,
+  type PersistorPrepareInput,
+} from "@main/agent/components/PersistorComponent.js";
 
-type MainContextPersistorOptions = {
+type FilePersistorOptions = {
   rootPath: string;
   contextId: string;
-  paths?: ContextPersistorPathOverrides;
-  modules?: MainContextPersistorModules;
+  paths?: PersistorPathOverrides;
 };
 
 function getShipDirPath(rootPath: string): string {
@@ -65,28 +59,28 @@ function getShipContextMessagesDirPath(rootPath: string, contextId: string): str
   return path.join(getShipContextDirPath(rootPath, contextId), "messages");
 }
 
-export class MainContextPersistor extends ContextPersistor {
+export class FilePersistor extends PersistorComponent {
+  readonly name = "file_persistor";
   readonly contextId: string;
+
   private readonly rootPath: string;
   private readonly overrideContextDirPath?: string;
   private readonly overrideMessagesDirPath?: string;
   private readonly overrideMessagesFilePath?: string;
   private readonly overrideMetaFilePath?: string;
   private readonly overrideArchiveDirPath?: string;
-  private readonly historyModule: MainContextHistoryModuleConfig;
-  private readonly compactorModule: MainContextCompactorModule;
-  private readonly compactorModuleConfig: Omit<MainContextCompactorModuleConfig, "module">;
 
-  constructor(options: MainContextPersistorOptions) {
+  constructor(options: FilePersistorOptions) {
     super();
     const rootPath = String(options.rootPath || "").trim();
     if (!rootPath) {
-      throw new Error("MainContextPersistor requires a non-empty rootPath");
+      throw new Error("FilePersistor requires a non-empty rootPath");
     }
     const contextId = String(options.contextId || "").trim();
     if (!contextId) {
-      throw new Error("MainContextPersistor requires a non-empty contextId");
+      throw new Error("FilePersistor requires a non-empty contextId");
     }
+
     this.rootPath = rootPath;
     this.contextId = contextId;
     this.overrideContextDirPath = this.readOptionalPath(options.paths?.contextDirPath);
@@ -94,41 +88,6 @@ export class MainContextPersistor extends ContextPersistor {
     this.overrideMessagesFilePath = this.readOptionalPath(options.paths?.messagesFilePath);
     this.overrideMetaFilePath = this.readOptionalPath(options.paths?.metaFilePath);
     this.overrideArchiveDirPath = this.readOptionalPath(options.paths?.archiveDirPath);
-    this.historyModule = this.resolveHistoryModule(options.modules);
-    this.compactorModule = this.resolveCompactorModule(options.modules);
-    this.compactorModuleConfig = this.resolveCompactorModuleConfig(options.modules);
-  }
-
-  private resolveHistoryModule(
-    modules: MainContextPersistorModules | undefined,
-  ): MainContextHistoryModuleConfig {
-    const driver = modules?.history?.driver ?? "jsonl-file";
-    if (driver !== "jsonl-file") {
-      throw new Error(
-        `MainContextPersistor only supports history.driver="jsonl-file", got "${String(driver)}"`,
-      );
-    }
-    return { driver };
-  }
-
-  private resolveCompactorModule(
-    modules: MainContextPersistorModules | undefined,
-  ): MainContextCompactorModule {
-    const module = modules?.compactor?.module;
-    if (module && typeof module.compactIfNeeded === "function") {
-      return module;
-    }
-    return defaultContextCompactorModule;
-  }
-
-  private resolveCompactorModuleConfig(
-    modules: MainContextPersistorModules | undefined,
-  ): Omit<MainContextCompactorModuleConfig, "module"> {
-    return {
-      keepLastMessages: modules?.compactor?.keepLastMessages,
-      maxInputTokensApprox: modules?.compactor?.maxInputTokensApprox,
-      archiveOnCompact: modules?.compactor?.archiveOnCompact,
-    };
   }
 
   private readOptionalPath(value: string | undefined): string | undefined {
@@ -295,33 +254,6 @@ export class MainContextPersistor extends ContextPersistor {
     }
   }
 
-  private resolveCompactPolicy(retryAttempts: number): {
-    keepLastMessages: number;
-    maxInputTokensApprox: number;
-    archiveOnCompact: boolean;
-  } {
-    const contextMessagesConfig = this.compactorModuleConfig;
-    const baseKeepLastMessages =
-      typeof contextMessagesConfig?.keepLastMessages === "number"
-        ? Math.max(6, Math.min(5000, Math.floor(contextMessagesConfig.keepLastMessages)))
-        : 30;
-    const baseMaxInputTokensApprox =
-      typeof contextMessagesConfig?.maxInputTokensApprox === "number"
-        ? Math.max(2000, Math.min(200_000, Math.floor(contextMessagesConfig.maxInputTokensApprox)))
-        : 128000;
-    const retryFactor = Math.max(1, Math.pow(2, retryAttempts));
-    const keepLastMessages = Math.max(6, Math.floor(baseKeepLastMessages / retryFactor));
-    const maxInputTokensApprox = Math.max(
-      2000,
-      Math.floor(baseMaxInputTokensApprox / retryFactor),
-    );
-    const archiveOnCompact =
-      contextMessagesConfig?.archiveOnCompact === undefined
-        ? true
-        : Boolean(contextMessagesConfig.archiveOnCompact);
-    return { keepLastMessages, maxInputTokensApprox, archiveOnCompact };
-  }
-
   private normalizeSystem(system: SystemModelMessage[]): SystemModelMessage[] {
     if (!Array.isArray(system)) return [];
     return system.filter((item) => item && typeof item === "object");
@@ -364,7 +296,7 @@ export class MainContextPersistor extends ContextPersistor {
   }
 
   private async toModelMessages(params: { tools?: ToolSet }): Promise<ModelMessage[]> {
-    const msgs = await this.loadAll();
+    const msgs = await this.list();
     const sanitizedMessages = msgs
       .map((m) => {
         const parts = Array.isArray(m.parts)
@@ -387,20 +319,16 @@ export class MainContextPersistor extends ContextPersistor {
     });
   }
 
-  async prepareRunMessages(input: PrepareRunMessagesInput): Promise<ModelMessage[]> {
-    const query = String(input.query || "").trim();
-    const model: LanguageModel = input.model;
-    const tools = this.normalizeTools(input.tools);
-    const system = this.normalizeSystem(input.system);
-    const compactPolicy = this.resolveCompactPolicy(input.retryAttempts);
-    void this.historyModule;
-
-    try {
-      await this.compactorModule.compactIfNeeded({
+  async compact(input: PersistorCompactInput): Promise<{
+    compacted: boolean;
+    reason?: string;
+  }> {
+    return await compactContextMessageIfNeeded(
+      {
         rootPath: this.rootPath,
         contextId: this.contextId,
         withWriteLock: (fn) => this.withWriteLock(fn),
-        loadAll: () => this.loadAll(),
+        loadAll: () => this.list(),
         createSummaryMessage: ({ text, sourceRange }) => ({
           id: `a:${this.contextId}:${generateId()}`,
           role: "assistant",
@@ -418,15 +346,20 @@ export class MainContextPersistor extends ContextPersistor {
         getMessagesFilePath: () => this.getMessagesFilePath(),
         readMetaUnsafe: () => this.readMetaUnsafe(),
         writeMetaUnsafe: (next) => this.writeMetaUnsafe(next),
-        model,
-        system,
-        keepLastMessages: compactPolicy.keepLastMessages,
-        maxInputTokensApprox: compactPolicy.maxInputTokensApprox,
-        archiveOnCompact: compactPolicy.archiveOnCompact,
-      });
-    } catch {
-      // ignore compact failure; fallback to un-compacted messages
-    }
+      },
+      {
+        model: input.model,
+        system: this.normalizeSystem(input.system),
+        keepLastMessages: input.keepLastMessages,
+        maxInputTokensApprox: input.maxInputTokensApprox,
+        archiveOnCompact: input.archiveOnCompact,
+      },
+    );
+  }
+
+  async prepare(input: PersistorPrepareInput): Promise<ModelMessage[]> {
+    const query = String(input.query || "").trim();
+    const tools = this.normalizeTools(input.tools);
 
     let baseModelMessages = await this.toModelMessages({ tools });
     if (!Array.isArray(baseModelMessages) || baseModelMessages.length === 0) {
@@ -444,7 +377,7 @@ export class MainContextPersistor extends ContextPersistor {
     });
   }
 
-  async loadAll(): Promise<ContextMessageV1[]> {
+  async list(): Promise<ContextMessageV1[]> {
     await this.ensureLayout();
     const file = this.getMessagesFilePath();
     const raw = await fs.readFile(file, "utf8");
@@ -465,31 +398,33 @@ export class MainContextPersistor extends ContextPersistor {
     return out;
   }
 
-  async loadRange(startIndex: number, endIndex: number): Promise<ContextMessageV1[]> {
-    const msgs = await this.loadAll();
-    const start = Math.max(0, Math.floor(startIndex));
-    const end = Math.max(start, Math.floor(endIndex));
-    return msgs.slice(start, end);
+  async slice(start: number, end: number): Promise<ContextMessageV1[]> {
+    const msgs = await this.list();
+    const startIndex = Math.max(0, Math.floor(start));
+    const endIndex = Math.max(startIndex, Math.floor(end));
+    return msgs.slice(startIndex, endIndex);
   }
 
-  async getTotalMessageCount(): Promise<number> {
-    const msgs = await this.loadAll();
+  async size(): Promise<number> {
+    const msgs = await this.list();
     return msgs.length;
   }
 
-  async loadMeta(): Promise<Record<string, unknown>> {
+  async meta(): Promise<Record<string, unknown>> {
     await this.ensureLayout();
-    const meta = await this.readMetaUnsafe();
-    return (meta && typeof meta === "object" ? { ...meta } : {}) as Record<string, unknown>;
+    const metadata = await this.readMetaUnsafe();
+    return (metadata && typeof metadata === "object"
+      ? { ...metadata }
+      : {}) as Record<string, unknown>;
   }
 
-  createUserTextMessage(params: {
+  userText(input: {
     text: string;
     metadata: Omit<ContextMetadataV1, "v" | "ts"> &
       Partial<Pick<ContextMetadataV1, "ts">>;
     id?: string;
   }): ContextMessageV1 {
-    const { ts, ...metadata } = params.metadata;
+    const { ts, ...metadata } = input.metadata;
     const md: ContextMetadataV1 = {
       v: 1,
       ts: typeof ts === "number" ? ts : Date.now(),
@@ -497,16 +432,16 @@ export class MainContextPersistor extends ContextPersistor {
       source: "ingress",
       kind: "normal",
     };
-    const id = params.id || `u:${this.contextId}:${generateId()}`;
+    const id = input.id || `u:${this.contextId}:${generateId()}`;
     return {
       id,
       role: "user",
       metadata: md,
-      parts: [{ type: "text", text: String(params.text ?? "") }],
+      parts: [{ type: "text", text: String(input.text ?? "") }],
     };
   }
 
-  createAssistantTextMessage(params: {
+  assistantText(input: {
     text: string;
     metadata: Omit<ContextMetadataV1, "v" | "ts"> &
       Partial<Pick<ContextMetadataV1, "ts">>;
@@ -514,20 +449,20 @@ export class MainContextPersistor extends ContextPersistor {
     kind?: "normal" | "summary";
     source?: "egress" | "compact";
   }): ContextMessageV1 {
-    const { ts, ...metadata } = params.metadata;
+    const { ts, ...metadata } = input.metadata;
     const md: ContextMetadataV1 = {
       v: 1,
       ts: typeof ts === "number" ? ts : Date.now(),
       ...metadata,
-      source: params.source || "egress",
-      kind: params.kind || "normal",
+      source: input.source || "egress",
+      kind: input.kind || "normal",
     };
-    const id = params.id || `a:${this.contextId}:${generateId()}`;
+    const id = input.id || `a:${this.contextId}:${generateId()}`;
     return {
       id,
       role: "assistant",
       metadata: md,
-      parts: [{ type: "text", text: String(params.text ?? "") }],
+      parts: [{ type: "text", text: String(input.text ?? "") }],
     };
   }
 }

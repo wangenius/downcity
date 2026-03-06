@@ -38,16 +38,18 @@ import {
 import { ensureDir, saveJson } from "@/main/runtime/Storage.js";
 import type { ShipConfig } from "@/main/runtime/Config.js";
 import { SHIP_JSON_SCHEMA } from "@main/constants/ShipSchema.js";
-import {
-  MODEL_PRESETS,
-} from "@main/constants/Model.js";
 import { DEFAULT_SHIP_JSON } from "@main/constants/Ship.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
   DEFAULT_USER_MD_TEMPLATE,
-} from "@main/constants/InitTemplates.js";
+} from "@main/prompts/common/InitPrompts.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
+import {
+  listInitModelChoices,
+  getInitModelDefaultIndex,
+  resolveInitModel,
+} from "@/main/model/ModelCommand.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -191,26 +193,8 @@ export async function initCommand(
       type: "select",
       name: "model",
       message: "Select LLM model",
-      choices: [
-        { title: "Claude Sonnet 4", value: "claude-sonnet-4-5" },
-        { title: "Claude Haiku", value: "claude-haiku" },
-        { title: "Claude 3.5 Sonnet", value: "claude-3-5-sonnet-20241022" },
-        { title: "Claude 3 Opus", value: "claude-3-opus-20240229" },
-        { title: "GPT-4", value: "gpt-4" },
-        { title: "GPT-4 Turbo", value: "gpt-4-turbo" },
-        { title: "GPT-4o", value: "gpt-4o" },
-        { title: "GPT-3.5 Turbo", value: "gpt-3.5-turbo" },
-        { title: "DeepSeek Chat", value: "deepseek-chat" },
-        { title: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
-        { title: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
-        { title: "xAI Grok 3", value: "grok-3" },
-        { title: "HF Llama 3.1 8B", value: "meta-llama/Llama-3.1-8B-Instruct" },
-        { title: "OpenRouter Auto", value: "openrouter/auto" },
-        { title: "Moonshot v1 8k", value: "moonshot-v1-8k" },
-        { title: "Open-compatible model", value: "open-compatible" },
-        { title: "Open-responses model", value: "open-responses" },
-      ],
-      initial: 0,
+      choices: listInitModelChoices(),
+      initial: getInitModelDefaultIndex(),
     },
     {
       // 关键交互: Chat channels 允许多选，未选择的就不写入 ship.json
@@ -254,7 +238,8 @@ export async function initCommand(
   ])) as InitPromptResponse;
 
   // 关键点（中文）：agent_name 同时用于 `ship.json.name` 与 init 模板变量渲染，避免两处来源不一致。
-  const agentName = String(response.name || "").trim() || path.basename(projectRoot);
+  const agentName =
+    String(response.name || "").trim() || path.basename(projectRoot);
   const initTemplateVariables = {
     agent_name: agentName,
   };
@@ -306,21 +291,17 @@ export async function initCommand(
 
   // Save ship.json
   // Build LLM configuration
-  const selectedModel = response.model || "claude-sonnet-4-5";
-  const modelTemplate =
-    MODEL_PRESETS[selectedModel as keyof typeof MODEL_PRESETS] ||
-    MODEL_PRESETS["open-compatible"];
+  const selectedModel = resolveInitModel(response.model);
   const activeModelId = "default";
   const providerId = "default";
-  const useCustomModelName =
-    selectedModel === "open-compatible" || selectedModel === "open-responses";
+  const useCustomModelName = selectedModel.useCustomModelName;
 
   // 关键点（中文）：init 默认生成“1 provider + 1 model”的多模型结构，后续用户可按需扩展。
   const llmConfig: ShipConfig["llm"] = {
     activeModel: activeModelId,
     providers: {
       [providerId]: {
-        type: modelTemplate.providerType,
+        type: selectedModel.providerType,
         ...(useCustomModelName ? { baseUrl: LLM_BASE_URL } : {}),
         apiKey: LLM_API_KEY,
       },
@@ -328,7 +309,7 @@ export async function initCommand(
     models: {
       [activeModelId]: {
         provider: providerId,
-        name: useCustomModelName ? LLM_MODEL : selectedModel,
+        name: useCustomModelName ? LLM_MODEL : selectedModel.modelId,
         temperature: 0.7,
       },
     },

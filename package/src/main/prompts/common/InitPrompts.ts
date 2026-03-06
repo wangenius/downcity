@@ -1,23 +1,23 @@
 /**
- * init 默认模板常量与渲染工具。
+ * InitPrompts：`shipmyagent init` 默认 prompt 资产加载器。
  *
  * 职责说明（中文）
- * - 统一管理 `shipmyagent init` 生成的 `PROFILE.md` / `SOUL.md` / `USER.md` 默认内容。
- * - 模板内容存放在独立 txt 文件，避免在 TS 中内联长文本。
+ * - 统一管理 init 生成的 `PROFILE.md` / `SOUL.md` / `USER.md` 默认内容。
+ * - 资源集中在 `prompts/common/assets/init/*.txt`，避免散落在 constants。
  */
 
 import { readFileSync } from "node:fs";
 
 const PROFILE_TEMPLATE_FILE_URL = new URL(
-  "./templates/PROFILE.md.txt",
+  "./assets/init/PROFILE.md.txt",
   import.meta.url,
 );
 const SOUL_TEMPLATE_FILE_URL = new URL(
-  "./templates/SOUL.md.txt",
+  "./assets/init/SOUL.md.txt",
   import.meta.url,
 );
 const USER_TEMPLATE_FILE_URL = new URL(
-  "./templates/USER.md.txt",
+  "./assets/init/USER.md.txt",
   import.meta.url,
 );
 

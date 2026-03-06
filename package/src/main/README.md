@@ -21,8 +21,10 @@ Agent 执行、上下文持久化与模型构建也统一收敛在该目录。
    - `Config.ts` 读取 `.env` + `ship.json` 并解析 `${ENV}` 占位符。
    - `Paths.ts` 提供 `.ship/*` 路径约定，作为全项目统一事实来源。
 3. `prompts/`
-   - `System.ts` 负责运行时系统提示模板、变量替换与默认 prompt 资产加载。
-   - `runtime/GeoContext.ts` 负责地理上下文解析与缓存，供 prompt 变量填充复用。
+   - `System.ts` 是 system 能力门面层（统一导出入口）。
+   - `system/` 收敛 system 域实现：system 资产、message 组装、resolver、组件适配层。
+   - `common/` 收敛公共 prompt 能力：类型、地理上下文、渲染器、init 模板资产。
+   - `variables/` 收敛模板变量替换能力（独立模块）。
 4. `service/`
    - `Manager.ts` / `ServiceManager.ts` 提供 service 注册契约与运行态调度入口。
    - service 采用 `actions` 对象模型：由 `Manager.ts` 自动注册 CLI 与 HTTP 路由（默认 `/service/<service>/<action>`）。
@@ -33,11 +35,30 @@ Agent 执行、上下文持久化与模型构建也统一收敛在该目录。
    - 详细约束见 `service/README.md`（含请求上下文与 shell env 透传约定）。
 5. `agent/`
    - `Agent.ts` 提供单会话 Agent 执行器（system/tools 外部注入）。
-   - `ContextPersistor.ts` 与 `Compact.ts` 提供上下文持久化抽象与压缩逻辑。
-6. `tools/shell/`
+   - `components/*Component.ts` 提供组件抽象（Persistor/Compactor/Orchestrator/Systemer）。
+6. `runtime/components/compact/`
+   - `SummaryCompact.ts` 提供摘要压缩算法实现（由 runtime 组件调用）。
+   - `runtime/components/*.ts` 提供默认组件实现（FilePersistor/SummaryCompactor/RuntimeOrchestrator）。
+7. `prompts/system/`
+   - `PromptSystemer.ts` 提供 system 组件适配层。
+   - `SystemDomain.ts` 收敛 system 全链路：资产加载、显式档位(profile)解析、service 收集、messages 组装。
+   - `assets/` 存放 system 相关文本资产（`core.prompt.txt` / `service.prompt.txt` / `task.prompt.txt`）。
+8. `prompts/common/`
+   - `PromptRenderer.ts` 负责文本 prompt 到 system message 的转换。
+   - `InitPrompts.ts` 提供 init 阶段 `PROFILE/SOUL/USER` 模板资产加载。
+9. `prompts/variables/`
+   - `VariableReplacer.ts` 负责模板变量构建与变量替换。
+   - `PromptTypes.ts` 提供模板变量相关类型。
+   - `GeoContext.ts` 负责地理上下文解析与缓存。
+10. `llm/`
+   - `CreateModel.ts` 负责根据 ship.json 构建运行时模型实例。
+   - `ModelManager.ts` 负责管理 init 模型预设与 provider 映射策略。
+11. `commands/ModelCommand.ts`
+   - 提供命令层模型入口（模型选项列表、默认索引、init 模型解析）。
+12. `tools/shell/`
    - `Tool.ts` 暴露会话式 shell 工具：`exec_command`、`write_stdin`、`close_shell`。
    - shell 工具在 main 层注册后注入到 `Agent`。
-7. `types/constants/utils/ui`
+13. `types/constants/utils/ui`
    - 放置进程层协议类型、常量、CLI 输出与 Web UI 辅助实现。
 
 ## 关键文件

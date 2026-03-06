@@ -2,79 +2,74 @@
  * ContextManager：会话生命周期编排器（main 层）。
  *
  * 关键职责（中文）
- * - 管理 contextId -> Agent/ContextPersistor 缓存
- * - 负责消息入库与 agent/persistor 访问
- * - 在上下文更新后触发 memory 维护钩子
+ * - 管理 contextId -> Agent/Persistor 缓存。
+ * - 负责用户消息与助手消息入库。
+ * - 在上下文更新后触发维护回调。
  */
 
-import type { Tool, SystemModelMessage, LanguageModel } from "ai";
-import { generateId } from "@utils/Id.js";
+import type { LanguageModel } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ContextMetadataV1 } from "@main/types/ContextMessage.js";
-import type { ResolvedAgentSystemConfig } from "@main/types/AgentSystem.js";
-import type { ContextPersistor } from "@main/agent/ContextPersistor.js";
+import { withRequestContext } from "@main/runtime/RequestContext.js";
+import type { RequestContext } from "@main/runtime/RequestContext.js";
+import type {
+  ContextMessageV1,
+  ContextMetadataV1,
+} from "@main/types/ContextMessage.js";
+import type { AgentResult } from "@main/types/Agent.js";
 import type { JsonObject } from "@/types/Json.js";
 import { Agent } from "@main/agent/Agent.js";
+import { PersistorComponent } from "@main/agent/components/PersistorComponent.js";
+import { CompactorComponent } from "@main/agent/components/CompactorComponent.js";
+import { OrchestratorComponent } from "@main/agent/components/OrchestratorComponent.js";
+import { SystemerComponent } from "@main/agent/components/SystemerComponent.js";
 
 /**
  * ContextManager：统一会话运行管理容器。
- *
- * 关键点（中文）
- * - 一个 contextId 对应一个 Agent 实例与一个 ContextPersistor 实例。
- * - ContextManager 只负责上下文对象组装与落盘，不处理调度。
  */
 export class ContextManager {
   private readonly agentsByContextId: Map<string, Agent> = new Map();
-  private readonly persistorsByContextId: Map<string, ContextPersistor> =
+  private readonly persistorsByContextId: Map<string, PersistorComponent> =
     new Map();
 
-  private readonly runMemoryMaintenance?: (contextId: string) => Promise<void>;
   private readonly agentModel?: LanguageModel;
   private readonly agentLogger?: Logger;
-  private readonly createPersistor: (contextId: string) => ContextPersistor;
-  private readonly resolveAgentSystemMessages?: (params: {
-    contextId: string;
-    requestId: string;
-    system: ResolvedAgentSystemConfig;
-  }) => Promise<SystemModelMessage[]>;
-  private agentTools: Record<string, Tool> = {};
+  private readonly createPersistor: (contextId: string) => PersistorComponent;
+  private readonly compactor: CompactorComponent;
+  private readonly orchestrator: OrchestratorComponent;
+  private readonly systemer: SystemerComponent;
+  private readonly runAfterContextUpdated?: (contextId: string) => Promise<void>;
 
   /**
-   * 构造函数：装配可选回调。
-   *
-   * 关键点（中文）
-   * - `runMemoryMaintenance` 由 service 注入，manager 只负责触发。
+   * 构造函数：装配组件。
    */
   constructor(params: {
-    runMemoryMaintenance?: (contextId: string) => Promise<void>;
     agentModel?: LanguageModel;
     agentLogger?: Logger;
-    createPersistor: (contextId: string) => ContextPersistor;
-    resolveAgentSystemMessages?: (params: {
-      contextId: string;
-      requestId: string;
-      system: ResolvedAgentSystemConfig;
-    }) => Promise<SystemModelMessage[]>;
+    createPersistor: (contextId: string) => PersistorComponent;
+    compactor: CompactorComponent;
+    orchestrator: OrchestratorComponent;
+    systemer: SystemerComponent;
+    runAfterContextUpdated?: (contextId: string) => Promise<void>;
   }) {
     if (typeof params.createPersistor !== "function") {
       throw new Error("ContextManager requires createPersistor");
     }
-    this.runMemoryMaintenance = params.runMemoryMaintenance;
     this.agentModel = params.agentModel;
     this.agentLogger = params.agentLogger;
     this.createPersistor = params.createPersistor;
-    this.resolveAgentSystemMessages = params.resolveAgentSystemMessages;
+    this.compactor = params.compactor;
+    this.orchestrator = params.orchestrator;
+    this.systemer = params.systemer;
+    this.runAfterContextUpdated = params.runAfterContextUpdated;
   }
 
   /**
-   * 获取（或创建）ContextPersistor。
+   * 获取（或创建）Persistor。
    */
-  getContextPersistor(contextId: string): ContextPersistor {
+  getPersistor(contextId: string): PersistorComponent {
     const key = String(contextId || "").trim();
     if (!key) {
-      throw new Error(
-        "ContextManager.getContextPersistor requires a non-empty contextId",
-      );
+      throw new Error("ContextManager.getPersistor requires a non-empty contextId");
     }
 
     const existing = this.persistorsByContextId.get(key);
@@ -96,53 +91,48 @@ export class ContextManager {
     if (existing) return existing;
     if (!this.agentModel || !this.agentLogger) {
       throw new Error(
-        "ContextManager agent runtime is missing. Ensure runtime injects agent model/logger before calling getAgent().",
+        "ContextManager agent runtime is missing. Ensure runtime injects model/logger before calling getAgent().",
       );
     }
+
     const created = new Agent({
       model: this.agentModel,
       logger: this.agentLogger,
-      persistor: this.getContextPersistor(key),
+      persistor: this.getPersistor(key),
+      compactor: this.compactor,
+      orchestrator: this.orchestrator,
+      systemer: this.systemer,
     });
     this.agentsByContextId.set(key, created);
     return created;
   }
 
   /**
-   * 设置 Agent 全局工具集合。
+   * 执行一次 Agent run（统一调用链）。
+   *
+   * 关键点（中文）
+   * - 收敛 getAgent + withRequestContext + agent.run。
+   * - 调用方只传 contextId/query 与可选运行态覆盖参数。
    */
-  setAgentTools(tools: Record<string, Tool>): void {
-    this.agentTools = tools && typeof tools === "object" ? { ...tools } : {};
-  }
-
-  /**
-   * 构建一次 Agent 运行所需上下文参数。
-   */
-  async createAgentRunContext(contextId: string): Promise<{
-    requestId: string;
-    system: SystemModelMessage[];
-    tools: Record<string, Tool>;
-  }> {
-    const key = String(contextId || "").trim();
-    if (!key) {
-      throw new Error(
-        "ContextManager.createAgentRunContext requires a non-empty contextId",
-      );
+  async run(params: {
+    contextId: string;
+    query: string;
+    requestContext?: Omit<RequestContext, "contextId">;
+  }): Promise<AgentResult> {
+    const contextId = String(params.contextId || "").trim();
+    if (!contextId) {
+      throw new Error("ContextManager.run requires a non-empty contextId");
     }
-    const requestId = generateId();
-    const agent = this.getAgent(key);
-    const system = this.resolveAgentSystemMessages
-      ? await this.resolveAgentSystemMessages({
-          contextId: key,
-          requestId,
-          system: agent.getSystem(),
-        })
-      : [];
-    return {
-      requestId,
-      system: Array.isArray(system) ? [...system] : [],
-      tools: { ...this.agentTools },
-    };
+    const query = String(params.query || "").trim();
+    const agent = this.getAgent(contextId);
+    const requestContext = params.requestContext || {};
+    return await withRequestContext(
+      {
+        contextId,
+        ...requestContext,
+      },
+      () => agent.run({ query }),
+    );
   }
 
   /**
@@ -157,21 +147,21 @@ export class ContextManager {
   }
 
   /**
-   * 触发 context 记忆维护。
+   * 触发会话更新回调。
    */
   async afterContextUpdatedAsync(contextId: string): Promise<void> {
     const key = String(contextId || "").trim();
     if (!key) return;
-    if (!this.runMemoryMaintenance) return;
+    if (!this.runAfterContextUpdated) return;
     try {
-      await this.runMemoryMaintenance(key);
+      await this.runAfterContextUpdated(key);
     } catch {
       // ignore
     }
   }
 
   /**
-   * 追加一条 user 消息到上下文消息流。
+   * 追加一条 user 消息到历史。
    */
   async appendUserMessage(params: {
     contextId: string;
@@ -181,9 +171,10 @@ export class ContextManager {
   }): Promise<void> {
     const contextId = String(params.contextId || "").trim();
     if (!contextId) return;
+
     try {
-      const persistor = this.getContextPersistor(contextId);
-      const msg = persistor.createUserTextMessage({
+      const persistor = this.getPersistor(contextId);
+      const msg = persistor.userText({
         text: params.text,
         metadata: {
           contextId,
@@ -192,6 +183,49 @@ export class ContextManager {
         } as Omit<ContextMetadataV1, "v" | "ts">,
       });
       await persistor.append(msg);
+      void this.afterContextUpdatedAsync(contextId);
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * 追加一条 assistant 消息到历史。
+   */
+  async appendAssistantMessage(params: {
+    contextId: string;
+    message?: ContextMessageV1 | null;
+    fallbackText?: string;
+    requestId?: string;
+    extra?: JsonObject;
+  }): Promise<void> {
+    const contextId = String(params.contextId || "").trim();
+    if (!contextId) return;
+
+    try {
+      const persistor = this.getPersistor(contextId);
+      const message = params.message;
+      if (message && typeof message === "object") {
+        await persistor.append(message);
+        void this.afterContextUpdatedAsync(contextId);
+        return;
+      }
+
+      const fallbackText = String(params.fallbackText || "").trim();
+      if (!fallbackText) return;
+
+      await persistor.append(
+        persistor.assistantText({
+          text: fallbackText,
+          metadata: {
+            contextId,
+            requestId: params.requestId,
+            extra: params.extra,
+          },
+          kind: "normal",
+          source: "egress",
+        }),
+      );
       void this.afterContextUpdatedAsync(contextId);
     } catch {
       // ignore

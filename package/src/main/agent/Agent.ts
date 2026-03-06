@@ -1,10 +1,11 @@
 /**
- * Agent：单会话执行器。
+ * Agent：单会话执行器（微内核）。
  *
  * 关键职责（中文）
- * - 消费上游注入的 system messages。
- * - 执行 tool-loop，并产出 assistant 结果消息。
- * - 在上下文超窗时按策略逐步收紧 compact 参数并重试。
+ * - 通过 Orchestrator 组装一次运行上下文（requestId/tools/onStep）。
+ * - 通过 Systemer 解析本轮 system messages。
+ * - 调用 Compactor + Persistor 准备 messages 后执行 tool-loop。
+ * - 产出 assistant 结果消息，并处理有限重试。
  */
 
 import {
@@ -18,22 +19,21 @@ import {
 } from "ai";
 import { generateId } from "@utils/Id.js";
 import type { AgentRunInput, AgentResult } from "@main/types/Agent.js";
-import type {
-  AgentSystemConfig,
-  ResolvedAgentSystemConfig,
-} from "@main/types/AgentSystem.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
 } from "@main/types/ContextMessage.js";
-import type { ContextPersistor } from "./ContextPersistor.js";
+import { PersistorComponent } from "@main/agent/components/PersistorComponent.js";
+import { CompactorComponent } from "@main/agent/components/CompactorComponent.js";
+import { OrchestratorComponent } from "@main/agent/components/OrchestratorComponent.js";
+import { SystemerComponent } from "@main/agent/components/SystemerComponent.js";
 
 const MAX_ERROR_HANDOVER_ATTEMPTS = 2;
 const MAX_CONTEXT_LENGTH_RETRY_ATTEMPTS = 3;
 
 type AgentRunState = {
-  retryAttempts: number;
+  retryCount: number;
   errorHandoverAttempts: number;
   errorForAgent: string;
 };
@@ -41,70 +41,27 @@ type AgentRunState = {
 type AgentOptions = {
   model: LanguageModel;
   logger: Logger;
-  persistor: ContextPersistor;
+  persistor: PersistorComponent;
+  compactor: CompactorComponent;
+  orchestrator: OrchestratorComponent;
+  systemer: SystemerComponent;
 };
 
 export class Agent {
   private readonly model: LanguageModel;
   private readonly logger: Logger;
-  private readonly persistor: ContextPersistor;
-  /**
-   * Agent system 配置（可由调用方覆盖）。
-   *
-   * 关键点（中文）
-   * - 默认按 chat 会话模式运行。
-   * - task 等非聊天场景可通过 `setSystem` 覆盖默认行为。
-   */
-  private system: ResolvedAgentSystemConfig = Agent.createDefaultSystemConfig();
+  private readonly persistor: PersistorComponent;
+  private readonly compactor: CompactorComponent;
+  private readonly orchestrator: OrchestratorComponent;
+  private readonly systemer: SystemerComponent;
 
   constructor(options: AgentOptions) {
     this.model = options.model;
     this.logger = options.logger;
     this.persistor = options.persistor;
-  }
-
-  /**
-   * 创建默认 system 配置。
-   */
-  private static createDefaultSystemConfig(): ResolvedAgentSystemConfig {
-    return {
-      mode: "chat",
-      disableServiceSystems: [],
-    };
-  }
-
-  /**
-   * 归一化外部传入的 system 配置。
-   */
-  private normalizeSystemConfig(
-    input: AgentSystemConfig,
-  ): ResolvedAgentSystemConfig {
-    const mode = input.mode === "task" ? "task" : "chat";
-    const replaceDefaultCorePrompt = String(
-      input.replaceDefaultCorePrompt || "",
-    ).trim();
-    const disableServiceSystems = Array.isArray(input.disableServiceSystems)
-      ? [
-          ...new Set(
-            input.disableServiceSystems
-              .map((item) => String(item || "").trim())
-              .filter(Boolean),
-          ),
-        ]
-      : [];
-
-    return {
-      mode,
-      ...(replaceDefaultCorePrompt ? { replaceDefaultCorePrompt } : {}),
-      disableServiceSystems,
-    };
-  }
-
-  /**
-   * 读取当前 Agent system 配置。
-   */
-  getSystem(): ResolvedAgentSystemConfig {
-    return { ...this.system };
+    this.compactor = options.compactor;
+    this.orchestrator = options.orchestrator;
+    this.systemer = options.systemer;
   }
 
   /**
@@ -126,15 +83,10 @@ export class Agent {
 
   /**
    * tool-loop 主执行流程。
-   *
-   * 算法步骤（中文）
-   * - 使用调用方传入的 system/tools 执行模型调用。
-   * - 基于 persistor 准备本轮 messages。
-   * - 执行模型调用；若超窗则有限重试并失败兜底。
    */
   async run(input: AgentRunInput): Promise<AgentResult> {
     return this.runWithState(input, {
-      retryAttempts: 0,
+      retryCount: 0,
       errorHandoverAttempts: 0,
       errorForAgent: "",
     });
@@ -147,28 +99,59 @@ export class Agent {
     input: AgentRunInput,
     state: AgentRunState,
   ): Promise<AgentResult> {
-    const { query, onStepCallback } = input;
+    const query = String(input.query || "").trim();
     const contextId = this.persistor.contextId;
     if (!contextId) {
       throw new Error("Agent.run requires persistor.contextId");
     }
+
     const startTime = Date.now();
-    const requestId = String(input.requestId || "").trim() || generateId();
-    const { retryAttempts, errorHandoverAttempts, errorForAgent } = state;
+    const { retryCount, errorHandoverAttempts, errorForAgent } = state;
     const logger = this.logger;
-    const runTools = this.normalizeRunTools(input.tools);
-    let currentBaseSystemMessages = this.normalizeRunSystem(input.system);
+
+    let requestId = generateId();
+    let runTools: Record<string, Tool> = {};
+    let currentBaseSystemMessages: SystemModelMessage[] = [];
+    let onStepCallback: (() => Promise<ContextMessageV1[]>) | undefined;
     let baseModelMessages: ModelMessage[] = [];
 
     try {
-      baseModelMessages = await this.persistor.prepareRunMessages({
+      const runContext = await this.orchestrator.compose({
         contextId,
+      });
+      requestId = String(runContext.requestId || "").trim() || generateId();
+      runTools = this.normalizeRunTools(runContext.tools);
+      onStepCallback =
+        typeof runContext.onStepCallback === "function"
+          ? runContext.onStepCallback
+          : undefined;
+      currentBaseSystemMessages = this.normalizeRunSystem(
+        await this.systemer.resolve({
+          contextId,
+          requestId,
+        }),
+      );
+
+      // 关键点（中文）：压缩失败不阻断主流程，消息准备继续按原历史进行。
+      try {
+        await this.compactor.run({
+          persistor: this.persistor,
+          model: this.model,
+          system: currentBaseSystemMessages,
+          retryCount,
+        });
+      } catch {
+        // ignore
+      }
+
+      baseModelMessages = await this.persistor.prepare({
         query,
         tools: runTools,
         system: currentBaseSystemMessages,
         model: this.model,
-        retryAttempts,
+        retryCount,
       });
+
       if (errorForAgent) {
         // 关键点（中文）：把错误作为“新用户补充”交还给 Agent，要求其继续执行而非终止。
         baseModelMessages = [
@@ -210,7 +193,6 @@ export class Agent {
         return toAppend.length;
       };
 
-      // phase 2（中文）：进入 tool-loop。
       const runStreamText = () =>
         streamText({
           model: this.model,
@@ -238,13 +220,8 @@ export class Agent {
                 // ignore merge hook failures
               }
             }
-            const stepOverrides: {
-              system?: Array<SystemModelMessage>;
-            } = {
-              system: currentBaseSystemMessages,
-            };
             return {
-              ...stepOverrides,
+              system: currentBaseSystemMessages,
               ...(Array.isArray(outMessages) ? { messages: outMessages } : {}),
             };
           },
@@ -256,8 +233,6 @@ export class Agent {
 
       const result = runStreamText();
 
-      // phase 3（中文）：把 stream 结果固化为最终 assistant UIMessage。
-      // 关键点（中文）：用 ai-sdk v6 的 UIMessage 流来生成最终 assistant UIMessage（包含 tool parts），避免手工拼装。
       let finalAssistantUiMessage: ContextMessageV1 | null = null;
       let uiStreamError: unknown | null = null;
       try {
@@ -275,13 +250,11 @@ export class Agent {
           sendReasoning: false,
           sendSources: false,
           generateMessageId: () => `a:${contextId}:${generateId()}`,
-          // 关键点（中文）：metadata 通过 ai-sdk 的 UIMessage 生成管线注入，避免我们手工改写最终 message。
           messageMetadata: () => md,
           onFinish: (event) => {
             finalAssistantUiMessage = event.responseMessage ?? null;
           },
         });
-        // 关键点（中文）：必须消费完整 UIMessage stream，onFinish 才会触发并产出 responseMessage。
         for await (const _ of uiStream) {
           // ignore chunks
         }
@@ -290,16 +263,13 @@ export class Agent {
         finalAssistantUiMessage = null;
       }
       if (uiStreamError !== null) {
-        // 关键点（中文）：流式阶段出现异常必须上抛，统一走失败返回，避免“看似成功但已中断”。
         throw uiStreamError;
       }
 
-      // phase 4（中文）：统计结果并返回标准 AgentResult。
       const duration = Date.now() - startTime;
       await logger.log("info", "Agent execution completed", {
         duration,
       });
-      // 关键点（中文）：对话消息由 ContextManager 管理并写入 messages（messages.jsonl）
 
       if (!finalAssistantUiMessage) {
         let assistantText = "";
@@ -321,7 +291,6 @@ export class Agent {
       };
     } catch (error) {
       const errorMsg = String(error);
-      // 超窗重试策略（中文）：识别 context window 类错误并触发 compact 递进重试。
       if (
         errorMsg.includes("context_length") ||
         errorMsg.includes("too long") ||
@@ -334,10 +303,10 @@ export class Agent {
           {
             contextId,
             error: errorMsg,
-            retryAttempts,
+            retryCount,
           },
         );
-        if (retryAttempts >= MAX_CONTEXT_LENGTH_RETRY_ATTEMPTS) {
+        if (retryCount >= MAX_CONTEXT_LENGTH_RETRY_ATTEMPTS) {
           return {
             success: false,
             assistantMessage: this.buildFallbackAssistantMessage({
@@ -351,7 +320,7 @@ export class Agent {
 
         return this.runWithState(input, {
           ...state,
-          retryAttempts: retryAttempts + 1,
+          retryCount: retryCount + 1,
         });
       }
       if (errorHandoverAttempts < MAX_ERROR_HANDOVER_ATTEMPTS) {
@@ -404,10 +373,6 @@ export class Agent {
 
   /**
    * 构造“错误交接给 Agent”的补充用户消息。
-   *
-   * 关键点（中文）
-   * - 明确要求 Agent 基于错误继续推进，而不是停止在报错结论。
-   * - 截断错误文本，避免把超长堆栈直接塞回上下文。
    */
   private buildErrorHandoverUserMessage(
     errorMsg: string,
@@ -426,10 +391,6 @@ export class Agent {
 
   /**
    * 构造 fallback assistant 消息。
-   *
-   * 关键点（中文）
-   * - 仅在 UIMessage 生成失败/异常时兜底使用
-   * - metadata 尽量与正常 assistant 消息保持一致
    */
   private buildFallbackAssistantMessage(params: {
     contextId: string;
@@ -458,13 +419,4 @@ export class Agent {
     };
   }
 
-  /**
-   * 设置当前 Agent 的 system 配置。
-   *
-   * 关键点（中文）
-   * - 由上游调用方（如 task runner）按场景覆盖默认 chat system。
-   */
-  setSystem(config: AgentSystemConfig): void {
-    this.system = this.normalizeSystemConfig(config);
-  }
 }

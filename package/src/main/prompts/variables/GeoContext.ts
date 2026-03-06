@@ -7,7 +7,7 @@
  * - 使用进程内缓存，避免每次请求都访问外部服务。
  */
 
-import type { PromptGeoContext } from "@main/prompts/types/PromptVariables.js";
+import type { PromptGeoContext } from "@main/prompts/variables/PromptTypes.js";
 
 type IpApiCoResponse = {
   ip?: unknown;

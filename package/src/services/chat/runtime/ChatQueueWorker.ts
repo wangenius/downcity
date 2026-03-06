@@ -12,7 +12,6 @@ import type { AgentResult } from "@main/types/Agent.js";
 import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
-import { withRequestContext } from "@main/runtime/RequestContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
   onChatQueueEnqueue,
@@ -246,7 +245,6 @@ export class ChatQueueWorker {
     if (first.kind === "audit") return;
 
     const serviceContext = this.requireContext();
-    const agent = serviceContext.getAgent(first.contextId);
 
     let clearRequested = false;
     const onStepCallback = async (): Promise<ShipContextUserMessageV1[]> => {
@@ -285,20 +283,11 @@ export class ChatQueueWorker {
     const typing = this.startTypingHeartbeat(first);
     let result: AgentResult;
     try {
-      const runContext = await serviceContext.createAgentRunContext(
-        first.contextId,
-      );
-      result = await withRequestContext(
-        { contextId: first.contextId },
-        () =>
-          agent.run({
-            requestId: runContext.requestId,
-            system: runContext.system,
-            tools: runContext.tools,
-            query: first.text,
-            onStepCallback,
-          }),
-      );
+      result = await serviceContext.run({
+        contextId: first.contextId,
+        query: first.text,
+        onStepCallback,
+      });
     } finally {
       typing.stop();
     }
@@ -309,12 +298,10 @@ export class ChatQueueWorker {
     }
 
     try {
-      const persistor = serviceContext.getContextPersistor(first.contextId);
-      const assistantMessage = result.assistantMessage;
-      if (assistantMessage && typeof assistantMessage === "object") {
-        await persistor.append(assistantMessage);
-        void serviceContext.afterContextUpdatedAsync(first.contextId);
-      }
+      await serviceContext.appendAssistantMessage({
+        contextId: first.contextId,
+        message: result.assistantMessage,
+      });
     } catch {
       // ignore
     }

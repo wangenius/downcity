@@ -1,128 +1,204 @@
-# Main 架构方案（微内核 + 模块化 + 解耦）
+# Main 架构设计（最终版）
 
-## 1. 设计目标（简单优先）
+## 1. 目标
 
-1. `Agent` 只做一件事：`run`（执行 tool-loop 与返回结果）。
-2. 可变能力全部模块化：不同功能放到不同 `modules` 槽位。
-3. 核心稳定，模块可替换：算法、存储、策略在外部注入，不侵入核心。
-4. 依赖单向流动：`core -> modules interface -> module impl`，避免反向耦合。
+1. 简单：调用链尽量短，核心流程只保留必要步骤。
+2. 微内核：`Agent` 只负责执行，不承担具体策略实现。
+3. 模块化：能力按组件拆分，接口稳定，默认实现可替换。
+4. 解耦：`system / tools / compact / 持久化` 各自独立。
+5. 直接迭代：不保留向后兼容层。
 
----
-
-## 2. 总体分层
+## 2. 分层
 
 ```text
 services / api / cli
         |
         v
-  ContextManager (微内核编排层)
+ContextManager（会话管理与调用收口）
         |
         v
-      Agent (微内核执行层，只有 run)
+Agent（微内核，只负责 run）
         |
         v
-     modules（可插拔）
-      - history
-      - compactor
-      - systems
-      - tools
-      - hooks
+Persistor + Compactor + Orchestrator + Systemer
+        |
+        v
+runtime/components/*（默认实现）
 ```
 
-说明：
-- `Agent` 是执行内核，不直接感知“文件存储/压缩算法/记忆实现”。
-- `ContextManager` 负责按 `contextId` 组装内核与模块，不承载业务策略。
+## 3. 核心概念
 
----
+### 3.1 AgentComponent（统一基类）
 
-## 3. 微内核职责
+```ts
+abstract class AgentComponent {
+  abstract readonly name: string;
+  async init(): Promise<void> {}
+  async dispose(): Promise<void> {}
+}
+```
 
-### 3.1 Agent（执行内核）
+作用：仅提供最小生命周期能力，不承载业务方法。
 
-只负责：
-1. 读取已准备好的 messages + system + tools。
-2. 执行模型调用与 tool-loop。
-3. 处理重试与错误交接。
-4. 输出 assistant message。
+### 3.2 PersistorComponent（历史持久化）
 
-不负责：
-1. 历史存储细节。
-2. compact 算法细节。
-3. memory 提取细节。
+职责：
+1. 历史读写：`append/list/slice/size/meta`。
+2. 运行准备：`prepare(...)` 组装 `ModelMessage[]`。
+3. 压缩执行：`compact(...)`（由 Compactor 驱动参数）。
+4. 消息工厂：`userText(...)`、`assistantText(...)`。
 
-### 3.2 ContextManager（编排内核）
+### 3.3 CompactorComponent（上下文压缩策略）
 
-只负责：
-1. `contextId -> Agent` 生命周期缓存。
-2. `contextId -> modules` 组装与缓存。
-3. 触发模块钩子（如 context 更新后的异步维护）。
+职责：
+1. 决策压缩参数（如窗口、预算、归档策略）。
+2. 调用 `persistor.compact(...)` 执行压缩。
+3. 失败 fail-open，不阻断主执行链路。
 
-不负责：
-1. 模块内部策略实现。
-2. 业务服务逻辑（chat/task/skills）。
+接口：
 
----
+```ts
+run(input: {
+  persistor: PersistorComponent;
+  model: LanguageModel;
+  system: SystemModelMessage[];
+  retryCount: number;
+}): Promise<{ compacted: boolean; reason?: string }>
+```
 
-## 4. 模块设计（modules）
+### 3.4 OrchestratorComponent（运行编排）
 
-## 4.1 命名约定
+职责：
+1. 生成 `requestId`。
+2. 提供本轮 `tools`。
+3. 读取并注入 `onStepCallback`。
 
-1. 功能位统一叫 `modules`（简单直观）。
-2. 纯算法实现用 `strategy`。
-3. 外部依赖实现（文件/DB/缓存）用 `driver`。
+接口：
 
-示例：
+```ts
+compose(input: {
+  contextId: string;
+}): Promise<{
+  requestId: string;
+  tools: Record<string, Tool>;
+  onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
+}>
+```
+
+说明：`Orchestrator` 不再负责 system 解析。
+
+### 3.5 SystemerComponent（system 解析）
+
+职责：
+1. 接收本轮 `contextId/requestId`。
+2. 调用 `SystemDomain` 统一完成显式档位(profile)解析与加载。
+3. 生成最终 `SystemModelMessage[]`。
+
+接口：
+
+```ts
+resolve(input: {
+  contextId: string;
+  requestId: string;
+}): Promise<SystemModelMessage[]>
+```
+
+## 4. Agent 最终形态
+
+```ts
+class Agent {
+  constructor(params: {
+    model: LanguageModel;
+    logger: Logger;
+    persistor: PersistorComponent;
+    compactor: CompactorComponent;
+    orchestrator: OrchestratorComponent;
+    systemer: SystemerComponent;
+  }) {}
+
+  run(input: {
+    query: string;
+  }): Promise<AgentResult> {}
+}
+```
+
+### 4.1 run 固定调用链
+
+1. `orchestrator.compose({ contextId })`
+2. `systemer.resolve({ contextId, requestId })`
+3. `compactor.run(...)`（best-effort）
+4. `persistor.prepare(...)`
+5. tool-loop 执行并返回 `assistantMessage`
+
+## 5. ContextManager 职责
+
+1. 管理 `contextId -> Agent` 缓存。
+2. 管理 `contextId -> Persistor` 缓存。
+3. 注入全局 `compactor / orchestrator / systemer`。
+4. 提供统一入口：
+   - `run(...)`
+   - `appendUserMessage(...)`
+   - `appendAssistantMessage(...)`
+   - `afterContextUpdatedAsync(...)`
+
+## 6. 默认实现
+
+1. `FilePersistor`：JSONL 历史持久化。
+2. `SummaryCompactor`：摘要压缩策略。
+3. `RuntimeOrchestrator`：requestId/tools/onStep 编排。
+4. `PromptSystemer`：组件适配层（位于 `prompts/system`）。
+5. `SystemDomain`：system 全链路实现（资产加载 + 显式档位(profile)解析 + service 收集 + messages 组装，位于 `prompts/system`）。
+6. `VariableReplacer`：模板变量构建与变量替换（位于 `prompts/variables`）。
+7. `PromptTypes`：模板变量类型定义（位于 `prompts/variables`）。
+8. `GeoContext`：模板渲染所需地理上下文解析（位于 `prompts/variables`）。
+9. `PromptRenderer`：文本 prompt 到 system message 转换（位于 `prompts/common`）。
+
+## 7. 目录约定
 
 ```text
-modules.history.driver = jsonl-file | sqlite | redis
-modules.compactor.strategy = llm-summary | sliding-window
+main/
+  agent/
+    Agent.ts
+    components/
+      AgentComponent.ts
+      PersistorComponent.ts
+      CompactorComponent.ts
+      OrchestratorComponent.ts
+      SystemerComponent.ts
+  runtime/
+    ContextManager.ts
+    components/
+      FilePersistor.ts
+      SummaryCompactor.ts
+      RuntimeOrchestrator.ts
+      compact/SummaryCompact.ts
+  prompts/
+    system/
+      PromptSystemer.ts
+      SystemDomain.ts
+      assets/
+        core.prompt.txt
+        service.prompt.txt
+        task.prompt.txt
+    common/
+      PromptRenderer.ts
+      InitPrompts.ts
+      assets/
+        init/
+          PROFILE.md.txt
+          SOUL.md.txt
+          USER.md.txt
+    variables/
+      VariableReplacer.ts
+      PromptTypes.ts
+      GeoContext.ts
 ```
 
-## 4.2 当前推荐模块槽位
+## 8. 设计约束
 
-1. `history`
-   - 职责：消息读写、范围读取、元信息读取。
-   - 可替换点：JSONL / SQLite / Redis。
-2. `compactor`
-   - 职责：上下文压缩（是否压缩、如何摘要、是否归档）。
-   - 可替换点：LLM 摘要 / 窗口裁剪 / 混合策略。
-3. `systems`
-   - 职责：组装 system prompts（静态 + service + memory）。
-4. `tools`
-   - 职责：提供 Agent 本轮工具集合。
-5. `hooks`
-   - 职责：context 更新后的异步 side-effects（如 memory maintenance）。
-
----
-
-## 5. 关键解耦原则
-
-1. 核心只依赖接口，不依赖实现。
-2. 模块之间禁止直接互调，通过内核或显式端口协作。
-3. 一个模块只做一类事，避免“持久化 + 压缩 + 组装”混在同一实现里。
-4. 默认实现必须可用，替换实现必须可插拔。
-
----
-
-## 6. 运行时装配（RuntimeState）
-
-启动时一次性装配：
-1. 创建模型与日志器。
-2. 创建 `ContextManager`。
-3. 为 `ContextManager` 注入默认 `modules`（history/compactor/systems/tools/hooks）。
-4. services 只从 `ServiceRuntime.context` 访问能力，不直接依赖具体实现类。
-
----
-
-## 7. 最小落地方案（建议顺序）
-
-1. 第一步：保持 `Agent.run` 不变，仅把 `compactor` 从 persistor 内部逻辑提为模块。
-2. 第二步：把 `history` 读写能力从“具体类耦合”收敛为独立模块接口。
-3. 第三步：把 context 更新后的行为改为 `hooks[]`，memory 只是其中一个 hook。
-
----
-
-## 8. 一句话结论
-
-最终架构是：
-`Agent` 做稳定微内核执行，`modules` 承载所有可变能力；核心简化、模块可替换、边界清晰、演进成本低。
+1. `Agent` 只依赖组件抽象，不依赖具体实现。
+2. `Persistor/Compactor/Orchestrator/Systemer` 各自单责。
+3. 不使用动态导入。
+4. 命令层禁止直接硬编码模型预设，统一走 `commands/ModelCommand`。
+5. 模型预设与 provider 映射统一收敛在 `llm/ModelManager`。
+6. 新增共享类型统一放在 `types/`。

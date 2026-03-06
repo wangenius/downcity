@@ -20,7 +20,6 @@ import {
 } from "@/main/runtime/Paths.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
-import { withRequestContext } from "@main/runtime/RequestContext.js";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;
@@ -630,43 +629,22 @@ export async function executeByContextId(params: {
     text: instructions,
   });
 
-  const agent = params.runtime.contextManager.getAgent(contextId);
-  const runContext =
-    await params.runtime.contextManager.createAgentRunContext(contextId);
-  const result = await withRequestContext({ contextId }, () =>
-    agent.run({
-      requestId: runContext.requestId,
-      system: runContext.system,
-      tools: runContext.tools,
-      query: instructions,
-    }),
-  );
+  const result = await params.runtime.contextManager.run({
+    contextId,
+    query: instructions,
+  });
 
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
   try {
-    const persistor = params.runtime.contextManager.getContextPersistor(contextId);
-    const assistantMessage = result.assistantMessage;
-    if (assistantMessage && typeof assistantMessage === "object") {
-      await persistor.append(assistantMessage as ContextMessageV1);
-      void params.runtime.contextManager.afterContextUpdatedAsync(contextId);
-    } else if (userVisible && userVisible.trim()) {
-      const metadata: Omit<ContextMetadataV1, "v" | "ts"> = {
-        contextId,
-        extra: {
-          via: "tui_context_execute",
-          note: "assistant_message_missing",
-        },
-      };
-      await persistor.append(
-        persistor.createAssistantTextMessage({
-          text: userVisible,
-          metadata,
-          kind: "normal",
-          source: "egress",
-        }),
-      );
-      void params.runtime.contextManager.afterContextUpdatedAsync(contextId);
-    }
+    await params.runtime.contextManager.appendAssistantMessage({
+      contextId,
+      message: result.assistantMessage,
+      fallbackText: userVisible,
+      extra: {
+        via: "tui_context_execute",
+        note: "assistant_message_missing",
+      },
+    });
   } catch {
     // ignore
   }

@@ -11,12 +11,10 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { logger as server_logger } from "@utils/logger/Logger.js";
-import { withRequestContext } from "@main/runtime/RequestContext.js";
 import http from "node:http";
 import fs from "fs-extra";
 import path from "path";
 import { getShipPublicDirPath } from "@/main/runtime/Paths.js";
-import type { ContextMetadataV1 } from "@main/types/ContextMessage.js";
 import {
   getServiceRuntimeState,
   getRuntimeState,
@@ -342,56 +340,29 @@ export class AgentServer {
           contextId,
           text: String(instructions),
         });
-        const agent = runtime.contextManager.getAgent(contextId);
-        const runContext =
-          await runtime.contextManager.createAgentRunContext(contextId);
 
-        // [阶段2] 执行：在 withContextRequestContext 下运行 agent，保证下游可读取会话上下文。
+        // [阶段2] 执行：通过 ContextManager.run 统一注入请求上下文并执行 agent。
         // API 场景同样会落盘 context messages，但它不是“平台消息回发”场景：
         // - 不提供 dispatcher 回发能力（响应通过 HTTP body 返回）
-        const result = await withRequestContext(
-          {
-            contextId,
-          },
-          () =>
-            agent.run({
-              requestId: runContext.requestId,
-              system: runContext.system,
-              tools: runContext.tools,
-              query: instructions,
-            }),
-        );
+        const result = await runtime.contextManager.run({
+          contextId,
+          query: String(instructions),
+        });
 
         // [阶段3] 结果提取：优先拿 chat_send 的最终文本，其次回退到 message 文本。
         const userVisible =
           pickLastSuccessfulChatSendText(result.assistantMessage);
         try {
-          // [阶段3] 上下文消息落盘：优先 append assistantMessage；缺失时生成文本消息兜底。
-          const persistor = runtime.contextManager.getContextPersistor(
+          // [阶段3] 上下文消息落盘：优先 append assistantMessage；缺失时文本兜底。
+          await runtime.contextManager.appendAssistantMessage({
             contextId,
-          );
-          const assistantMessage = result.assistantMessage;
-          if (assistantMessage && typeof assistantMessage === "object") {
-            await persistor.append(assistantMessage);
-            void runtime.contextManager.afterContextUpdatedAsync(contextId);
-          } else if (userVisible && userVisible.trim()) {
-            const metadata: Omit<ContextMetadataV1, "v" | "ts"> = {
-              contextId,
-              extra: {
-                via: "api_execute",
-                note: "assistant_message_missing",
-              },
-            };
-            await persistor.append(
-              persistor.createAssistantTextMessage({
-                text: userVisible,
-                metadata,
-                kind: "normal",
-                source: "egress",
-              }),
-            );
-            void runtime.contextManager.afterContextUpdatedAsync(contextId);
-          }
+            message: result.assistantMessage,
+            fallbackText: userVisible,
+            extra: {
+              via: "api_execute",
+              note: "assistant_message_missing",
+            },
+          });
         } catch {
           // ignore
         }

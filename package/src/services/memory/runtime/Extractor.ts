@@ -39,8 +39,8 @@ export async function extractMemoryFromContextMessages(
 
   try {
     const serviceContext = runtime.context;
-    const contextPersistor = serviceContext.getContextPersistor(contextId);
-    const messages = await contextPersistor.loadRange(startIndex, endIndex);
+    const contextPersistor = serviceContext.getPersistor(contextId);
+    const messages = await contextPersistor.slice(startIndex, endIndex);
 
     const messagesText = (() => {
       const lines: string[] = [];

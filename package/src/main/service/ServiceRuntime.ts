@@ -1,10 +1,10 @@
-import type { LanguageModel, SystemModelMessage, Tool } from "ai";
+import type { LanguageModel } from "ai";
 import type {
   ContextMetadataV1,
   ContextMessageV1,
+  ShipContextUserMessageV1,
 } from "@main/types/ContextMessage.js";
 import type { AgentResult, AgentRunInput } from "@main/types/Agent.js";
-import type { AgentSystemConfig } from "@main/types/AgentSystem.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@main/types/ShipConfig.js";
@@ -13,9 +13,7 @@ import type { ShipConfig } from "@main/types/ShipConfig.js";
  * Service 运行时端口类型。
  *
  * 关键点（中文）
- * - 这些类型用于描述 services 需要的最小能力面
- * - services 只依赖这些端口，不直接依赖 core 具体实现
- * - 具体实现由 server 在启动时注入
+ * - services 仅依赖这些端口，不直接依赖 main 具体实现。
  */
 
 export type ServiceInvokeParams = {
@@ -32,28 +30,21 @@ export type ServiceInvokeResult = {
 
 /**
  * 服务调用端口（services -> services）。
- *
- * 关键点（中文）
- * - 统一跨 service action 调用入口。
- * - service 只感知“调用哪个 service/action”，不感知 main 内部调度细节。
  */
 export type ServiceInvokePort = {
   invoke(params: ServiceInvokeParams): Promise<ServiceInvokeResult>;
 };
 
 /**
- * 会话持久化端口。
+ * 会话 Persistor 端口。
  */
-export type ServiceContextPersistor = {
-  loadAll(): Promise<ContextMessageV1[]>;
-  loadRange(
-    startIndex: number,
-    endIndex: number,
-  ): Promise<ContextMessageV1[]>;
+export type ServicePersistor = {
+  list(): Promise<ContextMessageV1[]>;
+  slice(start: number, end: number): Promise<ContextMessageV1[]>;
   append(message: ContextMessageV1): Promise<void>;
-  getTotalMessageCount(): Promise<number>;
-  loadMeta(): Promise<Record<string, unknown>>;
-  createAssistantTextMessage(params: {
+  size(): Promise<number>;
+  meta(): Promise<Record<string, unknown>>;
+  assistantText(params: {
     text: string;
     metadata: Omit<ContextMetadataV1, "v" | "ts"> &
       Partial<Pick<ContextMetadataV1, "ts">>;
@@ -67,26 +58,20 @@ export type ServiceContextPersistor = {
  * 会话 Agent 端口。
  */
 export type ServiceContextAgent = {
-  setSystem(config: AgentSystemConfig): void;
   run(params: AgentRunInput): Promise<AgentResult>;
 };
 
 /**
- * service 会话能力（会话管理 + 模型能力）。
- *
- * 关键点（中文）
- * - 只保留一个 `ServiceContext`，避免同层重复类型（如 manager/context）。
- * - 把模型能力收敛到 `context` 下，避免 Runtime 顶层字段增长。
- * - 会话相关与模型相关能力统一从 `context` 进入。
+ * service 会话能力。
  */
 export type ServiceContext = {
   getAgent(contextId: string): ServiceContextAgent;
-  createAgentRunContext(contextId: string): Promise<{
-    requestId: string;
-    system: SystemModelMessage[];
-    tools: Record<string, Tool>;
-  }>;
-  getContextPersistor(contextId: string): ServiceContextPersistor;
+  getPersistor(contextId: string): ServicePersistor;
+  run(params: {
+    contextId: string;
+    query: string;
+    onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
+  }): Promise<AgentResult>;
   clearAgent(contextId?: string): void;
   afterContextUpdatedAsync(contextId: string): Promise<void>;
   appendUserMessage(params: {
@@ -95,18 +80,18 @@ export type ServiceContext = {
     requestId?: string;
     extra?: ContextMetadataV1["extra"];
   }): Promise<void>;
+  appendAssistantMessage(params: {
+    contextId: string;
+    message?: ContextMessageV1 | null;
+    fallbackText?: string;
+    requestId?: string;
+    extra?: ContextMetadataV1["extra"];
+  }): Promise<void>;
   model: LanguageModel;
 };
 
-
 /**
  * ServiceRuntime（统一注入对象）。
- *
- * 关键点（中文）
- * - 所有 service 在执行时都拿到同一结构的运行时对象。
- * - 该类型只描述“service 需要的能力”，不暴露 main 内部实现细节。
- * - 关键能力收敛为两类：`context`（会话+模型能力）、`invoke`（跨 service 调用）。
- * - 不在这里放 `contextId/request` 一类请求态字段；请求态由 `RequestContext` 显式传递。
  */
 export type ServiceRuntime = {
   /**
@@ -135,20 +120,12 @@ export type ServiceRuntime = {
   systems: string[];
 
   /**
-   * 会话能力入口（context persistor + context agent + context lifecycle）；
-   * 同时承载模型能力（`context.model`）。
-   *
-   * 关键点（中文）
-   * - service 所有会话读写与模型访问都通过该字段完成。
-   * - `context` 只表达“会话域能力”，与 Runtime 层概念解耦。
+   * 会话能力入口。
    */
   context: ServiceContext;
 
   /**
    * 跨 service action 调用入口。
-   *
-   * 关键点（中文）
-   * - 例如 task 可以通过 `invoke` 调用 chat action。
    */
   invoke: ServiceInvokePort;
 };

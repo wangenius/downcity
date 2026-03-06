@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
 
 /**
  * RequestContext（单次请求上下文）。
@@ -10,6 +11,14 @@ import { AsyncLocalStorage } from "node:async_hooks";
 export type RequestContext = {
   contextId?: string;
   requestId?: string;
+  /**
+   * step 边界合并回调（可选）。
+   *
+   * 关键点（中文）
+   * - 由调用侧（如 chat queue）注入。
+   * - Orchestrator 从 RequestContext 读取并编排到本轮运行上下文。
+   */
+  onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
 };
 
 /**

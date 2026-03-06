@@ -1,11 +1,8 @@
-import {
-  buildAgentSystemMessages,
-  DEFAULT_SHIP_PROMPTS,
-} from "@main/prompts/System.js";
+import { DEFAULT_SHIP_PROMPTS } from "@main/prompts/system/SystemDomain.js";
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
 import { ContextManager } from "@main/runtime/ContextManager.js";
 import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";
-import { createModel } from "@main/llm/CreateModel.js";
+import { createModel } from "@main/model/CreateModel.js";
 import type {
   ServiceRuntime,
   ServiceContext,
@@ -35,9 +32,7 @@ import {
   getShipPublicDirPath,
   getShipTasksDirPath,
 } from "@/main/runtime/Paths.js";
-import { SERVICES } from "@main/service/Services.js";
 import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
-import { buildMemorySystemText } from "@services/memory/runtime/SystemProvider.js";
 import {
   getTaskRunDir,
   parseTaskRunContextId,
@@ -45,7 +40,10 @@ import {
 import { runServiceCommand } from "@main/service/Manager.js";
 import { setShellToolRuntime, shellTools } from "@main/tools/shell/Tool.js";
 import { getRequestContext } from "@main/runtime/RequestContext.js";
-import { MainContextPersistor } from "@main/runtime/MainContextPersistor.js";
+import { FilePersistor } from "@main/runtime/components/FilePersistor.js";
+import { SummaryCompactor } from "@main/runtime/components/SummaryCompactor.js";
+import { RuntimeOrchestrator } from "@main/runtime/components/RuntimeOrchestrator.js";
+import { PromptSystemer } from "@main/prompts/system/PromptSystemer.js";
 import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
 import path from "path";
@@ -84,39 +82,11 @@ export type RuntimeState = RuntimeStateBase & {
 };
 
 const HOT_RELOAD_DEBOUNCE_MS = 300;
-const MAIN_SERVICE_PROMPT_FILE_URL = new URL(
-  "../service/PROMPT.txt",
-  import.meta.url,
-);
 
 let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
 let stopRuntimeHotReloadWatcher: (() => void) | null = null;
 let serviceModel: LanguageModel | null = null;
-
-function normalizeSystemText(input: string | null | undefined): string {
-  return String(input || "").trim();
-}
-
-/**
- * 加载 main/service 全局提示词。
- *
- * 关键点（中文）
- * - 这是所有 service 的共享行为约束，统一在 main 层收口。
- * - 资产缺失时直接抛错，避免运行时静默丢失关键规则。
- */
-function loadMainServicePrompt(): string {
-  try {
-    return fs.readFileSync(MAIN_SERVICE_PROMPT_FILE_URL, "utf-8").trim();
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `failed to load main service prompt from ${MAIN_SERVICE_PROMPT_FILE_URL.pathname}: ${reason}`,
-    );
-  }
-}
-
-const MAIN_SERVICE_PROMPT = loadMainServicePrompt();
 
 /**
  * 读取 service 运行时模型（必填）。
@@ -254,7 +224,9 @@ function applyRuntimeSystems(nextSystems: string[]): void {
 function reloadStaticPromptSystems(reason: string, filename?: string): void {
   const runtime = getRuntimeStateBase();
   const staticProfiles = loadStaticPromptProfiles(runtime.rootPath);
-  const nextSystems = buildStaticSystems(staticProfiles.map((item) => item.text));
+  const nextSystems = buildStaticSystems(
+    staticProfiles.map((item) => item.text),
+  );
   if (systemsEqual(runtime.systems, nextSystems)) return;
 
   const pathByKey = new Map<string, string>();
@@ -268,59 +240,11 @@ function reloadStaticPromptSystems(reason: string, filename?: string): void {
   runtime.logger.info("Static prompts hot reloaded", {
     reason,
     filename: filename || undefined,
-    profileMdPath: pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
+    profileMdPath:
+      pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
     soulMdPath: pathByKey.get("soul") || getSoulMdPath(runtime.rootPath),
     userMdPath: pathByKey.get("user") || getUserMdPath(runtime.rootPath),
   });
-}
-
-/**
- * 收集所有 service 的 system 文本。
- *
- * 关键点（中文）
- * - 每次请求时动态遍历 services，避免额外注册层。
- * - 单个 service 失败走 fail-open，不阻断主链路。
- */
-export async function collectServiceSystemTexts(params?: {
-  disabledServiceNames?: string[];
-}): Promise<string[]> {
-  const runtime = getServiceRuntimeState();
-  const out: string[] = [];
-  const mainServicePrompt = normalizeSystemText(MAIN_SERVICE_PROMPT);
-  if (mainServicePrompt) {
-    // 关键点（中文）：先注入全局 service 规则，再注入具体 service 规则。
-    out.push(mainServicePrompt);
-  }
-  const disabledServiceNamesInput = Array.isArray(params?.disabledServiceNames)
-    ? params.disabledServiceNames
-    : undefined;
-  const disabledServiceNames = Array.isArray(disabledServiceNamesInput)
-    ? new Set(
-        disabledServiceNamesInput
-          .map((item) => String(item || "").trim())
-          .filter(Boolean),
-      )
-    : new Set<string>();
-  for (const service of SERVICES) {
-    if (typeof service.system !== "function") continue;
-    if (disabledServiceNames.has(service.name)) continue;
-    try {
-      const text = normalizeSystemText(await service.system(runtime));
-      if (!text) continue;
-      out.push(text);
-    } catch {
-      // fail-open
-    }
-  }
-
-  try {
-    const memoryText = normalizeSystemText(await buildMemorySystemText(runtime));
-    if (memoryText) out.push(memoryText);
-  } catch {
-    // fail-open
-  }
-
-  return out;
 }
 
 /**
@@ -438,7 +362,8 @@ function startRuntimeHotReload(): void {
   };
 
   runtime.logger.info("Runtime hot reload enabled", {
-    profileMdPath: pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
+    profileMdPath:
+      pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
     soulMdPath: pathByKey.get("soul") || getSoulMdPath(runtime.rootPath),
     userMdPath: pathByKey.get("user") || getUserMdPath(runtime.rootPath),
     watchers: watchers.length,
@@ -503,15 +428,22 @@ const serviceInvokePort: ServiceInvokePort = {
 function buildServiceContext(input: RuntimeState): ServiceContext {
   return {
     getAgent: (contextId) => input.contextManager.getAgent(contextId),
-    createAgentRunContext: (contextId) =>
-      input.contextManager.createAgentRunContext(contextId),
-    getContextPersistor: (contextId) =>
-      input.contextManager.getContextPersistor(contextId),
+    getPersistor: (contextId) => input.contextManager.getPersistor(contextId),
+    run: (params) =>
+      input.contextManager.run({
+        contextId: params.contextId,
+        query: params.query,
+        ...(params.onStepCallback
+          ? { requestContext: { onStepCallback: params.onStepCallback } }
+          : {}),
+      }),
     clearAgent: (contextId) => input.contextManager.clearAgent(contextId),
     afterContextUpdatedAsync: (contextId) =>
       input.contextManager.afterContextUpdatedAsync(contextId),
     appendUserMessage: (params) =>
       input.contextManager.appendUserMessage(params),
+    appendAssistantMessage: (params) =>
+      input.contextManager.appendAssistantMessage(params),
     model: requireServiceModel(),
   };
 }
@@ -653,12 +585,22 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   });
 
   let contextManager: ContextManager;
+  const compactor = new SummaryCompactor({
+    keepLastMessages: config.context?.messages?.keepLastMessages,
+    maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
+    archiveOnCompact: config.context?.messages?.archiveOnCompact,
+  });
+  const orchestrator = new RuntimeOrchestrator({
+    getTools: () => shellTools,
+  });
+  // 关键点（中文）：system 域逻辑全部收敛到 prompts/system，runtime 这里只做依赖注入。
+  const systemer = new PromptSystemer({
+    projectRoot: rootPath,
+    getStaticSystemPrompts: () => getRuntimeStateBase().systems,
+    getRuntime: () => getServiceRuntimeState(),
+    profile: "chat",
+  });
   contextManager = new ContextManager({
-    runMemoryMaintenance: async (contextId) =>
-      runContextMemoryMaintenance({
-        context: getServiceRuntimeState(),
-        contextId,
-      }),
     createPersistor: (contextId) => {
       const parsedRun = parseTaskRunContextId(contextId);
       const paths = parsedRun
@@ -677,36 +619,23 @@ export async function initRuntimeState(cwd: string): Promise<void> {
             };
           })()
         : undefined;
-      return new MainContextPersistor({
+      return new FilePersistor({
         rootPath,
         contextId,
         ...(paths ? { paths } : {}),
-        modules: {
-          compactor: {
-            keepLastMessages: config.context?.messages?.keepLastMessages,
-            maxInputTokensApprox:
-              config.context?.messages?.maxInputTokensApprox,
-            archiveOnCompact: config.context?.messages?.archiveOnCompact,
-          },
-        },
       });
     },
-    resolveAgentSystemMessages: async (params) =>
-      buildAgentSystemMessages({
-        projectRoot: rootPath,
-        contextId: params.contextId,
-        requestId: params.requestId,
-        mode: params.system.mode,
-        replaceDefaultCorePrompt: params.system.replaceDefaultCorePrompt,
-        staticSystemPrompts: getRuntimeStateBase().systems,
-        serviceSystemPrompts: await collectServiceSystemTexts({
-          disabledServiceNames: params.system.disableServiceSystems,
-        }),
-      }),
     agentModel: requireServiceModel(),
     agentLogger: defaultLogger,
+    compactor,
+    orchestrator,
+    systemer,
+    runAfterContextUpdated: async (contextId) =>
+      runContextMemoryMaintenance({
+        context: getServiceRuntimeState(),
+        contextId,
+      }),
   });
-  contextManager.setAgentTools(shellTools);
 
   const runtimeStateForServices: RuntimeState = {
     cwd: resolvedCwd,

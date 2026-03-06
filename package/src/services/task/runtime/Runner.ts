@@ -12,7 +12,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import { withRequestContext } from "@main/service/RequestContext.js";
+import { withRequestContext } from "@main/runtime/RequestContext.js";
 import type { AgentSystemConfig } from "@main/types/AgentSystem.js";
 import type {
   ShipTaskKind,

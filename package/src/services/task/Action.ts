@@ -44,6 +44,12 @@ function resolveTaskStatus(input: JsonValue | undefined, fallback: ShipTaskStatu
   return normalized || fallback;
 }
 
+const TASK_LOG_PREFIX = "[TASK]";
+
+function formatTaskLogMessage(message: string): string {
+  return `${TASK_LOG_PREFIX} ${message}`;
+}
+
 function buildDefaultTaskBody(): string {
   return [
     "# 任务目标",
@@ -342,37 +348,72 @@ export async function runTaskDefinition(params: {
   const root = path.resolve(params.projectRoot);
   const taskId = normalizeTaskId(String(params.request.taskId || "").trim());
   const reason = typeof params.request.reason === "string" ? params.request.reason.trim() : "";
+  const trigger = {
+    type: "manual" as const,
+    ...(reason ? { reason } : {}),
+  };
 
   try {
-    const result = await runTaskNow({
+    // 关键点（中文）：run 改为“异步受理”，先做存在性校验，再后台执行。
+    await readTask({
+      taskId,
+      projectRoot: root,
+    });
+
+    params.context.logger.info(
+      formatTaskLogMessage("Manual task run accepted"),
+      {
+        taskId,
+        via: "manual",
+        ...(reason ? { reason } : {}),
+      },
+    );
+
+    void runTaskNow({
       context: params.context,
       projectRoot: root,
       taskId,
-      trigger: {
-        type: "manual",
-        ...(reason ? { reason } : {}),
-      },
-    });
+      trigger,
+    })
+      .then((result) => {
+        params.context.logger.info(
+          formatTaskLogMessage("Manual task run finished"),
+          {
+            taskId,
+            via: "manual",
+            status: result.status,
+            executionStatus: result.executionStatus,
+            resultStatus: result.resultStatus,
+            ...(result.resultErrors.length > 0
+              ? { resultErrors: result.resultErrors }
+              : {}),
+            dialogueRounds: result.dialogueRounds,
+            userSimulatorSatisfied: result.userSimulatorSatisfied,
+            timestamp: result.timestamp,
+            runDir: result.runDirRel,
+            notified: result.notified,
+            ...(result.notifyError
+              ? { notifyError: result.notifyError }
+              : {}),
+          },
+        );
+      })
+      .catch((error) => {
+        params.context.logger.error(
+          formatTaskLogMessage("Manual task run failed"),
+          {
+            taskId,
+            via: "manual",
+            error: String(error),
+          },
+        );
+      });
 
     return {
-      success: result.ok,
-      status: result.status,
-      executionStatus: result.executionStatus,
-      resultStatus: result.resultStatus,
-      resultErrors: result.resultErrors,
-      dialogueRounds: result.dialogueRounds,
-      userSimulatorSatisfied: result.userSimulatorSatisfied,
-      ...(result.userSimulatorReply ? { userSimulatorReply: result.userSimulatorReply } : {}),
-      ...(result.userSimulatorReason ? { userSimulatorReason: result.userSimulatorReason } : {}),
-      ...(typeof result.userSimulatorScore === "number"
-        ? { userSimulatorScore: result.userSimulatorScore }
-        : {}),
-      taskId: result.taskId,
-      timestamp: result.timestamp,
-      runDir: result.runDir,
-      runDirRel: result.runDirRel,
-      notified: result.notified,
-      ...(result.notifyError ? { notifyError: result.notifyError } : {}),
+      success: true,
+      accepted: true,
+      message: "任务已经开始执行",
+      taskId,
     };
   } catch (error) {
     return {

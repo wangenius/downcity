@@ -12,7 +12,7 @@ import type { AgentResult } from "@main/types/Agent.js";
 import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
-import { withRequestContext } from "@main/service/RequestContext.js";
+import { withRequestContext } from "@main/runtime/RequestContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
   onChatQueueEnqueue,

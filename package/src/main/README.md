@@ -52,7 +52,8 @@ Agent 执行、上下文持久化与模型构建也统一收敛在该目录。
 - `project/Config.ts`
 - `service/Manager.ts`
 - `service/ServiceManager.ts`
-- `service/RequestContext.ts`
+- `service/ServiceCommand.ts`
+- `runtime/RequestContext.ts`
 - `service/README.md`
 - `tools/shell/Tool.ts`
 

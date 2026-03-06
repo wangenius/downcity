@@ -20,9 +20,9 @@ import { runCommand } from "./Run.js";
 import { registerServicesCommand } from "./Services.js";
 import { startCommand } from "./Start.js";
 import { stopCommand } from "./Stop.js";
+import { registerAllServicesForCli } from "@main/service/ServiceCommand.js";
 import {
   getServiceRootCommandNames,
-  registerAllServicesForCli,
 } from "@main/service/Manager.js";
 
 // 在 ES 模块中获取 __dirname

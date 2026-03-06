@@ -9,12 +9,12 @@
 
 import { z } from "zod";
 import { tool } from "ai";
-import { getRuntimeState } from "@main/runtime/RuntimeState.js";
 import type {
   ShellCloseInput,
   ShellCommandInput,
   ShellWriteInput,
 } from "@main/types/Shell.js";
+import type { ShipConfig } from "@main/types/ShipConfig.js";
 import {
   DEFAULT_SHELL_COMMAND_YIELD_MS,
   DEFAULT_WRITE_STDIN_YIELD_MS,
@@ -33,6 +33,27 @@ import {
   getContextOrThrow,
 } from "./ShellContextManager.js";
 import { formatContextResponse } from "./ShellResponse.js";
+
+type ShellToolRuntime = {
+  rootPath: string;
+  config: ShipConfig;
+};
+
+let shellToolRuntime: ShellToolRuntime | null = null;
+
+/**
+ * 注入 shell 工具所需的最小运行时快照。
+ */
+export function setShellToolRuntime(next: ShellToolRuntime): void {
+  shellToolRuntime = next;
+}
+
+function requireShellToolRuntime(): ShellToolRuntime {
+  if (shellToolRuntime) return shellToolRuntime;
+  throw new Error(
+    "Shell tool runtime is not initialized. Ensure initRuntimeState() has completed before using shell tools.",
+  );
+}
 
 /**
  * 构建标准错误响应。
@@ -145,7 +166,7 @@ export const exec_command = tool({
         };
       }
 
-      const runtime = getRuntimeState();
+      const runtime = requireShellToolRuntime();
       const context = createShellContext({
         command: cmd,
         cwd: resolveShellWorkdir(runtime.rootPath, workdir),
@@ -160,7 +181,7 @@ export const exec_command = tool({
 
       const page = consumeContextOutputPage(
         context,
-        resolveOutputLimits(max_output_tokens),
+        resolveOutputLimits(runtime.config, max_output_tokens),
       );
       return formatContextResponse({ context, page, startedAt });
     } catch (error) {
@@ -185,6 +206,7 @@ export const write_stdin = tool({
     const startedAt = Date.now();
 
     try {
+      const runtime = requireShellToolRuntime();
       const context = getContextOrThrow(context_id);
       const input = String(chars ?? "");
 
@@ -199,7 +221,7 @@ export const write_stdin = tool({
 
       const page = consumeContextOutputPage(
         context,
-        resolveOutputLimits(max_output_tokens),
+        resolveOutputLimits(runtime.config, max_output_tokens),
       );
       return formatContextResponse({ context, page, startedAt });
     } catch (error) {

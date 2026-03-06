@@ -7,7 +7,7 @@
  * - `load` 行为改为无状态：由 action 直接返回 SKILL.md 内容
  */
 
-import { requestContext } from "@/main/service/RequestContext.js";
+import { requestContext } from "@/main/runtime/RequestContext.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";

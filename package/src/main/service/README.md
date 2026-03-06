@@ -5,9 +5,12 @@
 `main/service/` 是进程编排与 services 之间的桥接层。  
 它负责三件事：
 
-1. 进程侧请求上下文（`RequestContext`）的最小透传
-2. main 对 services 的直接能力调用与聚合
-3. service `actions` 的统一注册与调度（CLI + HTTP）
+1. main 对 services 的直接能力调用与聚合
+2. service `actions` 的统一注册与调度（HTTP）
+3. service runtime 生命周期（start/stop/restart/status）调度
+
+请求上下文（`RequestContext`）已迁到 `main/runtime/RequestContext.ts`。
+CLI action 注册入口在 `main/service/ServiceCommand.ts`。
 
 ## Service Prompt 注册约定
 

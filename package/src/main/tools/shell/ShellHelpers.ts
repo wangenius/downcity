@@ -8,13 +8,13 @@
 
 import path from "path";
 import { randomBytes } from "crypto";
-import { getRuntimeState } from "@main/runtime/RuntimeState.js";
-import { requestContext } from "@main/service/RequestContext.js";
+import { requestContext } from "@main/runtime/RequestContext.js";
 import type {
   ShellContext,
   ShellOutputPage,
   OutputLimits,
 } from "@main/types/Shell.js";
+import type { ShipConfig } from "@main/types/ShipConfig.js";
 
 export const DEFAULT_MAX_OUTPUT_CHARS = 12_000;
 export const DEFAULT_MAX_OUTPUT_LINES = 200;
@@ -92,8 +92,11 @@ export function validateChatSendCommand(cmd: string): string | null {
  * - `ship.json.permissions.exec_command.maxOutputChars/maxOutputLines`
  * - 工具入参 `max_output_tokens` 会进一步收紧 maxChars
  */
-export function resolveOutputLimits(maxOutputTokens?: number): OutputLimits {
-  const cfg = getRuntimeState().config.permissions?.exec_command;
+export function resolveOutputLimits(
+  config: ShipConfig,
+  maxOutputTokens?: number,
+): OutputLimits {
+  const cfg = config.permissions?.exec_command;
   const cfgObject = cfg && typeof cfg === "object" ? cfg : undefined;
   const maxCharsRaw = cfgObject?.maxOutputChars;
   const maxLinesRaw = cfgObject?.maxOutputLines;

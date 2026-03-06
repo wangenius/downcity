@@ -29,7 +29,7 @@ import { listTaskDefinitions } from "@services/task/Action.js";
 import { isValidTaskId } from "@services/task/runtime/Paths.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
-import { withRequestContext } from "@main/service/RequestContext.js";
+import { withRequestContext } from "@main/runtime/RequestContext.js";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;

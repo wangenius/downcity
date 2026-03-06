@@ -43,8 +43,8 @@ import {
   parseTaskRunContextId,
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@main/service/Manager.js";
-import { shellTools } from "@main/tools/shell/Tool.js";
-import { getRequestContext } from "@main/service/RequestContext.js";
+import { setShellToolRuntime, shellTools } from "@main/tools/shell/Tool.js";
+import { getRequestContext } from "@main/runtime/RequestContext.js";
 import { MainContextPersistor } from "@main/runtime/MainContextPersistor.js";
 import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
@@ -636,6 +636,12 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     logger: defaultLogger,
     config,
     systems,
+  });
+
+  // 关键点（中文）：在 runtime 初始化阶段注入 shell 所需快照，避免 tools/shell 反向依赖 RuntimeState。
+  setShellToolRuntime({
+    rootPath,
+    config,
   });
 
   // 关键点（中文）：模型实例在 main 启动时创建一次，并注入给 services 复用。

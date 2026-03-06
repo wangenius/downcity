@@ -96,6 +96,10 @@ export type TaskRunRequest = {
 
 export type TaskRunResponse = {
   success: boolean;
+  /** 是否已受理后台执行（true 表示任务已开始异步执行） */
+  accepted?: boolean;
+  /** 给调用方的简短提示（例如“任务已经开始执行”） */
+  message?: string;
   status?: ShipTaskRunStatusV1;
   executionStatus?: ShipTaskRunExecutionStatusV1;
   resultStatus?: ShipTaskRunResultStatusV1;

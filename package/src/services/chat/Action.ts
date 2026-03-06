@@ -7,7 +7,7 @@
  */
 
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import { requestContext } from "@main/service/RequestContext.js";
+import { requestContext } from "@main/runtime/RequestContext.js";
 import {
   parseChatKeyForDispatch,
   sendActionByChatKey,

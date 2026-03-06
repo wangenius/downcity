@@ -12,7 +12,7 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { SERVICES } from "@main/service/Services.js";
 import type { Service, ServiceAction } from "@main/service/ServiceManager.js";
 import type { ServiceCommandResponse } from "@main/types/Services.js";
-import { callServer } from "@main/runtime/Client.js";
+import { callServer } from "@/main/server/daemon/Client.js";
 import { printResult } from "@main/utils/CliOutput.js";
 import { parsePortOption } from "@main/utils/Checker.js";
 

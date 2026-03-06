@@ -1,7 +1,7 @@
 import * as Lark from "@larksuiteoapi/node-sdk";
 import fs from "fs-extra";
 import path from "path";
-import { getCacheDirPath } from "@/main/runtime/Paths.js";
+import { getCacheDirPath } from "@/main/server/env/Paths.js";
 import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import type {
   ChannelChatKeyParams,

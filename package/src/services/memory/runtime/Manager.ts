@@ -4,7 +4,7 @@ import {
   getShipContextMemoryBackupDirPath,
   getShipContextMemoryBackupPath,
   getShipContextMemoryMetaPath,
-} from "@/main/runtime/Paths.js";
+} from "@/main/server/env/Paths.js";
 import type { MemoryEntry } from "@services/memory/types/Memory.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 

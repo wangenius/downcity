@@ -10,7 +10,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { Command } from "commander";
-import { getShipJsonPath } from "@main/runtime/Paths.js";
+import { getShipJsonPath } from "@/main/server/env/Paths.js";
 import { printResult } from "@main/utils/CliOutput.js";
 import type {
   LlmModelConfig,

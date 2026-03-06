@@ -13,10 +13,10 @@ import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { Agent } from "@main/agent/Agent.js";
-import { withRequestContext } from "@main/runtime/RequestContext.js";
-import { FilePersistor } from "@main/runtime/components/FilePersistor.js";
-import { SummaryCompactor } from "@main/runtime/components/SummaryCompactor.js";
-import { RuntimeOrchestrator } from "@main/runtime/components/RuntimeOrchestrator.js";
+import { withRequestContext } from "@main/context/RequestContext.js";
+import { FilePersistor } from "@main/context/components/FilePersistor.js";
+import { SummaryCompactor } from "@main/context/components/SummaryCompactor.js";
+import { RuntimeOrchestrator } from "@main/context/components/RuntimeOrchestrator.js";
 import { PromptSystemer } from "@main/prompts/system/PromptSystemer.js";
 import { shellTools } from "@main/tools/shell/Tool.js";
 import type {

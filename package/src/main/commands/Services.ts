@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import type { Command } from "commander";
-import { callServer } from "@main/runtime/Client.js";
+import { callServer } from "@/main/server/daemon/Client.js";
 import { printResult } from "@main/utils/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
 import type {

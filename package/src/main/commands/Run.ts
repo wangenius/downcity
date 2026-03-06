@@ -8,7 +8,7 @@
  * - 后台常驻启动请使用 `shipmyagent start`（daemon 模式），并用 `shipmyagent stop|restart` 管理。
  */
 
-import { AgentServer } from "@main/runtime/AgentServer.js";
+import { startServer } from "@/main/server/index.js";
 import { createWebUIClient } from "@main/ui/WebUIClient.js";
 
 import {
@@ -16,7 +16,7 @@ import {
   getRuntimeState,
   initRuntimeState,
   stopRuntimeHotReload,
-} from "@main/runtime/RuntimeState.js";
+} from "@/main/context/RuntimeState.js";
 import type { StartOptions } from "@main/types/Start.js";
 import { logger } from "@utils/logger/Logger.js";
 import {
@@ -76,25 +76,26 @@ export async function runCommand(
   try {
     port = parsePort(options.port, "port") ?? shipConfig.start?.port ?? 3000;
     webport =
-      parsePort(options.webport, "webport") ??
-      shipConfig.start?.webport;
+      parsePort(options.webport, "webport") ?? shipConfig.start?.webport;
   } catch (error) {
     console.error("❌ Invalid start options:", error);
     process.exit(1);
   }
 
   const host = (options.host ?? shipConfig.start?.host ?? "0.0.0.0").trim();
-  const accessibleHost = host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
+  const accessibleHost =
+    host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
   const webui_client =
-    parseBoolean(options.webui) ??
-    shipConfig.start?.webui ??
-    false;
+    parseBoolean(options.webui) ?? shipConfig.start?.webui ?? false;
 
   process.env.SMA_SERVER_PORT = String(port);
   process.env.SMA_SERVER_HOST = host;
 
   // Create and start server
-  const server = new AgentServer();
+  const server = await startServer({
+    port,
+    host,
+  });
 
   // 创建交互式 Web 服务器（如果已启用）
   let webui = null;
@@ -155,12 +156,6 @@ export async function runCommand(
   } catch (e) {
     logger.error(`Service runtime bootstrap failed: ${String(e)}`);
   }
-
-  // Start server
-  await server.start({
-    port,
-    host,
-  });
 
   // 启动交互式 Web 服务器（如果已启用）
   if (webui) {

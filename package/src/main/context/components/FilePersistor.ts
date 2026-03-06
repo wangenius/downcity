@@ -15,16 +15,14 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import {
-  convertToModelMessages,
-  type LanguageModel,
-  type ModelMessage,
+  convertToModelMessages, type ModelMessage,
   type SystemModelMessage,
   type Tool,
-  type ToolSet,
+  type ToolSet
 } from "ai";
 import { generateId } from "@utils/Id.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import { compactContextMessageIfNeeded } from "@main/runtime/components/compact/SummaryCompact.js";
+import { compactContextMessageIfNeeded } from "@/main/context/components/SummaryCompact.js";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
@@ -52,10 +50,16 @@ function getShipContextRootDirPath(rootPath: string): string {
 }
 
 function getShipContextDirPath(rootPath: string, contextId: string): string {
-  return path.join(getShipContextRootDirPath(rootPath), encodeURIComponent(contextId));
+  return path.join(
+    getShipContextRootDirPath(rootPath),
+    encodeURIComponent(contextId),
+  );
 }
 
-function getShipContextMessagesDirPath(rootPath: string, contextId: string): string {
+function getShipContextMessagesDirPath(
+  rootPath: string,
+  contextId: string,
+): string {
   return path.join(getShipContextDirPath(rootPath, contextId), "messages");
 }
 
@@ -83,11 +87,21 @@ export class FilePersistor extends PersistorComponent {
 
     this.rootPath = rootPath;
     this.contextId = contextId;
-    this.overrideContextDirPath = this.readOptionalPath(options.paths?.contextDirPath);
-    this.overrideMessagesDirPath = this.readOptionalPath(options.paths?.messagesDirPath);
-    this.overrideMessagesFilePath = this.readOptionalPath(options.paths?.messagesFilePath);
-    this.overrideMetaFilePath = this.readOptionalPath(options.paths?.metaFilePath);
-    this.overrideArchiveDirPath = this.readOptionalPath(options.paths?.archiveDirPath);
+    this.overrideContextDirPath = this.readOptionalPath(
+      options.paths?.contextDirPath,
+    );
+    this.overrideMessagesDirPath = this.readOptionalPath(
+      options.paths?.messagesDirPath,
+    );
+    this.overrideMessagesFilePath = this.readOptionalPath(
+      options.paths?.messagesFilePath,
+    );
+    this.overrideMetaFilePath = this.readOptionalPath(
+      options.paths?.metaFilePath,
+    );
+    this.overrideArchiveDirPath = this.readOptionalPath(
+      options.paths?.archiveDirPath,
+    );
   }
 
   private readOptionalPath(value: string | undefined): string | undefined {
@@ -152,7 +166,9 @@ export class FilePersistor extends PersistorComponent {
   private async readMetaUnsafe(): Promise<ShipContextMessagesMetaV1> {
     const file = this.getMetaFilePath();
     try {
-      const raw = (await fs.readJson(file)) as Partial<ShipContextMessagesMetaV1> | null;
+      const raw = (await fs.readJson(
+        file,
+      )) as Partial<ShipContextMessagesMetaV1> | null;
       if (!raw || typeof raw !== "object") throw new Error("invalid_meta");
       return {
         v: 1,
@@ -162,7 +178,8 @@ export class FilePersistor extends PersistorComponent {
         ...(typeof raw.lastArchiveId === "string" && raw.lastArchiveId.trim()
           ? { lastArchiveId: raw.lastArchiveId.trim() }
           : {}),
-        ...(typeof raw.keepLastMessages === "number" && Number.isFinite(raw.keepLastMessages)
+        ...(typeof raw.keepLastMessages === "number" &&
+        Number.isFinite(raw.keepLastMessages)
           ? { keepLastMessages: raw.keepLastMessages }
           : {}),
         ...(typeof raw.maxInputTokensApprox === "number" &&
@@ -180,16 +197,20 @@ export class FilePersistor extends PersistorComponent {
     }
   }
 
-  private async writeMetaUnsafe(next: ShipContextMessagesMetaV1): Promise<void> {
+  private async writeMetaUnsafe(
+    next: ShipContextMessagesMetaV1,
+  ): Promise<void> {
     const normalized: ShipContextMessagesMetaV1 = {
       v: 1,
       contextId: this.contextId,
-      updatedAt: typeof next.updatedAt === "number" ? next.updatedAt : Date.now(),
+      updatedAt:
+        typeof next.updatedAt === "number" ? next.updatedAt : Date.now(),
       pinnedSkillIds: this.normalizePinnedSkillIds(next.pinnedSkillIds),
       ...(typeof next.lastArchiveId === "string" && next.lastArchiveId.trim()
         ? { lastArchiveId: next.lastArchiveId.trim() }
         : {}),
-      ...(typeof next.keepLastMessages === "number" && Number.isFinite(next.keepLastMessages)
+      ...(typeof next.keepLastMessages === "number" &&
+      Number.isFinite(next.keepLastMessages)
         ? { keepLastMessages: next.keepLastMessages }
         : {}),
       ...(typeof next.maxInputTokensApprox === "number" &&
@@ -283,7 +304,10 @@ export class FilePersistor extends PersistorComponent {
       .trim();
   }
 
-  private hasTrailingUserQuery(messages: ModelMessage[], query: string): boolean {
+  private hasTrailingUserQuery(
+    messages: ModelMessage[],
+    query: string,
+  ): boolean {
     const target = String(query || "").trim();
     if (!target) return true;
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -295,7 +319,9 @@ export class FilePersistor extends PersistorComponent {
     return false;
   }
 
-  private async toModelMessages(params: { tools?: ToolSet }): Promise<ModelMessage[]> {
+  private async toModelMessages(params: {
+    tools?: ToolSet;
+  }): Promise<ModelMessage[]> {
     const msgs = await this.list();
     const sanitizedMessages = msgs
       .map((m) => {
@@ -309,10 +335,12 @@ export class FilePersistor extends PersistorComponent {
       })
       .filter((m) => Array.isArray(m.parts) && m.parts.length > 0);
 
-    const input: Array<Omit<ContextMessageV1, "id">> = sanitizedMessages.map((m) => {
-      const { id: _id, ...rest } = m;
-      return rest;
-    });
+    const input: Array<Omit<ContextMessageV1, "id">> = sanitizedMessages.map(
+      (m) => {
+        const { id: _id, ...rest } = m;
+        return rest;
+      },
+    );
     return await convertToModelMessages(input, {
       ...(params.tools ? { tools: params.tools } : {}),
       ignoreIncompleteToolCalls: true,
@@ -366,14 +394,21 @@ export class FilePersistor extends PersistorComponent {
       baseModelMessages = query ? [{ role: "user", content: query }] : [];
     }
     if (query && !this.hasTrailingUserQuery(baseModelMessages, query)) {
-      baseModelMessages = [...baseModelMessages, { role: "user", content: query }];
+      baseModelMessages = [
+        ...baseModelMessages,
+        { role: "user", content: query },
+      ];
     }
     return baseModelMessages;
   }
 
   async append(message: ContextMessageV1): Promise<void> {
     await this.withWriteLock(async () => {
-      await fs.appendFile(this.getMessagesFilePath(), JSON.stringify(message) + "\n", "utf8");
+      await fs.appendFile(
+        this.getMessagesFilePath(),
+        JSON.stringify(message) + "\n",
+        "utf8",
+      );
     });
   }
 
@@ -413,9 +448,9 @@ export class FilePersistor extends PersistorComponent {
   async meta(): Promise<Record<string, unknown>> {
     await this.ensureLayout();
     const metadata = await this.readMetaUnsafe();
-    return (metadata && typeof metadata === "object"
-      ? { ...metadata }
-      : {}) as Record<string, unknown>;
+    return (
+      metadata && typeof metadata === "object" ? { ...metadata } : {}
+    ) as Record<string, unknown>;
   }
 
   userText(input: {

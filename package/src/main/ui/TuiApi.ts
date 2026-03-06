@@ -7,8 +7,11 @@
  */
 
 import type { Hono } from "hono";
-import { listServiceRuntimes, runServiceCommand } from "@main/service/Manager.js";
-import type { RuntimeState } from "@main/runtime/RuntimeState.js";
+import {
+  listServiceRuntimes,
+  runServiceCommand,
+} from "@main/service/Manager.js";
+import type { RuntimeState } from "@/main/context/RuntimeState.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { isValidTaskId } from "@services/task/runtime/Paths.js";
@@ -25,7 +28,7 @@ import {
   toOptionalString,
   toUiMessageTimeline,
 } from "./tui/Helpers.js";
-import { getShipContextMessagesPath } from "@/main/runtime/Paths.js";
+import { getShipContextMessagesPath } from "@/main/server/env/Paths.js";
 
 export function registerTuiApiRoutes(params: {
   app: Hono;
@@ -109,14 +112,18 @@ export function registerTuiApiRoutes(params: {
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"), 200);
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
+      const contextId = decodeMaybe(
+        String(c.req.param("contextId") || "").trim(),
+      );
       if (!contextId) {
         return c.json({ success: false, error: "Missing contextId" }, 400);
       }
 
       const filePath = getShipContextMessagesPath(runtime.rootPath, contextId);
       const messages = await loadContextMessagesFromFile(filePath);
-      const sliced = messages.slice(-limit).flatMap((message) => toUiMessageTimeline(message));
+      const sliced = messages
+        .slice(-limit)
+        .flatMap((message) => toUiMessageTimeline(message));
       return c.json({
         success: true,
         contextId,
@@ -132,7 +139,9 @@ export function registerTuiApiRoutes(params: {
   app.post("/api/tui/contexts/:contextId/execute", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
+      const contextId = decodeMaybe(
+        String(c.req.param("contextId") || "").trim(),
+      );
       const body = (await c.req.json().catch(() => ({}))) as {
         instructions?: string;
       };
@@ -165,7 +174,9 @@ export function registerTuiApiRoutes(params: {
       const status = toOptionalString(c.req.query("status"));
       const result = await listTaskDefinitions({
         projectRoot: runtime.rootPath,
-        ...(status ? { status: status as "enabled" | "paused" | "disabled" } : {}),
+        ...(status
+          ? { status: status as "enabled" | "paused" | "disabled" }
+          : {}),
       });
       return c.json({
         success: true,

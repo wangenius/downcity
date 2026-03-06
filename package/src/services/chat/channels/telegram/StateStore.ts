@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
-import { getCacheDirPath } from "@/main/runtime/Paths.js";
+import { getCacheDirPath } from "@/main/server/env/Paths.js";
 import type { JsonObject } from "@/types/Json.js";
 
 /**

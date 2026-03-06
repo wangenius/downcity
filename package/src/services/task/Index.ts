@@ -17,7 +17,7 @@ import {
   updateTaskDefinition,
   setTaskStatus,
 } from "./Action.js";
-import { resolveContextId } from "@/main/runtime/ContextId.js";
+import { resolveContextId } from "@main/context/ContextId.js";
 import type { Service } from "@main/service/ServiceManager.js";
 import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
@@ -210,12 +210,16 @@ function resolveContextIdOrThrow(input?: string): string {
   return contextId;
 }
 
-function mapTaskListCommandInput(opts: Record<string, JsonValue>): TaskListPayload {
+function mapTaskListCommandInput(
+  opts: Record<string, JsonValue>,
+): TaskListPayload {
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
   return status ? { status } : {};
 }
 
-function mapTaskCreateCommandInput(opts: Record<string, JsonValue>): TaskCreateRequest {
+function mapTaskCreateCommandInput(
+  opts: Record<string, JsonValue>,
+): TaskCreateRequest {
   const title = String(getStringOpt(opts, "title") || "").trim();
   const description = String(getStringOpt(opts, "description") || "").trim();
   if (!title) throw new Error("Missing title");
@@ -227,7 +231,9 @@ function mapTaskCreateCommandInput(opts: Record<string, JsonValue>): TaskCreateR
   const requiredArtifacts = getStringArrayOpt(opts, "requiredArtifact");
 
   return {
-    ...(getStringOpt(opts, "taskId") ? { taskId: getStringOpt(opts, "taskId") } : {}),
+    ...(getStringOpt(opts, "taskId")
+      ? { taskId: getStringOpt(opts, "taskId") }
+      : {}),
     title,
     cron: String(getStringOpt(opts, "cron") || "@manual").trim() || "@manual",
     description,
@@ -267,7 +273,10 @@ function mapTaskUpdateCommandInput(params: {
 
   // 关键点（中文）：set 与 clear 选项互斥，提前在命令入口做校验。
   const conflicts: string[] = [];
-  if (typeof getStringOpt(opts, "timezone") === "string" && getBooleanOpt(opts, "clearTimezone")) {
+  if (
+    typeof getStringOpt(opts, "timezone") === "string" &&
+    getBooleanOpt(opts, "clearTimezone")
+  ) {
     conflicts.push("`--timezone` conflicts with `--clear-timezone`");
   }
   if (
@@ -275,21 +284,36 @@ function mapTaskUpdateCommandInput(params: {
     requiredArtifacts.length > 0 &&
     getBooleanOpt(opts, "clearRequiredArtifacts")
   ) {
-    conflicts.push("`--required-artifact` conflicts with `--clear-required-artifacts`");
+    conflicts.push(
+      "`--required-artifact` conflicts with `--clear-required-artifacts`",
+    );
   }
-  if (typeof getNumberOpt(opts, "minOutputChars") === "number" && getBooleanOpt(opts, "clearMinOutputChars")) {
-    conflicts.push("`--min-output-chars` conflicts with `--clear-min-output-chars`");
+  if (
+    typeof getNumberOpt(opts, "minOutputChars") === "number" &&
+    getBooleanOpt(opts, "clearMinOutputChars")
+  ) {
+    conflicts.push(
+      "`--min-output-chars` conflicts with `--clear-min-output-chars`",
+    );
   }
   if (
     typeof getNumberOpt(opts, "maxDialogueRounds") === "number" &&
     getBooleanOpt(opts, "clearMaxDialogueRounds")
   ) {
-    conflicts.push("`--max-dialogue-rounds` conflicts with `--clear-max-dialogue-rounds`");
+    conflicts.push(
+      "`--max-dialogue-rounds` conflicts with `--clear-max-dialogue-rounds`",
+    );
   }
-  if (typeof getStringOpt(opts, "body") === "string" && getBooleanOpt(opts, "clearBody")) {
+  if (
+    typeof getStringOpt(opts, "body") === "string" &&
+    getBooleanOpt(opts, "clearBody")
+  ) {
     conflicts.push("`--body` conflicts with `--clear-body`");
   }
-  if (typeof getStringOpt(opts, "time") === "string" && getBooleanOpt(opts, "clearTime")) {
+  if (
+    typeof getStringOpt(opts, "time") === "string" &&
+    getBooleanOpt(opts, "clearTime")
+  ) {
     conflicts.push("`--time` conflicts with `--clear-time`");
   }
   if (conflicts.length > 0) {
@@ -338,17 +362,13 @@ function mapTaskUpdateCommandInput(params: {
     ...(typeof getStringOpt(opts, "time") === "string"
       ? { time: getStringOpt(opts, "time") }
       : {}),
-    ...(getBooleanOpt(opts, "clearTime")
-      ? { clearTime: true }
-      : {}),
+    ...(getBooleanOpt(opts, "clearTime") ? { clearTime: true } : {}),
     ...(typeof status === "string" ? { status } : {}),
     ...(typeof getStringOpt(opts, "timezone") === "string"
       ? { timezone: getStringOpt(opts, "timezone") }
       : {}),
     ...(getBooleanOpt(opts, "clearTimezone") ? { clearTimezone: true } : {}),
-    ...(Array.isArray(requiredArtifacts)
-      ? { requiredArtifacts }
-      : {}),
+    ...(Array.isArray(requiredArtifacts) ? { requiredArtifacts } : {}),
     ...(getBooleanOpt(opts, "clearRequiredArtifacts")
       ? { clearRequiredArtifacts: true }
       : {}),
@@ -443,18 +463,14 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
     ...(getOptionalStringField(body, "time")
       ? { time: getOptionalStringField(body, "time") }
       : {}),
-    ...(getBooleanField(body, "clearTime")
-      ? { clearTime: true }
-      : {}),
+    ...(getBooleanField(body, "clearTime") ? { clearTime: true } : {}),
     ...(getOptionalTaskStatusField(body, "status")
       ? { status: getOptionalTaskStatusField(body, "status") }
       : {}),
     ...(getOptionalStringField(body, "timezone")
       ? { timezone: getOptionalStringField(body, "timezone") }
       : {}),
-    ...(getBooleanField(body, "clearTimezone")
-      ? { clearTimezone: true }
-      : {}),
+    ...(getBooleanField(body, "clearTimezone") ? { clearTimezone: true } : {}),
     ...(getOptionalStringArrayField(body, "requiredArtifacts")
       ? {
           requiredArtifacts: getOptionalStringArrayField(
@@ -474,10 +490,7 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
       : {}),
     ...(typeof getOptionalNumberField(body, "maxDialogueRounds") === "number"
       ? {
-          maxDialogueRounds: getOptionalNumberField(
-            body,
-            "maxDialogueRounds",
-          ),
+          maxDialogueRounds: getOptionalNumberField(body, "maxDialogueRounds"),
         }
       : {}),
     ...(getBooleanField(body, "clearMaxDialogueRounds")
@@ -517,7 +530,10 @@ export const taskService: Service = {
       command: {
         description: "列出任务",
         configure(command: Command) {
-          command.option("--status <status>", "按状态过滤（enabled|paused|disabled）");
+          command.option(
+            "--status <status>",
+            "按状态过滤（enabled|paused|disabled）",
+          );
         },
         mapInput({ opts }) {
           return mapTaskListCommandInput(opts);
@@ -553,7 +569,10 @@ export const taskService: Service = {
             .option("--task-id <taskId>", "任务 ID（不传则自动生成）")
             .option("--cron <cron>", "cron 表达式（默认 @manual）", "@manual")
             .option("--kind <kind>", "执行类型（agent|script）", "agent")
-            .option("--time <time>", "单次计划时间（ISO8601，例如 2026-03-05T01:00:00Z）")
+            .option(
+              "--time <time>",
+              "单次计划时间（ISO8601，例如 2026-03-05T01:00:00Z）",
+            )
             .option(
               "--context-id <contextId>",
               "通知目标 contextId（不传尝试使用 SMA_CTX_CONTEXT_ID）",
@@ -616,7 +635,9 @@ export const taskService: Service = {
       command: {
         description: "手动运行任务",
         configure(command: Command) {
-          command.argument("<taskId>").option("--reason <reason>", "手动运行原因");
+          command
+            .argument("<taskId>")
+            .option("--reason <reason>", "手动运行原因");
         },
         mapInput({ args, opts }): TaskRunRequest {
           const taskId = String(args[0] || "").trim();
@@ -710,7 +731,11 @@ export const taskService: Service = {
               "设置 requiredArtifacts（可重复；与 --clear-required-artifacts 互斥）",
               collectStringOption,
             )
-            .option("--clear-required-artifacts", "清空 requiredArtifacts", false)
+            .option(
+              "--clear-required-artifacts",
+              "清空 requiredArtifacts",
+              false,
+            )
             .option(
               "--min-output-chars <n>",
               "设置最小输出字符数",
@@ -722,7 +747,11 @@ export const taskService: Service = {
               "设置最大对话轮数",
               parsePositiveIntOption,
             )
-            .option("--clear-max-dialogue-rounds", "清空 maxDialogueRounds", false)
+            .option(
+              "--clear-max-dialogue-rounds",
+              "清空 maxDialogueRounds",
+              false,
+            )
             .option("--body <body>", "设置任务正文")
             .option("--clear-body", "清空任务正文", false);
         },

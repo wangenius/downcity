@@ -8,12 +8,12 @@
 
 import fs from "fs-extra";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import { requestContext } from "@/main/runtime/RequestContext.js";
+import { requestContext } from "@main/context/RequestContext.js";
 import {
   getShipProfileOtherPath,
   getShipProfilePrimaryPath,
   getShipContextMemoryPrimaryPath,
-} from "@/main/runtime/Paths.js";
+} from "@/main/server/env/Paths.js";
 
 async function readOptionalMarkdown(filePath: string): Promise<string> {
   try {

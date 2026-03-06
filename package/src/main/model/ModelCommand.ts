@@ -3,14 +3,14 @@
  *
  * 关键点（中文）
  * - commands 不直接访问模型预设常量，统一通过该模块获取。
- * - 底层委托给 llm/ModelManager，命令层只关心交互与配置生成需要的数据形状。
+ * - 底层委托给 model/ModelManager，命令层只关心交互与配置生成需要的数据形状。
  */
 
 import type { LlmProviderType } from "@main/types/LlmConfig.js";
 import {
   ModelManager,
   type ModelPreset,
-} from "@main/llm/ModelManager.js";
+} from "@main/model/ModelManager.js";
 
 const manager = new ModelManager();
 

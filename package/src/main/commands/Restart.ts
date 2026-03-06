@@ -5,9 +5,9 @@
 import path from "path";
 import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getProfileMdPath, getShipJsonPath } from "@/main/runtime/Paths.js";
-import { buildRunArgsFromOptions } from "@main/runtime/CliArgs.js";
-import { startDaemonProcess, stopDaemonProcess } from "@main/runtime/Manager.js";
+import { getProfileMdPath, getShipJsonPath } from "@/main/server/env/Paths.js";
+import { buildRunArgsFromOptions } from "@/main/server/daemon/CliArgs.js";
+import { startDaemonProcess, stopDaemonProcess } from "@/main/server/daemon/Manager.js";
 import type { StartOptions } from "@main/types/Start.js";
 
 /**

@@ -1,6 +1,5 @@
-import { DEFAULT_SHIP_PROMPTS } from "@main/prompts/system/SystemDomain.js";
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
-import { ContextManager } from "@main/runtime/ContextManager.js";
+import { ContextManager } from "@main/context/ContextManager.js";
 import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";
 import { createModel } from "@main/model/CreateModel.js";
 import type {
@@ -12,26 +11,7 @@ import {
   loadProjectDotenv,
   loadShipConfig,
   type ShipConfig,
-} from "@/main/runtime/Config.js";
-import {
-  getProfileMdCandidatePaths,
-  getProfileMdPath,
-  getCacheDirPath,
-  getLogsDirPath,
-  getSoulMdCandidatePaths,
-  getSoulMdPath,
-  getUserMdCandidatePaths,
-  getUserMdPath,
-  getShipContextRootDirPath,
-  getShipConfigDirPath,
-  getShipDataDirPath,
-  getShipDebugDirPath,
-  getShipDirPath,
-  getShipJsonPath,
-  getShipProfileDirPath,
-  getShipPublicDirPath,
-  getShipTasksDirPath,
-} from "@/main/runtime/Paths.js";
+} from "@/main/server/env/Config.js";
 import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
 import {
   getTaskRunDir,
@@ -39,15 +19,18 @@ import {
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@main/service/Manager.js";
 import { setShellToolRuntime, shellTools } from "@main/tools/shell/Tool.js";
-import { getRequestContext } from "@main/runtime/RequestContext.js";
-import { FilePersistor } from "@main/runtime/components/FilePersistor.js";
-import { SummaryCompactor } from "@main/runtime/components/SummaryCompactor.js";
-import { RuntimeOrchestrator } from "@main/runtime/components/RuntimeOrchestrator.js";
+import { getRequestContext } from "@main/context/RequestContext.js";
+import { FilePersistor } from "@main/context/components/FilePersistor.js";
+import { SummaryCompactor } from "@main/context/components/SummaryCompactor.js";
+import { RuntimeOrchestrator } from "@main/context/components/RuntimeOrchestrator.js";
 import { PromptSystemer } from "@main/prompts/system/PromptSystemer.js";
+import { ensureRuntimeProjectReady } from "@/main/context/ProjectRuntimeSetup.js";
+import {
+  loadStaticSystems,
+  PromptRuntime,
+} from "@main/prompts/PromptRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
-import fs from "fs-extra";
 import path from "path";
-import { watch, type FSWatcher } from "node:fs";
 import type { LanguageModel } from "ai";
 
 /**
@@ -81,11 +64,9 @@ export type RuntimeState = RuntimeStateBase & {
   contextManager: ContextManager;
 };
 
-const HOT_RELOAD_DEBOUNCE_MS = 300;
-
 let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
-let stopRuntimeHotReloadWatcher: (() => void) | null = null;
+let promptRuntime: PromptRuntime | null = null;
 let serviceModel: LanguageModel | null = null;
 
 /**
@@ -99,102 +80,6 @@ function requireServiceModel(): LanguageModel {
   throw new Error(
     "Service runtime model is not initialized. Ensure initRuntimeState() completed successfully.",
   );
-}
-
-/**
- * 静态 prompt 文件规范。
- *
- * 关键点（中文）
- * - PROFILE.md / SOUL.md / USER.md 统一走同一加载与热重载逻辑。
- * - 文件差异通过配置描述（文件名、候选名、默认兜底）表达。
- */
-type StaticPromptFileSpec = {
-  key: "profile" | "soul" | "user";
-  reloadReason: "profile_md_changed" | "soul_md_changed" | "user_md_changed";
-  defaultPath: (rootPath: string) => string;
-  candidatePaths: (rootPath: string) => string[];
-  fallbackText?: string;
-};
-
-const STATIC_PROMPT_FILES: StaticPromptFileSpec[] = [
-  {
-    key: "profile",
-    reloadReason: "profile_md_changed",
-    defaultPath: getProfileMdPath,
-    candidatePaths: getProfileMdCandidatePaths,
-    fallbackText: `# Agent Role
-You are a helpful project assistant.`,
-  },
-  {
-    key: "soul",
-    reloadReason: "soul_md_changed",
-    defaultPath: getSoulMdPath,
-    candidatePaths: getSoulMdCandidatePaths,
-  },
-  {
-    key: "user",
-    reloadReason: "user_md_changed",
-    defaultPath: getUserMdPath,
-    candidatePaths: getUserMdCandidatePaths,
-  },
-];
-
-/**
- * 解析静态 prompt 文件路径（支持候选名）。
- */
-function resolveStaticPromptPath(
-  rootPath: string,
-  spec: StaticPromptFileSpec,
-): string | null {
-  const candidates = spec.candidatePaths(rootPath);
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) return candidate;
-    } catch {
-      // ignore
-    }
-  }
-  return null;
-}
-
-/**
- * 读取所有静态 prompt 文件。
- */
-function loadStaticPromptProfiles(rootPath: string): Array<{
-  spec: StaticPromptFileSpec;
-  resolvedPath: string | null;
-  text: string;
-}> {
-  return STATIC_PROMPT_FILES.map((spec) => {
-    const resolvedPath = resolveStaticPromptPath(rootPath, spec);
-    let text = "";
-    if (resolvedPath) {
-      try {
-        text = fs.readFileSync(resolvedPath, "utf-8").trim();
-      } catch {
-        text = "";
-      }
-    }
-    if (!text && spec.fallbackText) {
-      text = spec.fallbackText;
-    }
-    return { spec, resolvedPath, text };
-  });
-}
-
-/**
- * 构建静态系统提示列表。
- */
-function buildStaticSystems(staticProfiles: string[]): string[] {
-  return [...staticProfiles, DEFAULT_SHIP_PROMPTS].filter(Boolean);
-}
-
-function systemsEqual(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }
 
 /**
@@ -219,155 +104,29 @@ function applyRuntimeSystems(nextSystems: string[]): void {
 }
 
 /**
- * 刷新静态系统提示（PROFILE.md / SOUL.md / USER.md）。
- */
-function reloadStaticPromptSystems(reason: string, filename?: string): void {
-  const runtime = getRuntimeStateBase();
-  const staticProfiles = loadStaticPromptProfiles(runtime.rootPath);
-  const nextSystems = buildStaticSystems(
-    staticProfiles.map((item) => item.text),
-  );
-  if (systemsEqual(runtime.systems, nextSystems)) return;
-
-  const pathByKey = new Map<string, string>();
-  for (const profile of staticProfiles) {
-    pathByKey.set(
-      profile.spec.key,
-      profile.resolvedPath || profile.spec.defaultPath(runtime.rootPath),
-    );
-  }
-  applyRuntimeSystems(nextSystems);
-  runtime.logger.info("Static prompts hot reloaded", {
-    reason,
-    filename: filename || undefined,
-    profileMdPath:
-      pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
-    soulMdPath: pathByKey.get("soul") || getSoulMdPath(runtime.rootPath),
-    userMdPath: pathByKey.get("user") || getUserMdPath(runtime.rootPath),
-  });
-}
-
-/**
  * 停止 runtime 文件热重载监听。
  */
 export function stopRuntimeHotReload(): void {
-  if (!stopRuntimeHotReloadWatcher) return;
-  stopRuntimeHotReloadWatcher();
-  stopRuntimeHotReloadWatcher = null;
+  if (!promptRuntime) return;
+  promptRuntime.stop();
+  promptRuntime = null;
 }
 
 /**
  * 启动 runtime 文件热重载监听（PROFILE.md / SOUL.md / USER.md）。
- *
- * 监听策略（中文）
- * - PROFILE.md / SOUL.md / USER.md：监听项目根目录并过滤目标文件名，兼容 rename/replace。
- * - 所有回调都做 debounce，避免编辑器连续写入造成重复刷新。
  */
 function startRuntimeHotReload(): void {
   stopRuntimeHotReload();
-
   const runtime = getRuntimeState();
-  const watchers: FSWatcher[] = [];
-  const timers = new Map<string, NodeJS.Timeout>();
-
-  const clearAllTimers = (): void => {
-    for (const timer of timers.values()) {
-      clearTimeout(timer);
-    }
-    timers.clear();
-  };
-
-  const schedule = (key: string, task: () => void): void => {
-    const prev = timers.get(key);
-    if (prev) clearTimeout(prev);
-    const next = setTimeout(() => {
-      timers.delete(key);
-      task();
-    }, HOT_RELOAD_DEBOUNCE_MS);
-    timers.set(key, next);
-  };
-
-  const attachWatcher = (
-    watchPath: string,
-    options: { recursive?: boolean },
-    onChange: (eventType: string, filename: string) => void,
-  ): boolean => {
-    try {
-      const watcher = watch(
-        watchPath,
-        { recursive: Boolean(options.recursive) },
-        (eventType, filename) => {
-          const normalized = filename
-            ? Buffer.isBuffer(filename)
-              ? filename.toString("utf-8")
-              : String(filename)
-            : "";
-          onChange(eventType, normalized);
-        },
-      );
-      watcher.on("error", (error) => {
-        runtime.logger.warn("Hot reload watcher runtime error", {
-          watchPath,
-          error: String(error),
-        });
-      });
-      watchers.push(watcher);
-      return true;
-    } catch (error) {
-      runtime.logger.warn("Hot reload watcher attach failed", {
-        watchPath,
-        error: String(error),
-      });
-      return false;
-    }
-  };
-
-  const staticPromptFileNameToReason = new Map<string, string>();
-  for (const spec of STATIC_PROMPT_FILES) {
-    for (const candidatePath of spec.candidatePaths(runtime.rootPath)) {
-      staticPromptFileNameToReason.set(
-        path.basename(candidatePath),
-        spec.reloadReason,
-      );
-    }
-  }
-
-  // PROFILE.md / SOUL.md / USER.md：监听项目根目录（文件替换/重命名也能捕获）。
-  attachWatcher(runtime.rootPath, {}, (_eventType, filename) => {
-    const basename = filename ? path.basename(filename) : "";
-    const changedReason = staticPromptFileNameToReason.get(basename);
-    if (!changedReason) return;
-    schedule("static-prompts", () =>
-      reloadStaticPromptSystems(changedReason, basename),
-    );
+  promptRuntime = new PromptRuntime({
+    rootPath: runtime.rootPath,
+    logger: runtime.logger,
+    getCurrentSystems: () => getRuntimeStateBase().systems,
+    applySystems: (nextSystems) => {
+      applyRuntimeSystems(nextSystems);
+    },
   });
-
-  const staticProfiles = loadStaticPromptProfiles(runtime.rootPath);
-  const pathByKey = new Map<string, string>();
-  for (const profile of staticProfiles) {
-    pathByKey.set(
-      profile.spec.key,
-      profile.resolvedPath || profile.spec.defaultPath(runtime.rootPath),
-    );
-  }
-  stopRuntimeHotReloadWatcher = () => {
-    clearAllTimers();
-    for (const watcher of watchers) {
-      try {
-        watcher.close();
-      } catch {
-        // ignore
-      }
-    }
-  };
-
-  runtime.logger.info("Runtime hot reload enabled", {
-    profileMdPath:
-      pathByKey.get("profile") || getProfileMdPath(runtime.rootPath),
-    soulMdPath: pathByKey.get("soul") || getSoulMdPath(runtime.rootPath),
-    userMdPath: pathByKey.get("user") || getUserMdPath(runtime.rootPath),
-    watchers: watchers.length,
-  });
+  promptRuntime.start();
 }
 
 /**
@@ -541,8 +300,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   // 这样可以移除全局 ROOT/CWD 单例模块，避免初始化时序与 import 副作用。
   defaultLogger.bindProjectRoot(rootPath);
 
-  ensureContextFiles(rootPath);
-  ensureShipDirectories(rootPath);
+  ensureRuntimeProjectReady(rootPath);
 
   // 在启动时加载 dotenv，确保后续 config / channels 可读取环境变量。
   loadProjectDotenv(rootPath);
@@ -558,8 +316,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems: [],
   });
 
-  const staticProfiles = loadStaticPromptProfiles(rootPath);
-  const systems = buildStaticSystems(staticProfiles.map((item) => item.text));
+  const systems = loadStaticSystems(rootPath);
 
   // 关键点（中文）：systems 在启动时确认后写回 base runtime state，供后续模块读取。
   setRuntimeStateBase({
@@ -664,42 +421,4 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     contextManager,
   });
   startRuntimeHotReload();
-}
-
-/**
- * 校验项目初始化关键文件。
- */
-function ensureContextFiles(projectRoot: string): void {
-  // Check if initialized（启动入口一次性确认工程根目录与关键文件）
-  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
-    console.error(
-      '❌ Project not initialized. Please run "shipmyagent init" first',
-    );
-    process.exit(1);
-  }
-
-  if (!fs.existsSync(getShipJsonPath(projectRoot))) {
-    console.error(
-      '❌ ship.json does not exist. Please run "shipmyagent init" first',
-    );
-    process.exit(1);
-  }
-}
-
-/**
- * 确保 `.ship` 运行目录结构完整。
- */
-function ensureShipDirectories(projectRoot: string): void {
-  // 关键点（中文）：尽量只在启动时确保目录结构存在，避免在 Agent/Tool 执行过程中反复 ensure。
-  fs.ensureDirSync(getShipDirPath(projectRoot));
-  fs.ensureDirSync(getShipTasksDirPath(projectRoot));
-  fs.ensureDirSync(getLogsDirPath(projectRoot));
-  fs.ensureDirSync(getCacheDirPath(projectRoot));
-  fs.ensureDirSync(getShipProfileDirPath(projectRoot));
-  fs.ensureDirSync(getShipDataDirPath(projectRoot));
-  fs.ensureDirSync(getShipContextRootDirPath(projectRoot));
-  fs.ensureDirSync(getShipPublicDirPath(projectRoot));
-  fs.ensureDirSync(getShipConfigDirPath(projectRoot));
-  fs.ensureDirSync(path.join(getShipDirPath(projectRoot), "schema"));
-  fs.ensureDirSync(getShipDebugDirPath(projectRoot));
 }

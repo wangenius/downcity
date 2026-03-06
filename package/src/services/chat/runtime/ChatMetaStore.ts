@@ -8,7 +8,7 @@
  */
 
 import fs from "fs-extra";
-import { getShipChatMetaDirPath, getShipChatMetaPath } from "@/main/runtime/Paths.js";
+import { getShipChatMetaDirPath, getShipChatMetaPath } from "@/main/server/env/Paths.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";

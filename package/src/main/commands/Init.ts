@@ -34,11 +34,11 @@ import {
   getShipDebugDirPath,
   getShipPublicDirPath,
   getShipTasksDirPath,
-} from "@/main/runtime/Paths.js";
-import { ensureDir, saveJson } from "@/main/runtime/Storage.js";
-import type { ShipConfig } from "@/main/runtime/Config.js";
-import { SHIP_JSON_SCHEMA } from "@main/constants/ShipSchema.js";
-import { DEFAULT_SHIP_JSON } from "@main/constants/Ship.js";
+} from "@/main/server/env/Paths.js";
+import { ensureDir, saveJson } from "@/utils/storage/index.js";
+import type { ShipConfig } from "@/main/server/env/Config.js";
+import { SHIP_JSON_SCHEMA } from "@/main/server/constants/ShipSchema.js";
+import { DEFAULT_SHIP_JSON } from "@/main/server/constants/Ship.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,

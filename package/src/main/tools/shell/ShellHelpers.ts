@@ -8,7 +8,7 @@
 
 import path from "path";
 import { randomBytes } from "crypto";
-import { requestContext } from "@main/runtime/RequestContext.js";
+import { requestContext } from "@main/context/RequestContext.js";
 import type {
   ShellContext,
   ShellOutputPage,

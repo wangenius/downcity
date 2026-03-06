@@ -10,7 +10,7 @@ import { generateId } from "@utils/Id.js";
 import {
   requestContext,
   type RequestContext,
-} from "@main/runtime/RequestContext.js";
+} from "@main/context/RequestContext.js";
 import { OrchestratorComponent } from "@main/agent/components/OrchestratorComponent.js";
 import type {
   OrchestratorComposeInput,
@@ -50,7 +50,9 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
   ): Promise<OrchestratorComposeResult> {
     const contextId = String(input.contextId || "").trim();
     if (!contextId) {
-      throw new Error("RuntimeOrchestrator.compose requires a non-empty contextId");
+      throw new Error(
+        "RuntimeOrchestrator.compose requires a non-empty contextId",
+      );
     }
     const requestId = generateId();
     const tools = this.getTools();

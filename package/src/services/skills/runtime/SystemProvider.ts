@@ -7,7 +7,7 @@
  * - `load` 行为改为无状态：由 action 直接返回 SKILL.md 内容
  */
 
-import { requestContext } from "@/main/runtime/RequestContext.js";
+import { requestContext } from "@main/context/RequestContext.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
@@ -30,7 +30,10 @@ export async function buildSkillsSystemText(
   runtime: ServiceRuntime,
 ): Promise<string> {
   const contextId = getCurrentContextId();
-  const discoveredSkills = discoverClaudeSkillsSync(runtime.rootPath, runtime.config);
+  const discoveredSkills = discoverClaudeSkillsSync(
+    runtime.rootPath,
+    runtime.config,
+  );
 
   if (contextId) {
     setContextAvailableSkills(contextId, discoveredSkills);

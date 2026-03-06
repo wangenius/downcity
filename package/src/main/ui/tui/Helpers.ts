@@ -8,16 +8,24 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { getToolName, isTextUIPart, isToolUIPart, type UIMessagePart } from "ai";
-import type { ContextMessageV1, ContextMetadataV1 } from "@main/types/ContextMessage.js";
+import {
+  getToolName,
+  isTextUIPart,
+  isToolUIPart,
+  type UIMessagePart,
+} from "ai";
+import type {
+  ContextMessageV1,
+  ContextMetadataV1,
+} from "@main/types/ContextMessage.js";
 import type { JsonObject } from "@/types/Json.js";
-import type { RuntimeState } from "@main/runtime/RuntimeState.js";
+import type { RuntimeState } from "@/main/context/RuntimeState.js";
 import {
   getLogsDirPath,
   getShipContextMessagesPath,
   getShipContextRootDirPath,
   getShipTasksDirPath,
-} from "@/main/runtime/Paths.js";
+} from "@/main/server/env/Paths.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
 
@@ -104,7 +112,10 @@ export type TuiTaskRunDetail = {
   messages: TuiTimelineEvent[];
 };
 
-export function toLimit(raw: string | undefined, fallback = DEFAULT_LIMIT): number {
+export function toLimit(
+  raw: string | undefined,
+  fallback = DEFAULT_LIMIT,
+): number {
   const n = Number.parseInt(String(raw || "").trim(), 10);
   if (!Number.isFinite(n) || Number.isNaN(n)) return fallback;
   return Math.max(1, Math.min(MAX_LIMIT, n));
@@ -172,16 +183,17 @@ function extractAssistantToolSummary(message: ContextMessageV1): string {
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) return "";
   const toolNames = Array.from(
     new Set(
-      toolCalls
-        .map((item) => String(item.tool || "").trim())
-        .filter(Boolean),
+      toolCalls.map((item) => String(item.tool || "").trim()).filter(Boolean),
     ),
   );
   if (toolNames.length === 0) return "";
   return `[tool] ${toolNames.join(", ")}`;
 }
 
-function resolveToolName(part: ToolPartCompatShape, aiToolName?: string): string {
+function resolveToolName(
+  part: ToolPartCompatShape,
+  aiToolName?: string,
+): string {
   const fromAi = String(aiToolName || "").trim();
   if (fromAi) return fromAi;
 
@@ -248,7 +260,9 @@ function toUiMessageEvent(params: {
     role,
     ...(typeof metadata?.ts === "number" ? { ts: metadata.ts } : {}),
     ...(typeof metadata?.kind === "string" ? { kind: metadata.kind } : {}),
-    ...(typeof metadata?.source === "string" ? { source: metadata.source } : {}),
+    ...(typeof metadata?.source === "string"
+      ? { source: metadata.source }
+      : {}),
     text,
     ...(toolName ? { toolName } : {}),
   };
@@ -273,7 +287,9 @@ function resolveUiMessageText(message: ContextMessageV1): string {
   return extractAssistantToolSummary(message);
 }
 
-export function toUiMessageTimeline(message: ContextMessageV1): TuiTimelineEvent[] {
+export function toUiMessageTimeline(
+  message: ContextMessageV1,
+): TuiTimelineEvent[] {
   if (message.role !== "assistant") {
     return [
       toUiMessageEvent({
@@ -444,7 +460,9 @@ export async function listContextSummaries(params: {
       messageCount: messages.length,
       ...(typeof updatedAt === "number" ? { updatedAt } : {}),
       ...(last?.role ? { lastRole: last.role } : {}),
-      ...(last ? { lastText: truncateText(resolveUiMessageText(last), 180) } : {}),
+      ...(last
+        ? { lastText: truncateText(resolveUiMessageText(last), 180) }
+        : {}),
     });
   }
 
@@ -549,7 +567,9 @@ export async function listTaskRuns(params: {
       ...(typeof meta?.resultStatus === "string"
         ? { resultStatus: meta.resultStatus }
         : {}),
-      ...(typeof meta?.startedAt === "number" ? { startedAt: meta.startedAt } : {}),
+      ...(typeof meta?.startedAt === "number"
+        ? { startedAt: meta.startedAt }
+        : {}),
       ...(typeof meta?.endedAt === "number" ? { endedAt: meta.endedAt } : {}),
       ...(typeof meta?.dialogueRounds === "number"
         ? { dialogueRounds: meta.dialogueRounds }
@@ -598,7 +618,10 @@ export async function readTaskRunDetail(params: {
   return {
     taskId: params.taskId,
     timestamp: params.timestamp,
-    runDirRel: path.relative(params.projectRoot, runDir).split(path.sep).join("/"),
+    runDirRel: path
+      .relative(params.projectRoot, runDir)
+      .split(path.sep)
+      .join("/"),
     meta: await readJson<Record<string, unknown>>("run.json"),
     dialogue: await readJson<Record<string, unknown>>("dialogue.json"),
     artifacts: {

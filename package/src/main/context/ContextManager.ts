@@ -9,8 +9,8 @@
 
 import type { LanguageModel } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
-import { withRequestContext } from "@main/runtime/RequestContext.js";
-import type { RequestContext } from "@main/runtime/RequestContext.js";
+import { withRequestContext } from "@main/context/RequestContext.js";
+import type { RequestContext } from "@main/context/RequestContext.js";
 import type {
   ContextMessageV1,
   ContextMetadataV1,

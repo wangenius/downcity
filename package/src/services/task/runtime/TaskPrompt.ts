@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - task 执行（executor / user-simulator）不应复用 chat 对话提示词。
- * - 这里加载 `TASK.prompt.txt`，供 ContextAgent 在 task 上下文替换默认 core prompt。
+ * - 这里加载 `TASK.prompt.txt`，供 Agent 在 task 上下文替换默认 prompt。
  */
 
 import { readFileSync } from "node:fs";

@@ -11,7 +11,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import type { Hono } from "hono";
 import { getToolName, isTextUIPart, isToolUIPart, type UIMessagePart } from "ai";
-import type { ContextMessageV1, ContextMetadataV1 } from "@core/types/ContextMessage.js";
+import type { ContextMessageV1, ContextMetadataV1 } from "@main/types/ContextMessage.js";
 import type { JsonObject } from "@/types/Json.js";
 import {
   getLogsDirPath,
@@ -618,19 +618,25 @@ async function executeByContextId(params: {
   });
 
   const agent = params.runtime.contextManager.getAgent(contextId);
+  const runContext =
+    await params.runtime.contextManager.createAgentRunContext(contextId);
   const result = await withRequestContext({ contextId }, () =>
     agent.run({
-      contextId,
+      requestId: runContext.requestId,
+      system: runContext.system,
+      tools: runContext.tools,
       query: instructions,
     }),
   );
 
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
   try {
-    const store = params.runtime.contextManager.getContextStore(contextId);
+    const persistor = params.runtime.contextManager.getContextPersistor(
+      contextId,
+    );
     const assistantMessage = result.assistantMessage;
     if (assistantMessage && typeof assistantMessage === "object") {
-      await store.append(assistantMessage as ContextMessageV1);
+      await persistor.append(assistantMessage as ContextMessageV1);
       void params.runtime.contextManager.afterContextUpdatedAsync(contextId);
     } else if (userVisible && userVisible.trim()) {
       const metadata: Omit<ContextMetadataV1, "v" | "ts"> = {
@@ -640,8 +646,8 @@ async function executeByContextId(params: {
           note: "assistant_message_missing",
         },
       };
-      await store.append(
-        store.createAssistantTextMessage({
+      await persistor.append(
+        persistor.createAssistantTextMessage({
           text: userVisible,
           metadata,
           kind: "normal",

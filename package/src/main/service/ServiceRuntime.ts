@@ -1,10 +1,10 @@
-import type { LanguageModel } from "ai";
+import type { LanguageModel, SystemModelMessage, Tool } from "ai";
 import type {
   ContextMetadataV1,
   ContextMessageV1,
-} from "@core/types/ContextMessage.js";
-import type { AgentResult, AgentRunInput } from "@core/types/Agent.js";
-import type { AgentSystemConfig } from "@core/types/AgentSystem.js";
+} from "@main/types/ContextMessage.js";
+import type { AgentResult, AgentRunInput } from "@main/types/Agent.js";
+import type { AgentSystemConfig } from "@main/types/AgentSystem.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@main/types/ShipConfig.js";
@@ -42,9 +42,9 @@ export type ServiceInvokePort = {
 };
 
 /**
- * 会话存储端口。
+ * 会话持久化端口。
  */
-export type ServiceContextStore = {
+export type ServiceContextPersistor = {
   loadAll(): Promise<ContextMessageV1[]>;
   loadRange(
     startIndex: number,
@@ -52,8 +52,7 @@ export type ServiceContextStore = {
   ): Promise<ContextMessageV1[]>;
   append(message: ContextMessageV1): Promise<void>;
   getTotalMessageCount(): Promise<number>;
-  loadMeta(): Promise<{ pinnedSkillIds?: string[] }>;
-  setPinnedSkillIds(skillIds: string[]): Promise<void>;
+  loadMeta(): Promise<Record<string, unknown>>;
   createAssistantTextMessage(params: {
     text: string;
     metadata: Omit<ContextMetadataV1, "v" | "ts"> &
@@ -69,7 +68,6 @@ export type ServiceContextStore = {
  */
 export type ServiceContextAgent = {
   setSystem(config: AgentSystemConfig): void;
-  resetSystem(): void;
   run(params: AgentRunInput): Promise<AgentResult>;
 };
 
@@ -83,7 +81,12 @@ export type ServiceContextAgent = {
  */
 export type ServiceContext = {
   getAgent(contextId: string): ServiceContextAgent;
-  getContextStore(contextId: string): ServiceContextStore;
+  createAgentRunContext(contextId: string): Promise<{
+    requestId: string;
+    system: SystemModelMessage[];
+    tools: Record<string, Tool>;
+  }>;
+  getContextPersistor(contextId: string): ServiceContextPersistor;
   clearAgent(contextId?: string): void;
   afterContextUpdatedAsync(contextId: string): Promise<void>;
   appendUserMessage(params: {
@@ -132,7 +135,7 @@ export type ServiceRuntime = {
   systems: string[];
 
   /**
-   * 会话能力入口（context store + context agent + context lifecycle）；
+   * 会话能力入口（context persistor + context agent + context lifecycle）；
    * 同时承载模型能力（`context.model`）。
    *
    * 关键点（中文）

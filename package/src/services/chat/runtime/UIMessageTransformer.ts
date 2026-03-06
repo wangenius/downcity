@@ -14,7 +14,7 @@ import {
   type UIMessagePart,
   type UITools,
 } from "ai";
-import type { ContextMessageV1 } from "@core/types/ContextMessage.js";
+import type { ContextMessageV1 } from "@main/types/ContextMessage.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;

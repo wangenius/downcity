@@ -14,7 +14,7 @@ import type {
   ShellContext,
   ShellOutputPage,
   OutputLimits,
-} from "@core/types/Shell.js";
+} from "@main/types/Shell.js";
 
 export const DEFAULT_MAX_OUTPUT_CHARS = 12_000;
 export const DEFAULT_MAX_OUTPUT_LINES = 200;

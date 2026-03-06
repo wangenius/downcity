@@ -13,7 +13,7 @@ import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
-import type { AgentSystemConfig } from "@core/types/AgentSystem.js";
+import type { AgentSystemConfig } from "@main/types/AgentSystem.js";
 import type {
   ShipTaskKind,
   ShipTaskFrontmatterV1,
@@ -23,7 +23,7 @@ import type {
   ShipTaskRunStatusV1,
   ShipTaskRunTriggerV1,
 } from "@services/task/types/Task.js";
-import type { AgentResult } from "@core/types/Agent.js";
+import type { AgentResult } from "@main/types/Agent.js";
 import type { JsonObject } from "@/types/Json.js";
 import {
   createTaskRunContextId,
@@ -340,13 +340,18 @@ async function runAgentRound(params: {
   if (params.systemConfig) {
     agent.setSystem(params.systemConfig);
   }
+  const runContext = await requireContext(
+    params.context,
+  ).createAgentRunContext(params.contextId);
   const result = await withRequestContext(
     {
       contextId: params.contextId,
     },
     () =>
       agent.run({
-        contextId: params.contextId,
+        requestId: runContext.requestId,
+        system: runContext.system,
+        tools: runContext.tools,
         query: params.query,
       }),
   );
@@ -404,7 +409,7 @@ async function runScriptTask(params: {
 }
 
 /**
- * 把 executor 的 assistant 消息落盘到 run context store。
+ * 把 executor 的 assistant 消息落盘到 run context persistor。
  */
 async function appendExecutorAssistantMessage(params: {
   context: ServiceRuntime;
@@ -412,12 +417,12 @@ async function appendExecutorAssistantMessage(params: {
   taskId: string;
   rawResult: AgentResult;
 }): Promise<void> {
-  const store = requireContext(params.context).getContextStore(
+  const persistor = requireContext(params.context).getContextPersistor(
     params.runContextId,
   );
   const assistantMessage = params.rawResult?.assistantMessage;
   if (assistantMessage && typeof assistantMessage === "object") {
-    await store.append(assistantMessage);
+    await persistor.append(assistantMessage);
     return;
   }
 }
@@ -676,7 +681,7 @@ export async function runTaskNow(params: {
         executorRoundOutput = executorRound.outputText;
         outputText = executorRound.outputText;
 
-        // executor assistant 消息写入 runDir 对应的 context store（messages.jsonl）。
+        // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
         try {
           await appendExecutorAssistantMessage({
             context,

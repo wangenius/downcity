@@ -14,7 +14,7 @@ import type {
   ShellCloseInput,
   ShellCommandInput,
   ShellWriteInput,
-} from "@core/types/Shell.js";
+} from "@main/types/Shell.js";
 import {
   DEFAULT_SHELL_COMMAND_YIELD_MS,
   DEFAULT_WRITE_STDIN_YIELD_MS,

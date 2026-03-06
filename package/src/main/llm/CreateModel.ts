@@ -19,7 +19,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { type LanguageModel } from "ai";
 import { createLlmLoggingFetch } from "@utils/logger/Fetch.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import type { ShipConfig } from "@/main/runtime/Config.js";
+import type { ShipConfig } from "@main/types/ShipConfig.js";
 import type { LlmProviderType } from "@main/types/LlmConfig.js";
 
 type ModelLogContext = {

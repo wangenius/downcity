@@ -8,8 +8,8 @@
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
-import type { AgentResult } from "@core/types/Agent.js";
-import type { ShipContextUserMessageV1 } from "@core/types/ContextMessage.js";
+import type { AgentResult } from "@main/types/Agent.js";
+import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import { withRequestContext } from "@main/service/RequestContext.js";
@@ -285,11 +285,16 @@ export class ChatQueueWorker {
     const typing = this.startTypingHeartbeat(first);
     let result: AgentResult;
     try {
+      const runContext = await serviceContext.createAgentRunContext(
+        first.contextId,
+      );
       result = await withRequestContext(
         { contextId: first.contextId },
         () =>
           agent.run({
-            contextId: first.contextId,
+            requestId: runContext.requestId,
+            system: runContext.system,
+            tools: runContext.tools,
             query: first.text,
             onStepCallback,
           }),
@@ -304,10 +309,10 @@ export class ChatQueueWorker {
     }
 
     try {
-      const store = serviceContext.getContextStore(first.contextId);
+      const persistor = serviceContext.getContextPersistor(first.contextId);
       const assistantMessage = result.assistantMessage;
       if (assistantMessage && typeof assistantMessage === "object") {
-        await store.append(assistantMessage);
+        await persistor.append(assistantMessage);
         void serviceContext.afterContextUpdatedAsync(first.contextId);
       }
     } catch {

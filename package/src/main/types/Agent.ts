@@ -11,6 +11,7 @@ import type {
   ContextMessageV1,
   ShipContextUserMessageV1,
 } from "./ContextMessage.js";
+import type { Tool, SystemModelMessage } from "ai";
 
 export interface AgentResult {
   success: boolean;
@@ -18,7 +19,9 @@ export interface AgentResult {
 }
 
 export interface AgentRunInput {
-  contextId: string;
+  requestId?: string;
+  system: SystemModelMessage[];
+  tools: Record<string, Tool>;
   query: string;
   /**
    * 在 tool-loop 的 step 边界执行回调，拉取同 lane 新增的用户消息（UIMessage）。

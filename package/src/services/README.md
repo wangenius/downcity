@@ -12,14 +12,14 @@
    - 维护平台适配器（Telegram/Feishu/QQ）与发送分发逻辑。
    - `runtime/` 包含队列、幂等、发送注册表、文本标准化等执行细节。
 2. `skills/`
-   - 提供技能发现、列表、加载/卸载、已 pin 列表能力。
-   - `load/unload` 通过 `messages/meta.json` 的 `pinnedSkillIds` 维护上下文技能状态。
+   - 提供技能发现、列表、安装、加载能力。
+   - `load` 直接返回 `SKILL.md` 内容，按当前回合无状态使用。
 3. `task/`
    - 管理任务定义（`task.md` frontmatter + body）与执行入口。
    - 支持任务 CRUD、状态切换、立即执行、cron 调度运行时。
 4. `memory/`
    - 负责上下文记忆提取、压缩与备份策略。
-   - 由 `core/context` 在上下文更新后异步触发，不阻塞主对话链路。
+   - 由 `main/runtime/ContextManager` 在上下文更新后异步触发，不阻塞主对话链路。
 
 ## 关键文件
 
@@ -41,5 +41,5 @@
 
 ## 边界约束
 
-- `services` 可以使用 `core` 抽象，但不应把业务策略回灌到 `core`。
+- `services` 应通过 `main/service/ServiceRuntime` 端口获取运行时能力。
 - 服务间协作优先通过运行时依赖端口（`ServiceRuntime`）而非隐式全局状态。

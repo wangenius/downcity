@@ -2,8 +2,8 @@
 
 ## 模块定位
 
-`main/` 是进程编排层，负责 CLI/daemon/server 启动、运行时初始化、配置与路径管理、以及服务依赖注入。  
-它把 `core/` 的内核能力组装成可启动的应用进程。
+`main/` 是运行时主模块，负责 CLI/daemon/server 启动、运行时初始化、配置与路径管理、以及服务依赖注入。  
+Agent 执行、上下文持久化与模型构建也统一收敛在该目录。
 
 ## 实现概览
 
@@ -12,6 +12,7 @@
    - `Index.ts` 负责命令注册与默认命令回退（未识别一级命令时转发到 `run`）。
 2. `runtime/`
    - `RuntimeState.ts` 管理进程级运行状态（rootPath/config/logger/contextManager）。
+   - `ContextManager.ts` 管理会话 agent/persistor 生命周期与运行上下文组装。
    - `AgentServer.ts` 承载 HTTP API、静态资源服务与 service 路由挂载。
    - `Client.ts` 实现 CLI -> daemon API 的统一调用与 endpoint 解析。
    - `Manager.ts` 负责后台 daemon 进程 PID/日志/启停管理。
@@ -28,7 +29,13 @@
    - `RuntimeState.ts` 直接聚合 services 能力并注入运行时桥接。
    - chat 队列执行器已下沉到 `services/chat/runtime/ChatQueueWorker.ts`。
    - 详细约束见 `service/README.md`（含请求上下文与 shell env 透传约定）。
-5. `types/constants/utils/ui`
+5. `agent/`
+   - `Agent.ts` 提供单会话 Agent 执行器（system/tools 外部注入）。
+   - `ContextPersistor.ts` 与 `Compact.ts` 提供上下文持久化抽象与压缩逻辑。
+6. `tools/shell/`
+   - `Tool.ts` 暴露会话式 shell 工具：`exec_command`、`write_stdin`、`close_shell`。
+   - shell 工具在 main 层注册后注入到 `Agent`。
+7. `types/constants/utils/ui`
    - 放置进程层协议类型、常量、CLI 输出与 Web UI 辅助实现。
 
 ## 关键文件
@@ -40,12 +47,14 @@
 - `runtime/AgentServer.ts`
 - `runtime/Client.ts`
 - `runtime/Manager.ts`
+- `agent/Agent.ts`
 - `prompts/System.ts`
 - `project/Config.ts`
 - `service/Manager.ts`
 - `service/ServiceManager.ts`
 - `service/RequestContext.ts`
 - `service/README.md`
+- `tools/shell/Tool.ts`
 
 ## 启动链路（简化）
 
@@ -57,4 +66,4 @@
 ## 边界约束
 
 - `main` 负责“组装与编排”，不沉淀具体业务策略。
-- 业务能力应下沉到 `services/`，内核机制应留在 `core/`。
+- 业务能力应下沉到 `services/`。

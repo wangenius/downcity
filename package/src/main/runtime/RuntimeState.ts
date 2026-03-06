@@ -1,8 +1,11 @@
-import { DEFAULT_SHIP_PROMPTS } from "@main/prompts/System.js";
+import {
+  buildAgentSystemMessages,
+  DEFAULT_SHIP_PROMPTS,
+} from "@main/prompts/System.js";
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
-import { ContextManager } from "@core/context/ContextManager.js";
+import { ContextManager } from "@main/runtime/ContextManager.js";
 import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";
-import { createModel } from "@core/llm/CreateModel.js";
+import { createModel } from "@main/llm/CreateModel.js";
 import type {
   ServiceRuntime,
   ServiceContext,
@@ -40,10 +43,9 @@ import {
   parseTaskRunContextId,
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@main/service/Manager.js";
-import {
-  getRequestContext,
-  withRequestContext,
-} from "@main/service/RequestContext.js";
+import { shellTools } from "@main/tools/shell/Tool.js";
+import { getRequestContext } from "@main/service/RequestContext.js";
+import { MainContextPersistor } from "@main/runtime/MainContextPersistor.js";
 import type { JsonValue } from "@/types/Json.js";
 import fs from "fs-extra";
 import path from "path";
@@ -501,8 +503,10 @@ const serviceInvokePort: ServiceInvokePort = {
 function buildServiceContext(input: RuntimeState): ServiceContext {
   return {
     getAgent: (contextId) => input.contextManager.getAgent(contextId),
-    getContextStore: (contextId) =>
-      input.contextManager.getContextStore(contextId),
+    createAgentRunContext: (contextId) =>
+      input.contextManager.createAgentRunContext(contextId),
+    getContextPersistor: (contextId) =>
+      input.contextManager.getContextPersistor(contextId),
     clearAgent: (contextId) => input.contextManager.clearAgent(contextId),
     afterContextUpdatedAsync: (contextId) =>
       input.contextManager.afterContextUpdatedAsync(contextId),
@@ -644,38 +648,56 @@ export async function initRuntimeState(cwd: string): Promise<void> {
 
   let contextManager: ContextManager;
   contextManager = new ContextManager({
-    rootPath,
     runMemoryMaintenance: async (contextId) =>
       runContextMemoryMaintenance({
         context: getServiceRuntimeState(),
         contextId,
       }),
-    resolveContextStorePaths: (contextId) => {
+    createPersistor: (contextId) => {
       const parsedRun = parseTaskRunContextId(contextId);
-      if (!parsedRun) return null;
-      const runDir = getTaskRunDir(rootPath, parsedRun.taskId, parsedRun.timestamp);
-      return {
-        contextDirPath: runDir,
-        messagesDirPath: runDir,
-        messagesFilePath: path.join(runDir, "messages.jsonl"),
-        metaFilePath: path.join(runDir, "meta.json"),
-        archiveDirPath: path.join(runDir, "archive"),
-      };
+      const paths = parsedRun
+        ? (() => {
+            const runDir = getTaskRunDir(
+              rootPath,
+              parsedRun.taskId,
+              parsedRun.timestamp,
+            );
+            return {
+              contextDirPath: runDir,
+              messagesDirPath: runDir,
+              messagesFilePath: path.join(runDir, "messages.jsonl"),
+              metaFilePath: path.join(runDir, "meta.json"),
+              archiveDirPath: path.join(runDir, "archive"),
+            };
+          })()
+        : undefined;
+      return new MainContextPersistor({
+        rootPath,
+        contextId,
+        ...(paths ? { paths } : {}),
+        compact: {
+          keepLastMessages: config.context?.messages?.keepLastMessages,
+          maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
+          archiveOnCompact: config.context?.messages?.archiveOnCompact,
+        },
+      });
     },
-    agentDependencies: {
-      model: requireServiceModel(),
-      logger: defaultLogger,
-      projectRoot: rootPath,
-      withRequestContext,
-      getStaticSystemPrompts: () => getRuntimeStateBase().systems,
-      getServiceSystemPrompts: (params) => collectServiceSystemTexts(params),
-      compact: {
-        keepLastMessages: config.context?.messages?.keepLastMessages,
-        maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
-        archiveOnCompact: config.context?.messages?.archiveOnCompact,
-      },
-    },
+    resolveAgentSystemMessages: async (params) =>
+      buildAgentSystemMessages({
+        projectRoot: rootPath,
+        contextId: params.contextId,
+        requestId: params.requestId,
+        mode: params.system.mode,
+        replaceDefaultCorePrompt: params.system.replaceDefaultCorePrompt,
+        staticSystemPrompts: getRuntimeStateBase().systems,
+        serviceSystemPrompts: await collectServiceSystemTexts({
+          disabledServiceNames: params.system.disableServiceSystems,
+        }),
+      }),
+    agentModel: requireServiceModel(),
+    agentLogger: defaultLogger,
   });
+  contextManager.setAgentTools(shellTools);
 
   const runtimeStateForServices: RuntimeState = {
     cwd: resolvedCwd,

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 作为全局共享类型，不再挂在 main/server 目录下。
- * - 供 main/core/services 多层复用，避免反向类型依赖。
+ * - 供 main/services 多层复用，避免反向类型依赖。
  */
 import type { LlmConfig } from "@main/types/LlmConfig.js";
 

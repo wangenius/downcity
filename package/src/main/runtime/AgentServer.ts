@@ -16,7 +16,7 @@ import http from "node:http";
 import fs from "fs-extra";
 import path from "path";
 import { getShipPublicDirPath } from "@/main/runtime/Paths.js";
-import type { ContextMetadataV1 } from "@core/types/ContextMessage.js";
+import type { ContextMetadataV1 } from "@main/types/ContextMessage.js";
 import {
   getServiceRuntimeState,
   getRuntimeState,
@@ -28,7 +28,7 @@ import {
   registerAllServicesForServer,
   runServiceCommand,
 } from "@main/service/Manager.js";
-import { registerTuiApiRoutes } from "@main/runtime/TuiApi.js";
+import { registerTuiApiRoutes } from "@/main/ui/TuiApi.js";
 
 /**
  * 启动参数。
@@ -343,6 +343,8 @@ export class AgentServer {
           text: String(instructions),
         });
         const agent = runtime.contextManager.getAgent(contextId);
+        const runContext =
+          await runtime.contextManager.createAgentRunContext(contextId);
 
         // [阶段2] 执行：在 withContextRequestContext 下运行 agent，保证下游可读取会话上下文。
         // API 场景同样会落盘 context messages，但它不是“平台消息回发”场景：
@@ -351,7 +353,13 @@ export class AgentServer {
           {
             contextId,
           },
-          () => agent.run({ contextId, query: instructions }),
+          () =>
+            agent.run({
+              requestId: runContext.requestId,
+              system: runContext.system,
+              tools: runContext.tools,
+              query: instructions,
+            }),
         );
 
         // [阶段3] 结果提取：优先拿 chat_send 的最终文本，其次回退到 message 文本。
@@ -359,10 +367,12 @@ export class AgentServer {
           pickLastSuccessfulChatSendText(result.assistantMessage);
         try {
           // [阶段3] 上下文消息落盘：优先 append assistantMessage；缺失时生成文本消息兜底。
-          const store = runtime.contextManager.getContextStore(contextId);
+          const persistor = runtime.contextManager.getContextPersistor(
+            contextId,
+          );
           const assistantMessage = result.assistantMessage;
           if (assistantMessage && typeof assistantMessage === "object") {
-            await store.append(assistantMessage);
+            await persistor.append(assistantMessage);
             void runtime.contextManager.afterContextUpdatedAsync(contextId);
           } else if (userVisible && userVisible.trim()) {
             const metadata: Omit<ContextMetadataV1, "v" | "ts"> = {
@@ -372,8 +382,8 @@ export class AgentServer {
                 note: "assistant_message_missing",
               },
             };
-            await store.append(
-              store.createAssistantTextMessage({
+            await persistor.append(
+              persistor.createAssistantTextMessage({
                 text: userVisible,
                 metadata,
                 kind: "normal",

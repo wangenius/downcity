@@ -20,8 +20,8 @@ import { getLogger } from "@utils/logger/Logger.js";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
-} from "@core/types/ContextMessage.js";
-import type { ShipContextMessagesMetaV1 } from "@core/types/ContextMessagesMeta.js";
+} from "@main/types/ContextMessage.js";
+import type { ShipContextMessagesMetaV1 } from "@main/types/ContextMessagesMeta.js";
 
 export type ContextCompactParams = {
   model: LanguageModel;

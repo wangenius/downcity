@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { generateText } from "ai";
-import { createModel } from "../../bin/core/llm/CreateModel.js";
+import { createModel } from "../../bin/main/llm/CreateModel.js";
 
 function createBaseConfig() {
   return {

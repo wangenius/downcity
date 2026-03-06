@@ -20,7 +20,7 @@
 
 ## 关键调用链
 
-1. `core/llm/CreateModel.ts` 创建模型时注入 `createLlmLoggingFetch`。
+1. `main/llm/CreateModel.ts` 创建模型时注入 `createLlmLoggingFetch`。
 2. `main/service/RequestContext.ts` 在运行期维护 `contextId/requestId`。
 3. LLM 请求发出时，`utils/logger` 通过注入回调读取上下文并记录结构化日志。
 

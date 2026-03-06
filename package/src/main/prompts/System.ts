@@ -150,6 +150,74 @@ export async function transformPromptsIntoSystemMessages(
 }
 
 /**
+ * 解析静态 system prompts。
+ *
+ * 关键点（中文）
+ * - task 执行上下文可替换默认 core prompt（`DEFAULT_SHIP_PROMPTS`）为任务专用提示词。
+ * - PROFILE/SOUL/USER 等其他静态提示保持不变。
+ */
+export function resolveStaticSystemPrompts(input: {
+  systems: string[];
+  replaceDefaultCorePrompt?: string;
+}): string[] {
+  const base = Array.isArray(input.systems) ? [...input.systems] : [];
+  const replacement = String(input.replaceDefaultCorePrompt || "").trim();
+  if (!replacement) return base;
+  return [...base.filter((item) => item !== DEFAULT_SHIP_PROMPTS), replacement];
+}
+
+/**
+ * 统一构建一次 Agent 运行所需的 system messages。
+ *
+ * 关键点（中文）
+ * - runtime/static/service 的组装逻辑统一收敛在 main/prompts。
+ * - 上层传入静态与服务提示文本，core 仅消费最终 system messages。
+ */
+export async function buildAgentSystemMessages(input: {
+  projectRoot: string;
+  contextId: string;
+  requestId: string;
+  mode?: "chat" | "task";
+  replaceDefaultCorePrompt?: string;
+  staticSystemPrompts: string[];
+  serviceSystemPrompts: string[];
+}): Promise<SystemModelMessage[]> {
+  const runtimeSystemText = buildContextSystemPrompt({
+    projectRoot: input.projectRoot,
+    contextId: input.contextId,
+    requestId: input.requestId,
+    mode: input.mode,
+  });
+  const runtimeSystemMessages: SystemModelMessage[] = runtimeSystemText
+    ? [{ role: "system", content: runtimeSystemText }]
+    : [];
+  const staticSystemMessages = await transformPromptsIntoSystemMessages(
+    resolveStaticSystemPrompts({
+      systems: input.staticSystemPrompts,
+      replaceDefaultCorePrompt: input.replaceDefaultCorePrompt,
+    }),
+    {
+      projectPath: input.projectRoot,
+      contextId: input.contextId,
+      requestId: input.requestId,
+    },
+  );
+  const serviceSystemMessages = await transformPromptsIntoSystemMessages(
+    Array.isArray(input.serviceSystemPrompts) ? input.serviceSystemPrompts : [],
+    {
+      projectPath: input.projectRoot,
+      contextId: input.contextId,
+      requestId: input.requestId,
+    },
+  );
+  return [
+    ...runtimeSystemMessages,
+    ...staticSystemMessages,
+    ...serviceSystemMessages,
+  ];
+}
+
+/**
  * 加载 Ship 默认系统提示模板（txt 文件）。
  *
  * 关键点（中文）

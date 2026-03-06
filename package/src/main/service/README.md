@@ -66,4 +66,4 @@
 
 - `main/service` 只做编排与桥接，不承载平台业务规则
 - 平台路由、chat meta、发送参数补全等逻辑应放在 `services/chat`
-- `core` 侧只消费稳定抽象（contextId + messages），不依赖 chat 平台字段
+- runtime 只消费稳定抽象（contextId + messages），不依赖 chat 平台字段

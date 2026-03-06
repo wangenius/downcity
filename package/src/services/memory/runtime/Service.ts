@@ -45,8 +45,8 @@ export async function runContextMemoryMaintenance(params: {
 
   try {
     const serviceContext = runtime.context;
-    const store = serviceContext.getContextStore(contextId);
-    const totalEntries = await store.getTotalMessageCount();
+    const persistor = serviceContext.getContextPersistor(contextId);
+    const totalEntries = await persistor.getTotalMessageCount();
 
     const memoryManager = getMemoryManager(runtime, contextId);
     const meta = await memoryManager.loadMeta();

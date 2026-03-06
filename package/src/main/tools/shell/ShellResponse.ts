@@ -7,7 +7,7 @@
  */
 
 import type { JsonObject } from "@/types/Json.js";
-import type { ShellContext, ShellOutputPage } from "@core/types/Shell.js";
+import type { ShellContext, ShellOutputPage } from "@main/types/Shell.js";
 import {
   MAX_CONTEXT_PENDING_CHARS,
   approxTokenCountFromChars,

@@ -21,6 +21,7 @@ import { getServiceRuntimeState } from "@/main/context/manager/RuntimeState.js";
  * Service 路由。
  */
 export const servicesRouter = new Hono();
+let serviceActionRoutesRegistered = false;
 
 servicesRouter.get("/api/services/list", (c) => {
   return c.json({
@@ -75,5 +76,14 @@ servicesRouter.post("/api/services/command", async (c) => {
   return c.json(result, result.success ? 200 : 400);
 });
 
-// 关键点（中文）：service 自定义 HTTP 路由也挂在同一 router 域中，边界更集中。
-registerAllServicesForServer(servicesRouter, getServiceRuntimeState());
+/**
+ * 确保 service action API 路由只注册一次。
+ *
+ * 关键点（中文）
+ * - 延迟到 server 启动阶段再注册，避免 `sma init` 等无需 runtime 的命令在 import 时触发初始化错误。
+ */
+export function ensureServiceActionRoutesRegistered(): void {
+  if (serviceActionRoutesRegistered) return;
+  registerAllServicesForServer(servicesRouter, getServiceRuntimeState());
+  serviceActionRoutesRegistered = true;
+}

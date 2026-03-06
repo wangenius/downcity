@@ -14,7 +14,10 @@ import http from "node:http";
 import { logger as serverLogger } from "@utils/logger/Logger.js";
 import { executeRouter } from "./routes/execute.js";
 import { healthRouter } from "./routes/health.js";
-import { servicesRouter } from "./routes/services.js";
+import {
+  ensureServiceActionRoutesRegistered,
+  servicesRouter,
+} from "./routes/services.js";
 import { staticRouter } from "./routes/static.js";
 import { tuiRouter } from "@/main/ui/tui/Router.js";
 
@@ -55,6 +58,9 @@ export function createServerApp(): Hono {
       allowHeaders: ["Content-Type", "Authorization"],
     }),
   );
+
+  // 关键点（中文）：service action 路由在 runtime ready 后再注册，避免命令级 import 副作用。
+  ensureServiceActionRoutesRegistered();
 
   // 关键点（中文）：按路由域挂载，index 只保留装配职责。
   app.route("/", staticRouter);

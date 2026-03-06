@@ -52,6 +52,7 @@ type InitPromptResponse = {
   providerType?: LlmProviderType;
   apiKey?: string;
   modelName?: string;
+  baseUrl?: string;
   channels?: string[];
   qqSandbox?: boolean;
   skillsToInstall?: string[];
@@ -69,6 +70,7 @@ type EnvEntry = {
 
 const LLM_API_KEY_ENV_KEY = "LLM_API_KEY";
 const LLM_MODEL_ENV_KEY = "LLM_MODEL";
+const LLM_BASE_URL_ENV_KEY = "LLM_BASE_URL";
 
 const INIT_PROVIDER_CHOICES: InitProviderChoice[] = [
   { title: "OpenAI", value: "openai" },
@@ -319,7 +321,6 @@ export async function initCommand(
     : "";
   const existingDotEnvValues = parseEnvValueMap(existingDotEnvContent);
   const TELEGRAM_BOT_TOKEN = "${TELEGRAM_BOT_TOKEN}";
-  const TELEGRAM_CHAT_ID = "${TELEGRAM_CHAT_ID}";
   const FEISHU_APP_ID = "${FEISHU_APP_ID}";
   const FEISHU_APP_SECRET = "${FEISHU_APP_SECRET}";
   const QQ_APP_ID = "${QQ_APP_ID}";
@@ -396,6 +397,12 @@ export async function initCommand(
         String(value || "").trim() ? true : "Model name is required",
     },
     {
+      type: "text",
+      name: "baseUrl",
+      message: "Input base URL (optional, press Enter to skip)",
+      initial: String(existingDotEnvValues[LLM_BASE_URL_ENV_KEY] || "").trim(),
+    },
+    {
       // 关键交互: Chat channels 允许多选，未选择的就不写入 ship.json
       type: "multiselect",
       name: "channels",
@@ -445,15 +452,31 @@ export async function initCommand(
     INIT_DEFAULT_MODEL_BY_PROVIDER[providerType];
   let apiKey = String(response.apiKey || "").trim();
   let resolvedModelName = modelName;
+  let resolvedBaseUrl = String(response.baseUrl || "").trim();
   const overwriteEnvKeys = new Set<string>();
+  const hasExistingApiKey = Object.prototype.hasOwnProperty.call(
+    existingDotEnvValues,
+    LLM_API_KEY_ENV_KEY,
+  );
+  const hasExistingModelName = Object.prototype.hasOwnProperty.call(
+    existingDotEnvValues,
+    LLM_MODEL_ENV_KEY,
+  );
+  const hasExistingBaseUrl = Object.prototype.hasOwnProperty.call(
+    existingDotEnvValues,
+    LLM_BASE_URL_ENV_KEY,
+  );
   const existingApiKey = String(
     existingDotEnvValues[LLM_API_KEY_ENV_KEY] || "",
   ).trim();
   const existingModelName = String(
     existingDotEnvValues[LLM_MODEL_ENV_KEY] || "",
   ).trim();
+  const existingBaseUrl = String(
+    existingDotEnvValues[LLM_BASE_URL_ENV_KEY] || "",
+  ).trim();
 
-  if (existingApiKey && apiKey !== existingApiKey) {
+  if (hasExistingApiKey && apiKey !== existingApiKey) {
     const confirmOverwriteApiKey = (await prompts({
       type: "confirm",
       name: "overwrite",
@@ -467,7 +490,7 @@ export async function initCommand(
     }
   }
 
-  if (existingModelName && resolvedModelName !== existingModelName) {
+  if (hasExistingModelName && resolvedModelName !== existingModelName) {
     const confirmOverwriteModel = (await prompts({
       type: "confirm",
       name: "overwrite",
@@ -478,6 +501,25 @@ export async function initCommand(
       overwriteEnvKeys.add(LLM_MODEL_ENV_KEY);
     } else {
       resolvedModelName = existingModelName;
+    }
+  }
+
+  // 关键点（中文）
+  // - baseUrl 允许留空（skip）。
+  // - 若已有值且用户输入了新值，则二次确认是否覆盖。
+  if (!resolvedBaseUrl) {
+    resolvedBaseUrl = existingBaseUrl;
+  } else if (hasExistingBaseUrl && resolvedBaseUrl !== existingBaseUrl) {
+    const confirmOverwriteBaseUrl = (await prompts({
+      type: "confirm",
+      name: "overwrite",
+      message: `${LLM_BASE_URL_ENV_KEY} already exists in .env. Overwrite it?`,
+      initial: false,
+    })) as { overwrite?: boolean };
+    if (confirmOverwriteBaseUrl.overwrite) {
+      overwriteEnvKeys.add(LLM_BASE_URL_ENV_KEY);
+    } else {
+      resolvedBaseUrl = existingBaseUrl;
     }
   }
   const initTemplateVariables = {
@@ -540,6 +582,7 @@ export async function initCommand(
     providers: {
       [providerId]: {
         type: providerType,
+        baseUrl: `\${${LLM_BASE_URL_ENV_KEY}}`,
         apiKey: `\${${LLM_API_KEY_ENV_KEY}}`,
       },
     },
@@ -563,8 +606,8 @@ export async function initCommand(
     channelsConfig.telegram = {
       enabled: true,
       botToken: TELEGRAM_BOT_TOKEN,
-      // 关键点（中文）：chatId 可选，允许通过环境变量注入（避免把 chatId 写进 ship.json）
-      chatId: TELEGRAM_CHAT_ID,
+      // 关键点（中文）：每个 channel 独立配置单值 auth_id，默认留空。
+      auth_id: "",
     };
   }
   if (selectedChannels.has("feishu")) {
@@ -573,6 +616,7 @@ export async function initCommand(
       appId: FEISHU_APP_ID,
       appSecret: FEISHU_APP_SECRET,
       domain: "https://open.feishu.cn",
+      auth_id: "",
     };
   }
   if (selectedChannels.has("qq")) {
@@ -581,6 +625,7 @@ export async function initCommand(
       appId: QQ_APP_ID,
       appSecret: QQ_APP_SECRET,
       sandbox: Boolean(response.qqSandbox),
+      auth_id: "",
     };
   }
 
@@ -619,29 +664,33 @@ export async function initCommand(
   const envRealEntries: EnvEntry[] = [
     { key: LLM_API_KEY_ENV_KEY, value: apiKey },
     { key: LLM_MODEL_ENV_KEY, value: resolvedModelName },
+    { key: LLM_BASE_URL_ENV_KEY, value: resolvedBaseUrl },
   ];
   const envExampleEntries: EnvEntry[] = [
     { key: LLM_API_KEY_ENV_KEY, value: "" },
     { key: LLM_MODEL_ENV_KEY, value: resolvedModelName },
+    { key: LLM_BASE_URL_ENV_KEY, value: "" },
   ];
   if (selectedChannels.has("telegram")) {
     envRealEntries.push(
       { key: "TELEGRAM_BOT_TOKEN", value: "" },
-      { key: "TELEGRAM_CHAT_ID", value: "" },
+      { key: "TELEGRAM_AUTH_ID", value: "" },
     );
     envExampleEntries.push(
       { key: "TELEGRAM_BOT_TOKEN", value: "" },
-      { key: "TELEGRAM_CHAT_ID", value: "" },
+      { key: "TELEGRAM_AUTH_ID", value: "" },
     );
   }
   if (selectedChannels.has("feishu")) {
     envRealEntries.push(
       { key: "FEISHU_APP_ID", value: "" },
       { key: "FEISHU_APP_SECRET", value: "" },
+      { key: "FEISHU_AUTH_ID", value: "" },
     );
     envExampleEntries.push(
       { key: "FEISHU_APP_ID", value: "" },
       { key: "FEISHU_APP_SECRET", value: "" },
+      { key: "FEISHU_AUTH_ID", value: "" },
     );
   }
   if (selectedChannels.has("qq")) {
@@ -650,11 +699,13 @@ export async function initCommand(
       { key: "QQ_APP_ID", value: "" },
       { key: "QQ_APP_SECRET", value: "" },
       { key: "QQ_SANDBOX", value: qqSandbox },
+      { key: "QQ_AUTH_ID", value: "" },
     );
     envExampleEntries.push(
       { key: "QQ_APP_ID", value: "" },
       { key: "QQ_APP_SECRET", value: "" },
       { key: "QQ_SANDBOX", value: qqSandbox },
+      { key: "QQ_AUTH_ID", value: "" },
     );
   }
 
@@ -763,7 +814,7 @@ export async function initCommand(
 
   console.log("\n🎉 Initialization complete!\n");
   console.log(`📦 Current model: ${providerType} / ${resolvedModelName}`);
-  console.log("🌐 API URL: -\n");
+  console.log(`🌐 API URL: ${resolvedBaseUrl || "-"}\n`);
 
   if (selectedChannels.has("feishu")) {
     console.log("📱 Feishu chat channel enabled");
@@ -771,16 +822,16 @@ export async function initCommand(
       "   Please configure FEISHU_APP_ID and FEISHU_APP_SECRET in ship.json (services.chat.channels.feishu)",
     );
     console.log(
-      "   or set environment variables: FEISHU_APP_ID and FEISHU_APP_SECRET\n",
+      "   Optional auth: services.chat.channels.feishu.auth_id or FEISHU_AUTH_ID\n",
     );
   }
   if (selectedChannels.has("telegram")) {
     console.log("📱 Telegram chat channel enabled");
     console.log(
-      "   Please configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID (optional) in ship.json (services.chat.channels.telegram)",
+      "   Please configure TELEGRAM_BOT_TOKEN in ship.json (services.chat.channels.telegram)",
     );
     console.log(
-      "   or set environment variables: TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID\n",
+      "   Optional auth: services.chat.channels.telegram.auth_id or TELEGRAM_AUTH_ID\n",
     );
   }
   if (selectedChannels.has("qq")) {
@@ -789,7 +840,7 @@ export async function initCommand(
       "   Please configure QQ_APP_ID and QQ_APP_SECRET in ship.json (services.chat.channels.qq)",
     );
     console.log(
-      "   or set environment variables: QQ_APP_ID and QQ_APP_SECRET\n",
+      "   Optional auth: services.chat.channels.qq.auth_id or QQ_AUTH_ID\n",
     );
     console.log(
       "   Optional: set QQ_SANDBOX=true to use sandbox environment\n",
@@ -805,17 +856,26 @@ export async function initCommand(
 
   if (selectedChannels.has("telegram")) {
     nextSteps.push(
-      "Configure services.chat.channels.telegram (Bot Token and optional Chat ID)",
+      "Configure services.chat.channels.telegram (Bot Token)",
+    );
+    nextSteps.push(
+      "Optional: configure services.chat.channels.telegram.auth_id (or TELEGRAM_AUTH_ID)",
     );
   }
   if (selectedChannels.has("feishu")) {
     nextSteps.push(
       "Configure services.chat.channels.feishu (App ID and App Secret)",
     );
+    nextSteps.push(
+      "Optional: configure services.chat.channels.feishu.auth_id (or FEISHU_AUTH_ID)",
+    );
   }
   if (selectedChannels.has("qq")) {
     nextSteps.push(
       "Configure services.chat.channels.qq (App ID and App Secret)",
+    );
+    nextSteps.push(
+      "Optional: configure services.chat.channels.qq.auth_id (or QQ_AUTH_ID)",
     );
   }
   nextSteps.push('Run "shipmyagent start" to start the agent');

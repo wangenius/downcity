@@ -11,6 +11,8 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
 import { appendInboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
+import { createChatMasterAuthResolver } from "@services/chat/auth/MasterAuth.js";
+import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
 
 type ChannelUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -34,6 +36,15 @@ function normalizeInfoValue(value: unknown): string {
 }
 
 /**
+ * 规范化 master 状态文本，写入 `<info>`。
+ */
+function formatIsMaster(status: ChatMasterStatus): "yes" | "no" | "unknown" {
+  if (status === "master") return "yes";
+  if (status === "guest") return "no";
+  return "unknown";
+}
+
+/**
  * 构造“入队 user message”文本：
  * - 顶部 `<info>...</info>`：供 Agent 了解上下文元信息
  * - 下方正文：用户原始消息
@@ -52,6 +63,7 @@ function buildQueuedUserMessageWithInfo(params: {
   messageId?: string;
   userId?: string;
   username?: string;
+  masterStatus: ChatMasterStatus;
   text: string;
 }): string {
   const infoLines = [
@@ -66,6 +78,7 @@ function buildQueuedUserMessageWithInfo(params: {
     `message_id: ${normalizeInfoValue(params.messageId || "unknown")}`,
     `user_id: ${normalizeInfoValue(params.userId || "unknown")}`,
     `username: ${normalizeInfoValue(params.username || "unknown")}`,
+    `is_master: ${normalizeInfoValue(formatIsMaster(params.masterStatus))}`,
     `received_at: ${new Date().toISOString()}`,
   ];
   const infoBlock = `<info>\n${infoLines.join("\n")}\n</info>`;
@@ -115,6 +128,10 @@ export type IncomingChatMessage = {
   messageThreadId?: number;
   userId?: string;
   username?: string;
+  /**
+   * 可选：由上游显式覆盖主人身份判定（通常无需传，默认由 auth 模块计算）。
+   */
+  isMaster?: boolean;
 };
 
 /**
@@ -130,6 +147,7 @@ export abstract class BaseChatChannel {
   protected readonly context: ServiceRuntime;
   protected readonly rootPath: string;
   protected readonly logger: Logger;
+  private readonly chatMasterAuth: ReturnType<typeof createChatMasterAuthResolver>;
 
   protected constructor(params: {
     channel: ChatDispatchChannel;
@@ -139,6 +157,7 @@ export abstract class BaseChatChannel {
     this.context = params.context;
     this.rootPath = params.context.rootPath;
     this.logger = params.context.logger;
+    this.chatMasterAuth = createChatMasterAuthResolver(this.context.config);
 
     // 统一把“平台发送能力”注册到 chat-send registry。
     // 后续 `chat_send` 等工具只依赖 channel，不耦合具体 channel 实例。
@@ -384,6 +403,24 @@ export abstract class BaseChatChannel {
   protected async enqueueMessage(
     msg: IncomingChatMessage,
   ): Promise<{ chatKey: string; position: number }> {
+    const explicitMasterStatus: ChatMasterStatus | undefined =
+      typeof msg.isMaster === "boolean"
+        ? msg.isMaster
+          ? "master"
+          : "guest"
+        : undefined;
+    const masterStatus =
+      explicitMasterStatus ||
+      this.chatMasterAuth.resolveStatus({
+        channel: this.channel,
+        userId: msg.userId,
+      });
+    const masterExtra: JsonObject = {
+      masterStatus,
+      ...(masterStatus === "master" ? { isMaster: true } : {}),
+      ...(masterStatus === "guest" ? { isMaster: false } : {}),
+    };
+
     const chatKey = this.getChatKey({
       chatId: msg.chatId,
       chatType: msg.chatType,
@@ -401,6 +438,7 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       userId: msg.userId,
       username: msg.username,
+      masterStatus,
       text: msg.text,
     });
 
@@ -414,6 +452,7 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       actorId: msg.userId,
       actorName: msg.username,
+      extra: masterExtra,
     });
 
     await this.updateChatMeta({
@@ -437,6 +476,7 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       actorId: msg.userId,
       actorName: msg.username,
+      extra: masterExtra,
     });
 
     return { chatKey, position: lanePosition };

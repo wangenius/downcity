@@ -5,7 +5,6 @@ import path from "path";
  */
 export interface TelegramConfig {
   botToken?: string;
-  chatId?: string;
   followupWindowMs?: number;
   groupAccess?: "initiator_or_admin" | "anyone";
   enabled: boolean;

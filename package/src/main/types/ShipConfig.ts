@@ -83,7 +83,14 @@ export interface ShipConfig {
         telegram?: {
           enabled: boolean;
           botToken?: string;
-          chatId?: string;
+          /**
+           * Telegram 主人鉴权 ID（对应 Telegram `from.id`）。
+           *
+           * 关键点（中文）
+           * - 命中即判定为 master。
+           * - 会注入到入站 `<info>` 的 `is_master` 字段。
+           */
+          auth_id?: string;
           /**
            * Group follow-up window in milliseconds.
            * When a user has just talked to the bot (mention/reply/command), allow
@@ -108,12 +115,20 @@ export interface ShipConfig {
           appId?: string;
           appSecret?: string;
           domain?: string;
+          /**
+           * Feishu 主人鉴权 ID（对应事件中的发送者 ID）。
+           */
+          auth_id?: string;
         };
         qq?: {
           enabled: boolean;
           appId?: string; // 机器人ID
           appSecret?: string; // 密钥
           sandbox?: boolean; // 是否使用沙箱环境
+          /**
+           * QQ 主人鉴权 ID（对应事件中的发送者 ID）。
+           */
+          auth_id?: string;
           /**
            * 群聊权限门禁：
            * - "anyone"（默认）：群成员都可触发机器人。

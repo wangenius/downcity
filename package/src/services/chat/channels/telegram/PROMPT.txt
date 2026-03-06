@@ -6,6 +6,7 @@
 
 ## 使用约束
 - 当目标是 Telegram 对话时，回复内容通过 `chat send` 正常发送即可，适配器会完成平台投递。
+- Telegram 会在入站 `<info>` 中注入 `is_master` 字段（yes/no/unknown）；涉及执行权限时应优先遵循 master 指令。
 - Telegram 默认普通发送；只有显式使用 `chat send --reply` 时，才会按 `messageId` 走 `reply_to_message`。
 - `--reply` 仅用于必要场景（例如群里消息很多，需要精确指向某条消息）；常规回复不要开启。
 - 轻量确认（如“收到/认可/态度”）可使用 `chat react` 贴表情，而不是发送冗余文本。

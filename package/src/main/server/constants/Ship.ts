@@ -56,7 +56,6 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
         telegram: {
           enabled: false,
           botToken: undefined,
-          chatId: undefined,
         },
       },
     },

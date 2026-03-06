@@ -33,7 +33,6 @@ import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
  */
 export class TelegramBot extends BaseChatChannel {
   private botToken: string;
-  private chatId?: string;
   private followupWindowMs: number;
   private groupAccess: "initiator_or_admin" | "anyone";
   private lastUpdateId: number = 0;
@@ -57,13 +56,11 @@ export class TelegramBot extends BaseChatChannel {
   constructor(
     context: ServiceRuntime,
     botToken: string,
-    chatId: string | undefined,
     followupWindowMs: number | undefined,
     groupAccess: TelegramConfig["groupAccess"] | undefined,
   ) {
     super({ channel: "telegram", context });
     this.botToken = botToken;
-    this.chatId = chatId;
     this.followupWindowMs =
       Number.isFinite(followupWindowMs as number) &&
       (followupWindowMs as number) > 0
@@ -1081,7 +1078,6 @@ export function createTelegramBot(
   const bot = new TelegramBot(
     context,
     config.botToken,
-    config.chatId,
     config.followupWindowMs,
     config.groupAccess,
   );

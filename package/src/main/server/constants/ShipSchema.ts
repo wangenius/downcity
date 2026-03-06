@@ -68,7 +68,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                   properties: {
                     enabled: { type: "boolean" },
                     botToken: { type: "string" },
-                    chatId: { type: "string" },
+                    auth_id: { type: "string" },
                     followupWindowMs: { type: "number" },
                     groupAccess: { type: "string", enum: ["initiator_or_admin", "anyone"] },
                   },
@@ -89,6 +89,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                     appId: { type: "string" },
                     appSecret: { type: "string" },
                     domain: { type: "string" },
+                    auth_id: { type: "string" },
                   },
                 },
                 qq: {
@@ -99,6 +100,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                     appId: { type: "string" },
                     appSecret: { type: "string" },
                     sandbox: { type: "boolean" },
+                    auth_id: { type: "string" },
                     groupAccess: { type: "string", enum: ["initiator_or_admin", "anyone"] },
                   },
                 },

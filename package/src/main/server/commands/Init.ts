@@ -39,25 +39,194 @@ import { ensureDir, saveJson } from "@/utils/storage/index.js";
 import type { ShipConfig } from "@/main/server/env/Config.js";
 import { SHIP_JSON_SCHEMA } from "@/main/server/constants/ShipSchema.js";
 import { DEFAULT_SHIP_JSON } from "@/main/server/constants/Ship.js";
+import type { LlmProviderType } from "@main/types/LlmConfig.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
   DEFAULT_USER_MD_TEMPLATE,
 } from "@main/prompts/common/InitPrompts.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
-import {
-  listInitModelChoices,
-  getInitModelDefaultIndex,
-  resolveInitModel,
-} from "@/main/model/ModelCommand.js";
 
 type InitPromptResponse = {
   name?: string;
-  model?: string;
+  providerType?: LlmProviderType;
+  apiKey?: string;
+  modelName?: string;
   channels?: string[];
   qqSandbox?: boolean;
   skillsToInstall?: string[];
 };
+
+type InitProviderChoice = {
+  title: string;
+  value: LlmProviderType;
+};
+
+type EnvEntry = {
+  key: string;
+  value: string;
+};
+
+const LLM_API_KEY_ENV_KEY = "LLM_API_KEY";
+const LLM_MODEL_ENV_KEY = "LLM_MODEL";
+
+const INIT_PROVIDER_CHOICES: InitProviderChoice[] = [
+  { title: "OpenAI", value: "openai" },
+  { title: "Anthropic", value: "anthropic" },
+  { title: "DeepSeek", value: "deepseek" },
+  { title: "Gemini", value: "gemini" },
+  { title: "Open Compatible", value: "open-compatible" },
+  { title: "Open Responses", value: "open-responses" },
+  { title: "Moonshot (Kimi)", value: "moonshot" },
+  { title: "xAI", value: "xai" },
+  { title: "HuggingFace", value: "huggingface" },
+  { title: "OpenRouter", value: "openrouter" },
+];
+
+const INIT_DEFAULT_MODEL_BY_PROVIDER: Record<LlmProviderType, string> = {
+  anthropic: "claude-sonnet-4-5",
+  openai: "gpt-4o-mini",
+  deepseek: "deepseek-chat",
+  gemini: "gemini-2.0-flash",
+  "open-compatible": "gpt-4o-mini",
+  "open-responses": "gpt-4.1-mini",
+  moonshot: "moonshot-v1-8k",
+  xai: "grok-3-mini",
+  huggingface: "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  openrouter: "openai/gpt-4o-mini",
+};
+
+/**
+ * 解析 init 交互中的 provider type。
+ *
+ * 关键点（中文）
+ * - 非法输入回退到 `openai`，避免初始化中断。
+ */
+function resolveInitProviderType(input: unknown): LlmProviderType {
+  const value = String(input || "").trim();
+  if (!value) return "openai";
+  const found = INIT_PROVIDER_CHOICES.find((item) => item.value === value);
+  return found?.value || "openai";
+}
+
+function parseEnvKeys(content: string): Set<string> {
+  const out = new Set<string>();
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = String(rawLine || "").trim();
+    if (!line || line.startsWith("#")) continue;
+    const matched = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=/);
+    if (!matched) continue;
+    out.add(matched[1]);
+  }
+  return out;
+}
+
+function parseEnvValueMap(content: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = String(rawLine || "").trim();
+    if (!line || line.startsWith("#")) continue;
+    const matched = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!matched) continue;
+    out[matched[1]] = matched[2] ?? "";
+  }
+  return out;
+}
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * 仅向 env 文件追加缺失键（不覆盖已有键）。
+ *
+ * 关键点（中文）
+ * - 用户已有的 env 配置永远优先，不会被 init 覆盖。
+ * - 仅当键不存在时才追加，满足“原来有就跳过，原来没有就写入”。
+ */
+async function appendMissingEnvEntries(params: {
+  filePath: string;
+  sectionTitle: string;
+  entries: EnvEntry[];
+  overwriteKeys?: Set<string>;
+}): Promise<{
+  appended: string[];
+  overwritten: string[];
+  skipped: string[];
+}> {
+  const filePath = String(params.filePath || "").trim();
+  if (!filePath) return { appended: [], overwritten: [], skipped: [] };
+  const entries = Array.isArray(params.entries)
+    ? params.entries.filter((item) => {
+        const key = String(item?.key || "").trim();
+        return Boolean(key);
+      })
+    : [];
+  if (entries.length === 0) return { appended: [], overwritten: [], skipped: [] };
+  const overwriteKeys = params.overwriteKeys || new Set<string>();
+
+  let existing = "";
+  if (await fs.pathExists(filePath)) {
+    existing = await fs.readFile(filePath, "utf-8");
+  }
+  const existingKeys = parseEnvKeys(existing);
+  const appendedEntries: EnvEntry[] = [];
+  const skippedEntries: EnvEntry[] = [];
+  const overwrittenEntries: EnvEntry[] = [];
+  let nextContent = existing;
+
+  for (const entry of entries) {
+    if (!existingKeys.has(entry.key)) {
+      appendedEntries.push(entry);
+      continue;
+    }
+    if (!overwriteKeys.has(entry.key)) {
+      skippedEntries.push(entry);
+      continue;
+    }
+    const linePattern = new RegExp(
+      `^${escapeRegExp(entry.key)}\\s*=.*$`,
+      "gm",
+    );
+    if (linePattern.test(nextContent)) {
+      nextContent = nextContent.replace(linePattern, `${entry.key}=${entry.value}`);
+    } else {
+      appendedEntries.push(entry);
+      continue;
+    }
+    overwrittenEntries.push(entry);
+  }
+
+  if (appendedEntries.length > 0) {
+    const lines: string[] = [];
+    if (!nextContent.trim()) {
+      lines.push("# ShipMyAgent 环境变量");
+    }
+    lines.push("", `# ${params.sectionTitle}`);
+    for (const entry of appendedEntries) {
+      lines.push(`${entry.key}=${entry.value}`);
+    }
+    let chunk = lines.join("\n");
+    if (nextContent && !nextContent.endsWith("\n")) {
+      chunk = `\n${chunk}`;
+    }
+    nextContent = `${nextContent}${chunk}\n`;
+  }
+
+  if (
+    appendedEntries.length > 0 ||
+    overwrittenEntries.length > 0 ||
+    !(await fs.pathExists(filePath))
+  ) {
+    await fs.writeFile(filePath, nextContent, "utf-8");
+  }
+
+  return {
+    appended: appendedEntries.map((item) => item.key),
+    overwritten: overwrittenEntries.map((item) => item.key),
+    skipped: skippedEntries.map((item) => item.key),
+  };
+}
 
 /**
  * 获取用户级 `.ship/skills` 目录。
@@ -71,7 +240,7 @@ function getUserShipSkillsDir(): string {
  */
 function getBuiltInSkillsDirFromBin(): string {
   // 关键点（中文）
-  // - 发布包中该文件在 `bin/main/commands/init.js`
+  // - 发布包中该文件在 `bin/main/server/commands/Init.js`
   // - 内置 skills 会在 build 阶段复制到 `bin/services/skills/built-in`
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -143,9 +312,12 @@ export async function initCommand(
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
   let allowOverwrite = Boolean(options.force);
-  const LLM_API_KEY = "${LLM_API_KEY}";
-  const LLM_BASE_URL = "${LLM_BASE_URL}";
-  const LLM_MODEL = "${LLM_MODEL}";
+  const dotEnvPath = path.join(projectRoot, ".env");
+  const dotEnvExamplePath = path.join(projectRoot, ".env.example");
+  const existingDotEnvContent = (await fs.pathExists(dotEnvPath))
+    ? await fs.readFile(dotEnvPath, "utf-8")
+    : "";
+  const existingDotEnvValues = parseEnvValueMap(existingDotEnvContent);
   const TELEGRAM_BOT_TOKEN = "${TELEGRAM_BOT_TOKEN}";
   const TELEGRAM_CHAT_ID = "${TELEGRAM_CHAT_ID}";
   const FEISHU_APP_ID = "${FEISHU_APP_ID}";
@@ -181,7 +353,7 @@ export async function initCommand(
   }
 
   // Collect configuration information
-  // 交互采集（中文）：模型 + channels + 推荐 skills，最小化首启配置成本。
+  // 交互采集（中文）：provider type + apiKey + modelName + channels + 推荐 skills。
   const response = (await prompts([
     {
       type: "text",
@@ -191,10 +363,37 @@ export async function initCommand(
     },
     {
       type: "select",
-      name: "model",
-      message: "Select LLM model",
-      choices: listInitModelChoices(),
-      initial: getInitModelDefaultIndex(),
+      name: "providerType",
+      message: "Select LLM provider type",
+      choices: INIT_PROVIDER_CHOICES,
+      initial: 0,
+    },
+    {
+      type: "text",
+      name: "apiKey",
+      message: "Input API key",
+      initial: String(
+        existingDotEnvValues[LLM_API_KEY_ENV_KEY] ||
+          process.env[LLM_API_KEY_ENV_KEY] ||
+          "",
+      ).trim(),
+      validate: (value) =>
+        String(value || "").trim() ? true : "API key is required",
+    },
+    {
+      type: "text",
+      name: "modelName",
+      message: "Input model name",
+      initial: (prev, values) => {
+        const existingModelName = String(
+          existingDotEnvValues[LLM_MODEL_ENV_KEY] || "",
+        ).trim();
+        if (existingModelName) return existingModelName;
+        const providerType = resolveInitProviderType(values.providerType);
+        return INIT_DEFAULT_MODEL_BY_PROVIDER[providerType];
+      },
+      validate: (value) =>
+        String(value || "").trim() ? true : "Model name is required",
     },
     {
       // 关键交互: Chat channels 允许多选，未选择的就不写入 ship.json
@@ -240,6 +439,47 @@ export async function initCommand(
   // 关键点（中文）：agent_name 同时用于 `ship.json.name` 与 init 模板变量渲染，避免两处来源不一致。
   const agentName =
     String(response.name || "").trim() || path.basename(projectRoot);
+  const providerType = resolveInitProviderType(response.providerType);
+  const modelName =
+    String(response.modelName || "").trim() ||
+    INIT_DEFAULT_MODEL_BY_PROVIDER[providerType];
+  let apiKey = String(response.apiKey || "").trim();
+  let resolvedModelName = modelName;
+  const overwriteEnvKeys = new Set<string>();
+  const existingApiKey = String(
+    existingDotEnvValues[LLM_API_KEY_ENV_KEY] || "",
+  ).trim();
+  const existingModelName = String(
+    existingDotEnvValues[LLM_MODEL_ENV_KEY] || "",
+  ).trim();
+
+  if (existingApiKey && apiKey !== existingApiKey) {
+    const confirmOverwriteApiKey = (await prompts({
+      type: "confirm",
+      name: "overwrite",
+      message: `${LLM_API_KEY_ENV_KEY} already exists in .env. Overwrite it?`,
+      initial: false,
+    })) as { overwrite?: boolean };
+    if (confirmOverwriteApiKey.overwrite) {
+      overwriteEnvKeys.add(LLM_API_KEY_ENV_KEY);
+    } else {
+      apiKey = existingApiKey;
+    }
+  }
+
+  if (existingModelName && resolvedModelName !== existingModelName) {
+    const confirmOverwriteModel = (await prompts({
+      type: "confirm",
+      name: "overwrite",
+      message: `${LLM_MODEL_ENV_KEY} already exists in .env. Overwrite it?`,
+      initial: false,
+    })) as { overwrite?: boolean };
+    if (confirmOverwriteModel.overwrite) {
+      overwriteEnvKeys.add(LLM_MODEL_ENV_KEY);
+    } else {
+      resolvedModelName = existingModelName;
+    }
+  }
   const initTemplateVariables = {
     agent_name: agentName,
   };
@@ -291,25 +531,22 @@ export async function initCommand(
 
   // Save ship.json
   // Build LLM configuration
-  const selectedModel = resolveInitModel(response.model);
   const activeModelId = "default";
   const providerId = "default";
-  const useCustomModelName = selectedModel.useCustomModelName;
 
   // 关键点（中文）：init 默认生成“1 provider + 1 model”的多模型结构，后续用户可按需扩展。
   const llmConfig: ShipConfig["llm"] = {
     activeModel: activeModelId,
     providers: {
       [providerId]: {
-        type: selectedModel.providerType,
-        ...(useCustomModelName ? { baseUrl: LLM_BASE_URL } : {}),
-        apiKey: LLM_API_KEY,
+        type: providerType,
+        apiKey: `\${${LLM_API_KEY_ENV_KEY}}`,
       },
     },
     models: {
       [activeModelId]: {
         provider: providerId,
-        name: useCustomModelName ? LLM_MODEL : selectedModel.modelId,
+        name: `\${${LLM_MODEL_ENV_KEY}}`,
         temperature: 0.7,
       },
     },
@@ -375,88 +612,84 @@ export async function initCommand(
   await saveJson(shipJsonPath, shipConfig);
   console.log(`✅ Created ship.json`);
 
-  // Create .env and .env.example (optional, but recommended)
+  // Create .env and .env.example
   // 关键点（中文）
-  // - `.env.example`：可提交，用于告诉团队需要哪些环境变量
-  // - `.env`：本地私密配置，不建议提交
-  // - 仅生成“本次 init 选择相关”的变量（减少噪音）
-  const dotEnvExamplePath = path.join(projectRoot, ".env.example");
-  const dotEnvPath = path.join(projectRoot, ".env");
-
-  const envLines: string[] = [
-    "# ShipMyAgent 环境变量",
-    "# - .env.example: 可提交到 git（示例）",
-    "# - .env: 本地私密配置（不要提交）",
-    "",
-    "# LLM（ship.json 默认读取 LLM_API_KEY）",
-    "LLM_API_KEY=",
+  // - `.env` 写入真实值（仅追加缺失键，不覆盖已有键）
+  // - `.env.example` 写入示例值（便于团队同步所需变量）
+  const envRealEntries: EnvEntry[] = [
+    { key: LLM_API_KEY_ENV_KEY, value: apiKey },
+    { key: LLM_MODEL_ENV_KEY, value: resolvedModelName },
   ];
-
-  if (useCustomModelName) {
-    envLines.push(
-      "",
-      "# Open-compatible / Open-responses model",
-      "LLM_MODEL=",
-      "LLM_BASE_URL=",
-    );
-  }
-
+  const envExampleEntries: EnvEntry[] = [
+    { key: LLM_API_KEY_ENV_KEY, value: "" },
+    { key: LLM_MODEL_ENV_KEY, value: resolvedModelName },
+  ];
   if (selectedChannels.has("telegram")) {
-    envLines.push(
-      "",
-      "# Telegram",
-      "TELEGRAM_BOT_TOKEN=",
-      "# 可选：限制仅在指定 chatId 发送（不填则不限制）",
-      "TELEGRAM_CHAT_ID=",
+    envRealEntries.push(
+      { key: "TELEGRAM_BOT_TOKEN", value: "" },
+      { key: "TELEGRAM_CHAT_ID", value: "" },
+    );
+    envExampleEntries.push(
+      { key: "TELEGRAM_BOT_TOKEN", value: "" },
+      { key: "TELEGRAM_CHAT_ID", value: "" },
     );
   }
-
   if (selectedChannels.has("feishu")) {
-    envLines.push("", "# Feishu", "FEISHU_APP_ID=", "FEISHU_APP_SECRET=");
+    envRealEntries.push(
+      { key: "FEISHU_APP_ID", value: "" },
+      { key: "FEISHU_APP_SECRET", value: "" },
+    );
+    envExampleEntries.push(
+      { key: "FEISHU_APP_ID", value: "" },
+      { key: "FEISHU_APP_SECRET", value: "" },
+    );
   }
-
   if (selectedChannels.has("qq")) {
-    envLines.push(
-      "",
-      "# QQ",
-      "QQ_APP_ID=",
-      "QQ_APP_SECRET=",
-      `QQ_SANDBOX=${Boolean(response.qqSandbox) ? "true" : "false"}`,
+    const qqSandbox = Boolean(response.qqSandbox) ? "true" : "false";
+    envRealEntries.push(
+      { key: "QQ_APP_ID", value: "" },
+      { key: "QQ_APP_SECRET", value: "" },
+      { key: "QQ_SANDBOX", value: qqSandbox },
+    );
+    envExampleEntries.push(
+      { key: "QQ_APP_ID", value: "" },
+      { key: "QQ_APP_SECRET", value: "" },
+      { key: "QQ_SANDBOX", value: qqSandbox },
     );
   }
 
-  envLines.push("");
-  const envTemplate = envLines.join("\n");
-
-  const AUTO_ENV_MARKER = "# ShipMyAgent 环境变量";
-  const canOverwriteEnvFile = async (filePath: string): Promise<boolean> => {
-    if (options.force) return true;
-    if (!(await fs.pathExists(filePath))) return true;
-    try {
-      const existing = await fs.readFile(filePath, "utf-8");
-      // 关键点（中文）：只有“我们自己生成的 env 文件”才允许在非 --force 下覆盖，避免误伤用户自有 .env
-      return existing.trimStart().startsWith(AUTO_ENV_MARKER);
-    } catch {
-      return false;
-    }
-  };
-
-  const writeTextFile = async (filePath: string, content: string) => {
-    if (!(await canOverwriteEnvFile(filePath))) return false;
-    await fs.writeFile(filePath, content, "utf-8");
-    return true;
-  };
-
-  const wroteEnvExample = await writeTextFile(dotEnvExamplePath, envTemplate);
-  const wroteEnv = await writeTextFile(dotEnvPath, envTemplate);
-
-  if (wroteEnvExample) console.log("✅ Created .env.example");
-  else if (await fs.pathExists(dotEnvExamplePath)) {
-    console.log("⏭️  Skipped existing .env.example (use --force to overwrite)");
+  const envResult = await appendMissingEnvEntries({
+    filePath: dotEnvPath,
+    sectionTitle: "ShipMyAgent Init",
+    entries: envRealEntries,
+    overwriteKeys: overwriteEnvKeys,
+  });
+  const envExampleResult = await appendMissingEnvEntries({
+    filePath: dotEnvExamplePath,
+    sectionTitle: "ShipMyAgent Init Example",
+    entries: envExampleEntries,
+  });
+  if (envResult.appended.length > 0 || envResult.overwritten.length > 0) {
+    const detail = [
+      envResult.appended.length > 0
+        ? `added: ${envResult.appended.join(", ")}`
+        : "",
+      envResult.overwritten.length > 0
+        ? `overwritten: ${envResult.overwritten.join(", ")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("; ");
+    console.log(`✅ Updated .env (${detail})`);
+  } else {
+    console.log("⏭️  Skipped .env (required keys already exist)");
   }
-  if (wroteEnv) console.log("✅ Created .env");
-  else if (await fs.pathExists(dotEnvPath)) {
-    console.log("⏭️  Skipped existing .env (use --force to overwrite)");
+  if (envExampleResult.appended.length > 0) {
+    console.log(
+      `✅ Updated .env.example (added: ${envExampleResult.appended.join(", ")})`,
+    );
+  } else {
+    console.log("⏭️  Skipped .env.example (required keys already exist)");
   }
 
   // Create .ship directory structure
@@ -529,12 +762,8 @@ export async function initCommand(
   }
 
   console.log("\n🎉 Initialization complete!\n");
-  const activeModelConfig = llmConfig.models[llmConfig.activeModel];
-  const activeProviderConfig = llmConfig.providers[activeModelConfig.provider];
-  console.log(
-    `📦 Current model: ${activeProviderConfig.type} / ${activeModelConfig.name}`,
-  );
-  console.log(`🌐 API URL: ${activeProviderConfig.baseUrl || "-"}\n`);
+  console.log(`📦 Current model: ${providerType} / ${resolvedModelName}`);
+  console.log("🌐 API URL: -\n");
 
   if (selectedChannels.has("feishu")) {
     console.log("📱 Feishu chat channel enabled");
@@ -597,7 +826,7 @@ export async function initCommand(
   }
   console.log("");
   console.log(
-    "💡 Tip: API Key is recommended to use environment variables (e.g. ${LLM_API_KEY}, ${OPENAI_API_KEY}, ${GEMINI_API_KEY})\n",
+    "💡 Tip: 本次输入的 API Key 与 Model 已按“缺失才追加”策略写入 .env。\n",
   );
   console.log(
     "To switch models or modify configuration, edit the llm field in ship.json directly.\n",

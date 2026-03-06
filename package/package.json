@@ -4,8 +4,8 @@
   "type": "module",
   "description": "把一个代码仓库，启动成一个可对话、可审计的 Agent Runtime",
   "bin": {
-    "shipmyagent": "./bin/main/commands/index.js",
-    "sma": "./bin/main/commands/index.js"
+    "shipmyagent": "./bin/main/server/commands/Index.js",
+    "sma": "./bin/main/server/commands/Index.js"
   },
   "scripts": {
     "build": "tsc && tsc-alias && node scripts/copy-built-in-skills.mjs && node scripts/copy-prompt-assets.mjs",

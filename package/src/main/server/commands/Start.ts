@@ -45,7 +45,7 @@ export async function startCommand(
     process.exit(1);
   }
 
-  // 计算当前 CLI 的入口路径（编译后是 `bin/main/commands/index.js`）。
+  // 计算当前 CLI 的入口路径（编译后是 `bin/main/server/commands/Index.js`）。
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   const cliPath = path.resolve(__dirname, "./Index.js");

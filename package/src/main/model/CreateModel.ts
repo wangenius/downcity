@@ -43,6 +43,23 @@ function normalizeOptionalBaseUrl(value: string | undefined): string | undefined
   return trimmed || undefined;
 }
 
+/**
+ * provider 默认 baseUrl。
+ *
+ * 关键点（中文）
+ * - 当 `ship.json.llm.providers.<id>.baseUrl` 省略时，按 provider type 自动补全。
+ * - 保持“只配置 provider type + apiKey + modelName”也能跑通常见 provider。
+ */
+function resolveProviderDefaultBaseUrl(
+  providerType: LlmProviderType,
+): string | undefined {
+  if (providerType === "deepseek") return "https://api.deepseek.com/v1";
+  if (providerType === "moonshot") return "https://api.moonshot.cn/v1";
+  if (providerType === "xai") return "https://api.x.ai/v1";
+  if (providerType === "openrouter") return "https://openrouter.ai/api/v1";
+  return undefined;
+}
+
 function resolveEnvPlaceholder(value: string | undefined): string | undefined {
   if (!value) return value;
   if (value.startsWith("${") && value.endsWith("}")) {
@@ -161,7 +178,8 @@ export async function createModel(input: {
   }
 
   const resolvedBaseUrl = normalizeOptionalBaseUrl(
-    resolveEnvPlaceholder(selectedProviderConfig.baseUrl),
+    resolveEnvPlaceholder(selectedProviderConfig.baseUrl) ||
+      resolveProviderDefaultBaseUrl(providerType),
   );
 
   let resolvedApiKey = resolveEnvPlaceholder(selectedProviderConfig.apiKey);

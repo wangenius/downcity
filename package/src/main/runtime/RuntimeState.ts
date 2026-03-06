@@ -681,10 +681,13 @@ export async function initRuntimeState(cwd: string): Promise<void> {
         rootPath,
         contextId,
         ...(paths ? { paths } : {}),
-        compact: {
-          keepLastMessages: config.context?.messages?.keepLastMessages,
-          maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
-          archiveOnCompact: config.context?.messages?.archiveOnCompact,
+        modules: {
+          compactor: {
+            keepLastMessages: config.context?.messages?.keepLastMessages,
+            maxInputTokensApprox:
+              config.context?.messages?.maxInputTokensApprox,
+            archiveOnCompact: config.context?.messages?.archiveOnCompact,
+          },
         },
       });
     },

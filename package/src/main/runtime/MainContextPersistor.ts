@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - persistor 自身直接负责消息与 meta 落盘。
  * - agent 只依赖 ContextPersistor 抽象，不感知具体文件结构。
- * - 兼容 compact/archive 策略，并统一处理并发写锁。
+ * - 通过 modules 组合 `history + compactor`，并统一处理并发写锁。
  */
 
 import fs from "fs-extra";
@@ -28,23 +28,25 @@ import {
   ContextPersistor,
   type PrepareRunMessagesInput,
 } from "@main/agent/ContextPersistor.js";
-import { compactContextMessageIfNeeded } from "@main/agent/Compact.js";
 import type {
   ContextMessageV1,
   ContextMetadataV1,
 } from "@main/types/ContextMessage.js";
 import type { ShipContextMessagesMetaV1 } from "@main/types/ContextMessagesMeta.js";
 import type { ContextPersistorPathOverrides } from "@main/types/ContextPersistor.js";
+import type {
+  MainContextCompactorModule,
+  MainContextCompactorModuleConfig,
+  MainContextHistoryModuleConfig,
+  MainContextPersistorModules,
+} from "@main/types/ContextModules.js";
+import { defaultContextCompactorModule } from "@main/runtime/modules/DefaultContextCompactorModule.js";
 
 type MainContextPersistorOptions = {
   rootPath: string;
   contextId: string;
   paths?: ContextPersistorPathOverrides;
-  compact?: {
-    keepLastMessages?: number;
-    maxInputTokensApprox?: number;
-    archiveOnCompact?: boolean;
-  };
+  modules?: MainContextPersistorModules;
 };
 
 function getShipDirPath(rootPath: string): string {
@@ -71,11 +73,9 @@ export class MainContextPersistor extends ContextPersistor {
   private readonly overrideMessagesFilePath?: string;
   private readonly overrideMetaFilePath?: string;
   private readonly overrideArchiveDirPath?: string;
-  private readonly compact?: {
-    keepLastMessages?: number;
-    maxInputTokensApprox?: number;
-    archiveOnCompact?: boolean;
-  };
+  private readonly historyModule: MainContextHistoryModuleConfig;
+  private readonly compactorModule: MainContextCompactorModule;
+  private readonly compactorModuleConfig: Omit<MainContextCompactorModuleConfig, "module">;
 
   constructor(options: MainContextPersistorOptions) {
     super();
@@ -94,7 +94,41 @@ export class MainContextPersistor extends ContextPersistor {
     this.overrideMessagesFilePath = this.readOptionalPath(options.paths?.messagesFilePath);
     this.overrideMetaFilePath = this.readOptionalPath(options.paths?.metaFilePath);
     this.overrideArchiveDirPath = this.readOptionalPath(options.paths?.archiveDirPath);
-    this.compact = options.compact;
+    this.historyModule = this.resolveHistoryModule(options.modules);
+    this.compactorModule = this.resolveCompactorModule(options.modules);
+    this.compactorModuleConfig = this.resolveCompactorModuleConfig(options.modules);
+  }
+
+  private resolveHistoryModule(
+    modules: MainContextPersistorModules | undefined,
+  ): MainContextHistoryModuleConfig {
+    const driver = modules?.history?.driver ?? "jsonl-file";
+    if (driver !== "jsonl-file") {
+      throw new Error(
+        `MainContextPersistor only supports history.driver="jsonl-file", got "${String(driver)}"`,
+      );
+    }
+    return { driver };
+  }
+
+  private resolveCompactorModule(
+    modules: MainContextPersistorModules | undefined,
+  ): MainContextCompactorModule {
+    const module = modules?.compactor?.module;
+    if (module && typeof module.compactIfNeeded === "function") {
+      return module;
+    }
+    return defaultContextCompactorModule;
+  }
+
+  private resolveCompactorModuleConfig(
+    modules: MainContextPersistorModules | undefined,
+  ): Omit<MainContextCompactorModuleConfig, "module"> {
+    return {
+      keepLastMessages: modules?.compactor?.keepLastMessages,
+      maxInputTokensApprox: modules?.compactor?.maxInputTokensApprox,
+      archiveOnCompact: modules?.compactor?.archiveOnCompact,
+    };
   }
 
   private readOptionalPath(value: string | undefined): string | undefined {
@@ -266,7 +300,7 @@ export class MainContextPersistor extends ContextPersistor {
     maxInputTokensApprox: number;
     archiveOnCompact: boolean;
   } {
-    const contextMessagesConfig = this.compact;
+    const contextMessagesConfig = this.compactorModuleConfig;
     const baseKeepLastMessages =
       typeof contextMessagesConfig?.keepLastMessages === "number"
         ? Math.max(6, Math.min(5000, Math.floor(contextMessagesConfig.keepLastMessages)))
@@ -359,40 +393,37 @@ export class MainContextPersistor extends ContextPersistor {
     const tools = this.normalizeTools(input.tools);
     const system = this.normalizeSystem(input.system);
     const compactPolicy = this.resolveCompactPolicy(input.retryAttempts);
+    void this.historyModule;
 
     try {
-      await compactContextMessageIfNeeded(
-        {
-          rootPath: this.rootPath,
-          contextId: this.contextId,
-          withWriteLock: (fn) => this.withWriteLock(fn),
-          loadAll: () => this.loadAll(),
-          createSummaryMessage: ({ text, sourceRange }) => ({
-            id: `a:${this.contextId}:${generateId()}`,
-            role: "assistant",
-            metadata: {
-              v: 1,
-              ts: Date.now(),
-              contextId: this.contextId,
-              source: "compact",
-              kind: "summary",
-              ...(sourceRange ? { sourceRange } : {}),
-            },
-            parts: [{ type: "text", text: String(text ?? "") }],
-          }),
-          getArchiveDirPath: () => this.getArchiveDirPath(),
-          getMessagesFilePath: () => this.getMessagesFilePath(),
-          readMetaUnsafe: () => this.readMetaUnsafe(),
-          writeMetaUnsafe: (next) => this.writeMetaUnsafe(next),
-        },
-        {
-          model,
-          system,
-          keepLastMessages: compactPolicy.keepLastMessages,
-          maxInputTokensApprox: compactPolicy.maxInputTokensApprox,
-          archiveOnCompact: compactPolicy.archiveOnCompact,
-        },
-      );
+      await this.compactorModule.compactIfNeeded({
+        rootPath: this.rootPath,
+        contextId: this.contextId,
+        withWriteLock: (fn) => this.withWriteLock(fn),
+        loadAll: () => this.loadAll(),
+        createSummaryMessage: ({ text, sourceRange }) => ({
+          id: `a:${this.contextId}:${generateId()}`,
+          role: "assistant",
+          metadata: {
+            v: 1,
+            ts: Date.now(),
+            contextId: this.contextId,
+            source: "compact",
+            kind: "summary",
+            ...(sourceRange ? { sourceRange } : {}),
+          },
+          parts: [{ type: "text", text: String(text ?? "") }],
+        }),
+        getArchiveDirPath: () => this.getArchiveDirPath(),
+        getMessagesFilePath: () => this.getMessagesFilePath(),
+        readMetaUnsafe: () => this.readMetaUnsafe(),
+        writeMetaUnsafe: (next) => this.writeMetaUnsafe(next),
+        model,
+        system,
+        keepLastMessages: compactPolicy.keepLastMessages,
+        maxInputTokensApprox: compactPolicy.maxInputTokensApprox,
+        archiveOnCompact: compactPolicy.archiveOnCompact,
+      });
     } catch {
       // ignore compact failure; fallback to un-compacted messages
     }

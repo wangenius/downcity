@@ -23,7 +23,7 @@ Currently, the most complete service is Telegram. Through Telegram, you can:
    - Set the Bot's name and username as prompted.
    - Get the **HTTP API Token**.
 
-2. **Get Chat ID**
+2. **Get Master User ID**
    - Search for `@userinfobot` (or similar ID fetching Bot) in Telegram.
    - Send any message to get your numeric User ID.
    - Alternatively, if you want to use it in a group, pull the Bot into the group and get the group ID.
@@ -40,7 +40,7 @@ Edit `services.chat.adapters.telegram` in `ship.json`:
         "telegram": {
           "enabled": true,
           "botToken": "123456789:ABCdefGHIjklMNOpqrsTUVwxyz",
-          "chatId": "12345678"
+          "auth_id": "12345678"
         }
       }
     }
@@ -48,7 +48,7 @@ Edit `services.chat.adapters.telegram` in `ship.json`:
 }
 ```
 
-> 🔒 **Security Tip**: Configuring `chatId` is very important. If not configured, anyone who knows your Bot username can interact with your local codebase! After configuring a specific `chatId`, the Bot will only respond to messages from that ID.
+> 🔒 **Security Tip**: Configure `auth_id` to explicitly mark the trusted owner. Incoming messages include `is_master` in `<info>`, so your agent can enforce owner-first behavior.
 
 4. **Restart Service**
    Run `shipmyagent start` to restart the service.

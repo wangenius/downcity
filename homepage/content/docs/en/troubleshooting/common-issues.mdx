@@ -310,14 +310,14 @@ EOF
    # Look for Telegram connection logs
    ```
 
-4. **Ensure chatId is configured**:
+4. **Ensure Telegram auth is configured**:
    ```json
    {
      "services": {
-       "telegram": {
-         "enabled": true,
+      "telegram": {
+        "enabled": true,
          "botToken": "${TELEGRAM_BOT_TOKEN}",
-         "chatId": "12345678"  // This is required!
+         "auth_id": "12345678"  // Optional but recommended
        }
      }
    }

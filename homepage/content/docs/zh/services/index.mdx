@@ -277,8 +277,7 @@ sudo systemctl status shipmyagent
   "services": {
     "telegram": {
       "enabled": true,
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "chatId": "${TELEGRAM_CHAT_ID}"
+      "botToken": "${TELEGRAM_BOT_TOKEN}"
     }
   }
 }
@@ -492,8 +491,7 @@ ShipMyAgent 发送 JSON 负载：
   "services": {
     "telegram": {
       "enabled": true,
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "chatId": "${TELEGRAM_CHAT_ID}"
+      "botToken": "${TELEGRAM_BOT_TOKEN}"
     },
     "github": {
       "enabled": true,
@@ -568,7 +566,7 @@ export TELEGRAM_BOT_TOKEN="123456:..."
 ### 限制 Bot 权限
 
 - 仅授予必要的权限
-- 为 Telegram 使用特定的 `chatId`
+- 为 Telegram 配置 `auth_id` 做主人鉴权
 - 使用有范围的 GitHub 令牌
 - 设置 webhook 密钥
 

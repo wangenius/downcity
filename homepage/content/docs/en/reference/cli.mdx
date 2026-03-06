@@ -161,14 +161,24 @@ Default templates support `{{...}}` variables. During initialization, built-in `
 
 **Options**:
 
-| Option | Alias | Description |
-|--------|-------|-------------|
-| `--name <name>` | `-n` | Agent name |
-| `--provider <provider>` | `-p` | LLM provider (anthropic, openai, deepseek) |
-| `--model <model>` | `-m` | LLM model name |
-| `--telegram` | `-t` | Enable Telegram service |
-| `--no-git` | | Skip Git repository check |
-| `--force` | `-f` | Overwrite existing configuration |
+| Option | Description |
+|--------|-------------|
+| `--force` | Overwrite existing `ship.json` |
+
+**Interactive inputs collected during init**:
+
+- Agent name
+- LLM provider type
+- API key (real value)
+- Model name (real value)
+- Base URL (optional, press Enter to skip)
+- Chat channels (Telegram / Feishu / QQ, multi-select)
+- Recommended skills (optional)
+
+During init, API key / model / base URL are written to `.env`, while `ship.json` references `${LLM_API_KEY}` / `${LLM_MODEL}` / `${LLM_BASE_URL}`:
+
+- If the key does not exist: it is appended
+- If the key already exists and you entered a new value: init asks for overwrite confirmation
 
 **Examples**:
 
@@ -176,14 +186,8 @@ Default templates support `{{...}}` variables. During initialization, built-in `
 # Interactive setup
 shipmyagent init
 
-# Quick setup with defaults
-shipmyagent init --name "my-agent" --provider anthropic
-
 # Force reinitialize
 shipmyagent init --force
-
-# Skip Git check
-shipmyagent init --no-git
 ```
 
 ---

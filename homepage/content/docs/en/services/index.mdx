@@ -311,8 +311,7 @@ Use multiple services together:
   "services": {
     "telegram": {
       "enabled": true,
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "chatId": "${TELEGRAM_CHAT_ID}"
+      "botToken": "${TELEGRAM_BOT_TOKEN}"
     },
     "github": {
       "enabled": true,
@@ -432,7 +431,7 @@ export TELEGRAM_BOT_TOKEN="123456:..."
 ### Restrict Bot Permissions
 
 - Only grant necessary permissions
-- Use specific `chatId` for Telegram
+- Configure Telegram `auth_id` for owner authentication
 - Use scoped GitHub tokens
 - Set webhook secrets
 

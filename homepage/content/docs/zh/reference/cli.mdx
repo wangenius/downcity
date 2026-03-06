@@ -145,14 +145,24 @@ shipmyagent init [选项]
 
 **选项**：
 
-| 选项 | 简写 | 描述 |
-|------|------|------|
-| `--name <name>` | `-n` | Agent 名称 |
-| `--provider <provider>` | `-p` | LLM 提供商（anthropic、openai、deepseek）|
-| `--model <model>` | `-m` | LLM 模型名称 |
-| `--telegram` | `-t` | 启用 Telegram 集成 |
-| `--no-git` | | 跳过 Git 仓库检查 |
-| `--force` | `-f` | 覆盖现有配置 |
+| 选项 | 描述 |
+|------|------|
+| `--force` | 覆盖现有 `ship.json` |
+
+**初始化时会交互采集**：
+
+- Agent 名称
+- LLM provider type
+- API Key（输入真实值）
+- Model name（输入真实值）
+- Base URL（可选，回车跳过）
+- Chat channels（Telegram / Feishu / QQ，多选）
+- 推荐 skills（可选）
+
+初始化会把 `API Key` / `Model` / `Base URL` 写入 `.env`，并在 `ship.json` 中引用 `${LLM_API_KEY}` / `${LLM_MODEL}` / `${LLM_BASE_URL}`：
+
+- 若键不存在：自动追加
+- 若键已存在且你输入了新值：会当场询问是否覆盖
 
 **示例**：
 
@@ -160,14 +170,8 @@ shipmyagent init [选项]
 # 交互式设置
 shipmyagent init
 
-# 使用默认值快速设置
-shipmyagent init --name "my-agent" --provider anthropic
-
 # 强制重新初始化
 shipmyagent init --force
-
-# 跳过 Git 检查
-shipmyagent init --no-git
 ```
 
 ---

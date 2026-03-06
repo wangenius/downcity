@@ -65,7 +65,6 @@ description: Deep dive into ship.json and PROFILE.md configuration
         "telegram": {
           "enabled": true,
           "botToken": "${TELEGRAM_BOT_TOKEN}",
-          "chatId": "${TELEGRAM_CHAT_ID}",
           "followupWindowMs": 600000,
           "groupAccess": "anyone"
         },
@@ -134,7 +133,7 @@ Configure chat adapters for various platforms to deploy your Agent on different 
 **telegram** (Telegram Bot)
 - **enabled**: Whether to enable the adapter
 - **botToken**: Bot Token, supports environment variables
-- **chatId**: (Optional) Specify allowed chat ID
+- **auth_id**: (Optional) Owner auth ID
 - **followupWindowMs**: (Optional) Followup window duration, default 10 minutes
 - **groupAccess**: (Optional) Group chat access control, `"anyone"` (default) or `"initiator_or_admin"`
 - **Typing indicator**: While the Agent is executing, the bot will show Telegram “typing…” status (auto-refreshed until completion).

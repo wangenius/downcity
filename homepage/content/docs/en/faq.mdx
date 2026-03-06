@@ -134,7 +134,7 @@ No. Telegram is optional. You can use ShipMyAgent entirely via CLI without any s
 1. Message [@BotFather](https://t.me/BotFather) on Telegram
 2. Send `/newbot` and follow instructions
 3. Copy the HTTP API token
-4. Get your chat ID from [@userinfobot](https://t.me/userinfobot)
+4. Get your user ID from [@userinfobot](https://t.me/userinfobot) (as owner ID)
 5. Add to `ship.json`:
 
 ```json
@@ -143,7 +143,7 @@ No. Telegram is optional. You can use ShipMyAgent entirely via CLI without any s
     "telegram": {
       "enabled": true,
       "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "chatId": "12345678"
+      "auth_id": "12345678"
     }
   }
 }

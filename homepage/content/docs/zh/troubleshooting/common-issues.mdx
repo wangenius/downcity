@@ -308,14 +308,14 @@ EOF
    # 查找 Telegram 连接日志
    ```
 
-4. **确保配置了 chatId**：
+4. **确认 Telegram 鉴权配置**：
    ```json
    {
      "services": {
-       "telegram": {
-         "enabled": true,
-         "botToken": "${TELEGRAM_BOT_TOKEN}",
-         "chatId": "12345678"  // 这是必需的！
+      "telegram": {
+        "enabled": true,
+        "botToken": "${TELEGRAM_BOT_TOKEN}",
+         "auth_id": "12345678"  // 可选但推荐
        }
      }
    }

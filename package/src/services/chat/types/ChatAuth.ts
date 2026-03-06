@@ -9,24 +9,6 @@
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 
 /**
- * 按渠道维护的主人鉴权 ID。
- */
-export type ChatMasterAuthIdMap = {
-  /**
-   * Telegram 主人鉴权 ID（对应 Telegram `from.id`）。
-   */
-  telegram?: string;
-  /**
-   * Feishu 主人鉴权 ID（对应事件中的发送者 ID）。
-   */
-  feishu?: string;
-  /**
-   * QQ 主人鉴权 ID（对应事件中的发送者 ID）。
-   */
-  qq?: string;
-};
-
-/**
  * 主人身份判定输入参数。
  */
 export type ChatMasterMatchParams = {

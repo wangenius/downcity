@@ -11,8 +11,10 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
 import { appendInboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
-import { createChatMasterAuthResolver } from "@services/chat/auth/MasterAuth.js";
 import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
+import { resolveTelegramMasterStatus } from "@services/chat/channels/telegram/Auth.js";
+import { resolveFeishuMasterStatus } from "@services/chat/channels/feishu/Auth.js";
+import { resolveQqMasterStatus } from "@services/chat/channels/qq/Auth.js";
 
 type ChannelUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -147,7 +149,6 @@ export abstract class BaseChatChannel {
   protected readonly context: ServiceRuntime;
   protected readonly rootPath: string;
   protected readonly logger: Logger;
-  private readonly chatMasterAuth: ReturnType<typeof createChatMasterAuthResolver>;
 
   protected constructor(params: {
     channel: ChatDispatchChannel;
@@ -157,7 +158,6 @@ export abstract class BaseChatChannel {
     this.context = params.context;
     this.rootPath = params.context.rootPath;
     this.logger = params.context.logger;
-    this.chatMasterAuth = createChatMasterAuthResolver(this.context.config);
 
     // 统一把“平台发送能力”注册到 chat-send registry。
     // 后续 `chat_send` 等工具只依赖 channel，不耦合具体 channel 实例。
@@ -411,10 +411,7 @@ export abstract class BaseChatChannel {
         : undefined;
     const masterStatus =
       explicitMasterStatus ||
-      this.chatMasterAuth.resolveStatus({
-        channel: this.channel,
-        userId: msg.userId,
-      });
+      this.resolveMasterStatusByChannel({ userId: msg.userId });
     const masterExtra: JsonObject = {
       masterStatus,
       ...(masterStatus === "master" ? { isMaster: true } : {}),
@@ -480,5 +477,36 @@ export abstract class BaseChatChannel {
     });
 
     return { chatKey, position: lanePosition };
+  }
+
+  /**
+   * 按 channel 分发主人鉴权逻辑。
+   *
+   * 关键点（中文）
+   * - 鉴权实现放在各自 channel 的 `Auth.ts` 中。
+   * - Base 仅负责统一分发，避免集中式“全平台鉴权模块”。
+   */
+  private resolveMasterStatusByChannel(params: {
+    userId?: string;
+  }): ChatMasterStatus {
+    if (this.channel === "telegram") {
+      return resolveTelegramMasterStatus({
+        config: this.context.config,
+        userId: params.userId,
+      });
+    }
+    if (this.channel === "feishu") {
+      return resolveFeishuMasterStatus({
+        config: this.context.config,
+        userId: params.userId,
+      });
+    }
+    if (this.channel === "qq") {
+      return resolveQqMasterStatus({
+        config: this.context.config,
+        userId: params.userId,
+      });
+    }
+    return "unknown";
   }
 }

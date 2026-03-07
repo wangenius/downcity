@@ -67,24 +67,26 @@ Key rules:
 Skills are exposed to the model via two built-in tools:
 
 - `skills_list`: list available skills (`id/name/description/allowedTools`)
-- `skills_load`: find a skill by `id`/`name` and return the raw `SKILL.md`
+- `skills_lookup`: find a skill by `id`/`name` and return the raw `SKILL.md`
 
 Typical flow:
 
 1. Call `skills_list` to discover what exists
-2. Call `skills_load` to read the raw instructions
+2. Call `skills_lookup` to read the raw instructions
 3. Follow the `SKILL.md` steps using other tools as needed (tool access may be restricted by `allowed-tools`)
 
-`skills_load` is stateless: it returns `SKILL.md` as the current tool result and does not pin to the conversation.
+Before using a skill, call `skills_lookup` first. Do not execute a skill from memory only.
 
-If the target skill is not present in local `skills_list`, use the CLI learning flow first: `find -> add -> load`.
+`skills_lookup` is stateless: it returns `SKILL.md` as the current tool result and does not pin to the conversation.
+
+If the target skill is not present in local `skills_list`, use the CLI learning flow first: `find -> install -> lookup`.
 
 ## Skills section in the system prompt
 
 `shipmyagent start` and the chat adapters now include a “skills summary section” in the final system prompt (composed from `PROFILE.md` + optional `SOUL.md` / `USER.md`). This helps the model know from the start:
 
 - which skill roots exist
-- to use `skills_list` / `skills_load` to discover and load skills
+- to use `skills_list` / `skills_lookup` to discover and load skills
 - which skills were found (up to 40 listed)
 
 ## Built-in Task skill
@@ -95,7 +97,7 @@ ShipMyAgent ships a built-in skill named **“Task System（定时任务）”**
 - `task_list`
 - `run_task`
 
-This skill is Claude Code compatible and can be discovered via `skills_list` and loaded via `skills_load`.
+This skill is Claude Code compatible and can be discovered via `skills_list` and loaded via `skills_lookup`.
 
 ## CLI (optional)
 
@@ -103,7 +105,7 @@ ShipMyAgent provides a thin wrapper around `npx skills`:
 
 - `sma skill list`: list skills you have already learned locally
 - `sma skill find <query>`: search skills you have not learned yet
-- `sma skill add <spec>`: download/learn missing skills (syncs into `~/.ship/skills`)
-- `sma skill load <name>`: read the `SKILL.md` content of a learned skill
+- `sma skill install <spec>`: download/learn missing skills (syncs into `~/.ship/skills`)
+- `sma skill lookup <name>`: read the `SKILL.md` content of a learned skill
 
-Recommended order: `find -> add -> load`. If `list` already shows the skill, skip `add` and load it directly.
+Recommended order: `find -> install -> lookup`. If `list` already shows the skill, skip `install` and lookup directly.

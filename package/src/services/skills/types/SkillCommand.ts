@@ -20,11 +20,11 @@ export type SkillListResponse = {
   skills: SkillSummary[];
 };
 
-export type SkillLoadRequest = {
+export type SkillLookupRequest = {
   name: string;
 };
 
-export type SkillLoadResponse = {
+export type SkillLookupResponse = {
   success: boolean;
   skill?: SkillSummary;
   content?: string;

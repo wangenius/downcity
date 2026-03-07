@@ -36,6 +36,21 @@ const packageJson = JSON.parse(
 
 const program = new Command();
 
+/**
+ * 在关键运行命令执行前打印当前 sma 版本。
+ *
+ * 说明（中文）
+ * - 仅用于 run/start/stop/restart 这类运行态命令，避免影响 `config --json` 等结构化输出。
+ */
+function withVersionBanner<TArgs extends unknown[]>(
+  action: (...args: TArgs) => Promise<void> | void,
+): (...args: TArgs) => Promise<void> {
+  return async (...args: TArgs): Promise<void> => {
+    console.log(`sma version: ${packageJson.version}`);
+    await action(...args);
+  };
+}
+
 function parsePort(value: string): number {
   const num = Number.parseInt(value, 10);
   if (
@@ -88,7 +103,7 @@ const run = program
     parsePort,
   )
   .helpOption("--help", "display help for command")
-  .action(runCommand);
+  .action(withVersionBanner(runCommand));
 
 const start = program
   .command("start [path]")
@@ -106,13 +121,13 @@ const start = program
     parsePort,
   )
   .helpOption("--help", "display help for command")
-  .action(startCommand);
+  .action(withVersionBanner(startCommand));
 
 const stop = program
   .command("stop [path]")
   .description("停止后台 Agent 服务器（daemon）")
   .helpOption("--help", "display help for command")
-  .action(stopCommand);
+  .action(withVersionBanner(stopCommand));
 
 const restart = program
   .command("restart [path]")
@@ -130,7 +145,7 @@ const restart = program
     parsePort,
   )
   .helpOption("--help", "display help for command")
-  .action(restartCommand);
+  .action(withVersionBanner(restartCommand));
 
 program
   .command("alias")

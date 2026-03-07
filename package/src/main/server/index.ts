@@ -87,15 +87,6 @@ export async function startServer(
         `🚀 Agent Server started: http://${options.host}:${options.port}`,
       );
       serverLogger.info("Available APIs:");
-      serverLogger.info("  GET  /health - Health check");
-      serverLogger.info("  GET  /api/status - Agent status");
-      serverLogger.info("  GET  /api/services/list - Service runtime list");
-      serverLogger.info("  POST /api/services/control - Service runtime control");
-      serverLogger.info("  POST /api/services/command - Service command bridge");
-      serverLogger.info("  POST /api/execute - Execute instruction");
-      serverLogger.info("  POST /service/chat/send - Chat service");
-      serverLogger.info("  POST /service/skill/load - Skill service");
-      serverLogger.info("  POST /service/task/create - Task service");
       resolve();
     });
   });

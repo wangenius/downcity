@@ -67,24 +67,26 @@ ShipMyAgent 当前支持 **Claude Code-compatible skills**。本页解释：skil
 skills 通过两个内置工具提供给模型：
 
 - `skills_list`：列出可用 skills（含 `id/name/description/allowedTools`）
-- `skills_load`：按 `id/name` 查找并返回对应 `SKILL.md` 全文
+- `skills_lookup`：按 `id/name` 查找并返回对应 `SKILL.md` 全文
 
 典型工作流：
 
 1. 模型调用 `skills_list` 发现是否有合适的 skill
-2. 调用 `skills_load` 读取 `SKILL.md` 原文
+2. 调用 `skills_lookup` 读取 `SKILL.md` 原文
 3. 按 `SKILL.md` 的步骤执行（必要时再调用其它工具；工具权限可能会被 `allowed-tools` 限制）
 
-如果本地 `skills_list` 没有目标技能，推荐先走 CLI 学习流程：`find -> add -> load`。
+使用 skill 前应先执行 `skills_lookup`，不要只凭历史记忆直接执行。
 
-> 说明：`skills_load` 为无状态读取，返回 `SKILL.md` 内容作为当次工具结果，不会写入会话 pin。
+如果本地 `skills_list` 没有目标技能，推荐先走 CLI 学习流程：`find -> install -> lookup`。
+
+> 说明：`skills_lookup` 为无状态读取，返回 `SKILL.md` 内容作为当次工具结果，不会写入会话 pin。
 
 ## system prompt 中的 skills section
 
 当前 `shipmyagent start` 与聊天适配器默认都会把 skills 摘要 section 拼进 system prompt（`PROFILE.md` + 可选 `SOUL.md` / `USER.md` 拼接结果），让模型在对话一开始就知道：
 
 - skills roots 是哪些
-- 应优先用 `skills_list / skills_load` 来发现与加载 skills
+- 应优先用 `skills_list / skills_lookup` 来发现与加载 skills
 - 当前发现了哪些 skills（最多列出 40 个）
 
 ## CLI：安装与查找（可选）
@@ -93,7 +95,7 @@ ShipMyAgent 提供了一个对标 `npx skills` 的包装命令（内部仍是调
 
 - `sma skill list`：列出你当前已经学会（本地可发现）的技能
 - `sma skill find <query>`：查找你还没学会的技能
-- `sma skill add <spec>`：下载/学习没学会的技能（会同步到 `~/.ship/skills`）
-- `sma skill load <name>`：读取已学会技能的 `SKILL.md` 内容
+- `sma skill install <spec>`：下载/学习没学会的技能（会同步到 `~/.ship/skills`）
+- `sma skill lookup <name>`：读取已学会技能的 `SKILL.md` 内容
 
-推荐顺序：`find -> add -> load`。如果 `list` 已经能看到目标技能，直接 `load` 即可。
+推荐顺序：`find -> install -> lookup`。如果 `list` 已经能看到目标技能，直接 `lookup` 即可。

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 与 runtime tool 解耦：CLI / Server 统一走这里
- * - `load` 采用无状态实现：直接返回 SKILL.md 内容，不做 pin 持久化
+ * - `lookup` 采用无状态实现：直接返回 SKILL.md 内容，不做 pin 持久化
  */
 
 import fs from "fs-extra";
@@ -14,8 +14,8 @@ import type { ClaudeSkill } from "./types/ClaudeSkill.js";
 import type { JsonValue } from "@/types/Json.js";
 import type {
   SkillListResponse,
-  SkillLoadRequest,
-  SkillLoadResponse,
+  SkillLookupRequest,
+  SkillLookupResponse,
   SkillSummary,
 } from "./types/SkillCommand.js";
 
@@ -69,7 +69,7 @@ function findSkill(skills: ClaudeSkill[], name: string): ClaudeSkill | null {
  *
  * 关键点（中文）
  * - 仅匹配 id/name 全等（忽略大小写）
- * - 用于控制 find/add/load 的状态流转，避免误判
+ * - 用于控制 find/install/lookup 的状态流转，避免误判
  */
 export function findLearnedSkillExact(
   projectRoot: string,
@@ -85,7 +85,7 @@ export function findLearnedSkillExact(
  *
  * 关键点（中文）
  * - 命中 id/name/description 的 contains
- * - 只用于提示，不作为 add/load 的强判断依据
+ * - 只用于提示，不作为 install/lookup 的强判断依据
  */
 export function searchLearnedSkills(
   projectRoot: string,
@@ -120,10 +120,10 @@ export function listSkills(projectRoot: string): SkillListResponse {
   };
 }
 
-export async function loadSkill(params: {
+export async function lookupSkill(params: {
   projectRoot: string;
-  request: SkillLoadRequest;
-}): Promise<SkillLoadResponse> {
+  request: SkillLookupRequest;
+}): Promise<SkillLookupResponse> {
   const root = path.resolve(params.projectRoot);
   const skills = getSkills(root);
   const target = findSkill(skills, params.request.name);

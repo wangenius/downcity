@@ -7,7 +7,7 @@
 
 ## 用户可见回复规则
 - 直接输出给用户的自然语言结论，不要输出工具日志或原始 JSON。
-- 当前会话会自动投递 assistant 文本，不需要通过 CLI 发送。
+- 当前会话会自动投递 assistant 文本（按 step 分条发送），不需要通过 CLI 发送。
 - 保持简洁清晰，避免连续空行（`\n\n`）。
 
 ## 参数传递协议（标签格式，可选）
@@ -15,12 +15,15 @@
 
 - `<chatKey>目标会话键</chatKey>`：仅在跨对话/跨会话发送时使用；当前会话回复不要写。
 - `<reply>true</reply>`：主文本按 reply 语义发送。
+- `<delay>3000</delay>`：主文本延迟发送毫秒数（非负整数）。
+- `<time>2026-03-05T20:00:00+08:00</time>`：主文本定时发送（支持 Unix 时间戳秒/毫秒 或 ISO 时间）。
 - `<file type="document">相对路径</file>`：发送附件（支持 `document/photo/voice/audio`）。
 - `<react>👍</react>`：发送表情反应（可加属性：`chatKey`、`messageId`、`big`）。
 
-示例（跨对话 + reply + 附件 + react）：
+示例（跨对话 + 定时 + reply + 附件 + react）：
 ```text
 <chatKey>telegram-chat-123</chatKey>
+<time>2026-03-05T20:00:00+08:00</time>
 <reply>true</reply>
 这是给用户的正文。
 <file type="document">reports/daily.md</file>
@@ -35,6 +38,7 @@
 协议约束：
 - 标签是“控制参数”，正文仍直接写自然语言。
 - 只有需要控制参数时才加标签；普通回复只写正文。
+- `<delay>` 与 `<time>` 不要同时输出（若同时输出，系统会优先按 `<time>` 处理）。
 - 不要输出 JSON 或 CLI 命令作为用户可见内容。
 
 ## 跨协议/跨平台操作

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 默认把 assistant 文本原样当作用户可见正文发送。
- * - 支持标签协议：`<chatKey> / <reply> / <file> / <react>`。
+ * - 支持标签协议：`<chatKey> / <reply> / <delay> / <time> / <file> / <react>`。
  * - `<file>` 标签会被转换为附件指令文本，拼到主正文中发送。
  */
 
@@ -18,6 +18,8 @@ import type {
 
 const CHAT_KEY_TAG_REGEXP = /<chatKey>([\s\S]*?)<\/chatKey>/gi;
 const REPLY_TAG_REGEXP = /<reply>([\s\S]*?)<\/reply>/gi;
+const DELAY_TAG_REGEXP = /<delay>([\s\S]*?)<\/delay>/gi;
+const TIME_TAG_REGEXP = /<time>([\s\S]*?)<\/time>/gi;
 const FILE_TAG_REGEXP = /<file\b([^>]*)>([\s\S]*?)<\/file>/gi;
 const FILE_SELF_CLOSING_TAG_REGEXP = /<file\b([^>]*)\/>/gi;
 const REACT_TAG_REGEXP = /<react\b([^>]*)>([\s\S]*?)<\/react>/gi;
@@ -60,6 +62,51 @@ function parseDirectFileType(value: unknown): DirectFileType {
   if (text === "voice") return "voice";
   if (text === "audio") return "audio";
   return "document";
+}
+
+/**
+ * 解析 `<delay>` 毫秒值。
+ *
+ * 说明（中文）
+ * - 仅接受非负整数字符串。
+ * - 非法值返回 undefined（降级为立即发送）。
+ */
+function parseDelayMsTag(value: unknown): number | undefined {
+  const text = normalizeText(value);
+  if (!text) return undefined;
+  if (!/^\d+$/.test(text)) return undefined;
+  const parsed = Number.parseInt(text, 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
+    return undefined;
+  }
+  return parsed;
+}
+
+/**
+ * 解析 `<time>` 绝对发送时间。
+ *
+ * 支持格式（中文）
+ * - Unix 时间戳（秒/毫秒）
+ * - ISO 时间字符串
+ */
+function parseSendAtMsTag(value: unknown): number | undefined {
+  const text = normalizeText(value);
+  if (!text) return undefined;
+
+  if (/^\d+$/.test(text)) {
+    const parsed = Number.parseInt(text, 10);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+      return undefined;
+    }
+    // 关键点（中文）：10 位通常是秒级时间戳，统一转换为毫秒。
+    return parsed < 1_000_000_000_000 ? parsed * 1000 : parsed;
+  }
+
+  const parsed = Date.parse(text);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return parsed;
 }
 
 function extractLastTagValue(source: string, regexp: RegExp): string {
@@ -170,6 +217,8 @@ function stripDirectProtocolTags(source: string): string {
   return String(source || "")
     .replace(CHAT_KEY_TAG_REGEXP, "")
     .replace(REPLY_TAG_REGEXP, "")
+    .replace(DELAY_TAG_REGEXP, "")
+    .replace(TIME_TAG_REGEXP, "")
     .replace(FILE_TAG_REGEXP, "")
     .replace(FILE_SELF_CLOSING_TAG_REGEXP, "")
     .replace(REACT_TAG_REGEXP, "")
@@ -201,6 +250,8 @@ function resolveTextPlan(params: {
   fallbackChatKey: string;
   chatKeyOverride?: string;
   replyToMessage: boolean;
+  delayMs?: number;
+  sendAtMs?: number;
   files: DirectFileTagPayload[];
 }): ResolvedDirectTextPayload | null {
   const baseText = stripDirectProtocolTags(params.source);
@@ -218,6 +269,10 @@ function resolveTextPlan(params: {
     text,
     chatKey,
     replyToMessage: params.replyToMessage,
+    ...(typeof params.sendAtMs === "number"
+      ? { sendAtMs: params.sendAtMs }
+      : {}),
+    ...(typeof params.delayMs === "number" ? { delayMs: params.delayMs } : {}),
   };
 }
 
@@ -248,6 +303,8 @@ function resolveReactionPlans(params: {
  * 协议（中文）
  * - `<chatKey>...</chatKey>`：覆盖主文本目标会话。
  * - `<reply>true|false</reply>`：设置主文本 reply 语义。
+ * - `<delay>3000</delay>`：主文本延迟发送毫秒数（非负整数）。
+ * - `<time>2026-03-05T20:30:00+08:00</time>`：主文本定时发送（秒/毫秒时间戳或 ISO）。
  * - `<file type=\"document\">path</file>`：发送附件（会转换为附件指令行）。
  * - `<react>👍</react>`：发送表情反应（支持属性：chatKey/messageId/big）。
  */
@@ -261,14 +318,23 @@ export function parseDirectDispatchAssistantText(params: {
 
   const chatKeyOverride = extractLastTagValue(source, CHAT_KEY_TAG_REGEXP);
   const replyRaw = extractLastTagValue(source, REPLY_TAG_REGEXP);
+  const delayRaw = extractLastTagValue(source, DELAY_TAG_REGEXP);
+  const timeRaw = extractLastTagValue(source, TIME_TAG_REGEXP);
   const files = extractFileTags(source);
   const reacts = extractReactTags(source);
+  const delayMs = parseDelayMsTag(delayRaw);
+  const sendAtMs = parseSendAtMsTag(timeRaw);
 
   const textPlan = resolveTextPlan({
     source,
     fallbackChatKey,
     ...(chatKeyOverride ? { chatKeyOverride } : {}),
     replyToMessage: parseBoolean(replyRaw),
+    ...(typeof sendAtMs === "number"
+      ? { sendAtMs }
+      : typeof delayMs === "number"
+        ? { delayMs }
+        : {}),
     files,
   });
   const reactionPlans = resolveReactionPlans({

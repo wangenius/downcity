@@ -2,12 +2,12 @@
  * `shipmyagent skill`：skills 管理命令（对标 `npx skills`）。
  *
  * 设计目标（中文）
- * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/add）
+ * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/install）
  * - 同时提供本地视角的 `list`：列出 ShipMyAgent 当前能发现的 skills（含 project/home/built-in）
  *
  * 注意（中文）
  * - 这里是 CLI 命令层，不依赖运行时 server，不读取 RuntimeState
- * - `find/add` 需要本机可运行 `npx`，并可能触发网络下载（由用户环境决定）
+ * - `find/install` 需要本机可运行 `npx`，并可能触发网络下载（由用户环境决定）
  */
 
 import path from "node:path";
@@ -50,19 +50,20 @@ export async function skillFindCommand(query: string): Promise<void> {
   await runNpxSkills(["find", q], { yes: true });
 }
 
-export type SkillAddOptions = {
+export type SkillInstallOptions = {
   global?: boolean;
   yes?: boolean;
   agent?: string;
 };
 
-export async function skillAddCommand(
+export async function skillInstallCommand(
   spec: string,
-  options: SkillAddOptions = {},
+  options: SkillInstallOptions = {},
 ): Promise<void> {
   const s = String(spec || "").trim();
   if (!s) throw new Error("Missing spec");
 
+  // 关键点（中文）：对外 action 叫 `install`，底层仍复用 `npx skills add`。
   const args: string[] = ["add", s];
   const agent = String(options.agent || "claude-code").trim();
   if (agent) args.push("--agent", agent);

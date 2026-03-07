@@ -85,13 +85,14 @@ sma chat history [--chat-key <chatKey>] [--context-id <contextId>]
 ```bash
 sma skill list [path]
 sma skill find <query>
-sma skill add <spec>
-sma skill load <name>
+sma skill install <spec>
+sma skill lookup <name>
 ```
 
 说明：
 - `sma skill` 依赖本地 runtime（`sma start` 或 `sma run`）。
-- `sma skill load` 为无状态读取，直接返回 `SKILL.md` 内容。
+- `sma skill lookup` 为无状态读取，直接返回 `SKILL.md` 内容。
+- 使用 skill 前建议先执行一次 `sma skill lookup`，以当前返回内容为准。
 
 ### `sma task`
 
@@ -193,6 +194,8 @@ shipmyagent .
 `shipmyagent start` 会读取 `ship.json` 里的 `start` 配置作为默认值；如果你在命令行里显式传参，则会覆盖 `ship.json`。
 
 后台启动的日志默认写入：`.ship/debug/shipmyagent.daemon.log`。
+
+运行提示：执行 `sma .`、`sma start`、`sma stop`、`sma restart`（或对应 `shipmyagent` 命令）时，会先打印当前 CLI 版本，例如 `sma version: 1.0.211`。
 
 **选项**：
 

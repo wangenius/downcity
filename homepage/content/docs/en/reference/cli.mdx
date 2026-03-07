@@ -85,13 +85,14 @@ Notes:
 ```bash
 sma skill list [path]
 sma skill find <query>
-sma skill add <spec>
-sma skill load <name>
+sma skill install <spec>
+sma skill lookup <name>
 ```
 
 Notes:
 - `sma skill` is daemon-only and requires an active local runtime (`sma start` or `sma run`)
-- `sma skill load` is stateless and directly returns the `SKILL.md` content
+- `sma skill lookup` is stateless and directly returns the `SKILL.md` content
+- Before using a skill, run `sma skill lookup` first and follow the returned content as the source of truth
 
 ### `sma task`
 
@@ -209,6 +210,8 @@ shipmyagent .
 `shipmyagent start` reads `ship.json` → `start` as defaults; explicit CLI flags override `ship.json`.
 
 Daemon logs are written to: `.ship/debug/shipmyagent.daemon.log`.
+
+Runtime note: `sma .`, `sma start`, `sma stop`, and `sma restart` (and their `shipmyagent` equivalents) print the current CLI version first, for example `sma version: 1.0.211`.
 
 **Options**:
 

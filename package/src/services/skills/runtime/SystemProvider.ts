@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 只负责输出“可用技能概览”提示词
  * - 不再读取/写入 pinnedSkillIds，不做会话级技能注入
- * - `load` 行为改为无状态：由 action 直接返回 SKILL.md 内容
+ * - `lookup` 行为改为无状态：由 action 直接返回 SKILL.md 内容
  */
 
 import { requestContext } from "@main/context/manager/RequestContext.js";

@@ -25,10 +25,11 @@ import {
   getChatQueueLaneSize,
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
-import { sendActionByChatKey, sendTextByChatKey } from "./ChatkeySend.js";
+import { sendActionByChatKey } from "./ChatkeySend.js";
 import { resolveChatMethod } from "./ChatMethod.js";
 import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
+import { sendChatTextByChatKey } from "../Action.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
 
@@ -275,11 +276,13 @@ export class ChatQueueWorker {
 
     if (plan.text) {
       dispatched = true;
-      const textResult = await sendTextByChatKey({
+      const textResult = await sendChatTextByChatKey({
         context: this.runtime,
         chatKey: plan.text.chatKey,
         text: plan.text.text,
         replyToMessage: plan.text.replyToMessage,
+        delayMs: plan.text.delayMs,
+        sendAtMs: plan.text.sendAtMs,
       });
       if (!textResult.success) {
         this.logger.warn("Direct chat text dispatch failed", {

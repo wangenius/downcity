@@ -4,16 +4,16 @@
  * 关键点（中文）
  * - 使用统一 actions 模型声明 CLI/API/执行逻辑
  * - API 默认路由为 `/service/skill/<action>`
- * - load 无状态返回 SKILL.md 内容，避免会话 pin 复杂度
+ * - lookup 无状态返回 SKILL.md 内容，避免会话 pin 复杂度
  */
 
 import type { Command } from "commander";
 import { readFileSync } from "node:fs";
-import { skillAddCommand, skillFindCommand } from "./Command.js";
+import { skillFindCommand, skillInstallCommand } from "./Command.js";
 import {
   findLearnedSkillExact,
   listSkills,
-  loadSkill,
+  lookupSkill,
   searchLearnedSkills,
 } from "./Action.js";
 import type { Service } from "@main/service/ServiceManager.js";
@@ -24,14 +24,14 @@ type SkillFindPayload = {
   query: string;
 };
 
-type SkillAddPayload = {
+type SkillInstallPayload = {
   spec: string;
   global?: boolean;
   yes?: boolean;
   agent?: string;
 };
 
-type SkillLoadPayload = {
+type SkillLookupPayload = {
   name: string;
 };
 
@@ -80,7 +80,7 @@ function getBooleanOpt(
 }
 
 /**
- * 从 add spec 推断候选 skill 标识。
+ * 从 install spec 推断候选 skill 标识。
  *
  * 关键点（中文）
  * - 优先取 `repo@skill-id` 的 `skill-id`
@@ -109,7 +109,7 @@ export const skillsService: Service = {
   actions: {
     find: {
       command: {
-        description: "查找未学会 skills（下一步通常 add）",
+        description: "查找未学会 skills（下一步通常 install）",
         configure(command: Command) {
           command.argument("<query>");
         },
@@ -128,9 +128,9 @@ export const skillsService: Service = {
             success: true,
             data: {
               query: payload.query,
-              message: "该技能已学会，请直接执行 load。",
-              workflow: ["find", "add", "load"],
-              nextAction: "load",
+              message: "该技能已学会。使用技能前请先执行 lookup。",
+              workflow: ["find", "install", "lookup"],
+              nextAction: "lookup",
               learnedSkill: exactLearned,
               learnedHints: [],
             },
@@ -143,18 +143,18 @@ export const skillsService: Service = {
           success: true,
           data: {
             query: payload.query,
-            message: "已执行未学会技能检索，下一步可 add 后再 load。",
-            workflow: ["find", "add", "load"],
-            nextAction: "add",
+            message: "已执行未学会技能检索，下一步可 install 后再 lookup。",
+            workflow: ["find", "install", "lookup"],
+            nextAction: "install",
             learnedSkill: null,
             learnedHints,
           },
         };
       },
     },
-    add: {
+    install: {
       command: {
-        description: "下载/学习未学会 skill（完成后可 load）",
+        description: "下载/学习未学会 skill（完成后请先 lookup）",
         configure(command: Command) {
           command
             .argument("<spec>")
@@ -162,7 +162,7 @@ export const skillsService: Service = {
             .option("-y, --yes", "跳过确认（默认 true）", true)
             .option("--agent <agent>", "指定 agent", "claude-code");
         },
-        mapInput({ args, opts }): SkillAddPayload {
+        mapInput({ args, opts }): SkillInstallPayload {
           const spec = String(args[0] || "").trim();
           if (!spec) throw new Error("Missing spec");
           return {
@@ -174,7 +174,7 @@ export const skillsService: Service = {
         },
       },
       async execute(params) {
-        const payload = params.payload as SkillAddPayload;
+        const payload = params.payload as SkillInstallPayload;
         const rootPath = params.context.rootPath;
         const queryFromSpec = inferSkillQueryFromSpec(payload.spec);
         const beforeList = listSkills(rootPath).skills;
@@ -189,9 +189,9 @@ export const skillsService: Service = {
             data: {
               spec: payload.spec,
               skipped: true,
-              message: "技能已学会，无需 add。请直接执行 load。",
-              workflow: ["find", "add", "load"],
-              nextAction: "load",
+              message: "技能已学会，无需 install。使用技能前请先执行 lookup。",
+              workflow: ["find", "install", "lookup"],
+              nextAction: "lookup",
               queryFromSpec,
               addedSkills: [],
               learnedSkill: learnedBefore,
@@ -199,7 +199,7 @@ export const skillsService: Service = {
           };
         }
 
-        await skillAddCommand(payload.spec, {
+        await skillInstallCommand(payload.spec, {
           global: payload.global,
           yes: payload.yes,
           agent: payload.agent,
@@ -215,9 +215,9 @@ export const skillsService: Service = {
           success: true,
           data: {
             spec: payload.spec,
-            message: "技能学习完成。请执行 load 读取该技能的 SKILL.md 内容。",
-            workflow: ["find", "add", "load"],
-            nextAction: "load",
+            message: "技能学习完成。使用技能前请先执行 lookup 读取该技能的 SKILL.md 内容。",
+            workflow: ["find", "install", "lookup"],
+            nextAction: "lookup",
             skipped: false,
             queryFromSpec,
             addedSkills,
@@ -244,13 +244,13 @@ export const skillsService: Service = {
         };
       },
     },
-    load: {
+    lookup: {
       command: {
         description: "读取已学会 skill 内容（SKILL.md）",
         configure(command: Command) {
           command.argument("<name>");
         },
-        mapInput({ args }): SkillLoadPayload {
+        mapInput({ args }): SkillLookupPayload {
           const name = String(args[0] || "").trim();
           if (!name) throw new Error("Missing name");
           return { name };
@@ -258,7 +258,7 @@ export const skillsService: Service = {
       },
       api: {
         method: "POST",
-        async mapInput(c): Promise<SkillLoadPayload> {
+        async mapInput(c): Promise<SkillLookupPayload> {
           const body = readJsonObject(await c.req.json());
           const name = String(body.name || "").trim();
           if (!name) throw new Error("Missing name");
@@ -266,8 +266,8 @@ export const skillsService: Service = {
         },
       },
       async execute(params) {
-        const payload = params.payload as SkillLoadPayload;
-        const result = await loadSkill({
+        const payload = params.payload as SkillLookupPayload;
+        const result = await lookupSkill({
           projectRoot: params.context.rootPath,
           request: {
             name: payload.name,
@@ -276,7 +276,7 @@ export const skillsService: Service = {
         if (!result.success) {
           return {
             success: false,
-            error: result.error || "skill load failed",
+            error: result.error || "skill lookup failed",
           };
         }
         return {

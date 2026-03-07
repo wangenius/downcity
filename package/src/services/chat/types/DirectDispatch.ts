@@ -94,6 +94,26 @@ export interface ResolvedDirectTextPayload {
    * 是否以 reply 语义发送正文。
    */
   replyToMessage: boolean;
+
+  /**
+   * 可选延迟发送毫秒数。
+   *
+   * 说明（中文）
+   * - 来自 `<delay>` 标签。
+   * - 仅允许非负整数。
+   * - 与 `sendAtMs` 互斥，若同时存在以 `sendAtMs` 为准。
+   */
+  delayMs?: number;
+
+  /**
+   * 可选绝对发送时间（Unix 毫秒时间戳）。
+   *
+   * 说明（中文）
+   * - 来自 `<time>` 标签。
+   * - 支持由 ISO/秒级时间戳解析后归一化为毫秒。
+   * - 与 `delayMs` 互斥，优先级更高。
+   */
+  sendAtMs?: number;
 }
 
 /**

@@ -8,7 +8,10 @@
  */
 
 import { type SystemModelMessage } from "ai";
-import { replaceVariablesInPrompts } from "@main/prompts/variables/VariableReplacer.js";
+import {
+  replaceVariablesInPrompts,
+  type PromptVariableMode,
+} from "@main/prompts/variables/VariableReplacer.js";
 
 /**
  * 将纯文本 prompts 转为 `system` messages。
@@ -33,6 +36,15 @@ export async function transformPromptsIntoSystemMessages(
      * 请求 ID（用于模板变量）。
      */
     requestId?: string;
+
+    /**
+     * 变量替换模式。
+     *
+     * 关键点（中文）
+     * - `full`：替换全部变量（含时间/位置/requestId）。
+     * - `stable`：仅保留稳定变量，易变变量替换为稳定占位文本。
+     */
+    variableMode?: PromptVariableMode;
   },
 ): Promise<SystemModelMessage[]> {
   const nonEmptyPrompts = prompts.filter((item) => item.length > 0);

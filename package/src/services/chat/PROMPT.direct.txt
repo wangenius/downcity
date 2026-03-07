@@ -2,8 +2,7 @@
 
 ## Runtime context
 - Project root: {{project_root}}
-- ContextId: {{context_id}}
-- Request ID: {{request_id}}
+- Current clock (time/timezone/location) is provided in runtime tail system messages.
 
 ## 用户可见回复规则
 - 直接输出给用户的自然语言结论，不要输出工具日志或原始 JSON。

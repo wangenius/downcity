@@ -27,9 +27,9 @@ test("buildContextSystemPrompt keeps runtime context and task rules for task mod
     requestId: "req-2",
     mode: "task",
   });
-  assert.equal(prompt.includes("Runtime context:"), true);
+  assert.equal(prompt.includes("Task runtime context:"), true);
   assert.equal(prompt.includes("- Project root: /tmp/demo"), true);
-  assert.equal(prompt.includes("- ContextId: task-run--123"), true);
-  assert.equal(prompt.includes("- Request ID: req-2"), true);
+  assert.equal(prompt.includes("- ContextId: task-run--123"), false);
+  assert.equal(prompt.includes("- Request ID: req-2"), false);
   assert.equal(prompt.includes("Task-run output rules:"), true);
 });

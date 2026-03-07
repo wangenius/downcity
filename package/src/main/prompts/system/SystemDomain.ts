@@ -9,6 +9,7 @@
 import fs from "fs-extra";
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@main/prompts/common/PromptRenderer.js";
+import { resolvePromptGeoContext } from "@main/prompts/variables/GeoContext.js";
 import { SERVICES } from "@main/service/Services.js";
 import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
 import { buildMemorySystemText } from "@services/memory/runtime/SystemProvider.js";
@@ -24,6 +25,57 @@ const DEFAULT_DISABLED_SERVICE_NAMES: string[] = [];
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
+}
+
+/**
+ * 生成“当前时间”文本（按时区）。
+ */
+function getCurrentTimeString(timezone: string): string {
+  try {
+    // 关键点（中文）：统一格式，减少模型解析歧义。
+    const formatted = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+      .format(new Date())
+      .replace(" ", "T");
+    return `${formatted} (${timezone})`;
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
+/**
+ * 构建每轮“动态时钟尾部”system 文本。
+ *
+ * 关键点（中文）
+ * - 仅保留“最新时间/地点”动态信息，缩小动态 token 面积。
+ * - 该段应放到 system 最后，提升前缀缓存命中率。
+ */
+async function buildRuntimeClockTailPrompt(): Promise<string> {
+  let timezone = "UTC";
+  let location = "Unknown";
+  try {
+    const geo = await resolvePromptGeoContext();
+    timezone = String(geo.timezone || "").trim() || "UTC";
+    location = String(geo.location || "").trim() || "Unknown";
+  } catch {
+    // ignore
+  }
+
+  return [
+    "Runtime clock (authoritative):",
+    `- Current time: ${getCurrentTimeString(timezone)}`,
+    `- Timezone: ${timezone}`,
+    `- Location: ${location}`,
+    "- Treat this block as the source of truth for 'now'/'today' questions.",
+  ].join("\n");
 }
 
 /**
@@ -61,8 +113,8 @@ const TASK_SYSTEM_PROMPT = loadSystemPromptAsset(
  * 构建一次运行的运行时 system prompt。
  *
  * 关键点（中文）
- * - 注入 project/context/request 等请求级上下文。
- * - task 模式下追加输出规则；chat 模式为空。
+ * - 仅承载“稳定规则”块，避免把每轮变化字段放在前缀 system。
+ * - task 模式下追加任务输出规则；chat 模式为空。
  */
 export function buildContextSystemPrompt(input: {
   /**
@@ -90,15 +142,13 @@ export function buildContextSystemPrompt(input: {
    */
   extraContextLines?: string[];
 }): string {
-  const { projectRoot, contextId, requestId, extraContextLines } = input;
+  const { projectRoot, extraContextLines } = input;
   const mode = input.mode === "task" ? "task" : "chat";
   if (mode === "chat") return "";
 
   const runtimeContextLines: string[] = [
-    "Runtime context:",
+    "Task runtime context:",
     `- Project root: ${projectRoot}`,
-    `- ContextId: ${contextId}`,
-    `- Request ID: ${requestId}`,
   ];
 
   if (Array.isArray(extraContextLines) && extraContextLines.length > 0) {
@@ -279,8 +329,12 @@ export async function buildAgentSystemMessages(input: {
     requestId: input.requestId,
     mode: input.mode,
   });
-  const runtimeSystemMessages: SystemModelMessage[] = runtimeSystemText
+  const runtimeRuleMessages: SystemModelMessage[] = runtimeSystemText
     ? [{ role: "system", content: runtimeSystemText }]
+    : [];
+  const runtimeClockTail = normalizeSystemText(await buildRuntimeClockTailPrompt());
+  const runtimeClockMessages: SystemModelMessage[] = runtimeClockTail
+    ? [{ role: "system", content: runtimeClockTail }]
     : [];
 
   const staticSystemMessages = await transformPromptsIntoSystemMessages(
@@ -290,8 +344,7 @@ export async function buildAgentSystemMessages(input: {
     }),
     {
       projectPath: input.projectRoot,
-      contextId: input.contextId,
-      requestId: input.requestId,
+      variableMode: "stable",
     },
   );
 
@@ -299,15 +352,15 @@ export async function buildAgentSystemMessages(input: {
     Array.isArray(input.serviceSystemPrompts) ? input.serviceSystemPrompts : [],
     {
       projectPath: input.projectRoot,
-      contextId: input.contextId,
-      requestId: input.requestId,
+      variableMode: "stable",
     },
   );
 
   return [
-    ...runtimeSystemMessages,
     ...staticSystemMessages,
     ...serviceSystemMessages,
+    ...runtimeRuleMessages,
+    ...runtimeClockMessages,
   ];
 }
 

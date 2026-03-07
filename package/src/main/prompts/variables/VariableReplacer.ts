@@ -11,6 +11,15 @@ import type { PromptVariables } from "@main/prompts/variables/PromptTypes.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
 
 /**
+ * Prompt 变量替换模式。
+ *
+ * 关键点（中文）
+ * - `full`：完整替换（包含时间/地点/上下文动态变量）。
+ * - `stable`：仅保留稳定替换，易变变量统一替换为稳定文本，提升缓存命中率。
+ */
+export type PromptVariableMode = "full" | "stable";
+
+/**
  * 获取当前时间字符串（指定时区）。
  */
 function getCurrentTimeString(timezone: string): string {
@@ -49,9 +58,26 @@ async function buildPromptVariables(options?: {
    * 请求 ID（用于 `request_id`）。
    */
   requestId?: string;
+
+  /**
+   * 变量替换模式（默认 full）。
+   */
+  mode?: PromptVariableMode;
 }): Promise<PromptVariables> {
-  const geo = await resolvePromptGeoContext();
+  const mode = options?.mode === "stable" ? "stable" : "full";
   const projectPath = String(options?.projectPath || "").trim() || process.cwd();
+  if (mode === "stable") {
+    return {
+      currentTime: "[See runtime clock tail message]",
+      location: "[See runtime clock tail message]",
+      projectPath,
+      projectRoot: projectPath,
+      contextId: "[Runtime context id]",
+      requestId: "[Runtime request id]",
+    };
+  }
+
+  const geo = await resolvePromptGeoContext();
   const contextId = String(options?.contextId || "").trim() || "unknown";
   const requestId = String(options?.requestId || "").trim() || "unknown";
   return {
@@ -92,6 +118,11 @@ export async function replaceVariablesInPrompts(
      * 请求 ID（用于 `request_id`）。
      */
     requestId?: string;
+
+    /**
+     * 变量替换模式（默认 full）。
+     */
+    mode?: PromptVariableMode;
   },
 ): Promise<string> {
   if (!prompt) return prompt;

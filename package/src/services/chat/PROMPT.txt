@@ -4,8 +4,7 @@
 
 ## Runtime context
 - Project root: {{project_root}}
-- ContextId: {{context_id}}
-- Request ID: {{request_id}}
+- Current clock (time/timezone/location) is provided in runtime tail system messages.
 
 User-facing output rules:
 - Reply in natural language.

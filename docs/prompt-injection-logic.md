@@ -84,14 +84,15 @@
 
 `buildAgentSystemMessages(...)` 的输出顺序固定为：
 
-1. `runtimeSystemMessages`（仅 task 模式有）
-2. `staticSystemMessages`（PROFILE/SOUL/USER + core 或 task-core）
-3. `serviceSystemMessages`（service 统一说明 + 各 service + memory）
+1. `staticSystemMessages`（PROFILE/SOUL/USER + core 或 task-core）
+2. `serviceSystemMessages`（service 统一说明 + 各 service + memory）
+3. `runtimeSystemMessages`（仅 task 模式有，放尾部）
+4. `runtimeClockTail`（每轮动态时钟尾部，放最后）
 
 即：
 
 ```text
-runtime -> static -> service
+static -> service -> runtime rules -> runtime clock tail
 ```
 
 对应代码：
@@ -106,9 +107,12 @@ runtime -> static -> service
 - `chat` 模式：返回空字符串（不注入 runtime context 块）
 - `task` 模式：注入
   - `Project root`
-  - `ContextId`
-  - `Request ID`
   - task 输出规则（禁止默认外发 chat 等）
+
+另外每轮都会追加一个单独的动态时钟尾部（`Runtime clock`）system：
+- Current time
+- Timezone
+- Location
 
 验证测试：
 - `package/test/core/context-system-prompt.test.mjs`
@@ -177,14 +181,13 @@ runtime -> static -> service
 
 ## 7. 模板变量替换
 
-静态和 service prompts 在转成 system message 时会经过变量替换：
+静态和 service prompts 在转成 system message 时会经过**稳定变量替换**（`stable` 模式）：
 
-- `{{current_time}}`
-- `{{location}}`
 - `{{project_path}}`
 - `{{project_root}}`
-- `{{context_id}}`
-- `{{request_id}}`
+
+`current_time/location/context_id/request_id` 不再作为前缀 prompt 的每轮动态替换项，避免破坏缓存前缀。
+“当前时间/地点”由最后一条 `Runtime clock` system 提供。
 
 链路：
 

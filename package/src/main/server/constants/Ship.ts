@@ -32,6 +32,7 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
       keepLastMessages: 30,
       maxInputTokensApprox: 128000,
       archiveOnCompact: true,
+      compactRatio: 0.5,
     },
   },
   permissions: {

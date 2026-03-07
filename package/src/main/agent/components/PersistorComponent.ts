@@ -72,6 +72,15 @@ export type PersistorCompactInput = {
    * compact 时是否归档旧消息。
    */
   archiveOnCompact: boolean;
+
+  /**
+   * 前段压缩比例（0-1）。
+   *
+   * 关键点（中文）
+   * - 例如 0.5 表示“优先压缩最早 50% 的 UIMessage”。
+   * - 具体切分由 persistor 实现侧做边界校正。
+   */
+  compactRatio: number;
 };
 
 /**

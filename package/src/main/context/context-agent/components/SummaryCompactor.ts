@@ -13,6 +13,7 @@ type SummaryCompactorOptions = {
   keepLastMessages?: number;
   maxInputTokensApprox?: number;
   archiveOnCompact?: boolean;
+  compactRatio?: number;
 };
 
 /**
@@ -31,6 +32,7 @@ export class SummaryCompactor extends CompactorComponent {
     keepLastMessages: number;
     maxInputTokensApprox: number;
     archiveOnCompact: boolean;
+    compactRatio: number;
   } {
     const baseKeepLastMessages =
       typeof this.options.keepLastMessages === "number"
@@ -50,7 +52,18 @@ export class SummaryCompactor extends CompactorComponent {
       this.options.archiveOnCompact === undefined
         ? true
         : Boolean(this.options.archiveOnCompact);
-    return { keepLastMessages, maxInputTokensApprox, archiveOnCompact };
+    const compactRatioRaw =
+      typeof this.options.compactRatio === "number" &&
+      Number.isFinite(this.options.compactRatio)
+        ? this.options.compactRatio
+        : 0.5;
+    const compactRatio = Math.max(0.1, Math.min(0.9, compactRatioRaw));
+    return {
+      keepLastMessages,
+      maxInputTokensApprox,
+      archiveOnCompact,
+      compactRatio,
+    };
   }
 
   async run(input: CompactorRunInput): Promise<{
@@ -64,6 +77,7 @@ export class SummaryCompactor extends CompactorComponent {
       keepLastMessages: policy.keepLastMessages,
       maxInputTokensApprox: policy.maxInputTokensApprox,
       archiveOnCompact: policy.archiveOnCompact,
+      compactRatio: policy.compactRatio,
     });
   }
 }

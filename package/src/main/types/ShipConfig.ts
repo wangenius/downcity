@@ -170,7 +170,12 @@ export interface ShipConfig {
      */
     messages?: {
       /**
-       * compact 后保留最近多少条消息（user/assistant 都计入）。
+       * 历史兼容字段（保留）。
+       *
+       * 说明（中文）
+       * - 当前默认策略按 `compactRatio` 压缩前段消息。
+       * - 该字段仍会写入 compact 元信息，便于观测与旧配置兼容。
+       *
        * 默认：30
        */
       keepLastMessages?: number;
@@ -189,6 +194,18 @@ export interface ShipConfig {
        * 默认：true
        */
       archiveOnCompact?: boolean;
+
+      /**
+       * 前段压缩比例（0-1）。
+       *
+       * 说明（中文）
+       * - 触发 compact 后，优先压缩最早一段消息。
+       * - `0.5` 代表优先压缩“最早 50% 的 UIMessage”。
+       * - 实际切分会做边界保护（至少保留 1 条最近消息）。
+       *
+       * 默认：0.5
+       */
+      compactRatio?: number;
     };
     /**
      * 记忆管理配置。

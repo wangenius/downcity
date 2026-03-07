@@ -284,18 +284,22 @@ export class Agent {
         baseContextMessages,
         tools,
       );
-      let lastAppliedBasePrefixLen = baseModelMessages.length;
       const appendMergedUserMessages = async (
         messages: ContextMessageV1[],
-      ): Promise<number> => {
+      ): Promise<ModelMessage[]> => {
         const normalized = this.extractMergedUserMessages(messages);
-        if (normalized.length === 0) return 0;
+        if (normalized.length === 0) return [];
         baseContextMessages = [...baseContextMessages, ...normalized];
-        baseModelMessages = await this.toModelMessages(
-          baseContextMessages,
-          tools,
-        );
-        return normalized.length;
+        const mergedModelMessages = await this.toModelMessages(normalized, tools);
+        if (mergedModelMessages.length > 0) {
+          baseModelMessages = [...baseModelMessages, ...mergedModelMessages];
+        } else {
+          baseModelMessages = await this.toModelMessages(
+            baseContextMessages,
+            tools,
+          );
+        }
+        return mergedModelMessages;
       };
       let assistantStepIndex = 0;
 
@@ -321,20 +325,16 @@ export class Agent {
           const incomingMessages: ModelMessage[] = Array.isArray(messages)
             ? messages
             : [];
-          const suffix =
-            incomingMessages.length >= lastAppliedBasePrefixLen
-              ? incomingMessages.slice(lastAppliedBasePrefixLen)
-              : [];
           let outMessages: ModelMessage[] | undefined;
           if (typeof onStepCallback === "function") {
             try {
               const mergedMessages = await onStepCallback();
-              const added = await appendMergedUserMessages(
+              const mergedModelMessages = await appendMergedUserMessages(
                 Array.isArray(mergedMessages) ? mergedMessages : [],
               );
-              if (added > 0) {
-                outMessages = [...baseModelMessages, ...suffix];
-                lastAppliedBasePrefixLen = baseModelMessages.length;
+              if (mergedModelMessages.length > 0) {
+                // 关键点（中文）：保持当前 step 已有消息顺序不变，只把新合并用户消息追加到末尾，避免错序。
+                outMessages = [...incomingMessages, ...mergedModelMessages];
               }
             } catch {
               // ignore merge hook failures
@@ -467,7 +467,7 @@ export class Agent {
     return messages
       .map((message) => {
         const parts = Array.isArray(message.parts)
-          ? message.parts.filter((part) => part?.type === "text")
+          ? message.parts.filter((part) => part && typeof part === "object")
           : [];
         return {
           ...message,

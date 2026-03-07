@@ -355,6 +355,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     keepLastMessages: config.context?.messages?.keepLastMessages,
     maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
     archiveOnCompact: config.context?.messages?.archiveOnCompact,
+    compactRatio: config.context?.messages?.compactRatio,
   });
   // 关键点（中文）：system 域逻辑全部收敛到 prompts/system，runtime 这里只做依赖注入。
   const system = new PromptSystem({

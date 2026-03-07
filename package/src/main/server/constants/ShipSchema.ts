@@ -176,6 +176,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
             keepLastMessages: { type: "integer", minimum: 6, maximum: 5000 },
             maxInputTokensApprox: { type: "integer", minimum: 2000, maximum: 200000 },
             archiveOnCompact: { type: "boolean" },
+            compactRatio: { type: "number", minimum: 0.1, maximum: 0.9 },
           },
         },
       },

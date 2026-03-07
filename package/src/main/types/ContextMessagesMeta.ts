@@ -14,4 +14,5 @@ export type ShipContextMessagesMetaV1 = {
   lastArchiveId?: string;
   keepLastMessages?: number;
   maxInputTokensApprox?: number;
+  compactRatio?: number;
 };

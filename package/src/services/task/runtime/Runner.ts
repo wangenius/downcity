@@ -107,6 +107,7 @@ function createTaskAgentRuntime(params: {
     keepLastMessages: runtime.config.context?.messages?.keepLastMessages,
     maxInputTokensApprox: runtime.config.context?.messages?.maxInputTokensApprox,
     archiveOnCompact: runtime.config.context?.messages?.archiveOnCompact,
+    compactRatio: runtime.config.context?.messages?.compactRatio,
   });
   const orchestrator = new RuntimeOrchestrator({
     getTools: () => shellTools,

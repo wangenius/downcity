@@ -184,6 +184,10 @@ export class FilePersistor extends PersistorComponent {
         Number.isFinite(raw.maxInputTokensApprox)
           ? { maxInputTokensApprox: raw.maxInputTokensApprox }
           : {}),
+        ...(typeof raw.compactRatio === "number" &&
+        Number.isFinite(raw.compactRatio)
+          ? { compactRatio: raw.compactRatio }
+          : {}),
       };
     } catch {
       return {
@@ -214,6 +218,10 @@ export class FilePersistor extends PersistorComponent {
       ...(typeof next.maxInputTokensApprox === "number" &&
       Number.isFinite(next.maxInputTokensApprox)
         ? { maxInputTokensApprox: next.maxInputTokensApprox }
+        : {}),
+      ...(typeof next.compactRatio === "number" &&
+      Number.isFinite(next.compactRatio)
+        ? { compactRatio: next.compactRatio }
         : {}),
     };
     await fs.writeJson(this.getMetaFilePath(), normalized, { spaces: 2 });
@@ -320,7 +328,7 @@ export class FilePersistor extends PersistorComponent {
     return messages
       .map((message) => {
         const parts = Array.isArray(message.parts)
-          ? message.parts.filter((part) => part?.type === "text")
+          ? message.parts.filter((part) => part && typeof part === "object")
           : [];
         return {
           ...message,
@@ -364,6 +372,7 @@ export class FilePersistor extends PersistorComponent {
         keepLastMessages: input.keepLastMessages,
         maxInputTokensApprox: input.maxInputTokensApprox,
         archiveOnCompact: input.archiveOnCompact,
+        compactRatio: input.compactRatio,
       },
     );
   }

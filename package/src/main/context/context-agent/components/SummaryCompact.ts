@@ -29,6 +29,7 @@ export type ContextCompactParams = {
   keepLastMessages: number;
   maxInputTokensApprox: number;
   archiveOnCompact: boolean;
+  compactRatio: number;
 };
 
 type ContextCompactDeps = {
@@ -73,7 +74,7 @@ export async function compactContextMessageIfNeeded(
         : "";
   });
 
-  if (snapshot.length <= params.keepLastMessages + 2) {
+  if (snapshot.length < 4) {
     return { compacted: false, reason: "small_messages" };
   }
 
@@ -92,8 +93,10 @@ export async function compactContextMessageIfNeeded(
     return { compacted: false, reason: "under_budget" };
   }
 
-  const keepLast = Math.max(6, Math.min(2000, Math.floor(params.keepLastMessages)));
-  const older = snapshot.slice(0, Math.max(0, snapshot.length - keepLast));
+  // 关键点（中文）：触发 compact 后，优先压缩“最早一段消息”，默认比例 50%。
+  const compactRatio = normalizeCompactRatio(params.compactRatio);
+  const compactCount = resolveCompactCount(snapshot.length, compactRatio);
+  const older = snapshot.slice(0, compactCount);
   if (older.length === 0) return { compacted: false, reason: "nothing_to_compact" };
 
   const olderTextAll = extractPlainTextFromMessages(older);
@@ -151,12 +154,13 @@ export async function compactContextMessageIfNeeded(
     const current = await deps.loadAll();
     if (!current.length) return;
 
-    // 如果 tail 不同，说明期间有新消息追加；我们仍可安全 compact：按“当前”来保留最近 keepLast。
+    // 如果 tail 不同，说明期间有新消息追加；我们仍可安全 compact：按“当前长度 + 相同比例”重算。
     // snapshotTailId 用于 debug，不作为强一致性依赖。
     void snapshotTailId;
 
-    const currentOlder = current.slice(0, Math.max(0, current.length - keepLast));
-    const currentKept = current.slice(Math.max(0, current.length - keepLast));
+    const currentCompactCount = resolveCompactCount(current.length, compactRatio);
+    const currentOlder = current.slice(0, currentCompactCount);
+    const currentKept = current.slice(currentCompactCount);
     if (currentOlder.length === 0) return;
 
     if (params.archiveOnCompact) {
@@ -188,12 +192,38 @@ export async function compactContextMessageIfNeeded(
       ...prevMeta,
       updatedAt: Date.now(),
       lastArchiveId: params.archiveOnCompact ? archiveId : undefined,
-      keepLastMessages: keepLast,
+      keepLastMessages: Math.max(1, currentKept.length),
       maxInputTokensApprox: params.maxInputTokensApprox,
+      compactRatio,
     });
   });
 
   return { compacted: true };
+}
+
+/**
+ * 归一化压缩比例。
+ *
+ * 关键点（中文）
+ * - 仅允许 0.1~0.9，避免“几乎不压缩”或“几乎全压缩”。
+ */
+function normalizeCompactRatio(value: number): number {
+  if (!Number.isFinite(value)) return 0.5;
+  return Math.max(0.1, Math.min(0.9, value));
+}
+
+/**
+ * 按比例计算前段压缩条数。
+ *
+ * 关键点（中文）
+ * - 至少压缩 1 条；
+ * - 至少保留 1 条未压缩消息。
+ */
+function resolveCompactCount(total: number, ratio: number): number {
+  const n = Math.max(0, Math.floor(total));
+  if (n <= 1) return 0;
+  const raw = Math.floor(n * ratio);
+  return Math.max(1, Math.min(n - 1, raw));
 }
 
 /**

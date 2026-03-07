@@ -45,6 +45,14 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
     return undefined;
   }
 
+  private readAssistantStepCallbackFromRequestContext(
+    ctx: RequestContext | undefined,
+  ): OrchestratorComposeResult["onAssistantStepCallback"] {
+    const candidate = ctx?.onAssistantStepCallback;
+    if (typeof candidate === "function") return candidate;
+    return undefined;
+  }
+
   async compose(
     input: OrchestratorComposeInput,
   ): Promise<OrchestratorComposeResult> {
@@ -58,10 +66,13 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
     const tools = this.getTools();
     const ctx = requestContext.getStore();
     const onStepCallback = this.readStepCallbackFromRequestContext(ctx);
+    const onAssistantStepCallback =
+      this.readAssistantStepCallbackFromRequestContext(ctx);
     return {
       requestId,
       tools: tools && typeof tools === "object" ? { ...tools } : {},
       ...(onStepCallback ? { onStepCallback } : {}),
+      ...(onAssistantStepCallback ? { onAssistantStepCallback } : {}),
     };
   }
 }

@@ -12,6 +12,28 @@ import type { ContextMessageV1 } from "./ContextMessage.js";
 import type { ContextSystemMessage } from "./ContextSystemMessage.js";
 
 /**
+ * Assistant step 回调入参。
+ */
+export interface AgentAssistantStepCallbackInput {
+  /**
+   * 当前 step 生成的文本。
+   */
+  text: string;
+
+  /**
+   * 当前 step 序号（从 1 开始）。
+   */
+  stepIndex: number;
+}
+
+/**
+ * Assistant step 完成回调。
+ */
+export type AgentAssistantStepCallback = (
+  input: AgentAssistantStepCallbackInput,
+) => Promise<void>;
+
+/**
  * Agent 执行结果。
  */
 export interface AgentResult {
@@ -64,4 +86,9 @@ export interface AgentExecuteInput {
    * step 边界合并回调。
    */
   onStepCallback?: () => Promise<ContextMessageV1[]>;
+
+  /**
+   * step 文本完成回调。
+   */
+  onAssistantStepCallback?: AgentAssistantStepCallback;
 }

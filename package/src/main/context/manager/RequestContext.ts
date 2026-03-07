@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
+import type { AgentAssistantStepCallback } from "@main/types/Agent.js";
 
 /**
  * RequestContext（单次请求上下文）。
@@ -19,6 +20,15 @@ export type RequestContext = {
    * - Orchestrator 从 RequestContext 读取并编排到本轮运行上下文。
    */
   onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
+
+  /**
+   * assistant step 完成回调（可选）。
+   *
+   * 关键点（中文）
+   * - 在每个 LLM step 结束时触发。
+   * - 用于把中间文本增量派发到外部通道（如 direct 模式分步发送）。
+   */
+  onAssistantStepCallback?: AgentAssistantStepCallback;
 };
 
 /**

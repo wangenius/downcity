@@ -253,26 +253,28 @@ export class ChatQueueWorker {
   }
 
   /**
-   * direct 模式：把 assistant 文本直接投递到当前 chatKey。
+   * direct 模式：把 assistant 纯文本直接投递到 chat。
    *
    * 关键点（中文）
    * - 支持标签协议：主文本发送 + `<react>` 动作发送。
    * - 仅消费用户可见文本与协议标签，不转发工具日志/结构化输出。
    * - 发送失败只记录 warning，不中断主执行流程。
    */
-  private async dispatchAssistantMessageDirect(params: {
+  private async dispatchAssistantTextDirect(params: {
     contextId: string;
-    assistantMessage: ContextMessageV1 | null | undefined;
-  }): Promise<void> {
-    if (!this.isDirectModeEnabled()) return;
+    assistantText: string;
+  }): Promise<boolean> {
+    if (!this.isDirectModeEnabled()) return false;
 
     const plan = parseDirectDispatchAssistantText({
-      assistantText: extractTextFromUiMessage(params.assistantMessage),
+      assistantText: params.assistantText,
       fallbackChatKey: params.contextId,
     });
-    if (!plan) return;
+    if (!plan) return false;
+    let dispatched = false;
 
     if (plan.text) {
+      dispatched = true;
       const textResult = await sendTextByChatKey({
         context: this.runtime,
         chatKey: plan.text.chatKey,
@@ -289,6 +291,7 @@ export class ChatQueueWorker {
     }
 
     for (const reaction of plan.reactions) {
+      dispatched = true;
       const reactResult = await sendActionByChatKey({
         context: this.runtime,
         chatKey: reaction.chatKey,
@@ -305,6 +308,21 @@ export class ChatQueueWorker {
         });
       }
     }
+
+    return dispatched;
+  }
+
+  /**
+   * direct 模式：从 assistant UIMessage 中提取文本并投递。
+   */
+  private async dispatchAssistantMessageDirect(params: {
+    contextId: string;
+    assistantMessage: ContextMessageV1 | null | undefined;
+  }): Promise<boolean> {
+    return this.dispatchAssistantTextDirect({
+      contextId: params.contextId,
+      assistantText: extractTextFromUiMessage(params.assistantMessage),
+    });
   }
 
   private async processOne(laneKey: string, first: ChatQueueItem): Promise<void> {
@@ -317,6 +335,7 @@ export class ChatQueueWorker {
     if (first.kind === "audit") return;
 
     const serviceContext = this.requireContext();
+    let dispatchedDirectStepCount = 0;
 
     let clearRequested = false;
     const onStepCallback = async (): Promise<ShipContextUserMessageV1[]> => {
@@ -351,6 +370,18 @@ export class ChatQueueWorker {
       }
       return mergedExecMessages;
     };
+    const onAssistantStepCallback = async (params: {
+      text: string;
+      stepIndex: number;
+    }): Promise<void> => {
+      const dispatched = await this.dispatchAssistantTextDirect({
+        contextId: first.contextId,
+        assistantText: params.text,
+      });
+      if (dispatched) {
+        dispatchedDirectStepCount += 1;
+      }
+    };
 
     const typing = this.startTypingHeartbeat(first);
     let result: AgentResult;
@@ -359,6 +390,7 @@ export class ChatQueueWorker {
         contextId: first.contextId,
         query: first.text,
         onStepCallback,
+        onAssistantStepCallback,
       });
     } finally {
       typing.stop();
@@ -379,10 +411,13 @@ export class ChatQueueWorker {
     }
 
     try {
-      await this.dispatchAssistantMessageDirect({
-        contextId: first.contextId,
-        assistantMessage: result.assistantMessage,
-      });
+      // 关键点（中文）：若 step 期间已分条发送，则不再做最终聚合回发，避免重复。
+      if (dispatchedDirectStepCount === 0) {
+        await this.dispatchAssistantMessageDirect({
+          contextId: first.contextId,
+          assistantMessage: result.assistantMessage,
+        });
+      }
     } catch {
       // ignore
     }

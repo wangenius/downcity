@@ -192,8 +192,17 @@ function buildServiceContext(input: RuntimeState): ServiceContext {
       input.contextManager.run({
         contextId: params.contextId,
         query: params.query,
-        ...(params.onStepCallback
-          ? { requestContext: { onStepCallback: params.onStepCallback } }
+        ...(params.onStepCallback || params.onAssistantStepCallback
+          ? {
+              requestContext: {
+                ...(params.onStepCallback
+                  ? { onStepCallback: params.onStepCallback }
+                  : {}),
+                ...(params.onAssistantStepCallback
+                  ? { onAssistantStepCallback: params.onAssistantStepCallback }
+                  : {}),
+              },
+            }
           : {}),
       }),
     clearAgent: (contextId) => input.contextManager.clearAgent(contextId),

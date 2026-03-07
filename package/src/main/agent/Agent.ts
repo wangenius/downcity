@@ -238,6 +238,9 @@ export class Agent {
       ...(typeof runContext.onStepCallback === "function"
         ? { onStepCallback: runContext.onStepCallback }
         : {}),
+      ...(typeof runContext.onAssistantStepCallback === "function"
+        ? { onAssistantStepCallback: runContext.onAssistantStepCallback }
+        : {}),
     };
   }
 
@@ -257,6 +260,10 @@ export class Agent {
     const onStepCallback =
       typeof input.onStepCallback === "function"
         ? input.onStepCallback
+        : undefined;
+    const onAssistantStepCallback =
+      typeof input.onAssistantStepCallback === "function"
+        ? input.onAssistantStepCallback
         : undefined;
     const { errorForAgent, errorHandoverAttempts } = state;
 
@@ -290,10 +297,26 @@ export class Agent {
         );
         return normalized.length;
       };
+      let assistantStepIndex = 0;
 
       const result = streamText({
         model: this.model,
         system,
+        onStepFinish: async (stepResult) => {
+          if (typeof onAssistantStepCallback !== "function") return;
+          const text = String(stepResult?.text || "").trim();
+          if (!text) return;
+          try {
+            assistantStepIndex += 1;
+            await onAssistantStepCallback({
+              text,
+              // 关键点（中文）：1-based step 序号，按回调触发次数递增。
+              stepIndex: assistantStepIndex,
+            });
+          } catch {
+            // ignore assistant step callback failures
+          }
+        },
         prepareStep: async ({ messages }) => {
           const incomingMessages: ModelMessage[] = Array.isArray(messages)
             ? messages

@@ -8,6 +8,7 @@
 
 import type { Tool } from "ai";
 import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
+import type { AgentAssistantStepCallback } from "@main/types/Agent.js";
 import { AgentComponent } from "./AgentComponent.js";
 
 /**
@@ -38,6 +39,11 @@ export type OrchestratorComposeResult = {
    * 可选 step 边界合并回调。
    */
   onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
+
+  /**
+   * 可选 assistant step 完成回调。
+   */
+  onAssistantStepCallback?: AgentAssistantStepCallback;
 };
 
 /**

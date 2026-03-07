@@ -4,7 +4,11 @@ import type {
   ContextMessageV1,
   ShipContextUserMessageV1,
 } from "@main/types/ContextMessage.js";
-import type { AgentResult, AgentRunInput } from "@main/types/Agent.js";
+import type {
+  AgentAssistantStepCallback,
+  AgentResult,
+  AgentRunInput,
+} from "@main/types/Agent.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@main/types/ShipConfig.js";
@@ -71,6 +75,7 @@ export type ServiceContext = {
     contextId: string;
     query: string;
     onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
+    onAssistantStepCallback?: AgentAssistantStepCallback;
   }): Promise<AgentResult>;
   clearAgent(contextId?: string): void;
   afterContextUpdatedAsync(contextId: string): Promise<void>;

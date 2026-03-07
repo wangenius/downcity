@@ -35,6 +35,7 @@ import type { ContextSystemMessage } from "@main/types/ContextSystemMessage.js";
 
 const MAX_ERROR_HANDOVER_ATTEMPTS = 2;
 const MAX_CONTEXT_LENGTH_RETRY_ATTEMPTS = 3;
+const MAX_TOOL_LOOP_STEPS = 64;
 
 type AgentExecuteState = {
   errorHandoverAttempts: number;
@@ -43,6 +44,11 @@ type AgentExecuteState = {
 
 type AgentRunState = {
   retryCount: number;
+};
+
+type AgentStepLike = {
+  text?: unknown;
+  toolCalls?: unknown;
 };
 
 type AgentOptions = {
@@ -256,7 +262,6 @@ export class Agent {
     const requestId = String(input.requestId || "").trim();
     const system = this.normalizeSystem(input.system);
     const tools = this.normalizeRunTools(input.tools);
-    let baseContextMessages = this.normalizeContextMessages(input.messages);
     const onStepCallback =
       typeof input.onStepCallback === "function"
         ? input.onStepCallback
@@ -265,8 +270,11 @@ export class Agent {
       typeof input.onAssistantStepCallback === "function"
         ? input.onAssistantStepCallback
         : undefined;
-    const { errorForAgent, errorHandoverAttempts } = state;
+    const { errorHandoverAttempts } = state;
 
+    // 核心步骤 1（中文）：组装本轮 context messages 基线（必要时追加错误交接提示）。
+    let baseContextMessages = this.normalizeContextMessages(input.messages);
+    const errorForAgent = String(state.errorForAgent || "").trim();
     if (errorForAgent) {
       baseContextMessages = [
         ...baseContextMessages,
@@ -280,6 +288,7 @@ export class Agent {
     }
 
     try {
+      // 核心步骤 2（中文）：将 context 消息转换为模型消息，并构建“step 间追加 user 消息”的增量器。
       let baseModelMessages = await this.toModelMessages(
         baseContextMessages,
         tools,
@@ -301,143 +310,232 @@ export class Agent {
         }
         return mergedModelMessages;
       };
-      let assistantStepIndex = 0;
+
+      const onStepFinish = this.createOnStepFinishHandler({
+        onAssistantStepCallback,
+      });
+      const prepareStep = this.createPrepareStepHandler({
+        system,
+        onStepCallback,
+        appendMergedUserMessages,
+      });
 
       const result = streamText({
         model: this.model,
         system,
-        onStepFinish: async (stepResult) => {
-          if (typeof onAssistantStepCallback !== "function") return;
-          const text = String(stepResult?.text || "").trim();
-          if (!text) return;
-          try {
-            assistantStepIndex += 1;
-            await onAssistantStepCallback({
-              text,
-              // 关键点（中文）：1-based step 序号，按回调触发次数递增。
-              stepIndex: assistantStepIndex,
-            });
-          } catch {
-            // ignore assistant step callback failures
-          }
-        },
-        prepareStep: async ({ messages }) => {
-          const incomingMessages: ModelMessage[] = Array.isArray(messages)
-            ? messages
-            : [];
-          let outMessages: ModelMessage[] | undefined;
-          if (typeof onStepCallback === "function") {
-            try {
-              const mergedMessages = await onStepCallback();
-              const mergedModelMessages = await appendMergedUserMessages(
-                Array.isArray(mergedMessages) ? mergedMessages : [],
-              );
-              if (mergedModelMessages.length > 0) {
-                // 关键点（中文）：保持当前 step 已有消息顺序不变，只把新合并用户消息追加到末尾，避免错序。
-                outMessages = [...incomingMessages, ...mergedModelMessages];
-              }
-            } catch {
-              // ignore merge hook failures
-            }
-          }
-          return {
-            system,
-            ...(Array.isArray(outMessages) ? { messages: outMessages } : {}),
-          };
-        },
+        onStepFinish,
+        prepareStep,
         messages: baseModelMessages,
         tools,
         providerOptions: this.buildOpenAIResponsesProviderOptions(),
-        stopWhen: [stepCountIs(30)],
+        stopWhen: [stepCountIs(MAX_TOOL_LOOP_STEPS)],
       });
 
-      let finalAssistantUiMessage: ContextMessageV1 | null = null;
-      let uiStreamError: unknown | null = null;
-      try {
-        const md = this.buildAssistantMessageMetadata({
-          contextId,
-          requestId,
-          note: "ai_sdk_ui_message",
-        });
-        const uiStream = result.toUIMessageStream<ContextMessageV1>({
-          sendReasoning: false,
-          sendSources: false,
-          generateMessageId: () => `a:${contextId}:${Date.now()}`,
-          messageMetadata: () => md,
-          onFinish: (event) => {
-            finalAssistantUiMessage = event.responseMessage ?? null;
-          },
-        });
-        for await (const _ of uiStream) {
-          // ignore chunks
-        }
-      } catch (error) {
-        uiStreamError = error;
-        finalAssistantUiMessage = null;
-      }
-      if (uiStreamError !== null) {
-        throw uiStreamError;
-      }
+      // 核心步骤 3（中文）：消费 UI stream，并拿到最终 assistant message（含兜底）。
+      const finalAssistantUiMessage = await this.collectFinalAssistantMessage({
+        result,
+        contextId,
+        requestId,
+      });
 
+      // 核心步骤 4（中文）：记录完成日志并返回最终消息。
       const duration = Date.now() - startTime;
       await this.logger.log("info", "Agent execution completed", {
         duration,
       });
 
-      if (!finalAssistantUiMessage) {
-        let assistantText = "";
-        try {
-          assistantText = String((await result.text) ?? "").trim();
-        } catch {
-          assistantText = "";
-        }
-        finalAssistantUiMessage = this.buildFallbackAssistantMessage({
-          contextId,
-          requestId,
-          text: assistantText || "Execution completed",
-          note: "assistant_message_fallback",
-        });
-      }
       return {
         success: true,
         assistantMessage: finalAssistantUiMessage,
       };
     } catch (error) {
-      if (isContextLengthError(error)) {
-        throw error;
-      }
-
-      const errorMsg = String(error);
-      if (errorHandoverAttempts < MAX_ERROR_HANDOVER_ATTEMPTS) {
-        await this.logger.log(
-          "warn",
-          "Agent run failed, hand over error back to agent",
-          {
-            contextId,
-            error: errorMsg,
-            errorHandoverAttempts,
-          },
-        );
-        return this.executePreparedRun(input, {
-          errorHandoverAttempts: errorHandoverAttempts + 1,
-          errorForAgent: errorMsg,
-        });
-      }
-
-      await this.logger.log("error", "Agent execution failed", {
+      return this.handleExecutePreparedRunError({
+        error,
+        input,
         contextId,
-        error: errorMsg,
+        requestId,
+        errorHandoverAttempts,
       });
-      return {
-        success: false,
-        assistantMessage: this.buildFallbackAssistantMessage({
-          contextId,
-          requestId,
-          text: `Execution failed: ${errorMsg}`,
-          note: "agent_execution_failed",
-        }),
-      };
     }
+  }
+
+  /**
+   * 生成 step 完成回调。
+   *
+   * 关键点（中文）
+   * - 汇总本轮工具调用计数，供执行后校验使用。
+   * - 若上层注入了 onAssistantStepCallback，则把本 step 文本回传给外层分步发送。
+   */
+  private createOnStepFinishHandler(params: {
+    onAssistantStepCallback?: AgentExecuteInput["onAssistantStepCallback"];
+  }): (stepResult: unknown) => Promise<void> {
+    let assistantStepIndex = 0;
+    return async (stepResult: unknown): Promise<void> => {
+      const step = stepResult as AgentStepLike;
+      const stepText = String(step.text || "").trim();
+      if (typeof params.onAssistantStepCallback !== "function" || !stepText) return;
+      try {
+        assistantStepIndex += 1;
+        await params.onAssistantStepCallback({
+          text: stepText,
+          // 关键点（中文）：1-based step 序号，按回调触发次数递增。
+          stepIndex: assistantStepIndex,
+        });
+      } catch {
+        // ignore assistant step callback failures
+      }
+    };
+  }
+
+  /**
+   * 生成 prepareStep 回调。
+   *
+   * 关键点（中文）
+   * - 每个 step 开始前，尝试把同 lane 新入队的 user 消息并入当前推理上下文。
+   * - 只追加“本轮新增 user 消息”的 model 片段，不重排已有消息顺序。
+   */
+  private createPrepareStepHandler(params: {
+    system: ContextSystemMessage[];
+    onStepCallback?: AgentExecuteInput["onStepCallback"];
+    appendMergedUserMessages: (
+      messages: ContextMessageV1[],
+    ) => Promise<ModelMessage[]>;
+  }): (input: { messages?: ModelMessage[] }) => Promise<{
+    system: ContextSystemMessage[];
+    messages?: ModelMessage[];
+  }> {
+    return async ({
+      messages,
+    }: {
+      messages?: ModelMessage[];
+    }): Promise<{
+      system: ContextSystemMessage[];
+      messages?: ModelMessage[];
+    }> => {
+      if (typeof params.onStepCallback !== "function") {
+        return { system: params.system };
+      }
+
+      const incomingMessages: ModelMessage[] = Array.isArray(messages)
+        ? messages
+        : [];
+      let outMessages: ModelMessage[] | undefined;
+      try {
+        const mergedMessages = await params.onStepCallback();
+        const mergedModelMessages = await params.appendMergedUserMessages(
+          Array.isArray(mergedMessages) ? mergedMessages : [],
+        );
+        if (mergedModelMessages.length > 0) {
+          // 关键点（中文）：保持当前 step 已有消息顺序不变，只把新增 user 消息追加到末尾，避免错序。
+          outMessages = [...incomingMessages, ...mergedModelMessages];
+        }
+      } catch {
+        // ignore merge hook failures
+      }
+
+      return {
+        system: params.system,
+        ...(Array.isArray(outMessages) ? { messages: outMessages } : {}),
+      };
+    };
+  }
+
+  /**
+   * 消费 UI stream 并解析最终 assistant 消息。
+   *
+   * 关键点（中文）
+   * - 优先使用 UI stream onFinish 给出的完整消息。
+   * - 若 stream 未产出 message，则回退到 `result.text` 生成标准 assistant 文本消息。
+   */
+  private async collectFinalAssistantMessage(params: {
+    result: ReturnType<typeof streamText>;
+    contextId: string;
+    requestId: string;
+  }): Promise<ContextMessageV1> {
+    let streamedAssistantMessage: ContextMessageV1 | null = null;
+    const md = this.buildAssistantMessageMetadata({
+      contextId: params.contextId,
+      requestId: params.requestId,
+      note: "ai_sdk_ui_message",
+    });
+    const uiStream = params.result.toUIMessageStream<ContextMessageV1>({
+      sendReasoning: false,
+      sendSources: false,
+      generateMessageId: () => `a:${params.contextId}:${Date.now()}`,
+      messageMetadata: () => md,
+      onFinish: (event) => {
+        streamedAssistantMessage = event.responseMessage ?? null;
+      },
+    });
+    for await (const _ of uiStream) {
+      // ignore chunks
+    }
+    if (streamedAssistantMessage) return streamedAssistantMessage;
+
+    let assistantText = "";
+    try {
+      assistantText = String((await params.result.text) ?? "").trim();
+    } catch {
+      assistantText = "";
+    }
+
+    const fallback = this.buildFallbackAssistantMessage({
+      contextId: params.contextId,
+      requestId: params.requestId,
+      text: assistantText || "Execution completed",
+      note: "assistant_message_fallback",
+    });
+    return fallback;
+  }
+
+  /**
+   * 统一处理 executePreparedRun 的错误语义。
+   *
+   * 关键点（中文）
+   * - context-length 错误上抛给上层重试策略处理。
+   * - 其他错误优先走“错误交接重试”，超过阈值再返回失败消息。
+   */
+  private async handleExecutePreparedRunError(params: {
+    error: unknown;
+    input: AgentExecuteInput;
+    contextId: string;
+    requestId: string;
+    errorHandoverAttempts: number;
+  }): Promise<AgentResult> {
+    if (isContextLengthError(params.error)) {
+      throw params.error;
+    }
+
+    const errorMsg = String(params.error);
+    if (params.errorHandoverAttempts < MAX_ERROR_HANDOVER_ATTEMPTS) {
+      await this.logger.log(
+        "warn",
+        "Agent run failed, hand over error back to agent",
+        {
+          contextId: params.contextId,
+          error: errorMsg,
+          errorHandoverAttempts: params.errorHandoverAttempts,
+        },
+      );
+      return this.executePreparedRun(params.input, {
+        errorHandoverAttempts: params.errorHandoverAttempts + 1,
+        errorForAgent: errorMsg,
+      });
+    }
+
+    await this.logger.log("error", "Agent execution failed", {
+      contextId: params.contextId,
+      error: errorMsg,
+    });
+    return {
+      success: false,
+      assistantMessage: this.buildFallbackAssistantMessage({
+        contextId: params.contextId,
+        requestId: params.requestId,
+        text: `Execution failed: ${errorMsg}`,
+        note: "agent_execution_failed",
+      }),
+    };
   }
 
   /**

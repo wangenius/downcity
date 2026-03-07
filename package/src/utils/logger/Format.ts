@@ -86,7 +86,12 @@ function contentToText(content: JsonValue | undefined, maxChars: number): string
       .map((part) => {
         if (!isJsonObject(part)) return "";
         const partType = getStringField(part, "type");
-        if (partType === "text" || partType === "input_text") {
+        // 关键点（中文）：OpenAI Responses 在 assistant 历史里常见 `output_text`，必须纳入日志提取，否则会显示为 `-`。
+        if (
+          partType === "text" ||
+          partType === "input_text" ||
+          partType === "output_text"
+        ) {
           return String(getStringField(part, "text") ?? "");
         }
         if (partType === "tool-approval-request") {
@@ -379,6 +384,15 @@ export function parseFetchRequestForLog(
   const system = extractSystemForLog(payloadObject);
   const messages = payloadObject ? extractMessages(payloadObject) : null;
   const tools = payloadObject ? payloadObject.tools : undefined;
+  const toolChoiceRaw = payloadObject
+    ? payloadObject.tool_choice ?? payloadObject.toolChoice
+    : undefined;
+  const toolChoice =
+    typeof toolChoiceRaw === "string"
+      ? toolChoiceRaw
+      : toolChoiceRaw !== undefined
+        ? stringifyCompact(toolChoiceRaw as JsonValue | object, 300)
+        : undefined;
   const toolsCount = Array.isArray(tools)
     ? tools.length
     : isJsonObject(tools)
@@ -391,6 +405,7 @@ export function parseFetchRequestForLog(
     formatLogField("url", url),
     ...(model ? [formatLogField("model", model)] : []),
     ...(toolsCount ? [formatLogField("tools", String(toolsCount))] : []),
+    ...(toolChoice ? [formatLogField("tool_choice", toolChoice)] : []),
   ];
 
   const messageTextParts: string[] = [...headerLines];
@@ -437,6 +452,7 @@ export function parseFetchRequestForLog(
       method,
       ...(model ? { model } : {}),
       toolsCount,
+      ...(toolChoice ? { toolChoice } : {}),
       messagesCount: Array.isArray(messages) ? messages.length : 0,
       ...(typeof system === "string" ? { systemLength: system.length } : {}),
       ...(includePayload ? { payload } : {}),

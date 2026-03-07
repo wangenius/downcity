@@ -158,8 +158,24 @@ export const exec_command = tool({
     const startedAt = Date.now();
 
     try {
+      // 关键点（中文）：直接打印工具调用关键节点，便于排查“模型是否真的发起了工具调用”。
+      console.log(
+        "[shell-tool] exec_command:start",
+        JSON.stringify({
+          cmd,
+          workdir: workdir || "",
+          shell: shell || "",
+          login,
+          yield_time_ms,
+          max_output_tokens: max_output_tokens ?? null,
+        }),
+      );
       const validationError = validateChatSendCommand(cmd);
       if (validationError) {
+        console.log(
+          "[shell-tool] exec_command:rejected",
+          JSON.stringify({ reason: validationError }),
+        );
         return {
           success: false,
           error: `exec_command rejected: ${validationError}`,
@@ -183,8 +199,23 @@ export const exec_command = tool({
         context,
         resolveOutputLimits(runtime.config, max_output_tokens),
       );
-      return formatContextResponse({ context, page, startedAt });
+      const response = formatContextResponse({ context, page, startedAt });
+      console.log(
+        "[shell-tool] exec_command:done",
+        JSON.stringify({
+          context_id: response.context_id,
+          running: response.running,
+          has_more_output: response.has_more_output,
+          output_chars: String(response.output || "").length,
+          exit_code: response.exit_code ?? null,
+        }),
+      );
+      return response;
     } catch (error) {
+      console.log(
+        "[shell-tool] exec_command:error",
+        JSON.stringify({ error: String(error) }),
+      );
       return formatToolError("exec_command failed", error);
     }
   },
@@ -206,6 +237,17 @@ export const write_stdin = tool({
     const startedAt = Date.now();
 
     try {
+      // 关键点（中文）：区分“轮询”与“写入”，方便确认是否真的进入循环读取。
+      console.log(
+        "[shell-tool] write_stdin:start",
+        JSON.stringify({
+          context_id,
+          mode: chars ? "write" : "poll",
+          input_chars: String(chars || "").length,
+          yield_time_ms,
+          max_output_tokens: max_output_tokens ?? null,
+        }),
+      );
       const runtime = requireShellToolRuntime();
       const context = getContextOrThrow(context_id);
       const input = String(chars ?? "");
@@ -223,8 +265,23 @@ export const write_stdin = tool({
         context,
         resolveOutputLimits(runtime.config, max_output_tokens),
       );
-      return formatContextResponse({ context, page, startedAt });
+      const response = formatContextResponse({ context, page, startedAt });
+      console.log(
+        "[shell-tool] write_stdin:done",
+        JSON.stringify({
+          context_id: response.context_id,
+          running: response.running,
+          has_more_output: response.has_more_output,
+          output_chars: String(response.output || "").length,
+          exit_code: response.exit_code ?? null,
+        }),
+      );
+      return response;
     } catch (error) {
+      console.log(
+        "[shell-tool] write_stdin:error",
+        JSON.stringify({ context_id, error: String(error) }),
+      );
       return formatToolError("write_stdin failed", error);
     }
   },
@@ -242,10 +299,14 @@ export const close_shell = tool({
     force = false,
   }: ShellCloseInput) => {
     try {
+      console.log(
+        "[shell-tool] close_shell:start",
+        JSON.stringify({ context_id, force }),
+      );
       const context = getContextOrThrow(context_id);
       const result = closeShellContext(context, force);
 
-      return {
+      const response = {
         success: true,
         context_id: result.contextId,
         closed: true,
@@ -259,10 +320,24 @@ export const close_shell = tool({
             }
           : {}),
       };
+      console.log(
+        "[shell-tool] close_shell:done",
+        JSON.stringify({
+          context_id: response.context_id,
+          closed: response.closed,
+          was_running: response.was_running,
+          exit_code: response.exit_code ?? null,
+        }),
+      );
+      return response;
     } catch (error) {
       const err = String(error ?? "");
       // 关键点（中文）：close 是“释放资源”语义，重复 close 应视为幂等成功而非失败。
       if (err.includes("Unknown context_id")) {
+        console.log(
+          "[shell-tool] close_shell:already_closed",
+          JSON.stringify({ context_id }),
+        );
         return {
           success: true,
           context_id,
@@ -274,6 +349,10 @@ export const close_shell = tool({
           note: `Context ${context_id} already closed or expired.`,
         };
       }
+      console.log(
+        "[shell-tool] close_shell:error",
+        JSON.stringify({ context_id, error: err }),
+      );
       return formatToolError("close_shell failed", error);
     }
   },

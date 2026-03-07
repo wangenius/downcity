@@ -168,3 +168,4 @@ Behavior:
 - **Bot doesn’t receive group messages**: in BotFather run `/setprivacy` and set it to `Disable`, then make sure you’re mentioning the bot in the group.
 - **Polling doesn’t work**: if you previously set a webhook, polling (`getUpdates`) will conflict. ShipMyAgent clears webhook on startup; check logs for webhook-related errors.
 - **Bot can’t speak in the group**: check group permissions (the bot may be muted / not allowed to send messages).
+- **Agent says “I’ll execute” but doesn’t run tools**: explicitly ask with execution intent words (for example `run`, `execute`, `use skill`, `lookup`). Runtime will force a tool call on these turns; if it still fails, verify your model/provider actually supports tool calling.

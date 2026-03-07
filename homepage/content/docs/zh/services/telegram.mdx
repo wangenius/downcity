@@ -168,3 +168,4 @@ sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxx
 - **群里收不到消息**：在 BotFather 执行 `/setprivacy` 设为 `Disable`，并确认你是在群里 `@bot`。
 - **轮询收不到（getUpdates 冲突）**：如果之前配置过 webhook，会与轮询冲突。ShipMyAgent 启动时会尝试清理 webhook；留意日志里的 webhook/Conflict 报错。
 - **群里发不出消息**：检查群权限/管理员设置，机器人可能被禁言或不允许发消息。
+- **Agent 口头说“我去执行”但没真正跑工具**：请在消息里明确写执行意图关键词（例如“执行 / run / 用 skill / lookup”）。这些回合运行时会强制触发一次工具调用；若仍失败，优先检查当前模型/网关是否支持工具调用。

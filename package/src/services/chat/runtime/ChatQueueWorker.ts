@@ -9,7 +9,10 @@
 
 import type { Logger } from "@utils/logger/Logger.js";
 import type { AgentResult } from "@main/types/Agent.js";
-import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
+import type {
+  ShipContextUserMessageV1,
+  ContextMessageV1,
+} from "@main/types/ContextMessage.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
@@ -22,6 +25,10 @@ import {
   getChatQueueLaneSize,
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
+import { sendActionByChatKey, sendTextByChatKey } from "./ChatkeySend.js";
+import { resolveChatMethod } from "./ChatMethod.js";
+import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
+import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
 
@@ -235,6 +242,71 @@ export class ChatQueueWorker {
     };
   }
 
+  /**
+   * 是否启用 direct 回发模式。
+   *
+   * 关键点（中文）
+   * - 默认就是 `direct`；仅当显式配置 `services.chat.method = cmd` 时关闭。
+   */
+  private isDirectModeEnabled(): boolean {
+    return resolveChatMethod(this.runtime.config) === "direct";
+  }
+
+  /**
+   * direct 模式：把 assistant 文本直接投递到当前 chatKey。
+   *
+   * 关键点（中文）
+   * - 支持标签协议：主文本发送 + `<react>` 动作发送。
+   * - 仅消费用户可见文本与协议标签，不转发工具日志/结构化输出。
+   * - 发送失败只记录 warning，不中断主执行流程。
+   */
+  private async dispatchAssistantMessageDirect(params: {
+    contextId: string;
+    assistantMessage: ContextMessageV1 | null | undefined;
+  }): Promise<void> {
+    if (!this.isDirectModeEnabled()) return;
+
+    const plan = parseDirectDispatchAssistantText({
+      assistantText: extractTextFromUiMessage(params.assistantMessage),
+      fallbackChatKey: params.contextId,
+    });
+    if (!plan) return;
+
+    if (plan.text) {
+      const textResult = await sendTextByChatKey({
+        context: this.runtime,
+        chatKey: plan.text.chatKey,
+        text: plan.text.text,
+        replyToMessage: plan.text.replyToMessage,
+      });
+      if (!textResult.success) {
+        this.logger.warn("Direct chat text dispatch failed", {
+          contextId: params.contextId,
+          targetChatKey: plan.text.chatKey,
+          error: textResult.error || "chat send failed",
+        });
+      }
+    }
+
+    for (const reaction of plan.reactions) {
+      const reactResult = await sendActionByChatKey({
+        context: this.runtime,
+        chatKey: reaction.chatKey,
+        action: "react",
+        messageId: reaction.messageId,
+        reactionEmoji: reaction.emoji,
+        reactionIsBig: reaction.big,
+      });
+      if (!reactResult.success) {
+        this.logger.warn("Direct chat reaction dispatch failed", {
+          contextId: params.contextId,
+          targetChatKey: reaction.chatKey,
+          error: reactResult.error || "chat react failed",
+        });
+      }
+    }
+  }
+
   private async processOne(laneKey: string, first: ChatQueueItem): Promise<void> {
     if (first.kind === "control") {
       this.handleControl(first);
@@ -301,6 +373,15 @@ export class ChatQueueWorker {
       await serviceContext.appendAssistantMessage({
         contextId: first.contextId,
         message: result.assistantMessage,
+      });
+    } catch {
+      // ignore
+    }
+
+    try {
+      await this.dispatchAssistantMessageDirect({
+        contextId: first.contextId,
+        assistantMessage: result.assistantMessage,
       });
     } catch {
       // ignore

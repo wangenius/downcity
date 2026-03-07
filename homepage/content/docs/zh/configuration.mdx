@@ -234,6 +234,23 @@ your-project/
 }
 ```
 
+**services.chat.method** (string, 可选)
+
+用于控制 chat 出站回复的方式：
+
+- `direct`（默认）：模型输出的 assistant 文本会自动发送到当前请求会话对应的 channel。
+- `cmd`：模型通过 shell 执行 `sma chat send` 发送用户可见消息。
+
+```json
+{
+  "services": {
+    "chat": {
+      "method": "direct"
+    }
+  }
+}
+```
+
 **services.chat.queue** (object, 可选)
 
 用于控制按 chatKey 分 lane 的消息调度：
@@ -256,7 +273,7 @@ your-project/
 
 **services.chat.egress** (object, 可选)
 
-用于控制出站消息发送的安全策略（tool-strict）：
+用于控制出站消息发送的安全策略（主要作用于 `cmd` 模式）：
 
 - 限制单次 run 内 `chat_send` 最大调用次数（允许多次发送，但避免无限循环刷屏）。
 - 在能拿到稳定的 inbound `messageId` 时，对 `chat_send` 做 best-effort 幂等去重（同一条入站消息 + 相同回复内容只发送一次）。
@@ -274,10 +291,10 @@ your-project/
 }
 ```
 
-#### services.chat.adapters (object)
+#### services.chat.channels (object)
 
 消息平台适配器（Telegram / 飞书 / QQ ...）。  
-使用 `services.chat.adapters` 配置消息平台适配器。
+使用 `services.chat.channels` 配置消息平台适配器。
 
 外部服务连接。
 
@@ -287,7 +304,7 @@ your-project/
 {
   "services": {
     "chat": {
-      "adapters": {
+      "channels": {
         "telegram": {
           "enabled": true,
           "botToken": "${TELEGRAM_BOT_TOKEN}",

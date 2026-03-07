@@ -126,7 +126,13 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
 > - `open-responses`、`openai`、`deepseek` 走 Responses 兼容链路（`/responses`）。
 > - `gemini` 走 Google 原生接口（`/v1beta/models/*:generateContent`）。
 
-#### `services.chat.adapters` (聊天适配器)
+#### `services.chat.method` (回复投递方式)
+
+- **method**: 可选 `cmd` 或 `direct`（默认 `direct`）。
+  - `direct`：模型输出的 assistant 文本会自动发送到当前会话 channel。
+  - `cmd`：模型通过执行 `sma chat send` 发消息（Bash-first）。
+
+#### `services.chat.channels` (聊天适配器)
 
 配置各种平台的集成适配器，支持将 Agent 部署到不同的聊天平台：
 
@@ -164,6 +170,8 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
 > 详细技能开发指南请参考 [技能系统](/zh/docs/guide/skills)。
 
 #### `services.chat.egress` (消息出站控制)
+
+> 主要作用于 `cmd` 模式。
 
 - **chatSendMaxCallsPerRun**：单次 run 内 `chat_send` 最大调用次数。
 - **chatSendIdempotency**：是否启用 `chat_send` 的 best-effort 幂等去重。

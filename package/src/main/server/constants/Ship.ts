@@ -49,6 +49,7 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
   },
   services: {
     chat: {
+      method: "direct",
       queue: {
         maxConcurrency: 2,
       },

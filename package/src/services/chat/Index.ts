@@ -18,6 +18,7 @@ import {
   sendChatTextByChatKey,
 } from "./Action.js";
 import { readChatHistory } from "./runtime/ChatHistoryStore.js";
+import { resolveChatMethod, type ChatMethod } from "./runtime/ChatMethod.js";
 import { createTelegramBot } from "./channels/telegram/Bot.js";
 import { createFeishuBot } from "./channels/feishu/Feishu.js";
 import { createQQBot } from "./channels/qq/QQ.js";
@@ -56,15 +57,28 @@ type ChatHistoryActionPayload = ChatHistoryRequest;
 type ChatReactActionPayload = ChatReactRequest;
 
 const CHAT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
+const CHAT_DIRECT_PROMPT_FILE_URL = new URL("./PROMPT.direct.txt", import.meta.url);
 const TELEGRAM_PROMPT_FILE_URL = new URL(
   "./channels/telegram/PROMPT.txt",
+  import.meta.url,
+);
+const TELEGRAM_DIRECT_PROMPT_FILE_URL = new URL(
+  "./channels/telegram/PROMPT.direct.txt",
   import.meta.url,
 );
 const FEISHU_PROMPT_FILE_URL = new URL(
   "./channels/feishu/PROMPT.txt",
   import.meta.url,
 );
+const FEISHU_DIRECT_PROMPT_FILE_URL = new URL(
+  "./channels/feishu/PROMPT.direct.txt",
+  import.meta.url,
+);
 const QQ_PROMPT_FILE_URL = new URL("./channels/qq/PROMPT.txt", import.meta.url);
+const QQ_DIRECT_PROMPT_FILE_URL = new URL(
+  "./channels/qq/PROMPT.direct.txt",
+  import.meta.url,
+);
 
 /**
  * 加载 chat service 使用说明提示词。
@@ -72,18 +86,21 @@ const QQ_PROMPT_FILE_URL = new URL("./channels/qq/PROMPT.txt", import.meta.url);
  * 关键点（中文）
  * - 启动阶段即加载，缺失时直接抛错，避免静默失效。
  */
-function loadChatServicePrompt(): string {
+function loadChatServicePrompt(fileUrl: URL): string {
   try {
-    return readFileSync(CHAT_PROMPT_FILE_URL, "utf-8").trim();
+    return readFileSync(fileUrl, "utf-8").trim();
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `failed to load chat service prompt from ${CHAT_PROMPT_FILE_URL.pathname}: ${reason}`,
+      `failed to load chat service prompt from ${fileUrl.pathname}: ${reason}`,
     );
   }
 }
 
-const CHAT_SERVICE_PROMPT = loadChatServicePrompt();
+const CHAT_SERVICE_PROMPTS: Record<ChatMethod, string> = {
+  cmd: loadChatServicePrompt(CHAT_PROMPT_FILE_URL),
+  direct: loadChatServicePrompt(CHAT_DIRECT_PROMPT_FILE_URL),
+};
 
 /**
  * 加载单个 channel 提示词。
@@ -102,10 +119,25 @@ function loadChatChannelPrompt(fileUrl: URL, channelName: string): string {
   }
 }
 
-const CHAT_CHANNEL_PROMPTS: Record<"telegram" | "feishu" | "qq", string> = {
-  telegram: loadChatChannelPrompt(TELEGRAM_PROMPT_FILE_URL, "telegram"),
-  feishu: loadChatChannelPrompt(FEISHU_PROMPT_FILE_URL, "feishu"),
-  qq: loadChatChannelPrompt(QQ_PROMPT_FILE_URL, "qq"),
+const CHAT_CHANNEL_PROMPTS: Record<
+  "telegram" | "feishu" | "qq",
+  Record<ChatMethod, string>
+> = {
+  telegram: {
+    cmd: loadChatChannelPrompt(TELEGRAM_PROMPT_FILE_URL, "telegram"),
+    direct: loadChatChannelPrompt(
+      TELEGRAM_DIRECT_PROMPT_FILE_URL,
+      "telegram-direct",
+    ),
+  },
+  feishu: {
+    cmd: loadChatChannelPrompt(FEISHU_PROMPT_FILE_URL, "feishu"),
+    direct: loadChatChannelPrompt(FEISHU_DIRECT_PROMPT_FILE_URL, "feishu-direct"),
+  },
+  qq: {
+    cmd: loadChatChannelPrompt(QQ_PROMPT_FILE_URL, "qq"),
+    direct: loadChatChannelPrompt(QQ_DIRECT_PROMPT_FILE_URL, "qq-direct"),
+  },
 };
 
 /**
@@ -114,17 +146,20 @@ const CHAT_CHANNEL_PROMPTS: Record<"telegram" | "feishu" | "qq", string> = {
  * 关键点（中文）
  * - 仅注入已启用 channel，避免给模型引入未接入平台的噪音规则。
  */
-function buildEnabledChannelPrompts(context: ServiceRuntime): string[] {
+function buildEnabledChannelPrompts(
+  context: ServiceRuntime,
+  method: ChatMethod,
+): string[] {
   const prompts: string[] = [];
   const channels = context.config.services?.chat?.channels || {};
   if (channels.telegram?.enabled) {
-    prompts.push(CHAT_CHANNEL_PROMPTS.telegram);
+    prompts.push(CHAT_CHANNEL_PROMPTS.telegram[method]);
   }
   if (channels.feishu?.enabled) {
-    prompts.push(CHAT_CHANNEL_PROMPTS.feishu);
+    prompts.push(CHAT_CHANNEL_PROMPTS.feishu[method]);
   }
   if (channels.qq?.enabled) {
-    prompts.push(CHAT_CHANNEL_PROMPTS.qq);
+    prompts.push(CHAT_CHANNEL_PROMPTS.qq[method]);
   }
   return prompts;
 }
@@ -646,10 +681,12 @@ async function executeChatReactAction(params: {
 
 export const chatService: Service = {
   name: "chat",
-  system: (context) =>
-    [CHAT_SERVICE_PROMPT, ...buildEnabledChannelPrompts(context)]
+  system: (context) => {
+    const method = resolveChatMethod(context.config);
+    return [CHAT_SERVICE_PROMPTS[method], ...buildEnabledChannelPrompts(context, method)]
       .filter(Boolean)
-      .join("\n\n"),
+      .join("\n\n");
+  },
   actions: {
     send: {
       command: {

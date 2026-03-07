@@ -647,6 +647,7 @@ export async function initCommand(
       ...(Object.keys(channelsConfig).length > 0
         ? {
             chat: {
+              method: "direct",
               channels: channelsConfig,
             },
           }

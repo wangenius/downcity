@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 默认把 assistant 文本原样当作用户可见正文发送。
- * - 结构化控制参数使用 frontmatter metadata（`chatKey/reply(message_id)/delay/time/react`）。
+ * - 结构化控制参数使用 frontmatter metadata（`chatKey/reply(message_id)/react`）。
  * - 附件能力保留 `<file>` 标签；会被转换为附件指令文本，拼到主正文中发送。
  */
 
@@ -59,61 +59,6 @@ function parseDirectFileType(value: unknown): DirectFileType {
   if (text === "voice") return "voice";
   if (text === "audio") return "audio";
   return "document";
-}
-
-function parseDelayMsValue(value: unknown): number | undefined {
-  if (typeof value === "number") {
-    if (!Number.isFinite(value) || Number.isNaN(value) || value < 0) {
-      return undefined;
-    }
-    return Math.trunc(value);
-  }
-  const text = normalizeText(value);
-  if (!text) return undefined;
-  if (!/^\d+$/.test(text)) return undefined;
-  const parsed = Number.parseInt(text, 10);
-  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
-    return undefined;
-  }
-  return parsed;
-}
-
-function looksLikeIsoDatetimeWithoutTimezone(value: string): boolean {
-  const text = normalizeText(value);
-  if (!text) return false;
-  const isoLike = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text);
-  if (!isoLike) return false;
-  return !/(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
-}
-
-function parseSendAtMsValue(value: unknown): number | undefined {
-  if (typeof value === "number") {
-    if (!Number.isFinite(value) || Number.isNaN(value) || value <= 0) {
-      return undefined;
-    }
-    return value < 1_000_000_000_000 ? Math.trunc(value * 1000) : Math.trunc(value);
-  }
-  const text = normalizeText(value);
-  if (!text) return undefined;
-
-  if (/^\d+$/.test(text)) {
-    const parsed = Number.parseInt(text, 10);
-    if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
-      return undefined;
-    }
-    // 关键点（中文）：10 位通常是秒级时间戳，统一转换为毫秒。
-    return parsed < 1_000_000_000_000 ? parsed * 1000 : parsed;
-  }
-
-  if (looksLikeIsoDatetimeWithoutTimezone(text)) {
-    return undefined;
-  }
-
-  const parsed = Date.parse(text);
-  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
-    return undefined;
-  }
-  return parsed;
 }
 
 type DirectFrontmatterMetadata = Record<string, unknown>;
@@ -328,8 +273,6 @@ function resolveTextPlan(params: {
   chatKeyOverride?: string;
   replyToMessage: boolean;
   messageId?: string;
-  delayMs?: number;
-  sendAtMs?: number;
   files: DirectFileTagPayload[];
 }): ResolvedDirectTextPayload | null {
   const baseText = stripAttachmentTags(params.source);
@@ -350,10 +293,6 @@ function resolveTextPlan(params: {
     ...(typeof params.messageId === "string" && params.messageId
       ? { messageId: params.messageId }
       : {}),
-    ...(typeof params.sendAtMs === "number"
-      ? { sendAtMs: params.sendAtMs }
-      : {}),
-    ...(typeof params.delayMs === "number" ? { delayMs: params.delayMs } : {}),
   };
 }
 
@@ -389,7 +328,7 @@ function resolveReactionPlans(params: {
  * 从 assistant 文本中解析 direct 出站执行计划。
  *
  * 协议（中文）
- * - frontmatter metadata：`chatKey/reply(message_id)/message_id/delay/sendAt(time)/react(reactions)`。
+ * - frontmatter metadata：`chatKey/reply(message_id)/message_id/react(reactions)`。
  * - `<file type=\"document\">path</file>`：发送附件（会转换为附件指令行）。
  */
 export function parseDirectDispatchAssistantText(params: {
@@ -417,18 +356,8 @@ export function parseDirectDispatchAssistantText(params: {
     replyRaw,
     explicitMessageIdRaw,
   });
-  const delayRaw = pickFirstValue(metadata, ["delay"]);
-  const timeRaw = pickFirstValue(metadata, [
-    "time",
-    "sendAt",
-    "send_at",
-    "sendAtMs",
-    "send_at_ms",
-  ]);
   const files = extractFileTags(body);
   const reacts = parseReactionsFromMetadata(metadata);
-  const delayMs = parseDelayMsValue(delayRaw);
-  const sendAtMs = parseSendAtMsValue(timeRaw);
 
   const textPlan = resolveTextPlan({
     source: body,
@@ -436,11 +365,6 @@ export function parseDirectDispatchAssistantText(params: {
     ...(chatKeyOverride ? { chatKeyOverride } : {}),
     replyToMessage: replyControl.replyToMessage,
     ...(replyControl.messageId ? { messageId: replyControl.messageId } : {}),
-    ...(typeof sendAtMs === "number"
-      ? { sendAtMs }
-      : typeof delayMs === "number"
-        ? { delayMs }
-        : {}),
     files,
   });
   const reactionPlans = resolveReactionPlans({

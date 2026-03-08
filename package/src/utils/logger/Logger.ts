@@ -98,6 +98,23 @@ function colorizeMessageBracketPrefixes(message: string): string {
   });
 }
 
+/**
+ * 压缩日志为“可分段的紧凑展示”。
+ *
+ * 关键点（中文）
+ * - 段内换行转义为字面量 `\n`，避免一条消息占多行。
+ * - 段与段之间保留真实换行，确保不同 message 可清晰区分。
+ */
+function compactMessageForConsole(message: string): string {
+  const normalized = String(message || "").replace(/\r\n/g, "\n");
+  const blocks = normalized
+    .split(/\n{2,}/)
+    .map((block) => String(block || "").replace(/\n/g, "\\n").trim())
+    .filter(Boolean);
+  if (blocks.length === 0) return "";
+  return blocks.join("\n");
+}
+
 function normalizeToAllowedMessageLabels(message: string): string {
   const normalizedLines: string[] = [];
   let activeLabel: string | null = null;
@@ -275,7 +292,7 @@ export class Logger {
   private printLog(entry: LogEntry): void {
     // 关键点（中文）：控制台输出不展示前置时间戳，减少聊天链路日志噪音。
     // 时间信息仍保存在 JSONL 落盘字段 `timestamp` 中。
-    const compactBody = String(entry.message || "").replace(/\r?\n/g, "\\n");
+    const compactBody = compactMessageForConsole(entry.message);
     const body = colorizeMessageBracketPrefixes(compactBody);
     const message = body;
 

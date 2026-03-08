@@ -107,26 +107,6 @@ export interface ResolvedDirectTextPayload {
    * - 来自 metadata 的 `reply`（message_id）或 `message_id/messageId`。
    */
   messageId?: string;
-
-  /**
-   * 可选延迟发送毫秒数。
-   *
-   * 说明（中文）
-   * - 来自 frontmatter metadata（`delay`）。
-   * - 仅允许非负整数。
-   * - 与 `sendAtMs` 互斥，若同时存在以 `sendAtMs` 为准。
-   */
-  delayMs?: number;
-
-  /**
-   * 可选绝对发送时间（Unix 毫秒时间戳）。
-   *
-   * 说明（中文）
-   * - 来自 frontmatter metadata（`sendAtMs/sendAt/time`）。
-   * - 支持由 ISO/秒级时间戳解析后归一化为毫秒。
-   * - 与 `delayMs` 互斥，优先级更高。
-   */
-  sendAtMs?: number;
 }
 
 /**

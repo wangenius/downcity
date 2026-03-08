@@ -300,7 +300,8 @@ export class ChatQueueWorker {
    * direct 模式：把 assistant 纯文本直接投递到 chat。
    *
    * 关键点（中文）
-   * - 支持 frontmatter metadata 协议：主文本发送 + reaction 动作发送。
+   * - 支持 frontmatter metadata 协议：`chatKey/reply/message_id/react`。
+   * - direct metadata 不支持 delay/time；定时或延迟请走 `sma chat send`。
    * - 附件能力保留 `<file>` 标签（会在 parser 中转换为附件指令行）。
    * - 仅消费用户可见文本与控制协议，不转发工具日志/结构化输出。
    * - 发送失败只记录 warning，不中断主执行流程。
@@ -326,10 +327,6 @@ export class ChatQueueWorker {
         text: plan.text.text,
         replyToMessage: plan.text.replyToMessage,
         messageId: plan.text.messageId,
-        delayMs: plan.text.delayMs,
-        sendAtMs: plan.text.sendAtMs,
-        // 关键点（中文）：direct 回发遇到 delay/time 时异步调度，不阻塞 agent finish。
-        nonBlockingDelay: true,
       });
       if (!textResult.success) {
         this.logger.warn("Direct chat text dispatch failed", {

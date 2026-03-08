@@ -8,8 +8,8 @@
 
 import {
   PrompterComponent,
-  type PrompterResolveInput,
 } from "@main/agent/components/PrompterComponent.js";
+import { requestContext } from "@main/context/manager/RequestContext.js";
 import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
 import {
   resolveAgentSystemMessages,
@@ -61,12 +61,13 @@ export class PromptSystem extends PrompterComponent {
     this.profile = options.profile === "task" ? "task" : "chat";
   }
 
-  async resolve(input: PrompterResolveInput) {
-    const contextId = String(input.contextId || "").trim();
+  async resolve() {
+    const ctx = requestContext.getStore();
+    const contextId = String(ctx?.contextId || "").trim();
     if (!contextId) {
       throw new Error("PromptSystem.resolve requires a non-empty contextId");
     }
-    const requestId = String(input.requestId || "").trim();
+    const requestId = String(ctx?.requestId || "").trim();
     if (!requestId) {
       throw new Error("PromptSystem.resolve requires a non-empty requestId");
     }

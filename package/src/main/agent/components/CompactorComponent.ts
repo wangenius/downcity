@@ -53,6 +53,15 @@ export abstract class CompactorComponent extends AgentComponent {
   }>;
 
   /**
+   * 判断某次执行错误是否应该触发“压缩后重试”。
+   *
+   * 关键点（中文）
+   * - 由 compactor 实现侧维护错误识别策略。
+   * - Agent 不感知具体错误文案，只按该布尔结果决定是否重试。
+   */
+  abstract shouldCompactOnError(error: unknown): boolean;
+
+  /**
    * 可选初始化钩子。
    */
   // 生命周期沿用 AgentComponent 默认实现。

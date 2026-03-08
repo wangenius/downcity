@@ -63,11 +63,6 @@ export interface AgentRunInput {
  */
 export interface AgentExecuteInput {
   /**
-   * 当前请求链路 ID。
-   */
-  requestId: string;
-
-  /**
    * 当前轮 system messages。
    */
   system: ContextSystemMessage[];
@@ -81,14 +76,4 @@ export interface AgentExecuteInput {
    * 当前轮可用工具集合。
    */
   tools: Record<string, Tool>;
-
-  /**
-   * step 边界合并回调。
-   */
-  onStepCallback?: () => Promise<ContextMessageV1[]>;
-
-  /**
-   * step 文本完成回调。
-   */
-  onAssistantStepCallback?: AgentAssistantStepCallback;
 }

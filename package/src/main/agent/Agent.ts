@@ -1,765 +1,468 @@
 /**
- * Agent：通用执行器。
+ * Agent：最小执行层。
  *
  * 关键点（中文）
- * - 自身负责“调用核心组件装配 -> 执行 tool-loop”。
- * - 组件按运行节点收敛为：Orchestrator / Prompter / Compactor / Persistor。
- * - `AgentExecuteInput` 使用 context 语义消息，内部再转换为模型消息。
+ * - 这个类只做“流程编排”，不承载业务策略。
+ * - 业务策略由组件实现（Orchestrator / Prompter / Persistor / Compactor）。
+ * - 本文件追求“看注释即可理解执行路径”。
+ *
+ * 主流程（中文）
+ * 1) `run`：入口，做并发保护与状态初始化。
+ * 2) `runWithRetry`：做“可压缩错误”的重试。
+ * 3) `prepareExecuteInput`：从各组件装配 system/tools/messages。
+ * 4) `executePreparedRun`：执行 streamText tool-loop。
+ * 5) `collectFinalAssistantMessage`：收敛最终 assistant 消息。
  */
 
 import {
-  convertToModelMessages,
-  isTextUIPart,
   streamText,
   stepCountIs,
   type LanguageModel,
-  type ModelMessage,
-  type Tool,
-  type ToolSet,
+  type ModelMessage
 } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
 import { CompactorComponent } from "@main/agent/components/CompactorComponent.js";
 import { OrchestratorComponent } from "@main/agent/components/OrchestratorComponent.js";
 import { PersistorComponent } from "@main/agent/components/PersistorComponent.js";
 import { PrompterComponent } from "@main/agent/components/PrompterComponent.js";
+import {
+  buildOpenAIResponsesProviderOptions,
+  logAssistantMessageNow,
+  pickMergedUserMessages,
+  toModelMessages,
+} from "@main/agent/helpers/AgentHelpers.js";
 import type {
   AgentExecuteInput,
   AgentResult,
   AgentRunInput,
 } from "@main/types/Agent.js";
-import type {
-  ContextMessageV1,
-  ContextMetadataV1,
-} from "@main/types/ContextMessage.js";
-import type { ContextSystemMessage } from "@main/types/ContextSystemMessage.js";
+import type { ContextMessageV1 } from "@main/types/ContextMessage.js";
 
-const MAX_ERROR_HANDOVER_ATTEMPTS = 2;
-const MAX_CONTEXT_LENGTH_RETRY_ATTEMPTS = 3;
+/**
+ * 可压缩错误的最大重试次数。
+ */
+const MAX_COMPACTION_RETRY_ATTEMPTS = 3;
+
+/**
+ * 单次 tool-loop 允许的最大 step 数。
+ */
 const MAX_TOOL_LOOP_STEPS = 64;
 
-type AgentExecuteState = {
-  errorHandoverAttempts: number;
-  errorForAgent: string;
-};
-
-type AgentRunState = {
-  retryCount: number;
-};
-
-type AgentStepLike = {
-  text?: unknown;
-  toolCalls?: unknown;
-};
-
+/**
+ * Agent 构造参数。
+ */
 type AgentOptions = {
-  /**
-   * 当前模型实例。
-   */
+  /** 当前模型实例。 */
   model: LanguageModel;
 
-  /**
-   * 统一日志器。
-   */
+  /** 统一日志器。 */
   logger: Logger;
 
-  /**
-   * 当前会话持久化组件。
-   */
+  /** 当前会话持久化组件。 */
   persistor: PersistorComponent;
 
-  /**
-   * 当前会话压缩组件。
-   */
+  /** 当前会话压缩组件。 */
   compactor: CompactorComponent;
 
-  /**
-   * 当前轮运行编排组件。
-   */
+  /** 当前轮运行编排组件。 */
   orchestrator: OrchestratorComponent;
 
-  /**
-   * 当前轮 system 解析组件。
-   */
-  system: PrompterComponent;
+  /** 当前轮 system 解析组件。 */
+  prompter: PrompterComponent;
 };
 
 /**
- * 判断是否为上下文长度超限错误。
+ * Agent 主类。
  */
-export function isContextLengthError(error: unknown): boolean {
-  const errorMsg = String(error ?? "");
-  return (
-    errorMsg.includes("context_length") ||
-    errorMsg.includes("too long") ||
-    errorMsg.includes("maximum context") ||
-    errorMsg.includes("context window")
-  );
-}
-
 export class Agent {
+  /** 模型实例：用于真正执行 streamText。 */
   private readonly model: LanguageModel;
-  private readonly logger: Logger;
-  private readonly persistor: PersistorComponent;
-  private readonly compactor: CompactorComponent;
-  private readonly orchestrator: OrchestratorComponent;
-  private readonly system: PrompterComponent;
 
+  /** 日志实例：用于输出运行过程与错误。 */
+  private readonly logger: Logger;
+
+  /** 持久化组件：用于读写会话消息。 */
+  private readonly persistor: PersistorComponent;
+
+  /** 压缩组件：用于在上下文过长前执行 compact。 */
+  private readonly compactor: CompactorComponent;
+
+  /** 编排组件：用于提供 tools 与 step 回调。 */
+  private readonly orchestrator: OrchestratorComponent;
+
+  /** system 组件：用于解析 system messages。 */
+  private readonly prompter: PrompterComponent;
+
+  /** 运行互斥锁：防止同一个 Agent 实例并发 run。 */
+  private isRunning = false;
+
+  /** context-length 重试计数。 */
+  private retryCount = 0;
+
+  /**
+   * 构造函数。
+   */
   constructor(options: AgentOptions) {
+    // 注入模型。
     this.model = options.model;
+
+    // 注入日志。
     this.logger = options.logger;
+
+    // 注入持久化组件。
     this.persistor = options.persistor;
+
+    // 注入压缩组件。
     this.compactor = options.compactor;
+
+    // 注入编排组件。
     this.orchestrator = options.orchestrator;
-    this.system = options.system;
+
+    // 注入 system 组件。
+    this.prompter = options.prompter;
   }
 
   /**
    * 执行一次 Agent run。
+   *
+   * 关键点（中文）
+   * - 这里只做入口控制，不直接做模型调用。
+   * - 保证同实例串行运行，避免 `retryCount` 等状态串线。
    */
   async run(input: AgentRunInput): Promise<AgentResult> {
-    return this.runWithState(input, {
-      retryCount: 0,
-    });
+    // 如果当前实例已经在运行，则直接拒绝并发调用。
+    if (this.isRunning) {
+      throw new Error("Agent.run does not support concurrent execution");
+    }
+
+    // 标记运行中。
+    this.isRunning = true;
+
+    // 每次新 run 先清理状态。
+    this.resetRunState();
+
+    try {
+      // 真正执行带重试的 run。
+      return await this.runWithRetry(input);
+    } finally {
+      // 无论成功失败都清理状态，避免污染下一轮。
+      this.resetRunState();
+
+      // 释放运行锁。
+      this.isRunning = false;
+    }
   }
 
   /**
-   * 执行一次 Agent run（带装配重试状态）。
+   * 执行一次 Agent run（带可压缩错误重试）。
+   *
+   * 关键点（中文）
+   * - 正常：准备输入 -> 执行。
+   * - 异常：
+   *   - 可压缩错误：压缩重试（是否可压缩由 compactor 决定）。
+   *   - 其他错误：返回失败消息。
    */
-  private async runWithState(
-    input: AgentRunInput,
-    state: AgentRunState,
-  ): Promise<AgentResult> {
-    const query = String(input.query || "").trim();
-    const contextId = String(this.persistor.contextId || "").trim();
-    if (!contextId) {
-      throw new Error("Agent.run requires persistor.contextId");
-    }
-
-    let requestId = "";
-
+  private async runWithRetry(input: AgentRunInput): Promise<AgentResult> {
     try {
-      const prepared = await this.prepareExecuteInput({
-        contextId,
-        query,
-        retryCount: state.retryCount,
-      });
-      requestId = prepared.requestId;
-      return await this.executePreparedRun(prepared, {
-        errorHandoverAttempts: 0,
-        errorForAgent: "",
-      });
+      // 清理并规整 query，避免把 undefined/null 传入后续组件。
+      const query = String(input.query || "").trim();
+
+      // 组装本轮运行所需输入（system/messages/tools）。
+      const prepared = await this.prepareExecuteInput(query);
+
+      // 执行组装好的运行输入。
+      return await this.executePreparedRun(prepared);
     } catch (error) {
-      if (isContextLengthError(error)) {
+      // 是否应压缩重试由 compactor 决策，Agent 只消费布尔结果。
+      if (this.compactor.shouldCompactOnError(error)) {
+        // 记录压缩重试日志，便于观测问题频率。
         await this.logger.log("info", "[agent] compacting", {
-          contextId,
+          retryCount: this.retryCount,
           error: String(error),
-          retryCount: state.retryCount,
         });
-        if (state.retryCount >= MAX_CONTEXT_LENGTH_RETRY_ATTEMPTS) {
-          return {
-            success: false,
-            assistantMessage: this.buildFallbackAssistantMessage({
-              contextId,
-              requestId,
-              text: "Context length exceeded and retries failed. Please resend your question.",
-              note: "context_length_exceeded",
-            }),
-          };
+
+        // 若未超过上限，则增加计数并递归重试。
+        if (this.retryCount < MAX_COMPACTION_RETRY_ATTEMPTS) {
+          this.retryCount += 1;
+          return this.runWithRetry(input);
         }
-        return this.runWithState(input, {
-          retryCount: state.retryCount + 1,
-        });
+
+        // 达到上限后返回可读失败消息，避免死循环。
+        return {
+          success: false,
+          assistantMessage: this.orchestrator.buildFallbackAssistantMessage(
+            "Context length exceeded and retries failed. Please resend your question.",
+          ),
+        };
       }
 
+      // 非“可压缩错误”走统一失败返回。
       const errorMsg = String(error);
+
+      // 记录错误日志。
       await this.logger.log("error", "Agent execution failed", {
-        contextId,
         error: errorMsg,
       });
+
+      // 返回失败 assistant 消息。
       return {
         success: false,
-        assistantMessage: this.buildFallbackAssistantMessage({
-          contextId,
-          requestId,
-          text: `Execution failed: ${errorMsg}`,
-          note: "agent_execution_failed",
-        }),
+        assistantMessage: this.orchestrator.buildFallbackAssistantMessage(
+          `Execution failed: ${errorMsg}`,
+        ),
       };
     }
   }
 
   /**
    * 调用核心组件组装当前轮执行输入。
+   *
+   * 关键点（中文）
+   * - orchestrator 提供 tools 与运行上下文。
+   * - system 提供本轮 system messages。
+   * - compactor 先尝试压缩，再由 persistor 产出消息基线。
    */
-  private async prepareExecuteInput(params: {
-    contextId: string;
-    query: string;
-    retryCount: number;
-  }): Promise<AgentExecuteInput> {
-    const runContext = await this.orchestrator.compose({
-      contextId: params.contextId,
-    });
-    const requestId = String(runContext.requestId || "").trim();
-    if (!requestId) {
-      throw new Error("Agent.prepareExecuteInput requires requestId");
+  private async prepareExecuteInput(query: string): Promise<AgentExecuteInput> {
+    // 基础安全检查：persistor 必须携带 contextId。
+    if (!String(this.persistor.contextId || "").trim()) {
+      throw new Error("Agent.run requires persistor.contextId");
     }
-    const tools = this.normalizeRunTools(runContext.tools);
-    const system = this.normalizeSystem(
-      await this.system.resolve({
-        contextId: params.contextId,
-        requestId,
-      }),
-    );
+
+    // 让 orchestrator 组装运行上下文（例如 tools 与 request 作用域）。
+    const runContext = await this.orchestrator.compose();
+
+    // 拿到本轮工具集合。
+    const tools = runContext.tools;
+
+    // 解析本轮 system messages。
+    const system = await this.prompter.resolve();
 
     try {
-      if (params.retryCount > 0) {
+      // 只有在重试场景下才记录额外 compacting 日志。
+      if (this.retryCount > 0) {
         await this.logger.log("info", "[agent] compacting", {
-          contextId: params.contextId,
-          retryCount: params.retryCount,
+          retryCount: this.retryCount,
         });
       }
+
+      // 尝试执行压缩（best-effort，失败不阻断主流程）。
       await this.compactor.run({
         persistor: this.persistor,
         model: this.model,
         system,
-        retryCount: params.retryCount,
+        retryCount: this.retryCount,
       });
     } catch {
-      // ignore
+      // 压缩失败忽略，继续使用当前历史消息执行。
     }
 
-    const messages = this.normalizeContextMessages(
-      await this.persistor.prepare({
-        query: params.query,
-        tools,
-        system,
-        model: this.model,
-        retryCount: params.retryCount,
-      }),
-    );
+    // 让 persistor 按当前 query/system/tools 生成消息基线。
+    const messages = await this.persistor.prepare({
+      query,
+      tools,
+      system,
+      model: this.model,
+      retryCount: this.retryCount,
+    });
 
+    // 返回最终可执行输入。
     return {
-      requestId,
       system,
       messages,
       tools,
-      ...(typeof runContext.onStepCallback === "function"
-        ? { onStepCallback: runContext.onStepCallback }
-        : {}),
-      ...(typeof runContext.onAssistantStepCallback === "function"
-        ? { onAssistantStepCallback: runContext.onAssistantStepCallback }
-        : {}),
     };
   }
 
   /**
    * 执行一次已装配完成的运行材料。
+   *
+   * 关键点（中文）
+   * - 这里只关心执行，不关心 request/context 参数怎么来的。
+   * - 增量并入逻辑用来支持 step 间新增 user 消息。
    */
   private async executePreparedRun(
     input: AgentExecuteInput,
-    state: AgentExecuteState,
   ): Promise<AgentResult> {
+    // 记录开始时间，用于 finish 日志。
     const startTime = Date.now();
-    const contextId = String(this.persistor.contextId || "").trim();
-    const requestId = String(input.requestId || "").trim();
-    const system = this.normalizeSystem(input.system);
-    const tools = this.normalizeRunTools(input.tools);
-    const onStepCallback =
-      typeof input.onStepCallback === "function"
-        ? input.onStepCallback
-        : undefined;
-    const onAssistantStepCallback =
-      typeof input.onAssistantStepCallback === "function"
-        ? input.onAssistantStepCallback
-        : undefined;
-    const { errorHandoverAttempts } = state;
 
-    // 核心步骤 1（中文）：组装本轮 context messages 基线（必要时追加错误交接提示）。
-    let baseContextMessages = this.normalizeContextMessages(input.messages);
-    const errorForAgent = String(state.errorForAgent || "").trim();
-    if (errorForAgent) {
-      baseContextMessages = [
-        ...baseContextMessages,
-        this.buildErrorHandoverUserMessage({
-          contextId,
-          requestId,
-          errorMessage: errorForAgent,
-          handoverAttempt: errorHandoverAttempts,
-        }),
-      ];
-    }
+    // 防御性兜底：确保 system 至少是数组。
+    const system = Array.isArray(input.system) ? input.system : [];
+
+    // 工具集合直接透传。
+    const tools = input.tools;
 
     try {
-      // 核心步骤 2（中文）：将 context 消息转换为模型消息，并构建“step 间追加 user 消息”的增量器。
-      let baseModelMessages = await this.toModelMessages(
-        baseContextMessages,
-        tools,
-      );
+      // 核心步骤 1（中文）：把 context messages 转成模型输入消息。
+      let baseContextMessages = Array.isArray(input.messages)
+        ? [...input.messages]
+        : [];
+
+      // 根据当前基线消息生成模型消息。
+      let baseModelMessages = await toModelMessages(baseContextMessages, tools);
+
+      // 核心步骤 2（中文）：定义“step 间新增 user 消息并入器”。
       const appendMergedUserMessages = async (
         messages: ContextMessageV1[],
       ): Promise<ModelMessage[]> => {
-        const normalized = this.extractMergedUserMessages(messages);
-        if (normalized.length === 0) return [];
-        baseContextMessages = [...baseContextMessages, ...normalized];
-        const mergedModelMessages = await this.toModelMessages(normalized, tools);
+        // 子步骤 A（中文）：过滤出有效 user 文本消息。
+        const mergedMessages = pickMergedUserMessages(messages);
+
+        // 如果没有可并入消息，直接返回空增量。
+        if (mergedMessages.length === 0) return [];
+
+        // 子步骤 B（中文）：更新 context 基线，保证后续全量重算时可见这些新增消息。
+        baseContextMessages = [...baseContextMessages, ...mergedMessages];
+
+        // 先尝试只转换新增消息，减少重复计算。
+        const mergedModelMessages = await toModelMessages(
+          mergedMessages,
+          tools,
+        );
+
+        // 如果增量转换成功，直接追加并返回增量。
         if (mergedModelMessages.length > 0) {
           baseModelMessages = [...baseModelMessages, ...mergedModelMessages];
-        } else {
-          baseModelMessages = await this.toModelMessages(
-            baseContextMessages,
-            tools,
-          );
+          return mergedModelMessages;
         }
-        return mergedModelMessages;
+
+        // 子步骤 C（中文）：增量不可用时回退为全量重算，保证一致性。
+        baseModelMessages = await toModelMessages(baseContextMessages, tools);
+
+        // 返回空，表示本次 prepareStep 不注入增量片段。
+        return [];
       };
 
-      const onStepFinish = this.createOnStepFinishHandler({
-        onAssistantStepCallback,
-      });
-      const prepareStep = this.createPrepareStepHandler({
+      // 从 orchestrator 获取 step 完成回调（用于中间输出处理）。
+      const onStepFinish = this.orchestrator.createOnStepFinishHandler();
+
+      // 从 orchestrator 获取 step 准备回调（用于 step 间消息并入）。
+      const prepareStep = this.orchestrator.createPrepareStepHandler({
         system,
-        onStepCallback,
         appendMergedUserMessages,
       });
 
+      // 核心步骤 3（中文）：启动 streamText 工具循环。
       const result = streamText({
+        // 指定模型。
         model: this.model,
+        // 指定 system。
         system,
+        // 注入 step 完成钩子。
         onStepFinish,
+        // 注入 step 准备钩子。
         prepareStep,
+        // 注入消息基线。
         messages: baseModelMessages,
+        // 注入工具集。
         tools,
-        providerOptions: this.buildOpenAIResponsesProviderOptions(),
+        // 注入 provider 选项。
+        providerOptions: buildOpenAIResponsesProviderOptions(),
+        // 限制最大 step 数，避免无界循环。
         stopWhen: [stepCountIs(MAX_TOOL_LOOP_STEPS)],
       });
 
-      // 核心步骤 3（中文）：消费 UI stream，并拿到最终 assistant message（含兜底）。
+      // 核心步骤 4（中文）：收敛最终 assistant 消息。
       const finalAssistantUiMessage = await this.collectFinalAssistantMessage({
         result,
-        contextId,
-        requestId,
       });
-      await this.logAssistantMessageNow(finalAssistantUiMessage);
 
-      // 核心步骤 4（中文）：记录完成日志并返回最终消息。
+      // 输出 assistant 文本日志。
+      await logAssistantMessageNow(this.logger, finalAssistantUiMessage);
+
+      // 计算耗时。
       const duration = Date.now() - startTime;
+
+      // 写入 finish 日志。
       await this.logger.log("info", "[agent] finish", {
         duration,
       });
 
+      // 返回成功结果。
       return {
         success: true,
         assistantMessage: finalAssistantUiMessage,
       };
     } catch (error) {
-      return this.handleExecutePreparedRunError({
-        error,
-        input,
-        contextId,
-        requestId,
-        errorHandoverAttempts,
+      // 可压缩错误上抛，让上层 runWithRetry 统一处理重试。
+      if (this.compactor.shouldCompactOnError(error)) {
+        throw error;
+      }
+
+      // 非“可压缩错误”转为失败结果。
+      const errorMsg = String(error);
+
+      // 记录错误日志。
+      await this.logger.log("error", "Agent execution failed", {
+        error: errorMsg,
       });
-    }
-  }
 
-  /**
-   * 生成 step 完成回调。
-   *
-   * 关键点（中文）
-   * - 汇总本轮工具调用计数，供执行后校验使用。
-   * - 若上层注入了 onAssistantStepCallback，则把本 step 文本回传给外层分步发送。
-   */
-  private createOnStepFinishHandler(params: {
-    onAssistantStepCallback?: AgentExecuteInput["onAssistantStepCallback"];
-  }): (stepResult: unknown) => Promise<void> {
-    let assistantStepIndex = 0;
-    return async (stepResult: unknown): Promise<void> => {
-      const step = stepResult as AgentStepLike;
-      const stepText = String(step.text || "").trim();
-      if (typeof params.onAssistantStepCallback !== "function" || !stepText) return;
-      try {
-        assistantStepIndex += 1;
-        await params.onAssistantStepCallback({
-          text: stepText,
-          // 关键点（中文）：1-based step 序号，按回调触发次数递增。
-          stepIndex: assistantStepIndex,
-        });
-      } catch {
-        // ignore assistant step callback failures
-      }
-    };
-  }
-
-  /**
-   * 生成 prepareStep 回调。
-   *
-   * 关键点（中文）
-   * - 每个 step 开始前，尝试把同 lane 新入队的 user 消息并入当前推理上下文。
-   * - 只追加“本轮新增 user 消息”的 model 片段，不重排已有消息顺序。
-   */
-  private createPrepareStepHandler(params: {
-    system: ContextSystemMessage[];
-    onStepCallback?: AgentExecuteInput["onStepCallback"];
-    appendMergedUserMessages: (
-      messages: ContextMessageV1[],
-    ) => Promise<ModelMessage[]>;
-  }): (input: { messages?: ModelMessage[] }) => Promise<{
-    system: ContextSystemMessage[];
-    messages?: ModelMessage[];
-  }> {
-    return async ({
-      messages,
-    }: {
-      messages?: ModelMessage[];
-    }): Promise<{
-      system: ContextSystemMessage[];
-      messages?: ModelMessage[];
-    }> => {
-      if (typeof params.onStepCallback !== "function") {
-        return { system: params.system };
-      }
-
-      const incomingMessages: ModelMessage[] = Array.isArray(messages)
-        ? messages
-        : [];
-      let outMessages: ModelMessage[] | undefined;
-      try {
-        const mergedMessages = await params.onStepCallback();
-        const mergedModelMessages = await params.appendMergedUserMessages(
-          Array.isArray(mergedMessages) ? mergedMessages : [],
-        );
-        if (mergedModelMessages.length > 0) {
-          // 关键点（中文）：保持当前 step 已有消息顺序不变，只把新增 user 消息追加到末尾，避免错序。
-          outMessages = [...incomingMessages, ...mergedModelMessages];
-        }
-      } catch {
-        // ignore merge hook failures
-      }
-
+      // 返回失败消息。
       return {
-        system: params.system,
-        ...(Array.isArray(outMessages) ? { messages: outMessages } : {}),
+        success: false,
+        assistantMessage: this.orchestrator.buildFallbackAssistantMessage(
+          `Execution failed: ${errorMsg}`,
+        ),
       };
-    };
+    }
   }
 
   /**
    * 消费 UI stream 并解析最终 assistant 消息。
    *
    * 关键点（中文）
-   * - 优先使用 UI stream onFinish 给出的完整消息。
-   * - 若 stream 未产出 message，则回退到 `result.text` 生成标准 assistant 文本消息。
+   * - 优先取 UI stream 的结构化 responseMessage。
+   * - 取不到时回退到 `result.text` 生成文本消息。
    */
   private async collectFinalAssistantMessage(params: {
     result: ReturnType<typeof streamText>;
-    contextId: string;
-    requestId: string;
   }): Promise<ContextMessageV1> {
+    // 用于接收 onFinish 传出的结构化 assistant 消息。
     let streamedAssistantMessage: ContextMessageV1 | null = null;
-    const md = this.buildAssistantMessageMetadata({
-      contextId: params.contextId,
-      requestId: params.requestId,
-      note: "ai_sdk_ui_message",
-    });
+
+    // 创建 UI message stream。
     const uiStream = params.result.toUIMessageStream<ContextMessageV1>({
+      // 不发送 reasoning 片段。
       sendReasoning: false,
+      // 不发送来源片段。
       sendSources: false,
-      generateMessageId: () => `a:${params.contextId}:${Date.now()}`,
-      messageMetadata: () => md,
+      // 在 finish 时收敛最终 responseMessage。
       onFinish: (event) => {
         streamedAssistantMessage = event.responseMessage ?? null;
       },
     });
+
+    // 必须完整消费 stream，确保 onFinish 被触发。
     for await (const _ of uiStream) {
-      // ignore chunks
+      // 此处只为驱动流消费，不处理 chunk。
     }
+
+    // 如果拿到结构化消息，直接返回。
     if (streamedAssistantMessage) return streamedAssistantMessage;
 
+    // 回退路径：尝试读取纯文本结果。
     let assistantText = "";
     try {
       assistantText = String((await params.result.text) ?? "").trim();
     } catch {
+      // 读取文本失败时保持空串。
       assistantText = "";
     }
 
-    const fallback = this.buildFallbackAssistantMessage({
-      contextId: params.contextId,
-      requestId: params.requestId,
-      text: assistantText || "Execution completed",
-      note: "assistant_message_fallback",
-    });
-    return fallback;
+    // 用回退文本构造标准 assistant 消息并返回。
+    return this.orchestrator.buildFallbackAssistantMessage(
+      assistantText || "Execution completed",
+    );
   }
 
   /**
-   * 统一处理 executePreparedRun 的错误语义。
+   * 重置当前 run 状态。
    *
    * 关键点（中文）
-   * - context-length 错误上抛给上层重试策略处理。
-   * - 其他错误优先走“错误交接重试”，超过阈值再返回失败消息。
+   * - 统一收口 run 级状态，避免散落在多个位置。
    */
-  private async handleExecutePreparedRunError(params: {
-    error: unknown;
-    input: AgentExecuteInput;
-    contextId: string;
-    requestId: string;
-    errorHandoverAttempts: number;
-  }): Promise<AgentResult> {
-    if (isContextLengthError(params.error)) {
-      throw params.error;
-    }
-
-    const errorMsg = String(params.error);
-    if (params.errorHandoverAttempts < MAX_ERROR_HANDOVER_ATTEMPTS) {
-      await this.logger.log(
-        "warn",
-        "Agent run failed, hand over error back to agent",
-        {
-          contextId: params.contextId,
-          error: errorMsg,
-          errorHandoverAttempts: params.errorHandoverAttempts,
-        },
-      );
-      return this.executePreparedRun(params.input, {
-        errorHandoverAttempts: params.errorHandoverAttempts + 1,
-        errorForAgent: errorMsg,
-      });
-    }
-
-    await this.logger.log("error", "Agent execution failed", {
-      contextId: params.contextId,
-      error: errorMsg,
-    });
-    return {
-      success: false,
-      assistantMessage: this.buildFallbackAssistantMessage({
-        contextId: params.contextId,
-        requestId: params.requestId,
-        text: `Execution failed: ${errorMsg}`,
-        note: "agent_execution_failed",
-      }),
-    };
-  }
-
-  /**
-   * 归一化 system messages。
-   */
-  private normalizeSystem(
-    system: ContextSystemMessage[],
-  ): ContextSystemMessage[] {
-    if (!Array.isArray(system)) return [];
-    return system.filter((item) => item && typeof item === "object");
-  }
-
-  /**
-   * 归一化工具集合。
-   */
-  private normalizeRunTools(tools: Record<string, Tool>): Record<string, Tool> {
-    return tools && typeof tools === "object" ? { ...tools } : {};
-  }
-
-  /**
-   * 归一化 context 消息集合。
-   */
-  private normalizeContextMessages(
-    messages: ContextMessageV1[],
-  ): ContextMessageV1[] {
-    if (!Array.isArray(messages)) return [];
-    return messages
-      .map((message) => {
-        const parts = Array.isArray(message.parts)
-          ? message.parts.filter((part) => part && typeof part === "object")
-          : [];
-        return {
-          ...message,
-          parts,
-        };
-      })
-      .filter(
-        (message) => Array.isArray(message.parts) && message.parts.length > 0,
-      );
-  }
-
-  /**
-   * 从回调返回值中提取可追加的 user 消息。
-   */
-  private extractMergedUserMessages(
-    messages: ContextMessageV1[],
-  ): ContextMessageV1[] {
-    if (!Array.isArray(messages)) return [];
-    return this.normalizeContextMessages(messages).filter((message) => {
-      if (message.role !== "user") return false;
-      const text = message.parts
-        .filter(isTextUIPart)
-        .map((part) => String(part.text ?? ""))
-        .join("\n")
-        .trim();
-      return Boolean(text);
-    });
-  }
-
-  /**
-   * 将 context 消息转换为模型消息。
-   */
-  private async toModelMessages(
-    messages: ContextMessageV1[],
-    tools: Record<string, Tool>,
-  ): Promise<ModelMessage[]> {
-    const input = this.normalizeContextMessages(messages).map((message) => {
-      const { id: _id, ...rest } = message;
-      return rest;
-    });
-    if (input.length === 0) return [];
-    return await convertToModelMessages(input, {
-      ...(tools && Object.keys(tools).length > 0
-        ? { tools: tools as ToolSet }
-        : {}),
-      ignoreIncompleteToolCalls: true,
-    });
-  }
-
-  /**
-   * 构造 assistant 消息元信息。
-   */
-  private buildAssistantMessageMetadata(params: {
-    contextId: string;
-    requestId?: string;
-    note: string;
-  }): ContextMetadataV1 {
-    return {
-      v: 1,
-      ts: Date.now(),
-      contextId: params.contextId,
-      requestId: params.requestId,
-      source: "egress",
-      kind: "normal",
-      extra: { note: params.note },
-    };
-  }
-
-  /**
-   * 构造 fallback assistant 消息。
-   */
-  private buildFallbackAssistantMessage(params: {
-    contextId: string;
-    requestId?: string;
-    text: string;
-    note: string;
-  }): ContextMessageV1 {
-    return this.persistor.assistantText({
-      text: params.text,
-      metadata: {
-        contextId: params.contextId,
-        requestId: params.requestId,
-        extra: { note: params.note },
-      },
-      kind: "normal",
-      source: "egress",
-    });
-  }
-
-  /**
-   * 立即输出 assistant 文本日志（只用 [assistant] 标签）。
-   */
-  private async logAssistantMessageNow(message: ContextMessageV1): Promise<void> {
-    const text = this.extractAssistantTextForLog(message) || "-";
-    const normalized = text.replace(/\r\n/g, "\n");
-    const lines = normalized.split("\n");
-    const prefix = this.buildAssistantLogPrefix(message);
-    const out = [`${prefix} ${lines[0] || "-"}`];
-    if (lines.length > 1) out.push(...lines.slice(1));
-    const output = out.join("\n");
-    await this.logger.log("info", output);
-  }
-
-  /**
-   * 生成 assistant 日志前缀（包含 metadata）。
-   */
-  private buildAssistantLogPrefix(message: ContextMessageV1): string {
-    const metadata =
-      message.metadata && typeof message.metadata === "object"
-        ? (message.metadata as ContextMetadataV1)
-        : undefined;
-    if (!metadata) return "[assistant]";
-
-    const attrs: string[] = [];
-    if (metadata.contextId) {
-      attrs.push(`context_id=${this.normalizeLogAttrValue(metadata.contextId)}`);
-    }
-    if (metadata.requestId) {
-      attrs.push(`request_id=${this.normalizeLogAttrValue(metadata.requestId)}`);
-    }
-    if (metadata.kind) {
-      attrs.push(`kind=${this.normalizeLogAttrValue(metadata.kind)}`);
-    }
-    if (metadata.source) {
-      attrs.push(`source=${this.normalizeLogAttrValue(metadata.source)}`);
-    }
-    if (attrs.length === 0) return "[assistant]";
-    return `[assistant ${attrs.join(" ")}]`;
-  }
-
-  /**
-   * 规整日志属性值，避免破坏前缀结构。
-   */
-  private normalizeLogAttrValue(value: unknown): string {
-    return String(value ?? "")
-      .trim()
-      .replace(/\s+/g, "_")
-      .replace(/[\[\]]/g, "");
-  }
-
-  /**
-   * 从 UI message 中提取 assistant 文本部分。
-   */
-  private extractAssistantTextForLog(message: ContextMessageV1): string {
-    if (!Array.isArray(message.parts)) return "";
-    return message.parts
-      .filter(isTextUIPart)
-      .map((part) => String(part.text ?? ""))
-      .join("\n")
-      .trim();
-  }
-
-  /**
-   * 构造错误交接 user 消息。
-   */
-  private buildErrorHandoverUserMessage(params: {
-    contextId: string;
-    requestId?: string;
-    errorMessage: string;
-    handoverAttempt: number;
-  }): ContextMessageV1 {
-    const normalizedError = String(params.errorMessage || "")
-      .trim()
-      .slice(0, 1200);
-    return this.persistor.userText({
-      text: [
-        "上一轮执行出现错误，请不要结束，继续推进当前任务。",
-        `错误信息：${normalizedError || "(empty error)"}`,
-        "要求：分析错误原因，调整执行步骤，并继续调用需要的工具直到任务完成。",
-        `错误交接轮次：${params.handoverAttempt + 1}`,
-      ].join("\n"),
-      metadata: {
-        contextId: params.contextId,
-        requestId: params.requestId,
-        extra: { note: "agent_error_handover" },
-      },
-    });
-  }
-
-  /**
-   * 构建 OpenAI Responses providerOptions。
-   */
-  private buildOpenAIResponsesProviderOptions(): {
-    openai: {
-      store: boolean;
-    };
-  } {
-    return {
-      openai: {
-        store: false,
-      },
-    };
+  private resetRunState(): void {
+    // 当前仅维护 retryCount，重置为 0。
+    this.retryCount = 0;
   }
 }

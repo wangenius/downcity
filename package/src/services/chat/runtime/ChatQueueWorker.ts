@@ -300,7 +300,7 @@ export class ChatQueueWorker {
    * direct 模式：把 assistant 纯文本直接投递到 chat。
    *
    * 关键点（中文）
-   * - 支持 frontmatter metadata 协议：`chatKey/reply/message_id/react`。
+   * - 支持 frontmatter metadata 协议：`reply/react`。
    * - direct metadata 不支持 delay/time；定时或延迟请走 `sma chat send`。
    * - 附件能力保留 `<file>` 标签（会在 parser 中转换为附件指令行）。
    * - 仅消费用户可见文本与控制协议，不转发工具日志/结构化输出。

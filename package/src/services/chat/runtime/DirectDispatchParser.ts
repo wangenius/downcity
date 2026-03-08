@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 默认把 assistant 文本原样当作用户可见正文发送。
- * - 结构化控制参数使用 frontmatter metadata（`chatKey/reply(message_id)/react`）。
+ * - 结构化控制参数使用 frontmatter metadata（`reply/react`）。
  * - 附件能力保留 `<file>` 标签；会被转换为附件指令文本，拼到主正文中发送。
  */
 
@@ -100,18 +100,6 @@ function extractFrontmatter(params: {
   };
 }
 
-function pickFirstValue(
-  source: DirectFrontmatterMetadata,
-  keys: string[],
-): unknown {
-  for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-      return source[key];
-    }
-  }
-  return undefined;
-}
-
 function parseOptionalMessageId(value: unknown): string | undefined {
   if (typeof value === "number" && Number.isFinite(value) && !Number.isNaN(value)) {
     const text = String(Math.trunc(value)).trim();
@@ -126,19 +114,10 @@ function parseOptionalMessageId(value: unknown): string | undefined {
 
 function resolveReplyControl(params: {
   replyRaw: unknown;
-  explicitMessageIdRaw: unknown;
 }): {
   replyToMessage: boolean;
   messageId?: string;
 } {
-  const explicitMessageId = parseOptionalMessageId(params.explicitMessageIdRaw);
-  if (explicitMessageId) {
-    return {
-      replyToMessage: true,
-      messageId: explicitMessageId,
-    };
-  }
-
   const replyAsMessageId = parseOptionalMessageId(params.replyRaw);
   if (replyAsMessageId) {
     return {
@@ -205,15 +184,9 @@ function parseReactionFromMetadata(value: unknown): DirectReactTagPayload | null
   const raw = value as Record<string, unknown>;
   const emoji = normalizeText(raw.emoji);
   if (!emoji) return null;
-  const chatKey = normalizeText(pickFirstValue(raw, ["chatKey", "chat_key"]));
-  const messageId = normalizeText(
-    pickFirstValue(raw, ["messageId", "message_id"]),
-  );
   const big = parseBoolean(raw.big);
   return {
     emoji,
-    ...(chatKey ? { chatKey } : {}),
-    ...(messageId ? { messageId } : {}),
     ...(big ? { big: true } : {}),
   };
 }
@@ -222,18 +195,13 @@ function parseReactionsFromMetadata(
   metadata: DirectFrontmatterMetadata,
 ): DirectReactTagPayload[] {
   const out: DirectReactTagPayload[] = [];
-  const rawValues = [
-    pickFirstValue(metadata, ["reactions"]),
-    pickFirstValue(metadata, ["react"]),
-  ];
-  for (const raw of rawValues) {
-    if (!raw) continue;
-    const list = Array.isArray(raw) ? raw : [raw];
-    for (const item of list) {
-      const parsed = parseReactionFromMetadata(item);
-      if (!parsed) continue;
-      out.push(parsed);
-    }
+  const raw = metadata.react;
+  if (!raw) return out;
+  const list = Array.isArray(raw) ? raw : [raw];
+  for (const item of list) {
+    const parsed = parseReactionFromMetadata(item);
+    if (!parsed) continue;
+    out.push(parsed);
   }
   return out;
 }
@@ -270,7 +238,6 @@ function buildAttachmentLines(files: DirectFileTagPayload[]): string[] {
 function resolveTextPlan(params: {
   source: string;
   fallbackChatKey: string;
-  chatKeyOverride?: string;
   replyToMessage: boolean;
   messageId?: string;
   files: DirectFileTagPayload[];
@@ -283,7 +250,7 @@ function resolveTextPlan(params: {
     .trim();
   if (!text) return null;
 
-  const chatKey = normalizeText(params.chatKeyOverride || params.fallbackChatKey);
+  const chatKey = normalizeText(params.fallbackChatKey);
   if (!chatKey) return null;
 
   return {
@@ -297,23 +264,19 @@ function resolveTextPlan(params: {
 }
 
 function resolveReactionPlans(params: {
-  defaultChatKey: string;
-  defaultMessageId?: string;
+  fallbackChatKey: string;
+  replyMessageId?: string;
   reacts: DirectReactTagPayload[];
 }): ResolvedDirectReactionPayload[] {
   const out: ResolvedDirectReactionPayload[] = [];
-  const defaultChatKey = normalizeText(params.defaultChatKey);
-  const defaultMessageId = normalizeText(params.defaultMessageId);
+  const chatKey = normalizeText(params.fallbackChatKey);
+  const replyMessageId = normalizeText(params.replyMessageId);
+  if (!chatKey) return out;
   for (const react of params.reacts) {
     const emoji = normalizeText(react.emoji);
     if (!emoji) continue;
-    const chatKey = normalizeText(react.chatKey || defaultChatKey);
-    if (!chatKey) continue;
-    const explicitMessageId = normalizeText(react.messageId);
-    // 关键点（中文）：react 未显式指定 messageId 时，默认复用 reply/message_id。
-    const messageId =
-      explicitMessageId ||
-      (defaultMessageId && chatKey === defaultChatKey ? defaultMessageId : "");
+    // 关键点（中文）：react 统一复用当前会话；目标消息仅来自 reply。
+    const messageId = replyMessageId;
     out.push({
       emoji,
       chatKey,
@@ -328,7 +291,7 @@ function resolveReactionPlans(params: {
  * 从 assistant 文本中解析 direct 出站执行计划。
  *
  * 协议（中文）
- * - frontmatter metadata：`chatKey/reply(message_id)/message_id/react(reactions)`。
+ * - frontmatter metadata：`reply/react`。
  * - `<file type=\"document\">path</file>`：发送附件（会转换为附件指令行）。
  */
 export function parseDirectDispatchAssistantText(params: {
@@ -343,18 +306,9 @@ export function parseDirectDispatchAssistantText(params: {
   const metadata = extracted.metadata;
   const body = extracted.body;
 
-  const chatKeyOverride = normalizeText(
-    pickFirstValue(metadata, ["chatKey", "chat_key"]),
-  );
-  const defaultChatKey = normalizeText(chatKeyOverride || fallbackChatKey);
-  const replyRaw = pickFirstValue(metadata, ["reply"]);
-  const explicitMessageIdRaw = pickFirstValue(metadata, [
-    "message_id",
-    "messageId",
-  ]);
+  const replyRaw = metadata.reply;
   const replyControl = resolveReplyControl({
     replyRaw,
-    explicitMessageIdRaw,
   });
   const files = extractFileTags(body);
   const reacts = parseReactionsFromMetadata(metadata);
@@ -362,14 +316,13 @@ export function parseDirectDispatchAssistantText(params: {
   const textPlan = resolveTextPlan({
     source: body,
     fallbackChatKey,
-    ...(chatKeyOverride ? { chatKeyOverride } : {}),
     replyToMessage: replyControl.replyToMessage,
     ...(replyControl.messageId ? { messageId: replyControl.messageId } : {}),
     files,
   });
   const reactionPlans = resolveReactionPlans({
-    defaultChatKey,
-    defaultMessageId: replyControl.messageId,
+    fallbackChatKey,
+    replyMessageId: replyControl.messageId,
     reacts,
   });
 

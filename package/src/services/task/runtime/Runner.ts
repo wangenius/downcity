@@ -109,9 +109,6 @@ function createTaskAgentRuntime(params: {
     archiveOnCompact: runtime.config.context?.messages?.archiveOnCompact,
     compactRatio: runtime.config.context?.messages?.compactRatio,
   });
-  const orchestrator = new RuntimeOrchestrator({
-    getTools: () => shellTools,
-  });
   const system = new PromptSystem({
     projectRoot: runtime.rootPath,
     getStaticSystemPrompts: () => runtime.systems,
@@ -168,13 +165,17 @@ function createTaskAgentRuntime(params: {
       if (existing) return existing;
 
       const persistor = resolveTaskPersistor(key);
+      const orchestrator = new RuntimeOrchestrator({
+        contextId: key,
+        getTools: () => shellTools,
+      });
       const created = new Agent({
         model: runtime.context.model,
         logger: runtime.logger,
         persistor,
         compactor,
         orchestrator,
-        system,
+        prompter: system,
       });
       agentsByContextId.set(key, created);
       return created;

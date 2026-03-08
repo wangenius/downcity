@@ -10,21 +10,6 @@ import type { SystemModelMessage } from "ai";
 import { AgentComponent } from "./AgentComponent.js";
 
 /**
- * system 解析输入。
- */
-export type PrompterResolveInput = {
-  /**
-   * 当前会话 ID。
-   */
-  contextId: string;
-
-  /**
-   * 当前请求 ID。
-   */
-  requestId: string;
-};
-
-/**
  * Prompter 组件抽象类。
  */
 export abstract class PrompterComponent extends AgentComponent {
@@ -36,5 +21,5 @@ export abstract class PrompterComponent extends AgentComponent {
   /**
    * 解析本轮 system messages。
    */
-  abstract resolve(input: PrompterResolveInput): Promise<SystemModelMessage[]>;
+  abstract resolve(): Promise<SystemModelMessage[]>;
 }

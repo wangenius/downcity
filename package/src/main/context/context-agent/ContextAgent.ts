@@ -59,8 +59,9 @@ export class ContextAgent {
       logger: options.logger,
       persistor: options.persistor,
       compactor: options.compactor,
-      system: options.system,
+      prompter: options.system,
       orchestrator: new RuntimeOrchestrator({
+        contextId: options.persistor.contextId,
         getTools: options.getTools,
       }),
     });

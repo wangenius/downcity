@@ -80,4 +80,21 @@ export class SummaryCompactor extends CompactorComponent {
       compactRatio: policy.compactRatio,
     });
   }
+
+  /**
+   * 判断错误是否属于“应先 compact 再重试”的类型。
+   *
+   * 关键点（中文）
+   * - 当前实现基于主流模型 provider 的超限关键词。
+   * - 后续若接入新 provider，可在此处统一扩展识别规则。
+   */
+  shouldCompactOnError(error: unknown): boolean {
+    const errorMsg = String(error ?? "");
+    return (
+      errorMsg.includes("context_length") ||
+      errorMsg.includes("too long") ||
+      errorMsg.includes("maximum context") ||
+      errorMsg.includes("context window")
+    );
+  }
 }

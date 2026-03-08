@@ -6,44 +6,19 @@
  * - 不负责历史读写，不负责 system 解析，不负责 compact。
  */
 
-import type { Tool } from "ai";
-import type { ShipContextUserMessageV1 } from "@main/types/ContextMessage.js";
-import type { AgentAssistantStepCallback } from "@main/types/Agent.js";
+import type { ModelMessage, Tool } from "ai";
+import type { ContextMessageV1 } from "@main/types/ContextMessage.js";
+import type { ContextSystemMessage } from "@main/types/ContextSystemMessage.js";
 import { AgentComponent } from "./AgentComponent.js";
-
-/**
- * 本轮运行编排输入。
- */
-export type OrchestratorComposeInput = {
-  /**
-   * 当前会话 ID。
-   */
-  contextId: string;
-};
 
 /**
  * 本轮运行编排输出。
  */
 export type OrchestratorComposeResult = {
   /**
-   * 请求链路 ID。
-   */
-  requestId: string;
-
-  /**
    * 本轮工具集合。
    */
   tools: Record<string, Tool>;
-
-  /**
-   * 可选 step 边界合并回调。
-   */
-  onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
-
-  /**
-   * 可选 assistant step 完成回调。
-   */
-  onAssistantStepCallback?: AgentAssistantStepCallback;
 };
 
 /**
@@ -58,7 +33,39 @@ export abstract class OrchestratorComponent extends AgentComponent {
   /**
    * 组装一次 run 所需运行态。
    */
-  abstract compose(
-    input: OrchestratorComposeInput,
-  ): Promise<OrchestratorComposeResult>;
+  abstract compose(): Promise<OrchestratorComposeResult>;
+
+  /**
+   * 构造 prepareStep 回调。
+   */
+  abstract createPrepareStepHandler(
+    input: {
+      /**
+       * 当前轮 system 消息。
+       */
+      system: ContextSystemMessage[];
+      /**
+       * 将新增 user 消息转换为可追加的模型消息。
+       */
+      appendMergedUserMessages: (
+        messages: ContextMessageV1[],
+      ) => Promise<ModelMessage[]>;
+    },
+  ): (input: { messages?: ModelMessage[] }) => Promise<{
+    system: ContextSystemMessage[];
+    messages?: ModelMessage[];
+  }>;
+
+  /**
+   * 构造 onStepFinish 回调。
+   */
+  abstract createOnStepFinishHandler(): (stepResult: unknown) => Promise<void>;
+
+  /**
+   * 构造 fallback assistant 消息。
+   *
+   * 关键点（中文）
+   * - fallback 消息构造由 orchestrator 内部实现，Agent 不直接依赖 persistor。
+   */
+  abstract buildFallbackAssistantMessage(text: string): ContextMessageV1;
 }

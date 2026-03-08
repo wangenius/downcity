@@ -52,23 +52,6 @@ export interface DirectReactTagPayload {
   emoji: string;
 
   /**
-   * 可选目标会话键。
-   *
-   * 说明（中文）
-   * - 缺省时使用当前会话。
-   */
-  chatKey?: string;
-
-  /**
-   * 可选目标消息 ID。
-   *
-   * 说明（中文）
-   * - 提供时会优先贴到该消息。
-   * - 未提供时可回退到主文本的 `reply/message_id`（同一 chatKey 下）。
-   */
-  messageId?: string;
-
-  /**
    * 是否使用大表情。
    *
    * 说明（中文）
@@ -95,7 +78,7 @@ export interface ResolvedDirectTextPayload {
    * 是否以 reply 语义发送正文。
    *
    * 说明（中文）
-   * - 当 metadata 提供 `reply`（message_id）或 `message_id/messageId` 时自动为 true。
+   * - 当 metadata 提供 `reply`（目标 `message_id`）时自动为 true。
    * - `reply` 必须是目标 `message_id`，不接受布尔值。
    */
   replyToMessage: boolean;
@@ -104,7 +87,7 @@ export interface ResolvedDirectTextPayload {
    * 可选 reply 目标消息 ID。
    *
    * 说明（中文）
-   * - 来自 metadata 的 `reply`（message_id）或 `message_id/messageId`。
+   * - 来自 metadata 的 `reply`。
    */
   messageId?: string;
 }
@@ -125,6 +108,9 @@ export interface ResolvedDirectReactionPayload {
 
   /**
    * 可选目标消息 ID。
+   *
+   * 说明（中文）
+   * - 来自主文本 metadata 的 `reply`。
    */
   messageId?: string;
 

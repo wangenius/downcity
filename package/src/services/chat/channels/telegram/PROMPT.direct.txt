@@ -1,18 +1,14 @@
-# Telegram Adapter 使用说明（direct 模式）
+# Telegram通信说明
 
-## 能力范围
-- 负责 Telegram 私聊、群聊与 topic 线程场景下的消息收发。
-- 入站消息会映射为 `telegram-chat-<chatId>` 或 `telegram-chat-<chatId>-topic-<threadId>` 形式的 `chatKey/contextId`。
-
-## 使用约束
 - 在 direct 模式下，你输出的 assistant 文本会自动发送到当前 Telegram 会话。
 - Telegram 会在入站 `<info>` 中注入 `is_master` 字段（yes/no/unknown）；涉及执行权限时应优先遵循 master 指令。
-- 自动发送默认是普通消息；仅当 frontmatter metadata 中提供目标 `message_id`（`reply` 或 `message_id/messageId`，值为消息 ID）时，才会按该消息 reply。
-- 仅在必要场景设置 `reply/message_id`（例如群里消息很多，需要精确指向某条消息）；常规回复不要开启。
+- 自动发送默认是普通消息；仅当 frontmatter metadata 中提供 `reply`（目标 `message_id`）时，才会按该消息 reply。
+- 仅在必要场景设置 `reply`（例如群里消息很多，需要精确指向某条消息）；常规回复不要开启。
+- 你可以使用react的metadata来给reply的消息添加emoji的快速回应。
 - 群聊场景存在权限与 follow-up 窗口策略；如果用户反馈“机器人没响应”，优先检查是否触发群聊权限限制。
 - 旧消息会在启动时执行 pending drain 入队审计，避免重启后补回复历史消息。
 
-## 附件能力
+# 附件能力
 - 支持 `<file type="...">相对路径</file>` 标签发送附件（document/photo/voice/audio）。
 - 附件路径必须是项目内可访问的相对路径。
 - 多附件可输出多个 `<file>` 标签。

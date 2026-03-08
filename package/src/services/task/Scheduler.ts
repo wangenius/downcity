@@ -7,6 +7,7 @@
  */
 
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import { normalizeTaskCronExpression } from "./runtime/Model.js";
 import { listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import { ServiceCronEngine } from "./types/Cron.js";
@@ -15,18 +16,6 @@ const TASK_LOG_PREFIX = "[TASK]";
 
 function formatTaskLogMessage(message: string): string {
   return `${TASK_LOG_PREFIX} ${message}`;
-}
-
-function normalizeCronExpression(raw: string): string | null {
-  const value = String(raw || "").trim();
-  if (!value) return null;
-  if (value === "@manual") return "@manual";
-  if (value === "@hourly") return "0 * * * *";
-  if (value === "@daily") return "0 0 * * *";
-  if (value === "@weekly") return "0 0 * * 0";
-  if (value === "@monthly") return "0 0 1 * *";
-  if (value === "@yearly" || value === "@annually") return "0 0 1 1 *";
-  return value;
 }
 
 function parsePlannedTimeMs(raw: string | undefined): number | null {
@@ -51,7 +40,7 @@ export async function registerTaskCronJobs(params: {
   for (const item of tasks) {
     if (String(item.status).toLowerCase() !== "enabled") continue;
 
-    const expr = normalizeCronExpression(item.cron);
+    const expr = normalizeTaskCronExpression(item.cron);
     let timezone: string | undefined;
     let timeRaw: string | undefined;
     try {
@@ -87,6 +76,19 @@ export async function registerTaskCronJobs(params: {
 
             runningByTaskId.add(taskId);
             try {
+              // 关键点（中文）：触发瞬间复查最新 task.md，避免 status/time/cron 变更后仍沿用旧注册状态。
+              const latest = await readTask({
+                taskId,
+                projectRoot: runtime.rootPath,
+              });
+              if (String(latest.frontmatter.status).toLowerCase() !== "enabled") {
+                return;
+              }
+              const latestExpr = normalizeTaskCronExpression(latest.frontmatter.cron);
+              if (!latestExpr || latestExpr === "@manual") {
+                return;
+              }
+
               const result = await runTaskNow({
                 context: runtime,
                 taskId,

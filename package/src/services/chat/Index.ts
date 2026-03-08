@@ -320,6 +320,14 @@ function parseNonNegativeIntOptionOrThrow(value: string, fieldName: string): num
   return parsed;
 }
 
+function looksLikeIsoDatetimeWithoutTimezone(value: string): boolean {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  const isoLike = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text);
+  if (!isoLike) return false;
+  return !/(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+}
+
 /**
  * 解析定时发送时间。
  *
@@ -340,6 +348,11 @@ function parseSendTimeOptionOrThrow(value: string, fieldName: string): number {
     }
     // 关键点（中文）：10 位通常是秒级时间戳，统一转换为毫秒。
     return parsed < 1_000_000_000_000 ? parsed * 1000 : parsed;
+  }
+  if (looksLikeIsoDatetimeWithoutTimezone(text)) {
+    throw new Error(
+      `Invalid ${fieldName}: ${value}. ISO datetime must include timezone offset (e.g. +08:00 or Z).`,
+    );
   }
 
   const parsed = Date.parse(text);

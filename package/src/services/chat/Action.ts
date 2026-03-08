@@ -277,6 +277,7 @@ export async function sendChatTextByChatKey(params: {
   delayMs?: number;
   sendAtMs?: number;
   replyToMessage?: boolean;
+  messageId?: string;
 }): Promise<ChatSendResponse> {
   const chatKey = String(params.chatKey || "").trim();
   const text = normalizeChatSendText(String(params.text ?? ""));
@@ -309,6 +310,9 @@ export async function sendChatTextByChatKey(params: {
     chatKey,
     text,
     replyToMessage: params.replyToMessage === true,
+    ...(typeof params.messageId === "string" && params.messageId.trim()
+      ? { messageId: params.messageId.trim() }
+      : {}),
   });
   return {
     success: Boolean(result.success),
@@ -369,6 +373,7 @@ export async function sendChatTextByContextId(params: {
   delayMs?: number;
   sendAtMs?: number;
   replyToMessage?: boolean;
+  messageId?: string;
 }): Promise<{ success: boolean; contextId: string; error?: string }> {
   const contextId = String(params.contextId || "").trim();
   if (!contextId) {
@@ -386,6 +391,9 @@ export async function sendChatTextByContextId(params: {
     delayMs: params.delayMs,
     sendAtMs: params.sendAtMs,
     replyToMessage: params.replyToMessage === true,
+    ...(typeof params.messageId === "string" && params.messageId.trim()
+      ? { messageId: params.messageId.trim() }
+      : {}),
   });
   return {
     success: Boolean(result.success),

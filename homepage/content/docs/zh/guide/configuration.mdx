@@ -130,7 +130,10 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
 
 - **method**: 可选 `cmd` 或 `direct`（默认 `direct`）。
   - `direct`：模型输出的 assistant 文本会自动发送到当前会话 channel。
-    可按需输出控制标签：`<chatKey>`、`<reply>`、`<delay>`、`<time>`、`<file>`、`<react>`。
+    控制参数从 frontmatter metadata 读取：`chatKey`、`reply(message_id)` / `message_id` / `messageId`、`delay`、`sendAtMs/sendAt/time`、`react/reactions`。
+    `reply` 的值必须是目标 `message_id`（不接受 `true/false`）。
+    `react/reactions` 未显式传 `messageId` 时，会默认复用 `reply/message_id`（同一 chatKey）。
+    附件仍通过正文中的 `<file type="...">path</file>` 发送。
     投递为 step 级分条发送，而不是仅最终合并一次发送。
   - `cmd`：模型通过执行 `sma chat send` 发消息（Bash-first）。
 

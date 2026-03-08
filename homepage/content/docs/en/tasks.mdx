@@ -42,6 +42,11 @@ Tasks live under `.ship/task/` (note: `task`, not `tasks`):
 
 If you want a manual-only task, use `cron: "@manual"` (the field still exists, but the scheduler won’t register it).
 
+One-shot scheduling is supported via optional `time`:
+
+- `time` must be ISO8601 **with explicit timezone** (for example `2026-03-05T20:00:00+08:00`).
+- When `time` is set, use `cron: "@manual"` to avoid mixed scheduling semantics.
+
 Optional result-check fields:
 
 - `requiredArtifacts`: string array; files that must exist in the current run directory (relative paths)
@@ -133,6 +138,11 @@ The Task System is primarily driven via **built-in tools** (so the Agent can cre
 For CLI control, you can also use `sma task update <taskId> ...` to modify task config without editing `task.md` manually.  
 Use `--clear-*` flags (for example `--clear-required-artifacts`) when you need to unset optional fields.
 
+Useful shortcuts:
+
+- `sma task create ... --activate` is equivalent to `--status enabled`.
+- `sma task update <taskId> --activate` sets `status` to `enabled`.
+
 ### Scheduler
 
 The cron scheduler runs when your runtime is running (for example, when you launch `shipmyagent run` or `shipmyagent start` and keep the process alive). Only tasks with:
@@ -140,6 +150,8 @@ The cron scheduler runs when your runtime is running (for example, when you laun
 `status: enabled` and `cron != "@manual"`
 
 are registered.
+
+When task definitions change (`create/update/delete/status/enable/disable`), ShipMyAgent now auto-reloads the task scheduler so new status/time settings take effect immediately.
 
 ## Notifications
 

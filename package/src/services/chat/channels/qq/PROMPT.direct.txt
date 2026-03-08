@@ -6,6 +6,6 @@
 
 ## 使用约束
 - 在 direct 模式下，你输出的 assistant 文本会自动发送到当前 QQ 会话。
-- QQ 出站回复依赖入站消息上下文（如 `chatType` 与 `messageId`）；跨 context 发送时，`<chatKey>` 必须可解析到 QQ 元信息。
+- QQ 出站回复依赖入站消息上下文（如 `chatType` 与 `messageId`）；跨 context 发送时，frontmatter metadata 的 `chatKey` 必须可解析到 QQ 元信息。
 - 群聊权限支持 `anyone` 与 `initiator_or_admin` 两种门禁策略；群内无响应时优先检查该配置。
 - 适配器会过滤机器人自回环消息并做入站去重，避免“自己回复自己”的循环。

@@ -240,9 +240,12 @@ your-project/
 
 - `direct`（默认）：模型输出的 assistant 文本会自动发送到当前请求会话对应的 channel。
 - `cmd`：模型通过 shell 执行 `sma chat send` 发送用户可见消息。
-- `direct` 模式下，assistant 输出可按需携带控制标签：
-  `<chatKey>`、`<reply>`、`<delay>`、`<time>`、`<file>`、`<react>`。
-  系统会按模型 step 分条投递，而不是只在最终合并后发送一次。
+- `direct` 模式下，控制参数从 Markdown frontmatter metadata 读取：
+  `chatKey`、`reply(message_id)` / `message_id` / `messageId`、`delay`、`sendAtMs/sendAt/time`、`react/reactions`。
+  其中 `reply` 的值必须是目标 `message_id`（不接受 `true/false`）。
+  `react/reactions` 未显式传 `messageId` 时，会默认复用 `reply/message_id`（同一 chatKey）。
+- 附件仍通过正文中的 `<file type="...">path</file>` 发送。
+- 系统会按模型 step 分条投递，而不是只在最终合并后发送一次。
 
 ```json
 {

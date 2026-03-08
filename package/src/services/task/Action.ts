@@ -16,12 +16,15 @@ import {
   normalizeTaskId,
 } from "./runtime/Paths.js";
 import {
+  normalizeTaskCron,
   normalizeMaxDialogueRounds,
   normalizeMinOutputChars,
   normalizeRequiredArtifacts,
   normalizeTaskKind,
   normalizeTaskTime,
+  normalizeTaskTimezone,
   normalizeTaskStatus,
+  validateTaskScheduleCombination,
 } from "./runtime/Model.js";
 import { deleteTask, listTasks, readTask, writeTask } from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
@@ -112,18 +115,27 @@ export async function createTaskDefinition(params: {
 
   const title = String(req.title || "").trim();
   const description = String(req.description || "").trim();
-  const cron = String(req.cron || "@manual").trim() || "@manual";
+  const cronNormalized = normalizeTaskCron(String(req.cron || "@manual").trim() || "@manual");
   const contextId = String(req.contextId || "").trim();
   const kind = normalizeTaskKind(req.kind);
   const timeNormalized = normalizeTaskTime(req.time);
+  const timezoneNormalized = normalizeTaskTimezone(req.timezone);
 
   if (!title) return { success: false, error: "Missing title" };
   if (!description) return { success: false, error: "Missing description" };
   if (!contextId) return { success: false, error: "Missing contextId" };
+  if (!cronNormalized.ok) return { success: false, error: cronNormalized.error };
   if (!timeNormalized.ok) return { success: false, error: timeNormalized.error };
+  if (!timezoneNormalized.ok) return { success: false, error: timezoneNormalized.error };
+  const scheduleCombination = validateTaskScheduleCombination({
+    cron: cronNormalized.value,
+    time: timeNormalized.value,
+  });
+  if (!scheduleCombination.ok) {
+    return { success: false, error: scheduleCombination.error };
+  }
 
   const status = resolveTaskStatus(req.status, "paused");
-  const timezone = typeof req.timezone === "string" ? req.timezone.trim() : "";
   const body =
     typeof req.body === "string" && req.body.trim()
       ? req.body.trim()
@@ -145,12 +157,12 @@ export async function createTaskDefinition(params: {
       frontmatter: {
         title,
         description,
-        cron,
+        cron: cronNormalized.value,
         contextId,
         kind,
         ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
         status,
-        ...(timezone ? { timezone } : {}),
+        ...(timezoneNormalized.value ? { timezone: timezoneNormalized.value } : {}),
         ...(requiredArtifactsNormalized.value.length > 0
           ? { requiredArtifacts: requiredArtifactsNormalized.value }
           : {}),
@@ -221,9 +233,10 @@ export async function updateTaskDefinition(params: {
         : current.frontmatter.description;
     if (!description) return { success: false, error: "description cannot be empty" };
 
-    const cron =
+    const cronInput =
       typeof req.cron === "string" ? req.cron.trim() : current.frontmatter.cron;
-    if (!cron) return { success: false, error: "cron cannot be empty" };
+    const cronNormalized = normalizeTaskCron(cronInput);
+    if (!cronNormalized.ok) return { success: false, error: cronNormalized.error };
 
     const contextId =
       typeof req.contextId === "string" ? req.contextId.trim() : current.frontmatter.contextId;
@@ -250,9 +263,9 @@ export async function updateTaskDefinition(params: {
       };
     }
 
-    let timezone: string | undefined;
+    let timezoneInput: string | undefined;
     if (req.clearTimezone) {
-      timezone = undefined;
+      timezoneInput = undefined;
     } else if (typeof req.timezone === "string") {
       const t = req.timezone.trim();
       if (!t) {
@@ -261,9 +274,20 @@ export async function updateTaskDefinition(params: {
           error: "timezone cannot be empty (use clearTimezone to unset)",
         };
       }
-      timezone = t;
+      timezoneInput = t;
     } else {
-      timezone = current.frontmatter.timezone;
+      timezoneInput = current.frontmatter.timezone;
+    }
+    const timezoneNormalized = normalizeTaskTimezone(timezoneInput);
+    if (!timezoneNormalized.ok) {
+      return { success: false, error: timezoneNormalized.error };
+    }
+    const scheduleCombination = validateTaskScheduleCombination({
+      cron: cronNormalized.value,
+      time: timeNormalized.value,
+    });
+    if (!scheduleCombination.ok) {
+      return { success: false, error: scheduleCombination.error };
     }
 
     let requiredArtifacts: string[] = [];
@@ -314,12 +338,12 @@ export async function updateTaskDefinition(params: {
       frontmatter: {
         title,
         description,
-        cron,
+        cron: cronNormalized.value,
         contextId,
         kind,
         ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
         status,
-        ...(timezone ? { timezone } : {}),
+        ...(timezoneNormalized.value ? { timezone: timezoneNormalized.value } : {}),
         ...(requiredArtifacts.length > 0 ? { requiredArtifacts } : {}),
         ...(typeof minOutputChars === "number" ? { minOutputChars } : {}),
         ...(typeof maxDialogueRounds === "number" ? { maxDialogueRounds } : {}),

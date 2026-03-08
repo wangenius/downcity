@@ -53,10 +53,10 @@
 
 - 常用 action（CLI）：
   - `sma task list [--status enabled|paused|disabled]`
-  - `sma task create --title '...' --description '...' --context-id <contextId> [--cron '@manual'] [--kind agent|script]`
+  - `sma task create --title '...' --description '...' --context-id <contextId> [--cron '@manual'] [--kind agent|script] [--status ...|--activate]`
   - `sma task run <taskId> [--reason '...']`
   - `sma task delete <taskId>`
-  - `sma task update <taskId> [--title ...] [--description ...] [--cron ...] [--status ...] [--context-id ...]`
+  - `sma task update <taskId> [--title ...] [--description ...] [--cron ...] [--status ...|--activate] [--context-id ...]`
   - `sma task status <taskId> <enabled|paused|disabled>`
   - `sma task enable <taskId>`
   - `sma task disable <taskId>`
@@ -65,6 +65,10 @@
   - `sma service restart task`
 - 调度重载命令（task lifecycle command）：
   - `sma service command task reschedule`
+
+关键行为（中文）：
+- `create/update/delete/status/enable/disable` 成功后，task scheduler 会自动重载一次（等价于内部执行 `reschedule`）。
+- 仍可手动执行 `sma service command task reschedule` 做显式重载。
 
 ## 状态语义
 
@@ -85,7 +89,7 @@
 - `contextId`：结果回发目标（必填）
 - `status`：`enabled|paused|disabled`（必填）
 - `kind`：`agent|script`（可选，默认 `agent`）
-- `time`：单次计划时间（可选，ISO8601；到点执行一次）
+- `time`：单次计划时间（可选，ISO8601 且必须显式时区，如 `2026-03-05T20:00:00+08:00`；到点执行一次）
 
 ### 可选字段
 - `timezone`：IANA 时区（如 `Asia/Shanghai`）
@@ -95,7 +99,8 @@
 
 ### 冲突与校验
 - 更新时所有 `set` 与 `clear` 选项必须互斥。
-- `time` 适合“单次计划”；触发后系统会自动将任务置为 `paused` 并清空 `time`。
+- `time` 适合“单次计划”；请与 `cron=@manual` 搭配使用。
+- `time` 触发后系统会自动将任务置为 `paused` 并清空 `time`。
 - `kind=script` 时，正文不能为空且应为脚本；不要配置成空 body。
 - `requiredArtifacts` 应是 run 目录内相对路径。
 

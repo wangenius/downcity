@@ -40,7 +40,7 @@ export interface DirectFileTagPayload {
 }
 
 /**
- * 解析后的反应标签参数（来自 `<react>` 标签）。
+ * 解析后的反应参数（来自 frontmatter metadata）。
  */
 export interface DirectReactTagPayload {
   /**
@@ -64,6 +64,7 @@ export interface DirectReactTagPayload {
    *
    * 说明（中文）
    * - 提供时会优先贴到该消息。
+   * - 未提供时可回退到主文本的 `reply/message_id`（同一 chatKey 下）。
    */
   messageId?: string;
 
@@ -92,14 +93,26 @@ export interface ResolvedDirectTextPayload {
 
   /**
    * 是否以 reply 语义发送正文。
+   *
+   * 说明（中文）
+   * - 当 metadata 提供 `reply`（message_id）或 `message_id/messageId` 时自动为 true。
+   * - `reply` 必须是目标 `message_id`，不接受布尔值。
    */
   replyToMessage: boolean;
+
+  /**
+   * 可选 reply 目标消息 ID。
+   *
+   * 说明（中文）
+   * - 来自 metadata 的 `reply`（message_id）或 `message_id/messageId`。
+   */
+  messageId?: string;
 
   /**
    * 可选延迟发送毫秒数。
    *
    * 说明（中文）
-   * - 来自 `<delay>` 标签。
+   * - 来自 frontmatter metadata（`delay`）。
    * - 仅允许非负整数。
    * - 与 `sendAtMs` 互斥，若同时存在以 `sendAtMs` 为准。
    */
@@ -109,7 +122,7 @@ export interface ResolvedDirectTextPayload {
    * 可选绝对发送时间（Unix 毫秒时间戳）。
    *
    * 说明（中文）
-   * - 来自 `<time>` 标签。
+   * - 来自 frontmatter metadata（`sendAtMs/sendAt/time`）。
    * - 支持由 ISO/秒级时间戳解析后归一化为毫秒。
    * - 与 `delayMs` 互斥，优先级更高。
    */
@@ -149,7 +162,7 @@ export interface ResolvedDirectDispatchPlan {
    * 主文本发送计划。
    *
    * 说明（中文）
-   * - 为空表示本轮没有可发送正文（例如只有 `<react>` 标签）。
+   * - 为空表示本轮没有可发送正文（例如只有 reaction metadata）。
    */
   text: ResolvedDirectTextPayload | null;
 

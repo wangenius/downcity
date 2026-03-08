@@ -206,7 +206,7 @@ export class Logger {
   }
 
   private printLog(entry: LogEntry): void {
-    const timestamp = new Date(entry.timestamp).toLocaleTimeString("zh-CN");
+    const timestamp = new Date(entry.timestamp).toISOString();
     const level = entry.type.toUpperCase().padEnd(7);
     const timestampToken = `${ANSI_DIM}[${timestamp}]${ANSI_RESET}`;
     const levelToken = `${ANSI_BOLD}${colorizeBracketedPrefix(level)}${ANSI_RESET}`;
@@ -241,7 +241,7 @@ export class Logger {
   private async saveToFile(entry: LogEntry): Promise<void> {
     if (!this.projectRoot) return;
     const logsDir = getLogsDirPath(this.projectRoot);
-    const date = new Date().toISOString().split("T")[0];
+    const date = String(entry.timestamp || "").slice(0, 10) || new Date().toISOString().slice(0, 10);
     const logFile = path.join(logsDir, `${date}.jsonl`);
 
     const logLine = JSON.stringify(entry) + "\n";

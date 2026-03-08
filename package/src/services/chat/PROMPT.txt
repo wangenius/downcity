@@ -67,7 +67,7 @@ User-facing output rules:
 - 不要滥用 `--reply`：仅在消息密集、需要把回复明确挂到某条消息时再使用。
 - 默认使用单引号包裹 `--text`，例如：`sma chat send --text '你好'`。
 - `send` 支持 `--delay <ms>`（非负整数，毫秒）用于延迟发送。
-- `send` 支持 `--time <time>`（Unix 时间戳秒/毫秒或 ISO 时间）用于定时发送。
+- `send` 支持 `--time <time>`（Unix 时间戳秒/毫秒或 ISO 时间；ISO 必须显式时区）用于定时发送。
 - `--delay` 与 `--time` 互斥，不能同时传。
 - 多行正文使用 heredoc 管道到 stdin，例如：
   `cat <<'EOF' | sma chat send --stdin --chat-key <chatKey>`

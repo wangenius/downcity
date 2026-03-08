@@ -126,9 +126,21 @@ export class MemoryManager {
     }
   }
 
+  /**
+   * 格式化记忆时间戳（UTC）。
+   *
+   * 关键点（中文）
+   * - 统一使用 ISO8601，避免跨时区阅读歧义。
+   */
+  private formatMemoryTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return "invalid-date";
+    return date.toISOString();
+  }
+
   private formatEntry(entry: MemoryEntry): string {
     const lines: string[] = [];
-    const date = new Date(entry.timestamp).toLocaleString("zh-CN");
+    const date = this.formatMemoryTimestamp(entry.timestamp);
     const [start, end] = entry.roundRange;
 
     lines.push(`### [轮次 ${start}-${end}] ${date}`);
@@ -156,7 +168,7 @@ export class MemoryManager {
 
   private createInitialStructure(firstEntry: MemoryEntry): string {
     const lines: string[] = [];
-    const date = new Date(firstEntry.timestamp).toLocaleString("zh-CN");
+    const date = this.formatMemoryTimestamp(firstEntry.timestamp);
 
     lines.push("# Context Memory / Primary");
     lines.push("");

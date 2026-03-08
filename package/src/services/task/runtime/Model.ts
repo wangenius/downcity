@@ -9,6 +9,7 @@
 
 import yaml from "js-yaml";
 import path from "node:path";
+import cron from "node-cron";
 import { parseFrontMatter } from "./Frontmatter.js";
 import type {
   ShipTaskDefinitionV1,
@@ -30,6 +31,88 @@ const REQUIRED_FIELDS: Array<keyof ShipTaskFrontmatterV1> = [
 ];
 
 type TaskRawValue = JsonValue | undefined;
+
+/**
+ * cron alias 映射表。
+ *
+ * 关键点（中文）
+ * - 与 scheduler 侧保持一致，避免“写入可过，调度不可用”的分裂行为。
+ */
+const CRON_ALIAS_TO_EXPRESSION: Record<string, string> = {
+  "@manual": "@manual",
+  "@hourly": "0 * * * *",
+  "@daily": "0 0 * * *",
+  "@weekly": "0 0 * * 0",
+  "@monthly": "0 0 1 * *",
+  "@yearly": "0 0 1 1 *",
+  "@annually": "0 0 1 1 *",
+};
+
+/**
+ * ISO8601 日期时间（必须显式时区）。
+ *
+ * 示例（中文）
+ * - `2026-03-08T10:30:00Z`
+ * - `2026-03-08T18:30:00+08:00`
+ */
+const ISO_DATETIME_WITH_TZ_REGEXP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/i;
+
+/**
+ * 把用户输入 cron（含 alias）映射为 node-cron 可执行表达式。
+ *
+ * 关键点（中文）
+ * - 返回 `@manual` 表示“仅手动触发”。
+ */
+export function normalizeTaskCronExpression(raw: string): string | null {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  return CRON_ALIAS_TO_EXPRESSION[lower] || value;
+}
+
+/**
+ * 校验并归一化 cron。
+ *
+ * 关键点（中文）
+ * - alias 会统一为小写存储，避免大小写抖动。
+ * - 非 `@manual` 必须通过 node-cron 校验。
+ */
+export function normalizeTaskCron(
+  input: TaskRawValue,
+): { ok: true; value: string } | { ok: false; error: string } {
+  const raw = String(input || "").trim();
+  if (!raw) return { ok: false, error: "cron cannot be empty" };
+
+  const lower = raw.toLowerCase();
+  const canonical = CRON_ALIAS_TO_EXPRESSION[lower] ? lower : raw;
+  const expression = normalizeTaskCronExpression(canonical);
+  if (!expression) return { ok: false, error: "cron cannot be empty" };
+  if (expression !== "@manual" && !cron.validate(expression)) {
+    return { ok: false, error: `Invalid cron: "${raw}"` };
+  }
+  return { ok: true, value: canonical };
+}
+
+/**
+ * 校验并归一化 timezone。
+ *
+ * 关键点（中文）
+ * - 仅允许 IANA 时区（例如 `Asia/Shanghai`）。
+ */
+export function normalizeTaskTimezone(
+  input: TaskRawValue,
+): { ok: true; value?: string } | { ok: false; error: string } {
+  if (input === undefined || input === null) return { ok: true, value: undefined };
+  const raw = String(input || "").trim();
+  if (!raw) return { ok: true, value: undefined };
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: raw });
+  } catch {
+    return { ok: false, error: `Invalid timezone: "${raw}" (expected IANA timezone)` };
+  }
+  return { ok: true, value: raw };
+}
 
 /**
  * 归一化 task 状态。
@@ -70,11 +153,43 @@ export function normalizeTaskTime(
   if (input === undefined || input === null) return { ok: true, value: undefined };
   const raw = String(input || "").trim();
   if (!raw) return { ok: true, value: undefined };
+  if (!ISO_DATETIME_WITH_TZ_REGEXP.test(raw)) {
+    return {
+      ok: false,
+      error:
+        `Invalid time: "${raw}" (expected ISO8601 datetime with timezone, e.g. 2026-03-08T10:30:00+08:00 or Z)`,
+    };
+  }
   const ms = Date.parse(raw);
   if (!Number.isFinite(ms) || Number.isNaN(ms)) {
-    return { ok: false, error: `Invalid time: "${raw}" (expected ISO8601 datetime)` };
+    return {
+      ok: false,
+      error:
+        `Invalid time: "${raw}" (expected ISO8601 datetime with timezone, e.g. 2026-03-08T10:30:00+08:00 or Z)`,
+    };
   }
   return { ok: true, value: new Date(ms).toISOString() };
+}
+
+/**
+ * 校验调度组合是否合法。
+ *
+ * 关键点（中文）
+ * - `time` 是一次性触发语义，要求 `cron=@manual`，避免双调度歧义。
+ */
+export function validateTaskScheduleCombination(params: {
+  cron: string;
+  time?: string;
+}): { ok: true } | { ok: false; error: string } {
+  const expression = normalizeTaskCronExpression(params.cron);
+  if (!expression) return { ok: false, error: "cron cannot be empty" };
+  if (params.time && expression !== "@manual") {
+    return {
+      ok: false,
+      error: "Invalid schedule: `time` requires `cron=@manual`",
+    };
+  }
+  return { ok: true };
 }
 
 /**
@@ -233,10 +348,25 @@ export function parseTaskMarkdown(params: {
       error: `Invalid status: "${String(meta.status)}" (expected: enabled|paused|disabled)`,
     };
   }
+  const cronNormalized = normalizeTaskCron(meta.cron);
+  if (!cronNormalized.ok) {
+    return { ok: false, error: cronNormalized.error };
+  }
   const kind = normalizeTaskKind(meta.kind);
   const timeNormalized = normalizeTaskTime(meta.time);
   if (!timeNormalized.ok) {
     return { ok: false, error: timeNormalized.error };
+  }
+  const timezoneNormalized = normalizeTaskTimezone(meta.timezone);
+  if (!timezoneNormalized.ok) {
+    return { ok: false, error: timezoneNormalized.error };
+  }
+  const scheduleCombination = validateTaskScheduleCombination({
+    cron: cronNormalized.value,
+    time: timeNormalized.value,
+  });
+  if (!scheduleCombination.ok) {
+    return { ok: false, error: scheduleCombination.error };
   }
   const bodyText = String(body ?? "").trim();
   if (kind === "script" && !bodyText) {
@@ -259,15 +389,13 @@ export function parseTaskMarkdown(params: {
 
   const fm: ShipTaskFrontmatterV1 = {
     title: String(meta.title).trim(),
-    cron: String(meta.cron).trim(),
+    cron: cronNormalized.value,
     description: String(meta.description).trim(),
     contextId: String(meta.contextId).trim(),
     kind,
     ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
     status,
-    ...(typeof meta.timezone === "string" && meta.timezone.trim()
-      ? { timezone: meta.timezone.trim() }
-      : {}),
+    ...(timezoneNormalized.value ? { timezone: timezoneNormalized.value } : {}),
     ...(requiredArtifactsNormalized.value.length > 0
       ? { requiredArtifacts: requiredArtifactsNormalized.value }
       : {}),
@@ -307,6 +435,10 @@ export function buildTaskMarkdown(params: {
   body: string;
 }): string {
   const { frontmatter, body } = params;
+  const cronNormalized = normalizeTaskCron(frontmatter.cron);
+  if (!cronNormalized.ok) {
+    throw new Error(cronNormalized.error);
+  }
   const requiredArtifactsNormalized = normalizeRequiredArtifacts(frontmatter.requiredArtifacts);
   if (!requiredArtifactsNormalized.ok) {
     throw new Error(requiredArtifactsNormalized.error);
@@ -325,6 +457,17 @@ export function buildTaskMarkdown(params: {
   if (!timeNormalized.ok) {
     throw new Error(timeNormalized.error);
   }
+  const timezoneNormalized = normalizeTaskTimezone(frontmatter.timezone);
+  if (!timezoneNormalized.ok) {
+    throw new Error(timezoneNormalized.error);
+  }
+  const scheduleCombination = validateTaskScheduleCombination({
+    cron: cronNormalized.value,
+    time: timeNormalized.value,
+  });
+  if (!scheduleCombination.ok) {
+    throw new Error(scheduleCombination.error);
+  }
   const bodyText = String(body ?? "").trim();
   if (kind === "script" && !bodyText) {
     throw new Error("script task body cannot be empty");
@@ -332,15 +475,13 @@ export function buildTaskMarkdown(params: {
 
   const meta = {
     title: String(frontmatter.title || "").trim(),
-    cron: String(frontmatter.cron || "").trim(),
+    cron: cronNormalized.value,
     description: String(frontmatter.description || "").trim(),
     contextId: String(frontmatter.contextId || "").trim(),
     kind,
     ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
     status: String(frontmatter.status || "").trim(),
-    ...(typeof frontmatter.timezone === "string" && frontmatter.timezone.trim()
-      ? { timezone: frontmatter.timezone.trim() }
-      : {}),
+    ...(timezoneNormalized.value ? { timezone: timezoneNormalized.value } : {}),
     ...(requiredArtifactsNormalized.value.length > 0
       ? { requiredArtifacts: requiredArtifactsNormalized.value }
       : {}),

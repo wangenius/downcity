@@ -20,7 +20,7 @@ export type ShipTaskFrontmatterV1 = {
   contextId: string;
   /** 任务执行类型（agent=交给 agent 执行；script=直接执行 task 正文脚本） */
   kind?: ShipTaskKind;
-  /** 单次计划执行时间（ISO8601 字符串）；到点执行一次后自动清空并置为 paused */
+  /** 单次计划执行时间（ISO8601 且必须显式时区）；要求与 cron=@manual 搭配使用 */
   time?: string;
   /** 启停状态 */
   status: ShipTaskStatus;

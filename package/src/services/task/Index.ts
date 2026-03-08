@@ -19,6 +19,7 @@ import {
 } from "./Action.js";
 import { resolveContextId } from "@main/context/manager/ContextId.js";
 import type { Service } from "@main/service/ServiceManager.js";
+import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
 import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type {
@@ -210,6 +211,56 @@ function resolveContextIdOrThrow(input?: string): string {
   return contextId;
 }
 
+/**
+ * 任务定义变更后重载 scheduler。
+ *
+ * 关键点（中文）
+ * - 解决“create/update 后还沿用旧注册表”的时序问题。
+ * - 重载失败不阻断主操作（任务定义已经写入成功），仅记录 warning 供排查。
+ */
+async function reloadTaskSchedulerAfterMutation(params: {
+  context: ServiceRuntime;
+  action: "create" | "update" | "delete" | "status";
+  taskId: string;
+}): Promise<{
+  reloaded: boolean;
+  tasksFound?: number;
+  jobsScheduled?: number;
+  error?: string;
+}> {
+  try {
+    const result = await restartTaskCronRuntime(params.context);
+    params.context.logger.info(
+      formatTaskLogMessage("Task scheduler reloaded after mutation"),
+      {
+        action: params.action,
+        taskId: params.taskId,
+        tasksFound: result.tasksFound,
+        jobsScheduled: result.jobsScheduled,
+      },
+    );
+    return {
+      reloaded: true,
+      tasksFound: result.tasksFound,
+      jobsScheduled: result.jobsScheduled,
+    };
+  } catch (error) {
+    const reason = String(error);
+    params.context.logger.warn(
+      formatTaskLogMessage("Task scheduler reload failed after mutation"),
+      {
+        action: params.action,
+        taskId: params.taskId,
+        error: reason,
+      },
+    );
+    return {
+      reloaded: false,
+      error: reason,
+    };
+  }
+}
+
 function mapTaskListCommandInput(
   opts: Record<string, JsonValue>,
 ): TaskListPayload {
@@ -228,7 +279,12 @@ function mapTaskCreateCommandInput(
   const contextId = resolveContextIdOrThrow(getStringOpt(opts, "contextId"));
   const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
+  const activate = getBooleanOpt(opts, "activate") === true;
+  if (activate && status && status !== "enabled") {
+    throw new Error("`--activate` conflicts with `--status` unless status=enabled");
+  }
   const requiredArtifacts = getStringArrayOpt(opts, "requiredArtifact");
+  const resolvedStatus = activate ? "enabled" : status;
 
   return {
     ...(getStringOpt(opts, "taskId")
@@ -242,7 +298,7 @@ function mapTaskCreateCommandInput(
     ...(typeof getStringOpt(opts, "time") === "string"
       ? { time: getStringOpt(opts, "time") }
       : {}),
-    ...(status ? { status } : {}),
+    ...(resolvedStatus ? { status: resolvedStatus } : {}),
     ...(getStringOpt(opts, "timezone")
       ? { timezone: getStringOpt(opts, "timezone") }
       : {}),
@@ -269,6 +325,7 @@ function mapTaskUpdateCommandInput(params: {
   const opts = params.opts;
   const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
+  const activate = getBooleanOpt(opts, "activate") === true;
   const requiredArtifacts = getStringArrayOpt(opts, "requiredArtifact");
 
   // 关键点（中文）：set 与 clear 选项互斥，提前在命令入口做校验。
@@ -316,9 +373,13 @@ function mapTaskUpdateCommandInput(params: {
   ) {
     conflicts.push("`--time` conflicts with `--clear-time`");
   }
+  if (activate && status && status !== "enabled") {
+    conflicts.push("`--activate` conflicts with `--status` unless status=enabled");
+  }
   if (conflicts.length > 0) {
     throw new Error(conflicts.join("; "));
   }
+  const resolvedStatus = activate ? "enabled" : status;
 
   const hasUpdate =
     typeof getStringOpt(opts, "title") === "string" ||
@@ -328,7 +389,7 @@ function mapTaskUpdateCommandInput(params: {
     typeof kind === "string" ||
     typeof getStringOpt(opts, "time") === "string" ||
     getBooleanOpt(opts, "clearTime") === true ||
-    typeof status === "string" ||
+    typeof resolvedStatus === "string" ||
     typeof getStringOpt(opts, "timezone") === "string" ||
     getBooleanOpt(opts, "clearTimezone") === true ||
     (Array.isArray(requiredArtifacts) && requiredArtifacts.length > 0) ||
@@ -363,7 +424,7 @@ function mapTaskUpdateCommandInput(params: {
       ? { time: getStringOpt(opts, "time") }
       : {}),
     ...(getBooleanOpt(opts, "clearTime") ? { clearTime: true } : {}),
-    ...(typeof status === "string" ? { status } : {}),
+    ...(typeof resolvedStatus === "string" ? { status: resolvedStatus } : {}),
     ...(typeof getStringOpt(opts, "timezone") === "string"
       ? { timezone: getStringOpt(opts, "timezone") }
       : {}),
@@ -415,6 +476,13 @@ function mapTaskListApiInput(query: { status?: string }): TaskListPayload {
 }
 
 function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
+  const status = getOptionalTaskStatusField(body, "status");
+  const activate = getBooleanField(body, "activate");
+  if (activate && status && status !== "enabled") {
+    throw new Error("`activate` conflicts with `status` unless status=enabled");
+  }
+  const resolvedStatus = activate ? "enabled" : status;
+
   return {
     taskId: getOptionalStringField(body, "taskId"),
     title: getStringField(body, "title"),
@@ -423,7 +491,7 @@ function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
     contextId: getStringField(body, "contextId"),
     kind: getOptionalTaskKindField(body, "kind"),
     time: getOptionalStringField(body, "time"),
-    status: getOptionalTaskStatusField(body, "status"),
+    status: resolvedStatus,
     timezone: getOptionalStringField(body, "timezone"),
     body: getOptionalStringField(body, "body"),
     requiredArtifacts: getOptionalStringArrayField(body, "requiredArtifacts"),
@@ -443,6 +511,13 @@ function mapTaskRunApiInput(body: JsonObject): TaskRunRequest {
 }
 
 function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
+  const status = getOptionalTaskStatusField(body, "status");
+  const activate = getBooleanField(body, "activate");
+  if (activate && status && status !== "enabled") {
+    throw new Error("`activate` conflicts with `status` unless status=enabled");
+  }
+  const resolvedStatus = activate ? "enabled" : status;
+
   return {
     taskId: getStringField(body, "taskId"),
     ...(getOptionalStringField(body, "title")
@@ -464,9 +539,7 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
       ? { time: getOptionalStringField(body, "time") }
       : {}),
     ...(getBooleanField(body, "clearTime") ? { clearTime: true } : {}),
-    ...(getOptionalTaskStatusField(body, "status")
-      ? { status: getOptionalTaskStatusField(body, "status") }
-      : {}),
+    ...(resolvedStatus ? { status: resolvedStatus } : {}),
     ...(getOptionalStringField(body, "timezone")
       ? { timezone: getOptionalStringField(body, "timezone") }
       : {}),
@@ -571,7 +644,7 @@ export const taskService: Service = {
             .option("--kind <kind>", "执行类型（agent|script）", "agent")
             .option(
               "--time <time>",
-              "单次计划时间（ISO8601，例如 2026-03-05T01:00:00Z）",
+              "单次计划时间（ISO8601 且必须含时区；启用 time 时请配合 --cron @manual）",
             )
             .option(
               "--context-id <contextId>",
@@ -579,8 +652,12 @@ export const taskService: Service = {
             )
             .option(
               "--status <status>",
-              "状态（enabled|paused|disabled）",
-              "paused",
+              "状态（enabled|paused|disabled，默认 paused）",
+            )
+            .option(
+              "--activate",
+              "创建后立即启用（等同 --status enabled）",
+              false,
             )
             .option("--timezone <timezone>", "IANA 时区")
             .option(
@@ -625,9 +702,17 @@ export const taskService: Service = {
             error: result.error || "task create failed",
           };
         }
+        const scheduler = await reloadTaskSchedulerAfterMutation({
+          context: params.context,
+          action: "create",
+          taskId: String(result.taskId || "").trim() || "unknown",
+        });
         return {
           success: true,
-          data: result,
+          data: {
+            ...result,
+            scheduler,
+          },
         };
       },
     },
@@ -704,9 +789,17 @@ export const taskService: Service = {
             error: result.error || "task delete failed",
           };
         }
+        const scheduler = await reloadTaskSchedulerAfterMutation({
+          context: params.context,
+          action: "delete",
+          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+        });
         return {
           success: true,
-          data: result,
+          data: {
+            ...result,
+            scheduler,
+          },
         };
       },
     },
@@ -720,10 +813,15 @@ export const taskService: Service = {
             .option("--description <description>", "任务描述")
             .option("--cron <cron>", "cron 表达式")
             .option("--kind <kind>", "执行类型（agent|script）")
-            .option("--time <time>", "单次计划时间（ISO8601）")
+            .option("--time <time>", "单次计划时间（ISO8601 且必须含时区；启用 time 时请配合 cron=@manual）")
             .option("--clear-time", "清空 time", false)
             .option("--context-id <contextId>", "通知目标 contextId")
             .option("--status <status>", "状态（enabled|paused|disabled）")
+            .option(
+              "--activate",
+              "更新后立即启用（等同 --status enabled）",
+              false,
+            )
             .option("--timezone <timezone>", "IANA 时区")
             .option("--clear-timezone", "清空 timezone", false)
             .option(
@@ -783,9 +881,17 @@ export const taskService: Service = {
             error: result.error || "task update failed",
           };
         }
+        const scheduler = await reloadTaskSchedulerAfterMutation({
+          context: params.context,
+          action: "update",
+          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+        });
         return {
           success: true,
-          data: result,
+          data: {
+            ...result,
+            scheduler,
+          },
         };
       },
     },
@@ -825,9 +931,17 @@ export const taskService: Service = {
             error: result.error || "task status update failed",
           };
         }
+        const scheduler = await reloadTaskSchedulerAfterMutation({
+          context: params.context,
+          action: "status",
+          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+        });
         return {
           success: true,
-          data: result,
+          data: {
+            ...result,
+            scheduler,
+          },
         };
       },
     },
@@ -858,9 +972,17 @@ export const taskService: Service = {
             error: result.error || "task enable failed",
           };
         }
+        const scheduler = await reloadTaskSchedulerAfterMutation({
+          context: params.context,
+          action: "status",
+          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+        });
         return {
           success: true,
-          data: result,
+          data: {
+            ...result,
+            scheduler,
+          },
         };
       },
     },
@@ -891,9 +1013,17 @@ export const taskService: Service = {
             error: result.error || "task disable failed",
           };
         }
+        const scheduler = await reloadTaskSchedulerAfterMutation({
+          context: params.context,
+          action: "status",
+          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+        });
         return {
           success: true,
-          data: result,
+          data: {
+            ...result,
+            scheduler,
+          },
         };
       },
     },

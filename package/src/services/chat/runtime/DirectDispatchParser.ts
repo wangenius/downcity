@@ -3,10 +3,11 @@
  *
  * 关键点（中文）
  * - 默认把 assistant 文本原样当作用户可见正文发送。
- * - 支持标签协议：`<chatKey> / <reply> / <delay> / <time> / <file> / <react>`。
- * - `<file>` 标签会被转换为附件指令文本，拼到主正文中发送。
+ * - 结构化控制参数使用 frontmatter metadata（`chatKey/reply(message_id)/delay/time/react`）。
+ * - 附件能力保留 `<file>` 标签；会被转换为附件指令文本，拼到主正文中发送。
  */
 
+import yaml from "js-yaml";
 import type {
   DirectFileTagPayload,
   DirectFileType,
@@ -16,14 +17,9 @@ import type {
   ResolvedDirectTextPayload,
 } from "@services/chat/types/DirectDispatch.js";
 
-const CHAT_KEY_TAG_REGEXP = /<chatKey>([\s\S]*?)<\/chatKey>/gi;
-const REPLY_TAG_REGEXP = /<reply>([\s\S]*?)<\/reply>/gi;
-const DELAY_TAG_REGEXP = /<delay>([\s\S]*?)<\/delay>/gi;
-const TIME_TAG_REGEXP = /<time>([\s\S]*?)<\/time>/gi;
 const FILE_TAG_REGEXP = /<file\b([^>]*)>([\s\S]*?)<\/file>/gi;
 const FILE_SELF_CLOSING_TAG_REGEXP = /<file\b([^>]*)\/>/gi;
-const REACT_TAG_REGEXP = /<react\b([^>]*)>([\s\S]*?)<\/react>/gi;
-const REACT_SELF_CLOSING_TAG_REGEXP = /<react\b([^>]*)\/>/gi;
+const FRONTMATTER_REGEXP = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/;
 
 function normalizeText(value: unknown): string {
   return String(value ?? "").trim();
@@ -52,6 +48,7 @@ function parseTagAttributes(rawAttrs: string): Record<string, string> {
 }
 
 function parseBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
   const text = normalizeText(value).toLowerCase();
   return text === "true" || text === "1" || text === "yes";
 }
@@ -64,14 +61,13 @@ function parseDirectFileType(value: unknown): DirectFileType {
   return "document";
 }
 
-/**
- * 解析 `<delay>` 毫秒值。
- *
- * 说明（中文）
- * - 仅接受非负整数字符串。
- * - 非法值返回 undefined（降级为立即发送）。
- */
-function parseDelayMsTag(value: unknown): number | undefined {
+function parseDelayMsValue(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Number.isNaN(value) || value < 0) {
+      return undefined;
+    }
+    return Math.trunc(value);
+  }
   const text = normalizeText(value);
   if (!text) return undefined;
   if (!/^\d+$/.test(text)) return undefined;
@@ -82,14 +78,21 @@ function parseDelayMsTag(value: unknown): number | undefined {
   return parsed;
 }
 
-/**
- * 解析 `<time>` 绝对发送时间。
- *
- * 支持格式（中文）
- * - Unix 时间戳（秒/毫秒）
- * - ISO 时间字符串
- */
-function parseSendAtMsTag(value: unknown): number | undefined {
+function looksLikeIsoDatetimeWithoutTimezone(value: string): boolean {
+  const text = normalizeText(value);
+  if (!text) return false;
+  const isoLike = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text);
+  if (!isoLike) return false;
+  return !/(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+}
+
+function parseSendAtMsValue(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Number.isNaN(value) || value <= 0) {
+      return undefined;
+    }
+    return value < 1_000_000_000_000 ? Math.trunc(value * 1000) : Math.trunc(value);
+  }
   const text = normalizeText(value);
   if (!text) return undefined;
 
@@ -102,6 +105,10 @@ function parseSendAtMsTag(value: unknown): number | undefined {
     return parsed < 1_000_000_000_000 ? parsed * 1000 : parsed;
   }
 
+  if (looksLikeIsoDatetimeWithoutTimezone(text)) {
+    return undefined;
+  }
+
   const parsed = Date.parse(text);
   if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
     return undefined;
@@ -109,17 +116,95 @@ function parseSendAtMsTag(value: unknown): number | undefined {
   return parsed;
 }
 
-function extractLastTagValue(source: string, regexp: RegExp): string {
-  let last = "";
-  const text = String(source || "");
-  let match: RegExpExecArray | null = null;
-  regexp.lastIndex = 0;
-  while (true) {
-    match = regexp.exec(text);
-    if (!match) break;
-    last = normalizeText(match[1]);
+type DirectFrontmatterMetadata = Record<string, unknown>;
+
+function extractFrontmatter(params: {
+  source: string;
+}): {
+  metadata: DirectFrontmatterMetadata;
+  body: string;
+} {
+  const source = String(params.source || "");
+  const match = FRONTMATTER_REGEXP.exec(source);
+  if (!match) {
+    return {
+      metadata: {},
+      body: source,
+    };
   }
-  return last;
+
+  const yamlRaw = String(match[1] || "");
+  let metadata: DirectFrontmatterMetadata = {};
+  try {
+    const parsed = yaml.load(yamlRaw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      metadata = parsed as DirectFrontmatterMetadata;
+    }
+  } catch {
+    // 关键点（中文）：frontmatter 非法时按“无 metadata”处理，避免误删正文。
+    return {
+      metadata: {},
+      body: source,
+    };
+  }
+
+  const body = source.slice(match[0].length);
+  return {
+    metadata,
+    body,
+  };
+}
+
+function pickFirstValue(
+  source: DirectFrontmatterMetadata,
+  keys: string[],
+): unknown {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      return source[key];
+    }
+  }
+  return undefined;
+}
+
+function parseOptionalMessageId(value: unknown): string | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && !Number.isNaN(value)) {
+    const text = String(Math.trunc(value)).trim();
+    return text ? text : undefined;
+  }
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text ? text : undefined;
+  }
+  return undefined;
+}
+
+function resolveReplyControl(params: {
+  replyRaw: unknown;
+  explicitMessageIdRaw: unknown;
+}): {
+  replyToMessage: boolean;
+  messageId?: string;
+} {
+  const explicitMessageId = parseOptionalMessageId(params.explicitMessageIdRaw);
+  if (explicitMessageId) {
+    return {
+      replyToMessage: true,
+      messageId: explicitMessageId,
+    };
+  }
+
+  const replyAsMessageId = parseOptionalMessageId(params.replyRaw);
+  if (replyAsMessageId) {
+    return {
+      replyToMessage: true,
+      messageId: replyAsMessageId,
+    };
+  }
+
+  return {
+    replyToMessage: false,
+  };
 }
 
 /**
@@ -164,65 +249,57 @@ function extractFileTags(source: string): DirectFileTagPayload[] {
   return out;
 }
 
-/**
- * 提取 `<react>` 标签列表。
- */
-function extractReactTags(source: string): DirectReactTagPayload[] {
+function parseReactionFromMetadata(value: unknown): DirectReactTagPayload | null {
+  if (typeof value === "string") {
+    const emoji = normalizeText(value);
+    return emoji ? { emoji } : null;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const raw = value as Record<string, unknown>;
+  const emoji = normalizeText(raw.emoji);
+  if (!emoji) return null;
+  const chatKey = normalizeText(pickFirstValue(raw, ["chatKey", "chat_key"]));
+  const messageId = normalizeText(
+    pickFirstValue(raw, ["messageId", "message_id"]),
+  );
+  const big = parseBoolean(raw.big);
+  return {
+    emoji,
+    ...(chatKey ? { chatKey } : {}),
+    ...(messageId ? { messageId } : {}),
+    ...(big ? { big: true } : {}),
+  };
+}
+
+function parseReactionsFromMetadata(
+  metadata: DirectFrontmatterMetadata,
+): DirectReactTagPayload[] {
   const out: DirectReactTagPayload[] = [];
-  const text = String(source || "");
-
-  REACT_TAG_REGEXP.lastIndex = 0;
-  let blockMatch: RegExpExecArray | null = null;
-  while (true) {
-    blockMatch = REACT_TAG_REGEXP.exec(text);
-    if (!blockMatch) break;
-    const attrs = parseTagAttributes(blockMatch[1] || "");
-    const emoji = normalizeText(attrs.emoji || blockMatch[2]);
-    if (!emoji) continue;
-    const chatKey = normalizeText(attrs.chatkey);
-    const messageId = normalizeText(attrs.messageid);
-    out.push({
-      emoji,
-      ...(chatKey ? { chatKey } : {}),
-      ...(messageId ? { messageId } : {}),
-      ...(parseBoolean(attrs.big) ? { big: true } : {}),
-    });
+  const rawValues = [
+    pickFirstValue(metadata, ["reactions"]),
+    pickFirstValue(metadata, ["react"]),
+  ];
+  for (const raw of rawValues) {
+    if (!raw) continue;
+    const list = Array.isArray(raw) ? raw : [raw];
+    for (const item of list) {
+      const parsed = parseReactionFromMetadata(item);
+      if (!parsed) continue;
+      out.push(parsed);
+    }
   }
-
-  REACT_SELF_CLOSING_TAG_REGEXP.lastIndex = 0;
-  let selfMatch: RegExpExecArray | null = null;
-  while (true) {
-    selfMatch = REACT_SELF_CLOSING_TAG_REGEXP.exec(text);
-    if (!selfMatch) break;
-    const attrs = parseTagAttributes(selfMatch[1] || "");
-    const emoji = normalizeText(attrs.emoji);
-    if (!emoji) continue;
-    const chatKey = normalizeText(attrs.chatkey);
-    const messageId = normalizeText(attrs.messageid);
-    out.push({
-      emoji,
-      ...(chatKey ? { chatKey } : {}),
-      ...(messageId ? { messageId } : {}),
-      ...(parseBoolean(attrs.big) ? { big: true } : {}),
-    });
-  }
-
   return out;
 }
 
 /**
- * 剥离协议标签，保留正文文本。
+ * 剥离附件标签，保留正文文本。
  */
-function stripDirectProtocolTags(source: string): string {
+function stripAttachmentTags(source: string): string {
   return String(source || "")
-    .replace(CHAT_KEY_TAG_REGEXP, "")
-    .replace(REPLY_TAG_REGEXP, "")
-    .replace(DELAY_TAG_REGEXP, "")
-    .replace(TIME_TAG_REGEXP, "")
     .replace(FILE_TAG_REGEXP, "")
     .replace(FILE_SELF_CLOSING_TAG_REGEXP, "")
-    .replace(REACT_TAG_REGEXP, "")
-    .replace(REACT_SELF_CLOSING_TAG_REGEXP, "")
     .trim();
 }
 
@@ -250,11 +327,12 @@ function resolveTextPlan(params: {
   fallbackChatKey: string;
   chatKeyOverride?: string;
   replyToMessage: boolean;
+  messageId?: string;
   delayMs?: number;
   sendAtMs?: number;
   files: DirectFileTagPayload[];
 }): ResolvedDirectTextPayload | null {
-  const baseText = stripDirectProtocolTags(params.source);
+  const baseText = stripAttachmentTags(params.source);
   const attachmentLines = buildAttachmentLines(params.files);
   const text = [baseText, attachmentLines.join("\n")]
     .filter((item) => normalizeText(item).length > 0)
@@ -269,6 +347,9 @@ function resolveTextPlan(params: {
     text,
     chatKey,
     replyToMessage: params.replyToMessage,
+    ...(typeof params.messageId === "string" && params.messageId
+      ? { messageId: params.messageId }
+      : {}),
     ...(typeof params.sendAtMs === "number"
       ? { sendAtMs: params.sendAtMs }
       : {}),
@@ -277,16 +358,23 @@ function resolveTextPlan(params: {
 }
 
 function resolveReactionPlans(params: {
-  fallbackChatKey: string;
+  defaultChatKey: string;
+  defaultMessageId?: string;
   reacts: DirectReactTagPayload[];
 }): ResolvedDirectReactionPayload[] {
   const out: ResolvedDirectReactionPayload[] = [];
+  const defaultChatKey = normalizeText(params.defaultChatKey);
+  const defaultMessageId = normalizeText(params.defaultMessageId);
   for (const react of params.reacts) {
     const emoji = normalizeText(react.emoji);
     if (!emoji) continue;
-    const chatKey = normalizeText(react.chatKey || params.fallbackChatKey);
+    const chatKey = normalizeText(react.chatKey || defaultChatKey);
     if (!chatKey) continue;
-    const messageId = normalizeText(react.messageId);
+    const explicitMessageId = normalizeText(react.messageId);
+    // 关键点（中文）：react 未显式指定 messageId 时，默认复用 reply/message_id。
+    const messageId =
+      explicitMessageId ||
+      (defaultMessageId && chatKey === defaultChatKey ? defaultMessageId : "");
     out.push({
       emoji,
       chatKey,
@@ -301,12 +389,8 @@ function resolveReactionPlans(params: {
  * 从 assistant 文本中解析 direct 出站执行计划。
  *
  * 协议（中文）
- * - `<chatKey>...</chatKey>`：覆盖主文本目标会话。
- * - `<reply>true|false</reply>`：设置主文本 reply 语义。
- * - `<delay>3000</delay>`：主文本延迟发送毫秒数（非负整数）。
- * - `<time>2026-03-05T20:30:00+08:00</time>`：主文本定时发送（秒/毫秒时间戳或 ISO）。
+ * - frontmatter metadata：`chatKey/reply(message_id)/message_id/delay/sendAt(time)/react(reactions)`。
  * - `<file type=\"document\">path</file>`：发送附件（会转换为附件指令行）。
- * - `<react>👍</react>`：发送表情反应（支持属性：chatKey/messageId/big）。
  */
 export function parseDirectDispatchAssistantText(params: {
   assistantText: string;
@@ -316,20 +400,42 @@ export function parseDirectDispatchAssistantText(params: {
   const fallbackChatKey = normalizeText(params.fallbackChatKey);
   if (!normalizeText(source) || !fallbackChatKey) return null;
 
-  const chatKeyOverride = extractLastTagValue(source, CHAT_KEY_TAG_REGEXP);
-  const replyRaw = extractLastTagValue(source, REPLY_TAG_REGEXP);
-  const delayRaw = extractLastTagValue(source, DELAY_TAG_REGEXP);
-  const timeRaw = extractLastTagValue(source, TIME_TAG_REGEXP);
-  const files = extractFileTags(source);
-  const reacts = extractReactTags(source);
-  const delayMs = parseDelayMsTag(delayRaw);
-  const sendAtMs = parseSendAtMsTag(timeRaw);
+  const extracted = extractFrontmatter({ source });
+  const metadata = extracted.metadata;
+  const body = extracted.body;
+
+  const chatKeyOverride = normalizeText(
+    pickFirstValue(metadata, ["chatKey", "chat_key"]),
+  );
+  const defaultChatKey = normalizeText(chatKeyOverride || fallbackChatKey);
+  const replyRaw = pickFirstValue(metadata, ["reply"]);
+  const explicitMessageIdRaw = pickFirstValue(metadata, [
+    "message_id",
+    "messageId",
+  ]);
+  const replyControl = resolveReplyControl({
+    replyRaw,
+    explicitMessageIdRaw,
+  });
+  const delayRaw = pickFirstValue(metadata, ["delay"]);
+  const timeRaw = pickFirstValue(metadata, [
+    "time",
+    "sendAt",
+    "send_at",
+    "sendAtMs",
+    "send_at_ms",
+  ]);
+  const files = extractFileTags(body);
+  const reacts = parseReactionsFromMetadata(metadata);
+  const delayMs = parseDelayMsValue(delayRaw);
+  const sendAtMs = parseSendAtMsValue(timeRaw);
 
   const textPlan = resolveTextPlan({
-    source,
+    source: body,
     fallbackChatKey,
     ...(chatKeyOverride ? { chatKeyOverride } : {}),
-    replyToMessage: parseBoolean(replyRaw),
+    replyToMessage: replyControl.replyToMessage,
+    ...(replyControl.messageId ? { messageId: replyControl.messageId } : {}),
     ...(typeof sendAtMs === "number"
       ? { sendAtMs }
       : typeof delayMs === "number"
@@ -338,7 +444,8 @@ export function parseDirectDispatchAssistantText(params: {
     files,
   });
   const reactionPlans = resolveReactionPlans({
-    fallbackChatKey,
+    defaultChatKey,
+    defaultMessageId: replyControl.messageId,
     reacts,
   });
 

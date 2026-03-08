@@ -7,8 +7,8 @@
 ## 使用约束
 - 在 direct 模式下，你输出的 assistant 文本会自动发送到当前 Telegram 会话。
 - Telegram 会在入站 `<info>` 中注入 `is_master` 字段（yes/no/unknown）；涉及执行权限时应优先遵循 master 指令。
-- 自动发送默认是普通消息；仅当你输出 `<reply>true</reply>` 时，才会尝试按 `messageId` 走 `reply_to_message`。
-- `<reply>` 仅用于必要场景（例如群里消息很多，需要精确指向某条消息）；常规回复不要开启。
+- 自动发送默认是普通消息；仅当 frontmatter metadata 中提供目标 `message_id`（`reply` 或 `message_id/messageId`，值为消息 ID）时，才会按该消息 reply。
+- 仅在必要场景设置 `reply/message_id`（例如群里消息很多，需要精确指向某条消息）；常规回复不要开启。
 - 群聊场景存在权限与 follow-up 窗口策略；如果用户反馈“机器人没响应”，优先检查是否触发群聊权限限制。
 - 旧消息会在启动时执行 pending drain 入队审计，避免重启后补回复历史消息。
 

@@ -44,13 +44,14 @@ export function getTaskMdPath(projectRoot: string, taskId: string): string {
 
 export function formatTaskRunTimestamp(date: Date = new Date()): string {
   const pad = (n: number, width: number) => String(n).padStart(width, "0");
-  const yyyy = date.getFullYear();
-  const mm = pad(date.getMonth() + 1, 2);
-  const dd = pad(date.getDate(), 2);
-  const hh = pad(date.getHours(), 2);
-  const mi = pad(date.getMinutes(), 2);
-  const ss = pad(date.getSeconds(), 2);
-  const ms = pad(date.getMilliseconds(), 3);
+  // 关键点（中文）：run 目录名统一使用 UTC，避免跨时区/DST 下时间排序歧义。
+  const yyyy = date.getUTCFullYear();
+  const mm = pad(date.getUTCMonth() + 1, 2);
+  const dd = pad(date.getUTCDate(), 2);
+  const hh = pad(date.getUTCHours(), 2);
+  const mi = pad(date.getUTCMinutes(), 2);
+  const ss = pad(date.getUTCSeconds(), 2);
+  const ms = pad(date.getUTCMilliseconds(), 3);
   return `${yyyy}${mm}${dd}-${hh}${mi}${ss}-${ms}`;
 }
 

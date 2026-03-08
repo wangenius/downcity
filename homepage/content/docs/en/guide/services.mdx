@@ -51,7 +51,7 @@ Edit `services.chat.adapters.telegram` in `ship.json`:
 > 🔒 **Security Tip**: Configure `auth_id` to explicitly mark the trusted owner. Incoming messages include `is_master` in `<info>`, so your agent can enforce owner-first behavior.
 
 4. **Restart Service**
-   Run `shipmyagent start` to restart the service.
+   Run `shipmyagent agent on --daemon` to restart the service.
 
 ### Usage
 
@@ -94,7 +94,7 @@ Edit `services.chat.adapters.feishu` in `ship.json`:
 > 🔒 **Security Tip**: Keep your App Secret secure. Never commit it to version control. Consider using environment variables.
 
 3. **Restart Service**
-   Run `shipmyagent start` to restart the service.
+   Run `shipmyagent agent on --daemon` to restart the service.
 
 ### Usage
 
@@ -141,7 +141,7 @@ Edit `services.chat.adapters.qq` in `ship.json`:
 > 🔒 **Security Tip**: Keep your App Secret secure. Never commit it to version control. Consider using environment variables.
 
 3. **Restart Service**
-   Run `shipmyagent start` to restart the service.
+   Run `shipmyagent agent on --daemon` to restart the service.
 
 ### Usage
 

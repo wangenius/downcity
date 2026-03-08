@@ -1,0 +1,13 @@
+{
+  "title": "命令",
+  "pages": [
+    "index",
+    "init",
+    "agent",
+    "config",
+    "service",
+    "chat",
+    "skill",
+    "task"
+  ]
+}

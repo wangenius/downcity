@@ -56,7 +56,7 @@ Configuration schema version.
 
 #### start (object, optional)
 
-Startup options (read by `shipmyagent .` / `shipmyagent start`). Explicit CLI flags override this config.
+Startup options (read by `shipmyagent .` / `shipmyagent agent on --daemon`). Explicit CLI flags override this config.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -409,7 +409,7 @@ Server configuration.
 ## PROFILE.md
 
 Defines the agent's personality, goals, constraints, and behavior. This is the **system prompt** for your LLM.
-In a running `shipmyagent run` / `shipmyagent start` process, saving `PROFILE.md` triggers hot reload automatically (no restart required).
+In a running `shipmyagent agent on` / `shipmyagent agent on --daemon` process, saving `PROFILE.md` triggers hot reload automatically (no restart required).
 If `SOUL.md` / `USER.md` exists at project root, each is injected as an additional static system prompt and hot-reloads on save.
 
 ### Structure

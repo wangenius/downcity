@@ -1,0 +1,38 @@
+---
+title: sma task
+description: Task service actions
+---
+
+# `sma task`
+
+Task service command group.
+
+## Usage
+
+```bash
+sma task <subcommand>
+```
+
+## Subcommands
+
+- `list`: list tasks
+- `create`: create task definition
+- `run <taskId>`: run task manually
+- `delete <taskId>`: delete task definition and run history directory
+- `update <taskId>`: update task definition
+- `status <taskId> <status>`: set status (`enabled | paused | disabled`)
+- `enable <taskId>`: set status to `enabled`
+- `disable <taskId>`: set status to `disabled`
+
+## Example
+
+```bash
+sma task list
+sma task create --title "Daily report" --description "Summarize yesterday"
+sma task run daily-report
+sma task disable daily-report
+```
+
+## Notes
+
+- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.

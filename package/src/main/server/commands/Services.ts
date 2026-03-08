@@ -1,9 +1,9 @@
 /**
- * `sma services` 命令组。
+ * `sma service` 命令组。
  *
  * 关键点（中文）
- * - 统一管理 services runtime：list/status/start/stop/restart
- * - 所有 services 默认支持 command 桥接（含内建 lifecycle 命令）
+ * - 统一管理 service runtime：list/status/start/stop/restart
+ * - 所有 service 默认支持 command 桥接（含内建 lifecycle 命令）
  */
 
 import path from "node:path";
@@ -73,7 +73,7 @@ async function runServiceListCommand(options: ServiceCliBaseOptions): Promise<vo
     payload: {
       error:
         remote.error ||
-        "Service list requires an active Agent server runtime. Start via `sma start` or `sma run` first.",
+        "Service list requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
     },
   });
 }
@@ -116,7 +116,7 @@ async function runServiceControlCommand(params: {
     payload: {
       error:
         remote.error ||
-        `Service ${params.action} requires an active Agent server runtime. Start via \`sma start\` or \`sma run\` first.`,
+        `Service ${params.action} requires an active Agent server runtime. Start via \`sma agent on --daemon\` first.`,
     },
   });
 }
@@ -165,24 +165,23 @@ async function runServiceCommandBridge(params: {
     payload: {
       error:
         remote.error ||
-        "Service command requires an active Agent server runtime. Start via `sma start` or `sma run` first.",
+        "Service command requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
     },
   });
 }
 
 /**
- * 注册 `services` 命令组。
+ * 注册 `service` 命令组。
  */
 export function registerServicesCommand(program: Command): void {
-  const services = program
-    .command("services")
-    .alias("service")
+  const service = program
+    .command("service")
     .description("Service runtime 管理命令")
     .helpOption("--help", "display help for command");
 
-  services
+  service
     .command("list")
-    .description("列出 services 运行状态")
+    .description("列出全部 service 运行状态")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
@@ -191,7 +190,7 @@ export function registerServicesCommand(program: Command): void {
       await runServiceListCommand(opts);
     });
 
-  services
+  service
     .command("status <serviceName>")
     .description("查看单个 service 状态")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
@@ -206,7 +205,7 @@ export function registerServicesCommand(program: Command): void {
       });
     });
 
-  services
+  service
     .command("start <serviceName>")
     .description("启动 service")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
@@ -221,7 +220,7 @@ export function registerServicesCommand(program: Command): void {
       });
     });
 
-  services
+  service
     .command("stop <serviceName>")
     .description("停止 service")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
@@ -236,7 +235,7 @@ export function registerServicesCommand(program: Command): void {
       });
     });
 
-  services
+  service
     .command("restart <serviceName>")
     .description("重启 service")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
@@ -251,7 +250,7 @@ export function registerServicesCommand(program: Command): void {
       });
     });
 
-  services
+  service
     .command("command <serviceName> <command>")
     .description("转发 service command")
     .option("--payload <json>", "可选 payload（JSON 字符串或普通字符串）")

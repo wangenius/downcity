@@ -1,0 +1,42 @@
+---
+title: sma config
+description: Manage ship.json configuration and alias
+---
+
+# `sma config`
+
+Manage `ship.json`, including `llm` provider/model configuration and alias setup.
+
+## Usage
+
+```bash
+sma config <subcommand>
+```
+
+## Subcommands
+
+- `sma config get [keyPath]`: read full config or a specific path
+- `sma config set <keyPath> <value>`: set value at path (`value` supports JSON literals)
+- `sma config unset <keyPath>`: remove path
+- `sma config llm`: manage `ship.json.llm`
+- `sma config alias`: write `alias sma="shipmyagent"` into shell rc files
+
+## `alias` options
+
+- `--shell <shell>`: `zsh | bash | both` (default: `both`)
+- `--dry-run`: print planned changes without writing files
+- `--print`: print alias content only (for `eval`)
+
+## Example
+
+```bash
+sma config get
+sma config get llm
+sma config set start.port 3000
+sma config set start.webui true
+sma config unset start.webport
+
+sma config alias
+sma config alias --shell zsh
+sma config alias --dry-run
+```

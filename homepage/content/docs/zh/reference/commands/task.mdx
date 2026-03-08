@@ -1,0 +1,38 @@
+---
+title: sma task
+description: task service actions
+---
+
+# `sma task`
+
+task service 命令组。
+
+## 用法
+
+```bash
+sma task <subcommand>
+```
+
+## 子命令
+
+- `list`：列出任务
+- `create`：创建任务定义
+- `run <taskId>`：手动运行任务
+- `delete <taskId>`：删除任务定义与历史运行目录
+- `update <taskId>`：更新任务定义
+- `status <taskId> <status>`：设置任务状态（`enabled | paused | disabled`）
+- `enable <taskId>`：启用任务
+- `disable <taskId>`：禁用任务
+
+## 示例
+
+```bash
+sma task list
+sma task create --title "Daily report" --description "Summarize yesterday"
+sma task run daily-report
+sma task disable daily-report
+```
+
+## 说明
+
+- 该命令组面向 daemon 运行态，先启动 runtime：`sma agent on --daemon`。

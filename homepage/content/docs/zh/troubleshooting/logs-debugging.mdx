@@ -111,7 +111,7 @@ ShipMyAgent 当前会把结构化 JSONL 日志写入 `.ship/logs/<YYYY-MM-DD>.js
 ### 启用详细日志
 
 ```bash
-shipmyagent start
+shipmyagent agent on --daemon
 tail -f .ship/logs/$(date +%F).jsonl
 ```
 

@@ -7,7 +7,7 @@
   "step1Command": "npx shipmyagent init",
   "step2Title": "Start Service",
   "step2Desc": "Launch the local agent service.",
-  "step2Command": "npx shipmyagent start",
+  "step2Command": "npx shipmyagent agent on --daemon",
   "step3Title": "Start Using",
   "step3Desc": "Interact with your agent immediately.",
   "step3Command": "Open http://localhost:3000"

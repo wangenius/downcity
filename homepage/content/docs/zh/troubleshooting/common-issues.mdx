@@ -31,7 +31,7 @@ description: 频繁遇到的问题及其解决方案
 3. **使用 npx（替代方案）**：
    ```bash
    npx shipmyagent init
-   npx shipmyagent start
+   npx shipmyagent agent on --daemon
    ```
 
 ### "Node.js 版本过低"
@@ -147,7 +147,7 @@ nvm use 20
    lsof -ti:3000 | xargs kill -9
 
    # 或使用不同端口
-   shipmyagent start --port 3001
+   shipmyagent agent on --daemon --port 3001
    ```
 
 2. **在 ship.json 中配置**：
@@ -229,7 +229,7 @@ export MY_API_KEY="xxx"
 echo $MY_API_KEY
 
 # 重启 agent
-shipmyagent restart
+shipmyagent agent restart
 ```
 
 ## 任务问题
@@ -304,7 +304,7 @@ EOF
 
 3. **使用调试模式重启**：
    ```bash
-   shipmyagent start --verbose
+   shipmyagent agent on --daemon --verbose
    # 查找 Telegram 连接日志
    ```
 
@@ -343,7 +343,7 @@ EOF
 
 1. **启用详细日志**：
    ```bash
-   shipmyagent start --verbose --log-level debug
+   shipmyagent agent on --daemon --verbose --log-level debug
    ```
 
 2. **导出诊断信息**：

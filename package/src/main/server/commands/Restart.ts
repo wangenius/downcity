@@ -1,5 +1,5 @@
 /**
- * `shipmyagent restart`：重启后台常驻的 Agent Runtime（daemon）。
+ * `shipmyagent agent restart`：重启后台常驻的 Agent Runtime（daemon）。
  */
 
 import path from "path";

@@ -111,7 +111,7 @@ Each log entry follows this format:
 To debug, keep the agent running and follow today’s unified JSONL log:
 
 ```bash
-shipmyagent start
+shipmyagent agent on --daemon
 tail -f .ship/logs/$(date +%F).jsonl
 ```
 

@@ -1,0 +1,13 @@
+{
+  "title": "Commands",
+  "pages": [
+    "index",
+    "init",
+    "agent",
+    "config",
+    "service",
+    "chat",
+    "skill",
+    "task"
+  ]
+}

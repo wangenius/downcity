@@ -12,6 +12,7 @@ import fs from "fs-extra";
 import type { Command } from "commander";
 import { getShipJsonPath } from "@/main/server/env/Paths.js";
 import { printResult } from "@main/utils/CliOutput.js";
+import { aliasCommand } from "./Alias.js";
 import type {
   LlmModelConfig,
   LlmProviderConfig,
@@ -259,7 +260,7 @@ function applyCommonOptions(command: Command): Command {
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
-    .description("管理 ship.json 配置（含 llm provider/model）")
+    .description("管理 ship.json 配置（含 llm provider/model 与 alias）")
     .helpOption("--help", "display help for command");
 
   applyCommonOptions(
@@ -348,6 +349,21 @@ export function registerConfigCommand(program: Command): void {
       };
     });
   });
+
+  config
+    .command("alias")
+    .description("在 .zshrc / .bashrc 中写入 `alias sma=\"shipmyagent\"`")
+    .option("--shell <shell>", "指定写入的 shell: zsh | bash | both", "both")
+    .option("--dry-run", "只打印将要修改的文件，不实际写入", false)
+    .option("--print", "仅打印 alias 内容（用于 eval）", false)
+    .helpOption("--help", "display help for command")
+    .action(async (options: { shell?: string; dryRun?: boolean; print?: boolean }) => {
+      await aliasCommand({
+        shell: options.shell,
+        dryRun: Boolean(options.dryRun),
+        print: Boolean(options.print),
+      });
+    });
 
   const llm = config
     .command("llm")

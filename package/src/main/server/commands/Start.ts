@@ -1,12 +1,14 @@
 /**
- * `shipmyagent start`：后台常驻启动（daemon）。
+ * 后台常驻启动（daemon）。
+ *
+ * 对应用户命令：`shipmyagent agent on --daemon`
  *
  * 行为
  * - 在 `.ship/debug/` 写入 pid/log/meta 文件
  * - 通过 `node <commands/index.js> run ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
  *
  * 注意
- * - `shipmyagent .` / `shipmyagent run` 才是“当前终端前台启动”。
+ * - `shipmyagent .` / `shipmyagent agent on`（不带 `--daemon`）才是“当前终端前台启动”。
  */
 
 import path from "path";
@@ -18,7 +20,7 @@ import { buildRunArgsFromOptions } from "@/main/server/daemon/CliArgs.js";
 import type { StartOptions } from "@main/types/Start.js";
 
 /**
- * start 命令入口。
+ * daemon 启动入口。
  *
  * 流程（中文）
  * 1) 校验项目初始化文件是否存在

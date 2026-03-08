@@ -1,0 +1,35 @@
+---
+title: sma skill
+description: Skill service actions
+---
+
+# `sma skill`
+
+Skill service command group.
+
+## Usage
+
+```bash
+sma skill <subcommand>
+```
+
+## Subcommands
+
+- `find <query>`: find not-yet-learned skills
+- `install <spec>`: download and learn a skill
+- `list`: list discovered local skills
+- `lookup <name>`: read learned skill content (`SKILL.md`)
+
+## Example
+
+```bash
+sma skill find telegram
+sma skill install owner/repo@skill-name
+sma skill list
+sma skill lookup playwright
+```
+
+## Notes
+
+- In typical workflow, use: `find -> install -> lookup`.
+- Start runtime first when running daemon-facing skill actions.

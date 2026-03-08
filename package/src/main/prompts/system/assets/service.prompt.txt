@@ -3,7 +3,7 @@
 你正在一个基于 service 的运行时中工作。以下规则适用于所有 service（chat / skill / task 等）。
 
 ## 可用命令总览
-- service runtime 管理（`sma service` 与 `sma services` 等价）：
+- service runtime 管理（统一使用 `sma service`）：
   - `sma service list`
   - `sma service status <serviceName>`
   - `sma service start <serviceName>`

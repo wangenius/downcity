@@ -1,0 +1,26 @@
+---
+title: Command Index
+description: Per-command documentation for the ShipMyAgent CLI
+---
+
+# Command Index
+
+This section splits CLI docs by command. Each command has its own page.
+
+## Runtime lifecycle
+
+- [`sma init`](/en/docs/reference/commands/init)
+- [`sma agent`](/en/docs/reference/commands/agent)
+
+## Service-style commands
+
+- [`sma config`](/en/docs/reference/commands/config)
+- [`sma service`](/en/docs/reference/commands/service)
+- [`sma chat`](/en/docs/reference/commands/chat)
+- [`sma skill`](/en/docs/reference/commands/skill)
+- [`sma task`](/en/docs/reference/commands/task)
+
+## Notes
+
+- You can always check latest flags with `sma <command> --help`.
+- `sma service/chat/skill/task` are daemon-facing command groups and usually require a running runtime (`sma agent on --daemon`).

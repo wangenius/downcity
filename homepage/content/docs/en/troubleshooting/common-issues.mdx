@@ -31,7 +31,7 @@ This section covers the most frequently encountered problems and their solutions
 3. **Use npx (alternative)**:
    ```bash
    npx shipmyagent init
-   npx shipmyagent start
+   npx shipmyagent agent on --daemon
    ```
 
 ### "Node.js version too old"
@@ -147,7 +147,7 @@ nvm use 20
    lsof -ti:3000 | xargs kill -9
 
    # Or use a different port
-   shipmyagent start --port 3001
+   shipmyagent agent on --daemon --port 3001
    ```
 
 2. **Configure in ship.json**:
@@ -229,7 +229,7 @@ export MY_API_KEY="xxx"
 echo $MY_API_KEY
 
 # Restart the agent
-shipmyagent restart
+shipmyagent agent restart
 ```
 
 ## Task Issues
@@ -306,7 +306,7 @@ EOF
 
 3. **Restart with debug mode**:
    ```bash
-   shipmyagent start --verbose
+   shipmyagent agent on --daemon --verbose
    # Look for Telegram connection logs
    ```
 
@@ -345,7 +345,7 @@ If none of these solutions work:
 
 1. **Enable verbose logging**:
    ```bash
-   shipmyagent start --verbose --log-level debug
+   shipmyagent agent on --daemon --verbose --log-level debug
    ```
 
 2. **Export diagnostic info**:

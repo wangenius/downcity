@@ -191,7 +191,7 @@ function registerServiceActionCommand(params: {
       payload: {
         error:
           remote.error ||
-          "Service action requires an active Agent server runtime. Start via `sma start` or `sma run` first.",
+          "Service action requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
       },
     });
   });

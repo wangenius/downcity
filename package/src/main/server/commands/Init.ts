@@ -879,7 +879,7 @@ export async function initCommand(
       "Optional: configure services.chat.channels.qq.auth_id (or QQ_AUTH_ID)",
     );
   }
-  nextSteps.push('Run "shipmyagent start" to start the agent');
+  nextSteps.push('Run "shipmyagent agent on" to start the agent');
 
   console.log("Next steps:");
   for (const [idx, line] of nextSteps.entries()) {

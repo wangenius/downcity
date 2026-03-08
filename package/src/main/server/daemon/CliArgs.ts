@@ -2,13 +2,14 @@
  * 负责把 commander 解析到的 options 转换成子进程 CLI 参数。
  *
  * 关键点
- * - daemon 实际启动的是 `shipmyagent run`（前台逻辑），这里拼装出对应的 argv。
+ * - daemon（来自 `agent on --daemon` / `agent restart`）实际启动的是内部 `run`
+ *   前台逻辑，这里负责拼装其 argv。
  */
 
 import type { StartOptions } from "@main/types/Start.js";
 
 /**
- * 将 start/restart 选项转换为 `run` 子进程 argv。
+ * 将 daemon 选项转换为 `run` 子进程 argv。
  *
  * 关键点（中文）
  * - daemon 始终启动 `run`，因此参数统一映射到 `run` 的 CLI 形态。
@@ -29,4 +30,3 @@ export const buildRunArgsFromOptions = (
 
   return args;
 };
-

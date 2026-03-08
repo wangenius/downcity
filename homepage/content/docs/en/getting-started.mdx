@@ -60,7 +60,7 @@ Then use with `npx` or add to package.json scripts:
 {
   "scripts": {
     "agent": "shipmyagent",
-    "agent:start": "shipmyagent start"
+    "agent:start": "shipmyagent agent on --daemon"
   }
 }
 ```
@@ -242,7 +242,7 @@ Launch your agent:
 ```bash
 shipmyagent .
 # `shipmyagent .`: foreground (current terminal)
-# `shipmyagent start [path]`: background (daemon)
+# `shipmyagent agent on --daemon [path]`: background (daemon)
 ```
 
 Output:
@@ -296,7 +296,7 @@ Ensure everything is working:
 - [ ] `shipmyagent --version` shows correct version
 - [ ] `shipmyagent init` created configuration files
 - [ ] `shipmyagent test-llm` shows successful connection
-- [ ] `shipmyagent start` launches without errors
+- [ ] `shipmyagent agent on --daemon` launches without errors
 - [ ] Agent responds to questions (CLI or Telegram)
 - [ ] Logs are being written: `shipmyagent logs --tail 10`
 

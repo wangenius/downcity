@@ -1,0 +1,60 @@
+---
+title: sma agent
+description: Control Agent Runtime using on/off/restart
+---
+
+# `sma agent`
+
+Control Agent Runtime with `on/off/restart` subcommands.
+
+## Usage
+
+```bash
+sma agent on [path] [options]
+sma agent off [path]
+sma agent restart [path] [options]
+```
+
+## Subcommands
+
+- `on`: start runtime
+- `off`: stop daemon runtime
+- `restart`: restart daemon runtime
+
+## `on` options
+
+- `-p, --port <port>`: service port (can also be set in `ship.json.start.port`)
+- `-h, --host <host>`: service host (can also be set in `ship.json.start.host`)
+- `--webui [enabled]`: enable interactive Web UI (can also be set in `ship.json.start.webui`)
+- `--webport <port>`: Web UI port (can also be set in `ship.json.start.webport`)
+- `--daemon [enabled]`: run in background daemon mode
+
+## `restart` options
+
+- `-p, --port <port>`: service port (can also be set in `ship.json.start.port`)
+- `-h, --host <host>`: service host (can also be set in `ship.json.start.host`)
+- `--webui [enabled]`: enable interactive Web UI (can also be set in `ship.json.start.webui`)
+- `--webport <port>`: Web UI port (can also be set in `ship.json.start.webport`)
+
+## Behavior
+
+- `sma agent on`: foreground mode (current terminal)
+- `sma agent on --daemon`: background daemon mode
+- `sma agent off`: stop daemon runtime
+- `sma agent restart`: restart daemon runtime
+
+## Examples
+
+```bash
+# foreground
+sma agent on
+
+# background daemon
+sma agent on --daemon
+
+# restart daemon
+sma agent restart
+
+# stop daemon
+sma agent off
+```

@@ -13,7 +13,7 @@ export interface ShipConfig {
   version: string;
   description?: string;
   /**
-   * Runtime startup configuration used by `shipmyagent start` / `shipmyagent .`.
+   * Runtime startup configuration used by `shipmyagent agent on` / `shipmyagent .`.
    * CLI flags (if provided) take precedence over this config.
    */
   start?: {

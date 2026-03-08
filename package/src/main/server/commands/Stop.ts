@@ -1,5 +1,7 @@
 /**
- * `shipmyagent stop`：停止后台常驻的 Agent Runtime（daemon）。
+ * 停止后台常驻的 Agent Runtime（daemon）。
+ *
+ * 对应用户命令：`shipmyagent agent off`
  */
 
 import path from "path";
@@ -29,4 +31,3 @@ export async function stopCommand(cwd: string = "."): Promise<void> {
 
   console.log("ℹ️  No ShipMyAgent daemon is running");
 }
-

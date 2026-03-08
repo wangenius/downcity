@@ -1,5 +1,5 @@
 /**
- * `shipmyagent alias`：向 shell rc 文件写入 `alias sma="shipmyagent"`。
+ * `shipmyagent config alias`：向 shell rc 文件写入 `alias sma="shipmyagent"`。
  *
  * 关键点（中文）
  * - 通过标记块（start/end）实现幂等更新。
@@ -104,4 +104,3 @@ export async function aliasCommand(options: AliasOptions = {}): Promise<void> {
   if (targets.includes("bash")) console.log(`- source ${path.join(home, ".bashrc")}`);
   console.log('- 或重新打开一个终端');
 }
-

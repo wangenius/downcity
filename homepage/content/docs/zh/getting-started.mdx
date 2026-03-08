@@ -60,7 +60,7 @@ npm install --save-dev shipmyagent
 {
   "scripts": {
     "agent": "shipmyagent",
-    "agent:start": "shipmyagent start"
+    "agent:start": "shipmyagent agent on --daemon"
   }
 }
 ```
@@ -242,7 +242,7 @@ shipmyagent test-llm
 ```bash
 shipmyagent .
 # `shipmyagent .`：前台启动（当前终端运行）
-# `shipmyagent start [path]`：后台启动（终端关闭也保持运行）
+# `shipmyagent agent on --daemon [path]`：后台启动（终端关闭也保持运行）
 ```
 
 输出：
@@ -296,7 +296,7 @@ Agent 将分析您的仓库并响应。
 - [ ] `shipmyagent --version` 显示正确版本
 - [ ] `shipmyagent init` 创建了配置文件
 - [ ] `shipmyagent test-llm` 显示成功连接
-- [ ] `shipmyagent start` 无错误启动
+- [ ] `shipmyagent agent on --daemon` 无错误启动
 - [ ] Agent 响应问题（CLI 或 Telegram）
 - [ ] 正在写入日志：`shipmyagent logs --tail 10`
 

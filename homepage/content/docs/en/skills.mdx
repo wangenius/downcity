@@ -14,7 +14,7 @@ By default ShipMyAgent scans 2 skill root types:
 - Project: `<project>/.ship/skills`
 - Home (global): `~/.ship/skills`
 
-In a running `shipmyagent run` / `shipmyagent start` process, changes under skill directories (including `SKILL.md`) are hot-reloaded automatically and applied on the next request.
+In a running `shipmyagent agent on` / `shipmyagent agent on --daemon` process, changes under skill directories (including `SKILL.md`) are hot-reloaded automatically and applied on the next request.
 
 You can add extra roots via `ship.json.services.skills.paths`. By default `sma init` writes `services.skills.paths: [".claude/skills"]` and creates `./.claude/skills/` to stay compatible with common community layouts.
 
@@ -83,7 +83,7 @@ If the target skill is not present in local `skills_list`, use the CLI learning 
 
 ## Skills section in the system prompt
 
-`shipmyagent start` and the chat adapters now include a “skills summary section” in the final system prompt (composed from `PROFILE.md` + optional `SOUL.md` / `USER.md`). This helps the model know from the start:
+`shipmyagent agent on --daemon` and the chat adapters now include a “skills summary section” in the final system prompt (composed from `PROFILE.md` + optional `SOUL.md` / `USER.md`). This helps the model know from the start:
 
 - which skill roots exist
 - to use `skills_list` / `skills_lookup` to discover and load skills

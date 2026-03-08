@@ -4,15 +4,14 @@
  * CLI 程序入口模块。
  *
  * 职责说明：
- * 1. 组装所有一级命令（init/run/start/stop/restart/alias/config/services）。
+ * 1. 组装所有一级命令（init/agent/config/service）。
  * 2. 统一处理命令行参数解析规则（端口、布尔值）。
- * 3. 处理默认命令回退：未指定已知一级命令时自动转发到 run。
+ * 3. 处理默认命令回退：未指定已知一级命令时自动转发到 `agent on`。
  */
 import { readFileSync } from "fs";
 import { basename, dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Command } from "commander";
-import { aliasCommand } from "./Alias.js";
 import { registerConfigCommand } from "./Config.js";
 import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
@@ -20,6 +19,7 @@ import { runCommand } from "./Run.js";
 import { registerServicesCommand } from "./Services.js";
 import { startCommand } from "./Start.js";
 import { stopCommand } from "./Stop.js";
+import type { StartOptions } from "@main/types/Start.js";
 import { registerAllServicesForCli } from "@main/service/ServiceCommand.js";
 import {
   getServiceRootCommandNames,
@@ -40,7 +40,7 @@ const program = new Command();
  * 在关键运行命令执行前打印当前 sma 版本。
  *
  * 说明（中文）
- * - 仅用于 run/start/stop/restart 这类运行态命令，避免影响 `config --json` 等结构化输出。
+ * - 仅用于 agent on/off/restart 这类运行态命令，避免影响 `config --json` 等结构化输出。
  */
 function withVersionBanner<TArgs extends unknown[]>(
   action: (...args: TArgs) => Promise<void> | void,
@@ -87,9 +87,14 @@ const init = program
   .helpOption("--help", "display help for command")
   .action(initCommand);
 
-const run = program
-  .command("run [path]")
-  .description("前台启动 Agent Runtime（当前终端运行）")
+const agent = program
+  .command("agent")
+  .description("管理 Agent Runtime 启停与重启")
+  .helpOption("--help", "display help for command");
+
+agent
+  .command("on [path]")
+  .description("启动 Agent Runtime（默认前台；--daemon 为后台）")
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
   .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
   .option(
@@ -102,36 +107,29 @@ const run = program
     "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
     parsePort,
   )
+  .option("--daemon [enabled]", "后台启动（daemon）", parseBoolean)
   .helpOption("--help", "display help for command")
-  .action(withVersionBanner(runCommand));
+  .action(
+    withVersionBanner(
+      async (cwd: string = ".", options: StartOptions & { daemon?: boolean }) => {
+        if (options.daemon === true) {
+          await startCommand(cwd, options);
+          return;
+        }
+        await runCommand(cwd, options);
+      },
+    ),
+  );
 
-const start = program
-  .command("start [path]")
-  .description("后台启动 Agent Runtime（终端退出也保持运行）")
-  .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
-  .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
-  .option(
-    "--webui [enabled]",
-    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
-    parseBoolean,
-  )
-  .option(
-    "--webport <port>",
-    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
-    parsePort,
-  )
-  .helpOption("--help", "display help for command")
-  .action(withVersionBanner(startCommand));
-
-const stop = program
-  .command("stop [path]")
-  .description("停止后台 Agent 服务器（daemon）")
+agent
+  .command("off [path]")
+  .description("停止后台 Agent Runtime（daemon）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(stopCommand));
 
-const restart = program
+agent
   .command("restart [path]")
-  .description("重启后台 Agent 服务器（daemon）")
+  .description("重启后台 Agent Runtime（daemon）")
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
   .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
   .option(
@@ -147,15 +145,6 @@ const restart = program
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(restartCommand));
 
-program
-  .command("alias")
-  .description("在 .zshrc / .bashrc 中写入 `alias sma=\"shipmyagent\"`")
-  .option("--shell <shell>", "指定写入的 shell: zsh | bash | both", "both")
-  .option("--dry-run", "只打印将要修改的文件，不实际写入", false)
-  .option("--print", "仅打印 alias 内容（用于 eval）", false)
-  .helpOption("--help", "display help for command")
-  .action(aliasCommand);
-
 registerConfigCommand(program);
 
 registerServicesCommand(program);
@@ -163,16 +152,19 @@ registerServicesCommand(program);
 // 服务命令统一注册（chat / skill / task / future services）
 registerAllServicesForCli(program);
 
-// 默认行为：`shipmyagent` / `shipmyagent .` / `shipmyagent [run-options]` -> `shipmyagent run [path]`
+// 默认行为：`shipmyagent` / `shipmyagent .` / `shipmyagent [on-options]` -> `shipmyagent agent on [path]`
 const firstArg = process.argv[2];
 const staticRootCommands = [
   init.name(),
-  run.name(),
-  start.name(),
-  stop.name(),
-  restart.name(),
-  "alias",
+  agent.name(),
   "config",
+  // 关键点（中文）：以下命令已移除；仍保留在识别列表里，避免误回退为 `agent on`。
+  "restart",
+  "alias",
+  "run",
+  "start",
+  "stop",
+  // 关键点（中文）：`services` 已移除，仍保留在识别列表里，避免误回退为 `agent on`。
   "services",
   "service",
   "help",
@@ -185,7 +177,7 @@ if (
   (!knownRootCommands.has(firstArg) &&
     !["--help", "-v", "--version"].includes(firstArg))
 ) {
-  process.argv.splice(2, 0, "run");
+  process.argv.splice(2, 0, "agent", "on");
 }
 
 program.parse();

@@ -1,11 +1,13 @@
 /**
- * `shipmyagent run`：前台启动 Agent Runtime（当前终端进程内运行）。
+ * 前台启动 Agent Runtime（当前终端进程内运行）。
  *
  * 场景
  * - `sma .` / `shipmyagent .` 默认走这里（符合“当前终端启动”的直觉）
+ * - `sma agent on`（不带 `--daemon`）也走这里
  *
  * 说明
- * - 后台常驻启动请使用 `shipmyagent start`（daemon 模式），并用 `shipmyagent stop|restart` 管理。
+ * - 后台常驻启动请使用 `shipmyagent agent on --daemon`，并用
+ *   `shipmyagent agent off` / `shipmyagent agent restart` 管理。
  */
 
 import { startServer } from "@/main/server/index.js";
@@ -25,7 +27,7 @@ import {
 } from "@main/service/Manager.js";
 
 /**
- * `shipmyagent run` 命令入口。
+ * 运行态启动入口（由 `agent on` 前台模式与内部 daemon 子进程复用）。
  *
  * 职责（中文）
  * - 初始化 runtime 状态（配置、日志、services 依赖）

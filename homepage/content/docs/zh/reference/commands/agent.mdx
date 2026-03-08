@@ -1,0 +1,60 @@
+---
+title: sma agent
+description: 使用 on/off/restart 控制 Agent Runtime
+---
+
+# `sma agent`
+
+通过 `on/off/restart` 子命令控制 Agent Runtime。
+
+## 用法
+
+```bash
+sma agent on [path] [options]
+sma agent off [path]
+sma agent restart [path] [options]
+```
+
+## 子命令
+
+- `on`：启动 runtime
+- `off`：停止 daemon runtime
+- `restart`：重启 daemon runtime
+
+## `on` 选项
+
+- `-p, --port <port>`：服务端口（也可在 `ship.json.start.port` 配置）
+- `-h, --host <host>`：服务主机（也可在 `ship.json.start.host` 配置）
+- `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
+- `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
+- `--daemon [enabled]`：使用后台 daemon 模式运行
+
+## `restart` 选项
+
+- `-p, --port <port>`：服务端口（也可在 `ship.json.start.port` 配置）
+- `-h, --host <host>`：服务主机（也可在 `ship.json.start.host` 配置）
+- `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
+- `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
+
+## 行为说明
+
+- `sma agent on`：前台模式（当前终端）
+- `sma agent on --daemon`：后台 daemon 模式
+- `sma agent off`：停止 daemon runtime
+- `sma agent restart`：重启 daemon runtime
+
+## 示例
+
+```bash
+# 前台
+sma agent on
+
+# 后台 daemon
+sma agent on --daemon
+
+# 重启 daemon
+sma agent restart
+
+# 停止 daemon
+sma agent off
+```

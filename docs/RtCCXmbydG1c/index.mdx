@@ -13,7 +13,7 @@ description:
 
 ```mermaid
 sequenceDiagram
-  participant CLI as sma run
+  participant CLI as sma agent on
   participant Run as main/commands/Run
   participant RT as RuntimeState
   participant SV as AgentServer
@@ -245,7 +245,7 @@ lifecycle: {
 
 # 3. 验证清单（创建后）
 
-1. 能启动：sma run 后 service 出现在 /api/services/list
+1. 能启动：sma agent on 后 service 出现在 /api/services/list
 2. 能路由：registerServer 暴露的 API 可访问
 3. 能命令：CLI 子命令能通过 callServer 返回结果
 4. 能停启（若实现 lifecycle）：/api/services/control 正常

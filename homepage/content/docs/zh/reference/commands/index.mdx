@@ -1,0 +1,26 @@
+---
+title: 命令索引
+description: ShipMyAgent CLI 按命令拆分的文档目录
+---
+
+# 命令索引
+
+这里把 CLI 文档按单个命令拆分维护，每个命令一个页面。
+
+## Runtime 生命周期命令
+
+- [`sma init`](/zh/docs/reference/commands/init)
+- [`sma agent`](/zh/docs/reference/commands/agent)
+
+## Service 风格命令
+
+- [`sma config`](/zh/docs/reference/commands/config)
+- [`sma service`](/zh/docs/reference/commands/service)
+- [`sma chat`](/zh/docs/reference/commands/chat)
+- [`sma skill`](/zh/docs/reference/commands/skill)
+- [`sma task`](/zh/docs/reference/commands/task)
+
+## 说明
+
+- 最新参数始终以本地 `sma <command> --help` 为准。
+- `sma service/chat/skill/task` 通常依赖已启动的 daemon runtime（`sma agent on --daemon`）。

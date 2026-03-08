@@ -1,0 +1,34 @@
+---
+title: sma chat
+description: Chat service actions
+---
+
+# `sma chat`
+
+Chat service command group.
+
+## Usage
+
+```bash
+sma chat <subcommand>
+```
+
+## Subcommands
+
+- `send`: send message to target `chatKey`
+- `react`: react to a message (currently Telegram)
+- `context`: view current conversation context snapshot
+- `history`: read recent chat history (default latest 30)
+
+## Example
+
+```bash
+sma chat send --text "done"
+sma chat react --emoji "✅"
+sma chat context
+sma chat history --limit 50
+```
+
+## Notes
+
+- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.

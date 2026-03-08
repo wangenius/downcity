@@ -1,0 +1,50 @@
+---
+title: sma voice
+description: Voice extension 命令（本地 STT 模型与转写能力管理）
+---
+
+# `sma voice`
+
+`voice` extension 命令组，用于统一管理本地语音识别模型与 `extensions.voice` 配置。
+
+## 用法
+
+```bash
+sma voice <subcommand>
+```
+
+## 子命令
+
+- `models`：列出内置模型目录
+- `status`：查看当前 `extensions.voice` 配置
+- `on [models...]`：启用 voice extension；默认安装所选模型
+- `off`：关闭 voice extension（保留已安装记录）
+- `install [models...]`：仅安装模型，不改变启用状态
+- `use <modelId>`：切换激活模型
+- `transcribe <audioPath>`：转写本地音频文件（联调用）
+
+## 示例
+
+```bash
+# 1）交互选择并安装，再启用
+sma voice on
+
+# 2）显式安装到指定目录
+sma voice install SenseVoiceSmall --models-dir .ship/models/voice
+
+# 3）只写配置，不下载
+sma voice on SenseVoiceSmall --no-install
+
+# 4）切换激活模型
+sma voice use whisper-large-v3-turbo
+
+# 5）本地音频转写测试
+sma voice transcribe .ship/.cache/telegram/demo.ogg --language zh
+```
+
+## 说明
+
+- 该命令组属于 daemon-facing 命令，请先启动：`sma agent on --daemon`。
+- 模型默认下载到 `.ship/models/voice`（可通过 `--models-dir` 覆盖）。
+- 内置转写 runner 依赖本地 Python 包（`funasr` / `transformers` 至少其一）。
+- Telegram 收到 voice/audio 附件时，会通过该 extension 的 `transcribe` action 做 best-effort 转写。

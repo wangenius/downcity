@@ -11,4 +11,8 @@ import { chatService } from "@services/chat/Index.js";
 import { skillsService } from "@services/skills/Index.js";
 import { taskService } from "@services/task/Index.js";
 
-export const SERVICES: Service[] = [chatService, skillsService, taskService];
+export const SERVICES: Service[] = [
+  chatService,
+  skillsService,
+  taskService,
+];

@@ -4,7 +4,7 @@
  * CLI 程序入口模块。
  *
  * 职责说明：
- * 1. 组装所有一级命令（init/agent/config/service）。
+ * 1. 组装所有一级命令（init/agent/config/service/extension）。
  * 2. 统一处理命令行参数解析规则（端口、布尔值）。
  * 3. 处理默认命令回退：未指定已知一级命令时自动转发到 `agent on`。
  */
@@ -17,13 +17,16 @@ import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
 import { runCommand } from "./Run.js";
 import { registerServicesCommand } from "./Services.js";
+import { registerExtensionsCommand } from "./Extensions.js";
 import { startCommand } from "./Start.js";
 import { stopCommand } from "./Stop.js";
 import type { StartOptions } from "@main/types/Start.js";
 import { registerAllServicesForCli } from "@main/service/ServiceCommand.js";
+import { registerAllExtensionsForCli } from "@main/extension/ExtensionCommand.js";
 import {
   getServiceRootCommandNames,
 } from "@main/service/Manager.js";
+import { getExtensionRootCommandNames } from "@main/extension/Manager.js";
 
 // 在 ES 模块中获取 __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -148,9 +151,12 @@ agent
 registerConfigCommand(program);
 
 registerServicesCommand(program);
+registerExtensionsCommand(program);
 
 // 服务命令统一注册（chat / skill / task / future services）
 registerAllServicesForCli(program);
+// 扩展命令统一注册（voice / future extensions）
+registerAllExtensionsForCli(program);
 
 // 默认行为：`shipmyagent` / `shipmyagent .` / `shipmyagent [on-options]` -> `shipmyagent agent on [path]`
 const firstArg = process.argv[2];
@@ -167,10 +173,17 @@ const staticRootCommands = [
   // 关键点（中文）：`services` 已移除，仍保留在识别列表里，避免误回退为 `agent on`。
   "services",
   "service",
+  "extensions",
+  "extension",
   "help",
 ];
 const serviceRootCommands = getServiceRootCommandNames();
-const knownRootCommands = new Set([...staticRootCommands, ...serviceRootCommands]);
+const extensionRootCommands = getExtensionRootCommandNames();
+const knownRootCommands = new Set([
+  ...staticRootCommands,
+  ...serviceRootCommands,
+  ...extensionRootCommands,
+]);
 
 if (
   !firstArg ||

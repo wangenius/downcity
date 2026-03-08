@@ -15,7 +15,7 @@ ShipMyAgent uses four main configuration files:
 your-project/
 ├── .env.example       # Environment variables template (recommended)
 ├── .env               # Local environment variables (do not commit)
-├── ship.json          # Main configuration (LLM, services)
+├── ship.json          # Main configuration (LLM, services, extensions)
 ├── PROFILE.md           # Agent personality and behavior
 ├── SOUL.md            # Optional core principles / operating style
 ├── USER.md            # Optional user profile / preference prompt
@@ -254,6 +254,37 @@ Controls the per-chat lane scheduler:
     "chat": {
       "queue": {
         "maxConcurrency": 2
+      }
+    }
+  }
+}
+```
+
+**extensions.voice** (object, optional)
+
+Voice extension config for local speech-to-text model management.
+
+- `enabled`: whether the voice extension is enabled
+- `provider`: currently `local`
+- `activeModel`: active model ID
+- `modelsDir`: local model root directory (default: `.ship/models/voice`)
+- `installedModels`: installed model IDs
+- `transcribe.strategy`: runner strategy (`auto` | `funasr` | `transformers-whisper` | `command`)
+- `transcribe.command`: custom command template (used when `strategy=command`)
+
+```json
+{
+  "extensions": {
+    "voice": {
+      "enabled": true,
+      "provider": "local",
+      "activeModel": "SenseVoiceSmall",
+      "modelsDir": ".ship/models/voice",
+      "installedModels": ["SenseVoiceSmall"],
+      "transcribe": {
+        "strategy": "auto",
+        "timeoutMs": 120000,
+        "language": "zh"
       }
     }
   }

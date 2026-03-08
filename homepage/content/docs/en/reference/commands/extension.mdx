@@ -1,0 +1,36 @@
+---
+title: sma extension
+description: Manage extension runtime and bridge extension commands
+---
+
+# `sma extension`
+
+Extension runtime management command group.
+
+## Usage
+
+```bash
+sma extension <subcommand>
+```
+
+## Subcommands
+
+- `list`: list all extension runtime status
+- `status <extensionName>`: view one extension status
+- `start <extensionName>`: start an extension
+- `stop <extensionName>`: stop an extension
+- `restart <extensionName>`: restart an extension
+- `command <extensionName> <command>`: forward extension command payload
+
+## Example
+
+```bash
+sma extension list
+sma extension status voice
+sma extension restart voice
+sma extension command voice status
+```
+
+## Notes
+
+- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.

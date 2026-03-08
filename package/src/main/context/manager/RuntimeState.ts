@@ -6,6 +6,7 @@ import { createModel } from "@main/model/CreateModel.js";
 import type {
   ServiceRuntime,
   ServiceContext,
+  ExtensionInvokePort,
   ServiceInvokePort,
 } from "@/main/service/ServiceRuntime.js";
 import {
@@ -19,6 +20,7 @@ import {
   parseTaskRunContextId,
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@main/service/Manager.js";
+import { runExtensionCommand } from "@main/extension/Manager.js";
 import { setShellToolRuntime, shellTools } from "@main/tools/shell/Tool.js";
 import { getRequestContext } from "@main/context/manager/RequestContext.js";
 import { FilePersistor } from "@/main/context/context-agent/components/FilePersistor.js";
@@ -178,6 +180,54 @@ const serviceInvokePort: ServiceInvokePort = {
 };
 
 /**
+ * extension 调用端口实现。
+ *
+ * 关键点（中文）
+ * - services 通过 extensions.invoke 调用 extension action。
+ * - main 侧负责分发与错误语义统一。
+ */
+const extensionInvokePort: ExtensionInvokePort = {
+  async invoke(params: {
+    extension: string;
+    action: string;
+    payload?: JsonValue;
+  }) {
+    const extensionName = String(params.extension || "").trim();
+    const action = String(params.action || "").trim();
+    if (!extensionName) {
+      return {
+        success: false,
+        error: "extensions.invoke.extension is required",
+      };
+    }
+    if (!action) {
+      return {
+        success: false,
+        error: "extensions.invoke.action is required",
+      };
+    }
+
+    const result = await runExtensionCommand({
+      extensionName,
+      command: action,
+      payload: params.payload,
+      context: getServiceRuntimeState(),
+    });
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.message || "extension invoke failed",
+      };
+    }
+
+    return {
+      success: true,
+      ...(result.data !== undefined ? { data: result.data } : {}),
+    };
+  },
+};
+
+/**
  * 构建 service context（会话管理 + 模型）。
  *
  * 关键点（中文）
@@ -228,6 +278,7 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
     systems: input.systems,
     context: buildServiceContext(input),
     invoke: serviceInvokePort,
+    extensions: extensionInvokePort,
   };
 }
 

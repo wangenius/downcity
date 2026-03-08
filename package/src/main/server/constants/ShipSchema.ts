@@ -111,6 +111,58 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
         },
       },
     },
+    extensions: {
+      type: "object",
+      additionalProperties: true,
+      properties: {
+        voice: {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            enabled: { type: "boolean" },
+            provider: { type: "string", enum: ["local"] },
+            activeModel: {
+              type: "string",
+              enum: [
+                "SenseVoiceSmall",
+                "paraformer-zh-streaming",
+                "whisper-large-v3-turbo",
+              ],
+            },
+            modelsDir: { type: "string" },
+            installedModels: {
+              type: "array",
+              items: {
+                type: "string",
+                enum: [
+                  "SenseVoiceSmall",
+                  "paraformer-zh-streaming",
+                  "whisper-large-v3-turbo",
+                ],
+              },
+            },
+            transcribe: {
+              type: "object",
+              additionalProperties: true,
+              properties: {
+                strategy: {
+                  type: "string",
+                  enum: [
+                    "auto",
+                    "funasr",
+                    "transformers-whisper",
+                    "command",
+                  ],
+                },
+                command: { type: "string" },
+                timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+                language: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
     llm: {
       type: "object",
       additionalProperties: true,

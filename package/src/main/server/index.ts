@@ -18,6 +18,10 @@ import {
   ensureServiceActionRoutesRegistered,
   servicesRouter,
 } from "./routes/services.js";
+import {
+  ensureExtensionActionRoutesRegistered,
+  extensionsRouter,
+} from "./routes/extensions.js";
 import { staticRouter } from "./routes/static.js";
 import { tuiRouter } from "@/main/ui/tui/Router.js";
 
@@ -61,11 +65,14 @@ export function createServerApp(): Hono {
 
   // 关键点（中文）：service action 路由在 runtime ready 后再注册，避免命令级 import 副作用。
   ensureServiceActionRoutesRegistered();
+  // 关键点（中文）：extension action 路由同样延迟到 runtime ready 后注册。
+  ensureExtensionActionRoutesRegistered();
 
   // 关键点（中文）：按路由域挂载，index 只保留装配职责。
   app.route("/", staticRouter);
   app.route("/", healthRouter);
   app.route("/", servicesRouter);
+  app.route("/", extensionsRouter);
   app.route("/", executeRouter);
   app.route("/", tuiRouter);
 

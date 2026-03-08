@@ -40,6 +40,31 @@ export type ServiceInvokePort = {
 };
 
 /**
+ * Extension 调用参数（services -> extensions）。
+ */
+export type ExtensionInvokeParams = {
+  extension: string;
+  action: string;
+  payload?: JsonValue;
+};
+
+/**
+ * Extension 调用结果。
+ */
+export type ExtensionInvokeResult = {
+  success: boolean;
+  data?: JsonValue;
+  error?: string;
+};
+
+/**
+ * Extension 调用端口（services -> extensions）。
+ */
+export type ExtensionInvokePort = {
+  invoke(params: ExtensionInvokeParams): Promise<ExtensionInvokeResult>;
+};
+
+/**
  * 会话 Persistor 端口。
  */
 export type ServicePersistor = {
@@ -133,4 +158,9 @@ export type ServiceRuntime = {
    * 跨 service action 调用入口。
    */
   invoke: ServiceInvokePort;
+
+  /**
+   * 跨 extension action 调用入口。
+   */
+  extensions: ExtensionInvokePort;
 };

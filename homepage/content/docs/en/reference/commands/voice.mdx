@@ -1,0 +1,50 @@
+---
+title: sma voice
+description: Voice extension commands (local STT model and transcription management)
+---
+
+# `sma voice`
+
+Voice extension command group for managing local STT models and `extensions.voice` config.
+
+## Usage
+
+```bash
+sma voice <subcommand>
+```
+
+## Subcommands
+
+- `models`: list built-in model catalog
+- `status`: show current `extensions.voice` config
+- `on [models...]`: enable voice extension; installs selected models by default
+- `off`: disable voice extension (keeps installed model records)
+- `install [models...]`: install model files without changing enabled state
+- `use <modelId>`: switch active model
+- `transcribe <audioPath>`: transcribe a local audio file (for debugging)
+
+## Examples
+
+```bash
+# 1) interactive select + install + enable
+sma voice on
+
+# 2) explicit model install path
+sma voice install SenseVoiceSmall --models-dir .ship/models/voice
+
+# 3) enable without downloading
+sma voice on SenseVoiceSmall --no-install
+
+# 4) switch active model
+sma voice use whisper-large-v3-turbo
+
+# 5) local audio transcription check
+sma voice transcribe .ship/.cache/telegram/demo.ogg --language zh
+```
+
+## Notes
+
+- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.
+- Model files are downloaded from HuggingFace into `.ship/models/voice` by default.
+- Built-in transcription runners require local Python dependencies (`funasr` and/or `transformers`).
+- Telegram voice/audio attachments use this extension's `transcribe` action in best-effort mode.

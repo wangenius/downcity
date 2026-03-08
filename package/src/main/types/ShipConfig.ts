@@ -6,6 +6,7 @@
  * - 供 main/services 多层复用，避免反向类型依赖。
  */
 import type { LlmConfig } from "@main/types/LlmConfig.js";
+import type { VoiceExtensionConfig } from "@main/types/Voice.js";
 
 export interface ShipConfig {
   $schema?: string;
@@ -146,6 +147,23 @@ export interface ShipConfig {
         };
       };
     };
+  };
+  /**
+   * extensions 配置。
+   *
+   * 关键点（中文）
+   * - 扩展能力统一放在 `extensions` 下，供 service 调用。
+   * - 示例：`extensions.voice`。
+   */
+  extensions?: {
+    /**
+     * Voice extension（本地语音识别）配置。
+     *
+     * 关键点（中文）
+     * - 负责统一管理 STT 模型目录、启停开关、激活模型与转写执行策略。
+     * - 可通过 `sma voice ...` 命令组维护，不需要手改 JSON。
+     */
+    voice?: VoiceExtensionConfig;
   };
   /**
    * LLM 配置。

@@ -96,6 +96,23 @@ You can send a file directly to the bot (document/photo/voice/audio/video).
 
 Example: send a PDF with caption: `Summarize this PDF and list action items.`
 
+### Local STT model management
+
+If you want to manage local voice-to-text models, use the dedicated `voice` extension command group:
+
+```bash
+# start daemon first
+sma agent on --daemon
+
+# interactive select + install + enable
+sma voice on
+
+# inspect current voice config
+sma voice status
+```
+
+When `extensions.voice.enabled=true`, incoming Telegram `voice/audio` attachments are transcribed in best-effort mode and appended into the user instruction.
+
 ### Group / supergroup
 
 - Add the bot to the group

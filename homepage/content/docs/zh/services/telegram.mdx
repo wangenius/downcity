@@ -96,6 +96,23 @@ shipmyagent agent on --daemon
 
 示例：发送一个 PDF，并在 caption 写：`帮我总结这个 PDF，并列出待办事项。`
 
+### 本地 STT 模型管理
+
+如果你要统一管理本地语音转写模型，请使用独立的 `voice` extension 命令组：
+
+```bash
+# 先启动 daemon
+sma agent on --daemon
+
+# 交互选择 + 安装 + 启用
+sma voice on
+
+# 查看当前 voice 配置
+sma voice status
+```
+
+当 `extensions.voice.enabled=true` 时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
+
 ### 群聊 / 超级群
 
 - 把机器人拉进群

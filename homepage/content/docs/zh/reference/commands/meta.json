@@ -6,7 +6,9 @@
     "agent",
     "config",
     "service",
+    "extension",
     "chat",
+    "voice",
     "skill",
     "task"
   ]

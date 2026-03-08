@@ -15,7 +15,7 @@ ShipMyAgent 使用四个主要配置文件：
 your-project/
 ├── .env.example       # 环境变量模板（推荐提交）
 ├── .env               # 本地环境变量（不要提交）
-├── ship.json          # 主配置（LLM、services）
+├── ship.json          # 主配置（LLM、services、extensions）
 ├── PROFILE.md           # Agent 个性和行为
 ├── SOUL.md            # 可选：核心原则/执行风格
 ├── USER.md            # 可选：用户画像/偏好
@@ -274,6 +274,37 @@ your-project/
     "chat": {
       "queue": {
         "maxConcurrency": 2
+      }
+    }
+  }
+}
+```
+
+**extensions.voice** (object, 可选)
+
+用于本地语音识别（STT）模型与转写执行器的统一管理配置。
+
+- `enabled`：是否启用 voice extension
+- `provider`：当前固定 `local`
+- `activeModel`：当前激活模型 ID
+- `modelsDir`：模型本地目录（默认 `.ship/models/voice`）
+- `installedModels`：已安装模型 ID 列表
+- `transcribe.strategy`：转写执行策略（`auto` | `funasr` | `transformers-whisper` | `command`）
+- `transcribe.command`：自定义命令模板（仅 `strategy=command` 生效）
+
+```json
+{
+  "extensions": {
+    "voice": {
+      "enabled": true,
+      "provider": "local",
+      "activeModel": "SenseVoiceSmall",
+      "modelsDir": ".ship/models/voice",
+      "installedModels": ["SenseVoiceSmall"],
+      "transcribe": {
+        "strategy": "auto",
+        "timeoutMs": 120000,
+        "language": "zh"
       }
     }
   }

@@ -19,6 +19,7 @@ import {
   type TelegramUpdate,
   type TelegramUser,
 } from "./Shared.js";
+import { buildTelegramVoiceTranscriptionInstruction } from "./VoiceInput.js";
 import { TelegramStateStore } from "./StateStore.js";
 import { appendOutboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
@@ -805,9 +806,14 @@ export class TelegramBot extends BaseChatChannel {
         }
 
         const attachmentLines: string[] = [];
+        let incomingAttachments: Array<{
+          type: TelegramAttachmentType;
+          path: string;
+          desc?: string;
+        }> = [];
         try {
-          const incoming = await this.saveIncomingAttachments(message);
-          for (const att of incoming) {
+          incomingAttachments = await this.saveIncomingAttachments(message);
+          for (const att of incomingAttachments) {
             const rel = path.relative(this.rootPath, att.path);
             const desc = att.desc ? ` | ${att.desc}` : "";
             attachmentLines.push(`@attach ${att.type} ${rel}${desc}`);
@@ -824,6 +830,15 @@ export class TelegramBot extends BaseChatChannel {
         const instructions =
           [
             attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
+            await buildTelegramVoiceTranscriptionInstruction({
+              context: this.context,
+              logger: this.logger,
+              rootPath: this.rootPath,
+              chatId,
+              messageId,
+              chatKey,
+              attachments: incomingAttachments,
+            }),
             cleaned ? cleaned.trim() : undefined,
           ]
             .filter(Boolean)

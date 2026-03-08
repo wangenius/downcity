@@ -32,6 +32,49 @@ import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import { sendChatTextByChatKey } from "../Action.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
+const CHANNEL_ERROR_TEXT_MAX_LENGTH = 480;
+
+/**
+ * 判断是否为上游模型服务临时不可用。
+ *
+ * 关键点（中文）
+ * - 这里不依赖 provider 私有错误类型，统一基于错误文本做稳健匹配。
+ * - 主要覆盖 AI SDK 的 RetryError / APICallError 以及 503 场景。
+ */
+function isTemporaryModelServiceUnavailable(error: unknown): boolean {
+  const msg = String(error ?? "");
+  return (
+    /Service temporarily unavailable/i.test(msg) ||
+    /AI_RetryError/i.test(msg) ||
+    /AI_APICallError/i.test(msg) ||
+    /maxRetriesExceeded/i.test(msg) ||
+    /\b503\b/.test(msg)
+  );
+}
+
+/**
+ * 构造回发到 channel 的失败文本。
+ *
+ * 关键点（中文）
+ * - 文本必须短，避免把大型错误对象原样透出给用户。
+ * - 对“临时不可用”给出明确可执行建议（稍后重试）。
+ */
+function buildChannelErrorText(error: unknown): string {
+  if (isTemporaryModelServiceUnavailable(error)) {
+    return "⚠️ 模型服务暂时不可用（503），系统已自动重试但仍失败，请稍后再试。";
+  }
+
+  const normalized = String(error ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "❌ 执行失败，请稍后重试。";
+  }
+
+  const clipped =
+    normalized.length > CHANNEL_ERROR_TEXT_MAX_LENGTH
+      ? `${normalized.slice(0, CHANNEL_ERROR_TEXT_MAX_LENGTH)}…`
+      : normalized;
+  return `❌ 执行失败：${clipped}`;
+}
 
 type WorkerConfig = {
   maxConcurrency: number;
@@ -330,6 +373,42 @@ export class ChatQueueWorker {
     });
   }
 
+  /**
+   * 无论 chat method（direct/cmd），都强制把文本回发到 channel。
+   *
+   * 关键点（中文）
+   * - 错误兜底不能依赖模型再次调用 `chat_send`。
+   * - 直接按 chatKey 分发，确保失败信息可见。
+   */
+  private async dispatchTextToChannel(params: {
+    contextId: string;
+    text: string;
+    messageId?: string;
+  }): Promise<boolean> {
+    const text = String(params.text || "").trim();
+    if (!text) return false;
+
+    const result = await sendChatTextByChatKey({
+      context: this.runtime,
+      chatKey: params.contextId,
+      text,
+      // 关键点（中文）：优先以 reply 形式返回到触发消息，增强用户感知。
+      replyToMessage: true,
+      ...(typeof params.messageId === "string" && params.messageId
+        ? { messageId: params.messageId }
+        : {}),
+    });
+
+    if (!result.success) {
+      this.logger.warn("ChatQueueWorker forced channel dispatch failed", {
+        contextId: params.contextId,
+        error: result.error || "chat send failed",
+      });
+      return false;
+    }
+    return true;
+  }
+
   private async processOne(laneKey: string, first: ChatQueueItem): Promise<void> {
     if (first.kind === "control") {
       this.handleControl(first);
@@ -397,6 +476,31 @@ export class ChatQueueWorker {
         onStepCallback,
         onAssistantStepCallback,
       });
+    } catch (error) {
+      const channelErrorText = buildChannelErrorText(error);
+      this.logger.error("ChatQueueWorker execution failed", {
+        contextId: first.contextId,
+        error: String(error),
+      });
+
+      try {
+        await serviceContext.appendAssistantMessage({
+          contextId: first.contextId,
+          fallbackText: channelErrorText,
+          extra: {
+            note: "chat_queue_worker_run_failed",
+          },
+        });
+      } catch {
+        // ignore
+      }
+
+      await this.dispatchTextToChannel({
+        contextId: first.contextId,
+        text: channelErrorText,
+        messageId: first.messageId,
+      });
+      return;
     } finally {
       typing.stop();
     }
@@ -416,12 +520,23 @@ export class ChatQueueWorker {
     }
 
     try {
-      // 关键点（中文）：若 step 期间已分条发送，则不再做最终聚合回发，避免重复。
-      if (dispatchedDirectStepCount === 0) {
-        await this.dispatchAssistantMessageDirect({
+      // 关键点（中文）
+      // - 正常成功：若 step 期间已分条发送，则跳过最终聚合回发，避免重复。
+      // - 失败场景：必须回发最终失败信息（即使已有 step 输出）。
+      if (result.success === false || dispatchedDirectStepCount === 0) {
+        const dispatchedDirect = await this.dispatchAssistantMessageDirect({
           contextId: first.contextId,
           assistantMessage: result.assistantMessage,
         });
+        // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里强制兜底回发。
+        if (!dispatchedDirect && result.success === false) {
+          const assistantText = extractTextFromUiMessage(result.assistantMessage).trim();
+          await this.dispatchTextToChannel({
+            contextId: first.contextId,
+            text: assistantText || "❌ 执行失败，请稍后重试。",
+            messageId: first.messageId,
+          });
+        }
       }
     } catch {
       // ignore

@@ -50,7 +50,7 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
         "name": "gpt-4o-mini"
       }
     },
-    "logMessages": true
+    "logMessages": false
   },
   "services": {
     "skills": {
@@ -118,7 +118,7 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
   - **provider**: Provider key（必须存在于 `llm.providers`）。
   - **name**: 上游模型名称。
   - 可选采样字段：`temperature`、`maxTokens`、`topP`、`frequencyPenalty`、`presencePenalty`。
-- **logMessages**: 是否记录发给 LLM 的请求 payload（默认 `true`）。
+- **logMessages**: 是否记录发给 LLM 的请求 payload（默认 `false`）。
 
 > 说明：
 > - `open-compatible` 走 Chat Completions 兼容链路（`/chat/completions`）。

@@ -28,11 +28,7 @@ export function createLlmLoggingFetch(args: {
         if (parsed) {
           const contextId = ctx?.contextId;
           const requestId = ctx?.requestId;
-          const message = parsed.requestText
-            .replace(/\n===== LLM REQUEST END =====$/, "") +
-            `${contextId ? `\ncontextId: ${contextId}` : ""}` +
-            `${requestId ? `\nrequestId: ${requestId}` : ""}` +
-            `\n===== LLM REQUEST END =====`;
+          const message = String(parsed.requestText || "").trim();
 
           await args.logger.log("info", message.slice(0, maxChars), {
             ...parsed.meta,

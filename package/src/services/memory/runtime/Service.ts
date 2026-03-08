@@ -54,6 +54,10 @@ export async function runContextMemoryMaintenance(params: {
     const unmemorizedCount = totalEntries - lastMemorizedEntryCount;
 
     if (unmemorizedCount < extractMinEntries) return;
+    await runtime.logger.log("info", "[agent] memory calling", {
+      contextId,
+      entryRange: [lastMemorizedEntryCount, totalEntries],
+    });
 
     void extractAndSaveMemory({
       context: runtime,
@@ -76,7 +80,7 @@ async function extractAndSaveMemory(params: {
   const logger = getLogger(runtime.rootPath, "info");
 
   try {
-    await logger.log("info", "Memory extraction started (async)", {
+    await logger.log("info", "[agent] memory extracting", {
       contextId,
       entryRange: [startIndex, endIndex],
     });
@@ -102,12 +106,12 @@ async function extractAndSaveMemory(params: {
 
     await checkAndCompressMemory(runtime, contextId, model);
 
-    await logger.log("info", "Memory extraction completed (async)", {
+    await logger.log("info", "[agent] memory extracted", {
       contextId,
       entryRange: [startIndex, endIndex],
     });
   } catch (error) {
-    await logger.log("error", "Memory extraction failed (async)", {
+    await logger.log("error", "[agent] memory extract failed", {
       contextId,
       error: String(error),
     });
@@ -132,7 +136,7 @@ async function checkAndCompressMemory(
 
     if (currentSize <= maxChars) return;
 
-    await logger.log("info", "Memory compression started (async)", {
+    await logger.log("info", "[agent] compacting memory", {
       contextId,
       currentSize,
       maxChars,
@@ -141,7 +145,7 @@ async function checkAndCompressMemory(
     const backupEnabled = config?.backupBeforeCompress ?? true;
     if (backupEnabled) {
       const backupPath = await memoryManager.backup();
-      await logger.log("info", "Memory backed up before compression", {
+      await logger.log("info", "[agent] memory backup", {
         contextId,
         backupPath,
       });
@@ -159,14 +163,14 @@ async function checkAndCompressMemory(
 
     await memoryManager.overwrite(compressed);
 
-    await logger.log("info", "Memory compression completed (async)", {
+    await logger.log("info", "[agent] memory compacted", {
       contextId,
       originalSize: currentSize,
       compressedSize: compressed.length,
       targetChars,
     });
   } catch (error) {
-    await logger.log("error", "Memory compression failed (async)", {
+    await logger.log("error", "[agent] memory compact failed", {
       contextId,
       error: String(error),
     });

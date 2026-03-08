@@ -191,9 +191,24 @@ export async function createModel(input: {
     throw Error("No API Key configured, will use simulation mode");
   }
 
-  // 日志策略（中文）：默认开启 LLM 请求日志，可通过 llm.logMessages 关闭。
+  // 日志策略（中文）：默认关闭 LLM 请求日志，按需通过 llm.logMessages 显式开启。
   const configLog = llm?.logMessages;
-  const logLlmMessages = typeof configLog === "boolean" ? configLog : true;
+  const logLlmMessages = typeof configLog === "boolean" ? configLog : false;
+
+  // 关键点（中文）：启动阶段只打印一次当前生效模型状态，便于快速确认路由是否正确。
+  await logger.log(
+    "info",
+    `[agent] model active=${activeModelId} provider=${providerType}/${providerKey} name=${resolvedModel}${resolvedBaseUrl ? ` baseUrl=${resolvedBaseUrl}` : ""}`,
+    {
+      kind: "llm_model_ready",
+      activeModel: activeModelId,
+      providerType,
+      providerKey,
+      model: resolvedModel,
+      ...(resolvedBaseUrl ? { baseUrl: resolvedBaseUrl } : {}),
+      logMessages: logLlmMessages,
+    },
+  );
 
   const loggingFetch = createLlmLoggingFetch({
     logger,

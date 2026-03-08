@@ -150,15 +150,11 @@ export class Agent {
       });
     } catch (error) {
       if (isContextLengthError(error)) {
-        await this.logger.log(
-          "warn",
-          "Context length exceeded, retry with messages compaction",
-          {
-            contextId,
-            error: String(error),
-            retryCount: state.retryCount,
-          },
-        );
+        await this.logger.log("info", "[agent] compacting", {
+          contextId,
+          error: String(error),
+          retryCount: state.retryCount,
+        });
         if (state.retryCount >= MAX_CONTEXT_LENGTH_RETRY_ATTEMPTS) {
           return {
             success: false,
@@ -216,6 +212,12 @@ export class Agent {
     );
 
     try {
+      if (params.retryCount > 0) {
+        await this.logger.log("info", "[agent] compacting", {
+          contextId: params.contextId,
+          retryCount: params.retryCount,
+        });
+      }
       await this.compactor.run({
         persistor: this.persistor,
         model: this.model,
@@ -340,7 +342,7 @@ export class Agent {
 
       // 核心步骤 4（中文）：记录完成日志并返回最终消息。
       const duration = Date.now() - startTime;
-      await this.logger.log("info", "Agent execution completed", {
+      await this.logger.log("info", "[agent] finish", {
         duration,
       });
 

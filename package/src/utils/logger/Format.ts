@@ -76,7 +76,33 @@ function toInlineLogValue(value: string, maxChars: number): string {
 }
 
 function formatLogField(key: string, value: string): string {
-  return `[${key}]: ${value}`;
+  return `[${key}] ${value}`;
+}
+
+function pushLabeledTextLines(
+  out: string[],
+  label: "user" | "assistant" | "tool" | "tool_result",
+  text: string,
+  maxChars: number,
+): void {
+  const normalized = truncate(String(text || "-"), maxChars).replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  for (const line of lines) {
+    out.push(formatLogField(label, line || "-"));
+  }
+}
+
+function parseInfoBlockText(value: string): {
+  body: string;
+} | null {
+  const normalized = String(value || "").replace(/\r\n/g, "\n").trim();
+  if (!normalized.startsWith("<info>\n")) return null;
+  const matched = normalized.match(/^<info>\n([\s\S]*?)\n<\/info>(?:\n\n([\s\S]*))?$/);
+  if (!matched) return null;
+
+  return {
+    body: String(matched[2] || "").trim(),
+  };
 }
 
 function contentToText(content: JsonValue | undefined, maxChars: number): string {
@@ -94,30 +120,14 @@ function contentToText(content: JsonValue | undefined, maxChars: number): string
         ) {
           return String(getStringField(part, "text") ?? "");
         }
-        if (partType === "tool-approval-request") {
-          const toolCall = getObjectField(part, "toolCall");
-          const toolName = toolCall ? getStringField(toolCall, "toolName") : "";
-          return `Approval requested: ${String(toolName ?? "")}`;
-        }
-        if (partType === "tool-call") {
-          const toolName = String(getStringField(part, "toolName") ?? "");
-          if (!toolName) return "Tool call:";
-
-          // 关键点（中文）：在 function call 日志中补充 exec_command 的 cmd，便于直接定位执行命令。
-          if (toolName === "exec_command") {
-            const execCmd = extractExecCommandCmd(part);
-            return execCmd
-              ? `Tool call: ${toolName} cmd=${truncate(execCmd, Math.max(64, Math.floor(maxChars / 2)))}`
-              : `Tool call: ${toolName}`;
-          }
-
-          return `Tool call: ${toolName}`;
-        }
-        if (partType === "tool-result") {
-          return `Tool result: ${String(getStringField(part, "toolName") ?? "")}`;
-        }
-        if (partType === "tool-error") {
-          return `Tool error: ${String(getStringField(part, "toolName") ?? "")}`;
+        // 关键点（中文）：tool 事件由 formatMessagesForLog 单独输出为 [tool]/[tool_result]，这里不混入文本。
+        if (
+          partType === "tool-approval-request" ||
+          partType === "tool-call" ||
+          partType === "tool-result" ||
+          partType === "tool-error"
+        ) {
+          return "";
         }
         return "";
       })
@@ -134,13 +144,6 @@ function parsePossibleJsonObject(value: JsonValue | undefined): JsonObject | und
   if (typeof value !== "string") return undefined;
   const parsed = safeJsonParse(value);
   return isJsonObject(parsed) ? parsed : undefined;
-}
-
-function extractExecCommandCmd(part: JsonObject): string | undefined {
-  const inputValue = part.input ?? part.rawInput ?? part.arguments;
-  const inputObj = parsePossibleJsonObject(inputValue);
-  if (!inputObj) return undefined;
-  return getStringField(inputObj, "cmd");
 }
 
 function extractFunctionCallExecCommandCmd(message: JsonObject): string | undefined {
@@ -214,14 +217,6 @@ function formatToolCalls(
   return out.length > 0 ? out : null;
 }
 
-function resolveMessageRoleLabel(message: JsonObject): string {
-  const role = getStringField(message, "role");
-  if (role) return role;
-  const itemType = getStringField(message, "type");
-  if (itemType) return `item:${itemType}`;
-  return "item";
-}
-
 function summarizeValue(value: JsonValue | undefined): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
@@ -243,50 +238,90 @@ function formatMessagesForLog(
   const out: string[] = [];
 
   for (const message of messages) {
-    const role = resolveMessageRoleLabel(message);
-    const name = getStringField(message, "name");
-    const toolCallId = getStringField(message, "tool_call_id");
-    const callId = getStringField(message, "call_id");
+    const role = String(getStringField(message, "role") || "").trim().toLowerCase();
+    const itemType = String(getStringField(message, "type") || "")
+      .trim()
+      .toLowerCase();
     const output = summarizeValue(message.output);
     const outputText = summarizeValue(message.output_text);
-    const segments: string[] = [];
-
-    if (name) segments.push(`name=${name}`);
-    if (toolCallId) segments.push(`tool_call_id=${toolCallId}`);
-    if (callId) segments.push(`call_id=${callId}`);
-    const functionCallExecCmd = extractFunctionCallExecCommandCmd(message);
-    // 关键点（中文）：Responses API 的 item:function_call 里把 exec_command 的 cmd 打出来，便于直接排障。
-    if (functionCallExecCmd) {
-      segments.push(`cmd=${truncate(functionCallExecCmd, opts.maxToolArgsChars)}`);
-    }
 
     const toolCalls = formatToolCalls(message.tool_calls, opts.maxToolArgsChars);
     if (toolCalls) {
       for (const toolCall of toolCalls) {
-        const label = [
-          toolCall.id ? `id=${toolCall.id}` : "",
-          toolCall.type ? `type=${toolCall.type}` : "",
-          toolCall.name ? `name=${toolCall.name}` : "",
+        const detail = [
+          toolCall.name ? String(toolCall.name) : "",
           toolCall.arguments ? `args=${toolCall.arguments}` : "",
         ]
-          .filter(Boolean)
-          .join("; ");
-        if (label) segments.push(`tool{${label}}`);
+        .filter(Boolean)
+          .join(" | ");
+        if (detail) {
+          pushLabeledTextLines(out, "tool", detail, opts.maxToolArgsChars);
+        }
       }
     }
 
+    if (itemType === "function_call") {
+      const functionName = String(getStringField(message, "name") || "").trim();
+      const functionCallExecCmd = extractFunctionCallExecCommandCmd(message);
+      const argsText =
+        typeof message.arguments === "string"
+          ? truncate(message.arguments, opts.maxToolArgsChars)
+          : "";
+      const functionCallDetail = [
+        functionName || "function_call",
+        functionCallExecCmd ? `cmd=${functionCallExecCmd}` : "",
+        !functionCallExecCmd && argsText ? `args=${argsText}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+      pushLabeledTextLines(
+        out,
+        "tool",
+        functionCallDetail || "function_call",
+        opts.maxToolArgsChars,
+      );
+      continue;
+    }
+
+    let bodyText = "";
     if ("content" in message) {
       const contentText = contentToText(message.content, opts.maxContentChars);
-      if (contentText) segments.push(contentText);
+      if (role === "user") {
+        const parsedInfoBlock = parseInfoBlockText(contentText);
+        bodyText = parsedInfoBlock ? parsedInfoBlock.body : contentText;
+      } else {
+        bodyText = contentText;
+      }
     }
-    if (outputText) segments.push(`output_text=${outputText}`);
-    if (output) segments.push(`output=${output}`);
 
-    const summary = toInlineLogValue(
-      segments.filter(Boolean).join(" | ") || "-",
-      opts.maxContentChars,
-    );
-    out.push(`[${role}]: ${summary}`);
+    if (role === "user") {
+      pushLabeledTextLines(out, "user", bodyText || "-", opts.maxContentChars);
+      continue;
+    }
+
+    if (
+      role === "tool" ||
+      itemType === "function_call_output" ||
+      itemType === "tool-result" ||
+      itemType === "tool_error" ||
+      itemType === "tool-error"
+    ) {
+      const toolResultText = [bodyText, outputText, output].filter(Boolean).join(" | ");
+      pushLabeledTextLines(
+        out,
+        "tool_result",
+        toolResultText || "-",
+        opts.maxContentChars,
+      );
+      continue;
+    }
+
+    const assistantText = [bodyText, outputText, output]
+      .filter(Boolean)
+      .join(bodyText ? "" : " | ");
+    if (assistantText) {
+      pushLabeledTextLines(out, "assistant", assistantText, opts.maxContentChars);
+    }
   }
 
   return out;
@@ -297,18 +332,10 @@ function formatPayloadSummaryLines(
   maxChars: number,
 ): string[] {
   if (Array.isArray(payload)) {
-    return [formatLogField("payload", `[array:${payload.length}]`)];
+    return [formatLogField("agent", `payload=[array:${payload.length}]`)];
   }
-  const keys = Object.keys(payload);
-  const lines: string[] = [formatLogField("payload.keys", keys.join(",") || "-")];
-  for (const key of keys.slice(0, 12)) {
-    const summary = summarizeValue(payload[key]);
-    if (!summary) continue;
-    lines.push(
-      formatLogField(`payload.${key}`, toInlineLogValue(summary, maxChars)),
-    );
-  }
-  return lines;
+  const keys = Object.keys(payload).slice(0, 12).join(",") || "-";
+  return [formatLogField("agent", toInlineLogValue(`payload.keys=${keys}`, maxChars))];
 }
 
 export type ProviderFetch = (
@@ -366,13 +393,7 @@ export function parseFetchRequestForLog(
         messages: null,
         system: undefined,
         toolsCount: 0,
-        requestText: [
-          "===== LLM REQUEST BEGIN =====",
-          formatLogField("method", method),
-          formatLogField("url", url),
-          formatLogField("body", "non-json"),
-          "===== LLM REQUEST END =====",
-        ].join("\n"),
+        requestText: formatLogField("agent", "llm.request non-json body"),
         meta: { kind: "llm_request", url, method },
       };
     }
@@ -399,21 +420,7 @@ export function parseFetchRequestForLog(
       ? Object.keys(tools).length
       : 0;
 
-  const headerLines: string[] = [
-    "===== LLM REQUEST BEGIN =====",
-    formatLogField("method", method),
-    formatLogField("url", url),
-    ...(model ? [formatLogField("model", model)] : []),
-    ...(toolsCount ? [formatLogField("tools", String(toolsCount))] : []),
-    ...(toolChoice ? [formatLogField("tool_choice", toolChoice)] : []),
-  ];
-
-  const messageTextParts: string[] = [...headerLines];
-  if (typeof system === "string" && system.trim()) {
-    messageTextParts.push(
-      formatLogField("system", toInlineLogValue(system, 4000)),
-    );
-  }
+  const messageTextParts: string[] = [];
 
   if (messages && Array.isArray(messages)) {
     const incrementalKey = String(opts?.incrementalKey || "").trim();
@@ -426,12 +433,14 @@ export function parseFetchRequestForLog(
       maxToolArgsChars: 1200,
     }));
     if (selectedMessages.length === 0) {
-      messageTextParts.push(formatLogField("messages", "no incremental items"));
+      messageTextParts.push(formatLogField("agent", "no incremental items"));
     }
   } else {
     messageTextParts.push(...formatPayloadSummaryLines(payload, maxChars));
   }
-  messageTextParts.push("===== LLM REQUEST END =====");
+  if (messageTextParts.length === 0) {
+    messageTextParts.push(formatLogField("agent", "empty"));
+  }
 
   return {
     url,
@@ -471,13 +480,30 @@ function selectMessagesForIncrementalLog(
   lastLoggedMessagesCountByKey.set(incrementalKey, currentCount);
 
   if (currentCount > prevCount) {
-    return messages.slice(prevCount);
+    return trimLeadingAssistantMessages(messages.slice(prevCount));
   }
 
   // 关键点（中文）：当消息数回退（compact/rewrite）时，打印最近两条作为对齐点。
   if (currentCount < prevCount) {
-    return messages.slice(Math.max(0, currentCount - 2));
+    return trimLeadingAssistantMessages(
+      messages.slice(Math.max(0, currentCount - 2)),
+    );
   }
 
   return [];
+}
+
+function trimLeadingAssistantMessages(messages: JsonObject[]): JsonObject[] {
+  if (!Array.isArray(messages) || messages.length === 0) return [];
+  const firstUserIndex = messages.findIndex(
+    (message) => getStringField(message, "role") === "user",
+  );
+  if (firstUserIndex <= 0) return messages;
+  for (let index = 0; index < firstUserIndex; index += 1) {
+    if (getStringField(messages[index], "role") !== "assistant") {
+      return messages;
+    }
+  }
+  // 关键点（中文）：增量片段若以“上一轮 assistant 历史”开头且随后有新 user，默认省略前置 assistant，避免视觉延迟错觉。
+  return messages.slice(firstUserIndex);
 }

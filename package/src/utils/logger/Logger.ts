@@ -20,6 +20,25 @@ const ANSI_RESET = "\x1b[0m";
 const ANSI_BOLD = "\x1b[1m";
 const ANSI_DIM = "\x1b[2m";
 const TASK_BRACKET_COLOR = "\x1b[95m"; // bright magenta
+const ALLOWED_MESSAGE_LABELS = new Set([
+  "user",
+  "assistant",
+  "tool",
+  "tool_result",
+  "agent",
+]);
+const FIXED_BRACKET_COLORS: Record<string, string> = {
+  INFO: "\x1b[36m", // cyan
+  WARN: "\x1b[33m", // yellow
+  ERROR: "\x1b[31m", // red
+  DEBUG: "\x1b[90m", // gray
+  ACTION: "\x1b[96m", // bright cyan
+  USER: "\x1b[33m", // yellow
+  ASSISTANT: "\x1b[32m", // green
+  TOOL: "\x1b[95m", // bright magenta
+  TOOL_RESULT: "\x1b[34m", // blue
+  AGENT: "\x1b[36m", // cyan
+};
 const BRACKET_COLOR_PALETTE = [
   "\x1b[36m", // cyan
   "\x1b[32m", // green
@@ -50,9 +69,14 @@ function hashText(input: string): number {
 
 function colorizeBracketedPrefix(label: string): string {
   const normalized = String(label || "").trim().toUpperCase();
+  const baseLabel = normalized.split(".")[0].replace(/[^A-Z0-9_]/g, "");
   // 关键点（中文）：task 日志标签使用固定高可见色，避免随机色导致辨识度不稳定。
   if (normalized === "TASK") {
     return `${TASK_BRACKET_COLOR}[${label}]${ANSI_RESET}`;
+  }
+  const fixedColor = FIXED_BRACKET_COLORS[normalized] || FIXED_BRACKET_COLORS[baseLabel];
+  if (fixedColor) {
+    return `${fixedColor}[${label}]${ANSI_RESET}`;
   }
   const color = BRACKET_COLOR_PALETTE[hashText(label) % BRACKET_COLOR_PALETTE.length];
   return `${color}[${label}]${ANSI_RESET}`;
@@ -71,6 +95,35 @@ function colorizeMessageBracketPrefixes(message: string): string {
     .split("\n")
     .map((line) => colorizeLeadingBracketTokens(line))
     .join("\n");
+}
+
+function normalizeToAllowedMessageLabels(message: string): string {
+  const normalizedLines = String(message || "")
+    .split("\n")
+    .map((line) => normalizeOneMessageLine(line))
+    .filter(Boolean);
+  if (normalizedLines.length === 0) return "[agent] -";
+  return normalizedLines.join("\n");
+}
+
+function normalizeOneMessageLine(line: string): string {
+  const trimmed = String(line || "").trim();
+  if (!trimmed) return "";
+
+  const matched = trimmed.match(/^\[([^\]]+)\]\s*:?\s*(.*)$/);
+  if (matched) {
+    const rawLabel = String(matched[1] || "")
+      .trim()
+      .toLowerCase();
+    const baseLabel = rawLabel.split(".")[0];
+    const content = String(matched[2] || "").trim();
+    if (ALLOWED_MESSAGE_LABELS.has(baseLabel)) {
+      return `[${baseLabel}]${content ? ` ${content}` : ""}`;
+    }
+    return `[agent] ${content || trimmed}`;
+  }
+
+  return `[agent] ${trimmed}`;
 }
 
 /**
@@ -187,7 +240,7 @@ export class Logger {
       id: this.generateId(),
       timestamp: getTimestamp(),
       type,
-      message,
+      message: normalizeToAllowedMessageLabels(message),
       details: normalizeLogDetails(details),
       level: type,
     };
@@ -207,11 +260,9 @@ export class Logger {
 
   private printLog(entry: LogEntry): void {
     const timestamp = new Date(entry.timestamp).toISOString();
-    const level = entry.type.toUpperCase().padEnd(7);
     const timestampToken = `${ANSI_DIM}[${timestamp}]${ANSI_RESET}`;
-    const levelToken = `${ANSI_BOLD}${colorizeBracketedPrefix(level)}${ANSI_RESET}`;
     const body = colorizeMessageBracketPrefixes(entry.message);
-    const message = `${timestampToken} ${levelToken} ${body}`;
+    const message = `${timestampToken} ${body}`;
 
     switch (entry.type) {
       case "error":

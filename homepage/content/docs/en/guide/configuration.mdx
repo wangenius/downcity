@@ -50,7 +50,7 @@ description: Deep dive into ship.json and PROFILE.md configuration
         "name": "gpt-4o-mini"
       }
     },
-    "logMessages": true
+    "logMessages": false
   },
   "services": {
     "skills": {
@@ -118,7 +118,7 @@ Controls the Agent service startup parameters:
   - **provider**: Provider key (must exist in `llm.providers`).
   - **name**: Upstream model name.
   - Optional sampling fields: `temperature`, `maxTokens`, `topP`, `frequencyPenalty`, `presencePenalty`.
-- **logMessages**: Whether to log outbound LLM request payloads (default `true`).
+- **logMessages**: Whether to log outbound LLM request payloads (default `false`).
 
 > Notes:
 > - `open-compatible` uses Chat Completions-compatible flow (`/chat/completions`).

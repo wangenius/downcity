@@ -30,7 +30,7 @@ sma voice <subcommand>
 sma voice on
 
 # 2) explicit model install path
-sma voice install SenseVoiceSmall --models-dir .ship/models/voice
+sma voice install SenseVoiceSmall --models-dir ~/.ship/models/voice
 
 # 3) enable without downloading
 sma voice on SenseVoiceSmall --no-install
@@ -45,6 +45,6 @@ sma voice transcribe .ship/.cache/telegram/demo.ogg --language zh
 ## Notes
 
 - This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.
-- Model files are downloaded from HuggingFace into `.ship/models/voice` by default.
+- Model files are downloaded from HuggingFace into `~/.ship/models/voice` by default.
 - Built-in transcription runners require local Python dependencies (`funasr` and/or `transformers`).
 - Telegram voice/audio attachments use this extension's `transcribe` action in best-effort mode.

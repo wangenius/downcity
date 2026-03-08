@@ -1,4 +1,5 @@
 import path from "node:path";
+import os from "node:os";
 import fs from "fs-extra";
 import { getShipJsonPath } from "@/main/server/env/Paths.js";
 import type { ShipConfig } from "@/main/types/ShipConfig.js";
@@ -34,9 +35,28 @@ export function toPortableRelativePath(
   projectRoot: string,
   absolutePath: string,
 ): string {
-  const relative = path.relative(projectRoot, absolutePath);
+  const project = path.resolve(projectRoot);
+  const absolute = path.resolve(absolutePath);
+  if (
+    absolute !== project &&
+    !absolute.startsWith(`${project}${path.sep}`)
+  ) {
+    return absolute.replace(/\\/g, "/");
+  }
+
+  const relative = path.relative(project, absolute);
   if (!relative) return ".";
   return relative.replace(/\\/g, "/");
+}
+
+function expandHomePath(inputPath: string): string {
+  const raw = String(inputPath || "").trim();
+  if (!raw) return raw;
+  if (raw === "~") return os.homedir();
+  if (raw.startsWith("~/")) {
+    return path.join(os.homedir(), raw.slice(2));
+  }
+  return raw;
 }
 
 /**
@@ -46,8 +66,9 @@ export function resolveVoiceModelsRootDir(input: {
   projectRoot: string;
   modelsDir?: string;
 }): string {
-  const raw = String(input.modelsDir || ".ship/models/voice").trim();
-  if (!raw) return path.resolve(input.projectRoot, ".ship/models/voice");
+  const fallback = path.join(os.homedir(), ".ship", "models", "voice");
+  const raw = expandHomePath(String(input.modelsDir || fallback).trim());
+  if (!raw) return path.resolve(fallback);
   if (path.isAbsolute(raw)) return path.resolve(raw);
   return path.resolve(input.projectRoot, raw);
 }

@@ -88,8 +88,22 @@ function toExtensionCliBridgeOptions(
   };
 }
 
-function toExtensionActionCommandArgs(values: unknown[]): string[] {
-  return values.map((item) => String(item));
+function flattenExtensionActionCommandArgs(values: unknown[]): string[] {
+  const out: string[] = [];
+  const pushValue = (value: unknown): void => {
+    if (value === undefined || value === null) return;
+    if (Array.isArray(value)) {
+      for (const item of value) pushValue(item);
+      return;
+    }
+    const text = String(value).trim();
+    if (!text) return;
+    out.push(text);
+  };
+  for (const value of values) {
+    pushValue(value);
+  }
+  return out;
 }
 
 function isCommanderCommandLike(value: unknown): value is Command {
@@ -97,6 +111,17 @@ function isCommanderCommandLike(value: unknown): value is Command {
     value &&
       typeof value === "object" &&
       typeof (value as { opts?: unknown }).opts === "function",
+  );
+}
+
+function isPlainOptionsObject(
+  value: unknown,
+): value is Record<string, unknown> {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      typeof (value as { opts?: unknown }).opts !== "function",
   );
 }
 
@@ -130,12 +155,25 @@ function registerExtensionActionCommand(params: {
   actionCommand.action(async (...rawArgs: unknown[]) => {
     const last = rawArgs.at(-1);
     const commandLike = isCommanderCommandLike(last) ? last : null;
-    const positionalArgs = toExtensionActionCommandArgs(
-      commandLike ? rawArgs.slice(0, -1) : rawArgs,
-    );
+    const positionalArgs = commandLike
+      ? flattenExtensionActionCommandArgs(
+          Array.isArray(commandLike.processedArgs)
+            ? (commandLike.processedArgs as unknown[])
+            : [],
+        )
+      : (() => {
+          const fallbackLast = rawArgs.at(-1);
+          const fallbackPositional = isPlainOptionsObject(fallbackLast)
+            ? rawArgs.slice(0, -1)
+            : rawArgs;
+          return flattenExtensionActionCommandArgs(fallbackPositional);
+        })();
     const allOptions = commandLike
       ? ((commandLike.opts() as Record<string, unknown>) || {})
-      : {};
+      : (() => {
+          const fallbackLast = rawArgs.at(-1);
+          return isPlainOptionsObject(fallbackLast) ? fallbackLast : {};
+        })();
     const actionOptions = toExtensionActionCommandOpts(allOptions);
     const bridgeOptions = toExtensionCliBridgeOptions(allOptions);
 

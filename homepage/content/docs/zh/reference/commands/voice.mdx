@@ -30,7 +30,7 @@ sma voice <subcommand>
 sma voice on
 
 # 2）显式安装到指定目录
-sma voice install SenseVoiceSmall --models-dir .ship/models/voice
+sma voice install SenseVoiceSmall --models-dir ~/.ship/models/voice
 
 # 3）只写配置，不下载
 sma voice on SenseVoiceSmall --no-install
@@ -45,6 +45,6 @@ sma voice transcribe .ship/.cache/telegram/demo.ogg --language zh
 ## 说明
 
 - 该命令组属于 daemon-facing 命令，请先启动：`sma agent on --daemon`。
-- 模型默认下载到 `.ship/models/voice`（可通过 `--models-dir` 覆盖）。
+- 模型默认下载到 `~/.ship/models/voice`（可通过 `--models-dir` 覆盖）。
 - 内置转写 runner 依赖本地 Python 包（`funasr` / `transformers` 至少其一）。
 - Telegram 收到 voice/audio 附件时，会通过该 extension 的 `transcribe` action 做 best-effort 转写。

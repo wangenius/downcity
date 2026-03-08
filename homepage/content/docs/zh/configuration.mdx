@@ -287,7 +287,7 @@ your-project/
 - `enabled`：是否启用 voice extension
 - `provider`：当前固定 `local`
 - `activeModel`：当前激活模型 ID
-- `modelsDir`：模型本地目录（默认 `.ship/models/voice`）
+- `modelsDir`：模型本地目录（默认 `~/.ship/models/voice`）
 - `installedModels`：已安装模型 ID 列表
 - `transcribe.strategy`：转写执行策略（`auto` | `funasr` | `transformers-whisper` | `command`）
 - `transcribe.command`：自定义命令模板（仅 `strategy=command` 生效）
@@ -299,7 +299,7 @@ your-project/
       "enabled": true,
       "provider": "local",
       "activeModel": "SenseVoiceSmall",
-      "modelsDir": ".ship/models/voice",
+      "modelsDir": "~/.ship/models/voice",
       "installedModels": ["SenseVoiceSmall"],
       "transcribe": {
         "strategy": "auto",

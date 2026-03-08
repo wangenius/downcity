@@ -47,7 +47,7 @@ type VoiceOnPayload = {
    */
   force: boolean;
   /**
-   * 模型根目录（可选，默认 `.ship/models/voice`）。
+   * 模型根目录（可选，默认 `~/.ship/models/voice`）。
    */
   modelsDir?: string;
   /**
@@ -73,7 +73,7 @@ type VoiceInstallPayload = {
    */
   force: boolean;
   /**
-   * 模型根目录（可选，默认 `.ship/models/voice`）。
+   * 模型根目录（可选，默认 `~/.ship/models/voice`）。
    */
   modelsDir?: string;
   /**
@@ -269,7 +269,7 @@ export const voiceExtension: Extension = {
         configure(command: Command) {
           command
             .argument("[models...]")
-            .option("--models-dir <path>", "模型目录（默认 .ship/models/voice）")
+            .option("--models-dir <path>", "模型目录（默认 ~/.ship/models/voice）")
             .option("--active-model <modelId>", "激活模型 ID（必须在所选模型中）")
             .option("--no-install", "仅写入配置，不执行下载")
             .option("--force", "强制覆盖并重下已存在模型文件")
@@ -396,7 +396,7 @@ export const voiceExtension: Extension = {
         configure(command: Command) {
           command
             .argument("[models...]")
-            .option("--models-dir <path>", "模型目录（默认 .ship/models/voice）")
+            .option("--models-dir <path>", "模型目录（默认 ~/.ship/models/voice）")
             .option("--force", "强制覆盖并重下已存在模型文件")
             .option("--hf-token <token>", "HuggingFace token（私有/Gated 模型场景）");
         },

@@ -112,7 +112,7 @@ export interface VoiceExtensionConfig {
    * 本地模型根目录。
    *
    * 说明（中文）
-   * - 推荐相对项目根目录，默认 `.ship/models/voice`。
+   * - 默认 `~/.ship/models/voice`（用户级共享目录）。
    * - 每个模型安装在 `<modelsDir>/<modelId>/`。
    */
   modelsDir?: string;

@@ -50,7 +50,7 @@ description: Deep dive into ship.json and PROFILE.md configuration
         "name": "gpt-4o-mini"
       }
     },
-    "logMessages": false
+    "logMessages": true
   },
   "services": {
     "skills": {
@@ -118,7 +118,7 @@ Controls the Agent service startup parameters:
   - **provider**: Provider key (must exist in `llm.providers`).
   - **name**: Upstream model name.
   - Optional sampling fields: `temperature`, `maxTokens`, `topP`, `frequencyPenalty`, `presencePenalty`.
-- **logMessages**: Whether to log outbound LLM request payloads (default `false`).
+- **logMessages**: Whether to log outbound LLM request payloads (default `true`).
 
 > Notes:
 > - `open-compatible` uses Chat Completions-compatible flow (`/chat/completions`).
@@ -135,6 +135,7 @@ Controls the Agent service startup parameters:
     When `react/reactions` omits `messageId`, runtime reuses `reply/message_id` in the same `chatKey`.
     Attachments still use `<file type="...">path</file>` in body text.
     Delivery is step-wise (each model step can be sent), not only one final merged send.
+    `delay/sendAtMs/sendAt/time` is scheduled asynchronously, so run completion is not blocked by delayed delivery.
   - `cmd`: model sends user-visible replies by executing `sma chat send` (Bash-first).
 
 #### `services.chat.channels` (Chat Adapters)

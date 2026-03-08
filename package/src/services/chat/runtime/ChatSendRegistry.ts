@@ -26,6 +26,16 @@ export function registerChatSender(
 }
 
 /**
+ * 移除 channel 的 dispatcher 映射。
+ *
+ * 关键点（中文）
+ * - 主要用于测试场景回收全局注册状态。
+ */
+export function unregisterChatSender(channel: ChatDispatchChannel): void {
+  dispatchers.delete(channel);
+}
+
+/**
  * 获取指定 channel 的 dispatcher。
  */
 export function getChatSender(channel: ChatDispatchChannel): ChatDispatcher | undefined {

@@ -18,9 +18,10 @@ type LogDetails = {
 
 const ANSI_RESET = "\x1b[0m";
 const ANSI_BOLD = "\x1b[1m";
-const ANSI_DIM = "\x1b[2m";
 const TASK_BRACKET_COLOR = "\x1b[95m"; // bright magenta
 const ALLOWED_MESSAGE_LABELS = new Set([
+  "main",
+  "system",
   "user",
   "assistant",
   "tool",
@@ -33,11 +34,13 @@ const FIXED_BRACKET_COLORS: Record<string, string> = {
   ERROR: "\x1b[31m", // red
   DEBUG: "\x1b[90m", // gray
   ACTION: "\x1b[96m", // bright cyan
+  SYSTEM: "\x1b[90m", // gray
   USER: "\x1b[33m", // yellow
   ASSISTANT: "\x1b[32m", // green
   TOOL: "\x1b[95m", // bright magenta
   TOOL_RESULT: "\x1b[34m", // blue
   AGENT: "\x1b[36m", // cyan
+  MAIN: "\x1b[90m", // gray
 };
 const BRACKET_COLOR_PALETTE = [
   "\x1b[36m", // cyan
@@ -69,7 +72,7 @@ function hashText(input: string): number {
 
 function colorizeBracketedPrefix(label: string): string {
   const normalized = String(label || "").trim().toUpperCase();
-  const baseLabel = normalized.split(".")[0].replace(/[^A-Z0-9_]/g, "");
+  const baseLabel = normalized.split(/[.\s]+/)[0].replace(/[^A-Z0-9_]/g, "");
   // 关键点（中文）：task 日志标签使用固定高可见色，避免随机色导致辨识度不稳定。
   if (normalized === "TASK") {
     return `${TASK_BRACKET_COLOR}[${label}]${ANSI_RESET}`;
@@ -82,48 +85,59 @@ function colorizeBracketedPrefix(label: string): string {
   return `${color}[${label}]${ANSI_RESET}`;
 }
 
-function colorizeLeadingBracketTokens(line: string): string {
-  if (!line) return line;
-  return line.replace(/^\[([^\]]+)\]/, (_match, label: string) => {
-    return colorizeBracketedPrefix(String(label || "").trim());
+function colorizeMessageBracketPrefixes(message: string): string {
+  // 关键点（中文）：紧凑单行展示时，给消息中的标签 token 着色，正文保持原样。
+  return String(message || "").replace(/\[([^\]\n]+)\]/g, (full, label: string) => {
+    const normalized = String(label || "").trim();
+    const base = normalized
+      .toUpperCase()
+      .split(/[.\s:]+/)[0]
+      .replace(/[^A-Z0-9_]/g, "");
+    if (!base || !/[A-Z]/.test(base)) return full;
+    return colorizeBracketedPrefix(normalized);
   });
 }
 
-function colorizeMessageBracketPrefixes(message: string): string {
-  // 关键点（中文）：仅给每行“行首 [] 标签”着色，正文不染色，避免可读性下降。
-  return String(message || "")
-    .split("\n")
-    .map((line) => colorizeLeadingBracketTokens(line))
-    .join("\n");
-}
-
 function normalizeToAllowedMessageLabels(message: string): string {
-  const normalizedLines = String(message || "")
-    .split("\n")
-    .map((line) => normalizeOneMessageLine(line))
-    .filter(Boolean);
-  if (normalizedLines.length === 0) return "[agent] -";
-  return normalizedLines.join("\n");
-}
+  const normalizedLines: string[] = [];
+  let activeLabel: string | null = null;
 
-function normalizeOneMessageLine(line: string): string {
-  const trimmed = String(line || "").trim();
-  if (!trimmed) return "";
-
-  const matched = trimmed.match(/^\[([^\]]+)\]\s*:?\s*(.*)$/);
-  if (matched) {
-    const rawLabel = String(matched[1] || "")
-      .trim()
-      .toLowerCase();
-    const baseLabel = rawLabel.split(".")[0];
-    const content = String(matched[2] || "").trim();
-    if (ALLOWED_MESSAGE_LABELS.has(baseLabel)) {
-      return `[${baseLabel}]${content ? ` ${content}` : ""}`;
+  for (const rawLine of String(message || "").split("\n")) {
+    const line = String(rawLine || "");
+    const trimmed = line.trim();
+    if (!trimmed) {
+      normalizedLines.push("");
+      continue;
     }
-    return `[agent] ${content || trimmed}`;
-  }
 
-  return `[agent] ${trimmed}`;
+    const matched = trimmed.match(/^\[([^\]]+)\]\s*:?\s*(.*)$/);
+    if (matched) {
+      const rawLabel = String(matched[1] || "").trim();
+      const lowerLabel = rawLabel.toLowerCase();
+      const labelToken = lowerLabel.split(/\s+/)[0] || "";
+      const baseLabel = labelToken.split(".")[0];
+      const content = String(matched[2] || "").trim();
+      if (ALLOWED_MESSAGE_LABELS.has(baseLabel)) {
+        activeLabel = baseLabel;
+        const attrsRaw = rawLabel.slice(labelToken.length).trim();
+        const normalizedLabel = attrsRaw ? `${baseLabel} ${attrsRaw}` : baseLabel;
+        normalizedLines.push(`[${normalizedLabel}]${content ? ` ${content}` : ""}`);
+      } else {
+        activeLabel = "main";
+        normalizedLines.push(`[main] ${content || trimmed}`);
+      }
+      continue;
+    }
+
+    if (activeLabel) {
+      // 关键点（中文）：同一消息块的续行不重复打标签。
+      normalizedLines.push(line);
+      continue;
+    }
+    normalizedLines.push(`[main] ${trimmed}`);
+  }
+  if (normalizedLines.length === 0) return "[main] -";
+  return normalizedLines.join("\n");
 }
 
 /**
@@ -259,25 +273,26 @@ export class Logger {
   }
 
   private printLog(entry: LogEntry): void {
-    const timestamp = new Date(entry.timestamp).toISOString();
-    const timestampToken = `${ANSI_DIM}[${timestamp}]${ANSI_RESET}`;
-    const body = colorizeMessageBracketPrefixes(entry.message);
-    const message = `${timestampToken} ${body}`;
+    // 关键点（中文）：控制台输出不展示前置时间戳，减少聊天链路日志噪音。
+    // 时间信息仍保存在 JSONL 落盘字段 `timestamp` 中。
+    const compactBody = String(entry.message || "").replace(/\r?\n/g, "\\n");
+    const body = colorizeMessageBracketPrefixes(compactBody);
+    const message = body;
 
     switch (entry.type) {
       case "error":
-        console.error(`\x1b[31m${message}${ANSI_RESET}`);
+        console.error(message);
         break;
       case "warn":
-        console.warn(`\x1b[33m${message}${ANSI_RESET}`);
+        console.warn(message);
         break;
       case "debug":
         if (this.logLevel === "debug") {
-          console.log(`\x1b[90m${message}${ANSI_RESET}`);
+          console.log(message);
         }
         break;
       case "action":
-        console.log(`\x1b[36m${message}${ANSI_RESET}`);
+        console.log(message);
         break;
       default:
         console.log(message);

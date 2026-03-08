@@ -21,6 +21,22 @@ function toUiParts(message: { parts?: AnyUiMessagePart[] } | null | undefined): 
 }
 
 /**
+ * 剥离入站消息里的 `<info>...</info>` 元信息块。
+ *
+ * 关键点（中文）
+ * - chat ingress 会在 user 文本顶部注入 `<info>`，用于路由与权限判断。
+ * - memory 提取只需要用户可见正文；移除 `<info>` 可显著减少无效字符占用。
+ */
+function stripIngressInfoBlock(raw: string): string {
+  const source = String(raw ?? "");
+  if (!source) return "";
+  const normalized = source.replace(/\r\n/g, "\n");
+  const matched = normalized.match(/^<info>\n[\s\S]*?\n<\/info>(?:\n\n?([\s\S]*))?$/);
+  if (!matched) return normalized;
+  return String(matched[1] ?? "").trim();
+}
+
+/**
  * 从上下文消息中提取记忆摘要。
  *
  * 关键点（中文）
@@ -48,11 +64,13 @@ export async function extractMemoryFromContextMessages(
         if (!message || typeof message !== "object") continue;
         const role = message.role === "user" ? "User" : "Assistant";
         const parts = toUiParts(message);
-        const text = parts
+        const rawText = parts
           .filter(isTextUIPart)
           .map((part) => String(part.text ?? ""))
           .join("\n")
           .trim();
+        const text =
+          message.role === "user" ? stripIngressInfoBlock(rawText).trim() : rawText;
         if (!text) continue;
         lines.push(`${role}: ${text}`);
       }

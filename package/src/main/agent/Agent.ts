@@ -339,6 +339,7 @@ export class Agent {
         contextId,
         requestId,
       });
+      await this.logAssistantMessageNow(finalAssistantUiMessage);
 
       // 核心步骤 4（中文）：记录完成日志并返回最终消息。
       const duration = Date.now() - startTime;
@@ -655,6 +656,69 @@ export class Agent {
       kind: "normal",
       source: "egress",
     });
+  }
+
+  /**
+   * 立即输出 assistant 文本日志（只用 [assistant] 标签）。
+   */
+  private async logAssistantMessageNow(message: ContextMessageV1): Promise<void> {
+    const text = this.extractAssistantTextForLog(message) || "-";
+    const normalized = text.replace(/\r\n/g, "\n");
+    const lines = normalized.split("\n");
+    const prefix = this.buildAssistantLogPrefix(message);
+    const out = [`${prefix} ${lines[0] || "-"}`];
+    if (lines.length > 1) out.push(...lines.slice(1));
+    const output = out.join("\n");
+    await this.logger.log("info", output);
+  }
+
+  /**
+   * 生成 assistant 日志前缀（包含 metadata）。
+   */
+  private buildAssistantLogPrefix(message: ContextMessageV1): string {
+    const metadata =
+      message.metadata && typeof message.metadata === "object"
+        ? (message.metadata as ContextMetadataV1)
+        : undefined;
+    if (!metadata) return "[assistant]";
+
+    const attrs: string[] = [];
+    if (metadata.contextId) {
+      attrs.push(`context_id=${this.normalizeLogAttrValue(metadata.contextId)}`);
+    }
+    if (metadata.requestId) {
+      attrs.push(`request_id=${this.normalizeLogAttrValue(metadata.requestId)}`);
+    }
+    if (metadata.kind) {
+      attrs.push(`kind=${this.normalizeLogAttrValue(metadata.kind)}`);
+    }
+    if (metadata.source) {
+      attrs.push(`source=${this.normalizeLogAttrValue(metadata.source)}`);
+    }
+    if (attrs.length === 0) return "[assistant]";
+    return `[assistant ${attrs.join(" ")}]`;
+  }
+
+  /**
+   * 规整日志属性值，避免破坏前缀结构。
+   */
+  private normalizeLogAttrValue(value: unknown): string {
+    return String(value ?? "")
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[\[\]]/g, "");
+  }
+
+  /**
+   * 从 UI message 中提取 assistant 文本部分。
+   */
+  private extractAssistantTextForLog(message: ContextMessageV1): string {
+    if (!Array.isArray(message.parts)) return "";
+    return message.parts
+      .filter(isTextUIPart)
+      .map((part) => String(part.text ?? ""))
+      .join("\n")
+      .trim();
   }
 
   /**

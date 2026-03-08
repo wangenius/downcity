@@ -328,6 +328,8 @@ export class ChatQueueWorker {
         messageId: plan.text.messageId,
         delayMs: plan.text.delayMs,
         sendAtMs: plan.text.sendAtMs,
+        // 关键点（中文）：direct 回发遇到 delay/time 时异步调度，不阻塞 agent finish。
+        nonBlockingDelay: true,
       });
       if (!textResult.success) {
         this.logger.warn("Direct chat text dispatch failed", {

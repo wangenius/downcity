@@ -85,7 +85,7 @@ Language Model configuration.
 | `activeModel` | string | Yes | - | Active model key (must exist in `llm.models`) |
 | `providers` | object | Yes | - | Provider map (credentials + base URL by key) |
 | `models` | object | Yes | - | Model map (model name + provider reference by key) |
-| `logMessages` | boolean | No | false | Whether to log LLM request payloads |
+| `logMessages` | boolean | No | true | Whether to log LLM request payloads |
 
 **Example configurations**:
 
@@ -226,6 +226,7 @@ Controls how user-visible chat replies are delivered:
   When `react/reactions` omits `messageId`, runtime reuses `reply/message_id` in the same `chatKey`.
 - Attachment sending still uses `<file type="...">path</file>` in body text.
 - Delivery happens per model step (not only one final merged message).
+- In `direct`, `delay/sendAtMs/sendAt/time` is scheduled asynchronously: run completion does not wait for delayed delivery.
 
 ```json
 {

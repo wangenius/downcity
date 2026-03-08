@@ -79,20 +79,39 @@ function formatLogField(key: string, value: string): string {
   return `[${key}] ${value}`;
 }
 
-function pushLabeledTextLines(
+function normalizeAttrKey(input: string): string {
+  return String(input || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "_");
+}
+
+function normalizeAttrValue(input: string): string {
+  return String(input || "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[\]\[]/g, "");
+}
+
+function pushLabeledTextBlock(
   out: string[],
-  label: "user" | "assistant" | "tool" | "tool_result",
+  label: "system" | "user" | "assistant" | "tool" | "tool_result",
   text: string,
   maxChars: number,
+  attrs?: string[],
 ): void {
   const normalized = truncate(String(text || "-"), maxChars).replace(/\r\n/g, "\n");
   const lines = normalized.split("\n");
-  for (const line of lines) {
-    out.push(formatLogField(label, line || "-"));
+  const headLabel =
+    Array.isArray(attrs) && attrs.length > 0 ? `${label} ${attrs.join(" ")}` : label;
+  out.push(formatLogField(headLabel, lines[0] || "-"));
+  if (lines.length > 1) {
+    out.push(...lines.slice(1));
   }
 }
 
 function parseInfoBlockText(value: string): {
+  info: Record<string, string>;
   body: string;
 } | null {
   const normalized = String(value || "").replace(/\r\n/g, "\n").trim();
@@ -100,9 +119,51 @@ function parseInfoBlockText(value: string): {
   const matched = normalized.match(/^<info>\n([\s\S]*?)\n<\/info>(?:\n\n([\s\S]*))?$/);
   if (!matched) return null;
 
+  const info: Record<string, string> = {};
+  for (const rawLine of String(matched[1] || "").split("\n")) {
+    const line = String(rawLine || "").trim();
+    const index = line.indexOf(":");
+    if (index <= 0) continue;
+    const key = normalizeAttrKey(line.slice(0, index));
+    const fieldValue = normalizeAttrValue(line.slice(index + 1));
+    if (!key || !fieldValue) continue;
+    info[key] = fieldValue;
+  }
+
   return {
+    info,
     body: String(matched[2] || "").trim(),
   };
+}
+
+function buildInfoAttrs(info: Record<string, string>): string[] {
+  const preferredOrder = [
+    "channel",
+    "context_id",
+    "chat_key",
+    "chat_id",
+    "chat_type",
+    "thread_id",
+    "message_id",
+    "user_id",
+    "username",
+    "is_master",
+    "received_at",
+  ];
+
+  const attrs: string[] = [];
+  for (const key of preferredOrder) {
+    const value = String(info[key] || "").trim();
+    if (!value || value === "unknown" || value === "none") continue;
+    attrs.push(`${key}=${value}`);
+  }
+  for (const [key, raw] of Object.entries(info)) {
+    if (preferredOrder.includes(key)) continue;
+    const value = String(raw || "").trim();
+    if (!value) continue;
+    attrs.push(`${key}=${value}`);
+  }
+  return attrs;
 }
 
 function contentToText(content: JsonValue | undefined, maxChars: number): string {
@@ -255,7 +316,7 @@ function formatMessagesForLog(
         .filter(Boolean)
           .join(" | ");
         if (detail) {
-          pushLabeledTextLines(out, "tool", detail, opts.maxToolArgsChars);
+          pushLabeledTextBlock(out, "tool", detail, opts.maxToolArgsChars);
         }
       }
     }
@@ -274,7 +335,7 @@ function formatMessagesForLog(
       ]
         .filter(Boolean)
         .join(" | ");
-      pushLabeledTextLines(
+      pushLabeledTextBlock(
         out,
         "tool",
         functionCallDetail || "function_call",
@@ -284,18 +345,31 @@ function formatMessagesForLog(
     }
 
     let bodyText = "";
+    let userInfoAttrs: string[] = [];
     if ("content" in message) {
       const contentText = contentToText(message.content, opts.maxContentChars);
       if (role === "user") {
         const parsedInfoBlock = parseInfoBlockText(contentText);
         bodyText = parsedInfoBlock ? parsedInfoBlock.body : contentText;
+        userInfoAttrs = parsedInfoBlock ? buildInfoAttrs(parsedInfoBlock.info) : [];
       } else {
         bodyText = contentText;
       }
     }
 
     if (role === "user") {
-      pushLabeledTextLines(out, "user", bodyText || "-", opts.maxContentChars);
+      pushLabeledTextBlock(
+        out,
+        "user",
+        bodyText || "-",
+        opts.maxContentChars,
+        userInfoAttrs,
+      );
+      continue;
+    }
+
+    if (role === "system" || role === "developer") {
+      pushLabeledTextBlock(out, "system", bodyText || "-", opts.maxContentChars);
       continue;
     }
 
@@ -307,7 +381,7 @@ function formatMessagesForLog(
       itemType === "tool-error"
     ) {
       const toolResultText = [bodyText, outputText, output].filter(Boolean).join(" | ");
-      pushLabeledTextLines(
+      pushLabeledTextBlock(
         out,
         "tool_result",
         toolResultText || "-",
@@ -320,7 +394,7 @@ function formatMessagesForLog(
       .filter(Boolean)
       .join(bodyText ? "" : " | ");
     if (assistantText) {
-      pushLabeledTextLines(out, "assistant", assistantText, opts.maxContentChars);
+      pushLabeledTextBlock(out, "assistant", assistantText, opts.maxContentChars);
     }
   }
 

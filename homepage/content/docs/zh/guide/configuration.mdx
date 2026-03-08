@@ -50,7 +50,7 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
         "name": "gpt-4o-mini"
       }
     },
-    "logMessages": false
+    "logMessages": true
   },
   "services": {
     "skills": {
@@ -118,7 +118,7 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
   - **provider**: Provider key（必须存在于 `llm.providers`）。
   - **name**: 上游模型名称。
   - 可选采样字段：`temperature`、`maxTokens`、`topP`、`frequencyPenalty`、`presencePenalty`。
-- **logMessages**: 是否记录发给 LLM 的请求 payload（默认 `false`）。
+- **logMessages**: 是否记录发给 LLM 的请求 payload（默认 `true`）。
 
 > 说明：
 > - `open-compatible` 走 Chat Completions 兼容链路（`/chat/completions`）。
@@ -135,6 +135,7 @@ description: 深入了解 ship.json 和 PROFILE.md 配置
     `react/reactions` 未显式传 `messageId` 时，会默认复用 `reply/message_id`（同一 chatKey）。
     附件仍通过正文中的 `<file type="...">path</file>` 发送。
     投递为 step 级分条发送，而不是仅最终合并一次发送。
+    `delay/sendAtMs/sendAt/time` 采用异步调度，run 完成不会被延迟投递阻塞。
   - `cmd`：模型通过执行 `sma chat send` 发消息（Bash-first）。
 
 #### `services.chat.channels` (聊天适配器)

@@ -240,20 +240,22 @@ function normalizeChatSendText(raw: string): string {
  * - 支持延迟毫秒（delayMs）或绝对时间（sendAtMs）
  * - 超长等待按分片 setTimeout，避免超出 Node 单次定时器上限
  */
-async function waitBeforeSend(params: {
+function resolveTargetWaitMs(params: {
   delayMs: number;
   sendAtMs?: number;
-}): Promise<void> {
+}): number {
   const delayMs = params.delayMs;
   const sendAtMs = params.sendAtMs;
-  const targetWaitMs =
+  const rawWaitMs =
     typeof sendAtMs === "number" ? Math.max(0, sendAtMs - Date.now()) : delayMs;
-  if (!Number.isFinite(targetWaitMs) || Number.isNaN(targetWaitMs) || targetWaitMs <= 0) {
-    return;
-  }
+  if (!Number.isFinite(rawWaitMs) || Number.isNaN(rawWaitMs) || rawWaitMs <= 0) return 0;
+  return Math.trunc(rawWaitMs);
+}
 
+async function waitByTimeoutChunks(waitMs: number): Promise<void> {
+  if (!Number.isFinite(waitMs) || Number.isNaN(waitMs) || waitMs <= 0) return;
   const MAX_TIMEOUT_MS = 2_147_483_647;
-  let remaining = Math.trunc(targetWaitMs);
+  let remaining = Math.trunc(waitMs);
   while (remaining > 0) {
     const chunk = Math.min(remaining, MAX_TIMEOUT_MS);
     await new Promise<void>((resolve) => {
@@ -261,6 +263,13 @@ async function waitBeforeSend(params: {
     });
     remaining -= chunk;
   }
+}
+
+async function waitBeforeSend(params: {
+  delayMs: number;
+  sendAtMs?: number;
+}): Promise<void> {
+  await waitByTimeoutChunks(resolveTargetWaitMs(params));
 }
 
 /**
@@ -276,6 +285,14 @@ export async function sendChatTextByChatKey(params: {
   text: string;
   delayMs?: number;
   sendAtMs?: number;
+  /**
+   * 延迟发送是否异步调度（不阻塞当前调用）。
+   *
+   * 关键点（中文）
+   * - 仅在存在有效 delay/sendAt 时生效。
+   * - 默认 false，保持 CLI/API 的阻塞行为不变。
+   */
+  nonBlockingDelay?: boolean;
   replyToMessage?: boolean;
   messageId?: string;
 }): Promise<ChatSendResponse> {
@@ -303,6 +320,42 @@ export async function sendChatTextByChatKey(params: {
     };
   }
 
+  const messageId =
+    typeof params.messageId === "string" && params.messageId.trim()
+      ? params.messageId.trim()
+      : undefined;
+  const targetWaitMs = resolveTargetWaitMs({ delayMs, sendAtMs });
+  if (params.nonBlockingDelay === true && targetWaitMs > 0) {
+    // 关键点（中文）：异步调度延迟发送，让调用方可立即结束当前 run。
+    void (async () => {
+      try {
+        await waitByTimeoutChunks(targetWaitMs);
+        const delayed = await sendTextByChatKey({
+          context: params.context,
+          chatKey,
+          text,
+          replyToMessage: params.replyToMessage === true,
+          ...(messageId ? { messageId } : {}),
+        });
+        if (!delayed.success) {
+          params.context.logger.warn("Delayed chat send failed", {
+            chatKey,
+            error: delayed.error || "chat send failed",
+          });
+        }
+      } catch (error) {
+        params.context.logger.warn("Delayed chat send failed", {
+          chatKey,
+          error: String(error),
+        });
+      }
+    })();
+    return {
+      success: true,
+      chatKey,
+    };
+  }
+
   await waitBeforeSend({ delayMs, sendAtMs });
 
   const result = await sendTextByChatKey({
@@ -310,9 +363,7 @@ export async function sendChatTextByChatKey(params: {
     chatKey,
     text,
     replyToMessage: params.replyToMessage === true,
-    ...(typeof params.messageId === "string" && params.messageId.trim()
-      ? { messageId: params.messageId.trim() }
-      : {}),
+    ...(messageId ? { messageId } : {}),
   });
   return {
     success: Boolean(result.success),

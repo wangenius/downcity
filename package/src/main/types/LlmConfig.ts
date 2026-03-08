@@ -110,7 +110,7 @@ export interface LlmConfig {
   models: Record<string, LlmModelConfig>;
   /**
    * 是否记录发给 LLM 的请求 payload。
-   * 默认关闭；设为 true 可开启。
+   * 默认启用；设为 false 可关闭。
    */
   logMessages?: boolean;
 }

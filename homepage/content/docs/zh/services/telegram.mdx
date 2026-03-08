@@ -34,7 +34,7 @@ TELEGRAM_BOT_TOKEN=123456:abc...
 {
   "services": {
     "chat": {
-      "adapters": {
+      "channels": {
         "telegram": {
           "enabled": true,
           "botToken": "${TELEGRAM_BOT_TOKEN}"
@@ -57,7 +57,7 @@ TELEGRAM_BOT_TOKEN=123456:abc...
 {
   "services": {
     "chat": {
-      "adapters": {
+      "channels": {
         "telegram": {
           "enabled": true,
           "botToken": "${TELEGRAM_BOT_TOKEN}",
@@ -101,11 +101,8 @@ shipmyagent agent on --daemon
 如果你要统一管理本地语音转写模型，请使用独立的 `voice` extension 命令组：
 
 ```bash
-# 先启动 daemon
-sma agent on --daemon
-
-# 交互选择 + 安装 + 启用
-sma voice on
+# 从零初始化（启用 + 模型下载 + 自动安装转写依赖）
+sma voice init SenseVoiceSmall
 
 # 查看当前 voice 配置
 sma voice status

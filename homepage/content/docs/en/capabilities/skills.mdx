@@ -1,0 +1,47 @@
+---
+title: Skills
+description: Skill roots, discovery behavior, and find/install/lookup workflow
+---
+
+# Skills
+
+ShipMyAgent supports SKILL.md-based skills.
+
+## Default roots
+
+- Project-level: `.ship/skills`
+- User-level: `~/.ship/skills`
+- Extra roots: `ship.json.services.skills.paths`
+
+## Recommended workflow
+
+1. `sma skill find <query>`
+2. `sma skill install <spec>`
+3. `sma skill lookup <name>`
+
+Example:
+
+```bash
+sma skill find playwright
+sma skill install owner/repo@playwright
+sma skill lookup playwright
+```
+
+## Key rules
+
+- Always `lookup` before using a skill.
+- Follow `allowed-tools` in `SKILL.md` strictly.
+- Runtime discovers changed skill files automatically.
+
+## Related config
+
+```json
+{
+  "services": {
+    "skills": {
+      "paths": [".claude/skills"],
+      "allowExternalPaths": false
+    }
+  }
+}
+```

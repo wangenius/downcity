@@ -30,6 +30,14 @@ export interface VoiceModelInstallResult {
    */
   skippedFiles: number;
   /**
+   * 本次实际下载的文件路径（相对模型目录）。
+   */
+  downloadedFilePaths: string[];
+  /**
+   * 本次跳过的文件路径（相对模型目录）。
+   */
+  skippedFilePaths: string[];
+  /**
    * 安装源仓库 ID。
    */
   repoId: string;
@@ -37,6 +45,33 @@ export interface VoiceModelInstallResult {
    * 安装源 revision。
    */
   revision: string;
+}
+
+/**
+ * Voice 模型安装进度事件。
+ */
+export interface VoiceModelInstallProgressEvent {
+  /**
+   * 当前阶段。
+   */
+  stage:
+    | "discover"
+    | "skip"
+    | "download_start"
+    | "download_done"
+    | "manifest";
+  /**
+   * 文件路径（相对模型目录，可选）。
+   */
+  filePath?: string;
+  /**
+   * 文件总数（可选）。
+   */
+  totalFiles?: number;
+  /**
+   * 当前文件序号（从 1 开始，可选）。
+   */
+  index?: number;
 }
 
 function encodePathSegments(input: string): string {
@@ -143,6 +178,7 @@ export async function installVoiceModelFromHuggingFace(input: {
   modelsRootDir: string;
   force?: boolean;
   hfToken?: string;
+  onProgress?: (event: VoiceModelInstallProgressEvent) => void;
 }): Promise<VoiceModelInstallResult> {
   const modelDir = path.resolve(input.modelsRootDir, input.model.id);
   await fsExtra.ensureDir(modelDir);
@@ -151,16 +187,36 @@ export async function installVoiceModelFromHuggingFace(input: {
     repoId: input.model.huggingfaceRepo,
     hfToken: input.hfToken,
   });
+  input.onProgress?.({
+    stage: "discover",
+    totalFiles: files.length,
+  });
 
   let downloadedFiles = 0;
   let skippedFiles = 0;
-  for (const filePath of files) {
+  const downloadedFilePaths: string[] = [];
+  const skippedFilePaths: string[] = [];
+  for (let i = 0; i < files.length; i += 1) {
+    const filePath = files[i];
     const targetPath = resolveSafeTargetPath(modelDir, filePath);
     const exists = await fsExtra.pathExists(targetPath);
     if (exists && input.force !== true) {
       skippedFiles += 1;
+      skippedFilePaths.push(filePath);
+      input.onProgress?.({
+        stage: "skip",
+        filePath,
+        index: i + 1,
+        totalFiles: files.length,
+      });
       continue;
     }
+    input.onProgress?.({
+      stage: "download_start",
+      filePath,
+      index: i + 1,
+      totalFiles: files.length,
+    });
     await downloadModelFile({
       repoId: input.model.huggingfaceRepo,
       revision: input.model.revision,
@@ -169,6 +225,13 @@ export async function installVoiceModelFromHuggingFace(input: {
       hfToken: input.hfToken,
     });
     downloadedFiles += 1;
+    downloadedFilePaths.push(filePath);
+    input.onProgress?.({
+      stage: "download_done",
+      filePath,
+      index: i + 1,
+      totalFiles: files.length,
+    });
   }
 
   await fsExtra.writeJson(
@@ -184,11 +247,16 @@ export async function installVoiceModelFromHuggingFace(input: {
     },
     { spaces: 2 },
   );
+  input.onProgress?.({
+    stage: "manifest",
+  });
 
   return {
     modelDir,
     downloadedFiles,
     skippedFiles,
+    downloadedFilePaths,
+    skippedFilePaths,
     repoId: input.model.huggingfaceRepo,
     revision: input.model.revision,
   };

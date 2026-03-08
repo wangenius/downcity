@@ -1,0 +1,47 @@
+---
+title: Skills
+description: Skill 目录、发现逻辑与 find/install/lookup 工作流
+---
+
+# Skills
+
+ShipMyAgent 兼容 SKILL.md 形态的 skills。
+
+## 默认扫描目录
+
+- 项目级：`.ship/skills`
+- 用户级：`~/.ship/skills`
+- 额外目录：`ship.json.services.skills.paths`
+
+## 推荐工作流
+
+1. `sma skill find <query>`
+2. `sma skill install <spec>`
+3. `sma skill lookup <name>`
+
+示例：
+
+```bash
+sma skill find playwright
+sma skill install owner/repo@playwright
+sma skill lookup playwright
+```
+
+## 关键原则
+
+- 使用 skill 前先 `lookup`，不要只凭记忆执行。
+- `SKILL.md` 中的 `allowed-tools` 约束应严格遵守。
+- 运行时会自动发现新增/变更的 skill 文件。
+
+## 相关配置
+
+```json
+{
+  "services": {
+    "skills": {
+      "paths": [".claude/skills"],
+      "allowExternalPaths": false
+    }
+  }
+}
+```

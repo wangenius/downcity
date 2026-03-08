@@ -1,0 +1,36 @@
+---
+title: FAQ
+description: 使用 ShipMyAgent 的高频问题
+---
+
+# FAQ
+
+## `shipmyagent` 和 `sma` 有区别吗？
+
+没有。`sma` 是同一个可执行文件的短命令。
+
+## 为什么我执行 `sma task ...` 返回连接失败？
+
+`task/chat/skill/voice/service/extension` 这类命令通常依赖运行中的 daemon：
+
+```bash
+sma agent on --daemon
+```
+
+## `ship.json` 里的 `${VAR}` 没有被替换怎么办？
+
+确认变量存在于运行环境或项目根目录 `.env`，然后重启 runtime。
+
+## 如何切换模型？
+
+```bash
+sma config llm model list
+sma config llm model activate <modelId>
+```
+
+## 如何查看当前服务状态？
+
+```bash
+sma service list
+sma extension list
+```

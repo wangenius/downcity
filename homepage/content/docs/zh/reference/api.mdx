@@ -1,288 +1,100 @@
 ---
-title: API 参考
-description: ShipMyAgent 可扩展性完整 API 参考
+title: HTTP API 参考
+description: Runtime 对外 HTTP 接口与请求示例
 ---
 
-# API 参考
+# HTTP API 参考
 
-ShipMyAgent 扩展和定制的完整 API 参考。
+> 面向用户的运行时 API。更多细粒度命令建议优先使用 CLI（`sma ...`）。
 
-## 核心 API
+## 基础接口
 
-### 工具 API
+### `GET /health`
 
-创建 agent 可以使用的自定义工具。
+```json
+{ "status": "ok", "timestamp": "2026-03-08T12:00:00.000Z" }
+```
 
-```typescript
-import { Tool, ToolContext, ToolResult } from '@shipmyagent/core';
+### `GET /api/status`
 
-interface Tool {
-  name: string;
-  description: string;
-  parameters?: ToolParameters;
-  execute(params: any, context: ToolContext): Promise<ToolResult>;
-}
+```json
+{ "name": "shipmyagent", "status": "running", "timestamp": "..." }
+```
 
-// 示例：自定义工具
-export class DatabaseTool extends Tool {
-  name = 'database_query';
-  description = '在数据库上执行 SQL 查询';
+### `POST /api/execute`
 
-  parameters = {
-    type: 'object',
-    properties: {
-      query: {
-        type: 'string',
-        description: '要执行的 SQL 查询'
-      }
-    },
-    required: ['query']
-  };
+请求体：
 
-  async execute(params: { query: string }, context: ToolContext): Promise<ToolResult> {
-    // 执行查询
-    const result = await database.query(params.query);
-
-    return {
-      success: true,
-      data: result
-    };
-  }
-
-  validate(params: any): boolean {
-    // 验证 SQL 注入
-    return !params.query.includes('DROP') &&
-           !params.query.includes('DELETE') &&
-           params.query.match(/^SELECT/i);
-  }
+```json
+{
+  "instructions": "帮我总结今天的改动",
+  "chatId": "default"
 }
 ```
 
-### LLM 提供商 API
+## Service Runtime API
 
-创建自定义 LLM 提供商实现。
+### `GET /api/services/list`
 
-```typescript
-import { LLMProvider, ChatParams, ChatResponse } from '@shipmyagent/core';
+列出 service 运行状态。
 
-export class CustomProvider extends LLMProvider {
-  name = 'custom';
+### `POST /api/services/control`
 
-  constructor(private config: ProviderConfig) {
-    super();
-  }
+```json
+{ "serviceName": "chat", "action": "restart" }
+```
 
-  async chat(params: ChatParams): Promise<ChatResponse> {
-    const response = await fetch(this.config.baseUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.config.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages: params.messages,
-        temperature: params.temperature || 0.7,
-        max_tokens: params.maxTokens || 4096
-      })
-    });
+`action` 支持：`start | stop | restart | status`。
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`);
-    }
+### `POST /api/services/command`
 
-    return await response.json();
-  }
-
-  async *stream(params: ChatParams): AsyncIterator<ChatChunk> {
-    const response = await fetch(this.config.baseUrl + '/stream', {
-      method: 'POST',
-      headers: { ... },
-      body: JSON.stringify({ ... })
-    });
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      yield JSON.parse(chunk);
-    }
-  }
-
-  async validate(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.config.baseUrl}/models`, {
-        headers: { 'Authorization': `Bearer ${this.config.apiKey}` }
-      });
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  estimateTokens(text: string): number {
-    // 粗略估计：约 4 个字符 = 1 个 token
-    return Math.ceil(text.length / 4);
-  }
+```json
+{
+  "serviceName": "task",
+  "command": "list",
+  "payload": { "status": "enabled" }
 }
 ```
 
----
+## Extension Runtime API
 
-## 配置 Schema
+### `GET /api/extensions/list`
 
-### ship.json Schema
+列出 extension 运行状态。
 
-`ship.json` 的完整 schema：
+### `POST /api/extensions/control`
 
-```typescript
-interface ShipConfig {
-  name: string;
-  version: string;
+```json
+{ "extensionName": "voice", "action": "status" }
+```
 
-  // LLM 配置
-  llm: LLMConfig;
+### `POST /api/extensions/command`
 
-  // 集成
-  services: {
-    telegram?: TelegramConfig;
-    github?: GitHubConfig;
-    slack?: SlackConfig;
-    discord?: DiscordConfig;
-    webhook?: WebhookConfig;
-  };
-
-  // 日志
-  logging?: {
-    level: 'debug' | 'info' | 'warn' | 'error';
-    file?: string;
-    timing?: boolean;
-    rotation?: RotationConfig;
-  };
-
-  // 缓存
-  cache?: {
-    enabled: boolean;
-    fileReads?: boolean;
-    llmResponses?: boolean;
-    ttl?: number;
-  };
-
-  // 服务器
-  server?: {
-    port?: number;
-    host?: string;
-  };
+```json
+{
+  "extensionName": "voice",
+  "command": "status",
+  "payload": {}
 }
 ```
 
----
+## Action 直连路由
 
-## 错误代码
+每个 service/extension action 还会暴露默认路由：
 
-### 标准错误
+- `/service/<serviceName>/<actionName>`
+- `/extension/<extensionName>/<actionName>`
 
-| 代码 | 名称 | 描述 | 解决方案 |
-|------|------|------|----------|
-| `E001` | `INVALID_CONFIG` | ship.json 格式无效 | 验证 JSON 语法 |
-| `E002` | `MISSING_API_KEY` | LLM API key 未设置 | 设置环境变量 |
-| `E003` | `PERMISSION_DENIED` | 操作不被允许 | 检查权限 |
-| `E004` | `LLM_ERROR` | LLM API 调用失败 | 检查 API key 和配额 |
-| `E005` | `TOOL_EXECUTION_FAILED` | 工具执行错误 | 检查工具参数 |
-| `E006` | `TASK_FAILED` | 任务执行失败 | 审查任务日志 |
-| `E007` | `INTEGRATION_ERROR` | 集成连接失败 | 验证集成配置 |
-| `E008` | `TIMEOUT` | 操作超时 | 增加超时或优化 |
+例如：
 
----
+- `POST /service/chat/send`
+- `GET /extension/voice/status`
 
-## CLI API
+## 调试建议
 
-### 编程式使用
+先确认 runtime 已启动：
 
-在您的 Node.js 应用中使用 ShipMyAgent：
-
-```typescript
-import { Agent } from '@shipmyagent/core';
-
-// 初始化 agent
-const agent = new Agent({
-  configPath: './ship.json',
-  agentPromptPath: './PROFILE.md'
-});
-
-// 启动 agent
-await agent.start();
-
-// 与 agent 聊天
-const response = await agent.chat('src/ 中有什么文件？');
-
-// 运行任务
-const result = await agent.tasks.run('daily-report');
-
-// 停止 agent
-await agent.stop();
+```bash
+sma agent on --daemon
+curl http://localhost:3000/health
 ```
-
----
-
-## 插件开发
-
-### 插件结构
-
-```typescript
-// my-plugin/index.ts
-import { Plugin } from '@shipmyagent/core';
-
-export default class MyPlugin extends Plugin {
-  name = 'my-plugin';
-  version = '1.0.0';
-
-  async onLoad(agent: Agent): Promise<void> {
-    // 注册工具
-    agent.registerTool(new MyCustomTool());
-
-    // 注册钩子
-    agent.on('before.chat', this.onBeforeChat);
-  }
-
-  async onUnload(agent: Agent): Promise<void> {
-    // 清理
-    agent.unregisterTool('my_custom_tool');
-  }
-}
-```
-
----
-
-## 测试 API
-
-### 测试工具
-
-```typescript
-import { MockLLMProvider, MockTool } from '@shipmyagent/testing';
-
-describe('MyCustomTool', () => {
-  it('should execute successfully', async () => {
-    const tool = new MyCustomTool();
-    const context = createMockContext();
-
-    const result = await tool.execute({
-      query: 'SELECT * FROM users'
-    }, context);
-
-    expect(result.success).toBe(true);
-  });
-});
-```
-
----
-
-## 下一步
-
-- [架构](/docs/architecture) - 系统设计细节
-- [自定义](/docs/customization) - 高级自定义
-- [贡献](/docs/community/contributing) - 贡献指南

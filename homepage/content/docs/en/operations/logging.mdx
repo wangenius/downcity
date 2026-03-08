@@ -1,0 +1,43 @@
+---
+title: Logging & Audit
+description: Runtime logs, conversation history, and task audit artifacts under `.ship/`
+---
+
+# Logging & Audit
+
+## Key paths
+
+```text
+.ship/
+  logs/<YYYY-MM-DD>.jsonl
+  context/<contextId>/messages/messages.jsonl
+  task/<taskId>/<timestamp>/run.json
+  chat/<contextId>/history.jsonl
+```
+
+## Useful commands
+
+```bash
+# Follow today's runtime logs
+tail -f .ship/logs/$(date +%F).jsonl
+
+# Search failures
+grep -Ei "error|warn|timeout|failed" .ship/logs/$(date +%F).jsonl
+
+# Inspect recent chat records
+sma chat history --chat-key telegram-chat-123 --limit 30
+```
+
+## LLM message logging toggle
+
+In `ship.json`:
+
+```json
+{
+  "llm": {
+    "logMessages": false
+  }
+}
+```
+
+Set to `false` to reduce sensitive payload logging.

@@ -71,6 +71,15 @@ export interface VoiceTranscribeConfig {
    */
   timeoutMs?: number;
   /**
+   * Python 可执行文件路径。
+   *
+   * 说明（中文）
+   * - 内置 `funasr` / `transformers-whisper` runner 会用该解释器执行。
+   * - `sma voice init` 在命中 PEP 668 时会自动写入 venv 的 python 路径。
+   * - 未设置时默认使用 `python3`。
+   */
+  pythonBin?: string;
+  /**
    * 默认语言提示。
    *
    * 说明（中文）

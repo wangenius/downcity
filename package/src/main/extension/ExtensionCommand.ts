@@ -16,14 +16,25 @@ import type {
 } from "@/main/extension/ExtensionManager.js";
 import type { ExtensionCommandResponse } from "@/main/types/Extensions.js";
 import { callServer } from "@/main/server/daemon/Client.js";
+import {
+  loadProjectDotenv,
+  loadShipConfig,
+} from "@/main/server/env/Config.js";
+import { ensureRuntimeProjectReady } from "@/main/server/daemon/ProjectSetup.js";
 import { printResult } from "@/main/utils/CliOutput.js";
 import { parsePortOption } from "@/main/utils/Checker.js";
+import { logger } from "@utils/logger/Logger.js";
+import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 
 type ExtensionCliBridgeOptions = {
   path?: string;
   host?: string;
   port?: number;
   json?: boolean;
+};
+
+type CommandProgressHandle = {
+  stop(params: { success: boolean }): void;
 };
 
 function resolveProjectRoot(pathInput?: string): string {
@@ -125,6 +136,126 @@ function isPlainOptionsObject(
   );
 }
 
+function readModelIdsFromPayload(payload: JsonValue): string[] {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return [];
+  }
+  const modelIds = (payload as { modelIds?: unknown }).modelIds;
+  if (!Array.isArray(modelIds)) return [];
+  return modelIds
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function startCommandProgress(params: {
+  extensionName: string;
+  actionName: string;
+  payload: JsonValue;
+}): CommandProgressHandle | null {
+  if (params.extensionName !== "voice") return null;
+  if (!["on", "install", "init"].includes(params.actionName)) return null;
+
+  const models = readModelIdsFromPayload(params.payload);
+  const modelLabel = models.length > 0 ? models.join(", ") : "selected models";
+  const startedAt = Date.now();
+
+  process.stderr.write(
+    `voice install: started (${params.actionName}) models=${modelLabel}\n`,
+  );
+  const timer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    process.stderr.write(`voice install: running (${elapsed}s)\n`);
+  }, 5000);
+
+  return {
+    stop({ success }) {
+      clearInterval(timer);
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      process.stderr.write(
+        `voice install: ${success ? "completed" : "failed"} (${elapsed}s)\n`,
+      );
+    },
+  };
+}
+
+function canFallbackToLocalExecution(params: {
+  extensionName: string;
+  remote: { success: boolean; status?: number; error?: string };
+}): boolean {
+  if (params.extensionName !== "voice") return false;
+  if (params.remote.success) return false;
+  // 关键点（中文）：仅在“无法连上 daemon”时走本地兜底。
+  // 若服务端已返回业务错误（HTTP 4xx/5xx），保持原错误语义，避免掩盖真实问题。
+  return params.remote.status === undefined;
+}
+
+async function runExtensionActionLocally(params: {
+  projectRoot: string;
+  extension: Extension;
+  actionName: string;
+  payload: JsonValue;
+}): Promise<ExtensionCommandResponse> {
+  ensureRuntimeProjectReady(params.projectRoot);
+  loadProjectDotenv(params.projectRoot);
+  const config = loadShipConfig(params.projectRoot);
+  logger.bindProjectRoot(params.projectRoot);
+
+  // 关键点（中文）：本地兜底仅用于 extension 纯命令动作（如 voice on/install/use/status），
+  // 不依赖 ContextManager/LLM，因此注入最小 runtime 占位符即可。
+  const runtime = {
+    cwd: params.projectRoot,
+    rootPath: params.projectRoot,
+    logger,
+    config,
+    systems: [],
+    context: {} as ServiceRuntime["context"],
+    invoke: {
+      async invoke() {
+        return {
+          success: false,
+          error: "local extension fallback does not support service invoke",
+        };
+      },
+    },
+    extensions: {
+      async invoke() {
+        return {
+          success: false,
+          error: "local extension fallback does not support extension invoke",
+        };
+      },
+    },
+  } as ServiceRuntime;
+
+  const action = params.extension.actions[params.actionName];
+  if (!action) {
+    return {
+      success: false,
+      error: `Extension "${params.extension.name}" does not implement action "${params.actionName}"`,
+    };
+  }
+
+  const result = await action.execute({
+    context: runtime,
+    payload: params.payload,
+    extensionName: params.extension.name,
+    actionName: params.actionName,
+  });
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error || "local extension action failed",
+      message: result.error || "local extension action failed",
+    };
+  }
+
+  return {
+    success: true,
+    data: result.data,
+    message: "daemon not reachable, executed locally",
+  };
+}
+
 function registerExtensionActionCommand(params: {
   program: Command;
   extension: Extension;
@@ -195,8 +326,14 @@ function registerExtensionActionCommand(params: {
       return;
     }
 
+    const progress = startCommandProgress({
+      extensionName: params.extension.name,
+      actionName: params.actionName,
+      payload,
+    });
+    const projectRoot = resolveProjectRoot(bridgeOptions.path);
     const remote = await callServer<ExtensionCommandResponse>({
-      projectRoot: resolveProjectRoot(bridgeOptions.path),
+      projectRoot,
       path: "/api/extensions/command",
       method: "POST",
       host: bridgeOptions.host,
@@ -208,8 +345,37 @@ function registerExtensionActionCommand(params: {
       },
     });
 
-    if (remote.success && remote.data) {
-      const data = remote.data;
+    let response: ExtensionCommandResponse | null =
+      remote.success && remote.data ? remote.data : null;
+    if (
+      !response &&
+      canFallbackToLocalExecution({
+        extensionName: params.extension.name,
+        remote,
+      })
+    ) {
+      try {
+        response = await runExtensionActionLocally({
+          projectRoot,
+          extension: params.extension,
+          actionName: params.actionName,
+          payload,
+        });
+      } catch (error) {
+        response = {
+          success: false,
+          error: String(error),
+          message: String(error),
+        };
+      }
+    }
+
+    progress?.stop({
+      success: Boolean(response?.success),
+    });
+
+    if (response) {
+      const data = response;
       printResult({
         asJson: bridgeOptions.json,
         success: Boolean(data.success),

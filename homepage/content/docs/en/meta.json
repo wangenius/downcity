@@ -2,19 +2,10 @@
   "title": "Documentation",
   "pages": [
     "index",
-    "guide",
-    "getting-started",
-    "guides",
-    "configuration",
-    "skills",
-    "logging",
-    "tasks",
-    "services",
-    "architecture",
-    "best-practices",
-    "examples",
-    "faq",
-    "troubleshooting",
+    "quickstart",
+    "capabilities",
+    "concepts",
+    "operations",
     "reference",
     "community"
   ]

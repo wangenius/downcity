@@ -1,0 +1,4 @@
+{
+  "title": "核心原理",
+  "pages": ["architecture", "context-engineering", "message-processing"]
+}

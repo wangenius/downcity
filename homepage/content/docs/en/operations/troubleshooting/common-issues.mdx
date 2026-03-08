@@ -1,0 +1,45 @@
+---
+title: Common Issues
+description: Typical installation, startup, and config failures
+---
+
+# Common Issues
+
+## Command not found (`shipmyagent: command not found`)
+
+```bash
+npm config get prefix
+export PATH=$(npm config get prefix)/bin:$PATH
+```
+
+Or run directly with:
+
+```bash
+npx shipmyagent --version
+```
+
+## Port conflict (3000 already in use)
+
+```bash
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+sma agent on --daemon --port 3100
+```
+
+## `sma task/chat/...` cannot connect
+
+Make sure daemon is running:
+
+```bash
+sma agent on --daemon
+sma service list
+```
+
+## LLM configuration mismatch
+
+Check:
+
+```bash
+sma config get llm
+```
+
+Ensure `llm.activeModel` points to an existing `llm.models.<id>`.

@@ -1,0 +1,143 @@
+---
+title: 配置
+description: ship.json、PROFILE.md 与运行目录配置说明
+---
+
+# 配置
+
+ShipMyAgent 的核心配置由 4 部分组成：
+
+- `PROFILE.md`：Agent 角色与行为边界（必需）
+- `SOUL.md`：稳定执行原则（可选）
+- `USER.md`：用户偏好（可选）
+- `ship.json`：运行时配置（必需）
+
+## `ship.json` 关键字段
+
+### `start`
+
+控制启动参数（可被 CLI 参数覆盖）：
+
+```json
+{
+  "start": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "webui": false,
+    "webport": 3001
+  }
+}
+```
+
+### `llm`
+
+定义 provider 与 model：
+
+```json
+{
+  "llm": {
+    "activeModel": "default",
+    "providers": {
+      "default": {
+        "type": "openai",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "default",
+        "name": "gpt-4o-mini",
+        "temperature": 0.7
+      }
+    },
+    "logMessages": true
+  }
+}
+```
+
+### `services.chat`
+
+聊天通道与队列控制：
+
+```json
+{
+  "services": {
+    "chat": {
+      "method": "direct",
+      "queue": { "maxConcurrency": 2 },
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "auth_id": "123456789"
+        }
+      }
+    }
+  }
+}
+```
+
+### `services.skills`
+
+配置 skills 扫描目录：
+
+```json
+{
+  "services": {
+    "skills": {
+      "paths": [".claude/skills"],
+      "allowExternalPaths": false
+    }
+  }
+}
+```
+
+### `extensions.voice`
+
+本地语音识别配置：
+
+```json
+{
+  "extensions": {
+    "voice": {
+      "enabled": true,
+      "provider": "local",
+      "activeModel": "SenseVoiceSmall"
+    }
+  }
+}
+```
+
+### `permissions`
+
+仓库写入与命令执行权限：
+
+```json
+{
+  "permissions": {
+    "read_repo": true,
+    "write_repo": { "requiresApproval": false },
+    "exec_command": {
+      "deny": ["rm"],
+      "requiresApproval": false,
+      "maxOutputChars": 12000,
+      "maxOutputLines": 200
+    }
+  }
+}
+```
+
+## 常用命令
+
+```bash
+sma config get
+sma config get llm.activeModel
+sma config set start.port 3100
+sma config unset services.chat.channels.telegram
+```
+
+## 下一步
+
+- [MCP 配置](/zh/docs/quickstart/mcp)
+- [CLI 参考](/zh/docs/reference/cli)
+- [`.ship/` 目录说明](/zh/docs/reference/dot-ship)

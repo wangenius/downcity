@@ -128,3 +128,58 @@ test("voice on command mapInput parses no-install/force and model IDs", async ()
   assert.equal(payload.modelsDir, ".ship/models/voice-custom");
   assert.equal(payload.activeModel, "SenseVoiceSmall");
 });
+
+test("voice init command mapInput applies defaults", async () => {
+  const payload = await voiceExtension.actions.init.command.mapInput({
+    args: [],
+    opts: {},
+  });
+
+  assert.deepEqual(payload.modelIds, ["SenseVoiceSmall"]);
+  assert.equal(payload.activeModel, "SenseVoiceSmall");
+  assert.equal(payload.installModel, true);
+  assert.equal(payload.installDeps, true);
+  assert.equal(payload.pipUpgrade, true);
+});
+
+test("voice init can enable extension without downloading when model already installed", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-voice-init-"));
+  t.after(async () => {
+    await fs.remove(tempRoot);
+  });
+
+  const config = createBaseShipConfig();
+  config.extensions = {
+    voice: {
+      enabled: false,
+      provider: "local",
+      activeModel: "SenseVoiceSmall",
+      modelsDir: ".ship/models/voice",
+      installedModels: ["SenseVoiceSmall"],
+    },
+  };
+  await fs.writeJson(path.join(tempRoot, "ship.json"), config, { spaces: 2 });
+  const runtime = buildRuntime(tempRoot, config);
+
+  const initResult = await voiceExtension.actions.init.execute({
+    context: runtime,
+    payload: {
+      modelIds: ["SenseVoiceSmall"],
+      installModel: false,
+      installDeps: false,
+      force: false,
+      activeModel: "SenseVoiceSmall",
+      pipUpgrade: true,
+      pythonBin: "python3",
+    },
+    extensionName: "voice",
+    actionName: "init",
+  });
+  assert.equal(initResult.success, true);
+
+  const saved = await fs.readJson(path.join(tempRoot, "ship.json"));
+  assert.equal(saved.extensions.voice.enabled, true);
+  assert.equal(saved.extensions.voice.provider, "local");
+  assert.equal(saved.extensions.voice.activeModel, "SenseVoiceSmall");
+  assert.equal(saved.extensions.voice.transcribe.strategy, "funasr");
+});

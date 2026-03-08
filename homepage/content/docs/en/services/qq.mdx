@@ -1,0 +1,37 @@
+---
+title: QQ
+description: Integrate ShipMyAgent with QQ Bot
+---
+
+# QQ Integration
+
+## Required config
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "qq": {
+          "enabled": true,
+          "appId": "${QQ_APP_ID}",
+          "appSecret": "${QQ_APP_SECRET}",
+          "sandbox": false
+        }
+      }
+    }
+  }
+}
+```
+
+## Start runtime
+
+```bash
+sma agent on --daemon
+```
+
+## Verify channel status
+
+```bash
+sma service status chat
+```

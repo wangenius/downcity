@@ -1,0 +1,27 @@
+---
+title: 架构总览
+description: ShipMyAgent 的运行层次与关键组件
+---
+
+# 架构总览
+
+ShipMyAgent 的核心是“本地 Runtime + 可审计数据目录 + 多渠道消息接入”。
+
+## 运行层次
+
+1. **CLI 层**：`sma init`、`sma agent ...`、`sma task ...`
+2. **Server 层**：HTTP 路由（`/health`、`/api/execute`、`/api/services/*`、`/api/extensions/*`）
+3. **Service/Extension 层**：`chat` / `skill` / `task` / `voice`
+4. **Context 层**：`.ship/context/<contextId>/messages/messages.jsonl`
+5. **存储层**：`.ship/logs`、`.ship/task`、`.ship/chat`、`.ship/config`
+
+## 核心设计点
+
+- 同一会话串行处理，不同会话并行处理。
+- 对话、任务、日志均落盘，便于审计和回溯。
+- Service/Extension 统一动作模型，CLI 与 HTTP 共享执行入口。
+
+## 延伸阅读
+
+- [上下文工程](/zh/docs/concepts/context-engineering)
+- [消息处理链路](/zh/docs/concepts/message-processing)

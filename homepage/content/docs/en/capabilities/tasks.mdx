@@ -1,0 +1,55 @@
+---
+title: Tasks
+description: Task definition, scheduling, and CLI operations
+---
+
+# Tasks
+
+Task definitions live in `.ship/task/<taskId>/task.md`.
+
+## Minimal task example
+
+```markdown
+---
+title: Daily Repo Check
+cron: "0 9 * * 1-5"
+description: Run tests and summarize issues
+contextId: telegram-chat-123456
+status: enabled
+---
+
+Run tests and write conclusions to result.md.
+```
+
+## Directory layout
+
+```text
+.ship/task/
+  <taskId>/
+    task.md
+    <timestamp>/
+      run.json
+      result.md
+      output.md
+      dialogue.md
+```
+
+## Common commands
+
+```bash
+sma task list
+sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task run daily-check
+sma task update daily-check --cron "0 10 * * 1-5"
+sma task disable daily-check
+```
+
+## Status
+
+- `enabled`: scheduled
+- `paused`: defined but not scheduled
+- `disabled`: disabled
+
+## Runtime requirement
+
+Scheduling only works with a running runtime (typically `sma agent on --daemon`).

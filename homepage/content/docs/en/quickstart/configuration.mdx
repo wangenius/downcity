@@ -1,0 +1,143 @@
+---
+title: Configuration
+description: ship.json, PROFILE.md, and runtime configuration essentials
+---
+
+# Configuration
+
+ShipMyAgent is configured with four core files:
+
+- `PROFILE.md`: agent role and boundaries (required)
+- `SOUL.md`: stable operating principles (optional)
+- `USER.md`: user preferences (optional)
+- `ship.json`: runtime configuration (required)
+
+## Key `ship.json` fields
+
+### `start`
+
+Startup options (CLI flags override these values):
+
+```json
+{
+  "start": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "webui": false,
+    "webport": 3001
+  }
+}
+```
+
+### `llm`
+
+Provider and model configuration:
+
+```json
+{
+  "llm": {
+    "activeModel": "default",
+    "providers": {
+      "default": {
+        "type": "openai",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "default",
+        "name": "gpt-4o-mini",
+        "temperature": 0.7
+      }
+    },
+    "logMessages": true
+  }
+}
+```
+
+### `services.chat`
+
+Chat channels and queue behavior:
+
+```json
+{
+  "services": {
+    "chat": {
+      "method": "direct",
+      "queue": { "maxConcurrency": 2 },
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "auth_id": "123456789"
+        }
+      }
+    }
+  }
+}
+```
+
+### `services.skills`
+
+Skills discovery roots:
+
+```json
+{
+  "services": {
+    "skills": {
+      "paths": [".claude/skills"],
+      "allowExternalPaths": false
+    }
+  }
+}
+```
+
+### `extensions.voice`
+
+Local speech-to-text extension:
+
+```json
+{
+  "extensions": {
+    "voice": {
+      "enabled": true,
+      "provider": "local",
+      "activeModel": "SenseVoiceSmall"
+    }
+  }
+}
+```
+
+### `permissions`
+
+Repository write and command execution policies:
+
+```json
+{
+  "permissions": {
+    "read_repo": true,
+    "write_repo": { "requiresApproval": false },
+    "exec_command": {
+      "deny": ["rm"],
+      "requiresApproval": false,
+      "maxOutputChars": 12000,
+      "maxOutputLines": 200
+    }
+  }
+}
+```
+
+## Useful commands
+
+```bash
+sma config get
+sma config get llm.activeModel
+sma config set start.port 3100
+sma config unset services.chat.channels.telegram
+```
+
+## Next
+
+- [MCP Configuration](/en/docs/quickstart/mcp)
+- [CLI Reference](/en/docs/reference/cli)
+- [`.ship/` Directory](/en/docs/reference/dot-ship)

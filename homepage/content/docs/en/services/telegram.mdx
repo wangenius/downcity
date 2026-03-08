@@ -34,7 +34,7 @@ Enable Telegram in `ship.json`:
 {
   "services": {
     "chat": {
-      "adapters": {
+      "channels": {
         "telegram": {
           "enabled": true,
           "botToken": "${TELEGRAM_BOT_TOKEN}"
@@ -57,7 +57,7 @@ If you want a stricter policy (only the initiator or group admins), set:
 {
   "services": {
     "chat": {
-      "adapters": {
+      "channels": {
         "telegram": {
           "enabled": true,
           "botToken": "${TELEGRAM_BOT_TOKEN}",
@@ -101,11 +101,8 @@ Example: send a PDF with caption: `Summarize this PDF and list action items.`
 If you want to manage local voice-to-text models, use the dedicated `voice` extension command group:
 
 ```bash
-# start daemon first
-sma agent on --daemon
-
-# interactive select + install + enable
-sma voice on
+# zero-to-ready bootstrap (enable + model install + auto dependency install)
+sma voice init SenseVoiceSmall
 
 # inspect current voice config
 sma voice status

@@ -1,0 +1,95 @@
+---
+title: 快速开始
+description: 10 分钟启动一个可对话的 ShipMyAgent Runtime
+---
+
+# 快速开始
+
+## 1. 安装
+
+```bash
+npm install -g shipmyagent
+shipmyagent --version
+```
+
+> 可用短命令 `sma`，与 `shipmyagent` 等价。
+
+## 2. 初始化项目
+
+```bash
+cd /path/to/your-repo
+sma init
+```
+
+初始化后会生成：
+
+- `PROFILE.md`（必需）
+- `SOUL.md` / `USER.md`（可选）
+- `ship.json`
+- `.ship/` 运行目录
+
+## 3. 配置 LLM
+
+在项目根目录创建 `.env`（不要提交到 Git）：
+
+```bash
+LLM_API_KEY=your_key
+```
+
+`ship.json` 最小示例：
+
+```json
+{
+  "name": "my-agent",
+  "version": "1.0.0",
+  "llm": {
+    "activeModel": "default",
+    "providers": {
+      "default": {
+        "type": "anthropic",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "default",
+        "name": "claude-sonnet-4-5"
+      }
+    }
+  }
+}
+```
+
+## 4. 启动运行时
+
+前台启动（开发调试）：
+
+```bash
+sma .
+```
+
+后台启动（长期运行）：
+
+```bash
+sma agent on --daemon
+```
+
+## 5. 验证服务状态
+
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/api/status
+```
+
+## 6. 可选：配置命令别名
+
+```bash
+sma config alias
+```
+
+## 下一步
+
+- [配置详解](/zh/docs/quickstart/configuration)
+- [Skills 使用](/zh/docs/capabilities/skills)
+- [Tasks 自动化](/zh/docs/capabilities/tasks)
+- [故障排查](/zh/docs/operations/troubleshooting)

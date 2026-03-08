@@ -1,0 +1,95 @@
+---
+title: Getting Started
+description: Launch a conversational ShipMyAgent runtime in about 10 minutes
+---
+
+# Getting Started
+
+## 1. Install
+
+```bash
+npm install -g shipmyagent
+shipmyagent --version
+```
+
+> `sma` is the same binary as `shipmyagent`.
+
+## 2. Initialize a repository
+
+```bash
+cd /path/to/your-repo
+sma init
+```
+
+Initialization generates:
+
+- `PROFILE.md` (required)
+- `SOUL.md` / `USER.md` (optional)
+- `ship.json`
+- `.ship/` runtime directory
+
+## 3. Configure LLM
+
+Create `.env` at project root (do not commit):
+
+```bash
+LLM_API_KEY=your_key
+```
+
+Minimal `ship.json` example:
+
+```json
+{
+  "name": "my-agent",
+  "version": "1.0.0",
+  "llm": {
+    "activeModel": "default",
+    "providers": {
+      "default": {
+        "type": "anthropic",
+        "apiKey": "${LLM_API_KEY}"
+      }
+    },
+    "models": {
+      "default": {
+        "provider": "default",
+        "name": "claude-sonnet-4-5"
+      }
+    }
+  }
+}
+```
+
+## 4. Start runtime
+
+Foreground (for local debugging):
+
+```bash
+sma .
+```
+
+Daemon mode (for long-running runtime):
+
+```bash
+sma agent on --daemon
+```
+
+## 5. Verify health
+
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/api/status
+```
+
+## 6. Optional: add alias to shell rc
+
+```bash
+sma config alias
+```
+
+## Next
+
+- [Configuration](/en/docs/quickstart/configuration)
+- [Skills](/en/docs/capabilities/skills)
+- [Tasks](/en/docs/capabilities/tasks)
+- [Troubleshooting](/en/docs/operations/troubleshooting)

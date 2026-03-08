@@ -1,0 +1,42 @@
+---
+title: MCP 配置
+description: 通过 .ship/config/mcp.json 接入外部 MCP Server
+---
+
+# MCP 配置
+
+ShipMyAgent 通过 MCP（Model Context Protocol）连接外部工具与数据源。
+
+## 配置文件位置
+
+- `.ship/config/mcp.json`
+- `.ship/schema/mcp.schema.json`（用于 IDE 校验）
+
+## 最小示例
+
+```json
+{
+  "$schema": "../schema/mcp.schema.json",
+  "servers": {
+    "local-tools": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./scripts/mcp-server.js"]
+    }
+  }
+}
+```
+
+## 支持的 `type`
+
+- `stdio`：本地进程（`command` + `args`）
+- `sse`：SSE endpoint（`url`）
+- `http`：HTTP endpoint（`url` + 可选 `headers`）
+
+## 环境变量占位符
+
+`env` / `headers` / `url` 可使用 `${VAR_NAME}`，运行时会读取环境变量替换。
+
+## 生效方式
+
+启动 runtime 后，MCP 工具会以 `serverName:toolName` 形式暴露给 Agent。

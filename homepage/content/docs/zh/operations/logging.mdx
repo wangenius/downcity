@@ -1,0 +1,43 @@
+---
+title: 日志与审计
+description: `.ship/` 下的日志、会话与任务审计数据
+---
+
+# 日志与审计
+
+## 关键路径
+
+```text
+.ship/
+  logs/<YYYY-MM-DD>.jsonl
+  context/<contextId>/messages/messages.jsonl
+  task/<taskId>/<timestamp>/run.json
+  chat/<contextId>/history.jsonl
+```
+
+## 常用排查命令
+
+```bash
+# 查看当天运行日志
+tail -f .ship/logs/$(date +%F).jsonl
+
+# 搜索错误
+grep -Ei "error|warn|timeout|failed" .ship/logs/$(date +%F).jsonl
+
+# 查看某个会话最近消息
+sma chat history --chat-key telegram-chat-123 --limit 30
+```
+
+## LLM 请求日志开关
+
+`ship.json` 中：
+
+```json
+{
+  "llm": {
+    "logMessages": false
+  }
+}
+```
+
+设为 `false` 可减少敏感信息写入日志。

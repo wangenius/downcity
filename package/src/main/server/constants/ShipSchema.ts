@@ -156,6 +156,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                 },
                 command: { type: "string" },
                 timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+                pythonBin: { type: "string" },
                 language: { type: "string" },
               },
             },

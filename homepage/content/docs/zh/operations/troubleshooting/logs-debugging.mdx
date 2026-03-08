@@ -1,0 +1,35 @@
+---
+title: 日志与调试
+description: 基于日志与状态命令定位问题
+---
+
+# 日志与调试
+
+## 1) 看运行日志
+
+```bash
+tail -f .ship/logs/$(date +%F).jsonl
+```
+
+## 2) 看服务状态
+
+```bash
+sma service list
+sma extension list
+```
+
+## 3) 看会话数据
+
+```bash
+sma chat context --chat-key telegram-chat-123
+sma chat history --chat-key telegram-chat-123 --limit 50
+```
+
+## 4) 看任务执行产物
+
+```bash
+ls -la .ship/task/<taskId>
+ls -la .ship/task/<taskId>/<timestamp>
+```
+
+`run.json` + `result.md` 基本可以还原一次任务执行结果。

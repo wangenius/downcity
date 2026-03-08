@@ -1,0 +1,35 @@
+---
+title: Logs & Debugging
+description: Diagnose runtime issues with logs and state commands
+---
+
+# Logs & Debugging
+
+## 1) Follow runtime logs
+
+```bash
+tail -f .ship/logs/$(date +%F).jsonl
+```
+
+## 2) Inspect service state
+
+```bash
+sma service list
+sma extension list
+```
+
+## 3) Inspect conversation state
+
+```bash
+sma chat context --chat-key telegram-chat-123
+sma chat history --chat-key telegram-chat-123 --limit 50
+```
+
+## 4) Inspect task artifacts
+
+```bash
+ls -la .ship/task/<taskId>
+ls -la .ship/task/<taskId>/<timestamp>
+```
+
+`run.json` and `result.md` usually reveal the root cause quickly.

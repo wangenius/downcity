@@ -1,0 +1,42 @@
+---
+title: MCP Configuration
+description: Connect external MCP servers via .ship/config/mcp.json
+---
+
+# MCP Configuration
+
+ShipMyAgent uses MCP (Model Context Protocol) to connect external tools and data sources.
+
+## File locations
+
+- `.ship/config/mcp.json`
+- `.ship/schema/mcp.schema.json` (for IDE validation)
+
+## Minimal example
+
+```json
+{
+  "$schema": "../schema/mcp.schema.json",
+  "servers": {
+    "local-tools": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./scripts/mcp-server.js"]
+    }
+  }
+}
+```
+
+## Supported `type`
+
+- `stdio`: local process (`command` + `args`)
+- `sse`: SSE endpoint (`url`)
+- `http`: HTTP endpoint (`url` + optional `headers`)
+
+## Env placeholders
+
+You can use `${VAR_NAME}` in `env`, `headers`, and `url`.
+
+## Runtime behavior
+
+After runtime startup, MCP tools are exposed as `serverName:toolName`.

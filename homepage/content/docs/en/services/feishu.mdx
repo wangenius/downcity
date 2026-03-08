@@ -1,0 +1,37 @@
+---
+title: Feishu
+description: Integrate ShipMyAgent with Feishu/Lark chat
+---
+
+# Feishu Integration
+
+## Required config
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "feishu": {
+          "enabled": true,
+          "appId": "${FEISHU_APP_ID}",
+          "appSecret": "${FEISHU_APP_SECRET}",
+          "domain": "https://open.feishu.cn"
+        }
+      }
+    }
+  }
+}
+```
+
+## Start runtime
+
+```bash
+sma agent on --daemon
+```
+
+## Verify channel status
+
+```bash
+sma service status chat
+```

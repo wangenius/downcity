@@ -1,0 +1,45 @@
+---
+title: 常见问题
+description: 安装、启动与配置中的常见错误
+---
+
+# 常见问题
+
+## 命令找不到（`shipmyagent: command not found`）
+
+```bash
+npm config get prefix
+export PATH=$(npm config get prefix)/bin:$PATH
+```
+
+或直接用：
+
+```bash
+npx shipmyagent --version
+```
+
+## 端口冲突（3000 被占用）
+
+```bash
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+sma agent on --daemon --port 3100
+```
+
+## 启动后无法调用 `sma task/chat/...`
+
+先确认 daemon 运行中：
+
+```bash
+sma agent on --daemon
+sma service list
+```
+
+## LLM 配置错误
+
+检查：
+
+```bash
+sma config get llm
+```
+
+并确认 `llm.activeModel` 指向存在的 `llm.models.<id>`。

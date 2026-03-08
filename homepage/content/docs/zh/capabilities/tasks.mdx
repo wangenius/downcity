@@ -1,0 +1,55 @@
+---
+title: Tasks
+description: 任务定义、调度与 CLI 操作
+---
+
+# Tasks
+
+任务定义存放在 `.ship/task/<taskId>/task.md`。
+
+## 最小任务示例
+
+```markdown
+---
+title: 每日仓库巡检
+cron: "0 9 * * 1-5"
+description: 运行测试并总结异常
+contextId: telegram-chat-123456
+status: enabled
+---
+
+请执行测试并把结论写入 result.md。
+```
+
+## 目录结构
+
+```text
+.ship/task/
+  <taskId>/
+    task.md
+    <timestamp>/
+      run.json
+      result.md
+      output.md
+      dialogue.md
+```
+
+## 常用命令
+
+```bash
+sma task list
+sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task run daily-check
+sma task update daily-check --cron "0 10 * * 1-5"
+sma task disable daily-check
+```
+
+## 状态说明
+
+- `enabled`：参与调度
+- `paused`：保留定义，不调度
+- `disabled`：禁用
+
+## 调度生效条件
+
+任务调度依赖运行中的 runtime（建议 `sma agent on --daemon`）。

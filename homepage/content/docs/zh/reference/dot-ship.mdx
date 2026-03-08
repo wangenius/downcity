@@ -1,340 +1,51 @@
 ---
 title: .ship 目录
-description: ShipMyAgent 运行时目录结构与文件格式参考
+description: 运行时数据目录结构与用途
 ---
 
 # `.ship/` 目录
 
-`.ship/` 是 ShipMyAgent 在你的项目根目录下创建的**本地运行时工作目录**：用于落盘聊天历史、日志、幂等缓存、MCP 配置，以及持久化记忆（profile/chat memory）等。
+`.ship/` 是 ShipMyAgent 的本地运行数据目录，默认建议不提交到 Git。
 
-重要提醒：
-
-- `.ship/` **通常不应提交到 Git**（里面可能包含聊天内容、联系人、工具调用痕迹等敏感信息）。
-- 你一般**不需要手动编辑**其中的文件；如果要排查问题或做数据迁移，这份页面可以帮助你理解它们的结构。
-
-## 目录概览
-
-不同集成/功能会生成不同子目录；下面是典型结构（部分目录/文件可能不存在）：
+## 常见结构
 
 ```text
 .ship/
-  .cache/                        # 缓存/幂等/去重（可删除）
-  profile/                       # 全局持久化记忆（影响 character）
-    Primary.md
-    other.md
-  data/                          # 运行时数据（按需；可能为空）
-  chat/
-    <encodedChatKey>/
-      messages/                  # 对话历史（UIMessage JSONL，唯一事实源）
-        messages.jsonl
-        meta.json                # (可选，compact 元数据 + pinned skills)
-        archive/                 # (可选，compact 归档段)
-      memory/                    # chat 级持久化记忆（面对不同 chat 的默认逻辑）
-        Primary.md
-        backup/                  # (可选，压缩前备份)
-        .meta.json               # (可选，记忆元数据)
   logs/
-    <YYYY-MM-DD>.jsonl
+  context/
+  chat/
+  task/
   config/
-    mcp.json
-  schema/                        # schema 用于配置文件（编辑器补全/校验）
-    mcp.schema.json
-    ship.schema.json
-  public/                        # 服务器对外暴露的内容目录（可通过 URL 访问）
-  skills/                        # 项目级技能（优先级最高）
-  task/                          # (预留，任务系统)
-  .debug/                        # (可选，调试/抓包输出)
+  schema/
+  skills/
+  public/
+  profile/
+  .cache/
 ```
 
-说明：
+## 重点目录
 
-- `<encodedChatKey>` / `<encodedMessageId>` 采用 `encodeURIComponent(...)`，用于确保文件名安全可用。
-- `jsonl` 表示 **JSON Lines**：一行一个 JSON 对象，便于持续追加与流式处理。
+### `.ship/logs/`
 
-## 各目录/文件说明
+每日 JSONL 日志：`<YYYY-MM-DD>.jsonl`。
 
-### `.ship/chat/<chatKey>/messages/`：对话历史（History）
+### `.ship/context/<contextId>/messages/`
 
-用途：按 `chatKey` 归档对话历史（`UIMessage[]`），用于 UI 展示与模型输入（同一份数据，唯一事实源）。
+会话消息事实源：`messages.jsonl`，并包含 compact 元数据与归档。
 
-路径规则：
+### `.ship/chat/`
 
-- `.ship/chat/<encodedChatKey>/messages/messages.jsonl`
-- `.ship/chat/<encodedChatKey>/messages/meta.json`（可选；包含 compact 元数据与 `pinnedSkillIds`）
-- `.ship/chat/<encodedChatKey>/messages/archive/*.json`（可选，compact 时归档被折叠的原始段）
+chat 元信息与 history 事件流。
 
-`messages.jsonl` 单行示例（字段会随平台/场景不同而略有差异）：
+### `.ship/task/`
 
-```json
-{"id":"u:telegram-chat-123:456","role":"user","parts":[{"type":"text","text":"..."}],"metadata":{"v":1,"ts":1730000000000,"channel":"telegram","chatId":"123","chatKey":"telegram-chat-123","userId":"123","messageId":"456","chatType":"private","username":"alice"}}
-```
+任务定义与每次运行产物（`run.json`、`result.md` 等）。
 
-**Compact 机制**：
+### `.ship/config/mcp.json`
 
-- **触发条件**：
-  - 历史消息超过 `keepLastMessages`（默认 30）
-  - 预估 token 超过 `maxInputTokensApprox`（默认 16000）
+MCP server 配置文件。
 
-- **处理流程**：
-  1. 两阶段锁：先 snapshot，再生成摘要（降低锁持有时间）
-  2. 生成摘要消息（kind: "summary"）
-  3. 可选备份被折叠的消息到 `archive/`
-  4. 更新 `meta.json`
+## 安全建议
 
-**meta.json 示例**：
-
-```json
-{
-  "v": 1,
-  "chatKey": "telegram-chat-123",
-  "updatedAt": 1770557540206,
-  "pinnedSkillIds": [],
-  "lastArchiveId": "compact-1770557540197-On1wNXqOXK3oJRz9",
-  "keepLastMessages": 30,
-  "maxInputTokensApprox": 16000
-}
-```
-
-**archive/ 目录**（可选）：
-
-- 格式：`compact-<timestamp>-<randomId>.json`
-- 内容：被 compact 折叠的原始消息段
-
-```json
-{
-  "v": 1,
-  "chatKey": "telegram-chat-123",
-  "archivedAt": 1770557540197,
-  "messages": [/* 原始消息数组 */]
-}
-```
-
-### `.ship/profile/`：全局持久化记忆（Profile）
-
-用途：存放跨 chat 的"长期记忆/角色偏好/自学摘要"等信息。运行时会把其中内容作为 system 上下文提供给模型（适合放规则、偏好、长期目标、总结性记忆）。
-
-- `.ship/profile/Primary.md`：最核心的持久化记忆
-- `.ship/profile/other.md`：其他记忆（可选）
-
-**特点**：
-
-- 默认会注入到所有 chat 的 system prompt
-- 不像 chat memory 那样分散
-
-### `.ship/chat/<chatKey>/memory/`：chat 级持久化记忆（Chat Memory）
-
-用途：存放某个 chat 的默认持久化记忆/长期约束（例如某个客户/项目专属背景、沟通风格、禁忌等）。运行时会把 `Primary.md` 作为 system 上下文提供给模型。
-
-- `.ship/chat/<encodedChatKey>/memory/Primary.md`
-- `.ship/chat/<encodedChatKey>/memory/backup/Primary-<timestamp>.md`（可选，压缩前备份）
-- `.ship/chat/<encodedChatKey>/memory/.meta.json`（可选，记忆元数据如最后更新时间）
-
-**示例结构**（来自实际项目）：
-
-```markdown
-# Chat Memory / Primary
-**最后更新**: 2025年2月9日 17:45
-**总轮次**: 50
----
-## 摘要记录
-### [轮次 1-3] 2025年2月9日
-- **已确认事实**
-  - 账号归属：小红书账号 @wangenius 持有者
-  - 核心需求：个人账号数据诊断与优化建议
-- **用户偏好约束**
-  - 平台限定：仅小红书生态
-  - 数据交付弹性：接受截图或链接
-```
-
-### `.ship/logs/`：运行日志（JSONL）
-
-用途：系统/适配器/工具执行的统一日志落盘，按日期分文件。
-
-路径规则：
-
-- `.ship/logs/<YYYY-MM-DD>.jsonl`
-
-单行示例：
-
-```json
-{"id":"ml83ggn36bblfu","timestamp":"2026-02-04T13:59:35.487Z","type":"debug","message":"发送心跳","level":"debug"}
-```
-
-### `.ship/.cache/`：幂等与适配器缓存（可删除）
-
-用途：本地幂等去重与适配器状态缓存，**主要用于避免重复收消息/重复发消息**，以及记录平台 offset 等状态。
-
-常见子目录：
-
-- **Ingress 幂等（入站去重）**
-  - `.ship/.cache/ingress/<channel>/<encodedChatKey>/<encodedMessageId>.json`
-  - 通过文件原子创建（`flag: "wx"`）实现跨进程去重
-  - 示例：`.cache/ingress/telegram/telegram-chat-123/890.json`
-  - 内容：
-    ```json
-    {
-      "v": 1,
-      "channel": "telegram",
-      "chatKey": "telegram-chat-123",
-      "messageId": "890",
-      "claimedAt": 1730000000000,
-      "meta": {
-        "chatId": "123",
-        "actorId": "123",
-        "updateHint": "telegram.message"
-      }
-    }
-    ```
-
-- **Egress 幂等（出站去重，chat_send）**
-  - `.ship/.cache/egress/chat_send/<channel>/<encodedChatId>/<encodedMessageKey>.json`
-  - 以「同一 inbound messageId + 回复内容」为维度
-  - 内容：
-    ```json
-    {
-      "v": 1,
-      "channel": "telegram",
-      "chatId": "123",
-      "messageId": "890",
-      "messageKey": "hash-of-reply",
-      "status": "delivered",
-      "claimedAt": 1730000000000,
-      "deliveredAt": 1730000000123
-    }
-    ```
-
-- **适配器自用缓存**
-  - 例如 Telegram 可能出现 `.ship/.cache/telegram/lastUpdateId.json` 等
-
-### `.ship/data/`：运行时数据（按需）
-
-用途：用于存放一些按需生成的运行时数据。多数情况下你不需要关心该目录。
-
-### `.ship/config/mcp.json`：MCP 配置（可选）
-
-用途：配置 MCP servers（Model Context Protocol），让 Agent 连接外部工具/数据源（按你的 `mcp.json` 配置启用）。
-
-- `.ship/config/mcp.json`
-- `.ship/schema/mcp.schema.json`（编辑器校验用）
-
-默认 `mcp.json` 形态：
-
-```json
-{ "$schema": "../schema/mcp.schema.json", "servers": {} }
-```
-
-### `.ship/schema/`：配置文件 JSON Schema（编辑器提示用）
-
-用途：为 `ship.json` 提供 `$schema` 引用，获得 IDE 自动补全与校验。
-
-- `.ship/schema/ship.schema.json`
-
-### `.ship/public/`：公开/静态文件（按需）
-
-用途：用于存放运行时生成或下载的文件（例如附件、可被 Web/工具读取的静态资源）。
-
-访问方式：
-
-- 运行中的 agent server 会把 `.ship/public/` 暴露在 `GET /ship/public/<path>`。
-  - 例如：`.ship/public/report.pdf` -> `http://<host>:<port>/ship/public/report.pdf`
-
-**常见用途**：
-- 截图（如 `screenshot.png`）
-- 生成的报告（如 `report.pdf`）
-- 下载的文件
-
-### `.ship/skills/`：项目级技能（优先级最高）
-
-用途：存放项目专属的技能插件。扫描 skills 时，此目录优先级最高。
-
-**扫描优先级**（根据 `skills/paths.ts`）：
-1. **项目路径**（最高）：`.ship/skills/`
-2. **用户目录**（次高）：`~/.ship/skills/`
-3. **配置路径**（需要 allowExternalPaths）：自定义路径
-
-### `.ship/task/`：预留目录
-
-用途：当前版本用于预留（例如未来可能放置任务/运行记录等）。没有广泛使用时它会保持为空目录。
-
-**设计结构**（尚未广泛使用）：
-
-```text
-.ship/task/
-├── <taskId>/
-│   ├── task.md                 # 任务定义
-│   └── <timestamp>/            # 任务运行目录
-│       ├── messages.jsonl       # 该次运行的历史
-│       └── meta.json
-```
-
-- taskId 格式：`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`
-- chatKey 格式：`task-run:<taskId>:<timestamp>`
-
-### `.ship/.debug/`：调试输出（可选）
-
-用途：某些适配器在开启调试/抓包时会写入调试文件（例如 QQ 事件抓取目录可能在 `.ship/.debug/qq-events`）。
-
-## 清理与迁移建议
-
-### 安全可删除
-
-- `.ship/.cache/` - 会自动重新生成；平台适配器可能会重新拉取部分消息
-- `.ship/logs/` - 历史日志（幂等去重状态/日志会丢失，但不影响重新运行）
-- `.ship/schema/` - 可重新生成（通过初始化）
-- `.ship/.debug/` - 调试文件
-
-### 谨慎删除
-
-- `.ship/chat/` - 会丢失对话历史
-- `.ship/profile/` - 会丢失全局持久化记忆
-- `.ship/chat/*/memory/` - 会丢失 chat 级记忆
-
-### 迁移建议
-
-- **迁移项目到新机器**：按需拷贝 `.ship/chat/`、`.ship/profile/`、`.ship/config/`
-- **不要拷贝** `.ship/.cache/`（避免跨环境 offset/幂等状态混淆）
-
-## 技术细节
-
-### 锁机制
-
-- `.history.lock` 文件（位于 messages/ 目录）
-- 原子创建（flag: "wx"）实现跨进程互斥
-- 防止 compact 与 append 同时操作导致消息丢失
-- Stale 超时：30 秒
-
-### 文件编码规则
-
-- chatKey 和 messageId 使用 `encodeURIComponent()` 编码
-- 目的：确保文件名安全可用
-- 示例：`telegram-chat--1003761993516-topic-20` → 直接使用（不需编码）
-
-### Git 建议
-
-添加到 `.gitignore`：
-
-```bash
-# 敏感运行时数据
-.ship/chat/
-.ship/profile/
-.ship/.cache/
-.ship/logs/
-.ship/.debug/
-
-# 保留配置和 schema
-!.ship/config/
-!.ship/schema/
-!.ship/skills/
-```
-
-或使用更有选择性的方式：
-
-```bash
-# .gitignore - 默认排除所有
-.ship/*
-
-# .gitinclude - 跟踪特定目录
-!.ship/config/
-!.ship/schema/
-!.ship/skills/
-```
+- `.ship/` 可能含敏感对话与执行痕迹，不建议提交到公开仓库。
+- 需要排障时优先查看 `logs`、`task`、`context` 三处。

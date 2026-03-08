@@ -1,0 +1,49 @@
+---
+title: 性能问题
+description: 降低响应延迟与任务执行耗时
+---
+
+# 性能问题
+
+## 常见瓶颈
+
+- 模型响应慢
+- 任务并发过高
+- 单次命令输出过大
+- 会话历史过长
+
+## 优化建议
+
+1. 使用更快模型处理高频请求。
+2. 降低任务触发频率，避免重叠执行。
+3. 控制命令输出规模：
+
+```json
+{
+  "permissions": {
+    "exec_command": {
+      "maxOutputChars": 12000,
+      "maxOutputLines": 200
+    }
+  }
+}
+```
+
+4. 调整上下文 compact 参数：
+
+```json
+{
+  "context": {
+    "messages": {
+      "maxInputTokensApprox": 128000,
+      "compactRatio": 0.5
+    }
+  }
+}
+```
+
+## 观测方法
+
+```bash
+grep -Ei "timeout|slow|context|compact" .ship/logs/$(date +%F).jsonl
+```

@@ -1,0 +1,27 @@
+---
+title: Architecture Overview
+description: Runtime layers and key components of ShipMyAgent
+---
+
+# Architecture Overview
+
+ShipMyAgent is built around local runtime execution, auditable on-disk state, and multi-channel chat ingress.
+
+## Runtime layers
+
+1. **CLI layer**: `sma init`, `sma agent ...`, `sma task ...`
+2. **Server layer**: HTTP routes (`/health`, `/api/execute`, `/api/services/*`, `/api/extensions/*`)
+3. **Service/Extension layer**: `chat`, `skill`, `task`, `voice`
+4. **Context layer**: `.ship/context/<contextId>/messages/messages.jsonl`
+5. **Storage layer**: `.ship/logs`, `.ship/task`, `.ship/chat`, `.ship/config`
+
+## Core design choices
+
+- Same conversation is processed serially; different conversations run concurrently.
+- Chat, task, and logs are persisted for auditability.
+- Service/Extension action model is shared across CLI and HTTP routes.
+
+## Read next
+
+- [Context Engineering](/en/docs/concepts/context-engineering)
+- [Message Processing Flow](/en/docs/concepts/message-processing)

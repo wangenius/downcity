@@ -71,6 +71,7 @@ type VoiceConfigResolved = {
   audioPath: string;
   timeoutMs: number;
   language: string;
+  pythonBin: string;
 };
 
 function normalizeLanguage(input?: string): string {
@@ -84,6 +85,11 @@ function normalizeTimeoutMs(value?: number): number {
   if (ms < 1_000) return 1_000;
   if (ms > 600_000) return 600_000;
   return Math.floor(ms);
+}
+
+function normalizePythonBin(value?: string): string {
+  const text = String(value || "").trim();
+  return text || "python3";
 }
 
 function normalizeStrategy(strategy?: VoiceTranscribeStrategy): VoiceTranscribeStrategy {
@@ -141,12 +147,13 @@ async function runCustomCommand(params: {
 }
 
 async function runPythonInline(params: {
+  pythonBin: string;
   script: string;
   args: string[];
   timeoutMs: number;
 }): Promise<string> {
   const { stdout, stderr } = await execFileAsync(
-    "python3",
+    params.pythonBin,
     ["-c", params.script, ...params.args],
     {
       timeout: params.timeoutMs,
@@ -199,11 +206,13 @@ const TRANSFORMERS_WHISPER_INLINE_SCRIPT = [
 ].join("\n");
 
 async function runFunasrRunner(params: {
+  pythonBin: string;
   modelDir: string;
   audioPath: string;
   timeoutMs: number;
 }): Promise<string> {
   return runPythonInline({
+    pythonBin: params.pythonBin,
     script: FUNASR_INLINE_SCRIPT,
     args: [params.modelDir, params.audioPath],
     timeoutMs: params.timeoutMs,
@@ -211,12 +220,14 @@ async function runFunasrRunner(params: {
 }
 
 async function runTransformersWhisperRunner(params: {
+  pythonBin: string;
   modelDir: string;
   audioPath: string;
   language: string;
   timeoutMs: number;
 }): Promise<string> {
   return runPythonInline({
+    pythonBin: params.pythonBin,
     script: TRANSFORMERS_WHISPER_INLINE_SCRIPT,
     args: [params.modelDir, params.audioPath, params.language],
     timeoutMs: params.timeoutMs,
@@ -272,6 +283,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
     audioPath,
     timeoutMs: normalizeTimeoutMs(config.transcribe?.timeoutMs),
     language: normalizeLanguage(input.language || config.transcribe?.language),
+    pythonBin: normalizePythonBin(config.transcribe?.pythonBin),
   };
 }
 
@@ -322,12 +334,14 @@ export async function transcribeVoiceAudio(
         });
       } else if (runner === "funasr") {
         text = await runFunasrRunner({
+          pythonBin: resolved.pythonBin,
           modelDir: resolved.modelDir,
           audioPath: resolved.audioPath,
           timeoutMs: resolved.timeoutMs,
         });
       } else {
         text = await runTransformersWhisperRunner({
+          pythonBin: resolved.pythonBin,
           modelDir: resolved.modelDir,
           audioPath: resolved.audioPath,
           language: resolved.language,

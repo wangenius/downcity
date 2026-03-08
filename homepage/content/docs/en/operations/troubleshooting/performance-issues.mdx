@@ -1,0 +1,49 @@
+---
+title: Performance Issues
+description: Reduce response latency and long task execution time
+---
+
+# Performance Issues
+
+## Typical bottlenecks
+
+- Slow model responses
+- Overlapping scheduled tasks
+- Large command outputs
+- Long conversation context
+
+## Optimization checklist
+
+1. Use faster models for high-frequency interactions.
+2. Reduce task frequency to avoid overlaps.
+3. Cap command output size:
+
+```json
+{
+  "permissions": {
+    "exec_command": {
+      "maxOutputChars": 12000,
+      "maxOutputLines": 200
+    }
+  }
+}
+```
+
+4. Tune context compaction:
+
+```json
+{
+  "context": {
+    "messages": {
+      "maxInputTokensApprox": 128000,
+      "compactRatio": 0.5
+    }
+  }
+}
+```
+
+## Observe performance signals
+
+```bash
+grep -Ei "timeout|slow|context|compact" .ship/logs/$(date +%F).jsonl
+```

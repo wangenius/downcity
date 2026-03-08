@@ -1,0 +1,33 @@
+---
+title: Voice 扩展
+description: 本地语音识别模型安装与转写
+---
+
+# Voice 扩展
+
+Voice 扩展用于本地语音识别（STT）。
+
+## 常用命令
+
+```bash
+sma voice models
+sma voice init SenseVoiceSmall
+sma voice on SenseVoiceSmall
+sma voice install whisper-large-v3-turbo
+sma voice use whisper-large-v3-turbo
+sma voice transcribe ./demo.ogg --language zh
+sma voice off
+```
+
+## 说明
+
+- `voice init` 用于从零初始化（启用 + 安装模型 + 自动安装转写依赖）。
+- `voice on` 可交互选择模型。
+- `voice install` 只安装，不改变启用状态。
+- 当前配置写入 `ship.json.extensions.voice`。
+
+## 运行态查看
+
+```bash
+sma extension status voice
+```

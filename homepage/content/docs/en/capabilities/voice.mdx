@@ -1,0 +1,33 @@
+---
+title: Voice Extension
+description: Local speech-to-text model install and transcription
+---
+
+# Voice Extension
+
+The Voice extension provides local speech-to-text (STT).
+
+## Common commands
+
+```bash
+sma voice models
+sma voice init SenseVoiceSmall
+sma voice on SenseVoiceSmall
+sma voice install whisper-large-v3-turbo
+sma voice use whisper-large-v3-turbo
+sma voice transcribe ./demo.ogg --language en
+sma voice off
+```
+
+## Notes
+
+- `voice init` is the zero-to-ready bootstrap (enable + model install + auto dependency install).
+- `voice on` supports interactive model selection.
+- `voice install` installs models without enabling the extension.
+- Configuration is stored at `ship.json.extensions.voice`.
+
+## Runtime status
+
+```bash
+sma extension status voice
+```

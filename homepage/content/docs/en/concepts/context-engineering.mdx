@@ -1,0 +1,25 @@
+---
+title: Context Engineering
+description: How “Repo is the Agent” is implemented in runtime
+---
+
+# Context Engineering
+
+ShipMyAgent keeps context in composable, persisted layers:
+
+1. `PROFILE.md` / `SOUL.md` / `USER.md`
+2. `ship.json` runtime config
+3. `.ship/context/<contextId>/messages/messages.jsonl` conversation history
+4. `.ship/context/<contextId>/memory/Primary.md` long-term memory
+
+## Why this model
+
+- History is auditable and explicit.
+- Long conversations can be compacted safely.
+- Context isolation by `contextId` avoids cross-conversation bleed.
+
+## Practical tips
+
+- Keep clear boundaries and goals in `PROFILE.md`.
+- Use meaningful `contextId` per channel/user/workflow.
+- Inspect `.ship/logs/<date>.jsonl` and task run artifacts regularly.

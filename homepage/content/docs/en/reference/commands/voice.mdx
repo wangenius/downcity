@@ -17,6 +17,7 @@ sma voice <subcommand>
 
 - `models`: list built-in model catalog
 - `status`: show current `extensions.voice` config
+- `init [models...]`: one-shot bootstrap (enable + install model + auto install transcription dependencies)
 - `on [models...]`: enable voice extension; installs selected models by default
 - `off`: disable voice extension (keeps installed model records)
 - `install [models...]`: install model files without changing enabled state
@@ -26,8 +27,8 @@ sma voice <subcommand>
 ## Examples
 
 ```bash
-# 1) interactive select + install + enable
-sma voice on
+# 1) zero-to-ready bootstrap (recommended)
+sma voice init SenseVoiceSmall
 
 # 2) explicit model install path
 sma voice install SenseVoiceSmall --models-dir ~/.ship/models/voice
@@ -44,7 +45,10 @@ sma voice transcribe .ship/.cache/telegram/demo.ogg --language zh
 
 ## Notes
 
-- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.
+- If daemon is reachable, `sma voice ...` executes remotely via `/api/extensions/command`.
+- If daemon is not reachable, `sma voice ...` automatically falls back to local execution (still writes `ship.json` and performs model installation).
+- `voice init` installs Python transcription dependencies automatically (`funasr` or `transformers/torch`, selected by model).
+- If system Python is blocked by PEP 668, `voice init` automatically falls back to virtualenv install at `~/.ship/venvs/voice`.
 - Model files are downloaded from HuggingFace into `~/.ship/models/voice` by default.
 - Built-in transcription runners require local Python dependencies (`funasr` and/or `transformers`).
 - Telegram voice/audio attachments use this extension's `transcribe` action in best-effort mode.

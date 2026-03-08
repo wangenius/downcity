@@ -27,7 +27,16 @@ import {
   resolveVoiceModelsRootDir,
   toPortableRelativePath,
 } from "./runtime/ConfigStore.js";
-import { installVoiceModelFromHuggingFace } from "./runtime/Installer.js";
+import {
+  installVoiceModelFromHuggingFace,
+  type VoiceModelInstallProgressEvent,
+} from "./runtime/Installer.js";
+import {
+  installVoiceTranscribeDependencies,
+  resolveVoiceRunnersByModels,
+  resolveVoiceStrategyByModel,
+  type VoiceDependencyInstallResult,
+} from "./runtime/DependencyInstaller.js";
 import { transcribeVoiceAudio } from "./runtime/Transcriber.js";
 
 /**
@@ -83,6 +92,56 @@ type VoiceInstallPayload = {
 };
 
 /**
+ * `voice init` 命令 payload。
+ */
+type VoiceInitPayload = {
+  /**
+   * 需要初始化的模型列表。
+   */
+  modelIds: VoiceModelId[];
+  /**
+   * 是否执行模型下载。
+   */
+  installModel: boolean;
+  /**
+   * 是否安装 Python 转写依赖。
+   */
+  installDeps: boolean;
+  /**
+   * 是否强制覆盖已存在模型文件。
+   */
+  force: boolean;
+  /**
+   * 模型根目录（可选，默认 `~/.ship/models/voice`）。
+   */
+  modelsDir?: string;
+  /**
+   * 指定激活模型（默认取首个 modelIds）。
+   */
+  activeModel: VoiceModelId;
+  /**
+   * HuggingFace token（可选）。
+   */
+  hfToken?: string;
+  /**
+   * Python 可执行文件（默认 `python3`）。
+   */
+  pythonBin?: string;
+  /**
+   * 是否使用 pip `-U` 安装依赖。
+   */
+  pipUpgrade: boolean;
+  /**
+   * pip 安装超时（毫秒，可选）。
+   */
+  pipTimeoutMs?: number;
+  /**
+   * 虚拟环境目录（可选）。
+   */
+  venvDir?: string;
+};
+
+/**
  * `voice use` 命令 payload。
  */
 type VoiceUsePayload = {
@@ -126,6 +185,27 @@ function getBooleanOpt(
     if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
   }
   return defaultValue;
+}
+
+function getNumberOpt(
+  opts: Record<string, JsonValue>,
+  key: string,
+): number | undefined {
+  const value = opts[key];
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Number.isNaN(value)) return undefined;
+    return Math.floor(value);
+  }
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) return undefined;
+    const parsed = Number.parseInt(text, 10);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed)) {
+      throw new Error(`Invalid numeric option "${key}": ${value}`);
+    }
+    return parsed;
+  }
+  return undefined;
 }
 
 function parseVoiceModelIdOrThrow(input: string): VoiceModelId {
@@ -191,6 +271,7 @@ function toVoiceTranscribeJson(
   if (typeof value.strategy === "string") out.strategy = value.strategy;
   if (typeof value.command === "string") out.command = value.command;
   if (typeof value.timeoutMs === "number") out.timeoutMs = value.timeoutMs;
+  if (typeof value.pythonBin === "string") out.pythonBin = value.pythonBin;
   if (typeof value.language === "string") out.language = value.language;
   return out;
 }
@@ -220,6 +301,43 @@ function toVoiceCatalogJson(): Array<Record<string, JsonValue>> {
     huggingfaceRepo: item.huggingfaceRepo,
     revision: item.revision,
   }));
+}
+
+function toInstallProgressJson(
+  event: VoiceModelInstallProgressEvent,
+): Record<string, JsonValue> {
+  return {
+    stage: event.stage,
+    ...(typeof event.filePath === "string" ? { filePath: event.filePath } : {}),
+    ...(typeof event.index === "number" ? { index: event.index } : {}),
+    ...(typeof event.totalFiles === "number"
+      ? { totalFiles: event.totalFiles }
+      : {}),
+  };
+}
+
+function toDependencyInstallJson(
+  value: VoiceDependencyInstallResult,
+): Record<string, JsonValue> {
+  return {
+    pythonBin: value.pythonBin,
+    runners: value.runners,
+    usedVirtualEnv: value.usedVirtualEnv,
+    ...(typeof value.venvDir === "string" ? { venvDir: value.venvDir } : {}),
+    ...(typeof value.basePythonBin === "string"
+      ? { basePythonBin: value.basePythonBin }
+      : {}),
+    items: value.items.map((item) => ({
+      runner: item.runner,
+      pythonBin: item.pythonBin,
+      args: item.args,
+      packages: item.packages,
+      command: item.command,
+      elapsedMs: item.elapsedMs,
+      ...(typeof item.stdoutTail === "string" ? { stdoutTail: item.stdoutTail } : {}),
+      ...(typeof item.stderrTail === "string" ? { stderrTail: item.stderrTail } : {}),
+    })),
+  };
 }
 
 export const voiceExtension: Extension = {
@@ -314,11 +432,15 @@ export const voiceExtension: Extension = {
             if (!model) {
               throw new Error(`Voice model catalog entry not found: ${modelId}`);
             }
+            const progressEvents: Array<Record<string, JsonValue>> = [];
             const installed = await installVoiceModelFromHuggingFace({
               model,
               modelsRootDir,
               force: payload.force,
               hfToken: payload.hfToken,
+              onProgress: (event) => {
+                progressEvents.push(toInstallProgressJson(event));
+              },
             });
             installResults.push({
               modelId,
@@ -327,6 +449,9 @@ export const voiceExtension: Extension = {
               revision: installed.revision,
               downloadedFiles: installed.downloadedFiles,
               skippedFiles: installed.skippedFiles,
+              downloadedFilePaths: installed.downloadedFilePaths,
+              skippedFilePaths: installed.skippedFilePaths,
+              progressEvents,
             });
           }
         }
@@ -360,6 +485,159 @@ export const voiceExtension: Extension = {
             voice: toVoiceConfigJson(voiceConfig),
             install: payload.install,
             installResults,
+          },
+        };
+      },
+    },
+    init: {
+      command: {
+        description: "从零初始化 voice（启用 + 安装模型 + 自动安装转写依赖）",
+        configure(command: Command) {
+          command
+            .argument("[models...]")
+            .option("--models-dir <path>", "模型目录（默认 ~/.ship/models/voice）")
+            .option("--active-model <modelId>", "激活模型 ID（必须在所选模型中）")
+            .option("--no-install-model", "跳过模型下载，仅写入配置")
+            .option("--no-install-deps", "跳过 Python 转写依赖安装")
+            .option("--python <bin>", "Python 可执行文件（默认 python3）")
+            .option(
+              "--venv-dir <path>",
+              "PEP 668 回退虚拟环境目录（默认 ~/.ship/venvs/voice）",
+            )
+            .option("--no-pip-upgrade", "安装依赖时不带 pip -U")
+            .option("--pip-timeout-ms <ms>", "pip 安装超时毫秒（默认 300000）")
+            .option("--force", "强制覆盖并重下已存在模型文件")
+            .option("--hf-token <token>", "HuggingFace token（私有/Gated 模型场景）");
+        },
+        mapInput({ args, opts }): VoiceInitPayload {
+          const fromArgs = parseVoiceModelArgs(args);
+          const modelIds: VoiceModelId[] =
+            fromArgs.length > 0 ? fromArgs : ["SenseVoiceSmall"];
+          const activeModel = getStringOpt(opts, "activeModel")
+            ? parseVoiceModelIdOrThrow(String(getStringOpt(opts, "activeModel")))
+            : modelIds[0];
+          if (!modelIds.includes(activeModel)) {
+            throw new Error(
+              `active-model "${activeModel}" is not in selected models: ${modelIds.join(", ")}`,
+            );
+          }
+
+          return {
+            modelIds,
+            installModel: getBooleanOpt(opts, "installModel", true),
+            installDeps: getBooleanOpt(opts, "installDeps", true),
+            force: getBooleanOpt(opts, "force", false),
+            modelsDir: getStringOpt(opts, "modelsDir"),
+            activeModel,
+            hfToken: getStringOpt(opts, "hfToken"),
+            pythonBin: getStringOpt(opts, "python"),
+            pipUpgrade: getBooleanOpt(opts, "pipUpgrade", true),
+            pipTimeoutMs: getNumberOpt(opts, "pipTimeoutMs"),
+            venvDir: getStringOpt(opts, "venvDir"),
+          };
+        },
+      },
+      async execute(params) {
+        const payload = params.payload as VoiceInitPayload;
+        const modelsRootDir = resolveVoiceModelsRootDir({
+          projectRoot: params.context.rootPath,
+          modelsDir: payload.modelsDir,
+        });
+
+        const installResults: Array<Record<string, JsonValue>> = [];
+        if (payload.installModel) {
+          for (const modelId of payload.modelIds) {
+            const model = getVoiceModelCatalogItem(modelId);
+            if (!model) {
+              throw new Error(`Voice model catalog entry not found: ${modelId}`);
+            }
+            const progressEvents: Array<Record<string, JsonValue>> = [];
+            const installed = await installVoiceModelFromHuggingFace({
+              model,
+              modelsRootDir,
+              force: payload.force,
+              hfToken: payload.hfToken,
+              onProgress: (event) => {
+                progressEvents.push(toInstallProgressJson(event));
+              },
+            });
+            installResults.push({
+              modelId,
+              modelDir: installed.modelDir,
+              repoId: installed.repoId,
+              revision: installed.revision,
+              downloadedFiles: installed.downloadedFiles,
+              skippedFiles: installed.skippedFiles,
+              downloadedFilePaths: installed.downloadedFilePaths,
+              skippedFilePaths: installed.skippedFilePaths,
+              progressEvents,
+            });
+          }
+        }
+
+        const voiceConfig = ensureVoiceExtensionConfig(params.context.config);
+        const existingInstalled = readInstalledModelIds(voiceConfig.installedModels);
+        if (
+          !payload.installModel &&
+          !existingInstalled.includes(payload.activeModel)
+        ) {
+          throw new Error(
+            `active-model "${payload.activeModel}" is not installed. Remove --no-install-model or run "sma voice install ${payload.activeModel}" first.`,
+          );
+        }
+        const installedFromInit = payload.installModel ? payload.modelIds : [];
+        voiceConfig.enabled = true;
+        voiceConfig.provider = "local";
+        voiceConfig.activeModel = payload.activeModel;
+        voiceConfig.modelsDir = toPortableRelativePath(
+          params.context.rootPath,
+          modelsRootDir,
+        );
+        voiceConfig.installedModels = dedupeVoiceModelIds([
+          ...existingInstalled,
+          ...installedFromInit,
+        ]);
+        let dependencyInstall: Record<string, JsonValue> | undefined;
+        if (payload.installDeps) {
+          const runners = resolveVoiceRunnersByModels(payload.modelIds);
+          const installedDeps = await installVoiceTranscribeDependencies({
+            pythonBin: payload.pythonBin,
+            runners,
+            upgrade: payload.pipUpgrade,
+            timeoutMs: payload.pipTimeoutMs,
+            venvDir: payload.venvDir,
+          });
+          dependencyInstall = toDependencyInstallJson(installedDeps);
+          voiceConfig.transcribe = {
+            ...(voiceConfig.transcribe || {}),
+            pythonBin: installedDeps.pythonBin,
+          };
+        }
+        voiceConfig.transcribe = {
+          ...(voiceConfig.transcribe || {}),
+          strategy: resolveVoiceStrategyByModel(payload.activeModel),
+        };
+
+        const shipJsonPath = await persistShipConfig({
+          projectRoot: params.context.rootPath,
+          config: params.context.config,
+        });
+        params.context.logger.info("Voice extension initialized", {
+          activeModel: voiceConfig.activeModel,
+          modelsDir: voiceConfig.modelsDir,
+          installModel: payload.installModel,
+          installDeps: payload.installDeps,
+        });
+
+        return {
+          success: true,
+          data: {
+            shipJsonPath,
+            voice: toVoiceConfigJson(voiceConfig),
+            installModel: payload.installModel,
+            installDeps: payload.installDeps,
+            installResults,
+            ...(dependencyInstall ? { dependencyInstall } : {}),
           },
         };
       },
@@ -428,11 +706,15 @@ export const voiceExtension: Extension = {
           if (!model) {
             throw new Error(`Voice model catalog entry not found: ${modelId}`);
           }
+          const progressEvents: Array<Record<string, JsonValue>> = [];
           const installed = await installVoiceModelFromHuggingFace({
             model,
             modelsRootDir,
             force: payload.force,
             hfToken: payload.hfToken,
+            onProgress: (event) => {
+              progressEvents.push(toInstallProgressJson(event));
+            },
           });
           installResults.push({
             modelId,
@@ -441,6 +723,9 @@ export const voiceExtension: Extension = {
             revision: installed.revision,
             downloadedFiles: installed.downloadedFiles,
             skippedFiles: installed.skippedFiles,
+            downloadedFilePaths: installed.downloadedFilePaths,
+            skippedFilePaths: installed.skippedFilePaths,
+            progressEvents,
           });
         }
 

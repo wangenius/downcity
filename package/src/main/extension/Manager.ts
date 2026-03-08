@@ -323,11 +323,18 @@ export async function runExtensionCommand(params: {
   const action = resolveExtensionAction(extension, command);
   if (action) {
     if (record.state !== "running") {
-      return {
-        success: false,
-        extension: toRuntimeSnapshot(record),
-        message: `Extension "${extension.name}" is not running`,
-      };
+      // 关键点（中文）：extension action 调用时若 runtime 未启动，自动拉起后再执行。
+      // 这样可以避免调用方必须先显式执行 `sma extension start <name>`。
+      const started = await startExtensionRuntimeInternal(extension, params.context);
+      if (!started.success) {
+        return {
+          success: false,
+          extension: started.extension || toRuntimeSnapshot(record),
+          message:
+            started.error ||
+            `Failed to start extension "${extension.name}" before action "${command}"`,
+        };
+      }
     }
 
     const result = await invokeExtensionAction({

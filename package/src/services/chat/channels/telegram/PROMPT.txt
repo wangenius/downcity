@@ -14,11 +14,12 @@
 - 旧消息会在启动时执行 pending drain 入队审计，避免重启后补回复历史消息。
 
 ## 附件能力
-- 支持在回复正文中使用 `@attach` 指令发送附件（document/photo/voice/audio）。
+- 支持在回复正文中使用 `@attach` 指令发送附件（document/photo/voice/audio/video）。
 - 附件路径必须是项目内可访问的相对路径。
 - 常用格式：
   - `@attach document <相对路径> | 可选说明`
   - `@attach photo <相对路径> | 可选说明`
   - `@attach voice <相对路径> | 可选说明`
   - `@attach audio <相对路径> | 可选说明`
+  - `@attach video <相对路径> | 可选说明`
 - 如果回复中包含多个附件，按行写多个 `@attach` 指令。

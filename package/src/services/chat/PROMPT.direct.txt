@@ -20,7 +20,7 @@
   - 单个字符串：`react: "👍"`
   - 或对象/数组：`emoji/big`
   - 设置 `reply` 时，`react` 会优先复用该 `message_id` 作为目标消息。
-- 附件仍使用 `<file type="...">path</file>`（支持 `document/photo/voice/audio`）。
+- 附件仍使用 `<file type="...">path</file>`（支持 `document/photo/voice/audio/video`）。
 
 示例（当前会话 reply + 附件 + react）：
 

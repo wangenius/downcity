@@ -245,7 +245,7 @@ your-project/
   其中 `reply` 的值必须是目标 `message_id`（不接受 `true/false`）。
   `react` 支持字符串（如 `"👍"`）或对象/数组（`emoji` + 可选 `big`）。
   当设置了 `reply` 时，`react` 会复用该 `message_id` 作为目标消息。
-- 附件仍通过正文中的 `<file type="...">path</file>` 发送。
+- 附件仍通过正文中的 `<file type="...">path</file>` 发送（支持 `document/photo/voice/audio/video`）。
 - 系统会按模型 step 分条投递，而不是只在最终合并后发送一次。
 - `direct` 模式不支持通过 metadata 延迟/定时发送；如有需要，请通过 shell 执行 `sma chat send --delay <ms>` 或 `sma chat send --time <time>`。
 - `direct` 跨会话发送必须使用 `sma chat send --chat-key <chatKey>`（参数不确定时先看 `sma chat send --help`）。

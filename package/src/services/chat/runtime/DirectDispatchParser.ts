@@ -58,6 +58,7 @@ function parseDirectFileType(value: unknown): DirectFileType {
   if (text === "photo") return "photo";
   if (text === "voice") return "voice";
   if (text === "audio") return "audio";
+  if (text === "video") return "video";
   return "document";
 }
 
@@ -292,7 +293,7 @@ function resolveReactionPlans(params: {
  *
  * 协议（中文）
  * - frontmatter metadata：`reply/react`。
- * - `<file type=\"document\">path</file>`：发送附件（会转换为附件指令行）。
+ * - `<file type=\"document|photo|voice|audio|video\">path</file>`：发送附件（会转换为附件指令行）。
  */
 export function parseDirectDispatchAssistantText(params: {
   assistantText: string;

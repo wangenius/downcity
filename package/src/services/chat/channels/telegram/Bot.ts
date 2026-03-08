@@ -169,7 +169,8 @@ export class TelegramBot extends BaseChatChannel {
               !!message.document ||
               (Array.isArray(message.photo) && message.photo.length > 0) ||
               !!message.voice ||
-              !!message.audio;
+              !!message.audio ||
+              !!message.video;
 
             const messageId =
               typeof message.message_id === "number"
@@ -390,6 +391,7 @@ export class TelegramBot extends BaseChatChannel {
     if (Array.isArray(message?.photo) && message.photo.length > 0) types.push("photo");
     if (message?.voice) types.push("voice");
     if (message?.audio) types.push("audio");
+    if (message?.video) types.push("video");
 
     const uniq = Array.from(new Set(types)).filter(Boolean);
     const suffix = uniq.length > 0 ? ` (${uniq.join(", ")})` : "";
@@ -629,7 +631,8 @@ export class TelegramBot extends BaseChatChannel {
       !!message.document ||
       (Array.isArray(message.photo) && message.photo.length > 0) ||
       !!message.voice ||
-      !!message.audio;
+      !!message.audio ||
+      !!message.video;
     const messageId =
       typeof message.message_id === "number"
         ? String(message.message_id)
@@ -904,6 +907,15 @@ export class TelegramBot extends BaseChatChannel {
         fileId: message.audio.file_id,
         fileName: message.audio.file_name || "audio",
         desc: message.audio.file_name || "audio",
+      });
+    }
+
+    if (message.video?.file_id) {
+      items.push({
+        type: "video",
+        fileId: message.video.file_id,
+        fileName: message.video.file_name || "video.mp4",
+        desc: message.video.file_name || "video",
       });
     }
 

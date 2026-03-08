@@ -9,6 +9,6 @@
 - 旧消息会在启动时执行 pending drain 入队审计，避免重启后补回复历史消息。
 
 # 附件能力
-- 支持 `<file type="...">相对路径</file>` 标签发送附件（document/photo/voice/audio）。
+- 支持 `<file type="...">相对路径</file>` 标签发送附件（document/photo/voice/audio/video）。
 - 附件路径必须是项目内可访问的相对路径。
 - 多附件可输出多个 `<file>` 标签。

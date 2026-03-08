@@ -6,7 +6,12 @@
  * - 目标是让模型在“纯文本默认发送”的基础上，按需携带结构化参数。
  */
 
-export type DirectFileType = "document" | "photo" | "voice" | "audio";
+export type DirectFileType =
+  | "document"
+  | "photo"
+  | "voice"
+  | "audio"
+  | "video";
 
 /**
  * 解析后的附件标签参数（来自 `<file>` 标签）。
@@ -26,7 +31,7 @@ export interface DirectFileTagPayload {
    *
    * 说明（中文）
    * - 若缺省，默认使用 `document`。
-   * - 仅允许 `document/photo/voice/audio` 四种值。
+   * - 仅允许 `document/photo/voice/audio/video` 五种值。
    */
   type: DirectFileType;
 

@@ -49,6 +49,15 @@ export interface TelegramUpdate {
       file_size?: number;
       duration?: number;
     };
+    video?: {
+      file_id: string;
+      file_name?: string;
+      mime_type?: string;
+      file_size?: number;
+      duration?: number;
+      width?: number;
+      height?: number;
+    };
     reply_to_message?: {
       message_id?: number;
       from?: {
@@ -114,7 +123,12 @@ export interface TelegramApiResponse<T> {
   error_code?: number;
 }
 
-export type TelegramAttachmentType = "photo" | "document" | "voice" | "audio";
+export type TelegramAttachmentType =
+  | "photo"
+  | "document"
+  | "voice"
+  | "audio"
+  | "video";
 
 /**
  * 清洗用户可见文本，避免直接回显冗长工具日志。
@@ -163,6 +177,14 @@ export function guessMimeType(fileName: string): string | undefined {
       return "audio/ogg";
     case ".opus":
       return "audio/opus";
+    case ".mp4":
+      return "video/mp4";
+    case ".mov":
+      return "video/quicktime";
+    case ".webm":
+      return "video/webm";
+    case ".m4v":
+      return "video/x-m4v";
     default:
       return undefined;
   }
@@ -194,7 +216,7 @@ export function parseTelegramAttachments(text: string): {
 
   for (const line of lines) {
     const m = line.match(
-      /^\s*@attach\s+(photo|image|document|file|voice|audio)\s+(.+?)(?:\s*\|\s*(.+))?\s*$/i,
+      /^\s*@attach\s+(photo|image|document|file|voice|audio|video)\s+(.+?)(?:\s*\|\s*(.+))?\s*$/i,
     );
     if (!m) {
       kept.push(line);
@@ -207,6 +229,8 @@ export function parseTelegramAttachments(text: string): {
         ? "photo"
         : kindRaw === "file" || kindRaw === "document"
           ? "document"
+          : kindRaw === "video"
+            ? "video"
           : kindRaw === "audio"
             ? "audio"
             : "voice";

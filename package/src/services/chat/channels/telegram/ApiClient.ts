@@ -79,7 +79,7 @@ export class TelegramApiClient {
    * 发送 multipart/form-data 请求。
    *
    * 说明（中文）
-   * - 主要用于上传附件（photo/document/audio 等）
+   * - 主要用于上传附件（photo/document/audio/video 等）
    * - 与 requestJson 采用同一套错误归一化策略
    */
   async requestForm<T>(method: string, form: FormData): Promise<T> {
@@ -313,25 +313,10 @@ export class TelegramApiClient {
 
     // URL mode: send via JSON request
     if (isUrl) {
-      const method =
-        att.type === "photo"
-          ? "sendPhoto"
-          : att.type === "voice"
-            ? "sendVoice"
-            : att.type === "audio"
-              ? "sendAudio"
-              : "sendDocument";
-      const field =
-        att.type === "photo"
-          ? "photo"
-          : att.type === "voice"
-            ? "voice"
-            : att.type === "audio"
-              ? "audio"
-              : "document";
-      await this.requestJson(method, {
+      const endpoint = this.resolveAttachmentEndpoint(att.type);
+      await this.requestJson(endpoint.method, {
         chat_id: chatId,
-        [field]: src,
+        [endpoint.field]: src,
         ...(caption ? { caption } : {}),
         ...(message_thread_id ? { message_thread_id } : {}),
         ...(reply_to_message_id ? { reply_to_message_id } : {}),
@@ -362,24 +347,25 @@ export class TelegramApiClient {
     if (reply_to_message_id)
       form.set("reply_to_message_id", String(reply_to_message_id));
 
-    const method =
-      att.type === "photo"
-        ? "sendPhoto"
-        : att.type === "voice"
-          ? "sendVoice"
-          : att.type === "audio"
-            ? "sendAudio"
-            : "sendDocument";
-    const field =
-      att.type === "photo"
-        ? "photo"
-        : att.type === "voice"
-          ? "voice"
-          : att.type === "audio"
-            ? "audio"
-            : "document";
+    const endpoint = this.resolveAttachmentEndpoint(att.type);
+    form.set(endpoint.field, blob, path.basename(resolved));
+    await this.requestForm(endpoint.method, form);
+  }
 
-    form.set(field, blob, path.basename(resolved));
-    await this.requestForm(method, form);
+  /**
+   * 解析附件类型到 Telegram Bot API 发送端点。
+   *
+   * 关键点（中文）
+   * - 统一映射表，避免 URL 与本地文件两条路径出现行为不一致。
+   */
+  private resolveAttachmentEndpoint(type: TelegramAttachmentType): {
+    method: "sendPhoto" | "sendDocument" | "sendVoice" | "sendAudio" | "sendVideo";
+    field: "photo" | "document" | "voice" | "audio" | "video";
+  } {
+    if (type === "photo") return { method: "sendPhoto", field: "photo" };
+    if (type === "voice") return { method: "sendVoice", field: "voice" };
+    if (type === "audio") return { method: "sendAudio", field: "audio" };
+    if (type === "video") return { method: "sendVideo", field: "video" };
+    return { method: "sendDocument", field: "document" };
   }
 }

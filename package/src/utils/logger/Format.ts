@@ -100,14 +100,13 @@ function pushLabeledTextBlock(
   maxChars: number,
   attrs?: string[],
 ): void {
-  const normalized = truncate(String(text || "-"), maxChars).replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
+  // 关键点（中文）：日志按“每条消息一段”输出，段内换行转义为字面量 `\n`，保证紧凑且可分段。
+  const normalized = truncate(String(text || "-"), maxChars)
+    .replace(/\r\n/g, "\n")
+    .replace(/\n/g, "\\n");
   const headLabel =
     Array.isArray(attrs) && attrs.length > 0 ? `${label} ${attrs.join(" ")}` : label;
-  out.push(formatLogField(headLabel, lines[0] || "-"));
-  if (lines.length > 1) {
-    out.push(...lines.slice(1));
-  }
+  out.push(formatLogField(headLabel, normalized || "-"));
 }
 
 function parseInfoBlockText(value: string): {
@@ -287,6 +286,40 @@ function summarizeValue(value: JsonValue | undefined): string {
   if (Array.isArray(value)) return `[array:${value.length}]`;
   if (isJsonObject(value)) return `[object:${Object.keys(value).length}]`;
   return String(value);
+}
+
+/**
+ * 规范化 system 提示词文本用于日志展示。
+ *
+ * 关键点（中文）
+ * - `system` 可能是 string / object / array（不同 provider 形态不一致）。
+ * - 统一折叠为可读文本，便于和历史 message 分段展示。
+ */
+function normalizeSystemTextForLog(
+  system: JsonValue | undefined,
+  maxChars: number,
+): string {
+  if (system === null || system === undefined) return "";
+  if (typeof system === "string") return truncate(system, maxChars);
+
+  if (Array.isArray(system)) {
+    const merged = system
+      .map((item) => summarizeValue(item))
+      .filter(Boolean)
+      .join("\n");
+    return truncate(merged, maxChars);
+  }
+
+  if (isJsonObject(system)) {
+    const directText =
+      getStringField(system, "text") ||
+      getStringField(system, "content") ||
+      getStringField(system, "instructions");
+    if (directText) return truncate(directText, maxChars);
+    return stringifyCompact(system, maxChars);
+  }
+
+  return truncate(String(system), maxChars);
 }
 
 function formatMessagesForLog(
@@ -497,6 +530,19 @@ export function parseFetchRequestForLog(
   const messageTextParts: string[] = [];
 
   if (messages && Array.isArray(messages)) {
+    const hasSystemMessage = messages.some((item) => {
+      const role = String(getStringField(item, "role") || "")
+        .trim()
+        .toLowerCase();
+      return role === "system" || role === "developer";
+    });
+    if (!hasSystemMessage) {
+      const systemText = normalizeSystemTextForLog(system, 2000).trim();
+      if (systemText) {
+        pushLabeledTextBlock(messageTextParts, "system", systemText, 2000);
+      }
+    }
+
     const incrementalKey = String(opts?.incrementalKey || "").trim();
     const selectedMessages = selectMessagesForIncrementalLog(
       messages,
@@ -528,7 +574,7 @@ export function parseFetchRequestForLog(
     toolsCount,
     systemLength: typeof system === "string" ? system.length : undefined,
     // 注意：不做整体截断；每条消息已单独截断。
-    requestText: messageTextParts.join("\n"),
+    requestText: messageTextParts.join("\n\n"),
     meta: {
       kind: "llm_request",
       url,

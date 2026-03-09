@@ -21,6 +21,12 @@ status: enabled
 Run tests and write conclusions to result.md.
 ```
 
+## Result Delivery
+
+- Task runs only write artifacts under `.ship/task/<taskId>/<timestamp>/`.
+- Results are not auto-sent to chat channels.
+- `contextId` is used as the task execution context identifier.
+
 ## Directory layout
 
 ```text

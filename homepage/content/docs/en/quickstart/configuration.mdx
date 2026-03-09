@@ -64,7 +64,11 @@ Chat channels and queue behavior:
   "services": {
     "chat": {
       "method": "direct",
-      "queue": { "maxConcurrency": 2 },
+      "queue": {
+        "maxConcurrency": 2,
+        "mergeDebounceMs": 600,
+        "mergeMaxWaitMs": 2000
+      },
       "channels": {
         "telegram": {
           "enabled": true,
@@ -76,6 +80,11 @@ Chat channels and queue behavior:
   }
 }
 ```
+
+`services.chat.queue` notes:
+- `maxConcurrency`: max lane concurrency across different chat keys.
+- `mergeDebounceMs`: short debounce window for batching consecutive inbound messages in one run.
+- `mergeMaxWaitMs`: hard cap for the batching wait to avoid unbounded delay.
 
 ### `services.skills`
 

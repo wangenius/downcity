@@ -71,6 +71,28 @@ export interface ShipConfig {
          * 默认：2
          */
         maxConcurrency?: number;
+        /**
+         * 入站消息合并的防抖窗口（毫秒）。
+         *
+         * 关键点（中文）
+         * - 同一 chatKey 在该窗口内连续到达的多条消息，会在一次 run 前一起并入上下文。
+         * - 典型场景：用户先发一句话，再紧接着转发链接/卡片。
+         * - 设为 `0` 或负数可关闭该能力（立即执行首条消息）。
+         *
+         * 默认：600
+         */
+        mergeDebounceMs?: number;
+        /**
+         * 入站消息合并的最长等待时间（毫秒）。
+         *
+         * 关键点（中文）
+         * - 即使用户持续发送新消息，也不会无限延期；达到该上限后会立刻启动 run。
+         * - 用于平衡“尽量合并上下文”与“响应时延可控”。
+         * - 当 `mergeDebounceMs <= 0` 时该字段不会生效。
+         *
+         * 默认：2000
+         */
+        mergeMaxWaitMs?: number;
       };
       /**
        * 出站（egress）控制：用于限制工具发送、避免重复与无限循环刷屏。
@@ -229,36 +251,11 @@ export interface ShipConfig {
      * 记忆管理配置。
      *
      * 设计目标
-     * - 自动提取对话摘要到 memory/Primary.md
-     * - 智能压缩避免记忆文件过长
-     * - 异步处理不阻塞主对话流程
+     * - 默认开启，开箱即用（零配置）
+     * - 仅保留总开关，避免复杂配置负担
      */
     memory?: {
-      /**
-       * 是否启用自动记忆提取。
-       * 默认：true
-       */
-      autoExtractEnabled?: boolean;
-      /**
-       * 触发记忆提取的最小未记忆化记录数。
-       * 默认：40
-       */
-      extractMinEntries?: number;
-      /**
-       * memory/Primary.md 的最大字符数，超过时触发压缩。
-       * 默认：15000
-       */
-      maxPrimaryChars?: number;
-      /**
-       * 超过阈值时是否自动压缩（使用 LLM）。
-       * 默认：true
-       */
-      compressOnOverflow?: boolean;
-      /**
-       * 压缩前是否备份到 memory/backup/。
-       * 默认：true
-       */
-      backupBeforeCompress?: boolean;
+      enabled?: boolean;
     };
   };
   permissions?: {

@@ -1,0 +1,43 @@
+---
+title: sma memory
+description: Memory service actions (status/index/search/get/store/flush)
+---
+
+# `sma memory`
+
+Memory service command group.
+
+## Usage
+
+```bash
+sma memory <subcommand> [options]
+```
+
+## Subcommands
+
+- `status`
+- `index`
+- `search <query>`
+- `get <memoryPath> [--from <line>] [--lines <count>]`
+- `store --content <text> [--target <longterm|daily|working>] [--context-id <contextId>]`
+- `flush --context-id <contextId> [--max-messages <count>]`
+
+## Examples
+
+```bash
+sma memory status
+sma memory index --force
+sma memory search "release decision"
+sma memory get .ship/memory/MEMORY.md --from 10 --lines 20
+sma memory store --target longterm --content "User prefers concise release notes."
+sma memory flush --context-id telegram-chat-123 --max-messages 40
+```
+
+## Notes
+
+- Memory is enabled by default (zero config). Disable only when needed: `context.memory.enabled=false`.
+- Start daemon runtime first:
+
+```bash
+sma agent on --daemon
+```

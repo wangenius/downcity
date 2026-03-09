@@ -47,6 +47,8 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
               additionalProperties: true,
               properties: {
                 maxConcurrency: { type: "integer", minimum: 1, maximum: 32 },
+                mergeDebounceMs: { type: "integer", minimum: 0, maximum: 60000 },
+                mergeMaxWaitMs: { type: "integer", minimum: 0, maximum: 120000 },
               },
             },
             egress: {

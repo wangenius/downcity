@@ -86,7 +86,7 @@
 - `title`：任务标题（必填）
 - `description`：任务描述（必填）
 - `cron`：cron 表达式（必填，支持 `@manual`）
-- `contextId`：结果回发目标（必填）
+- `contextId`：任务执行上下文标识（必填）
 - `status`：`enabled|paused|disabled`（必填）
 - `kind`：`agent|script`（可选，默认 `agent`）
 - `time`：单次计划时间（可选，ISO8601 且必须显式时区，如 `2026-03-05T20:00:00+08:00`；到点执行一次）
@@ -124,7 +124,7 @@
 ## 典型流程
 
 ### 新建任务
-- 明确需求（频率、执行类型、回发目标）
+- 明确需求（频率、执行类型、执行上下文）
 - `create`
 - （可选）`run` 做验收
 - 验收通过后 `enable`
@@ -135,7 +135,7 @@
 - 根据结果决定 `enable/disable`
 
 ### 紧急止损
-- 出现异常重复触发、错误推送、成本异常时：`disable`
+- 出现异常重复触发、执行结果异常、成本异常时：`disable`
 
 ## 执行结果解读
 
@@ -145,7 +145,6 @@
 - `resultStatus`：结果校验是否通过（valid/invalid/not_checked）
 - `resultErrors`：校验失败原因
 - `runDirRel`：本次执行产物目录
-- `notifyError`：回发失败原因（如有）
 
 ### 快速判断
 - `executionStatus=failure`：执行本身失败（如运行时错误、模型未就绪、脚本异常）
@@ -169,7 +168,7 @@
 - 已创建任务：`<taskId>`
 - 类型：`<kind>`
 - 调度：`<cron>`（`<timezone>`）
-- 回发：`<contextId>`
+- 执行上下文：`<contextId>`
 - 当前状态：`<status>`
 
 ### run 失败

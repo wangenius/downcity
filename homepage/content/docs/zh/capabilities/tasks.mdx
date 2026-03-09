@@ -21,6 +21,12 @@ status: enabled
 请执行测试并把结论写入 result.md。
 ```
 
+## 执行结果通知
+
+- 任务完成后只会写入 `.ship/task/<taskId>/<timestamp>/` 产物。
+- 不会自动把结果发送到 chat channel。
+- `contextId` 仅作为任务执行上下文标识使用。
+
 ## 目录结构
 
 ```text

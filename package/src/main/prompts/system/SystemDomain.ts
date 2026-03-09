@@ -12,7 +12,6 @@ import { transformPromptsIntoSystemMessages } from "@main/prompts/common/PromptR
 import { resolvePromptGeoContext } from "@main/prompts/variables/GeoContext.js";
 import { SERVICES } from "@main/service/Services.js";
 import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
-import { buildMemorySystemText } from "@services/memory/runtime/SystemProvider.js";
 
 const CORE_PROMPT_FILE_URL = new URL("./assets/core.prompt.txt", import.meta.url);
 const SERVICE_PROMPT_FILE_URL = new URL(
@@ -231,7 +230,7 @@ export function resolveSystemContextProfile(
  * 收集 service 维度的 system 文本。
  *
  * 关键点（中文）
- * - 顺序：main service prompt -> service.system -> memory.system。
+ * - 顺序：main service prompt -> service.system。
  * - 单个加载失败走 fail-open，不阻断主链路。
  */
 export async function loadServiceSystemPrompts(input: {
@@ -267,15 +266,6 @@ export async function loadServiceSystemPrompts(input: {
     } catch {
       // fail-open
     }
-  }
-
-  try {
-    const memoryText = normalizeSystemText(
-      await buildMemorySystemText(input.runtime),
-    );
-    if (memoryText) out.push(memoryText);
-  } catch {
-    // fail-open
   }
 
   return out;

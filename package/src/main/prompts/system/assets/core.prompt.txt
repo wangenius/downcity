@@ -5,7 +5,11 @@
    - `.ship/context/<encodedContextId>/messages/messages.jsonl`：对话消息（UIMessage JSONL，user/assistant，唯一事实源）。
    - `.ship/context/<encodedContextId>/messages/meta.json`：messages compact 元数据（可选）。
    - `.ship/context/<encodedContextId>/messages/archive/*.json`：compact 归档段（可审计）。
-   - `.ship/context/<encodedContextId>/memory/Primary.md`：某个 context 的持久化“记忆”；存在时会自动作为 system prompt 注入。
+   - `.ship/context/<encodedContextId>/memory/working.md`：某个 context 的工作记忆（短期、按需写入与读取）。
+   - `.ship/memory/MEMORY.md`：长期稳定记忆（偏好、规则、长期事实）。
+   - `.ship/memory/daily/<YYYY-MM-DD>.md`：每日增量记忆（append-only）。
+   - `.ship/memory/index.sqlite`：memory 本地检索索引（SQLite FTS5，可重建）。
+   - memory 召回通过 `memory.search` / `memory.get` 等 service action 完成，不再自动注入整份 memory 文件。
    - `.ship/profile/Primary.md`、`.ship/profile/other.md`：全局 profile 记忆；存在时会自动作为 system prompt 注入。
    - `.ship/public/`：对外静态资源目录，通过 `GET /ship/public/<path>` 访问；用于给外部访问的路径。不要存放敏感信息
    - `.ship/logs/<YYYY-MM-DD>.jsonl`：运行日志（JSONL）；用于排查问题，避免把原始日志整段贴给用户。

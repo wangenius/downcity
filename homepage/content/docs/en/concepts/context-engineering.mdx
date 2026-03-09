@@ -10,13 +10,16 @@ ShipMyAgent keeps context in composable, persisted layers:
 1. `PROFILE.md` / `SOUL.md` / `USER.md`
 2. `ship.json` runtime config
 3. `.ship/context/<contextId>/messages/messages.jsonl` conversation history
-4. `.ship/context/<contextId>/memory/Primary.md` long-term memory
+4. `.ship/memory/MEMORY.md` long-term memory
+5. `.ship/memory/daily/<YYYY-MM-DD>.md` daily memory increments
+6. `.ship/context/<contextId>/memory/working.md` context working memory (optional)
 
 ## Why this model
 
 - History is auditable and explicit.
 - Long conversations can be compacted safely.
 - Context isolation by `contextId` avoids cross-conversation bleed.
+- Memory retrieval is budgeted via `memory.search -> memory.get`, instead of full-file injection.
 
 ## Practical tips
 

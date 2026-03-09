@@ -13,6 +13,7 @@ description: 运行时数据目录结构与用途
 .ship/
   logs/
   context/
+  memory/
   chat/
   task/
   config/
@@ -32,6 +33,13 @@ description: 运行时数据目录结构与用途
 ### `.ship/context/<contextId>/messages/`
 
 会话消息事实源：`messages.jsonl`，并包含 compact 元数据与归档。
+
+### `.ship/memory/`
+
+Memory V2 存储层：
+- `MEMORY.md`：长期事实/偏好记忆。
+- `daily/<YYYY-MM-DD>.md`：按天追加的记忆流水。
+- `index.sqlite`：本地 FTS 索引（可重建）。
 
 ### `.ship/chat/`
 

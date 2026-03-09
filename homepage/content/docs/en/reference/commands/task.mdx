@@ -28,7 +28,7 @@ sma task <subcommand> [options]
 
 - `--title <title>` (required)
 - `--description <description>` (required)
-- `--context-id <contextId>` (required)
+- `--context-id <contextId>` (required, task execution context identifier)
 - `--cron <cron>` (default `@manual`)
 - `--activate` (same as `--status enabled`)
 - `--kind <agent|script>`
@@ -59,3 +59,5 @@ Task scheduling requires a running runtime:
 ```bash
 sma agent on --daemon
 ```
+
+Task runs do not auto-send completion messages to chat channels; check the task run directory for results.

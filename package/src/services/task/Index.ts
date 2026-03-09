@@ -648,7 +648,7 @@ export const taskService: Service = {
             )
             .option(
               "--context-id <contextId>",
-              "通知目标 contextId（不传尝试使用 SMA_CTX_CONTEXT_ID）",
+              "任务执行 contextId（不传尝试使用 SMA_CTX_CONTEXT_ID）",
             )
             .option(
               "--status <status>",
@@ -815,7 +815,7 @@ export const taskService: Service = {
             .option("--kind <kind>", "执行类型（agent|script）")
             .option("--time <time>", "单次计划时间（ISO8601 且必须含时区；启用 time 时请配合 cron=@manual）")
             .option("--clear-time", "清空 time", false)
-            .option("--context-id <contextId>", "通知目标 contextId")
+            .option("--context-id <contextId>", "任务执行 contextId")
             .option("--status <status>", "状态（enabled|paused|disabled）")
             .option(
               "--activate",

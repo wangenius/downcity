@@ -28,7 +28,7 @@ sma task <subcommand> [options]
 
 - `--title <title>`（必填）
 - `--description <description>`（必填）
-- `--context-id <contextId>`（必填）
+- `--context-id <contextId>`（必填，任务执行上下文标识）
 - `--cron <cron>`（默认 `@manual`）
 - `--activate`（等同 `--status enabled`）
 - `--kind <agent|script>`
@@ -59,3 +59,5 @@ sma task disable daily-check
 ```bash
 sma agent on --daemon
 ```
+
+任务执行完成后不会自动回发到 chat channel，结果请在任务 run 目录查看。

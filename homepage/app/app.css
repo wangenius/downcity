@@ -174,3 +174,77 @@
     @apply font-sans;
   }
 }
+
+@keyframes homepage-orb-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -4%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes homepage-float {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -6px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* 首页背景光斑：提供非扁平视觉氛围 */
+.homepage-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(68px);
+  opacity: 0.38;
+  animation: homepage-orb-drift 12s ease-in-out infinite;
+}
+
+.homepage-orb--one {
+  top: -120px;
+  right: -120px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, color-mix(in oklch, var(--primary) 58%, white 42%), transparent 72%);
+}
+
+.homepage-orb--two {
+  bottom: -170px;
+  left: -150px;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, color-mix(in oklch, var(--accent) 45%, var(--primary) 35%), transparent 74%);
+  animation-delay: -6s;
+}
+
+/* 首页网格遮罩：提升层次感但避免压过正文 */
+.homepage-grid-mask {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--border) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--border) 45%, transparent) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, black 28%, transparent 88%);
+}
+
+.homepage-float {
+  animation: homepage-float 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homepage-orb,
+  .homepage-float {
+    animation: none !important;
+    transform: none !important;
+  }
+}

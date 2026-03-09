@@ -95,6 +95,45 @@ export function getShipProfileOtherPath(cwd: string): string {
   return path.join(getShipProfileDirPath(cwd), "other.md");
 }
 
+/**
+ * Memory 根目录（V2）。
+ *
+ * 关键点（中文）
+ * - `.ship/memory` 为跨会话记忆目录。
+ */
+export function getShipMemoryDirPath(cwd: string): string {
+  return path.join(getShipDirPath(cwd), "memory");
+}
+
+/**
+ * 长期记忆文件路径（V2）。
+ */
+export function getShipMemoryLongTermPath(cwd: string): string {
+  return path.join(getShipMemoryDirPath(cwd), "MEMORY.md");
+}
+
+/**
+ * 每日记忆目录路径（V2）。
+ */
+export function getShipMemoryDailyDirPath(cwd: string): string {
+  return path.join(getShipMemoryDirPath(cwd), "daily");
+}
+
+/**
+ * 每日记忆文件路径（V2）。
+ */
+export function getShipMemoryDailyPath(cwd: string, date: string): string {
+  const fileName = `${String(date || "").trim() || "unknown-date"}.md`;
+  return path.join(getShipMemoryDailyDirPath(cwd), fileName);
+}
+
+/**
+ * Memory 索引文件路径（V2）。
+ */
+export function getShipMemoryIndexPath(cwd: string): string {
+  return path.join(getShipMemoryDirPath(cwd), "index.sqlite");
+}
+
 export function getShipDataDirPath(cwd: string): string {
   return path.join(getShipDirPath(cwd), "data");
 }

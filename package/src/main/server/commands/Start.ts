@@ -5,7 +5,7 @@
  *
  * 行为
  * - 在 `.ship/debug/` 写入 pid/log/meta 文件
- * - 通过 `node <commands/index.js> run ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
+ * - 通过 `node <commands/index.js> agent on ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
  *
  * 注意
  * - `shipmyagent .` / `shipmyagent agent on`（不带 `--daemon`）才是“当前终端前台启动”。
@@ -24,7 +24,7 @@ import type { StartOptions } from "@main/types/Start.js";
  *
  * 流程（中文）
  * 1) 校验项目初始化文件是否存在
- * 2) 组装 `run` 子进程参数
+ * 2) 组装 `agent on` 子进程参数
  * 3) 通过 daemon manager 后台拉起并打印 pid/log
  */
 export async function startCommand(

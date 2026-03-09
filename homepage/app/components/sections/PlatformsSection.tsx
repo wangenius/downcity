@@ -1,24 +1,24 @@
-import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
-  IconBrandTelegram,
+  IconArrowRight,
   IconBrandQq,
+  IconBrandTelegram,
   IconMessageDots,
   IconMessageReport,
   IconPuzzle,
-  IconChevronRight,
 } from "@tabler/icons-react";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const PlatformsSection: FC = () => {
+/**
+ * 首页平台能力模块。
+ * 设计目标：
+ * 1. 清晰传达当前支持的平台能力。
+ * 2. 给出“扩展平台”的两条明确路径。
+ * 3. 保持 CTA 层级，帮助用户快速进入讨论或文档。
+ */
+export function PlatformsSection() {
   const { i18n, t } = useTranslation();
   const lang = i18n.language;
   const skillsPath =
@@ -31,8 +31,8 @@ export const PlatformsSection: FC = () => {
       name: t("platforms:defaultPlatforms.telegram.name"),
       description: t("platforms:defaultPlatforms.telegram.description"),
       icon: IconBrandTelegram,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
+      color: "text-sky-500",
+      surface: "from-sky-500/20 to-sky-500/5",
     },
     {
       id: "feishu",
@@ -40,78 +40,78 @@ export const PlatformsSection: FC = () => {
       description: t("platforms:defaultPlatforms.feishu.description"),
       icon: IconMessageDots,
       color: "text-blue-600",
-      bg: "bg-blue-600/10",
+      surface: "from-blue-600/20 to-blue-600/5",
     },
     {
       id: "qq",
       name: t("platforms:defaultPlatforms.qq.name"),
       description: t("platforms:defaultPlatforms.qq.description"),
       icon: IconBrandQq,
-      color: "text-sky-500",
-      bg: "bg-sky-500/10",
+      color: "text-cyan-500",
+      surface: "from-cyan-500/20 to-cyan-500/5",
     },
-  ];
+  ] as const;
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden border-t">
-      {/* Decorative gradient background */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl -z-10" />
+    <section className="relative overflow-hidden py-16 md:py-24">
+      {/* 背景层：细微渐变与网格纹理，避免区块显得扁平 */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/20 to-background" />
+        <div className="homepage-grid-mask opacity-40" />
+      </div>
 
       <div className="container mx-auto px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-16">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-5xl">
-              {t("platforms:title")}
-            </h2>
-            <p className="max-w-[800px] text-muted-foreground md:text-xl/relaxed">
-              {t("platforms:subtitle")}
-            </p>
-          </div>
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
+            {t("platforms:title")}
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base leading-7 text-muted-foreground md:text-lg">
+            {t("platforms:subtitle")}
+          </p>
         </div>
 
-        {/* Main Platforms Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
           {platforms.map((platform) => (
-            <Card
+            <article
               key={platform.id}
-              className="group hover:border-primary/50 transition-all duration-300 bg-muted/30 backdrop-blur-sm"
+              className="group relative overflow-hidden rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl"
             >
-              <CardHeader className="flex flex-col items-center text-center">
-                <div
-                  className={`p-4 rounded-2xl ${platform.bg} ${platform.color} mb-4 group-hover:scale-110 transition-transform duration-300`}
-                >
-                  <platform.icon className="h-10 w-10" />
-                </div>
-                <CardTitle>{platform.name}</CardTitle>
-                <CardDescription className="mt-2 text-balance leading-relaxed">
-                  {platform.description}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <div
+                className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${platform.surface}`}
+              />
+              <div
+                className={`mb-5 inline-flex rounded-2xl border border-border/70 bg-background/80 p-3 ${platform.color}`}
+              >
+                <platform.icon className="h-7 w-7" />
+              </div>
+              <h3 className="text-xl font-semibold tracking-tight">{platform.name}</h3>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">
+                {platform.description}
+              </p>
+            </article>
           ))}
         </div>
 
-        {/* More Solutions Section */}
-        <div className="max-w-4xl mx-auto border rounded-3xl p-8 md:p-12 bg-muted/20 backdrop-blur-md">
-          <div className="text-center mb-10">
-            <h3 className="text-2xl font-bold mb-4">
+        {/* 关键决策区：引导用户选择“提需求”或“自己封装” */}
+        <div className="mt-12 rounded-3xl border border-border/70 bg-card/80 p-6 shadow-sm md:p-8">
+          <div className="mb-8 text-center">
+            <h3 className="text-2xl font-semibold tracking-tight md:text-3xl">
               {t("platforms:otherTitle")}
             </h3>
-            <p className="text-muted-foreground">
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
               {t("platforms:otherSubtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Solution 1: Discuss */}
-            <div className="flex flex-col space-y-4 p-6 rounded-2xl bg-background/50 border hover:shadow-lg transition-all">
-              <div className="p-3 w-fit rounded-lg bg-orange-500/10 text-orange-500">
-                <IconMessageReport className="h-8 w-8" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <article className="rounded-2xl border border-border/70 bg-background/85 p-5">
+              <div className="mb-4 inline-flex rounded-xl bg-orange-500/10 p-2 text-orange-500">
+                <IconMessageReport className="h-6 w-6" />
               </div>
-              <h4 className="text-xl font-semibold">
+              <h4 className="text-lg font-semibold">
                 {t("platforms:solutions.discuss.title")}
               </h4>
-              <p className="text-muted-foreground text-sm grow">
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">
                 {t("platforms:solutions.discuss.description")}
               </p>
               <Link
@@ -120,41 +120,40 @@ export const PlatformsSection: FC = () => {
                 rel="noopener noreferrer"
                 className={cn(
                   buttonVariants({ variant: "outline" }),
-                  "w-fit group",
+                  "mt-5 inline-flex items-center gap-2 rounded-xl",
                 )}
               >
                 {t("platforms:solutions.discuss.button")}
-                <IconChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                <IconArrowRight className="h-4 w-4" />
               </Link>
-            </div>
+            </article>
 
-            {/* Solution 2: Skill */}
-            <div className="flex flex-col space-y-4 p-6 rounded-2xl bg-background/50 border hover:shadow-lg transition-all">
-              <div className="p-3 w-fit rounded-lg bg-primary/10 text-primary">
-                <IconPuzzle className="h-8 w-8" />
+            <article className="rounded-2xl border border-border/70 bg-background/85 p-5">
+              <div className="mb-4 inline-flex rounded-xl bg-primary/10 p-2 text-primary">
+                <IconPuzzle className="h-6 w-6" />
               </div>
-              <h4 className="text-xl font-semibold">
+              <h4 className="text-lg font-semibold">
                 {t("platforms:solutions.skill.title")}
               </h4>
-              <p className="text-muted-foreground text-sm grow">
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">
                 {t("platforms:solutions.skill.description")}
               </p>
               <Link
                 to={skillsPath}
                 className={cn(
                   buttonVariants({ variant: "default" }),
-                  "w-fit group",
+                  "mt-5 inline-flex items-center gap-2 rounded-xl",
                 )}
               >
                 {t("platforms:solutions.skill.button")}
-                <IconChevronRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                <IconArrowRight className="h-4 w-4" />
               </Link>
-            </div>
+            </article>
           </div>
         </div>
       </div>
     </section>
   );
-};
+}
 
 export default PlatformsSection;

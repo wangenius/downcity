@@ -13,6 +13,7 @@ description: Runtime data layout and what each folder is for
 .ship/
   logs/
   context/
+  memory/
   chat/
   task/
   config/
@@ -32,6 +33,13 @@ Daily JSONL logs: `<YYYY-MM-DD>.jsonl`.
 ### `.ship/context/<contextId>/messages/`
 
 Conversation source-of-truth (`messages.jsonl`) with compact metadata/archive.
+
+### `.ship/memory/`
+
+Memory V2 storage:
+- `MEMORY.md` for long-term facts/preferences.
+- `daily/<YYYY-MM-DD>.md` for append-only daily memory.
+- `index.sqlite` for local FTS index (rebuildable).
 
 ### `.ship/chat/`
 

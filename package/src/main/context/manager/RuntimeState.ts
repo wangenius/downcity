@@ -14,7 +14,6 @@ import {
   loadShipConfig,
   type ShipConfig,
 } from "@/main/server/env/Config.js";
-import { runContextMemoryMaintenance } from "@services/memory/runtime/Service.js";
 import {
   getTaskRunDir,
   parseTaskRunContextId,
@@ -448,11 +447,6 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   });
   contextManager = new ContextManager({
     dispatcher,
-    runAfterContextUpdated: async (contextId) =>
-      runContextMemoryMaintenance({
-        context: getServiceRuntimeState(),
-        contextId,
-      }),
   });
 
   const runtimeStateForServices: RuntimeState = {

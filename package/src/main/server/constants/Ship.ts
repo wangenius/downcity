@@ -53,6 +53,8 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
       method: "direct",
       queue: {
         maxConcurrency: 2,
+        mergeDebounceMs: 600,
+        mergeMaxWaitMs: 2000,
       },
       channels: {
         telegram: {

@@ -33,6 +33,9 @@ import { sendChatTextByChatKey } from "../Action.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
 const CHANNEL_ERROR_TEXT_MAX_LENGTH = 480;
+const DEFAULT_MERGE_DEBOUNCE_MS = 600;
+const DEFAULT_MERGE_MAX_WAIT_MS = 2_000;
+const BURST_MERGE_POLL_INTERVAL_MS = 20;
 
 /**
  * 判断是否为上游模型服务临时不可用。
@@ -78,6 +81,8 @@ function buildChannelErrorText(error: unknown): string {
 
 type WorkerConfig = {
   maxConcurrency: number;
+  mergeDebounceMs: number;
+  mergeMaxWaitMs: number;
 };
 
 type LaneState = {
@@ -90,7 +95,20 @@ function normalizeConfig(input?: Partial<WorkerConfig>): WorkerConfig {
     typeof input?.maxConcurrency === "number" && Number.isFinite(input.maxConcurrency)
       ? Math.max(1, Math.min(32, Math.floor(input.maxConcurrency)))
       : 2;
-  return { maxConcurrency };
+
+  const mergeDebounceMs =
+    typeof input?.mergeDebounceMs === "number" &&
+    Number.isFinite(input.mergeDebounceMs)
+      ? Math.max(0, Math.min(60_000, Math.floor(input.mergeDebounceMs)))
+      : DEFAULT_MERGE_DEBOUNCE_MS;
+
+  const mergeMaxWaitMs =
+    typeof input?.mergeMaxWaitMs === "number" &&
+    Number.isFinite(input.mergeMaxWaitMs)
+      ? Math.max(0, Math.min(120_000, Math.floor(input.mergeMaxWaitMs)))
+      : DEFAULT_MERGE_MAX_WAIT_MS;
+
+  return { maxConcurrency, mergeDebounceMs, mergeMaxWaitMs };
 }
 
 export class ChatQueueWorker {
@@ -197,6 +215,69 @@ export class ChatQueueWorker {
     const first = shiftChatQueueItem(lane.key);
     if (!first) return;
     await this.processOne(lane.key, first);
+  }
+
+  /**
+   * 是否启用“启动前消息合并”。
+   *
+   * 关键点（中文）
+   * - 两个阈值都大于 0 才启用；
+   * - 任一阈值被设为 0，表示禁用该能力，保持“首条消息立即执行”。
+   */
+  private isBurstMergeEnabled(): boolean {
+    return this.config.mergeDebounceMs > 0 && this.config.mergeMaxWaitMs > 0;
+  }
+
+  /**
+   * 等待一小段时间，让同 lane 的连续消息尽量在一次 run 前合并。
+   *
+   * 关键点（中文）
+   * - 防抖窗口：`mergeDebounceMs`（期间若有新消息则续期）
+   * - 最长等待：`mergeMaxWaitMs`（防止无限等待）
+   */
+  private async collectInitialBurstItems(
+    laneKey: string,
+    first: ChatQueueItem,
+  ): Promise<ChatQueueItem[]> {
+    if (first.kind !== "exec") return [first];
+    if (!this.isBurstMergeEnabled()) return [first];
+
+    const startedAt = Date.now();
+    let lastInboundAt = startedAt;
+    let knownLaneSize = getChatQueueLaneSize(laneKey);
+
+    while (true) {
+      const now = Date.now();
+      const idleMs = now - lastInboundAt;
+      const elapsedMs = now - startedAt;
+      if (idleMs >= this.config.mergeDebounceMs) break;
+      if (elapsedMs >= this.config.mergeMaxWaitMs) break;
+
+      const remainingDebounceMs = this.config.mergeDebounceMs - idleMs;
+      const remainingMaxWaitMs = this.config.mergeMaxWaitMs - elapsedMs;
+      const sleepMs = Math.max(
+        1,
+        Math.min(
+          BURST_MERGE_POLL_INTERVAL_MS,
+          remainingDebounceMs,
+          remainingMaxWaitMs,
+        ),
+      );
+
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, sleepMs);
+        if (typeof timer.unref === "function") timer.unref();
+      });
+
+      const laneSize = getChatQueueLaneSize(laneKey);
+      if (laneSize > knownLaneSize) {
+        knownLaneSize = laneSize;
+        lastInboundAt = Date.now();
+      }
+    }
+
+    const drained = drainChatQueueLane(laneKey);
+    return drained.length > 0 ? [first, ...drained] : [first];
   }
 
   private shouldAppendHistory(item: ChatQueueItem): boolean {
@@ -414,13 +495,28 @@ export class ChatQueueWorker {
       return;
     }
 
-    await this.appendHistory(first);
-    if (first.kind === "audit") return;
+    if (first.kind === "audit") {
+      await this.appendHistory(first);
+      return;
+    }
 
     const serviceContext = this.requireContext();
     let dispatchedDirectStepCount = 0;
+    let runItem = first;
 
     let clearRequested = false;
+    const initialBurstItems = await this.collectInitialBurstItems(laneKey, first);
+    for (const item of initialBurstItems) {
+      if (item.kind === "control") {
+        if (item.control?.type === "clear") clearRequested = true;
+        continue;
+      }
+      await this.appendHistory(item);
+      if (item.kind === "exec") {
+        runItem = item;
+      }
+    }
+
     const onStepCallback = async (): Promise<ShipContextUserMessageV1[]> => {
       const drainedItems = drainChatQueueLane(laneKey);
       if (drainedItems.length === 0) return [];
@@ -458,7 +554,7 @@ export class ChatQueueWorker {
       stepIndex: number;
     }): Promise<void> => {
       const dispatched = await this.dispatchAssistantTextDirect({
-        contextId: first.contextId,
+        contextId: runItem.contextId,
         assistantText: params.text,
       });
       if (dispatched) {
@@ -466,25 +562,25 @@ export class ChatQueueWorker {
       }
     };
 
-    const typing = this.startTypingHeartbeat(first);
+    const typing = this.startTypingHeartbeat(runItem);
     let result: AgentResult;
     try {
       result = await serviceContext.run({
-        contextId: first.contextId,
-        query: first.text,
+        contextId: runItem.contextId,
+        query: runItem.text,
         onStepCallback,
         onAssistantStepCallback,
       });
     } catch (error) {
       const channelErrorText = buildChannelErrorText(error);
       this.logger.error("ChatQueueWorker execution failed", {
-        contextId: first.contextId,
+        contextId: runItem.contextId,
         error: String(error),
       });
 
       try {
         await serviceContext.appendAssistantMessage({
-          contextId: first.contextId,
+          contextId: runItem.contextId,
           fallbackText: channelErrorText,
           extra: {
             note: "chat_queue_worker_run_failed",
@@ -495,9 +591,9 @@ export class ChatQueueWorker {
       }
 
       await this.dispatchTextToChannel({
-        contextId: first.contextId,
+        contextId: runItem.contextId,
         text: channelErrorText,
-        messageId: first.messageId,
+        messageId: runItem.messageId,
       });
       return;
     } finally {
@@ -505,13 +601,13 @@ export class ChatQueueWorker {
     }
 
     if (clearRequested) {
-      serviceContext.clearAgent(first.contextId);
-      clearChatQueueLane(first.contextId);
+      serviceContext.clearAgent(runItem.contextId);
+      clearChatQueueLane(runItem.contextId);
     }
 
     try {
       await serviceContext.appendAssistantMessage({
-        contextId: first.contextId,
+        contextId: runItem.contextId,
         message: result.assistantMessage,
       });
     } catch {
@@ -524,16 +620,16 @@ export class ChatQueueWorker {
       // - 失败场景：必须回发最终失败信息（即使已有 step 输出）。
       if (result.success === false || dispatchedDirectStepCount === 0) {
         const dispatchedDirect = await this.dispatchAssistantMessageDirect({
-          contextId: first.contextId,
+          contextId: runItem.contextId,
           assistantMessage: result.assistantMessage,
         });
         // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里强制兜底回发。
         if (!dispatchedDirect && result.success === false) {
           const assistantText = extractTextFromUiMessage(result.assistantMessage).trim();
           await this.dispatchTextToChannel({
-            contextId: first.contextId,
+            contextId: runItem.contextId,
             text: assistantText || "❌ 执行失败，请稍后重试。",
-            messageId: first.messageId,
+            messageId: runItem.messageId,
           });
         }
       }

@@ -11,9 +11,9 @@ ShipMyAgent is built around local runtime execution, auditable on-disk state, an
 
 1. **CLI layer**: `sma init`, `sma agent ...`, `sma task ...`
 2. **Server layer**: HTTP routes (`/health`, `/api/execute`, `/api/services/*`, `/api/extensions/*`)
-3. **Service/Extension layer**: `chat`, `skill`, `task`, `voice`
+3. **Service/Extension layer**: `chat`, `skill`, `task`, `memory`, `voice`
 4. **Context layer**: `.ship/context/<contextId>/messages/messages.jsonl`
-5. **Storage layer**: `.ship/logs`, `.ship/task`, `.ship/chat`, `.ship/config`
+5. **Storage layer**: `.ship/logs`, `.ship/task`, `.ship/chat`, `.ship/memory`, `.ship/config`
 
 ## Core design choices
 

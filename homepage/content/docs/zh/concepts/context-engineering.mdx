@@ -10,13 +10,16 @@ ShipMyAgent 把“上下文”拆成可组合、可落盘的几层数据：
 1. `PROFILE.md` / `SOUL.md` / `USER.md`
 2. `ship.json` 配置
 3. `.ship/context/<contextId>/messages/messages.jsonl` 对话历史
-4. `.ship/context/<contextId>/memory/Primary.md` 长期记忆
+4. `.ship/memory/MEMORY.md` 长期记忆
+5. `.ship/memory/daily/<YYYY-MM-DD>.md` 每日增量记忆
+6. `.ship/context/<contextId>/memory/working.md` 会话工作记忆（可选）
 
 ## 为什么这样设计
 
 - 历史记录可审计，不依赖隐式内存。
 - 超长对话可 compact，保留最近消息与摘要。
 - 各 `contextId` 相互隔离，减少串话。
+- 记忆召回通过 `memory.search -> memory.get` 按预算检索，不再整文件注入。
 
 ## 实践建议
 

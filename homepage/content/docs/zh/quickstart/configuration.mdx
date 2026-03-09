@@ -64,7 +64,11 @@ ShipMyAgent 的核心配置由 4 部分组成：
   "services": {
     "chat": {
       "method": "direct",
-      "queue": { "maxConcurrency": 2 },
+      "queue": {
+        "maxConcurrency": 2,
+        "mergeDebounceMs": 600,
+        "mergeMaxWaitMs": 2000
+      },
       "channels": {
         "telegram": {
           "enabled": true,
@@ -76,6 +80,11 @@ ShipMyAgent 的核心配置由 4 部分组成：
   }
 }
 ```
+
+`services.chat.queue` 说明：
+- `maxConcurrency`：不同 chatKey lane 的全局并发上限。
+- `mergeDebounceMs`：连续入站消息的短防抖窗口，窗口内消息会尽量并入同一次 run。
+- `mergeMaxWaitMs`：合并等待的硬上限，避免持续来消息导致无限延迟。
 
 ### `services.skills`
 

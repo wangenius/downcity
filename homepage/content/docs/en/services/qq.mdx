@@ -35,3 +35,18 @@ sma agent on --daemon
 ```bash
 sma service status chat
 ```
+
+## Voice messages (voice/audio)
+
+When `extensions.voice.enabled=true`, QQ inbound `voice/audio` attachments are transcribed in best-effort mode and the transcript is appended to the user instruction.
+
+Recommended setup:
+
+```bash
+sma voice on SenseVoiceSmall
+sma voice status
+```
+
+Notes:
+- Transcription failures do not break the main chat flow.
+- QQ voice attachment delivery depends on gateway `AUDIO_ACTION` capability. If your bot app does not have that permission, audio payload fields may be missing.

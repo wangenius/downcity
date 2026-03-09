@@ -3,10 +3,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
+import {
+  buildQqVoiceTranscriptionInstruction,
+  extractQqIncomingAttachments,
+} from "./VoiceInput.js";
 import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
+import type { QqIncomingAttachment, QqRawInboundAttachment } from "@services/chat/types/QqVoice.js";
 import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
@@ -93,6 +98,14 @@ type QQMessageData = {
   message_reference?: QQMessageReference;
   reference?: QQMessageReference;
   reply_to_message?: QQReplyToMessage;
+  attachments?: QqRawInboundAttachment[] | string;
+  files?: QqRawInboundAttachment[] | string;
+  file_info?: QqRawInboundAttachment | QqRawInboundAttachment[] | string;
+  file_infos?: QqRawInboundAttachment[] | string;
+  media?: QqRawInboundAttachment | QqRawInboundAttachment[] | string;
+  medias?: QqRawInboundAttachment[] | string;
+  audio?: QqRawInboundAttachment | string;
+  voice?: QqRawInboundAttachment | string;
 };
 
 type QQSendMessageBody = {
@@ -692,9 +705,11 @@ export class QQBot extends BaseChatChannel {
 
     // 群聊和 C2C 消息
     const GROUP_AND_C2C_EVENT = 1 << 25;
+    // 语音/音频事件（用于 voice extension 转写链路）
+    const AUDIO_ACTION = 1 << 29;
 
     // 返回需要订阅的 intents
-    return GROUP_AND_C2C_EVENT;
+    return GROUP_AND_C2C_EVENT | AUDIO_ACTION;
   }
 
   /**
@@ -823,6 +838,7 @@ export class QQBot extends BaseChatChannel {
     // 提取纯文本内容（去除 @机器人 的部分）
     const rawContent = String(content || "");
     const userMessage = this.extractTextContent(rawContent);
+    const incomingAttachments = this.extractIncomingAttachments(data);
     const actor = this.extractAuthorIdentity(author);
 
     const enqueueGroupAudit = async (params: {
@@ -881,8 +897,8 @@ export class QQBot extends BaseChatChannel {
     const inWindow = this.isWithinFollowupWindow(chatKey, actor.userId);
     const isAddressed = isMentioned || isReplyToBot || inWindow;
 
-    // 关键点（中文）：与 Telegram 对齐，纯 @ 空消息不触发执行。
-    if (!userMessage) {
+    // 关键点（中文）：与 Telegram 对齐，纯 @ 空消息且无附件时不触发执行。
+    if (!userMessage && incomingAttachments.length === 0) {
       // 关键点（中文）：显式 @bot / 回复bot 的空消息也可激活 follow-up 窗口，
       // 便于用户先点名机器人，再发送下一条具体内容。
       if (actor.userId && (isMentioned || isReplyToBot)) {
@@ -960,11 +976,27 @@ export class QQBot extends BaseChatChannel {
         return;
       }
       if (actor.userId) this.touchFollowupWindow(chatKey, actor.userId);
+      const instructions = await this.buildInboundInstructions({
+        chatId: groupId,
+        chatKey,
+        messageId,
+        userMessage,
+        attachments: incomingAttachments,
+      });
+      if (!instructions) {
+        await enqueueGroupAudit({
+          reason: "empty_after_extract",
+          isMentioned,
+          isReplyToBot,
+          inWindow,
+        });
+        return;
+      }
       await this.executeAndReply(
         groupId,
         "group",
         messageId,
-        userMessage,
+        instructions,
         actor,
       );
     }
@@ -989,6 +1021,7 @@ export class QQBot extends BaseChatChannel {
     const chatId = actor.userId || "";
 
     const userMessage = this.extractTextContent(String(content || ""));
+    const incomingAttachments = this.extractIncomingAttachments(data);
 
     if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
       this.logger.debug("忽略机器人自身消息（c2c）", {
@@ -1006,7 +1039,15 @@ export class QQBot extends BaseChatChannel {
     if (userMessage.startsWith("/")) {
       await this.handleCommand(chatId, "c2c", messageId, userMessage);
     } else {
-      await this.executeAndReply(chatId, "c2c", messageId, userMessage, actor);
+      const instructions = await this.buildInboundInstructions({
+        chatId,
+        chatKey: this.getChatKey({ chatId, chatType }),
+        messageId,
+        userMessage,
+        attachments: incomingAttachments,
+      });
+      if (!instructions) return;
+      await this.executeAndReply(chatId, "c2c", messageId, instructions, actor);
     }
   }
 
@@ -1027,6 +1068,7 @@ export class QQBot extends BaseChatChannel {
     }
 
     const userMessage = this.extractTextContent(String(content || ""));
+    const incomingAttachments = this.extractIncomingAttachments(data);
     const actor = this.extractAuthorIdentity(author);
 
     if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
@@ -1043,11 +1085,19 @@ export class QQBot extends BaseChatChannel {
     if (userMessage.startsWith("/")) {
       await this.handleCommand(channelId, "channel", messageId, userMessage);
     } else {
+      const instructions = await this.buildInboundInstructions({
+        chatId: channelId,
+        chatKey: this.getChatKey({ chatId: channelId, chatType }),
+        messageId,
+        userMessage,
+        attachments: incomingAttachments,
+      });
+      if (!instructions) return;
       await this.executeAndReply(
         channelId,
         "channel",
         messageId,
-        userMessage,
+        instructions,
         actor,
       );
     }
@@ -1130,6 +1180,60 @@ export class QQBot extends BaseChatChannel {
       .replace(/<@!\d+>/g, "")
       .replace(/<@\d+>/g, "")
       .trim();
+  }
+
+  /**
+   * 提取 QQ 入站附件（best-effort）。
+   *
+   * 关键点（中文）
+   * - 字段来源不稳定，统一委托 `VoiceInput` 做宽松归一化。
+   * - 这里只做“提取”，不做网络下载，避免阻塞普通文本路径。
+   */
+  private extractIncomingAttachments(data: QQMessageData): QqIncomingAttachment[] {
+    return extractQqIncomingAttachments({
+      attachments: data.attachments,
+      files: data.files,
+      file_info: data.file_info,
+      file_infos: data.file_infos,
+      media: data.media,
+      medias: data.medias,
+      audio: data.audio,
+      voice: data.voice,
+    });
+  }
+
+  /**
+   * 构造入站执行指令（文本 + QQ 语音转写）。
+   *
+   * 关键点（中文）
+   * - 仅当存在 voice/audio 附件时触发转写，普通文本路径零额外开销。
+   * - 转写失败不抛错，保持主链路 best-effort。
+   */
+  private async buildInboundInstructions(params: {
+    chatId: string;
+    chatKey: string;
+    messageId: string;
+    userMessage: string;
+    attachments: QqIncomingAttachment[];
+  }): Promise<string> {
+    const text = String(params.userMessage || "").trim();
+    const hasVoiceAttachment = params.attachments.some(
+      (item) => item.kind === "voice" || item.kind === "audio",
+    );
+    if (!hasVoiceAttachment) return text;
+
+    const transcript = await buildQqVoiceTranscriptionInstruction({
+      context: this.context,
+      logger: this.logger,
+      rootPath: this.rootPath,
+      chatId: params.chatId,
+      messageId: params.messageId,
+      chatKey: params.chatKey,
+      attachments: params.attachments,
+      resolveAuthToken: async () => this.getAuthToken(),
+    });
+
+    return [transcript || undefined, text || undefined].filter(Boolean).join("\n\n");
   }
 
   /**

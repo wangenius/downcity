@@ -1,11 +1,11 @@
 ---
 title: sma service
-description: Manage service runtime and bridge service commands
+description: Manage service runtime and forward service commands
 ---
 
 # `sma service`
 
-Service runtime management command group.
+Manage service runtime state and forward service commands.
 
 ## Usage
 
@@ -15,22 +15,26 @@ sma service <subcommand>
 
 ## Subcommands
 
-- `list`: list all service runtime status
-- `status <serviceName>`: view one service status
-- `start <serviceName>`: start a service
-- `stop <serviceName>`: stop a service
-- `restart <serviceName>`: restart a service
-- `command <serviceName> <command>`: forward service command payload
+- `list`
+- `status <serviceName>`
+- `start <serviceName>`
+- `stop <serviceName>`
+- `restart <serviceName>`
+- `command <serviceName> <command> --payload <json>`
 
-## Example
+## Examples
 
 ```bash
 sma service list
 sma service status chat
 sma service restart task
-sma service command chat status
+sma service command task list --payload '{"status":"enabled"}'
 ```
 
 ## Notes
 
-- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.
+Start daemon runtime first:
+
+```bash
+sma agent on --daemon
+```

@@ -1,35 +1,40 @@
 ---
 title: sma skill
-description: Skill service actions
+description: Skill service actions (find/install/list/lookup)
 ---
 
 # `sma skill`
 
-Skill service command group.
+Manage skill discovery, installation, and lookup.
 
 ## Usage
 
 ```bash
-sma skill <subcommand>
+sma skill <subcommand> [options]
 ```
 
 ## Subcommands
 
-- `find <query>`: find not-yet-learned skills
-- `install <spec>`: download and learn a skill
-- `list`: list discovered local skills
-- `lookup <name>`: read learned skill content (`SKILL.md`)
+- `find <query>`
+- `install <spec>`
+- `list`
+- `lookup <name>`
 
-## Example
+## `install` key options
+
+- `-g, --global`: global install (default true)
+- `-y, --yes`: skip confirmation (default true)
+- `--agent <agent>`: default `claude-code`
+
+## Examples
 
 ```bash
-sma skill find telegram
-sma skill install owner/repo@skill-name
+sma skill find playwright
+sma skill install owner/repo@playwright
 sma skill list
 sma skill lookup playwright
 ```
 
-## Notes
+## Recommended flow
 
-- In typical workflow, use: `find -> install -> lookup`.
-- Start runtime first when running daemon-facing skill actions.
+`find -> install -> lookup`

@@ -1,11 +1,11 @@
 ---
 title: sma extension
-description: 管理 extension runtime 与转发 extension command
+description: 管理 extension runtime 与 command 转发
 ---
 
 # `sma extension`
 
-extension runtime 管理命令组。
+管理 extension 运行状态，并转发 extension command。
 
 ## 用法
 
@@ -15,12 +15,12 @@ sma extension <subcommand>
 
 ## 子命令
 
-- `list`：列出全部 extension 运行状态
-- `status <extensionName>`：查看单个 extension 状态
-- `start <extensionName>`：启动 extension
-- `stop <extensionName>`：停止 extension
-- `restart <extensionName>`：重启 extension
-- `command <extensionName> <command>`：转发 extension command 载荷
+- `list`
+- `status <extensionName>`
+- `start <extensionName>`
+- `stop <extensionName>`
+- `restart <extensionName>`
+- `command <extensionName> <command> --payload <json>`
 
 ## 示例
 
@@ -28,9 +28,13 @@ sma extension <subcommand>
 sma extension list
 sma extension status voice
 sma extension restart voice
-sma extension command voice status
+sma extension command voice status --payload '{}'
 ```
 
 ## 说明
 
-- 该命令组面向 daemon 运行态，先启动 runtime：`sma agent on --daemon`。
+需要先启动 daemon runtime：
+
+```bash
+sma agent on --daemon
+```

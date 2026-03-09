@@ -1,11 +1,11 @@
 ---
 title: sma config
-description: 管理 ship.json 配置与 alias
+description: 管理 ship.json、alias 与 llm provider/model
 ---
 
 # `sma config`
 
-管理 `ship.json`，包含 `llm` provider/model 配置与 alias 设置。
+管理项目 `ship.json`，并提供 `llm` 结构化管理命令。
 
 ## 用法
 
@@ -15,28 +15,32 @@ sma config <subcommand>
 
 ## 子命令
 
-- `sma config get [keyPath]`：读取完整配置或指定路径
-- `sma config set <keyPath> <value>`：写入指定路径（`value` 支持 JSON 字面量）
-- `sma config unset <keyPath>`：删除指定路径
-- `sma config llm`：管理 `ship.json.llm`
-- `sma config alias`：向 shell rc 写入 `alias sma="shipmyagent"`
+- `get [keyPath]`
+- `set <keyPath> <value>`
+- `unset <keyPath>`
+- `alias`
+- `llm`
 
-## `alias` 选项
+## `llm` 子命令
 
-- `--shell <shell>`：`zsh | bash | both`（默认 `both`）
-- `--dry-run`：仅打印将修改内容，不写入文件
-- `--print`：仅打印 alias 内容（可配合 `eval`）
+```bash
+sma config llm provider list
+sma config llm provider add <providerId>
+sma config llm provider update <providerId>
+sma config llm provider remove <providerId>
+
+sma config llm model list
+sma config llm model add <modelId>
+sma config llm model update <modelId>
+sma config llm model activate <modelId>
+sma config llm model remove <modelId>
+```
 
 ## 示例
 
 ```bash
-sma config get
-sma config get llm
-sma config set start.port 3000
-sma config set start.webui true
-sma config unset start.webport
-
-sma config alias
-sma config alias --shell zsh
+sma config get llm.activeModel
+sma config set start.port 3001
+sma config unset services.chat.channels.telegram
 sma config alias --dry-run
 ```

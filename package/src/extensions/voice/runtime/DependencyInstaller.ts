@@ -55,6 +55,18 @@ export interface VoiceDependencyInstallItem {
    */
   elapsedMs: number;
   /**
+   * 是否跳过安装。
+   *
+   * 说明（中文）
+   * - `true` 表示依赖已存在，仅做检查，不再重复安装。
+   * - `false` 或缺省表示执行了实际安装。
+   */
+  skipped?: boolean;
+  /**
+   * 跳过原因（可选）。
+   */
+  skipReason?: string;
+  /**
    * stdout 尾部（可选）。
    */
   stdoutTail?: string;
@@ -181,9 +193,41 @@ function dedupeRunners(runners: VoiceDependencyRunner[]): VoiceDependencyRunner[
 
 function getRunnerPackages(runner: VoiceDependencyRunner): string[] {
   if (runner === "funasr") {
-    return ["funasr"];
+    // 关键点（中文）：FunASR 在常见语音模型推理路径会依赖 torch/torchaudio。
+    // 仅安装 funasr 会在转写阶段触发 `ModuleNotFoundError: torch`。
+    return ["funasr", "torch", "torchaudio"];
   }
   return ["transformers", "torch", "torchaudio"];
+}
+
+async function checkRunnerPackagesInstalled(params: {
+  pythonBin: string;
+  packages: string[];
+  timeoutMs: number;
+}): Promise<{
+  installed: boolean;
+  args: string[];
+  command: string;
+}> {
+  const args = ["-m", "pip", "show", ...params.packages];
+  const command = [params.pythonBin, ...args].join(" ");
+  try {
+    await execFileAsync(params.pythonBin, args, {
+      timeout: params.timeoutMs,
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    return {
+      installed: true,
+      args,
+      command,
+    };
+  } catch {
+    return {
+      installed: false,
+      args,
+      command,
+    };
+  }
 }
 
 type RunnerInstallFailure = {
@@ -209,6 +253,28 @@ async function installRunnerWithPython(params: {
   timeoutMs: number;
 }): Promise<RunnerInstallAttempt> {
   const packages = getRunnerPackages(params.runner);
+  const checkStartedAt = Date.now();
+  const checkResult = await checkRunnerPackagesInstalled({
+    pythonBin: params.pythonBin,
+    packages,
+    timeoutMs: params.timeoutMs,
+  });
+  if (checkResult.installed) {
+    return {
+      success: true,
+      item: {
+        runner: params.runner,
+        pythonBin: params.pythonBin,
+        args: checkResult.args,
+        packages,
+        command: checkResult.command,
+        elapsedMs: Date.now() - checkStartedAt,
+        skipped: true,
+        skipReason: "already-installed",
+      },
+    };
+  }
+
   const args = [
     "-m",
     "pip",

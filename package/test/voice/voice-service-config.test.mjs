@@ -53,6 +53,48 @@ function buildRuntime(rootPath, config) {
   };
 }
 
+test("voice install skips download when local model files already exist", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-voice-install-skip-"));
+  t.after(async () => {
+    await fs.remove(tempRoot);
+  });
+
+  const modelsDir = path.join(tempRoot, ".ship", "models", "voice");
+  const modelDir = path.join(modelsDir, "SenseVoiceSmall");
+  await fs.ensureDir(modelDir);
+  await fs.writeFile(path.join(modelDir, "model.bin"), "dummy", "utf-8");
+
+  const config = createBaseShipConfig();
+  await fs.writeJson(path.join(tempRoot, "ship.json"), config, { spaces: 2 });
+  const runtime = buildRuntime(tempRoot, config);
+
+  const originalFetch = globalThis.fetch;
+  const fetchCalls = [];
+  globalThis.fetch = async (...args) => {
+    fetchCalls.push(args);
+    throw new Error("fetch should not be called when model is already installed");
+  };
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const result = await voiceExtension.actions.install.execute({
+    context: runtime,
+    payload: {
+      modelIds: ["SenseVoiceSmall"],
+      force: false,
+      modelsDir,
+    },
+    extensionName: "voice",
+    actionName: "install",
+  });
+  assert.equal(result.success, true);
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(result.data.installResults.length, 1);
+  assert.equal(result.data.installResults[0].skipped, true);
+  assert.equal(result.data.installResults[0].skipSource, "directory");
+});
+
 test("voice on/off/use updates extensions.voice config in ship.json", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-voice-service-"));
   t.after(async () => {
@@ -129,9 +171,9 @@ test("voice on command mapInput parses no-install/force and model IDs", async ()
   assert.equal(payload.activeModel, "SenseVoiceSmall");
 });
 
-test("voice init command mapInput applies defaults", async () => {
+test("voice init command mapInput applies defaults when models are provided", async () => {
   const payload = await voiceExtension.actions.init.command.mapInput({
-    args: [],
+    args: ["SenseVoiceSmall"],
     opts: {},
   });
 

@@ -1,38 +1,61 @@
 ---
 title: sma task
-description: task service actions
+description: task service actions（list/create/run/update/status）
 ---
 
 # `sma task`
 
-task service 命令组。
+任务系统命令组。
 
 ## 用法
 
 ```bash
-sma task <subcommand>
+sma task <subcommand> [options]
 ```
 
 ## 子命令
 
-- `list`：列出任务
-- `create`：创建任务定义
-- `run <taskId>`：手动运行任务
-- `delete <taskId>`：删除任务定义与历史运行目录
-- `update <taskId>`：更新任务定义
-- `status <taskId> <status>`：设置任务状态（`enabled | paused | disabled`）
-- `enable <taskId>`：启用任务
-- `disable <taskId>`：禁用任务
+- `list`
+- `create`
+- `run <taskId>`
+- `update <taskId>`
+- `delete <taskId>`
+- `status <taskId> <enabled|paused|disabled>`
+- `enable <taskId>`
+- `disable <taskId>`
+
+## `create` 关键参数
+
+- `--title <title>`（必填）
+- `--description <description>`（必填）
+- `--context-id <contextId>`（必填）
+- `--cron <cron>`（默认 `@manual`）
+- `--activate`（等同 `--status enabled`）
+- `--kind <agent|script>`
+- `--time <ISO8601>`（带时区；建议配合 `--cron @manual`）
+
+## `update` 常用参数
+
+- `--cron` / `--timezone` / `--status`
+- `--required-artifact <path>`（可重复）
+- `--clear-required-artifacts`
+- `--min-output-chars` / `--clear-min-output-chars`
+- `--max-dialogue-rounds` / `--clear-max-dialogue-rounds`
 
 ## 示例
 
 ```bash
 sma task list
-sma task create --title "Daily report" --description "Summarize yesterday"
-sma task run daily-report
-sma task disable daily-report
+sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task run daily-check
+sma task update daily-check --cron "0 10 * * 1-5"
+sma task disable daily-check
 ```
 
 ## 说明
 
-- 该命令组面向 daemon 运行态，先启动 runtime：`sma agent on --daemon`。
+任务调度依赖运行中的 runtime：
+
+```bash
+sma agent on --daemon
+```

@@ -11,7 +11,6 @@ The Voice extension provides local speech-to-text (STT).
 
 ```bash
 sma voice models
-sma voice init SenseVoiceSmall
 sma voice on SenseVoiceSmall
 sma voice install whisper-large-v3-turbo
 sma voice use whisper-large-v3-turbo
@@ -21,9 +20,8 @@ sma voice off
 
 ## Notes
 
-- `voice init` is the zero-to-ready bootstrap (enable + model install + auto dependency install).
 - `voice on` supports interactive model selection.
-- `voice install` installs models without enabling the extension.
+- `voice install` installs models without enabling the extension; existing local models are skipped unless `--force` is set.
 - Configuration is stored at `ship.json.extensions.voice`.
 
 ## Runtime status

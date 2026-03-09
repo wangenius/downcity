@@ -3,7 +3,7 @@ import fs from "node:fs";
 import fsExtra from "fs-extra";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { VoiceModelCatalogItem } from "@main/types/Voice.js";
+import type { VoiceModelCatalogItem, VoiceModelId } from "@main/types/Voice.js";
 
 const HUGGINGFACE_HOST = "https://huggingface.co";
 
@@ -72,6 +72,67 @@ export interface VoiceModelInstallProgressEvent {
    * 当前文件序号（从 1 开始，可选）。
    */
   index?: number;
+}
+
+/**
+ * 判断模型在本地是否已安装。
+ *
+ * 关键点（中文）
+ * - 优先识别安装清单 `shipmyagent.voice.install.json`。
+ * - 若无清单但目录非空，也视为已存在模型，避免重复下载。
+ */
+export async function detectLocalVoiceModelInstallState(input: {
+  modelId: VoiceModelId;
+  modelsRootDir: string;
+}): Promise<{
+  /**
+   * 模型目录（绝对路径）。
+   */
+  modelDir: string;
+  /**
+   * 是否判断为“已安装”。
+   */
+  installed: boolean;
+  /**
+   * 已安装来源。
+   */
+  source?: "manifest" | "directory";
+}> {
+  const modelDir = path.resolve(input.modelsRootDir, input.modelId);
+  const manifestPath = path.join(modelDir, "shipmyagent.voice.install.json");
+  const hasManifest = await fsExtra.pathExists(manifestPath);
+  if (hasManifest) {
+    return {
+      modelDir,
+      installed: true,
+      source: "manifest",
+    };
+  }
+
+  const hasModelDir = await fsExtra.pathExists(modelDir);
+  if (!hasModelDir) {
+    return {
+      modelDir,
+      installed: false,
+    };
+  }
+
+  const entries = await fsExtra.readdir(modelDir).catch(() => []);
+  const hasPersistedFiles = entries.some(
+    (entry) => !String(entry).endsWith(".downloading"),
+  );
+  if (!hasPersistedFiles) {
+    return {
+      modelDir,
+      installed: false,
+    };
+  }
+
+  return {
+    modelDir,
+    installed: true,
+    source: "directory",
+  };
 }
 
 function encodePathSegments(input: string): string {

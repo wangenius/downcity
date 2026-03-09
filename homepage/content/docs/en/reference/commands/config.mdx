@@ -1,11 +1,11 @@
 ---
 title: sma config
-description: Manage ship.json configuration and alias
+description: Manage ship.json, alias, and llm provider/model entries
 ---
 
 # `sma config`
 
-Manage `ship.json`, including `llm` provider/model configuration and alias setup.
+Manage project `ship.json` and structured LLM configuration commands.
 
 ## Usage
 
@@ -15,28 +15,32 @@ sma config <subcommand>
 
 ## Subcommands
 
-- `sma config get [keyPath]`: read full config or a specific path
-- `sma config set <keyPath> <value>`: set value at path (`value` supports JSON literals)
-- `sma config unset <keyPath>`: remove path
-- `sma config llm`: manage `ship.json.llm`
-- `sma config alias`: write `alias sma="shipmyagent"` into shell rc files
+- `get [keyPath]`
+- `set <keyPath> <value>`
+- `unset <keyPath>`
+- `alias`
+- `llm`
 
-## `alias` options
-
-- `--shell <shell>`: `zsh | bash | both` (default: `both`)
-- `--dry-run`: print planned changes without writing files
-- `--print`: print alias content only (for `eval`)
-
-## Example
+## `llm` subcommands
 
 ```bash
-sma config get
-sma config get llm
-sma config set start.port 3000
-sma config set start.webui true
-sma config unset start.webport
+sma config llm provider list
+sma config llm provider add <providerId>
+sma config llm provider update <providerId>
+sma config llm provider remove <providerId>
 
-sma config alias
-sma config alias --shell zsh
+sma config llm model list
+sma config llm model add <modelId>
+sma config llm model update <modelId>
+sma config llm model activate <modelId>
+sma config llm model remove <modelId>
+```
+
+## Examples
+
+```bash
+sma config get llm.activeModel
+sma config set start.port 3001
+sma config unset services.chat.channels.telegram
 sma config alias --dry-run
 ```

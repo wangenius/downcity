@@ -1,11 +1,11 @@
 ---
 title: sma service
-description: 管理 service runtime 与转发 service command
+description: 管理 service runtime 与 command 转发
 ---
 
 # `sma service`
 
-service runtime 管理命令组。
+管理 service 运行状态，并转发 service command。
 
 ## 用法
 
@@ -15,12 +15,12 @@ sma service <subcommand>
 
 ## 子命令
 
-- `list`：列出全部 service 运行状态
-- `status <serviceName>`：查看单个 service 状态
-- `start <serviceName>`：启动 service
-- `stop <serviceName>`：停止 service
-- `restart <serviceName>`：重启 service
-- `command <serviceName> <command>`：转发 service command 载荷
+- `list`
+- `status <serviceName>`
+- `start <serviceName>`
+- `stop <serviceName>`
+- `restart <serviceName>`
+- `command <serviceName> <command> --payload <json>`
 
 ## 示例
 
@@ -28,9 +28,13 @@ sma service <subcommand>
 sma service list
 sma service status chat
 sma service restart task
-sma service command chat status
+sma service command task list --payload '{"status":"enabled"}'
 ```
 
 ## 说明
 
-- 该命令组面向 daemon 运行态，先启动 runtime：`sma agent on --daemon`。
+需要先启动 daemon runtime：
+
+```bash
+sma agent on --daemon
+```

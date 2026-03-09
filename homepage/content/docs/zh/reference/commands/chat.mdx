@@ -1,34 +1,63 @@
 ---
 title: sma chat
-description: chat service actions
+description: chat service actions（send/react/context/history）
 ---
 
 # `sma chat`
 
-chat service 命令组。
+用于向指定会话发送消息、贴表情、查看上下文和读取历史。
 
 ## 用法
 
 ```bash
-sma chat <subcommand>
+sma chat <subcommand> [options]
 ```
 
 ## 子命令
 
-- `send`：发送消息到目标 `chatKey`
-- `react`：给目标消息贴表情（当前主要 Telegram）
+- `send`：发送消息
+- `react`：给消息贴表情（当前主要 Telegram）
 - `context`：查看当前会话上下文快照
-- `history`：读取 chat 历史消息（默认最近 30 条）
+- `history`：读取历史消息
+
+## `send` 常用选项
+
+- `--text <text>`：消息正文
+- `--stdin`：从标准输入读消息正文
+- `--text-file <file>`：从文件读消息正文
+- `--chat-key <chatKey>`：目标会话
+- `--delay <ms>`：延迟发送
+- `--time <time>`：定时发送（时间戳秒/毫秒或 ISO）
+- `--reply`：reply_to_message 发送
+
+## `react` 常用选项
+
+- `--emoji <emoji>`：表情，默认 👍
+- `--message-id <id>`：目标消息 ID
+- `--chat-key <chatKey>`：目标会话
+- `--big`：大表情（Telegram `is_big`）
+
+## `history` 常用选项
+
+- `--chat-key <chatKey>`
+- `--context-id <contextId>`
+- `--limit <n>`
+- `--direction <all|inbound|outbound>`
+- `--before-ts <ts>` / `--after-ts <ts>`（毫秒）
 
 ## 示例
 
 ```bash
-sma chat send --text "done"
-sma chat react --emoji "✅"
-sma chat context
-sma chat history --limit 50
+sma chat send --chat-key telegram-chat-123 --text "done"
+sma chat react --chat-key telegram-chat-123 --emoji "✅"
+sma chat context --chat-key telegram-chat-123
+sma chat history --chat-key telegram-chat-123 --limit 50
 ```
 
 ## 说明
 
-- 该命令组面向 daemon 运行态，先启动 runtime：`sma agent on --daemon`。
+该命令组通常需要已运行的 daemon：
+
+```bash
+sma agent on --daemon
+```

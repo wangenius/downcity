@@ -28,6 +28,7 @@ import {
   toPortableRelativePath,
 } from "./runtime/ConfigStore.js";
 import {
+  detectLocalVoiceModelInstallState,
   installVoiceModelFromHuggingFace,
   type VoiceModelInstallProgressEvent,
 } from "./runtime/Installer.js";
@@ -229,7 +230,19 @@ function parseVoiceModelArgs(args: string[]): VoiceModelId[] {
 
 async function selectVoiceModelsInteractively(params: {
   message: string;
+  /**
+   * 默认勾选模型（可选）。
+   *
+   * 说明（中文）
+   * - 传空数组表示不预选任何模型，强制用户显式选择。
+   */
+  defaultSelectedModelIds?: VoiceModelId[];
 }): Promise<VoiceModelId[]> {
+  const defaultSelectedSet = new Set<VoiceModelId>(
+    Array.isArray(params.defaultSelectedModelIds)
+      ? params.defaultSelectedModelIds
+      : ["SenseVoiceSmall"],
+  );
   const answer = await prompts({
     type: "multiselect",
     name: "selectedModels",
@@ -240,7 +253,7 @@ async function selectVoiceModelsInteractively(params: {
     choices: VOICE_MODEL_CATALOG.map((item) => ({
       title: `${item.label}  (${item.description})`,
       value: item.id,
-      selected: item.id === "SenseVoiceSmall",
+      selected: defaultSelectedSet.has(item.id),
     })),
   });
   const selected = Array.isArray(answer.selectedModels)
@@ -250,6 +263,43 @@ async function selectVoiceModelsInteractively(params: {
     throw new Error("No voice model selected");
   }
   return dedupeVoiceModelIds(selected);
+}
+
+/**
+ * 判断当前进程是否可进行交互式提问。
+ */
+function canPromptInteractively(): boolean {
+  return process.stdin.isTTY === true && process.stdout.isTTY === true;
+}
+
+/**
+ * 在多模型场景下交互选择 active model。
+ */
+async function selectActiveVoiceModelInteractively(params: {
+  modelIds: VoiceModelId[];
+  message: string;
+}): Promise<VoiceModelId> {
+  const modelIds = dedupeVoiceModelIds(params.modelIds);
+  if (modelIds.length === 1) return modelIds[0];
+  const answer = await prompts({
+    type: "select",
+    name: "activeModel",
+    message: params.message,
+    choices: modelIds.map((modelId) => {
+      const catalogItem = getVoiceModelCatalogItem(modelId);
+      const label = catalogItem ? catalogItem.label : modelId;
+      return {
+        title: `${label} (${modelId})`,
+        value: modelId,
+      };
+    }),
+    initial: 0,
+  });
+  const activeModel = resolveVoiceModelId(String(answer.activeModel || ""));
+  if (!activeModel || !modelIds.includes(activeModel)) {
+    throw new Error("No active voice model selected");
+  }
+  return activeModel;
 }
 
 function readInstalledModelIds(raw: unknown): VoiceModelId[] {
@@ -334,10 +384,79 @@ function toDependencyInstallJson(
       packages: item.packages,
       command: item.command,
       elapsedMs: item.elapsedMs,
+      ...(item.skipped === true ? { skipped: true } : {}),
+      ...(typeof item.skipReason === "string" ? { skipReason: item.skipReason } : {}),
       ...(typeof item.stdoutTail === "string" ? { stdoutTail: item.stdoutTail } : {}),
       ...(typeof item.stderrTail === "string" ? { stderrTail: item.stderrTail } : {}),
     })),
   };
+}
+
+async function installVoiceModelsWithSkip(params: {
+  modelIds: VoiceModelId[];
+  modelsRootDir: string;
+  force: boolean;
+  hfToken?: string;
+  logger: {
+    info(message: string, payload?: Record<string, JsonValue>): void;
+  };
+}): Promise<Array<Record<string, JsonValue>>> {
+  const installResults: Array<Record<string, JsonValue>> = [];
+  for (const modelId of params.modelIds) {
+    const model = getVoiceModelCatalogItem(modelId);
+    if (!model) {
+      throw new Error(`Voice model catalog entry not found: ${modelId}`);
+    }
+
+    const localState = await detectLocalVoiceModelInstallState({
+      modelId,
+      modelsRootDir: params.modelsRootDir,
+    });
+    if (!params.force && localState.installed) {
+      params.logger.info("Voice model already exists, skip install", {
+        modelId,
+        modelDir: localState.modelDir,
+        skipSource: localState.source || "unknown",
+      });
+      installResults.push({
+        modelId,
+        modelDir: localState.modelDir,
+        repoId: model.huggingfaceRepo,
+        revision: model.revision,
+        downloadedFiles: 0,
+        skippedFiles: 0,
+        downloadedFilePaths: [],
+        skippedFilePaths: [],
+        skipped: true,
+        skipSource: localState.source || "unknown",
+        progressEvents: [toInstallProgressJson({ stage: "skip" })],
+      });
+      continue;
+    }
+
+    const progressEvents: Array<Record<string, JsonValue>> = [];
+    const installed = await installVoiceModelFromHuggingFace({
+      model,
+      modelsRootDir: params.modelsRootDir,
+      force: params.force,
+      hfToken: params.hfToken,
+      onProgress: (event) => {
+        progressEvents.push(toInstallProgressJson(event));
+      },
+    });
+    installResults.push({
+      modelId,
+      modelDir: installed.modelDir,
+      repoId: installed.repoId,
+      revision: installed.revision,
+      downloadedFiles: installed.downloadedFiles,
+      skippedFiles: installed.skippedFiles,
+      downloadedFilePaths: installed.downloadedFilePaths,
+      skippedFilePaths: installed.skippedFilePaths,
+      progressEvents,
+    });
+  }
+  return installResults;
 }
 
 export const voiceExtension: Extension = {
@@ -425,36 +544,15 @@ export const voiceExtension: Extension = {
           projectRoot: params.context.rootPath,
           modelsDir: payload.modelsDir,
         });
-        const installResults: Array<Record<string, JsonValue>> = [];
-        if (payload.install) {
-          for (const modelId of payload.modelIds) {
-            const model = getVoiceModelCatalogItem(modelId);
-            if (!model) {
-              throw new Error(`Voice model catalog entry not found: ${modelId}`);
-            }
-            const progressEvents: Array<Record<string, JsonValue>> = [];
-            const installed = await installVoiceModelFromHuggingFace({
-              model,
+        const installResults = payload.install
+          ? await installVoiceModelsWithSkip({
+              modelIds: payload.modelIds,
               modelsRootDir,
               force: payload.force,
               hfToken: payload.hfToken,
-              onProgress: (event) => {
-                progressEvents.push(toInstallProgressJson(event));
-              },
-            });
-            installResults.push({
-              modelId,
-              modelDir: installed.modelDir,
-              repoId: installed.repoId,
-              revision: installed.revision,
-              downloadedFiles: installed.downloadedFiles,
-              skippedFiles: installed.skippedFiles,
-              downloadedFilePaths: installed.downloadedFilePaths,
-              skippedFilePaths: installed.skippedFilePaths,
-              progressEvents,
-            });
-          }
-        }
+              logger: params.context.logger,
+            })
+          : [];
 
         const voiceConfig = ensureVoiceExtensionConfig(params.context.config);
         const existingInstalled = readInstalledModelIds(voiceConfig.installedModels);
@@ -509,13 +607,31 @@ export const voiceExtension: Extension = {
             .option("--force", "强制覆盖并重下已存在模型文件")
             .option("--hf-token <token>", "HuggingFace token（私有/Gated 模型场景）");
         },
-        mapInput({ args, opts }): VoiceInitPayload {
+        async mapInput({ args, opts }): Promise<VoiceInitPayload> {
           const fromArgs = parseVoiceModelArgs(args);
-          const modelIds: VoiceModelId[] =
-            fromArgs.length > 0 ? fromArgs : ["SenseVoiceSmall"];
-          const activeModel = getStringOpt(opts, "activeModel")
-            ? parseVoiceModelIdOrThrow(String(getStringOpt(opts, "activeModel")))
-            : modelIds[0];
+          let modelIds: VoiceModelId[] = [];
+          if (fromArgs.length > 0) {
+            modelIds = fromArgs;
+          } else {
+            if (!canPromptInteractively()) {
+              throw new Error(
+                'No voice models provided in non-interactive mode. Pass models explicitly, for example: "sma voice init SenseVoiceSmall".',
+              );
+            }
+            modelIds = await selectVoiceModelsInteractively({
+              message: "请选择要初始化的语音识别模型（可多选）",
+              defaultSelectedModelIds: [],
+            });
+          }
+          const activeModelOpt = getStringOpt(opts, "activeModel");
+          const activeModel = activeModelOpt
+            ? parseVoiceModelIdOrThrow(String(activeModelOpt))
+            : fromArgs.length > 0
+              ? modelIds[0]
+              : await selectActiveVoiceModelInteractively({
+                  modelIds,
+                  message: "请选择默认激活模型（active model）",
+                });
           if (!modelIds.includes(activeModel)) {
             throw new Error(
               `active-model "${activeModel}" is not in selected models: ${modelIds.join(", ")}`,
@@ -544,48 +660,43 @@ export const voiceExtension: Extension = {
           modelsDir: payload.modelsDir,
         });
 
-        const installResults: Array<Record<string, JsonValue>> = [];
-        if (payload.installModel) {
-          for (const modelId of payload.modelIds) {
-            const model = getVoiceModelCatalogItem(modelId);
-            if (!model) {
-              throw new Error(`Voice model catalog entry not found: ${modelId}`);
-            }
-            const progressEvents: Array<Record<string, JsonValue>> = [];
-            const installed = await installVoiceModelFromHuggingFace({
-              model,
+        const installResults = payload.installModel
+          ? await installVoiceModelsWithSkip({
+              modelIds: payload.modelIds,
               modelsRootDir,
               force: payload.force,
               hfToken: payload.hfToken,
-              onProgress: (event) => {
-                progressEvents.push(toInstallProgressJson(event));
-              },
-            });
-            installResults.push({
-              modelId,
-              modelDir: installed.modelDir,
-              repoId: installed.repoId,
-              revision: installed.revision,
-              downloadedFiles: installed.downloadedFiles,
-              skippedFiles: installed.skippedFiles,
-              downloadedFilePaths: installed.downloadedFilePaths,
-              skippedFilePaths: installed.skippedFilePaths,
-              progressEvents,
-            });
-          }
-        }
+              logger: params.context.logger,
+            })
+          : [];
 
         const voiceConfig = ensureVoiceExtensionConfig(params.context.config);
         const existingInstalled = readInstalledModelIds(voiceConfig.installedModels);
+        const localInstalledFromDisk: VoiceModelId[] = [];
+        for (const modelId of payload.modelIds) {
+          const localState = await detectLocalVoiceModelInstallState({
+            modelId,
+            modelsRootDir,
+          });
+          if (localState.installed) {
+            localInstalledFromDisk.push(modelId);
+          }
+        }
+        const installedSet = new Set<VoiceModelId>([
+          ...existingInstalled,
+          ...localInstalledFromDisk,
+        ]);
         if (
           !payload.installModel &&
-          !existingInstalled.includes(payload.activeModel)
+          !installedSet.has(payload.activeModel)
         ) {
           throw new Error(
             `active-model "${payload.activeModel}" is not installed. Remove --no-install-model or run "sma voice install ${payload.activeModel}" first.`,
           );
         }
-        const installedFromInit = payload.installModel ? payload.modelIds : [];
+        const installedFromInit = payload.installModel
+          ? payload.modelIds
+          : localInstalledFromDisk;
         voiceConfig.enabled = true;
         voiceConfig.provider = "local";
         voiceConfig.activeModel = payload.activeModel;
@@ -607,6 +718,15 @@ export const voiceExtension: Extension = {
             timeoutMs: payload.pipTimeoutMs,
             venvDir: payload.venvDir,
           });
+          for (const item of installedDeps.items) {
+            if (item.skipped !== true) continue;
+            params.context.logger.info("Voice transcribe dependencies already exist, skip install", {
+              runner: item.runner,
+              pythonBin: item.pythonBin,
+              packages: item.packages,
+              reason: item.skipReason || "already-installed",
+            });
+          }
           dependencyInstall = toDependencyInstallJson(installedDeps);
           voiceConfig.transcribe = {
             ...(voiceConfig.transcribe || {}),
@@ -700,34 +820,13 @@ export const voiceExtension: Extension = {
           projectRoot: params.context.rootPath,
           modelsDir: payload.modelsDir,
         });
-        const installResults: Array<Record<string, JsonValue>> = [];
-        for (const modelId of payload.modelIds) {
-          const model = getVoiceModelCatalogItem(modelId);
-          if (!model) {
-            throw new Error(`Voice model catalog entry not found: ${modelId}`);
-          }
-          const progressEvents: Array<Record<string, JsonValue>> = [];
-          const installed = await installVoiceModelFromHuggingFace({
-            model,
-            modelsRootDir,
-            force: payload.force,
-            hfToken: payload.hfToken,
-            onProgress: (event) => {
-              progressEvents.push(toInstallProgressJson(event));
-            },
-          });
-          installResults.push({
-            modelId,
-            modelDir: installed.modelDir,
-            repoId: installed.repoId,
-            revision: installed.revision,
-            downloadedFiles: installed.downloadedFiles,
-            skippedFiles: installed.skippedFiles,
-            downloadedFilePaths: installed.downloadedFilePaths,
-            skippedFilePaths: installed.skippedFilePaths,
-            progressEvents,
-          });
-        }
+        const installResults = await installVoiceModelsWithSkip({
+          modelIds: payload.modelIds,
+          modelsRootDir,
+          force: payload.force,
+          hfToken: payload.hfToken,
+          logger: params.context.logger,
+        });
 
         const voiceConfig = ensureVoiceExtensionConfig(params.context.config);
         const existingInstalled = readInstalledModelIds(voiceConfig.installedModels);

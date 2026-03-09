@@ -34,3 +34,15 @@ sma config llm model activate <modelId>
 sma service list
 sma extension list
 ```
+
+## I see `deprecated eslint@8` and deprecated subdependencies during install. Is this critical?
+
+Usually no. These warnings are typically from dev-tooling dependency chains and do not block runtime usage.
+
+- `deprecated eslint@8`: your resolved tree still includes ESLint 8.x.
+- `glob@7`, `rimraf@3`, `inflight`, etc.: usually transitive dependencies from upstream tools.
+
+If you only run `sma`, you can proceed. To reduce warnings:
+
+1. Upgrade direct `eslint` dependency to 9.x.
+2. Upgrade upstream tooling packages to newer major versions when available.

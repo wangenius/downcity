@@ -1,54 +1,86 @@
 ---
 title: sma voice
-description: Voice extension commands (local STT model and transcription management)
+description: Voice extension commands (local STT model and transcription)
 ---
 
 # `sma voice`
 
-Voice extension command group for managing local STT models and `extensions.voice` config.
+Manage local speech-to-text via the `voice` extension.
 
 ## Usage
 
 ```bash
-sma voice <subcommand>
+sma voice <subcommand> [options]
 ```
 
-## Subcommands
+## Subcommands (current version)
 
-- `models`: list built-in model catalog
-- `status`: show current `extensions.voice` config
-- `init [models...]`: one-shot bootstrap (enable + install model + auto install transcription dependencies)
-- `on [models...]`: enable voice extension; installs selected models by default
-- `off`: disable voice extension (keeps installed model records)
-- `install [models...]`: install model files without changing enabled state
-- `use <modelId>`: switch active model
-- `transcribe <audioPath>`: transcribe a local audio file (for debugging)
+- `models`
+- `status`
+- `on [models...]`
+- `init [models...]`
+- `off`
+- `install [models...]`
+- `use <modelId>`
+- `transcribe <audioPath>`
+
+## `on` key options
+
+- `--models-dir <path>`: model directory (default `~/.ship/models/voice`)
+- `--active-model <modelId>`: set active model
+- `--no-install`: write config only, skip download
+- `--force`: overwrite existing model files
+- `--hf-token <token>`: token for private/gated models
+
+## `init` key options
+
+- `[models...]`: model IDs (if omitted, interactive multi-select is shown in TTY)
+- `--active-model <modelId>`: active model (if omitted with multiple selected models, interactive select is shown)
+- `--no-install-model`: skip model download, only write config
+- `--no-install-deps`: skip Python dependency install
+- `--python <bin>`: Python executable path
+- `--venv-dir <path>`: fallback venv dir for PEP 668 environments
+- `--no-pip-upgrade`: install deps without `pip -U`
+- `--pip-timeout-ms <ms>`: pip install timeout in milliseconds
+
+## `install` key options
+
+- `--models-dir <path>`
+- `--force`
+- `--hf-token <token>`
+
+## `transcribe` key options
+
+- `<audioPath>`: local audio path
+- `--language <code>`: language hint (for example `zh` / `en`)
 
 ## Examples
 
 ```bash
-# 1) zero-to-ready bootstrap (recommended)
-sma voice init SenseVoiceSmall
-
-# 2) explicit model install path
-sma voice install SenseVoiceSmall --models-dir ~/.ship/models/voice
-
-# 3) enable without downloading
-sma voice on SenseVoiceSmall --no-install
-
-# 4) switch active model
+sma voice models
+sma voice init
+sma voice on SenseVoiceSmall
+sma voice install whisper-large-v3-turbo --force
 sma voice use whisper-large-v3-turbo
-
-# 5) local audio transcription check
-sma voice transcribe .ship/.cache/telegram/demo.ogg --language zh
+sma voice transcribe ./demo.ogg --language en
+sma voice off
 ```
 
 ## Notes
 
-- If daemon is reachable, `sma voice ...` executes remotely via `/api/extensions/command`.
-- If daemon is not reachable, `sma voice ...` automatically falls back to local execution (still writes `ship.json` and performs model installation).
-- `voice init` installs Python transcription dependencies automatically (`funasr` or `transformers/torch`, selected by model).
-- If system Python is blocked by PEP 668, `voice init` automatically falls back to virtualenv install at `~/.ship/venvs/voice`.
-- Model files are downloaded from HuggingFace into `~/.ship/models/voice` by default.
-- Built-in transcription runners require local Python dependencies (`funasr` and/or `transformers`).
-- Telegram voice/audio attachments use this extension's `transcribe` action in best-effort mode.
+Install-related actions perform a local pre-check first:
+
+- If model files already exist, download is skipped by default (`--force` re-downloads).
+- During `voice init`, Python dependency install is skipped when packages are already present, with explicit skip logs.
+
+This command group usually requires daemon runtime:
+
+```bash
+sma agent on --daemon
+```
+
+In non-interactive environments (CI/scripts), pass models explicitly, for example:
+
+```bash
+sma voice init SenseVoiceSmall
+```

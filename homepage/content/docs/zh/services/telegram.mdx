@@ -9,7 +9,7 @@ description: 通过 Telegram 与 Agent 对话并接收审批/结果通知
 
 使用 Telegram 和 ShipMyAgent 对话（私聊或群聊）。
 
-> 想了解内部怎么跑起来的？看这篇：[/docs/services/telegram-message-flow](/docs/services/telegram-message-flow)
+> 想了解内部怎么跑起来的？看这篇：[/zh/docs/services/telegram-message-flow](/zh/docs/services/telegram-message-flow)
 
 ## 配置步骤
 
@@ -101,8 +101,8 @@ shipmyagent agent on --daemon
 如果你要统一管理本地语音转写模型，请使用独立的 `voice` extension 命令组：
 
 ```bash
-# 从零初始化（启用 + 模型下载 + 自动安装转写依赖）
-sma voice init SenseVoiceSmall
+# 启用并安装模型
+sma voice on SenseVoiceSmall
 
 # 查看当前 voice 配置
 sma voice status

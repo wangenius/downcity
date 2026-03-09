@@ -1,34 +1,63 @@
 ---
 title: sma chat
-description: Chat service actions
+description: Chat service actions (send/react/context/history)
 ---
 
 # `sma chat`
 
-Chat service command group.
+Send messages, react to messages, inspect context, and read chat history.
 
 ## Usage
 
 ```bash
-sma chat <subcommand>
+sma chat <subcommand> [options]
 ```
 
 ## Subcommands
 
-- `send`: send message to target `chatKey`
-- `react`: react to a message (currently Telegram)
-- `context`: view current conversation context snapshot
-- `history`: read recent chat history (default latest 30)
+- `send`: send message
+- `react`: react to message (primarily Telegram)
+- `context`: view conversation context snapshot
+- `history`: read chat history
 
-## Example
+## `send` key options
+
+- `--text <text>`: message body
+- `--stdin`: read message body from stdin
+- `--text-file <file>`: read message body from file
+- `--chat-key <chatKey>`: target conversation
+- `--delay <ms>`: delayed send
+- `--time <time>`: scheduled send (unix sec/ms or ISO)
+- `--reply`: send as `reply_to_message`
+
+## `react` key options
+
+- `--emoji <emoji>`: emoji, default 👍
+- `--message-id <id>`: target message ID
+- `--chat-key <chatKey>`: target conversation
+- `--big`: Telegram large emoji (`is_big`)
+
+## `history` key options
+
+- `--chat-key <chatKey>`
+- `--context-id <contextId>`
+- `--limit <n>`
+- `--direction <all|inbound|outbound>`
+- `--before-ts <ts>` / `--after-ts <ts>` (milliseconds)
+
+## Examples
 
 ```bash
-sma chat send --text "done"
-sma chat react --emoji "✅"
-sma chat context
-sma chat history --limit 50
+sma chat send --chat-key telegram-chat-123 --text "done"
+sma chat react --chat-key telegram-chat-123 --emoji "✅"
+sma chat context --chat-key telegram-chat-123
+sma chat history --chat-key telegram-chat-123 --limit 50
 ```
 
 ## Notes
 
-- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.
+This command group usually requires daemon runtime:
+
+```bash
+sma agent on --daemon
+```

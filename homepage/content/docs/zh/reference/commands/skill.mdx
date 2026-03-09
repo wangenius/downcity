@@ -1,35 +1,40 @@
 ---
 title: sma skill
-description: skill service actions
+description: skill service actions（find/install/list/lookup）
 ---
 
 # `sma skill`
 
-skill service 命令组。
+管理 skills 的发现、安装与读取。
 
 ## 用法
 
 ```bash
-sma skill <subcommand>
+sma skill <subcommand> [options]
 ```
 
 ## 子命令
 
-- `find <query>`：查找未学会 skill
-- `install <spec>`：下载并学习 skill
-- `list`：列出本地可发现的已学会 skill
-- `lookup <name>`：读取已学会 skill 内容（`SKILL.md`）
+- `find <query>`
+- `install <spec>`
+- `list`
+- `lookup <name>`
+
+## `install` 常用参数
+
+- `-g, --global`：全局安装（默认 true）
+- `-y, --yes`：跳过确认（默认 true）
+- `--agent <agent>`：默认 `claude-code`
 
 ## 示例
 
 ```bash
-sma skill find telegram
-sma skill install owner/repo@skill-name
+sma skill find playwright
+sma skill install owner/repo@playwright
 sma skill list
 sma skill lookup playwright
 ```
 
-## 说明
+## 推荐流程
 
-- 常见流程：`find -> install -> lookup`。
-- daemon 场景建议先启动 runtime。
+`find -> install -> lookup`

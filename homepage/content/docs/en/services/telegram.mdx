@@ -9,7 +9,7 @@ description: Chat with your agent and receive notifications on Telegram
 
 Use Telegram to chat with ShipMyAgent (DM or group chat).
 
-> Want the internal flow? See: [/docs/services/telegram-message-flow](/docs/services/telegram-message-flow)
+> Want the internal flow? See: [/en/docs/services/telegram-message-flow](/en/docs/services/telegram-message-flow)
 
 ## Setup
 
@@ -101,8 +101,8 @@ Example: send a PDF with caption: `Summarize this PDF and list action items.`
 If you want to manage local voice-to-text models, use the dedicated `voice` extension command group:
 
 ```bash
-# zero-to-ready bootstrap (enable + model install + auto dependency install)
-sma voice init SenseVoiceSmall
+# enable and install model
+sma voice on SenseVoiceSmall
 
 # inspect current voice config
 sma voice status

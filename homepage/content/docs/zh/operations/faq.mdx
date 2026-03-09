@@ -34,3 +34,15 @@ sma config llm model activate <modelId>
 sma service list
 sma extension list
 ```
+
+## 安装依赖时看到 `deprecated eslint@8` 和一堆子依赖告警怎么办？
+
+这类告警通常是开发依赖链路（lint/build tooling）引起的，不影响 runtime 功能使用。
+
+- `eslint@8` 告警：说明当前依赖树里还在解析 8.x。
+- `glob@7` / `rimraf@3` / `inflight` 等：多为上游工具的传递依赖。
+
+如果你只运行 `sma`，可暂时忽略；如果要清理告警，优先做两件事：
+
+1. 把项目里直接声明的 `eslint` 升到 9.x。
+2. 升级触发告警的工具包到最新主版本（若其已支持）。

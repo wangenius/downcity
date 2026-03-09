@@ -1,54 +1,86 @@
 ---
 title: sma voice
-description: Voice extension 命令（本地 STT 模型与转写能力管理）
+description: Voice extension 命令（本地 STT 模型与转写管理）
 ---
 
 # `sma voice`
 
-`voice` extension 命令组，用于统一管理本地语音识别模型与 `extensions.voice` 配置。
+管理本地语音识别扩展 `voice`。
 
 ## 用法
 
 ```bash
-sma voice <subcommand>
+sma voice <subcommand> [options]
 ```
 
-## 子命令
+## 子命令（当前版本）
 
-- `models`：列出内置模型目录
-- `status`：查看当前 `extensions.voice` 配置
-- `init [models...]`：一键初始化（启用 + 安装模型 + 自动安装转写依赖）
-- `on [models...]`：启用 voice extension；默认安装所选模型
-- `off`：关闭 voice extension（保留已安装记录）
-- `install [models...]`：仅安装模型，不改变启用状态
-- `use <modelId>`：切换激活模型
-- `transcribe <audioPath>`：转写本地音频文件（联调用）
+- `models`
+- `status`
+- `on [models...]`
+- `init [models...]`
+- `off`
+- `install [models...]`
+- `use <modelId>`
+- `transcribe <audioPath>`
+
+## `on` 常用参数
+
+- `--models-dir <path>`：模型目录（默认 `~/.ship/models/voice`）
+- `--active-model <modelId>`：激活模型
+- `--no-install`：只写配置不下载
+- `--force`：覆盖已有模型文件
+- `--hf-token <token>`：私有/Gated 模型下载 token
+
+## `init` 常用参数
+
+- `[models...]`：模型列表（不传则在交互终端弹出多选）
+- `--active-model <modelId>`：激活模型（不传且多模型时会交互选择）
+- `--no-install-model`：跳过模型下载，仅写配置
+- `--no-install-deps`：跳过 Python 转写依赖安装
+- `--python <bin>`：指定 Python 可执行文件
+- `--venv-dir <path>`：PEP 668 回退虚拟环境目录
+- `--no-pip-upgrade`：安装依赖时不带 `pip -U`
+- `--pip-timeout-ms <ms>`：pip 安装超时
+
+## `install` 常用参数
+
+- `--models-dir <path>`
+- `--force`
+- `--hf-token <token>`
+
+## `transcribe` 常用参数
+
+- `<audioPath>`：音频路径
+- `--language <code>`：语言提示（如 `zh` / `en`）
 
 ## 示例
 
 ```bash
-# 1）从零初始化（推荐）
-sma voice init SenseVoiceSmall
-
-# 2）显式安装到指定目录
-sma voice install SenseVoiceSmall --models-dir ~/.ship/models/voice
-
-# 3）只写配置，不下载
-sma voice on SenseVoiceSmall --no-install
-
-# 4）切换激活模型
+sma voice models
+sma voice init
+sma voice on SenseVoiceSmall
+sma voice install whisper-large-v3-turbo --force
 sma voice use whisper-large-v3-turbo
-
-# 5）本地音频转写测试
-sma voice transcribe .ship/.cache/telegram/demo.ogg --language zh
+sma voice transcribe ./demo.ogg --language zh
+sma voice off
 ```
 
 ## 说明
 
-- 若 daemon 正在运行，`sma voice ...` 会通过 `/api/extensions/command` 远程执行。
-- 若 daemon 不可达，`sma voice ...` 会自动降级为本地执行（同样会写入 `ship.json` 并执行模型安装）。
-- `voice init` 默认会自动安装 Python 转写依赖（`funasr` 或 `transformers/torch`，按模型自动选择）。
-- 若系统 Python 命中 PEP 668（不允许全局 pip install），`voice init` 会自动回退到 `~/.ship/venvs/voice` 虚拟环境安装依赖。
-- 模型默认下载到 `~/.ship/models/voice`（可通过 `--models-dir` 覆盖）。
-- 内置转写 runner 依赖本地 Python 包（`funasr` / `transformers` 至少其一）。
-- Telegram 收到 voice/audio 附件时，会通过该 extension 的 `transcribe` action 做 best-effort 转写。
+安装相关命令会先做本地检查：
+
+- 模型目录已存在时，默认直接跳过下载（`--force` 可强制重下）。
+- `voice init` 安装 Python 依赖时，已存在依赖会跳过，并打印 skip 日志。
+
+该命令组通常需要已运行的 daemon：
+
+```bash
+sma agent on --daemon
+```
+
+如果在非交互环境（CI、脚本）使用 `sma voice init`，请显式传入模型参数，例如：
+
+```bash
+sma voice init SenseVoiceSmall
+```

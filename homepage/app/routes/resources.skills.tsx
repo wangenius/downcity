@@ -32,7 +32,9 @@ const skillDirectories = [
 
 export default function Skills() {
   const { i18n, t } = useTranslation();
-  const mcpDocsPath = i18n.language === "zh" ? "/zh/docs/mcp" : "/en/docs/mcp";
+  const mcpDocsPath = i18n.language === "zh"
+    ? "/zh/docs/quickstart/mcp"
+    : "/en/docs/quickstart/mcp";
 
   const mcpResources = [
     {

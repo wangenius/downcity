@@ -1,38 +1,61 @@
 ---
 title: sma task
-description: Task service actions
+description: Task service actions (list/create/run/update/status)
 ---
 
 # `sma task`
 
-Task service command group.
+Task system command group.
 
 ## Usage
 
 ```bash
-sma task <subcommand>
+sma task <subcommand> [options]
 ```
 
 ## Subcommands
 
-- `list`: list tasks
-- `create`: create task definition
-- `run <taskId>`: run task manually
-- `delete <taskId>`: delete task definition and run history directory
-- `update <taskId>`: update task definition
-- `status <taskId> <status>`: set status (`enabled | paused | disabled`)
-- `enable <taskId>`: set status to `enabled`
-- `disable <taskId>`: set status to `disabled`
+- `list`
+- `create`
+- `run <taskId>`
+- `update <taskId>`
+- `delete <taskId>`
+- `status <taskId> <enabled|paused|disabled>`
+- `enable <taskId>`
+- `disable <taskId>`
 
-## Example
+## `create` key options
+
+- `--title <title>` (required)
+- `--description <description>` (required)
+- `--context-id <contextId>` (required)
+- `--cron <cron>` (default `@manual`)
+- `--activate` (same as `--status enabled`)
+- `--kind <agent|script>`
+- `--time <ISO8601>` (with timezone; recommended with `--cron @manual`)
+
+## `update` common options
+
+- `--cron` / `--timezone` / `--status`
+- `--required-artifact <path>` (repeatable)
+- `--clear-required-artifacts`
+- `--min-output-chars` / `--clear-min-output-chars`
+- `--max-dialogue-rounds` / `--clear-max-dialogue-rounds`
+
+## Examples
 
 ```bash
 sma task list
-sma task create --title "Daily report" --description "Summarize yesterday"
-sma task run daily-report
-sma task disable daily-report
+sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task run daily-check
+sma task update daily-check --cron "0 10 * * 1-5"
+sma task disable daily-check
 ```
 
 ## Notes
 
-- This command group is daemon-facing. Start runtime first with `sma agent on --daemon`.
+Task scheduling requires a running runtime:
+
+```bash
+sma agent on --daemon
+```

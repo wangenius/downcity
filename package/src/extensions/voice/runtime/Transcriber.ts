@@ -120,6 +120,31 @@ function shellEscapeSingle(value: string): string {
   return `'${String(value).replace(/'/g, `'"'"'`)}'`;
 }
 
+/**
+ * 为 python 执行构建环境变量。
+ *
+ * 关键点（中文）
+ * - 当 `pythonBin` 指向 venv 内解释器时，把其 `bin` 目录前置到 PATH，
+ *   以便 python 子进程内调用 `pip`（FunASR 远程代码会用到）能正确命中同一 venv。
+ */
+function buildPythonExecEnv(pythonBin: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  const raw = String(pythonBin || "").trim();
+  if (!raw || (!raw.includes("/") && !raw.includes("\\"))) {
+    return env;
+  }
+  const pythonDir = path.dirname(path.resolve(raw));
+  const currentPath = String(env.PATH || "");
+  const segments = currentPath
+    .split(path.delimiter)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (!segments.includes(pythonDir)) {
+    env.PATH = [pythonDir, ...segments].join(path.delimiter);
+  }
+  return env;
+}
+
 function renderCommandTemplate(template: string, values: Record<string, string>): string {
   return template.replace(/\{(audioPath|modelDir|modelId|language)\}/g, (_, key) => {
     const value = values[key] || "";
@@ -152,17 +177,37 @@ async function runPythonInline(params: {
   args: string[];
   timeoutMs: number;
 }): Promise<string> {
-  const { stdout, stderr } = await execFileAsync(
-    params.pythonBin,
-    ["-c", params.script, ...params.args],
-    {
-      timeout: params.timeoutMs,
-      maxBuffer: 8 * 1024 * 1024,
-    },
-  );
-  const text = pickLastNonEmptyLine(String(stdout || ""));
+  let stdout = "";
+  let stderr = "";
+  try {
+    const output = await execFileAsync(
+      params.pythonBin,
+      ["-c", params.script, ...params.args],
+      {
+        timeout: params.timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+        env: buildPythonExecEnv(params.pythonBin),
+      },
+    );
+    stdout = String(output.stdout || "");
+    stderr = String(output.stderr || "");
+  } catch (error) {
+    const errorLike = error as {
+      stdout?: string;
+      stderr?: string;
+      message?: string;
+    };
+    stdout = String(errorLike.stdout || "");
+    stderr = String(errorLike.stderr || "");
+    const err = pickLastNonEmptyLine(stderr) || pickLastNonEmptyLine(stdout);
+    if (err) {
+      throw new Error(`python runner failed: ${err}`);
+    }
+    throw new Error(`python runner failed: ${String(errorLike.message || error)}`);
+  }
+  const text = pickLastNonEmptyLine(stdout);
   if (text) return text;
-  const err = pickLastNonEmptyLine(String(stderr || ""));
+  const err = pickLastNonEmptyLine(stderr);
   if (err) {
     throw new Error(`python runner produced no transcript: ${err}`);
   }

@@ -1,223 +1,239 @@
-# Memory V2 重设计（参考 OpenClaw）
+# Memory V2 重设计（完全替换版）
 
-## 1. 目标与边界
+> 状态：设计稿（待实现）  
+> 目标：用一套更简单、更高效、可观测的 memory service 完全替换现有 memory 逻辑。  
+> 原则：不做向后兼容，不保留双写，不保留旧行为分支。
 
-### 1.1 目标
+## 1. 背景与结论
 
-1. 记忆从“占位能力”升级为可观测、可检索、可控制的正式 service。
-2. 记忆写入/检索行为可解释：什么时候写、写到哪里、为什么被召回。
-3. 在不阻塞主对话链路的前提下，提供稳定的长期记忆召回能力。
+当前 memory 逻辑存在三个核心问题：
 
-### 1.2 非目标
+1. 不是正式 service：没有统一 action 面（CLI/API/内部调用），状态不可观测。
+2. 写入与召回耦合且粗糙：以“累计消息数”触发提取，system 直接拼接整份 `Primary.md`。
+3. 不可控：缺少检索预算、故障降级、来源引用、范围控制。
 
-1. 不在 V2 首版引入远程向量数据库。
-2. 不在 V2 首版做跨项目全局共享记忆。
-3. 不实现“自动把所有对话都永久存档”。
+本次改造结论：
 
-## 2. 对 OpenClaw 的参考结论
+1. memory 升级为一等 service（`memory`），通过 `actions` 提供统一能力。
+2. Markdown 作为事实源，SQLite 作为检索加速层。
+3. 召回流程统一为 `search -> get`，禁止整文件无预算注入。
 
-### 2.1 可以直接借鉴的设计
+## 2. 设计目标
 
-1. Markdown 文件作为记忆事实源，索引只是加速层。
-2. 工具拆分为 `search + get`：先检索片段，再按路径/行号精读，控制上下文体积。
-3. 索引异步维护：watch + debounce + on-search/on-interval，不阻塞主流程。
-4. 检索故障降级：memory 工具返回结构化 unavailable，而不是抛异常中断。
-5. 召回结果支持 citations（按会话类型可控），提升可验证性。
-6. 临近 compaction 触发静默 memory flush，减少压缩导致的信息丢失。
-7. 记忆检索默认最小暴露（例如 direct 优先），避免在 group 场景无差别注入。
+1. 简单：首版只做 `builtin` backend（单机 SQLite），不做多后端插件化。
+2. 零配置：默认开启，用户不需要手动写 memory 配置即可使用。
+3. 高效：索引维护异步化（watch + debounce + interval），不阻塞主对话。
+4. 好用：有 `status/search/get/store/index/flush` 完整动作面，能查、能控、能诊断。
+5. 可解释：每条召回结果必须带来源（路径+行号）。
+6. 可失败：检索不可用时返回结构化错误，不中断主流程。
 
-### 2.2 不直接照搬的部分
+## 3. 非目标
 
-1. QMD sidecar 与多后端切换先不做，首版先做 builtin backend。
-2. 插件化 memory slot 先不引入，先用现有 service 架构稳定落地。
-3. LanceDB 自动捕获策略先不引入，避免误采集和污染。
+1. 不做远程向量库（Pinecone/Qdrant 等）。
+2. 不做跨项目共享记忆。
+3. 不做“自动永久存档全部会话”。
+4. 不做 V1/V2 兼容层。
 
-## 3. 现状问题（ShipMyAgent）
+## 4. 新架构（四层）
 
-1. `memory` 代码存在，但不是正式注册 service，缺少 action/CLI/API 面。
-2. 当前按“累计消息条数阈值”提取，策略单一，缺少 flush/手动触发/状态可见性。
-3. 记忆注入是直接拼接 `Primary.md`，没有检索层和注入预算控制。
-4. 压缩策略为整文件 LLM 压缩，缺少结构化分层（长期/每日/会话）与可追踪引用。
-5. 缺少记忆诊断命令（provider、dirty、chunks、sources、错误原因等）。
+### 4.1 Source Layer（事实层）
 
-## 4. Memory V2 总体架构
+目录与文件（唯一事实源）：
 
-### 4.1 四层结构
+1. `.ship/memory/MEMORY.md`：长期稳定记忆（偏好、规则、长期事实）。
+2. `.ship/memory/daily/YYYY-MM-DD.md`：每日增量（append-only）。
+3. `.ship/context/<contextId>/memory/working.md`：当前会话工作记忆（短期，可选）。
 
-1. Source Layer（事实层）
-- `.ship/memory/MEMORY.md`：长期稳定记忆（偏好、约束、长期事实）。
-- `.ship/memory/daily/YYYY-MM-DD.md`：每日增量记录（append-only）。
-- `.ship/context/<contextId>/memory/working.md`：会话工作记忆（短期）。
+规则：
 
-2. Index Layer（加速层）
-- `.ship/memory/index.sqlite`：chunk、embedding、fts、meta。
-- 仅缓存检索必要字段，不改变 Source 文件语义。
+1. 真相只在 Markdown 文件中，索引可随时重建。
+2. 写入只允许追加或受控覆盖（覆盖仅用于压缩产物替换）。
 
-3. Retrieval Layer（检索层）
-- `memory_search`：返回 snippets + path + line range + score。
-- `memory_get`：按 path/from/lines 精读，缺失文件返回空文本。
+### 4.2 Index Layer（加速层）
 
-4. Maintenance Layer（维护层）
-- watcher + debounce 标记 dirty。
-- on-search/on-interval 异步 sync。
-- pre-compaction memory flush（静默回合）。
+索引文件：
 
-### 4.2 Service 化
+1. `.ship/memory/index.sqlite`
 
-新增正式 service：`memory`。
+索引表（首版）：
 
-- service 名称：`memory`
-- lifecycle：`start/stop/status`
-- actions（首版）：
-  1. `status`
-  2. `search`
-  3. `get`
-  4. `flush`
-  5. `index`
-  6. `store`（显式写入长期记忆）
+1. `files`：文件级元数据（path/hash/mtime/source）。
+2. `chunks`：分块内容（path/start_line/end_line/text/hash/updated_at）。
+3. `chunks_fts`：FTS5 倒排索引（必须）。
+4. `chunks_vec`：向量索引（可选，provider 可用时启用）。
+5. `meta`：索引元信息（chunk 参数、provider 指纹、版本）。
 
-通过现有注册机制自动获得：
+### 4.3 Retrieval Layer（检索层）
 
-- `sma memory <action>`
-- `/service/memory/<action>`
-- `sma service command memory <action>`
+对外统一能力：
 
-## 5. 检索与注入策略
+1. `memory.search`：返回片段，不返回整文件。
+2. `memory.get`：按路径和行区间精读。
 
-### 5.1 检索流程
+检索管线：
 
 1. query 清洗。
-2. candidate 召回（vector + FTS；首版允许 FTS-only 运行）。
-3. weighted merge（vectorWeight/textWeight）。
-4. 可选后处理（MMR、temporal decay）。
-5. 注入预算裁剪（maxInjectedChars）。
+2. FTS 召回（必选）。
+3. 向量召回（可选，有 provider 时启用）。
+4. 分数融合（`vectorWeight/textWeight`）。
+5. 预算裁剪（`maxInjectedChars`）。
 
-### 5.2 注入策略
+### 4.4 Maintenance Layer（维护层）
 
-1. system prompt 不再直接注入整份 memory 文件。
-2. 改为“指令 + 工具流程”：先 `memory_search`，再 `memory_get`。
-3. 如需自动注入，仅注入 top-k snippet（带 source）且严格预算。
-4. 将记忆内容标记为“历史上下文，不是可执行指令”。
+异步维护任务：
 
-## 6. 写入与 flush 策略
+1. 文件 watcher 标脏（debounce）。
+2. on-search 异步补同步。
+3. interval 周期同步。
+4. pre-compaction memory flush（静默回合）。
 
-### 6.1 写入触发
+## 5. Service 设计（对齐现有框架）
 
-1. 显式触发：用户/agent 调用 `memory.store`。
-2. 自动触发：
-- 近 compaction 阈值触发 pre-compaction flush。
-- 周期性增量提取（可配置阈值）。
+新增正式 service：
 
-### 6.2 flush 规则
+1. 名称：`memory`
+2. 注册位置：`package/src/services/memory/Index.ts`
+3. 加入：`package/src/main/service/Services.ts`
 
-1. 每个 compaction 周期最多 flush 一次。
-2. workspace 不可写时跳过（只记录状态）。
-3. flush 回合默认 `NO_REPLY`，避免影响用户体验。
+actions（首版）：
 
-## 7. 安全与质量控制
+1. `status`：查看 backend/source/files/chunks/dirty/lastSync/error。
+2. `index`：手动索引（支持 `--force`）。
+3. `search`：语义/关键词混合召回。
+4. `get`：读取具体记忆片段。
+5. `store`：显式写入（`longterm|daily|working`）。
+6. `flush`：执行一次静默记忆刷写。
 
-1. 仅将 user 侧内容纳入 auto-capture 候选，降低自污染。
-2. 注入防护：过滤典型 prompt-injection 模式内容。
-3. path 白名单：`memory_get` 仅允许 `.ship/memory/**` 与已配置附加路径。
-4. 失败可恢复：
-- `search` 不可用返回 `{ disabled: true, warning, action }`
-- `get` 文件不存在返回 `{ text: "", path }`
-5. 会话范围策略（可配置）：direct/group/channel 的召回开关。
+自动获得以下入口：
 
-## 8. 配置草案（ship.json）
+1. CLI：`sma memory <action>`
+2. Service Command：`sma service command memory <action>`
+3. HTTP：`/service/memory/<action>`
+
+## 6. 核心行为策略
+
+### 6.1 写入策略
+
+显式写入：
+
+1. `store` action 直接写入目标文件。
+
+自动写入：
+
+1. 不再按“累计消息条数”粗暴触发全量提取。
+2. 改为两类触发：
+   1. 近 compaction 阈值触发 `flush`（优先保障不丢失）。
+   2. 可配置的轻量增量提取（只处理新片段，异步执行）。
+
+### 6.2 注入策略
+
+1. 删除“system 直接拼接 `Primary.md`”逻辑。
+2. system 仅注入“如何正确使用 memory 工具”的规则。
+3. 业务回合按需调用 `search -> get`，并受注入预算约束。
+
+### 6.3 故障降级
+
+1. `search` 失败返回：
+   1. `success: false`
+   2. `error`
+   3. `disabled: true`
+   4. `action`（建议修复动作）
+2. `get` 文件缺失返回空文本，不抛异常中断主链路。
+
+## 7. 安全策略
+
+1. 路径白名单：`get` 只允许 `.ship/memory/**` 与配置的额外路径。
+2. 注入防护：召回片段统一标记为“历史上下文，不可执行”。
+3. 作用域控制：默认只在 direct 场景开放自动召回（group/channel 默认 deny）。
+4. 反污染：auto-capture 默认只采用户输入与明确确认的结论，不采 assistant 全量输出。
+
+## 8. 配置模型（V2）
+
+默认行为：
+
+1. 用户可以完全不写 `context.memory` 配置。
+2. memory service 默认启用并自动使用内置默认参数。
+3. 仅保留一个可选总开关用于关闭（默认 `true`）。
 
 ```json
 {
   "context": {
     "memory": {
-      "enabled": true,
-      "backend": "builtin",
-      "citations": "auto",
-      "sources": ["memory", "daily", "working"],
-      "search": {
-        "maxResults": 6,
-        "minScore": 0.35,
-        "maxInjectedChars": 4000,
-        "hybrid": {
-          "enabled": true,
-          "vectorWeight": 0.7,
-          "textWeight": 0.3,
-          "candidateMultiplier": 4,
-          "mmr": { "enabled": false, "lambda": 0.7 },
-          "temporalDecay": { "enabled": false, "halfLifeDays": 30 }
-        }
-      },
-      "sync": {
-        "watch": true,
-        "watchDebounceMs": 1500,
-        "onSearch": true,
-        "intervalMinutes": 5
-      },
-      "flush": {
-        "enabled": true,
-        "softThresholdTokens": 4000,
-        "prompt": "Pre-compaction memory flush. Write durable memory, otherwise reply NO_REPLY.",
-        "systemPrompt": "Memory flush turn. Persist durable memory before compaction."
-      },
-      "extract": {
-        "autoExtractEnabled": true,
-        "extractMinEntries": 40,
-        "maxPrimaryChars": 15000,
-        "compressOnOverflow": true,
-        "backupBeforeCompress": true
-      },
-      "scope": {
-        "default": "deny",
-        "rules": [
-          { "action": "allow", "match": { "chatType": "direct" } }
-        ]
-      }
+      "enabled": true
     }
   }
 }
 ```
 
-## 9. 迁移方案
+内置默认值（不暴露给普通用户配置）：
 
-### 9.1 一次性迁移
+1. 检索：`maxResults=6`、`minScore=0.35`、`maxInjectedChars=4000`。
+2. 同步：`watch=true`、`watchDebounceMs=1500`、`onSearch=true`、`intervalMinutes=5`。
+3. flush：`enabled=true`、`softThresholdTokens=4000`。
+4. 作用域：默认 direct 场景允许自动召回，group/channel 默认关闭。
 
-1. 读取旧文件：`.ship/context/<id>/memory/Primary.md`。
-2. 迁移规则：
-- 抽取“稳定事实/偏好”写入 `.ship/memory/MEMORY.md`。
-- 抽取“时序记录”写入 `.ship/memory/daily/<date>.md`。
-3. 迁移后保留旧文件备份到 `.ship/memory/migration-backup/`。
+## 9. 模块拆分（实现约束）
 
-### 9.2 运行时切换
+目录建议：
 
-1. V2 开关默认开启（不做兼容双写）。
-2. 若需回滚，只回滚到备份文件，不保留 V1/V2 并行逻辑。
+1. `package/src/services/memory/Index.ts`
+2. `package/src/services/memory/Action.ts`
+3. `package/src/services/memory/types/Memory.ts`
+4. `package/src/services/memory/runtime/Store.ts`
+5. `package/src/services/memory/runtime/Indexer.ts`
+6. `package/src/services/memory/runtime/Search.ts`
+7. `package/src/services/memory/runtime/Writer.ts`
+8. `package/src/services/memory/runtime/Flush.ts`
+9. `package/src/services/memory/runtime/SystemProvider.ts`
 
-## 10. 分阶段实施
+约束：
 
-### Phase 1（先可用）
+1. 单模块控制在 800-1000 行以内。
+2. 类型统一在 `types/`。
+3. 注释与关键节点文案使用中文。
 
-1. 注册 `memory` service（进入 SERVICES）。
-2. 落地 `status/search/get/index` action。
-3. 把 system 注入从“整文件注入”改为“工具优先 + 预算注入”。
-4. 增加 memory CLI 文档页（homepage）。
+## 10. 与现有系统的替换点（必须执行）
 
-### Phase 2（再增强）
+1. 删除 `RuntimeState.ts` 中旧的 `runContextMemoryMaintenance` 调用。
+2. 删除 `SystemDomain.ts` 中对旧 `buildMemorySystemText` 的硬编码拼接。
+3. 通过 `memoryService.system()` 输出 memory 工具规则文本。
+4. 旧文件路径 `context/<id>/memory/Primary.md` 停止写入。
+5. 旧 `Extractor/Manager/Service` 逻辑整体下线。
 
-1. 加入 pre-compaction flush。
-2. 加入 MMR/temporal decay。
-3. 加入 scope/citations 策略。
-4. 增加 memory doctor/diagnostics。
+## 11. 迁移方案（一次性）
 
-### Phase 3（可选）
+1. 扫描旧文件：`.ship/context/*/memory/Primary.md`。
+2. 抽取规则：
+   1. 稳定事实 -> `.ship/memory/MEMORY.md`
+   2. 时间性记录 -> `.ship/memory/daily/YYYY-MM-DD.md`
+3. 迁移备份：
+   1. `.ship/memory/migration-backup/<contextId>-Primary.md`
+4. 迁移完成即切断旧路径读写，不保留双轨。
 
-1. 评估 QMD/sidecar backend。
-2. 增加 session transcript source（默认关闭）。
+## 12. 实施阶段
 
-## 11. 验收标准
+### Phase 1（最小可用）
 
-1. `sma memory status` 能输出 backend/provider/files/chunks/dirty/sourceCounts。
-2. `sma memory search <query>` 返回 path + line range + score + snippet。
-3. `sma memory get <path> --from --lines` 可稳定读取，缺失文件不报错。
-4. 在高对话负载下，memory sync/flush 不阻塞主对话链路。
-5. prompt 中 memory 注入总字符不超过预算，且可解释来源。
+1. 注册 `memory` service（进入 `SERVICES`）。
+2. 实现 `status/index/search/get/store`。
+3. 替换 system 注入策略（工具优先，移除整文件注入）。
+4. 配置层仅保留 `context.memory.enabled`，其余参数固化为内置默认值。
 
+### Phase 2（稳定增强）
+
+1. 实现 `flush` 与 pre-compaction 集成。
+2. 加入 scope/citations。
+3. 增加 memory 诊断信息与错误分类。
+
+### Phase 3（按需）
+
+1. 可选启用向量召回增强。
+2. 可选加入 MMR/temporal decay。
+
+## 13. 验收标准
+
+1. `sma memory status` 可见完整状态（backend/sources/files/chunks/dirty/error）。
+2. `sma memory search "<query>"` 返回 `path + lineRange + score + snippet`。
+3. `sma memory get --path ... --from ... --lines ...` 稳定可读，缺失不报错。
+4. 高并发对话下，memory 同步不阻塞主请求。
+5. system prompt 中不再出现整份 memory 文件注入。

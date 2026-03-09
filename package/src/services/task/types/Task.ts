@@ -16,7 +16,7 @@ export type ShipTaskFrontmatterV1 = {
   cron: string;
   /** 任务描述（给执行器的意图说明） */
   description: string;
-  /** 执行结果回发目标（contextId） */
+  /** 任务执行上下文标识（contextId） */
   contextId: string;
   /** 任务执行类型（agent=交给 agent 执行；script=直接执行 task 正文脚本） */
   kind?: ShipTaskKind;
@@ -63,7 +63,7 @@ export type ShipTaskRunMetaV1 = {
   taskId: string;
   /** 本次 run 时间戳（目录名） */
   timestamp: string;
-  /** 通知回发目标 */
+  /** 任务执行上下文标识 */
   contextId: string;
   /** 触发来源 */
   trigger: ShipTaskRunTriggerV1;

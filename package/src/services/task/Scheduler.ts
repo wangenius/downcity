@@ -109,10 +109,6 @@ export async function registerTaskCronJobs(params: {
                 userSimulatorSatisfied: result.userSimulatorSatisfied,
                 timestamp: result.timestamp,
                 runDir: result.runDirRel,
-                notified: result.notified,
-                ...(result.notifyError
-                  ? { notifyError: result.notifyError }
-                  : {}),
               });
             } catch (error) {
               void logger.log("error", formatTaskLogMessage("Task run failed (scheduler)"), {
@@ -198,10 +194,6 @@ export async function registerTaskCronJobs(params: {
               userSimulatorSatisfied: result.userSimulatorSatisfied,
               timestamp: result.timestamp,
               runDir: result.runDirRel,
-              notified: result.notified,
-              ...(result.notifyError
-                ? { notifyError: result.notifyError }
-                : {}),
             });
           } catch (error) {
             void logger.log("error", formatTaskLogMessage("Task run failed (scheduler)"), {

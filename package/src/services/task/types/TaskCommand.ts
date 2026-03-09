@@ -113,8 +113,6 @@ export type TaskRunResponse = {
   timestamp?: string;
   runDir?: string;
   runDirRel?: string;
-  notified?: boolean;
-  notifyError?: string;
   error?: string;
 };
 

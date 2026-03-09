@@ -415,10 +415,6 @@ export async function runTaskDefinition(params: {
             userSimulatorSatisfied: result.userSimulatorSatisfied,
             timestamp: result.timestamp,
             runDir: result.runDirRel,
-            notified: result.notified,
-            ...(result.notifyError
-              ? { notifyError: result.notifyError }
-              : {}),
           },
         );
       })

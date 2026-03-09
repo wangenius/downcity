@@ -5,7 +5,6 @@
  * - 创建 run 目录（timestamp）
  * - 以“干净历史”调用当前 runtime 的 Agent（逻辑与正常 chat 一致）
  * - 把执行过程与结果写入 run 目录（messages.jsonl / output.md / result.md / error.md）
- * - 执行结束后向 task.frontmatter.contextId 推送一条结果消息（成功/失败都会发）
  */
 
 import fs from "fs-extra";
@@ -181,20 +180,6 @@ function createTaskAgentRuntime(params: {
       return created;
     },
   };
-}
-
-/**
- * 读取 invoke 端口。
- *
- * 关键点（中文）
- * - 在使用点显式校验，避免隐藏依赖来源。
- */
-function requireInvoke(context: ServiceRuntime) {
-  const invoke = context.invoke;
-  if (invoke) return invoke;
-  throw new Error(
-    "Service invoke is required but missing. Ensure server injects invoke before invoking this capability.",
-  );
 }
 
 /**
@@ -573,12 +558,10 @@ async function validateTaskResult(params: {
  * 1) 解析 task + 创建 run 目录
  * 2) 在 scheduler 上下文里执行 agent
  * 3) 产物落盘（input/output/result/error/run.json）
- * 4) 向 contextId 发送执行通知（成功/失败都通知）
  *
  * 返回值（中文）
  * - `ok`/`status`：任务执行结果。
  * - `runDir`/`runDirRel`：执行产物目录。
- * - `notified`/`notifyError`：回传 chat 通知状态。
  */
 export async function runTaskNow(params: {
   context: ServiceRuntime;
@@ -600,8 +583,6 @@ export async function runTaskNow(params: {
   timestamp: string;
   runDir: string;
   runDirRel: string;
-  notified: boolean;
-  notifyError?: string;
 }> {
   const context = params.context;
   const root = String(params.projectRoot || context.rootPath || "").trim();
@@ -1066,53 +1047,6 @@ export async function runTaskNow(params: {
 
   await fs.writeFile(resultMdPath, resultLines.join("\n"), "utf-8");
 
-  // phase 3：通知 contextId（成功/失败都发，便于可观测）
-  // 通知策略（中文）：通知失败不影响任务主状态，只记录 `notifyError` 供排查。
-  let notified = false;
-  let notifyError: string | undefined;
-  try {
-    const textLines: string[] = [];
-    textLines.push(`[TASK] ${task.frontmatter.title}`);
-    textLines.push(`taskId: ${task.taskId}`);
-    textLines.push(`kind: ${taskKind}`);
-    textLines.push(`status: ${status}`);
-    textLines.push(`executionStatus: ${executionStatus}`);
-    textLines.push(`resultStatus: ${resultStatus}`);
-    textLines.push(`dialogueRounds: ${dialogueRounds}/${maxDialogueRounds}`);
-    textLines.push(`userSimulatorSatisfied: ${String(userSimulatorSatisfied)}`);
-    textLines.push(`run: ${runDirRel}`);
-    textLines.push(`result: ${path.posix.join(runDirRel, "result.md")}`);
-    textLines.push(`dialogue: ${path.posix.join(runDirRel, "dialogue.md")}`);
-    if (resultErrors.length > 0) {
-      textLines.push("");
-      textLines.push(`resultChecks:`);
-      for (const item of resultErrors.slice(0, 10)) {
-        textLines.push(`- ${item}`);
-      }
-    }
-    if (status === "failure" && errorText) {
-      textLines.push("");
-      textLines.push(`error: ${summarizeText(errorText, 500)}`);
-    }
-    const send = await requireInvoke(context).invoke({
-      service: "chat",
-      action: "send",
-      payload: {
-        chatKey: task.frontmatter.contextId,
-        text: textLines.join("\n"),
-      },
-    });
-    if (!send.success) {
-      notified = false;
-      notifyError = String(send.error || "chat send failed");
-    } else {
-      notified = true;
-    }
-  } catch (e) {
-    notified = false;
-    notifyError = String(e);
-  }
-
   return {
     ok,
     status,
@@ -1128,7 +1062,5 @@ export async function runTaskNow(params: {
     timestamp,
     runDir: runDirAbs,
     runDirRel,
-    notified,
-    ...(notifyError ? { notifyError } : {}),
   };
 }

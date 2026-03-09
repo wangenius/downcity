@@ -59,12 +59,30 @@ function toStringOrEmpty(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function toStringOrNumberText(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "bigint") return String(value);
+  return "";
+}
+
 function pickFirstNonEmptyString(
   obj: Record<string, unknown>,
   keys: string[],
 ): string {
   for (const key of keys) {
     const text = toStringOrEmpty(obj[key]);
+    if (text) return text;
+  }
+  return "";
+}
+
+function pickFirstNonEmptyText(
+  obj: Record<string, unknown>,
+  keys: string[],
+): string {
+  for (const key of keys) {
+    const text = toStringOrNumberText(obj[key]);
     if (text) return text;
   }
   return "";
@@ -82,13 +100,47 @@ function parseMaybeJson(value: unknown): unknown {
   }
 }
 
-function asRawAttachmentArray(value: unknown): QqRawInboundAttachment[] {
+function isLikelyRemoteUrl(text: string): boolean {
+  return /^https?:\/\//i.test(text) || text.startsWith("//");
+}
+
+function isLikelyLocalPath(text: string): boolean {
+  return text.startsWith("/") || text.startsWith("./") || text.startsWith("../");
+}
+
+function withKindHint(
+  raw: QqRawInboundAttachment,
+  kindHint: "voice" | "audio" | undefined,
+): QqRawInboundAttachment {
+  if (!kindHint) return raw;
+  if (typeof raw.type === "string" && raw.type.trim()) return raw;
+  if (typeof raw.media_type === "string" && raw.media_type.trim()) return raw;
+  return {
+    ...raw,
+    type: kindHint,
+  };
+}
+
+function asRawAttachmentArray(
+  value: unknown,
+  kindHint: "voice" | "audio" | undefined,
+): QqRawInboundAttachment[] {
   const parsed = parseMaybeJson(value);
   if (Array.isArray(parsed)) {
-    return parsed.filter(isRecord).map((item) => ({ ...item }));
+    return parsed
+      .filter(isRecord)
+      .map((item) => withKindHint({ ...item }, kindHint));
   }
   if (isRecord(parsed)) {
-    return [{ ...parsed }];
+    return [withKindHint({ ...parsed }, kindHint)];
+  }
+  const text = toStringOrEmpty(parsed);
+  if (text && (isLikelyRemoteUrl(text) || isLikelyLocalPath(text))) {
+    // 关键点（中文）：兼容 voice/audio 字段直接给字符串 URL/路径的场景。
+    const seeded = isLikelyRemoteUrl(text)
+      ? ({ url: text } as QqRawInboundAttachment)
+      : ({ local_path: text } as QqRawInboundAttachment);
+    return [withKindHint(seeded, kindHint)];
   }
   return [];
 }
@@ -98,9 +150,11 @@ function inferKindFromHints(hints: string): QqInboundAttachmentKind {
   if (!text) return "unknown";
 
   if (
-    /audio|voice|ogg|opus|mp3|wav|amr|m4a|aac|silk|speex|pcm/.test(text)
+    /audio|voice|ogg|opus|mp3|wav|amr|m4a|aac|silk|speex|pcm|ptt|record/.test(
+      text,
+    )
   ) {
-    if (/voice|ogg|opus|amr|silk|speex/.test(text)) return "voice";
+    if (/voice|ogg|opus|amr|silk|speex|ptt|record/.test(text)) return "voice";
     return "audio";
   }
   if (/image|photo|png|jpg|jpeg|webp|gif|bmp/.test(text)) return "photo";
@@ -114,7 +168,7 @@ function inferKindFromHints(hints: string): QqInboundAttachmentKind {
 function normalizeOneAttachment(raw: QqRawInboundAttachment): QqIncomingAttachment {
   const rawObj = raw as Record<string, unknown>;
   const attachmentId =
-    pickFirstNonEmptyString(rawObj, ["id", "file_id", "media_id", "uuid"]) ||
+    pickFirstNonEmptyText(rawObj, ["id", "file_id", "media_id", "uuid"]) ||
     undefined;
   const fileName =
     pickFirstNonEmptyString(rawObj, ["filename", "file_name", "name", "title"]) ||
@@ -141,7 +195,12 @@ function normalizeOneAttachment(raw: QqRawInboundAttachment): QqIncomingAttachme
     undefined;
 
   const hints = [
-    pickFirstNonEmptyString(rawObj, ["type", "media_type", "file_type"]),
+    pickFirstNonEmptyText(rawObj, [
+      "type",
+      "media_type",
+      "file_type",
+      "msg_type",
+    ]),
     contentType || "",
     fileName || "",
     url || "",
@@ -188,17 +247,19 @@ export function extractQqIncomingAttachments(
   payload: QqVoiceMessagePayload,
 ): QqIncomingAttachment[] {
   const sources = [
-    payload.attachments,
-    payload.files,
-    payload.file_info,
-    payload.file_infos,
-    payload.media,
-    payload.medias,
-    payload.audio,
-    payload.voice,
+    { value: payload.attachments },
+    { value: payload.files },
+    { value: payload.file_info },
+    { value: payload.file_infos },
+    { value: payload.media },
+    { value: payload.medias },
+    { value: payload.audio, kindHint: "audio" as const },
+    { value: payload.voice, kindHint: "voice" as const },
   ];
 
-  const rawItems = sources.flatMap((value) => asRawAttachmentArray(value));
+  const rawItems = sources.flatMap((source) =>
+    asRawAttachmentArray(source.value, source.kindHint),
+  );
   if (rawItems.length === 0) return [];
 
   const normalized = rawItems.map((raw) => normalizeOneAttachment(raw));

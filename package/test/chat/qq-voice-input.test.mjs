@@ -62,6 +62,28 @@ test("extractQqIncomingAttachments supports mixed QQ payload fields", () => {
   );
 });
 
+test("extractQqIncomingAttachments supports string voice/audio fields", () => {
+  const attachments = extractQqIncomingAttachments({
+    voice: "https://example.com/media/voice-001.ogg",
+    audio: "//example.com/media/audio-001.mp3",
+  });
+
+  assert.equal(attachments.length, 2);
+  assert.equal(
+    attachments.some(
+      (item) =>
+        item.kind === "voice" && item.url === "https://example.com/media/voice-001.ogg",
+    ),
+    true,
+  );
+  assert.equal(
+    attachments.some(
+      (item) => item.kind === "audio" && item.url === "//example.com/media/audio-001.mp3",
+    ),
+    true,
+  );
+});
+
 test("voice/audio attachments call extension and produce transcript blocks", async () => {
   const rootPath = "/tmp/demo-root";
   const invokePayloads = [];

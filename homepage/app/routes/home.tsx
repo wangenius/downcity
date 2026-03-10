@@ -1,8 +1,4 @@
-import { HeroSection } from "@/components/sections/HeroSection";
-import { TutorialSection } from "@/components/sections/TutorialSection";
-import { PlatformsSection } from "@/components/sections/PlatformsSection";
-import { Footer } from "@/components/sections/Footer";
-import { Navbar } from "@/components/sections/navbar";
+import { WhitepaperSection } from "@/components/sections/WhitepaperSection";
 import { product } from "@/lib/product";
 
 export function meta() {
@@ -83,13 +79,9 @@ export function meta() {
 export default function Home() {
   return (
     <div className="min-h-screen">
-      <Navbar />
       <main>
-        <HeroSection />
-        <TutorialSection />
-        <PlatformsSection />
+        <WhitepaperSection />
       </main>
-      <Footer />
     </div>
   );
 }

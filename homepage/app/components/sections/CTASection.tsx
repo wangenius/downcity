@@ -9,15 +9,15 @@ export const CTASection: FC = () => {
   const { i18n, t } = useTranslation();
   const docsPath = i18n.language === "zh" ? "/zh/docs" : "/en/docs";
   return (
-    <section className="py-12 md:py-24 lg:py-32 bg-muted">
-      <div className="container mx-auto px-4 md:px-6">
+    <section className="py-12 md:py-24 lg:py-32">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
               {t("common:ctaSection.titlePrefix")}{" "}
               <span className="italic">{t("common:ctaSection.titleItalic")}</span>
             </h2>
-            <p className="max-w-150 text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+            <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
               {t("hero:subtitle")}
             </p>
           </div>

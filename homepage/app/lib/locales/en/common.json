@@ -5,6 +5,8 @@
   "getStarted": "Get Started",
   "readDocs": "Read Docs",
   "nav": {
+    "home": "Home",
+    "quickStart": "Quick Start",
     "docs": "Docs",
     "features": "Features",
     "resources": "Resources",

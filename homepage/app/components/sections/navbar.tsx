@@ -1,441 +1,249 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Link } from "react-router";
+
+import { Link, useLocation, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import {
-  IconMenu2,
-  IconX,
   IconBrandGithub,
   IconBrandX,
-  IconTools,
-  IconBuildingStore,
-  IconCloud,
-  IconHelp,
-  IconMap2,
-  IconMessageCircle,
-  IconUsers,
   IconChevronDown,
+  IconLanguage,
+  IconMenu2,
 } from "@tabler/icons-react";
-import { useTranslation } from "react-i18next";
 import { setLang } from "@/lib/locales";
-
-import { product } from "@/lib/product";
 import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
+/**
+ * 全站统一极简 Header。
+ * 说明：
+ * 1. 宽度与 home 主内容对齐（max-w-4xl）。
+ * 2. 保留必要入口，并通过下拉收敛次级导航。
+ * 3. 顶部只保留一个 Header，避免重复导航。
+ */
 export function Navbar() {
   const { i18n, t } = useTranslation();
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isZh = i18n.language === "zh";
 
-  useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 0);
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const homePath = isZh ? "/zh" : "/";
+  const startPath = isZh ? "/zh/start" : "/start";
+  const docsPath = isZh ? "/zh/docs" : "/en/docs";
+  const featuresPath = isZh ? "/zh/features" : "/features";
+  const resourcesPath = isZh ? "/zh/resources" : "/resources";
+  const communityPath = isZh ? "/zh/community" : "/community";
+  const isHomeActive = location.pathname === homePath;
+  const isStartActive = location.pathname === startPath;
 
-  const handleLanguageChange = (lang: "en" | "zh") => {
-    setLang(lang);
-  };
+  const navItemClass = cn(
+    buttonVariants({ variant: "ghost", size: "sm" }),
+    "h-10 px-3 text-sm text-muted-foreground hover:text-foreground",
+  );
 
-  const homePath = i18n.language === "zh" ? "/zh" : "/";
-  const docsPath = i18n.language === "zh" ? "/zh/docs" : "/en/docs";
-  const featuresPath = i18n.language === "zh" ? "/zh/features" : "/features";
-  const resourcesPath = i18n.language === "zh" ? "/zh/resources" : "/resources";
-  const communityPath = i18n.language === "zh" ? "/zh/community" : "/community";
+  const iconButtonClass = cn(
+    buttonVariants({ variant: "ghost", size: "icon" }),
+    "size-10 text-muted-foreground hover:text-foreground",
+  );
+  const homeItemClass = cn(
+    navItemClass,
+    isHomeActive ? "text-foreground bg-muted/60" : undefined,
+  );
+  const quickStartClass = cn(
+    navItemClass,
+    isStartActive ? "text-foreground bg-muted/60" : undefined,
+  );
+  const dropdownContentClass = "w-52 p-1.5";
+  const dropdownItemClass = "min-h-10 px-3 py-2 text-sm";
 
   return (
-    <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled
-          ? "bg-background/80 backdrop-blur-xl border-b border-border/40 supports-backdrop-filter:bg-background/60"
-          : "bg-transparent border-transparent"
-      }`}
-    >
-      <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link
-          to={homePath}
-          className="flex items-center gap-2 mr-6 hover:opacity-80 transition-opacity"
-        >
-          <img src="/icon.png" alt="Logo" className="size-8" />
-          <span className="font-semibold tracking-tight text-lg inline-block">
-            {product.productName}
-          </span>
-        </Link>
-
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1">
-          {/* Docs - Simple Link */}
-          <Link
-            to={docsPath}
-            className={cn(
-              buttonVariants({ variant: "ghost" }),
-              "text-sm font-medium transition-colors",
-            )}
-          >
-            {t("nav.docs")}
-          </Link>
-
-          {/* Features - Simple Link */}
-          <Link
-            to={featuresPath}
-            className={cn(
-              buttonVariants({ variant: "ghost" }),
-              "text-sm font-medium transition-colors",
-            )}
-          >
-            {t("nav.features")}
-          </Link>
-
-          {/* Resources Menu */}
-          <Popover>
-            <PopoverTrigger
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "group gap-1",
-              )}
-            >
-              {t("nav.resources")}
-              <IconChevronDown className="size-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-80 p-2">
-              <div className="grid gap-1">
-                <Link
-                  to={`${resourcesPath}/skills`}
-                  className="group flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-background border border-border/50 group-hover:border-border transition-colors">
-                    <IconTools className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium leading-none mb-1">
-                      {t("nav.skillsAndMcp")}
-                    </div>
-                    <div className="text-xs text-muted-foreground line-clamp-1">
-                      {t("nav.skillsAndMcpDesc")}
-                    </div>
-                  </div>
-                </Link>
-                <Link
-                  to={`${resourcesPath}/marketplace`}
-                  className="group flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-background border border-border/50 group-hover:border-border transition-colors">
-                    <IconBuildingStore className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium leading-none mb-1">
-                      {t("nav.agentMarketplace")}
-                    </div>
-                    <div className="text-xs text-muted-foreground line-clamp-1">
-                      {t("nav.agentMarketplaceDesc")}
-                    </div>
-                  </div>
-                </Link>
-                <Link
-                  to={`${resourcesPath}/hosting`}
-                  className="group flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-background border border-border/50 group-hover:border-border transition-colors">
-                    <IconCloud className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium leading-none mb-1">
-                      {t("nav.hosting")}
-                    </div>
-                    <div className="text-xs text-muted-foreground line-clamp-1">
-                      {t("nav.hostingDesc")}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Community Menu */}
-          <Popover>
-            <PopoverTrigger
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "group gap-1",
-              )}
-            >
-              {t("nav.community")}
-              <IconChevronDown className="size-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-80 p-2">
-              <div className="grid gap-1">
-                <Link
-                  to={`${communityPath}/faq`}
-                  className="group flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-background border border-border/50 group-hover:border-border transition-colors">
-                    <IconHelp className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium leading-none mb-1">
-                      {t("nav.faq")}
-                    </div>
-                    <div className="text-xs text-muted-foreground line-clamp-1">
-                      {t("nav.faqDesc")}
-                    </div>
-                  </div>
-                </Link>
-                <Link
-                  to={`${communityPath}/roadmap`}
-                  className="group flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-background border border-border/50 group-hover:border-border transition-colors">
-                    <IconMap2 className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium leading-none mb-1">
-                      {t("nav.roadmap")}
-                    </div>
-                    <div className="text-xs text-muted-foreground line-clamp-1">
-                      {t("nav.roadmapDesc")}
-                    </div>
-                  </div>
-                </Link>
-                <a
-                  href="https://t.me/+iozIHyXr-BJhNjE1"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-background border border-border/50 group-hover:border-border transition-colors">
-                    <IconMessageCircle className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium leading-none mb-1">
-                      {t("nav.discussions")}
-                    </div>
-                    <div className="text-xs text-muted-foreground line-clamp-1">
-                      {t("nav.discussionsDesc")}
-                    </div>
-                  </div>
-                </a>
-                <div className="my-1 border-t border-border/50" />
-                <Link
-                  to={communityPath}
-                  className="group flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted group-hover:bg-background border border-border/50 group-hover:border-border transition-colors">
-                    <IconUsers className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium leading-none text-muted-foreground group-hover:text-foreground transition-colors">
-                      {t("nav.joinCommunity")}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </nav>
-
-        {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-2">
-          {/* Language Switcher - Text Button */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "text-sm font-medium text-muted-foreground hover:text-primary transition-colors min-w-[60px]",
-              )}
-            >
-              {i18n.language === "zh" ? t("languages.zh") : t("languages.en")}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleLanguageChange("en")}>
-                {t("languages.en")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleLanguageChange("zh")}>
-                {t("languages.zh")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Twitter (X) Button */}
-          <Link
-            to="https://twitter.com/shipmyagent"
-            target="_blank"
-            rel="noreferrer"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
-          >
-            <IconBrandX className="size-4" />
-            <span className="sr-only">{t("social.twitter")}</span>
-          </Link>
-
-          {/* GitHub Button - Minimalist Outline */}
-          <Link
-            to="https://github.com/wangenius/shipmyagent"
-            target="_blank"
-            rel="noreferrer"
-            className={cn(buttonVariants({ variant: "outline" }), "gap-2")}
-          >
-            <IconBrandGithub className="size-4" />
-            <span>{t("nav.starOnGithub")}</span>
-          </Link>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <Button
-          variant="ghost"
-          className="md:hidden size-8 px-0"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? (
-            <IconX className="size-4" />
-          ) : (
-            <IconMenu2 className="size-4" />
-          )}
-          <span className="sr-only">{t("nav.toggleMenu")}</span>
-        </Button>
-      </div>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-background">
-          <div className="container px-4 py-4 space-y-4">
-            {/* Docs Link */}
-            <Link
-              to={docsPath}
-              className="block text-sm font-medium hover:underline"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {t("nav.docs")}
-            </Link>
-
-            {/* Features Link */}
-            <Link
-              to={featuresPath}
-              className="block text-sm font-medium hover:underline"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {t("nav.features")}
-            </Link>
-
-            {/* Resources Section */}
-            <div>
-              <p className="text-sm font-medium mb-2">{t("nav.resources")}</p>
-              <div className="pl-4 space-y-2">
-                <Link
-                  to={`${resourcesPath}/skills`}
-                  className="block text-sm text-muted-foreground hover:underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t("nav.skillsAndMcp")}
-                </Link>
-                <Link
-                  to={`${resourcesPath}/marketplace`}
-                  className="block text-sm text-muted-foreground hover:underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t("nav.agentMarketplace")}
-                </Link>
-                <Link
-                  to={`${resourcesPath}/hosting`}
-                  className="block text-sm text-muted-foreground hover:underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t("nav.hosting")}
-                </Link>
-              </div>
-            </div>
-
-            {/* Community Section */}
-            <div>
-              <p className="text-sm font-medium mb-2">{t("nav.community")}</p>
-              <div className="pl-4 space-y-2">
-                <Link
-                  to={`${communityPath}/faq`}
-                  className="block text-sm text-muted-foreground hover:underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t("nav.faq")}
-                </Link>
-                <Link
-                  to={`${communityPath}/roadmap`}
-                  className="block text-sm text-muted-foreground hover:underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t("nav.roadmap")}
-                </Link>
-                <Link
-                  to="https://t.me/+iozIHyXr-BJhNjE1"
-                  target="_blank"
-                  className="block text-sm text-muted-foreground hover:underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t("nav.discussions")}
-                </Link>
-                <Link
-                  to={communityPath}
-                  className="block text-sm text-muted-foreground hover:underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {t("nav.joinCommunity")}
-                </Link>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t flex flex-col gap-2">
-              <Link
-                to="https://github.com/wangenius/shipmyagent"
-                target="_blank"
-                className="flex items-center gap-2 text-sm font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <IconBrandGithub className="size-4" /> {t("social.github")}
+    <header className="sticky top-0 z-50 px-4 md:px-6">
+      <div className="mx-auto w-full max-w-4xl bg-background/92 px-2 backdrop-blur supports-backdrop-filter:bg-background/80">
+        <div className="flex h-14 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-1">
+            <nav className="hidden items-center gap-0.5 sm:flex">
+              <Link to={homePath} className={homeItemClass}>
+                {t("nav.home")}
               </Link>
-              <Link
-                to="https://twitter.com/shipmyagent"
-                target="_blank"
-                className="flex items-center gap-2 text-sm font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <IconBrandX className="size-4" /> {t("social.twitter")}
+              <Link to={startPath} className={quickStartClass}>
+                {t("nav.quickStart")}
               </Link>
-            </div>
+              <Link to={docsPath} className={navItemClass}>
+                {t("nav.docs")}
+              </Link>
+              <Link to={featuresPath} className={navItemClass}>
+                {t("nav.features")}
+              </Link>
 
-            {/* Language Switcher in Mobile */}
-            <div className="pt-4 border-t">
-              <p className="text-xs text-muted-foreground mb-2">{t("nav.language")}</p>
-              <div className="flex gap-2">
-                <Button
-                  variant={i18n.language === "en" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleLanguageChange("en")}
+              <DropdownMenu>
+                <DropdownMenuTrigger className={cn(navItemClass, "gap-1")}>
+                  {t("nav.resources")}
+                  <IconChevronDown className="size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className={dropdownContentClass}>
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => navigate(resourcesPath)}
+                  >
+                    {t("nav.viewAllResources")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => navigate(`${resourcesPath}/skills`)}
+                  >
+                    {t("nav.skillsAndMcp")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => navigate(`${resourcesPath}/marketplace`)}
+                  >
+                    {t("nav.agentMarketplace")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => navigate(`${resourcesPath}/hosting`)}
+                  >
+                    {t("nav.hosting")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className={cn(navItemClass, "gap-1")}>
+                  {t("nav.community")}
+                  <IconChevronDown className="size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className={dropdownContentClass}>
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => navigate(communityPath)}
+                  >
+                    {t("nav.joinCommunity")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => navigate(`${communityPath}/faq`)}
+                  >
+                    {t("nav.faq")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => navigate(`${communityPath}/roadmap`)}
+                  >
+                    {t("nav.roadmap")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className={dropdownItemClass}
+                    onClick={() => window.open("https://t.me/+iozIHyXr-BJhNjE1", "_blank")}
+                  >
+                    {t("nav.discussions")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </nav>
+          </div>
+
+          <div className="inline-flex shrink-0 items-center gap-0.5">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={isZh ? "菜单" : "Menu"}
+                title={isZh ? "菜单" : "Menu"}
+                className={cn(iconButtonClass, "sm:hidden")}
+              >
+                <IconMenu2 className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className={cn(dropdownContentClass, "sm:hidden")}
+              >
+                <DropdownMenuItem
+                  className={dropdownItemClass}
+                  onClick={() => navigate(homePath)}
                 >
-                  {t("languages.en")}
-                </Button>
-                <Button
-                  variant={i18n.language === "zh" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleLanguageChange("zh")}
+                  {t("nav.home")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={dropdownItemClass}
+                  onClick={() => navigate(startPath)}
                 >
-                  {t("languages.zh")}
-                </Button>
-              </div>
-            </div>
+                  {t("nav.quickStart")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={dropdownItemClass}
+                  onClick={() => navigate(docsPath)}
+                >
+                  {t("nav.docs")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={dropdownItemClass}
+                  onClick={() => navigate(featuresPath)}
+                >
+                  {t("nav.features")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={dropdownItemClass}
+                  onClick={() => navigate(resourcesPath)}
+                >
+                  {t("nav.resources")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={dropdownItemClass}
+                  onClick={() => navigate(communityPath)}
+                >
+                  {t("nav.community")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <a
+              href="https://x.com/shipmyagent"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="X"
+              title="X"
+              className={iconButtonClass}
+            >
+              <IconBrandX className="size-4" />
+            </a>
+
+            <a
+              href="https://github.com/wangenius/shipmyagent"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="GitHub"
+              title="GitHub"
+              className={iconButtonClass}
+            >
+              <IconBrandGithub className="size-4" />
+            </a>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={isZh ? "切换语言" : "Switch language"}
+                title={isZh ? "切换语言" : "Switch language"}
+                className={iconButtonClass}
+              >
+                <IconLanguage className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32 p-1.5">
+                <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang("en")}>
+                  EN
+                </DropdownMenuItem>
+                <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang("zh")}>
+                  中文
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }

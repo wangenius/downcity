@@ -97,10 +97,10 @@ export default function Roadmap() {
   const issuesUrl = `${repoUrl}/issues`;
 
   return (
-    <section className="py-16 md:py-24 bg-background overflow-hidden relative">
-      <div className="container mx-auto px-4 md:px-6 relative z-10">
+    <section className="relative overflow-hidden py-16 md:py-24">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6 relative z-10">
         {/* Header */}
-        <div className="max-w-3xl mx-auto text-center mb-16">
+        <div className="mb-16 w-full text-center">
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
             {t("nav.roadmap")}
           </h1>
@@ -110,7 +110,7 @@ export default function Roadmap() {
         </div>
 
         {/* Roadmap Timeline (match homepage “Get Started in 3 Steps”) */}
-        <div className="max-w-3xl mx-auto relative">
+        <div className="relative w-full">
           <div className="absolute left-[27px] top-4 bottom-4 w-0.5 bg-border z-0 hidden md:block" />
 
           <div className="space-y-12 md:space-y-16">
@@ -157,7 +157,7 @@ export default function Roadmap() {
                       </p>
                     </div>
 
-                    <div className="w-full max-w-lg mt-4">
+                    <div className="mt-4 w-full">
                       <div className="rounded-xl bg-muted/30 border border-border shadow-sm p-4">
                         <div className="space-y-2">
                           {version.features.map((feature, idx) => {
@@ -210,13 +210,13 @@ export default function Roadmap() {
         </div>
 
         {/* CTA */}
-        <div className="max-w-4xl mx-auto mt-20 text-center">
+        <div className="mt-20 w-full text-center">
           <div className="flex flex-col items-center gap-4">
             <IconSparkles className="w-8 h-8 text-primary" />
             <h3 className="text-lg font-semibold">
               {t("community:roadmapPage.cta.title")}
             </h3>
-            <p className="text-muted-foreground max-w-2xl">
+            <p className="w-full text-muted-foreground">
               {t("community:roadmapPage.cta.description")}
             </p>
             <a

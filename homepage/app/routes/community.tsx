@@ -1,6 +1,4 @@
 import { Outlet } from "react-router";
-import { CommunitySection } from "@/components/sections/CommunitySection";
-import { Navbar } from "@/components/sections/navbar";
 import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
@@ -49,7 +47,6 @@ export function meta() {
 export default function Community() {
   return (
     <div className="min-h-screen">
-      <Navbar />
       <main>
         <Outlet />
       </main>

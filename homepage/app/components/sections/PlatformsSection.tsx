@@ -60,7 +60,7 @@ export function PlatformsSection() {
         <div className="homepage-grid-mask opacity-40" />
       </div>
 
-      <div className="container mx-auto px-4 md:px-6">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
             {t("platforms:title")}

@@ -53,7 +53,7 @@ export function TutorialSection() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       </div>
 
-      <div className="container mx-auto px-4 md:px-6">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
         <header className="mx-auto mb-12 max-w-3xl text-center md:mb-14">
           <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
             {t("tutorial:title")}

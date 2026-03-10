@@ -13,7 +13,7 @@ export const Footer: FC = () => {
 
   return (
     <footer className="py-12 md:py-16 bg-muted text-muted-foreground border-t">
-      <div className="container mx-auto px-4 md:px-6">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">

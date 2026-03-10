@@ -66,8 +66,8 @@ export default function Marketplace() {
       : "https://github.com/wangenius/shipmyagent";
   const discussionsUrl = `${repoUrl}/discussions`;
   return (
-    <div className="container mx-auto px-4 py-12 md:py-20">
-      <div className="max-w-6xl mx-auto">
+    <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">
+      <div className="w-full">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm font-medium mb-4">
             <span className="text-lg">🚀</span>
@@ -76,7 +76,7 @@ export default function Marketplace() {
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             {t("nav.agentMarketplace")}
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground">
             {t("resources:marketplacePage.subtitle")}
           </p>
         </div>

@@ -1,27 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
-  IconBrandGithub,
-  IconChevronDown,
   IconCheck,
   IconCopy,
   IconDownload,
-  IconLanguage,
 } from "@tabler/icons-react";
-import { setLang } from "@/lib/locales";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 const INSTALL_COMMAND = "npm i -g shipmyagent";
@@ -32,7 +16,7 @@ const WHITEPAPER_DOWNLOAD_FILENAME = "agent-strategy-whitepaper-2026-03-09.md";
  * 首页白皮书模块。
  * 说明：
  * 1. 承载白皮书主内容，直接用于 home 首页展示。
- * 2. 保留站点级导航、语言切换与安装命令交互。
+ * 2. 保留安装命令与白皮书导出交互。
  * 3. 通过同构的中英文结构降低后续维护成本。
  */
 const WHITEPAPER = {
@@ -145,18 +129,12 @@ const WHITEPAPER = {
 } as const;
 
 export function WhitepaperSection() {
-  const { i18n, t } = useTranslation();
+  const { i18n } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [whitepaperCopied, setWhitepaperCopied] = useState(false);
   const [whitepaperCopyFailed, setWhitepaperCopyFailed] = useState(false);
   const isZh = i18n.language === "zh";
   const content = isZh ? WHITEPAPER.zh : WHITEPAPER.en;
-
-  const docsPath = isZh ? "/zh/docs" : "/en/docs";
-  const featuresPath = isZh ? "/zh/features" : "/features";
-  const resourcesPath = isZh ? "/zh/resources" : "/resources";
-  const communityPath = isZh ? "/zh/community" : "/community";
-  const discussionsUrl = "https://t.me/+iozIHyXr-BJhNjE1";
 
   const onCopyInstall = () => {
     navigator.clipboard.writeText(INSTALL_COMMAND);
@@ -182,129 +160,11 @@ export function WhitepaperSection() {
     }
   };
 
-  const topNavItemClass = cn(
-    buttonVariants({ variant: "ghost", size: "sm" }),
-    "h-8 px-2 text-sm font-medium text-foreground/85",
-  );
-  const iconButtonClass = cn(
-    buttonVariants({ variant: "ghost", size: "icon" }),
-    "size-8 text-muted-foreground transition hover:text-foreground",
-  );
-  const popoverItemClass =
-    "block rounded-md px-2 py-1.5 text-sm font-medium text-foreground transition hover:bg-muted";
-
   return (
-    <section className="pt-2 pb-6 md:pt-3 md:pb-8">
-      <div className="container mx-auto px-4 md:px-6">
+    <section className="pt-8 pb-6 md:pt-10 md:pb-8">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
         <article className="mx-auto max-w-4xl space-y-12">
-          <header className="border-b border-border/40 pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <nav className="flex flex-wrap items-center gap-1">
-                <Link to={docsPath} className={topNavItemClass}>
-                  {t("nav.docs")}
-                </Link>
-                <Link to={featuresPath} className={topNavItemClass}>
-                  {t("nav.features")}
-                </Link>
-
-                <Popover>
-                  <PopoverTrigger className={cn(topNavItemClass, "gap-1")}>
-                    {t("nav.resources")}
-                    <IconChevronDown className="size-3" />
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-44 p-1">
-                    <div className="grid gap-1">
-                      <Link
-                        to={`${resourcesPath}/skills`}
-                        className={popoverItemClass}
-                      >
-                        {t("nav.skillsAndMcp")}
-                      </Link>
-                      <Link
-                        to={`${resourcesPath}/marketplace`}
-                        className={popoverItemClass}
-                      >
-                        {t("nav.agentMarketplace")}
-                      </Link>
-                      <Link
-                        to={`${resourcesPath}/hosting`}
-                        className={popoverItemClass}
-                      >
-                        {t("nav.hosting")}
-                      </Link>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                <Popover>
-                  <PopoverTrigger className={cn(topNavItemClass, "gap-1")}>
-                    {t("nav.community")}
-                    <IconChevronDown className="size-3" />
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-44 p-1">
-                    <div className="grid gap-1">
-                      <Link to={`${communityPath}/faq`} className={popoverItemClass}>
-                        {t("nav.faq")}
-                      </Link>
-                      <Link
-                        to={`${communityPath}/roadmap`}
-                        className={popoverItemClass}
-                      >
-                        {t("nav.roadmap")}
-                      </Link>
-                      <Link
-                        to={discussionsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={popoverItemClass}
-                      >
-                        {t("nav.discussions")}
-                      </Link>
-                      <Link to={communityPath} className={popoverItemClass}>
-                        {t("nav.joinCommunity")}
-                      </Link>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </nav>
-
-              <div className="inline-flex items-center gap-1">
-                <Link
-                  to="https://github.com/wangenius/shipmyagent"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="GitHub"
-                  title="GitHub"
-                  className={iconButtonClass}
-                >
-                  <IconBrandGithub className="size-4" />
-                </Link>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    aria-label={isZh ? "切换语言" : "Switch language"}
-                    title={isZh ? "切换语言" : "Switch language"}
-                    className={iconButtonClass}
-                  >
-                    <IconLanguage className="size-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-28">
-                    <DropdownMenuItem onClick={() => setLang("en")}>
-                      EN
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLang("zh")}>
-                      中文
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </header>
-
           <header className="space-y-5">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              {content.badge}
-            </p>
             <h1 className="text-balance font-serif text-4xl leading-[1.12] tracking-tight md:text-5xl lg:text-6xl">
               {content.title}
             </h1>

@@ -5,7 +5,6 @@ import { CodePreviewSection } from "@/components/sections/CodePreviewSection";
 import { UseCasesSection } from "@/components/sections/UseCasesSection";
 import { StatsSection } from "@/components/sections/StatsSection";
 import { CTASection } from "@/components/sections/CTASection";
-import { Navbar } from "@/components/sections/navbar";
 import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
@@ -53,7 +52,6 @@ export function meta() {
 export default function Features() {
   return (
     <div className="min-h-screen">
-      <Navbar />
       <main>
         <FeaturesSection />
         <CodePreviewSection />

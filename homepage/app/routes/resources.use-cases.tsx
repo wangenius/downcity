@@ -73,8 +73,8 @@ export default function UseCases() {
       : "https://github.com/wangenius/shipmyagent/discussions";
 
   return (
-    <div className="container mx-auto px-4 py-12 md:py-20">
-      <div className="max-w-6xl mx-auto">
+    <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">
+      <div className="w-full">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             {t("nav.useCases")}

@@ -11,7 +11,7 @@ import {
 import { RootProvider } from "fumadocs-ui/provider/react-router";
 import { I18nextProvider } from "react-i18next";
 import { defineI18nUI } from "fumadocs-ui/i18n";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
@@ -116,28 +116,50 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const path = location.pathname;
 
-  // Simple check for lang in path
-  let lang = "en";
-  if (path.includes("/zh/") || path.endsWith("/zh")) {
-    lang = "zh";
-  }
+  // 根据路径判断语言前缀；无前缀路径（如 /）将跟随本地语言偏好。
+  const pathLang: "en" | "zh" =
+    path.includes("/zh/") || path.endsWith("/zh") ? "zh" : "en";
+  const hasLangPrefix =
+    path === "/zh" ||
+    path === "/en" ||
+    path.startsWith("/zh/") ||
+    path.startsWith("/en/");
+  const [lang, setLang] = useState<"en" | "zh">(pathLang);
+
+  // 文档页使用 fumadocs 自身导航，不展示站点全局 Header。
+  const isDocsPath =
+    path === "/docs" ||
+    path.startsWith("/docs/") ||
+    path.startsWith("/en/docs") ||
+    path.startsWith("/zh/docs");
 
   // Sync i18n language with localStorage (only on client side)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // On first load, check localStorage for saved language preference
+      // 语言优先级：显式路径前缀 > 本地保存偏好 > 路径推导默认值。
       const savedLang = localStorage.getItem("shipmyagent-lang") as "en" | "zh" | null;
-      if (savedLang && i18next.language !== savedLang) {
-        i18next.changeLanguage(savedLang);
-      } else if (i18next.language !== lang) {
-        // Sync with URL path and save to localStorage
-        i18next.changeLanguage(lang);
-        localStorage.setItem("shipmyagent-lang", lang);
+      const resolvedLang: "en" | "zh" = hasLangPrefix ? pathLang : (savedLang ?? pathLang);
+
+      if (i18next.language !== resolvedLang) {
+        i18next.changeLanguage(resolvedLang);
       }
+      localStorage.setItem("shipmyagent-lang", resolvedLang);
+      setLang(resolvedLang);
+
+      const handleLanguageChanged = (next: string) => {
+        const normalized: "en" | "zh" = next.startsWith("zh") ? "zh" : "en";
+        setLang(normalized);
+        localStorage.setItem("shipmyagent-lang", normalized);
+        document.documentElement.lang = normalized;
+      };
+
+      i18next.on("languageChanged", handleLanguageChanged);
+      return () => {
+        i18next.off("languageChanged", handleLanguageChanged);
+      };
     }
-    // Only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return undefined;
+  }, [hasLangPrefix, pathLang]);
 
   return (
     <html lang={lang} suppressHydrationWarning>
@@ -149,6 +171,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <I18nextProvider i18n={i18next}>
           <RootProvider i18n={provider(lang)}>
             <Toaster theme="light" richColors position="top-center" />
+            {!isDocsPath ? <Navbar /> : null}
             {children}
           </RootProvider>
         </I18nextProvider>
@@ -186,7 +209,6 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Navbar />
       <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
         <div className="space-y-6 max-w-md mx-auto">
           <h1 className="text-9xl font-bold font-mono tracking-tighter text-transparent bg-clip-text bg-linear-to-b from-foreground to-foreground/20 select-none">

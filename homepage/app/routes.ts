@@ -9,6 +9,8 @@ export default [
   // Homepage
   index("routes/home.tsx"),
   route("zh", "routes/home.tsx", { id: "home-zh" }),
+  route("start", "routes/start.tsx"),
+  route("zh/start", "routes/start.tsx", { id: "start-zh" }),
 
   // Features page
   route("features", "routes/features.tsx"),

@@ -5,6 +5,8 @@
   "getStarted": "开始使用",
   "readDocs": "查看文档",
   "nav": {
+    "home": "首页",
+    "quickStart": "快速开始",
     "docs": "文档",
     "features": "功能特性",
     "resources": "资源",

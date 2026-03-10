@@ -41,8 +41,8 @@ export const CodePreviewSection: FC = () => {
   const content = activeTab === "agent" ? AGENT_MD_CONTENT : SHIP_JSON_CONTENT;
 
   return (
-    <section className="py-16 md:py-24 bg-muted/30">
-      <div className="container mx-auto px-4 md:px-6">
+    <section className="py-16 md:py-24">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
         <div className="flex flex-col md:flex-row gap-12 items-center">
           {/* Text Side */}
           <div className="flex-1 space-y-6">

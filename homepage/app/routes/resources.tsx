@@ -1,6 +1,4 @@
 import { Outlet } from "react-router";
-import { ResourcesSection } from "@/components/sections/ResourcesSection";
-import { Navbar } from "@/components/sections/navbar";
 import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
@@ -49,7 +47,6 @@ export function meta() {
 export default function Resources() {
   return (
     <div className="min-h-screen">
-      <Navbar />
       <main>
         <Outlet />
       </main>

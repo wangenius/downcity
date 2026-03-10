@@ -45,7 +45,7 @@ export function HeroSection() {
         <div className="homepage-grid-mask" />
       </div>
 
-      <div className="container mx-auto px-4 md:px-6">
+      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
         <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
           <div className="space-y-8">
             <Badge

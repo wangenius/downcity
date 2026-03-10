@@ -29,12 +29,20 @@ sma skill <subcommand> [options]
 ## Examples
 
 ```bash
+sma skill list
+sma skill lookup playwright
+
+# install only when missing from `list`
 sma skill find playwright
 sma skill install owner/repo@playwright
-sma skill list
 sma skill lookup playwright
 ```
 
 ## Recommended flow
 
-`find -> install -> lookup`
+`list -> lookup` (if missing, then `find -> install -> lookup`)
+
+## Runtime behavior
+
+- In Agent runtime, `lookup` tool output returns status only.
+- Skill content is injected through the next user message wrapped in `<skill>...</skill>`.

@@ -18,7 +18,7 @@ You can run tools in ./scripts/:
 - ./scripts/analyze.py
 
 ## Coding
-- Use MCP tools (Web, DB)
+- Use web/data tools when needed
 - Write & execute custom scripts
   in the ./code/ directory
 `;

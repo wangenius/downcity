@@ -37,7 +37,8 @@ export function Navbar() {
   const startPath = isZh ? "/zh/start" : "/start";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const featuresPath = isZh ? "/zh/features" : "/features";
-  const resourcesPath = isZh ? "/zh/resources" : "/resources";
+  const resourcesBasePath = isZh ? "/zh/resources" : "/resources";
+  const resourcesPath = `${resourcesBasePath}/skills`;
   const communityPath = isZh ? "/zh/community" : "/community";
   const isHomeActive = location.pathname === homePath;
   const isStartActive = location.pathname === startPath;
@@ -74,11 +75,11 @@ export function Navbar() {
               <Link to={startPath} className={quickStartClass}>
                 {t("nav.quickStart")}
               </Link>
-              <Link to={docsPath} className={navItemClass}>
-                {t("nav.docs")}
-              </Link>
               <Link to={featuresPath} className={navItemClass}>
                 {t("nav.features")}
+              </Link>
+              <Link to={docsPath} className={navItemClass}>
+                {t("nav.docs")}
               </Link>
 
               <DropdownMenu>
@@ -89,25 +90,19 @@ export function Navbar() {
                 <DropdownMenuContent align="start" className={dropdownContentClass}>
                   <DropdownMenuItem
                     className={dropdownItemClass}
-                    onClick={() => navigate(resourcesPath)}
+                    onClick={() => navigate(`${resourcesBasePath}/skills`)}
                   >
-                    {t("nav.viewAllResources")}
+                    {t("nav.skills")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className={dropdownItemClass}
-                    onClick={() => navigate(`${resourcesPath}/skills`)}
-                  >
-                    {t("nav.skillsAndMcp")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${resourcesPath}/marketplace`)}
+                    onClick={() => navigate(`${resourcesBasePath}/marketplace`)}
                   >
                     {t("nav.agentMarketplace")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className={dropdownItemClass}
-                    onClick={() => navigate(`${resourcesPath}/hosting`)}
+                    onClick={() => navigate(`${resourcesBasePath}/hosting`)}
                   >
                     {t("nav.hosting")}
                   </DropdownMenuItem>
@@ -177,15 +172,15 @@ export function Navbar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className={dropdownItemClass}
-                  onClick={() => navigate(docsPath)}
-                >
-                  {t("nav.docs")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
                   onClick={() => navigate(featuresPath)}
                 >
                   {t("nav.features")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={dropdownItemClass}
+                  onClick={() => navigate(docsPath)}
+                >
+                  {t("nav.docs")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className={dropdownItemClass}

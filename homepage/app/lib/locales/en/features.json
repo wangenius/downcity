@@ -10,7 +10,7 @@
     },
     "interactive": {
       "title": "Proactive Employee",
-      "description": "True agency unlocked. It doesn't just wait for commands—it **proactively notifies you and executes tasks**. It learns by searching the web, installs skills, and writes scripts to handle complex workflows autonomously."
+      "description": "True agency unlocked. It doesn't just wait for commands—it **proactively notifies you and executes tasks**. It learns by searching the web, installs skills on demand, and writes scripts to handle complex workflows autonomously."
     },
     "schedule": {
       "title": "Human-in-the-Loop",
@@ -19,10 +19,6 @@
     "audit": {
       "title": "Auditable Memory",
       "description": "Every thought, every action result, and every human approval is persistently logged in the file system. It's your most trustworthy and transparent digital employee."
-    },
-    "mcp": {
-      "title": "MCP Native",
-      "description": "Native support for the Model Context Protocol. Instantly connect to hundreds of existing MCP Servers (Postgres, Stripe, Linear) to give your Agent real-world data access."
     },
     "skills": {
       "title": "Claude Code Skills",

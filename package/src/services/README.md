@@ -13,7 +13,7 @@
    - `runtime/` 包含队列、幂等、发送注册表、文本标准化等执行细节。
 2. `skills/`
    - 提供技能发现、列表、安装、查阅能力。
-   - `lookup` 直接返回 `SKILL.md` 内容，按当前回合无状态使用。
+   - `lookup` 读取 `SKILL.md` 后通过运行时协议注入 user message（无 pin 持久化）。
 3. `task/`
    - 管理任务定义（`task.md` frontmatter + body）与执行入口。
    - 支持任务 CRUD、状态切换、立即执行、cron 调度运行时。

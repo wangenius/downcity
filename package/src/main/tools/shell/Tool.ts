@@ -9,12 +9,18 @@
 
 import { z } from "zod";
 import { tool } from "ai";
+import { generateId } from "@utils/Id.js";
 import type {
   ShellCloseInput,
   ShellCommandInput,
   ShellWriteInput,
 } from "@main/types/Shell.js";
 import type { ShipConfig } from "@main/types/ShipConfig.js";
+import type { JsonObject } from "@/types/Json.js";
+import {
+  enqueueInjectedUserMessage,
+  requestContext,
+} from "@main/context/manager/RequestContext.js";
 import {
   DEFAULT_SHELL_COMMAND_YIELD_MS,
   DEFAULT_WRITE_STDIN_YIELD_MS,
@@ -40,6 +46,23 @@ type ShellToolRuntime = {
 };
 
 let shellToolRuntime: ShellToolRuntime | null = null;
+
+type CommandBridgeState = {
+  /**
+   * 当前 shell 会话累计输出（用于在结束后解析桥接协议 JSON）。
+   */
+  bufferedOutput: string;
+};
+
+/**
+ * 通用命令桥接状态表（按 shell context_id）。
+ *
+ * 关键点（中文）
+ * - main 不识别具体 service，只识别统一协议字段。
+ * - 仅对 CLI 命令候选（`sma`/`shipmyagent`）开启累积解析，降低额外开销。
+ * - 会话结束/close 时必须清理，避免内存泄漏。
+ */
+const commandBridgeStates = new Map<number, CommandBridgeState>();
 
 /**
  * 注入 shell 工具所需的最小运行时快照。
@@ -81,6 +104,188 @@ function resolveWriteStdinYieldMs(
   );
   if (input) return clamped;
   return Math.max(MIN_EMPTY_WRITE_STDIN_YIELD_MS, clamped);
+}
+
+function toJsonObject(value: unknown): JsonObject | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as JsonObject;
+}
+
+/**
+ * 判断命令是否需要开启桥接协议解析。
+ */
+function shouldEnableCommandBridge(command: string): boolean {
+  const raw = String(command || "").trim();
+  if (!raw) return false;
+  return /(?:^|\s)(?:sma|shipmyagent)(?:\s|$)/i.test(raw);
+}
+
+function tryParseJsonObject(raw: string): JsonObject | null {
+  const text = String(raw || "").trim();
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    return toJsonObject(parsed);
+  } catch {
+    // 关键点（中文）：容错处理前后杂音，尽量从首个 `{` 到末尾 `}` 提取 JSON。
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    if (firstBrace < 0 || lastBrace <= firstBrace) return null;
+    const candidate = text.slice(firstBrace, lastBrace + 1);
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      return toJsonObject(parsed);
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
+ * 注入一条 user 文本消息（通用协议）。
+ */
+function injectUserTextMessage(params: {
+  text: string;
+  note?: string;
+}): boolean {
+  const store = requestContext.getStore();
+  const contextId = String(store?.contextId || "").trim();
+  const text = String(params.text || "").trim();
+  if (!contextId || !text) return false;
+
+  enqueueInjectedUserMessage({
+    id: `u:${contextId}:${generateId()}`,
+    role: "user",
+    metadata: {
+      v: 1,
+      ts: Date.now(),
+      contextId,
+      source: "ingress",
+      kind: "normal",
+      extra: {
+        note: String(params.note || "runtime_injected_user_message"),
+      },
+    },
+    parts: [{ type: "text", text }],
+  });
+
+  return true;
+}
+
+/**
+ * 提取命令结果中的运行时桥接协议块。
+ *
+ * 关键点（中文）
+ * - main 只识别 `__ship` 协议，不依赖具体 service 语义。
+ * - 协议位置：`payload.__ship` 或 `payload.data.__ship`。
+ */
+function extractRuntimeBridgeBlock(payload: JsonObject): {
+  injectUserMessages: Array<{ text: string; note?: string }>;
+  suppressToolOutput: boolean;
+  toolOutputMessage: string;
+} | null {
+  const data = toJsonObject(payload.data);
+  const bridge = toJsonObject((data?.__ship ?? payload.__ship) as unknown);
+  if (!bridge) return null;
+
+  const rawMessages = Array.isArray(bridge.injectUserMessages)
+    ? bridge.injectUserMessages
+    : [];
+  const injectUserMessages: Array<{ text: string; note?: string }> = [];
+  for (const item of rawMessages) {
+    const obj = toJsonObject(item);
+    if (!obj) continue;
+    const text = typeof obj.text === "string" ? obj.text.trim() : "";
+    if (!text) continue;
+    const note =
+      typeof obj.note === "string" && obj.note.trim() ? obj.note.trim() : undefined;
+    injectUserMessages.push({ text, ...(note ? { note } : {}) });
+  }
+
+  const suppressToolOutput = bridge.suppressToolOutput !== false;
+  const toolOutputMessage =
+    typeof bridge.toolOutputMessage === "string" && bridge.toolOutputMessage.trim()
+      ? bridge.toolOutputMessage.trim()
+      : "runtime bridge applied";
+
+  return {
+    injectUserMessages,
+    suppressToolOutput,
+    toolOutputMessage,
+  };
+}
+
+function sanitizeBridgeMarkers(payload: JsonObject): JsonObject {
+  const cloned = JSON.parse(JSON.stringify(payload)) as JsonObject;
+  if ("__ship" in cloned) {
+    delete cloned.__ship;
+  }
+  const data = toJsonObject(cloned.data);
+  if (data && "__ship" in data) {
+    delete data.__ship;
+  }
+  return cloned;
+}
+
+/**
+ * 对 shell 命令结果应用“通用运行时桥接协议”。
+ */
+function bridgeCommandResponse(params: {
+  contextId: number;
+  response: JsonObject;
+}): JsonObject {
+  const state = commandBridgeStates.get(params.contextId);
+  if (!state) return params.response;
+
+  const rawOutput =
+    typeof params.response.output === "string" ? params.response.output : "";
+  if (rawOutput) {
+    state.bufferedOutput += rawOutput;
+  }
+
+  const hasMoreOutput = params.response.has_more_output === true;
+  const exitCode =
+    typeof params.response.exit_code === "number"
+      ? params.response.exit_code
+      : null;
+  const completed = !hasMoreOutput && exitCode !== null;
+  if (!completed) return params.response;
+
+  commandBridgeStates.delete(params.contextId);
+
+  const payload = tryParseJsonObject(state.bufferedOutput);
+  if (!payload) return params.response;
+  const bridge = extractRuntimeBridgeBlock(payload);
+  if (!bridge) return params.response;
+
+  let injectedCount = 0;
+  for (const item of bridge.injectUserMessages) {
+    if (
+      injectUserTextMessage({
+        text: item.text,
+        note: item.note,
+      })
+    ) {
+      injectedCount += 1;
+    }
+  }
+
+  if (!bridge.suppressToolOutput) {
+    const sanitized = sanitizeBridgeMarkers(payload);
+    return {
+      ...params.response,
+      output: JSON.stringify(sanitized, null, 2),
+    };
+  }
+
+  return {
+    ...params.response,
+    output: JSON.stringify({
+      success: true,
+      message: bridge.toolOutputMessage,
+      injected_user_messages: injectedCount,
+    }),
+  };
 }
 
 const shellCommandInputSchema = z.object({
@@ -189,6 +394,11 @@ export const exec_command = tool({
         shellPath: shell,
         login,
       });
+      if (shouldEnableCommandBridge(cmd)) {
+        commandBridgeStates.set(context.id, {
+          bufferedOutput: "",
+        });
+      }
 
       await collectOutputUntilDeadline(
         context,
@@ -200,17 +410,21 @@ export const exec_command = tool({
         resolveOutputLimits(runtime.config, max_output_tokens),
       );
       const response = formatContextResponse({ context, page, startedAt });
+      const bridgedResponse = bridgeCommandResponse({
+        contextId: context.id,
+        response,
+      });
       console.log(
         "[shell-tool] exec_command:done",
         JSON.stringify({
-          context_id: response.context_id,
-          running: response.running,
-          has_more_output: response.has_more_output,
-          output_chars: String(response.output || "").length,
-          exit_code: response.exit_code ?? null,
+          context_id: bridgedResponse.context_id,
+          running: bridgedResponse.running,
+          has_more_output: bridgedResponse.has_more_output,
+          output_chars: String(bridgedResponse.output || "").length,
+          exit_code: bridgedResponse.exit_code ?? null,
         }),
       );
-      return response;
+      return bridgedResponse;
     } catch (error) {
       console.log(
         "[shell-tool] exec_command:error",
@@ -266,17 +480,21 @@ export const write_stdin = tool({
         resolveOutputLimits(runtime.config, max_output_tokens),
       );
       const response = formatContextResponse({ context, page, startedAt });
+      const bridgedResponse = bridgeCommandResponse({
+        contextId: context.id,
+        response,
+      });
       console.log(
         "[shell-tool] write_stdin:done",
         JSON.stringify({
-          context_id: response.context_id,
-          running: response.running,
-          has_more_output: response.has_more_output,
-          output_chars: String(response.output || "").length,
-          exit_code: response.exit_code ?? null,
+          context_id: bridgedResponse.context_id,
+          running: bridgedResponse.running,
+          has_more_output: bridgedResponse.has_more_output,
+          output_chars: String(bridgedResponse.output || "").length,
+          exit_code: bridgedResponse.exit_code ?? null,
         }),
       );
-      return response;
+      return bridgedResponse;
     } catch (error) {
       console.log(
         "[shell-tool] write_stdin:error",
@@ -303,6 +521,8 @@ export const close_shell = tool({
         "[shell-tool] close_shell:start",
         JSON.stringify({ context_id, force }),
       );
+      // 关键点（中文）：关闭会话时同步清理桥接状态。
+      commandBridgeStates.delete(context_id);
       const context = getContextOrThrow(context_id);
       const result = closeShellContext(context, force);
 

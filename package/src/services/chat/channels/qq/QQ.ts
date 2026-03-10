@@ -822,233 +822,231 @@ export class QQBot extends BaseChatChannel {
   }): Promise<void> {
     const eventType = String(params.eventType || "").trim();
     const data = params.data;
-    const { id: messageId, group_openid: groupId, content, author } = data;
+    const messageId =
+      typeof data.id === "string" ? data.id.trim() : String(data.id || "").trim();
+    const groupId =
+      typeof data.group_openid === "string" ? data.group_openid.trim() : "";
     if (!groupId || !messageId) return;
-    const chatType = "group";
-    const chatKey = this.getChatKey({ chatId: groupId, chatType });
-    if (
-      await this.shouldSkipDuplicatedInboundMessage(
-        eventType || EventType.GROUP_MESSAGE_CREATE,
-        messageId,
-      )
-    ) {
-      return;
-    }
 
-    // 提取纯文本内容（去除 @机器人 的部分）
-    const rawContent = String(content || "");
-    const userMessage = this.extractTextContent(rawContent);
-    const incomingAttachments = this.extractIncomingAttachments(data);
-    const actor = this.extractAuthorIdentity(author);
-
-    const enqueueGroupAudit = async (params: {
-      reason: string;
-      kind?: string;
-      isMentioned?: boolean;
-      isReplyToBot?: boolean;
-      inWindow?: boolean;
-    }): Promise<void> => {
-      await this.enqueueAuditMessage({
-        chatId: groupId,
-        chatKey,
-        messageId,
-        userId: actor.userId,
-        text: this.buildGroupAuditText({
-          rawContent,
-          userMessage,
-        }),
-        meta: {
-          chatType,
-          username: actor.username,
-          eventType,
-          reason: params.reason,
-          ...(params.kind ? { kind: params.kind } : {}),
-          ...(typeof params.isMentioned === "boolean"
-            ? { isMentioned: params.isMentioned }
-            : {}),
-          ...(typeof params.isReplyToBot === "boolean"
-            ? { isReplyToBot: params.isReplyToBot }
-            : {}),
-          ...(typeof params.inWindow === "boolean"
-            ? { inWindow: params.inWindow }
-            : {}),
-        },
-      });
-    };
-
-    if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
-      await enqueueGroupAudit({
-        reason: "bot_originated",
-      });
-      this.logger.debug("忽略机器人自身消息（group）", {
-        messageId,
-        groupId,
-        botUserId: this.botUserId,
-      });
-      return;
-    }
-
-    this.logger.info(`收到群聊消息 [${groupId}]: ${userMessage}`);
-
-    const isMentioned =
-      eventType === EventType.GROUP_AT_MESSAGE_CREATE ||
-      this.isBotMentionedInMessage(String(content || ""), data);
-    const isReplyToBot = this.isReplyToBot(data);
-    const inWindow = this.isWithinFollowupWindow(chatKey, actor.userId);
-    const isAddressed = isMentioned || isReplyToBot || inWindow;
-
-    // 关键点（中文）：与 Telegram 对齐，纯 @ 空消息且无附件时不触发执行。
-    if (!userMessage && incomingAttachments.length === 0) {
-      // 关键点（中文）：显式 @bot / 回复bot 的空消息也可激活 follow-up 窗口，
-      // 便于用户先点名机器人，再发送下一条具体内容。
-      if (actor.userId && (isMentioned || isReplyToBot)) {
-        this.touchFollowupWindow(chatKey, actor.userId);
-      }
-      await enqueueGroupAudit({
-        reason: "empty_after_extract",
-        isMentioned,
-        isReplyToBot,
-        inWindow,
-      });
-      return;
-    }
-
-    // 检查是否是命令
-    if (userMessage.startsWith("/")) {
-      await enqueueGroupAudit({
-        reason: "command_received",
-        kind: "command",
-        isMentioned,
-        isReplyToBot,
-        inWindow,
-      });
-      const cmdName = (userMessage.trim().split(/\s+/)[0] || "")
-        .split("@")[0]
-        ?.toLowerCase();
-      const allowAny = cmdName === "/help" || cmdName === "/start";
-      if (
-        !allowAny &&
-        !this.isAllowedGroupActor({
-          chatKey,
-          actorId: actor.userId,
-          author,
-        })
-      ) {
-        await enqueueGroupAudit({
-          reason: "permission_denied",
-          isMentioned,
-          isReplyToBot,
-          inWindow,
-        });
-        await this.sendMessage(
-          groupId,
-          "group",
-          messageId,
-          "⛔️ 仅发起人或群管理员可以使用该命令。",
-        );
-        return;
-      }
-      if (actor.userId) this.touchFollowupWindow(chatKey, actor.userId);
-      await this.handleCommand(groupId, "group", messageId, userMessage);
-    } else {
-      if (
-        !this.isAllowedGroupActor({
-          chatKey,
-          actorId: actor.userId,
-          author,
-        })
-      ) {
-        await enqueueGroupAudit({
-          reason: "permission_denied",
-          isMentioned,
-          isReplyToBot,
-          inWindow,
-        });
-        // 关键点（中文）：未显式点名 bot 时静默拒绝，避免群里刷屏。
-        if (isAddressed) {
-          await this.sendMessage(
-            groupId,
-            "group",
-            messageId,
-            "⛔️ 仅发起人或群管理员可以与我对话。",
-          );
-        }
-        return;
-      }
-      if (actor.userId) this.touchFollowupWindow(chatKey, actor.userId);
-      const instructions = await this.buildInboundInstructions({
-        chatId: groupId,
-        chatKey,
-        messageId,
-        userMessage,
-        attachments: incomingAttachments,
-      });
-      if (!instructions) {
-        await enqueueGroupAudit({
-          reason: "empty_after_extract",
-          isMentioned,
-          isReplyToBot,
-          inWindow,
-        });
-        return;
-      }
-      await this.executeAndReply(
-        groupId,
-        "group",
-        messageId,
-        instructions,
-        actor,
-      );
-    }
+    await this.handleInboundMessage({
+      eventType: eventType || EventType.GROUP_MESSAGE_CREATE,
+      chatId: groupId,
+      chatType: "group",
+      data,
+    });
   }
 
   /**
    * 处理 C2C 私聊消息
    */
   private async handleC2CMessage(data: QQMessageData): Promise<void> {
-    const { id: messageId, author, content } = data;
+    const messageId =
+      typeof data.id === "string" ? data.id.trim() : String(data.id || "").trim();
     if (!messageId) return;
-    if (
-      await this.shouldSkipDuplicatedInboundMessage(
-        EventType.C2C_MESSAGE_CREATE,
+
+    const actor = this.extractAuthorIdentity(data.author);
+    const chatId = String(actor.userId || "").trim();
+    if (!chatId) {
+      this.logger.warn("QQ C2C 消息缺少 userId，已忽略", {
+        eventType: EventType.C2C_MESSAGE_CREATE,
         messageId,
-      )
-    ) {
+      });
       return;
     }
-    const actor = this.extractAuthorIdentity(author);
-    const chatType = "c2c";
-    const chatId = actor.userId || "";
 
-    const userMessage = this.extractTextContent(String(content || ""));
-    const incomingAttachments = this.extractIncomingAttachments(data);
+    await this.handleInboundMessage({
+      eventType: EventType.C2C_MESSAGE_CREATE,
+      chatId,
+      chatType: "c2c",
+      data,
+      actor,
+    });
+  }
+
+  /**
+   * QQ 入站主流程（对齐 Telegram 处理顺序）。
+   *
+   * 关键点（中文）
+   * - 群聊与私聊复用同一条主逻辑，只在群聊路径增加权限与 follow-up 判定。
+   * - 保持“审计入队”和“执行触发”解耦，避免历史断层。
+   */
+  private async handleInboundMessage(params: {
+    eventType: string;
+    chatId: string;
+    chatType: "group" | "c2c";
+    data: QQMessageData;
+    actor?: { userId?: string; username?: string };
+  }): Promise<void> {
+    const eventType = String(params.eventType || "").trim();
+    const chatId = String(params.chatId || "").trim();
+    const messageId =
+      typeof params.data.id === "string"
+        ? params.data.id.trim()
+        : String(params.data.id || "").trim();
+    if (!chatId || !messageId) return;
+
+    if (await this.shouldSkipDuplicatedInboundMessage(eventType, messageId)) {
+      return;
+    }
+
+    const actor = params.actor || this.extractAuthorIdentity(params.data.author);
+    const chatType = params.chatType;
+    const isGroup = chatType === "group";
+    const chatKey = this.getChatKey({ chatId, chatType });
+    const rawContent = String(params.data.content || "");
+    const incomingAttachments = this.extractIncomingAttachments(params.data);
+    const hasIncomingAttachment = incomingAttachments.length > 0;
+    const cleanedText = isGroup
+      ? this.stripBotMention(rawContent)
+      : this.extractTextContent(rawContent);
+    const isMentioned = isGroup
+      ? eventType === EventType.GROUP_AT_MESSAGE_CREATE ||
+        this.isBotMentionedInMessage(rawContent, params.data)
+      : false;
+    const isReplyToBot = isGroup ? this.isReplyToBot(params.data) : false;
+    const inWindow = isGroup
+      ? this.isWithinFollowupWindow(chatKey, actor.userId)
+      : false;
+    const explicit = isGroup ? isMentioned || isReplyToBot : true;
+    const isAddressed = isGroup ? explicit || inWindow : true;
+
+    const enqueueAudit = async (opts: { reason: string; kind?: string }): Promise<void> => {
+      await this.enqueueAuditMessage({
+        chatId,
+        chatKey,
+        messageId,
+        userId: actor.userId,
+        text: this.buildAuditText({
+          rawContent,
+          cleanedText,
+          hasIncomingAttachment,
+        }),
+        meta: {
+          chatType,
+          username: actor.username,
+          eventType,
+          reason: opts.reason,
+          ...(opts.kind ? { kind: opts.kind } : {}),
+          ...(isGroup ? { isMentioned, isReplyToBot, inWindow } : {}),
+        },
+      });
+    };
 
     if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
-      this.logger.debug("忽略机器人自身消息（c2c）", {
+      if (isGroup) {
+        await enqueueAudit({ reason: "bot_originated" });
+      }
+      this.logger.debug("忽略机器人自身消息", {
         messageId,
+        chatId,
+        chatType,
         botUserId: this.botUserId,
       });
       return;
     }
 
-    this.logger.info(
-      `收到私聊消息 [${actor.userId || "unknown"}]: ${userMessage}`,
-    );
+    this.logger.info(`收到 ${chatType} 消息 [${chatId}]: ${cleanedText}`);
 
-    // 检查是否是命令
-    if (userMessage.startsWith("/")) {
-      await this.handleCommand(chatId, "c2c", messageId, userMessage);
-    } else {
-      const instructions = await this.buildInboundInstructions({
-        chatId,
-        chatKey: this.getChatKey({ chatId, chatType }),
-        messageId,
-        userMessage,
-        attachments: incomingAttachments,
-      });
-      if (!instructions) return;
-      await this.executeAndReply(chatId, "c2c", messageId, instructions, actor);
+    // 与 Telegram 对齐：纯空 payload（既无文本也无附件）直接忽略。
+    if (!rawContent && !hasIncomingAttachment) {
+      if (isGroup) {
+        await enqueueAudit({ reason: "empty_payload" });
+      }
+      return;
     }
+
+    // 命令路径：与 Telegram 对齐，命令消息也入审计流。
+    if (cleanedText.startsWith("/")) {
+      await enqueueAudit({
+        reason: "command_received",
+        kind: "command",
+      });
+
+      if (isGroup) {
+        if (!actor.userId) {
+          await enqueueAudit({ reason: "missing_actor" });
+          return;
+        }
+        const cmdName = (cleanedText.trim().split(/\s+/)[0] || "")
+          .split("@")[0]
+          ?.toLowerCase();
+        const allowAny = cmdName === "/help" || cmdName === "/start";
+        if (
+          !allowAny &&
+          !this.isAllowedGroupActor({
+            chatKey,
+            actorId: actor.userId,
+            author: params.data.author,
+          })
+        ) {
+          await enqueueAudit({ reason: "permission_denied" });
+          await this.sendMessage(
+            chatId,
+            chatType,
+            messageId,
+            "⛔️ 仅发起人或群管理员可以使用该命令。",
+          );
+          return;
+        }
+        this.touchFollowupWindow(chatKey, actor.userId);
+      }
+
+      await this.handleCommand(chatId, chatType, messageId, cleanedText);
+      return;
+    }
+
+    if (isGroup) {
+      if (!actor.userId) {
+        await enqueueAudit({ reason: "missing_actor" });
+        return;
+      }
+
+      const allowed = this.isAllowedGroupActor({
+        chatKey,
+        actorId: actor.userId,
+        author: params.data.author,
+      });
+      if (!allowed) {
+        await enqueueAudit({ reason: "permission_denied" });
+        // 关键点（中文）：未显式点名 bot 时静默拒绝，避免群里刷屏。
+        if (isAddressed) {
+          await this.sendMessage(
+            chatId,
+            chatType,
+            messageId,
+            "⛔️ 仅发起人或群管理员可以与我对话。",
+          );
+        }
+        return;
+      }
+    }
+
+    if (!cleanedText && !hasIncomingAttachment) {
+      // 关键点（中文）：显式 @bot / 回复bot 的空消息也可激活 follow-up 窗口。
+      if (isGroup && actor.userId && explicit) {
+        this.touchFollowupWindow(chatKey, actor.userId);
+      }
+      await enqueueAudit({ reason: "empty_after_clean" });
+      return;
+    }
+
+    if (isGroup && actor.userId) {
+      this.touchFollowupWindow(chatKey, actor.userId);
+    }
+
+    const instructions = await this.buildInboundInstructions({
+      chatId,
+      chatKey,
+      messageId,
+      userMessage: cleanedText,
+      attachments: incomingAttachments,
+    });
+    if (!instructions) {
+      await enqueueAudit({ reason: "empty_after_build" });
+      return;
+    }
+
+    await this.executeAndReply(chatId, chatType, messageId, instructions, actor);
   }
 
   /**
@@ -1175,10 +1173,30 @@ export class QQBot extends BaseChatChannel {
    */
   private extractTextContent(content: string): string {
     if (!content) return "";
-    // 去除 @ 提及和多余空格
-    return content
-      .replace(/<@!\d+>/g, "")
-      .replace(/<@\d+>/g, "")
+    return String(content).replace(/\s+/g, " ").trim();
+  }
+
+  private escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /**
+   * 仅移除消息中的“机器人提及”片段，保留其他文本。
+   *
+   * 关键点（中文）
+   * - 对齐 Telegram：只清理 bot mention，不误删用户正文。
+   */
+  private stripBotMention(content: string): string {
+    const raw = String(content || "");
+    if (!raw) return "";
+
+    const botUserId = String(this.botUserId || "").trim();
+    if (!botUserId) return raw.trim();
+
+    const escaped = this.escapeRegExp(botUserId);
+    return raw
+      .replace(new RegExp(`<@!?${escaped}>`, "ig"), " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
@@ -1237,17 +1255,21 @@ export class QQBot extends BaseChatChannel {
   }
 
   /**
-   * 构造 QQ 群聊审计文本（保证非空，便于上下文回溯）。
+   * 构造入站审计文本（保证非空，便于历史回溯）。
    */
-  private buildGroupAuditText(params: {
+  private buildAuditText(params: {
     rawContent: string;
-    userMessage: string;
+    cleanedText: string;
+    hasIncomingAttachment: boolean;
   }): string {
     const raw = String(params.rawContent || "").trim();
     if (raw) return raw;
-    const extracted = String(params.userMessage || "").trim();
-    if (extracted) return extracted;
-    return "[group_message] (no_text_content)";
+
+    const cleaned = String(params.cleanedText || "").trim();
+    if (cleaned) return cleaned;
+
+    if (params.hasIncomingAttachment) return "[attachment] (qq)";
+    return "[message] (no_text_or_supported_attachment)";
   }
 
   /**

@@ -8,7 +8,10 @@
 
 import { generateId } from "@utils/Id.js";
 import type { ModelMessage } from "ai";
-import { requestContext } from "@main/context/manager/RequestContext.js";
+import {
+  drainInjectedUserMessages,
+  requestContext,
+} from "@main/context/manager/RequestContext.js";
 import { OrchestratorComponent } from "@main/agent/components/OrchestratorComponent.js";
 import type {
   OrchestratorComposeResult,
@@ -82,8 +85,12 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
       system: ContextSystemMessage[];
       messages?: ModelMessage[];
     }> => {
+      const injectedMessages = drainInjectedUserMessages();
       const onStepCallback = requestContext.getStore()?.onStepCallback;
-      if (typeof onStepCallback !== "function") {
+      if (
+        typeof onStepCallback !== "function" &&
+        injectedMessages.length === 0
+      ) {
         return { system: input.system };
       }
 
@@ -92,9 +99,14 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
         : [];
       let outMessages: ModelMessage[] | undefined;
       try {
-        const mergedMessages = await onStepCallback();
+        const mergedMessages =
+          typeof onStepCallback === "function" ? await onStepCallback() : [];
+        const mergedWithInjected = [
+          ...injectedMessages,
+          ...(Array.isArray(mergedMessages) ? mergedMessages : []),
+        ];
         const mergedModelMessages = await input.appendMergedUserMessages(
-          Array.isArray(mergedMessages) ? mergedMessages : [],
+          mergedWithInjected,
         );
         if (mergedModelMessages.length > 0) {
           // 关键点（中文）：保持当前 step 已有消息顺序不变，只把新增 user 消息追加到末尾。

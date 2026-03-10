@@ -1,9 +1,6 @@
 
 import { FeaturesSection } from "@/components/sections/FeaturesSection";
-import { EcosystemSection } from "@/components/sections/EcosystemSection";
 import { CodePreviewSection } from "@/components/sections/CodePreviewSection";
-import { UseCasesSection } from "@/components/sections/UseCasesSection";
-import { StatsSection } from "@/components/sections/StatsSection";
 import { CTASection } from "@/components/sections/CTASection";
 import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
@@ -55,9 +52,6 @@ export default function Features() {
       <main>
         <FeaturesSection />
         <CodePreviewSection />
-        <EcosystemSection />
-        <UseCasesSection />
-        <StatsSection />
         <CTASection />
       </main>
       <Footer />

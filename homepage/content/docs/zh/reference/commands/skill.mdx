@@ -29,12 +29,20 @@ sma skill <subcommand> [options]
 ## 示例
 
 ```bash
+sma skill list
+sma skill lookup playwright
+
+# 仅当 list 中缺失时再安装
 sma skill find playwright
 sma skill install owner/repo@playwright
-sma skill list
 sma skill lookup playwright
 ```
 
 ## 推荐流程
 
-`find -> install -> lookup`
+`list -> lookup`（缺失时再 `find -> install -> lookup`）
+
+## 运行时行为说明
+
+- 在 Agent 运行时，`lookup` 的工具返回只包含执行状态。
+- 技能正文会通过下一条 user message 注入，并使用 `<skill>...</skill>` 包裹。

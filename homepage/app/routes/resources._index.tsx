@@ -1,5 +1,5 @@
-import { ResourcesSection } from "@/components/sections/ResourcesSection";
+import { Navigate } from "react-router";
 
 export default function ResourcesIndex() {
-  return <ResourcesSection />;
+  return <Navigate to="skills" replace />;
 }

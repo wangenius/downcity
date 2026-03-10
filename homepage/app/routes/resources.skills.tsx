@@ -3,7 +3,7 @@ import { product } from "@/lib/product";
 
 export function meta() {
   const title = `${product.productName} — Skills`;
-  const description = "Skill directories and MCP resources";
+  const description = "Skill directories and extension resources";
   return [
     { title },
     { name: "description", content: description },
@@ -31,43 +31,7 @@ const skillDirectories = [
 ] as const;
 
 export default function Skills() {
-  const { i18n, t } = useTranslation();
-  const mcpDocsPath = i18n.language === "zh"
-    ? "/zh/docs/quickstart/mcp"
-    : "/en/docs/quickstart/mcp";
-
-  const mcpResources = [
-    {
-      id: "shipmyagentMcpDocs",
-      url: mcpDocsPath,
-      icon: "📘",
-      external: false,
-    },
-    {
-      id: "smithery",
-      url: "https://smithery.ai",
-      icon: "🧪",
-      external: true,
-    },
-    {
-      id: "mcpMarket",
-      url: "https://mcpmarket.com",
-      icon: "🛍️",
-      external: true,
-    },
-    {
-      id: "mcpServers",
-      url: "https://github.com/modelcontextprotocol/servers",
-      icon: "🧰",
-      external: true,
-    },
-    {
-      id: "mcpSo",
-      url: "https://mcp.so",
-      icon: "🧭",
-      external: true,
-    },
-  ] as const;
+  const { t } = useTranslation();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">
@@ -119,42 +83,6 @@ export default function Skills() {
             </ul>
           </section>
 
-          <section>
-            <h2 className="text-lg font-semibold mb-3">
-              {t("resources:skillsPage.sections.mcp")}
-            </h2>
-            <ul className="border rounded-lg divide-y overflow-hidden bg-background">
-              {mcpResources.map((item) => (
-                <li key={item.id}>
-                  <a
-                    href={item.url}
-                    target={item.external ? "_blank" : undefined}
-                    rel={item.external ? "noopener noreferrer" : undefined}
-                    className="block p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl leading-none mt-0.5">
-                        {item.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold">
-                          {t(`resources:skillsPage.mcpLinks.${item.id}.title`)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {t(
-                            `resources:skillsPage.mcpLinks.${item.id}.description`,
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2 truncate">
-                          {item.url}
-                        </div>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
         </div>
       </div>
     </div>

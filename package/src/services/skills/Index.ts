@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 使用统一 actions 模型声明 CLI/API/执行逻辑
  * - API 默认路由为 `/service/skill/<action>`
- * - lookup 无状态返回 SKILL.md 内容，避免会话 pin 复杂度
+ * - lookup 无状态读取 SKILL.md，并通过协议下发到运行时注入 user message
  */
 
 import type { Command } from "commander";
@@ -79,6 +79,14 @@ function getBooleanOpt(
   return typeof value === "boolean" ? value : undefined;
 }
 
+function sanitizeXmlAttr(value: string): string {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 /**
  * 从 install spec 推断候选 skill 标识。
  *
@@ -109,7 +117,7 @@ export const skillsService: Service = {
   actions: {
     find: {
       command: {
-        description: "查找未学会 skills（下一步通常 install）",
+        description: "查找 `list` 中不存在的未学会 skills（缺失时再 install）",
         configure(command: Command) {
           command.argument("<query>");
         },
@@ -128,8 +136,8 @@ export const skillsService: Service = {
             success: true,
             data: {
               query: payload.query,
-              message: "该技能已学会。使用技能前请先执行 lookup。",
-              workflow: ["find", "install", "lookup"],
+              message: "该技能已在 list 中，无需 install。使用前请先执行 lookup。",
+              workflow: ["list", "lookup"],
               nextAction: "lookup",
               learnedSkill: exactLearned,
               learnedHints: [],
@@ -143,7 +151,7 @@ export const skillsService: Service = {
           success: true,
           data: {
             query: payload.query,
-            message: "已执行未学会技能检索，下一步可 install 后再 lookup。",
+            message: "已执行缺失技能检索；若目标不在 list 中，可 install 后再 lookup。",
             workflow: ["find", "install", "lookup"],
             nextAction: "install",
             learnedSkill: null,
@@ -154,7 +162,7 @@ export const skillsService: Service = {
     },
     install: {
       command: {
-        description: "下载/学习未学会 skill（完成后请先 lookup）",
+        description: "安装 `list` 中不存在的 skill（完成后请先 lookup）",
         configure(command: Command) {
           command
             .argument("<spec>")
@@ -189,8 +197,8 @@ export const skillsService: Service = {
             data: {
               spec: payload.spec,
               skipped: true,
-              message: "技能已学会，无需 install。使用技能前请先执行 lookup。",
-              workflow: ["find", "install", "lookup"],
+              message: "技能已在 list 中，无需 install。使用前请先执行 lookup。",
+              workflow: ["list", "lookup"],
               nextAction: "lookup",
               queryFromSpec,
               addedSkills: [],
@@ -279,11 +287,36 @@ export const skillsService: Service = {
             error: result.error || "skill lookup failed",
           };
         }
+        const skillName = String(result.skill?.name || result.skill?.id || "").trim();
+        const openingTag = skillName
+          ? `<skill name="${sanitizeXmlAttr(skillName)}">`
+          : "<skill>";
+        const skillUserMessage = [
+          openingTag,
+          String(result.content || "").trim(),
+          "</skill>",
+        ]
+          .filter(Boolean)
+          .join("\n")
+          .trim();
+
         return {
           success: true,
           data: {
-            ...result,
-            message: "已返回 SKILL.md 内容，请按该技能指令执行。",
+            success: true,
+            ...(result.skill ? { skill: result.skill } : {}),
+            message: "技能内容已准备，下一步将以 `<skill>...</skill>` user message 注入。",
+            __ship: {
+              injectUserMessages: [
+                {
+                  text: skillUserMessage,
+                  note: "skill_lookup",
+                },
+              ],
+              suppressToolOutput: true,
+              toolOutputMessage:
+                "skill lookup success; content injected as <skill> user message.",
+            },
           },
         };
       },

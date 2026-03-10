@@ -29,6 +29,15 @@ export type RequestContext = {
    * - 用于把中间文本增量派发到外部通道（如 direct 模式分步发送）。
    */
   onAssistantStepCallback?: AgentAssistantStepCallback;
+
+  /**
+   * 运行时注入的 user 消息队列（可选）。
+   *
+   * 关键点（中文）
+   * - 用于在 tool 执行后向下一 step 注入结构化 user 消息。
+   * - 队列内容由 service 侧通过统一协议下发，main 不感知业务语义。
+   */
+  injectedUserMessages?: ShipContextUserMessageV1[];
 };
 
 /**
@@ -52,4 +61,35 @@ export function withRequestContext<T>(ctx: RequestContext, fn: () => T): T {
  */
 export function getRequestContext(): RequestContext | undefined {
   return requestContext.getStore();
+}
+
+/**
+ * 入队一条“待注入 user 消息”。
+ *
+ * 关键点（中文）
+ * - 若当前不在请求上下文内，静默忽略（fail-open）。
+ */
+export function enqueueInjectedUserMessage(
+  message: ShipContextUserMessageV1,
+): void {
+  const store = requestContext.getStore();
+  if (!store || !message) return;
+  if (!Array.isArray(store.injectedUserMessages)) {
+    store.injectedUserMessages = [];
+  }
+  store.injectedUserMessages.push(message);
+}
+
+/**
+ * 读取并清空“待注入 user 消息”队列。
+ *
+ * 关键点（中文）
+ * - 采用 drain 语义，确保每条注入消息只在下一 step 使用一次。
+ */
+export function drainInjectedUserMessages(): ShipContextUserMessageV1[] {
+  const store = requestContext.getStore();
+  if (!store || !Array.isArray(store.injectedUserMessages)) return [];
+  const out = [...store.injectedUserMessages];
+  store.injectedUserMessages = [];
+  return out;
 }

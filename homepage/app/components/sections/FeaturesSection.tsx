@@ -1,84 +1,118 @@
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  IconSitemap,
+  IconLayersIntersect,
   IconBrain,
+  IconBolt,
   IconShieldCheck,
   IconHistory,
-  IconApi,
   IconTools,
 } from "@tabler/icons-react";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 const features = [
   {
+    id: "repo",
+    index: "01",
+    kickerZh: "以仓库为中心",
+    kickerEn: "Repo-Centered",
     titleKey: "features:features.repo.title",
     descriptionKey: "features:features.repo.description",
-    icon: IconSitemap,
+    icon: IconLayersIntersect,
   },
   {
+    id: "interactive",
+    index: "02",
+    kickerZh: "主动执行",
+    kickerEn: "Proactive Execution",
     titleKey: "features:features.interactive.title",
     descriptionKey: "features:features.interactive.description",
     icon: IconBrain,
   },
   {
+    id: "schedule",
+    index: "03",
+    kickerZh: "关键操作可控",
+    kickerEn: "Controlled Actions",
     titleKey: "features:features.schedule.title",
     descriptionKey: "features:features.schedule.description",
     icon: IconShieldCheck,
   },
   {
+    id: "audit",
+    index: "04",
+    kickerZh: "过程可追溯",
+    kickerEn: "Traceable Process",
     titleKey: "features:features.audit.title",
     descriptionKey: "features:features.audit.description",
     icon: IconHistory,
   },
   {
-    titleKey: "features:features.mcp.title",
-    descriptionKey: "features:features.mcp.description",
-    icon: IconApi,
-  },
-  {
+    id: "skills",
+    index: "05",
+    kickerZh: "能力按需扩展",
+    kickerEn: "Extensible Skills",
     titleKey: "features:features.skills.title",
     descriptionKey: "features:features.skills.description",
     icon: IconTools,
   },
-];
+] as const;
 
 export const FeaturesSection: FC = () => {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const isZh = i18n.language === "zh";
 
   return (
     <section className="py-12 md:py-24 lg:py-32">
       <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
-              {t("features:title")}{" "}
-              <span className="text-primary italic">
-                {t("features:titleItalic")}
-              </span>
-            </h2>
-            <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              {t("features:description")}
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-6 mt-12 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature, i) => (
-            <Card key={i} className="bg-background">
-              <CardHeader>
-                <feature.icon className="h-10 w-10 mb-2 text-primary" />
-                <CardTitle>{t(feature.titleKey as any)}</CardTitle>
-                <CardDescription>
-                  {t(feature.descriptionKey as any)}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+        <header className="space-y-4">
+          <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <IconBolt className="size-3.5" />
+            {t("features:sectionLabel")}
+          </p>
+          <h1 className="text-balance font-serif text-4xl leading-[1.12] tracking-tight md:text-5xl">
+            {t("features:title")}{" "}
+            <span className="text-primary italic">{t("features:titleItalic")}</span>
+          </h1>
+          <p className="max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
+            {t("features:description")}
+          </p>
+        </header>
+
+        <div className="mt-10 space-y-3">
+          {features.map((feature) => (
+            <article
+              key={feature.id}
+              className="rounded-lg border border-border/60 px-4 py-4 md:px-5"
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex w-12 shrink-0 flex-col items-center gap-1 pt-0.5">
+                  <span className="text-xs font-mono tracking-wider text-muted-foreground">
+                    {feature.index}
+                  </span>
+                  <feature.icon className="size-4 text-primary" />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    {isZh ? feature.kickerZh : feature.kickerEn}
+                  </p>
+                  <h2 className="font-serif text-2xl leading-tight tracking-tight text-foreground md:text-[1.7rem]">
+                    {t(feature.titleKey as any)}
+                  </h2>
+                  <p className="text-sm leading-7 text-muted-foreground md:text-base">
+                    {t(feature.descriptionKey as any)}
+                  </p>
+                </div>
+              </div>
+            </article>
           ))}
+        </div>
+
+        <div className="mt-8 rounded-lg border border-border/60 px-4 py-4 md:px-5">
+          <p className="text-sm leading-7 text-muted-foreground md:text-base">
+            {isZh
+              ? "这套能力不是“替代人”，而是让你在熟悉的工程路径里，把执行速度、治理能力和可持续协作同时拉起来。"
+              : "These capabilities are not about replacing humans; they raise execution speed, governance, and sustainable collaboration inside familiar engineering workflows."}
+          </p>
         </div>
       </div>
     </section>

@@ -10,7 +10,7 @@
     },
     "interactive": {
       "title": "Proactive Employee",
-      "description": "它具备真正的主动性：它不仅能响应指令，更能**主动发出提醒并执行任务**。遇到未知领域，它会自动联网学习、下载 MCP 技能；面对复杂场景，它会编写脚本并自我规划，让一切自动发生。"
+      "description": "它具备真正的主动性：它不仅能响应指令，更能**主动发出提醒并执行任务**。遇到未知领域，它会自动联网学习、按需安装技能；面对复杂场景，它会编写脚本并自我规划，让一切自动发生。"
     },
     "schedule": {
       "title": "Human-in-the-Loop",
@@ -19,10 +19,6 @@
     "audit": {
       "title": "Auditable Memory",
       "description": "Agent 的每一次思考、每一步行动结果、每一次人类的审批记录，都被完整记录在文件系统中。它是你最值得信赖、最透明的数字化员工。"
-    },
-    "mcp": {
-      "title": "MCP Native",
-      "description": "原生支持 Model Context Protocol 标准。一键接入数百种现有的 MCP Servers（如 Postgres, Stripe, Linear），让 Agent 瞬间拥有连接真实世界数据的能力。"
     },
     "skills": {
       "title": "Claude Code Skills",

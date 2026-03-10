@@ -2,7 +2,8 @@
  * Skills prompt section 渲染器。
  *
  * 关键点（中文）
- * - 负责把“可用 skills + 扫描根目录”格式化为 system prompt 文本。
+ * - 仅负责渲染运行时动态清单（已发现 skills + 扫描根目录）。
+ * - 稳定规则放在 `services/skills/PROMPT.txt`，避免分散在代码里维护。
  * - 仅做字符串渲染，不做文件 IO。
  */
 
@@ -24,44 +25,49 @@ export function renderClaudeSkillsPromptSection(
 ): string {
   const roots = getClaudeSkillSearchRoots(projectRoot, config);
   const allowExternal = Boolean(config.services?.skills?.allowExternalPaths);
+  const visibleSkills = skills.slice(0, 40);
 
-  const lines: string[] = [];
-  lines.push("# Skills System");
-  lines.push("");
-  lines.push("## What are Skills?");
-  lines.push("Skills are specialized instruction sets (SKILL.md files) that define workflows, constraints, and best practices for specific tasks. When you lookup a skill, you MUST strictly follow its instructions as Standard Operating Procedures (SOPs).");
-  lines.push("");
-  lines.push("## When to Use Skills");
-  lines.push("- `sma skill list` shows skills you have already learned locally");
-  lines.push("- Use `sma skill find <query>` to search skills you have NOT learned yet (delegates to `npx skills find`)");
-  lines.push("- Use `sma skill install <spec>` to learn/install missing skills (delegates to `npx skills add`)");
-  lines.push("- Use `sma skill lookup <name>` to read the full SKILL.md content for a learned skill");
-  lines.push("- `lookup` is stateless: it returns content directly and does not pin to the conversation");
-  lines.push("");
-  lines.push("## Available Skills");
-  lines.push(`Found ${skills.length} skill(s):`);
-  lines.push("");
+  const skillsSection =
+    visibleSkills.length > 0
+      ? visibleSkills
+          .map((skill) => {
+            const desc = skill.description ? ` - ${skill.description}` : "";
+            return `- **${skill.name}**${desc}`;
+          })
+          .join("\n")
+      : "- (none)";
 
-  for (const s of skills.slice(0, 40)) {
-    const desc = s.description ? ` — ${s.description}` : "";
-    lines.push(`- **${s.name}**${desc}`);
-  }
-  if (skills.length > 40) lines.push(`- …and ${skills.length - 40} more`);
+  const moreSkillsLine =
+    skills.length > visibleSkills.length
+      ? `- ...and ${skills.length - visibleSkills.length} more`
+      : "";
 
-  lines.push("");
-  lines.push("## Skill Roots (scan order, higher wins on conflicts)");
-  for (const r of roots) {
-    const externalNote =
-      r.source === "config" && !allowExternal ? " (disabled: allowExternalPaths=false)" : "";
-    lines.push(`- [${r.source}] ${r.display}${externalNote}`);
-  }
+  const rootsSection =
+    roots.length > 0
+      ? roots
+          .map((root) => {
+            const externalNote =
+              root.source === "config" && !allowExternal
+                ? " (disabled: allowExternalPaths=false)"
+                : "";
+            return `- [${root.source}] ${root.display}${externalNote}`;
+          })
+          .join("\n")
+      : "- (none)";
 
-  lines.push("");
-  lines.push("## Important Rules");
-  lines.push("1. Before using any skill in the current task, you MUST call `lookup` for that skill first");
-  lines.push("2. When `lookup` returns a skill, treat its instructions as mandatory SOPs for the current task");
-  lines.push("3. If a skill defines `allowedTools`, you can ONLY use those tools (plus exec_command/write_stdin/close_shell)");
-  lines.push("4. Skills take priority over general instructions when there's a conflict");
-  lines.push("5. Read skills proactively when task matches skill description — don't wait to be asked");
-  return lines.join("\n");
+  return [
+    "# Runtime Skills Inventory",
+    "",
+    `Discovered ${skills.length} learned/installed skill(s).`,
+    "All skills in `Available Skills` are already available locally.",
+    "",
+    "## Available Skills",
+    skillsSection,
+    moreSkillsLine,
+    "",
+    "## Skill Roots (scan order, higher wins on conflicts)",
+    rootsSection,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

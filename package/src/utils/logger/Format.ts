@@ -7,6 +7,8 @@ type FormattedToolCall = {
   name?: string;
   arguments?: string;
 };
+// 关键点（中文）：system/developer 指令需要完整可审计，日志不做截断。
+const UNLIMITED_LOG_CHARS = Number.MAX_SAFE_INTEGER;
 
 /**
  * 按会话记录“上次已打印的消息数”。
@@ -327,6 +329,7 @@ function formatMessagesForLog(
   opts: {
     maxContentChars: number;
     maxToolArgsChars: number;
+    maxSystemChars: number;
   },
 ): string[] {
   const out: string[] = [];
@@ -380,7 +383,11 @@ function formatMessagesForLog(
     let bodyText = "";
     let userInfoAttrs: string[] = [];
     if ("content" in message) {
-      const contentText = contentToText(message.content, opts.maxContentChars);
+      const isSystemRole = role === "system" || role === "developer";
+      const contentText = contentToText(
+        message.content,
+        isSystemRole ? opts.maxSystemChars : opts.maxContentChars,
+      );
       if (role === "user") {
         const parsedInfoBlock = parseInfoBlockText(contentText);
         bodyText = parsedInfoBlock ? parsedInfoBlock.body : contentText;
@@ -402,7 +409,7 @@ function formatMessagesForLog(
     }
 
     if (role === "system" || role === "developer") {
-      pushLabeledTextBlock(out, "system", bodyText || "-", opts.maxContentChars);
+      pushLabeledTextBlock(out, "system", bodyText || "-", opts.maxSystemChars);
       continue;
     }
 
@@ -528,6 +535,7 @@ export function parseFetchRequestForLog(
       : 0;
 
   const messageTextParts: string[] = [];
+  const maxSystemChars = UNLIMITED_LOG_CHARS;
 
   if (messages && Array.isArray(messages)) {
     const hasSystemMessage = messages.some((item) => {
@@ -537,9 +545,9 @@ export function parseFetchRequestForLog(
       return role === "system" || role === "developer";
     });
     if (!hasSystemMessage) {
-      const systemText = normalizeSystemTextForLog(system, 2000).trim();
+      const systemText = normalizeSystemTextForLog(system, maxSystemChars).trim();
       if (systemText) {
-        pushLabeledTextBlock(messageTextParts, "system", systemText, 2000);
+        pushLabeledTextBlock(messageTextParts, "system", systemText, maxSystemChars);
       }
     }
 
@@ -551,6 +559,7 @@ export function parseFetchRequestForLog(
     messageTextParts.push(...formatMessagesForLog(selectedMessages, {
       maxContentChars: 2000,
       maxToolArgsChars: 1200,
+      maxSystemChars,
     }));
     if (selectedMessages.length === 0) {
       messageTextParts.push(formatLogField("agent", "no incremental items"));

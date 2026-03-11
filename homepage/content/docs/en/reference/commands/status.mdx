@@ -1,38 +1,35 @@
 ---
 title: sma status
-description: Check Agent Runtime (daemon) status for current directory or target path
+description: Check SMA manager and active managed agents status
 ---
 
 # `sma status`
 
-Check Agent Runtime daemon status.
+Check SMA manager status and active managed agent daemons.
 
 ## Usage
 
 ```bash
-sma status [path]
-sma agent status [path]
+sma status
 ```
 
 ## Output behavior
 
-- Running: shows `pid`, `log`, and `startedAt`
-- Initialized but stopped: shows `daemon is not running`
-- Not initialized: suggests running `shipmyagent init`
+- Shows whether manager process is running
+- Shows manager `pidFile` and `log` paths
+- Shows active managed agent daemons summary
 
 ## Examples
 
 ```bash
-# current directory
+# manager global status
 sma status
 
-# explicit project path
-sma status /path/to/agent
-
-# equivalent agent subcommand
-sma agent status .
+# project daemon status (use agent subcommand)
+sma agent status /path/to/agent
 ```
 
 ## Related command
 
+- [`sma manager`](/en/docs/reference/commands/manager)
 - [`sma agent`](/en/docs/reference/commands/agent)

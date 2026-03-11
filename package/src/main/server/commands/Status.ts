@@ -2,7 +2,6 @@
  * 查询后台 Agent Runtime（daemon）状态。
  *
  * 对应命令：
- * - `sma status [path]`
  * - `sma agent status [path]`
  */
 

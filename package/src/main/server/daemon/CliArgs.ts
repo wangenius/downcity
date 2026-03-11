@@ -3,7 +3,7 @@
  *
  * 关键点
  * - daemon（来自 `agent on --daemon` / `agent restart`）会拉起一个前台 `agent on`
- *   进程（不带 `--daemon`），这里负责拼装其 argv。
+ *   进程（显式 `--foreground true`），这里负责拼装其 argv。
  */
 
 import type { StartOptions } from "@main/types/Start.js";
@@ -19,7 +19,8 @@ export const buildRunArgsFromOptions = (
   projectRoot: string,
   options: StartOptions,
 ): string[] => {
-  const args: string[] = ["agent", "on", projectRoot];
+  // 关键点（中文）：daemon 子进程必须强制前台模式，避免再次进入 startCommand 形成递归拉起。
+  const args: string[] = ["agent", "on", projectRoot, "--foreground", "true"];
 
   if (options.port !== undefined) args.push("--port", String(options.port));
   if (options.host) args.push("--host", String(options.host));

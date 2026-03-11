@@ -1,38 +1,35 @@
 ---
 title: sma status
-description: 查看当前目录或指定目录的 Agent Runtime（daemon）状态
+description: 查看 SMA manager 与活跃托管 agent 状态
 ---
 
 # `sma status`
 
-查看 Agent Runtime daemon 状态。
+查看 SMA manager 状态和活跃托管的 agent daemon。
 
 ## 用法
 
 ```bash
-sma status [path]
-sma agent status [path]
+sma status
 ```
 
 ## 输出规则
 
-- 运行中：显示 `pid`、`log`、`startedAt`
-- 已初始化但未运行：显示 `daemon is not running`
-- 未初始化：提示执行 `shipmyagent init`
+- 显示 manager 进程是否在运行
+- 显示 manager 的 `pidFile` 与 `log` 路径
+- 显示当前活跃托管 agent daemon 概览
 
 ## 示例
 
 ```bash
-# 查看当前目录
+# 查看 manager 全局状态
 sma status
 
-# 显式指定目录
-sma status /path/to/agent
-
-# 与 agent 子命令等价
-sma agent status .
+# 查看项目 daemon 状态（用 agent 子命令）
+sma agent status /path/to/agent
 ```
 
 ## 相关命令
 
+- [`sma manager`](/zh/docs/reference/commands/manager)
 - [`sma agent`](/zh/docs/reference/commands/agent)

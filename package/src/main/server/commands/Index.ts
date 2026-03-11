@@ -476,12 +476,17 @@ program
   }));
 
 program
-  .command("status [path]")
-  .description("查看当前目录或指定目录 Agent Runtime 状态")
+  .command("status [legacyPath]")
+  .description("查看 manager 与已托管 agent 运行状态")
   .helpOption("--help", "display help for command")
-  .action(withVersionBanner(async (cwd: string = ".") => {
-    injectAgentContext(cwd);
-    await statusCommand(cwd);
+  .action(withVersionBanner(async (legacyPath?: string) => {
+    if (String(legacyPath || "").trim()) {
+      console.log("ℹ️  Top-level `sma status` now shows manager global status.");
+      console.log(
+        "   Use `sma agent status <path>` for project daemon status.",
+      );
+    }
+    await managerStatusCommand();
   }));
 
 const agent = program

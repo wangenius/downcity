@@ -10,6 +10,7 @@ This section splits CLI docs by command. Each command has its own page.
 ## Runtime lifecycle
 
 - [`sma init`](/en/docs/reference/commands/init)
+- [`sma start`](/en/docs/reference/commands/start)
 - [`sma agent`](/en/docs/reference/commands/agent)
 
 ## Service / Extension-style commands
@@ -26,4 +27,5 @@ This section splits CLI docs by command. Each command has its own page.
 ## Notes
 
 - You can always check latest flags with `sma <command> --help`.
-- `sma service/extension/chat/voice/skill/task/memory` are daemon-facing command groups and usually require a running runtime (`sma agent on --daemon`).
+- `sma agent on` now defaults to background mode; use `--foreground` for terminal mode.
+- `sma service/extension/chat/voice/skill/task/memory` usually require a running agent runtime.

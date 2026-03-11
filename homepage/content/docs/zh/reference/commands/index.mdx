@@ -10,6 +10,7 @@ description: ShipMyAgent CLI 按命令拆分的文档目录
 ## Runtime 生命周期命令
 
 - [`sma init`](/zh/docs/reference/commands/init)
+- [`sma start`](/zh/docs/reference/commands/start)
 - [`sma agent`](/zh/docs/reference/commands/agent)
 
 ## Service / Extension 风格命令
@@ -26,4 +27,5 @@ description: ShipMyAgent CLI 按命令拆分的文档目录
 ## 说明
 
 - 最新参数始终以本地 `sma <command> --help` 为准。
-- `sma service/extension/chat/voice/skill/task/memory` 通常依赖已启动的 daemon runtime（`sma agent on --daemon`）。
+- 现在 `sma agent on` 默认后台运行；前台请使用 `--foreground`。
+- `sma service/extension/chat/voice/skill/task/memory` 通常依赖已启动的 agent runtime。

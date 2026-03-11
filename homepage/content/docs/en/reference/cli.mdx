@@ -14,6 +14,7 @@ The CLI reference is now organized as per-command documents.
 ## Top-level command groups
 
 - [`sma init`](/en/docs/reference/commands/init)
+- [`sma start`](/en/docs/reference/commands/start)
 - [`sma agent`](/en/docs/reference/commands/agent)
 - [`sma config`](/en/docs/reference/commands/config)
 - [`sma service`](/en/docs/reference/commands/service)
@@ -23,6 +24,14 @@ The CLI reference is now organized as per-command documents.
 - [`sma skill`](/en/docs/reference/commands/skill)
 - [`sma task`](/en/docs/reference/commands/task)
 - [`sma memory`](/en/docs/reference/commands/memory)
+
+## New runtime logic (short)
+
+- `sma start`: start manager in background
+- `sma agent .`: alias of `sma agent on .`
+- `sma agent on .`: default background mode
+- `sma agent on . --foreground`: foreground mode
+- `sma agent off .`: stop current directory agent
 
 ## Always up to date
 

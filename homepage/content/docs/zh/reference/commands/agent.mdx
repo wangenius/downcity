@@ -1,15 +1,16 @@
 ---
 title: sma agent
-description: 使用 on/off/restart 控制 Agent Runtime
+description: 使用 on/off/restart 管理当前目录或指定目录的 Agent Runtime
 ---
 
 # `sma agent`
 
-通过 `on/off/restart` 子命令控制 Agent Runtime。
+管理 Agent Runtime 的启动、停止和重启。
 
 ## 用法
 
 ```bash
+sma agent [path]
 sma agent on [path] [options]
 sma agent off [path]
 sma agent restart [path] [options]
@@ -21,40 +22,60 @@ sma agent restart [path] [options]
 - `off`：停止 daemon runtime
 - `restart`：重启 daemon runtime
 
-## `on` 选项
+## 参数
+
+### `on` 选项
 
 - `-p, --port <port>`：服务端口（也可在 `ship.json.start.port` 配置）
 - `-h, --host <host>`：服务主机（也可在 `ship.json.start.host` 配置）
 - `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
 - `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
-- `--daemon [enabled]`：使用后台 daemon 模式运行
+- `--foreground [enabled]`：前台启动（仅当前终端）
+- `--daemon [enabled]`：后台启动兼容参数（保留旧写法）
 
-## `restart` 选项
+### `restart` 选项
 
 - `-p, --port <port>`：服务端口（也可在 `ship.json.start.port` 配置）
 - `-h, --host <host>`：服务主机（也可在 `ship.json.start.host` 配置）
 - `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
 - `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
 
-## 行为说明
+## 新运行逻辑
 
-- `sma agent on`：前台模式（当前终端）
-- `sma agent on --daemon`：后台 daemon 模式
-- `sma agent off`：停止 daemon runtime
-- `sma agent restart`：重启 daemon runtime
+- `sma agent .`：等价 `sma agent on .`
+- `sma agent on .`：默认后台 daemon 启动
+- `sma agent on . --foreground`：前台启动
+- `sma agent off .`：关闭当前目录对应的 agent daemon
+- `path` 不传时默认当前目录 `.`
+
+## 环境变量注入
+
+每次执行 `sma` 时，CLI 会自动推导当前 agent 上下文，并在 `sma` 进程及其子进程中注入：
+
+- `SMA_AGENT_PATH`：当前 agent 绝对路径
+- `SMA_AGENT_NAME`：当前 agent 名称（优先 `ship.json.name`，否则目录名）
+
+> 注意：这是进程级注入，不会直接回写你当前 shell 会话的环境变量。
 
 ## 示例
 
 ```bash
-# 前台
-sma agent on
+# 当前目录后台启动（默认）
+sma agent .
 
-# 后台 daemon
-sma agent on --daemon
+# 显式后台启动
+sma agent on .
 
-# 重启 daemon
-sma agent restart
+# 前台启动
+sma agent on . --foreground
 
-# 停止 daemon
-sma agent off
+# 停止当前目录 agent
+sma agent off .
+
+# 重启当前目录 agent
+sma agent restart .
 ```
+
+## 相关命令
+
+- 推荐先启动 manager：[`sma start`](/zh/docs/reference/commands/start)

@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "init",
+    "start",
     "agent",
     "config",
     "service",

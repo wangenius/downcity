@@ -14,6 +14,7 @@ CLI 文档现已按“单命令页面”拆分维护。
 ## 一级命令
 
 - [`sma init`](/zh/docs/reference/commands/init)
+- [`sma start`](/zh/docs/reference/commands/start)
 - [`sma agent`](/zh/docs/reference/commands/agent)
 - [`sma config`](/zh/docs/reference/commands/config)
 - [`sma service`](/zh/docs/reference/commands/service)
@@ -23,6 +24,14 @@ CLI 文档现已按“单命令页面”拆分维护。
 - [`sma skill`](/zh/docs/reference/commands/skill)
 - [`sma task`](/zh/docs/reference/commands/task)
 - [`sma memory`](/zh/docs/reference/commands/memory)
+
+## 新运行逻辑（简版）
+
+- `sma start`：启动 manager（后台）
+- `sma agent .`：等价 `sma agent on .`
+- `sma agent on .`：默认后台
+- `sma agent on . --foreground`：前台
+- `sma agent off .`：关闭当前目录 agent
 
 ## 保持最新
 

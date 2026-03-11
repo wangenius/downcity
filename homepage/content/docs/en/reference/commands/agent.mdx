@@ -1,15 +1,16 @@
 ---
 title: sma agent
-description: Control Agent Runtime using on/off/restart
+description: Manage Agent Runtime in the current directory or a target directory
 ---
 
 # `sma agent`
 
-Control Agent Runtime with `on/off/restart` subcommands.
+Manage Agent Runtime start/stop/restart.
 
 ## Usage
 
 ```bash
+sma agent [path]
 sma agent on [path] [options]
 sma agent off [path]
 sma agent restart [path] [options]
@@ -21,40 +22,60 @@ sma agent restart [path] [options]
 - `off`: stop daemon runtime
 - `restart`: restart daemon runtime
 
-## `on` options
+## Options
 
-- `-p, --port <port>`: service port (can also be set in `ship.json.start.port`)
-- `-h, --host <host>`: service host (can also be set in `ship.json.start.host`)
-- `--webui [enabled]`: enable interactive Web UI (can also be set in `ship.json.start.webui`)
-- `--webport <port>`: Web UI port (can also be set in `ship.json.start.webport`)
-- `--daemon [enabled]`: run in background daemon mode
+### `on` options
 
-## `restart` options
+- `-p, --port <port>`: service port (or `ship.json.start.port`)
+- `-h, --host <host>`: service host (or `ship.json.start.host`)
+- `--webui [enabled]`: enable interactive Web UI (or `ship.json.start.webui`)
+- `--webport <port>`: Web UI port (or `ship.json.start.webport`)
+- `--foreground [enabled]`: run in foreground (current terminal)
+- `--daemon [enabled]`: backward-compatible daemon flag (legacy form)
 
-- `-p, --port <port>`: service port (can also be set in `ship.json.start.port`)
-- `-h, --host <host>`: service host (can also be set in `ship.json.start.host`)
-- `--webui [enabled]`: enable interactive Web UI (can also be set in `ship.json.start.webui`)
-- `--webport <port>`: Web UI port (can also be set in `ship.json.start.webport`)
+### `restart` options
 
-## Behavior
+- `-p, --port <port>`: service port (or `ship.json.start.port`)
+- `-h, --host <host>`: service host (or `ship.json.start.host`)
+- `--webui [enabled]`: enable interactive Web UI (or `ship.json.start.webui`)
+- `--webport <port>`: Web UI port (or `ship.json.start.webport`)
 
-- `sma agent on`: foreground mode (current terminal)
-- `sma agent on --daemon`: background daemon mode
-- `sma agent off`: stop daemon runtime
-- `sma agent restart`: restart daemon runtime
+## New runtime logic
+
+- `sma agent .`: alias of `sma agent on .`
+- `sma agent on .`: default is background daemon mode
+- `sma agent on . --foreground`: foreground mode
+- `sma agent off .`: stop daemon for the current directory agent
+- If `path` is omitted, default is `.`
+
+## Environment variable injection
+
+On every `sma` execution, CLI resolves current agent context and injects variables into the `sma` process and its child processes:
+
+- `SMA_AGENT_PATH`: absolute path of current agent
+- `SMA_AGENT_NAME`: agent name (prefer `ship.json.name`, fallback to directory name)
+
+> Note: this is process-scoped injection and does not mutate your parent shell session.
 
 ## Examples
 
 ```bash
-# foreground
-sma agent on
+# start current directory agent in background (default)
+sma agent .
 
-# background daemon
-sma agent on --daemon
+# explicit background start
+sma agent on .
 
-# restart daemon
-sma agent restart
+# foreground start
+sma agent on . --foreground
 
-# stop daemon
-sma agent off
+# stop current directory agent
+sma agent off .
+
+# restart current directory agent
+sma agent restart .
 ```
+
+## Related command
+
+- Start manager first: [`sma start`](/en/docs/reference/commands/start)

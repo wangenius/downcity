@@ -1,0 +1,42 @@
+---
+title: sma start
+description: Start SMA Manager in background mode
+---
+
+# `sma start`
+
+Start the SMA Manager background process.
+
+## Usage
+
+```bash
+sma start
+```
+
+## Behavior
+
+- First run creates manager runtime directory and starts a detached process.
+- If manager is already running, command returns with an "already running" message.
+- Manager is a global control process for agent runtime state, not a business scheduler.
+
+## Runtime files
+
+Written under the user home directory:
+
+- `~/.ship/manager/manager.pid`
+- `~/.ship/manager/manager.log`
+
+## Typical flow
+
+```bash
+# 1) start manager
+sma start
+
+# 2) enter an agent directory and start the agent (background by default)
+cd /path/to/agent
+sma agent .
+```
+
+## Related command
+
+- [`sma agent`](/en/docs/reference/commands/agent)

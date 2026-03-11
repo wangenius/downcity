@@ -2,7 +2,7 @@
  * ShipMyAgent daemon 管理（PID / 日志 / 启停）。
  *
  * 目标
- * - `shipmyagent agent on --daemon`：后台启动（终端退出后仍运行）
+ * - `shipmyagent agent on`：后台启动（终端退出后仍运行）
  * - `shipmyagent agent off`：停止后台进程
  * - `shipmyagent agent restart`：重启后台进程
  *

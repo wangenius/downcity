@@ -6,7 +6,6 @@
  * 职责说明：
  * 1. 组装所有一级命令（init/agent/config/service/extension/manager）。
  * 2. 统一处理命令行参数解析规则（端口、布尔值）。
- * 3. 处理默认命令回退：未指定已知一级命令时自动转发到 `agent on`。
  */
 import { readFileSync, existsSync } from "fs";
 import { basename, dirname, join, resolve } from "path";
@@ -28,10 +27,6 @@ import type { StartOptions } from "@main/types/Start.js";
 import { registerAllServicesForCli } from "@main/service/ServiceCommand.js";
 import { registerAllExtensionsForCli } from "@main/extension/ExtensionCommand.js";
 import {
-  getServiceRootCommandNames,
-} from "@main/service/Manager.js";
-import { getExtensionRootCommandNames } from "@main/extension/Manager.js";
-import {
   cleanupStaleDaemonFiles,
   getDaemonLogPath,
   isProcessAlive as isDaemonProcessAlive,
@@ -41,7 +36,6 @@ import {
 import {
   getManagerAgentRegistryPath,
   listManagedAgents,
-  removeManagedAgentEntry,
 } from "@/main/server/manager/AgentRegistry.js";
 import type { ManagedAgentRuntimeView } from "@/main/types/Manager.js";
 
@@ -70,7 +64,15 @@ function withVersionBanner<TArgs extends unknown[]>(
   action: (...args: TArgs) => Promise<void> | void,
 ): (...args: TArgs) => Promise<void> {
   return async (...args: TArgs): Promise<void> => {
-    console.log(`sma version: ${packageJson.version}`);
+    // 关键点（中文）：`--json` 场景禁止在 stdout 混入 banner，避免破坏机器可解析输出。
+    const hasJsonMode = args.some((arg) => {
+      if (!arg || typeof arg !== "object") return false;
+      if (!Object.prototype.hasOwnProperty.call(arg, "json")) return false;
+      return (arg as { json?: unknown }).json === true;
+    });
+    if (!hasJsonMode) {
+      console.log(`sma version: ${packageJson.version}`);
+    }
     await action(...args);
   };
 }
@@ -96,6 +98,12 @@ function parseBoolean(value: string | undefined): boolean {
   if (["false", "0", "no", "n", "off"].includes(s)) return false;
   throw new Error(`Invalid boolean: ${value}`);
 }
+
+/**
+ * 异步睡眠工具。
+ */
+const sleep = async (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 function resolveAgentName(projectRoot: string): string {
   const fallback = basename(projectRoot);
@@ -184,6 +192,66 @@ async function startManagerCommand(): Promise<void> {
   console.log(`   log: ${MANAGER_LOG_PATH}`);
 }
 
+/**
+ * 停止 SMA manager 后台进程。
+ *
+ * 策略（中文）
+ * - 先发 `SIGTERM` 做优雅退出；
+ * - 超时后回退 `SIGKILL`；
+ * - 最终清理 manager pid 文件，保证状态可恢复。
+ */
+async function stopManagerCommand(params?: { timeoutMs?: number }): Promise<void> {
+  const timeoutMs = params?.timeoutMs ?? 10_000;
+  await fs.ensureDir(MANAGER_DIR);
+
+  const managerPid = await readManagerPid();
+  if (!managerPid) {
+    console.log("ℹ️  SMA manager is not running");
+    console.log(`   pidFile: ${MANAGER_PID_PATH}`);
+    console.log(`   log: ${MANAGER_LOG_PATH}`);
+    return;
+  }
+
+  if (!isManagerProcessAlive(managerPid)) {
+    // 关键点（中文）：stop 作为“收敛命令”，遇到 stale pid 直接清理，确保后续可重启。
+    await fs.remove(MANAGER_PID_PATH);
+    console.log("⚠️  Stale manager pid file detected; cleaned up");
+    console.log(`   pidFile: ${MANAGER_PID_PATH}`);
+    console.log(`   log: ${MANAGER_LOG_PATH}`);
+    return;
+  }
+
+  process.kill(managerPid, "SIGTERM");
+
+  const startAt = Date.now();
+  while (Date.now() - startAt < timeoutMs) {
+    if (!isManagerProcessAlive(managerPid)) break;
+    await sleep(200);
+  }
+
+  if (isManagerProcessAlive(managerPid)) {
+    // 关键点（中文）：优雅退出超时后强制停止，避免 manager 卡死。
+    process.kill(managerPid, "SIGKILL");
+    const forceStartAt = Date.now();
+    while (Date.now() - forceStartAt < 2_000) {
+      if (!isManagerProcessAlive(managerPid)) break;
+      await sleep(100);
+    }
+  }
+
+  await fs.remove(MANAGER_PID_PATH);
+
+  if (isManagerProcessAlive(managerPid)) {
+    console.log("⚠️  SMA manager may still be running");
+    console.log(`   pid: ${managerPid}`);
+  } else {
+    console.log("✅ SMA manager stopped");
+    console.log(`   pid: ${managerPid}`);
+  }
+  console.log(`   pidFile: ${MANAGER_PID_PATH}`);
+  console.log(`   log: ${MANAGER_LOG_PATH}`);
+}
+
 async function runManagerRuntimeCommand(): Promise<void> {
   await fs.ensureDir(MANAGER_DIR);
   await fs.writeFile(MANAGER_PID_PATH, String(process.pid), "utf-8");
@@ -219,30 +287,18 @@ async function resolveRunningManagedAgents(): Promise<ManagedAgentRuntimeView[]>
 
   for (const entry of entries) {
     const projectRoot = resolve(String(entry.projectRoot || "").trim() || ".");
-    try {
-      await cleanupStaleDaemonFiles(projectRoot);
-      const daemonPid = await readDaemonPid(projectRoot);
-      if (!daemonPid || !isDaemonProcessAlive(daemonPid)) {
-        await removeManagedAgentEntry(projectRoot);
-        continue;
-      }
-      views.push({
-        projectRoot,
-        registeredPid: entry.pid,
-        daemonPid,
-        running: true,
-        startedAt: entry.startedAt,
-        updatedAt: entry.updatedAt,
-        logPath: getDaemonLogPath(projectRoot),
-      });
-    } catch {
-      // 关键点（中文）：读取异常时移除脏记录，避免后续 list/status 持续噪音。
-      try {
-        await removeManagedAgentEntry(projectRoot);
-      } catch {
-        // ignore
-      }
-    }
+    const daemonPid = await readDaemonPid(projectRoot);
+    if (!daemonPid || !isDaemonProcessAlive(daemonPid)) continue;
+
+    views.push({
+      projectRoot,
+      registeredPid: entry.pid,
+      daemonPid,
+      running: true,
+      startedAt: entry.startedAt,
+      updatedAt: entry.updatedAt,
+      logPath: getDaemonLogPath(projectRoot),
+    });
   }
 
   return views.sort((a, b) => a.projectRoot.localeCompare(b.projectRoot));
@@ -278,15 +334,15 @@ async function managerStatusCommand(): Promise<void> {
   const managerRunning = Boolean(
     managerPid && isManagerProcessAlive(managerPid),
   );
-  if (managerPid && !managerRunning) {
-    await fs.remove(MANAGER_PID_PATH);
-  }
 
   if (managerRunning) {
     console.log("✅ SMA manager is running");
     console.log(`   pid: ${managerPid}`);
   } else {
     console.log("ℹ️  SMA manager is not running");
+    if (managerPid) {
+      console.log("⚠️  Stale manager pid file detected");
+    }
   }
   console.log(`   pidFile: ${MANAGER_PID_PATH}`);
   console.log(`   log: ${MANAGER_LOG_PATH}`);
@@ -304,7 +360,7 @@ program
 // 保留 -h 给 host 参数，帮助命令只使用 --help
 program.helpOption("--help", "display help for command");
 
-const init = program
+program
   .command("init [path]")
   .description("初始化 ShipMyAgent 项目")
   .helpOption("--help", "display help for command")
@@ -325,6 +381,14 @@ manager
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async () => {
     await managerStatusCommand();
+  }));
+
+manager
+  .command("stop")
+  .description("停止 SMA Manager（后台）")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async () => {
+    await stopManagerCommand();
   }));
 
 const managerAgents = manager
@@ -476,6 +540,14 @@ program
   }));
 
 program
+  .command("stop")
+  .description("停止 SMA Manager（后台）")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async () => {
+    await stopManagerCommand();
+  }));
+
+program
   .command("status [legacyPath]")
   .description("查看 manager 与已托管 agent 运行状态")
   .helpOption("--help", "display help for command")
@@ -510,18 +582,16 @@ agent
     parsePort,
   )
   .option("--foreground [enabled]", "前台启动（仅当前终端）", parseBoolean)
-  .option("--daemon [enabled]", "后台启动（兼容参数）", parseBoolean)
   .helpOption("--help", "display help for command")
   .action(
     withVersionBanner(
       async (
         cwd: string = ".",
-        options: StartOptions & { daemon?: boolean; foreground?: boolean },
+        options: StartOptions & { foreground?: boolean },
       ) => {
         injectAgentContext(cwd);
 
-        const shouldForeground =
-          options.foreground === true || options.daemon === false;
+        const shouldForeground = options.foreground === true;
 
         if (shouldForeground) {
           await runCommand(cwd, options);
@@ -549,6 +619,46 @@ agent
   .action(withVersionBanner(async (cwd: string = ".") => {
     injectAgentContext(cwd);
     await statusCommand(cwd);
+  }));
+
+agent
+  .command("doctor [path]")
+  .description("诊断 daemon 状态文件；可选修复僵尸 pid/meta")
+  .option("--fix [enabled]", "清理僵尸 daemon 状态文件", parseBoolean)
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (
+    cwd: string = ".",
+    options: { fix?: boolean },
+  ) => {
+    injectAgentContext(cwd);
+    const projectRoot = resolve(String(cwd || "."));
+    const pid = await readDaemonPid(projectRoot);
+
+    if (!pid) {
+      console.log("✅ No daemon pid file found");
+      console.log(`   project: ${projectRoot}`);
+      return;
+    }
+
+    if (isDaemonProcessAlive(pid)) {
+      console.log("✅ Daemon process is alive");
+      console.log(`   project: ${projectRoot}`);
+      console.log(`   pid: ${pid}`);
+      return;
+    }
+
+    console.log("⚠️  Stale daemon state detected");
+    console.log(`   project: ${projectRoot}`);
+    console.log(`   stalePid: ${pid}`);
+    console.log(`   log: ${getDaemonLogPath(projectRoot)}`);
+
+    if (options.fix !== true) {
+      console.log("   Run `sma agent doctor <path> --fix` to clean stale pid/meta.");
+      return;
+    }
+
+    await cleanupStaleDaemonFiles(projectRoot);
+    console.log("✅ Cleaned stale daemon pid/meta files");
   }));
 
 agent
@@ -582,65 +692,11 @@ registerAllServicesForCli(program);
 // 扩展命令统一注册（voice / future extensions）
 registerAllExtensionsForCli(program);
 
-// 每次执行 sma 默认注入当前目录 agent 上下文环境变量。
-injectAgentContext(".");
-
-// `sma agent .` => `sma agent on .`
-if (process.argv[2] === "agent") {
-  const secondArg = process.argv[3];
-  const knownAgentSubCommands = new Set([
-    "on",
-    "off",
-    "status",
-    "restart",
-    "help",
-    "--help",
-    "-h",
-  ]);
-  if (
-    secondArg &&
-    !knownAgentSubCommands.has(secondArg) &&
-    !String(secondArg).startsWith("-")
-  ) {
-    process.argv.splice(3, 0, "on");
-  }
-}
-
-// 默认行为：`shipmyagent` / `shipmyagent .` / `shipmyagent [on-options]` -> `shipmyagent agent on [path]`
-const firstArg = process.argv[2];
-const staticRootCommands = [
-  init.name(),
-  agent.name(),
-  "config",
-  "start",
-  "status",
-  "manager",
-  // 关键点（中文）：以下命令已移除；仍保留在识别列表里，避免误回退为 `agent on`。
-  "restart",
-  "alias",
-  "run",
-  "stop",
-  // 关键点（中文）：`services` 已移除，仍保留在识别列表里，避免误回退为 `agent on`。
-  "services",
-  "service",
-  "extensions",
-  "extension",
-  "help",
-];
-const serviceRootCommands = getServiceRootCommandNames();
-const extensionRootCommands = getExtensionRootCommandNames();
-const knownRootCommands = new Set([
-  ...staticRootCommands,
-  ...serviceRootCommands,
-  ...extensionRootCommands,
-]);
-
-if (
-  !firstArg ||
-  (!knownRootCommands.has(firstArg) &&
-    !["--help", "-v", "--version"].includes(firstArg))
-) {
-  process.argv.splice(2, 0, "agent", "on");
+program.showHelpAfterError();
+program.showSuggestionAfterError();
+if (process.argv.length <= 2) {
+  program.outputHelp();
+  process.exit(0);
 }
 
 program.parse();

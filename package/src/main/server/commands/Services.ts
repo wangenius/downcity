@@ -73,7 +73,7 @@ async function runServiceListCommand(options: ServiceCliBaseOptions): Promise<vo
     payload: {
       error:
         remote.error ||
-        "Service list requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
+        "Service list requires an active Agent server runtime. Start via `sma agent on` first.",
     },
   });
 }
@@ -116,7 +116,7 @@ async function runServiceControlCommand(params: {
     payload: {
       error:
         remote.error ||
-        `Service ${params.action} requires an active Agent server runtime. Start via \`sma agent on --daemon\` first.`,
+        `Service ${params.action} requires an active Agent server runtime. Start via \`sma agent on\` first.`,
     },
   });
 }
@@ -165,7 +165,7 @@ async function runServiceCommandBridge(params: {
     payload: {
       error:
         remote.error ||
-        "Service command requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
+        "Service command requires an active Agent server runtime. Start via `sma agent on` first.",
     },
   });
 }

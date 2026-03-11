@@ -1,0 +1,46 @@
+---
+title: sma stop
+description: Stop SMA Manager background process
+---
+
+# `sma stop`
+
+Stop the SMA Manager background process.
+
+## Usage
+
+```bash
+sma stop
+```
+
+## Behavior
+
+- If manager is running, the command sends `SIGTERM` first, then falls back to `SIGKILL` on timeout.
+- If pid file is stale, the command cleans it up.
+- This command only stops manager itself, and does not stop project agent daemons.
+
+## Runtime files
+
+Written under the user home directory:
+
+- `~/.ship/manager/manager.pid`
+- `~/.ship/manager/manager.log`
+
+## Typical flow
+
+```bash
+# 1) start manager
+sma start
+
+# 2) verify manager status
+sma status
+
+# 3) stop manager
+sma stop
+```
+
+## Related commands
+
+- [`sma start`](/en/docs/reference/commands/start)
+- [`sma manager`](/en/docs/reference/commands/manager)
+- [`sma agent`](/en/docs/reference/commands/agent)

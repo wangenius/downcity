@@ -15,6 +15,7 @@ The CLI reference is now organized as per-command documents.
 
 - [`sma init`](/en/docs/reference/commands/init)
 - [`sma start`](/en/docs/reference/commands/start)
+- [`sma stop`](/en/docs/reference/commands/stop)
 - [`sma manager`](/en/docs/reference/commands/manager)
 - [`sma status`](/en/docs/reference/commands/status)
 - [`sma agent`](/en/docs/reference/commands/agent)
@@ -30,14 +31,14 @@ The CLI reference is now organized as per-command documents.
 ## New runtime logic (short)
 
 - `sma start`: start manager in background
+- `sma stop`: stop manager background process
 - `sma manager status`: show manager + active managed agents
 - `sma manager agents list`: list active managed agent daemons
 - `sma status`: top-level alias for manager global status
-- `sma agent .`: alias of `sma agent on .`
-- `sma agent on .`: default background mode
-- `sma agent on . --foreground`: foreground mode
-- `sma agent status .`: check current directory agent status
-- `sma agent off .`: stop current directory agent
+- `sma agent on`: default background mode
+- `sma agent on --foreground`: foreground mode
+- `sma agent status`: check current directory agent status
+- `sma agent off`: stop current directory agent
 
 ## Always up to date
 

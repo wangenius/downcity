@@ -398,7 +398,7 @@ function registerExtensionActionCommand(params: {
       payload: {
         error:
           remote.error ||
-          "Extension action requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
+          "Extension action requires an active Agent server runtime. Start via `sma agent on` first.",
       },
     });
   });

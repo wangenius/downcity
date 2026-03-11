@@ -3,6 +3,7 @@
   "pages": [
     "init",
     "start",
+    "stop",
     "manager",
     "status",
     "agent",

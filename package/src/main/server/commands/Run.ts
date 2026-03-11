@@ -2,11 +2,11 @@
  * 前台启动 Agent Runtime（当前终端进程内运行）。
  *
  * 场景
- * - `sma .` / `shipmyagent .` 默认走这里（符合“当前终端启动”的直觉）
- * - `sma agent on`（不带 `--daemon`）也走这里
+ * - `sma agent on --foreground` 走这里（当前终端前台运行）
+ * - daemon 子进程也复用这里作为真正运行入口
  *
  * 说明
- * - 后台常驻启动请使用 `shipmyagent agent on --daemon`，并用
+ * - 后台常驻启动请使用 `shipmyagent agent on`，并用
  *   `shipmyagent agent off` / `shipmyagent agent restart` 管理。
  */
 

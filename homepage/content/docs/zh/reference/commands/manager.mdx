@@ -11,6 +11,7 @@ description: 用于全局管理 agent daemon 的 manager 命令组
 
 ```bash
 sma manager status
+sma manager stop
 
 sma manager agents list [--json]
 sma manager agents start <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
@@ -23,6 +24,7 @@ sma manager agents restart <path> [--port <port>] [--host <host>] [--webui [enab
 ## 行为说明
 
 - `sma manager status`：查看 manager 进程状态与托管的活跃 agent 概览。
+- `sma manager stop`：停止 manager 后台进程。
 - `sma manager agents list`：列出当前 manager 追踪到的活跃 agent daemon。
 - `sma manager agents stop all`：一键停止全部活跃 agent daemon。
 - `open` 是 `start` 的别名。
@@ -47,4 +49,5 @@ sma manager agents stop all
 ## 相关命令
 
 - [`sma start`](/zh/docs/reference/commands/start)
+- [`sma stop`](/zh/docs/reference/commands/stop)
 - [`sma agent`](/zh/docs/reference/commands/agent)

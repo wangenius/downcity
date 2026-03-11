@@ -10,10 +10,10 @@ Manage Agent Runtime start/stop/restart.
 ## Usage
 
 ```bash
-sma agent [path]
 sma agent on [path] [options]
 sma agent off [path]
 sma agent status [path]
+sma agent doctor [path] [options]
 sma agent restart [path] [options]
 ```
 
@@ -22,6 +22,7 @@ sma agent restart [path] [options]
 - `on`: start runtime
 - `off`: stop daemon runtime
 - `status`: show daemon runtime status
+- `doctor`: diagnose daemon state files and optionally fix stale pid/meta
 - `restart`: restart daemon runtime
 
 ## Options
@@ -33,7 +34,6 @@ sma agent restart [path] [options]
 - `--webui [enabled]`: enable interactive Web UI (or `ship.json.start.webui`)
 - `--webport <port>`: Web UI port (or `ship.json.start.webport`)
 - `--foreground [enabled]`: run in foreground (current terminal)
-- `--daemon [enabled]`: backward-compatible daemon flag (legacy form)
 
 ### `restart` options
 
@@ -42,12 +42,15 @@ sma agent restart [path] [options]
 - `--webui [enabled]`: enable interactive Web UI (or `ship.json.start.webui`)
 - `--webport <port>`: Web UI port (or `ship.json.start.webport`)
 
+### `doctor` options
+
+- `--fix [enabled]`: clean stale daemon pid/meta files
+
 ## New runtime logic
 
-- `sma agent .`: alias of `sma agent on .`
-- `sma agent on .`: default is background daemon mode
-- `sma agent on . --foreground`: foreground mode
-- `sma agent off .`: stop daemon for the current directory agent
+- `sma agent on`: default is background daemon mode
+- `sma agent on --foreground`: foreground mode
+- `sma agent off`: stop daemon for the current directory agent
 - If `path` is omitted, default is `.`
 
 ## Environment variable injection
@@ -63,22 +66,25 @@ On every `sma` execution, CLI resolves current agent context and injects variabl
 
 ```bash
 # start current directory agent in background (default)
-sma agent .
+sma agent on
 
 # explicit background start
 sma agent on .
 
 # foreground start
-sma agent on . --foreground
+sma agent on --foreground
 
 # stop current directory agent
-sma agent off .
+sma agent off
 
 # show current directory agent status
-sma agent status .
+sma agent status
 
 # restart current directory agent
-sma agent restart .
+sma agent restart
+
+# diagnose stale daemon files
+sma agent doctor --fix
 ```
 
 ## Related command

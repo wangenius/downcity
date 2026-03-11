@@ -22,7 +22,7 @@ description: Service 与 Extension 的关系，以及进程运行模型
 ## 进程模型
 
 1. 先启动 manager 进程：`sma start`
-2. 在项目中启动 agent runtime 进程：`sma agent on .`（或 `sma agent .`）
+2. 在项目中启动 agent runtime 进程：`sma agent on .`
 3. runtime 加载 `services.*` 与 `extensions.*` 配置
 4. 接收消息/任务并进行调度
 5. Agent 执行触发 service/extension 动作
@@ -32,7 +32,7 @@ description: Service 与 Extension 的关系，以及进程运行模型
 
 ```bash
 sma start
-sma agent .
+sma agent on
 sma service list
 sma extension list
 ```
@@ -43,4 +43,3 @@ sma extension list
 - [Extension Runtime](/zh/docs/concepts/extension-runtime)
 - [`sma agent`](/zh/docs/reference/commands/agent)
 - [`sma start`](/zh/docs/reference/commands/start)
-

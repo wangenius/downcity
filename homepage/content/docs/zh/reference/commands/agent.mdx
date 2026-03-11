@@ -10,10 +10,10 @@ description: 使用 on/off/restart 管理当前目录或指定目录的 Agent Ru
 ## 用法
 
 ```bash
-sma agent [path]
 sma agent on [path] [options]
 sma agent off [path]
 sma agent status [path]
+sma agent doctor [path] [options]
 sma agent restart [path] [options]
 ```
 
@@ -22,6 +22,7 @@ sma agent restart [path] [options]
 - `on`：启动 runtime
 - `off`：停止 daemon runtime
 - `status`：查看 daemon runtime 状态
+- `doctor`：诊断 daemon 状态文件，并可修复僵尸 pid/meta
 - `restart`：重启 daemon runtime
 
 ## 参数
@@ -33,7 +34,6 @@ sma agent restart [path] [options]
 - `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
 - `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
 - `--foreground [enabled]`：前台启动（仅当前终端）
-- `--daemon [enabled]`：后台启动兼容参数（保留旧写法）
 
 ### `restart` 选项
 
@@ -42,12 +42,15 @@ sma agent restart [path] [options]
 - `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
 - `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
 
+### `doctor` 选项
+
+- `--fix [enabled]`：清理僵尸 daemon pid/meta 文件
+
 ## 新运行逻辑
 
-- `sma agent .`：等价 `sma agent on .`
-- `sma agent on .`：默认后台 daemon 启动
-- `sma agent on . --foreground`：前台启动
-- `sma agent off .`：关闭当前目录对应的 agent daemon
+- `sma agent on`：默认后台 daemon 启动
+- `sma agent on --foreground`：前台启动
+- `sma agent off`：关闭当前目录对应的 agent daemon
 - `path` 不传时默认当前目录 `.`
 
 ## 环境变量注入
@@ -63,22 +66,25 @@ sma agent restart [path] [options]
 
 ```bash
 # 当前目录后台启动（默认）
-sma agent .
+sma agent on
 
 # 显式后台启动
 sma agent on .
 
 # 前台启动
-sma agent on . --foreground
+sma agent on --foreground
 
 # 停止当前目录 agent
-sma agent off .
+sma agent off
 
 # 查看当前目录 agent 状态
-sma agent status .
+sma agent status
 
 # 重启当前目录 agent
-sma agent restart .
+sma agent restart
+
+# 诊断并清理僵尸 daemon 文件
+sma agent doctor --fix
 ```
 
 ## 相关命令

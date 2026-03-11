@@ -27,6 +27,9 @@ sma status
 
 # 查看项目 daemon 状态（用 agent 子命令）
 sma agent status /path/to/agent
+
+# 显式清理僵尸 daemon pid/meta 文件
+sma agent doctor /path/to/agent --fix
 ```
 
 ## 相关命令

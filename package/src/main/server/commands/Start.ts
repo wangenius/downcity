@@ -1,14 +1,14 @@
 /**
  * 后台常驻启动（daemon）。
  *
- * 对应用户命令：`shipmyagent agent on --daemon`
+ * 对应用户命令：`shipmyagent agent on`
  *
  * 行为
  * - 在 `.ship/debug/` 写入 pid/log/meta 文件
  * - 通过 `node <commands/index.js> agent on ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
  *
  * 注意
- * - `shipmyagent .` / `shipmyagent agent on`（不带 `--daemon`）才是“当前终端前台启动”。
+ * - 前台启动请显式使用 `shipmyagent agent on --foreground`。
  */
 
 import path from "path";

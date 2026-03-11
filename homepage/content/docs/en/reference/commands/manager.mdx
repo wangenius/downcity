@@ -11,6 +11,7 @@ Use manager commands to inspect global manager state and operate multiple agent 
 
 ```bash
 sma manager status
+sma manager stop
 
 sma manager agents list [--json]
 sma manager agents start <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
@@ -23,6 +24,7 @@ sma manager agents restart <path> [--port <port>] [--host <host>] [--webui [enab
 ## Behavior
 
 - `sma manager status`: show manager process status and active managed agents summary.
+- `sma manager stop`: stop manager background process.
 - `sma manager agents list`: list currently running daemons tracked by manager.
 - `sma manager agents stop all`: stop all active managed agent daemons.
 - `open` is an alias of `start`.
@@ -47,4 +49,5 @@ sma manager agents stop all
 ## Related commands
 
 - [`sma start`](/en/docs/reference/commands/start)
+- [`sma stop`](/en/docs/reference/commands/stop)
 - [`sma agent`](/en/docs/reference/commands/agent)

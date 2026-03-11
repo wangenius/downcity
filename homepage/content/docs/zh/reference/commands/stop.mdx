@@ -1,0 +1,46 @@
+---
+title: sma stop
+description: 停止 SMA Manager（后台）
+---
+
+# `sma stop`
+
+停止 SMA Manager 后台进程。
+
+## 用法
+
+```bash
+sma stop
+```
+
+## 行为说明
+
+- manager 在运行时，先发送 `SIGTERM`，超时后回退 `SIGKILL`。
+- 如果检测到 stale pid 文件，会自动清理。
+- 该命令只停止 manager 本身，不会停止各项目 agent daemon。
+
+## 运行文件
+
+默认写入用户目录下：
+
+- `~/.ship/manager/manager.pid`
+- `~/.ship/manager/manager.log`
+
+## 常见组合
+
+```bash
+# 1) 启动 manager
+sma start
+
+# 2) 查看 manager 状态
+sma status
+
+# 3) 停止 manager
+sma stop
+```
+
+## 相关命令
+
+- [`sma start`](/zh/docs/reference/commands/start)
+- [`sma manager`](/zh/docs/reference/commands/manager)
+- [`sma agent`](/zh/docs/reference/commands/agent)

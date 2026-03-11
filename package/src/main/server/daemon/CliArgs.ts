@@ -2,7 +2,7 @@
  * 负责把 commander 解析到的 options 转换成子进程 CLI 参数。
  *
  * 关键点
- * - daemon（来自 `agent on --daemon` / `agent restart`）会拉起一个前台 `agent on`
+ * - daemon（来自 `agent on` / `agent restart`）会拉起一个前台 `agent on`
  *   进程（显式 `--foreground true`），这里负责拼装其 argv。
  */
 

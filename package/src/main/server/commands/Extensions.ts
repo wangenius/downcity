@@ -85,7 +85,7 @@ async function runExtensionListCommand(
     payload: {
       error:
         remote.error ||
-        "Extension list requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
+        "Extension list requires an active Agent server runtime. Start via `sma agent on` first.",
     },
   });
 }
@@ -130,7 +130,7 @@ async function runExtensionControlCommand(params: {
     payload: {
       error:
         remote.error ||
-        `Extension ${params.action} requires an active Agent server runtime. Start via \`sma agent on --daemon\` first.`,
+        `Extension ${params.action} requires an active Agent server runtime. Start via \`sma agent on\` first.`,
     },
   });
 }
@@ -181,7 +181,7 @@ async function runExtensionCommandBridge(params: {
     payload: {
       error:
         remote.error ||
-        "Extension command requires an active Agent server runtime. Start via `sma agent on --daemon` first.",
+        "Extension command requires an active Agent server runtime. Start via `sma agent on` first.",
     },
   });
 }

@@ -22,7 +22,7 @@ This page explains two things:
 ## Process model
 
 1. Start manager process: `sma start`
-2. Start agent runtime process in project: `sma agent on .` (or `sma agent .`)
+2. Start agent runtime process in project: `sma agent on .`
 3. Runtime loads configured `services.*` and `extensions.*`
 4. Inbound messages/tasks are scheduled
 5. Agent execution triggers service/extension actions
@@ -32,7 +32,7 @@ This page explains two things:
 
 ```bash
 sma start
-sma agent .
+sma agent on
 sma service list
 sma extension list
 ```
@@ -43,4 +43,3 @@ sma extension list
 - [Extension Runtime](/en/docs/concepts/extension-runtime)
 - [`sma agent`](/en/docs/reference/commands/agent)
 - [`sma start`](/en/docs/reference/commands/start)
-

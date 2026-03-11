@@ -8,7 +8,6 @@
 import path from "path";
 import fs from "fs-extra";
 import {
-  cleanupStaleDaemonFiles,
   getDaemonLogPath,
   getDaemonMetaPath,
   isProcessAlive,
@@ -73,8 +72,8 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
   }
 
   if (pid) {
-    await cleanupStaleDaemonFiles(projectRoot);
-    console.log("⚠️  Daemon pid file exists but process is not running; cleaned up");
+    console.log("⚠️  Daemon pid file exists but process is not running (stale state)");
+    console.log(`   fix: sma agent doctor ${projectRoot} --fix`);
   }
 
   if (missingInitFiles.length > 0) {

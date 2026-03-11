@@ -22,7 +22,7 @@ npx shipmyagent --version
 
 ```bash
 lsof -nP -iTCP:3000 -sTCP:LISTEN
-sma agent on --daemon --port 3100
+sma agent on --port 3100
 ```
 
 ## 启动后无法调用 `sma task/chat/...`
@@ -30,7 +30,7 @@ sma agent on --daemon --port 3100
 先确认 daemon 运行中：
 
 ```bash
-sma agent on --daemon
+sma agent on
 sma service list
 ```
 

@@ -1,0 +1,46 @@
+---
+title: 关系与进程模型
+description: Service 与 Extension 的关系，以及进程运行模型
+---
+
+# 关系与进程模型
+
+本文回答两个问题：
+
+- Service 与 Extension 的关系是什么
+- 运行时有哪些进程，怎么协同
+
+## Service 与 Extension 的关系
+
+- Service 承载核心业务域（`chat`、`task`、`skill`、`memory`）。
+- Extension 承载可选扩展能力（例如 `voice`）。
+- 两者共享统一动作模型：CLI 与 HTTP 都走 runtime 控制/命令入口。
+- 一次 Agent 执行可能同时触发：
+  - service 动作（业务流程）
+  - extension 动作（专用能力）
+
+## 进程模型
+
+1. 先启动 manager 进程：`sma start`
+2. 在项目中启动 agent runtime 进程：`sma agent on .`（或 `sma agent .`）
+3. runtime 加载 `services.*` 与 `extensions.*` 配置
+4. 接收消息/任务并进行调度
+5. Agent 执行触发 service/extension 动作
+6. 结果与轨迹写入 `.ship/*`
+
+## 快速检查
+
+```bash
+sma start
+sma agent .
+sma service list
+sma extension list
+```
+
+## 相关文档
+
+- [Service Runtime](/zh/docs/concepts/service-runtime)
+- [Extension Runtime](/zh/docs/concepts/extension-runtime)
+- [`sma agent`](/zh/docs/reference/commands/agent)
+- [`sma start`](/zh/docs/reference/commands/start)
+

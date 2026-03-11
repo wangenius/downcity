@@ -1,0 +1,40 @@
+---
+title: Service Runtime
+description: Service 的职责、运行位置与运维方式
+---
+
+# Service Runtime
+
+Service 是承载核心业务能力的运行时模块类型。
+
+常见内置 service：
+
+- `chat`
+- `skill`
+- `task`
+- `memory`
+
+## Service 负责什么
+
+- 通过 `sma service ...` 提供稳定的运行态动作
+- 通过 `/api/services/*` 暴露 HTTP 控制/命令入口
+- 管理并落盘 `.ship/` 下的业务状态与执行产物
+
+## 配置范围
+
+Service 相关配置在 `ship.json.services.*`（例如 `services.chat`、`services.skills`）。
+
+## 常用运维命令
+
+```bash
+sma service list
+sma service status chat
+sma service restart task
+sma service command memory search --payload '{"query":"release"}'
+```
+
+## 相关文档
+
+- [`sma service`](/zh/docs/reference/commands/service)
+- [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)
+

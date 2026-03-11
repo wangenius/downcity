@@ -1,0 +1,28 @@
+---
+title: Skill Service
+description: Skill discovery, install, list, and lookup service
+---
+
+# Skill Service
+
+`skill` service manages local learned skills.
+
+## Responsibilities
+
+- Find skills
+- Install skills
+- List learned skills
+- Lookup `SKILL.md` content for execution context injection
+
+## Runtime operations
+
+```bash
+sma service status skill
+sma service command skill list --payload '{}'
+```
+
+## Related docs
+
+- [`sma service`](/en/docs/reference/commands/service)
+- [`sma skill`](/en/docs/reference/commands/skill)
+

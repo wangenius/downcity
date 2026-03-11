@@ -1,0 +1,40 @@
+---
+title: Extension Runtime
+description: What Extension is, where it runs, and how to operate it
+---
+
+# Extension Runtime
+
+Extension is the runtime module type for optional feature plugins.
+
+Typical built-in extension:
+
+- `voice`
+
+## What Extension is responsible for
+
+- Provide extension lifecycle and command forwarding via `sma extension ...`
+- Expose HTTP control and command routes under `/api/extensions/*`
+- Keep extension-specific config under `ship.json.extensions.*`
+
+## Operational commands
+
+```bash
+sma extension list
+sma extension status voice
+sma extension restart voice
+sma extension command voice status --payload '{}'
+```
+
+If you are operating speech models directly, use:
+
+```bash
+sma voice models
+sma voice on SenseVoiceSmall
+```
+
+## Related docs
+
+- [`sma extension`](/en/docs/reference/commands/extension)
+- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
+

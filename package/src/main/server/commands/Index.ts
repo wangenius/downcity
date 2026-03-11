@@ -22,6 +22,7 @@ import { runCommand } from "./Run.js";
 import { registerServicesCommand } from "./Services.js";
 import { registerExtensionsCommand } from "./Extensions.js";
 import { startCommand } from "./Start.js";
+import { statusCommand } from "./Status.js";
 import { stopCommand } from "./Stop.js";
 import type { StartOptions } from "@main/types/Start.js";
 import { registerAllServicesForCli } from "@main/service/ServiceCommand.js";
@@ -223,6 +224,15 @@ program
     await startManagerCommand();
   }));
 
+program
+  .command("status [path]")
+  .description("查看当前目录或指定目录 Agent Runtime 状态")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (cwd: string = ".") => {
+    injectAgentContext(cwd);
+    await statusCommand(cwd);
+  }));
+
 const agent = program
   .command("agent")
   .description("管理 Agent Runtime 启停与重启")
@@ -277,6 +287,15 @@ agent
   }));
 
 agent
+  .command("status [path]")
+  .description("查看后台 Agent Runtime（daemon）状态")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (cwd: string = ".") => {
+    injectAgentContext(cwd);
+    await statusCommand(cwd);
+  }));
+
+agent
   .command("restart [path]")
   .description("重启后台 Agent Runtime（daemon）")
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
@@ -316,6 +335,7 @@ if (process.argv[2] === "agent") {
   const knownAgentSubCommands = new Set([
     "on",
     "off",
+    "status",
     "restart",
     "help",
     "--help",
@@ -337,6 +357,7 @@ const staticRootCommands = [
   agent.name(),
   "config",
   "start",
+  "status",
   "manager",
   // 关键点（中文）：以下命令已移除；仍保留在识别列表里，避免误回退为 `agent on`。
   "restart",

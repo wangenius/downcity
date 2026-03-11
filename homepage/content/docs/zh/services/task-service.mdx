@@ -1,0 +1,28 @@
+---
+title: Task Service
+description: 任务定义生命周期与调度服务
+---
+
+# Task Service
+
+`task` service 负责任务定义与执行编排。
+
+## 职责
+
+- 任务定义的创建/更新/删除
+- 任务状态切换（启用/暂停/禁用）
+- 立即执行任务
+- 维护 cron runtime 与 scheduler 重载
+
+## 运行态操作
+
+```bash
+sma service status task
+sma service command task list --payload '{"status":"enabled"}'
+```
+
+## 相关文档
+
+- [`sma service`](/zh/docs/reference/commands/service)
+- [`sma task`](/zh/docs/reference/commands/task)
+

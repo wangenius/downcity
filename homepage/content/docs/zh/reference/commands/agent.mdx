@@ -13,6 +13,7 @@ description: 使用 on/off/restart 管理当前目录或指定目录的 Agent Ru
 sma agent [path]
 sma agent on [path] [options]
 sma agent off [path]
+sma agent status [path]
 sma agent restart [path] [options]
 ```
 
@@ -20,6 +21,7 @@ sma agent restart [path] [options]
 
 - `on`：启动 runtime
 - `off`：停止 daemon runtime
+- `status`：查看 daemon runtime 状态
 - `restart`：重启 daemon runtime
 
 ## 参数
@@ -71,6 +73,9 @@ sma agent on . --foreground
 
 # 停止当前目录 agent
 sma agent off .
+
+# 查看当前目录 agent 状态
+sma agent status .
 
 # 重启当前目录 agent
 sma agent restart .

@@ -1,0 +1,38 @@
+---
+title: sma status
+description: Check Agent Runtime (daemon) status for current directory or target path
+---
+
+# `sma status`
+
+Check Agent Runtime daemon status.
+
+## Usage
+
+```bash
+sma status [path]
+sma agent status [path]
+```
+
+## Output behavior
+
+- Running: shows `pid`, `log`, and `startedAt`
+- Initialized but stopped: shows `daemon is not running`
+- Not initialized: suggests running `shipmyagent init`
+
+## Examples
+
+```bash
+# current directory
+sma status
+
+# explicit project path
+sma status /path/to/agent
+
+# equivalent agent subcommand
+sma agent status .
+```
+
+## Related command
+
+- [`sma agent`](/en/docs/reference/commands/agent)

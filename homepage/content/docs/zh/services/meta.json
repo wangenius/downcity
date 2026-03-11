@@ -1,4 +1,4 @@
 {
   "title": "集成",
-  "pages": ["telegram", "telegram-message-flow", "feishu", "qq"]
+  "pages": ["service-matrix", "chat", "skill-service", "task-service", "memory-service"]
 }

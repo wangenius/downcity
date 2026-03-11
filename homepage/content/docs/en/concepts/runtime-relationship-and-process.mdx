@@ -1,0 +1,46 @@
+---
+title: Runtime Relationship & Process
+description: Relationship between Service and Extension, and process model
+---
+
+# Runtime Relationship & Process
+
+This page explains two things:
+
+- how Service and Extension relate
+- how processes are started and collaborate
+
+## Service vs Extension relationship
+
+- Service handles core runtime business domains (`chat`, `task`, `skill`, `memory`).
+- Extension handles optional capability plugins (for example `voice`).
+- Both share a unified action model: CLI and HTTP routes call into runtime control/command handlers.
+- Agent execution may involve both:
+  - Service actions for domain workflows
+  - Extension actions for specialized capabilities
+
+## Process model
+
+1. Start manager process: `sma start`
+2. Start agent runtime process in project: `sma agent on .` (or `sma agent .`)
+3. Runtime loads configured `services.*` and `extensions.*`
+4. Inbound messages/tasks are scheduled
+5. Agent execution triggers service/extension actions
+6. Outputs and traces are persisted to `.ship/*`
+
+## Practical checklist
+
+```bash
+sma start
+sma agent .
+sma service list
+sma extension list
+```
+
+## Related docs
+
+- [Service Runtime](/en/docs/concepts/service-runtime)
+- [Extension Runtime](/en/docs/concepts/extension-runtime)
+- [`sma agent`](/en/docs/reference/commands/agent)
+- [`sma start`](/en/docs/reference/commands/start)
+

@@ -2,6 +2,7 @@ import type { Route } from "./+types/page";
 import type { MDXComponents } from "mdx/types";
 import type { ComponentType } from "react";
 import React from "react";
+import { redirect } from "react-router";
 import { source } from "@/lib/source";
 import {
   DocsPage,
@@ -11,6 +12,41 @@ import {
 } from "fumadocs-ui/page";
 import { getMDXComponents } from "@/components/docs/mdx-components";
 import browserCollections from "fumadocs-mdx:collections/browser";
+
+type PageTreeNode = {
+  type?: string;
+  url?: string;
+  children?: PageTreeNode[];
+};
+
+/**
+ * 递归按侧边栏顺序收集文档页 URL，用于目录页跳转。
+ */
+function collectPageUrls(node: PageTreeNode | undefined, out: string[]) {
+  if (!node) return;
+  if (node.type === "page" && typeof node.url === "string") {
+    out.push(node.url);
+  }
+  if (!Array.isArray(node.children)) return;
+  for (const child of node.children) {
+    collectPageUrls(child, out);
+  }
+}
+
+/**
+ * 当请求的是目录路径时，返回该目录下第一个子文档 URL。
+ */
+function findFirstChildDocUrl(lang: "en" | "zh", slugs: string[]) {
+  if (slugs.length === 0) return undefined;
+  const tree = source.getPageTree(lang) as PageTreeNode | undefined;
+  if (!tree) return undefined;
+
+  const urls: string[] = [];
+  collectPageUrls(tree, urls);
+
+  const prefix = `/${lang}/docs/${slugs.join("/")}/`;
+  return urls.find((item) => item.startsWith(prefix));
+}
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -26,8 +62,16 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   // source.getPage automatically handles the 'en'/'zh' folder mapping because of parser: 'dir'
   // We just need to give it the relative slug (layout path) and the lang.
 
+  // 目录路径统一跳转到首个子文档，不再停留在 overview/index 页面。
+  const firstChild = findFirstChildDocUrl(lang, cleanSlugs);
+  if (firstChild) {
+    throw redirect(`${firstChild}${url.search}${url.hash}`, { status: 302 });
+  }
+
   const page = source.getPage(cleanSlugs, lang);
-  if (!page) throw new Response("Not found", { status: 404 });
+  if (!page) {
+    throw new Response("Not found", { status: 404 });
+  }
 
   return {
     path: page.path,

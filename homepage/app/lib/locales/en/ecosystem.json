@@ -8,7 +8,7 @@
     },
     "protocols": {
       "title": "Standard Protocols",
-      "items": ["MCP (Context)", "ACP (Client)", "HTTP / REST", "WebSocket"]
+      "items": ["A2A (Agent2Agent)", "ACP (Client)", "HTTP / REST", "WebSocket"]
     },
     "tools": {
       "title": "Agent Clients",

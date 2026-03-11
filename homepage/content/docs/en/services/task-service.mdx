@@ -1,0 +1,28 @@
+---
+title: Task Service
+description: Task definition lifecycle and scheduler service
+---
+
+# Task Service
+
+`task` service manages task definitions and execution.
+
+## Responsibilities
+
+- Create/update/delete task definitions
+- Enable/disable/pause task status
+- Run tasks immediately
+- Manage cron runtime and scheduler reload
+
+## Runtime operations
+
+```bash
+sma service status task
+sma service command task list --payload '{"status":"enabled"}'
+```
+
+## Related docs
+
+- [`sma service`](/en/docs/reference/commands/service)
+- [`sma task`](/en/docs/reference/commands/task)
+

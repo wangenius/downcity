@@ -1,0 +1,30 @@
+---
+title: Service 矩阵
+description: package 运行时真实注册的 services 清单
+---
+
+# Service 矩阵
+
+本页给出**运行时真实注册的 service**，不是仅指 chat 渠道。
+
+## 已注册 services
+
+根据 `package/src/main/service/Services.ts`，当前 runtime 注册：
+
+- `chat`
+- `skill`
+- `task`
+- `memory`
+
+## 为什么要区分
+
+- `services/*` 是业务运行时模块层，不是“渠道列表”同义词。
+- Telegram/Feishu/QQ 文档只是 `chat` service 的子能力说明。
+
+## 相关文档
+
+- [Chat Service](/zh/docs/services/chat)
+- [Skill Service](/zh/docs/services/skill-service)
+- [Task Service](/zh/docs/services/task-service)
+- [Memory Service](/zh/docs/services/memory-service)
+- [Extensions](/zh/docs/extensions)

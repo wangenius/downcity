@@ -141,8 +141,7 @@
   "skillsPage": {
     "subtitle": "Useful directories and resources",
     "sections": {
-      "skills": "Skills",
-      "mcp": "MCP"
+      "skills": "Skills"
     },
     "links": {
       "skillsSh": {
@@ -156,28 +155,6 @@
       "smitherySkills": {
         "title": "smithery.ai/skills",
         "description": "Browse skills on Smithery"
-      }
-    },
-    "mcpLinks": {
-      "shipmyagentMcpDocs": {
-        "title": "ShipMyAgent MCP Docs",
-        "description": "How to use MCP with ShipMyAgent"
-      },
-      "smithery": {
-        "title": "Smithery",
-        "description": "A marketplace to discover MCP servers"
-      },
-      "mcpMarket": {
-        "title": "MCP Market",
-        "description": "A marketplace for MCP servers and services"
-      },
-      "mcpServers": {
-        "title": "MCP Servers",
-        "description": "Official server examples and references"
-      },
-      "mcpSo": {
-        "title": "mcp.so",
-        "description": "A community MCP marketplace and directory"
       }
     }
   },

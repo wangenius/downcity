@@ -1,0 +1,28 @@
+---
+title: Chat Service
+description: Chat service responsibilities and channel integrations
+---
+
+# Chat Service
+
+`chat` is the service that handles inbound/outbound chat flows.
+
+## Responsibilities
+
+- Receive and normalize inbound channel events
+- Resolve `contextId/chatKey`, persist chat history and metadata
+- Dispatch outbound replies/actions to channels
+
+## Channel integrations
+
+- [Telegram](/en/docs/services/chat/telegram)
+- [Telegram Message Flow](/en/docs/services/chat/telegram-message-flow)
+- [Feishu](/en/docs/services/chat/feishu)
+- [QQ](/en/docs/services/chat/qq)
+
+## Runtime operations
+
+```bash
+sma service status chat
+sma service restart chat
+```

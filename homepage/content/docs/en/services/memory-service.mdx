@@ -1,0 +1,28 @@
+---
+title: Memory Service
+description: Memory indexing, search, read, store, and flush service
+---
+
+# Memory Service
+
+`memory` service provides runtime memory operations.
+
+## Responsibilities
+
+- Status and index rebuild
+- Search and read memory entries
+- Store explicit memory records
+- Flush conversation window into daily memory
+
+## Runtime operations
+
+```bash
+sma service status memory
+sma service command memory search --payload '{"query":"release decision"}'
+```
+
+## Related docs
+
+- [`sma service`](/en/docs/reference/commands/service)
+- [`sma memory`](/en/docs/reference/commands/memory)
+

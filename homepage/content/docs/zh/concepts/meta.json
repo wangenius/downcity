@@ -1,4 +1,11 @@
 {
   "title": "核心原理",
-  "pages": ["index", "architecture", "context-engineering", "message-processing"]
+  "pages": [
+    "architecture",
+    "service-runtime",
+    "extension-runtime",
+    "runtime-relationship-and-process",
+    "context-engineering",
+    "message-processing"
+  ]
 }

@@ -1,0 +1,28 @@
+---
+title: Chat Service
+description: chat service 的职责与渠道集成
+---
+
+# Chat Service
+
+`chat` 是负责消息收发链路的 service。
+
+## 职责
+
+- 接收入站渠道事件并做标准化
+- 解析 `contextId/chatKey`，写入 history 与 meta
+- 把回复/动作下发到具体渠道
+
+## 渠道文档
+
+- [Telegram](/zh/docs/services/chat/telegram)
+- [Telegram 消息链路](/zh/docs/services/chat/telegram-message-flow)
+- [飞书](/zh/docs/services/chat/feishu)
+- [QQ](/zh/docs/services/chat/qq)
+
+## 运行态操作
+
+```bash
+sma service status chat
+sma service restart chat
+```

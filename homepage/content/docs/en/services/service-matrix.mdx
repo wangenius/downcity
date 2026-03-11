@@ -1,0 +1,30 @@
+---
+title: Service Matrix
+description: Actual registered services in package runtime
+---
+
+# Service Matrix
+
+This page lists **actual services registered in runtime**.
+
+## Registered services
+
+From `package/src/main/service/Services.ts`, runtime registers:
+
+- `chat`
+- `skill`
+- `task`
+- `memory`
+
+## Why this matters
+
+- `services/*` should be read as business runtime modules, not only chat channels.
+- Channel docs (Telegram/Feishu/QQ) are only one part of the `chat` service.
+
+## Related docs
+
+- [Chat Service](/en/docs/services/chat)
+- [Skill Service](/en/docs/services/skill-service)
+- [Task Service](/en/docs/services/task-service)
+- [Memory Service](/en/docs/services/memory-service)
+- [Extensions](/en/docs/extensions)

@@ -141,8 +141,7 @@
   "skillsPage": {
     "subtitle": "常用的聚合目录与资源",
     "sections": {
-      "skills": "技能",
-      "mcp": "MCP"
+      "skills": "技能"
     },
     "links": {
       "skillsSh": {
@@ -156,28 +155,6 @@
       "smitherySkills": {
         "title": "smithery.ai/skills",
         "description": "Smithery 上的技能列表"
-      }
-    },
-    "mcpLinks": {
-      "shipmyagentMcpDocs": {
-        "title": "ShipMyAgent MCP 文档",
-        "description": "在 ShipMyAgent 中使用 MCP 的指南"
-      },
-      "smithery": {
-        "title": "Smithery",
-        "description": "用于发现 MCP Server 的市场/目录"
-      },
-      "mcpMarket": {
-        "title": "MCP Market",
-        "description": "MCP Server 与集成的市场/目录"
-      },
-      "mcpServers": {
-        "title": "MCP Servers",
-        "description": "官方 Server 示例与参考实现"
-      },
-      "mcpSo": {
-        "title": "mcp.so",
-        "description": "社区 MCP 市场与目录"
       }
     }
   },

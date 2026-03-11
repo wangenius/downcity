@@ -1,0 +1,40 @@
+---
+title: Service Runtime
+description: What Service is, where it runs, and how to operate it
+---
+
+# Service Runtime
+
+Service is the runtime module type for core business capabilities.
+
+Typical built-in services include:
+
+- `chat`
+- `skill`
+- `task`
+- `memory`
+
+## What Service is responsible for
+
+- Provide stable runtime actions via `sma service ...`
+- Expose HTTP control and command routes under `/api/services/*`
+- Own persistent state and execution outputs under `.ship/` directories
+
+## Configuration scope
+
+Service-related configuration is under `ship.json.services.*` (for example `services.chat`, `services.skills`).
+
+## Operational commands
+
+```bash
+sma service list
+sma service status chat
+sma service restart task
+sma service command memory search --payload '{"query":"release"}'
+```
+
+## Related docs
+
+- [`sma service`](/en/docs/reference/commands/service)
+- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
+

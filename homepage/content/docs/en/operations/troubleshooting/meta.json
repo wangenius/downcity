@@ -1,4 +1,4 @@
 {
   "title": "Troubleshooting",
-  "pages": ["index", "common-issues", "logs-debugging", "performance-issues"]
+  "pages": ["common-issues", "logs-debugging", "performance-issues"]
 }

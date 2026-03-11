@@ -13,6 +13,7 @@ Manage Agent Runtime start/stop/restart.
 sma agent [path]
 sma agent on [path] [options]
 sma agent off [path]
+sma agent status [path]
 sma agent restart [path] [options]
 ```
 
@@ -20,6 +21,7 @@ sma agent restart [path] [options]
 
 - `on`: start runtime
 - `off`: stop daemon runtime
+- `status`: show daemon runtime status
 - `restart`: restart daemon runtime
 
 ## Options
@@ -71,6 +73,9 @@ sma agent on . --foreground
 
 # stop current directory agent
 sma agent off .
+
+# show current directory agent status
+sma agent status .
 
 # restart current directory agent
 sma agent restart .

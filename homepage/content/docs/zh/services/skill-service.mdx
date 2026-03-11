@@ -1,0 +1,28 @@
+---
+title: Skill Service
+description: skill 发现、安装、列表、查阅服务
+---
+
+# Skill Service
+
+`skill` service 负责本地已学习技能的管理。
+
+## 职责
+
+- 查找 skill
+- 安装 skill
+- 列出已学会 skill
+- 查阅 `SKILL.md` 并注入执行上下文
+
+## 运行态操作
+
+```bash
+sma service status skill
+sma service command skill list --payload '{}'
+```
+
+## 相关文档
+
+- [`sma service`](/zh/docs/reference/commands/service)
+- [`sma skill`](/zh/docs/reference/commands/skill)
+

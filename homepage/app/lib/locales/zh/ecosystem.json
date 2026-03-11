@@ -8,7 +8,7 @@
     },
     "protocols": {
       "title": "标准协议",
-      "items": ["MCP (上下文协议)", "ACP (客户端协议)", "HTTP / REST", "WebSocket"]
+      "items": ["A2A (Agent2Agent)", "ACP (客户端协议)", "HTTP / REST", "WebSocket"]
     },
     "tools": {
       "title": "Agent 客户端",

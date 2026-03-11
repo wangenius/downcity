@@ -1,0 +1,28 @@
+---
+title: Memory Service
+description: memory 索引、检索、读取、写入与刷写服务
+---
+
+# Memory Service
+
+`memory` service 提供运行时记忆操作能力。
+
+## 职责
+
+- 状态查看与索引重建
+- 记忆检索与按文件读取
+- 显式写入 memory
+- 把会话窗口刷写到 daily memory
+
+## 运行态操作
+
+```bash
+sma service status memory
+sma service command memory search --payload '{"query":"release decision"}'
+```
+
+## 相关文档
+
+- [`sma service`](/zh/docs/reference/commands/service)
+- [`sma memory`](/zh/docs/reference/commands/memory)
+

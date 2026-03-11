@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - roots 分三类：项目内（project）、用户目录（home），以及配置外部路径（config）
  * - allowExternalPaths 只控制“配置外部路径（config）”是否可扫描；home 默认始终可扫描
- * - 兼容 `.claude/skills` 这种布局：如果 root basename 不是 `skills` 且其子目录 `skills/` 存在，则优先扫描 `<root>/skills`
+ * - 兼容 `<any>/skills` 这种布局：如果 root basename 不是 `skills` 且其子目录 `skills/` 存在，则优先扫描 `<root>/skills`
  */
 
 import fs from "fs-extra";
@@ -43,8 +43,8 @@ export function getClaudeSkillSearchRoots(
     ? config.services.skills.paths.map((x) => String(x))
     : [];
 
-  const defaultsProject = [".ship/skills"];
-  const defaultsHome = ["~/.ship/skills"];
+  const defaultsProject = [".agents/skills"];
+  const defaultsHome = ["~/.agents/skills"];
 
   const rawConfigured = uniqStrings(configured);
   const rawProject = uniqStrings(defaultsProject);

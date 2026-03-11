@@ -231,10 +231,10 @@ async function appendMissingEnvEntries(params: {
 }
 
 /**
- * 获取用户级 `.ship/skills` 目录。
+ * 获取用户级 `.agents/skills` 目录。
  */
-function getUserShipSkillsDir(): string {
-  return path.join(os.homedir(), ".ship", "skills");
+function getUserAgentsSkillsDir(): string {
+  return path.join(os.homedir(), ".agents", "skills");
 }
 
 /**
@@ -258,7 +258,7 @@ function getBuiltInSkillsDirFromBin(): string {
  */
 async function installBuiltInSkillsToUserDir(): Promise<void> {
   const src = getBuiltInSkillsDirFromBin();
-  const dst = getUserShipSkillsDir();
+  const dst = getUserAgentsSkillsDir();
 
   try {
     if (!(await fs.pathExists(src))) return;
@@ -280,14 +280,14 @@ async function installBuiltInSkillsToUserDir(): Promise<void> {
 }
 
 /**
- * 同步 `~/.claude/skills` 到 `~/.ship/skills`。
+ * 同步 `~/.claude/skills` 到 `~/.agents/skills`。
  *
  * 关键点（中文）
  * - 这是兼容开发者本地习惯的“软同步”，失败不阻断 init。
  */
-async function syncClaudeSkillsToUserShipSkills(): Promise<void> {
+async function syncClaudeSkillsToUserAgentsSkills(): Promise<void> {
   const src = path.join(os.homedir(), ".claude", "skills");
-  const dst = getUserShipSkillsDir();
+  const dst = getUserAgentsSkillsDir();
   try {
     if (!(await fs.pathExists(src))) return;
     const stat = await fs.stat(src);
@@ -642,8 +642,8 @@ export async function initCommand(
     llm: llmConfig,
     // 关键点（中文）：所有服务相关配置统一放入 `services`。
     services: {
-      // 默认额外支持 `.claude/skills`（兼容社区/工具链习惯），同时仍保留 `.ship/skills` 作为默认 root
-      skills: { paths: [".claude/skills"] },
+      // skills 扫描目录统一使用 `.agents/skills`（project/home 默认 roots）
+      skills: { paths: [".agents/skills"] },
       ...(Object.keys(channelsConfig).length > 0
         ? {
             chat: {
@@ -755,8 +755,7 @@ export async function initCommand(
     getShipContextRootDirPath(projectRoot),
     getShipPublicDirPath(projectRoot),
     getShipConfigDirPath(projectRoot),
-    path.join(getShipDirPath(projectRoot), "skills"),
-    path.join(projectRoot, ".claude", "skills"),
+    path.join(projectRoot, ".agents", "skills"),
     path.join(getShipDirPath(projectRoot), "schema"),
     getShipDebugDirPath(projectRoot),
   ];
@@ -781,7 +780,7 @@ export async function initCommand(
     // ignore
   }
 
-  // Install built-in skills to user directory (~/.ship/skills)
+  // Install built-in skills to user directory (~/.agents/skills)
   await installBuiltInSkillsToUserDir();
 
   // Skills installation (optional)
@@ -797,7 +796,7 @@ export async function initCommand(
       try {
         // 关键点（中文）
         // - `-y`（npx）：跳过安装确认
-        // - `-g`：`npx skills` 默认全局安装到 ~/.claude/skills
+        // - `-g`：`npx skills` 默认全局安装到 ~/.claude/skills（随后同步到 ~/.agents/skills）
         // - `--agent claude-code`：对齐 Claude Code-compatible 目录结构（SKILL.md）
         await execa(
           "npx",
@@ -809,8 +808,8 @@ export async function initCommand(
         console.log(`   Error: ${String(err)}`);
       }
     }
-    // 同步到 `~/.ship/skills`，保证 ShipMyAgent 可发现
-    await syncClaudeSkillsToUserShipSkills();
+    // 同步到 `~/.agents/skills`，保证 ShipMyAgent 可发现
+    await syncClaudeSkillsToUserAgentsSkills();
   }
 
   console.log("\n🎉 Initialization complete!\n");

@@ -21,7 +21,7 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
  * 扫描并发现 Claude Code-compatible skills。
  *
  * 关键点（中文）
- * - skills 的扫描根目录与 projectRoot 强相关（默认 `.ship/skills`）
+ * - skills 的扫描根目录与 projectRoot 强相关（默认 `.agents/skills`）
  * - 这里做成同步函数：启动时扫描一次，产出 prompt section 与 tools 索引
  */
 /**

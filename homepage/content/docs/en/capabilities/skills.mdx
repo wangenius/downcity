@@ -9,8 +9,8 @@ ShipMyAgent supports SKILL.md-based skills.
 
 ## Default roots
 
-- Project-level: `.ship/skills`
-- User-level: `~/.ship/skills`
+- Project-level: `.agents/skills`
+- User-level: `~/.agents/skills`
 - Extra roots: `ship.json.services.skills.paths`
 
 ## Recommended workflow
@@ -46,7 +46,7 @@ sma skill lookup playwright
 {
   "services": {
     "skills": {
-      "paths": [".claude/skills"],
+      "paths": [".agents/skills"],
       "allowExternalPaths": false
     }
   }

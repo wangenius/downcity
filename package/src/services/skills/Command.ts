@@ -18,13 +18,13 @@ import { discoverClaudeSkillsSync } from "./runtime/Discovery.js";
 import { getClaudeSkillSearchRoots } from "./runtime/Paths.js";
 import { loadShipConfig } from "@/main/server/env/Config.js";
 
-function getUserShipSkillsDir(): string {
-  return path.join(os.homedir(), ".ship", "skills");
+function getUserAgentsSkillsDir(): string {
+  return path.join(os.homedir(), ".agents", "skills");
 }
 
-async function syncClaudeSkillsToUserShipSkills(): Promise<void> {
+async function syncClaudeSkillsToUserAgentsSkills(): Promise<void> {
   const src = path.join(os.homedir(), ".claude", "skills");
-  const dst = getUserShipSkillsDir();
+  const dst = getUserAgentsSkillsDir();
   try {
     if (!(await fs.pathExists(src))) return;
     const stat = await fs.stat(src);
@@ -76,8 +76,8 @@ export async function skillInstallCommand(
 
   await runNpxSkills(args, { yes });
 
-  // 关键点（中文）：`npx skills -g` 默认装到 ~/.claude/skills，这里同步到 ~/.ship/skills 供 ShipMyAgent 扫描
-  await syncClaudeSkillsToUserShipSkills();
+  // 关键点（中文）：`npx skills -g` 默认装到 ~/.claude/skills，这里同步到 ~/.agents/skills 供 ShipMyAgent 扫描
+  await syncClaudeSkillsToUserAgentsSkills();
 }
 
 export async function skillListCommand(cwd: string = "."): Promise<void> {

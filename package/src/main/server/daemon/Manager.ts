@@ -23,6 +23,10 @@ import {
   DAEMON_PID_FILENAME,
   type DaemonMeta,
 } from "@main/types/Daemon.js";
+import {
+  removeManagedAgentEntry,
+  upsertManagedAgentEntry,
+} from "@/main/server/manager/AgentRegistry.js";
 
 /**
  * 异步睡眠工具。
@@ -94,6 +98,12 @@ export const cleanupStaleDaemonFiles = async (
   // 关键注释：pid 文件存在但进程已退出，属于“脏状态”，这里直接清理。
   await fs.remove(getDaemonPidPath(projectRoot));
   await fs.remove(getDaemonMetaPath(projectRoot));
+  // 关键点（中文）：僵尸 daemon 清理时同步移除 manager registry 记录，避免列表残留。
+  try {
+    await removeManagedAgentEntry(projectRoot);
+  } catch {
+    // ignore registry sync errors
+  }
 };
 
 /**
@@ -162,6 +172,16 @@ export const startDaemonProcess = async (params: {
     platform: process.platform,
   });
 
+  // 关键点（中文）：启动成功后登记到 manager agent registry，供 `sma manager agents list` 使用。
+  try {
+    await upsertManagedAgentEntry({
+      projectRoot,
+      pid: child.pid,
+    });
+  } catch {
+    // ignore registry sync errors
+  }
+
   return { pid: child.pid, logPath };
 };
 
@@ -207,6 +227,12 @@ export const stopDaemonProcess = async (params: {
 
   await fs.remove(getDaemonPidPath(projectRoot));
   await fs.remove(getDaemonMetaPath(projectRoot));
+  // 关键点（中文）：停止后移除 registry 记录，保证列表只保留活跃 daemon。
+  try {
+    await removeManagedAgentEntry(projectRoot);
+  } catch {
+    // ignore registry sync errors
+  }
 
   return { stopped: true, pid };
 };

@@ -31,6 +31,19 @@ import {
   getServiceRootCommandNames,
 } from "@main/service/Manager.js";
 import { getExtensionRootCommandNames } from "@main/extension/Manager.js";
+import {
+  cleanupStaleDaemonFiles,
+  getDaemonLogPath,
+  isProcessAlive as isDaemonProcessAlive,
+  readDaemonPid,
+  stopDaemonProcess,
+} from "@/main/server/daemon/Manager.js";
+import {
+  getManagerAgentRegistryPath,
+  listManagedAgents,
+  removeManagedAgentEntry,
+} from "@/main/server/manager/AgentRegistry.js";
+import type { ManagedAgentRuntimeView } from "@/main/types/Manager.js";
 
 const MANAGER_DIR = join(os.homedir(), ".ship", "manager");
 const MANAGER_PID_PATH = join(MANAGER_DIR, "manager.pid");
@@ -113,7 +126,7 @@ function injectAgentContext(pathInput: string = "."): {
   return { projectRoot, agentName };
 }
 
-function isProcessAlive(pid: number): boolean {
+function isManagerProcessAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
@@ -136,7 +149,7 @@ async function startManagerCommand(): Promise<void> {
   await fs.ensureDir(MANAGER_DIR);
 
   const existingPid = await readManagerPid();
-  if (existingPid && isProcessAlive(existingPid)) {
+  if (existingPid && isManagerProcessAlive(existingPid)) {
     console.log("ℹ️  SMA manager is already running");
     console.log(`   pid: ${existingPid}`);
     return;
@@ -193,6 +206,96 @@ async function runManagerRuntimeCommand(): Promise<void> {
   }, 60_000);
 }
 
+/**
+ * 解析 manager 维护的“正在运行” agent 列表。
+ *
+ * 关键点（中文）
+ * - 先做每个项目的 stale pid 清理，再判活。
+ * - 不在运行的记录会从 registry 移除，保持列表语义稳定（仅显示活跃 agent）。
+ */
+async function resolveRunningManagedAgents(): Promise<ManagedAgentRuntimeView[]> {
+  const entries = await listManagedAgents();
+  const views: ManagedAgentRuntimeView[] = [];
+
+  for (const entry of entries) {
+    const projectRoot = resolve(String(entry.projectRoot || "").trim() || ".");
+    try {
+      await cleanupStaleDaemonFiles(projectRoot);
+      const daemonPid = await readDaemonPid(projectRoot);
+      if (!daemonPid || !isDaemonProcessAlive(daemonPid)) {
+        await removeManagedAgentEntry(projectRoot);
+        continue;
+      }
+      views.push({
+        projectRoot,
+        registeredPid: entry.pid,
+        daemonPid,
+        running: true,
+        startedAt: entry.startedAt,
+        updatedAt: entry.updatedAt,
+        logPath: getDaemonLogPath(projectRoot),
+      });
+    } catch {
+      // 关键点（中文）：读取异常时移除脏记录，避免后续 list/status 持续噪音。
+      try {
+        await removeManagedAgentEntry(projectRoot);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return views.sort((a, b) => a.projectRoot.localeCompare(b.projectRoot));
+}
+
+/**
+ * 打印 manager 下活跃 agent 列表。
+ */
+function printRunningManagedAgents(views: ManagedAgentRuntimeView[]): void {
+  if (views.length === 0) {
+    console.log("ℹ️  No running agent daemon managed by manager");
+    return;
+  }
+
+  console.log(`✅ Running agents: ${views.length}`);
+  for (const item of views) {
+    console.log(`- project: ${item.projectRoot}`);
+    console.log(`  pid: ${item.daemonPid}`);
+    console.log(`  startedAt: ${item.startedAt}`);
+    console.log(`  updatedAt: ${item.updatedAt}`);
+    console.log(`  log: ${item.logPath}`);
+  }
+}
+
+/**
+ * `sma manager status`。
+ *
+ * 关键点（中文）
+ * - 同时输出 manager 进程状态 + manager 维护的活跃 agent 列表摘要。
+ */
+async function managerStatusCommand(): Promise<void> {
+  const managerPid = await readManagerPid();
+  const managerRunning = Boolean(
+    managerPid && isManagerProcessAlive(managerPid),
+  );
+  if (managerPid && !managerRunning) {
+    await fs.remove(MANAGER_PID_PATH);
+  }
+
+  if (managerRunning) {
+    console.log("✅ SMA manager is running");
+    console.log(`   pid: ${managerPid}`);
+  } else {
+    console.log("ℹ️  SMA manager is not running");
+  }
+  console.log(`   pidFile: ${MANAGER_PID_PATH}`);
+  console.log(`   log: ${MANAGER_LOG_PATH}`);
+  console.log(`   registry: ${getManagerAgentRegistryPath()}`);
+
+  const runningAgents = await resolveRunningManagedAgents();
+  printRunningManagedAgents(runningAgents);
+}
+
 program
   .name(basename(process.argv[1] || "shipmyagent"))
   .description("把一个代码仓库，启动为一个拥有自主意识和执行能力的 Agent")
@@ -215,6 +318,154 @@ manager
   .command("run")
   .description("internal manager runtime")
   .action(runManagerRuntimeCommand);
+
+manager
+  .command("status")
+  .description("查看 manager 与已托管 agent 运行状态")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async () => {
+    await managerStatusCommand();
+  }));
+
+const managerAgents = manager
+  .command("agents")
+  .description("通过 manager 统一管理 agent daemon");
+
+managerAgents
+  .command("list")
+  .description("列出 manager 当前托管的活跃 agent daemon")
+  .helpOption("--help", "display help for command")
+  .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+  .action(withVersionBanner(async (options?: { json?: boolean }) => {
+    const views = await resolveRunningManagedAgents();
+    if (options?.json) {
+      console.log(
+        JSON.stringify(
+          {
+            success: true,
+            count: views.length,
+            agents: views,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    printRunningManagedAgents(views);
+  }));
+
+managerAgents
+  .command("start <path>")
+  .description("启动指定项目的 agent daemon（等价于 `sma agent on <path>`）")
+  .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
+  .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
+  .option(
+    "--webui [enabled]",
+    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
+    parseBoolean,
+  )
+  .option(
+    "--webport <port>",
+    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
+    parsePort,
+  )
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (cwd: string, options: StartOptions) => {
+    injectAgentContext(cwd);
+    await startCommand(cwd, options);
+  }));
+
+managerAgents
+  .command("open <path>")
+  .description("启动指定项目的 agent daemon（`start` 别名）")
+  .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
+  .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
+  .option(
+    "--webui [enabled]",
+    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
+    parseBoolean,
+  )
+  .option(
+    "--webport <port>",
+    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
+    parsePort,
+  )
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (cwd: string, options: StartOptions) => {
+    injectAgentContext(cwd);
+    await startCommand(cwd, options);
+  }));
+
+managerAgents
+  .command("stop <pathOrAll>")
+  .description("停止指定项目 agent daemon；传 `all` 可停止全部活跃 agent")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (pathOrAll: string) => {
+    const target = String(pathOrAll || "").trim();
+    if (!target) {
+      throw new Error("pathOrAll is required");
+    }
+
+    if (target.toLowerCase() !== "all") {
+      injectAgentContext(target);
+      await stopCommand(target);
+      return;
+    }
+
+    const views = await resolveRunningManagedAgents();
+    if (views.length === 0) {
+      console.log("ℹ️  No running agent daemon to stop");
+      return;
+    }
+
+    console.log(`Stopping ${views.length} managed agents...`);
+    for (const item of views) {
+      try {
+        const result = await stopDaemonProcess({
+          projectRoot: item.projectRoot,
+        });
+        if (result.stopped) {
+          console.log(`✅ stopped: ${item.projectRoot} (pid=${item.daemonPid})`);
+        } else {
+          console.log(`ℹ️  already stopped: ${item.projectRoot}`);
+        }
+      } catch (error) {
+        console.log(`❌ stop failed: ${item.projectRoot}`);
+        console.log(`   error: ${String(error)}`);
+      }
+    }
+  }));
+
+managerAgents
+  .command("status <path>")
+  .description("查看指定项目的 agent daemon 状态（等价于 `sma agent status <path>`）")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (cwd: string) => {
+    injectAgentContext(cwd);
+    await statusCommand(cwd);
+  }));
+
+managerAgents
+  .command("restart <path>")
+  .description("重启指定项目的 agent daemon（等价于 `sma agent restart <path>`）")
+  .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
+  .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
+  .option(
+    "--webui [enabled]",
+    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
+    parseBoolean,
+  )
+  .option(
+    "--webport <port>",
+    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
+    parsePort,
+  )
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (cwd: string, options: StartOptions) => {
+    injectAgentContext(cwd);
+    await restartCommand(cwd, options);
+  }));
 
 program
   .command("start")

@@ -1,0 +1,50 @@
+---
+title: sma manager
+description: 用于全局管理 agent daemon 的 manager 命令组
+---
+
+# `sma manager`
+
+通过 manager 命令可以查看全局 manager 状态，并统一管理多个项目的 agent daemon。
+
+## 用法
+
+```bash
+sma manager status
+
+sma manager agents list [--json]
+sma manager agents start <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
+sma manager agents open <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
+sma manager agents stop <path|all>
+sma manager agents status <path>
+sma manager agents restart <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
+```
+
+## 行为说明
+
+- `sma manager status`：查看 manager 进程状态与托管的活跃 agent 概览。
+- `sma manager agents list`：列出当前 manager 追踪到的活跃 agent daemon。
+- `sma manager agents stop all`：一键停止全部活跃 agent daemon。
+- `open` 是 `start` 的别名。
+
+## 常见流程
+
+```bash
+# 1) 启动全局 manager
+sma start
+
+# 2) 通过 manager 启动两个项目
+sma manager agents start /path/to/agent-a
+sma manager agents start /path/to/agent-b
+
+# 3) 查看当前活跃 daemon 列表
+sma manager agents list
+
+# 4) 一键停止全部活跃 daemon
+sma manager agents stop all
+```
+
+## 相关命令
+
+- [`sma start`](/zh/docs/reference/commands/start)
+- [`sma agent`](/zh/docs/reference/commands/agent)

@@ -1,0 +1,50 @@
+---
+title: sma manager
+description: Manager command group for global agent daemon management
+---
+
+# `sma manager`
+
+Use manager commands to inspect global manager state and operate multiple agent daemons.
+
+## Usage
+
+```bash
+sma manager status
+
+sma manager agents list [--json]
+sma manager agents start <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
+sma manager agents open <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
+sma manager agents stop <path|all>
+sma manager agents status <path>
+sma manager agents restart <path> [--port <port>] [--host <host>] [--webui [enabled]] [--webport <port>]
+```
+
+## Behavior
+
+- `sma manager status`: show manager process status and active managed agents summary.
+- `sma manager agents list`: list currently running daemons tracked by manager.
+- `sma manager agents stop all`: stop all active managed agent daemons.
+- `open` is an alias of `start`.
+
+## Typical flow
+
+```bash
+# 1) start global manager
+sma start
+
+# 2) start two projects via manager
+sma manager agents start /path/to/agent-a
+sma manager agents start /path/to/agent-b
+
+# 3) list active daemons
+sma manager agents list
+
+# 4) stop all active daemons
+sma manager agents stop all
+```
+
+## Related commands
+
+- [`sma start`](/en/docs/reference/commands/start)
+- [`sma agent`](/en/docs/reference/commands/agent)

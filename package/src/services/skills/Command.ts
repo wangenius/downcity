@@ -85,7 +85,7 @@ export async function skillListCommand(cwd: string = "."): Promise<void> {
   const shipJson = path.join(projectRoot, "ship.json");
   if (!fs.existsSync(shipJson)) {
     throw new Error(
-      `ship.json not found at ${shipJson}. Run "shipmyagent init" first or pass the correct path.`,
+      `ship.json not found at ${shipJson}. Run "sma agent create" first or pass the correct path.`,
     );
   }
 

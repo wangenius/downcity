@@ -10,6 +10,7 @@ description: 使用 on/off/restart 管理当前目录或指定目录的 Agent Ru
 ## 用法
 
 ```bash
+sma agent create [path] [options]
 sma agent on [path] [options]
 sma agent off [path]
 sma agent status [path]
@@ -19,6 +20,7 @@ sma agent restart [path] [options]
 
 ## 子命令
 
+- `create`：创建/初始化 agent 项目
 - `on`：启动 runtime
 - `off`：停止 daemon runtime
 - `status`：查看 daemon runtime 状态
@@ -26,6 +28,10 @@ sma agent restart [path] [options]
 - `restart`：重启 daemon runtime
 
 ## 参数
+
+### `create` 选项
+
+- `-f, --force [enabled]`：允许覆盖已有 `ship.json`（危险操作）
 
 ### `on` 选项
 
@@ -65,6 +71,9 @@ sma agent restart [path] [options]
 ## 示例
 
 ```bash
+# 创建/初始化（当前目录）
+sma agent create .
+
 # 当前目录后台启动（默认）
 sma agent on
 

@@ -31,16 +31,16 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
       {
         title: "2. 在仓库里初始化 Agent",
         paragraphs: [
-          "进入你的项目目录后执行初始化。系统会生成 `PROFILE.md`、`ship.json` 与 `.ship/` 目录。",
+          "进入你的项目目录后创建/初始化 agent。系统会生成 `PROFILE.md`、`ship.json` 与 `.ship/` 目录。",
         ],
-        code: `cd /path/to/your-repo\nsma init`,
+        code: `cd /path/to/your-repo\nsma agent create .`,
       },
       {
         title: "3. 配置模型并启动 Runtime",
         paragraphs: [
-          "在项目根目录写入 `.env`，然后前台启动进行调试；若要长期运行，可切到守护模式。",
+          "在项目根目录写入 `.env`，然后启动 runtime（默认后台 daemon）。需要在当前终端观察日志时再用前台模式。",
         ],
-        code: `LLM_API_KEY=your_key\n\nsma .\n# 或\nsma agent on --daemon`,
+        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent on\n# 或（前台调试）\nsma agent on --foreground`,
       },
       {
         title: "4. 健康检查与下一步",
@@ -68,16 +68,16 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
       {
         title: "2. Initialize in your repository",
         paragraphs: [
-          "Run initialization inside your project directory. It creates `PROFILE.md`, `ship.json`, and `.ship/`.",
+          "Create/init the agent project inside your repository. It creates `PROFILE.md`, `ship.json`, and `.ship/`.",
         ],
-        code: `cd /path/to/your-repo\nsma init`,
+        code: `cd /path/to/your-repo\nsma agent create .`,
       },
       {
         title: "3. Configure model and start runtime",
         paragraphs: [
-          "Create `.env` in project root, then start in foreground for debugging. Use daemon mode for long-running workloads.",
+          "Create `.env` in project root, then start runtime (default: background daemon). Use foreground mode when you want logs in the current terminal.",
         ],
-        code: `LLM_API_KEY=your_key\n\nsma .\n# or\nsma agent on --daemon`,
+        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent on\n# or (foreground)\nsma agent on --foreground`,
       },
       {
         title: "4. Health check and next steps",

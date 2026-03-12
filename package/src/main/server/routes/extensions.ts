@@ -80,7 +80,7 @@ extensionsRouter.post("/api/extensions/command", async (c) => {
  * 确保 extension action API 路由只注册一次。
  *
  * 关键点（中文）
- * - 延迟到 server 启动阶段再注册，避免 `sma init` 等无需 runtime 的命令在 import 时触发初始化错误。
+ * - 延迟到 server 启动阶段再注册，避免 `sma agent create` 等无需 runtime 的命令在 import 时触发初始化错误。
  */
 export function ensureExtensionActionRoutesRegistered(): void {
   if (extensionActionRoutesRegistered) return;

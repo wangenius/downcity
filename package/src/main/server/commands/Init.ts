@@ -1,9 +1,9 @@
 /**
- * `shipmyagent init`：在目标目录生成最小可用的 ShipMyAgent 工程骨架与配置文件。
+ * `sma agent create`：在目标目录生成最小可用的 ShipMyAgent 工程骨架与配置文件。
  *
  * 目标
  * - 生成 `PROFILE.md` / `SOUL.md` / `USER.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
- * - 通过交互式问题收集必要配置（模型、Adapters 等）
+ * - 通过交互式问题收集必要配置（模型、channels 等）
  *
  * 设计要点
  * - Chat channels 支持多选：仅写入用户选择的 channels（未选择的不出现在 `ship.json`）
@@ -712,13 +712,13 @@ export async function initCommand(
 
   const envResult = await appendMissingEnvEntries({
     filePath: dotEnvPath,
-    sectionTitle: "ShipMyAgent Init",
+    sectionTitle: "ShipMyAgent Create",
     entries: envRealEntries,
     overwriteKeys: overwriteEnvKeys,
   });
   const envExampleResult = await appendMissingEnvEntries({
     filePath: dotEnvExamplePath,
-    sectionTitle: "ShipMyAgent Init Example",
+    sectionTitle: "ShipMyAgent Create Example",
     entries: envExampleEntries,
   });
   if (envResult.appended.length > 0 || envResult.overwritten.length > 0) {
@@ -878,7 +878,7 @@ export async function initCommand(
       "Optional: configure services.chat.channels.qq.auth_id (or QQ_AUTH_ID)",
     );
   }
-  nextSteps.push('Run "shipmyagent agent on" to start the agent');
+  nextSteps.push('Run "sma agent on" to start the agent');
 
   console.log("Next steps:");
   for (const [idx, line] of nextSteps.entries()) {

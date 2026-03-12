@@ -1,0 +1,32 @@
+---
+title: sma agent create
+description: Create/initialize a ShipMyAgent agent project
+---
+
+# `sma agent create`
+
+Create/initialize a ShipMyAgent agent project in the target path.
+
+## Usage
+
+```bash
+sma agent create [path]
+```
+
+## Arguments
+
+- `path` (optional): project path. Defaults to current directory.
+
+## Options
+
+- `-f, --force [enabled]`: allow overwriting existing `ship.json` (dangerous)
+
+## Example
+
+```bash
+# Initialize in current directory
+sma agent create .
+
+# Initialize in another directory
+sma agent create ./my-agent-project
+```

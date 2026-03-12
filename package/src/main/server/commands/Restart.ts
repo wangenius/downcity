@@ -1,5 +1,5 @@
 /**
- * `shipmyagent agent restart`：重启后台常驻的 Agent Runtime（daemon）。
+ * `sma agent restart`：重启后台常驻的 Agent Runtime（daemon）。
  */
 
 import path from "path";
@@ -26,13 +26,13 @@ export async function restartCommand(
 
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
-      '❌ Project not initialized. Please run "shipmyagent init" first',
+      '❌ Project not initialized. Please run "sma agent create" first',
     );
     process.exit(1);
   }
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
     console.error(
-      '❌ ship.json does not exist. Please run "shipmyagent init" first',
+      '❌ ship.json does not exist. Please run "sma agent create" first',
     );
     process.exit(1);
   }

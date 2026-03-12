@@ -1,14 +1,14 @@
 /**
  * 后台常驻启动（daemon）。
  *
- * 对应用户命令：`shipmyagent agent on`
+ * 对应用户命令：`sma agent on`
  *
  * 行为
  * - 在 `.ship/debug/` 写入 pid/log/meta 文件
  * - 通过 `node <commands/index.js> agent on ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
  *
  * 注意
- * - 前台启动请显式使用 `shipmyagent agent on --foreground`。
+ * - 前台启动请显式使用 `sma agent on --foreground`。
  */
 
 import path from "path";
@@ -36,13 +36,13 @@ export async function startCommand(
   // 启动前先做最基本的工程校验，避免起了一个立刻报错退出的 daemon。
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
-      '❌ Project not initialized. Please run "shipmyagent init" first',
+      '❌ Project not initialized. Please run "sma agent create" first',
     );
     process.exit(1);
   }
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
     console.error(
-      '❌ ship.json does not exist. Please run "shipmyagent init" first',
+      '❌ ship.json does not exist. Please run "sma agent create" first',
     );
     process.exit(1);
   }

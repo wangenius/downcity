@@ -17,13 +17,16 @@ const useCases = [
     id: "collaborator",
     icon: "🤝",
     bulletKeys: ["review", "answer", "onboard", "bugs", "docs"],
-    example: `# Start the Agent
-shipmyagent .
+    example: `# Create/init the Agent project
+sma agent create .
+
+# Start the Agent (default: daemon)
+sma agent on
 
 # In Telegram, chat with your Agent:
 /status          # Check project status
-/suggest refactor auth  # Suggest how to refactor auth module
-/run test        # Run tests`,
+Suggest refactor auth  # Suggest how to refactor auth module
+Run tests              # Run tests`,
   },
   {
     id: "worker",
@@ -47,10 +50,8 @@ Suggest which ones should be prioritized.`,
     example: `# Telegram Bot = Your Project UI
 
 /status              # Check status
-/tasks               # List tasks
-/suggest <intent>    # Request suggestions
-/run <command>       # Execute commands
-/approve             # Approve pending operations`,
+/clear               # Clear conversation history
+<any message>        # Execute instruction`,
   },
   {
     id: "maintainer",
@@ -59,9 +60,8 @@ Suggest which ones should be prioritized.`,
     example: `# Agent automatically:
 1. Scans for security issues
 2. Proposes fixes via pull requests
-3. Awaits your approval
-4. Implements approved changes
-5. Documents all actions`,
+3. Implements changes (tool-driven)
+4. Documents all actions`,
   },
 ];
 

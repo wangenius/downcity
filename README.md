@@ -4,7 +4,7 @@
 
 ShipMyAgent 是一个 Agent Runtime，它将你的本地或远程代码仓库启动为一个可对话、可执行、可审计的 AI Agent。
 
-> ⚠️ **当前版本说明（2026-02-03）**：已暂时移除 **任务系统（Tasks/Runs/Scheduler）** 与 **权限/审批（Approvals）**，默认 **全权限** 直接执行；后续再重新设计权限体系。
+> ⚠️ **当前版本说明（2026-02-03）**：已暂时移除 **权限/审批（Approvals）**，默认 **全权限** 直接执行；后续再重新设计权限体系。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
@@ -49,7 +49,9 @@ pnpm add -g shipmyagent
 在你的项目根目录运行：
 
 ```bash
-shipmyagent init
+sma start
+cd /path/to/your-repo
+sma agent create .
 ```
 
 这会创建以下文件：
@@ -61,7 +63,7 @@ shipmyagent init
 ### 启动 Agent
 
 ```bash
-shipmyagent .
+sma agent on
 ```
 
 Agent 将启动并监听配置的通信渠道（如 Telegram Bot）。
@@ -122,6 +124,7 @@ You are the maintainer agent of this repository.
 ```json
 {
   "name": "my-project-agent",
+  "version": "1.0.0",
   "llm": {
     "activeModel": "default",
     "providers": {
@@ -146,13 +149,14 @@ You are the maintainer agent of this repository.
       "maxOutputLines": 200
     }
   },
-  "adapters": {
-    "telegram": {
-      "enabled": true,
-      "botToken": "${TELEGRAM_BOT_TOKEN}"
-    },
-    "feishu": {
-      "enabled": false
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "botToken": "${TELEGRAM_BOT_TOKEN}"
+        }
+      }
     }
   }
 }
@@ -162,7 +166,7 @@ You are the maintainer agent of this repository.
 
 > 注：启动时会自动加载项目根目录的 `.env`，并把 `ship.json` 里的 `${VAR_NAME}` 形式占位符替换为对应环境变量。
 
-你也可以在 `ship.json` 里配置启动参数（`shipmyagent .` / `shipmyagent agent on` 会读取），例如：
+你也可以在 `ship.json` 里配置启动参数（`sma agent on` 会读取），例如：
 
 ```json
 {
@@ -185,7 +189,7 @@ You are the maintainer agent of this repository.
 
 ```bash
 # 启动 Agent
-shipmyagent .
+sma agent on
 
 # 在 Telegram 中与 Agent 对话
 /status          # 查看项目状态

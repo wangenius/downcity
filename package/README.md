@@ -9,7 +9,10 @@ npm i -g shipmyagent
 ## quick start
 
 ```bash
-shipmyagent .
+sma start
+cd /path/to/your-repo
+sma agent create .
+sma agent on
 ```
 
 ## troubleshooting
@@ -20,10 +23,10 @@ shipmyagent .
 
 ```bash
 # 本地依赖安装（仓库内）
-chmod +x node_modules/shipmyagent/bin/main/commands/index.js
+chmod +x node_modules/shipmyagent/bin/main/server/commands/Index.js
 
 # 或者直接用 node 执行（不依赖可执行位）
-node node_modules/shipmyagent/bin/main/commands/index.js .
+node node_modules/shipmyagent/bin/main/server/commands/Index.js agent on .
 ```
 
 ## access

@@ -360,11 +360,7 @@ program
 // 保留 -h 给 host 参数，帮助命令只使用 --help
 program.helpOption("--help", "display help for command");
 
-program
-  .command("init [path]")
-  .description("初始化 ShipMyAgent 项目")
-  .helpOption("--help", "display help for command")
-  .action(initCommand);
+// 关键点（中文）：不保留 `sma init` 旧命令，统一使用 `sma agent create`。
 
 const manager = program
   .command("manager")
@@ -563,8 +559,17 @@ program
 
 const agent = program
   .command("agent")
-  .description("管理 Agent Runtime 启停与重启")
+  .description("管理 Agent Runtime：创建/启停/重启")
   .helpOption("--help", "display help for command");
+
+agent
+  .command("create [path]")
+  .description("创建/初始化一个 Agent 项目")
+  .option("-f, --force [enabled]", "允许覆盖已有 ship.json（危险操作）", parseBoolean)
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async (cwd: string = ".", options: { force?: boolean }) => {
+    await initCommand(cwd, options);
+  }));
 
 agent
   .command("on [path]")

@@ -40,7 +40,7 @@ async function readDaemonMeta(projectRoot: string): Promise<DaemonMeta | null> {
  * 状态规则（中文）
  * - 运行中：输出 pid / log / startedAt
  * - 已初始化但未运行：输出 not running
- * - 未初始化：提示执行 `shipmyagent init`
+ * - 未初始化：提示执行 `sma agent create`
  */
 export async function statusCommand(cwd: string = "."): Promise<void> {
   const projectRoot = path.resolve(cwd);
@@ -78,7 +78,7 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
 
   if (missingInitFiles.length > 0) {
     console.error(
-      '❌ Project not initialized. Please run "shipmyagent init" first',
+      '❌ Project not initialized. Please run "sma agent create" first',
     );
     console.log(`   project: ${projectRoot}`);
     console.log(`   missing: ${missingInitFiles.join(", ")}`);

@@ -90,7 +90,9 @@ function parseConfigValue(rawValue: string): unknown {
 function readShipConfig(projectRoot: string): { shipJsonPath: string; config: ShipConfig } {
   const shipJsonPath = getShipJsonPath(projectRoot);
   if (!fs.existsSync(shipJsonPath)) {
-    throw new Error(`ship.json not found at ${shipJsonPath}. Run "shipmyagent init" first.`);
+    throw new Error(
+      `ship.json not found at ${shipJsonPath}. Run "sma agent create" first.`,
+    );
   }
   const raw = fs.readJsonSync(shipJsonPath) as unknown;
   if (!isPlainObject(raw)) {

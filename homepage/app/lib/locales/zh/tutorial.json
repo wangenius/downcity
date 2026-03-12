@@ -3,13 +3,13 @@
   "description": "在几分钟内将您的代码仓库转换为 AI Agent",
   "step1": {
     "title": "初始化配置",
-    "description": "在项目根目录运行初始化命令。系统会自动生成 `PROFILE.md`（Agent Instruction）与配置文件，为你的代码仓库赋予独特的人格与权限边界。",
-    "command": "shipmyagent init"
+    "description": "在仓库中创建/初始化 agent 项目。系统会生成 `PROFILE.md` 与配置文件，为你的代码仓库赋予独特的人格与边界。",
+    "command": "sma agent create ."
   },
   "step2": {
     "title": "唤醒运行时",
     "description": "在本地启动 Agent Runtime。它将接管代码仓库的读写权限，并连接到你配置的即时通讯软件（如 Telegram），随时作为员工待命。",
-    "command": "shipmyagent ."
+    "command": "sma agent on"
   },
   "step3": {
     "title": "自然语言协作",

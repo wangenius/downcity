@@ -30,14 +30,14 @@ function ensureContextFiles(projectRoot: string): void {
   // Check if initialized（启动入口一次性确认工程根目录与关键文件）
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
-      '❌ Project not initialized. Please run "shipmyagent init" first',
+      '❌ Project not initialized. Please run "sma agent create" first',
     );
     process.exit(1);
   }
 
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
     console.error(
-      '❌ ship.json does not exist. Please run "shipmyagent init" first',
+      '❌ ship.json does not exist. Please run "sma agent create" first',
     );
     process.exit(1);
   }

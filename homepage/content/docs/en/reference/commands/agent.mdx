@@ -10,6 +10,7 @@ Manage Agent Runtime start/stop/restart.
 ## Usage
 
 ```bash
+sma agent create [path] [options]
 sma agent on [path] [options]
 sma agent off [path]
 sma agent status [path]
@@ -19,6 +20,7 @@ sma agent restart [path] [options]
 
 ## Subcommands
 
+- `create`: create/initialize an agent project
 - `on`: start runtime
 - `off`: stop daemon runtime
 - `status`: show daemon runtime status
@@ -26,6 +28,10 @@ sma agent restart [path] [options]
 - `restart`: restart daemon runtime
 
 ## Options
+
+### `create` options
+
+- `-f, --force [enabled]`: allow overwriting existing `ship.json` (dangerous)
 
 ### `on` options
 
@@ -65,6 +71,9 @@ On every `sma` execution, CLI resolves current agent context and injects variabl
 ## Examples
 
 ```bash
+# create/init (current directory)
+sma agent create .
+
 # start current directory agent in background (default)
 sma agent on
 

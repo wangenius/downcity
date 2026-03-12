@@ -9,7 +9,7 @@ ShipMyAgent 的核心是“本地 Runtime + 可审计数据目录 + 多渠道消
 
 ## 运行层次
 
-1. **CLI 层**：`sma init`、`sma agent ...`、`sma task ...`
+1. **CLI 层**：`sma agent create`、`sma agent ...`、`sma task ...`
 2. **Server 层**：HTTP 路由（`/health`、`/api/execute`、`/api/services/*`、`/api/extensions/*`）
 3. **Service/Extension 层**：`chat` / `skill` / `task` / `memory` / `voice`
 4. **Context 层**：`.ship/context/<contextId>/messages/messages.jsonl`

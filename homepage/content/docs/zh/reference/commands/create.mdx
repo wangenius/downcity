@@ -1,0 +1,32 @@
+---
+title: sma agent create
+description: 创建/初始化一个 ShipMyAgent Agent 项目
+---
+
+# `sma agent create`
+
+在目标路径创建/初始化一个 ShipMyAgent Agent 项目。
+
+## 用法
+
+```bash
+sma agent create [path]
+```
+
+## 参数
+
+- `path`（可选）：项目路径，默认当前目录。
+
+## 选项
+
+- `-f, --force [enabled]`：允许覆盖已有 `ship.json`（危险操作）
+
+## 示例
+
+```bash
+# 在当前目录初始化
+sma agent create .
+
+# 在指定目录初始化
+sma agent create ./my-agent-project
+```

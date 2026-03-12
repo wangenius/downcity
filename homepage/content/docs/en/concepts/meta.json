@@ -4,6 +4,7 @@
     "architecture",
     "logic-map",
     "service-vs-extension",
+    "invocation-routing-and-isolation",
     "service-runtime",
     "extension-runtime",
     "runtime-relationship-and-process",

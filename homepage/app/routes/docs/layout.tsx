@@ -46,6 +46,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 
   return (
     <DocsLayout
+      key={`${lang}:${location.pathname}`}
       tree={loaderData.tree as PageTreeRoot}
       nav={{
         title: product.productName,

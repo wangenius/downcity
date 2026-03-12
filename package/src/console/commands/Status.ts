@@ -15,6 +15,11 @@ import {
 } from "@/console/daemon/Manager.js";
 import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
 import type { DaemonMeta } from "@agent/types/Daemon.js";
+import {
+  printPanel,
+  renderKeyValueLines,
+  type StatusTone,
+} from "@/utils/cli/PrettyStatus.js";
 
 /**
  * 安全读取 daemon 元数据。
@@ -54,38 +59,66 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
   }
 
   const pid = await readDaemonPid(projectRoot);
+  const logPath = getDaemonLogPath(projectRoot);
+
+  const rows: Array<[string, string]> = [
+    ["project", projectRoot],
+    ["log", logPath],
+  ];
+  let tone: StatusTone = "neutral";
+
   if (pid && isProcessAlive(pid)) {
     const meta = await readDaemonMeta(projectRoot);
 
-    console.log("✅ ShipMyAgent daemon is running");
-    console.log(`   project: ${projectRoot}`);
-    console.log(`   pid: ${pid}`);
-    console.log(`   log: ${getDaemonLogPath(projectRoot)}`);
+    tone = "success";
+    rows.push(["state", "running"]);
+    rows.push(["pid", String(pid)]);
     if (meta?.startedAt) {
-      console.log(`   startedAt: ${meta.startedAt}`);
+      rows.push(["started_at", meta.startedAt]);
     }
     if (missingInitFiles.length > 0) {
       // 关键点（中文）：运行中但初始化文件不完整时仍给出告警，便于排查异常目录变更。
-      console.log(`⚠️  Missing init files: ${missingInitFiles.join(", ")}`);
+      rows.push(["warning", `missing init files: ${missingInitFiles.join(", ")}`]);
     }
+    printPanel({
+      title: "sma agent status",
+      tone,
+      lines: renderKeyValueLines(rows),
+    });
     return;
   }
 
   if (pid) {
-    console.log("⚠️  Daemon pid file exists but process is not running (stale state)");
-    console.log(`   fix: sma agent doctor ${projectRoot} --fix`);
-  }
-
-  if (missingInitFiles.length > 0) {
-    console.error(
-      '❌ Project not initialized. Please run "sma agent create" first',
-    );
-    console.log(`   project: ${projectRoot}`);
-    console.log(`   missing: ${missingInitFiles.join(", ")}`);
+    tone = "warning";
+    rows.push(["state", "stale"]);
+    rows.push(["stale_pid", String(pid)]);
+    rows.push(["fix", `sma agent doctor ${projectRoot} --fix`]);
+    printPanel({
+      title: "sma agent status",
+      tone,
+      lines: renderKeyValueLines(rows),
+    });
     return;
   }
 
-  console.log("ℹ️  ShipMyAgent daemon is not running");
-  console.log(`   project: ${projectRoot}`);
-  console.log(`   log: ${getDaemonLogPath(projectRoot)}`);
+  if (missingInitFiles.length > 0) {
+    tone = "error";
+    rows.push(["state", "not_initialized"]);
+    rows.push(["missing", missingInitFiles.join(", ")]);
+    rows.push(["fix", 'run "sma agent create" first']);
+    printPanel({
+      title: "sma agent status",
+      tone,
+      lines: renderKeyValueLines(rows),
+    });
+    return;
+  }
+
+  tone = "info";
+  rows.push(["state", "stopped"]);
+  printPanel({
+    title: "sma agent status",
+    tone,
+    lines: renderKeyValueLines(rows),
+  });
 }

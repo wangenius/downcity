@@ -49,6 +49,11 @@ import {
   isConsoleRunning,
   readConsolePid,
 } from "@/console/runtime/ConsoleRuntime.js";
+import {
+  printPanel,
+  renderKeyValueLines,
+  type StatusTone,
+} from "@/utils/cli/PrettyStatus.js";
 
 // 在 ES 模块中获取 __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -323,19 +328,40 @@ async function resolveRunningConsoleAgents(): Promise<ConsoleAgentRuntimeView[]>
 }
 
 function printRunningConsoleAgents(views: ConsoleAgentRuntimeView[]): void {
+  const lines: string[] = [];
+  lines.push(...renderKeyValueLines([["agents", String(views.length)]], 2));
   if (views.length === 0) {
-    console.log("ℹ️  No running agent daemon managed by console");
+    lines.push(...renderKeyValueLines([["detail", "no running agent daemon"]], 2));
+    printPanel({
+      title: "managed agents",
+      tone: "info",
+      lines,
+    });
     return;
   }
 
-  console.log(`✅ Running agents: ${views.length}`);
-  for (const item of views) {
-    console.log(`- project: ${item.projectRoot}`);
-    console.log(`  pid: ${item.daemonPid}`);
-    console.log(`  startedAt: ${item.startedAt}`);
-    console.log(`  updatedAt: ${item.updatedAt}`);
-    console.log(`  log: ${item.logPath}`);
+  for (const [index, item] of views.entries()) {
+    const seq = String(index + 1).padStart(2, "0");
+    lines.push(`  - agent ${seq}`);
+    lines.push(
+      ...renderKeyValueLines(
+        [
+          ["project", item.projectRoot],
+          ["pid", String(item.daemonPid)],
+          ["started_at", item.startedAt],
+          ["updated_at", item.updatedAt],
+          ["log", item.logPath],
+        ],
+        4,
+      ),
+    );
   }
+
+  printPanel({
+    title: "managed agents",
+    tone: "success",
+    lines,
+  });
 }
 
 async function consoleStatusCommand(): Promise<void> {
@@ -344,17 +370,23 @@ async function consoleStatusCommand(): Promise<void> {
 
   const consolePid = await readConsolePid();
   const running = Boolean(consolePid && isConsoleProcessAlive(consolePid));
-
+  const tone: StatusTone = running ? "success" : consolePid ? "warning" : "info";
+  const rows: Array<[string, string]> = [
+    ["state", running ? "running" : "stopped"],
+    ["pid_file", pidPath],
+    ["log", logPath],
+    ["registry", getConsoleAgentRegistryPath()],
+  ];
   if (running) {
-    console.log("✅ SMA console is running");
-    console.log(`   pid: ${consolePid}`);
-  } else {
-    console.log("ℹ️  SMA console is not running");
-    if (consolePid) console.log("⚠️  Stale console pid file detected");
+    rows.splice(1, 0, ["pid", String(consolePid)]);
+  } else if (consolePid) {
+    rows.splice(1, 0, ["warning", "stale pid file detected"]);
   }
-  console.log(`   pidFile: ${pidPath}`);
-  console.log(`   log: ${logPath}`);
-  console.log(`   registry: ${getConsoleAgentRegistryPath()}`);
+  printPanel({
+    title: "sma console status",
+    tone,
+    lines: renderKeyValueLines(rows, 2),
+  });
 
   const runningAgents = await resolveRunningConsoleAgents();
   printRunningConsoleAgents(runningAgents);

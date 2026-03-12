@@ -1,0 +1,96 @@
+---
+title: 调用路由与环境隔离
+description: 解释 service/extension 的调用是否会串环境，以及 shell 场景下环境变量如何路由
+---
+
+# 调用路由与环境隔离
+
+这页专门回答三个高频问题：
+
+1. 一个 agent runtime 调 `service`，会不会串到其他 agent 环境？
+2. `service` / `extension` 调用时，到底走不走 shell？
+3. CLI 和 shell 子进程下，环境变量如何决定“命中哪个 agent”？
+
+## 结论先说
+
+- 正常情况下，**不会串到其他 agent 环境**。
+- `service` / `extension` 的主调用链是 **runtime 内存分发**，不是默认走 shell。
+- 真正可能“串环境”的主要风险点是：你手动覆盖了 `host/port` 或 `SMA_SERVER_*`，把请求发到了另一套 daemon。
+
+## 隔离边界（核心原理）
+
+当前实现是“**单进程绑定单 projectRoot**”：
+
+- 一个 `sma agent on` 运行进程只初始化一个 runtime。
+- 这个 runtime 只绑定一个 `rootPath`（也就是一个 agent 项目目录）。
+- 该进程内的 `service` 与 `extension` 调用都复用同一份 runtime state（同一个 `config/context/logger/model`）。
+
+因此，在不改 endpoint 的前提下，同一进程内不会跨 agent 拿到别的上下文。
+
+## 调用链路（不经过 shell 的主路径）
+
+### 1) CLI 调 service / extension
+
+`sma service ...` / `sma extension ...` 的流程是：
+
+1. CLI 根据 `--path` 解析 `projectRoot`
+2. 再按优先级解析 daemon endpoint（下面有详细优先级）
+3. 调用 `/api/services/*` 或 `/api/extensions/*`
+4. daemon 在当前 runtime 内分发到对应 dispatcher 执行 action/command
+
+这个路径是 HTTP + runtime dispatch，不是 shell 命令拼接。
+
+### 2) service 内调用 extension
+
+`service` 通过 `extensions.invoke(...)` 调 `extension` 时：
+
+- 由 runtime 的 invoke port 直接转发到 extension dispatcher
+- 使用的是当前 runtime 注入的同一个 `context/config/rootPath`
+
+所以 `service -> extension` 也是同 runtime 内调用。
+
+## endpoint 与环境变量优先级
+
+CLI/SDK 发往 daemon 的地址优先级：
+
+1. 显式参数：`--host/--port`
+2. 环境变量：`SMA_SERVER_HOST/SMA_SERVER_PORT`（其次 `SMA_CTX_SERVER_*`）
+3. 当前项目 `ship.json.start.host/port`
+4. 默认：`127.0.0.1:3000`
+
+这意味着：
+
+- 只要你给了 `--host/--port`，就会强制命中目标地址。
+- 若 shell 里残留了 `SMA_SERVER_*`，也可能把请求路由到非当前项目。
+
+## shell 场景怎么区分环境
+
+虽然 service/extension 主链路不依赖 shell，但有些业务会在运行期调用 shell 工具。此时：
+
+- shell 默认工作目录是当前 runtime 的 `projectRoot`（未显式指定 `workdir` 时）。
+- 子进程会注入 `SMA_CTX_SERVER_HOST/SMA_CTX_SERVER_PORT`，优先指向当前 agent runtime 所在 server。
+- 还会带上当前请求上下文标识（如 context/request id），用于请求链路关联。
+
+所以在“从当前 agent 发起 shell 命令”的常见路径里，默认仍会回到当前 agent 环境。
+
+## 什么时候可能看起来“串环境”
+
+常见误用：
+
+1. 在另一个终端导出了 `SMA_SERVER_PORT`，忘记清理。
+2. 命令里手动写了 `--host/--port` 指向别的 agent daemon。
+3. 用了错误的 `--path`，导致读取了别的项目 `ship.json.start`。
+
+## 自检清单（建议）
+
+1. 先看当前命令是否带了 `--host/--port`
+2. 检查 `SMA_SERVER_*` 与 `SMA_CTX_SERVER_*` 是否被覆盖
+3. 确认 `--path` 和当前目录是否是目标项目
+4. 运行 `sma console agents` 查看各项目 daemon 端口/状态，再核对目标 endpoint
+
+## 相关文档
+
+- [Service 与 Extension 区别](/zh/docs/concepts/service-vs-extension)
+- [Service Runtime](/zh/docs/concepts/service-runtime)
+- [Extension Runtime](/zh/docs/concepts/extension-runtime)
+- [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)

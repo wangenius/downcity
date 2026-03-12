@@ -26,7 +26,7 @@ flowchart LR
     CLI --> CFG[sma console config ...\n模型与运行配置]
     CLI --> SVCOPS[sma service ...\nservice 运维]
     CLI --> EXTOPS[sma extension ...\nextension 运维]
-    CONSOLE --> REG[~/.ship/manager/agents.json\nagent registry]
+    CONSOLE --> REG[~/.ship/console/agents.json\nagent registry]
   end
 
   subgraph DP[执行面（按项目）]

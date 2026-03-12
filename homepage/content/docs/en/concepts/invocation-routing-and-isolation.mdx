@@ -1,0 +1,96 @@
+---
+title: Invocation Routing and Isolation
+description: Explain why service/extension calls do not cross agent environments and how env-based routing works in shell scenarios
+---
+
+# Invocation Routing and Isolation
+
+This page answers three practical questions:
+
+1. Can one agent runtime call `service` and leak into another agent environment?
+2. Do `service` / `extension` calls go through shell by default?
+3. In CLI and shell subprocess scenarios, how do env vars decide which agent endpoint is used?
+
+## Short Answer
+
+- In normal operation, **calls do not leak across agent environments**.
+- The main `service` / `extension` path is **runtime dispatch in-process**, not shell execution.
+- Cross-environment routing usually happens only when `host/port` or `SMA_SERVER_*` is intentionally or accidentally overridden.
+
+## Isolation Boundary (Core Principle)
+
+The runtime model is effectively **one process bound to one projectRoot**:
+
+- One `sma agent on` process initializes one runtime state.
+- That runtime is bound to one `rootPath` (one agent project directory).
+- `service` and `extension` calls in that process reuse the same runtime state (`config/context/logger/model`).
+
+So without endpoint overrides, calls stay in the same agent environment.
+
+## Main Call Paths (No Shell by Default)
+
+### 1) CLI -> service / extension
+
+For `sma service ...` and `sma extension ...`, the flow is:
+
+1. Resolve `projectRoot` from `--path`
+2. Resolve daemon endpoint (priority listed below)
+3. Call `/api/services/*` or `/api/extensions/*`
+4. Daemon dispatches to runtime dispatcher actions inside current runtime
+
+This path is HTTP + runtime dispatch, not shell command chaining.
+
+### 2) service -> extension
+
+When a `service` calls `extensions.invoke(...)`:
+
+- runtime invoke ports dispatch directly to extension dispatcher
+- the call uses the same injected runtime (`context/config/rootPath`)
+
+So `service -> extension` stays in the same process/runtime scope.
+
+## Endpoint Resolution Priority
+
+Daemon endpoint resolution order is:
+
+1. explicit CLI params: `--host/--port`
+2. env vars: `SMA_SERVER_HOST/SMA_SERVER_PORT` (then `SMA_CTX_SERVER_*`)
+3. current project `ship.json.start.host/port`
+4. default: `127.0.0.1:3000`
+
+Implications:
+
+- explicit `--host/--port` always wins.
+- stale `SMA_SERVER_*` can redirect calls away from the current project.
+
+## Shell Scenarios and Env Routing
+
+The main service/extension path does not require shell, but some business logic can execute shell tools. In that case:
+
+- default shell `workdir` is current runtime `projectRoot` (unless explicitly overridden)
+- subprocess env includes `SMA_CTX_SERVER_HOST/SMA_CTX_SERVER_PORT` to target current runtime server
+- request context ids are also propagated for traceability
+
+So shell commands spawned from a runtime usually route back to that same runtime by default.
+
+## When “Crossing Environments” Can Happen
+
+Typical misrouting cases:
+
+1. leftover exported `SMA_SERVER_*` in terminal
+2. explicit `--host/--port` points to another daemon
+3. wrong `--path` causes loading another project's `ship.json.start`
+
+## Quick Troubleshooting Checklist
+
+1. Check whether command has explicit `--host/--port`
+2. Check `SMA_SERVER_*` / `SMA_CTX_SERVER_*`
+3. Confirm `--path` or current directory points to target project
+4. Run `sma console agents` and verify endpoint/port against your target runtime
+
+## Related Docs
+
+- [Service vs Extension](/en/docs/concepts/service-vs-extension)
+- [Service Runtime](/en/docs/concepts/service-runtime)
+- [Extension Runtime](/en/docs/concepts/extension-runtime)
+- [Runtime Relationship and Process](/en/docs/concepts/runtime-relationship-and-process)

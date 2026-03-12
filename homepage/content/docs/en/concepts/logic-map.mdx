@@ -25,7 +25,7 @@ flowchart LR
     CLI --> CFG[sma console config ...\nmodel/runtime config]
     CLI --> SVCOPS[sma service ...\nservice ops]
     CLI --> EXTOPS[sma extension ...\nextension ops]
-    CONSOLE --> REG[~/.ship/manager/agents.json\nagent registry]
+    CONSOLE --> REG[~/.ship/console/agents.json\nagent registry]
   end
 
   subgraph DP[Execution Plane (Per Project)]

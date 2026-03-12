@@ -7,25 +7,42 @@ description: Global console command group for process orchestration and multi-ag
 
 `console` is the global control plane.
 
-Use it to manage the console daemon and inspect managed agent runtimes.
+Use it to manage console runtime and inspect managed agent runtimes.
+
+## Command hierarchy
+
+Top-level commands are fixed to 4:
+
+- `sma console`
+- `sma agent`
+- `sma service`
+- `sma extension`
+
+Under `console`, use `init/config/start/stop/status/agents/ui`.
 
 ## Usage
 
 ```bash
+sma console init
+sma console config <subcommand>
 sma console start
 sma console stop
 sma console restart
 sma console status
 sma console agents [--json]
+sma console ui [start|stop|status] [--port 3001]
 ```
 
 ## Behavior
 
-- `start`: start console daemon in background.
-- `stop`: stop console daemon and managed child agent daemons.
-- `restart`: restart console daemon.
+- `init`: initialize global console config (`~/.ship/*`).
+- `config`: manage project `ship.json` and llm/provider/model/alias.
+- `start`: start console in background.
+- `stop`: stop console and managed child agent runtimes.
+- `restart`: restart console.
 - `status`: print console process state and active managed agents.
 - `agents`: print active managed agents list.
+- `ui`: manage single UI instance (start/stop/status) and switch across agents in one page.
 
 ## Typical Flow
 
@@ -45,7 +62,9 @@ sma agent status .
 
 ## Related Commands
 
+- [`sma console init`](/en/docs/commands/console/init)
 - [`sma agent`](/en/docs/commands/agent/agent)
 - [`sma console config`](/en/docs/commands/console/config)
 - [`sma service`](/en/docs/commands/service/service)
 - [`sma extension`](/en/docs/commands/extension/extension)
+- [Command Environment Requirements](/en/docs/commands/variables)

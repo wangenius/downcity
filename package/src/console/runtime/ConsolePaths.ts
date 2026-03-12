@@ -54,9 +54,29 @@ export function getConsoleLogPath(): string {
 }
 
 /**
+ * console ui pid 文件路径。
+ */
+export function getConsoleUiPidPath(): string {
+  return path.join(getConsoleRuntimeDirPath(), "ui.pid");
+}
+
+/**
+ * console ui 日志路径（stdout/stderr 合并）。
+ */
+export function getConsoleUiLogPath(): string {
+  return path.join(getConsoleRuntimeDirPath(), "ui.log");
+}
+
+/**
+ * console ui 元数据路径。
+ */
+export function getConsoleUiMetaPath(): string {
+  return path.join(getConsoleRuntimeDirPath(), "ui.json");
+}
+
+/**
  * console agent registry 文件路径（运行中 agent 清单）。
  */
 export function getConsoleAgentRegistryPath(): string {
   return path.join(getConsoleRuntimeDirPath(), "agents.json");
 }
-

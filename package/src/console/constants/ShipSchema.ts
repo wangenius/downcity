@@ -21,8 +21,6 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
       properties: {
         port: { type: "integer", minimum: 1, maximum: 65535 },
         host: { type: "string" },
-        webui: { type: "boolean" },
-        webport: { type: "integer", minimum: 1, maximum: 65535 },
       },
     },
     services: {

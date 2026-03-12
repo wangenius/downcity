@@ -1,0 +1,60 @@
+---
+title: sma console ui
+description: Start console UI (single instance, multi-agent view)
+---
+
+# `sma console ui`
+
+Manage the UI gateway hosted by `console`.
+
+This UI is not bound to one `agent on` process. One page can switch across multiple running agents.
+
+## Usage
+
+```bash
+sma console ui [action] [options]
+```
+
+## Key options
+
+- `-p, --port <port>`: UI port (default `3001`)
+- `-h, --host <host>`: UI host (default `127.0.0.1`)
+
+## action
+
+- `start`: start UI in background (default)
+- `stop`: stop background UI
+- `status`: show UI status
+
+## Behavior
+
+- Requires console first: `sma console start`.
+- On startup, UI loads active agents from console registry.
+- Agent switcher in top bar controls all `Contexts/Services/Tasks/Logs` views.
+- `sma console status` also shows UI status.
+
+## Typical flow
+
+```bash
+# 1) start console
+sma console start
+
+# 2) start multiple agents
+sma agent on /path/to/agent-a
+sma agent on /path/to/agent-b
+
+# 3) start UI in background
+sma console ui start --port 3001
+
+# 4) check UI status
+sma console ui status
+
+# 5) stop UI
+sma console ui stop
+```
+
+## Related commands
+
+- [`sma console start`](/en/docs/commands/console/start)
+- [`sma console agents`](/en/docs/commands/console/agents)
+- [`sma agent on`](/en/docs/commands/agent/on)

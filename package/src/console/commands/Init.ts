@@ -544,8 +544,6 @@ export async function initCommand(
     start: {
       port: 3000,
       host: "0.0.0.0",
-      webui: false,
-      webport: 3001,
     },
     llm: llmConfig,
     // 关键点（中文）：所有服务相关配置统一放入 `services`。

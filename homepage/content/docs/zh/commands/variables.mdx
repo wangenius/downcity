@@ -1,0 +1,118 @@
+---
+title: 命令环境要求总览
+description: 说明所有 sma 命令所需的运行环境、配置文件与环境变量优先级
+---
+
+# 命令环境要求总览
+
+这页用于集中回答一个问题：每类 `sma` 命令运行时，依赖哪些环境。
+
+## 0) 一级命令边界
+
+一级命令只有 4 个：
+
+- `sma console`
+- `sma agent`
+- `sma service`
+- `sma extension`
+
+像 `sma chat`、`sma task`、`sma memory`、`sma skill`、`sma voice` 都是挂载在 service/extension 体系下的动作命令，不是一级命令。
+
+## 1) 各命令组所需环境
+
+| 命令组 | 必需环境 | 可选环境 | 备注 |
+| --- | --- | --- | --- |
+| `sma console init` | 可写 `~/.ship/` 目录 | 预先设置 `LLM_API_KEY`（可作为初始化默认值） | 会写 `~/.ship/ship.json` 与 `~/.ship/.env` |
+| `sma console start/stop/restart/status/agents` | 可写 `~/.ship/console/` | 无 | 管理全局 console 进程与 registry |
+| `sma console ui` | console 已启动；浏览器可访问 UI 端口 | `--host`、`--port` | 单 UI 实例可切换查看多个运行中的 agent |
+| `sma agent create` | 目标目录可写 | 无 | 会生成 `ship.json`、`PROFILE.md`、`.ship/` |
+| `sma agent on` | console 已启动；项目含 `ship.json` + `PROFILE.md` | `--port/--host` | 后台模式会登记到 console registry |
+| `sma agent off/status/doctor/restart` | 目标 agent 已在 console registry 注册 | 无 | 不是“任意路径直接操作”，先走 registry 解析 |
+| `sma console config ...` | 目标路径下 `ship.json` 存在且合法 | `--path` | 读写的是 agent 项目配置，不是 runtime API |
+| `sma console config alias` | 可写 `~/.zshrc` 或 `~/.bashrc` | `--shell zsh|bash` | 仅写 alias，不依赖 agent runtime |
+| `sma service ...` | 目标 agent runtime 可访问；项目已在 registry；项目含 `ship.json` + `PROFILE.md` | `--agent`、`--path`、`--host`、`--port` | `--agent` 优先于 `--path` |
+| `sma extension ...` | 目标 agent runtime 可访问 | `--path`、`--host`、`--port` | `voice` 扩展在远程 runtime 不可达时有本地兜底 |
+| `sma <service> <action>`（如 `sma chat ...`） | 目标 agent runtime 可访问 | `--path`、`--host`、`--port` | 通过 `/api/services/command` 转发 |
+| `sma <extension> <action>`（如 `sma voice ...`） | 目标 agent runtime 可访问 | `--path`、`--host`、`--port` | 通过 `/api/extensions/command` 转发 |
+
+## 2) 常见命令的上下文变量要求
+
+### `sma chat ...`
+
+- `--chat-key` 未传时，会尝试读取 `SMA_CTX_CHAT_KEY`
+- `--context-id` 未传时，会尝试读取 `SMA_CTX_CONTEXT_ID`
+- 在 agent shell 内执行时，这些 `SMA_CTX_*` 通常由运行时自动注入
+
+### `sma task ...`
+
+- 创建/运行任务需要 `contextId`
+- 可显式传 `--context-id`
+- 未传时可回退读取 `SMA_CTX_CONTEXT_ID`
+
+### chat channel 凭据
+
+- Telegram: `TELEGRAM_BOT_TOKEN`（可选 `TELEGRAM_AUTH_ID`）
+- Feishu: `FEISHU_APP_ID`、`FEISHU_APP_SECRET`（可选 `FEISHU_AUTH_ID`）
+- QQ: `QQ_APP_ID`、`QQ_APP_SECRET`（可选 `QQ_AUTH_ID`、`QQ_SANDBOX`）
+
+这些可配置在项目 `.env`，或写在 `ship.json` 对应字段；运行时会按配置读取。
+
+## 3) `sma service` 目标 agent 解析顺序
+
+`sma service list/status/start/stop/restart/command`：
+
+1. 显式 `--agent <name>`（最高优先级）
+2. 若未传 `--agent` 且 `--path` 为默认 `.`，先尝试 `SMA_AGENT_NAME`
+3. 回退到 `--path` 或默认 `.`
+4. 若默认 `.` 且存在 `SMA_AGENT_PATH`，优先解析为该路径
+
+最终仍要求：
+
+- 目标路径已登记在 console registry
+- 路径内存在 `ship.json` 与 `PROFILE.md`
+
+## 4) Runtime API 地址解析顺序（`host/port`）
+
+调用 runtime API（service/extension/action 命令）时，地址优先级：
+
+1. CLI 显式参数：`--host` / `--port`
+2. 环境变量：`SMA_SERVER_HOST/PORT`
+3. 环境变量：`SMA_CTX_SERVER_HOST/PORT`
+4. 项目配置：`ship.json.start.host/port`
+5. 默认值：`127.0.0.1:3000`
+
+补充规则：
+
+- `0.0.0.0` 或 `::` 会被归一化为 `127.0.0.1`
+
+## 5) 变量注入来源
+
+### runtime 启动后注入
+
+- `SMA_AGENT_PATH`
+- `SMA_AGENT_NAME`
+- `SMA_SERVER_HOST`
+- `SMA_SERVER_PORT`
+
+### agent shell 子进程注入
+
+- `SMA_CTX_CONTEXT_ID`
+- `SMA_CTX_REQUEST_ID`
+- `SMA_CTX_SERVER_HOST`
+- `SMA_CTX_SERVER_PORT`
+
+## 6) 推荐实践
+
+多 agent 并行场景，建议显式指定目标：
+
+```bash
+sma service list --agent my-agent
+# 或
+sma service list --path /abs/path/to/agent
+```
+
+在 agent shell 内，默认形式通常足够：
+
+```bash
+sma service list
+```

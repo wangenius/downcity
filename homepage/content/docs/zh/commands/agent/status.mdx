@@ -1,0 +1,26 @@
+---
+title: sma agent status
+description: 查看指定 agent runtime 状态
+---
+
+# `sma agent status`
+
+查看指定 agent 的 runtime 状态。
+
+## 用法
+
+```bash
+sma agent status [path]
+```
+
+## 行为说明
+
+- `path` 默认当前目录 `.`。
+- 目标 agent 需要已登记在 console registry。
+- 输出包含运行状态、进程信息和关键路径。
+
+## 相关命令
+
+- [`sma agent on`](/zh/docs/commands/agent/on)
+- [`sma agent off`](/zh/docs/commands/agent/off)
+- [`sma console agents`](/zh/docs/commands/console/agents)

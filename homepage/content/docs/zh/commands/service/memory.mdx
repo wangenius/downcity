@@ -7,6 +7,8 @@ description: Memory service 动作（status/index/search/get/store/flush）
 
 Memory service 命令组。
 
+> 层级说明：`sma memory` 是 service 动作命令，不是一级命令。一级入口是 `sma service`。
+
 ## 用法
 
 ```bash
@@ -36,7 +38,7 @@ sma memory flush --context-id telegram-chat-123 --max-messages 40
 ## 说明
 
 - Memory 默认开启（零配置）。如需关闭：`context.memory.enabled=false`。
-- 先启动 daemon runtime：
+- 先启动 agent runtime：
 
 ```bash
 sma agent on

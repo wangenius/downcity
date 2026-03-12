@@ -46,7 +46,7 @@ export class WebUIClient {
 
   constructor(context: InteractiveServerContext) {
     this.context = context;
-    // 关键点（中文）：src/agent/ui 与 bin/agent/ui 都统一回到 package/public。
+    // 关键点（中文）：src/console/ui 与 bin/console/ui 都统一回到 package/public。
     this.publicDir = path.join(__dirname, "../../../public");
     this.app = new Hono();
 

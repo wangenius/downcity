@@ -1,0 +1,33 @@
+---
+title: sma agent on
+description: Start agent runtime (background or foreground)
+---
+
+# `sma agent on`
+
+Start runtime for a target agent.
+
+## Usage
+
+```bash
+sma agent on [path] [options]
+```
+
+## Key options
+
+- `-p, --port <port>`: service port
+- `-h, --host <host>`: service host
+- `--foreground [enabled]`: run in foreground
+
+## Behavior
+
+- Checks console runtime before start.
+- `path` defaults to current directory `.`
+- With `--foreground`, runs in current terminal; otherwise runs in background mode.
+- `--foreground` is a temporary terminal session; once terminal exits, the process exits too.
+
+## Related commands
+
+- [`sma agent off`](/en/docs/commands/agent/off)
+- [`sma agent status`](/en/docs/commands/agent/status)
+- [`sma console start`](/en/docs/commands/console/start)

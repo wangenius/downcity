@@ -1,0 +1,26 @@
+---
+title: sma service status
+description: Show runtime status for a single service
+---
+
+# `sma service status`
+
+Show status of a single service under a target agent.
+
+## Usage
+
+```bash
+sma service status <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## Examples
+
+```bash
+sma service status chat --agent my-agent
+sma service status memory --path /abs/path/to/agent
+```
+
+## Related commands
+
+- [`sma service list`](/en/docs/commands/service/list)
+- [`sma service restart`](/en/docs/commands/service/restart)

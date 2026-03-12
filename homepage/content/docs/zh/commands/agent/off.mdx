@@ -1,0 +1,26 @@
+---
+title: sma agent off
+description: 停止指定 agent runtime
+---
+
+# `sma agent off`
+
+停止指定 agent 的 runtime。
+
+## 用法
+
+```bash
+sma agent off [path]
+```
+
+## 行为说明
+
+- `path` 默认当前目录 `.`。
+- 目标 agent 需要已登记在 console registry。
+- 找不到登记项时会直接报错并退出。
+
+## 相关命令
+
+- [`sma agent on`](/zh/docs/commands/agent/on)
+- [`sma agent status`](/zh/docs/commands/agent/status)
+- [`sma agent doctor`](/zh/docs/commands/agent/doctor)

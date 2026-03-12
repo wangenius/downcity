@@ -2,12 +2,14 @@
  * ShipMyAgent Web TUI 前端。
  *
  * 关键点（中文）
- * - 所有数据走 `/api/tui/*`（同源访问，不写死 3000 端口）。
+ * - 通过 `/api/ui/agents` 获取可选 agent，再走 `/api/tui/*` 访问选中 agent。
  * - 覆盖四类核心视图：context 历史、多 context、services 状态、task 执行过程。
  * - 页面只做展示与轻量操作，不引入前端状态管理框架。
  */
 
 const state = {
+  agents: [],
+  selectedAgentId: "",
   contexts: [],
   contextFilter: "",
   selectedContextId: "",
@@ -23,6 +25,8 @@ const state = {
 };
 
 const refs = {
+  agentSelect: document.getElementById("agent-select"),
+  refreshAgentsBtn: document.getElementById("refresh-agents-btn"),
   topbarStatus: document.getElementById("topbar-status"),
   refreshAllBtn: document.getElementById("refresh-all-btn"),
   contextsCount: document.getElementById("contexts-count"),
@@ -45,6 +49,8 @@ const refs = {
   refreshLogsBtn: document.getElementById("refresh-logs-btn"),
   toast: document.getElementById("toast"),
 };
+
+const AGENT_STORAGE_KEY = "sma_console_ui_selected_agent";
 
 function escapeHtml(text) {
   const div = document.createElement("div");
@@ -113,8 +119,19 @@ function showToast(message, type = "info") {
   }, 2200);
 }
 
+function withSelectedAgent(path) {
+  const rawPath = String(path || "");
+  if (!rawPath.startsWith("/api/")) return rawPath;
+  if (rawPath.startsWith("/api/ui/")) return rawPath;
+  if (!state.selectedAgentId) return rawPath;
+
+  const url = new URL(rawPath, window.location.origin);
+  url.searchParams.set("agent", state.selectedAgentId);
+  return `${url.pathname}${url.search}`;
+}
+
 async function requestJson(path, options = {}) {
-  const response = await fetch(path, {
+  const response = await fetch(withSelectedAgent(path), {
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
@@ -133,6 +150,45 @@ async function requestJson(path, options = {}) {
   }
 
   return body;
+}
+
+function renderAgents() {
+  if (!refs.agentSelect) return;
+  const agents = Array.isArray(state.agents) ? state.agents : [];
+  const selected = String(state.selectedAgentId || "");
+
+  if (agents.length === 0) {
+    refs.agentSelect.innerHTML = '<option value="">无可用 agent</option>';
+    refs.agentSelect.disabled = true;
+    return;
+  }
+
+  refs.agentSelect.disabled = false;
+  refs.agentSelect.innerHTML = agents
+    .map((agent) => {
+      const id = String(agent.id || "");
+      const name = String(agent.name || id || "unknown-agent");
+      const port = Number(agent.port || 0);
+      const label = Number.isFinite(port) && port > 0 ? `${name} :${port}` : name;
+      const active = id === selected ? "selected" : "";
+      return `<option value="${escapeHtml(id)}" ${active}>${escapeHtml(label)}</option>`;
+    })
+    .join("");
+}
+
+async function refreshAgents() {
+  const localSelected = localStorage.getItem(AGENT_STORAGE_KEY) || "";
+  const preferred = state.selectedAgentId || localSelected;
+  const query = preferred
+    ? `/api/ui/agents?agent=${encodeURIComponent(preferred)}`
+    : "/api/ui/agents";
+  const data = await requestJson(query);
+  state.agents = Array.isArray(data.agents) ? data.agents : [];
+  state.selectedAgentId = String(data.selectedAgentId || "");
+  if (state.selectedAgentId) {
+    localStorage.setItem(AGENT_STORAGE_KEY, state.selectedAgentId);
+  }
+  renderAgents();
 }
 
 function setTopbarStatus(text, isError = false) {
@@ -487,6 +543,12 @@ function renderLogs() {
 }
 
 async function refreshContexts({ keepSelection = true } = {}) {
+  if (!state.selectedAgentId) {
+    state.contexts = [];
+    state.selectedContextId = "";
+    renderContexts();
+    return;
+  }
   const data = await requestJson("/api/tui/contexts?limit=300");
   state.contexts = Array.isArray(data.contexts) ? data.contexts : [];
 
@@ -499,6 +561,11 @@ async function refreshContexts({ keepSelection = true } = {}) {
 }
 
 async function refreshMessages() {
+  if (!state.selectedAgentId) {
+    state.messages = [];
+    renderMessages();
+    return;
+  }
   if (!state.selectedContextId) {
     state.messages = [];
     renderMessages();
@@ -512,12 +579,28 @@ async function refreshMessages() {
 }
 
 async function refreshServices() {
+  if (!state.selectedAgentId) {
+    state.services = [];
+    renderServices();
+    return;
+  }
   const data = await requestJson("/api/tui/services");
   state.services = Array.isArray(data.services) ? data.services : [];
   renderServices();
 }
 
 async function refreshTasks() {
+  if (!state.selectedAgentId) {
+    state.tasks = [];
+    state.selectedTaskId = "";
+    state.selectedRunTimestamp = "";
+    state.taskRuns = [];
+    state.runDetail = null;
+    renderTasks();
+    renderTaskRuns();
+    renderRunDetail();
+    return;
+  }
   const data = await requestJson("/api/tui/tasks");
   state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
 
@@ -566,21 +649,56 @@ async function refreshRunDetail() {
 }
 
 async function refreshLogs() {
+  if (!state.selectedAgentId) {
+    state.logs = [];
+    renderLogs();
+    return;
+  }
   const data = await requestJson("/api/tui/logs?limit=220");
   state.logs = Array.isArray(data.logs) ? data.logs : [];
   renderLogs();
 }
 
 async function refreshOverview() {
+  if (!state.selectedAgentId) {
+    setTopbarStatus("未检测到运行中的 agent");
+    return;
+  }
   const data = await requestJson("/api/tui/overview?contextLimit=20");
   const totalContexts = Number(data?.contexts?.total || 0);
   const totalTasks = Number(data?.tasks?.total || 0);
   const totalServices = Array.isArray(data?.services) ? data.services.length : 0;
-  setTopbarStatus(`在线 · contexts ${totalContexts} · services ${totalServices} · tasks ${totalTasks}`);
+  const selectedAgent = state.agents.find((agent) => agent.id === state.selectedAgentId);
+  const agentName = String(selectedAgent?.name || "unknown-agent");
+  setTopbarStatus(
+    `在线 · ${agentName} · contexts ${totalContexts} · services ${totalServices} · tasks ${totalTasks}`,
+  );
 }
 
 async function refreshAll() {
   try {
+    await refreshAgents();
+    if (!state.selectedAgentId) {
+      state.contexts = [];
+      state.selectedContextId = "";
+      state.messages = [];
+      state.services = [];
+      state.tasks = [];
+      state.selectedTaskId = "";
+      state.taskRuns = [];
+      state.selectedRunTimestamp = "";
+      state.runDetail = null;
+      state.logs = [];
+      renderContexts();
+      renderMessages();
+      renderServices();
+      renderTasks();
+      renderTaskRuns();
+      renderRunDetail();
+      renderLogs();
+      setTopbarStatus("未检测到运行中的 agent");
+      return;
+    }
     await refreshOverview();
     await refreshContexts();
     await Promise.all([refreshServices(), refreshTasks(), refreshLogs()]);
@@ -658,6 +776,21 @@ async function runTask(taskId) {
 }
 
 function bindEvents() {
+  refs.refreshAgentsBtn.addEventListener("click", () => {
+    void refreshAll().catch((error) =>
+      showToast(`刷新 agent 失败: ${String(error.message || error)}`, "error"),
+    );
+  });
+
+  refs.agentSelect.addEventListener("change", (event) => {
+    const nextId = String(event.target.value || "");
+    state.selectedAgentId = nextId;
+    if (nextId) {
+      localStorage.setItem(AGENT_STORAGE_KEY, nextId);
+    }
+    void refreshAll();
+  });
+
   refs.refreshAllBtn.addEventListener("click", () => {
     void refreshAll();
   });
@@ -761,6 +894,10 @@ function bindEvents() {
 }
 
 function startPolling() {
+  setInterval(() => {
+    void refreshAgents();
+  }, 7000);
+
   setInterval(() => {
     void refreshOverview();
   }, 8000);

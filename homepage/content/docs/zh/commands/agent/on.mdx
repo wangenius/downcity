@@ -1,0 +1,33 @@
+---
+title: sma agent on
+description: 启动 agent runtime（后台或前台）
+---
+
+# `sma agent on`
+
+启动指定 agent 的 runtime。
+
+## 用法
+
+```bash
+sma agent on [path] [options]
+```
+
+## 常用参数
+
+- `-p, --port <port>`：服务端口
+- `-h, --host <host>`：服务主机
+- `--foreground [enabled]`：前台运行（不进入后台）
+
+## 行为说明
+
+- 启动前会检查 console 是否已启动。
+- `path` 默认当前目录 `.`。
+- `--foreground` 时在当前终端运行；否则按后台方式运行。
+- `--foreground` 仅用于当前终端的临时运行会话，终端结束后进程随之结束。
+
+## 相关命令
+
+- [`sma agent off`](/zh/docs/commands/agent/off)
+- [`sma agent status`](/zh/docs/commands/agent/status)
+- [`sma console start`](/zh/docs/commands/console/start)

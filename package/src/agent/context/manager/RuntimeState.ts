@@ -10,9 +10,8 @@ import type {
   ServiceInvokePort,
 } from "@/agent/service/ServiceRuntime.js";
 import {
-  loadProjectDotenv,
   loadShipConfig,
-  type ShipConfig,
+  type ShipConfig
 } from "@/console/env/Config.js";
 import {
   getTaskRunDir,
@@ -363,6 +362,9 @@ export async function initRuntimeState(cwd: string): Promise<void> {
 
   // 在启动时加载 dotenv（console -> project）并读取 ship.json（支持继承/覆盖）。
   const config = loadShipConfig(rootPath);
+  // 关键点（中文）：统一注入当前 agent 标识，供 shell/CLI 子命令默认解析。
+  process.env.SMA_AGENT_PATH = rootPath;
+  process.env.SMA_AGENT_NAME = String(config.name || path.basename(rootPath));
 
   // 关键点（中文）：先初始化 base runtime state，保证底层模块可直接读取 rootPath/config/utils/logger/systems。
   setRuntimeStateBase({

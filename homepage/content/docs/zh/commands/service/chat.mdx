@@ -7,6 +7,8 @@ description: chat service actions（send/react/context/history）
 
 用于向指定会话发送消息、贴表情、查看上下文和读取历史。
 
+> 层级说明：`sma chat` 是 service 动作命令，不是一级命令。一级入口是 `sma service`。
+
 ## 用法
 
 ```bash
@@ -56,7 +58,7 @@ sma chat history --chat-key telegram-chat-123 --limit 50
 
 ## 说明
 
-该命令组通常需要已运行的 daemon：
+该命令组通常需要已启动的 agent runtime：
 
 ```bash
 sma agent on

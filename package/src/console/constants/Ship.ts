@@ -7,8 +7,6 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
   start: {
     port: 3000,
     host: "0.0.0.0",
-    webui: false,
-    webport: 3001,
   },
   llm: {
     activeModel: "default",

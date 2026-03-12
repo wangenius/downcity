@@ -1,0 +1,31 @@
+---
+title: sma agent restart
+description: Restart target agent runtime
+---
+
+# `sma agent restart`
+
+Restart runtime for a target agent.
+
+## Usage
+
+```bash
+sma agent restart [path] [options]
+```
+
+## Key options
+
+- `-p, --port <port>`: service port
+- `-h, --host <host>`: service host
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in console registry
+- Restart flow is stop first, then start with latest options
+
+## Related commands
+
+- [`sma agent on`](/en/docs/commands/agent/on)
+- [`sma agent off`](/en/docs/commands/agent/off)
+- [`sma agent status`](/en/docs/commands/agent/status)

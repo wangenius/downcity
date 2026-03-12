@@ -42,8 +42,24 @@ export type ServiceCommandResponse = {
 };
 
 export type ServiceCliBaseOptions = {
+  /**
+   * agent 项目路径（默认当前目录）。
+   */
   path?: string;
+  /**
+   * agent 名称（从 console registry 解析到项目路径）。
+   */
+  agent?: string;
+  /**
+   * 覆盖服务主机地址。
+   */
   host?: string;
+  /**
+   * 覆盖服务端口。
+   */
   port?: number;
+  /**
+   * 是否输出 JSON。
+   */
   json?: boolean;
 };

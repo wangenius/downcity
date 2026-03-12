@@ -7,6 +7,8 @@ description: Voice extension 命令（本地 STT 模型与转写管理）
 
 管理本地语音识别扩展 `voice`。
 
+> 层级说明：`sma voice` 是 extension 动作命令，不是一级命令。一级入口是 `sma extension`。
+
 ## 用法
 
 ```bash
@@ -73,7 +75,7 @@ sma voice off
 - 模型目录已存在时，默认直接跳过下载（`--force` 可强制重下）。
 - `voice init` 安装 Python 依赖时，已存在依赖会跳过，并打印 skip 日志。
 
-该命令组通常需要已运行的 daemon：
+该命令组通常需要已启动的 agent runtime：
 
 ```bash
 sma agent on

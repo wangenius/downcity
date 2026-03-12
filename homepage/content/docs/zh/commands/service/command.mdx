@@ -1,0 +1,32 @@
+---
+title: sma service command
+description: 转发 service 自定义动作命令
+---
+
+# `sma service command`
+
+把任意动作转发给指定 service。
+
+## 用法
+
+```bash
+sma service command <serviceName> <command> [--payload <json>] [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## 关键参数
+
+- `--payload <json>`：动作入参，支持 JSON 字符串；非 JSON 会按字符串透传
+- `--agent <name>` / `--path <path>`：目标 agent 解析
+
+## 示例
+
+```bash
+sma service command task list --payload '{"status":"enabled"}' --agent my-agent
+sma service command memory search --payload '{"query":"release decision"}' --path /abs/path/to/agent
+```
+
+## 相关命令
+
+- [`sma service`](/zh/docs/commands/service/service)
+- [`sma task`](/zh/docs/commands/service/task)
+- [`sma memory`](/zh/docs/commands/service/memory)

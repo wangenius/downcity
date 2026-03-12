@@ -118,11 +118,15 @@ export async function callServer<T>(
   const url = new URL(params.path, endpoint.baseUrl).toString();
   const method = params.method || "GET";
   const hasBody = params.body !== undefined && method !== "GET";
+  const headers: Record<string, string> = {};
+  if (hasBody) {
+    headers["Content-Type"] = "application/json";
+  }
 
   try {
     const response = await fetch(url, {
       method,
-      headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+      headers: Object.keys(headers).length > 0 ? headers : undefined,
       body: hasBody ? JSON.stringify(params.body) : undefined,
     });
 

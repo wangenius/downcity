@@ -11,7 +11,6 @@
  */
 
 import { startServer } from "@/console/index.js";
-import { createWebUIClient } from "@agent/ui/WebUIClient.js";
 
 import {
   getServiceRuntimeState,
@@ -36,7 +35,7 @@ import {
  * 职责（中文）
  * - 初始化 runtime 状态（配置、日志、services 依赖）
  * - 解析并合并启动参数（CLI > ship.json > 默认值）
- * - 启动主 HTTP 服务、可选交互式 Web
+ * - 启动主 HTTP 服务
  * - 启动 service runtimes（例如 task cron）
  * - 统一处理进程信号并优雅停机
  */
@@ -62,37 +61,18 @@ export async function runCommand(
     }
     return num;
   };
-  // 布尔解析（中文）：兼容 true/false、1/0、yes/no、on/off。
-  const parseBoolean = (
-    value: string | boolean | undefined,
-  ): boolean | undefined => {
-    if (value === undefined || value === null || value === "") return undefined;
-    if (typeof value === "boolean") return value;
-    const s = String(value).trim().toLowerCase();
-    if (["true", "1", "yes", "y", "on"].includes(s)) return true;
-    if (["false", "0", "no", "n", "off"].includes(s)) return false;
-    return undefined;
-  };
-
   const shipConfig = getRuntimeState().config;
 
   // Resolve startup options: CLI flags override ship.json, then built-in defaults.
   let port: number;
-  let webport: number | undefined;
   try {
     port = parsePort(options.port, "port") ?? shipConfig.start?.port ?? 3000;
-    webport =
-      parsePort(options.webport, "webport") ?? shipConfig.start?.webport;
   } catch (error) {
     console.error("❌ Invalid start options:", error);
     process.exit(1);
   }
 
   const host = (options.host ?? shipConfig.start?.host ?? "0.0.0.0").trim();
-  const accessibleHost =
-    host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
-  const webui_client =
-    parseBoolean(options.webui) ?? shipConfig.start?.webui ?? false;
 
   process.env.SMA_SERVER_PORT = String(port);
   process.env.SMA_SERVER_HOST = host;
@@ -103,17 +83,8 @@ export async function runCommand(
     host,
   });
 
-  // 创建交互式 Web 服务器（如果已启用）
-  let webui = null;
-  if (webui_client) {
-    logger.info("交互式 Web 界面已启用");
-    webui = createWebUIClient({
-      agentApiUrl: `http://${accessibleHost}:${port}`,
-    });
-  }
-
   // 处理进程信号
-  // 停机顺序（中文）：services -> extensions -> interactive server -> API server -> flush logs。
+  // 停机顺序（中文）：services -> extensions -> API server -> flush logs。
   let isShuttingDown = false;
   const shutdown = async (signal: string) => {
     if (isShuttingDown) return;
@@ -136,11 +107,6 @@ export async function runCommand(
       await stopAllExtensionRuntimes(getServiceRuntimeState());
     } catch {
       // ignore
-    }
-
-    // 停止交互式 Web 服务器
-    if (webui) {
-      await webui.stop();
     }
 
     // 停止服务器
@@ -183,17 +149,6 @@ export async function runCommand(
     }
   } catch (e) {
     logger.error(`Service runtime bootstrap failed: ${String(e)}`);
-  }
-
-  // 启动交互式 Web 服务器（如果已启用）
-  if (webui) {
-    const resolvedWebPort = webport ?? 3001;
-    await webui.start({
-      port: resolvedWebPort,
-      host,
-    });
-    // 关键点（中文）：统一打印可直接访问的前端地址，避免 0.0.0.0 在浏览器中不可直连。
-    logger.info(`🌐 Web UI: http://${accessibleHost}:${resolvedWebPort}`);
   }
 
   logger.info("=== ShipMyAgent Started ===");

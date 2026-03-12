@@ -7,57 +7,33 @@ description: 使用 on/off/restart 管理当前目录或指定目录的 Agent Ru
 
 管理 Agent Runtime 的启动、停止和重启。
 
+## 命令层级
+
+一级命令固定为 4 个：`sma console`、`sma agent`、`sma service`、`sma extension`。
+
 ## 用法
 
 ```bash
-sma agent create [path] [options]
-sma agent on [path] [options]
-sma agent off [path]
-sma agent status [path]
-sma agent doctor [path] [options]
-sma agent restart [path] [options]
+sma agent <subcommand>
 ```
 
 ## 子命令
 
 - `create`：创建/初始化 agent 项目
 - `on`：启动 runtime
-- `off`：停止 daemon runtime
-- `status`：查看 daemon runtime 状态
-- `doctor`：诊断 daemon 状态文件，并可修复僵尸 pid/meta
-- `restart`：重启 daemon runtime
+- `off`：停止 runtime
+- `status`：查看 runtime 状态
+- `doctor`：诊断状态文件，并可修复僵尸 pid/meta
+- `restart`：重启 runtime
 
-## 参数
+## 子命令文档
 
-### `create` 选项
-
-- `-f, --force [enabled]`：允许覆盖已有 `ship.json`（危险操作）
-
-### `on` 选项
-
-- `-p, --port <port>`：服务端口（也可在 `ship.json.start.port` 配置）
-- `-h, --host <host>`：服务主机（也可在 `ship.json.start.host` 配置）
-- `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
-- `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
-- `--foreground [enabled]`：前台启动（仅当前终端）
-
-### `restart` 选项
-
-- `-p, --port <port>`：服务端口（也可在 `ship.json.start.port` 配置）
-- `-h, --host <host>`：服务主机（也可在 `ship.json.start.host` 配置）
-- `--webui [enabled]`：启用交互式 Web UI（也可在 `ship.json.start.webui` 配置）
-- `--webport <port>`：Web UI 端口（也可在 `ship.json.start.webport` 配置）
-
-### `doctor` 选项
-
-- `--fix [enabled]`：清理僵尸 daemon pid/meta 文件
-
-## 新运行逻辑
-
-- `sma agent on`：默认后台 daemon 启动
-- `sma agent on --foreground`：前台启动
-- `sma agent off`：关闭当前目录对应的 agent daemon
-- `path` 不传时默认当前目录 `.`
+- [`sma agent create`](/zh/docs/commands/agent/create)
+- [`sma agent on`](/zh/docs/commands/agent/on)
+- [`sma agent off`](/zh/docs/commands/agent/off)
+- [`sma agent status`](/zh/docs/commands/agent/status)
+- [`sma agent restart`](/zh/docs/commands/agent/restart)
+- [`sma agent doctor`](/zh/docs/commands/agent/doctor)
 
 ## 环境变量注入
 
@@ -67,34 +43,6 @@ sma agent restart [path] [options]
 - `SMA_AGENT_NAME`：当前 agent 名称（优先 `ship.json.name`，否则目录名）
 
 > 注意：这是进程级注入，不会直接回写你当前 shell 会话的环境变量。
-
-## 示例
-
-```bash
-# 创建/初始化（当前目录）
-sma agent create .
-
-# 当前目录后台启动（默认）
-sma agent on
-
-# 显式后台启动
-sma agent on .
-
-# 前台启动
-sma agent on --foreground
-
-# 停止当前目录 agent
-sma agent off
-
-# 查看当前目录 agent 状态
-sma agent status
-
-# 重启当前目录 agent
-sma agent restart
-
-# 诊断并清理僵尸 daemon 文件
-sma agent doctor --fix
-```
 
 ## 相关命令
 

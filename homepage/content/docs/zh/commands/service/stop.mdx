@@ -1,0 +1,25 @@
+---
+title: sma service stop
+description: 停止单个 service
+---
+
+# `sma service stop`
+
+停止目标 agent 下的指定 service。
+
+## 用法
+
+```bash
+sma service stop <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## 示例
+
+```bash
+sma service stop task --agent my-agent
+```
+
+## 相关命令
+
+- [`sma service start`](/zh/docs/commands/service/start)
+- [`sma service status`](/zh/docs/commands/service/status)

@@ -1,0 +1,25 @@
+---
+title: sma service stop
+description: Stop a single service
+---
+
+# `sma service stop`
+
+Stop a single service under a target agent.
+
+## Usage
+
+```bash
+sma service stop <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## Example
+
+```bash
+sma service stop task --agent my-agent
+```
+
+## Related commands
+
+- [`sma service start`](/en/docs/commands/service/start)
+- [`sma service status`](/en/docs/commands/service/status)

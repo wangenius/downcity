@@ -1,0 +1,25 @@
+---
+title: sma service restart
+description: 重启单个 service
+---
+
+# `sma service restart`
+
+重启目标 agent 下的指定 service。
+
+## 用法
+
+```bash
+sma service restart <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## 示例
+
+```bash
+sma service restart chat --agent my-agent
+```
+
+## 相关命令
+
+- [`sma service status`](/zh/docs/commands/service/status)
+- [`sma service command`](/zh/docs/commands/service/command)

@@ -1,0 +1,30 @@
+---
+title: sma service list
+description: List all service runtime states for a target agent
+---
+
+# `sma service list`
+
+List states of all services under a target agent.
+
+## Usage
+
+```bash
+sma service list [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## Key options
+
+- `--agent <name>`: resolve target by agent name (highest priority)
+- `--path <path>`: resolve target by project path (default `.`)
+- `--host <host>` / `--port <port>`: override API endpoint resolution
+
+## Behavior
+
+- Target path must be registered in console registry.
+- When both are passed, `--agent` takes precedence over `--path`.
+
+## Related commands
+
+- [`sma service status`](/en/docs/commands/service/status)
+- [`sma service start`](/en/docs/commands/service/start)

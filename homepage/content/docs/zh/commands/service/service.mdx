@@ -7,6 +7,13 @@ description: 管理 service runtime 与 command 转发
 
 管理 service 运行状态，并转发 service command。
 
+## 命令层级
+
+- 一级命令：`sma service`
+- 动作命令：`sma chat` / `sma task` / `sma memory` / `sma skill`
+
+上述动作命令都属于 service 体系，不是一级命令。
+
 ## 用法
 
 ```bash
@@ -22,21 +29,38 @@ sma service <subcommand>
 - `restart <serviceName>`
 - `command <serviceName> <command> --payload <json>`
 
-## 示例
+## 子命令文档
 
-```bash
-sma service list
-sma service status chat
-sma service status memory
-sma service restart task
-sma service command task list --payload '{"status":"enabled"}'
-sma service command memory search --payload '{"query":"release decision"}'
-```
+- [`sma service list`](/zh/docs/commands/service/list)
+- [`sma service status`](/zh/docs/commands/service/status)
+- [`sma service start`](/zh/docs/commands/service/start)
+- [`sma service stop`](/zh/docs/commands/service/stop)
+- [`sma service restart`](/zh/docs/commands/service/restart)
+- [`sma service command`](/zh/docs/commands/service/command)
 
 ## 说明
 
-需要先启动 daemon runtime：
+`sma service` 必须绑定 agent 项目路径。
+
+- 可显式传 `--path <agentProjectPath>`
+- 或传 `--agent <agentName>`，从 console registry 解析
+- 不传时默认使用当前目录 `.`
+- 解析后的路径必须已登记在 console registry
+- 该路径必须包含 `ship.json` 与 `PROFILE.md`
+
+在 agent shell 内执行时，若未显式传 `--agent` 且 `--path` 使用默认值，会先使用注入的 `SMA_AGENT_NAME` 走 registry 解析；默认 `.` 也会优先解析为注入的 `SMA_AGENT_PATH`。
+
+若同时传入，`--agent` 优先。
+
+需要先启动 agent runtime：
 
 ```bash
 sma agent on
 ```
+
+## 相关动作命令
+
+- [`sma chat`](/zh/docs/commands/service/chat)
+- [`sma task`](/zh/docs/commands/service/task)
+- [`sma memory`](/zh/docs/commands/service/memory)
+- [`sma skill`](/zh/docs/commands/service/skill)

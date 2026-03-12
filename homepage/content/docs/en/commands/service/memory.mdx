@@ -7,6 +7,8 @@ description: Memory service actions (status/index/search/get/store/flush)
 
 Memory service command group.
 
+> Hierarchy note: `sma memory` is a service action command, not a top-level command. Top-level entry is `sma service`.
+
 ## Usage
 
 ```bash
@@ -36,7 +38,7 @@ sma memory flush --context-id telegram-chat-123 --max-messages 40
 ## Notes
 
 - Memory is enabled by default (zero config). Disable only when needed: `context.memory.enabled=false`.
-- Start daemon runtime first:
+- Start agent runtime first:
 
 ```bash
 sma agent on

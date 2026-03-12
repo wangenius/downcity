@@ -1,0 +1,29 @@
+---
+title: sma console init
+description: Initialize global console config (~/.ship/ship.json and ~/.ship/.env)
+---
+
+# `sma console init`
+
+Initialize global console configuration.
+
+## Usage
+
+```bash
+sma console init [--force]
+```
+
+## Behavior
+
+- Writes `~/.ship/ship.json` (global default config)
+- Writes/updates `~/.ship/.env` (global environment variables)
+- Generates `~/.ship/schema/ship.schema.json` (editor schema)
+
+## Key option
+
+- `--force`: overwrite existing global config (dangerous)
+
+## Notes
+
+- This is a console-level command and does not depend on an agent project path.
+- For project-level configuration, use [`sma console config`](/en/docs/commands/console/config).

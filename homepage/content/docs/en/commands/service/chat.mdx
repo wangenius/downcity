@@ -7,6 +7,8 @@ description: Chat service actions (send/react/context/history)
 
 Send messages, react to messages, inspect context, and read chat history.
 
+> Hierarchy note: `sma chat` is a service action command, not a top-level command. Top-level entry is `sma service`.
+
 ## Usage
 
 ```bash
@@ -56,7 +58,7 @@ sma chat history --chat-key telegram-chat-123 --limit 50
 
 ## Notes
 
-This command group usually requires daemon runtime:
+This command group usually requires an active agent runtime:
 
 ```bash
 sma agent on

@@ -1,0 +1,25 @@
+---
+title: sma service start
+description: 启动单个 service
+---
+
+# `sma service start`
+
+启动目标 agent 下的指定 service。
+
+## 用法
+
+```bash
+sma service start <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## 示例
+
+```bash
+sma service start task --agent my-agent
+```
+
+## 相关命令
+
+- [`sma service stop`](/zh/docs/commands/service/stop)
+- [`sma service restart`](/zh/docs/commands/service/restart)

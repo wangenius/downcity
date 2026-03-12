@@ -12,7 +12,7 @@ import {
   getRuntimeState,
   getServiceRuntimeState,
 } from "@/agent/context/manager/RuntimeState.js";
-import { registerTuiApiRoutes } from "@/agent/ui/TuiApi.js";
+import { registerTuiApiRoutes } from "@console/ui/TuiApi.js";
 
 /**
  * TUI / WebUI 专用路由。

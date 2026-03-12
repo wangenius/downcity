@@ -1,0 +1,60 @@
+---
+title: sma console ui
+description: 启动 console UI（单实例，多 agent 视图）
+---
+
+# `sma console ui`
+
+管理由 `console` 托管的 UI 网关。
+
+该 UI 不绑定某一个 `agent on` 进程，而是可以在同一页面切换查看多个已运行 agent。
+
+## 用法
+
+```bash
+sma console ui [action] [options]
+```
+
+## 常用参数
+
+- `-p, --port <port>`：UI 端口（默认 `3001`）
+- `-h, --host <host>`：UI 主机（默认 `127.0.0.1`）
+
+## action
+
+- `start`：后台启动 UI（默认）
+- `stop`：停止后台 UI
+- `status`：查看 UI 状态
+
+## 行为说明
+
+- 需要先启动 console：`sma console start`。
+- UI 启动后会读取 console registry 中的活跃 agent 列表。
+- 页面顶部可切换目标 agent，所有 `Contexts/Services/Tasks/Logs` 视图会跟随切换。
+- `sma console status` 会同时显示 console 与 UI 状态。
+
+## 典型流程
+
+```bash
+# 1) 启动 console
+sma console start
+
+# 2) 启动多个 agent
+sma agent on /path/to/agent-a
+sma agent on /path/to/agent-b
+
+# 3) 后台启动 UI
+sma console ui start --port 3001
+
+# 4) 查看 UI 状态
+sma console ui status
+
+# 5) 停止 UI
+sma console ui stop
+```
+
+## 相关命令
+
+- [`sma console start`](/zh/docs/commands/console/start)
+- [`sma console agents`](/zh/docs/commands/console/agents)
+- [`sma agent on`](/zh/docs/commands/agent/on)

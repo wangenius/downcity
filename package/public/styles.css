@@ -449,6 +449,24 @@ tr.selected {
   cursor: not-allowed;
 }
 
+.select-input {
+  min-width: 220px;
+  max-width: 360px;
+  border: 1px solid var(--border);
+  background: #0d1421;
+  color: var(--text);
+  border-radius: 7px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: #4a77ac;
+}
+
 .text-input {
   width: calc(100% - 16px);
   margin: 8px;

@@ -7,6 +7,13 @@ description: Manage extension runtime and forward extension commands
 
 Manage extension runtime state and forward extension commands.
 
+## Command hierarchy
+
+- Top-level command: `sma extension`
+- Action command: `sma voice`
+
+`sma voice` is an extension action command, not a top-level command.
+
 ## Usage
 
 ```bash
@@ -33,8 +40,12 @@ sma extension command voice status --payload '{}'
 
 ## Notes
 
-Start daemon runtime first:
+Start agent runtime first:
 
 ```bash
 sma agent on
 ```
+
+## Related action command
+
+- [`sma voice`](/en/docs/commands/extension/voice)

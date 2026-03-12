@@ -1,0 +1,30 @@
+---
+title: sma service list
+description: 列出当前 agent 的全部 service 运行状态
+---
+
+# `sma service list`
+
+列出目标 agent 下所有 service 的状态。
+
+## 用法
+
+```bash
+sma service list [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## 关键参数
+
+- `--agent <name>`：按 agent 名称解析目标（优先级最高）
+- `--path <path>`：按项目路径解析目标（默认 `.`）
+- `--host <host>` / `--port <port>`：覆盖 API 地址解析
+
+## 行为说明
+
+- 目标路径必须存在于 console registry。
+- 同时传 `--agent` 和 `--path` 时，优先使用 `--agent`。
+
+## 相关命令
+
+- [`sma service status`](/zh/docs/commands/service/status)
+- [`sma service start`](/zh/docs/commands/service/start)

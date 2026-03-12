@@ -7,10 +7,13 @@
  */
 
 import path from "node:path";
+import fs from "node:fs";
 import type { Command } from "commander";
 import { callServer } from "@/console/daemon/Client.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
+import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
+import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
 import type {
   ServiceCliBaseOptions,
   ServiceCommandResponse,
@@ -28,7 +31,128 @@ function parsePortOption(value: string): number {
 }
 
 function resolveProjectRoot(pathInput?: string): string {
-  return path.resolve(String(pathInput || "."));
+  const raw = String(pathInput || ".").trim() || ".";
+  // 关键点（中文）：在 agent shell 中，默认 path="." 时优先使用注入的 SMA_AGENT_PATH。
+  if (raw === ".") {
+    const envAgentPath = String(process.env.SMA_AGENT_PATH || "").trim();
+    if (envAgentPath) return path.resolve(envAgentPath);
+  }
+  return path.resolve(raw);
+}
+
+/**
+ * 读取 agent 显示名（优先 ship.json.name，其次目录名）。
+ */
+function readAgentName(projectRoot: string): string {
+  const shipJsonPath = getShipJsonPath(projectRoot);
+  const fallback = path.basename(projectRoot);
+  if (!fs.existsSync(shipJsonPath)) return fallback;
+  try {
+    const raw = fs.readFileSync(shipJsonPath, "utf-8");
+    const parsed = JSON.parse(raw) as { name?: unknown };
+    if (typeof parsed.name === "string" && parsed.name.trim()) {
+      return parsed.name.trim();
+    }
+  } catch {
+    // ignore and fallback
+  }
+  return fallback;
+}
+
+/**
+ * 通过 agent 名称解析 projectRoot。
+ */
+async function resolveProjectRootByAgentName(agentName: string): Promise<{
+  projectRoot?: string;
+  error?: string;
+}> {
+  const target = String(agentName || "").trim().toLowerCase();
+  if (!target) {
+    return { error: "--agent requires a non-empty value" };
+  }
+
+  const entries = await listConsoleAgents();
+  const matchedRoots = entries
+    .map((entry) => path.resolve(String(entry.projectRoot || "").trim() || "."))
+    .filter((root, index, all) => all.indexOf(root) === index)
+    .filter((root) => {
+      const byDirName = path.basename(root).toLowerCase() === target;
+      const byShipName = readAgentName(root).toLowerCase() === target;
+      return byDirName || byShipName;
+    });
+
+  if (matchedRoots.length === 0) {
+    return {
+      error: `Agent not found in console registry: ${agentName}. Run "sma console agents" to inspect names.`,
+    };
+  }
+  if (matchedRoots.length > 1) {
+    return {
+      error: `Agent name is ambiguous: ${agentName}. Matched paths: ${matchedRoots.join(", ")}`,
+    };
+  }
+
+  return { projectRoot: matchedRoots[0] };
+}
+
+/**
+ * 统一解析 service 命令目标路径（agent 优先于 path）。
+ */
+async function resolveServiceProjectRoot(options: ServiceCliBaseOptions): Promise<{
+  projectRoot?: string;
+  error?: string;
+}> {
+  const explicitAgent = String(options.agent || "").trim();
+  if (explicitAgent) {
+    return resolveProjectRootByAgentName(explicitAgent);
+  }
+
+  const rawPath = String(options.path || ".").trim() || ".";
+  // 关键点（中文）：在 agent shell 中，未显式传 --agent 且 path 走默认值时，
+  // 优先使用注入的 SMA_AGENT_NAME 走 registry 解析，确保多 agent 下目标稳定。
+  if (rawPath === ".") {
+    const envAgentName = String(process.env.SMA_AGENT_NAME || "").trim();
+    if (envAgentName) {
+      const byName = await resolveProjectRootByAgentName(envAgentName);
+      if (byName.projectRoot) {
+        return byName;
+      }
+    }
+  }
+
+  const projectRoot = resolveProjectRoot(options.path);
+  const entries = await listConsoleAgents();
+  const registered = entries.some(
+    (entry) =>
+      path.resolve(String(entry.projectRoot || "").trim() || ".") === projectRoot,
+  );
+  if (!registered) {
+    return {
+      error:
+        `Agent is not registered in console registry: ${projectRoot}. ` +
+        `Run "sma console agents" to inspect registered agents.`,
+    };
+  }
+  return { projectRoot };
+}
+
+/**
+ * 校验路径是否为有效 agent 项目目录。
+ *
+ * 关键点（中文）
+ * - service 命令必须绑定 agent 项目路径，避免在多 agent 场景误连默认端口。
+ */
+function validateAgentProjectRoot(projectRoot: string): string | null {
+  const missing: string[] = [];
+  if (!fs.existsSync(getShipJsonPath(projectRoot))) {
+    missing.push("ship.json");
+  }
+  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
+    missing.push("PROFILE.md");
+  }
+
+  if (missing.length === 0) return null;
+  return `Invalid agent path: ${projectRoot}. Missing: ${missing.join(", ")}`;
 }
 
 function parseCommandPayload(raw?: string): JsonValue | undefined {
@@ -44,7 +168,31 @@ function parseCommandPayload(raw?: string): JsonValue | undefined {
 }
 
 async function runServiceListCommand(options: ServiceCliBaseOptions): Promise<void> {
-  const projectRoot = resolveProjectRoot(options.path);
+  const resolved = await resolveServiceProjectRoot(options);
+  if (!resolved.projectRoot) {
+    printResult({
+      asJson: options.json,
+      success: false,
+      title: "service list failed",
+      payload: {
+        error: resolved.error || "Failed to resolve agent project path",
+      },
+    });
+    return;
+  }
+  const projectRoot = resolved.projectRoot;
+  const pathError = validateAgentProjectRoot(projectRoot);
+  if (pathError) {
+    printResult({
+      asJson: options.json,
+      success: false,
+      title: "service list failed",
+      payload: {
+        error: pathError,
+      },
+    });
+    return;
+  }
   const remote = await callServer<ServiceListResponse>({
     projectRoot,
     path: "/api/services/list",
@@ -83,7 +231,31 @@ async function runServiceControlCommand(params: {
   action: ServiceControlAction;
   options: ServiceCliBaseOptions;
 }): Promise<void> {
-  const projectRoot = resolveProjectRoot(params.options.path);
+  const resolved = await resolveServiceProjectRoot(params.options);
+  if (!resolved.projectRoot) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: `service ${params.action} failed`,
+      payload: {
+        error: resolved.error || "Failed to resolve agent project path",
+      },
+    });
+    return;
+  }
+  const projectRoot = resolved.projectRoot;
+  const pathError = validateAgentProjectRoot(projectRoot);
+  if (pathError) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: `service ${params.action} failed`,
+      payload: {
+        error: pathError,
+      },
+    });
+    return;
+  }
   const remote = await callServer<ServiceControlResponse>({
     projectRoot,
     path: "/api/services/control",
@@ -127,7 +299,31 @@ async function runServiceCommandBridge(params: {
   payloadRaw?: string;
   options: ServiceCliBaseOptions;
 }): Promise<void> {
-  const projectRoot = resolveProjectRoot(params.options.path);
+  const resolved = await resolveServiceProjectRoot(params.options);
+  if (!resolved.projectRoot) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service command failed",
+      payload: {
+        error: resolved.error || "Failed to resolve agent project path",
+      },
+    });
+    return;
+  }
+  const projectRoot = resolved.projectRoot;
+  const pathError = validateAgentProjectRoot(projectRoot);
+  if (pathError) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service command failed",
+      payload: {
+        error: pathError,
+      },
+    });
+    return;
+  }
   const remote = await callServer<ServiceCommandResponse>({
     projectRoot,
     path: "/api/services/command",
@@ -183,6 +379,7 @@ export function registerServicesCommand(program: Command): void {
     .command("list")
     .description("列出全部 service 运行状态")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
     .option("--json [enabled]", "以 JSON 输出", true)
@@ -194,6 +391,7 @@ export function registerServicesCommand(program: Command): void {
     .command("status <serviceName>")
     .description("查看单个 service 状态")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
     .option("--json [enabled]", "以 JSON 输出", true)
@@ -209,6 +407,7 @@ export function registerServicesCommand(program: Command): void {
     .command("start <serviceName>")
     .description("启动 service")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
     .option("--json [enabled]", "以 JSON 输出", true)
@@ -224,6 +423,7 @@ export function registerServicesCommand(program: Command): void {
     .command("stop <serviceName>")
     .description("停止 service")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
     .option("--json [enabled]", "以 JSON 输出", true)
@@ -239,6 +439,7 @@ export function registerServicesCommand(program: Command): void {
     .command("restart <serviceName>")
     .description("重启 service")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
     .option("--json [enabled]", "以 JSON 输出", true)
@@ -255,6 +456,7 @@ export function registerServicesCommand(program: Command): void {
     .description("转发 service command")
     .option("--payload <json>", "可选 payload（JSON 字符串或普通字符串）")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
     .option("--json [enabled]", "以 JSON 输出", true)

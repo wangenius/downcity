@@ -1,0 +1,118 @@
+---
+title: Command Environment Requirements
+description: Explain required runtime environment, files, and env-variable priority for all sma command groups
+---
+
+# Command Environment Requirements
+
+This page answers one question: what environment each `sma` command group needs to run correctly.
+
+## 0) Top-level command boundary
+
+Top-level commands are only:
+
+- `sma console`
+- `sma agent`
+- `sma service`
+- `sma extension`
+
+Commands like `sma chat`, `sma task`, `sma memory`, `sma skill`, and `sma voice` are action commands under service/extension systems, not top-level commands.
+
+## 1) Environment by command group
+
+| Command Group | Required Environment | Optional Environment | Notes |
+| --- | --- | --- | --- |
+| `sma console init` | Writable `~/.ship/` | Pre-set `LLM_API_KEY` (can be used as default init input) | Writes `~/.ship/ship.json` and `~/.ship/.env` |
+| `sma console start/stop/restart/status/agents` | Writable `~/.ship/console/` | None | Manages global console process and registry |
+| `sma console ui` | Console is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
+| `sma agent create` | Writable target directory | None | Generates `ship.json`, `PROFILE.md`, `.ship/` |
+| `sma agent on` | Console is running; project has `ship.json` + `PROFILE.md` | `--port/--host` | Background mode registers target into console registry |
+| `sma agent off/status/doctor/restart` | Target agent is registered in console registry | None | Operates through registry resolution, not arbitrary path only |
+| `sma console config ...` | Valid `ship.json` exists under target path | `--path` | Reads/writes project config; does not call runtime API |
+| `sma console config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
+| `sma service ...` | Target runtime is reachable; project is registered; project has `ship.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
+| `sma extension ...` | Target runtime is reachable | `--path`, `--host`, `--port` | `voice` extension has local fallback when remote runtime is unreachable |
+| `sma <service> <action>` (e.g. `sma chat ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
+| `sma <extension> <action>` (e.g. `sma voice ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/extensions/command` |
+
+## 2) Context env requirements for common commands
+
+### `sma chat ...`
+
+- If `--chat-key` is omitted, it tries `SMA_CTX_CHAT_KEY`
+- If `--context-id` is omitted, it tries `SMA_CTX_CONTEXT_ID`
+- In agent shell, these `SMA_CTX_*` variables are usually injected automatically
+
+### `sma task ...`
+
+- Task creation/run needs `contextId`
+- You can pass `--context-id` explicitly
+- Or fallback to `SMA_CTX_CONTEXT_ID`
+
+### Chat channel credentials
+
+- Telegram: `TELEGRAM_BOT_TOKEN` (optional `TELEGRAM_AUTH_ID`)
+- Feishu: `FEISHU_APP_ID`, `FEISHU_APP_SECRET` (optional `FEISHU_AUTH_ID`)
+- QQ: `QQ_APP_ID`, `QQ_APP_SECRET` (optional `QQ_AUTH_ID`, `QQ_SANDBOX`)
+
+These can be configured in project `.env` or in channel fields of `ship.json`.
+
+## 3) `sma service` target agent resolution order
+
+For `sma service list/status/start/stop/restart/command`:
+
+1. explicit `--agent <name>` (highest priority)
+2. if `--agent` omitted and `--path` is default `.`, try `SMA_AGENT_NAME` first
+3. fallback to `--path` or default `.`
+4. if default `.` and `SMA_AGENT_PATH` exists, resolve `.` to it first
+
+Still must satisfy:
+
+- resolved path is registered in console registry
+- resolved path contains `ship.json` and `PROFILE.md`
+
+## 4) Runtime API endpoint resolution order (`host/port`)
+
+For runtime API calls (service/extension/action commands):
+
+1. explicit CLI args: `--host` / `--port`
+2. env vars: `SMA_SERVER_HOST/PORT`
+3. env vars: `SMA_CTX_SERVER_HOST/PORT`
+4. project config: `ship.json.start.host/port`
+5. default: `127.0.0.1:3000`
+
+Normalization rule:
+
+- `0.0.0.0` and `::` are normalized to `127.0.0.1`
+
+## 5) Variable injection sources
+
+### Injected after runtime startup
+
+- `SMA_AGENT_PATH`
+- `SMA_AGENT_NAME`
+- `SMA_SERVER_HOST`
+- `SMA_SERVER_PORT`
+
+### Injected into agent shell subprocess
+
+- `SMA_CTX_CONTEXT_ID`
+- `SMA_CTX_REQUEST_ID`
+- `SMA_CTX_SERVER_HOST`
+- `SMA_CTX_SERVER_PORT`
+
+## 6) Recommended usage
+
+For multi-agent workflows, prefer explicit target:
+
+```bash
+sma service list --agent my-agent
+# or
+sma service list --path /abs/path/to/agent
+```
+
+Inside agent shell, default form is usually enough:
+
+```bash
+sma service list
+```

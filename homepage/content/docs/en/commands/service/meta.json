@@ -1,4 +1,16 @@
 {
   "title": "Service",
-  "pages": ["service", "chat", "skill", "task", "memory"]
+  "pages": [
+    "service",
+    "list",
+    "status",
+    "start",
+    "stop",
+    "restart",
+    "command",
+    "chat",
+    "skill",
+    "task",
+    "memory"
+  ]
 }

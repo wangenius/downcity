@@ -1,0 +1,32 @@
+---
+title: sma service command
+description: Forward custom action commands to a service
+---
+
+# `sma service command`
+
+Forward any action command to a target service.
+
+## Usage
+
+```bash
+sma service command <serviceName> <command> [--payload <json>] [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## Key options
+
+- `--payload <json>`: action input payload; JSON string is supported, non-JSON is passed as plain string
+- `--agent <name>` / `--path <path>`: target agent resolution
+
+## Examples
+
+```bash
+sma service command task list --payload '{"status":"enabled"}' --agent my-agent
+sma service command memory search --payload '{"query":"release decision"}' --path /abs/path/to/agent
+```
+
+## Related commands
+
+- [`sma service`](/en/docs/commands/service/service)
+- [`sma task`](/en/docs/commands/service/task)
+- [`sma memory`](/en/docs/commands/service/memory)

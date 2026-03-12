@@ -1,0 +1,26 @@
+---
+title: sma agent status
+description: Show target agent runtime status
+---
+
+# `sma agent status`
+
+Show runtime status for a target agent.
+
+## Usage
+
+```bash
+sma agent status [path]
+```
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in console registry
+- Output includes runtime state, process info, and key paths
+
+## Related commands
+
+- [`sma agent on`](/en/docs/commands/agent/on)
+- [`sma agent off`](/en/docs/commands/agent/off)
+- [`sma console agents`](/en/docs/commands/console/agents)

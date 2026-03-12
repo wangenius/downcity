@@ -1,0 +1,29 @@
+---
+title: sma agent doctor
+description: 诊断并可修复 agent runtime 的僵尸状态文件
+---
+
+# `sma agent doctor`
+
+诊断指定 agent 的状态文件，并可清理僵尸 pid/meta。
+
+## 用法
+
+```bash
+sma agent doctor [path] [--fix]
+```
+
+## 常用参数
+
+- `--fix [enabled]`：发现僵尸状态时自动清理
+
+## 行为说明
+
+- `path` 默认当前目录 `.`。
+- 目标 agent 需要已登记在 console registry。
+- 不带 `--fix` 时只诊断，不修改文件。
+
+## 相关命令
+
+- [`sma agent status`](/zh/docs/commands/agent/status)
+- [`sma agent off`](/zh/docs/commands/agent/off)

@@ -7,6 +7,13 @@ description: 管理 extension runtime 与 command 转发
 
 管理 extension 运行状态，并转发 extension command。
 
+## 命令层级
+
+- 一级命令：`sma extension`
+- 动作命令：`sma voice`
+
+`sma voice` 属于 extension 体系动作命令，不是一级命令。
+
 ## 用法
 
 ```bash
@@ -33,8 +40,12 @@ sma extension command voice status --payload '{}'
 
 ## 说明
 
-需要先启动 daemon runtime：
+需要先启动 agent runtime：
 
 ```bash
 sma agent on
 ```
+
+## 相关动作命令
+
+- [`sma voice`](/zh/docs/commands/extension/voice)

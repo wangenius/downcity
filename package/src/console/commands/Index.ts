@@ -23,6 +23,12 @@ import { registerExtensionsCommand } from "./Extensions.js";
 import { startCommand } from "./Start.js";
 import { statusCommand } from "./Status.js";
 import { stopCommand } from "./Stop.js";
+import {
+  getConsoleUiRuntimeStatus,
+  runConsoleUiRuntimeCommand,
+  startConsoleUiCommand,
+  stopConsoleUiCommand,
+} from "./UI.js";
 import type { StartOptions } from "@agent/types/Start.js";
 import { registerAllServicesForCli } from "@agent/service/ServiceCommand.js";
 import { registerAllExtensionsForCli } from "@console/extension/ExtensionCommand.js";
@@ -43,6 +49,8 @@ import {
   getConsoleLogPath,
   getConsolePidPath,
   getConsoleRuntimeDirPath,
+  getConsoleUiLogPath,
+  getConsoleUiPidPath,
 } from "@/console/runtime/ConsolePaths.js";
 import {
   isConsoleProcessAlive,
@@ -202,6 +210,9 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
   const logPath = getConsoleLogPath();
   await fs.ensureDir(consoleDir);
 
+  // 先停 console ui，避免 UI 悬空代理到不存在的 runtime。
+  await stopConsoleUiCommand();
+
   // 先停子 agent daemon
   const views = await resolveRunningConsoleAgents();
   if (views.length > 0) {
@@ -327,6 +338,26 @@ async function resolveRunningConsoleAgents(): Promise<ConsoleAgentRuntimeView[]>
   return views.sort((a, b) => a.projectRoot.localeCompare(b.projectRoot));
 }
 
+/**
+ * 解析并校验目标 agent 是否已登记在 console registry。
+ */
+async function resolveRegisteredAgentProjectRoot(
+  cwd: string,
+): Promise<string | null> {
+  const projectRoot = resolve(String(cwd || "."));
+  const entries = await listConsoleAgents();
+  const matched = entries.some(
+    (entry) =>
+      resolve(String(entry.projectRoot || "").trim() || ".") === projectRoot,
+  );
+  if (matched) return projectRoot;
+
+  console.error("❌ agent is not registered in console registry");
+  console.error(`   project: ${projectRoot}`);
+  console.error("   fix: start agent first (`sma agent on <path>`) or run `sma console agents`");
+  return null;
+}
+
 function printRunningConsoleAgents(views: ConsoleAgentRuntimeView[]): void {
   const lines: string[] = [];
   lines.push(...renderKeyValueLines([["agents", String(views.length)]], 2));
@@ -388,6 +419,23 @@ async function consoleStatusCommand(): Promise<void> {
     lines: renderKeyValueLines(rows, 2),
   });
 
+  const ui = await getConsoleUiRuntimeStatus();
+  const uiTone: StatusTone = ui.running ? "success" : "info";
+  const uiRows: Array<[string, string]> = [
+    ["state", ui.running ? "running" : "stopped"],
+    ["pid_file", ui.pidPath],
+    ["log", ui.logPath],
+  ];
+  if (ui.running) {
+    uiRows.splice(1, 0, ["pid", String(ui.pid || "-")]);
+    if (ui.url) uiRows.splice(2, 0, ["url", ui.url]);
+  }
+  printPanel({
+    title: "sma console ui status",
+    tone: uiTone,
+    lines: renderKeyValueLines(uiRows, 2),
+  });
+
   const runningAgents = await resolveRunningConsoleAgents();
   printRunningConsoleAgents(runningAgents);
 }
@@ -418,6 +466,61 @@ consoleCommand
   .command("run")
   .description("internal console runtime")
   .action(runConsoleRuntimeCommand);
+
+consoleCommand
+  .command("ui [action]")
+  .description("管理 console UI（start/stop/status，默认 start）")
+  .option("-p, --port <port>", "UI 端口（默认 3001）", parsePort)
+  .option("-h, --host <host>", "UI 主机（默认 127.0.0.1）")
+  .helpOption("--help", "display help for command")
+  .action(
+    withVersionBanner(
+      async (
+        action: string | undefined,
+        options?: { port?: number; host?: string },
+      ) => {
+        const resolvedAction = String(action || "start").trim().toLowerCase();
+        if (resolvedAction === "start") {
+          const cliPath = resolve(__dirname, "./Index.js");
+          await startConsoleUiCommand({
+            options,
+            cliPath,
+          });
+          return;
+        }
+        if (resolvedAction === "run") {
+          await runConsoleUiRuntimeCommand(options);
+          return;
+        }
+        if (resolvedAction === "stop") {
+          await stopConsoleUiCommand();
+          return;
+        }
+        if (resolvedAction === "status") {
+          const status = await getConsoleUiRuntimeStatus();
+          const panelRows: Array<[string, string]> = [
+            ["state", status.running ? "running" : "stopped"],
+            ["pid_file", status.pidPath || getConsoleUiPidPath()],
+            ["log", status.logPath || getConsoleUiLogPath()],
+          ];
+          if (status.running) {
+            panelRows.splice(1, 0, ["pid", String(status.pid || "-")]);
+            if (status.url) panelRows.splice(2, 0, ["url", status.url]);
+          }
+          printPanel({
+            title: "sma console ui status",
+            tone: status.running ? "success" : "info",
+            lines: renderKeyValueLines(panelRows, 2),
+          });
+          return;
+        }
+        console.error(
+          `❌ Unknown action: ${resolvedAction}. Use start|stop|status.`,
+        );
+        process.exit(1);
+      },
+    ),
+  );
 
 consoleCommand
   .command("start")
@@ -494,16 +597,6 @@ agent
   .description("启动 Agent Runtime（后台/前台）")
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
   .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
-  .option(
-    "--webui [enabled]",
-    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
-    parseBoolean,
-  )
-  .option(
-    "--webport <port>",
-    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
-    parsePort,
-  )
   .option("--foreground [enabled]", "前台启动（仅当前终端）", parseBoolean)
   .helpOption("--help", "display help for command")
   .action(
@@ -538,8 +631,10 @@ agent
   .description("停止后台 Agent Runtime（daemon）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (cwd: string = ".") => {
-    injectAgentContext(cwd);
-    await stopCommand(cwd);
+    const projectRoot = await resolveRegisteredAgentProjectRoot(cwd);
+    if (!projectRoot) process.exit(1);
+    injectAgentContext(projectRoot);
+    await stopCommand(projectRoot);
   }));
 
 agent
@@ -547,8 +642,10 @@ agent
   .description("查看后台 Agent Runtime（daemon）状态")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (cwd: string = ".") => {
-    injectAgentContext(cwd);
-    await statusCommand(cwd);
+    const projectRoot = await resolveRegisteredAgentProjectRoot(cwd);
+    if (!projectRoot) process.exit(1);
+    injectAgentContext(projectRoot);
+    await statusCommand(projectRoot);
   }));
 
 agent
@@ -560,8 +657,9 @@ agent
     cwd: string = ".",
     options: { fix?: boolean },
   ) => {
-    injectAgentContext(cwd);
-    const projectRoot = resolve(String(cwd || "."));
+    const projectRoot = await resolveRegisteredAgentProjectRoot(cwd);
+    if (!projectRoot) process.exit(1);
+    injectAgentContext(projectRoot);
     const pid = await readDaemonPid(projectRoot);
 
     if (!pid) {
@@ -596,20 +694,12 @@ agent
   .description("重启后台 Agent Runtime（daemon）")
   .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
   .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
-  .option(
-    "--webui [enabled]",
-    "启动交互式 Web 界面（可在 ship.json 的 start.webui 配置）",
-    parseBoolean,
-  )
-  .option(
-    "--webport <port>",
-    "交互式 Web 界面端口（可在 ship.json 的 start.webport 配置）",
-    parsePort,
-  )
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (cwd: string = ".", options: StartOptions) => {
-    injectAgentContext(cwd);
-    await restartCommand(cwd, options);
+    const projectRoot = await resolveRegisteredAgentProjectRoot(cwd);
+    if (!projectRoot) process.exit(1);
+    injectAgentContext(projectRoot);
+    await restartCommand(projectRoot, options);
   }));
 
 registerConfigCommand(consoleCommand);

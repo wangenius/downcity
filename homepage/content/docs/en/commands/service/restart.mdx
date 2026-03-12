@@ -1,0 +1,25 @@
+---
+title: sma service restart
+description: Restart a single service
+---
+
+# `sma service restart`
+
+Restart a single service under a target agent.
+
+## Usage
+
+```bash
+sma service restart <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## Example
+
+```bash
+sma service restart chat --agent my-agent
+```
+
+## Related commands
+
+- [`sma service status`](/en/docs/commands/service/status)
+- [`sma service command`](/en/docs/commands/service/command)

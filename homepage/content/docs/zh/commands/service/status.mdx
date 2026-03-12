@@ -1,0 +1,26 @@
+---
+title: sma service status
+description: 查看单个 service 的运行状态
+---
+
+# `sma service status`
+
+查看目标 agent 下某个 service 的状态。
+
+## 用法
+
+```bash
+sma service status <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+```
+
+## 示例
+
+```bash
+sma service status chat --agent my-agent
+sma service status memory --path /abs/path/to/agent
+```
+
+## 相关命令
+
+- [`sma service list`](/zh/docs/commands/service/list)
+- [`sma service restart`](/zh/docs/commands/service/restart)

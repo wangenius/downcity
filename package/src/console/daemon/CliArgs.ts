@@ -24,10 +24,6 @@ export const buildRunArgsFromOptions = (
 
   if (options.port !== undefined) args.push("--port", String(options.port));
   if (options.host) args.push("--host", String(options.host));
-  if (options.webui !== undefined)
-    args.push("--webui", String(options.webui));
-  if (options.webport !== undefined)
-    args.push("--webport", String(options.webport));
 
   return args;
 };

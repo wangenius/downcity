@@ -1,0 +1,29 @@
+---
+title: sma agent doctor
+description: Diagnose and optionally fix stale runtime state files
+---
+
+# `sma agent doctor`
+
+Diagnose runtime state files for a target agent and optionally clean stale pid/meta files.
+
+## Usage
+
+```bash
+sma agent doctor [path] [--fix]
+```
+
+## Key option
+
+- `--fix [enabled]`: clean stale state files automatically
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in console registry
+- Without `--fix`, it only reports issues and does not modify files
+
+## Related commands
+
+- [`sma agent status`](/en/docs/commands/agent/status)
+- [`sma agent off`](/en/docs/commands/agent/off)

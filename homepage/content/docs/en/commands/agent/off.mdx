@@ -1,0 +1,26 @@
+---
+title: sma agent off
+description: Stop target agent runtime
+---
+
+# `sma agent off`
+
+Stop runtime for a target agent.
+
+## Usage
+
+```bash
+sma agent off [path]
+```
+
+## Behavior
+
+- `path` defaults to current directory `.`
+- Target agent must be registered in console registry
+- If no registry entry is found, command exits with error
+
+## Related commands
+
+- [`sma agent on`](/en/docs/commands/agent/on)
+- [`sma agent status`](/en/docs/commands/agent/status)
+- [`sma agent doctor`](/en/docs/commands/agent/doctor)

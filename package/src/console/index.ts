@@ -23,7 +23,7 @@ import {
   extensionsRouter,
 } from "./routes/extensions.js";
 import { staticRouter } from "./routes/static.js";
-import { tuiRouter } from "@/agent/ui/tui/Router.js";
+import { tuiRouter } from "@console/ui/tui/Router.js";
 
 /**
  * Server 启动参数。

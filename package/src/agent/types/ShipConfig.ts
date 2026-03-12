@@ -20,8 +20,6 @@ export interface ShipConfig {
   start?: {
     port?: number;
     host?: string;
-    webui?: boolean;
-    webport?: number;
   };
   /**
    * services 配置。

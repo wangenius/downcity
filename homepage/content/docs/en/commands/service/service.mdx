@@ -7,6 +7,13 @@ description: Manage service runtime and forward service commands
 
 Manage service runtime state and forward service commands.
 
+## Command hierarchy
+
+- Top-level command: `sma service`
+- Action commands: `sma chat` / `sma task` / `sma memory` / `sma skill`
+
+These action commands belong to the service system and are not top-level commands.
+
 ## Usage
 
 ```bash
@@ -22,21 +29,38 @@ sma service <subcommand>
 - `restart <serviceName>`
 - `command <serviceName> <command> --payload <json>`
 
-## Examples
+## Subcommand docs
 
-```bash
-sma service list
-sma service status chat
-sma service status memory
-sma service restart task
-sma service command task list --payload '{"status":"enabled"}'
-sma service command memory search --payload '{"query":"release decision"}'
-```
+- [`sma service list`](/en/docs/commands/service/list)
+- [`sma service status`](/en/docs/commands/service/status)
+- [`sma service start`](/en/docs/commands/service/start)
+- [`sma service stop`](/en/docs/commands/service/stop)
+- [`sma service restart`](/en/docs/commands/service/restart)
+- [`sma service command`](/en/docs/commands/service/command)
 
 ## Notes
 
-Start daemon runtime first:
+`sma service` is path-bound to an agent project.
+
+- You can pass `--path <agentProjectPath>`
+- Or pass `--agent <agentName>` to resolve from console registry
+- If omitted, it uses current directory `.`
+- The resolved path must be registered in console registry
+- The resolved path must contain `ship.json` and `PROFILE.md`
+
+Inside agent shell, when `--agent` is omitted and `--path` uses default, it first resolves by injected `SMA_AGENT_NAME` via registry; default `.` also prefers injected `SMA_AGENT_PATH`.
+
+When both are passed, `--agent` takes precedence.
+
+Start agent runtime first:
 
 ```bash
 sma agent on
 ```
+
+## Related action commands
+
+- [`sma chat`](/en/docs/commands/service/chat)
+- [`sma task`](/en/docs/commands/service/task)
+- [`sma memory`](/en/docs/commands/service/memory)
+- [`sma skill`](/en/docs/commands/service/skill)

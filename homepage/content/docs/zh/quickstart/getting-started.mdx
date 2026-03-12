@@ -62,16 +62,16 @@ LLM_API_KEY=your_key
 
 ## 4. 启动运行时
 
-前台启动（开发调试）：
-
-```bash
-sma agent on --foreground
-```
-
-后台启动（长期运行）：
+启动（默认后台 daemon，适合长期运行）：
 
 ```bash
 sma agent on
+```
+
+需要在当前终端前台观察日志时再用：
+
+```bash
+sma agent on --foreground
 ```
 
 ## 5. 验证服务状态

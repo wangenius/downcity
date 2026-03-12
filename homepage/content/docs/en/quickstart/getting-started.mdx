@@ -62,16 +62,16 @@ Minimal `ship.json` example:
 
 ## 4. Start runtime
 
-Foreground (for local debugging):
-
-```bash
-sma agent on --foreground
-```
-
-Daemon mode (for long-running runtime):
+Start runtime (default: background daemon):
 
 ```bash
 sma agent on
+```
+
+Use foreground mode when you want logs in the current terminal:
+
+```bash
+sma agent on --foreground
 ```
 
 ## 5. Verify health

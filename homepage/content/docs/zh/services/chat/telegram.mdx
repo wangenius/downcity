@@ -1,11 +1,11 @@
 ---
 title: Telegram
-description: 通过 Telegram 与 Agent 对话并接收审批/结果通知
+description: 通过 Telegram 与 Agent 对话
 ---
 
 # Telegram 集成
 
-> ⚠️ **简化模式（2026-02-03）**：当前发布的 `shipmyagent` 包已暂时移除审批与任务系统（默认全权限执行）。旧文档里关于“审批提示/任务结果通知”的描述可能已过期。
+> ⚠️ **简化模式（2026-02-03）**：当前发布的 `shipmyagent` 包已暂时移除审批（默认全权限执行）。旧文档里关于“审批提示”的描述可能已过期。
 
 使用 Telegram 和 ShipMyAgent 对话（私聊或群聊）。
 
@@ -72,7 +72,7 @@ TELEGRAM_BOT_TOKEN=123456:abc...
 ### 3）启动 ShipMyAgent
 
 ```bash
-shipmyagent agent on
+sma agent on
 ```
 
 日志里看到以下内容说明启动成功：

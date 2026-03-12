@@ -9,6 +9,7 @@ import type {
 } from "@services/chat/channels/BaseChatChannel.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
+import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 
 /**
  * Feishu (Lark) chat channel.
@@ -297,6 +298,115 @@ export class FeishuBot extends BaseChatChannel {
       return true;
     }
     return existing === actorId;
+  }
+
+  /**
+   * 读取 Feishu runtime 快照。
+   *
+   * 关键点（中文）
+   * - SDK 未公开 WS readyState，这里按实例存活 + 启动标记推断链路状态。
+   */
+  getRuntimeStatus(): {
+    running: boolean;
+    linkState: "connected" | "disconnected" | "unknown";
+    statusText: string;
+    detail: Record<string, string | number | boolean | null>;
+  } {
+    const running = this.isRunning;
+    const hasClients = Boolean(this.client && this.wsClient);
+    const linkState = running && hasClients ? "connected" : running ? "unknown" : "disconnected";
+    return {
+      running,
+      linkState,
+      statusText:
+        linkState === "connected"
+          ? "ws_online"
+          : linkState === "unknown"
+            ? "starting"
+            : "stopped",
+      detail: {
+        knownChatCount: this.knownChats.size,
+        dedupeCacheSize: this.processedMessages.size,
+        hasClient: Boolean(this.client),
+        hasWsClient: Boolean(this.wsClient),
+      },
+    };
+  }
+
+  /**
+   * 执行 Feishu 连通性测试。
+   *
+   * 关键点（中文）
+   * - 直接调用 app_access_token 接口验证 appId/appSecret 与网络可达性。
+   */
+  async testConnection(): Promise<ChatChannelTestResult> {
+    const startedAt = Date.now();
+    if (!this.appId || !this.appSecret) {
+      return {
+        channel: "feishu",
+        success: false,
+        testedAtMs: startedAt,
+        message: "App credentials are missing",
+      };
+    }
+
+    const domain = this.domain || "https://open.feishu.cn";
+    const endpoint = `${domain.replace(/\/+$/, "")}/open-apis/auth/v3/app_access_token/internal`;
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          app_id: this.appId,
+          app_secret: this.appSecret,
+        }),
+      });
+      const raw = await response.text();
+      const now = Date.now();
+      let code: number | undefined;
+      let msg: string | undefined;
+      try {
+        const parsed = JSON.parse(raw) as { code?: number; msg?: string };
+        code = typeof parsed.code === "number" ? parsed.code : undefined;
+        msg = typeof parsed.msg === "string" ? parsed.msg : undefined;
+      } catch {
+        // ignore parse error
+      }
+
+      if (response.ok && (code === 0 || code === undefined)) {
+        return {
+          channel: "feishu",
+          success: true,
+          testedAtMs: now,
+          latencyMs: now - startedAt,
+          message: "Connected to Feishu Open API",
+          detail: {
+            httpStatus: response.status,
+            code: code ?? null,
+          },
+        };
+      }
+      return {
+        channel: "feishu",
+        success: false,
+        testedAtMs: now,
+        latencyMs: now - startedAt,
+        message: `Feishu API check failed: HTTP ${response.status}${msg ? ` ${msg}` : ""}`,
+        detail: {
+          httpStatus: response.status,
+          code: code ?? null,
+        },
+      };
+    } catch (error) {
+      const now = Date.now();
+      return {
+        channel: "feishu",
+        success: false,
+        testedAtMs: now,
+        latencyMs: now - startedAt,
+        message: `Feishu API check failed: ${String(error)}`,
+      };
+    }
   }
 
   async start(): Promise<void> {

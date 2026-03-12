@@ -1,0 +1,82 @@
+/**
+ * Chat 渠道运行状态与连通性测试类型。
+ *
+ * 关键点（中文）
+ * - 统一 `status/test/reconnect` 的返回结构，供 CLI 与 Console UI 复用。
+ * - 字段保持稳定，避免前端按渠道分支解析。
+ */
+
+/**
+ * 支持的 chat 渠道名称。
+ */
+export type ChatChannelName = "telegram" | "feishu" | "qq";
+
+/**
+ * 渠道链路状态枚举。
+ */
+export type ChatLinkState = "connected" | "disconnected" | "unknown";
+
+/**
+ * 单个渠道的运行时快照。
+ */
+export type ChatChannelRuntimeSnapshot = {
+  /**
+   * 渠道名称（telegram/feishu/qq）。
+   */
+  channel: ChatChannelName;
+  /**
+   * 是否在配置中启用（`ship.json` 的 `services.chat.channels.<channel>.enabled`）。
+   */
+  enabled: boolean;
+  /**
+   * 必要鉴权配置是否完整（例如 token/appId/appSecret）。
+   */
+  configured: boolean;
+  /**
+   * 当前进程内该渠道实例是否处于运行态。
+   */
+  running: boolean;
+  /**
+   * 当前链路状态（已连接/未连接/未知）。
+   */
+  linkState: ChatLinkState;
+  /**
+   * 状态描述文本（用于面板展示与排障提示）。
+   */
+  statusText: string;
+  /**
+   * 渠道附加诊断信息（仅用于可视化，不承诺结构稳定）。
+   */
+  detail?: Record<string, string | number | boolean | null>;
+};
+
+/**
+ * 单个渠道连通性测试结果。
+ */
+export type ChatChannelTestResult = {
+  /**
+   * 渠道名称。
+   */
+  channel: ChatChannelName;
+  /**
+   * 测试是否通过。
+   */
+  success: boolean;
+  /**
+   * 测试执行时间（Unix 毫秒时间戳）。
+   */
+  testedAtMs: number;
+  /**
+   * 测试耗时（毫秒）。
+   */
+  latencyMs?: number;
+  /**
+   * 测试结果说明。
+   */
+  message: string;
+  /**
+   * 附加诊断信息（例如 bot 用户名、ws readyState）。
+   */
+  detail?: Record<string, string | number | boolean | null>;
+};
+

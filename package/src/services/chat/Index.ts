@@ -33,6 +33,11 @@ import type { ChatHistoryRequest, ChatReactRequest } from "./types/ChatCommand.j
 import type { TelegramBot } from "./channels/telegram/Bot.js";
 import type { FeishuBot } from "./channels/feishu/Feishu.js";
 import type { QQBot } from "./channels/qq/QQ.js";
+import type {
+  ChatChannelName,
+  ChatChannelRuntimeSnapshot,
+  ChatChannelTestResult,
+} from "./types/ChannelStatus.js";
 
 type ChatChannelState = {
   telegram: TelegramBot | null;
@@ -55,6 +60,17 @@ type ChatContextActionPayload = {
 
 type ChatHistoryActionPayload = ChatHistoryRequest;
 type ChatReactActionPayload = ChatReactRequest;
+type ChatStatusActionPayload = {
+  channel?: ChatChannelName;
+};
+type ChatTestActionPayload = {
+  channel?: ChatChannelName;
+};
+type ChatReconnectActionPayload = {
+  channel?: ChatChannelName;
+};
+
+const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
 const CHAT_PROMPT_FILE_URL = new URL("./PROMPT.txt", import.meta.url);
 const CHAT_DIRECT_PROMPT_FILE_URL = new URL("./PROMPT.direct.txt", import.meta.url);
@@ -183,87 +199,176 @@ function isPlaceholder(value?: string): boolean {
   return value === "${}";
 }
 
-async function startChatChannels(context: ServiceRuntime): Promise<void> {
-  if (channelState.telegram || channelState.feishu || channelState.qq) {
-    await stopChatChannels();
+function resolveChatChannelNameOrThrow(value: string): ChatChannelName {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (
+    normalized === "telegram" ||
+    normalized === "feishu" ||
+    normalized === "qq"
+  ) {
+    return normalized;
   }
-  const channels = context.config.services?.chat?.channels || {};
+  throw new Error(`Invalid channel: ${value}. Use telegram|feishu|qq.`);
+}
 
-  if (channels.telegram?.enabled) {
-    context.logger.info("Telegram channel enabled");
-    channelState.telegram = createTelegramBot(channels.telegram, context);
-    if (channelState.telegram) {
-      await channelState.telegram.start();
-    }
-  }
+function resolveTelegramToken(context: ServiceRuntime): string {
+  const token = context.config.services?.chat?.channels?.telegram?.botToken;
+  if (token && !isPlaceholder(token)) return token;
+  return "";
+}
 
-  if (channels.feishu?.enabled) {
-    context.logger.info("Feishu channel enabled");
-    const feishuChannel = channels.feishu as typeof channels.feishu & {
-      adminUserIds?: string[];
-    };
-    const feishuConfig = {
+function resolveFeishuCredentials(context: ServiceRuntime): {
+  appId: string;
+  appSecret: string;
+} {
+  const channel = context.config.services?.chat?.channels?.feishu;
+  return {
+    appId:
+      (channel?.appId && !isPlaceholder(channel.appId) ? channel.appId : "") ||
+      String(process.env.FEISHU_APP_ID || "").trim(),
+    appSecret:
+      (channel?.appSecret && !isPlaceholder(channel.appSecret)
+        ? channel.appSecret
+        : "") || String(process.env.FEISHU_APP_SECRET || "").trim(),
+  };
+}
+
+function resolveQQCredentials(context: ServiceRuntime): {
+  appId: string;
+  appSecret: string;
+} {
+  const channel = context.config.services?.chat?.channels?.qq;
+  return {
+    appId:
+      (channel?.appId && !isPlaceholder(channel.appId) ? channel.appId : "") ||
+      String(process.env.QQ_APP_ID || "").trim(),
+    appSecret:
+      (channel?.appSecret && !isPlaceholder(channel.appSecret)
+        ? channel.appSecret
+        : "") || String(process.env.QQ_APP_SECRET || "").trim(),
+  };
+}
+
+async function startTelegramChannel(context: ServiceRuntime): Promise<void> {
+  if (!context.config.services?.chat?.channels?.telegram?.enabled) return;
+  context.logger.info("Telegram channel enabled");
+  channelState.telegram = createTelegramBot(
+    {
+      ...(context.config.services?.chat?.channels?.telegram || {}),
       enabled: true,
-      appId:
-        (channels.feishu?.appId && !isPlaceholder(channels.feishu.appId)
-          ? channels.feishu.appId
-          : undefined) ||
-        process.env.FEISHU_APP_ID ||
-        "",
-      appSecret:
-        (channels.feishu?.appSecret && !isPlaceholder(channels.feishu.appSecret)
-          ? channels.feishu.appSecret
-          : undefined) ||
-        process.env.FEISHU_APP_SECRET ||
-        "",
+      botToken: resolveTelegramToken(context),
+    },
+    context,
+  );
+  if (channelState.telegram) {
+    await channelState.telegram.start();
+  }
+}
+
+async function startFeishuChannel(context: ServiceRuntime): Promise<void> {
+  if (!context.config.services?.chat?.channels?.feishu?.enabled) return;
+  context.logger.info("Feishu channel enabled");
+  const feishuChannel = context.config.services?.chat?.channels?.feishu as
+    | {
+        domain?: string;
+        adminUserIds?: string[];
+      }
+    | undefined;
+  const credentials = resolveFeishuCredentials(context);
+  channelState.feishu = await createFeishuBot(
+    {
+      enabled: true,
+      appId: credentials.appId,
+      appSecret: credentials.appSecret,
       domain: feishuChannel?.domain || "https://open.feishu.cn",
       adminUserIds: Array.isArray(feishuChannel?.adminUserIds)
         ? feishuChannel.adminUserIds
         : undefined,
-    };
-    channelState.feishu = await createFeishuBot(feishuConfig, context);
-    if (channelState.feishu) {
-      await channelState.feishu.start();
-    }
+    },
+    context,
+  );
+  if (channelState.feishu) {
+    await channelState.feishu.start();
   }
+}
 
-  if (channels.qq?.enabled) {
-    context.logger.info("QQ channel enabled");
-    const envQqGroupAccess = (process.env.QQ_GROUP_ACCESS || "")
-      .trim()
-      .toLowerCase();
-    const qqGroupAccess: "initiator_or_admin" | "anyone" | undefined =
-      channels.qq?.groupAccess === "anyone"
-        ? "anyone"
-        : channels.qq?.groupAccess === "initiator_or_admin"
+async function startQQChannel(context: ServiceRuntime): Promise<void> {
+  if (!context.config.services?.chat?.channels?.qq?.enabled) return;
+  context.logger.info("QQ channel enabled");
+  const qqChannel = context.config.services?.chat?.channels?.qq;
+  const envQqGroupAccess = (process.env.QQ_GROUP_ACCESS || "")
+    .trim()
+    .toLowerCase();
+  const qqGroupAccess: "initiator_or_admin" | "anyone" | undefined =
+    qqChannel?.groupAccess === "anyone"
+      ? "anyone"
+      : qqChannel?.groupAccess === "initiator_or_admin"
+        ? "initiator_or_admin"
+        : envQqGroupAccess === "initiator_or_admin"
           ? "initiator_or_admin"
-          : envQqGroupAccess === "initiator_or_admin"
-            ? "initiator_or_admin"
-            : "anyone";
-    const qqConfig = {
+          : "anyone";
+  const credentials = resolveQQCredentials(context);
+  channelState.qq = await createQQBot(
+    {
       enabled: true,
-      appId:
-        (channels.qq?.appId && !isPlaceholder(channels.qq.appId)
-          ? channels.qq.appId
-          : undefined) ||
-        process.env.QQ_APP_ID ||
-        "",
-      appSecret:
-        (channels.qq?.appSecret && !isPlaceholder(channels.qq.appSecret)
-          ? channels.qq.appSecret
-          : undefined) ||
-        process.env.QQ_APP_SECRET ||
-        "",
+      appId: credentials.appId,
+      appSecret: credentials.appSecret,
       sandbox:
-        typeof channels.qq?.sandbox === "boolean"
-          ? channels.qq.sandbox
+        typeof qqChannel?.sandbox === "boolean"
+          ? qqChannel.sandbox
           : (process.env.QQ_SANDBOX || "").toLowerCase() === "true",
       groupAccess: qqGroupAccess,
-    };
-    channelState.qq = await createQQBot(qqConfig, context);
-    if (channelState.qq) {
-      await channelState.qq.start();
-    }
+    },
+    context,
+  );
+  if (channelState.qq) {
+    await channelState.qq.start();
+  }
+}
+
+async function startSingleChatChannel(
+  context: ServiceRuntime,
+  channel: ChatChannelName,
+): Promise<void> {
+  if (channel === "telegram") {
+    await startTelegramChannel(context);
+    return;
+  }
+  if (channel === "feishu") {
+    await startFeishuChannel(context);
+    return;
+  }
+  await startQQChannel(context);
+}
+
+async function stopSingleChatChannel(channel: ChatChannelName): Promise<void> {
+  if (channel === "telegram" && channelState.telegram) {
+    const bot = channelState.telegram;
+    channelState.telegram = null;
+    await bot.stop();
+    return;
+  }
+  if (channel === "feishu" && channelState.feishu) {
+    const bot = channelState.feishu;
+    channelState.feishu = null;
+    await bot.stop();
+    return;
+  }
+  if (channel === "qq" && channelState.qq) {
+    const bot = channelState.qq;
+    channelState.qq = null;
+    await bot.stop();
+  }
+}
+
+async function startChatChannels(context: ServiceRuntime): Promise<void> {
+  if (channelState.telegram || channelState.feishu || channelState.qq) {
+    await stopChatChannels();
+  }
+  for (const channel of CHAT_CHANNEL_NAMES) {
+    await startSingleChatChannel(context, channel);
   }
 }
 
@@ -282,12 +387,211 @@ async function stopChatChannels(): Promise<void> {
   }
 }
 
+function resolveTargetChannels(
+  channel?: ChatChannelName,
+): ChatChannelName[] {
+  return channel ? [channel] : [...CHAT_CHANNEL_NAMES];
+}
+
+function getChatChannelStatus(
+  context: ServiceRuntime,
+  channel: ChatChannelName,
+): ChatChannelRuntimeSnapshot {
+  const channels = context.config.services?.chat?.channels || {};
+  const enabled = channels[channel]?.enabled === true;
+  const configured =
+    channel === "telegram"
+      ? !!resolveTelegramToken(context)
+      : channel === "feishu"
+        ? (() => {
+            const c = resolveFeishuCredentials(context);
+            return !!c.appId && !!c.appSecret;
+          })()
+        : (() => {
+            const c = resolveQQCredentials(context);
+            return !!c.appId && !!c.appSecret;
+          })();
+
+  const runtime =
+    channel === "telegram"
+      ? channelState.telegram?.getRuntimeStatus()
+      : channel === "feishu"
+        ? channelState.feishu?.getRuntimeStatus()
+        : channelState.qq?.getRuntimeStatus();
+  const linkState = !enabled
+    ? "disconnected"
+    : !configured
+      ? "disconnected"
+      : runtime?.linkState || "unknown";
+  const statusText = !enabled
+    ? "disabled"
+    : !configured
+      ? "config_missing"
+      : runtime?.statusText || "not_started";
+
+  return {
+    channel,
+    enabled,
+    configured,
+    running: runtime?.running === true,
+    linkState,
+    statusText,
+    detail: {
+      ...(runtime?.detail || {}),
+    },
+  };
+}
+
+async function executeChatStatusAction(params: {
+  context: ServiceRuntime;
+  payload: ChatStatusActionPayload;
+}) {
+  const channels = resolveTargetChannels(params.payload.channel);
+  const items = channels.map((channel) =>
+    getChatChannelStatus(params.context, channel),
+  );
+  return {
+    success: true,
+    data: {
+      channels: items,
+    },
+  };
+}
+
+async function executeChatTestAction(params: {
+  context: ServiceRuntime;
+  payload: ChatTestActionPayload;
+}) {
+  const channels = resolveTargetChannels(params.payload.channel);
+  const results: ChatChannelTestResult[] = [];
+  for (const channel of channels) {
+    const snapshot = getChatChannelStatus(params.context, channel);
+    if (!snapshot.enabled) {
+      results.push({
+        channel,
+        success: false,
+        testedAtMs: Date.now(),
+        message: "Channel is disabled",
+      });
+      continue;
+    }
+    if (!snapshot.configured) {
+      results.push({
+        channel,
+        success: false,
+        testedAtMs: Date.now(),
+        message: "Channel credentials are missing",
+      });
+      continue;
+    }
+
+    const bot =
+      channel === "telegram"
+        ? channelState.telegram
+        : channel === "feishu"
+          ? channelState.feishu
+          : channelState.qq;
+    if (!bot) {
+      results.push({
+        channel,
+        success: false,
+        testedAtMs: Date.now(),
+        message: "Channel is not running. Use reconnect first.",
+      });
+      continue;
+    }
+    results.push(await bot.testConnection());
+  }
+
+  return {
+    success: true,
+    data: {
+      results,
+      total: results.length,
+      failed: results.filter((item) => !item.success).length,
+    },
+  };
+}
+
+async function executeChatReconnectAction(params: {
+  context: ServiceRuntime;
+  payload: ChatReconnectActionPayload;
+}) {
+  const targets = resolveTargetChannels(params.payload.channel);
+  for (const channel of targets) {
+    const snapshot = getChatChannelStatus(params.context, channel);
+    if (!snapshot.enabled) {
+      return {
+        success: false,
+        error: `Channel ${channel} is disabled`,
+      };
+    }
+    if (!snapshot.configured) {
+      return {
+        success: false,
+        error: `Channel ${channel} credentials are missing`,
+      };
+    }
+  }
+
+  for (const channel of targets) {
+    await stopSingleChatChannel(channel);
+  }
+  for (const channel of targets) {
+    await startSingleChatChannel(params.context, channel);
+  }
+
+  const channels = targets.map((channel) =>
+    getChatChannelStatus(params.context, channel),
+  );
+  return {
+    success: true,
+    data: {
+      channels,
+    },
+  };
+}
+
 function getStringOpt(opts: Record<string, JsonValue>, key: string): string {
   return typeof opts[key] === "string" ? String(opts[key]).trim() : "";
 }
 
 function getBooleanOpt(opts: Record<string, JsonValue>, key: string): boolean {
   return opts[key] === true;
+}
+
+function mapChatChannelCommandInput(
+  input: ServiceActionCommandInput,
+): { channel?: ChatChannelName } {
+  const channelRaw = getStringOpt(input.opts, "channel");
+  if (!channelRaw) return {};
+  return {
+    channel: resolveChatChannelNameOrThrow(channelRaw),
+  };
+}
+
+function mapChatChannelApiInput(body: JsonValue): { channel?: ChatChannelName } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {};
+  }
+  const channelRaw =
+    typeof (body as JsonObject).channel === "string"
+      ? String((body as JsonObject).channel).trim()
+      : "";
+  if (!channelRaw) return {};
+  return {
+    channel: resolveChatChannelNameOrThrow(channelRaw),
+  };
+}
+
+function mapChatChannelApiQueryInput(query?: {
+  channel?: string;
+}): { channel?: ChatChannelName } {
+  const channelRaw = String(query?.channel || "").trim();
+  if (!channelRaw) return {};
+  return {
+    channel: resolveChatChannelNameOrThrow(channelRaw),
+  };
 }
 
 function parsePositiveIntOptionOrThrow(value: string, fieldName: string): number {
@@ -701,6 +1005,71 @@ export const chatService: Service = {
       .join("\n\n");
   },
   actions: {
+    status: {
+      command: {
+        description: "查看 chat 渠道连接状态",
+        configure(command: Command) {
+          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+        },
+        mapInput: mapChatChannelCommandInput,
+      },
+      api: {
+        method: "GET",
+        mapInput(c) {
+          return mapChatChannelApiQueryInput({
+            channel: c.req.query("channel"),
+          });
+        },
+      },
+      async execute(params) {
+        return executeChatStatusAction({
+          context: params.context,
+          payload: params.payload as ChatStatusActionPayload,
+        });
+      },
+    },
+    test: {
+      command: {
+        description: "测试 chat 渠道连通性",
+        configure(command: Command) {
+          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+        },
+        mapInput: mapChatChannelCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
+        },
+      },
+      async execute(params) {
+        return executeChatTestAction({
+          context: params.context,
+          payload: params.payload as ChatTestActionPayload,
+        });
+      },
+    },
+    reconnect: {
+      command: {
+        description: "重连 chat 渠道（默认全部）",
+        configure(command: Command) {
+          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+        },
+        mapInput: mapChatChannelCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
+        },
+      },
+      async execute(params) {
+        return executeChatReconnectAction({
+          context: params.context,
+          payload: params.payload as ChatReconnectActionPayload,
+        });
+      },
+    },
     send: {
       command: {
         description: "发送消息到目标 chatKey",

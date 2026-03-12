@@ -14,6 +14,7 @@ import type {
 import type { QqIncomingAttachment, QqRawInboundAttachment } from "@services/chat/types/QqVoice.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
+import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 
 /**
  * QQ official bot adapter (WebSocket gateway).
@@ -396,6 +397,122 @@ export class QQBot extends BaseChatChannel {
   private async getAuthToken(): Promise<string> {
     const accessToken = await this.getAccessToken();
     return `QQBot ${accessToken}`;
+  }
+
+  /**
+   * 读取 QQ runtime 快照。
+   *
+   * 关键点（中文）
+   * - `connected` 以 WebSocket readyState=OPEN 为准。
+   * - `wsContextId` 仅作为诊断信息，不再阻断连接态判断。
+   */
+  getRuntimeStatus(): {
+    running: boolean;
+    linkState: "connected" | "disconnected" | "unknown";
+    statusText: string;
+    detail: Record<string, string | number | boolean | null>;
+  } {
+    const readyState = typeof this.ws?.readyState === "number" ? this.ws.readyState : null;
+    const isOpen = readyState === WebSocket.OPEN;
+    const running = this.isRunning;
+    const hasContext = Boolean(String(this.wsContextId || "").trim());
+    const linkState = running && isOpen ? "connected" : running ? "unknown" : "disconnected";
+    return {
+      running,
+      linkState,
+      statusText:
+        linkState === "connected"
+          ? hasContext
+            ? "ws_online"
+            : "ws_open_wait_ready"
+          : linkState === "unknown"
+            ? "connecting"
+            : "stopped",
+      detail: {
+        wsReadyState: readyState,
+        wsContextId: this.wsContextId || null,
+        reconnectAttempts: this.reconnectAttempts,
+        maxReconnectAttempts: this.maxReconnectAttempts,
+        sandbox: this.useSandbox,
+      },
+    };
+  }
+
+  /**
+   * 执行 QQ 连通性测试。
+   *
+   * 关键点（中文）
+   * - 测试会同时验证 access_token 获取与 `/gateway` API 可达。
+   */
+  async testConnection(): Promise<ChatChannelTestResult> {
+    const startedAt = Date.now();
+    if (!this.appId || !this.appSecret) {
+      return {
+        channel: "qq",
+        success: false,
+        testedAtMs: startedAt,
+        message: "App credentials are missing",
+      };
+    }
+
+    try {
+      const authToken = await this.getAuthToken();
+      const apiBase = this.getApiBase();
+      const response = await fetch(`${apiBase}/gateway`, {
+        method: "GET",
+        headers: {
+          Authorization: authToken,
+        },
+      });
+      const raw = await response.text();
+      const now = Date.now();
+      let code: number | undefined;
+      try {
+        const parsed = JSON.parse(raw) as { code?: number };
+        code = typeof parsed.code === "number" ? parsed.code : undefined;
+      } catch {
+        // ignore parse error
+      }
+
+      if (response.ok && (code === 0 || code === undefined)) {
+        return {
+          channel: "qq",
+          success: true,
+          testedAtMs: now,
+          latencyMs: now - startedAt,
+          message: "Connected to QQ Open API",
+          detail: {
+            httpStatus: response.status,
+            code: code ?? null,
+            sandbox: this.useSandbox,
+          },
+        };
+      }
+      return {
+        channel: "qq",
+        success: false,
+        testedAtMs: now,
+        latencyMs: now - startedAt,
+        message: `QQ API check failed: HTTP ${response.status}`,
+        detail: {
+          httpStatus: response.status,
+          code: code ?? null,
+          sandbox: this.useSandbox,
+        },
+      };
+    } catch (error) {
+      const now = Date.now();
+      return {
+        channel: "qq",
+        success: false,
+        testedAtMs: now,
+        latencyMs: now - startedAt,
+        message: `QQ API check failed: ${String(error)}`,
+        detail: {
+          sandbox: this.useSandbox,
+        },
+      };
+    }
   }
 
   /**

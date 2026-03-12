@@ -1,6 +1,6 @@
 ---
 title: sma chat
-description: chat service actions（send/react/context/history）
+description: chat service actions（status/test/reconnect/send/react/context/history）
 ---
 
 # `sma chat`
@@ -17,10 +17,17 @@ sma chat <subcommand> [options]
 
 ## 子命令
 
+- `status`：查看渠道连接状态
+- `test`：测试渠道连通性
+- `reconnect`：重连渠道（默认全部，可按渠道）
 - `send`：发送消息
 - `react`：给消息贴表情（当前主要 Telegram）
 - `context`：查看当前会话上下文快照
 - `history`：读取历史消息
+
+## `status/test/reconnect` 常用选项
+
+- `--channel <telegram|feishu|qq>`：只针对单个渠道执行（不传则全部）
 
 ## `send` 常用选项
 
@@ -54,6 +61,9 @@ sma chat send --chat-key telegram-chat-123 --text "done"
 sma chat react --chat-key telegram-chat-123 --emoji "✅"
 sma chat context --chat-key telegram-chat-123
 sma chat history --chat-key telegram-chat-123 --limit 50
+sma chat status
+sma chat test --channel telegram
+sma chat reconnect --channel qq
 ```
 
 ## 说明

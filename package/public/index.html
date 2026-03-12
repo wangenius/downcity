@@ -3,83 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ShipMyAgent TUI</title>
+    <title>ShipMyAgent Console Dashboard</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <div class="dashboard-shell">
       <header class="topbar">
-        <div class="brand">
-          <span class="dot"></span>
-          <h1>ShipMyAgent TUI</h1>
+        <div class="topbar-brand">
+          <span class="brand-mark"></span>
+          <div>
+            <h1>Console Dashboard</h1>
+            <p>Agent Runtime State Board</p>
+          </div>
         </div>
-        <div class="topbar-actions">
-          <select id="agent-select" class="select-input" title="选择 agent"></select>
-          <button id="refresh-agents-btn" class="btn">刷新 Agent</button>
-          <button id="refresh-all-btn" class="btn">全量刷新</button>
-          <span id="topbar-status" class="topbar-status">连接中...</span>
+        <div class="topbar-controls">
+          <label class="field-label" for="agent-select">Agent</label>
+          <select id="agent-select" class="control-select"></select>
+          <button id="refresh-all-btn" class="control-btn">刷新面板</button>
+          <span id="topbar-status" class="status-pill">连接中...</span>
         </div>
       </header>
 
-      <div class="workspace">
-        <aside class="panel contexts-panel">
-          <div class="panel-title-row">
-            <h2>Contexts</h2>
-            <span id="contexts-count" class="count-chip">0</span>
+      <main class="dashboard-grid">
+        <section class="panel panel-summary">
+          <div class="panel-head">
+            <h2>运行状态</h2>
           </div>
-          <input id="context-search" class="text-input" placeholder="过滤 contextId" />
-          <div id="context-list" class="context-list"></div>
-        </aside>
+          <div id="summary-cards" class="summary-cards"></div>
 
-        <section class="panel messages-panel">
-          <div class="panel-title-row">
-            <h2 id="messages-title">消息历史</h2>
-            <button id="refresh-messages-btn" class="btn">刷新消息</button>
+          <div class="panel-head minor">
+            <h3>服务状态</h3>
           </div>
-          <div id="message-list" class="message-list"></div>
-          <div class="composer">
-            <textarea id="message-input" class="text-input" rows="4" placeholder="给当前 context 发送指令（Ctrl/Cmd + Enter）"></textarea>
-            <div class="composer-actions">
-              <button id="send-btn" class="btn primary">发送到当前 context</button>
+          <div id="services-quick" class="services-quick"></div>
+
+          <div class="panel-head minor">
+            <h3>Contexts（只读）</h3>
+          </div>
+          <div id="contexts-table" class="table-wrap"></div>
+        </section>
+
+        <section class="panel panel-core">
+          <div class="panel-head split">
+            <h2>系统面板</h2>
+            <div class="head-actions">
+              <button id="refresh-services-btn" class="control-btn ghost">服务</button>
+              <button id="refresh-tasks-btn" class="control-btn ghost">任务</button>
+              <button id="refresh-logs-btn" class="control-btn ghost">日志</button>
             </div>
+          </div>
+
+          <div class="stack-block">
+            <h3>Services Runtime</h3>
+            <div id="services-table" class="table-wrap"></div>
+          </div>
+
+          <div class="stack-block">
+            <div class="panel-head inner split">
+              <h3>Chat Channels</h3>
+              <div class="head-actions">
+                <button id="reconnect-all-chat-btn" class="control-btn ghost">全部重连</button>
+                <button id="refresh-chat-links-btn" class="control-btn ghost">刷新连接</button>
+              </div>
+            </div>
+            <div id="chat-links-table" class="table-wrap"></div>
+          </div>
+
+          <div class="stack-block">
+            <h3>Tasks Runtime</h3>
+            <div id="tasks-table" class="table-wrap"></div>
+          </div>
+
+          <div class="stack-block">
+            <h3>Recent Logs</h3>
+            <pre id="logs-view" class="logs-view">加载中...</pre>
           </div>
         </section>
 
-        <aside class="panel right-panel">
-          <section class="sub-panel">
-            <div class="panel-title-row">
-              <h3>Services</h3>
-              <button id="refresh-services-btn" class="btn">刷新</button>
-            </div>
-            <div id="services-table" class="table-wrap"></div>
-          </section>
+        <aside class="panel panel-side">
+          <div class="panel-head split">
+            <h2>Prompt 构成</h2>
+            <button id="refresh-prompt-btn" class="control-btn ghost">刷新</button>
+          </div>
+          <div id="prompt-meta" class="prompt-meta"></div>
+          <div id="prompt-sections" class="prompt-sections"></div>
 
-          <section class="sub-panel">
-            <div class="panel-title-row">
-              <h3>Tasks</h3>
-              <button id="refresh-tasks-btn" class="btn">刷新</button>
-            </div>
-            <div id="tasks-table" class="table-wrap"></div>
-            <div class="panel-title-row nested">
-              <h4 id="task-runs-title">Task Runs</h4>
-              <button id="refresh-runs-btn" class="btn">刷新</button>
-            </div>
-            <div id="task-runs-table" class="table-wrap"></div>
-            <div class="panel-title-row nested">
-              <h4>Run Detail</h4>
-            </div>
-            <div id="task-run-detail" class="run-detail">选择一个 run 查看执行过程</div>
-          </section>
-
-          <section class="sub-panel">
-            <div class="panel-title-row">
-              <h3>Logs</h3>
-              <button id="refresh-logs-btn" class="btn">刷新</button>
-            </div>
-            <pre id="logs-view" class="logs-view">加载中...</pre>
-          </section>
+          <div class="panel-head minor split">
+            <h3>Local UI 对话（local_ui）</h3>
+            <button id="refresh-chat-btn" class="control-btn ghost">刷新</button>
+          </div>
+          <div id="local-chat-list" class="local-chat-list"></div>
+          <div class="composer">
+            <textarea
+              id="local-chat-input"
+              class="composer-input"
+              rows="3"
+              placeholder="只会发送到 local_ui（Ctrl/Cmd + Enter）"
+            ></textarea>
+            <button id="local-chat-send-btn" class="control-btn accent">发送</button>
+          </div>
         </aside>
-      </div>
+      </main>
     </div>
 
     <div id="toast" class="toast"></div>

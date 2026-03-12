@@ -1,6 +1,6 @@
 ---
 title: sma chat
-description: Chat service actions (send/react/context/history)
+description: Chat service actions (status/test/reconnect/send/react/context/history)
 ---
 
 # `sma chat`
@@ -17,10 +17,17 @@ sma chat <subcommand> [options]
 
 ## Subcommands
 
+- `status`: show channel link status
+- `test`: run channel connectivity checks
+- `reconnect`: reconnect channels (all by default, or one channel)
 - `send`: send message
 - `react`: react to message (primarily Telegram)
 - `context`: view conversation context snapshot
 - `history`: read chat history
+
+## `status/test/reconnect` key options
+
+- `--channel <telegram|feishu|qq>`: run against one channel only (all channels if omitted)
 
 ## `send` key options
 
@@ -54,6 +61,9 @@ sma chat send --chat-key telegram-chat-123 --text "done"
 sma chat react --chat-key telegram-chat-123 --emoji "✅"
 sma chat context --chat-key telegram-chat-123
 sma chat history --chat-key telegram-chat-123 --limit 50
+sma chat status
+sma chat test --channel telegram
+sma chat reconnect --channel qq
 ```
 
 ## Notes

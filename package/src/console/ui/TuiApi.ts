@@ -7,6 +7,7 @@
  */
 
 import type { Hono } from "hono";
+import type { SystemModelMessage } from "ai";
 import {
   listServiceRuntimes,
   runServiceCommand,
@@ -15,6 +16,7 @@ import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { isValidTaskId } from "@services/task/runtime/Paths.js";
+import { resolveAgentSystemMessages } from "@agent/prompts/system/SystemDomain.js";
 import {
   TASK_RUN_DIR_REGEX,
   decodeMaybe,
@@ -29,6 +31,65 @@ import {
   toUiMessageTimeline,
 } from "./tui/Helpers.js";
 import { getShipContextMessagesPath } from "@/console/env/Paths.js";
+
+const LOCAL_UI_CONTEXT_ID = "local_ui";
+
+function normalizeSystemText(input: string | null | undefined): string {
+  return String(input || "").trim();
+}
+
+function toSystemMessageText(message: SystemModelMessage): string {
+  const content = message.content as unknown;
+  if (typeof content === "string") return normalizeSystemText(content);
+  if (!Array.isArray(content)) return "";
+  const parts = content as Array<{ text?: unknown }>;
+  const texts: string[] = [];
+  for (const part of parts) {
+    if (!part || typeof part !== "object") continue;
+    const text = normalizeSystemText(String(part.text || ""));
+    if (!text) continue;
+    texts.push(text);
+  }
+  return texts.join("\n").trim();
+}
+
+/**
+ * 把 Prompter 直接产出的 system messages 转成 UI 可渲染结构。
+ *
+ * 关键点（中文）
+ * - 只做“展示层映射”，不在 UI 层重建 system 业务规则。
+ */
+function toSystemPromptPayload(messages: SystemModelMessage[]): {
+  sections: Array<{
+    key: string;
+    title: string;
+    items: Array<{ index: number; content: string }>;
+  }>;
+  totalMessages: number;
+  totalChars: number;
+} {
+  const items = messages
+    .map((message, index) => ({
+      index: index + 1,
+      content: toSystemMessageText(message),
+    }))
+    .filter((item) => item.content);
+  const totalChars = items.reduce(
+    (acc, item) => acc + String(item.content || "").length,
+    0,
+  );
+  return {
+    sections: [
+      {
+        key: "resolved",
+        title: "Resolved System Messages",
+        items,
+      },
+    ],
+    totalMessages: items.length,
+    totalChars,
+  };
+}
 
 export function registerTuiApiRoutes(params: {
   app: Hono;
@@ -130,6 +191,30 @@ export function registerTuiApiRoutes(params: {
         total: sliced.length,
         rawTotal: messages.length,
         messages: sliced,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.get("/api/tui/system-prompt", async (c) => {
+    try {
+      const runtime = params.getRuntimeState();
+      const contextId =
+        decodeMaybe(String(c.req.query("contextId") || "").trim()) ||
+        LOCAL_UI_CONTEXT_ID;
+      const systemMessages = await resolveAgentSystemMessages({
+        projectRoot: runtime.rootPath,
+        contextId,
+        requestId: `ui-system-preview-${Date.now()}`,
+        profile: "chat",
+        staticSystemPrompts: runtime.systems,
+        runtime: params.getServiceRuntimeState(),
+      });
+      return c.json({
+        success: true,
+        contextId,
+        ...toSystemPromptPayload(systemMessages),
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);

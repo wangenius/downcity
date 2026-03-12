@@ -1,56 +1,59 @@
 /**
- * ShipMyAgent Web TUI 前端。
+ * Console Dashboard 前端。
  *
  * 关键点（中文）
- * - 通过 `/api/ui/agents` 获取可选 agent，再走 `/api/tui/*` 访问选中 agent。
- * - 覆盖四类核心视图：context 历史、多 context、services 状态、task 执行过程。
- * - 页面只做展示与轻量操作，不引入前端状态管理框架。
+ * - 这是状态面板，不是聊天主界面。
+ * - 仅保留一个附属对话入口：固定 local_ui context。
  */
+
+const LOCAL_UI_CONTEXT_ID = "local_ui";
+const AGENT_STORAGE_KEY = "sma_console_ui_selected_agent";
 
 const state = {
   agents: [],
   selectedAgentId: "",
-  contexts: [],
-  contextFilter: "",
-  selectedContextId: "",
-  messages: [],
+  overview: null,
   services: [],
+  chatChannels: [],
   tasks: [],
-  selectedTaskId: "",
-  taskRuns: [],
-  selectedRunTimestamp: "",
-  runDetail: null,
+  contexts: [],
   logs: [],
+  prompt: null,
+  localMessages: [],
   sending: false,
 };
 
 const refs = {
   agentSelect: document.getElementById("agent-select"),
-  refreshAgentsBtn: document.getElementById("refresh-agents-btn"),
-  topbarStatus: document.getElementById("topbar-status"),
   refreshAllBtn: document.getElementById("refresh-all-btn"),
-  contextsCount: document.getElementById("contexts-count"),
-  contextSearch: document.getElementById("context-search"),
-  contextList: document.getElementById("context-list"),
-  messagesTitle: document.getElementById("messages-title"),
-  messageList: document.getElementById("message-list"),
-  messageInput: document.getElementById("message-input"),
-  sendBtn: document.getElementById("send-btn"),
-  refreshMessagesBtn: document.getElementById("refresh-messages-btn"),
+  topbarStatus: document.getElementById("topbar-status"),
+
+  summaryCards: document.getElementById("summary-cards"),
+  servicesQuick: document.getElementById("services-quick"),
+  contextsTable: document.getElementById("contexts-table"),
+
   servicesTable: document.getElementById("services-table"),
-  refreshServicesBtn: document.getElementById("refresh-services-btn"),
+  chatLinksTable: document.getElementById("chat-links-table"),
   tasksTable: document.getElementById("tasks-table"),
-  refreshTasksBtn: document.getElementById("refresh-tasks-btn"),
-  taskRunsTitle: document.getElementById("task-runs-title"),
-  taskRunsTable: document.getElementById("task-runs-table"),
-  refreshRunsBtn: document.getElementById("refresh-runs-btn"),
-  taskRunDetail: document.getElementById("task-run-detail"),
   logsView: document.getElementById("logs-view"),
+
+  refreshServicesBtn: document.getElementById("refresh-services-btn"),
+  refreshTasksBtn: document.getElementById("refresh-tasks-btn"),
+  refreshChatLinksBtn: document.getElementById("refresh-chat-links-btn"),
+  reconnectAllChatBtn: document.getElementById("reconnect-all-chat-btn"),
   refreshLogsBtn: document.getElementById("refresh-logs-btn"),
+
+  promptMeta: document.getElementById("prompt-meta"),
+  promptSections: document.getElementById("prompt-sections"),
+  refreshPromptBtn: document.getElementById("refresh-prompt-btn"),
+
+  localChatList: document.getElementById("local-chat-list"),
+  localChatInput: document.getElementById("local-chat-input"),
+  localChatSendBtn: document.getElementById("local-chat-send-btn"),
+  refreshChatBtn: document.getElementById("refresh-chat-btn"),
+
   toast: document.getElementById("toast"),
 };
-
-const AGENT_STORAGE_KEY = "sma_console_ui_selected_agent";
 
 function escapeHtml(text) {
   const div = document.createElement("div");
@@ -65,50 +68,10 @@ function formatTime(ts) {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
-function shortText(text, maxChars = 120) {
-  const value = String(text || "").trim();
-  if (value.length <= maxChars) return value;
-  return value.slice(0, Math.max(0, maxChars - 3)) + "...";
-}
-
-function toRenderableText(input) {
-  const raw = String(input ?? "");
-  const noAnsi = raw.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "");
-  const cleaned = noAnsi.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "");
-  const value = cleaned.trim();
-  return value || "(empty)";
-}
-
-function normalizeForPreview(text) {
-  return String(text || "").replace(/\s+/g, " ").trim();
-}
-
-function formatMessageAsHtml(text) {
-  return escapeHtml(String(text || "")).replace(/\n/g, "<br>");
-}
-
-function splitMessagesIntoTurns(messages) {
-  const turns = [];
-  for (const msg of messages) {
-    const role = String(msg?.role || "");
-    const lastTurn = turns[turns.length - 1];
-    if (role === "user") {
-      turns.push({
-        user: msg,
-        events: [],
-      });
-      continue;
-    }
-    if (!lastTurn) {
-      turns.push({
-        user: null,
-        events: [msg],
-      });
-      continue;
-    }
-    lastTurn.events.push(msg);
-  }
-  return turns;
+function shortText(text, max = 120) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  if (value.length <= max) return value;
+  return `${value.slice(0, Math.max(0, max - 3))}...`;
 }
 
 function showToast(message, type = "info") {
@@ -119,12 +82,16 @@ function showToast(message, type = "info") {
   }, 2200);
 }
 
+function setTopbarStatus(text, isError = false) {
+  refs.topbarStatus.textContent = text;
+  refs.topbarStatus.className = isError ? "status-pill error" : "status-pill";
+}
+
 function withSelectedAgent(path) {
   const rawPath = String(path || "");
   if (!rawPath.startsWith("/api/")) return rawPath;
   if (rawPath.startsWith("/api/ui/")) return rawPath;
   if (!state.selectedAgentId) return rawPath;
-
   const url = new URL(rawPath, window.location.origin);
   url.searchParams.set("agent", state.selectedAgentId);
   return `${url.pathname}${url.search}`;
@@ -152,13 +119,17 @@ async function requestJson(path, options = {}) {
   return body;
 }
 
-function renderAgents() {
-  if (!refs.agentSelect) return;
-  const agents = Array.isArray(state.agents) ? state.agents : [];
-  const selected = String(state.selectedAgentId || "");
+function statusBadgeClass(raw) {
+  const value = String(raw || "").toLowerCase();
+  if (["running", "ok", "active", "enabled", "success"].includes(value)) return "ok";
+  if (["stopped", "disabled", "paused", "error", "failed", "offline"].includes(value)) return "bad";
+  return "warn";
+}
 
+function renderAgents() {
+  const agents = Array.isArray(state.agents) ? state.agents : [];
   if (agents.length === 0) {
-    refs.agentSelect.innerHTML = '<option value="">无可用 agent</option>';
+    refs.agentSelect.innerHTML = '<option value="">无运行中的 agent</option>';
     refs.agentSelect.disabled = true;
     return;
   }
@@ -168,21 +139,363 @@ function renderAgents() {
     .map((agent) => {
       const id = String(agent.id || "");
       const name = String(agent.name || id || "unknown-agent");
+      const host = String(agent.host || "127.0.0.1");
       const port = Number(agent.port || 0);
-      const label = Number.isFinite(port) && port > 0 ? `${name} :${port}` : name;
-      const active = id === selected ? "selected" : "";
-      return `<option value="${escapeHtml(id)}" ${active}>${escapeHtml(label)}</option>`;
+      const label = `${name} (${host}:${port})`;
+      const selected = id === state.selectedAgentId ? "selected" : "";
+      return `<option value="${escapeHtml(id)}" ${selected}>${escapeHtml(label)}</option>`;
     })
     .join("");
 }
 
+function renderSummaryCards() {
+  if (!state.selectedAgentId || !state.overview) {
+    refs.summaryCards.innerHTML = '<div class="empty">未选择可用 agent</div>';
+    return;
+  }
+
+  const selected = state.agents.find((agent) => agent.id === state.selectedAgentId) || {};
+  const tasks = state.overview?.tasks || {};
+  const statusCount = tasks.statusCount || {};
+  const contextsTotal = Number(state.overview?.contexts?.total || 0);
+  const servicesTotal = Array.isArray(state.services) ? state.services.length : 0;
+
+  refs.summaryCards.innerHTML = [
+    {
+      label: "Agent",
+      value: String(selected.name || "-") ,
+      sub: `pid ${selected.daemonPid || "-"} · ${selected.host || "-"}:${selected.port || "-"}`,
+    },
+    {
+      label: "Services",
+      value: String(servicesTotal),
+      sub: "runtime services",
+    },
+    {
+      label: "Tasks",
+      value: String(tasks.total || 0),
+      sub: `enabled ${statusCount.enabled || 0} / paused ${statusCount.paused || 0} / disabled ${statusCount.disabled || 0}`,
+    },
+    {
+      label: "Contexts",
+      value: String(contextsTotal),
+      sub: `local_ui ${state.contexts.some((x) => x.contextId === LOCAL_UI_CONTEXT_ID) ? "exists" : "missing"}`,
+    },
+  ]
+    .map((card) => `
+      <article class="card">
+        <div class="label">${escapeHtml(card.label)}</div>
+        <div class="value">${escapeHtml(card.value)}</div>
+        <div class="sub">${escapeHtml(card.sub)}</div>
+      </article>
+    `)
+    .join("");
+}
+
+function renderServicesQuick() {
+  if (!Array.isArray(state.services) || state.services.length === 0) {
+    refs.servicesQuick.innerHTML = '<div class="empty">暂无 service 运行数据</div>';
+    return;
+  }
+
+  refs.servicesQuick.innerHTML = state.services
+    .map((item) => {
+      const name = String(item.name || item.service || "unknown");
+      const status = String(item.state || item.status || "unknown");
+      const badge = statusBadgeClass(status);
+      return `
+        <div class="quick-item">
+          <span>${escapeHtml(name)}</span>
+          <span class="badge ${badge}">${escapeHtml(status)}</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderContextsTable() {
+  const rows = Array.isArray(state.contexts) ? state.contexts : [];
+  if (rows.length === 0) {
+    refs.contextsTable.innerHTML = '<div class="empty">暂无 context</div>';
+    return;
+  }
+
+  const topRows = [...rows]
+    .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
+    .slice(0, 12);
+
+  refs.contextsTable.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Context</th>
+          <th>Role</th>
+          <th>Msgs</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${topRows
+          .map((ctx) => {
+            const id = String(ctx.contextId || "-");
+            const role = String(ctx.lastRole || "-");
+            const count = Number(ctx.messageCount || 0);
+            const updated = formatTime(ctx.updatedAt);
+            const marker = id === LOCAL_UI_CONTEXT_ID ? "local_ui" : shortText(id, 30);
+            return `
+              <tr>
+                <td>${escapeHtml(marker)}</td>
+                <td>${escapeHtml(role)}</td>
+                <td>${escapeHtml(String(count))}</td>
+                <td>${escapeHtml(updated)}</td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderServicesTable() {
+  const rows = Array.isArray(state.services) ? state.services : [];
+  if (rows.length === 0) {
+    refs.servicesTable.innerHTML = '<div class="empty">暂无 service 数据</div>';
+    return;
+  }
+
+  refs.servicesTable.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map((svc) => {
+            const name = String(svc.name || svc.service || "unknown");
+            const status = String(svc.state || svc.status || "unknown");
+            const badge = statusBadgeClass(status);
+            return `
+              <tr>
+                <td>${escapeHtml(name)}</td>
+                <td><span class="badge ${badge}">${escapeHtml(status)}</span></td>
+                <td>
+                  <button class="control-btn ghost" data-service-action="start" data-service-name="${escapeHtml(name)}">start</button>
+                  <button class="control-btn ghost" data-service-action="restart" data-service-name="${escapeHtml(name)}">restart</button>
+                  <button class="control-btn ghost" data-service-action="stop" data-service-name="${escapeHtml(name)}">stop</button>
+                </td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderChatLinksTable() {
+  const rows = Array.isArray(state.chatChannels) ? state.chatChannels : [];
+  if (rows.length === 0) {
+    refs.chatLinksTable.innerHTML = '<div class="empty">暂无 chat 渠道状态</div>';
+    return;
+  }
+
+  refs.chatLinksTable.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Channel</th>
+          <th>Link</th>
+          <th>Runtime</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map((item) => {
+            const channel = String(item.channel || "unknown");
+            const linkState = String(item.linkState || "unknown");
+            const statusText = String(item.statusText || "unknown");
+            const running = item.running === true;
+            const enabled = item.enabled === true;
+            const configured = item.configured === true;
+            const actionDisabled = !enabled || !configured;
+            const disabledAttr = actionDisabled ? "disabled" : "";
+            const badge = statusBadgeClass(linkState);
+            const runtimeLabel = enabled
+              ? configured
+                ? running
+                  ? statusText
+                  : "stopped"
+                : "config_missing"
+              : "disabled";
+            return `
+              <tr>
+                <td>${escapeHtml(channel)}</td>
+                <td><span class="badge ${badge}">${escapeHtml(linkState)}</span></td>
+                <td>${escapeHtml(runtimeLabel)}</td>
+                <td>
+                  <button class="control-btn ghost" data-chat-action="test" data-chat-channel="${escapeHtml(channel)}" ${disabledAttr}>test</button>
+                  <button class="control-btn ghost" data-chat-action="reconnect" data-chat-channel="${escapeHtml(channel)}" ${disabledAttr}>reconnect</button>
+                </td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderTasksTable() {
+  const rows = Array.isArray(state.tasks) ? state.tasks : [];
+  if (rows.length === 0) {
+    refs.tasksTable.innerHTML = '<div class="empty">暂无 task 数据</div>';
+    return;
+  }
+
+  refs.tasksTable.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Status</th>
+          <th>Cron</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map((task) => {
+            const id = String(task.taskId || task.id || "-");
+            const status = String(task.status || "unknown");
+            const cron = String(task.cron || "-");
+            const badge = statusBadgeClass(status);
+            return `
+              <tr>
+                <td>${escapeHtml(id)}</td>
+                <td><span class="badge ${badge}">${escapeHtml(status)}</span></td>
+                <td>${escapeHtml(cron)}</td>
+                <td>
+                  <button class="control-btn ghost" data-task-action="run" data-task-id="${escapeHtml(id)}">run</button>
+                </td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderLogs() {
+  const rows = Array.isArray(state.logs) ? state.logs : [];
+  if (rows.length === 0) {
+    refs.logsView.textContent = "暂无日志";
+    return;
+  }
+  refs.logsView.textContent = rows
+    .map((item) => {
+      const time = formatTime(item.timestamp);
+      const level = String(item.type || item.level || "info").toUpperCase();
+      const message = String(item.message || "");
+      return `[${time}] [${level}] ${message}`;
+    })
+    .join("\n");
+}
+
+function renderPromptComposition() {
+  const data = state.prompt;
+  if (!data || !Array.isArray(data.sections)) {
+    refs.promptMeta.innerHTML = '<span class="empty">暂无 prompt 数据</span>';
+    refs.promptSections.innerHTML = "";
+    return;
+  }
+
+  refs.promptMeta.textContent = `context: ${data.contextId || LOCAL_UI_CONTEXT_ID} · messages ${data.totalMessages || 0} · chars ${data.totalChars || 0}`;
+
+  refs.promptSections.innerHTML = data.sections
+    .map((section, sectionIndex) => {
+      const title = String(section.title || section.key || "section");
+      const items = Array.isArray(section.items) ? section.items : [];
+      const open = sectionIndex <= 1 ? "open" : "";
+      return `
+        <details class="prompt-card" ${open}>
+          <summary>${escapeHtml(title)} · ${items.length}</summary>
+          <div class="prompt-body">
+            ${items
+              .map((item) => {
+                const index = Number(item.index || 0);
+                const content = String(item.content || "");
+                return `
+                  <div>
+                    <div class="field-label">#${escapeHtml(String(index || "-"))}</div>
+                    <pre>${escapeHtml(content)}</pre>
+                  </div>
+                `;
+              })
+              .join("")}
+          </div>
+        </details>
+      `;
+    })
+    .join("");
+}
+
+function renderLocalChat() {
+  const rows = Array.isArray(state.localMessages) ? state.localMessages : [];
+  if (rows.length === 0) {
+    refs.localChatList.innerHTML = '<div class="empty">local_ui 暂无消息</div>';
+    return;
+  }
+
+  const turns = rows.slice(-16);
+  refs.localChatList.innerHTML = turns
+    .map((msg) => {
+      const role = String(msg.role || "assistant");
+      const text = String(msg.text || "").trim() || "(empty)";
+      const ts = formatTime(msg.ts);
+      return `
+        <article class="chat-item">
+          <div class="meta">${escapeHtml(role.toUpperCase())} · ${escapeHtml(ts)}</div>
+          <div class="body">${escapeHtml(text)}</div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function clearPanelDataForNoAgent() {
+  state.overview = null;
+  state.services = [];
+  state.chatChannels = [];
+  state.tasks = [];
+  state.contexts = [];
+  state.logs = [];
+  state.prompt = null;
+  state.localMessages = [];
+  renderSummaryCards();
+  renderServicesQuick();
+  renderContextsTable();
+  renderServicesTable();
+  renderChatLinksTable();
+  renderTasksTable();
+  renderLogs();
+  renderPromptComposition();
+  renderLocalChat();
+}
+
 async function refreshAgents() {
-  const localSelected = localStorage.getItem(AGENT_STORAGE_KEY) || "";
-  const preferred = state.selectedAgentId || localSelected;
-  const query = preferred
+  const cachedId = localStorage.getItem(AGENT_STORAGE_KEY) || "";
+  const preferred = state.selectedAgentId || cachedId;
+  const endpoint = preferred
     ? `/api/ui/agents?agent=${encodeURIComponent(preferred)}`
     : "/api/ui/agents";
-  const data = await requestJson(query);
+  const data = await requestJson(endpoint);
   state.agents = Array.isArray(data.agents) ? data.agents : [];
   state.selectedAgentId = String(data.selectedAgentId || "");
   if (state.selectedAgentId) {
@@ -191,736 +504,309 @@ async function refreshAgents() {
   renderAgents();
 }
 
-function setTopbarStatus(text, isError = false) {
-  refs.topbarStatus.textContent = text;
-  refs.topbarStatus.className = isError ? "topbar-status error" : "topbar-status";
-}
-
-function renderContexts() {
-  const query = state.contextFilter.toLowerCase();
-  const filtered = state.contexts.filter((ctx) =>
-    String(ctx.contextId || "").toLowerCase().includes(query),
-  );
-
-  refs.contextsCount.textContent = String(filtered.length);
-
-  if (filtered.length === 0) {
-    refs.contextList.innerHTML = '<div class="empty">暂无 context</div>';
-    return;
-  }
-
-  refs.contextList.innerHTML = filtered
-    .map((ctx) => {
-      const active = ctx.contextId === state.selectedContextId ? "active" : "";
-      return `
-        <button class="context-item ${active}" data-context-id="${escapeHtml(ctx.contextId)}">
-          <div class="context-id">${escapeHtml(ctx.contextId)}</div>
-          <div class="context-meta">
-            <span>${escapeHtml(ctx.lastRole || "-")}</span>
-            <span>${escapeHtml(formatTime(ctx.updatedAt))}</span>
-          </div>
-          <div class="context-preview">${escapeHtml(shortText(ctx.lastText || "", 90))}</div>
-          <div class="context-count">${escapeHtml(String(ctx.messageCount || 0))} msgs</div>
-        </button>
-      `;
-    })
-    .join("");
-}
-
-function renderMessages() {
-  if (!state.selectedContextId) {
-    refs.messagesTitle.textContent = "消息历史";
-    refs.messageList.innerHTML = '<div class="empty">请选择一个 context</div>';
-    return;
-  }
-
-  refs.messagesTitle.textContent = `消息历史 · ${state.selectedContextId}`;
-
-  if (!state.messages.length) {
-    refs.messageList.innerHTML = '<div class="empty">该 context 暂无消息</div>';
-    return;
-  }
-
-  const previousScrollTop = refs.messageList.scrollTop;
-  const distanceToBottom =
-    refs.messageList.scrollHeight - refs.messageList.clientHeight - refs.messageList.scrollTop;
-  // 关键点（中文）：只有用户本来就在底部附近时，刷新后才自动跟随到底部。
-  const shouldStickToBottom = distanceToBottom <= 48;
-
-  const turns = splitMessagesIntoTurns(state.messages);
-  refs.messageList.innerHTML = turns
-    .map((turn) => {
-      const user = turn.user;
-      const userHtml = user
-        ? `
-          <article class="turn-user">
-            <div class="turn-head">
-              <span class="role role-user">USER</span>
-              <span class="time">${escapeHtml(formatTime(user.ts))}</span>
-              <span class="meta">${escapeHtml(user.kind || "normal")}/${escapeHtml(user.source || "-")}</span>
-            </div>
-            <div class="turn-body">${formatMessageAsHtml(toRenderableText(user.text))}</div>
-          </article>
-        `
-        : "";
-
-      const eventsHtml = Array.isArray(turn.events)
-        ? turn.events
-            .map((msg) => {
-              const role = String(msg.role || "");
-              const toolName = String(msg.toolName || "").trim();
-              const roleText =
-                role === "assistant"
-                  ? "ASSISTANT"
-                  : role === "tool-call"
-                    ? "TOOL CALL"
-                    : role === "tool-result"
-                      ? "TOOL RESULT"
-                      : role.toUpperCase();
-              const eventClass =
-                role === "assistant"
-                  ? "assistant"
-                  : role === "tool-call"
-                    ? "tool-call"
-                    : role === "tool-result"
-                      ? "tool-result"
-                      : "assistant";
-              const normalizedText = toRenderableText(msg.text);
-              const preview = shortText(normalizeForPreview(normalizedText), 140);
-              const roleLabel = toolName ? `${roleText} · ${toolName}` : roleText;
-
-              // 关键点（中文）：tool 事件默认折叠，先展示摘要，避免消息区被工具日志挤满。
-              if (role === "tool-call" || role === "tool-result") {
-                return `
-                  <article class="turn-event ${eventClass} is-collapsed">
-                    <div class="turn-head">
-                      <span class="role">${escapeHtml(roleLabel)}</span>
-                      <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
-                      <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
-                      <button class="turn-toggle" type="button" data-turn-toggle="true">展开</button>
-                    </div>
-                    <div class="turn-preview">${escapeHtml(preview)}</div>
-                    <div class="turn-body code">${formatMessageAsHtml(normalizedText)}</div>
-                  </article>
-                `;
-              }
-
-              return `
-                <article class="turn-event ${eventClass}">
-                  <div class="turn-head">
-                    <span class="role">${escapeHtml(roleLabel)}</span>
-                    <span class="time">${escapeHtml(formatTime(msg.ts))}</span>
-                    <span class="meta">${escapeHtml(msg.kind || "normal")}/${escapeHtml(msg.source || "-")}</span>
-                  </div>
-                  <div class="turn-preview">${escapeHtml(preview)}</div>
-                  <div class="turn-body code">${formatMessageAsHtml(normalizedText)}</div>
-                </article>
-              `;
-            })
-            .join("")
-        : "";
-
-      return `
-        <section class="turn">
-          ${userHtml}
-          <div class="turn-events">${eventsHtml}</div>
-        </section>
-      `;
-    })
-    .join("");
-
-  if (shouldStickToBottom) {
-    refs.messageList.scrollTop = refs.messageList.scrollHeight;
-  } else {
-    // 关键点（中文）：用户正在看历史时，刷新后保持阅读位置，避免跳到底部。
-    refs.messageList.scrollTop = previousScrollTop;
-  }
-}
-
-function renderServices() {
-  if (!state.services.length) {
-    refs.servicesTable.innerHTML = '<div class="empty">暂无 service 运行状态</div>';
-    return;
-  }
-
-  refs.servicesTable.innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>service</th>
-          <th>state</th>
-          <th>updated</th>
-          <th>action</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${state.services
-          .map(
-            (svc) => `
-          <tr>
-            <td>${escapeHtml(svc.name || "-")}</td>
-            <td><span class="badge ${escapeHtml(String(svc.state || ""))}">${escapeHtml(svc.state || "-")}</span></td>
-            <td>${escapeHtml(formatTime(svc.updatedAt))}</td>
-            <td>
-              <div class="inline-actions">
-                <button class="btn mini" data-svc-action="start" data-service-name="${escapeHtml(svc.name)}">start</button>
-                <button class="btn mini" data-svc-action="stop" data-service-name="${escapeHtml(svc.name)}">stop</button>
-                <button class="btn mini" data-svc-action="restart" data-service-name="${escapeHtml(svc.name)}">restart</button>
-              </div>
-            </td>
-          </tr>
-        `,
-          )
-          .join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-function renderTasks() {
-  if (!state.tasks.length) {
-    refs.tasksTable.innerHTML = '<div class="empty">暂无任务</div>';
-    return;
-  }
-
-  refs.tasksTable.innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>taskId</th>
-          <th>status</th>
-          <th>cron</th>
-          <th>contextId</th>
-          <th>action</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${state.tasks
-          .map((task) => {
-            const selected = state.selectedTaskId === task.taskId ? "selected" : "";
-            return `
-              <tr class="${selected}">
-                <td>${escapeHtml(task.taskId || "-")}</td>
-                <td><span class="badge ${escapeHtml(task.status || "")}">${escapeHtml(task.status || "-")}</span></td>
-                <td>${escapeHtml(task.cron || "-")}</td>
-                <td title="${escapeHtml(task.contextId || "")}">${escapeHtml(shortText(task.contextId || "-", 28))}</td>
-                <td>
-                  <div class="inline-actions">
-                    <button class="btn mini" data-task-action="select" data-task-id="${escapeHtml(task.taskId)}">runs</button>
-                    <button class="btn mini" data-task-action="run" data-task-id="${escapeHtml(task.taskId)}">run</button>
-                  </div>
-                </td>
-              </tr>
-            `;
-          })
-          .join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-function renderTaskRuns() {
-  if (!state.selectedTaskId) {
-    refs.taskRunsTitle.textContent = "Task Runs";
-    refs.taskRunsTable.innerHTML = '<div class="empty">先在上方选择任务</div>';
-    return;
-  }
-
-  refs.taskRunsTitle.textContent = `Task Runs · ${state.selectedTaskId}`;
-
-  if (!state.taskRuns.length) {
-    refs.taskRunsTable.innerHTML = '<div class="empty">暂无执行记录</div>';
-    return;
-  }
-
-  refs.taskRunsTable.innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>timestamp</th>
-          <th>status</th>
-          <th>execution</th>
-          <th>dialogue</th>
-          <th>action</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${state.taskRuns
-          .map((run) => {
-            const selected = state.selectedRunTimestamp === run.timestamp ? "selected" : "";
-            return `
-              <tr class="${selected}">
-                <td>${escapeHtml(run.timestamp)}</td>
-                <td><span class="badge ${escapeHtml(run.status || "")}">${escapeHtml(run.status || "-")}</span></td>
-                <td>${escapeHtml(run.executionStatus || "-")}/${escapeHtml(run.resultStatus || "-")}</td>
-                <td>${escapeHtml(String(run.dialogueRounds ?? "-"))}</td>
-                <td>
-                  <button class="btn mini" data-run-action="view" data-run-ts="${escapeHtml(run.timestamp)}">view</button>
-                </td>
-              </tr>
-            `;
-          })
-          .join("")}
-      </tbody>
-    </table>
-  `;
-}
-
-function renderRunDetail() {
-  const detail = state.runDetail;
-  if (!detail) {
-    refs.taskRunDetail.innerHTML = "选择一个 run 查看执行过程";
-    return;
-  }
-
-  const meta = detail.meta || {};
-  const rounds = Array.isArray(detail?.dialogue?.rounds) ? detail.dialogue.rounds : [];
-  const roundHtml = rounds.length
-    ? rounds
-        .map(
-          (round) => `
-          <div class="round-card">
-            <div class="round-title">Round ${escapeHtml(String(round.round ?? "-"))}</div>
-            <div class="round-field"><strong>ruleErrors:</strong> ${escapeHtml(JSON.stringify(round.ruleErrors || []))}</div>
-            <div class="round-field"><strong>satisfied:</strong> ${escapeHtml(String(round?.userSimulator?.satisfied ?? false))}</div>
-            <div class="round-field"><strong>reason:</strong> ${escapeHtml(String(round?.userSimulator?.reason || ""))}</div>
-            <pre>${escapeHtml(shortText(String(round?.executorOutput || ""), 1600))}</pre>
-          </div>
-        `,
-        )
-        .join("")
-    : '<div class="empty">该 run 暂无 round 过程记录</div>';
-
-  refs.taskRunDetail.innerHTML = `
-    <div class="run-meta-grid">
-      <div><strong>taskId</strong><span>${escapeHtml(String(detail.taskId || "-"))}</span></div>
-      <div><strong>timestamp</strong><span>${escapeHtml(String(detail.timestamp || "-"))}</span></div>
-      <div><strong>status</strong><span>${escapeHtml(String(meta.status || "-"))}</span></div>
-      <div><strong>execution</strong><span>${escapeHtml(String(meta.executionStatus || "-"))}</span></div>
-      <div><strong>result</strong><span>${escapeHtml(String(meta.resultStatus || "-"))}</span></div>
-      <div><strong>durationMs</strong><span>${escapeHtml(String((meta.endedAt && meta.startedAt) ? meta.endedAt - meta.startedAt : "-"))}</span></div>
-      <div><strong>startedAt</strong><span>${escapeHtml(formatTime(meta.startedAt))}</span></div>
-      <div><strong>endedAt</strong><span>${escapeHtml(formatTime(meta.endedAt))}</span></div>
-    </div>
-
-    <h5>Dialogue Process</h5>
-    <div class="round-list">${roundHtml}</div>
-
-    <h5>Artifacts Preview</h5>
-    <details open>
-      <summary>result.md</summary>
-      <pre>${escapeHtml(String(detail?.artifacts?.result || "(empty)"))}</pre>
-    </details>
-    <details>
-      <summary>dialogue.md</summary>
-      <pre>${escapeHtml(String(detail?.artifacts?.dialogue || "(empty)"))}</pre>
-    </details>
-    <details>
-      <summary>output.md</summary>
-      <pre>${escapeHtml(String(detail?.artifacts?.output || "(empty)"))}</pre>
-    </details>
-    <details>
-      <summary>error.md</summary>
-      <pre>${escapeHtml(String(detail?.artifacts?.error || "(empty)"))}</pre>
-    </details>
-  `;
-}
-
-function renderLogs() {
-  if (!state.logs.length) {
-    refs.logsView.textContent = "暂无日志";
-    return;
-  }
-
-  refs.logsView.textContent = state.logs
-    .map((log) => {
-      const time = formatTime(log.timestamp);
-      const level = String(log.type || log.level || "info").toUpperCase();
-      const msg = String(log.message || "");
-      return `[${time}] [${level}] ${msg}`;
-    })
-    .join("\n");
-}
-
-async function refreshContexts({ keepSelection = true } = {}) {
-  if (!state.selectedAgentId) {
-    state.contexts = [];
-    state.selectedContextId = "";
-    renderContexts();
-    return;
-  }
-  const data = await requestJson("/api/tui/contexts?limit=300");
-  state.contexts = Array.isArray(data.contexts) ? data.contexts : [];
-
-  const selectedExists = state.contexts.some((ctx) => ctx.contextId === state.selectedContextId);
-  if (!keepSelection || !selectedExists) {
-    state.selectedContextId = state.contexts[0]?.contextId || "";
-  }
-
-  renderContexts();
-}
-
-async function refreshMessages() {
-  if (!state.selectedAgentId) {
-    state.messages = [];
-    renderMessages();
-    return;
-  }
-  if (!state.selectedContextId) {
-    state.messages = [];
-    renderMessages();
-    return;
-  }
-
-  const encoded = encodeURIComponent(state.selectedContextId);
-  const data = await requestJson(`/api/tui/contexts/${encoded}/messages?limit=200`);
-  state.messages = Array.isArray(data.messages) ? data.messages : [];
-  renderMessages();
+async function refreshOverview() {
+  if (!state.selectedAgentId) return;
+  state.overview = await requestJson("/api/tui/overview?contextLimit=40");
 }
 
 async function refreshServices() {
-  if (!state.selectedAgentId) {
-    state.services = [];
-    renderServices();
-    return;
-  }
+  if (!state.selectedAgentId) return;
   const data = await requestJson("/api/tui/services");
   state.services = Array.isArray(data.services) ? data.services : [];
-  renderServices();
+}
+
+async function refreshChatChannels() {
+  if (!state.selectedAgentId) return;
+  try {
+    const data = await requestJson("/api/services/command", {
+      method: "POST",
+      body: JSON.stringify({
+        serviceName: "chat",
+        command: "status",
+        payload: {},
+      }),
+    });
+    const channels = data?.data?.channels;
+    state.chatChannels = Array.isArray(channels) ? channels : [];
+  } catch (error) {
+    // 关键点（中文）：旧版 runtime 可能不支持 chat.status，降级为空列表避免整页失败。
+    const message = String(error?.message || error || "");
+    if (/404|not found|unknown action|unknown service/i.test(message)) {
+      state.chatChannels = [];
+      return;
+    }
+    throw error;
+  }
 }
 
 async function refreshTasks() {
-  if (!state.selectedAgentId) {
-    state.tasks = [];
-    state.selectedTaskId = "";
-    state.selectedRunTimestamp = "";
-    state.taskRuns = [];
-    state.runDetail = null;
-    renderTasks();
-    renderTaskRuns();
-    renderRunDetail();
-    return;
-  }
+  if (!state.selectedAgentId) return;
   const data = await requestJson("/api/tui/tasks");
   state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
-
-  const selectedExists = state.tasks.some((task) => task.taskId === state.selectedTaskId);
-  if (!selectedExists) {
-    state.selectedTaskId = "";
-    state.selectedRunTimestamp = "";
-    state.taskRuns = [];
-    state.runDetail = null;
-  }
-
-  renderTasks();
-  renderTaskRuns();
-  renderRunDetail();
 }
 
-async function refreshTaskRuns() {
-  if (!state.selectedTaskId) {
-    state.taskRuns = [];
-    renderTaskRuns();
-    return;
-  }
-  const data = await requestJson(`/api/tui/tasks/${encodeURIComponent(state.selectedTaskId)}/runs?limit=60`);
-  state.taskRuns = Array.isArray(data.runs) ? data.runs : [];
-
-  const selectedExists = state.taskRuns.some((run) => run.timestamp === state.selectedRunTimestamp);
-  if (!selectedExists) {
-    state.selectedRunTimestamp = state.taskRuns[0]?.timestamp || "";
-  }
-
-  renderTaskRuns();
-}
-
-async function refreshRunDetail() {
-  if (!state.selectedTaskId || !state.selectedRunTimestamp) {
-    state.runDetail = null;
-    renderRunDetail();
-    return;
-  }
-
-  const data = await requestJson(
-    `/api/tui/tasks/${encodeURIComponent(state.selectedTaskId)}/runs/${encodeURIComponent(state.selectedRunTimestamp)}`,
-  );
-  state.runDetail = data;
-  renderRunDetail();
+async function refreshContexts() {
+  if (!state.selectedAgentId) return;
+  const data = await requestJson("/api/tui/contexts?limit=120");
+  state.contexts = Array.isArray(data.contexts) ? data.contexts : [];
 }
 
 async function refreshLogs() {
-  if (!state.selectedAgentId) {
-    state.logs = [];
-    renderLogs();
-    return;
-  }
-  const data = await requestJson("/api/tui/logs?limit=220");
+  if (!state.selectedAgentId) return;
+  const data = await requestJson("/api/tui/logs?limit=260");
   state.logs = Array.isArray(data.logs) ? data.logs : [];
-  renderLogs();
 }
 
-async function refreshOverview() {
-  if (!state.selectedAgentId) {
-    setTopbarStatus("未检测到运行中的 agent");
-    return;
+async function refreshPrompt() {
+  if (!state.selectedAgentId) return;
+  try {
+    state.prompt = await requestJson(`/api/tui/system-prompt?contextId=${encodeURIComponent(LOCAL_UI_CONTEXT_ID)}`);
+  } catch (error) {
+    // 关键点（中文）：agent runtime 若未注册该接口（404），UI 保持可用并隐藏 prompt 面板数据。
+    const message = String(error?.message || error || "");
+    if (/404|not found/i.test(message)) {
+      state.prompt = null;
+      return;
+    }
+    throw error;
   }
-  const data = await requestJson("/api/tui/overview?contextLimit=20");
-  const totalContexts = Number(data?.contexts?.total || 0);
-  const totalTasks = Number(data?.tasks?.total || 0);
-  const totalServices = Array.isArray(data?.services) ? data.services.length : 0;
-  const selectedAgent = state.agents.find((agent) => agent.id === state.selectedAgentId);
-  const agentName = String(selectedAgent?.name || "unknown-agent");
-  setTopbarStatus(
-    `在线 · ${agentName} · contexts ${totalContexts} · services ${totalServices} · tasks ${totalTasks}`,
-  );
 }
 
-async function refreshAll() {
+async function refreshLocalChat() {
+  if (!state.selectedAgentId) return;
+  const data = await requestJson(`/api/tui/contexts/${encodeURIComponent(LOCAL_UI_CONTEXT_ID)}/messages?limit=80`);
+  state.localMessages = Array.isArray(data.messages) ? data.messages : [];
+}
+
+async function refreshDashboard() {
   try {
     await refreshAgents();
     if (!state.selectedAgentId) {
-      state.contexts = [];
-      state.selectedContextId = "";
-      state.messages = [];
-      state.services = [];
-      state.tasks = [];
-      state.selectedTaskId = "";
-      state.taskRuns = [];
-      state.selectedRunTimestamp = "";
-      state.runDetail = null;
-      state.logs = [];
-      renderContexts();
-      renderMessages();
-      renderServices();
-      renderTasks();
-      renderTaskRuns();
-      renderRunDetail();
-      renderLogs();
+      clearPanelDataForNoAgent();
       setTopbarStatus("未检测到运行中的 agent");
       return;
     }
-    await refreshOverview();
-    await refreshContexts();
-    await Promise.all([refreshServices(), refreshTasks(), refreshLogs()]);
-    await refreshMessages();
-    await refreshTaskRuns();
-    await refreshRunDetail();
+
+    await Promise.all([
+      refreshOverview(),
+      refreshServices(),
+      refreshChatChannels(),
+      refreshTasks(),
+      refreshContexts(),
+      refreshLogs(),
+      refreshPrompt(),
+      refreshLocalChat(),
+    ]);
+
+    renderSummaryCards();
+    renderServicesQuick();
+    renderContextsTable();
+    renderServicesTable();
+    renderChatLinksTable();
+    renderTasksTable();
+    renderLogs();
+    renderPromptComposition();
+    renderLocalChat();
+
+    const selected = state.agents.find((x) => x.id === state.selectedAgentId) || {};
+    setTopbarStatus(`在线 · ${selected.name || "agent"} · ${selected.host || "127.0.0.1"}:${selected.port || "-"}`);
   } catch (error) {
     setTopbarStatus(`连接失败: ${String(error.message || error)}`, true);
     showToast(`刷新失败: ${String(error.message || error)}`, "error");
   }
 }
 
-async function sendToCurrentContext() {
-  if (state.sending) return;
-  const contextId = state.selectedContextId;
-  const instructions = String(refs.messageInput.value || "").trim();
-  if (!contextId) {
-    showToast("请先选择 context", "error");
-    return;
-  }
-  if (!instructions) return;
-
-  state.sending = true;
-  refs.sendBtn.disabled = true;
-  refs.sendBtn.textContent = "发送中...";
-
-  try {
-    await requestJson(`/api/tui/contexts/${encodeURIComponent(contextId)}/execute`, {
-      method: "POST",
-      body: JSON.stringify({ instructions }),
-    });
-    refs.messageInput.value = "";
-    await refreshContexts();
-    await refreshMessages();
-    await refreshLogs();
-    showToast("已发送", "success");
-  } catch (error) {
-    showToast(`发送失败: ${String(error.message || error)}`, "error");
-  } finally {
-    state.sending = false;
-    refs.sendBtn.disabled = false;
-    refs.sendBtn.textContent = "发送到当前 context";
-  }
-}
-
-async function controlService(serviceName, action) {
+async function controlService(name, action) {
   try {
     await requestJson("/api/services/control", {
       method: "POST",
-      body: JSON.stringify({ serviceName, action }),
+      body: JSON.stringify({ serviceName: name, action }),
     });
+    showToast(`service ${name} ${action} 已执行`, "success");
     await refreshServices();
-    showToast(`service ${serviceName} ${action} 已执行`, "success");
+    renderServicesQuick();
+    renderServicesTable();
   } catch (error) {
     showToast(`service 操作失败: ${String(error.message || error)}`, "error");
   }
 }
 
+async function runChatChannelAction(action, channel) {
+  try {
+    const payload = channel ? { channel } : {};
+    const data = await requestJson("/api/services/command", {
+      method: "POST",
+      body: JSON.stringify({
+        serviceName: "chat",
+        command: action,
+        payload,
+      }),
+    });
+
+    if (action === "test") {
+      const results = Array.isArray(data?.data?.results) ? data.data.results : [];
+      const one = channel
+        ? results.find((item) => String(item.channel || "") === channel)
+        : results[0];
+      const message = String(one?.message || "test completed");
+      showToast(`${channel || "chat"} test: ${message}`, one?.success ? "success" : "error");
+    } else {
+      showToast(`${channel || "chat"} ${action} 已执行`, "success");
+    }
+
+    await refreshChatChannels();
+    renderChatLinksTable();
+    await refreshServices();
+    renderServicesQuick();
+    renderServicesTable();
+  } catch (error) {
+    showToast(`chat ${action} 失败: ${String(error.message || error)}`, "error");
+  }
+}
+
 async function runTask(taskId) {
   try {
-    showToast(`开始执行 task: ${taskId}`);
     await requestJson("/api/tui/tasks/run", {
       method: "POST",
-      body: JSON.stringify({ taskId, reason: "triggered_by_web_tui" }),
+      body: JSON.stringify({ taskId, reason: "dashboard_manual_trigger" }),
     });
-    await refreshTasks();
-    state.selectedTaskId = taskId;
-    await refreshTaskRuns();
-    await refreshRunDetail();
-    await refreshLogs();
-    showToast(`task ${taskId} 执行完成`, "success");
+    showToast(`task ${taskId} 已触发`, "success");
+    await Promise.all([refreshTasks(), refreshLogs()]);
+    renderTasksTable();
+    renderLogs();
   } catch (error) {
     showToast(`task 执行失败: ${String(error.message || error)}`, "error");
   }
 }
 
+async function sendLocalMessage() {
+  if (state.sending) return;
+  const instructions = String(refs.localChatInput.value || "").trim();
+  if (!instructions) return;
+  if (!state.selectedAgentId) {
+    showToast("当前无可用 agent", "error");
+    return;
+  }
+
+  state.sending = true;
+  refs.localChatSendBtn.disabled = true;
+  refs.localChatSendBtn.textContent = "发送中...";
+
+  try {
+    await requestJson(`/api/tui/contexts/${encodeURIComponent(LOCAL_UI_CONTEXT_ID)}/execute`, {
+      method: "POST",
+      body: JSON.stringify({ instructions }),
+    });
+    refs.localChatInput.value = "";
+    await Promise.all([refreshLocalChat(), refreshLogs(), refreshContexts()]);
+    renderLocalChat();
+    renderLogs();
+    renderContextsTable();
+    showToast("已发送到 local_ui", "success");
+  } catch (error) {
+    showToast(`发送失败: ${String(error.message || error)}`, "error");
+  } finally {
+    state.sending = false;
+    refs.localChatSendBtn.disabled = false;
+    refs.localChatSendBtn.textContent = "发送";
+  }
+}
+
 function bindEvents() {
-  refs.refreshAgentsBtn.addEventListener("click", () => {
-    void refreshAll().catch((error) =>
-      showToast(`刷新 agent 失败: ${String(error.message || error)}`, "error"),
-    );
+  refs.refreshAllBtn.addEventListener("click", () => {
+    void refreshDashboard();
   });
 
   refs.agentSelect.addEventListener("change", (event) => {
-    const nextId = String(event.target.value || "");
-    state.selectedAgentId = nextId;
-    if (nextId) {
-      localStorage.setItem(AGENT_STORAGE_KEY, nextId);
+    state.selectedAgentId = String(event.target.value || "");
+    if (state.selectedAgentId) {
+      localStorage.setItem(AGENT_STORAGE_KEY, state.selectedAgentId);
     }
-    void refreshAll();
-  });
-
-  refs.refreshAllBtn.addEventListener("click", () => {
-    void refreshAll();
-  });
-
-  refs.contextSearch.addEventListener("input", (event) => {
-    state.contextFilter = String(event.target.value || "").trim();
-    renderContexts();
-  });
-
-  refs.contextList.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-context-id]");
-    if (!target) return;
-    const contextId = target.getAttribute("data-context-id") || "";
-    if (!contextId) return;
-    state.selectedContextId = contextId;
-    renderContexts();
-    void refreshMessages();
-  });
-
-  refs.refreshMessagesBtn.addEventListener("click", () => {
-    void refreshMessages();
-  });
-
-  refs.sendBtn.addEventListener("click", () => {
-    void sendToCurrentContext();
-  });
-
-  refs.messageInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      void sendToCurrentContext();
-    }
-  });
-
-  refs.messageList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-turn-toggle='true']");
-    if (!button) return;
-    const card = button.closest(".turn-event");
-    if (!card) return;
-    const isCollapsed = card.classList.contains("is-collapsed");
-    card.classList.toggle("is-collapsed", !isCollapsed);
-    button.textContent = isCollapsed ? "收起" : "展开";
+    void refreshDashboard();
   });
 
   refs.refreshServicesBtn.addEventListener("click", () => {
-    void refreshServices();
-  });
-
-  refs.servicesTable.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-svc-action]");
-    if (!target) return;
-    const action = target.getAttribute("data-svc-action") || "";
-    const serviceName = target.getAttribute("data-service-name") || "";
-    if (!action || !serviceName) return;
-    void controlService(serviceName, action);
+    void refreshServices().then(() => {
+      renderServicesQuick();
+      renderServicesTable();
+    });
   });
 
   refs.refreshTasksBtn.addEventListener("click", () => {
-    void refreshTasks();
+    void refreshTasks().then(renderTasksTable);
+  });
+
+  refs.refreshChatLinksBtn.addEventListener("click", () => {
+    void refreshChatChannels().then(renderChatLinksTable);
+  });
+
+  refs.reconnectAllChatBtn.addEventListener("click", () => {
+    void runChatChannelAction("reconnect", "");
+  });
+
+  refs.refreshLogsBtn.addEventListener("click", () => {
+    void refreshLogs().then(renderLogs);
+  });
+
+  refs.refreshPromptBtn.addEventListener("click", () => {
+    void refreshPrompt().then(renderPromptComposition);
+  });
+
+  refs.refreshChatBtn.addEventListener("click", () => {
+    void refreshLocalChat().then(renderLocalChat);
+  });
+
+  refs.localChatSendBtn.addEventListener("click", () => {
+    void sendLocalMessage();
+  });
+
+  refs.localChatInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      void sendLocalMessage();
+    }
+  });
+
+  refs.servicesTable.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-service-action]");
+    if (!target) return;
+    const action = String(target.getAttribute("data-service-action") || "");
+    const name = String(target.getAttribute("data-service-name") || "");
+    if (!action || !name) return;
+    void controlService(name, action);
   });
 
   refs.tasksTable.addEventListener("click", (event) => {
     const target = event.target.closest("[data-task-action]");
     if (!target) return;
-    const action = target.getAttribute("data-task-action");
-    const taskId = target.getAttribute("data-task-id") || "";
-    if (!taskId) return;
-
-    if (action === "run") {
+    const action = String(target.getAttribute("data-task-action") || "");
+    const taskId = String(target.getAttribute("data-task-id") || "");
+    if (action === "run" && taskId) {
       void runTask(taskId);
-      return;
-    }
-
-    if (action === "select") {
-      state.selectedTaskId = taskId;
-      state.selectedRunTimestamp = "";
-      state.runDetail = null;
-      renderTasks();
-      void refreshTaskRuns().then(() => refreshRunDetail());
     }
   });
 
-  refs.refreshRunsBtn.addEventListener("click", () => {
-    void refreshTaskRuns().then(() => refreshRunDetail());
-  });
-
-  refs.taskRunsTable.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-run-action]");
+  refs.chatLinksTable.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-chat-action]");
     if (!target) return;
-    const action = target.getAttribute("data-run-action");
-    const timestamp = target.getAttribute("data-run-ts") || "";
-    if (action !== "view" || !timestamp) return;
-    state.selectedRunTimestamp = timestamp;
-    renderTaskRuns();
-    void refreshRunDetail();
-  });
-
-  refs.refreshLogsBtn.addEventListener("click", () => {
-    void refreshLogs();
+    const action = String(target.getAttribute("data-chat-action") || "");
+    const channel = String(target.getAttribute("data-chat-channel") || "");
+    if (!action || !channel) return;
+    if (action === "test" || action === "reconnect") {
+      void runChatChannelAction(action, channel);
+    }
   });
 }
 
 function startPolling() {
   setInterval(() => {
-    void refreshAgents();
-  }, 7000);
-
-  setInterval(() => {
-    void refreshOverview();
-  }, 8000);
-
-  setInterval(() => {
-    void refreshContexts().then(() => refreshMessages());
-  }, 6000);
-
-  setInterval(() => {
-    void refreshServices();
-    void refreshTasks();
-    void refreshLogs();
-  }, 10000);
-
-  setInterval(() => {
-    if (!state.selectedTaskId) return;
-    void refreshTaskRuns().then(() => refreshRunDetail());
-  }, 9000);
+    void refreshDashboard();
+  }, 12000);
 }
 
 async function bootstrap() {
   bindEvents();
-  await refreshAll();
+  await refreshDashboard();
   startPolling();
 }
 

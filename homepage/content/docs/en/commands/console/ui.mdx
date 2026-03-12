@@ -8,6 +8,7 @@ description: Start console UI (single instance, multi-agent view)
 Manage the UI gateway hosted by `console`.
 
 This UI is not bound to one `agent on` process. One page can switch across multiple running agents.
+It is a state-first dashboard; chat is only a secondary capability.
 
 ## Usage
 
@@ -31,6 +32,9 @@ sma console ui [action] [options]
 - Requires console first: `sma console start`.
 - On startup, UI loads active agents from console registry.
 - Agent switcher in top bar controls all `Contexts/Services/Tasks/Logs` views.
+- Dashboard shows `Chat Channels` link status (Telegram/Feishu/QQ) with `test` and `reconnect` actions.
+- Chat input is fixed to `local_ui` context only; UI cannot publish instructions to arbitrary contexts.
+- UI shows grouped `system prompt` composition (static/service/runtime).
 - `sma console status` also shows UI status.
 
 ## Typical flow

@@ -23,6 +23,7 @@ import { buildTelegramVoiceTranscriptionInstruction } from "./VoiceInput.js";
 import { TelegramStateStore } from "./StateStore.js";
 import { appendOutboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 
 /**
  * Telegram 平台适配器。
@@ -360,6 +361,90 @@ export class TelegramBot extends BaseChatChannel {
     if (!actorId) return;
     const key = this.getFollowupKey(threadKey, actorId);
     this.followupExpiryByActorAndThread.set(key, expiry);
+  }
+
+  /**
+   * 读取 Telegram runtime 快照。
+   *
+   * 关键点（中文）
+   * - 仅暴露只读状态给上层 dashboard，不暴露内部可变引用。
+   */
+  getRuntimeStatus(): {
+    running: boolean;
+    linkState: "connected" | "disconnected" | "unknown";
+    statusText: string;
+    detail: Record<string, string | number | boolean | null>;
+  } {
+    const running = this.isRunning;
+    const linkState =
+      running && (typeof this.botId === "number" || !!this.botUsername)
+        ? "connected"
+        : running
+          ? "unknown"
+          : "disconnected";
+    return {
+      running,
+      linkState,
+      statusText:
+        linkState === "connected"
+          ? "polling"
+          : linkState === "unknown"
+            ? "starting"
+            : "stopped",
+      detail: {
+        pollInFlight: this.pollInFlight,
+        lastUpdateId: this.lastUpdateId,
+        consecutivePollErrors: this.consecutivePollErrors,
+        nextPollAllowedAt: this.nextPollAllowedAt || null,
+        botUsername: this.botUsername || null,
+        botId: typeof this.botId === "number" ? this.botId : null,
+      },
+    };
+  }
+
+  /**
+   * 执行 Telegram 连通性测试。
+   *
+   * 关键点（中文）
+   * - 通过 `getMe` 主动验证 token 与平台 API 可达性。
+   */
+  async testConnection(): Promise<ChatChannelTestResult> {
+    const startedAt = Date.now();
+    if (!this.botToken) {
+      return {
+        channel: "telegram",
+        success: false,
+        testedAtMs: startedAt,
+        message: "Bot token is missing",
+      };
+    }
+    try {
+      const me = await this.api.requestJson<{ id?: number; username?: string }>(
+        "getMe",
+        {},
+      );
+      const now = Date.now();
+      return {
+        channel: "telegram",
+        success: true,
+        testedAtMs: now,
+        latencyMs: now - startedAt,
+        message: `Connected as @${String(me.username || "unknown")}`,
+        detail: {
+          botId: typeof me.id === "number" ? me.id : null,
+          botUsername: me.username || null,
+        },
+      };
+    } catch (error) {
+      const now = Date.now();
+      return {
+        channel: "telegram",
+        success: false,
+        testedAtMs: now,
+        latencyMs: now - startedAt,
+        message: `Telegram API check failed: ${String(error)}`,
+      };
+    }
   }
 
   private escapeRegExp(text: string): string {

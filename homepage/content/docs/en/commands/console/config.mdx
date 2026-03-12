@@ -1,0 +1,46 @@
+---
+title: sma console config
+description: Manage ship.json, alias, and llm provider/model entries
+---
+
+# `sma console config`
+
+Manage project `ship.json` and structured LLM configuration commands.
+
+## Usage
+
+```bash
+sma console config <subcommand>
+```
+
+## Subcommands
+
+- `get [keyPath]`
+- `set <keyPath> <value>`
+- `unset <keyPath>`
+- `alias`
+- `llm`
+
+## `llm` subcommands
+
+```bash
+sma console config llm provider list
+sma console config llm provider add <providerId>
+sma console config llm provider update <providerId>
+sma console config llm provider remove <providerId>
+
+sma console config llm model list
+sma console config llm model add <modelId>
+sma console config llm model update <modelId>
+sma console config llm model activate <modelId>
+sma console config llm model remove <modelId>
+```
+
+## Examples
+
+```bash
+sma console config get llm.activeModel
+sma console config set start.port 3001
+sma console config unset services.chat.channels.telegram
+sma console config alias --dry-run
+```

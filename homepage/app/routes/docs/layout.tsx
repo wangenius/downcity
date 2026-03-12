@@ -51,7 +51,7 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
         title: product.productName,
       }}
       sidebar={{
-        defaultOpenLevel: 1,
+        defaultOpenLevel: 0,
       }}
       i18n={i18n}
     >

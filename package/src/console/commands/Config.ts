@@ -1,5 +1,5 @@
 /**
- * `sma config` 命令组。
+ * `sma console config` 命令组。
  *
  * 目标（中文）
  * - 提供 ship.json 的通用读写能力（get/set/unset）。
@@ -275,7 +275,7 @@ function applyCommonOptions(command: Command): Command {
 }
 
 /**
- * 注册 `sma config` 命令组。
+ * 注册 `sma console config` 命令组。
  */
 export function registerConfigCommand(program: Command): void {
   const config = program
@@ -878,7 +878,7 @@ export function registerConfigCommand(program: Command): void {
       if (!models[id]) throw new Error(`Model not found: ${id}`);
       if (shipConfig.llm.activeModel === id) {
         throw new Error(
-          `Cannot remove active model "${id}". Please run "sma config llm model activate <anotherModelId>" first.`,
+          `Cannot remove active model "${id}". Please run "sma console config llm model activate <anotherModelId>" first.`,
         );
       }
       delete models[id];

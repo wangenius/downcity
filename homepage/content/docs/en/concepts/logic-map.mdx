@@ -22,7 +22,7 @@ what `console`, `agent`, `service`, and `extension` each own, and how one reques
 flowchart LR
   subgraph CP[Control Plane (Console)]
     CLI[sma CLI] --> CONSOLE[sma console start\nconsole daemon]
-    CLI --> CFG[sma config ...\nmodel/runtime config]
+    CLI --> CFG[sma console config ...\nmodel/runtime config]
     CLI --> SVCOPS[sma service ...\nservice ops]
     CLI --> EXTOPS[sma extension ...\nextension ops]
     CONSOLE --> REG[~/.ship/manager/agents.json\nagent registry]
@@ -68,7 +68,7 @@ sequenceDiagram
 - `console` handles governance/ops, `agent` handles execution/persistence.
 - `service` is the core domain layer, `extension` is the optional enhancement layer.
 - `service` and `extension` are operated from console-facing commands, but execution happens inside agent runtime.
-- Model configuration is managed with `sma config llm ...` and applied to project runtime config.
+- Model configuration is managed with `sma console config llm ...` and applied to project runtime config.
 
 ## 5. Typical Command Order
 

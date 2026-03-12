@@ -580,7 +580,7 @@ agent
     await restartCommand(cwd, options);
   }));
 
-registerConfigCommand(program);
+registerConfigCommand(consoleCommand);
 
 registerServicesCommand(program);
 registerExtensionsCommand(program);

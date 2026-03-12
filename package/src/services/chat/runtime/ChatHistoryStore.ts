@@ -10,8 +10,8 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { generateId } from "@utils/Id.js";
-import { getShipChatHistoryPath } from "@/main/server/env/Paths.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import { getShipChatHistoryPath } from "@/console/env/Paths.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import type {

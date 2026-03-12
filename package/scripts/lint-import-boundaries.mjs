@@ -79,27 +79,27 @@ async function run() {
 
       const target = resolveToSrcRelative(filePath, specifier);
 
-      const allowMainServerClient = target.startsWith("main/server/daemon/Client");
+      const allowMainServerClient = target.startsWith("console/daemon/Client");
 
-      // 规则 1（中文）：service 全量禁止反向依赖 main/server（daemon client 例外）。
-      if (target.startsWith("main/server/") && !allowMainServerClient) {
+      // 规则 1（中文）：service 全量禁止反向依赖 console（daemon client 例外）。
+      if (target.startsWith("console/") && !allowMainServerClient) {
         violations.push({
           file: srcRelativeFilePath,
           specifier,
-          reason: "services 层禁止直接依赖 main/server/*，请通过依赖注入访问运行时能力",
+          reason: "services 层禁止直接依赖 console/*，请通过依赖注入访问运行时能力",
         });
       }
 
-      // 规则 2（中文）：service 入口文件禁止直接依赖 main-server。
+      // 规则 2（中文）：service 入口文件禁止直接依赖 console。
       if (
         isServiceEntryFile &&
-        target.startsWith("main/server/") &&
+        target.startsWith("console/") &&
         !allowMainServerClient
       ) {
         violations.push({
           file: srcRelativeFilePath,
           specifier,
-          reason: "services/*/service-entry.ts 禁止直接依赖 main/server/*",
+          reason: "services/*/service-entry.ts 禁止直接依赖 console/*",
         });
       }
 

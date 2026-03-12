@@ -19,7 +19,7 @@
    - 支持任务 CRUD、状态切换、立即执行、cron 调度运行时。
 4. `memory/`
    - 负责上下文记忆提取、压缩与备份策略。
-   - 由 `main/runtime/ContextManager` 在上下文更新后异步触发，不阻塞主对话链路。
+   - 由 `agent/context/manager/ContextManager` 在上下文更新后异步触发，不阻塞主对话链路。
 
 ## 关键文件
 
@@ -41,5 +41,5 @@
 
 ## 边界约束
 
-- `services` 应通过 `main/service/ServiceRuntime` 端口获取运行时能力。
+- `services` 应通过 `agent/service/ServiceRuntime` 端口获取运行时能力。
 - 服务间协作优先通过运行时依赖端口（`ServiceRuntime`）而非隐式全局状态。

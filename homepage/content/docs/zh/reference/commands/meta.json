@@ -2,10 +2,7 @@
   "title": "命令",
   "pages": [
     "create",
-    "start",
-    "stop",
-    "manager",
-    "status",
+    "console",
     "agent",
     "config",
     "service",

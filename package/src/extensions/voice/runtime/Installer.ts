@@ -3,7 +3,7 @@ import fs from "node:fs";
 import fsExtra from "fs-extra";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { VoiceModelCatalogItem, VoiceModelId } from "@main/types/Voice.js";
+import type { VoiceModelCatalogItem, VoiceModelId } from "@agent/types/Voice.js";
 
 const HUGGINGFACE_HOST = "https://huggingface.co";
 

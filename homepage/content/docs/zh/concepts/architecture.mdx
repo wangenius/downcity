@@ -1,30 +1,45 @@
 ---
 title: 架构总览
-description: ShipMyAgent 的运行层次与关键组件
+description: ShipMyAgent 的核心分层：console、agent、service、extension
 ---
 
 # 架构总览
 
-ShipMyAgent 的核心是“本地 Runtime + 可审计数据目录 + 多渠道消息接入”。
+ShipMyAgent 现在可以直接按两大主干理解：
 
-## 运行层次
+- `console`：全局控制与运维中台
+- `agent`：项目执行运行时
 
-1. **CLI 层**：`sma agent create`、`sma agent ...`、`sma task ...`
-2. **Server 层**：HTTP 路由（`/health`、`/api/execute`、`/api/services/*`、`/api/extensions/*`）
-3. **Service/Extension 层**：`chat` / `skill` / `task` / `memory` / `voice`
-4. **Context 层**：`.ship/context/<contextId>/messages/messages.jsonl`
-5. **存储层**：`.ship/logs`、`.ship/task`、`.ship/chat`、`.ship/memory`、`.ship/config`
+在这两大主干内部，`service` 与 `extension` 作为能力层被统一调度。
 
-## 核心设计点
+## 分层结构
 
-- 同一会话串行处理，不同会话并行处理。
-- 对话、任务、日志均落盘，便于审计和回溯。
-- Service/Extension 统一动作模型，CLI 与 HTTP 共享执行入口。
+1. **Console 层（全局）**
+- 命令：`sma console ...`、`sma config ...`、`sma service ...`、`sma extension ...`
+- 职责：全局进程管理、运维入口、模型与运行配置治理
+
+2. **Agent 层（项目）**
+- 命令：`sma agent create/on/off/status/restart ...`
+- 职责：加载项目上下文，执行模型与工具调用，落盘运行状态
+
+3. **Capability 层（运行时能力）**
+- `service`：核心业务域（`chat` / `skill` / `task` / `memory`）
+- `extension`：共享扩展域（如 `voice`）
+
+4. **State 层（可审计落盘）**
+- 路径：`.ship/context`、`.ship/logs`、`.ship/.cache`、`.ship/tasks`、`.ship/debug`
+- 目标：可回放、可定位、可审计
+
+## 架构原则
+
+- 控制与执行分离：`console` 负责管控，`agent` 负责执行。
+- 核心与扩展分离：`service` 是核心，`extension` 是增强。
+- 命令入口统一：同一套能力可通过 CLI/HTTP 访问。
+- 配置变更前置：模型等关键配置先通过 console 入口管理，再进入 agent 执行。
 
 ## 延伸阅读
 
+- [架构逻辑图](/zh/docs/concepts/logic-map)
+- [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)
 - [Service Runtime](/zh/docs/concepts/service-runtime)
 - [Extension Runtime](/zh/docs/concepts/extension-runtime)
-- [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)
-- [上下文工程](/zh/docs/concepts/context-engineering)
-- [消息处理链路](/zh/docs/concepts/message-processing)

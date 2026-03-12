@@ -5,19 +5,16 @@ description: ShipMyAgent 命令行参考入口
 
 # CLI 命令
 
-CLI 文档现已按“单命令页面”拆分维护。
+CLI 文档按“单命令页面”组织。
 
 ## 命令目录
 
 - 浏览全部命令页：[/zh/docs/reference/commands](/zh/docs/reference/commands)
 
-## 一级命令
+## 主要命令组
 
 - [`sma agent create`](/zh/docs/reference/commands/create)
-- [`sma start`](/zh/docs/reference/commands/start)
-- [`sma stop`](/zh/docs/reference/commands/stop)
-- [`sma manager`](/zh/docs/reference/commands/manager)
-- [`sma status`](/zh/docs/reference/commands/status)
+- [`sma console`](/zh/docs/reference/commands/console)
 - [`sma agent`](/zh/docs/reference/commands/agent)
 - [`sma config`](/zh/docs/reference/commands/config)
 - [`sma service`](/zh/docs/reference/commands/service)
@@ -28,18 +25,14 @@ CLI 文档现已按“单命令页面”拆分维护。
 - [`sma task`](/zh/docs/reference/commands/task)
 - [`sma memory`](/zh/docs/reference/commands/memory)
 
-## 新运行逻辑（简版）
+## 运行模型（简版）
 
-- `sma agent create`：创建/初始化一个 agent 项目
-- `sma start`：启动 manager（后台）
-- `sma stop`：停止 manager（后台）
-- `sma manager status`：查看 manager + 活跃托管 agent
-- `sma manager agents list`：查看活跃托管 agent daemon 列表
-- `sma status`：顶层快捷查看 manager 全局状态
-- `sma agent on`：默认后台
-- `sma agent on --foreground`：前台
-- `sma agent status`：查看当前目录 agent 状态
-- `sma agent off`：关闭当前目录 agent
+- `sma console start`：启动全局控制面
+- `sma agent create`：初始化项目运行文件
+- `sma agent on`：启动项目 agent daemon
+- `sma service ...`：运维核心 service 能力
+- `sma extension ...`：运维 extension 扩展能力
+- `sma config llm ...`：管理运行时模型配置
 
 ## 保持最新
 

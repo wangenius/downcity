@@ -1,45 +1,49 @@
 ---
 title: 关系与进程模型
-description: Service 与 Extension 的关系，以及进程运行模型
+description: console、agent、service、extension 的协作关系与进程启动顺序
 ---
 
 # 关系与进程模型
 
-本文回答两个问题：
+本文聚焦两件事：
 
-- Service 与 Extension 的关系是什么
-- 运行时有哪些进程，怎么协同
+- 四类角色如何协作
+- 进程如何启动与连接
 
-## Service 与 Extension 的关系
+## 1. 角色关系
 
-- Service 承载核心业务域（`chat`、`task`、`skill`、`memory`）。
-- Extension 承载可选扩展能力（例如 `voice`）。
-- 两者共享统一动作模型：CLI 与 HTTP 都走 runtime 控制/命令入口。
-- 一次 Agent 执行可能同时触发：
-  - service 动作（业务流程）
-  - extension 动作（专用能力）
+- `console` 是控制中心：维护 agent registry，承接 `config/service/extension` 运维命令。
+- `agent` 是执行中心：在项目内处理消息、任务、工具调用与落盘。
+- `service` 是业务域：承载核心流程能力。
+- `extension` 是扩展域：承载跨 agent 共享的增强能力。
 
-## 进程模型
+可以用一句话概括：
 
-1. 先启动 manager 进程：`sma start`
-2. 在项目中启动 agent runtime 进程：`sma agent on`
-3. runtime 加载 `services.*` 与 `extensions.*` 配置
-4. 接收消息/任务并进行调度
-5. Agent 执行触发 service/extension 动作
-6. 结果与轨迹写入 `.ship/*`
+`console` 负责“管”，`agent` 负责“跑”，`service/extension` 负责“提供能力”。
 
-## 快速检查
+## 2. 进程启动模型
+
+1. 启动 console：`sma console start`
+2. 在项目内启动 agent：`sma agent on`
+3. agent runtime 加载项目 `ship.json`（包含 `services.*`、`extensions.*`、`llm.*`）
+4. 入站消息/任务进入 agent 调度
+5. agent 调用 service/extension 完成执行
+6. 执行轨迹写入 `.ship/*`
+
+## 3. 运维检查清单
 
 ```bash
-sma start
-sma agent on
+sma console status
+sma agent status .
 sma service list
 sma extension list
 ```
 
 ## 相关文档
 
+- [架构逻辑图](/zh/docs/concepts/logic-map)
+- [Service 与 Extension 区别](/zh/docs/concepts/service-vs-extension)
 - [Service Runtime](/zh/docs/concepts/service-runtime)
 - [Extension Runtime](/zh/docs/concepts/extension-runtime)
+- [`sma console`](/zh/docs/reference/commands/console)
 - [`sma agent`](/zh/docs/reference/commands/agent)
-- [`sma start`](/zh/docs/reference/commands/start)

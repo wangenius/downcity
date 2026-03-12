@@ -6,8 +6,8 @@
  * - 所有动作统一返回结构化结果，失败不抛给上层。
  */
 
-import type { ServiceActionResult } from "@main/service/ServiceManager.js";
-import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
+import type { ServiceActionResult } from "@agent/service/ServiceManager.js";
+import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import type {
   MemoryFlushPayload,

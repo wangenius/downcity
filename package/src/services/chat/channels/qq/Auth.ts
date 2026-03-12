@@ -1,4 +1,4 @@
-import type { ShipConfig } from "@main/types/ShipConfig.js";
+import type { ShipConfig } from "@agent/types/ShipConfig.js";
 import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
 
 /**

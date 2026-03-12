@@ -9,7 +9,7 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import {
   isValidTaskId,

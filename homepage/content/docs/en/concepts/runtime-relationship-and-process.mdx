@@ -1,45 +1,49 @@
 ---
 title: Runtime Relationship & Process
-description: Relationship between Service and Extension, and process model
+description: Collaboration model and process order across console, agent, service, and extension
 ---
 
 # Runtime Relationship & Process
 
-This page explains two things:
+This page focuses on two things:
 
-- how Service and Extension relate
-- how processes are started and collaborate
+- how the four roles collaborate
+- how runtime processes are started and connected
 
-## Service vs Extension relationship
+## 1. Role Relationship
 
-- Service handles core runtime business domains (`chat`, `task`, `skill`, `memory`).
-- Extension handles optional capability plugins (for example `voice`).
-- Both share a unified action model: CLI and HTTP routes call into runtime control/command handlers.
-- Agent execution may involve both:
-  - Service actions for domain workflows
-  - Extension actions for specialized capabilities
+- `console` is the control center: manages agent registry and receives `config/service/extension` operational commands.
+- `agent` is the execution center: handles message/task/tool execution and persistence in each project.
+- `service` is the core domain layer: provides primary business workflows.
+- `extension` is the optional capability layer: provides shared enhancements across agents.
 
-## Process model
+In one line:
 
-1. Start manager process: `sma start`
-2. Start agent runtime process in project: `sma agent on`
-3. Runtime loads configured `services.*` and `extensions.*`
-4. Inbound messages/tasks are scheduled
-5. Agent execution triggers service/extension actions
-6. Outputs and traces are persisted to `.ship/*`
+`console` governs, `agent` runs, `service/extension` provide capabilities.
 
-## Practical checklist
+## 2. Process Startup Model
+
+1. Start console: `sma console start`
+2. Start agent in project: `sma agent on`
+3. Agent runtime loads project `ship.json` (`services.*`, `extensions.*`, `llm.*`)
+4. Inbound messages/tasks enter agent scheduling
+5. Agent invokes service/extension to complete execution
+6. Runtime traces are persisted to `.ship/*`
+
+## 3. Operational Checklist
 
 ```bash
-sma start
-sma agent on
+sma console status
+sma agent status .
 sma service list
 sma extension list
 ```
 
-## Related docs
+## Related Docs
 
+- [Architecture Logic Map](/en/docs/concepts/logic-map)
+- [Service vs Extension](/en/docs/concepts/service-vs-extension)
 - [Service Runtime](/en/docs/concepts/service-runtime)
 - [Extension Runtime](/en/docs/concepts/extension-runtime)
+- [`sma console`](/en/docs/reference/commands/console)
 - [`sma agent`](/en/docs/reference/commands/agent)
-- [`sma start`](/en/docs/reference/commands/start)

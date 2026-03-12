@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { TelegramAttachmentType } from "./Shared.js";
 
 /**

@@ -1,30 +1,45 @@
 ---
 title: Architecture Overview
-description: Runtime layers and key components of ShipMyAgent
+description: "Core architecture layers in ShipMyAgent: console, agent, service, and extension"
 ---
 
 # Architecture Overview
 
-ShipMyAgent is built around local runtime execution, auditable on-disk state, and multi-channel chat ingress.
+ShipMyAgent is easiest to reason about with two top-level trunks:
 
-## Runtime layers
+- `console`: global control and operations plane
+- `agent`: project runtime execution plane
 
-1. **CLI layer**: `sma agent create`, `sma agent ...`, `sma task ...`
-2. **Server layer**: HTTP routes (`/health`, `/api/execute`, `/api/services/*`, `/api/extensions/*`)
-3. **Service/Extension layer**: `chat`, `skill`, `task`, `memory`, `voice`
-4. **Context layer**: `.ship/context/<contextId>/messages/messages.jsonl`
-5. **Storage layer**: `.ship/logs`, `.ship/task`, `.ship/chat`, `.ship/memory`, `.ship/config`
+Inside these trunks, `service` and `extension` form the capability layer.
 
-## Core design choices
+## Layered Structure
 
-- Same conversation is processed serially; different conversations run concurrently.
-- Chat, task, and logs are persisted for auditability.
-- Service/Extension action model is shared across CLI and HTTP routes.
+1. **Console Layer (global)**
+- Commands: `sma console ...`, `sma config ...`, `sma service ...`, `sma extension ...`
+- Responsibility: global process management, operational entry points, model/runtime configuration governance
 
-## Read next
+2. **Agent Layer (project)**
+- Commands: `sma agent create/on/off/status/restart ...`
+- Responsibility: load project context, run model/tool execution, persist runtime state
 
+3. **Capability Layer (runtime abilities)**
+- `service`: core domains (`chat` / `skill` / `task` / `memory`)
+- `extension`: shared optional capabilities (for example `voice`)
+
+4. **State Layer (auditable persistence)**
+- Paths: `.ship/context`, `.ship/logs`, `.ship/.cache`, `.ship/tasks`, `.ship/debug`
+- Goal: replayability, diagnosability, auditability
+
+## Architecture Rules
+
+- Separate control from execution: `console` governs, `agent` executes.
+- Separate core from optional: `service` is core, `extension` is enhancement.
+- Keep command entry unified: same abilities are accessible through CLI/HTTP.
+- Apply critical config first: model/runtime config is managed via console-facing commands before agent execution.
+
+## Read Next
+
+- [Architecture Logic Map](/en/docs/concepts/logic-map)
+- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
 - [Service Runtime](/en/docs/concepts/service-runtime)
 - [Extension Runtime](/en/docs/concepts/extension-runtime)
-- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
-- [Context Engineering](/en/docs/concepts/context-engineering)
-- [Message Processing Flow](/en/docs/concepts/message-processing)

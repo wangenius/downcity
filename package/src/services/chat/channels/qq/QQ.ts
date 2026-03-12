@@ -12,7 +12,7 @@ import type {
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
 import type { QqIncomingAttachment, QqRawInboundAttachment } from "@services/chat/types/QqVoice.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**

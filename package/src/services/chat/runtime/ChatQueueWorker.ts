@@ -8,12 +8,12 @@
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
-import type { AgentResult } from "@main/types/Agent.js";
+import type { AgentResult } from "@agent/types/Agent.js";
 import type {
   ShipContextUserMessageV1,
   ContextMessageV1,
-} from "@main/types/ContextMessage.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+} from "@agent/types/ContextMessage.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {

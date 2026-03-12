@@ -11,7 +11,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import type { FSWatcher } from "node:fs";
-import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
 import type {
   MemoryDefaults,
   MemorySourceType,
@@ -21,7 +21,7 @@ import {
   getShipDirPath,
   getShipMemoryDailyDirPath,
   getShipMemoryLongTermPath,
-} from "@/main/server/env/Paths.js";
+} from "@/console/env/Paths.js";
 import {
   MemoryIndexer,
   type MemoryIndexSyncResult,

@@ -10,14 +10,14 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { execa } from "execa";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
-import { Agent } from "@main/agent/Agent.js";
-import { withRequestContext } from "@main/context/manager/RequestContext.js";
-import { FilePersistor } from "@/main/context/context-agent/components/FilePersistor.js";
-import { SummaryCompactor } from "@/main/context/context-agent/components/SummaryCompactor.js";
-import { RuntimeOrchestrator } from "@/main/context/context-agent/components/RuntimeOrchestrator.js";
-import { PromptSystem } from "@main/prompts/system/PromptSystem.js";
-import { shellTools } from "@main/tools/shell/Tool.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import { Agent } from "@agent/Agent.js";
+import { withRequestContext } from "@agent/context/manager/RequestContext.js";
+import { FilePersistor } from "@/agent/context/context-agent/components/FilePersistor.js";
+import { SummaryCompactor } from "@/agent/context/context-agent/components/SummaryCompactor.js";
+import { RuntimeOrchestrator } from "@/agent/context/context-agent/components/RuntimeOrchestrator.js";
+import { PromptSystem } from "@agent/prompts/system/PromptSystem.js";
+import { shellTools } from "@agent/tools/shell/Tool.js";
 import type {
   ShipTaskKind,
   ShipTaskFrontmatterV1,
@@ -27,7 +27,7 @@ import type {
   ShipTaskRunStatusV1,
   ShipTaskRunTriggerV1,
 } from "@services/task/types/Task.js";
-import type { AgentResult } from "@main/types/Agent.js";
+import type { AgentResult } from "@agent/types/Agent.js";
 import type { JsonObject } from "@/types/Json.js";
 import {
   createTaskRunContextId,

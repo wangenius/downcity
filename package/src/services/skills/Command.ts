@@ -3,7 +3,7 @@
  *
  * 设计目标（中文）
  * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/install）
- * - 同时提供本地视角的 `list`：列出 ShipMyAgent 当前能发现的 skills（含 project/home/built-in）
+ * - 同时提供本地视角的 `list`：列出 ShipMyAgent 当前能发现的 skills（含 project/home）
  *
  * 注意（中文）
  * - 这里是 CLI 命令层，不依赖运行时 server，不读取 RuntimeState
@@ -13,28 +13,9 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { execa } from "execa";
-import os from "node:os";
 import { discoverClaudeSkillsSync } from "./runtime/Discovery.js";
 import { getClaudeSkillSearchRoots } from "./runtime/Paths.js";
-import { loadShipConfig } from "@/main/server/env/Config.js";
-
-function getUserAgentsSkillsDir(): string {
-  return path.join(os.homedir(), ".agents", "skills");
-}
-
-async function syncClaudeSkillsToUserAgentsSkills(): Promise<void> {
-  const src = path.join(os.homedir(), ".claude", "skills");
-  const dst = getUserAgentsSkillsDir();
-  try {
-    if (!(await fs.pathExists(src))) return;
-    const stat = await fs.stat(src);
-    if (!stat.isDirectory()) return;
-    await fs.ensureDir(dst);
-    await fs.copy(src, dst, { overwrite: true, dereference: true });
-  } catch {
-    // ignore
-  }
-}
+import { loadShipConfig } from "@/console/env/Config.js";
 
 async function runNpxSkills(args: string[], opts?: { yes?: boolean }): Promise<number> {
   const yes = opts?.yes !== false;
@@ -75,9 +56,6 @@ export async function skillInstallCommand(
   if (globalInstall) args.push("-g");
 
   await runNpxSkills(args, { yes });
-
-  // 关键点（中文）：`npx skills -g` 默认装到 ~/.claude/skills，这里同步到 ~/.agents/skills 供 ShipMyAgent 扫描
-  await syncClaudeSkillsToUserAgentsSkills();
 }
 
 export async function skillListCommand(cwd: string = "."): Promise<void> {

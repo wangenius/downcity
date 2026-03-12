@@ -1,0 +1,64 @@
+---
+title: Service vs Extension
+description: Dedicated guide to responsibility boundaries, call direction, scope, and sharing model
+---
+
+# Service vs Extension
+
+This page is a dedicated explanation of how `service` and `extension` differ.
+
+## One-line Summary (Essence)
+
+- `service`: an **agent-layer mechanism** that must run with concrete `context` (conversation/model/persistence).
+- `extension`: a **console/platform-layer mechanism** whose core is not conversation-context orchestration; it is invoked by services or CLI.
+
+## Comparison
+
+| Dimension | service | extension |
+| --- | --- | --- |
+| Primary role | Agent execution mechanism (context-oriented) | Console/platform extension mechanism |
+| command/action | Registered and orchestrated by agent runtime | Registered and invoked by service/CLI |
+| Typical call direction | `agent -> service` | `service -> extension`, `CLI -> extension` |
+| Config scope | `ship.json.services.*` (per-project) | `ship.json.extensions.*` (per-project enablement/state) |
+| Context dependency | Strong (ContextManager/model/persistor) | Weak or none as core design goal |
+| Asset sharing | Mostly project runtime state (`.ship/*`) | Often global reusable assets (voice defaults to `~/.ship/models/voice`) |
+
+## Direct Confirmation
+
+1. `service` is an agent-layer mechanism and must be combined with concrete context.
+- Confirmed: **yes**.
+
+2. `extension` is context-independent in essence and belongs to console/platform-level extension.
+- Confirmed: **directionally yes**.
+- Note: extension still receives runtime input, but its core role is not conversation-context orchestration.
+
+3. `service` and `extension` should be documented as two different mechanisms, not one generic “capabilities” bucket.
+- Confirmed: **yes**.
+
+4. Voice extension assets are globally shared by default.
+- Confirmed: **yes (by default)**.
+- Note:
+  - voice model directory defaults to `~/.ship/models/voice`, so multiple agents can reuse downloaded models.
+  - each agent still has its own extension switches/config under `ship.json.extensions.*`.
+  - if `modelsDir` is set to a project path, sharing can be disabled intentionally.
+
+## Call Graph
+
+```mermaid
+flowchart LR
+  AGENT[agent runtime] --> SVC[service action]
+  SVC --> SVC2[other service action]
+  SVC --> EXT[extension action]
+  CLI[sma extension ...] --> EXT
+```
+
+## Practical Rules
+
+- Put context-bound orchestration logic in `service`.
+- Put platform-level reusable logic in `extension`.
+
+## Related Docs
+
+- [Service Runtime](/en/docs/concepts/service-runtime)
+- [Extension Runtime](/en/docs/concepts/extension-runtime)
+- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)

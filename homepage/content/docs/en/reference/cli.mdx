@@ -5,19 +5,16 @@ description: Command-line reference entry for ShipMyAgent
 
 # CLI Commands
 
-The CLI reference is now organized as per-command documents.
+CLI docs are organized per command page.
 
 ## Command docs directory
 
 - Browse all command pages: [/en/docs/reference/commands](/en/docs/reference/commands)
 
-## Top-level command groups
+## Primary command groups
 
 - [`sma agent create`](/en/docs/reference/commands/create)
-- [`sma start`](/en/docs/reference/commands/start)
-- [`sma stop`](/en/docs/reference/commands/stop)
-- [`sma manager`](/en/docs/reference/commands/manager)
-- [`sma status`](/en/docs/reference/commands/status)
+- [`sma console`](/en/docs/reference/commands/console)
 - [`sma agent`](/en/docs/reference/commands/agent)
 - [`sma config`](/en/docs/reference/commands/config)
 - [`sma service`](/en/docs/reference/commands/service)
@@ -28,22 +25,18 @@ The CLI reference is now organized as per-command documents.
 - [`sma task`](/en/docs/reference/commands/task)
 - [`sma memory`](/en/docs/reference/commands/memory)
 
-## New runtime logic (short)
+## Runtime model (short)
 
-- `sma agent create`: create/initialize an agent project
-- `sma start`: start manager in background
-- `sma stop`: stop manager background process
-- `sma manager status`: show manager + active managed agents
-- `sma manager agents list`: list active managed agent daemons
-- `sma status`: top-level alias for manager global status
-- `sma agent on`: default background mode
-- `sma agent on --foreground`: foreground mode
-- `sma agent status`: check current directory agent status
-- `sma agent off`: stop current directory agent
+- `sma console start`: start global control plane
+- `sma agent create`: initialize project runtime files
+- `sma agent on`: start project agent daemon
+- `sma service ...`: operate service domain capabilities
+- `sma extension ...`: operate extension capabilities
+- `sma config llm ...`: manage model config for runtime
 
 ## Always up to date
 
-Run local help for latest flags:
+Use local help for latest flags:
 
 ```bash
 sma --help

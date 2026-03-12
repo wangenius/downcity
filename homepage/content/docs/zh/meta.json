@@ -3,10 +3,9 @@
   "pages": [
     "index",
     "quickstart",
-    "capabilities",
+    "concepts",
     "services",
     "extensions",
-    "concepts",
     "operations",
     "reference",
     "community"

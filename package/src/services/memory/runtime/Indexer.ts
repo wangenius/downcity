@@ -17,7 +17,7 @@ import type {
   MemorySourceStat,
 } from "@services/memory/types/Memory.js";
 import type { MemorySourceFile } from "./Store.js";
-import { getShipMemoryIndexPath } from "@/main/server/env/Paths.js";
+import { getShipMemoryIndexPath } from "@/console/env/Paths.js";
 
 const INDEX_SCHEMA_VERSION = 1;
 const SNIPPET_MAX_CHARS = 700;

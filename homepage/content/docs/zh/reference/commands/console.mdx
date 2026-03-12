@@ -1,0 +1,51 @@
+---
+title: sma console
+description: 全局 console 命令组，用于进程编排与多 agent 治理
+---
+
+# `sma console`
+
+`console` 是全局控制面。
+
+你可以通过它管理 console daemon，并查看当前托管的 agent runtime。
+
+## 用法
+
+```bash
+sma console start
+sma console stop
+sma console restart
+sma console status
+sma console agents [--json]
+```
+
+## 行为说明
+
+- `start`：后台启动 console daemon。
+- `stop`：停止 console daemon，并停止其托管的子 agent daemon。
+- `restart`：重启 console daemon。
+- `status`：查看 console 进程状态与活跃 agent 清单。
+- `agents`：打印当前活跃托管 agent 列表。
+
+## 典型流程
+
+```bash
+# 1) 启动全局 console
+sma console start
+
+# 2) 启动项目 runtime
+cd /path/to/agent-project
+sma agent create .
+sma agent on
+
+# 3) 查看状态
+sma console status
+sma agent status .
+```
+
+## 相关命令
+
+- [`sma agent`](/zh/docs/reference/commands/agent)
+- [`sma config`](/zh/docs/reference/commands/config)
+- [`sma service`](/zh/docs/reference/commands/service)
+- [`sma extension`](/zh/docs/reference/commands/extension)

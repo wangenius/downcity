@@ -5,7 +5,7 @@ description: Service 的职责、运行位置与运维方式
 
 # Service Runtime
 
-Service 是承载核心业务能力的运行时模块类型。
+Service 是 Agent Runtime 里的核心业务模块。
 
 常见内置 service：
 
@@ -14,17 +14,27 @@ Service 是承载核心业务能力的运行时模块类型。
 - `task`
 - `memory`
 
-## Service 负责什么
+## 1. Service 的核心职责
 
-- 通过 `sma service ...` 提供稳定的运行态动作
-- 通过 `/api/services/*` 暴露 HTTP 控制/命令入口
-- 管理并落盘 `.ship/` 下的业务状态与执行产物
+- 对外提供 command/action（CLI 与 HTTP 都可调用）。
+- 通过注册机制告诉 agent：有哪些能力、每个 action 的入参与语义是什么。
+- 承载业务流程与状态落盘（`.ship/*`）。
 
-## 配置范围
+## 2. 调用方向（关键）
 
-Service 相关配置在 `ship.json.services.*`（例如 `services.chat`、`services.skills`）。
+- `agent -> service`：agent 在执行阶段调度 service action。
+- `service -> service`：service 之间可以互调。
+- `service -> extension`：service 可以直接调用 extension 能力。
+- `extension -/-> service`：extension 不负责反向编排业务流程。
 
-## 常用运维命令
+例如：`chat` service 在语音附件场景会直接调用 `voice` extension 的转写 action。
+
+## 3. 作用域与隔离
+
+- Service 配置是 **每个 agent 项目独立** 的：`ship.json.services.*`。
+- 不同 agent 可启用不同 service 组合、不同参数与不同运行环境。
+
+## 4. 常用运维命令
 
 ```bash
 sma service list
@@ -36,5 +46,6 @@ sma service command memory search --payload '{"query":"release"}'
 ## 相关文档
 
 - [`sma service`](/zh/docs/reference/commands/service)
+- [Service 与 Extension 区别](/zh/docs/concepts/service-vs-extension)
+- [Extension Runtime](/zh/docs/concepts/extension-runtime)
 - [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)
-

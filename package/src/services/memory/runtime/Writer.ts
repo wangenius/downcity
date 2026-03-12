@@ -8,7 +8,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
 import type {
   MemoryGetPayload,
   MemoryGetResponse,
@@ -21,7 +21,7 @@ import {
   getShipMemoryDailyDirPath,
   getShipMemoryDailyPath,
   getShipMemoryLongTermPath,
-} from "@/main/server/env/Paths.js";
+} from "@/console/env/Paths.js";
 import { markMemoryDirty } from "./Store.js";
 
 function nowIso(): string {

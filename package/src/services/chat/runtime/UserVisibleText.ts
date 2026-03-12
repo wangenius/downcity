@@ -7,7 +7,7 @@
  * - 因此需要一个稳定的、与 Agent 解耦的提取逻辑（属于 chat/egress 语义）
  */
 
-import type { ContextMessageV1 } from "@main/types/ContextMessage.js";
+import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
 import {
   extractTextFromUiMessage,
   extractToolCallsFromUiMessage,

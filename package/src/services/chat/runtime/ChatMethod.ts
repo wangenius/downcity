@@ -6,7 +6,7 @@
  * - 未配置或非法值统一回退到 `direct`，保证默认直发与行为稳定。
  */
 
-import type { ShipConfig } from "@main/types/ShipConfig.js";
+import type { ShipConfig } from "@agent/types/ShipConfig.js";
 
 export type ChatMethod = "cmd" | "direct";
 

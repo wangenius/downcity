@@ -20,7 +20,7 @@ import {
   getSoulMdCandidatePaths,
   getUserMdPath,
   getUserMdCandidatePaths,
-} from "../../bin/main/runtime/Paths.js";
+} from "../../bin/console/env/Paths.js";
 
 test("getProfileMdPath returns default PROFILE.md path", () => {
   const cwd = "/tmp/demo";

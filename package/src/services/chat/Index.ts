@@ -25,9 +25,9 @@ import { createQQBot } from "./channels/qq/QQ.js";
 import type {
   Service,
   ServiceActionCommandInput,
-} from "@main/service/ServiceManager.js";
+} from "@agent/service/ServiceManager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { ChatHistoryEventV1 } from "./types/ChatHistory.js";
 import type { ChatHistoryRequest, ChatReactRequest } from "./types/ChatCommand.js";
 import type { TelegramBot } from "./channels/telegram/Bot.js";

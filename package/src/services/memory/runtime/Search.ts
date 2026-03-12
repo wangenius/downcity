@@ -6,7 +6,7 @@
  * - 检索前确保索引同步（dirty 时自动补齐）。
  */
 
-import type { ServiceRuntime } from "@main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
 import type {
   MemorySearchPayload,
   MemorySearchResponse,

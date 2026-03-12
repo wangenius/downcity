@@ -6,7 +6,7 @@ import type {
   ChatDispatcher,
 } from "@services/chat/types/ChatDispatcher.js";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";

@@ -1,0 +1,51 @@
+---
+title: sma console
+description: Global console command group for process orchestration and multi-agent governance
+---
+
+# `sma console`
+
+`console` is the global control plane.
+
+Use it to manage the console daemon and inspect managed agent runtimes.
+
+## Usage
+
+```bash
+sma console start
+sma console stop
+sma console restart
+sma console status
+sma console agents [--json]
+```
+
+## Behavior
+
+- `start`: start console daemon in background.
+- `stop`: stop console daemon and managed child agent daemons.
+- `restart`: restart console daemon.
+- `status`: print console process state and active managed agents.
+- `agents`: print active managed agents list.
+
+## Typical Flow
+
+```bash
+# 1) start global console
+sma console start
+
+# 2) start project runtime
+cd /path/to/agent-project
+sma agent create .
+sma agent on
+
+# 3) check status
+sma console status
+sma agent status .
+```
+
+## Related Commands
+
+- [`sma agent`](/en/docs/reference/commands/agent)
+- [`sma config`](/en/docs/reference/commands/config)
+- [`sma service`](/en/docs/reference/commands/service)
+- [`sma extension`](/en/docs/reference/commands/extension)

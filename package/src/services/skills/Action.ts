@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { discoverClaudeSkillsSync } from "./runtime/Discovery.js";
-import { loadShipConfig } from "@/main/server/env/Config.js";
+import { loadShipConfig } from "@/console/env/Config.js";
 import type { ClaudeSkill } from "./types/ClaudeSkill.js";
 import type { JsonValue } from "@/types/Json.js";
 import type {

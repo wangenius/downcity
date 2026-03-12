@@ -2,10 +2,7 @@
   "title": "Commands",
   "pages": [
     "create",
-    "start",
-    "stop",
-    "manager",
-    "status",
+    "console",
     "agent",
     "config",
     "service",

@@ -7,8 +7,8 @@ import type {
   VoiceModelId,
   VoiceProvider,
   VoiceTranscribeStrategy,
-} from "@/main/types/Voice.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+} from "@/agent/types/Voice.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import { resolveVoiceModelsRootDir } from "./ConfigStore.js";
 
 const execShellAsync = promisify(execWithShell);

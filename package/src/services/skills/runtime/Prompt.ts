@@ -7,7 +7,7 @@
  * - 仅做字符串渲染，不做文件 IO。
  */
 
-import type { ShipConfig } from "@/main/server/env/Config.js";
+import type { ShipConfig } from "@/console/env/Config.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";
 import type { ClaudeSkill } from "@services/skills/types/ClaudeSkill.js";
 

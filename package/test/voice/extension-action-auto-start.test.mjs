@@ -16,12 +16,12 @@ import fs from "fs-extra";
 import {
   controlExtensionRuntime,
   runExtensionCommand,
-} from "../../bin/main/extension/Manager.js";
+} from "../../bin/console/extension/Manager.js";
 
 const execFileAsync = promisify(execFile);
 const CLI_ENTRY = path.resolve(
   process.cwd(),
-  "bin/main/server/commands/Index.js",
+  "bin/console/commands/Index.js",
 );
 
 function parseLastJsonLine(stdout) {

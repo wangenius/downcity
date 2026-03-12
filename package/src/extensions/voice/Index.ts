@@ -9,12 +9,12 @@
 import type { Command } from "commander";
 import prompts from "prompts";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { Extension } from "@/main/extension/ExtensionManager.js";
+import type { Extension } from "@/console/extension/ExtensionManager.js";
 import type {
   VoiceModelId,
   VoiceExtensionConfig,
   VoiceTranscribeConfig,
-} from "@/main/types/Voice.js";
+} from "@/agent/types/Voice.js";
 import {
   VOICE_MODEL_CATALOG,
   getVoiceModelCatalogItem,

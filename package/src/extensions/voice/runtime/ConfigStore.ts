@@ -1,9 +1,9 @@
 import path from "node:path";
 import os from "node:os";
 import fs from "fs-extra";
-import { getShipJsonPath } from "@/main/server/env/Paths.js";
-import type { ShipConfig } from "@/main/types/ShipConfig.js";
-import type { VoiceModelId, VoiceExtensionConfig } from "@/main/types/Voice.js";
+import { getShipJsonPath } from "@/console/env/Paths.js";
+import type { ShipConfig } from "@/agent/types/ShipConfig.js";
+import type { VoiceModelId, VoiceExtensionConfig } from "@/agent/types/Voice.js";
 
 /**
  * 保障 `extensions.voice` 结构存在并返回可写对象。

@@ -1,4 +1,4 @@
 {
-  "title": "集成",
+  "title": "Service",
   "pages": ["service-matrix", "chat", "skill-service", "task-service", "memory-service"]
 }

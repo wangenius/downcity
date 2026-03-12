@@ -22,7 +22,7 @@ import {
 import { buildTelegramVoiceTranscriptionInstruction } from "./VoiceInput.js";
 import { TelegramStateStore } from "./StateStore.js";
 import { appendOutboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
-import type { ServiceRuntime } from "@/main/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 
 /**
  * Telegram 平台适配器。

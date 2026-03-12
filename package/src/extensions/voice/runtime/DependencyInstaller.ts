@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import fs from "fs-extra";
-import type { VoiceModelId, VoiceTranscribeStrategy } from "@main/types/Voice.js";
+import type { VoiceModelId, VoiceTranscribeStrategy } from "@agent/types/Voice.js";
 
 const execFileAsync = promisify(execFileCb);
 

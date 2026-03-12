@@ -16,7 +16,7 @@ import test from "node:test";
 import fs from "fs-extra";
 
 const execFileAsync = promisify(execFile);
-const CLI_ENTRY = path.resolve(process.cwd(), "bin/main/commands/index.js");
+const CLI_ENTRY = path.resolve(process.cwd(), "bin/console/commands/Index.js");
 
 function createBaseShipConfig() {
   return {

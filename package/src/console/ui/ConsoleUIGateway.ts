@@ -90,20 +90,6 @@ export class ConsoleUIGateway {
    * 注册网关路由。
    */
   private setupRoutes(): void {
-    this.app.get("/", async (c) => {
-      return this.serveStatic(c, "index.html", "text/html; charset=utf-8");
-    });
-    this.app.get("/styles.css", async (c) => {
-      return this.serveStatic(c, "styles.css", "text/css; charset=utf-8");
-    });
-    this.app.get("/app.js", async (c) => {
-      return this.serveStatic(
-        c,
-        "app.js",
-        "application/javascript; charset=utf-8",
-      );
-    });
-
     this.app.get("/health", async (c) => {
       return c.json({
         status: "ok",
@@ -155,20 +141,68 @@ export class ConsoleUIGateway {
         );
       }
     });
+
+    // 关键点（中文）：托管 Vite 构建产物（含 `/assets/*`）并支持 SPA fallback。
+    this.app.get("/*", async (c) => {
+      const reqPath = String(c.req.path || "/");
+      if (reqPath.startsWith("/api/")) {
+        return c.json({ success: false, error: "Not Found" }, 404);
+      }
+      return this.serveFrontendPath(c, reqPath);
+    });
   }
 
-  private async serveStatic(
-    c: Context,
-    filename: string,
-    contentType: string,
-  ): Promise<Response> {
-    const filePath = path.join(this.publicDir, filename);
-    if (!(await fs.pathExists(filePath))) {
-      return c.text("Not Found", 404);
+  private resolveContentType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === ".html") return "text/html; charset=utf-8";
+    if (ext === ".css") return "text/css; charset=utf-8";
+    if (ext === ".js" || ext === ".mjs") {
+      return "application/javascript; charset=utf-8";
     }
-    const content = await fs.readFile(filePath, "utf-8");
-    return c.body(content, 200, {
-      "Content-Type": contentType,
+    if (ext === ".json") return "application/json; charset=utf-8";
+    if (ext === ".svg") return "image/svg+xml";
+    if (ext === ".png") return "image/png";
+    if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+    if (ext === ".ico") return "image/x-icon";
+    if (ext === ".webp") return "image/webp";
+    if (ext === ".map") return "application/json; charset=utf-8";
+    if (ext === ".woff") return "font/woff";
+    if (ext === ".woff2") return "font/woff2";
+    return "application/octet-stream";
+  }
+
+  private async serveFrontendPath(c: Context, reqPath: string): Promise<Response> {
+    const cleanPath = reqPath === "/" ? "/index.html" : reqPath;
+    const safePath = cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
+    const candidatePath = path.resolve(this.publicDir, safePath);
+    const publicRoot = path.resolve(this.publicDir);
+    const isInsidePublic =
+      candidatePath === publicRoot ||
+      candidatePath.startsWith(`${publicRoot}${path.sep}`);
+    if (!isInsidePublic) {
+      return c.text("Forbidden", 403);
+    }
+
+    if (await fs.pathExists(candidatePath)) {
+      const stat = await fs.stat(candidatePath);
+      if (stat.isFile()) {
+        const content = await fs.readFile(candidatePath);
+        return c.body(content, 200, {
+          "Content-Type": this.resolveContentType(candidatePath),
+          "Cache-Control":
+            safePath.startsWith("assets/") ? "public, max-age=31536000, immutable" : "no-cache",
+        });
+      }
+    }
+
+    // SPA fallback
+    const indexPath = path.join(this.publicDir, "index.html");
+    if (!(await fs.pathExists(indexPath))) {
+      return c.text("Console UI frontend not found. Build console-ui first.", 503);
+    }
+    const html = await fs.readFile(indexPath, "utf-8");
+    return c.body(html, 200, {
+      "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-cache",
     });
   }

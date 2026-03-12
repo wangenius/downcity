@@ -3,6 +3,10 @@ set -euo pipefail
 
 # 交互式发布脚本：检查状态、选择版本提升类型、确认并推送
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT_DIR"
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -185,4 +189,3 @@ main() {
 trap 'print_error "发布过程中发生错误"; exit 1' ERR
 
 main "$@"
-

@@ -5,15 +5,17 @@
   "type": "module",
   "workspaces": {
     "packages": [
+      "console-ui",
       "package",
       "examples/*"
     ]
   },
   "scripts": {
-    "build": "bash ./build.sh",
+    "build": "bash ./scripts/build.sh",
+    "ui": "npm --prefix ./console-ui run dev",
     "dev":"cd examples/server-agent && shipmyagent agent on",
     "cli": "bun run examples/cli-interactive/src/index.ts",
-    "publish":"./publish.sh"
+    "publish":"./scripts/publish.sh"
   },
   "devDependencies": {
     "@types/bun": "latest"

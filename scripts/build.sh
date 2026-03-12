@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PACKAGE_JSON="$ROOT_DIR/package/package.json"
 
 node --input-type=module - "$PACKAGE_JSON" <<'NODE'
@@ -31,11 +32,17 @@ fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
 console.log(`Patched version: ${version} -> ${pkg.version}`);
 NODE
 
+# 关键点（中文）：仓库级 build 顺序固定为：
+# 1) 先构建 console-ui（输出到 package/public）
+# 2) 再构建 package（tsc + copy assets）
 if command -v bun >/dev/null 2>&1; then
+  (cd "$ROOT_DIR/console-ui" && bun run build)
   (cd "$ROOT_DIR/package" && bun run build)
 elif command -v pnpm >/dev/null 2>&1; then
+  pnpm -C "$ROOT_DIR/console-ui" build
   pnpm -C "$ROOT_DIR/package" build
 else
+  npm --prefix "$ROOT_DIR/console-ui" run build
   npm --prefix "$ROOT_DIR/package" run build
 fi
 

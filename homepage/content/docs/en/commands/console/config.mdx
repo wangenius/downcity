@@ -1,11 +1,11 @@
 ---
 title: sma console config
-description: Manage project ship.json and console-global llm model pool
+description: Manage project ship.json and alias (model pool is separate)
 ---
 
 # `sma console config`
 
-Manage project `ship.json` and structured console-global LLM configuration commands.
+Manage project `ship.json` and alias.
 
 > Naming note: configuration command is `sma console config`, not `sma config`.
 
@@ -21,23 +21,8 @@ sma console config <subcommand>
 - `set <keyPath> <value>`
 - `unset <keyPath>`
 - `alias`
-- `llm`
 
-## `llm` subcommands
-
-> `llm` subcommands read/write `~/.ship/ship.db` (console-global SQLite), not project `ship.json`.
-
-```bash
-sma console config llm provider list
-sma console config llm provider add <providerId>
-sma console config llm provider update <providerId>
-sma console config llm provider remove <providerId>
-
-sma console config llm model list
-sma console config llm model add <modelId>
-sma console config llm model update <modelId>
-sma console config llm model remove <modelId>
-```
+> Model pool management has moved to [`sma console model`](/en/docs/commands/console/model).
 
 ## `extensions.*` path behavior
 
@@ -53,8 +38,6 @@ sma console config set extensions.voice.enabled true
 ```bash
 sma console config get model.primary
 sma console config set model.primary fast
-sma console config set start.port 3001
 sma console config unset services.chat.channels.telegram
-sma console config llm model update quality --temperature 0.5
 sma console config alias --dry-run
 ```

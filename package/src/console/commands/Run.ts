@@ -61,18 +61,16 @@ export async function runCommand(
     }
     return num;
   };
-  const shipConfig = getRuntimeState().config;
-
-  // Resolve startup options: CLI flags override ship.json, then built-in defaults.
+  // Resolve startup options: CLI flags override built-in defaults.
   let port: number;
   try {
-    port = parsePort(options.port, "port") ?? shipConfig.start?.port ?? 3000;
+    port = parsePort(options.port, "port") ?? 3000;
   } catch (error) {
     console.error("❌ Invalid start options:", error);
     process.exit(1);
   }
 
-  const host = (options.host ?? shipConfig.start?.host ?? "0.0.0.0").trim();
+  const host = (options.host ?? "0.0.0.0").trim();
 
   process.env.SMA_SERVER_PORT = String(port);
   process.env.SMA_SERVER_HOST = host;

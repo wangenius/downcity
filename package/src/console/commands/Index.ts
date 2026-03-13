@@ -14,6 +14,7 @@ import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import { Command } from "commander";
 import { registerConfigCommand } from "./Config.js";
+import { registerModelCommand } from "./Model.js";
 import { initCommand } from "./Init.js";
 import { consoleInitCommand } from "./ConsoleInit.js";
 import { restartCommand } from "./Restart.js";
@@ -595,8 +596,8 @@ agent
 agent
   .command("on [path]")
   .description("启动 Agent Runtime（后台/前台）")
-  .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
-  .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
+  .option("-p, --port <port>", "服务端口（默认由 console 自动分配）", parsePort)
+  .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
   .option("--foreground [enabled]", "前台启动（仅当前终端）", parseBoolean)
   .helpOption("--help", "display help for command")
   .action(
@@ -692,8 +693,8 @@ agent
 agent
   .command("restart [path]")
   .description("重启后台 Agent Runtime（daemon）")
-  .option("-p, --port <port>", "服务端口（可在 ship.json 的 start.port 配置）", parsePort)
-  .option("-h, --host <host>", "服务主机（可在 ship.json 的 start.host 配置）")
+  .option("-p, --port <port>", "服务端口（默认由 console 自动分配）", parsePort)
+  .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (cwd: string = ".", options: StartOptions) => {
     const projectRoot = await resolveRegisteredAgentProjectRoot(cwd);
@@ -703,6 +704,7 @@ agent
   }));
 
 registerConfigCommand(consoleCommand);
+registerModelCommand(consoleCommand);
 
 registerServicesCommand(program);
 registerExtensionsCommand(program);

@@ -3,7 +3,8 @@
  *
  * 目标（中文）
  * - 提供 ship.json 的通用读写能力（get/set/unset）。
- * - 提供 SQLite 模型池（provider/model）的结构化管理命令。
+ * - 提供 alias 写入能力。
+ * - 历史 `llm` 子命令保留兼容，但已迁移到 `sma console model`。
  * - 所有输出统一支持 JSON（默认）与可读文本两种模式。
  */
 
@@ -308,7 +309,7 @@ function applyCommonOptions(command: Command): Command {
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
-    .description("管理 ship.json 配置、alias 与 SQLite 模型池")
+    .description("管理 ship.json 配置与 alias")
     .helpOption("--help", "display help for command");
 
   applyCommonOptions(
@@ -526,7 +527,7 @@ export function registerConfigCommand(program: Command): void {
 
   const llm = config
     .command("llm")
-    .description("管理 console 全局模型池（~/.ship/ship.db）")
+    .description("管理 console 全局模型池（兼容命令，建议使用 `sma console model`）")
     .helpOption("--help", "display help for command");
 
   const provider = llm

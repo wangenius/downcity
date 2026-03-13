@@ -15,14 +15,16 @@ sma agent on [path] [options]
 
 ## Key options
 
-- `-p, --port <port>`: service port
-- `-h, --host <host>`: service host
+- `-p, --port <port>`: service port (auto-assigned by console if omitted)
+- `-h, --host <host>`: service host (default `0.0.0.0`)
 - `--foreground [enabled]`: run in foreground
 
 ## Behavior
 
 - Checks console runtime before start.
 - `path` defaults to current directory `.`
+- If `--port` is not provided, console auto-assigns an available port for this agent.
+- Project `ship.json.start.host/port` is not required for daemon startup.
 - With `--foreground`, runs in current terminal; otherwise runs in background mode.
 - `--foreground` is a temporary terminal session; once terminal exits, the process exits too.
 

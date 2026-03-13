@@ -68,14 +68,36 @@ export class ConsoleStore {
         frequency_penalty REAL,
         presence_penalty REAL,
         anthropic_version TEXT,
+        is_paused INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
     `);
+    this.ensureModelsTableColumns();
     this.sqlite.exec(`
       CREATE INDEX IF NOT EXISTS models_provider_id_idx
       ON models(provider_id);
     `);
+  }
+
+  /**
+   * 补齐 models 表的增量列（轻量迁移）。
+   *
+   * 关键点（中文）
+   * - 历史库可能不存在 `is_paused`，这里在启动时自动补齐。
+   */
+  private ensureModelsTableColumns(): void {
+    const rows = this.sqlite
+      .prepare("PRAGMA table_info(models)")
+      .all() as Array<{ name?: unknown }>;
+    const columns = new Set(
+      rows.map((row) => String(row.name || "").trim()).filter(Boolean),
+    );
+    if (!columns.has("is_paused")) {
+      this.sqlite.exec(
+        "ALTER TABLE models ADD COLUMN is_paused INTEGER NOT NULL DEFAULT 0;",
+      );
+    }
   }
 
   /**
@@ -213,6 +235,7 @@ export class ConsoleStore {
       frequencyPenalty: row.frequencyPenalty ?? undefined,
       presencePenalty: row.presencePenalty ?? undefined,
       anthropicVersion: row.anthropicVersion ?? undefined,
+      isPaused: Number(row.isPaused || 0) === 1,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));
@@ -238,6 +261,7 @@ export class ConsoleStore {
       frequencyPenalty: row.frequencyPenalty ?? undefined,
       presencePenalty: row.presencePenalty ?? undefined,
       anthropicVersion: row.anthropicVersion ?? undefined,
+      isPaused: Number(row.isPaused || 0) === 1,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -278,6 +302,7 @@ export class ConsoleStore {
         frequencyPenalty: input.frequencyPenalty ?? null,
         presencePenalty: input.presencePenalty ?? null,
         anthropicVersion: input.anthropicVersion ?? null,
+        isPaused: input.isPaused === true ? 1 : 0,
         createdAt,
         updatedAt,
       })
@@ -292,9 +317,28 @@ export class ConsoleStore {
           frequencyPenalty: input.frequencyPenalty ?? null,
           presencePenalty: input.presencePenalty ?? null,
           anthropicVersion: input.anthropicVersion ?? null,
+          isPaused: input.isPaused === true ? 1 : 0,
           updatedAt,
         },
       })
+      .run();
+  }
+
+  /**
+   * 切换模型暂停状态。
+   */
+  setModelPaused(modelId: string, paused: boolean): void {
+    const id = String(modelId || "").trim();
+    if (!id) throw new Error("modelId cannot be empty");
+    const current = this.getModel(id);
+    if (!current) throw new Error(`Model not found: ${id}`);
+    this.db
+      .update(modelsTable)
+      .set({
+        isPaused: paused ? 1 : 0,
+        updatedAt: nowIso(),
+      })
+      .where(eq(modelsTable.id, id))
       .run();
   }
 

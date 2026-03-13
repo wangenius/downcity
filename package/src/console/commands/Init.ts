@@ -210,6 +210,14 @@ export async function initCommand(
   const existingUserMd = fs.existsSync(getUserMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
   const consoleModelIds = listConsoleModelIds();
+  // 关键点（中文）：模型池为空时，继续 create 只会生成“必然启动失败”的配置，这里直接中止并给出明确修复路径。
+  if (consoleModelIds.length === 0) {
+    console.error("❌ Console model pool is empty.");
+    console.error("   Please configure at least one model before `sma agent create`:");
+    console.error("   1) sma console config llm provider add ...");
+    console.error("   2) sma console config llm model add ...");
+    process.exit(1);
+  }
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 ship.json 已存在时询问覆盖。
   if (existingShipJson) {
@@ -243,10 +251,7 @@ export async function initCommand(
       type: "select",
       name: "primaryModelId",
       message: "Select primary model (from console model pool)",
-      choices:
-        consoleModelIds.length > 0
-          ? consoleModelIds.map((id) => ({ title: id, value: id }))
-          : [{ title: "default", value: "default" }],
+      choices: consoleModelIds.map((id) => ({ title: id, value: id })),
       initial: 0,
     },
     {
@@ -275,11 +280,6 @@ export async function initCommand(
   const agentName =
     String(response.name || "").trim() || path.basename(projectRoot);
   const primaryModelId = String(response.primaryModelId || "").trim() || "default";
-  if (consoleModelIds.length === 0) {
-    console.log(
-      "⚠️  Console model pool is empty. Please run `sma console config llm model add ...` before starting this agent.",
-    );
-  }
   const initTemplateVariables = {
     agent_name: agentName,
   };
@@ -367,10 +367,6 @@ export async function initCommand(
     $schema: DEFAULT_SHIP_JSON.$schema,
     name: agentName,
     version: "1.0.0",
-    start: {
-      port: 3000,
-      host: "0.0.0.0",
-    },
     model: {
       primary: primaryModelId,
     },

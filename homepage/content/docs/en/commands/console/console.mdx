@@ -18,12 +18,13 @@ Top-level commands are fixed to 4:
 - `sma service`
 - `sma extension`
 
-Under `console`, use `init/config/start/stop/status/agents/ui`.
+Under `console`, use `init/model/config/start/stop/status/agents/ui`.
 
 ## Usage
 
 ```bash
 sma console init
+sma console model <subcommand>
 sma console config <subcommand>
 sma console start
 sma console stop
@@ -36,7 +37,8 @@ sma console ui [start|stop|status] [--port 3001]
 ## Behavior
 
 - `init`: initialize global console config (`~/.ship/*`).
-- `config`: manage project `ship.json` and llm/provider/model/alias.
+- `model`: dedicated management for console-global language model pool (provider/model/test/pause).
+- `config`: manage project `ship.json` and alias.
 - `start`: start console in background.
 - `stop`: stop console and managed child agent runtimes.
 - `restart`: restart console.
@@ -64,6 +66,7 @@ sma agent status .
 
 - [`sma console init`](/en/docs/commands/console/init)
 - [`sma agent`](/en/docs/commands/agent/agent)
+- [`sma console model`](/en/docs/commands/console/model)
 - [`sma console config`](/en/docs/commands/console/config)
 - [`sma service`](/en/docs/commands/service/service)
 - [`sma extension`](/en/docs/commands/extension/extension)

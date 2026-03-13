@@ -15,14 +15,16 @@ sma agent on [path] [options]
 
 ## 常用参数
 
-- `-p, --port <port>`：服务端口
-- `-h, --host <host>`：服务主机
+- `-p, --port <port>`：服务端口（默认由 console 自动分配）
+- `-h, --host <host>`：服务主机（默认 `0.0.0.0`）
 - `--foreground [enabled]`：前台运行（不进入后台）
 
 ## 行为说明
 
 - 启动前会检查 console 是否已启动。
 - `path` 默认当前目录 `.`。
+- 未显式传 `--port` 时，console 会为该 agent 自动分配可用端口。
+- 默认不依赖项目 `ship.json.start.host/port`。
 - `--foreground` 时在当前终端运行；否则按后台方式运行。
 - `--foreground` 仅用于当前终端的临时运行会话，终端结束后进程随之结束。
 

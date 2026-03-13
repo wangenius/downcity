@@ -28,6 +28,7 @@ export const modelsTable = sqliteTable(
     frequencyPenalty: real("frequency_penalty"),
     presencePenalty: real("presence_penalty"),
     anthropicVersion: text("anthropic_version"),
+    isPaused: integer("is_paused").notNull().default(0),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
@@ -35,4 +36,3 @@ export const modelsTable = sqliteTable(
     providerIdIdx: index("models_provider_id_idx").on(table.providerId),
   }),
 );
-

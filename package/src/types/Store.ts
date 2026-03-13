@@ -78,6 +78,14 @@ export interface StoredModel {
    */
   anthropicVersion?: string;
   /**
+   * 是否暂停该模型。
+   *
+   * 关键点（中文）
+   * - 暂停后禁止作为 `model.primary` 被运行时加载。
+   * - 用于模型维护窗口、成本管控或临时故障隔离。
+   */
+  isPaused: boolean;
+  /**
    * 创建时间（ISO 字符串）。
    */
   createdAt: string;
@@ -149,5 +157,8 @@ export interface UpsertModelInput {
    * Anthropic 版本字段（可选）。
    */
   anthropicVersion?: string;
+  /**
+   * 是否暂停该模型（可选）。
+   */
+  isPaused?: boolean;
 }
-

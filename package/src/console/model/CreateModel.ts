@@ -156,6 +156,13 @@ export async function createModel(input: {
   }
   const selectedModelConfig = resolved.model;
   const selectedProviderConfig = resolved.provider;
+  if (selectedModelConfig.isPaused === true) {
+    await logger.log(
+      "warn",
+      `LLM model is paused in sqlite store: ${primaryModelId}`,
+    );
+    throw Error(`LLM model is paused: ${primaryModelId}`);
+  }
   const providerKey = selectedProviderConfig.id;
 
   const providerType = normalizeProviderType(selectedProviderConfig.type);

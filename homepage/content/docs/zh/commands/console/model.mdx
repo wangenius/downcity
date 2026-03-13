@@ -1,0 +1,85 @@
+---
+title: sma console model
+description: 独立管理 console 全局语言模型（provider/model）
+---
+
+# `sma console model`
+
+独立的模型管理命令域，只管理语言模型。
+
+## 设计约束
+
+- `create` 是唯一交互式命令。
+- 其他命令（`list/pause/update/test`）都是非交互，适合脚本化。
+- provider 的 `apiKey` 存储在 `~/.ship/ship.db`，写入时自动加密。
+
+## 用法
+
+```bash
+# 交互式创建（选择创建 provider 或 model）
+sma console model create
+
+# 列表
+sma console model list
+
+# 读取详情
+sma console model get provider <providerId>
+sma console model get model <modelId>
+
+# 暂停模型（默认 enabled=true）
+sma console model pause <modelId>
+sma console model pause <modelId> --enabled false
+
+# 发现 provider 模型（可选自动写入）
+sma console model discover <providerId>
+sma console model discover <providerId> --auto-add true --prefix openai_
+
+# 更新 provider
+sma console model update provider <providerId> --api-key '${OPENAI_API_KEY}'
+
+# 更新 model
+sma console model update model <modelId> --name gpt-4o-mini --provider openai_main
+
+# 删除 provider/model
+sma console model remove provider <providerId>
+sma console model remove model <modelId>
+
+# 绑定到项目（设置 ship.json.model.primary）
+sma console model use <modelId> --path /path/to/agent
+
+# 测试 provider
+sma console model test provider <providerId>
+
+# 测试 model（真实调用）
+sma console model test model <modelId>
+```
+
+## create 行为
+
+- 可选创建 `provider` 或 `model`。
+- 创建 provider 后可立即测试连通性。
+- 对支持模型发现的 provider，会尝试拉取远端模型列表并支持多选自动添加。
+
+## 自动化命令
+
+- `get`：查询单个 provider/model 详情。
+- `discover`：发现 provider 模型列表，可选 `--auto-add` 批量写入。
+- `remove`：删除 provider/model（provider 若被引用会拒绝）。
+- `use`：把项目 `ship.json.model.primary` 绑定到指定模型 ID。
+
+## pause 行为
+
+- `pause` 会设置模型状态为暂停。
+- 暂停模型不能作为 `model.primary` 被 runtime 加载。
+- 用于故障隔离、成本控制或临时维护窗口。
+
+## test 行为
+
+- `test provider`：测试 provider 连通性并尝试发现模型。
+- `test model`：按当前配置真实调用一次模型，验证端到端可用。
+
+## 相关命令
+
+- [`sma console config`](/zh/docs/commands/console/config)
+- [`sma agent create`](/zh/docs/commands/agent/create)
+- [`sma agent on`](/zh/docs/commands/agent/on)

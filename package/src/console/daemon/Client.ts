@@ -14,6 +14,7 @@ import {
 } from "./Api.js";
 import { getShipJsonPath } from "@/console/env/Paths.js";
 import { loadShipConfig } from "@/console/env/Config.js";
+import { getDaemonMetaPath } from "@/console/daemon/Manager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
@@ -52,14 +53,22 @@ function parseErrorMessageFromPayload(data: JsonValue | null): string | null {
   return null;
 }
 
+function pickArgValue(args: string[], key: string): string | undefined {
+  const idx = args.findIndex((item) => String(item).trim() === key);
+  if (idx < 0) return undefined;
+  const next = String(args[idx + 1] || "").trim();
+  return next || undefined;
+}
+
 /**
  * 解析 daemon endpoint。
  *
  * 优先级（中文）
  * 1) 显式入参 `host/port`
  * 2) 环境变量 `SMA_SERVER_*` / `SMA_CTX_SERVER_*`
- * 3) `ship.json.start`
- * 4) 默认 `127.0.0.1:3000`
+ * 3) daemon meta args（`shipmyagent.daemon.json`）
+ * 4) `ship.json.start`（兼容旧配置）
+ * 5) 默认 `127.0.0.1:3000`
  */
 function resolveDaemonEndpoint(params: {
   projectRoot: string;
@@ -78,6 +87,22 @@ function resolveDaemonEndpoint(params: {
 
   let configHost: string | undefined;
   let configPort: number | undefined;
+  let daemonArgHost: string | undefined;
+  let daemonArgPort: number | undefined;
+  try {
+    const metaPath = getDaemonMetaPath(params.projectRoot);
+    if (fs.existsSync(metaPath)) {
+      const raw = fs.readJsonSync(metaPath) as { args?: unknown };
+      const args = Array.isArray(raw?.args)
+        ? raw.args.map((item) => String(item))
+        : [];
+      daemonArgHost = normalizeHost(pickArgValue(args, "--host"));
+      daemonArgPort = parsePortLike(pickArgValue(args, "--port"));
+    }
+  } catch {
+    // ignore daemon meta errors, fallback to other sources
+  }
+
   try {
     const shipJsonPath = getShipJsonPath(params.projectRoot);
     if (fs.existsSync(shipJsonPath)) {
@@ -89,8 +114,9 @@ function resolveDaemonEndpoint(params: {
     // ignore config errors, fallback to defaults
   }
 
-  const host = explicitHost || envHost || configHost || "127.0.0.1";
-  const port = explicitPort || envPort || configPort || 3000;
+  const host =
+    explicitHost || envHost || daemonArgHost || configHost || "127.0.0.1";
+  const port = explicitPort || envPort || daemonArgPort || configPort || 3000;
 
   return {
     host,

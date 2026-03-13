@@ -18,12 +18,13 @@ description: 全局 console 命令组，用于进程编排与多 agent 治理
 - `sma service`
 - `sma extension`
 
-`console` 下面再细分 `init/config/start/stop/status/agents/ui`。
+`console` 下面再细分 `init/model/config/start/stop/status/agents/ui`。
 
 ## 用法
 
 ```bash
 sma console init
+sma console model <subcommand>
 sma console config <subcommand>
 sma console start
 sma console stop
@@ -36,7 +37,8 @@ sma console ui [start|stop|status] [--port 3001]
 ## 行为说明
 
 - `init`：初始化全局 console 配置（`~/.ship/*`）。
-- `config`：管理项目级 `ship.json` 与 llm/provider/model/alias。
+- `model`：独立管理 console 全局语言模型池（provider/model/test/pause）。
+- `config`：管理项目级 `ship.json` 与 alias。
 - `start`：后台启动 console。
 - `stop`：停止 console，并停止其托管的子 agent runtime。
 - `restart`：重启 console。
@@ -64,6 +66,7 @@ sma agent status .
 
 - [`sma console init`](/zh/docs/commands/console/init)
 - [`sma agent`](/zh/docs/commands/agent/agent)
+- [`sma console model`](/zh/docs/commands/console/model)
 - [`sma console config`](/zh/docs/commands/console/config)
 - [`sma service`](/zh/docs/commands/service/service)
 - [`sma extension`](/zh/docs/commands/extension/extension)

@@ -13,6 +13,23 @@
 
 ---
 
+开发环境
+
+1. 在 console-ui/ 开发 React（vite dev 热更新）。
+2. API 仍走 console ui 网关（或 Vite proxy 到网关），请求 /api/*。
+3. 目标是快速迭代 UI，不依赖每次打包 package。
+
+生产环境
+
+1. 发布前先构建 console-ui：vite build。
+2. 构建产物输出到 package/public（已在 vite.config.ts 配好）。
+3. 用户执行 sma console ui start 时，ConsoleUIGateway 直接托管这些静态文件并代理 /api/*。
+4. 不需要用户机器再跑 Vite 或前端构建。
+
+一句话：  
+
+开发用 vite dev，生产用“预构建静态产物 + gateway 托管”。
+
 # 2. 目录与职责
 
 # 2.1 前端包

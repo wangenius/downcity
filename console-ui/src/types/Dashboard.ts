@@ -69,6 +69,46 @@ export interface UiOverviewContextItem {
 }
 
 /**
+ * TUI context 摘要项。
+ */
+export interface UiContextSummary {
+  /**
+   * context 唯一标识。
+   */
+  contextId: string;
+  /**
+   * 消息总数。
+   */
+  messageCount?: number;
+  /**
+   * 最近更新时间戳。
+   */
+  updatedAt?: number;
+  /**
+   * 最后一条消息角色。
+   */
+  lastRole?: string;
+  /**
+   * 最后一条消息摘要。
+   */
+  lastText?: string;
+}
+
+/**
+ * `/api/tui/contexts` 响应。
+ */
+export interface UiContextsResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * context 列表。
+   */
+  contexts?: UiContextSummary[];
+}
+
+/**
  * `/api/tui/overview` 响应。
  */
 export interface UiOverviewResponse {
@@ -163,6 +203,66 @@ export interface UiServicesResponse {
 }
 
 /**
+ * Extension 运行时快照。
+ */
+export interface UiExtensionRuntimeItem {
+  /**
+   * extension 名称。
+   */
+  name?: string;
+  /**
+   * extension 运行状态。
+   */
+  state?: string;
+  /**
+   * 最近更新时间戳。
+   */
+  updatedAt?: number;
+  /**
+   * 最近错误信息。
+   */
+  lastError?: string;
+  /**
+   * 最近命令名。
+   */
+  lastCommand?: string;
+  /**
+   * 最近命令时间戳。
+   */
+  lastCommandAt?: number;
+  /**
+   * 是否支持 lifecycle 控制。
+   */
+  supportsLifecycle?: boolean;
+  /**
+   * 是否支持 command 调用。
+   */
+  supportsCommand?: boolean;
+}
+
+/**
+ * `/api/extensions/list` 响应。
+ */
+export interface UiExtensionsResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * extension 列表。
+   */
+  extensions?: UiExtensionRuntimeItem[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
+  /**
+   * 附加消息。
+   */
+  message?: string;
+}
+
+/**
  * Chat 渠道运行状态项。
  */
 export interface UiChatChannelStatus {
@@ -212,6 +312,18 @@ export interface UiChatStatusResponse {
      * 渠道测试结果列表。
      */
     results?: UiChatActionResult[];
+    /**
+     * history 事件列表（chat.history）。
+     */
+    events?: UiChatHistoryEvent[];
+    /**
+     * history 事件数量。
+     */
+    count?: number;
+    /**
+     * history 文件路径。
+     */
+    historyPath?: string;
   };
   /**
    * 错误信息。
@@ -387,6 +499,92 @@ export interface UiLocalMessage {
    * 时间戳。
    */
   ts?: number | string;
+}
+
+/**
+ * context 时间线消息项（来自 `/api/tui/contexts/:id/messages`）。
+ */
+export interface UiContextTimelineMessage {
+  /**
+   * 消息 id。
+   */
+  id?: string;
+  /**
+   * 消息角色。
+   */
+  role?: string;
+  /**
+   * 消息时间戳。
+   */
+  ts?: number | string;
+  /**
+   * 消息文本。
+   */
+  text?: string;
+  /**
+   * 消息类型。
+   */
+  kind?: string;
+  /**
+   * 消息来源。
+   */
+  source?: string;
+  /**
+   * tool 名称。
+   */
+  toolName?: string;
+}
+
+/**
+ * `/api/tui/contexts/:id/messages` 响应。
+ */
+export interface UiContextMessagesResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * context id。
+   */
+  contextId?: string;
+  /**
+   * 时间线消息列表。
+   */
+  messages?: UiContextTimelineMessage[];
+}
+
+/**
+ * chat history 事件项（来自 chat.history）。
+ */
+export interface UiChatHistoryEvent {
+  /**
+   * 事件 id。
+   */
+  id?: string;
+  /**
+   * 事件方向。
+   */
+  direction?: "inbound" | "outbound" | string;
+  /**
+   * 事件时间戳。
+   */
+  ts?: number;
+  /**
+   * 渠道名。
+   */
+  channel?: string;
+  /**
+   * 文本内容。
+   */
+  text?: string;
+  /**
+   * context id。
+   */
+  contextId?: string;
+  /**
+   * 便于展示的 ISO 时间。
+   */
+  isoTime?: string;
 }
 
 /**

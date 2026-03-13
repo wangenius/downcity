@@ -3,22 +3,28 @@
  *
  * 关键点（中文）
  * - 直接输出到 `package/public`，作为 `sma console ui` 的静态资源目录。
- * - 固定入口文件名，兼容现有网关默认加载路径。
+ * - 开发模式下代理 API 到 console 网关。
  */
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "node:path";
 
 const API_TARGET =
   String(process.env.CONSOLE_UI_API_TARGET || "").trim() ||
   "http://127.0.0.1:3001";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   server: {
     port: 5173,
     proxy: {
-      // 关键点（中文）：开发模式下把 API 请求代理到 `sma console ui` 网关。
       "/api": {
         target: API_TARGET,
         changeOrigin: true,

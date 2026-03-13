@@ -1,11 +1,11 @@
 ---
 title: sma console config
-description: 管理 ship.json、alias 与 llm provider/model
+description: 管理项目 ship.json 与 console 全局 llm 模型池
 ---
 
 # `sma console config`
 
-管理项目 `ship.json`，并提供 `llm` 结构化管理命令。
+管理项目 `ship.json`，并提供 console 全局 `llm` 结构化管理命令。
 
 > 命令名说明：配置命令是 `sma console config`，不是 `sma config`。
 
@@ -25,6 +25,8 @@ sma console config <subcommand>
 
 ## `llm` 子命令
 
+> `llm` 子命令读写的是 `~/.ship/ship.db`（console 全局 SQLite），不是项目 `ship.json`。
+
 ```bash
 sma console config llm provider list
 sma console config llm provider add <providerId>
@@ -34,15 +36,20 @@ sma console config llm provider remove <providerId>
 sma console config llm model list
 sma console config llm model add <modelId>
 sma console config llm model update <modelId>
-sma console config llm model activate <modelId>
 sma console config llm model remove <modelId>
 ```
 
 ## 示例
 
 ```bash
-sma console config get llm.activeModel
+sma console config get model.primary
+sma console config set model.primary fast
 sma console config set start.port 3001
 sma console config unset services.chat.channels.telegram
+sma console config llm model update quality --temperature 0.5
 sma console config alias --dry-run
 ```
+
+## 延伸阅读
+
+- [ship.json 参考](/zh/docs/reference/ship-json)

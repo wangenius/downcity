@@ -1,0 +1,48 @@
+---
+title: 权限配置
+description: ship.json 中 permissions 的设计与推荐实践
+---
+
+# 权限配置
+
+`ship.json.permissions` 用于定义 agent 的操作边界。
+
+## 最小配置示例
+
+```json
+{
+  "permissions": {
+    "read_repo": true,
+    "write_repo": {
+      "requiresApproval": false
+    },
+    "exec_command": {
+      "deny": ["rm"],
+      "requiresApproval": false,
+      "denyRequiresApproval": true,
+      "maxOutputChars": 12000,
+      "maxOutputLines": 200
+    }
+  }
+}
+```
+
+## 字段说明
+
+- `read_repo`：是否允许读取仓库内容。
+- `write_repo.requiresApproval`：写仓库是否要求确认。
+- `exec_command.deny`：直接阻断的命令前缀列表。
+- `exec_command.requiresApproval`：普通命令是否需要确认。
+- `exec_command.denyRequiresApproval`：命中 `deny` 时是否允许人工确认放行。
+- `exec_command.maxOutputChars/maxOutputLines`：单次命令输出上限。
+
+## 推荐策略
+
+1. 生产环境保持 `deny` 默认值，并按需增加风险命令。
+2. CI 或共享机器建议开启 `requiresApproval`。
+3. 遇到输出被截断时，优先细化命令范围，不要无上限放大输出。
+
+## 相关文档
+
+- [配置总览](/zh/docs/configuration/overview)
+- [ship.json 参考](/zh/docs/reference/ship-json)

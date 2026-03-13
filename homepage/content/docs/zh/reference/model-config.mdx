@@ -1,0 +1,87 @@
+---
+title: Model 配置参考
+description: "model 的真实实现逻辑：SQLite 存储、加密、绑定解析与生效机制"
+---
+
+# Model 配置参考
+
+当前版本中，model 实现分成两层：
+
+1. Console 全局：`~/.ship/ship.db`（SQLite）
+2. Agent 本地：`ship.json -> model.primary`
+
+## 1) 数据落盘位置
+
+模型池在 console 全局 SQLite：
+
+- 文件：`~/.ship/ship.db`
+- 表：`model_providers`、`models`
+- 管理入口：`sma console config llm ...`
+
+agent 项目只保留绑定：
+
+- 文件：`<project>/ship.json`
+- 字段：`model.primary`
+
+## 2) 写入链路（配置怎么被保存）
+
+1. `sma console config llm provider/model ...`  
+写入 `~/.ship/ship.db`
+
+2. `sma console ui` 中的 model 切换  
+本质是更新当前 agent 的 `ship.json -> model.primary`
+
+3. `sma agent create`  
+会从 console 模型池中选择一个 model id，写入新项目 `model.primary`
+
+## 3) 读取链路（运行时如何解析）
+
+```json
+{
+  "model": {
+    "primary": "default"
+  }
+}
+```
+
+1. 读取 agent `model.primary`
+2. 在 `~/.ship/ship.db` 找到对应 model
+3. 根据 model 的 `providerId` 找到 provider
+4. 组合出最终 provider + modelName + apiKey + baseUrl
+
+`primary` 必须引用 SQLite 模型池中已有的 model id，否则启动失败。
+
+## 4) 加密逻辑
+
+provider 的 `apiKey` 不明文入库：
+
+- 存储方式：AES-256-GCM 字段级加密
+- 密钥优先级：`SMA_MODEL_DB_KEY` 环境变量 > `~/.ship/console/model-db.key`
+- 结果：`ship.db` 中 `api_key_encrypted` 为密文
+
+## 5) 常用命令
+
+模型池管理（全局）：
+
+```bash
+sma console config llm provider list
+sma console config llm model list
+```
+
+agent 绑定（项目）：
+
+```bash
+sma console config set model.primary fast
+```
+
+## 6) 生效机制
+
+模型相关配置变更后建议重启 agent：
+
+```bash
+sma agent restart .
+```
+
+## 相关文档
+
+- [ship.json 参考](/zh/docs/reference/ship-json)

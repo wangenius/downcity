@@ -8,22 +8,8 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
     port: 3000,
     host: "0.0.0.0",
   },
-  llm: {
-    activeModel: "default",
-    providers: {
-      default: {
-        type: "anthropic",
-        baseUrl: "https://api.anthropic.com/v1",
-        apiKey: "${API_KEY}",
-      },
-    },
-    models: {
-      default: {
-        provider: "default",
-        name: "claude-sonnet-4-20250514",
-        temperature: 0.7,
-      },
-    },
+  model: {
+    primary: "default",
   },
   context: {
     messages: {

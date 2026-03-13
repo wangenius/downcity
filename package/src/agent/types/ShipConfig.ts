@@ -6,6 +6,7 @@
  * - 供 agent/services 多层复用，避免反向类型依赖。
  */
 import type { LlmConfig } from "@agent/types/LlmConfig.js";
+import type { AgentModelBindingConfig } from "@agent/types/ModelBinding.js";
 import type { VoiceExtensionConfig } from "@agent/types/Voice.js";
 
 export interface ShipConfig {
@@ -186,14 +187,21 @@ export interface ShipConfig {
     voice?: VoiceExtensionConfig;
   };
   /**
-   * LLM 配置。
+   * Agent 模型绑定配置。
    *
    * 关键点（中文）
-   * - 通过 `activeModel` 选择当前模型。
-   * - `providers` 存连接信息（type/baseUrl/apiKey）。
-   * - `models` 存模型名称与采样参数。
+   * - agent 只声明绑定关系（`model.primary`）。
+   * - provider/models 的完整配置统一由 console 全局 `~/.ship/ship.json` 管理。
    */
-  llm: LlmConfig;
+  model?: AgentModelBindingConfig;
+  /**
+   * LLM 全量配置（通常来自 console 全局层合并结果）。
+   *
+   * 关键点（中文）
+   * - 运行时会读取该字段创建真实模型实例。
+   * - 对于项目内 `ship.json`，通常不需要显式写该字段。
+   */
+  llm?: LlmConfig;
   /**
    * 上下文管理（工程向配置）。
    *

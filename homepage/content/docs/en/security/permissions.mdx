@@ -1,0 +1,48 @@
+---
+title: Permissions Configuration
+description: How to configure and reason about ship.json permissions
+---
+
+# Permissions Configuration
+
+`ship.json.permissions` defines the operational boundary for an agent.
+
+## Minimal example
+
+```json
+{
+  "permissions": {
+    "read_repo": true,
+    "write_repo": {
+      "requiresApproval": false
+    },
+    "exec_command": {
+      "deny": ["rm"],
+      "requiresApproval": false,
+      "denyRequiresApproval": true,
+      "maxOutputChars": 12000,
+      "maxOutputLines": 200
+    }
+  }
+}
+```
+
+## Field semantics
+
+- `read_repo`: allow repository reads.
+- `write_repo.requiresApproval`: require approval before repository writes.
+- `exec_command.deny`: blocked command prefix list.
+- `exec_command.requiresApproval`: require approval for general commands.
+- `exec_command.denyRequiresApproval`: whether denied commands can be manually approved.
+- `exec_command.maxOutputChars/maxOutputLines`: command output limits.
+
+## Recommended policy
+
+1. Keep baseline deny list for production and add risk-specific rules.
+2. On CI/shared hosts, enable `requiresApproval`.
+3. If output is truncated, narrow command scope first instead of unlimited output.
+
+## Related docs
+
+- [Configuration Overview](/en/docs/configuration/overview)
+- [ship.json Reference](/en/docs/reference/ship-json)

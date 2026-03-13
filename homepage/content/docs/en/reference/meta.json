@@ -1,4 +1,4 @@
 {
   "title": "Reference",
-  "pages": ["cli", "dot-ship", "api"]
+  "pages": ["cli", "ship-json", "model-config", "dot-ship", "api"]
 }

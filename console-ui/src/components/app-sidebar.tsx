@@ -6,16 +6,16 @@
 
 import * as React from "react"
 import {
-  BoltIcon,
   CommandIcon,
+  CpuIcon,
   Layers3Icon,
   MessageSquareTextIcon,
-  NetworkIcon,
-  NotepadTextIcon,
-  RadarIcon,
+  PuzzleIcon,
   ScrollTextIcon,
+  ServerCogIcon,
+  RadarIcon,
 } from "lucide-react"
-import type { UiContextSummary } from "@/types/Dashboard"
+import type { UiAgentOption, UiContextSummary } from "@/types/Dashboard"
 import {
   Sidebar,
   SidebarContent,
@@ -29,22 +29,35 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { NavUser } from "@/components/nav-user"
+import { buildContextGroups } from "@/lib/context-groups"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export type DashboardView =
-  | "overview"
-  | "services"
-  | "commsContext"
-  | "tasks"
-  | "logs"
-  | "extensions"
-  | "contextDetail"
-  | "localChat"
+  | "globalOverview"
+  | "globalRuntime"
+  | "globalModel"
+  | "globalAgents"
+  | "globalExtensions"
+  | "agentOverview"
+  | "agentServices"
+  | "agentTasks"
+  | "agentLogs"
+  | "contextOverview"
+  | "contextWorkspace"
 
 export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   /**
    * 当前激活视图。
    */
   activeView: DashboardView
+  /**
+   * 可切换 agent 列表。
+   */
+  agents: UiAgentOption[]
+  /**
+   * 当前选中 agent id。
+   */
+  selectedAgentId: string
   /**
    * context 列表。
    */
@@ -58,34 +71,42 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    */
   onViewChange: (view: DashboardView) => void
   /**
-   * 打开 context 状态页。
+   * 切换 agent 回调。
+   */
+  onAgentChange: (agentId: string) => void
+  /**
+   * 打开 context workspace 并选中 context。
    */
   onContextOpen: (contextId: string) => void
-  /**
-   * 打开 local_ui 聊天页。
-   */
-  onLocalChatOpen: () => void
 }
 
-const mainItems: Array<{ key: DashboardView; title: string; icon: React.ReactNode }> = [
-  { key: "overview", title: "Overview", icon: <Layers3Icon /> },
-  { key: "services", title: "Services", icon: <BoltIcon /> },
-  { key: "commsContext", title: "Comms & Context", icon: <NetworkIcon /> },
-  { key: "tasks", title: "Tasks", icon: <RadarIcon /> },
-  { key: "logs", title: "Logs", icon: <ScrollTextIcon /> },
-  { key: "extensions", title: "Extensions", icon: <NotepadTextIcon /> },
+const globalItems: Array<{ key: DashboardView; title: string; icon: React.ReactNode }> = [
+  { key: "globalOverview", title: "Overview", icon: <Layers3Icon /> },
+  { key: "globalRuntime", title: "Console Runtime", icon: <ServerCogIcon /> },
+  { key: "globalModel", title: "Model", icon: <ServerCogIcon /> },
+  { key: "globalAgents", title: "Agents", icon: <CpuIcon /> },
+  { key: "globalExtensions", title: "Extensions", icon: <PuzzleIcon /> },
+]
+
+const agentItems: Array<{ key: DashboardView; title: string; icon: React.ReactNode }> = [
+  { key: "agentOverview", title: "Agent Overview", icon: <CpuIcon /> },
+  { key: "agentServices", title: "Services", icon: <ServerCogIcon /> },
+  { key: "agentTasks", title: "Tasks", icon: <RadarIcon /> },
+  { key: "agentLogs", title: "Logs", icon: <ScrollTextIcon /> },
 ]
 
 export function AppSidebar({
   activeView,
+  agents,
+  selectedAgentId,
   contexts,
   selectedContextId,
   onViewChange,
+  onAgentChange,
   onContextOpen,
-  onLocalChatOpen,
   ...props
 }: AppSidebarProps) {
-  const sortedContexts = [...contexts].sort((a, b) => a.contextId.localeCompare(b.contextId))
+  const groupedContexts = buildContextGroups(contexts)
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -98,14 +119,41 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        <div className="px-2 pb-1">
+          {agents.length > 0 ? (
+            <Select
+              value={selectedAgentId}
+              onValueChange={(value) => {
+                if (value !== null) onAgentChange(value)
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="选择 agent" />
+              </SelectTrigger>
+              <SelectContent>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {`${agent.name || "unknown-agent"}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="rounded-md border border-dashed border-border px-2 py-1.5 text-xs text-muted-foreground">
+              无运行中的 agent
+            </div>
+          )}
+        </div>
+
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Runtime</SidebarGroupLabel>
+          <SidebarGroupLabel>Global</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
+              {globalItems.map((item) => (
                 <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton
                     tooltip={item.title}
@@ -122,33 +170,65 @@ export function AppSidebar({
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Contexts</SidebarGroupLabel>
+          <SidebarGroupLabel>Agent</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {agentItems.map((item) => (
+                <SidebarMenuItem key={item.key}>
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    isActive={activeView === item.key}
+                    onClick={() => onViewChange(item.key)}
+                  >
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Context</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip="local_ui chat"
-                  isActive={activeView === "localChat"}
-                  onClick={onLocalChatOpen}
+                  tooltip="Context Overview"
+                  isActive={activeView === "contextOverview"}
+                  onClick={() => onViewChange("contextOverview")}
                 >
-                  <MessageSquareTextIcon />
-                  <span>local_ui chat</span>
+                  <Layers3Icon />
+                  <span>Context Overview</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {sortedContexts.map((item) => {
-                if (item.contextId === "local_ui") return null
-                return (
-                  <SidebarMenuItem key={item.contextId}>
+              {groupedContexts.map((group) => (
+                <React.Fragment key={group.key}>
+                  <SidebarMenuItem>
                     <SidebarMenuButton
-                      tooltip={item.contextId}
-                      isActive={activeView === "contextDetail" && selectedContextId === item.contextId}
-                      onClick={() => onContextOpen(item.contextId)}
+                      render={<button type="button" disabled />}
+                      className="opacity-70 data-[slot=sidebar-menu-button]:cursor-default"
                     >
-                      <span className="w-full truncate font-mono text-xs">{item.contextId}</span>
+                      <span className="w-full truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {`${group.title} (${group.items.length})`}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                )
-              })}
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.contextId}>
+                      <SidebarMenuButton
+                        tooltip={item.contextId}
+                        isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
+                        onClick={() => onContextOpen(item.contextId)}
+                      >
+                        {item.contextId === "local_ui" ? <MessageSquareTextIcon /> : null}
+                        <span className="w-full truncate font-mono text-xs">{item.contextId}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </React.Fragment>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

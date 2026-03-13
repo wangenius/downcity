@@ -1,0 +1,24 @@
+---
+title: Security and Permissions Overview
+description: User-facing security model for isolation, permissions, and secret protection
+---
+
+# Security and Permissions Overview
+
+ShipMyAgent security has three layers:
+
+1. Runtime isolation: one agent runtime is bound to one `projectRoot`.
+2. Permission control: `ship.json.permissions` defines write/exec boundaries.
+3. Data protection: model provider `apiKey` is encrypted in `~/.ship/ship.db`.
+
+## What to watch first
+
+1. Avoid stale `SMA_SERVER_HOST/SMA_SERVER_PORT` in your shell, or requests may hit the wrong runtime.
+2. Keep high-risk commands in `permissions.exec_command.deny` (for example `rm`).
+3. In production, prefer `SMA_MODEL_DB_KEY` from secret management.
+
+## Recommended reading
+
+1. [Permissions](/en/docs/security/permissions)
+2. [Data Security and Keys](/en/docs/security/data-security)
+3. [Invocation Routing and Isolation](/en/docs/concepts/invocation-routing-and-isolation)

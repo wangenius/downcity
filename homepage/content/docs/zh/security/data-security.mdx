@@ -1,0 +1,31 @@
+---
+title: 数据安全与密钥
+description: 模型配置存储、加密机制与用户注意事项
+---
+
+# 数据安全与密钥
+
+模型配置采用“全局存储 + 本地绑定”：
+
+1. 全局模型池：`~/.ship/ship.db`
+2. 项目绑定：`<project>/ship.json` 的 `model.primary`
+
+## apiKey 如何保护
+
+provider 的 `apiKey` 不以明文写入数据库，而是写入加密字段 `api_key_encrypted`。
+
+密钥来源优先级：
+
+1. `SMA_MODEL_DB_KEY` 环境变量
+2. `~/.ship/console/model-db.key`
+
+## 用户侧最佳实践
+
+1. 不要提交 `~/.ship` 或任何私钥文件到版本库。
+2. 团队环境统一通过密钥管理系统注入 `SMA_MODEL_DB_KEY`。
+3. 轮换 key 后，执行一次模型连通性验证（`sma console config llm model list` + 实际调用测试）。
+
+## 相关文档
+
+- [Model 配置参考](/zh/docs/reference/model-config)
+- [Model 配置](/zh/docs/configuration/model)

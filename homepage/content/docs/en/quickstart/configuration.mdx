@@ -27,28 +27,14 @@ Startup options (CLI flags override these values):
 }
 ```
 
-### `llm`
+### `model`
 
-Provider and model configuration:
+Agent model binding (maps to console-global model pool):
 
 ```json
 {
-  "llm": {
-    "activeModel": "default",
-    "providers": {
-      "default": {
-        "type": "openai",
-        "apiKey": "${LLM_API_KEY}"
-      }
-    },
-    "models": {
-      "default": {
-        "provider": "default",
-        "name": "gpt-4o-mini",
-        "temperature": 0.7
-      }
-    },
-    "logMessages": true
+  "model": {
+    "primary": "default"
   }
 }
 ```
@@ -138,7 +124,8 @@ Repository write and command execution policies:
 
 ```bash
 sma console config get
-sma console config get llm.activeModel
+sma console config get model.primary
+sma console config llm model list
 sma console config set start.port 3100
 sma console config unset services.chat.channels.telegram
 ```

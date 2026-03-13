@@ -1,0 +1,5 @@
+# >>> vibecape-managed >>>
+.vibecape/*
+!.vibecape/
+!.vibecape/meta.db
+# <<< vibecape-managed <<<

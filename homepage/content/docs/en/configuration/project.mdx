@@ -1,0 +1,43 @@
+---
+title: Project Configuration (ship.json)
+description: Most-used project-level fields and practical cautions
+---
+
+# Project Configuration (ship.json)
+
+`ship.json` is the project runtime entrypoint.
+
+```json
+{
+  "name": "my-agent",
+  "model": {
+    "primary": "default"
+  },
+  "start": {
+    "host": "127.0.0.1",
+    "port": 3000
+  },
+  "services": {},
+  "extensions": {},
+  "permissions": {}
+}
+```
+
+## Cautions
+
+1. `model.primary` must resolve in the global model pool.
+2. `start.host/start.port` affects default CLI routing.
+3. Enable only required services/extensions for production stability.
+
+## Common commands
+
+```bash
+sma console config get
+sma console config get model.primary
+sma console config set start.port 3100
+```
+
+## Related docs
+
+- [ship.json Reference](/en/docs/reference/ship-json)
+- [Quickstart Configuration](/en/docs/quickstart/configuration)

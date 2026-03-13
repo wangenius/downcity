@@ -18,6 +18,8 @@ import type {
   UiLocalMessagesResponse,
   UiLogItem,
   UiLogsResponse,
+  UiModelResponse,
+  UiModelSummary,
   UiOverviewResponse,
   UiPromptResponse,
   UiExtensionRuntimeItem,
@@ -129,6 +131,10 @@ export interface UseConsoleDashboardResult {
    */
   logs: UiLogItem[];
   /**
+   * 模型配置快照。
+   */
+  model: UiModelSummary | null;
+  /**
    * system prompt 数据。
    */
   prompt: UiPromptResponse | null;
@@ -203,7 +209,11 @@ export interface UseConsoleDashboardResult {
   /**
    * 刷新 prompt。
    */
-  refreshPrompt: (agentId: string) => Promise<void>;
+  refreshPrompt: (agentId: string, contextId?: string) => Promise<void>;
+  /**
+   * 刷新模型信息。
+   */
+  refreshModel: (agentId: string) => Promise<void>;
   /**
    * 刷新 local_ui 消息。
    */
@@ -228,6 +238,10 @@ export interface UseConsoleDashboardResult {
    * 发送 local_ui 指令。
    */
   sendLocalMessage: () => Promise<void>;
+  /**
+   * 切换 active model。
+   */
+  switchModel: (primaryModelId: string) => Promise<void>;
   /**
    * 提供常用常量。
    */
@@ -258,6 +272,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [contextMessages, setContextMessages] = useState<UiContextTimelineMessage[]>([]);
   const [tasks, setTasks] = useState<UiTaskItem[]>([]);
   const [logs, setLogs] = useState<UiLogItem[]>([]);
+  const [model, setModel] = useState<UiModelSummary | null>(null);
   const [prompt, setPrompt] = useState<UiPromptResponse | null>(null);
   const [localMessages, setLocalMessages] = useState<UiLocalMessage[]>([]);
 
@@ -358,6 +373,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setContextMessages([]);
     setTasks([]);
     setLogs([]);
+    setModel(null);
     setPrompt(null);
     setLocalMessages([]);
   }, []);
@@ -512,12 +528,32 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
-  const refreshPrompt = useCallback(
+  const refreshModel = useCallback(
     async (agentId: string) => {
       if (!agentId) return;
       try {
+        const data = await requestJson<UiModelResponse>("/api/tui/model", {}, agentId);
+        setModel(data.model || null);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        // 关键点（中文）：旧 runtime 没有 model 接口时降级为空。
+        if (/404|not found/i.test(message)) {
+          setModel(null);
+          return;
+        }
+        throw error;
+      }
+    },
+    [requestJson],
+  );
+
+  const refreshPrompt = useCallback(
+    async (agentId: string, contextId?: string) => {
+      if (!agentId) return;
+      const resolvedContextId = String(contextId || LOCAL_UI_CONTEXT_ID).trim() || LOCAL_UI_CONTEXT_ID;
+      try {
         const data = await requestJson<UiPromptResponse>(
-          `/api/tui/system-prompt?contextId=${encodeURIComponent(LOCAL_UI_CONTEXT_ID)}`,
+          `/api/tui/system-prompt?contextId=${encodeURIComponent(resolvedContextId)}`,
           {},
           agentId,
         );
@@ -571,7 +607,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshExtensions(nextAgentId),
           refreshTasks(nextAgentId),
           refreshLogs(nextAgentId),
-          refreshPrompt(nextAgentId),
+          refreshModel(nextAgentId),
           refreshLocalChat(nextAgentId),
         ]);
 
@@ -592,10 +628,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           await Promise.all([
             refreshChannelHistory(nextAgentId, nextContext),
             refreshContextMessages(nextAgentId, nextContext),
+            refreshPrompt(nextAgentId, nextContext),
           ]);
         } else {
           setChannelHistory([]);
           setContextMessages([]);
+          setPrompt(null);
         }
 
         const selected = list.find((item) => item.id === nextAgentId);
@@ -622,6 +660,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshExtensions,
       refreshLocalChat,
       refreshLogs,
+      refreshModel,
       refreshOverview,
       refreshPrompt,
       refreshServices,
@@ -708,9 +747,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       await Promise.all([
         refreshChannelHistory(selectedAgentId, nextContext),
         refreshContextMessages(selectedAgentId, nextContext),
+        refreshPrompt(selectedAgentId, nextContext),
       ]);
     },
-    [contexts, refreshChannelHistory, refreshContextMessages, selectedAgentId],
+    [contexts, refreshChannelHistory, refreshContextMessages, refreshPrompt, selectedAgentId],
   );
 
   const handleContextChange = useCallback(
@@ -725,9 +765,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       await Promise.all([
         refreshChannelHistory(selectedAgentId, nextContextId),
         refreshContextMessages(selectedAgentId, nextContextId),
+        refreshPrompt(selectedAgentId, nextContextId),
       ]);
     },
-    [refreshChannelHistory, refreshContextMessages, selectedAgentId],
+    [refreshChannelHistory, refreshContextMessages, refreshPrompt, selectedAgentId],
   );
 
   const runTask = useCallback(
@@ -784,6 +825,36 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     showToast,
   ]);
 
+  const switchModel = useCallback(
+    async (primaryModelId: string) => {
+      const next = String(primaryModelId || "").trim();
+      if (!next) return;
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return;
+      }
+      try {
+        await requestJson<{
+          success?: boolean;
+          restartRequired?: boolean;
+          message?: string;
+        }>(
+          "/api/tui/model/switch",
+          {
+            method: "POST",
+            body: JSON.stringify({ primaryModelId: next }),
+          },
+          selectedAgentId,
+        );
+        await refreshModel(selectedAgentId);
+        showToast("agent model.primary 已更新（需重启 agent 完整生效）", "success");
+      } catch (error) {
+        showToast(`model.primary 更新失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshModel, requestJson, selectedAgentId, showToast],
+  );
+
   const handleAgentChange = useCallback(
     (nextAgentId: string) => {
       setSelectedAgentId(nextAgentId);
@@ -825,6 +896,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     contextMessages,
     tasks,
     logs,
+    model,
     prompt,
     localMessages,
     topbarStatus,
@@ -844,12 +916,14 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshChannelHistory,
     refreshContextMessages,
     refreshPrompt,
+    refreshModel,
     refreshLocalChat,
     controlService,
     controlExtension,
     runChatChannelAction,
     runTask,
     sendLocalMessage,
+    switchModel,
     constants: {
       LOCAL_UI_CONTEXT_ID,
     },

@@ -40,6 +40,10 @@ Check:
 
 ```bash
 sma console config get llm
+sma console config get model.primary
 ```
 
-Ensure `llm.activeModel` points to an existing `llm.models.<id>`.
+Ensure:
+
+1. `model.primary` points to an existing model id in `~/.ship/ship.db`
+2. console-global SQLite providers/models entries are valid

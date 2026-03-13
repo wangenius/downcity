@@ -8,7 +8,7 @@ description: 启动 console UI（单实例，多 agent 视图）
 管理由 `console` 托管的 UI 网关。
 
 该 UI 不绑定某一个 `agent on` 进程，而是可以在同一页面切换查看多个已运行 agent。
-它是状态优先的 Dashboard，对话只是附属能力。
+它是状态优先的 Dashboard，对话只在 `local_ui` context 中开放。
 
 ## 用法
 
@@ -31,10 +31,13 @@ sma console ui [action] [options]
 
 - 需要先启动 console：`sma console start`。
 - UI 启动后会读取 console registry 中的活跃 agent 列表。
-- 页面顶部可切换目标 agent，所有 `Contexts/Services/Tasks/Logs` 视图会跟随切换。
-- Dashboard 会展示 `Chat Channels` 链路状态（Telegram/Feishu/QQ），并提供 `test` / `reconnect` 按钮。
-- 对话入口固定到 `local_ui` context，不支持在 UI 中对任意 context 下发指令。
-- 页面会展示 `system prompt` 的构成分组（静态/服务/运行时）。
+- 侧边栏按三层分区：`Global` / `Agent` / `Context`。
+- `Global`：全局概览、console runtime、model 管理、agents 管理、extensions。
+- `Agent`：`Overview`、`Services`、`Tasks`、`Logs`。
+- `Context`：`Context Overview` + 每个 context 条目（包含 `local_ui`）。
+- `Context Overview` 内会展示 channel 链路状态与 context 对应关系，并提供 `test` / `reconnect`。
+- 只有 `local_ui` 支持发送消息；其他 context 在 UI 中为只读。
+- `Context Workspace` 会展示当前 context 的消息历史、channel 历史、system prompt 解析结果。
 - `sma console status` 会同时显示 console 与 UI 状态。
 
 ## 典型流程

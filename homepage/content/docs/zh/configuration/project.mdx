@@ -1,0 +1,43 @@
+---
+title: 项目配置（ship.json）
+description: ship.json 中用户最常用字段与注意事项
+---
+
+# 项目配置（ship.json）
+
+`ship.json` 是项目级运行入口，常用字段如下：
+
+```json
+{
+  "name": "my-agent",
+  "model": {
+    "primary": "default"
+  },
+  "start": {
+    "host": "127.0.0.1",
+    "port": 3000
+  },
+  "services": {},
+  "extensions": {},
+  "permissions": {}
+}
+```
+
+## 注意事项
+
+1. `model.primary` 必须能在全局模型池中解析到。
+2. `start.host/start.port` 会影响 CLI 的默认路由目标。
+3. `services` 与 `extensions` 建议按需启用，避免无效组件常驻。
+
+## 常用命令
+
+```bash
+sma console config get
+sma console config get model.primary
+sma console config set start.port 3100
+```
+
+## 相关文档
+
+- [ship.json 参考](/zh/docs/reference/ship-json)
+- [快速开始配置](/zh/docs/quickstart/configuration)

@@ -27,28 +27,14 @@ ShipMyAgent 的核心配置由 4 部分组成：
 }
 ```
 
-### `llm`
+### `model`
 
-定义 provider 与 model：
+agent 绑定模型 ID（映射到 console 全局模型池）：
 
 ```json
 {
-  "llm": {
-    "activeModel": "default",
-    "providers": {
-      "default": {
-        "type": "openai",
-        "apiKey": "${LLM_API_KEY}"
-      }
-    },
-    "models": {
-      "default": {
-        "provider": "default",
-        "name": "gpt-4o-mini",
-        "temperature": 0.7
-      }
-    },
-    "logMessages": true
+  "model": {
+    "primary": "default"
   }
 }
 ```
@@ -138,7 +124,8 @@ ShipMyAgent 的核心配置由 4 部分组成：
 
 ```bash
 sma console config get
-sma console config get llm.activeModel
+sma console config get model.primary
+sma console config llm model list
 sma console config set start.port 3100
 sma console config unset services.chat.channels.telegram
 ```
@@ -146,4 +133,5 @@ sma console config unset services.chat.channels.telegram
 ## 下一步
 
 - [CLI 参考](/zh/docs/reference/cli)
+- [ship.json 参考](/zh/docs/reference/ship-json)
 - [`.ship/` 目录说明](/zh/docs/reference/dot-ship)

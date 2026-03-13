@@ -1,0 +1,329 @@
+/**
+ * Console 模型存储（SQLite + Drizzle）。
+ *
+ * 关键点（中文）
+ * - 数据文件：`~/.ship/ship.db`
+ * - provider / model 配置统一落到 SQLite，不再依赖 ship.json 的 llm 节点。
+ * - provider.apiKey 采用字段级加密存储。
+ */
+import fs from "fs-extra";
+import Database from "better-sqlite3";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import type {
+  StoredModel,
+  StoredModelProvider,
+  UpsertModelInput,
+  UpsertModelProviderInput,
+} from "@/types/Store.js";
+import {
+  getConsoleRootDirPath,
+  getConsoleShipDbPath,
+} from "@/console/runtime/ConsolePaths.js";
+import { decryptText, encryptText } from "./crypto.js";
+import { modelProvidersTable, modelsTable } from "./schema.js";
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+/**
+ * Console 模型存储。
+ */
+export class ConsoleStore {
+  private readonly sqlite: Database.Database;
+
+  private readonly db: ReturnType<typeof drizzle>;
+
+  constructor(dbPath: string = getConsoleShipDbPath()) {
+    fs.ensureDirSync(getConsoleRootDirPath());
+    this.sqlite = new Database(dbPath);
+    this.sqlite.pragma("journal_mode = WAL");
+    this.db = drizzle(this.sqlite);
+    this.ensureSchema();
+  }
+
+  /**
+   * 创建基础表结构。
+   */
+  private ensureSchema(): void {
+    this.sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS model_providers (
+        id TEXT PRIMARY KEY NOT NULL,
+        type TEXT NOT NULL,
+        base_url TEXT,
+        api_key_encrypted TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    this.sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS models (
+        id TEXT PRIMARY KEY NOT NULL,
+        provider_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        temperature REAL,
+        max_tokens INTEGER,
+        top_p REAL,
+        frequency_penalty REAL,
+        presence_penalty REAL,
+        anthropic_version TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    this.sqlite.exec(`
+      CREATE INDEX IF NOT EXISTS models_provider_id_idx
+      ON models(provider_id);
+    `);
+  }
+
+  /**
+   * 关闭连接。
+   */
+  close(): void {
+    this.sqlite.close();
+  }
+
+  /**
+   * 列出 providers（包含解密后的 apiKey）。
+   */
+  async listProviders(): Promise<StoredModelProvider[]> {
+    const rows = this.db.select().from(modelProvidersTable).all();
+    const result: StoredModelProvider[] = [];
+    for (const row of rows) {
+      let apiKey: string | undefined;
+      if (row.apiKeyEncrypted) {
+        apiKey = await decryptText(row.apiKeyEncrypted);
+      }
+      result.push({
+        id: row.id,
+        type: row.type as StoredModelProvider["type"],
+        baseUrl: row.baseUrl || undefined,
+        apiKey,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * 获取单个 provider。
+   */
+  async getProvider(providerId: string): Promise<StoredModelProvider | null> {
+    const row = this.db
+      .select()
+      .from(modelProvidersTable)
+      .where(eq(modelProvidersTable.id, providerId))
+      .get();
+    if (!row) return null;
+    let apiKey: string | undefined;
+    if (row.apiKeyEncrypted) {
+      apiKey = await decryptText(row.apiKeyEncrypted);
+    }
+    return {
+      id: row.id,
+      type: row.type as StoredModelProvider["type"],
+      baseUrl: row.baseUrl || undefined,
+      apiKey,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  /**
+   * 新增或更新 provider。
+   */
+  async upsertProvider(input: UpsertModelProviderInput): Promise<void> {
+    const id = String(input.id || "").trim();
+    if (!id) throw new Error("providerId cannot be empty");
+
+    const existing = this.db
+      .select()
+      .from(modelProvidersTable)
+      .where(eq(modelProvidersTable.id, id))
+      .get();
+    const createdAt = existing?.createdAt || nowIso();
+    const updatedAt = nowIso();
+    const hasApiKeyField = Object.prototype.hasOwnProperty.call(input, "apiKey");
+    let apiKeyEncrypted: string | null = existing?.apiKeyEncrypted || null;
+    if (hasApiKeyField) {
+      if (typeof input.apiKey === "string" && input.apiKey.length > 0) {
+        apiKeyEncrypted = await encryptText(input.apiKey);
+      } else {
+        apiKeyEncrypted = null;
+      }
+    }
+
+    this.db
+      .insert(modelProvidersTable)
+      .values({
+        id,
+        type: input.type,
+        baseUrl: input.baseUrl || null,
+        apiKeyEncrypted,
+        createdAt,
+        updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: modelProvidersTable.id,
+        set: {
+          type: input.type,
+          baseUrl: input.baseUrl || null,
+          apiKeyEncrypted,
+          updatedAt,
+        },
+      })
+      .run();
+  }
+
+  /**
+   * 删除 provider（若被 model 引用会抛错）。
+   */
+  removeProvider(providerId: string): void {
+    const refs = this.db
+      .select()
+      .from(modelsTable)
+      .where(eq(modelsTable.providerId, providerId))
+      .all();
+    if (refs.length > 0) {
+      throw new Error(
+        `Provider "${providerId}" is referenced by models: ${refs.map((x) => x.id).join(", ")}`,
+      );
+    }
+    this.db
+      .delete(modelProvidersTable)
+      .where(eq(modelProvidersTable.id, providerId))
+      .run();
+  }
+
+  /**
+   * 列出 models。
+   */
+  listModels(): StoredModel[] {
+    const rows = this.db.select().from(modelsTable).all();
+    return rows.map((row) => ({
+      id: row.id,
+      providerId: row.providerId,
+      name: row.name,
+      temperature: row.temperature ?? undefined,
+      maxTokens: row.maxTokens ?? undefined,
+      topP: row.topP ?? undefined,
+      frequencyPenalty: row.frequencyPenalty ?? undefined,
+      presencePenalty: row.presencePenalty ?? undefined,
+      anthropicVersion: row.anthropicVersion ?? undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
+  /**
+   * 获取单个 model。
+   */
+  getModel(modelId: string): StoredModel | null {
+    const row = this.db
+      .select()
+      .from(modelsTable)
+      .where(eq(modelsTable.id, modelId))
+      .get();
+    if (!row) return null;
+    return {
+      id: row.id,
+      providerId: row.providerId,
+      name: row.name,
+      temperature: row.temperature ?? undefined,
+      maxTokens: row.maxTokens ?? undefined,
+      topP: row.topP ?? undefined,
+      frequencyPenalty: row.frequencyPenalty ?? undefined,
+      presencePenalty: row.presencePenalty ?? undefined,
+      anthropicVersion: row.anthropicVersion ?? undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  /**
+   * 新增或更新 model。
+   */
+  upsertModel(input: UpsertModelInput): void {
+    const id = String(input.id || "").trim();
+    if (!id) throw new Error("modelId cannot be empty");
+    const providerId = String(input.providerId || "").trim();
+    if (!providerId) throw new Error("providerId cannot be empty");
+    const provider = this.db
+      .select()
+      .from(modelProvidersTable)
+      .where(eq(modelProvidersTable.id, providerId))
+      .get();
+    if (!provider) throw new Error(`Provider not found: ${providerId}`);
+
+    const existing = this.db
+      .select()
+      .from(modelsTable)
+      .where(eq(modelsTable.id, id))
+      .get();
+    const createdAt = existing?.createdAt || nowIso();
+    const updatedAt = nowIso();
+
+    this.db
+      .insert(modelsTable)
+      .values({
+        id,
+        providerId,
+        name: input.name,
+        temperature: input.temperature ?? null,
+        maxTokens: input.maxTokens ?? null,
+        topP: input.topP ?? null,
+        frequencyPenalty: input.frequencyPenalty ?? null,
+        presencePenalty: input.presencePenalty ?? null,
+        anthropicVersion: input.anthropicVersion ?? null,
+        createdAt,
+        updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: modelsTable.id,
+        set: {
+          providerId,
+          name: input.name,
+          temperature: input.temperature ?? null,
+          maxTokens: input.maxTokens ?? null,
+          topP: input.topP ?? null,
+          frequencyPenalty: input.frequencyPenalty ?? null,
+          presencePenalty: input.presencePenalty ?? null,
+          anthropicVersion: input.anthropicVersion ?? null,
+          updatedAt,
+        },
+      })
+      .run();
+  }
+
+  /**
+   * 删除 model。
+   */
+  removeModel(modelId: string): void {
+    this.db.delete(modelsTable).where(eq(modelsTable.id, modelId)).run();
+  }
+
+  /**
+   * 按 modelId 获取“模型 + provider”聚合信息。
+   */
+  async getResolvedModel(modelId: string): Promise<{
+    model: StoredModel;
+    provider: StoredModelProvider;
+  } | null> {
+    const model = this.getModel(modelId);
+    if (!model) return null;
+    const provider = await this.getProvider(model.providerId);
+    if (!provider) return null;
+    return { model, provider };
+  }
+
+  /**
+   * 清空模型池（仅内部迁移/初始化使用）。
+   */
+  clearAll(): void {
+    this.sqlite.exec("DELETE FROM models;");
+    this.sqlite.exec("DELETE FROM model_providers;");
+  }
+}

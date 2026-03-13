@@ -5,12 +5,14 @@
 import * as React from "react"
 
 import { AppSidebar, type DashboardView } from "@/components/app-sidebar"
-import { CommsContextSection } from "@/components/dashboard/CommsContextSection"
-import { ContextStatusSection } from "@/components/dashboard/ContextStatusSection"
+import { ConsoleStatusSection } from "@/components/dashboard/ConsoleStatusSection"
+import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
+import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
+import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
+import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspaceSection"
 import { ExtensionsSection } from "@/components/dashboard/ExtensionsSection"
-import { LocalChatSection } from "@/components/dashboard/LocalChatSection"
+import { GlobalOverviewSection } from "@/components/dashboard/GlobalOverviewSection"
 import { LogsSection } from "@/components/dashboard/LogsSection"
-import { PromptSection } from "@/components/dashboard/PromptSection"
 import { ServicesSection } from "@/components/dashboard/ServicesSection"
 import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { TasksSection } from "@/components/dashboard/TasksSection"
@@ -20,18 +22,21 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 
 const viewLabelMap: Record<DashboardView, string> = {
-  overview: "Overview",
-  services: "Services",
-  commsContext: "Comms & Context",
-  tasks: "Tasks",
-  logs: "Logs",
-  extensions: "Extensions",
-  contextDetail: "Context Status",
-  localChat: "local_ui Chat",
+  globalOverview: "Global / Overview",
+  globalRuntime: "Global / Console Runtime",
+  globalModel: "Global / Model",
+  globalAgents: "Global / Agents",
+  globalExtensions: "Global / Extensions",
+  agentOverview: "Agent / Overview",
+  agentServices: "Agent / Services",
+  agentTasks: "Agent / Tasks",
+  agentLogs: "Agent / Logs",
+  contextOverview: "Context / Overview",
+  contextWorkspace: "Context / Workspace",
 }
 
 export function App() {
-  const [activeView, setActiveView] = React.useState<DashboardView>("overview")
+  const [activeView, setActiveView] = React.useState<DashboardView>("globalOverview")
 
   const {
     agents,
@@ -42,14 +47,13 @@ export function App() {
     extensions,
     chatChannels,
     contexts,
-    selectedChannel,
     selectedContextId,
     channelHistory,
     contextMessages,
     tasks,
     logs,
+    model,
     prompt,
-    localMessages,
     topbarStatus,
     topbarError,
     loading,
@@ -58,18 +62,17 @@ export function App() {
     toast,
     setChatInput,
     handleAgentChange,
-    handleChannelChange,
     handleContextChange,
     refreshDashboard,
     refreshChatChannels,
-    refreshExtensions,
+    refreshModel,
     refreshPrompt,
-    refreshLocalChat,
     controlService,
     controlExtension,
     runChatChannelAction,
     runTask,
     sendLocalMessage,
+    switchModel,
     constants,
     uiHelpers,
   } = useConsoleDashboard()
@@ -85,67 +88,68 @@ export function App() {
     >
       <AppSidebar
         activeView={activeView}
+        agents={agents}
+        selectedAgentId={selectedAgentId}
         contexts={contexts}
         selectedContextId={selectedContextId}
         onViewChange={setActiveView}
-        onContextOpen={(contextId) => {
-          setActiveView("contextDetail")
-          void handleContextChange(contextId)
+        onAgentChange={(agentId) => {
+          void handleAgentChange(agentId)
         }}
-        onLocalChatOpen={() => {
-          setActiveView("localChat")
-          void handleContextChange(constants.LOCAL_UI_CONTEXT_ID)
+        onContextOpen={(contextId) => {
+          setActiveView("contextWorkspace")
+          void handleContextChange(contextId)
         }}
         variant="inset"
       />
       <SidebarInset>
         <SiteHeader
-          agents={agents}
-          selectedAgentId={selectedAgentId}
           topbarStatus={topbarStatus}
           topbarError={topbarError}
           loading={loading}
-          onAgentChange={handleAgentChange}
           onRefresh={() => void refreshDashboard()}
           viewLabel={viewLabelMap[activeView]}
         />
 
         <main className="flex flex-1 flex-col gap-4 bg-muted/35 p-3 md:p-4 lg:p-6">
-          {activeView === "overview" ? (
-            <section className="grid gap-4 xl:grid-cols-[minmax(760px,1fr)_420px] animate-in fade-in-0 duration-300">
-              <div className="space-y-4">
-                <SummaryCards
-                  selectedAgent={selectedAgent}
-                  overview={overview}
-                  services={services}
-                  localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
-                />
-                <ServicesSection
-                  services={services}
-                  statusBadgeVariant={uiHelpers.statusBadgeVariant}
-                  onControlService={(name, action) => void controlService(name, action)}
-                />
-              </div>
-              <aside className="space-y-4">
-                <CommsContextSection
-                  chatChannels={chatChannels}
-                  contexts={contexts}
-                  selectedChannel={selectedChannel}
-                  selectedContextId={selectedContextId}
-                  channelHistory={channelHistory}
-                  contextMessages={contextMessages}
-                  statusBadgeVariant={uiHelpers.statusBadgeVariant}
-                  formatTime={uiHelpers.formatTime}
-                  onChannelChange={(channel) => void handleChannelChange(channel)}
-                  onContextChange={(contextId) => void handleContextChange(contextId)}
-                  onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
-                  onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
-                />
-              </aside>
+          {activeView === "globalOverview" ? (
+            <section className="animate-in fade-in-0 duration-300">
+              <GlobalOverviewSection
+                topbarStatus={topbarStatus}
+                topbarError={topbarError}
+                agents={agents}
+                selectedAgent={selectedAgent}
+                chatChannels={chatChannels}
+                extensions={extensions}
+              />
             </section>
           ) : null}
 
-          {activeView === "services" ? (
+          {activeView === "globalRuntime" ? (
+            <section className="animate-in fade-in-0 duration-300">
+              <ConsoleStatusSection
+                selectedAgent={selectedAgent}
+                topbarStatus={topbarStatus}
+                topbarError={topbarError}
+                hasPrompt={Boolean(prompt && Array.isArray(prompt.sections) && prompt.sections.length > 0)}
+                extensions={extensions}
+                onRefresh={() => void refreshDashboard()}
+              />
+            </section>
+          ) : null}
+
+          {activeView === "agentOverview" ? (
+            <section className="animate-in fade-in-0 duration-300">
+              <SummaryCards
+                selectedAgent={selectedAgent}
+                overview={overview}
+                services={services}
+                localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
+              />
+            </section>
+          ) : null}
+
+          {activeView === "agentServices" ? (
             <section className="animate-in fade-in-0 duration-300">
               <ServicesSection
                 services={services}
@@ -155,26 +159,43 @@ export function App() {
             </section>
           ) : null}
 
-          {activeView === "commsContext" ? (
+          {activeView === "globalAgents" ? (
             <section className="animate-in fade-in-0 duration-300">
-              <CommsContextSection
-                chatChannels={chatChannels}
-                contexts={contexts}
-                selectedChannel={selectedChannel}
-                selectedContextId={selectedContextId}
-                channelHistory={channelHistory}
-                contextMessages={contextMessages}
-                statusBadgeVariant={uiHelpers.statusBadgeVariant}
-                formatTime={uiHelpers.formatTime}
-                onChannelChange={(channel) => void handleChannelChange(channel)}
-                onContextChange={(contextId) => void handleContextChange(contextId)}
-                onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
-                onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
+              <GlobalAgentsSection
+                agents={agents}
+                selectedAgentId={selectedAgentId}
+                onSelectAgent={(agentId) => {
+                  void handleAgentChange(agentId)
+                }}
+                onRefresh={() => void refreshDashboard(selectedAgentId)}
               />
             </section>
           ) : null}
 
-          {activeView === "tasks" ? (
+          {activeView === "globalModel" ? (
+            <section className="animate-in fade-in-0 duration-300">
+              <GlobalModelSection
+                model={model}
+                loading={loading}
+                onRefresh={() => void refreshModel(selectedAgentId)}
+                onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
+              />
+            </section>
+          ) : null}
+
+          {activeView === "globalExtensions" ? (
+            <section className="animate-in fade-in-0 duration-300">
+              <ExtensionsSection
+                extensions={extensions}
+                formatTime={uiHelpers.formatTime}
+                statusBadgeVariant={uiHelpers.statusBadgeVariant}
+                onRefresh={() => void refreshDashboard()}
+                onControl={(name, action) => void controlExtension(name, action)}
+              />
+            </section>
+          ) : null}
+
+          {activeView === "agentTasks" ? (
             <section className="animate-in fade-in-0 duration-300">
               <TasksSection
                 tasks={tasks}
@@ -184,54 +205,44 @@ export function App() {
             </section>
           ) : null}
 
-          {activeView === "extensions" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <ExtensionsSection
-                extensions={extensions}
-                formatTime={uiHelpers.formatTime}
-                statusBadgeVariant={uiHelpers.statusBadgeVariant}
-                onRefresh={() => void refreshExtensions(selectedAgentId)}
-                onControl={(name, action) => void controlExtension(name, action)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "logs" ? (
+          {activeView === "agentLogs" ? (
             <section className="animate-in fade-in-0 duration-300">
               <LogsSection logs={logs} formatTime={uiHelpers.formatTime} />
             </section>
           ) : null}
 
-          {activeView === "contextDetail" ? (
+          {activeView === "contextOverview" ? (
             <section className="animate-in fade-in-0 duration-300">
-              <ContextStatusSection
-                selectedContextId={selectedContextId}
+              <ContextOverviewSection
                 contexts={contexts}
-                channelHistory={channelHistory}
-                contextMessages={contextMessages}
+                selectedContextId={selectedContextId}
+                chatChannels={chatChannels}
                 formatTime={uiHelpers.formatTime}
+                onOpenContext={(contextId) => {
+                  setActiveView("contextWorkspace")
+                  void handleContextChange(contextId)
+                }}
+                onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
+                onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
               />
             </section>
           ) : null}
 
-          {activeView === "localChat" ? (
+          {activeView === "contextWorkspace" ? (
             <section className="animate-in fade-in-0 duration-300">
-              <div className="grid gap-4 xl:grid-cols-[1fr_420px]">
-                <LocalChatSection
-                  localMessages={localMessages}
-                  chatInput={chatInput}
-                  sending={sending}
-                  onChangeInput={setChatInput}
-                  onRefresh={() => void refreshLocalChat(selectedAgentId)}
-                  onSend={() => void sendLocalMessage()}
-                  formatTime={uiHelpers.formatTime}
-                />
-                <PromptSection
-                  prompt={prompt}
-                  localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
-                  onRefresh={() => void refreshPrompt(selectedAgentId)}
-                />
-              </div>
+              <ContextWorkspaceSection
+                selectedContextId={selectedContextId}
+                contexts={contexts}
+                channelHistory={channelHistory}
+                contextMessages={contextMessages}
+                prompt={prompt}
+                chatInput={chatInput}
+                sending={sending}
+                formatTime={uiHelpers.formatTime}
+                onChangeInput={setChatInput}
+                onSendLocalMessage={() => void sendLocalMessage()}
+                onRefreshPrompt={() => void refreshPrompt(selectedAgentId, selectedContextId || constants.LOCAL_UI_CONTEXT_ID)}
+              />
             </section>
           ) : null}
         </main>

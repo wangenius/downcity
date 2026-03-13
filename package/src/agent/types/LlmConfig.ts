@@ -3,7 +3,7 @@
  *
  * 设计目标（中文）
  * - 将“provider 连接信息”与“model 选择/采样参数”解耦。
- * - 支持一个项目内配置多个 provider 与多个 model，并通过 activeModel 切换。
+ * - 支持在 console 全局层配置多个 provider 与多个 model。
  * - 避免在每个 model 上重复填写 apiKey/baseUrl。
  */
 
@@ -93,11 +93,6 @@ export interface LlmModelConfig {
  * Ship 主配置中的 llm 节点结构。
  */
 export interface LlmConfig {
-  /**
-   * 当前激活模型 ID。
-   * 该值必须存在于 `models` 的 key 中。
-   */
-  activeModel: string;
   /**
    * Provider 配置集合。
    * key 由用户自定义（例如：`openai_main`、`google`）。

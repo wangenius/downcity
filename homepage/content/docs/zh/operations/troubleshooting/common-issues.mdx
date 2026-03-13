@@ -40,6 +40,10 @@ sma service list
 
 ```bash
 sma console config get llm
+sma console config get model.primary
 ```
 
-并确认 `llm.activeModel` 指向存在的 `llm.models.<id>`。
+并确认：
+
+1. `model.primary` 指向 `~/.ship/ship.db` 中存在的 model id
+2. console 全局 SQLite 的 providers/models 记录完整可用

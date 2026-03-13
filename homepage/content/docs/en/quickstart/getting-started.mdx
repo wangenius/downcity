@@ -42,20 +42,8 @@ Minimal `ship.json` example:
 {
   "name": "my-agent",
   "version": "1.0.0",
-  "llm": {
-    "activeModel": "default",
-    "providers": {
-      "default": {
-        "type": "anthropic",
-        "apiKey": "${LLM_API_KEY}"
-      }
-    },
-    "models": {
-      "default": {
-        "provider": "default",
-        "name": "claude-sonnet-4-5"
-      }
-    }
+  "model": {
+    "primary": "default"
   }
 }
 ```

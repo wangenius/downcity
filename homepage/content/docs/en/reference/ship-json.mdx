@@ -1,0 +1,56 @@
+---
+title: ship.json Reference
+description: Current ship.json layering, loading behavior, and key fields
+---
+
+# `ship.json` Reference
+
+Model config is now split into two layers:
+
+1. `~/.ship/ship.db` (console-global SQLite) manages the full model pool
+2. Project `ship.json` (agent-local) only sets `model.primary`
+
+## Agent project minimal shape
+
+```json
+{
+  "$schema": "./.ship/schema/ship.schema.json",
+  "name": "my-agent",
+  "version": "1.0.0",
+  "model": {
+    "primary": "default"
+  }
+}
+```
+
+`model.primary` must match an existing model id in `~/.ship/ship.db`.
+
+## Console-global model pool
+
+Full model management stays in `~/.ship/ship.db`:
+
+- providers table
+- models table
+- provider apiKey is encrypted at rest (`api_key_encrypted`)
+
+Use CLI:
+
+```bash
+sma console config llm provider list
+sma console config llm model list
+```
+
+## Runtime resolution
+
+At agent runtime:
+
+1. Read project `model.primary`
+2. Resolve model in SQLite models table by id
+3. Resolve provider in SQLite providers table by providerId
+
+If any link is missing, startup fails fast.
+
+## Related docs
+
+- [Model Config Reference](/en/docs/reference/model-config)
+- [`sma console config`](/en/docs/commands/console/config)

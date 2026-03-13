@@ -1,0 +1,28 @@
+---
+title: Configuration Overview
+description: Understand console-global vs agent-local configuration layers
+---
+
+# Configuration Overview
+
+Recommended configuration layers:
+
+1. Console-global layer for shared resources (for example model pool).
+2. Agent project layer for runtime binding and behavior.
+
+## Core principles
+
+1. Define models at console level.
+2. Agent only binds via `model.primary`.
+3. Restart agent after config changes to verify apply behavior.
+
+## Most edited locations
+
+1. `~/.ship/ship.db` (managed through CLI/UI, not direct manual edits)
+2. `<project>/ship.json`
+
+## Next
+
+1. [Project Configuration (ship.json)](/en/docs/configuration/project)
+2. [Model Configuration (Console + Agent)](/en/docs/configuration/model)
+3. [Configuration Checklist](/en/docs/configuration/checklist)

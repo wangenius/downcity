@@ -3,7 +3,7 @@
  *
  * 目标（中文）
  * - 提供 ship.json 的通用读写能力（get/set/unset）。
- * - 提供 llm provider/model 的结构化管理命令，减少手改 JSON 出错概率。
+ * - 提供 SQLite 模型池（provider/model）的结构化管理命令。
  * - 所有输出统一支持 JSON（默认）与可读文本两种模式。
  */
 
@@ -11,6 +11,7 @@ import path from "node:path";
 import fs from "fs-extra";
 import type { Command } from "commander";
 import { getShipJsonPath } from "@/console/env/Paths.js";
+import { ConsoleStore } from "@utils/store/index.js";
 import {
   ModelManager,
   type ModelPreset,
@@ -18,8 +19,6 @@ import {
 import { printResult } from "@agent/utils/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
 import type {
-  LlmModelConfig,
-  LlmProviderConfig,
   LlmProviderType,
 } from "@agent/types/LlmConfig.js";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
@@ -107,9 +106,6 @@ function readShipConfig(projectRoot: string): { shipJsonPath: string; config: Sh
   if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
     throw new Error("Invalid ship.json: missing required fields name/version");
   }
-  if (!isPlainObject(candidate.llm)) {
-    throw new Error("Invalid ship.json: missing required field llm");
-  }
   return { shipJsonPath, config: candidate as ShipConfig };
 }
 
@@ -193,25 +189,6 @@ function assertProviderType(inputType: string): LlmProviderType {
   return candidate;
 }
 
-function ensureLlmCollections(config: ShipConfig): {
-  providers: Record<string, LlmProviderConfig>;
-  models: Record<string, LlmModelConfig>;
-} {
-  if (!isPlainObject(config.llm)) {
-    throw new Error("Invalid ship.json: llm must be an object");
-  }
-  if (!isPlainObject(config.llm.providers)) {
-    config.llm.providers = {};
-  }
-  if (!isPlainObject(config.llm.models)) {
-    config.llm.models = {};
-  }
-  return {
-    providers: config.llm.providers as Record<string, LlmProviderConfig>,
-    models: config.llm.models as Record<string, LlmModelConfig>,
-  };
-}
-
 /**
  * 解析模型预设并做存在性校验。
  */
@@ -268,6 +245,40 @@ function runConfigCommand(
   }
 }
 
+function runStoreCommand(
+  options: { json?: boolean },
+  handler: (store: ConsoleStore) => Promise<{
+    title: string;
+    payload: Record<string, unknown>;
+  }>,
+): void {
+  const asJson = options.json !== false;
+  const store = new ConsoleStore();
+  void (async () => {
+    try {
+      const result = await handler(store);
+      printResult({
+        asJson,
+        success: true,
+        title: result.title,
+        payload: result.payload,
+      });
+    } catch (error) {
+      printResult({
+        asJson,
+        success: false,
+        title: "store command failed",
+        payload: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+      process.exitCode = 1;
+    } finally {
+      store.close();
+    }
+  })();
+}
+
 function applyCommonOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
@@ -280,7 +291,7 @@ function applyCommonOptions(command: Command): Command {
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
-    .description("管理 ship.json 配置（含 llm provider/model 与 alias）")
+    .description("管理 ship.json 配置、alias 与 SQLite 模型池")
     .helpOption("--help", "display help for command");
 
   applyCommonOptions(
@@ -387,7 +398,7 @@ export function registerConfigCommand(program: Command): void {
 
   const llm = config
     .command("llm")
-    .description("管理 ship.json.llm 配置")
+    .description("管理 console 全局模型池（~/.ship/ship.db）")
     .helpOption("--help", "display help for command");
 
   const provider = llm
@@ -402,13 +413,13 @@ export function registerConfigCommand(program: Command): void {
       .description("列出 providers")
       .helpOption("--help", "display help for command"),
   ).action((options: { path?: string; json?: boolean }) => {
-    runConfigCommand(options, ({ config: shipConfig }) => {
-      const { providers } = ensureLlmCollections(shipConfig);
+    runStoreCommand(options, async (store) => {
+      const providers = await store.listProviders();
       return {
         title: "providers listed",
         payload: {
           providers,
-          providerIds: Object.keys(providers),
+          providerIds: providers.map((x) => x.id),
         },
       };
     });
@@ -433,20 +444,20 @@ export function registerConfigCommand(program: Command): void {
         apiKey?: string;
       },
     ) => {
-      runConfigCommand(options, ({ config: shipConfig }) => {
-        const { providers } = ensureLlmCollections(shipConfig);
+      runStoreCommand(options, async (store) => {
         const id = String(providerId || "").trim();
         if (!id) throw new Error("providerId cannot be empty");
-        if (providers[id]) throw new Error(`Provider already exists: ${id}`);
-        const nextProvider: LlmProviderConfig = {
+        const existing = await store.getProvider(id);
+        if (existing) throw new Error(`Provider already exists: ${id}`);
+        const nextProvider = {
+          id,
           type: assertProviderType(options.type),
           ...(typeof options.baseUrl === "string" ? { baseUrl: options.baseUrl } : {}),
           ...(typeof options.apiKey === "string" ? { apiKey: options.apiKey } : {}),
         };
-        providers[id] = nextProvider;
+        await store.upsertProvider(nextProvider);
         return {
           title: "provider added",
-          save: true,
           payload: {
             providerId: id,
             provider: nextProvider,
@@ -479,10 +490,9 @@ export function registerConfigCommand(program: Command): void {
         clearApiKey?: boolean;
       },
     ) => {
-      runConfigCommand(options, ({ config: shipConfig }) => {
-        const { providers } = ensureLlmCollections(shipConfig);
+      runStoreCommand(options, async (store) => {
         const id = String(providerId || "").trim();
-        const current = providers[id];
+        const current = await store.getProvider(id);
         if (!current) throw new Error(`Provider not found: ${id}`);
         if (options.baseUrl !== undefined && options.clearBaseUrl) {
           throw new Error("--base-url and --clear-base-url cannot be used together");
@@ -501,17 +511,26 @@ export function registerConfigCommand(program: Command): void {
           throw new Error("No update specified");
         }
 
-        const nextProvider: LlmProviderConfig = { ...current };
+        const nextProvider: {
+          id: string;
+          type: LlmProviderType;
+          baseUrl?: string;
+          apiKey?: string;
+        } = {
+          id,
+          type: current.type,
+          baseUrl: current.baseUrl,
+          apiKey: current.apiKey,
+        };
         if (options.type !== undefined) nextProvider.type = assertProviderType(options.type);
         if (options.baseUrl !== undefined) nextProvider.baseUrl = options.baseUrl;
         if (options.apiKey !== undefined) nextProvider.apiKey = options.apiKey;
         if (options.clearBaseUrl) delete nextProvider.baseUrl;
-        if (options.clearApiKey) delete nextProvider.apiKey;
-        providers[id] = nextProvider;
+        if (options.clearApiKey) nextProvider.apiKey = undefined;
+        await store.upsertProvider(nextProvider);
 
         return {
           title: "provider updated",
-          save: true,
           payload: {
             providerId: id,
             provider: nextProvider,
@@ -527,22 +546,13 @@ export function registerConfigCommand(program: Command): void {
       .description("删除 provider（若被 model 引用会拒绝）")
       .helpOption("--help", "display help for command"),
   ).action((providerId: string, options: { path?: string; json?: boolean }) => {
-    runConfigCommand(options, ({ config: shipConfig }) => {
-      const { providers, models } = ensureLlmCollections(shipConfig);
+    runStoreCommand(options, async (store) => {
       const id = String(providerId || "").trim();
-      if (!providers[id]) throw new Error(`Provider not found: ${id}`);
-      const referencedBy = Object.entries(models)
-        .filter(([, model]) => model.provider === id)
-        .map(([modelId]) => modelId);
-      if (referencedBy.length > 0) {
-        throw new Error(
-          `Provider "${id}" is referenced by models: ${referencedBy.join(", ")}. Remove or migrate these models first.`,
-        );
-      }
-      delete providers[id];
+      const current = await store.getProvider(id);
+      if (!current) throw new Error(`Provider not found: ${id}`);
+      store.removeProvider(id);
       return {
         title: "provider removed",
-        save: true,
         payload: {
           providerId: id,
         },
@@ -553,7 +563,7 @@ export function registerConfigCommand(program: Command): void {
   const model = llm
     .command("model")
     .alias("models")
-    .description("管理 llm.models 与 llm.activeModel")
+    .description("管理 llm.models（console 全局模型池）")
     .helpOption("--help", "display help for command");
 
   applyCommonOptions(
@@ -562,14 +572,13 @@ export function registerConfigCommand(program: Command): void {
       .description("列出 models")
       .helpOption("--help", "display help for command"),
   ).action((options: { path?: string; json?: boolean }) => {
-    runConfigCommand(options, ({ config: shipConfig }) => {
-      const { models } = ensureLlmCollections(shipConfig);
+    runStoreCommand(options, async (store) => {
+      const models = store.listModels();
       return {
         title: "models listed",
         payload: {
-          activeModel: shipConfig.llm.activeModel,
           models,
-          modelIds: Object.keys(models),
+          modelIds: models.map((x) => x.id),
           presets: modelManager.listPresets(),
         },
       };
@@ -582,7 +591,7 @@ export function registerConfigCommand(program: Command): void {
       .description("列出内置模型预设（console/model）")
       .helpOption("--help", "display help for command"),
   ).action((options: { path?: string; json?: boolean }) => {
-    runConfigCommand(options, () => ({
+    runStoreCommand(options, async () => ({
       title: "model presets listed",
       payload: {
         presets: modelManager.listPresets(),
@@ -629,15 +638,17 @@ export function registerConfigCommand(program: Command): void {
         anthropicVersion?: string;
       },
     ) => {
-      runConfigCommand(options, ({ config: shipConfig }) => {
-        const { providers, models } = ensureLlmCollections(shipConfig);
+      runStoreCommand(options, async (store) => {
+        const providers = await store.listProviders();
+        const providerMap = new Map(providers.map((x) => [x.id, x] as const));
         const id = String(modelId || "").trim();
         if (!id) throw new Error("modelId cannot be empty");
-        if (models[id]) throw new Error(`Model already exists: ${id}`);
+        const existingModel = store.getModel(id);
+        if (existingModel) throw new Error(`Model already exists: ${id}`);
         const providerId = String(options.provider || "").trim();
         if (!providerId) throw new Error("provider cannot be empty");
-        if (!providers[providerId]) throw new Error(`Provider not found: ${providerId}`);
-        const provider = providers[providerId];
+        const provider = providerMap.get(providerId);
+        if (!provider) throw new Error(`Provider not found: ${providerId}`);
         const preset = resolveModelPresetOrThrow(options.preset);
         if (preset && provider.type !== preset.providerType) {
           throw new Error(
@@ -649,8 +660,9 @@ export function registerConfigCommand(program: Command): void {
           throw new Error("name is required when preset is not specified");
         }
 
-        const nextModel: LlmModelConfig = {
-          provider: providerId,
+        const nextModel = {
+          id,
+          providerId,
           name: modelName,
           ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
           ...(options.maxTokens !== undefined ? { maxTokens: options.maxTokens } : {}),
@@ -666,10 +678,9 @@ export function registerConfigCommand(program: Command): void {
             : {}),
         };
 
-        models[id] = nextModel;
+        store.upsertModel(nextModel);
         return {
           title: "model added",
-          save: true,
           payload: {
             modelId: id,
             model: nextModel,
@@ -731,10 +742,11 @@ export function registerConfigCommand(program: Command): void {
         clearAnthropicVersion?: boolean;
       },
     ) => {
-      runConfigCommand(options, ({ config: shipConfig }) => {
-        const { providers, models } = ensureLlmCollections(shipConfig);
+      runStoreCommand(options, async (store) => {
+        const providers = await store.listProviders();
+        const providerMap = new Map(providers.map((x) => [x.id, x] as const));
         const id = String(modelId || "").trim();
-        const current = models[id];
+        const current = store.getModel(id);
         if (!current) throw new Error(`Model not found: ${id}`);
 
         if (options.temperature !== undefined && options.clearTemperature) {
@@ -782,20 +794,40 @@ export function registerConfigCommand(program: Command): void {
           throw new Error("No update specified");
         }
 
-        const nextModel: LlmModelConfig = { ...current };
+        const nextModel: {
+          id: string;
+          providerId: string;
+          name: string;
+          temperature?: number;
+          maxTokens?: number;
+          topP?: number;
+          frequencyPenalty?: number;
+          presencePenalty?: number;
+          anthropicVersion?: string;
+        } = {
+          id,
+          providerId: current.providerId,
+          name: current.name,
+          temperature: current.temperature,
+          maxTokens: current.maxTokens,
+          topP: current.topP,
+          frequencyPenalty: current.frequencyPenalty,
+          presencePenalty: current.presencePenalty,
+          anthropicVersion: current.anthropicVersion,
+        };
         const preset = resolveModelPresetOrThrow(options.preset);
         if (options.provider !== undefined) {
           const nextProviderId = String(options.provider).trim();
           if (!nextProviderId) throw new Error("provider cannot be empty");
-          if (!providers[nextProviderId]) {
+          if (!providerMap.get(nextProviderId)) {
             throw new Error(`Provider not found: ${nextProviderId}`);
           }
-          nextModel.provider = nextProviderId;
+          nextModel.providerId = nextProviderId;
         }
         if (preset) {
           const targetProviderId =
-            options.provider !== undefined ? String(options.provider).trim() : nextModel.provider;
-          const targetProvider = providers[targetProviderId];
+            options.provider !== undefined ? String(options.provider).trim() : nextModel.providerId;
+          const targetProvider = providerMap.get(targetProviderId);
           if (!targetProvider) {
             throw new Error(`Provider not found: ${targetProviderId}`);
           }
@@ -827,10 +859,9 @@ export function registerConfigCommand(program: Command): void {
         if (options.clearPresencePenalty) delete nextModel.presencePenalty;
         if (options.clearAnthropicVersion) delete nextModel.anthropicVersion;
 
-        models[id] = nextModel;
+        store.upsertModel(nextModel);
         return {
           title: "model updated",
-          save: true,
           payload: {
             modelId: id,
             model: nextModel,
@@ -843,48 +874,17 @@ export function registerConfigCommand(program: Command): void {
 
   applyCommonOptions(
     model
-      .command("activate <modelId>")
-      .description("切换 llm.activeModel")
-      .helpOption("--help", "display help for command"),
-  ).action((modelId: string, options: { path?: string; json?: boolean }) => {
-    runConfigCommand(options, ({ config: shipConfig }) => {
-      const { models } = ensureLlmCollections(shipConfig);
-      const id = String(modelId || "").trim();
-      if (!models[id]) {
-        throw new Error(`Model not found: ${id}`);
-      }
-      const previous = shipConfig.llm.activeModel;
-      shipConfig.llm.activeModel = id;
-      return {
-        title: "active model switched",
-        save: true,
-        payload: {
-          activeModel: id,
-          previousActiveModel: previous,
-        },
-      };
-    });
-  });
-
-  applyCommonOptions(
-    model
       .command("remove <modelId>")
-      .description("删除 model（当前 activeModel 不允许删除）")
+      .description("删除 model")
       .helpOption("--help", "display help for command"),
   ).action((modelId: string, options: { path?: string; json?: boolean }) => {
-    runConfigCommand(options, ({ config: shipConfig }) => {
-      const { models } = ensureLlmCollections(shipConfig);
+    runStoreCommand(options, async (store) => {
       const id = String(modelId || "").trim();
-      if (!models[id]) throw new Error(`Model not found: ${id}`);
-      if (shipConfig.llm.activeModel === id) {
-        throw new Error(
-          `Cannot remove active model "${id}". Please run "sma console config llm model activate <anotherModelId>" first.`,
-        );
-      }
-      delete models[id];
+      const model = store.getModel(id);
+      if (!model) throw new Error(`Model not found: ${id}`);
+      store.removeModel(id);
       return {
         title: "model removed",
-        save: true,
         payload: {
           modelId: id,
         },

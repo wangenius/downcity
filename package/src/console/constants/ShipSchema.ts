@@ -23,6 +23,18 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
         host: { type: "string" },
       },
     },
+    model: {
+      type: "object",
+      additionalProperties: true,
+      properties: {
+        primary: {
+          type: "string",
+          description:
+            "Agent 主模型绑定 ID（映射到 console 全局 `llm.models.<id>`）。",
+        },
+      },
+      required: ["primary"],
+    },
     services: {
       type: "object",
       additionalProperties: true,
@@ -168,7 +180,6 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
       type: "object",
       additionalProperties: true,
       properties: {
-        activeModel: { type: "string" },
         providers: {
           type: "object",
           additionalProperties: {
@@ -216,7 +227,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
         },
         logMessages: { type: "boolean" },
       },
-      required: ["activeModel", "providers", "models"],
+      required: ["providers", "models"],
     },
     context: {
       type: "object",

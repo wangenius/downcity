@@ -1,0 +1,77 @@
+---
+title: ship.json 参考
+description: 当前版本 ship.json 的职责分层、加载规则与关键字段
+---
+
+# `ship.json` 参考
+
+当前版本采用两层模型配置：
+
+1. `~/.ship/ship.db`（console 全局 SQLite）管理完整模型池  
+2. 项目 `ship.json`（agent 本地）只声明 `model.primary`
+
+## 1) Agent 项目最小结构
+
+```json
+{
+  "$schema": "./.ship/schema/ship.schema.json",
+  "name": "my-agent",
+  "version": "1.0.0",
+  "model": {
+    "primary": "default"
+  },
+  "services": {},
+  "extensions": {}
+}
+```
+
+`model.primary` 的值必须能在 `~/.ship/ship.db` 的模型池中找到同名 model id。
+
+## 2) Console 全局模型池（`~/.ship/ship.db`）
+
+模型细节统一在 SQLite：
+
+- providers
+- models
+- provider.apiKey 为加密存储（`api_key_encrypted`）
+
+通过命令管理：
+
+```bash
+sma console config llm provider list
+sma console config llm model list
+```
+
+## 3) 运行时解析规则
+
+agent 启动时：
+
+1. 读取项目 `model.primary`
+2. 到 `~/.ship/ship.db` 的 models 表取模型
+3. 再由 `providerId` 关联 providers 表
+
+任何一步缺失都会启动失败。
+
+## 4) 配置加载优先级
+
+运行时会合并多层配置：
+
+1. `~/.ship/ship.json`（全局）
+2. 项目目录链上的 `ship.json`
+
+其中 `model.primary` 来自项目层；模型池来自全局 SQLite。
+
+## 5) 推荐操作方式
+
+1. 在 console 层维护模型池（provider/model）  
+2. 在 agent 层只改 `model.primary` 绑定目标模型 ID  
+3. 修改后重启 agent：
+
+```bash
+sma agent restart .
+```
+
+## 相关文档
+
+- [Model 配置参考](/zh/docs/reference/model-config)
+- [`sma console config`](/zh/docs/commands/console/config)

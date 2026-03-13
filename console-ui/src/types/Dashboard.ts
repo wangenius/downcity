@@ -600,3 +600,81 @@ export interface UiLocalMessagesResponse {
    */
   messages?: UiLocalMessage[];
 }
+
+/**
+ * 模型选项项（来自 `/api/tui/model`）。
+ */
+export interface UiModelOption {
+  /**
+   * 模型配置 id（对应 llm.models 的 key）。
+   */
+  id?: string;
+  /**
+   * 上游模型名称。
+   */
+  name?: string;
+  /**
+   * provider key。
+   */
+  providerKey?: string;
+  /**
+   * provider 类型。
+   */
+  providerType?: string;
+}
+
+/**
+ * 当前激活模型信息。
+ */
+export interface UiModelSummary {
+  /**
+   * 当前 agent 绑定模型 id（model.primary）。
+   */
+  primaryModelId?: string;
+  /**
+   * 当前 agent 的 model.primary 绑定。
+   */
+  agentPrimaryModelId?: string;
+  /**
+   * 激活模型名称。
+   */
+  primaryModelName?: string;
+  /**
+   * 激活模型 provider key。
+   */
+  providerKey?: string;
+  /**
+   * 激活模型 provider 类型。
+   */
+  providerType?: string;
+  /**
+   * provider baseUrl。
+   */
+  baseUrl?: string;
+  /**
+   * 可切换模型列表。
+   */
+  availableModels?: UiModelOption[];
+}
+
+/**
+ * `/api/tui/model` 响应。
+ */
+export interface UiModelResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 模型信息。
+   */
+  model?: UiModelSummary;
+  /**
+   * 错误信息。
+   */
+  error?: string;
+  /**
+   * 附加消息。
+   */
+  message?: string;
+}

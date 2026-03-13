@@ -1,0 +1,35 @@
+---
+title: Model Configuration (Console + Agent)
+description: Responsibility boundary between model pool and project binding
+---
+
+# Model Configuration (Console + Agent)
+
+Model setup is split into two responsibilities:
+
+1. Console manages the model pool (provider/model metadata, keys, endpoints).
+2. Agent project chooses `model.primary` in `ship.json`.
+
+## Workflow
+
+1. Configure provider/model in console.
+2. Set `model.primary` in project.
+3. Restart agent and validate one real invocation.
+
+## Commands
+
+```bash
+sma console config llm provider list
+sma console config llm model list
+sma console config set model.primary default
+sma agent restart .
+```
+
+## Failure cases
+
+- missing `model.primary` target: agent startup fails.
+- invalid provider/key: model invocation fails with auth/network errors.
+
+## Related docs
+
+- [Model Config Reference](/en/docs/reference/model-config)

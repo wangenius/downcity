@@ -3,7 +3,7 @@
  *
  * 设计目标（中文，关键点）
  * - 这是“核心能力”，不应该依赖 server/RuntimeContext（避免隐式初始化时序）。
- * - 运行时按 `llm.activeModel` 从 `llm.models` / `llm.providers` 解析最终模型。
+ * - 运行时按 `model.primary`（agent 绑定）从 console 全局 `llm.models` / `llm.providers` 解析最终模型。
  * - Agent、Memory extractor 等都可以复用同一套模型构造逻辑。
  */
 
@@ -21,6 +21,7 @@ import { createLlmLoggingFetch } from "@utils/logger/Fetch.js";
 import { getLogger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
+import { ConsoleStore } from "@utils/store/index.js";
 
 type ModelLogContext = {
   contextId?: string;
@@ -129,7 +130,7 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
  * 创建 LanguageModel 实例。
  *
  * 解析策略（中文）
- * 1) 读取 `llm.activeModel`，定位 `llm.models[activeModel]`。
+ * 1) 读取 `model.primary`，定位 console 全局 `llm.models[primary]`。
  * 2) 由模型配置中的 `provider` 字段定位 `llm.providers[providerKey]`。
  * 3) 解析 model/baseUrl/apiKey（支持 `${ENV}` 占位符）。
  * 4) 创建带日志拦截的 fetch，并按 provider type 分发到 SDK 工厂。
@@ -139,31 +140,23 @@ export async function createModel(input: {
   getRequestContext?: () => ModelLogContext | undefined;
 }): Promise<LanguageModel> {
   const logger = getLogger();
-  const llm = input.config.llm;
 
-  const activeModelId = String(llm?.activeModel || "").trim();
-  if (!activeModelId) {
-    await logger.log("warn", "No active LLM model configured");
-    throw Error("No active LLM model configured");
+  const primaryModelId = String(input.config.model?.primary || "").trim();
+  if (!primaryModelId) {
+    await logger.log("warn", "No agent model.primary configured");
+    throw Error("No agent model.primary configured");
   }
 
-  const selectedModelConfig = llm?.models?.[activeModelId];
-  if (!selectedModelConfig || typeof selectedModelConfig !== "object") {
-    await logger.log("warn", `LLM model config not found: ${activeModelId}`);
-    throw Error(`LLM model config not found: ${activeModelId}`);
+  const store = new ConsoleStore();
+  const resolved = await store.getResolvedModel(primaryModelId);
+  store.close();
+  if (!resolved) {
+    await logger.log("warn", `LLM model config not found in sqlite store: ${primaryModelId}`);
+    throw Error(`LLM model config not found in sqlite store: ${primaryModelId}`);
   }
-
-  const providerKey = String(selectedModelConfig.provider || "").trim();
-  if (!providerKey) {
-    await logger.log("warn", `LLM model provider key is missing: ${activeModelId}`);
-    throw Error(`LLM model provider key is missing: ${activeModelId}`);
-  }
-
-  const selectedProviderConfig = llm?.providers?.[providerKey];
-  if (!selectedProviderConfig || typeof selectedProviderConfig !== "object") {
-    await logger.log("warn", `LLM provider config not found: ${providerKey}`);
-    throw Error(`LLM provider config not found: ${providerKey}`);
-  }
+  const selectedModelConfig = resolved.model;
+  const selectedProviderConfig = resolved.provider;
+  const providerKey = selectedProviderConfig.id;
 
   const providerType = normalizeProviderType(selectedProviderConfig.type);
   if (!providerType) {
@@ -192,16 +185,16 @@ export async function createModel(input: {
   }
 
   // 日志策略（中文）：默认开启 LLM 请求日志；可通过 llm.logMessages 关闭。
-  const configLog = llm?.logMessages;
+  const configLog = input.config.llm?.logMessages;
   const logLlmMessages = typeof configLog === "boolean" ? configLog : true;
 
   // 关键点（中文）：启动阶段只打印一次当前生效模型状态，便于快速确认路由是否正确。
   await logger.log(
     "info",
-    `[main] model active=${activeModelId} provider=${providerType}/${providerKey} name=${resolvedModel}${resolvedBaseUrl ? ` baseUrl=${resolvedBaseUrl}` : ""}`,
+    `[main] model primary=${primaryModelId} provider=${providerType}/${providerKey} name=${resolvedModel}${resolvedBaseUrl ? ` baseUrl=${resolvedBaseUrl}` : ""}`,
     {
       kind: "llm_model_ready",
-      activeModel: activeModelId,
+      primaryModel: primaryModelId,
       providerType,
       providerKey,
       model: resolvedModel,

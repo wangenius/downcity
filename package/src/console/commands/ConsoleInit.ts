@@ -23,6 +23,7 @@ import {
   getConsoleRootDirPath,
   getConsoleShipJsonPath,
 } from "@/console/runtime/ConsolePaths.js";
+import { ConsoleStore } from "@utils/store/index.js";
 
 type InitProviderChoice = { title: string; value: LlmProviderType };
 
@@ -241,23 +242,6 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
     services: {
       skills: { paths: [".agents/skills"] },
     },
-    llm: {
-      activeModel: "default",
-      providers: {
-        default: {
-          type: providerType,
-          baseUrl: `\${${LLM_BASE_URL_ENV_KEY}}`,
-          apiKey: `\${${LLM_API_KEY_ENV_KEY}}`,
-        },
-      },
-      models: {
-        default: {
-          provider: "default",
-          name: `\${${LLM_MODEL_ENV_KEY}}`,
-          temperature: 0.7,
-        },
-      },
-    },
   };
 
   await saveJson(shipJsonPath, shipConfig);
@@ -286,6 +270,25 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   } else if (envResult.skipped.length > 0) {
     console.log("⏭️  Skipped ~/.ship/.env (keys already exist; re-run with --force to overwrite)");
   }
+
+  const modelStore = new ConsoleStore();
+  if (allowOverwrite) {
+    modelStore.clearAll();
+  }
+  await modelStore.upsertProvider({
+    id: "default",
+    type: providerType,
+    baseUrl: `\${${LLM_BASE_URL_ENV_KEY}}`,
+    apiKey: `\${${LLM_API_KEY_ENV_KEY}}`,
+  });
+  modelStore.upsertModel({
+    id: "default",
+    providerId: "default",
+    name: `\${${LLM_MODEL_ENV_KEY}}`,
+    temperature: 0.7,
+  });
+  modelStore.close();
+  console.log("✅ Initialized ~/.ship/ship.db model store");
 
   // 关键点（中文）：skills 仅使用 `~/.agents/skills`，不做 built-in/claude 自动同步。
 }

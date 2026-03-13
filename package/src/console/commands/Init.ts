@@ -36,7 +36,7 @@ import { ensureDir, saveJson } from "@/utils/storage/index.js";
 import type { ShipConfig } from "@/console/env/Config.js";
 import { SHIP_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
 import { DEFAULT_SHIP_JSON } from "@/console/constants/Ship.js";
-import type { LlmProviderType } from "@agent/types/LlmConfig.js";
+import { ConsoleStore } from "@utils/store/index.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
@@ -46,17 +46,9 @@ import { renderTemplateVariables } from "@/utils/Template.js";
 
 type InitPromptResponse = {
   name?: string;
-  providerType?: LlmProviderType;
-  apiKey?: string;
-  modelName?: string;
-  baseUrl?: string;
+  primaryModelId?: string;
   channels?: string[];
   qqSandbox?: boolean;
-};
-
-type InitProviderChoice = {
-  title: string;
-  value: LlmProviderType;
 };
 
 type EnvEntry = {
@@ -64,47 +56,20 @@ type EnvEntry = {
   value: string;
 };
 
-const LLM_API_KEY_ENV_KEY = "LLM_API_KEY";
-const LLM_MODEL_ENV_KEY = "LLM_MODEL";
-const LLM_BASE_URL_ENV_KEY = "LLM_BASE_URL";
-
-const INIT_PROVIDER_CHOICES: InitProviderChoice[] = [
-  { title: "OpenAI", value: "openai" },
-  { title: "Anthropic", value: "anthropic" },
-  { title: "DeepSeek", value: "deepseek" },
-  { title: "Gemini", value: "gemini" },
-  { title: "Open Compatible", value: "open-compatible" },
-  { title: "Open Responses", value: "open-responses" },
-  { title: "Moonshot (Kimi)", value: "moonshot" },
-  { title: "xAI", value: "xai" },
-  { title: "HuggingFace", value: "huggingface" },
-  { title: "OpenRouter", value: "openrouter" },
-];
-
-const INIT_DEFAULT_MODEL_BY_PROVIDER: Record<LlmProviderType, string> = {
-  anthropic: "claude-sonnet-4-5",
-  openai: "gpt-4o-mini",
-  deepseek: "deepseek-chat",
-  gemini: "gemini-2.0-flash",
-  "open-compatible": "gpt-4o-mini",
-  "open-responses": "gpt-4.1-mini",
-  moonshot: "moonshot-v1-8k",
-  xai: "grok-3-mini",
-  huggingface: "meta-llama/Meta-Llama-3.1-8B-Instruct",
-  openrouter: "openai/gpt-4o-mini",
-};
 
 /**
- * 解析 init 交互中的 provider type。
- *
- * 关键点（中文）
- * - 非法输入回退到 `openai`，避免初始化中断。
+ * 读取 console 全局模型 ID 列表。
  */
-function resolveInitProviderType(input: unknown): LlmProviderType {
-  const value = String(input || "").trim();
-  if (!value) return "openai";
-  const found = INIT_PROVIDER_CHOICES.find((item) => item.value === value);
-  return found?.value || "openai";
+function listConsoleModelIds(): string[] {
+  const store = new ConsoleStore();
+  try {
+    return store
+      .listModels()
+      .map((item) => String(item.id || "").trim())
+      .filter((id) => id.length > 0);
+  } finally {
+    store.close();
+  }
 }
 
 function parseEnvKeys(content: string): Set<string> {
@@ -115,18 +80,6 @@ function parseEnvKeys(content: string): Set<string> {
     const matched = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=/);
     if (!matched) continue;
     out.add(matched[1]);
-  }
-  return out;
-}
-
-function parseEnvValueMap(content: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = String(rawLine || "").trim();
-    if (!line || line.startsWith("#")) continue;
-    const matched = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!matched) continue;
-    out[matched[1]] = matched[2] ?? "";
   }
   return out;
 }
@@ -243,10 +196,6 @@ export async function initCommand(
   let allowOverwrite = Boolean(options.force);
   const dotEnvPath = path.join(projectRoot, ".env");
   const dotEnvExamplePath = path.join(projectRoot, ".env.example");
-  const existingDotEnvContent = (await fs.pathExists(dotEnvPath))
-    ? await fs.readFile(dotEnvPath, "utf-8")
-    : "";
-  const existingDotEnvValues = parseEnvValueMap(existingDotEnvContent);
   const TELEGRAM_BOT_TOKEN = "${TELEGRAM_BOT_TOKEN}";
   const FEISHU_APP_ID = "${FEISHU_APP_ID}";
   const FEISHU_APP_SECRET = "${FEISHU_APP_SECRET}";
@@ -260,6 +209,7 @@ export async function initCommand(
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingUserMd = fs.existsSync(getUserMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
+  const consoleModelIds = listConsoleModelIds();
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 ship.json 已存在时询问覆盖。
   if (existingShipJson) {
@@ -281,7 +231,7 @@ export async function initCommand(
   }
 
   // Collect configuration information
-  // 交互采集（中文）：provider type + apiKey + modelName + channels + 推荐 skills。
+  // 交互采集（中文）：agent name + channels。
   const response = (await prompts([
     {
       type: "text",
@@ -291,43 +241,13 @@ export async function initCommand(
     },
     {
       type: "select",
-      name: "providerType",
-      message: "Select LLM provider type",
-      choices: INIT_PROVIDER_CHOICES,
+      name: "primaryModelId",
+      message: "Select primary model (from console model pool)",
+      choices:
+        consoleModelIds.length > 0
+          ? consoleModelIds.map((id) => ({ title: id, value: id }))
+          : [{ title: "default", value: "default" }],
       initial: 0,
-    },
-    {
-      type: "text",
-      name: "apiKey",
-      message: "Input API key",
-      initial: String(
-        existingDotEnvValues[LLM_API_KEY_ENV_KEY] ||
-          process.env[LLM_API_KEY_ENV_KEY] ||
-          "",
-      ).trim(),
-      validate: (value) =>
-        String(value || "").trim() ? true : "API key is required",
-    },
-    {
-      type: "text",
-      name: "modelName",
-      message: "Input model name",
-      initial: (prev, values) => {
-        const existingModelName = String(
-          existingDotEnvValues[LLM_MODEL_ENV_KEY] || "",
-        ).trim();
-        if (existingModelName) return existingModelName;
-        const providerType = resolveInitProviderType(values.providerType);
-        return INIT_DEFAULT_MODEL_BY_PROVIDER[providerType];
-      },
-      validate: (value) =>
-        String(value || "").trim() ? true : "Model name is required",
-    },
-    {
-      type: "text",
-      name: "baseUrl",
-      message: "Input base URL (optional, press Enter to skip)",
-      initial: String(existingDotEnvValues[LLM_BASE_URL_ENV_KEY] || "").trim(),
     },
     {
       // 关键交互: Chat channels 允许多选，未选择的就不写入 ship.json
@@ -354,81 +274,11 @@ export async function initCommand(
   // 关键点（中文）：agent_name 同时用于 `ship.json.name` 与 init 模板变量渲染，避免两处来源不一致。
   const agentName =
     String(response.name || "").trim() || path.basename(projectRoot);
-  const providerType = resolveInitProviderType(response.providerType);
-  const modelName =
-    String(response.modelName || "").trim() ||
-    INIT_DEFAULT_MODEL_BY_PROVIDER[providerType];
-  let apiKey = String(response.apiKey || "").trim();
-  let resolvedModelName = modelName;
-  let resolvedBaseUrl = String(response.baseUrl || "").trim();
-  const overwriteEnvKeys = new Set<string>();
-  const hasExistingApiKey = Object.prototype.hasOwnProperty.call(
-    existingDotEnvValues,
-    LLM_API_KEY_ENV_KEY,
-  );
-  const hasExistingModelName = Object.prototype.hasOwnProperty.call(
-    existingDotEnvValues,
-    LLM_MODEL_ENV_KEY,
-  );
-  const hasExistingBaseUrl = Object.prototype.hasOwnProperty.call(
-    existingDotEnvValues,
-    LLM_BASE_URL_ENV_KEY,
-  );
-  const existingApiKey = String(
-    existingDotEnvValues[LLM_API_KEY_ENV_KEY] || "",
-  ).trim();
-  const existingModelName = String(
-    existingDotEnvValues[LLM_MODEL_ENV_KEY] || "",
-  ).trim();
-  const existingBaseUrl = String(
-    existingDotEnvValues[LLM_BASE_URL_ENV_KEY] || "",
-  ).trim();
-
-  if (hasExistingApiKey && apiKey !== existingApiKey) {
-    const confirmOverwriteApiKey = (await prompts({
-      type: "confirm",
-      name: "overwrite",
-      message: `${LLM_API_KEY_ENV_KEY} already exists in .env. Overwrite it?`,
-      initial: false,
-    })) as { overwrite?: boolean };
-    if (confirmOverwriteApiKey.overwrite) {
-      overwriteEnvKeys.add(LLM_API_KEY_ENV_KEY);
-    } else {
-      apiKey = existingApiKey;
-    }
-  }
-
-  if (hasExistingModelName && resolvedModelName !== existingModelName) {
-    const confirmOverwriteModel = (await prompts({
-      type: "confirm",
-      name: "overwrite",
-      message: `${LLM_MODEL_ENV_KEY} already exists in .env. Overwrite it?`,
-      initial: false,
-    })) as { overwrite?: boolean };
-    if (confirmOverwriteModel.overwrite) {
-      overwriteEnvKeys.add(LLM_MODEL_ENV_KEY);
-    } else {
-      resolvedModelName = existingModelName;
-    }
-  }
-
-  // 关键点（中文）
-  // - baseUrl 允许留空（skip）。
-  // - 若已有值且用户输入了新值，则二次确认是否覆盖。
-  if (!resolvedBaseUrl) {
-    resolvedBaseUrl = existingBaseUrl;
-  } else if (hasExistingBaseUrl && resolvedBaseUrl !== existingBaseUrl) {
-    const confirmOverwriteBaseUrl = (await prompts({
-      type: "confirm",
-      name: "overwrite",
-      message: `${LLM_BASE_URL_ENV_KEY} already exists in .env. Overwrite it?`,
-      initial: false,
-    })) as { overwrite?: boolean };
-    if (confirmOverwriteBaseUrl.overwrite) {
-      overwriteEnvKeys.add(LLM_BASE_URL_ENV_KEY);
-    } else {
-      resolvedBaseUrl = existingBaseUrl;
-    }
+  const primaryModelId = String(response.primaryModelId || "").trim() || "default";
+  if (consoleModelIds.length === 0) {
+    console.log(
+      "⚠️  Console model pool is empty. Please run `sma console config llm model add ...` before starting this agent.",
+    );
   }
   const initTemplateVariables = {
     agent_name: agentName,
@@ -479,30 +329,6 @@ export async function initCommand(
     console.log(`✅ Created ${file.filename}`);
   }
 
-  // Save ship.json
-  // Build LLM configuration
-  const activeModelId = "default";
-  const providerId = "default";
-
-  // 关键点（中文）：init 默认生成“1 provider + 1 model”的多模型结构，后续用户可按需扩展。
-  const llmConfig: ShipConfig["llm"] = {
-    activeModel: activeModelId,
-    providers: {
-      [providerId]: {
-        type: providerType,
-        baseUrl: `\${${LLM_BASE_URL_ENV_KEY}}`,
-        apiKey: `\${${LLM_API_KEY_ENV_KEY}}`,
-      },
-    },
-    models: {
-      [activeModelId]: {
-        provider: providerId,
-        name: `\${${LLM_MODEL_ENV_KEY}}`,
-        temperature: 0.7,
-      },
-    },
-  };
-
   const selectedChannels = new Set<string>(
     Array.isArray(response.channels) ? (response.channels as string[]) : [],
   );
@@ -545,7 +371,9 @@ export async function initCommand(
       port: 3000,
       host: "0.0.0.0",
     },
-    llm: llmConfig,
+    model: {
+      primary: primaryModelId,
+    },
     // 关键点（中文）：所有服务相关配置统一放入 `services`。
     services: {
       // skills 扫描目录统一使用 `.agents/skills`（project/home 默认 roots）
@@ -568,16 +396,8 @@ export async function initCommand(
   // 关键点（中文）
   // - `.env` 写入真实值（仅追加缺失键，不覆盖已有键）
   // - `.env.example` 写入示例值（便于团队同步所需变量）
-  const envRealEntries: EnvEntry[] = [
-    { key: LLM_API_KEY_ENV_KEY, value: apiKey },
-    { key: LLM_MODEL_ENV_KEY, value: resolvedModelName },
-    { key: LLM_BASE_URL_ENV_KEY, value: resolvedBaseUrl },
-  ];
-  const envExampleEntries: EnvEntry[] = [
-    { key: LLM_API_KEY_ENV_KEY, value: "" },
-    { key: LLM_MODEL_ENV_KEY, value: resolvedModelName },
-    { key: LLM_BASE_URL_ENV_KEY, value: "" },
-  ];
+  const envRealEntries: EnvEntry[] = [];
+  const envExampleEntries: EnvEntry[] = [];
   if (selectedChannels.has("telegram")) {
     envRealEntries.push(
       { key: "TELEGRAM_BOT_TOKEN", value: "" },
@@ -620,7 +440,6 @@ export async function initCommand(
     filePath: dotEnvPath,
     sectionTitle: "ShipMyAgent Create",
     entries: envRealEntries,
-    overwriteKeys: overwriteEnvKeys,
   });
   const envExampleResult = await appendMissingEnvEntries({
     filePath: dotEnvExamplePath,
@@ -687,8 +506,8 @@ export async function initCommand(
   }
 
   console.log("\n🎉 Initialization complete!\n");
-  console.log(`📦 Current model: ${providerType} / ${resolvedModelName}`);
-  console.log(`🌐 API URL: ${resolvedBaseUrl || "-"}\n`);
+  console.log(`📦 Agent model.primary: ${primaryModelId}`);
+  console.log("🌐 Model pool source: ~/.ship/ship.json (console global)\n");
 
   if (selectedChannels.has("feishu")) {
     console.log("📱 Feishu chat channel enabled");
@@ -725,7 +544,8 @@ export async function initCommand(
     "Edit PROFILE.md to customize agent behavior",
     "Edit SOUL.md to customize your core operating principles",
     "Edit USER.md to define user goals and communication preferences",
-    "Edit ship.json to modify llm.activeModel / llm.models / llm.providers",
+    "Edit ship.json to modify model.primary (bind to console model id)",
+    'Use "sma console config llm ..." to manage global model pool',
   ];
 
   if (selectedChannels.has("telegram")) {
@@ -760,9 +580,6 @@ export async function initCommand(
   }
   console.log("");
   console.log(
-    "💡 Tip: 本次输入的 API Key 与 Model 已按“缺失才追加”策略写入 .env。\n",
-  );
-  console.log(
-    "To switch models or modify configuration, edit the llm field in ship.json directly.\n",
+    "💡 Tip: 模型管理在 console 全局层完成，agent 仅绑定 model.primary。\n",
   );
 }

@@ -142,11 +142,14 @@ export function loadShipConfig(projectRoot: string): ShipConfig {
   if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
     throw new Error("Invalid ship.json: missing required fields name/version");
   }
-  if (!candidate.llm || typeof candidate.llm !== "object") {
+  if (!candidate.model || typeof candidate.model !== "object") {
     throw new Error(
-      'Invalid ship.json: missing required field llm (run "sma init" to create ~/.ship/ship.json)',
+      'Invalid ship.json: missing required field model.primary in project ship.json (run "sma agent create" to regenerate)',
     );
   }
-
+  const primary = String((candidate.model as { primary?: unknown }).primary || "").trim();
+  if (!primary) {
+    throw new Error("Invalid ship.json: model.primary cannot be empty");
+  }
   return candidate as ShipConfig;
 }

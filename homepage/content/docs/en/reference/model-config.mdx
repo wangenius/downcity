@@ -1,0 +1,82 @@
+---
+title: Model Config Reference
+description: "Real model implementation flow: SQLite storage, encryption, binding resolution, and apply behavior"
+---
+
+# Model Config Reference
+
+Model implementation has two layers:
+
+1. Console-global model pool in `~/.ship/ship.db` (SQLite)
+2. Project-local `model.primary` in each agent `ship.json`
+
+## 1) Persistence layout
+
+Console-global model pool:
+
+- file: `~/.ship/ship.db`
+- tables: `model_providers`, `models`
+- write entrypoint: `sma console config llm ...`
+
+Project-local binding:
+
+- file: `<project>/ship.json`
+- field: `model.primary`
+
+## 2) Write flow
+
+1. `sma console config llm provider/model ...`  
+writes provider/model records into `~/.ship/ship.db`
+
+2. Console UI model switch  
+updates current agent `ship.json -> model.primary`
+
+3. `sma agent create`  
+selects a model id from console pool and writes `model.primary`
+
+## 3) Read flow at runtime
+
+```json
+{
+  "model": {
+    "primary": "default"
+  }
+}
+```
+
+`primary` must reference an existing model id in SQLite, otherwise startup fails.
+
+## 4) Encryption behavior
+
+Provider `apiKey` is not stored in plaintext:
+
+- algorithm: AES-256-GCM field-level encryption
+- key priority: `SMA_MODEL_DB_KEY` env var > `~/.ship/console/model-db.key`
+- DB field: `api_key_encrypted`
+
+## 5) Commands
+
+Manage model pool globally:
+
+```bash
+sma console config llm provider list
+sma console config llm model list
+```
+
+Bind agent to a model ID:
+
+```bash
+sma console config set model.primary fast
+```
+
+## 6) Apply changes
+
+Restart agent after model changes:
+
+```bash
+sma agent restart .
+```
+
+## Related docs
+
+- [ship.json Reference](/en/docs/reference/ship-json)

@@ -1,0 +1,31 @@
+---
+title: Data Security and Keys
+description: Model storage, encryption behavior, and key management guidance
+---
+
+# Data Security and Keys
+
+Model config uses a split design:
+
+1. Global model pool in `~/.ship/ship.db`
+2. Project-level binding in `<project>/ship.json` as `model.primary`
+
+## How apiKey is protected
+
+Provider `apiKey` is not stored in plaintext. It is stored in encrypted field `api_key_encrypted`.
+
+Key source priority:
+
+1. `SMA_MODEL_DB_KEY`
+2. `~/.ship/console/model-db.key`
+
+## Best practices
+
+1. Never commit `~/.ship` or any key material.
+2. Use a secret manager to inject `SMA_MODEL_DB_KEY` in team/production environments.
+3. After key rotation, validate model connectivity through CLI and one real invocation.
+
+## Related docs
+
+- [Model Config Reference](/en/docs/reference/model-config)
+- [Model Configuration](/en/docs/configuration/model)

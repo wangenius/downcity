@@ -1,0 +1,32 @@
+---
+title: 配置检查清单
+description: 上线前建议逐项确认的配置项
+---
+
+# 配置检查清单
+
+上线或交付前，建议按下面顺序检查：
+
+1. 模型绑定
+- `ship.json.model.primary` 是否可在 `sma console config llm model list` 中找到。
+
+2. 网络与路由
+- `start.host/start.port` 与实际 daemon 一致。
+- 终端中没有残留错误的 `SMA_SERVER_*` 环境变量。
+
+3. 通道与服务
+- 仅启用必要的 chat channel / service。
+- 每个启用通道都做一次发送与接收测试。
+
+4. 权限与安全
+- `permissions.exec_command.deny` 已包含高风险命令。
+- `SMA_MODEL_DB_KEY` 已通过安全方式注入。
+
+5. 可观测性
+- 已确认日志路径可写且可回溯。
+- `sma console status`、`sma agent status` 状态正常。
+
+## 相关文档
+
+- [安全与权限总览](/zh/docs/security/overview)
+- [运维与排障](/zh/docs/operations)

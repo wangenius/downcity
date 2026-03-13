@@ -69,7 +69,7 @@ sequenceDiagram
 - `console` 管“运维与治理”，`agent` 管“执行与落盘”。
 - `service` 是核心域，`extension` 是可选增强域。
 - `service` / `extension` 都由 console 统一暴露运维接口，但真正执行发生在 agent runtime 内。
-- 模型相关配置通过 `sma console config llm ...` 管理，最终作用于项目运行时配置。
+- 模型池通过 `sma console config llm ...` 在 console 全局层管理；项目只通过 `model.primary` 绑定模型 ID。
 
 ## 5. 常用命令顺序
 

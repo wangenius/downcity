@@ -98,6 +98,24 @@ function readShipJsonLayer(filePath: string): ResolvedConfigValue {
   return resolveEnvPlaceholdersDeep(raw);
 }
 
+/**
+ * 校验项目层是否误配 extensions。
+ *
+ * 关键点（中文）
+ * - `extensions` 统一由 console 全局层（`~/.ship/ship.json`）管理。
+ * - agent 项目 `ship.json` 只允许配置绑定与项目级参数，不允许写 `extensions`。
+ */
+function assertNoProjectExtensionsLayer(
+  filePath: string,
+  layer: ResolvedConfigValue,
+): void {
+  if (!isPlainObject(layer)) return;
+  if (!Object.prototype.hasOwnProperty.call(layer, "extensions")) return;
+  throw new Error(
+    `Invalid ship.json: extensions must be configured in console ~/.ship/ship.json, not project file (${filePath})`,
+  );
+}
+
 function collectAncestorShipJsonPaths(projectRoot: string): string[] {
   const paths: string[] = [];
   const resolvedRoot = path.resolve(projectRoot);
@@ -131,6 +149,7 @@ export function loadShipConfig(projectRoot: string): ShipConfig {
   let merged: unknown = operationLayer;
   for (const p of ancestorShipJsonPaths) {
     const layer = readShipJsonLayer(p);
+    assertNoProjectExtensionsLayer(p, layer);
     merged = deepMerge(merged, layer);
   }
 

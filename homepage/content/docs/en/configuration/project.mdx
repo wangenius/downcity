@@ -18,7 +18,6 @@ description: Most-used project-level fields and practical cautions
     "port": 3000
   },
   "services": {},
-  "extensions": {},
   "permissions": {}
 }
 ```
@@ -27,7 +26,7 @@ description: Most-used project-level fields and practical cautions
 
 1. `model.primary` must resolve in the global model pool.
 2. `start.host/start.port` affects default CLI routing.
-3. Enable only required services/extensions for production stability.
+3. Keep project-level config focused on `services`; `extensions` are console-global.
 
 ## Common commands
 

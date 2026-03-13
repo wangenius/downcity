@@ -18,7 +18,6 @@ description: ship.json 中用户最常用字段与注意事项
     "port": 3000
   },
   "services": {},
-  "extensions": {},
   "permissions": {}
 }
 ```
@@ -27,7 +26,7 @@ description: ship.json 中用户最常用字段与注意事项
 
 1. `model.primary` 必须能在全局模型池中解析到。
 2. `start.host/start.port` 会影响 CLI 的默认路由目标。
-3. `services` 与 `extensions` 建议按需启用，避免无效组件常驻。
+3. 项目层只维护 `services`；`extensions` 统一在 console 全局层配置。
 
 ## 常用命令
 

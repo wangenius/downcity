@@ -74,6 +74,7 @@ sma voice off
 
 - 模型目录已存在时，默认直接跳过下载（`--force` 可强制重下）。
 - `voice init` 安装 Python 依赖时，已存在依赖会跳过，并打印 skip 日志。
+- `voice` 配置写入 console 全局 `~/.ship/ship.json`（`extensions.voice`），不写项目 `ship.json`。
 
 该命令组通常需要已启动的 agent runtime：
 

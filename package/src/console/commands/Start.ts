@@ -59,7 +59,7 @@ export async function startCommand(
   const __dirname = path.dirname(__filename);
   const cliPath = path.resolve(__dirname, "./Index.js");
 
-  const args = buildRunArgsFromOptions(projectRoot, options || {});
+  const args = await buildRunArgsFromOptions(projectRoot, options || {});
 
   try {
     const { pid, logPath } = await startDaemonProcess({

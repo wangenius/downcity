@@ -39,6 +39,15 @@ sma console config llm model update <modelId>
 sma console config llm model remove <modelId>
 ```
 
+## `extensions.*` 路径说明
+
+当 `keyPath` 以 `extensions.` 开头时，读写目标自动切换为 console 全局 `~/.ship/ship.json`。
+
+```bash
+sma console config get extensions.voice
+sma console config set extensions.voice.enabled true
+```
+
 ## 示例
 
 ```bash

@@ -25,6 +25,8 @@ Model config is now split into two layers:
 
 `model.primary` must match an existing model id in `~/.ship/ship.db`.
 
+Project `ship.json` should not configure `extensions.*`.
+
 ## Console-global model pool
 
 Full model management stays in `~/.ship/ship.db`:
@@ -49,6 +51,11 @@ At agent runtime:
 3. Resolve provider in SQLite providers table by providerId
 
 If any link is missing, startup fails fast.
+
+## Extension scope
+
+`extensions.*` is console-global and loaded from `~/.ship/ship.json`.
+Project-level `ship.json` is not the place to configure extensions.
 
 ## Related docs
 

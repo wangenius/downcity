@@ -85,20 +85,15 @@ agent 绑定模型 ID（映射到 console 全局模型池）：
 }
 ```
 
-### `extensions.voice`
+### `extensions.*`（说明）
 
-本地语音识别配置：
+extension 配置不在项目 `ship.json` 里维护，而是统一在 console 全局 `~/.ship/ship.json` 中维护。
 
-```json
-{
-  "extensions": {
-    "voice": {
-      "enabled": true,
-      "provider": "local",
-      "activeModel": "SenseVoiceSmall"
-    }
-  }
-}
+例如 voice：
+
+```bash
+sma voice on SenseVoiceSmall
+sma console config get extensions.voice
 ```
 
 ### `permissions`

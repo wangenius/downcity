@@ -39,6 +39,15 @@ sma console config llm model update <modelId>
 sma console config llm model remove <modelId>
 ```
 
+## `extensions.*` path behavior
+
+When `keyPath` starts with `extensions.`, the command automatically reads/writes console-global `~/.ship/ship.json`.
+
+```bash
+sma console config get extensions.voice
+sma console config set extensions.voice.enabled true
+```
+
 ## Examples
 
 ```bash

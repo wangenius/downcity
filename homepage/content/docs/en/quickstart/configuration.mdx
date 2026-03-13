@@ -85,20 +85,16 @@ Skills discovery roots:
 }
 ```
 
-### `extensions.voice`
+### `extensions.*` (note)
 
-Local speech-to-text extension:
+Extension config is not maintained in project `ship.json`. It is maintained in console-global `~/.ship/ship.json`.
 
-```json
-{
-  "extensions": {
-    "voice": {
-      "enabled": true,
-      "provider": "local",
-      "activeModel": "SenseVoiceSmall"
-    }
-  }
-}
+Example for voice:
+
+```bash
+sma voice on SenseVoiceSmall
+sma console config get extensions.voice
+```
 ```
 
 ### `permissions`

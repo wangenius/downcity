@@ -44,7 +44,7 @@ export async function restartCommand(
 
   try {
     await stopDaemonProcess({ projectRoot });
-    const args = buildRunArgsFromOptions(projectRoot, options || {});
+    const args = await buildRunArgsFromOptions(projectRoot, options || {});
     const { pid, logPath } = await startDaemonProcess({
       projectRoot,
       cliPath,

@@ -173,8 +173,9 @@ export interface ShipConfig {
    * extensions 配置。
    *
    * 关键点（中文）
-   * - 扩展能力统一放在 `extensions` 下，供 service 调用。
-   * - 示例：`extensions.voice`。
+   * - 扩展能力统一放在 console 全局 `~/.ship/ship.json` 的 `extensions` 下。
+   * - 运行时会把该全局层合并到 `config.extensions` 供 service 调用。
+   * - agent 项目 `ship.json` 不应配置该字段。
    */
   extensions?: {
     /**

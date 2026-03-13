@@ -8,36 +8,18 @@
 import path from "path";
 import fs from "fs-extra";
 import {
+  diagnoseDaemonStaleReasons,
   getDaemonLogPath,
-  getDaemonMetaPath,
   isProcessAlive,
+  readDaemonMeta,
   readDaemonPid,
 } from "@/console/daemon/Manager.js";
 import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
-import type { DaemonMeta } from "@agent/types/Daemon.js";
 import {
   printPanel,
   renderKeyValueLines,
   type StatusTone,
 } from "@/utils/cli/PrettyStatus.js";
-
-/**
- * 安全读取 daemon 元数据。
- */
-async function readDaemonMeta(projectRoot: string): Promise<DaemonMeta | null> {
-  try {
-    const value = await fs.readJson(getDaemonMetaPath(projectRoot));
-    const pid = Number((value as { pid?: unknown })?.pid);
-    if (!Number.isFinite(pid) || pid <= 0) return null;
-    const startedAt = String(
-      (value as { startedAt?: unknown })?.startedAt || "",
-    ).trim();
-    if (!startedAt) return null;
-    return value as DaemonMeta;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * daemon 状态查询入口。
@@ -92,6 +74,8 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
     tone = "warning";
     rows.push(["state", "stale"]);
     rows.push(["stale_pid", String(pid)]);
+    const reasons = await diagnoseDaemonStaleReasons(projectRoot, pid);
+    rows.push(["stale_reason", reasons.map((item) => item.message).join("; ")]);
     rows.push(["fix", `sma agent doctor ${projectRoot} --fix`]);
     printPanel({
       title: "sma agent status",

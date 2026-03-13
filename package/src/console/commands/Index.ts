@@ -35,11 +35,13 @@ import { registerAllServicesForCli } from "@agent/service/ServiceCommand.js";
 import { registerAllExtensionsForCli } from "@console/extension/ExtensionCommand.js";
 import {
   cleanupStaleDaemonFiles,
+  diagnoseDaemonStaleReasons,
   getDaemonLogPath,
   isProcessAlive as isDaemonProcessAlive,
   readDaemonPid,
   stopDaemonProcess,
 } from "@/console/daemon/Manager.js";
+import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js";
 import {
   listConsoleAgents,
   removeConsoleAgentEntry,
@@ -614,6 +616,8 @@ agent
         }
 
         injectAgentContext(cwd);
+        const projectRoot = resolve(String(cwd || "."));
+        ensureRuntimeModelBindingReady(projectRoot);
 
         const shouldForeground = options.foreground === true;
 
@@ -679,6 +683,8 @@ agent
     console.log("⚠️  Stale daemon state detected");
     console.log(`   project: ${projectRoot}`);
     console.log(`   stalePid: ${pid}`);
+    const staleReasons = await diagnoseDaemonStaleReasons(projectRoot, pid);
+    console.log(`   reason: ${staleReasons.map((item) => item.message).join("; ")}`);
     console.log(`   log: ${getDaemonLogPath(projectRoot)}`);
 
     if (options.fix !== true) {

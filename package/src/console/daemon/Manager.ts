@@ -22,6 +22,7 @@ import {
   DAEMON_META_FILENAME,
   DAEMON_PID_FILENAME,
   type DaemonMeta,
+  type DaemonStaleReason,
 } from "@agent/types/Daemon.js";
 import {
   removeConsoleAgentEntry,
@@ -80,6 +81,98 @@ export const isProcessAlive = (pid: number): boolean => {
   } catch {
     return false;
   }
+};
+
+/**
+ * 读取 daemon meta（宽松模式）。
+ *
+ * 关键点（中文）
+ * - 返回 null 表示文件缺失、解析失败或结构非法。
+ * - 该函数用于状态展示，不抛异常。
+ */
+export const readDaemonMeta = async (
+  projectRoot: string,
+): Promise<DaemonMeta | null> => {
+  try {
+    const value = await fs.readJson(getDaemonMetaPath(projectRoot));
+    const pid = Number((value as { pid?: unknown })?.pid);
+    if (!Number.isFinite(pid) || pid <= 0) return null;
+    const startedAt = String(
+      (value as { startedAt?: unknown })?.startedAt || "",
+    ).trim();
+    if (!startedAt) return null;
+    const command = String(
+      (value as { command?: unknown })?.command || "",
+    ).trim();
+    const project = String(
+      (value as { projectRoot?: unknown })?.projectRoot || "",
+    ).trim();
+    if (!command || !project) return null;
+    return value as DaemonMeta;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * 诊断 stale 原因。
+ */
+export const diagnoseDaemonStaleReasons = async (
+  projectRoot: string,
+  pid: number,
+): Promise<DaemonStaleReason[]> => {
+  const reasons: DaemonStaleReason[] = [];
+  reasons.push({
+    code: "process_not_alive",
+    message: "pid file exists but process is not alive",
+  });
+
+  const metaPath = getDaemonMetaPath(projectRoot);
+  const metaExists = await fs.pathExists(metaPath);
+  if (!metaExists) {
+    reasons.push({
+      code: "meta_missing",
+      message: "daemon meta file is missing",
+    });
+    return reasons;
+  }
+
+  try {
+    await fs.readJson(metaPath);
+  } catch {
+    reasons.push({
+      code: "meta_invalid",
+      message: "daemon meta file is invalid JSON",
+    });
+    return reasons;
+  }
+
+  const parsedMeta = await readDaemonMeta(projectRoot);
+  if (!parsedMeta) {
+    reasons.push({
+      code: "meta_invalid",
+      message: "daemon meta file has invalid structure",
+    });
+    return reasons;
+  }
+
+  if (parsedMeta.pid !== pid) {
+    reasons.push({
+      code: "meta_pid_mismatch",
+      message: `meta pid (${parsedMeta.pid}) does not match pid file (${pid})`,
+    });
+  }
+
+  const metaProjectRoot = path.resolve(String(parsedMeta.projectRoot || ""));
+  const expectedProjectRoot = path.resolve(projectRoot);
+  if (metaProjectRoot !== expectedProjectRoot) {
+    reasons.push({
+      code: "meta_project_mismatch",
+      message: `meta project root mismatch (${metaProjectRoot})`,
+    });
+  }
+
+  return reasons;
 };
 
 /**

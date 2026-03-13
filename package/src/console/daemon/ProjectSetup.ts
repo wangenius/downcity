@@ -8,6 +8,8 @@
 
 import fs from "fs-extra";
 import path from "node:path";
+import { loadShipConfig } from "@/console/env/Config.js";
+import { ConsoleStore } from "@/utils/store/index.js";
 import {
   getCacheDirPath,
   getLogsDirPath,
@@ -67,4 +69,52 @@ function ensureShipDirectories(projectRoot: string): void {
 export function ensureRuntimeProjectReady(projectRoot: string): void {
   ensureContextFiles(projectRoot);
   ensureShipDirectories(projectRoot);
+}
+
+/**
+ * 校验项目模型绑定是否可用于启动。
+ *
+ * 关键点（中文）
+ * - `ship.json.model.primary` 必须存在且在 console 模型池中可解析。
+ * - 若模型被 pause，也要在启动前直接拒绝，避免进程拉起后秒退。
+ */
+export function ensureRuntimeModelBindingReady(projectRoot: string): void {
+  let primaryModelId = "";
+  try {
+    const config = loadShipConfig(projectRoot);
+    primaryModelId = String(config.model?.primary || "").trim();
+  } catch (error) {
+    console.error("❌ Invalid ship.json model binding");
+    console.error(`   project: ${projectRoot}`);
+    console.error(`   error: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+
+  if (!primaryModelId) {
+    console.error("❌ Invalid ship.json model binding");
+    console.error(`   project: ${projectRoot}`);
+    console.error("   error: model.primary is required");
+    process.exit(1);
+  }
+
+  const store = new ConsoleStore();
+  try {
+    const model = store.getModel(primaryModelId);
+    if (!model) {
+      console.error("❌ Model not found in console model pool");
+      console.error(`   project: ${projectRoot}`);
+      console.error(`   model.primary: ${primaryModelId}`);
+      console.error("   fix: run `sma console model create` or `sma console model list`");
+      process.exit(1);
+    }
+    if (model.isPaused === true) {
+      console.error("❌ Model is paused");
+      console.error(`   project: ${projectRoot}`);
+      console.error(`   model.primary: ${primaryModelId}`);
+      console.error(`   fix: run \`sma console model pause ${primaryModelId} --enabled false\``);
+      process.exit(1);
+    }
+  } finally {
+    store.close();
+  }
 }

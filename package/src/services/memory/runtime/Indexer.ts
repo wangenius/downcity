@@ -10,7 +10,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import Database from "better-sqlite3";
 import type {
   MemorySearchResultItem,
   MemorySourceType,
@@ -176,7 +176,7 @@ function chunkMarkdown(content: string): MemoryChunk[] {
  */
 export class MemoryIndexer {
   private readonly dbPath: string;
-  private readonly db: DatabaseSync;
+  private readonly db: Database.Database;
 
   constructor(private readonly rootPath: string) {
     this.dbPath = getShipMemoryIndexPath(rootPath);
@@ -184,7 +184,9 @@ export class MemoryIndexer {
     // 同步创建目录，保证 sqlite 可打开。
     // 关键点（中文）：这里是启动路径，避免引入异步竞态。
     mkdirSync(dir, { recursive: true });
-    this.db = new DatabaseSync(this.dbPath);
+    this.db = new Database(this.dbPath);
+    // 关键点（中文）：使用 WAL 改善并发读写稳定性，避免长事务阻塞查询。
+    this.db.pragma("journal_mode = WAL");
     this.ensureSchema();
   }
 

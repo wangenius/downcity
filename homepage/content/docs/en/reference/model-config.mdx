@@ -16,7 +16,7 @@ Console-global model pool:
 
 - file: `~/.ship/ship.db`
 - tables: `model_providers`, `models`
-- write entrypoint: `sma console config llm ...`
+- write entrypoint: `sma console model ...`
 
 Project-local binding:
 
@@ -25,7 +25,7 @@ Project-local binding:
 
 ## 2) Write flow
 
-1. `sma console config llm provider/model ...`  
+1. `sma console model ...`  
 writes provider/model records into `~/.ship/ship.db`
 
 2. Console UI model switch  
@@ -59,8 +59,8 @@ Provider `apiKey` is not stored in plaintext:
 Manage model pool globally:
 
 ```bash
-sma console config llm provider list
-sma console config llm model list
+sma console model list
+sma console model get model fast
 ```
 
 Bind agent to a model ID:

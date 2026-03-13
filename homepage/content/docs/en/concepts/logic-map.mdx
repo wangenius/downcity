@@ -68,7 +68,7 @@ sequenceDiagram
 - `console` handles governance/ops, `agent` handles execution/persistence.
 - `service` is the core domain layer, `extension` is the optional enhancement layer.
 - `service` and `extension` are operated from console-facing commands, but execution happens inside agent runtime.
-- The model pool is managed globally via `sma console config llm ...`; each project binds with `model.primary`.
+- The model pool is managed globally via `sma console model ...`; each project binds with `model.primary`.
 
 ## 5. Typical Command Order
 

@@ -214,8 +214,8 @@ export async function initCommand(
   if (consoleModelIds.length === 0) {
     console.error("❌ Console model pool is empty.");
     console.error("   Please configure at least one model before `sma agent create`:");
-    console.error("   1) sma console config llm provider add ...");
-    console.error("   2) sma console config llm model add ...");
+    console.error("   1) sma console model create");
+    console.error("   2) or use sma console model update/test for scripting");
     process.exit(1);
   }
 
@@ -541,7 +541,7 @@ export async function initCommand(
     "Edit SOUL.md to customize your core operating principles",
     "Edit USER.md to define user goals and communication preferences",
     "Edit ship.json to modify model.primary (bind to console model id)",
-    'Use "sma console config llm ..." to manage global model pool',
+    'Use "sma console model ..." to manage global model pool',
   ];
 
   if (selectedChannels.has("telegram")) {

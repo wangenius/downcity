@@ -18,6 +18,7 @@ sma agent status [path]
 - `path` 默认当前目录 `.`。
 - 目标 agent 需要已登记在 console registry。
 - 输出包含运行状态、进程信息和关键路径。
+- 当状态为 `stale` 时，会额外输出 `stale_reason`，说明判定为僵尸状态的具体原因。
 
 ## 相关命令
 

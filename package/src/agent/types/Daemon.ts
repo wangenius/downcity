@@ -15,3 +15,22 @@ export interface DaemonMeta {
   node: string;
   platform: NodeJS.Platform;
 }
+
+/**
+ * daemon 进入 stale 状态的诊断项。
+ */
+export interface DaemonStaleReason {
+  /**
+   * 机器可读的原因编码。
+   */
+  code:
+    | "process_not_alive"
+    | "meta_missing"
+    | "meta_invalid"
+    | "meta_pid_mismatch"
+    | "meta_project_mismatch";
+  /**
+   * 面向用户展示的原因说明。
+   */
+  message: string;
+}

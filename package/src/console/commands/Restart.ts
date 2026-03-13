@@ -9,6 +9,7 @@ import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
 import { buildRunArgsFromOptions } from "@/console/daemon/CliArgs.js";
 import { startDaemonProcess, stopDaemonProcess } from "@/console/daemon/Manager.js";
 import type { StartOptions } from "@agent/types/Start.js";
+import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js";
 
 /**
  * restart 命令执行流程。
@@ -36,6 +37,8 @@ export async function restartCommand(
     );
     process.exit(1);
   }
+  // 关键点（中文）：重启前同样校验模型绑定，避免停掉旧进程后无法拉起新进程。
+  ensureRuntimeModelBindingReady(projectRoot);
 
   // 计算当前 CLI 的入口路径（编译后是 `bin/console/commands/Index.js`）。
   const __filename = fileURLToPath(import.meta.url);

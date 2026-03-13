@@ -373,7 +373,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setContextMessages([]);
     setTasks([]);
     setLogs([]);
-    setModel(null);
     setPrompt(null);
     setLocalMessages([]);
   }, []);
@@ -530,13 +529,15 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   const refreshModel = useCallback(
     async (agentId: string) => {
-      if (!agentId) return;
       try {
-        const data = await requestJson<UiModelResponse>("/api/tui/model", {}, agentId);
+        const endpoint = agentId
+          ? `/api/ui/model?agent=${encodeURIComponent(agentId)}`
+          : "/api/ui/model";
+        const data = await requestJson<UiModelResponse>(endpoint, {}, agentId);
         setModel(data.model || null);
       } catch (error) {
         const message = getErrorMessage(error);
-        // 关键点（中文）：旧 runtime 没有 model 接口时降级为空。
+        // 关键点（中文）：异常场景降级为空，避免全局面板阻塞。
         if (/404|not found/i.test(message)) {
           setModel(null);
           return;
@@ -591,6 +592,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         const { nextAgentId, list } = await refreshAgents(preferredAgentId);
         if (!nextAgentId) {
           clearPanelDataForNoAgent();
+          await refreshModel("");
           setTopbarError(false);
           setTopbarStatus("未检测到运行中的 agent");
           return;
@@ -834,12 +836,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         return;
       }
       try {
+        const endpoint = `/api/ui/model/switch?agent=${encodeURIComponent(selectedAgentId)}`;
         await requestJson<{
           success?: boolean;
           restartRequired?: boolean;
           message?: string;
         }>(
-          "/api/tui/model/switch",
+          endpoint,
           {
             method: "POST",
             body: JSON.stringify({ primaryModelId: next }),

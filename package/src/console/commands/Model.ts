@@ -37,6 +37,24 @@ const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
 
 const modelManager = new ModelManager();
 
+function maskSecret(value: string | undefined): string | undefined {
+  const raw = String(value || "").trim();
+  if (!raw) return undefined;
+  if (raw.length <= 8) return "***";
+  return `${raw.slice(0, 4)}***${raw.slice(-4)}`;
+}
+
+function toSafeProviderView<T extends { apiKey?: string }>(provider: T): T & {
+  apiKeyMasked?: string;
+} {
+  const masked = maskSecret(provider.apiKey);
+  return {
+    ...provider,
+    apiKey: masked ? "***masked***" : undefined,
+    apiKeyMasked: masked,
+  };
+}
+
 function parseBooleanOption(value: string | undefined): boolean {
   if (value === undefined) return true;
   const normalized = String(value).trim().toLowerCase();
@@ -387,7 +405,9 @@ export function registerModelCommand(program: Command): void {
     .helpOption("--help", "display help for command")
     .action(async (options: { json?: boolean }) => {
       await runStoreCommand(options, async (store) => {
-        const providers = await store.listProviders();
+        const providers = (await store.listProviders()).map((item) =>
+          toSafeProviderView(item),
+        );
         const models = store.listModels();
         return {
           title: "console models listed",
@@ -421,7 +441,7 @@ export function registerModelCommand(program: Command): void {
           title: "provider loaded",
           payload: {
             providerId: id,
-            provider,
+            provider: toSafeProviderView(provider),
           },
         };
       });

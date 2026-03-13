@@ -60,13 +60,29 @@ type EnvEntry = {
 /**
  * 读取 console 全局模型 ID 列表。
  */
-function listConsoleModelIds(): string[] {
+async function listConsoleModelChoices(): Promise<Array<{ title: string; value: string }>> {
   const store = new ConsoleStore();
   try {
-    return store
-      .listModels()
-      .map((item) => String(item.id || "").trim())
-      .filter((id) => id.length > 0);
+    const models = store.listModels();
+    const providers = await store.listProviders();
+    const providerMap = new Map(providers.map((item) => [item.id, item] as const));
+    return models
+      .map((item) => {
+        const id = String(item.id || "").trim();
+        if (!id) return null;
+        const providerId = String(item.providerId || "").trim();
+        const providerType = String(providerMap.get(providerId)?.type || "").trim();
+        const providerLabel = providerId
+          ? providerType
+            ? `${providerId} (${providerType})`
+            : providerId
+          : "-";
+        return {
+          title: `${id} · ${providerLabel}`,
+          value: id,
+        };
+      })
+      .filter((item): item is { title: string; value: string } => item !== null);
   } finally {
     store.close();
   }
@@ -209,7 +225,8 @@ export async function initCommand(
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
   const existingUserMd = fs.existsSync(getUserMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
-  const consoleModelIds = listConsoleModelIds();
+  const consoleModelChoices = await listConsoleModelChoices();
+  const consoleModelIds = consoleModelChoices.map((item) => item.value);
   // 关键点（中文）：模型池为空时，继续 create 只会生成“必然启动失败”的配置，这里直接中止并给出明确修复路径。
   if (consoleModelIds.length === 0) {
     console.error("❌ Console model pool is empty.");
@@ -251,7 +268,7 @@ export async function initCommand(
       type: "select",
       name: "primaryModelId",
       message: "Select primary model (from console model pool)",
-      choices: consoleModelIds.map((id) => ({ title: id, value: id })),
+      choices: consoleModelChoices,
       initial: 0,
     },
     {

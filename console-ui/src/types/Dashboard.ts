@@ -602,7 +602,7 @@ export interface UiLocalMessagesResponse {
 }
 
 /**
- * 模型选项项（来自 `/api/tui/model`）。
+ * 模型选项项（来自 `/api/ui/model`）。
  */
 export interface UiModelOption {
   /**
@@ -621,6 +621,10 @@ export interface UiModelOption {
    * provider 类型。
    */
   providerType?: string;
+  /**
+   * 是否处于暂停状态。
+   */
+  isPaused?: boolean;
 }
 
 /**
@@ -658,7 +662,7 @@ export interface UiModelSummary {
 }
 
 /**
- * `/api/tui/model` 响应。
+ * `/api/ui/model` 响应。
  */
 export interface UiModelResponse {
   /**

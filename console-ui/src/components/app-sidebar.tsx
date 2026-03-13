@@ -34,7 +34,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export type DashboardView =
   | "globalOverview"
-  | "globalRuntime"
   | "globalModel"
   | "globalAgents"
   | "globalExtensions"
@@ -82,7 +81,6 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 const globalItems: Array<{ key: DashboardView; title: string; icon: React.ReactNode }> = [
   { key: "globalOverview", title: "Overview", icon: <Layers3Icon /> },
-  { key: "globalRuntime", title: "Console Runtime", icon: <ServerCogIcon /> },
   { key: "globalModel", title: "Model", icon: <ServerCogIcon /> },
   { key: "globalAgents", title: "Agents", icon: <CpuIcon /> },
   { key: "globalExtensions", title: "Extensions", icon: <PuzzleIcon /> },

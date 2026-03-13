@@ -5,7 +5,7 @@
 import * as React from "react"
 
 import { AppSidebar, type DashboardView } from "@/components/app-sidebar"
-import { ConsoleStatusSection } from "@/components/dashboard/ConsoleStatusSection"
+import { AgentModelBindingSection } from "@/components/dashboard/AgentModelBindingSection"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
@@ -23,7 +23,6 @@ import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 
 const viewLabelMap: Record<DashboardView, string> = {
   globalOverview: "Global / Overview",
-  globalRuntime: "Global / Console Runtime",
   globalModel: "Global / Model",
   globalAgents: "Global / Agents",
   globalExtensions: "Global / Extensions",
@@ -125,26 +124,20 @@ export function App() {
             </section>
           ) : null}
 
-          {activeView === "globalRuntime" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <ConsoleStatusSection
-                selectedAgent={selectedAgent}
-                topbarStatus={topbarStatus}
-                topbarError={topbarError}
-                hasPrompt={Boolean(prompt && Array.isArray(prompt.sections) && prompt.sections.length > 0)}
-                extensions={extensions}
-                onRefresh={() => void refreshDashboard()}
-              />
-            </section>
-          ) : null}
-
           {activeView === "agentOverview" ? (
-            <section className="animate-in fade-in-0 duration-300">
+            <section className="animate-in fade-in-0 space-y-4 duration-300">
               <SummaryCards
                 selectedAgent={selectedAgent}
                 overview={overview}
                 services={services}
                 localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
+              />
+              <AgentModelBindingSection
+                selectedAgent={selectedAgent}
+                model={model}
+                loading={loading}
+                onRefresh={() => void refreshModel(selectedAgentId)}
+                onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
               />
             </section>
           ) : null}
@@ -178,7 +171,6 @@ export function App() {
                 model={model}
                 loading={loading}
                 onRefresh={() => void refreshModel(selectedAgentId)}
-                onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
               />
             </section>
           ) : null}

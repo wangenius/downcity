@@ -22,6 +22,7 @@ import {
 } from "@/console/daemon/Manager.js";
 import { getShipJsonPath } from "@/console/env/Paths.js";
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
+import { ConsoleStore } from "@utils/store/index.js";
 import type {
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
@@ -39,6 +40,9 @@ type DaemonMetaLike = {
 
 type ShipJsonLike = {
   name?: unknown;
+  model?: {
+    primary?: unknown;
+  };
   start?: {
     host?: unknown;
     port?: unknown;
@@ -102,6 +106,84 @@ export class ConsoleUIGateway {
         const requestedAgentId = this.readRequestedAgentId(c.req.raw);
         const payload = await this.buildAgentsResponse(requestedAgentId);
         return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.get("/api/ui/model", async (c) => {
+      try {
+        const requestedAgentId = this.readRequestedAgentId(c.req.raw);
+        const payload = await this.buildModelResponse(requestedAgentId);
+        return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.post("/api/ui/model/switch", async (c) => {
+      try {
+        const requestedAgentId = this.readRequestedAgentId(c.req.raw);
+        const selectedAgent = await this.resolveSelectedAgent(requestedAgentId);
+        if (!selectedAgent) {
+          return c.json(
+            {
+              success: false,
+              error: "No running agent selected. Start/select an agent first.",
+            },
+            400,
+          );
+        }
+
+        const body = (await c.req.json().catch(() => ({}))) as {
+          primaryModelId?: string;
+        };
+        const nextPrimaryModelId = String(body.primaryModelId || "").trim();
+        if (!nextPrimaryModelId) {
+          return c.json({ success: false, error: "Missing primaryModelId" }, 400);
+        }
+
+        const store = new ConsoleStore();
+        try {
+          const targetModel = store.getModel(nextPrimaryModelId);
+          if (!targetModel) {
+            return c.json(
+              { success: false, error: `Model not found: ${nextPrimaryModelId}` },
+              400,
+            );
+          }
+          if (targetModel.isPaused === true) {
+            return c.json(
+              { success: false, error: `Model is paused: ${nextPrimaryModelId}` },
+              400,
+            );
+          }
+        } finally {
+          store.close();
+        }
+
+        const shipJsonPath = getShipJsonPath(selectedAgent.projectRoot);
+        if (!(await fs.pathExists(shipJsonPath))) {
+          return c.json(
+            { success: false, error: `ship.json not found: ${shipJsonPath}` },
+            400,
+          );
+        }
+
+        const agentShip = (await fs.readJson(shipJsonPath)) as ShipJsonLike;
+        if (!agentShip.model || typeof agentShip.model !== "object") {
+          agentShip.model = { primary: nextPrimaryModelId };
+        } else {
+          agentShip.model.primary = nextPrimaryModelId;
+        }
+        await fs.writeJson(shipJsonPath, agentShip, { spaces: 2 });
+
+        return c.json({
+          success: true,
+          primaryModelId: nextPrimaryModelId,
+          restartRequired: true,
+          message: "Agent primary model updated. Restart agent to fully apply runtime model instance.",
+        });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
       }
@@ -357,6 +439,82 @@ export class ConsoleUIGateway {
       agents,
       selectedAgentId,
     };
+  }
+
+  /**
+   * 构建 Global Model 面板响应。
+   *
+   * 关键点（中文）
+   * - 模型池来自 console 全局 SQLite，而不是某个 agent runtime。
+   * - `agentPrimaryModelId` 仅用于展示当前选中 agent 的项目绑定。
+   */
+  private async buildModelResponse(requestedAgentId: string): Promise<{
+    success: boolean;
+    model: {
+      primaryModelId: string;
+      primaryModelName: string;
+      providerKey: string;
+      providerType: string;
+      baseUrl: string;
+      agentPrimaryModelId: string;
+      availableModels: Array<{
+        id: string;
+        name: string;
+        providerKey: string;
+        providerType: string;
+        isPaused: boolean;
+      }>;
+    };
+  }> {
+    const selectedAgent = await this.resolveSelectedAgent(requestedAgentId);
+    let agentPrimaryModelId = "";
+    if (selectedAgent) {
+      try {
+        const shipPath = getShipJsonPath(selectedAgent.projectRoot);
+        if (await fs.pathExists(shipPath)) {
+          const ship = (await fs.readJson(shipPath)) as ShipJsonLike;
+          agentPrimaryModelId = String(ship?.model?.primary || "").trim();
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    const store = new ConsoleStore();
+    try {
+      const models = store.listModels();
+      const providers = await store.listProviders();
+      const providerMap = new Map(providers.map((x) => [x.id, x] as const));
+      const activeModel = agentPrimaryModelId
+        ? models.find((x) => x.id === agentPrimaryModelId)
+        : undefined;
+      const providerKey = String(activeModel?.providerId || "").trim();
+      const provider = providerKey ? providerMap.get(providerKey) : undefined;
+
+      return {
+        success: true,
+        model: {
+          primaryModelId: agentPrimaryModelId,
+          primaryModelName: String(activeModel?.name || "").trim(),
+          providerKey,
+          providerType: String(provider?.type || "").trim(),
+          baseUrl: String(provider?.baseUrl || "").trim(),
+          agentPrimaryModelId,
+          availableModels: models.map((model) => {
+            const providerConfig = providerMap.get(model.providerId);
+            return {
+              id: model.id,
+              name: model.name,
+              providerKey: model.providerId,
+              providerType: String(providerConfig?.type || "").trim(),
+              isPaused: model.isPaused === true,
+            };
+          }),
+        },
+      };
+    } finally {
+      store.close();
+    }
   }
 
   private async resolveSelectedAgent(

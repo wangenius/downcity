@@ -48,3 +48,29 @@ sma skill lookup playwright
 
 - 在 Agent 运行时，`lookup` 的工具返回只包含执行状态。
 - 技能正文会通过下一条 user message 注入，并使用 `<skill>...</skill>` 包裹。
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma skill list
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "skills": []
+  }
+}
+```
+
+```text
+$ sma skill lookup playwright
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "name": "playwright"
+  }
+}
+```

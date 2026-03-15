@@ -18,3 +18,26 @@ sma console start
 - [`sma console stop`](/en/docs/commands/console/stop)
 - [`sma console status`](/en/docs/commands/console/status)
 - [`sma console agents`](/en/docs/commands/console/agents)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console start
+sma version: 1.0.0
+✅ SMA console started
+   pid: <pid>
+   log: <consoleLogPath>
+✅ Console UI started
+   pid: <uiPid>
+   url: http://127.0.0.1:3001
+   log: <uiLogPath>
+```
+
+```text
+$ sma console start
+sma version: 1.0.0
+ℹ️  SMA console is already running
+   pid: <pid>
+```

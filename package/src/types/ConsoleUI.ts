@@ -64,6 +64,33 @@ export interface ConsoleUiAgentOption {
    * daemon 日志路径（用于排障展示）。
    */
   logPath?: string;
+
+  /**
+   * 当前 agent 的 chat 渠道身份快照。
+   */
+  chatProfiles?: Array<{
+    /**
+     * 渠道名（telegram/feishu/qq）。
+     */
+    channel: string;
+    /**
+     * 渠道身份展示名（例如 `@bot_name`、`app:123456`）。
+     */
+    identity: string;
+    /**
+     * 链路状态（connected/disconnected/unknown）。
+     */
+    linkState?: string;
+    /**
+     * 状态文案（如 polling/ws_online/config_missing）。
+     */
+    statusText?: string;
+  }>;
+
+  /**
+   * 当前 agent 的 `ship.json.model.primary`。
+   */
+  primaryModelId?: string;
 }
 
 /**
@@ -149,4 +176,89 @@ export interface ConsoleUiRuntimeStatus {
    * 状态文件路径。
    */
   pidPath: string;
+}
+
+/**
+ * 配置文件状态项。
+ */
+export interface ConsoleUiConfigFileStatusItem {
+  /**
+   * 配置文件逻辑名称（例如 `ship_json`、`console_pid`）。
+   */
+  key: string;
+
+  /**
+   * 配置文件分组（`console` 或 `agent`）。
+   */
+  scope: "console" | "agent";
+
+  /**
+   * 配置文件展示标签。
+   */
+  label: string;
+
+  /**
+   * 配置文件绝对路径。
+   */
+  path: string;
+
+  /**
+   * 是否存在。
+   */
+  exists: boolean;
+
+  /**
+   * 是否为普通文件。
+   */
+  isFile: boolean;
+
+  /**
+   * 是否可读。
+   */
+  readable: boolean;
+
+  /**
+   * 文件大小（字节）。
+   */
+  sizeBytes: number;
+
+  /**
+   * 最后修改时间（ISO8601）。
+   */
+  mtime: string;
+
+  /**
+   * 归一化状态（ok/missing/error）。
+   */
+  status: "ok" | "missing" | "error";
+
+  /**
+   * 状态原因（例如 `file_not_found`、`not_a_file`）。
+   */
+  reason: string;
+}
+
+/**
+ * `/api/ui/config-status` 响应体。
+ */
+export interface ConsoleUiConfigStatusResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * 当前选中的 agent id（可能为空）。
+   */
+  selectedAgentId: string;
+
+  /**
+   * 当前选中的 agent 名称（可能为空）。
+   */
+  selectedAgentName: string;
+
+  /**
+   * 配置文件状态列表。
+   */
+  items: ConsoleUiConfigFileStatusItem[];
 }

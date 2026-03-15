@@ -13,18 +13,48 @@
 import path from "node:path";
 import { getShipTasksDirPath } from "@/console/env/Paths.js";
 
+/**
+ * taskId 允许字符：
+ * - 首字符：任意语言字母/数字
+ * - 后续：字母/数字/空格/下划线/连字符
+ */
+const TASK_ID_REGEXP = /^[\p{L}\p{N}][\p{L}\p{N}_\-\s]{0,63}$/u;
+
 export function isValidTaskId(input: string): boolean {
   const id = String(input || "").trim();
   if (!id) return false;
   // 关键点（中文）：taskId 直接参与文件路径拼接，必须是安全的文件夹名。
-  return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(id);
+  return TASK_ID_REGEXP.test(id);
+}
+
+/**
+ * 从 taskName 派生 taskId。
+ *
+ * 关键点（中文）
+ * - 目标：保证“title 与 taskId 同源”，避免随机 ID。
+ * - 处理：移除路径危险字符与非常见标点，压缩空白，最终按 taskId 规则校验。
+ */
+export function deriveTaskIdFromTaskName(taskName: string): string {
+  const normalized = String(taskName || "")
+    .normalize("NFKC")
+    .replace(/[\\/:\u0000]/g, " ")
+    .replace(/[^\p{L}\p{N}_\-\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 64)
+    .trim();
+
+  if (!normalized) {
+    throw new Error("Cannot derive taskId from taskName: taskName is empty after normalization.");
+  }
+  return normalizeTaskId(normalized);
 }
 
 export function normalizeTaskId(input: string): string {
   const id = String(input || "").trim();
   if (!isValidTaskId(id)) {
     throw new Error(
-      `Invalid taskId: "${id}". Use [a-zA-Z0-9][a-zA-Z0-9_-]{0,63}.`,
+      `Invalid taskId: "${id}". Use a letter/number first, then letters/numbers/space/_/-, max 64 chars.`,
     );
   }
   return id;

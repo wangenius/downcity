@@ -116,3 +116,23 @@ Inside agent shell, default form is usually enough:
 ```bash
 sma service list
 ```
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma service list --agent <agentName>
+{
+  "success": true,
+  "services": []
+}
+```
+
+```text
+$ sma chat send --text "hi"
+{
+  "success": false,
+  "error": "Failed to parse command input: <error>"
+}
+```

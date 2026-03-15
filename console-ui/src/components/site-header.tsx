@@ -35,11 +35,11 @@ export function SiteHeader(props: SiteHeaderProps) {
   const { topbarStatus, topbarError, loading, onRefresh, viewLabel } = props
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-sidebar-border/70 bg-background/70 backdrop-blur transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border/80 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex w-full flex-wrap items-center gap-2 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto" />
-        <h1 className="text-sm font-semibold tracking-tight text-foreground">{`Console Dashboard / ${viewLabel}`}</h1>
+        <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto bg-border" />
+        <h1 className="text-sm font-semibold tracking-[0.01em] text-foreground">{`Console Dashboard / ${viewLabel}`}</h1>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={onRefresh} disabled={loading}>
@@ -50,7 +50,9 @@ export function SiteHeader(props: SiteHeaderProps) {
           <div
             className={cn(
               "inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium",
-              topbarError ? "border-destructive/40 text-destructive" : "border-emerald-300 text-emerald-700",
+              topbarError
+                ? "border-destructive/35 bg-destructive/10 text-destructive"
+                : "border-border bg-muted/45 text-foreground",
             )}
           >
             {topbarStatus}

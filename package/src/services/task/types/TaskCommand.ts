@@ -15,8 +15,7 @@ import type {
 } from "./Task.js";
 
 export type TaskCreateRequest = {
-  taskId?: string;
-  title: string;
+  taskName: string;
   cron: string;
   description: string;
   contextId: string;
@@ -32,15 +31,23 @@ export type TaskCreateRequest = {
 };
 
 export type TaskCreateResponse = {
+  /** 调用是否成功 */
   success: boolean;
-  taskId?: string;
+  /** 任务名称（新建成功或复用已有任务时返回） */
+  taskName?: string;
+  /** 任务定义文件相对路径 */
   taskMdPath?: string;
+  /** 是否复用了已有任务（true 表示未新建） */
+  reusedExisting?: boolean;
+  /** 说明信息（例如“复用已有任务”） */
+  message?: string;
+  /** 错误信息 */
   error?: string;
 };
 
 export type TaskUpdateRequest = {
-  taskId: string;
-  title?: string;
+  taskName: string;
+  taskNameNext?: string;
   cron?: string;
   description?: string;
   contextId?: string;
@@ -62,14 +69,13 @@ export type TaskUpdateRequest = {
 
 export type TaskUpdateResponse = {
   success: boolean;
-  taskId?: string;
+  taskName?: string;
   taskMdPath?: string;
   error?: string;
 };
 
 export type TaskListItemView = {
-  taskId: string;
-  title: string;
+  taskName: string;
   description: string;
   cron: string;
   status: string;
@@ -90,7 +96,7 @@ export type TaskListResponse = {
 };
 
 export type TaskRunRequest = {
-  taskId: string;
+  taskName: string;
   reason?: string;
 };
 
@@ -109,7 +115,7 @@ export type TaskRunResponse = {
   userSimulatorReply?: string;
   userSimulatorReason?: string;
   userSimulatorScore?: number;
-  taskId?: string;
+  taskName?: string;
   timestamp?: string;
   runDir?: string;
   runDirRel?: string;
@@ -117,24 +123,24 @@ export type TaskRunResponse = {
 };
 
 export type TaskSetStatusRequest = {
-  taskId: string;
+  taskName: string;
   status: ShipTaskStatus;
 };
 
 export type TaskSetStatusResponse = {
   success: boolean;
-  taskId?: string;
+  taskName?: string;
   status?: ShipTaskStatus;
   error?: string;
 };
 
 export type TaskDeleteRequest = {
-  taskId: string;
+  taskName: string;
 };
 
 export type TaskDeleteResponse = {
   success: boolean;
-  taskId?: string;
+  taskName?: string;
   taskDirPath?: string;
   error?: string;
 };

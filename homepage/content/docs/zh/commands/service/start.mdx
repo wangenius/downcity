@@ -23,3 +23,23 @@ sma service start task --agent my-agent
 
 - [`sma service stop`](/zh/docs/commands/service/stop)
 - [`sma service restart`](/zh/docs/commands/service/restart)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma service start task
+{
+  "success": true,
+  "service": "task"
+}
+```
+
+```text
+$ sma service start task --agent missing-agent
+{
+  "success": false,
+  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+}
+```

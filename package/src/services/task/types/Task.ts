@@ -10,8 +10,8 @@ export type ShipTaskStatus = "enabled" | "paused" | "disabled";
 export type ShipTaskKind = "agent" | "script";
 
 export type ShipTaskFrontmatterV1 = {
-  /** 任务标题（展示给用户） */
-  title: string;
+  /** 任务名称（唯一语义标识；对外统一使用 task_name） */
+  taskName: string;
   /** cron 表达式，支持 @manual */
   cron: string;
   /** 任务描述（给执行器的意图说明） */
@@ -37,7 +37,7 @@ export type ShipTaskFrontmatterV1 = {
 export type ShipTaskDefinitionV1 = {
   /** schema 版本 */
   v: 1;
-  /** 稳定任务 ID */
+  /** 稳定任务键（与 taskName 同值，用于目录与运行上下文） */
   taskId: string;
   /** task.md frontmatter */
   frontmatter: ShipTaskFrontmatterV1;

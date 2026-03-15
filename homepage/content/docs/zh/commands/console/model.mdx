@@ -83,3 +83,41 @@ sma console model test model <modelId>
 - [`sma console config`](/zh/docs/commands/console/config)
 - [`sma agent create`](/zh/docs/commands/agent/create)
 - [`sma agent on`](/zh/docs/commands/agent/on)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma console model list
+{
+  "success": true,
+  "providers": [
+    {
+      "id": "<providerId>",
+      "type": "openai",
+      "apiKey": "***masked***",
+      "apiKeyMasked": "sk-xx***xxxx"
+    }
+  ],
+  "models": [
+    {
+      "id": "<modelId>",
+      "providerId": "<providerId>",
+      "name": "<upstreamModelName>",
+      "isPaused": false
+    }
+  ],
+  "providerIds": ["<providerId>"],
+  "modelIds": ["<modelId>"]
+}
+```
+
+```text
+$ sma console model pause <modelId>
+{
+  "success": true,
+  "modelId": "<modelId>",
+  "isPaused": true
+}
+```

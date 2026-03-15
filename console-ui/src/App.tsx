@@ -5,6 +5,7 @@
 import * as React from "react"
 
 import { AppSidebar, type DashboardView } from "@/components/app-sidebar"
+import { AgentChannelsSection } from "@/components/dashboard/AgentChannelsSection"
 import { AgentModelBindingSection } from "@/components/dashboard/AgentModelBindingSection"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
@@ -20,6 +21,7 @@ import { ToastMessage } from "@/components/dashboard/ToastMessage"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
+import { parseDashboardPath, toDashboardPath } from "@/lib/dashboard-route"
 
 const viewLabelMap: Record<DashboardView, string> = {
   globalOverview: "Global / Overview",
@@ -27,6 +29,7 @@ const viewLabelMap: Record<DashboardView, string> = {
   globalAgents: "Global / Agents",
   globalExtensions: "Global / Extensions",
   agentOverview: "Agent / Overview",
+  agentChannels: "Agent / Channels",
   agentServices: "Agent / Services",
   agentTasks: "Agent / Tasks",
   agentLogs: "Agent / Logs",
@@ -35,7 +38,10 @@ const viewLabelMap: Record<DashboardView, string> = {
 }
 
 export function App() {
-  const [activeView, setActiveView] = React.useState<DashboardView>("globalOverview")
+  const [activeView, setActiveView] = React.useState<DashboardView>(() => {
+    if (typeof window === "undefined") return "globalOverview"
+    return parseDashboardPath(window.location.pathname).view
+  })
 
   const {
     agents,
@@ -52,6 +58,9 @@ export function App() {
     tasks,
     logs,
     model,
+    configStatus,
+    modelProviders,
+    modelPoolItems,
     prompt,
     topbarStatus,
     topbarError,
@@ -65,22 +74,74 @@ export function App() {
     refreshDashboard,
     refreshChatChannels,
     refreshModel,
+    refreshModelPool,
     refreshPrompt,
     controlService,
     controlExtension,
     runChatChannelAction,
     runTask,
+    loadTaskRuns,
+    loadTaskRunDetail,
     sendLocalMessage,
     switchModel,
+    switchModelForAgent,
+    upsertModelProvider,
+    removeModelProvider,
+    testModelProvider,
+    discoverModelProvider,
+    upsertModelPoolItem,
+    removeModelPoolItem,
+    setModelPoolItemPaused,
+    testModelPoolItem,
     constants,
     uiHelpers,
   } = useConsoleDashboard()
+
+  const navigateToView = React.useCallback((view: DashboardView, contextId?: string) => {
+    if (typeof window === "undefined") return
+    const nextPath = toDashboardPath(view, contextId)
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath)
+    }
+    setActiveView(view)
+  }, [])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const parsed = parseDashboardPath(window.location.pathname)
+    if (parsed.view === "contextWorkspace" && parsed.contextId) {
+      void handleContextChange(parsed.contextId)
+    }
+  }, [handleContextChange])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined
+    const onPopState = () => {
+      const parsed = parseDashboardPath(window.location.pathname)
+      setActiveView(parsed.view)
+      if (parsed.view === "contextWorkspace" && parsed.contextId) {
+        void handleContextChange(parsed.contextId)
+      }
+    }
+    window.addEventListener("popstate", onPopState)
+    return () => window.removeEventListener("popstate", onPopState)
+  }, [handleContextChange])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    if (activeView !== "contextWorkspace") return
+    if (!selectedContextId) return
+    const expectedPath = toDashboardPath("contextWorkspace", selectedContextId)
+    if (window.location.pathname !== expectedPath) {
+      window.history.replaceState({}, "", expectedPath)
+    }
+  }, [activeView, selectedContextId])
 
   return (
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "17rem",
+          "--sidebar-width": "18rem",
           "--header-height": "3.25rem",
         } as React.CSSProperties
       }
@@ -91,12 +152,20 @@ export function App() {
         selectedAgentId={selectedAgentId}
         contexts={contexts}
         selectedContextId={selectedContextId}
-        onViewChange={setActiveView}
+        onViewChange={(view) => {
+          if (view === "contextWorkspace") {
+            const nextContextId = selectedContextId || constants.LOCAL_UI_CONTEXT_ID
+            navigateToView("contextWorkspace", nextContextId)
+            void handleContextChange(nextContextId)
+            return
+          }
+          navigateToView(view)
+        }}
         onAgentChange={(agentId) => {
           void handleAgentChange(agentId)
         }}
         onContextOpen={(contextId) => {
-          setActiveView("contextWorkspace")
+          navigateToView("contextWorkspace", contextId)
           void handleContextChange(contextId)
         }}
         variant="inset"
@@ -110,7 +179,7 @@ export function App() {
           viewLabel={viewLabelMap[activeView]}
         />
 
-        <main className="flex flex-1 flex-col gap-4 bg-muted/35 p-3 md:p-4 lg:p-6">
+        <main className="flex flex-1 flex-col gap-4 overflow-hidden bg-background p-3 md:p-4 lg:p-6">
           {activeView === "globalOverview" ? (
             <section className="animate-in fade-in-0 duration-300">
               <GlobalOverviewSection
@@ -120,6 +189,7 @@ export function App() {
                 selectedAgent={selectedAgent}
                 chatChannels={chatChannels}
                 extensions={extensions}
+                configStatus={configStatus}
               />
             </section>
           ) : null}
@@ -131,6 +201,7 @@ export function App() {
                 overview={overview}
                 services={services}
                 localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
+                configStatus={configStatus}
               />
               <AgentModelBindingSection
                 selectedAgent={selectedAgent}
@@ -152,15 +223,31 @@ export function App() {
             </section>
           ) : null}
 
+          {activeView === "agentChannels" ? (
+            <section className="animate-in fade-in-0 duration-300">
+              <AgentChannelsSection
+                selectedAgent={selectedAgent}
+                channels={chatChannels}
+                loading={loading}
+                onRefresh={() => void refreshChatChannels(selectedAgentId)}
+                onChannelAction={(action, channel) => void runChatChannelAction(action, channel)}
+              />
+            </section>
+          ) : null}
+
           {activeView === "globalAgents" ? (
             <section className="animate-in fade-in-0 duration-300">
               <GlobalAgentsSection
                 agents={agents}
                 selectedAgentId={selectedAgentId}
+                model={model}
                 onSelectAgent={(agentId) => {
                   void handleAgentChange(agentId)
                 }}
                 onRefresh={() => void refreshDashboard(selectedAgentId)}
+                onSwitchModel={(agentId, primaryModelId) => {
+                  void switchModelForAgent(agentId, primaryModelId)
+                }}
               />
             </section>
           ) : null}
@@ -169,8 +256,19 @@ export function App() {
             <section className="animate-in fade-in-0 duration-300">
               <GlobalModelSection
                 model={model}
+                providers={modelProviders}
+                poolItems={modelPoolItems}
                 loading={loading}
                 onRefresh={() => void refreshModel(selectedAgentId)}
+                onRefreshPool={() => void refreshModelPool()}
+                onUpsertProvider={(input) => void upsertModelProvider(input)}
+                onRemoveProvider={(providerId) => void removeModelProvider(providerId)}
+                onTestProvider={(providerId) => void testModelProvider(providerId)}
+                onDiscoverProvider={(params) => void discoverModelProvider(params)}
+                onUpsertModel={(input) => void upsertModelPoolItem(input)}
+                onRemoveModel={(modelId) => void removeModelPoolItem(modelId)}
+                onPauseModel={(modelId, isPaused) => void setModelPoolItemPaused(modelId, isPaused)}
+                onTestModel={(modelId, prompt) => void testModelPoolItem(modelId, prompt)}
               />
             </section>
           ) : null}
@@ -192,7 +290,10 @@ export function App() {
               <TasksSection
                 tasks={tasks}
                 statusBadgeVariant={uiHelpers.statusBadgeVariant}
+                formatTime={uiHelpers.formatTime}
                 onRunTask={(taskId) => void runTask(taskId)}
+                onLoadTaskRuns={(taskId, limit) => loadTaskRuns(taskId, limit)}
+                onLoadTaskRunDetail={(taskId, timestamp) => loadTaskRunDetail(taskId, timestamp)}
               />
             </section>
           ) : null}
@@ -211,7 +312,7 @@ export function App() {
                 chatChannels={chatChannels}
                 formatTime={uiHelpers.formatTime}
                 onOpenContext={(contextId) => {
-                  setActiveView("contextWorkspace")
+                  navigateToView("contextWorkspace", contextId)
                   void handleContextChange(contextId)
                 }}
                 onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
@@ -234,6 +335,10 @@ export function App() {
                 onChangeInput={setChatInput}
                 onSendLocalMessage={() => void sendLocalMessage()}
                 onRefreshPrompt={() => void refreshPrompt(selectedAgentId, selectedContextId || constants.LOCAL_UI_CONTEXT_ID)}
+                onSelectContext={(contextId) => {
+                  navigateToView("contextWorkspace", contextId)
+                  void handleContextChange(contextId)
+                }}
               />
             </section>
           ) : null}

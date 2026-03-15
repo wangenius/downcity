@@ -87,3 +87,29 @@ sma agent on
 ```bash
 sma voice init SenseVoiceSmall
 ```
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma voice status
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "activeModel": "<modelId>"
+  }
+}
+```
+
+```text
+$ sma voice on SenseVoiceSmall
+{
+  "success": true,
+  "data": {
+    "changed": true
+  },
+  "message": "daemon not reachable, executed locally"
+}
+```

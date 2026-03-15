@@ -232,6 +232,21 @@ export async function startConsoleUiCommand(params: {
 }
 
 /**
+ * 重启后台 UI。
+ *
+ * 关键点（中文）
+ * - 先 stop 再 start，保证加载最新代码与路由。
+ * - 支持通过 options 覆盖 host/port。
+ */
+export async function restartConsoleUiCommand(params: {
+  options?: ConsoleUiStartOptions;
+  cliPath: string;
+}): Promise<void> {
+  await stopConsoleUiCommand();
+  await startConsoleUiCommand(params);
+}
+
+/**
  * 停止后台 UI。
  */
 export async function stopConsoleUiCommand(params?: {
@@ -275,4 +290,3 @@ export async function stopConsoleUiCommand(params?: {
   console.log(`   pidFile: ${getConsoleUiPidPath()}`);
   console.log(`   log: ${getConsoleUiLogPath()}`);
 }
-

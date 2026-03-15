@@ -55,15 +55,15 @@ export function AgentModelBindingSection(props: AgentModelBindingSectionProps) {
   }
 
   return (
-    <Card className="border-border/80 bg-card/90 shadow-sm">
-      <CardHeader>
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle>{`Agent Model Binding · ${selectedAgent.name || "-"}`}</CardTitle>
         <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
           {loading ? "刷新中..." : "刷新"}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-2 rounded-xl border border-border/70 bg-background/70 p-3 text-xs">
+        <div className="grid gap-2 rounded-xl border border-border/70 bg-muted/35 p-3 text-xs">
           <div>{`agent primary: ${model?.agentPrimaryModelId || "-"}`}</div>
           <div>{`model id: ${model?.primaryModelId || "-"}`}</div>
           <div>{`model name: ${model?.primaryModelName || "-"}`}</div>
@@ -102,7 +102,7 @@ export function AgentModelBindingSection(props: AgentModelBindingSectionProps) {
             >
               保存 model.primary
             </Button>
-            <Badge variant="outline" className="border-amber-300 text-amber-700">
+            <Badge variant="outline" className="border-border bg-muted/45 text-muted-foreground">
               切换后需重启 agent 生效
             </Badge>
           </div>
@@ -111,4 +111,3 @@ export function AgentModelBindingSection(props: AgentModelBindingSectionProps) {
     </Card>
   )
 }
-

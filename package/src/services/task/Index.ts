@@ -221,7 +221,7 @@ function resolveContextIdOrThrow(input?: string): string {
 async function reloadTaskSchedulerAfterMutation(params: {
   context: ServiceRuntime;
   action: "create" | "update" | "delete" | "status";
-  taskId: string;
+  taskName: string;
 }): Promise<{
   reloaded: boolean;
   tasksFound?: number;
@@ -234,7 +234,7 @@ async function reloadTaskSchedulerAfterMutation(params: {
       formatTaskLogMessage("Task scheduler reloaded after mutation"),
       {
         action: params.action,
-        taskId: params.taskId,
+        taskName: params.taskName,
         tasksFound: result.tasksFound,
         jobsScheduled: result.jobsScheduled,
       },
@@ -250,7 +250,7 @@ async function reloadTaskSchedulerAfterMutation(params: {
       formatTaskLogMessage("Task scheduler reload failed after mutation"),
       {
         action: params.action,
-        taskId: params.taskId,
+        taskName: params.taskName,
         error: reason,
       },
     );
@@ -271,9 +271,9 @@ function mapTaskListCommandInput(
 function mapTaskCreateCommandInput(
   opts: Record<string, JsonValue>,
 ): TaskCreateRequest {
-  const title = String(getStringOpt(opts, "title") || "").trim();
+  const taskName = String(getStringOpt(opts, "taskName") || "").trim();
   const description = String(getStringOpt(opts, "description") || "").trim();
-  if (!title) throw new Error("Missing title");
+  if (!taskName) throw new Error("Missing taskName");
   if (!description) throw new Error("Missing description");
 
   const contextId = resolveContextIdOrThrow(getStringOpt(opts, "contextId"));
@@ -287,10 +287,7 @@ function mapTaskCreateCommandInput(
   const resolvedStatus = activate ? "enabled" : status;
 
   return {
-    ...(getStringOpt(opts, "taskId")
-      ? { taskId: getStringOpt(opts, "taskId") }
-      : {}),
-    title,
+    taskName,
     cron: String(getStringOpt(opts, "cron") || "@manual").trim() || "@manual",
     description,
     contextId,
@@ -319,7 +316,7 @@ function mapTaskCreateCommandInput(
 }
 
 function mapTaskUpdateCommandInput(params: {
-  taskId: string;
+  taskName: string;
   opts: Record<string, JsonValue>;
 }): TaskUpdateRequest {
   const opts = params.opts;
@@ -382,7 +379,7 @@ function mapTaskUpdateCommandInput(params: {
   const resolvedStatus = activate ? "enabled" : status;
 
   const hasUpdate =
-    typeof getStringOpt(opts, "title") === "string" ||
+    typeof getStringOpt(opts, "taskName") === "string" ||
     typeof getStringOpt(opts, "cron") === "string" ||
     typeof getStringOpt(opts, "description") === "string" ||
     typeof getStringOpt(opts, "contextId") === "string" ||
@@ -406,9 +403,9 @@ function mapTaskUpdateCommandInput(params: {
   }
 
   return {
-    taskId: String(params.taskId || "").trim(),
-    ...(typeof getStringOpt(opts, "title") === "string"
-      ? { title: getStringOpt(opts, "title") }
+    taskName: String(params.taskName || "").trim(),
+    ...(typeof getStringOpt(opts, "taskName") === "string"
+      ? { taskNameNext: getStringOpt(opts, "taskName") }
       : {}),
     ...(typeof getStringOpt(opts, "cron") === "string"
       ? { cron: getStringOpt(opts, "cron") }
@@ -453,19 +450,19 @@ function mapTaskUpdateCommandInput(params: {
 }
 
 function mapTaskSetStatusCommandInput(params: {
-  taskId: string;
+  taskName: string;
   status: ShipTaskStatus;
 }): TaskSetStatusRequest {
   return {
-    taskId: String(params.taskId || "").trim(),
+    taskName: String(params.taskName || "").trim(),
     status: params.status,
   };
 }
 
-function mapTaskDeleteCommandInput(taskIdInput: string): TaskDeleteRequest {
-  const taskId = String(taskIdInput || "").trim();
-  if (!taskId) throw new Error("Missing taskId");
-  return { taskId };
+function mapTaskDeleteCommandInput(taskNameInput: string): TaskDeleteRequest {
+  const taskName = String(taskNameInput || "").trim();
+  if (!taskName) throw new Error("Missing taskName");
+  return { taskName };
 }
 
 function mapTaskListApiInput(query: { status?: string }): TaskListPayload {
@@ -484,8 +481,7 @@ function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
   const resolvedStatus = activate ? "enabled" : status;
 
   return {
-    taskId: getOptionalStringField(body, "taskId"),
-    title: getStringField(body, "title"),
+    taskName: getStringField(body, "taskName"),
     cron: getStringField(body, "cron"),
     description: getStringField(body, "description"),
     contextId: getStringField(body, "contextId"),
@@ -503,7 +499,7 @@ function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
 
 function mapTaskRunApiInput(body: JsonObject): TaskRunRequest {
   return {
-    taskId: getStringField(body, "taskId"),
+    taskName: getStringField(body, "taskName"),
     ...(getOptionalStringField(body, "reason")
       ? { reason: getOptionalStringField(body, "reason") }
       : {}),
@@ -519,9 +515,9 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
   const resolvedStatus = activate ? "enabled" : status;
 
   return {
-    taskId: getStringField(body, "taskId"),
-    ...(getOptionalStringField(body, "title")
-      ? { title: getOptionalStringField(body, "title") }
+    taskName: getStringField(body, "taskName"),
+    ...(getOptionalStringField(body, "taskNameNext")
+      ? { taskNameNext: getOptionalStringField(body, "taskNameNext") }
       : {}),
     ...(getOptionalStringField(body, "description")
       ? { description: getOptionalStringField(body, "description") }
@@ -582,17 +578,17 @@ function mapTaskStatusApiInput(body: JsonObject): TaskSetStatusRequest {
     throw new Error("Missing or invalid status");
   }
   return {
-    taskId: getStringField(body, "taskId"),
+    taskName: getStringField(body, "taskName"),
     status,
   };
 }
 
 function mapTaskDeleteApiInput(body: JsonObject): TaskDeleteRequest {
-  const taskId = getStringField(body, "taskId");
-  if (!String(taskId || "").trim()) {
-    throw new Error("Missing taskId");
+  const taskName = getStringField(body, "taskName");
+  if (!String(taskName || "").trim()) {
+    throw new Error("Missing taskName");
   }
-  return { taskId };
+  return { taskName };
 }
 
 export const taskService: Service = {
@@ -637,9 +633,8 @@ export const taskService: Service = {
         description: "创建任务定义",
         configure(command: Command) {
           command
-            .requiredOption("--title <title>", "任务标题")
+            .requiredOption("--task-name <taskName>", "任务名称（唯一语义标识）")
             .requiredOption("--description <description>", "任务描述")
-            .option("--task-id <taskId>", "任务 ID（不传则自动生成）")
             .option("--cron <cron>", "cron 表达式（默认 @manual）", "@manual")
             .option("--kind <kind>", "执行类型（agent|script）", "agent")
             .option(
@@ -705,7 +700,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "create",
-          taskId: String(result.taskId || "").trim() || "unknown",
+          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -721,15 +716,15 @@ export const taskService: Service = {
         description: "手动运行任务",
         configure(command: Command) {
           command
-            .argument("<taskId>")
+            .argument("<taskName>")
             .option("--reason <reason>", "手动运行原因");
         },
         mapInput({ args, opts }): TaskRunRequest {
-          const taskId = String(args[0] || "").trim();
-          if (!taskId) throw new Error("Missing taskId");
+          const taskName = String(args[0] || "").trim();
+          if (!taskName) throw new Error("Missing taskName");
           const reason = getStringOpt(opts, "reason");
           return {
-            taskId,
+            taskName,
             ...(reason ? { reason } : {}),
           };
         },
@@ -764,7 +759,7 @@ export const taskService: Service = {
       command: {
         description: "删除任务定义与历史运行目录",
         configure(command: Command) {
-          command.argument("<taskId>");
+          command.argument("<taskName>");
         },
         mapInput({ args }) {
           return mapTaskDeleteCommandInput(String(args[0] || ""));
@@ -792,7 +787,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "delete",
-          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -808,8 +803,8 @@ export const taskService: Service = {
         description: "更新任务定义",
         configure(command: Command) {
           command
-            .argument("<taskId>")
-            .option("--title <title>", "任务标题")
+            .argument("<taskName>")
+            .option("--task-name <taskName>", "任务名称（保持同一语义）")
             .option("--description <description>", "任务描述")
             .option("--cron <cron>", "cron 表达式")
             .option("--kind <kind>", "执行类型（agent|script）")
@@ -854,10 +849,10 @@ export const taskService: Service = {
             .option("--clear-body", "清空任务正文", false);
         },
         mapInput({ args, opts }) {
-          const taskId = String(args[0] || "").trim();
-          if (!taskId) throw new Error("Missing taskId");
+          const taskName = String(args[0] || "").trim();
+          if (!taskName) throw new Error("Missing taskName");
           return mapTaskUpdateCommandInput({
-            taskId,
+            taskName,
             opts,
           });
         },
@@ -884,7 +879,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "update",
-          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -899,15 +894,15 @@ export const taskService: Service = {
       command: {
         description: "设置任务状态（enabled|paused|disabled）",
         configure(command: Command) {
-          command.argument("<taskId>").argument("<status>");
+          command.argument("<taskName>").argument("<status>");
         },
         mapInput({ args }) {
-          const taskId = String(args[0] || "").trim();
+          const taskName = String(args[0] || "").trim();
           const status = readTaskStatusOrThrow(String(args[1] || "").trim());
-          if (!taskId) throw new Error("Missing taskId");
+          if (!taskName) throw new Error("Missing taskName");
           if (!status) throw new Error("Missing or invalid status");
           return mapTaskSetStatusCommandInput({
-            taskId,
+            taskName,
             status,
           });
         },
@@ -934,7 +929,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "status",
-          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -949,13 +944,13 @@ export const taskService: Service = {
       command: {
         description: "启用任务（status=enabled）",
         configure(command: Command) {
-          command.argument("<taskId>");
+          command.argument("<taskName>");
         },
         mapInput({ args }) {
-          const taskId = String(args[0] || "").trim();
-          if (!taskId) throw new Error("Missing taskId");
+          const taskName = String(args[0] || "").trim();
+          if (!taskName) throw new Error("Missing taskName");
           return mapTaskSetStatusCommandInput({
-            taskId,
+            taskName,
             status: "enabled",
           });
         },
@@ -975,7 +970,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "status",
-          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -990,13 +985,13 @@ export const taskService: Service = {
       command: {
         description: "禁用任务（status=disabled）",
         configure(command: Command) {
-          command.argument("<taskId>");
+          command.argument("<taskName>");
         },
         mapInput({ args }) {
-          const taskId = String(args[0] || "").trim();
-          if (!taskId) throw new Error("Missing taskId");
+          const taskName = String(args[0] || "").trim();
+          if (!taskName) throw new Error("Missing taskName");
           return mapTaskSetStatusCommandInput({
-            taskId,
+            taskName,
             status: "disabled",
           });
         },
@@ -1016,7 +1011,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "status",
-          taskId: String(result.taskId || payload.taskId || "").trim() || "unknown",
+          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
         });
         return {
           success: true,

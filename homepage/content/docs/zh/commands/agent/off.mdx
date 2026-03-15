@@ -24,3 +24,20 @@ sma agent off [path]
 - [`sma agent on`](/zh/docs/commands/agent/on)
 - [`sma agent status`](/zh/docs/commands/agent/status)
 - [`sma agent doctor`](/zh/docs/commands/agent/doctor)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma agent off .
+sma version: 1.0.0
+✅ ShipMyAgent daemon stopped
+   pid: <pid>
+```
+
+```text
+$ sma agent off .
+sma version: 1.0.0
+ℹ️  No ShipMyAgent daemon is running (pid file not found)
+```

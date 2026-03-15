@@ -10,6 +10,8 @@ import type {
   UiChatChannelStatus,
   UiChatHistoryEvent,
   UiChatStatusResponse,
+  UiConfigStatusItem,
+  UiConfigStatusResponse,
   UiContextMessagesResponse,
   UiContextSummary,
   UiContextsResponse,
@@ -19,6 +21,9 @@ import type {
   UiLogItem,
   UiLogsResponse,
   UiModelResponse,
+  UiModelPoolItem,
+  UiModelPoolResponse,
+  UiModelProviderItem,
   UiModelSummary,
   UiOverviewResponse,
   UiPromptResponse,
@@ -27,6 +32,9 @@ import type {
   UiServiceItem,
   UiServicesResponse,
   UiTaskItem,
+  UiTaskRunDetailResponse,
+  UiTaskRunsResponse,
+  UiTaskRunSummary,
   UiTasksResponse,
 } from "../types/Dashboard";
 
@@ -135,6 +143,18 @@ export interface UseConsoleDashboardResult {
    */
   model: UiModelSummary | null;
   /**
+   * 配置文件状态列表。
+   */
+  configStatus: UiConfigStatusItem[];
+  /**
+   * 模型池 provider 列表。
+   */
+  modelProviders: UiModelProviderItem[];
+  /**
+   * 模型池 model 列表。
+   */
+  modelPoolItems: UiModelPoolItem[];
+  /**
    * system prompt 数据。
    */
   prompt: UiPromptResponse | null;
@@ -215,6 +235,14 @@ export interface UseConsoleDashboardResult {
    */
   refreshModel: (agentId: string) => Promise<void>;
   /**
+   * 刷新模型池数据。
+   */
+  refreshModelPool: () => Promise<void>;
+  /**
+   * 刷新配置文件状态。
+   */
+  refreshConfigStatus: (agentId: string) => Promise<void>;
+  /**
    * 刷新 local_ui 消息。
    */
   refreshLocalChat: (agentId: string) => Promise<void>;
@@ -229,11 +257,19 @@ export interface UseConsoleDashboardResult {
   /**
    * 执行 chat 渠道动作。
    */
-  runChatChannelAction: (action: "test" | "reconnect", channel: string) => Promise<void>;
+  runChatChannelAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => Promise<void>;
   /**
    * 触发 task 运行。
    */
   runTask: (taskId: string) => Promise<void>;
+  /**
+   * 加载任务执行列表。
+   */
+  loadTaskRuns: (taskId: string, limit?: number) => Promise<UiTaskRunSummary[]>;
+  /**
+   * 加载任务执行详情。
+   */
+  loadTaskRunDetail: (taskId: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
   /**
    * 发送 local_ui 指令。
    */
@@ -242,6 +278,64 @@ export interface UseConsoleDashboardResult {
    * 切换 active model。
    */
   switchModel: (primaryModelId: string) => Promise<void>;
+  /**
+   * 按指定 agent 切换 primary model。
+   */
+  switchModelForAgent: (agentId: string, primaryModelId: string) => Promise<void>;
+  /**
+   * 新增或更新 provider。
+   */
+  upsertModelProvider: (input: {
+    id: string;
+    type: string;
+    baseUrl?: string;
+    apiKey?: string;
+    clearBaseUrl?: boolean;
+    clearApiKey?: boolean;
+  }) => Promise<void>;
+  /**
+   * 删除 provider。
+   */
+  removeModelProvider: (providerId: string) => Promise<void>;
+  /**
+   * 测试 provider。
+   */
+  testModelProvider: (providerId: string) => Promise<void>;
+  /**
+   * 发现 provider 模型。
+   */
+  discoverModelProvider: (params: {
+    providerId: string;
+    autoAdd?: boolean;
+    prefix?: string;
+  }) => Promise<void>;
+  /**
+   * 新增或更新 model。
+   */
+  upsertModelPoolItem: (input: {
+    id: string;
+    providerId: string;
+    name: string;
+    temperature?: string;
+    maxTokens?: string;
+    topP?: string;
+    frequencyPenalty?: string;
+    presencePenalty?: string;
+    anthropicVersion?: string;
+    isPaused?: boolean;
+  }) => Promise<void>;
+  /**
+   * 删除 model。
+   */
+  removeModelPoolItem: (modelId: string) => Promise<void>;
+  /**
+   * 设置 model pause 状态。
+   */
+  setModelPoolItemPaused: (modelId: string, isPaused: boolean) => Promise<void>;
+  /**
+   * 测试 model。
+   */
+  testModelPoolItem: (modelId: string, prompt?: string) => Promise<void>;
   /**
    * 提供常用常量。
    */
@@ -273,6 +367,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [tasks, setTasks] = useState<UiTaskItem[]>([]);
   const [logs, setLogs] = useState<UiLogItem[]>([]);
   const [model, setModel] = useState<UiModelSummary | null>(null);
+  const [configStatus, setConfigStatus] = useState<UiConfigStatusItem[]>([]);
+  const [modelProviders, setModelProviders] = useState<UiModelProviderItem[]>([]);
+  const [modelPoolItems, setModelPoolItems] = useState<UiModelPoolItem[]>([]);
   const [prompt, setPrompt] = useState<UiPromptResponse | null>(null);
   const [localMessages, setLocalMessages] = useState<UiLocalMessage[]>([]);
 
@@ -548,6 +645,23 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
+  const refreshConfigStatus = useCallback(
+    async (agentId: string) => {
+      const endpoint = agentId
+        ? `/api/ui/config-status?agent=${encodeURIComponent(agentId)}`
+        : "/api/ui/config-status";
+      const data = await requestJson<UiConfigStatusResponse>(endpoint, {}, agentId);
+      setConfigStatus(Array.isArray(data.items) ? data.items : []);
+    },
+    [requestJson],
+  );
+
+  const refreshModelPool = useCallback(async () => {
+    const data = await requestJson<UiModelPoolResponse>("/api/ui/model/pool");
+    setModelProviders(Array.isArray(data.providers) ? data.providers : []);
+    setModelPoolItems(Array.isArray(data.models) ? data.models : []);
+  }, [requestJson]);
+
   const refreshPrompt = useCallback(
     async (agentId: string, contextId?: string) => {
       if (!agentId) return;
@@ -593,6 +707,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         if (!nextAgentId) {
           clearPanelDataForNoAgent();
           await refreshModel("");
+          await refreshModelPool();
+          await refreshConfigStatus("");
           setTopbarError(false);
           setTopbarStatus("未检测到运行中的 agent");
           return;
@@ -610,6 +726,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshTasks(nextAgentId),
           refreshLogs(nextAgentId),
           refreshModel(nextAgentId),
+          refreshModelPool(),
+          refreshConfigStatus(nextAgentId),
           refreshLocalChat(nextAgentId),
         ]);
 
@@ -662,7 +780,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshExtensions,
       refreshLocalChat,
       refreshLogs,
+      refreshConfigStatus,
       refreshModel,
+      refreshModelPool,
       refreshOverview,
       refreshPrompt,
       refreshServices,
@@ -706,7 +826,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const runChatChannelAction = useCallback(
-    async (action: "test" | "reconnect", channel: string) => {
+    async (action: "test" | "reconnect" | "open" | "close", channel: string) => {
       try {
         const payload = channel ? { channel } : {};
         const data = await requestJson<UiChatStatusResponse>("/api/services/command", {
@@ -725,6 +845,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             : results[0];
           const message = String(one?.message || "test completed");
           showToast(`${channel || "chat"} test: ${message}`, one?.success ? "success" : "error");
+        } else if (action === "open" || action === "close") {
+          showToast(`${channel || "chat"} ${action} 已执行（已写入 ship.json）`, "success");
         } else {
           showToast(`${channel || "chat"} ${action} 已执行`, "success");
         }
@@ -787,6 +909,45 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       }
     },
     [refreshLogs, refreshTasks, requestJson, selectedAgentId, showToast],
+  );
+
+  const loadTaskRuns = useCallback(
+    async (taskId: string, limit = 50): Promise<UiTaskRunSummary[]> => {
+      const id = String(taskId || "").trim();
+      if (!id) return [];
+      try {
+        const data = await requestJson<UiTaskRunsResponse>(
+          `/api/tui/tasks/${encodeURIComponent(id)}/runs?limit=${encodeURIComponent(String(limit))}`,
+          {},
+          selectedAgentId,
+        );
+        return Array.isArray(data.runs) ? data.runs : [];
+      } catch (error) {
+        showToast(`加载 task runs 失败: ${getErrorMessage(error)}`, "error");
+        return [];
+      }
+    },
+    [requestJson, selectedAgentId, showToast],
+  );
+
+  const loadTaskRunDetail = useCallback(
+    async (taskId: string, timestamp: string): Promise<UiTaskRunDetailResponse | null> => {
+      const id = String(taskId || "").trim();
+      const ts = String(timestamp || "").trim();
+      if (!id || !ts) return null;
+      try {
+        const data = await requestJson<UiTaskRunDetailResponse>(
+          `/api/tui/tasks/${encodeURIComponent(id)}/runs/${encodeURIComponent(ts)}`,
+          {},
+          selectedAgentId,
+        );
+        return data;
+      } catch (error) {
+        showToast(`加载 run 详情失败: ${getErrorMessage(error)}`, "error");
+        return null;
+      }
+    },
+    [requestJson, selectedAgentId, showToast],
   );
 
   const sendLocalMessage = useCallback(async () => {
@@ -858,6 +1019,204 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshModel, requestJson, selectedAgentId, showToast],
   );
 
+  const switchModelForAgent = useCallback(
+    async (agentId: string, primaryModelId: string) => {
+      const targetAgentId = String(agentId || "").trim();
+      const next = String(primaryModelId || "").trim();
+      if (!targetAgentId || !next) return;
+      try {
+        const endpoint = `/api/ui/model/switch?agent=${encodeURIComponent(targetAgentId)}`;
+        await requestJson<{
+          success?: boolean;
+          restartRequired?: boolean;
+          message?: string;
+        }>(
+          endpoint,
+          {
+            method: "POST",
+            body: JSON.stringify({ primaryModelId: next }),
+          },
+          targetAgentId,
+        );
+        await refreshDashboard(selectedAgentId || targetAgentId);
+        showToast(`已更新 ${targetAgentId} 的 model.primary（需重启 agent 生效）`, "success");
+      } catch (error) {
+        showToast(`agent model.primary 更新失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshDashboard, requestJson, selectedAgentId, showToast],
+  );
+
+  const upsertModelProvider = useCallback(
+    async (input: {
+      id: string;
+      type: string;
+      baseUrl?: string;
+      apiKey?: string;
+      clearBaseUrl?: boolean;
+      clearApiKey?: boolean;
+    }) => {
+      try {
+        await requestJson("/api/ui/model/provider/upsert", {
+          method: "POST",
+          body: JSON.stringify(input),
+        });
+        await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
+        showToast(`provider ${input.id} 已保存`, "success");
+      } catch (error) {
+        showToast(`provider 保存失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshModel, refreshModelPool, requestJson, selectedAgentId, showToast],
+  );
+
+  const removeModelProvider = useCallback(
+    async (providerId: string) => {
+      try {
+        await requestJson("/api/ui/model/provider/remove", {
+          method: "POST",
+          body: JSON.stringify({ providerId }),
+        });
+        await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
+        showToast(`provider ${providerId} 已删除`, "success");
+      } catch (error) {
+        showToast(`provider 删除失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshModel, refreshModelPool, requestJson, selectedAgentId, showToast],
+  );
+
+  const testModelProvider = useCallback(
+    async (providerId: string) => {
+      try {
+        const data = await requestJson<{
+          success?: boolean;
+          modelCount?: number;
+        }>("/api/ui/model/provider/test", {
+          method: "POST",
+          body: JSON.stringify({ providerId }),
+        });
+        showToast(`provider ${providerId} 测试通过，发现 ${Number(data.modelCount || 0)} 个模型`, "success");
+      } catch (error) {
+        showToast(`provider 测试失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [requestJson, showToast],
+  );
+
+  const discoverModelProvider = useCallback(
+    async (params: {
+      providerId: string;
+      autoAdd?: boolean;
+      prefix?: string;
+    }) => {
+      try {
+        const data = await requestJson<{
+          success?: boolean;
+          modelCount?: number;
+          autoAdded?: unknown[];
+        }>("/api/ui/model/provider/discover", {
+          method: "POST",
+          body: JSON.stringify(params),
+        });
+        await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
+        const autoAddedCount = Array.isArray(data.autoAdded) ? data.autoAdded.length : 0;
+        showToast(
+          `discover 完成：${Number(data.modelCount || 0)} 个，自动添加 ${autoAddedCount} 个`,
+          "success",
+        );
+      } catch (error) {
+        showToast(`discover 失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshModel, refreshModelPool, requestJson, selectedAgentId, showToast],
+  );
+
+  const upsertModelPoolItem = useCallback(
+    async (input: {
+      id: string;
+      providerId: string;
+      name: string;
+      temperature?: string;
+      maxTokens?: string;
+      topP?: string;
+      frequencyPenalty?: string;
+      presencePenalty?: string;
+      anthropicVersion?: string;
+      isPaused?: boolean;
+    }) => {
+      try {
+        await requestJson("/api/ui/model/model/upsert", {
+          method: "POST",
+          body: JSON.stringify({
+            ...input,
+            temperature: input.temperature?.trim() || undefined,
+            maxTokens: input.maxTokens?.trim() || undefined,
+            topP: input.topP?.trim() || undefined,
+            frequencyPenalty: input.frequencyPenalty?.trim() || undefined,
+            presencePenalty: input.presencePenalty?.trim() || undefined,
+            anthropicVersion: input.anthropicVersion?.trim() || undefined,
+          }),
+        });
+        await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
+        showToast(`model ${input.id} 已保存`, "success");
+      } catch (error) {
+        showToast(`model 保存失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshModel, refreshModelPool, requestJson, selectedAgentId, showToast],
+  );
+
+  const removeModelPoolItem = useCallback(
+    async (modelId: string) => {
+      try {
+        await requestJson("/api/ui/model/model/remove", {
+          method: "POST",
+          body: JSON.stringify({ modelId }),
+        });
+        await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
+        showToast(`model ${modelId} 已删除`, "success");
+      } catch (error) {
+        showToast(`model 删除失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshModel, refreshModelPool, requestJson, selectedAgentId, showToast],
+  );
+
+  const setModelPoolItemPaused = useCallback(
+    async (modelId: string, isPaused: boolean) => {
+      try {
+        await requestJson("/api/ui/model/model/pause", {
+          method: "POST",
+          body: JSON.stringify({ modelId, isPaused }),
+        });
+        await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
+        showToast(`model ${modelId} 已${isPaused ? "暂停" : "恢复"}`, "success");
+      } catch (error) {
+        showToast(`model 状态更新失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshModel, refreshModelPool, requestJson, selectedAgentId, showToast],
+  );
+
+  const testModelPoolItem = useCallback(
+    async (modelId: string, prompt?: string) => {
+      try {
+        await requestJson("/api/ui/model/model/test", {
+          method: "POST",
+          body: JSON.stringify({
+            modelId,
+            prompt: String(prompt || "").trim() || undefined,
+          }),
+        });
+        showToast(`model ${modelId} 测试通过`, "success");
+      } catch (error) {
+        showToast(`model 测试失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [requestJson, showToast],
+  );
+
   const handleAgentChange = useCallback(
     (nextAgentId: string) => {
       setSelectedAgentId(nextAgentId);
@@ -900,6 +1259,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     tasks,
     logs,
     model,
+    configStatus,
+    modelProviders,
+    modelPoolItems,
     prompt,
     localMessages,
     topbarStatus,
@@ -920,13 +1282,26 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshContextMessages,
     refreshPrompt,
     refreshModel,
+    refreshModelPool,
+    refreshConfigStatus,
     refreshLocalChat,
     controlService,
     controlExtension,
     runChatChannelAction,
     runTask,
+    loadTaskRuns,
+    loadTaskRunDetail,
     sendLocalMessage,
     switchModel,
+    switchModelForAgent,
+    upsertModelProvider,
+    removeModelProvider,
+    testModelProvider,
+    discoverModelProvider,
+    upsertModelPoolItem,
+    removeModelPoolItem,
+    setModelPoolItemPaused,
+    testModelPoolItem,
     constants: {
       LOCAL_UI_CONTEXT_ID,
     },

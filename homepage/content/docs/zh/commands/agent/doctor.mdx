@@ -27,3 +27,24 @@ sma agent doctor [path] [--fix]
 
 - [`sma agent status`](/zh/docs/commands/agent/status)
 - [`sma agent off`](/zh/docs/commands/agent/off)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma agent doctor .
+sma version: 1.0.0
+⚠️  Stale daemon state detected
+   project: <projectRoot>
+   stalePid: <pid>
+   reason: <reasons>
+   log: <daemonLogPath>
+   Run `sma agent doctor <path> --fix` to clean stale pid/meta.
+```
+
+```text
+$ sma agent doctor . --fix
+sma version: 1.0.0
+✅ Cleaned stale daemon pid/meta files
+```

@@ -21,10 +21,10 @@ export function ToastMessage(props: ToastMessageProps) {
   return (
     <div
       className={cn(
-        "fixed bottom-5 right-5 z-50 rounded-xl border px-4 py-2 text-sm shadow-lg backdrop-blur",
-        type === "success" && "border-emerald-300 bg-emerald-50 text-emerald-700",
-        type === "error" && "border-red-300 bg-red-50 text-red-700",
-        type === "info" && "border-neutral-300 bg-white text-neutral-700",
+        "fixed bottom-5 right-5 z-50 rounded-xl border px-4 py-2 text-sm shadow-lg",
+        type === "success" && "border-border bg-card text-foreground",
+        type === "error" && "border-destructive/35 bg-destructive/10 text-destructive",
+        type === "info" && "border-border bg-card text-muted-foreground",
       )}
     >
       {message}

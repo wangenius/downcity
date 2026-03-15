@@ -69,6 +69,12 @@ type ChatTestActionPayload = {
 type ChatReconnectActionPayload = {
   channel?: ChatChannelName;
 };
+type ChatOpenActionPayload = {
+  channel?: ChatChannelName;
+};
+type ChatCloseActionPayload = {
+  channel?: ChatChannelName;
+};
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
@@ -442,6 +448,51 @@ function getChatChannelStatus(
   };
 }
 
+/**
+ * 更新内存配置与 ship.json 中的 channel enabled 状态。
+ *
+ * 关键点（中文）
+ * - 先更新 runtime `context.config`，保证当前进程立刻可见。
+ * - 再落盘到项目 `ship.json`，保证重启后状态一致。
+ */
+async function setChatChannelEnabled(params: {
+  context: ServiceRuntime;
+  channel: ChatChannelName;
+  enabled: boolean;
+}): Promise<void> {
+  const { context, channel, enabled } = params;
+
+  const configServices = ((context.config.services ??= {}) as {
+    chat?: {
+      channels?: Record<string, Record<string, unknown>>;
+    };
+  });
+  const chatConfig = (configServices.chat ??= {});
+  const channelConfigs = (chatConfig.channels ??= {});
+  const channelConfig = (channelConfigs[channel] ??= {});
+  channelConfig.enabled = enabled;
+
+  const shipPath = path.join(context.rootPath, "ship.json");
+  let shipJson: Record<string, unknown> = {};
+  try {
+    const raw = await fs.readFile(shipPath, "utf-8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      shipJson = parsed as Record<string, unknown>;
+    }
+  } catch {
+    shipJson = {};
+  }
+
+  const shipServices = ((shipJson.services ??= {}) as Record<string, unknown>);
+  const shipChat = ((shipServices.chat ??= {}) as Record<string, unknown>);
+  const shipChannels = ((shipChat.channels ??= {}) as Record<string, unknown>);
+  const shipChannel = ((shipChannels[channel] ??= {}) as Record<string, unknown>);
+  shipChannel.enabled = enabled;
+
+  await fs.writeFile(shipPath, `${JSON.stringify(shipJson, null, 2)}\n`, "utf-8");
+}
+
 async function executeChatStatusAction(params: {
   context: ServiceRuntime;
   payload: ChatStatusActionPayload;
@@ -539,6 +590,62 @@ async function executeChatReconnectAction(params: {
   }
   for (const channel of targets) {
     await startSingleChatChannel(params.context, channel);
+  }
+
+  const channels = targets.map((channel) =>
+    getChatChannelStatus(params.context, channel),
+  );
+  return {
+    success: true,
+    data: {
+      channels,
+    },
+  };
+}
+
+async function executeChatOpenAction(params: {
+  context: ServiceRuntime;
+  payload: ChatOpenActionPayload;
+}) {
+  const targets = resolveTargetChannels(params.payload.channel);
+  for (const channel of targets) {
+    await setChatChannelEnabled({
+      context: params.context,
+      channel,
+      enabled: true,
+    });
+  }
+
+  for (const channel of targets) {
+    const snapshot = getChatChannelStatus(params.context, channel);
+    if (!snapshot.configured) continue;
+    if (snapshot.running) continue;
+    await startSingleChatChannel(params.context, channel);
+  }
+
+  const channels = targets.map((channel) =>
+    getChatChannelStatus(params.context, channel),
+  );
+  return {
+    success: true,
+    data: {
+      channels,
+    },
+  };
+}
+
+async function executeChatCloseAction(params: {
+  context: ServiceRuntime;
+  payload: ChatCloseActionPayload;
+}) {
+  const targets = resolveTargetChannels(params.payload.channel);
+  for (const channel of targets) {
+    await stopSingleChatChannel(channel);
+    await setChatChannelEnabled({
+      context: params.context,
+      channel,
+      enabled: false,
+    });
   }
 
   const channels = targets.map((channel) =>
@@ -1067,6 +1174,48 @@ export const chatService: Service = {
         return executeChatReconnectAction({
           context: params.context,
           payload: params.payload as ChatReconnectActionPayload,
+        });
+      },
+    },
+    open: {
+      command: {
+        description: "打开 chat 渠道（enabled=true，已配置则尝试启动）",
+        configure(command: Command) {
+          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+        },
+        mapInput: mapChatChannelCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
+        },
+      },
+      async execute(params) {
+        return executeChatOpenAction({
+          context: params.context,
+          payload: params.payload as ChatOpenActionPayload,
+        });
+      },
+    },
+    close: {
+      command: {
+        description: "关闭 chat 渠道（enabled=false，并停止运行）",
+        configure(command: Command) {
+          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+        },
+        mapInput: mapChatChannelCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatChannelApiInput(await c.req.json().catch(() => ({})));
+        },
+      },
+      async execute(params) {
+        return executeChatCloseAction({
+          context: params.context,
+          payload: params.payload as ChatCloseActionPayload,
         });
       },
     },

@@ -28,9 +28,9 @@ export function ServicesSection(props: ServicesSectionProps) {
 
   const badgeClass = (status?: string): string => {
     const tone = statusBadgeVariant(status);
-    if (tone === "ok") return "border-emerald-300 text-emerald-700";
-    if (tone === "bad") return "border-destructive/40 text-destructive";
-    return "border-amber-300 text-amber-700";
+    if (tone === "ok") return "border-border bg-muted/45 text-foreground";
+    if (tone === "bad") return "border-destructive/40 bg-destructive/10 text-destructive";
+    return "border-border bg-muted/35 text-muted-foreground";
   };
 
   return (

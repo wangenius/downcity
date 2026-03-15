@@ -30,3 +30,27 @@ sma service command memory search --payload '{"query":"release decision"}' --pat
 - [`sma service`](/zh/docs/commands/service/service)
 - [`sma task`](/zh/docs/commands/service/task)
 - [`sma memory`](/zh/docs/commands/service/memory)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma service command task list --payload '{"status":"enabled"}' --agent <agentName>
+{
+  "success": true,
+  "service": "task",
+  "data": {
+    "success": true,
+    "tasks": []
+  }
+}
+```
+
+```text
+$ sma service command task list --agent missing-agent
+{
+  "success": false,
+  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+}
+```

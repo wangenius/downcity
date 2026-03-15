@@ -48,3 +48,29 @@ sma skill lookup playwright
 
 - In Agent runtime, `lookup` tool output returns status only.
 - Skill content is injected through the next user message wrapped in `<skill>...</skill>`.
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma skill list
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "skills": []
+  }
+}
+```
+
+```text
+$ sma skill lookup playwright
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "name": "playwright"
+  }
+}
+```

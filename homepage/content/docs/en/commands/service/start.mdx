@@ -23,3 +23,23 @@ sma service start task --agent my-agent
 
 - [`sma service stop`](/en/docs/commands/service/stop)
 - [`sma service restart`](/en/docs/commands/service/restart)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma service start task
+{
+  "success": true,
+  "service": "task"
+}
+```
+
+```text
+$ sma service start task --agent missing-agent
+{
+  "success": false,
+  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+}
+```

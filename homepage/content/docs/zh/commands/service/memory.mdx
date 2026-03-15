@@ -43,3 +43,28 @@ sma memory flush --context-id telegram-chat-123 --max-messages 40
 ```bash
 sma agent on
 ```
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma memory search "release decision"
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "hits": []
+  }
+}
+```
+
+```text
+$ sma memory flush --context-id <contextId> --max-messages 40
+{
+  "success": true,
+  "data": {
+    "success": true
+  }
+}
+```

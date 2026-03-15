@@ -7,12 +7,11 @@
  */
 
 import path from "node:path";
-import { nanoid } from "nanoid";
 import type { ShipTaskStatus } from "./types/Task.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import {
-  isValidTaskId,
+  deriveTaskIdFromTaskName,
   normalizeTaskId,
 } from "./runtime/Paths.js";
 import {
@@ -61,9 +60,91 @@ function buildDefaultTaskBody(): string {
     "",
     "# 约束",
     "",
-    "- 尽量使用可审计的方式：关键中间产物写入 `./.ship/task/<taskId>/<timestamp>/` 下的 markdown 文件。",
+    "- 尽量使用可审计的方式：关键中间产物写入 `./.ship/task/<task_name>/<timestamp>/` 下的 markdown 文件。",
     "",
   ].join("\n");
+}
+
+/**
+ * 归一化语义文本（用于 task 去重）。
+ *
+ * 关键点（中文）
+ * - 降噪：统一小写，移除空白与常见标点
+ * - 不做语义模型推断，仅做轻量级字符串近似匹配
+ */
+function normalizeTaskSemanticText(input: string): string {
+  return String(input || "")
+    .toLowerCase()
+    .replace(
+      /[\s`~!@#$%^&*()\-_=+\[\]{}\\|;:'",.<>/?，。！？；：、“”‘’（）【】《》、]/g,
+      "",
+    )
+    .trim();
+}
+
+/**
+ * 计算 Dice 系数（bigram），用于近似语义比对。
+ */
+function diceCoefficientByBigram(a: string, b: string): number {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+
+  const gramsA = new Map<string, number>();
+  const gramsB = new Map<string, number>();
+  for (let i = 0; i < a.length - 1; i += 1) {
+    const g = a.slice(i, i + 2);
+    gramsA.set(g, (gramsA.get(g) || 0) + 1);
+  }
+  for (let i = 0; i < b.length - 1; i += 1) {
+    const g = b.slice(i, i + 2);
+    gramsB.set(g, (gramsB.get(g) || 0) + 1);
+  }
+
+  let overlap = 0;
+  for (const [gram, countA] of gramsA) {
+    const countB = gramsB.get(gram) || 0;
+    overlap += Math.min(countA, countB);
+  }
+  const total = (a.length - 1) + (b.length - 1);
+  if (total <= 0) return 0;
+  return (2 * overlap) / total;
+}
+
+/**
+ * 判断两个 task 描述是否属于“同语义/同场景/同目的”。
+ *
+ * 关键点（中文）
+ * - 仅在同 contextId + 同 kind 下比较，避免跨渠道误合并
+ * - 规则：
+ *   1) 归一化后完全相等
+ *   2) 一方包含另一方（长度足够）
+ *   3) Dice 系数 >= 0.92 视为同语义
+ */
+function isSemanticallySameTask(params: {
+  incomingTaskName: string;
+  incomingDescription: string;
+  existingTaskName: string;
+  existingDescription: string;
+}): boolean {
+  const incoming = normalizeTaskSemanticText(
+    `${params.incomingTaskName} ${params.incomingDescription}`,
+  );
+  const existing = normalizeTaskSemanticText(
+    `${params.existingTaskName} ${params.existingDescription}`,
+  );
+  if (!incoming || !existing) return false;
+  if (incoming === existing) return true;
+
+  const minLen = Math.min(incoming.length, existing.length);
+  if (
+    minLen >= 12 &&
+    (incoming.includes(existing) || existing.includes(incoming))
+  ) {
+    return true;
+  }
+
+  return diceCoefficientByBigram(incoming, existing) >= 0.92;
 }
 
 export async function listTaskDefinitions(params: {
@@ -81,8 +162,7 @@ export async function listTaskDefinitions(params: {
   return {
     success: true,
     tasks: filtered.map((task) => ({
-      taskId: task.taskId,
-      title: task.title,
+      taskName: task.taskName,
       description: task.description,
       cron: task.cron,
       status: task.status,
@@ -108,20 +188,26 @@ export async function createTaskDefinition(params: {
   const root = path.resolve(params.projectRoot);
   const req = params.request;
 
-  const rawTaskId = String(req.taskId || "").trim();
-  const taskId = rawTaskId && isValidTaskId(rawTaskId)
-    ? normalizeTaskId(rawTaskId)
-    : `task-${nanoid(10)}`;
-
-  const title = String(req.title || "").trim();
+  const taskName = String(req.taskName || "").trim();
   const description = String(req.description || "").trim();
+  let taskIdFromName = "";
+  let taskId = "";
+  try {
+    taskIdFromName = deriveTaskIdFromTaskName(taskName);
+    taskId = normalizeTaskId(taskIdFromName);
+  } catch (error) {
+    return {
+      success: false,
+      error: String(error),
+    };
+  }
   const cronNormalized = normalizeTaskCron(String(req.cron || "@manual").trim() || "@manual");
   const contextId = String(req.contextId || "").trim();
   const kind = normalizeTaskKind(req.kind);
   const timeNormalized = normalizeTaskTime(req.time);
   const timezoneNormalized = normalizeTaskTimezone(req.timezone);
 
-  if (!title) return { success: false, error: "Missing title" };
+  if (!taskName) return { success: false, error: "Missing taskName" };
   if (!description) return { success: false, error: "Missing description" };
   if (!contextId) return { success: false, error: "Missing contextId" };
   if (!cronNormalized.ok) return { success: false, error: cronNormalized.error };
@@ -149,13 +235,39 @@ export async function createTaskDefinition(params: {
   const maxDialogueRoundsNormalized = normalizeMaxDialogueRounds(req.maxDialogueRounds);
   if (!maxDialogueRoundsNormalized.ok) return { success: false, error: maxDialogueRoundsNormalized.error };
 
+  // 关键点（中文）：防止同语义任务被重复创建。
+  // 规则：同 contextId + 同 kind + 文本语义近似，直接复用已有任务。
+  // 备注：显式 overwrite 仅用于同 taskId 覆盖，不用于放开“重复语义创建”。
+  const existingTasks = await listTasks(root);
+  const duplicated = existingTasks.find((item) => {
+    const itemKind = item.kind || "agent";
+    if (String(item.contextId || "").trim() !== contextId) return false;
+    if (itemKind !== kind) return false;
+    return isSemanticallySameTask({
+      incomingTaskName: taskName,
+      incomingDescription: description,
+      existingTaskName: item.taskName,
+      existingDescription: item.description,
+    });
+  });
+  if (duplicated) {
+    return {
+      success: true,
+      taskName: duplicated.taskName,
+      taskMdPath: duplicated.taskMdPath,
+      reusedExisting: true,
+      message:
+        "Detected existing task with same semantic goal in the same context; reused existing task instead of creating a duplicate.",
+    };
+  }
+
   try {
     const written = await writeTask({
       taskId,
       projectRoot: root,
       overwrite: Boolean(req.overwrite),
       frontmatter: {
-        title,
+        taskName,
         description,
         cron: cronNormalized.value,
         contextId,
@@ -178,7 +290,7 @@ export async function createTaskDefinition(params: {
 
     return {
       success: true,
-      taskId: written.taskId,
+      taskName,
       taskMdPath: written.taskMdPath,
     };
   } catch (error) {
@@ -195,7 +307,8 @@ export async function updateTaskDefinition(params: {
 }): Promise<TaskUpdateResponse> {
   const root = path.resolve(params.projectRoot);
   const req = params.request;
-  const taskId = normalizeTaskId(String(req.taskId || "").trim());
+  const taskName = String(req.taskName || "").trim();
+  const taskId = normalizeTaskId(taskName);
 
   // 关键点（中文）：API 层也做一次互斥校验，避免非 CLI 调用写入歧义状态。
   if (req.timezone !== undefined && req.clearTimezone) {
@@ -223,9 +336,18 @@ export async function updateTaskDefinition(params: {
       taskId,
     });
 
-    const title =
-      typeof req.title === "string" ? req.title.trim() : current.frontmatter.title;
-    if (!title) return { success: false, error: "title cannot be empty" };
+    const nextTaskName =
+      typeof req.taskNameNext === "string"
+        ? req.taskNameNext.trim()
+        : current.frontmatter.taskName;
+    if (!nextTaskName) return { success: false, error: "taskName cannot be empty" };
+    const nextTaskId = normalizeTaskId(deriveTaskIdFromTaskName(nextTaskName));
+    if (nextTaskId !== taskId) {
+      return {
+        success: false,
+        error: `taskName cannot change task identity. Expected "${taskId}", got "${nextTaskId}".`,
+      };
+    }
 
     const description =
       typeof req.description === "string"
@@ -336,7 +458,7 @@ export async function updateTaskDefinition(params: {
       taskId,
       overwrite: true,
       frontmatter: {
-        title,
+        taskName: nextTaskName,
         description,
         cron: cronNormalized.value,
         contextId,
@@ -353,7 +475,7 @@ export async function updateTaskDefinition(params: {
 
     return {
       success: true,
-      taskId: written.taskId,
+      taskName: nextTaskName,
       taskMdPath: written.taskMdPath,
     };
   } catch (error) {
@@ -370,7 +492,8 @@ export async function runTaskDefinition(params: {
   request: TaskRunRequest;
 }): Promise<TaskRunResponse> {
   const root = path.resolve(params.projectRoot);
-  const taskId = normalizeTaskId(String(params.request.taskId || "").trim());
+  const taskName = String(params.request.taskName || "").trim();
+  const taskId = normalizeTaskId(taskName);
   const reason = typeof params.request.reason === "string" ? params.request.reason.trim() : "";
   const trigger = {
     type: "manual" as const,
@@ -433,7 +556,7 @@ export async function runTaskDefinition(params: {
       success: true,
       accepted: true,
       message: "任务已经开始执行",
-      taskId,
+      taskName,
     };
   } catch (error) {
     return {
@@ -448,7 +571,8 @@ export async function setTaskStatus(params: {
   request: TaskSetStatusRequest;
 }): Promise<TaskSetStatusResponse> {
   const root = path.resolve(params.projectRoot);
-  const taskId = normalizeTaskId(String(params.request.taskId || "").trim());
+  const taskName = String(params.request.taskName || "").trim();
+  const taskId = normalizeTaskId(taskName);
   const status = normalizeTaskStatus(params.request.status);
 
   if (!status) {
@@ -477,7 +601,7 @@ export async function setTaskStatus(params: {
 
     return {
       success: true,
-      taskId,
+      taskName: task.frontmatter.taskName,
       status,
     };
   } catch (error) {
@@ -493,7 +617,8 @@ export async function deleteTaskDefinition(params: {
   request: TaskDeleteRequest;
 }): Promise<TaskDeleteResponse> {
   const root = path.resolve(params.projectRoot);
-  const taskId = normalizeTaskId(String(params.request.taskId || "").trim());
+  const taskName = String(params.request.taskName || "").trim();
+  const taskId = normalizeTaskId(taskName);
 
   try {
     const deleted = await deleteTask({
@@ -502,7 +627,7 @@ export async function deleteTaskDefinition(params: {
     });
     return {
       success: true,
-      taskId: deleted.taskId,
+      taskName,
       taskDirPath: deleted.taskDirPath,
     };
   } catch (error) {

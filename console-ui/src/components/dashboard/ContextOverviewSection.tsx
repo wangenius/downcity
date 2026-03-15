@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { UiChatChannelStatus, UiContextSummary } from "@/types/Dashboard"
 import {
   buildContextGroups,
@@ -60,9 +59,10 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
   const [search, setSearch] = React.useState("")
   const [filter, setFilter] = React.useState<"all" | ContextGroupKey>("all")
   const filteredContexts = filterContextsByKeyword(contexts, search)
-  const groups = buildContextGroups(filteredContexts).filter((group) =>
-    filter === "all" ? true : group.key === filter,
-  )
+  const grouped = buildContextGroups(filteredContexts)
+  const visibleContexts = grouped
+    .filter((group) => (filter === "all" ? true : group.key === filter))
+    .flatMap((group) => group.items)
 
   const channelContextStats = React.useMemo(() => {
     const counts = new Map<string, number>()
@@ -83,124 +83,160 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
   }, [contexts])
 
   return (
-    <Card className="border-border/80 bg-card/90 shadow-sm">
-      <CardHeader>
-        <CardTitle>Context Overview</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-xl border border-border/70 bg-background/65 p-3">
-          <div className="mb-2 flex items-center gap-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Channel Mapping</div>
-            <Button size="sm" variant="outline" className="ml-auto h-7 px-2" onClick={onRefreshChannels}>
-              刷新
-            </Button>
+    <div className="space-y-4">
+      <Card className="border-border/80 bg-card/90 shadow-sm">
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle>Context Overview</CardTitle>
+          <Button size="sm" variant="outline" className="h-8 px-3" onClick={onRefreshChannels}>
+            刷新 Channels
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="overflow-hidden rounded-xl border border-border/70">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-muted/40 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="px-3 py-2 font-medium">Channel</th>
+                  <th className="px-3 py-2 font-medium">State</th>
+                  <th className="px-3 py-2 font-medium">Mapped Contexts</th>
+                  <th className="px-3 py-2 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chatChannels.length === 0 ? (
+                  <tr>
+                    <td className="px-3 py-4 text-sm text-muted-foreground" colSpan={4}>
+                      暂无 channel 状态
+                    </td>
+                  </tr>
+                ) : (
+                  chatChannels.map((channel) => {
+                    const name = String(channel.channel || "unknown")
+                    const linkState = String(channel.linkState || "unknown")
+                    const mappedCount = channelContextStats.get(name) || 0
+                    const tone =
+                      linkState === "connected"
+                        ? "border-border bg-muted/45 text-foreground"
+                        : linkState === "disconnected" || linkState === "error"
+                          ? "border-destructive/40 bg-destructive/10 text-destructive"
+                          : "border-border bg-muted/35 text-muted-foreground"
+                    const actionDisabled = !(channel.enabled === true && channel.configured === true)
+                    return (
+                      <tr key={name} className="border-t border-border/70">
+                        <td className="px-3 py-2 text-sm font-medium">{name}</td>
+                        <td className="px-3 py-2">
+                          <Badge variant="outline" className={tone}>
+                            {linkState}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-muted-foreground">{mappedCount}</td>
+                        <td className="px-3 py-2 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[11px]"
+                              disabled={actionDisabled}
+                              onClick={() => onChatAction("test", name)}
+                            >
+                              test
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[11px]"
+                              disabled={actionDisabled}
+                              onClick={() => onChatAction("reconnect", name)}
+                            >
+                              reconnect
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            {chatChannels.length === 0 ? (
-              <div className="text-xs text-muted-foreground">暂无 channel 状态</div>
-            ) : (
-              chatChannels.map((channel) => {
-                const name = String(channel.channel || "unknown")
-                const linkState = String(channel.linkState || "unknown")
-                const mappedCount = channelContextStats.get(name) || 0
-                const tone =
-                  linkState === "connected"
-                    ? "border-emerald-300 text-emerald-700"
-                    : linkState === "disconnected" || linkState === "error"
-                      ? "border-destructive/40 text-destructive"
-                      : "border-amber-300 text-amber-700"
-                const actionDisabled = !(channel.enabled === true && channel.configured === true)
-                return (
-                  <div key={name} className="rounded-lg border border-border/70 bg-card/90 p-2.5">
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="text-xs font-medium">{name}</span>
-                      <Badge variant="outline" className={tone}>
-                        {linkState}
-                      </Badge>
-                      <span className="ml-auto text-[11px] text-muted-foreground">{`contexts ${mappedCount}`}</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-[11px]"
-                        disabled={actionDisabled}
-                        onClick={() => onChatAction("test", name)}
-                      >
-                        test
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-[11px]"
-                        disabled={actionDisabled}
-                        onClick={() => onChatAction("reconnect", name)}
-                      >
-                        reconnect
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索 contextId / role / message"
-          />
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as "all" | ContextGroupKey)}>
-            <TabsList>
-              <TabsTrigger value="all">all</TabsTrigger>
-              <TabsTrigger value="chat">chat</TabsTrigger>
-              <TabsTrigger value="api">api</TabsTrigger>
-              <TabsTrigger value="other">other</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {groups.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-muted/40 px-3 py-4 text-sm text-muted-foreground">
-            当前筛选条件下无 context
+      <Card className="border-border/80 bg-card/90 shadow-sm">
+        <CardHeader>
+          <CardTitle>Contexts</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="搜索 contextId / role / message"
+            />
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(["all", "local_ui", "chat", "api", "other"] as const).map((key) => (
+                <Button
+                  key={key}
+                  type="button"
+                  size="sm"
+                  variant={filter === key ? "default" : "outline"}
+                  className="h-8 px-2 text-xs"
+                  onClick={() => setFilter(key)}
+                >
+                  {key}
+                </Button>
+              ))}
+            </div>
           </div>
-        ) : (
-          groups.map((group) => (
-            <details key={group.key} className="rounded-xl border border-border/70 bg-background/55" open>
-              <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {`${group.title} (${group.items.length})`}
-              </summary>
-              <div className="space-y-2 border-t border-dashed border-border/60 p-2.5">
-                {group.items.map((item) => (
-                  <button
-                    key={item.contextId}
-                    type="button"
-                    onClick={() => onOpenContext(item.contextId)}
-                    className={`w-full rounded-xl border px-3 py-2 text-left ${
-                      item.contextId === selectedContextId
-                        ? "border-primary/40 bg-primary/10"
-                        : "border-border/70 bg-background/75 hover:bg-muted/40"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-mono text-xs text-foreground">{item.contextId}</span>
-                      <span className="ml-auto rounded-md border border-border/80 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        {`msg ${item.messageCount || 0}`}
-                      </span>
-                    </div>
-                    <div className="mt-1 truncate text-[11px] text-muted-foreground">
-                      {`${item.lastRole || "unknown"} · ${item.lastText || "(empty)"}`}
-                    </div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">{`updated ${formatTime(item.updatedAt)}`}</div>
-                  </button>
-                ))}
-              </div>
-            </details>
-          ))
-        )}
-      </CardContent>
-    </Card>
+
+          <div className="overflow-hidden rounded-xl border border-border/70">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-muted/40 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="px-3 py-2 font-medium">Context</th>
+                  <th className="px-3 py-2 font-medium">Group</th>
+                  <th className="px-3 py-2 font-medium">Messages</th>
+                  <th className="px-3 py-2 font-medium">Updated</th>
+                  <th className="px-3 py-2 font-medium">Preview</th>
+                  <th className="px-3 py-2 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleContexts.length === 0 ? (
+                  <tr>
+                    <td className="px-3 py-4 text-sm text-muted-foreground" colSpan={6}>
+                      当前筛选条件下无 context
+                    </td>
+                  </tr>
+                ) : (
+                  visibleContexts.map((item) => {
+                    const group = resolveContextGroup(item.contextId)
+                    const isSelected = item.contextId === selectedContextId
+                    return (
+                      <tr key={item.contextId} className={`border-t border-border/70 ${isSelected ? "bg-primary/5" : ""}`}>
+                        <td className="max-w-[22rem] truncate px-3 py-2 font-mono text-xs" title={item.contextId}>
+                          {item.contextId}
+                        </td>
+                        <td className="px-3 py-2 text-xs uppercase text-muted-foreground">{group}</td>
+                        <td className="px-3 py-2 text-sm text-muted-foreground">{item.messageCount || 0}</td>
+                        <td className="px-3 py-2 text-sm text-muted-foreground">{formatTime(item.updatedAt)}</td>
+                        <td className="max-w-[18rem] truncate px-3 py-2 text-xs text-muted-foreground" title={item.lastText || ""}>
+                          {`${item.lastRole || "unknown"} · ${item.lastText || "(empty)"}`}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Button size="sm" variant={isSelected ? "secondary" : "outline"} onClick={() => onOpenContext(item.contextId)}>
+                            {isSelected ? "已打开" : "打开"}
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

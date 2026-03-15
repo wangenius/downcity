@@ -1,6 +1,6 @@
 ---
 title: sma chat
-description: Chat service actions (status/test/reconnect/send/react/context/history)
+description: Chat service actions (status/test/reconnect/open/close/send/react/context/history)
 ---
 
 # `sma chat`
@@ -20,12 +20,14 @@ sma chat <subcommand> [options]
 - `status`: show channel link status
 - `test`: run channel connectivity checks
 - `reconnect`: reconnect channels (all by default, or one channel)
+- `open`: enable a channel (`enabled=true` in `ship.json`, then try to start if configured)
+- `close`: disable a channel (`enabled=false` in `ship.json`, and stop runtime channel)
 - `send`: send message
 - `react`: react to message (primarily Telegram)
 - `context`: view conversation context snapshot
 - `history`: read chat history
 
-## `status/test/reconnect` key options
+## `status/test/reconnect/open/close` key options
 
 - `--channel <telegram|feishu|qq>`: run against one channel only (all channels if omitted)
 
@@ -64,6 +66,8 @@ sma chat history --chat-key telegram-chat-123 --limit 50
 sma chat status
 sma chat test --channel telegram
 sma chat reconnect --channel qq
+sma chat open --channel qq
+sma chat close --channel telegram
 ```
 
 ## Notes
@@ -72,4 +76,31 @@ This command group usually requires an active agent runtime:
 
 ```bash
 sma agent on
+```
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma chat status
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "channels": {
+      "telegram": {"state": "connected"}
+    }
+  }
+}
+```
+
+```text
+$ sma chat send --chat-key <chatKey> --text "done"
+{
+  "success": true,
+  "data": {
+    "success": true
+  }
+}
 ```

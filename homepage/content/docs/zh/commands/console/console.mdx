@@ -31,7 +31,7 @@ sma console stop
 sma console restart
 sma console status
 sma console agents [--json]
-sma console ui [start|stop|status] [--port 3001]
+sma console ui [start|stop|restart|status] [--port 3001]
 ```
 
 ## 行为说明
@@ -44,7 +44,7 @@ sma console ui [start|stop|status] [--port 3001]
 - `restart`：重启 console。
 - `status`：查看 console 进程状态与活跃 agent 清单。
 - `agents`：打印当前活跃托管 agent 列表。
-- `ui`：管理单实例 UI（start/stop/status），并可在页面内切换查看不同 agent。
+- `ui`：管理单实例 UI（start/stop/restart/status），并可在页面内切换查看不同 agent。
 
 ## 典型流程
 
@@ -71,3 +71,21 @@ sma agent status .
 - [`sma service`](/zh/docs/commands/service/service)
 - [`sma extension`](/zh/docs/commands/extension/extension)
 - [命令环境要求总览](/zh/docs/commands/variables)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma console
+sma version: 1.0.0
+Usage: sma console [options] [command]
+Commands:
+  run
+  ui [action]
+  start
+  stop
+  restart
+  status
+  agents
+```

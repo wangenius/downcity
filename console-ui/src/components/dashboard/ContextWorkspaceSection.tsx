@@ -4,6 +4,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { UiContextSummary, UiPromptResponse } from "@/types/Dashboard"
 import { HistoryViewerPanel } from "./comms/HistoryViewerPanel"
@@ -55,6 +56,10 @@ export interface ContextWorkspaceSectionProps {
    * 刷新 prompt。
    */
   onRefreshPrompt: () => void
+  /**
+   * 切换 context。
+   */
+  onSelectContext: (contextId: string) => void
 }
 
 const LOCAL_UI_CONTEXT_ID = "local_ui"
@@ -72,6 +77,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
     onChangeInput,
     onSendLocalMessage,
     onRefreshPrompt,
+    onSelectContext,
   } = props
 
   const selectedContext = contexts.find((item) => item.contextId === selectedContextId) || null
@@ -87,33 +93,37 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid min-h-0 gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <div className="min-w-0 space-y-4">
-          <Card className="border-border/80 bg-card/90 shadow-sm">
-            <CardHeader>
-              <CardTitle>Context Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="rounded-lg border border-border/70 bg-muted/40 px-2.5 py-2 font-mono text-xs">
-                {selectedContextId}
-              </div>
-              <div className="text-xs text-muted-foreground">{`messages ${selectedContext?.messageCount || 0}`}</div>
-              <div className="text-xs text-muted-foreground">{`updated ${formatTime(selectedContext?.updatedAt)}`}</div>
-              <div className="rounded-lg border border-border/70 bg-background/75 px-2.5 py-2 text-xs text-muted-foreground">
-                {`${selectedContext?.lastRole || "unknown"} · ${selectedContext?.lastText || "(empty)"}`}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="min-w-0">
-            <PromptSection
-              prompt={prompt}
-              localUiContextId={selectedContextId}
-              onRefresh={onRefreshPrompt}
-            />
+      <Card className="border-border/80 bg-card/90 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle>Context Workspace</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_220px]">
+            <Select value={selectedContextId || undefined} onValueChange={onSelectContext}>
+              <SelectTrigger>
+                <SelectValue placeholder="选择 context" />
+              </SelectTrigger>
+              <SelectContent>
+                {contexts.map((item) => (
+                  <SelectItem key={item.contextId} value={item.contextId}>
+                    {item.contextId === LOCAL_UI_CONTEXT_ID ? "chat here (local_ui)" : item.contextId}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
+              {`messages ${selectedContext?.messageCount || 0} · updated ${formatTime(selectedContext?.updatedAt)}`}
+            </div>
           </div>
-        </div>
 
+          <div className="rounded-lg border border-border/70 bg-background/75 px-3 py-2 text-xs text-muted-foreground">
+            <span className="font-mono">{selectedContextId}</span>
+            <span>{` · ${selectedContext?.lastRole || "unknown"} · ${selectedContext?.lastText || "(empty)"}`}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           <HistoryViewerPanel
             channelHistory={channelHistory}
@@ -121,34 +131,40 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
             formatTime={formatTime}
           />
         </div>
+
+        <div className="min-w-0">
+          <PromptSection
+            prompt={prompt}
+            localUiContextId={selectedContextId}
+            onRefresh={onRefreshPrompt}
+          />
+        </div>
       </div>
 
-      {isLocalUi ? (
-        <Card className="border-border/80 bg-card/90 shadow-sm">
-          <CardHeader>
-            <CardTitle>local_ui Composer</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Textarea
-              value={chatInput}
-              onChange={(event) => onChangeInput(event.target.value)}
-              rows={4}
-              placeholder="输入发给 local_ui 的指令..."
-            />
-            <div className="flex justify-end">
-              <Button onClick={onSendLocalMessage} disabled={sending || !chatInput.trim()}>
-                {sending ? "发送中..." : "发送"}
-              </Button>
+      <Card className="border-border/80 bg-card/90 shadow-sm">
+        <CardHeader>
+          <CardTitle>Composer</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={chatInput}
+            onChange={(event) => onChangeInput(event.target.value)}
+            rows={4}
+            placeholder={isLocalUi ? "输入发给 local_ui 的指令..." : "当前 context 为只读，仅 local_ui 可发送"}
+            disabled={!isLocalUi}
+          />
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              {isLocalUi
+                ? "当前可发送到 local_ui（chat here）"
+                : "只读模式：切换到 local_ui 才能发送"}
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-border/80 bg-card/90 shadow-sm">
-          <CardContent className="p-4 text-xs text-muted-foreground">
-            当前 context 为只读，只有 `local_ui` 支持在 UI 里发送指令。
-          </CardContent>
-        </Card>
-      )}
+            <Button onClick={onSendLocalMessage} disabled={!isLocalUi || sending || !chatInput.trim()}>
+              {sending ? "发送中..." : "发送"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

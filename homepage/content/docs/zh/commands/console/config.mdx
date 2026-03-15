@@ -45,3 +45,31 @@ sma console config alias --dry-run
 ## 延伸阅读
 
 - [ship.json 参考](/zh/docs/reference/ship-json)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma console config get model.primary
+{
+  "success": true,
+  "projectRoot": "<projectRoot>",
+  "shipJsonPath": "<projectRoot>/ship.json",
+  "keyPath": "model.primary",
+  "value": "<modelId>"
+}
+```
+
+```text
+$ sma console config set model.primary gpt-5.4
+{
+  "success": true,
+  "projectRoot": "<projectRoot>",
+  "shipJsonPath": "<projectRoot>/ship.json",
+  "keyPath": "model.primary",
+  "value": "gpt-5.4",
+  "existed": true,
+  "previous": "<oldModelId>"
+}
+```

@@ -619,7 +619,7 @@ export async function runTaskNow(params: {
       `# Task Input`,
       ``,
       `- taskId: \`${task.taskId}\``,
-      `- title: ${task.frontmatter.title}`,
+      `- task_name: ${task.frontmatter.taskName}`,
       `- cron: \`${task.frontmatter.cron}\``,
       `- status: \`${task.frontmatter.status}\``,
       `- contextId: \`${task.frontmatter.contextId}\``,
@@ -786,7 +786,7 @@ export async function runTaskNow(params: {
       };
       try {
         const simulatorQuery = buildUserSimulatorQuery({
-          taskTitle: task.frontmatter.title,
+          taskTitle: task.frontmatter.taskName,
           taskDescription: task.frontmatter.description,
           taskBody: task.body,
           round,
@@ -988,7 +988,7 @@ export async function runTaskNow(params: {
   resultLines.push(`# Task Result`);
   resultLines.push("");
   resultLines.push(`- taskId: \`${task.taskId}\``);
-  resultLines.push(`- title: ${task.frontmatter.title}`);
+  resultLines.push(`- task_name: ${task.frontmatter.taskName}`);
   resultLines.push(`- trigger: \`${params.trigger.type}\``);
   resultLines.push(`- status: **${status.toUpperCase()}**`);
   resultLines.push(`- executionStatus: \`${executionStatus}\``);

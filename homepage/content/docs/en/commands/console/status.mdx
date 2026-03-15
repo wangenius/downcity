@@ -17,3 +17,28 @@ sma console status
 
 - [`sma console agents`](/en/docs/commands/console/agents)
 - [`sma console`](/en/docs/commands/console/console)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console status
+sma version: 1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ OK sma console status                                   │
+│   state    : running                                    │
+│   pid      : <pid>                                      │
+│   pid_file : <consolePidPath>                           │
+│   log      : <consoleLogPath>                           │
+│   registry : <consoleRegistryPath>                      │
+└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│ OK sma console ui status                           │
+│   state    : running                               │
+│   pid      : <uiPid>                               │
+│   url      : http://127.0.0.1:3001                 │
+│   pid_file : <uiPidPath>                            │
+│   log      : <uiLogPath>                            │
+└────────────────────────────────────────────────────┘
+```

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - `task.md` 使用 YAML frontmatter + markdown 正文
- * - frontmatter 必须包含：title/cron/description/contextId/status
+ * - frontmatter 必须包含：task_name/cron/description/contextId/status
  * - 正文（body）会作为一次 run 的输入，且每次执行都从“干净历史”开始
  */
 
@@ -23,7 +23,7 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
  * 必填 frontmatter 字段清单。
  */
 const REQUIRED_FIELDS: Array<keyof ShipTaskFrontmatterV1> = [
-  "title",
+  "taskName",
   "cron",
   "description",
   "contextId",
@@ -332,7 +332,9 @@ export function parseTaskMarkdown(params: {
   }
 
   const missing: string[] = [];
-  for (const f of REQUIRED_FIELDS) {
+  const rawTaskName = String(meta?.task_name ?? meta?.taskName ?? "").trim();
+  if (!rawTaskName) missing.push("task_name");
+  for (const f of REQUIRED_FIELDS.filter((x) => x !== "taskName")) {
     if (meta?.[f] === undefined || meta?.[f] === null || String(meta?.[f]).trim() === "") {
       missing.push(String(f));
     }
@@ -388,7 +390,7 @@ export function parseTaskMarkdown(params: {
   }
 
   const fm: ShipTaskFrontmatterV1 = {
-    title: String(meta.title).trim(),
+    taskName: rawTaskName,
     cron: cronNormalized.value,
     description: String(meta.description).trim(),
     contextId: String(meta.contextId).trim(),
@@ -474,7 +476,7 @@ export function buildTaskMarkdown(params: {
   }
 
   const meta = {
-    title: String(frontmatter.title || "").trim(),
+    task_name: String(frontmatter.taskName || "").trim(),
     cron: cronNormalized.value,
     description: String(frontmatter.description || "").trim(),
     contextId: String(frontmatter.contextId || "").trim(),

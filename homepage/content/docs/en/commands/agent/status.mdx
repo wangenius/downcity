@@ -25,3 +25,34 @@ sma agent status [path]
 - [`sma agent on`](/en/docs/commands/agent/on)
 - [`sma agent off`](/en/docs/commands/agent/off)
 - [`sma console agents`](/en/docs/commands/console/agents)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma agent status .
+sma version: 1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ OK sma agent status                                    │
+│   project    : <projectRoot>                           │
+│   log        : <daemonLogPath>                         │
+│   state      : running                                 │
+│   pid        : <pid>                                   │
+│   started_at : <isoTimestamp>                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+```text
+$ sma agent status .
+sma version: 1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ WARN sma agent status                                  │
+│   project      : <projectRoot>                         │
+│   log          : <daemonLogPath>                       │
+│   state        : stale                                 │
+│   stale_pid    : <pid>                                 │
+│   stale_reason : <reason>                              │
+│   fix          : sma agent doctor <projectRoot> --fix  │
+└─────────────────────────────────────────────────────────┘
+```

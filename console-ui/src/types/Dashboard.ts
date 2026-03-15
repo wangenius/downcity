@@ -30,6 +30,31 @@ export interface UiAgentOption {
    * Agent daemon 进程号。
    */
   daemonPid?: number;
+  /**
+   * 当前 agent 的 `ship.json.model.primary`。
+   */
+  primaryModelId?: string;
+  /**
+   * 当前 agent 的 chat 渠道身份快照。
+   */
+  chatProfiles?: Array<{
+    /**
+     * 渠道名（telegram/feishu/qq）。
+     */
+    channel?: string;
+    /**
+     * 渠道身份展示名。
+     */
+    identity?: string;
+    /**
+     * 链路状态。
+     */
+    linkState?: string;
+    /**
+     * 状态文案。
+     */
+    statusText?: string;
+  }>;
 }
 
 /**
@@ -56,6 +81,78 @@ export interface UiAgentsResponse {
    * 附加消息。
    */
   message?: string;
+}
+
+/**
+ * 配置文件状态项（来自 `/api/ui/config-status`）。
+ */
+export interface UiConfigStatusItem {
+  /**
+   * 配置文件逻辑名称（例如 `ship_json`、`console_pid`）。
+   */
+  key: string;
+  /**
+   * 作用域（`console` 或 `agent`）。
+   */
+  scope: "console" | "agent";
+  /**
+   * 展示标签。
+   */
+  label: string;
+  /**
+   * 配置文件绝对路径。
+   */
+  path: string;
+  /**
+   * 文件是否存在。
+   */
+  exists: boolean;
+  /**
+   * 是否为普通文件。
+   */
+  isFile: boolean;
+  /**
+   * 是否可读。
+   */
+  readable: boolean;
+  /**
+   * 文件大小（字节）。
+   */
+  sizeBytes: number;
+  /**
+   * 最后修改时间（ISO8601）。
+   */
+  mtime: string;
+  /**
+   * 状态（ok/missing/error）。
+   */
+  status: "ok" | "missing" | "error";
+  /**
+   * 状态原因。
+   */
+  reason: string;
+}
+
+/**
+ * `/api/ui/config-status` 响应。
+ */
+export interface UiConfigStatusResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 当前选中的 agent id。
+   */
+  selectedAgentId?: string;
+  /**
+   * 当前选中的 agent 名称。
+   */
+  selectedAgentName?: string;
+  /**
+   * 配置文件状态列表。
+   */
+  items?: UiConfigStatusItem[];
 }
 
 /**
@@ -373,6 +470,50 @@ export interface UiTaskItem {
    * cron 表达式。
    */
   cron?: string;
+  /**
+   * 任务标题。
+   */
+  title?: string;
+  /**
+   * 任务描述。
+   */
+  description?: string;
+  /**
+   * 任务所属 contextId。
+   */
+  contextId?: string;
+  /**
+   * 任务类型（agent/script）。
+   */
+  kind?: "agent" | "script" | string;
+  /**
+   * 一次性调度时间（ISO）。
+   */
+  time?: string;
+  /**
+   * 调度时区。
+   */
+  timezone?: string;
+  /**
+   * 任务正文文件路径。
+   */
+  taskMdPath?: string;
+  /**
+   * 最近一次执行时间戳目录名。
+   */
+  lastRunTimestamp?: string;
+  /**
+   * 需要产物列表。
+   */
+  requiredArtifacts?: string[];
+  /**
+   * 最小输出字符数。
+   */
+  minOutputChars?: number;
+  /**
+   * 最大对话轮数。
+   */
+  maxDialogueRounds?: number;
 }
 
 /**
@@ -387,6 +528,143 @@ export interface UiTasksResponse {
    * task 列表。
    */
   tasks?: UiTaskItem[];
+}
+
+/**
+ * 任务执行摘要项。
+ */
+export interface UiTaskRunSummary {
+  /**
+   * 运行时间戳目录名（YYYYMMDD-HHmmss-SSS）。
+   */
+  timestamp: string;
+  /**
+   * 任务最终状态。
+   */
+  status?: string;
+  /**
+   * 执行器状态。
+   */
+  executionStatus?: string;
+  /**
+   * 结果状态。
+   */
+  resultStatus?: string;
+  /**
+   * 开始时间戳（毫秒）。
+   */
+  startedAt?: number;
+  /**
+   * 结束时间戳（毫秒）。
+   */
+  endedAt?: number;
+  /**
+   * 对话轮数。
+   */
+  dialogueRounds?: number;
+  /**
+   * 用户模拟满意度。
+   */
+  userSimulatorSatisfied?: boolean;
+  /**
+   * 错误信息。
+   */
+  error?: string;
+  /**
+   * run 目录相对路径。
+   */
+  runDirRel?: string;
+}
+
+/**
+ * 任务执行详情项。
+ */
+export interface UiTaskRunDetail {
+  /**
+   * task id。
+   */
+  taskId?: string;
+  /**
+   * 运行时间戳目录名。
+   */
+  timestamp?: string;
+  /**
+   * run 目录相对路径。
+   */
+  runDirRel?: string;
+  /**
+   * run 元数据（run.json）。
+   */
+  meta?: Record<string, unknown>;
+  /**
+   * 对话元数据（dialogue.json）。
+   */
+  dialogue?: Record<string, unknown>;
+  /**
+   * 产物文本集合。
+   */
+  artifacts?: {
+    /**
+     * 输入文本。
+     */
+    input?: string;
+    /**
+     * 输出文本。
+     */
+    output?: string;
+    /**
+     * 结果文本。
+     */
+    result?: string;
+    /**
+     * 对话文本。
+     */
+    dialogue?: string;
+    /**
+     * 错误文本。
+     */
+    error?: string;
+  };
+  /**
+   * 执行消息时间线。
+   */
+  messages?: UiContextTimelineMessage[];
+}
+
+/**
+ * `/api/tui/tasks/:taskId/runs` 响应。
+ */
+export interface UiTaskRunsResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * task id。
+   */
+  taskId?: string;
+  /**
+   * 执行摘要列表。
+   */
+  runs?: UiTaskRunSummary[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * `/api/tui/tasks/:taskId/runs/:timestamp` 响应。
+ */
+export interface UiTaskRunDetailResponse extends UiTaskRunDetail {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 错误信息。
+   */
+  error?: string;
 }
 
 /**
@@ -681,4 +959,122 @@ export interface UiModelResponse {
    * 附加消息。
    */
   message?: string;
+}
+
+/**
+ * Provider 管理项（来自 `/api/ui/model/pool`）。
+ */
+export interface UiModelProviderItem {
+  /**
+   * provider id。
+   */
+  id: string;
+  /**
+   * provider 类型。
+   */
+  type: string;
+  /**
+   * provider baseUrl。
+   */
+  baseUrl?: string;
+  /**
+   * 是否已配置 apiKey。
+   */
+  hasApiKey?: boolean;
+  /**
+   * 脱敏后的 apiKey。
+   */
+  apiKeyMasked?: string;
+  /**
+   * 创建时间。
+   */
+  createdAt?: string;
+  /**
+   * 更新时间。
+   */
+  updatedAt?: string;
+}
+
+/**
+ * Model 管理项（来自 `/api/ui/model/pool`）。
+ */
+export interface UiModelPoolItem {
+  /**
+   * model id。
+   */
+  id: string;
+  /**
+   * provider id。
+   */
+  providerId: string;
+  /**
+   * 上游模型名。
+   */
+  name: string;
+  /**
+   * 采样温度。
+   */
+  temperature?: number;
+  /**
+   * 最大 token。
+   */
+  maxTokens?: number;
+  /**
+   * top-p。
+   */
+  topP?: number;
+  /**
+   * 频率惩罚。
+   */
+  frequencyPenalty?: number;
+  /**
+   * 存在惩罚。
+   */
+  presencePenalty?: number;
+  /**
+   * anthropicVersion。
+   */
+  anthropicVersion?: string;
+  /**
+   * 是否暂停。
+   */
+  isPaused?: boolean;
+  /**
+   * 创建时间。
+   */
+  createdAt?: string;
+  /**
+   * 更新时间。
+   */
+  updatedAt?: string;
+}
+
+/**
+ * `/api/ui/model/pool` 响应。
+ */
+export interface UiModelPoolResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * provider 列表。
+   */
+  providers?: UiModelProviderItem[];
+  /**
+   * model 列表。
+   */
+  models?: UiModelPoolItem[];
+  /**
+   * provider id 列表。
+   */
+  providerIds?: string[];
+  /**
+   * model id 列表。
+   */
+  modelIds?: string[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
 }

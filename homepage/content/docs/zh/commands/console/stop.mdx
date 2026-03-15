@@ -17,3 +17,28 @@ sma console stop
 
 - [`sma console start`](/zh/docs/commands/console/start)
 - [`sma console status`](/zh/docs/commands/console/status)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma console stop
+sma version: 1.0.0
+✅ Console UI stopped
+   pid: <uiPid>
+   pidFile: <uiPidPath>
+   log: <uiLogPath>
+✅ SMA console stopped
+   pid: <pid>
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+```
+
+```text
+$ sma console stop
+sma version: 1.0.0
+ℹ️  SMA console is not running
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+```

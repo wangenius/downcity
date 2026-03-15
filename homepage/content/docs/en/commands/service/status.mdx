@@ -24,3 +24,23 @@ sma service status memory --path /abs/path/to/agent
 
 - [`sma service list`](/en/docs/commands/service/list)
 - [`sma service restart`](/en/docs/commands/service/restart)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma service status task
+{
+  "success": true,
+  "service": "task"
+}
+```
+
+```text
+$ sma service status task --path /invalid/path
+{
+  "success": false,
+  "error": "Agent is not registered in console registry: /invalid/path. Run \"sma console agents\" to inspect registered agents."
+}
+```

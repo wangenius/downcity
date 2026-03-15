@@ -25,13 +25,18 @@ sma console ui [action] [options]
 
 - `start`: start UI in background (default)
 - `stop`: stop background UI
+- `restart`: restart background UI
 - `status`: show UI status
 
 ## Behavior
 
 - Requires console first: `sma console start`.
 - On startup, UI loads active agents from console registry.
+- Global Agents panel shows each agent's runtime endpoint, current model binding, and chat identity snapshots (e.g. Telegram bot username), and supports direct model switching from the table.
+- Global / Overview shows console + selected agent config file status (exists/readable/updated time).
+- Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
 - Agent switcher in top bar controls all `Contexts/Services/Tasks/Logs` views.
+- Agent / Tasks now includes task definition details and per-run execution history (run list + run detail).
 - Dashboard shows `Chat Channels` link status (Telegram/Feishu/QQ) with `test` and `reconnect` actions.
 - Chat input is fixed to `local_ui` context only; UI cannot publish instructions to arbitrary contexts.
 - UI shows grouped `system prompt` composition (static/service/runtime).
@@ -53,7 +58,10 @@ sma console ui start --port 3001
 # 4) check UI status
 sma console ui status
 
-# 5) stop UI
+# 5) restart UI (reload latest gateway code/routes)
+sma console ui restart
+
+# 6) stop UI
 sma console ui stop
 ```
 
@@ -62,3 +70,29 @@ sma console ui stop
 - [`sma console start`](/en/docs/commands/console/start)
 - [`sma console agents`](/en/docs/commands/console/agents)
 - [`sma agent on`](/en/docs/commands/agent/on)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console ui start
+sma version: 1.0.0
+✅ Console UI started
+   pid: <pid>
+   url: http://127.0.0.1:3001
+   log: <uiLogPath>
+```
+
+```text
+$ sma console ui status
+sma version: 1.0.0
+┌────────────────────────────────────────────────────┐
+│ OK sma console ui status                           │
+│   state    : running                               │
+│   pid      : <pid>                                 │
+│   url      : http://127.0.0.1:3001                 │
+│   pid_file : <uiPidPath>                           │
+│   log      : <uiLogPath>                           │
+└────────────────────────────────────────────────────┘
+```

@@ -28,3 +28,26 @@ sma service list [--agent <name> | --path <path>] [--host <host>] [--port <port>
 
 - [`sma service status`](/en/docs/commands/service/status)
 - [`sma service start`](/en/docs/commands/service/start)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma service list --agent <agentName>
+{
+  "success": true,
+  "services": [
+    {"name": "chat", "state": "running"},
+    {"name": "task", "state": "running"}
+  ]
+}
+```
+
+```text
+$ sma service list --agent missing-agent
+{
+  "success": false,
+  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+}
+```

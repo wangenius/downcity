@@ -25,3 +25,34 @@ sma agent status [path]
 - [`sma agent on`](/zh/docs/commands/agent/on)
 - [`sma agent off`](/zh/docs/commands/agent/off)
 - [`sma console agents`](/zh/docs/commands/console/agents)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma agent status .
+sma version: 1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ OK sma agent status                                    │
+│   project    : <projectRoot>                           │
+│   log        : <daemonLogPath>                         │
+│   state      : running                                 │
+│   pid        : <pid>                                   │
+│   started_at : <isoTimestamp>                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+```text
+$ sma agent status .
+sma version: 1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ WARN sma agent status                                  │
+│   project      : <projectRoot>                         │
+│   log          : <daemonLogPath>                       │
+│   state        : stale                                 │
+│   stale_pid    : <pid>                                 │
+│   stale_reason : <reason>                              │
+│   fix          : sma agent doctor <projectRoot> --fix  │
+└─────────────────────────────────────────────────────────┘
+```

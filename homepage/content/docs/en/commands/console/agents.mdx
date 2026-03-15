@@ -23,3 +23,35 @@ sma console agents [--json]
 - [`sma console`](/en/docs/commands/console/console)
 - [`sma console status`](/en/docs/commands/console/status)
 - [`sma agent`](/en/docs/commands/agent/agent)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console agents --json
+{
+  "success": true,
+  "count": 2,
+  "agents": [
+    {
+      "projectRoot": "<projectRootA>",
+      "daemonPid": 12345,
+      "running": true,
+      "startedAt": "<iso>",
+      "updatedAt": "<iso>",
+      "logPath": "<logPathA>"
+    }
+  ]
+}
+```
+
+```text
+$ sma console agents
+sma version: 1.0.0
+┌──────────────────────────────────────┐
+│ INFO managed agents                  │
+│   agents   : 0                       │
+│   detail   : no running agent daemon │
+└──────────────────────────────────────┘
+```

@@ -20,12 +20,30 @@ import {
   isProcessAlive,
   readDaemonPid,
 } from "@/console/daemon/Manager.js";
-import { getShipJsonPath } from "@/console/env/Paths.js";
+import {
+  getProfileMdPath,
+  getShipJsonPath,
+  getShipMemoryIndexPath,
+  getShipSchemaPath,
+  getSoulMdPath,
+  getUserMdPath,
+} from "@/console/env/Paths.js";
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
+import {
+  getConsoleAgentRegistryPath,
+  getConsoleDotenvPath,
+  getConsolePidPath,
+  getConsoleShipDbPath,
+  getConsoleShipJsonPath,
+  getConsoleUiPidPath,
+} from "@/console/runtime/ConsolePaths.js";
 import { ConsoleStore } from "@utils/store/index.js";
+import { registerConsoleUiModelRoutes } from "@/console/ui/ModelApiRoutes.js";
 import type {
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
+  ConsoleUiConfigFileStatusItem,
+  ConsoleUiConfigStatusResponse,
 } from "@/types/ConsoleUI.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,10 +61,38 @@ type ShipJsonLike = {
   model?: {
     primary?: unknown;
   };
+  services?: {
+    chat?: {
+      channels?: {
+        telegram?: {
+          enabled?: unknown;
+          botToken?: unknown;
+        };
+        feishu?: {
+          enabled?: unknown;
+          appId?: unknown;
+        };
+        qq?: {
+          enabled?: unknown;
+          appId?: unknown;
+        };
+      };
+    };
+  };
   start?: {
     host?: unknown;
     port?: unknown;
   };
+};
+
+type ChatChannelStatusLike = {
+  channel?: unknown;
+  enabled?: unknown;
+  configured?: unknown;
+  running?: unknown;
+  linkState?: unknown;
+  statusText?: unknown;
+  detail?: Record<string, unknown>;
 };
 
 /**
@@ -111,82 +157,23 @@ export class ConsoleUIGateway {
       }
     });
 
-    this.app.get("/api/ui/model", async (c) => {
+    this.app.get("/api/ui/config-status", async (c) => {
       try {
         const requestedAgentId = this.readRequestedAgentId(c.req.raw);
-        const payload = await this.buildModelResponse(requestedAgentId);
+        const payload = await this.buildConfigStatusResponse(requestedAgentId);
         return c.json(payload);
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
       }
     });
 
-    this.app.post("/api/ui/model/switch", async (c) => {
-      try {
-        const requestedAgentId = this.readRequestedAgentId(c.req.raw);
-        const selectedAgent = await this.resolveSelectedAgent(requestedAgentId);
-        if (!selectedAgent) {
-          return c.json(
-            {
-              success: false,
-              error: "No running agent selected. Start/select an agent first.",
-            },
-            400,
-          );
-        }
-
-        const body = (await c.req.json().catch(() => ({}))) as {
-          primaryModelId?: string;
-        };
-        const nextPrimaryModelId = String(body.primaryModelId || "").trim();
-        if (!nextPrimaryModelId) {
-          return c.json({ success: false, error: "Missing primaryModelId" }, 400);
-        }
-
-        const store = new ConsoleStore();
-        try {
-          const targetModel = store.getModel(nextPrimaryModelId);
-          if (!targetModel) {
-            return c.json(
-              { success: false, error: `Model not found: ${nextPrimaryModelId}` },
-              400,
-            );
-          }
-          if (targetModel.isPaused === true) {
-            return c.json(
-              { success: false, error: `Model is paused: ${nextPrimaryModelId}` },
-              400,
-            );
-          }
-        } finally {
-          store.close();
-        }
-
-        const shipJsonPath = getShipJsonPath(selectedAgent.projectRoot);
-        if (!(await fs.pathExists(shipJsonPath))) {
-          return c.json(
-            { success: false, error: `ship.json not found: ${shipJsonPath}` },
-            400,
-          );
-        }
-
-        const agentShip = (await fs.readJson(shipJsonPath)) as ShipJsonLike;
-        if (!agentShip.model || typeof agentShip.model !== "object") {
-          agentShip.model = { primary: nextPrimaryModelId };
-        } else {
-          agentShip.model.primary = nextPrimaryModelId;
-        }
-        await fs.writeJson(shipJsonPath, agentShip, { spaces: 2 });
-
-        return c.json({
-          success: true,
-          primaryModelId: nextPrimaryModelId,
-          restartRequired: true,
-          message: "Agent primary model updated. Restart agent to fully apply runtime model instance.",
-        });
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
+    registerConsoleUiModelRoutes({
+      app: this.app,
+      readRequestedAgentId: (request) => this.readRequestedAgentId(request),
+      resolveSelectedAgent: (requestedAgentId) =>
+        this.resolveSelectedAgent(requestedAgentId),
+      buildModelResponse: (requestedAgentId) =>
+        this.buildModelResponse(requestedAgentId),
     });
 
     // 关键点（中文）：除 `/api/ui/*` 外，其他 API 一律透传到“当前选中 agent”。
@@ -373,16 +360,22 @@ export class ConsoleUIGateway {
     const endpoint = await this.resolveRuntimeEndpoint(projectRoot);
 
     let displayName = basename(projectRoot);
+    let ship: ShipJsonLike | null = null;
     try {
       const shipPath = getShipJsonPath(projectRoot);
       if (await fs.pathExists(shipPath)) {
-        const ship = (await fs.readJson(shipPath)) as ShipJsonLike;
+        ship = (await fs.readJson(shipPath)) as ShipJsonLike;
         const name = String(ship?.name || "").trim();
         if (name) displayName = name;
       }
     } catch {
       // ignore
     }
+
+    const chatProfiles = await this.resolveAgentChatProfiles({
+      ship,
+      baseUrl: `http://${endpoint.host}:${endpoint.port}`,
+    });
 
     return {
       id: projectRoot,
@@ -396,7 +389,113 @@ export class ConsoleUIGateway {
       updatedAt,
       daemonPid,
       logPath: getDaemonLogPath(projectRoot),
+      chatProfiles,
+      primaryModelId: String(ship?.model?.primary || "").trim() || undefined,
     };
+  }
+
+  private normalizeChatIdentity(params: {
+    channel: string;
+    detail?: Record<string, unknown>;
+    ship?: ShipJsonLike | null;
+  }): string {
+    const channel = params.channel;
+    const detail = params.detail || {};
+    const shipChannels = params.ship?.services?.chat?.channels;
+    if (channel === "telegram") {
+      const botUsername = String(detail.botUsername || "").trim();
+      if (botUsername) return `@${botUsername.replace(/^@+/, "")}`;
+      return "telegram bot";
+    }
+    if (channel === "qq") {
+      // 关键点（中文）：QQ 优先展示可读名称，其次展示 appId，避免退化为固定文案。
+      const qqBotName = String(
+        detail.botName || detail.nickname || detail.username || "",
+      ).trim();
+      if (qqBotName) return qqBotName;
+      const appId = String(detail.appId || shipChannels?.qq?.appId || "").trim();
+      return appId ? `app:${appId}` : "qq bot";
+    }
+    if (channel === "feishu") {
+      const appId = String(shipChannels?.feishu?.appId || "").trim();
+      return appId ? `app:${appId}` : "feishu bot";
+    }
+    return `${channel} bot`;
+  }
+
+  private async resolveAgentChatProfiles(params: {
+    ship?: ShipJsonLike | null;
+    baseUrl: string;
+  }): Promise<Array<{
+    channel: string;
+    identity: string;
+    linkState?: string;
+    statusText?: string;
+  }>> {
+    try {
+      const upstreamUrl = new URL("/api/services/command", params.baseUrl).toString();
+      const response = await fetch(upstreamUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          serviceName: "chat",
+          command: "status",
+          payload: {},
+        }),
+      });
+      if (!response.ok) return [];
+      const payload = (await response.json().catch(() => ({}))) as {
+        success?: unknown;
+        data?: {
+          channels?: ChatChannelStatusLike[];
+        };
+      };
+      const rows = Array.isArray(payload?.data?.channels) ? payload.data.channels : [];
+      return rows
+        .map((row) => {
+          const channel = String(row?.channel || "").trim();
+          if (!channel) return null;
+          const running =
+            typeof row?.running === "boolean"
+              ? row.running
+              : (() => {
+                  const linkState = String(row?.linkState || "").trim();
+                  return linkState === "connected" || linkState === "unknown";
+                })();
+          // 关键点（中文）：只展示已启动渠道，未启动渠道不进入 chat identity 面板。
+          if (!running) return null;
+          const linkState = String(row?.linkState || "").trim();
+          const statusText = String(row?.statusText || "").trim();
+          const detail =
+            row?.detail && typeof row.detail === "object"
+              ? row.detail
+              : undefined;
+          return {
+            channel,
+            identity: this.normalizeChatIdentity({
+              channel,
+              detail,
+              ship: params.ship,
+            }),
+            ...(linkState ? { linkState } : {}),
+            ...(statusText ? { statusText } : {}),
+          };
+        })
+        .filter(
+          (
+            item,
+          ): item is {
+            channel: string;
+            identity: string;
+            linkState?: string;
+            statusText?: string;
+          } => item !== null,
+        );
+    } catch {
+      return [];
+    }
   }
 
   private async listRunningAgents(): Promise<ConsoleUiAgentOption[]> {
@@ -515,6 +614,196 @@ export class ConsoleUIGateway {
     } finally {
       store.close();
     }
+  }
+
+  /**
+   * 读取单个配置文件状态。
+   *
+   * 关键点（中文）
+   * - 不抛出异常，统一返回 `status/reason` 便于 UI 汇总展示。
+   * - 使用最小探测维度：存在性、文件类型、可读性、大小、修改时间。
+   */
+  private async readConfigFileStatus(params: {
+    key: string;
+    scope: "console" | "agent";
+    label: string;
+    filePath: string;
+  }): Promise<ConsoleUiConfigFileStatusItem> {
+    const filePath = path.resolve(String(params.filePath || ""));
+    if (!filePath) {
+      return {
+        key: params.key,
+        scope: params.scope,
+        label: params.label,
+        path: String(params.filePath || ""),
+        exists: false,
+        isFile: false,
+        readable: false,
+        sizeBytes: 0,
+        mtime: "",
+        status: "error",
+        reason: "invalid_path",
+      };
+    }
+
+    try {
+      const stat = await fs.stat(filePath);
+      const isFile = stat.isFile();
+      if (!isFile) {
+        return {
+          key: params.key,
+          scope: params.scope,
+          label: params.label,
+          path: filePath,
+          exists: true,
+          isFile: false,
+          readable: false,
+          sizeBytes: Number(stat.size || 0),
+          mtime: stat.mtime.toISOString(),
+          status: "error",
+          reason: "not_a_file",
+        };
+      }
+
+      let readable = true;
+      try {
+        await fs.access(filePath, fs.constants.R_OK);
+      } catch {
+        readable = false;
+      }
+
+      return {
+        key: params.key,
+        scope: params.scope,
+        label: params.label,
+        path: filePath,
+        exists: true,
+        isFile: true,
+        readable,
+        sizeBytes: Number(stat.size || 0),
+        mtime: stat.mtime.toISOString(),
+        status: readable ? "ok" : "error",
+        reason: readable ? "ok" : "permission_denied",
+      };
+    } catch (error) {
+      const message = String(error || "").toLowerCase();
+      const missing = message.includes("enoent");
+      return {
+        key: params.key,
+        scope: params.scope,
+        label: params.label,
+        path: filePath,
+        exists: false,
+        isFile: false,
+        readable: false,
+        sizeBytes: 0,
+        mtime: "",
+        status: missing ? "missing" : "error",
+        reason: missing ? "file_not_found" : "stat_failed",
+      };
+    }
+  }
+
+  /**
+   * 构建配置文件状态响应。
+   *
+   * 关键点（中文）
+   * - `console` 维度始终返回。
+   * - `agent` 维度仅在存在选中 agent 时返回，避免误导。
+   */
+  private async buildConfigStatusResponse(
+    requestedAgentId: string,
+  ): Promise<ConsoleUiConfigStatusResponse> {
+    const selectedAgent = await this.resolveSelectedAgent(requestedAgentId);
+
+    const consoleChecks = await Promise.all([
+      this.readConfigFileStatus({
+        key: "ship_json",
+        scope: "console",
+        label: "Console ship.json",
+        filePath: getConsoleShipJsonPath(),
+      }),
+      this.readConfigFileStatus({
+        key: "ship_db",
+        scope: "console",
+        label: "Console ship.db",
+        filePath: getConsoleShipDbPath(),
+      }),
+      this.readConfigFileStatus({
+        key: "dotenv",
+        scope: "console",
+        label: "Console .env",
+        filePath: getConsoleDotenvPath(),
+      }),
+      this.readConfigFileStatus({
+        key: "console_pid",
+        scope: "console",
+        label: "Console PID",
+        filePath: getConsolePidPath(),
+      }),
+      this.readConfigFileStatus({
+        key: "ui_pid",
+        scope: "console",
+        label: "Console UI PID",
+        filePath: getConsoleUiPidPath(),
+      }),
+      this.readConfigFileStatus({
+        key: "agents_registry",
+        scope: "console",
+        label: "Agents Registry",
+        filePath: getConsoleAgentRegistryPath(),
+      }),
+    ]);
+
+    let agentChecks: ConsoleUiConfigFileStatusItem[] = [];
+    if (selectedAgent) {
+      const cwd = selectedAgent.projectRoot;
+      agentChecks = await Promise.all([
+        this.readConfigFileStatus({
+          key: "profile_md",
+          scope: "agent",
+          label: "PROFILE.md",
+          filePath: getProfileMdPath(cwd),
+        }),
+        this.readConfigFileStatus({
+          key: "soul_md",
+          scope: "agent",
+          label: "SOUL.md",
+          filePath: getSoulMdPath(cwd),
+        }),
+        this.readConfigFileStatus({
+          key: "user_md",
+          scope: "agent",
+          label: "USER.md",
+          filePath: getUserMdPath(cwd),
+        }),
+        this.readConfigFileStatus({
+          key: "ship_json",
+          scope: "agent",
+          label: "Agent ship.json",
+          filePath: getShipJsonPath(cwd),
+        }),
+        this.readConfigFileStatus({
+          key: "ship_schema",
+          scope: "agent",
+          label: ".ship/schema/ship.schema.json",
+          filePath: getShipSchemaPath(cwd),
+        }),
+        this.readConfigFileStatus({
+          key: "memory_index",
+          scope: "agent",
+          label: ".ship/memory/index.sqlite",
+          filePath: getShipMemoryIndexPath(cwd),
+        }),
+      ]);
+    }
+
+    return {
+      success: true,
+      selectedAgentId: selectedAgent?.id || "",
+      selectedAgentName: selectedAgent?.name || "",
+      items: [...consoleChecks, ...agentChecks],
+    };
   }
 
   private async resolveSelectedAgent(

@@ -30,3 +30,27 @@ sma service command memory search --payload '{"query":"release decision"}' --pat
 - [`sma service`](/en/docs/commands/service/service)
 - [`sma task`](/en/docs/commands/service/task)
 - [`sma memory`](/en/docs/commands/service/memory)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma service command task list --payload '{"status":"enabled"}' --agent <agentName>
+{
+  "success": true,
+  "service": "task",
+  "data": {
+    "success": true,
+    "tasks": []
+  }
+}
+```
+
+```text
+$ sma service command task list --agent missing-agent
+{
+  "success": false,
+  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+}
+```

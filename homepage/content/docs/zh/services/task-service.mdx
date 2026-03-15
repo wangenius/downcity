@@ -1,18 +1,267 @@
 ---
 title: Task Service
-description: 任务定义生命周期与调度 service
+description: Task Service 的完整执行逻辑、状态机、产物与排障方法
 ---
 
 # Task Service
 
 `task` service 负责任务定义与执行编排。
 
-## 职责
+## 它到底管什么
 
-- 任务定义的创建/更新/删除
-- 任务状态切换（启用/暂停/禁用）
-- 立即执行任务
-- 维护 cron runtime 与 scheduler 重载
+- 解析 `task.md`（frontmatter + body）并做字段校验
+- 管理任务定义（create/update/delete/list）
+- 管理任务状态（`enabled` / `paused` / `disabled`）
+- 管理调度（cron / `@manual` / one-shot `time`）
+- 执行任务并写入可审计产物（`run.json`、`result.md` 等）
+- 在执行后做结果校验（输出长度、必需产物、模拟用户满意度）
+
+## 任务定义模型（`task.md`）
+
+任务文件路径：
+
+```text
+.ship/task/<taskName>/task.md
+```
+
+核心 frontmatter 字段：
+
+| 字段 | 必填 | 含义 |
+| --- | --- | --- |
+| `task_name` | 是 | 任务名称（唯一语义标识） |
+| `description` | 是 | 任务描述（执行意图） |
+| `contextId` | 是 | 执行上下文标识 |
+| `cron` | 是 | 调度表达式，支持 `@manual` |
+| `status` | 是 | `enabled`/`paused`/`disabled` |
+| `kind` | 否 | `agent`（默认）或 `script` |
+| `time` | 否 | one-shot 执行时间（ISO8601 + 时区） |
+| `timezone` | 否 | IANA 时区，如 `Asia/Shanghai` |
+| `requiredArtifacts` | 否 | 要求 run 目录必须存在的相对路径文件 |
+| `minOutputChars` | 否 | 最小输出字符数（`0` 允许空输出） |
+| `maxDialogueRounds` | 否 | `agent` 类型最大多轮数（>=1） |
+
+约束要点：
+
+- `time` 只能与 `cron=@manual` 搭配使用（one-shot 语义）
+- `requiredArtifacts` 只能是 run 目录内相对路径，不能用绝对路径/`..`
+- `timezone` 必须是合法 IANA 时区
+
+## 从定义到执行：完整链路
+
+1. `task` service 读取并校验 `task.md`
+2. scheduler 根据状态注册任务：
+- `status!=enabled` 不参与调度
+- `cron` 任务按表达式注册
+- `time` 任务按分钟轮询，到点补执行一次
+3. 触发后创建本次 run 目录：
+- `.ship/task/<taskName>/<timestamp>/`
+4. 先写 `input.md`（定义快照）
+5. 按 `kind` 执行：
+- `agent`：执行器 agent 与 user-simulator 多轮交互
+- `script`：直接执行 task body 脚本
+6. 做结果校验：
+- 输出是否达到 `minOutputChars`
+- 必需产物是否满足 `requiredArtifacts`
+- `agent` 场景下是否达到“规则通过 + 模拟用户满意”
+7. 落盘 `run.json` 和其它产物，给出 `status/executionStatus/resultStatus`
+
+## Agent 调用 Task 的逻辑（何时/如何）
+
+### 何时会调用
+
+`agent` 会在这三类场景调用 `task`：
+
+1. 用户明确要求“管理任务”
+- 例如：创建每日任务、修改 cron、暂停任务、立即执行任务
+2. 需要把一次性操作升级为“可重复自动化”
+- 例如：用户说“每天 9 点做这个”
+3. 需要排障或验证任务状态
+- 例如：查询任务列表、手动 run、切换状态
+
+### 如何调用
+
+调用入口本质是 `task service action`，常见两种方式：
+
+1. CLI（你手动执行）
+
+```bash
+sma task create ...
+sma task run <taskName>
+sma task update <taskName> ...
+```
+
+2. Agent 通过 service command 转发（语义等价）
+
+```bash
+sma service command task list --payload '{"status":"enabled"}'
+sma service command task run --payload '{"taskName":"daily-news","reason":"manual-check"}'
+```
+
+### 调用决策（简化版）
+
+| 用户意图 | 推荐 action |
+| --- | --- |
+| 我想新建定时任务 | `create` |
+| 先执行一次看看 | `run` |
+| 改时间/改正文/改参数 | `update` |
+| 暂停但保留定义 | `status` 或 `disable` |
+| 重新启用 | `enable` |
+| 彻底删除定义 | `delete` |
+
+### 调用后会发生什么
+
+- `create/update/delete/status/enable/disable` 成功后，会自动重载 scheduler
+- `run` 会立刻触发一次执行，并写入新的 run 目录
+- `run` 是“手动执行”，不依赖 `status` 是否 `enabled`
+- `create` 在同 `contextId + kind` 下会做语义去重：若检测到同目标任务，会复用已有 `task_name`，不重复创建
+
+## 两种执行模式（`kind`）
+
+### `agent`（默认）
+
+- Task body 作为执行提示词输入执行器 agent
+- 服务会自动引入 user-simulator 做“是否满足任务目标”的判定
+- 直到满足或达到 `maxDialogueRounds`
+
+### `script`
+
+- Task body 会写入 `task-script.sh` 并执行
+- 当前工作目录是本次 run 目录，不是项目根目录
+- 脚本里引用项目文件时，必须显式处理路径（例如先 `cd` 到项目根）
+
+## run 目录产物与状态机
+
+典型目录：
+
+```text
+.ship/task/<taskName>/<timestamp>/
+  input.md
+  output.md
+  result.md
+  run.json
+  error.md
+  dialogue.md
+  dialogue.json
+  messages.jsonl
+```
+
+`run.json` 的三个核心状态：
+
+- `status`：最终态（`success` / `failure` / `skipped`）
+- `executionStatus`：执行阶段是否成功
+- `resultStatus`：结果校验（`valid` / `invalid` / `not_checked`）
+
+常见组合：
+
+- `executionStatus=success` + `resultStatus=invalid`：执行成功但结果不达标（最常见）
+- `executionStatus=failure` + `resultStatus=not_checked`：执行过程报错（如脚本路径错误）
+
+## 调度细节（容易误解）
+
+- `enabled` 才会被调度
+- 同一 `task_name` 串行执行，重叠触发会跳过，避免并发污染 run 目录
+- `time` one-shot 到点执行后会自动转为 `paused`
+- `@manual` 不自动调度，只能手动 `sma task run`
+
+## Task Action 参数总览
+
+> 下表是 agent 侧常用参数（CLI 与 API/payload 语义一致）。
+
+### `list`
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `status` | 否 | 过滤状态：`enabled|paused|disabled` |
+
+### `create`
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `task_name` | 是 | 任务名称（唯一语义标识） |
+| `description` | 是 | 任务描述 |
+| `contextId` | 是 | 任务执行上下文 |
+| `cron` | 否 | 默认 `@manual` |
+| `kind` | 否 | `agent`（默认）或 `script` |
+| `status` | 否 | `enabled|paused|disabled`（默认 paused） |
+| `activate` | 否 | 等价于 `status=enabled` |
+| `time` | 否 | one-shot 时间（ISO8601+时区） |
+| `timezone` | 否 | IANA 时区 |
+| `requiredArtifacts` | 否 | run 目录必需产物列表 |
+| `minOutputChars` | 否 | 最小输出字符数 |
+| `maxDialogueRounds` | 否 | `agent` 模式最大轮数 |
+| `body` | 否 | 任务正文 |
+| `overwrite` | 否 | 覆盖已存在同名任务 |
+
+去重行为（重要）：
+
+- 系统会在创建前检查同 `contextId`、同 `kind` 下是否已有同语义任务
+- 若命中，会返回已有任务（`reusedExisting=true`），而不是新建第二个同类任务
+
+### `run`
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `taskName` | 是 | 要执行的任务名称 |
+| `reason` | 否 | 本次手动触发原因 |
+
+### `update`
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `taskName` | 是 | 要更新的任务名称 |
+| `taskName/description/cron/contextId/kind/body` | 否 | 对应字段更新 |
+| `status` | 否 | 改状态 |
+| `activate` | 否 | 等价于 `status=enabled` |
+| `time` | 否 | 更新 one-shot 时间 |
+| `clearTime` | 否 | 清空 one-shot 时间 |
+| `timezone` | 否 | 设置时区 |
+| `clearTimezone` | 否 | 清空时区 |
+| `requiredArtifacts` | 否 | 重设 requiredArtifacts |
+| `clearRequiredArtifacts` | 否 | 清空 requiredArtifacts |
+| `minOutputChars` | 否 | 设置最小输出长度 |
+| `clearMinOutputChars` | 否 | 清空 minOutputChars |
+| `maxDialogueRounds` | 否 | 设置最大轮数 |
+| `clearMaxDialogueRounds` | 否 | 清空 maxDialogueRounds |
+| `clearBody` | 否 | 清空正文 |
+
+### `status/enable/disable/delete`
+
+| action | 必填参数 | 说明 |
+| --- | --- | --- |
+| `status` | `taskName`, `status` | 显式设置状态 |
+| `enable` | `taskName` | 设置为 enabled |
+| `disable` | `taskName` | 设置为 disabled |
+| `delete` | `taskName` | 删除定义和历史运行目录 |
+
+## 用户排障顺序（推荐）
+
+1. 看任务定义
+
+```bash
+sma task list
+sma task get <taskName>
+```
+
+2. 看本次 run 结果
+
+```bash
+ls -la .ship/task/<taskName>
+ls -la .ship/task/<taskName>/<timestamp>
+cat .ship/task/<taskName>/<timestamp>/run.json
+cat .ship/task/<taskName>/<timestamp>/error.md
+```
+
+3. 看当天日志
+
+```bash
+cat .ship/logs/$(date +%F).jsonl
+```
+
+优先关注：
+
+- `resultStatus=invalid`：通常是任务目标没达标或产物缺失
+- `No such file or directory`：通常是脚本路径基于 runDir 解析错误
+- `fetch failed/terminated`：通常是外部网络或上游依赖瞬时失败
 
 ## 运行态操作
 
@@ -25,3 +274,6 @@ sma service command task list --payload '{"status":"enabled"}'
 
 - [`sma service`](/zh/docs/commands/service/service)
 - [`sma task`](/zh/docs/commands/service/task)
+- [`Tasks（能力说明）`](/zh/docs/capabilities/tasks)
+- [`.ship 目录结构`](/zh/docs/reference/dot-ship)
+- [日志与审计](/zh/docs/operations/logging)

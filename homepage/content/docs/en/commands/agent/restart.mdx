@@ -29,3 +29,21 @@ sma agent restart [path] [options]
 - [`sma agent on`](/en/docs/commands/agent/on)
 - [`sma agent off`](/en/docs/commands/agent/off)
 - [`sma agent status`](/en/docs/commands/agent/status)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma agent restart .
+sma version: 1.0.0
+✅ ShipMyAgent daemon restarted
+   pid: <pid>
+   log: <daemonLogPath>
+```
+
+```text
+$ sma agent restart .
+sma version: 1.0.0
+❌ Failed to restart daemon: <error>
+```

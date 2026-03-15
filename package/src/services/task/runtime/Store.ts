@@ -12,6 +12,7 @@ import path from "node:path";
 import type { ShipTaskDefinitionV1, ShipTaskFrontmatterV1 } from "@services/task/types/Task.js";
 import { parseTaskMarkdown, buildTaskMarkdown } from "./Model.js";
 import {
+  isValidTaskId,
   getTaskDir,
   getTaskMdPath,
   getTaskRootDir,
@@ -24,7 +25,7 @@ import {
  */
 export type TaskListItem = {
   taskId: string;
-  title: string;
+  taskName: string;
   description: string;
   cron: string;
   status: string;
@@ -75,7 +76,7 @@ export async function listTasks(projectRoot: string): Promise<TaskListItem[]> {
     if (!entry.isDirectory()) continue;
     const taskId = String(entry.name || "").trim();
     if (!taskId || taskId.startsWith(".")) continue;
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(taskId)) continue;
+    if (!isValidTaskId(taskId)) continue;
 
     const taskMdPath = getTaskMdPath(root, taskId);
     let raw = "";
@@ -110,7 +111,7 @@ export async function listTasks(projectRoot: string): Promise<TaskListItem[]> {
 
     items.push({
       taskId,
-      title: parsed.task.frontmatter.title,
+      taskName: parsed.task.frontmatter.taskName,
       description: parsed.task.frontmatter.description,
       cron: parsed.task.frontmatter.cron,
       status: parsed.task.frontmatter.status,

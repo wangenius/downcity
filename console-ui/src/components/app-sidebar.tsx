@@ -8,6 +8,7 @@ import * as React from "react"
 import {
   CommandIcon,
   CpuIcon,
+  ChevronsUpDownIcon,
   Layers3Icon,
   MessageSquareTextIcon,
   PuzzleIcon,
@@ -28,9 +29,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { NavUser } from "@/components/nav-user"
 import { buildContextGroups } from "@/lib/context-groups"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export type DashboardView =
   | "globalOverview"
@@ -38,6 +48,7 @@ export type DashboardView =
   | "globalAgents"
   | "globalExtensions"
   | "agentOverview"
+  | "agentChannels"
   | "agentServices"
   | "agentTasks"
   | "agentLogs"
@@ -87,7 +98,8 @@ const globalItems: Array<{ key: DashboardView; title: string; icon: React.ReactN
 ]
 
 const agentItems: Array<{ key: DashboardView; title: string; icon: React.ReactNode }> = [
-  { key: "agentOverview", title: "Agent Overview", icon: <CpuIcon /> },
+  { key: "agentOverview", title: "Overview", icon: <CpuIcon /> },
+  { key: "agentChannels", title: "Channels", icon: <MessageSquareTextIcon /> },
   { key: "agentServices", title: "Services", icon: <ServerCogIcon /> },
   { key: "agentTasks", title: "Tasks", icon: <RadarIcon /> },
   { key: "agentLogs", title: "Logs", icon: <ScrollTextIcon /> },
@@ -105,50 +117,27 @@ export function AppSidebar({
   ...props
 }: AppSidebarProps) {
   const groupedContexts = buildContextGroups(contexts)
+  const selectedAgent =
+    agents.find((agent) => agent.id === selectedAgentId) ?? null
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
+    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border" {...props}>
+      <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-1.5!" render={<button type="button" />}>
-              <CommandIcon className="size-5!" />
-              <span className="text-base font-semibold">ShipMyAgent</span>
+            <SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-2.5!" render={<button type="button" />}>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
+                <CommandIcon className="size-4!" />
+              </span>
+              <span className="text-base font-semibold tracking-tight text-sidebar-foreground">ShipMyAgent</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-
-        <div className="px-2 pb-1">
-          {agents.length > 0 ? (
-            <Select
-              value={selectedAgentId}
-              onValueChange={(value) => {
-                if (value !== null) onAgentChange(value)
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="选择 agent" />
-              </SelectTrigger>
-              <SelectContent>
-                {agents.map((agent) => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {`${agent.name || "unknown-agent"}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="rounded-md border border-dashed border-border px-2 py-1.5 text-xs text-muted-foreground">
-              无运行中的 agent
-            </div>
-          )}
-        </div>
-
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="gap-1.5">
         <SidebarGroup>
-          <SidebarGroupLabel>Global</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Global</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {globalItems.map((item) => (
@@ -157,6 +146,7 @@ export function AppSidebar({
                     tooltip={item.title}
                     isActive={activeView === item.key}
                     onClick={() => onViewChange(item.key)}
+                    className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                   >
                     {item.icon}
                     <span>{item.title}</span>
@@ -168,7 +158,7 @@ export function AppSidebar({
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Agent</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Agent</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {agentItems.map((item) => (
@@ -177,6 +167,7 @@ export function AppSidebar({
                     tooltip={item.title}
                     isActive={activeView === item.key}
                     onClick={() => onViewChange(item.key)}
+                    className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                   >
                     {item.icon}
                     <span>{item.title}</span>
@@ -188,17 +179,18 @@ export function AppSidebar({
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Context</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Context</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip="Context Overview"
+                  tooltip="Overview"
                   isActive={activeView === "contextOverview"}
                   onClick={() => onViewChange("contextOverview")}
+                  className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                 >
                   <Layers3Icon />
-                  <span>Context Overview</span>
+                  <span>Overview</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {groupedContexts.map((group) => (
@@ -215,13 +207,16 @@ export function AppSidebar({
                   </SidebarMenuItem>
                   {group.items.map((item) => (
                     <SidebarMenuItem key={item.contextId}>
-                      <SidebarMenuButton
+                  <SidebarMenuButton
                         tooltip={item.contextId}
                         isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
                         onClick={() => onContextOpen(item.contextId)}
+                        className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                       >
                         {item.contextId === "local_ui" ? <MessageSquareTextIcon /> : null}
-                        <span className="w-full truncate font-mono text-xs">{item.contextId}</span>
+                        <span className="w-full truncate font-mono text-xs">
+                          {item.contextId === "local_ui" ? "chat here" : item.contextId}
+                        </span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
@@ -232,14 +227,71 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
-        <NavUser
-          user={{
-            name: "SMA Console",
-            email: "runtime@local",
-            avatar: "",
-          }}
-        />
+      <SidebarFooter className="border-t border-sidebar-border">
+        <div className="space-y-2 px-2 py-2">
+          <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Active Agent
+          </div>
+          {agents.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    className="h-auto w-full justify-between rounded-lg border-sidebar-border bg-background px-3 py-2"
+                  />
+                }
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-semibold text-primary-foreground">
+                    {String(selectedAgent?.name || "A")
+                      .trim()
+                      .slice(0, 1)
+                      .toUpperCase()}
+                  </span>
+                  <span className="min-w-0 text-left">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {selectedAgent?.name || "unknown-agent"}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {selectedAgent?.host && selectedAgent?.port
+                        ? `${selectedAgent.host}:${selectedAgent.port}`
+                        : "switch agent"}
+                    </span>
+                  </span>
+                </span>
+                <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top" sideOffset={8} className="max-h-80">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Select Agent</DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup
+                  value={selectedAgentId}
+                  onValueChange={(value) => {
+                    if (value !== null) onAgentChange(value)
+                  }}
+                >
+                  {agents.map((agent) => (
+                    <DropdownMenuRadioItem key={agent.id} value={agent.id}>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate font-medium">{agent.name || "unknown-agent"}</span>
+                        <span className="truncate text-[11px] text-muted-foreground">
+                          {agent.host && agent.port ? `${agent.host}:${agent.port}` : agent.id}
+                        </span>
+                      </span>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="rounded-lg border border-dashed border-sidebar-border px-2 py-1.5 text-xs text-muted-foreground">
+              无运行中的 agent
+            </div>
+          )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   )

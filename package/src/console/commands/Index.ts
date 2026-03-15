@@ -26,6 +26,7 @@ import { statusCommand } from "./Status.js";
 import { stopCommand } from "./Stop.js";
 import {
   getConsoleUiRuntimeStatus,
+  restartConsoleUiCommand,
   runConsoleUiRuntimeCommand,
   startConsoleUiCommand,
   stopConsoleUiCommand,
@@ -472,7 +473,7 @@ consoleCommand
 
 consoleCommand
   .command("ui [action]")
-  .description("管理 console UI（start/stop/status，默认 start）")
+  .description("管理 console UI（start/stop/restart/status，默认 start）")
   .option("-p, --port <port>", "UI 端口（默认 3001）", parsePort)
   .option("-h, --host <host>", "UI 主机（默认 127.0.0.1）")
   .helpOption("--help", "display help for command")
@@ -499,6 +500,14 @@ consoleCommand
           await stopConsoleUiCommand();
           return;
         }
+        if (resolvedAction === "restart") {
+          const cliPath = resolve(__dirname, "./Index.js");
+          await restartConsoleUiCommand({
+            options,
+            cliPath,
+          });
+          return;
+        }
         if (resolvedAction === "status") {
           const status = await getConsoleUiRuntimeStatus();
           const panelRows: Array<[string, string]> = [
@@ -518,7 +527,7 @@ consoleCommand
           return;
         }
         console.error(
-          `❌ Unknown action: ${resolvedAction}. Use start|stop|status.`,
+          `❌ Unknown action: ${resolvedAction}. Use start|stop|restart|status.`,
         );
         process.exit(1);
       },

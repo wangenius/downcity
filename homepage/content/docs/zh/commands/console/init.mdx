@@ -27,3 +27,21 @@ sma console init [--force]
 
 - 这是 console 级命令，不依赖 agent 项目路径。
 - 后续项目级配置请使用 [`sma console config`](/zh/docs/commands/console/config)。
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma console init
+sma version: 1.0.0
+✅ Created ~/.ship/ship.json
+✅ Updated ~/.ship/.env (added: LLM_PROVIDER_TYPE, LLM_API_KEY, LLM_MODEL, LLM_BASE_URL)
+✅ Initialized ~/.ship/ship.db model store
+```
+
+```text
+$ sma console init
+sma version: 1.0.0
+❌ API Key is required
+```

@@ -23,3 +23,23 @@ sma service restart chat --agent my-agent
 
 - [`sma service status`](/zh/docs/commands/service/status)
 - [`sma service command`](/zh/docs/commands/service/command)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma service restart task
+{
+  "success": true,
+  "service": "task"
+}
+```
+
+```text
+$ sma service restart unknown
+{
+  "success": false,
+  "error": "<service error>"
+}
+```

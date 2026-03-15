@@ -87,3 +87,29 @@ In non-interactive environments (CI/scripts), pass models explicitly, for exampl
 ```bash
 sma voice init SenseVoiceSmall
 ```
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma voice status
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "activeModel": "<modelId>"
+  }
+}
+```
+
+```text
+$ sma voice on SenseVoiceSmall
+{
+  "success": true,
+  "data": {
+    "changed": true
+  },
+  "message": "daemon not reachable, executed locally"
+}
+```

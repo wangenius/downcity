@@ -43,3 +43,28 @@ sma memory flush --context-id telegram-chat-123 --max-messages 40
 ```bash
 sma agent on
 ```
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma memory search "release decision"
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "hits": []
+  }
+}
+```
+
+```text
+$ sma memory flush --context-id <contextId> --max-messages 40
+{
+  "success": true,
+  "data": {
+    "success": true
+  }
+}
+```

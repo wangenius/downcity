@@ -64,3 +64,20 @@ sma agent on
 - [`sma task`](/en/docs/commands/service/task)
 - [`sma memory`](/en/docs/commands/service/memory)
 - [`sma skill`](/en/docs/commands/service/skill)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma service
+sma version: 1.0.0
+Usage: sma service [options] [command]
+Commands:
+  list
+  status <serviceName>
+  start <serviceName>
+  stop <serviceName>
+  restart <serviceName>
+  command <serviceName> <command>
+```

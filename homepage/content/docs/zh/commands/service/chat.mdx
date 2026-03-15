@@ -1,6 +1,6 @@
 ---
 title: sma chat
-description: chat service actions（status/test/reconnect/send/react/context/history）
+description: chat service actions（status/test/reconnect/open/close/send/react/context/history）
 ---
 
 # `sma chat`
@@ -20,12 +20,14 @@ sma chat <subcommand> [options]
 - `status`：查看渠道连接状态
 - `test`：测试渠道连通性
 - `reconnect`：重连渠道（默认全部，可按渠道）
+- `open`：打开渠道（写入 `ship.json` 为 `enabled=true`，已配置会尝试启动）
+- `close`：关闭渠道（写入 `ship.json` 为 `enabled=false`，并停止运行）
 - `send`：发送消息
 - `react`：给消息贴表情（当前主要 Telegram）
 - `context`：查看当前会话上下文快照
 - `history`：读取历史消息
 
-## `status/test/reconnect` 常用选项
+## `status/test/reconnect/open/close` 常用选项
 
 - `--channel <telegram|feishu|qq>`：只针对单个渠道执行（不传则全部）
 
@@ -64,6 +66,8 @@ sma chat history --chat-key telegram-chat-123 --limit 50
 sma chat status
 sma chat test --channel telegram
 sma chat reconnect --channel qq
+sma chat open --channel qq
+sma chat close --channel telegram
 ```
 
 ## 说明
@@ -72,4 +76,31 @@ sma chat reconnect --channel qq
 
 ```bash
 sma agent on
+```
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma chat status
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "channels": {
+      "telegram": {"state": "connected"}
+    }
+  }
+}
+```
+
+```text
+$ sma chat send --chat-key <chatKey> --text "done"
+{
+  "success": true,
+  "data": {
+    "success": true
+  }
+}
 ```

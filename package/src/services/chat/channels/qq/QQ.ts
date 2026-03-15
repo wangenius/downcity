@@ -429,6 +429,7 @@ export class QQBot extends BaseChatChannel {
             ? "connecting"
             : "stopped",
       detail: {
+        appId: this.appId || null,
         wsReadyState: readyState,
         wsContextId: this.wsContextId || null,
         reconnectAttempts: this.reconnectAttempts,

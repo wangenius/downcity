@@ -64,3 +64,20 @@ sma agent on
 - [`sma task`](/zh/docs/commands/service/task)
 - [`sma memory`](/zh/docs/commands/service/memory)
 - [`sma skill`](/zh/docs/commands/service/skill)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma service
+sma version: 1.0.0
+Usage: sma service [options] [command]
+Commands:
+  list
+  status <serviceName>
+  start <serviceName>
+  stop <serviceName>
+  restart <serviceName>
+  command <serviceName> <command>
+```

@@ -9,12 +9,17 @@
 
 ## 任务模型
 
-每个任务由 `./.ship/task/<taskId>/task.md` 定义，包含：
+每个任务由 `./.ship/task/<task_name>/task.md` 定义，包含：
 - frontmatter（结构化字段）
 - body（任务正文）
 
+`task_name` 规则（重要）：
+- 对外统一使用 `task_name`，不再区分 `taskId` 与 `title`。
+- 目录与运行上下文使用稳定键（内部与 `task_name` 同值）。
+- 建议把 `task_name` 设计为稳定、可复用的任务标识（避免频繁改名）。
+
 执行时会产生 run 目录：
-- `./.ship/task/<taskId>/<timestamp>/`
+- `./.ship/task/<task_name>/<timestamp>/`
 
 常见产物：
 - `input.md`：本次执行输入快照
@@ -53,13 +58,13 @@
 
 - 常用 action（CLI）：
   - `sma task list [--status enabled|paused|disabled]`
-  - `sma task create --title '...' --description '...' --context-id <contextId> [--cron '@manual'] [--kind agent|script] [--status ...|--activate]`
-  - `sma task run <taskId> [--reason '...']`
-  - `sma task delete <taskId>`
-  - `sma task update <taskId> [--title ...] [--description ...] [--cron ...] [--status ...|--activate] [--context-id ...]`
-  - `sma task status <taskId> <enabled|paused|disabled>`
-  - `sma task enable <taskId>`
-  - `sma task disable <taskId>`
+  - `sma task create --task-name '...' --description '...' --context-id <contextId> [--cron '@manual'] [--kind agent|script] [--status ...|--activate]`
+  - `sma task run <taskName> [--reason '...']`
+  - `sma task delete <taskName>`
+  - `sma task update <taskName> [--task-name ...] [--description ...] [--cron ...] [--status ...|--activate] [--context-id ...]`
+  - `sma task status <taskName> <enabled|paused|disabled>`
+  - `sma task enable <taskName>`
+  - `sma task disable <taskName>`
 - runtime 管理：
   - `sma service status task`
   - `sma service restart task`
@@ -78,12 +83,13 @@
 
 注意：
 - `run` 是手动立即执行，与状态无关。
-- 生产环境切换状态前，先确认 `taskId` 与目标状态。
+- 生产环境切换状态前，先确认 `task_name` 与目标状态。
 
 ## 字段约束与推荐
 
 ### 核心字段
-- `title`：任务标题（必填）
+- `task_name`：任务名称（唯一语义标识，必填）
+
 - `description`：任务描述（必填）
 - `cron`：cron 表达式（必填，支持 `@manual`）
 - `contextId`：任务执行上下文标识（必填）
@@ -110,15 +116,20 @@
 - 需要推理/生成：优先 `kind=agent`
 - 需要确定性自动化：优先 `kind=script`
 
-2. 修改前先读取上下文
-- 对未知任务先 `list`（必要时再 `run` 验证）
-- 变更前明确 `taskId`
+2. 创建前必须先查重（禁止重复语义任务）
+- 先执行 `list`，在同 `contextId` 下检查是否已存在“同语义/同场景/同目的”任务。
+- 若已存在：优先 `update` 或直接复用该 `task_name`，**不要再次 create**。
+- 只有当目标明显不同（不同目的/不同上下文）时才允许新建。
 
-3. 变更要最小化
+3. 修改前先读取上下文
+- 对未知任务先 `list`（必要时再 `run` 验证）
+- 变更前明确 `task_name`
+
+4. 变更要最小化
 - `update` 仅改必要字段，不要顺带改无关字段
 
-4. 返回结果必须可追踪
-- 成功时带 `taskId`（和关键状态）
+5. 返回结果必须可追踪
+- 成功时带 `task_name`（和关键状态）
 - 失败时给出明确错误原因（字段缺失/校验失败/执行失败）
 
 ## 典型流程
@@ -154,25 +165,25 @@
 
 当你把结果回复给用户时：
 - 先给结论（成功/失败）
-- 再给关键标识（`taskId`、必要时 `runDirRel`）
+- 再给关键标识（`task_name`、必要时 `runDirRel`）
 - 最后给下一步建议（例如是否 `enable`、是否补字段）
 
 避免：
 - 只说“失败了”但不给原因
 - 大段堆叠底层日志
-- 没有 `taskId` 导致用户无法追踪
+- 没有 `task_name` 导致用户无法追踪
 
 ## 建议模板（可复用）
 
 ### create 成功
-- 已创建任务：`<taskId>`
+- 已创建任务：`<task_name>`
 - 类型：`<kind>`
 - 调度：`<cron>`（`<timezone>`）
 - 执行上下文：`<contextId>`
 - 当前状态：`<status>`
 
 ### run 失败
-- 任务执行失败：`<taskId>`
+- 任务执行失败：`<task_name>`
 - 执行状态：`<executionStatus>`
 - 结果状态：`<resultStatus>`
 - 原因：`<error 或 resultErrors>`
@@ -181,6 +192,6 @@
 ## 关键原则（必须遵循）
 
 1. 先准确，再自动化。
-2. 修改型操作要保守，避免误改。
+2. 同语义任务只保留一个；先查重再创建。
 3. 所有返回都要带可追踪标识。
 4. 对 `script` 任务，正文即脚本，不要混入无关自然语言说明。

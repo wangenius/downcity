@@ -30,3 +30,28 @@ sma agent create .
 # Initialize in another directory
 sma agent create ./my-agent-project
 ```
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma agent create .
+sma version: 1.0.0
+🚀 Initializing ShipMyAgent project: <projectRoot>
+✅ Created PROFILE.md
+✅ Created SOUL.md
+✅ Created USER.md
+✅ Created ship.json
+✅ Created .ship/ directory structure
+✅ Created ship.schema.json
+```
+
+```text
+$ sma agent create .
+sma version: 1.0.0
+❌ Console model pool is empty.
+   Please configure at least one model before `sma agent create`:
+   1) sma console model create
+   2) or use sma console model update/test for scripting
+```

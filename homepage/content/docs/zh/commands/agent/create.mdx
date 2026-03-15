@@ -30,3 +30,28 @@ sma agent create .
 # 在指定目录初始化
 sma agent create ./my-agent-project
 ```
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ sma agent create .
+sma version: 1.0.0
+🚀 Initializing ShipMyAgent project: <projectRoot>
+✅ Created PROFILE.md
+✅ Created SOUL.md
+✅ Created USER.md
+✅ Created ship.json
+✅ Created .ship/ directory structure
+✅ Created ship.schema.json
+```
+
+```text
+$ sma agent create .
+sma version: 1.0.0
+❌ Console model pool is empty.
+   Please configure at least one model before `sma agent create`:
+   1) sma console model create
+   2) or use sma console model update/test for scripting
+```

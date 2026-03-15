@@ -27,3 +27,21 @@ sma console init [--force]
 
 - This is a console-level command and does not depend on an agent project path.
 - For project-level configuration, use [`sma console config`](/en/docs/commands/console/config).
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console init
+sma version: 1.0.0
+✅ Created ~/.ship/ship.json
+✅ Updated ~/.ship/.env (added: LLM_PROVIDER_TYPE, LLM_API_KEY, LLM_MODEL, LLM_BASE_URL)
+✅ Initialized ~/.ship/ship.db model store
+```
+
+```text
+$ sma console init
+sma version: 1.0.0
+❌ API Key is required
+```

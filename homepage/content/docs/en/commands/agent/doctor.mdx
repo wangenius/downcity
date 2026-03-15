@@ -27,3 +27,24 @@ sma agent doctor [path] [--fix]
 
 - [`sma agent status`](/en/docs/commands/agent/status)
 - [`sma agent off`](/en/docs/commands/agent/off)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma agent doctor .
+sma version: 1.0.0
+⚠️  Stale daemon state detected
+   project: <projectRoot>
+   stalePid: <pid>
+   reason: <reasons>
+   log: <daemonLogPath>
+   Run `sma agent doctor <path> --fix` to clean stale pid/meta.
+```
+
+```text
+$ sma agent doctor . --fix
+sma version: 1.0.0
+✅ Cleaned stale daemon pid/meta files
+```

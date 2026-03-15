@@ -13,6 +13,19 @@ description: Task definition lifecycle and scheduler service
 - Enable/disable/pause task status
 - Run tasks immediately
 - Manage cron runtime and scheduler reload
+- De-duplicate semantically equivalent task creation in the same `contextId` + `kind`
+
+## De-duplication On Create
+
+When calling `create`, task service checks existing tasks under the same `contextId` and `kind`.
+
+- If a task with the same semantic goal is found, service reuses that task instead of creating a duplicate.
+- Response returns the existing `taskName` and may include `reusedExisting=true`.
+
+## Naming
+
+- Use one name field only: `taskName`.
+- Do not split semantics into separate `taskId` and title fields in user workflows.
 
 ## Runtime operations
 
@@ -25,4 +38,3 @@ sma service command task list --payload '{"status":"enabled"}'
 
 - [`sma service`](/en/docs/commands/service/service)
 - [`sma task`](/en/docs/commands/service/task)
-

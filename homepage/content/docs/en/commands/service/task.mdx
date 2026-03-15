@@ -19,22 +19,26 @@ sma task <subcommand> [options]
 
 - `list`
 - `create`
-- `run <taskId>`
-- `update <taskId>`
-- `delete <taskId>`
-- `status <taskId> <enabled|paused|disabled>`
-- `enable <taskId>`
-- `disable <taskId>`
+- `run <taskName>`
+- `update <taskName>`
+- `delete <taskName>`
+- `status <taskName> <enabled|paused|disabled>`
+- `enable <taskName>`
+- `disable <taskName>`
 
 ## `create` key options
 
-- `--title <title>` (required)
+- `--task-name <taskName>` (required)
 - `--description <description>` (required)
 - `--context-id <contextId>` (required, task execution context identifier)
 - `--cron <cron>` (default `@manual`)
 - `--activate` (same as `--status enabled`)
 - `--kind <agent|script>`
 - `--time <ISO8601>` (with timezone; recommended with `--cron @manual`)
+
+Create behavior note:
+
+- If task service detects an equivalent semantic task under the same `contextId` + `kind`, it reuses the existing task instead of creating a duplicate.
 
 ## `update` common options
 
@@ -48,7 +52,7 @@ sma task <subcommand> [options]
 
 ```bash
 sma task list
-sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task create --task-name "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
 sma task run daily-check
 sma task update daily-check --cron "0 10 * * 1-5"
 sma task disable daily-check
@@ -63,3 +67,31 @@ sma agent on
 ```
 
 Task runs do not auto-send completion messages to chat channels; check the task run directory for results.
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma task list
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "tasks": []
+  }
+}
+```
+
+```text
+$ sma task run daily-check --reason "manual"
+{
+  "success": true,
+  "data": {
+    "success": true,
+    "accepted": true,
+    "message": "任务已经开始执行",
+    "taskName": "daily-check"
+  }
+}
+```

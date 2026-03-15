@@ -41,3 +41,31 @@ sma console config set model.primary fast
 sma console config unset services.chat.channels.telegram
 sma console config alias --dry-run
 ```
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console config get model.primary
+{
+  "success": true,
+  "projectRoot": "<projectRoot>",
+  "shipJsonPath": "<projectRoot>/ship.json",
+  "keyPath": "model.primary",
+  "value": "<modelId>"
+}
+```
+
+```text
+$ sma console config set model.primary gpt-5.4
+{
+  "success": true,
+  "projectRoot": "<projectRoot>",
+  "shipJsonPath": "<projectRoot>/ship.json",
+  "keyPath": "model.primary",
+  "value": "gpt-5.4",
+  "existed": true,
+  "previous": "<oldModelId>"
+}
+```

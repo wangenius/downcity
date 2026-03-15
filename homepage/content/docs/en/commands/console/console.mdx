@@ -31,7 +31,7 @@ sma console stop
 sma console restart
 sma console status
 sma console agents [--json]
-sma console ui [start|stop|status] [--port 3001]
+sma console ui [start|stop|restart|status] [--port 3001]
 ```
 
 ## Behavior
@@ -44,7 +44,7 @@ sma console ui [start|stop|status] [--port 3001]
 - `restart`: restart console.
 - `status`: print console process state and active managed agents.
 - `agents`: print active managed agents list.
-- `ui`: manage single UI instance (start/stop/status) and switch across agents in one page.
+- `ui`: manage single UI instance (start/stop/restart/status) and switch across agents in one page.
 
 ## Typical Flow
 
@@ -71,3 +71,21 @@ sma agent status .
 - [`sma service`](/en/docs/commands/service/service)
 - [`sma extension`](/en/docs/commands/extension/extension)
 - [Command Environment Requirements](/en/docs/commands/variables)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console
+sma version: 1.0.0
+Usage: sma console [options] [command]
+Commands:
+  run
+  ui [action]
+  start
+  stop
+  restart
+  status
+  agents
+```

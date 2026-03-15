@@ -83,3 +83,41 @@ sma console model test model <modelId>
 - [`sma console config`](/en/docs/commands/console/config)
 - [`sma agent create`](/en/docs/commands/agent/create)
 - [`sma agent on`](/en/docs/commands/agent/on)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ sma console model list
+{
+  "success": true,
+  "providers": [
+    {
+      "id": "<providerId>",
+      "type": "openai",
+      "apiKey": "***masked***",
+      "apiKeyMasked": "sk-xx***xxxx"
+    }
+  ],
+  "models": [
+    {
+      "id": "<modelId>",
+      "providerId": "<providerId>",
+      "name": "<upstreamModelName>",
+      "isPaused": false
+    }
+  ],
+  "providerIds": ["<providerId>"],
+  "modelIds": ["<modelId>"]
+}
+```
+
+```text
+$ sma console model pause <modelId>
+{
+  "success": true,
+  "modelId": "<modelId>",
+  "isPaused": true
+}
+```

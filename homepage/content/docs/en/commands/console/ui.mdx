@@ -31,8 +31,8 @@ sma console ui [action] [options]
 ## Behavior
 
 - Requires console first: `sma console start`.
-- On startup, UI loads active agents from console registry.
-- Global Agents panel shows each agent's runtime endpoint, current model binding, and chat identity snapshots (e.g. Telegram bot username), and supports direct model switching from the table.
+- On startup, UI loads agents from console registry (running + history).
+- Global Agents panel shows runtime state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
 - Global / Overview only shows global health signals (console, fleet, channels, extensions, config risk).
 - Global / Console Runtime shows console runtime details and console-scope config file status.

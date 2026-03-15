@@ -45,7 +45,7 @@ import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js
 import { allocateAvailablePort } from "@/console/daemon/PortAllocator.js";
 import {
   listConsoleAgents,
-  removeConsoleAgentEntry,
+  markConsoleAgentStopped,
 } from "@/console/runtime/ConsoleRegistry.js";
 import type { ConsoleAgentRuntimeView } from "@/agent/types/Console.js";
 import {
@@ -229,7 +229,7 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
         } else {
           console.log(`ℹ️  already stopped: ${item.projectRoot}`);
         }
-        await removeConsoleAgentEntry(item.projectRoot);
+        await markConsoleAgentStopped(item.projectRoot);
       } catch (error) {
         console.log(`❌ stop failed: ${item.projectRoot}`);
         console.log(`   error: ${String(error)}`);
@@ -323,8 +323,8 @@ async function resolveRunningConsoleAgents(): Promise<ConsoleAgentRuntimeView[]>
     const projectRoot = resolve(String(entry.projectRoot || "").trim() || ".");
     const daemonPid = await readDaemonPid(projectRoot);
     if (!daemonPid || !isDaemonProcessAlive(daemonPid)) {
-      // 关键点（中文）：registry 只显示活跃 daemon，遇到 stale 记录直接移除，避免无限膨胀。
-      await removeConsoleAgentEntry(projectRoot);
+      // 关键点（中文）：列表展示“运行中”时，遇到 stale 记录只标记 stopped，不删除历史。
+      await markConsoleAgentStopped(projectRoot);
       continue;
     }
 
@@ -454,8 +454,8 @@ program.helpOption("--help", "display help for command");
 
 program
   .command("init")
-  .description("初始化 console（模型/插件等全局配置，写入 ~/.ship/）")
-  .option("--force [enabled]", "允许覆盖 ~/.ship/ship.json 与关键 env（危险操作）", parseBoolean)
+  .description("初始化 console（模型/插件等全局配置，写入 ~/.ship/ship.db）")
+  .option("--force [enabled]", "允许清空并重建 ~/.ship/ship.db 中的 console 数据（危险操作）", parseBoolean)
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (options: { force?: boolean }) => {
     await consoleInitCommand(options);

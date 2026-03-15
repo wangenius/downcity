@@ -14,14 +14,17 @@ ShipMyAgent 的核心配置由 4 部分组成：
 
 ## `ship.json` 关键字段
 
-### `start`
+### `start`（仅高级场景）
 
-控制启动参数（可被 CLI 参数覆盖）：
+`sma agent start` 的端口由 console 自动分配。
+
+因此常规场景不需要在项目 `ship.json` 配置 `start.port`。
+
+仅在你手动运行前台 runtime 或调试特殊网络绑定时，才考虑配置：
 
 ```json
 {
   "start": {
-    "port": 5314,
     "host": "0.0.0.0"
   }
 }
@@ -87,7 +90,7 @@ agent 绑定模型 ID（映射到 console 全局模型池）：
 
 ### `extensions.*`（说明）
 
-extension 配置不在项目 `ship.json` 里维护，而是统一在 console 全局 `~/.ship/ship.json` 中维护。
+extension 配置不在项目 `ship.json` 里维护，而是统一在 console 全局 `~/.ship/ship.db` 中维护。
 
 例如 voice：
 
@@ -121,7 +124,6 @@ sma console config get extensions.voice
 sma console config get
 sma console config get model.primary
 sma console model list
-sma console config set start.port 3100
 sma console config unset services.chat.channels.telegram
 ```
 

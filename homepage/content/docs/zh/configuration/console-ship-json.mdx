@@ -1,0 +1,68 @@
+---
+title: Console 配置存储（ship.db）
+description: Console 全局配置已统一收敛到 ~/.ship/ship.db（含加密存储）
+---
+
+# Console 配置存储（ship.db）
+
+从当前版本开始，Console 不再使用：
+
+1. `~/.ship/ship.json`
+2. `~/.ship/.env`
+
+Console 全局配置统一存储在：
+
+- `~/.ship/ship.db`
+
+## 存储内容
+
+`ship.db` 中包含两类数据：
+
+1. 模型池（providers/models）
+2. Console 全局配置（例如 `extensions.*`）
+
+其中敏感字段（如 API Key）采用加密存储。
+
+## 与 Agent 项目配置的边界
+
+以下文件仍然是 Agent 项目级配置（保留不变）：
+
+1. `<agent>/ship.json`
+2. `<agent>/.env`
+
+也就是：
+
+- Console：`~/.ship/ship.db`
+- Agent：项目目录下的 `ship.json/.env`
+
+## 常用操作
+
+初始化 Console（写入 `ship.db`）：
+
+```bash
+sma console init
+```
+
+查看/修改 console 级扩展配置：
+
+```bash
+sma console config get extensions.voice
+sma console config set extensions.voice.enabled true
+```
+
+管理模型池：
+
+```bash
+sma console model list
+sma console model create
+```
+
+## 运行文件
+
+以下运行文件仍保留在文件系统（非配置）：
+
+1. `~/.ship/console/console.pid`
+2. `~/.ship/console/ui.pid`
+3. `~/.ship/console/console.log`
+4. `~/.ship/console/ui.log`
+5. `~/.ship/console/agents.json`

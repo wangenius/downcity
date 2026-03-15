@@ -14,14 +14,17 @@ ShipMyAgent is configured with four core files:
 
 ## Key `ship.json` fields
 
-### `start`
+### `start` (advanced only)
 
-Startup options (CLI flags override these values):
+For `sma agent start`, ports are auto-allocated by console.
+
+So in normal usage you do not need `start.port` in project `ship.json`.
+
+Only configure `start` when manually running foreground runtime or debugging special host binding:
 
 ```json
 {
   "start": {
-    "port": 5314,
     "host": "0.0.0.0"
   }
 }
@@ -87,14 +90,13 @@ Skills discovery roots:
 
 ### `extensions.*` (note)
 
-Extension config is not maintained in project `ship.json`. It is maintained in console-global `~/.ship/ship.json`.
+Extension config is not maintained in project `ship.json`. It is maintained in console-global `~/.ship/ship.db`.
 
 Example for voice:
 
 ```bash
 sma voice on SenseVoiceSmall
 sma console config get extensions.voice
-```
 ```
 
 ### `permissions`
@@ -122,7 +124,6 @@ Repository write and command execution policies:
 sma console config get
 sma console config get model.primary
 sma console model list
-sma console config set start.port 3100
 sma console config unset services.chat.channels.telegram
 ```
 

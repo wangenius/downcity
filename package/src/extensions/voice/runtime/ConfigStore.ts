@@ -1,9 +1,9 @@
 import path from "node:path";
 import os from "node:os";
-import fs from "fs-extra";
-import { getConsoleShipJsonPath } from "@/console/runtime/ConsolePaths.js";
+import { getConsoleShipDbPath } from "@/console/runtime/ConsolePaths.js";
 import type { ShipConfig } from "@/agent/types/ShipConfig.js";
 import type { VoiceModelId, VoiceExtensionConfig } from "@/agent/types/Voice.js";
+import { ConsoleStore } from "@/utils/store/index.js";
 
 /**
  * 保障 `extensions.voice` 结构存在并返回可写对象。
@@ -84,32 +84,34 @@ export async function persistShipConfig(params: {
   projectRoot: string;
   config: ShipConfig;
 }): Promise<string> {
-  const shipJsonPath = getConsoleShipJsonPath();
-  const existingRaw = (await fs.pathExists(shipJsonPath))
-    ? ((await fs.readJson(shipJsonPath)) as unknown)
-    : {};
-  const existingConfig =
-    existingRaw && typeof existingRaw === "object" && !Array.isArray(existingRaw)
-      ? (existingRaw as Record<string, unknown>)
-      : {};
+  const store = new ConsoleStore();
+  try {
+    const existingRaw = store.getSecureSettingJsonSync<unknown>("console_config");
+    const existingConfig =
+      existingRaw && typeof existingRaw === "object" && !Array.isArray(existingRaw)
+        ? (existingRaw as Record<string, unknown>)
+        : {};
 
-  const nextExtensions =
-    existingConfig.extensions &&
-    typeof existingConfig.extensions === "object" &&
-    !Array.isArray(existingConfig.extensions)
-      ? (existingConfig.extensions as Record<string, unknown>)
-      : {};
+    const nextExtensions =
+      existingConfig.extensions &&
+      typeof existingConfig.extensions === "object" &&
+      !Array.isArray(existingConfig.extensions)
+        ? (existingConfig.extensions as Record<string, unknown>)
+        : {};
 
-  nextExtensions.voice = params.config.extensions?.voice || {};
-  existingConfig.extensions = nextExtensions;
+    nextExtensions.voice = params.config.extensions?.voice || {};
+    existingConfig.extensions = nextExtensions;
 
-  if (typeof existingConfig.name !== "string" || !existingConfig.name.trim()) {
-    existingConfig.name = "console";
+    if (typeof existingConfig.name !== "string" || !existingConfig.name.trim()) {
+      existingConfig.name = "console";
+    }
+    if (typeof existingConfig.version !== "string" || !existingConfig.version.trim()) {
+      existingConfig.version = "1.0.0";
+    }
+
+    store.setSecureSettingJsonSync("console_config", existingConfig);
+    return getConsoleShipDbPath();
+  } finally {
+    store.close();
   }
-  if (typeof existingConfig.version !== "string" || !existingConfig.version.trim()) {
-    existingConfig.version = "1.0.0";
-  }
-
-  await fs.writeJson(shipJsonPath, existingConfig, { spaces: 2 });
-  return shipJsonPath;
 }

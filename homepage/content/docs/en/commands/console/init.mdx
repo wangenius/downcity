@@ -1,6 +1,6 @@
 ---
 title: sma console init
-description: Initialize global console config (~/.ship/ship.json and ~/.ship/.env)
+description: Initialize global console config (stored in ~/.ship/ship.db)
 ---
 
 # `sma console init`
@@ -15,8 +15,7 @@ sma console init [--force]
 
 ## Behavior
 
-- Writes `~/.ship/ship.json` (global default config)
-- Writes/updates `~/.ship/.env` (global environment variables)
+- Writes/updates `~/.ship/ship.db` (global config + model pool)
 - Generates `~/.ship/schema/ship.schema.json` (editor schema)
 
 ## Key option
@@ -35,8 +34,7 @@ The examples below are aligned with current command implementations in `package/
 ```text
 $ sma console init
 sma version: 1.0.0
-✅ Created ~/.ship/ship.json
-✅ Updated ~/.ship/.env (added: LLM_PROVIDER_TYPE, LLM_API_KEY, LLM_MODEL, LLM_BASE_URL)
+✅ Saved console config into ~/.ship/ship.db (encrypted)
 ✅ Initialized ~/.ship/ship.db model store
 ```
 

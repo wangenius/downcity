@@ -2,9 +2,9 @@
  * Env Config：环境与配置读取工具模块。
  *
  * 职责说明：
- * 1. 先加载 console（`~/.ship/.env`）的全局环境变量，再加载项目根目录 `.env` 覆盖同名键。
+ * 1. 仅加载项目根目录 `.env`（console 级配置已迁移到 `~/.ship/ship.db`）。
  * 2. 读取 `ship.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
- * 3. 支持 `ship.json` 继承：console ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
+ * 3. 支持配置继承：console(db) ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
  * 4. 统一导出 Ship 配置类型，避免业务模块直接依赖具体配置文件路径。
  */
 import dotenv from "dotenv";
@@ -12,19 +12,14 @@ import fs from "fs-extra";
 import path from "path";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import { getConsoleDotenvPath, getConsoleShipJsonPath } from "@/console/runtime/ConsolePaths.js";
+import { ConsoleStore } from "@/utils/store/index.js";
 
 export type { ShipConfig };
 
 export function loadProjectDotenv(projectRoot: string): void {
   // 关键点（中文）
-  // - 先加载 console 的全局环境变量（不覆盖已有 env）
-  // - 再加载项目 `.env`，允许覆盖 console 的同名键（agent 优先）
-  const operationEnvPath = getConsoleDotenvPath();
-  if (fs.existsSync(operationEnvPath)) {
-    dotenv.config({ path: operationEnvPath, override: false });
-  }
-
+  // - console 级配置不再走 `~/.ship/.env`（统一迁移到 ship.db）
+  // - 仅加载项目 `.env`（agent 级）
   const projectEnvPath = path.join(projectRoot, ".env");
   if (fs.existsSync(projectEnvPath)) {
     dotenv.config({ path: projectEnvPath, override: true });
@@ -98,11 +93,25 @@ function readShipJsonLayer(filePath: string): ResolvedConfigValue {
   return resolveEnvPlaceholdersDeep(raw);
 }
 
+function readConsoleConfigLayerFromStore(): ResolvedConfigValue {
+  let store: ConsoleStore | null = null;
+  try {
+    store = new ConsoleStore();
+    const raw = store.getSecureSettingJsonSync<unknown>("console_config");
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+    return resolveEnvPlaceholdersDeep(raw as ResolvedConfigValue);
+  } catch {
+    return undefined;
+  } finally {
+    store?.close();
+  }
+}
+
 /**
  * 校验项目层是否误配 extensions。
  *
  * 关键点（中文）
- * - `extensions` 统一由 console 全局层（`~/.ship/ship.json`）管理。
+ * - `extensions` 统一由 console 全局层（`~/.ship/ship.db`）管理。
  * - agent 项目 `ship.json` 只允许配置绑定与项目级参数，不允许写 `extensions`。
  */
 function assertNoProjectExtensionsLayer(
@@ -112,7 +121,7 @@ function assertNoProjectExtensionsLayer(
   if (!isPlainObject(layer)) return;
   if (!Object.prototype.hasOwnProperty.call(layer, "extensions")) return;
   throw new Error(
-    `Invalid ship.json: extensions must be configured in console ~/.ship/ship.json, not project file (${filePath})`,
+    `Invalid ship.json: extensions must be configured in console ~/.ship/ship.db, not project file (${filePath})`,
   );
 }
 
@@ -134,14 +143,9 @@ function collectAncestorShipJsonPaths(projectRoot: string): string[] {
 export function loadShipConfig(projectRoot: string): ShipConfig {
   loadProjectDotenv(projectRoot);
 
-  const operationShipJsonPath = getConsoleShipJsonPath();
-  const operationLayer = fs.existsSync(operationShipJsonPath)
-    ? readShipJsonLayer(operationShipJsonPath)
-    : undefined;
+  const operationLayer = readConsoleConfigLayerFromStore();
 
-  const ancestorShipJsonPaths = collectAncestorShipJsonPaths(projectRoot).filter(
-    (p) => path.resolve(p) !== path.resolve(operationShipJsonPath),
-  );
+  const ancestorShipJsonPaths = collectAncestorShipJsonPaths(projectRoot);
   if (ancestorShipJsonPaths.length === 0) {
     throw new Error("ship.json not found in project directory");
   }

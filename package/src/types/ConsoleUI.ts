@@ -33,17 +33,17 @@ export interface ConsoleUiAgentOption {
   /**
    * 可访问的 runtime 主机地址（已归一化，不会是 0.0.0.0/::）。
    */
-  host: string;
+  host?: string;
 
   /**
    * runtime 端口。
    */
-  port: number;
+  port?: number;
 
   /**
    * runtime 基础地址（例如 http://127.0.0.1:5314）。
    */
-  baseUrl: string;
+  baseUrl?: string;
 
   /**
    * registry 首次登记时间（ISO8601）。
@@ -54,6 +54,11 @@ export interface ConsoleUiAgentOption {
    * registry 最近刷新时间（ISO8601）。
    */
   updatedAt: string;
+
+  /**
+   * 最近停止时间（ISO8601，可选）。
+   */
+  stoppedAt?: string;
 
   /**
    * 当前读取到的 daemon pid（仅 running=true 时有值）。

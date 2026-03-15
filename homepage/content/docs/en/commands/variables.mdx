@@ -22,7 +22,7 @@ Commands like `sma chat`, `sma task`, `sma memory`, `sma skill`, and `sma voice`
 
 | Command Group | Required Environment | Optional Environment | Notes |
 | --- | --- | --- | --- |
-| `sma console init` | Writable `~/.ship/` | Pre-set `LLM_API_KEY` (can be used as default init input) | Writes `~/.ship/ship.json` and `~/.ship/.env` |
+| `sma console init` | Writable `~/.ship/` | Pre-set `LLM_API_KEY` (can be used as default init input) | Writes `~/.ship/ship.db` (sensitive fields encrypted) |
 | `sma console start/stop/restart/status/agents` | Writable `~/.ship/console/` | None | Manages global console process and registry |
 | `sma console ui` | Console is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
 | `sma agent create` | Writable target directory | None | Generates `ship.json`, `PROFILE.md`, `.ship/` |

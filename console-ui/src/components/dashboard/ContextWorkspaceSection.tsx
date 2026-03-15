@@ -99,7 +99,13 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_220px]">
-            <Select value={selectedContextId || undefined} onValueChange={onSelectContext}>
+            <Select
+              value={selectedContextId || undefined}
+              onValueChange={(value) => {
+                if (!value) return
+                onSelectContext(value)
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="选择 context" />
               </SelectTrigger>

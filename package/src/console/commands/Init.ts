@@ -520,7 +520,7 @@ export async function initCommand(
 
   console.log("\n🎉 Initialization complete!\n");
   console.log(`📦 Agent model.primary: ${primaryModelId}`);
-  console.log("🌐 Model pool source: ~/.ship/ship.json (console global)\n");
+  console.log("🌐 Model pool source: ~/.ship/ship.db (console global)\n");
 
   if (selectedChannels.has("feishu")) {
     console.log("📱 Feishu chat channel enabled");

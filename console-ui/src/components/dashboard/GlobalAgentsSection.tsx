@@ -42,10 +42,14 @@ export interface GlobalAgentsSectionProps {
    * 刷新回调。
    */
   onRefresh: () => void
+  /**
+   * 启动历史 agent。
+   */
+  onStartAgent: (agentId: string) => void
 }
 
 export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
-  const { agents, selectedAgentId, model, onSelectAgent, onSwitchModel, onRefresh } = props
+  const { agents, selectedAgentId, model, onSelectAgent, onSwitchModel, onRefresh, onStartAgent } = props
   const availableModels = Array.isArray(model?.availableModels) ? model.availableModels : []
   const [targetModelByAgent, setTargetModelByAgent] = React.useState<Record<string, string>>({})
 
@@ -91,6 +95,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
               <TableBody>
                 {agents.map((agent) => {
                   const isSelected = agent.id === selectedAgentId
+                  const isRunning = agent.running !== false
                   const profiles = Array.isArray(agent.chatProfiles) ? agent.chatProfiles : []
                   return (
                     <TableRow key={agent.id} data-state={isSelected ? "selected" : undefined}>
@@ -102,8 +107,12 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                       </TableCell>
                       <TableCell className="whitespace-normal">
                         <div className="text-xs text-foreground">
-                          <div>{`${agent.host || "127.0.0.1"}:${agent.port || "-"}`}</div>
-                          <div className="text-muted-foreground">{`pid ${agent.daemonPid || "-"}`}</div>
+                          <div>{isRunning ? `${agent.host || "127.0.0.1"}:${agent.port || "-"}` : "-"}</div>
+                          <div className="text-muted-foreground">
+                            {isRunning
+                              ? `pid ${agent.daemonPid || "-"}`
+                              : `stopped ${String(agent.stoppedAt || agent.updatedAt || "-")}`}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="min-w-[15rem] whitespace-normal">
@@ -142,7 +151,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                         )}
                       </TableCell>
                       <TableCell>
-                        {profiles.length === 0 ? (
+                        {!isRunning ? (
+                          <span className="text-xs text-muted-foreground">离线（历史记录）</span>
+                        ) : profiles.length === 0 ? (
                           <span className="text-xs text-muted-foreground">无已启动 channel</span>
                         ) : (
                           <div className="flex flex-col gap-2">
@@ -163,13 +174,19 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                         )}
                       </TableCell>
                       <TableCell>
-                        {isSelected ? (
-                          <Badge variant="outline" className="border-border bg-muted/45 text-foreground">
-                            selected
-                          </Badge>
+                        {isRunning ? (
+                          isSelected ? (
+                            <Badge variant="outline" className="border-border bg-muted/45 text-foreground">
+                              selected
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-border bg-background text-muted-foreground">
+                              standby
+                            </Badge>
+                          )
                         ) : (
-                          <Badge variant="outline" className="border-border bg-background text-muted-foreground">
-                            standby
+                          <Badge variant="outline" className="border-border bg-muted/45 text-foreground">
+                            stopped
                           </Badge>
                         )}
                       </TableCell>
@@ -179,6 +196,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                             size="sm"
                             variant="outline"
                             disabled={
+                              !isRunning ||
                               !targetModelByAgent[agent.id] ||
                               targetModelByAgent[agent.id] === String(agent.primaryModelId || "")
                             }
@@ -186,10 +204,15 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                           >
                             应用模型
                           </Button>
+                          {!isRunning ? (
+                            <Button size="sm" variant="outline" onClick={() => onStartAgent(agent.id)}>
+                              启动
+                            </Button>
+                          ) : null}
                           <Button
                             size="sm"
                             variant={isSelected ? "secondary" : "outline"}
-                            disabled={isSelected}
+                            disabled={!isRunning || isSelected}
                             onClick={() => onSelectAgent(agent.id)}
                           >
                             {isSelected ? "当前 Agent" : "切换"}

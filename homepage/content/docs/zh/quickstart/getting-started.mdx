@@ -1,6 +1,6 @@
 ---
 title: 快速开始
-description: 10 分钟启动一个可对话的 ShipMyAgent Runtime
+description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
 ---
 
 # 快速开始
@@ -14,7 +14,23 @@ shipmyagent --version
 
 > 可用短命令 `sma`，与 `shipmyagent` 等价。
 
-## 2. 初始化项目
+## 2. 初始化 Console（仅首次）
+
+```bash
+sma console init
+```
+
+该命令会生成 Console 全局配置（位于 `~/.ship/`）。
+
+## 3. 启动 Console
+
+```bash
+sma console start
+```
+
+> `sma agent start` 依赖 console 先运行。
+
+## 4. 初始化项目
 
 ```bash
 cd /path/to/your-repo
@@ -28,7 +44,7 @@ sma agent create .
 - `ship.json`
 - `.ship/` 运行目录
 
-## 3. 配置 LLM
+## 5. 配置 LLM
 
 在项目根目录创建 `.env`（不要提交到 Git）：
 
@@ -48,7 +64,7 @@ LLM_API_KEY=your_key
 }
 ```
 
-## 4. 启动运行时
+## 6. 启动 Agent 运行时
 
 启动（默认后台 daemon，适合长期运行）：
 
@@ -62,17 +78,22 @@ sma agent start
 sma agent start --foreground
 ```
 
-## 5. 验证 service 状态
+## 7. 验证运行状态
 
 ```bash
-curl http://localhost:5314/health
-curl http://localhost:5314/api/status
+sma agent status
+sma console agents
 ```
 
-## 6. 可选：配置命令别名
+说明：
+
+- agent 端口由 console 自动分配，不建议在快速开始里固定写死端口。
+- 多 agent 场景下，每个 agent 端口可能不同。
+
+## 8. 可选：启动 Console UI
 
 ```bash
-sma console config alias
+sma console ui start
 ```
 
 ## 下一步

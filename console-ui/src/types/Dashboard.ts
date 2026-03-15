@@ -19,6 +19,14 @@ export interface UiAgentOption {
    */
   name: string;
   /**
+   * agent 项目根路径。
+   */
+  projectRoot?: string;
+  /**
+   * daemon 是否运行中。
+   */
+  running?: boolean;
+  /**
    * Agent 运行主机地址。
    */
   host?: string;
@@ -27,9 +35,21 @@ export interface UiAgentOption {
    */
   port?: number;
   /**
+   * Agent runtime baseUrl。
+   */
+  baseUrl?: string;
+  /**
    * Agent daemon 进程号。
    */
   daemonPid?: number;
+  /**
+   * 最近停止时间（ISO8601，可选）。
+   */
+  stoppedAt?: string;
+  /**
+   * 最近更新时间（ISO8601，可选）。
+   */
+  updatedAt?: string;
   /**
    * 当前 agent 的 `ship.json.model.primary`。
    */

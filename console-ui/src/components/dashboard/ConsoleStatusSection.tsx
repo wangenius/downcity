@@ -56,7 +56,13 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
   const runningExtensions = extensions.filter((item) => String(item.state || "") === "running").length
   const errorExtensions = extensions.filter((item) => String(item.state || "") === "error").length
   const consoleConfigItems = configStatus.filter((item) => item.scope === "console")
-  const nonOkConfigItems = consoleConfigItems.filter((item) => item.status !== "ok")
+  // 关键说明（中文）：
+  // 仅必需 console 文件参与“异常”统计；可选文件缺失不算异常。
+  const requiredConsoleKeys = new Set(["ship_db", "console_pid", "agents_registry"])
+  const requiredConsoleItems = consoleConfigItems.filter((item) => requiredConsoleKeys.has(item.key))
+  const optionalConsoleItems = consoleConfigItems.filter((item) => !requiredConsoleKeys.has(item.key))
+  const nonOkRequiredConfigItems = requiredConsoleItems.filter((item) => item.status !== "ok")
+  const missingOptionalCount = optionalConsoleItems.filter((item) => item.status === "missing").length
 
   return (
     <div className="space-y-4">
@@ -112,7 +118,7 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="text-xs text-muted-foreground">
-            {`异常 ${nonOkConfigItems.length} / 总数 ${consoleConfigItems.length}`}
+            {`异常 ${nonOkRequiredConfigItems.length} / 必需 ${requiredConsoleItems.length}（可选缺失 ${missingOptionalCount}）`}
           </div>
           {consoleConfigItems.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
@@ -124,6 +130,7 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
                 <thead>
                   <tr className="bg-muted/35 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                     <th className="px-3 py-2 font-medium">File</th>
+                    <th className="px-3 py-2 font-medium">Level</th>
                     <th className="px-3 py-2 font-medium">Status</th>
                     <th className="px-3 py-2 font-medium">Reason</th>
                     <th className="px-3 py-2 font-medium">Updated</th>
@@ -135,12 +142,19 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
                     <tr key={`${item.scope}:${item.key}:${item.path}`} className="border-t border-border/70">
                       <td className="px-3 py-2 text-sm font-medium">{item.label}</td>
                       <td className="px-3 py-2 text-xs">
+                        <span className="inline-flex rounded-full border border-border bg-muted/35 px-2 py-0.5 text-muted-foreground">
+                          {requiredConsoleKeys.has(item.key) ? "required" : "optional"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs">
                         <span
                           className={
                             item.status === "ok"
                               ? "inline-flex rounded-full border border-border bg-muted/45 px-2 py-0.5 text-foreground"
                               : item.status === "missing"
-                                ? "inline-flex rounded-full border border-border bg-muted/35 px-2 py-0.5 text-muted-foreground"
+                                ? requiredConsoleKeys.has(item.key)
+                                  ? "inline-flex rounded-full border border-destructive/35 bg-destructive/10 px-2 py-0.5 text-destructive"
+                                  : "inline-flex rounded-full border border-border bg-muted/35 px-2 py-0.5 text-muted-foreground"
                                 : "inline-flex rounded-full border border-destructive/35 bg-destructive/10 px-2 py-0.5 text-destructive"
                           }
                         >

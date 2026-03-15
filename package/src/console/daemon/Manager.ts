@@ -24,7 +24,7 @@ import {
   type DaemonStaleReason,
 } from "@agent/types/Daemon.js";
 import {
-  removeConsoleAgentEntry,
+  markConsoleAgentStopped,
   upsertConsoleAgentEntry,
 } from "@/console/runtime/ConsoleRegistry.js";
 
@@ -190,9 +190,9 @@ export const cleanupStaleDaemonFiles = async (
   // 关键注释：pid 文件存在但进程已退出，属于“脏状态”，这里直接清理。
   await fs.remove(getDaemonPidPath(projectRoot));
   await fs.remove(getDaemonMetaPath(projectRoot));
-  // 关键点（中文）：僵尸 daemon 清理时同步移除 console registry 记录，避免列表残留。
+  // 关键点（中文）：僵尸 daemon 清理时标记 stopped，保留历史记录。
   try {
-    await removeConsoleAgentEntry(projectRoot);
+    await markConsoleAgentStopped(projectRoot);
   } catch {
     // ignore registry sync errors
   }
@@ -266,7 +266,11 @@ export const startDaemonProcess = async (params: {
 
   // 关键点（中文）：启动成功后必须登记到 console registry，否则该 daemon 视为“无效启动”。
   try {
-    await upsertConsoleAgentEntry({ projectRoot, pid: child.pid });
+    await upsertConsoleAgentEntry({
+      projectRoot,
+      pid: child.pid,
+      status: "running",
+    });
   } catch (error) {
     // 回滚：无法登记时立即停止 daemon 并清理状态文件。
     try {
@@ -330,9 +334,9 @@ export const stopDaemonProcess = async (params: {
 
   await fs.remove(getDaemonPidPath(projectRoot));
   await fs.remove(getDaemonMetaPath(projectRoot));
-  // 关键点（中文）：停止后移除 console registry 记录，保证列表只保留活跃 daemon。
+  // 关键点（中文）：停止后标记为 stopped，保留历史记录。
   try {
-    await removeConsoleAgentEntry(projectRoot);
+    await markConsoleAgentStopped(projectRoot);
   } catch {
     // ignore registry sync errors
   }

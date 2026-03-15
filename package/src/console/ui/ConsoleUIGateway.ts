@@ -15,11 +15,14 @@ import path from "node:path";
 import { basename } from "node:path";
 import { fileURLToPath } from "url";
 import {
+  startDaemonProcess,
   getDaemonLogPath,
   getDaemonMetaPath,
   isProcessAlive,
   readDaemonPid,
 } from "@/console/daemon/Manager.js";
+import { buildRunArgsFromOptions } from "@/console/daemon/CliArgs.js";
+import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js";
 import {
   getProfileMdPath,
   getShipJsonPath,
@@ -31,10 +34,8 @@ import {
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
 import {
   getConsoleAgentRegistryPath,
-  getConsoleDotenvPath,
   getConsolePidPath,
   getConsoleShipDbPath,
-  getConsoleShipJsonPath,
   getConsoleUiPidPath,
 } from "@/console/runtime/ConsolePaths.js";
 import { ConsoleStore } from "@utils/store/index.js";
@@ -157,6 +158,24 @@ export class ConsoleUIGateway {
       }
     });
 
+    this.app.post("/api/ui/agents/start", async (c) => {
+      try {
+        const body = (await c.req.json().catch(() => ({}))) as {
+          agentId?: unknown;
+          projectRoot?: unknown;
+        };
+        const rawProject = String(body.projectRoot || body.agentId || "").trim();
+        if (!rawProject) {
+          return c.json({ success: false, error: "projectRoot is required" }, 400);
+        }
+        const projectRoot = path.resolve(rawProject);
+        const payload = await this.startAgentByProjectRoot(projectRoot);
+        return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
     this.app.get("/api/ui/config-status", async (c) => {
       try {
         const requestedAgentId = this.readRequestedAgentId(c.req.raw);
@@ -197,6 +216,15 @@ export class ConsoleUIGateway {
           );
         }
 
+        if (!selection.baseUrl) {
+          return c.json(
+            {
+              success: false,
+              error: "Selected agent runtime endpoint is unavailable.",
+            },
+            503,
+          );
+        }
         const upstreamUrl = this.buildUpstreamUrl(reqUrl, selection.baseUrl);
         const response = await this.forwardRequest(c.req.raw, upstreamUrl);
         return response;
@@ -338,11 +366,14 @@ export class ConsoleUIGateway {
     };
   }
 
-  private async buildAgentOption(projectRoot: string, startedAt: string, updatedAt: string): Promise<ConsoleUiAgentOption | null> {
+  private async buildAgentOption(
+    projectRoot: string,
+    startedAt: string,
+    updatedAt: string,
+    stoppedAt?: string,
+  ): Promise<ConsoleUiAgentOption | null> {
     const daemonPid = await readDaemonPid(projectRoot);
-    if (!daemonPid || !isProcessAlive(daemonPid)) {
-      return null;
-    }
+    const running = Boolean(daemonPid && isProcessAlive(daemonPid));
 
     const endpoint = await this.resolveRuntimeEndpoint(projectRoot);
 
@@ -359,23 +390,26 @@ export class ConsoleUIGateway {
       // ignore
     }
 
-    const chatProfiles = await this.resolveAgentChatProfiles({
-      ship,
-      baseUrl: `http://${endpoint.host}:${endpoint.port}`,
-    });
+    const chatProfiles = running
+      ? await this.resolveAgentChatProfiles({
+          ship,
+          baseUrl: `http://${endpoint.host}:${endpoint.port}`,
+        })
+      : [];
 
     return {
       id: projectRoot,
       name: displayName,
       projectRoot,
-      running: true,
-      host: endpoint.host,
-      port: endpoint.port,
-      baseUrl: `http://${endpoint.host}:${endpoint.port}`,
+      running,
+      host: running ? endpoint.host : undefined,
+      port: running ? endpoint.port : undefined,
+      baseUrl: running ? `http://${endpoint.host}:${endpoint.port}` : undefined,
       startedAt,
       updatedAt,
-      daemonPid,
-      logPath: getDaemonLogPath(projectRoot),
+      stoppedAt: String(stoppedAt || "").trim() || undefined,
+      daemonPid: running ? daemonPid || undefined : undefined,
+      logPath: running ? getDaemonLogPath(projectRoot) : undefined,
       chatProfiles,
       primaryModelId: String(ship?.model?.primary || "").trim() || undefined,
     };
@@ -485,7 +519,7 @@ export class ConsoleUIGateway {
     }
   }
 
-  private async listRunningAgents(): Promise<ConsoleUiAgentOption[]> {
+  private async listKnownAgents(): Promise<ConsoleUiAgentOption[]> {
     const entries = await listConsoleAgents();
     const agents: ConsoleUiAgentOption[] = [];
 
@@ -496,12 +530,18 @@ export class ConsoleUIGateway {
         projectRoot,
         String(entry.startedAt || ""),
         String(entry.updatedAt || ""),
+        String(entry.stoppedAt || ""),
       );
       if (!option) continue;
       agents.push(option);
     }
 
-    return agents.sort((a, b) => a.name.localeCompare(b.name));
+    return agents.sort((a, b) => {
+      const runningA = a.running === true ? 1 : 0;
+      const runningB = b.running === true ? 1 : 0;
+      if (runningA !== runningB) return runningB - runningA;
+      return a.name.localeCompare(b.name);
+    });
   }
 
   private selectAgentId(
@@ -509,16 +549,19 @@ export class ConsoleUIGateway {
     requestedAgentId: string,
   ): string {
     const requested = String(requestedAgentId || "").trim();
-    if (requested && agents.some((agent) => agent.id === requested)) {
-      return requested;
+    if (requested) {
+      const requestedAgent = agents.find((agent) => agent.id === requested);
+      if (requestedAgent?.running === true) return requested;
     }
+    const running = agents.find((agent) => agent.running === true);
+    if (running) return running.id;
     return agents[0]?.id || "";
   }
 
   private async buildAgentsResponse(
     requestedAgentId: string,
   ): Promise<ConsoleUiAgentsResponse> {
-    const agents = await this.listRunningAgents();
+    const agents = await this.listKnownAgents();
     const selectedAgentId = this.selectAgentId(agents, requestedAgentId);
     return {
       success: true,
@@ -705,22 +748,10 @@ export class ConsoleUIGateway {
 
     const consoleChecks = await Promise.all([
       this.readConfigFileStatus({
-        key: "ship_json",
-        scope: "console",
-        label: "Console ship.json",
-        filePath: getConsoleShipJsonPath(),
-      }),
-      this.readConfigFileStatus({
         key: "ship_db",
         scope: "console",
         label: "Console ship.db",
         filePath: getConsoleShipDbPath(),
-      }),
-      this.readConfigFileStatus({
-        key: "dotenv",
-        scope: "console",
-        label: "Console .env",
-        filePath: getConsoleDotenvPath(),
       }),
       this.readConfigFileStatus({
         key: "console_pid",
@@ -798,10 +829,58 @@ export class ConsoleUIGateway {
   ): Promise<ConsoleUiAgentOption | null> {
     const payload = await this.buildAgentsResponse(requestedAgentId);
     if (!payload.selectedAgentId) return null;
-    return (
-      payload.agents.find((agent) => agent.id === payload.selectedAgentId) ||
-      null
+    const selected = payload.agents.find(
+      (agent) => agent.id === payload.selectedAgentId,
     );
+    if (!selected || selected.running !== true) return null;
+    return selected;
+  }
+
+  private async startAgentByProjectRoot(projectRoot: string): Promise<{
+    success: boolean;
+    projectRoot: string;
+    started: boolean;
+    pid?: number;
+    logPath?: string;
+    message?: string;
+  }> {
+    const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
+    const daemonPid = await readDaemonPid(normalizedRoot);
+    if (daemonPid && isProcessAlive(daemonPid)) {
+      return {
+        success: true,
+        projectRoot: normalizedRoot,
+        started: false,
+        pid: daemonPid,
+        logPath: getDaemonLogPath(normalizedRoot),
+        message: "already_running",
+      };
+    }
+
+    const profilePath = getProfileMdPath(normalizedRoot);
+    const shipPath = getShipJsonPath(normalizedRoot);
+    if (!(await fs.pathExists(profilePath)) || !(await fs.pathExists(shipPath))) {
+      throw new Error(
+        `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and ship.json`,
+      );
+    }
+
+    ensureRuntimeModelBindingReady(normalizedRoot);
+    const args = await buildRunArgsFromOptions(normalizedRoot, {});
+    const cliPath = path.resolve(__dirname, "../commands/Index.js");
+    const started = await startDaemonProcess({
+      projectRoot: normalizedRoot,
+      cliPath,
+      args,
+    });
+    return {
+      success: true,
+      projectRoot: normalizedRoot,
+      started: true,
+      pid: started.pid,
+      logPath: started.logPath,
+      message: "started",
+    };
   }
 
   private buildUpstreamUrl(requestUrl: URL, baseUrl: string): string {

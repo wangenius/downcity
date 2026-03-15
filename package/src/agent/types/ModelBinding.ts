@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - agent 侧不再维护 provider/models 细节。
  * - 仅声明“当前 agent 使用哪个 console 全局模型 ID”。
- * - 实际模型池由 `~/.ship/ship.json` 的 `llm` 统一管理。
+ * - 实际模型池由 `~/.ship/ship.db` 统一管理。
  */
 export interface AgentModelBindingConfig {
   /**
@@ -16,4 +16,3 @@ export interface AgentModelBindingConfig {
    */
   primary: string;
 }
-

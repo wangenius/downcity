@@ -1,6 +1,6 @@
 ---
 title: sma console init
-description: 初始化全局 console 配置（~/.ship/ship.json 与 ~/.ship/.env）
+description: 初始化全局 console 配置（统一写入 ~/.ship/ship.db）
 ---
 
 # `sma console init`
@@ -15,8 +15,7 @@ sma console init [--force]
 
 ## 行为
 
-- 写入 `~/.ship/ship.json`（全局默认配置）
-- 写入/更新 `~/.ship/.env`（全局环境变量）
+- 写入/更新 `~/.ship/ship.db`（全局配置 + 模型池）
 - 生成 `~/.ship/schema/ship.schema.json`（编辑器 schema）
 
 ## 常用参数
@@ -35,8 +34,7 @@ sma console init [--force]
 ```text
 $ sma console init
 sma version: 1.0.0
-✅ Created ~/.ship/ship.json
-✅ Updated ~/.ship/.env (added: LLM_PROVIDER_TYPE, LLM_API_KEY, LLM_MODEL, LLM_BASE_URL)
+✅ Saved console config into ~/.ship/ship.db (encrypted)
 ✅ Initialized ~/.ship/ship.db model store
 ```
 

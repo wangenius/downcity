@@ -271,6 +271,10 @@ export interface UseConsoleDashboardResult {
    */
   switchModelForAgent: (agentId: string, primaryModelId: string) => Promise<void>;
   /**
+   * 启动历史 agent（未运行记录）。
+   */
+  startAgentFromHistory: (agentId: string) => Promise<void>;
+  /**
    * 新增或更新 provider。
    */
   upsertModelProvider: (input: {
@@ -1029,6 +1033,32 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshDashboard, requestJson, selectedAgentId, showToast],
   );
 
+  const startAgentFromHistory = useCallback(
+    async (agentId: string) => {
+      const targetAgentId = String(agentId || "").trim();
+      if (!targetAgentId) return;
+      try {
+        const data = await requestJson<{
+          success?: boolean;
+          started?: boolean;
+          pid?: number;
+        }>("/api/ui/agents/start", {
+          method: "POST",
+          body: JSON.stringify({ agentId: targetAgentId }),
+        });
+        await refreshDashboard(targetAgentId);
+        if (data.started === true) {
+          showToast(`agent 已启动（pid ${String(data.pid || "-")}）`, "success");
+          return;
+        }
+        showToast("agent 已在运行", "info");
+      } catch (error) {
+        showToast(`启动 agent 失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshDashboard, requestJson, showToast],
+  );
+
   const upsertModelProvider = useCallback(
     async (input: {
       id: string;
@@ -1275,6 +1305,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     sendLocalMessage,
     switchModel,
     switchModelForAgent,
+    startAgentFromHistory,
     upsertModelProvider,
     removeModelProvider,
     testModelProvider,

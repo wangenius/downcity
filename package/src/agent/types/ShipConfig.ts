@@ -173,7 +173,7 @@ export interface ShipConfig {
    * extensions 配置。
    *
    * 关键点（中文）
-   * - 扩展能力统一放在 console 全局 `~/.ship/ship.json` 的 `extensions` 下。
+   * - 扩展能力统一放在 console 全局 `~/.ship/ship.db` 的 `console_config.extensions` 下。
    * - 运行时会把该全局层合并到 `config.extensions` 供 service 调用。
    * - agent 项目 `ship.json` 不应配置该字段。
    */
@@ -192,7 +192,7 @@ export interface ShipConfig {
    *
    * 关键点（中文）
    * - agent 只声明绑定关系（`model.primary`）。
-   * - provider/models 的完整配置统一由 console 全局 `~/.ship/ship.json` 管理。
+   * - provider/models 的完整配置统一由 console 全局 `~/.ship/ship.db` 管理。
    */
   model?: AgentModelBindingConfig;
   /**

@@ -42,6 +42,23 @@ export interface ConsoleAgentRegistryEntry {
    * - 每次 upsert 都会更新，便于定位最后活跃点。
    */
   updatedAt: string;
+
+  /**
+   * 最近一次登记时的运行状态。
+   *
+   * 关键点（中文）
+   * - `running`：当前已知 daemon 存活。
+   * - `stopped`：历史记录（daemon 已停止）。
+   */
+  status?: "running" | "stopped";
+
+  /**
+   * 最近一次停止时间（ISO8601，可选）。
+   *
+   * 关键点（中文）
+   * - 仅在 `status=stopped` 时有意义。
+   */
+  stoppedAt?: string;
 }
 
 /**
@@ -103,4 +120,3 @@ export interface ConsoleAgentRuntimeView {
    */
   logPath: string;
 }
-

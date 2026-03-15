@@ -5,7 +5,6 @@
 import { Card, CardContent } from "@/components/ui/card"
 import type {
   UiAgentOption,
-  UiChatChannelStatus,
   UiConfigStatusItem,
   UiExtensionRuntimeItem,
 } from "@/types/Dashboard"
@@ -52,10 +51,6 @@ export interface GlobalOverviewSectionProps {
    */
   agents: UiAgentOption[]
   /**
-   * channel 列表。
-   */
-  chatChannels: UiChatChannelStatus[]
-  /**
    * extension 列表。
    */
   extensions: UiExtensionRuntimeItem[]
@@ -66,15 +61,18 @@ export interface GlobalOverviewSectionProps {
 }
 
 export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
-  const { topbarStatus, topbarError, agents, chatChannels, extensions, configStatus } = props
-  const onlineChannels = chatChannels.filter(
-    (item) => String(item.linkState || "").toLowerCase() === "connected",
-  ).length
-  const disconnectedChannels = chatChannels.length - onlineChannels
+  const { topbarStatus, topbarError, agents, extensions, configStatus } = props
   const extensionErrors = extensions.filter((item) => String(item.state || "").toLowerCase() === "error").length
   const consoleItems = configStatus.filter((item) => item.scope === "console")
-  const nonOkConfigItems = consoleItems.filter((item) => item.status !== "ok")
-  const warningCount = disconnectedChannels + extensionErrors + nonOkConfigItems.length
+  // 关键说明（中文）：
+  // global overview 只看 console 必需配置，避免把可选文件缺失误判为异常。
+  const requiredConsoleKeys = new Set(["ship_db", "console_pid", "agents_registry"])
+  const requiredConsoleItems = consoleItems.filter((item) => requiredConsoleKeys.has(item.key))
+  const nonOkRequiredConfigItems = requiredConsoleItems.filter((item) => item.status !== "ok")
+  const warningCount = extensionErrors + nonOkRequiredConfigItems.length
+  const nonOkRequiredConfigSummary = nonOkRequiredConfigItems
+    .map((item) => `${item.label}(${item.reason || item.status})`)
+    .join(", ")
 
   const riskSignals: Array<{ title: string; detail: string; tone: "good" | "warn" }> = [
     {
@@ -83,19 +81,17 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
       tone: topbarError ? "warn" : "good",
     },
     {
-      title: disconnectedChannels > 0 ? "Chat 链路存在掉线" : "Chat 链路全部在线",
-      detail: `${onlineChannels}/${chatChannels.length} connected`,
-      tone: disconnectedChannels > 0 ? "warn" : "good",
-    },
-    {
       title: extensionErrors > 0 ? "Extension 存在 error 状态" : "Extension 运行稳定",
       detail: `error ${extensionErrors} / total ${extensions.length}`,
       tone: extensionErrors > 0 ? "warn" : "good",
     },
     {
-      title: nonOkConfigItems.length > 0 ? "Console 配置存在异常项" : "Console 配置完整",
-      detail: `non-ok ${nonOkConfigItems.length} / total ${consoleItems.length}`,
-      tone: nonOkConfigItems.length > 0 ? "warn" : "good",
+      title: nonOkRequiredConfigItems.length > 0 ? "Console 必需配置存在异常项" : "Console 必需配置完整",
+      detail:
+        nonOkRequiredConfigItems.length > 0
+          ? `non-ok ${nonOkRequiredConfigItems.length} / required ${requiredConsoleItems.length} · ${nonOkRequiredConfigSummary}`
+          : `non-ok 0 / required ${requiredConsoleItems.length}`,
+      tone: nonOkRequiredConfigItems.length > 0 ? "warn" : "good",
     },
   ]
 
@@ -104,13 +100,17 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Console" value={topbarError ? "error" : "running"} sub={topbarStatus} />
         <MetricCard label="Agents" value={String(agents.length)} sub="registered runtimes" />
-        <MetricCard label="Channels" value={`${onlineChannels}/${chatChannels.length}`} sub="connected / total" />
         <MetricCard label="Extensions" value={String(extensions.length)} sub={`error ${extensionErrors}`} />
+        <MetricCard
+          label="Console Config"
+          value={`${requiredConsoleItems.length - nonOkRequiredConfigItems.length}/${requiredConsoleItems.length}`}
+          sub="required ok / required total"
+        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <MetricCard label="Console Configs" value={String(consoleItems.length)} sub="console scope files" />
-        <MetricCard label="Risk Signals" value={String(warningCount)} sub="channel + extension + config" />
+        <MetricCard label="Console Configs" value={String(consoleItems.length)} sub="all console scope files" />
+        <MetricCard label="Risk Signals" value={String(warningCount)} sub="extension + required config" />
       </div>
 
       <Card className="border-border/70 bg-card/90 shadow-sm">

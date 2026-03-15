@@ -19,7 +19,7 @@ This page is a dedicated explanation of how `service` and `extension` differ.
 | Primary role | Agent execution mechanism (context-oriented) | Console/platform extension mechanism |
 | command/action | Registered and orchestrated by agent runtime | Registered and invoked by service/CLI |
 | Typical call direction | `agent -> service` | `service -> extension`, `CLI -> extension` |
-| Config scope | `ship.json.services.*` (per-project) | `~/.ship/ship.json.extensions.*` (console-global) |
+| Config scope | `ship.json.services.*` (per-project) | `~/.ship/ship.db` `console_config.extensions.*` (console-global) |
 | Context dependency | Strong (ContextManager/model/persistor) | Weak or none as core design goal |
 | Asset sharing | Mostly project runtime state (`.ship/*`) | Often global reusable assets (voice defaults to `~/.ship/models/voice`) |
 
@@ -39,7 +39,7 @@ This page is a dedicated explanation of how `service` and `extension` differ.
 - Confirmed: **yes (by default)**.
 - Note:
   - voice model directory defaults to `~/.ship/models/voice`, so multiple agents can reuse downloaded models.
-  - extension switches/config are managed at console-global layer (`~/.ship/ship.json.extensions.*`).
+  - extension switches/config are managed at console-global layer (`~/.ship/ship.db` `console_config.extensions.*`).
   - if `modelsDir` is set to a project path, sharing can be disabled intentionally.
 
 ## Call Graph

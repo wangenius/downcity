@@ -14,13 +14,17 @@ const ENCRYPTION_ALGO = "aes-256-gcm";
 
 let cachedKey: Buffer | null = null;
 
-async function resolveKeyFilePath(): Promise<string> {
+function resolveKeyFilePathSync(): string {
   const runtimeDir = getConsoleRuntimeDirPath();
-  await fs.ensureDir(runtimeDir);
+  fs.ensureDirSync(runtimeDir);
   return `${runtimeDir}/${MODEL_DB_KEY_PATH}`;
 }
 
-async function loadOrCreateKey(): Promise<Buffer> {
+async function resolveKeyFilePath(): Promise<string> {
+  return resolveKeyFilePathSync();
+}
+
+function loadOrCreateKeySync(): Buffer {
   if (cachedKey) return cachedKey;
   const envKey = String(process.env.SMA_MODEL_DB_KEY || "").trim();
   if (envKey) {
@@ -28,9 +32,9 @@ async function loadOrCreateKey(): Promise<Buffer> {
     return cachedKey;
   }
 
-  const keyPath = await resolveKeyFilePath();
-  if (await fs.pathExists(keyPath)) {
-    const raw = String(await fs.readFile(keyPath, "utf8")).trim();
+  const keyPath = resolveKeyFilePathSync();
+  if (fs.existsSync(keyPath)) {
+    const raw = String(fs.readFileSync(keyPath, "utf8")).trim();
     if (raw) {
       const parsed = Buffer.from(raw, "base64");
       if (parsed.length === 32) {
@@ -41,16 +45,20 @@ async function loadOrCreateKey(): Promise<Buffer> {
   }
 
   const next = crypto.randomBytes(32);
-  await fs.writeFile(keyPath, next.toString("base64"), { mode: 0o600 });
+  fs.writeFileSync(keyPath, next.toString("base64"), { mode: 0o600 });
   cachedKey = next;
   return cachedKey;
 }
 
+async function loadOrCreateKey(): Promise<Buffer> {
+  return loadOrCreateKeySync();
+}
+
 /**
- * 加密字符串。
+ * 同步加密字符串（用于同步配置读取链路）。
  */
-export async function encryptText(plainText: string): Promise<string> {
-  const key = await loadOrCreateKey();
+export function encryptTextSync(plainText: string): string {
+  const key = loadOrCreateKeySync();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ENCRYPTION_ALGO, key, iv);
   const encrypted = Buffer.concat([cipher.update(plainText, "utf8"), cipher.final()]);
@@ -59,10 +67,10 @@ export async function encryptText(plainText: string): Promise<string> {
 }
 
 /**
- * 解密字符串。
+ * 同步解密字符串（用于同步配置读取链路）。
  */
-export async function decryptText(cipherText: string): Promise<string> {
-  const key = await loadOrCreateKey();
+export function decryptTextSync(cipherText: string): string {
+  const key = loadOrCreateKeySync();
   const packed = Buffer.from(cipherText, "base64");
   if (packed.length < 28) {
     throw new Error("Invalid encrypted payload");
@@ -76,3 +84,18 @@ export async function decryptText(cipherText: string): Promise<string> {
   return plain.toString("utf8");
 }
 
+/**
+ * 加密字符串。
+ */
+export async function encryptText(plainText: string): Promise<string> {
+  await loadOrCreateKey();
+  return encryptTextSync(plainText);
+}
+
+/**
+ * 解密字符串。
+ */
+export async function decryptText(cipherText: string): Promise<string> {
+  await loadOrCreateKey();
+  return decryptTextSync(cipherText);
+}

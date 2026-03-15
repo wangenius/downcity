@@ -25,7 +25,7 @@ In one line:
 
 1. Start console: `sma console start`
 2. Start agent in project: `sma agent start`
-3. Agent runtime loads config layers (project `ship.json.services.*` + console-global `~/.ship/ship.json.extensions.*` + global model pool)
+3. Agent runtime loads config layers (project `ship.json.services.*` + console-global `~/.ship/ship.db` `console_config.extensions.*` + global model pool)
 4. Inbound messages/tasks enter agent scheduling
 5. Agent invokes service/extension to complete execution
 6. Runtime traces are persisted to `.ship/*`

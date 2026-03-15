@@ -22,6 +22,12 @@ import type {
   ServiceListResponse,
 } from "@agent/types/Services.js";
 
+function isRegistryEntryRunning(
+  entry: { status?: "running" | "stopped" },
+): boolean {
+  return entry.status !== "stopped";
+}
+
 function parsePortOption(value: string): number {
   const port = Number.parseInt(value, 10);
   if (!Number.isFinite(port) || Number.isNaN(port) || !Number.isInteger(port) || port <= 0 || port > 65535) {
@@ -73,6 +79,7 @@ async function resolveProjectRootByAgentName(agentName: string): Promise<{
 
   const entries = await listConsoleAgents();
   const matchedRoots = entries
+    .filter((entry) => isRegistryEntryRunning(entry))
     .map((entry) => path.resolve(String(entry.projectRoot || "").trim() || "."))
     .filter((root, index, all) => all.indexOf(root) === index)
     .filter((root) => {
@@ -124,6 +131,7 @@ async function resolveServiceProjectRoot(options: ServiceCliBaseOptions): Promis
   const entries = await listConsoleAgents();
   const registered = entries.some(
     (entry) =>
+      isRegistryEntryRunning(entry) &&
       path.resolve(String(entry.projectRoot || "").trim() || ".") === projectRoot,
   );
   if (!registered) {

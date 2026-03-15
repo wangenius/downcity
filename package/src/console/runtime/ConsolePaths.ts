@@ -3,9 +3,7 @@
  *
  * 关键点（中文）
  * - console 运行在用户目录 `~/.ship/` 下，作为“全局中台”。
- * - `~/.ship/ship.json`：console 的默认配置（模型、插件等全局配置）。
- * - `~/.ship/ship.db`：console 的 SQLite 模型池（providers/models）。
- * - `~/.ship/.env`：console 的默认环境变量（例如 API Key）。
+ * - `~/.ship/ship.db`：console 的 SQLite 数据库（模型池 + 全局配置）。
  * - `~/.ship/console/*`：console 进程与 registry 的运行文件（pid/log/agents）。
  */
 
@@ -20,7 +18,7 @@ export function getConsoleRootDirPath(): string {
 }
 
 /**
- * console 默认 ship.json 路径（用户级）。
+ * 历史兼容：console 旧版 ship.json 路径（当前不再使用）。
  */
 export function getConsoleShipJsonPath(): string {
   return path.join(getConsoleRootDirPath(), "ship.json");
@@ -34,7 +32,7 @@ export function getConsoleShipDbPath(): string {
 }
 
 /**
- * console 默认 .env 路径（用户级）。
+ * 历史兼容：console 旧版 .env 路径（当前不再使用）。
  */
 export function getConsoleDotenvPath(): string {
   return path.join(getConsoleRootDirPath(), ".env");

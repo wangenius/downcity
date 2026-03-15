@@ -74,6 +74,7 @@ export function App() {
     sendLocalMessage,
     switchModel,
     switchModelForAgent,
+    startAgentFromHistory,
     upsertModelProvider,
     removeModelProvider,
     testModelProvider,
@@ -135,7 +136,6 @@ export function App() {
               topbarStatus={topbarStatus}
               topbarError={topbarError}
               agents={agents}
-              chatChannels={chatChannels}
               extensions={extensions}
               configStatus={configStatus}
             />
@@ -197,6 +197,9 @@ export function App() {
               onRefresh={() => void refreshDashboard(selectedAgentId)}
               onSwitchModel={(agentId, primaryModelId) => {
                 void switchModelForAgent(agentId, primaryModelId)
+              }}
+              onStartAgent={(agentId) => {
+                void startAgentFromHistory(agentId)
               }}
             />
           </section>

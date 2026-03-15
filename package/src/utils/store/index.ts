@@ -20,7 +20,7 @@ import {
   getConsoleRootDirPath,
   getConsoleShipDbPath,
 } from "@/console/runtime/ConsolePaths.js";
-import { decryptText, encryptText } from "./crypto.js";
+import { decryptText, decryptTextSync, encryptText, encryptTextSync } from "./crypto.js";
 import { modelProvidersTable, modelsTable } from "./schema.js";
 
 function nowIso(): string {
@@ -77,6 +77,14 @@ export class ConsoleStore {
     this.sqlite.exec(`
       CREATE INDEX IF NOT EXISTS models_provider_id_idx
       ON models(provider_id);
+    `);
+    this.sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS console_secure_settings (
+        key TEXT PRIMARY KEY NOT NULL,
+        value_encrypted TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
     `);
   }
 
@@ -369,5 +377,97 @@ export class ConsoleStore {
   clearAll(): void {
     this.sqlite.exec("DELETE FROM models;");
     this.sqlite.exec("DELETE FROM model_providers;");
+    this.sqlite.exec("DELETE FROM console_secure_settings;");
+  }
+
+  /**
+   * 同步读取 console 加密配置项（JSON）。
+   */
+  getSecureSettingJsonSync<T>(key: string): T | null {
+    const settingKey = String(key || "").trim();
+    if (!settingKey) throw new Error("setting key cannot be empty");
+    const row = this.sqlite
+      .prepare(
+        "SELECT value_encrypted FROM console_secure_settings WHERE key = ? LIMIT 1;",
+      )
+      .get(settingKey) as { value_encrypted?: unknown } | undefined;
+    if (!row || typeof row.value_encrypted !== "string" || !row.value_encrypted) {
+      return null;
+    }
+    const raw = decryptTextSync(row.value_encrypted);
+    return JSON.parse(raw) as T;
+  }
+
+  /**
+   * 同步写入 console 加密配置项（JSON）。
+   */
+  setSecureSettingJsonSync(key: string, value: unknown): void {
+    const settingKey = String(key || "").trim();
+    if (!settingKey) throw new Error("setting key cannot be empty");
+    const raw = JSON.stringify(value ?? null);
+    const encrypted = encryptTextSync(raw);
+    const now = nowIso();
+    this.sqlite
+      .prepare(
+        `
+        INSERT INTO console_secure_settings (key, value_encrypted, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value_encrypted = excluded.value_encrypted,
+          updated_at = excluded.updated_at;
+        `,
+      )
+      .run(settingKey, encrypted, now, now);
+  }
+
+  /**
+   * 删除 console 加密配置项。
+   */
+  removeSecureSetting(key: string): void {
+    const settingKey = String(key || "").trim();
+    if (!settingKey) throw new Error("setting key cannot be empty");
+    this.sqlite
+      .prepare("DELETE FROM console_secure_settings WHERE key = ?;")
+      .run(settingKey);
+  }
+
+  /**
+   * 异步读取 console 加密配置项（JSON）。
+   */
+  async getSecureSettingJson<T>(key: string): Promise<T | null> {
+    const settingKey = String(key || "").trim();
+    if (!settingKey) throw new Error("setting key cannot be empty");
+    const row = this.sqlite
+      .prepare(
+        "SELECT value_encrypted FROM console_secure_settings WHERE key = ? LIMIT 1;",
+      )
+      .get(settingKey) as { value_encrypted?: unknown } | undefined;
+    if (!row || typeof row.value_encrypted !== "string" || !row.value_encrypted) {
+      return null;
+    }
+    const raw = await decryptText(row.value_encrypted);
+    return JSON.parse(raw) as T;
+  }
+
+  /**
+   * 异步写入 console 加密配置项（JSON）。
+   */
+  async setSecureSettingJson(key: string, value: unknown): Promise<void> {
+    const settingKey = String(key || "").trim();
+    if (!settingKey) throw new Error("setting key cannot be empty");
+    const raw = JSON.stringify(value ?? null);
+    const encrypted = await encryptText(raw);
+    const now = nowIso();
+    this.sqlite
+      .prepare(
+        `
+        INSERT INTO console_secure_settings (key, value_encrypted, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value_encrypted = excluded.value_encrypted,
+          updated_at = excluded.updated_at;
+        `,
+      )
+      .run(settingKey, encrypted, now, now);
   }
 }

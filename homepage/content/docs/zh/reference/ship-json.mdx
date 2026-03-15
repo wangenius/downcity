@@ -55,14 +55,14 @@ agent 启动时：
 
 运行时会合并多层配置：
 
-1. `~/.ship/ship.json`（全局）
+1. `~/.ship/ship.db` 中的 `console_config`（全局）
 2. 项目目录链上的 `ship.json`
 
 其中：
 
 - `model.primary` 来自项目层；
 - 模型池来自全局 SQLite；
-- `extensions.*` 只从 console 全局 `~/.ship/ship.json` 读取，项目层不允许配置。
+- `extensions.*` 只从 console 全局 `~/.ship/ship.db` 的 `console_config` 读取，项目层不允许配置。
 
 ## 5) 推荐操作方式
 

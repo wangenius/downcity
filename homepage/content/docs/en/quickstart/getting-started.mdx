@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: Launch a conversational ShipMyAgent runtime in about 10 minutes
+description: Correct startup sequence for Console + Agent in about 10 minutes
 ---
 
 # Getting Started
@@ -14,7 +14,23 @@ shipmyagent --version
 
 > `sma` is the same binary as `shipmyagent`.
 
-## 2. Initialize a repository
+## 2. Initialize Console (first time only)
+
+```bash
+sma console init
+```
+
+This creates console-global config under `~/.ship/`.
+
+## 3. Start Console
+
+```bash
+sma console start
+```
+
+> `sma agent start` requires console to be running first.
+
+## 4. Initialize a repository
 
 ```bash
 cd /path/to/your-repo
@@ -28,7 +44,7 @@ Initialization generates:
 - `ship.json`
 - `.ship/` runtime directory
 
-## 3. Configure LLM
+## 5. Configure LLM
 
 Create `.env` at project root (do not commit):
 
@@ -48,7 +64,7 @@ Minimal `ship.json` example:
 }
 ```
 
-## 4. Start runtime
+## 6. Start Agent runtime
 
 Start runtime (default: background daemon):
 
@@ -62,17 +78,22 @@ Use foreground mode when you want logs in the current terminal:
 sma agent start --foreground
 ```
 
-## 5. Verify health
+## 7. Verify runtime state
 
 ```bash
-curl http://localhost:5314/health
-curl http://localhost:5314/api/status
+sma agent status
+sma console agents
 ```
 
-## 6. Optional: add alias to shell rc
+Notes:
+
+- Agent ports are auto-allocated by console, so Quickstart should not assume a fixed port.
+- In multi-agent setups, each agent can have a different runtime port.
+
+## 8. Optional: start Console UI
 
 ```bash
-sma console config alias
+sma console ui start
 ```
 
 ## Next

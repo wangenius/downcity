@@ -65,6 +65,18 @@ function normalizeRegistryEntry(
       pid,
       startedAt,
       updatedAt,
+      status:
+        entry.status === "stopped"
+          ? "stopped"
+          : "running",
+      stoppedAt:
+        entry.status === "stopped"
+          ? normalizeIsoTime(
+              typeof entry.stoppedAt === "string"
+                ? entry.stoppedAt
+                : undefined,
+            )
+          : undefined,
     };
   } catch {
     return null;
@@ -150,6 +162,8 @@ export async function upsertConsoleAgentEntry(input: {
   projectRoot: string;
   pid: number;
   startedAt?: string;
+  status?: "running" | "stopped";
+  stoppedAt?: string;
 }): Promise<void> {
   // 关键点（中文）：agent 必须登记到 console 才“有效”，因此 console 未启动时拒绝写入 registry。
   if (!(await isConsoleRunning())) {
@@ -169,6 +183,11 @@ export async function upsertConsoleAgentEntry(input: {
       pid,
       startedAt: normalizeIsoTime(existing.startedAt || input.startedAt),
       updatedAt: nowIso,
+      status: input.status === "stopped" ? "stopped" : "running",
+      stoppedAt:
+        input.status === "stopped"
+          ? normalizeIsoTime(input.stoppedAt || nowIso)
+          : undefined,
     };
   } else {
     registry.agents.push({
@@ -176,9 +195,34 @@ export async function upsertConsoleAgentEntry(input: {
       pid,
       startedAt: normalizeIsoTime(input.startedAt),
       updatedAt: nowIso,
+      status: input.status === "stopped" ? "stopped" : "running",
+      stoppedAt:
+        input.status === "stopped"
+          ? normalizeIsoTime(input.stoppedAt || nowIso)
+          : undefined,
     });
   }
 
+  registry.updatedAt = nowIso;
+  await writeConsoleAgentRegistry(registry);
+}
+
+/**
+ * 标记 agent 为 stopped（保留历史记录，不删除）。
+ */
+export async function markConsoleAgentStopped(projectRoot: string): Promise<void> {
+  const key = normalizeProjectRoot(projectRoot);
+  const registry = await readConsoleAgentRegistry();
+  const index = registry.agents.findIndex((entry) => entry.projectRoot === key);
+  if (index < 0) return;
+  const nowIso = new Date().toISOString();
+  const current = registry.agents[index];
+  registry.agents[index] = {
+    ...current,
+    status: "stopped",
+    stoppedAt: nowIso,
+    updatedAt: nowIso,
+  };
   registry.updatedAt = nowIso;
   await writeConsoleAgentRegistry(registry);
 }

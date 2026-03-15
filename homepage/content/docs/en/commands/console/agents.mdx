@@ -1,11 +1,11 @@
 ---
 title: sma console agents
-description: List active managed agent runtimes
+description: List managed agents (running + historical)
 ---
 
 # `sma console agents`
 
-List active managed agent runtimes.
+List managed agents including running and historical entries.
 
 ## Usage
 
@@ -15,8 +15,11 @@ sma console agents [--json]
 
 ## Behavior
 
-- Lists active managed agent runtimes.
+- Lists currently running managed agent runtimes.
+- Historical entries are preserved in registry (`status=stopped`).
 - `--json` outputs machine-readable result.
+
+> In Console UI, `Global Agents` can start an agent directly from history.
 
 ## Related commands
 

@@ -1,0 +1,12 @@
+{
+  "title": "Task Service",
+  "pages": [
+    "task-service",
+    "task-definition-and-actions",
+    "agent-task-mode",
+    "script-task-mode",
+    "scheduler-and-trigger-flow",
+    "execution-and-validation-flow",
+    "run-artifacts-and-debugging"
+  ]
+}

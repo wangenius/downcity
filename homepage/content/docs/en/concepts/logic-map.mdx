@@ -29,7 +29,7 @@ flowchart LR
   end
 
   subgraph DP[Execution Plane (Per Project)]
-    AGENTCMD[sma agent on] --> AGENTD[agent daemon]
+    AGENTCMD[sma agent start] --> AGENTD[agent daemon]
     AGENTD --> SERVICES[services\nchat/skill/task/memory]
     AGENTD --> EXTS[extensions\nvoice/...]
     AGENTD --> SHIP[.ship/*\ncontext/logs/cache/tasks]
@@ -78,7 +78,7 @@ sma console start
 
 # 2) Init project and start agent
 sma agent create .
-sma agent on
+sma agent start
 
 # 3) Operate service / extension
 sma service list

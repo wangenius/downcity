@@ -1,0 +1,45 @@
+---
+title: Script Task Mode
+description: kind=script behavior, constraints, and scripting guidance
+---
+
+# Script Task Mode
+
+`kind=script` executes task body directly as a shell script.
+
+## Use cases
+
+- deterministic automation
+- repeatable command pipelines
+- tasks that do not need agent reasoning
+
+## Constraints
+
+- body cannot be empty
+- body must be executable shell script content
+- script output is written to `result.md`
+
+## Best practices
+
+- set safety options early (for example `set -e`)
+- print clear step/result logs
+- emit actionable errors for `error.md` debugging
+
+## Example
+
+```yaml
+---
+title: nightly-cleanup
+description: cleanup cache directory nightly
+contextId: ops
+when: 0 2 * * *
+status: enabled
+kind: script
+---
+
+set -e
+
+echo "start cleanup"
+rm -rf ./tmp/cache/*
+echo "cleanup done"
+```

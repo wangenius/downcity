@@ -54,7 +54,7 @@ QQ_APP_SECRET=your_app_secret
 ### 3）启动 ShipMyAgent
 
 ```bash
-sma agent on
+sma agent start
 ```
 
 启动成功时，你会在日志中看到类似输出：
@@ -91,7 +91,7 @@ sma voice status
 
 ## 常见问题排查
 
-- **启动后完全没反应**：先看启动日志；如果你用的是前台模式可 `Ctrl+C` 停止；daemon 模式用 `sma agent off` 停止。运行日志在 `.ship/logs/`。
+- **启动后完全没反应**：先看启动日志；如果你用的是前台模式可 `Ctrl+C` 停止；daemon 模式用 `sma agent restart` 停止。运行日志在 `.ship/logs/`。
 - **群里收不到消息**：确认你是在群里 `@机器人`；并检查 QQBot 控制台中是否已开启群聊相关事件/权限。
 - **语音消息没有被转写**：先确认 `extensions.voice.enabled=true`，再检查 voice 模型是否可用（`sma voice status`）；同时确认 QQBot 侧已开通音频事件权限（`AUDIO_ACTION`）。
 - **App Secret 配错/权限不足**：日志里通常会出现获取 `access_token` 或 WebSocket 鉴权失败的错误信息；确认 `QQ_APP_ID` / `QQ_APP_SECRET` 与沙箱开关匹配。

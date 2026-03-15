@@ -28,14 +28,14 @@ export function isValidTaskId(input: string): boolean {
 }
 
 /**
- * 从 taskName 派生 taskId。
+ * 从 title 派生 taskId。
  *
  * 关键点（中文）
  * - 目标：保证“title 与 taskId 同源”，避免随机 ID。
  * - 处理：移除路径危险字符与非常见标点，压缩空白，最终按 taskId 规则校验。
  */
-export function deriveTaskIdFromTaskName(taskName: string): string {
-  const normalized = String(taskName || "")
+export function deriveTaskIdFromTitle(title: string): string {
+  const normalized = String(title || "")
     .normalize("NFKC")
     .replace(/[\\/:\u0000]/g, " ")
     .replace(/[^\p{L}\p{N}_\-\s]/gu, " ")
@@ -45,7 +45,7 @@ export function deriveTaskIdFromTaskName(taskName: string): string {
     .trim();
 
   if (!normalized) {
-    throw new Error("Cannot derive taskId from taskName: taskName is empty after normalization.");
+    throw new Error("Cannot derive taskId from title: title is empty after normalization.");
   }
   return normalizeTaskId(normalized);
 }

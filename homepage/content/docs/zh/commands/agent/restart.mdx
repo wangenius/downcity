@@ -15,19 +15,18 @@ sma agent restart [path] [options]
 
 ## 常用参数
 
-- `-p, --port <port>`：服务端口
 - `-h, --host <host>`：服务主机
 
 ## 行为说明
 
 - `path` 默认当前目录 `.`。
 - 目标 agent 需要已登记在 console registry。
-- 流程是先停后起，最终按新参数启动。
+- 流程是先停后起，端口由 console 重新自动分配。
 
 ## 相关命令
 
-- [`sma agent on`](/zh/docs/commands/agent/on)
-- [`sma agent off`](/zh/docs/commands/agent/off)
+- [`sma agent start`](/zh/docs/commands/agent/start)
+- [`sma agent restart`](/zh/docs/commands/agent/restart)
 - [`sma agent status`](/zh/docs/commands/agent/status)
 
 ## 示例输出（基于当前实现）

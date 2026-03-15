@@ -3,6 +3,7 @@
   "pages": [
     "architecture",
     "logic-map",
+    "port-and-instance-lifecycle",
     "service-vs-extension",
     "invocation-routing-and-isolation",
     "runtime-registration-service-shell-flow",

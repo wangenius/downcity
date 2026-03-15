@@ -17,6 +17,22 @@ export type ChatChannelName = "telegram" | "feishu" | "qq";
 export type ChatLinkState = "connected" | "disconnected" | "unknown";
 
 /**
+ * 渠道诊断字段值类型。
+ *
+ * 关键点（中文）
+ * - 允许嵌套对象，便于挂载 `detail.config` 这类结构化摘要。
+ * - 不允许数组，避免 UI 解析复杂度无序增长。
+ */
+export type ChatChannelDetailValue =
+  | string
+  | number
+  | boolean
+  | null
+  | {
+      [key: string]: ChatChannelDetailValue;
+    };
+
+/**
  * 单个渠道的运行时快照。
  */
 export type ChatChannelRuntimeSnapshot = {
@@ -47,7 +63,7 @@ export type ChatChannelRuntimeSnapshot = {
   /**
    * 渠道附加诊断信息（仅用于可视化，不承诺结构稳定）。
    */
-  detail?: Record<string, string | number | boolean | null>;
+  detail?: Record<string, ChatChannelDetailValue>;
 };
 
 /**
@@ -77,6 +93,5 @@ export type ChatChannelTestResult = {
   /**
    * 附加诊断信息（例如 bot 用户名、ws readyState）。
    */
-  detail?: Record<string, string | number | boolean | null>;
+  detail?: Record<string, ChatChannelDetailValue>;
 };
-

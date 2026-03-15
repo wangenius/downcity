@@ -53,20 +53,20 @@ LLM_API_KEY=your_key
 启动（默认后台 daemon，适合长期运行）：
 
 ```bash
-sma agent on
+sma agent start
 ```
 
 需要在当前终端前台观察日志时再用：
 
 ```bash
-sma agent on --foreground
+sma agent start --foreground
 ```
 
 ## 5. 验证 service 状态
 
 ```bash
-curl http://localhost:3000/health
-curl http://localhost:3000/api/status
+curl http://localhost:5314/health
+curl http://localhost:5314/api/status
 ```
 
 ## 6. 可选：配置命令别名
@@ -79,5 +79,5 @@ sma console config alias
 
 - [配置详解](/zh/docs/quickstart/configuration)
 - [Skill Service](/zh/docs/services/skill-service)
-- [Task Service](/zh/docs/services/task-service)
+- [Task Service](/zh/docs/services/task/task-service)
 - [故障排查](/zh/docs/operations/troubleshooting)

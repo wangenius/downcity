@@ -26,8 +26,8 @@ Commands like `sma chat`, `sma task`, `sma memory`, `sma skill`, and `sma voice`
 | `sma console start/stop/restart/status/agents` | Writable `~/.ship/console/` | None | Manages global console process and registry |
 | `sma console ui` | Console is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
 | `sma agent create` | Writable target directory | None | Generates `ship.json`, `PROFILE.md`, `.ship/` |
-| `sma agent on` | Console is running; project has `ship.json` + `PROFILE.md` | `--port/--host` | Background mode registers target into console registry |
-| `sma agent off/status/doctor/restart` | Target agent is registered in console registry | None | Operates through registry resolution, not arbitrary path only |
+| `sma agent start` | Console is running; project has `ship.json` + `PROFILE.md` | `--host` | Agent port is always allocated by console and then registered into console registry |
+| `sma agent restart/status/doctor` | Target agent is registered in console registry | None | Operates through registry resolution, not arbitrary path only |
 | `sma console config ...` | Valid `ship.json` exists under target path | `--path` | Reads/writes project config; does not call runtime API |
 | `sma console config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
 | `sma service ...` | Target runtime is reachable; project is registered; project has `ship.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
@@ -78,8 +78,8 @@ For runtime API calls (service/extension/action commands):
 1. explicit CLI args: `--host` / `--port`
 2. env vars: `SMA_SERVER_HOST/PORT`
 3. env vars: `SMA_CTX_SERVER_HOST/PORT`
-4. project config: `ship.json.start.host/port`
-5. default: `127.0.0.1:3000`
+4. daemon meta args (`.ship/.debug/shipmyagent.daemon.json`)
+5. default: `127.0.0.1:5314`
 
 Normalization rule:
 

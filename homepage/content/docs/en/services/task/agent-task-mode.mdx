@@ -1,0 +1,44 @@
+---
+title: Agent Task Mode
+description: kind=agent behavior, use cases, and output expectations
+---
+
+# Agent Task Mode
+
+`kind=agent` executes task body through the agent and converges results via multi-round evaluator flow.
+
+## Use cases
+
+- tasks requiring reasoning and iteration
+- research / analysis / summarization
+- human-readable deliverables
+
+## Execution characteristics
+
+- multi-round execution (default max: 3)
+- live progress events visible in Console UI
+- channel-delivered output written to `output.md`, with summary in `result.md`
+
+## Best practices
+
+- write explicit goals, boundaries, and acceptance criteria
+- require auditable outputs when possible
+- do not put raw shell scripts in agent tasks
+
+## Example
+
+```yaml
+---
+title: daily-market-research
+description: daily market research summary
+contextId: research
+when: 0 8 * * *
+status: enabled
+kind: agent
+---
+
+Generate today's market research summary including:
+1. major events
+2. key risks
+3. next-step recommendations
+```

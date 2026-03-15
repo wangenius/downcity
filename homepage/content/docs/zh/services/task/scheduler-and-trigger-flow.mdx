@@ -1,0 +1,57 @@
+---
+title: 调度注册与触发链路
+description: when 调度注册、触发复检、串行保护与 one-shot 行为
+---
+
+# 调度注册与触发链路
+
+## 注册规则
+
+启动或重载 task scheduler 时，针对每个 `enabled` 任务：
+
+1. `when=@manual`：不注册 job。
+2. `when=cron`：注册 `task:<taskId>`。
+3. `when=time:...`：注册 `task-time:<taskId>`（分钟轮询）。
+
+## 触发前复检
+
+真正触发时会重新读取最新 `task.md` 并复检：
+
+- `status` 仍为 `enabled`
+- `when` 仍匹配当前触发方式
+
+这样可避免“定义已更新但旧调度还在跑”的问题。
+
+## one-shot 行为
+
+`when=time:...` 执行成功后自动：
+
+- `status -> paused`
+- `when -> @manual`
+
+## 串行保护
+
+同一 `taskId` 同时只允许 1 次执行：
+
+- 若上次还在执行，新触发会被跳过
+- 日志记录：`Task skipped (already running)`
+
+## Mermaid
+
+```mermaid
+flowchart TD
+  A[Scheduler start or reload] --> B[List enabled tasks]
+  B --> C{when type}
+  C -->|manual| D[Skip register]
+  C -->|cron| E[Register job task taskId]
+  C -->|time| F[Register minute job task-time taskId]
+  E --> G[Trigger arrives]
+  F --> G
+  G --> H[Re-read latest task.md]
+  H --> I{still enabled and when match}
+  I -->|no| J[Skip]
+  I -->|yes| K[runTaskNow]
+  K --> L{trigger type time}
+  L -->|yes| M[write back paused and when=@manual]
+  L -->|no| N[keep current schedule]
+```

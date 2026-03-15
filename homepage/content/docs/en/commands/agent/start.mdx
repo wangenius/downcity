@@ -1,21 +1,20 @@
 ---
-title: sma agent on
+title: sma agent start
 description: Start agent runtime (background or foreground)
 ---
 
-# `sma agent on`
+# `sma agent start`
 
 Start runtime for a target agent.
 
 ## Usage
 
 ```bash
-sma agent on [path] [options]
+sma agent start [path] [options]
 ```
 
 ## Key options
 
-- `-p, --port <port>`: service port (auto-assigned by console if omitted)
 - `-h, --host <host>`: service host (default `0.0.0.0`)
 - `--foreground [enabled]`: run in foreground
 
@@ -23,14 +22,14 @@ sma agent on [path] [options]
 
 - Checks console runtime before start.
 - `path` defaults to current directory `.`
-- If `--port` is not provided, console auto-assigns an available port for this agent.
+- Agent port is always auto-assigned by console.
 - Project `ship.json.start.host/port` is not required for daemon startup.
 - With `--foreground`, runs in current terminal; otherwise runs in background mode.
 - `--foreground` is a temporary terminal session; once terminal exits, the process exits too.
 
 ## Related commands
 
-- [`sma agent off`](/en/docs/commands/agent/off)
+- [`sma agent restart`](/en/docs/commands/agent/restart)
 - [`sma agent status`](/en/docs/commands/agent/status)
 - [`sma console start`](/en/docs/commands/console/start)
 
@@ -39,7 +38,7 @@ sma agent on [path] [options]
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma agent on .
+$ sma agent start .
 sma version: 1.0.0
 ✅ ShipMyAgent daemon started
    pid: <pid>
@@ -47,7 +46,7 @@ sma version: 1.0.0
 ```
 
 ```text
-$ sma agent on .
+$ sma agent start .
 sma version: 1.0.0
 ❌ console is not running. Please run `sma console start` first.
 ```

@@ -6,7 +6,8 @@
  * - 保持纯函数映射，避免在组件内散落硬编码路径。
  */
 
-import type { DashboardView } from "@/components/app-sidebar"
+import { getPrimaryViewPathMap } from "@/lib/dashboard-navigation"
+import type { DashboardPrimaryView, DashboardView } from "@/types/Navigation"
 
 export type DashboardRouteState = {
   /**
@@ -19,18 +20,7 @@ export type DashboardRouteState = {
   contextId?: string
 }
 
-const VIEW_TO_PATH: Record<Exclude<DashboardView, "contextWorkspace">, string> = {
-  globalOverview: "/global/overview",
-  globalModel: "/global/model",
-  globalAgents: "/global/agents",
-  globalExtensions: "/global/extensions",
-  agentOverview: "/agent/overview",
-  agentChannels: "/agent/channels",
-  agentServices: "/agent/services",
-  agentTasks: "/agent/tasks",
-  agentLogs: "/agent/logs",
-  contextOverview: "/context/overview",
-}
+const VIEW_TO_PATH: Record<DashboardPrimaryView, string> = getPrimaryViewPathMap()
 
 export function toDashboardPath(view: DashboardView, contextId?: string): string {
   if (view === "contextWorkspace") {
@@ -49,7 +39,7 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
 
   for (const [view, path] of Object.entries(VIEW_TO_PATH)) {
     if (normalized === path) {
-      return { view: view as Exclude<DashboardView, "contextWorkspace"> };
+      return { view: view as DashboardPrimaryView };
     }
   }
 

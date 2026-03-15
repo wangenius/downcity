@@ -52,10 +52,6 @@ export interface GlobalOverviewSectionProps {
    */
   agents: UiAgentOption[]
   /**
-   * 当前选中 agent。
-   */
-  selectedAgent: UiAgentOption | null
-  /**
    * channel 列表。
    */
   chatChannels: UiChatChannelStatus[]
@@ -70,123 +66,77 @@ export interface GlobalOverviewSectionProps {
 }
 
 export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
-  const { topbarStatus, topbarError, agents, selectedAgent, chatChannels, extensions, configStatus } = props
-  const onlineChannels = chatChannels.filter((item) => String(item.linkState || "").toLowerCase() === "connected").length
+  const { topbarStatus, topbarError, agents, chatChannels, extensions, configStatus } = props
+  const onlineChannels = chatChannels.filter(
+    (item) => String(item.linkState || "").toLowerCase() === "connected",
+  ).length
+  const disconnectedChannels = chatChannels.length - onlineChannels
   const extensionErrors = extensions.filter((item) => String(item.state || "").toLowerCase() === "error").length
-  const totalConfigs = configStatus.length
-  const okConfigs = configStatus.filter((item) => item.status === "ok").length
-  const nonOkConfigs = totalConfigs - okConfigs
   const consoleItems = configStatus.filter((item) => item.scope === "console")
-  const agentItems = configStatus.filter((item) => item.scope === "agent")
+  const nonOkConfigItems = consoleItems.filter((item) => item.status !== "ok")
+  const warningCount = disconnectedChannels + extensionErrors + nonOkConfigItems.length
 
-  const renderStatusPill = (status: UiConfigStatusItem["status"]) => {
-    if (status === "ok") {
-      return <span className="inline-flex rounded-full border border-border bg-muted/45 px-2 py-0.5 text-[11px] font-medium text-foreground">ok</span>
-    }
-    if (status === "missing") {
-      return <span className="inline-flex rounded-full border border-border bg-muted/35 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">missing</span>
-    }
-    return <span className="inline-flex rounded-full border border-destructive/35 bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">error</span>
-  }
-
-  const formatBytes = (sizeBytes: number) => {
-    const n = Number(sizeBytes || 0)
-    if (n < 1024) return `${n} B`
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-    return `${(n / 1024 / 1024).toFixed(1)} MB`
-  }
-
-  const renderRows = (items: UiConfigStatusItem[]) => {
-    if (items.length === 0) {
-      return (
-        <tr>
-          <td className="px-3 py-6 text-sm text-muted-foreground" colSpan={6}>
-            当前无可展示的配置文件状态
-          </td>
-        </tr>
-      )
-    }
-    return items.map((item) => (
-      <tr className="border-t border-border/50" key={`${item.scope}:${item.key}:${item.path}`}>
-        <td className="px-3 py-2 text-sm font-medium">{item.label}</td>
-        <td className="px-3 py-2">{renderStatusPill(item.status)}</td>
-        <td className="px-3 py-2 text-xs text-muted-foreground">{item.reason || "-"}</td>
-        <td className="px-3 py-2 text-xs text-muted-foreground">{formatBytes(item.sizeBytes)}</td>
-        <td className="px-3 py-2 text-xs text-muted-foreground">{item.mtime ? new Date(item.mtime).toLocaleString("zh-CN", { hour12: false }) : "-"}</td>
-        <td className="max-w-[28rem] truncate px-3 py-2 text-xs text-muted-foreground" title={item.path}>
-          {item.path}
-        </td>
-      </tr>
-    ))
-  }
+  const riskSignals: Array<{ title: string; detail: string; tone: "good" | "warn" }> = [
+    {
+      title: topbarError ? "Console 连接异常" : "Console 网关正常",
+      detail: topbarStatus,
+      tone: topbarError ? "warn" : "good",
+    },
+    {
+      title: disconnectedChannels > 0 ? "Chat 链路存在掉线" : "Chat 链路全部在线",
+      detail: `${onlineChannels}/${chatChannels.length} connected`,
+      tone: disconnectedChannels > 0 ? "warn" : "good",
+    },
+    {
+      title: extensionErrors > 0 ? "Extension 存在 error 状态" : "Extension 运行稳定",
+      detail: `error ${extensionErrors} / total ${extensions.length}`,
+      tone: extensionErrors > 0 ? "warn" : "good",
+    },
+    {
+      title: nonOkConfigItems.length > 0 ? "Console 配置存在异常项" : "Console 配置完整",
+      detail: `non-ok ${nonOkConfigItems.length} / total ${consoleItems.length}`,
+      tone: nonOkConfigItems.length > 0 ? "warn" : "good",
+    },
+  ]
 
   return (
     <section className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Console" value={topbarError ? "error" : "running"} sub={topbarStatus} />
-        <MetricCard
-          label="Agents"
-          value={String(agents.length)}
-          sub={selectedAgent ? `selected: ${selectedAgent.name}` : "未选中 agent"}
-        />
+        <MetricCard label="Agents" value={String(agents.length)} sub="registered runtimes" />
         <MetricCard label="Channels" value={`${onlineChannels}/${chatChannels.length}`} sub="connected / total" />
         <MetricCard label="Extensions" value={String(extensions.length)} sub={`error ${extensionErrors}`} />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <MetricCard label="Config Files" value={`${okConfigs}/${totalConfigs || 0}`} sub="ok / total" />
-        <MetricCard
-          label="Config Alerts"
-          value={String(nonOkConfigs < 0 ? 0 : nonOkConfigs)}
-          sub={selectedAgent ? `agent: ${selectedAgent.name}` : "仅展示 console"}
-        />
+        <MetricCard label="Console Configs" value={String(consoleItems.length)} sub="console scope files" />
+        <MetricCard label="Risk Signals" value={String(warningCount)} sub="channel + extension + config" />
       </div>
 
       <Card className="border-border/70 bg-card/90 shadow-sm">
-        <CardContent className="space-y-4 p-0">
-          <div className="border-b border-border/60 px-4 py-3 text-sm font-semibold">Console Config</div>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-muted/30 text-left text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                  <th className="px-3 py-2 font-medium">Name</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Reason</th>
-                  <th className="px-3 py-2 font-medium">Size</th>
-                  <th className="px-3 py-2 font-medium">Updated</th>
-                  <th className="px-3 py-2 font-medium">Path</th>
-                </tr>
-              </thead>
-              <tbody>{renderRows(consoleItems)}</tbody>
-            </table>
+        <CardContent className="space-y-3 p-4">
+          <div className="text-sm font-semibold">Global Signals</div>
+          <div className="grid gap-2">
+            {riskSignals.map((signal) => (
+              <div
+                key={signal.title}
+                className={
+                  signal.tone === "warn"
+                    ? "rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2"
+                    : "rounded-lg border border-border bg-muted/35 px-3 py-2"
+                }
+              >
+                <div className={signal.tone === "warn" ? "text-sm font-medium text-destructive" : "text-sm font-medium text-foreground"}>
+                  {signal.title}
+                </div>
+                <div className={signal.tone === "warn" ? "text-xs text-destructive/80" : "text-xs text-muted-foreground"}>
+                  {signal.detail}
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
-
-      {selectedAgent ? (
-        <Card className="border-border/70 bg-card/90 shadow-sm">
-          <CardContent className="space-y-4 p-0">
-            <div className="border-b border-border/60 px-4 py-3 text-sm font-semibold">
-              Agent Config · {selectedAgent.name}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-muted/30 text-left text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Reason</th>
-                    <th className="px-3 py-2 font-medium">Size</th>
-                    <th className="px-3 py-2 font-medium">Updated</th>
-                    <th className="px-3 py-2 font-medium">Path</th>
-                  </tr>
-                </thead>
-                <tbody>{renderRows(agentItems)}</tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
     </section>
   )
 }

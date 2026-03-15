@@ -9,7 +9,7 @@
   "step2": {
     "title": "Wake Up Runtime",
     "description": "Start the Agent Runtime locally. It takes over the repo's read/write capabilities and connects to your chat apps (e.g., Telegram), standing by as a team member.",
-    "command": "sma agent on"
+    "command": "sma agent start"
   },
   "step3": {
     "title": "Collaborate Naturally",

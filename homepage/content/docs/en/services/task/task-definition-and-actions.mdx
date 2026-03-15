@@ -1,0 +1,89 @@
+---
+title: Task Definition and Action Contracts
+description: task.md schema, when trigger semantics, and action contracts
+---
+
+# Task Definition and Action Contracts
+
+## Task definition file
+
+```text
+.ship/task/<taskId>/task.md
+```
+
+`taskId` is derived from normalized `title`, and `title` should stay unique.
+
+## Frontmatter fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `title` | Yes | Unique task name |
+| `description` | Yes | Goal description |
+| `contextId` | Yes | Execution context id |
+| `when` | Yes | Trigger: `@manual` / cron / `time:ISO8601` |
+| `status` | Yes | `enabled` / `paused` / `disabled` |
+| `kind` | No | `agent` (default) or `script` |
+
+## `when` semantics
+
+- `@manual`: manual trigger only.
+- cron expression: periodic scheduling.
+- `time:2026-03-08T10:30:00+08:00`: one-shot trigger (timezone required).
+
+After one-shot execution succeeds:
+- `status -> paused`
+- `when -> @manual`
+
+## Actions
+
+| Action | Purpose | Key response |
+| --- | --- | --- |
+| `list` | list task definitions | `tasks[]` |
+| `create` | create task definition | may return `reusedExisting=true` |
+| `update` | update definition | writes `task.md` |
+| `run` | manual run once | returns `accepted=true` + `executionId` immediately |
+| `status` | explicit status set | `enabled/paused/disabled` |
+| `enable/disable` | status shortcuts | same as status update |
+| `delete` | remove definition and run history | returns task dir path |
+
+## Create de-dup logic
+
+`create` now deduplicates by exact `title` only:
+
+- same `title` exists: reuse existing task (`reusedExisting=true`)
+- otherwise: create a new task
+
+No semantic-similarity dedup is applied.
+
+## `run` contract
+
+`run` is async-accepted:
+
+1. verify task exists
+2. start `runTaskNow(...)` in background
+3. return immediately with `accepted=true`, `message`, and `executionId`
+
+Additional `agent` rule:
+- success requires successful `chat_send` delivery
+- delivery failure is treated as `executionStatus=failure`
+
+## CLI and API
+
+CLI:
+
+```bash
+sma task run daily-check --reason "manual"
+```
+
+API:
+
+```bash
+sma service command task run --payload '{"title":"daily-check","reason":"manual"}'
+```
+
+## Related docs
+
+- [Agent Task Mode](/en/docs/services/task/agent-task-mode)
+- [Script Task Mode](/en/docs/services/task/script-task-mode)
+- [Scheduler Registration and Trigger Flow](/en/docs/services/task/scheduler-and-trigger-flow)
+- [Execution and Validation Flow](/en/docs/services/task/execution-and-validation-flow)

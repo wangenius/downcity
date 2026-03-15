@@ -7,8 +7,6 @@ description: task service actions（list/create/run/update/status）
 
 任务系统命令组。
 
-> 层级说明：`sma task` 是 service 动作命令，不是一级命令。一级入口是 `sma service`。
-
 ## 用法
 
 ```bash
@@ -19,136 +17,49 @@ sma task <subcommand> [options]
 
 - `list`
 - `create`
-- `run <taskName>`
-- `update <taskName>`
-- `delete <taskName>`
-- `status <taskName> <enabled|paused|disabled>`
-- `enable <taskName>`
-- `disable <taskName>`
+- `run <title>`
+- `update <title>`
+- `delete <title>`
+- `status <title> <enabled|paused|disabled>`
+- `enable <title>`
+- `disable <title>`
 
 ## `create` 关键参数
 
-- `--task-name <taskName>`（必填）
+- `--title <title>`（必填）
 - `--description <description>`（必填）
-- `--context-id <contextId>`（必填，任务执行上下文标识）
-- `--cron <cron>`（默认 `@manual`）
-- `--activate`（等同 `--status enabled`）
+- `--context-id <contextId>`（必填）
+- `--when <when>`（默认 `@manual`，支持 cron / `time:ISO8601`）
 - `--kind <agent|script>`
-- `--time <ISO8601>`（带时区；建议配合 `--cron @manual`）
+- `--status <enabled|paused|disabled>` 或 `--activate`
+- `--body <body>`
+- `--overwrite`
 
-### `create` 完整参数
-
-| 参数 | 说明 |
-| --- | --- |
-| `--cron <cron>` | cron 表达式，默认 `@manual` |
-| `--status <status>` | `enabled|paused|disabled` |
-| `--activate` | 等价 `--status enabled` |
-| `--timezone <timezone>` | IANA 时区 |
-| `--required-artifact <path>` | 必需产物（可重复） |
-| `--min-output-chars <n>` | 最小输出字符数 |
-| `--max-dialogue-rounds <n>` | 最大对话轮数（agent 模式） |
-| `--body <body>` | 任务正文 |
-| `--overwrite` | 覆盖已有同 ID 任务 |
-
-`create` 结果说明：
-- 若同 `contextId` + 同执行类型下已存在同语义任务，系统会直接复用已有任务，不再创建重复任务。
+create 去重：只按 `title` 精确去重。
 
 ## `update` 常用参数
 
-- `--cron` / `--timezone` / `--status`
-- `--required-artifact <path>`（可重复）
-- `--clear-required-artifacts`
-- `--min-output-chars` / `--clear-min-output-chars`
-- `--max-dialogue-rounds` / `--clear-max-dialogue-rounds`
+- `--title <title>` / `--description <description>`
+- `--when <when>` / `--clear-when`
+- `--kind <agent|script>`
+- `--context-id <contextId>`
+- `--status <status>` / `--activate`
+- `--body <body>` / `--clear-body`
 
-### `update` 完整参数
+## `run` 返回语义
 
-| 参数 | 说明 |
-| --- | --- |
-| `--task-name <taskName>` | 更新任务名称（保持同一语义） |
-| `--description <description>` | 更新描述 |
-| `--cron <cron>` | 更新 cron |
-| `--kind <agent\|script>` | 更新执行类型 |
-| `--time <ISO8601>` | 设置 one-shot 时间 |
-| `--clear-time` | 清空 one-shot 时间 |
-| `--context-id <contextId>` | 更新执行上下文 |
-| `--status <status>` | 更新状态 |
-| `--activate` | 等价 `--status enabled` |
-| `--timezone <timezone>` | 设置时区 |
-| `--clear-timezone` | 清空时区 |
-| `--required-artifact <path>` | 重设必需产物（可重复） |
-| `--clear-required-artifacts` | 清空必需产物 |
-| `--min-output-chars <n>` | 设置最小输出字符数 |
-| `--clear-min-output-chars` | 清空最小输出字符数 |
-| `--max-dialogue-rounds <n>` | 设置最大对话轮数 |
-| `--clear-max-dialogue-rounds` | 清空最大对话轮数 |
-| `--body <body>` | 设置正文 |
-| `--clear-body` | 清空正文 |
+`run` 为异步受理，立即返回：
 
-## `run` 参数
-
-| 参数 | 说明 |
-| --- | --- |
-| `<taskName>` | 要执行的任务名称（必填） |
-| `--reason <reason>` | 手动执行原因（可选） |
-
-## 什么时候用哪个子命令
-
-| 场景 | 子命令 |
-| --- | --- |
-| 新建任务 | `create` |
-| 立即触发一次 | `run` |
-| 调整调度或正文 | `update` |
-| 暂停任务 | `disable` 或 `status <taskName> paused` |
-| 恢复调度 | `enable` |
-| 删除任务 | `delete` |
+- `accepted=true`
+- `message`
+- `executionId`
 
 ## 示例
 
 ```bash
 sma task list
-sma task create --task-name "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 10 * * 1-5" --activate
 sma task run daily-check
-sma task update daily-check --cron "0 10 * * 1-5"
+sma task update daily-check --when "@manual"
 sma task disable daily-check
-```
-
-## 说明
-
-任务调度依赖运行中的 runtime：
-
-```bash
-sma agent on
-```
-
-任务执行完成后不会自动回发到 chat channel，结果请在任务 run 目录查看。
-
-想看 agent 调用 task 的决策逻辑与全链路说明，请看 [Task Service](/zh/docs/services/task-service)。
-
-## 示例输出（基于当前实现）
-
-以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
-
-```text
-$ sma task list
-{
-  "success": true,
-  "data": {
-    "success": true,
-    "tasks": []
-  }
-}
-```
-
-```text
-$ sma task run daily-check --reason "manual"
-{
-  "success": true,
-  "data": {
-    "success": true,
-    "accepted": true,
-    "message": "任务已经开始执行",
-    "taskName": "daily-check"
-  }
-}
 ```

@@ -387,6 +387,14 @@ export interface UiChatChannelStatus {
    * 渠道是否已配置。
    */
   configured?: boolean;
+  /**
+   * 渠道附加诊断信息。
+   *
+   * 关键点（中文）
+   * - 由 runtime/status 动态返回，字段不保证完全稳定。
+   * - `detail.config` 中放置可安全展示的配置摘要（不含明文密钥）。
+   */
+  detail?: Record<string, unknown>;
 }
 
 /**
@@ -455,29 +463,25 @@ export interface UiChatActionResult {
  */
 export interface UiTaskItem {
   /**
-   * 任务 id（主字段）。
+   * 任务名称（主字段）。
    */
-  taskId?: string;
-  /**
-   * 任务 id（兼容字段）。
-   */
-  id?: string;
+  title?: string;
   /**
    * 任务状态。
    */
   status?: string;
   /**
-   * cron 表达式。
+   * 触发条件（@manual | cron | time:ISO8601）。
    */
-  cron?: string;
-  /**
-   * 任务标题。
-   */
-  title?: string;
+  when?: string;
   /**
    * 任务描述。
    */
   description?: string;
+  /**
+   * 任务正文（task.md frontmatter 之后的 body）。
+   */
+  body?: string;
   /**
    * 任务所属 contextId。
    */
@@ -487,14 +491,6 @@ export interface UiTaskItem {
    */
   kind?: "agent" | "script" | string;
   /**
-   * 一次性调度时间（ISO）。
-   */
-  time?: string;
-  /**
-   * 调度时区。
-   */
-  timezone?: string;
-  /**
    * 任务正文文件路径。
    */
   taskMdPath?: string;
@@ -502,18 +498,6 @@ export interface UiTaskItem {
    * 最近一次执行时间戳目录名。
    */
   lastRunTimestamp?: string;
-  /**
-   * 需要产物列表。
-   */
-  requiredArtifacts?: string[];
-  /**
-   * 最小输出字符数。
-   */
-  minOutputChars?: number;
-  /**
-   * 最大对话轮数。
-   */
-  maxDialogueRounds?: number;
 }
 
 /**
@@ -551,6 +535,30 @@ export interface UiTaskRunSummary {
    */
   resultStatus?: string;
   /**
+   * 是否仍在执行中。
+   */
+  inProgress?: boolean;
+  /**
+   * 当前执行阶段（来自 run-progress.json）。
+   */
+  progressPhase?: string;
+  /**
+   * 当前阶段说明（来自 run-progress.json）。
+   */
+  progressMessage?: string;
+  /**
+   * 最近进度更新时间（毫秒）。
+   */
+  progressUpdatedAt?: number;
+  /**
+   * 当前执行轮次（agent 任务可选）。
+   */
+  progressRound?: number;
+  /**
+   * 最大执行轮次（agent 任务可选）。
+   */
+  progressMaxRounds?: number;
+  /**
    * 开始时间戳（毫秒）。
    */
   startedAt?: number;
@@ -581,9 +589,9 @@ export interface UiTaskRunSummary {
  */
 export interface UiTaskRunDetail {
   /**
-   * task id。
+   * task 名称。
    */
-  taskId?: string;
+  title?: string;
   /**
    * 运行时间戳目录名。
    */
@@ -596,6 +604,80 @@ export interface UiTaskRunDetail {
    * run 元数据（run.json）。
    */
   meta?: Record<string, unknown>;
+  /**
+   * 运行进度快照（run-progress.json）。
+   */
+  progress?: {
+    /**
+     * 当前进度状态（running/success/failure）。
+     */
+    status?: string;
+    /**
+     * 当前阶段标识。
+     */
+    phase?: string;
+    /**
+     * 当前阶段说明文案。
+     */
+    message?: string;
+    /**
+     * 开始时间（毫秒）。
+     */
+    startedAt?: number;
+    /**
+     * 最近更新时间（毫秒）。
+     */
+    updatedAt?: number;
+    /**
+     * 结束时间（毫秒）。
+     */
+    endedAt?: number;
+    /**
+     * 当前轮次（agent 场景可选）。
+     */
+    round?: number;
+    /**
+     * 最大轮次（agent 场景可选）。
+     */
+    maxRounds?: number;
+    /**
+     * 最终 run 状态（可选）。
+     */
+    runStatus?: string;
+    /**
+     * 最终执行状态（可选）。
+     */
+    executionStatus?: string;
+    /**
+     * 最终结果状态（可选）。
+     */
+    resultStatus?: string;
+    /**
+     * 最近进度事件列表（时间顺序）。
+     */
+    events?: Array<{
+      /**
+       * 事件时间（毫秒）。
+       */
+      at?: number;
+      /**
+       * 事件阶段标识。
+       */
+      phase?: string;
+      /**
+       * 事件说明文案。
+       */
+      message?: string;
+      /**
+       * 事件对应轮次（可选）。
+       */
+      round?: number;
+      /**
+       * 事件对应最大轮次（可选）。
+       */
+      maxRounds?: number;
+    }>;
+  };
   /**
    * 对话元数据（dialogue.json）。
    */
@@ -632,7 +714,7 @@ export interface UiTaskRunDetail {
 }
 
 /**
- * `/api/tui/tasks/:taskId/runs` 响应。
+ * `/api/tui/tasks/:title/runs` 响应。
  */
 export interface UiTaskRunsResponse {
   /**
@@ -640,9 +722,9 @@ export interface UiTaskRunsResponse {
    */
   success?: boolean;
   /**
-   * task id。
+   * task 名称。
    */
-  taskId?: string;
+  title?: string;
   /**
    * 执行摘要列表。
    */
@@ -654,7 +736,7 @@ export interface UiTaskRunsResponse {
 }
 
 /**
- * `/api/tui/tasks/:taskId/runs/:timestamp` 响应。
+ * `/api/tui/tasks/:title/runs/:timestamp` 响应。
  */
 export interface UiTaskRunDetailResponse extends UiTaskRunDetail {
   /**

@@ -15,17 +15,12 @@ import type {
 } from "./Task.js";
 
 export type TaskCreateRequest = {
-  taskName: string;
-  cron: string;
+  title: string;
+  when: string;
   description: string;
   contextId: string;
   kind?: ShipTaskKind;
-  time?: string;
   status?: ShipTaskStatus;
-  timezone?: string;
-  requiredArtifacts?: string[];
-  minOutputChars?: number;
-  maxDialogueRounds?: number;
   body?: string;
   overwrite?: boolean;
 };
@@ -34,7 +29,7 @@ export type TaskCreateResponse = {
   /** 调用是否成功 */
   success: boolean;
   /** 任务名称（新建成功或复用已有任务时返回） */
-  taskName?: string;
+  title?: string;
   /** 任务定义文件相对路径 */
   taskMdPath?: string;
   /** 是否复用了已有任务（true 表示未新建） */
@@ -46,46 +41,33 @@ export type TaskCreateResponse = {
 };
 
 export type TaskUpdateRequest = {
-  taskName: string;
-  taskNameNext?: string;
-  cron?: string;
+  title: string;
+  titleNext?: string;
+  when?: string;
+  clearWhen?: boolean;
   description?: string;
   contextId?: string;
   kind?: ShipTaskKind;
-  time?: string;
-  clearTime?: boolean;
   status?: ShipTaskStatus;
-  timezone?: string;
-  clearTimezone?: boolean;
-  requiredArtifacts?: string[];
-  clearRequiredArtifacts?: boolean;
-  minOutputChars?: number;
-  clearMinOutputChars?: boolean;
-  maxDialogueRounds?: number;
-  clearMaxDialogueRounds?: boolean;
   body?: string;
   clearBody?: boolean;
 };
 
 export type TaskUpdateResponse = {
   success: boolean;
-  taskName?: string;
+  title?: string;
   taskMdPath?: string;
   error?: string;
 };
 
 export type TaskListItemView = {
-  taskName: string;
+  title: string;
   description: string;
-  cron: string;
+  body?: string;
+  when: string;
   status: string;
   contextId: string;
   kind?: ShipTaskKind;
-  time?: string;
-  timezone?: string;
-  requiredArtifacts?: string[];
-  minOutputChars?: number;
-  maxDialogueRounds?: number;
   taskMdPath: string;
   lastRunTimestamp?: string;
 };
@@ -96,7 +78,7 @@ export type TaskListResponse = {
 };
 
 export type TaskRunRequest = {
-  taskName: string;
+  title: string;
   reason?: string;
 };
 
@@ -106,6 +88,8 @@ export type TaskRunResponse = {
   accepted?: boolean;
   /** 给调用方的简短提示（例如“任务已经开始执行”） */
   message?: string;
+  /** 本次执行 ID（可用于 UI 关联执行状态） */
+  executionId?: string;
   status?: ShipTaskRunStatusV1;
   executionStatus?: ShipTaskRunExecutionStatusV1;
   resultStatus?: ShipTaskRunResultStatusV1;
@@ -115,7 +99,7 @@ export type TaskRunResponse = {
   userSimulatorReply?: string;
   userSimulatorReason?: string;
   userSimulatorScore?: number;
-  taskName?: string;
+  title?: string;
   timestamp?: string;
   runDir?: string;
   runDirRel?: string;
@@ -123,24 +107,24 @@ export type TaskRunResponse = {
 };
 
 export type TaskSetStatusRequest = {
-  taskName: string;
+  title: string;
   status: ShipTaskStatus;
 };
 
 export type TaskSetStatusResponse = {
   success: boolean;
-  taskName?: string;
+  title?: string;
   status?: ShipTaskStatus;
   error?: string;
 };
 
 export type TaskDeleteRequest = {
-  taskName: string;
+  title: string;
 };
 
 export type TaskDeleteResponse = {
   success: boolean;
-  taskName?: string;
+  title?: string;
   taskDirPath?: string;
   error?: string;
 };

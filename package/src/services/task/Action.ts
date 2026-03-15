@@ -11,21 +11,21 @@ import type { ShipTaskStatus } from "./types/Task.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import {
-  deriveTaskIdFromTaskName,
+  deriveTaskIdFromTitle,
   normalizeTaskId,
 } from "./runtime/Paths.js";
 import {
-  normalizeTaskCron,
-  normalizeMaxDialogueRounds,
-  normalizeMinOutputChars,
-  normalizeRequiredArtifacts,
   normalizeTaskKind,
-  normalizeTaskTime,
-  normalizeTaskTimezone,
+  normalizeTaskWhen,
   normalizeTaskStatus,
-  validateTaskScheduleCombination,
 } from "./runtime/Model.js";
-import { deleteTask, listTasks, readTask, writeTask } from "./runtime/Store.js";
+import {
+  deleteTask,
+  listTasks,
+  readTask,
+  resolveTaskIdByTitle,
+  writeTask,
+} from "./runtime/Store.js";
 import { runTaskNow } from "./runtime/Runner.js";
 import type {
   TaskCreateRequest,
@@ -56,96 +56,15 @@ function buildDefaultTaskBody(): string {
   return [
     "# 任务目标",
     "",
-    "- 用清晰的步骤完成任务，并把关键结果写入本次 run 目录的 `result.md`（必要时也写 `output.md`）。",
+    "- 用清晰的步骤完成任务，并把关键结果写入本次 run 目录的 `result.md`。",
     "",
     "# 约束",
     "",
-    "- 尽量使用可审计的方式：关键中间产物写入 `./.ship/task/<task_name>/<timestamp>/` 下的 markdown 文件。",
+    "- 尽量使用可审计的方式：关键中间产物写入 `./.ship/task/<title>/<timestamp>/` 下的 markdown 文件。",
     "",
   ].join("\n");
 }
 
-/**
- * 归一化语义文本（用于 task 去重）。
- *
- * 关键点（中文）
- * - 降噪：统一小写，移除空白与常见标点
- * - 不做语义模型推断，仅做轻量级字符串近似匹配
- */
-function normalizeTaskSemanticText(input: string): string {
-  return String(input || "")
-    .toLowerCase()
-    .replace(
-      /[\s`~!@#$%^&*()\-_=+\[\]{}\\|;:'",.<>/?，。！？；：、“”‘’（）【】《》、]/g,
-      "",
-    )
-    .trim();
-}
-
-/**
- * 计算 Dice 系数（bigram），用于近似语义比对。
- */
-function diceCoefficientByBigram(a: string, b: string): number {
-  if (!a || !b) return 0;
-  if (a === b) return 1;
-  if (a.length < 2 || b.length < 2) return 0;
-
-  const gramsA = new Map<string, number>();
-  const gramsB = new Map<string, number>();
-  for (let i = 0; i < a.length - 1; i += 1) {
-    const g = a.slice(i, i + 2);
-    gramsA.set(g, (gramsA.get(g) || 0) + 1);
-  }
-  for (let i = 0; i < b.length - 1; i += 1) {
-    const g = b.slice(i, i + 2);
-    gramsB.set(g, (gramsB.get(g) || 0) + 1);
-  }
-
-  let overlap = 0;
-  for (const [gram, countA] of gramsA) {
-    const countB = gramsB.get(gram) || 0;
-    overlap += Math.min(countA, countB);
-  }
-  const total = (a.length - 1) + (b.length - 1);
-  if (total <= 0) return 0;
-  return (2 * overlap) / total;
-}
-
-/**
- * 判断两个 task 描述是否属于“同语义/同场景/同目的”。
- *
- * 关键点（中文）
- * - 仅在同 contextId + 同 kind 下比较，避免跨渠道误合并
- * - 规则：
- *   1) 归一化后完全相等
- *   2) 一方包含另一方（长度足够）
- *   3) Dice 系数 >= 0.92 视为同语义
- */
-function isSemanticallySameTask(params: {
-  incomingTaskName: string;
-  incomingDescription: string;
-  existingTaskName: string;
-  existingDescription: string;
-}): boolean {
-  const incoming = normalizeTaskSemanticText(
-    `${params.incomingTaskName} ${params.incomingDescription}`,
-  );
-  const existing = normalizeTaskSemanticText(
-    `${params.existingTaskName} ${params.existingDescription}`,
-  );
-  if (!incoming || !existing) return false;
-  if (incoming === existing) return true;
-
-  const minLen = Math.min(incoming.length, existing.length);
-  if (
-    minLen >= 12 &&
-    (incoming.includes(existing) || existing.includes(incoming))
-  ) {
-    return true;
-  }
-
-  return diceCoefficientByBigram(incoming, existing) >= 0.92;
-}
 
 export async function listTaskDefinitions(params: {
   projectRoot: string;
@@ -162,19 +81,15 @@ export async function listTaskDefinitions(params: {
   return {
     success: true,
     tasks: filtered.map((task) => ({
-      taskName: task.taskName,
+      title: task.title,
       description: task.description,
-      cron: task.cron,
+      ...(typeof task.body === "string" && task.body.trim()
+        ? { body: task.body }
+        : {}),
+      when: task.when,
       status: task.status,
       contextId: task.contextId,
       kind: task.kind || "agent",
-      ...(task.time ? { time: task.time } : {}),
-      ...(task.timezone ? { timezone: task.timezone } : {}),
-      ...(Array.isArray(task.requiredArtifacts) && task.requiredArtifacts.length > 0
-        ? { requiredArtifacts: task.requiredArtifacts }
-        : {}),
-      ...(typeof task.minOutputChars === "number" ? { minOutputChars: task.minOutputChars } : {}),
-      ...(typeof task.maxDialogueRounds === "number" ? { maxDialogueRounds: task.maxDialogueRounds } : {}),
       taskMdPath: task.taskMdPath,
       ...(task.lastRunTimestamp ? { lastRunTimestamp: task.lastRunTimestamp } : {}),
     })),
@@ -188,12 +103,12 @@ export async function createTaskDefinition(params: {
   const root = path.resolve(params.projectRoot);
   const req = params.request;
 
-  const taskName = String(req.taskName || "").trim();
+  const title = String(req.title || "").trim();
   const description = String(req.description || "").trim();
   let taskIdFromName = "";
   let taskId = "";
   try {
-    taskIdFromName = deriveTaskIdFromTaskName(taskName);
+    taskIdFromName = deriveTaskIdFromTitle(title);
     taskId = normalizeTaskId(taskIdFromName);
   } catch (error) {
     return {
@@ -201,25 +116,14 @@ export async function createTaskDefinition(params: {
       error: String(error),
     };
   }
-  const cronNormalized = normalizeTaskCron(String(req.cron || "@manual").trim() || "@manual");
+  const whenNormalized = normalizeTaskWhen(String(req.when || "@manual").trim() || "@manual");
   const contextId = String(req.contextId || "").trim();
   const kind = normalizeTaskKind(req.kind);
-  const timeNormalized = normalizeTaskTime(req.time);
-  const timezoneNormalized = normalizeTaskTimezone(req.timezone);
 
-  if (!taskName) return { success: false, error: "Missing taskName" };
+  if (!title) return { success: false, error: "Missing title" };
   if (!description) return { success: false, error: "Missing description" };
   if (!contextId) return { success: false, error: "Missing contextId" };
-  if (!cronNormalized.ok) return { success: false, error: cronNormalized.error };
-  if (!timeNormalized.ok) return { success: false, error: timeNormalized.error };
-  if (!timezoneNormalized.ok) return { success: false, error: timezoneNormalized.error };
-  const scheduleCombination = validateTaskScheduleCombination({
-    cron: cronNormalized.value,
-    time: timeNormalized.value,
-  });
-  if (!scheduleCombination.ok) {
-    return { success: false, error: scheduleCombination.error };
-  }
+  if (!whenNormalized.ok) return { success: false, error: whenNormalized.error };
 
   const status = resolveTaskStatus(req.status, "paused");
   const body =
@@ -228,69 +132,39 @@ export async function createTaskDefinition(params: {
       : kind === "script"
         ? ""
         : buildDefaultTaskBody();
-  const requiredArtifactsNormalized = normalizeRequiredArtifacts(req.requiredArtifacts);
-  if (!requiredArtifactsNormalized.ok) return { success: false, error: requiredArtifactsNormalized.error };
-  const minOutputCharsNormalized = normalizeMinOutputChars(req.minOutputChars);
-  if (!minOutputCharsNormalized.ok) return { success: false, error: minOutputCharsNormalized.error };
-  const maxDialogueRoundsNormalized = normalizeMaxDialogueRounds(req.maxDialogueRounds);
-  if (!maxDialogueRoundsNormalized.ok) return { success: false, error: maxDialogueRoundsNormalized.error };
-
-  // 关键点（中文）：防止同语义任务被重复创建。
-  // 规则：同 contextId + 同 kind + 文本语义近似，直接复用已有任务。
-  // 备注：显式 overwrite 仅用于同 taskId 覆盖，不用于放开“重复语义创建”。
+  // 关键点（中文）：`title` 是唯一键，create 去重只按 title 精确匹配。
   const existingTasks = await listTasks(root);
-  const duplicated = existingTasks.find((item) => {
-    const itemKind = item.kind || "agent";
-    if (String(item.contextId || "").trim() !== contextId) return false;
-    if (itemKind !== kind) return false;
-    return isSemanticallySameTask({
-      incomingTaskName: taskName,
-      incomingDescription: description,
-      existingTaskName: item.taskName,
-      existingDescription: item.description,
-    });
-  });
-  if (duplicated) {
+  const duplicated = existingTasks.find((item) => String(item.title || "").trim() === title);
+  if (duplicated && !req.overwrite) {
     return {
       success: true,
-      taskName: duplicated.taskName,
+      title: duplicated.title,
       taskMdPath: duplicated.taskMdPath,
       reusedExisting: true,
-      message:
-        "Detected existing task with same semantic goal in the same context; reused existing task instead of creating a duplicate.",
+      message: "Task title already exists; reused existing task.",
     };
   }
+  const targetTaskId = duplicated ? duplicated.taskId : taskId;
 
   try {
     const written = await writeTask({
-      taskId,
+      taskId: targetTaskId,
       projectRoot: root,
-      overwrite: Boolean(req.overwrite),
+      overwrite: Boolean(req.overwrite) || Boolean(duplicated),
       frontmatter: {
-        taskName,
+        title,
         description,
-        cron: cronNormalized.value,
+        when: whenNormalized.value,
         contextId,
         kind,
-        ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
         status,
-        ...(timezoneNormalized.value ? { timezone: timezoneNormalized.value } : {}),
-        ...(requiredArtifactsNormalized.value.length > 0
-          ? { requiredArtifacts: requiredArtifactsNormalized.value }
-          : {}),
-        ...(typeof minOutputCharsNormalized.value === "number"
-          ? { minOutputChars: minOutputCharsNormalized.value }
-          : {}),
-        ...(typeof maxDialogueRoundsNormalized.value === "number"
-          ? { maxDialogueRounds: maxDialogueRoundsNormalized.value }
-          : {}),
       },
       body,
     });
 
     return {
       success: true,
-      taskName,
+      title,
       taskMdPath: written.taskMdPath,
     };
   } catch (error) {
@@ -307,27 +181,20 @@ export async function updateTaskDefinition(params: {
 }): Promise<TaskUpdateResponse> {
   const root = path.resolve(params.projectRoot);
   const req = params.request;
-  const taskName = String(req.taskName || "").trim();
-  const taskId = normalizeTaskId(taskName);
+  const title = String(req.title || "").trim();
+  let taskId = "";
+  try {
+    taskId = await resolveTaskIdByTitle({ projectRoot: root, title });
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
 
   // 关键点（中文）：API 层也做一次互斥校验，避免非 CLI 调用写入歧义状态。
-  if (req.timezone !== undefined && req.clearTimezone) {
-    return { success: false, error: "`timezone` conflicts with `clearTimezone`" };
-  }
-  if (req.requiredArtifacts !== undefined && req.clearRequiredArtifacts) {
-    return { success: false, error: "`requiredArtifacts` conflicts with `clearRequiredArtifacts`" };
-  }
-  if (req.minOutputChars !== undefined && req.clearMinOutputChars) {
-    return { success: false, error: "`minOutputChars` conflicts with `clearMinOutputChars`" };
-  }
-  if (req.maxDialogueRounds !== undefined && req.clearMaxDialogueRounds) {
-    return { success: false, error: "`maxDialogueRounds` conflicts with `clearMaxDialogueRounds`" };
-  }
   if (req.body !== undefined && req.clearBody) {
     return { success: false, error: "`body` conflicts with `clearBody`" };
   }
-  if (req.time !== undefined && req.clearTime) {
-    return { success: false, error: "`time` conflicts with `clearTime`" };
+  if (req.when !== undefined && req.clearWhen) {
+    return { success: false, error: "`when` conflicts with `clearWhen`" };
   }
 
   try {
@@ -336,16 +203,16 @@ export async function updateTaskDefinition(params: {
       taskId,
     });
 
-    const nextTaskName =
-      typeof req.taskNameNext === "string"
-        ? req.taskNameNext.trim()
-        : current.frontmatter.taskName;
-    if (!nextTaskName) return { success: false, error: "taskName cannot be empty" };
-    const nextTaskId = normalizeTaskId(deriveTaskIdFromTaskName(nextTaskName));
+    const nextTitle =
+      typeof req.titleNext === "string"
+        ? req.titleNext.trim()
+        : current.frontmatter.title;
+    if (!nextTitle) return { success: false, error: "title cannot be empty" };
+    const nextTaskId = normalizeTaskId(deriveTaskIdFromTitle(nextTitle));
     if (nextTaskId !== taskId) {
       return {
         success: false,
-        error: `taskName cannot change task identity. Expected "${taskId}", got "${nextTaskId}".`,
+        error: `title cannot change task identity. Expected "${taskId}", got "${nextTaskId}".`,
       };
     }
 
@@ -355,10 +222,13 @@ export async function updateTaskDefinition(params: {
         : current.frontmatter.description;
     if (!description) return { success: false, error: "description cannot be empty" };
 
-    const cronInput =
-      typeof req.cron === "string" ? req.cron.trim() : current.frontmatter.cron;
-    const cronNormalized = normalizeTaskCron(cronInput);
-    if (!cronNormalized.ok) return { success: false, error: cronNormalized.error };
+    const whenInput = req.clearWhen
+      ? "@manual"
+      : typeof req.when === "string"
+        ? req.when.trim()
+        : current.frontmatter.when;
+    const whenNormalized = normalizeTaskWhen(whenInput);
+    if (!whenNormalized.ok) return { success: false, error: whenNormalized.error };
 
     const contextId =
       typeof req.contextId === "string" ? req.contextId.trim() : current.frontmatter.contextId;
@@ -366,13 +236,6 @@ export async function updateTaskDefinition(params: {
     const kind = normalizeTaskKind(
       req.kind === undefined ? current.frontmatter.kind : req.kind,
     );
-    const timeInput = req.clearTime
-      ? undefined
-      : req.time !== undefined
-        ? req.time
-        : current.frontmatter.time;
-    const timeNormalized = normalizeTaskTime(timeInput);
-    if (!timeNormalized.ok) return { success: false, error: timeNormalized.error };
 
     const status =
       req.status === undefined
@@ -383,68 +246,6 @@ export async function updateTaskDefinition(params: {
         success: false,
         error: `Invalid status: ${String(req.status)}`,
       };
-    }
-
-    let timezoneInput: string | undefined;
-    if (req.clearTimezone) {
-      timezoneInput = undefined;
-    } else if (typeof req.timezone === "string") {
-      const t = req.timezone.trim();
-      if (!t) {
-        return {
-          success: false,
-          error: "timezone cannot be empty (use clearTimezone to unset)",
-        };
-      }
-      timezoneInput = t;
-    } else {
-      timezoneInput = current.frontmatter.timezone;
-    }
-    const timezoneNormalized = normalizeTaskTimezone(timezoneInput);
-    if (!timezoneNormalized.ok) {
-      return { success: false, error: timezoneNormalized.error };
-    }
-    const scheduleCombination = validateTaskScheduleCombination({
-      cron: cronNormalized.value,
-      time: timeNormalized.value,
-    });
-    if (!scheduleCombination.ok) {
-      return { success: false, error: scheduleCombination.error };
-    }
-
-    let requiredArtifacts: string[] = [];
-    if (req.clearRequiredArtifacts) {
-      requiredArtifacts = [];
-    } else if (req.requiredArtifacts !== undefined) {
-      const normalized = normalizeRequiredArtifacts(req.requiredArtifacts);
-      if (!normalized.ok) return { success: false, error: normalized.error };
-      requiredArtifacts = normalized.value;
-    } else {
-      requiredArtifacts = Array.isArray(current.frontmatter.requiredArtifacts)
-        ? current.frontmatter.requiredArtifacts
-        : [];
-    }
-
-    let minOutputChars: number | undefined;
-    if (req.clearMinOutputChars) {
-      minOutputChars = undefined;
-    } else if (req.minOutputChars !== undefined) {
-      const normalized = normalizeMinOutputChars(req.minOutputChars);
-      if (!normalized.ok) return { success: false, error: normalized.error };
-      minOutputChars = normalized.value;
-    } else {
-      minOutputChars = current.frontmatter.minOutputChars;
-    }
-
-    let maxDialogueRounds: number | undefined;
-    if (req.clearMaxDialogueRounds) {
-      maxDialogueRounds = undefined;
-    } else if (req.maxDialogueRounds !== undefined) {
-      const normalized = normalizeMaxDialogueRounds(req.maxDialogueRounds);
-      if (!normalized.ok) return { success: false, error: normalized.error };
-      maxDialogueRounds = normalized.value;
-    } else {
-      maxDialogueRounds = current.frontmatter.maxDialogueRounds;
     }
 
     const body = req.clearBody
@@ -458,24 +259,19 @@ export async function updateTaskDefinition(params: {
       taskId,
       overwrite: true,
       frontmatter: {
-        taskName: nextTaskName,
+        title: nextTitle,
         description,
-        cron: cronNormalized.value,
+        when: whenNormalized.value,
         contextId,
         kind,
-        ...(timeNormalized.value ? { time: timeNormalized.value } : {}),
         status,
-        ...(timezoneNormalized.value ? { timezone: timezoneNormalized.value } : {}),
-        ...(requiredArtifacts.length > 0 ? { requiredArtifacts } : {}),
-        ...(typeof minOutputChars === "number" ? { minOutputChars } : {}),
-        ...(typeof maxDialogueRounds === "number" ? { maxDialogueRounds } : {}),
       },
       body,
     });
 
     return {
       success: true,
-      taskName: nextTaskName,
+      title: nextTitle,
       taskMdPath: written.taskMdPath,
     };
   } catch (error) {
@@ -492,8 +288,13 @@ export async function runTaskDefinition(params: {
   request: TaskRunRequest;
 }): Promise<TaskRunResponse> {
   const root = path.resolve(params.projectRoot);
-  const taskName = String(params.request.taskName || "").trim();
-  const taskId = normalizeTaskId(taskName);
+  const title = String(params.request.title || "").trim();
+  let taskId = "";
+  try {
+    taskId = await resolveTaskIdByTitle({ projectRoot: root, title });
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
   const reason = typeof params.request.reason === "string" ? params.request.reason.trim() : "";
   const trigger = {
     type: "manual" as const,
@@ -516,11 +317,13 @@ export async function runTaskDefinition(params: {
       },
     );
 
+    const executionId = `${taskId}:${Date.now()}`;
     void runTaskNow({
       context: params.context,
       projectRoot: root,
       taskId,
       trigger,
+      executionId,
     })
       .then((result) => {
         params.context.logger.info(
@@ -536,6 +339,7 @@ export async function runTaskDefinition(params: {
               : {}),
             dialogueRounds: result.dialogueRounds,
             userSimulatorSatisfied: result.userSimulatorSatisfied,
+            executionId: result.executionId,
             timestamp: result.timestamp,
             runDir: result.runDirRel,
           },
@@ -556,7 +360,8 @@ export async function runTaskDefinition(params: {
       success: true,
       accepted: true,
       message: "任务已经开始执行",
-      taskName,
+      executionId,
+      title,
     };
   } catch (error) {
     return {
@@ -571,8 +376,13 @@ export async function setTaskStatus(params: {
   request: TaskSetStatusRequest;
 }): Promise<TaskSetStatusResponse> {
   const root = path.resolve(params.projectRoot);
-  const taskName = String(params.request.taskName || "").trim();
-  const taskId = normalizeTaskId(taskName);
+  const title = String(params.request.title || "").trim();
+  let taskId = "";
+  try {
+    taskId = await resolveTaskIdByTitle({ projectRoot: root, title });
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
   const status = normalizeTaskStatus(params.request.status);
 
   if (!status) {
@@ -601,7 +411,7 @@ export async function setTaskStatus(params: {
 
     return {
       success: true,
-      taskName: task.frontmatter.taskName,
+      title: task.frontmatter.title,
       status,
     };
   } catch (error) {
@@ -617,8 +427,13 @@ export async function deleteTaskDefinition(params: {
   request: TaskDeleteRequest;
 }): Promise<TaskDeleteResponse> {
   const root = path.resolve(params.projectRoot);
-  const taskName = String(params.request.taskName || "").trim();
-  const taskId = normalizeTaskId(taskName);
+  const title = String(params.request.title || "").trim();
+  let taskId = "";
+  try {
+    taskId = await resolveTaskIdByTitle({ projectRoot: root, title });
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
 
   try {
     const deleted = await deleteTask({
@@ -627,7 +442,7 @@ export async function deleteTaskDefinition(params: {
     });
     return {
       success: true,
-      taskName,
+      title,
       taskDirPath: deleted.taskDirPath,
     };
   } catch (error) {

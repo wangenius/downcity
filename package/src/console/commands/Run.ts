@@ -2,12 +2,12 @@
  * 前台启动 Agent Runtime（当前终端进程内运行）。
  *
  * 场景
- * - `sma agent on --foreground` 走这里（当前终端前台运行）
+ * - `sma agent start --foreground` 走这里（当前终端前台运行）
  * - daemon 子进程也复用这里作为真正运行入口
  *
  * 说明
- * - 后台常驻启动请使用 `shipmyagent agent on`，并用
- *   `shipmyagent agent off` / `shipmyagent agent restart` 管理。
+ * - 后台常驻启动请使用 `shipmyagent agent start`，并用
+ *   `shipmyagent agent restart` 管理。
  */
 
 import { startServer } from "@/console/index.js";
@@ -30,7 +30,7 @@ import {
 } from "@console/extension/Manager.js";
 
 /**
- * 运行态启动入口（由 `agent on` 前台模式与内部 daemon 子进程复用）。
+ * 运行态启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *
  * 职责（中文）
  * - 初始化 runtime 状态（配置、日志、services 依赖）
@@ -64,7 +64,7 @@ export async function runCommand(
   // Resolve startup options: CLI flags override built-in defaults.
   let port: number;
   try {
-    port = parsePort(options.port, "port") ?? 3000;
+    port = parsePort(options.port, "port") ?? 5314;
   } catch (error) {
     console.error("❌ Invalid start options:", error);
     process.exit(1);

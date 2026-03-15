@@ -21,7 +21,7 @@ This page answers three practical questions:
 
 The runtime model is effectively **one process bound to one projectRoot**:
 
-- One `sma agent on` process initializes one runtime state.
+- One `sma agent start` process initializes one runtime state.
 - That runtime is bound to one `rootPath` (one agent project directory).
 - `service` and `extension` calls in that process reuse the same runtime state (`config/context/logger/model`).
 
@@ -56,7 +56,7 @@ Daemon endpoint resolution order is:
 1. explicit CLI params: `--host/--port`
 2. env vars: `SMA_SERVER_HOST/SMA_SERVER_PORT` (then `SMA_CTX_SERVER_*`)
 3. current project `ship.json.start.host/port`
-4. default: `127.0.0.1:3000`
+4. default: `127.0.0.1:5314`
 
 Implications:
 

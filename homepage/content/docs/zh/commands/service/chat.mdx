@@ -1,6 +1,6 @@
 ---
 title: sma chat
-description: chat service actions（status/test/reconnect/open/close/send/react/context/history）
+description: chat service actions（status/test/reconnect/open/close/configure/send/react/context/history）
 ---
 
 # `sma chat`
@@ -22,6 +22,7 @@ sma chat <subcommand> [options]
 - `reconnect`：重连渠道（默认全部，可按渠道）
 - `open`：打开渠道（写入 `ship.json` 为 `enabled=true`，已配置会尝试启动）
 - `close`：关闭渠道（写入 `ship.json` 为 `enabled=false`，并停止运行）
+- `configure`：更新渠道参数（写入 `ship.json`，默认重载该渠道）
 - `send`：发送消息
 - `react`：给消息贴表情（当前主要 Telegram）
 - `context`：查看当前会话上下文快照
@@ -30,6 +31,12 @@ sma chat <subcommand> [options]
 ## `status/test/reconnect/open/close` 常用选项
 
 - `--channel <telegram|feishu|qq>`：只针对单个渠道执行（不传则全部）
+
+## `configure` 常用选项
+
+- `--channel <telegram|feishu|qq>`：目标渠道
+- `--config-json <json>`：配置 patch（JSON 对象）
+- `--restart`：配置后立即重载渠道
 
 ## `send` 常用选项
 
@@ -68,6 +75,7 @@ sma chat test --channel telegram
 sma chat reconnect --channel qq
 sma chat open --channel qq
 sma chat close --channel telegram
+sma chat configure --channel qq --config-json '{"appId":"xxx","sandbox":false}'
 ```
 
 ## 说明
@@ -75,7 +83,7 @@ sma chat close --channel telegram
 该命令组通常需要已启动的 agent runtime：
 
 ```bash
-sma agent on
+sma agent start
 ```
 
 ## 示例输出（基于当前实现）

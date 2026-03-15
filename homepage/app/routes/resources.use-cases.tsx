@@ -21,7 +21,7 @@ const useCases = [
 sma agent create .
 
 # Start the Agent (default: daemon)
-sma agent on
+sma agent start
 
 # In Telegram, chat with your Agent:
 /status          # Check project status

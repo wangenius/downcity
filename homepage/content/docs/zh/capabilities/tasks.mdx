@@ -8,20 +8,21 @@ description: 任务定义、调度与 CLI 操作
 任务定义存放在 `.ship/task/<taskId>/task.md`。
 
 > 想看完整执行链路（状态机、校验规则、run 目录语义、排障）：  
-> 参考 [Task Service 详细说明](/zh/docs/services/task-service)。
+> 参考 [Task Service 详细说明](/zh/docs/services/task/task-service)。
 
 ## 最小任务示例
 
 ```markdown
 ---
 title: 每日仓库巡检
-cron: "0 9 * * 1-5"
+when: "0 9 * * 1-5"
 description: 运行测试并总结异常
 contextId: telegram-chat-123456
 status: enabled
+kind: agent
 ---
 
-请执行测试并把结论写入 result.md。
+请执行测试并把发送到 channel 的正文写入 output.md，并在 result.md 写摘要。
 ```
 
 ## 执行结果通知
@@ -38,8 +39,8 @@ status: enabled
     task.md
     <timestamp>/
       run.json
-      result.md
       output.md
+      result.md
       dialogue.md
 ```
 
@@ -47,9 +48,9 @@ status: enabled
 
 ```bash
 sma task list
-sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
 sma task run daily-check
-sma task update daily-check --cron "0 10 * * 1-5"
+sma task update daily-check --when "@manual"
 sma task disable daily-check
 ```
 
@@ -61,4 +62,4 @@ sma task disable daily-check
 
 ## 调度生效条件
 
-任务调度依赖运行中的 runtime（建议 `sma agent on`）。
+任务调度依赖运行中的 runtime（建议 `sma agent start`）。

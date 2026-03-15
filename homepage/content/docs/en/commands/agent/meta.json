@@ -1,4 +1,4 @@
 {
   "title": "Agent",
-  "pages": ["agent", "create", "on", "off", "status", "restart", "doctor"]
+  "pages": ["agent", "create", "start", "status", "restart", "doctor"]
 }

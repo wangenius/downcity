@@ -1,0 +1,154 @@
+---
+title: Port and Instance Lifecycle
+description: How console, agent, service, and extension coordinate on port allocation, invocation routing, and runtime lifecycle
+---
+
+# Port and Instance Lifecycle
+
+This page explains one thing: how `console`, `agent`, `service`, and `extension` work together at runtime, especially who allocates ports, how commands are routed, and when instances are created or removed.
+
+## 1) Unified Rule
+
+- Agent ports are allocated by `console`.
+- `sma agent start/restart` no longer expose `--port`.
+- `service/extension` commands do not rely on a fixed port by default. They resolve target agent first, then resolve endpoint by priority.
+
+## 2) Runtime Roles
+
+### console (global control plane)
+
+- Maintains global registry (`~/.ship/console/agents.json`).
+- Manages agent daemon lifecycle (start/stop/restart/status aggregation).
+- Allocates runtime ports for agents.
+
+### agent (project runtime plane)
+
+- Each agent project maps to one daemon process.
+- Daemon startup args are persisted to project debug metadata (`.ship/.debug/shipmyagent.daemon.json`).
+- This process hosts runtime HTTP APIs (`/api/services/*`, `/api/extensions/*`).
+
+### service (capability domain)
+
+- `sma service ...` and `sma <service> <action>` call agent runtime APIs.
+- They resolve target project first, then host/port, then call `/api/services/*`.
+
+### extension (extension domain)
+
+- `sma extension ...` and `sma <extension> <action>` call `/api/extensions/*`.
+- `voice` has a local fallback path for selected actions when runtime is unreachable.
+
+## 3) Agent Port Allocation and Instance Creation
+
+### `sma agent start`
+
+1. Validate console is running.
+2. Validate project init files (`ship.json`, `PROFILE.md`).
+3. Console allocates an available port.
+4. Spawn daemon foreground child:
+
+```bash
+agent start <projectRoot> --foreground true --port <allocatedPort> --host <host>
+```
+
+5. Persist pid/log/meta under `.ship/.debug`.
+6. Upsert console registry record.
+
+### Auto-allocation algorithm (current behavior)
+
+- Allocation module: `console/daemon/PortAllocator`
+- Default range: `5314-6399` (with `5315` reserved for Console UI)
+- Probe host: the actual agent bind host (default `0.0.0.0`)
+- Strategy: scan ports in ascending order and pick the first listenable one
+- Failure: startup fails if no port is available in range
+
+Equivalent pseudo code:
+
+```text
+host = start.host || "0.0.0.0"
+for port in [5314..6399]:
+  if port == 5315:
+    continue
+  if canListen(host, port):
+    return port
+throw "No available port"
+```
+
+Implementation notes:
+
+- No central lock is used (no cross-process strong lock); final truth is actual `listen` success.
+- Probing on target host avoids false positives like "`127.0.0.1` is free but `0.0.0.0` conflicts".
+- Daemon startup args are persisted in `.ship/.debug/shipmyagent.daemon.json`, and service/extension routing prefers this source.
+
+### `sma agent restart`
+
+1. Stop old daemon.
+2. Console allocates a port again and starts new daemon.
+3. Refresh registry entry.
+
+Note: port can change after restart by design.
+
+### Console UI port interaction
+
+- Console UI default port is fixed to `5315`.
+- Agent auto-allocation skips `5315`, avoiding collisions with UI.
+
+## 4) How service/extension resolve target agent
+
+`service` target resolution order:
+
+1. `--agent <name>`
+2. if path is default `.`, prefer `SMA_AGENT_NAME`
+3. `--path` / current directory
+4. if `.` and `SMA_AGENT_PATH` exists, prefer that path
+
+Then hard checks:
+
+- target must be registered in console registry
+- target must contain `ship.json` and `PROFILE.md` (for service commands)
+
+`extension` commands resolve target project by `--path` / current directory, then resolve endpoint.
+
+## 5) Endpoint resolution order (host/port)
+
+For runtime API calls (service/extension/action):
+
+1. explicit CLI `--host` / `--port` (debug use only)
+2. `SMA_SERVER_HOST/PORT`
+3. `SMA_CTX_SERVER_HOST/PORT`
+4. daemon meta `--host/--port`
+5. default `127.0.0.1:5314`
+
+Normalization:
+
+- `0.0.0.0` / `::` are converted to `127.0.0.1` for client connections.
+
+## 6) Common port issues
+
+### `state=stale` + `pid file exists but process is not alive`
+
+Daemon started and crashed. Port conflict is the common cause.
+
+Fix:
+
+```bash
+sma agent doctor <path> --fix
+sma agent restart <path>
+```
+
+### “One agent is running, second agent fails to start”
+
+Typical cause: stale state or old flow still trying to bind the same port.
+
+Check:
+
+```bash
+sma console agents
+lsof -nP -iTCP:<port> -sTCP:LISTEN
+tail -n 200 <agentPath>/.ship/.debug/shipmyagent.daemon.log
+```
+
+## 7) Recommendations
+
+- In multi-agent scenarios, prefer `sma service ... --agent <name>`.
+- Do not keep manually exported `SMA_SERVER_PORT` in shell profile.
+- For abnormal status, run `doctor --fix`, then `restart`, then inspect daemon log.

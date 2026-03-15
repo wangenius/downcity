@@ -15,8 +15,10 @@ import {
   ScrollTextIcon,
   ServerCogIcon,
   RadarIcon,
+  ActivityIcon,
 } from "lucide-react"
 import type { UiAgentOption, UiContextSummary } from "@/types/Dashboard"
+import type { DashboardView } from "@/types/Navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -30,6 +32,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { buildContextGroups } from "@/lib/context-groups"
+import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -42,18 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export type DashboardView =
-  | "globalOverview"
-  | "globalModel"
-  | "globalAgents"
-  | "globalExtensions"
-  | "agentOverview"
-  | "agentChannels"
-  | "agentServices"
-  | "agentTasks"
-  | "agentLogs"
-  | "contextOverview"
-  | "contextWorkspace"
+export type { DashboardView }
 
 export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   /**
@@ -90,20 +82,18 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onContextOpen: (contextId: string) => void
 }
 
-const globalItems: Array<{ key: DashboardView; title: string; icon: React.ReactNode }> = [
-  { key: "globalOverview", title: "Overview", icon: <Layers3Icon /> },
-  { key: "globalModel", title: "Model", icon: <ServerCogIcon /> },
-  { key: "globalAgents", title: "Agents", icon: <CpuIcon /> },
-  { key: "globalExtensions", title: "Extensions", icon: <PuzzleIcon /> },
-]
-
-const agentItems: Array<{ key: DashboardView; title: string; icon: React.ReactNode }> = [
-  { key: "agentOverview", title: "Overview", icon: <CpuIcon /> },
-  { key: "agentChannels", title: "Channels", icon: <MessageSquareTextIcon /> },
-  { key: "agentServices", title: "Services", icon: <ServerCogIcon /> },
-  { key: "agentTasks", title: "Tasks", icon: <RadarIcon /> },
-  { key: "agentLogs", title: "Logs", icon: <ScrollTextIcon /> },
-]
+const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.ReactNode> = {
+  globalOverview: <Layers3Icon />,
+  globalRuntime: <ActivityIcon />,
+  globalModel: <ServerCogIcon />,
+  globalAgents: <CpuIcon />,
+  globalExtensions: <PuzzleIcon />,
+  agentOverview: <CpuIcon />,
+  agentServices: <ServerCogIcon />,
+  agentTasks: <RadarIcon />,
+  agentLogs: <ScrollTextIcon />,
+  contextOverview: <Layers3Icon />,
+}
 
 export function AppSidebar({
   activeView,
@@ -117,6 +107,8 @@ export function AppSidebar({
   ...props
 }: AppSidebarProps) {
   const groupedContexts = buildContextGroups(contexts)
+  const globalItems = React.useMemo(() => listPrimaryPagesByScope("global"), [])
+  const agentItems = React.useMemo(() => listPrimaryPagesByScope("agent"), [])
   const selectedAgent =
     agents.find((agent) => agent.id === selectedAgentId) ?? null
 
@@ -141,14 +133,14 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {globalItems.map((item) => (
-                <SidebarMenuItem key={item.key}>
+                <SidebarMenuItem key={item.view}>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    isActive={activeView === item.key}
-                    onClick={() => onViewChange(item.key)}
+                    isActive={activeView === item.view}
+                    onClick={() => onViewChange(item.view)}
                     className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                   >
-                    {item.icon}
+                    {viewIconMap[item.view]}
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -162,14 +154,14 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {agentItems.map((item) => (
-                <SidebarMenuItem key={item.key}>
+                <SidebarMenuItem key={item.view}>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    isActive={activeView === item.key}
-                    onClick={() => onViewChange(item.key)}
+                    isActive={activeView === item.view}
+                    onClick={() => onViewChange(item.view)}
                     className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                   >
-                    {item.icon}
+                    {viewIconMap[item.view]}
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -207,7 +199,7 @@ export function AppSidebar({
                   </SidebarMenuItem>
                   {group.items.map((item) => (
                     <SidebarMenuItem key={item.contextId}>
-                  <SidebarMenuButton
+                      <SidebarMenuButton
                         tooltip={item.contextId}
                         isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
                         onClick={() => onContextOpen(item.contextId)}

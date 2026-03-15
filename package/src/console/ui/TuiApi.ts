@@ -16,7 +16,6 @@ import {
 import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
-import { isValidTaskId } from "@services/task/runtime/Paths.js";
 import { resolveAgentSystemMessages } from "@agent/prompts/system/SystemDomain.js";
 import {
   TASK_RUN_DIR_REGEX,
@@ -352,9 +351,10 @@ export function registerTuiApiRoutes(params: {
           ? { status: status as "enabled" | "paused" | "disabled" }
           : {}),
       });
+      const tasks = Array.isArray(result.tasks) ? result.tasks : [];
       return c.json({
         success: true,
-        tasks: Array.isArray(result.tasks) ? result.tasks : [],
+        tasks,
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
@@ -364,12 +364,12 @@ export function registerTuiApiRoutes(params: {
   app.post("/api/tui/tasks/run", async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
-        taskId?: string;
+        title?: string;
         reason?: string;
       };
-      const taskId = String(body.taskId || "").trim();
-      if (!taskId || !isValidTaskId(taskId)) {
-        return c.json({ success: false, error: "Invalid taskId" }, 400);
+      const title = String(body.title || "").trim();
+      if (!title) {
+        return c.json({ success: false, error: "Invalid title" }, 400);
       }
 
       const reason = toOptionalString(body.reason);
@@ -377,7 +377,7 @@ export function registerTuiApiRoutes(params: {
         serviceName: "task",
         command: "run",
         payload: {
-          taskId,
+          title,
           ...(reason ? { reason } : {}),
         },
         context: params.getServiceRuntimeState(),
@@ -388,33 +388,37 @@ export function registerTuiApiRoutes(params: {
     }
   });
 
-  app.get("/api/tui/tasks/:taskId/runs", async (c) => {
+  app.get("/api/tui/tasks/:title/runs", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const taskId = String(c.req.param("taskId") || "").trim();
-      if (!taskId || !isValidTaskId(taskId)) {
-        return c.json({ success: false, error: "Invalid taskId" }, 400);
+      const title = decodeMaybe(
+        String(c.req.param("title") || "").trim(),
+      );
+      if (!title) {
+        return c.json({ success: false, error: "Invalid title" }, 400);
       }
 
       const limit = toLimit(c.req.query("limit"), 50);
       const runs = await listTaskRuns({
         projectRoot: runtime.rootPath,
-        taskId,
+        title,
         limit,
       });
-      return c.json({ success: true, taskId, runs });
+      return c.json({ success: true, title, runs });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
     }
   });
 
-  app.get("/api/tui/tasks/:taskId/runs/:timestamp", async (c) => {
+  app.get("/api/tui/tasks/:title/runs/:timestamp", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const taskId = String(c.req.param("taskId") || "").trim();
+      const title = decodeMaybe(
+        String(c.req.param("title") || "").trim(),
+      );
       const timestamp = String(c.req.param("timestamp") || "").trim();
-      if (!taskId || !isValidTaskId(taskId)) {
-        return c.json({ success: false, error: "Invalid taskId" }, 400);
+      if (!title) {
+        return c.json({ success: false, error: "Invalid title" }, 400);
       }
       if (!TASK_RUN_DIR_REGEX.test(timestamp)) {
         return c.json({ success: false, error: "Invalid timestamp" }, 400);
@@ -422,7 +426,7 @@ export function registerTuiApiRoutes(params: {
 
       const detail = await readTaskRunDetail({
         projectRoot: runtime.rootPath,
-        taskId,
+        title,
         timestamp,
       });
       if (!detail) {

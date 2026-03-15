@@ -73,14 +73,6 @@ function formatTime(ts?: number | string): string {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
-function inferChannelFromContextId(contextId: string): string {
-  const value = String(contextId || "").trim().toLowerCase();
-  if (value.startsWith("telegram-chat-")) return "telegram";
-  if (value.startsWith("feishu-chat-")) return "feishu";
-  if (value.startsWith("qq-")) return "qq";
-  return "";
-}
-
 export interface UseConsoleDashboardResult {
   /**
    * 当前 agent 列表。
@@ -114,10 +106,6 @@ export interface UseConsoleDashboardResult {
    * context 摘要列表。
    */
   contexts: UiContextSummary[];
-  /**
-   * 当前选中的渠道。
-   */
-  selectedChannel: string;
   /**
    * 当前选中的 contextId。
    */
@@ -195,10 +183,6 @@ export interface UseConsoleDashboardResult {
    */
   handleAgentChange: (nextAgentId: string) => void;
   /**
-   * 切换当前渠道。
-   */
-  handleChannelChange: (channel: string) => Promise<void>;
-  /**
    * 切换当前 context。
    */
   handleContextChange: (contextId: string) => Promise<void>;
@@ -259,17 +243,21 @@ export interface UseConsoleDashboardResult {
    */
   runChatChannelAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => Promise<void>;
   /**
+   * 更新 chat 渠道配置参数。
+   */
+  configureChatChannel: (channel: string, config: Record<string, unknown>) => Promise<void>;
+  /**
    * 触发 task 运行。
    */
-  runTask: (taskId: string) => Promise<void>;
+  runTask: (title: string) => Promise<void>;
   /**
    * 加载任务执行列表。
    */
-  loadTaskRuns: (taskId: string, limit?: number) => Promise<UiTaskRunSummary[]>;
+  loadTaskRuns: (title: string, limit?: number) => Promise<UiTaskRunSummary[]>;
   /**
    * 加载任务执行详情。
    */
-  loadTaskRunDetail: (taskId: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
+  loadTaskRunDetail: (title: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
   /**
    * 发送 local_ui 指令。
    */
@@ -360,7 +348,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [extensions, setExtensions] = useState<UiExtensionRuntimeItem[]>([]);
   const [chatChannels, setChatChannels] = useState<UiChatChannelStatus[]>([]);
   const [contexts, setContexts] = useState<UiContextSummary[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState("");
   const [selectedContextId, setSelectedContextId] = useState("");
   const [channelHistory, setChannelHistory] = useState<UiChatHistoryEvent[]>([]);
   const [contextMessages, setContextMessages] = useState<UiContextTimelineMessage[]>([]);
@@ -464,7 +451,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setExtensions([]);
     setChatChannels([]);
     setContexts([]);
-    setSelectedChannel("");
     setSelectedContextId("");
     setChannelHistory([]);
     setContextMessages([]);
@@ -731,17 +717,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshLocalChat(nextAgentId),
         ]);
 
-        const nextSelectedChannel = String(selectedChannel || channels[0]?.channel || "").trim();
-        if (nextSelectedChannel) {
-          setSelectedChannel(nextSelectedChannel);
-        }
-
         const byCurrent = contextList.find((item) => item.contextId === selectedContextId)?.contextId || "";
-        const byChannel =
-          contextList.find((item) => inferChannelFromContextId(item.contextId) === nextSelectedChannel)?.contextId ||
-          "";
+        const localUi = contextList.find((item) => item.contextId === LOCAL_UI_CONTEXT_ID)?.contextId || "";
         const fallback = contextList[0]?.contextId || "";
-        const nextContext = byCurrent || byChannel || fallback;
+        const nextContext = byCurrent || localUi || fallback;
         setSelectedContextId(nextContext);
 
         if (nextContext) {
@@ -787,7 +766,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshPrompt,
       refreshServices,
       refreshTasks,
-      selectedChannel,
       selectedContextId,
       showToast,
     ],
@@ -859,32 +837,36 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshChatChannels, refreshServices, requestJson, selectedAgentId, showToast],
   );
 
-  const handleChannelChange = useCallback(
-    async (channel: string) => {
-      const nextChannel = String(channel || "").trim();
-      setSelectedChannel(nextChannel);
-      const nextContext =
-        contexts.find((item) => inferChannelFromContextId(item.contextId) === nextChannel)?.contextId || "";
-      if (!nextContext) return;
-      setSelectedContextId(nextContext);
-      if (!selectedAgentId) return;
-      await Promise.all([
-        refreshChannelHistory(selectedAgentId, nextContext),
-        refreshContextMessages(selectedAgentId, nextContext),
-        refreshPrompt(selectedAgentId, nextContext),
-      ]);
+  const configureChatChannel = useCallback(
+    async (channel: string, config: Record<string, unknown>) => {
+      const normalizedChannel = String(channel || "").trim();
+      if (!normalizedChannel) return;
+      try {
+        await requestJson("/api/services/command", {
+          method: "POST",
+          body: JSON.stringify({
+            serviceName: "chat",
+            command: "configure",
+            payload: {
+              channel: normalizedChannel,
+              config,
+              restart: true,
+            },
+          }),
+        });
+        showToast(`${normalizedChannel} 配置已保存并重载`, "success");
+        await refreshDashboard(selectedAgentId);
+      } catch (error) {
+        showToast(`配置 ${normalizedChannel} 失败: ${getErrorMessage(error)}`, "error");
+      }
     },
-    [contexts, refreshChannelHistory, refreshContextMessages, refreshPrompt, selectedAgentId],
+    [refreshDashboard, requestJson, selectedAgentId, showToast],
   );
 
   const handleContextChange = useCallback(
     async (contextId: string) => {
       const nextContextId = String(contextId || "").trim();
       setSelectedContextId(nextContextId);
-      const channelFromContext = inferChannelFromContextId(nextContextId);
-      if (channelFromContext) {
-        setSelectedChannel(channelFromContext);
-      }
       if (!selectedAgentId || !nextContextId) return;
       await Promise.all([
         refreshChannelHistory(selectedAgentId, nextContextId),
@@ -896,13 +878,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const runTask = useCallback(
-    async (taskId: string) => {
+    async (title: string) => {
       try {
         await requestJson("/api/tui/tasks/run", {
           method: "POST",
-          body: JSON.stringify({ taskId, reason: "dashboard_manual_trigger" }),
+          body: JSON.stringify({ title, reason: "dashboard_manual_trigger" }),
         });
-        showToast(`task ${taskId} 已触发`, "success");
+        showToast(`task ${title} 已触发`, "success");
         await Promise.all([refreshTasks(selectedAgentId), refreshLogs(selectedAgentId)]);
       } catch (error) {
         showToast(`task 执行失败: ${getErrorMessage(error)}`, "error");
@@ -912,12 +894,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const loadTaskRuns = useCallback(
-    async (taskId: string, limit = 50): Promise<UiTaskRunSummary[]> => {
-      const id = String(taskId || "").trim();
-      if (!id) return [];
+    async (title: string, limit = 50): Promise<UiTaskRunSummary[]> => {
+      const name = String(title || "").trim();
+      if (!name) return [];
       try {
         const data = await requestJson<UiTaskRunsResponse>(
-          `/api/tui/tasks/${encodeURIComponent(id)}/runs?limit=${encodeURIComponent(String(limit))}`,
+          `/api/tui/tasks/${encodeURIComponent(name)}/runs?limit=${encodeURIComponent(String(limit))}`,
           {},
           selectedAgentId,
         );
@@ -931,13 +913,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const loadTaskRunDetail = useCallback(
-    async (taskId: string, timestamp: string): Promise<UiTaskRunDetailResponse | null> => {
-      const id = String(taskId || "").trim();
+    async (title: string, timestamp: string): Promise<UiTaskRunDetailResponse | null> => {
+      const name = String(title || "").trim();
       const ts = String(timestamp || "").trim();
-      if (!id || !ts) return null;
+      if (!name || !ts) return null;
       try {
         const data = await requestJson<UiTaskRunDetailResponse>(
-          `/api/tui/tasks/${encodeURIComponent(id)}/runs/${encodeURIComponent(ts)}`,
+          `/api/tui/tasks/${encodeURIComponent(name)}/runs/${encodeURIComponent(ts)}`,
           {},
           selectedAgentId,
         );
@@ -1252,7 +1234,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     extensions,
     chatChannels,
     contexts,
-    selectedChannel,
     selectedContextId,
     channelHistory,
     contextMessages,
@@ -1272,7 +1253,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     toast,
     setChatInput,
     handleAgentChange,
-    handleChannelChange,
     handleContextChange,
     refreshDashboard,
     refreshChatChannels,
@@ -1288,6 +1268,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     controlService,
     controlExtension,
     runChatChannelAction,
+    configureChatChannel,
     runTask,
     loadTaskRuns,
     loadTaskRunDetail,

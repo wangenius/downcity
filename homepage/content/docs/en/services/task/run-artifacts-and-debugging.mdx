@@ -1,0 +1,50 @@
+---
+title: Run Artifacts and Debugging
+description: run directory semantics, status interpretation, and practical troubleshooting steps
+---
+
+# Run Artifacts and Debugging
+
+Every task execution creates a run directory:
+
+```text
+.ship/task/<taskId>/<timestamp>/
+```
+
+## Core artifacts
+
+| File | Purpose |
+| --- | --- |
+| `input.md` | definition snapshot for this run |
+| `output.md` | output body (`agent`: successfully delivered channel text; `script`: script output) |
+| `result.md` | human-readable summary |
+| `run.json` | final status payload |
+| `run-progress.json` | live progress snapshot |
+| `dialogue.md` | multi-round summary (`agent`) |
+| `dialogue.json` | structured round records (`agent`) |
+| `messages.jsonl` | execution context message stream |
+| `error.md` | failure summary |
+
+## `run.json` key fields
+
+- `executionId`
+- `status`
+- `executionStatus`
+- `resultStatus`
+- `resultErrors`
+- `dialogueRounds`
+- `startedAt` / `endedAt`
+
+## Common patterns
+
+- `resultStatus=invalid`
+  - usually output too short
+
+- `executionStatus=failure`
+  - usually script execution failure, agent runtime failure, or failed `chat_send` delivery
+
+- `Task skipped (already running)`
+  - overlap trigger skipped by per-task serial guard
+
+- one-shot `when=time:...` no longer auto-runs
+  - expected behavior after execution: `paused + @manual`

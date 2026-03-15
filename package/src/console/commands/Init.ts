@@ -585,7 +585,7 @@ export async function initCommand(
       "Optional: configure services.chat.channels.qq.auth_id (or QQ_AUTH_ID)",
     );
   }
-  nextSteps.push('Run "sma agent on" to start the agent');
+  nextSteps.push('Run "sma agent start" to start the agent');
 
   console.log("Next steps:");
   for (const [idx, line] of nextSteps.entries()) {

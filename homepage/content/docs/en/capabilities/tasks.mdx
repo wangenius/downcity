@@ -12,13 +12,14 @@ Task definitions live in `.ship/task/<taskId>/task.md`.
 ```markdown
 ---
 title: Daily Repo Check
-cron: "0 9 * * 1-5"
+when: "0 9 * * 1-5"
 description: Run tests and summarize issues
 contextId: telegram-chat-123456
 status: enabled
+kind: agent
 ---
 
-Run tests and write conclusions to result.md.
+Run tests, write channel-delivered body to output.md, and write summary to result.md.
 ```
 
 ## Result Delivery
@@ -35,8 +36,8 @@ Run tests and write conclusions to result.md.
     task.md
     <timestamp>/
       run.json
-      result.md
       output.md
+      result.md
       dialogue.md
 ```
 
@@ -44,9 +45,9 @@ Run tests and write conclusions to result.md.
 
 ```bash
 sma task list
-sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --activate
+sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
 sma task run daily-check
-sma task update daily-check --cron "0 10 * * 1-5"
+sma task update daily-check --when "@manual"
 sma task disable daily-check
 ```
 
@@ -58,4 +59,4 @@ sma task disable daily-check
 
 ## Runtime requirement
 
-Scheduling only works with a running runtime (typically `sma agent on`).
+Scheduling only works with a running runtime (typically `sma agent start`).

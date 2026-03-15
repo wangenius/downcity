@@ -1,21 +1,20 @@
 ---
-title: sma agent on
+title: sma agent start
 description: 启动 agent runtime（后台或前台）
 ---
 
-# `sma agent on`
+# `sma agent start`
 
 启动指定 agent 的 runtime。
 
 ## 用法
 
 ```bash
-sma agent on [path] [options]
+sma agent start [path] [options]
 ```
 
 ## 常用参数
 
-- `-p, --port <port>`：服务端口（默认由 console 自动分配）
 - `-h, --host <host>`：服务主机（默认 `0.0.0.0`）
 - `--foreground [enabled]`：前台运行（不进入后台）
 
@@ -23,14 +22,14 @@ sma agent on [path] [options]
 
 - 启动前会检查 console 是否已启动。
 - `path` 默认当前目录 `.`。
-- 未显式传 `--port` 时，console 会为该 agent 自动分配可用端口。
+- agent 端口始终由 console 自动分配。
 - 默认不依赖项目 `ship.json.start.host/port`。
 - `--foreground` 时在当前终端运行；否则按后台方式运行。
 - `--foreground` 仅用于当前终端的临时运行会话，终端结束后进程随之结束。
 
 ## 相关命令
 
-- [`sma agent off`](/zh/docs/commands/agent/off)
+- [`sma agent restart`](/zh/docs/commands/agent/restart)
 - [`sma agent status`](/zh/docs/commands/agent/status)
 - [`sma console start`](/zh/docs/commands/console/start)
 
@@ -39,7 +38,7 @@ sma agent on [path] [options]
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma agent on .
+$ sma agent start .
 sma version: 1.0.0
 ✅ ShipMyAgent daemon started
    pid: <pid>
@@ -47,7 +46,7 @@ sma version: 1.0.0
 ```
 
 ```text
-$ sma agent on .
+$ sma agent start .
 sma version: 1.0.0
 ❌ console is not running. Please run `sma console start` first.
 ```

@@ -1,0 +1,44 @@
+---
+title: Agent 模式任务
+description: kind=agent 的执行行为、适用场景与输出要求
+---
+
+# Agent 模式任务
+
+`kind=agent` 会把 `task.md` 正文交给 agent 执行，并通过“执行器 + 模拟用户”多轮评估收敛结果。
+
+## 适用场景
+
+- 需要推理和迭代的任务
+- 研究/分析/总结
+- 需要结构化文字产出的任务
+
+## 执行特点
+
+- 自动多轮（默认最多 3 轮）
+- 每轮都有进度事件（Console UI 可实时查看）
+- 成功发送到 channel 的正文写入 `output.md`，并在 `result.md` 写摘要
+
+## 最佳实践
+
+- 正文写清目标、边界和验收标准
+- 尽量要求“可审计输出”，方便排障
+- 不要把 shell 脚本直接放在 agent 任务正文里
+
+## 示例
+
+```yaml
+---
+title: daily-market-research
+description: 每日市场研究摘要
+contextId: research
+when: 0 8 * * *
+status: enabled
+kind: agent
+---
+
+请生成今天的市场研究摘要，包含：
+1. 主要事件
+2. 关键风险
+3. 下一步建议
+```

@@ -1,0 +1,55 @@
+---
+title: Scheduler Registration and Trigger Flow
+description: when-based registration, re-check on trigger, serial guard, and one-shot behavior
+---
+
+# Scheduler Registration and Trigger Flow
+
+## Registration rules
+
+On scheduler start/reload, for each `enabled` task:
+
+1. `when=@manual`: no job registration
+2. `when=cron`: register `task:<taskId>`
+3. `when=time:...`: register `task-time:<taskId>` minute poller
+
+## Re-check before execute
+
+At trigger time, runtime re-reads latest `task.md` and verifies:
+
+- status is still `enabled`
+- `when` still matches current trigger mode
+
+## One-shot behavior
+
+After successful `when=time:...` execution:
+
+- `status -> paused`
+- `when -> @manual`
+
+## Serial guard
+
+Only one in-flight run per `taskId`:
+
+- overlap trigger is skipped
+- log: `Task skipped (already running)`
+
+## Mermaid
+
+```mermaid
+flowchart TD
+  A[Scheduler start or reload] --> B[List enabled tasks]
+  B --> C{when type}
+  C -->|manual| D[Skip register]
+  C -->|cron| E[Register job task taskId]
+  C -->|time| F[Register minute job task-time taskId]
+  E --> G[Trigger arrives]
+  F --> G
+  G --> H[Re-read latest task.md]
+  H --> I{still enabled and when match}
+  I -->|no| J[Skip]
+  I -->|yes| K[runTaskNow]
+  K --> L{trigger type time}
+  L -->|yes| M[write back paused and when=@manual]
+  L -->|no| N[keep current schedule]
+```

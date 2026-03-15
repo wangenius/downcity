@@ -1,14 +1,14 @@
 /**
  * 后台常驻启动（daemon）。
  *
- * 对应用户命令：`sma agent on`
+ * 对应用户命令：`sma agent start`
  *
  * 行为
  * - 在 `.ship/debug/` 写入 pid/log/meta 文件
- * - 通过 `node <commands/index.js> agent on ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
+ * - 通过 `node <commands/index.js> agent start ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
  *
  * 注意
- * - 前台启动请显式使用 `sma agent on --foreground`。
+ * - 前台启动请显式使用 `sma agent start --foreground`。
  */
 
 import path from "path";
@@ -26,7 +26,7 @@ import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js
  *
  * 流程（中文）
  * 1) 校验项目初始化文件是否存在
- * 2) 组装 `agent on` 子进程参数
+ * 2) 组装 `agent start` 子进程参数
  * 3) 通过 daemon manager 后台拉起并打印 pid/log
  */
 export async function startCommand(

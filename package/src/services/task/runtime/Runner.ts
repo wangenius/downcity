@@ -20,9 +20,12 @@ import { PromptSystem } from "@agent/prompts/system/PromptSystem.js";
 import { shellTools } from "@agent/tools/shell/Tool.js";
 import type {
   ShipTaskKind,
-  ShipTaskFrontmatterV1,
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunMetaV1,
+  ShipTaskRunProgressEventV1,
+  ShipTaskRunProgressPhaseV1,
+  ShipTaskRunProgressStatusV1,
+  ShipTaskRunProgressV1,
   ShipTaskRunResultStatusV1,
   ShipTaskRunStatusV1,
   ShipTaskRunTriggerV1,
@@ -55,6 +58,88 @@ function summarizeText(text: string, maxChars: number): string {
   if (!t) return "";
   if (t.length <= maxChars) return t;
   return t.slice(0, Math.max(0, maxChars - 3)).trimEnd() + "...";
+}
+
+type RunProgressSnapshot = {
+  status: ShipTaskRunProgressStatusV1;
+  phase: ShipTaskRunProgressPhaseV1;
+  message: string;
+  round?: number;
+  maxRounds?: number;
+  endedAt?: number;
+  runStatus?: ShipTaskRunStatusV1;
+  executionStatus?: ShipTaskRunExecutionStatusV1;
+  resultStatus?: ShipTaskRunResultStatusV1;
+};
+
+/**
+ * 持续写入运行进度快照（run-progress.json）。
+ *
+ * 关键点（中文）
+ * - run.json 只在结束时写入；该快照用于 UI 展示“执行中过程”。
+ * - 写入失败不会阻塞主流程，避免影响任务执行。
+ */
+function createRunProgressWriter(params: {
+  progressJsonPath: string;
+  taskId: string;
+  timestamp: string;
+  trigger: ShipTaskRunTriggerV1;
+  kind: ShipTaskKind;
+  startedAt: number;
+}) {
+  const events: ShipTaskRunProgressEventV1[] = [];
+  let current: RunProgressSnapshot = {
+    status: "running",
+    phase: "preparing",
+    message: "任务已唤起，正在准备执行环境",
+  };
+
+  const persist = async (): Promise<void> => {
+    const now = Date.now();
+    const payload: ShipTaskRunProgressV1 = {
+      v: 1,
+      taskId: params.taskId,
+      timestamp: params.timestamp,
+      trigger: params.trigger,
+      kind: params.kind,
+      status: current.status,
+      phase: current.phase,
+      message: current.message,
+      startedAt: params.startedAt,
+      updatedAt: now,
+      ...(typeof current.endedAt === "number" ? { endedAt: current.endedAt } : {}),
+      ...(current.runStatus ? { runStatus: current.runStatus } : {}),
+      ...(current.executionStatus ? { executionStatus: current.executionStatus } : {}),
+      ...(current.resultStatus ? { resultStatus: current.resultStatus } : {}),
+      ...(typeof current.round === "number" ? { round: current.round } : {}),
+      ...(typeof current.maxRounds === "number" ? { maxRounds: current.maxRounds } : {}),
+      events: [...events],
+    };
+    try {
+      await fs.writeJson(params.progressJsonPath, payload, { spaces: 2 });
+    } catch {
+      // ignore
+    }
+  };
+
+  const update = async (next: RunProgressSnapshot): Promise<void> => {
+    current = { ...current, ...next };
+    events.push({
+      at: Date.now(),
+      phase: current.phase,
+      message: current.message,
+      ...(typeof current.round === "number" ? { round: current.round } : {}),
+      ...(typeof current.maxRounds === "number" ? { maxRounds: current.maxRounds } : {}),
+    });
+    if (events.length > 40) {
+      events.splice(0, events.length - 40);
+    }
+    await persist();
+  };
+
+  return {
+    update,
+  };
 }
 
 type TaskResultValidation = {
@@ -243,8 +328,13 @@ function extractTextFromAssistantMessageParts(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function pickLastChatSendToolInputText(parts: unknown): string {
-  if (!Array.isArray(parts)) return "";
+type ChatSendOutputPick = {
+  text: string;
+  delivered: boolean;
+};
+
+function pickLastChatSendDeliveredText(parts: unknown): ChatSendOutputPick {
+  if (!Array.isArray(parts)) return { text: "", delivered: false };
   for (let i = parts.length - 1; i >= 0; i -= 1) {
     const part = parts[i];
     if (!part || typeof part !== "object") continue;
@@ -255,6 +345,11 @@ function pickLastChatSendToolInputText(parts: unknown): string {
       input?: unknown;
       rawInput?: unknown;
       arguments?: unknown;
+      output?: unknown;
+      result?: unknown;
+      state?: unknown;
+      errorText?: unknown;
+      error?: unknown;
     };
     if (p.type !== "tool-call") continue;
     const toolName = String(p.toolName ?? p.tool ?? "").trim();
@@ -264,20 +359,38 @@ function pickLastChatSendToolInputText(parts: unknown): string {
     );
     if (!inputObject) continue;
     const text = String(inputObject.text ?? "").trim();
-    if (text) return text;
+    if (!text) continue;
+
+    const state = String(p.state ?? "").trim();
+    if (state === "output-error" || state === "output-denied") {
+      return { text, delivered: false };
+    }
+
+    const outputObject = parsePossibleJsonObject(p.output ?? p.result);
+    if (outputObject) {
+      const success = outputObject.success;
+      if (success === true) return { text, delivered: true };
+      if (success === false) return { text, delivered: false };
+    }
+
+    if (state === "output-available") return { text, delivered: true };
+    return { text, delivered: false };
   }
-  return "";
+  return { text: "", delivered: false };
 }
 
-function pickAgentOutputText(assistantMessage: AgentResult["assistantMessage"]): string {
-  // 关键点（中文）：优先取 chat_send 的输入文本，回退到普通文本 part。
-  const toolText = pickLastChatSendToolInputText(
+function pickAgentOutput(assistantMessage: AgentResult["assistantMessage"]): ChatSendOutputPick {
+  // 关键点（中文）：task 成功要求 chat_send 成功送达。
+  const picked = pickLastChatSendDeliveredText(
     (assistantMessage as { parts?: unknown } | null)?.parts,
   );
-  if (toolText) return toolText;
-  return extractTextFromAssistantMessageParts(
+  if (picked.text) return picked;
+  return {
+    text: extractTextFromAssistantMessageParts(
     (assistantMessage as { parts?: unknown } | null)?.parts,
-  );
+    ),
+    delivered: false,
+  };
 }
 
 /**
@@ -415,7 +528,7 @@ async function runAgentRound(params: {
   query: string;
   actorId: string;
   actorName: string;
-}): Promise<{ outputText: string; rawResult: AgentResult }> {
+}): Promise<{ outputText: string; delivered: boolean; rawResult: AgentResult }> {
   const result = await withRequestContext(
     {
       contextId: params.contextId,
@@ -425,16 +538,17 @@ async function runAgentRound(params: {
         query: params.query,
       }),
   );
-  const outputText = pickAgentOutputText(result.assistantMessage);
+  const outputPick = pickAgentOutput(result.assistantMessage);
 
   // 关键点（中文）：agent.run 可能返回 success=false 但不抛异常；这里必须转为执行失败，避免误判为“多轮不满意”。
   if (!result.success) {
-    const reason = outputText || "agent run returned success=false";
+    const reason = outputPick.text || "agent run returned success=false";
     throw new Error(reason);
   }
 
   return {
-    outputText,
+    outputText: outputPick.text,
+    delivered: outputPick.delivered,
     rawResult: result,
   };
 }
@@ -499,43 +613,16 @@ async function appendExecutorAssistantMessage(params: {
  * 校验任务结果是否满足“必须有结果”的规则。
  *
  * 关键点（中文）
- * - 默认要求输出至少 1 个字符；可通过 `minOutputChars: 0` 显式允许空输出
- * - 可通过 `requiredArtifacts` 强约束 run 目录必须产出指定文件
+ * - 统一要求输出至少 1 个字符。
  */
 async function validateTaskResult(params: {
-  frontmatter: ShipTaskFrontmatterV1;
-  runDirAbs: string;
   outputText: string;
-  plannedArtifacts?: Set<string>;
 }): Promise<TaskResultValidation> {
   const errors: string[] = [];
-  const frontmatter = params.frontmatter;
-
-  const minOutputChars =
-    typeof frontmatter.minOutputChars === "number" && Number.isInteger(frontmatter.minOutputChars)
-      ? frontmatter.minOutputChars
-      : 1;
-
+  const minOutputChars = 1;
   const outputChars = String(params.outputText ?? "").trim().length;
   if (outputChars < minOutputChars) {
     errors.push(`output too short: got ${outputChars}, expected >= ${minOutputChars}`);
-  }
-
-  const requiredArtifacts = Array.isArray(frontmatter.requiredArtifacts)
-    ? frontmatter.requiredArtifacts
-    : [];
-  for (const artifact of requiredArtifacts) {
-    const rel = String(artifact || "").trim();
-    if (!rel) continue;
-    if (params.plannedArtifacts?.has(rel)) {
-      // 关键点（中文）：runner 自身会在本次 run 中生成的产物，视为“将满足”。
-      continue;
-    }
-    const abs = path.join(params.runDirAbs, rel);
-    const exists = await fs.pathExists(abs);
-    if (!exists) {
-      errors.push(`missing artifact: ${rel}`);
-    }
   }
 
   if (errors.length > 0) {
@@ -567,6 +654,7 @@ export async function runTaskNow(params: {
   context: ServiceRuntime;
   taskId: string;
   trigger: ShipTaskRunTriggerV1;
+  executionId?: string;
   projectRoot?: string;
 }): Promise<{
   ok: boolean;
@@ -580,6 +668,7 @@ export async function runTaskNow(params: {
   userSimulatorReason?: string;
   userSimulatorScore?: number;
   taskId: string;
+  executionId: string;
   timestamp: string;
   runDir: string;
   runDirRel: string;
@@ -590,6 +679,7 @@ export async function runTaskNow(params: {
 
   const startedAt = Date.now();
   const timestamp = formatTaskRunTimestamp(new Date(startedAt));
+  const executionId = String(params.executionId || `${params.taskId}:${timestamp}`).trim();
 
   const task = await readTask({ taskId: params.taskId, projectRoot: root });
   const runDirAbs = getTaskRunDir(root, task.taskId, timestamp);
@@ -604,13 +694,17 @@ export async function runTaskNow(params: {
   const dialogueMdPath = path.join(runDirAbs, "dialogue.md");
   const dialogueJsonPath = path.join(runDirAbs, "dialogue.json");
   const metaJsonPath = path.join(runDirAbs, "run.json");
-  const maxDialogueRounds =
-    typeof task.frontmatter.maxDialogueRounds === "number" &&
-    Number.isInteger(task.frontmatter.maxDialogueRounds) &&
-    task.frontmatter.maxDialogueRounds > 0
-      ? task.frontmatter.maxDialogueRounds
-      : DEFAULT_MAX_DIALOGUE_ROUNDS;
+  const progressJsonPath = path.join(runDirAbs, "run-progress.json");
+  const maxDialogueRounds = DEFAULT_MAX_DIALOGUE_ROUNDS;
   const taskKind: ShipTaskKind = task.frontmatter.kind || "agent";
+  const runProgress = createRunProgressWriter({
+    progressJsonPath,
+    taskId: task.taskId,
+    timestamp,
+    trigger: params.trigger,
+    kind: taskKind,
+    startedAt,
+  });
 
   // input.md：把 frontmatter 摘要 + 正文快照写入 run 目录，方便审计。
   await fs.writeFile(
@@ -619,19 +713,12 @@ export async function runTaskNow(params: {
       `# Task Input`,
       ``,
       `- taskId: \`${task.taskId}\``,
-      `- task_name: ${task.frontmatter.taskName}`,
-      `- cron: \`${task.frontmatter.cron}\``,
+      `- executionId: \`${executionId}\``,
+      `- title: ${task.frontmatter.title}`,
+      `- when: \`${task.frontmatter.when}\``,
       `- status: \`${task.frontmatter.status}\``,
       `- contextId: \`${task.frontmatter.contextId}\``,
       `- kind: \`${taskKind}\``,
-      task.frontmatter.time ? `- time: \`${task.frontmatter.time}\`` : null,
-      task.frontmatter.timezone ? `- timezone: \`${task.frontmatter.timezone}\`` : null,
-      Array.isArray(task.frontmatter.requiredArtifacts) && task.frontmatter.requiredArtifacts.length > 0
-        ? `- requiredArtifacts: \`${task.frontmatter.requiredArtifacts.join(", ")}\``
-        : null,
-      typeof task.frontmatter.minOutputChars === "number"
-        ? `- minOutputChars: \`${task.frontmatter.minOutputChars}\``
-        : null,
       `- maxDialogueRounds: \`${maxDialogueRounds}\``,
       ``,
       `## Body`,
@@ -643,6 +730,12 @@ export async function runTaskNow(params: {
       .join("\n"),
     "utf-8",
   );
+  await runProgress.update({
+    status: "running",
+    phase: "preparing",
+    message: "执行输入已写入，准备开始任务执行",
+    ...(taskKind === "agent" ? { maxRounds: maxDialogueRounds } : {}),
+  });
 
   const runContextId = createTaskRunContextId(task.taskId, timestamp);
   const userSimulatorContextId = `task-user-sim:${task.taskId}:${timestamp}`;
@@ -671,6 +764,13 @@ export async function runTaskNow(params: {
   if (taskKind === "script") {
     dialogueRounds = 1;
     executionStatus = "success";
+    await runProgress.update({
+      status: "running",
+      phase: "script_running",
+      message: "正在执行 script 任务",
+      round: 1,
+      maxRounds: 1,
+    });
     try {
       const scriptResult = await runScriptTask({
         runDirAbs,
@@ -678,19 +778,15 @@ export async function runTaskNow(params: {
         scriptBody: task.body,
       });
       outputText = scriptResult.outputText;
-      const plannedArtifacts = new Set<string>([
-        "input.md",
-        "output.md",
-        "result.md",
-        "run.json",
-        "dialogue.md",
-        "dialogue.json",
-      ]);
+      await runProgress.update({
+        status: "running",
+        phase: "validating",
+        message: "script 执行完成，正在校验输出与产物",
+        round: 1,
+        maxRounds: 1,
+      });
       const validation = await validateTaskResult({
-        frontmatter: task.frontmatter,
-        runDirAbs,
         outputText,
-        plannedArtifacts,
       });
       if (validation.errors.length === 0) {
         ok = true;
@@ -707,6 +803,13 @@ export async function runTaskNow(params: {
           "Script task result validation failed.",
           ...resultErrors.map((x) => `- ${x}`),
         ].join("\n");
+        await runProgress.update({
+          status: "running",
+          phase: "validating",
+          message: "输出校验未通过，准备写入失败产物",
+          round: 1,
+          maxRounds: 1,
+        });
       }
     } catch (e) {
       executionStatus = "failure";
@@ -714,6 +817,13 @@ export async function runTaskNow(params: {
       resultStatus = "not_checked";
       resultErrors = [];
       errorText = `Script task execution failed: ${String(e)}`;
+      await runProgress.update({
+        status: "running",
+        phase: "script_running",
+        message: `script 执行失败: ${summarizeText(String(e), 160)}`,
+        round: 1,
+        maxRounds: 1,
+      });
     }
   } else {
     // phase 1（agent）：双 agent 多轮对话（executor <-> user-simulator）
@@ -726,6 +836,14 @@ export async function runTaskNow(params: {
     for (let round = 1; round <= maxDialogueRounds; round++) {
       dialogueRounds = round;
       let executorRoundOutput = "";
+      let executorDelivered = false;
+      await runProgress.update({
+        status: "running",
+        phase: "agent_executor_round",
+        message: `执行器正在第 ${round}/${maxDialogueRounds} 轮生成结果`,
+        round,
+        maxRounds: maxDialogueRounds,
+      });
 
       try {
         const executorQuery = buildExecutorRoundQuery({
@@ -743,6 +861,7 @@ export async function runTaskNow(params: {
           actorName: "scheduler",
         });
         executorRoundOutput = executorRound.outputText;
+        executorDelivered = executorRound.delivered;
         outputText = executorRound.outputText;
 
         // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
@@ -759,22 +878,34 @@ export async function runTaskNow(params: {
       } catch (e) {
         executionStatus = "failure";
         errorText = `Executor agent failed at round ${round}: ${String(e)}`;
+        await runProgress.update({
+          status: "running",
+          phase: "agent_executor_round",
+          message: `执行器在第 ${round} 轮失败: ${summarizeText(String(e), 160)}`,
+          round,
+          maxRounds: maxDialogueRounds,
+        });
         break;
       }
 
-      const plannedArtifacts = new Set<string>([
-        "input.md",
-        "output.md",
-        "result.md",
-        "run.json",
-        "dialogue.md",
-        "dialogue.json",
-      ]);
+      if (!executorDelivered) {
+        executionStatus = "failure";
+        status = "failure";
+        resultStatus = "not_checked";
+        resultErrors = [];
+        errorText = "chat_send delivery failed: output was not successfully sent to channel";
+        await runProgress.update({
+          status: "running",
+          phase: "agent_executor_round",
+          message: "执行器输出未成功发送到 channel，任务判定失败",
+          round,
+          maxRounds: maxDialogueRounds,
+        });
+        break;
+      }
+
       const validation = await validateTaskResult({
-        frontmatter: task.frontmatter,
-        runDirAbs,
         outputText: executorRoundOutput,
-        plannedArtifacts,
       });
       lastRoundRuleErrors = [...validation.errors];
 
@@ -784,9 +915,16 @@ export async function runTaskNow(params: {
         reason: "user simulator did not run",
         raw: "",
       };
+      await runProgress.update({
+        status: "running",
+        phase: "agent_user_simulator_round",
+        message: `模拟用户正在评估第 ${round}/${maxDialogueRounds} 轮结果`,
+        round,
+        maxRounds: maxDialogueRounds,
+      });
       try {
         const simulatorQuery = buildUserSimulatorQuery({
-          taskTitle: task.frontmatter.taskName,
+          taskTitle: task.frontmatter.title,
           taskDescription: task.frontmatter.description,
           taskBody: task.body,
           round,
@@ -835,6 +973,13 @@ export async function runTaskNow(params: {
         status = "success";
         resultStatus = "valid";
         resultErrors = [];
+        await runProgress.update({
+          status: "running",
+          phase: "validating",
+          message: `第 ${round} 轮校验通过，准备写入执行产物`,
+          round,
+          maxRounds: maxDialogueRounds,
+        });
         break;
       }
 
@@ -851,6 +996,13 @@ export async function runTaskNow(params: {
         feedbackLines.push(`模拟用户理由：${decision.reason}`);
       }
       lastFeedback = feedbackLines.join("\n").trim();
+      await runProgress.update({
+        status: "running",
+        phase: "validating",
+        message: `第 ${round} 轮未通过，继续下一轮修订`,
+        round,
+        maxRounds: maxDialogueRounds,
+      });
     }
 
     if (!ok) {
@@ -877,10 +1029,16 @@ export async function runTaskNow(params: {
   }
 
   // phase 2：写入执行产物与元数据
+  await runProgress.update({
+    status: "running",
+    phase: "writing_artifacts",
+    message: "正在写入 output/result/run 元数据",
+    ...(taskKind === "agent" ? { maxRounds: maxDialogueRounds } : { maxRounds: 1 }),
+    ...(dialogueRounds > 0 ? { round: dialogueRounds } : {}),
+  });
   const endedAt = Date.now();
   const durationMs = endedAt - startedAt;
 
-  // output.md
   await fs.writeFile(
     outputMdPath,
     [`# Task Output`, ``, outputText ? outputText : "_(empty output)_", ``].join(
@@ -965,6 +1123,7 @@ export async function runTaskNow(params: {
     v: 1,
     taskId: task.taskId,
     timestamp,
+    executionId,
     contextId: task.frontmatter.contextId,
     trigger: params.trigger,
     status,
@@ -988,7 +1147,8 @@ export async function runTaskNow(params: {
   resultLines.push(`# Task Result`);
   resultLines.push("");
   resultLines.push(`- taskId: \`${task.taskId}\``);
-  resultLines.push(`- task_name: ${task.frontmatter.taskName}`);
+  resultLines.push(`- executionId: \`${executionId}\``);
+  resultLines.push(`- title: ${task.frontmatter.title}`);
   resultLines.push(`- trigger: \`${params.trigger.type}\``);
   resultLines.push(`- status: **${status.toUpperCase()}**`);
   resultLines.push(`- executionStatus: \`${executionStatus}\``);
@@ -1046,6 +1206,20 @@ export async function runTaskNow(params: {
   }
 
   await fs.writeFile(resultMdPath, resultLines.join("\n"), "utf-8");
+  await runProgress.update({
+    status: status === "success" ? "success" : "failure",
+    phase: "completed",
+    message:
+      status === "success"
+        ? "任务执行完成"
+        : `任务执行失败: ${summarizeText(errorText || "result invalid", 160)}`,
+    ...(taskKind === "agent" ? { maxRounds: maxDialogueRounds } : { maxRounds: 1 }),
+    ...(dialogueRounds > 0 ? { round: dialogueRounds } : {}),
+    endedAt,
+    runStatus: status,
+    executionStatus,
+    resultStatus,
+  });
 
   return {
     ok,
@@ -1059,6 +1233,7 @@ export async function runTaskNow(params: {
     ...(userSimulatorReason ? { userSimulatorReason } : {}),
     ...(typeof userSimulatorScore === "number" ? { userSimulatorScore } : {}),
     taskId: task.taskId,
+    executionId,
     timestamp,
     runDir: runDirAbs,
     runDirRel,

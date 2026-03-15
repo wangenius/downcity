@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 业务模块统一通过 daemon API 与运行时通信。
- * - 地址解析优先级：CLI 参数 > 环境变量 > ship.json.start > 默认值。
+ * - 地址解析优先级：CLI 参数 > 环境变量 > daemon meta > 默认值。
  */
 
 import fs from "fs-extra";
@@ -12,8 +12,6 @@ import {
   type DaemonJsonApiCallParams,
   type DaemonJsonApiCallResult,
 } from "./Api.js";
-import { getShipJsonPath } from "@/console/env/Paths.js";
-import { loadShipConfig } from "@/console/env/Config.js";
 import { getDaemonMetaPath } from "@/console/daemon/Manager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
@@ -67,8 +65,7 @@ function pickArgValue(args: string[], key: string): string | undefined {
  * 1) 显式入参 `host/port`
  * 2) 环境变量 `SMA_SERVER_*` / `SMA_CTX_SERVER_*`
  * 3) daemon meta args（`shipmyagent.daemon.json`）
- * 4) `ship.json.start`（兼容旧配置）
- * 5) 默认 `127.0.0.1:3000`
+ * 4) 默认 `127.0.0.1:5314`
  */
 function resolveDaemonEndpoint(params: {
   projectRoot: string;
@@ -85,8 +82,6 @@ function resolveDaemonEndpoint(params: {
     parsePortLike(process.env.SMA_SERVER_PORT) ||
     parsePortLike(process.env.SMA_CTX_SERVER_PORT);
 
-  let configHost: string | undefined;
-  let configPort: number | undefined;
   let daemonArgHost: string | undefined;
   let daemonArgPort: number | undefined;
   try {
@@ -103,20 +98,8 @@ function resolveDaemonEndpoint(params: {
     // ignore daemon meta errors, fallback to other sources
   }
 
-  try {
-    const shipJsonPath = getShipJsonPath(params.projectRoot);
-    if (fs.existsSync(shipJsonPath)) {
-      const cfg = loadShipConfig(params.projectRoot);
-      configHost = normalizeHost(cfg.start?.host);
-      configPort = parsePortLike(cfg.start?.port);
-    }
-  } catch {
-    // ignore config errors, fallback to defaults
-  }
-
-  const host =
-    explicitHost || envHost || daemonArgHost || configHost || "127.0.0.1";
-  const port = explicitPort || envPort || daemonArgPort || configPort || 3000;
+  const host = explicitHost || envHost || daemonArgHost || "127.0.0.1";
+  const port = explicitPort || envPort || daemonArgPort || 5314;
 
   return {
     host,

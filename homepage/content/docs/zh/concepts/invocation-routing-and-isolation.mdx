@@ -21,7 +21,7 @@ description: 解释 service/extension 的调用是否会串环境，以及 shell
 
 当前实现是“**单进程绑定单 projectRoot**”：
 
-- 一个 `sma agent on` 运行进程只初始化一个 runtime。
+- 一个 `sma agent start` 运行进程只初始化一个 runtime。
 - 这个 runtime 只绑定一个 `rootPath`（也就是一个 agent 项目目录）。
 - 该进程内的 `service` 与 `extension` 调用都复用同一份 runtime state（同一个 `config/context/logger/model`）。
 
@@ -56,7 +56,7 @@ CLI/SDK 发往 daemon 的地址优先级：
 1. 显式参数：`--host/--port`
 2. 环境变量：`SMA_SERVER_HOST/SMA_SERVER_PORT`（其次 `SMA_CTX_SERVER_*`）
 3. 当前项目 `ship.json.start.host/port`
-4. 默认：`127.0.0.1:3000`
+4. 默认：`127.0.0.1:5314`
 
 这意味着：
 

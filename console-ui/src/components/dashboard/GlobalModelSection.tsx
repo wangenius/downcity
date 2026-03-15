@@ -135,7 +135,7 @@ function formatTime(raw?: string): string {
   const text = String(raw || "").trim()
   if (!text) return "-"
   const t = Date.parse(text)
-  if (!Number.isFinite(t) || Number.isNaN(t)) return text
+  if (!Number.isFinite(t) || Number.isNaN(t)) return "-"
   return new Date(t).toLocaleString("zh-CN", { hour12: false })
 }
 

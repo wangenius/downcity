@@ -30,7 +30,7 @@ flowchart LR
   end
 
   subgraph DP[执行面（按项目）]
-    AGENTCMD[sma agent on] --> AGENTD[agent daemon]
+    AGENTCMD[sma agent start] --> AGENTD[agent daemon]
     AGENTD --> SERVICES[services\nchat/skill/task/memory]
     AGENTD --> EXTS[extensions\nvoice/...]
     AGENTD --> SHIP[.ship/*\ncontext/logs/cache/tasks]
@@ -79,7 +79,7 @@ sma console start
 
 # 2) 初始化项目并启动 agent
 sma agent create .
-sma agent on
+sma agent start
 
 # 3) 运维 service / extension
 sma service list

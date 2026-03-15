@@ -40,7 +40,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         paragraphs: [
           "在项目根目录写入 `.env`，然后启动 runtime（默认后台 daemon）。需要在当前终端观察日志时再用前台模式。",
         ],
-        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent on\n# 或（前台调试）\nsma agent on --foreground`,
+        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent start\n# 或（前台调试）\nsma agent start --foreground`,
       },
       {
         title: "4. 健康检查与下一步",
@@ -77,7 +77,7 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
         paragraphs: [
           "Create `.env` in project root, then start runtime (default: background daemon). Use foreground mode when you want logs in the current terminal.",
         ],
-        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent on\n# or (foreground)\nsma agent on --foreground`,
+        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent start\n# or (foreground)\nsma agent start --foreground`,
       },
       {
         title: "4. Health check and next steps",

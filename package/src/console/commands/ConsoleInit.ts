@@ -7,7 +7,7 @@
  * - `~/.ship/schema/ship.schema.json`：给编辑器的 schema（可选）
  *
  * 关键点（中文）
- * - console 是强依赖：`sma console start` + `sma agent on` 都会使用这里的默认配置。
+ * - console 是强依赖：`sma console start` + `sma agent start` 都会使用这里的默认配置。
  * - agent 项目内的 `ship.json/.env` 允许覆盖 console 的默认值（同名 env 优先、同字段 JSON 以 agent 为准）。
  */
 

@@ -7,7 +7,7 @@ description: 启动 console UI（单实例，多 agent 视图）
 
 管理由 `console` 托管的 UI 网关。
 
-该 UI 不绑定某一个 `agent on` 进程，而是可以在同一页面切换查看多个已运行 agent。
+该 UI 不绑定某一个 `agent start` 进程，而是可以在同一页面切换查看多个已运行 agent。
 它是状态优先的 Dashboard，对话只在 `local_ui` context 中开放。
 
 ## 用法
@@ -18,7 +18,7 @@ sma console ui [action] [options]
 
 ## 常用参数
 
-- `-p, --port <port>`：UI 端口（默认 `3001`）
+- `-p, --port <port>`：UI 端口（默认 `5315`）
 - `-h, --host <host>`：UI 主机（默认 `127.0.0.1`）
 
 ## action
@@ -36,11 +36,15 @@ sma console ui [action] [options]
 - 侧边栏按三层分区：`Global` / `Agent` / `Context`。
 - `Global`：全局概览、console runtime、model 管理、agents 管理、extensions。
 - `Global / Model` 现已支持 provider/model 全量操作（创建、更新、测试、发现、暂停、删除）。
-- `Global / Overview` 会展示 console 与当前 agent 的关键配置文件状态（存在性、可读性、更新时间）。
+- `Global / Overview` 仅展示全局级健康信号（console、agent fleet、channels、extensions、config risk）。
+- `Global / Console Runtime` 展示 console 运行态与 console 级配置文件状态。
 - `Agent`：`Overview`、`Services`、`Tasks`、`Logs`。
+- `Agent / Overview` 聚焦当前 agent（bootstrap 配置、chat 身份、模型绑定），不再混入 global 信息。
 - `Agent / Tasks` 会展示任务定义详情与每次执行记录（run history + run detail）。
+- `Agent / Tasks` 支持执行中实时进度：手动 `run` 后会显示 `running`、当前阶段、轮次与进度事件，完成后自动切换到最终状态。
 - `Context`：`Context Overview` + 每个 context 条目（包含 `local_ui`）。
-- `Context Overview` 内会展示 channel 链路状态与 context 对应关系，并提供 `test` / `reconnect`。
+- `Context Overview` 内会展示 channel 链路状态与 context 对应关系，并提供 `open` / `close` / `test` / `reconnect`。
+- `Context Overview` 支持直接修改 channel 参数（例如 qq 的 `appId/appSecret/sandbox/groupAccess`），保存后自动重载该渠道。
 - 只有 `local_ui` 支持发送消息；其他 context 在 UI 中为只读。
 - `Context Workspace` 会展示当前 context 的消息历史、channel 历史、system prompt 解析结果。
 - `sma console status` 会同时显示 console 与 UI 状态。
@@ -52,11 +56,11 @@ sma console ui [action] [options]
 sma console start
 
 # 2) 启动多个 agent
-sma agent on /path/to/agent-a
-sma agent on /path/to/agent-b
+sma agent start /path/to/agent-a
+sma agent start /path/to/agent-b
 
 # 3) 后台启动 UI
-sma console ui start --port 3001
+sma console ui start --port 5315
 
 # 4) 查看 UI 状态
 sma console ui status
@@ -72,7 +76,7 @@ sma console ui stop
 
 - [`sma console start`](/zh/docs/commands/console/start)
 - [`sma console agents`](/zh/docs/commands/console/agents)
-- [`sma agent on`](/zh/docs/commands/agent/on)
+- [`sma agent start`](/zh/docs/commands/agent/start)
 
 ## 示例输出（基于当前实现）
 
@@ -83,7 +87,7 @@ $ sma console ui start
 sma version: 1.0.0
 ✅ Console UI started
    pid: <pid>
-   url: http://127.0.0.1:3001
+   url: http://127.0.0.1:5315
    log: <uiLogPath>
 ```
 
@@ -94,7 +98,7 @@ sma version: 1.0.0
 │ OK sma console ui status                           │
 │   state    : running                               │
 │   pid      : <pid>                                 │
-│   url      : http://127.0.0.1:3001                 │
+│   url      : http://127.0.0.1:5315                 │
 │   pid_file : <uiPidPath>                           │
 │   log      : <uiLogPath>                           │
 └────────────────────────────────────────────────────┘

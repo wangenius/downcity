@@ -5,7 +5,7 @@ description: Manage Agent Runtime in the current directory or a target directory
 
 # `sma agent`
 
-Manage Agent Runtime start/stop/restart.
+Manage Agent Runtime start/restart.
 
 ## Command hierarchy
 
@@ -20,8 +20,7 @@ sma agent <subcommand>
 ## Subcommands
 
 - `create`: create/initialize an agent project
-- `on`: start runtime
-- `off`: stop runtime
+- `start`: start runtime
 - `status`: show runtime status
 - `doctor`: diagnose state files and optionally fix stale pid/meta
 - `restart`: restart runtime
@@ -29,8 +28,7 @@ sma agent <subcommand>
 ## Subcommand docs
 
 - [`sma agent create`](/en/docs/commands/agent/create)
-- [`sma agent on`](/en/docs/commands/agent/on)
-- [`sma agent off`](/en/docs/commands/agent/off)
+- [`sma agent start`](/en/docs/commands/agent/start)
 - [`sma agent status`](/en/docs/commands/agent/status)
 - [`sma agent restart`](/en/docs/commands/agent/restart)
 - [`sma agent doctor`](/en/docs/commands/agent/doctor)
@@ -58,8 +56,7 @@ sma version: 1.0.0
 Usage: sma agent [options] [command]
 Commands:
   create [path]
-  on [path]
-  off [path]
+  start [path]
   status [path]
   doctor [path]
   restart [path]

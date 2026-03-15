@@ -1,0 +1,50 @@
+---
+title: 运行产物与排障
+description: run 目录文件语义、状态判读、排障步骤与常见错误
+---
+
+# 运行产物与排障
+
+每次 task 执行都会生成一个 run 目录：
+
+```text
+.ship/task/<taskId>/<timestamp>/
+```
+
+## 核心产物
+
+| 文件 | 作用 |
+| --- | --- |
+| `input.md` | 本次执行输入快照 |
+| `output.md` | 输出正文（`agent` 为成功发送到 channel 的文本；`script` 为脚本输出） |
+| `result.md` | 面向人的结果摘要 |
+| `run.json` | 最终状态机结果 |
+| `run-progress.json` | 执行中实时进度快照 |
+| `dialogue.md` | 多轮执行摘要（agent） |
+| `dialogue.json` | 多轮结构化记录（agent） |
+| `messages.jsonl` | 执行上下文消息流 |
+| `error.md` | 失败摘要（失败时） |
+
+## `run.json` 重点字段
+
+- `executionId`
+- `status`
+- `executionStatus`
+- `resultStatus`
+- `resultErrors`
+- `dialogueRounds`
+- `startedAt` / `endedAt`
+
+## 常见问题与定位
+
+- `resultStatus=invalid`
+  - 常见是输出过短。
+
+- `executionStatus=failure`
+  - 常见是脚本执行失败、agent 调用异常，或 `chat_send` 发送失败。
+
+- `Task skipped (already running)`
+  - 同一任务重叠触发被串行保护跳过。
+
+- one-shot `when=time:...` 执行后不再自动触发
+  - 正常行为：执行后自动回退到 `paused + @manual`。

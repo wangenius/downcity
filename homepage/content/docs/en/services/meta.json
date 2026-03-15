@@ -1,4 +1,4 @@
 {
   "title": "Services",
-  "pages": ["service-matrix", "chat", "skill-service", "task-service", "memory-service"]
+  "pages": ["service-matrix", "chat", "skill-service", "task", "memory-service"]
 }

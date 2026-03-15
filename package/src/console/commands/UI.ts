@@ -25,7 +25,7 @@ import type {
 } from "@/types/ConsoleUI.js";
 
 const DEFAULT_UI_HOST = "127.0.0.1";
-const DEFAULT_UI_PORT = 3001;
+const DEFAULT_UI_PORT = 5315;
 
 /**
  * console ui 启动参数。

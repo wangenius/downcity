@@ -49,7 +49,7 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEFAULT_RUNTIME_PORT = 3000;
+const DEFAULT_RUNTIME_PORT = 5314;
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 
 type DaemonMetaLike = {
@@ -191,7 +191,7 @@ export class ConsoleUIGateway {
             {
               success: false,
               error:
-                "No running agent found. Start one via `sma agent on` first.",
+                "No running agent found. Start one via `sma agent start` first.",
             },
             503,
           );
@@ -315,21 +315,8 @@ export class ConsoleUIGateway {
     host: string;
     port: number;
   }> {
-    let configHost: string | undefined;
-    let configPort: number | undefined;
     let daemonArgHost: string | undefined;
     let daemonArgPort: number | undefined;
-
-    try {
-      const shipPath = getShipJsonPath(projectRoot);
-      if (await fs.pathExists(shipPath)) {
-        const ship = (await fs.readJson(shipPath)) as ShipJsonLike;
-        configHost = this.normalizeHost(ship?.start?.host);
-        configPort = this.normalizePort(ship?.start?.port);
-      }
-    } catch {
-      // ignore ship parse errors
-    }
 
     try {
       const metaPath = getDaemonMetaPath(projectRoot);
@@ -346,8 +333,8 @@ export class ConsoleUIGateway {
     }
 
     return {
-      host: daemonArgHost || configHost || DEFAULT_RUNTIME_HOST,
-      port: daemonArgPort || configPort || DEFAULT_RUNTIME_PORT,
+      host: daemonArgHost || DEFAULT_RUNTIME_HOST,
+      port: daemonArgPort || DEFAULT_RUNTIME_PORT,
     };
   }
 

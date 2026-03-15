@@ -18,11 +18,12 @@ export PATH=$(npm config get prefix)/bin:$PATH
 npx shipmyagent --version
 ```
 
-## 端口冲突（3000 被占用）
+## 端口冲突（5314 被占用）
 
 ```bash
-lsof -nP -iTCP:3000 -sTCP:LISTEN
-sma agent on --port 3100
+lsof -nP -iTCP:5314 -sTCP:LISTEN
+sma agent doctor . --fix
+sma agent restart .
 ```
 
 ## 启动后无法调用 `sma task/chat/...`
@@ -30,7 +31,7 @@ sma agent on --port 3100
 先确认 daemon 运行中：
 
 ```bash
-sma agent on
+sma agent start
 sma service list
 ```
 

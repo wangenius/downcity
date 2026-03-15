@@ -12,7 +12,7 @@ import { basename, dirname, join, resolve } from "path";
 import fs from "fs-extra";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { registerConfigCommand } from "./Config.js";
 import { registerModelCommand } from "./Model.js";
 import { initCommand } from "./Init.js";
@@ -23,7 +23,6 @@ import { registerServicesCommand } from "./Services.js";
 import { registerExtensionsCommand } from "./Extensions.js";
 import { startCommand } from "./Start.js";
 import { statusCommand } from "./Status.js";
-import { stopCommand } from "./Stop.js";
 import {
   getConsoleUiRuntimeStatus,
   restartConsoleUiCommand,
@@ -43,6 +42,7 @@ import {
   stopDaemonProcess,
 } from "@/console/daemon/Manager.js";
 import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js";
+import { allocateAvailablePort } from "@/console/daemon/PortAllocator.js";
 import {
   listConsoleAgents,
   removeConsoleAgentEntry,
@@ -73,7 +73,7 @@ const __dirname = dirname(__filename);
 
 // 读取 package.json 版本号
 const packageJson = JSON.parse(
-  readFileSync(join(__dirname, "../../../../package.json"), "utf-8"),
+  readFileSync(join(__dirname, "../../../package.json"), "utf-8"),
 ) as { version: string };
 
 const program = new Command();
@@ -358,7 +358,7 @@ async function resolveRegisteredAgentProjectRoot(
 
   console.error("❌ agent is not registered in console registry");
   console.error(`   project: ${projectRoot}`);
-  console.error("   fix: start agent first (`sma agent on <path>`) or run `sma console agents`");
+  console.error("   fix: start agent first (`sma agent start <path>`) or run `sma console agents`");
   return null;
 }
 
@@ -474,7 +474,7 @@ consoleCommand
 consoleCommand
   .command("ui [action]")
   .description("管理 console UI（start/stop/restart/status，默认 start）")
-  .option("-p, --port <port>", "UI 端口（默认 3001）", parsePort)
+  .option("-p, --port <port>", "UI 端口（默认 5315）", parsePort)
   .option("-h, --host <host>", "UI 主机（默认 127.0.0.1）")
   .helpOption("--help", "display help for command")
   .action(
@@ -605,9 +605,10 @@ agent
   }));
 
 agent
-  .command("on [path]")
+  .command("start [path]")
   .description("启动 Agent Runtime（后台/前台）")
-  .option("-p, --port <port>", "服务端口（默认由 console 自动分配）", parsePort)
+  // 关键点（中文）：仅供 daemon 内部转发端口，用户文档不暴露该参数。
+  .addOption(new Option("--port <port>").argParser(parsePort).hideHelp())
   .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
   .option("--foreground [enabled]", "前台启动（仅当前终端）", parseBoolean)
   .helpOption("--help", "display help for command")
@@ -631,7 +632,16 @@ agent
         const shouldForeground = options.foreground === true;
 
         if (shouldForeground) {
-          await runCommand(cwd, options);
+          const host = String(options.host || "0.0.0.0").trim() || "0.0.0.0";
+          const foregroundPort =
+            options.port !== undefined && options.port !== null && options.port !== ""
+              ? options.port
+              : await allocateAvailablePort({ host });
+          await runCommand(cwd, {
+            ...options,
+            host,
+            port: foregroundPort,
+          });
           return;
         }
 
@@ -639,17 +649,6 @@ agent
       },
     ),
   );
-
-agent
-  .command("off [path]")
-  .description("停止后台 Agent Runtime（daemon）")
-  .helpOption("--help", "display help for command")
-  .action(withVersionBanner(async (cwd: string = ".") => {
-    const projectRoot = await resolveRegisteredAgentProjectRoot(cwd);
-    if (!projectRoot) process.exit(1);
-    injectAgentContext(projectRoot);
-    await stopCommand(projectRoot);
-  }));
 
 agent
   .command("status [path]")
@@ -708,7 +707,6 @@ agent
 agent
   .command("restart [path]")
   .description("重启后台 Agent Runtime（daemon）")
-  .option("-p, --port <port>", "服务端口（默认由 console 自动分配）", parsePort)
   .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (cwd: string = ".", options: StartOptions) => {

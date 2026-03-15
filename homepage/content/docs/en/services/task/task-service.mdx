@@ -1,0 +1,31 @@
+---
+title: Task Service
+description: "Task service overview: responsibilities, boundaries, and deep-dive map"
+---
+
+# Task Service
+
+`task` service owns task definition, scheduling, execution, and auditable artifacts.
+
+## What you get here
+
+- how task definitions are stored in `.ship/task/<taskId>/task.md`
+- how scheduling works via unified `when`
+- how execution differs in `agent` and `script` modes
+- how final states are derived (`executionStatus` / `resultStatus` / `status`)
+- how live progress is exposed in Console UI (`run-progress.json`)
+
+## Doc map (recommended order)
+
+1. [Task Definition and Action Contracts](/en/docs/services/task/task-definition-and-actions)
+2. [Agent Task Mode](/en/docs/services/task/agent-task-mode)
+3. [Script Task Mode](/en/docs/services/task/script-task-mode)
+4. [Scheduler Registration and Trigger Flow](/en/docs/services/task/scheduler-and-trigger-flow)
+5. [Execution and Validation Flow](/en/docs/services/task/execution-and-validation-flow)
+6. [Run Artifacts and Debugging](/en/docs/services/task/run-artifacts-and-debugging)
+
+## Runtime boundary
+
+- `task` does not send chat messages by default.
+- `run` is async-accepted and returns `accepted=true` plus `executionId` immediately.
+- Results are written into run directories by default.

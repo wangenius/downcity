@@ -18,11 +18,12 @@ Or run directly with:
 npx shipmyagent --version
 ```
 
-## Port conflict (3000 already in use)
+## Port conflict (5314 already in use)
 
 ```bash
-lsof -nP -iTCP:3000 -sTCP:LISTEN
-sma agent on --port 3100
+lsof -nP -iTCP:5314 -sTCP:LISTEN
+sma agent doctor . --fix
+sma agent restart .
 ```
 
 ## `sma task/chat/...` cannot connect
@@ -30,7 +31,7 @@ sma agent on --port 3100
 Make sure daemon is running:
 
 ```bash
-sma agent on
+sma agent start
 sma service list
 ```
 

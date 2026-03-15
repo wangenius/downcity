@@ -41,7 +41,7 @@ export interface ConsoleUiAgentOption {
   port: number;
 
   /**
-   * runtime 基础地址（例如 http://127.0.0.1:3000）。
+   * runtime 基础地址（例如 http://127.0.0.1:5314）。
    */
   baseUrl: string;
 

@@ -31,7 +31,7 @@ sma console stop
 sma console restart
 sma console status
 sma console agents [--json]
-sma console ui [start|stop|restart|status] [--port 3001]
+sma console ui [start|stop|restart|status] [--port 5315]
 ```
 
 ## Behavior
@@ -55,7 +55,7 @@ sma console start
 # 2) start project runtime
 cd /path/to/agent-project
 sma agent create .
-sma agent on
+sma agent start
 
 # 3) check status
 sma console status

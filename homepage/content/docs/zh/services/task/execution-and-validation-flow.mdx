@@ -1,0 +1,49 @@
+---
+title: 执行与校验链路
+description: runTaskNow 的执行阶段、进度快照与结果判定
+---
+
+# 执行与校验链路
+
+## 总体流程
+
+1. 读取任务定义并创建 run 目录。
+2. 写入 `input.md` 与 `run-progress.json`（running）。
+3. 按 `kind` 执行：
+   - `script`：直接执行脚本
+   - `agent`：执行器 + 模拟用户多轮
+4. 做结果校验（当前规则：输出至少 1 字符；`agent` 任务要求 `chat_send` 成功送达）。
+5. 写入 `output.md` / `result.md` / `run.json` / `dialogue.*` / `error.md`。
+
+## 结果字段
+
+- `status`：最终状态（success/failure）
+- `executionStatus`：执行阶段状态
+- `resultStatus`：结果校验状态（valid/invalid/not_checked）
+- `executionId`：本次执行唯一 ID
+
+## Mermaid
+
+```mermaid
+sequenceDiagram
+  participant T as Trigger(manual cron time)
+  participant A as Action.run
+  participant R as Runner.runTaskNow
+  participant F as RunFiles
+
+  T->>A: run title
+  A->>R: start async with executionId
+  A-->>T: accepted true + executionId
+
+  R->>F: write input.md and run-progress.json
+  alt kind script
+    R->>R: execute script body
+  else kind agent
+    loop rounds
+      R->>R: executor round
+      R->>R: simulator round
+    end
+  end
+  R->>R: validate output length
+  R->>F: write output.md result.md run.json dialogue and error
+```

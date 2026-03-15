@@ -5,7 +5,7 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
   name: "shipmyagent",
   version: "1.0.0",
   start: {
-    port: 3000,
+    port: 5314,
     host: "0.0.0.0",
   },
   model: {

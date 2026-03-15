@@ -65,30 +65,6 @@ function loadTaskServicePrompt(): string {
 
 const TASK_SERVICE_PROMPT = loadTaskServicePrompt();
 
-function parseNonNegativeIntOption(value: string): number {
-  const s = String(value || "").trim();
-  if (!/^\d+$/.test(s)) {
-    throw new Error(`Invalid non-negative integer: ${value}`);
-  }
-  const n = Number(s);
-  if (!Number.isFinite(n) || Number.isNaN(n) || !Number.isInteger(n) || n < 0) {
-    throw new Error(`Invalid non-negative integer: ${value}`);
-  }
-  return n;
-}
-
-function parsePositiveIntOption(value: string): number {
-  const n = parseNonNegativeIntOption(value);
-  if (n < 1) throw new Error(`Invalid positive integer: ${value}`);
-  return n;
-}
-
-function collectStringOption(value: string, previous: string[] = []): string[] {
-  const item = String(value || "").trim();
-  if (!item) return previous;
-  return [...previous, item];
-}
-
 function parseJsonBodyObject(rawBody: JsonValue): JsonObject {
   if (rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)) {
     return rawBody as JsonObject;
@@ -111,23 +87,6 @@ function getOptionalStringField(
 
 function getBooleanField(body: JsonObject, key: string): boolean {
   return body[key] === true;
-}
-
-function getOptionalNumberField(
-  body: JsonObject,
-  key: string,
-): number | undefined {
-  const value = body[key];
-  return typeof value === "number" ? value : undefined;
-}
-
-function getOptionalStringArrayField(
-  body: JsonObject,
-  key: string,
-): string[] | undefined {
-  const value = body[key];
-  if (!Array.isArray(value)) return undefined;
-  return value.filter((item): item is string => typeof item === "string");
 }
 
 function getOptionalTaskStatusField(
@@ -168,23 +127,6 @@ function getBooleanOpt(
   return typeof value === "boolean" ? value : undefined;
 }
 
-function getNumberOpt(
-  opts: Record<string, JsonValue>,
-  key: string,
-): number | undefined {
-  const value = opts[key];
-  return typeof value === "number" ? value : undefined;
-}
-
-function getStringArrayOpt(
-  opts: Record<string, JsonValue>,
-  key: string,
-): string[] | undefined {
-  const value = opts[key];
-  if (!Array.isArray(value)) return undefined;
-  return value.filter((item): item is string => typeof item === "string");
-}
-
 function readTaskStatusOrThrow(value?: string): ShipTaskStatus | undefined {
   if (!value) return undefined;
   if (value === "enabled" || value === "paused" || value === "disabled") {
@@ -221,7 +163,7 @@ function resolveContextIdOrThrow(input?: string): string {
 async function reloadTaskSchedulerAfterMutation(params: {
   context: ServiceRuntime;
   action: "create" | "update" | "delete" | "status";
-  taskName: string;
+  title: string;
 }): Promise<{
   reloaded: boolean;
   tasksFound?: number;
@@ -234,7 +176,7 @@ async function reloadTaskSchedulerAfterMutation(params: {
       formatTaskLogMessage("Task scheduler reloaded after mutation"),
       {
         action: params.action,
-        taskName: params.taskName,
+        title: params.title,
         tasksFound: result.tasksFound,
         jobsScheduled: result.jobsScheduled,
       },
@@ -250,7 +192,7 @@ async function reloadTaskSchedulerAfterMutation(params: {
       formatTaskLogMessage("Task scheduler reload failed after mutation"),
       {
         action: params.action,
-        taskName: params.taskName,
+        title: params.title,
         error: reason,
       },
     );
@@ -271,9 +213,9 @@ function mapTaskListCommandInput(
 function mapTaskCreateCommandInput(
   opts: Record<string, JsonValue>,
 ): TaskCreateRequest {
-  const taskName = String(getStringOpt(opts, "taskName") || "").trim();
+  const title = String(getStringOpt(opts, "title") || "").trim();
   const description = String(getStringOpt(opts, "description") || "").trim();
-  if (!taskName) throw new Error("Missing taskName");
+  if (!title) throw new Error("Missing title");
   if (!description) throw new Error("Missing description");
 
   const contextId = resolveContextIdOrThrow(getStringOpt(opts, "contextId"));
@@ -283,31 +225,15 @@ function mapTaskCreateCommandInput(
   if (activate && status && status !== "enabled") {
     throw new Error("`--activate` conflicts with `--status` unless status=enabled");
   }
-  const requiredArtifacts = getStringArrayOpt(opts, "requiredArtifact");
   const resolvedStatus = activate ? "enabled" : status;
 
   return {
-    taskName,
-    cron: String(getStringOpt(opts, "cron") || "@manual").trim() || "@manual",
+    title,
+    when: String(getStringOpt(opts, "when") || "@manual").trim() || "@manual",
     description,
     contextId,
     ...(kind ? { kind } : {}),
-    ...(typeof getStringOpt(opts, "time") === "string"
-      ? { time: getStringOpt(opts, "time") }
-      : {}),
     ...(resolvedStatus ? { status: resolvedStatus } : {}),
-    ...(getStringOpt(opts, "timezone")
-      ? { timezone: getStringOpt(opts, "timezone") }
-      : {}),
-    ...(Array.isArray(requiredArtifacts) && requiredArtifacts.length > 0
-      ? { requiredArtifacts }
-      : {}),
-    ...(typeof getNumberOpt(opts, "minOutputChars") === "number"
-      ? { minOutputChars: getNumberOpt(opts, "minOutputChars") }
-      : {}),
-    ...(typeof getNumberOpt(opts, "maxDialogueRounds") === "number"
-      ? { maxDialogueRounds: getNumberOpt(opts, "maxDialogueRounds") }
-      : {}),
     ...(typeof getStringOpt(opts, "body") === "string"
       ? { body: getStringOpt(opts, "body") }
       : {}),
@@ -316,48 +242,16 @@ function mapTaskCreateCommandInput(
 }
 
 function mapTaskUpdateCommandInput(params: {
-  taskName: string;
+  title: string;
   opts: Record<string, JsonValue>;
 }): TaskUpdateRequest {
   const opts = params.opts;
   const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
   const activate = getBooleanOpt(opts, "activate") === true;
-  const requiredArtifacts = getStringArrayOpt(opts, "requiredArtifact");
 
   // 关键点（中文）：set 与 clear 选项互斥，提前在命令入口做校验。
   const conflicts: string[] = [];
-  if (
-    typeof getStringOpt(opts, "timezone") === "string" &&
-    getBooleanOpt(opts, "clearTimezone")
-  ) {
-    conflicts.push("`--timezone` conflicts with `--clear-timezone`");
-  }
-  if (
-    Array.isArray(requiredArtifacts) &&
-    requiredArtifacts.length > 0 &&
-    getBooleanOpt(opts, "clearRequiredArtifacts")
-  ) {
-    conflicts.push(
-      "`--required-artifact` conflicts with `--clear-required-artifacts`",
-    );
-  }
-  if (
-    typeof getNumberOpt(opts, "minOutputChars") === "number" &&
-    getBooleanOpt(opts, "clearMinOutputChars")
-  ) {
-    conflicts.push(
-      "`--min-output-chars` conflicts with `--clear-min-output-chars`",
-    );
-  }
-  if (
-    typeof getNumberOpt(opts, "maxDialogueRounds") === "number" &&
-    getBooleanOpt(opts, "clearMaxDialogueRounds")
-  ) {
-    conflicts.push(
-      "`--max-dialogue-rounds` conflicts with `--clear-max-dialogue-rounds`",
-    );
-  }
   if (
     typeof getStringOpt(opts, "body") === "string" &&
     getBooleanOpt(opts, "clearBody")
@@ -365,10 +259,10 @@ function mapTaskUpdateCommandInput(params: {
     conflicts.push("`--body` conflicts with `--clear-body`");
   }
   if (
-    typeof getStringOpt(opts, "time") === "string" &&
-    getBooleanOpt(opts, "clearTime")
+    typeof getStringOpt(opts, "when") === "string" &&
+    getBooleanOpt(opts, "clearWhen")
   ) {
-    conflicts.push("`--time` conflicts with `--clear-time`");
+    conflicts.push("`--when` conflicts with `--clear-when`");
   }
   if (activate && status && status !== "enabled") {
     conflicts.push("`--activate` conflicts with `--status` unless status=enabled");
@@ -379,22 +273,13 @@ function mapTaskUpdateCommandInput(params: {
   const resolvedStatus = activate ? "enabled" : status;
 
   const hasUpdate =
-    typeof getStringOpt(opts, "taskName") === "string" ||
-    typeof getStringOpt(opts, "cron") === "string" ||
+    typeof getStringOpt(opts, "title") === "string" ||
+    typeof getStringOpt(opts, "when") === "string" ||
     typeof getStringOpt(opts, "description") === "string" ||
     typeof getStringOpt(opts, "contextId") === "string" ||
     typeof kind === "string" ||
-    typeof getStringOpt(opts, "time") === "string" ||
-    getBooleanOpt(opts, "clearTime") === true ||
+    getBooleanOpt(opts, "clearWhen") === true ||
     typeof resolvedStatus === "string" ||
-    typeof getStringOpt(opts, "timezone") === "string" ||
-    getBooleanOpt(opts, "clearTimezone") === true ||
-    (Array.isArray(requiredArtifacts) && requiredArtifacts.length > 0) ||
-    getBooleanOpt(opts, "clearRequiredArtifacts") === true ||
-    typeof getNumberOpt(opts, "minOutputChars") === "number" ||
-    getBooleanOpt(opts, "clearMinOutputChars") === true ||
-    typeof getNumberOpt(opts, "maxDialogueRounds") === "number" ||
-    getBooleanOpt(opts, "clearMaxDialogueRounds") === true ||
     typeof getStringOpt(opts, "body") === "string" ||
     getBooleanOpt(opts, "clearBody") === true;
 
@@ -403,12 +288,12 @@ function mapTaskUpdateCommandInput(params: {
   }
 
   return {
-    taskName: String(params.taskName || "").trim(),
-    ...(typeof getStringOpt(opts, "taskName") === "string"
-      ? { taskNameNext: getStringOpt(opts, "taskName") }
+    title: String(params.title || "").trim(),
+    ...(typeof getStringOpt(opts, "title") === "string"
+      ? { titleNext: getStringOpt(opts, "title") }
       : {}),
-    ...(typeof getStringOpt(opts, "cron") === "string"
-      ? { cron: getStringOpt(opts, "cron") }
+    ...(typeof getStringOpt(opts, "when") === "string"
+      ? { when: getStringOpt(opts, "when") }
       : {}),
     ...(typeof getStringOpt(opts, "description") === "string"
       ? { description: getStringOpt(opts, "description") }
@@ -417,31 +302,8 @@ function mapTaskUpdateCommandInput(params: {
       ? { contextId: getStringOpt(opts, "contextId") }
       : {}),
     ...(typeof kind === "string" ? { kind } : {}),
-    ...(typeof getStringOpt(opts, "time") === "string"
-      ? { time: getStringOpt(opts, "time") }
-      : {}),
-    ...(getBooleanOpt(opts, "clearTime") ? { clearTime: true } : {}),
+    ...(getBooleanOpt(opts, "clearWhen") ? { clearWhen: true } : {}),
     ...(typeof resolvedStatus === "string" ? { status: resolvedStatus } : {}),
-    ...(typeof getStringOpt(opts, "timezone") === "string"
-      ? { timezone: getStringOpt(opts, "timezone") }
-      : {}),
-    ...(getBooleanOpt(opts, "clearTimezone") ? { clearTimezone: true } : {}),
-    ...(Array.isArray(requiredArtifacts) ? { requiredArtifacts } : {}),
-    ...(getBooleanOpt(opts, "clearRequiredArtifacts")
-      ? { clearRequiredArtifacts: true }
-      : {}),
-    ...(typeof getNumberOpt(opts, "minOutputChars") === "number"
-      ? { minOutputChars: getNumberOpt(opts, "minOutputChars") }
-      : {}),
-    ...(getBooleanOpt(opts, "clearMinOutputChars")
-      ? { clearMinOutputChars: true }
-      : {}),
-    ...(typeof getNumberOpt(opts, "maxDialogueRounds") === "number"
-      ? { maxDialogueRounds: getNumberOpt(opts, "maxDialogueRounds") }
-      : {}),
-    ...(getBooleanOpt(opts, "clearMaxDialogueRounds")
-      ? { clearMaxDialogueRounds: true }
-      : {}),
     ...(typeof getStringOpt(opts, "body") === "string"
       ? { body: getStringOpt(opts, "body") }
       : {}),
@@ -450,19 +312,19 @@ function mapTaskUpdateCommandInput(params: {
 }
 
 function mapTaskSetStatusCommandInput(params: {
-  taskName: string;
+  title: string;
   status: ShipTaskStatus;
 }): TaskSetStatusRequest {
   return {
-    taskName: String(params.taskName || "").trim(),
+    title: String(params.title || "").trim(),
     status: params.status,
   };
 }
 
-function mapTaskDeleteCommandInput(taskNameInput: string): TaskDeleteRequest {
-  const taskName = String(taskNameInput || "").trim();
-  if (!taskName) throw new Error("Missing taskName");
-  return { taskName };
+function mapTaskDeleteCommandInput(titleInput: string): TaskDeleteRequest {
+  const title = String(titleInput || "").trim();
+  if (!title) throw new Error("Missing title");
+  return { title };
 }
 
 function mapTaskListApiInput(query: { status?: string }): TaskListPayload {
@@ -481,25 +343,20 @@ function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
   const resolvedStatus = activate ? "enabled" : status;
 
   return {
-    taskName: getStringField(body, "taskName"),
-    cron: getStringField(body, "cron"),
+    title: getStringField(body, "title"),
+    when: getStringField(body, "when"),
     description: getStringField(body, "description"),
     contextId: getStringField(body, "contextId"),
     kind: getOptionalTaskKindField(body, "kind"),
-    time: getOptionalStringField(body, "time"),
     status: resolvedStatus,
-    timezone: getOptionalStringField(body, "timezone"),
     body: getOptionalStringField(body, "body"),
-    requiredArtifacts: getOptionalStringArrayField(body, "requiredArtifacts"),
-    minOutputChars: getOptionalNumberField(body, "minOutputChars"),
-    maxDialogueRounds: getOptionalNumberField(body, "maxDialogueRounds"),
     overwrite: getBooleanField(body, "overwrite"),
   };
 }
 
 function mapTaskRunApiInput(body: JsonObject): TaskRunRequest {
   return {
-    taskName: getStringField(body, "taskName"),
+    title: getStringField(body, "title"),
     ...(getOptionalStringField(body, "reason")
       ? { reason: getOptionalStringField(body, "reason") }
       : {}),
@@ -515,15 +372,15 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
   const resolvedStatus = activate ? "enabled" : status;
 
   return {
-    taskName: getStringField(body, "taskName"),
-    ...(getOptionalStringField(body, "taskNameNext")
-      ? { taskNameNext: getOptionalStringField(body, "taskNameNext") }
+    title: getStringField(body, "title"),
+    ...(getOptionalStringField(body, "titleNext")
+      ? { titleNext: getOptionalStringField(body, "titleNext") }
       : {}),
     ...(getOptionalStringField(body, "description")
       ? { description: getOptionalStringField(body, "description") }
       : {}),
-    ...(getOptionalStringField(body, "cron")
-      ? { cron: getOptionalStringField(body, "cron") }
+    ...(getOptionalStringField(body, "when")
+      ? { when: getOptionalStringField(body, "when") }
       : {}),
     ...(getOptionalStringField(body, "contextId")
       ? { contextId: getOptionalStringField(body, "contextId") }
@@ -531,40 +388,8 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
     ...(getOptionalTaskKindField(body, "kind")
       ? { kind: getOptionalTaskKindField(body, "kind") }
       : {}),
-    ...(getOptionalStringField(body, "time")
-      ? { time: getOptionalStringField(body, "time") }
-      : {}),
-    ...(getBooleanField(body, "clearTime") ? { clearTime: true } : {}),
+    ...(getBooleanField(body, "clearWhen") ? { clearWhen: true } : {}),
     ...(resolvedStatus ? { status: resolvedStatus } : {}),
-    ...(getOptionalStringField(body, "timezone")
-      ? { timezone: getOptionalStringField(body, "timezone") }
-      : {}),
-    ...(getBooleanField(body, "clearTimezone") ? { clearTimezone: true } : {}),
-    ...(getOptionalStringArrayField(body, "requiredArtifacts")
-      ? {
-          requiredArtifacts: getOptionalStringArrayField(
-            body,
-            "requiredArtifacts",
-          ),
-        }
-      : {}),
-    ...(getBooleanField(body, "clearRequiredArtifacts")
-      ? { clearRequiredArtifacts: true }
-      : {}),
-    ...(typeof getOptionalNumberField(body, "minOutputChars") === "number"
-      ? { minOutputChars: getOptionalNumberField(body, "minOutputChars") }
-      : {}),
-    ...(getBooleanField(body, "clearMinOutputChars")
-      ? { clearMinOutputChars: true }
-      : {}),
-    ...(typeof getOptionalNumberField(body, "maxDialogueRounds") === "number"
-      ? {
-          maxDialogueRounds: getOptionalNumberField(body, "maxDialogueRounds"),
-        }
-      : {}),
-    ...(getBooleanField(body, "clearMaxDialogueRounds")
-      ? { clearMaxDialogueRounds: true }
-      : {}),
     ...(getOptionalStringField(body, "body")
       ? { body: getOptionalStringField(body, "body") }
       : {}),
@@ -578,17 +403,17 @@ function mapTaskStatusApiInput(body: JsonObject): TaskSetStatusRequest {
     throw new Error("Missing or invalid status");
   }
   return {
-    taskName: getStringField(body, "taskName"),
+    title: getStringField(body, "title"),
     status,
   };
 }
 
 function mapTaskDeleteApiInput(body: JsonObject): TaskDeleteRequest {
-  const taskName = getStringField(body, "taskName");
-  if (!String(taskName || "").trim()) {
-    throw new Error("Missing taskName");
+  const title = getStringField(body, "title");
+  if (!String(title || "").trim()) {
+    throw new Error("Missing title");
   }
-  return { taskName };
+  return { title };
 }
 
 export const taskService: Service = {
@@ -633,14 +458,10 @@ export const taskService: Service = {
         description: "创建任务定义",
         configure(command: Command) {
           command
-            .requiredOption("--task-name <taskName>", "任务名称（唯一语义标识）")
+            .requiredOption("--title <title>", "任务名称（唯一语义标识）")
             .requiredOption("--description <description>", "任务描述")
-            .option("--cron <cron>", "cron 表达式（默认 @manual）", "@manual")
+            .option("--when <when>", "触发条件（@manual | cron | time:ISO8601）", "@manual")
             .option("--kind <kind>", "执行类型（agent|script）", "agent")
-            .option(
-              "--time <time>",
-              "单次计划时间（ISO8601 且必须含时区；启用 time 时请配合 --cron @manual）",
-            )
             .option(
               "--context-id <contextId>",
               "任务执行 contextId（不传尝试使用 SMA_CTX_CONTEXT_ID）",
@@ -653,23 +474,6 @@ export const taskService: Service = {
               "--activate",
               "创建后立即启用（等同 --status enabled）",
               false,
-            )
-            .option("--timezone <timezone>", "IANA 时区")
-            .option(
-              "--required-artifact <path>",
-              "要求 run 目录必须产出的相对路径文件（可重复）",
-              collectStringOption,
-              [],
-            )
-            .option(
-              "--min-output-chars <n>",
-              "最小输出字符数（默认 1）",
-              parseNonNegativeIntOption,
-            )
-            .option(
-              "--max-dialogue-rounds <n>",
-              "执行 agent 与模拟用户 agent 最大对话轮数（默认 3）",
-              parsePositiveIntOption,
             )
             .option("--body <body>", "任务正文")
             .option("--overwrite", "覆盖已有 task.md", false);
@@ -700,7 +504,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "create",
-          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
+          title: String(result.title || payload.title || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -716,15 +520,15 @@ export const taskService: Service = {
         description: "手动运行任务",
         configure(command: Command) {
           command
-            .argument("<taskName>")
+            .argument("<title>")
             .option("--reason <reason>", "手动运行原因");
         },
         mapInput({ args, opts }): TaskRunRequest {
-          const taskName = String(args[0] || "").trim();
-          if (!taskName) throw new Error("Missing taskName");
+          const title = String(args[0] || "").trim();
+          if (!title) throw new Error("Missing title");
           const reason = getStringOpt(opts, "reason");
           return {
-            taskName,
+            title,
             ...(reason ? { reason } : {}),
           };
         },
@@ -759,7 +563,7 @@ export const taskService: Service = {
       command: {
         description: "删除任务定义与历史运行目录",
         configure(command: Command) {
-          command.argument("<taskName>");
+          command.argument("<title>");
         },
         mapInput({ args }) {
           return mapTaskDeleteCommandInput(String(args[0] || ""));
@@ -787,7 +591,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "delete",
-          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
+          title: String(result.title || payload.title || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -803,13 +607,12 @@ export const taskService: Service = {
         description: "更新任务定义",
         configure(command: Command) {
           command
-            .argument("<taskName>")
-            .option("--task-name <taskName>", "任务名称（保持同一语义）")
+            .argument("<title>")
+            .option("--title <title>", "任务名称（保持同一语义）")
             .option("--description <description>", "任务描述")
-            .option("--cron <cron>", "cron 表达式")
+            .option("--when <when>", "触发条件（@manual | cron | time:ISO8601）")
             .option("--kind <kind>", "执行类型（agent|script）")
-            .option("--time <time>", "单次计划时间（ISO8601 且必须含时区；启用 time 时请配合 cron=@manual）")
-            .option("--clear-time", "清空 time", false)
+            .option("--clear-when", "清空 when（回退为 @manual）", false)
             .option("--context-id <contextId>", "任务执行 contextId")
             .option("--status <status>", "状态（enabled|paused|disabled）")
             .option(
@@ -817,42 +620,14 @@ export const taskService: Service = {
               "更新后立即启用（等同 --status enabled）",
               false,
             )
-            .option("--timezone <timezone>", "IANA 时区")
-            .option("--clear-timezone", "清空 timezone", false)
-            .option(
-              "--required-artifact <path>",
-              "设置 requiredArtifacts（可重复；与 --clear-required-artifacts 互斥）",
-              collectStringOption,
-            )
-            .option(
-              "--clear-required-artifacts",
-              "清空 requiredArtifacts",
-              false,
-            )
-            .option(
-              "--min-output-chars <n>",
-              "设置最小输出字符数",
-              parseNonNegativeIntOption,
-            )
-            .option("--clear-min-output-chars", "清空 minOutputChars", false)
-            .option(
-              "--max-dialogue-rounds <n>",
-              "设置最大对话轮数",
-              parsePositiveIntOption,
-            )
-            .option(
-              "--clear-max-dialogue-rounds",
-              "清空 maxDialogueRounds",
-              false,
-            )
             .option("--body <body>", "设置任务正文")
             .option("--clear-body", "清空任务正文", false);
         },
         mapInput({ args, opts }) {
-          const taskName = String(args[0] || "").trim();
-          if (!taskName) throw new Error("Missing taskName");
+          const title = String(args[0] || "").trim();
+          if (!title) throw new Error("Missing title");
           return mapTaskUpdateCommandInput({
-            taskName,
+            title,
             opts,
           });
         },
@@ -879,7 +654,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "update",
-          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
+          title: String(result.title || payload.title || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -894,15 +669,15 @@ export const taskService: Service = {
       command: {
         description: "设置任务状态（enabled|paused|disabled）",
         configure(command: Command) {
-          command.argument("<taskName>").argument("<status>");
+          command.argument("<title>").argument("<status>");
         },
         mapInput({ args }) {
-          const taskName = String(args[0] || "").trim();
+          const title = String(args[0] || "").trim();
           const status = readTaskStatusOrThrow(String(args[1] || "").trim());
-          if (!taskName) throw new Error("Missing taskName");
+          if (!title) throw new Error("Missing title");
           if (!status) throw new Error("Missing or invalid status");
           return mapTaskSetStatusCommandInput({
-            taskName,
+            title,
             status,
           });
         },
@@ -929,7 +704,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "status",
-          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
+          title: String(result.title || payload.title || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -944,13 +719,13 @@ export const taskService: Service = {
       command: {
         description: "启用任务（status=enabled）",
         configure(command: Command) {
-          command.argument("<taskName>");
+          command.argument("<title>");
         },
         mapInput({ args }) {
-          const taskName = String(args[0] || "").trim();
-          if (!taskName) throw new Error("Missing taskName");
+          const title = String(args[0] || "").trim();
+          if (!title) throw new Error("Missing title");
           return mapTaskSetStatusCommandInput({
-            taskName,
+            title,
             status: "enabled",
           });
         },
@@ -970,7 +745,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "status",
-          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
+          title: String(result.title || payload.title || "").trim() || "unknown",
         });
         return {
           success: true,
@@ -985,13 +760,13 @@ export const taskService: Service = {
       command: {
         description: "禁用任务（status=disabled）",
         configure(command: Command) {
-          command.argument("<taskName>");
+          command.argument("<title>");
         },
         mapInput({ args }) {
-          const taskName = String(args[0] || "").trim();
-          if (!taskName) throw new Error("Missing taskName");
+          const title = String(args[0] || "").trim();
+          if (!title) throw new Error("Missing title");
           return mapTaskSetStatusCommandInput({
-            taskName,
+            title,
             status: "disabled",
           });
         },
@@ -1011,7 +786,7 @@ export const taskService: Service = {
         const scheduler = await reloadTaskSchedulerAfterMutation({
           context: params.context,
           action: "status",
-          taskName: String(result.taskName || payload.taskName || "").trim() || "unknown",
+          title: String(result.title || payload.title || "").trim() || "unknown",
         });
         return {
           success: true,

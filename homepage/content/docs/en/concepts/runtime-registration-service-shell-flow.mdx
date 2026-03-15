@@ -21,7 +21,7 @@ This page covers three things:
 
 ## Trigger timing
 
-When running `sma agent on` (daemon mode):
+When running `sma agent start` (daemon mode):
 
 1. verify console is running
 2. verify project init files (`PROFILE.md` / `ship.json`)
@@ -116,7 +116,7 @@ This is the standard loop from shell command back to dialog context.
 
 ```mermaid
 flowchart TD
-  A[sma agent on] --> B[startDaemonProcess]
+  A[sma agent start] --> B[startDaemonProcess]
   B --> C[write ship debug files]
   B --> D[upsert console registry]
   D --> E[console registry]

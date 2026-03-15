@@ -26,6 +26,7 @@ import {
   getShipContextRootDirPath,
   getShipTasksDirPath,
 } from "@/console/env/Paths.js";
+import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
 
@@ -88,6 +89,12 @@ export type TuiTaskRunSummary = {
   status?: string;
   executionStatus?: string;
   resultStatus?: string;
+  inProgress?: boolean;
+  progressPhase?: string;
+  progressMessage?: string;
+  progressUpdatedAt?: number;
+  progressRound?: number;
+  progressMaxRounds?: number;
   startedAt?: number;
   endedAt?: number;
   dialogueRounds?: number;
@@ -97,10 +104,30 @@ export type TuiTaskRunSummary = {
 };
 
 export type TuiTaskRunDetail = {
-  taskId: string;
+  title: string;
   timestamp: string;
   runDirRel: string;
   meta?: Record<string, unknown>;
+  progress?: {
+    status?: string;
+    phase?: string;
+    message?: string;
+    startedAt?: number;
+    updatedAt?: number;
+    endedAt?: number;
+    round?: number;
+    maxRounds?: number;
+    runStatus?: string;
+    executionStatus?: string;
+    resultStatus?: string;
+    events?: Array<{
+      at?: number;
+      phase?: string;
+      message?: string;
+      round?: number;
+      maxRounds?: number;
+    }>;
+  };
   dialogue?: Record<string, unknown>;
   artifacts: {
     input?: string;
@@ -255,6 +282,7 @@ function toUiMessageEvent(params: {
 }): TuiTimelineEvent {
   const { message, role, text, sequence, toolName } = params;
   const metadata = (message.metadata || null) as ContextMetadataV1 | null;
+
   return {
     id: `${String(message.id || "")}:${sequence}`,
     role,
@@ -518,16 +546,17 @@ export async function readRecentLogs(params: {
   return out;
 }
 
-function resolveTaskDir(projectRoot: string, taskId: string): string {
+async function resolveTaskDir(projectRoot: string, title: string): Promise<string> {
+  const taskId = await resolveTaskIdByTitle({ projectRoot, title });
   return path.join(getShipTasksDirPath(projectRoot), taskId);
 }
 
 export async function listTaskRuns(params: {
   projectRoot: string;
-  taskId: string;
+  title: string;
   limit: number;
 }): Promise<TuiTaskRunSummary[]> {
-  const taskDir = resolveTaskDir(params.projectRoot, params.taskId);
+  const taskDir = await resolveTaskDir(params.projectRoot, params.title);
   if (!(await fs.pathExists(taskDir))) return [];
 
   const entries = await fs.readdir(taskDir, { withFileTypes: true });
@@ -543,6 +572,7 @@ export async function listTaskRuns(params: {
   for (const timestamp of timestamps) {
     const runDir = path.join(taskDir, timestamp);
     const metaPath = path.join(runDir, "run.json");
+    const progressPath = path.join(runDir, "run-progress.json");
     const runDirRel = path
       .relative(params.projectRoot, runDir)
       .split(path.sep)
@@ -557,15 +587,51 @@ export async function listTaskRuns(params: {
       userSimulatorSatisfied?: boolean;
       error?: string;
     } | null;
+    const progress = (await fs.readJson(progressPath).catch(() => null)) as {
+      status?: string;
+      phase?: string;
+      message?: string;
+      updatedAt?: number;
+      round?: number;
+      maxRounds?: number;
+    } | null;
+
+    const progressStatus =
+      typeof progress?.status === "string" ? progress.status : undefined;
+    const inProgress =
+      progressStatus === "running" ||
+      (!meta && (await fs.pathExists(progressPath)));
+    const displayStatus =
+      inProgress
+        ? "running"
+        : typeof meta?.status === "string"
+          ? meta.status
+          : progressStatus;
 
     out.push({
       timestamp,
-      ...(typeof meta?.status === "string" ? { status: meta.status } : {}),
+      ...(typeof displayStatus === "string" ? { status: displayStatus } : {}),
       ...(typeof meta?.executionStatus === "string"
         ? { executionStatus: meta.executionStatus }
         : {}),
       ...(typeof meta?.resultStatus === "string"
         ? { resultStatus: meta.resultStatus }
+        : {}),
+      ...(inProgress ? { inProgress: true } : {}),
+      ...(typeof progress?.phase === "string"
+        ? { progressPhase: progress.phase }
+        : {}),
+      ...(typeof progress?.message === "string"
+        ? { progressMessage: progress.message }
+        : {}),
+      ...(typeof progress?.updatedAt === "number"
+        ? { progressUpdatedAt: progress.updatedAt }
+        : {}),
+      ...(typeof progress?.round === "number"
+        ? { progressRound: progress.round }
+        : {}),
+      ...(typeof progress?.maxRounds === "number"
+        ? { progressMaxRounds: progress.maxRounds }
         : {}),
       ...(typeof meta?.startedAt === "number"
         ? { startedAt: meta.startedAt }
@@ -587,11 +653,12 @@ export async function listTaskRuns(params: {
 
 export async function readTaskRunDetail(params: {
   projectRoot: string;
-  taskId: string;
+  title: string;
   timestamp: string;
 }): Promise<TuiTaskRunDetail | null> {
+  const taskDir = await resolveTaskDir(params.projectRoot, params.title);
   const runDir = path.join(
-    resolveTaskDir(params.projectRoot, params.taskId),
+    taskDir,
     params.timestamp,
   );
   if (!(await fs.pathExists(runDir))) return null;
@@ -614,19 +681,41 @@ export async function readTaskRunDetail(params: {
 
   const messagesPath = path.join(runDir, "messages.jsonl");
   const messages = await loadContextMessagesFromFile(messagesPath);
+  const progress = await readJson<{
+    status?: string;
+    phase?: string;
+    message?: string;
+    startedAt?: number;
+    updatedAt?: number;
+    endedAt?: number;
+    round?: number;
+    maxRounds?: number;
+    runStatus?: string;
+    executionStatus?: string;
+    resultStatus?: string;
+    events?: Array<{
+      at?: number;
+      phase?: string;
+      message?: string;
+      round?: number;
+      maxRounds?: number;
+    }>;
+  }>("run-progress.json");
+  const outputText = (await readText("output.md")) || (await readText("result.md"));
 
   return {
-    taskId: params.taskId,
+    title: params.title,
     timestamp: params.timestamp,
     runDirRel: path
       .relative(params.projectRoot, runDir)
       .split(path.sep)
       .join("/"),
     meta: await readJson<Record<string, unknown>>("run.json"),
+    ...(progress ? { progress } : {}),
     dialogue: await readJson<Record<string, unknown>>("dialogue.json"),
     artifacts: {
       input: await readText("input.md"),
-      output: await readText("output.md"),
+      output: outputText,
       result: await readText("result.md"),
       dialogue: await readText("dialogue.md"),
       error: await readText("error.md"),

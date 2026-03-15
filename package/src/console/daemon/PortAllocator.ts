@@ -8,12 +8,14 @@
 
 import net from "node:net";
 
-const DEFAULT_PORT_RANGE_START = 3000;
-const DEFAULT_PORT_RANGE_END = 3999;
+const DEFAULT_PORT_RANGE_START = 5314;
+const DEFAULT_PORT_RANGE_END = 6399;
+const RESERVED_PORTS = new Set<number>([5315]);
 
 type AllocatePortParams = {
   start?: number;
   end?: number;
+  host?: string;
 };
 
 function isValidPort(port: number): boolean {
@@ -24,16 +26,16 @@ function isValidPort(port: number): boolean {
  * 探测单个端口是否可监听。
  *
  * 关键点（中文）
- * - 使用 127.0.0.1 探测本机监听能力，避免 0.0.0.0 在某些环境下的地址歧义。
+ * - 必须按目标 host 探测（默认 0.0.0.0），避免和实际监听地址不一致导致误判。
  */
-async function canListenPort(port: number): Promise<boolean> {
+async function canListenPort(port: number, host: string): Promise<boolean> {
   return await new Promise<boolean>((resolve) => {
     const server = net.createServer();
     server.unref();
     server.once("error", () => {
       resolve(false);
     });
-    server.listen(port, "127.0.0.1", () => {
+    server.listen(port, host, () => {
       server.close(() => resolve(true));
     });
   });
@@ -47,15 +49,16 @@ export async function allocateAvailablePort(
 ): Promise<number> {
   const start = params.start ?? DEFAULT_PORT_RANGE_START;
   const end = params.end ?? DEFAULT_PORT_RANGE_END;
+  const host = String(params.host || "0.0.0.0").trim() || "0.0.0.0";
   if (!isValidPort(start) || !isValidPort(end) || start > end) {
     throw new Error(`Invalid port range: ${start}-${end}`);
   }
 
   for (let port = start; port <= end; port += 1) {
+    if (RESERVED_PORTS.has(port)) continue;
     // 关键点（中文）：逐个探测可用端口，找到即返回，避免强依赖外部状态文件。
-    if (await canListenPort(port)) return port;
+    if (await canListenPort(port, host)) return port;
   }
 
-  throw new Error(`No available port in range ${start}-${end}`);
+  throw new Error(`No available port in range ${start}-${end} for host ${host}`);
 }
-

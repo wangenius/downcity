@@ -44,7 +44,17 @@ type QQGatewayPayload = {
 type QQReadyUser = {
   id?: string;
   user_id?: string;
+  openid?: string;
+  user_openid?: string;
   username?: string;
+  nickname?: string;
+  name?: string;
+  bot_name?: string;
+  user?: {
+    username?: string;
+    nickname?: string;
+    name?: string;
+  };
 };
 
 type QQReadyData = {
@@ -55,15 +65,25 @@ type QQReadyData = {
 type QQAuthor = {
   member_openid?: string;
   user_openid?: string;
+  openid?: string;
+  union_openid?: string;
   id?: string;
   user_id?: string;
+  tiny_id?: string;
+  member_tinyid?: string;
+  user_tinyid?: string;
   uid?: string;
   nickname?: string;
   username?: string;
   name?: string;
   user?: {
+    id?: string;
+    user_id?: string;
+    openid?: string;
+    user_openid?: string;
     username?: string;
     nickname?: string;
+    name?: string;
   };
   member_role?: string;
   role?: string;
@@ -92,7 +112,14 @@ type QQReplyToMessage = {
 type QQMessageData = {
   id?: string;
   group_openid?: string;
+  group_id?: string;
+  group_code?: string;
+  group_uin?: string;
   channel_id?: string;
+  guild_id?: string;
+  user_openid?: string;
+  openid?: string;
+  author_id?: string;
   content?: string;
   author?: QQAuthor;
   mentions?: QQMentionUser[];
@@ -192,6 +219,13 @@ export class QQBot extends BaseChatChannel {
    * - 如果不做过滤，可能出现“自己回复自己”导致的无限循环刷屏。
    */
   private botUserId: string = "";
+  /**
+   * 机器人展示名（从 READY 事件里捕获）。
+   *
+   * 关键点（中文）
+   * - Console UI 优先展示该字段，避免退化为 appId。
+   */
+  private botDisplayName: string = "";
 
   constructor(
     context: ServiceRuntime,
@@ -430,6 +464,8 @@ export class QQBot extends BaseChatChannel {
             : "stopped",
       detail: {
         appId: this.appId || null,
+        botName: this.botDisplayName || null,
+        botUserId: this.botUserId || null,
         wsReadyState: readyState,
         wsContextId: this.wsContextId || null,
         reconnectAttempts: this.reconnectAttempts,
@@ -476,6 +512,24 @@ export class QQBot extends BaseChatChannel {
       }
 
       if (response.ok && (code === 0 || code === undefined)) {
+        const runtime = this.getRuntimeStatus();
+        if (runtime.linkState !== "connected") {
+          return {
+            channel: "qq",
+            success: false,
+            testedAtMs: now,
+            latencyMs: now - startedAt,
+            message: `QQ Open API reachable, but WS is not ready (${runtime.statusText})`,
+            detail: {
+              httpStatus: response.status,
+              code: code ?? null,
+              sandbox: this.useSandbox,
+              linkState: runtime.linkState,
+              statusText: runtime.statusText,
+              botName: this.botDisplayName || null,
+            },
+          };
+        }
         return {
           channel: "qq",
           success: true,
@@ -486,6 +540,9 @@ export class QQBot extends BaseChatChannel {
             httpStatus: response.status,
             code: code ?? null,
             sandbox: this.useSandbox,
+            linkState: runtime.linkState,
+            statusText: runtime.statusText,
+            botName: this.botDisplayName || null,
           },
         };
       }
@@ -886,13 +943,28 @@ export class QQBot extends BaseChatChannel {
           !Array.isArray(data.user)
             ? (data.user as QQReadyUser)
             : undefined;
-        this.logger.info(`用户: ${readyUser?.username || "N/A"}`);
+        this.botDisplayName = [
+          readyUser?.username,
+          readyUser?.nickname,
+          readyUser?.name,
+          readyUser?.bot_name,
+          readyUser?.user?.username,
+          readyUser?.user?.nickname,
+          readyUser?.user?.name,
+        ]
+          .map((v) => (typeof v === "string" ? v.trim() : ""))
+          .find(Boolean) || "";
+        this.logger.info(`用户: ${this.botDisplayName || "N/A"}`);
         // best-effort：记录 bot 自己的 userId，供入站过滤使用
         this.botUserId =
           typeof readyUser?.id === "string"
             ? readyUser.id.trim()
             : typeof readyUser?.user_id === "string"
               ? readyUser.user_id.trim()
+              : typeof readyUser?.user_openid === "string"
+                ? readyUser.user_openid.trim()
+                : typeof readyUser?.openid === "string"
+                  ? readyUser.openid.trim()
               : "";
         break;
 
@@ -942,9 +1014,24 @@ export class QQBot extends BaseChatChannel {
     const data = params.data;
     const messageId =
       typeof data.id === "string" ? data.id.trim() : String(data.id || "").trim();
-    const groupId =
-      typeof data.group_openid === "string" ? data.group_openid.trim() : "";
-    if (!groupId || !messageId) return;
+    if (!messageId) return;
+    const groupId = [
+      data.group_openid,
+      data.group_id,
+      data.group_code,
+      data.group_uin,
+      data.channel_id,
+      data.guild_id,
+    ]
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .find(Boolean) || "";
+    if (!groupId) {
+      this.logger.warn("QQ 群消息缺少 groupId，已忽略", {
+        eventType: eventType || EventType.GROUP_MESSAGE_CREATE,
+        messageId,
+      });
+      return;
+    }
 
     await this.handleInboundMessage({
       eventType: eventType || EventType.GROUP_MESSAGE_CREATE,
@@ -963,7 +1050,23 @@ export class QQBot extends BaseChatChannel {
     if (!messageId) return;
 
     const actor = this.extractAuthorIdentity(data.author);
-    const chatId = String(actor.userId || "").trim();
+    const chatId = [
+      actor.userId,
+      data.user_openid,
+      data.openid,
+      data.author_id,
+      data.author?.user_openid,
+      data.author?.member_openid,
+      data.author?.openid,
+      data.author?.id,
+      data.author?.user_id,
+      data.author?.user?.user_openid,
+      data.author?.user?.openid,
+      data.author?.user?.id,
+      data.author?.user?.user_id,
+    ]
+      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .find(Boolean) || "";
     if (!chatId) {
       this.logger.warn("QQ C2C 消息缺少 userId，已忽略", {
         eventType: EventType.C2C_MESSAGE_CREATE,
@@ -1261,9 +1364,18 @@ export class QQBot extends BaseChatChannel {
     const userIdCandidates = [
       author?.member_openid,
       author?.user_openid,
+      author?.openid,
+      author?.union_openid,
       author?.id,
       author?.user_id,
+      author?.tiny_id,
+      author?.member_tinyid,
+      author?.user_tinyid,
       author?.uid,
+      author?.user?.id,
+      author?.user?.user_id,
+      author?.user?.openid,
+      author?.user?.user_openid,
     ];
     const usernameCandidates = [
       author?.nickname,
@@ -1271,6 +1383,7 @@ export class QQBot extends BaseChatChannel {
       author?.name,
       author?.user?.username,
       author?.user?.nickname,
+      author?.user?.name,
     ];
 
     const userId = userIdCandidates

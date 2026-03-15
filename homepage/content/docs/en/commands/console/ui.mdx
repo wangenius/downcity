@@ -7,7 +7,7 @@ description: Start console UI (single instance, multi-agent view)
 
 Manage the UI gateway hosted by `console`.
 
-This UI is not bound to one `agent on` process. One page can switch across multiple running agents.
+This UI is not bound to one `agent start` process. One page can switch across multiple running agents.
 It is a state-first dashboard; chat is only a secondary capability.
 
 ## Usage
@@ -18,7 +18,7 @@ sma console ui [action] [options]
 
 ## Key options
 
-- `-p, --port <port>`: UI port (default `3001`)
+- `-p, --port <port>`: UI port (default `5315`)
 - `-h, --host <host>`: UI host (default `127.0.0.1`)
 
 ## action
@@ -33,11 +33,16 @@ sma console ui [action] [options]
 - Requires console first: `sma console start`.
 - On startup, UI loads active agents from console registry.
 - Global Agents panel shows each agent's runtime endpoint, current model binding, and chat identity snapshots (e.g. Telegram bot username), and supports direct model switching from the table.
-- Global / Overview shows console + selected agent config file status (exists/readable/updated time).
+- Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
+- Global / Overview only shows global health signals (console, fleet, channels, extensions, config risk).
+- Global / Console Runtime shows console runtime details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
-- Agent switcher in top bar controls all `Contexts/Services/Tasks/Logs` views.
+- Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).
+- Agent switcher controls all `Agent/*` and `Context/*` views.
 - Agent / Tasks now includes task definition details and per-run execution history (run list + run detail).
-- Dashboard shows `Chat Channels` link status (Telegram/Feishu/QQ) with `test` and `reconnect` actions.
+- Agent / Tasks now shows live execution progress after manual `run`: `running` state, current phase, round progress, and progress events until completion.
+- Dashboard shows `Chat Channels` link status (Telegram/Feishu/QQ) with `open` / `close` / `test` / `reconnect` actions.
+- Context Overview can edit channel parameters directly (for example QQ `appId/appSecret/sandbox/groupAccess`) and auto-reload that channel after save.
 - Chat input is fixed to `local_ui` context only; UI cannot publish instructions to arbitrary contexts.
 - UI shows grouped `system prompt` composition (static/service/runtime).
 - `sma console status` also shows UI status.
@@ -49,11 +54,11 @@ sma console ui [action] [options]
 sma console start
 
 # 2) start multiple agents
-sma agent on /path/to/agent-a
-sma agent on /path/to/agent-b
+sma agent start /path/to/agent-a
+sma agent start /path/to/agent-b
 
 # 3) start UI in background
-sma console ui start --port 3001
+sma console ui start --port 5315
 
 # 4) check UI status
 sma console ui status
@@ -69,7 +74,7 @@ sma console ui stop
 
 - [`sma console start`](/en/docs/commands/console/start)
 - [`sma console agents`](/en/docs/commands/console/agents)
-- [`sma agent on`](/en/docs/commands/agent/on)
+- [`sma agent start`](/en/docs/commands/agent/start)
 
 ## Example Output (Based on Current Implementation)
 
@@ -80,7 +85,7 @@ $ sma console ui start
 sma version: 1.0.0
 ✅ Console UI started
    pid: <pid>
-   url: http://127.0.0.1:3001
+   url: http://127.0.0.1:5315
    log: <uiLogPath>
 ```
 
@@ -91,7 +96,7 @@ sma version: 1.0.0
 │ OK sma console ui status                           │
 │   state    : running                               │
 │   pid      : <pid>                                 │
-│   url      : http://127.0.0.1:3001                 │
+│   url      : http://127.0.0.1:5315                 │
 │   pid_file : <uiPidPath>                           │
 │   log      : <uiLogPath>                           │
 └────────────────────────────────────────────────────┘

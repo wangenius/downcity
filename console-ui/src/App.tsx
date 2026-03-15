@@ -4,9 +4,9 @@
 
 import * as React from "react"
 
-import { AppSidebar, type DashboardView } from "@/components/app-sidebar"
-import { AgentChannelsSection } from "@/components/dashboard/AgentChannelsSection"
+import { AppSidebar } from "@/components/app-sidebar"
 import { AgentModelBindingSection } from "@/components/dashboard/AgentModelBindingSection"
+import { ConsoleStatusSection } from "@/components/dashboard/ConsoleStatusSection"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
@@ -21,21 +21,9 @@ import { ToastMessage } from "@/components/dashboard/ToastMessage"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
+import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
 import { parseDashboardPath, toDashboardPath } from "@/lib/dashboard-route"
-
-const viewLabelMap: Record<DashboardView, string> = {
-  globalOverview: "Global / Overview",
-  globalModel: "Global / Model",
-  globalAgents: "Global / Agents",
-  globalExtensions: "Global / Extensions",
-  agentOverview: "Agent / Overview",
-  agentChannels: "Agent / Channels",
-  agentServices: "Agent / Services",
-  agentTasks: "Agent / Tasks",
-  agentLogs: "Agent / Logs",
-  contextOverview: "Context / Overview",
-  contextWorkspace: "Context / Workspace",
-}
+import type { DashboardView } from "@/types/Navigation"
 
 export function App() {
   const [activeView, setActiveView] = React.useState<DashboardView>(() => {
@@ -79,6 +67,7 @@ export function App() {
     controlService,
     controlExtension,
     runChatChannelAction,
+    configureChatChannel,
     runTask,
     loadTaskRuns,
     loadTaskRunDetail,
@@ -137,6 +126,180 @@ export function App() {
     }
   }, [activeView, selectedContextId])
 
+  const renderActiveView = () => {
+    switch (activeView) {
+      case "globalOverview":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <GlobalOverviewSection
+              topbarStatus={topbarStatus}
+              topbarError={topbarError}
+              agents={agents}
+              chatChannels={chatChannels}
+              extensions={extensions}
+              configStatus={configStatus}
+            />
+          </section>
+        )
+      case "globalRuntime":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <ConsoleStatusSection
+              selectedAgent={selectedAgent}
+              topbarStatus={topbarStatus}
+              topbarError={topbarError}
+              hasPrompt={Boolean(prompt)}
+              extensions={extensions}
+              configStatus={configStatus}
+              onRefresh={() => void refreshDashboard()}
+            />
+          </section>
+        )
+      case "agentOverview":
+        return (
+          <section className="animate-in fade-in-0 space-y-4 duration-300">
+            <SummaryCards
+              selectedAgent={selectedAgent}
+              overview={overview}
+              services={services}
+              localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
+              configStatus={configStatus}
+            />
+            <AgentModelBindingSection
+              selectedAgent={selectedAgent}
+              model={model}
+              loading={loading}
+              onRefresh={() => void refreshModel(selectedAgentId)}
+              onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
+            />
+          </section>
+        )
+      case "agentServices":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <ServicesSection
+              services={services}
+              statusBadgeVariant={uiHelpers.statusBadgeVariant}
+              onControlService={(name, action) => void controlService(name, action)}
+            />
+          </section>
+        )
+      case "globalAgents":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <GlobalAgentsSection
+              agents={agents}
+              selectedAgentId={selectedAgentId}
+              model={model}
+              onSelectAgent={(agentId) => {
+                void handleAgentChange(agentId)
+              }}
+              onRefresh={() => void refreshDashboard(selectedAgentId)}
+              onSwitchModel={(agentId, primaryModelId) => {
+                void switchModelForAgent(agentId, primaryModelId)
+              }}
+            />
+          </section>
+        )
+      case "globalModel":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <GlobalModelSection
+              model={model}
+              providers={modelProviders}
+              poolItems={modelPoolItems}
+              loading={loading}
+              onRefresh={() => void refreshModel(selectedAgentId)}
+              onRefreshPool={() => void refreshModelPool()}
+              onUpsertProvider={(input) => void upsertModelProvider(input)}
+              onRemoveProvider={(providerId) => void removeModelProvider(providerId)}
+              onTestProvider={(providerId) => void testModelProvider(providerId)}
+              onDiscoverProvider={(params) => void discoverModelProvider(params)}
+              onUpsertModel={(input) => void upsertModelPoolItem(input)}
+              onRemoveModel={(modelId) => void removeModelPoolItem(modelId)}
+              onPauseModel={(modelId, isPaused) => void setModelPoolItemPaused(modelId, isPaused)}
+              onTestModel={(modelId, prompt) => void testModelPoolItem(modelId, prompt)}
+            />
+          </section>
+        )
+      case "globalExtensions":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <ExtensionsSection
+              extensions={extensions}
+              formatTime={uiHelpers.formatTime}
+              statusBadgeVariant={uiHelpers.statusBadgeVariant}
+              onRefresh={() => void refreshDashboard()}
+              onControl={(name, action) => void controlExtension(name, action)}
+            />
+          </section>
+        )
+      case "agentTasks":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <TasksSection
+              tasks={tasks}
+              statusBadgeVariant={uiHelpers.statusBadgeVariant}
+              formatTime={uiHelpers.formatTime}
+              onRunTask={(title) => void runTask(title)}
+              onLoadTaskRuns={(title, limit) => loadTaskRuns(title, limit)}
+              onLoadTaskRunDetail={(title, timestamp) => loadTaskRunDetail(title, timestamp)}
+            />
+          </section>
+        )
+      case "agentLogs":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <LogsSection logs={logs} formatTime={uiHelpers.formatTime} />
+          </section>
+        )
+      case "contextOverview":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <ContextOverviewSection
+              contexts={contexts}
+              selectedContextId={selectedContextId}
+              chatChannels={chatChannels}
+              formatTime={uiHelpers.formatTime}
+              onOpenContext={(contextId) => {
+                navigateToView("contextWorkspace", contextId)
+                void handleContextChange(contextId)
+              }}
+              onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
+              onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
+              onChatConfigure={(channel, config) => void configureChatChannel(channel, config)}
+            />
+          </section>
+        )
+      case "contextWorkspace":
+        return (
+          <section className="animate-in fade-in-0 duration-300">
+            <ContextWorkspaceSection
+              selectedContextId={selectedContextId}
+              contexts={contexts}
+              channelHistory={channelHistory}
+              contextMessages={contextMessages}
+              prompt={prompt}
+              chatInput={chatInput}
+              sending={sending}
+              formatTime={uiHelpers.formatTime}
+              onChangeInput={setChatInput}
+              onSendLocalMessage={() => void sendLocalMessage()}
+              onRefreshPrompt={() =>
+                void refreshPrompt(selectedAgentId, selectedContextId || constants.LOCAL_UI_CONTEXT_ID)
+              }
+              onSelectContext={(contextId) => {
+                navigateToView("contextWorkspace", contextId)
+                void handleContextChange(contextId)
+              }}
+            />
+          </section>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <SidebarProvider
       style={
@@ -176,172 +339,11 @@ export function App() {
           topbarError={topbarError}
           loading={loading}
           onRefresh={() => void refreshDashboard()}
-          viewLabel={viewLabelMap[activeView]}
+          viewLabel={getDashboardViewLabel(activeView)}
         />
 
         <main className="flex flex-1 flex-col gap-4 overflow-hidden bg-background p-3 md:p-4 lg:p-6">
-          {activeView === "globalOverview" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <GlobalOverviewSection
-                topbarStatus={topbarStatus}
-                topbarError={topbarError}
-                agents={agents}
-                selectedAgent={selectedAgent}
-                chatChannels={chatChannels}
-                extensions={extensions}
-                configStatus={configStatus}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "agentOverview" ? (
-            <section className="animate-in fade-in-0 space-y-4 duration-300">
-              <SummaryCards
-                selectedAgent={selectedAgent}
-                overview={overview}
-                services={services}
-                localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
-                configStatus={configStatus}
-              />
-              <AgentModelBindingSection
-                selectedAgent={selectedAgent}
-                model={model}
-                loading={loading}
-                onRefresh={() => void refreshModel(selectedAgentId)}
-                onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "agentServices" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <ServicesSection
-                services={services}
-                statusBadgeVariant={uiHelpers.statusBadgeVariant}
-                onControlService={(name, action) => void controlService(name, action)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "agentChannels" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <AgentChannelsSection
-                selectedAgent={selectedAgent}
-                channels={chatChannels}
-                loading={loading}
-                onRefresh={() => void refreshChatChannels(selectedAgentId)}
-                onChannelAction={(action, channel) => void runChatChannelAction(action, channel)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "globalAgents" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <GlobalAgentsSection
-                agents={agents}
-                selectedAgentId={selectedAgentId}
-                model={model}
-                onSelectAgent={(agentId) => {
-                  void handleAgentChange(agentId)
-                }}
-                onRefresh={() => void refreshDashboard(selectedAgentId)}
-                onSwitchModel={(agentId, primaryModelId) => {
-                  void switchModelForAgent(agentId, primaryModelId)
-                }}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "globalModel" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <GlobalModelSection
-                model={model}
-                providers={modelProviders}
-                poolItems={modelPoolItems}
-                loading={loading}
-                onRefresh={() => void refreshModel(selectedAgentId)}
-                onRefreshPool={() => void refreshModelPool()}
-                onUpsertProvider={(input) => void upsertModelProvider(input)}
-                onRemoveProvider={(providerId) => void removeModelProvider(providerId)}
-                onTestProvider={(providerId) => void testModelProvider(providerId)}
-                onDiscoverProvider={(params) => void discoverModelProvider(params)}
-                onUpsertModel={(input) => void upsertModelPoolItem(input)}
-                onRemoveModel={(modelId) => void removeModelPoolItem(modelId)}
-                onPauseModel={(modelId, isPaused) => void setModelPoolItemPaused(modelId, isPaused)}
-                onTestModel={(modelId, prompt) => void testModelPoolItem(modelId, prompt)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "globalExtensions" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <ExtensionsSection
-                extensions={extensions}
-                formatTime={uiHelpers.formatTime}
-                statusBadgeVariant={uiHelpers.statusBadgeVariant}
-                onRefresh={() => void refreshDashboard()}
-                onControl={(name, action) => void controlExtension(name, action)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "agentTasks" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <TasksSection
-                tasks={tasks}
-                statusBadgeVariant={uiHelpers.statusBadgeVariant}
-                formatTime={uiHelpers.formatTime}
-                onRunTask={(taskId) => void runTask(taskId)}
-                onLoadTaskRuns={(taskId, limit) => loadTaskRuns(taskId, limit)}
-                onLoadTaskRunDetail={(taskId, timestamp) => loadTaskRunDetail(taskId, timestamp)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "agentLogs" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <LogsSection logs={logs} formatTime={uiHelpers.formatTime} />
-            </section>
-          ) : null}
-
-          {activeView === "contextOverview" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <ContextOverviewSection
-                contexts={contexts}
-                selectedContextId={selectedContextId}
-                chatChannels={chatChannels}
-                formatTime={uiHelpers.formatTime}
-                onOpenContext={(contextId) => {
-                  navigateToView("contextWorkspace", contextId)
-                  void handleContextChange(contextId)
-                }}
-                onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
-                onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
-              />
-            </section>
-          ) : null}
-
-          {activeView === "contextWorkspace" ? (
-            <section className="animate-in fade-in-0 duration-300">
-              <ContextWorkspaceSection
-                selectedContextId={selectedContextId}
-                contexts={contexts}
-                channelHistory={channelHistory}
-                contextMessages={contextMessages}
-                prompt={prompt}
-                chatInput={chatInput}
-                sending={sending}
-                formatTime={uiHelpers.formatTime}
-                onChangeInput={setChatInput}
-                onSendLocalMessage={() => void sendLocalMessage()}
-                onRefreshPrompt={() => void refreshPrompt(selectedAgentId, selectedContextId || constants.LOCAL_UI_CONTEXT_ID)}
-                onSelectContext={(contextId) => {
-                  navigateToView("contextWorkspace", contextId)
-                  void handleContextChange(contextId)
-                }}
-              />
-            </section>
-          ) : null}
+          {renderActiveView()}
         </main>
       </SidebarInset>
 

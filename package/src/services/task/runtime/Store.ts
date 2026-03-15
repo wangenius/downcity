@@ -12,6 +12,7 @@ import path from "node:path";
 import type { ShipTaskDefinitionV1, ShipTaskFrontmatterV1 } from "@services/task/types/Task.js";
 import { parseTaskMarkdown, buildTaskMarkdown } from "./Model.js";
 import {
+  deriveTaskIdFromTitle,
   isValidTaskId,
   getTaskDir,
   getTaskMdPath,
@@ -25,17 +26,13 @@ import {
  */
 export type TaskListItem = {
   taskId: string;
-  taskName: string;
+  title: string;
   description: string;
-  cron: string;
+  body?: string;
+  when: string;
   status: string;
   contextId: string;
   kind?: "agent" | "script";
-  time?: string;
-  timezone?: string;
-  requiredArtifacts?: string[];
-  minOutputChars?: number;
-  maxDialogueRounds?: number;
   taskMdPath: string;
   lastRunTimestamp?: string;
 };
@@ -111,24 +108,13 @@ export async function listTasks(projectRoot: string): Promise<TaskListItem[]> {
 
     items.push({
       taskId,
-      taskName: parsed.task.frontmatter.taskName,
+      title: parsed.task.frontmatter.title,
       description: parsed.task.frontmatter.description,
-      cron: parsed.task.frontmatter.cron,
+      ...(parsed.task.body ? { body: parsed.task.body } : {}),
+      when: parsed.task.frontmatter.when,
       status: parsed.task.frontmatter.status,
       contextId: parsed.task.frontmatter.contextId,
       kind: parsed.task.frontmatter.kind || "agent",
-      ...(parsed.task.frontmatter.time ? { time: parsed.task.frontmatter.time } : {}),
-      ...(parsed.task.frontmatter.timezone ? { timezone: parsed.task.frontmatter.timezone } : {}),
-      ...(Array.isArray(parsed.task.frontmatter.requiredArtifacts) &&
-      parsed.task.frontmatter.requiredArtifacts.length > 0
-        ? { requiredArtifacts: parsed.task.frontmatter.requiredArtifacts }
-        : {}),
-      ...(typeof parsed.task.frontmatter.minOutputChars === "number"
-        ? { minOutputChars: parsed.task.frontmatter.minOutputChars }
-        : {}),
-      ...(typeof parsed.task.frontmatter.maxDialogueRounds === "number"
-        ? { maxDialogueRounds: parsed.task.frontmatter.maxDialogueRounds }
-        : {}),
       taskMdPath: parsed.task.taskMdPath,
       ...(lastRunTimestamp ? { lastRunTimestamp } : {}),
     });
@@ -136,6 +122,31 @@ export async function listTasks(projectRoot: string): Promise<TaskListItem[]> {
 
   items.sort((a, b) => a.taskId.localeCompare(b.taskId));
   return items;
+}
+
+/**
+ * 根据 title 解析 taskId。
+ *
+ * 关键点（中文）
+ * - 对外只暴露 title，因此运行/状态/删除链路需要先定位真实目录键。
+ * - 若磁盘中存在同 title 多定义，会拒绝并提示冲突。
+ */
+export async function resolveTaskIdByTitle(params: {
+  projectRoot: string;
+  title: string;
+}): Promise<string> {
+  const root = String(params.projectRoot || "").trim();
+  if (!root) throw new Error("projectRoot is required");
+  const title = String(params.title || "").trim();
+  if (!title) throw new Error("title is required");
+
+  const tasks = await listTasks(root);
+  const matched = tasks.filter((item) => String(item.title || "").trim() === title);
+  if (matched.length === 1) return matched[0].taskId;
+  if (matched.length > 1) {
+    throw new Error(`Duplicated task title found: "${title}". Please keep title unique.`);
+  }
+  return deriveTaskIdFromTitle(title);
 }
 
 /**

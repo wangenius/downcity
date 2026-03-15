@@ -1,0 +1,49 @@
+---
+title: Execution and Validation Flow
+description: runTaskNow stages, live progress snapshots, and final status rules
+---
+
+# Execution and Validation Flow
+
+## End-to-end flow
+
+1. load task definition and create run directory
+2. write `input.md` and `run-progress.json` (running)
+3. execute by `kind`:
+   - `script`: execute script body directly
+   - `agent`: executor + user-simulator multi-round flow
+4. validate result (current rule: output must be at least 1 char; `agent` tasks require successful `chat_send` delivery)
+5. write `output.md` / `result.md` / `run.json` / `dialogue.*` / `error.md`
+
+## Result fields
+
+- `status`: final status (success/failure)
+- `executionStatus`: execution-stage status
+- `resultStatus`: validation status (valid/invalid/not_checked)
+- `executionId`: unique execution id
+
+## Mermaid
+
+```mermaid
+sequenceDiagram
+  participant T as Trigger(manual cron time)
+  participant A as Action.run
+  participant R as Runner.runTaskNow
+  participant F as RunFiles
+
+  T->>A: run title
+  A->>R: start async with executionId
+  A-->>T: accepted true + executionId
+
+  R->>F: write input.md and run-progress.json
+  alt kind script
+    R->>R: execute script body
+  else kind agent
+    loop rounds
+      R->>R: executor round
+      R->>R: simulator round
+    end
+  end
+  R->>R: validate output length
+  R->>F: write output.md result.md run.json dialogue and error
+```

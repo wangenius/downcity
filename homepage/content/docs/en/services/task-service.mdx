@@ -1,40 +1,18 @@
 ---
-title: Task Service
-description: Task definition lifecycle and scheduler service
+title: Task Service (Migration Notice)
+description: task service docs are now split into multi-page deep dives
 ---
 
-# Task Service
+# Task Service (Migration Notice)
 
-`task` service manages task definitions and execution.
+Task service documentation has been split into focused pages. Start from the new entry:
 
-## Responsibilities
+- [Task Service Overview](/en/docs/services/task/task-service)
+- [Task Definition and Action Contracts](/en/docs/services/task/task-definition-and-actions)
+- [Agent Task Mode](/en/docs/services/task/agent-task-mode)
+- [Script Task Mode](/en/docs/services/task/script-task-mode)
+- [Scheduler Registration and Trigger Flow](/en/docs/services/task/scheduler-and-trigger-flow)
+- [Execution and Validation Flow](/en/docs/services/task/execution-and-validation-flow)
+- [Run Artifacts and Debugging](/en/docs/services/task/run-artifacts-and-debugging)
 
-- Create/update/delete task definitions
-- Enable/disable/pause task status
-- Run tasks immediately
-- Manage cron runtime and scheduler reload
-- De-duplicate semantically equivalent task creation in the same `contextId` + `kind`
-
-## De-duplication On Create
-
-When calling `create`, task service checks existing tasks under the same `contextId` and `kind`.
-
-- If a task with the same semantic goal is found, service reuses that task instead of creating a duplicate.
-- Response returns the existing `taskName` and may include `reusedExisting=true`.
-
-## Naming
-
-- Use one name field only: `taskName`.
-- Do not split semantics into separate `taskId` and title fields in user workflows.
-
-## Runtime operations
-
-```bash
-sma service status task
-sma service command task list --payload '{"status":"enabled"}'
-```
-
-## Related docs
-
-- [`sma service`](/en/docs/commands/service/service)
-- [`sma task`](/en/docs/commands/service/task)
+> This page is kept only as a compatibility entry.

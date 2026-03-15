@@ -75,6 +75,11 @@ type ChatOpenActionPayload = {
 type ChatCloseActionPayload = {
   channel?: ChatChannelName;
 };
+type ChatConfigureActionPayload = {
+  channel: ChatChannelName;
+  config: Record<string, JsonValue>;
+  restart?: boolean;
+};
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
@@ -444,7 +449,72 @@ function getChatChannelStatus(
     statusText,
     detail: {
       ...(runtime?.detail || {}),
+      config: buildChatChannelConfigSummary(context, channel),
     },
+  };
+}
+
+/**
+ * 生成可安全暴露给 UI 的渠道配置摘要。
+ *
+ * 关键点（中文）
+ * - 不返回明文密钥，只返回布尔“是否已配置”。
+ * - 字段命名尽量贴近 `ship.json`，便于前端直接映射编辑。
+ */
+function buildChatChannelConfigSummary(
+  context: ServiceRuntime,
+  channel: ChatChannelName,
+): Record<string, string | number | boolean | null> {
+  const channels = context.config.services?.chat?.channels;
+  if (channel === "telegram") {
+    const cfg = channels?.telegram;
+    return {
+      enabled: cfg?.enabled === true,
+      botTokenConfigured: !!resolveTelegramToken(context),
+      auth_id:
+        typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
+          ? cfg.auth_id.trim()
+          : null,
+      followupWindowMs:
+        typeof cfg?.followupWindowMs === "number" &&
+        Number.isFinite(cfg.followupWindowMs) &&
+        cfg.followupWindowMs >= 0
+          ? cfg.followupWindowMs
+          : null,
+      groupAccess:
+        cfg?.groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone",
+    };
+  }
+  if (channel === "feishu") {
+    const cfg = channels?.feishu;
+    const credentials = resolveFeishuCredentials(context);
+    return {
+      enabled: cfg?.enabled === true,
+      appId: credentials.appId || null,
+      appSecretConfigured: !!credentials.appSecret,
+      domain:
+        typeof cfg?.domain === "string" && cfg.domain.trim()
+          ? cfg.domain.trim()
+          : "https://open.feishu.cn",
+      auth_id:
+        typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
+          ? cfg.auth_id.trim()
+          : null,
+    };
+  }
+  const cfg = channels?.qq;
+  const credentials = resolveQQCredentials(context);
+  return {
+    enabled: cfg?.enabled === true,
+    appId: credentials.appId || null,
+    appSecretConfigured: !!credentials.appSecret,
+    sandbox: cfg?.sandbox === true,
+    auth_id:
+      typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
+        ? cfg.auth_id.trim()
+        : null,
+    groupAccess:
+      cfg?.groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone",
   };
 }
 
@@ -489,6 +559,188 @@ async function setChatChannelEnabled(params: {
   const shipChannels = ((shipChat.channels ??= {}) as Record<string, unknown>);
   const shipChannel = ((shipChannels[channel] ??= {}) as Record<string, unknown>);
   shipChannel.enabled = enabled;
+
+  await fs.writeFile(shipPath, `${JSON.stringify(shipJson, null, 2)}\n`, "utf-8");
+}
+
+function isJsonObject(value: JsonValue): value is JsonObject {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function readOptionalStringPatch(value: JsonValue): string | null | undefined {
+  if (value === null) return null;
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text || null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return undefined;
+}
+
+function readOptionalBooleanPatch(value: JsonValue): boolean | undefined {
+  if (value === true) return true;
+  if (value === false) return false;
+  if (typeof value === "string") {
+    const text = value.trim().toLowerCase();
+    if (text === "true" || text === "1") return true;
+    if (text === "false" || text === "0") return false;
+  }
+  return undefined;
+}
+
+function readOptionalNonNegativeIntPatch(
+  value: JsonValue,
+): number | null | undefined {
+  if (value === null) return null;
+  const text =
+    typeof value === "number" && Number.isFinite(value)
+      ? String(Math.trunc(value))
+      : typeof value === "string"
+        ? value.trim()
+        : "";
+  if (!text) return undefined;
+  if (!/^\d+$/.test(text)) {
+    throw new Error(`Invalid non-negative integer value: ${String(value)}`);
+  }
+  const parsed = Number.parseInt(text, 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
+    throw new Error(`Invalid non-negative integer value: ${String(value)}`);
+  }
+  return parsed;
+}
+
+/**
+ * 解析 chat.configure patch。
+ *
+ * 关键点（中文）
+ * - 只接受白名单字段，避免 UI 误写入未知键。
+ * - 密钥类字段支持 `null` 清空，字符串会自动 trim。
+ */
+function normalizeChatChannelConfigPatch(params: {
+  channel: ChatChannelName;
+  config: Record<string, JsonValue>;
+}): Record<string, string | number | boolean | null> {
+  const channel = params.channel;
+  const config = params.config;
+  const patch: Record<string, string | number | boolean | null> = {};
+
+  const enabled = readOptionalBooleanPatch(config.enabled);
+  if (typeof enabled === "boolean") patch.enabled = enabled;
+
+  if (channel === "telegram") {
+    const botToken = readOptionalStringPatch(config.botToken);
+    if (botToken !== undefined) patch.botToken = botToken;
+
+    const authId = readOptionalStringPatch(config.auth_id);
+    if (authId !== undefined) patch.auth_id = authId;
+
+    const followupWindowMs = readOptionalNonNegativeIntPatch(config.followupWindowMs);
+    if (followupWindowMs !== undefined) patch.followupWindowMs = followupWindowMs;
+
+    const groupAccessText = String(config.groupAccess || "").trim().toLowerCase();
+    if (groupAccessText) {
+      if (groupAccessText !== "anyone" && groupAccessText !== "initiator_or_admin") {
+        throw new Error("Invalid groupAccess: use anyone|initiator_or_admin");
+      }
+      patch.groupAccess = groupAccessText;
+    }
+    return patch;
+  }
+
+  if (channel === "feishu") {
+    const appId = readOptionalStringPatch(config.appId);
+    if (appId !== undefined) patch.appId = appId;
+
+    const appSecret = readOptionalStringPatch(config.appSecret);
+    if (appSecret !== undefined) patch.appSecret = appSecret;
+
+    const domain = readOptionalStringPatch(config.domain);
+    if (domain !== undefined) patch.domain = domain;
+
+    const authId = readOptionalStringPatch(config.auth_id);
+    if (authId !== undefined) patch.auth_id = authId;
+    return patch;
+  }
+
+  const appId = readOptionalStringPatch(config.appId);
+  if (appId !== undefined) patch.appId = appId;
+
+  const appSecret = readOptionalStringPatch(config.appSecret);
+  if (appSecret !== undefined) patch.appSecret = appSecret;
+
+  const sandbox = readOptionalBooleanPatch(config.sandbox);
+  if (typeof sandbox === "boolean") patch.sandbox = sandbox;
+
+  const authId = readOptionalStringPatch(config.auth_id);
+  if (authId !== undefined) patch.auth_id = authId;
+
+  const groupAccessText = String(config.groupAccess || "").trim().toLowerCase();
+  if (groupAccessText) {
+    if (groupAccessText !== "anyone" && groupAccessText !== "initiator_or_admin") {
+      throw new Error("Invalid groupAccess: use anyone|initiator_or_admin");
+    }
+    patch.groupAccess = groupAccessText;
+  }
+  return patch;
+}
+
+function applyChannelPatch(
+  target: Record<string, unknown>,
+  patch: Record<string, string | number | boolean | null>,
+): void {
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) {
+      delete target[key];
+      continue;
+    }
+    target[key] = value;
+  }
+}
+
+/**
+ * 更新单个 channel 配置（内存 + ship.json）。
+ *
+ * 关键点（中文）
+ * - 与 `setChatChannelEnabled` 一样保持“先内存后落盘”。
+ * - patch 可同时包含启停开关和凭据参数。
+ */
+async function setChatChannelConfig(params: {
+  context: ServiceRuntime;
+  channel: ChatChannelName;
+  patch: Record<string, string | number | boolean | null>;
+}): Promise<void> {
+  const { context, channel, patch } = params;
+  if (Object.keys(patch).length === 0) return;
+
+  const configServices = ((context.config.services ??= {}) as {
+    chat?: {
+      channels?: Record<string, Record<string, unknown>>;
+    };
+  });
+  const chatConfig = (configServices.chat ??= {});
+  const channelConfigs = (chatConfig.channels ??= {});
+  const channelConfig = (channelConfigs[channel] ??= {});
+  applyChannelPatch(channelConfig, patch);
+
+  const shipPath = path.join(context.rootPath, "ship.json");
+  let shipJson: Record<string, unknown> = {};
+  try {
+    const raw = await fs.readFile(shipPath, "utf-8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      shipJson = parsed as Record<string, unknown>;
+    }
+  } catch {
+    shipJson = {};
+  }
+
+  const shipServices = ((shipJson.services ??= {}) as Record<string, unknown>);
+  const shipChat = ((shipServices.chat ??= {}) as Record<string, unknown>);
+  const shipChannels = ((shipChat.channels ??= {}) as Record<string, unknown>);
+  const shipChannel = ((shipChannels[channel] ??= {}) as Record<string, unknown>);
+  applyChannelPatch(shipChannel, patch);
 
   await fs.writeFile(shipPath, `${JSON.stringify(shipJson, null, 2)}\n`, "utf-8");
 }
@@ -659,6 +911,50 @@ async function executeChatCloseAction(params: {
   };
 }
 
+async function executeChatConfigureAction(params: {
+  context: ServiceRuntime;
+  payload: ChatConfigureActionPayload;
+}) {
+  const channel = params.payload.channel;
+  const patch = normalizeChatChannelConfigPatch({
+    channel,
+    config: params.payload.config || {},
+  });
+
+  if (Object.keys(patch).length === 0) {
+    return {
+      success: false,
+      error: "No valid config fields provided",
+    };
+  }
+
+  await setChatChannelConfig({
+    context: params.context,
+    channel,
+    patch,
+  });
+
+  // 关键点（中文）：默认重载一次目标渠道，让新配置立刻生效。
+  const restart = params.payload.restart !== false;
+  if (restart) {
+    await stopSingleChatChannel(channel);
+    const snapshot = getChatChannelStatus(params.context, channel);
+    if (snapshot.enabled && snapshot.configured) {
+      await startSingleChatChannel(params.context, channel);
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      channel,
+      restartApplied: restart,
+      appliedKeys: Object.keys(patch),
+      channels: [getChatChannelStatus(params.context, channel)],
+    },
+  };
+}
+
 function getStringOpt(opts: Record<string, JsonValue>, key: string): string {
   return typeof opts[key] === "string" ? String(opts[key]).trim() : "";
 }
@@ -698,6 +994,61 @@ function mapChatChannelApiQueryInput(query?: {
   if (!channelRaw) return {};
   return {
     channel: resolveChatChannelNameOrThrow(channelRaw),
+  };
+}
+
+function mapChatConfigureCommandInput(
+  input: ServiceActionCommandInput,
+): ChatConfigureActionPayload {
+  const channelRaw = getStringOpt(input.opts, "channel");
+  if (!channelRaw) {
+    throw new Error("Missing --channel. Use telegram|feishu|qq.");
+  }
+  const channel = resolveChatChannelNameOrThrow(channelRaw);
+  const rawConfigJson = getStringOpt(input.opts, "configJson");
+  if (!rawConfigJson) {
+    throw new Error("Missing --config-json.");
+  }
+  let parsed: JsonValue = {};
+  try {
+    parsed = JSON.parse(rawConfigJson) as JsonValue;
+  } catch (error) {
+    throw new Error(`Invalid --config-json: ${String(error)}`);
+  }
+  if (!isJsonObject(parsed)) {
+    throw new Error("--config-json must be a JSON object");
+  }
+  return {
+    channel,
+    config: parsed as Record<string, JsonValue>,
+    restart: getBooleanOpt(input.opts, "restart"),
+  };
+}
+
+async function mapChatConfigureApiInput(c: {
+  req: {
+    json: () => Promise<JsonValue>;
+  };
+}): Promise<ChatConfigureActionPayload> {
+  const body = await c.req.json().catch(() => ({} as JsonValue));
+  if (!isJsonObject(body)) {
+    throw new Error("Invalid JSON body");
+  }
+  const channelRaw =
+    typeof body.channel === "string" ? String(body.channel).trim() : "";
+  if (!channelRaw) {
+    throw new Error("Missing channel");
+  }
+  const configRaw = body.config;
+  if (!isJsonObject(configRaw)) {
+    throw new Error("Missing config object");
+  }
+  const restart =
+    typeof body.restart === "boolean" ? body.restart : undefined;
+  return {
+    channel: resolveChatChannelNameOrThrow(channelRaw),
+    config: configRaw as Record<string, JsonValue>,
+    ...(typeof restart === "boolean" ? { restart } : {}),
   };
 }
 
@@ -1216,6 +1567,33 @@ export const chatService: Service = {
         return executeChatCloseAction({
           context: params.context,
           payload: params.payload as ChatCloseActionPayload,
+        });
+      },
+    },
+    configure: {
+      command: {
+        description: "更新 chat 渠道参数（写入 ship.json，可选立即重载）",
+        configure(command: Command) {
+          command
+            .requiredOption("--channel <name>", "指定渠道（telegram|feishu|qq）")
+            .requiredOption(
+              "--config-json <json>",
+              "配置 patch JSON（例如 '{\"appId\":\"xxx\",\"sandbox\":false}'）",
+            )
+            .option("--restart", "配置后立即重载渠道", false);
+        },
+        mapInput: mapChatConfigureCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatConfigureApiInput(c);
+        },
+      },
+      async execute(params) {
+        return executeChatConfigureAction({
+          context: params.context,
+          payload: params.payload as ChatConfigureActionPayload,
         });
       },
     },

@@ -15,19 +15,18 @@ sma agent restart [path] [options]
 
 ## Key options
 
-- `-p, --port <port>`: service port
 - `-h, --host <host>`: service host
 
 ## Behavior
 
 - `path` defaults to current directory `.`
 - Target agent must be registered in console registry
-- Restart flow is stop first, then start with latest options
+- Restart flow is stop first, then start again with a new console-assigned port
 
 ## Related commands
 
-- [`sma agent on`](/en/docs/commands/agent/on)
-- [`sma agent off`](/en/docs/commands/agent/off)
+- [`sma agent start`](/en/docs/commands/agent/start)
+- [`sma agent restart`](/en/docs/commands/agent/restart)
 - [`sma agent status`](/en/docs/commands/agent/status)
 
 ## Example Output (Based on Current Implementation)

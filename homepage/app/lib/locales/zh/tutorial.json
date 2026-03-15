@@ -9,7 +9,7 @@
   "step2": {
     "title": "唤醒运行时",
     "description": "在本地启动 Agent Runtime。它将接管代码仓库的读写权限，并连接到你配置的即时通讯软件（如 Telegram），随时作为员工待命。",
-    "command": "sma agent on"
+    "command": "sma agent start"
   },
   "step3": {
     "title": "自然语言协作",

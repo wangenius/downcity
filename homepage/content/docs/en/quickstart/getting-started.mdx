@@ -53,20 +53,20 @@ Minimal `ship.json` example:
 Start runtime (default: background daemon):
 
 ```bash
-sma agent on
+sma agent start
 ```
 
 Use foreground mode when you want logs in the current terminal:
 
 ```bash
-sma agent on --foreground
+sma agent start --foreground
 ```
 
 ## 5. Verify health
 
 ```bash
-curl http://localhost:3000/health
-curl http://localhost:3000/api/status
+curl http://localhost:5314/health
+curl http://localhost:5314/api/status
 ```
 
 ## 6. Optional: add alias to shell rc
@@ -79,5 +79,5 @@ sma console config alias
 
 - [Configuration](/en/docs/quickstart/configuration)
 - [Skill Service](/en/docs/services/skill-service)
-- [Task Service](/en/docs/services/task-service)
+- [Task Service](/en/docs/services/task/task-service)
 - [Troubleshooting](/en/docs/operations/troubleshooting)

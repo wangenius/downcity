@@ -1,0 +1,45 @@
+---
+title: Script 模式任务
+description: kind=script 的执行行为、约束与脚本写法建议
+---
+
+# Script 模式任务
+
+`kind=script` 会直接把任务正文当作 shell 脚本执行。
+
+## 适用场景
+
+- 固定流程自动化
+- 可重复命令链
+- 无需 agent 推理的任务
+
+## 执行约束
+
+- 正文不能为空
+- 正文必须是可执行脚本
+- 脚本输出会写入 `result.md`
+
+## 最佳实践
+
+- 脚本开头显式设置安全选项（如 `set -e`）
+- 输出明确的步骤和结果文本
+- 把失败信息写清楚，便于 `error.md` 排障
+
+## 示例
+
+```yaml
+---
+title: nightly-cleanup
+description: 每晚清理缓存目录
+contextId: ops
+when: 0 2 * * *
+status: enabled
+kind: script
+---
+
+set -e
+
+echo "start cleanup"
+rm -rf ./tmp/cache/*
+echo "cleanup done"
+```

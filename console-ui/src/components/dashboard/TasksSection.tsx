@@ -29,15 +29,15 @@ export interface TasksSectionProps {
   /**
    * 手动执行任务。
    */
-  onRunTask: (taskId: string) => void;
+  onRunTask: (title: string) => void;
   /**
    * 加载任务执行列表。
    */
-  onLoadTaskRuns: (taskId: string, limit?: number) => Promise<UiTaskRunSummary[]>;
+  onLoadTaskRuns: (title: string, limit?: number) => Promise<UiTaskRunSummary[]>;
   /**
    * 加载任务执行详情。
    */
-  onLoadTaskRunDetail: (taskId: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
+  onLoadTaskRunDetail: (title: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
 }
 
 function formatDurationMs(startedAt?: number, endedAt?: number): string {
@@ -45,6 +45,43 @@ function formatDurationMs(startedAt?: number, endedAt?: number): string {
   const diff = Math.max(0, Number(endedAt) - Number(startedAt));
   if (diff < 1000) return `${diff} ms`;
   return `${(diff / 1000).toFixed(2)} s`;
+}
+
+function formatRunTimestampForDisplay(
+  raw: string | undefined,
+  formatTime: (ts?: number | string) => string,
+): string {
+  const value = String(raw || "").trim();
+  if (!value) return "-";
+
+  const match = value.match(
+    /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-(\d{3})$/,
+  );
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    const second = Number(match[6]);
+    const milli = Number(match[7]);
+    const t = new Date(year, month, day, hour, minute, second, milli).getTime();
+    const human = formatTime(t);
+    return human === "-" ? "未记录时间" : human;
+  }
+
+  const parsed = formatTime(value);
+  return parsed === "-" ? "未记录时间" : parsed;
+}
+
+function normalizeRunStatus(
+  run?: UiTaskRunSummary | null,
+  detail?: UiTaskRunDetailResponse | null,
+): string {
+  const progressStatus = String(detail?.progress?.status || "").trim();
+  if (progressStatus) return progressStatus;
+  if (run?.inProgress) return "running";
+  return String(run?.status || run?.executionStatus || "unknown");
 }
 
 export function TasksSection(props: TasksSectionProps) {
@@ -57,12 +94,13 @@ export function TasksSection(props: TasksSectionProps) {
     onLoadTaskRunDetail,
   } = props;
 
-  const [selectedTaskId, setSelectedTaskId] = React.useState("");
+  const [selectedTitle, setSelectedTitle] = React.useState("");
   const [runs, setRuns] = React.useState<UiTaskRunSummary[]>([]);
   const [selectedRunTimestamp, setSelectedRunTimestamp] = React.useState("");
   const [selectedRunDetail, setSelectedRunDetail] = React.useState<UiTaskRunDetailResponse | null>(null);
   const [loadingRuns, setLoadingRuns] = React.useState(false);
   const [loadingRunDetail, setLoadingRunDetail] = React.useState(false);
+  const [forceLivePolling, setForceLivePolling] = React.useState(false);
 
   const badgeClass = React.useCallback(
     (status?: string): string => {
@@ -76,72 +114,171 @@ export function TasksSection(props: TasksSectionProps) {
 
   const selectedTask = React.useMemo(
     () =>
-      tasks.find((item) => String(item.taskId || item.id || "").trim() === selectedTaskId) ||
+      tasks.find((item) => String(item.title || "").trim() === selectedTitle) ||
       null,
-    [selectedTaskId, tasks],
+    [selectedTitle, tasks],
+  );
+
+  const selectedRun = React.useMemo(
+    () =>
+      runs.find((item) => String(item.timestamp || "").trim() === selectedRunTimestamp) || null,
+    [runs, selectedRunTimestamp],
+  );
+
+  const activeRun = React.useMemo(
+    () => runs.find((item) => Boolean(item.inProgress)) || null,
+    [runs],
+  );
+
+  const selectedRunInProgress = React.useMemo(
+    () =>
+      Boolean(selectedRun?.inProgress) ||
+      String(selectedRunDetail?.progress?.status || "").trim().toLowerCase() === "running",
+    [selectedRun, selectedRunDetail],
+  );
+
+  const loadRuns = React.useCallback(
+    async (
+      titleInput: string,
+      options?: {
+        showLoading?: boolean;
+        preferInProgress?: boolean;
+      },
+    ): Promise<UiTaskRunSummary[]> => {
+      const title = String(titleInput || "").trim();
+      if (!title) return [];
+      const showLoading = options?.showLoading !== false;
+      if (showLoading) setLoadingRuns(true);
+      try {
+        const nextRuns = await onLoadTaskRuns(title, 50);
+        setRuns(nextRuns);
+        setSelectedRunTimestamp((prev) => {
+          const running = options?.preferInProgress
+            ? nextRuns.find((item) => Boolean(item.inProgress))
+            : null;
+          if (running?.timestamp) return String(running.timestamp);
+          if (prev && nextRuns.some((item) => item.timestamp === prev)) return prev;
+          return String(nextRuns[0]?.timestamp || "").trim();
+        });
+        return nextRuns;
+      } finally {
+        if (showLoading) setLoadingRuns(false);
+      }
+    },
+    [onLoadTaskRuns],
+  );
+
+  const loadRunDetail = React.useCallback(
+    async (
+      titleInput: string,
+      timestampInput: string,
+      options?: {
+        showLoading?: boolean;
+      },
+    ): Promise<UiTaskRunDetailResponse | null> => {
+      const title = String(titleInput || "").trim();
+      const timestamp = String(timestampInput || "").trim();
+      if (!title || !timestamp) {
+        setSelectedRunDetail(null);
+        return null;
+      }
+      const showLoading = options?.showLoading !== false;
+      if (showLoading) setLoadingRunDetail(true);
+      try {
+        const detail = await onLoadTaskRunDetail(title, timestamp);
+        setSelectedRunDetail(detail);
+        return detail;
+      } finally {
+        if (showLoading) setLoadingRunDetail(false);
+      }
+    },
+    [onLoadTaskRunDetail],
   );
 
   React.useEffect(() => {
-    if (!selectedTaskId) {
-      const fallback = String(tasks[0]?.taskId || tasks[0]?.id || "").trim();
-      if (fallback) setSelectedTaskId(fallback);
+    if (!selectedTitle) {
+      const fallback = String(tasks[0]?.title || "").trim();
+      if (fallback) setSelectedTitle(fallback);
       return;
     }
     const exists = tasks.some(
-      (item) => String(item.taskId || item.id || "").trim() === selectedTaskId,
+      (item) => String(item.title || "").trim() === selectedTitle,
     );
     if (!exists) {
-      const fallback = String(tasks[0]?.taskId || tasks[0]?.id || "").trim();
-      setSelectedTaskId(fallback || "");
+      const fallback = String(tasks[0]?.title || "").trim();
+      setSelectedTitle(fallback || "");
     }
-  }, [selectedTaskId, tasks]);
+  }, [selectedTitle, tasks]);
 
   React.useEffect(() => {
-    const taskId = String(selectedTaskId || "").trim();
-    if (!taskId) {
+    const title = String(selectedTitle || "").trim();
+    if (!title) {
       setRuns([]);
       setSelectedRunTimestamp("");
       setSelectedRunDetail(null);
+      setForceLivePolling(false);
       return;
     }
-    let cancelled = false;
-    setLoadingRuns(true);
-    void onLoadTaskRuns(taskId, 50)
-      .then((nextRuns) => {
-        if (cancelled) return;
-        setRuns(nextRuns);
-        const fallback = String(nextRuns[0]?.timestamp || "").trim();
-        setSelectedRunTimestamp((prev) => (prev && nextRuns.some((x) => x.timestamp === prev) ? prev : fallback));
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingRuns(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [onLoadTaskRuns, selectedTaskId]);
+    void loadRuns(title, {
+      showLoading: true,
+      preferInProgress: true,
+    });
+  }, [loadRuns, selectedTitle]);
 
   React.useEffect(() => {
-    const taskId = String(selectedTaskId || "").trim();
+    const title = String(selectedTitle || "").trim();
     const timestamp = String(selectedRunTimestamp || "").trim();
-    if (!taskId || !timestamp) {
+    if (!title || !timestamp) {
       setSelectedRunDetail(null);
       return;
     }
-    let cancelled = false;
-    setLoadingRunDetail(true);
-    void onLoadTaskRunDetail(taskId, timestamp)
-      .then((detail) => {
-        if (cancelled) return;
-        setSelectedRunDetail(detail);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingRunDetail(false);
+    void loadRunDetail(title, timestamp, { showLoading: true });
+  }, [loadRunDetail, selectedRunTimestamp, selectedTitle]);
+
+  React.useEffect(() => {
+    if (!activeRun?.timestamp) return;
+    if (activeRun.timestamp === selectedRunTimestamp) return;
+    setSelectedRunTimestamp(activeRun.timestamp);
+  }, [activeRun, selectedRunTimestamp]);
+
+  React.useEffect(() => {
+    const title = String(selectedTitle || "").trim();
+    if (!title) return;
+    const shouldPoll =
+      forceLivePolling || selectedRunInProgress || runs.some((item) => Boolean(item.inProgress));
+    if (!shouldPoll) return;
+
+    // 关键点（中文）：仅在“执行中”阶段高频轮询，完成后自动停掉，避免 UI 无意义刷接口。
+    const timer = window.setInterval(() => {
+      void loadRuns(title, { showLoading: false, preferInProgress: true }).then((nextRuns) => {
+        const running = nextRuns.find((item) => Boolean(item.inProgress));
+        const targetTimestamp = String(
+          running?.timestamp ||
+            selectedRunTimestamp ||
+            nextRuns[0]?.timestamp ||
+            "",
+        ).trim();
+        if (targetTimestamp) {
+          void loadRunDetail(title, targetTimestamp, { showLoading: false });
+        }
+        if (!running) {
+          setForceLivePolling(false);
+        }
       });
+    }, 1500);
+
     return () => {
-      cancelled = true;
+      window.clearInterval(timer);
     };
-  }, [onLoadTaskRunDetail, selectedRunTimestamp, selectedTaskId]);
+  }, [
+    forceLivePolling,
+    loadRunDetail,
+    loadRuns,
+    runs,
+    selectedRunInProgress,
+    selectedRunTimestamp,
+    selectedTitle,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -160,7 +297,6 @@ export function TasksSection(props: TasksSectionProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Task</TableHead>
-                    <TableHead>Title</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Schedule</TableHead>
                     <TableHead>Context</TableHead>
@@ -170,38 +306,59 @@ export function TasksSection(props: TasksSectionProps) {
                 </TableHeader>
                 <TableBody>
                   {tasks.map((task) => {
-                    const taskId = String(task.taskId || task.id || "-");
+                    const title = String(task.title || "-");
                     const status = String(task.status || "unknown");
-                    const isSelected = taskId === selectedTaskId;
+                    const isSelected = title === selectedTitle;
+                    const selectedTaskRunning = isSelected && Boolean(activeRun);
                     return (
-                      <TableRow key={taskId} className={isSelected ? "bg-primary/5" : ""}>
-                        <TableCell className="font-medium">{taskId}</TableCell>
-                        <TableCell className="max-w-[16rem] truncate" title={task.title || ""}>
-                          {String(task.title || "-")}
-                        </TableCell>
+                      <TableRow key={title} className={isSelected ? "bg-primary/5" : ""}>
+                        <TableCell className="font-medium">{title}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={badgeClass(status)}>
-                            {status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={badgeClass(status)}>
+                              {status}
+                            </Badge>
+                            {selectedTaskRunning ? (
+                              <Badge variant="outline" className={badgeClass("running")}>
+                                running
+                              </Badge>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-xs text-muted-foreground">
-                            <div>{`cron ${String(task.cron || "-")}`}</div>
-                            <div>{`time ${String(task.time || "-")}`}</div>
+                            <div>{`when ${String(task.when || "-")}`}</div>
                           </div>
                         </TableCell>
                         <TableCell className="max-w-[14rem] truncate font-mono text-xs" title={task.contextId || ""}>
                           {String(task.contextId || "-")}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {task.lastRunTimestamp || "-"}
+                          {formatRunTimestampForDisplay(
+                            String(task.lastRunTimestamp || ""),
+                            formatTime,
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => setSelectedTaskId(taskId)}>
+                            <Button size="sm" variant="outline" onClick={() => setSelectedTitle(title)}>
                               详情
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => onRunTask(taskId)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedTitle(title);
+                                setForceLivePolling(true);
+                                onRunTask(title);
+                                window.setTimeout(() => {
+                                  void loadRuns(title, {
+                                    showLoading: false,
+                                    preferInProgress: true,
+                                  });
+                                }, 350);
+                              }}
+                            >
                               run
                             </Button>
                           </div>
@@ -220,46 +377,94 @@ export function TasksSection(props: TasksSectionProps) {
         <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
           <Card className="border-border/80 bg-card/90 shadow-sm">
             <CardHeader>
-              <CardTitle>{`Task Detail · ${selectedTaskId}`}</CardTitle>
+              <CardTitle>{`Task Detail · ${selectedTitle}`}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <div className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">title</div>
-                <div>{selectedTask.title || "-"}</div>
-              </div>
               <div className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">description</div>
                 <div className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
                   {selectedTask.description || "-"}
                 </div>
               </div>
+              <div className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">body</div>
+                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/60 bg-background/80 p-2 text-[11px] leading-relaxed">
+                  {selectedTask.body || "-"}
+                </pre>
+              </div>
               <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/35 px-3 py-2 text-xs">
                 <div>{`status: ${selectedTask.status || "-"}`}</div>
                 <div>{`kind: ${selectedTask.kind || "-"}`}</div>
-                <div>{`cron: ${selectedTask.cron || "-"}`}</div>
-                <div>{`time: ${selectedTask.time || "-"}`}</div>
-                <div>{`timezone: ${selectedTask.timezone || "-"}`}</div>
+                <div>{`when: ${selectedTask.when || "-"}`}</div>
                 <div className="truncate font-mono" title={selectedTask.contextId || ""}>{`contextId: ${selectedTask.contextId || "-"}`}</div>
                 <div className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{`taskMdPath: ${selectedTask.taskMdPath || "-"}`}</div>
-                <div>{`requiredArtifacts: ${
-                  Array.isArray(selectedTask.requiredArtifacts) && selectedTask.requiredArtifacts.length > 0
-                    ? selectedTask.requiredArtifacts.join(", ")
-                    : "-"
-                }`}</div>
-                <div>{`minOutputChars: ${selectedTask.minOutputChars ?? "-"}`}</div>
-                <div>{`maxDialogueRounds: ${selectedTask.maxDialogueRounds ?? "-"}`}</div>
               </div>
             </CardContent>
           </Card>
 
           <div className="space-y-4">
+            {activeRun || selectedRunInProgress || forceLivePolling ? (
+              <Card className="border-border/80 bg-card/90 shadow-sm">
+                <CardHeader>
+                  <CardTitle>Current Execution</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-xs">
+                  <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/35 p-3">
+                    <div>{`time: ${formatRunTimestampForDisplay(
+                      String(activeRun?.timestamp || selectedRunTimestamp || ""),
+                      formatTime,
+                    )}`}</div>
+                    <div className="flex items-center gap-2">
+                      <span>status:</span>
+                      <Badge
+                        variant="outline"
+                        className={badgeClass(normalizeRunStatus(activeRun || selectedRun, selectedRunDetail))}
+                      >
+                        {normalizeRunStatus(activeRun || selectedRun, selectedRunDetail)}
+                      </Badge>
+                    </div>
+                    <div>{`phase: ${String(selectedRunDetail?.progress?.phase || activeRun?.progressPhase || "-")}`}</div>
+                    <div>{`message: ${String(selectedRunDetail?.progress?.message || activeRun?.progressMessage || "-")}`}</div>
+                    <div>{`round: ${
+                      selectedRunDetail?.progress?.round ?? activeRun?.progressRound ?? "-"
+                    }/${selectedRunDetail?.progress?.maxRounds ?? activeRun?.progressMaxRounds ?? "-"}`}</div>
+                    <div>{`updatedAt: ${formatTime(selectedRunDetail?.progress?.updatedAt || activeRun?.progressUpdatedAt)}`}</div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress Events</div>
+                    <div className="max-h-48 space-y-2 overflow-auto rounded-lg border border-border/70 bg-background/75 p-2">
+                      {Array.isArray(selectedRunDetail?.progress?.events) &&
+                      selectedRunDetail.progress.events.length > 0 ? (
+                        selectedRunDetail.progress.events.slice(-12).map((event, index) => (
+                          <article key={`${String(event.at || index)}:${index}`} className="rounded-md border border-border/70 bg-card p-2">
+                            <div className="mb-1 text-[11px] text-muted-foreground">
+                              {`${String(event.phase || "phase")} · ${formatTime(event.at)}`}
+                            </div>
+                            <div className="text-xs">{String(event.message || "-")}</div>
+                          </article>
+                        ))
+                      ) : (
+                        <div className="text-xs text-muted-foreground">等待执行进度...</div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
             <Card className="border-border/80 bg-card/90 shadow-sm">
               <CardHeader className="flex-row items-center justify-between space-y-0">
                 <CardTitle>Run History</CardTitle>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => void onLoadTaskRuns(selectedTaskId, 50).then((next) => setRuns(next))}
+                  onClick={() => {
+                    void loadRuns(selectedTitle, {
+                      showLoading: true,
+                      preferInProgress: true,
+                    });
+                  }}
                   disabled={loadingRuns}
                 >
                   {loadingRuns ? "加载中..." : "刷新"}
@@ -270,7 +475,7 @@ export function TasksSection(props: TasksSectionProps) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Timestamp</TableHead>
+                        <TableHead>Time</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Started</TableHead>
                         <TableHead>Duration</TableHead>
@@ -288,20 +493,33 @@ export function TasksSection(props: TasksSectionProps) {
                       ) : (
                         runs.map((run) => {
                           const isActive = run.timestamp === selectedRunTimestamp;
-                          const status = String(run.status || run.executionStatus || "unknown");
+                          const status = run.inProgress
+                            ? "running"
+                            : String(run.status || run.executionStatus || "unknown");
                           return (
                             <TableRow key={run.timestamp} className={isActive ? "bg-primary/5" : ""}>
-                              <TableCell className="font-mono text-xs">{run.timestamp}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {formatRunTimestampForDisplay(run.timestamp, formatTime)}
+                              </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className={badgeClass(status)}>
-                                  {status}
-                                </Badge>
+                                <div className="space-y-1">
+                                  <Badge variant="outline" className={badgeClass(status)}>
+                                    {status}
+                                  </Badge>
+                                  {run.inProgress && run.progressMessage ? (
+                                    <div className="max-w-[20rem] truncate text-[11px] text-muted-foreground" title={run.progressMessage}>
+                                      {run.progressMessage}
+                                    </div>
+                                  ) : null}
+                                </div>
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">{formatTime(run.startedAt)}</TableCell>
                               <TableCell className="text-xs text-muted-foreground">
                                 {formatDurationMs(run.startedAt, run.endedAt)}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">{run.dialogueRounds ?? "-"}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {run.dialogueRounds ?? run.progressRound ?? "-"}
+                              </TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   size="sm"
@@ -323,7 +541,11 @@ export function TasksSection(props: TasksSectionProps) {
 
             <Card className="border-border/80 bg-card/90 shadow-sm">
               <CardHeader>
-                <CardTitle>{`Run Detail${selectedRunTimestamp ? ` · ${selectedRunTimestamp}` : ""}`}</CardTitle>
+                <CardTitle>{`Run Detail${
+                  selectedRunTimestamp
+                    ? ` · ${formatRunTimestampForDisplay(selectedRunTimestamp, formatTime)}`
+                    : ""
+                }`}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {loadingRunDetail ? (
@@ -334,7 +556,10 @@ export function TasksSection(props: TasksSectionProps) {
                   <>
                     <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/35 p-3 text-xs">
                       <div>{`runDir: ${selectedRunDetail.runDirRel || "-"}`}</div>
-                      <div>{`status: ${String(selectedRunDetail.meta?.status || selectedRunDetail.meta?.executionStatus || "-")}`}</div>
+                      <div>{`status: ${normalizeRunStatus(selectedRun, selectedRunDetail)}`}</div>
+                      <div>{`phase: ${String(selectedRunDetail.progress?.phase || "-")}`}</div>
+                      <div>{`message: ${String(selectedRunDetail.progress?.message || "-")}`}</div>
+                      <div>{`updatedAt: ${formatTime(selectedRunDetail.progress?.updatedAt)}`}</div>
                       <div>{`error: ${String(selectedRunDetail.meta?.error || "-")}`}</div>
                     </div>
 
@@ -350,7 +575,7 @@ export function TasksSection(props: TasksSectionProps) {
                     </div>
 
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timeline</div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timeline (Live)</div>
                       <div className="max-h-72 space-y-2 overflow-auto rounded-lg border border-border/70 bg-background/75 p-2">
                         {(selectedRunDetail.messages || []).length === 0 ? (
                           <div className="text-xs text-muted-foreground">无 timeline 消息</div>

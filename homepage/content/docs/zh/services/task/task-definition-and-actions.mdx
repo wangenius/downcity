@@ -1,0 +1,89 @@
+---
+title: 任务定义与 Action 协议
+description: task.md schema、when 触发语义、create/update/run/list 协议
+---
+
+# 任务定义与 Action 协议
+
+## 任务定义文件
+
+```text
+.ship/task/<taskId>/task.md
+```
+
+`taskId` 由 `title` 归一化生成，`title` 需要保持唯一。
+
+## Frontmatter 字段
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `title` | 是 | 任务名称（唯一标识） |
+| `description` | 是 | 任务目标描述 |
+| `contextId` | 是 | 执行上下文标识 |
+| `when` | 是 | 触发条件：`@manual` / cron / `time:ISO8601` |
+| `status` | 是 | `enabled` / `paused` / `disabled` |
+| `kind` | 否 | `agent`（默认）或 `script` |
+
+## `when` 语义
+
+- `@manual`：仅手动触发。
+- cron 表达式：按周期触发。
+- `time:2026-03-08T10:30:00+08:00`：一次性触发（必须带时区）。
+
+one-shot 触发成功后，任务会自动：
+- `status -> paused`
+- `when -> @manual`
+
+## Action 一览
+
+| Action | 作用 | 关键结果 |
+| --- | --- | --- |
+| `list` | 列出任务定义 | `tasks[]` |
+| `create` | 新建任务定义 | 可能 `reusedExisting=true` |
+| `update` | 更新任务定义 | 写回 `task.md` |
+| `run` | 手动触发一次执行 | 立即返回 `accepted=true` + `executionId` |
+| `status` | 显式改状态 | `enabled/paused/disabled` |
+| `enable/disable` | 状态快捷命令 | 等价状态更新 |
+| `delete` | 删除任务与历史目录 | 返回 task 目录路径 |
+
+## create 去重逻辑
+
+`create` 只按 `title` 精确去重：
+
+- 已有同名 `title`：返回复用（`reusedExisting=true`）。
+- 无同名：创建新任务。
+
+不会再做“语义近似”去重。
+
+## run 的协议语义
+
+`run` 是异步受理：
+
+1. 校验任务存在。
+2. 后台启动 `runTaskNow(...)`。
+3. 立即返回：`accepted=true`、`message`、`executionId`。
+
+`agent` 任务额外约束：
+- 只有 `chat_send` 成功发送后才会判定成功。
+- 若发送失败，会进入 `executionStatus=failure`。
+
+## CLI 与 API
+
+CLI：
+
+```bash
+sma task run daily-check --reason "manual"
+```
+
+API：
+
+```bash
+sma service command task run --payload '{"title":"daily-check","reason":"manual"}'
+```
+
+## 相关文档
+
+- [Agent 模式任务](/zh/docs/services/task/agent-task-mode)
+- [Script 模式任务](/zh/docs/services/task/script-task-mode)
+- [调度注册与触发链路](/zh/docs/services/task/scheduler-and-trigger-flow)
+- [执行与校验链路](/zh/docs/services/task/execution-and-validation-flow)

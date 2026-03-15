@@ -1,0 +1,31 @@
+---
+title: Task Service
+description: task service 全览：职责、边界、链路与专题文档导航
+---
+
+# Task Service
+
+`task` service 负责“任务定义 + 调度 + 执行 + 审计产物”。
+
+## 你在这里会看到什么
+
+- 任务定义如何落盘到 `.ship/task/<taskId>/task.md`
+- 调度如何注册（统一使用 `when`）
+- 执行如何进行（`agent` / `script`）
+- 结果如何判定（`executionStatus` / `resultStatus` / `status`）
+- 运行中进度如何在 Console UI 实时展示（`run-progress.json`）
+
+## 主题拆分（建议阅读顺序）
+
+1. [任务定义与 Action 协议](/zh/docs/services/task/task-definition-and-actions)
+2. [Agent 模式任务](/zh/docs/services/task/agent-task-mode)
+3. [Script 模式任务](/zh/docs/services/task/script-task-mode)
+4. [调度注册与触发链路](/zh/docs/services/task/scheduler-and-trigger-flow)
+5. [执行与校验链路](/zh/docs/services/task/execution-and-validation-flow)
+6. [运行产物与排障](/zh/docs/services/task/run-artifacts-and-debugging)
+
+## 运行边界
+
+- `task` 只处理任务系统本身，不负责 chat 渠道发消息。
+- `run` 是异步受理：立刻返回 `accepted=true` 与 `executionId`。
+- 任务结果默认写入 run 目录，不自动回发到 chat channel。

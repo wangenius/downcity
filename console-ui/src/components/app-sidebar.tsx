@@ -6,9 +6,9 @@
 
 import * as React from "react"
 import {
-  ArrowLeftIcon,
+  ArrowRightIcon,
   BotIcon,
-  CommandIcon,
+  ChevronLeftIcon,
   Layers3Icon,
   MessageSquareTextIcon,
   PuzzleIcon,
@@ -21,7 +21,6 @@ import type { DashboardView } from "@/types/Navigation"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -34,13 +33,6 @@ import { buildContextGroups } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 
 export type { DashboardView }
 
@@ -57,6 +49,14 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    * 当前选中 agent id。
    */
   selectedAgentId: string
+  /**
+   * 当前路由 pathname。
+   */
+  routePathname: string
+  /**
+   * 当前路由对应的 agent id（由 pathname 解析得到）。
+   */
+  routeAgentId: string
   /**
    * context 列表。
    */
@@ -82,9 +82,9 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    */
   onAgentChange: (agentId: string) => void
   /**
-   * 启动未运行的 agent。
+   * 进入 agent 二级侧边栏与页面。
    */
-  onStartAgent: (agentId: string) => Promise<void> | void
+  onAgentEnter: (agentId: string) => void
   /**
    * 打开 context workspace 并选中 context。
    */
@@ -113,13 +113,15 @@ export function AppSidebar({
   activeView,
   agents,
   selectedAgentId,
+  routePathname,
+  routeAgentId,
   contexts,
   selectedContextId,
   tasks,
   selectedTaskTitle,
   onViewChange,
   onAgentChange,
-  onStartAgent,
+  onAgentEnter,
   onContextOpen,
   onTaskOpen,
   ...props
@@ -159,30 +161,37 @@ export function AppSidebar({
       .filter((entry) => entry.items.length > 0)
   }, [chatGroup])
   const globalItems = React.useMemo(() => listPrimaryPagesByScope("global"), [])
+  const globalItemsWithoutAgents = React.useMemo(
+    () => globalItems.filter((item) => item.view !== "globalAgents"),
+    [globalItems],
+  )
   const agentItems = React.useMemo(() => listPrimaryPagesByScope("agent"), [])
-  const [sidebarMode, setSidebarMode] = React.useState<SidebarMode>("agent-list")
+  const globalViews: DashboardView[] = ["globalOverview", "globalModel", "globalAgents", "globalExtensions"]
+  const sidebarMode: SidebarMode = globalViews.includes(activeView) ? "agent-list" : "agent-detail"
   const [navDirection, setNavDirection] = React.useState<"forward" | "back">("forward")
   const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
-  const [confirmStartAgent, setConfirmStartAgent] = React.useState<UiAgentOption | null>(null)
-  const [startingAgentId, setStartingAgentId] = React.useState("")
+  const [hoveredAgentId, setHoveredAgentId] = React.useState("")
+  const previousSidebarModeRef = React.useRef<SidebarMode>(sidebarMode)
+  const isGlobalAgentOverviewRoute = React.useMemo(() => {
+    if (activeView !== "globalOverview") return false
+    const parts = routePathname.split("/").filter(Boolean)
+    return parts.length >= 3 && parts[0] === "global" && parts[1] === "agent"
+  }, [activeView, routePathname])
+  const isPureGlobalOverviewRoute = React.useMemo(() => {
+    const parts = routePathname.split("/").filter(Boolean)
+    return parts.length >= 2 && parts[0] === "global" && parts[1] === "overview"
+  }, [routePathname])
 
   const selectedAgent = agents.find((agent) => agent.id === selectedAgentId) ?? null
+  const menuButtonClass =
+    "rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
 
   React.useEffect(() => {
-    const nextMode: SidebarMode =
-      activeView === "globalOverview" ||
-      activeView === "globalModel" ||
-      activeView === "globalAgents" ||
-      activeView === "globalExtensions"
-        ? "agent-list"
-        : "agent-detail"
-    setSidebarMode((prev) => {
-      if (prev !== nextMode) {
-        setNavDirection(nextMode === "agent-detail" ? "forward" : "back")
-      }
-      return nextMode
-    })
-  }, [activeView])
+    const previous = previousSidebarModeRef.current
+    if (previous === sidebarMode) return
+    setNavDirection(sidebarMode === "agent-detail" ? "forward" : "back")
+    previousSidebarModeRef.current = sidebarMode
+  }, [sidebarMode])
 
   React.useEffect(() => {
     setCollapsedChatChannels({})
@@ -190,32 +199,27 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border" {...props}>
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-between px-2 py-1.5">
-          <SidebarMenu className="flex-1">
-            <SidebarMenuItem>
-              <SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-2.5!" render={<button type="button" />}>
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
-                  <CommandIcon className="size-4!" />
-                </span>
-                <span className="text-base font-semibold tracking-tight text-sidebar-foreground">ShipMyAgent</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+      <SidebarHeader>
+        <div className="px-3 py-2">
           {sidebarMode === "agent-detail" ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              onClick={() => {
-                setNavDirection("back")
-                onViewChange("globalAgents")
-              }}
-            >
-              <ArrowLeftIcon className="size-4" />
-              <span className="sr-only">返回 agent 列表</span>
-            </Button>
-          ) : null}
+            <div className="inline-flex max-w-full items-center gap-1.5 text-sm font-medium text-sidebar-foreground">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0"
+                onClick={() => {
+                  onViewChange("globalOverview")
+                }}
+                aria-label="返回"
+                title="返回"
+              >
+                <ChevronLeftIcon className="size-4" />
+              </Button>
+              <span className="truncate">{selectedAgent?.name || "Agent"}</span>
+            </div>
+          ) : (
+            <div className="text-sm font-semibold tracking-[0.08em] text-sidebar-foreground">SHIPMYAGENT</div>
+          )}
         </div>
       </SidebarHeader>
 
@@ -229,16 +233,20 @@ export function AppSidebar({
             )}
           >
             <SidebarGroup>
-              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Global</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Console</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {globalItems.map((item) => (
+                  {globalItemsWithoutAgents.map((item) => (
                     <SidebarMenuItem key={item.view}>
                       <SidebarMenuButton
                         tooltip={item.title}
-                        isActive={activeView === item.view}
+                        isActive={
+                          item.view === "globalOverview"
+                            ? activeView === "globalOverview" && isPureGlobalOverviewRoute
+                            : activeView === item.view
+                        }
                         onClick={() => onViewChange(item.view)}
-                        className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                        className={menuButtonClass}
                       >
                         {viewIconMap[item.view]}
                         <span>{item.title}</span>
@@ -261,23 +269,18 @@ export function AppSidebar({
                     </SidebarMenuItem>
                   ) : null}
                   {agents.map((agent) => {
-                    const isActive = agent.id === selectedAgentId
+                    const isActive = isGlobalAgentOverviewRoute && agent.id === routeAgentId
                     const isRunning = agent.running === true
                     return (
                       <SidebarMenuItem key={agent.id}>
                         <SidebarMenuButton
                           tooltip={agent.id}
                           isActive={isActive}
-                          onClick={() => {
-                            if (isRunning) {
-                              setNavDirection("forward")
-                              onAgentChange(agent.id)
-                              return
-                            }
-                            setConfirmStartAgent(agent)
-                          }}
+                          onMouseEnter={() => setHoveredAgentId(agent.id)}
+                          onMouseLeave={() => setHoveredAgentId((prev) => (prev === agent.id ? "" : prev))}
+                          onClick={() => onAgentChange(agent.id)}
                           className={cn(
-                            "rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground",
+                            menuButtonClass,
                             !isRunning && "opacity-55",
                           )}
                         >
@@ -286,11 +289,30 @@ export function AppSidebar({
                               <BotIcon className="size-4 shrink-0 text-muted-foreground" />
                               <span className="truncate">{agent.name || "unknown-agent"}</span>
                             </span>
-                            <span
-                              className={`inline-flex h-2 w-2 shrink-0 rounded-full ${
-                                isRunning ? "bg-emerald-500" : "bg-muted-foreground/60"
-                              }`}
-                            />
+                            {isRunning ? (
+                              <span className="inline-flex items-center">
+                                <span
+                                  className={`inline-flex h-2 w-2 shrink-0 rounded-full bg-emerald-500 ${
+                                    hoveredAgentId === agent.id ? "hidden" : ""
+                                  }`}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className={`h-5 w-5 p-0 ${hoveredAgentId === agent.id ? "inline-flex" : "hidden"}`}
+                                  aria-label="进入 Agent"
+                                  title="进入 Agent"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    onAgentEnter(agent.id)
+                                  }}
+                                >
+                                  <ArrowRightIcon className="size-3.5" />
+                                </Button>
+                              </span>
+                            ) : (
+                              <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-muted-foreground/60" />
+                            )}
                           </span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -314,29 +336,21 @@ export function AppSidebar({
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      render={<button type="button" disabled />}
-                      className="opacity-70 data-[slot=sidebar-menu-button]:cursor-default"
-                    >
-                      <span className="w-full truncate text-xs text-muted-foreground">
-                        {selectedAgent?.name || "unknown-agent"}
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {agentItems.map((item) => (
+                  {agentItems
+                    .filter((item) => item.view !== "agentTasks")
+                    .map((item) => (
                     <SidebarMenuItem key={item.view}>
                       <SidebarMenuButton
                         tooltip={item.title}
                         isActive={activeView === item.view}
                         onClick={() => onViewChange(item.view)}
-                        className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                        className={menuButtonClass}
                       >
                         {viewIconMap[item.view]}
                         <span>{item.title}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  ))}
+                    ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -345,6 +359,17 @@ export function AppSidebar({
               <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Tasks</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="Task Overview"
+                      isActive={activeView === "agentTasks" && !selectedTaskTitle}
+                      onClick={() => onViewChange("agentTasks")}
+                      className={menuButtonClass}
+                    >
+                      <RadarIcon />
+                      <span>Overview</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   {tasks.length === 0 ? (
                     <SidebarMenuItem>
                       <SidebarMenuButton
@@ -364,7 +389,7 @@ export function AppSidebar({
                           tooltip={title}
                           isActive={activeView === "agentTasks" && selectedTaskTitle === title}
                           onClick={() => onTaskOpen(title)}
-                          className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                          className={menuButtonClass}
                         >
                           <RadarIcon />
                           <span className="w-full truncate text-xs">{title}</span>
@@ -385,7 +410,7 @@ export function AppSidebar({
                       tooltip="Overview"
                       isActive={activeView === "contextOverview"}
                       onClick={() => onViewChange("contextOverview")}
-                      className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                      className={menuButtonClass}
                     >
                       <Layers3Icon />
                       <span>Overview</span>
@@ -417,7 +442,7 @@ export function AppSidebar({
                                   tooltip={item.contextId}
                                   isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
                                   onClick={() => onContextOpen(item.contextId)}
-                                  className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                                  className={menuButtonClass}
                                 >
                                   <span className="w-full truncate font-mono text-xs">{item.contextId}</span>
                                 </SidebarMenuButton>
@@ -445,7 +470,7 @@ export function AppSidebar({
                             tooltip={item.contextId}
                             isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
                             onClick={() => onContextOpen(item.contextId)}
-                            className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                            className={menuButtonClass}
                           >
                             {item.contextId === "local_ui" ? <MessageSquareTextIcon /> : null}
                             <span className="w-full truncate font-mono text-xs">
@@ -463,54 +488,6 @@ export function AppSidebar({
         </div>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        <div className="px-3 py-2 text-xs text-muted-foreground">Console UI</div>
-      </SidebarFooter>
-
-      <Dialog
-        open={Boolean(confirmStartAgent)}
-        onOpenChange={(open) => {
-          if (!open && !startingAgentId) {
-            setConfirmStartAgent(null)
-          }
-        }}
-      >
-        <DialogContent className="w-[min(92vw,460px)]">
-          <DialogHeader>
-            <DialogTitle>启动 Agent</DialogTitle>
-            <DialogDescription>
-              {`Agent "${confirmStartAgent?.name || "unknown-agent"}" 当前未启动，是否现在启动？`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center justify-end gap-2 px-4 pb-4">
-            <Button
-              variant="outline"
-              onClick={() => setConfirmStartAgent(null)}
-              disabled={Boolean(startingAgentId)}
-            >
-              取消
-            </Button>
-            <Button
-              onClick={async () => {
-                const target = confirmStartAgent
-                if (!target) return
-                try {
-                  setStartingAgentId(target.id)
-                  await Promise.resolve(onStartAgent(target.id))
-                  setNavDirection("forward")
-                  onAgentChange(target.id)
-                } finally {
-                  setStartingAgentId("")
-                  setConfirmStartAgent(null)
-                }
-              }}
-              disabled={Boolean(startingAgentId)}
-            >
-              {startingAgentId ? "启动中..." : "确认启动"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </Sidebar>
   )
 }

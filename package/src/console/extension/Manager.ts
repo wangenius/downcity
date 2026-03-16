@@ -30,6 +30,7 @@ type ExtensionRuntimeRecord = {
 
 export type ExtensionRuntimeSnapshot = {
   name: string;
+  description?: string;
   state: ExtensionRuntimeState;
   updatedAt: number;
   lastError?: string;
@@ -90,6 +91,9 @@ function toRuntimeSnapshot(
   const lifecycle = record.extension.lifecycle;
   return {
     name: record.extension.name,
+    ...(record.extension.description
+      ? { description: String(record.extension.description).trim() }
+      : {}),
     state: record.state,
     updatedAt: record.updatedAt,
     ...(record.lastError ? { lastError: record.lastError } : {}),

@@ -92,6 +92,15 @@ function formatTime(ts?: number | string): string {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
+/**
+ * 异步等待工具。
+ */
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 export interface UseConsoleDashboardResult {
   /**
    * 当前 agent 列表。
@@ -258,6 +267,10 @@ export interface UseConsoleDashboardResult {
    */
   controlExtension: (extensionName: string, action: "start" | "stop" | "restart") => Promise<void>;
   /**
+   * 测试 extension 可用性（status）。
+   */
+  testExtension: (extensionName: string) => Promise<void>;
+  /**
    * 执行 chat 渠道动作。
    */
   runChatChannelAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => Promise<void>;
@@ -293,6 +306,14 @@ export interface UseConsoleDashboardResult {
    * 启动历史 agent（未运行记录）。
    */
   startAgentFromHistory: (agentId: string) => Promise<void>;
+  /**
+   * 重启指定 agent（运行前检查 context/task 执行状态）。
+   */
+  restartAgentFromHistory: (agentId: string) => Promise<void>;
+  /**
+   * 停止指定 agent（运行前检查 context/task 执行状态）。
+   */
+  stopAgentFromHistory: (agentId: string) => Promise<void>;
   /**
    * 新增或更新 provider。
    */
@@ -513,11 +534,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
       const list = Array.isArray(data.agents) ? data.agents : [];
       const selectedFromApi = String(data.selectedAgentId || "").trim();
-      const selectedRunning =
-        list.find((item) => item.id === selectedFromApi && item.running === true)?.id || "";
+      const preferredMatched = preferred ? list.find((item) => item.id === preferred)?.id || "" : "";
+      const selectedMatched = selectedFromApi ? list.find((item) => item.id === selectedFromApi)?.id || "" : "";
       const firstRunning = list.find((item) => item.running === true)?.id || "";
-      // 关键点（中文）：前端只接受 running agent，彻底阻断离线 agent 被误选后导致的持续 503。
-      const nextId = selectedRunning || firstRunning || "";
+      const firstAny = list[0]?.id || "";
+      // 关键点（中文）：允许选中未启动 agent（用于全局 overview 的静态信息查看）；仅在请求 runtime 接口时再判断 running。
+      const nextId = preferredMatched || selectedMatched || firstRunning || firstAny || "";
       setAgents(list);
       setSelectedAgentId(nextId);
 
@@ -750,6 +772,23 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           return;
         }
 
+        const selected = list.find((item) => item.id === nextAgentId) || null;
+        if (selected && selected.running !== true) {
+          // 关键点（中文）：未启动 agent 仅渲染静态概览，避免请求 runtime 接口造成 503 噪音。
+          clearPanelDataForNoAgent();
+          await Promise.allSettled([
+            refreshExtensions(),
+            refreshModel(nextAgentId),
+            refreshModelPool(),
+            refreshConfigStatus(nextAgentId),
+          ]);
+          setTopbarError(false);
+          setTopbarStatus(
+            `未启动 · ${selected.name || "agent"} · ${selected.projectRoot || selected.id || "-"}`,
+          );
+          return;
+        }
+
         const [channels, contextList] = await Promise.all([
           refreshChatChannels(nextAgentId),
           refreshContexts(nextAgentId),
@@ -786,7 +825,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           setPrompt(null);
         }
 
-        const selected = list.find((item) => item.id === nextAgentId);
         setTopbarError(false);
         setTopbarStatus(
           `在线 · ${selected?.name || "agent"} · ${selected?.host || "127.0.0.1"}:${selected?.port || "-"}`,
@@ -864,6 +902,29 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         await refreshExtensions();
       } catch (error) {
         showToast(`extension 操作失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshExtensions, requestJson, showToast],
+  );
+
+  const testExtension = useCallback(
+    async (extensionName: string) => {
+      try {
+        const result = await requestJson<{
+          success?: boolean;
+          message?: string;
+          extension?: {
+            state?: string;
+          };
+        }>("/api/extensions/control", {
+          method: "POST",
+          body: JSON.stringify({ extensionName, action: "status" }),
+        });
+        const state = String(result?.extension?.state || "").trim() || "unknown";
+        showToast(`extension ${extensionName} test: ${state}`, result?.success ? "success" : "error");
+        await refreshExtensions();
+      } catch (error) {
+        showToast(`extension test 失败: ${getErrorMessage(error)}`, "error");
       }
     },
     [refreshExtensions, requestJson, showToast],
@@ -1128,17 +1189,130 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           method: "POST",
           body: JSON.stringify({ agentId: targetAgentId }),
         });
+
+        // 关键点（中文）：启动命令返回成功不代表 runtime 已就绪，需要轮询等待 running。
+        const maxRetry = 24;
+        const intervalMs = 500;
+        let ready = false;
+        for (let index = 0; index < maxRetry; index += 1) {
+          const agentsSnapshot = await requestJson<UiAgentsResponse>(
+            `/api/ui/agents?agent=${encodeURIComponent(targetAgentId)}`,
+          );
+          const list = Array.isArray(agentsSnapshot.agents) ? agentsSnapshot.agents : [];
+          const target = list.find((item) => String(item.id || "") === targetAgentId);
+          if (target?.running === true) {
+            ready = true;
+            break;
+          }
+          await wait(intervalMs);
+        }
+
         await refreshDashboard(targetAgentId);
-        if (data.started === true) {
-          showToast(`agent 已启动（pid ${String(data.pid || "-")}）`, "success");
+        if (ready) {
+          if (data.started === true) {
+            showToast(`agent 已启动（pid ${String(data.pid || "-")}）`, "success");
+          } else {
+            showToast("agent 已在运行", "info");
+          }
           return;
         }
-        showToast("agent 已在运行", "info");
+
+        showToast("agent 启动中，请稍后再进入该 agent 页面", "info");
       } catch (error) {
         showToast(`启动 agent 失败: ${getErrorMessage(error)}`, "error");
       }
     },
     [refreshDashboard, requestJson, showToast],
+  );
+
+  const restartAgentFromHistory = useCallback(
+    async (agentId: string) => {
+      const targetAgentId = String(agentId || "").trim();
+      if (!targetAgentId) return;
+      try {
+        await requestJson<{
+          success?: boolean;
+          restarted?: boolean;
+          pid?: number;
+          activeContexts?: string[];
+          activeTasks?: string[];
+        }>("/api/ui/agents/restart", {
+          method: "POST",
+          body: JSON.stringify({ agentId: targetAgentId }),
+        });
+
+        const maxRetry = 24;
+        const intervalMs = 500;
+        let ready = false;
+        for (let index = 0; index < maxRetry; index += 1) {
+          const agentsSnapshot = await requestJson<UiAgentsResponse>(
+            `/api/ui/agents?agent=${encodeURIComponent(targetAgentId)}`,
+          );
+          const list = Array.isArray(agentsSnapshot.agents) ? agentsSnapshot.agents : [];
+          const target = list.find((item) => String(item.id || "") === targetAgentId);
+          if (target?.running === true) {
+            ready = true;
+            break;
+          }
+          await wait(intervalMs);
+        }
+
+        await refreshDashboard(targetAgentId);
+        if (ready) {
+          showToast("agent 已重启", "success");
+          return;
+        }
+        showToast("agent 重启中，请稍后刷新", "info");
+      } catch (error) {
+        showToast(`重启 agent 失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshDashboard, requestJson, showToast],
+  );
+
+  const stopAgentFromHistory = useCallback(
+    async (agentId: string) => {
+      const targetAgentId = String(agentId || "").trim();
+      if (!targetAgentId) return;
+      try {
+        await requestJson<{
+          success?: boolean;
+          stopped?: boolean;
+          pid?: number;
+          activeContexts?: string[];
+          activeTasks?: string[];
+        }>("/api/ui/agents/stop", {
+          method: "POST",
+          body: JSON.stringify({ agentId: targetAgentId }),
+        });
+
+        const maxRetry = 20;
+        const intervalMs = 400;
+        let stopped = false;
+        for (let index = 0; index < maxRetry; index += 1) {
+          const agentsSnapshot = await requestJson<UiAgentsResponse>(
+            `/api/ui/agents?agent=${encodeURIComponent(targetAgentId)}`,
+          );
+          const list = Array.isArray(agentsSnapshot.agents) ? agentsSnapshot.agents : [];
+          const target = list.find((item) => String(item.id || "") === targetAgentId);
+          if (!target || target.running !== true) {
+            stopped = true;
+            break;
+          }
+          await wait(intervalMs);
+        }
+
+        await refreshDashboard(selectedAgentId || targetAgentId);
+        if (stopped) {
+          showToast("agent 已停止", "success");
+          return;
+        }
+        showToast("agent 停止中，请稍后刷新", "info");
+      } catch (error) {
+        showToast(`停止 agent 失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshDashboard, requestJson, selectedAgentId, showToast],
   );
 
   const upsertModelProvider = useCallback(
@@ -1383,6 +1557,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshLocalChat,
     controlService,
     controlExtension,
+    testExtension,
     runChatChannelAction,
     configureChatChannel,
     runTask,
@@ -1392,6 +1567,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
+    restartAgentFromHistory,
+    stopAgentFromHistory,
     upsertModelProvider,
     removeModelProvider,
     testModelProvider,

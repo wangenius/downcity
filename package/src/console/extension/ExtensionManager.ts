@@ -115,6 +115,10 @@ export interface Extension {
    */
   name: string;
   /**
+   * Extension 描述（用于 UI 展示）。
+   */
+  description?: string;
+  /**
    * Action 集合。
    */
   actions: ExtensionActions;

@@ -54,7 +54,11 @@ export function toDashboardPath(
 ): string {
   const agentSegment = toAgentRouteSegment(String(options?.agentSegment || "agent"))
 
-  if (view === "globalOverview") return "/global/overview"
+  if (view === "globalOverview") {
+    const hasAgentSegment = Boolean(String(options?.agentSegment || "").trim())
+    if (hasAgentSegment) return `/global/agent/${encodeURIComponent(agentSegment)}`
+    return "/global/overview"
+  }
   if (view === "globalModel") return "/global/model"
   if (view === "globalAgents") return "/global/agents"
   if (view === "globalExtensions") return "/global/extensions"
@@ -89,6 +93,17 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
 
   // 新路由格式：/<agent>/overview|services|tasks|logs|chat(/:context)
   const parts = normalized.split("/").filter(Boolean)
+  if (parts.length >= 3) {
+    const first = String(parts[0] || "").trim().toLowerCase()
+    const second = String(parts[1] || "").trim().toLowerCase()
+    if (first === "global" && second === "agent") {
+      const agentSegment = decodeURIComponent(parts.slice(2).join("/")).trim()
+      if (agentSegment) {
+        return { view: "globalOverview", agentSegment }
+      }
+    }
+  }
+
   if (parts.length >= 2) {
     const agentSegment = decodeURIComponent(parts[0] || "").trim()
     const second = String(parts[1] || "").trim().toLowerCase()

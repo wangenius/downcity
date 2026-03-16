@@ -2,14 +2,15 @@
  * Extension 状态区。
  *
  * 关键点（中文）
- * - 从纯表格切换为状态分组看板，优先暴露 error 与可操作节点。
- * - 保留 lifecycle 操作，强调“快速定位 -> 立即控制”流程。
+ * - 采用与 Agents 区一致的极简 table 结构。
+ * - 不使用卡片分组，通过行样式表达状态差异。
+ * - lifecycle 统一使用 icon action，并在 stop/restart 前确认。
  */
 
 import * as React from "react"
-import { Badge } from "../ui/badge"
+import { CheckIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
 import { Button } from "../ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Input } from "../ui/input"
 import type { UiExtensionRuntimeItem } from "../../types/Dashboard"
 
@@ -23,7 +24,7 @@ export interface ExtensionsSectionProps {
    */
   formatTime: (ts?: number | string) => string
   /**
-   * 状态映射。
+   * 状态映射（保留签名，供上层兼容）。
    */
   statusBadgeVariant: (status?: string) => "ok" | "warn" | "bad"
   /**
@@ -34,190 +35,288 @@ export interface ExtensionsSectionProps {
    * 执行 lifecycle。
    */
   onControl: (extensionName: string, action: "start" | "stop" | "restart") => void
-}
-
-function groupKeyFromState(raw?: string): "error" | "running" | "idle" {
-  const state = String(raw || "").toLowerCase()
-  if (state === "error") return "error"
-  if (state === "running") return "running"
-  return "idle"
+  /**
+   * 测试 extension 可用性。
+   */
+  onTest: (extensionName: string) => void
 }
 
 export function ExtensionsSection(props: ExtensionsSectionProps) {
-  const { extensions, formatTime, statusBadgeVariant, onRefresh, onControl } = props
+  const { extensions, formatTime, onRefresh, onControl, onTest } = props
   const [search, setSearch] = React.useState("")
-  const [groupFilter, setGroupFilter] = React.useState<"all" | "error" | "running" | "idle">("all")
+  const [actionLoadingKey, setActionLoadingKey] = React.useState("")
+  const [confirmAction, setConfirmAction] = React.useState<{
+    name: string
+    action: "stop" | "restart"
+  } | null>(null)
 
   const filtered = extensions.filter((item) => {
-    const key = String(item.name || "").toLowerCase()
     const query = search.trim().toLowerCase()
     if (!query) return true
-    return key.includes(query)
+    return String(item.name || "").toLowerCase().includes(query)
   })
 
-  const grouped = {
-    error: filtered.filter((item) => groupKeyFromState(item.state) === "error"),
-    running: filtered.filter((item) => groupKeyFromState(item.state) === "running"),
-    idle: filtered.filter((item) => groupKeyFromState(item.state) === "idle"),
-  }
-
-  const sections: Array<{ key: "error" | "running" | "idle"; title: string; items: UiExtensionRuntimeItem[] }> = [
-    { key: "error", title: "Error", items: grouped.error },
-    { key: "running", title: "Running", items: grouped.running },
-    { key: "idle", title: "Idle", items: grouped.idle },
-  ]
-
-  const visibleSections = sections.filter((section) => groupFilter === "all" || groupFilter === section.key)
-
-  const badgeClass = (status?: string): string => {
-    const tone = statusBadgeVariant(status)
-    if (tone === "ok") return "border-emerald-500/35 bg-emerald-500/10 text-emerald-700"
-    if (tone === "bad") return "border-destructive/35 bg-destructive/10 text-destructive"
-    return "border-border/65 bg-muted/40 text-muted-foreground"
-  }
-
   return (
-    <section className="space-y-4">
-      <Card>
-        <CardHeader className="border-b border-border/55 pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Extension Operations</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={onRefresh}>
-                刷新
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3 pt-3">
-          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="搜索 extension 名称"
-            />
-            <div className="flex flex-wrap items-center gap-1.5">
-              {([
-                ["all", `all (${filtered.length})`],
-                ["error", `error (${grouped.error.length})`],
-                ["running", `running (${grouped.running.length})`],
-                ["idle", `idle (${grouped.idle.length})`],
-              ] as const).map(([key, label]) => (
-                <Button
-                  key={key}
-                  size="sm"
-                  variant={groupFilter === key ? "secondary" : "outline"}
-                  className="h-7 px-2 text-[11px]"
-                  onClick={() => setGroupFilter(key)}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <section className="min-h-0 overflow-y-auto">
+      <div className="flex h-10 items-center justify-between border-b border-border/60 px-3">
+        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Extensions</div>
+        <div className="flex items-center gap-2">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="搜索 extension"
+            className="h-7 w-[180px]"
+          />
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onRefresh}>
+            刷新
+          </Button>
+        </div>
+      </div>
 
       {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-6 text-sm text-muted-foreground">没有匹配的 extension。</CardContent>
-        </Card>
+        <div className="px-3 py-4 text-sm text-muted-foreground">没有匹配的 extension。</div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-3">
-          {visibleSections.map((section) => (
-            <Card key={section.key} className={section.key === "error" ? "border-destructive/30" : ""}>
-              <CardHeader className="border-b border-border/55 pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className={section.key === "error" ? "text-destructive" : ""}>{section.title}</CardTitle>
-                  <span className="text-xs text-muted-foreground">{section.items.length}</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-3">
-                {section.items.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/60 bg-background/60 px-3 py-4 text-xs text-muted-foreground">
-                    空分组
-                  </div>
-                ) : (
-                  section.items.map((item) => {
-                    const name = String(item.name || "unknown")
-                    const state = String(item.state || "unknown")
-                    const supportsLifecycle = item.supportsLifecycle === true
-                    const lifecycle = item.config?.lifecycle || {}
-                    const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
-                    return (
-                      <article key={name} className="rounded-xl border border-border/60 bg-background/65 p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="truncate text-sm font-medium text-foreground">{name}</h4>
-                          <Badge variant="outline" className={badgeClass(state)}>
-                            {state}
-                          </Badge>
-                        </div>
+        <div className="px-3 py-2">
+          <table className="w-full table-fixed border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border/60 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <th className="py-2 text-left font-medium">Extension</th>
+                <th className="w-[100px] py-2 text-left font-medium">State</th>
+                <th className="w-[220px] py-2 text-left font-medium">Updated</th>
+                <th className="w-[320px] py-2 text-left font-medium">Config</th>
+                <th className="w-[120px] py-2 text-right font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item) => {
+                const name = String(item.name || "unknown")
+                const state = String(item.state || "unknown").toLowerCase()
+                const supportsLifecycle = item.supportsLifecycle === true
+                const lifecycle = item.config?.lifecycle || {}
+                const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
+                const isRunning = state === "running"
+                const isIdle = state === "idle"
+                const isError = state === "error"
+                const loadingStart = actionLoadingKey === `${name}:start`
+                const loadingStop = actionLoadingKey === `${name}:stop`
+                const loadingRestart = actionLoadingKey === `${name}:restart`
+                const loadingTest = actionLoadingKey === `${name}:test`
 
-                        <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
-                          <div>{`updated: ${formatTime(item.updatedAt)}`}</div>
-                          <div>{`last command: ${item.lastCommand ? `${item.lastCommand} @ ${formatTime(item.lastCommandAt)}` : "-"}`}</div>
-                          <div className="truncate" title={item.lastError || ""}>
-                            {`last error: ${item.lastError || "-"}`}
-                          </div>
+                return (
+                  <tr
+                    key={name}
+                    className={`border-b border-border/40 align-middle ${
+                      isError
+                        ? "text-destructive"
+                        : isRunning || isIdle
+                          ? "text-foreground"
+                          : "text-muted-foreground opacity-60"
+                    }`}
+                  >
+                    <td className="py-2 pr-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-[15px] font-semibold">{name}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {String(item.description || "").trim() || "-"}
                         </div>
-
-                        <div className="mt-2 space-y-1 border-t border-border/50 pt-2 text-[11px] text-muted-foreground">
-                          <div className="font-medium text-foreground/80">config</div>
-                          <div>{`lifecycle.start: ${lifecycle.start ? "on" : "off"}`}</div>
-                          <div>{`lifecycle.stop: ${lifecycle.stop ? "on" : "off"}`}</div>
-                          <div>{`lifecycle.command: ${lifecycle.command ? "on" : "off"}`}</div>
-                          <div>{`actions: ${actionItems.length}`}</div>
-                          {actionItems.length > 0 ? (
-                            <div className="max-h-28 space-y-1 overflow-auto">
-                              {actionItems.map((action) => {
-                                const actionName = String(action?.name || "unknown")
-                                const supportsApi = action?.supportsApi === true
-                                const supportsCmd = action?.supportsCommand === true
-                                const apiMethod = String(action?.apiMethod || "").trim()
-                                const apiPath = String(action?.apiPath || "").trim()
-                                const commandDescription = String(action?.commandDescription || "").trim()
-                                const modeLabel = [
-                                  supportsCmd ? "cmd" : "",
-                                  supportsApi ? "api" : "",
-                                ].filter(Boolean).join("+") || "none"
-                                return (
-                                  <div key={`${name}:${actionName}`} className="truncate" title={commandDescription || apiPath || actionName}>
-                                    {`${actionName} · ${modeLabel}${
-                                      supportsApi && apiMethod && apiPath ? ` · ${apiMethod} ${apiPath}` : ""
-                                    }`}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ) : null}
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {item.lastError ? `error: ${String(item.lastError)}` : "error: -"}
                         </div>
-
-                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                          {supportsLifecycle ? (
-                            <>
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onControl(name, "start")}>
-                                start
-                              </Button>
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onControl(name, "restart")}>
-                                restart
-                              </Button>
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onControl(name, "stop")}>
-                                stop
-                              </Button>
-                            </>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span
+                        className={`inline-flex h-5 items-center rounded-full border px-2 font-mono text-[11px] ${
+                          isError
+                            ? "border-destructive/40 bg-destructive/10 text-destructive"
+                            : isRunning || isIdle
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                              : "border-border text-muted-foreground"
+                        }`}
+                      >
+                        {state}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 text-xs text-muted-foreground">
+                      <div>{formatTime(item.updatedAt)}</div>
+                      <div className="truncate">{item.lastCommand ? `${item.lastCommand} @ ${formatTime(item.lastCommandAt)}` : "-"}</div>
+                    </td>
+                    <td className="py-2 pr-3 text-xs text-muted-foreground">
+                      <div className="truncate">
+                        {`lifecycle(start:${lifecycle.start ? "on" : "off"}, stop:${lifecycle.stop ? "on" : "off"})`}
+                      </div>
+                      <div className="truncate">{`actions: ${actionItems.length}`}</div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {actionItems.length === 0 ? (
+                          <span className="text-[11px] text-muted-foreground">-</span>
+                        ) : (
+                          actionItems.map((action) => {
+                            const actionName = String(action?.name || "unknown")
+                            const modeLabel = [
+                              action?.supportsCommand ? "cmd" : "",
+                              action?.supportsApi ? "api" : "",
+                            ].filter(Boolean).join("+") || "none"
+                            return (
+                              <span
+                                key={`${name}:${actionName}`}
+                                className="inline-flex h-5 items-center rounded-full border border-border px-2 font-mono text-[11px] text-foreground/85"
+                                title={`${actionName} · ${modeLabel}${
+                                  action?.apiMethod && action?.apiPath ? ` · ${action.apiMethod} ${action.apiPath}` : ""
+                                }`}
+                              >
+                                {`${actionName}·${modeLabel}`}
+                              </span>
+                            )
+                          })
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2 text-right">
+                      {supportsLifecycle ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isError ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                              aria-label="restart"
+                              title="restart"
+                              onClick={() => setConfirmAction({ name, action: "restart" })}
+                            >
+                              {loadingRestart ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
+                            </Button>
                           ) : (
-                            <span className="text-xs text-muted-foreground">lifecycle unsupported</span>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0"
+                                disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                                aria-label="test"
+                                title="test"
+                                onClick={async () => {
+                                  try {
+                                    setActionLoadingKey(`${name}:test`)
+                                    await Promise.resolve(onTest(name))
+                                  } finally {
+                                    setActionLoadingKey("")
+                                  }
+                                }}
+                              >
+                                {loadingTest ? <Loader2Icon className="size-4 animate-spin" /> : <CheckIcon className="size-4" />}
+                              </Button>
+                              {isRunning || state === "idle" ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 w-8 p-0"
+                                    disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                                    aria-label="restart"
+                                    title="restart"
+                                    onClick={() => setConfirmAction({ name, action: "restart" })}
+                                  >
+                                    {loadingRestart ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 w-8 p-0"
+                                    disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                                    aria-label="stop"
+                                    title="stop"
+                                    onClick={() => setConfirmAction({ name, action: "stop" })}
+                                  >
+                                    {loadingStop ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 w-8 p-0"
+                                  disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                                  aria-label="start"
+                                  title="start"
+                                  onClick={async () => {
+                                    try {
+                                      setActionLoadingKey(`${name}:start`)
+                                      await Promise.resolve(onControl(name, "start"))
+                                    } finally {
+                                      setActionLoadingKey("")
+                                    }
+                                  }}
+                                >
+                                  {loadingStart ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
-                      </article>
-                    )
-                  })
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
+
+      <Dialog
+        open={Boolean(confirmAction)}
+        onOpenChange={(open) => {
+          if (!open && !actionLoadingKey) {
+            setConfirmAction(null)
+          }
+        }}
+      >
+        <DialogContent className="w-[min(92vw,460px)]">
+          <DialogHeader>
+            <DialogTitle>{confirmAction?.action === "stop" ? "停止 Extension" : "重启 Extension"}</DialogTitle>
+            <DialogDescription>
+              {confirmAction?.action === "stop"
+                ? `确认停止 "${confirmAction?.name || "unknown"}"？`
+                : `确认重启 "${confirmAction?.name || "unknown"}"？`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={Boolean(actionLoadingKey)}
+              onClick={() => setConfirmAction(null)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="outline"
+              disabled={Boolean(actionLoadingKey)}
+              onClick={async () => {
+                const target = confirmAction
+                if (!target) return
+                try {
+                  setActionLoadingKey(`${target.name}:${target.action}`)
+                  await Promise.resolve(onControl(target.name, target.action))
+                } finally {
+                  setActionLoadingKey("")
+                  setConfirmAction(null)
+                }
+              }}
+            >
+              {actionLoadingKey
+                ? confirmAction?.action === "stop"
+                  ? "停止中..."
+                  : "重启中..."
+                : confirmAction?.action === "stop"
+                  ? "确认停止"
+                  : "确认重启"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

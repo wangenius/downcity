@@ -461,6 +461,7 @@ async function installVoiceModelsWithSkip(params: {
 
 export const voiceExtension: Extension = {
   name: "voice",
+  description: "本地语音识别与转写能力管理（模型安装、启停、转写执行）。",
   actions: {
     models: {
       command: {

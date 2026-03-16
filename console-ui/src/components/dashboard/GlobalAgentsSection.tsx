@@ -2,15 +2,15 @@
  * Global 作用域的 agent 管理页。
  *
  * 关键点（中文）
- * - 使用“Roster + Workbench”结构替代大表格，降低操作路径复杂度。
- * - 每次聚焦一个 agent 做模型切换/启动/进入该 agent 操作。
+ * - 单列表结构：每个 agent 一行，所有关键信息与操作都在行内完成。
+ * - 不需要“选中某个 agent”概念，避免额外状态切换成本。
  */
 
 import * as React from "react"
+import { BotIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { UiAgentOption, UiModelSummary } from "@/types/Dashboard"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import type { UiAgentOption } from "@/types/Dashboard"
 
 export interface GlobalAgentsSectionProps {
   /**
@@ -18,17 +18,13 @@ export interface GlobalAgentsSectionProps {
    */
   agents: UiAgentOption[]
   /**
-   * 全局模型池快照。
+   * 重启运行中的 agent。
    */
-  model: UiModelSummary | null
+  onRestartAgent: (agentId: string) => void
   /**
-   * 切换 agent 回调。
+   * 停止运行中的 agent。
    */
-  onSelectAgent: (agentId: string) => void
-  /**
-   * 切换指定 agent 绑定模型回调。
-   */
-  onSwitchModel: (agentId: string, primaryModelId: string) => void
+  onStopAgent: (agentId: string) => void
   /**
    * 刷新回调。
    */
@@ -40,213 +36,178 @@ export interface GlobalAgentsSectionProps {
 }
 
 export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
-  const { agents, model, onSelectAgent, onSwitchModel, onRefresh, onStartAgent } = props
-  const availableModels = Array.isArray(model?.availableModels) ? model.availableModels : []
-  const [focusAgentId, setFocusAgentId] = React.useState("")
-  const [targetModelByAgent, setTargetModelByAgent] = React.useState<Record<string, string>>({})
-
-  React.useEffect(() => {
-    setFocusAgentId((prev) => {
-      if (prev && agents.some((item) => item.id === prev)) return prev
-      return String(agents[0]?.id || "")
-    })
-  }, [agents])
-
-  React.useEffect(() => {
-    const nextMap: Record<string, string> = {}
-    for (const agent of agents) {
-      const agentId = String(agent.id || "").trim()
-      if (!agentId) continue
-      const currentModelId = String(agent.primaryModelId || "").trim()
-      if (currentModelId) nextMap[agentId] = currentModelId
-    }
-    setTargetModelByAgent((prev) => ({ ...nextMap, ...prev }))
-  }, [agents])
-
-  const focusAgent = agents.find((item) => item.id === focusAgentId) || null
+  const { agents, onRestartAgent, onStopAgent, onRefresh, onStartAgent } = props
+  const [startingAgentId, setStartingAgentId] = React.useState("")
+  const [restartingAgentId, setRestartingAgentId] = React.useState("")
+  const [stoppingAgentId, setStoppingAgentId] = React.useState("")
+  const [confirmAction, setConfirmAction] = React.useState<{
+    agent: UiAgentOption
+    action: "restart" | "stop"
+  } | null>(null)
 
   return (
-    <section className="space-y-4">
-      <Card>
-        <CardHeader className="border-b border-border/55 pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle>Agent Control Room</CardTitle>
-            <Button size="sm" variant="outline" onClick={onRefresh}>
-              刷新
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-3">
-          {agents.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/65 bg-background/60 px-4 py-6 text-sm text-muted-foreground">
-              暂无可管理 agent
-            </div>
-          ) : (
-            <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-              <aside className="space-y-2 rounded-2xl border border-border/60 bg-background/65 p-2">
-                {agents.map((agent) => {
-                  const isFocus = focusAgentId === agent.id
-                  const isRunning = agent.running !== false
-                  return (
-                    <button
-                      key={agent.id}
-                      type="button"
-                      onClick={() => setFocusAgentId(agent.id)}
-                      className={`w-full rounded-xl border px-3 py-2 text-left transition ${
-                        isFocus
-                          ? "border-primary/35 bg-primary/8"
-                          : "border-border/60 bg-background/70 hover:border-border"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-medium text-foreground">{agent.name || "unknown-agent"}</span>
-                        <span
-                          className={
-                            isRunning
-                              ? "rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-700"
-                              : "rounded-full border border-border/65 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground"
-                          }
+    <section className="min-h-0 overflow-y-auto">
+      <div className="flex h-10 items-center justify-between border-b border-border/60 px-3">
+        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Agents</div>
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onRefresh}>
+          刷新
+        </Button>
+      </div>
+
+      {agents.length === 0 ? (
+        <div className="px-3 py-4 text-sm text-muted-foreground">暂无 agent</div>
+      ) : (
+        <div className="px-3 py-2">
+          <table className="w-full table-fixed border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border/60 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <th className="py-2 text-left font-medium">Agent</th>
+                <th className="w-[200px] py-2 text-left font-medium">Model</th>
+                <th className="w-[88px] py-2 text-left font-medium">PID</th>
+                <th className="w-[88px] py-2 text-left font-medium">Port</th>
+                <th className="w-[104px] py-2 text-right font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agents.map((agent) => {
+                const isRunning = agent.running === true
+                const primaryModelId = String(agent.primaryModelId || "")
+                const isStarting = startingAgentId === agent.id
+                const isRestarting = restartingAgentId === agent.id
+                const isStopping = stoppingAgentId === agent.id
+                return (
+                  <tr
+                    key={agent.id}
+                    className={`border-b border-border/40 align-middle ${isRunning ? "text-foreground" : "text-muted-foreground opacity-55"}`}
+                  >
+                    <td className="py-2 pr-3">
+                      <div className="flex min-w-0 items-start gap-2">
+                        <BotIcon className={`mt-0.5 size-5 shrink-0 ${isRunning ? "text-emerald-600" : ""}`} />
+                        <div className="min-w-0">
+                          <span className="truncate text-[15px] font-semibold">{agent.name || "unknown-agent"}</span>
+                          <div className="truncate font-mono text-[11px] text-muted-foreground">{agent.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className="inline-flex h-5 max-w-full items-center rounded-full border border-border px-2 font-mono text-[11px]">
+                        {primaryModelId || "-"}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 font-mono text-xs">{isRunning ? String(agent.daemonPid || "-") : "-"}</td>
+                    <td className="py-2 pr-3 font-mono text-xs">{isRunning ? String(agent.port || "-") : "-"}</td>
+                    <td className="py-2 text-right">
+                      {isRunning ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setConfirmAction({ agent, action: "restart" })}
+                            disabled={isRestarting || isStopping}
+                            aria-label="重启"
+                            title="重启"
+                          >
+                            {isRestarting ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setConfirmAction({ agent, action: "stop" })}
+                            disabled={isRestarting || isStopping}
+                            aria-label="停止"
+                            title="停止"
+                          >
+                            {isStopping ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          disabled={isStarting || isRestarting || isStopping}
+                          aria-label="启动"
+                          title="启动"
+                          onClick={async () => {
+                            try {
+                              setStartingAgentId(agent.id)
+                              await Promise.resolve(onStartAgent(agent.id))
+                            } finally {
+                              setStartingAgentId("")
+                            }
+                          }}
                         >
-                          {isRunning ? "running" : "stopped"}
-                        </span>
-                      </div>
-                      <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{agent.id}</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        {isRunning ? `${agent.host || "127.0.0.1"}:${agent.port || "-"}` : "历史记录（未运行）"}
-                      </div>
-                    </button>
-                  )
-                })}
-              </aside>
+                          {isStarting ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-              <div className="space-y-4">
-                {focusAgent ? (
-                  <>
-                    <Card>
-                      <CardHeader className="border-b border-border/55 pb-3">
-                        <CardTitle>{focusAgent.name || "unknown-agent"}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 pt-3">
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <article className="rounded-xl border border-border/60 bg-background/65 p-3">
-                            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Runtime</div>
-                            <div className="mt-1 text-sm">
-                              {focusAgent.running !== false
-                                ? `${focusAgent.host || "127.0.0.1"}:${focusAgent.port || "-"}`
-                                : "stopped"}
-                            </div>
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              {focusAgent.running !== false
-                                ? `pid ${focusAgent.daemonPid || "-"}`
-                                : `stopped at ${String(focusAgent.stoppedAt || focusAgent.updatedAt || "-")}`}
-                            </div>
-                          </article>
-
-                          <article className="rounded-xl border border-border/60 bg-background/65 p-3">
-                            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Model Binding</div>
-                            <div className="mt-1 truncate text-sm">{focusAgent.primaryModelId || "-"}</div>
-                            <div className="mt-1 text-xs text-muted-foreground">model.primary</div>
-                          </article>
-                        </div>
-
-                        <div className="rounded-xl border border-border/60 bg-background/65 p-3">
-                          <div className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                            Apply Model
-                          </div>
-                          {availableModels.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">模型池为空，无法切换。</p>
-                          ) : (
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Select
-                                value={targetModelByAgent[focusAgent.id] || undefined}
-                                onValueChange={(value) => {
-                                  setTargetModelByAgent((prev) => ({
-                                    ...prev,
-                                    [focusAgent.id]: String(value || ""),
-                                  }))
-                                }}
-                              >
-                                <SelectTrigger className="h-8 min-w-[280px]">
-                                  <SelectValue placeholder="选择模型" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableModels.map((item) => {
-                                    const modelId = String(item.id || "").trim()
-                                    if (!modelId) return null
-                                    return (
-                                      <SelectItem key={modelId} value={modelId}>
-                                        {`${modelId} · ${item.providerType || "-"}${item.isPaused ? " · paused" : ""}`}
-                                      </SelectItem>
-                                    )
-                                  })}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={
-                                  focusAgent.running === false ||
-                                  !targetModelByAgent[focusAgent.id] ||
-                                  targetModelByAgent[focusAgent.id] === String(focusAgent.primaryModelId || "")
-                                }
-                                onClick={() => onSwitchModel(focusAgent.id, targetModelByAgent[focusAgent.id] || "")}
-                              >
-                                应用模型
-                              </Button>
-                              {focusAgent.running === false ? (
-                                <Button size="sm" variant="outline" onClick={() => onStartAgent(focusAgent.id)}>
-                                  启动 Agent
-                                </Button>
-                              ) : null}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={focusAgent.running === false}
-                                onClick={() => onSelectAgent(focusAgent.id)}
-                              >
-                                打开该 Agent
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="border-b border-border/55 pb-3">
-                        <CardTitle>Chat Identity</CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-3">
-                        {focusAgent.running === false ? (
-                          <p className="text-sm text-muted-foreground">离线 agent 不显示实时 chat identity。</p>
-                        ) : Array.isArray(focusAgent.chatProfiles) && focusAgent.chatProfiles.length > 0 ? (
-                          <div className="grid gap-2 md:grid-cols-2">
-                            {focusAgent.chatProfiles.map((profile, index) => (
-                              <article
-                                key={`${focusAgent.id}-${profile.channel || "chat"}-${index}`}
-                                className="rounded-xl border border-border/60 bg-background/65 p-3"
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="text-sm font-medium text-foreground">{profile.channel || "chat"}</div>
-                                  <div className="text-[11px] text-muted-foreground">{profile.linkState || "-"}</div>
-                                </div>
-                                <p className="mt-1 truncate text-xs text-foreground">{profile.identity || "-"}</p>
-                                <p className="mt-1 text-[11px] text-muted-foreground">{profile.statusText || "-"}</p>
-                              </article>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">当前没有已启动 channel。</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Dialog
+        open={Boolean(confirmAction)}
+        onOpenChange={(open) => {
+          if (!open && !restartingAgentId && !stoppingAgentId) {
+            setConfirmAction(null)
+          }
+        }}
+      >
+        <DialogContent className="w-[min(92vw,460px)]">
+          <DialogHeader>
+            <DialogTitle>{confirmAction?.action === "stop" ? "停止 Agent" : "重启 Agent"}</DialogTitle>
+            <DialogDescription>
+              {confirmAction?.action === "stop"
+                ? `确认停止 "${confirmAction?.agent.name || "unknown-agent"}"？停止前会检查当前是否有正在执行的 context 和 task。`
+                : `确认重启 "${confirmAction?.agent.name || "unknown-agent"}"？重启前会检查当前是否有正在执行的 context 和 task。`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={Boolean(restartingAgentId || stoppingAgentId)}
+              onClick={() => setConfirmAction(null)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="outline"
+              disabled={Boolean(restartingAgentId || stoppingAgentId)}
+              onClick={async () => {
+                const target = confirmAction
+                if (!target) return
+                try {
+                  if (target.action === "restart") {
+                    setRestartingAgentId(target.agent.id)
+                    await Promise.resolve(onRestartAgent(target.agent.id))
+                  } else {
+                    setStoppingAgentId(target.agent.id)
+                    await Promise.resolve(onStopAgent(target.agent.id))
+                  }
+                } finally {
+                  setRestartingAgentId("")
+                  setStoppingAgentId("")
+                  setConfirmAction(null)
+                }
+              }}
+            >
+              {restartingAgentId
+                ? "重启中..."
+                : stoppingAgentId
+                  ? "停止中..."
+                  : confirmAction?.action === "stop"
+                    ? "确认停止"
+                    : "确认重启"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

@@ -16,6 +16,7 @@ import { basename } from "node:path";
 import { fileURLToPath } from "url";
 import {
   startDaemonProcess,
+  stopDaemonProcess,
   getDaemonLogPath,
   getDaemonMetaPath,
   isProcessAlive,
@@ -28,6 +29,7 @@ import {
   getShipJsonPath,
   getShipMemoryIndexPath,
   getShipSchemaPath,
+  getShipContextRootDirPath,
   getSoulMdPath,
   getUserMdPath,
 } from "@/console/env/Paths.js";
@@ -172,6 +174,104 @@ export class ConsoleUIGateway {
         const projectRoot = path.resolve(rawProject);
         const payload = await this.startAgentByProjectRoot(projectRoot);
         return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.post("/api/ui/agents/restart", async (c) => {
+      try {
+        const body = (await c.req.json().catch(() => ({}))) as {
+          agentId?: unknown;
+          projectRoot?: unknown;
+          force?: unknown;
+        };
+        const rawProject = String(body.projectRoot || body.agentId || "").trim();
+        if (!rawProject) {
+          return c.json({ success: false, error: "projectRoot is required" }, 400);
+        }
+        const projectRoot = path.resolve(rawProject);
+        const forceRestart = body.force === true;
+        const checks = await this.inspectAgentRestartSafety(projectRoot);
+        const hasBlocking =
+          checks.activeContexts.length > 0 || checks.activeTasks.length > 0;
+        if (hasBlocking && !forceRestart) {
+          const contextLabel =
+            checks.activeContexts.length > 0
+              ? `contexts: ${checks.activeContexts.join(", ")}`
+              : "";
+          const taskLabel =
+            checks.activeTasks.length > 0
+              ? `tasks: ${checks.activeTasks.join(", ")}`
+              : "";
+          const detail = [contextLabel, taskLabel].filter(Boolean).join(" | ");
+          return c.json(
+            {
+              success: false,
+              error: detail
+                ? `Agent has running workload, restart blocked (${detail})`
+                : "Agent has running workload, restart blocked",
+              activeContexts: checks.activeContexts,
+              activeTasks: checks.activeTasks,
+            },
+            409,
+          );
+        }
+        const payload = await this.restartAgentByProjectRoot(projectRoot);
+        return c.json({
+          ...payload,
+          activeContexts: checks.activeContexts,
+          activeTasks: checks.activeTasks,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.post("/api/ui/agents/stop", async (c) => {
+      try {
+        const body = (await c.req.json().catch(() => ({}))) as {
+          agentId?: unknown;
+          projectRoot?: unknown;
+          force?: unknown;
+        };
+        const rawProject = String(body.projectRoot || body.agentId || "").trim();
+        if (!rawProject) {
+          return c.json({ success: false, error: "projectRoot is required" }, 400);
+        }
+        const projectRoot = path.resolve(rawProject);
+        const forceStop = body.force === true;
+        const checks = await this.inspectAgentRestartSafety(projectRoot);
+        const hasBlocking =
+          checks.activeContexts.length > 0 || checks.activeTasks.length > 0;
+        if (hasBlocking && !forceStop) {
+          const contextLabel =
+            checks.activeContexts.length > 0
+              ? `contexts: ${checks.activeContexts.join(", ")}`
+              : "";
+          const taskLabel =
+            checks.activeTasks.length > 0
+              ? `tasks: ${checks.activeTasks.join(", ")}`
+              : "";
+          const detail = [contextLabel, taskLabel].filter(Boolean).join(" | ");
+          return c.json(
+            {
+              success: false,
+              error: detail
+                ? `Agent has running workload, stop blocked (${detail})`
+                : "Agent has running workload, stop blocked",
+              activeContexts: checks.activeContexts,
+              activeTasks: checks.activeTasks,
+            },
+            409,
+          );
+        }
+        const payload = await this.stopAgentByProjectRoot(projectRoot);
+        return c.json({
+          ...payload,
+          activeContexts: checks.activeContexts,
+          activeTasks: checks.activeTasks,
+        });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
       }
@@ -926,6 +1026,114 @@ export class ConsoleUIGateway {
       pid: started.pid,
       logPath: started.logPath,
       message: "started",
+    };
+  }
+
+  private async inspectAgentRestartSafety(projectRoot: string): Promise<{
+    activeContexts: string[];
+    activeTasks: string[];
+  }> {
+    const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
+    const activeContexts: string[] = [];
+    const activeTasks: string[] = [];
+
+    const contextRootDir = getShipContextRootDirPath(normalizedRoot);
+    if (await fs.pathExists(contextRootDir)) {
+      const entries = await fs.readdir(contextRootDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const lockFilePath = path.join(contextRootDir, entry.name, "messages", ".context.lock");
+        if (!(await fs.pathExists(lockFilePath))) continue;
+        try {
+          activeContexts.push(decodeURIComponent(entry.name));
+        } catch {
+          activeContexts.push(entry.name);
+        }
+      }
+    }
+
+    const knownAgents = await this.listKnownAgents();
+    const targetAgent = knownAgents.find(
+      (item) => path.resolve(String(item.projectRoot || "")) === normalizedRoot,
+    );
+    if (targetAgent?.running === true && targetAgent.baseUrl) {
+      try {
+        const tasksUrl = new URL("/api/tui/tasks", targetAgent.baseUrl).toString();
+        const tasksResponse = await fetch(tasksUrl);
+        if (tasksResponse.ok) {
+          const payload = (await tasksResponse.json().catch(() => ({}))) as {
+            tasks?: Array<{ title?: unknown }>;
+          };
+          const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+          for (const task of tasks) {
+            const title = String(task?.title || "").trim();
+            if (!title) continue;
+            const runsUrl = new URL(
+              `/api/tui/tasks/${encodeURIComponent(title)}/runs?limit=1`,
+              targetAgent.baseUrl,
+            ).toString();
+            const runsResponse = await fetch(runsUrl);
+            if (!runsResponse.ok) continue;
+            const runsPayload = (await runsResponse.json().catch(() => ({}))) as {
+              runs?: Array<{ inProgress?: unknown }>;
+            };
+            const firstRun = Array.isArray(runsPayload.runs)
+              ? runsPayload.runs[0]
+              : null;
+            if (firstRun?.inProgress === true) {
+              activeTasks.push(title);
+            }
+          }
+        }
+      } catch {
+        // ignore runtime check failures
+      }
+    }
+
+    return {
+      activeContexts: Array.from(new Set(activeContexts)),
+      activeTasks: Array.from(new Set(activeTasks)),
+    };
+  }
+
+  private async restartAgentByProjectRoot(projectRoot: string): Promise<{
+    success: boolean;
+    projectRoot: string;
+    restarted: boolean;
+    pid?: number;
+    logPath?: string;
+    message?: string;
+  }> {
+    const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
+    await stopDaemonProcess({ projectRoot: normalizedRoot }).catch(() => ({
+      stopped: false,
+    }));
+    const started = await this.startAgentByProjectRoot(normalizedRoot);
+    return {
+      success: true,
+      projectRoot: normalizedRoot,
+      restarted: true,
+      pid: started.pid,
+      logPath: started.logPath,
+      message: "restarted",
+    };
+  }
+
+  private async stopAgentByProjectRoot(projectRoot: string): Promise<{
+    success: boolean;
+    projectRoot: string;
+    stopped: boolean;
+    pid?: number;
+    message?: string;
+  }> {
+    const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
+    const result = await stopDaemonProcess({ projectRoot: normalizedRoot });
+    return {
+      success: true,
+      projectRoot: normalizedRoot,
+      stopped: result.stopped === true,
+      pid: result.pid,
+      message: result.stopped ? "stopped" : "already_stopped",
     };
   }
 

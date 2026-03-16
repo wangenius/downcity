@@ -328,6 +328,10 @@ export interface UiExtensionRuntimeItem {
    */
   name?: string;
   /**
+   * extension 描述信息。
+   */
+  description?: string;
+  /**
    * extension 运行状态。
    */
   state?: string;

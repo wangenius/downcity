@@ -10,6 +10,7 @@ import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import type {
   UiAgentOption,
   UiConfigStatusItem,
@@ -72,10 +73,33 @@ export interface GlobalOverviewSectionProps {
    * 刷新回调。
    */
   onRefresh: () => void
+  /**
+   * 启动 agent。
+   */
+  onStartAgent: (agentId: string) => void
+  /**
+   * 重启 agent。
+   */
+  onRestartAgent: (agentId: string) => void
+  /**
+   * 停止 agent。
+   */
+  onStopAgent: (agentId: string) => void
 }
 
 export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
-  const { topbarStatus, topbarError, hasPrompt, agents, extensions, configStatus, onRefresh } = props
+  const {
+    topbarStatus,
+    topbarError,
+    hasPrompt,
+    agents,
+    extensions,
+    configStatus,
+    onRefresh,
+    onStartAgent,
+    onRestartAgent,
+    onStopAgent,
+  } = props
   const [mode, setMode] = React.useState<ConfigViewMode>("required")
 
   const requiredConsoleKeys = new Set(["ship_db", "console_pid", "agents_registry"])
@@ -229,6 +253,14 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
           )}
         </CardContent>
       </Card>
+
+      <GlobalAgentsSection
+        agents={agents}
+        onRefresh={onRefresh}
+        onStartAgent={onStartAgent}
+        onRestartAgent={onRestartAgent}
+        onStopAgent={onStopAgent}
+      />
     </section>
   )
 }

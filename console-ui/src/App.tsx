@@ -6,7 +6,7 @@ import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { AgentModelBindingSection } from "@/components/dashboard/AgentModelBindingSection"
-import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
+import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
 import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspaceSection"
@@ -25,6 +25,10 @@ import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/
 import type { DashboardView } from "@/types/Navigation"
 
 export function App() {
+  const [routePathname, setRoutePathname] = React.useState<string>(() => {
+    if (typeof window === "undefined") return "/global/overview"
+    return window.location.pathname
+  })
   const [activeView, setActiveView] = React.useState<DashboardView>(() => {
     if (typeof window === "undefined") return "globalOverview"
     return parseDashboardPath(window.location.pathname).view
@@ -70,6 +74,7 @@ export function App() {
     refreshPrompt,
     controlService,
     controlExtension,
+    testExtension,
     runChatChannelAction,
     configureChatChannel,
     runTask,
@@ -79,6 +84,8 @@ export function App() {
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
+    restartAgentFromHistory,
+    stopAgentFromHistory,
     upsertModelProvider,
     removeModelProvider,
     testModelProvider,
@@ -130,10 +137,14 @@ export function App() {
       },
     ) => {
       if (typeof window === "undefined") return
+      const hasExplicitAgentForGlobalOverview =
+        view === "globalOverview" && Boolean(String(options?.agentId || "").trim())
       const nextPath = toDashboardPath(view, {
         contextId: options?.contextId,
         taskTitle: options?.taskTitle,
-        agentSegment: resolveAgentRouteSegment(options?.agentId),
+        agentSegment: hasExplicitAgentForGlobalOverview || view !== "globalOverview"
+          ? resolveAgentRouteSegment(options?.agentId)
+          : undefined,
       })
       if (window.location.pathname !== nextPath) {
         if (options?.replace) {
@@ -142,6 +153,7 @@ export function App() {
           window.history.pushState({}, "", nextPath)
         }
       }
+      setRoutePathname(nextPath)
       setActiveView(view)
       if (view === "agentTasks") {
         setSelectedTaskTitle(String(options?.taskTitle || "").trim())
@@ -157,6 +169,7 @@ export function App() {
     if (routeHydrated) return
 
     const parsed = parseDashboardPath(window.location.pathname)
+    setRoutePathname(window.location.pathname)
     setActiveView(parsed.view)
     setSelectedTaskTitle(String(parsed.taskTitle || "").trim())
 
@@ -193,6 +206,7 @@ export function App() {
     if (typeof window === "undefined") return undefined
     const onPopState = () => {
       const parsed = parseDashboardPath(window.location.pathname)
+      setRoutePathname(window.location.pathname)
       setActiveView(parsed.view)
       setSelectedTaskTitle(String(parsed.taskTitle || "").trim())
       const parsedAgentId = resolveAgentIdByRouteSegment(parsed.agentSegment)
@@ -234,9 +248,51 @@ export function App() {
     }
   }, [activeView, selectedTaskTitle, tasks])
 
+  const hasGlobalAgentRoute = React.useMemo(() => {
+    if (activeView !== "globalOverview") return false
+    return Boolean(String(parseDashboardPath(routePathname).agentSegment || "").trim())
+  }, [activeView, routePathname])
+  const routeAgentId = React.useMemo(() => {
+    const parsed = parseDashboardPath(routePathname)
+    return resolveAgentIdByRouteSegment(parsed.agentSegment)
+  }, [resolveAgentIdByRouteSegment, routePathname])
+
+  const renderAgentOverviewSection = () => (
+    selectedAgent && selectedAgent.running === false ? (
+      <section>
+        <AgentOverviewStoppedSection
+          agent={selectedAgent}
+          onStart={(agentId) => {
+            void startAgentFromHistory(agentId)
+          }}
+        />
+      </section>
+    ) : (
+      <section className="space-y-6">
+        <SummaryCards
+          selectedAgent={selectedAgent}
+          overview={overview}
+          services={services}
+          localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
+          configStatus={configStatus}
+        />
+        <AgentModelBindingSection
+          selectedAgent={selectedAgent}
+          model={model}
+          loading={loading}
+          onRefresh={() => void refreshModel(selectedAgentId)}
+          onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
+        />
+      </section>
+    )
+  )
+
   const renderActiveView = () => {
     switch (activeView) {
       case "globalOverview":
+        if (hasGlobalAgentRoute) {
+          return renderAgentOverviewSection()
+        }
         return (
           <section>
             <GlobalOverviewSection
@@ -247,28 +303,20 @@ export function App() {
               extensions={extensions}
               configStatus={configStatus}
               onRefresh={() => void refreshDashboard()}
+              onStartAgent={(agentId) => {
+                void startAgentFromHistory(agentId)
+              }}
+              onRestartAgent={(agentId) => {
+                void restartAgentFromHistory(agentId)
+              }}
+              onStopAgent={(agentId) => {
+                void stopAgentFromHistory(agentId)
+              }}
             />
           </section>
         )
       case "agentOverview":
-        return (
-          <section className="space-y-6">
-            <SummaryCards
-              selectedAgent={selectedAgent}
-              overview={overview}
-              services={services}
-              localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
-              configStatus={configStatus}
-            />
-            <AgentModelBindingSection
-              selectedAgent={selectedAgent}
-              model={model}
-              loading={loading}
-              onRefresh={() => void refreshModel(selectedAgentId)}
-              onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
-            />
-          </section>
-        )
+        return renderAgentOverviewSection()
       case "agentServices":
         return (
           <section>
@@ -282,18 +330,22 @@ export function App() {
       case "globalAgents":
         return (
           <section>
-            <GlobalAgentsSection
+            <GlobalOverviewSection
+              topbarStatus={topbarStatus}
+              topbarError={topbarError}
+              hasPrompt={Boolean(prompt)}
               agents={agents}
-              model={model}
-              onSelectAgent={(agentId) => {
-                void handleAgentChange(agentId)
-              }}
-              onRefresh={() => void refreshDashboard(selectedAgentId)}
-              onSwitchModel={(agentId, primaryModelId) => {
-                void switchModelForAgent(agentId, primaryModelId)
-              }}
+              extensions={extensions}
+              configStatus={configStatus}
+              onRefresh={() => void refreshDashboard()}
               onStartAgent={(agentId) => {
                 void startAgentFromHistory(agentId)
+              }}
+              onRestartAgent={(agentId) => {
+                void restartAgentFromHistory(agentId)
+              }}
+              onStopAgent={(agentId) => {
+                void stopAgentFromHistory(agentId)
               }}
             />
           </section>
@@ -328,6 +380,7 @@ export function App() {
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
               onRefresh={() => void refreshDashboard()}
               onControl={(name, action) => void controlExtension(name, action)}
+              onTest={(name) => void testExtension(name)}
             />
           </section>
         )
@@ -417,6 +470,8 @@ export function App() {
         activeView={activeView}
         agents={agents}
         selectedAgentId={selectedAgentId}
+        routePathname={routePathname}
+        routeAgentId={routeAgentId}
         contexts={contexts}
         selectedContextId={selectedContextId}
         tasks={tasks}
@@ -432,10 +487,11 @@ export function App() {
         }}
         onAgentChange={(agentId) => {
           handleAgentChange(agentId)
-          navigateToView("agentOverview", { agentId })
+          navigateToView("globalOverview", { agentId })
         }}
-        onStartAgent={async (agentId) => {
-          await startAgentFromHistory(agentId)
+        onAgentEnter={(agentId) => {
+          handleAgentChange(agentId)
+          navigateToView("agentOverview", { agentId })
         }}
         onTaskOpen={(taskTitle) => {
           setSelectedTaskTitle(taskTitle)

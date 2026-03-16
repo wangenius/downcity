@@ -6,7 +6,6 @@ import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { AgentModelBindingSection } from "@/components/dashboard/AgentModelBindingSection"
-import { ConsoleStatusSection } from "@/components/dashboard/ConsoleStatusSection"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
@@ -22,13 +21,18 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
-import { parseDashboardPath, toDashboardPath } from "@/lib/dashboard-route"
+import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/dashboard-route"
 import type { DashboardView } from "@/types/Navigation"
 
 export function App() {
   const [activeView, setActiveView] = React.useState<DashboardView>(() => {
     if (typeof window === "undefined") return "globalOverview"
     return parseDashboardPath(window.location.pathname).view
+  })
+  const [routeHydrated, setRouteHydrated] = React.useState(false)
+  const [selectedTaskTitle, setSelectedTaskTitle] = React.useState<string>(() => {
+    if (typeof window === "undefined") return ""
+    return String(parseDashboardPath(window.location.pathname).taskTitle || "").trim()
   })
 
   const {
@@ -87,68 +91,164 @@ export function App() {
     uiHelpers,
   } = useConsoleDashboard()
 
-  const navigateToView = React.useCallback((view: DashboardView, contextId?: string) => {
-    if (typeof window === "undefined") return
-    const nextPath = toDashboardPath(view, contextId)
-    if (window.location.pathname !== nextPath) {
-      window.history.pushState({}, "", nextPath)
-    }
-    setActiveView(view)
-  }, [])
+  const resolveAgentRouteSegment = React.useCallback(
+    (agentIdInput?: string): string => {
+      const agentId = String(agentIdInput || "").trim()
+      if (agentId) {
+        const target = agents.find((agent) => agent.id === agentId)
+        if (target) return toAgentRouteSegment(target.name || target.id)
+      }
+      if (selectedAgent) return toAgentRouteSegment(selectedAgent.name || selectedAgent.id)
+      if (selectedAgentId) return toAgentRouteSegment(selectedAgentId)
+      return "agent"
+    },
+    [agents, selectedAgent, selectedAgentId],
+  )
+
+  const resolveAgentIdByRouteSegment = React.useCallback(
+    (segmentInput?: string): string => {
+      const segment = toAgentRouteSegment(String(segmentInput || ""))
+      if (!segment) return ""
+      const matched = agents.find((agent) => {
+        const byName = toAgentRouteSegment(String(agent.name || ""))
+        const byId = toAgentRouteSegment(String(agent.id || ""))
+        return segment === byName || segment === byId
+      })
+      return String(matched?.id || "")
+    },
+    [agents],
+  )
+
+  const navigateToView = React.useCallback(
+    (
+      view: DashboardView,
+      options?: {
+        contextId?: string
+        taskTitle?: string
+        agentId?: string
+        replace?: boolean
+      },
+    ) => {
+      if (typeof window === "undefined") return
+      const nextPath = toDashboardPath(view, {
+        contextId: options?.contextId,
+        taskTitle: options?.taskTitle,
+        agentSegment: resolveAgentRouteSegment(options?.agentId),
+      })
+      if (window.location.pathname !== nextPath) {
+        if (options?.replace) {
+          window.history.replaceState({}, "", nextPath)
+        } else {
+          window.history.pushState({}, "", nextPath)
+        }
+      }
+      setActiveView(view)
+      if (view === "agentTasks") {
+        setSelectedTaskTitle(String(options?.taskTitle || "").trim())
+      } else if (view !== "contextWorkspace") {
+        setSelectedTaskTitle("")
+      }
+    },
+    [resolveAgentRouteSegment],
+  )
 
   React.useEffect(() => {
     if (typeof window === "undefined") return
+    if (routeHydrated) return
+
     const parsed = parseDashboardPath(window.location.pathname)
-    if (parsed.view === "contextWorkspace" && parsed.contextId) {
+    setActiveView(parsed.view)
+    setSelectedTaskTitle(String(parsed.taskTitle || "").trim())
+
+    const hasAgentSegment = Boolean(String(parsed.agentSegment || "").trim())
+    if (hasAgentSegment && agents.length === 0) {
+      return
+    }
+
+    const parsedAgentId = resolveAgentIdByRouteSegment(parsed.agentSegment)
+    if (hasAgentSegment && parsedAgentId && parsedAgentId !== selectedAgentId) {
+      handleAgentChange(parsedAgentId)
+      return
+    }
+
+    if (
+      parsed.view === "contextWorkspace" &&
+      parsed.contextId &&
+      (!hasAgentSegment || !parsedAgentId || parsedAgentId === selectedAgentId)
+    ) {
       void handleContextChange(parsed.contextId)
     }
-  }, [handleContextChange])
+
+    setRouteHydrated(true)
+  }, [
+    agents.length,
+    handleContextChange,
+    handleAgentChange,
+    resolveAgentIdByRouteSegment,
+    routeHydrated,
+    selectedAgentId,
+  ])
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined
     const onPopState = () => {
       const parsed = parseDashboardPath(window.location.pathname)
       setActiveView(parsed.view)
-      if (parsed.view === "contextWorkspace" && parsed.contextId) {
+      setSelectedTaskTitle(String(parsed.taskTitle || "").trim())
+      const parsedAgentId = resolveAgentIdByRouteSegment(parsed.agentSegment)
+      if (parsedAgentId && parsedAgentId !== selectedAgentId) {
+        handleAgentChange(parsedAgentId)
+      }
+      if (parsed.view === "contextWorkspace" && parsed.contextId && (!parsedAgentId || parsedAgentId === selectedAgentId)) {
         void handleContextChange(parsed.contextId)
       }
     }
     window.addEventListener("popstate", onPopState)
     return () => window.removeEventListener("popstate", onPopState)
-  }, [handleContextChange])
+  }, [handleContextChange, handleAgentChange, resolveAgentIdByRouteSegment, selectedAgentId])
 
   React.useEffect(() => {
     if (typeof window === "undefined") return
-    if (activeView !== "contextWorkspace") return
-    if (!selectedContextId) return
-    const expectedPath = toDashboardPath("contextWorkspace", selectedContextId)
+    if (!routeHydrated) return
+    const agentScopedView = activeView !== "globalOverview" &&
+      activeView !== "globalModel" &&
+      activeView !== "globalAgents" &&
+      activeView !== "globalExtensions"
+    if (!agentScopedView || !selectedAgentId) return
+    const expectedPath = toDashboardPath(activeView, {
+      contextId: activeView === "contextWorkspace" ? selectedContextId : undefined,
+      taskTitle: activeView === "agentTasks" ? selectedTaskTitle : undefined,
+      agentSegment: resolveAgentRouteSegment(selectedAgentId),
+    })
     if (window.location.pathname !== expectedPath) {
       window.history.replaceState({}, "", expectedPath)
     }
-  }, [activeView, selectedContextId])
+  }, [activeView, resolveAgentRouteSegment, routeHydrated, selectedAgentId, selectedContextId, selectedTaskTitle])
+
+  React.useEffect(() => {
+    if (activeView !== "agentTasks") return
+    if (!selectedTaskTitle) {
+      const fallback = String(tasks[0]?.title || "").trim()
+      if (fallback) setSelectedTaskTitle(fallback)
+      return
+    }
+    const exists = tasks.some((item) => String(item.title || "").trim() === selectedTaskTitle)
+    if (!exists) {
+      const fallback = String(tasks[0]?.title || "").trim()
+      setSelectedTaskTitle(fallback || "")
+    }
+  }, [activeView, selectedTaskTitle, tasks])
 
   const renderActiveView = () => {
     switch (activeView) {
       case "globalOverview":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <GlobalOverviewSection
               topbarStatus={topbarStatus}
               topbarError={topbarError}
-              agents={agents}
-              extensions={extensions}
-              configStatus={configStatus}
-            />
-          </section>
-        )
-      case "globalRuntime":
-        return (
-          <section className="animate-in fade-in-0 duration-300">
-            <ConsoleStatusSection
-              selectedAgent={selectedAgent}
-              topbarStatus={topbarStatus}
-              topbarError={topbarError}
               hasPrompt={Boolean(prompt)}
+              agents={agents}
               extensions={extensions}
               configStatus={configStatus}
               onRefresh={() => void refreshDashboard()}
@@ -157,7 +257,7 @@ export function App() {
         )
       case "agentOverview":
         return (
-          <section className="animate-in fade-in-0 space-y-4 duration-300">
+          <section className="space-y-6">
             <SummaryCards
               selectedAgent={selectedAgent}
               overview={overview}
@@ -176,7 +276,7 @@ export function App() {
         )
       case "agentServices":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <ServicesSection
               services={services}
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
@@ -186,10 +286,9 @@ export function App() {
         )
       case "globalAgents":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <GlobalAgentsSection
               agents={agents}
-              selectedAgentId={selectedAgentId}
               model={model}
               onSelectAgent={(agentId) => {
                 void handleAgentChange(agentId)
@@ -206,7 +305,7 @@ export function App() {
         )
       case "globalModel":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <GlobalModelSection
               model={model}
               providers={modelProviders}
@@ -227,7 +326,7 @@ export function App() {
         )
       case "globalExtensions":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <ExtensionsSection
               extensions={extensions}
               formatTime={uiHelpers.formatTime}
@@ -239,7 +338,7 @@ export function App() {
         )
       case "agentTasks":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <TasksSection
               tasks={tasks}
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
@@ -247,25 +346,30 @@ export function App() {
               onRunTask={(title) => void runTask(title)}
               onLoadTaskRuns={(title, limit) => loadTaskRuns(title, limit)}
               onLoadTaskRunDetail={(title, timestamp) => loadTaskRunDetail(title, timestamp)}
+              selectedTaskTitle={selectedTaskTitle}
+              onSelectTaskTitle={(taskTitle) => {
+                setSelectedTaskTitle(taskTitle)
+                navigateToView("agentTasks", { taskTitle })
+              }}
             />
           </section>
         )
       case "agentLogs":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <LogsSection logs={logs} formatTime={uiHelpers.formatTime} />
           </section>
         )
       case "contextOverview":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section>
             <ContextOverviewSection
               contexts={contexts}
               selectedContextId={selectedContextId}
               chatChannels={chatChannels}
               formatTime={uiHelpers.formatTime}
               onOpenContext={(contextId) => {
-                navigateToView("contextWorkspace", contextId)
+                navigateToView("contextWorkspace", { contextId })
                 void handleContextChange(contextId)
               }}
               onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
@@ -276,11 +380,12 @@ export function App() {
         )
       case "contextWorkspace":
         return (
-          <section className="animate-in fade-in-0 duration-300">
+          <section className="h-full min-h-0">
             <ContextWorkspaceSection
               selectedContextId={selectedContextId}
               contexts={contexts}
               channelHistory={channelHistory}
+              chatChannels={chatChannels}
               contextMessages={contextMessages}
               prompt={prompt}
               chatInput={chatInput}
@@ -292,7 +397,7 @@ export function App() {
                 void refreshPrompt(selectedAgentId, selectedContextId || constants.LOCAL_UI_CONTEXT_ID)
               }
               onSelectContext={(contextId) => {
-                navigateToView("contextWorkspace", contextId)
+                navigateToView("contextWorkspace", { contextId })
                 void handleContextChange(contextId)
               }}
             />
@@ -318,23 +423,30 @@ export function App() {
         selectedAgentId={selectedAgentId}
         contexts={contexts}
         selectedContextId={selectedContextId}
+        tasks={tasks}
+        selectedTaskTitle={selectedTaskTitle}
         onViewChange={(view) => {
           if (view === "contextWorkspace") {
             const nextContextId = selectedContextId || constants.LOCAL_UI_CONTEXT_ID
-            navigateToView("contextWorkspace", nextContextId)
+            navigateToView("contextWorkspace", { contextId: nextContextId })
             void handleContextChange(nextContextId)
             return
           }
           navigateToView(view)
         }}
         onAgentChange={(agentId) => {
-          void handleAgentChange(agentId)
+          handleAgentChange(agentId)
+          navigateToView("agentOverview", { agentId })
+        }}
+        onTaskOpen={(taskTitle) => {
+          setSelectedTaskTitle(taskTitle)
+          navigateToView("agentTasks", { taskTitle })
         }}
         onContextOpen={(contextId) => {
-          navigateToView("contextWorkspace", contextId)
+          navigateToView("contextWorkspace", { contextId })
           void handleContextChange(contextId)
         }}
-        variant="inset"
+        variant="sidebar"
       />
       <SidebarInset>
         <SiteHeader
@@ -345,7 +457,7 @@ export function App() {
           viewLabel={getDashboardViewLabel(activeView)}
         />
 
-        <main className="flex flex-1 flex-col gap-4 overflow-hidden bg-background p-3 md:p-4 lg:p-6">
+        <main className="mainview-shell flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto overflow-x-hidden bg-background px-3 py-2 md:px-4 md:py-3">
           {renderActiveView()}
         </main>
       </SidebarInset>

@@ -5,8 +5,6 @@
 import * as React from "react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import type {
   UiTaskItem,
   UiTaskRunDetailResponse,
@@ -38,6 +36,14 @@ export interface TasksSectionProps {
    * 加载任务执行详情。
    */
   onLoadTaskRunDetail: (title: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
+  /**
+   * 外部路由驱动的已选 task 标题。
+   */
+  selectedTaskTitle?: string;
+  /**
+   * 当内部切换 task 时同步到外部路由。
+   */
+  onSelectTaskTitle?: (title: string) => void;
 }
 
 function formatDurationMs(startedAt?: number, endedAt?: number): string {
@@ -92,6 +98,8 @@ export function TasksSection(props: TasksSectionProps) {
     onRunTask,
     onLoadTaskRuns,
     onLoadTaskRunDetail,
+    selectedTaskTitle,
+    onSelectTaskTitle,
   } = props;
 
   const [selectedTitle, setSelectedTitle] = React.useState("");
@@ -101,6 +109,15 @@ export function TasksSection(props: TasksSectionProps) {
   const [loadingRuns, setLoadingRuns] = React.useState(false);
   const [loadingRunDetail, setLoadingRunDetail] = React.useState(false);
   const [forceLivePolling, setForceLivePolling] = React.useState(false);
+
+  const selectTaskTitle = React.useCallback(
+    (titleInput: string) => {
+      const nextTitle = String(titleInput || "").trim();
+      setSelectedTitle(nextTitle);
+      if (nextTitle) onSelectTaskTitle?.(nextTitle);
+    },
+    [onSelectTaskTitle],
+  );
 
   const badgeClass = React.useCallback(
     (status?: string): string => {
@@ -196,9 +213,18 @@ export function TasksSection(props: TasksSectionProps) {
   );
 
   React.useEffect(() => {
+    const externalTitle = String(selectedTaskTitle || "").trim();
+    if (externalTitle) {
+      const exists = tasks.some((item) => String(item.title || "").trim() === externalTitle);
+      if (exists && externalTitle !== selectedTitle) {
+        setSelectedTitle(externalTitle);
+      }
+      if (exists) return;
+    }
+
     if (!selectedTitle) {
       const fallback = String(tasks[0]?.title || "").trim();
-      if (fallback) setSelectedTitle(fallback);
+      if (fallback) selectTaskTitle(fallback);
       return;
     }
     const exists = tasks.some(
@@ -206,9 +232,13 @@ export function TasksSection(props: TasksSectionProps) {
     );
     if (!exists) {
       const fallback = String(tasks[0]?.title || "").trim();
-      setSelectedTitle(fallback || "");
+      if (fallback) {
+        selectTaskTitle(fallback);
+      } else {
+        setSelectedTitle("");
+      }
     }
-  }, [selectedTitle, tasks]);
+  }, [selectedTaskTitle, selectTaskTitle, selectedTitle, tasks]);
 
   React.useEffect(() => {
     const title = String(selectedTitle || "").trim();
@@ -281,181 +311,166 @@ export function TasksSection(props: TasksSectionProps) {
   ]);
 
   return (
-    <div className="space-y-4">
-      <Card className="border-border/80 bg-card/90 shadow-sm">
-        <CardHeader>
-          <CardTitle>Tasks Runtime</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-              暂无 task 数据
-            </div>
-          ) : (
-            <div className="overflow-auto rounded-xl border border-border/70 bg-background/75">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Task</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Schedule</TableHead>
-                    <TableHead>Context</TableHead>
-                    <TableHead>Last Run</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks.map((task) => {
-                    const title = String(task.title || "-");
-                    const status = String(task.status || "unknown");
-                    const isSelected = title === selectedTitle;
-                    const selectedTaskRunning = isSelected && Boolean(activeRun);
-                    return (
-                      <TableRow key={title} className={isSelected ? "bg-primary/5" : ""}>
-                        <TableCell className="font-medium">{title}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={badgeClass(status)}>
-                              {status}
+    <div className="space-y-6">
+      <section className="space-y-2">
+        <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Tasks Runtime
+        </div>
+
+        {tasks.length === 0 ? (
+          <div className="py-4 text-sm text-muted-foreground">暂无 task 数据</div>
+        ) : (
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <th className="px-0 py-2 font-medium">Task</th>
+                  <th className="px-2 py-2 font-medium">Status</th>
+                  <th className="px-2 py-2 font-medium">Schedule</th>
+                  <th className="px-2 py-2 font-medium">Context</th>
+                  <th className="px-2 py-2 font-medium">Last Run</th>
+                  <th className="px-2 py-2 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((task) => {
+                  const title = String(task.title || "-");
+                  const status = String(task.status || "unknown");
+                  const isSelected = title === selectedTitle;
+                  const selectedTaskRunning = isSelected && Boolean(activeRun);
+                  return (
+                    <tr key={title} className="border-b border-border/50">
+                      <td className="px-0 py-2 text-sm font-medium">{title}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={badgeClass(status)}>
+                            {status}
+                          </Badge>
+                          {selectedTaskRunning ? (
+                            <Badge variant="outline" className={badgeClass("running")}>
+                              running
                             </Badge>
-                            {selectedTaskRunning ? (
-                              <Badge variant="outline" className={badgeClass("running")}>
-                                running
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs text-muted-foreground">
-                            <div>{`when ${String(task.when || "-")}`}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="max-w-[14rem] truncate font-mono text-xs" title={task.contextId || ""}>
-                          {String(task.contextId || "-")}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {formatRunTimestampForDisplay(
-                            String(task.lastRunTimestamp || ""),
-                            formatTime,
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => setSelectedTitle(title)}>
-                              详情
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedTitle(title);
-                                setForceLivePolling(true);
-                                onRunTask(title);
-                                window.setTimeout(() => {
-                                  void loadRuns(title, {
-                                    showLoading: false,
-                                    preferInProgress: true,
-                                  });
-                                }, 350);
-                              }}
-                            >
-                              run
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="px-2 py-2 text-xs text-muted-foreground">{`when ${String(task.when || "-")}`}</td>
+                      <td className="max-w-[14rem] truncate px-2 py-2 font-mono text-xs" title={task.contextId || ""}>
+                        {String(task.contextId || "-")}
+                      </td>
+                      <td className="px-2 py-2 text-xs text-muted-foreground">
+                        {formatRunTimestampForDisplay(
+                          String(task.lastRunTimestamp || ""),
+                          formatTime,
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => selectTaskTitle(title)}>
+                            详情
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              selectTaskTitle(title);
+                              setForceLivePolling(true);
+                              onRunTask(title);
+                              window.setTimeout(() => {
+                                void loadRuns(title, {
+                                  showLoading: false,
+                                  preferInProgress: true,
+                                });
+                              }, 350);
+                            }}
+                          >
+                            run
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {selectedTask ? (
-        <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
-          <Card className="border-border/80 bg-card/90 shadow-sm">
-            <CardHeader>
-              <CardTitle>{`Task Detail · ${selectedTitle}`}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">description</div>
-                <div className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
-                  {selectedTask.description || "-"}
-                </div>
-              </div>
-              <div className="rounded-lg border border-border/70 bg-muted/35 px-3 py-2">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">body</div>
-                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/60 bg-background/80 p-2 text-[11px] leading-relaxed">
-                  {selectedTask.body || "-"}
-                </pre>
-              </div>
-              <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/35 px-3 py-2 text-xs">
+        <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+          <section className="space-y-2">
+            <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {`Task Detail · ${selectedTitle}`}
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">description</div>
+              <div className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{selectedTask.description || "-"}</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">body</div>
+              <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
+                {selectedTask.body || "-"}
+              </pre>
+              <div className="grid gap-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
                 <div>{`status: ${selectedTask.status || "-"}`}</div>
                 <div>{`kind: ${selectedTask.kind || "-"}`}</div>
                 <div>{`when: ${selectedTask.when || "-"}`}</div>
                 <div className="truncate font-mono" title={selectedTask.contextId || ""}>{`contextId: ${selectedTask.contextId || "-"}`}</div>
                 <div className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{`taskMdPath: ${selectedTask.taskMdPath || "-"}`}</div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {activeRun || selectedRunInProgress || forceLivePolling ? (
-              <Card className="border-border/80 bg-card/90 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Current Execution</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-xs">
-                  <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/35 p-3">
-                    <div>{`time: ${formatRunTimestampForDisplay(
-                      String(activeRun?.timestamp || selectedRunTimestamp || ""),
-                      formatTime,
-                    )}`}</div>
-                    <div className="flex items-center gap-2">
-                      <span>status:</span>
-                      <Badge
-                        variant="outline"
-                        className={badgeClass(normalizeRunStatus(activeRun || selectedRun, selectedRunDetail))}
-                      >
-                        {normalizeRunStatus(activeRun || selectedRun, selectedRunDetail)}
-                      </Badge>
-                    </div>
-                    <div>{`phase: ${String(selectedRunDetail?.progress?.phase || activeRun?.progressPhase || "-")}`}</div>
-                    <div>{`message: ${String(selectedRunDetail?.progress?.message || activeRun?.progressMessage || "-")}`}</div>
-                    <div>{`round: ${
-                      selectedRunDetail?.progress?.round ?? activeRun?.progressRound ?? "-"
-                    }/${selectedRunDetail?.progress?.maxRounds ?? activeRun?.progressMaxRounds ?? "-"}`}</div>
-                    <div>{`updatedAt: ${formatTime(selectedRunDetail?.progress?.updatedAt || activeRun?.progressUpdatedAt)}`}</div>
+              <section className="space-y-2">
+                <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Current Execution
+                </div>
+                <div className="grid gap-1 text-xs text-muted-foreground">
+                  <div>{`time: ${formatRunTimestampForDisplay(
+                    String(activeRun?.timestamp || selectedRunTimestamp || ""),
+                    formatTime,
+                  )}`}</div>
+                  <div className="flex items-center gap-2">
+                    <span>status:</span>
+                    <Badge
+                      variant="outline"
+                      className={badgeClass(normalizeRunStatus(activeRun || selectedRun, selectedRunDetail))}
+                    >
+                      {normalizeRunStatus(activeRun || selectedRun, selectedRunDetail)}
+                    </Badge>
                   </div>
+                  <div>{`phase: ${String(selectedRunDetail?.progress?.phase || activeRun?.progressPhase || "-")}`}</div>
+                  <div>{`message: ${String(selectedRunDetail?.progress?.message || activeRun?.progressMessage || "-")}`}</div>
+                  <div>{`round: ${
+                    selectedRunDetail?.progress?.round ?? activeRun?.progressRound ?? "-"
+                  }/${selectedRunDetail?.progress?.maxRounds ?? activeRun?.progressMaxRounds ?? "-"}`}</div>
+                  <div>{`updatedAt: ${formatTime(selectedRunDetail?.progress?.updatedAt || activeRun?.progressUpdatedAt)}`}</div>
+                </div>
 
-                  <div className="space-y-1">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress Events</div>
-                    <div className="max-h-48 space-y-2 overflow-auto rounded-lg border border-border/70 bg-background/75 p-2">
-                      {Array.isArray(selectedRunDetail?.progress?.events) &&
-                      selectedRunDetail.progress.events.length > 0 ? (
-                        selectedRunDetail.progress.events.slice(-12).map((event, index) => (
-                          <article key={`${String(event.at || index)}:${index}`} className="rounded-md border border-border/70 bg-card p-2">
-                            <div className="mb-1 text-[11px] text-muted-foreground">
-                              {`${String(event.phase || "phase")} · ${formatTime(event.at)}`}
-                            </div>
-                            <div className="text-xs">{String(event.message || "-")}</div>
-                          </article>
-                        ))
-                      ) : (
-                        <div className="text-xs text-muted-foreground">等待执行进度...</div>
-                      )}
-                    </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress Events</div>
+                  <div className="max-h-48 space-y-2 overflow-auto border border-border/70 bg-background p-2">
+                    {Array.isArray(selectedRunDetail?.progress?.events) &&
+                    selectedRunDetail.progress.events.length > 0 ? (
+                      selectedRunDetail.progress.events.slice(-12).map((event, index) => (
+                        <article key={`${String(event.at || index)}:${index}`} className="border-b border-border/60 pb-2">
+                          <div className="mb-1 text-[11px] text-muted-foreground">
+                            {`${String(event.phase || "phase")} · ${formatTime(event.at)}`}
+                          </div>
+                          <div className="text-xs">{String(event.message || "-")}</div>
+                        </article>
+                      ))
+                    ) : (
+                      <div className="text-xs text-muted-foreground">等待执行进度...</div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </section>
             ) : null}
 
-            <Card className="border-border/80 bg-card/90 shadow-sm">
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle>Run History</CardTitle>
+            <section className="space-y-2">
+              <div className="flex items-center justify-between border-b border-border/70 pb-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Run History</div>
                 <Button
                   size="sm"
                   variant="outline"
@@ -469,132 +484,129 @@ export function TasksSection(props: TasksSectionProps) {
                 >
                   {loadingRuns ? "加载中..." : "刷新"}
                 </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-auto rounded-xl border border-border/70 bg-background/75">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Started</TableHead>
-                        <TableHead>Duration</TableHead>
-                        <TableHead>Rounds</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {runs.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-sm text-muted-foreground">
-                            暂无执行记录
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        runs.map((run) => {
-                          const isActive = run.timestamp === selectedRunTimestamp;
-                          const status = run.inProgress
-                            ? "running"
-                            : String(run.status || run.executionStatus || "unknown");
-                          return (
-                            <TableRow key={run.timestamp} className={isActive ? "bg-primary/5" : ""}>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {formatRunTimestampForDisplay(run.timestamp, formatTime)}
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  <Badge variant="outline" className={badgeClass(status)}>
-                                    {status}
-                                  </Badge>
-                                  {run.inProgress && run.progressMessage ? (
-                                    <div className="max-w-[20rem] truncate text-[11px] text-muted-foreground" title={run.progressMessage}>
-                                      {run.progressMessage}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">{formatTime(run.startedAt)}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {formatDurationMs(run.startedAt, run.endedAt)}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {run.dialogueRounds ?? run.progressRound ?? "-"}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  size="sm"
-                                  variant={isActive ? "secondary" : "outline"}
-                                  onClick={() => setSelectedRunTimestamp(run.timestamp)}
-                                >
-                                  查看
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            <Card className="border-border/80 bg-card/90 shadow-sm">
-              <CardHeader>
-                <CardTitle>{`Run Detail${
+              <div className="overflow-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                      <th className="px-0 py-2 font-medium">Time</th>
+                      <th className="px-2 py-2 font-medium">Status</th>
+                      <th className="px-2 py-2 font-medium">Started</th>
+                      <th className="px-2 py-2 font-medium">Duration</th>
+                      <th className="px-2 py-2 font-medium">Rounds</th>
+                      <th className="px-2 py-2 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {runs.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-0 py-3 text-sm text-muted-foreground">
+                          暂无执行记录
+                        </td>
+                      </tr>
+                    ) : (
+                      runs.map((run) => {
+                        const isActive = run.timestamp === selectedRunTimestamp;
+                        const status = run.inProgress
+                          ? "running"
+                          : String(run.status || run.executionStatus || "unknown");
+                        return (
+                          <tr key={run.timestamp} className="border-b border-border/50">
+                            <td className="px-0 py-2 text-xs text-muted-foreground">
+                              {formatRunTimestampForDisplay(run.timestamp, formatTime)}
+                            </td>
+                            <td className="px-2 py-2">
+                              <div className="space-y-1">
+                                <Badge variant="outline" className={badgeClass(status)}>
+                                  {status}
+                                </Badge>
+                                {run.inProgress && run.progressMessage ? (
+                                  <div className="max-w-[20rem] truncate text-[11px] text-muted-foreground" title={run.progressMessage}>
+                                    {run.progressMessage}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </td>
+                            <td className="px-2 py-2 text-xs text-muted-foreground">{formatTime(run.startedAt)}</td>
+                            <td className="px-2 py-2 text-xs text-muted-foreground">
+                              {formatDurationMs(run.startedAt, run.endedAt)}
+                            </td>
+                            <td className="px-2 py-2 text-xs text-muted-foreground">
+                              {run.dialogueRounds ?? run.progressRound ?? "-"}
+                            </td>
+                            <td className="px-2 py-2 text-right">
+                              <Button
+                                size="sm"
+                                variant={isActive ? "secondary" : "outline"}
+                                onClick={() => setSelectedRunTimestamp(run.timestamp)}
+                              >
+                                查看
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="space-y-2">
+              <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {`Run Detail${
                   selectedRunTimestamp
                     ? ` · ${formatRunTimestampForDisplay(selectedRunTimestamp, formatTime)}`
                     : ""
-                }`}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {loadingRunDetail ? (
-                  <div className="text-sm text-muted-foreground">加载中...</div>
-                ) : !selectedRunDetail ? (
-                  <div className="text-sm text-muted-foreground">请选择一条 run 记录</div>
-                ) : (
-                  <>
-                    <div className="grid gap-2 rounded-lg border border-border/70 bg-muted/35 p-3 text-xs">
-                      <div>{`runDir: ${selectedRunDetail.runDirRel || "-"}`}</div>
-                      <div>{`status: ${normalizeRunStatus(selectedRun, selectedRunDetail)}`}</div>
-                      <div>{`phase: ${String(selectedRunDetail.progress?.phase || "-")}`}</div>
-                      <div>{`message: ${String(selectedRunDetail.progress?.message || "-")}`}</div>
-                      <div>{`updatedAt: ${formatTime(selectedRunDetail.progress?.updatedAt)}`}</div>
-                      <div>{`error: ${String(selectedRunDetail.meta?.error || "-")}`}</div>
-                    </div>
+                }`}
+              </div>
+              {loadingRunDetail ? (
+                <div className="text-sm text-muted-foreground">加载中...</div>
+              ) : !selectedRunDetail ? (
+                <div className="text-sm text-muted-foreground">请选择一条 run 记录</div>
+              ) : (
+                <>
+                  <div className="grid gap-1 border-b border-border/60 pb-2 text-xs text-muted-foreground">
+                    <div>{`runDir: ${selectedRunDetail.runDirRel || "-"}`}</div>
+                    <div>{`status: ${normalizeRunStatus(selectedRun, selectedRunDetail)}`}</div>
+                    <div>{`phase: ${String(selectedRunDetail.progress?.phase || "-")}`}</div>
+                    <div>{`message: ${String(selectedRunDetail.progress?.message || "-")}`}</div>
+                    <div>{`updatedAt: ${formatTime(selectedRunDetail.progress?.updatedAt)}`}</div>
+                    <div>{`error: ${String(selectedRunDetail.meta?.error || "-")}`}</div>
+                  </div>
 
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      {(["input", "output", "result", "dialogue", "error"] as const).map((key) => (
-                        <div key={key} className="space-y-1">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</div>
-                          <pre className="max-h-56 overflow-auto rounded-lg border border-border/70 bg-background/75 p-2 text-[11px] leading-relaxed">
-                            {String(selectedRunDetail.artifacts?.[key] || "-")}
-                          </pre>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timeline (Live)</div>
-                      <div className="max-h-72 space-y-2 overflow-auto rounded-lg border border-border/70 bg-background/75 p-2">
-                        {(selectedRunDetail.messages || []).length === 0 ? (
-                          <div className="text-xs text-muted-foreground">无 timeline 消息</div>
-                        ) : (
-                          (selectedRunDetail.messages || []).map((msg, index) => (
-                            <article key={`${msg.id || index}`} className="rounded-md border border-border/70 bg-card p-2">
-                              <div className="mb-1 text-[11px] text-muted-foreground">
-                                {`${String(msg.role || "unknown")} · ${formatTime(msg.ts)}`}
-                              </div>
-                              <div className="whitespace-pre-wrap break-all text-xs">{String(msg.text || "")}</div>
-                            </article>
-                          ))
-                        )}
+                  <div className="grid gap-3 xl:grid-cols-2">
+                    {(["input", "output", "result", "dialogue", "error"] as const).map((key) => (
+                      <div key={key} className="space-y-1">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</div>
+                        <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
+                          {String(selectedRunDetail.artifacts?.[key] || "-")}
+                        </pre>
                       </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timeline (Live)</div>
+                    <div className="max-h-72 space-y-2 overflow-auto border border-border/70 bg-background p-2">
+                      {(selectedRunDetail.messages || []).length === 0 ? (
+                        <div className="text-xs text-muted-foreground">无 timeline 消息</div>
+                      ) : (
+                        (selectedRunDetail.messages || []).map((msg, index) => (
+                          <article key={`${msg.id || index}`} className="border-b border-border/60 pb-2">
+                            <div className="mb-1 text-[11px] text-muted-foreground">
+                              {`${String(msg.role || "unknown")} · ${formatTime(msg.ts)}`}
+                            </div>
+                            <div className="whitespace-pre-wrap break-all text-xs">{String(msg.text || "")}</div>
+                          </article>
+                        ))
+                      )}
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  </div>
+                </>
+              )}
+            </section>
           </div>
         </div>
       ) : null}

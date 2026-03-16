@@ -16,7 +16,6 @@ export type DashboardScope = "global" | "agent" | "context";
  */
 export type DashboardView =
   | "globalOverview"
-  | "globalRuntime"
   | "globalModel"
   | "globalAgents"
   | "globalExtensions"
@@ -53,4 +52,3 @@ export interface DashboardPageMeta {
    */
   path: string;
 }
-

@@ -6,18 +6,16 @@
 
 import * as React from "react"
 import {
+  ArrowLeftIcon,
   CommandIcon,
-  CpuIcon,
-  ChevronsUpDownIcon,
   Layers3Icon,
   MessageSquareTextIcon,
   PuzzleIcon,
   ScrollTextIcon,
   ServerCogIcon,
   RadarIcon,
-  ActivityIcon,
 } from "lucide-react"
-import type { UiAgentOption, UiContextSummary } from "@/types/Dashboard"
+import type { UiAgentOption, UiContextSummary, UiTaskItem } from "@/types/Dashboard"
 import type { DashboardView } from "@/types/Navigation"
 import {
   Sidebar,
@@ -33,17 +31,8 @@ import {
 } from "@/components/ui/sidebar"
 import { buildContextGroups } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 export type { DashboardView }
 
@@ -69,6 +58,14 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    */
   selectedContextId: string
   /**
+   * 当前 agent 下任务列表。
+   */
+  tasks: UiTaskItem[]
+  /**
+   * 当前选中 task 标题。
+   */
+  selectedTaskTitle?: string
+  /**
    * 切换视图回调。
    */
   onViewChange: (view: DashboardView) => void
@@ -80,15 +77,20 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    * 打开 context workspace 并选中 context。
    */
   onContextOpen: (contextId: string) => void
+  /**
+   * 打开任务详情。
+   */
+  onTaskOpen: (taskTitle: string) => void
 }
+
+type SidebarMode = "agent-list" | "agent-detail"
 
 const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.ReactNode> = {
   globalOverview: <Layers3Icon />,
-  globalRuntime: <ActivityIcon />,
   globalModel: <ServerCogIcon />,
-  globalAgents: <CpuIcon />,
+  globalAgents: <Layers3Icon />,
   globalExtensions: <PuzzleIcon />,
-  agentOverview: <CpuIcon />,
+  agentOverview: <Layers3Icon />,
   agentServices: <ServerCogIcon />,
   agentTasks: <RadarIcon />,
   agentLogs: <ScrollTextIcon />,
@@ -101,189 +103,332 @@ export function AppSidebar({
   selectedAgentId,
   contexts,
   selectedContextId,
+  tasks,
+  selectedTaskTitle,
   onViewChange,
   onAgentChange,
   onContextOpen,
+  onTaskOpen,
   ...props
 }: AppSidebarProps) {
   const groupedContexts = buildContextGroups(contexts)
+  const chatGroup = React.useMemo(
+    () => groupedContexts.find((group) => group.key === "chat") ?? null,
+    [groupedContexts],
+  )
+  const otherContextGroups = React.useMemo(
+    () => groupedContexts.filter((group) => group.key !== "chat"),
+    [groupedContexts],
+  )
+  const chatChannelGroups = React.useMemo(() => {
+    const buckets: Record<string, UiContextSummary[]> = {
+      telegram: [],
+      qq: [],
+      feishu: [],
+      unknown: [],
+    }
+    for (const item of chatGroup?.items || []) {
+      const contextId = String(item.contextId || "")
+      const key = contextId.startsWith("telegram-")
+        ? "telegram"
+        : contextId.startsWith("qq-")
+          ? "qq"
+          : contextId.startsWith("feishu-")
+            ? "feishu"
+            : "unknown"
+      buckets[key].push(item)
+    }
+    return (["telegram", "qq", "feishu", "unknown"] as const)
+      .map((channel) => ({
+        channel,
+        items: buckets[channel],
+      }))
+      .filter((entry) => entry.items.length > 0)
+  }, [chatGroup])
   const globalItems = React.useMemo(() => listPrimaryPagesByScope("global"), [])
   const agentItems = React.useMemo(() => listPrimaryPagesByScope("agent"), [])
-  const selectedAgent =
-    agents.find((agent) => agent.id === selectedAgentId) ?? null
+  const [sidebarMode, setSidebarMode] = React.useState<SidebarMode>("agent-list")
+  const [navDirection, setNavDirection] = React.useState<"forward" | "back">("forward")
+  const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
+
+  const selectedAgent = agents.find((agent) => agent.id === selectedAgentId) ?? null
+
+  React.useEffect(() => {
+    const nextMode: SidebarMode =
+      activeView === "globalOverview" ||
+      activeView === "globalModel" ||
+      activeView === "globalAgents" ||
+      activeView === "globalExtensions"
+        ? "agent-list"
+        : "agent-detail"
+    setSidebarMode((prev) => {
+      if (prev !== nextMode) {
+        setNavDirection(nextMode === "agent-detail" ? "forward" : "back")
+      }
+      return nextMode
+    })
+  }, [activeView])
+
+  React.useEffect(() => {
+    setCollapsedChatChannels({})
+  }, [selectedAgentId])
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border" {...props}>
       <SidebarHeader className="border-b border-sidebar-border">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-2.5!" render={<button type="button" />}>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
-                <CommandIcon className="size-4!" />
-              </span>
-              <span className="text-base font-semibold tracking-tight text-sidebar-foreground">ShipMyAgent</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <SidebarMenu className="flex-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-2.5!" render={<button type="button" />}>
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
+                  <CommandIcon className="size-4!" />
+                </span>
+                <span className="text-base font-semibold tracking-tight text-sidebar-foreground">ShipMyAgent</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          {sidebarMode === "agent-detail" ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={() => {
+                setNavDirection("back")
+                onViewChange("globalAgents")
+              }}
+            >
+              <ArrowLeftIcon className="size-4" />
+              <span className="sr-only">返回 agent 列表</span>
+            </Button>
+          ) : null}
+        </div>
       </SidebarHeader>
 
-      <SidebarContent className="gap-1.5">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Global</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {globalItems.map((item) => (
-                <SidebarMenuItem key={item.view}>
-                  <SidebarMenuButton
-                    tooltip={item.title}
-                    isActive={activeView === item.view}
-                    onClick={() => onViewChange(item.view)}
-                    className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
-                  >
-                    {viewIconMap[item.view]}
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Agent</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {agentItems.map((item) => (
-                <SidebarMenuItem key={item.view}>
-                  <SidebarMenuButton
-                    tooltip={item.title}
-                    isActive={activeView === item.view}
-                    onClick={() => onViewChange(item.view)}
-                    className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
-                  >
-                    {viewIconMap[item.view]}
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Context</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip="Overview"
-                  isActive={activeView === "contextOverview"}
-                  onClick={() => onViewChange("contextOverview")}
-                  className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
-                >
-                  <Layers3Icon />
-                  <span>Overview</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {groupedContexts.map((group) => (
-                <React.Fragment key={group.key}>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      render={<button type="button" disabled />}
-                      className="opacity-70 data-[slot=sidebar-menu-button]:cursor-default"
-                    >
-                      <span className="w-full truncate text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {`${group.title} (${group.items.length})`}
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {group.items.map((item) => (
-                    <SidebarMenuItem key={item.contextId}>
+      <SidebarContent className="relative gap-1.5 overflow-hidden">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <div
+            className={cn(
+              "absolute inset-0 overflow-y-auto transition-all duration-200 ease-out",
+              sidebarMode === "agent-list" ? "translate-x-0 opacity-100" : navDirection === "forward" ? "-translate-x-6 opacity-0" : "translate-x-6 opacity-0",
+              sidebarMode === "agent-list" ? "pointer-events-auto" : "pointer-events-none",
+            )}
+          >
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Global</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {globalItems.map((item) => (
+                    <SidebarMenuItem key={item.view}>
                       <SidebarMenuButton
-                        tooltip={item.contextId}
-                        isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
-                        onClick={() => onContextOpen(item.contextId)}
+                        tooltip={item.title}
+                        isActive={activeView === item.view}
+                        onClick={() => onViewChange(item.view)}
                         className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                       >
-                        {item.contextId === "local_ui" ? <MessageSquareTextIcon /> : null}
-                        <span className="w-full truncate font-mono text-xs">
-                          {item.contextId === "local_ui" ? "chat here" : item.contextId}
-                        </span>
+                        {viewIconMap[item.view]}
+                        <span>{item.title}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
-                </React.Fragment>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Agents</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {agents.length === 0 ? (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton render={<button type="button" disabled />} className="opacity-70 data-[slot=sidebar-menu-button]:cursor-default">
+                        <span className="text-xs text-muted-foreground">无运行中的 agent</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : null}
+                  {agents.map((agent) => {
+                    const isActive = agent.id === selectedAgentId
+                    const status = agent.running ? "running" : "stopped"
+                    return (
+                      <SidebarMenuItem key={agent.id}>
+                        <SidebarMenuButton
+                          tooltip={agent.id}
+                          isActive={isActive}
+                          onClick={() => {
+                            setNavDirection("forward")
+                            onAgentChange(agent.id)
+                          }}
+                          className="h-auto rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                        >
+                          <span className="flex min-w-0 w-full items-center gap-2">
+                            <span className={`inline-flex h-2 w-2 shrink-0 rounded-full ${agent.running ? "bg-emerald-500" : "bg-muted-foreground/70"}`} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium">{agent.name || "unknown-agent"}</span>
+                              <span className="block truncate text-[11px] text-muted-foreground">{status}</span>
+                            </span>
+                          </span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </div>
+
+          <div
+            className={cn(
+              "absolute inset-0 overflow-y-auto transition-all duration-200 ease-out",
+              sidebarMode === "agent-detail" ? "translate-x-0 opacity-100" : navDirection === "forward" ? "translate-x-6 opacity-0" : "-translate-x-6 opacity-0",
+              sidebarMode === "agent-detail" ? "pointer-events-auto" : "pointer-events-none",
+            )}
+          >
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">
+                {selectedAgent?.name || "Agent"}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {agentItems.map((item) => (
+                    <SidebarMenuItem key={item.view}>
+                      <SidebarMenuButton
+                        tooltip={item.title}
+                        isActive={activeView === item.view}
+                        onClick={() => onViewChange(item.view)}
+                        className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                      >
+                        {viewIconMap[item.view]}
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Tasks</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {tasks.length === 0 ? (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        render={<button type="button" disabled />}
+                        className="opacity-70 data-[slot=sidebar-menu-button]:cursor-default"
+                      >
+                        <span className="text-xs text-muted-foreground">暂无任务</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : null}
+                  {tasks.map((task) => {
+                    const title = String(task.title || "").trim()
+                    if (!title) return null
+                    return (
+                      <SidebarMenuItem key={`task:${title}`}>
+                        <SidebarMenuButton
+                          tooltip={title}
+                          isActive={activeView === "agentTasks" && selectedTaskTitle === title}
+                          onClick={() => onTaskOpen(title)}
+                          className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                        >
+                          <RadarIcon />
+                          <span className="w-full truncate text-xs">{title}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">Context</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      tooltip="Overview"
+                      isActive={activeView === "contextOverview"}
+                      onClick={() => onViewChange("contextOverview")}
+                      className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                    >
+                      <Layers3Icon />
+                      <span>Overview</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {chatChannelGroups.map((entry) => {
+                    const isCollapsed = Boolean(collapsedChatChannels[entry.channel])
+                    return (
+                      <React.Fragment key={`chat:${entry.channel}`}>
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            onClick={() => {
+                              setCollapsedChatChannels((prev) => ({
+                                ...prev,
+                                [entry.channel]: !prev[entry.channel],
+                              }))
+                            }}
+                          >
+                            <span className="w-full truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                              {`chat/${entry.channel} (${entry.items.length})`}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">{isCollapsed ? "+" : "-"}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        {!isCollapsed
+                          ? entry.items.map((item) => (
+                              <SidebarMenuItem key={item.contextId}>
+                                <SidebarMenuButton
+                                  tooltip={item.contextId}
+                                  isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
+                                  onClick={() => onContextOpen(item.contextId)}
+                                  className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                                >
+                                  <span className="w-full truncate font-mono text-xs">{item.contextId}</span>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            ))
+                          : null}
+                      </React.Fragment>
+                    )
+                  })}
+                  {otherContextGroups.map((group) => (
+                    <React.Fragment key={group.key}>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          render={<button type="button" disabled />}
+                          className="opacity-70 data-[slot=sidebar-menu-button]:cursor-default"
+                        >
+                          <span className="w-full truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {`${group.title} (${group.items.length})`}
+                          </span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      {group.items.map((item) => (
+                        <SidebarMenuItem key={item.contextId}>
+                          <SidebarMenuButton
+                            tooltip={item.contextId}
+                            isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
+                            onClick={() => onContextOpen(item.contextId)}
+                            className="rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                          >
+                            {item.contextId === "local_ui" ? <MessageSquareTextIcon /> : null}
+                            <span className="w-full truncate font-mono text-xs">
+                              {item.contextId === "local_ui" ? "chat here" : item.contextId}
+                            </span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </div>
+        </div>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
-        <div className="space-y-2 px-2 py-2">
-          <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Active Agent
-          </div>
-          {agents.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    className="h-auto w-full justify-between rounded-lg border-sidebar-border bg-background px-3 py-2"
-                  />
-                }
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-semibold text-primary-foreground">
-                    {String(selectedAgent?.name || "A")
-                      .trim()
-                      .slice(0, 1)
-                      .toUpperCase()}
-                  </span>
-                  <span className="min-w-0 text-left">
-                    <span className="block truncate text-sm font-medium text-foreground">
-                      {selectedAgent?.name || "unknown-agent"}
-                    </span>
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {selectedAgent?.host && selectedAgent?.port
-                        ? `${selectedAgent.host}:${selectedAgent.port}`
-                        : "switch agent"}
-                    </span>
-                  </span>
-                </span>
-                <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="top" sideOffset={8} className="max-h-80">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>Select Agent</DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioGroup
-                  value={selectedAgentId}
-                  onValueChange={(value) => {
-                    if (value !== null) onAgentChange(value)
-                  }}
-                >
-                  {agents.map((agent) => (
-                    <DropdownMenuRadioItem key={agent.id} value={agent.id}>
-                      <span className="flex min-w-0 flex-col">
-                        <span className="truncate font-medium">{agent.name || "unknown-agent"}</span>
-                        <span className="truncate text-[11px] text-muted-foreground">
-                          {agent.host && agent.port ? `${agent.host}:${agent.port}` : agent.id}
-                        </span>
-                      </span>
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="rounded-lg border border-dashed border-sidebar-border px-2 py-1.5 text-xs text-muted-foreground">
-              无运行中的 agent
-            </div>
-          )}
-        </div>
+        <div className="px-3 py-2 text-xs text-muted-foreground">Console UI</div>
       </SidebarFooter>
     </Sidebar>
   )

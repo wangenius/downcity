@@ -965,6 +965,18 @@ export interface UiChatHistoryEvent {
    * 便于展示的 ISO 时间。
    */
   isoTime?: string;
+  /**
+   * 外部用户展示名（如果渠道提供）。
+   */
+  username?: string;
+  /**
+   * chat history 标准入站用户名（后端字段）。
+   */
+  actorName?: string;
+  /**
+   * 附加信息（可能包含 username）。
+   */
+  extra?: Record<string, unknown>;
 }
 
 /**

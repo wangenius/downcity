@@ -15,20 +15,64 @@ export type DashboardRouteState = {
    */
   view: DashboardView
   /**
+   * 当前解析出的 agent 路由段（新路由格式）。
+   */
+  agentSegment?: string
+  /**
    * 当视图为 context workspace 时的 contextId。
    */
   contextId?: string
+  /**
+   * 当视图为 agentTasks 时的 task 标题。
+   */
+  taskTitle?: string
 }
 
 const VIEW_TO_PATH: Record<DashboardPrimaryView, string> = getPrimaryViewPathMap()
 
-export function toDashboardPath(view: DashboardView, contextId?: string): string {
-  if (view === "contextWorkspace") {
-    const normalizedContextId = String(contextId || "").trim()
-    if (!normalizedContextId) return "/context/overview"
-    return `/context/workspace/${encodeURIComponent(normalizedContextId)}`
+/**
+ * 生成 agent 路由段。
+ */
+export function toAgentRouteSegment(raw: string): string {
+  const text = String(raw || "").trim().toLocaleLowerCase()
+  if (!text) return "agent"
+  const normalized = text
+    .replace(/[\s_]+/g, "-")
+    .replace(/[/?#]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return normalized || "agent"
+}
+
+export function toDashboardPath(
+  view: DashboardView,
+  options?: {
+    contextId?: string
+    taskTitle?: string
+    agentSegment?: string
+  },
+): string {
+  const agentSegment = toAgentRouteSegment(String(options?.agentSegment || "agent"))
+
+  if (view === "globalOverview") return "/global/overview"
+  if (view === "globalModel") return "/global/model"
+  if (view === "globalAgents") return "/global/agents"
+  if (view === "globalExtensions") return "/global/extensions"
+  if (view === "agentOverview") return `/${encodeURIComponent(agentSegment)}/overview`
+  if (view === "agentServices") return `/${encodeURIComponent(agentSegment)}/services`
+  if (view === "agentTasks") {
+    const normalizedTaskTitle = String(options?.taskTitle || "").trim()
+    if (!normalizedTaskTitle) return `/${encodeURIComponent(agentSegment)}/tasks`
+    return `/${encodeURIComponent(agentSegment)}/tasks/${encodeURIComponent(normalizedTaskTitle)}`
   }
-  return VIEW_TO_PATH[view]
+  if (view === "agentLogs") return `/${encodeURIComponent(agentSegment)}/logs`
+  if (view === "contextOverview") return `/${encodeURIComponent(agentSegment)}/chat`
+  if (view === "contextWorkspace") {
+    const normalizedContextId = String(options?.contextId || "").trim()
+    if (!normalizedContextId) return `/${encodeURIComponent(agentSegment)}/chat`
+    return `/${encodeURIComponent(agentSegment)}/chat/${encodeURIComponent(normalizedContextId)}`
+  }
+  return "/global/overview"
 }
 
 export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
@@ -43,15 +87,26 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
     }
   }
 
-  const workspacePrefix = "/context/workspace/";
-  if (normalized.startsWith(workspacePrefix)) {
-    const raw = normalized.slice(workspacePrefix.length).trim();
-    const decoded = raw ? decodeURIComponent(raw) : "";
-    if (decoded) {
-      return {
-        view: "contextWorkspace",
-        contextId: decoded,
-      };
+  // 新路由格式：/<agent>/overview|services|tasks|logs|chat(/:context)
+  const parts = normalized.split("/").filter(Boolean)
+  if (parts.length >= 2) {
+    const agentSegment = decodeURIComponent(parts[0] || "").trim()
+    const second = String(parts[1] || "").trim().toLowerCase()
+    if (agentSegment) {
+      if (second === "overview") return { view: "agentOverview", agentSegment }
+      if (second === "services") return { view: "agentServices", agentSegment }
+      if (second === "tasks") {
+        const taskTitle = parts.length >= 3 ? decodeURIComponent(parts.slice(2).join("/")) : ""
+        return { view: "agentTasks", agentSegment, taskTitle }
+      }
+      if (second === "logs") return { view: "agentLogs", agentSegment }
+      if (second === "chat") {
+        const contextId = parts.length >= 3 ? decodeURIComponent(parts.slice(2).join("/")) : ""
+        if (contextId) {
+          return { view: "contextWorkspace", agentSegment, contextId }
+        }
+        return { view: "contextOverview", agentSegment }
+      }
     }
   }
 

@@ -20,12 +20,6 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
     title: "Overview",
     path: "/global/overview",
   },
-  globalRuntime: {
-    view: "globalRuntime",
-    scope: "global",
-    title: "Console Runtime",
-    path: "/global/runtime",
-  },
   globalModel: {
     view: "globalModel",
     scope: "global",
@@ -84,7 +78,6 @@ const SCOPE_TITLES: Record<DashboardScope, string> = {
 
 const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
   "globalOverview",
-  "globalRuntime",
   "globalModel",
   "globalAgents",
   "globalExtensions",
@@ -131,4 +124,3 @@ export function getPrimaryViewPathMap(): Record<DashboardPrimaryView, string> {
     return result;
   }, {} as Record<DashboardPrimaryView, string>);
 }
-

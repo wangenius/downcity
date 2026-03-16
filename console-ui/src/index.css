@@ -30,14 +30,14 @@
     --chart-4: oklch(0.488 0.243 264.376);
     --chart-5: oklch(0.424 0.199 265.638);
     --radius: 0.7rem;
-    --sidebar: oklch(0.975 0.003 248.1);
-    --sidebar-foreground: oklch(0.22 0.01 248.2);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.95 0.003 248.1);
-    --sidebar-accent-foreground: oklch(0.22 0.01 248.2);
-    --sidebar-border: oklch(0.89 0.003 248.1);
-    --sidebar-ring: oklch(0.62 0.01 248.2);
+    --sidebar: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
 }
 
 .dark {
@@ -64,14 +64,14 @@
     --chart-3: oklch(0.546 0.245 262.881);
     --chart-4: oklch(0.488 0.243 264.376);
     --chart-5: oklch(0.424 0.199 265.638);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
 }
 
 @theme inline {
@@ -120,6 +120,12 @@
   * {
     @apply border-border outline-ring/50;
     }
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01" 1, "cv01" 1, "cv11" 1;
@@ -129,5 +135,21 @@
     }
   h1, h2, h3 {
     letter-spacing: 0.01em;
+  }
+
+  [data-slot="sidebar-wrapper"] {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  [data-slot="sidebar-inset"] {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .mainview-shell {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }

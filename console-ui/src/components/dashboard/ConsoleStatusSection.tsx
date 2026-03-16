@@ -1,21 +1,23 @@
 /**
  * Console 级状态总览。
+ *
+ * 关键点（中文）
+ * - 采用“运行面板 + 配置工单台”的双区结构，减少信息跳转。
+ * - 配置表支持 required/optional/all 视图切换，便于快速排障。
  */
 
+import * as React from "react"
 import { Badge } from "../ui/badge"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import type {
-  UiAgentOption,
   UiConfigStatusItem,
   UiExtensionRuntimeItem,
 } from "../../types/Dashboard"
 
+type ConfigViewMode = "required" | "optional" | "all"
+
 export interface ConsoleStatusSectionProps {
-  /**
-   * 当前选中 agent。
-   */
-  selectedAgent: UiAgentOption | null
   /**
    * 顶栏状态文本。
    */
@@ -42,9 +44,23 @@ export interface ConsoleStatusSectionProps {
   onRefresh: () => void
 }
 
+function StatusBadge(props: { ok: boolean; okText: string; failText: string }) {
+  if (props.ok) {
+    return (
+      <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700">
+        {props.okText}
+      </span>
+    )
+  }
+  return (
+    <span className="rounded-full border border-destructive/35 bg-destructive/10 px-2.5 py-1 text-xs text-destructive">
+      {props.failText}
+    </span>
+  )
+}
+
 export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
   const {
-    selectedAgent,
     topbarStatus,
     topbarError,
     hasPrompt,
@@ -52,83 +68,124 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
     configStatus,
     onRefresh,
   } = props
+  const [mode, setMode] = React.useState<ConfigViewMode>("required")
 
-  const runningExtensions = extensions.filter((item) => String(item.state || "") === "running").length
-  const errorExtensions = extensions.filter((item) => String(item.state || "") === "error").length
+  const runningExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "running").length
+  const errorExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "error").length
   const consoleConfigItems = configStatus.filter((item) => item.scope === "console")
-  // 关键说明（中文）：
-  // 仅必需 console 文件参与“异常”统计；可选文件缺失不算异常。
   const requiredConsoleKeys = new Set(["ship_db", "console_pid", "agents_registry"])
-  const requiredConsoleItems = consoleConfigItems.filter((item) => requiredConsoleKeys.has(item.key))
-  const optionalConsoleItems = consoleConfigItems.filter((item) => !requiredConsoleKeys.has(item.key))
-  const nonOkRequiredConfigItems = requiredConsoleItems.filter((item) => item.status !== "ok")
-  const missingOptionalCount = optionalConsoleItems.filter((item) => item.status === "missing").length
+  const requiredItems = consoleConfigItems.filter((item) => requiredConsoleKeys.has(item.key))
+  const optionalItems = consoleConfigItems.filter((item) => !requiredConsoleKeys.has(item.key))
+  const nonOkRequiredCount = requiredItems.filter((item) => item.status !== "ok").length
+  const filteredItems =
+    mode === "required" ? requiredItems : mode === "optional" ? optionalItems : consoleConfigItems
 
   return (
-    <div className="space-y-4">
-      <Card className="border-border/80 bg-card/90 shadow-sm">
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle>Console Runtime</CardTitle>
-          <Button size="sm" variant="outline" onClick={onRefresh}>
-            refresh
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-border/70 bg-background/75 p-3">
-              <div className="mb-2 text-[11px] uppercase tracking-wider text-muted-foreground">Console</div>
-              <Badge variant="outline" className={topbarError ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-muted/45 text-foreground"}>
-                {topbarError ? "error" : "running"}
-              </Badge>
-              <div className="mt-2 text-xs text-muted-foreground">{topbarStatus}</div>
+    <section className="space-y-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader className="border-b border-border/55 pb-3">
+            <CardTitle>Runtime Board</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={onRefresh}>
+                refresh
+              </Button>
             </div>
+          </CardHeader>
+          <CardContent className="pt-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <article className="rounded-xl border border-border/60 bg-background/65 p-3">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Console Link</div>
+                <div className="mt-2">
+                  <StatusBadge ok={!topbarError} okText="running" failText="error" />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{topbarStatus || "-"}</p>
+              </article>
 
-            <div className="rounded-xl border border-border/70 bg-background/75 p-3">
-              <div className="mb-2 text-[11px] uppercase tracking-wider text-muted-foreground">Active Agent</div>
-              <Badge variant="outline" className={selectedAgent ? "border-border bg-muted/45 text-foreground" : "border-border bg-muted/35 text-muted-foreground"}>
-                {selectedAgent ? "selected" : "none"}
-              </Badge>
-              <div className="mt-2 text-xs text-muted-foreground">
-                {selectedAgent ? `${selectedAgent.name} (${selectedAgent.host || "127.0.0.1"}:${selectedAgent.port || "-"})` : "未选择 agent"}
-              </div>
+              <article className="rounded-xl border border-border/60 bg-background/65 p-3">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Prompt Runtime</div>
+                <div className="mt-2">
+                  <StatusBadge ok={hasPrompt} okText="ready" failText="unknown" />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {hasPrompt ? "system prompt resolved" : "waiting runtime context"}
+                </p>
+              </article>
+
+              <article className="rounded-xl border border-border/60 bg-background/65 p-3">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Extensions</div>
+                <div className="mt-2">
+                  <Badge variant="outline" className={errorExtensions > 0 ? "border-destructive/35 bg-destructive/10 text-destructive" : "border-emerald-500/35 bg-emerald-500/10 text-emerald-700"}>
+                    {`${runningExtensions}/${extensions.length} running`}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{`error ${errorExtensions} · total ${extensions.length}`}</p>
+              </article>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="rounded-xl border border-border/70 bg-background/75 p-3">
-              <div className="mb-2 text-[11px] uppercase tracking-wider text-muted-foreground">Prompt Runtime</div>
-              <Badge variant="outline" className={hasPrompt ? "border-border bg-muted/45 text-foreground" : "border-border bg-muted/35 text-muted-foreground"}>
-                {hasPrompt ? "ready" : "unknown"}
-              </Badge>
-              <div className="mt-2 text-xs text-muted-foreground">{hasPrompt ? "system prompt resolved" : "waiting runtime context"}</div>
+        <Card>
+          <CardHeader className="border-b border-border/55 pb-3">
+            <CardTitle>Health Snapshot</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-3">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <article className="rounded-xl border border-border/60 bg-background/65 p-3">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Required</div>
+                <div className="mt-1 text-xl font-semibold">{requiredItems.length}</div>
+              </article>
+              <article className="rounded-xl border border-border/60 bg-background/65 p-3">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Required Non-OK</div>
+                <div className={nonOkRequiredCount > 0 ? "mt-1 text-xl font-semibold text-destructive" : "mt-1 text-xl font-semibold"}>
+                  {nonOkRequiredCount}
+                </div>
+              </article>
+              <article className="rounded-xl border border-border/60 bg-background/65 p-3">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Optional Missing</div>
+                <div className="mt-1 text-xl font-semibold">{optionalItems.filter((item) => item.status === "missing").length}</div>
+              </article>
             </div>
+            <p className="text-xs text-muted-foreground">
+              配置异常优先处理顺序：`required + missing/error` → `optional + error` → 其他。
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-            <div className="rounded-xl border border-border/70 bg-background/75 p-3">
-              <div className="mb-2 text-[11px] uppercase tracking-wider text-muted-foreground">Extensions</div>
-              <Badge variant="outline" className={errorExtensions > 0 ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-muted/45 text-foreground"}>
-                {`${runningExtensions}/${extensions.length} running`}
-              </Badge>
-              <div className="mt-2 text-xs text-muted-foreground">{`error ${errorExtensions} · total ${extensions.length}`}</div>
+      <Card>
+        <CardHeader className="border-b border-border/55 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Config Workbench</CardTitle>
+            <div className="flex items-center gap-1.5">
+              {([
+                ["required", `required (${requiredItems.length})`],
+                ["optional", `optional (${optionalItems.length})`],
+                ["all", `all (${consoleConfigItems.length})`],
+              ] as const).map(([key, label]) => (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant={mode === key ? "secondary" : "outline"}
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setMode(key)}
+                >
+                  {label}
+                </Button>
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/80 bg-card/90 shadow-sm">
-        <CardHeader>
-          <CardTitle>Console Config Files</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-xs text-muted-foreground">
-            {`异常 ${nonOkRequiredConfigItems.length} / 必需 ${requiredConsoleItems.length}（可选缺失 ${missingOptionalCount}）`}
-          </div>
-          {consoleConfigItems.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
-              未获取到 console 级配置文件状态
+        <CardContent className="pt-3">
+          {filteredItems.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/65 bg-background/60 px-4 py-5 text-sm text-muted-foreground">
+              当前筛选下没有配置项。
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border/70">
+            <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-muted/35 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                     <th className="px-3 py-2 font-medium">File</th>
                     <th className="px-3 py-2 font-medium">Level</th>
                     <th className="px-3 py-2 font-medium">Status</th>
@@ -138,11 +195,11 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {consoleConfigItems.map((item) => (
-                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="border-t border-border/70">
+                  {filteredItems.map((item) => (
+                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="border-t border-border/60">
                       <td className="px-3 py-2 text-sm font-medium">{item.label}</td>
                       <td className="px-3 py-2 text-xs">
-                        <span className="inline-flex rounded-full border border-border bg-muted/35 px-2 py-0.5 text-muted-foreground">
+                        <span className="rounded-full border border-border/60 bg-muted/35 px-2 py-0.5 text-muted-foreground">
                           {requiredConsoleKeys.has(item.key) ? "required" : "optional"}
                         </span>
                       </td>
@@ -150,12 +207,8 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
                         <span
                           className={
                             item.status === "ok"
-                              ? "inline-flex rounded-full border border-border bg-muted/45 px-2 py-0.5 text-foreground"
-                              : item.status === "missing"
-                                ? requiredConsoleKeys.has(item.key)
-                                  ? "inline-flex rounded-full border border-destructive/35 bg-destructive/10 px-2 py-0.5 text-destructive"
-                                  : "inline-flex rounded-full border border-border bg-muted/35 px-2 py-0.5 text-muted-foreground"
-                                : "inline-flex rounded-full border border-destructive/35 bg-destructive/10 px-2 py-0.5 text-destructive"
+                              ? "rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-emerald-700"
+                              : "rounded-full border border-destructive/35 bg-destructive/10 px-2 py-0.5 text-destructive"
                           }
                         >
                           {item.status}
@@ -165,7 +218,7 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {item.mtime ? new Date(item.mtime).toLocaleString("zh-CN", { hour12: false }) : "-"}
                       </td>
-                      <td className="max-w-[28rem] truncate px-3 py-2 font-mono text-[11px] text-muted-foreground" title={item.path}>
+                      <td className="max-w-[30rem] truncate px-3 py-2 font-mono text-[11px] text-muted-foreground" title={item.path}>
                         {item.path}
                       </td>
                     </tr>
@@ -176,6 +229,6 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
           )}
         </CardContent>
       </Card>
-    </div>
+    </section>
   )
 }

@@ -4,8 +4,6 @@
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import type { UiServiceItem } from "../../types/Dashboard";
 
 export interface ServicesSectionProps {
@@ -34,58 +32,54 @@ export function ServicesSection(props: ServicesSectionProps) {
   };
 
   return (
-    <Card className="border-border/80 bg-card/90 shadow-sm">
-      <CardHeader>
-        <CardTitle>Services Runtime</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {services.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-            暂无 service 数据
-          </div>
-        ) : (
-          <div className="overflow-auto rounded-xl border border-border/70 bg-background/75">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {services.map((svc) => {
-                  const name = String(svc.name || svc.service || "unknown");
-                  const status = String(svc.state || svc.status || "unknown");
-                  return (
-                    <TableRow key={name}>
-                      <TableCell className="font-medium">{name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={badgeClass(status)}>
-                          {status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Button size="sm" variant="outline" onClick={() => onControlService(name, "start")}>
-                            start
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => onControlService(name, "restart")}>
-                            restart
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => onControlService(name, "stop")}>
-                            stop
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <section className="space-y-2">
+      <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        Services Runtime
+      </div>
+      {services.length === 0 ? (
+        <div className="py-4 text-sm text-muted-foreground">暂无 service 数据</div>
+      ) : (
+        <div className="overflow-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                <th className="px-0 py-2 font-medium">Service</th>
+                <th className="px-2 py-2 font-medium">Status</th>
+                <th className="px-2 py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {services.map((svc) => {
+                const name = String(svc.name || svc.service || "unknown");
+                const status = String(svc.state || svc.status || "unknown");
+                return (
+                  <tr key={name} className="border-b border-border/50">
+                    <td className="px-0 py-2 text-sm font-medium">{name}</td>
+                    <td className="px-2 py-2">
+                      <Badge variant="outline" className={badgeClass(status)}>
+                        {status}
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => onControlService(name, "start")}>
+                          start
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onControlService(name, "restart")}>
+                          restart
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => onControlService(name, "stop")}>
+                          stop
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

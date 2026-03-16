@@ -2,9 +2,8 @@
  * Global 作用域模型管理页。
  *
  * 关键点（中文）
- * - 保留原有 provider/model 的增删改查与测试能力。
- * - 通过“编辑区 + 列表区”的双栏结构降低操作噪音。
- * - 使用 Tabs 分离 Provider 与 Model 任务流，避免单屏过载。
+ * - 采用 Workbench 结构：顶部总控 + Providers/Models 双任务流。
+ * - 每个任务流都内置筛选与操作区，减少“弹窗前后切换”成本。
  */
 
 import * as React from "react"
@@ -13,17 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
 import {
   Dialog,
   DialogContent,
@@ -151,24 +141,13 @@ function formatTime(raw?: string): string {
   return new Date(t).toLocaleString("zh-CN", { hour12: false })
 }
 
-function StatCard(props: { label: string; value: string; sub?: string }) {
-  const { label, value, sub } = props
+function MetricChip(props: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-card/80 p-3">
-      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
-      <div className="mt-1 text-xl font-semibold tracking-tight">{value}</div>
-      {sub ? <div className="mt-1 text-xs text-muted-foreground">{sub}</div> : null}
-    </div>
-  )
-}
-
-function EmptyRow(props: { colSpan: number; text: string }) {
-  return (
-    <TableRow>
-      <TableCell colSpan={props.colSpan} className="text-sm text-muted-foreground">
-        {props.text}
-      </TableCell>
-    </TableRow>
+    <article className="rounded-xl border border-border/60 bg-background/65 px-3 py-2.5">
+      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{props.label}</div>
+      <div className="mt-1 text-lg font-semibold">{props.value}</div>
+      {props.hint ? <div className="mt-0.5 text-[11px] text-muted-foreground">{props.hint}</div> : null}
+    </article>
   )
 }
 
@@ -207,6 +186,9 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
     presencePenalty: "",
     anthropicVersion: "",
   })
+
+  const [providerQuery, setProviderQuery] = React.useState("")
+  const [modelQuery, setModelQuery] = React.useState("")
   const [discoverPrefix, setDiscoverPrefix] = React.useState("")
   const [testPrompt, setTestPrompt] = React.useState("Reply with exactly: OK")
   const [providerEditorOpen, setProviderEditorOpen] = React.useState(false)
@@ -216,6 +198,28 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
     () => providers.map((item) => String(item.id || "").trim()).filter(Boolean),
     [providers],
   )
+
+  const filteredProviders = React.useMemo(() => {
+    const query = providerQuery.trim().toLowerCase()
+    if (!query) return providers
+    return providers.filter((item) => {
+      const id = String(item.id || "").toLowerCase()
+      const type = String(item.type || "").toLowerCase()
+      const base = String(item.baseUrl || "").toLowerCase()
+      return id.includes(query) || type.includes(query) || base.includes(query)
+    })
+  }, [providerQuery, providers])
+
+  const filteredModels = React.useMemo(() => {
+    const query = modelQuery.trim().toLowerCase()
+    if (!query) return poolItems
+    return poolItems.filter((item) => {
+      const id = String(item.id || "").toLowerCase()
+      const providerId = String(item.providerId || "").toLowerCase()
+      const name = String(item.name || "").toLowerCase()
+      return id.includes(query) || providerId.includes(query) || name.includes(query)
+    })
+  }, [modelQuery, poolItems])
 
   const canSaveProvider = providerForm.id.trim().length > 0 && providerForm.type.trim().length > 0
   const canSaveModel =
@@ -247,28 +251,32 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
   }, [])
 
   return (
-    <section className="space-y-4">
-      <Card className="border-border/70">
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle>Global Model Control</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onRefreshPool} disabled={loading}>
-              刷新模型池
-            </Button>
-            <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
-              刷新当前绑定
-            </Button>
+    <section className="space-y-5">
+      <Card>
+        <CardHeader className="border-b border-border/55 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Model Operations Workbench</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={onRefreshPool} disabled={loading}>
+                刷新模型池
+              </Button>
+              <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
+                刷新当前绑定
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Providers" value={String(providers.length)} sub="global pool" />
-          <StatCard label="Models" value={String(poolItems.length)} sub="global pool" />
-          <StatCard label="Agent Primary" value={model?.agentPrimaryModelId || "-"} sub="selected agent binding" />
-          <StatCard
-            label="Runtime Provider"
-            value={model?.providerType || "-"}
-            sub={model?.providerKey ? `key: ${model.providerKey}` : "-"}
-          />
+        <CardContent className="pt-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <MetricChip label="Providers" value={String(providers.length)} hint="global pool" />
+            <MetricChip label="Models" value={String(poolItems.length)} hint="global pool" />
+            <MetricChip label="Primary Snapshot" value={model?.agentPrimaryModelId || "-"} hint="runtime snapshot" />
+            <MetricChip
+              label="Runtime Provider"
+              value={model?.providerType || "-"}
+              hint={model?.providerKey ? `key: ${model.providerKey}` : "-"}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -279,72 +287,81 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         </TabsList>
 
         <TabsContent value="providers" className="space-y-4">
-          <Card className="border-border/70">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Provider List</CardTitle>
-              <Button
-                size="sm"
-                onClick={() => {
-                  resetProviderForm()
-                  setProviderEditorOpen(true)
-                }}
-              >
-                新建 Provider
-              </Button>
+          <Card>
+            <CardHeader className="border-b border-border/55 pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle>Provider Registry</CardTitle>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    resetProviderForm()
+                    setProviderEditorOpen(true)
+                  }}
+                >
+                  新建 Provider
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">模型发现前缀（可选）</div>
+            <CardContent className="space-y-3 pt-3">
+              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_220px]">
                 <Input
-                  placeholder="例如 gpt- 或 claude-"
+                  value={providerQuery}
+                  onChange={(event) => setProviderQuery(event.target.value)}
+                  placeholder="筛选 provider（id/type/baseUrl）"
+                />
+                <Input
+                  placeholder="发现前缀（如 gpt-/claude-）"
                   value={discoverPrefix}
                   onChange={(event) => setDiscoverPrefix(event.target.value)}
-                  className="max-w-sm"
                 />
-                <div className="text-[11px] text-muted-foreground">在表格中点击“发现”会用该前缀过滤并自动添加。</div>
               </div>
-              <Separator />
-              <div className="overflow-hidden rounded-xl border border-border/70">
-                <Table>
-                  <TableHeader className="bg-muted/35">
-                    <TableRow>
-                      <TableHead>Id</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Base URL</TableHead>
-                      <TableHead>API Key</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {providers.length === 0 ? (
-                      <EmptyRow colSpan={6} text="暂无 provider" />
-                    ) : (
-                      providers.map((item) => {
+
+              {filteredProviders.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/65 bg-background/60 px-4 py-6 text-sm text-muted-foreground">
+                  没有匹配的 provider。
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        <th className="px-3 py-2 font-medium">Id</th>
+                        <th className="px-3 py-2 font-medium">Type</th>
+                        <th className="px-3 py-2 font-medium">Base URL</th>
+                        <th className="px-3 py-2 font-medium">API Key</th>
+                        <th className="px-3 py-2 font-medium">Updated</th>
+                        <th className="px-3 py-2 font-medium text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProviders.map((item) => {
                         const providerId = String(item.id || "").trim()
                         if (!providerId) return null
                         return (
-                          <TableRow key={providerId}>
-                            <TableCell className="font-medium">{providerId}</TableCell>
-                            <TableCell>{item.type || "-"}</TableCell>
-                            <TableCell className="max-w-[18rem] truncate" title={item.baseUrl || ""}>
+                          <tr key={providerId} className="border-t border-border/60">
+                            <td className="px-3 py-2 text-sm font-medium">{providerId}</td>
+                            <td className="px-3 py-2 text-sm">{item.type || "-"}</td>
+                            <td className="max-w-[20rem] truncate px-3 py-2 text-sm text-muted-foreground" title={item.baseUrl || ""}>
                               {item.baseUrl || "-"}
-                            </TableCell>
-                            <TableCell>
+                            </td>
+                            <td className="px-3 py-2 text-xs">
                               {item.hasApiKey ? (
-                                <Badge variant="outline" className="border-border bg-muted/45 text-foreground">
+                                <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700">
                                   {item.apiKeyMasked || "configured"}
                                 </Badge>
                               ) : (
-                                <Badge variant="outline">empty</Badge>
+                                <Badge variant="outline" className="border-border/60 bg-muted/35 text-muted-foreground">
+                                  empty
+                                </Badge>
                               )}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{formatTime(item.updatedAt)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
+                            </td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">{formatTime(item.updatedAt)}</td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex flex-wrap items-center justify-end gap-1.5">
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="h-7 px-2 text-[11px]"
                                   onClick={() => {
                                     setProviderForm({
                                       id: providerId,
@@ -357,12 +374,13 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
                                 >
                                   编辑
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => onTestProvider(providerId)}>
+                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onTestProvider(providerId)}>
                                   测试
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="h-7 px-2 text-[11px]"
                                   onClick={() =>
                                     onDiscoverProvider({
                                       providerId,
@@ -373,18 +391,18 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
                                 >
                                   发现
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => onRemoveProvider(providerId)}>
+                                <Button size="sm" variant="destructive" className="h-7 px-2 text-[11px]" onClick={() => onRemoveProvider(providerId)}>
                                   删除
                                 </Button>
                               </div>
-                            </TableCell>
-                          </TableRow>
+                            </td>
+                          </tr>
                         )
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -451,77 +469,86 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         </TabsContent>
 
         <TabsContent value="models" className="space-y-4">
-          <Card className="border-border/70">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Model List</CardTitle>
-              <Button
-                size="sm"
-                onClick={() => {
-                  resetModelForm()
-                  setModelEditorOpen(true)
-                }}
-              >
-                新建 Model
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">测试 Prompt</div>
-                <Textarea
-                  className="min-h-[90px]"
-                  value={testPrompt}
-                  onChange={(event) => setTestPrompt(event.target.value)}
-                />
+          <Card>
+            <CardHeader className="border-b border-border/55 pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle>Model Registry</CardTitle>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    resetModelForm()
+                    setModelEditorOpen(true)
+                  }}
+                >
+                  新建 Model
+                </Button>
               </div>
-              <Separator />
-              <div className="overflow-hidden rounded-xl border border-border/70">
-                <Table>
-                  <TableHeader className="bg-muted/35">
-                    <TableRow>
-                      <TableHead>Id</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Params</TableHead>
-                      <TableHead>Updated</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {poolItems.length === 0 ? (
-                      <EmptyRow colSpan={7} text="暂无 model" />
-                    ) : (
-                      poolItems.map((item) => {
+            </CardHeader>
+            <CardContent className="space-y-3 pt-3">
+              <Input
+                value={modelQuery}
+                onChange={(event) => setModelQuery(event.target.value)}
+                placeholder="筛选 model（id/provider/name）"
+              />
+
+              <Textarea
+                className="min-h-[88px]"
+                value={testPrompt}
+                onChange={(event) => setTestPrompt(event.target.value)}
+                placeholder="测试 prompt"
+              />
+
+              {filteredModels.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/65 bg-background/60 px-4 py-6 text-sm text-muted-foreground">
+                  没有匹配的 model。
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        <th className="px-3 py-2 font-medium">Id</th>
+                        <th className="px-3 py-2 font-medium">Provider</th>
+                        <th className="px-3 py-2 font-medium">Name</th>
+                        <th className="px-3 py-2 font-medium">Status</th>
+                        <th className="px-3 py-2 font-medium">Params</th>
+                        <th className="px-3 py-2 font-medium">Updated</th>
+                        <th className="px-3 py-2 font-medium text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredModels.map((item) => {
                         const modelId = String(item.id || "").trim()
                         if (!modelId) return null
                         const isPaused = item.isPaused === true
                         return (
-                          <TableRow key={modelId}>
-                            <TableCell className="font-medium">{modelId}</TableCell>
-                            <TableCell>{item.providerId || "-"}</TableCell>
-                            <TableCell>{item.name || "-"}</TableCell>
-                            <TableCell>
+                          <tr key={modelId} className="border-t border-border/60">
+                            <td className="px-3 py-2 text-sm font-medium">{modelId}</td>
+                            <td className="px-3 py-2 text-sm text-muted-foreground">{item.providerId || "-"}</td>
+                            <td className="px-3 py-2 text-sm">{item.name || "-"}</td>
+                            <td className="px-3 py-2 text-xs">
                               {isPaused ? (
-                                <Badge variant="outline" className="border-border bg-muted/35 text-muted-foreground">
+                                <Badge variant="outline" className="border-border/65 bg-muted/35 text-muted-foreground">
                                   paused
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="border-border bg-muted/45 text-foreground">
+                                <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700">
                                   active
                                 </Badge>
                               )}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
+                            </td>
+                            <td className="px-3 py-2 text-[11px] text-muted-foreground">
                               <div>{`temp ${item.temperature ?? "-"}`}</div>
                               <div>{`max ${item.maxTokens ?? "-"}`}</div>
                               <div>{`topP ${item.topP ?? "-"}`}</div>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{formatTime(item.updatedAt)}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
+                            </td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">{formatTime(item.updatedAt)}</td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex flex-wrap items-center justify-end gap-1.5">
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="h-7 px-2 text-[11px]"
                                   onClick={() => {
                                     setModelForm({
                                       id: modelId,
@@ -541,24 +568,24 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
                                 >
                                   编辑
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => onTestModel(modelId, testPrompt)}>
+                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onTestModel(modelId, testPrompt)}>
                                   测试
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => onPauseModel(modelId, !isPaused)}>
+                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onPauseModel(modelId, !isPaused)}>
                                   {isPaused ? "恢复" : "暂停"}
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => onRemoveModel(modelId)}>
+                                <Button size="sm" variant="destructive" className="h-7 px-2 text-[11px]" onClick={() => onRemoveModel(modelId)}>
                                   删除
                                 </Button>
                               </div>
-                            </TableCell>
-                          </TableRow>
+                            </td>
+                          </tr>
                         )
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
 

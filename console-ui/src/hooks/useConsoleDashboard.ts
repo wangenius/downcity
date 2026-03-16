@@ -371,6 +371,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [chatInput, setChatInput] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const selectedContextIdRef = useRef("");
+  const refreshDashboardRef = useRef<((preferredAgentId?: string) => Promise<void>) | null>(null);
+
+  useEffect(() => {
+    selectedContextIdRef.current = selectedContextId;
+  }, [selectedContextId]);
 
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.id === selectedAgentId) || null,
@@ -721,7 +727,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshLocalChat(nextAgentId),
         ]);
 
-        const byCurrent = contextList.find((item) => item.contextId === selectedContextId)?.contextId || "";
+        const byCurrent =
+          contextList.find((item) => item.contextId === selectedContextIdRef.current)?.contextId || "";
         const localUi = contextList.find((item) => item.contextId === LOCAL_UI_CONTEXT_ID)?.contextId || "";
         const fallback = contextList[0]?.contextId || "";
         const nextContext = byCurrent || localUi || fallback;
@@ -770,7 +777,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshPrompt,
       refreshServices,
       refreshTasks,
-      selectedContextId,
       showToast,
     ],
   );
@@ -827,6 +833,26 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             : results[0];
           const message = String(one?.message || "test completed");
           showToast(`${channel || "chat"} test: ${message}`, one?.success ? "success" : "error");
+
+          const statusRow = chatChannels.find(
+            (item) => String(item.channel || "").trim() === String(channel || "").trim(),
+          );
+          const linkState = String(statusRow?.linkState || "").trim().toLowerCase();
+          const shouldAutoReconnect =
+            Boolean(channel) &&
+            Boolean(one?.success) &&
+            linkState !== "connected";
+          if (shouldAutoReconnect) {
+            await requestJson("/api/services/command", {
+              method: "POST",
+              body: JSON.stringify({
+                serviceName: "chat",
+                command: "reconnect",
+                payload: { channel },
+              }),
+            });
+            showToast(`${channel} test 通过，已自动 reconnect`, "success");
+          }
         } else if (action === "open" || action === "close") {
           showToast(`${channel || "chat"} ${action} 已执行（已写入 ship.json）`, "success");
         } else {
@@ -838,7 +864,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         showToast(`chat ${action} 失败: ${getErrorMessage(error)}`, "error");
       }
     },
-    [refreshChatChannels, refreshServices, requestJson, selectedAgentId, showToast],
+    [chatChannels, refreshChatChannels, refreshServices, requestJson, selectedAgentId, showToast],
   );
 
   const configureChatChannel = useCallback(
@@ -1243,9 +1269,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   useEffect(() => {
-    void refreshDashboard();
+    refreshDashboardRef.current = refreshDashboard;
+  }, [refreshDashboard]);
+
+  useEffect(() => {
+    void refreshDashboardRef.current?.();
     const timer = window.setInterval(() => {
-      void refreshDashboard();
+      void refreshDashboardRef.current?.();
     }, 12000);
     return () => {
       window.clearInterval(timer);
@@ -1253,7 +1283,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         window.clearTimeout(toastTimerRef.current);
       }
     };
-  }, [refreshDashboard]);
+  }, []);
 
   return {
     agents,

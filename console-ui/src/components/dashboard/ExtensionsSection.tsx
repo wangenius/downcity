@@ -36,17 +36,17 @@ export interface ExtensionsSectionProps {
   onControl: (extensionName: string, action: "start" | "stop" | "restart") => void
 }
 
-function groupKeyFromState(raw?: string): "error" | "running" | "other" {
+function groupKeyFromState(raw?: string): "error" | "running" | "idle" {
   const state = String(raw || "").toLowerCase()
   if (state === "error") return "error"
   if (state === "running") return "running"
-  return "other"
+  return "idle"
 }
 
 export function ExtensionsSection(props: ExtensionsSectionProps) {
   const { extensions, formatTime, statusBadgeVariant, onRefresh, onControl } = props
   const [search, setSearch] = React.useState("")
-  const [groupFilter, setGroupFilter] = React.useState<"all" | "error" | "running" | "other">("all")
+  const [groupFilter, setGroupFilter] = React.useState<"all" | "error" | "running" | "idle">("all")
 
   const filtered = extensions.filter((item) => {
     const key = String(item.name || "").toLowerCase()
@@ -58,13 +58,13 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
   const grouped = {
     error: filtered.filter((item) => groupKeyFromState(item.state) === "error"),
     running: filtered.filter((item) => groupKeyFromState(item.state) === "running"),
-    other: filtered.filter((item) => groupKeyFromState(item.state) === "other"),
+    idle: filtered.filter((item) => groupKeyFromState(item.state) === "idle"),
   }
 
-  const sections: Array<{ key: "error" | "running" | "other"; title: string; items: UiExtensionRuntimeItem[] }> = [
+  const sections: Array<{ key: "error" | "running" | "idle"; title: string; items: UiExtensionRuntimeItem[] }> = [
     { key: "error", title: "Error", items: grouped.error },
     { key: "running", title: "Running", items: grouped.running },
-    { key: "other", title: "Other", items: grouped.other },
+    { key: "idle", title: "Idle", items: grouped.idle },
   ]
 
   const visibleSections = sections.filter((section) => groupFilter === "all" || groupFilter === section.key)
@@ -101,7 +101,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                 ["all", `all (${filtered.length})`],
                 ["error", `error (${grouped.error.length})`],
                 ["running", `running (${grouped.running.length})`],
-                ["other", `other (${grouped.other.length})`],
+                ["idle", `idle (${grouped.idle.length})`],
               ] as const).map(([key, label]) => (
                 <Button
                   key={key}
@@ -142,6 +142,8 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                     const name = String(item.name || "unknown")
                     const state = String(item.state || "unknown")
                     const supportsLifecycle = item.supportsLifecycle === true
+                    const lifecycle = item.config?.lifecycle || {}
+                    const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
                     return (
                       <article key={name} className="rounded-xl border border-border/60 bg-background/65 p-3">
                         <div className="flex items-start justify-between gap-2">
@@ -157,6 +159,37 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                           <div className="truncate" title={item.lastError || ""}>
                             {`last error: ${item.lastError || "-"}`}
                           </div>
+                        </div>
+
+                        <div className="mt-2 space-y-1 border-t border-border/50 pt-2 text-[11px] text-muted-foreground">
+                          <div className="font-medium text-foreground/80">config</div>
+                          <div>{`lifecycle.start: ${lifecycle.start ? "on" : "off"}`}</div>
+                          <div>{`lifecycle.stop: ${lifecycle.stop ? "on" : "off"}`}</div>
+                          <div>{`lifecycle.command: ${lifecycle.command ? "on" : "off"}`}</div>
+                          <div>{`actions: ${actionItems.length}`}</div>
+                          {actionItems.length > 0 ? (
+                            <div className="max-h-28 space-y-1 overflow-auto">
+                              {actionItems.map((action) => {
+                                const actionName = String(action?.name || "unknown")
+                                const supportsApi = action?.supportsApi === true
+                                const supportsCmd = action?.supportsCommand === true
+                                const apiMethod = String(action?.apiMethod || "").trim()
+                                const apiPath = String(action?.apiPath || "").trim()
+                                const commandDescription = String(action?.commandDescription || "").trim()
+                                const modeLabel = [
+                                  supportsCmd ? "cmd" : "",
+                                  supportsApi ? "api" : "",
+                                ].filter(Boolean).join("+") || "none"
+                                return (
+                                  <div key={`${name}:${actionName}`} className="truncate" title={commandDescription || apiPath || actionName}>
+                                    {`${actionName} · ${modeLabel}${
+                                      supportsApi && apiMethod && apiPath ? ` · ${apiMethod} ${apiPath}` : ""
+                                    }`}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : null}
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center gap-1.5">

@@ -78,6 +78,40 @@ List extension runtime states.
 }
 ```
 
+## Console UI API (summary)
+
+### `GET /api/ui/extensions`
+
+Returns extension runtime state plus config summary (used by Console UI panels).
+
+Example:
+
+```json
+{
+  "success": true,
+  "extensions": [
+    {
+      "name": "voice",
+      "state": "idle",
+      "supportsLifecycle": true,
+      "supportsCommand": true,
+      "config": {
+        "lifecycle": { "start": true, "stop": true, "command": true },
+        "actions": [
+          {
+            "name": "status",
+            "supportsCommand": true,
+            "supportsApi": true,
+            "apiMethod": "GET",
+            "apiPath": "/extension/voice/status"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
 ## Direct action routes
 
 Each service/extension action also has a default route:

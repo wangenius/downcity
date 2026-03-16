@@ -40,7 +40,7 @@ import {
 } from "@/console/runtime/ConsolePaths.js";
 import { ConsoleStore } from "@utils/store/index.js";
 import { registerConsoleUiModelRoutes } from "@/console/ui/ModelApiRoutes.js";
-import { listExtensionRuntimes } from "@/console/extension/Manager.js";
+import { getSmaExtensions, listExtensionRuntimes } from "@/console/extension/Manager.js";
 import type {
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
@@ -189,9 +189,42 @@ export class ConsoleUIGateway {
 
     this.app.get("/api/ui/extensions", async (c) => {
       try {
+        const runtimes = listExtensionRuntimes();
+        const extensions = getSmaExtensions();
+        const extensionConfigMap = new Map(
+          extensions.map((extension) => {
+            const actions = Object.entries(extension.actions || {}).map(
+              ([actionName, action]) => ({
+                name: actionName,
+                supportsCommand: Boolean(action?.command),
+                supportsApi: Boolean(action?.api),
+                commandDescription: String(action?.command?.description || "").trim(),
+                apiMethod: String(action?.api?.method || "").trim().toUpperCase(),
+                apiPath: String(action?.api?.path || "").trim(),
+              }),
+            );
+            return [
+              extension.name,
+              {
+                lifecycle: {
+                  start: Boolean(extension.lifecycle?.start),
+                  stop: Boolean(extension.lifecycle?.stop),
+                  command: Boolean(extension.lifecycle?.command),
+                },
+                actions,
+              },
+            ] as const;
+          }),
+        );
         return c.json({
           success: true,
-          extensions: listExtensionRuntimes(),
+          extensions: runtimes.map((item) => ({
+            ...item,
+            config: extensionConfigMap.get(item.name) || {
+              lifecycle: { start: false, stop: false, command: false },
+              actions: [],
+            },
+          })),
         });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);

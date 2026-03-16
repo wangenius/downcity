@@ -78,6 +78,40 @@ description: Runtime 对外 HTTP 接口与请求示例
 }
 ```
 
+## Console UI API（摘要）
+
+### `GET /api/ui/extensions`
+
+返回 extension 运行状态 + 配置摘要（适用于 Console UI 面板）。
+
+返回字段示例：
+
+```json
+{
+  "success": true,
+  "extensions": [
+    {
+      "name": "voice",
+      "state": "idle",
+      "supportsLifecycle": true,
+      "supportsCommand": true,
+      "config": {
+        "lifecycle": { "start": true, "stop": true, "command": true },
+        "actions": [
+          {
+            "name": "status",
+            "supportsCommand": true,
+            "supportsApi": true,
+            "apiMethod": "GET",
+            "apiPath": "/extension/voice/status"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
 ## Action 直连路由
 
 每个 service/extension action 还会暴露默认路由：

@@ -72,7 +72,7 @@ function ensureExtensionRuntimeRecord(
 
   const created: ExtensionRuntimeRecord = {
     extension,
-    state: "stopped",
+    state: "idle",
     updatedAt: nowMs(),
     chain: Promise.resolve(),
   };
@@ -236,11 +236,11 @@ async function stopExtensionRuntimeInternal(
   const record = ensureExtensionRuntimeRecord(extension);
   try {
     await runSerialByExtension(record, async () => {
-      if (record.state === "stopped") return;
+      if (record.state === "idle") return;
       markRuntimeState(record, "stopping");
       try {
         await extension.lifecycle?.stop?.(context);
-        markRuntimeState(record, "stopped");
+        markRuntimeState(record, "idle");
       } catch (error) {
         markRuntimeState(record, "error", String(error));
         throw error;
@@ -473,7 +473,7 @@ function wrapExtensionRouteHandler(
       return c.json(
         {
           success: false,
-          error: `Extension "${extensionName}" is stopped`,
+          error: `Extension "${extensionName}" is idle`,
           extensionName,
         },
         503,

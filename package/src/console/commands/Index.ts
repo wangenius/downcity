@@ -473,6 +473,14 @@ program
     });
   }));
 
+program
+  .command("stop")
+  .description("停止 SMA（等价于执行 `sma console stop`）")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async () => {
+    await stopConsoleCommand();
+  }));
+
 const consoleCommand = program
   .command("console")
   .description("Console（中台）：统一管理多个 agent daemon")

@@ -355,6 +355,57 @@ export interface UiExtensionRuntimeItem {
    * 是否支持 command 调用。
    */
   supportsCommand?: boolean;
+  /**
+   * extension 配置摘要（由 console ui 接口返回）。
+   */
+  config?: {
+    /**
+     * 生命周期钩子支持情况。
+     */
+    lifecycle?: {
+      /**
+       * 是否支持 start。
+       */
+      start?: boolean;
+      /**
+       * 是否支持 stop。
+       */
+      stop?: boolean;
+      /**
+       * 是否支持 lifecycle.command。
+       */
+      command?: boolean;
+    };
+    /**
+     * action 能力清单。
+     */
+    actions?: Array<{
+      /**
+       * action 名称。
+       */
+      name?: string;
+      /**
+       * 是否支持 CLI command。
+       */
+      supportsCommand?: boolean;
+      /**
+       * 是否支持 HTTP API。
+       */
+      supportsApi?: boolean;
+      /**
+       * CLI command 描述。
+       */
+      commandDescription?: string;
+      /**
+       * API method（若存在）。
+       */
+      apiMethod?: string;
+      /**
+       * API path（若存在）。
+       */
+      apiPath?: string;
+    }>;
+  };
 }
 
 /**

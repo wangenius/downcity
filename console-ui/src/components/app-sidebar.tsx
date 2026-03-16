@@ -7,6 +7,7 @@
 import * as React from "react"
 import {
   ArrowLeftIcon,
+  BotIcon,
   CommandIcon,
   Layers3Icon,
   MessageSquareTextIcon,
@@ -282,7 +283,7 @@ export function AppSidebar({
                         >
                           <span className="flex min-w-0 w-full items-center justify-between gap-2">
                             <span className="flex min-w-0 items-center gap-2">
-                              <Layers3Icon className="size-4 shrink-0 text-muted-foreground" />
+                              <BotIcon className="size-4 shrink-0 text-muted-foreground" />
                               <span className="truncate">{agent.name || "unknown-agent"}</span>
                             </span>
                             <span
@@ -309,10 +310,20 @@ export function AppSidebar({
           >
             <SidebarGroup>
               <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">
-                {selectedAgent?.name || "Agent"}
+                Agent
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      render={<button type="button" disabled />}
+                      className="opacity-70 data-[slot=sidebar-menu-button]:cursor-default"
+                    >
+                      <span className="w-full truncate text-xs text-muted-foreground">
+                        {selectedAgent?.name || "unknown-agent"}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   {agentItems.map((item) => (
                     <SidebarMenuItem key={item.view}>
                       <SidebarMenuButton

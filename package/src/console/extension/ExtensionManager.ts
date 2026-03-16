@@ -16,7 +16,7 @@ import type { Context as HonoContext } from "hono";
  */
 export type ExtensionRuntimeState =
   | "running"
-  | "stopped"
+  | "idle"
   | "starting"
   | "stopping"
   | "error";

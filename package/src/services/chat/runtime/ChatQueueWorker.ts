@@ -501,7 +501,6 @@ export class ChatQueueWorker {
     }
 
     const serviceContext = this.requireContext();
-    let dispatchedDirectStepCount = 0;
     let runItem = first;
 
     let clearRequested = false;
@@ -553,13 +552,10 @@ export class ChatQueueWorker {
       text: string;
       stepIndex: number;
     }): Promise<void> => {
-      const dispatched = await this.dispatchAssistantTextDirect({
+      await this.dispatchAssistantTextDirect({
         contextId: runItem.contextId,
         assistantText: params.text,
       });
-      if (dispatched) {
-        dispatchedDirectStepCount += 1;
-      }
     };
 
     const typing = this.startTypingHeartbeat(runItem);
@@ -616,22 +612,21 @@ export class ChatQueueWorker {
 
     try {
       // 关键点（中文）
-      // - 正常成功：若 step 期间已分条发送，则跳过最终聚合回发，避免重复。
+      // - 正常成功：不因“已发送 step 文本”而跳过最终结果回发。
+      //   step 文本用于中途反馈；最终消息用于收口本轮结论。
       // - 失败场景：必须回发最终失败信息（即使已有 step 输出）。
-      if (result.success === false || dispatchedDirectStepCount === 0) {
-        const dispatchedDirect = await this.dispatchAssistantMessageDirect({
+      const assistantText = extractTextFromUiMessage(result.assistantMessage).trim();
+      const dispatchedDirect = await this.dispatchAssistantMessageDirect({
+        contextId: runItem.contextId,
+        assistantMessage: result.assistantMessage,
+      });
+      // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里强制兜底回发。
+      if (!dispatchedDirect && result.success === false) {
+        await this.dispatchTextToChannel({
           contextId: runItem.contextId,
-          assistantMessage: result.assistantMessage,
+          text: assistantText || "❌ 执行失败，请稍后重试。",
+          messageId: runItem.messageId,
         });
-        // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里强制兜底回发。
-        if (!dispatchedDirect && result.success === false) {
-          const assistantText = extractTextFromUiMessage(result.assistantMessage).trim();
-          await this.dispatchTextToChannel({
-            contextId: runItem.contextId,
-            text: assistantText || "❌ 执行失败，请稍后重试。",
-            messageId: runItem.messageId,
-          });
-        }
       }
     } catch {
       // ignore

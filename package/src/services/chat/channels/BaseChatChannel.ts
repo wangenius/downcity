@@ -10,7 +10,10 @@ import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
-import { appendInboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
+import {
+  appendInboundChatHistory,
+  appendOutboundChatHistory,
+} from "@services/chat/runtime/ChatHistoryStore.js";
 import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
 import { resolveTelegramMasterStatus } from "@services/chat/channels/telegram/Auth.js";
 import { resolveFeishuMasterStatus } from "@services/chat/channels/feishu/Auth.js";
@@ -181,6 +184,66 @@ export abstract class BaseChatChannel {
   ): Promise<void>;
 
   /**
+   * 是否在 `sendToolText` 成功后自动写入 outbound chat history。
+   *
+   * 关键点（中文）
+   * - 默认开启，覆盖 QQ/Feishu 等未自行写 outbound history 的渠道。
+   * - 已有独立 outbound 落盘逻辑的渠道（如 Telegram）应覆写为 false，避免重复记录。
+   */
+  protected shouldAppendOutboundHistoryOnSend(): boolean {
+    return true;
+  }
+
+  /**
+   * 在工具侧文本发送成功后补齐 outbound history。
+   *
+   * 关键点（中文）
+   * - 使用 channel 的 chatKey 作为 contextId，保证与 inbound/history 查询对齐。
+   * - 仅做审计落盘，不影响发送结果语义。
+   */
+  private async appendToolOutboundHistory(
+    params: ChannelSendTextParams,
+  ): Promise<void> {
+    const chatId = String(params.chatId || "").trim();
+    const text = String(params.text ?? "");
+    if (!chatId || !text.trim()) return;
+
+    const contextId = this.getChatKey({
+      chatId,
+      chatType: params.chatType,
+      messageThreadId: params.messageThreadId,
+      messageId: params.messageId,
+    });
+
+    try {
+      await appendOutboundChatHistory({
+        context: this.context,
+        contextId,
+        channel: this.channel,
+        chatId,
+        text,
+        targetType: params.chatType,
+        ...(typeof params.messageThreadId === "number"
+          ? { threadId: params.messageThreadId }
+          : {}),
+        ...(typeof params.messageId === "string" && params.messageId
+          ? { messageId: params.messageId }
+          : {}),
+        extra: {
+          source: "channel_send_tool_text",
+        },
+      });
+    } catch (error) {
+      this.logger.warn("Failed to append outbound chat history", {
+        error: String(error),
+        channel: this.channel,
+        contextId,
+        chatId,
+      });
+    }
+  }
+
+  /**
    * 供工具层调用的文本发送统一入口。
    *
    * 设计点（中文）
@@ -197,7 +260,11 @@ export abstract class BaseChatChannel {
     if (!text.trim()) return { success: true };
 
     try {
-      await this.sendTextToPlatform({ ...params, chatId, text });
+      const normalized: ChannelSendTextParams = { ...params, chatId, text };
+      await this.sendTextToPlatform(normalized);
+      if (this.shouldAppendOutboundHistoryOnSend()) {
+        await this.appendToolOutboundHistory(normalized);
+      }
       return { success: true };
     } catch (e) {
       return { success: false, error: String(e) };

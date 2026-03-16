@@ -33,6 +33,13 @@ import { buildContextGroups } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export type { DashboardView }
 
@@ -74,6 +81,10 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    */
   onAgentChange: (agentId: string) => void
   /**
+   * 启动未运行的 agent。
+   */
+  onStartAgent: (agentId: string) => Promise<void> | void
+  /**
    * 打开 context workspace 并选中 context。
    */
   onContextOpen: (contextId: string) => void
@@ -107,6 +118,7 @@ export function AppSidebar({
   selectedTaskTitle,
   onViewChange,
   onAgentChange,
+  onStartAgent,
   onContextOpen,
   onTaskOpen,
   ...props
@@ -150,6 +162,8 @@ export function AppSidebar({
   const [sidebarMode, setSidebarMode] = React.useState<SidebarMode>("agent-list")
   const [navDirection, setNavDirection] = React.useState<"forward" | "back">("forward")
   const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
+  const [confirmStartAgent, setConfirmStartAgent] = React.useState<UiAgentOption | null>(null)
+  const [startingAgentId, setStartingAgentId] = React.useState("")
 
   const selectedAgent = agents.find((agent) => agent.id === selectedAgentId) ?? null
 
@@ -247,24 +261,35 @@ export function AppSidebar({
                   ) : null}
                   {agents.map((agent) => {
                     const isActive = agent.id === selectedAgentId
-                    const status = agent.running ? "running" : "stopped"
+                    const isRunning = agent.running === true
                     return (
                       <SidebarMenuItem key={agent.id}>
                         <SidebarMenuButton
                           tooltip={agent.id}
                           isActive={isActive}
                           onClick={() => {
-                            setNavDirection("forward")
-                            onAgentChange(agent.id)
+                            if (isRunning) {
+                              setNavDirection("forward")
+                              onAgentChange(agent.id)
+                              return
+                            }
+                            setConfirmStartAgent(agent)
                           }}
-                          className="h-auto rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
+                          className={cn(
+                            "rounded-lg text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground",
+                            !isRunning && "opacity-55",
+                          )}
                         >
-                          <span className="flex min-w-0 w-full items-center gap-2">
-                            <span className={`inline-flex h-2 w-2 shrink-0 rounded-full ${agent.running ? "bg-emerald-500" : "bg-muted-foreground/70"}`} />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-medium">{agent.name || "unknown-agent"}</span>
-                              <span className="block truncate text-[11px] text-muted-foreground">{status}</span>
+                          <span className="flex min-w-0 w-full items-center justify-between gap-2">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <Layers3Icon className="size-4 shrink-0 text-muted-foreground" />
+                              <span className="truncate">{agent.name || "unknown-agent"}</span>
                             </span>
+                            <span
+                              className={`inline-flex h-2 w-2 shrink-0 rounded-full ${
+                                isRunning ? "bg-emerald-500" : "bg-muted-foreground/60"
+                              }`}
+                            />
                           </span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -430,6 +455,51 @@ export function AppSidebar({
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="px-3 py-2 text-xs text-muted-foreground">Console UI</div>
       </SidebarFooter>
+
+      <Dialog
+        open={Boolean(confirmStartAgent)}
+        onOpenChange={(open) => {
+          if (!open && !startingAgentId) {
+            setConfirmStartAgent(null)
+          }
+        }}
+      >
+        <DialogContent className="w-[min(92vw,460px)]">
+          <DialogHeader>
+            <DialogTitle>启动 Agent</DialogTitle>
+            <DialogDescription>
+              {`Agent "${confirmStartAgent?.name || "unknown-agent"}" 当前未启动，是否现在启动？`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-end gap-2 px-4 pb-4">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmStartAgent(null)}
+              disabled={Boolean(startingAgentId)}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={async () => {
+                const target = confirmStartAgent
+                if (!target) return
+                try {
+                  setStartingAgentId(target.id)
+                  await Promise.resolve(onStartAgent(target.id))
+                  setNavDirection("forward")
+                  onAgentChange(target.id)
+                } finally {
+                  setStartingAgentId("")
+                  setConfirmStartAgent(null)
+                }
+              }}
+              disabled={Boolean(startingAgentId)}
+            >
+              {startingAgentId ? "启动中..." : "确认启动"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Sidebar>
   )
 }

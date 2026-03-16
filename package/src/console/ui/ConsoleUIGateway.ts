@@ -40,6 +40,7 @@ import {
 } from "@/console/runtime/ConsolePaths.js";
 import { ConsoleStore } from "@utils/store/index.js";
 import { registerConsoleUiModelRoutes } from "@/console/ui/ModelApiRoutes.js";
+import { listExtensionRuntimes } from "@/console/extension/Manager.js";
 import type {
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
@@ -181,6 +182,17 @@ export class ConsoleUIGateway {
         const requestedAgentId = this.readRequestedAgentId(c.req.raw);
         const payload = await this.buildConfigStatusResponse(requestedAgentId);
         return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.get("/api/ui/extensions", async (c) => {
+      try {
+        return c.json({
+          success: true,
+          extensions: listExtensionRuntimes(),
+        });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
       }
@@ -555,7 +567,8 @@ export class ConsoleUIGateway {
     }
     const running = agents.find((agent) => agent.running === true);
     if (running) return running.id;
-    return agents[0]?.id || "";
+    // 关键点（中文）：没有运行中 agent 时不返回历史/离线 id，避免 UI 持续请求并触发 503 噪音。
+    return "";
   }
 
   private async buildAgentsResponse(

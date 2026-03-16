@@ -434,6 +434,9 @@ export function App() {
           handleAgentChange(agentId)
           navigateToView("agentOverview", { agentId })
         }}
+        onStartAgent={async (agentId) => {
+          await startAgentFromHistory(agentId)
+        }}
         onTaskOpen={(taskTitle) => {
           setSelectedTaskTitle(taskTitle)
           navigateToView("agentTasks", { taskTitle })

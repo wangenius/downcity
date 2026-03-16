@@ -461,6 +461,18 @@ program
     await consoleInitCommand(options);
   }));
 
+program
+  .command("start")
+  .description("启动 SMA（等价于先执行 `sma console start`，再执行 `sma console ui start`）")
+  .helpOption("--help", "display help for command")
+  .action(withVersionBanner(async () => {
+    await startConsoleCommand();
+    const cliPath = resolve(__dirname, "./Index.js");
+    await startConsoleUiCommand({
+      cliPath,
+    });
+  }));
+
 const consoleCommand = program
   .command("console")
   .description("Console（中台）：统一管理多个 agent daemon")

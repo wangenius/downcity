@@ -291,10 +291,10 @@ export function TasksSection(props: TasksSectionProps) {
         {tasks.length === 0 ? (
           <div className="py-4 text-sm text-muted-foreground">暂无 task 数据</div>
         ) : (
-          <div className="overflow-auto border border-border/70">
+          <div className="overflow-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="px-0 py-2 font-medium">Task</th>
                   <th className="px-2 py-2 font-medium">Status</th>
                 </tr>
@@ -307,7 +307,7 @@ export function TasksSection(props: TasksSectionProps) {
                   return (
                     <tr
                       key={title}
-                      className="cursor-pointer border-b border-border/50 hover:bg-muted/30"
+                      className="cursor-pointer hover:bg-muted/30"
                       onClick={() => onSelectTaskTitle?.(title)}
                     >
                       <td className="px-0 py-2 text-sm font-medium">{title}</td>
@@ -363,8 +363,8 @@ export function TasksSection(props: TasksSectionProps) {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <section className="space-y-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="min-w-0 space-y-2">
           <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             Task Detail
           </div>
@@ -372,15 +372,30 @@ export function TasksSection(props: TasksSectionProps) {
             <div className="text-xs uppercase tracking-wide text-muted-foreground">description</div>
             <div className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{selectedTask.description || "-"}</div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">body</div>
-            <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
+            <pre className="h-[42vh] min-h-[22rem] overflow-auto border border-border/70 bg-background p-3 text-[12px] leading-relaxed">
               {selectedTask.body || "-"}
             </pre>
-            <div className="grid gap-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
-              <div>{`kind: ${selectedTask.kind || "-"}`}</div>
-              <div>{`when: ${selectedTask.when || "-"}`}</div>
-              <div className="truncate font-mono" title={selectedTask.contextId || ""}>{`contextId: ${selectedTask.contextId || "-"}`}</div>
-              <div className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{`taskMdPath: ${selectedTask.taskMdPath || "-"}`}</div>
-              <div>{`lastRun: ${formatRunTimestampForDisplay(String(selectedTask.lastRunTimestamp || ""), formatTime)}`}</div>
+            <div className="space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                <span className="text-foreground/80">kind</span>
+                <span>{selectedTask.kind || "-"}</span>
+              </div>
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                <span className="text-foreground/80">when</span>
+                <span>{selectedTask.when || "-"}</span>
+              </div>
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                <span className="text-foreground/80">contextId</span>
+                <span className="truncate font-mono" title={selectedTask.contextId || ""}>{selectedTask.contextId || "-"}</span>
+              </div>
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                <span className="text-foreground/80">taskMdPath</span>
+                <span className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{selectedTask.taskMdPath || "-"}</span>
+              </div>
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                <span className="text-foreground/80">lastRun</span>
+                <span>{formatRunTimestampForDisplay(String(selectedTask.lastRunTimestamp || ""), formatTime)}</span>
+              </div>
             </div>
           </div>
         </section>
@@ -404,10 +419,10 @@ export function TasksSection(props: TasksSectionProps) {
               </Button>
             </div>
 
-            <div className="overflow-auto border border-border/70">
+            <div className="overflow-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                     <th className="px-0 py-2 font-medium">Time</th>
                     <th className="px-2 py-2 font-medium">Status</th>
                     <th className="px-2 py-2 font-medium">Started</th>
@@ -430,7 +445,7 @@ export function TasksSection(props: TasksSectionProps) {
                       return (
                         <tr
                           key={run.timestamp}
-                          className="cursor-pointer border-b border-border/50 hover:bg-muted/30"
+                          className="cursor-pointer hover:bg-muted/30"
                           onClick={() => {
                             setSelectedRunTimestamp(run.timestamp);
                             setRunDetailOpen(true);

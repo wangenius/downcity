@@ -59,6 +59,25 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function isNoRunningAgentError(messageInput: string): boolean {
+  const message = String(messageInput || "").toLowerCase();
+  return (
+    message.includes("no running agent found") ||
+    message.includes("start one via `sma agent start` first") ||
+    message.includes("no running agent selected")
+  );
+}
+
+function isAgentUnavailableError(messageInput: string): boolean {
+  const message = String(messageInput || "").toLowerCase();
+  return (
+    isNoRunningAgentError(message) ||
+    message.includes("service unavailable") ||
+    message.includes("selected agent runtime endpoint is unavailable") ||
+    message.includes("503")
+  );
+}
+
 function statusBadgeVariant(raw?: string): "ok" | "warn" | "bad" {
   const value = String(raw || "").toLowerCase();
   if (["running", "ok", "active", "enabled", "success"].includes(value)) return "ok";
@@ -197,7 +216,7 @@ export interface UseConsoleDashboardResult {
   /**
    * 刷新 extension 状态。
    */
-  refreshExtensions: (agentId: string) => Promise<void>;
+  refreshExtensions: () => Promise<void>;
   /**
    * 刷新 context 列表。
    */
@@ -458,7 +477,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const clearPanelDataForNoAgent = useCallback(() => {
     setOverview(null);
     setServices([]);
-    setExtensions([]);
+    // 关键点（中文）：extensions 作为全局页信息，保留上次快照，避免无 agent 时整块消失。
     setChatChannels([]);
     setContexts([]);
     setSelectedContextId("");
@@ -477,10 +496,28 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       const endpoint = preferred
         ? `/api/ui/agents?agent=${encodeURIComponent(preferred)}`
         : "/api/ui/agents";
-      const data = await requestJson<UiAgentsResponse>(endpoint);
+      let data: UiAgentsResponse;
+      try {
+        data = await requestJson<UiAgentsResponse>(endpoint);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        // 关键点（中文）：无运行中 agent 属于正常空态，不应走错误提示。
+        if (isNoRunningAgentError(message)) {
+          setAgents([]);
+          setSelectedAgentId("");
+          localStorage.removeItem(AGENT_STORAGE_KEY);
+          return { nextAgentId: "", list: [] };
+        }
+        throw error;
+      }
 
       const list = Array.isArray(data.agents) ? data.agents : [];
-      const nextId = String(data.selectedAgentId || list[0]?.id || "");
+      const selectedFromApi = String(data.selectedAgentId || "").trim();
+      const selectedRunning =
+        list.find((item) => item.id === selectedFromApi && item.running === true)?.id || "";
+      const firstRunning = list.find((item) => item.running === true)?.id || "";
+      // 关键点（中文）：前端只接受 running agent，彻底阻断离线 agent 被误选后导致的持续 503。
+      const nextId = selectedRunning || firstRunning || "";
       setAgents(list);
       setSelectedAgentId(nextId);
 
@@ -514,9 +551,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const refreshExtensions = useCallback(
-    async (agentId: string) => {
-      if (!agentId) return;
-      const data = await requestJson<UiExtensionsResponse>("/api/extensions/list", {}, agentId);
+    async () => {
+      const data = await requestJson<UiExtensionsResponse>("/api/ui/extensions");
       setExtensions(Array.isArray(data.extensions) ? data.extensions : []);
     },
     [requestJson],
@@ -702,9 +738,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         const { nextAgentId, list } = await refreshAgents(preferredAgentId);
         if (!nextAgentId) {
           clearPanelDataForNoAgent();
-          await refreshModel("");
-          await refreshModelPool();
-          await refreshConfigStatus("");
+          // 关键点（中文）：无 agent 也要保留并刷新全局 model/pool/config 信息。
+          await Promise.allSettled([
+            refreshExtensions(),
+            refreshModel(""),
+            refreshModelPool(),
+            refreshConfigStatus(""),
+          ]);
           setTopbarError(false);
           setTopbarStatus("未检测到运行中的 agent");
           return;
@@ -716,9 +756,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         ]);
 
         await Promise.all([
+          refreshExtensions(),
           refreshOverview(nextAgentId),
           refreshServices(nextAgentId),
-          refreshExtensions(nextAgentId),
           refreshTasks(nextAgentId),
           refreshLogs(nextAgentId),
           refreshModel(nextAgentId),
@@ -753,6 +793,22 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         );
       } catch (error) {
         const message = getErrorMessage(error);
+        if (isAgentUnavailableError(message)) {
+          // 关键点（中文）：agent 不可用时直接退回空态，避免轮询持续打离线 agent。
+          clearPanelDataForNoAgent();
+          setSelectedAgentId("");
+          localStorage.removeItem(AGENT_STORAGE_KEY);
+          // 关键点（中文）：离线自愈分支同样要保留并刷新全局 model/pool/config。
+          await Promise.allSettled([
+            refreshExtensions(),
+            refreshModel(""),
+            refreshModelPool(),
+            refreshConfigStatus(""),
+          ]);
+          setTopbarError(false);
+          setTopbarStatus("未检测到运行中的 agent");
+          return;
+        }
         setTopbarError(true);
         setTopbarStatus(`连接失败: ${message}`);
         showToast(`刷新失败: ${message}`, "error");
@@ -805,12 +861,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           body: JSON.stringify({ extensionName, action }),
         });
         showToast(`extension ${extensionName} ${action} 已执行`, "success");
-        await refreshExtensions(selectedAgentId);
+        await refreshExtensions();
       } catch (error) {
         showToast(`extension 操作失败: ${getErrorMessage(error)}`, "error");
       }
     },
-    [refreshExtensions, requestJson, selectedAgentId, showToast],
+    [refreshExtensions, requestJson, showToast],
   );
 
   const runChatChannelAction = useCallback(

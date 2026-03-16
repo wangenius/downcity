@@ -227,15 +227,10 @@ export function App() {
 
   React.useEffect(() => {
     if (activeView !== "agentTasks") return
-    if (!selectedTaskTitle) {
-      const fallback = String(tasks[0]?.title || "").trim()
-      if (fallback) setSelectedTaskTitle(fallback)
-      return
-    }
+    if (!selectedTaskTitle) return
     const exists = tasks.some((item) => String(item.title || "").trim() === selectedTaskTitle)
     if (!exists) {
-      const fallback = String(tasks[0]?.title || "").trim()
-      setSelectedTaskTitle(fallback || "")
+      setSelectedTaskTitle("")
     }
   }, [activeView, selectedTaskTitle, tasks])
 
@@ -348,8 +343,9 @@ export function App() {
               onLoadTaskRunDetail={(title, timestamp) => loadTaskRunDetail(title, timestamp)}
               selectedTaskTitle={selectedTaskTitle}
               onSelectTaskTitle={(taskTitle) => {
-                setSelectedTaskTitle(taskTitle)
-                navigateToView("agentTasks", { taskTitle })
+                const normalizedTaskTitle = String(taskTitle || "").trim()
+                setSelectedTaskTitle(normalizedTaskTitle)
+                navigateToView("agentTasks", normalizedTaskTitle ? { taskTitle: normalizedTaskTitle } : undefined)
               }}
             />
           </section>

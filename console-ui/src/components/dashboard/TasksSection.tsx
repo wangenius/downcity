@@ -1,10 +1,21 @@
 /**
  * Tasks 运行状态与执行历史区。
+ *
+ * 关键点（中文）
+ * - `/tasks`：只展示 task 总览列表（名称 + 状态）。
+ * - `/tasks/:title`：只展示当前 task 的详细内容，不再重复展示 task 列表。
  */
 
 import * as React from "react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import type {
   UiTaskItem,
   UiTaskRunDetailResponse,
@@ -102,22 +113,20 @@ export function TasksSection(props: TasksSectionProps) {
     onSelectTaskTitle,
   } = props;
 
-  const [selectedTitle, setSelectedTitle] = React.useState("");
+  const routeTaskTitle = String(selectedTaskTitle || "").trim();
+  const selectedTask = React.useMemo(
+    () => tasks.find((item) => String(item.title || "").trim() === routeTaskTitle) || null,
+    [routeTaskTitle, tasks],
+  );
+  const isOverviewMode = !routeTaskTitle;
+
   const [runs, setRuns] = React.useState<UiTaskRunSummary[]>([]);
   const [selectedRunTimestamp, setSelectedRunTimestamp] = React.useState("");
   const [selectedRunDetail, setSelectedRunDetail] = React.useState<UiTaskRunDetailResponse | null>(null);
   const [loadingRuns, setLoadingRuns] = React.useState(false);
   const [loadingRunDetail, setLoadingRunDetail] = React.useState(false);
   const [forceLivePolling, setForceLivePolling] = React.useState(false);
-
-  const selectTaskTitle = React.useCallback(
-    (titleInput: string) => {
-      const nextTitle = String(titleInput || "").trim();
-      setSelectedTitle(nextTitle);
-      if (nextTitle) onSelectTaskTitle?.(nextTitle);
-    },
-    [onSelectTaskTitle],
-  );
+  const [runDetailOpen, setRunDetailOpen] = React.useState(false);
 
   const badgeClass = React.useCallback(
     (status?: string): string => {
@@ -127,13 +136,6 @@ export function TasksSection(props: TasksSectionProps) {
       return "border-border bg-muted/35 text-muted-foreground";
     },
     [statusBadgeVariant],
-  );
-
-  const selectedTask = React.useMemo(
-    () =>
-      tasks.find((item) => String(item.title || "").trim() === selectedTitle) ||
-      null,
-    [selectedTitle, tasks],
   );
 
   const selectedRun = React.useMemo(
@@ -213,57 +215,29 @@ export function TasksSection(props: TasksSectionProps) {
   );
 
   React.useEffect(() => {
-    const externalTitle = String(selectedTaskTitle || "").trim();
-    if (externalTitle) {
-      const exists = tasks.some((item) => String(item.title || "").trim() === externalTitle);
-      if (exists && externalTitle !== selectedTitle) {
-        setSelectedTitle(externalTitle);
-      }
-      if (exists) return;
-    }
-
-    if (!selectedTitle) {
-      const fallback = String(tasks[0]?.title || "").trim();
-      if (fallback) selectTaskTitle(fallback);
-      return;
-    }
-    const exists = tasks.some(
-      (item) => String(item.title || "").trim() === selectedTitle,
-    );
-    if (!exists) {
-      const fallback = String(tasks[0]?.title || "").trim();
-      if (fallback) {
-        selectTaskTitle(fallback);
-      } else {
-        setSelectedTitle("");
-      }
-    }
-  }, [selectedTaskTitle, selectTaskTitle, selectedTitle, tasks]);
-
-  React.useEffect(() => {
-    const title = String(selectedTitle || "").trim();
-    if (!title) {
+    if (!selectedTask) {
       setRuns([]);
       setSelectedRunTimestamp("");
       setSelectedRunDetail(null);
       setForceLivePolling(false);
+      setRunDetailOpen(false);
       return;
     }
-    void loadRuns(title, {
+    void loadRuns(String(selectedTask.title || ""), {
       showLoading: true,
       preferInProgress: true,
     });
-  }, [loadRuns, selectedTitle]);
+  }, [loadRuns, selectedTask]);
 
   React.useEffect(() => {
-    const title = String(selectedTitle || "").trim();
+    const title = String(selectedTask?.title || "").trim();
     const timestamp = String(selectedRunTimestamp || "").trim();
     if (!title || !timestamp) {
       setSelectedRunDetail(null);
       return;
     }
     void loadRunDetail(title, timestamp, { showLoading: true });
-  }, [loadRunDetail, selectedRunTimestamp, selectedTitle]);
+  }, [loadRunDetail, selectedRunTimestamp, selectedTask]);
 
   React.useEffect(() => {
     if (!activeRun?.timestamp) return;
@@ -272,21 +246,18 @@ export function TasksSection(props: TasksSectionProps) {
   }, [activeRun, selectedRunTimestamp]);
 
   React.useEffect(() => {
-    const title = String(selectedTitle || "").trim();
+    const title = String(selectedTask?.title || "").trim();
     if (!title) return;
     const shouldPoll =
       forceLivePolling || selectedRunInProgress || runs.some((item) => Boolean(item.inProgress));
     if (!shouldPoll) return;
 
-    // 关键点（中文）：仅在“执行中”阶段高频轮询，完成后自动停掉，避免 UI 无意义刷接口。
+    // 关键点（中文）：仅在执行中轮询，执行结束自动停掉，减少无效刷新。
     const timer = window.setInterval(() => {
       void loadRuns(title, { showLoading: false, preferInProgress: true }).then((nextRuns) => {
         const running = nextRuns.find((item) => Boolean(item.inProgress));
         const targetTimestamp = String(
-          running?.timestamp ||
-            selectedRunTimestamp ||
-            nextRuns[0]?.timestamp ||
-            "",
+          running?.timestamp || selectedRunTimestamp || nextRuns[0]?.timestamp || "",
         ).trim();
         if (targetTimestamp) {
           void loadRunDetail(title, targetTimestamp, { showLoading: false });
@@ -307,85 +278,43 @@ export function TasksSection(props: TasksSectionProps) {
     runs,
     selectedRunInProgress,
     selectedRunTimestamp,
-    selectedTitle,
+    selectedTask,
   ]);
 
-  return (
-    <div className="space-y-6">
-      <section className="space-y-2">
+  if (isOverviewMode) {
+    return (
+      <div className="space-y-2">
         <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Tasks Runtime
+          Tasks
         </div>
 
         {tasks.length === 0 ? (
           <div className="py-4 text-sm text-muted-foreground">暂无 task 数据</div>
         ) : (
-          <div className="overflow-auto">
+          <div className="overflow-auto border border-border/70">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                   <th className="px-0 py-2 font-medium">Task</th>
                   <th className="px-2 py-2 font-medium">Status</th>
-                  <th className="px-2 py-2 font-medium">Schedule</th>
-                  <th className="px-2 py-2 font-medium">Context</th>
-                  <th className="px-2 py-2 font-medium">Last Run</th>
-                  <th className="px-2 py-2 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {tasks.map((task) => {
-                  const title = String(task.title || "-");
+                  const title = String(task.title || "").trim();
+                  if (!title) return null;
                   const status = String(task.status || "unknown");
-                  const isSelected = title === selectedTitle;
-                  const selectedTaskRunning = isSelected && Boolean(activeRun);
                   return (
-                    <tr key={title} className="border-b border-border/50">
+                    <tr
+                      key={title}
+                      className="cursor-pointer border-b border-border/50 hover:bg-muted/30"
+                      onClick={() => onSelectTaskTitle?.(title)}
+                    >
                       <td className="px-0 py-2 text-sm font-medium">{title}</td>
                       <td className="px-2 py-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={badgeClass(status)}>
-                            {status}
-                          </Badge>
-                          {selectedTaskRunning ? (
-                            <Badge variant="outline" className={badgeClass("running")}>
-                              running
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-xs text-muted-foreground">{`when ${String(task.when || "-")}`}</td>
-                      <td className="max-w-[14rem] truncate px-2 py-2 font-mono text-xs" title={task.contextId || ""}>
-                        {String(task.contextId || "-")}
-                      </td>
-                      <td className="px-2 py-2 text-xs text-muted-foreground">
-                        {formatRunTimestampForDisplay(
-                          String(task.lastRunTimestamp || ""),
-                          formatTime,
-                        )}
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => selectTaskTitle(title)}>
-                            详情
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              selectTaskTitle(title);
-                              setForceLivePolling(true);
-                              onRunTask(title);
-                              window.setTimeout(() => {
-                                void loadRuns(title, {
-                                  showLoading: false,
-                                  preferInProgress: true,
-                                });
-                              }, 350);
-                            }}
-                          >
-                            run
-                          </Button>
-                        </div>
+                        <Badge variant="outline" className={badgeClass(status)}>
+                          {status}
+                        </Badge>
                       </td>
                     </tr>
                   );
@@ -394,222 +323,190 @@ export function TasksSection(props: TasksSectionProps) {
             </table>
           </div>
         )}
-      </section>
+      </div>
+    );
+  }
 
-      {selectedTask ? (
-        <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-          <section className="space-y-2">
-            <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              {`Task Detail · ${selectedTitle}`}
+  if (!selectedTask) {
+    return <div className="py-6 text-sm text-muted-foreground">该 task 不存在或已被删除</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-border/70 pb-2">
+        <div className="text-sm font-semibold tracking-tight">{String(selectedTask.title || "-")}</div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={badgeClass(String(selectedTask.status || "unknown"))}>
+            {String(selectedTask.status || "unknown")}
+          </Badge>
+          <Button size="sm" variant="outline" onClick={() => onSelectTaskTitle?.("")}>
+            返回列表
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const title = String(selectedTask.title || "").trim();
+              if (!title) return;
+              setForceLivePolling(true);
+              onRunTask(title);
+              window.setTimeout(() => {
+                void loadRuns(title, {
+                  showLoading: false,
+                  preferInProgress: true,
+                });
+              }, 350);
+            }}
+          >
+            run
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="space-y-2">
+          <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Task Detail
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">description</div>
+            <div className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{selectedTask.description || "-"}</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">body</div>
+            <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
+              {selectedTask.body || "-"}
+            </pre>
+            <div className="grid gap-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+              <div>{`kind: ${selectedTask.kind || "-"}`}</div>
+              <div>{`when: ${selectedTask.when || "-"}`}</div>
+              <div className="truncate font-mono" title={selectedTask.contextId || ""}>{`contextId: ${selectedTask.contextId || "-"}`}</div>
+              <div className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{`taskMdPath: ${selectedTask.taskMdPath || "-"}`}</div>
+              <div>{`lastRun: ${formatRunTimestampForDisplay(String(selectedTask.lastRunTimestamp || ""), formatTime)}`}</div>
             </div>
-            <div className="space-y-2 text-sm">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">description</div>
-              <div className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{selectedTask.description || "-"}</div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">body</div>
-              <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
-                {selectedTask.body || "-"}
-              </pre>
-              <div className="grid gap-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
-                <div>{`status: ${selectedTask.status || "-"}`}</div>
-                <div>{`kind: ${selectedTask.kind || "-"}`}</div>
-                <div>{`when: ${selectedTask.when || "-"}`}</div>
-                <div className="truncate font-mono" title={selectedTask.contextId || ""}>{`contextId: ${selectedTask.contextId || "-"}`}</div>
-                <div className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{`taskMdPath: ${selectedTask.taskMdPath || "-"}`}</div>
-              </div>
+          </div>
+        </section>
+
+        <div className="space-y-2">
+          <section className="space-y-2">
+            <div className="flex items-center justify-between border-b border-border/70 pb-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Runtime</div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void loadRuns(String(selectedTask.title || ""), {
+                    showLoading: true,
+                    preferInProgress: true,
+                  });
+                }}
+                disabled={loadingRuns}
+              >
+                {loadingRuns ? "加载中..." : "刷新"}
+              </Button>
+            </div>
+
+            <div className="overflow-auto border border-border/70">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <th className="px-0 py-2 font-medium">Time</th>
+                    <th className="px-2 py-2 font-medium">Status</th>
+                    <th className="px-2 py-2 font-medium">Started</th>
+                    <th className="px-2 py-2 font-medium">Duration</th>
+                    <th className="px-2 py-2 font-medium">Rounds</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-0 py-3 text-sm text-muted-foreground">
+                        暂无执行记录
+                      </td>
+                    </tr>
+                  ) : (
+                    runs.map((run) => {
+                      const status = run.inProgress
+                        ? "running"
+                        : String(run.status || run.executionStatus || "unknown");
+                      return (
+                        <tr
+                          key={run.timestamp}
+                          className="cursor-pointer border-b border-border/50 hover:bg-muted/30"
+                          onClick={() => {
+                            setSelectedRunTimestamp(run.timestamp);
+                            setRunDetailOpen(true);
+                          }}
+                        >
+                          <td className="px-0 py-2 text-xs text-muted-foreground">
+                            {formatRunTimestampForDisplay(run.timestamp, formatTime)}
+                          </td>
+                          <td className="px-2 py-2">
+                            <Badge variant="outline" className={badgeClass(status)}>
+                              {status}
+                            </Badge>
+                          </td>
+                          <td className="px-2 py-2 text-xs text-muted-foreground">{formatTime(run.startedAt)}</td>
+                          <td className="px-2 py-2 text-xs text-muted-foreground">
+                            {formatDurationMs(run.startedAt, run.endedAt)}
+                          </td>
+                          <td className="px-2 py-2 text-xs text-muted-foreground">
+                            {run.dialogueRounds ?? run.progressRound ?? "-"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </section>
-
-          <div className="space-y-6">
-            {activeRun || selectedRunInProgress || forceLivePolling ? (
-              <section className="space-y-2">
-                <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Current Execution
-                </div>
-                <div className="grid gap-1 text-xs text-muted-foreground">
-                  <div>{`time: ${formatRunTimestampForDisplay(
-                    String(activeRun?.timestamp || selectedRunTimestamp || ""),
-                    formatTime,
-                  )}`}</div>
-                  <div className="flex items-center gap-2">
-                    <span>status:</span>
-                    <Badge
-                      variant="outline"
-                      className={badgeClass(normalizeRunStatus(activeRun || selectedRun, selectedRunDetail))}
-                    >
-                      {normalizeRunStatus(activeRun || selectedRun, selectedRunDetail)}
-                    </Badge>
-                  </div>
-                  <div>{`phase: ${String(selectedRunDetail?.progress?.phase || activeRun?.progressPhase || "-")}`}</div>
-                  <div>{`message: ${String(selectedRunDetail?.progress?.message || activeRun?.progressMessage || "-")}`}</div>
-                  <div>{`round: ${
-                    selectedRunDetail?.progress?.round ?? activeRun?.progressRound ?? "-"
-                  }/${selectedRunDetail?.progress?.maxRounds ?? activeRun?.progressMaxRounds ?? "-"}`}</div>
-                  <div>{`updatedAt: ${formatTime(selectedRunDetail?.progress?.updatedAt || activeRun?.progressUpdatedAt)}`}</div>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress Events</div>
-                  <div className="max-h-48 space-y-2 overflow-auto border border-border/70 bg-background p-2">
-                    {Array.isArray(selectedRunDetail?.progress?.events) &&
-                    selectedRunDetail.progress.events.length > 0 ? (
-                      selectedRunDetail.progress.events.slice(-12).map((event, index) => (
-                        <article key={`${String(event.at || index)}:${index}`} className="border-b border-border/60 pb-2">
-                          <div className="mb-1 text-[11px] text-muted-foreground">
-                            {`${String(event.phase || "phase")} · ${formatTime(event.at)}`}
-                          </div>
-                          <div className="text-xs">{String(event.message || "-")}</div>
-                        </article>
-                      ))
-                    ) : (
-                      <div className="text-xs text-muted-foreground">等待执行进度...</div>
-                    )}
-                  </div>
-                </div>
-              </section>
-            ) : null}
-
-            <section className="space-y-2">
-              <div className="flex items-center justify-between border-b border-border/70 pb-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Run History</div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    void loadRuns(selectedTitle, {
-                      showLoading: true,
-                      preferInProgress: true,
-                    });
-                  }}
-                  disabled={loadingRuns}
-                >
-                  {loadingRuns ? "加载中..." : "刷新"}
-                </Button>
-              </div>
-
-              <div className="overflow-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                      <th className="px-0 py-2 font-medium">Time</th>
-                      <th className="px-2 py-2 font-medium">Status</th>
-                      <th className="px-2 py-2 font-medium">Started</th>
-                      <th className="px-2 py-2 font-medium">Duration</th>
-                      <th className="px-2 py-2 font-medium">Rounds</th>
-                      <th className="px-2 py-2 text-right font-medium">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runs.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-0 py-3 text-sm text-muted-foreground">
-                          暂无执行记录
-                        </td>
-                      </tr>
-                    ) : (
-                      runs.map((run) => {
-                        const isActive = run.timestamp === selectedRunTimestamp;
-                        const status = run.inProgress
-                          ? "running"
-                          : String(run.status || run.executionStatus || "unknown");
-                        return (
-                          <tr key={run.timestamp} className="border-b border-border/50">
-                            <td className="px-0 py-2 text-xs text-muted-foreground">
-                              {formatRunTimestampForDisplay(run.timestamp, formatTime)}
-                            </td>
-                            <td className="px-2 py-2">
-                              <div className="space-y-1">
-                                <Badge variant="outline" className={badgeClass(status)}>
-                                  {status}
-                                </Badge>
-                                {run.inProgress && run.progressMessage ? (
-                                  <div className="max-w-[20rem] truncate text-[11px] text-muted-foreground" title={run.progressMessage}>
-                                    {run.progressMessage}
-                                  </div>
-                                ) : null}
-                              </div>
-                            </td>
-                            <td className="px-2 py-2 text-xs text-muted-foreground">{formatTime(run.startedAt)}</td>
-                            <td className="px-2 py-2 text-xs text-muted-foreground">
-                              {formatDurationMs(run.startedAt, run.endedAt)}
-                            </td>
-                            <td className="px-2 py-2 text-xs text-muted-foreground">
-                              {run.dialogueRounds ?? run.progressRound ?? "-"}
-                            </td>
-                            <td className="px-2 py-2 text-right">
-                              <Button
-                                size="sm"
-                                variant={isActive ? "secondary" : "outline"}
-                                onClick={() => setSelectedRunTimestamp(run.timestamp)}
-                              >
-                                查看
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="space-y-2">
-              <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                {`Run Detail${
-                  selectedRunTimestamp
-                    ? ` · ${formatRunTimestampForDisplay(selectedRunTimestamp, formatTime)}`
-                    : ""
-                }`}
-              </div>
-              {loadingRunDetail ? (
-                <div className="text-sm text-muted-foreground">加载中...</div>
-              ) : !selectedRunDetail ? (
-                <div className="text-sm text-muted-foreground">请选择一条 run 记录</div>
-              ) : (
-                <>
-                  <div className="grid gap-1 border-b border-border/60 pb-2 text-xs text-muted-foreground">
-                    <div>{`runDir: ${selectedRunDetail.runDirRel || "-"}`}</div>
-                    <div>{`status: ${normalizeRunStatus(selectedRun, selectedRunDetail)}`}</div>
-                    <div>{`phase: ${String(selectedRunDetail.progress?.phase || "-")}`}</div>
-                    <div>{`message: ${String(selectedRunDetail.progress?.message || "-")}`}</div>
-                    <div>{`updatedAt: ${formatTime(selectedRunDetail.progress?.updatedAt)}`}</div>
-                    <div>{`error: ${String(selectedRunDetail.meta?.error || "-")}`}</div>
-                  </div>
-
-                  <div className="grid gap-3 xl:grid-cols-2">
-                    {(["input", "output", "result", "dialogue", "error"] as const).map((key) => (
-                      <div key={key} className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</div>
-                        <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
-                          {String(selectedRunDetail.artifacts?.[key] || "-")}
-                        </pre>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timeline (Live)</div>
-                    <div className="max-h-72 space-y-2 overflow-auto border border-border/70 bg-background p-2">
-                      {(selectedRunDetail.messages || []).length === 0 ? (
-                        <div className="text-xs text-muted-foreground">无 timeline 消息</div>
-                      ) : (
-                        (selectedRunDetail.messages || []).map((msg, index) => (
-                          <article key={`${msg.id || index}`} className="border-b border-border/60 pb-2">
-                            <div className="mb-1 text-[11px] text-muted-foreground">
-                              {`${String(msg.role || "unknown")} · ${formatTime(msg.ts)}`}
-                            </div>
-                            <div className="whitespace-pre-wrap break-all text-xs">{String(msg.text || "")}</div>
-                          </article>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </section>
-          </div>
         </div>
-      ) : null}
+      </div>
+
+      <Dialog open={runDetailOpen} onOpenChange={setRunDetailOpen}>
+        <DialogContent className="w-[min(96vw,980px)]">
+          <DialogHeader>
+            <DialogTitle>
+              {`Run Detail${
+                selectedRunTimestamp
+                  ? ` · ${formatRunTimestampForDisplay(selectedRunTimestamp, formatTime)}`
+                  : ""
+              }`}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedTask?.title || "-"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[68vh] space-y-3 overflow-y-auto px-4 pb-4">
+            {loadingRunDetail ? (
+              <div className="text-sm text-muted-foreground">加载中...</div>
+            ) : !selectedRunDetail ? (
+              <div className="text-sm text-muted-foreground">未找到执行详情</div>
+            ) : (
+              <>
+                <div className="grid gap-1 border-b border-border/60 pb-2 text-xs text-muted-foreground">
+                  <div>{`runDir: ${selectedRunDetail.runDirRel || "-"}`}</div>
+                  <div>{`status: ${normalizeRunStatus(selectedRun, selectedRunDetail)}`}</div>
+                  <div>{`phase: ${String(selectedRunDetail.progress?.phase || "-")}`}</div>
+                  <div>{`message: ${String(selectedRunDetail.progress?.message || "-")}`}</div>
+                  <div>{`updatedAt: ${formatTime(selectedRunDetail.progress?.updatedAt)}`}</div>
+                  <div>{`error: ${String(selectedRunDetail.meta?.error || "-")}`}</div>
+                </div>
+
+                <div className="grid gap-3 xl:grid-cols-2">
+                  {(["input", "output", "result", "dialogue", "error"] as const).map((key) => (
+                    <div key={key} className="space-y-1">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</div>
+                      <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
+                        {String(selectedRunDetail.artifacts?.[key] || "-")}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

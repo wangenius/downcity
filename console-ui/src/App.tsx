@@ -13,7 +13,6 @@ import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspace
 import { ExtensionsSection } from "@/components/dashboard/ExtensionsSection"
 import { GlobalOverviewSection } from "@/components/dashboard/GlobalOverviewSection"
 import { LogsSection } from "@/components/dashboard/LogsSection"
-import { ServicesSection } from "@/components/dashboard/ServicesSection"
 import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { TasksSection } from "@/components/dashboard/TasksSection"
 import { ToastMessage } from "@/components/dashboard/ToastMessage"
@@ -45,6 +44,7 @@ export function App() {
     selectedAgent,
     overview,
     services,
+    skills,
     extensions,
     chatChannels,
     contexts,
@@ -223,6 +223,7 @@ export function App() {
     if (!routeHydrated) return
     const agentScopedView = activeView !== "globalOverview" &&
       activeView !== "globalModel" &&
+      activeView !== "globalCommand" &&
       activeView !== "globalAgents" &&
       activeView !== "globalExtensions"
     if (!agentScopedView || !selectedAgentId) return
@@ -244,6 +245,25 @@ export function App() {
       setSelectedTaskTitle("")
     }
   }, [activeView, selectedTaskTitle, tasks])
+
+  React.useEffect(() => {
+    if (!routeHydrated) return
+    if (activeView === "agentServices") {
+      navigateToView("agentOverview", { replace: true })
+      return
+    }
+    if (activeView === "agentCommand") {
+      navigateToView("globalCommand", { replace: true })
+      return
+    }
+    if (activeView === "agentTasks" && !selectedTaskTitle) {
+      navigateToView("agentOverview", { replace: true })
+      return
+    }
+    if (activeView === "contextOverview") {
+      navigateToView("agentOverview", { replace: true })
+    }
+  }, [activeView, navigateToView, routeHydrated, selectedTaskTitle])
 
   const hasGlobalAgentRoute = React.useMemo(() => {
     if (activeView !== "globalOverview") return false
@@ -275,11 +295,38 @@ export function App() {
           selectedAgent={selectedAgent}
           overview={overview}
           services={services}
+          skills={skills}
+          tasks={tasks}
+          contexts={contexts}
           localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
           configStatus={configStatus}
-          tasks={tasks}
           model={model}
           onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
+          onStartAgent={async () => {
+            if (!selectedAgentId) return
+            await startAgentFromHistory(selectedAgentId)
+          }}
+          onRestartAgent={async () => {
+            if (!selectedAgentId) return
+            await restartAgentFromHistory(selectedAgentId)
+          }}
+          onStopAgent={async () => {
+            if (!selectedAgentId) return
+            await stopAgentFromHistory(selectedAgentId)
+          }}
+          onOpenTask={(taskTitle) => {
+            const normalizedTaskTitle = String(taskTitle || "").trim()
+            if (!normalizedTaskTitle) return
+            setSelectedTaskTitle(normalizedTaskTitle)
+            navigateToView("agentTasks", { taskTitle: normalizedTaskTitle })
+          }}
+          onOpenContext={(contextId) => {
+            const normalizedContextId = String(contextId || "").trim()
+            if (!normalizedContextId) return
+            navigateToView("contextWorkspace", { contextId: normalizedContextId })
+            void handleContextChange(normalizedContextId)
+          }}
+          onControlService={(serviceName, action) => controlService(serviceName, action)}
         />
       </section>
     )
@@ -305,22 +352,14 @@ export function App() {
         )
       case "agentOverview":
         return renderAgentOverviewSection()
-      case "agentServices":
-        return (
-          <section>
-            <ServicesSection
-              services={services}
-              statusBadgeVariant={uiHelpers.statusBadgeVariant}
-              onControlService={(name, action) => void controlService(name, action)}
-            />
-          </section>
-        )
       case "agentCommand":
         return (
           <section className="flex min-h-0 flex-1">
             <AgentCommandSection
               selectedAgentId={selectedAgentId}
               selectedAgentName={String(selectedAgent?.name || "").trim() || "agent"}
+              agents={agents}
+              persistSelectionInUrl={false}
               onExecute={(input) => executeAgentCommand(input)}
             />
           </section>
@@ -349,11 +388,23 @@ export function App() {
               onUpsertProvider={(input) => void upsertModelProvider(input)}
               onRemoveProvider={(providerId) => void removeModelProvider(providerId)}
               onTestProvider={(providerId) => void testModelProvider(providerId)}
-              onDiscoverProvider={(params) => void discoverModelProvider(params)}
-              onUpsertModel={(input) => void upsertModelPoolItem(input)}
+              onDiscoverProvider={(params) => discoverModelProvider(params)}
+              onUpsertModel={(input) => upsertModelPoolItem(input)}
               onRemoveModel={(modelId) => void removeModelPoolItem(modelId)}
               onPauseModel={(modelId, isPaused) => void setModelPoolItemPaused(modelId, isPaused)}
               onTestModel={(modelId, prompt) => void testModelPoolItem(modelId, prompt)}
+            />
+          </section>
+        )
+      case "globalCommand":
+        return (
+          <section className="flex min-h-0 flex-1">
+            <AgentCommandSection
+              selectedAgentId={selectedAgentId}
+              selectedAgentName={String(selectedAgent?.name || "").trim() || "agent"}
+              agents={agents}
+              persistSelectionInUrl
+              onExecute={(input) => executeAgentCommand(input)}
             />
           </section>
         )

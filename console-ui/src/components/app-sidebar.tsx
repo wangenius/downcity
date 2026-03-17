@@ -119,6 +119,7 @@ type SidebarMode = "agent-list" | "agent-detail"
 const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.ReactNode> = {
   globalOverview: <Layers3Icon />,
   globalModel: <ServerCogIcon />,
+  globalCommand: <TerminalIcon />,
   globalAgents: <Layers3Icon />,
   globalExtensions: <PuzzleIcon />,
   agentOverview: <Layers3Icon />,
@@ -190,7 +191,7 @@ export function AppSidebar({
     [globalItems],
   )
   const agentItems = React.useMemo(() => listPrimaryPagesByScope("agent"), [])
-  const globalViews: DashboardView[] = ["globalOverview", "globalModel", "globalAgents", "globalExtensions"]
+  const globalViews: DashboardView[] = ["globalOverview", "globalModel", "globalCommand", "globalAgents", "globalExtensions"]
   const sidebarMode: SidebarMode = globalViews.includes(activeView) ? "agent-list" : "agent-detail"
   const [navDirection, setNavDirection] = React.useState<"forward" | "back">("forward")
   const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
@@ -325,6 +326,7 @@ export function AppSidebar({
                           onMouseEnter={() => setHoveredAgentId(agent.id)}
                           onMouseLeave={() => setHoveredAgentId((prev) => (prev === agent.id ? "" : prev))}
                           onClick={() => onAgentChange(agent.id)}
+                          onDoubleClick={() => onAgentEnter(agent.id)}
                           className={cn(
                             menuItemButtonClass,
                             !isRunning && "opacity-55",
@@ -395,7 +397,7 @@ export function AppSidebar({
               <SidebarGroupContent>
                 <SidebarMenu>
                   {agentItems
-                    .filter((item) => item.view !== "agentTasks")
+                    .filter((item) => item.view !== "agentTasks" && item.view !== "agentServices" && item.view !== "agentCommand")
                     .map((item) => (
                     <SidebarMenuItem key={item.view}>
                       <SidebarMenuButton
@@ -422,22 +424,6 @@ export function AppSidebar({
               <SidebarGroupLabel className="px-2 text-[10px] font-medium tracking-[0.12em] text-sidebar-foreground/45">Tasks</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      tooltip="Task Overview"
-                      isActive={activeView === "agentTasks" && !selectedTaskTitle}
-                      onClick={() => onViewChange("agentTasks")}
-                      className={menuItemButtonClass}
-                    >
-                      <span className={rowClass}>
-                        <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
-                          <RadarIcon className="size-4" />
-                        </span>
-                        <span className="truncate">Overview</span>
-                        <span />
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
                   {tasks.length === 0 ? (
                     <SidebarMenuItem>
                       <SidebarMenuButton
@@ -478,22 +464,6 @@ export function AppSidebar({
               <SidebarGroupLabel className="px-2 text-[10px] font-medium tracking-[0.12em] text-sidebar-foreground/45">Context</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      tooltip="Overview"
-                      isActive={activeView === "contextOverview"}
-                      onClick={() => onViewChange("contextOverview")}
-                      className={menuItemButtonClass}
-                    >
-                      <span className={rowClass}>
-                        <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
-                          <Layers3Icon className="size-4" />
-                        </span>
-                        <span className="truncate">Overview</span>
-                        <span />
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
                   {chatChannelGroups.map((entry) => {
                     const isCollapsed = Boolean(collapsedChatChannels[entry.channel])
                     return (

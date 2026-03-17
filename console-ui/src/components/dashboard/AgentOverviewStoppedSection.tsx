@@ -2,12 +2,12 @@
  * 未启动 Agent 的概览区。
  *
  * 关键点（中文）
- * - 仅展示必要基础信息，避免运行态面板造成噪音。
- * - 提供单一启动入口，交互保持克制。
+ * - 视觉风格与运行态 overview 对齐：顶部信息条 + 参数块。
+ * - 未启动时保持信息完整，但交互仅保留启动主动作。
  */
 
 import * as React from "react"
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, PlayIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { UiAgentOption } from "@/types/Dashboard"
 
@@ -24,9 +24,9 @@ export interface AgentOverviewStoppedSectionProps {
 
 function BasicRow(props: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[7rem_1fr] gap-3 py-1.5">
-      <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{props.label}</div>
-      <div className="min-w-0 truncate text-sm text-foreground" title={props.value}>
+    <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
+      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{props.label}</div>
+      <div className="min-w-0 truncate text-foreground" title={props.value}>
         {props.value || "-"}
       </div>
     </div>
@@ -49,14 +49,23 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+      <div className="flex items-start justify-between gap-3 px-1 py-1">
         <div className="min-w-0">
-          <div className="truncate text-xl font-semibold tracking-tight text-foreground">{agent.name || "Unknown Agent"}</div>
-          <div className="mt-1 text-xs text-muted-foreground">当前未启动</div>
+          <div className="flex min-w-0 items-start gap-2">
+            <img src="/image.png" alt="bot" className="mt-0.5 size-8 shrink-0 rounded-[4px] object-cover" />
+            <div className="min-w-0 space-y-1">
+              <div className="truncate text-xl font-semibold leading-none text-foreground">{agent.name || "Unknown Agent"}</div>
+              <div className="truncate text-xs text-muted-foreground">{path}</div>
+            </div>
+          </div>
         </div>
         <Button
           size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0"
           disabled={starting}
+          title={starting ? "启动中" : "启动"}
+          aria-label={starting ? "启动中" : "启动"}
           onClick={async () => {
             try {
               setStarting(true)
@@ -66,17 +75,24 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
             }
           }}
         >
-          {starting ? <Loader2Icon className="size-4 animate-spin" /> : "启动"}
+          {starting ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
         </Button>
       </div>
 
-      <div className="space-y-0.5">
+      <section className="rounded-md bg-muted/70 px-3 py-2">
         <BasicRow label="Model" value={model} />
         <BasicRow label="Path" value={path} />
         <BasicRow label="Host" value={String(agent.host || "-")} />
         <BasicRow label="Port" value={agent.port ? String(agent.port) : "-"} />
         <BasicRow label="Last Stop" value={lastStoppedAt} />
-      </div>
+        <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
+          <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Status</div>
+          <div className="inline-flex items-center gap-1 text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-muted-foreground/70" />
+            <span>stopped</span>
+          </div>
+        </div>
+      </section>
     </section>
   )
 }

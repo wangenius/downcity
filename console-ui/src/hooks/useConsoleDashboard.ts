@@ -25,6 +25,7 @@ import type {
   UiModelResponse,
   UiModelPoolItem,
   UiModelPoolResponse,
+  UiModelProviderDiscoverResult,
   UiModelProviderItem,
   UiModelSummary,
   UiOverviewResponse,
@@ -33,6 +34,8 @@ import type {
   UiExtensionsResponse,
   UiServiceItem,
   UiServicesResponse,
+  UiSkillListResponse,
+  UiSkillSummaryItem,
   UiTaskItem,
   UiTaskRunDetailResponse,
   UiTaskRunsResponse,
@@ -133,6 +136,10 @@ export interface UseConsoleDashboardResult {
    * service 状态列表。
    */
   services: UiServiceItem[];
+  /**
+   * skills 列表（来自 skill service 的 list）。
+   */
+  skills: UiSkillSummaryItem[];
   /**
    * extension 状态列表。
    */
@@ -351,7 +358,7 @@ export interface UseConsoleDashboardResult {
     providerId: string;
     autoAdd?: boolean;
     prefix?: string;
-  }) => Promise<void>;
+  }) => Promise<UiModelProviderDiscoverResult | null>;
   /**
    * 新增或更新 model。
    */
@@ -408,6 +415,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   const [overview, setOverview] = useState<UiOverviewResponse | null>(null);
   const [services, setServices] = useState<UiServiceItem[]>([]);
+  const [skills, setSkills] = useState<UiSkillSummaryItem[]>([]);
   const [extensions, setExtensions] = useState<UiExtensionRuntimeItem[]>([]);
   const [chatChannels, setChatChannels] = useState<UiChatChannelStatus[]>([]);
   const [contexts, setContexts] = useState<UiContextSummary[]>([]);
@@ -517,6 +525,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const clearPanelDataForNoAgent = useCallback(() => {
     setOverview(null);
     setServices([]);
+    setSkills([]);
     // 关键点（中文）：extensions 作为全局页信息，保留上次快照，避免无 agent 时整块消失。
     setChatChannels([]);
     setContexts([]);
@@ -574,6 +583,39 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       if (!agentId) return;
       const data = await requestJson<UiServicesResponse>("/api/tui/services", {}, agentId);
       setServices(Array.isArray(data.services) ? data.services : []);
+    },
+    [requestJson],
+  );
+
+  const refreshSkills = useCallback(
+    async (agentId: string) => {
+      if (!agentId) return;
+      try {
+        const data = await requestJson<UiSkillListResponse>(
+          "/api/services/command",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              serviceName: "skill",
+              command: "list",
+              payload: {},
+            }),
+          },
+          agentId,
+        );
+        const items = Array.isArray(data?.data?.skills) ? data.data.skills : [];
+        setSkills(items);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        if (
+          /404|not found|unknown action|unknown service/i.test(message) ||
+          isAgentUnavailableError(message)
+        ) {
+          setSkills([]);
+          return;
+        }
+        throw error;
+      }
     },
     [requestJson],
   );
@@ -909,6 +951,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshExtensions(),
           refreshOverview(nextAgentId),
           refreshServices(nextAgentId),
+          refreshSkills(nextAgentId),
           refreshTasks(nextAgentId),
           refreshLogs(nextAgentId),
           refreshModel(nextAgentId),
@@ -996,6 +1039,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshOverview,
       refreshPrompt,
       refreshServices,
+      refreshSkills,
       refreshTasks,
       showToast,
     ],
@@ -1009,12 +1053,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           body: JSON.stringify({ serviceName, action }),
         });
         showToast(`service ${serviceName} ${action} 已执行`, "success");
-        await refreshServices(selectedAgentId);
+        await Promise.all([refreshServices(selectedAgentId), refreshSkills(selectedAgentId)]);
       } catch (error) {
         showToast(`service 操作失败: ${getErrorMessage(error)}`, "error");
       }
     },
-    [refreshServices, requestJson, selectedAgentId, showToast],
+    [refreshServices, refreshSkills, requestJson, selectedAgentId, showToast],
   );
 
   const controlExtension = useCallback(
@@ -1493,22 +1537,32 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       prefix?: string;
     }) => {
       try {
-        const data = await requestJson<{
-          success?: boolean;
-          modelCount?: number;
-          autoAdded?: unknown[];
-        }>("/api/ui/model/provider/discover", {
+        const data = await requestJson<UiModelProviderDiscoverResult & { success?: boolean }>(
+          "/api/ui/model/provider/discover",
+          {
           method: "POST",
           body: JSON.stringify(params),
-        });
-        await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
-        const autoAddedCount = Array.isArray(data.autoAdded) ? data.autoAdded.length : 0;
-        showToast(
-          `discover 完成：${Number(data.modelCount || 0)} 个，自动添加 ${autoAddedCount} 个`,
-          "success",
+          },
         );
+        const payload: UiModelProviderDiscoverResult = {
+          providerId: String(data.providerId || params.providerId || "").trim(),
+          discoveredModels: Array.isArray(data.discoveredModels) ? data.discoveredModels : [],
+          modelCount: Number(data.modelCount || 0),
+          autoAdded: Array.isArray(data.autoAdded) ? data.autoAdded : [],
+        };
+        if (params.autoAdd === true) {
+          await Promise.all([refreshModelPool(), refreshModel(selectedAgentId)]);
+          showToast(
+            `discover 完成：${payload.modelCount} 个，自动添加 ${payload.autoAdded.length} 个`,
+            "success",
+          );
+        } else {
+          showToast(`discover 完成：发现 ${payload.modelCount} 个模型，请选择后添加`, "success");
+        }
+        return payload;
       } catch (error) {
         showToast(`discover 失败: ${getErrorMessage(error)}`, "error");
+        return null;
       }
     },
     [refreshModel, refreshModelPool, requestJson, selectedAgentId, showToast],
@@ -1664,6 +1718,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     selectedAgent,
     overview,
     services,
+    skills,
     extensions,
     chatChannels,
     contexts,

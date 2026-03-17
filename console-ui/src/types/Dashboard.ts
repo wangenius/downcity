@@ -324,6 +324,55 @@ export interface UiServicesResponse {
 }
 
 /**
+ * Skill 列表项（来自 `service=skill` 的 `list` 命令）。
+ */
+export interface UiSkillSummaryItem {
+  /**
+   * skill 唯一标识（目录 id）。
+   */
+  id: string;
+  /**
+   * skill 展示名。
+   */
+  name: string;
+  /**
+   * skill 描述。
+   */
+  description: string;
+  /**
+   * skill 来源（project/home/external）。
+   */
+  source: string;
+  /**
+   * SKILL.md 绝对路径。
+   */
+  skillMdPath: string;
+  /**
+   * 允许使用的工具列表。
+   */
+  allowedTools: string[];
+}
+
+/**
+ * skills list 响应（`/api/services/command`）。
+ */
+export interface UiSkillListResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 返回数据体。
+   */
+  data?: {
+    /**
+     * 已发现的 skill 列表。
+     */
+    skills?: UiSkillSummaryItem[];
+  };
+}
+
+/**
  * Extension 运行时快照。
  */
 export interface UiExtensionRuntimeItem {
@@ -1310,4 +1359,35 @@ export interface UiModelPoolResponse {
    * 错误信息。
    */
   error?: string;
+}
+
+/**
+ * Provider discover 结果（来自 `/api/ui/model/provider/discover`）。
+ */
+export interface UiModelProviderDiscoverResult {
+  /**
+   * 发起 discover 的 provider id。
+   */
+  providerId: string;
+  /**
+   * 发现到的上游模型名称列表。
+   */
+  discoveredModels: string[];
+  /**
+   * 发现总数。
+   */
+  modelCount: number;
+  /**
+   * 自动写入模型池的条目（仅 `autoAdd=true` 时存在）。
+   */
+  autoAdded: Array<{
+    /**
+     * 写入模型池后的模型 id。
+     */
+    modelId: string;
+    /**
+     * 对应的上游模型名称。
+     */
+    modelName: string;
+  }>;
 }

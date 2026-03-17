@@ -60,6 +60,7 @@ export function toDashboardPath(
     return "/global/overview"
   }
   if (view === "globalModel") return "/global/model"
+  if (view === "globalCommand") return "/global/command"
   if (view === "globalAgents") return "/global/agents"
   if (view === "globalExtensions") return "/global/extensions"
   if (view === "agentOverview") return `/${encodeURIComponent(agentSegment)}/overview`

@@ -12,6 +12,8 @@ import type {
   UiChatStatusResponse,
   UiConfigStatusItem,
   UiConfigStatusResponse,
+  UiCommandExecuteResponse,
+  UiCommandExecuteResult,
   UiContextMessagesResponse,
   UiContextSummary,
   UiContextsResponse,
@@ -39,7 +41,6 @@ import type {
 } from "../types/Dashboard";
 
 const LOCAL_UI_CONTEXT_ID = "local_ui";
-const AGENT_STORAGE_KEY = "sma_console_ui_selected_agent";
 
 type ToastType = "info" | "success" | "error";
 
@@ -75,6 +76,16 @@ function isAgentUnavailableError(messageInput: string): boolean {
     message.includes("service unavailable") ||
     message.includes("selected agent runtime endpoint is unavailable") ||
     message.includes("503")
+  );
+}
+
+function isChatServiceNotReadyError(messageInput: string): boolean {
+  const message = String(messageInput || "").toLowerCase();
+  return (
+    (message.includes("service") && message.includes("chat") && message.includes("未启动")) ||
+    (message.includes("service") && message.includes("chat") && message.includes("not started")) ||
+    (message.includes("service") && message.includes("chat") && message.includes("not start")) ||
+    (message.includes("chat") && message.includes("not running"))
   );
 }
 
@@ -369,6 +380,14 @@ export interface UseConsoleDashboardResult {
    */
   testModelPoolItem: (modelId: string, prompt?: string) => Promise<void>;
   /**
+   * 执行 agent 项目目录下的 shell command。
+   */
+  executeAgentCommand: (input: {
+    command: string;
+    timeoutMs?: number;
+    agentId?: string;
+  }) => Promise<UiCommandExecuteResult>;
+  /**
    * 提供常用常量。
    */
   constants: {
@@ -512,8 +531,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   const refreshAgents = useCallback(
     async (preferredAgentId?: string): Promise<{ nextAgentId: string; list: UiAgentOption[] }> => {
-      const cachedId = localStorage.getItem(AGENT_STORAGE_KEY) || "";
-      const preferred = preferredAgentId || selectedAgentId || cachedId;
+      const preferred = String(preferredAgentId || selectedAgentId || "").trim();
       const endpoint = preferred
         ? `/api/ui/agents?agent=${encodeURIComponent(preferred)}`
         : "/api/ui/agents";
@@ -526,28 +544,16 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         if (isNoRunningAgentError(message)) {
           setAgents([]);
           setSelectedAgentId("");
-          localStorage.removeItem(AGENT_STORAGE_KEY);
           return { nextAgentId: "", list: [] };
         }
         throw error;
       }
 
       const list = Array.isArray(data.agents) ? data.agents : [];
-      const selectedFromApi = String(data.selectedAgentId || "").trim();
       const preferredMatched = preferred ? list.find((item) => item.id === preferred)?.id || "" : "";
-      const selectedMatched = selectedFromApi ? list.find((item) => item.id === selectedFromApi)?.id || "" : "";
-      const firstRunning = list.find((item) => item.running === true)?.id || "";
-      const firstAny = list[0]?.id || "";
-      // 关键点（中文）：允许选中未启动 agent（用于全局 overview 的静态信息查看）；仅在请求 runtime 接口时再判断 running。
-      const nextId = preferredMatched || selectedMatched || firstRunning || firstAny || "";
+      // 关键点（中文）：仅接受显式选择（路由驱动），不再自动挑选“当前 agent”。
+      const nextId = preferredMatched || "";
       setAgents(list);
-      setSelectedAgentId(nextId);
-
-      if (nextId) {
-        localStorage.setItem(AGENT_STORAGE_KEY, nextId);
-      } else {
-        localStorage.removeItem(AGENT_STORAGE_KEY);
-      }
 
       return { nextAgentId: nextId, list };
     },
@@ -568,6 +574,107 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       if (!agentId) return;
       const data = await requestJson<UiServicesResponse>("/api/tui/services", {}, agentId);
       setServices(Array.isArray(data.services) ? data.services : []);
+    },
+    [requestJson],
+  );
+
+  /**
+   * 等待 agent 运行态与核心服务就绪。
+   *
+   * 关键点（中文）
+   * - 仅当 agent 已 running 且 services 接口返回全就绪时，才视为“启动完成”。
+   * - 启动窗口中的短暂 503 不视为失败，继续轮询等待。
+   */
+  const waitAgentReady = useCallback(
+    async (
+      agentId: string,
+      options?: {
+        maxRetry?: number;
+        intervalMs?: number;
+      },
+    ): Promise<{ running: boolean; servicesReady: boolean }> => {
+      const targetAgentId = String(agentId || "").trim();
+      if (!targetAgentId) return { running: false, servicesReady: false };
+      const maxRetry = Number.isFinite(options?.maxRetry as number) ? Number(options?.maxRetry) : 36;
+      const intervalMs = Number.isFinite(options?.intervalMs as number) ? Number(options?.intervalMs) : 500;
+      let running = false;
+
+      for (let index = 0; index < maxRetry; index += 1) {
+        try {
+          const agentsSnapshot = await requestJson<UiAgentsResponse>(
+            `/api/ui/agents?agent=${encodeURIComponent(targetAgentId)}`,
+          );
+          const list = Array.isArray(agentsSnapshot.agents) ? agentsSnapshot.agents : [];
+          const target = list.find((item) => String(item.id || "") === targetAgentId);
+          running = target?.running === true;
+        } catch {
+          running = false;
+        }
+
+        if (!running) {
+          await wait(intervalMs);
+          continue;
+        }
+
+        try {
+          const servicesData = await requestJson<UiServicesResponse>("/api/tui/services", {}, targetAgentId);
+          const serviceList = Array.isArray(servicesData.services) ? servicesData.services : [];
+          if (serviceList.length === 0) {
+            await wait(intervalMs);
+            continue;
+          }
+          const allReady = serviceList.every((item) => {
+            const state = String(item.state || item.status || "").trim().toLowerCase();
+            return ["running", "ok", "active", "enabled", "success", "idle"].includes(state);
+          });
+          if (!allReady) {
+            await wait(intervalMs);
+            continue;
+          }
+
+          const hasChatService = serviceList.some((item) => {
+            const name = String(item.name || item.service || "").trim().toLowerCase();
+            return name === "chat";
+          });
+          if (!hasChatService) return { running: true, servicesReady: true };
+
+          try {
+            await requestJson<UiChatStatusResponse>(
+              "/api/services/command",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  serviceName: "chat",
+                  command: "status",
+                  payload: {},
+                }),
+              },
+              targetAgentId,
+            );
+            return { running: true, servicesReady: true };
+          } catch (chatError) {
+            const chatMessage = getErrorMessage(chatError);
+            if (/404|not found|unknown action|unknown service/i.test(chatMessage)) {
+              // 老 runtime 无 chat.status，按服务就绪降级放行。
+              return { running: true, servicesReady: true };
+            }
+            if (isChatServiceNotReadyError(chatMessage) || isAgentUnavailableError(chatMessage)) {
+              await wait(intervalMs);
+              continue;
+            }
+            throw chatError;
+          }
+        } catch (error) {
+          const message = getErrorMessage(error);
+          if (!isAgentUnavailableError(message)) {
+            // 非启动窗口类错误，保持等待但不吞掉状态。
+          }
+        }
+
+        await wait(intervalMs);
+      }
+
+      return { running, servicesReady: false };
     },
     [requestJson],
   );
@@ -603,6 +710,11 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         const message = getErrorMessage(error);
         // 关键点（中文）：兼容旧 runtime 不支持 chat.status 的场景。
         if (/404|not found|unknown action|unknown service/i.test(message)) {
+          setChatChannels([]);
+          return [];
+        }
+        // 关键点（中文）：启动窗口内 chat 服务未就绪时降级为空，避免误报失败。
+        if (isChatServiceNotReadyError(message) || isAgentUnavailableError(message)) {
           setChatChannels([]);
           return [];
         }
@@ -759,6 +871,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       try {
         const { nextAgentId, list } = await refreshAgents(preferredAgentId);
         if (!nextAgentId) {
+          setSelectedAgentId("");
           clearPanelDataForNoAgent();
           // 关键点（中文）：无 agent 也要保留并刷新全局 model/pool/config 信息。
           await Promise.allSettled([
@@ -768,7 +881,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshConfigStatus(""),
           ]);
           setTopbarError(false);
-          setTopbarStatus("未检测到运行中的 agent");
+          setTopbarStatus("Console 在线");
           return;
         }
 
@@ -783,9 +896,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshConfigStatus(nextAgentId),
           ]);
           setTopbarError(false);
-          setTopbarStatus(
-            `未启动 · ${selected.name || "agent"} · ${selected.projectRoot || selected.id || "-"}`,
-          );
+          setTopbarStatus("Console 在线");
           return;
         }
 
@@ -826,16 +937,31 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         }
 
         setTopbarError(false);
-        setTopbarStatus(
-          `在线 · ${selected?.name || "agent"} · ${selected?.host || "127.0.0.1"}:${selected?.port || "-"}`,
-        );
+        setTopbarStatus("Console 在线");
       } catch (error) {
         const message = getErrorMessage(error);
         if (isAgentUnavailableError(message)) {
+          const targetHint = String(preferredAgentId || selectedAgentId || "").trim();
+          if (targetHint) {
+            try {
+              const agentsSnapshot = await requestJson<UiAgentsResponse>(
+                `/api/ui/agents?agent=${encodeURIComponent(targetHint)}`,
+              );
+              const list = Array.isArray(agentsSnapshot.agents) ? agentsSnapshot.agents : [];
+              const target = list.find((item) => String(item.id || "") === targetHint);
+              if (target?.running === true) {
+                setAgents(list);
+                setSelectedAgentId(targetHint);
+                setTopbarError(false);
+                return;
+              }
+            } catch {
+              // ignore
+            }
+          }
           // 关键点（中文）：agent 不可用时直接退回空态，避免轮询持续打离线 agent。
           clearPanelDataForNoAgent();
           setSelectedAgentId("");
-          localStorage.removeItem(AGENT_STORAGE_KEY);
           // 关键点（中文）：离线自愈分支同样要保留并刷新全局 model/pool/config。
           await Promise.allSettled([
             refreshExtensions(),
@@ -844,7 +970,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshConfigStatus(""),
           ]);
           setTopbarError(false);
-          setTopbarStatus("未检测到运行中的 agent");
+          setTopbarStatus("Console 在线");
           return;
         }
         setTopbarError(true);
@@ -1190,25 +1316,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           body: JSON.stringify({ agentId: targetAgentId }),
         });
 
-        // 关键点（中文）：启动命令返回成功不代表 runtime 已就绪，需要轮询等待 running。
-        const maxRetry = 24;
-        const intervalMs = 500;
-        let ready = false;
-        for (let index = 0; index < maxRetry; index += 1) {
-          const agentsSnapshot = await requestJson<UiAgentsResponse>(
-            `/api/ui/agents?agent=${encodeURIComponent(targetAgentId)}`,
-          );
-          const list = Array.isArray(agentsSnapshot.agents) ? agentsSnapshot.agents : [];
-          const target = list.find((item) => String(item.id || "") === targetAgentId);
-          if (target?.running === true) {
-            ready = true;
-            break;
-          }
-          await wait(intervalMs);
-        }
+        const readyState = await waitAgentReady(targetAgentId, {
+          maxRetry: 120,
+          intervalMs: 500,
+        });
 
-        await refreshDashboard(targetAgentId);
-        if (ready) {
+        if (readyState.running && readyState.servicesReady) {
+          await refreshDashboard(targetAgentId);
           if (data.started === true) {
             showToast(`agent 已启动（pid ${String(data.pid || "-")}）`, "success");
           } else {
@@ -1217,12 +1331,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           return;
         }
 
-        showToast("agent 启动中，请稍后再进入该 agent 页面", "info");
+        showToast("agent 启动超时：服务未全部就绪", "error");
       } catch (error) {
         showToast(`启动 agent 失败: ${getErrorMessage(error)}`, "error");
       }
     },
-    [refreshDashboard, requestJson, showToast],
+    [refreshDashboard, requestJson, showToast, waitAgentReady],
   );
 
   const restartAgentFromHistory = useCallback(
@@ -1241,33 +1355,28 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           body: JSON.stringify({ agentId: targetAgentId }),
         });
 
-        const maxRetry = 24;
-        const intervalMs = 500;
-        let ready = false;
-        for (let index = 0; index < maxRetry; index += 1) {
-          const agentsSnapshot = await requestJson<UiAgentsResponse>(
-            `/api/ui/agents?agent=${encodeURIComponent(targetAgentId)}`,
-          );
-          const list = Array.isArray(agentsSnapshot.agents) ? agentsSnapshot.agents : [];
-          const target = list.find((item) => String(item.id || "") === targetAgentId);
-          if (target?.running === true) {
-            ready = true;
-            break;
-          }
-          await wait(intervalMs);
-        }
+        const readyState = await waitAgentReady(targetAgentId, {
+          maxRetry: 120,
+          intervalMs: 500,
+        });
 
-        await refreshDashboard(targetAgentId);
-        if (ready) {
+        if (readyState.running && readyState.servicesReady) {
+          await refreshDashboard(targetAgentId);
           showToast("agent 已重启", "success");
           return;
         }
-        showToast("agent 重启中，请稍后刷新", "info");
+
+        showToast("agent 重启超时：服务未全部就绪", "error");
       } catch (error) {
-        showToast(`重启 agent 失败: ${getErrorMessage(error)}`, "error");
+        const message = getErrorMessage(error);
+        if (/not found/i.test(message)) {
+          showToast("当前 Console UI 进程版本过旧，请先重启 `sma console ui` 后再重启 agent", "error");
+          return;
+        }
+        showToast(`重启 agent 失败: ${message}`, "error");
       }
     },
-    [refreshDashboard, requestJson, showToast],
+    [refreshDashboard, requestJson, showToast, waitAgentReady],
   );
 
   const stopAgentFromHistory = useCallback(
@@ -1309,7 +1418,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         }
         showToast("agent 停止中，请稍后刷新", "info");
       } catch (error) {
-        showToast(`停止 agent 失败: ${getErrorMessage(error)}`, "error");
+        const message = getErrorMessage(error);
+        if (/not found/i.test(message)) {
+          showToast("当前 Console UI 进程版本过旧，请先重启 `sma console ui` 后再停止 agent", "error");
+          return;
+        }
+        showToast(`停止 agent 失败: ${message}`, "error");
       }
     },
     [refreshDashboard, requestJson, selectedAgentId, showToast],
@@ -1485,14 +1599,43 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson, showToast],
   );
 
+  const executeAgentCommand = useCallback(
+    async (input: {
+      command: string;
+      timeoutMs?: number;
+      agentId?: string;
+    }): Promise<UiCommandExecuteResult> => {
+      const command = String(input.command || "").trim();
+      const targetAgentId = String(input.agentId || selectedAgentId || "").trim();
+      if (!command) {
+        throw new Error("command 不能为空");
+      }
+      if (!targetAgentId) {
+        throw new Error("当前无可用 agent");
+      }
+      const response = await requestJson<UiCommandExecuteResponse>(
+        "/api/ui/command/execute",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            agentId: targetAgentId,
+            command,
+            timeoutMs: input.timeoutMs,
+          }),
+        },
+        targetAgentId,
+      );
+      if (!response.result) {
+        throw new Error("command 执行失败：缺少结果");
+      }
+      return response.result;
+    },
+    [requestJson, selectedAgentId],
+  );
+
   const handleAgentChange = useCallback(
     (nextAgentId: string) => {
       setSelectedAgentId(nextAgentId);
-      if (nextAgentId) {
-        localStorage.setItem(AGENT_STORAGE_KEY, nextAgentId);
-      } else {
-        localStorage.removeItem(AGENT_STORAGE_KEY);
-      }
       void refreshDashboard(nextAgentId);
     },
     [refreshDashboard],
@@ -1577,6 +1720,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     removeModelPoolItem,
     setModelPoolItemPaused,
     testModelPoolItem,
+    executeAgentCommand,
     constants: {
       LOCAL_UI_CONTEXT_ID,
     },

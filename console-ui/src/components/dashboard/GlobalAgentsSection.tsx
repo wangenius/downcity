@@ -26,17 +26,13 @@ export interface GlobalAgentsSectionProps {
    */
   onStopAgent: (agentId: string) => void
   /**
-   * 刷新回调。
-   */
-  onRefresh: () => void
-  /**
    * 启动历史 agent。
    */
   onStartAgent: (agentId: string) => void
 }
 
 export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
-  const { agents, onRestartAgent, onStopAgent, onRefresh, onStartAgent } = props
+  const { agents, onRestartAgent, onStopAgent, onStartAgent } = props
   const [startingAgentId, setStartingAgentId] = React.useState("")
   const [restartingAgentId, setRestartingAgentId] = React.useState("")
   const [stoppingAgentId, setStoppingAgentId] = React.useState("")
@@ -47,13 +43,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
 
   return (
     <section className="min-h-0 overflow-y-auto">
-      <div className="flex h-10 items-center justify-between border-b border-border/60 px-3">
-        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Agents</div>
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onRefresh}>
-          刷新
-        </Button>
-      </div>
-
       {agents.length === 0 ? (
         <div className="px-3 py-4 text-sm text-muted-foreground">暂无 agent</div>
       ) : (
@@ -101,8 +90,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-8 w-8 p-0"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-md p-0"
                             onClick={() => setConfirmAction({ agent, action: "restart" })}
                             disabled={isRestarting || isStopping}
                             aria-label="重启"
@@ -112,8 +101,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-8 w-8 p-0"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-md p-0"
                             onClick={() => setConfirmAction({ agent, action: "stop" })}
                             disabled={isRestarting || isStopping}
                             aria-label="停止"
@@ -125,8 +114,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                       ) : (
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="h-8 w-8 p-0"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-md p-0"
                           disabled={isStarting || isRestarting || isStopping}
                           aria-label="启动"
                           title="启动"

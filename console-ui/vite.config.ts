@@ -13,7 +13,7 @@ import path from "node:path";
 
 const API_TARGET =
   String(process.env.CONSOLE_UI_API_TARGET || "").trim() ||
-  "http://127.0.0.1:3001";
+  "http://127.0.0.1:5315";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

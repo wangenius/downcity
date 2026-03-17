@@ -61,10 +61,6 @@ export interface ContextWorkspaceSectionProps {
    */
   onSendLocalMessage: () => void
   /**
-   * 刷新 prompt。
-   */
-  onRefreshPrompt: () => void
-  /**
    * 切换 context。
    */
   onSelectContext: (contextId: string) => void
@@ -239,7 +235,6 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
     sending,
     onChangeInput,
     onSendLocalMessage,
-    onRefreshPrompt,
   } = props
 
   const isLocalUi = selectedContextId === LOCAL_UI_CONTEXT_ID
@@ -322,11 +317,6 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
           >
             context messages
           </button>
-          {rightTab === "system" ? (
-            <Button size="sm" variant="outline" onClick={onRefreshPrompt} className="ml-auto">
-              刷新
-            </Button>
-          ) : null}
         </div>
 
         {rightTab === "system" ? (

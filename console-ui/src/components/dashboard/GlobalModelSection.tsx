@@ -9,7 +9,6 @@
 import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -74,14 +73,6 @@ export interface GlobalModelSectionProps {
    */
   loading: boolean
   /**
-   * 刷新当前模型摘要。
-   */
-  onRefresh: () => void
-  /**
-   * 刷新模型池。
-   */
-  onRefreshPool: () => void
-  /**
    * 保存 provider。
    */
   onUpsertProvider: (input: {
@@ -141,24 +132,12 @@ function formatTime(raw?: string): string {
   return new Date(t).toLocaleString("zh-CN", { hour12: false })
 }
 
-function MetricChip(props: { label: string; value: string; hint?: string }) {
-  return (
-    <article className="rounded-xl border border-border/60 bg-background/65 px-3 py-2.5">
-      <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{props.label}</div>
-      <div className="mt-1 text-lg font-semibold">{props.value}</div>
-      {props.hint ? <div className="mt-0.5 text-[11px] text-muted-foreground">{props.hint}</div> : null}
-    </article>
-  )
-}
-
 export function GlobalModelSection(props: GlobalModelSectionProps) {
   const {
     model,
     providers,
     poolItems,
     loading,
-    onRefresh,
-    onRefreshPool,
     onUpsertProvider,
     onRemoveProvider,
     onTestProvider,
@@ -251,160 +230,141 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
   }, [])
 
   return (
-    <section className="space-y-5">
-      <Card>
-        <CardHeader className="border-b border-border/55 pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Model Operations Workbench</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={onRefreshPool} disabled={loading}>
-                刷新模型池
-              </Button>
-              <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
-                刷新当前绑定
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-3">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <MetricChip label="Providers" value={String(providers.length)} hint="global pool" />
-            <MetricChip label="Models" value={String(poolItems.length)} hint="global pool" />
-            <MetricChip label="Primary Snapshot" value={model?.agentPrimaryModelId || "-"} hint="runtime snapshot" />
-            <MetricChip
-              label="Runtime Provider"
-              value={model?.providerType || "-"}
-              hint={model?.providerKey ? `key: ${model.providerKey}` : "-"}
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            providers {providers.length}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            models {poolItems.length}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            primary {model?.agentPrimaryModelId || "-"}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            provider {model?.providerType || "-"}
+          </Badge>
+        </div>
+      </div>
 
-      <Tabs defaultValue="providers" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="providers">Providers</TabsTrigger>
-          <TabsTrigger value="models">Models</TabsTrigger>
+      <Tabs defaultValue="providers" className="space-y-3">
+        <TabsList className="h-8">
+          <TabsTrigger value="providers" className="text-xs">Providers</TabsTrigger>
+          <TabsTrigger value="models" className="text-xs">Models</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="providers" className="space-y-4">
-          <Card>
-            <CardHeader className="border-b border-border/55 pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle>Provider Registry</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    resetProviderForm()
-                    setProviderEditorOpen(true)
-                  }}
-                >
-                  新建 Provider
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-3">
-              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_220px]">
-                <Input
-                  value={providerQuery}
-                  onChange={(event) => setProviderQuery(event.target.value)}
-                  placeholder="筛选 provider（id/type/baseUrl）"
-                />
-                <Input
-                  placeholder="发现前缀（如 gpt-/claude-）"
-                  value={discoverPrefix}
-                  onChange={(event) => setDiscoverPrefix(event.target.value)}
-                />
-              </div>
+        <TabsContent value="providers" className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={providerQuery}
+              onChange={(event) => setProviderQuery(event.target.value)}
+              placeholder="筛选 provider（id/type/baseUrl）"
+              className="h-8 max-w-md"
+            />
+            <Input
+              placeholder="发现前缀（如 gpt-/claude-）"
+              value={discoverPrefix}
+              onChange={(event) => setDiscoverPrefix(event.target.value)}
+              className="h-8 w-52"
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                resetProviderForm()
+                setProviderEditorOpen(true)
+              }}
+            >
+              新建 Provider
+            </Button>
+          </div>
 
-              {filteredProviders.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border/65 bg-background/60 px-4 py-6 text-sm text-muted-foreground">
-                  没有匹配的 provider。
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                        <th className="px-3 py-2 font-medium">Id</th>
-                        <th className="px-3 py-2 font-medium">Type</th>
-                        <th className="px-3 py-2 font-medium">Base URL</th>
-                        <th className="px-3 py-2 font-medium">API Key</th>
-                        <th className="px-3 py-2 font-medium">Updated</th>
-                        <th className="px-3 py-2 font-medium text-right">Actions</th>
+          {filteredProviders.length === 0 ? (
+            <div className="px-1 py-6 text-sm text-muted-foreground">没有匹配的 provider。</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <th className="px-2 py-2 font-medium">Id</th>
+                    <th className="px-2 py-2 font-medium">Type</th>
+                    <th className="px-2 py-2 font-medium">Base URL</th>
+                    <th className="px-2 py-2 font-medium">API Key</th>
+                    <th className="px-2 py-2 font-medium">Updated</th>
+                    <th className="px-2 py-2 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProviders.map((item) => {
+                    const providerId = String(item.id || "").trim()
+                    if (!providerId) return null
+                    return (
+                      <tr key={providerId} className="border-b border-border/45">
+                        <td className="px-2 py-2 text-sm font-medium">{providerId}</td>
+                        <td className="px-2 py-2 text-sm">{item.type || "-"}</td>
+                        <td className="max-w-[20rem] truncate px-2 py-2 text-sm text-muted-foreground" title={item.baseUrl || ""}>
+                          {item.baseUrl || "-"}
+                        </td>
+                        <td className="px-2 py-2 text-xs">
+                          {item.hasApiKey ? (
+                            <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700">
+                              {item.apiKeyMasked || "configured"}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              empty
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-xs text-muted-foreground">{formatTime(item.updatedAt)}</td>
+                        <td className="px-2 py-2 text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => {
+                                setProviderForm({
+                                  id: providerId,
+                                  type: String(item.type || "openai"),
+                                  baseUrl: String(item.baseUrl || ""),
+                                  apiKey: "",
+                                })
+                                setProviderEditorOpen(true)
+                              }}
+                            >
+                              编辑
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => onTestProvider(providerId)}>
+                              测试
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() =>
+                                onDiscoverProvider({
+                                  providerId,
+                                  autoAdd: true,
+                                  prefix: discoverPrefix.trim() || undefined,
+                                })
+                              }
+                            >
+                              发现
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] text-destructive" onClick={() => onRemoveProvider(providerId)}>
+                              删除
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {filteredProviders.map((item) => {
-                        const providerId = String(item.id || "").trim()
-                        if (!providerId) return null
-                        return (
-                          <tr key={providerId} className="border-t border-border/60">
-                            <td className="px-3 py-2 text-sm font-medium">{providerId}</td>
-                            <td className="px-3 py-2 text-sm">{item.type || "-"}</td>
-                            <td className="max-w-[20rem] truncate px-3 py-2 text-sm text-muted-foreground" title={item.baseUrl || ""}>
-                              {item.baseUrl || "-"}
-                            </td>
-                            <td className="px-3 py-2 text-xs">
-                              {item.hasApiKey ? (
-                                <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700">
-                                  {item.apiKeyMasked || "configured"}
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="border-border/60 bg-muted/35 text-muted-foreground">
-                                  empty
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-xs text-muted-foreground">{formatTime(item.updatedAt)}</td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex flex-wrap items-center justify-end gap-1.5">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2 text-[11px]"
-                                  onClick={() => {
-                                    setProviderForm({
-                                      id: providerId,
-                                      type: String(item.type || "openai"),
-                                      baseUrl: String(item.baseUrl || ""),
-                                      apiKey: "",
-                                    })
-                                    setProviderEditorOpen(true)
-                                  }}
-                                >
-                                  编辑
-                                </Button>
-                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onTestProvider(providerId)}>
-                                  测试
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2 text-[11px]"
-                                  onClick={() =>
-                                    onDiscoverProvider({
-                                      providerId,
-                                      autoAdd: true,
-                                      prefix: discoverPrefix.trim() || undefined,
-                                    })
-                                  }
-                                >
-                                  发现
-                                </Button>
-                                <Button size="sm" variant="destructive" className="h-7 px-2 text-[11px]" onClick={() => onRemoveProvider(providerId)}>
-                                  删除
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <Dialog open={providerEditorOpen} onOpenChange={setProviderEditorOpen}>
             <DialogContent>
@@ -469,125 +429,118 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         </TabsContent>
 
         <TabsContent value="models" className="space-y-4">
-          <Card>
-            <CardHeader className="border-b border-border/55 pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle>Model Registry</CardTitle>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    resetModelForm()
-                    setModelEditorOpen(true)
-                  }}
-                >
-                  新建 Model
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-3">
-              <Input
-                value={modelQuery}
-                onChange={(event) => setModelQuery(event.target.value)}
-                placeholder="筛选 model（id/provider/name）"
-              />
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={modelQuery}
+              onChange={(event) => setModelQuery(event.target.value)}
+              placeholder="筛选 model（id/provider/name）"
+              className="h-8 max-w-md"
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                resetModelForm()
+                setModelEditorOpen(true)
+              }}
+            >
+              新建 Model
+            </Button>
+          </div>
 
-              <Textarea
-                className="min-h-[88px]"
-                value={testPrompt}
-                onChange={(event) => setTestPrompt(event.target.value)}
-                placeholder="测试 prompt"
-              />
+          <Textarea
+            className="min-h-[88px]"
+            value={testPrompt}
+            onChange={(event) => setTestPrompt(event.target.value)}
+            placeholder="测试 prompt"
+          />
 
-              {filteredModels.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border/65 bg-background/60 px-4 py-6 text-sm text-muted-foreground">
-                  没有匹配的 model。
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                        <th className="px-3 py-2 font-medium">Id</th>
-                        <th className="px-3 py-2 font-medium">Provider</th>
-                        <th className="px-3 py-2 font-medium">Name</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                        <th className="px-3 py-2 font-medium">Params</th>
-                        <th className="px-3 py-2 font-medium">Updated</th>
-                        <th className="px-3 py-2 font-medium text-right">Actions</th>
+          {filteredModels.length === 0 ? (
+            <div className="px-1 py-6 text-sm text-muted-foreground">没有匹配的 model。</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <th className="px-2 py-2 font-medium">Id</th>
+                    <th className="px-2 py-2 font-medium">Provider</th>
+                    <th className="px-2 py-2 font-medium">Name</th>
+                    <th className="px-2 py-2 font-medium">Status</th>
+                    <th className="px-2 py-2 font-medium">Params</th>
+                    <th className="px-2 py-2 font-medium">Updated</th>
+                    <th className="px-2 py-2 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredModels.map((item) => {
+                    const modelId = String(item.id || "").trim()
+                    if (!modelId) return null
+                    const isPaused = item.isPaused === true
+                    return (
+                      <tr key={modelId} className="border-b border-border/45">
+                        <td className="px-2 py-2 text-sm font-medium">{modelId}</td>
+                        <td className="px-2 py-2 text-sm text-muted-foreground">{item.providerId || "-"}</td>
+                        <td className="px-2 py-2 text-sm">{item.name || "-"}</td>
+                        <td className="px-2 py-2 text-xs">
+                          {isPaused ? (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              paused
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700">
+                              active
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-[11px] text-muted-foreground">
+                          <div>{`temp ${item.temperature ?? "-"}`}</div>
+                          <div>{`max ${item.maxTokens ?? "-"}`}</div>
+                          <div>{`topP ${item.topP ?? "-"}`}</div>
+                        </td>
+                        <td className="px-2 py-2 text-xs text-muted-foreground">{formatTime(item.updatedAt)}</td>
+                        <td className="px-2 py-2 text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[11px]"
+                              onClick={() => {
+                                setModelForm({
+                                  id: modelId,
+                                  providerId: String(item.providerId || ""),
+                                  name: String(item.name || ""),
+                                  temperature: item.temperature === undefined ? "" : String(item.temperature),
+                                  maxTokens: item.maxTokens === undefined ? "" : String(item.maxTokens),
+                                  topP: item.topP === undefined ? "" : String(item.topP),
+                                  frequencyPenalty:
+                                    item.frequencyPenalty === undefined ? "" : String(item.frequencyPenalty),
+                                  presencePenalty:
+                                    item.presencePenalty === undefined ? "" : String(item.presencePenalty),
+                                  anthropicVersion: String(item.anthropicVersion || ""),
+                                })
+                                setModelEditorOpen(true)
+                              }}
+                            >
+                              编辑
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => onTestModel(modelId, testPrompt)}>
+                              测试
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={() => onPauseModel(modelId, !isPaused)}>
+                              {isPaused ? "恢复" : "暂停"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] text-destructive" onClick={() => onRemoveModel(modelId)}>
+                              删除
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {filteredModels.map((item) => {
-                        const modelId = String(item.id || "").trim()
-                        if (!modelId) return null
-                        const isPaused = item.isPaused === true
-                        return (
-                          <tr key={modelId} className="border-t border-border/60">
-                            <td className="px-3 py-2 text-sm font-medium">{modelId}</td>
-                            <td className="px-3 py-2 text-sm text-muted-foreground">{item.providerId || "-"}</td>
-                            <td className="px-3 py-2 text-sm">{item.name || "-"}</td>
-                            <td className="px-3 py-2 text-xs">
-                              {isPaused ? (
-                                <Badge variant="outline" className="border-border/65 bg-muted/35 text-muted-foreground">
-                                  paused
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700">
-                                  active
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-[11px] text-muted-foreground">
-                              <div>{`temp ${item.temperature ?? "-"}`}</div>
-                              <div>{`max ${item.maxTokens ?? "-"}`}</div>
-                              <div>{`topP ${item.topP ?? "-"}`}</div>
-                            </td>
-                            <td className="px-3 py-2 text-xs text-muted-foreground">{formatTime(item.updatedAt)}</td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex flex-wrap items-center justify-end gap-1.5">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2 text-[11px]"
-                                  onClick={() => {
-                                    setModelForm({
-                                      id: modelId,
-                                      providerId: String(item.providerId || ""),
-                                      name: String(item.name || ""),
-                                      temperature: item.temperature === undefined ? "" : String(item.temperature),
-                                      maxTokens: item.maxTokens === undefined ? "" : String(item.maxTokens),
-                                      topP: item.topP === undefined ? "" : String(item.topP),
-                                      frequencyPenalty:
-                                        item.frequencyPenalty === undefined ? "" : String(item.frequencyPenalty),
-                                      presencePenalty:
-                                        item.presencePenalty === undefined ? "" : String(item.presencePenalty),
-                                      anthropicVersion: String(item.anthropicVersion || ""),
-                                    })
-                                    setModelEditorOpen(true)
-                                  }}
-                                >
-                                  编辑
-                                </Button>
-                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onTestModel(modelId, testPrompt)}>
-                                  测试
-                                </Button>
-                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => onPauseModel(modelId, !isPaused)}>
-                                  {isPaused ? "恢复" : "暂停"}
-                                </Button>
-                                <Button size="sm" variant="destructive" className="h-7 px-2 text-[11px]" onClick={() => onRemoveModel(modelId)}>
-                                  删除
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <Dialog open={modelEditorOpen} onOpenChange={setModelEditorOpen}>
             <DialogContent>

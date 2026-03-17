@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { Loader2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { UiAgentOption } from "@/types/Dashboard"
 
@@ -18,7 +19,7 @@ export interface AgentOverviewStoppedSectionProps {
   /**
    * 启动 agent 回调。
    */
-  onStart: (agentId: string) => void
+  onStart: (agentId: string) => Promise<void> | void
 }
 
 function BasicRow(props: { label: string; value: string }) {
@@ -34,6 +35,7 @@ function BasicRow(props: { label: string; value: string }) {
 
 export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionProps) {
   const { agent, onStart } = props
+  const [starting, setStarting] = React.useState(false)
 
   if (!agent) {
     return <div className="py-6 text-sm text-muted-foreground">未选择 Agent</div>
@@ -52,8 +54,19 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
           <div className="truncate text-xl font-semibold tracking-tight text-foreground">{agent.name || "Unknown Agent"}</div>
           <div className="mt-1 text-xs text-muted-foreground">当前未启动</div>
         </div>
-        <Button size="sm" onClick={() => onStart(agent.id)}>
-          启动
+        <Button
+          size="sm"
+          disabled={starting}
+          onClick={async () => {
+            try {
+              setStarting(true)
+              await Promise.resolve(onStart(agent.id))
+            } finally {
+              setStarting(false)
+            }
+          }}
+        >
+          {starting ? <Loader2Icon className="size-4 animate-spin" /> : "启动"}
         </Button>
       </div>
 
@@ -67,4 +80,3 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
     </section>
   )
 }
-

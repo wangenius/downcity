@@ -9,6 +9,8 @@
 import type { Hono } from "hono";
 import type { SystemModelMessage } from "ai";
 import fs from "fs-extra";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import {
   listServiceRuntimes,
   runServiceCommand,
@@ -34,6 +36,23 @@ import { getShipContextMessagesPath, getShipJsonPath } from "@/console/env/Paths
 import { ConsoleStore } from "@utils/store/index.js";
 
 const LOCAL_UI_CONTEXT_ID = "local_ui";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * 当前 SMA 版本号（用于 Overview 显示）。
+ */
+const SMA_VERSION = (() => {
+  try {
+    const pkg = fs.readJsonSync(join(__dirname, "../../../package.json")) as {
+      version?: string;
+    };
+    const version = String(pkg?.version || "").trim();
+    return version || "unknown";
+  } catch {
+    return "unknown";
+  }
+})();
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
@@ -125,6 +144,7 @@ export function registerTuiApiRoutes(params: {
 
       return c.json({
         success: true,
+        smaVersion: SMA_VERSION,
         now: new Date().toISOString(),
         agent: {
           name: runtime.config.name,

@@ -7,9 +7,6 @@
  */
 
 import * as React from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import type {
   UiAgentOption,
@@ -17,46 +14,7 @@ import type {
   UiExtensionRuntimeItem,
 } from "@/types/Dashboard"
 
-type ConfigViewMode = "required" | "optional" | "all"
-
-interface MetricTileProps {
-  /**
-   * 指标标题。
-   */
-  label: string
-  /**
-   * 指标值。
-   */
-  value: string
-  /**
-   * 指标说明。
-   */
-  hint: string
-}
-
-function MetricTile(props: MetricTileProps) {
-  return (
-    <article className="rounded-xl border border-border/65 bg-background/70 p-3">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{props.label}</div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{props.value}</div>
-      <p className="mt-1 text-xs text-muted-foreground">{props.hint}</p>
-    </article>
-  )
-}
-
 export interface GlobalOverviewSectionProps {
-  /**
-   * 顶栏状态文案。
-   */
-  topbarStatus: string
-  /**
-   * 顶栏是否错误态。
-   */
-  topbarError: boolean
-  /**
-   * system prompt 是否可用。
-   */
-  hasPrompt: boolean
   /**
    * 运行中 agent 列表。
    */
@@ -69,10 +27,6 @@ export interface GlobalOverviewSectionProps {
    * 配置文件状态列表。
    */
   configStatus: UiConfigStatusItem[]
-  /**
-   * 刷新回调。
-   */
-  onRefresh: () => void
   /**
    * 启动 agent。
    */
@@ -89,178 +43,137 @@ export interface GlobalOverviewSectionProps {
 
 export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
   const {
-    topbarStatus,
-    topbarError,
-    hasPrompt,
     agents,
     extensions,
     configStatus,
-    onRefresh,
     onStartAgent,
     onRestartAgent,
     onStopAgent,
   } = props
-  const [mode, setMode] = React.useState<ConfigViewMode>("required")
 
   const requiredConsoleKeys = new Set(["ship_db", "console_pid", "agents_registry"])
   const consoleItems = configStatus.filter((item) => item.scope === "console")
   const requiredConsoleItems = consoleItems.filter((item) => requiredConsoleKeys.has(item.key))
-  const optionalConsoleItems = consoleItems.filter((item) => !requiredConsoleKeys.has(item.key))
+  const optionalMissingCount = consoleItems.filter(
+    (item) => !requiredConsoleKeys.has(item.key) && item.status === "missing",
+  ).length
   const nonOkRequired = requiredConsoleItems.filter((item) => item.status !== "ok")
 
-  const runningAgentCount = agents.filter((item) => item.running !== false).length
-  const stoppedAgentCount = Math.max(0, agents.length - runningAgentCount)
-  const runningExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "running").length
   const errorExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "error").length
-  const warningCount = nonOkRequired.length + errorExtensions
+  const warningCount = nonOkRequired.length + errorExtensions + optionalMissingCount
+  const requiredOkCount = requiredConsoleItems.length - nonOkRequired.length
+  const configHealthy = nonOkRequired.length === 0
 
-  const filteredConfigItems =
-    mode === "required"
-      ? requiredConsoleItems
-      : mode === "optional"
-        ? optionalConsoleItems
-        : consoleItems
+  const issueSignals = [
+    ...nonOkRequired.map((item) => ({
+      key: `config:${item.key}`,
+      source: "config",
+      name: item.label,
+      state: item.status,
+      detail: item.reason || item.path,
+    })),
+    ...extensions
+      .filter((item) => String(item.state || "").toLowerCase() === "error")
+      .map((item) => ({
+        key: `ext:${String(item.name || "unknown")}`,
+        source: "extension",
+        name: String(item.name || "unknown"),
+        state: String(item.state || "error"),
+        detail: String(item.lastError || item.description || "").trim() || "-",
+      })),
+  ]
 
   return (
     <section className="space-y-5">
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b border-border/55 pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-lg">Console Command Deck</CardTitle>
-            <Button size="sm" variant="outline" onClick={onRefresh}>
-              refresh
-            </Button>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span
-              className={
-                topbarError
-                  ? "rounded-full border border-destructive/35 bg-destructive/10 px-2.5 py-1 text-destructive"
-                  : "rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-emerald-700"
-              }
-            >
-              {topbarError ? "console error" : "console healthy"}
-            </span>
-            <span
-              className={
-                hasPrompt
-                  ? "rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-emerald-700"
-                  : "rounded-full border border-border/60 bg-muted/45 px-2.5 py-1 text-muted-foreground"
-              }
-            >
-              {hasPrompt ? "prompt ready" : "prompt unknown"}
-            </span>
-            <span className="rounded-full border border-border/60 bg-muted/45 px-2.5 py-1 text-muted-foreground">
-              {`warnings ${warningCount}`}
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-3">
-          <p className="text-sm text-muted-foreground">{topbarStatus || "Console runtime status unavailable."}</p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <MetricTile label="Agents Running" value={String(runningAgentCount)} hint={`stopped ${stoppedAgentCount}`} />
-        <MetricTile label="Extensions Running" value={String(runningExtensions)} hint={`error ${errorExtensions}`} />
-        <MetricTile
-          label="Required Config"
-          value={`${requiredConsoleItems.length - nonOkRequired.length}/${requiredConsoleItems.length}`}
-          hint="required ok / required total"
-        />
-        <MetricTile label="Console Files" value={String(consoleItems.length)} hint="all console scope files" />
-        <MetricTile
-          label="Optional Missing"
-          value={String(optionalConsoleItems.filter((item) => item.status === "missing").length)}
-          hint="non-blocking files"
-        />
-        <MetricTile label="Signals" value={String(warningCount)} hint="config + extension" />
+      <div
+        className={
+          configHealthy
+            ? "rounded-md bg-emerald-500/12 px-3 py-2.5 text-emerald-800 dark:text-emerald-300"
+            : "rounded-md bg-muted px-3 py-2.5 text-muted-foreground"
+        }
+      >
+        <div className="text-sm font-semibold">{configHealthy ? "配置正常" : "配置待完善"}</div>
+        <div className="mt-0.5 text-xs opacity-90">
+          {`required ${requiredOkCount}/${requiredConsoleItems.length}`}
+          {optionalMissingCount > 0 ? ` · optional missing ${optionalMissingCount}` : ""}
+        </div>
       </div>
-
-      <Card>
-        <CardHeader className="border-b border-border/55 pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Config Workbench</CardTitle>
-            <div className="flex items-center gap-1.5">
-              {([
-                ["required", `required (${requiredConsoleItems.length})`],
-                ["optional", `optional (${optionalConsoleItems.length})`],
-                ["all", `all (${consoleItems.length})`],
-              ] as const).map(([key, label]) => (
-                <Button
-                  key={key}
-                  size="sm"
-                  variant={mode === key ? "secondary" : "outline"}
-                  className="h-7 px-2 text-[11px]"
-                  onClick={() => setMode(key)}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-3">
-          {filteredConfigItems.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/65 bg-background/60 px-4 py-5 text-sm text-muted-foreground">
-              当前筛选下没有配置项。
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">File</th>
-                    <th className="px-3 py-2 font-medium">Level</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Reason</th>
-                    <th className="px-3 py-2 font-medium">Updated</th>
-                    <th className="px-3 py-2 font-medium">Path</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredConfigItems.map((item) => (
-                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="border-t border-border/60">
-                      <td className="px-3 py-2 text-sm font-medium">{item.label}</td>
-                      <td className="px-3 py-2 text-xs">
-                        <span className="rounded-full border border-border/60 bg-muted/35 px-2 py-0.5 text-muted-foreground">
-                          {requiredConsoleKeys.has(item.key) ? "required" : "optional"}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-xs">
-                        <span
-                          className={
-                            item.status === "ok"
-                              ? "rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-emerald-700"
-                              : "rounded-full border border-destructive/35 bg-destructive/10 px-2 py-0.5 text-destructive"
-                          }
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{item.reason || "-"}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
-                        {item.mtime ? new Date(item.mtime).toLocaleString("zh-CN", { hour12: false }) : "-"}
-                      </td>
-                      <td className="max-w-[30rem] truncate px-3 py-2 font-mono text-[11px] text-muted-foreground" title={item.path}>
-                        {item.path}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <GlobalAgentsSection
         agents={agents}
-        onRefresh={onRefresh}
         onStartAgent={onStartAgent}
         onRestartAgent={onRestartAgent}
         onStopAgent={onStopAgent}
       />
+
+      <section className="min-h-0 overflow-y-auto">
+        {consoleItems.length === 0 ? (
+          <div className="px-3 py-4 text-sm text-muted-foreground">暂无 console 配置项</div>
+        ) : (
+          <div className="px-3 py-2">
+            <table className="w-full table-fixed border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border/60 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <th className="py-2 text-left font-medium">Config</th>
+                  <th className="w-[120px] py-2 text-left font-medium">Level</th>
+                  <th className="w-[96px] py-2 text-left font-medium">Status</th>
+                  <th className="py-2 text-left font-medium">Path</th>
+                </tr>
+              </thead>
+              <tbody>
+                {consoleItems.map((item) => {
+                  const isRequired = requiredConsoleKeys.has(item.key)
+                  const isOk = item.status === "ok"
+                  return (
+                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="border-b border-border/40 align-middle">
+                      <td className="py-2 pr-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-[15px] font-semibold text-foreground">{item.label}</div>
+                          <div className="truncate text-[11px] text-muted-foreground">{item.key}</div>
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3 text-xs text-muted-foreground">{isRequired ? "required" : "optional"}</td>
+                      <td className="py-2 pr-3 text-xs">
+                        <span className={isOk ? "text-emerald-700" : "text-muted-foreground"}>{item.status}</span>
+                      </td>
+                      <td className="py-2 font-mono text-[11px] text-muted-foreground" title={item.path}>
+                        <span className="block truncate">{item.path}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Health Signals
+        </div>
+        {issueSignals.length === 0 ? (
+          <div className="py-2 text-sm text-muted-foreground">没有异常信号</div>
+        ) : (
+          <div className="space-y-1">
+            {issueSignals.map((signal) => (
+              <div
+                key={signal.key}
+                className="rounded-md bg-destructive/8 px-3 py-2"
+              >
+                <div className="flex flex-wrap items-center gap-x-2 text-sm">
+                  <span className="font-medium text-foreground">{signal.name}</span>
+                  <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">{signal.source}</span>
+                  <span className="text-xs text-destructive">{signal.state}</span>
+                </div>
+                <div className="mt-0.5 truncate text-xs text-muted-foreground" title={signal.detail}>
+                  {signal.detail}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </section>
   )
 }

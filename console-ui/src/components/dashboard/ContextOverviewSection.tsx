@@ -37,10 +37,6 @@ export interface ContextOverviewSectionProps {
    */
   onOpenContext: (contextId: string) => void
   /**
-   * 刷新渠道状态。
-   */
-  onRefreshChannels: () => void
-  /**
    * 渠道动作。
    */
   onChatAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => void
@@ -96,7 +92,6 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
     selectedContextId,
     formatTime,
     onOpenContext,
-    onRefreshChannels,
     onChatAction,
     onChatConfigure,
   } = props
@@ -135,9 +130,6 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
       <section className="space-y-3">
         <div className="flex items-center justify-between border-b border-border/70 pb-2">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Channels</div>
-          <Button size="sm" variant="outline" className="h-8 px-3" onClick={onRefreshChannels}>
-            刷新 Channels
-          </Button>
         </div>
 
         <div className="overflow-x-auto">

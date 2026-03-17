@@ -5,8 +5,8 @@
 import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { AgentModelBindingSection } from "@/components/dashboard/AgentModelBindingSection"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
+import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
 import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspaceSection"
@@ -68,10 +68,6 @@ export function App() {
     handleAgentChange,
     handleContextChange,
     refreshDashboard,
-    refreshChatChannels,
-    refreshModel,
-    refreshModelPool,
-    refreshPrompt,
     controlService,
     controlExtension,
     testExtension,
@@ -94,6 +90,7 @@ export function App() {
     removeModelPoolItem,
     setModelPoolItemPaused,
     testModelPoolItem,
+    executeAgentCommand,
     constants,
     uiHelpers,
   } = useConsoleDashboard()
@@ -252,19 +249,24 @@ export function App() {
     if (activeView !== "globalOverview") return false
     return Boolean(String(parseDashboardPath(routePathname).agentSegment || "").trim())
   }, [activeView, routePathname])
+  const parsedRoute = React.useMemo(() => parseDashboardPath(routePathname), [routePathname])
   const routeAgentId = React.useMemo(() => {
-    const parsed = parseDashboardPath(routePathname)
-    return resolveAgentIdByRouteSegment(parsed.agentSegment)
-  }, [resolveAgentIdByRouteSegment, routePathname])
+    return resolveAgentIdByRouteSegment(parsedRoute.agentSegment)
+  }, [parsedRoute.agentSegment, resolveAgentIdByRouteSegment])
+
+  React.useEffect(() => {
+    const hasAgentSegment = Boolean(String(parsedRoute.agentSegment || "").trim())
+    if (hasAgentSegment) return
+    if (!selectedAgentId) return
+    handleAgentChange("")
+  }, [handleAgentChange, parsedRoute.agentSegment, selectedAgentId])
 
   const renderAgentOverviewSection = () => (
     selectedAgent && selectedAgent.running === false ? (
       <section>
         <AgentOverviewStoppedSection
           agent={selectedAgent}
-          onStart={(agentId) => {
-            void startAgentFromHistory(agentId)
-          }}
+          onStart={(agentId) => startAgentFromHistory(agentId)}
         />
       </section>
     ) : (
@@ -275,12 +277,8 @@ export function App() {
           services={services}
           localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
           configStatus={configStatus}
-        />
-        <AgentModelBindingSection
-          selectedAgent={selectedAgent}
+          tasks={tasks}
           model={model}
-          loading={loading}
-          onRefresh={() => void refreshModel(selectedAgentId)}
           onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
         />
       </section>
@@ -296,22 +294,12 @@ export function App() {
         return (
           <section>
             <GlobalOverviewSection
-              topbarStatus={topbarStatus}
-              topbarError={topbarError}
-              hasPrompt={Boolean(prompt)}
               agents={agents}
               extensions={extensions}
               configStatus={configStatus}
-              onRefresh={() => void refreshDashboard()}
-              onStartAgent={(agentId) => {
-                void startAgentFromHistory(agentId)
-              }}
-              onRestartAgent={(agentId) => {
-                void restartAgentFromHistory(agentId)
-              }}
-              onStopAgent={(agentId) => {
-                void stopAgentFromHistory(agentId)
-              }}
+              onStartAgent={(agentId) => startAgentFromHistory(agentId)}
+              onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
+              onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
             />
           </section>
         )
@@ -327,26 +315,26 @@ export function App() {
             />
           </section>
         )
+      case "agentCommand":
+        return (
+          <section className="flex min-h-0 flex-1">
+            <AgentCommandSection
+              selectedAgentId={selectedAgentId}
+              selectedAgentName={String(selectedAgent?.name || "").trim() || "agent"}
+              onExecute={(input) => executeAgentCommand(input)}
+            />
+          </section>
+        )
       case "globalAgents":
         return (
           <section>
             <GlobalOverviewSection
-              topbarStatus={topbarStatus}
-              topbarError={topbarError}
-              hasPrompt={Boolean(prompt)}
               agents={agents}
               extensions={extensions}
               configStatus={configStatus}
-              onRefresh={() => void refreshDashboard()}
-              onStartAgent={(agentId) => {
-                void startAgentFromHistory(agentId)
-              }}
-              onRestartAgent={(agentId) => {
-                void restartAgentFromHistory(agentId)
-              }}
-              onStopAgent={(agentId) => {
-                void stopAgentFromHistory(agentId)
-              }}
+              onStartAgent={(agentId) => startAgentFromHistory(agentId)}
+              onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
+              onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
             />
           </section>
         )
@@ -358,8 +346,6 @@ export function App() {
               providers={modelProviders}
               poolItems={modelPoolItems}
               loading={loading}
-              onRefresh={() => void refreshModel(selectedAgentId)}
-              onRefreshPool={() => void refreshModelPool()}
               onUpsertProvider={(input) => void upsertModelProvider(input)}
               onRemoveProvider={(providerId) => void removeModelProvider(providerId)}
               onTestProvider={(providerId) => void testModelProvider(providerId)}
@@ -378,7 +364,6 @@ export function App() {
               extensions={extensions}
               formatTime={uiHelpers.formatTime}
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
-              onRefresh={() => void refreshDashboard()}
               onControl={(name, action) => void controlExtension(name, action)}
               onTest={(name) => void testExtension(name)}
             />
@@ -421,7 +406,6 @@ export function App() {
                 navigateToView("contextWorkspace", { contextId })
                 void handleContextChange(contextId)
               }}
-              onRefreshChannels={() => void refreshChatChannels(selectedAgentId)}
               onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
               onChatConfigure={(channel, config) => void configureChatChannel(channel, config)}
             />
@@ -442,9 +426,6 @@ export function App() {
               formatTime={uiHelpers.formatTime}
               onChangeInput={setChatInput}
               onSendLocalMessage={() => void sendLocalMessage()}
-              onRefreshPrompt={() =>
-                void refreshPrompt(selectedAgentId, selectedContextId || constants.LOCAL_UI_CONTEXT_ID)
-              }
               onSelectContext={(contextId) => {
                 navigateToView("contextWorkspace", { contextId })
                 void handleContextChange(contextId)
@@ -501,16 +482,14 @@ export function App() {
           navigateToView("contextWorkspace", { contextId })
           void handleContextChange(contextId)
         }}
+        topbarStatus={topbarStatus}
+        topbarError={topbarError}
+        loading={loading}
+        onRefresh={() => void refreshDashboard()}
         variant="sidebar"
       />
       <SidebarInset>
-        <SiteHeader
-          topbarStatus={topbarStatus}
-          topbarError={topbarError}
-          loading={loading}
-          onRefresh={() => void refreshDashboard()}
-          viewLabel={getDashboardViewLabel(activeView)}
-        />
+        <SiteHeader viewLabel={getDashboardViewLabel(activeView)} />
 
         <main className="mainview-shell flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto overflow-x-hidden bg-background px-3 py-2 md:px-4 md:py-3">
           {renderActiveView()}

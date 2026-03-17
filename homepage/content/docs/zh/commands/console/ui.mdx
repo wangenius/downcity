@@ -38,8 +38,9 @@ sma console ui [action] [options]
 - `Global / Model` 现已支持 provider/model 全量操作（创建、更新、测试、发现、暂停、删除）。
 - `Global / Overview` 仅展示全局级健康信号（console、agent fleet、channels、extensions、config risk）。
 - `Global / Console Runtime` 展示 console 运行态与 console 级配置文件状态。
-- `Agent`：`Overview`、`Services`、`Tasks`、`Logs`。
+- `Agent`：`Overview`、`Services`、`Command`、`Tasks`、`Logs`。
 - `Agent / Overview` 聚焦当前 agent（bootstrap 配置、chat 身份、模型绑定），不再混入 global 信息。
+- `Agent / Command` 提供终端风格命令面板：在当前 agent 项目根目录执行 shell 命令，并展示 stdout/stderr 与退出码。
 - `Agent / Tasks` 会展示任务定义详情与每次执行记录（run history + run detail）。
 - `Agent / Tasks` 支持执行中实时进度：手动 `run` 后会显示 `running`、当前阶段、轮次与进度事件，完成后自动切换到最终状态。
 - `Context`：`Context Overview` + 每个 context 条目（包含 `local_ui`）。

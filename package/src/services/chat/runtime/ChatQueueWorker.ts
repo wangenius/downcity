@@ -548,14 +548,21 @@ export class ChatQueueWorker {
       }
       return mergedExecMessages;
     };
+    let lastDirectDispatchedStepText = "";
     const onAssistantStepCallback = async (params: {
       text: string;
       stepIndex: number;
     }): Promise<void> => {
-      await this.dispatchAssistantTextDirect({
+      const stepText = String(params.text || "").trim();
+      if (!stepText) return;
+      const dispatched = await this.dispatchAssistantTextDirect({
         contextId: runItem.contextId,
-        assistantText: params.text,
+        assistantText: stepText,
       });
+      // 关键点（中文）：记录最近一次已发送的 step 文本，避免最终消息重复回发。
+      if (dispatched) {
+        lastDirectDispatchedStepText = stepText;
+      }
     };
 
     const typing = this.startTypingHeartbeat(runItem);
@@ -612,14 +619,19 @@ export class ChatQueueWorker {
 
     try {
       // 关键点（中文）
-      // - 正常成功：不因“已发送 step 文本”而跳过最终结果回发。
-      //   step 文本用于中途反馈；最终消息用于收口本轮结论。
+      // - step 文本用于中途反馈；最终消息用于收口。
+      // - 若最终文本与最近一次 step 已发送文本完全一致，则跳过最终 direct 回发，避免重复。
       // - 失败场景：必须回发最终失败信息（即使已有 step 输出）。
       const assistantText = extractTextFromUiMessage(result.assistantMessage).trim();
-      const dispatchedDirect = await this.dispatchAssistantMessageDirect({
-        contextId: runItem.contextId,
-        assistantMessage: result.assistantMessage,
-      });
+      const duplicatedWithStep =
+        assistantText.length > 0 &&
+        assistantText === lastDirectDispatchedStepText;
+      const dispatchedDirect = duplicatedWithStep
+        ? true
+        : await this.dispatchAssistantMessageDirect({
+            contextId: runItem.contextId,
+            assistantMessage: result.assistantMessage,
+          });
       // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里强制兜底回发。
       if (!dispatchedDirect && result.success === false) {
         await this.dispatchTextToChannel({

@@ -28,10 +28,6 @@ export interface ExtensionsSectionProps {
    */
   statusBadgeVariant: (status?: string) => "ok" | "warn" | "bad"
   /**
-   * 刷新操作。
-   */
-  onRefresh: () => void
-  /**
    * 执行 lifecycle。
    */
   onControl: (extensionName: string, action: "start" | "stop" | "restart") => void
@@ -42,7 +38,7 @@ export interface ExtensionsSectionProps {
 }
 
 export function ExtensionsSection(props: ExtensionsSectionProps) {
-  const { extensions, formatTime, onRefresh, onControl, onTest } = props
+  const { extensions, formatTime, onControl, onTest } = props
   const [search, setSearch] = React.useState("")
   const [actionLoadingKey, setActionLoadingKey] = React.useState("")
   const [confirmAction, setConfirmAction] = React.useState<{
@@ -56,35 +52,63 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
     return String(item.name || "").toLowerCase().includes(query)
   })
 
+  const summary = React.useMemo(() => {
+    let active = 0
+    let inactive = 0
+    let error = 0
+    for (const item of filtered) {
+      const state = String(item.state || "").toLowerCase()
+      if (state === "error") {
+        error += 1
+        continue
+      }
+      if (state === "running" || state === "idle") {
+        active += 1
+        continue
+      }
+      inactive += 1
+    }
+    return { active, inactive, error }
+  }, [filtered])
+
   return (
-    <section className="min-h-0 overflow-y-auto">
-      <div className="flex h-10 items-center justify-between border-b border-border/60 px-3">
-        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Extensions</div>
-        <div className="flex items-center gap-2">
+    <section className="min-h-0 space-y-3 overflow-y-auto px-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
+            active {summary.active}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+            inactive {summary.inactive}
+          </span>
+          {summary.error > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">
+              error {summary.error}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-1.5">
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="搜索 extension"
-            className="h-7 w-[180px]"
+            className="h-8 w-[220px]"
           />
-          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onRefresh}>
-            刷新
-          </Button>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="px-3 py-4 text-sm text-muted-foreground">没有匹配的 extension。</div>
+        <div className="py-8 text-sm text-muted-foreground">没有匹配的 extension。</div>
       ) : (
-        <div className="px-3 py-2">
+        <div>
           <table className="w-full table-fixed border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border/60 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+              <tr className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                 <th className="py-2 text-left font-medium">Extension</th>
                 <th className="w-[100px] py-2 text-left font-medium">State</th>
                 <th className="w-[220px] py-2 text-left font-medium">Updated</th>
-                <th className="w-[320px] py-2 text-left font-medium">Config</th>
-                <th className="w-[120px] py-2 text-right font-medium">Action</th>
+                <th className="w-[360px] py-2 text-left font-medium">Info</th>
+                <th className="w-[144px] py-2 text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -105,9 +129,9 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                 return (
                   <tr
                     key={name}
-                    className={`border-b border-border/40 align-middle ${
+                    className={`align-middle ${
                       isError
-                        ? "text-destructive"
+                        ? "text-foreground"
                         : isRunning || isIdle
                           ? "text-foreground"
                           : "text-muted-foreground opacity-60"
@@ -116,22 +140,19 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                     <td className="py-2 pr-3">
                       <div className="min-w-0">
                         <div className="truncate text-[15px] font-semibold">{name}</div>
-                        <div className="truncate text-[11px] text-muted-foreground">
+                        <div className="truncate text-[12px] text-muted-foreground">
                           {String(item.description || "").trim() || "-"}
-                        </div>
-                        <div className="truncate text-[11px] text-muted-foreground">
-                          {item.lastError ? `error: ${String(item.lastError)}` : "error: -"}
                         </div>
                       </div>
                     </td>
                     <td className="py-2 pr-3">
                       <span
-                        className={`inline-flex h-5 items-center rounded-full border px-2 font-mono text-[11px] ${
+                        className={`inline-flex h-5 items-center rounded-full px-2 font-mono text-[11px] ${
                           isError
-                            ? "border-destructive/40 bg-destructive/10 text-destructive"
+                            ? "bg-destructive/10 text-destructive"
                             : isRunning || isIdle
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
-                              : "border-border text-muted-foreground"
+                              ? "bg-emerald-500/10 text-emerald-700"
+                              : "bg-muted text-muted-foreground"
                         }`}
                       >
                         {state}
@@ -139,13 +160,24 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                     </td>
                     <td className="py-2 pr-3 text-xs text-muted-foreground">
                       <div>{formatTime(item.updatedAt)}</div>
-                      <div className="truncate">{item.lastCommand ? `${item.lastCommand} @ ${formatTime(item.lastCommandAt)}` : "-"}</div>
+                      <div className="truncate">
+                        {item.lastCommand ? `${item.lastCommand} @ ${formatTime(item.lastCommandAt)}` : "-"}
+                      </div>
                     </td>
                     <td className="py-2 pr-3 text-xs text-muted-foreground">
-                      <div className="truncate">
-                        {`lifecycle(start:${lifecycle.start ? "on" : "off"}, stop:${lifecycle.stop ? "on" : "off"})`}
+                      <div className="flex flex-wrap gap-1">
+                        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px]">
+                          lifecycle s:{lifecycle.start ? "on" : "off"} t:{lifecycle.stop ? "on" : "off"}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px]">
+                          actions {actionItems.length}
+                        </span>
+                        {item.lastError ? (
+                          <span className="inline-flex max-w-full items-center truncate rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] text-destructive">
+                            {String(item.lastError)}
+                          </span>
+                        ) : null}
                       </div>
-                      <div className="truncate">{`actions: ${actionItems.length}`}</div>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {actionItems.length === 0 ? (
                           <span className="text-[11px] text-muted-foreground">-</span>
@@ -159,7 +191,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                             return (
                               <span
                                 key={`${name}:${actionName}`}
-                                className="inline-flex h-5 items-center rounded-full border border-border px-2 font-mono text-[11px] text-foreground/85"
+                                className="inline-flex h-5 items-center rounded-full bg-muted px-2 font-mono text-[11px] text-foreground/85"
                                 title={`${actionName} · ${modeLabel}${
                                   action?.apiMethod && action?.apiPath ? ` · ${action.apiMethod} ${action.apiPath}` : ""
                                 }`}
@@ -173,11 +205,11 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                     </td>
                     <td className="py-2 text-right">
                       {supportsLifecycle ? (
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1">
                           {isError ? (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               className="h-8 w-8 p-0"
                               disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                               aria-label="restart"
@@ -187,13 +219,13 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                               {loadingRestart ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
                             </Button>
                           ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 w-8 p-0"
-                                disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
-                                aria-label="test"
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                                  aria-label="test"
                                 title="test"
                                 onClick={async () => {
                                   try {
@@ -210,7 +242,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                                 <>
                                   <Button
                                     size="sm"
-                                    variant="outline"
+                                    variant="ghost"
                                     className="h-8 w-8 p-0"
                                     disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                                     aria-label="restart"
@@ -221,7 +253,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant="outline"
+                                    variant="ghost"
                                     className="h-8 w-8 p-0"
                                     disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                                     aria-label="stop"
@@ -234,7 +266,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                               ) : (
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="ghost"
                                   className="h-8 w-8 p-0"
                                   disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                                   aria-label="start"

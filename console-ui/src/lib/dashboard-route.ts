@@ -64,6 +64,7 @@ export function toDashboardPath(
   if (view === "globalExtensions") return "/global/extensions"
   if (view === "agentOverview") return `/${encodeURIComponent(agentSegment)}/overview`
   if (view === "agentServices") return `/${encodeURIComponent(agentSegment)}/services`
+  if (view === "agentCommand") return `/${encodeURIComponent(agentSegment)}/command`
   if (view === "agentTasks") {
     const normalizedTaskTitle = String(options?.taskTitle || "").trim()
     if (!normalizedTaskTitle) return `/${encodeURIComponent(agentSegment)}/tasks`
@@ -91,7 +92,7 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
     }
   }
 
-  // 新路由格式：/<agent>/overview|services|tasks|logs|chat(/:context)
+  // 新路由格式：/<agent>/overview|services|command|tasks|logs|chat(/:context)
   const parts = normalized.split("/").filter(Boolean)
   if (parts.length >= 3) {
     const first = String(parts[0] || "").trim().toLowerCase()
@@ -110,6 +111,7 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
     if (agentSegment) {
       if (second === "overview") return { view: "agentOverview", agentSegment }
       if (second === "services") return { view: "agentServices", agentSegment }
+      if (second === "command") return { view: "agentCommand", agentSegment }
       if (second === "tasks") {
         const taskTitle = parts.length >= 3 ? decodeURIComponent(parts.slice(2).join("/")) : ""
         return { view: "agentTasks", agentSegment, taskTitle }

@@ -234,6 +234,10 @@ export interface UiOverviewResponse {
    */
   success?: boolean;
   /**
+   * 当前 SMA CLI 版本号。
+   */
+  smaVersion?: string;
+  /**
    * 当前 agent 基础信息。
    */
   agent?: {
@@ -531,6 +535,66 @@ export interface UiChatActionResult {
    * 动作反馈信息。
    */
   message?: string;
+}
+
+/**
+ * command 执行结果。
+ */
+export interface UiCommandExecuteResult {
+  /**
+   * 实际执行的命令文本。
+   */
+  command: string;
+  /**
+   * 执行工作目录（agent 项目根目录）。
+   */
+  cwd: string;
+  /**
+   * 进程退出码；被信号终止时可能为空。
+   */
+  exitCode?: number | null;
+  /**
+   * 进程终止信号（如 SIGTERM）。
+   */
+  signal?: string;
+  /**
+   * 是否命中执行超时。
+   */
+  timedOut: boolean;
+  /**
+   * 执行耗时（毫秒）。
+   */
+  durationMs: number;
+  /**
+   * 标准输出内容。
+   */
+  stdout: string;
+  /**
+   * 标准错误内容。
+   */
+  stderr: string;
+}
+
+/**
+ * `/api/ui/command/execute` 响应。
+ */
+export interface UiCommandExecuteResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 选中的 agent id。
+   */
+  agentId?: string;
+  /**
+   * command 执行结果。
+   */
+  result?: UiCommandExecuteResult;
+  /**
+   * 错误信息。
+   */
+  error?: string;
 }
 
 /**

@@ -10,6 +10,7 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import http from "node:http";
+import { spawn } from "node:child_process";
 import fs from "fs-extra";
 import path from "node:path";
 import { basename } from "node:path";
@@ -282,6 +283,55 @@ export class ConsoleUIGateway {
         const requestedAgentId = this.readRequestedAgentId(c.req.raw);
         const payload = await this.buildConfigStatusResponse(requestedAgentId);
         return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.post("/api/ui/command/execute", async (c) => {
+      try {
+        const body = (await c.req.json().catch(() => ({}))) as {
+          agentId?: unknown;
+          command?: unknown;
+          timeoutMs?: unknown;
+        };
+        const requestedAgentId = String(
+          body.agentId || this.readRequestedAgentId(c.req.raw) || "",
+        ).trim();
+        if (!requestedAgentId) {
+          return c.json({ success: false, error: "agentId is required" }, 400);
+        }
+        const command = String(body.command || "").trim();
+        if (!command) {
+          return c.json({ success: false, error: "command is required" }, 400);
+        }
+
+        const selectedAgent = await this.resolveAgentById(requestedAgentId);
+        if (!selectedAgent) {
+          return c.json(
+            {
+              success: false,
+              error: "Agent not found in console registry",
+            },
+            404,
+          );
+        }
+
+        const timeoutRaw = Number.parseInt(String(body.timeoutMs || ""), 10);
+        const timeoutMs = Number.isFinite(timeoutRaw) && timeoutRaw > 0
+          ? Math.min(timeoutRaw, 120_000)
+          : 45_000;
+
+        const result = await this.executeShellCommand({
+          command,
+          cwd: selectedAgent.projectRoot,
+          timeoutMs,
+        });
+        return c.json({
+          success: true,
+          agentId: selectedAgent.id,
+          result,
+        });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
       }
@@ -980,6 +1030,109 @@ export class ConsoleUIGateway {
     );
     if (!selected || selected.running !== true) return null;
     return selected;
+  }
+
+  /**
+   * 根据 id 查找 agent（允许离线 agent，用于 command 页面）。
+   */
+  private async resolveAgentById(
+    requestedAgentId: string,
+  ): Promise<ConsoleUiAgentOption | null> {
+    const targetId = String(requestedAgentId || "").trim();
+    if (!targetId) return null;
+    const agents = await this.listKnownAgents();
+    return agents.find((item) => item.id === targetId) || null;
+  }
+
+  /**
+   * 在 agent 项目目录中执行 shell 命令。
+   *
+   * 关键点（中文）
+   * - 默认 shell 使用 zsh，保持与 CLI 使用习惯一致。
+   * - 输出做大小限制，避免单次命令把 UI 网关进程内存打满。
+   */
+  private async executeShellCommand(params: {
+    command: string;
+    cwd: string;
+    timeoutMs: number;
+  }): Promise<{
+    command: string;
+    cwd: string;
+    exitCode: number | null;
+    signal: string;
+    timedOut: boolean;
+    durationMs: number;
+    stdout: string;
+    stderr: string;
+  }> {
+    const command = String(params.command || "").trim();
+    const cwd = path.resolve(String(params.cwd || "").trim() || ".");
+    const timeoutMs = Math.max(1_000, Math.min(Number(params.timeoutMs || 45_000), 120_000));
+    const startedAt = Date.now();
+
+    return await new Promise((resolve, reject) => {
+      const child = spawn("/bin/zsh", ["-lc", command], {
+        cwd,
+        env: {
+          ...process.env,
+          FORCE_COLOR: "0",
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      const MAX_OUTPUT_BYTES = 200_000;
+      let stdout = "";
+      let stderr = "";
+      let timedOut = false;
+      let settled = false;
+      let killTimer: NodeJS.Timeout | null = null;
+      let hardKillTimer: NodeJS.Timeout | null = null;
+
+      // 关键点（中文）：超时先尝试 SIGTERM，仍未退出再兜底 SIGKILL。
+      killTimer = setTimeout(() => {
+        timedOut = true;
+        child.kill("SIGTERM");
+        hardKillTimer = setTimeout(() => {
+          child.kill("SIGKILL");
+        }, 1_200);
+      }, timeoutMs);
+
+      child.stdout.on("data", (chunk) => {
+        if (!chunk) return;
+        if (Buffer.byteLength(stdout, "utf-8") >= MAX_OUTPUT_BYTES) return;
+        stdout += String(chunk);
+      });
+
+      child.stderr.on("data", (chunk) => {
+        if (!chunk) return;
+        if (Buffer.byteLength(stderr, "utf-8") >= MAX_OUTPUT_BYTES) return;
+        stderr += String(chunk);
+      });
+
+      child.on("error", (error) => {
+        if (settled) return;
+        settled = true;
+        if (killTimer) clearTimeout(killTimer);
+        if (hardKillTimer) clearTimeout(hardKillTimer);
+        reject(error);
+      });
+
+      child.on("close", (code, signal) => {
+        if (settled) return;
+        settled = true;
+        if (killTimer) clearTimeout(killTimer);
+        if (hardKillTimer) clearTimeout(hardKillTimer);
+        resolve({
+          command,
+          cwd,
+          exitCode: code,
+          signal: signal || "",
+          timedOut,
+          durationMs: Date.now() - startedAt,
+          stdout: stdout.slice(0, MAX_OUTPUT_BYTES),
+          stderr: stderr.slice(0, MAX_OUTPUT_BYTES),
+        });
+      });
+    });
   }
 
   private async startAgentByProjectRoot(projectRoot: string): Promise<{

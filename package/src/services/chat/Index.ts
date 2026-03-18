@@ -210,6 +210,10 @@ function isPlaceholder(value?: string): boolean {
   return value === "${}";
 }
 
+function readAgentEnv(context: ServiceRuntime, key: string): string {
+  return String(context.env?.[key] || "").trim();
+}
+
 function resolveChatChannelNameOrThrow(value: string): ChatChannelName {
   const normalized = String(value || "")
     .trim()
@@ -227,7 +231,7 @@ function resolveChatChannelNameOrThrow(value: string): ChatChannelName {
 function resolveTelegramToken(context: ServiceRuntime): string {
   const token = context.config.services?.chat?.channels?.telegram?.botToken;
   if (token && !isPlaceholder(token)) return token;
-  return "";
+  return readAgentEnv(context, "TELEGRAM_BOT_TOKEN");
 }
 
 function resolveFeishuCredentials(context: ServiceRuntime): {
@@ -238,11 +242,11 @@ function resolveFeishuCredentials(context: ServiceRuntime): {
   return {
     appId:
       (channel?.appId && !isPlaceholder(channel.appId) ? channel.appId : "") ||
-      String(process.env.FEISHU_APP_ID || "").trim(),
+      readAgentEnv(context, "FEISHU_APP_ID"),
     appSecret:
       (channel?.appSecret && !isPlaceholder(channel.appSecret)
         ? channel.appSecret
-        : "") || String(process.env.FEISHU_APP_SECRET || "").trim(),
+        : "") || readAgentEnv(context, "FEISHU_APP_SECRET"),
   };
 }
 
@@ -254,11 +258,11 @@ function resolveQQCredentials(context: ServiceRuntime): {
   return {
     appId:
       (channel?.appId && !isPlaceholder(channel.appId) ? channel.appId : "") ||
-      String(process.env.QQ_APP_ID || "").trim(),
+      readAgentEnv(context, "QQ_APP_ID"),
     appSecret:
       (channel?.appSecret && !isPlaceholder(channel.appSecret)
         ? channel.appSecret
-        : "") || String(process.env.QQ_APP_SECRET || "").trim(),
+        : "") || readAgentEnv(context, "QQ_APP_SECRET"),
   };
 }
 
@@ -282,10 +286,7 @@ async function startFeishuChannel(context: ServiceRuntime): Promise<void> {
   if (!context.config.services?.chat?.channels?.feishu?.enabled) return;
   context.logger.info("Feishu channel enabled");
   const feishuChannel = context.config.services?.chat?.channels?.feishu as
-    | {
-        domain?: string;
-        adminUserIds?: string[];
-      }
+    | { domain?: string }
     | undefined;
   const credentials = resolveFeishuCredentials(context);
   channelState.feishu = await createFeishuBot(
@@ -294,9 +295,6 @@ async function startFeishuChannel(context: ServiceRuntime): Promise<void> {
       appId: credentials.appId,
       appSecret: credentials.appSecret,
       domain: feishuChannel?.domain || "https://open.feishu.cn",
-      adminUserIds: Array.isArray(feishuChannel?.adminUserIds)
-        ? feishuChannel.adminUserIds
-        : undefined,
     },
     context,
   );
@@ -309,17 +307,6 @@ async function startQQChannel(context: ServiceRuntime): Promise<void> {
   if (!context.config.services?.chat?.channels?.qq?.enabled) return;
   context.logger.info("QQ channel enabled");
   const qqChannel = context.config.services?.chat?.channels?.qq;
-  const envQqGroupAccess = (process.env.QQ_GROUP_ACCESS || "")
-    .trim()
-    .toLowerCase();
-  const qqGroupAccess: "initiator_or_admin" | "anyone" | undefined =
-    qqChannel?.groupAccess === "anyone"
-      ? "anyone"
-      : qqChannel?.groupAccess === "initiator_or_admin"
-        ? "initiator_or_admin"
-        : envQqGroupAccess === "initiator_or_admin"
-          ? "initiator_or_admin"
-          : "anyone";
   const credentials = resolveQQCredentials(context);
   channelState.qq = await createQQBot(
     {
@@ -329,8 +316,7 @@ async function startQQChannel(context: ServiceRuntime): Promise<void> {
       sandbox:
         typeof qqChannel?.sandbox === "boolean"
           ? qqChannel.sandbox
-          : (process.env.QQ_SANDBOX || "").toLowerCase() === "true",
-      groupAccess: qqGroupAccess,
+          : readAgentEnv(context, "QQ_SANDBOX").toLowerCase() === "true",
     },
     context,
   );
@@ -475,22 +461,25 @@ function buildChatChannelConfigSummary(
         typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
           ? cfg.auth_id.trim()
           : null,
-      followupWindowMs:
-        typeof cfg?.followupWindowMs === "number" &&
-        Number.isFinite(cfg.followupWindowMs) &&
-        cfg.followupWindowMs >= 0
-          ? cfg.followupWindowMs
-          : null,
-      groupAccess:
-        cfg?.groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone",
     };
   }
   if (channel === "feishu") {
     const cfg = channels?.feishu;
     const credentials = resolveFeishuCredentials(context);
+    const appIdFromConfig =
+      typeof cfg?.appId === "string" && cfg.appId.trim() && !isPlaceholder(cfg.appId)
+        ? cfg.appId.trim()
+        : "";
+    const appIdSource = appIdFromConfig
+      ? "ship"
+      : credentials.appId
+        ? "env"
+        : "none";
     return {
       enabled: cfg?.enabled === true,
       appId: credentials.appId || null,
+      appIdFromConfig: appIdFromConfig || null,
+      appIdSource,
       appSecretConfigured: !!credentials.appSecret,
       domain:
         typeof cfg?.domain === "string" && cfg.domain.trim()
@@ -504,17 +493,26 @@ function buildChatChannelConfigSummary(
   }
   const cfg = channels?.qq;
   const credentials = resolveQQCredentials(context);
+  const appIdFromConfig =
+    typeof cfg?.appId === "string" && cfg.appId.trim() && !isPlaceholder(cfg.appId)
+      ? cfg.appId.trim()
+      : "";
+  const appIdSource = appIdFromConfig
+    ? "ship"
+    : credentials.appId
+      ? "env"
+      : "none";
   return {
     enabled: cfg?.enabled === true,
     appId: credentials.appId || null,
+    appIdFromConfig: appIdFromConfig || null,
+    appIdSource,
     appSecretConfigured: !!credentials.appSecret,
     sandbox: cfg?.sandbox === true,
     auth_id:
       typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
         ? cfg.auth_id.trim()
         : null,
-    groupAccess:
-      cfg?.groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone",
   };
 }
 
@@ -590,27 +588,6 @@ function readOptionalBooleanPatch(value: JsonValue): boolean | undefined {
   return undefined;
 }
 
-function readOptionalNonNegativeIntPatch(
-  value: JsonValue,
-): number | null | undefined {
-  if (value === null) return null;
-  const text =
-    typeof value === "number" && Number.isFinite(value)
-      ? String(Math.trunc(value))
-      : typeof value === "string"
-        ? value.trim()
-        : "";
-  if (!text) return undefined;
-  if (!/^\d+$/.test(text)) {
-    throw new Error(`Invalid non-negative integer value: ${String(value)}`);
-  }
-  const parsed = Number.parseInt(text, 10);
-  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed < 0) {
-    throw new Error(`Invalid non-negative integer value: ${String(value)}`);
-  }
-  return parsed;
-}
-
 /**
  * 解析 chat.configure patch。
  *
@@ -635,17 +612,6 @@ function normalizeChatChannelConfigPatch(params: {
 
     const authId = readOptionalStringPatch(config.auth_id);
     if (authId !== undefined) patch.auth_id = authId;
-
-    const followupWindowMs = readOptionalNonNegativeIntPatch(config.followupWindowMs);
-    if (followupWindowMs !== undefined) patch.followupWindowMs = followupWindowMs;
-
-    const groupAccessText = String(config.groupAccess || "").trim().toLowerCase();
-    if (groupAccessText) {
-      if (groupAccessText !== "anyone" && groupAccessText !== "initiator_or_admin") {
-        throw new Error("Invalid groupAccess: use anyone|initiator_or_admin");
-      }
-      patch.groupAccess = groupAccessText;
-    }
     return patch;
   }
 
@@ -675,14 +641,6 @@ function normalizeChatChannelConfigPatch(params: {
 
   const authId = readOptionalStringPatch(config.auth_id);
   if (authId !== undefined) patch.auth_id = authId;
-
-  const groupAccessText = String(config.groupAccess || "").trim().toLowerCase();
-  if (groupAccessText) {
-    if (groupAccessText !== "anyone" && groupAccessText !== "initiator_or_admin") {
-      throw new Error("Invalid groupAccess: use anyone|initiator_or_admin");
-    }
-    patch.groupAccess = groupAccessText;
-  }
   return patch;
 }
 

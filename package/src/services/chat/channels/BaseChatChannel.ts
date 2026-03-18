@@ -559,18 +559,21 @@ export abstract class BaseChatChannel {
     if (this.channel === "telegram") {
       return resolveTelegramMasterStatus({
         config: this.context.config,
+        env: this.context.env,
         userId: params.userId,
       });
     }
     if (this.channel === "feishu") {
       return resolveFeishuMasterStatus({
         config: this.context.config,
+        env: this.context.env,
         userId: params.userId,
       });
     }
     if (this.channel === "qq") {
       return resolveQqMasterStatus({
         config: this.context.config,
+        env: this.context.env,
         userId: params.userId,
       });
     }

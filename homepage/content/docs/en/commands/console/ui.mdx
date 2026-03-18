@@ -8,7 +8,7 @@ description: Start console UI (single instance, multi-agent view)
 Manage the UI gateway hosted by `console`.
 
 This UI is not bound to one `agent start` process. One page can switch across multiple running agents.
-It is a state-first dashboard; chat is only a secondary capability.
+It is a state-first dashboard; chat input is only enabled in the built-in `consoleui` channel (default context: `consoleui-chat-main`).
 
 ## Usage
 
@@ -35,17 +35,24 @@ sma console ui [action] [options]
 - Global Agents panel shows runtime state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
 - Global / Overview only shows global health signals (console, fleet, channels, extensions, config risk).
+- Global / Overview now shows the current SMA version in the top summary area.
 - Global / Console Runtime shows console runtime details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
 - Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).
+- Agent / Overview now exposes channel-level chat quick actions in chat overview: `open` / `close` / `test` / `reconnect`.
 - Agent / Command provides a terminal-style panel that runs shell commands in the selected agent project root and shows stdout/stderr with exit code.
+- Agent / Command now supports inline command prediction and keyboard accelerators: `Tab` accepts full suggestion, `Ctrl/Cmd + →` accepts next word, and `↑/↓` navigates session history.
 - Agent switcher controls all `Agent/*` and `Context/*` views.
 - Agent / Tasks now includes task definition details and per-run execution history (run list + run detail).
 - Agent / Tasks now shows live execution progress after manual `run`: `running` state, current phase, round progress, and progress events until completion.
+- Agent / Tasks now supports task management actions: switch task status (`enabled` / `paused` / `disabled`), delete task definitions, and delete individual run records (running runs cannot be deleted).
+- Agent / Tasks now supports one-click cleanup for all run logs of the current task (running run directories are skipped automatically).
 - Dashboard shows `Chat Channels` link status (Telegram/Feishu/QQ) with `open` / `close` / `test` / `reconnect` actions.
-- Context Overview can edit channel parameters directly (for example QQ `appId/appSecret/sandbox/groupAccess`) and auto-reload that channel after save.
-- Chat input is fixed to `local_ui` context only; UI cannot publish instructions to arbitrary contexts.
+- Context Overview can edit channel parameters directly (for example QQ `appId/appSecret/sandbox`) and auto-reload that channel after save.
+- Chat input is fixed to the built-in `consoleui` channel; UI cannot publish instructions to arbitrary contexts.
 - UI shows grouped `system prompt` composition (static/service/runtime).
+- Context Workspace now supports message management for all chat contexts: clear `context messages` and `chat history` independently.
+- Context Workspace now supports compact archive inspection: open the `archive` panel to review pre-compact history batches.
 - `sma console status` also shows UI status.
 
 ## Typical flow

@@ -31,7 +31,6 @@ interface QQConfig {
   appSecret: string;
   enabled: boolean;
   sandbox?: boolean; // 是否使用沙箱环境
-  groupAccess?: "initiator_or_admin" | "anyone";
 }
 
 type QQGatewayPayload = {
@@ -201,13 +200,6 @@ export class QQBot extends BaseChatChannel {
 
   // 是否使用沙箱环境
   private useSandbox: boolean = false;
-  private readonly groupAccess: "initiator_or_admin" | "anyone";
-  private readonly groupInitiatorByChatKey: Map<string, string> = new Map();
-  private readonly followupWindowMs: number = 10 * 60 * 1000;
-  private readonly followupExpiryByChatKey: Map<string, number> = new Map();
-  private readonly followupExpiryByActorAndChatKey: Map<string, number> =
-    new Map();
-  private readonly botOutboundMessageIds: Map<string, number> = new Map();
   private msgSeqByMessageKey: Map<string, number> = new Map();
   private readonly qqEventCapture: QQEventCaptureConfig;
   private readonly inboundDedupeStore: QqInboundDedupeStore;
@@ -232,14 +224,11 @@ export class QQBot extends BaseChatChannel {
     appId: string,
     appSecret: string,
     useSandbox: boolean = false,
-    groupAccess: QQConfig["groupAccess"] | undefined = undefined,
   ) {
     super({ channel: "qq", context });
     this.appId = appId;
     this.appSecret = appSecret;
     this.useSandbox = useSandbox;
-    this.groupAccess =
-      groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone";
     this.qqEventCapture = getQqEventCaptureConfig(this.rootPath);
     this.inboundDedupeStore = new QqInboundDedupeStore({
       rootPath: this.rootPath,
@@ -981,7 +970,7 @@ export class QQBot extends BaseChatChannel {
         break;
 
       case EventType.GROUP_MESSAGE_CREATE:
-        // 群聊普通消息（非空内容默认可触发，权限门禁仍生效）
+        // 群聊普通消息（非空内容默认可触发）
         await this.handleGroupMessage({
           eventType: EventType.GROUP_MESSAGE_CREATE,
           data: data as QQMessageData,
@@ -1088,7 +1077,7 @@ export class QQBot extends BaseChatChannel {
    * QQ 入站主流程（对齐 Telegram 处理顺序）。
    *
    * 关键点（中文）
-   * - 群聊与私聊复用同一条主逻辑，只在群聊路径增加权限与 follow-up 判定。
+   * - 群聊与私聊复用同一条主逻辑，统一采用“非空消息即触发”。
    * - 保持“审计入队”和“执行触发”解耦，避免历史断层。
    */
   private async handleInboundMessage(params: {
@@ -1120,16 +1109,6 @@ export class QQBot extends BaseChatChannel {
     const cleanedText = isGroup
       ? this.stripBotMention(rawContent)
       : this.extractTextContent(rawContent);
-    const isMentioned = isGroup
-      ? eventType === EventType.GROUP_AT_MESSAGE_CREATE ||
-        this.isBotMentionedInMessage(rawContent, params.data)
-      : false;
-    const isReplyToBot = isGroup ? this.isReplyToBot(params.data) : false;
-    const inWindow = isGroup
-      ? this.isWithinFollowupWindow(chatKey, actor.userId)
-      : false;
-    const explicit = isGroup ? isMentioned || isReplyToBot : true;
-    const isAddressed = isGroup ? explicit || inWindow : true;
 
     const enqueueAudit = async (opts: { reason: string; kind?: string }): Promise<void> => {
       await this.enqueueAuditMessage({
@@ -1148,7 +1127,6 @@ export class QQBot extends BaseChatChannel {
           eventType,
           reason: opts.reason,
           ...(opts.kind ? { kind: opts.kind } : {}),
-          ...(isGroup ? { isMentioned, isReplyToBot, inWindow } : {}),
         },
       });
     };
@@ -1183,76 +1161,13 @@ export class QQBot extends BaseChatChannel {
         kind: "command",
       });
 
-      if (isGroup) {
-        if (!actor.userId) {
-          await enqueueAudit({ reason: "missing_actor" });
-          return;
-        }
-        const cmdName = (cleanedText.trim().split(/\s+/)[0] || "")
-          .split("@")[0]
-          ?.toLowerCase();
-        const allowAny = cmdName === "/help" || cmdName === "/start";
-        if (
-          !allowAny &&
-          !this.isAllowedGroupActor({
-            chatKey,
-            actorId: actor.userId,
-            author: params.data.author,
-          })
-        ) {
-          await enqueueAudit({ reason: "permission_denied" });
-          await this.sendMessage(
-            chatId,
-            chatType,
-            messageId,
-            "⛔️ 仅发起人或群管理员可以使用该命令。",
-          );
-          return;
-        }
-        this.touchFollowupWindow(chatKey, actor.userId);
-      }
-
       await this.handleCommand(chatId, chatType, messageId, cleanedText);
       return;
     }
 
-    if (isGroup) {
-      if (!actor.userId) {
-        await enqueueAudit({ reason: "missing_actor" });
-        return;
-      }
-
-      const allowed = this.isAllowedGroupActor({
-        chatKey,
-        actorId: actor.userId,
-        author: params.data.author,
-      });
-      if (!allowed) {
-        await enqueueAudit({ reason: "permission_denied" });
-        // 关键点（中文）：未显式点名 bot 时静默拒绝，避免群里刷屏。
-        if (isAddressed) {
-          await this.sendMessage(
-            chatId,
-            chatType,
-            messageId,
-            "⛔️ 仅发起人或群管理员可以与我对话。",
-          );
-        }
-        return;
-      }
-    }
-
     if (!cleanedText && !hasIncomingAttachment) {
-      // 关键点（中文）：显式 @bot / 回复bot 的空消息也可激活 follow-up 窗口。
-      if (isGroup && actor.userId && explicit) {
-        this.touchFollowupWindow(chatKey, actor.userId);
-      }
       await enqueueAudit({ reason: "empty_after_clean" });
       return;
-    }
-
-    if (isGroup && actor.userId) {
-      this.touchFollowupWindow(chatKey, actor.userId);
     }
 
     const instructions = await this.buildInboundInstructions({
@@ -1504,183 +1419,6 @@ export class QQBot extends BaseChatChannel {
   }
 
   /**
-   * 判断消息是否 @ 机器人（best-effort）。
-   */
-  private isBotMentionedInMessage(content: string, data: QQMessageData): boolean {
-    const botUserId = String(this.botUserId || "").trim();
-    const mentionCandidates = Array.isArray(data.mentions) ? data.mentions : [];
-
-    const mentionUserIds = mentionCandidates
-      .flatMap((m) => [
-        m?.id,
-        m?.user_id,
-        m?.member_openid,
-        m?.user_openid,
-      ])
-      .map((v) => (typeof v === "string" ? v.trim() : ""))
-      .filter(Boolean);
-    if (botUserId && mentionUserIds.includes(botUserId)) return true;
-
-    // 兜底：从富文本标签中提取 @id，再与 botUserId 比较。
-    // 示例：<@123> / <@!123>
-    if (botUserId) {
-      const ids = Array.from(
-        content.matchAll(/<@!?([^>\s]+)>/g),
-        (m) => String(m[1] || "").trim(),
-      ).filter(Boolean);
-      if (ids.includes(botUserId)) return true;
-    }
-
-    return false;
-  }
-
-  private getFollowupKey(chatKey: string, actorId: string): string {
-    return `${chatKey}|${actorId}`;
-  }
-
-  private isWithinFollowupWindow(chatKey: string, actorId?: string): boolean {
-    const now = Date.now();
-
-    // 会话级窗口：同一群内更容易续聊，不要求同一 actor。
-    const chatExp = this.followupExpiryByChatKey.get(chatKey);
-    if (typeof chatExp === "number") {
-      if (now <= chatExp) return true;
-      this.followupExpiryByChatKey.delete(chatKey);
-    }
-
-    const actor = String(actorId || "").trim();
-    if (!actor) return false;
-    const key = this.getFollowupKey(chatKey, actor);
-    const exp = this.followupExpiryByActorAndChatKey.get(key);
-    if (!exp) return false;
-    if (now > exp) {
-      this.followupExpiryByActorAndChatKey.delete(key);
-      return false;
-    }
-    return true;
-  }
-
-  private touchFollowupWindow(chatKey: string, actorId?: string): void {
-    const expiry = Date.now() + this.followupWindowMs;
-    this.followupExpiryByChatKey.set(chatKey, expiry);
-
-    const actor = String(actorId || "").trim();
-    if (!actor) return;
-    const key = this.getFollowupKey(chatKey, actor);
-    this.followupExpiryByActorAndChatKey.set(key, expiry);
-  }
-
-  /**
-   * 记录机器人出站消息 ID，用于识别“回复机器人”场景。
-   */
-  private trackBotOutboundMessageId(messageId: string | undefined): void {
-    const id = String(messageId || "").trim();
-    if (!id) return;
-    this.botOutboundMessageIds.set(id, Date.now() + 30 * 60 * 1000);
-
-    // 关键点（中文）：顺手做过期清理，防止 map 无界增长。
-    if (this.botOutboundMessageIds.size <= 5000) return;
-    const now = Date.now();
-    for (const [k, exp] of this.botOutboundMessageIds.entries()) {
-      if (exp <= now) this.botOutboundMessageIds.delete(k);
-      if (this.botOutboundMessageIds.size <= 3000) break;
-    }
-  }
-
-  /**
-   * 判断当前消息是否“回复机器人消息”（best-effort）。
-   */
-  private isReplyToBot(data: QQMessageData): boolean {
-    const replyAuthor = this.extractAuthorIdentity(data.reply_to_message?.author);
-    if (
-      replyAuthor.userId &&
-      this.botUserId &&
-      replyAuthor.userId === this.botUserId
-    ) {
-      return true;
-    }
-
-    const referenceCandidates = [
-      data.reply_to_message?.id,
-      data.message_reference?.message_id,
-      data.message_reference?.msg_id,
-      data.message_reference?.id,
-      data.reference?.message_id,
-      data.reference?.msg_id,
-      data.reference?.id,
-    ]
-      .map((v) => (typeof v === "string" ? v.trim() : ""))
-      .filter(Boolean);
-    if (referenceCandidates.length === 0) return false;
-
-    const now = Date.now();
-    for (const refId of referenceCandidates) {
-      const exp = this.botOutboundMessageIds.get(refId);
-      if (!exp) continue;
-      if (exp > now) return true;
-      this.botOutboundMessageIds.delete(refId);
-    }
-    return false;
-  }
-
-  /**
-   * QQ 群聊管理员判定（best-effort）。
-   *
-   * 关键点（中文）
-   * - QQ 事件字段在不同能力集/事件类型下差异较大，无法保证一定带角色字段。
-   * - 这里仅做“有字段则识别”的最小策略；识别失败时回退为非管理员。
-   */
-  private isLikelyGroupAdmin(author: QQAuthor | undefined): boolean {
-    const roleCandidates = [
-      author?.member_role,
-      author?.role,
-      author?.permissions,
-      author?.permission,
-    ]
-      .map((v) =>
-        String(v || "")
-          .trim()
-          .toLowerCase(),
-      )
-      .filter(Boolean);
-    if (roleCandidates.length === 0) return false;
-
-    return roleCandidates.some((role) =>
-      ["admin", "administrator", "owner", "creator"].some((kw) =>
-        role.includes(kw),
-      ),
-    );
-  }
-
-  /**
-   * QQ 群聊访问门禁（对齐 Telegram 默认策略）。
-   *
-   * 规则（中文）
-   * - `anyone`：任何成员都可触发。
-   * - `initiator_or_admin`：首个触发用户是发起人；后续仅发起人或管理员可触发。
-   */
-  private isAllowedGroupActor(params: {
-    chatKey: string;
-    actorId?: string;
-    author?: QQAuthor;
-  }): boolean {
-    if (this.groupAccess === "anyone") return true;
-
-    const actorId = String(params.actorId || "").trim();
-    if (!actorId) return false;
-
-    if (this.isLikelyGroupAdmin(params.author)) return true;
-
-    const existing = this.groupInitiatorByChatKey.get(params.chatKey);
-    if (!existing) {
-      // 关键点（中文）：首次触发该群聊 lane 的用户自动成为发起人。
-      this.groupInitiatorByChatKey.set(params.chatKey, actorId);
-      return true;
-    }
-    return existing === actorId;
-  }
-
-  /**
    * 处理命令
    */
   private async handleCommand(
@@ -1821,27 +1559,7 @@ export class QQBot extends BaseChatChannel {
       }
 
       try {
-        const parsed = JSON.parse(responseText) as {
-          id?: string;
-          message_id?: string;
-          msg_id?: string;
-          data?: {
-            id?: string;
-            message_id?: string;
-            msg_id?: string;
-          };
-        };
-        const outboundMessageId =
-          (typeof parsed.id === "string" && parsed.id.trim()) ||
-          (typeof parsed.message_id === "string" && parsed.message_id.trim()) ||
-          (typeof parsed.msg_id === "string" && parsed.msg_id.trim()) ||
-          (typeof parsed.data?.id === "string" && parsed.data.id.trim()) ||
-          (typeof parsed.data?.message_id === "string" &&
-            parsed.data.message_id.trim()) ||
-          (typeof parsed.data?.msg_id === "string" &&
-            parsed.data.msg_id.trim()) ||
-          "";
-        this.trackBotOutboundMessageId(outboundMessageId);
+        void (responseText ? JSON.parse(responseText) : null);
       } catch {
         // ignore parse failure
       }
@@ -1891,7 +1609,6 @@ export async function createQQBot(
     config.appId,
     config.appSecret,
     config.sandbox || false,
-    config.groupAccess,
   );
   return bot;
 }

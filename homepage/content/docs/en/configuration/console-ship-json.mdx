@@ -35,6 +35,21 @@ So the split is:
 - Console: `~/.ship/ship.db`
 - Agent: project-local `ship.json/.env`
 
+## Environment Variable Scope (Important)
+
+Current versions split environment scope into two layers:
+
+1. Console-global (shared): for console-level capabilities such as model pool and extensions.
+2. Agent-project (private): from `<agent>/.env`, used by `services.*` (for example chat channel credentials).
+
+Key behavior:
+
+1. An agent `.env` is applied only inside that agent runtime and does not mutate global `process.env`.
+2. Switching agents does not reuse `.env` values from the previous agent.
+3. `${ENV_KEY}` in project `ship.json` resolves from current agent `.env` only (no fallback to shared `process.env`).
+4. Only shared fields from Console global layer are injected into agent config (currently `extensions` only), never `services.*`.
+5. So `services.chat` reads the current agent private env, while model/extension in console sidebar remains in shared config scope.
+
 ## Common operations
 
 Initialize Console (writes into `ship.db`):

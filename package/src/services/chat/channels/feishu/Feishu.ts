@@ -16,7 +16,6 @@ import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.j
  *
  * Responsibilities:
  * - Receive Feishu message events and translate them into AgentRuntime inputs
- * - Enforce basic access policy (optional admin allowlist)
  * - Relay tool-strict replies back to Feishu via dispatcher + `chat_send` tool
  * - Persist chat logs through UIMessage history via BaseChatChannel helpers
  */
@@ -25,28 +24,17 @@ import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.j
  * 飞书适配器配置。
  *
  * 说明（中文）
- * - adminUserIds 仅用于群聊放行策略，不影响私聊
+ * - 仅保留运行所需字段，群聊策略统一“任何消息可触发”
  */
 interface FeishuConfig {
   appId: string;
   appSecret: string;
   enabled: boolean;
   domain?: string;
-  /**
-   * Optional allowlist for "管理员" (platform user IDs/open IDs depending on your event payload).
-   * If set, these users can approve and interact in group chats besides the initiator.
-   */
-  adminUserIds?: string[];
 }
-
-type FeishuMention = {
-  key?: string;
-  name?: string;
-};
 
 type FeishuTextContentPayload = {
   text?: string;
-  mentions?: FeishuMention[];
 };
 
 type FeishuMessageEvent = {
@@ -64,7 +52,6 @@ type FeishuMessageEvent = {
     message_type: string;
     chat_type: string;
     message_id: string;
-    mentions?: FeishuMention[];
   };
 };
 
@@ -92,9 +79,6 @@ export class FeishuBot extends BaseChatChannel {
   private processedMessages: Set<string> = new Set(); // 用于消息去重
   private messageCleanupInterval: NodeJS.Timeout | null = null;
   private dedupeDir: string;
-  private threadInitiatorsFile: string;
-  private threadInitiators: Map<string, string> = new Map();
-  private adminUserIds: Set<string>;
   private knownChats: Map<string, { chatId: string; chatType: string }> =
     new Map();
 
@@ -103,7 +87,6 @@ export class FeishuBot extends BaseChatChannel {
     appId: string,
     appSecret: string,
     domain: string | undefined,
-    adminUserIds: string[] | undefined,
   ) {
     super({ channel: "feishu", context });
     this.appId = appId;
@@ -114,12 +97,6 @@ export class FeishuBot extends BaseChatChannel {
       "feishu",
       "dedupe",
     );
-    this.threadInitiatorsFile = path.join(
-      getCacheDirPath(this.rootPath),
-      "feishu",
-      "threadInitiators.json",
-    );
-    this.adminUserIds = new Set((adminUserIds || []).map((x) => String(x)));
   }
 
   private buildChatKey(chatId: string): string {
@@ -203,40 +180,6 @@ export class FeishuBot extends BaseChatChannel {
     }
   }
 
-  private async loadThreadInitiators(): Promise<void> {
-    try {
-      if (!(await fs.pathExists(this.threadInitiatorsFile))) return;
-      const data = (await fs.readJson(this.threadInitiatorsFile)) as JsonObject;
-      const raw = data?.initiators;
-      if (!raw || typeof raw !== "object") return;
-      for (const [k, v] of Object.entries(raw)) {
-        const threadId = String(k);
-        const initiatorId = String(v);
-        if (!threadId || !initiatorId) continue;
-        this.threadInitiators.set(threadId, initiatorId);
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  private async persistThreadInitiators(): Promise<void> {
-    try {
-      await fs.ensureDir(path.dirname(this.threadInitiatorsFile));
-      const entries = Array.from(this.threadInitiators.entries());
-      const capped = entries.slice(-1000);
-      const initiators: Record<string, string> = {};
-      for (const [k, v] of capped) initiators[k] = v;
-      await fs.writeJson(
-        this.threadInitiatorsFile,
-        { initiators, updatedAt: Date.now() },
-        { spaces: 2 },
-      );
-    } catch {
-      // ignore
-    }
-  }
-
   private isGroupChat(chatType: string): boolean {
     return chatType !== "p2p";
   }
@@ -250,24 +193,10 @@ export class FeishuBot extends BaseChatChannel {
     return sid ? String(sid) : undefined;
   }
 
-  private parseTextContent(content: string): { text: string; mentions: FeishuMention[] } {
+  private parseTextContent(content: string): { text: string } {
     const parsed = JSON.parse(content) as FeishuTextContentPayload;
     const text = typeof parsed?.text === "string" ? parsed.text : "";
-    const mentions = Array.isArray(parsed?.mentions) ? parsed.mentions : [];
-    return { text, mentions };
-  }
-
-  private hasAtMention(
-    text: string,
-    mentionsFromContent: FeishuMention[],
-    mentionsFromEvent: FeishuMention[],
-  ): boolean {
-    if (mentionsFromContent.length > 0) return true;
-    if (mentionsFromEvent.length > 0) return true;
-    if (/<at\b/i.test(text)) return true;
-    // Fallback: many clients render @mention as plain text
-    if (text.includes("@")) return true;
-    return false;
+    return { text };
   }
 
   private stripAtMentions(text: string): string {
@@ -276,28 +205,6 @@ export class FeishuBot extends BaseChatChannel {
       .replace(/<at\b[^>]*>[^<]*<\/at>/gi, " ")
       .replace(/\\s+/g, " ")
       .trim();
-  }
-
-  /**
-   * 群聊发言权限判断。
-   *
-   * 规则（中文）
-   * - 首次发言者绑定为 thread initiator
-   * - initiator 或管理员可继续对话
-   * - 其他成员默认不触发执行（但消息仍入库）
-   */
-  private async isAllowedGroupActor(
-    threadId: string,
-    actorId: string,
-  ): Promise<boolean> {
-    if (this.adminUserIds.has(actorId)) return true;
-    const existing = this.threadInitiators.get(threadId);
-    if (!existing) {
-      this.threadInitiators.set(threadId, actorId);
-      await this.persistThreadInitiators();
-      return true;
-    }
-    return existing === actorId;
   }
 
   /**
@@ -427,7 +334,6 @@ export class FeishuBot extends BaseChatChannel {
 
     this.isRunning = true;
     this.logger.info("🤖 Starting Feishu Bot...");
-    await this.loadThreadInitiators();
 
     try {
       // Configure Feishu client
@@ -481,7 +387,6 @@ export class FeishuBot extends BaseChatChannel {
           message_type,
           chat_type,
           message_id,
-          mentions: eventMentions,
         },
       } = data;
 
@@ -510,16 +415,11 @@ export class FeishuBot extends BaseChatChannel {
 
       // Parse user message
       let userMessage = "";
-      let mentionsFromContent: FeishuMention[] = [];
-      const mentionsFromEvent: FeishuMention[] = Array.isArray(eventMentions)
-        ? eventMentions
-        : [];
 
       try {
         if (message_type === "text") {
           const parsed = this.parseTextContent(content);
           userMessage = parsed.text;
-          mentionsFromContent = parsed.mentions;
         } else {
           await this.sendErrorMessage(
             chat_id,
@@ -547,44 +447,9 @@ export class FeishuBot extends BaseChatChannel {
       // Check if it's a command
       await this.runInChat(threadId, async () => {
         if (userMessage.startsWith("/")) {
-          if (this.isGroupChat(chat_type) && actorId) {
-            const cmdName = (
-              userMessage.trim().split(/\s+/)[0] || ""
-            ).toLowerCase();
-            const allowAny = cmdName === "/help" || cmdName === "/帮助";
-            if (!allowAny) {
-              const ok = await this.isAllowedGroupActor(threadId, actorId);
-              if (!ok) {
-                await this.sendMessage(
-                  chat_id,
-                  chat_type,
-                  message_id,
-                  "⛔️ 仅发起人或群管理员可以使用该命令。",
-                );
-                return;
-              }
-            }
-          }
           await this.handleCommand(chat_id, chat_type, message_id, userMessage);
         } else {
           if (this.isGroupChat(chat_type)) {
-            const hasAt = this.hasAtMention(
-              userMessage,
-              mentionsFromContent,
-              mentionsFromEvent,
-            );
-            if (!hasAt) return;
-            if (!actorId) return;
-            const ok = await this.isAllowedGroupActor(threadId, actorId);
-            if (!ok) {
-              await this.sendMessage(
-                chat_id,
-                chat_type,
-                message_id,
-                "⛔️ 仅发起人或群管理员可以与我对话。",
-              );
-              return;
-            }
             userMessage = this.stripAtMentions(userMessage);
             if (!userMessage) return;
           }
@@ -790,7 +655,6 @@ export async function createFeishuBot(
     config.appId,
     config.appSecret,
     config.domain,
-    config.adminUserIds,
   );
   return bot;
 }

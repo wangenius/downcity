@@ -47,28 +47,6 @@ Enable Telegram in `ship.json`:
 
 > ShipMyAgent uses a tool-strict chat mode: the agent should use the `chat_send` tool to decide when/how to send replies (multiple/staged messages are allowed).
 
-### Optional: restrict group access
-
-By default, `groupAccess` is `anyone`, so all group members can talk to the bot.
-
-If you want a stricter policy (only the initiator or group admins), set:
-
-```json
-{
-  "services": {
-    "chat": {
-      "channels": {
-        "telegram": {
-          "enabled": true,
-          "botToken": "${TELEGRAM_BOT_TOKEN}",
-          "groupAccess": "initiator_or_admin"
-        }
-      }
-    }
-  }
-}
-```
-
 ### 3) Start ShipMyAgent
 
 ```bash
@@ -113,13 +91,11 @@ When `extensions.voice.enabled=true`, incoming Telegram `voice/audio` attachment
 ### Group / supergroup
 
 - Add the bot to the group
-- Talk to it by mentioning: `@your_bot ...`
-- After you mention (or reply to the bot), you can send follow-up messages for a short time without mentioning again.
+- Group members can send normal messages directly (no `@` required).
 
 Notes:
 - If your group uses **Topics**, replies are sent back to the same topic.
-- In groups, ShipMyAgent may restrict who can talk to the bot (e.g. initiator/admin), depending on the runtime’s policy.
-- For file messages in groups, the mention (if needed) must be in the **caption**, or send the file as a reply to the bot.
+- For file messages in groups, the caption is treated as instruction text; no extra mention is required.
 - While the agent is running, Telegram shows a periodic **typing** indicator (`sendChatAction`) until the result is sent.
 
 ## Reply-to and Reaction Logic (Important)
@@ -179,7 +155,7 @@ Behavior:
 ## Troubleshooting
 
 - **No response at all**: confirm the process is running and check `.ship/logs/<YYYY-MM-DD>.jsonl` (search for `TELEGRAM`, `telegram`, or errors).
-- **Bot doesn’t receive group messages**: in BotFather run `/setprivacy` and set it to `Disable`, then make sure you’re mentioning the bot in the group.
+- **Bot doesn’t receive group messages**: in BotFather run `/setprivacy` and set it to `Disable`, then confirm the bot can read group messages.
 - **Polling doesn’t work**: if you previously set a webhook, polling (`getUpdates`) will conflict. ShipMyAgent clears webhook on startup; check logs for webhook-related errors.
 - **Bot can’t speak in the group**: check group permissions (the bot may be muted / not allowed to send messages).
 - **Agent says “I’ll execute” but doesn’t run tools**: explicitly ask with execution intent words (for example `run`, `execute`, `use skill`, `lookup`). Runtime will force a tool call on these turns; if it still fails, verify your model/provider actually supports tool calling.

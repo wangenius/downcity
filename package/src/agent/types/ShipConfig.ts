@@ -121,20 +121,6 @@ export interface ShipConfig {
            * - 会注入到入站 `<info>` 的 `is_master` 字段。
            */
           auth_id?: string;
-          /**
-           * Group follow-up window in milliseconds.
-           * When a user has just talked to the bot (mention/reply/command), allow
-           * non-mention follow-up messages within this time window.
-           * Default: 10 minutes.
-           */
-          followupWindowMs?: number;
-          /**
-           * Who can interact with the bot in group chats.
-           * - "anyone" (default): all group members can talk to the bot.
-           * - "initiator_or_admin": only the first person who talked to the bot in that chat/topic,
-           *   or group admins, can use it.
-           */
-          groupAccess?: "initiator_or_admin" | "anyone";
         };
         discord?: {
           enabled: boolean;
@@ -159,12 +145,6 @@ export interface ShipConfig {
            * QQ 主人鉴权 ID（对应事件中的发送者 ID）。
            */
           auth_id?: string;
-          /**
-           * 群聊权限门禁：
-           * - "anyone"（默认）：群成员都可触发机器人。
-           * - "initiator_or_admin"：仅发起人或管理员可触发机器人。
-           */
-          groupAccess?: "initiator_or_admin" | "anyone";
         };
       };
     };

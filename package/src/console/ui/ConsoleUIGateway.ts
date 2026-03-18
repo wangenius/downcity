@@ -57,6 +57,21 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_RUNTIME_PORT = 5314;
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 
+/**
+ * 当前 SMA 版本号（用于 Console Overview 显示）。
+ */
+const SMA_VERSION = (() => {
+  try {
+    const pkg = fs.readJsonSync(path.join(__dirname, "../../../package.json")) as {
+      version?: string;
+    };
+    const version = String(pkg?.version || "").trim();
+    return version || "unknown";
+  } catch {
+    return "unknown";
+  }
+})();
+
 type DaemonMetaLike = {
   args?: unknown;
 };
@@ -761,6 +776,7 @@ export class ConsoleUIGateway {
     const selectedAgentId = this.selectAgentId(agents, requestedAgentId);
     return {
       success: true,
+      smaVersion: SMA_VERSION,
       agents,
       selectedAgentId,
     };

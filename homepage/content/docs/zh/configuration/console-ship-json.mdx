@@ -35,6 +35,21 @@ Console 全局配置统一存储在：
 - Console：`~/.ship/ship.db`
 - Agent：项目目录下的 `ship.json/.env`
 
+## 环境变量作用域（重要）
+
+当前版本将环境变量作用域明确拆分为两层：
+
+1. Console 全局（共享）：用于模型池与 extension 等 console 级能力。
+2. Agent 项目（私有）：来自 `<agent>/.env`，用于 `services.*`（例如 chat 渠道密钥）。
+
+关键行为：
+
+1. Agent 的 `.env` 只在该 agent runtime 内生效，不会写入或污染全局 `process.env`。
+2. 切换到另一个 agent 时，不会复用前一个 agent 的 `.env` 值。
+3. 项目 `ship.json` 的 `${ENV_KEY}` 只解析当前 agent `.env`，不再回退共享 `process.env`。
+4. Console 全局层注入到 agent 的仅共享字段（当前仅 `extensions`），不会注入 `services.*`。
+5. 因此 `services.chat` 读取的是当前 agent 的私有环境变量；console sidebar 中 model/extension 依然是共享配置域。
+
 ## 常用操作
 
 初始化 Console（写入 `ship.db`）：

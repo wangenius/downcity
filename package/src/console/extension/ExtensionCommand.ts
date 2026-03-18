@@ -196,8 +196,10 @@ async function runExtensionActionLocally(params: {
   payload: JsonValue;
 }): Promise<ExtensionCommandResponse> {
   ensureRuntimeProjectReady(params.projectRoot);
-  loadProjectDotenv(params.projectRoot);
-  const config = loadShipConfig(params.projectRoot);
+  const projectEnv = loadProjectDotenv(params.projectRoot);
+  const config = loadShipConfig(params.projectRoot, {
+    projectEnv,
+  });
   logger.bindProjectRoot(params.projectRoot);
 
   // 关键点（中文）：本地兜底仅用于 extension 纯命令动作（如 voice on/install/use/status），
@@ -207,6 +209,7 @@ async function runExtensionActionLocally(params: {
     rootPath: params.projectRoot,
     logger,
     config,
+    env: projectEnv,
     systems: [],
     context: {} as ServiceRuntime["context"],
     invoke: {

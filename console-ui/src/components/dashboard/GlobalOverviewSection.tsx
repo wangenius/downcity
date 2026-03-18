@@ -16,6 +16,10 @@ import type {
 
 export interface GlobalOverviewSectionProps {
   /**
+   * 当前 SMA CLI 版本号。
+   */
+  smaVersion: string
+  /**
    * 运行中 agent 列表。
    */
   agents: UiAgentOption[]
@@ -43,6 +47,7 @@ export interface GlobalOverviewSectionProps {
 
 export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
   const {
+    smaVersion,
     agents,
     extensions,
     configStatus,
@@ -96,6 +101,9 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
         <div className="mt-0.5 text-xs opacity-90">
           {`required ${requiredOkCount}/${requiredConsoleItems.length}`}
           {optionalMissingCount > 0 ? ` · optional missing ${optionalMissingCount}` : ""}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {`SMA version: ${String(smaVersion || "-")}`}
         </div>
       </div>
 

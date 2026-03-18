@@ -21,6 +21,7 @@ export type DashboardView =
   | "globalAgents"
   | "globalExtensions"
   | "agentOverview"
+  | "agentSkills"
   | "agentServices"
   | "agentCommand"
   | "agentTasks"

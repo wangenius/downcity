@@ -17,11 +17,14 @@ function normalizeAuthId(value: unknown): string | undefined {
   return text;
 }
 
-function readTelegramAuthId(config?: ShipConfig): string | undefined {
+function readTelegramAuthId(params: {
+  config?: ShipConfig;
+  env?: Record<string, string>;
+}): string | undefined {
   const configAuthId = normalizeAuthId(
-    config?.services?.chat?.channels?.telegram?.auth_id,
+    params.config?.services?.chat?.channels?.telegram?.auth_id,
   );
-  const envAuthId = normalizeAuthId(process.env.TELEGRAM_AUTH_ID);
+  const envAuthId = normalizeAuthId(params.env?.TELEGRAM_AUTH_ID);
   return configAuthId || envAuthId;
 }
 
@@ -30,11 +33,15 @@ function readTelegramAuthId(config?: ShipConfig): string | undefined {
  */
 export function resolveTelegramMasterStatus(params: {
   config?: ShipConfig;
+  env?: Record<string, string>;
   userId?: string;
 }): ChatMasterStatus {
   const userId = normalizeAuthId(params.userId);
   if (!userId) return "unknown";
-  const authId = readTelegramAuthId(params.config);
+  const authId = readTelegramAuthId({
+    config: params.config,
+    env: params.env,
+  });
   if (!authId) return "unknown";
   return userId === authId ? "master" : "guest";
 }

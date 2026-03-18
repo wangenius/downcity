@@ -108,6 +108,11 @@ export interface ConsoleUiAgentsResponse {
   success: boolean;
 
   /**
+   * 当前 SMA CLI 版本号。
+   */
+  smaVersion: string;
+
+  /**
    * 当前可选的 agent 列表。
    */
   agents: ConsoleUiAgentOption[];

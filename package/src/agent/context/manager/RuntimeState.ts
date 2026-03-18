@@ -10,6 +10,7 @@ import type {
   ServiceInvokePort,
 } from "@/agent/service/ServiceRuntime.js";
 import {
+  loadProjectDotenv,
   loadShipConfig,
   type ShipConfig
 } from "@/console/env/Config.js";
@@ -57,6 +58,10 @@ export type RuntimeStateBase = {
   rootPath: string;
   logger: Logger;
   config: ShipConfig;
+  /**
+   * 当前 agent 的 `.env` 快照（局部作用域）。
+   */
+  env: Record<string, string>;
   systems: string[];
 };
 
@@ -273,6 +278,7 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
     rootPath: input.rootPath,
     logger: input.logger,
     config: input.config,
+    env: input.env,
     systems: input.systems,
     context: buildServiceContext(input),
     invoke: serviceInvokePort,
@@ -360,8 +366,11 @@ export async function initRuntimeState(cwd: string): Promise<void> {
 
   ensureRuntimeProjectReady(rootPath);
 
-  // 在启动时加载 dotenv（console -> project）并读取 ship.json（支持继承/覆盖）。
-  const config = loadShipConfig(rootPath);
+  // 在启动时加载项目 env 快照并读取 ship.json（支持继承/覆盖）。
+  const projectEnv = loadProjectDotenv(rootPath);
+  const config = loadShipConfig(rootPath, {
+    projectEnv,
+  });
   // 关键点（中文）：统一注入当前 agent 标识，供 shell/CLI 子命令默认解析。
   process.env.SMA_AGENT_PATH = rootPath;
   process.env.SMA_AGENT_NAME = String(config.name || path.basename(rootPath));
@@ -372,6 +381,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     rootPath,
     logger: defaultLogger,
     config,
+    env: projectEnv,
     systems: [],
   });
 
@@ -383,6 +393,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     rootPath,
     logger: defaultLogger,
     config,
+    env: projectEnv,
     systems,
   });
 
@@ -454,6 +465,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     rootPath,
     logger: defaultLogger,
     config,
+    env: projectEnv,
     systems,
     contextManager,
   };
@@ -472,6 +484,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     rootPath,
     logger: defaultLogger,
     config,
+    env: projectEnv,
     systems,
     contextManager,
   });

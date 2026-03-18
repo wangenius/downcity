@@ -3,8 +3,8 @@
  */
 
 import * as React from "react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { UiChatChannelStatus, UiContextSummary } from "@/types/Dashboard"
@@ -29,6 +29,10 @@ export interface ContextOverviewSectionProps {
    */
   selectedContextId: string
   /**
+   * 当前聚焦的渠道。
+   */
+  focusedChannel?: string
+  /**
    * 时间格式化函数。
    */
   formatTime: (ts?: number | string) => string
@@ -44,6 +48,10 @@ export interface ContextOverviewSectionProps {
    * 保存渠道配置。
    */
   onChatConfigure: (channel: string, config: Record<string, unknown>) => void
+  /**
+   * 当前 channel 的身份展示文案（来自 agent chatProfiles）。
+   */
+  channelIdentity?: string
 }
 
 type ChannelConfigDraft = {
@@ -52,9 +60,7 @@ type ChannelConfigDraft = {
   appSecret: string
   domain: string
   auth_id: string
-  groupAccess: "" | "anyone" | "initiator_or_admin"
   sandbox: "" | "true" | "false"
-  followupWindowMs: string
 }
 
 function parseChannelConfigSummary(channel: UiChatChannelStatus): Record<string, unknown> {
@@ -67,22 +73,48 @@ function parseChannelConfigSummary(channel: UiChatChannelStatus): Record<string,
 
 function initDraftFromChannel(channel: UiChatChannelStatus): ChannelConfigDraft {
   const config = parseChannelConfigSummary(channel)
+  const appIdFromConfig = String(config.appIdFromConfig || "").trim()
+  const appIdSource = String(config.appIdSource || "").trim().toLowerCase()
   return {
     botToken: "",
-    appId: String(config.appId || "").trim(),
+    // 关键点（中文）：输入框仅回填 ship.json 中已有值，避免把 env 回退值误写回配置。
+    appId: appIdFromConfig || (appIdSource === "ship" ? String(config.appId || "").trim() : ""),
     appSecret: "",
     domain: String(config.domain || "").trim(),
     auth_id: String(config.auth_id || "").trim(),
-    groupAccess:
-      config.groupAccess === "anyone" || config.groupAccess === "initiator_or_admin"
-        ? (config.groupAccess as "anyone" | "initiator_or_admin")
-        : "",
     sandbox: config.sandbox === true ? "true" : config.sandbox === false ? "false" : "",
-    followupWindowMs:
-      typeof config.followupWindowMs === "number" && Number.isFinite(config.followupWindowMs)
-        ? String(config.followupWindowMs)
-        : "",
   }
+}
+
+function resolveChannelFromContextId(contextIdInput?: string): string {
+  const contextId = String(contextIdInput || "").trim().toLowerCase()
+  if (!contextId) return "other"
+  if (contextId.startsWith("telegram-")) return "telegram"
+  if (contextId.startsWith("qq-")) return "qq"
+  if (contextId.startsWith("feishu-")) return "feishu"
+  if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
+  return "other"
+}
+
+function BasicRow(props: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
+      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{props.label}</div>
+      <div className="truncate text-foreground" title={props.value}>{props.value || "-"}</div>
+    </div>
+  )
+}
+
+function toYesNo(value: boolean | undefined): string {
+  return value === true ? "yes" : "no"
+}
+
+function readDetailString(detail: Record<string, unknown> | undefined, key: string): string {
+  if (!detail) return ""
+  const value = detail[key]
+  if (typeof value === "string") return value.trim()
+  if (typeof value === "number" && Number.isFinite(value)) return String(value)
+  return ""
 }
 
 export function ContextOverviewSection(props: ContextOverviewSectionProps) {
@@ -90,18 +122,31 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
     contexts,
     chatChannels,
     selectedContextId,
+    focusedChannel,
     formatTime,
     onOpenContext,
     onChatAction,
     onChatConfigure,
+    channelIdentity,
   } = props
 
   const [search, setSearch] = React.useState("")
   const [filter, setFilter] = React.useState<"all" | ContextGroupKey>("all")
-  const [editingChannel, setEditingChannel] = React.useState("")
   const [draftByChannel, setDraftByChannel] = React.useState<Record<string, ChannelConfigDraft>>({})
+  const [configDialogOpen, setConfigDialogOpen] = React.useState(false)
+  const normalizedFocusedChannel = String(focusedChannel || "").trim().toLowerCase()
+  const contextsInFocusedChannel = React.useMemo(() => {
+    if (!normalizedFocusedChannel) return []
+    return contexts.filter((item) => resolveChannelFromContextId(item.contextId) === normalizedFocusedChannel)
+  }, [contexts, normalizedFocusedChannel])
+  const visibleChatChannels = React.useMemo(() => {
+    if (!normalizedFocusedChannel) return []
+    return chatChannels.filter(
+      (channel) => String(channel.channel || "").trim().toLowerCase() === normalizedFocusedChannel,
+    )
+  }, [chatChannels, normalizedFocusedChannel])
 
-  const filteredContexts = filterContextsByKeyword(contexts, search)
+  const filteredContexts = filterContextsByKeyword(contextsInFocusedChannel, search)
   const grouped = buildContextGroups(filteredContexts)
   const visibleContexts = grouped
     .filter((group) => (filter === "all" ? true : group.key === filter))
@@ -119,295 +164,226 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
           ? "qq"
           : raw.startsWith("feishu-")
             ? "feishu"
+            : raw.startsWith("consoleui-") || raw === "local_ui"
+              ? "consoleui"
             : "unknown"
       counts.set(channel, (counts.get(channel) || 0) + 1)
     }
     return counts
   }, [contexts])
+  const activeChannel = visibleChatChannels[0] || null
+  const activeChannelName = String(activeChannel?.channel || "").trim()
+  const activeLinkState = String(activeChannel?.linkState || "unknown").trim().toLowerCase()
+  const activeMappedContexts = activeChannelName ? (channelContextStats.get(activeChannelName) || 0) : 0
+  const activeDetail = React.useMemo(() => {
+    if (!activeChannel?.detail || typeof activeChannel.detail !== "object" || Array.isArray(activeChannel.detail)) return undefined
+    return activeChannel.detail as Record<string, unknown>
+  }, [activeChannel?.detail])
+  const activeConfigSummary = React.useMemo(() => {
+    return activeChannel ? parseChannelConfigSummary(activeChannel) : {}
+  }, [activeChannel])
+  const activeReadonly = React.useMemo(() => {
+    if (!activeChannel) return false
+    if (activeChannelName === "consoleui") return true
+    return activeDetail?.readonly === true
+  }, [activeChannel, activeChannelName, activeDetail])
+  const activeBotName = React.useMemo(() => {
+    if (!activeChannelName) return ""
+    if (activeChannelName === "telegram") {
+      const username = readDetailString(activeDetail, "botUsername")
+      return username ? `@${username.replace(/^@+/, "")}` : ""
+    }
+    if (activeChannelName === "qq") {
+      return (
+        readDetailString(activeDetail, "botName") ||
+        readDetailString(activeDetail, "nickname") ||
+        readDetailString(activeDetail, "username")
+      )
+    }
+    return ""
+  }, [activeChannelName, activeDetail])
+  const activeBotId = React.useMemo(() => {
+    if (!activeChannelName) return ""
+    if (activeChannelName === "telegram") {
+      return readDetailString(activeDetail, "botId")
+    }
+    if (activeChannelName === "qq") {
+      return readDetailString(activeDetail, "botUserId")
+    }
+    return ""
+  }, [activeChannelName, activeDetail])
+  const activeAppId = React.useMemo(() => {
+    if (!activeChannelName) return ""
+    if (activeChannelName === "qq") {
+      return readDetailString(activeDetail, "appId") || String(activeConfigSummary.appId || "").trim()
+    }
+    if (activeChannelName === "feishu") {
+      return String(activeConfigSummary.appId || "").trim()
+    }
+    return ""
+  }, [activeChannelName, activeConfigSummary, activeDetail])
+  const activeAuthId = React.useMemo(() => {
+    return String(activeConfigSummary.auth_id || "").trim()
+  }, [activeConfigSummary])
+  const activeAppIdFromConfig = React.useMemo(() => {
+    return String(activeConfigSummary.appIdFromConfig || "").trim()
+  }, [activeConfigSummary])
+  const activeAppIdSource = React.useMemo(() => {
+    const source = String(activeConfigSummary.appIdSource || "").trim().toLowerCase()
+    if (source === "ship" || source === "env" || source === "none") return source
+    return activeAppId ? "ship" : "none"
+  }, [activeAppId, activeConfigSummary])
+  const activeBotTokenConfigured = activeConfigSummary.botTokenConfigured === true
+  const activeAppSecretConfigured = activeConfigSummary.appSecretConfigured === true
+  const activeIdentity = String(channelIdentity || "").trim() || activeBotName || "-"
+  const activeChannelDraft = React.useMemo(() => {
+    if (!activeChannelName || !activeChannel) return null
+    return draftByChannel[activeChannelName] || initDraftFromChannel(activeChannel)
+  }, [activeChannel, activeChannelName, draftByChannel])
+
+  React.useEffect(() => {
+    if (!activeChannelName || !activeChannel) return
+    setDraftByChannel((prev) => ({
+      ...prev,
+      [activeChannelName]: prev[activeChannelName] || initDraftFromChannel(activeChannel),
+    }))
+  }, [activeChannel, activeChannelName])
+
+  React.useEffect(() => {
+    setConfigDialogOpen(false)
+  }, [activeChannelName])
+
+  const onActiveDraftChange = (next: Partial<ChannelConfigDraft>) => {
+    if (!activeChannelName || !activeChannel) return
+    setDraftByChannel((prev) => ({
+      ...prev,
+      [activeChannelName]: {
+        ...(prev[activeChannelName] || initDraftFromChannel(activeChannel)),
+        ...next,
+      },
+    }))
+  }
+
+  const resetActiveDraft = () => {
+    if (!activeChannelName || !activeChannel) return
+    setDraftByChannel((prev) => ({
+      ...prev,
+      [activeChannelName]: initDraftFromChannel(activeChannel),
+    }))
+  }
+
+  const saveActiveChannelConfig = () => {
+    if (!activeChannel || !activeChannelDraft || !activeChannelName) return
+    const patch: Record<string, unknown> = {}
+    if (activeChannelName === "telegram") {
+      if (activeChannelDraft.botToken.trim()) patch.botToken = activeChannelDraft.botToken.trim()
+      if (activeChannelDraft.auth_id.trim()) patch.auth_id = activeChannelDraft.auth_id.trim()
+    } else if (activeChannelName === "feishu") {
+      if (activeChannelDraft.appId.trim()) patch.appId = activeChannelDraft.appId.trim()
+      if (activeChannelDraft.appSecret.trim()) patch.appSecret = activeChannelDraft.appSecret.trim()
+      if (activeChannelDraft.domain.trim()) patch.domain = activeChannelDraft.domain.trim()
+      if (activeChannelDraft.auth_id.trim()) patch.auth_id = activeChannelDraft.auth_id.trim()
+    } else if (activeChannelName === "qq") {
+      if (activeChannelDraft.appId.trim()) patch.appId = activeChannelDraft.appId.trim()
+      if (activeChannelDraft.appSecret.trim()) patch.appSecret = activeChannelDraft.appSecret.trim()
+      if (activeChannelDraft.sandbox) patch.sandbox = activeChannelDraft.sandbox === "true"
+      if (activeChannelDraft.auth_id.trim()) patch.auth_id = activeChannelDraft.auth_id.trim()
+    }
+    onChatConfigure(activeChannelName, patch)
+  }
 
   return (
     <div className="space-y-7">
       <section className="space-y-3">
-        <div className="flex items-center justify-between border-b border-border/70 pb-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Channels</div>
-        </div>
+        {!activeChannel ? (
+          <section className="rounded-md bg-muted/70 px-3 py-5 text-sm text-muted-foreground">
+            当前 channel 暂无状态
+          </section>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-3 px-1 py-1">
+              <div className="min-w-0">
+                <div className="truncate text-xl font-semibold leading-none text-foreground">{activeChannelName || "unknown"}</div>
+                <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span
+                    className={`size-1.5 rounded-full ${
+                      activeLinkState === "connected"
+                        ? "bg-emerald-500"
+                        : activeLinkState === "disconnected" || activeLinkState === "error"
+                          ? "bg-destructive"
+                          : "bg-muted-foreground/60"
+                    }`}
+                  />
+                  <span>{`link ${activeLinkState || "-"}`}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[11px]"
+                  disabled={activeReadonly || activeChannel.enabled === true}
+                  onClick={() => onChatAction("open", activeChannelName)}
+                >
+                  open
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[11px]"
+                  disabled={activeReadonly || activeChannel.enabled !== true}
+                  onClick={() => onChatAction("close", activeChannelName)}
+                >
+                  close
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[11px]"
+                  disabled={activeReadonly || !(activeChannel.enabled === true && activeChannel.configured === true)}
+                  onClick={() => onChatAction("test", activeChannelName)}
+                >
+                  test
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-[11px]"
+                  disabled={activeReadonly || !(activeChannel.enabled === true && activeChannel.configured === true)}
+                  onClick={() => onChatAction("reconnect", activeChannelName)}
+                >
+                  reconnect
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 px-2 text-[11px]"
+                  disabled={activeReadonly}
+                  onClick={() => setConfigDialogOpen(true)}
+                >
+                  configuration
+                </Button>
+              </div>
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                <th className="px-0 py-2 font-medium">Channel</th>
-                <th className="px-2 py-2 font-medium">State</th>
-                <th className="px-2 py-2 font-medium">Mapped Contexts</th>
-                <th className="px-2 py-2 font-medium text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chatChannels.length === 0 ? (
-                <tr>
-                  <td className="px-0 py-4 text-sm text-muted-foreground" colSpan={4}>
-                    暂无 channel 状态
-                  </td>
-                </tr>
-              ) : (
-                chatChannels.map((channel) => {
-                  const name = String(channel.channel || "unknown")
-                  const linkState = String(channel.linkState || "unknown")
-                  const mappedCount = channelContextStats.get(name) || 0
-                  const tone =
-                    linkState === "connected"
-                      ? "border-border bg-muted/45 text-foreground"
-                      : linkState === "disconnected" || linkState === "error"
-                        ? "border-destructive/40 bg-destructive/10 text-destructive"
-                        : "border-border bg-muted/35 text-muted-foreground"
-                  const actionDisabled = !(channel.enabled === true && channel.configured === true)
-                  const isEditing = editingChannel === name
-                  const configSummary = parseChannelConfigSummary(channel)
-                  const draft = draftByChannel[name] || initDraftFromChannel(channel)
-
-                  const onDraftChange = (next: Partial<ChannelConfigDraft>) => {
-                    setDraftByChannel((prev) => ({
-                      ...prev,
-                      [name]: {
-                        ...(prev[name] || initDraftFromChannel(channel)),
-                        ...next,
-                      },
-                    }))
-                  }
-
-                  const saveConfig = () => {
-                    const patch: Record<string, unknown> = {}
-                    if (name === "telegram") {
-                      if (draft.botToken.trim()) patch.botToken = draft.botToken.trim()
-                      if (draft.auth_id.trim()) patch.auth_id = draft.auth_id.trim()
-                      if (draft.groupAccess) patch.groupAccess = draft.groupAccess
-                      if (draft.followupWindowMs.trim()) patch.followupWindowMs = draft.followupWindowMs.trim()
-                    } else if (name === "feishu") {
-                      if (draft.appId.trim()) patch.appId = draft.appId.trim()
-                      if (draft.appSecret.trim()) patch.appSecret = draft.appSecret.trim()
-                      if (draft.domain.trim()) patch.domain = draft.domain.trim()
-                      if (draft.auth_id.trim()) patch.auth_id = draft.auth_id.trim()
-                    } else if (name === "qq") {
-                      if (draft.appId.trim()) patch.appId = draft.appId.trim()
-                      if (draft.appSecret.trim()) patch.appSecret = draft.appSecret.trim()
-                      if (draft.sandbox) patch.sandbox = draft.sandbox === "true"
-                      if (draft.auth_id.trim()) patch.auth_id = draft.auth_id.trim()
-                      if (draft.groupAccess) patch.groupAccess = draft.groupAccess
-                    }
-                    onChatConfigure(name, patch)
-                  }
-
-                  return (
-                    <React.Fragment key={name}>
-                      <tr className="border-b border-border/50">
-                        <td className="px-0 py-2 text-sm font-medium">{name}</td>
-                        <td className="px-2 py-2">
-                          <Badge variant="outline" className={tone}>
-                            {linkState}
-                          </Badge>
-                        </td>
-                        <td className="px-2 py-2 text-sm text-muted-foreground">{mappedCount}</td>
-                        <td className="px-2 py-2 text-right">
-                          <div className="flex flex-wrap items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-[11px]"
-                              disabled={channel.enabled === true}
-                              onClick={() => onChatAction("open", name)}
-                            >
-                              open
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-[11px]"
-                              disabled={channel.enabled !== true}
-                              onClick={() => onChatAction("close", name)}
-                            >
-                              close
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-[11px]"
-                              disabled={actionDisabled}
-                              onClick={() => onChatAction("test", name)}
-                            >
-                              test
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-[11px]"
-                              disabled={actionDisabled}
-                              onClick={() => onChatAction("reconnect", name)}
-                            >
-                              reconnect
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={isEditing ? "secondary" : "outline"}
-                              className="h-7 px-2 text-[11px]"
-                              onClick={() => {
-                                if (isEditing) {
-                                  setEditingChannel("")
-                                  return
-                                }
-                                setDraftByChannel((prev) => ({
-                                  ...prev,
-                                  [name]: prev[name] || initDraftFromChannel(channel),
-                                }))
-                                setEditingChannel(name)
-                              }}
-                            >
-                              {isEditing ? "hide config" : "configure"}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {isEditing ? (
-                        <tr className="border-b border-border/40">
-                          <td className="px-0 py-3 text-xs text-muted-foreground" colSpan={4}>
-                            <div className="space-y-3">
-                              <div className="text-[11px]">仅填写要更新的字段；密钥留空表示不改。保存后会自动重载该 channel。</div>
-
-                              {name === "telegram" ? (
-                                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                                  <Input
-                                    type="password"
-                                    placeholder="botToken（可选更新）"
-                                    value={draft.botToken}
-                                    onChange={(event) => onDraftChange({ botToken: event.target.value })}
-                                  />
-                                  <Input
-                                    placeholder="auth_id"
-                                    value={draft.auth_id}
-                                    onChange={(event) => onDraftChange({ auth_id: event.target.value })}
-                                  />
-                                  <Select
-                                    value={draft.groupAccess || "anyone"}
-                                    onValueChange={(value) =>
-                                      onDraftChange({
-                                        groupAccess: value as "anyone" | "initiator_or_admin",
-                                      })
-                                    }
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="groupAccess" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="anyone">anyone</SelectItem>
-                                      <SelectItem value="initiator_or_admin">initiator_or_admin</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Input
-                                    placeholder="followupWindowMs"
-                                    value={draft.followupWindowMs}
-                                    onChange={(event) => onDraftChange({ followupWindowMs: event.target.value })}
-                                  />
-                                </div>
-                              ) : null}
-
-                              {name === "feishu" ? (
-                                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                                  <Input
-                                    placeholder="appId"
-                                    value={draft.appId}
-                                    onChange={(event) => onDraftChange({ appId: event.target.value })}
-                                  />
-                                  <Input
-                                    type="password"
-                                    placeholder="appSecret（可选更新）"
-                                    value={draft.appSecret}
-                                    onChange={(event) => onDraftChange({ appSecret: event.target.value })}
-                                  />
-                                  <Input
-                                    placeholder="domain"
-                                    value={draft.domain}
-                                    onChange={(event) => onDraftChange({ domain: event.target.value })}
-                                  />
-                                  <Input
-                                    placeholder="auth_id"
-                                    value={draft.auth_id}
-                                    onChange={(event) => onDraftChange({ auth_id: event.target.value })}
-                                  />
-                                </div>
-                              ) : null}
-
-                              {name === "qq" ? (
-                                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
-                                  <Input
-                                    placeholder="appId"
-                                    value={draft.appId}
-                                    onChange={(event) => onDraftChange({ appId: event.target.value })}
-                                  />
-                                  <Input
-                                    type="password"
-                                    placeholder="appSecret（可选更新）"
-                                    value={draft.appSecret}
-                                    onChange={(event) => onDraftChange({ appSecret: event.target.value })}
-                                  />
-                                  <Input
-                                    placeholder="auth_id"
-                                    value={draft.auth_id}
-                                    onChange={(event) => onDraftChange({ auth_id: event.target.value })}
-                                  />
-                                  <Select
-                                    value={draft.groupAccess || "anyone"}
-                                    onValueChange={(value) =>
-                                      onDraftChange({
-                                        groupAccess: value as "anyone" | "initiator_or_admin",
-                                      })
-                                    }
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="groupAccess" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="anyone">anyone</SelectItem>
-                                      <SelectItem value="initiator_or_admin">initiator_or_admin</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Select
-                                    value={draft.sandbox || "false"}
-                                    onValueChange={(value) =>
-                                      onDraftChange({
-                                        sandbox: value as "true" | "false",
-                                      })
-                                    }
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="sandbox" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="false">sandbox: false</SelectItem>
-                                      <SelectItem value="true">sandbox: true</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              ) : null}
-
-                              <div className="flex items-center justify-between">
-                                <div className="max-w-[70%] truncate text-[11px] text-muted-foreground" title={JSON.stringify(configSummary)}>
-                                  当前摘要: {JSON.stringify(configSummary)}
-                                </div>
-                                <Button size="sm" onClick={saveConfig}>
-                                  保存并重载
-                                </Button>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : null}
-                    </React.Fragment>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+            <section className="rounded-md bg-muted/70 px-3 py-2">
+              <BasicRow label="Channel" value={activeChannelName || "-"} />
+              <BasicRow label="Identity" value={activeIdentity} />
+              <BasicRow label="Bot Name" value={activeBotName || "-"} />
+              <BasicRow label="Bot ID" value={activeBotId || "-"} />
+              <BasicRow label="App ID" value={activeAppId || "-"} />
+              <BasicRow label="App ID (ship.json)" value={activeAppIdFromConfig || "-"} />
+              <BasicRow label="App ID Source" value={activeAppIdSource} />
+              <BasicRow label="Auth ID" value={activeAuthId || "-"} />
+              <BasicRow label="Mapped Contexts" value={String(activeMappedContexts)} />
+              <BasicRow label="Enabled" value={toYesNo(activeChannel.enabled)} />
+              <BasicRow label="Configured" value={toYesNo(activeChannel.configured)} />
+              <BasicRow label="Running" value={toYesNo(activeChannel.running)} />
+              <BasicRow label="Link" value={String(activeChannel.linkState || "-")} />
+              <BasicRow label="Status" value={String(activeChannel.statusText || "-")} />
+            </section>
+          </div>
+        )}
       </section>
 
       <section className="space-y-3">
@@ -423,7 +399,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
             placeholder="搜索 contextId / role / message"
           />
           <div className="flex flex-wrap items-center gap-1.5">
-            {(["all", "local_ui", "chat", "api", "other"] as const).map((key) => (
+            {(["all", "chat", "api", "other"] as const).map((key) => (
               <Button
                 key={key}
                 type="button"
@@ -485,6 +461,125 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
           </table>
         </div>
       </section>
+
+      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
+        <DialogContent className="w-[min(94vw,780px)]">
+          <DialogHeader>
+            <DialogTitle>{`Configuration · ${activeChannelName || "-"}`}</DialogTitle>
+            <DialogDescription>仅填写要更新的字段；密钥留空表示不改。保存后会自动重载该 channel。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 overflow-y-auto px-4 pb-2">
+            {activeChannelName === "telegram" && activeChannelDraft ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  type="password"
+                  placeholder={
+                    activeBotTokenConfigured
+                      ? "botToken（已配置，留空表示不改）"
+                      : "botToken（可选更新）"
+                  }
+                  value={activeChannelDraft.botToken}
+                  onChange={(event) => onActiveDraftChange({ botToken: event.target.value })}
+                />
+                <Input
+                  placeholder="auth_id"
+                  value={activeChannelDraft.auth_id}
+                  onChange={(event) => onActiveDraftChange({ auth_id: event.target.value })}
+                />
+              </div>
+            ) : null}
+
+            {activeChannelName === "feishu" && activeChannelDraft ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  placeholder={activeAppIdSource === "env" ? `appId（当前来自 env: ${activeAppId || "-"}）` : "appId"}
+                  value={activeChannelDraft.appId}
+                  onChange={(event) => onActiveDraftChange({ appId: event.target.value })}
+                />
+                <Input
+                  type="password"
+                  placeholder={
+                    activeAppSecretConfigured
+                      ? "appSecret（已配置，留空表示不改）"
+                      : "appSecret（可选更新）"
+                  }
+                  value={activeChannelDraft.appSecret}
+                  onChange={(event) => onActiveDraftChange({ appSecret: event.target.value })}
+                />
+                <Input
+                  placeholder="domain"
+                  value={activeChannelDraft.domain}
+                  onChange={(event) => onActiveDraftChange({ domain: event.target.value })}
+                />
+                <Input
+                  placeholder="auth_id"
+                  value={activeChannelDraft.auth_id}
+                  onChange={(event) => onActiveDraftChange({ auth_id: event.target.value })}
+                />
+              </div>
+            ) : null}
+
+            {activeChannelName === "qq" && activeChannelDraft ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  placeholder={activeAppIdSource === "env" ? `appId（当前来自 env: ${activeAppId || "-"}）` : "appId"}
+                  value={activeChannelDraft.appId}
+                  onChange={(event) => onActiveDraftChange({ appId: event.target.value })}
+                />
+                <Input
+                  type="password"
+                  placeholder={
+                    activeAppSecretConfigured
+                      ? "appSecret（已配置，留空表示不改）"
+                      : "appSecret（可选更新）"
+                  }
+                  value={activeChannelDraft.appSecret}
+                  onChange={(event) => onActiveDraftChange({ appSecret: event.target.value })}
+                />
+                <Input
+                  placeholder="auth_id"
+                  value={activeChannelDraft.auth_id}
+                  onChange={(event) => onActiveDraftChange({ auth_id: event.target.value })}
+                />
+                <Select
+                  value={activeChannelDraft.sandbox || "false"}
+                  onValueChange={(value) =>
+                    onActiveDraftChange({
+                      sandbox: value as "true" | "false",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="sandbox" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="false">sandbox: false</SelectItem>
+                    <SelectItem value="true">sandbox: true</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
+            <div className="truncate text-[11px] text-muted-foreground" title={JSON.stringify(activeConfigSummary)}>
+              当前摘要: {JSON.stringify(activeConfigSummary)}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button size="sm" variant="outline" onClick={resetActiveDraft}>
+              重置
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                saveActiveChannelConfig()
+                setConfigDialogOpen(false)
+              }}
+            >
+              保存并重载
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

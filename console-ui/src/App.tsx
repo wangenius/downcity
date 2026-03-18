@@ -13,6 +13,7 @@ import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspace
 import { ExtensionsSection } from "@/components/dashboard/ExtensionsSection"
 import { GlobalOverviewSection } from "@/components/dashboard/GlobalOverviewSection"
 import { LogsSection } from "@/components/dashboard/LogsSection"
+import { SkillsSection } from "@/components/dashboard/SkillsSection"
 import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { TasksSection } from "@/components/dashboard/TasksSection"
 import { ToastMessage } from "@/components/dashboard/ToastMessage"
@@ -21,6 +22,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
 import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/dashboard-route"
+import { cn } from "@/lib/utils"
 import type { DashboardView } from "@/types/Navigation"
 
 export function App() {
@@ -37,9 +39,11 @@ export function App() {
     if (typeof window === "undefined") return ""
     return String(parseDashboardPath(window.location.pathname).taskTitle || "").trim()
   })
+  const [focusedChatChannel, setFocusedChatChannel] = React.useState<string>("")
 
   const {
     agents,
+    smaVersion,
     selectedAgentId,
     selectedAgent,
     overview,
@@ -51,6 +55,9 @@ export function App() {
     selectedContextId,
     channelHistory,
     contextMessages,
+    contextArchives,
+    selectedArchiveId,
+    contextArchiveMessages,
     tasks,
     logs,
     model,
@@ -62,21 +69,34 @@ export function App() {
     topbarError,
     loading,
     sending,
+    clearingContextMessages,
+    clearingChatHistory,
     chatInput,
     toast,
     setChatInput,
     handleAgentChange,
     handleContextChange,
     refreshDashboard,
+    refreshSkills,
+    refreshContextArchives,
     controlService,
     controlExtension,
     testExtension,
     runChatChannelAction,
     configureChatChannel,
+    runSkillFind,
+    runSkillInstall,
     runTask,
+    setTaskStatus,
+    deleteTask,
     loadTaskRuns,
+    deleteTaskRun,
+    clearTaskRuns,
     loadTaskRunDetail,
-    sendLocalMessage,
+    sendConsoleUiMessage,
+    clearContextMessages,
+    clearChatHistory,
+    loadContextArchiveMessages,
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
@@ -109,6 +129,46 @@ export function App() {
     [agents, selectedAgent, selectedAgentId],
   )
 
+  const resolveChannelFromContextId = React.useCallback((contextIdInput?: string): string => {
+    const contextId = String(contextIdInput || "").trim().toLowerCase()
+    if (!contextId) return ""
+    if (contextId.startsWith("telegram-")) return "telegram"
+    if (contextId.startsWith("qq-")) return "qq"
+    if (contextId.startsWith("feishu-")) return "feishu"
+    if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
+    return "other"
+  }, [])
+
+  const availableChatChannels = React.useMemo(() => {
+    const channelSet = new Set<string>()
+    for (const item of chatChannels) {
+      const channel = String(item.channel || "").trim().toLowerCase()
+      if (channel) channelSet.add(channel)
+    }
+    for (const item of contexts) {
+      const channel = resolveChannelFromContextId(item.contextId)
+      if (channel) channelSet.add(channel)
+    }
+    const preferredOrder = ["telegram", "qq", "feishu", "consoleui", "other"]
+    const orderedKnown = preferredOrder.filter((channel) => channelSet.has(channel))
+    const orderedExtra = [...channelSet]
+      .filter((channel) => !preferredOrder.includes(channel))
+      .sort((a, b) => a.localeCompare(b))
+    return [...orderedKnown, ...orderedExtra]
+  }, [chatChannels, contexts, resolveChannelFromContextId])
+  const effectiveFocusedChatChannel = React.useMemo(() => {
+    const normalized = String(focusedChatChannel || "").trim().toLowerCase()
+    if (normalized && availableChatChannels.includes(normalized)) return normalized
+    return String(availableChatChannels[0] || "").trim().toLowerCase()
+  }, [availableChatChannels, focusedChatChannel])
+  const focusedChannelIdentity = React.useMemo(() => {
+    const channel = String(effectiveFocusedChatChannel || "").trim().toLowerCase()
+    if (!channel) return ""
+    const profiles = Array.isArray(selectedAgent?.chatProfiles) ? selectedAgent.chatProfiles : []
+    const matched = profiles.find((item) => String(item.channel || "").trim().toLowerCase() === channel)
+    return String(matched?.identity || "").trim()
+  }, [effectiveFocusedChatChannel, selectedAgent?.chatProfiles])
+
   const resolveAgentIdByRouteSegment = React.useCallback(
     (segmentInput?: string): string => {
       const segment = toAgentRouteSegment(String(segmentInput || ""))
@@ -130,6 +190,7 @@ export function App() {
         contextId?: string
         taskTitle?: string
         agentId?: string
+        channel?: string
         replace?: boolean
       },
     ) => {
@@ -139,6 +200,7 @@ export function App() {
       const nextPath = toDashboardPath(view, {
         contextId: options?.contextId,
         taskTitle: options?.taskTitle,
+        channel: options?.channel,
         agentSegment: hasExplicitAgentForGlobalOverview || view !== "globalOverview"
           ? resolveAgentRouteSegment(options?.agentId)
           : undefined,
@@ -169,6 +231,7 @@ export function App() {
     setRoutePathname(window.location.pathname)
     setActiveView(parsed.view)
     setSelectedTaskTitle(String(parsed.taskTitle || "").trim())
+    setFocusedChatChannel(String(parsed.channel || "").trim().toLowerCase())
 
     const hasAgentSegment = Boolean(String(parsed.agentSegment || "").trim())
     if (hasAgentSegment && agents.length === 0) {
@@ -186,6 +249,12 @@ export function App() {
       parsed.contextId &&
       (!hasAgentSegment || !parsedAgentId || parsedAgentId === selectedAgentId)
     ) {
+      const routeChannel = String(parsed.channel || "").trim().toLowerCase()
+      if (routeChannel) {
+        setFocusedChatChannel(routeChannel)
+      } else {
+        setFocusedChatChannel(resolveChannelFromContextId(parsed.contextId))
+      }
       void handleContextChange(parsed.contextId)
     }
 
@@ -206,11 +275,18 @@ export function App() {
       setRoutePathname(window.location.pathname)
       setActiveView(parsed.view)
       setSelectedTaskTitle(String(parsed.taskTitle || "").trim())
+      setFocusedChatChannel(String(parsed.channel || "").trim().toLowerCase())
       const parsedAgentId = resolveAgentIdByRouteSegment(parsed.agentSegment)
       if (parsedAgentId && parsedAgentId !== selectedAgentId) {
         handleAgentChange(parsedAgentId)
       }
       if (parsed.view === "contextWorkspace" && parsed.contextId && (!parsedAgentId || parsedAgentId === selectedAgentId)) {
+        const routeChannel = String(parsed.channel || "").trim().toLowerCase()
+        if (routeChannel) {
+          setFocusedChatChannel(routeChannel)
+        } else {
+          setFocusedChatChannel(resolveChannelFromContextId(parsed.contextId))
+        }
         void handleContextChange(parsed.contextId)
       }
     }
@@ -230,12 +306,26 @@ export function App() {
     const expectedPath = toDashboardPath(activeView, {
       contextId: activeView === "contextWorkspace" ? selectedContextId : undefined,
       taskTitle: activeView === "agentTasks" ? selectedTaskTitle : undefined,
+      channel: activeView === "contextOverview"
+        ? effectiveFocusedChatChannel
+        : activeView === "contextWorkspace"
+          ? resolveChannelFromContextId(selectedContextId)
+          : undefined,
       agentSegment: resolveAgentRouteSegment(selectedAgentId),
     })
     if (window.location.pathname !== expectedPath) {
       window.history.replaceState({}, "", expectedPath)
     }
-  }, [activeView, resolveAgentRouteSegment, routeHydrated, selectedAgentId, selectedContextId, selectedTaskTitle])
+  }, [
+    activeView,
+    effectiveFocusedChatChannel,
+    resolveAgentRouteSegment,
+    resolveChannelFromContextId,
+    routeHydrated,
+    selectedAgentId,
+    selectedContextId,
+    selectedTaskTitle,
+  ])
 
   React.useEffect(() => {
     if (activeView !== "agentTasks") return
@@ -260,10 +350,21 @@ export function App() {
       navigateToView("agentOverview", { replace: true })
       return
     }
-    if (activeView === "contextOverview") {
-      navigateToView("agentOverview", { replace: true })
-    }
   }, [activeView, navigateToView, routeHydrated, selectedTaskTitle])
+
+  React.useEffect(() => {
+    setFocusedChatChannel("")
+  }, [selectedAgentId])
+
+  React.useEffect(() => {
+    if (activeView !== "contextOverview") return
+    const normalized = String(focusedChatChannel || "").trim().toLowerCase()
+    const hasFocused = Boolean(normalized) && availableChatChannels.includes(normalized)
+    if (hasFocused) return
+    const fallback = String(availableChatChannels[0] || "").trim().toLowerCase()
+    if (!fallback) return
+    setFocusedChatChannel(fallback)
+  }, [activeView, availableChatChannels, focusedChatChannel])
 
   const hasGlobalAgentRoute = React.useMemo(() => {
     if (activeView !== "globalOverview") return false
@@ -298,7 +399,7 @@ export function App() {
           skills={skills}
           tasks={tasks}
           contexts={contexts}
-          localUiContextId={constants.LOCAL_UI_CONTEXT_ID}
+          consoleUiContextId={constants.CONSOLEUI_CONTEXT_ID}
           configStatus={configStatus}
           model={model}
           onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
@@ -320,13 +421,18 @@ export function App() {
             setSelectedTaskTitle(normalizedTaskTitle)
             navigateToView("agentTasks", { taskTitle: normalizedTaskTitle })
           }}
-          onOpenContext={(contextId) => {
-            const normalizedContextId = String(contextId || "").trim()
-            if (!normalizedContextId) return
-            navigateToView("contextWorkspace", { contextId: normalizedContextId })
-            void handleContextChange(normalizedContextId)
-          }}
+              onOpenContext={(contextId) => {
+                const normalizedContextId = String(contextId || "").trim()
+                if (!normalizedContextId) return
+                navigateToView("contextWorkspace", {
+                  contextId: normalizedContextId,
+                  channel: resolveChannelFromContextId(normalizedContextId),
+                })
+                void handleContextChange(normalizedContextId)
+              }}
           onControlService={(serviceName, action) => controlService(serviceName, action)}
+          chatChannels={chatChannels}
+          onChatAction={(action, channel) => runChatChannelAction(action, channel)}
         />
       </section>
     )
@@ -341,6 +447,7 @@ export function App() {
         return (
           <section>
             <GlobalOverviewSection
+              smaVersion={smaVersion}
               agents={agents}
               extensions={extensions}
               configStatus={configStatus}
@@ -368,6 +475,7 @@ export function App() {
         return (
           <section>
             <GlobalOverviewSection
+              smaVersion={smaVersion}
               agents={agents}
               extensions={extensions}
               configStatus={configStatus}
@@ -420,6 +528,19 @@ export function App() {
             />
           </section>
         )
+      case "agentSkills":
+        return (
+          <section>
+            <SkillsSection
+              skills={skills}
+              loading={loading}
+              selectedAgentId={selectedAgentId}
+              onRefreshSkills={() => refreshSkills(selectedAgentId)}
+              onFindSkill={(query) => runSkillFind(query)}
+              onInstallSkill={(input) => runSkillInstall(input)}
+            />
+          </section>
+        )
       case "agentTasks":
         return (
           <section>
@@ -428,7 +549,11 @@ export function App() {
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
               formatTime={uiHelpers.formatTime}
               onRunTask={(title) => void runTask(title)}
+              onSetTaskStatus={(title, status) => setTaskStatus(title, status)}
+              onDeleteTask={(title) => deleteTask(title)}
               onLoadTaskRuns={(title, limit) => loadTaskRuns(title, limit)}
+              onDeleteTaskRun={(title, timestamp) => deleteTaskRun(title, timestamp)}
+              onClearTaskRuns={(title) => clearTaskRuns(title)}
               onLoadTaskRunDetail={(title, timestamp) => loadTaskRunDetail(title, timestamp)}
               selectedTaskTitle={selectedTaskTitle}
               onSelectTaskTitle={(taskTitle) => {
@@ -452,9 +577,15 @@ export function App() {
               contexts={contexts}
               selectedContextId={selectedContextId}
               chatChannels={chatChannels}
+              focusedChannel={effectiveFocusedChatChannel}
+              channelIdentity={focusedChannelIdentity}
               formatTime={uiHelpers.formatTime}
               onOpenContext={(contextId) => {
-                navigateToView("contextWorkspace", { contextId })
+                setFocusedChatChannel(resolveChannelFromContextId(contextId))
+                navigateToView("contextWorkspace", {
+                  contextId,
+                  channel: resolveChannelFromContextId(contextId),
+                })
                 void handleContextChange(contextId)
               }}
               onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
@@ -471,14 +602,42 @@ export function App() {
               channelHistory={channelHistory}
               chatChannels={chatChannels}
               contextMessages={contextMessages}
+              contextArchives={contextArchives}
+              selectedArchiveId={selectedArchiveId}
+              contextArchiveMessages={contextArchiveMessages}
               prompt={prompt}
               chatInput={chatInput}
               sending={sending}
+              clearingContextMessages={clearingContextMessages}
+              clearingChatHistory={clearingChatHistory}
               formatTime={uiHelpers.formatTime}
               onChangeInput={setChatInput}
-              onSendLocalMessage={() => void sendLocalMessage()}
+              onSendConsoleUiMessage={() => void sendConsoleUiMessage()}
+              onClearContextMessages={() => {
+                if (!selectedContextId) return
+                void clearContextMessages(selectedContextId)
+              }}
+              onClearChatHistory={() => {
+                if (!selectedContextId) return
+                void clearChatHistory(selectedContextId)
+              }}
+              onRefreshArchives={() => {
+                if (!selectedAgentId || !selectedContextId) return
+                void refreshContextArchives(selectedAgentId, selectedContextId)
+              }}
+              onSelectArchive={(archiveId) => {
+                if (!selectedAgentId || !selectedContextId) return
+                void loadContextArchiveMessages(
+                  selectedAgentId,
+                  selectedContextId,
+                  archiveId,
+                )
+              }}
               onSelectContext={(contextId) => {
-                navigateToView("contextWorkspace", { contextId })
+                navigateToView("contextWorkspace", {
+                  contextId,
+                  channel: resolveChannelFromContextId(contextId),
+                })
                 void handleContextChange(contextId)
               }}
             />
@@ -505,32 +664,53 @@ export function App() {
         routePathname={routePathname}
         routeAgentId={routeAgentId}
         contexts={contexts}
+        chatChannels={chatChannels}
         selectedContextId={selectedContextId}
         tasks={tasks}
         selectedTaskTitle={selectedTaskTitle}
+        selectedChatChannel={effectiveFocusedChatChannel}
         onViewChange={(view) => {
           if (view === "contextWorkspace") {
-            const nextContextId = selectedContextId || constants.LOCAL_UI_CONTEXT_ID
-            navigateToView("contextWorkspace", { contextId: nextContextId })
+            const nextContextId = selectedContextId || constants.CONSOLEUI_CONTEXT_ID
+            setFocusedChatChannel(resolveChannelFromContextId(nextContextId))
+            navigateToView("contextWorkspace", {
+              contextId: nextContextId,
+              channel: resolveChannelFromContextId(nextContextId),
+            })
             void handleContextChange(nextContextId)
             return
+          }
+          if (view !== "contextOverview") {
+            setFocusedChatChannel("")
           }
           navigateToView(view)
         }}
         onAgentChange={(agentId) => {
           handleAgentChange(agentId)
+          setFocusedChatChannel("")
           navigateToView("globalOverview", { agentId })
         }}
         onAgentEnter={(agentId) => {
           handleAgentChange(agentId)
+          setFocusedChatChannel("")
           navigateToView("agentOverview", { agentId })
         }}
         onTaskOpen={(taskTitle) => {
+          setFocusedChatChannel("")
           setSelectedTaskTitle(taskTitle)
           navigateToView("agentTasks", { taskTitle })
         }}
+        onChannelOpen={(channel) => {
+          const normalizedChannel = String(channel || "").trim().toLowerCase()
+          setFocusedChatChannel(normalizedChannel)
+          navigateToView("contextOverview", { channel: normalizedChannel })
+        }}
         onContextOpen={(contextId) => {
-          navigateToView("contextWorkspace", { contextId })
+          setFocusedChatChannel(resolveChannelFromContextId(contextId))
+          navigateToView("contextWorkspace", {
+            contextId,
+            channel: resolveChannelFromContextId(contextId),
+          })
           void handleContextChange(contextId)
         }}
         topbarStatus={topbarStatus}
@@ -542,7 +722,14 @@ export function App() {
       <SidebarInset>
         <SiteHeader viewLabel={getDashboardViewLabel(activeView)} />
 
-        <main className="mainview-shell flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto overflow-x-hidden bg-background px-3 py-2 md:px-4 md:py-3">
+        <main
+          className={cn(
+            "mainview-shell flex flex-1 min-h-0 flex-col bg-background",
+            activeView === "contextWorkspace"
+              ? "gap-0 overflow-hidden px-0 py-0 md:px-0 md:py-0"
+              : "gap-4 overflow-y-auto overflow-x-hidden px-3 py-2 md:px-4 md:py-3",
+          )}
+        >
           {renderActiveView()}
         </main>
       </SidebarInset>

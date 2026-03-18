@@ -11,7 +11,7 @@ import type { UiContextSummary } from "@/types/Dashboard"
 /**
  * context 分组键。
  */
-export type ContextGroupKey = "local_ui" | "chat" | "api" | "other"
+export type ContextGroupKey = "chat" | "api" | "other"
 
 /**
  * context 分组结构。
@@ -36,8 +36,13 @@ export interface ContextGroup {
  */
 export function resolveContextGroup(contextId: string): ContextGroupKey {
   const value = String(contextId || "")
-  if (value === "local_ui") return "local_ui"
-  if (value.startsWith("telegram-") || value.startsWith("qq-") || value.startsWith("feishu-")) return "chat"
+  if (
+    value.startsWith("telegram-") ||
+    value.startsWith("qq-") ||
+    value.startsWith("feishu-") ||
+    value.startsWith("consoleui-") ||
+    value === "local_ui"
+  ) return "chat"
   if (value.startsWith("api:")) return "api"
   return "other"
 }
@@ -60,7 +65,6 @@ export function sortContexts(contexts: UiContextSummary[]): UiContextSummary[] {
 export function buildContextGroups(contexts: UiContextSummary[]): ContextGroup[] {
   const sorted = sortContexts(contexts)
   const groupMap: Record<ContextGroupKey, UiContextSummary[]> = {
-    local_ui: [],
     chat: [],
     api: [],
     other: [],
@@ -70,7 +74,6 @@ export function buildContextGroups(contexts: UiContextSummary[]): ContextGroup[]
     groupMap[key].push(item)
   }
   const groups: ContextGroup[] = [
-    { key: "local_ui", title: "local_ui", items: groupMap.local_ui },
     { key: "chat", title: "chat:*", items: groupMap.chat },
     { key: "api", title: "api:*", items: groupMap.api },
     { key: "other", title: "other", items: groupMap.other },

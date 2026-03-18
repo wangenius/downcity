@@ -1,6 +1,7 @@
 import type { Route } from "./+types/page";
 import type { MDXComponents } from "mdx/types";
 import type { ComponentType } from "react";
+import type { TOCItemType } from "fumadocs-core/toc";
 import React from "react";
 import { redirect } from "react-router";
 import { source } from "@/lib/source";
@@ -158,11 +159,13 @@ const clientLoader = browserCollections.docs.createClientLoader({
   component: ({
     default: Mdx,
     frontmatter,
+    toc,
   }: {
     default: ComponentType<{ components?: MDXComponents }>;
     frontmatter: { title?: string; description?: string };
+    toc?: TOCItemType[];
   }) => (
-    <DocsPage>
+    <DocsPage toc={Array.isArray(toc) ? toc : []}>
       <DocsTitle>{frontmatter.title}</DocsTitle>
       <DocsDescription>{frontmatter.description}</DocsDescription>
       <DocsBody>

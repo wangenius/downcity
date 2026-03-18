@@ -56,6 +56,21 @@ type EnvEntry = {
   value: string;
 };
 
+/**
+ * 规范化默认 Agent 名称。
+ *
+ * 关键点（中文）
+ * - 仅用于“默认值”推导，不改写用户手动输入。
+ * - 将目录名里的 `_` / `-` 统一转换为空格，提升默认展示可读性。
+ */
+function normalizeDefaultAgentName(input: string): string {
+  const normalized = String(input || "")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized;
+}
 
 /**
  * 读取 console 全局模型 ID 列表。
@@ -209,6 +224,9 @@ export async function initCommand(
   options: { force?: boolean } = {},
 ): Promise<void> {
   const projectRoot = path.resolve(cwd);
+  const projectBaseName = path.basename(projectRoot);
+  const defaultAgentName =
+    normalizeDefaultAgentName(projectBaseName) || projectBaseName;
   let allowOverwrite = Boolean(options.force);
   const dotEnvPath = path.join(projectRoot, ".env");
   const dotEnvExamplePath = path.join(projectRoot, ".env.example");
@@ -262,7 +280,7 @@ export async function initCommand(
       type: "text",
       name: "name",
       message: "Agent name",
-      initial: path.basename(projectRoot),
+      initial: defaultAgentName,
     },
     {
       type: "select",
@@ -295,7 +313,7 @@ export async function initCommand(
 
   // 关键点（中文）：agent_name 同时用于 `ship.json.name` 与 init 模板变量渲染，避免两处来源不一致。
   const agentName =
-    String(response.name || "").trim() || path.basename(projectRoot);
+    String(response.name || "").trim() || defaultAgentName;
   const primaryModelId = String(response.primaryModelId || "").trim() || "default";
   const initTemplateVariables = {
     agent_name: agentName,

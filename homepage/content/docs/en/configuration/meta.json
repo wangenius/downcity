@@ -1,4 +1,4 @@
 {
   "title": "Configuration",
-  "pages": ["overview", "console-ship-json", "project", "model", "checklist"]
+  "pages": ["overview", "console-ship-json", "project", "environment-variables", "model", "checklist"]
 }

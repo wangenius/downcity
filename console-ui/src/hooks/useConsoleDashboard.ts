@@ -12,6 +12,10 @@ import type {
   UiChatStatusResponse,
   UiConfigStatusItem,
   UiConfigStatusResponse,
+  UiContextArchiveDetailResponse,
+  UiContextArchivesResponse,
+  UiContextArchiveSummary,
+  UiContextClearResponse,
   UiCommandExecuteResponse,
   UiCommandExecuteResult,
   UiContextMessagesResponse,
@@ -35,15 +39,25 @@ import type {
   UiServiceItem,
   UiServicesResponse,
   UiSkillListResponse,
+  UiSkillCommandResponse,
+  UiSkillFindPayload,
+  UiSkillFindResult,
+  UiSkillInstallPayload,
+  UiSkillInstallResult,
+  UiSkillLookupResult,
   UiSkillSummaryItem,
   UiTaskItem,
+  UiTaskMutationResponse,
+  UiTaskRunsClearResponse,
+  UiTaskRunDeleteResponse,
   UiTaskRunDetailResponse,
   UiTaskRunsResponse,
   UiTaskRunSummary,
+  UiTaskStatusValue,
   UiTasksResponse,
 } from "../types/Dashboard";
 
-const LOCAL_UI_CONTEXT_ID = "local_ui";
+const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
 
 type ToastType = "info" | "success" | "error";
 
@@ -92,6 +106,20 @@ function isChatServiceNotReadyError(messageInput: string): boolean {
   );
 }
 
+function isServiceNotRunningError(messageInput: string, serviceName: string): boolean {
+  const message = String(messageInput || "").toLowerCase();
+  const name = String(serviceName || "").trim().toLowerCase();
+  if (!name) return message.includes("is not running");
+  return message.includes(`service \"${name}\" is not running`) || (
+    message.includes("is not running") && message.includes(name)
+  );
+}
+
+function isNotFoundError(messageInput: string): boolean {
+  const message = String(messageInput || "").toLowerCase();
+  return message.includes("404") || message.includes("not found");
+}
+
 function statusBadgeVariant(raw?: string): "ok" | "warn" | "bad" {
   const value = String(raw || "").toLowerCase();
   if (["running", "ok", "active", "enabled", "success"].includes(value)) return "ok";
@@ -115,11 +143,46 @@ function wait(ms: number): Promise<void> {
   });
 }
 
+function isConsoleUiContext(contextIdInput: string): boolean {
+  const contextId = String(contextIdInput || "").trim().toLowerCase();
+  if (!contextId) return false;
+  return contextId.startsWith("consoleui-") || contextId === "local_ui";
+}
+
+function toHistoryEventsFromTimeline(
+  contextId: string,
+  timeline: UiContextTimelineMessage[],
+): UiChatHistoryEvent[] {
+  return timeline.map((item, index) => {
+    const role = String(item.role || "").trim().toLowerCase();
+    const tsRaw = item.ts;
+    const tsNumber =
+      typeof tsRaw === "number"
+        ? tsRaw
+        : Number.isFinite(Date.parse(String(tsRaw || "")))
+          ? Date.parse(String(tsRaw || ""))
+          : Date.now();
+    return {
+      id: String(item.id || `${contextId}:timeline:${index}`),
+      contextId,
+      channel: "consoleui",
+      direction: role === "user" ? "inbound" : "outbound",
+      ts: tsNumber,
+      text: String(item.text || ""),
+      ...(role === "user" ? { actorName: "user" } : { actorName: "agent" }),
+    };
+  });
+}
+
 export interface UseConsoleDashboardResult {
   /**
    * 当前 agent 列表。
    */
   agents: UiAgentOption[];
+  /**
+   * 当前 SMA CLI 版本号（来自 console 网关）。
+   */
+  smaVersion: string;
   /**
    * 当前选中的 agent id。
    */
@@ -165,6 +228,18 @@ export interface UseConsoleDashboardResult {
    */
   contextMessages: UiContextTimelineMessage[];
   /**
+   * compact archive 列表（按时间倒序）。
+   */
+  contextArchives: UiContextArchiveSummary[];
+  /**
+   * 当前选中的 archive id。
+   */
+  selectedArchiveId: string;
+  /**
+   * 当前选中 archive 的消息时间线。
+   */
+  contextArchiveMessages: UiContextTimelineMessage[];
+  /**
    * 任务状态列表。
    */
   tasks: UiTaskItem[];
@@ -193,7 +268,7 @@ export interface UseConsoleDashboardResult {
    */
   prompt: UiPromptResponse | null;
   /**
-   * local_ui 消息列表。
+   * consoleui channel 消息列表。
    */
   localMessages: UiLocalMessage[];
   /**
@@ -209,11 +284,19 @@ export interface UseConsoleDashboardResult {
    */
   loading: boolean;
   /**
-   * 是否正在发送 local_ui 消息。
+   * 是否正在发送 consoleui channel 消息。
    */
   sending: boolean;
   /**
-   * local_ui 输入框内容。
+   * 是否正在清理 context messages。
+   */
+  clearingContextMessages: boolean;
+  /**
+   * 是否正在清理 chat history。
+   */
+  clearingChatHistory: boolean;
+  /**
+   * consoleui channel 输入框内容。
    */
   chatInput: string;
   /**
@@ -245,6 +328,10 @@ export interface UseConsoleDashboardResult {
    */
   refreshExtensions: () => Promise<void>;
   /**
+   * 刷新 skills 列表。
+   */
+  refreshSkills: (agentId: string) => Promise<void>;
+  /**
    * 刷新 context 列表。
    */
   refreshContexts: (agentId: string) => Promise<UiContextSummary[]>;
@@ -256,6 +343,18 @@ export interface UseConsoleDashboardResult {
    * 刷新 context message 历史。
    */
   refreshContextMessages: (agentId: string, contextId: string) => Promise<void>;
+  /**
+   * 刷新 compact archive 列表。
+   */
+  refreshContextArchives: (agentId: string, contextId: string) => Promise<UiContextArchiveSummary[]>;
+  /**
+   * 加载 archive 详情。
+   */
+  loadContextArchiveMessages: (
+    agentId: string,
+    contextId: string,
+    archiveId: string,
+  ) => Promise<void>;
   /**
    * 刷新 prompt。
    */
@@ -273,7 +372,7 @@ export interface UseConsoleDashboardResult {
    */
   refreshConfigStatus: (agentId: string) => Promise<void>;
   /**
-   * 刷新 local_ui 消息。
+   * 刷新 consoleui channel 消息。
    */
   refreshLocalChat: (agentId: string) => Promise<void>;
   /**
@@ -297,21 +396,57 @@ export interface UseConsoleDashboardResult {
    */
   configureChatChannel: (channel: string, config: Record<string, unknown>) => Promise<void>;
   /**
+   * 查找缺失 skill。
+   */
+  runSkillFind: (query: string) => Promise<UiSkillFindResult | null>;
+  /**
+   * 安装 skill。
+   */
+  runSkillInstall: (input: UiSkillInstallPayload) => Promise<UiSkillInstallResult | null>;
+  /**
+   * 读取 skill 内容（运行时注入）。
+   */
+  runSkillLookup: (name: string) => Promise<UiSkillLookupResult | null>;
+  /**
    * 触发 task 运行。
    */
   runTask: (title: string) => Promise<void>;
+  /**
+   * 更新任务状态（enabled|paused|disabled）。
+   */
+  setTaskStatus: (title: string, status: UiTaskStatusValue) => Promise<boolean>;
+  /**
+   * 删除任务定义。
+   */
+  deleteTask: (title: string) => Promise<boolean>;
   /**
    * 加载任务执行列表。
    */
   loadTaskRuns: (title: string, limit?: number) => Promise<UiTaskRunSummary[]>;
   /**
+   * 删除单条 run 记录目录。
+   */
+  deleteTaskRun: (title: string, timestamp: string) => Promise<boolean>;
+  /**
+   * 一键清理指定任务的全部 run 记录（运行中记录会自动跳过）。
+   */
+  clearTaskRuns: (title: string) => Promise<boolean>;
+  /**
    * 加载任务执行详情。
    */
   loadTaskRunDetail: (title: string, timestamp: string) => Promise<UiTaskRunDetailResponse | null>;
   /**
-   * 发送 local_ui 指令。
+   * 发送 consoleui channel 指令。
    */
-  sendLocalMessage: () => Promise<void>;
+  sendConsoleUiMessage: () => Promise<void>;
+  /**
+   * 清理指定 context 的消息历史（messages.jsonl）。
+   */
+  clearContextMessages: (contextId: string) => Promise<void>;
+  /**
+   * 清理指定 context 的 chat history（history.jsonl）。
+   */
+  clearChatHistory: (contextId: string) => Promise<void>;
   /**
    * 切换 active model。
    */
@@ -398,7 +533,7 @@ export interface UseConsoleDashboardResult {
    * 提供常用常量。
    */
   constants: {
-    LOCAL_UI_CONTEXT_ID: string;
+    CONSOLEUI_CONTEXT_ID: string;
   };
   /**
    * UI 工具函数。
@@ -411,6 +546,7 @@ export interface UseConsoleDashboardResult {
 
 export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [agents, setAgents] = useState<UiAgentOption[]>([]);
+  const [smaVersion, setSmaVersion] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState("");
 
   const [overview, setOverview] = useState<UiOverviewResponse | null>(null);
@@ -422,6 +558,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [selectedContextId, setSelectedContextId] = useState("");
   const [channelHistory, setChannelHistory] = useState<UiChatHistoryEvent[]>([]);
   const [contextMessages, setContextMessages] = useState<UiContextTimelineMessage[]>([]);
+  const [contextArchives, setContextArchives] = useState<UiContextArchiveSummary[]>([]);
+  const [selectedArchiveId, setSelectedArchiveId] = useState("");
+  const [contextArchiveMessages, setContextArchiveMessages] = useState<UiContextTimelineMessage[]>([]);
   const [tasks, setTasks] = useState<UiTaskItem[]>([]);
   const [logs, setLogs] = useState<UiLogItem[]>([]);
   const [model, setModel] = useState<UiModelSummary | null>(null);
@@ -435,15 +574,23 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [topbarError, setTopbarError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [clearingContextMessages, setClearingContextMessages] = useState(false);
+  const [clearingChatHistory, setClearingChatHistory] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const selectedContextIdRef = useRef("");
+  const selectedArchiveIdRef = useRef("");
   const refreshDashboardRef = useRef<((preferredAgentId?: string) => Promise<void>) | null>(null);
+  const archiveApiStateRef = useRef<"unknown" | "supported" | "unsupported">("unknown");
 
   useEffect(() => {
     selectedContextIdRef.current = selectedContextId;
   }, [selectedContextId]);
+
+  useEffect(() => {
+    selectedArchiveIdRef.current = selectedArchiveId;
+  }, [selectedArchiveId]);
 
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.id === selectedAgentId) || null,
@@ -532,6 +679,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setSelectedContextId("");
     setChannelHistory([]);
     setContextMessages([]);
+    setContextArchives([]);
+    setSelectedArchiveId("");
+    setContextArchiveMessages([]);
     setTasks([]);
     setLogs([]);
     setPrompt(null);
@@ -559,6 +709,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       }
 
       const list = Array.isArray(data.agents) ? data.agents : [];
+      const nextSmaVersion = String(data.smaVersion || "").trim();
+      if (nextSmaVersion) setSmaVersion(nextSmaVersion);
       const preferredMatched = preferred ? list.find((item) => item.id === preferred)?.id || "" : "";
       // 关键点（中文）：仅接受显式选择（路由驱动），不再自动挑选“当前 agent”。
       const nextId = preferredMatched || "";
@@ -591,30 +743,80 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     async (agentId: string) => {
       if (!agentId) return;
       try {
-        const data = await requestJson<UiSkillListResponse>(
-          "/api/services/command",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              serviceName: "skill",
-              command: "list",
-              payload: {},
-            }),
-          },
-          agentId,
-        );
+        const data = await requestJson<UiSkillListResponse>("/api/services/command", {
+          method: "POST",
+          body: JSON.stringify({
+            serviceName: "skill",
+            command: "list",
+            payload: {},
+          }),
+        }, agentId);
         const items = Array.isArray(data?.data?.skills) ? data.data.skills : [];
         setSkills(items);
       } catch (error) {
         const message = getErrorMessage(error);
         if (
           /404|not found|unknown action|unknown service/i.test(message) ||
-          isAgentUnavailableError(message)
+          isAgentUnavailableError(message) ||
+          isServiceNotRunningError(message, "skill")
         ) {
           setSkills([]);
           return;
         }
         throw error;
+      }
+    },
+    [requestJson],
+  );
+
+  const runSkillServiceCommand = useCallback(
+    async <TData,>(
+      params: {
+        agentId: string;
+        command: string;
+        payload?: unknown;
+      },
+    ): Promise<UiSkillCommandResponse<TData>> => {
+      const targetAgentId = String(params.agentId || "").trim();
+      if (!targetAgentId) throw new Error("当前无可用 agent");
+      const command = String(params.command || "").trim();
+      if (!command) throw new Error("skill command 不能为空");
+      const payload = params.payload ?? {};
+
+      const execute = async () => {
+        return requestJson<UiSkillCommandResponse<TData>>(
+          "/api/services/command",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              serviceName: "skill",
+              command,
+              payload,
+            }),
+          },
+          targetAgentId,
+        );
+      };
+
+      try {
+        return await execute();
+      } catch (error) {
+        const message = getErrorMessage(error);
+        if (!isServiceNotRunningError(message, "skill")) {
+          throw error;
+        }
+        await requestJson(
+          "/api/services/control",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              serviceName: "skill",
+              action: "start",
+            }),
+          },
+          targetAgentId,
+        );
+        return execute();
       }
     },
     [requestJson],
@@ -746,19 +948,62 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           agentId,
         );
         const channels = Array.isArray(data?.data?.channels) ? data.data.channels : [];
-        setChatChannels(channels);
-        return channels;
+        const normalizedChannels = [
+          ...channels,
+          {
+            channel: "consoleui",
+            enabled: true,
+            configured: true,
+            running: true,
+            linkState: "connected",
+            statusText: "console-ui built-in channel",
+            detail: {
+              readonly: true,
+              managedBy: "console-ui",
+            },
+          } as UiChatChannelStatus,
+        ];
+        setChatChannels(normalizedChannels);
+        return normalizedChannels;
       } catch (error) {
         const message = getErrorMessage(error);
         // 关键点（中文）：兼容旧 runtime 不支持 chat.status 的场景。
         if (/404|not found|unknown action|unknown service/i.test(message)) {
-          setChatChannels([]);
-          return [];
+          const fallbackChannels: UiChatChannelStatus[] = [
+            {
+              channel: "consoleui",
+              enabled: true,
+              configured: true,
+              running: true,
+              linkState: "connected",
+              statusText: "console-ui built-in channel",
+              detail: {
+                readonly: true,
+                managedBy: "console-ui",
+              },
+            },
+          ];
+          setChatChannels(fallbackChannels);
+          return fallbackChannels;
         }
         // 关键点（中文）：启动窗口内 chat 服务未就绪时降级为空，避免误报失败。
         if (isChatServiceNotReadyError(message) || isAgentUnavailableError(message)) {
-          setChatChannels([]);
-          return [];
+          const fallbackChannels: UiChatChannelStatus[] = [
+            {
+              channel: "consoleui",
+              enabled: true,
+              configured: true,
+              running: true,
+              linkState: "connected",
+              statusText: "console-ui built-in channel",
+              detail: {
+                readonly: true,
+                managedBy: "console-ui",
+              },
+            },
+          ];
+          setChatChannels(fallbackChannels);
+          return fallbackChannels;
         }
         throw error;
       }
@@ -771,8 +1016,23 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       if (!agentId) return [];
       const data = await requestJson<UiContextsResponse>("/api/tui/contexts?limit=120", {}, agentId);
       const list = Array.isArray(data.contexts) ? data.contexts : [];
-      setContexts(list);
-      return list;
+      const hasConsoleUiContext = list.some(
+        (item) => String(item.contextId || "").trim() === CONSOLEUI_CONTEXT_ID,
+      );
+      const nextList = hasConsoleUiContext
+        ? list
+        : [
+            {
+              contextId: CONSOLEUI_CONTEXT_ID,
+              messageCount: 0,
+              updatedAt: Date.now(),
+              lastRole: "system",
+              lastText: "consoleui channel",
+            },
+            ...list,
+          ];
+      setContexts(nextList);
+      return nextList;
     },
     [requestJson],
   );
@@ -780,23 +1040,43 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const refreshChannelHistory = useCallback(
     async (agentId: string, contextId: string) => {
       if (!agentId || !contextId) return;
-      const data = await requestJson<UiChatStatusResponse>(
-        "/api/services/command",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            serviceName: "chat",
-            command: "history",
-            payload: {
-              contextId,
-              limit: 80,
-            },
-          }),
-        },
+      try {
+        const data = await requestJson<UiChatStatusResponse>(
+          "/api/services/command",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              serviceName: "chat",
+              command: "history",
+              payload: {
+                contextId,
+                limit: 80,
+              },
+            }),
+          },
+          agentId,
+        );
+        const events = Array.isArray(data?.data?.events) ? data.data.events : [];
+        if (events.length > 0 || !isConsoleUiContext(contextId)) {
+          setChannelHistory(events);
+          return;
+        }
+      } catch (error) {
+        if (!isConsoleUiContext(contextId)) {
+          throw error;
+        }
+      }
+
+      // 关键点（中文）：consoleui channel 没有平台级 chat.history 时，回退到 context timeline。
+      const fallbackData = await requestJson<UiContextMessagesResponse>(
+        `/api/tui/contexts/${encodeURIComponent(contextId)}/messages?limit=100`,
+        {},
         agentId,
       );
-      const events = Array.isArray(data?.data?.events) ? data.data.events : [];
-      setChannelHistory(events);
+      const timeline = Array.isArray(fallbackData.messages)
+        ? fallbackData.messages
+        : [];
+      setChannelHistory(toHistoryEventsFromTimeline(contextId, timeline));
     },
     [requestJson],
   );
@@ -812,6 +1092,96 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       setContextMessages(Array.isArray(data.messages) ? data.messages : []);
     },
     [requestJson],
+  );
+
+  const loadContextArchiveMessages = useCallback(
+    async (agentId: string, contextId: string, archiveId: string) => {
+      if (!agentId || !contextId || !archiveId) {
+        setSelectedArchiveId("");
+        setContextArchiveMessages([]);
+        return;
+      }
+      if (archiveApiStateRef.current === "unsupported") {
+        setSelectedArchiveId("");
+        setContextArchiveMessages([]);
+        return;
+      }
+      try {
+        const data = await requestJson<UiContextArchiveDetailResponse>(
+          `/api/tui/contexts/${encodeURIComponent(contextId)}/archives/${encodeURIComponent(archiveId)}`,
+          {},
+          agentId,
+        );
+        archiveApiStateRef.current = "supported";
+        setSelectedArchiveId(archiveId);
+        setContextArchiveMessages(Array.isArray(data.messages) ? data.messages : []);
+      } catch (error) {
+        const message = getErrorMessage(error);
+        if (isNotFoundError(message)) {
+          // 关键点（中文）：兼容旧 console 网关未实现 archive 接口，前端降级为空态。
+          archiveApiStateRef.current = "unsupported";
+          setSelectedArchiveId("");
+          setContextArchiveMessages([]);
+          return;
+        }
+        throw error;
+      }
+    },
+    [requestJson],
+  );
+
+  const refreshContextArchives = useCallback(
+    async (agentId: string, contextId: string): Promise<UiContextArchiveSummary[]> => {
+      if (!agentId || !contextId) {
+        setContextArchives([]);
+        setSelectedArchiveId("");
+        setContextArchiveMessages([]);
+        return [];
+      }
+      if (archiveApiStateRef.current === "unsupported") {
+        setContextArchives([]);
+        setSelectedArchiveId("");
+        setContextArchiveMessages([]);
+        return [];
+      }
+      let archives: UiContextArchiveSummary[] = [];
+      try {
+        const data = await requestJson<UiContextArchivesResponse>(
+          `/api/tui/contexts/${encodeURIComponent(contextId)}/archives?limit=80`,
+          {},
+          agentId,
+        );
+        archiveApiStateRef.current = "supported";
+        archives = Array.isArray(data.archives) ? data.archives : [];
+      } catch (error) {
+        const message = getErrorMessage(error);
+        if (!isNotFoundError(message)) {
+          throw error;
+        }
+        // 关键点（中文）：404 代表后端暂不支持 archives，按“无归档”处理，不中断主流程。
+        archiveApiStateRef.current = "unsupported";
+        archives = [];
+      }
+      setContextArchives(archives);
+
+      const currentArchiveId = String(selectedArchiveIdRef.current || "").trim();
+      const firstArchiveId = String(archives[0]?.archiveId || "").trim();
+      const nextArchiveId = archives.some(
+        (item) => String(item.archiveId || "").trim() === currentArchiveId,
+      )
+        ? currentArchiveId
+        : firstArchiveId;
+
+      if (!nextArchiveId) {
+        setSelectedArchiveId("");
+        setContextArchiveMessages([]);
+        return archives;
+      }
+
+      await loadContextArchiveMessages(agentId, contextId, nextArchiveId);
+      return archives;
+    },
+    [loadContextArchiveMessages, requestJson],
   );
 
   const refreshTasks = useCallback(
@@ -873,7 +1243,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const refreshPrompt = useCallback(
     async (agentId: string, contextId?: string) => {
       if (!agentId) return;
-      const resolvedContextId = String(contextId || LOCAL_UI_CONTEXT_ID).trim() || LOCAL_UI_CONTEXT_ID;
+      const resolvedContextId = String(contextId || CONSOLEUI_CONTEXT_ID).trim() || CONSOLEUI_CONTEXT_ID;
       try {
         const data = await requestJson<UiPromptResponse>(
           `/api/tui/system-prompt?contextId=${encodeURIComponent(resolvedContextId)}`,
@@ -898,7 +1268,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     async (agentId: string) => {
       if (!agentId) return;
       const data = await requestJson<UiLocalMessagesResponse>(
-        `/api/tui/contexts/${encodeURIComponent(LOCAL_UI_CONTEXT_ID)}/messages?limit=80`,
+        `/api/tui/contexts/${encodeURIComponent(CONSOLEUI_CONTEXT_ID)}/messages?limit=80`,
         {},
         agentId,
       );
@@ -962,20 +1332,25 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
         const byCurrent =
           contextList.find((item) => item.contextId === selectedContextIdRef.current)?.contextId || "";
-        const localUi = contextList.find((item) => item.contextId === LOCAL_UI_CONTEXT_ID)?.contextId || "";
+        const consoleUi =
+          contextList.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
         const fallback = contextList[0]?.contextId || "";
-        const nextContext = byCurrent || localUi || fallback;
+        const nextContext = byCurrent || consoleUi || fallback;
         setSelectedContextId(nextContext);
 
         if (nextContext) {
           await Promise.all([
             refreshChannelHistory(nextAgentId, nextContext),
             refreshContextMessages(nextAgentId, nextContext),
+            refreshContextArchives(nextAgentId, nextContext),
             refreshPrompt(nextAgentId, nextContext),
           ]);
         } else {
           setChannelHistory([]);
           setContextMessages([]);
+          setContextArchives([]);
+          setSelectedArchiveId("");
+          setContextArchiveMessages([]);
           setPrompt(null);
         }
 
@@ -1028,6 +1403,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshAgents,
       refreshChatChannels,
       refreshChannelHistory,
+      refreshContextArchives,
       refreshContextMessages,
       refreshContexts,
       refreshExtensions,
@@ -1180,6 +1556,104 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshDashboard, requestJson, selectedAgentId, showToast],
   );
 
+  const runSkillFind = useCallback(
+    async (query: string): Promise<UiSkillFindResult | null> => {
+      const normalizedQuery = String(query || "").trim();
+      if (!normalizedQuery) {
+        showToast("请输入要查找的 skill 关键词", "error");
+        return null;
+      }
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return null;
+      }
+      const payload: UiSkillFindPayload = {
+        query: normalizedQuery,
+      };
+      try {
+        const data = await runSkillServiceCommand<UiSkillFindResult>({
+          agentId: selectedAgentId,
+          command: "find",
+          payload,
+        });
+        const result = data?.data || null;
+        showToast(result?.message || `已执行 skill find: ${normalizedQuery}`, "success");
+        await refreshSkills(selectedAgentId);
+        return result;
+      } catch (error) {
+        showToast(`skill find 失败: ${getErrorMessage(error)}`, "error");
+        return null;
+      }
+    },
+    [refreshSkills, runSkillServiceCommand, selectedAgentId, showToast],
+  );
+
+  const runSkillInstall = useCallback(
+    async (input: UiSkillInstallPayload): Promise<UiSkillInstallResult | null> => {
+      const spec = String(input.spec || "").trim();
+      if (!spec) {
+        showToast("请输入要安装的 skill spec", "error");
+        return null;
+      }
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return null;
+      }
+      const payload: UiSkillInstallPayload = {
+        spec,
+        global: input.global !== false,
+        yes: input.yes !== false,
+        agent: String(input.agent || "claude-code").trim() || "claude-code",
+      };
+      try {
+        const data = await runSkillServiceCommand<UiSkillInstallResult>({
+          agentId: selectedAgentId,
+          command: "install",
+          payload,
+        });
+        const result = data?.data || null;
+        showToast(result?.message || `skill 安装完成: ${spec}`, "success");
+        await refreshSkills(selectedAgentId);
+        return result;
+      } catch (error) {
+        showToast(`skill install 失败: ${getErrorMessage(error)}`, "error");
+        return null;
+      }
+    },
+    [refreshSkills, runSkillServiceCommand, selectedAgentId, showToast],
+  );
+
+  const runSkillLookup = useCallback(
+    async (name: string): Promise<UiSkillLookupResult | null> => {
+      const normalizedName = String(name || "").trim();
+      if (!normalizedName) {
+        showToast("请输入 skill 名称", "error");
+        return null;
+      }
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return null;
+      }
+      try {
+        const data = await runSkillServiceCommand<UiSkillLookupResult>({
+          agentId: selectedAgentId,
+          command: "lookup",
+          payload: {
+            name: normalizedName,
+          },
+        });
+        const result = data?.data || null;
+        const targetName = String(result?.skill?.name || normalizedName).trim() || normalizedName;
+        showToast(result?.message || `skill lookup 已执行: ${targetName}`, "success");
+        return result;
+      } catch (error) {
+        showToast(`skill lookup 失败: ${getErrorMessage(error)}`, "error");
+        return null;
+      }
+    },
+    [runSkillServiceCommand, selectedAgentId, showToast],
+  );
+
   const handleContextChange = useCallback(
     async (contextId: string) => {
       const nextContextId = String(contextId || "").trim();
@@ -1188,10 +1662,17 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       await Promise.all([
         refreshChannelHistory(selectedAgentId, nextContextId),
         refreshContextMessages(selectedAgentId, nextContextId),
+        refreshContextArchives(selectedAgentId, nextContextId),
         refreshPrompt(selectedAgentId, nextContextId),
       ]);
     },
-    [refreshChannelHistory, refreshContextMessages, refreshPrompt, selectedAgentId],
+    [
+      refreshChannelHistory,
+      refreshContextArchives,
+      refreshContextMessages,
+      refreshPrompt,
+      selectedAgentId,
+    ],
   );
 
   const runTask = useCallback(
@@ -1208,6 +1689,62 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       }
     },
     [refreshLogs, refreshTasks, requestJson, selectedAgentId, showToast],
+  );
+
+  const setTaskStatus = useCallback(
+    async (title: string, status: UiTaskStatusValue): Promise<boolean> => {
+      const normalizedTitle = String(title || "").trim();
+      if (!normalizedTitle) {
+        showToast("task title 不能为空", "error");
+        return false;
+      }
+      try {
+        const response = await requestJson<UiTaskMutationResponse>(
+          `/api/tui/tasks/${encodeURIComponent(normalizedTitle)}/status`,
+          {
+            method: "POST",
+            body: JSON.stringify({ status }),
+          },
+          selectedAgentId,
+        );
+        const nextStatus = String(response?.status || status).trim() || status;
+        showToast(`task ${normalizedTitle} 状态已更新为 ${nextStatus}`, "success");
+        await Promise.all([refreshTasks(selectedAgentId), refreshOverview(selectedAgentId)]);
+        return true;
+      } catch (error) {
+        showToast(`task 状态更新失败: ${getErrorMessage(error)}`, "error");
+        return false;
+      }
+    },
+    [refreshOverview, refreshTasks, requestJson, selectedAgentId, showToast],
+  );
+
+  const deleteTask = useCallback(
+    async (title: string): Promise<boolean> => {
+      const normalizedTitle = String(title || "").trim();
+      if (!normalizedTitle) {
+        showToast("task title 不能为空", "error");
+        return false;
+      }
+      try {
+        await requestJson<UiTaskMutationResponse>(
+          `/api/tui/tasks/${encodeURIComponent(normalizedTitle)}`,
+          { method: "DELETE" },
+          selectedAgentId,
+        );
+        showToast(`task ${normalizedTitle} 已删除`, "success");
+        await Promise.all([
+          refreshTasks(selectedAgentId),
+          refreshOverview(selectedAgentId),
+          refreshLogs(selectedAgentId),
+        ]);
+        return true;
+      } catch (error) {
+        showToast(`task 删除失败: ${getErrorMessage(error)}`, "error");
+        return false;
+      }
+    },
+    [refreshLogs, refreshOverview, refreshTasks, requestJson, selectedAgentId, showToast],
   );
 
   const loadTaskRuns = useCallback(
@@ -1227,6 +1764,70 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       }
     },
     [requestJson, selectedAgentId, showToast],
+  );
+
+  const deleteTaskRun = useCallback(
+    async (title: string, timestamp: string): Promise<boolean> => {
+      const normalizedTitle = String(title || "").trim();
+      const normalizedTimestamp = String(timestamp || "").trim();
+      if (!normalizedTitle || !normalizedTimestamp) {
+        showToast("task title 或 run timestamp 不能为空", "error");
+        return false;
+      }
+      try {
+        await requestJson<UiTaskRunDeleteResponse>(
+          `/api/tui/tasks/${encodeURIComponent(normalizedTitle)}/runs/${encodeURIComponent(normalizedTimestamp)}`,
+          { method: "DELETE" },
+          selectedAgentId,
+        );
+        showToast(`run ${normalizedTimestamp} 已删除`, "success");
+        await refreshLogs(selectedAgentId);
+        return true;
+      } catch (error) {
+        showToast(`删除 run 记录失败: ${getErrorMessage(error)}`, "error");
+        return false;
+      }
+    },
+    [refreshLogs, requestJson, selectedAgentId, showToast],
+  );
+
+  const clearTaskRuns = useCallback(
+    async (title: string): Promise<boolean> => {
+      const normalizedTitle = String(title || "").trim();
+      if (!normalizedTitle) {
+        showToast("task title 不能为空", "error");
+        return false;
+      }
+      try {
+        const data = await requestJson<UiTaskRunsClearResponse>(
+          `/api/tui/tasks/${encodeURIComponent(normalizedTitle)}/runs`,
+          { method: "DELETE" },
+          selectedAgentId,
+        );
+        const deletedCount =
+          typeof data.deletedCount === "number" && Number.isFinite(data.deletedCount)
+            ? data.deletedCount
+            : 0;
+        const skippedCount =
+          typeof data.skippedRunningCount === "number" && Number.isFinite(data.skippedRunningCount)
+            ? data.skippedRunningCount
+            : 0;
+        if (skippedCount > 0) {
+          showToast(
+            `已清理 ${deletedCount} 条 run，跳过 ${skippedCount} 条运行中记录`,
+            "success",
+          );
+        } else {
+          showToast(`已清理 ${deletedCount} 条 run 记录`, "success");
+        }
+        await refreshLogs(selectedAgentId);
+        return true;
+      } catch (error) {
+        showToast(`清理 run 记录失败: ${getErrorMessage(error)}`, "error");
+        return false;
+      }
+    },
+    [refreshLogs, requestJson, selectedAgentId, showToast],
   );
 
   const loadTaskRunDetail = useCallback(
@@ -1249,7 +1850,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson, selectedAgentId, showToast],
   );
 
-  const sendLocalMessage = useCallback(async () => {
+  const sendConsoleUiMessage = useCallback(async () => {
     if (sending) return;
     const instructions = chatInput.trim();
     if (!instructions) return;
@@ -1260,17 +1861,26 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
     setSending(true);
     try {
-      await requestJson(`/api/tui/contexts/${encodeURIComponent(LOCAL_UI_CONTEXT_ID)}/execute`, {
+      const currentContextId = String(selectedContextIdRef.current || "").trim();
+      const targetContextId =
+        currentContextId.startsWith("consoleui-") || currentContextId === "local_ui"
+          ? currentContextId
+          : CONSOLEUI_CONTEXT_ID;
+      await requestJson(`/api/tui/contexts/${encodeURIComponent(targetContextId)}/execute`, {
         method: "POST",
         body: JSON.stringify({ instructions }),
       });
       setChatInput("");
       await Promise.all([
         refreshLocalChat(selectedAgentId),
+        refreshChannelHistory(selectedAgentId, targetContextId),
+        refreshContextMessages(selectedAgentId, targetContextId),
+        refreshContextArchives(selectedAgentId, targetContextId),
+        refreshPrompt(selectedAgentId, targetContextId),
         refreshLogs(selectedAgentId),
         refreshOverview(selectedAgentId),
       ]);
-      showToast("已发送到 local_ui", "success");
+      showToast("已发送到 consoleui channel", "success");
     } catch (error) {
       showToast(`发送失败: ${getErrorMessage(error)}`, "error");
     } finally {
@@ -1279,13 +1889,108 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   }, [
     chatInput,
     refreshLocalChat,
+    refreshChannelHistory,
+    refreshContextArchives,
+    refreshContextMessages,
     refreshLogs,
     refreshOverview,
+    refreshPrompt,
     requestJson,
     selectedAgentId,
     sending,
     showToast,
   ]);
+
+  const clearContextMessages = useCallback(
+    async (contextIdInput: string) => {
+      const contextId = String(contextIdInput || "").trim();
+      if (!contextId) return;
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return;
+      }
+      if (clearingContextMessages) return;
+
+      setClearingContextMessages(true);
+      try {
+        await requestJson<UiContextClearResponse>(
+          `/api/tui/contexts/${encodeURIComponent(contextId)}/messages`,
+          { method: "DELETE" },
+          selectedAgentId,
+        );
+        await Promise.all([
+          refreshContexts(selectedAgentId),
+          refreshChannelHistory(selectedAgentId, contextId),
+          refreshContextMessages(selectedAgentId, contextId),
+          refreshContextArchives(selectedAgentId, contextId),
+          refreshPrompt(selectedAgentId, contextId),
+          refreshOverview(selectedAgentId),
+          refreshLogs(selectedAgentId),
+        ]);
+        showToast("context messages 已清理", "success");
+      } catch (error) {
+        showToast(`清理 context messages 失败: ${getErrorMessage(error)}`, "error");
+      } finally {
+        setClearingContextMessages(false);
+      }
+    },
+    [
+      clearingContextMessages,
+      refreshChannelHistory,
+      refreshContextArchives,
+      refreshContextMessages,
+      refreshContexts,
+      refreshLogs,
+      refreshOverview,
+      refreshPrompt,
+      requestJson,
+      selectedAgentId,
+      showToast,
+    ],
+  );
+
+  const clearChatHistory = useCallback(
+    async (contextIdInput: string) => {
+      const contextId = String(contextIdInput || "").trim();
+      if (!contextId) return;
+      if (isConsoleUiContext(contextId)) {
+        await clearContextMessages(contextId);
+        return;
+      }
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return;
+      }
+      if (clearingChatHistory) return;
+
+      setClearingChatHistory(true);
+      try {
+        await requestJson<UiContextClearResponse>(
+          `/api/tui/contexts/${encodeURIComponent(contextId)}/chat-history`,
+          { method: "DELETE" },
+          selectedAgentId,
+        );
+        await Promise.all([
+          refreshChannelHistory(selectedAgentId, contextId),
+          refreshLogs(selectedAgentId),
+        ]);
+        showToast("chat history 已清理", "success");
+      } catch (error) {
+        showToast(`清理 chat history 失败: ${getErrorMessage(error)}`, "error");
+      } finally {
+        setClearingChatHistory(false);
+      }
+    },
+    [
+      clearContextMessages,
+      clearingChatHistory,
+      refreshChannelHistory,
+      refreshLogs,
+      requestJson,
+      selectedAgentId,
+      showToast,
+    ],
+  );
 
   const switchModel = useCallback(
     async (primaryModelId: string) => {
@@ -1714,6 +2419,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   return {
     agents,
+    smaVersion,
     selectedAgentId,
     selectedAgent,
     overview,
@@ -1725,6 +2431,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     selectedContextId,
     channelHistory,
     contextMessages,
+    contextArchives,
+    selectedArchiveId,
+    contextArchiveMessages,
     tasks,
     logs,
     model,
@@ -1737,6 +2446,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     topbarError,
     loading,
     sending,
+    clearingContextMessages,
+    clearingChatHistory,
     chatInput,
     toast,
     setChatInput,
@@ -1745,9 +2456,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshDashboard,
     refreshChatChannels,
     refreshExtensions,
+    refreshSkills,
     refreshContexts,
     refreshChannelHistory,
     refreshContextMessages,
+    refreshContextArchives,
+    loadContextArchiveMessages,
     refreshPrompt,
     refreshModel,
     refreshModelPool,
@@ -1758,10 +2472,19 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     testExtension,
     runChatChannelAction,
     configureChatChannel,
+    runSkillFind,
+    runSkillInstall,
+    runSkillLookup,
     runTask,
+    setTaskStatus,
+    deleteTask,
     loadTaskRuns,
+    deleteTaskRun,
+    clearTaskRuns,
     loadTaskRunDetail,
-    sendLocalMessage,
+    sendConsoleUiMessage,
+    clearContextMessages,
+    clearChatHistory,
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
@@ -1777,7 +2500,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     testModelPoolItem,
     executeAgentCommand,
     constants: {
-      LOCAL_UI_CONTEXT_ID,
+      CONSOLEUI_CONTEXT_ID,
     },
     uiHelpers: {
       formatTime,

@@ -36,6 +36,11 @@ sma agent start
 sma service status chat
 ```
 
+## Group behavior
+
+- Group messages are accepted directly (no `@mention` required).
+- If your bot only receives `@` messages, verify QQ platform event permissions (especially `GROUP_MESSAGE_CREATE`).
+
 ## Voice messages (voice/audio)
 
 When `extensions.voice.enabled=true`, QQ inbound `voice/audio` attachments are transcribed in best-effort mode and the transcript is appended to the user instruction.

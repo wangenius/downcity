@@ -47,28 +47,6 @@ TELEGRAM_BOT_TOKEN=123456:abc...
 
 > ShipMyAgent 的聊天回复采用 tool-strict：Agent 需要使用 `chat_send` 工具自行决定何时发消息（可以分多条、分阶段发送）。
 
-### 可选：收紧群聊权限
-
-默认情况下，`groupAccess` 是 `anyone`，群成员都可以与机器人对话。
-
-如果你希望更严格（仅发起人或群管理员可触发），配置：
-
-```json
-{
-  "services": {
-    "chat": {
-      "channels": {
-        "telegram": {
-          "enabled": true,
-          "botToken": "${TELEGRAM_BOT_TOKEN}",
-          "groupAccess": "initiator_or_admin"
-        }
-      }
-    }
-  }
-}
-```
-
 ### 3）启动 ShipMyAgent
 
 ```bash
@@ -113,13 +91,11 @@ sma voice status
 ### 群聊 / 超级群
 
 - 把机器人拉进群
-- 通过 `@你的机器人 用户名 ...` 的方式与它对话
-- 当你 `@bot`（或直接回复 bot 的消息）后，短时间内可以不再 `@` 继续追问，机器人仍会根据上下文回复。
+- 群成员发送普通消息即可触发对话（不需要 `@bot`）
 
 说明：
 - 如果群开启了 **Topics（话题）**，机器人会尽量在同一个话题里回复。
-- 群聊场景下，运行时可能会限制可对话的人（例如仅发起人/群管理员），以避免被滥用。
-- 群里发送文件时，如需 `@bot`，请把 `@bot` 写在 **caption** 里，或直接用“回复 bot 消息”的方式发送文件。
+- 群里发送文件时，caption 会作为指令文本一并处理，不需要额外 `@bot`。
 - Agent 执行期间会周期性发送 `sendChatAction(typing)`，你会看到 Telegram 的“正在输入”提示，直到结果发出。
 
 ## 回复关联与贴表情逻辑（重点）
@@ -179,7 +155,7 @@ sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxx
 ## 常见问题排查
 
 - **完全没反应**：确认进程在跑，并查看 `.ship/logs/<YYYY-MM-DD>.jsonl`（可搜索 `TELEGRAM` / `telegram` / error 关键词）。
-- **群里收不到消息**：在 BotFather 执行 `/setprivacy` 设为 `Disable`，并确认你是在群里 `@bot`。
+- **群里收不到消息**：在 BotFather 执行 `/setprivacy` 设为 `Disable`，并确认机器人已被允许读取群消息。
 - **轮询收不到（getUpdates 冲突）**：如果之前配置过 webhook，会与轮询冲突。ShipMyAgent 启动时会尝试清理 webhook；留意日志里的 webhook/Conflict 报错。
 - **群里发不出消息**：检查群权限/管理员设置，机器人可能被禁言或不允许发消息。
 - **Agent 口头说“我去执行”但没真正跑工具**：请在消息里明确写执行意图关键词（例如“执行 / run / 用 skill / lookup”）。这些回合运行时会强制触发一次工具调用；若仍失败，优先检查当前模型/网关是否支持工具调用。

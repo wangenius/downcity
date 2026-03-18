@@ -4,7 +4,7 @@
  * 职责说明：
  * 1. 仅加载项目根目录 `.env`（console 级配置已迁移到 `~/.ship/ship.db`）。
  * 2. 读取 `ship.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
- * 3. 支持配置继承：console(db) ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
+ * 3. 支持配置继承：console(db 共享层) ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
  * 4. 统一导出 Ship 配置类型，避免业务模块直接依赖具体配置文件路径。
  */
 import dotenv from "dotenv";
@@ -16,13 +16,33 @@ import { ConsoleStore } from "@/utils/store/index.js";
 
 export type { ShipConfig };
 
-export function loadProjectDotenv(projectRoot: string): void {
+/**
+ * 读取项目 `.env` 快照（不污染全局 process.env）。
+ *
+ * 关键点（中文）
+ * - 只返回当前 agent 项目自己的 env 映射，供 runtime 局部使用。
+ * - 不再把 agent env 注入全局，避免多个 agent 在同一 console 进程里互相污染。
+ */
+export function loadProjectDotenv(projectRoot: string): Record<string, string> {
   // 关键点（中文）
   // - console 级配置不再走 `~/.ship/.env`（统一迁移到 ship.db）
-  // - 仅加载项目 `.env`（agent 级）
+  // - 仅解析项目 `.env`（agent 级）
   const projectEnvPath = path.join(projectRoot, ".env");
-  if (fs.existsSync(projectEnvPath)) {
-    dotenv.config({ path: projectEnvPath, override: true });
+  if (!fs.existsSync(projectEnvPath)) {
+    return {};
+  }
+  try {
+    const raw = fs.readFileSync(projectEnvPath, "utf-8");
+    const parsed = dotenv.parse(raw);
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      const normalizedKey = String(key || "").trim();
+      if (!normalizedKey) continue;
+      result[normalizedKey] = String(value || "").trim();
+    }
+    return result;
+  } catch {
+    return {};
   }
 }
 
@@ -32,23 +52,26 @@ type ResolvedConfigValue =
   | { [key: string]: ResolvedConfigValue }
   | ResolvedConfigValue[];
 
-function resolveEnvPlaceholdersDeep(value: ResolvedConfigValue): ResolvedConfigValue {
+function resolveEnvPlaceholdersDeep(
+  value: ResolvedConfigValue,
+  resolveEnvVar: (name: string) => string | undefined,
+): ResolvedConfigValue {
   if (typeof value === "string") {
     const match = value.match(/^\$\{([A-Z0-9_]+)\}$/);
     if (!match) return value;
     const envVar = match[1];
-    return process.env[envVar];
+    return resolveEnvVar(envVar);
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => resolveEnvPlaceholdersDeep(item));
+    return value.map((item) => resolveEnvPlaceholdersDeep(item, resolveEnvVar));
   }
 
   if (value && typeof value === "object") {
     const obj = value as JsonObject;
     const out: { [key: string]: ResolvedConfigValue } = {};
     for (const [k, v] of Object.entries(obj)) {
-      out[k] = resolveEnvPlaceholdersDeep(v as ResolvedConfigValue);
+      out[k] = resolveEnvPlaceholdersDeep(v as ResolvedConfigValue, resolveEnvVar);
     }
     return out;
   }
@@ -88,23 +111,44 @@ function deepMerge(base: unknown, override: unknown): unknown {
   return out;
 }
 
-function readShipJsonLayer(filePath: string): ResolvedConfigValue {
+function readShipJsonLayer(
+  filePath: string,
+  resolveEnvVar: (name: string) => string | undefined,
+): ResolvedConfigValue {
   const raw = fs.readJsonSync(filePath) as ResolvedConfigValue;
-  return resolveEnvPlaceholdersDeep(raw);
+  return resolveEnvPlaceholdersDeep(raw, resolveEnvVar);
 }
 
-function readConsoleConfigLayerFromStore(): ResolvedConfigValue {
+function readConsoleConfigLayerFromStore(
+  resolveEnvVar: (name: string) => string | undefined,
+): ResolvedConfigValue {
   let store: ConsoleStore | null = null;
   try {
     store = new ConsoleStore();
     const raw = store.getSecureSettingJsonSync<unknown>("console_config");
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-    return resolveEnvPlaceholdersDeep(raw as ResolvedConfigValue);
+    return resolveEnvPlaceholdersDeep(raw as ResolvedConfigValue, resolveEnvVar);
   } catch {
     return undefined;
   } finally {
     store?.close();
   }
+}
+
+/**
+ * 提取 console 全局共享层（仅允许共享能力字段）。
+ *
+ * 关键点（中文）
+ * - 只把 `extensions` 注入到 agent 运行时配置。
+ * - `services.*`、`model.*` 等项目语义字段不允许来自 console 全局层。
+ */
+function pickConsoleSharedLayer(layer: ResolvedConfigValue): ResolvedConfigValue {
+  if (!isPlainObject(layer)) return undefined;
+  const shared: { [key: string]: ResolvedConfigValue } = {};
+  if (Object.prototype.hasOwnProperty.call(layer, "extensions")) {
+    shared.extensions = (layer as { extensions?: ResolvedConfigValue }).extensions;
+  }
+  return shared;
 }
 
 /**
@@ -140,10 +184,40 @@ function collectAncestorShipJsonPaths(projectRoot: string): string[] {
   return paths.reverse();
 }
 
-export function loadShipConfig(projectRoot: string): ShipConfig {
-  loadProjectDotenv(projectRoot);
+export function loadShipConfig(
+  projectRoot: string,
+  options?: {
+    projectEnv?: Record<string, string>;
+    sharedEnv?: NodeJS.ProcessEnv;
+  },
+): ShipConfig {
+  const projectEnv = options?.projectEnv ?? loadProjectDotenv(projectRoot);
+  const sharedEnv = options?.sharedEnv ?? process.env;
+  /**
+   * 读取 console 共享环境变量（模型池 / extensions）。
+   *
+   * 关键点（中文）
+   * - console 层只读共享 env，不读项目 .env。
+   * - 避免某个 agent 项目的 .env 反向污染 console 全局配置解析。
+   */
+  const resolveSharedEnvVar = (name: string): string | undefined => {
+    const sharedValue = String(sharedEnv[name] || "").trim();
+    return sharedValue || undefined;
+  };
+  /**
+   * 读取 agent 项目私有环境变量（services）。
+   *
+   * 关键点（中文）
+   * - project 层只读当前项目 .env，不再回退到共享 env。
+   * - 从根上杜绝跨 agent 的服务凭据串用。
+   */
+  const resolveProjectEnvVar = (name: string): string | undefined => {
+    const projectValue = String(projectEnv[name] || "").trim();
+    return projectValue || undefined;
+  };
 
-  const operationLayer = readConsoleConfigLayerFromStore();
+  const operationLayerRaw = readConsoleConfigLayerFromStore(resolveSharedEnvVar);
+  const operationLayer = pickConsoleSharedLayer(operationLayerRaw);
 
   const ancestorShipJsonPaths = collectAncestorShipJsonPaths(projectRoot);
   if (ancestorShipJsonPaths.length === 0) {
@@ -152,7 +226,7 @@ export function loadShipConfig(projectRoot: string): ShipConfig {
 
   let merged: unknown = operationLayer;
   for (const p of ancestorShipJsonPaths) {
-    const layer = readShipJsonLayer(p);
+    const layer = readShipJsonLayer(p, resolveProjectEnvVar);
     assertNoProjectExtensionsLayer(p, layer);
     merged = deepMerge(merged, layer);
   }

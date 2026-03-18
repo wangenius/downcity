@@ -7,18 +7,19 @@
 import * as React from "react"
 import {
   BotIcon,
-  ChevronRightIcon,
   ChevronLeftIcon,
+  ChevronRightIcon,
   Layers3Icon,
   MessageSquareTextIcon,
   PuzzleIcon,
+  SparklesIcon,
   RefreshCcwIcon,
   ScrollTextIcon,
   ServerCogIcon,
   RadarIcon,
   TerminalIcon,
 } from "lucide-react"
-import type { UiAgentOption, UiContextSummary, UiTaskItem } from "@/types/Dashboard"
+import type { UiAgentOption, UiChatChannelStatus, UiContextSummary, UiTaskItem } from "@/types/Dashboard"
 import type { DashboardView } from "@/types/Navigation"
 import {
   Sidebar,
@@ -77,6 +78,14 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    */
   selectedTaskTitle?: string
   /**
+   * 当前聚焦的 chat 渠道。
+   */
+  selectedChatChannel?: string
+  /**
+   * chat 渠道状态列表。
+   */
+  chatChannels: UiChatChannelStatus[]
+  /**
    * 切换视图回调。
    */
   onViewChange: (view: DashboardView) => void
@@ -96,6 +105,10 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    * 打开任务详情。
    */
   onTaskOpen: (taskTitle: string) => void
+  /**
+   * 打开 channel 主视图。
+   */
+  onChannelOpen: (channel: string) => void
   /**
    * 顶栏状态文案（展示在侧边栏底部）。
    */
@@ -123,11 +136,39 @@ const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.Reac
   globalAgents: <Layers3Icon />,
   globalExtensions: <PuzzleIcon />,
   agentOverview: <Layers3Icon />,
+  agentSkills: <SparklesIcon />,
   agentServices: <ServerCogIcon />,
   agentCommand: <TerminalIcon />,
   agentTasks: <RadarIcon />,
   agentLogs: <ScrollTextIcon />,
   contextOverview: <Layers3Icon />,
+}
+
+/**
+ * 由 contextId 推断所属 chat 渠道。
+ */
+function resolveChannelFromContextId(contextIdInput: string): string {
+  const contextId = String(contextIdInput || "").trim().toLowerCase()
+  if (!contextId) return "other"
+  if (contextId.startsWith("telegram-")) return "telegram"
+  if (contextId.startsWith("qq-")) return "qq"
+  if (contextId.startsWith("feishu-")) return "feishu"
+  if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
+  return "other"
+}
+
+/**
+ * 判断 channel 是否处于已启动态（用于 Sidebar 灰显控制）。
+ */
+function isChannelStarted(status: UiChatChannelStatus | undefined, fallbackByItems: boolean): boolean {
+  if (!status) return fallbackByItems
+  if (status.running === true) return true
+  if (status.running === false) return false
+  if (status.enabled === true) return true
+  if (status.enabled === false) return false
+  const linkState = String(status.linkState || "").trim().toLowerCase()
+  if (["connected", "disconnected", "error"].includes(linkState)) return true
+  return fallbackByItems
 }
 
 export function AppSidebar({
@@ -140,11 +181,14 @@ export function AppSidebar({
   selectedContextId,
   tasks,
   selectedTaskTitle,
+  selectedChatChannel,
+  chatChannels,
   onViewChange,
   onAgentChange,
   onAgentEnter,
   onContextOpen,
   onTaskOpen,
+  onChannelOpen,
   topbarStatus,
   topbarError,
   loading,
@@ -160,42 +204,49 @@ export function AppSidebar({
     () => groupedContexts.filter((group) => group.key !== "chat"),
     [groupedContexts],
   )
+  const chatItems = React.useMemo(
+    () => [...(chatGroup?.items || []), ...otherContextGroups.flatMap((group) => group.items)],
+    [chatGroup, otherContextGroups],
+  )
   const chatChannelGroups = React.useMemo(() => {
-    const buckets: Record<string, UiContextSummary[]> = {
-      telegram: [],
-      qq: [],
-      feishu: [],
-      unknown: [],
+    const buckets: Record<string, UiContextSummary[]> = {}
+    const ensureBucket = (channelInput: string) => {
+      const channel = String(channelInput || "").trim().toLowerCase()
+      if (!channel) return
+      if (!buckets[channel]) {
+        buckets[channel] = []
+      }
     }
-    for (const item of chatGroup?.items || []) {
-      const contextId = String(item.contextId || "")
-      const key = contextId.startsWith("telegram-")
-        ? "telegram"
-        : contextId.startsWith("qq-")
-          ? "qq"
-          : contextId.startsWith("feishu-")
-            ? "feishu"
-            : "unknown"
-      buckets[key].push(item)
+    for (const item of chatItems) {
+      const channel = resolveChannelFromContextId(String(item.contextId || ""))
+      ensureBucket(channel)
+      buckets[channel].push(item)
     }
-    return (["telegram", "qq", "feishu", "unknown"] as const)
-      .map((channel) => ({
-        channel,
-        items: buckets[channel],
-      }))
-      .filter((entry) => entry.items.length > 0)
-  }, [chatGroup])
+    for (const status of chatChannels) {
+      ensureBucket(String(status.channel || ""))
+    }
+    const preferredOrder = ["telegram", "qq", "feishu", "consoleui", "other"]
+    const known = preferredOrder.filter((channel) => Object.prototype.hasOwnProperty.call(buckets, channel))
+    const extras = Object.keys(buckets)
+      .filter((channel) => !preferredOrder.includes(channel))
+      .sort((a, b) => a.localeCompare(b))
+    const orderedChannels = [...known, ...extras]
+    return orderedChannels.map((channel) => ({
+      channel,
+      items: buckets[channel] || [],
+    }))
+  }, [chatChannels, chatItems])
   const globalItems = React.useMemo(() => listPrimaryPagesByScope("global"), [])
   const globalItemsWithoutAgents = React.useMemo(
     () => globalItems.filter((item) => item.view !== "globalAgents"),
     [globalItems],
   )
   const agentItems = React.useMemo(() => listPrimaryPagesByScope("agent"), [])
-  const globalViews: DashboardView[] = ["globalOverview", "globalModel", "globalCommand", "globalAgents", "globalExtensions"]
+  const globalViews: DashboardView[] = ["globalOverview", "globalCommand", "globalModel", "globalAgents", "globalExtensions"]
   const sidebarMode: SidebarMode = globalViews.includes(activeView) ? "agent-list" : "agent-detail"
   const [navDirection, setNavDirection] = React.useState<"forward" | "back">("forward")
-  const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
   const [hoveredAgentId, setHoveredAgentId] = React.useState("")
+  const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
   const previousSidebarModeRef = React.useRef<SidebarMode>(sidebarMode)
   const isGlobalAgentOverviewRoute = React.useMemo(() => {
     if (activeView !== "globalOverview") return false
@@ -213,6 +264,39 @@ export function AppSidebar({
   const menuItemButtonClass = `${menuButtonClass} h-9 px-2 text-[13px]`
   const menuItemDisabledClass = "h-9 px-2 opacity-60 data-[slot=sidebar-menu-button]:cursor-default"
   const rowClass = "grid w-full min-w-0 grid-cols-[1rem_minmax(0,1fr)_1.5rem] items-center gap-2"
+  const channelItemWrapperClass = "relative py-0.5"
+  const channelToggleButtonClass =
+    "absolute inset-y-0 left-1 z-10 my-auto h-6 w-6 rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground active:translate-y-0"
+  const channelMainButtonClass = cn(
+    menuItemButtonClass,
+    "h-8 w-full rounded-md px-2 pl-8 text-[11px] font-medium uppercase tracking-[0.08em]",
+    "data-[active=true]:bg-sidebar-accent/75",
+    "hover:bg-sidebar-accent/35",
+  )
+  const channelMainRowClass = "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+  const channelStateDotClass = "inline-flex h-2 w-2 rounded-full"
+  const chatChildrenCollapseClass = "min-w-0 overflow-hidden transition-[max-height,opacity] duration-200 ease-out"
+  const chatChildrenLayoutClass = "min-w-0 pl-4"
+  const chatChildrenMenuClass = "min-w-0 gap-0 border-l border-sidebar-border/50 pl-1"
+  const chatItemButtonClass = cn(
+    menuItemButtonClass,
+    "h-7 w-full min-w-0 rounded-md px-2 text-[10px]",
+    "data-[active=true]:bg-sidebar-accent/75",
+    "hover:bg-sidebar-accent/45",
+  )
+  const chatItemRowClass = "grid w-full min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5"
+  const chatItemIconClass = "inline-flex size-4 items-center justify-center text-muted-foreground"
+  const chatItemTextClass = "min-w-0 truncate text-[10px] font-medium"
+  const normalizedSelectedChannel = String(selectedChatChannel || "").trim().toLowerCase()
+  const statusByChannel = React.useMemo(() => {
+    const map = new Map<string, UiChatChannelStatus>()
+    for (const item of chatChannels) {
+      const channel = String(item.channel || "").trim().toLowerCase()
+      if (!channel) continue
+      map.set(channel, item)
+    }
+    return map
+  }, [chatChannels])
 
   React.useEffect(() => {
     const previous = previousSidebarModeRef.current
@@ -421,6 +505,137 @@ export function AppSidebar({
             </SidebarGroup>
 
             <SidebarGroup className="py-1">
+              <SidebarGroupLabel className="px-2 text-[10px] font-medium tracking-[0.12em] text-sidebar-foreground/45">
+                Chat
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {chatItems.length === 0 ? (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        render={<button type="button" disabled />}
+                        className={menuItemDisabledClass}
+                      >
+                        <span className="text-xs text-muted-foreground">暂无聊天会话</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : null}
+                  {chatChannelGroups.map((group) => {
+                    const channelStatus = statusByChannel.get(group.channel)
+                    const channelStarted = isChannelStarted(channelStatus, group.items.length > 0)
+                    const hasVisibleChildren = channelStarted && group.items.length > 0
+                    const isCollapsed = hasVisibleChildren ? Boolean(collapsedChatChannels[group.channel]) : true
+                    // 关键点（中文）：展示真实链路状态，优先 linkState，退化为 statusText。
+                    const channelState = String(
+                      channelStatus?.linkState ||
+                      channelStatus?.statusText ||
+                      (group.channel === "consoleui" ? "connected" : "unknown"),
+                    )
+                      .trim()
+                      .toLowerCase()
+                    const stateDotClass = !channelStarted
+                      ? "bg-muted-foreground/45"
+                      : channelState === "connected"
+                      ? "bg-emerald-500"
+                      : channelState === "disconnected" || channelState === "error" || channelState === "failed"
+                        ? "bg-destructive"
+                        : "bg-muted-foreground/60"
+                    const isChannelMainViewActive =
+                      activeView === "contextOverview" && normalizedSelectedChannel === group.channel
+                    return (
+                      <React.Fragment key={`chat-group:${group.channel}`}>
+                        <SidebarMenuItem className={channelItemWrapperClass}>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className={cn(
+                              channelToggleButtonClass,
+                              !hasVisibleChildren && "cursor-default opacity-35 hover:bg-transparent hover:text-sidebar-foreground/60",
+                            )}
+                            disabled={!hasVisibleChildren}
+                            onClick={(event) => {
+                              // 关键点（中文）：折叠按钮只负责折叠，不触发 item 主点击逻辑。
+                              event.preventDefault()
+                              event.stopPropagation()
+                              if (!hasVisibleChildren) return
+                              setCollapsedChatChannels((prev) => ({
+                                ...prev,
+                                [group.channel]: !prev[group.channel],
+                              }))
+                            }}
+                            aria-label={`${isCollapsed ? "展开" : "收起"} ${group.channel}`}
+                            title={`${isCollapsed ? "展开" : "收起"} ${group.channel}`}
+                          >
+                            <ChevronRightIcon
+                              className={cn(
+                                "size-3.5 shrink-0 transform-gpu transition-transform duration-200 ease-out",
+                                !isCollapsed ? "rotate-90" : "rotate-0",
+                              )}
+                            />
+                          </Button>
+                          <SidebarMenuButton
+                            tooltip={`${group.channel} · ${channelState}`}
+                            isActive={isChannelMainViewActive}
+                            className={cn(
+                              channelMainButtonClass,
+                              !channelStarted && "text-muted-foreground/55 hover:bg-sidebar-accent/20 hover:text-muted-foreground/70",
+                            )}
+                            onClick={() => {
+                              onChannelOpen(group.channel)
+                            }}
+                          >
+                            <span className={channelMainRowClass}>
+                              <span className="truncate">{group.channel}</span>
+                              <span
+                                className={cn(channelStateDotClass, stateDotClass)}
+                                aria-label={`link state: ${channelState}`}
+                                title={channelState}
+                              />
+                            </span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem
+                          className={cn(
+                            chatChildrenCollapseClass,
+                            isCollapsed ? "pointer-events-none max-h-0 opacity-0" : "max-h-[28rem] opacity-100",
+                          )}
+                        >
+                          <div className={chatChildrenLayoutClass}>
+                            <SidebarMenu className={chatChildrenMenuClass}>
+                              {group.items.map((item) => {
+                                const contextId = String(item.contextId || "").trim()
+                                if (!contextId) return null
+                                const isActive = activeView === "contextWorkspace" && selectedContextId === contextId
+                                return (
+                                  <SidebarMenuItem key={contextId} className="min-w-0">
+                                    <SidebarMenuButton
+                                      tooltip={contextId}
+                                      isActive={isActive}
+                                      onClick={() => onContextOpen(contextId)}
+                                      className={chatItemButtonClass}
+                                    >
+                                      <span className={chatItemRowClass}>
+                                        <span className={chatItemIconClass}>
+                                          <MessageSquareTextIcon className="h-2.5 w-2.5" />
+                                        </span>
+                                        <span className={chatItemTextClass}>{contextId}</span>
+                                      </span>
+                                    </SidebarMenuButton>
+                                  </SidebarMenuItem>
+                                )
+                              })}
+                            </SidebarMenu>
+                          </div>
+                        </SidebarMenuItem>
+                      </React.Fragment>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup className="py-1">
               <SidebarGroupLabel className="px-2 text-[10px] font-medium tracking-[0.12em] text-sidebar-foreground/45">Tasks</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -456,96 +671,6 @@ export function AppSidebar({
                       </SidebarMenuItem>
                     )
                   })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup className="py-1">
-              <SidebarGroupLabel className="px-2 text-[10px] font-medium tracking-[0.12em] text-sidebar-foreground/45">Context</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {chatChannelGroups.map((entry) => {
-                    const isCollapsed = Boolean(collapsedChatChannels[entry.channel])
-                    return (
-                      <React.Fragment key={`chat:${entry.channel}`}>
-                        <SidebarMenuItem>
-                          <SidebarMenuButton
-                            className={menuItemButtonClass}
-                            onClick={() => {
-                              setCollapsedChatChannels((prev) => ({
-                                ...prev,
-                                [entry.channel]: !prev[entry.channel],
-                              }))
-                            }}
-                          >
-                            <span className={rowClass}>
-                              <span className="inline-flex size-4" />
-                              <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
-                                {`chat/${entry.channel} (${entry.items.length})`}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">{isCollapsed ? "+" : "-"}</span>
-                            </span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        {!isCollapsed
-                          ? entry.items.map((item) => (
-                              <SidebarMenuItem key={item.contextId}>
-                                <SidebarMenuButton
-                                  tooltip={item.contextId}
-                                  isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
-                                  onClick={() => onContextOpen(item.contextId)}
-                                  className={menuItemButtonClass}
-                                >
-                                  <span className={rowClass}>
-                                    <span className="inline-flex size-4" />
-                                    <span className="truncate font-mono text-[12px]">{item.contextId}</span>
-                                    <span />
-                                  </span>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            ))
-                          : null}
-                      </React.Fragment>
-                    )
-                  })}
-                  {otherContextGroups.map((group) => (
-                    <React.Fragment key={group.key}>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          render={<button type="button" disabled />}
-                          className={menuItemDisabledClass}
-                        >
-                          <span className={rowClass}>
-                            <span className="inline-flex size-4" />
-                            <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
-                              {`${group.title} (${group.items.length})`}
-                            </span>
-                            <span />
-                          </span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      {group.items.map((item) => (
-                        <SidebarMenuItem key={item.contextId}>
-                          <SidebarMenuButton
-                            tooltip={item.contextId}
-                            isActive={activeView === "contextWorkspace" && selectedContextId === item.contextId}
-                            onClick={() => onContextOpen(item.contextId)}
-                            className={menuItemButtonClass}
-                          >
-                            <span className={rowClass}>
-                              <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
-                                {item.contextId === "local_ui" ? <MessageSquareTextIcon className="size-4" /> : null}
-                              </span>
-                              <span className="truncate font-mono text-[12px]">
-                                {item.contextId === "local_ui" ? "chat here" : item.contextId}
-                              </span>
-                              <span />
-                            </span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </React.Fragment>
-                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

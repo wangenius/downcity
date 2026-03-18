@@ -128,9 +128,7 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   const shipConfig: ShipConfig = {
     name: "console",
     version: "1.0.0",
-    services: {
-      skills: { paths: [".agents/skills"] },
-    },
+    extensions: {},
   };
 
   const modelStore = new ConsoleStore();

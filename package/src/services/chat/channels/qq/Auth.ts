@@ -16,9 +16,12 @@ function normalizeAuthId(value: unknown): string | undefined {
   return text;
 }
 
-function readQqAuthId(config?: ShipConfig): string | undefined {
-  const configAuthId = normalizeAuthId(config?.services?.chat?.channels?.qq?.auth_id);
-  const envAuthId = normalizeAuthId(process.env.QQ_AUTH_ID);
+function readQqAuthId(params: {
+  config?: ShipConfig;
+  env?: Record<string, string>;
+}): string | undefined {
+  const configAuthId = normalizeAuthId(params.config?.services?.chat?.channels?.qq?.auth_id);
+  const envAuthId = normalizeAuthId(params.env?.QQ_AUTH_ID);
   return configAuthId || envAuthId;
 }
 
@@ -27,11 +30,15 @@ function readQqAuthId(config?: ShipConfig): string | undefined {
  */
 export function resolveQqMasterStatus(params: {
   config?: ShipConfig;
+  env?: Record<string, string>;
   userId?: string;
 }): ChatMasterStatus {
   const userId = normalizeAuthId(params.userId);
   if (!userId) return "unknown";
-  const authId = readQqAuthId(params.config);
+  const authId = readQqAuthId({
+    config: params.config,
+    env: params.env,
+  });
   if (!authId) return "unknown";
   return userId === authId ? "master" : "guest";
 }

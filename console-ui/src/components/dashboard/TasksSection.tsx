@@ -16,8 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
+import { cn } from "../../lib/utils";
 import type {
   UiTaskItem,
+  UiTaskStatusValue,
   UiTaskRunDetailResponse,
   UiTaskRunSummary,
 } from "../../types/Dashboard";
@@ -40,9 +42,25 @@ export interface TasksSectionProps {
    */
   onRunTask: (title: string) => void;
   /**
+   * 设置任务状态。
+   */
+  onSetTaskStatus: (title: string, status: UiTaskStatusValue) => Promise<boolean>;
+  /**
+   * 删除任务定义。
+   */
+  onDeleteTask: (title: string) => Promise<boolean>;
+  /**
    * 加载任务执行列表。
    */
   onLoadTaskRuns: (title: string, limit?: number) => Promise<UiTaskRunSummary[]>;
+  /**
+   * 删除单条 run 记录。
+   */
+  onDeleteTaskRun: (title: string, timestamp: string) => Promise<boolean>;
+  /**
+   * 一键清理当前 task 的全部 run 记录。
+   */
+  onClearTaskRuns: (title: string) => Promise<boolean>;
   /**
    * 加载任务执行详情。
    */
@@ -101,13 +119,25 @@ function normalizeRunStatus(
   return String(run?.status || run?.executionStatus || "unknown");
 }
 
+function formatWhenLabel(rawWhen?: string): string {
+  const value = String(rawWhen || "").trim();
+  if (!value) return "manual";
+  if (value === "@manual") return "manual";
+  if (value.startsWith("time:")) return value.slice(5) || "time";
+  return value;
+}
+
 export function TasksSection(props: TasksSectionProps) {
   const {
     tasks,
     statusBadgeVariant,
     formatTime,
     onRunTask,
+    onSetTaskStatus,
+    onDeleteTask,
     onLoadTaskRuns,
+    onDeleteTaskRun,
+    onClearTaskRuns,
     onLoadTaskRunDetail,
     selectedTaskTitle,
     onSelectTaskTitle,
@@ -127,6 +157,9 @@ export function TasksSection(props: TasksSectionProps) {
   const [loadingRunDetail, setLoadingRunDetail] = React.useState(false);
   const [forceLivePolling, setForceLivePolling] = React.useState(false);
   const [runDetailOpen, setRunDetailOpen] = React.useState(false);
+  const [taskMutating, setTaskMutating] = React.useState(false);
+  const [deletingRunTimestamp, setDeletingRunTimestamp] = React.useState("");
+  const [clearingAllRuns, setClearingAllRuns] = React.useState(false);
 
   const badgeClass = React.useCallback(
     (status?: string): string => {
@@ -155,6 +188,17 @@ export function TasksSection(props: TasksSectionProps) {
       String(selectedRunDetail?.progress?.status || "").trim().toLowerCase() === "running",
     [selectedRun, selectedRunDetail],
   );
+
+  const overviewStats = React.useMemo(() => {
+    const total = tasks.length;
+    const running = tasks.filter((item) => String(item.status || "").toLowerCase() === "running").length;
+    const failed = tasks.filter((item) => {
+      const status = String(item.status || "").toLowerCase();
+      return status === "error" || status === "failed" || status === "failure";
+    }).length;
+    const manual = tasks.filter((item) => String(item.when || "").trim() === "@manual").length;
+    return { total, running, failed, manual };
+  }, [tasks]);
 
   const loadRuns = React.useCallback(
     async (
@@ -283,44 +327,48 @@ export function TasksSection(props: TasksSectionProps) {
 
   if (isOverviewMode) {
     return (
-      <div className="space-y-2">
-        <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Tasks
-        </div>
+      <div className="space-y-4">
+        <header className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tasks</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="outline" className="border-border/60 bg-muted/45 text-foreground">{`total ${overviewStats.total}`}</Badge>
+            <Badge variant="outline" className="border-border/60 bg-primary/10 text-primary">{`running ${overviewStats.running}`}</Badge>
+            <Badge variant="outline" className="border-border/60 bg-destructive/10 text-destructive">{`failed ${overviewStats.failed}`}</Badge>
+            <Badge variant="outline" className="border-border/60 bg-secondary/55 text-foreground">{`manual ${overviewStats.manual}`}</Badge>
+          </div>
+        </header>
 
         {tasks.length === 0 ? (
-          <div className="py-4 text-sm text-muted-foreground">暂无 task 数据</div>
+          <div className="rounded-2xl bg-muted/35 px-4 py-6 text-sm text-muted-foreground">暂无 task 数据</div>
         ) : (
-          <div className="overflow-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                  <th className="px-0 py-2 font-medium">Task</th>
-                  <th className="px-2 py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => {
-                  const title = String(task.title || "").trim();
-                  if (!title) return null;
-                  const status = String(task.status || "unknown");
-                  return (
-                    <tr
-                      key={title}
-                      className="cursor-pointer hover:bg-muted/30"
-                      onClick={() => onSelectTaskTitle?.(title)}
-                    >
-                      <td className="px-0 py-2 text-sm font-medium">{title}</td>
-                      <td className="px-2 py-2">
-                        <Badge variant="outline" className={badgeClass(status)}>
-                          {status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-1.5">
+            {tasks.map((task) => {
+              const title = String(task.title || "").trim();
+              if (!title) return null;
+              const status = String(task.status || "unknown");
+              const description = String(task.description || "").trim();
+              const whenLabel = formatWhenLabel(task.when);
+              return (
+                <button
+                  key={title}
+                  type="button"
+                  className="flex w-full items-start justify-between gap-3 rounded-xl bg-muted/35 px-3 py-2.5 text-left transition-colors hover:bg-muted/55"
+                  onClick={() => onSelectTaskTitle?.(title)}
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="truncate text-sm font-medium text-foreground">{title}</div>
+                    <div className="truncate text-xs text-muted-foreground">{description || "无描述"}</div>
+                  </div>
+                  <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    <Badge variant="outline" className={badgeClass(status)}>{status}</Badge>
+                    <Badge variant="outline" className="border-border/55 bg-secondary/45 text-muted-foreground">{whenLabel}</Badge>
+                    <Badge variant="outline" className="border-border/55 bg-background/60 text-muted-foreground">
+                      {formatRunTimestampForDisplay(String(task.lastRunTimestamp || ""), formatTime)}
+                    </Badge>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -331,11 +379,21 @@ export function TasksSection(props: TasksSectionProps) {
     return <div className="py-6 text-sm text-muted-foreground">该 task 不存在或已被删除</div>;
   }
 
+  const selectedTaskTitleValue = String(selectedTask.title || "").trim();
+  const selectedTaskStatus = String(selectedTask.status || "").trim().toLowerCase();
+  const toggleTargetStatus: UiTaskStatusValue =
+    selectedTaskStatus === "enabled" ? "paused" : "enabled";
+  const toggleActionLabel = toggleTargetStatus === "enabled" ? "Enable" : "Pause";
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-border/70 pb-2">
-        <div className="text-sm font-semibold tracking-tight">{String(selectedTask.title || "-")}</div>
-        <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Task Runtime</div>
+          <h2 className="truncate text-lg font-semibold tracking-tight">{String(selectedTask.title || "-")}</h2>
+          <p className="line-clamp-2 text-sm text-muted-foreground">{String(selectedTask.description || "").trim() || "无描述"}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className={badgeClass(String(selectedTask.status || "unknown"))}>
             {String(selectedTask.status || "unknown")}
           </Badge>
@@ -345,6 +403,62 @@ export function TasksSection(props: TasksSectionProps) {
           <Button
             size="sm"
             variant="outline"
+            disabled={taskMutating || !selectedTaskTitleValue}
+            onClick={async () => {
+              if (!selectedTaskTitleValue) return;
+              setTaskMutating(true);
+              try {
+                await onSetTaskStatus(selectedTaskTitleValue, toggleTargetStatus);
+              } finally {
+                setTaskMutating(false);
+              }
+            }}
+          >
+            {toggleActionLabel}
+          </Button>
+          {selectedTaskStatus !== "disabled" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={taskMutating || !selectedTaskTitleValue}
+              onClick={async () => {
+                if (!selectedTaskTitleValue) return;
+              setTaskMutating(true);
+              try {
+                await onSetTaskStatus(selectedTaskTitleValue, "disabled");
+              } finally {
+                setTaskMutating(false);
+              }
+              }}
+            >
+              Disable
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={taskMutating || !selectedTaskTitleValue}
+            onClick={async () => {
+              if (!selectedTaskTitleValue) return;
+              const shouldDelete = window.confirm(
+                `确认删除任务「${selectedTaskTitleValue}」及其全部运行记录？`,
+              );
+              if (!shouldDelete) return;
+              setTaskMutating(true);
+              try {
+                const deleted = await onDeleteTask(selectedTaskTitleValue);
+                if (deleted) {
+                  onSelectTaskTitle?.("");
+                }
+              } finally {
+                setTaskMutating(false);
+              }
+            }}
+          >
+            Delete Task
+          </Button>
+          <Button
+            size="sm"
             onClick={() => {
               const title = String(selectedTask.title || "").trim();
               if (!title) return;
@@ -358,52 +472,81 @@ export function TasksSection(props: TasksSectionProps) {
               }, 350);
             }}
           >
-            run
+            Run Task
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="min-w-0 space-y-2">
-          <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Task Detail
+      <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+        <section className="min-w-0 space-y-3 rounded-2xl bg-muted/35 p-3">
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Definition</div>
+          <div className="grid gap-1.5 text-xs text-muted-foreground">
+            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
+              <span className="text-foreground/80">kind</span>
+              <span>{selectedTask.kind || "-"}</span>
+            </div>
+            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
+              <span className="text-foreground/80">when</span>
+              <span>{formatWhenLabel(selectedTask.when)}</span>
+            </div>
+            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
+              <span className="text-foreground/80">context</span>
+              <span className="truncate font-mono" title={selectedTask.contextId || ""}>{selectedTask.contextId || "-"}</span>
+            </div>
+            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
+              <span className="text-foreground/80">file</span>
+              <span className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{selectedTask.taskMdPath || "-"}</span>
+            </div>
+            <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
+              <span className="text-foreground/80">lastRun</span>
+              <span>{formatRunTimestampForDisplay(String(selectedTask.lastRunTimestamp || ""), formatTime)}</span>
+            </div>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">description</div>
-            <div className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{selectedTask.description || "-"}</div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">body</div>
-            <pre className="h-[42vh] min-h-[22rem] overflow-auto border border-border/70 bg-background p-3 text-[12px] leading-relaxed">
+
+          <div className="space-y-1">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Body</div>
+            <pre className="h-[46vh] min-h-[20rem] overflow-auto rounded-xl bg-background/80 p-3 text-[12px] leading-relaxed text-foreground/90">
               {selectedTask.body || "-"}
             </pre>
-            <div className="space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
-              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-                <span className="text-foreground/80">kind</span>
-                <span>{selectedTask.kind || "-"}</span>
-              </div>
-              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-                <span className="text-foreground/80">when</span>
-                <span>{selectedTask.when || "-"}</span>
-              </div>
-              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-                <span className="text-foreground/80">contextId</span>
-                <span className="truncate font-mono" title={selectedTask.contextId || ""}>{selectedTask.contextId || "-"}</span>
-              </div>
-              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-                <span className="text-foreground/80">taskMdPath</span>
-                <span className="truncate font-mono" title={selectedTask.taskMdPath || ""}>{selectedTask.taskMdPath || "-"}</span>
-              </div>
-              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-                <span className="text-foreground/80">lastRun</span>
-                <span>{formatRunTimestampForDisplay(String(selectedTask.lastRunTimestamp || ""), formatTime)}</span>
-              </div>
-            </div>
           </div>
         </section>
 
-        <div className="space-y-2">
-          <section className="space-y-2">
-            <div className="flex items-center justify-between border-b border-border/70 pb-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Runtime</div>
+        <section className="min-w-0 space-y-3 rounded-2xl bg-secondary/35 p-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Runtime</div>
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const taskTitle = String(selectedTask.title || "").trim();
+                  if (!taskTitle) return;
+                  const shouldClear = window.confirm(
+                    `确认清理任务「${taskTitle}」的全部 run 记录？`,
+                  );
+                  if (!shouldClear) return;
+                  setClearingAllRuns(true);
+                  try {
+                    const cleared = await onClearTaskRuns(taskTitle);
+                    if (!cleared) return;
+                    const nextRuns = await loadRuns(taskTitle, {
+                      showLoading: false,
+                      preferInProgress: true,
+                    });
+                    const nextTimestamp = String(nextRuns[0]?.timestamp || "").trim();
+                    if (!nextTimestamp) {
+                      setSelectedRunTimestamp("");
+                      setSelectedRunDetail(null);
+                      setRunDetailOpen(false);
+                    }
+                  } finally {
+                    setClearingAllRuns(false);
+                  }
+                }}
+                disabled={loadingRuns || clearingAllRuns}
+              >
+                {clearingAllRuns ? "清理中..." : "清空 Run Log"}
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -413,73 +556,95 @@ export function TasksSection(props: TasksSectionProps) {
                     preferInProgress: true,
                   });
                 }}
-                disabled={loadingRuns}
+                disabled={loadingRuns || clearingAllRuns}
               >
                 {loadingRuns ? "加载中..." : "刷新"}
               </Button>
             </div>
+          </div>
 
-            <div className="overflow-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <th className="px-0 py-2 font-medium">Time</th>
-                    <th className="px-2 py-2 font-medium">Status</th>
-                    <th className="px-2 py-2 font-medium">Started</th>
-                    <th className="px-2 py-2 font-medium">Duration</th>
-                    <th className="px-2 py-2 font-medium">Rounds</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-0 py-3 text-sm text-muted-foreground">
-                        暂无执行记录
-                      </td>
-                    </tr>
-                  ) : (
-                    runs.map((run) => {
-                      const status = run.inProgress
-                        ? "running"
-                        : String(run.status || run.executionStatus || "unknown");
-                      return (
-                        <tr
-                          key={run.timestamp}
-                          className="cursor-pointer hover:bg-muted/30"
-                          onClick={() => {
-                            setSelectedRunTimestamp(run.timestamp);
-                            setRunDetailOpen(true);
-                          }}
-                        >
-                          <td className="px-0 py-2 text-xs text-muted-foreground">
-                            {formatRunTimestampForDisplay(run.timestamp, formatTime)}
-                          </td>
-                          <td className="px-2 py-2">
-                            <Badge variant="outline" className={badgeClass(status)}>
-                              {status}
-                            </Badge>
-                          </td>
-                          <td className="px-2 py-2 text-xs text-muted-foreground">{formatTime(run.startedAt)}</td>
-                          <td className="px-2 py-2 text-xs text-muted-foreground">
-                            {formatDurationMs(run.startedAt, run.endedAt)}
-                          </td>
-                          <td className="px-2 py-2 text-xs text-muted-foreground">
-                            {run.dialogueRounds ?? run.progressRound ?? "-"}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+          {runs.length === 0 ? (
+            <div className="rounded-xl bg-background/60 px-3 py-4 text-sm text-muted-foreground">暂无执行记录</div>
+          ) : (
+            <div className="max-h-[62vh] space-y-1.5 overflow-y-auto pr-1">
+              {runs.map((run) => {
+                const status = run.inProgress
+                  ? "running"
+                  : String(run.status || run.executionStatus || "unknown");
+                const isActive = String(run.timestamp || "") === String(selectedRunTimestamp || "");
+                const runTimestamp = String(run.timestamp || "").trim();
+                const deletingThisRun = deletingRunTimestamp === runTimestamp;
+                return (
+                  <div key={run.timestamp} className="flex items-start gap-1.5">
+                    <button
+                      type="button"
+                      className={cn(
+                        "min-w-0 flex-1 rounded-xl px-3 py-2 text-left transition-colors",
+                        isActive ? "bg-background/85" : "bg-background/55 hover:bg-background/75",
+                      )}
+                      onClick={() => {
+                        setSelectedRunTimestamp(run.timestamp);
+                        setRunDetailOpen(true);
+                      }}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs font-medium text-foreground/90">
+                          {formatRunTimestampForDisplay(run.timestamp, formatTime)}
+                        </div>
+                        <Badge variant="outline" className={badgeClass(status)}>{status}</Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                        <span>{`start ${formatTime(run.startedAt)}`}</span>
+                        <span>{`duration ${formatDurationMs(run.startedAt, run.endedAt)}`}</span>
+                        <span>{`rounds ${run.dialogueRounds ?? run.progressRound ?? "-"}`}</span>
+                      </div>
+                    </button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={Boolean(run.inProgress) || deletingThisRun}
+                      onClick={async () => {
+                        if (!selectedTaskTitleValue || !runTimestamp) return;
+                        const shouldDelete = window.confirm(
+                          `确认删除 run「${runTimestamp}」记录？`,
+                        );
+                        if (!shouldDelete) return;
+                        setDeletingRunTimestamp(runTimestamp);
+                        try {
+                          const deleted = await onDeleteTaskRun(selectedTaskTitleValue, runTimestamp);
+                          if (!deleted) return;
+                          const nextRuns = await loadRuns(selectedTaskTitleValue, {
+                            showLoading: false,
+                            preferInProgress: true,
+                          });
+                          if (!nextRuns.some((item) => String(item.timestamp || "").trim() === runTimestamp)) {
+                            if (String(selectedRunTimestamp || "").trim() === runTimestamp) {
+                              const nextTimestamp = String(nextRuns[0]?.timestamp || "").trim();
+                              setSelectedRunTimestamp(nextTimestamp);
+                              if (!nextTimestamp) {
+                                setSelectedRunDetail(null);
+                                setRunDetailOpen(false);
+                              }
+                            }
+                          }
+                        } finally {
+                          setDeletingRunTimestamp("");
+                        }
+                      }}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
-          </section>
-        </div>
+          )}
+        </section>
       </div>
 
       <Dialog open={runDetailOpen} onOpenChange={setRunDetailOpen}>
-        <DialogContent className="w-[min(96vw,980px)]">
-          <DialogHeader>
+        <DialogContent className="w-[min(96vw,980px)] p-0">
+          <DialogHeader className="border-b border-border/60 px-4 py-3">
             <DialogTitle>
               {`Run Detail${
                 selectedRunTimestamp
@@ -487,18 +652,16 @@ export function TasksSection(props: TasksSectionProps) {
                   : ""
               }`}
             </DialogTitle>
-            <DialogDescription>
-              {selectedTask?.title || "-"}
-            </DialogDescription>
+            <DialogDescription>{selectedTask?.title || "-"}</DialogDescription>
           </DialogHeader>
-          <div className="max-h-[68vh] space-y-3 overflow-y-auto px-4 pb-4">
+          <div className="max-h-[68vh] space-y-3 overflow-y-auto px-4 py-4">
             {loadingRunDetail ? (
               <div className="text-sm text-muted-foreground">加载中...</div>
             ) : !selectedRunDetail ? (
               <div className="text-sm text-muted-foreground">未找到执行详情</div>
             ) : (
               <>
-                <div className="grid gap-1 border-b border-border/60 pb-2 text-xs text-muted-foreground">
+                <div className="rounded-xl bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
                   <div>{`runDir: ${selectedRunDetail.runDirRel || "-"}`}</div>
                   <div>{`status: ${normalizeRunStatus(selectedRun, selectedRunDetail)}`}</div>
                   <div>{`phase: ${String(selectedRunDetail.progress?.phase || "-")}`}</div>
@@ -511,7 +674,7 @@ export function TasksSection(props: TasksSectionProps) {
                   {(["input", "output", "result", "dialogue", "error"] as const).map((key) => (
                     <div key={key} className="space-y-1">
                       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</div>
-                      <pre className="max-h-56 overflow-auto border border-border/70 bg-background p-2 text-[11px] leading-relaxed">
+                      <pre className="max-h-56 overflow-auto rounded-xl bg-background/70 p-2 text-[11px] leading-relaxed">
                         {String(selectedRunDetail.artifacts?.[key] || "-")}
                       </pre>
                     </div>

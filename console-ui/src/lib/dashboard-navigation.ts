@@ -50,6 +50,12 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
     title: "Overview",
     path: "/agent/overview",
   },
+  agentSkills: {
+    view: "agentSkills",
+    scope: "agent",
+    title: "Skills",
+    path: "/agent/skills",
+  },
   agentServices: {
     view: "agentServices",
     scope: "agent",
@@ -90,11 +96,12 @@ const SCOPE_TITLES: Record<DashboardScope, string> = {
 
 const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
   "globalOverview",
-  "globalModel",
   "globalCommand",
+  "globalModel",
   "globalAgents",
   "globalExtensions",
   "agentOverview",
+  "agentSkills",
   "agentServices",
   "agentCommand",
   "agentTasks",

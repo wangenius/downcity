@@ -145,6 +145,15 @@ export type ServiceRuntime = {
   config: ShipConfig;
 
   /**
+   * 当前 agent 的 `.env` 快照（仅本项目可见）。
+   *
+   * 关键点（中文）
+   * - 用于 service 读取 agent 私有环境变量（如 chat 渠道密钥）。
+   * - 不与全局 process.env 混用，避免跨 agent 污染。
+   */
+  env: Record<string, string>;
+
+  /**
    * 当前生效的系统提示文本集合。
    */
   systems: string[];

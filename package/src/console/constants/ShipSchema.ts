@@ -82,8 +82,6 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                     enabled: { type: "boolean" },
                     botToken: { type: "string" },
                     auth_id: { type: "string" },
-                    followupWindowMs: { type: "number" },
-                    groupAccess: { type: "string", enum: ["initiator_or_admin", "anyone"] },
                   },
                 },
                 discord: {
@@ -114,7 +112,6 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                     appSecret: { type: "string" },
                     sandbox: { type: "boolean" },
                     auth_id: { type: "string" },
-                    groupAccess: { type: "string", enum: ["initiator_or_admin", "anyone"] },
                   },
                 },
               },

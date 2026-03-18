@@ -32,10 +32,18 @@ import {
   toOptionalString,
   toUiMessageTimeline,
 } from "./tui/Helpers.js";
-import { getShipContextMessagesPath, getShipJsonPath } from "@/console/env/Paths.js";
+import {
+  getShipChatHistoryPath,
+  getShipContextMessagesArchiveDirPath,
+  getShipContextMessagesArchivePath,
+  getShipContextMessagesPath,
+  getShipJsonPath,
+  getShipTasksDirPath,
+} from "@/console/env/Paths.js";
 import { ConsoleStore } from "@utils/store/index.js";
+import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
 
-const LOCAL_UI_CONTEXT_ID = "local_ui";
+const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -181,9 +189,24 @@ export function registerTuiApiRoutes(params: {
         projectRoot: runtime.rootPath,
         limit,
       });
+      const hasConsoleUiContext = contexts.some(
+        (item) => String(item.contextId || "").trim() === CONSOLEUI_CONTEXT_ID,
+      );
+      const enrichedContexts = hasConsoleUiContext
+        ? contexts
+        : [
+            {
+              contextId: CONSOLEUI_CONTEXT_ID,
+              messageCount: 0,
+              updatedAt: Date.now(),
+              lastRole: "system",
+              lastText: "consoleui channel",
+            },
+            ...contexts,
+          ];
       return c.json({
         success: true,
-        contexts,
+        contexts: enrichedContexts,
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
@@ -218,12 +241,208 @@ export function registerTuiApiRoutes(params: {
     }
   });
 
+  app.delete("/api/tui/contexts/:contextId/messages", async (c) => {
+    try {
+      const runtime = params.getRuntimeState();
+      const contextId = decodeMaybe(
+        String(c.req.param("contextId") || "").trim(),
+      );
+      if (!contextId) {
+        return c.json({ success: false, error: "Missing contextId" }, 400);
+      }
+
+      const messagesPath = getShipContextMessagesPath(runtime.rootPath, contextId);
+      const messagesDirPath = dirname(messagesPath);
+      await fs.remove(messagesDirPath);
+      // 关键点（中文）：清理消息后必须清掉内存 agent，避免旧上下文继续参与后续 run。
+      runtime.contextManager.clearAgent(contextId);
+
+      return c.json({
+        success: true,
+        contextId,
+        cleared: true,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.delete("/api/tui/contexts/:contextId/chat-history", async (c) => {
+    try {
+      const runtime = params.getRuntimeState();
+      const contextId = decodeMaybe(
+        String(c.req.param("contextId") || "").trim(),
+      );
+      if (!contextId) {
+        return c.json({ success: false, error: "Missing contextId" }, 400);
+      }
+
+      const historyPath = getShipChatHistoryPath(runtime.rootPath, contextId);
+      await fs.remove(historyPath);
+
+      return c.json({
+        success: true,
+        contextId,
+        cleared: true,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.get("/api/tui/contexts/:contextId/archives", async (c) => {
+    try {
+      const runtime = params.getRuntimeState();
+      const limit = toLimit(c.req.query("limit"), 100);
+      const contextId = decodeMaybe(
+        String(c.req.param("contextId") || "").trim(),
+      );
+      if (!contextId) {
+        return c.json({ success: false, error: "Missing contextId" }, 400);
+      }
+
+      const archiveDirPath = getShipContextMessagesArchiveDirPath(
+        runtime.rootPath,
+        contextId,
+      );
+      if (!(await fs.pathExists(archiveDirPath))) {
+        return c.json({
+          success: true,
+          contextId,
+          archives: [],
+        });
+      }
+
+      const entries = await fs.readdir(archiveDirPath, { withFileTypes: true });
+      const archives: Array<{
+        archiveId: string;
+        archivedAt?: number;
+        messageCount: number;
+      }> = [];
+
+      for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+        const archiveId = decodeMaybe(entry.name.slice(0, -5));
+        if (!archiveId) continue;
+
+        const archivePath = getShipContextMessagesArchivePath(
+          runtime.rootPath,
+          contextId,
+          archiveId,
+        );
+        const payload = (await fs.readJson(archivePath).catch(() => null)) as
+          | {
+              archivedAt?: unknown;
+              messages?: unknown;
+            }
+          | null;
+        const archivedAtFromPayload =
+          typeof payload?.archivedAt === "number" &&
+          Number.isFinite(payload.archivedAt)
+            ? payload.archivedAt
+            : undefined;
+        const archivedAtFromStat =
+          typeof archivedAtFromPayload === "number"
+            ? undefined
+            : await fs
+                .stat(archivePath)
+                .then((stat) => stat.mtimeMs)
+                .catch(() => undefined);
+        const messageCount = Array.isArray(payload?.messages)
+          ? payload.messages.length
+          : 0;
+
+        archives.push({
+          archiveId,
+          ...(typeof archivedAtFromPayload === "number"
+            ? { archivedAt: archivedAtFromPayload }
+            : typeof archivedAtFromStat === "number"
+              ? { archivedAt: archivedAtFromStat }
+              : {}),
+          messageCount,
+        });
+      }
+
+      archives.sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+
+      return c.json({
+        success: true,
+        contextId,
+        archives: archives.slice(0, limit),
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.get("/api/tui/contexts/:contextId/archives/:archiveId", async (c) => {
+    try {
+      const runtime = params.getRuntimeState();
+      const contextId = decodeMaybe(
+        String(c.req.param("contextId") || "").trim(),
+      );
+      const archiveId = decodeMaybe(
+        String(c.req.param("archiveId") || "").trim(),
+      );
+      if (!contextId) {
+        return c.json({ success: false, error: "Missing contextId" }, 400);
+      }
+      if (!archiveId) {
+        return c.json({ success: false, error: "Missing archiveId" }, 400);
+      }
+
+      const archivePath = getShipContextMessagesArchivePath(
+        runtime.rootPath,
+        contextId,
+        archiveId,
+      );
+      if (!(await fs.pathExists(archivePath))) {
+        return c.json(
+          { success: false, error: `Archive not found: ${archiveId}` },
+          404,
+        );
+      }
+
+      const payload = (await fs.readJson(archivePath).catch(() => null)) as
+        | {
+            archivedAt?: unknown;
+            messages?: unknown;
+          }
+        | null;
+      const archivedAt =
+        typeof payload?.archivedAt === "number" &&
+        Number.isFinite(payload.archivedAt)
+          ? payload.archivedAt
+          : undefined;
+      const archivedMessages = Array.isArray(payload?.messages)
+        ? payload.messages
+        : [];
+      const messages = archivedMessages.flatMap((message) =>
+        toUiMessageTimeline(
+          message as Parameters<typeof toUiMessageTimeline>[0],
+        ),
+      );
+
+      return c.json({
+        success: true,
+        contextId,
+        archiveId,
+        ...(typeof archivedAt === "number" ? { archivedAt } : {}),
+        total: messages.length,
+        rawTotal: archivedMessages.length,
+        messages,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
   app.get("/api/tui/system-prompt", async (c) => {
     try {
       const runtime = params.getRuntimeState();
       const contextId =
         decodeMaybe(String(c.req.query("contextId") || "").trim()) ||
-        LOCAL_UI_CONTEXT_ID;
+        CONSOLEUI_CONTEXT_ID;
       const systemMessages = await resolveAgentSystemMessages({
         projectRoot: runtime.rootPath,
         contextId,
@@ -403,6 +622,198 @@ export function registerTuiApiRoutes(params: {
         context: params.getServiceRuntimeState(),
       });
       return c.json(result, result.success ? 200 : 400);
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.post("/api/tui/tasks/:title/status", async (c) => {
+    try {
+      const title = decodeMaybe(
+        String(c.req.param("title") || "").trim(),
+      );
+      const body = (await c.req.json().catch(() => ({}))) as {
+        status?: string;
+      };
+      const status = String(body.status || "").trim();
+      if (!title) {
+        return c.json({ success: false, error: "Invalid title" }, 400);
+      }
+      if (!["enabled", "paused", "disabled"].includes(status)) {
+        return c.json({ success: false, error: "Invalid status" }, 400);
+      }
+
+      const result = await runServiceCommand({
+        serviceName: "task",
+        command: "status",
+        payload: {
+          title,
+          status,
+        },
+        context: params.getServiceRuntimeState(),
+      });
+      if (!result.success) {
+        return c.json({ success: false, error: result.message || "task status update failed" }, 400);
+      }
+      const data =
+        result.data && typeof result.data === "object" && !Array.isArray(result.data)
+          ? result.data
+          : {};
+      return c.json({
+        success: true,
+        ...data,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.delete("/api/tui/tasks/:title", async (c) => {
+    try {
+      const title = decodeMaybe(
+        String(c.req.param("title") || "").trim(),
+      );
+      if (!title) {
+        return c.json({ success: false, error: "Invalid title" }, 400);
+      }
+
+      const result = await runServiceCommand({
+        serviceName: "task",
+        command: "delete",
+        payload: {
+          title,
+        },
+        context: params.getServiceRuntimeState(),
+      });
+      if (!result.success) {
+        return c.json({ success: false, error: result.message || "task delete failed" }, 400);
+      }
+      const data =
+        result.data && typeof result.data === "object" && !Array.isArray(result.data)
+          ? result.data
+          : {};
+      return c.json({
+        success: true,
+        ...data,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.delete("/api/tui/tasks/:title/runs/:timestamp", async (c) => {
+    try {
+      const runtime = params.getRuntimeState();
+      const title = decodeMaybe(
+        String(c.req.param("title") || "").trim(),
+      );
+      const timestamp = String(c.req.param("timestamp") || "").trim();
+      if (!title) {
+        return c.json({ success: false, error: "Invalid title" }, 400);
+      }
+      if (!TASK_RUN_DIR_REGEX.test(timestamp)) {
+        return c.json({ success: false, error: "Invalid timestamp" }, 400);
+      }
+
+      let taskId = "";
+      try {
+        taskId = await resolveTaskIdByTitle({
+          projectRoot: runtime.rootPath,
+          title,
+        });
+      } catch {
+        return c.json({ success: false, error: "Task not found" }, 404);
+      }
+      const runDir = join(getShipTasksDirPath(runtime.rootPath), taskId, timestamp);
+      if (!(await fs.pathExists(runDir))) {
+        return c.json({ success: false, error: "Run not found" }, 404);
+      }
+
+      const progressPath = join(runDir, "run-progress.json");
+      const progress = (await fs.readJson(progressPath).catch(() => null)) as {
+        status?: string;
+      } | null;
+      if (String(progress?.status || "").trim().toLowerCase() === "running") {
+        return c.json(
+          { success: false, error: "Run is still in progress and cannot be deleted" },
+          409,
+        );
+      }
+
+      await fs.remove(runDir);
+      return c.json({
+        success: true,
+        title,
+        timestamp,
+        deleted: true,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.delete("/api/tui/tasks/:title/runs", async (c) => {
+    try {
+      const runtime = params.getRuntimeState();
+      const title = decodeMaybe(
+        String(c.req.param("title") || "").trim(),
+      );
+      if (!title) {
+        return c.json({ success: false, error: "Invalid title" }, 400);
+      }
+
+      let taskId = "";
+      try {
+        taskId = await resolveTaskIdByTitle({
+          projectRoot: runtime.rootPath,
+          title,
+        });
+      } catch {
+        return c.json({ success: false, error: "Task not found" }, 404);
+      }
+
+      const taskDir = join(getShipTasksDirPath(runtime.rootPath), taskId);
+      if (!(await fs.pathExists(taskDir))) {
+        return c.json({
+          success: true,
+          title,
+          deletedCount: 0,
+          skippedRunningCount: 0,
+          deletedTimestamps: [],
+          skippedRunningTimestamps: [],
+        });
+      }
+
+      const entries = await fs.readdir(taskDir, { withFileTypes: true });
+      const timestamps = entries
+        .filter((x) => x.isDirectory() && TASK_RUN_DIR_REGEX.test(x.name))
+        .map((x) => x.name)
+        .sort();
+      const deletedTimestamps: string[] = [];
+      const skippedRunningTimestamps: string[] = [];
+
+      for (const timestamp of timestamps) {
+        const runDir = join(taskDir, timestamp);
+        const progressPath = join(runDir, "run-progress.json");
+        const progress = (await fs.readJson(progressPath).catch(() => null)) as {
+          status?: string;
+        } | null;
+        if (String(progress?.status || "").trim().toLowerCase() === "running") {
+          skippedRunningTimestamps.push(timestamp);
+          continue;
+        }
+        await fs.remove(runDir);
+        deletedTimestamps.push(timestamp);
+      }
+
+      return c.json({
+        success: true,
+        title,
+        deletedCount: deletedTimestamps.length,
+        skippedRunningCount: skippedRunningTimestamps.length,
+        deletedTimestamps,
+        skippedRunningTimestamps,
+      });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
     }

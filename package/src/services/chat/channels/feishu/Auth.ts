@@ -16,11 +16,14 @@ function normalizeAuthId(value: unknown): string | undefined {
   return text;
 }
 
-function readFeishuAuthId(config?: ShipConfig): string | undefined {
+function readFeishuAuthId(params: {
+  config?: ShipConfig;
+  env?: Record<string, string>;
+}): string | undefined {
   const configAuthId = normalizeAuthId(
-    config?.services?.chat?.channels?.feishu?.auth_id,
+    params.config?.services?.chat?.channels?.feishu?.auth_id,
   );
-  const envAuthId = normalizeAuthId(process.env.FEISHU_AUTH_ID);
+  const envAuthId = normalizeAuthId(params.env?.FEISHU_AUTH_ID);
   return configAuthId || envAuthId;
 }
 
@@ -29,11 +32,15 @@ function readFeishuAuthId(config?: ShipConfig): string | undefined {
  */
 export function resolveFeishuMasterStatus(params: {
   config?: ShipConfig;
+  env?: Record<string, string>;
   userId?: string;
 }): ChatMasterStatus {
   const userId = normalizeAuthId(params.userId);
   if (!userId) return "unknown";
-  const authId = readFeishuAuthId(params.config);
+  const authId = readFeishuAuthId({
+    config: params.config,
+    env: params.env,
+  });
   if (!authId) return "unknown";
   return userId === authId ? "master" : "guest";
 }

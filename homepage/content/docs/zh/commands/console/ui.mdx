@@ -8,7 +8,7 @@ description: 启动 console UI（单实例，多 agent 视图）
 管理由 `console` 托管的 UI 网关。
 
 该 UI 不绑定某一个 `agent start` 进程，而是可以在同一页面切换查看多个已运行 agent。
-它是状态优先的 Dashboard，对话只在 `local_ui` context 中开放。
+它是状态优先的 Dashboard，对话只在内置 `consoleui` channel 中开放（默认 context：`consoleui-chat-main`）。
 
 ## 用法
 
@@ -37,17 +37,24 @@ sma console ui [action] [options]
 - `Global`：全局概览、console runtime、model 管理、agents 管理、extensions。
 - `Global / Model` 现已支持 provider/model 全量操作（创建、更新、测试、发现、暂停、删除）。
 - `Global / Overview` 仅展示全局级健康信号（console、agent fleet、channels、extensions、config risk）。
+- `Global / Overview` 顶部摘要区域会显示当前 SMA 版本号。
 - `Global / Console Runtime` 展示 console 运行态与 console 级配置文件状态。
 - `Agent`：`Overview`、`Services`、`Command`、`Tasks`、`Logs`。
 - `Agent / Overview` 聚焦当前 agent（bootstrap 配置、chat 身份、模型绑定），不再混入 global 信息。
+- `Agent / Overview` 的 `chat overview` 现支持 channel 级快捷动作：`open` / `close` / `test` / `reconnect`，可直接做连通性与开关操作。
 - `Agent / Command` 提供终端风格命令面板：在当前 agent 项目根目录执行 shell 命令，并展示 stdout/stderr 与退出码。
+- `Agent / Command` 现支持输入原地预测与快捷输入：`Tab` 接受整条预测、`Ctrl/⌘ + →` 接受下一个词、`↑/↓` 浏览会话命令历史。
 - `Agent / Tasks` 会展示任务定义详情与每次执行记录（run history + run detail）。
 - `Agent / Tasks` 支持执行中实时进度：手动 `run` 后会显示 `running`、当前阶段、轮次与进度事件，完成后自动切换到最终状态。
-- `Context`：`Context Overview` + 每个 context 条目（包含 `local_ui`）。
+- `Agent / Tasks` 支持任务管理：可直接切换任务状态（`enabled` / `paused` / `disabled`）、删除任务定义、删除单条 run 历史记录（执行中 run 不允许删除）。
+- `Agent / Tasks` 支持一键清空当前任务全部 run log（会自动跳过执行中的 run 目录）。
+- `Context`：`Context Overview` + 每个 context 条目（包含内置 `consoleui` channel）。
 - `Context Overview` 内会展示 channel 链路状态与 context 对应关系，并提供 `open` / `close` / `test` / `reconnect`。
-- `Context Overview` 支持直接修改 channel 参数（例如 qq 的 `appId/appSecret/sandbox/groupAccess`），保存后自动重载该渠道。
-- 只有 `local_ui` 支持发送消息；其他 context 在 UI 中为只读。
+- `Context Overview` 支持直接修改 channel 参数（例如 qq 的 `appId/appSecret/sandbox`），保存后自动重载该渠道。
+- 只有 `consoleui` channel 支持发送消息；其他 context 在 UI 中为只读。
 - `Context Workspace` 会展示当前 context 的消息历史、channel 历史、system prompt 解析结果。
+- `Context Workspace` 现支持消息管理：所有 chat context 都可分别清理 `context messages` 与 `chat history`。
+- `Context Workspace` 现支持查看 compact archive：可在右侧 `archive` 面板按归档批次查看被 compact 折叠前的历史消息。
 - `sma console status` 会同时显示 console 与 UI 状态。
 
 ## 典型流程

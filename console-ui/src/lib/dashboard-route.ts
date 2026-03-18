@@ -23,12 +23,30 @@ export type DashboardRouteState = {
    */
   contextId?: string
   /**
+   * 当视图为 context 页面时的 channel。
+   */
+  channel?: string
+  /**
    * 当视图为 agentTasks 时的 task 标题。
    */
   taskTitle?: string
 }
 
 const VIEW_TO_PATH: Record<DashboardPrimaryView, string> = getPrimaryViewPathMap()
+
+/**
+ * 生成 channel 路由段。
+ */
+function toChannelRouteSegment(raw: string): string {
+  const text = String(raw || "").trim().toLocaleLowerCase()
+  if (!text) return "unknown"
+  const normalized = text
+    .replace(/[\s_]+/g, "-")
+    .replace(/[/?#]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return normalized || "unknown"
+}
 
 /**
  * 生成 agent 路由段。
@@ -50,6 +68,7 @@ export function toDashboardPath(
     contextId?: string
     taskTitle?: string
     agentSegment?: string
+    channel?: string
   },
 ): string {
   const agentSegment = toAgentRouteSegment(String(options?.agentSegment || "agent"))
@@ -64,6 +83,7 @@ export function toDashboardPath(
   if (view === "globalAgents") return "/global/agents"
   if (view === "globalExtensions") return "/global/extensions"
   if (view === "agentOverview") return `/${encodeURIComponent(agentSegment)}/overview`
+  if (view === "agentSkills") return `/${encodeURIComponent(agentSegment)}/skills`
   if (view === "agentServices") return `/${encodeURIComponent(agentSegment)}/services`
   if (view === "agentCommand") return `/${encodeURIComponent(agentSegment)}/command`
   if (view === "agentTasks") {
@@ -72,11 +92,17 @@ export function toDashboardPath(
     return `/${encodeURIComponent(agentSegment)}/tasks/${encodeURIComponent(normalizedTaskTitle)}`
   }
   if (view === "agentLogs") return `/${encodeURIComponent(agentSegment)}/logs`
-  if (view === "contextOverview") return `/${encodeURIComponent(agentSegment)}/chat`
+  if (view === "contextOverview") {
+    const channel = toChannelRouteSegment(String(options?.channel || ""))
+    return `/${encodeURIComponent(agentSegment)}/channel/${encodeURIComponent(channel)}`
+  }
   if (view === "contextWorkspace") {
     const normalizedContextId = String(options?.contextId || "").trim()
-    if (!normalizedContextId) return `/${encodeURIComponent(agentSegment)}/chat`
-    return `/${encodeURIComponent(agentSegment)}/chat/${encodeURIComponent(normalizedContextId)}`
+    const channel = toChannelRouteSegment(String(options?.channel || ""))
+    if (!normalizedContextId) {
+      return `/${encodeURIComponent(agentSegment)}/channel/${encodeURIComponent(channel)}`
+    }
+    return `/${encodeURIComponent(agentSegment)}/channel/${encodeURIComponent(channel)}/chat/${encodeURIComponent(normalizedContextId)}`
   }
   return "/global/overview"
 }
@@ -93,7 +119,7 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
     }
   }
 
-  // 新路由格式：/<agent>/overview|services|command|tasks|logs|chat(/:context)
+  // 新路由格式：/<agent>/overview|services|command|tasks|logs|channel/:channel(/chat/:context)
   const parts = normalized.split("/").filter(Boolean)
   if (parts.length >= 3) {
     const first = String(parts[0] || "").trim().toLowerCase()
@@ -111,6 +137,7 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
     const second = String(parts[1] || "").trim().toLowerCase()
     if (agentSegment) {
       if (second === "overview") return { view: "agentOverview", agentSegment }
+      if (second === "skills") return { view: "agentSkills", agentSegment }
       if (second === "services") return { view: "agentServices", agentSegment }
       if (second === "command") return { view: "agentCommand", agentSegment }
       if (second === "tasks") {
@@ -118,6 +145,17 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
         return { view: "agentTasks", agentSegment, taskTitle }
       }
       if (second === "logs") return { view: "agentLogs", agentSegment }
+      if (second === "channel") {
+        const channel = parts.length >= 3 ? decodeURIComponent(String(parts[2] || "").trim()) : ""
+        const third = String(parts[3] || "").trim().toLowerCase()
+        if (third === "chat") {
+          const contextId = parts.length >= 5 ? decodeURIComponent(parts.slice(4).join("/")) : ""
+          if (contextId) {
+            return { view: "contextWorkspace", agentSegment, channel, contextId }
+          }
+        }
+        return { view: "contextOverview", agentSegment, channel }
+      }
       if (second === "chat") {
         const contextId = parts.length >= 3 ? decodeURIComponent(parts.slice(2).join("/")) : ""
         if (contextId) {

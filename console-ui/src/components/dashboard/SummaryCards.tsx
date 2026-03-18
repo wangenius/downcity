@@ -14,6 +14,7 @@ import { ArrowRightIcon, Loader2Icon, PauseIcon, PlayIcon, RotateCwIcon, SquareI
 import type {
   UiAgentOption,
   UiConfigStatusItem,
+  UiChatChannelStatus,
   UiContextSummary,
   UiModelSummary,
   UiOverviewResponse,
@@ -48,9 +49,9 @@ export interface SummaryCardsProps {
    */
   contexts: UiContextSummary[];
   /**
-   * local_ui context id。
+   * consoleui channel 默认 context id。
    */
-  localUiContextId: string;
+  consoleUiContextId: string;
   /**
    * 配置状态列表。
    */
@@ -87,6 +88,14 @@ export interface SummaryCardsProps {
    * 控制 service 生命周期。
    */
   onControlService: (serviceName: string, action: string) => Promise<void> | void;
+  /**
+   * chat channel 状态快照。
+   */
+  chatChannels: UiChatChannelStatus[];
+  /**
+   * 执行 chat channel 动作。
+   */
+  onChatAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => Promise<void> | void;
 }
 
 function formatLastRun(rawInput?: string): string {
@@ -133,7 +142,7 @@ export function SummaryCards(props: SummaryCardsProps) {
     skills,
     tasks,
     contexts,
-    localUiContextId,
+    consoleUiContextId,
     configStatus,
     model,
     onSwitchModel,
@@ -143,15 +152,13 @@ export function SummaryCards(props: SummaryCardsProps) {
     onOpenTask,
     onOpenContext,
     onControlService,
+    chatChannels,
+    onChatAction,
   } = props;
 
-  if (!selectedAgent) {
-    return <div className="py-6 text-sm text-muted-foreground">未选择 agent</div>;
-  }
-
   const overviewContexts = Array.isArray(overview?.contexts?.items) ? overview.contexts.items : [];
-  const localUiExists = overviewContexts.some((item) => item.contextId === localUiContextId);
-  const chatProfiles = Array.isArray(selectedAgent.chatProfiles) ? selectedAgent.chatProfiles : [];
+  const consoleUiExists = overviewContexts.some((item) => item.contextId === consoleUiContextId);
+  const chatProfiles = Array.isArray(selectedAgent?.chatProfiles) ? selectedAgent.chatProfiles : [];
   const agentConfigItems = configStatus.filter((item) => item.scope === "agent");
   const badConfigItems = agentConfigItems.filter((item) => String(item.status || "").toLowerCase() !== "ok");
   const memoryConfigItems = agentConfigItems.filter((item) => {
@@ -162,7 +169,9 @@ export function SummaryCards(props: SummaryCardsProps) {
   });
 
   const availableModels = Array.isArray(model?.availableModels) ? model.availableModels : [];
-  const currentModelId = String(model?.agentPrimaryModelId || model?.primaryModelId || selectedAgent.primaryModelId || "").trim();
+  const currentModelId = String(
+    model?.agentPrimaryModelId || model?.primaryModelId || selectedAgent?.primaryModelId || "",
+  ).trim();
   const [targetModelId, setTargetModelId] = React.useState(currentModelId);
   const [pendingAgentAction, setPendingAgentAction] = React.useState<"" | "start" | "restart" | "stop">("");
   const [pendingServiceActions, setPendingServiceActions] = React.useState<Record<string, boolean>>({});
@@ -174,6 +183,21 @@ export function SummaryCards(props: SummaryCardsProps) {
     (key: string) => Boolean(pendingServiceActions[key]),
     [pendingServiceActions],
   );
+  /**
+   * 关键点（中文）：统一按 channel 建索引，方便 chat overview 渲染动作禁用态。
+   */
+  const chatStatusByChannel = React.useMemo(() => {
+    const map = new Map<string, { enabled?: boolean; configured?: boolean }>();
+    for (const item of chatChannels) {
+      const channel = String(item.channel || "").trim().toLowerCase();
+      if (!channel) continue;
+      map.set(channel, {
+        enabled: item.enabled,
+        configured: item.configured,
+      });
+    }
+    return map;
+  }, [chatChannels]);
 
   /**
    * 关键点（中文）：补齐内置 service，避免接口偶发缺项导致 UI 不显示（例如 skill）。
@@ -238,6 +262,10 @@ export function SummaryCards(props: SummaryCardsProps) {
     restart: { label: "restart", icon: <RotateCwIcon className="size-3.5" /> },
     stop: { label: "stop", icon: <SquareIcon className="size-3.5" /> },
   };
+
+  if (!selectedAgent) {
+    return <div className="py-6 text-sm text-muted-foreground">未选择 agent</div>;
+  }
 
   return (
     <section className="space-y-4">
@@ -435,7 +463,7 @@ export function SummaryCards(props: SummaryCardsProps) {
             contextItems = contexts.slice(0, 8).map((item) => String(item.contextId || "-"));
             details = contextItems.length
               ? []
-              : [`local_ui: ${localUiExists ? "ok" : "missing"}`];
+              : [`consoleui: ${consoleUiExists ? "ok" : "missing"}`];
           }
 
           const panelTone = index % 2 === 0 ? "bg-muted/55" : "bg-muted/75";
@@ -535,15 +563,89 @@ export function SummaryCards(props: SummaryCardsProps) {
                           <td className="py-1.5 pr-2 max-w-0 truncate">{chatItem.identity}</td>
                           <td className="py-1.5 pr-2">{chatItem.link}</td>
                           <td className="py-1.5 text-right">
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                              onClick={() => onOpenContext(chatItem.contextId)}
-                              disabled={!chatItem.clickable}
-                            >
-                              <span>open</span>
-                              <ArrowRightIcon className="size-3 shrink-0" />
-                            </button>
+                            {(() => {
+                              const normalizedChannel = String(chatItem.channel || "").trim();
+                              const hasValidChannel = Boolean(normalizedChannel) && normalizedChannel !== "-";
+                              const status = chatStatusByChannel.get(normalizedChannel.toLowerCase());
+                              const enabled = status?.enabled === true;
+                              const configured = status?.configured === true;
+                              const runtimeActionDisabled = !hasValidChannel || (status ? !(enabled && configured) : false);
+                              const openDisabled = !hasValidChannel || (status ? enabled : false);
+                              const closeDisabled = !hasValidChannel || (status ? !enabled : false);
+                              const testKey = `${name}:chat:${normalizedChannel}:test`;
+                              const reconnectKey = `${name}:chat:${normalizedChannel}:reconnect`;
+                              const openKey = `${name}:chat:${normalizedChannel}:open`;
+                              const closeKey = `${name}:chat:${normalizedChannel}:close`;
+                              return (
+                                <div className="flex flex-wrap items-center justify-end gap-1">
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    onClick={() => onOpenContext(chatItem.contextId)}
+                                    disabled={!chatItem.clickable}
+                                  >
+                                    <span>context</span>
+                                    <ArrowRightIcon className="size-3 shrink-0" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    disabled={openDisabled || isServiceActionPending(openKey)}
+                                    onClick={() => {
+                                      setPendingServiceActions((prev) => ({ ...prev, [openKey]: true }));
+                                      void Promise.resolve(onChatAction("open", normalizedChannel)).finally(() => {
+                                        setPendingServiceActions((prev) => ({ ...prev, [openKey]: false }));
+                                      });
+                                    }}
+                                  >
+                                    {isServiceActionPending(openKey) ? <Loader2Icon className="size-3 animate-spin" /> : null}
+                                    <span>open</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    disabled={closeDisabled || isServiceActionPending(closeKey)}
+                                    onClick={() => {
+                                      setPendingServiceActions((prev) => ({ ...prev, [closeKey]: true }));
+                                      void Promise.resolve(onChatAction("close", normalizedChannel)).finally(() => {
+                                        setPendingServiceActions((prev) => ({ ...prev, [closeKey]: false }));
+                                      });
+                                    }}
+                                  >
+                                    {isServiceActionPending(closeKey) ? <Loader2Icon className="size-3 animate-spin" /> : null}
+                                    <span>close</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    disabled={runtimeActionDisabled || isServiceActionPending(testKey)}
+                                    onClick={() => {
+                                      setPendingServiceActions((prev) => ({ ...prev, [testKey]: true }));
+                                      void Promise.resolve(onChatAction("test", normalizedChannel)).finally(() => {
+                                        setPendingServiceActions((prev) => ({ ...prev, [testKey]: false }));
+                                      });
+                                    }}
+                                  >
+                                    {isServiceActionPending(testKey) ? <Loader2Icon className="size-3 animate-spin" /> : null}
+                                    <span>test</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    disabled={runtimeActionDisabled || isServiceActionPending(reconnectKey)}
+                                    onClick={() => {
+                                      setPendingServiceActions((prev) => ({ ...prev, [reconnectKey]: true }));
+                                      void Promise.resolve(onChatAction("reconnect", normalizedChannel)).finally(() => {
+                                        setPendingServiceActions((prev) => ({ ...prev, [reconnectKey]: false }));
+                                      });
+                                    }}
+                                  >
+                                    {isServiceActionPending(reconnectKey) ? <Loader2Icon className="size-3 animate-spin" /> : null}
+                                    <span>reconnect</span>
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))}

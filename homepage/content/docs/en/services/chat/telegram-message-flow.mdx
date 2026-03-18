@@ -26,7 +26,7 @@ sequenceDiagram
   BOT->>TG: Poll getUpdates
   TG-->>BOT: update(message/callback_query)
 
-  BOT->>BOT: Parse text/caption, mentions, replies, attachments
+  BOT->>BOT: Parse text/caption and attachments
   BOT->>CS: append(user message)
   BOT->>RT: run(instructions)
   RT->>T: chat_send(...)
@@ -51,17 +51,12 @@ ShipMyAgent treats each topic as an independent conversation context, so the bot
 - A message in the group “main chat” goes to `telegram-chat-<chatId>`
 - A message in topic `#139` goes to `telegram-chat-<chatId>-topic-139`
 
-### Group behavior: trigger + access policy
+### Group behavior: trigger
 
 In groups, non-empty messages can be considered for execution.
 
-- Explicit mention/reply and follow-up window are still tracked to improve continuity
-- Empty explicit pings can open a follow-up window, but do not execute directly
-
-There is also an access policy (`groupAccess`):
-
-- Default: `"anyone"` (any group member can talk to the bot)
-- Optional `"initiator_or_admin"`: only the thread initiator or group admins can continue
+- No `@mention` or reply is required.
+- No initiator/admin gate is applied; group messages are accepted uniformly.
 
 ### Attachments: local cache + `@attach` lines
 

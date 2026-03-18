@@ -86,6 +86,10 @@ export interface UiAgentsResponse {
    */
   success?: boolean;
   /**
+   * 当前 SMA CLI 版本号。
+   */
+  smaVersion?: string;
+  /**
    * 当前可选 agent 列表。
    */
   agents?: UiAgentOption[];
@@ -370,6 +374,146 @@ export interface UiSkillListResponse {
      */
     skills?: UiSkillSummaryItem[];
   };
+}
+
+/**
+ * skills.find 请求载荷。
+ */
+export interface UiSkillFindPayload {
+  /**
+   * 要查找的 skill 关键词。
+   */
+  query: string;
+}
+
+/**
+ * skills.install 请求载荷。
+ */
+export interface UiSkillInstallPayload {
+  /**
+   * 目标 skill 安装描述（例如 `owner/repo@skill-id`）。
+   */
+  spec: string;
+  /**
+   * 是否全局安装（对应 `--global`）。
+   */
+  global?: boolean;
+  /**
+   * 是否跳过安装确认（对应 `--yes`）。
+   */
+  yes?: boolean;
+  /**
+   * 安装目标 agent（对应 `--agent`）。
+   */
+  agent?: string;
+}
+
+/**
+ * skills.find 返回数据。
+ */
+export interface UiSkillFindResult {
+  /**
+   * 原始查询词。
+   */
+  query?: string;
+  /**
+   * 运行结果文案。
+   */
+  message?: string;
+  /**
+   * 推荐工作流步骤。
+   */
+  workflow?: string[];
+  /**
+   * 建议下一步动作。
+   */
+  nextAction?: string;
+  /**
+   * 已学会 skill（精确命中）。
+   */
+  learnedSkill?: UiSkillSummaryItem | null;
+  /**
+   * 已学会 skill 的模糊提示列表。
+   */
+  learnedHints?: UiSkillSummaryItem[];
+}
+
+/**
+ * skills.install 返回数据。
+ */
+export interface UiSkillInstallResult {
+  /**
+   * 原始安装 spec。
+   */
+  spec?: string;
+  /**
+   * 运行结果文案。
+   */
+  message?: string;
+  /**
+   * 推荐工作流步骤。
+   */
+  workflow?: string[];
+  /**
+   * 建议下一步动作。
+   */
+  nextAction?: string;
+  /**
+   * 是否跳过安装（因为已存在）。
+   */
+  skipped?: boolean;
+  /**
+   * 从 spec 推断出的 skill 查询词。
+   */
+  queryFromSpec?: string;
+  /**
+   * 本次新增的 skill 列表。
+   */
+  addedSkills?: UiSkillSummaryItem[];
+  /**
+   * 当前可用的目标 skill。
+   */
+  learnedSkill?: UiSkillSummaryItem | null;
+}
+
+/**
+ * skills.lookup 返回数据。
+ */
+export interface UiSkillLookupResult {
+  /**
+   * lookup 是否成功。
+   */
+  success?: boolean;
+  /**
+   * 命中的 skill 元信息。
+   */
+  skill?: UiSkillSummaryItem;
+  /**
+   * lookup 结果文案。
+   */
+  message?: string;
+}
+
+/**
+ * skill 指令统一响应体。
+ */
+export interface UiSkillCommandResponse<TData> {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 指令数据载荷。
+   */
+  data?: TData;
+  /**
+   * 错误文案（兼容字段）。
+   */
+  error?: string;
+  /**
+   * 附加消息（兼容字段）。
+   */
+  message?: string;
 }
 
 /**
@@ -703,6 +847,45 @@ export interface UiTasksResponse {
 }
 
 /**
+ * 任务状态值。
+ */
+export type UiTaskStatusValue = "enabled" | "paused" | "disabled";
+
+/**
+ * task 通用变更响应（状态切换/删除）。
+ */
+export interface UiTaskMutationResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 任务名称。
+   */
+  title?: string;
+  /**
+   * 任务状态（状态更新接口时返回）。
+   */
+  status?: UiTaskStatusValue | string;
+  /**
+   * 任务目录路径（删除任务时可选返回）。
+   */
+  taskDirPath?: string;
+  /**
+   * 服务层补充信息（如 scheduler reload 信息）。
+   */
+  scheduler?: Record<string, unknown>;
+  /**
+   * 错误信息。
+   */
+  error?: string;
+  /**
+   * 可选提示文案。
+   */
+  message?: string;
+}
+
+/**
  * 任务执行摘要项。
  */
 export interface UiTaskRunSummary {
@@ -938,6 +1121,66 @@ export interface UiTaskRunDetailResponse extends UiTaskRunDetail {
 }
 
 /**
+ * 删除 task run 记录响应。
+ */
+export interface UiTaskRunDeleteResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * task 标题。
+   */
+  title?: string;
+  /**
+   * 被删除的 run 时间戳目录名。
+   */
+  timestamp?: string;
+  /**
+   * 是否完成删除。
+   */
+  deleted?: boolean;
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * 批量清理 task run 记录响应。
+ */
+export interface UiTaskRunsClearResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * task 标题。
+   */
+  title?: string;
+  /**
+   * 已删除 run 数量。
+   */
+  deletedCount?: number;
+  /**
+   * 因“仍在运行”而跳过的 run 数量。
+   */
+  skippedRunningCount?: number;
+  /**
+   * 已删除 run 的时间戳目录列表。
+   */
+  deletedTimestamps?: string[];
+  /**
+   * 被跳过（运行中）的 run 时间戳目录列表。
+   */
+  skippedRunningTimestamps?: string[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
  * 日志项。
  */
 export interface UiLogItem {
@@ -1099,6 +1342,98 @@ export interface UiContextMessagesResponse {
    * 时间线消息列表。
    */
   messages?: UiContextTimelineMessage[];
+}
+
+/**
+ * context compact archive 摘要项。
+ */
+export interface UiContextArchiveSummary {
+  /**
+   * archive 唯一标识（文件名去掉 `.json` 后解码）。
+   */
+  archiveId?: string;
+  /**
+   * archive 归档时间戳（毫秒）。
+   */
+  archivedAt?: number;
+  /**
+   * archive 中原始消息数量。
+   */
+  messageCount?: number;
+  /**
+   * archive 文件相对路径（便于调试展示）。
+   */
+  path?: string;
+}
+
+/**
+ * `/api/tui/contexts/:id/archives` 响应。
+ */
+export interface UiContextArchivesResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * context id。
+   */
+  contextId?: string;
+  /**
+   * archive 列表。
+   */
+  archives?: UiContextArchiveSummary[];
+}
+
+/**
+ * `/api/tui/contexts/:id/archives/:archiveId` 响应。
+ */
+export interface UiContextArchiveDetailResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * context id。
+   */
+  contextId?: string;
+  /**
+   * archive id。
+   */
+  archiveId?: string;
+  /**
+   * archive 归档时间戳（毫秒）。
+   */
+  archivedAt?: number;
+  /**
+   * 转换后的时间线消息总数。
+   */
+  total?: number;
+  /**
+   * archive 原始消息总数（写入前的 ContextMessage 条数）。
+   */
+  rawTotal?: number;
+  /**
+   * archive 中可展示的时间线消息列表。
+   */
+  messages?: UiContextTimelineMessage[];
+}
+
+/**
+ * 通用“清理成功”响应。
+ */
+export interface UiContextClearResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * context id。
+   */
+  contextId?: string;
+  /**
+   * 是否完成清理。
+   */
+  cleared?: boolean;
 }
 
 /**

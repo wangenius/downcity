@@ -6,7 +6,6 @@ import type {
   ChannelSendTextParams,
   ChannelSendActionParams,
 } from "@services/chat/channels/BaseChatChannel.js";
-import { isTelegramAdmin } from "./Access.js";
 import { TelegramApiClient } from "./ApiClient.js";
 import {
   handleTelegramCallbackQuery,
@@ -29,13 +28,11 @@ import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.j
  *
  * 关键职责（中文）
  * - 轮询拉取 updates，并转换为统一会话输入
- * - 维护 follow-up 窗口与群聊访问策略，提升群内连续对话体验
+ * - 群聊与私聊统一采用“非空消息即触发”策略
  * - 统一走 BaseChatChannel 入队（history 由 process 写入），确保调度语义一致
  */
 export class TelegramBot extends BaseChatChannel {
   private botToken: string;
-  private followupWindowMs: number;
-  private groupAccess: "initiator_or_admin" | "anyone";
   private lastUpdateId: number = 0;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
   private isRunning: boolean = false;
@@ -46,29 +43,14 @@ export class TelegramBot extends BaseChatChannel {
 
   private readonly api: TelegramApiClient;
   private readonly stateStore: TelegramStateStore;
-  private threadInitiators: Map<string, string> = new Map();
 
   private botUsername?: string;
   private botId?: number;
   private clearedWebhookOnce: boolean = false;
-  private followupExpiryByActorAndThread: Map<string, number> = new Map();
-  private followupExpiryByThread: Map<string, number> = new Map();
 
-  constructor(
-    context: ServiceRuntime,
-    botToken: string,
-    followupWindowMs: number | undefined,
-    groupAccess: TelegramConfig["groupAccess"] | undefined,
-  ) {
+  constructor(context: ServiceRuntime, botToken: string) {
     super({ channel: "telegram", context });
     this.botToken = botToken;
-    this.followupWindowMs =
-      Number.isFinite(followupWindowMs as number) &&
-      (followupWindowMs as number) > 0
-        ? (followupWindowMs as number)
-        : 10 * 60 * 1000;
-    this.groupAccess =
-      groupAccess === "initiator_or_admin" ? "initiator_or_admin" : "anyone";
     this.api = new TelegramApiClient({
       botToken,
       projectRoot: this.rootPath,
@@ -328,40 +310,6 @@ export class TelegramBot extends BaseChatChannel {
     return fn();
   }
 
-  private getFollowupKey(threadKey: string, actorId: string): string {
-    return `${threadKey}|${actorId}`;
-  }
-
-  private isWithinFollowupWindow(threadKey: string, actorId?: string): boolean {
-    const now = Date.now();
-
-    // 会话级窗口：同一群/话题内更容易续聊，不要求同一 actor。
-    const threadExp = this.followupExpiryByThread.get(threadKey);
-    if (typeof threadExp === "number") {
-      if (now <= threadExp) return true;
-      this.followupExpiryByThread.delete(threadKey);
-    }
-
-    if (!actorId) return false;
-    const key = this.getFollowupKey(threadKey, actorId);
-    const actorExp = this.followupExpiryByActorAndThread.get(key);
-    if (!actorExp) return false;
-    if (now > actorExp) {
-      this.followupExpiryByActorAndThread.delete(key);
-      return false;
-    }
-    return true;
-  }
-
-  private touchFollowupWindow(threadKey: string, actorId?: string): void {
-    const expiry = Date.now() + this.followupWindowMs;
-    this.followupExpiryByThread.set(threadKey, expiry);
-
-    if (!actorId) return;
-    const key = this.getFollowupKey(threadKey, actorId);
-    this.followupExpiryByActorAndThread.set(key, expiry);
-  }
-
   /**
    * 读取 Telegram runtime 快照。
    *
@@ -458,7 +406,7 @@ export class TelegramBot extends BaseChatChannel {
    * 将“所有入站消息”统一转成可落盘的文本形式（用于审计/回溯）。
    *
    * 关键点（中文）
-   * - 即使消息最终不执行（例如：空消息或无权限），也应当先入队落盘
+   * - 即使消息最终不执行（例如：空消息），也应当先入队落盘
    * - 但纯附件消息可能没有 text/caption，这里会生成一个稳定的占位文本
    */
   private buildAuditText(params: {
@@ -483,38 +431,6 @@ export class TelegramBot extends BaseChatChannel {
     return `[attachment]${suffix}`;
   }
 
-  private isBotMentioned(
-    text: string,
-    entities?: NonNullable<TelegramUpdate["message"]>["entities"],
-  ): boolean {
-    if (!text) return false;
-    const username = this.botUsername;
-
-    if (username) {
-      const re = new RegExp(`@${this.escapeRegExp(username)}\\b`, "i");
-      if (re.test(text)) return true;
-    }
-
-    if (!entities || entities.length === 0) return false;
-
-    for (const ent of entities) {
-      if (!ent || typeof ent !== "object") continue;
-      if (
-        ent.type === "text_mention" &&
-        this.botId &&
-        ent.user?.id === this.botId
-      )
-        return true;
-      if (ent.type === "mention" && username) {
-        const mentionText = text.slice(ent.offset, ent.offset + ent.length);
-        if (mentionText.toLowerCase() === `@${username.toLowerCase()}`)
-          return true;
-      }
-    }
-
-    return false;
-  }
-
   private stripBotMention(text: string): string {
     if (!text) return text;
     if (!this.botUsername) return text.trim();
@@ -523,27 +439,6 @@ export class TelegramBot extends BaseChatChannel {
       "ig",
     );
     return text.replace(re, " ").replace(/\s+/g, " ").trim();
-  }
-
-  private async isAllowedGroupActor(
-    threadId: string,
-    originChatId: string,
-    actorId: string,
-  ): Promise<boolean> {
-    if (this.groupAccess === "anyone") return true;
-    const existing = this.threadInitiators.get(threadId);
-    if (!existing) {
-      this.threadInitiators.set(threadId, actorId);
-      await this.stateStore.saveThreadInitiators(this.threadInitiators);
-      return true;
-    }
-    if (existing === actorId) return true;
-    return isTelegramAdmin(
-      (method, data) => this.api.requestJson(method, data),
-      this.logger,
-      originChatId,
-      actorId,
-    );
   }
 
   async start(): Promise<void> {
@@ -558,7 +453,6 @@ export class TelegramBot extends BaseChatChannel {
     if (typeof lastUpdateId === "number" && lastUpdateId > 0) {
       this.lastUpdateId = lastUpdateId;
     }
-    this.threadInitiators = await this.stateStore.loadThreadInitiators();
 
     // Ensure polling works even if a webhook was previously configured.
     // Telegram disallows getUpdates while a webhook is active.
@@ -774,13 +668,6 @@ export class TelegramBot extends BaseChatChannel {
       });
       return;
     }
-    const replyToFrom = message.reply_to_message?.from;
-    const isReplyToBot =
-      (!!this.botId && replyToFrom?.id === this.botId) ||
-      (!!this.botUsername &&
-        typeof replyToFrom?.username === "string" &&
-        replyToFrom.username.toLowerCase() === this.botUsername.toLowerCase());
-
     await this.runInChat(chatKey, async () => {
       this.logger.debug("Telegram message received", {
         chatId,
@@ -792,7 +679,6 @@ export class TelegramBot extends BaseChatChannel {
         messageId,
         messageThreadId,
         chatKey,
-        isReplyToBot,
         hasIncomingAttachment,
         textPreview:
           rawText.length > 240 ? `${rawText.slice(0, 240)}…` : rawText,
@@ -824,69 +710,13 @@ export class TelegramBot extends BaseChatChannel {
           },
         });
 
-        if (isGroup && actorId) {
-          const cmdName = (rawText.trim().split(/\s+/)[0] || "")
-            .split("@")[0]
-            ?.toLowerCase();
-          const allowAny = cmdName === "/help" || cmdName === "/start";
-          if (!allowAny) {
-            const ok = await this.isAllowedGroupActor(chatKey, chatId, actorId);
-            if (!ok) {
-              await this.sendMessage(
-                chatId,
-                "⛔️ 仅发起人或群管理员可以使用该命令。",
-                { messageThreadId },
-              );
-              return;
-            }
-          }
-        }
-        if (isGroup) this.touchFollowupWindow(chatKey, actorId);
         await this.handleCommand(chatId, rawText, from, messageThreadId);
       } else {
-        // 关键点（中文）：群聊“是否触发 bot” 与 “是否入队” 解耦。
-        // - 触发 bot：群聊非空内容默认可触发（权限门禁仍生效）
-        // - 入队：所有入站消息都应落盘（审计/回溯）
-        const isMentioned = isGroup ? this.isBotMentioned(rawText, entities) : false;
-        const inWindow = isGroup ? this.isWithinFollowupWindow(chatKey, actorId) : false;
-        const explicit = isGroup ? (isMentioned || isReplyToBot) : true;
-        const isAddressed = isGroup ? (explicit || inWindow) : true;
-
-        if (isGroup) {
-          if (!actorId) {
-            await enqueueGroupAudit({ reason: "missing_actor" });
-            return;
-          }
-
-          const ok = await this.isAllowedGroupActor(chatKey, chatId, actorId);
-          if (!ok) {
-            await enqueueGroupAudit({ reason: "permission_denied" });
-            // 关键点（中文）：未显式点名 bot 时静默拒绝，避免群里刷屏。
-            if (isAddressed) {
-              await this.sendMessage(
-                chatId,
-                "⛔️ 仅发起人或群管理员可以与我对话。",
-                { messageThreadId },
-              );
-            }
-            return;
-          }
-        }
-
+        // 关键点（中文）：群聊和私聊统一走“非空即触发”，不再依赖 @ 或发言人门禁。
         const cleaned = isGroup ? this.stripBotMention(rawText) : rawText;
         if (!cleaned && !hasIncomingAttachment) {
-          // 关键点（中文）：显式 @bot / 回复bot 的“空消息”也可激活 follow-up 窗口，
-          // 便于用户先点名机器人，再发送下一条具体内容。
-          if (isGroup && actorId && explicit) {
-            this.touchFollowupWindow(chatKey, actorId);
-          }
           await enqueueGroupAudit({ reason: "empty_after_clean" });
           return;
-        }
-
-        if (isGroup && actorId) {
-          // 处理到这里说明已有有效内容（文本或附件），可以续期开窗。
-          this.touchFollowupWindow(chatKey, actorId);
         }
 
         const attachmentLines: string[] = [];
@@ -1129,11 +959,6 @@ export function createTelegramBot(
     return null;
   }
 
-  const bot = new TelegramBot(
-    context,
-    config.botToken,
-    config.followupWindowMs,
-    config.groupAccess,
-  );
+  const bot = new TelegramBot(context, config.botToken);
   return bot;
 }

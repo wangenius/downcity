@@ -19,7 +19,7 @@ import type {
   ContextMetadataV1,
 } from "@agent/types/ContextMessage.js";
 import type { JsonObject } from "@/types/Json.js";
-import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
+import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import {
   getCacheDirPath,
   getLogsDirPath,
@@ -30,6 +30,7 @@ import {
 import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
+import { readChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
 import type {
   TuiContextExecuteAttachmentInput,
   TuiContextExecuteAttachmentType,
@@ -83,6 +84,10 @@ export type TuiContextSummary = {
   updatedAt?: number;
   lastRole?: "user" | "assistant" | "system";
   lastText?: string;
+  channel?: string;
+  chatId?: string;
+  chatType?: string;
+  threadId?: number;
 };
 
 export type TuiLogEntry = {
@@ -678,6 +683,7 @@ export async function loadContextMessagesFromFile(
 
 export async function listContextSummaries(params: {
   projectRoot: string;
+  serviceRuntime?: ServiceRuntime;
   limit: number;
 }): Promise<TuiContextSummary[]> {
   const rootDir = getShipContextRootDirPath(params.projectRoot);
@@ -701,6 +707,12 @@ export async function listContextSummaries(params: {
       .then((s) => s)
       .catch(() => null);
     const updatedAt = lastTs || (stat ? stat.mtimeMs : undefined);
+    const chatMeta = params.serviceRuntime
+      ? await readChatMetaByContextId({
+          context: params.serviceRuntime,
+          contextId,
+        })
+      : null;
 
     items.push({
       contextId,
@@ -709,6 +721,14 @@ export async function listContextSummaries(params: {
       ...(last?.role ? { lastRole: last.role } : {}),
       ...(last
         ? { lastText: truncateText(resolveUiMessageText(last), 180) }
+        : {}),
+      ...(typeof chatMeta?.channel === "string" ? { channel: chatMeta.channel } : {}),
+      ...(typeof chatMeta?.chatId === "string" ? { chatId: chatMeta.chatId } : {}),
+      ...(typeof chatMeta?.targetType === "string"
+        ? { chatType: chatMeta.targetType }
+        : {}),
+      ...(typeof chatMeta?.threadId === "number"
+        ? { threadId: chatMeta.threadId }
         : {}),
     });
   }
@@ -942,54 +962,5 @@ export async function readTaskRunDetail(params: {
     messages: messages
       .slice(-120)
       .flatMap((message) => toUiMessageTimeline(message)),
-  };
-}
-
-export async function executeByContextId(params: {
-  runtime: RuntimeState;
-  contextId: string;
-  instructions: string;
-  attachments?: TuiContextExecuteAttachmentInput[];
-}) {
-  const contextId = String(params.contextId || "").trim();
-  const instructions = String(params.instructions || "").trim();
-  if (!contextId) throw new Error("Missing contextId");
-  if (!instructions) throw new Error("Missing instructions");
-
-  const executeInput = await buildExecuteInputText({
-    projectRoot: params.runtime.rootPath,
-    contextId,
-    instructions,
-    attachments: params.attachments,
-  });
-
-  await params.runtime.contextManager.appendUserMessage({
-    contextId,
-    text: executeInput,
-  });
-
-  const result = await params.runtime.contextManager.run({
-    contextId,
-    query: executeInput,
-  });
-
-  const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
-  try {
-    await params.runtime.contextManager.appendAssistantMessage({
-      contextId,
-      message: result.assistantMessage,
-      fallbackText: userVisible,
-      extra: {
-        via: "tui_context_execute",
-        note: "assistant_message_missing",
-      },
-    });
-  } catch {
-    // ignore
-  }
-
-  return {
-    ...result,
-    userVisible,
   };
 }

@@ -14,6 +14,7 @@ description: Runtime data layout and what each folder is for
   logs/
   context/
   memory/
+  channel/
   chat/
   task/
   config/
@@ -43,6 +44,10 @@ Memory V2 storage:
 ### `.ship/chat/`
 
 Chat metadata and history event stream.
+
+### `.ship/channel/meta.json`
+
+Channel-target to `contextId` mapping snapshot (managed by chat service).
 
 ### `.ship/task/`
 

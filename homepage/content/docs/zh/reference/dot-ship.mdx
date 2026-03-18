@@ -14,6 +14,7 @@ description: 运行时数据目录结构与用途
   logs/
   context/
   memory/
+  channel/
   chat/
   task/
   config/
@@ -43,6 +44,10 @@ Memory V2 存储层：
 ### `.ship/chat/`
 
 chat 元信息与 history 事件流。
+
+### `.ship/channel/meta.json`
+
+渠道目标到 `contextId` 的映射快照（由 chat service 维护）。
 
 ### `.ship/task/`
 

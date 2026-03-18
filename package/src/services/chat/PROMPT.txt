@@ -80,6 +80,6 @@ User-facing output rules:
 ## 路由与标识
 - `channel` 表示平台接入渠道：`telegram` / `feishu` / `qq`（以及内部的 `api` / `cli` / `scheduler`）。
 - `targetId` 是平台侧会话标识，不能跨平台通用。
-- `contextId` 是系统内部唯一定位符（跨会话投递唯一 key），通常由 `channel + targetId (+ 线程信息)` 生成。
+- `contextId` 是系统内部唯一定位符（跨会话投递唯一 key），由 chat service 维护映射并随机分配，不应按字符串规则自行拼接。
 - 给当前对话回复可直接使用 `sma chat send --text '...'`（可不传 `--chat-key`，优先读取 `SMA_CTX_CONTEXT_ID`）。
 - 给其他 context 发送时，使用 `sma chat send --chat-key <contextId> --text '...'`。

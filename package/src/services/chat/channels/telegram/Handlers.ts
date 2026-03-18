@@ -24,7 +24,7 @@ export type TelegramHandlerContext = {
     text: string,
     opts?: { messageThreadId?: number },
   ) => Promise<void>;
-  clearChat: (chatKey: string) => void;
+  clearChat: (chatKey: string) => Promise<void>;
 };
 
 /**
@@ -68,7 +68,7 @@ Available commands:
       break;
 
     case "/clear":
-      ctx.clearChat(chatKey);
+      await ctx.clearChat(chatKey);
       await ctx.sendMessage(params.chatId, "✅ Conversation history cleared", {
         messageThreadId: params.messageThreadId,
       });

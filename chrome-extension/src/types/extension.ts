@@ -11,6 +11,16 @@
  */
 export interface ExtensionSettings {
   /**
+   * 目标 Console IP/主机名。
+   */
+  consoleHost: string;
+
+  /**
+   * 目标 Console 端口。
+   */
+  consolePort: number;
+
+  /**
    * 目标 Agent id（来自 `/api/ui/agents`）。
    */
   agentId: string;
@@ -24,6 +34,36 @@ export interface ExtensionSettings {
    * 用户补充任务说明。
    */
   taskPrompt: string;
+
+  /**
+   * 常用问题模板列表。
+   */
+  quickPrompts: ExtensionQuickPromptItem[];
+
+  /**
+   * 默认常用问题模板 id（用于 popup 快速填入默认值）。
+   */
+  defaultQuickPromptId: string;
+}
+
+/**
+ * 常用问题模板项。
+ */
+export interface ExtensionQuickPromptItem {
+  /**
+   * 模板唯一 id（本地生成，跨页面持久化）。
+   */
+  id: string;
+
+  /**
+   * 模板名称（用于下拉展示）。
+   */
+  title: string;
+
+  /**
+   * 模板正文（快速填入任务输入框）。
+   */
+  prompt: string;
 }
 
 /**
@@ -84,4 +124,49 @@ export interface StatusMessage {
    * 展示给用户的主消息。
    */
   text: string;
+}
+
+/**
+ * 当前页面发送记录。
+ */
+export interface ExtensionPageSendRecord {
+  /**
+   * 记录唯一 id（本地生成）。
+   */
+  id: string;
+
+  /**
+   * 页面 URL（标准化后，用于当前页面筛选）。
+   */
+  pageUrl: string;
+
+  /**
+   * 发送时页面标题快照。
+   */
+  pageTitle: string;
+
+  /**
+   * 发送目标 Agent id。
+   */
+  agentId: string;
+
+  /**
+   * 发送目标上下文（当前沿用 chatKey 字段名）。
+   */
+  chatKey: string;
+
+  /**
+   * 用户输入的任务说明快照。
+   */
+  taskPrompt: string;
+
+  /**
+   * 发送时附件文件名。
+   */
+  attachmentFileName: string;
+
+  /**
+   * 发送时间戳（毫秒）。
+   */
+  sentAt: number;
 }

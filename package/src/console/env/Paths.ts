@@ -242,6 +242,27 @@ export function getShipChatDirPath(cwd: string): string {
   return path.join(getShipDirPath(cwd), "chat");
 }
 
+/**
+ * Channel 目录（channel -> contextId 映射）。
+ *
+ * 关键点（中文）
+ * - 专门承载渠道目标与内部 contextId 的映射关系。
+ * - 与 `chat/` 审计事件目录分离，避免职责混淆。
+ */
+export function getShipChannelDirPath(cwd: string): string {
+  return path.join(getShipDirPath(cwd), "channel");
+}
+
+/**
+ * Channel 元信息文件路径。
+ *
+ * 关键点（中文）
+ * - 采用单文件 JSON（`meta.json`）存储映射表与最近路由信息。
+ */
+export function getShipChannelMetaPath(cwd: string): string {
+  return path.join(getShipChannelDirPath(cwd), "meta.json");
+}
+
 export function getShipChatMetaDirPath(cwd: string): string {
   return path.join(getShipChatDirPath(cwd), "meta");
 }

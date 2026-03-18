@@ -22,7 +22,6 @@ import { resolveAgentSystemMessages } from "@agent/prompts/system/SystemDomain.j
 import {
   TASK_RUN_DIR_REGEX,
   decodeMaybe,
-  executeByContextId,
   listContextSummaries,
   listTaskRuns,
   loadContextMessagesFromFile,
@@ -32,6 +31,7 @@ import {
   toOptionalString,
   toUiMessageTimeline,
 } from "./tui/Helpers.js";
+import { executeByContextId } from "./tui/ExecuteByContext.js";
 import type { TuiContextExecuteRequestBody } from "@/types/TuiContextExecute.js";
 import {
   getShipChatHistoryPath,
@@ -133,6 +133,7 @@ export function registerTuiApiRoutes(params: {
       const contextLimit = toLimit(c.req.query("contextLimit"), 20);
       const contexts = await listContextSummaries({
         projectRoot: runtime.rootPath,
+        serviceRuntime: params.getServiceRuntimeState(),
         limit: contextLimit,
       });
       const services = listServiceRuntimes();
@@ -188,6 +189,7 @@ export function registerTuiApiRoutes(params: {
       const limit = toLimit(c.req.query("limit"));
       const contexts = await listContextSummaries({
         projectRoot: runtime.rootPath,
+        serviceRuntime: params.getServiceRuntimeState(),
         limit,
       });
       const hasConsoleUiContext = contexts.some(
@@ -202,6 +204,7 @@ export function registerTuiApiRoutes(params: {
               updatedAt: Date.now(),
               lastRole: "system",
               lastText: "consoleui channel",
+              channel: "consoleui",
             },
             ...contexts,
           ];
@@ -479,6 +482,7 @@ export function registerTuiApiRoutes(params: {
 
       const result = await executeByContextId({
         runtime,
+        serviceRuntime: params.getServiceRuntimeState(),
         contextId,
         instructions,
         attachments: Array.isArray(body.attachments) ? body.attachments : undefined,

@@ -86,24 +86,16 @@ export function resolveChatContextSnapshot(input?: {
       ? requestCtx.requestId.trim()
       : readEnvString("SMA_CTX_REQUEST_ID")) || undefined;
 
-  const derivedFromChannel = deriveChatKeyFromSnapshot({
-    channel,
-    chatId,
-    messageThreadId,
-    chatType,
-  });
   const contextId =
     explicitContextId ||
     requestContextId ||
     envContextId ||
     explicitChatKey ||
-    envChatKey ||
-    derivedFromChannel;
+    envChatKey;
   const chatKey =
     explicitChatKey ||
     mapContextIdToChatKey(contextId) ||
-    envChatKey ||
-    derivedFromChannel;
+    envChatKey;
 
   const snapshot: ChatContextSnapshot = {
     ...(contextId ? { contextId } : {}),
@@ -121,53 +113,16 @@ export function resolveChatContextSnapshot(input?: {
 }
 
 /**
- * 从上下文快照派生 chatKey（当上游未显式给 chatKey 时）。
- *
- * 规则（中文）
- * - Telegram：`telegram-chat-<chatId>` / topic 场景 `telegram-chat-<chatId>-topic-<threadId>`
- * - Feishu：`feishu-chat-<chatId>`
- * - QQ：`qq-<chatType>-<chatId>`（chatType 缺失则无法派生）
- */
-function deriveChatKeyFromSnapshot(snapshot: ChatContextSnapshot): string | undefined {
-  const channel = String(snapshot.channel || "").trim().toLowerCase();
-  const chatId = String(snapshot.chatId || "").trim();
-  if (!channel || !chatId) return undefined;
-
-  if (channel === "telegram") {
-    const threadId =
-      typeof snapshot.messageThreadId === "number" &&
-      Number.isFinite(snapshot.messageThreadId)
-        ? snapshot.messageThreadId
-        : undefined;
-    if (typeof threadId === "number" && threadId > 0) {
-      return `telegram-chat-${chatId}-topic-${threadId}`;
-    }
-    return `telegram-chat-${chatId}`;
-  }
-
-  if (channel === "feishu") {
-    return `feishu-chat-${chatId}`;
-  }
-
-  if (channel === "qq") {
-    const chatType = String(snapshot.chatType || "").trim();
-    if (!chatType) return undefined;
-    return `qq-${chatType}-${chatId}`;
-  }
-
-  return undefined;
-}
-
-/**
  * 将 contextId 映射为可发送的 chatKey。
  *
  * 关键点（中文）
- * - 当前实现下：可分发的 chat contextId 与 chatKey 同值。
- * - 非聊天上下文（如 `api:chat:*`、task-run）返回 undefined。
+ * - 当前实现下：chat service 内部把 contextId 视作可发送 chatKey。
+ * - 不再依赖字符串规则推导（contextId 可为随机值）。
  */
 export function mapContextIdToChatKey(contextId?: string): string | undefined {
   const key = String(contextId || "").trim();
   if (!key) return undefined;
+  if (/^ctx_[A-Za-z0-9_-]+$/.test(key)) return key;
   return parseChatKeyForDispatch(key) ? key : undefined;
 }
 

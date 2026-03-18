@@ -2,7 +2,7 @@
 
 ## 能力范围
 - 负责飞书（Lark）消息事件接入与回发。
-- 入站消息映射为 `feishu-chat-<chatId>` 形式的 `chatKey/contextId`。
+- 入站消息会由 chat service 映射到内部 `contextId`（随机分配并持久化）。
 
 ## 使用约束
 - 在 direct 模式下，你输出的 assistant 文本会自动发送到当前飞书会话。

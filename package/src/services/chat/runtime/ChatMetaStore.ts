@@ -4,14 +4,18 @@
  * 关键点（中文）
  * - 入站消息到达时由 services/chat 写入
  * - 出站按 contextId/chatKey 发送时由 services/chat 读取
- * - 与 core context messages 解耦，避免平台细节下沉到 core
+ * - 底层数据落在 `.ship/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 
-import fs from "fs-extra";
-import { getShipChatMetaDirPath, getShipChatMetaPath } from "@/console/env/Paths.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import {
+  readChannelContextRouteByContextId,
+  resolveChannelContextIdByTarget,
+  resolveOrCreateChannelContextIdByTarget,
+  upsertChannelContextRouteByContextId,
+} from "./ChannelContextStore.js";
 
 function normalizeContextId(contextId: string): string {
   return String(contextId || "").trim();
@@ -28,45 +32,25 @@ export async function readChatMetaByContextId(params: {
   context: ServiceRuntime;
   contextId: string;
 }): Promise<ChatMetaV1 | null> {
-  const rootPath = String(params.context.rootPath || "").trim();
   const contextId = normalizeContextId(params.contextId);
-  if (!rootPath || !contextId) return null;
-
-  const file = getShipChatMetaPath(rootPath, contextId);
-  try {
-    const raw = (await fs.readJson(file)) as Partial<ChatMetaV1> | null;
-    if (!raw || typeof raw !== "object") return null;
-    const channel = raw.channel;
-    const chatId = normalizeChatId(String(raw.chatId || ""));
-    if (!channel || !chatId) return null;
-    return {
-      v: 1,
-      updatedAt:
-        typeof raw.updatedAt === "number" && Number.isFinite(raw.updatedAt)
-          ? raw.updatedAt
-          : 0,
-      contextId,
-      channel,
-      chatId,
-      ...(typeof raw.targetType === "string" && raw.targetType.trim()
-        ? { targetType: raw.targetType.trim() }
-        : {}),
-      ...(typeof raw.threadId === "number" && Number.isFinite(raw.threadId)
-        ? { threadId: raw.threadId }
-        : {}),
-      ...(typeof raw.messageId === "string" && raw.messageId.trim()
-        ? { messageId: raw.messageId.trim() }
-        : {}),
-      ...(typeof raw.actorId === "string" && raw.actorId.trim()
-        ? { actorId: raw.actorId.trim() }
-        : {}),
-      ...(typeof raw.actorName === "string" && raw.actorName.trim()
-        ? { actorName: raw.actorName.trim() }
-        : {}),
-    };
-  } catch {
-    return null;
-  }
+  if (!contextId) return null;
+  const route = await readChannelContextRouteByContextId({
+    context: params.context,
+    contextId,
+  });
+  if (!route) return null;
+  return {
+    v: 1,
+    updatedAt: route.updatedAt,
+    contextId: route.contextId,
+    channel: route.channel,
+    chatId: route.chatId,
+    ...(route.targetType ? { targetType: route.targetType } : {}),
+    ...(typeof route.threadId === "number" ? { threadId: route.threadId } : {}),
+    ...(route.messageId ? { messageId: route.messageId } : {}),
+    ...(route.actorId ? { actorId: route.actorId } : {}),
+    ...(route.actorName ? { actorName: route.actorName } : {}),
+  };
 }
 
 /**
@@ -83,40 +67,66 @@ export async function upsertChatMetaByContextId(params: {
   actorId?: string;
   actorName?: string;
 }): Promise<void> {
-  const rootPath = String(params.context.rootPath || "").trim();
   const contextId = normalizeContextId(params.contextId);
   const chatId = normalizeChatId(params.chatId);
-  if (!rootPath || !contextId || !chatId) return;
-
-  const dir = getShipChatMetaDirPath(rootPath);
-  const file = getShipChatMetaPath(rootPath, contextId);
-  const payload: ChatMetaV1 = {
-    v: 1,
-    updatedAt: Date.now(),
+  if (!contextId || !chatId) return;
+  await upsertChannelContextRouteByContextId({
+    context: params.context,
     contextId,
-    channel: params.channel,
-    chatId,
-    ...(typeof params.targetType === "string" && params.targetType.trim()
-      ? { targetType: params.targetType.trim() }
-      : {}),
-    ...(typeof params.threadId === "number" && Number.isFinite(params.threadId)
-      ? { threadId: params.threadId }
-      : {}),
-    ...(typeof params.messageId === "string" && params.messageId.trim()
-      ? { messageId: params.messageId.trim() }
-      : {}),
-    ...(typeof params.actorId === "string" && params.actorId.trim()
-      ? { actorId: params.actorId.trim() }
-      : {}),
-    ...(typeof params.actorName === "string" && params.actorName.trim()
-      ? { actorName: params.actorName.trim() }
-      : {}),
-  };
+    target: {
+      channel: params.channel,
+      chatId,
+      ...(typeof params.targetType === "string" ? { targetType: params.targetType } : {}),
+      ...(typeof params.threadId === "number" ? { threadId: params.threadId } : {}),
+    },
+    messageId: params.messageId,
+    actorId: params.actorId,
+    actorName: params.actorName,
+  });
+}
 
-  try {
-    await fs.ensureDir(dir);
-    await fs.writeJson(file, payload, { spaces: 2 });
-  } catch {
-    // ignore
-  }
+/**
+ * 通过渠道目标查找已有 contextId。
+ */
+export async function resolveContextIdByChatTarget(params: {
+  context: ServiceRuntime;
+  channel: ChatDispatchChannel;
+  chatId: string;
+  targetType?: string;
+  threadId?: number;
+}): Promise<string | null> {
+  const chatId = normalizeChatId(params.chatId);
+  if (!chatId) return null;
+  return await resolveChannelContextIdByTarget({
+    context: params.context,
+    target: {
+      channel: params.channel,
+      chatId,
+      ...(typeof params.targetType === "string" ? { targetType: params.targetType } : {}),
+      ...(typeof params.threadId === "number" ? { threadId: params.threadId } : {}),
+    },
+  });
+}
+
+/**
+ * 通过渠道目标解析或创建 contextId。
+ */
+export async function resolveOrCreateContextIdByChatTarget(params: {
+  context: ServiceRuntime;
+  channel: ChatDispatchChannel;
+  chatId: string;
+  targetType?: string;
+  threadId?: number;
+}): Promise<string | null> {
+  const chatId = normalizeChatId(params.chatId);
+  if (!chatId) return null;
+  return await resolveOrCreateChannelContextIdByTarget({
+    context: params.context,
+    target: {
+      channel: params.channel,
+      chatId,
+      ...(typeof params.targetType === "string" ? { targetType: params.targetType } : {}),
+      ...(typeof params.threadId === "number" ? { threadId: params.threadId } : {}),
+    },
+  });
 }

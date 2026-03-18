@@ -9,7 +9,13 @@ import type { Logger } from "@utils/logger/Logger.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
-import { upsertChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
+import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
+import {
+  readChatMetaByContextId,
+  resolveContextIdByChatTarget,
+  resolveOrCreateContextIdByChatTarget,
+  upsertChatMetaByContextId,
+} from "@services/chat/runtime/ChatMetaStore.js";
 import {
   appendInboundChatHistory,
   appendOutboundChatHistory,
@@ -29,67 +35,6 @@ function stripUndefinedMeta(meta: ChannelUserMessageMeta): JsonObject {
     if (v !== undefined) out[k] = v;
   }
   return out;
-}
-
-/**
- * 规范化 `<info>` 字段值，避免换行/标签字符破坏结构。
- */
-function normalizeInfoValue(value: unknown): string {
-  const text = String(value ?? "").replace(/\r?\n/g, " ").trim();
-  if (!text) return "";
-  return text.replace(/</g, "&#60;").replace(/>/g, "&#62;");
-}
-
-/**
- * 规范化 master 状态文本，写入 `<info>`。
- */
-function formatIsMaster(status: ChatMasterStatus): "yes" | "no" | "unknown" {
-  if (status === "master") return "yes";
-  if (status === "guest") return "no";
-  return "unknown";
-}
-
-/**
- * 构造“入队 user message”文本：
- * - 顶部 `<info>...</info>`：供 Agent 了解上下文元信息
- * - 下方正文：用户原始消息
- *
- * 关键点（中文）
- * - 仅用于执行类入队（exec），确保模型始终能读取统一元信息。
- * - `<info>` 是内部语义，不应在对外回复中原样复述。
- */
-function buildQueuedUserMessageWithInfo(params: {
-  channel: ChatDispatchChannel;
-  contextId: string;
-  chatKey: string;
-  chatId: string;
-  chatType?: string;
-  threadId?: number;
-  messageId?: string;
-  userId?: string;
-  username?: string;
-  masterStatus: ChatMasterStatus;
-  text: string;
-}): string {
-  const infoLines = [
-    `channel: ${normalizeInfoValue(params.channel)}`,
-    `context_id: ${normalizeInfoValue(params.contextId)}`,
-    `chat_key: ${normalizeInfoValue(params.chatKey)}`,
-    `chat_id: ${normalizeInfoValue(params.chatId)}`,
-    `chat_type: ${normalizeInfoValue(params.chatType || "unknown")}`,
-    `thread_id: ${normalizeInfoValue(
-      typeof params.threadId === "number" ? String(params.threadId) : "none",
-    )}`,
-    `message_id: ${normalizeInfoValue(params.messageId || "unknown")}`,
-    `user_id: ${normalizeInfoValue(params.userId || "unknown")}`,
-    `username: ${normalizeInfoValue(params.username || "unknown")}`,
-    `is_master: ${normalizeInfoValue(formatIsMaster(params.masterStatus))}`,
-    `received_at: ${new Date().toISOString()}`,
-  ];
-  const infoBlock = `<info>\n${infoLines.join("\n")}\n</info>`;
-  const body = String(params.text ?? "").trim();
-  if (!body) return infoBlock;
-  return `${infoBlock}\n\n${body}`;
 }
 
 /**
@@ -195,6 +140,30 @@ export abstract class BaseChatChannel {
   }
 
   /**
+   * 通过渠道目标解析或创建 contextId。
+   *
+   * 关键点（中文）
+   * - contextId 由映射存储维护，不能通过字符串规则推导。
+   */
+  private async resolveOrCreateContextIdByTarget(params: {
+    chatId: string;
+    chatType?: string;
+    messageThreadId?: number;
+  }): Promise<string | null> {
+    const chatId = String(params.chatId || "").trim();
+    if (!chatId) return null;
+    return await resolveOrCreateContextIdByChatTarget({
+      context: this.context,
+      channel: this.channel,
+      chatId,
+      ...(typeof params.chatType === "string" ? { targetType: params.chatType } : {}),
+      ...(typeof params.messageThreadId === "number"
+        ? { threadId: params.messageThreadId }
+        : {}),
+    });
+  }
+
+  /**
    * 在工具侧文本发送成功后补齐 outbound history。
    *
    * 关键点（中文）
@@ -208,12 +177,12 @@ export abstract class BaseChatChannel {
     const text = String(params.text ?? "");
     if (!chatId || !text.trim()) return;
 
-    const contextId = this.getChatKey({
+    const contextId = await this.resolveOrCreateContextIdByTarget({
       chatId,
       chatType: params.chatType,
       messageThreadId: params.messageThreadId,
-      messageId: params.messageId,
     });
+    if (!contextId) return;
 
     try {
       await appendOutboundChatHistory({
@@ -328,6 +297,33 @@ export abstract class BaseChatChannel {
   }
 
   /**
+   * 按渠道目标清理会话（映射到内部 contextId）。
+   */
+  protected async clearChatByTarget(params: ChannelChatKeyParams): Promise<void> {
+    const chatId = String(params.chatId || "").trim();
+    if (!chatId) return;
+    const contextId = await resolveContextIdByChatTarget({
+      context: this.context,
+      channel: this.channel,
+      chatId,
+      ...(typeof params.chatType === "string" ? { targetType: params.chatType } : {}),
+      ...(typeof params.messageThreadId === "number"
+        ? { threadId: params.messageThreadId }
+        : {}),
+    });
+    if (!contextId) {
+      this.logger.info("Skip clear chat: context mapping not found", {
+        channel: this.channel,
+        chatId,
+        chatType: params.chatType,
+        messageThreadId: params.messageThreadId,
+      });
+      return;
+    }
+    this.clearChat(contextId);
+  }
+
+  /**
    * 维护 contextId 对应的 chat 路由元信息。
    *
    * 关键点（中文）
@@ -423,9 +419,32 @@ export abstract class BaseChatChannel {
         ? meta.messageThreadId
         : undefined;
     const chatType = typeof meta.chatType === "string" ? meta.chatType : undefined;
+    const contextIdHint = String(params.chatKey || "").trim();
+    let contextId = "";
+    if (contextIdHint) {
+      const mapped = await readChatMetaByContextId({
+        context: this.context,
+        contextId: contextIdHint,
+      });
+      if (mapped) {
+        contextId = mapped.contextId;
+      }
+    }
+    if (!contextId) {
+      const resolved = await this.resolveOrCreateContextIdByTarget({
+        chatId: params.chatId,
+        chatType,
+        messageThreadId,
+      });
+      contextId = String(resolved || "").trim();
+    }
+    if (!contextId && contextIdHint) {
+      contextId = contextIdHint;
+    }
+    if (!contextId) return;
     const extra = stripUndefinedMeta(meta);
     await this.appendInboundHistory({
-      contextId: params.chatKey,
+      contextId,
       chatId: params.chatId,
       ingressKind: "audit",
       text: params.text,
@@ -437,7 +456,7 @@ export abstract class BaseChatChannel {
       extra,
     });
     await this.updateChatMeta({
-      contextId: params.chatKey,
+      contextId,
       chatId: params.chatId,
       targetType: chatType,
       threadId: messageThreadId,
@@ -449,7 +468,7 @@ export abstract class BaseChatChannel {
       kind: "audit",
       channel: this.channel,
       targetId: params.chatId,
-      contextId: params.chatKey,
+      contextId,
       actorId: params.userId,
       actorName: username,
       messageId: params.messageId,
@@ -485,12 +504,14 @@ export abstract class BaseChatChannel {
       ...(masterStatus === "guest" ? { isMaster: false } : {}),
     };
 
-    const chatKey = this.getChatKey({
+    const chatKey = await this.resolveOrCreateContextIdByTarget({
       chatId: msg.chatId,
       chatType: msg.chatType,
       messageThreadId: msg.messageThreadId,
-      messageId: msg.messageId,
     });
+    if (!chatKey) {
+      throw new Error("Failed to resolve contextId for incoming chat message");
+    }
 
     const queuedText = buildQueuedUserMessageWithInfo({
       channel: this.channel,

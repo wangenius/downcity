@@ -69,10 +69,10 @@ export function parseChatKeyForDispatch(chatKey: string): {
  * 解析实际分发目标。
  *
  * 规则（中文）
- * - 优先显式 chatKey 解析结果
- * - parse 失败时回退到 services/chat 维护的 chat meta
+ * - 优先读取 services/chat 维护的 context 路由映射
+ * - 若映射不存在，再尝试解析 legacy chatKey 文本规则
  */
-async function resolveDispatchTarget(params: {
+export async function resolveDispatchTargetByChatKey(params: {
   context: ServiceRuntime;
   chatKey: string;
 }): Promise<{
@@ -82,14 +82,14 @@ async function resolveDispatchTarget(params: {
   messageThreadId?: number;
   messageId?: string;
 } | null> {
-  const parsed = parseChatKeyForDispatch(params.chatKey);
   const storedMeta = await readChatMetaByContextId({
     context: params.context,
     contextId: params.chatKey,
   });
+  const parsed = parseChatKeyForDispatch(params.chatKey);
 
-  const channel = parsed?.channel || storedMeta?.channel;
-  const chatId = String(parsed?.chatId || storedMeta?.chatId || "").trim();
+  const channel = storedMeta?.channel || parsed?.channel;
+  const chatId = String(storedMeta?.chatId || parsed?.chatId || "").trim();
   if (!channel || !chatId) return null;
 
   const chatType =
@@ -140,7 +140,7 @@ export async function sendTextByChatKey(params: {
   if (!chatKey) return { success: false, error: "Missing chatKey" };
   if (!text.trim()) return { success: true };
 
-  const target = await resolveDispatchTarget({ context, chatKey });
+  const target = await resolveDispatchTargetByChatKey({ context, chatKey });
   if (!target) {
     return {
       success: false,
@@ -206,7 +206,7 @@ export async function sendActionByChatKey(params: {
   if (!chatKey) return { success: false, error: "Missing chatKey" };
   if (!params.action) return { success: false, error: "Missing action" };
 
-  const target = await resolveDispatchTarget({ context, chatKey });
+  const target = await resolveDispatchTargetByChatKey({ context, chatKey });
   if (!target) {
     return {
       success: false,

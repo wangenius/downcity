@@ -2,25 +2,43 @@
  * Popup 主界面。
  *
  * 关键点（中文）：
- * - 支持选择 Agent、选择 chatKey、补充任务说明。
- * - 发送前先把当前页面正文转换为 Markdown 附件。
- * - 投递成功后关闭 popup，执行结果在所选 chatKey 会话查看。
+ * - popup 只保留发送主流程，设置项统一迁移到独立 options 页面。
+ * - 顶部状态点用于提示当前状态，避免打断主操作。
+ * - 支持常用问题模板快速填入，减少重复输入。
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type SetStateAction,
+} from "react";
 import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
 import type {
   ActiveTabContext,
+  ExtensionPageSendRecord,
+  ExtensionQuickPromptItem,
   ExtensionSettings,
   StatusMessage,
 } from "../types/extension";
 import {
+  buildConsoleBaseUrl,
   dispatchAgentTask,
   fetchAgents,
   fetchChatKeyOptions,
 } from "../services/shipmyagentApi";
 import { buildPageMarkdownSnapshot } from "../services/pageMarkdown";
-import { DEFAULT_SETTINGS, loadSettings, saveSettings } from "../services/storage";
+import {
+  appendPageSendRecord,
+  DEFAULT_SETTINGS,
+  loadPageSendRecords,
+  loadSettings,
+  saveSettings,
+} from "../services/storage";
 import { getActiveTabContext } from "../services/tab";
 
 function readErrorText(error: unknown): string {
@@ -28,27 +46,36 @@ function readErrorText(error: unknown): string {
   return String(error || "未知错误");
 }
 
+function resolveConsoleBaseUrl(settings: ExtensionSettings): {
+  baseUrl: string;
+  errorText?: string;
+} {
+  try {
+    return {
+      baseUrl: buildConsoleBaseUrl({
+        host: settings.consoleHost,
+        port: settings.consolePort,
+      }),
+    };
+  } catch (error) {
+    return {
+      baseUrl: "",
+      errorText: readErrorText(error),
+    };
+  }
+}
+
 function buildInstructions(params: {
   tab: ActiveTabContext;
   taskPrompt: string;
-  chatKey: string;
   markdownFileName: string;
 }): string {
-  const safeUrl = params.tab.url || "（当前页面 URL 不可用）";
+  const safeUrl = params.tab.url || "N/A";
+  const userPrompt = String(params.taskPrompt || "").trim();
   return [
-    "你收到一个来自 Chrome 插件的网页分享任务。",
-    `页面标题：${params.tab.title}`,
-    `页面链接：${safeUrl}`,
-    `页面正文附件：${params.markdownFileName}`,
-    `当前会话 chatKey：${params.chatKey}`,
-    "",
-    "用户补充要求：",
-    params.taskPrompt.trim(),
-    "",
-    "执行要求：",
-    "1) 先阅读附件中的 Markdown 正文，再进行分析。",
-    "2) 最终结果直接回复在当前会话，不要切换到其他 channel / chatKey。",
-    "3) 若附件内容与页面标题冲突，以附件正文为准。",
+    `附件：${params.markdownFileName}`,
+    `原文链接：${safeUrl}`,
+    `用户要求：${userPrompt || "请阅读附件并按需求处理。"}`,
   ].join("\n");
 }
 
@@ -90,6 +117,21 @@ function shortenUrl(value: string): string {
   return `${text.slice(0, 63)}...`;
 }
 
+function shortenText(value: string, maxChars: number): string {
+  const text = String(value || "").trim();
+  if (!text) return "（无任务说明）";
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, Math.max(0, maxChars - 3))}...`;
+}
+
+function formatSentTime(timestamp: number): string {
+  const value = Number(timestamp);
+  if (!Number.isFinite(value) || Number.isNaN(value)) return "未知时间";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "未知时间";
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
+
 function resolveLinkedChannels(
   agent: ConsoleUiAgentOption | null | undefined,
 ): Set<"telegram" | "feishu" | "qq"> {
@@ -106,8 +148,32 @@ function resolveLinkedChannels(
   return out;
 }
 
+function clearChatLoadRelatedErrorStatus(
+  setStatus: Dispatch<SetStateAction<StatusMessage>>,
+): void {
+  setStatus((prev) => {
+    if (prev.type !== "error") return prev;
+    if (!/chatkey|channel\s*chat|会话|chat\s*渠道|已连接渠道/i.test(String(prev.text || ""))) {
+      return prev;
+    }
+    return { type: "idle", text: "准备就绪" };
+  });
+}
+
+function getQuickPromptById(
+  prompts: ExtensionQuickPromptItem[],
+  id: string,
+): ExtensionQuickPromptItem | null {
+  const normalizedId = String(id || "").trim();
+  if (!normalizedId) return null;
+  return prompts.find((item) => item.id === normalizedId) || null;
+}
+
 export function App() {
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
+  const [selectedQuickPromptId, setSelectedQuickPromptId] = useState("");
+
   const [tab, setTab] = useState<ActiveTabContext>({
     tabId: null,
     title: "加载中...",
@@ -115,40 +181,71 @@ export function App() {
   });
   const [agents, setAgents] = useState<ConsoleUiAgentOption[]>([]);
   const [chatKeyOptions, setChatKeyOptions] = useState<ChatKeyOption[]>([]);
+  const [pageSendRecords, setPageSendRecords] = useState<ExtensionPageSendRecord[]>([]);
+
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChatKeys, setIsLoadingChatKeys] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isConsoleOnline, setIsConsoleOnline] = useState(false);
   const [status, setStatus] = useState<StatusMessage>({
     type: "idle",
     text: "准备就绪",
   });
 
+  const consoleEndpoint = useMemo(
+    () => resolveConsoleBaseUrl(settings),
+    [settings],
+  );
+  const consoleBaseUrl = consoleEndpoint.baseUrl;
+
   const selectedAgent = useMemo(
     () => agents.find((item) => item.id === settings.agentId) || null,
     [agents, settings.agentId],
-  );
-
-  const selectedChatKeyOption = useMemo(
-    () => chatKeyOptions.find((item) => item.chatKey === settings.chatKey) || null,
-    [chatKeyOptions, settings.chatKey],
   );
   const linkedChannels = useMemo(
     () => resolveLinkedChannels(selectedAgent),
     [selectedAgent],
   );
+  const selectedQuickPrompt = useMemo(
+    () => getQuickPromptById(settings.quickPrompts, selectedQuickPromptId),
+    [settings.quickPrompts, selectedQuickPromptId],
+  );
 
-  const refreshAgents = useCallback(async (preferredAgentId: string) => {
+  const refreshPageSendHistory = useCallback(async (pageUrl: string) => {
+    const safeUrl = String(pageUrl || "").trim();
+    if (!safeUrl) {
+      setPageSendRecords([]);
+      return;
+    }
+    try {
+      const records = await loadPageSendRecords({ pageUrl: safeUrl, limit: 8 });
+      setPageSendRecords(records);
+    } catch {
+      setPageSendRecords([]);
+    }
+  }, []);
+
+  const refreshAgents = useCallback(async (params: {
+    preferredAgentId: string;
+    consoleBaseUrl: string;
+  }) => {
+    if (!params.consoleBaseUrl) {
+      setStatus({
+        type: "error",
+        text: "Console 地址无效，请在设置页检查目标 IP 与端口",
+      });
+      return;
+    }
     setIsLoadingAgents(true);
     try {
-      const payload = await fetchAgents();
-      setIsConsoleOnline(true);
+      const payload = await fetchAgents({
+        consoleBaseUrl: params.consoleBaseUrl,
+      });
       const list = payload.agents || [];
       setAgents(list);
 
       const nextAgentId = resolveAgentId({
         agents: list,
-        preferredAgentId,
+        preferredAgentId: params.preferredAgentId,
         selectedAgentId: payload.selectedAgentId,
       });
 
@@ -163,7 +260,6 @@ export function App() {
         setStatus({ type: "idle", text: "Agent 列表已刷新" });
       }
     } catch (error) {
-      setIsConsoleOnline(false);
       setStatus({
         type: "error",
         text: `加载 Agent 失败：${readErrorText(error)}`,
@@ -178,17 +274,28 @@ export function App() {
       agentId: string,
       preferredChatKey: string,
       allowedChannels: Set<"telegram" | "feishu" | "qq">,
+      baseUrl: string,
     ) => {
+      if (!baseUrl) {
+        setChatKeyOptions([]);
+        setSettings((prev) => ({ ...prev, chatKey: "" }));
+        clearChatLoadRelatedErrorStatus(setStatus);
+        return;
+      }
+
       const normalizedAgentId = String(agentId || "").trim();
       if (!normalizedAgentId) {
         setChatKeyOptions([]);
         setSettings((prev) => ({ ...prev, chatKey: "" }));
+        clearChatLoadRelatedErrorStatus(setStatus);
         return;
       }
 
       setIsLoadingChatKeys(true);
       try {
-        const options = await fetchChatKeyOptions(normalizedAgentId);
+        const options = await fetchChatKeyOptions(normalizedAgentId, {
+          consoleBaseUrl: baseUrl,
+        });
         const filtered =
           allowedChannels.size > 0
             ? options.filter((item) => allowedChannels.has(item.channel))
@@ -202,25 +309,24 @@ export function App() {
         }));
 
         if (allowedChannels.size === 0) {
-          setStatus({
-            type: "error",
-            text: "该 Agent 暂无已连接的 chat 渠道。",
-          });
+          clearChatLoadRelatedErrorStatus(setStatus);
           return;
         }
 
         if (filtered.length === 0) {
           setStatus({
             type: "error",
-            text: "已连接渠道中暂无可用 chatKey，请先让该渠道收到过消息。",
+            text: "已连接渠道中暂无可用 Channel Chat，请先让该渠道收到过消息。",
           });
+          return;
         }
+        clearChatLoadRelatedErrorStatus(setStatus);
       } catch (error) {
         setChatKeyOptions([]);
         setSettings((prev) => ({ ...prev, chatKey: "" }));
         setStatus({
           type: "error",
-          text: `加载 chatKey 失败：${readErrorText(error)}`,
+          text: `加载 Channel Chat 失败：${readErrorText(error)}`,
         });
       } finally {
         setIsLoadingChatKeys(false);
@@ -243,7 +349,24 @@ export function App() {
         setSettings(saved);
         setTab(activeTab);
 
-        await refreshAgents(saved.agentId);
+        const preferredQuickPromptId =
+          saved.defaultQuickPromptId || saved.quickPrompts[0]?.id || "";
+        setSelectedQuickPromptId(preferredQuickPromptId);
+
+        const endpoint = resolveConsoleBaseUrl(saved);
+        if (!endpoint.baseUrl) {
+          setStatus({
+            type: "error",
+            text: endpoint.errorText || "Console 地址无效，请在设置页检查配置",
+          });
+        } else {
+          await refreshAgents({
+            preferredAgentId: saved.agentId,
+            consoleBaseUrl: endpoint.baseUrl,
+          });
+        }
+
+        await refreshPageSendHistory(activeTab.url);
       } catch (error) {
         if (!isMounted) return;
         setStatus({
@@ -256,11 +379,71 @@ export function App() {
     return () => {
       isMounted = false;
     };
-  }, [refreshAgents]);
+  }, [refreshAgents, refreshPageSendHistory]);
 
   useEffect(() => {
-    void refreshChatKeys(settings.agentId, settings.chatKey, linkedChannels);
-  }, [settings.agentId, refreshChatKeys, linkedChannels]);
+    void refreshChatKeys(
+      settings.agentId,
+      settings.chatKey,
+      linkedChannels,
+      consoleBaseUrl,
+    );
+  }, [
+    settings.agentId,
+    settings.chatKey,
+    linkedChannels,
+    refreshChatKeys,
+    consoleBaseUrl,
+  ]);
+
+  useEffect(() => {
+    void refreshPageSendHistory(tab.url);
+  }, [tab.url, refreshPageSendHistory]);
+
+  useEffect(() => {
+    if (settings.quickPrompts.length === 0) {
+      setSelectedQuickPromptId("");
+      return;
+    }
+    const exists = settings.quickPrompts.some((item) => item.id === selectedQuickPromptId);
+    if (exists) return;
+    setSelectedQuickPromptId(settings.defaultQuickPromptId || settings.quickPrompts[0].id);
+  }, [selectedQuickPromptId, settings.defaultQuickPromptId, settings.quickPrompts]);
+
+  const openSettingsPage = useCallback(() => {
+    if (typeof chrome.runtime.openOptionsPage === "function") {
+      chrome.runtime.openOptionsPage(() => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          setStatus({ type: "error", text: `打开设置页失败：${error.message}` });
+          return;
+        }
+        setStatus({ type: "idle", text: "已打开设置页" });
+      });
+      return;
+    }
+
+    chrome.tabs.create({ url: chrome.runtime.getURL("options.html") }, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        setStatus({ type: "error", text: `打开设置页失败：${error.message}` });
+        return;
+      }
+      setStatus({ type: "idle", text: "已打开设置页" });
+    });
+  }, []);
+
+  const applySelectedQuickPrompt = useCallback(() => {
+    if (!selectedQuickPrompt) {
+      setStatus({ type: "error", text: "请先选择常用问题模板" });
+      return;
+    }
+    setSettings((prev) => ({
+      ...prev,
+      taskPrompt: selectedQuickPrompt.prompt,
+    }));
+    setStatus({ type: "idle", text: `已填入模板：${selectedQuickPrompt.title}` });
+  }, [selectedQuickPrompt]);
 
   const onSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -269,6 +452,7 @@ export function App() {
       const agentId = String(settings.agentId || "").trim();
       const chatKey = String(settings.chatKey || "").trim();
       const taskPrompt = String(settings.taskPrompt || "").trim();
+      const activeConsoleBaseUrl = resolveConsoleBaseUrl(settings).baseUrl;
 
       if (!agentId) {
         setStatus({ type: "error", text: "请选择目标 Agent" });
@@ -279,15 +463,22 @@ export function App() {
         return;
       }
       if (!chatKey) {
-        setStatus({ type: "error", text: "请选择 chatKey" });
+        setStatus({ type: "error", text: "请选择 Channel Chat" });
         return;
       }
       if (!taskPrompt) {
         setStatus({ type: "error", text: "任务说明不能为空" });
         return;
       }
+      if (!activeConsoleBaseUrl) {
+        setStatus({ type: "error", text: "Console 地址无效，请在设置页检查目标 IP 与端口" });
+        return;
+      }
 
       const nextSettings: ExtensionSettings = {
+        ...settings,
+        consoleHost: String(settings.consoleHost || "").trim(),
+        consolePort: Number(settings.consolePort),
         agentId,
         chatKey,
         taskPrompt,
@@ -302,14 +493,14 @@ export function App() {
         const markdownSnapshot = await buildPageMarkdownSnapshot(tab);
         setStatus({ type: "loading", text: "正在上传 Markdown 附件..." });
 
-        await dispatchAgentTask({
+        const accepted = dispatchAgentTask({
+          consoleBaseUrl: activeConsoleBaseUrl,
           agentId,
           contextId: chatKey,
           body: {
             instructions: buildInstructions({
               tab,
               taskPrompt,
-              chatKey,
               markdownFileName: markdownSnapshot.fileName,
             }),
             attachments: [
@@ -323,46 +514,73 @@ export function App() {
             ],
           },
         });
+        if (!accepted) {
+          throw new Error("任务投递失败，请稍后重试");
+        }
 
-        // 关键点（中文）：用户只关心“提交成功”，无需等待执行完成。
-        window.close();
+        try {
+          await appendPageSendRecord({
+            pageUrl: tab.url,
+            pageTitle: tab.title,
+            agentId,
+            chatKey,
+            taskPrompt,
+            attachmentFileName: markdownSnapshot.fileName,
+          });
+          await refreshPageSendHistory(tab.url);
+        } catch {
+          // ignore local history failures
+        }
+
+        setStatus({ type: "success", text: "已发送，任务已进入队列。" });
       } catch (error) {
         setStatus({
           type: "error",
           text: `发送失败：${readErrorText(error)}`,
         });
+      } finally {
         setIsSubmitting(false);
       }
     },
-    [selectedAgent?.running, settings, tab],
+    [refreshPageSendHistory, selectedAgent?.running, settings, tab],
+  );
+
+  const onTaskPromptKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.nativeEvent.isComposing) return;
+      if (event.key !== "Enter") return;
+      if (!event.metaKey && !event.ctrlKey) return;
+      event.preventDefault();
+      if (isSubmitting) return;
+      formRef.current?.requestSubmit();
+    },
+    [isSubmitting],
   );
 
   return (
     <main className="popup-root">
       <header className="header-card">
-        <div>
+        <div className="brand-block">
+          <img className="brand-logo" src="/icon-32.png" alt="ShipMyAgent logo" />
           <h1>ShipMyAgent Share</h1>
         </div>
-        <div className="inline-status-group">
-          <span className={`status-pill ${isConsoleOnline ? "ok" : "warn"}`}>
-            {isConsoleOnline ? "Console UI Online" : "Console UI Offline"}
-          </span>
-          <span className={`status-pill ${selectedAgent?.running ? "ok" : "warn"}`}>
-            {selectedAgent?.running ? "Agent Online" : "Agent Offline"}
-          </span>
-        </div>
+        <button
+          className="ghost-btn settings-btn"
+          type="button"
+          onClick={openSettingsPage}
+          disabled={isSubmitting}
+        >
+          设置
+        </button>
       </header>
 
-      <section className="page-card" aria-label="当前页面信息">
-        <div className="section-label">Current Page</div>
-        <div className="page-title">{tab.title}</div>
-        <a href={tab.url || "#"} title={tab.url} className="page-link">
-          {shortenUrl(tab.url)}
-        </a>
-      </section>
+      <div className={`status-inline status-${status.type}`} aria-live="polite">
+        <span className="status-dot" />
+        <span>{status.text}</span>
+      </div>
 
-      <form className="share-form" onSubmit={onSubmit}>
-        <div className="field-row">
+      <form ref={formRef} className="share-form" onSubmit={onSubmit}>
+        <section className="selector-grid" aria-label="目标选择">
           <label>
             Agent
             <select
@@ -384,19 +602,9 @@ export function App() {
               ))}
             </select>
           </label>
-          <button
-            className="ghost-btn"
-            type="button"
-            onClick={() => void refreshAgents(settings.agentId)}
-            disabled={isLoadingAgents || isSubmitting}
-          >
-            {isLoadingAgents ? "刷新中" : "刷新"}
-          </button>
-        </div>
 
-        <div className="field-row">
           <label>
-            chatKey
+            Channel Chat
             <select
               value={settings.chatKey}
               onChange={(event) =>
@@ -405,9 +613,11 @@ export function App() {
                   chatKey: event.target.value,
                 }))
               }
-              disabled={chatKeyOptions.length === 0}
+              disabled={chatKeyOptions.length === 0 || isLoadingChatKeys}
             >
-              <option value="">请选择 chatKey</option>
+              <option value="">
+                {isLoadingChatKeys ? "加载 Channel Chat 中..." : "请选择 Channel Chat"}
+              </option>
               {chatKeyOptions.map((option) => (
                 <option key={option.chatKey} value={option.chatKey}>
                   {option.title}
@@ -415,41 +625,79 @@ export function App() {
               ))}
             </select>
           </label>
-          <button
-            className="ghost-btn"
-            type="button"
-            onClick={() =>
-              void refreshChatKeys(settings.agentId, settings.chatKey, linkedChannels)
-            }
-            disabled={isLoadingChatKeys || isSubmitting || !settings.agentId}
-          >
-            {isLoadingChatKeys ? "刷新中" : "刷新"}
-          </button>
-        </div>
+        </section>
 
-        <div className="hint-text">
-          {selectedChatKeyOption?.subtitle ||
-            "仅展示已连接渠道的 chatKey（自动过滤未连接 channel）"}
-        </div>
+        <section className="compose-card" aria-label="页面与任务输入">
+          <div className="compose-header">
+            <div className="compose-quote-mark">“</div>
+            <div className="compose-meta">
+              <div className="page-title" title={tab.title}>
+                {tab.title || "（未获取到页面标题）"}
+              </div>
+              <a href={tab.url || "#"} title={tab.url} className="page-link">
+                {shortenUrl(tab.url)}
+              </a>
+            </div>
+          </div>
 
-        <label>
-          任务说明
-          <textarea
-            rows={5}
-            value={settings.taskPrompt}
-            onChange={(event) =>
-              setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
-            }
-            placeholder="例如：提炼这篇页面内容，给我 3 条可执行建议。"
-          />
-        </label>
+          <div className="quick-row" aria-label="常用问题模板">
+            <select
+              value={selectedQuickPromptId}
+              onChange={(event) => setSelectedQuickPromptId(event.target.value)}
+              disabled={settings.quickPrompts.length === 0}
+            >
+              <option value="">{settings.quickPrompts.length > 0 ? "选择常用问题" : "暂无模板"}</option>
+              {settings.quickPrompts.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+            <button
+              className="ghost-btn"
+              type="button"
+              onClick={applySelectedQuickPrompt}
+              disabled={!selectedQuickPrompt}
+            >
+              快速填入
+            </button>
+          </div>
+
+          <label className="compose-label">
+            <textarea
+              rows={5}
+              value={settings.taskPrompt}
+              onChange={(event) =>
+                setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
+              }
+              onKeyDown={onTaskPromptKeyDown}
+              placeholder="例如：提炼这篇页面内容，给我 3 条可执行建议。"
+            />
+            <div className="field-hint">快捷发送：Cmd/Ctrl + Enter</div>
+          </label>
+        </section>
 
         <button className="primary-btn" type="submit" disabled={isSubmitting}>
           {isSubmitting ? "发送中..." : "发送到 Agent"}
         </button>
       </form>
 
-      <footer className={`status-block status-${status.type}`}>{status.text}</footer>
+      {pageSendRecords.length > 0 ? (
+        <section className="panel-card history-card" aria-label="当前页面发送记录">
+          <div className="panel-title">当前页面发送记录</div>
+          <ul className="history-list">
+            {pageSendRecords.map((record) => (
+              <li key={record.id} className="history-item">
+                <div className="history-meta">
+                  <span>{formatSentTime(record.sentAt)}</span>
+                  <span className="history-badge">已发送</span>
+                </div>
+                <div className="history-text">{shortenText(record.taskPrompt, 80)}</div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </main>
   );
 }

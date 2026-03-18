@@ -1456,7 +1456,10 @@ export class QQBot extends BaseChatChannel {
 
       case "/clear":
       case "/清除":
-        this.clearChat(this.getChatKey({ chatId, chatType }));
+        await this.clearChatByTarget({
+          chatId,
+          chatType,
+        });
         responseText = "✅ 对话历史已清除";
         break;
 

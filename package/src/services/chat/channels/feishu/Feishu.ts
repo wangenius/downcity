@@ -506,7 +506,10 @@ Available commands:
 
       case "/clear":
       case "/清除":
-        this.clearChat(this.buildChatKey(chatId));
+        await this.clearChatByTarget({
+          chatId,
+          chatType,
+        });
         responseText = "✅ Conversation history cleared";
         break;
 

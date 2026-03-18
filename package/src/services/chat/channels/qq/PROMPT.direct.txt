@@ -2,7 +2,7 @@
 
 ## 能力范围
 - 负责 QQ 官方机器人网关（WebSocket）消息接入与发送。
-- 入站消息映射为 `qq-<chatType>-<chatId>` 形式的 `chatKey/contextId`。
+- 入站消息会由 chat service 映射到内部 `contextId`（随机分配并持久化）。
 
 ## 使用约束
 - 在 direct 模式下，你输出的 assistant 文本会自动发送到当前 QQ 会话。

@@ -3,13 +3,12 @@
  *
  * 关键点（中文）：
  * - 所有 HTTP 交互统一从这里走，UI 只关注业务流程。
- * - Console 地址固定为本地默认端口，避免用户重复填写。
+ * - 默认走本地 Console，也支持外部传入自定义 IP/端口地址。
  */
 
 import type {
   ChatKeyOption,
   ConsoleUiAgentsResponse,
-  GenericApiResponse,
   TuiContextExecuteRequestBody,
   TuiContextSummary,
   TuiContextsResponse,
@@ -19,6 +18,10 @@ import type {
  * Console UI 默认地址。
  */
 export const DEFAULT_CONSOLE_BASE_URL = "http://127.0.0.1:5315";
+
+type ApiRequestOptions = {
+  consoleBaseUrl?: string;
+};
 
 /**
  * 归一化 Console 地址。
@@ -34,8 +37,32 @@ function normalizeConsoleBaseUrl(input: string): string {
   return withProtocol.replace(/\/+$/, "");
 }
 
-function getConsoleBaseUrl(): string {
-  const normalized = normalizeConsoleBaseUrl(DEFAULT_CONSOLE_BASE_URL);
+/**
+ * 构建 Console 地址。
+ */
+export function buildConsoleBaseUrl(params: {
+  host: string;
+  port: number;
+}): string {
+  const host = String(params.host || "").trim() || "127.0.0.1";
+  const rawPort =
+    typeof params.port === "number"
+      ? params.port
+      : Number.parseInt(String(params.port || "").trim(), 10);
+  if (!Number.isFinite(rawPort) || Number.isNaN(rawPort)) {
+    throw new Error("端口无效");
+  }
+  const port = Math.trunc(rawPort);
+  if (port < 1 || port > 65535) {
+    throw new Error("端口范围应为 1-65535");
+  }
+  return normalizeConsoleBaseUrl(`http://${host}:${port}`);
+}
+
+function getConsoleBaseUrl(input?: string): string {
+  const normalized = normalizeConsoleBaseUrl(
+    String(input || "").trim() || DEFAULT_CONSOLE_BASE_URL,
+  );
   if (!normalized) {
     throw new Error("Console 地址配置无效");
   }
@@ -86,7 +113,7 @@ type ParsedChatKey =
   | {
       channel: "telegram";
       chatId: string;
-      threadId?: string;
+      threadId?: string | number;
     }
   | {
       channel: "feishu";
@@ -168,9 +195,40 @@ function toChatKeyTitle(parsed: ParsedChatKey): string {
     : `QQ · ${parsed.chatId}`;
 }
 
+function parseContextSummary(summary: TuiContextSummary): ParsedChatKey | null {
+  const channel = String(summary.channel || "")
+    .trim()
+    .toLowerCase();
+  const chatId = String(summary.chatId || "").trim();
+  if (channel === "telegram" && chatId) {
+    return {
+      channel: "telegram",
+      chatId,
+      ...(typeof summary.threadId === "number"
+        ? { threadId: summary.threadId }
+        : {}),
+    };
+  }
+  if (channel === "feishu" && chatId) {
+    return {
+      channel: "feishu",
+      chatId,
+    };
+  }
+  if (channel === "qq" && chatId) {
+    const chatType = String(summary.chatType || "").trim();
+    return {
+      channel: "qq",
+      chatId,
+      ...(chatType ? { chatType } : {}),
+    };
+  }
+  return parseChatKey(String(summary.contextId || "").trim());
+}
+
 function toChatKeyOption(summary: TuiContextSummary): ChatKeyOption | null {
   const chatKey = String(summary.contextId || "").trim();
-  const parsed = parseChatKey(chatKey);
+  const parsed = parseContextSummary(summary);
   if (!parsed) return null;
 
   const messageCount = Number.isFinite(summary.messageCount)
@@ -197,8 +255,10 @@ function toChatKeyOption(summary: TuiContextSummary): ChatKeyOption | null {
 /**
  * 拉取 Console 可用 Agent 列表。
  */
-export async function fetchAgents(): Promise<ConsoleUiAgentsResponse> {
-  const url = `${getConsoleBaseUrl()}/api/ui/agents`;
+export async function fetchAgents(
+  options?: ApiRequestOptions,
+): Promise<ConsoleUiAgentsResponse> {
+  const url = `${getConsoleBaseUrl(options?.consoleBaseUrl)}/api/ui/agents`;
   const payload = await requestJson<ConsoleUiAgentsResponse>(url, {
     method: "GET",
   });
@@ -211,11 +271,14 @@ export async function fetchAgents(): Promise<ConsoleUiAgentsResponse> {
 /**
  * 拉取指定 Agent 可用的 chatKey 列表。
  */
-export async function fetchChatKeyOptions(agentId: string): Promise<ChatKeyOption[]> {
+export async function fetchChatKeyOptions(
+  agentId: string,
+  options?: ApiRequestOptions,
+): Promise<ChatKeyOption[]> {
   const normalizedAgentId = String(agentId || "").trim();
   if (!normalizedAgentId) return [];
 
-  const url = `${getConsoleBaseUrl()}/api/tui/contexts?agent=${encodeURIComponent(normalizedAgentId)}&limit=500`;
+  const url = `${getConsoleBaseUrl(options?.consoleBaseUrl)}/api/tui/contexts?agent=${encodeURIComponent(normalizedAgentId)}&limit=500`;
   const payload = await requestJson<TuiContextsResponse>(url, {
     method: "GET",
   });
@@ -226,17 +289,17 @@ export async function fetchChatKeyOptions(agentId: string): Promise<ChatKeyOptio
 
   const contexts = Array.isArray(payload.contexts) ? payload.contexts : [];
   const seen = new Set<string>();
-  const options: ChatKeyOption[] = [];
+  const outOptions: ChatKeyOption[] = [];
 
   for (const item of contexts) {
     const option = toChatKeyOption(item);
     if (!option) continue;
     if (seen.has(option.chatKey)) continue;
     seen.add(option.chatKey);
-    options.push(option);
+    outOptions.push(option);
   }
 
-  return options.sort((a, b) => {
+  return outOptions.sort((a, b) => {
     const tsA = typeof a.updatedAt === "number" ? a.updatedAt : 0;
     const tsB = typeof b.updatedAt === "number" ? b.updatedAt : 0;
     if (tsA !== tsB) return tsB - tsA;
@@ -245,28 +308,47 @@ export async function fetchChatKeyOptions(agentId: string): Promise<ChatKeyOptio
 }
 
 /**
- * 投递 Agent 任务。
+ * 投递 Agent 任务（异步，不等待执行完成）。
  *
  * 关键点（中文）：
- * - 这里显式等待 HTTP 返回，确保大附件（例如页面 Markdown）可靠送达。
- * - 服务端返回 `success=false` 时抛错，便于 UI 给出明确失败提示。
+ * - 优先使用 sendBeacon，支持 popup 关闭后的请求续传。
+ * - sendBeacon 不可用时，回退到 keepalive fetch。
+ * - 只确认“请求已发起”，不等待后端执行结束。
  */
-export async function dispatchAgentTask(params: {
+export function dispatchAgentTask(params: {
+  consoleBaseUrl?: string;
   agentId: string;
   contextId: string;
   body: TuiContextExecuteRequestBody;
-}): Promise<void> {
+}): boolean {
   const agentId = String(params.agentId || "").trim();
   const contextId = String(params.contextId || "").trim();
-  if (!agentId) throw new Error("Missing agentId");
-  if (!contextId) throw new Error("Missing contextId");
+  if (!agentId) return false;
+  if (!contextId) return false;
 
-  const url = `${getConsoleBaseUrl()}/api/tui/contexts/${encodeURIComponent(contextId)}/execute?agent=${encodeURIComponent(agentId)}`;
-  const payload = await requestJson<GenericApiResponse>(url, {
-    method: "POST",
-    body: JSON.stringify(params.body),
-  });
-  if (payload?.success === false) {
-    throw new Error(String(payload.error || payload.message || "任务投递失败"));
+  const url = `${getConsoleBaseUrl(params.consoleBaseUrl)}/api/tui/contexts/${encodeURIComponent(contextId)}/execute?agent=${encodeURIComponent(agentId)}`;
+  const bodyText = JSON.stringify(params.body);
+
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const queued = navigator.sendBeacon(
+        url,
+        new Blob([bodyText], { type: "text/plain;charset=UTF-8" }),
+      );
+      if (queued) return true;
+    }
+
+    void fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: bodyText,
+      keepalive: true,
+    }).catch(() => {});
+
+    return true;
+  } catch {
+    return false;
   }
 }

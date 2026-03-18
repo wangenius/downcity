@@ -124,6 +124,26 @@ export interface TuiContextSummary {
    * 最后一条消息摘要。
    */
   lastText?: string;
+
+  /**
+   * 渠道名称（若该 context 由 chat 渠道维护）。
+   */
+  channel?: "telegram" | "feishu" | "qq" | "consoleui" | string;
+
+  /**
+   * 平台 chat 原始 ID（可选）。
+   */
+  chatId?: string;
+
+  /**
+   * 平台 chat 类型（可选）。
+   */
+  chatType?: string;
+
+  /**
+   * 平台 thread/topic ID（可选）。
+   */
+  threadId?: number;
 }
 
 /**

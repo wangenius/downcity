@@ -32,6 +32,9 @@ import type {
   UiModelProviderDiscoverResult,
   UiModelProviderItem,
   UiModelSummary,
+  UiChannelAccountItem,
+  UiChannelAccountsResponse,
+  UiChannelAccountProbeResult,
   UiOverviewResponse,
   UiPromptResponse,
   UiExtensionRuntimeItem,
@@ -263,6 +266,10 @@ export interface UseConsoleDashboardResult {
    * 模型池 model 列表。
    */
   modelPoolItems: UiModelPoolItem[];
+  /**
+   * Channel Account 列表（全局）。
+   */
+  channelAccounts: UiChannelAccountItem[];
   /**
    * system prompt 数据。
    */
@@ -522,6 +529,41 @@ export interface UseConsoleDashboardResult {
    */
   testModelPoolItem: (modelId: string, prompt?: string) => Promise<void>;
   /**
+   * 新增/更新 channel account。
+   */
+  upsertChannelAccount: (input: {
+    id: string;
+    channel: string;
+    name: string;
+    identity?: string;
+    owner?: string;
+    creator?: string;
+    botToken?: string;
+    appId?: string;
+    appSecret?: string;
+    domain?: string;
+    sandbox?: boolean;
+    authId?: string;
+    clearBotToken?: boolean;
+    clearAppId?: boolean;
+    clearAppSecret?: boolean;
+  }) => Promise<void>;
+  /**
+   * 探测 bot 凭据并自动获取 bot 信息。
+   */
+  probeChannelAccount: (input: {
+    channel: string;
+    botToken?: string;
+    appId?: string;
+    appSecret?: string;
+    domain?: string;
+    sandbox?: boolean;
+  }) => Promise<UiChannelAccountProbeResult | null>;
+  /**
+   * 删除 channel account。
+   */
+  removeChannelAccount: (id: string) => Promise<void>;
+  /**
    * 执行 agent 项目目录下的 shell command。
    */
   executeAgentCommand: (input: {
@@ -567,6 +609,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [configStatus, setConfigStatus] = useState<UiConfigStatusItem[]>([]);
   const [modelProviders, setModelProviders] = useState<UiModelProviderItem[]>([]);
   const [modelPoolItems, setModelPoolItems] = useState<UiModelPoolItem[]>([]);
+  const [channelAccounts, setChannelAccounts] = useState<UiChannelAccountItem[]>([]);
   const [prompt, setPrompt] = useState<UiPromptResponse | null>(null);
   const [localMessages, setLocalMessages] = useState<UiLocalMessage[]>([]);
 
@@ -1240,6 +1283,11 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setModelPoolItems(Array.isArray(data.models) ? data.models : []);
   }, [requestJson]);
 
+  const refreshChannelAccounts = useCallback(async () => {
+    const data = await requestJson<UiChannelAccountsResponse>("/api/ui/channel-accounts");
+    setChannelAccounts(Array.isArray(data.items) ? data.items : []);
+  }, [requestJson]);
+
   const refreshPrompt = useCallback(
     async (agentId: string, contextId?: string) => {
       if (!agentId) return;
@@ -1290,6 +1338,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshExtensions(),
             refreshModel(""),
             refreshModelPool(),
+            refreshChannelAccounts(),
             refreshConfigStatus(""),
           ]);
           setTopbarError(false);
@@ -1305,6 +1354,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshExtensions(),
             refreshModel(nextAgentId),
             refreshModelPool(),
+            refreshChannelAccounts(),
             refreshConfigStatus(nextAgentId),
           ]);
           setTopbarError(false);
@@ -1326,6 +1376,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshLogs(nextAgentId),
           refreshModel(nextAgentId),
           refreshModelPool(),
+          refreshChannelAccounts(),
           refreshConfigStatus(nextAgentId),
           refreshLocalChat(nextAgentId),
         ]);
@@ -1385,6 +1436,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshExtensions(),
             refreshModel(""),
             refreshModelPool(),
+            refreshChannelAccounts(),
             refreshConfigStatus(""),
           ]);
           setTopbarError(false);
@@ -1410,6 +1462,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshLocalChat,
       refreshLogs,
       refreshConfigStatus,
+      refreshChannelAccounts,
       refreshModel,
       refreshModelPool,
       refreshOverview,
@@ -2358,6 +2411,102 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson, showToast],
   );
 
+  const upsertChannelAccount = useCallback(
+    async (input: {
+      id: string;
+      channel: string;
+      name: string;
+      identity?: string;
+      owner?: string;
+      creator?: string;
+      botToken?: string;
+      appId?: string;
+      appSecret?: string;
+      domain?: string;
+      sandbox?: boolean;
+      authId?: string;
+      clearBotToken?: boolean;
+      clearAppId?: boolean;
+      clearAppSecret?: boolean;
+    }) => {
+      try {
+        await requestJson("/api/ui/channel-accounts/upsert", {
+          method: "POST",
+          body: JSON.stringify(input),
+        });
+        await Promise.all([refreshChannelAccounts(), refreshChatChannels(selectedAgentId)]);
+        showToast(`channel account ${input.id} 已确认`, "success");
+      } catch (error) {
+        showToast(`channel account 确认失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshChannelAccounts, refreshChatChannels, requestJson, selectedAgentId, showToast],
+  );
+
+  const probeChannelAccount = useCallback(
+    async (input: {
+      channel: string;
+      botToken?: string;
+      appId?: string;
+      appSecret?: string;
+      domain?: string;
+      sandbox?: boolean;
+    }): Promise<UiChannelAccountProbeResult | null> => {
+      try {
+        const data = await requestJson<{
+          success?: boolean;
+          channel?: string;
+          accountId?: string;
+          name?: string;
+          identity?: string;
+          owner?: string;
+          creator?: string;
+          botUserId?: string;
+          message?: string;
+        }>("/api/ui/channel-accounts/probe", {
+          method: "POST",
+          body: JSON.stringify(input),
+        });
+        const payload: UiChannelAccountProbeResult = {
+          channel: String(data.channel || input.channel || "").trim(),
+          accountId: String(data.accountId || "").trim(),
+          name: String(data.name || "").trim(),
+          identity: String(data.identity || "").trim() || undefined,
+          owner: String(data.owner || "").trim() || undefined,
+          creator: String(data.creator || "").trim() || undefined,
+          botUserId: String(data.botUserId || "").trim() || undefined,
+          message: String(data.message || "").trim() || undefined,
+        };
+        if (!payload.accountId || !payload.name) {
+          showToast("bot 信息探测成功，但返回数据不完整", "error");
+          return null;
+        }
+        showToast(payload.message || "bot 信息探测成功", "success");
+        return payload;
+      } catch (error) {
+        showToast(`bot 信息探测失败: ${getErrorMessage(error)}`, "error");
+        return null;
+      }
+    },
+    [requestJson, showToast],
+  );
+
+  const removeChannelAccount = useCallback(
+    async (id: string) => {
+      try {
+        await requestJson("/api/ui/channel-accounts/remove", {
+          method: "POST",
+          body: JSON.stringify({ id }),
+        });
+        await Promise.all([refreshChannelAccounts(), refreshChatChannels(selectedAgentId)]);
+        showToast(`channel account ${id} 已删除`, "success");
+      } catch (error) {
+        showToast(`channel account 删除失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshChannelAccounts, refreshChatChannels, requestJson, selectedAgentId, showToast],
+  );
+
   const executeAgentCommand = useCallback(
     async (input: {
       command: string;
@@ -2440,6 +2589,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     configStatus,
     modelProviders,
     modelPoolItems,
+    channelAccounts,
     prompt,
     localMessages,
     topbarStatus,
@@ -2498,6 +2648,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     removeModelPoolItem,
     setModelPoolItemPaused,
     testModelPoolItem,
+    upsertChannelAccount,
+    probeChannelAccount,
+    removeChannelAccount,
     executeAgentCommand,
     constants: {
       CONSOLEUI_CONTEXT_ID,

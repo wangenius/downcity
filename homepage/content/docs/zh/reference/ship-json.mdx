@@ -55,16 +55,37 @@ agent 启动时：
 
 运行时会合并多层配置：
 
-1. `~/.ship/ship.db` 中的 `console_config`（全局）
+1. `~/.ship/ship.db` 中的 `extensions_config`（全局）
 2. 项目目录链上的 `ship.json`
 
 其中：
 
 - `model.primary` 来自项目层；
 - 模型池来自全局 SQLite；
-- `extensions.*` 只从 console 全局 `~/.ship/ship.db` 的 `console_config` 读取，项目层不允许配置。
+- `extensions.*` 只从 console 全局 `~/.ship/ship.db` 的 `extensions_config` 读取，项目层不允许配置。
 
-## 5) 推荐操作方式
+## 5) Chat 渠道绑定
+
+`ship.json` 中的 chat 渠道应只绑定全局 bot 账户 ID：
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+`channelAccountId` 会解析到 `~/.ship/ship.db` 的 `channel_accounts.id`。
+
+## 6) 推荐操作方式
 
 1. 在 console 层维护模型池（provider/model）  
 2. 在 agent 层只改 `model.primary` 绑定目标模型 ID  

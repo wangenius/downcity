@@ -43,9 +43,9 @@ const { provider } = defineI18nUI(i18n, {
 
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
-  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-  { rel: "icon", href: "/og-image.png", type: "image/png", sizes: "128x128" },
-  { rel: "apple-touch-icon", href: "/og-image.png", sizes: "180x180" },
+  { rel: "icon", href: "/icon.png", type: "image/png", sizes: "400x400" },
+  { rel: "icon", href: "/icon-192.png", type: "image/png", sizes: "192x192" },
+  { rel: "apple-touch-icon", href: "/icon-192.png", sizes: "180x180" },
   { rel: "manifest", href: "/site.webmanifest" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
@@ -89,7 +89,7 @@ export const meta: Route.MetaFunction = () => {
       content:
         "Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
     },
-    { property: "og:image", content: "/og-image.png" },
+    { property: "og:image", content: "/icon-512.png" },
 
     // Twitter
     { name: "twitter:card", content: "summary_large_image" },
@@ -103,7 +103,7 @@ export const meta: Route.MetaFunction = () => {
       content:
         "Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
     },
-    { name: "twitter:image", content: "/twitter-image.png" },
+    { name: "twitter:image", content: "/icon-512.png" },
 
     // Additional SEO
     { name: "robots", content: "index, follow" },

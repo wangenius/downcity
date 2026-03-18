@@ -112,6 +112,31 @@ description: Runtime 对外 HTTP 接口与请求示例
 }
 ```
 
+### `POST /api/tui/contexts/:contextId/execute`
+
+在指定上下文执行一轮（例如你在 UI 里选中的 chatKey）。
+
+带附件请求示例：
+
+```json
+{
+  "instructions": "请阅读附件 markdown，并给出可执行摘要。",
+  "attachments": [
+    {
+      "type": "document",
+      "fileName": "page.md",
+      "contentType": "text/markdown; charset=utf-8",
+      "content": "# Captured Web Page\n\n..."
+    }
+  ]
+}
+```
+
+说明：
+
+- `contextId` 应传目标上下文本身（聊天回传场景下，直接使用已选中的 chatKey）。
+- 附件会先被 runtime 落盘，再以 `@attach` 指令行自动注入到用户消息前部。
+
 ## Action 直连路由
 
 每个 service/extension action 还会暴露默认路由：

@@ -65,11 +65,6 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
     )
   }
 
-  const profiles = Array.isArray(selectedAgent.chatProfiles) ? selectedAgent.chatProfiles : []
-  const identityMap = new Map(
-    profiles.map((item) => [String(item.channel || "").trim(), String(item.identity || "").trim()] as const),
-  )
-
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -84,7 +79,6 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
             <TableHeader className="bg-muted/35">
               <TableRow className="hover:bg-muted/35">
                 <TableHead>Channel</TableHead>
-                <TableHead>Identity</TableHead>
                 <TableHead>Enabled</TableHead>
                 <TableHead>Configured</TableHead>
                 <TableHead>Running</TableHead>
@@ -96,14 +90,13 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
             <TableBody>
               {channels.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={7} className="text-sm text-muted-foreground">
                     当前没有可管理 channel 数据
                   </TableCell>
                 </TableRow>
               ) : (
                 channels.map((item) => {
                   const channel = String(item.channel || "").trim() || "unknown"
-                  const identity = identityMap.get(channel) || "-"
                   const linkState = String(item.linkState || "").trim() || "-"
                   const statusText = String(item.statusText || "").trim() || "-"
                   const runtimeActionDisabled = !(item.enabled === true && item.configured === true)
@@ -112,9 +105,6 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
                   return (
                     <TableRow key={channel}>
                       <TableCell className="font-medium">{channel}</TableCell>
-                      <TableCell className="max-w-[16rem] truncate text-xs text-muted-foreground" title={identity}>
-                        {identity}
-                      </TableCell>
                       <TableCell>{renderBooleanBadge(item.enabled, "yes", "no")}</TableCell>
                       <TableCell>{renderBooleanBadge(item.configured, "yes", "no")}</TableCell>
                       <TableCell>{renderBooleanBadge(item.running, "yes", "no")}</TableCell>

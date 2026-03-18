@@ -54,8 +54,29 @@ If any link is missing, startup fails fast.
 
 ## Extension scope
 
-`extensions.*` is console-global and loaded from `~/.ship/ship.db` (`console_config`).
+`extensions.*` is console-global and loaded from `~/.ship/ship.db` (`extensions_config`).
 Project-level `ship.json` is not the place to configure extensions.
+
+## Chat channel binding
+
+Chat channels in `ship.json` should bind to a global channel account id:
+
+```json
+{
+  "services": {
+    "chat": {
+      "channels": {
+        "telegram": {
+          "enabled": true,
+          "channelAccountId": "telegram-main"
+        }
+      }
+    }
+  }
+}
+```
+
+`channelAccountId` resolves to `channel_accounts.id` in `~/.ship/ship.db`.
 
 ## Related docs
 

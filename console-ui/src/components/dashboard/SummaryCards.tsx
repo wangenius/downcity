@@ -228,17 +228,14 @@ export function SummaryCards(props: SummaryCardsProps) {
   }, [services]);
 
   const resolveContextIdByChatProfile = React.useCallback(
-    (channelInput?: string, identityInput?: string): string => {
+    (channelInput?: string): string => {
       const channel = String(channelInput || "").trim().toLowerCase();
       if (!channel) return "";
-      const identity = String(identityInput || "").trim().toLowerCase();
       const contextCandidates = contexts
         .map((item) => String(item.contextId || "").trim())
         .filter((contextId) => contextId.startsWith(`${channel}-`));
       if (contextCandidates.length === 0) return "";
-      if (!identity || identity === "-") return contextCandidates[0] || "";
-      const exact = contextCandidates.find((contextId) => contextId.toLowerCase().includes(identity));
-      return exact || contextCandidates[0] || "";
+      return contextCandidates[0] || "";
     },
     [contexts],
   );
@@ -424,7 +421,6 @@ export function SummaryCards(props: SummaryCardsProps) {
           let taskItems: UiTaskItem[] = [];
           let chatItems: Array<{
             channel: string;
-            identity: string;
             link: string;
             contextId: string;
             clickable: boolean;
@@ -438,12 +434,10 @@ export function SummaryCards(props: SummaryCardsProps) {
           if (normalizedName.includes("chat")) {
             chatItems = chatProfiles.map((profile) => {
                   const channel = String(profile.channel || "-");
-                  const identity = String(profile.identity || "-");
                   const link = String(profile.linkState || profile.statusText || "unknown");
-                  const contextId = resolveContextIdByChatProfile(channel, identity);
+                  const contextId = resolveContextIdByChatProfile(channel);
                   return {
                     channel,
-                    identity,
                     link,
                     contextId,
                     clickable: Boolean(contextId),
@@ -551,16 +545,14 @@ export function SummaryCards(props: SummaryCardsProps) {
                     <thead>
                       <tr className="text-muted-foreground">
                         <th className="py-1 pr-2 font-medium">Channel</th>
-                        <th className="py-1 pr-2 font-medium">Identity</th>
                         <th className="py-1 pr-2 font-medium">Link</th>
                         <th className="py-1 text-right font-medium">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {chatItems.map((chatItem, chatIndex) => (
-                        <tr key={`${name}:chat:${chatItem.channel}:${chatItem.identity}:${chatIndex}`} className="border-t border-border/35 text-muted-foreground">
+                        <tr key={`${name}:chat:${chatItem.channel}:${chatIndex}`} className="border-t border-border/35 text-muted-foreground">
                           <td className="py-1.5 pr-2">{chatItem.channel}</td>
-                          <td className="py-1.5 pr-2 max-w-0 truncate">{chatItem.identity}</td>
                           <td className="py-1.5 pr-2">{chatItem.link}</td>
                           <td className="py-1.5 text-right">
                             {(() => {

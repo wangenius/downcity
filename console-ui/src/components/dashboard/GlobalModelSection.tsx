@@ -9,6 +9,8 @@
 
 import * as React from "react"
 import {
+  CheckIcon,
+  ChevronDownIcon,
   Loader2Icon,
   PauseIcon,
   PencilIcon,
@@ -19,8 +21,8 @@ import {
   WandSparklesIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
@@ -639,21 +641,28 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
               value={providerForm.id}
               onChange={(event) => setProviderForm((prev) => ({ ...prev, id: event.target.value }))}
             />
-            <Select
-              value={providerForm.type}
-              onValueChange={(value) => setProviderForm((prev) => ({ ...prev, type: value || "" }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="provider type" />
-              </SelectTrigger>
-              <SelectContent>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 w-full justify-between"
+                  />
+                }
+              >
+                <span>{providerForm.type || "provider type"}</span>
+                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="min-w-[12rem]">
                 {PROVIDER_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
+                  <DropdownMenuItem key={type} onClick={() => setProviderForm((prev) => ({ ...prev, type }))}>
+                    {providerForm.type === type ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
+                    <span>{type}</span>
+                  </DropdownMenuItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Input
               placeholder="base url (optional)"
               value={providerForm.baseUrl}
@@ -738,21 +747,31 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
               value={modelForm.id}
               onChange={(event) => setModelForm((prev) => ({ ...prev, id: event.target.value }))}
             />
-            <Select
-              value={modelForm.providerId || undefined}
-              onValueChange={(value) => setModelForm((prev) => ({ ...prev, providerId: value || "" }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="provider" />
-              </SelectTrigger>
-              <SelectContent>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 w-full justify-between"
+                  />
+                }
+              >
+                <span>{modelForm.providerId || "provider"}</span>
+                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="min-w-[12rem]">
                 {providerIds.map((providerId) => (
-                  <SelectItem key={providerId} value={providerId}>
-                    {providerId}
-                  </SelectItem>
+                  <DropdownMenuItem
+                    key={providerId}
+                    onClick={() => setModelForm((prev) => ({ ...prev, providerId }))}
+                  >
+                    {modelForm.providerId === providerId ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
+                    <span>{providerId}</span>
+                  </DropdownMenuItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Input
               placeholder="upstream model name"
               value={modelForm.name}

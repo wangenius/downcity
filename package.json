@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "bash ./scripts/build.sh",
+    "extbuild": "bash ./scripts/extbuild.sh",
     "ui": "npm --prefix ./console-ui run dev",
     "dev":"cd examples/server-agent && shipmyagent agent on",
     "cli": "bun run examples/cli-interactive/src/index.ts",

@@ -55,17 +55,13 @@ export interface UiAgentOption {
    */
   primaryModelId?: string;
   /**
-   * 当前 agent 的 chat 渠道身份快照。
+   * 当前 agent 的 chat 渠道运行快照。
    */
   chatProfiles?: Array<{
     /**
      * 渠道名（telegram/feishu/qq）。
      */
     channel?: string;
-    /**
-     * 渠道身份展示名。
-     */
-    identity?: string;
     /**
      * 链路状态。
      */
@@ -632,6 +628,174 @@ export interface UiExtensionsResponse {
 }
 
 /**
+ * Chat 渠道配置字段类型。
+ */
+export type UiChatChannelConfigurationFieldType =
+  | "string"
+  | "boolean"
+  | "number"
+  | "secret"
+  | "enum";
+
+/**
+ * Chat 渠道配置字段来源。
+ */
+export type UiChatChannelConfigurationFieldSource =
+  | "ship_json"
+  | "bot_account"
+  | "env_fallback";
+
+/**
+ * 配置字段枚举选项。
+ */
+export interface UiChatChannelConfigurationFieldOption {
+  /**
+   * 选项实际值。
+   */
+  value: string;
+  /**
+   * 选项展示标签。
+   */
+  label: string;
+  /**
+   * 选项用途说明。
+   */
+  description: string;
+}
+
+/**
+ * Chat 渠道配置字段定义。
+ */
+export interface UiChatChannelConfigurationField {
+  /**
+   * 字段键名。
+   */
+  key: string;
+  /**
+   * 字段标签。
+   */
+  label: string;
+  /**
+   * 字段说明。
+   */
+  description: string;
+  /**
+   * 字段类型。
+   */
+  type: UiChatChannelConfigurationFieldType;
+  /**
+   * 字段来源。
+   */
+  source: UiChatChannelConfigurationFieldSource;
+  /**
+   * 是否必填。
+   */
+  required: boolean;
+  /**
+   * 是否允许 `null`。
+   */
+  nullable: boolean;
+  /**
+   * 是否允许写入。
+   */
+  writable: boolean;
+  /**
+   * 变更后是否需要重启。
+   */
+  restartRequired: boolean;
+  /**
+   * 默认值（若存在）。
+   */
+  defaultValue?: string | number | boolean | null;
+  /**
+   * 示例值（若存在）。
+   */
+  example?: string | number | boolean | null;
+  /**
+   * 枚举选项。
+   */
+  options?: UiChatChannelConfigurationFieldOption[];
+}
+
+/**
+ * Chat 渠道配置描述器。
+ */
+export interface UiChatChannelConfigurationDescriptor {
+  /**
+   * 渠道名。
+   */
+  channel: string;
+  /**
+   * 配置标题。
+   */
+  title: string;
+  /**
+   * 配置说明。
+   */
+  description: string;
+  /**
+   * 描述器版本。
+   */
+  version: string;
+  /**
+   * 渠道能力开关。
+   */
+  capabilities?: {
+    /**
+     * 是否支持 enabled 开关。
+     */
+    canToggleEnabled?: boolean;
+    /**
+     * 是否支持 channel account 绑定。
+     */
+    canBindChannelAccount?: boolean;
+    /**
+     * 是否支持配置写入。
+     */
+    canConfigure?: boolean;
+  };
+  /**
+   * 字段分组。
+   */
+  fields: {
+    /**
+     * `ship.json` 字段。
+     */
+    ship: UiChatChannelConfigurationField[];
+    /**
+     * channel account 字段。
+     */
+    channelAccount: UiChatChannelConfigurationField[];
+    /**
+     * env fallback 字段。
+     */
+    envFallback: UiChatChannelConfigurationField[];
+  };
+}
+
+/**
+ * Chat 渠道详情结构。
+ */
+export interface UiChatChannelDetail {
+  /**
+   * 可安全展示的配置摘要。
+   */
+  config?: Record<string, unknown>;
+  /**
+   * 配置元信息描述器。
+   */
+  configuration?: UiChatChannelConfigurationDescriptor;
+  /**
+   * 渠道是否只读。
+   */
+  readonly?: boolean;
+  /**
+   * 其余动态诊断字段。
+   */
+  [key: string]: unknown;
+}
+
+/**
  * Chat 渠道运行状态项。
  */
 export interface UiChatChannelStatus {
@@ -666,7 +830,7 @@ export interface UiChatChannelStatus {
    * - 由 runtime/status 动态返回，字段不保证完全稳定。
    * - `detail.config` 中放置可安全展示的配置摘要（不含明文密钥）。
    */
-  detail?: Record<string, unknown>;
+  detail?: UiChatChannelDetail;
 }
 
 /**
@@ -1725,4 +1889,134 @@ export interface UiModelProviderDiscoverResult {
      */
     modelName: string;
   }>;
+}
+
+/**
+ * Channel Account 管理项（来自 `/api/ui/channel-accounts`）。
+ */
+export interface UiChannelAccountItem {
+  /**
+   * 账户主键 id。
+   */
+  id: string;
+  /**
+   * 渠道类型（telegram/feishu/qq）。
+   */
+  channel: string;
+  /**
+   * 账户展示名。
+   */
+  name: string;
+  /**
+   * 身份展示文案。
+   */
+  identity?: string;
+  /**
+   * 机器人所有者信息（可选）。
+   */
+  owner?: string;
+  /**
+   * 机器人创建者信息（可选）。
+   */
+  creator?: string;
+  /**
+   * 渠道域名（主要用于 Feishu）。
+   */
+  domain?: string;
+  /**
+   * QQ 沙箱开关。
+   */
+  sandbox?: boolean;
+  /**
+   * 主人鉴权 ID。
+   */
+  authId?: string;
+  /**
+   * 是否已配置 botToken。
+   */
+  hasBotToken?: boolean;
+  /**
+   * 是否已配置 appId。
+   */
+  hasAppId?: boolean;
+  /**
+   * 是否已配置 appSecret。
+   */
+  hasAppSecret?: boolean;
+  /**
+   * 脱敏 botToken。
+   */
+  botTokenMasked?: string;
+  /**
+   * 脱敏 appId。
+   */
+  appIdMasked?: string;
+  /**
+   * 脱敏 appSecret。
+   */
+  appSecretMasked?: string;
+  /**
+   * 创建时间。
+   */
+  createdAt?: string;
+  /**
+   * 更新时间。
+   */
+  updatedAt?: string;
+}
+
+/**
+ * `/api/ui/channel-accounts` 响应。
+ */
+export interface UiChannelAccountsResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 账户列表。
+   */
+  items?: UiChannelAccountItem[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * Channel Account 探测结果（来自 `/api/ui/channel-accounts/probe`）。
+ */
+export interface UiChannelAccountProbeResult {
+  /**
+   * 渠道类型。
+   */
+  channel: string;
+  /**
+   * 系统建议的 account id（自动生成）。
+   */
+  accountId: string;
+  /**
+   * 探测得到的 bot 名称。
+   */
+  name: string;
+  /**
+   * 探测得到的身份标识（可选）。
+   */
+  identity?: string;
+  /**
+   * 探测得到的所有者信息（可选）。
+   */
+  owner?: string;
+  /**
+   * 探测得到的创建者信息（可选）。
+   */
+  creator?: string;
+  /**
+   * 探测得到的 bot user id（可选）。
+   */
+  botUserId?: string;
+  /**
+   * 探测反馈文案。
+   */
+  message?: string;
 }

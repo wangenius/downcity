@@ -15,18 +15,15 @@ description: 通过 QQ 群聊/私聊与 Agent 对话
 2. 在应用信息中获取 **App ID**、**App Secret**
 3. 确认机器人接入方式为 **WebSocket**，并开启群聊 / C2C 相关事件（用于接收消息）
 
-### 2）写入项目配置
+### 2）创建 Channel Account 并绑定到项目
 
-把凭证放到项目根目录的 `.env`（与 `ship.json` 同目录）：
+在 Console UI 的 `Global / Channel Accounts` 创建 QQ 账户（例如 `qq-main`）：
 
-```bash
-QQ_APP_ID=your_app_id
-QQ_APP_SECRET=your_app_secret
-# 可选：使用沙箱环境
-# QQ_SANDBOX=true
-```
+1. `channel = qq`
+2. 填入 `appId`、`appSecret`
+3. 按需设置 `sandbox`、`authId`
 
-在 `ship.json` 启用 QQ 集成：
+然后在 `ship.json` 里绑定该账户：
 
 ```json
 {
@@ -35,9 +32,7 @@ QQ_APP_SECRET=your_app_secret
       "channels": {
         "qq": {
           "enabled": true,
-          "appId": "${QQ_APP_ID}",
-          "appSecret": "${QQ_APP_SECRET}",
-          "sandbox": false
+          "channelAccountId": "qq-main"
         }
       }
     }
@@ -88,7 +83,7 @@ sma voice status
 - **启动后完全没反应**：先看启动日志；如果你用的是前台模式可 `Ctrl+C` 停止；daemon 模式用 `sma agent restart` 停止。运行日志在 `.ship/logs/`。
 - **群里收不到消息**：检查 QQBot 控制台是否已开启群聊相关事件/权限，特别是普通群消息事件（`GROUP_MESSAGE_CREATE`）。
 - **语音消息没有被转写**：先确认 `extensions.voice.enabled=true`，再检查 voice 模型是否可用（`sma voice status`）；同时确认 QQBot 侧已开通音频事件权限（`AUDIO_ACTION`）。
-- **App Secret 配错/权限不足**：日志里通常会出现获取 `access_token` 或 WebSocket 鉴权失败的错误信息；确认 `QQ_APP_ID` / `QQ_APP_SECRET` 与沙箱开关匹配。
+- **凭据错误/权限不足**：日志里通常会出现获取 `access_token` 或 WebSocket 鉴权失败；检查绑定的 channel account（`qq-main`）里的 `appId/appSecret/sandbox` 配置是否正确。
 - **报错 `QQ requires chatType + messageId to send a reply`**：QQ 当前走的是“被动回复”接口，需要带上触发这次对话的 `messageId` 才能回消息。只要目标 chatKey 下已经有对方发过的消息（会落盘到 `.ship/chat/<encodedChatKey>/messages/messages.jsonl`），工具就能从 history 里拿到最新 `messageId`；否则需要对方先发一条消息建立上下文。
 - **想确认 QQ 实际发了哪些字段（尤其是 username/nickname）**：开启原始事件抓取后查看落盘的 JSON 快照：
   - 启用抓取：`SHIP_QQ_CAPTURE_EVENTS=dispatch`（只抓取业务事件）或 `SHIP_QQ_CAPTURE_EVENTS=all`（包含心跳/握手等）

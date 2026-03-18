@@ -1,4 +1,12 @@
 {
   "title": "配置",
-  "pages": ["overview", "console-ship-json", "project", "environment-variables", "model", "checklist"]
+  "pages": [
+    "overview",
+    "console-ship-json",
+    "project",
+    "environment-variables",
+    "env-shipdb-design",
+    "model",
+    "checklist"
+  ]
 }

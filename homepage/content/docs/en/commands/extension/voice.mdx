@@ -74,7 +74,7 @@ Install-related actions perform a local pre-check first:
 
 - If model files already exist, download is skipped by default (`--force` re-downloads).
 - During `voice init`, Python dependency install is skipped when packages are already present, with explicit skip logs.
-- Voice config is written to console-global `~/.ship/ship.db` (`console_config.extensions.voice`), not project `ship.json`.
+- Voice config is written to console-global `~/.ship/ship.db` (`extensions_config.voice`), not project `ship.json`.
 
 This command group usually requires an active agent runtime:
 

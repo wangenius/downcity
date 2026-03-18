@@ -17,7 +17,7 @@ import type {
 import type { ExtensionCommandResponse } from "@/agent/types/Extensions.js";
 import { callServer } from "@/console/daemon/Client.js";
 import {
-  loadProjectDotenv,
+  loadAgentRuntimeEnv,
   loadShipConfig,
 } from "@/console/env/Config.js";
 import { ensureRuntimeProjectReady } from "@/console/daemon/ProjectSetup.js";
@@ -196,7 +196,7 @@ async function runExtensionActionLocally(params: {
   payload: JsonValue;
 }): Promise<ExtensionCommandResponse> {
   ensureRuntimeProjectReady(params.projectRoot);
-  const projectEnv = loadProjectDotenv(params.projectRoot);
+  const projectEnv = loadAgentRuntimeEnv(params.projectRoot);
   const config = loadShipConfig(params.projectRoot, {
     projectEnv,
   });

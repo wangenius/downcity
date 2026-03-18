@@ -11,8 +11,15 @@ import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import type {
+  StoredAgentEnvEntry,
+  StoredChannelAccount,
+  StoredChannelAccountChannel,
+  StoredGlobalEnvEntry,
   StoredModel,
   StoredModelProvider,
+  UpsertAgentEnvEntryInput,
+  UpsertChannelAccountInput,
+  UpsertGlobalEnvEntryInput,
   UpsertModelInput,
   UpsertModelProviderInput,
 } from "@/types/Store.js";
@@ -25,6 +32,25 @@ import { modelProvidersTable, modelsTable } from "./schema.js";
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function normalizeNonEmptyText(value: string, fieldName: string): string {
+  const normalized = String(value || "").trim();
+  if (!normalized) throw new Error(`${fieldName} cannot be empty`);
+  return normalized;
+}
+
+function optionalTrimmedText(value: string | undefined): string | undefined {
+  const normalized = String(value || "").trim();
+  return normalized || undefined;
+}
+
+function normalizeChannelAccountChannel(input: string): StoredChannelAccountChannel {
+  const channel = String(input || "").trim().toLowerCase();
+  if (channel === "telegram" || channel === "feishu" || channel === "qq") {
+    return channel;
+  }
+  throw new Error(`Unsupported channel account type: ${input}`);
 }
 
 /**
@@ -86,6 +112,51 @@ export class ConsoleStore {
         updated_at TEXT NOT NULL
       );
     `);
+    this.sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS global_env (
+        key TEXT PRIMARY KEY NOT NULL,
+        value_encrypted TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    this.sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS agent_env (
+        agent_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value_encrypted TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (agent_id, key)
+      );
+    `);
+    this.sqlite.exec(`
+      CREATE INDEX IF NOT EXISTS agent_env_agent_id_idx
+      ON agent_env(agent_id);
+    `);
+    this.sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS channel_accounts (
+        id TEXT PRIMARY KEY NOT NULL,
+        channel TEXT NOT NULL,
+        name TEXT NOT NULL,
+        identity TEXT,
+        owner TEXT,
+        creator TEXT,
+        bot_token_encrypted TEXT,
+        app_id_encrypted TEXT,
+        app_secret_encrypted TEXT,
+        domain TEXT,
+        sandbox INTEGER,
+        auth_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    this.sqlite.exec(`
+      CREATE INDEX IF NOT EXISTS channel_accounts_channel_idx
+      ON channel_accounts(channel);
+    `);
+    this.ensureChannelAccountsTableColumns();
   }
 
   /**
@@ -105,6 +176,27 @@ export class ConsoleStore {
       this.sqlite.exec(
         "ALTER TABLE models ADD COLUMN is_paused INTEGER NOT NULL DEFAULT 0;",
       );
+    }
+  }
+
+  /**
+   * 补齐 channel_accounts 表的增量列（轻量迁移）。
+   *
+   * 关键点（中文）
+   * - 历史库可能不存在 `owner`、`creator`，启动时自动补齐。
+   */
+  private ensureChannelAccountsTableColumns(): void {
+    const rows = this.sqlite
+      .prepare("PRAGMA table_info(channel_accounts)")
+      .all() as Array<{ name?: unknown }>;
+    const columns = new Set(
+      rows.map((row) => String(row.name || "").trim()).filter(Boolean),
+    );
+    if (!columns.has("owner")) {
+      this.sqlite.exec("ALTER TABLE channel_accounts ADD COLUMN owner TEXT;");
+    }
+    if (!columns.has("creator")) {
+      this.sqlite.exec("ALTER TABLE channel_accounts ADD COLUMN creator TEXT;");
     }
   }
 
@@ -378,6 +470,9 @@ export class ConsoleStore {
     this.sqlite.exec("DELETE FROM models;");
     this.sqlite.exec("DELETE FROM model_providers;");
     this.sqlite.exec("DELETE FROM console_secure_settings;");
+    this.sqlite.exec("DELETE FROM global_env;");
+    this.sqlite.exec("DELETE FROM agent_env;");
+    this.sqlite.exec("DELETE FROM channel_accounts;");
   }
 
   /**
@@ -469,5 +564,491 @@ export class ConsoleStore {
         `,
       )
       .run(settingKey, encrypted, now, now);
+  }
+
+  /**
+   * 读取 console extensions 配置（同步）。
+   */
+  getExtensionsConfigSync<T extends object>(): T | null {
+    return this.getSecureSettingJsonSync<T>("extensions_config");
+  }
+
+  /**
+   * 写入 console extensions 配置（同步）。
+   */
+  setExtensionsConfigSync(value: unknown): void {
+    this.setSecureSettingJsonSync("extensions_config", value);
+  }
+
+  /**
+   * 列出全局环境变量（同步解密）。
+   */
+  listGlobalEnvEntriesSync(): StoredGlobalEnvEntry[] {
+    const rows = this.sqlite.prepare(
+      "SELECT key, value_encrypted, created_at, updated_at FROM global_env ORDER BY key ASC;",
+    ).all() as Array<{
+      key?: unknown;
+      value_encrypted?: unknown;
+      created_at?: unknown;
+      updated_at?: unknown;
+    }>;
+    const out: StoredGlobalEnvEntry[] = [];
+    for (const row of rows) {
+      const key = String(row.key || "").trim();
+      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+      if (!key || !encrypted) continue;
+      const value = decryptTextSync(encrypted);
+      out.push({
+        key,
+        value,
+        createdAt: String(row.created_at || ""),
+        updatedAt: String(row.updated_at || ""),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 读取全局环境变量映射（同步解密）。
+   */
+  getGlobalEnvMapSync(): Record<string, string> {
+    const entries = this.listGlobalEnvEntriesSync();
+    const map: Record<string, string> = {};
+    for (const item of entries) {
+      map[item.key] = item.value;
+    }
+    return map;
+  }
+
+  /**
+   * 列出全局环境变量（解密后）。
+   */
+  async listGlobalEnvEntries(): Promise<StoredGlobalEnvEntry[]> {
+    const rows = this.sqlite.prepare(
+      "SELECT key, value_encrypted, created_at, updated_at FROM global_env ORDER BY key ASC;",
+    ).all() as Array<{
+      key?: unknown;
+      value_encrypted?: unknown;
+      created_at?: unknown;
+      updated_at?: unknown;
+    }>;
+    const out: StoredGlobalEnvEntry[] = [];
+    for (const row of rows) {
+      const key = String(row.key || "").trim();
+      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+      if (!key || !encrypted) continue;
+      const value = await decryptText(encrypted);
+      out.push({
+        key,
+        value,
+        createdAt: String(row.created_at || ""),
+        updatedAt: String(row.updated_at || ""),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 读取全局环境变量映射（解密后）。
+   */
+  async getGlobalEnvMap(): Promise<Record<string, string>> {
+    const entries = await this.listGlobalEnvEntries();
+    const map: Record<string, string> = {};
+    for (const item of entries) {
+      map[item.key] = item.value;
+    }
+    return map;
+  }
+
+  /**
+   * 新增或更新全局环境变量。
+   */
+  async upsertGlobalEnvEntry(input: UpsertGlobalEnvEntryInput): Promise<void> {
+    const key = normalizeNonEmptyText(input.key, "global env key");
+    const value = String(input.value ?? "");
+    const existing = this.sqlite.prepare(
+      "SELECT created_at FROM global_env WHERE key = ? LIMIT 1;",
+    ).get(key) as { created_at?: unknown } | undefined;
+    const createdAt = String(existing?.created_at || nowIso());
+    const updatedAt = nowIso();
+    const encrypted = await encryptText(value);
+    this.sqlite.prepare(
+      `
+      INSERT INTO global_env (key, value_encrypted, created_at, updated_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        value_encrypted = excluded.value_encrypted,
+        updated_at = excluded.updated_at;
+      `,
+    ).run(key, encrypted, createdAt, updatedAt);
+  }
+
+  /**
+   * 删除单个全局环境变量。
+   */
+  removeGlobalEnvEntry(keyInput: string): void {
+    const key = normalizeNonEmptyText(keyInput, "global env key");
+    this.sqlite.prepare("DELETE FROM global_env WHERE key = ?;").run(key);
+  }
+
+  /**
+   * 清空全局环境变量。
+   */
+  clearGlobalEnvEntries(): void {
+    this.sqlite.exec("DELETE FROM global_env;");
+  }
+
+  /**
+   * 列出指定 agent 的私有环境变量（同步解密）。
+   */
+  listAgentEnvEntriesSync(agentIdInput: string): StoredAgentEnvEntry[] {
+    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
+    const rows = this.sqlite.prepare(
+      `
+      SELECT agent_id, key, value_encrypted, created_at, updated_at
+      FROM agent_env
+      WHERE agent_id = ?
+      ORDER BY key ASC;
+      `,
+    ).all(agentId) as Array<{
+      agent_id?: unknown;
+      key?: unknown;
+      value_encrypted?: unknown;
+      created_at?: unknown;
+      updated_at?: unknown;
+    }>;
+    const out: StoredAgentEnvEntry[] = [];
+    for (const row of rows) {
+      const key = String(row.key || "").trim();
+      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+      if (!key || !encrypted) continue;
+      const value = decryptTextSync(encrypted);
+      out.push({
+        agentId,
+        key,
+        value,
+        createdAt: String(row.created_at || ""),
+        updatedAt: String(row.updated_at || ""),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 读取指定 agent 的私有环境变量映射（同步解密）。
+   */
+  getAgentEnvMapSync(agentIdInput: string): Record<string, string> {
+    const entries = this.listAgentEnvEntriesSync(agentIdInput);
+    const map: Record<string, string> = {};
+    for (const item of entries) {
+      map[item.key] = item.value;
+    }
+    return map;
+  }
+
+  /**
+   * 列出指定 agent 的私有环境变量（解密后）。
+   */
+  async listAgentEnvEntries(agentIdInput: string): Promise<StoredAgentEnvEntry[]> {
+    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
+    const rows = this.sqlite.prepare(
+      `
+      SELECT agent_id, key, value_encrypted, created_at, updated_at
+      FROM agent_env
+      WHERE agent_id = ?
+      ORDER BY key ASC;
+      `,
+    ).all(agentId) as Array<{
+      agent_id?: unknown;
+      key?: unknown;
+      value_encrypted?: unknown;
+      created_at?: unknown;
+      updated_at?: unknown;
+    }>;
+    const out: StoredAgentEnvEntry[] = [];
+    for (const row of rows) {
+      const key = String(row.key || "").trim();
+      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+      if (!key || !encrypted) continue;
+      const value = await decryptText(encrypted);
+      out.push({
+        agentId,
+        key,
+        value,
+        createdAt: String(row.created_at || ""),
+        updatedAt: String(row.updated_at || ""),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 读取指定 agent 的私有环境变量映射（解密后）。
+   */
+  async getAgentEnvMap(agentIdInput: string): Promise<Record<string, string>> {
+    const entries = await this.listAgentEnvEntries(agentIdInput);
+    const map: Record<string, string> = {};
+    for (const item of entries) {
+      map[item.key] = item.value;
+    }
+    return map;
+  }
+
+  /**
+   * 新增或更新 agent 私有环境变量。
+   */
+  async upsertAgentEnvEntry(input: UpsertAgentEnvEntryInput): Promise<void> {
+    const agentId = normalizeNonEmptyText(input.agentId, "agentId");
+    const key = normalizeNonEmptyText(input.key, "agent env key");
+    const value = String(input.value ?? "");
+    const existing = this.sqlite.prepare(
+      "SELECT created_at FROM agent_env WHERE agent_id = ? AND key = ? LIMIT 1;",
+    ).get(agentId, key) as { created_at?: unknown } | undefined;
+    const createdAt = String(existing?.created_at || nowIso());
+    const updatedAt = nowIso();
+    const encrypted = await encryptText(value);
+    this.sqlite.prepare(
+      `
+      INSERT INTO agent_env (agent_id, key, value_encrypted, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(agent_id, key) DO UPDATE SET
+        value_encrypted = excluded.value_encrypted,
+        updated_at = excluded.updated_at;
+      `,
+    ).run(agentId, key, encrypted, createdAt, updatedAt);
+  }
+
+  /**
+   * 删除指定 agent 的单个环境变量。
+   */
+  removeAgentEnvEntry(agentIdInput: string, keyInput: string): void {
+    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
+    const key = normalizeNonEmptyText(keyInput, "agent env key");
+    this.sqlite
+      .prepare("DELETE FROM agent_env WHERE agent_id = ? AND key = ?;")
+      .run(agentId, key);
+  }
+
+  /**
+   * 清空指定 agent 的私有环境变量。
+   */
+  clearAgentEnvEntries(agentIdInput: string): void {
+    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
+    this.sqlite.prepare("DELETE FROM agent_env WHERE agent_id = ?;").run(agentId);
+  }
+
+  /**
+   * 列出 channel accounts（同步解密）。
+   */
+  listChannelAccountsSync(channelInput?: string): StoredChannelAccount[] {
+    const maybeChannel = optionalTrimmedText(channelInput);
+    const rows = maybeChannel
+      ? this.sqlite.prepare(
+          `
+          SELECT
+            id, channel, name, identity, owner, creator,
+            bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
+            domain, sandbox, auth_id, created_at, updated_at
+          FROM channel_accounts
+          WHERE channel = ?
+          ORDER BY name ASC, id ASC;
+          `,
+        ).all(maybeChannel)
+      : this.sqlite.prepare(
+          `
+          SELECT
+            id, channel, name, identity, owner, creator,
+            bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
+            domain, sandbox, auth_id, created_at, updated_at
+          FROM channel_accounts
+          ORDER BY channel ASC, name ASC, id ASC;
+          `,
+        ).all();
+    const out: StoredChannelAccount[] = [];
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const id = String(row.id || "").trim();
+      if (!id) continue;
+      const channel = normalizeChannelAccountChannel(String(row.channel || ""));
+      const botTokenEncrypted =
+        typeof row.bot_token_encrypted === "string" ? row.bot_token_encrypted : "";
+      const appIdEncrypted =
+        typeof row.app_id_encrypted === "string" ? row.app_id_encrypted : "";
+      const appSecretEncrypted =
+        typeof row.app_secret_encrypted === "string" ? row.app_secret_encrypted : "";
+      const botToken = botTokenEncrypted ? decryptTextSync(botTokenEncrypted) : undefined;
+      const appId = appIdEncrypted ? decryptTextSync(appIdEncrypted) : undefined;
+      const appSecret = appSecretEncrypted ? decryptTextSync(appSecretEncrypted) : undefined;
+      out.push({
+        id,
+        channel,
+        name: String(row.name || "").trim() || id,
+        identity: optionalTrimmedText(String(row.identity || "")),
+        owner: optionalTrimmedText(String(row.owner || "")),
+        creator: optionalTrimmedText(String(row.creator || "")),
+        botToken: optionalTrimmedText(botToken),
+        appId: optionalTrimmedText(appId),
+        appSecret: optionalTrimmedText(appSecret),
+        domain: optionalTrimmedText(String(row.domain || "")),
+        sandbox: Number(row.sandbox || 0) === 1,
+        authId: optionalTrimmedText(String(row.auth_id || "")),
+        createdAt: String(row.created_at || ""),
+        updatedAt: String(row.updated_at || ""),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 按 ID 获取 channel account（同步解密）。
+   */
+  getChannelAccountSync(accountIdInput: string): StoredChannelAccount | null {
+    const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+    const rows = this.listChannelAccountsSync();
+    return rows.find((item) => item.id === accountId) || null;
+  }
+
+  /**
+   * 列出 channel accounts（解密后）。
+   */
+  async listChannelAccounts(channelInput?: string): Promise<StoredChannelAccount[]> {
+    const maybeChannel = optionalTrimmedText(channelInput);
+    const rows = maybeChannel
+      ? this.sqlite.prepare(
+          `
+          SELECT
+            id, channel, name, identity, owner, creator,
+            bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
+            domain, sandbox, auth_id, created_at, updated_at
+          FROM channel_accounts
+          WHERE channel = ?
+          ORDER BY name ASC, id ASC;
+          `,
+        ).all(maybeChannel)
+      : this.sqlite.prepare(
+          `
+          SELECT
+            id, channel, name, identity, owner, creator,
+            bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
+            domain, sandbox, auth_id, created_at, updated_at
+          FROM channel_accounts
+          ORDER BY channel ASC, name ASC, id ASC;
+          `,
+        ).all();
+    const out: StoredChannelAccount[] = [];
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const id = String(row.id || "").trim();
+      if (!id) continue;
+      const channel = normalizeChannelAccountChannel(String(row.channel || ""));
+      const botTokenEncrypted =
+        typeof row.bot_token_encrypted === "string" ? row.bot_token_encrypted : "";
+      const appIdEncrypted =
+        typeof row.app_id_encrypted === "string" ? row.app_id_encrypted : "";
+      const appSecretEncrypted =
+        typeof row.app_secret_encrypted === "string" ? row.app_secret_encrypted : "";
+      const botToken = botTokenEncrypted ? await decryptText(botTokenEncrypted) : undefined;
+      const appId = appIdEncrypted ? await decryptText(appIdEncrypted) : undefined;
+      const appSecret = appSecretEncrypted ? await decryptText(appSecretEncrypted) : undefined;
+      out.push({
+        id,
+        channel,
+        name: String(row.name || "").trim() || id,
+        identity: optionalTrimmedText(String(row.identity || "")),
+        owner: optionalTrimmedText(String(row.owner || "")),
+        creator: optionalTrimmedText(String(row.creator || "")),
+        botToken: optionalTrimmedText(botToken),
+        appId: optionalTrimmedText(appId),
+        appSecret: optionalTrimmedText(appSecret),
+        domain: optionalTrimmedText(String(row.domain || "")),
+        sandbox: Number(row.sandbox || 0) === 1,
+        authId: optionalTrimmedText(String(row.auth_id || "")),
+        createdAt: String(row.created_at || ""),
+        updatedAt: String(row.updated_at || ""),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 按 ID 获取 channel account（解密后）。
+   */
+  async getChannelAccount(accountIdInput: string): Promise<StoredChannelAccount | null> {
+    const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+    const rows = await this.listChannelAccounts();
+    return rows.find((item) => item.id === accountId) || null;
+  }
+
+  /**
+   * 新增或更新 channel account。
+   */
+  async upsertChannelAccount(input: UpsertChannelAccountInput): Promise<void> {
+    const id = normalizeNonEmptyText(input.id, "channel account id");
+    const channel = normalizeChannelAccountChannel(input.channel);
+    const name = normalizeNonEmptyText(input.name, "channel account name");
+    const existing = await this.getChannelAccount(id);
+    const createdAt = existing?.createdAt || nowIso();
+    const updatedAt = nowIso();
+
+    const nextBotToken =
+      Object.prototype.hasOwnProperty.call(input, "botToken")
+        ? optionalTrimmedText(input.botToken)
+        : existing?.botToken;
+    const nextAppId =
+      Object.prototype.hasOwnProperty.call(input, "appId")
+        ? optionalTrimmedText(input.appId)
+        : existing?.appId;
+    const nextAppSecret =
+      Object.prototype.hasOwnProperty.call(input, "appSecret")
+        ? optionalTrimmedText(input.appSecret)
+        : existing?.appSecret;
+    const botTokenEncrypted = nextBotToken ? await encryptText(nextBotToken) : null;
+    const appIdEncrypted = nextAppId ? await encryptText(nextAppId) : null;
+    const appSecretEncrypted = nextAppSecret ? await encryptText(nextAppSecret) : null;
+
+    this.sqlite.prepare(
+      `
+      INSERT INTO channel_accounts (
+        id, channel, name, identity, owner, creator,
+        bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
+        domain, sandbox, auth_id, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        channel = excluded.channel,
+        name = excluded.name,
+        identity = excluded.identity,
+        owner = excluded.owner,
+        creator = excluded.creator,
+        bot_token_encrypted = excluded.bot_token_encrypted,
+        app_id_encrypted = excluded.app_id_encrypted,
+        app_secret_encrypted = excluded.app_secret_encrypted,
+        domain = excluded.domain,
+        sandbox = excluded.sandbox,
+        auth_id = excluded.auth_id,
+        updated_at = excluded.updated_at;
+      `,
+    ).run(
+      id,
+      channel,
+      name,
+      optionalTrimmedText(input.identity) || null,
+      optionalTrimmedText(input.owner) || null,
+      optionalTrimmedText(input.creator) || null,
+      botTokenEncrypted,
+      appIdEncrypted,
+      appSecretEncrypted,
+      optionalTrimmedText(input.domain) || null,
+      input.sandbox === true ? 1 : 0,
+      optionalTrimmedText(input.authId) || null,
+      createdAt,
+      updatedAt,
+    );
+  }
+
+  /**
+   * 删除 channel account。
+   */
+  removeChannelAccount(accountIdInput: string): void {
+    const accountId = normalizeNonEmptyText(accountIdInput, "channel account id");
+    this.sqlite.prepare("DELETE FROM channel_accounts WHERE id = ?;").run(accountId);
   }
 }

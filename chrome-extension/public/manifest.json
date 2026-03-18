@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "ShipMyAgent Web Share",
+  "description": "分享当前网页给指定 ShipMyAgent，并将执行结果回传到 chatKey。",
+  "version": "0.1.1",
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "ShipMyAgent Web Share",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png"
+    }
+  },
+  "permissions": [
+    "tabs",
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}

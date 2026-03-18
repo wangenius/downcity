@@ -1,4 +1,3 @@
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
 import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
 
 /**
@@ -6,7 +5,7 @@ import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
  *
  * 关键点（中文）
  * - 仅负责 Telegram 的主人身份判定。
- * - 配置优先级：`ship.json` 的 `services.chat.channels.telegram.auth_id` > `TELEGRAM_AUTH_ID`。
+ * - 仅依赖运行时环境变量 `TELEGRAM_AUTH_ID`（通常由 channel account 注入）。
  */
 
 function normalizeAuthId(value: unknown): string | undefined {
@@ -18,28 +17,22 @@ function normalizeAuthId(value: unknown): string | undefined {
 }
 
 function readTelegramAuthId(params: {
-  config?: ShipConfig;
   env?: Record<string, string>;
 }): string | undefined {
-  const configAuthId = normalizeAuthId(
-    params.config?.services?.chat?.channels?.telegram?.auth_id,
-  );
   const envAuthId = normalizeAuthId(params.env?.TELEGRAM_AUTH_ID);
-  return configAuthId || envAuthId;
+  return envAuthId;
 }
 
 /**
  * 判定 Telegram 用户身份状态。
  */
 export function resolveTelegramMasterStatus(params: {
-  config?: ShipConfig;
   env?: Record<string, string>;
   userId?: string;
 }): ChatMasterStatus {
   const userId = normalizeAuthId(params.userId);
   if (!userId) return "unknown";
   const authId = readTelegramAuthId({
-    config: params.config,
     env: params.env,
   });
   if (!authId) return "unknown";

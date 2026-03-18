@@ -7,6 +7,7 @@ import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
+import { GlobalChannelAccountsSection } from "@/components/dashboard/GlobalChannelAccountsSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
 import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspaceSection"
@@ -18,12 +19,16 @@ import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { TasksSection } from "@/components/dashboard/TasksSection"
 import { ToastMessage } from "@/components/dashboard/ToastMessage"
 import { SiteHeader } from "@/components/site-header"
+import { Button } from "@/components/ui/button"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
 import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/dashboard-route"
 import { cn } from "@/lib/utils"
 import type { DashboardView } from "@/types/Navigation"
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+
+const DEBUG_PANELS_COLLAPSED_STORAGE_KEY = "sma.console-ui.context.debug-panels-collapsed"
 
 export function App() {
   const [routePathname, setRoutePathname] = React.useState<string>(() => {
@@ -40,6 +45,14 @@ export function App() {
     return String(parseDashboardPath(window.location.pathname).taskTitle || "").trim()
   })
   const [focusedChatChannel, setFocusedChatChannel] = React.useState<string>("")
+  const [debugPanelsCollapsed, setDebugPanelsCollapsed] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    try {
+      return window.localStorage.getItem(DEBUG_PANELS_COLLAPSED_STORAGE_KEY) === "1"
+    } catch {
+      return false
+    }
+  })
 
   const {
     agents,
@@ -64,6 +77,7 @@ export function App() {
     configStatus,
     modelProviders,
     modelPoolItems,
+    channelAccounts,
     prompt,
     topbarStatus,
     topbarError,
@@ -110,6 +124,9 @@ export function App() {
     removeModelPoolItem,
     setModelPoolItemPaused,
     testModelPoolItem,
+    upsertChannelAccount,
+    probeChannelAccount,
+    removeChannelAccount,
     executeAgentCommand,
     constants,
     uiHelpers,
@@ -161,13 +178,6 @@ export function App() {
     if (normalized && availableChatChannels.includes(normalized)) return normalized
     return String(availableChatChannels[0] || "").trim().toLowerCase()
   }, [availableChatChannels, focusedChatChannel])
-  const focusedChannelIdentity = React.useMemo(() => {
-    const channel = String(effectiveFocusedChatChannel || "").trim().toLowerCase()
-    if (!channel) return ""
-    const profiles = Array.isArray(selectedAgent?.chatProfiles) ? selectedAgent.chatProfiles : []
-    const matched = profiles.find((item) => String(item.channel || "").trim().toLowerCase() === channel)
-    return String(matched?.identity || "").trim()
-  }, [effectiveFocusedChatChannel, selectedAgent?.chatProfiles])
 
   const resolveAgentIdByRouteSegment = React.useCallback(
     (segmentInput?: string): string => {
@@ -299,6 +309,7 @@ export function App() {
     if (!routeHydrated) return
     const agentScopedView = activeView !== "globalOverview" &&
       activeView !== "globalModel" &&
+      activeView !== "globalChannelAccounts" &&
       activeView !== "globalCommand" &&
       activeView !== "globalAgents" &&
       activeView !== "globalExtensions"
@@ -355,6 +366,16 @@ export function App() {
   React.useEffect(() => {
     setFocusedChatChannel("")
   }, [selectedAgentId])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      // 关键点（中文）：折叠偏好是纯 UI 状态，使用本地存储即可跨刷新保留。
+      window.localStorage.setItem(DEBUG_PANELS_COLLAPSED_STORAGE_KEY, debugPanelsCollapsed ? "1" : "0")
+    } catch {
+      // 忽略存储异常（隐私模式或禁用存储）。
+    }
+  }, [debugPanelsCollapsed])
 
   React.useEffect(() => {
     if (activeView !== "contextOverview") return
@@ -504,6 +525,18 @@ export function App() {
             />
           </section>
         )
+      case "globalChannelAccounts":
+        return (
+          <section>
+            <GlobalChannelAccountsSection
+              items={channelAccounts}
+              loading={loading}
+              onUpsert={(input) => upsertChannelAccount(input)}
+              onProbe={(input) => probeChannelAccount(input)}
+              onRemove={(id) => removeChannelAccount(id)}
+            />
+          </section>
+        )
       case "globalCommand":
         return (
           <section className="flex min-h-0 flex-1">
@@ -577,8 +610,8 @@ export function App() {
               contexts={contexts}
               selectedContextId={selectedContextId}
               chatChannels={chatChannels}
+              channelAccounts={channelAccounts}
               focusedChannel={effectiveFocusedChatChannel}
-              channelIdentity={focusedChannelIdentity}
               formatTime={uiHelpers.formatTime}
               onOpenContext={(contextId) => {
                 setFocusedChatChannel(resolveChannelFromContextId(contextId))
@@ -607,6 +640,7 @@ export function App() {
               contextArchiveMessages={contextArchiveMessages}
               prompt={prompt}
               chatInput={chatInput}
+              debugPanelsCollapsed={debugPanelsCollapsed}
               sending={sending}
               clearingContextMessages={clearingContextMessages}
               clearingChatHistory={clearingChatHistory}
@@ -647,6 +681,23 @@ export function App() {
         return null
     }
   }
+
+  const headerRightActions = activeView === "contextWorkspace" ? (
+    <Button
+      type="button"
+      size="icon"
+      variant="ghost"
+      className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+      onClick={() => {
+        // 关键点（中文）：在顶部 header 提供统一入口，不打断聊天区和右侧面板内部结构。
+        setDebugPanelsCollapsed((prev) => !prev)
+      }}
+      aria-label={debugPanelsCollapsed ? "展开 Debug Panels" : "折叠 Debug Panels"}
+      title={debugPanelsCollapsed ? "展开 Debug Panels" : "折叠 Debug Panels"}
+    >
+      {debugPanelsCollapsed ? <ChevronLeftIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
+    </Button>
+  ) : null
 
   return (
     <SidebarProvider
@@ -720,7 +771,7 @@ export function App() {
         variant="sidebar"
       />
       <SidebarInset>
-        <SiteHeader viewLabel={getDashboardViewLabel(activeView)} />
+        <SiteHeader viewLabel={getDashboardViewLabel(activeView)} rightActions={headerRightActions} />
 
         <main
           className={cn(

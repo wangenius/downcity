@@ -43,6 +43,7 @@ import {
 } from "@/console/runtime/ConsolePaths.js";
 import { ConsoleStore } from "@utils/store/index.js";
 import { registerConsoleUiModelRoutes } from "@/console/ui/ModelApiRoutes.js";
+import { registerConsoleUiChannelAccountRoutes } from "@/console/ui/ChannelAccountApiRoutes.js";
 import { getSmaExtensions, listExtensionRuntimes } from "@/console/extension/Manager.js";
 import type {
   ConsoleUiAgentOption,
@@ -86,15 +87,15 @@ type ShipJsonLike = {
       channels?: {
         telegram?: {
           enabled?: unknown;
-          botToken?: unknown;
+          channelAccountId?: unknown;
         };
         feishu?: {
           enabled?: unknown;
-          appId?: unknown;
+          channelAccountId?: unknown;
         };
         qq?: {
           enabled?: unknown;
-          appId?: unknown;
+          channelAccountId?: unknown;
         };
       };
     };
@@ -404,6 +405,9 @@ export class ConsoleUIGateway {
       buildModelResponse: (requestedAgentId) =>
         this.buildModelResponse(requestedAgentId),
     });
+    registerConsoleUiChannelAccountRoutes({
+      app: this.app,
+    });
 
     // 关键点（中文）：除 `/api/ui/*` 外，其他 API 一律透传到“当前选中 agent”。
     this.app.all("/api/*", async (c) => {
@@ -602,7 +606,6 @@ export class ConsoleUIGateway {
 
     const chatProfiles = running
       ? await this.resolveAgentChatProfiles({
-          ship,
           baseUrl: `http://${endpoint.host}:${endpoint.port}`,
         })
       : [];
@@ -625,41 +628,10 @@ export class ConsoleUIGateway {
     };
   }
 
-  private normalizeChatIdentity(params: {
-    channel: string;
-    detail?: Record<string, unknown>;
-    ship?: ShipJsonLike | null;
-  }): string {
-    const channel = params.channel;
-    const detail = params.detail || {};
-    const shipChannels = params.ship?.services?.chat?.channels;
-    if (channel === "telegram") {
-      const botUsername = String(detail.botUsername || "").trim();
-      if (botUsername) return `@${botUsername.replace(/^@+/, "")}`;
-      return "telegram bot";
-    }
-    if (channel === "qq") {
-      // 关键点（中文）：QQ 优先展示可读名称，其次展示 appId，避免退化为固定文案。
-      const qqBotName = String(
-        detail.botName || detail.nickname || detail.username || "",
-      ).trim();
-      if (qqBotName) return qqBotName;
-      const appId = String(detail.appId || shipChannels?.qq?.appId || "").trim();
-      return appId ? `app:${appId}` : "qq bot";
-    }
-    if (channel === "feishu") {
-      const appId = String(shipChannels?.feishu?.appId || "").trim();
-      return appId ? `app:${appId}` : "feishu bot";
-    }
-    return `${channel} bot`;
-  }
-
   private async resolveAgentChatProfiles(params: {
-    ship?: ShipJsonLike | null;
     baseUrl: string;
   }): Promise<Array<{
     channel: string;
-    identity: string;
     linkState?: string;
     statusText?: string;
   }>> {
@@ -695,21 +667,12 @@ export class ConsoleUIGateway {
                   const linkState = String(row?.linkState || "").trim();
                   return linkState === "connected" || linkState === "unknown";
                 })();
-          // 关键点（中文）：只展示已启动渠道，未启动渠道不进入 chat identity 面板。
+          // 关键点（中文）：只展示已启动渠道，未启动渠道不进入侧边栏 chat 分组。
           if (!running) return null;
           const linkState = String(row?.linkState || "").trim();
           const statusText = String(row?.statusText || "").trim();
-          const detail =
-            row?.detail && typeof row.detail === "object"
-              ? row.detail
-              : undefined;
           return {
             channel,
-            identity: this.normalizeChatIdentity({
-              channel,
-              detail,
-              ship: params.ship,
-            }),
             ...(linkState ? { linkState } : {}),
             ...(statusText ? { statusText } : {}),
           };
@@ -719,7 +682,6 @@ export class ConsoleUIGateway {
             item,
           ): item is {
             channel: string;
-            identity: string;
             linkState?: string;
             statusText?: string;
           } => item !== null,

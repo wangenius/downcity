@@ -1,7 +1,10 @@
 ---
 title: Environment Variable Strategy (Console Shared vs Agent Private)
-description: A complete guide to environment variable scope, priority, and operational setup in ShipMyAgent
+description: Clear scope and runtime merge logic for global_env, agent_env, channel_accounts, and <agent>/.env
 ---
+
+> Canonical schema doc: [Env and ship.db Database Design](/en/docs/configuration/env-shipdb-design)
+
 
 # Environment Variable Strategy (Console Shared vs Agent Private)
 
@@ -12,167 +15,101 @@ This page answers 4 practical questions:
 3. How are they loaded and merged at startup?
 4. What reads project `.env`, and what does not?
 
-## 1. One-Page Overview
+## 1. Scope Matrix
 
-### 1.1 Three categories (clear naming first)
-
-| Category | Typical Keys | Storage | Scope | Should you configure manually? |
+| Layer | Source | Persisted | Scope | Typical content |
 |---|---|---|---|---|
-| Console shared config variables | provider API keys, `extensions.*` | `~/.ship/ship.db` | All agents | Yes (via `sma console ...`) |
-| Agent private config variables | `QQ_APP_ID`, `TELEGRAM_BOT_TOKEN` | `<agent>/.env` | Current agent only | Yes (inside project) |
-| Runtime context variables | `SMA_CTX_CHANNEL`, `SMA_CTX_CHAT_ID` | process env (not persisted) | Single request | No (injected automatically) |
-
-### 1.2 Architecture map (storage boundaries)
-
-```mermaid
-flowchart LR
-  subgraph ConsoleGlobal
-    A["~/.ship/ship.db<br/>console_config + models/providers"]
-  end
-
-  subgraph AgentProjectA
-    B1["ship.json"]
-    B2[".env"]
-  end
-
-  subgraph AgentProjectB
-    C1["ship.json"]
-    C2[".env"]
-  end
-
-  A -->|"shared capability injection (shared fields only)"| R1["Agent A Runtime"]
-  A -->|"shared capability injection (shared fields only)"| R2["Agent B Runtime"]
-  B1 --> R1
-  B2 --> R1
-  C1 --> R2
-  C2 --> R2
-```
+| Console shared env | `~/.ship/ship.db` `global_env` | Yes (encrypted) | All agents | shared API keys and shared placeholders |
+| Agent private env (DB) | `~/.ship/ship.db` `agent_env` | Yes (encrypted) | One agent (`agent_id`) | project-level secret keys |
+| Agent private env (file) | `<agent>/.env` | User-managed file | One agent | runtime overlay values |
+| Bot credentials | `~/.ship/ship.db` `channel_accounts` | Yes (encrypted fields) | Reusable by binding | Telegram/Feishu/QQ bot secrets |
+| Runtime context vars | process memory (`SMA_CTX_*`) | No | single request | channel/chat/user context |
 
 Key points:
 
-1. `ship.db` is the console-global source of truth.
-2. Each agent reads only its own `.env`.
-3. There is no path where project A `.env` leaks into project B runtime.
+1. All persisted env-like secrets are in `ship.db` encrypted tables.
+2. `<agent>/.env` is runtime-only overlay for that agent.
+3. `ship.json` stores bindings (`model.primary`, `channel.channelAccountId`), not plaintext credentials.
 
-## 2. Save Logic (where changes are written)
-
-### 2.1 Writes to Console shared storage
-
-The following write to `~/.ship/ship.db`:
-
-1. `sma console model ...`
-2. `sma console config set extensions...`
-3. `sma voice ...` (internally updates `extensions.voice`)
-
-### 2.2 Writes to Agent private storage
-
-Inside a project, edits to:
-
-1. `<agent>/ship.json`
-2. `<agent>/.env`
-
-affect only that agent.
-
-### 2.3 Save-path decision flow
-
-```mermaid
-flowchart TD
-  U["You want to change a setting"] --> Q{"Which domain?"}
-  Q -->|"Model pool / extensions"| S1["Write to ~/.ship/ship.db"]
-  Q -->|"services.chat / project service params"| S2["Write to <agent>/ship.json or <agent>/.env"]
-  Q -->|"SMA_CTX_*"| S3["Do not write manually (runtime injected)"]
-```
-
-## 3. Load Logic (how values become effective)
-
-At agent startup (`sma agent start` or daemon starting an agent), the high-level order is:
-
-1. Read `<agent>/.env` into an in-memory private snapshot (without mutating global `process.env`).
-2. Read `console_config` from `~/.ship/ship.db`.
-3. Inject only shared fields from console config (currently mainly `extensions`).
-4. Read project `ship.json` layers and deep-merge.
-5. Resolve `${ENV_KEY}` placeholders:
-   1. Project layers read project `.env` snapshot only.
-   2. Console layer reads system environment only.
-6. Start services with merged config + project env snapshot.
-
-### 3.1 Startup sequence diagram
+## 2. Data Flow (diagram)
 
 ```mermaid
 sequenceDiagram
   participant CLI as sma agent start
-  participant ENV as <agent>/.env
   participant DB as ~/.ship/ship.db
+  participant ENV as <agent>/.env
   participant JSON as ship.json(project layers)
   participant RT as Agent Runtime
 
-  CLI->>ENV: Read and parse .env
-  ENV-->>CLI: Project env snapshot
-  CLI->>DB: Read console_config
-  DB-->>CLI: Console global config
-  CLI->>JSON: Read/deep-merge ship.json
-  JSON-->>CLI: Project config layers
-  CLI->>CLI: Resolve placeholders by scope
-  CLI->>RT: Inject config + env snapshot
+  CLI->>DB: Read global_env
+  CLI->>DB: Read agent_env by agent_id
+  CLI->>ENV: Parse project .env
+  CLI->>CLI: Build runtime env = agent_env + .env (.env wins)
+  CLI->>DB: Read extensions_config
+  CLI->>JSON: Read and merge ship.json layers
+  CLI->>CLI: Resolve placeholders using scoped env maps
+  CLI->>DB: Resolve channel channel account by channelAccountId
+  CLI->>RT: Start services/channels
 ```
 
-## 4. Priority Logic (who wins)
+## 3. Load Priority (who wins)
 
-### 4.1 Chat credentials priority
+### 3.1 Runtime env merge
 
-For QQ (same pattern for Telegram/Feishu):
+1. `agent_env` (DB) loads first.
+2. `<agent>/.env` overlays it.
+3. `.env` wins on key conflicts.
 
-1. Use explicit `ship.json` value first (`services.chat.channels.qq.appId`).
-2. If missing, fallback to project `.env` (`QQ_APP_ID`).
-3. If both missing, treat as not configured.
+### 3.2 Channel credential resolution
 
-### 4.2 Priority flow (`appId` example)
+1. `ship.json` channel config only binds `channelAccountId`.
+2. Runtime resolves real credentials from `channel_accounts`.
+3. Missing binding or missing required secrets => `config_missing`.
+
+## 4. What Reads `.env` and What Does Not
+
+### 4.1 Reads project `.env`
+
+1. Project-layer `${ENV_KEY}` resolution.
+2. Agent runtime process env injection (`agent_env + .env`).
+3. Optional fallback paths in some service auth helpers.
+
+### 4.2 Does not read project `.env`
+
+1. Global model/provider pool (`model_providers`, `models`) from `ship.db`.
+2. Extension global config from `console_secure_settings.extensions_config`.
+3. Bot account credential source of truth (`channel_accounts`).
+4. Runtime context vars (`SMA_CTX_*`) are generated at request time.
+
+## 5. Save Paths
+
+1. Bot account CRUD (UI): writes `channel_accounts`.
+2. Model CRUD (CLI/UI): writes `model_providers`, `models`.
+3. Extension config (`sma console config set extensions.*`): writes `extensions_config`.
+4. Channel configure action: writes `ship.json` (`enabled`, `channelAccountId`).
+5. User manual `.env` edit: affects runtime only for that agent.
+
+## 6. FAQ and Troubleshooting
+
+### 6.1 Why does a new agent show existing channel credentials?
+
+Most common reasons:
+
+1. The channel is bound to an existing `channelAccountId`.
+2. The new project `.env` already contains fallback keys.
 
 ```mermaid
 flowchart TD
-  A["Read services.chat.channels.qq.appId"] --> B{"Has explicit value in ship.json?"}
-  B -->|Yes| C["Use ship.json value (Source=ship)"]
-  B -->|No| D{"Has QQ_APP_ID in <agent>/.env?"}
-  D -->|Yes| E["Use .env value (Source=env)"]
-  D -->|No| F["Not configured (Source=none)"]
+  A["Channel appears configured"] --> B["Check channel.channelAccountId in ship.json"]
+  B -->|bound| C["Find account in channel_accounts table"]
+  B -->|empty| D["Check fallback keys in <agent>/.env"]
+  C --> E["Credential source is channel account"]
+  D --> F["Credential source is project runtime env"]
 ```
 
-## 5. Where project `.env` is read vs not read
+## 7. Recommended Setup
 
-### 5.1 Reads project `.env` (current agent)
-
-1. `${ENV_KEY}` resolution in project `ship.json` layers.
-2. Chat credential resolution for Telegram/Feishu/QQ.
-3. Some extension local fallback runs (when daemon is unavailable) using the same project env snapshot.
-
-### 5.2 Does not read project `.env`
-
-1. Console model pool source of truth (providers/models): comes from `ship.db`.
-2. `extensions.*` global switches and config: comes from `ship.db` `console_config.extensions`.
-3. `SMA_CTX_*`: runtime request context, not configuration.
-
-## 6. Common Misunderstandings and Troubleshooting
-
-### 6.1 "Why does a new agent already show QQ appId?"
-
-Most common reason: that project `.env` already has `QQ_APP_ID`.  
-This means env fallback is working, not that `ship.json` was auto-written.
-
-### 6.2 Troubleshooting flow
-
-```mermaid
-flowchart TD
-  A["Channel looks configured in UI"] --> B["Check App ID Source"]
-  B -->|"ship"| C["Value comes from ship.json"]
-  B -->|"env"| D["Value comes from current project .env"]
-  B -->|"none"| E["Currently not configured"]
-  D --> F["Check if old project .env was copied into new project"]
-  C --> G["Check explicit value or placeholder in ship.json"]
-```
-
-## 7. Recommended Setup Templates
-
-### 7.1 Console shared capabilities
+1. Initialize console-global data once:
 
 ```bash
 sma console init
@@ -180,38 +117,14 @@ sma console model create
 sma console config set extensions.voice.enabled true
 ```
 
-### 7.2 Agent private capabilities
-
-`ship.json`:
-
-```json
-{
-  "services": {
-    "chat": {
-      "channels": {
-        "qq": {
-          "enabled": true,
-          "appId": "${QQ_APP_ID}",
-          "appSecret": "${QQ_APP_SECRET}",
-          "auth_id": ""
-        }
-      }
-    }
-  }
-}
-```
-
-`.env`:
-
-```bash
-QQ_APP_ID=your_qq_app_id
-QQ_APP_SECRET=your_qq_app_secret
-```
+2. Create channel accounts in Console UI `Global / Channel Accounts`.
+3. In each agent `ship.json`, bind channel to `channelAccountId`.
+4. Keep agent-private runtime keys in `<agent>/.env` only when needed.
 
 ## 8. Best-Practice Checklist
 
-1. Keep model pool and extensions in `ship.db`.
-2. Keep service secrets in project `.env`, and reference via `${ENV_KEY}` in `ship.json`.
-3. Treat `SMA_CTX_*` as runtime context, never as persisted config.
-4. Keep `.env` isolated per project when running multiple agents.
-5. After changes, restart the target agent and verify `Source` in Console UI.
+1. Keep persisted secrets in `ship.db` encrypted tables.
+2. Keep `ship.json` as binding/config file, not secret storage.
+3. Use `<agent>/.env` as agent-local runtime overlay only.
+4. Validate channel status via `chat status` after changing bindings.
+5. If values look inherited, check both `channelAccountId` and project `.env`.

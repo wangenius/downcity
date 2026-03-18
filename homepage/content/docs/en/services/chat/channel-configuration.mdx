@@ -1,0 +1,125 @@
+---
+title: Channel Configuration
+description: How channel configuration metadata drives Console UI and runtime persistence
+---
+
+# Channel Configuration
+
+Each chat channel (Telegram / Feishu / QQ) exposes a runtime-readable configuration descriptor.
+
+This descriptor directly controls:
+
+- Which fields Console UI renders
+- Which fields are editable
+- Field types (`string` / `boolean` / `number` / `secret` / `enum`)
+- Field source (`ship.json`)
+
+## Why this design
+
+- Remove frontend hardcoding for per-channel fields
+- Centralize validation in `chat.configure`
+- Keep clear boundaries:
+  - Agent service (`ship.json`): channel binding + runtime toggles only
+  - Global Channel Accounts (`ship.db`): all bot information (token/appId/appSecret/authId/name/owner/creator)
+
+## Agent Service Scope
+
+Agent-side channel config only includes:
+
+- `enabled`
+- `channelAccountId`
+
+Only fields with `writable=true` are editable in Console UI and persisted by `chat.configure`.
+
+## Runtime flow
+
+### 1. Read status
+
+`chat.status` returns, per channel:
+
+- `detail.config`: safe config summary
+- `detail.configuration`: full configuration descriptor
+
+### 2. Render UI
+
+Console UI renders forms dynamically from `detail.configuration.fields`:
+
+- writable fields -> `enabled` / `channelAccountId`
+
+### 3. Save config
+
+On save, Console UI sends only writable patch fields.
+
+Backend then:
+
+1. Filters fields by channel descriptor whitelist
+2. Normalizes and validates by field type
+3. Updates in-memory runtime config
+4. Persists to project `ship.json`
+5. Restarts/reloads channel if requested (default: restart)
+
+## Relationship with Channel Accounts
+
+Recommended flow:
+
+1. Fill credentials in Global Channel Accounts and click `Test`
+2. Click `Confirm` only after test passes (bot base info is auto-discovered and saved)
+3. Bind `channelAccountId` in channel configuration
+4. Run `test` / `reconnect`
+
+This cleanly separates secret management and per-agent channel runtime config.
+
+### How bot info is fetched
+
+You do not need to manually enter bot name, bot id, or identity.  
+The system fetches them automatically by channel:
+
+- Telegram: `botToken` -> `getMe`
+- Feishu: `appId + appSecret` -> access token -> bot info endpoint
+- QQ: `appId + appSecret` -> gateway validation -> bot profile when available
+
+Console UI keeps the flow minimal and focuses on test status + confirmation.
+
+## What you will use
+
+### Console UI
+
+- Global -> Channel Accounts: manage global channel accounts
+- Channel -> Configuration: bind `channelAccountId`, toggle `enabled`
+
+### CLI
+
+Inspect descriptor:
+
+```bash
+sma service command chat configuration --channel qq
+```
+
+Update and restart:
+
+```bash
+sma service command chat configure \
+  --channel qq \
+  --config-json '{"channelAccountId":"qq-main","enabled":true}' \
+  --restart
+```
+
+## FAQ
+
+### Why no plaintext secrets in channel pages?
+
+By design, channel pages expose safe summaries only.
+
+### Why are some fields not editable?
+
+Channel pages handle binding/toggles only. Bot details are managed in Global Channel Accounts.
+
+### Why did new fields appear automatically in Console UI?
+
+Because rendering is metadata-driven from `detail.configuration`, not hardcoded.
+
+## Related docs
+
+- [Chat Service Commands](/en/docs/commands/service/chat)
+- [Env + ship.db design](/en/docs/configuration/env-shipdb-design)
+- [Console ship.json configuration](/en/docs/configuration/console-ship-json)

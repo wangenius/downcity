@@ -20,15 +20,15 @@ Use Telegram to chat with ShipMyAgent (DM or group chat).
 3. Follow the prompts
 4. Copy the **HTTP API Token**
 
-### 2) Configure your project
+### 2) Create channel account and bind channel
 
-Add the token to your project `.env` (same directory as `ship.json`):
+Create a Telegram channel account in Console UI `Global / Channel Accounts`:
 
-```bash
-TELEGRAM_BOT_TOKEN=123456:abc...
-```
+1. account id: for example `telegram-main`
+2. channel: `telegram`
+3. bot token: token from BotFather
 
-Enable Telegram in `ship.json`:
+Then bind it in project `ship.json`:
 
 ```json
 {
@@ -37,7 +37,7 @@ Enable Telegram in `ship.json`:
       "channels": {
         "telegram": {
           "enabled": true,
-          "botToken": "${TELEGRAM_BOT_TOKEN}"
+          "channelAccountId": "telegram-main"
         }
       }
     }

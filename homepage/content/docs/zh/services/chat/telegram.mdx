@@ -20,15 +20,14 @@ description: 通过 Telegram 与 Agent 对话
 3. 按提示设置名称与用户名
 4. 复制 **HTTP API Token**
 
-### 2）写入项目配置
+### 2）创建 Channel Account 并绑定到项目
 
-把 token 放到项目根目录的 `.env`（与 `ship.json` 同目录）：
+在 Console UI 的 `Global / Channel Accounts` 创建 Telegram 账户（例如 `telegram-main`）：
 
-```bash
-TELEGRAM_BOT_TOKEN=123456:abc...
-```
+1. `channel = telegram`
+2. 填入 BotFather 生成的 `botToken`
 
-在 `ship.json` 启用 Telegram：
+然后在 `ship.json` 里绑定这个账户：
 
 ```json
 {
@@ -37,7 +36,7 @@ TELEGRAM_BOT_TOKEN=123456:abc...
       "channels": {
         "telegram": {
           "enabled": true,
-          "botToken": "${TELEGRAM_BOT_TOKEN}"
+          "channelAccountId": "telegram-main"
         }
       }
     }

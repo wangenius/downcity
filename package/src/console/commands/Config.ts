@@ -88,28 +88,18 @@ function readShipConfig(projectRoot: string): { shipJsonPath: string; config: Sh
 function readConsoleStoreConfig(): { consoleStorePath: string; config: ShipConfig } {
   const store = new ConsoleStore();
   try {
-    const raw = store.getSecureSettingJsonSync<unknown>("console_config");
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-      return {
-        consoleStorePath: getConsoleShipDbPath(),
-        config: { name: "console", version: "1.0.0" } as ShipConfig,
-      };
-    }
-    const candidate = raw as Partial<ShipConfig>;
-    if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
-      const normalized = candidate as Record<string, unknown>;
-      return {
-        consoleStorePath: getConsoleShipDbPath(),
-        config: {
-          ...(normalized as unknown as ShipConfig),
-          name: String(candidate.name || "console"),
-          version: String(candidate.version || "1.0.0"),
-        },
-      };
-    }
+    const raw = store.getExtensionsConfigSync<Record<string, unknown>>();
+    const extensions =
+      raw && typeof raw === "object" && !Array.isArray(raw)
+        ? raw
+        : {};
     return {
       consoleStorePath: getConsoleShipDbPath(),
-      config: candidate as ShipConfig,
+      config: {
+        name: "console",
+        version: "1.0.0",
+        extensions: extensions as ShipConfig["extensions"],
+      },
     };
   } finally {
     store.close();
@@ -119,7 +109,11 @@ function readConsoleStoreConfig(): { consoleStorePath: string; config: ShipConfi
 function writeConsoleStoreConfig(config: ShipConfig): void {
   const store = new ConsoleStore();
   try {
-    store.setSecureSettingJsonSync("console_config", config);
+    const extensions =
+      config.extensions && typeof config.extensions === "object"
+        ? config.extensions
+        : {};
+    store.setExtensionsConfigSync(extensions);
   } finally {
     store.close();
   }

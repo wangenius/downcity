@@ -43,7 +43,7 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
       channels: {
         telegram: {
           enabled: false,
-          botToken: undefined,
+          channelAccountId: undefined,
         },
       },
     },

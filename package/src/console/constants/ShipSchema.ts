@@ -80,16 +80,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                   additionalProperties: true,
                   properties: {
                     enabled: { type: "boolean" },
-                    botToken: { type: "string" },
-                    auth_id: { type: "string" },
-                  },
-                },
-                discord: {
-                  type: "object",
-                  additionalProperties: true,
-                  properties: {
-                    enabled: { type: "boolean" },
-                    botToken: { type: "string" },
+                    channelAccountId: { type: "string" },
                   },
                 },
                 feishu: {
@@ -97,10 +88,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                   additionalProperties: true,
                   properties: {
                     enabled: { type: "boolean" },
-                    appId: { type: "string" },
-                    appSecret: { type: "string" },
-                    domain: { type: "string" },
-                    auth_id: { type: "string" },
+                    channelAccountId: { type: "string" },
                   },
                 },
                 qq: {
@@ -108,10 +96,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                   additionalProperties: true,
                   properties: {
                     enabled: { type: "boolean" },
-                    appId: { type: "string" },
-                    appSecret: { type: "string" },
-                    sandbox: { type: "boolean" },
-                    auth_id: { type: "string" },
+                    channelAccountId: { type: "string" },
                   },
                 },
               },

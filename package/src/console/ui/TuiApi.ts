@@ -32,6 +32,7 @@ import {
   toOptionalString,
   toUiMessageTimeline,
 } from "./tui/Helpers.js";
+import type { TuiContextExecuteRequestBody } from "@/types/TuiContextExecute.js";
 import {
   getShipChatHistoryPath,
   getShipContextMessagesArchiveDirPath,
@@ -467,9 +468,7 @@ export function registerTuiApiRoutes(params: {
       const contextId = decodeMaybe(
         String(c.req.param("contextId") || "").trim(),
       );
-      const body = (await c.req.json().catch(() => ({}))) as {
-        instructions?: string;
-      };
+      const body = (await c.req.json().catch(() => ({}))) as Partial<TuiContextExecuteRequestBody>;
       const instructions = String(body.instructions || "").trim();
       if (!contextId) {
         return c.json({ success: false, error: "Missing contextId" }, 400);
@@ -482,6 +481,7 @@ export function registerTuiApiRoutes(params: {
         runtime,
         contextId,
         instructions,
+        attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
       });
       return c.json({
         success: true,

@@ -112,39 +112,24 @@ export interface ShipConfig {
       channels?: {
         telegram?: {
           enabled: boolean;
-          botToken?: string;
           /**
-           * Telegram 主人鉴权 ID（对应 Telegram `from.id`）。
-           *
-           * 关键点（中文）
-           * - 命中即判定为 master。
-           * - 会注入到入站 `<info>` 的 `is_master` 字段。
+           * 绑定的 channel account id（来源：console 全局 `~/.ship/ship.db`）。
            */
-          auth_id?: string;
-        };
-        discord?: {
-          enabled: boolean;
-          botToken?: string;
+          channelAccountId?: string;
         };
         feishu?: {
           enabled: boolean;
-          appId?: string;
-          appSecret?: string;
-          domain?: string;
           /**
-           * Feishu 主人鉴权 ID（对应事件中的发送者 ID）。
+           * 绑定的 channel account id（来源：console 全局 `~/.ship/ship.db`）。
            */
-          auth_id?: string;
+          channelAccountId?: string;
         };
         qq?: {
           enabled: boolean;
-          appId?: string; // 机器人ID
-          appSecret?: string; // 密钥
-          sandbox?: boolean; // 是否使用沙箱环境
           /**
-           * QQ 主人鉴权 ID（对应事件中的发送者 ID）。
+           * 绑定的 channel account id（来源：console 全局 `~/.ship/ship.db`）。
            */
-          auth_id?: string;
+          channelAccountId?: string;
         };
       };
     };
@@ -153,7 +138,7 @@ export interface ShipConfig {
    * extensions 配置。
    *
    * 关键点（中文）
-   * - 扩展能力统一放在 console 全局 `~/.ship/ship.db` 的 `console_config.extensions` 下。
+   * - 扩展能力统一放在 console 全局 `~/.ship/ship.db` 的 `extensions_config` 下。
    * - 运行时会把该全局层合并到 `config.extensions` 供 service 调用。
    * - agent 项目 `ship.json` 不应配置该字段。
    */

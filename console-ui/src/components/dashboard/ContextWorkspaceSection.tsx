@@ -59,6 +59,10 @@ export interface ContextWorkspaceSectionProps {
    */
   chatInput: string
   /**
+   * 是否折叠 Debug Panels。
+   */
+  debugPanelsCollapsed: boolean
+  /**
    * 是否发送中。
    */
   sending: boolean
@@ -381,6 +385,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
     contextArchiveMessages,
     prompt,
     chatInput,
+    debugPanelsCollapsed,
     sending,
     clearingContextMessages,
     clearingChatHistory,
@@ -428,8 +433,8 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
   }
 
   return (
-    <div className="grid h-full min-h-0 gap-0 overflow-hidden xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,1fr)]">
-      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-none bg-gradient-to-b from-muted/45 via-background to-background">
+    <div className="flex h-full min-h-0 flex-col gap-0 overflow-hidden xl:flex-row">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-none bg-gradient-to-b from-muted/45 via-background to-background">
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-1.5">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Chat Workspace</div>
@@ -503,83 +508,85 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
         </div>
       </section>
 
-      <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-none border-l border-border/50 bg-gradient-to-b from-secondary/75 via-secondary/35 to-background">
-        <div className="flex items-center justify-between gap-2 px-1 py-1.5">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Debug Panels</div>
-          <div className="inline-flex items-center rounded-lg bg-secondary/40 p-1">
-            {/* 关键点（中文）：使用分段控件样式，和其他主视图保持一致的“密度感”。 */}
-            <button
-              type="button"
-              className={cn(
-                "rounded-md px-2.5 py-1 text-xs transition-colors",
-                rightTab === "system" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => setRightTab("system")}
-            >
-              system
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-md px-2.5 py-1 text-xs transition-colors",
-                rightTab === "context" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => setRightTab("context")}
-            >
-              context messages
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-md px-2.5 py-1 text-xs transition-colors",
-                rightTab === "archive" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => setRightTab("archive")}
-            >
-              archive
-            </button>
+      {!debugPanelsCollapsed ? (
+        <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-none border-t border-border/50 bg-gradient-to-b from-secondary/75 via-secondary/35 to-background xl:w-[min(42%,640px)] xl:min-w-[360px] xl:border-t-0 xl:border-l">
+          <div className="flex items-center justify-between gap-2 px-1 py-1.5">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Debug Panels</div>
+            <div className="inline-flex items-center rounded-lg bg-secondary/40 p-1">
+              {/* 关键点（中文）：使用分段控件样式，和其他主视图保持一致的“密度感”。 */}
+              <button
+                type="button"
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs transition-colors",
+                  rightTab === "system" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => setRightTab("system")}
+              >
+                system
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs transition-colors",
+                  rightTab === "context" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => setRightTab("context")}
+              >
+                context messages
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs transition-colors",
+                  rightTab === "archive" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => setRightTab("archive")}
+              >
+                archive
+              </button>
+            </div>
           </div>
-        </div>
 
-        {rightTab === "system" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-            {systemBlocks.length === 0 ? (
-              <div className="text-xs text-muted-foreground">暂无 system 内容</div>
-            ) : (
-              <div className="space-y-3">
-                {systemBlocks.map((block, index) => (
-                  <article key={`${block.title}-${index}`} className="overflow-hidden rounded-xl border border-border/55 bg-secondary/45 dark:bg-secondary/20">
-                    <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-secondary/55 px-3 py-2">
-                      <div className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/80" title={block.title}>
-                        {block.title}
+          {rightTab === "system" ? (
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              {systemBlocks.length === 0 ? (
+                <div className="text-xs text-muted-foreground">暂无 system 内容</div>
+              ) : (
+                <div className="space-y-3">
+                  {systemBlocks.map((block, index) => (
+                    <article key={`${block.title}-${index}`} className="overflow-hidden rounded-xl border border-border/55 bg-secondary/45 dark:bg-secondary/20">
+                      <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-secondary/55 px-3 py-2">
+                        <div className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/80" title={block.title}>
+                          {block.title}
+                        </div>
+                        <div className="rounded-md bg-background/75 px-1.5 py-0.5 text-[10px] text-muted-foreground">{`#${index + 1}`}</div>
                       </div>
-                      <div className="rounded-md bg-background/75 px-1.5 py-0.5 text-[10px] text-muted-foreground">{`#${index + 1}`}</div>
-                    </div>
-                    <div className="max-h-[28vh] overflow-auto whitespace-pre-wrap break-words px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground/85">
-                      {block.content || "(empty)"}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : rightTab === "context" ? (
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <ContextMessageList items={contextMessages} formatTime={formatTime} />
-          </div>
-        ) : (
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <ArchivePanel
-              archives={contextArchives}
-              selectedArchiveId={selectedArchiveId}
-              archiveMessages={contextArchiveMessages}
-              formatTime={formatTime}
-              onSelectArchive={onSelectArchive}
-              onRefreshArchives={onRefreshArchives}
-            />
-          </div>
-        )}
-      </aside>
+                      <div className="whitespace-pre-wrap break-words px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground/85">
+                        {block.content || "(empty)"}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : rightTab === "context" ? (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <ContextMessageList items={contextMessages} formatTime={formatTime} />
+            </div>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <ArchivePanel
+                archives={contextArchives}
+                selectedArchiveId={selectedArchiveId}
+                archiveMessages={contextArchiveMessages}
+                formatTime={formatTime}
+                onSelectArchive={onSelectArchive}
+                onRefreshArchives={onRefreshArchives}
+              />
+            </div>
+          )}
+        </aside>
+      ) : null}
     </div>
   )
 }

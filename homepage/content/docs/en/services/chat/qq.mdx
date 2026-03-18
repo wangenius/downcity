@@ -14,15 +14,18 @@ description: Integrate ShipMyAgent with QQ Bot
       "channels": {
         "qq": {
           "enabled": true,
-          "appId": "${QQ_APP_ID}",
-          "appSecret": "${QQ_APP_SECRET}",
-          "sandbox": false
+          "channelAccountId": "qq-main"
         }
       }
     }
   }
 }
 ```
+
+Credential source:
+
+1. Create `qq-main` in Console UI `Global / Channel Accounts`.
+2. Fill `appId`, `appSecret`, and optional `sandbox/authId` in that channel account.
 
 ## Start runtime
 

@@ -48,7 +48,6 @@ type InitPromptResponse = {
   name?: string;
   primaryModelId?: string;
   channels?: string[];
-  qqSandbox?: boolean;
 };
 
 type EnvEntry = {
@@ -230,11 +229,6 @@ export async function initCommand(
   let allowOverwrite = Boolean(options.force);
   const dotEnvPath = path.join(projectRoot, ".env");
   const dotEnvExamplePath = path.join(projectRoot, ".env.example");
-  const TELEGRAM_BOT_TOKEN = "${TELEGRAM_BOT_TOKEN}";
-  const FEISHU_APP_ID = "${FEISHU_APP_ID}";
-  const FEISHU_APP_SECRET = "${FEISHU_APP_SECRET}";
-  const QQ_APP_ID = "${QQ_APP_ID}";
-  const QQ_APP_SECRET = "${QQ_APP_SECRET}";
 
   console.log(`🚀 Initializing ShipMyAgent project: ${projectRoot}`);
 
@@ -299,15 +293,6 @@ export async function initCommand(
         { title: "Feishu", value: "feishu" },
         { title: "QQ", value: "qq" },
       ],
-    },
-    {
-      type: (prev, values) =>
-        Array.isArray(values.channels) && values.channels.includes("qq")
-          ? "confirm"
-          : null,
-      name: "qqSandbox",
-      message: "Use QQ sandbox environment?",
-      initial: false,
     },
   ])) as InitPromptResponse;
 
@@ -374,27 +359,16 @@ export async function initCommand(
   if (selectedChannels.has("telegram")) {
     channelsConfig.telegram = {
       enabled: true,
-      botToken: TELEGRAM_BOT_TOKEN,
-      // 关键点（中文）：每个 channel 独立配置单值 auth_id，默认留空。
-      auth_id: "",
     };
   }
   if (selectedChannels.has("feishu")) {
     channelsConfig.feishu = {
       enabled: true,
-      appId: FEISHU_APP_ID,
-      appSecret: FEISHU_APP_SECRET,
-      domain: "https://open.feishu.cn",
-      auth_id: "",
     };
   }
   if (selectedChannels.has("qq")) {
     channelsConfig.qq = {
       enabled: true,
-      appId: QQ_APP_ID,
-      appSecret: QQ_APP_SECRET,
-      sandbox: Boolean(response.qqSandbox),
-      auth_id: "",
     };
   }
 
@@ -429,44 +403,6 @@ export async function initCommand(
   // - `.env.example` 写入示例值（便于团队同步所需变量）
   const envRealEntries: EnvEntry[] = [];
   const envExampleEntries: EnvEntry[] = [];
-  if (selectedChannels.has("telegram")) {
-    envRealEntries.push(
-      { key: "TELEGRAM_BOT_TOKEN", value: "" },
-      { key: "TELEGRAM_AUTH_ID", value: "" },
-    );
-    envExampleEntries.push(
-      { key: "TELEGRAM_BOT_TOKEN", value: "" },
-      { key: "TELEGRAM_AUTH_ID", value: "" },
-    );
-  }
-  if (selectedChannels.has("feishu")) {
-    envRealEntries.push(
-      { key: "FEISHU_APP_ID", value: "" },
-      { key: "FEISHU_APP_SECRET", value: "" },
-      { key: "FEISHU_AUTH_ID", value: "" },
-    );
-    envExampleEntries.push(
-      { key: "FEISHU_APP_ID", value: "" },
-      { key: "FEISHU_APP_SECRET", value: "" },
-      { key: "FEISHU_AUTH_ID", value: "" },
-    );
-  }
-  if (selectedChannels.has("qq")) {
-    const qqSandbox = Boolean(response.qqSandbox) ? "true" : "false";
-    envRealEntries.push(
-      { key: "QQ_APP_ID", value: "" },
-      { key: "QQ_APP_SECRET", value: "" },
-      { key: "QQ_SANDBOX", value: qqSandbox },
-      { key: "QQ_AUTH_ID", value: "" },
-    );
-    envExampleEntries.push(
-      { key: "QQ_APP_ID", value: "" },
-      { key: "QQ_APP_SECRET", value: "" },
-      { key: "QQ_SANDBOX", value: qqSandbox },
-      { key: "QQ_AUTH_ID", value: "" },
-    );
-  }
-
   const envResult = await appendMissingEnvEntries({
     filePath: dotEnvPath,
     sectionTitle: "ShipMyAgent Create",
@@ -490,14 +426,14 @@ export async function initCommand(
       .join("; ");
     console.log(`✅ Updated .env (${detail})`);
   } else {
-    console.log("⏭️  Skipped .env (required keys already exist)");
+    console.log("⏭️  Skipped .env (no new entries)");
   }
   if (envExampleResult.appended.length > 0) {
     console.log(
       `✅ Updated .env.example (added: ${envExampleResult.appended.join(", ")})`,
     );
   } else {
-    console.log("⏭️  Skipped .env.example (required keys already exist)");
+    console.log("⏭️  Skipped .env.example (no new entries)");
   }
 
   // Create .ship directory structure
@@ -543,32 +479,23 @@ export async function initCommand(
   if (selectedChannels.has("feishu")) {
     console.log("📱 Feishu chat channel enabled");
     console.log(
-      "   Please configure FEISHU_APP_ID and FEISHU_APP_SECRET in ship.json (services.chat.channels.feishu)",
+      "   Please bind services.chat.channels.feishu.channelAccountId to a channel account in Console UI",
     );
-    console.log(
-      "   Optional auth: services.chat.channels.feishu.auth_id or FEISHU_AUTH_ID\n",
-    );
+    console.log("   Manage credentials in Global / Channel Accounts\n");
   }
   if (selectedChannels.has("telegram")) {
     console.log("📱 Telegram chat channel enabled");
     console.log(
-      "   Please configure TELEGRAM_BOT_TOKEN in ship.json (services.chat.channels.telegram)",
+      "   Please bind services.chat.channels.telegram.channelAccountId to a channel account in Console UI",
     );
-    console.log(
-      "   Optional auth: services.chat.channels.telegram.auth_id or TELEGRAM_AUTH_ID\n",
-    );
+    console.log("   Manage credentials in Global / Channel Accounts\n");
   }
   if (selectedChannels.has("qq")) {
     console.log("📱 QQ chat channel enabled");
     console.log(
-      "   Please configure QQ_APP_ID and QQ_APP_SECRET in ship.json (services.chat.channels.qq)",
+      "   Please bind services.chat.channels.qq.channelAccountId to a channel account in Console UI",
     );
-    console.log(
-      "   Optional auth: services.chat.channels.qq.auth_id or QQ_AUTH_ID\n",
-    );
-    console.log(
-      "   Optional: set QQ_SANDBOX=true to use sandbox environment\n",
-    );
+    console.log("   Manage credentials in Global / Channel Accounts\n");
   }
 
   const nextSteps: string[] = [
@@ -581,26 +508,17 @@ export async function initCommand(
 
   if (selectedChannels.has("telegram")) {
     nextSteps.push(
-      "Configure services.chat.channels.telegram (Bot Token)",
-    );
-    nextSteps.push(
-      "Optional: configure services.chat.channels.telegram.auth_id (or TELEGRAM_AUTH_ID)",
+      "Bind services.chat.channels.telegram.channelAccountId to an existing channel account",
     );
   }
   if (selectedChannels.has("feishu")) {
     nextSteps.push(
-      "Configure services.chat.channels.feishu (App ID and App Secret)",
-    );
-    nextSteps.push(
-      "Optional: configure services.chat.channels.feishu.auth_id (or FEISHU_AUTH_ID)",
+      "Bind services.chat.channels.feishu.channelAccountId to an existing channel account",
     );
   }
   if (selectedChannels.has("qq")) {
     nextSteps.push(
-      "Configure services.chat.channels.qq (App ID and App Secret)",
-    );
-    nextSteps.push(
-      "Optional: configure services.chat.channels.qq.auth_id (or QQ_AUTH_ID)",
+      "Bind services.chat.channels.qq.channelAccountId to an existing channel account",
     );
   }
   nextSteps.push('Run "sma agent start" to start the agent');

@@ -20,14 +20,15 @@ export type ChatLinkState = "connected" | "disconnected" | "unknown";
  * 渠道诊断字段值类型。
  *
  * 关键点（中文）
- * - 允许嵌套对象，便于挂载 `detail.config` 这类结构化摘要。
- * - 不允许数组，避免 UI 解析复杂度无序增长。
+ * - 允许嵌套对象与数组，便于挂载 `detail.configuration.fields` 这类结构化元信息。
+ * - 仅允许 JSON 可序列化基础类型，避免传递运行时函数等不可持久化值。
  */
 export type ChatChannelDetailValue =
   | string
   | number
   | boolean
   | null
+  | ChatChannelDetailValue[]
   | {
       [key: string]: ChatChannelDetailValue;
     };

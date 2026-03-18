@@ -1,19 +1,25 @@
 /**
  * Context 列表总览区。
+ *
+ * 关键点（中文）
+ * - 渠道主视图的 configuration 采用右上角 dropdown menu 直接切换 channel account。
+ * - 切换来源限定为当前全局 Channel Account 库，不再打开复杂配置弹窗。
+ * - agent 渠道页只负责“绑定关系与运行状态”，不展示 bot 详情信息。
  */
 
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { UiChatChannelStatus, UiContextSummary } from "@/types/Dashboard"
+import type { UiChannelAccountItem, UiChatChannelStatus, UiContextSummary } from "@/types/Dashboard"
 import {
   buildContextGroups,
   filterContextsByKeyword,
   resolveContextGroup,
   type ContextGroupKey,
 } from "@/lib/context-groups"
+import { parseChannelConfigSummary, parseChannelConfigurationDescriptor, parseChannelDetail } from "./context-overview-config"
+import { CheckIcon, ChevronDownIcon } from "lucide-react"
 
 export interface ContextOverviewSectionProps {
   /**
@@ -24,6 +30,10 @@ export interface ContextOverviewSectionProps {
    * chat 渠道状态列表。
    */
   chatChannels: UiChatChannelStatus[]
+  /**
+   * 全局 channel account 列表。
+   */
+  channelAccounts: UiChannelAccountItem[]
   /**
    * 当前选中的 context id。
    */
@@ -48,42 +58,6 @@ export interface ContextOverviewSectionProps {
    * 保存渠道配置。
    */
   onChatConfigure: (channel: string, config: Record<string, unknown>) => void
-  /**
-   * 当前 channel 的身份展示文案（来自 agent chatProfiles）。
-   */
-  channelIdentity?: string
-}
-
-type ChannelConfigDraft = {
-  botToken: string
-  appId: string
-  appSecret: string
-  domain: string
-  auth_id: string
-  sandbox: "" | "true" | "false"
-}
-
-function parseChannelConfigSummary(channel: UiChatChannelStatus): Record<string, unknown> {
-  const detail = channel.detail
-  if (!detail || typeof detail !== "object" || Array.isArray(detail)) return {}
-  const raw = (detail as Record<string, unknown>).config
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
-  return raw as Record<string, unknown>
-}
-
-function initDraftFromChannel(channel: UiChatChannelStatus): ChannelConfigDraft {
-  const config = parseChannelConfigSummary(channel)
-  const appIdFromConfig = String(config.appIdFromConfig || "").trim()
-  const appIdSource = String(config.appIdSource || "").trim().toLowerCase()
-  return {
-    botToken: "",
-    // 关键点（中文）：输入框仅回填 ship.json 中已有值，避免把 env 回退值误写回配置。
-    appId: appIdFromConfig || (appIdSource === "ship" ? String(config.appId || "").trim() : ""),
-    appSecret: "",
-    domain: String(config.domain || "").trim(),
-    auth_id: String(config.auth_id || "").trim(),
-    sandbox: config.sandbox === true ? "true" : config.sandbox === false ? "false" : "",
-  }
 }
 
 function resolveChannelFromContextId(contextIdInput?: string): string {
@@ -96,49 +70,28 @@ function resolveChannelFromContextId(contextIdInput?: string): string {
   return "other"
 }
 
-function BasicRow(props: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
-      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{props.label}</div>
-      <div className="truncate text-foreground" title={props.value}>{props.value || "-"}</div>
-    </div>
-  )
-}
-
-function toYesNo(value: boolean | undefined): string {
-  return value === true ? "yes" : "no"
-}
-
-function readDetailString(detail: Record<string, unknown> | undefined, key: string): string {
-  if (!detail) return ""
-  const value = detail[key]
-  if (typeof value === "string") return value.trim()
-  if (typeof value === "number" && Number.isFinite(value)) return String(value)
-  return ""
-}
-
 export function ContextOverviewSection(props: ContextOverviewSectionProps) {
   const {
     contexts,
     chatChannels,
+    channelAccounts,
     selectedContextId,
     focusedChannel,
     formatTime,
     onOpenContext,
     onChatAction,
     onChatConfigure,
-    channelIdentity,
   } = props
 
   const [search, setSearch] = React.useState("")
   const [filter, setFilter] = React.useState<"all" | ContextGroupKey>("all")
-  const [draftByChannel, setDraftByChannel] = React.useState<Record<string, ChannelConfigDraft>>({})
-  const [configDialogOpen, setConfigDialogOpen] = React.useState(false)
+
   const normalizedFocusedChannel = String(focusedChannel || "").trim().toLowerCase()
   const contextsInFocusedChannel = React.useMemo(() => {
     if (!normalizedFocusedChannel) return []
     return contexts.filter((item) => resolveChannelFromContextId(item.contextId) === normalizedFocusedChannel)
   }, [contexts, normalizedFocusedChannel])
+
   const visibleChatChannels = React.useMemo(() => {
     if (!normalizedFocusedChannel) return []
     return chatChannels.filter(
@@ -152,145 +105,52 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
     .filter((group) => (filter === "all" ? true : group.key === filter))
     .flatMap((group) => group.items)
 
-  const channelContextStats = React.useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const item of contexts) {
-      const group = resolveContextGroup(item.contextId)
-      if (group !== "chat") continue
-      const raw = String(item.contextId || "")
-      const channel = raw.startsWith("telegram-")
-        ? "telegram"
-        : raw.startsWith("qq-")
-          ? "qq"
-          : raw.startsWith("feishu-")
-            ? "feishu"
-            : raw.startsWith("consoleui-") || raw === "local_ui"
-              ? "consoleui"
-            : "unknown"
-      counts.set(channel, (counts.get(channel) || 0) + 1)
-    }
-    return counts
-  }, [contexts])
   const activeChannel = visibleChatChannels[0] || null
   const activeChannelName = String(activeChannel?.channel || "").trim()
   const activeLinkState = String(activeChannel?.linkState || "unknown").trim().toLowerCase()
-  const activeMappedContexts = activeChannelName ? (channelContextStats.get(activeChannelName) || 0) : 0
+
   const activeDetail = React.useMemo(() => {
-    if (!activeChannel?.detail || typeof activeChannel.detail !== "object" || Array.isArray(activeChannel.detail)) return undefined
-    return activeChannel.detail as Record<string, unknown>
-  }, [activeChannel?.detail])
+    if (!activeChannel) return undefined
+    const detail = parseChannelDetail(activeChannel)
+    return detail ? (detail as Record<string, unknown>) : undefined
+  }, [activeChannel])
   const activeConfigSummary = React.useMemo(() => {
     return activeChannel ? parseChannelConfigSummary(activeChannel) : {}
   }, [activeChannel])
+  const activeConfigDescriptor = React.useMemo(() => {
+    return activeChannel ? parseChannelConfigurationDescriptor(activeChannel) : null
+  }, [activeChannel])
+
   const activeReadonly = React.useMemo(() => {
     if (!activeChannel) return false
     if (activeChannelName === "consoleui") return true
-    return activeDetail?.readonly === true
-  }, [activeChannel, activeChannelName, activeDetail])
-  const activeBotName = React.useMemo(() => {
-    if (!activeChannelName) return ""
-    if (activeChannelName === "telegram") {
-      const username = readDetailString(activeDetail, "botUsername")
-      return username ? `@${username.replace(/^@+/, "")}` : ""
-    }
-    if (activeChannelName === "qq") {
-      return (
-        readDetailString(activeDetail, "botName") ||
-        readDetailString(activeDetail, "nickname") ||
-        readDetailString(activeDetail, "username")
-      )
-    }
-    return ""
-  }, [activeChannelName, activeDetail])
-  const activeBotId = React.useMemo(() => {
-    if (!activeChannelName) return ""
-    if (activeChannelName === "telegram") {
-      return readDetailString(activeDetail, "botId")
-    }
-    if (activeChannelName === "qq") {
-      return readDetailString(activeDetail, "botUserId")
-    }
-    return ""
-  }, [activeChannelName, activeDetail])
-  const activeAppId = React.useMemo(() => {
-    if (!activeChannelName) return ""
-    if (activeChannelName === "qq") {
-      return readDetailString(activeDetail, "appId") || String(activeConfigSummary.appId || "").trim()
-    }
-    if (activeChannelName === "feishu") {
-      return String(activeConfigSummary.appId || "").trim()
-    }
-    return ""
-  }, [activeChannelName, activeConfigSummary, activeDetail])
-  const activeAuthId = React.useMemo(() => {
-    return String(activeConfigSummary.auth_id || "").trim()
-  }, [activeConfigSummary])
-  const activeAppIdFromConfig = React.useMemo(() => {
-    return String(activeConfigSummary.appIdFromConfig || "").trim()
-  }, [activeConfigSummary])
-  const activeAppIdSource = React.useMemo(() => {
-    const source = String(activeConfigSummary.appIdSource || "").trim().toLowerCase()
-    if (source === "ship" || source === "env" || source === "none") return source
-    return activeAppId ? "ship" : "none"
-  }, [activeAppId, activeConfigSummary])
-  const activeBotTokenConfigured = activeConfigSummary.botTokenConfigured === true
-  const activeAppSecretConfigured = activeConfigSummary.appSecretConfigured === true
-  const activeIdentity = String(channelIdentity || "").trim() || activeBotName || "-"
-  const activeChannelDraft = React.useMemo(() => {
-    if (!activeChannelName || !activeChannel) return null
-    return draftByChannel[activeChannelName] || initDraftFromChannel(activeChannel)
-  }, [activeChannel, activeChannelName, draftByChannel])
+    if (activeDetail?.readonly === true) return true
+    if (activeConfigDescriptor?.capabilities?.canConfigure === false) return true
+    return false
+  }, [activeChannel, activeChannelName, activeConfigDescriptor, activeDetail])
 
-  React.useEffect(() => {
-    if (!activeChannelName || !activeChannel) return
-    setDraftByChannel((prev) => ({
-      ...prev,
-      [activeChannelName]: prev[activeChannelName] || initDraftFromChannel(activeChannel),
-    }))
-  }, [activeChannel, activeChannelName])
+  const activeChannelAccountId = React.useMemo(() => String(activeConfigSummary.channelAccountId || "").trim(), [activeConfigSummary])
+  const activeChannelAccounts = React.useMemo(() => {
+    const channel = String(activeChannelName || "").trim().toLowerCase()
+    if (!channel || channel === "consoleui") return []
+    return channelAccounts.filter((item) => String(item.channel || "").trim().toLowerCase() === channel)
+  }, [activeChannelName, channelAccounts])
+  const activeChannelAccountLabel = React.useMemo(() => {
+    if (!activeChannelAccountId) return "config"
+    const target = activeChannelAccounts.find((item) => String(item.id || "").trim() === activeChannelAccountId)
+    if (!target) return "config"
+    return String(target.name || target.id || "config").trim() || "config"
+  }, [activeChannelAccountId, activeChannelAccounts])
 
-  React.useEffect(() => {
-    setConfigDialogOpen(false)
-  }, [activeChannelName])
-
-  const onActiveDraftChange = (next: Partial<ChannelConfigDraft>) => {
-    if (!activeChannelName || !activeChannel) return
-    setDraftByChannel((prev) => ({
-      ...prev,
-      [activeChannelName]: {
-        ...(prev[activeChannelName] || initDraftFromChannel(activeChannel)),
-        ...next,
-      },
-    }))
-  }
-
-  const resetActiveDraft = () => {
-    if (!activeChannelName || !activeChannel) return
-    setDraftByChannel((prev) => ({
-      ...prev,
-      [activeChannelName]: initDraftFromChannel(activeChannel),
-    }))
-  }
-
-  const saveActiveChannelConfig = () => {
-    if (!activeChannel || !activeChannelDraft || !activeChannelName) return
-    const patch: Record<string, unknown> = {}
-    if (activeChannelName === "telegram") {
-      if (activeChannelDraft.botToken.trim()) patch.botToken = activeChannelDraft.botToken.trim()
-      if (activeChannelDraft.auth_id.trim()) patch.auth_id = activeChannelDraft.auth_id.trim()
-    } else if (activeChannelName === "feishu") {
-      if (activeChannelDraft.appId.trim()) patch.appId = activeChannelDraft.appId.trim()
-      if (activeChannelDraft.appSecret.trim()) patch.appSecret = activeChannelDraft.appSecret.trim()
-      if (activeChannelDraft.domain.trim()) patch.domain = activeChannelDraft.domain.trim()
-      if (activeChannelDraft.auth_id.trim()) patch.auth_id = activeChannelDraft.auth_id.trim()
-    } else if (activeChannelName === "qq") {
-      if (activeChannelDraft.appId.trim()) patch.appId = activeChannelDraft.appId.trim()
-      if (activeChannelDraft.appSecret.trim()) patch.appSecret = activeChannelDraft.appSecret.trim()
-      if (activeChannelDraft.sandbox) patch.sandbox = activeChannelDraft.sandbox === "true"
-      if (activeChannelDraft.auth_id.trim()) patch.auth_id = activeChannelDraft.auth_id.trim()
-    }
-    onChatConfigure(activeChannelName, patch)
-  }
+  const onChannelAccountSwitch = React.useCallback((value: string | null) => {
+    if (!activeChannelName || activeReadonly) return
+    const normalized = String(value || "").trim()
+    const nextId = normalized === "__none__" ? "" : normalized
+    if (nextId === activeChannelAccountId) return
+    onChatConfigure(activeChannelName, {
+      channelAccountId: nextId || null,
+    })
+  }, [activeChannelAccountId, activeChannelName, activeReadonly, onChatConfigure])
 
   return (
     <div className="space-y-7">
@@ -318,6 +178,41 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
+                {activeChannelName !== "consoleui" ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 min-w-[9.5rem] max-w-[12rem] justify-between gap-1 px-2 text-[11px]"
+                          disabled={activeReadonly}
+                        />
+                      }
+                    >
+                      <span className="truncate">{activeChannelAccountLabel}</span>
+                      <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="min-w-[12rem]">
+                      <DropdownMenuItem onClick={() => onChannelAccountSwitch("__none__")}>
+                        {activeChannelAccountId ? <span className="inline-block w-4" /> : <CheckIcon className="size-4" />}
+                        <span>no binding</span>
+                      </DropdownMenuItem>
+                      {activeChannelAccounts.map((item) => {
+                        const id = String(item.id || "").trim()
+                        if (!id) return null
+                        const name = String(item.name || "").trim() || id
+                        const checked = id === activeChannelAccountId
+                        return (
+                          <DropdownMenuItem key={id} onClick={() => onChannelAccountSwitch(id)}>
+                            {checked ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
+                            <span className="truncate">{name}</span>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
                 <Button
                   size="sm"
                   variant="outline"
@@ -354,34 +249,9 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 >
                   reconnect
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="h-7 px-2 text-[11px]"
-                  disabled={activeReadonly}
-                  onClick={() => setConfigDialogOpen(true)}
-                >
-                  configuration
-                </Button>
               </div>
             </div>
 
-            <section className="rounded-md bg-muted/70 px-3 py-2">
-              <BasicRow label="Channel" value={activeChannelName || "-"} />
-              <BasicRow label="Identity" value={activeIdentity} />
-              <BasicRow label="Bot Name" value={activeBotName || "-"} />
-              <BasicRow label="Bot ID" value={activeBotId || "-"} />
-              <BasicRow label="App ID" value={activeAppId || "-"} />
-              <BasicRow label="App ID (ship.json)" value={activeAppIdFromConfig || "-"} />
-              <BasicRow label="App ID Source" value={activeAppIdSource} />
-              <BasicRow label="Auth ID" value={activeAuthId || "-"} />
-              <BasicRow label="Mapped Contexts" value={String(activeMappedContexts)} />
-              <BasicRow label="Enabled" value={toYesNo(activeChannel.enabled)} />
-              <BasicRow label="Configured" value={toYesNo(activeChannel.configured)} />
-              <BasicRow label="Running" value={toYesNo(activeChannel.running)} />
-              <BasicRow label="Link" value={String(activeChannel.linkState || "-")} />
-              <BasicRow label="Status" value={String(activeChannel.statusText || "-")} />
-            </section>
           </div>
         )}
       </section>
@@ -461,125 +331,6 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
           </table>
         </div>
       </section>
-
-      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
-        <DialogContent className="w-[min(94vw,780px)]">
-          <DialogHeader>
-            <DialogTitle>{`Configuration · ${activeChannelName || "-"}`}</DialogTitle>
-            <DialogDescription>仅填写要更新的字段；密钥留空表示不改。保存后会自动重载该 channel。</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 overflow-y-auto px-4 pb-2">
-            {activeChannelName === "telegram" && activeChannelDraft ? (
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input
-                  type="password"
-                  placeholder={
-                    activeBotTokenConfigured
-                      ? "botToken（已配置，留空表示不改）"
-                      : "botToken（可选更新）"
-                  }
-                  value={activeChannelDraft.botToken}
-                  onChange={(event) => onActiveDraftChange({ botToken: event.target.value })}
-                />
-                <Input
-                  placeholder="auth_id"
-                  value={activeChannelDraft.auth_id}
-                  onChange={(event) => onActiveDraftChange({ auth_id: event.target.value })}
-                />
-              </div>
-            ) : null}
-
-            {activeChannelName === "feishu" && activeChannelDraft ? (
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input
-                  placeholder={activeAppIdSource === "env" ? `appId（当前来自 env: ${activeAppId || "-"}）` : "appId"}
-                  value={activeChannelDraft.appId}
-                  onChange={(event) => onActiveDraftChange({ appId: event.target.value })}
-                />
-                <Input
-                  type="password"
-                  placeholder={
-                    activeAppSecretConfigured
-                      ? "appSecret（已配置，留空表示不改）"
-                      : "appSecret（可选更新）"
-                  }
-                  value={activeChannelDraft.appSecret}
-                  onChange={(event) => onActiveDraftChange({ appSecret: event.target.value })}
-                />
-                <Input
-                  placeholder="domain"
-                  value={activeChannelDraft.domain}
-                  onChange={(event) => onActiveDraftChange({ domain: event.target.value })}
-                />
-                <Input
-                  placeholder="auth_id"
-                  value={activeChannelDraft.auth_id}
-                  onChange={(event) => onActiveDraftChange({ auth_id: event.target.value })}
-                />
-              </div>
-            ) : null}
-
-            {activeChannelName === "qq" && activeChannelDraft ? (
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input
-                  placeholder={activeAppIdSource === "env" ? `appId（当前来自 env: ${activeAppId || "-"}）` : "appId"}
-                  value={activeChannelDraft.appId}
-                  onChange={(event) => onActiveDraftChange({ appId: event.target.value })}
-                />
-                <Input
-                  type="password"
-                  placeholder={
-                    activeAppSecretConfigured
-                      ? "appSecret（已配置，留空表示不改）"
-                      : "appSecret（可选更新）"
-                  }
-                  value={activeChannelDraft.appSecret}
-                  onChange={(event) => onActiveDraftChange({ appSecret: event.target.value })}
-                />
-                <Input
-                  placeholder="auth_id"
-                  value={activeChannelDraft.auth_id}
-                  onChange={(event) => onActiveDraftChange({ auth_id: event.target.value })}
-                />
-                <Select
-                  value={activeChannelDraft.sandbox || "false"}
-                  onValueChange={(value) =>
-                    onActiveDraftChange({
-                      sandbox: value as "true" | "false",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="sandbox" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="false">sandbox: false</SelectItem>
-                    <SelectItem value="true">sandbox: true</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-
-            <div className="truncate text-[11px] text-muted-foreground" title={JSON.stringify(activeConfigSummary)}>
-              当前摘要: {JSON.stringify(activeConfigSummary)}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button size="sm" variant="outline" onClick={resetActiveDraft}>
-              重置
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                saveActiveChannelConfig()
-                setConfigDialogOpen(false)
-              }}
-            >
-              保存并重载
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

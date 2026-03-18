@@ -15,7 +15,6 @@ import path from "node:path";
 import fs from "fs-extra";
 import prompts from "prompts";
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
-import type { ShipConfig } from "@/console/env/Config.js";
 import { SHIP_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
 import { saveJson } from "@/utils/storage/index.js";
 import {
@@ -125,18 +124,12 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   await fs.ensureDir(schemaDir);
   await saveJson(schemaPath, SHIP_JSON_SCHEMA);
 
-  const shipConfig: ShipConfig = {
-    name: "console",
-    version: "1.0.0",
-    extensions: {},
-  };
-
   const modelStore = new ConsoleStore();
   try {
     if (allowOverwrite) {
       modelStore.clearAll();
     }
-    modelStore.setSecureSettingJsonSync("console_config", shipConfig);
+    modelStore.setExtensionsConfigSync({});
     await modelStore.upsertProvider({
       id: "default",
       type: providerType,
@@ -152,7 +145,7 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   } finally {
     modelStore.close();
   }
-  console.log("✅ Saved console config into ~/.ship/ship.db (encrypted)");
+  console.log("✅ Saved console global settings into ~/.ship/ship.db (encrypted)");
   console.log("✅ Initialized ~/.ship/ship.db model store");
 
   // 关键点（中文）：skills 仅使用 `~/.agents/skills`，不做 built-in/claude 自动同步。

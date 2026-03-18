@@ -79,6 +79,7 @@ export function toDashboardPath(
     return "/global/overview"
   }
   if (view === "globalModel") return "/global/model"
+  if (view === "globalChannelAccounts") return "/global/channel-accounts"
   if (view === "globalCommand") return "/global/command"
   if (view === "globalAgents") return "/global/agents"
   if (view === "globalExtensions") return "/global/extensions"

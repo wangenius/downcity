@@ -59,14 +59,15 @@ Chat channels and queue behavior:
       "channels": {
         "telegram": {
           "enabled": true,
-          "botToken": "${TELEGRAM_BOT_TOKEN}",
-          "auth_id": "123456789"
+          "channelAccountId": "telegram-main"
         }
       }
     }
   }
 }
 ```
+
+`channelAccountId` binds to the global channel account registry in `~/.ship/ship.db` (`channel_accounts`).
 
 `services.chat.queue` notes:
 - `maxConcurrency`: max lane concurrency across different chat keys.

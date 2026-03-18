@@ -18,19 +18,15 @@ description: 通过飞书群聊/私聊与 Agent 对话
 
 > 不同应用类型（企业自建 / 商店应用）在权限与发布流程上略有差异；以飞书控制台提示为准。
 
-### 2）写入项目配置
+### 2）创建 Channel Account 并绑定到项目
 
-把凭证放到项目根目录的 `.env`（与 `ship.json` 同目录）：
+在 Console UI 的 `Global / Channel Accounts` 创建飞书账户（例如 `feishu-main`）：
 
-```bash
-FEISHU_APP_ID=cli_xxxxxxxxxxxxxxxx
-FEISHU_APP_SECRET=your_app_secret
+1. `channel = feishu`
+2. 填入 `appId`、`appSecret`
+3. 国际版 Lark 可设置 `domain=https://open.larksuite.com`
 
-# 可选：如果你用的是 Lark（国际版），设置域名
-# FEISHU_DOMAIN=https://open.larksuite.com
-```
-
-在 `ship.json` 启用飞书集成：
+然后在 `ship.json` 绑定该账户：
 
 ```json
 {
@@ -39,9 +35,7 @@ FEISHU_APP_SECRET=your_app_secret
       "channels": {
         "feishu": {
           "enabled": true,
-          "appId": "${FEISHU_APP_ID}",
-          "appSecret": "${FEISHU_APP_SECRET}",
-          "domain": "${FEISHU_DOMAIN}"
+          "channelAccountId": "feishu-main"
         }
       }
     }
@@ -73,6 +67,6 @@ sma agent start
 
 ## 常见问题排查
 
-- **启动后完全没反应**：确认 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` 正确；查看 `.ship/logs/` 下当天日志文件。
+- **启动后完全没反应**：确认绑定的 channel account 中 `appId/appSecret` 正确；查看 `.ship/logs/` 下当天日志文件。
 - **群里不回应**：检查开放平台是否已为应用开通消息接收相关权限/事件订阅，并确认群消息事件已成功投递到应用。
-- **国际版 Lark 无法连接**：在 `ship.json` 把 `services.chat.channels.feishu.domain` 设为 `https://open.larksuite.com`（或通过 `FEISHU_DOMAIN` 环境变量注入）。
+- **国际版 Lark 无法连接**：检查 channel account 的 `domain` 是否设置为 `https://open.larksuite.com`。

@@ -11,10 +11,14 @@ export interface SiteHeaderProps {
    * 当前视图名称。
    */
   viewLabel: string
+  /**
+   * 右上角操作区内容。
+   */
+  rightActions?: React.ReactNode
 }
 
 export function SiteHeader(props: SiteHeaderProps) {
-  const { viewLabel } = props
+  const { viewLabel, rightActions } = props
   const compactTitle = React.useMemo(() => {
     const raw = String(viewLabel || "").trim()
     if (!raw) return "Overview"
@@ -32,7 +36,7 @@ export function SiteHeader(props: SiteHeaderProps) {
         <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto bg-border" />
         <h1 className="text-sm font-semibold tracking-[0.01em] text-foreground">{compactTitle}</h1>
 
-        <div className="ml-auto" />
+        <div className="ml-auto flex items-center">{rightActions}</div>
       </div>
     </header>
   )

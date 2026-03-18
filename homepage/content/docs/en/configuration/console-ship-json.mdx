@@ -16,10 +16,13 @@ Console-global config is unified in:
 
 ## What is stored
 
-`ship.db` contains two groups:
+`ship.db` contains these major groups:
 
 1. Model pool (providers/models)
-2. Console-global config (for example `extensions.*`)
+2. Console-global env (`global_env`)
+3. Agent-private env (`agent_env`)
+4. Bot account vault (`channel_accounts`)
+5. Console-global extension config (`extensions_config`)
 
 Sensitive fields (such as API keys) are stored encrypted.
 
@@ -37,18 +40,20 @@ So the split is:
 
 ## Environment Variable Scope (Important)
 
-Current versions split environment scope into two layers:
+Current versions use explicit layers:
 
-1. Console-global (shared): for console-level capabilities such as model pool and extensions.
-2. Agent-project (private): from `<agent>/.env`, used by `services.*` (for example chat channel credentials).
+1. Console-global shared env: `global_env`
+2. Agent-private env in DB: `agent_env`
+3. Agent-local runtime overlay: `<agent>/.env` (user-managed)
+4. Chat channel credentials: `channel_accounts` (bound by `ship.json` `channelAccountId`)
 
 Key behavior:
 
-1. An agent `.env` is applied only inside that agent runtime and does not mutate global `process.env`.
-2. Switching agents does not reuse `.env` values from the previous agent.
-3. `${ENV_KEY}` in project `ship.json` resolves from current agent `.env` only (no fallback to shared `process.env`).
-4. Only shared fields from Console global layer are injected into agent config (currently `extensions` only), never `services.*`.
-5. So `services.chat` reads the current agent private env, while model/extension in console sidebar remains in shared config scope.
+1. Runtime env map is `agent_env + <agent>/.env` (`.env` wins).
+2. `.env` remains agent-local and does not mutate global `process.env`.
+3. `ship.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
+4. Bot credentials are resolved from `channel_accounts`.
+5. Extension config is read from `extensions_config`.
 
 ## Common operations
 
@@ -71,6 +76,11 @@ Manage model pool:
 sma console model list
 sma console model create
 ```
+
+## Related docs
+
+- [Env and ship.db Database Design](/en/docs/configuration/env-shipdb-design)
+- [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)
 
 ## Runtime files
 

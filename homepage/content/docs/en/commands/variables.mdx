@@ -51,11 +51,10 @@ Commands like `sma chat`, `sma task`, `sma memory`, `sma skill`, and `sma voice`
 
 ### Chat channel credentials
 
-- Telegram: `TELEGRAM_BOT_TOKEN` (optional `TELEGRAM_AUTH_ID`)
-- Feishu: `FEISHU_APP_ID`, `FEISHU_APP_SECRET` (optional `FEISHU_AUTH_ID`)
-- QQ: `QQ_APP_ID`, `QQ_APP_SECRET` (optional `QQ_AUTH_ID`, `QQ_SANDBOX`)
-
-These can be configured in project `.env` or in channel fields of `ship.json`.
+- The only path is binding `services.chat.channels.<channel>.channelAccountId` in `ship.json`.
+- Real credentials (`botToken` / `appId` / `appSecret`) are stored in global `~/.ship/ship.db` (`channel_accounts`).
+- `ship.json` and agent `.env` no longer carry these credentials.
+- Optional: only master auth IDs can be provided via env (`TELEGRAM_AUTH_ID` / `FEISHU_AUTH_ID` / `QQ_AUTH_ID`).
 
 ## 3) `sma service` target agent resolution order
 

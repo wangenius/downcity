@@ -8,6 +8,11 @@
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
 
 /**
+ * Channel Account 支持的渠道类型。
+ */
+export type StoredChannelAccountChannel = "telegram" | "feishu" | "qq";
+
+/**
  * 模型 provider 记录。
  */
 export interface StoredModelProvider {
@@ -161,4 +166,200 @@ export interface UpsertModelInput {
    * 是否暂停该模型（可选）。
    */
   isPaused?: boolean;
+}
+
+/**
+ * Console 全局环境变量记录。
+ */
+export interface StoredGlobalEnvEntry {
+  /**
+   * 环境变量 key（例如 `OPENAI_API_KEY`）。
+   */
+  key: string;
+  /**
+   * 环境变量 value（解密后的明文，仅运行时内存可见）。
+   */
+  value: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * Agent 私有环境变量记录。
+ */
+export interface StoredAgentEnvEntry {
+  /**
+   * Agent 唯一标识（使用 projectRoot 绝对路径）。
+   */
+  agentId: string;
+  /**
+   * 环境变量 key（例如 `QQ_APP_ID`）。
+   */
+  key: string;
+  /**
+   * 环境变量 value（解密后的明文，仅运行时内存可见）。
+   */
+  value: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * 全局环境变量写入参数。
+ */
+export interface UpsertGlobalEnvEntryInput {
+  /**
+   * 环境变量 key。
+   */
+  key: string;
+  /**
+   * 环境变量值；空字符串也允许（用于显式置空）。
+   */
+  value: string;
+}
+
+/**
+ * Agent 私有环境变量写入参数。
+ */
+export interface UpsertAgentEnvEntryInput {
+  /**
+   * Agent 唯一标识（projectRoot）。
+   */
+  agentId: string;
+  /**
+   * 环境变量 key。
+   */
+  key: string;
+  /**
+   * 环境变量值；空字符串也允许（用于显式置空）。
+   */
+  value: string;
+}
+
+/**
+ * Channel Account 记录。
+ */
+export interface StoredChannelAccount {
+  /**
+   * 账户主键 ID（例如 `qq-main`）。
+   */
+  id: string;
+  /**
+   * 账户归属渠道（telegram/feishu/qq）。
+   */
+  channel: StoredChannelAccountChannel;
+  /**
+   * UI 展示名（例如“主 QQ 机器人”）。
+   */
+  name: string;
+  /**
+   * 身份展示文案（例如 `@my_bot`、`app:123`），可选。
+   */
+  identity?: string;
+  /**
+   * 机器人所有者信息（可选，平台可获取时自动同步）。
+   */
+  owner?: string;
+  /**
+   * 机器人创建者信息（可选，平台可获取时自动同步）。
+   */
+  creator?: string;
+  /**
+   * Telegram Token（解密后，可选）。
+   */
+  botToken?: string;
+  /**
+   * AppId（解密后，可选）。
+   */
+  appId?: string;
+  /**
+   * AppSecret（解密后，可选）。
+   */
+  appSecret?: string;
+  /**
+   * 渠道域名（主要用于 Feishu/Lark），可选。
+   */
+  domain?: string;
+  /**
+   * QQ 沙箱模式开关，可选。
+   */
+  sandbox?: boolean;
+  /**
+   * 主人鉴权 ID（可选）。
+   */
+  authId?: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt: string;
+}
+
+/**
+ * Channel Account 写入参数。
+ */
+export interface UpsertChannelAccountInput {
+  /**
+   * 账户主键 ID。
+   */
+  id: string;
+  /**
+   * 账户归属渠道。
+   */
+  channel: StoredChannelAccountChannel;
+  /**
+   * 账户展示名。
+   */
+  name: string;
+  /**
+   * 身份展示文案，可选。
+   */
+  identity?: string;
+  /**
+   * 机器人所有者信息（可选）。
+   */
+  owner?: string;
+  /**
+   * 机器人创建者信息（可选）。
+   */
+  creator?: string;
+  /**
+   * Telegram Token，可选。
+   */
+  botToken?: string;
+  /**
+   * AppId，可选。
+   */
+  appId?: string;
+  /**
+   * AppSecret，可选。
+   */
+  appSecret?: string;
+  /**
+   * 渠道域名，可选。
+   */
+  domain?: string;
+  /**
+   * QQ 沙箱模式，可选。
+   */
+  sandbox?: boolean;
+  /**
+   * 主人鉴权 ID，可选。
+   */
+  authId?: string;
 }

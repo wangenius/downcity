@@ -22,6 +22,7 @@ sma chat <subcommand> [options]
 - `reconnect`：重连渠道（默认全部，可按渠道）
 - `open`：打开渠道（写入 `ship.json` 为 `enabled=true`，已配置会尝试启动）
 - `close`：关闭渠道（写入 `ship.json` 为 `enabled=false`，并停止运行）
+- `configuration`：查看渠道配置元信息（字段名/类型/说明/来源）
 - `configure`：更新渠道参数（写入 `ship.json`，默认重载该渠道）
 - `send`：发送消息
 - `react`：给消息贴表情（当前主要 Telegram）
@@ -37,6 +38,10 @@ sma chat <subcommand> [options]
 - `--channel <telegram|feishu|qq>`：目标渠道
 - `--config-json <json>`：配置 patch（JSON 对象）
 - `--restart`：配置后立即重载渠道
+
+## `configuration` 常用选项
+
+- `--channel <telegram|feishu|qq>`：仅查看指定渠道（不传则返回全部）
 
 ## `send` 常用选项
 
@@ -75,7 +80,8 @@ sma chat test --channel telegram
 sma chat reconnect --channel qq
 sma chat open --channel qq
 sma chat close --channel telegram
-sma chat configure --channel qq --config-json '{"appId":"xxx","sandbox":false}'
+sma chat configuration --channel qq
+sma chat configure --channel qq --config-json '{"channelAccountId":"qq-main","enabled":true}'
 ```
 
 ## 说明

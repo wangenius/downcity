@@ -86,30 +86,13 @@ export async function persistShipConfig(params: {
 }): Promise<string> {
   const store = new ConsoleStore();
   try {
-    const existingRaw = store.getSecureSettingJsonSync<unknown>("console_config");
+    const existingRaw = store.getExtensionsConfigSync<Record<string, unknown>>();
     const existingConfig =
       existingRaw && typeof existingRaw === "object" && !Array.isArray(existingRaw)
         ? (existingRaw as Record<string, unknown>)
         : {};
-
-    const nextExtensions =
-      existingConfig.extensions &&
-      typeof existingConfig.extensions === "object" &&
-      !Array.isArray(existingConfig.extensions)
-        ? (existingConfig.extensions as Record<string, unknown>)
-        : {};
-
-    nextExtensions.voice = params.config.extensions?.voice || {};
-    existingConfig.extensions = nextExtensions;
-
-    if (typeof existingConfig.name !== "string" || !existingConfig.name.trim()) {
-      existingConfig.name = "console";
-    }
-    if (typeof existingConfig.version !== "string" || !existingConfig.version.trim()) {
-      existingConfig.version = "1.0.0";
-    }
-
-    store.setSecureSettingJsonSync("console_config", existingConfig);
+    existingConfig.voice = params.config.extensions?.voice || {};
+    store.setExtensionsConfigSync(existingConfig);
     return getConsoleShipDbPath();
   } finally {
     store.close();

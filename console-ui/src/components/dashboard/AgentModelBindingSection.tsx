@@ -7,8 +7,10 @@
  */
 
 import * as React from "react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { UiAgentOption, UiModelSummary } from "@/types/Dashboard"
+import { CheckIcon, ChevronDownIcon } from "lucide-react"
 
 export interface AgentModelBindingSectionProps {
   /**
@@ -45,31 +47,42 @@ export function AgentModelBindingSection(props: AgentModelBindingSectionProps) {
         <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5">
           provider {model?.providerType || "-"}
         </span>
-        <Select
-          value={targetModelId || undefined}
-          onValueChange={(value) => {
-            const nextModelId = String(value || "").trim()
-            setTargetModelId(nextModelId)
-            // 关键点（中文）：在 selector 变更时直接提交，不再需要额外“保存”步骤。
-            if (!nextModelId || nextModelId === currentModelId) return
-            onSwitchModel(nextModelId)
-          }}
-        >
-          <SelectTrigger className="h-7 w-[min(30rem,65vw)] bg-muted text-xs">
-            <SelectValue placeholder="选择 model.primary" />
-          </SelectTrigger>
-          <SelectContent>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-[min(30rem,65vw)] justify-between gap-1 px-2 text-xs"
+              />
+            }
+          >
+            <span className="truncate">{targetModelId || "选择 model.primary"}</span>
+            <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="max-h-72 min-w-[min(30rem,65vw)]">
             {availableModels.map((item) => {
               const modelId = String(item.id || "").trim()
               if (!modelId) return null
+              const checked = modelId === targetModelId
               return (
-                <SelectItem key={modelId} value={modelId}>
-                  {`${modelId} · ${item.name || "-"} · ${item.providerType || "-"}${item.isPaused ? " · paused" : ""}`}
-                </SelectItem>
+                <DropdownMenuItem
+                  key={modelId}
+                  onClick={() => {
+                    const nextModelId = String(modelId || "").trim()
+                    setTargetModelId(nextModelId)
+                    // 关键点（中文）：在下拉菜单切换时直接提交，不再需要额外“保存”步骤。
+                    if (!nextModelId || nextModelId === currentModelId) return
+                    onSwitchModel(nextModelId)
+                  }}
+                >
+                  {checked ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
+                  <span className="truncate">{`${modelId} · ${item.name || "-"} · ${item.providerType || "-"}${item.isPaused ? " · paused" : ""}`}</span>
+                </DropdownMenuItem>
               )
             })}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="text-xs text-muted-foreground">切换后需重启生效</div>

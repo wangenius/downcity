@@ -59,14 +59,15 @@ agent 绑定模型 ID（映射到 console 全局模型池）：
       "channels": {
         "telegram": {
           "enabled": true,
-          "botToken": "${TELEGRAM_BOT_TOKEN}",
-          "auth_id": "123456789"
+          "channelAccountId": "telegram-main"
         }
       }
     }
   }
 }
 ```
+
+`channelAccountId` 会绑定到 `~/.ship/ship.db` 的全局 bot 账户池（`channel_accounts`）。
 
 `services.chat.queue` 说明：
 - `maxConcurrency`：不同 chatKey lane 的全局并发上限。

@@ -10,7 +10,7 @@ import type {
   ServiceInvokePort,
 } from "@/agent/service/ServiceRuntime.js";
 import {
-  loadProjectDotenv,
+  loadAgentRuntimeEnv,
   loadShipConfig,
   type ShipConfig
 } from "@/console/env/Config.js";
@@ -366,8 +366,8 @@ export async function initRuntimeState(cwd: string): Promise<void> {
 
   ensureRuntimeProjectReady(rootPath);
 
-  // 在启动时加载项目 env 快照并读取 ship.json（支持继承/覆盖）。
-  const projectEnv = loadProjectDotenv(rootPath);
+  // 在启动时加载 agent runtime env 快照并读取 ship.json（支持继承/覆盖）。
+  const projectEnv = loadAgentRuntimeEnv(rootPath);
   const config = loadShipConfig(rootPath, {
     projectEnv,
   });

@@ -112,6 +112,31 @@ Example:
 }
 ```
 
+### `POST /api/tui/contexts/:contextId/execute`
+
+Execute one turn in a specific context (for example a selected chatKey).
+
+Request body example with attachment:
+
+```json
+{
+  "instructions": "Please read the attached markdown and provide an actionable summary.",
+  "attachments": [
+    {
+      "type": "document",
+      "fileName": "page.md",
+      "contentType": "text/markdown; charset=utf-8",
+      "content": "# Captured Web Page\n\n..."
+    }
+  ]
+}
+```
+
+Notes:
+
+- `contextId` should be the exact target context (for chat reply scenarios, use the selected chatKey directly).
+- Attachments are materialized by runtime and injected as `@attach` lines before the user instruction.
+
 ## Direct action routes
 
 Each service/extension action also has a default route:

@@ -1,0 +1,241 @@
+/*
+ * Popup 样式。
+ *
+ * 关键点（中文）：
+ * - 视觉风格采用简洁高质感的浅色玻璃卡片。
+ * - 信息层级收敛，减少冗余装饰，突出核心操作。
+ */
+
+:root {
+  color-scheme: light;
+  font-family: "Manrope", "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
+  color: #1a1c1d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 400px;
+  min-height: 560px;
+}
+
+body {
+  background:
+    radial-gradient(120px 80px at 8% 5%, #ffffffc2 0%, transparent 80%),
+    radial-gradient(140px 90px at 94% 8%, #dce5ec85 0%, transparent 80%),
+    linear-gradient(170deg, #eceff2 0%, #e3e7ea 100%);
+}
+
+.popup-root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.header-card,
+.page-card,
+.share-form,
+.status-block {
+  border: 1px solid #ffffffaa;
+  border-radius: 14px;
+  background: #f8fafbe6;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px #17202618;
+}
+
+.header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+}
+
+.inline-status-group {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.header-card h1 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  color: #111316;
+}
+
+.header-card p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #5e636a;
+}
+
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.status-pill.ok {
+  color: #0e4f37;
+  background: #dbf4eb;
+  border-color: #b7e8d5;
+}
+
+.status-pill.warn {
+  color: #8a4a14;
+  background: #fff1e0;
+  border-color: #ffd8b4;
+}
+
+.page-card {
+  padding: 11px;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6a7077;
+}
+
+.page-title {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d2022;
+  line-height: 1.4;
+}
+
+.page-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #235979;
+  text-decoration: none;
+}
+
+.share-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #272b2f;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d0d6dc;
+  background: #ffffff;
+  color: #111418;
+  font-size: 13px;
+  padding: 9px 10px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #4e6678;
+  outline-offset: 0;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.hint-text {
+  margin-top: -3px;
+  margin-bottom: 2px;
+  color: #616871;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.primary-btn,
+.ghost-btn {
+  border: 0;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.primary-btn {
+  padding: 10px 12px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #20242a 0%, #3a4653 100%);
+}
+
+.ghost-btn {
+  padding: 8px 10px;
+  color: #39434d;
+  border: 1px solid #c9d0d6;
+  background: #eef2f5;
+}
+
+.primary-btn:hover,
+.ghost-btn:hover {
+  transform: translateY(-1px);
+}
+
+.primary-btn:disabled,
+.ghost-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.status-block {
+  padding: 9px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-idle {
+  color: #2d4a60;
+  background: #e8f0f5f0;
+}
+
+.status-loading {
+  color: #7a581d;
+  background: #fff5e3ee;
+}
+
+.status-success {
+  color: #17563d;
+  background: #e0f5ebf0;
+}
+
+.status-error {
+  color: #7f251d;
+  background: #fde8e6f0;
+}

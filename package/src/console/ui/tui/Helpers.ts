@@ -21,6 +21,7 @@ import type {
 import type { JsonObject } from "@/types/Json.js";
 import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import {
+  getCacheDirPath,
   getLogsDirPath,
   getShipContextMessagesPath,
   getShipContextRootDirPath,
@@ -29,10 +30,18 @@ import {
 import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
+import type {
+  TuiContextExecuteAttachmentInput,
+  TuiContextExecuteAttachmentType,
+} from "@/types/TuiContextExecute.js";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;
 export const TASK_RUN_DIR_REGEX = /^\d{8}-\d{6}-\d{3}$/;
+const EXECUTE_ATTACHMENT_MAX_COUNT = 8;
+const EXECUTE_ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;
+const EXECUTE_ATTACHMENT_CONTENT_MAX_CHARS = 1_500_000;
+const EXECUTE_ATTACHMENT_FALLBACK_TEXT = "请查看以上附件并按用户要求处理。";
 
 type TuiMessageRole =
   | "user"
@@ -188,6 +197,216 @@ export function decodeMaybe(value: string): string {
   } catch {
     return String(value || "");
   }
+}
+function normalizeExecuteAttachmentType(
+  value: unknown,
+): TuiContextExecuteAttachmentType {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (
+    raw === "photo" ||
+    raw === "voice" ||
+    raw === "audio" ||
+    raw === "video"
+  ) {
+    return raw;
+  }
+  return "document";
+}
+function normalizeAttachmentCaption(value: unknown): string | undefined {
+  const text = String(value || "")
+    .replace(/\r?\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\|/g, "/")
+    .trim();
+  if (!text) return undefined;
+  return text.slice(0, 180);
+}
+function toProjectRelativePath(
+  projectRoot: string,
+  absPath: string,
+): string | null {
+  const relative = path.relative(projectRoot, absPath);
+  if (!relative) return null;
+  if (relative.startsWith("..")) return null;
+  if (path.isAbsolute(relative)) return null;
+  return relative.split(path.sep).join("/");
+}
+function normalizeAttachmentFileName(params: {
+  fileName?: string;
+  fallbackExt: string;
+}): string {
+  const raw = String(params.fileName || "").trim();
+  const base = (raw || "attachment")
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^\.+/, "")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72);
+  const safeBase = base || "attachment";
+  const fallbackExt = params.fallbackExt.startsWith(".")
+    ? params.fallbackExt
+    : `.${params.fallbackExt}`;
+  const hasExt = /\.[A-Za-z0-9]+$/.test(safeBase);
+  return hasExt ? safeBase : `${safeBase}${fallbackExt}`;
+}
+function inferAttachmentExt(params: {
+  type: TuiContextExecuteAttachmentType;
+  fileName?: string;
+  contentType?: string;
+}): string {
+  const fromFileName = path.extname(String(params.fileName || "").trim())
+    .toLowerCase()
+    .trim();
+  if (fromFileName) return fromFileName;
+  const contentType = String(params.contentType || "").toLowerCase();
+  if (contentType.includes("markdown")) return ".md";
+  if (contentType.includes("json")) return ".json";
+  if (contentType.includes("html")) return ".html";
+  if (contentType.includes("plain")) return ".txt";
+  if (params.type === "photo") return ".jpg";
+  if (params.type === "voice" || params.type === "audio") return ".mp3";
+  if (params.type === "video") return ".mp4";
+  return ".md";
+}
+async function resolveAttachmentPathFromInput(params: {
+  projectRoot: string;
+  attachment: TuiContextExecuteAttachmentInput;
+}): Promise<string | null> {
+  const rawPath = String(params.attachment.path || "").trim();
+  if (!rawPath) return null;
+  const abs = path.isAbsolute(rawPath)
+    ? path.normalize(rawPath)
+    : path.resolve(params.projectRoot, rawPath);
+  const relative = toProjectRelativePath(params.projectRoot, abs);
+  if (!relative) return null;
+  const stat = await fs
+    .stat(abs)
+    .then((value) => value)
+    .catch(() => null);
+  if (!stat?.isFile()) return null;
+  return relative;
+}
+function resolveAttachmentBytes(
+  attachment: TuiContextExecuteAttachmentInput,
+): Buffer | null {
+  const textContent =
+    typeof attachment.content === "string" ? attachment.content : "";
+  if (textContent) {
+    const clipped = textContent.slice(0, EXECUTE_ATTACHMENT_CONTENT_MAX_CHARS);
+    return Buffer.from(clipped, "utf8");
+  }
+
+  const base64 = String(attachment.contentBase64 || "").trim();
+  if (!base64) return null;
+  try {
+    return Buffer.from(base64, "base64");
+  } catch {
+    return null;
+  }
+}
+async function materializeAttachmentContent(params: {
+  projectRoot: string;
+  contextId: string;
+  attachment: TuiContextExecuteAttachmentInput;
+  index: number;
+}): Promise<string | null> {
+  const bytes = resolveAttachmentBytes(params.attachment);
+  if (!bytes || bytes.length <= 0) return null;
+  if (bytes.length > EXECUTE_ATTACHMENT_MAX_BYTES) {
+    throw new Error(
+      `Attachment too large (>${EXECUTE_ATTACHMENT_MAX_BYTES} bytes)`,
+    );
+  }
+
+  const type = normalizeExecuteAttachmentType(params.attachment.type);
+  const ext = inferAttachmentExt({
+    type,
+    fileName: params.attachment.fileName,
+    contentType: params.attachment.contentType,
+  });
+  const safeName = normalizeAttachmentFileName({
+    fileName: params.attachment.fileName,
+    fallbackExt: ext,
+  });
+  const safeContext = String(params.contextId || "context")
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+  const prefix = safeContext || "context";
+  const fileName = `${Date.now()}-${prefix}-${String(params.index + 1).padStart(2, "0")}-${safeName}`;
+  const cacheDir = path.join(getCacheDirPath(params.projectRoot), "chrome-extension");
+  await fs.ensureDir(cacheDir);
+  const absPath = path.join(cacheDir, fileName);
+  await fs.writeFile(absPath, bytes);
+  return toProjectRelativePath(params.projectRoot, absPath);
+}
+function toAttachmentLine(params: {
+  type: TuiContextExecuteAttachmentType;
+  relativePath: string;
+  caption?: string;
+}): string {
+  return params.caption
+    ? `@attach ${params.type} ${params.relativePath} | ${params.caption}`
+    : `@attach ${params.type} ${params.relativePath}`;
+}
+/**
+ * 构造 execute 入站文本（支持附件注入）。
+ *
+ * 关键点（中文）
+ * - 对齐 Telegram 入站语义：附件统一转换为 `@attach` 指令行注入到用户消息顶部。
+ * - API 上传的内容会落盘到 `.ship/.cache/chrome-extension/` 后再引用，便于审计与复用。
+ */
+export async function buildExecuteInputText(params: {
+  projectRoot: string;
+  contextId: string;
+  instructions: string;
+  attachments?: TuiContextExecuteAttachmentInput[];
+}): Promise<string> {
+  const instructions = String(params.instructions || "").trim();
+  const inputAttachments = Array.isArray(params.attachments)
+    ? params.attachments.slice(0, EXECUTE_ATTACHMENT_MAX_COUNT)
+    : [];
+  if (inputAttachments.length === 0) return instructions;
+
+  const lines: string[] = [];
+  for (let index = 0; index < inputAttachments.length; index += 1) {
+    const attachment = inputAttachments[index];
+    if (!attachment || typeof attachment !== "object") continue;
+    const type = normalizeExecuteAttachmentType(attachment.type);
+    const caption = normalizeAttachmentCaption(attachment.caption);
+
+    const reusePath = await resolveAttachmentPathFromInput({
+      projectRoot: params.projectRoot,
+      attachment,
+    });
+    const relativePath =
+      reusePath ||
+      (await materializeAttachmentContent({
+        projectRoot: params.projectRoot,
+        contextId: params.contextId,
+        attachment,
+        index,
+      }));
+    if (!relativePath) continue;
+
+    lines.push(
+      toAttachmentLine({
+        type,
+        relativePath,
+        ...(caption ? { caption } : {}),
+      }),
+    );
+  }
+
+  if (lines.length === 0) return instructions;
+  return [lines.join("\n"), instructions || EXECUTE_ATTACHMENT_FALLBACK_TEXT]
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
 }
 
 function extractMessageText(parts: unknown): string {
@@ -730,20 +949,28 @@ export async function executeByContextId(params: {
   runtime: RuntimeState;
   contextId: string;
   instructions: string;
+  attachments?: TuiContextExecuteAttachmentInput[];
 }) {
   const contextId = String(params.contextId || "").trim();
   const instructions = String(params.instructions || "").trim();
   if (!contextId) throw new Error("Missing contextId");
   if (!instructions) throw new Error("Missing instructions");
 
+  const executeInput = await buildExecuteInputText({
+    projectRoot: params.runtime.rootPath,
+    contextId,
+    instructions,
+    attachments: params.attachments,
+  });
+
   await params.runtime.contextManager.appendUserMessage({
     contextId,
-    text: instructions,
+    text: executeInput,
   });
 
   const result = await params.runtime.contextManager.run({
     contextId,
-    query: instructions,
+    query: executeInput,
   });
 
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);

@@ -6,13 +6,13 @@ export function baseOptions(): BaseLayoutProps {
       title: (
         <>
           <img
-            src="/icon-black.svg"
+            src="/icon.png"
             width={24}
             height={24}
             alt="icon"
             className="w-8 h-8"
           />
-          <span className="font-bold">vibecape docs</span>
+          <span className="font-bold">ShipMyAgent docs</span>
         </>
       ),
     },

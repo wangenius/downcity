@@ -1,0 +1,125 @@
+---
+title: Channel Configuration
+description: Channel 配置元信息如何驱动 Console UI 与运行时保存
+---
+
+# Channel Configuration
+
+`chat` service 的每个 channel（Telegram / Feishu / QQ）都有一份“配置元信息（Configuration）”。
+
+这份元信息不是文档注释，而是运行时可读取的数据结构。它直接决定了：
+
+- Console UI 配置弹窗展示哪些字段
+- 哪些字段可编辑
+- 字段类型（string / boolean / number / secret / enum）
+- 字段来源（`ship.json`）
+
+## 设计目标
+
+- 消除前端硬编码：新增或调整 channel 字段，不需要同步改大量 UI 分支
+- 统一校验：`chat.configure` 根据元信息做类型校验与白名单过滤
+- 明确边界：
+  - Agent service（`ship.json`）只保存渠道绑定与运行开关
+  - 所有 bot 信息（token/appId/appSecret/authId/name/owner/creator 等）统一放在全局 Channel Accounts（`ship.db`）
+
+## Agent Service 配置范围
+
+Agent 侧 channel 配置仅包含这两类：
+
+- `enabled`
+- `channelAccountId`
+
+这组里只有 `writable=true` 的字段会被 Console UI 允许编辑，并会通过 `chat.configure` 写回项目 `ship.json`。
+
+## 运行时数据是如何流动的
+
+### 1. 读取状态
+
+当 Console UI 请求 `chat.status` 时，后端会返回每个 channel 的：
+
+- `detail.config`：当前生效配置摘要（安全可展示）
+- `detail.configuration`：该 channel 的完整配置元信息
+
+### 2. 渲染界面
+
+Console UI 不再写死字段，而是根据 `detail.configuration.fields` 动态渲染：
+
+- 可写字段：`enabled` / `channelAccountId`
+
+### 3. 保存配置
+
+点击保存后，Console UI 只提交可写字段 patch。
+
+后端会：
+
+1. 依据 channel 的 configuration 白名单筛选字段
+2. 按字段类型执行规范化与校验
+3. 更新内存配置
+4. 写回项目 `ship.json`
+5. 按参数决定是否重载 channel（默认会重载）
+
+## 与 Channel Account 的关系
+
+推荐流程：
+
+1. 在 Global Channel Accounts 填写凭据并点击“测试”
+2. 测试通过后点击“确认”（系统会自动探测并保存 bot 基础信息）
+3. 到 channel 页面绑定 `channelAccountId`
+4. 执行 `test` / `reconnect` 验证链路
+
+这样可以把“密钥管理”和“channel 运行配置”解耦，避免多个 agent 重复录入密钥。
+
+### Bot 信息如何获取
+
+你不需要手填 bot 名称、bot id、identity 等字段。  
+系统会按 channel 自动探测：
+
+- Telegram: 使用 `botToken` 调用 `getMe`
+- Feishu: 使用 `appId + appSecret` 获取 access token 后读取 bot info
+- QQ: 使用 `appId + appSecret` 校验网关并读取 bot profile（可用时）
+
+Console UI 默认不展示冗余 bot 详情，只保留测试状态与确认流程。
+
+## 你实际会用到的操作
+
+### Console UI
+
+- Global -> Channel Accounts：创建/编辑全局机器人账号
+- Channel 页面 -> Configuration：绑定 `channelAccountId`、调整 `enabled`
+
+### CLI
+
+查看元信息：
+
+```bash
+sma service command chat configuration --channel qq
+```
+
+更新配置并重载：
+
+```bash
+sma service command chat configure \
+  --channel qq \
+  --config-json '{"channelAccountId":"qq-main","enabled":true}' \
+  --restart
+```
+
+## 常见问题
+
+### 为什么 channel 页面看不到明文密钥？
+
+出于安全设计，channel 页面只显示安全摘要，不返回明文密钥。
+
+### 为什么某些字段在 channel 页面不能编辑？
+
+因为 channel 页面只负责绑定与启停；bot 详细信息统一在 Global Channel Accounts 页面管理。
+
+### 我新增了 channel 字段，为什么 UI 自动出现了？
+
+因为 UI 是根据 `detail.configuration` 动态渲染的，不依赖硬编码字段列表。
+
+## 相关文档
+
+- [Chat Service 命令](/zh/docs/commands/service/chat)
+- [环境变量与 ship.db 设计](/zh/docs/configuration/env-shipdb-design)
+- [Console ship.json 配置](/zh/docs/configuration/console-ship-json)

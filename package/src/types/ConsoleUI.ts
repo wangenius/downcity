@@ -71,17 +71,13 @@ export interface ConsoleUiAgentOption {
   logPath?: string;
 
   /**
-   * 当前 agent 的 chat 渠道身份快照。
+   * 当前 agent 的 chat 渠道运行快照。
    */
   chatProfiles?: Array<{
     /**
      * 渠道名（telegram/feishu/qq）。
      */
     channel: string;
-    /**
-     * 渠道身份展示名（例如 `@bot_name`、`app:123456`）。
-     */
-    identity: string;
     /**
      * 链路状态（connected/disconnected/unknown）。
      */

@@ -22,6 +22,10 @@ import { resolveChatMethod, type ChatMethod } from "./runtime/ChatMethod.js";
 import { createTelegramBot } from "./channels/telegram/Bot.js";
 import { createFeishuBot } from "./channels/feishu/Feishu.js";
 import { createQQBot } from "./channels/qq/QQ.js";
+import {
+  getChatChannelConfiguration,
+  listChatChannelConfigurations,
+} from "./channels/ConfigurationRegistry.js";
 import type {
   Service,
   ServiceActionCommandInput,
@@ -38,6 +42,9 @@ import type {
   ChatChannelRuntimeSnapshot,
   ChatChannelTestResult,
 } from "./types/ChannelStatus.js";
+import type { ChatChannelConfigurationField } from "./types/ChannelConfiguration.js";
+import { ConsoleStore } from "@/utils/store/index.js";
+import type { StoredChannelAccount } from "@/types/Store.js";
 
 type ChatChannelState = {
   telegram: TelegramBot | null;
@@ -73,6 +80,9 @@ type ChatOpenActionPayload = {
   channel?: ChatChannelName;
 };
 type ChatCloseActionPayload = {
+  channel?: ChatChannelName;
+};
+type ChatConfigurationActionPayload = {
   channel?: ChatChannelName;
 };
 type ChatConfigureActionPayload = {
@@ -205,15 +215,6 @@ function resetChannelState(): void {
   };
 }
 
-// 占位符判定（中文）：init 生成的模板值 `${...}` 不应被当作真实密钥。
-function isPlaceholder(value?: string): boolean {
-  return value === "${}";
-}
-
-function readAgentEnv(context: ServiceRuntime, key: string): string {
-  return String(context.env?.[key] || "").trim();
-}
-
 function resolveChatChannelNameOrThrow(value: string): ChatChannelName {
   const normalized = String(value || "")
     .trim()
@@ -228,52 +229,58 @@ function resolveChatChannelNameOrThrow(value: string): ChatChannelName {
   throw new Error(`Invalid channel: ${value}. Use telegram|feishu|qq.`);
 }
 
-function resolveTelegramToken(context: ServiceRuntime): string {
-  const token = context.config.services?.chat?.channels?.telegram?.botToken;
-  if (token && !isPlaceholder(token)) return token;
-  return readAgentEnv(context, "TELEGRAM_BOT_TOKEN");
+function resolveChannelAccountId(
+  context: ServiceRuntime,
+  channel: ChatChannelName,
+): string {
+  const config = context.config.services?.chat?.channels?.[channel] as
+    | { channelAccountId?: unknown }
+    | undefined;
+  return String(config?.channelAccountId || "").trim();
 }
 
-function resolveFeishuCredentials(context: ServiceRuntime): {
-  appId: string;
-  appSecret: string;
-} {
-  const channel = context.config.services?.chat?.channels?.feishu;
-  return {
-    appId:
-      (channel?.appId && !isPlaceholder(channel.appId) ? channel.appId : "") ||
-      readAgentEnv(context, "FEISHU_APP_ID"),
-    appSecret:
-      (channel?.appSecret && !isPlaceholder(channel.appSecret)
-        ? channel.appSecret
-        : "") || readAgentEnv(context, "FEISHU_APP_SECRET"),
-  };
+function resolveChannelAccount(
+  context: ServiceRuntime,
+  channel: ChatChannelName,
+): StoredChannelAccount | null {
+  const channelAccountId = resolveChannelAccountId(context, channel);
+  if (!channelAccountId) return null;
+  const store = new ConsoleStore();
+  try {
+    const account = store.getChannelAccountSync(channelAccountId);
+    if (!account) return null;
+    if (account.channel !== channel) return null;
+    return account;
+  } catch {
+    return null;
+  } finally {
+    store.close();
+  }
 }
 
-function resolveQQCredentials(context: ServiceRuntime): {
-  appId: string;
-  appSecret: string;
-} {
-  const channel = context.config.services?.chat?.channels?.qq;
-  return {
-    appId:
-      (channel?.appId && !isPlaceholder(channel.appId) ? channel.appId : "") ||
-      readAgentEnv(context, "QQ_APP_ID"),
-    appSecret:
-      (channel?.appSecret && !isPlaceholder(channel.appSecret)
-        ? channel.appSecret
-        : "") || readAgentEnv(context, "QQ_APP_SECRET"),
-  };
+function isChannelAccountConfigured(
+  channel: ChatChannelName,
+  account: StoredChannelAccount | null,
+): boolean {
+  if (!account) return false;
+  if (channel === "telegram") {
+    return !!String(account.botToken || "").trim();
+  }
+  return !!String(account.appId || "").trim() && !!String(account.appSecret || "").trim();
 }
 
 async function startTelegramChannel(context: ServiceRuntime): Promise<void> {
   if (!context.config.services?.chat?.channels?.telegram?.enabled) return;
   context.logger.info("Telegram channel enabled");
+  const account = resolveChannelAccount(context, "telegram");
+  const token = String(account?.botToken || "").trim();
+  if (!token) return;
+  const authId = String(account?.authId || "").trim();
+  if (authId) context.env.TELEGRAM_AUTH_ID = authId;
   channelState.telegram = createTelegramBot(
     {
-      ...(context.config.services?.chat?.channels?.telegram || {}),
       enabled: true,
-      botToken: resolveTelegramToken(context),
+      botToken: token,
     },
     context,
   );
@@ -285,16 +292,18 @@ async function startTelegramChannel(context: ServiceRuntime): Promise<void> {
 async function startFeishuChannel(context: ServiceRuntime): Promise<void> {
   if (!context.config.services?.chat?.channels?.feishu?.enabled) return;
   context.logger.info("Feishu channel enabled");
-  const feishuChannel = context.config.services?.chat?.channels?.feishu as
-    | { domain?: string }
-    | undefined;
-  const credentials = resolveFeishuCredentials(context);
+  const account = resolveChannelAccount(context, "feishu");
+  const appId = String(account?.appId || "").trim();
+  const appSecret = String(account?.appSecret || "").trim();
+  if (!appId || !appSecret) return;
+  const authId = String(account?.authId || "").trim();
+  if (authId) context.env.FEISHU_AUTH_ID = authId;
   channelState.feishu = await createFeishuBot(
     {
       enabled: true,
-      appId: credentials.appId,
-      appSecret: credentials.appSecret,
-      domain: feishuChannel?.domain || "https://open.feishu.cn",
+      appId,
+      appSecret,
+      domain: String(account?.domain || "").trim() || "https://open.feishu.cn",
     },
     context,
   );
@@ -306,17 +315,18 @@ async function startFeishuChannel(context: ServiceRuntime): Promise<void> {
 async function startQQChannel(context: ServiceRuntime): Promise<void> {
   if (!context.config.services?.chat?.channels?.qq?.enabled) return;
   context.logger.info("QQ channel enabled");
-  const qqChannel = context.config.services?.chat?.channels?.qq;
-  const credentials = resolveQQCredentials(context);
+  const account = resolveChannelAccount(context, "qq");
+  const appId = String(account?.appId || "").trim();
+  const appSecret = String(account?.appSecret || "").trim();
+  if (!appId || !appSecret) return;
+  const authId = String(account?.authId || "").trim();
+  if (authId) context.env.QQ_AUTH_ID = authId;
   channelState.qq = await createQQBot(
     {
       enabled: true,
-      appId: credentials.appId,
-      appSecret: credentials.appSecret,
-      sandbox:
-        typeof qqChannel?.sandbox === "boolean"
-          ? qqChannel.sandbox
-          : readAgentEnv(context, "QQ_SANDBOX").toLowerCase() === "true",
+      appId,
+      appSecret,
+      sandbox: account?.sandbox === true,
     },
     context,
   );
@@ -396,18 +406,8 @@ function getChatChannelStatus(
 ): ChatChannelRuntimeSnapshot {
   const channels = context.config.services?.chat?.channels || {};
   const enabled = channels[channel]?.enabled === true;
-  const configured =
-    channel === "telegram"
-      ? !!resolveTelegramToken(context)
-      : channel === "feishu"
-        ? (() => {
-            const c = resolveFeishuCredentials(context);
-            return !!c.appId && !!c.appSecret;
-          })()
-        : (() => {
-            const c = resolveQQCredentials(context);
-            return !!c.appId && !!c.appSecret;
-          })();
+  const channelAccount = resolveChannelAccount(context, channel);
+  const configured = isChannelAccountConfigured(channel, channelAccount);
 
   const runtime =
     channel === "telegram"
@@ -435,7 +435,8 @@ function getChatChannelStatus(
     statusText,
     detail: {
       ...(runtime?.detail || {}),
-      config: buildChatChannelConfigSummary(context, channel),
+      config: buildChatChannelConfigSummary(context, channel, channelAccount),
+      configuration: toJsonObject(getChatChannelConfiguration(channel).describe()),
     },
   };
 }
@@ -450,69 +451,33 @@ function getChatChannelStatus(
 function buildChatChannelConfigSummary(
   context: ServiceRuntime,
   channel: ChatChannelName,
+  accountInput?: StoredChannelAccount | null,
 ): Record<string, string | number | boolean | null> {
+  const account = accountInput ?? resolveChannelAccount(context, channel);
+  const channelAccountId = resolveChannelAccountId(context, channel);
+  const configured = isChannelAccountConfigured(channel, account);
   const channels = context.config.services?.chat?.channels;
   if (channel === "telegram") {
     const cfg = channels?.telegram;
     return {
       enabled: cfg?.enabled === true,
-      botTokenConfigured: !!resolveTelegramToken(context),
-      auth_id:
-        typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
-          ? cfg.auth_id.trim()
-          : null,
+      channelAccountId: channelAccountId || null,
+      channelAccountConfigured: configured,
     };
   }
   if (channel === "feishu") {
     const cfg = channels?.feishu;
-    const credentials = resolveFeishuCredentials(context);
-    const appIdFromConfig =
-      typeof cfg?.appId === "string" && cfg.appId.trim() && !isPlaceholder(cfg.appId)
-        ? cfg.appId.trim()
-        : "";
-    const appIdSource = appIdFromConfig
-      ? "ship"
-      : credentials.appId
-        ? "env"
-        : "none";
     return {
       enabled: cfg?.enabled === true,
-      appId: credentials.appId || null,
-      appIdFromConfig: appIdFromConfig || null,
-      appIdSource,
-      appSecretConfigured: !!credentials.appSecret,
-      domain:
-        typeof cfg?.domain === "string" && cfg.domain.trim()
-          ? cfg.domain.trim()
-          : "https://open.feishu.cn",
-      auth_id:
-        typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
-          ? cfg.auth_id.trim()
-          : null,
+      channelAccountId: channelAccountId || null,
+      channelAccountConfigured: configured,
     };
   }
   const cfg = channels?.qq;
-  const credentials = resolveQQCredentials(context);
-  const appIdFromConfig =
-    typeof cfg?.appId === "string" && cfg.appId.trim() && !isPlaceholder(cfg.appId)
-      ? cfg.appId.trim()
-      : "";
-  const appIdSource = appIdFromConfig
-    ? "ship"
-    : credentials.appId
-      ? "env"
-      : "none";
   return {
     enabled: cfg?.enabled === true,
-    appId: credentials.appId || null,
-    appIdFromConfig: appIdFromConfig || null,
-    appIdSource,
-    appSecretConfigured: !!credentials.appSecret,
-    sandbox: cfg?.sandbox === true,
-    auth_id:
-      typeof cfg?.auth_id === "string" && cfg.auth_id.trim()
-        ? cfg.auth_id.trim()
-        : null,
+    channelAccountId: channelAccountId || null,
+    channelAccountConfigured: configured,
   };
 }
 
@@ -565,6 +530,10 @@ function isJsonObject(value: JsonValue): value is JsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+function toJsonObject(input: unknown): JsonObject {
+  return JSON.parse(JSON.stringify(input)) as JsonObject;
+}
+
 function readOptionalStringPatch(value: JsonValue): string | null | undefined {
   if (value === null) return null;
   if (typeof value === "string") {
@@ -588,59 +557,83 @@ function readOptionalBooleanPatch(value: JsonValue): boolean | undefined {
   return undefined;
 }
 
+function readOptionalNumberPatch(value: JsonValue): number | null | undefined {
+  if (value === null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) return null;
+    const parsed = Number(text);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function normalizePatchFieldValue(params: {
+  field: ChatChannelConfigurationField;
+  value: JsonValue;
+}): string | number | boolean | null | undefined {
+  const { field, value } = params;
+
+  if (field.type === "boolean") {
+    if (value === null) return field.nullable ? null : undefined;
+    return readOptionalBooleanPatch(value);
+  }
+
+  if (field.type === "number") {
+    const normalized = readOptionalNumberPatch(value);
+    if (normalized === null) {
+      return field.nullable ? null : undefined;
+    }
+    return normalized;
+  }
+
+  const normalizedText = readOptionalStringPatch(value);
+  if (normalizedText === null) {
+    return field.nullable ? null : undefined;
+  }
+  if (normalizedText === undefined) {
+    return undefined;
+  }
+
+  if (field.type === "enum" && Array.isArray(field.options) && field.options.length > 0) {
+    const allowed = new Set(
+      field.options.map((item) => String(item.value || "").trim()).filter(Boolean),
+    );
+    if (!allowed.has(normalizedText)) {
+      throw new Error(
+        `Invalid value for ${field.key}: ${normalizedText}. Allowed: ${[...allowed].join(", ")}`,
+      );
+    }
+  }
+  return normalizedText;
+}
+
 /**
  * 解析 chat.configure patch。
  *
  * 关键点（中文）
- * - 只接受白名单字段，避免 UI 误写入未知键。
- * - 密钥类字段支持 `null` 清空，字符串会自动 trim。
+ * - 可写字段来自 channel 自身 Configuration 描述，而非 service 硬编码。
+ * - 字段类型转换按配置元信息执行（boolean/string/number/enum）。
  */
 function normalizeChatChannelConfigPatch(params: {
   channel: ChatChannelName;
   config: Record<string, JsonValue>;
 }): Record<string, string | number | boolean | null> {
-  const channel = params.channel;
-  const config = params.config;
+  const configDefinition = getChatChannelConfiguration(params.channel);
+  const writableFields = configDefinition.getWritableShipFields();
   const patch: Record<string, string | number | boolean | null> = {};
 
-  const enabled = readOptionalBooleanPatch(config.enabled);
-  if (typeof enabled === "boolean") patch.enabled = enabled;
-
-  if (channel === "telegram") {
-    const botToken = readOptionalStringPatch(config.botToken);
-    if (botToken !== undefined) patch.botToken = botToken;
-
-    const authId = readOptionalStringPatch(config.auth_id);
-    if (authId !== undefined) patch.auth_id = authId;
-    return patch;
+  for (const field of writableFields) {
+    if (!Object.prototype.hasOwnProperty.call(params.config, field.key)) continue;
+    const rawValue = params.config[field.key];
+    const normalizedValue = normalizePatchFieldValue({
+      field,
+      value: rawValue,
+    });
+    if (normalizedValue === undefined) continue;
+    patch[field.key] = normalizedValue;
   }
-
-  if (channel === "feishu") {
-    const appId = readOptionalStringPatch(config.appId);
-    if (appId !== undefined) patch.appId = appId;
-
-    const appSecret = readOptionalStringPatch(config.appSecret);
-    if (appSecret !== undefined) patch.appSecret = appSecret;
-
-    const domain = readOptionalStringPatch(config.domain);
-    if (domain !== undefined) patch.domain = domain;
-
-    const authId = readOptionalStringPatch(config.auth_id);
-    if (authId !== undefined) patch.auth_id = authId;
-    return patch;
-  }
-
-  const appId = readOptionalStringPatch(config.appId);
-  if (appId !== undefined) patch.appId = appId;
-
-  const appSecret = readOptionalStringPatch(config.appSecret);
-  if (appSecret !== undefined) patch.appSecret = appSecret;
-
-  const sandbox = readOptionalBooleanPatch(config.sandbox);
-  if (typeof sandbox === "boolean") patch.sandbox = sandbox;
-
-  const authId = readOptionalStringPatch(config.auth_id);
-  if (authId !== undefined) patch.auth_id = authId;
   return patch;
 }
 
@@ -869,6 +862,27 @@ async function executeChatCloseAction(params: {
   };
 }
 
+async function executeChatConfigurationAction(params: {
+  context: ServiceRuntime;
+  payload: ChatConfigurationActionPayload;
+}) {
+  void params.context;
+  const targets = resolveTargetChannels(params.payload.channel);
+  const items = targets.map((channel) => ({
+    channel,
+    configuration: toJsonObject(getChatChannelConfiguration(channel).describe()),
+  }));
+  return {
+    success: true,
+    data: {
+      channels: items,
+      allChannels: listChatChannelConfigurations().map((item) =>
+        toJsonObject(item.describe()),
+      ),
+    },
+  };
+}
+
 async function executeChatConfigureAction(params: {
   context: ServiceRuntime;
   payload: ChatConfigureActionPayload;
@@ -884,6 +898,30 @@ async function executeChatConfigureAction(params: {
       success: false,
       error: "No valid config fields provided",
     };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "channelAccountId")) {
+    const channelAccountId = String(patch.channelAccountId || "").trim();
+    if (channelAccountId) {
+      const store = new ConsoleStore();
+      try {
+        const account = store.getChannelAccountSync(channelAccountId);
+        if (!account) {
+          return {
+            success: false,
+            error: `Bot account not found: ${channelAccountId}`,
+          };
+        }
+        if (account.channel !== channel) {
+          return {
+            success: false,
+            error: `Bot account channel mismatch: expected ${channel}, got ${account.channel}`,
+          };
+        }
+      } finally {
+        store.close();
+      }
+    }
   }
 
   await setChatChannelConfig({
@@ -1528,6 +1566,29 @@ export const chatService: Service = {
         });
       },
     },
+    configuration: {
+      command: {
+        description: "查看 chat 渠道配置元信息（字段、类型、说明）",
+        configure(command: Command) {
+          command.option("--channel <name>", "指定渠道（telegram|feishu|qq）");
+        },
+        mapInput: mapChatChannelCommandInput,
+      },
+      api: {
+        method: "GET",
+        mapInput(c) {
+          return mapChatChannelApiQueryInput({
+            channel: c.req.query("channel"),
+          });
+        },
+      },
+      async execute(params) {
+        return executeChatConfigurationAction({
+          context: params.context,
+          payload: params.payload as ChatConfigurationActionPayload,
+        });
+      },
+    },
     configure: {
       command: {
         description: "更新 chat 渠道参数（写入 ship.json，可选立即重载）",
@@ -1536,7 +1597,7 @@ export const chatService: Service = {
             .requiredOption("--channel <name>", "指定渠道（telegram|feishu|qq）")
             .requiredOption(
               "--config-json <json>",
-              "配置 patch JSON（例如 '{\"appId\":\"xxx\",\"sandbox\":false}'）",
+              "配置 patch JSON（例如 '{\"channelAccountId\":\"qq-main\",\"enabled\":true}'）",
             )
             .option("--restart", "配置后立即重载渠道", false);
         },

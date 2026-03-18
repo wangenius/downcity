@@ -1,7 +1,10 @@
 ---
 title: 环境变量配置逻辑（Console 共享 vs Agent 私有）
-description: 从设计边界、优先级到实操，完整说明 ShipMyAgent 的环境变量作用域
+description: 说明 global_env、agent_env、channel_accounts 与 <agent>/.env 的作用域和运行时合并规则
 ---
+
+> 标准设计文档： [Env 与 ship.db 数据库设计](/zh/docs/configuration/env-shipdb-design)
+
 
 # 环境变量配置逻辑（Console 共享 vs Agent 私有）
 
@@ -12,167 +15,101 @@ description: 从设计边界、优先级到实操，完整说明 ShipMyAgent 的
 3. 启动时怎么加载、怎么覆盖？
 4. 哪些地方会读取，哪些地方不会？
 
-## 1. 一页总览
+## 1. 作用域矩阵
 
-### 1.1 三类变量（先分清概念）
-
-| 类型 | 典型键 | 保存位置 | 作用范围 | 你是否需要手工配置 |
+| 层 | 数据源 | 是否持久化 | 作用范围 | 典型内容 |
 |---|---|---|---|---|
-| Console 共享配置变量 | provider API Key、`extensions.*` | `~/.ship/ship.db` | 所有 Agent | 是（通过 `sma console ...`） |
-| Agent 私有配置变量 | `QQ_APP_ID`、`TELEGRAM_BOT_TOKEN` | `<agent>/.env` | 当前 Agent | 是（在项目目录配置） |
-| 运行时上下文变量 | `SMA_CTX_CHANNEL`、`SMA_CTX_CHAT_ID` | 进程环境（不落盘） | 单次请求 | 否（系统自动注入） |
-
-### 1.2 架构图（保存边界）
-
-```mermaid
-flowchart LR
-  subgraph Console全局
-    A["~/.ship/ship.db<br/>console_config + models/providers"]
-  end
-
-  subgraph Agent项目A
-    B1["ship.json"]
-    B2[".env"]
-  end
-
-  subgraph Agent项目B
-    C1["ship.json"]
-    C2[".env"]
-  end
-
-  A -->|"共享能力注入（仅共享字段）"| R1["Agent A Runtime"]
-  A -->|"共享能力注入（仅共享字段）"| R2["Agent B Runtime"]
-  B1 --> R1
-  B2 --> R1
-  C1 --> R2
-  C2 --> R2
-```
+| Console 全局 env | `~/.ship/ship.db` `global_env` | 是（加密） | 所有 agent | 全局共享 key、共享占位符 |
+| Agent 私有 env（DB） | `~/.ship/ship.db` `agent_env` | 是（加密） | 单个 agent（`agent_id`） | 项目私有密钥 |
+| Agent 私有 env（文件） | `<agent>/.env` | 用户文件 | 单个 agent | 运行时叠加值 |
+| Bot 凭据池 | `~/.ship/ship.db` `channel_accounts` | 是（敏感字段加密） | 被多个 agent 绑定复用 | Telegram/Feishu/QQ 密钥 |
+| 运行时上下文 | 进程内存（`SMA_CTX_*`） | 否 | 单次请求 | channel/chat/user 上下文 |
 
 关键点：
 
-1. `ship.db` 是 Console 全局事实源。
-2. 每个 Agent 只读取自己的 `.env`。
-3. 不存在 “A 项目的 `.env` 自动给 B 项目用” 的路径。
+1. 持久化的 env 类数据统一在 `ship.db` 加密存储。
+2. `<agent>/.env` 是该 agent 的运行时叠加层。
+3. `ship.json` 只做绑定（如 `channelAccountId`），不保存明文凭据。
 
-## 2. 保存逻辑（你改配置时写到哪里）
-
-### 2.1 Console 共享能力写入
-
-你通过以下命令修改的内容，会写到 `~/.ship/ship.db`：
-
-1. `sma console model ...`
-2. `sma console config set extensions...`
-3. `sma voice ...`（本质也是改 `extensions.voice`）
-
-### 2.2 Agent 私有能力写入
-
-你在项目目录里修改：
-
-1. `<agent>/ship.json`
-2. `<agent>/.env`
-
-这些只影响当前 Agent，不影响其它项目。
-
-### 2.3 保存路径流程图
-
-```mermaid
-flowchart TD
-  U["你修改一个配置"] --> Q{"配置属于哪类？"}
-  Q -->|"模型池 / extensions"| S1["写入 ~/.ship/ship.db"]
-  Q -->|"services.chat / 项目服务参数"| S2["写入 <agent>/ship.json 或 <agent>/.env"]
-  Q -->|"SMA_CTX_*"| S3["不需要手工写入（运行时自动注入）"]
-```
-
-## 3. 启动加载逻辑（从磁盘到生效）
-
-Agent 启动（`sma agent start` 或 console daemon 拉起）时，大致顺序：
-
-1. 读取 `<agent>/.env`，得到**项目私有快照**（不污染全局 `process.env`）。
-2. 读取 `~/.ship/ship.db` 的 `console_config`。
-3. 从 console 配置中只提取共享字段并注入（当前重点是 `extensions`）。
-4. 读取项目层 `ship.json`（含继承链）并深合并。
-5. 解析 `${ENV_KEY}` 占位符：
-   1. 项目层占位符：只读项目 `.env` 快照。
-   2. console 层占位符：只读系统环境。
-6. service 运行时按合并后的配置 + 项目 `.env` 快照执行。
-
-### 3.1 加载时序图
+## 2. 运行时数据流（图示）
 
 ```mermaid
 sequenceDiagram
   participant CLI as sma agent start
-  participant ENV as <agent>/.env
   participant DB as ~/.ship/ship.db
+  participant ENV as <agent>/.env
   participant JSON as ship.json(项目层)
   participant RT as Agent Runtime
 
-  CLI->>ENV: 读取并解析 .env
-  ENV-->>CLI: 项目 env 快照
-  CLI->>DB: 读取 console_config
-  DB-->>CLI: console 全局配置
-  CLI->>JSON: 读取/深合并 ship.json
-  JSON-->>CLI: 项目配置层
-  CLI->>CLI: 解析占位符与合并（按作用域）
-  CLI->>RT: 注入 config + env 快照
+  CLI->>DB: 读取 global_env
+  CLI->>DB: 按 agent_id 读取 agent_env
+  CLI->>ENV: 解析项目 .env
+  CLI->>CLI: 生成 runtime env = agent_env + .env（.env 优先）
+  CLI->>DB: 读取 extensions_config
+  CLI->>JSON: 读取并合并 ship.json
+  CLI->>CLI: 按作用域解析 ${ENV_KEY}
+  CLI->>DB: 按 channelAccountId 解析渠道账户
+  CLI->>RT: 启动服务与渠道
 ```
 
-## 4. 优先级逻辑（同一个字段谁赢）
+## 3. 优先级规则
 
-### 4.1 Chat 渠道凭据优先级
+### 3.1 运行时 env 合并优先级
 
-以 QQ 为例（Feishu/Telegram 同理）：
+1. 先加载 `agent_env`（DB）。
+2. 再叠加 `<agent>/.env`。
+3. 同名键冲突时 `.env` 覆盖 DB 值。
 
-1. 先看 `ship.json` 显式值（如 `services.chat.channels.qq.appId`）。
-2. 如果没填，再看项目 `.env`（如 `QQ_APP_ID`）。
-3. 两者都没有，视为未配置。
+### 3.2 渠道凭据优先级
 
-### 4.2 优先级图（以 `appId` 为例）
+1. `ship.json` 渠道只配置 `channelAccountId`。
+2. 真实密钥优先从 `channel_accounts` 解析。
+3. 如果绑定缺失或凭据不完整，则 `config_missing`。
+
+## 4. 哪些会读 `.env`，哪些不会
+
+### 4.1 会读取项目 `.env`
+
+1. 项目层 `ship.json` 的 `${ENV_KEY}` 解析。
+2. agent runtime 进程 env 注入（`agent_env + .env`）。
+3. 少数 service auth 的本地兜底读取。
+
+### 4.2 不会读取项目 `.env`
+
+1. 模型池（`model_providers`、`models`）只来自 `ship.db`。
+2. extension 全局配置来自 `console_secure_settings.extensions_config`。
+3. bot 凭据源只来自 `channel_accounts`。
+4. `SMA_CTX_*` 是请求时生成，不属于配置持久层。
+
+## 5. 写入路径
+
+1. Channel Accounts 页面：写 `channel_accounts`。
+2. 模型管理（CLI/UI）：写 `model_providers`、`models`。
+3. `extensions.*` 配置：写 `extensions_config`。
+4. 渠道配置：仅写 `ship.json` 的 `enabled` 与 `channelAccountId`。
+5. 用户手工改 `<agent>/.env`：仅影响当前 agent runtime。
+
+## 6. 常见问题与排查
+
+### 6.1 “为什么新 agent 也显示已有渠道凭据？”
+
+常见原因：
+
+1. 新 agent 绑定到了已有 `channelAccountId`。
+2. 新项目 `.env` 中已有回退凭据键。
 
 ```mermaid
 flowchart TD
-  A["读取 services.chat.channels.qq.appId"] --> B{"ship.json有显式值？"}
-  B -->|是| C["使用 ship.json 值（Source=ship）"]
-  B -->|否| D{"<agent>/.env 有 QQ_APP_ID？"}
-  D -->|是| E["使用 .env 值（Source=env）"]
-  D -->|否| F["未配置（Source=none）"]
+  A["channel 显示已配置"] --> B["先看 ship.json 的 channelAccountId"]
+  B -->|有绑定| C["到 channel_accounts 查对应 account"]
+  B -->|无绑定| D["检查 <agent>/.env 回退键"]
+  C --> E["来源是 channel account"]
+  D --> F["来源是项目 runtime env"]
 ```
 
-## 5. 会读取 `.env` 的位置 vs 不会读取的位置
+## 7. 推荐操作流程
 
-### 5.1 会读取项目 `.env`（当前 Agent）
-
-1. 项目 `ship.json` 的 `${ENV_KEY}` 解析（项目层）。
-2. Chat 渠道凭据解析（Telegram/Feishu/QQ）。
-3. 某些 extension 的本地兜底执行（daemon 不可达时）使用同一份项目 env 快照。
-
-### 5.2 不会读取项目 `.env`
-
-1. Console 模型池事实源（providers/models）本身：来源是 `ship.db`。
-2. `extensions.*` 全局开关与参数：来源是 `ship.db` 的 `console_config.extensions`。
-3. `SMA_CTX_*`：它们是请求上下文，不是配置项。
-
-## 6. 常见误解与排查图
-
-### 6.1 “新 Agent 为什么自动有 QQ appId？”
-
-最常见原因：该项目 `.env` 里已经有 `QQ_APP_ID`。  
-这表示 env 回退生效，不代表写回了 `ship.json`。
-
-### 6.2 排查流程图
-
-```mermaid
-flowchart TD
-  A["看到 channel 显示已配置"] --> B["看 UI 的 App ID Source"]
-  B -->|"ship"| C["值来自 ship.json"]
-  B -->|"env"| D["值来自当前项目 .env"]
-  B -->|"none"| E["当前未配置"]
-  D --> F["检查是否误把旧项目 .env 复制到新项目"]
-  C --> G["检查 ship.json 是否写了明文或占位符"]
-```
-
-## 7. 推荐配置模板
-
-### 7.1 Console 共享能力
+1. 初始化 console 全局层：
 
 ```bash
 sma console init
@@ -180,38 +117,14 @@ sma console model create
 sma console config set extensions.voice.enabled true
 ```
 
-### 7.2 Agent 私有能力
+2. 在 Console UI `Global / Channel Accounts` 创建账号。
+3. 在 agent `ship.json` 里绑定 `channelAccountId`。
+4. 仅在需要时使用 `<agent>/.env` 做项目级运行时覆盖。
 
-`ship.json`：
+## 8. 最佳实践
 
-```json
-{
-  "services": {
-    "chat": {
-      "channels": {
-        "qq": {
-          "enabled": true,
-          "appId": "${QQ_APP_ID}",
-          "appSecret": "${QQ_APP_SECRET}",
-          "auth_id": ""
-        }
-      }
-    }
-  }
-}
-```
-
-`.env`：
-
-```bash
-QQ_APP_ID=your_qq_app_id
-QQ_APP_SECRET=your_qq_app_secret
-```
-
-## 8. 最佳实践清单
-
-1. 把模型池和 extensions 统一放在 `ship.db`。
-2. 把服务密钥放在项目 `.env`，在 `ship.json` 里只写 `${ENV_KEY}`。
-3. 把 `SMA_CTX_*` 当成运行时上下文，不要手工落盘。
-4. 多 Agent 并行时，务必保证每个项目 `.env` 独立。
-5. 变更后重启目标 Agent，再看 Console UI 的 `Source` 字段验收。
+1. 持久化密钥全部放进 `ship.db` 加密表。
+2. `ship.json` 只写绑定，不写明文密钥。
+3. `<agent>/.env` 仅作 agent 私有运行时叠加。
+4. 渠道配置变更后执行 `chat status` 进行验收。
+5. 出现“像复用旧值”的情况时，优先检查 `channelAccountId` 与 `.env`。

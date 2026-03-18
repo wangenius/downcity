@@ -2,9 +2,10 @@
  * Env Config：环境与配置读取工具模块。
  *
  * 职责说明：
- * 1. 仅加载项目根目录 `.env`（console 级配置已迁移到 `~/.ship/ship.db`）。
+ * 1. 仅加载项目根目录 `.env`（用户自管文件，不写回 DB）。
  * 2. 读取 `ship.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
- * 3. 支持配置继承：console(db 共享层) ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
+ * 3. 支持配置继承：console(db 共享 extensions 层) ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
+ * 4. 环境变量分层：`global_env`（console 共享）与 `agent_env`（agent 私有）都存储在 `~/.ship/ship.db`。
  * 4. 统一导出 Ship 配置类型，避免业务模块直接依赖具体配置文件路径。
  */
 import dotenv from "dotenv";
@@ -15,6 +16,52 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 
 export type { ShipConfig };
+
+/**
+ * 读取 console 共享环境变量（global_env）。
+ */
+export function loadGlobalEnvFromStore(): Record<string, string> {
+  const store = new ConsoleStore();
+  try {
+    return store.getGlobalEnvMapSync();
+  } catch {
+    return {};
+  } finally {
+    store.close();
+  }
+}
+
+/**
+ * 读取 agent 私有环境变量（agent_env）。
+ */
+export function loadAgentEnvFromStore(agentId: string): Record<string, string> {
+  const normalizedAgentId = String(agentId || "").trim();
+  if (!normalizedAgentId) return {};
+  const store = new ConsoleStore();
+  try {
+    return store.getAgentEnvMapSync(normalizedAgentId);
+  } catch {
+    return {};
+  } finally {
+    store.close();
+  }
+}
+
+/**
+ * 读取 agent runtime 最终环境变量快照。
+ *
+ * 关键点（中文）
+ * - 来源：`agent_env`（DB） + `<agent>/.env`（用户文件）。
+ * - 冲突时 `.env` 优先，满足用户可在本地即时覆盖。
+ */
+export function loadAgentRuntimeEnv(projectRoot: string): Record<string, string> {
+  const agentFromDb = loadAgentEnvFromStore(projectRoot);
+  const projectDotenv = loadProjectDotenv(projectRoot);
+  return {
+    ...agentFromDb,
+    ...projectDotenv,
+  };
+}
 
 /**
  * 读取项目 `.env` 快照（不污染全局 process.env）。
@@ -119,15 +166,20 @@ function readShipJsonLayer(
   return resolveEnvPlaceholdersDeep(raw, resolveEnvVar);
 }
 
-function readConsoleConfigLayerFromStore(
+function readConsoleExtensionsLayerFromStore(
   resolveEnvVar: (name: string) => string | undefined,
 ): ResolvedConfigValue {
   let store: ConsoleStore | null = null;
   try {
     store = new ConsoleStore();
-    const raw = store.getSecureSettingJsonSync<unknown>("console_config");
+    const raw = store.getExtensionsConfigSync<Record<string, unknown>>();
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-    return resolveEnvPlaceholdersDeep(raw as ResolvedConfigValue, resolveEnvVar);
+    return resolveEnvPlaceholdersDeep(
+      {
+        extensions: raw as ResolvedConfigValue,
+      },
+      resolveEnvVar,
+    );
   } catch {
     return undefined;
   } finally {
@@ -188,11 +240,17 @@ export function loadShipConfig(
   projectRoot: string,
   options?: {
     projectEnv?: Record<string, string>;
-    sharedEnv?: NodeJS.ProcessEnv;
+    agentEnv?: Record<string, string>;
+    globalEnv?: Record<string, string>;
   },
 ): ShipConfig {
-  const projectEnv = options?.projectEnv ?? loadProjectDotenv(projectRoot);
-  const sharedEnv = options?.sharedEnv ?? process.env;
+  const projectDotenv = options?.projectEnv ?? loadProjectDotenv(projectRoot);
+  const agentEnv = options?.agentEnv ?? loadAgentEnvFromStore(projectRoot);
+  const globalEnv = options?.globalEnv ?? loadGlobalEnvFromStore();
+  const runtimeAgentEnv = {
+    ...agentEnv,
+    ...projectDotenv,
+  };
   /**
    * 读取 console 共享环境变量（模型池 / extensions）。
    *
@@ -201,7 +259,7 @@ export function loadShipConfig(
    * - 避免某个 agent 项目的 .env 反向污染 console 全局配置解析。
    */
   const resolveSharedEnvVar = (name: string): string | undefined => {
-    const sharedValue = String(sharedEnv[name] || "").trim();
+    const sharedValue = String(globalEnv[name] || "").trim();
     return sharedValue || undefined;
   };
   /**
@@ -212,11 +270,11 @@ export function loadShipConfig(
    * - 从根上杜绝跨 agent 的服务凭据串用。
    */
   const resolveProjectEnvVar = (name: string): string | undefined => {
-    const projectValue = String(projectEnv[name] || "").trim();
+    const projectValue = String(runtimeAgentEnv[name] || "").trim();
     return projectValue || undefined;
   };
 
-  const operationLayerRaw = readConsoleConfigLayerFromStore(resolveSharedEnvVar);
+  const operationLayerRaw = readConsoleExtensionsLayerFromStore(resolveSharedEnvVar);
   const operationLayer = pickConsoleSharedLayer(operationLayerRaw);
 
   const ancestorShipJsonPaths = collectAncestorShipJsonPaths(projectRoot);

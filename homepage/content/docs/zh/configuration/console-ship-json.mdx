@@ -16,10 +16,13 @@ Console 全局配置统一存储在：
 
 ## 存储内容
 
-`ship.db` 中包含两类数据：
+`ship.db` 中主要包含以下数据域：
 
 1. 模型池（providers/models）
-2. Console 全局配置（例如 `extensions.*`）
+2. Console 共享 env（`global_env`）
+3. Agent 私有 env（`agent_env`）
+4. Bot 账号凭据池（`channel_accounts`）
+5. Console 全局 extension 配置（`extensions_config`）
 
 其中敏感字段（如 API Key）采用加密存储。
 
@@ -37,18 +40,20 @@ Console 全局配置统一存储在：
 
 ## 环境变量作用域（重要）
 
-当前版本将环境变量作用域明确拆分为两层：
+当前版本按明确分层工作：
 
-1. Console 全局（共享）：用于模型池与 extension 等 console 级能力。
-2. Agent 项目（私有）：来自 `<agent>/.env`，用于 `services.*`（例如 chat 渠道密钥）。
+1. Console 共享 env：`global_env`
+2. Agent 私有 DB env：`agent_env`
+3. Agent 本地运行时覆盖：`<agent>/.env`（用户维护）
+4. Chat 渠道凭据：`channel_accounts`（由 `ship.json` 的 `channelAccountId` 绑定）
 
 关键行为：
 
-1. Agent 的 `.env` 只在该 agent runtime 内生效，不会写入或污染全局 `process.env`。
-2. 切换到另一个 agent 时，不会复用前一个 agent 的 `.env` 值。
-3. 项目 `ship.json` 的 `${ENV_KEY}` 只解析当前 agent `.env`，不再回退共享 `process.env`。
-4. Console 全局层注入到 agent 的仅共享字段（当前仅 `extensions`），不会注入 `services.*`。
-5. 因此 `services.chat` 读取的是当前 agent 的私有环境变量；console sidebar 中 model/extension 依然是共享配置域。
+1. runtime env 最终是 `agent_env + <agent>/.env`（`.env` 优先）。
+2. Agent 的 `.env` 只在当前 agent runtime 内生效，不污染全局 `process.env`。
+3. `ship.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
+4. 渠道真实凭据来自 `channel_accounts`。
+5. extension 配置来自 `extensions_config`。
 
 ## 常用操作
 
@@ -71,6 +76,11 @@ sma console config set extensions.voice.enabled true
 sma console model list
 sma console model create
 ```
+
+## 相关文档
+
+- [Env 与 ship.db 数据库设计](/zh/docs/configuration/env-shipdb-design)
+- [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)
 
 ## 运行文件
 

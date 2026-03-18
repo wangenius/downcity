@@ -83,11 +83,6 @@ function requiredCredsReady(form: ChannelAccountFormState): boolean {
   return trimText(form.appId).length > 0 && trimText(form.appSecret).length > 0
 }
 
-function credentialsLabel(channel: string): string {
-  if (channel === "telegram") return "botToken"
-  return "appId + appSecret"
-}
-
 function validateForConfirm(params: {
   form: ChannelAccountFormState
   probeStatus: ProbeStatus
@@ -96,10 +91,6 @@ function validateForConfirm(params: {
   const errors: string[] = []
 
   if (!trimText(form.channel)) errors.push("请选择 channel")
-
-  if (!requiredCredsReady(form)) {
-    errors.push(`请先填写 ${credentialsLabel(form.channel)}`)
-  }
 
   if (probeStatus !== "passed") {
     errors.push(probeStatus === "failed" ? "测试未通过，请修复凭据后重试" : "请先测试凭据并通过")
@@ -215,13 +206,6 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
     }
   }, [])
 
-  const firstError = formErrors[0] || ""
-  const probeStatusText =
-    probeStatus === "passed"
-      ? "测试通过"
-      : probeStatus === "failed"
-        ? `测试失败${probeMessage ? `：${probeMessage}` : ""}`
-        : "未测试"
   const readyCount = items.filter((item) => isAccountCredentialReady(item)).length
 
   const openCreateDialog = () => {
@@ -464,43 +448,58 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
             <div className="space-y-2.5 rounded-lg border border-border/70 bg-background p-3">
               <Label className="text-xs text-muted-foreground">Credentials</Label>
               {form.channel === "telegram" ? (
-                <Input
-                  type="password"
-                  placeholder="botToken"
-                  className="h-10 rounded-lg"
-                  value={form.botToken}
-                  onChange={(event) => {
-                    const value = event.target.value
-                    setForm((prev) => ({ ...prev, botToken: value }))
-                    setProbeStatus("idle")
-                    setProbeMessage("")
-                  }}
-                />
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2">
-                  <Input
-                    placeholder="appId"
-                    className="h-10 rounded-lg"
-                    value={form.appId}
-                    onChange={(event) => {
-                      const value = event.target.value
-                      setForm((prev) => ({ ...prev, appId: value }))
-                      setProbeStatus("idle")
-                      setProbeMessage("")
-                    }}
-                  />
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    botToken <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     type="password"
-                    placeholder="appSecret"
+                    placeholder="botToken"
                     className="h-10 rounded-lg"
-                    value={form.appSecret}
+                    value={form.botToken}
                     onChange={(event) => {
                       const value = event.target.value
-                      setForm((prev) => ({ ...prev, appSecret: value }))
+                      setForm((prev) => ({ ...prev, botToken: value }))
                       setProbeStatus("idle")
                       setProbeMessage("")
                     }}
                   />
+                </div>
+              ) : (
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      appId <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      placeholder="appId"
+                      className="h-10 rounded-lg"
+                      value={form.appId}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setForm((prev) => ({ ...prev, appId: value }))
+                        setProbeStatus("idle")
+                        setProbeMessage("")
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      appSecret <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="password"
+                      placeholder="appSecret"
+                      className="h-10 rounded-lg"
+                      value={form.appSecret}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setForm((prev) => ({ ...prev, appSecret: value }))
+                        setProbeStatus("idle")
+                        setProbeMessage("")
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -553,22 +552,6 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
               ) : null}
             </div>
 
-            <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5 text-xs">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`h-2 w-2 rounded-full ${
-                    probeStatus === "passed"
-                      ? "bg-emerald-500"
-                      : probeStatus === "failed"
-                        ? "bg-destructive"
-                        : "bg-muted-foreground/50"
-                  }`}
-                />
-                <div className={probeStatus === "failed" ? "text-destructive" : "text-muted-foreground"}>{probeStatusText}</div>
-              </div>
-              <div className="mt-1 text-muted-foreground">下一步：测试通过后点击“确认”</div>
-              {firstError ? <div className="mt-1 text-destructive">{firstError}</div> : null}
-            </div>
           </div>
 
           <DialogFooter className="gap-2 sm:justify-end">

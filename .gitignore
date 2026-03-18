@@ -35,3 +35,7 @@ package/bin
 **/.ship/.cache/
 **/.ship/public/
 .secrets
+
+# Chrome extension signed artifacts
+chrome-extension/dist.crx
+chrome-extension/dist.pem

@@ -69,8 +69,8 @@ export function Navbar() {
         <Link to={homePath} className="flex min-w-0 items-center gap-3">
           <img src="/icon-192.png" alt="Downcity" className="block h-7 w-7 shrink-0 object-contain opacity-95" />
           <span
-            className="truncate text-[1rem] leading-none tracking-[-0.045em] text-[#111113]"
-            style={{ fontFamily: "Fraunces, serif", fontWeight: 900 }}
+            className="truncate text-[1.08rem] leading-none tracking-[-0.05em] text-[#111113] md:text-[1.14rem]"
+            style={{ fontFamily: "Space Grotesk, sans-serif", fontWeight: 700 }}
           >
             Downcity
           </span>
@@ -81,7 +81,7 @@ export function Navbar() {
             <Link
               key={item.path}
               to={item.path}
-              className={`inline-flex items-center py-1 text-[0.61rem] uppercase tracking-[0.22em] transition-colors ${
+              className={`inline-flex items-center py-1 text-[0.68rem] uppercase tracking-[0.18em] transition-colors ${
                 isActive(item.path) ? "text-[#111113]" : "text-[#6B7280] hover:text-[#111113]"
               }`}
             >
@@ -95,7 +95,7 @@ export function Navbar() {
             <Link
               key={item.path}
               to={item.path}
-              className={`inline-flex items-center py-1 text-[0.61rem] uppercase tracking-[0.22em] transition-colors ${
+              className={`inline-flex items-center py-1 text-[0.68rem] uppercase tracking-[0.18em] transition-colors ${
                 isActive(item.path) ? "text-[#111113]" : "text-[#6B7280] hover:text-[#111113]"
               }`}
             >
@@ -104,17 +104,16 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-5 lg:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <a
             href={twitterUrl}
             target="_blank"
             rel="noreferrer"
             aria-label="Twitter"
             title="Twitter"
-            className="inline-flex items-center gap-1.5 py-1 text-[0.61rem] uppercase tracking-[0.22em] text-[#6B7280] transition-colors hover:text-[#111113]"
+            className="inline-flex h-8 w-8 items-center justify-center text-[#6B7280] transition-colors hover:text-[#111113]"
           >
             <IconBrandX className="size-3.5" />
-            Twitter
           </a>
           <a
             href={githubUrl}
@@ -122,15 +121,14 @@ export function Navbar() {
             rel="noreferrer"
             aria-label="GitHub"
             title="GitHub"
-            className="inline-flex items-center gap-1.5 py-1 text-[0.61rem] uppercase tracking-[0.22em] text-[#6B7280] transition-colors hover:text-[#111113]"
+            className="inline-flex h-8 w-8 items-center justify-center text-[#6B7280] transition-colors hover:text-[#111113]"
           >
             <IconBrandGithub className="size-3.5" />
-            GitHub
           </a>
           <button
             type="button"
             onClick={() => setLang(isZh ? "en" : "zh")}
-            className="inline-flex items-center py-1 text-[0.61rem] uppercase tracking-[0.22em] text-[#6B7280] transition-colors hover:text-[#111113]"
+            className="inline-flex min-w-8 items-center justify-center py-1 text-[0.68rem] uppercase tracking-[0.14em] text-[#6B7280] transition-colors hover:text-[#111113]"
           >
             {isZh ? "EN" : "中文"}
           </button>

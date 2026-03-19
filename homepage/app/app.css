@@ -42,10 +42,10 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --font-sans: "Lora", "PingFang SC", "Noto Serif CJK SC", serif;
-  --font-serif: "Fraunces", "Times New Roman", "Songti SC", serif;
+  --font-sans: "Space Grotesk", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --font-serif: "Space Grotesk", "PingFang SC", "Noto Sans CJK SC", sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", "Menlo", monospace;
-  --font-pixel: "Fraunces", "Times New Roman", serif;
+  --font-pixel: "Space Grotesk", "PingFang SC", "Noto Sans CJK SC", sans-serif;
   --spacing: 0.25rem;
   --tracking-normal: 0em;
   --shadow-2xs: 0px 1px 1px rgb(24 24 27 / 0.02);

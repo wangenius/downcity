@@ -86,6 +86,7 @@ export class FeishuBot extends BaseChatChannel {
     new Map();
   private chatTitleByChatId: Map<string, string> = new Map();
   private senderNameBySenderKey: Map<string, string> = new Map();
+  private lookupWarnings: Set<string> = new Set();
   private appAccessToken: string = "";
   private appAccessTokenExpiresAtMs: number = 0;
 
@@ -214,15 +215,37 @@ export class FeishuBot extends BaseChatChannel {
   }
 
   /**
+   * 飞书查询告警去重。
+   *
+   * 关键点（中文）
+   * - 同一类权限/查询失败只打印一次，避免日志被重复刷屏。
+   * - 仍保留关键上下文，方便直接定位缺失权限或返回异常。
+   */
+  private warnLookupOnce(
+    warningKey: string,
+    message: string,
+    details: JsonObject,
+  ): void {
+    const normalizedKey = String(warningKey || "").trim();
+    if (normalizedKey) {
+      if (this.lookupWarnings.has(normalizedKey)) return;
+      this.lookupWarnings.add(normalizedKey);
+    }
+    this.logger.warn(message, details);
+  }
+
+  /**
    * 解析飞书发送者姓名。
    *
    * 关键点（中文）
    * - 消息事件本身不直接给 `name`，需要再查「获取单个用户信息」接口。
-   * - 依赖通讯录权限与数据范围，因此这里只做 best-effort。
+   * - 若通讯录接口拿不到姓名，则继续尝试 chat members 接口兜底。
+   * - 依赖通讯录 / IM 群成员权限与数据范围，因此这里只做 best-effort。
    */
   private async resolveSenderName(params: {
     senderId?: string;
     idType?: "open_id" | "user_id" | "union_id";
+    chatId?: string;
   }): Promise<string | undefined> {
     const senderId = String(params.senderId || "").trim();
     const idType = params.idType;
@@ -247,15 +270,6 @@ export class FeishuBot extends BaseChatChannel {
           },
         },
       );
-      if (!response.ok) {
-        this.logger.debug("Feishu 用户信息查询失败", {
-          senderId,
-          idType,
-          httpStatus: response.status,
-        });
-        return undefined;
-      }
-
       const payload = (await response.json().catch(() => null)) as
         | {
             code?: number;
@@ -265,29 +279,172 @@ export class FeishuBot extends BaseChatChannel {
                 name?: string;
                 nickname?: string;
                 en_name?: string;
+                [key: string]: unknown;
               };
             };
           }
         | null;
-      if (payload?.code !== 0) {
-        this.logger.debug("Feishu 用户信息查询返回错误", {
+      if (!response.ok) {
+        this.warnLookupOnce(
+          `feishu-user-http:${idType}:${senderId}:${response.status}:${String(payload?.code ?? "")}`,
+          "Feishu 用户信息查询失败",
+          {
+            senderId,
+            idType,
+            httpStatus: response.status,
+            code: payload?.code ?? null,
+            msg: payload?.msg ?? null,
+          },
+        );
+      } else if (payload?.code !== 0) {
+        this.warnLookupOnce(
+          `feishu-user-code:${idType}:${senderId}:${String(payload?.code ?? "")}`,
+          "Feishu 用户信息查询返回错误",
+          {
+            senderId,
+            idType,
+            httpStatus: response.status,
+            code: payload?.code ?? null,
+            msg: payload?.msg ?? null,
+          },
+        );
+      } else {
+        const user = payload?.data?.user;
+        const name = [user?.nickname, user?.name, user?.en_name]
+          .map((value) => String(value || "").trim())
+          .find(Boolean);
+        if (name) {
+          this.senderNameBySenderKey.set(cacheKey, name);
+          return name;
+        }
+
+        this.warnLookupOnce(
+          `feishu-user-empty:${idType}:${senderId}`,
+          "Feishu 用户信息未返回姓名字段",
+          {
+            senderId,
+            idType,
+            returnedFields: user ? Object.keys(user) : [],
+          },
+        );
+      }
+    } catch (error) {
+      this.warnLookupOnce(
+        `feishu-user-exception:${idType}:${senderId}:${error instanceof Error ? error.name : "unknown"}`,
+        "Feishu 用户信息查询异常",
+        {
           senderId,
           idType,
-          code: payload?.code,
-          msg: payload?.msg,
-        });
+          error: String(error),
+        },
+      );
+    }
+
+    const memberName = await this.resolveSenderNameFromChatMembers({
+      chatId: params.chatId,
+      senderId,
+      idType,
+    });
+    if (memberName) {
+      this.senderNameBySenderKey.set(cacheKey, memberName);
+      return memberName;
+    }
+    return undefined;
+  }
+
+  /**
+   * 通过 chat members 列表兜底解析发送者姓名。
+   *
+   * 关键点（中文）
+   * - `im/v1/chats/:chat_id/members` 会返回成员 `name` 字段。
+   * - 对 p2p 会话尤其有价值，因为 `chat.get` 常常不返回标题。
+   * - 若应用未开通 `im:chat.members:read` 等权限，会在日志中明确提示。
+   */
+  private async resolveSenderNameFromChatMembers(params: {
+    chatId?: string;
+    senderId: string;
+    idType: "open_id" | "user_id" | "union_id";
+  }): Promise<string | undefined> {
+    const chatId = String(params.chatId || "").trim();
+    if (!chatId) return undefined;
+
+    const token = await this.getAppAccessToken();
+    if (!token) return undefined;
+
+    const domain = (this.domain || "https://open.feishu.cn").replace(/\/+$/, "");
+    try {
+      const response = await fetch(
+        `${domain}/open-apis/im/v1/chats/${encodeURIComponent(chatId)}/members?member_id_type=${encodeURIComponent(params.idType)}&page_size=100`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            code?: number;
+            msg?: string;
+            data?: {
+              items?: Array<{
+                member_id_type?: string;
+                member_id?: string;
+                name?: string;
+                tenant_key?: string;
+              }>;
+            };
+          }
+        | null;
+      if (!response.ok) {
+        this.warnLookupOnce(
+          `feishu-member-http:${chatId}:${params.idType}:${response.status}:${String(payload?.code ?? "")}`,
+          "Feishu 群成员查询失败",
+          {
+            chatId,
+            senderId: params.senderId,
+            idType: params.idType,
+            httpStatus: response.status,
+            code: payload?.code ?? null,
+            msg: payload?.msg ?? null,
+          },
+        );
+        return undefined;
+      }
+      if (payload?.code !== 0) {
+        this.warnLookupOnce(
+          `feishu-member-code:${chatId}:${params.idType}:${String(payload?.code ?? "")}`,
+          "Feishu 群成员查询返回错误",
+          {
+            chatId,
+            senderId: params.senderId,
+            idType: params.idType,
+            httpStatus: response.status,
+            code: payload?.code ?? null,
+            msg: payload?.msg ?? null,
+          },
+        );
         return undefined;
       }
 
-      const user = payload?.data?.user;
-      const name = [user?.nickname, user?.name, user?.en_name]
-        .map((value) => String(value || "").trim())
-        .find(Boolean);
-      if (!name) return undefined;
-
-      this.senderNameBySenderKey.set(cacheKey, name);
-      return name;
-    } catch {
+      const items = Array.isArray(payload?.data?.items) ? payload.data.items : [];
+      const matched = items.find(
+        (item) => String(item?.member_id || "").trim() === params.senderId,
+      );
+      const name = String(matched?.name || "").trim();
+      return name || undefined;
+    } catch (error) {
+      this.warnLookupOnce(
+        `feishu-member-exception:${chatId}:${params.idType}:${error instanceof Error ? error.name : "unknown"}`,
+        "Feishu 群成员查询异常",
+        {
+          chatId,
+          senderId: params.senderId,
+          idType: params.idType,
+          error: String(error),
+        },
+      );
       return undefined;
     }
   }
@@ -677,7 +834,11 @@ export class FeishuBot extends BaseChatChannel {
       }
 
       this.logger.info(`Received Feishu message: ${userMessage}`);
-      const actorName = await this.resolveSenderName(senderIdentity);
+      const actorName =
+        (await this.resolveSenderName({
+          ...senderIdentity,
+          chatId: chat_id,
+        })) || undefined;
       const resolvedChatTitle = await this.resolveChatTitle(chat_id);
       const chatTitle =
         resolvedChatTitle ||

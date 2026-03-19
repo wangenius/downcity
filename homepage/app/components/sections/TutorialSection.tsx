@@ -3,11 +3,10 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
 /**
- * 首页三步教程模块。
- * 设计目标：
- * 1. 用高信息密度卡片快速解释上手路径。
- * 2. 在移动端单列展示，在桌面端保持三列清晰节奏。
- * 3. 强化命令可见性，降低首次使用门槛。
+ * 首页三步上手模块（高级时间线版）。
+ * 说明：
+ * 1. 用时间线串联动作顺序，替代同质化三卡布局。
+ * 2. 每一步都包含命令与结果反馈，形成“输入-输出”闭环。
  */
 export function TutorialSection() {
   const { i18n, t } = useTranslation();
@@ -22,7 +21,6 @@ export function TutorialSection() {
       previewTop: t("tutorial:mock.terminal.step1.initializing"),
       previewBottom: t("tutorial:mock.terminal.step1.ready"),
       type: "terminal",
-      tone: "from-amber-500/80 via-orange-400/70 to-rose-400/80",
     },
     {
       icon: Play,
@@ -32,7 +30,6 @@ export function TutorialSection() {
       previewTop: t("tutorial:mock.terminal.step2.starting"),
       previewBottom: t("tutorial:mock.terminal.step2.online"),
       type: "terminal",
-      tone: "from-cyan-500/80 via-sky-400/70 to-blue-400/80",
     },
     {
       icon: MessageSquare,
@@ -42,79 +39,68 @@ export function TutorialSection() {
       previewTop: t("tutorial:step3.command"),
       previewBottom: t("tutorial:agentReply"),
       type: "chat",
-      tone: "from-emerald-500/80 via-lime-400/70 to-teal-400/80",
     },
   ] as const;
 
   return (
-    <section className="relative overflow-hidden border-y border-border/70 py-16 md:py-24">
-      {/* 背景层：轻纹理 + 顶部光带，让教程段落和首屏形成视觉分区 */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-      </div>
-
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <header className="mx-auto mb-12 max-w-3xl text-center md:mb-14">
-          <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
-            {t("tutorial:title")}
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base leading-7 text-muted-foreground md:text-lg">
+    <section className="home-divider py-16 md:py-20">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <header className="home-reveal mb-10 flex flex-col gap-3 md:mb-12">
+          <span className="home-kicker">{t("tutorial:title")}</span>
+          <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
             {t("tutorial:description")}
           </p>
         </header>
 
-        <div className="grid gap-5 lg:grid-cols-3">
-          {steps.map((step, index) => (
-            <article
-              key={step.title}
-              className="group relative overflow-hidden rounded-3xl border border-border/70 bg-card/80 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl"
-            >
-              <div
-                className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${step.tone}`}
-              />
-
-              <div className="mb-4 flex items-center justify-between">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/80 bg-muted font-mono text-xs text-muted-foreground">
-                  {index + 1}
-                </span>
-                <step.icon className="h-5 w-5 text-primary" />
-              </div>
-
-              <h3 className="text-xl font-semibold tracking-tight">{step.title}</h3>
-              <p className="mt-3 min-h-24 text-sm leading-7 text-muted-foreground md:text-base">
-                {step.description}
-              </p>
-
-              <code className="mt-4 block overflow-x-auto rounded-xl bg-zinc-950 px-3 py-2 font-mono text-[13px] text-zinc-100">
-                {step.command}
-              </code>
-
-              {/* 关键反馈面板：让用户在阅读步骤时直接看到执行后的期望输出 */}
-              {step.type === "chat" ? (
-                <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-background/90 p-3 text-sm">
-                  <div className="ml-auto w-fit rounded-2xl rounded-tr-sm bg-primary px-3 py-1.5 text-primary-foreground">
-                    {step.previewTop}
-                  </div>
-                  <div className="w-fit rounded-2xl rounded-tl-sm bg-muted px-3 py-1.5 text-foreground">
-                    {step.previewBottom}
-                  </div>
+        <div className="home-panel home-reveal home-reveal-delay-1 rounded-xl p-4 md:p-6">
+          <ol className="space-y-4">
+            {steps.map((step, index) => (
+              <li
+                key={step.title}
+                className="grid gap-3 border-b border-border/70 pb-4 last:border-b-0 last:pb-0 md:grid-cols-[2.6rem_1fr_16rem]"
+              >
+                <div className="flex items-start gap-2 md:flex-col md:items-center md:gap-1">
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/70 font-mono text-[11px] text-muted-foreground">
+                    {index + 1}
+                  </span>
+                  <step.icon className="size-4 text-muted-foreground" />
                 </div>
-              ) : (
-                <div className="mt-4 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground">
-                  <p>{step.previewTop}</p>
-                  <p className="mt-1 text-emerald-600 dark:text-emerald-400">
-                    {step.previewBottom}
-                  </p>
+
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
+                  <p className="text-sm leading-7 text-muted-foreground">{step.description}</p>
+                  <code className="home-command block overflow-x-auto">{step.command}</code>
                 </div>
-              )}
-            </article>
-          ))}
+
+                {/* 关键反馈面板：每一步都给出可观察结果，减少试错成本。 */}
+                <div className="rounded-lg border border-border bg-background/85 p-3 text-xs">
+                  {step.type === "chat" ? (
+                    <div className="space-y-2">
+                      <p className="ml-auto w-fit rounded-md border border-border bg-muted px-2 py-1 text-muted-foreground">
+                        {step.previewTop}
+                      </p>
+                      <p className="w-fit rounded-md border border-border bg-background px-2 py-1">
+                        {step.previewBottom}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-muted-foreground">{step.previewTop}</p>
+                      <p className="mt-1 text-emerald-600 dark:text-emerald-300">
+                        {step.previewBottom}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
 
-        <div className="mt-12 text-center">
+        <div className="home-reveal home-reveal-delay-2 mt-8">
           <Link
             to={docsPath}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-lg transition hover:-translate-y-0.5 hover:bg-primary/90"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             {t("tutorial:cta")}
           </Link>

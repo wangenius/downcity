@@ -12,6 +12,7 @@ import fs from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import {
+  deleteChatByChatKey,
   resolveChatContextSnapshot,
   resolveChatKey,
   sendChatActionByChatKey,
@@ -33,7 +34,11 @@ import type {
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { ChatHistoryEventV1 } from "./types/ChatHistory.js";
-import type { ChatHistoryRequest, ChatReactRequest } from "./types/ChatCommand.js";
+import type {
+  ChatDeleteRequest,
+  ChatHistoryRequest,
+  ChatReactRequest,
+} from "./types/ChatCommand.js";
 import type { TelegramBot } from "./channels/telegram/Bot.js";
 import type { FeishuBot } from "./channels/feishu/Feishu.js";
 import type { QQBot } from "./channels/qq/QQ.js";
@@ -67,6 +72,7 @@ type ChatContextActionPayload = {
 
 type ChatHistoryActionPayload = ChatHistoryRequest;
 type ChatReactActionPayload = ChatReactRequest;
+type ChatDeleteActionPayload = ChatDeleteRequest;
 type ChatStatusActionPayload = {
   channel?: ChatChannelName;
 };
@@ -1450,6 +1456,59 @@ async function executeChatReactAction(params: {
   };
 }
 
+function mapChatDeleteCommandInput(
+  input: ServiceActionCommandInput,
+): ChatDeleteActionPayload {
+  const chatKey = getStringOpt(input.opts, "chatKey");
+  const contextId = getStringOpt(input.opts, "contextId");
+  return {
+    ...(chatKey ? { chatKey } : {}),
+    ...(contextId ? { contextId } : {}),
+  };
+}
+
+function mapChatDeleteApiInput(body: JsonValue): ChatDeleteActionPayload {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {};
+  }
+  const payload = body as JsonObject;
+  const chatKey =
+    typeof payload.chatKey === "string" ? payload.chatKey.trim() : "";
+  const contextId =
+    typeof payload.contextId === "string" ? payload.contextId.trim() : "";
+  return {
+    ...(chatKey ? { chatKey } : {}),
+    ...(contextId ? { contextId } : {}),
+  };
+}
+
+async function executeChatDeleteAction(params: {
+  context: ServiceRuntime;
+  payload: ChatDeleteActionPayload;
+}) {
+  const result = await deleteChatByChatKey({
+    context: params.context,
+    ...(params.payload.chatKey ? { chatKey: params.payload.chatKey } : {}),
+    ...(params.payload.contextId ? { contextId: params.payload.contextId } : {}),
+  });
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error || "chat delete failed",
+    };
+  }
+  return {
+    success: true,
+    data: {
+      contextId: result.contextId || null,
+      deleted: result.deleted === true,
+      removedMeta: result.removedMeta === true,
+      removedChatDir: result.removedChatDir === true,
+      removedContextDir: result.removedContextDir === true,
+    },
+  };
+}
+
 export const chatService: Service = {
   name: "chat",
   system: (context) => {
@@ -1715,6 +1774,29 @@ export const chatService: Service = {
             context: snapshot,
           },
         };
+      },
+    },
+    delete: {
+      command: {
+        description: "彻底删除指定 chat 会话（映射+历史+context）",
+        configure(command: Command) {
+          command
+            .option("--chat-key <chatKey>", "显式指定 chatKey")
+            .option("--context-id <contextId>", "显式指定 contextId");
+        },
+        mapInput: mapChatDeleteCommandInput,
+      },
+      api: {
+        method: "POST",
+        async mapInput(c) {
+          return mapChatDeleteApiInput(await c.req.json().catch(() => ({} as JsonValue)));
+        },
+      },
+      async execute(params) {
+        return executeChatDeleteAction({
+          context: params.context,
+          payload: params.payload as ChatDeleteActionPayload,
+        });
       },
     },
     history: {

@@ -1,9 +1,15 @@
-import { WhitepaperSection } from "@/components/sections/WhitepaperSection";
+import { HomeRebuildSection } from "@/components/sections/HomeRebuildSection";
 import { product } from "@/lib/product";
 
+/**
+ * 首页营销落地页路由。
+ * 说明：
+ * 1. 首页文案直接对齐 package 与 quickstart 文档，避免能力描述失真。
+ * 2. 采用“用户目标 -> package 逻辑”映射方式呈现，不堆砌开发细节。
+ */
 export function meta() {
   const baseUrl = product.homepage || "https://downcity.ai";
-  const title = `${product.productName} — The Repo IS The Agent`;
+  const title = `${product.productName} — The Operating City for AI Agents`;
   const description = product.description;
 
   return [
@@ -18,7 +24,7 @@ export function meta() {
     {
       name: "keywords",
       content:
-        "AI agent, GitHub, repository, automation, developer tools, AI assistant, code automation, agent runtime, conversational AI",
+        "AI agents, agent collaboration, agent management, multi-agent workflow, task automation, chat-driven execution, Downcity",
     },
     {
       property: "og:title",
@@ -42,7 +48,7 @@ export function meta() {
     },
     {
       property: "og:image:alt",
-      content: "Downcity - Transform Your Repository into an AI Agent",
+      content: "Downcity - The Operating City for AI Agents",
     },
     {
       name: "twitter:card",
@@ -66,7 +72,7 @@ export function meta() {
     },
     {
       name: "twitter:image:alt",
-      content: "Downcity - Transform Your Repository into an AI Agent",
+      content: "Downcity - The Operating City for AI Agents",
     },
     {
       tagName: "link",
@@ -77,11 +83,5 @@ export function meta() {
 }
 
 export default function Home() {
-  return (
-    <div className="min-h-screen">
-      <main>
-        <WhitepaperSection />
-      </main>
-    </div>
-  );
+  return <HomeRebuildSection />;
 }

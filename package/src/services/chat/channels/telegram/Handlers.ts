@@ -17,14 +17,12 @@ import type { TelegramUpdate, TelegramUser } from "./Shared.js";
  */
 export type TelegramHandlerContext = {
   logger: Logger;
-  buildChatKey: (chatId: string, messageThreadId?: number) => string;
-  runInChat: (chatKey: string, fn: () => Promise<void>) => Promise<void>;
   sendMessage: (
     chatId: string,
     text: string,
     opts?: { messageThreadId?: number },
   ) => Promise<void>;
-  clearChat: (chatKey: string) => Promise<void>;
+  clearChat: (chatId: string, messageThreadId?: number) => Promise<void>;
 };
 
 /**
@@ -47,7 +45,6 @@ export async function handleTelegramCommand(
 
   const [commandToken] = params.command.trim().split(/\s+/);
   const cmd = (commandToken || "").split("@")[0]?.toLowerCase();
-  const chatKey = ctx.buildChatKey(params.chatId, params.messageThreadId);
 
   switch (cmd) {
     case "/start":
@@ -58,7 +55,7 @@ export async function handleTelegramCommand(
 
 Available commands:
 - /status - View agent status
-- /clear - Clear conversation history
+- /clear - Delete conversation completely
 - <any message> - Execute instruction`,
       );
       break;
@@ -68,8 +65,8 @@ Available commands:
       break;
 
     case "/clear":
-      await ctx.clearChat(chatKey);
-      await ctx.sendMessage(params.chatId, "✅ Conversation history cleared", {
+      await ctx.clearChat(params.chatId, params.messageThreadId);
+      await ctx.sendMessage(params.chatId, "✅ Conversation deleted completely", {
         messageThreadId: params.messageThreadId,
       });
       break;

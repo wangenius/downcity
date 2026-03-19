@@ -33,7 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { buildContextGroups } from "@/lib/context-groups"
+import { buildContextGroups, resolveContextChannel } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -146,19 +146,6 @@ const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.Reac
 }
 
 /**
- * 由 contextId 推断所属 chat 渠道。
- */
-function resolveChannelFromContextId(contextIdInput: string): string {
-  const contextId = String(contextIdInput || "").trim().toLowerCase()
-  if (!contextId) return "other"
-  if (contextId.startsWith("telegram-")) return "telegram"
-  if (contextId.startsWith("qq-")) return "qq"
-  if (contextId.startsWith("feishu-")) return "feishu"
-  if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
-  return "other"
-}
-
-/**
  * 判断 channel 是否处于已启动态（用于 Sidebar 灰显控制）。
  */
 function isChannelStarted(status: UiChatChannelStatus | undefined, fallbackByItems: boolean): boolean {
@@ -219,7 +206,7 @@ export function AppSidebar({
       }
     }
     for (const item of chatItems) {
-      const channel = resolveChannelFromContextId(String(item.contextId || ""))
+      const channel = resolveContextChannel(item)
       ensureBucket(channel)
       buckets[channel].push(item)
     }

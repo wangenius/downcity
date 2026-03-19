@@ -7,6 +7,7 @@ import { ArchiveIcon, InfoIcon, RefreshCcwIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
+import { resolveContextChannel } from "@/lib/context-groups"
 import { cn } from "@/lib/utils"
 import type {
   UiContextArchiveSummary,
@@ -75,6 +76,10 @@ export interface ContextWorkspaceSectionProps {
    */
   clearingChatHistory: boolean
   /**
+   * 是否正在删除当前 context。
+   */
+  deletingContext: boolean
+  /**
    * 时间格式化。
    */
   formatTime: (ts?: number | string) => string
@@ -94,6 +99,10 @@ export interface ContextWorkspaceSectionProps {
    * 清理当前 chat history。
    */
   onClearChatHistory: () => void
+  /**
+   * 完整删除当前 context。
+   */
+  onDeleteContext: () => void
   /**
    * 刷新 archive 列表。
    */
@@ -377,6 +386,7 @@ function ArchivePanel(props: {
 export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
   const {
     selectedContextId,
+    contexts,
     channelHistory,
     chatChannels,
     contextMessages,
@@ -389,31 +399,36 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
     sending,
     clearingContextMessages,
     clearingChatHistory,
+    deletingContext,
     formatTime,
     onChangeInput,
     onSendConsoleUiMessage,
     onClearContextMessages,
     onClearChatHistory,
+    onDeleteContext,
     onRefreshArchives,
     onSelectArchive,
   } = props
 
   const systemBlocks = resolveSystemBlocks(prompt)
   const [rightTab, setRightTab] = React.useState<RightTab>("system")
+  const selectedContext = React.useMemo(
+    () => contexts.find((item) => String(item.contextId || "").trim() === selectedContextId) || null,
+    [contexts, selectedContextId],
+  )
 
   const currentChannel = React.useMemo(() => {
-    if (selectedContextId.startsWith("telegram-")) return "telegram"
-    if (selectedContextId.startsWith("qq-")) return "qq"
-    if (selectedContextId.startsWith("feishu-")) return "feishu"
-    if (selectedContextId.startsWith("consoleui-") || selectedContextId === "local_ui") return "consoleui"
-    return "unknown"
-  }, [selectedContextId])
+    const channel = resolveContextChannel(selectedContext || selectedContextId)
+    return channel === "other" ? "unknown" : channel
+  }, [selectedContext, selectedContextId])
   const canSend = currentChannel === "consoleui"
 
   const currentChannelStatus = React.useMemo(() => {
     if (currentChannel === "consoleui") return "connected"
     if (currentChannel === "unknown") return "unknown"
-    const item = chatChannels.find((channel) => String(channel.channel || "") === currentChannel)
+    const item = chatChannels.find(
+      (channel) => String(channel.channel || "").trim().toLowerCase() === currentChannel,
+    )
     return String(item?.linkState || "unknown")
   }, [chatChannels, currentChannel])
 
@@ -451,6 +466,23 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
               <span className={cn("inline-flex size-1.5 rounded-full", currentChannelStatus === "connected" ? "bg-primary" : "bg-current")} />
               <span>{currentChannelStatus}</span>
             </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              className="h-7 rounded-md px-2 text-[11px]"
+              disabled={deletingContext}
+              onClick={() => {
+                const confirmed = window.confirm(
+                  `确认彻底删除 context「${selectedContextId}」吗？该操作不可恢复。`,
+                )
+                if (!confirmed) return
+                onDeleteContext()
+              }}
+            >
+              <Trash2Icon className="size-3.5" />
+              <span>{deletingContext ? "删除中..." : "删除 chat"}</span>
+            </Button>
             <Button
               type="button"
               size="sm"

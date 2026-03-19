@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
+import { resolveContextChannel } from "@/lib/context-groups"
 import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/dashboard-route"
 import { cn } from "@/lib/utils"
 import type { DashboardView } from "@/types/Navigation"
@@ -85,6 +86,7 @@ export function App() {
     sending,
     clearingContextMessages,
     clearingChatHistory,
+    deletingContextId,
     chatInput,
     toast,
     setChatInput,
@@ -110,6 +112,7 @@ export function App() {
     sendConsoleUiMessage,
     clearContextMessages,
     clearChatHistory,
+    deleteChatContext,
     loadContextArchiveMessages,
     switchModel,
     switchModelForAgent,
@@ -147,14 +150,11 @@ export function App() {
   )
 
   const resolveChannelFromContextId = React.useCallback((contextIdInput?: string): string => {
-    const contextId = String(contextIdInput || "").trim().toLowerCase()
+    const contextId = String(contextIdInput || "").trim()
     if (!contextId) return ""
-    if (contextId.startsWith("telegram-")) return "telegram"
-    if (contextId.startsWith("qq-")) return "qq"
-    if (contextId.startsWith("feishu-")) return "feishu"
-    if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
-    return "other"
-  }, [])
+    const target = contexts.find((item) => String(item.contextId || "").trim() === contextId)
+    return resolveContextChannel(target || contextId)
+  }, [contexts])
 
   const availableChatChannels = React.useMemo(() => {
     const channelSet = new Set<string>()
@@ -163,7 +163,7 @@ export function App() {
       if (channel) channelSet.add(channel)
     }
     for (const item of contexts) {
-      const channel = resolveChannelFromContextId(item.contextId)
+      const channel = resolveContextChannel(item)
       if (channel) channelSet.add(channel)
     }
     const preferredOrder = ["telegram", "qq", "feishu", "consoleui", "other"]
@@ -172,7 +172,7 @@ export function App() {
       .filter((channel) => !preferredOrder.includes(channel))
       .sort((a, b) => a.localeCompare(b))
     return [...orderedKnown, ...orderedExtra]
-  }, [chatChannels, contexts, resolveChannelFromContextId])
+  }, [chatChannels, contexts])
   const effectiveFocusedChatChannel = React.useMemo(() => {
     const normalized = String(focusedChatChannel || "").trim().toLowerCase()
     if (normalized && availableChatChannels.includes(normalized)) return normalized
@@ -621,6 +621,10 @@ export function App() {
                 })
                 void handleContextChange(contextId)
               }}
+              onDeleteContext={(contextId) => {
+                void deleteChatContext(contextId)
+              }}
+              deletingContextId={deletingContextId}
               onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
               onChatConfigure={(channel, config) => void configureChatChannel(channel, config)}
             />
@@ -644,6 +648,7 @@ export function App() {
               sending={sending}
               clearingContextMessages={clearingContextMessages}
               clearingChatHistory={clearingChatHistory}
+              deletingContext={Boolean(deletingContextId)}
               formatTime={uiHelpers.formatTime}
               onChangeInput={setChatInput}
               onSendConsoleUiMessage={() => void sendConsoleUiMessage()}
@@ -654,6 +659,10 @@ export function App() {
               onClearChatHistory={() => {
                 if (!selectedContextId) return
                 void clearChatHistory(selectedContextId)
+              }}
+              onDeleteContext={() => {
+                if (!selectedContextId) return
+                void deleteChatContext(selectedContextId)
               }}
               onRefreshArchives={() => {
                 if (!selectedAgentId || !selectedContextId) return

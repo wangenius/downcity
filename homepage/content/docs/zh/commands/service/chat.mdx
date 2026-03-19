@@ -1,6 +1,6 @@
 ---
 title: city chat
-description: chat service actions（status/test/reconnect/open/close/configure/send/react/context/history）
+description: chat service actions（status/test/reconnect/open/close/configure/send/react/context/delete/history）
 ---
 
 # `city chat`
@@ -27,6 +27,7 @@ city chat <subcommand> [options]
 - `send`：发送消息
 - `react`：给消息贴表情（当前主要 Telegram）
 - `context`：查看当前会话上下文快照
+- `delete`：彻底删除会话（路由映射 + chat 历史 + context 目录）
 - `history`：读取历史消息
 
 ## `status/test/reconnect/open/close` 常用选项
@@ -60,6 +61,11 @@ city chat <subcommand> [options]
 - `--chat-key <chatKey>`：目标会话
 - `--big`：大表情（Telegram `is_big`）
 
+## `delete` 常用选项
+
+- `--chat-key <chatKey>`
+- `--context-id <contextId>`
+
 ## `history` 常用选项
 
 - `--chat-key <chatKey>`
@@ -74,6 +80,7 @@ city chat <subcommand> [options]
 city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
+city chat delete --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
 city chat status
 city chat test --channel telegram

@@ -46,6 +46,21 @@ export type ChatReactResponse = {
   error?: string;
 };
 
+export type ChatDeleteRequest = {
+  chatKey?: string;
+  contextId?: string;
+};
+
+export type ChatDeleteResponse = {
+  success: boolean;
+  contextId?: string;
+  deleted?: boolean;
+  removedMeta?: boolean;
+  removedChatDir?: boolean;
+  removedContextDir?: boolean;
+  error?: string;
+};
+
 export type ChatHistoryDirection = "all" | "inbound" | "outbound";
 
 export type ChatHistoryRequest = {

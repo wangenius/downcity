@@ -18,59 +18,11 @@ import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import { readChatMetaByContextId } from "./ChatMetaStore.js";
 
 /**
- * 解析 chatKey 为 dispatch 参数。
- *
- * 支持格式（中文）
- * - telegram-chat-<id>
- * - telegram-chat-<id>-topic-<thread>
- * - feishu-chat-<id>
- * - qq-<chatType>-<chatId>
- */
-export function parseChatKeyForDispatch(chatKey: string): {
-  channel: string;
-  chatId: string;
-  chatType?: string;
-  messageThreadId?: number;
-} | null {
-  const key = String(chatKey || "").trim();
-  if (!key) return null;
-
-  // Telegram: telegram-chat-<id> 或 telegram-chat-<id>-topic-<thread>
-  // 关键点（中文）：chatId 可能是负数（例如 supergroup：-100...），因此不能排除 `-`。
-  const tgTopic = key.match(/^telegram-chat-(\S+)-topic-(\d+)$/i);
-  if (tgTopic) {
-    const chatId = String(tgTopic[1] || "").trim();
-    if (!chatId) return null;
-    return {
-      channel: "telegram",
-      chatId,
-      messageThreadId: Number.parseInt(tgTopic[2], 10),
-    };
-  }
-  const tg = key.match(/^telegram-chat-(\S+)$/i);
-  if (tg) {
-    const chatId = String(tg[1] || "").trim();
-    if (!chatId) return null;
-    return { channel: "telegram", chatId };
-  }
-
-  // Feishu: feishu-chat-<id>
-  const fe = key.match(/^feishu-chat-(.+)$/i);
-  if (fe) return { channel: "feishu", chatId: fe[1] };
-
-  // QQ: qq-<chatType>-<chatId>
-  const qq = key.match(/^qq-([^-\s]+)-(.+)$/i);
-  if (qq) return { channel: "qq", chatType: qq[1], chatId: qq[2] };
-
-  return null;
-}
-
-/**
  * 解析实际分发目标。
  *
  * 规则（中文）
- * - 优先读取 services/chat 维护的 context 路由映射
- * - 若映射不存在，再尝试解析 legacy chatKey 文本规则
+ * - 仅使用 services/chat 维护的 context 路由映射。
+ * - 不再支持 legacy chatKey 字符串解析回退。
  */
 export async function resolveDispatchTargetByChatKey(params: {
   context: ServiceRuntime;
@@ -86,25 +38,19 @@ export async function resolveDispatchTargetByChatKey(params: {
     context: params.context,
     contextId: params.chatKey,
   });
-  const parsed = parseChatKeyForDispatch(params.chatKey);
-
-  const channel = storedMeta?.channel || parsed?.channel;
-  const chatId = String(storedMeta?.chatId || parsed?.chatId || "").trim();
+  const channel = storedMeta?.channel;
+  const chatId = String(storedMeta?.chatId || "").trim();
   if (!channel || !chatId) return null;
 
   const chatType =
     typeof storedMeta?.targetType === "string" && storedMeta.targetType
       ? storedMeta.targetType
-      : typeof parsed?.chatType === "string"
-        ? parsed.chatType
-        : undefined;
+      : undefined;
   const messageThreadId =
     typeof storedMeta?.threadId === "number" &&
     Number.isFinite(storedMeta.threadId)
       ? storedMeta.threadId
-      : typeof parsed?.messageThreadId === "number"
-        ? parsed.messageThreadId
-        : undefined;
+      : undefined;
   const messageId =
     typeof storedMeta?.messageId === "string" && storedMeta.messageId
       ? storedMeta.messageId
@@ -123,7 +69,7 @@ export async function resolveDispatchTargetByChatKey(params: {
  * 按 chatKey 发送文本到对应平台。
  *
  * 流程（中文）
- * 1) 解析 chatKey（失败时回退 chat meta）并定位 channel dispatcher
+ * 1) 通过 contextId 读取映射并定位 channel dispatcher
  * 2) 从 chat meta 回填 chatType/threadId/messageId
  * 3) 合并参数后调用 dispatcher 发送
  */
@@ -144,7 +90,7 @@ export async function sendTextByChatKey(params: {
   if (!target) {
     return {
       success: false,
-      error: `Unsupported chatKey/contextId for dispatch: ${chatKey}`,
+      error: `Unsupported contextId for dispatch: ${chatKey}`,
     };
   }
 
@@ -189,7 +135,7 @@ export async function sendTextByChatKey(params: {
  * 按 chatKey 发送平台动作（typing/react）。
  *
  * 流程（中文）
- * 1) 解析 chatKey（失败时回退 chat meta）并定位 channel dispatcher
+ * 1) 通过 contextId 读取映射并定位 channel dispatcher
  * 2) 合并目标元信息与显式参数（显式 messageId 优先）
  * 3) 调用 dispatcher.sendAction
  */
@@ -210,7 +156,7 @@ export async function sendActionByChatKey(params: {
   if (!target) {
     return {
       success: false,
-      error: `Unsupported chatKey/contextId for dispatch: ${chatKey}`,
+      error: `Unsupported contextId for dispatch: ${chatKey}`,
     };
   }
 

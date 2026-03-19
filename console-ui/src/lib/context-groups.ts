@@ -31,20 +31,46 @@ export interface ContextGroup {
   items: UiContextSummary[]
 }
 
+const KNOWN_CHAT_CHANNELS = new Set(["telegram", "qq", "feishu", "consoleui"])
+
+function normalizeText(input: unknown): string {
+  return String(input || "").trim().toLowerCase()
+}
+
+function resolveContextChannelFromContextId(contextIdInput: string): string {
+  const contextId = normalizeText(contextIdInput)
+  if (!contextId) return "other"
+  if (contextId.startsWith("api:")) return "api"
+  if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
+  return "other"
+}
+
+/**
+ * 解析 context 对应渠道。
+ *
+ * 关键点（中文）
+ * - 优先使用后端回传的 `context.channel`（新映射唯一事实源）。
+ * - 仅保留 `consoleui` 与 `api` 的本地识别，不再兼容旧 contextId 前缀规则。
+ */
+export function resolveContextChannel(input: UiContextSummary | string): string {
+  if (typeof input === "string") {
+    return resolveContextChannelFromContextId(input)
+  }
+  const channel = normalizeText(input.channel)
+  if (KNOWN_CHAT_CHANNELS.has(channel)) return channel
+  if (channel === "api") return "api"
+  if (channel && channel !== "other") return channel
+  return resolveContextChannelFromContextId(input.contextId)
+}
+
 /**
  * 解析 contextId 对应分组。
  */
-export function resolveContextGroup(contextId: string): ContextGroupKey {
-  const value = String(contextId || "")
-  if (
-    value.startsWith("telegram-") ||
-    value.startsWith("qq-") ||
-    value.startsWith("feishu-") ||
-    value.startsWith("consoleui-") ||
-    value === "local_ui"
-  ) return "chat"
-  if (value.startsWith("api:")) return "api"
-  return "other"
+export function resolveContextGroup(input: UiContextSummary | string): ContextGroupKey {
+  const channel = resolveContextChannel(input)
+  if (channel === "api") return "api"
+  if (channel === "other") return "other"
+  return "chat"
 }
 
 /**
@@ -70,7 +96,7 @@ export function buildContextGroups(contexts: UiContextSummary[]): ContextGroup[]
     other: [],
   }
   for (const item of sorted) {
-    const key = resolveContextGroup(item.contextId)
+    const key = resolveContextGroup(item)
     groupMap[key].push(item)
   }
   const groups: ContextGroup[] = [

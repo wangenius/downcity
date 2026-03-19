@@ -163,7 +163,6 @@ export class TelegramBot extends BaseChatChannel {
 
             await this.enqueueAuditMessage({
               chatId,
-              chatKey,
               messageId,
               userId: actorId,
               text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
@@ -188,7 +187,6 @@ export class TelegramBot extends BaseChatChannel {
             const chatKey = this.buildChatKey(chatId, messageThreadId);
             await this.enqueueAuditMessage({
               chatId,
-              chatKey,
               messageId: undefined,
               userId: q.from?.id ? String(q.from.id) : undefined,
               text: `[callback_query] ${String(q.data || "").slice(0, 1000)}`.trim(),
@@ -240,36 +238,6 @@ export class TelegramBot extends BaseChatChannel {
 
   protected getChatKey(params: ChannelChatKeyParams): string {
     return this.buildChatKey(params.chatId, params.messageThreadId);
-  }
-
-  /**
-   * 通过 legacy chatKey 清理上下文。
-   *
-   * 关键点（中文）
-   * - 兼容 handler 传入的 `telegram-chat-*` 旧格式键。
-   * - 实际清理仍然走“渠道目标 -> contextId 映射”。
-   */
-  private async clearChatByLegacyKey(chatKey: string): Promise<void> {
-    const key = String(chatKey || "").trim();
-    const topicMatch = key.match(/^telegram-chat-(\S+)-topic-(\d+)$/i);
-    if (topicMatch) {
-      const chatId = String(topicMatch[1] || "").trim();
-      const threadId = Number.parseInt(String(topicMatch[2] || "").trim(), 10);
-      await this.clearChatByTarget({
-        chatId,
-        ...(Number.isFinite(threadId) && threadId > 0
-          ? { messageThreadId: threadId }
-          : {}),
-      });
-      return;
-    }
-    const chatMatch = key.match(/^telegram-chat-(\S+)$/i);
-    if (chatMatch) {
-      const chatId = String(chatMatch[1] || "").trim();
-      await this.clearChatByTarget({ chatId });
-      return;
-    }
-    this.clearChat(key);
   }
 
   protected async sendTextToPlatform(
@@ -671,7 +639,6 @@ export class TelegramBot extends BaseChatChannel {
       if (!isGroup) return;
       await this.enqueueAuditMessage({
         chatId,
-        chatKey,
         messageId,
         userId: actorId,
         text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
@@ -728,7 +695,6 @@ export class TelegramBot extends BaseChatChannel {
         // 关键点（中文）：命令消息也要入队（否则历史会“断层”）。
         await this.enqueueAuditMessage({
           chatId,
-          chatKey,
           messageId,
           userId: actorId,
           text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
@@ -902,11 +868,12 @@ export class TelegramBot extends BaseChatChannel {
     await handleTelegramCommand(
       {
         logger: this.logger,
-        buildChatKey: (c, t) => this.buildChatKey(c, t),
-        runInChat: (key, fn) => this.runInChat(key, fn),
         sendMessage: (c, text, opts) => this.sendMessage(c, text, opts),
-        clearChat: async (key) => {
-          await this.clearChatByLegacyKey(key);
+        clearChat: async (chatIdInput, threadIdInput) => {
+          await this.clearChatByTarget({
+            chatId: chatIdInput,
+            ...(typeof threadIdInput === "number" ? { messageThreadId: threadIdInput } : {}),
+          });
         },
       },
       { chatId, command, from, messageThreadId },
@@ -919,11 +886,12 @@ export class TelegramBot extends BaseChatChannel {
     await handleTelegramCallbackQuery(
       {
         logger: this.logger,
-        buildChatKey: (c, t) => this.buildChatKey(c, t),
-        runInChat: (key, fn) => this.runInChat(key, fn),
         sendMessage: (c, text, opts) => this.sendMessage(c, text, opts),
-        clearChat: async (key) => {
-          await this.clearChatByLegacyKey(key);
+        clearChat: async (chatIdInput, threadIdInput) => {
+          await this.clearChatByTarget({
+            chatId: chatIdInput,
+            ...(typeof threadIdInput === "number" ? { messageThreadId: threadIdInput } : {}),
+          });
         },
       },
       callbackQuery,

@@ -36,6 +36,7 @@ User-facing output rules:
 - `send`：发送文本到目标 `chatKey`。
 - `react`：给目标消息贴表情（当前主要用于 Telegram）。
 - `context`：读取当前会话快照（可按 `chatKey` 或 `contextId` 查询）。
+- `delete`：彻底删除会话（映射 + chat 历史 + context 目录）。
 - `history`：读取会话历史事件（按 `contextId`/`chatKey`，支持方向与时间窗口过滤）。
 
 ## 操作方法（命令）
@@ -50,6 +51,8 @@ User-facing output rules:
   - `city chat react --emoji '🔥' --chat-key <contextId> --message-id <id>`
   - `city chat context`
   - `city chat context --chat-key <chatKey>`
+  - `city chat delete --chat-key <chatKey>`
+  - `city chat delete --context-id <contextId>`
   - `city chat history --limit 30`
   - `city chat history --chat-key <chatKey> --direction inbound`
   - `city chat history --context-id <contextId> --after-ts <ts> --before-ts <ts>`

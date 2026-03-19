@@ -2,9 +2,9 @@
  * Popup 主界面。
  *
  * 关键点（中文）：
- * - popup 只保留发送主流程，设置项统一迁移到独立 options 页面。
- * - 顶部状态点用于提示当前状态，避免打断主操作。
- * - 支持常用问题模板快速填入，减少重复输入。
+ * - 只保留发送主链路：选择 Agent / Channel，输入 Ask，发送。
+ * - 常用预置模板已移除，改为最近 ask 历史回填。
+ * - 设置入口已移除，popup 仅保留发送相关能力。
  */
 
 import {
@@ -20,8 +20,6 @@ import {
 import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
 import type {
   ActiveTabContext,
-  ExtensionPageSendRecord,
-  ExtensionQuickPromptItem,
   ExtensionSettings,
   StatusMessage,
 } from "../types/extension";
@@ -35,7 +33,7 @@ import { buildPageMarkdownSnapshot } from "../services/pageMarkdown";
 import {
   appendPageSendRecord,
   DEFAULT_SETTINGS,
-  loadPageSendRecords,
+  loadRecentAskHistory,
   loadSettings,
   saveSettings,
 } from "../services/storage";
@@ -110,28 +108,6 @@ function resolveChatKey(options: ChatKeyOption[], preferredChatKey: string): str
   return options[0]?.chatKey || "";
 }
 
-function shortenUrl(value: string): string {
-  const text = String(value || "").trim();
-  if (!text) return "（当前页面 URL 不可用）";
-  if (text.length <= 66) return text;
-  return `${text.slice(0, 63)}...`;
-}
-
-function shortenText(value: string, maxChars: number): string {
-  const text = String(value || "").trim();
-  if (!text) return "（无任务说明）";
-  if (text.length <= maxChars) return text;
-  return `${text.slice(0, Math.max(0, maxChars - 3))}...`;
-}
-
-function formatSentTime(timestamp: number): string {
-  const value = Number(timestamp);
-  if (!Number.isFinite(value) || Number.isNaN(value)) return "未知时间";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "未知时间";
-  return date.toLocaleString("zh-CN", { hour12: false });
-}
-
 function resolveLinkedChannels(
   agent: ConsoleUiAgentOption | null | undefined,
 ): Set<"telegram" | "feishu" | "qq"> {
@@ -160,32 +136,55 @@ function clearChatLoadRelatedErrorStatus(
   });
 }
 
-function getQuickPromptById(
-  prompts: ExtensionQuickPromptItem[],
-  id: string,
-): ExtensionQuickPromptItem | null {
-  const normalizedId = String(id || "").trim();
-  if (!normalizedId) return null;
-  return prompts.find((item) => item.id === normalizedId) || null;
+function shortenUrl(value: string): string {
+  const text = String(value || "").trim();
+  if (!text) return "（当前页面 URL 不可用）";
+  if (text.length <= 72) return text;
+  return `${text.slice(0, 69)}...`;
 }
+
+function shortenAsk(value: string): string {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  if (text.length <= 60) return text;
+  return `${text.slice(0, 57)}...`;
+}
+
+function normalizeInitialTaskPrompt(value: string): string {
+  const incoming = String(value || "").trim();
+  const defaultPrompt = String(DEFAULT_SETTINGS.taskPrompt || "").trim();
+  if (!incoming) return "";
+  if (incoming === defaultPrompt) return "";
+  return incoming;
+}
+
+type ToastMessage = {
+  /** Toast 类型（中文）：成功或失败。 */
+  type: "success" | "error";
+  /** Toast 文本（中文）：展示给用户的提示内容。 */
+  text: string;
+};
 
 export function App() {
   const formRef = useRef<HTMLFormElement | null>(null);
-  const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
-  const [selectedQuickPromptId, setSelectedQuickPromptId] = useState("");
+  const toastTimerRef = useRef<number | null>(null);
 
+  const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [tab, setTab] = useState<ActiveTabContext>({
     tabId: null,
     title: "加载中...",
     url: "",
   });
+
   const [agents, setAgents] = useState<ConsoleUiAgentOption[]>([]);
   const [chatKeyOptions, setChatKeyOptions] = useState<ChatKeyOption[]>([]);
-  const [pageSendRecords, setPageSendRecords] = useState<ExtensionPageSendRecord[]>([]);
+  const [askHistory, setAskHistory] = useState<string[]>([]);
+  const [selectedAskHistoryIndex, setSelectedAskHistoryIndex] = useState("");
 
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChatKeys, setIsLoadingChatKeys] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
   const [status, setStatus] = useState<StatusMessage>({
     type: "idle",
     text: "准备就绪",
@@ -197,6 +196,20 @@ export function App() {
   );
   const consoleBaseUrl = consoleEndpoint.baseUrl;
 
+  const showToast = useCallback((type: ToastMessage["type"], text: string): void => {
+    const message = String(text || "").trim();
+    if (!message) return;
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToast({ type, text: message });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 2200);
+  }, []);
+
   const selectedAgent = useMemo(
     () => agents.find((item) => item.id === settings.agentId) || null,
     [agents, settings.agentId],
@@ -205,22 +218,13 @@ export function App() {
     () => resolveLinkedChannels(selectedAgent),
     [selectedAgent],
   );
-  const selectedQuickPrompt = useMemo(
-    () => getQuickPromptById(settings.quickPrompts, selectedQuickPromptId),
-    [settings.quickPrompts, selectedQuickPromptId],
-  );
 
-  const refreshPageSendHistory = useCallback(async (pageUrl: string) => {
-    const safeUrl = String(pageUrl || "").trim();
-    if (!safeUrl) {
-      setPageSendRecords([]);
-      return;
-    }
+  const refreshAskHistory = useCallback(async () => {
     try {
-      const records = await loadPageSendRecords({ pageUrl: safeUrl, limit: 8 });
-      setPageSendRecords(records);
+      const history = await loadRecentAskHistory({ limit: 12 });
+      setAskHistory(history);
     } catch {
-      setPageSendRecords([]);
+      setAskHistory([]);
     }
   }, []);
 
@@ -231,10 +235,11 @@ export function App() {
     if (!params.consoleBaseUrl) {
       setStatus({
         type: "error",
-        text: "Console 地址无效，请在设置页检查目标 IP 与端口",
+        text: "Console 地址无效，请检查 Console 是否已启动",
       });
       return;
     }
+
     setIsLoadingAgents(true);
     try {
       const payload = await fetchAgents({
@@ -254,10 +259,10 @@ export function App() {
         agentId: nextAgentId,
       }));
 
-      if (list.length === 0) {
+      if (list.length < 1) {
         setStatus({ type: "error", text: "未发现可用 Agent，请先启动 `city agent start`" });
       } else {
-        setStatus({ type: "idle", text: "Agent 列表已刷新" });
+        setStatus({ type: "idle", text: "准备就绪" });
       }
     } catch (error) {
       setStatus({
@@ -300,6 +305,7 @@ export function App() {
           allowedChannels.size > 0
             ? options.filter((item) => allowedChannels.has(item.channel))
             : [];
+
         setChatKeyOptions(filtered);
 
         const nextChatKey = resolveChatKey(filtered, preferredChatKey);
@@ -320,6 +326,7 @@ export function App() {
           });
           return;
         }
+
         clearChatLoadRelatedErrorStatus(setStatus);
       } catch (error) {
         setChatKeyOptions([]);
@@ -346,18 +353,18 @@ export function App() {
         ]);
 
         if (!isMounted) return;
-        setSettings(saved);
-        setTab(activeTab);
 
-        const preferredQuickPromptId =
-          saved.defaultQuickPromptId || saved.quickPrompts[0]?.id || "";
-        setSelectedQuickPromptId(preferredQuickPromptId);
+        setSettings({
+          ...saved,
+          taskPrompt: normalizeInitialTaskPrompt(saved.taskPrompt),
+        });
+        setTab(activeTab);
 
         const endpoint = resolveConsoleBaseUrl(saved);
         if (!endpoint.baseUrl) {
           setStatus({
             type: "error",
-            text: endpoint.errorText || "Console 地址无效，请在设置页检查配置",
+            text: endpoint.errorText || "Console 地址无效，请检查 Console 是否已启动",
           });
         } else {
           await refreshAgents({
@@ -366,7 +373,7 @@ export function App() {
           });
         }
 
-        await refreshPageSendHistory(activeTab.url);
+        await refreshAskHistory();
       } catch (error) {
         if (!isMounted) return;
         setStatus({
@@ -379,7 +386,16 @@ export function App() {
     return () => {
       isMounted = false;
     };
-  }, [refreshAgents, refreshPageSendHistory]);
+  }, [refreshAgents, refreshAskHistory]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     void refreshChatKeys(
@@ -396,54 +412,30 @@ export function App() {
     consoleBaseUrl,
   ]);
 
-  useEffect(() => {
-    void refreshPageSendHistory(tab.url);
-  }, [tab.url, refreshPageSendHistory]);
+  const applyAskHistoryByIndex = useCallback((indexText: string) => {
+    const normalized = String(indexText || "").trim();
+    setSelectedAskHistoryIndex(normalized);
 
-  useEffect(() => {
-    if (settings.quickPrompts.length === 0) {
-      setSelectedQuickPromptId("");
-      return;
-    }
-    const exists = settings.quickPrompts.some((item) => item.id === selectedQuickPromptId);
-    if (exists) return;
-    setSelectedQuickPromptId(settings.defaultQuickPromptId || settings.quickPrompts[0].id);
-  }, [selectedQuickPromptId, settings.defaultQuickPromptId, settings.quickPrompts]);
-
-  const openSettingsPage = useCallback(() => {
-    if (typeof chrome.runtime.openOptionsPage === "function") {
-      chrome.runtime.openOptionsPage(() => {
-        const error = chrome.runtime.lastError;
-        if (error) {
-          setStatus({ type: "error", text: `打开设置页失败：${error.message}` });
-          return;
-        }
-        setStatus({ type: "idle", text: "已打开设置页" });
-      });
+    if (!normalized) {
       return;
     }
 
-    chrome.tabs.create({ url: chrome.runtime.getURL("options.html") }, () => {
-      const error = chrome.runtime.lastError;
-      if (error) {
-        setStatus({ type: "error", text: `打开设置页失败：${error.message}` });
-        return;
-      }
-      setStatus({ type: "idle", text: "已打开设置页" });
-    });
-  }, []);
-
-  const applySelectedQuickPrompt = useCallback(() => {
-    if (!selectedQuickPrompt) {
-      setStatus({ type: "error", text: "请先选择常用问题模板" });
+    const index = Number.parseInt(normalized, 10);
+    if (!Number.isFinite(index) || Number.isNaN(index)) {
       return;
     }
+
+    const selected = askHistory[index];
+    if (!selected) {
+      return;
+    }
+
     setSettings((prev) => ({
       ...prev,
-      taskPrompt: selectedQuickPrompt.prompt,
+      taskPrompt: selected,
     }));
-    setStatus({ type: "idle", text: `已填入模板：${selectedQuickPrompt.title}` });
-  }, [selectedQuickPrompt]);
+    setStatus({ type: "idle", text: "已填入历史 ask" });
+  }, [askHistory]);
 
   const onSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -455,23 +447,33 @@ export function App() {
       const activeConsoleBaseUrl = resolveConsoleBaseUrl(settings).baseUrl;
 
       if (!agentId) {
-        setStatus({ type: "error", text: "请选择目标 Agent" });
+        const message = "请选择目标 Agent";
+        setStatus({ type: "error", text: message });
+        showToast("error", message);
         return;
       }
       if (!selectedAgent?.running) {
-        setStatus({ type: "error", text: "目标 Agent 未运行，请先启动后再试" });
+        const message = "目标 Agent 未运行，请先启动后再试";
+        setStatus({ type: "error", text: message });
+        showToast("error", message);
         return;
       }
       if (!chatKey) {
-        setStatus({ type: "error", text: "请选择 Channel Chat" });
+        const message = "请选择 Channel Chat";
+        setStatus({ type: "error", text: message });
+        showToast("error", message);
         return;
       }
       if (!taskPrompt) {
-        setStatus({ type: "error", text: "任务说明不能为空" });
+        const message = "Ask 不能为空";
+        setStatus({ type: "error", text: message });
+        showToast("error", message);
         return;
       }
       if (!activeConsoleBaseUrl) {
-        setStatus({ type: "error", text: "Console 地址无效，请在设置页检查目标 IP 与端口" });
+        const message = "Console 地址无效，请检查 Console 是否已启动";
+        setStatus({ type: "error", text: message });
+        showToast("error", message);
         return;
       }
 
@@ -489,10 +491,11 @@ export function App() {
 
       try {
         await saveSettings(nextSettings);
+
         setStatus({ type: "loading", text: "正在提取页面正文..." });
         const markdownSnapshot = await buildPageMarkdownSnapshot(tab);
-        setStatus({ type: "loading", text: "正在上传 Markdown 附件..." });
 
+        setStatus({ type: "loading", text: "正在上传 Markdown 附件..." });
         const accepted = dispatchAgentTask({
           consoleBaseUrl: activeConsoleBaseUrl,
           agentId,
@@ -527,22 +530,26 @@ export function App() {
             taskPrompt,
             attachmentFileName: markdownSnapshot.fileName,
           });
-          await refreshPageSendHistory(tab.url);
+          await refreshAskHistory();
         } catch {
           // ignore local history failures
         }
 
-        setStatus({ type: "success", text: "已发送，任务已进入队列。" });
+        const message = "已发送，任务已进入队列。";
+        setStatus({ type: "success", text: message });
+        showToast("success", "发送成功");
       } catch (error) {
+        const message = `发送失败：${readErrorText(error)}`;
         setStatus({
           type: "error",
-          text: `发送失败：${readErrorText(error)}`,
+          text: message,
         });
+        showToast("error", message);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [refreshPageSendHistory, selectedAgent?.running, settings, tab],
+    [refreshAskHistory, selectedAgent?.running, settings, showToast, tab],
   );
 
   const onTaskPromptKeyDown = useCallback(
@@ -559,28 +566,16 @@ export function App() {
 
   return (
     <main className="popup-root">
-      <header className="header-card">
-        <div className="brand-block">
-          <img className="brand-logo" src="/icon-32.png" alt="Downcity logo" />
-          <h1>Downcity Share</h1>
-        </div>
-        <button
-          className="ghost-btn settings-btn"
-          type="button"
-          onClick={openSettingsPage}
-          disabled={isSubmitting}
-        >
-          设置
-        </button>
+      <header className="popup-header">
+        <div className="popup-title">Downcity Share</div>
       </header>
 
-      <div className={`status-inline status-${status.type}`} aria-live="polite">
-        <span className="status-dot" />
-        <span>{status.text}</span>
+      <div className={`popup-status status-${status.type}`} aria-live="polite">
+        {status.text}
       </div>
 
-      <form ref={formRef} className="share-form" onSubmit={onSubmit}>
-        <section className="selector-grid" aria-label="目标选择">
+      <form ref={formRef} className="popup-form" onSubmit={onSubmit}>
+        <div className="field-grid">
           <label>
             Agent
             <select
@@ -592,8 +587,9 @@ export function App() {
                   chatKey: "",
                 }))
               }
+              disabled={isLoadingAgents}
             >
-              <option value="">请选择 Agent</option>
+              <option value="">{isLoadingAgents ? "加载 Agent 中..." : "请选择 Agent"}</option>
               {agents.map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.name}
@@ -625,78 +621,51 @@ export function App() {
               ))}
             </select>
           </label>
-        </section>
+        </div>
 
-        <section className="compose-card" aria-label="页面与任务输入">
-          <div className="compose-header">
-            <div className="compose-quote-mark">“</div>
-            <div className="compose-meta">
-              <div className="page-title" title={tab.title}>
-                {tab.title || "（未获取到页面标题）"}
-              </div>
-              <a href={tab.url || "#"} title={tab.url} className="page-link">
-                {shortenUrl(tab.url)}
-              </a>
-            </div>
-          </div>
+        <label>
+          Ask 历史
+          <select
+            value={selectedAskHistoryIndex}
+            onChange={(event) => applyAskHistoryByIndex(event.target.value)}
+            disabled={askHistory.length < 1}
+          >
+            <option value="">{askHistory.length < 1 ? "暂无历史 ask" : "选择历史 ask"}</option>
+            {askHistory.map((item, index) => (
+              <option key={`${index}-${item.slice(0, 20)}`} value={String(index)}>
+                {shortenAsk(item)}
+              </option>
+            ))}
+          </select>
+        </label>
 
-          <div className="quick-row" aria-label="常用问题模板">
-            <select
-              value={selectedQuickPromptId}
-              onChange={(event) => setSelectedQuickPromptId(event.target.value)}
-              disabled={settings.quickPrompts.length === 0}
-            >
-              <option value="">{settings.quickPrompts.length > 0 ? "选择常用问题" : "暂无模板"}</option>
-              {settings.quickPrompts.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-            <button
-              className="ghost-btn"
-              type="button"
-              onClick={applySelectedQuickPrompt}
-              disabled={!selectedQuickPrompt}
-            >
-              快速填入
-            </button>
-          </div>
+        <label>
+          Ask
+          <textarea
+            rows={6}
+            value={settings.taskPrompt}
+            onChange={(event) =>
+              setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
+            }
+            onKeyDown={onTaskPromptKeyDown}
+            placeholder="例如：提炼这篇页面内容，给我 3 条可执行建议。"
+          />
+        </label>
 
-          <label className="compose-label">
-            <textarea
-              rows={5}
-              value={settings.taskPrompt}
-              onChange={(event) =>
-                setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
-              }
-              onKeyDown={onTaskPromptKeyDown}
-              placeholder="例如：提炼这篇页面内容，给我 3 条可执行建议。"
-            />
-            <div className="field-hint">快捷发送：Cmd/Ctrl + Enter</div>
-          </label>
-        </section>
+        <div className="page-ref" title={tab.url}>
+          {tab.title || "（未获取到页面标题）"}
+          <span>{shortenUrl(tab.url)}</span>
+        </div>
 
         <button className="primary-btn" type="submit" disabled={isSubmitting}>
           {isSubmitting ? "发送中..." : "发送到 Agent"}
         </button>
       </form>
 
-      {pageSendRecords.length > 0 ? (
-        <section className="panel-card history-card" aria-label="当前页面发送记录">
-          <div className="panel-title">当前页面发送记录</div>
-          <ul className="history-list">
-            {pageSendRecords.map((record) => (
-              <li key={record.id} className="history-item">
-                <div className="history-meta">
-                  <span>{formatSentTime(record.sentAt)}</span>
-                  <span className="history-badge">已发送</span>
-                </div>
-                <div className="history-text">{shortenText(record.taskPrompt, 80)}</div>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {toast ? (
+        <div className="popup-toast" data-type={toast.type} role="status" aria-live="polite">
+          {toast.text}
+        </div>
       ) : null}
     </main>
   );

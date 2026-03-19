@@ -80,6 +80,8 @@ city voice status
 
 ## 常见问题排查
 
+- **看起来在线但实际上已断（假连接）**：新版本会基于心跳 ACK 做活性检查；当出现 `heartbeat_timeout` 时会自动触发 QQ 重连。你也可以手动执行 `city chat reconnect --channel qq`。
+- **能收到消息但发不回去**：回发链路现在会在网络波动/鉴权异常时自动重试一次，并触发链路自愈重连；如果仍失败，优先检查日志中的 `QQ send failed` 明细（HTTP 状态码与平台返回体）。
 - **启动后完全没反应**：先看启动日志；如果你用的是前台模式可 `Ctrl+C` 停止；daemon 模式用 `city agent restart` 停止。运行日志在 `.ship/logs/`。
 - **群里收不到消息**：检查 QQBot 控制台是否已开启群聊相关事件/权限，特别是普通群消息事件（`GROUP_MESSAGE_CREATE`）。
 - **语音消息没有被转写**：先确认 `extensions.voice.enabled=true`，再检查 voice 模型是否可用（`city voice status`）；同时确认 QQBot 侧已开通音频事件权限（`AUDIO_ACTION`）。

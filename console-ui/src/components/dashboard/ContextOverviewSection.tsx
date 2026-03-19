@@ -15,11 +15,12 @@ import type { UiChannelAccountItem, UiChatChannelStatus, UiContextSummary } from
 import {
   buildContextGroups,
   filterContextsByKeyword,
+  resolveContextChannel,
   resolveContextGroup,
   type ContextGroupKey,
 } from "@/lib/context-groups"
 import { parseChannelConfigSummary, parseChannelConfigurationDescriptor, parseChannelDetail } from "./context-overview-config"
-import { CheckIcon, ChevronDownIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, Trash2Icon } from "lucide-react"
 
 export interface ContextOverviewSectionProps {
   /**
@@ -51,6 +52,14 @@ export interface ContextOverviewSectionProps {
    */
   onOpenContext: (contextId: string) => void
   /**
+   * 删除指定 context。
+   */
+  onDeleteContext: (contextId: string) => void
+  /**
+   * 正在删除的 context id。
+   */
+  deletingContextId?: string
+  /**
    * 渠道动作。
    */
   onChatAction: (action: "test" | "reconnect" | "open" | "close", channel: string) => void
@@ -58,16 +67,6 @@ export interface ContextOverviewSectionProps {
    * 保存渠道配置。
    */
   onChatConfigure: (channel: string, config: Record<string, unknown>) => void
-}
-
-function resolveChannelFromContextId(contextIdInput?: string): string {
-  const contextId = String(contextIdInput || "").trim().toLowerCase()
-  if (!contextId) return "other"
-  if (contextId.startsWith("telegram-")) return "telegram"
-  if (contextId.startsWith("qq-")) return "qq"
-  if (contextId.startsWith("feishu-")) return "feishu"
-  if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
-  return "other"
 }
 
 export function ContextOverviewSection(props: ContextOverviewSectionProps) {
@@ -79,6 +78,8 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
     focusedChannel,
     formatTime,
     onOpenContext,
+    onDeleteContext,
+    deletingContextId,
     onChatAction,
     onChatConfigure,
   } = props
@@ -89,7 +90,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
   const normalizedFocusedChannel = String(focusedChannel || "").trim().toLowerCase()
   const contextsInFocusedChannel = React.useMemo(() => {
     if (!normalizedFocusedChannel) return []
-    return contexts.filter((item) => resolveChannelFromContextId(item.contextId) === normalizedFocusedChannel)
+    return contexts.filter((item) => resolveContextChannel(item) === normalizedFocusedChannel)
   }, [contexts, normalizedFocusedChannel])
 
   const visibleChatChannels = React.useMemo(() => {
@@ -305,8 +306,9 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 </tr>
               ) : (
                 visibleContexts.map((item) => {
-                  const group = resolveContextGroup(item.contextId)
+                  const group = resolveContextGroup(item)
                   const isSelected = item.contextId === selectedContextId
+                  const isDeleting = String(deletingContextId || "").trim() === item.contextId
                   return (
                     <tr key={item.contextId} className={`border-b border-border/50 ${isSelected ? "bg-muted/25" : ""}`}>
                       <td className="max-w-[22rem] truncate px-0 py-2 font-mono text-xs" title={item.contextId}>
@@ -319,9 +321,26 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                         {`${item.lastRole || "unknown"} · ${item.lastText || "(empty)"}`}
                       </td>
                       <td className="px-2 py-2 text-right">
-                        <Button size="sm" variant={isSelected ? "secondary" : "outline"} onClick={() => onOpenContext(item.contextId)}>
-                          {isSelected ? "已打开" : "打开"}
-                        </Button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <Button size="sm" variant={isSelected ? "secondary" : "outline"} onClick={() => onOpenContext(item.contextId)}>
+                            {isSelected ? "已打开" : "打开"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={Boolean(deletingContextId)}
+                            onClick={() => {
+                              const confirmed = window.confirm(
+                                `确认彻底删除 context「${item.contextId}」吗？该操作不可恢复。`,
+                              )
+                              if (!confirmed) return
+                              onDeleteContext(item.contextId)
+                            }}
+                          >
+                            <Trash2Icon className="size-3.5" />
+                            <span>{isDeleting ? "删除中..." : "删除"}</span>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )

@@ -9,12 +9,43 @@ export default [
   // Homepage
   index("routes/home.tsx"),
   route("zh", "routes/home.tsx", { id: "home-zh" }),
+  route("whitepaper", "routes/whitepaper.tsx"),
+  route("zh/whitepaper", "routes/whitepaper.tsx", { id: "whitepaper-zh" }),
   route("start", "routes/start.tsx"),
   route("zh/start", "routes/start.tsx", { id: "start-zh" }),
 
   // Features page
   route("features", "routes/features.tsx"),
   route("zh/features", "routes/features.tsx", { id: "features-zh" }),
+
+  // Product with child routes
+  route("product", "routes/product.tsx", [
+    index("routes/product/index.tsx"),
+    route("console-ui", "routes/product/console-ui.tsx"),
+    route("chrome-extension", "routes/product/chrome-extension.tsx"),
+    route("sdk", "routes/product/sdk.tsx"),
+    route("ui-sdk", "routes/product/ui-sdk.tsx"),
+  ]),
+  route(
+    "zh/product",
+    "routes/product.tsx",
+    { id: "routes/zh/product" },
+    [
+      index("routes/product/index.tsx", { id: "routes/zh/product._index" }),
+      route("console-ui", "routes/product/console-ui.tsx", {
+        id: "routes/zh/product.console-ui",
+      }),
+      route("chrome-extension", "routes/product/chrome-extension.tsx", {
+        id: "routes/zh/product.chrome-extension",
+      }),
+      route("sdk", "routes/product/sdk.tsx", {
+        id: "routes/zh/product.sdk",
+      }),
+      route("ui-sdk", "routes/product/ui-sdk.tsx", {
+        id: "routes/zh/product.ui-sdk",
+      }),
+    ],
+  ),
 
   // Resources with child routes
   route("resources", "routes/resources.tsx", [

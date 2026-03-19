@@ -1,101 +1,111 @@
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  IconTerminal2,
-  IconSchool,
-  IconBriefcase,
-  IconChartCandle,
   IconBrandYoutube,
-  IconNews,
+  IconBriefcase,
   IconBuildingSkyscraper,
+  IconChartCandle,
   IconDatabase,
+  IconNews,
+  IconSchool,
+  IconTerminal2,
   IconUserCircle,
 } from "@tabler/icons-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 
-const USE_CASES = [
+const USE_CASE_GROUPS = [
   {
-    id: "coding",
-    icon: IconTerminal2,
+    id: "builder",
+    items: [
+      { id: "coding", icon: IconTerminal2 },
+      { id: "data", icon: IconDatabase },
+      { id: "office", icon: IconBuildingSkyscraper },
+    ],
   },
   {
-    id: "research",
-    icon: IconSchool,
+    id: "insight",
+    items: [
+      { id: "research", icon: IconSchool },
+      { id: "news", icon: IconNews },
+      { id: "content", icon: IconBrandYoutube },
+    ],
   },
   {
-    id: "business",
-    icon: IconBriefcase,
+    id: "growth",
+    items: [
+      { id: "business", icon: IconBriefcase },
+      { id: "finance", icon: IconChartCandle },
+      { id: "career", icon: IconUserCircle },
+    ],
   },
-  {
-    id: "finance",
-    icon: IconChartCandle,
-  },
-  {
-    id: "content",
-    icon: IconBrandYoutube,
-  },
-  {
-    id: "news",
-    icon: IconNews,
-  },
-  {
-    id: "office",
-    icon: IconBuildingSkyscraper,
-  },
-  {
-    id: "data",
-    icon: IconDatabase,
-  },
-  {
-    id: "career",
-    icon: IconUserCircle,
-  },
-];
+] as const;
 
+/**
+ * 首页应用场景模块（高级分组版）。
+ * 说明：
+ * 1. 将场景按能力路径分为三条“工作流通道”，提升叙事性。
+ * 2. 每条通道使用统一列表结构，避免重复卡片造成视觉疲劳。
+ */
 export const UseCasesSection: FC = () => {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const isZh = i18n.language === "zh";
+
+  const laneTitles: Record<(typeof USE_CASE_GROUPS)[number]["id"], string> = {
+    builder: isZh ? "构建与执行" : "Build & Execute",
+    insight: isZh ? "研究与洞察" : "Research & Insight",
+    growth: isZh ? "业务与增长" : "Business & Growth",
+  };
 
   return (
-    <section className="py-16 md:py-24 border-t">
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">
-              {t("usecases:title")}
-            </h2>
-            <p className="text-muted-foreground md:text-xl">
-              {t("usecases:description")}
-            </p>
-          </div>
-        </div>
-        <div className="mx-auto grid w-full grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {USE_CASES.map((item) => (
-            <Card key={item.id} className="group hover:border-primary/50 transition-colors">
-              <CardHeader className="flex flex-row items-start gap-4 space-y-0">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
-                  <item.icon size={24} />
-                </div>
-                <div className="space-y-1">
-                  <CardTitle>{t(`usecases:cases.${item.id}.title`)}</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">
-                    {t(`usecases:cases.${item.id}.description`)}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-            </Card>
+    <section className="home-divider py-16 md:py-20">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <header className="home-reveal space-y-3">
+          <span className="home-kicker">{t("usecases:title")}</span>
+          <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
+            {t("usecases:description")}
+          </p>
+        </header>
+
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {USE_CASE_GROUPS.map((group, groupIndex) => (
+            <article
+              key={group.id}
+              className={`home-panel home-reveal rounded-xl p-4 md:p-5 ${
+                groupIndex === 1 ? "lg:-mt-4" : ""
+              } ${groupIndex === 2 ? "lg:mt-4" : ""}`}
+            >
+              <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                {laneTitles[group.id]}
+              </p>
+              <div className="space-y-3">
+                {group.items.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className={`rounded-lg border border-border bg-background/85 p-3 ${
+                      index !== group.items.length - 1 ? "" : ""
+                    }`}
+                  >
+                    <div className="mb-2 inline-flex rounded-md border border-border bg-muted/45 p-1.5 text-muted-foreground">
+                      <item.icon size={14} />
+                    </div>
+                    <h3 className="text-sm font-semibold leading-tight">
+                      {t(`usecases:cases.${item.id}.title`)}
+                    </h3>
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                      {t(`usecases:cases.${item.id}.description`)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </article>
           ))}
         </div>
-        <div className="mt-16 w-full text-center">
-          <p className="text-lg text-muted-foreground italic">
-            {t("usecases:bottom_text")}
-          </p>
-        </div>
+
+        <p className="home-reveal home-reveal-delay-2 mt-6 text-sm leading-7 text-muted-foreground">
+          {t("usecases:bottom_text")}
+        </p>
       </div>
     </section>
   );
 };
+
+export default UseCasesSection;

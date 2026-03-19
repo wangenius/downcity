@@ -1,35 +1,65 @@
 import type { FC } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
+import { IconArrowRight } from "@tabler/icons-react";
 
 const GITHUB_URL = "https://github.com/wangenius/downcity";
 
+/**
+ * 首页收尾 CTA 模块（高级分栏版）。
+ * 说明：
+ * 1. 左侧强调价值主张，右侧聚焦行动按钮与次要说明。
+ * 2. 使用边框分栏保持控制台风格的一致克制感。
+ */
 export const CTASection: FC = () => {
   const { i18n, t } = useTranslation();
-  const docsPath = i18n.language === "zh" ? "/zh/docs" : "/en/docs";
+  const isZh = i18n.language === "zh";
+  const docsPath = isZh ? "/zh/docs" : "/en/docs";
+
   return (
-    <section className="py-12 md:py-24 lg:py-32">
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
-              {t("common:ctaSection.titlePrefix")}{" "}
-              <span className="italic">{t("common:ctaSection.titleItalic")}</span>
-            </h2>
-            <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              {t("hero:subtitle")}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 min-[400px]:flex-row">
-            <Button size="lg">
-              <Link to={GITHUB_URL} target="_blank">
-                {t("common:getStarted")}
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg">
-              <Link to={docsPath}>{t("common:readDocs")}</Link>
-            </Button>
+    <section className="home-divider py-16 md:py-20">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <div className="home-panel home-reveal rounded-xl">
+          <div className="grid gap-6 p-6 md:grid-cols-[1.15fr_0.85fr] md:p-8">
+            <div className="space-y-3 md:pr-8 md:border-r md:border-border/70">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                Launch Decision
+              </p>
+              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+                {t("common:ctaSection.titlePrefix")}{" "}
+                <span className="italic text-foreground/72">
+                  {t("common:ctaSection.titleItalic")}
+                </span>
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+                {t("hero:subtitle")}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to={GITHUB_URL}
+                  target="_blank"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  {t("common:getStarted")}
+                  <IconArrowRight className="size-4" />
+                </Link>
+                <Link
+                  to={docsPath}
+                  className="inline-flex h-10 items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/65"
+                >
+                  {t("common:readDocs")}
+                </Link>
+              </div>
+
+              <p className="text-sm leading-7 text-muted-foreground">
+                {isZh
+                  ? "建议先用现有仓库跑通最小闭环，再按需接入更多技能与平台。"
+                  : "Start with one real repo loop, then layer more skills and channels as needed."}
+              </p>
+            </div>
           </div>
         </div>
       </div>

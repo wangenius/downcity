@@ -4,89 +4,96 @@ import { IconBrandGithub } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
 
+/**
+ * 全站页脚模块（console-ui 风格）。
+ * 说明：
+ * 1. 采用轻量边框分栏，不使用重背景块。
+ * 2. 保留白皮书入口，确保首页与白皮书分流后仍可直达。
+ */
 export const Footer: FC = () => {
   const currentYear = new Date().getFullYear();
   const { i18n, t } = useTranslation();
   const docsPath = i18n.language === "zh" ? "/zh/docs" : "/en/docs";
   const homePath = i18n.language === "zh" ? "/zh" : "/";
   const featuresPath = i18n.language === "zh" ? "/zh/features" : "/features";
+  const whitepaperPath =
+    i18n.language === "zh" ? "/zh/whitepaper" : "/whitepaper";
 
   return (
-    <footer className="py-12 md:py-16 bg-muted text-muted-foreground border-t">
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <Link to={homePath} className="inline-block mb-4">
-              <span className="text-lg font-bold text-foreground">
+    <footer className="home-divider py-10 md:py-12">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
+          <div>
+            <Link to={homePath} className="inline-flex items-center gap-2">
+              <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
                 {product.productName}
               </span>
             </Link>
-            <p className="text-sm leading-relaxed mb-4">{t("hero:subtitle")}</p>
+            <p className="mt-3 max-w-md text-sm leading-7 text-muted-foreground">
+              {t("hero:subtitle")}
+            </p>
             <Link
               to="https://github.com/wangenius/downcity"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm hover:text-foreground transition-colors"
+              className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <IconBrandGithub size={16} />
               <span>{t("footer.github")}</span>
             </Link>
           </div>
 
-          {/* Links */}
-          <div className="md:col-start-3">
-            <h4 className="text-sm font-medium mb-4 text-foreground">
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("footer.product")}
             </h4>
-            <ul className="space-y-3 text-sm">
+            <ul className="mt-3 space-y-2 text-sm">
               <li>
                 <Link
                   to={featuresPath}
-                  className="hover:text-foreground transition-colors"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {t("footer.features")}
                 </Link>
               </li>
               <li>
                 <Link
-                  to={docsPath}
-                  className="hover:text-foreground transition-colors"
+                  to={whitepaperPath}
+                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {t("footer.documentation")}
+                  {t("nav.whitepaper")}
                 </Link>
               </li>
               <li>
                 <Link
-                  to="https://github.com/wangenius/downcity/releases"
-                  target="_blank"
-                  className="hover:text-foreground transition-colors"
+                  to={docsPath}
+                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {t("footer.releases")}
+                  {t("footer.documentation")}
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-medium mb-4 text-foreground">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("footer.resources")}
             </h4>
-            <ul className="space-y-3 text-sm">
+            <ul className="mt-3 space-y-2 text-sm">
               <li>
                 <Link
-                  to="https://github.com/wangenius/downcity"
+                  to="https://github.com/wangenius/downcity/releases"
                   target="_blank"
-                  className="hover:text-foreground transition-colors"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {t("footer.github")}
+                  {t("footer.releases")}
                 </Link>
               </li>
               <li>
                 <Link
                   to="https://github.com/wangenius/downcity/issues"
                   target="_blank"
-                  className="hover:text-foreground transition-colors"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {t("footer.issues")}
                 </Link>
@@ -95,7 +102,7 @@ export const Footer: FC = () => {
                 <Link
                   to="https://twitter.com/downcity"
                   target="_blank"
-                  className="hover:text-foreground transition-colors"
+                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {t("footer.twitter")}
                 </Link>
@@ -104,8 +111,7 @@ export const Footer: FC = () => {
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-8 pt-8 border-t flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-sm">
+        <div className="mt-8 flex flex-col gap-2 border-t border-border/70 pt-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
           <p>
             {t("footer.copyright", {
               year: currentYear,

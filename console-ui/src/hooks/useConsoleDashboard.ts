@@ -15,6 +15,7 @@ import type {
   UiContextArchiveDetailResponse,
   UiContextArchivesResponse,
   UiContextArchiveSummary,
+  UiChatDeleteResponse,
   UiContextClearResponse,
   UiCommandExecuteResponse,
   UiCommandExecuteResult,
@@ -303,6 +304,10 @@ export interface UseConsoleDashboardResult {
    */
   clearingChatHistory: boolean;
   /**
+   * 正在删除的 context id（空字符串表示无删除任务）。
+   */
+  deletingContextId: string;
+  /**
    * consoleui channel 输入框内容。
    */
   chatInput: string;
@@ -454,6 +459,10 @@ export interface UseConsoleDashboardResult {
    * 清理指定 context 的 chat history（history.jsonl）。
    */
   clearChatHistory: (contextId: string) => Promise<void>;
+  /**
+   * 完整删除指定 context（包含映射、chat 审计与 context 目录）。
+   */
+  deleteChatContext: (contextId: string) => Promise<boolean>;
   /**
    * 切换 active model。
    */
@@ -619,6 +628,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [sending, setSending] = useState(false);
   const [clearingContextMessages, setClearingContextMessages] = useState(false);
   const [clearingChatHistory, setClearingChatHistory] = useState(false);
+  const [deletingContextId, setDeletingContextId] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -1067,6 +1077,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         : [
             {
               contextId: CONSOLEUI_CONTEXT_ID,
+              channel: "consoleui",
               messageCount: 0,
               updatedAt: Date.now(),
               lastRole: "system",
@@ -2045,6 +2056,98 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     ],
   );
 
+  const deleteChatContext = useCallback(
+    async (contextIdInput: string): Promise<boolean> => {
+      const contextId = String(contextIdInput || "").trim();
+      if (!contextId) return false;
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return false;
+      }
+      if (deletingContextId) return false;
+
+      setDeletingContextId(contextId);
+      try {
+        const data = await requestJson<UiChatDeleteResponse>(
+          "/api/services/command",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              serviceName: "chat",
+              command: "delete",
+              payload: {
+                contextId,
+              },
+            }),
+          },
+          selectedAgentId,
+        );
+        const deleted = data?.data?.deleted === true;
+
+        const contextList = await refreshContexts(selectedAgentId);
+        const currentSelectedContextId = String(selectedContextIdRef.current || "").trim();
+        const preservedCurrent =
+          contextList.find((item) => item.contextId === currentSelectedContextId)?.contextId || "";
+        const consoleUiContext =
+          contextList.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
+        const fallbackContext = contextList[0]?.contextId || "";
+        const nextContextId = preservedCurrent || consoleUiContext || fallbackContext;
+
+        // 关键点（中文）：删除后立即重建当前上下文视图，避免 UI 停留在已删除 context。
+        if (nextContextId) {
+          setSelectedContextId(nextContextId);
+          await Promise.all([
+            refreshChannelHistory(selectedAgentId, nextContextId),
+            refreshContextMessages(selectedAgentId, nextContextId),
+            refreshContextArchives(selectedAgentId, nextContextId),
+            refreshPrompt(selectedAgentId, nextContextId),
+          ]);
+        } else {
+          setSelectedContextId("");
+          setChannelHistory([]);
+          setContextMessages([]);
+          setContextArchives([]);
+          setSelectedArchiveId("");
+          setContextArchiveMessages([]);
+          setPrompt(null);
+        }
+
+        await Promise.all([
+          refreshChatChannels(selectedAgentId),
+          refreshOverview(selectedAgentId),
+          refreshLogs(selectedAgentId),
+          refreshLocalChat(selectedAgentId),
+        ]);
+
+        showToast(
+          deleted ? `已删除 context: ${contextId}` : `context 不存在，已同步状态: ${contextId}`,
+          "success",
+        );
+        return deleted;
+      } catch (error) {
+        showToast(`删除 context 失败: ${getErrorMessage(error)}`, "error");
+        return false;
+      } finally {
+        setDeletingContextId("");
+      }
+    },
+    [
+      deletingContextId,
+      refreshChannelHistory,
+      refreshChatChannels,
+      refreshContextArchives,
+      refreshContextMessages,
+      refreshContexts,
+      refreshLocalChat,
+      refreshLogs,
+      refreshOverview,
+      refreshPrompt,
+      requestJson,
+      selectedAgentId,
+      showToast,
+    ],
+  );
+
   const switchModel = useCallback(
     async (primaryModelId: string) => {
       const next = String(primaryModelId || "").trim();
@@ -2598,6 +2701,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     sending,
     clearingContextMessages,
     clearingChatHistory,
+    deletingContextId,
     chatInput,
     toast,
     setChatInput,
@@ -2635,6 +2739,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     sendConsoleUiMessage,
     clearContextMessages,
     clearChatHistory,
+    deleteChatContext,
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,

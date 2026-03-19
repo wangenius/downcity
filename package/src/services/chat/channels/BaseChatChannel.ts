@@ -11,11 +11,11 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
 import {
-  readChatMetaByContextId,
   resolveContextIdByChatTarget,
   resolveOrCreateContextIdByChatTarget,
   upsertChatMetaByContextId,
 } from "@services/chat/runtime/ChatMetaStore.js";
+import { deleteChatContextById } from "@services/chat/runtime/ChatContextDelete.js";
 import {
   appendInboundChatHistory,
   appendOutboundChatHistory,
@@ -167,7 +167,7 @@ export abstract class BaseChatChannel {
    * 在工具侧文本发送成功后补齐 outbound history。
    *
    * 关键点（中文）
-   * - 使用 channel 的 chatKey 作为 contextId，保证与 inbound/history 查询对齐。
+   * - 通过渠道目标映射解析 contextId，保证与 inbound/history 查询对齐。
    * - 仅做审计落盘，不影响发送结果语义。
    */
   private async appendToolOutboundHistory(
@@ -278,22 +278,24 @@ export abstract class BaseChatChannel {
   }
 
   /**
-   * 清理某个 chatKey 对应的 agent 会话状态。
+   * 清理某个 contextId 对应的 agent 会话状态。
    *
    * 说明（中文）
    * - 只清理 runtime/context 层状态，不直接删历史文件
    * - 常用于用户触发“重置对话”类命令
    */
-  clearChat(chatKey: string): void {
+  clearChat(contextId: string): void {
+    const key = String(contextId || "").trim();
+    if (!key) return;
     enqueueChatQueue({
       kind: "control",
       channel: this.channel,
-      targetId: chatKey,
-      contextId: chatKey,
+      targetId: key,
+      contextId: key,
       text: "",
       control: { type: "clear" },
     });
-    this.logger.info(`Cleared chat: ${chatKey}`);
+    this.logger.info(`Cleared chat: ${key}`);
   }
 
   /**
@@ -320,7 +322,27 @@ export abstract class BaseChatChannel {
       });
       return;
     }
-    this.clearChat(contextId);
+    const deleted = await deleteChatContextById({
+      context: this.context,
+      contextId,
+    });
+    if (!deleted.success) {
+      this.logger.warn("Failed to delete chat context by target", {
+        channel: this.channel,
+        chatId,
+        contextId,
+        error: deleted.error || "delete failed",
+      });
+      return;
+    }
+    this.logger.info("Deleted chat context by target", {
+      channel: this.channel,
+      chatId,
+      contextId,
+      removedMeta: deleted.removedMeta,
+      removedChatDir: deleted.removedChatDir,
+      removedContextDir: deleted.removedContextDir,
+    });
   }
 
   /**
@@ -406,7 +428,6 @@ export abstract class BaseChatChannel {
    */
   protected async enqueueAuditMessage(params: {
     chatId: string;
-    chatKey: string;
     messageId?: string;
     userId?: string;
     text: string;
@@ -419,28 +440,12 @@ export abstract class BaseChatChannel {
         ? meta.messageThreadId
         : undefined;
     const chatType = typeof meta.chatType === "string" ? meta.chatType : undefined;
-    const contextIdHint = String(params.chatKey || "").trim();
-    let contextId = "";
-    if (contextIdHint) {
-      const mapped = await readChatMetaByContextId({
-        context: this.context,
-        contextId: contextIdHint,
-      });
-      if (mapped) {
-        contextId = mapped.contextId;
-      }
-    }
-    if (!contextId) {
-      const resolved = await this.resolveOrCreateContextIdByTarget({
-        chatId: params.chatId,
-        chatType,
-        messageThreadId,
-      });
-      contextId = String(resolved || "").trim();
-    }
-    if (!contextId && contextIdHint) {
-      contextId = contextIdHint;
-    }
+    const resolved = await this.resolveOrCreateContextIdByTarget({
+      chatId: params.chatId,
+      chatType,
+      messageThreadId,
+    });
+    const contextId = String(resolved || "").trim();
     if (!contextId) return;
     const extra = stripUndefinedMeta(meta);
     await this.appendInboundHistory({

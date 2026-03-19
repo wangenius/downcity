@@ -8,21 +8,17 @@ import {
   IconMessageReport,
   IconPuzzle,
 } from "@tabler/icons-react";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 /**
- * 首页平台能力模块。
- * 设计目标：
- * 1. 清晰传达当前支持的平台能力。
- * 2. 给出“扩展平台”的两条明确路径。
- * 3. 保持 CTA 层级，帮助用户快速进入讨论或文档。
+ * 首页平台能力模块（高级信息板版）。
+ * 说明：
+ * 1. 平台列表使用“能力表”样式，强调可读性而非卡片堆叠。
+ * 2. 扩展路径拆为“提需求”与“自封装”两条清晰行动线。
  */
 export function PlatformsSection() {
   const { i18n, t } = useTranslation();
   const lang = i18n.language;
-  const skillsPath =
-    lang === "zh" ? "/zh/resources/skills" : "/resources/skills";
+  const skillsPath = lang === "zh" ? "/zh/resources/skills" : "/resources/skills";
   const discussionsUrl = "https://github.com/wangenius/downcity/discussions";
 
   const platforms = [
@@ -31,125 +27,95 @@ export function PlatformsSection() {
       name: t("platforms:defaultPlatforms.telegram.name"),
       description: t("platforms:defaultPlatforms.telegram.description"),
       icon: IconBrandTelegram,
-      color: "text-sky-500",
-      surface: "from-sky-500/20 to-sky-500/5",
+      status: "native",
     },
     {
       id: "feishu",
       name: t("platforms:defaultPlatforms.feishu.name"),
       description: t("platforms:defaultPlatforms.feishu.description"),
       icon: IconMessageDots,
-      color: "text-blue-600",
-      surface: "from-blue-600/20 to-blue-600/5",
+      status: "native",
     },
     {
       id: "qq",
       name: t("platforms:defaultPlatforms.qq.name"),
       description: t("platforms:defaultPlatforms.qq.description"),
       icon: IconBrandQq,
-      color: "text-cyan-500",
-      surface: "from-cyan-500/20 to-cyan-500/5",
+      status: "native",
     },
   ] as const;
 
   return (
-    <section className="relative overflow-hidden py-16 md:py-24">
-      {/* 背景层：细微渐变与网格纹理，避免区块显得扁平 */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/20 to-background" />
-        <div className="homepage-grid-mask opacity-40" />
-      </div>
-
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
-            {t("platforms:title")}
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base leading-7 text-muted-foreground md:text-lg">
+    <section className="home-divider py-16 md:py-20">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <header className="home-reveal space-y-3">
+          <span className="home-kicker">{t("platforms:title")}</span>
+          <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
             {t("platforms:subtitle")}
           </p>
-        </div>
+        </header>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {platforms.map((platform) => (
+        <div className="home-panel home-reveal home-reveal-delay-1 mt-7 overflow-hidden rounded-xl">
+          {platforms.map((platform, index) => (
             <article
               key={platform.id}
-              className="group relative overflow-hidden rounded-3xl border border-border/70 bg-card/85 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl"
+              className={`grid gap-2 px-4 py-4 md:grid-cols-[3rem_1fr_auto] md:items-center ${
+                index !== platforms.length - 1 ? "border-b border-border/70" : ""
+              }`}
             >
-              <div
-                className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${platform.surface}`}
-              />
-              <div
-                className={`mb-5 inline-flex rounded-2xl border border-border/70 bg-background/80 p-3 ${platform.color}`}
-              >
-                <platform.icon className="h-7 w-7" />
+              <div className="inline-flex rounded-md border border-border bg-muted/45 p-2 text-muted-foreground">
+                <platform.icon className="size-4" />
               </div>
-              <h3 className="text-xl font-semibold tracking-tight">{platform.name}</h3>
-              <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">
-                {platform.description}
-              </p>
+              <div>
+                <h3 className="text-base font-semibold">{platform.name}</h3>
+                <p className="mt-1 text-sm leading-7 text-muted-foreground">
+                  {platform.description}
+                </p>
+              </div>
+              <span className="inline-flex h-6 w-fit items-center rounded-full border border-border bg-background px-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                {platform.status}
+              </span>
             </article>
           ))}
         </div>
 
-        {/* 关键决策区：引导用户选择“提需求”或“自己封装” */}
-        <div className="mt-12 rounded-3xl border border-border/70 bg-card/80 p-6 shadow-sm md:p-8">
-          <div className="mb-8 text-center">
-            <h3 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              {t("platforms:otherTitle")}
-            </h3>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
-              {t("platforms:otherSubtitle")}
+        {/* 关键动作区：把“扩展方式”前置为并行决策，缩短用户路径。 */}
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <article className="home-panel home-reveal home-reveal-delay-2 rounded-xl p-5">
+            <div className="mb-3 inline-flex rounded-md border border-border bg-muted/45 p-2 text-muted-foreground">
+              <IconMessageReport className="size-4" />
+            </div>
+            <h4 className="text-base font-semibold">{t("platforms:solutions.discuss.title")}</h4>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              {t("platforms:solutions.discuss.description")}
             </p>
-          </div>
+            <Link
+              to={discussionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm text-foreground transition-colors hover:bg-muted/65"
+            >
+              {t("platforms:solutions.discuss.button")}
+              <IconArrowRight className="size-4" />
+            </Link>
+          </article>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <article className="rounded-2xl border border-border/70 bg-background/85 p-5">
-              <div className="mb-4 inline-flex rounded-xl bg-orange-500/10 p-2 text-orange-500">
-                <IconMessageReport className="h-6 w-6" />
-              </div>
-              <h4 className="text-lg font-semibold">
-                {t("platforms:solutions.discuss.title")}
-              </h4>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                {t("platforms:solutions.discuss.description")}
-              </p>
-              <Link
-                to={discussionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "mt-5 inline-flex items-center gap-2 rounded-xl",
-                )}
-              >
-                {t("platforms:solutions.discuss.button")}
-                <IconArrowRight className="h-4 w-4" />
-              </Link>
-            </article>
-
-            <article className="rounded-2xl border border-border/70 bg-background/85 p-5">
-              <div className="mb-4 inline-flex rounded-xl bg-primary/10 p-2 text-primary">
-                <IconPuzzle className="h-6 w-6" />
-              </div>
-              <h4 className="text-lg font-semibold">
-                {t("platforms:solutions.skill.title")}
-              </h4>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                {t("platforms:solutions.skill.description")}
-              </p>
-              <Link
-                to={skillsPath}
-                className={cn(
-                  buttonVariants({ variant: "default" }),
-                  "mt-5 inline-flex items-center gap-2 rounded-xl",
-                )}
-              >
-                {t("platforms:solutions.skill.button")}
-                <IconArrowRight className="h-4 w-4" />
-              </Link>
-            </article>
-          </div>
+          <article className="home-panel home-reveal home-reveal-delay-3 rounded-xl p-5">
+            <div className="mb-3 inline-flex rounded-md border border-border bg-muted/45 p-2 text-muted-foreground">
+              <IconPuzzle className="size-4" />
+            </div>
+            <h4 className="text-base font-semibold">{t("platforms:solutions.skill.title")}</h4>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              {t("platforms:solutions.skill.description")}
+            </p>
+            <Link
+              to={skillsPath}
+              className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary bg-primary px-3 text-sm text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              {t("platforms:solutions.skill.button")}
+              <IconArrowRight className="size-4" />
+            </Link>
+          </article>
         </div>
       </div>
     </section>

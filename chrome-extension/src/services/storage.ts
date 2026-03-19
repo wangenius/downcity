@@ -343,3 +343,35 @@ export async function loadPageSendRecords(params: {
   const all = await loadAllSendRecords();
   return all.filter((item) => item.pageUrl === pageUrl).slice(0, limit);
 }
+
+/**
+ * 读取最近 ask 历史（按时间倒序去重）。
+ *
+ * 关键点（中文）：
+ * - 仅返回 taskPrompt 文本，用于 UI 快速回填。
+ * - 按 lower-case 去重，避免同一句重复出现。
+ */
+export async function loadRecentAskHistory(params?: {
+  limit?: number;
+}): Promise<string[]> {
+  const limit =
+    typeof params?.limit === "number" && Number.isFinite(params.limit)
+      ? Math.max(1, Math.min(100, Math.trunc(params.limit)))
+      : 12;
+
+  const all = await loadAllSendRecords();
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of all) {
+    const prompt = String(item.taskPrompt || "").trim();
+    if (!prompt) continue;
+    const dedupKey = prompt.toLowerCase();
+    if (seen.has(dedupKey)) continue;
+    seen.add(dedupKey);
+    out.push(prompt);
+    if (out.length >= limit) break;
+  }
+
+  return out;
+}

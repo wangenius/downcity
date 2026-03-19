@@ -489,7 +489,7 @@ Available commands:
 - /help or /帮助 - View help information
 - /status or /状态 - View agent status
 - /tasks or /任务 - View task list
-- /clear or /清除 - Clear current conversation history
+- /clear or /清除 - Delete current conversation completely
 - <any message> - Execute instruction`;
         break;
 
@@ -510,7 +510,7 @@ Available commands:
           chatId,
           chatType,
         });
-        responseText = "✅ Conversation history cleared";
+        responseText = "✅ Conversation deleted completely";
         break;
 
       default:

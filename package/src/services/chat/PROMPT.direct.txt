@@ -53,6 +53,7 @@ react:
   - `city chat send --text '...' --delay <ms>`
   - `city chat send --text '...' --time '<ISO|timestamp>'`
   - `city chat send --text '...' --chat-key <targetChatKey>`
+  - 如需彻底删除会话：`city chat delete --chat-key <targetChatKey>`
 
 ## 跨协议/跨平台操作
 

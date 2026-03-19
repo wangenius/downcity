@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  IconArrowUpRight,
   IconCheck,
   IconCopy,
+  IconPlayerPlayFilled,
   IconSparkles,
   IconTerminal2,
 } from "@tabler/icons-react";
@@ -13,16 +13,17 @@ import {
 const INSTALL_COMMAND = "npm i -g downcity";
 
 /**
- * 首页首屏模块。
- * 设计目标：
- * 1. 左侧聚焦价值表达与核心行动。
- * 2. 右侧展示“仓库即 Agent”的运行流程感。
- * 3. 在移动端保持单列可读性，在桌面端形成强对比布局。
+ * 首页首屏模块（高级重构版）。
+ * 说明：
+ * 1. 采用“叙事区 + 控制平面”非对称布局，强化品牌记忆点。
+ * 2. 将安装命令、文档入口与治理能力放在同一视线链路中。
+ * 3. 右侧用运行时状态柱模拟 console-ui 的控制台质感。
  */
 export function HeroSection() {
   const { i18n, t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const docsPath = i18n.language === "zh" ? "/zh/docs" : "/en/docs";
+  const isZh = i18n.language === "zh";
+  const docsPath = isZh ? "/zh/docs" : "/en/docs";
 
   const copyCommand = () => {
     navigator.clipboard.writeText(INSTALL_COMMAND);
@@ -30,115 +31,139 @@ export function HeroSection() {
     setTimeout(() => setCopied(false), 1600);
   };
 
-  const flowPreview = [
-    { label: t("tutorial:step1.title"), command: t("tutorial:step1.command") },
-    { label: t("tutorial:step2.title"), command: t("tutorial:step2.command") },
-    { label: t("tutorial:step3.title"), command: t("tutorial:step3.command") },
-  ];
+  const governanceItems = isZh
+    ? [
+        "边界由你定义，Agent 只在边界内执行",
+        "关键操作可审批，过程全链路可追踪",
+        "状态留在仓库，不被平台绑架",
+      ]
+    : [
+        "You define boundaries, agents execute inside them.",
+        "Sensitive actions stay reviewable and traceable.",
+        "State remains in your repo, not locked in a platform.",
+      ];
+
+  const runtimeRows = [
+    { label: "Runtime", value: "online", state: "ok" },
+    { label: "Workspace", value: "repo-native", state: "idle" },
+    { label: "Control", value: "human-in-loop", state: "idle" },
+  ] as const;
 
   return (
-    <section className="relative overflow-hidden py-16 md:py-24 lg:py-28">
-      {/* 关键背景层：用渐变光斑和网格纹理强化首页识别度 */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="homepage-orb homepage-orb--one" />
-        <div className="homepage-orb homepage-orb--two" />
-        <div className="homepage-grid-mask" />
-      </div>
+    <section className="border-b border-border/80 py-16 md:py-20 lg:py-24">
+      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
+        <div className="home-grid-lines grid items-start gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-8 pr-0 lg:pr-8">
+            <div className="home-reveal">
+              <span className="home-kicker">
+                <IconSparkles className="size-3.5" />
+                {t("hero:topBadge")}
+              </span>
+            </div>
 
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
-          <div className="space-y-8">
-            <Badge
-              variant="outline"
-              className="rounded-full border-primary/30 bg-background/80 px-4 py-1 text-xs tracking-wide backdrop-blur"
-            >
-              {t("hero:topBadge")}
-            </Badge>
-
-            <div className="space-y-5">
-              <h1 className="text-balance text-4xl leading-[1.05] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-                <span className="font-serif">{t("hero:title")}</span>{" "}
-                <span className="font-serif italic text-primary">
-                  {t("hero:titleItalic")}
-                </span>{" "}
-                <span className="font-serif">{t("hero:titleEnd")}</span>
+            <div className="home-reveal home-reveal-delay-1 space-y-5">
+              <h1 className="text-balance font-semibold leading-[0.94] tracking-tight text-[clamp(2.6rem,8.2vw,6.1rem)]">
+                {t("hero:title")}
+                <br />
+                <span className="italic text-foreground/68">{t("hero:titleItalic")}</span>
+                {t("hero:titleEnd") ? <> {t("hero:titleEnd")}</> : null}
               </h1>
               <p className="max-w-2xl text-pretty text-base leading-7 text-muted-foreground md:text-lg">
                 {t("hero:subtitle")}
               </p>
             </div>
 
-            {/* 关键交互：复制命令为首要动作，文档入口为次要动作 */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="outline"
-                className="group h-11 gap-3 rounded-xl border-border/70 bg-card/90 px-4 font-mono text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            <div className="home-reveal home-reveal-delay-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
                 onClick={copyCommand}
+                className="home-panel inline-flex h-11 items-center gap-3 rounded-lg px-3.5 font-mono text-sm text-foreground transition-colors hover:bg-muted/65"
               >
-                <IconTerminal2 className="h-4 w-4 text-muted-foreground" />
+                <IconTerminal2 className="size-4 text-muted-foreground" />
                 <span>{INSTALL_COMMAND}</span>
-                <span className="ml-1 flex items-center border-l border-border pl-3">
+                <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background">
                   {copied ? (
-                    <IconCheck className="h-4 w-4 text-green-500" />
+                    <IconCheck className="size-4 text-emerald-600" />
                   ) : (
-                    <IconCopy className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
+                    <IconCopy className="size-4 text-muted-foreground" />
                   )}
                 </span>
-              </Button>
+              </button>
 
               <Link
                 to={docsPath}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:bg-primary/90"
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
+                <IconPlayerPlayFilled className="size-3.5" />
                 {t("tutorial:cta")}
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {[t("hero:tag1"), t("hero:tag2"), t("hero:tag3")].map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="rounded-full px-3 py-1 text-xs"
+            <div className="home-reveal home-reveal-delay-3 grid gap-2.5">
+              {governanceItems.map((item) => (
+                <div
+                  key={item}
+                  className="flex items-start gap-2.5 border-l border-border/80 pl-3 text-sm text-muted-foreground"
                 >
-                  {tag}
-                </Badge>
+                  <span className="mt-1 inline-flex size-1.5 shrink-0 rounded-full bg-foreground/55" />
+                  <p>{item}</p>
+                </div>
               ))}
             </div>
           </div>
 
-          <div className="relative">
-            <div className="homepage-float rounded-3xl border border-border/70 bg-card/85 shadow-xl backdrop-blur-xl">
-              <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
-                <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  {t("hero:verticalText")}
-                </span>
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
-                  <IconSparkles className="h-3.5 w-3.5" />
-                  {t("tutorial:mock.chat.status")}
-                </span>
-              </div>
+          <aside className="home-reveal home-reveal-delay-2 home-panel overflow-hidden rounded-xl">
+            <div className="flex items-center justify-between border-b border-border/80 px-4 py-3">
+              <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                Control Plane
+              </p>
+              <Link
+                to={docsPath}
+                className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:bg-muted/65 hover:text-foreground"
+              >
+                Docs
+                <IconArrowUpRight className="size-3" />
+              </Link>
+            </div>
 
-              <div className="space-y-4 p-5">
-                {flowPreview.map((step, index) => (
+            <div className="grid gap-4 p-4">
+              <div className="space-y-2.5">
+                {runtimeRows.map((row) => (
                   <div
-                    key={step.label}
-                    className="rounded-2xl border border-border/60 bg-background/80 p-4 transition hover:border-primary/35 hover:shadow-sm"
+                    key={row.label}
+                    className="grid grid-cols-[7rem_minmax(0,1fr)] items-center rounded-lg border border-border/75 bg-background/85 px-3 py-2"
                   >
-                    <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border/80 bg-muted font-mono text-[11px]">
-                        {index + 1}
-                      </span>
-                      {step.label}
-                    </div>
-                    <code className="block overflow-x-auto rounded-lg bg-zinc-950/95 px-3 py-2 font-mono text-[13px] text-zinc-100">
-                      {step.command}
-                    </code>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {row.label}
+                    </span>
+                    <span className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.08em] text-foreground">
+                      <span
+                        className={`inline-flex h-1.5 w-1.5 rounded-full ${
+                          row.state === "ok" ? "bg-emerald-500" : "bg-muted-foreground/65"
+                        }`}
+                      />
+                      {row.value}
+                    </span>
                   </div>
                 ))}
               </div>
+
+              <div className="space-y-2">
+                <div className="home-command">
+                  <p className="text-muted-foreground">$ city agent create .</p>
+                  <p className="mt-1 text-emerald-600 dark:text-emerald-300">
+                    {t("tutorial:mock.terminal.step1.ready")}
+                  </p>
+                </div>
+                <div className="home-command">
+                  <p className="text-muted-foreground">$ city agent start</p>
+                  <p className="mt-1 text-emerald-600 dark:text-emerald-300">
+                    {t("tutorial:mock.terminal.step2.online")}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
       </div>
     </section>

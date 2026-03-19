@@ -9,13 +9,14 @@
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import { requestContext } from "@agent/context/manager/RequestContext.js";
 import {
-  parseChatKeyForDispatch,
   sendActionByChatKey,
   sendTextByChatKey,
 } from "./runtime/ChatkeySend.js";
+import { deleteChatContextById } from "./runtime/ChatContextDelete.js";
 import type { ChatDispatchAction } from "./types/ChatDispatcher.js";
 import type {
   ChatContextSnapshot,
+  ChatDeleteResponse,
   ChatReactResponse,
   ChatSendResponse,
 } from "./types/ChatCommand.js";
@@ -122,8 +123,7 @@ export function resolveChatContextSnapshot(input?: {
 export function mapContextIdToChatKey(contextId?: string): string | undefined {
   const key = String(contextId || "").trim();
   if (!key) return undefined;
-  if (/^ctx_[A-Za-z0-9_-]+$/.test(key)) return key;
-  return parseChatKeyForDispatch(key) ? key : undefined;
+  return key;
 }
 
 /**
@@ -405,5 +405,46 @@ export async function sendChatTextByContextId(params: {
     success: Boolean(result.success),
     contextId,
     ...(result.success ? {} : { error: result.error || "chat send failed" }),
+  };
+}
+
+/**
+ * 按 chatKey/contextId 彻底删除 chat 会话。
+ *
+ * 关键点（中文）
+ * - chatKey 与 contextId 在 chat service 内部等价使用。
+ * - 删除包含：路由映射 + chat 审计目录 + context 目录 + 运行态清理。
+ */
+export async function deleteChatByChatKey(params: {
+  context: ServiceRuntime;
+  chatKey?: string;
+  contextId?: string;
+}): Promise<ChatDeleteResponse> {
+  const chatKey = resolveChatKey({
+    context: params.context,
+    chatKey: params.chatKey,
+    contextId: params.contextId,
+  });
+  const contextId = String(chatKey || "").trim();
+  if (!contextId) {
+    return {
+      success: false,
+      error:
+        "Missing chatKey/contextId. Provide --chat-key or --context-id, or ensure DC_CTX_CHAT_KEY/DC_CTX_CONTEXT_ID is injected.",
+    };
+  }
+
+  const result = await deleteChatContextById({
+    context: params.context,
+    contextId,
+  });
+  return {
+    success: result.success,
+    contextId: result.contextId,
+    deleted: result.deleted,
+    removedMeta: result.removedMeta,
+    removedChatDir: result.removedChatDir,
+    removedContextDir: result.removedContextDir,
+    ...(result.success ? {} : { error: result.error || "chat delete failed" }),
   };
 }

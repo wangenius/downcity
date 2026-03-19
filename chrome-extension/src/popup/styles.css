@@ -2,21 +2,19 @@
  * Popup 极简样式。
  *
  * 关键点（中文）：
- * - 统一黑灰白视觉，减少装饰色干扰。
- * - 页面信息与输入框保持一体，但仅保留轻量引用感。
- * - 状态提示保留圆点语义，不使用大面积状态底色。
+ * - 收敛成单卡片表单，减少视觉分层。
+ * - 仅保留必要状态颜色与操作按钮。
+ * - 适配固定 popup 宽度，保证阅读与填写效率。
  */
 
 :root {
   color-scheme: light;
   font-family: "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif;
-  --bg: #f7f7f7;
+  --bg: #f5f6f8;
   --surface: #ffffff;
-  --line: #e6e6e6;
-  --line-strong: #d6d6d6;
-  --text: #111111;
-  --muted: #666666;
-  --accent: #111111;
+  --line: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
 }
 
 * {
@@ -27,8 +25,8 @@ html,
 body,
 #root {
   margin: 0;
-  width: 400px;
-  min-height: 560px;
+  width: 380px;
+  min-height: 520px;
 }
 
 body {
@@ -37,162 +35,67 @@ body {
 }
 
 .popup-root {
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
+  position: relative;
 }
 
-.header-card,
-.panel-card,
-.share-form {
+.popup-header,
+.popup-form,
+.popup-status {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface);
 }
 
-.header-card {
+.popup-header {
+  padding: 8px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 10px;
 }
 
-.brand-block {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.brand-logo {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  border: 1px solid var(--line-strong);
-  background: #fff;
-}
-
-.header-card h1 {
-  margin: 0;
+.popup-title {
   font-size: 13px;
   font-weight: 700;
+  color: #111111;
 }
 
-.settings-btn {
-  min-width: 52px;
-}
-
-.status-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 28px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 5px 8px;
+.popup-status {
+  min-height: 30px;
+  padding: 7px 10px;
   font-size: 11px;
   font-weight: 600;
-  background: var(--surface);
-  color: #333333;
+  color: #374151;
+  display: flex;
+  align-items: center;
 }
 
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: #7a7a7a;
-  flex: 0 0 auto;
+.popup-status.status-success {
+  color: #166534;
 }
 
-.status-inline.status-success .status-dot {
-  background: #1f8a4c;
+.popup-status.status-error {
+  color: #b91c1c;
 }
 
-.status-inline.status-error .status-dot {
-  background: #b2392e;
+.popup-status.status-loading {
+  color: #9a6700;
 }
 
-.status-inline.status-loading .status-dot {
-  background: #af7f1f;
-}
-
-.share-form,
-.panel-card {
-  padding: 9px;
-}
-
-.share-form {
+.popup-form {
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
-.selector-grid {
+.field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-
-.compose-card {
-  border: 1px solid var(--line);
-  border-left: 3px solid #d2d2d2;
-  border-radius: 8px;
-  background: #fff;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.compose-header {
-  display: block;
-}
-
-.compose-quote-mark {
-  display: none;
-}
-
-.compose-meta {
-  min-width: 0;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: #1f1f1f;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.page-link {
-  display: block;
-  margin-top: 2px;
-  font-size: 11px;
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.compose-label {
-  gap: 4px;
-}
-
-.quick-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.panel-title {
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--muted);
 }
 
 label {
@@ -201,21 +104,15 @@ label {
   gap: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: #2a2a2a;
-}
-
-.field-hint {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--muted);
+  color: #1f2937;
 }
 
 input,
 select,
 textarea {
   width: 100%;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
-  border: 1px solid var(--line-strong);
   background: #fff;
   color: var(--text);
   font-size: 12px;
@@ -224,14 +121,31 @@ textarea {
 
 textarea {
   resize: vertical;
-  min-height: 104px;
+  min-height: 118px;
+  line-height: 1.45;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid #d9d9d9;
+  outline: 2px solid #dbeafe;
+  border-color: #93c5fd;
   outline-offset: 0;
+}
+
+.page-ref {
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 11px;
+  color: #374151;
+  line-height: 1.35;
+  display: grid;
+  gap: 2px;
+}
+
+.page-ref span {
+  color: var(--muted);
 }
 
 .primary-btn,
@@ -245,17 +159,17 @@ textarea:focus {
 
 .primary-btn {
   width: 100%;
-  border: 1px solid #111;
-  padding: 10px;
-  color: #fff;
-  background: #111;
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+  padding: 9px 10px;
 }
 
 .ghost-btn {
-  border: 1px solid var(--line-strong);
-  padding: 8px 10px;
-  color: #2f2f2f;
-  background: #fff;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #1f2937;
+  padding: 6px 10px;
 }
 
 .primary-btn:disabled,
@@ -264,47 +178,23 @@ textarea:focus {
   cursor: not-allowed;
 }
 
-.history-card {
-  padding-top: 8px;
-}
-
-.history-list {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.history-item {
-  border: 1px solid var(--line);
+.popup-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: calc(100vw - 20px);
   border-radius: 8px;
-  background: #fff;
-  padding: 7px;
-}
-
-.history-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.history-badge {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 1px 6px;
-  font-size: 10px;
-  color: #3a3a3a;
-  background: #fff;
-}
-
-.history-text {
-  margin-top: 3px;
+  padding: 8px 10px;
   font-size: 11px;
-  color: #252525;
+  font-weight: 600;
   line-height: 1.35;
-  word-break: break-word;
+  color: #ffffff;
+  background: rgba(17, 24, 39, 0.96);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.24);
+}
+
+.popup-toast[data-type="error"] {
+  background: rgba(185, 28, 28, 0.95);
 }

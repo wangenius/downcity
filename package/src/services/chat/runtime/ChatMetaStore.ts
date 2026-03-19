@@ -11,6 +11,7 @@ import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import {
+  removeChannelContextRouteByContextId,
   readChannelContextRouteByContextId,
   resolveChannelContextIdByTarget,
   resolveOrCreateChannelContextIdByTarget,
@@ -129,4 +130,53 @@ export async function resolveOrCreateContextIdByChatTarget(params: {
       ...(typeof params.threadId === "number" ? { threadId: params.threadId } : {}),
     },
   });
+}
+
+/**
+ * 删除指定 contextId 的 chat meta 映射。
+ *
+ * 关键点（中文）
+ * - 删除后该 contextId 不再可用于 chatKey 路由发送。
+ * - 若同一 target 重新收到入站消息，会创建新的 contextId。
+ */
+export async function removeChatMetaByContextId(params: {
+  context: ServiceRuntime;
+  contextId: string;
+}): Promise<{
+  removed: boolean;
+  route: ChatMetaV1 | null;
+}> {
+  const contextId = normalizeContextId(params.contextId);
+  if (!contextId) {
+    return {
+      removed: false,
+      route: null,
+    };
+  }
+  const result = await removeChannelContextRouteByContextId({
+    context: params.context,
+    contextId,
+  });
+  const route = result.route;
+  if (!route) {
+    return {
+      removed: false,
+      route: null,
+    };
+  }
+  return {
+    removed: result.removed,
+    route: {
+      v: 1,
+      updatedAt: route.updatedAt,
+      contextId: route.contextId,
+      channel: route.channel,
+      chatId: route.chatId,
+      ...(route.targetType ? { targetType: route.targetType } : {}),
+      ...(typeof route.threadId === "number" ? { threadId: route.threadId } : {}),
+      ...(route.messageId ? { messageId: route.messageId } : {}),
+      ...(route.actorId ? { actorId: route.actorId } : {}),
+      ...(route.actorName ? { actorName: route.actorName } : {}),
+    },
+  };
 }

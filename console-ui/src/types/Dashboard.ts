@@ -194,6 +194,24 @@ export interface UiContextSummary {
    */
   contextId: string;
   /**
+   * context 关联的渠道名称（例如 `telegram` / `qq` / `feishu` / `consoleui`）。
+   * - 由后端按 `contextId -> channel` 映射解析后回传。
+   * - 当历史数据缺失映射时可能为空，前端需自行回退解析。
+   */
+  channel?: string;
+  /**
+   * 该 context 对应的渠道侧会话标识（如 telegram chat id / qq openid）。
+   */
+  chatId?: string;
+  /**
+   * 渠道会话类型（例如 `private` / `group` / `channel`）。
+   */
+  chatType?: string;
+  /**
+   * 渠道线程 ID（仅线程型渠道存在，例如 Telegram topic）。
+   */
+  threadId?: number;
+  /**
    * 消息总数。
    */
   messageCount?: number;
@@ -1598,6 +1616,54 @@ export interface UiContextClearResponse {
    * 是否完成清理。
    */
   cleared?: boolean;
+}
+
+/**
+ * chat.delete 返回数据。
+ */
+export interface UiChatDeleteResult {
+  /**
+   * 被删除的 context id。
+   */
+  contextId?: string | null;
+  /**
+   * 是否真正删除了上下文目录。
+   */
+  deleted?: boolean;
+  /**
+   * 是否删除了 channel meta 映射。
+   */
+  removedMeta?: boolean;
+  /**
+   * 是否删除了 chat 审计目录。
+   */
+  removedChatDir?: boolean;
+  /**
+   * 是否删除了 context 目录。
+   */
+  removedContextDir?: boolean;
+}
+
+/**
+ * `/api/services/command` chat.delete 响应。
+ */
+export interface UiChatDeleteResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * chat.delete 返回数据。
+   */
+  data?: UiChatDeleteResult;
+  /**
+   * 错误信息。
+   */
+  error?: string;
+  /**
+   * 附加消息。
+   */
+  message?: string;
 }
 
 /**

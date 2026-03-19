@@ -58,3 +58,8 @@ city voice status
 Notes:
 - Transcription failures do not break the main chat flow.
 - QQ voice attachment delivery depends on gateway `AUDIO_ACTION` capability. If your bot app does not have that permission, audio payload fields may be missing.
+
+## Troubleshooting
+
+- **Looks connected but replies are missing**: runtime now checks heartbeat ACK liveness. When status becomes `heartbeat_timeout`, QQ channel will auto-reconnect. You can also run `city chat reconnect --channel qq`.
+- **Inbound works but outbound reply fails**: reply sending now does one automatic retry on transient auth/network errors and triggers self-healing reconnect. If it still fails, inspect logs for `QQ send failed` details (HTTP status + response body).

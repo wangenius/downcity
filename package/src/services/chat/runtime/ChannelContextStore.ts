@@ -283,3 +283,52 @@ export async function upsertChannelContextRouteByContextId(params: {
   file.updatedAt = Date.now();
   await writeMetaFile({ rootPath, file });
 }
+
+/**
+ * 删除指定 contextId 的渠道路由映射。
+ *
+ * 关键点（中文）
+ * - 会同步清理 `routesByContextId` 与 `contextIdByTargetKey` 双索引。
+ * - 仅影响 chat 路由，不触碰 context/chat 历史文件。
+ */
+export async function removeChannelContextRouteByContextId(params: {
+  context: ServiceRuntime;
+  contextId: string;
+}): Promise<{
+  removed: boolean;
+  route: ChannelContextRouteV1 | null;
+}> {
+  const rootPath = String(params.context.rootPath || "").trim();
+  const contextId = toOptionalTrimmedString(params.contextId);
+  if (!rootPath || !contextId) {
+    return {
+      removed: false,
+      route: null,
+    };
+  }
+
+  const file = await readMetaFile({ rootPath });
+  const route = normalizeRoute(file.routesByContextId[contextId]);
+  if (!route) {
+    return {
+      removed: false,
+      route: null,
+    };
+  }
+
+  delete file.routesByContextId[contextId];
+  for (const [targetKey, mappedContextId] of Object.entries(
+    file.contextIdByTargetKey,
+  )) {
+    if (mappedContextId === contextId) {
+      delete file.contextIdByTargetKey[targetKey];
+    }
+  }
+
+  file.updatedAt = Date.now();
+  await writeMetaFile({ rootPath, file });
+  return {
+    removed: true,
+    route,
+  };
+}

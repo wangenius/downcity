@@ -1,6 +1,6 @@
 ---
 title: city chat
-description: Chat service actions (status/test/reconnect/open/close/configure/send/react/context/history)
+description: Chat service actions (status/test/reconnect/open/close/configure/send/react/context/delete/history)
 ---
 
 # `city chat`
@@ -27,6 +27,7 @@ city chat <subcommand> [options]
 - `send`: send message
 - `react`: react to message (primarily Telegram)
 - `context`: view conversation context snapshot
+- `delete`: fully delete a conversation (route mapping + chat history + context directory)
 - `history`: read chat history
 
 ## `status/test/reconnect/open/close` key options
@@ -60,6 +61,11 @@ city chat <subcommand> [options]
 - `--chat-key <chatKey>`: target conversation
 - `--big`: Telegram large emoji (`is_big`)
 
+## `delete` key options
+
+- `--chat-key <chatKey>`
+- `--context-id <contextId>`
+
 ## `history` key options
 
 - `--chat-key <chatKey>`
@@ -74,6 +80,7 @@ city chat <subcommand> [options]
 city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
+city chat delete --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
 city chat status
 city chat test --channel telegram

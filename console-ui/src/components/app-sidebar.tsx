@@ -594,11 +594,16 @@ export function AppSidebar({
                               {group.items.map((item) => {
                                 const contextId = String(item.contextId || "").trim()
                                 if (!contextId) return null
+                                const chatTitle = String(item.chatTitle || "").trim()
+                                const chatId = String(item.chatId || "").trim()
+                                // 关键点（中文）：QQ 等渠道可能把 openid 回填到 chatTitle，这里做兜底清洗。
+                                const normalizedTitle = chatTitle && (!chatId || chatTitle !== chatId) ? chatTitle : ""
+                                const label = normalizedTitle || chatId || contextId
                                 const isActive = activeView === "contextWorkspace" && selectedContextId === contextId
                                 return (
                                   <SidebarMenuItem key={contextId} className="min-w-0">
                                     <SidebarMenuButton
-                                      tooltip={contextId}
+                                      tooltip={normalizedTitle ? `${normalizedTitle} · ${contextId}` : contextId}
                                       isActive={isActive}
                                       onClick={() => onContextOpen(contextId)}
                                       className={chatItemButtonClass}
@@ -607,7 +612,7 @@ export function AppSidebar({
                                         <span className={chatItemIconClass}>
                                           <MessageSquareTextIcon className="h-2.5 w-2.5" />
                                         </span>
-                                        <span className={chatItemTextClass}>{contextId}</span>
+                                        <span className={chatItemTextClass}>{label}</span>
                                       </span>
                                     </SidebarMenuButton>
                                   </SidebarMenuItem>

@@ -1,4 +1,5 @@
 import { StartGuideSection } from "@/components/sections/StartGuideSection";
+import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
 export function meta() {
@@ -26,6 +27,7 @@ export default function Start() {
       <main>
         <StartGuideSection />
       </main>
+      <Footer />
     </div>
   );
 }

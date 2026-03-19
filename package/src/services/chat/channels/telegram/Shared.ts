@@ -21,6 +21,10 @@ export interface TelegramUpdate {
     chat: {
       id: number;
       type?: "private" | "group" | "supergroup" | "channel";
+      title?: string;
+      username?: string;
+      first_name?: string;
+      last_name?: string;
     };
     document?: {
       file_id: string;
@@ -259,6 +263,31 @@ export function getActorName(from?: {
   const raw = [first, last].filter(Boolean).join(" ").trim();
   if (!raw) return undefined;
   return formatActorName(raw);
+}
+
+/**
+ * 提取 Telegram 会话展示名（群名/频道名/私聊对象名）。
+ *
+ * 关键点（中文）
+ * - 群聊/频道优先取 `chat.title`。
+ * - 私聊优先 username，再回退 first/last name。
+ */
+export function getTelegramChatTitle(chat?: {
+  title?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}): string | undefined {
+  const title = typeof chat?.title === "string" ? chat.title.trim() : "";
+  if (title) return title;
+
+  const username = typeof chat?.username === "string" ? chat.username.trim() : "";
+  if (username) return `@${username.replace(/^@+/, "")}`;
+
+  const first = typeof chat?.first_name === "string" ? chat.first_name.trim() : "";
+  const last = typeof chat?.last_name === "string" ? chat.last_name.trim() : "";
+  const full = formatActorName([first, last].filter(Boolean).join(" ").trim());
+  return full || undefined;
 }
 
 /**

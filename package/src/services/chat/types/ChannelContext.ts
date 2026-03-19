@@ -71,6 +71,14 @@ export type ChannelContextRouteV1 = {
    */
   actorName?: string;
   /**
+   * 会话展示名（群名/频道名/私聊对象名）。
+   *
+   * 说明（中文）
+   * - 由各渠道在入站时 best-effort 提供。
+   * - 用于 Console UI 展示，不参与路由键计算。
+   */
+  chatTitle?: string;
+  /**
    * 路由条目更新时间（毫秒时间戳）。
    */
   updatedAt: number;

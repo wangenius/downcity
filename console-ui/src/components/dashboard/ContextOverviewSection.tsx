@@ -11,6 +11,8 @@ import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { UiChannelAccountItem, UiChatChannelStatus, UiContextSummary } from "@/types/Dashboard"
 import {
   buildContextGroups,
@@ -20,7 +22,46 @@ import {
   type ContextGroupKey,
 } from "@/lib/context-groups"
 import { parseChannelConfigSummary, parseChannelConfigurationDescriptor, parseChannelDetail } from "./context-overview-config"
-import { CheckIcon, ChevronDownIcon, Trash2Icon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, Code2Icon, Trash2Icon } from "lucide-react"
+
+function toOptionalRouteText(input: unknown): string | null {
+  const text = String(input || "").trim()
+  return text || null
+}
+
+function resolveChatDisplayName(item: UiContextSummary): {
+  value: string
+  source: "title" | "chat_id" | "context_id"
+} {
+  const chatTitle = String(item.chatTitle || "").trim()
+  const chatId = String(item.chatId || "").trim()
+  // 关键点（中文）：避免把 `chatTitle===chatId`（常见 openid）误判成可读标题。
+  if (chatTitle && (!chatId || chatTitle !== chatId)) return { value: chatTitle, source: "title" }
+  if (chatId) return { value: chatId, source: "chat_id" }
+  const contextId = String(item.contextId || "").trim() || "unknown"
+  return { value: contextId, source: "context_id" }
+}
+
+function buildContextRouteJson(item: UiContextSummary): string {
+  const display = resolveChatDisplayName(item)
+  return JSON.stringify(
+    {
+      contextId: toOptionalRouteText(item.contextId),
+      channel: toOptionalRouteText(resolveContextChannel(item)),
+      chatId: toOptionalRouteText(item.chatId),
+      chatTitle: toOptionalRouteText(item.chatTitle),
+      chatDisplayName: toOptionalRouteText(display.value),
+      chatDisplayNameSource: display.source,
+      chatType: toOptionalRouteText(item.chatType),
+      threadId:
+        typeof item.threadId === "number" && Number.isFinite(item.threadId)
+          ? item.threadId
+          : null,
+    },
+    null,
+    2,
+  )
+}
 
 export interface ContextOverviewSectionProps {
   /**
@@ -83,6 +124,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
     onChatAction,
     onChatConfigure,
   } = props
+  const confirm = useConfirmDialog()
 
   const [search, setSearch] = React.useState("")
   const [filter, setFilter] = React.useState<"all" | ContextGroupKey>("all")
@@ -267,7 +309,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索 contextId / role / message"
+            placeholder="搜索 contextId / chatId / chatTitle / role / message"
           />
           <div className="flex flex-wrap items-center gap-1.5">
             {(["all", "chat", "api", "other"] as const).map((key) => (
@@ -309,10 +351,36 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                   const group = resolveContextGroup(item)
                   const isSelected = item.contextId === selectedContextId
                   const isDeleting = String(deletingContextId || "").trim() === item.contextId
+                  const display = resolveChatDisplayName(item)
+                  const contextLabel = display.value
+                  const routeJson = buildContextRouteJson(item)
+                  const chatId = String(item.chatId || "").trim()
+                  const chatType = String(item.chatType || "").trim()
                   return (
                     <tr key={item.contextId} className={`border-b border-border/50 ${isSelected ? "bg-muted/25" : ""}`}>
-                      <td className="max-w-[22rem] truncate px-0 py-2 font-mono text-xs" title={item.contextId}>
-                        {item.contextId}
+                      <td
+                        className="max-w-[22rem] px-0 py-2"
+                        title={`${contextLabel}\n${item.contextId}`}
+                      >
+                        <div className="truncate text-xs">{contextLabel}</div>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground/85">
+                          {item.contextId}
+                        </div>
+                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground/90">
+                          <span className="rounded bg-muted px-1.5 py-0.5 uppercase tracking-[0.08em]">
+                            {display.source}
+                          </span>
+                          {chatType ? (
+                            <span className="rounded bg-muted px-1.5 py-0.5 uppercase tracking-[0.08em]">
+                              {chatType}
+                            </span>
+                          ) : null}
+                          {chatId ? (
+                            <span className="max-w-[10rem] truncate font-mono" title={chatId}>
+                              {chatId}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-2 py-2 text-xs uppercase text-muted-foreground">{group}</td>
                       <td className="px-2 py-2 text-sm text-muted-foreground">{item.messageCount || 0}</td>
@@ -322,6 +390,24 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                       </td>
                       <td className="px-2 py-2 text-right">
                         <div className="inline-flex items-center gap-1.5">
+                          <Popover>
+                            <PopoverTrigger
+                              render={
+                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" />
+                              }
+                            >
+                              <Code2Icon className="size-3.5" />
+                              <span>Route</span>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-[min(92vw,34rem)] overflow-hidden p-0">
+                              <div className="border-b border-border/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                context route json
+                              </div>
+                              <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/85">
+                                {routeJson}
+                              </pre>
+                            </PopoverContent>
+                          </Popover>
                           <Button size="sm" variant={isSelected ? "secondary" : "outline"} onClick={() => onOpenContext(item.contextId)}>
                             {isSelected ? "已打开" : "打开"}
                           </Button>
@@ -329,10 +415,14 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                             size="sm"
                             variant="destructive"
                             disabled={Boolean(deletingContextId)}
-                            onClick={() => {
-                              const confirmed = window.confirm(
-                                `确认彻底删除 context「${item.contextId}」吗？该操作不可恢复。`,
-                              )
+                            onClick={async () => {
+                              const confirmed = await confirm({
+                                title: "删除 Context",
+                                description: `确认彻底删除 context「${item.contextId}」吗？该操作不可恢复。`,
+                                confirmText: "删除",
+                                cancelText: "取消",
+                                confirmVariant: "destructive",
+                              })
                               if (!confirmed) return
                               onDeleteContext(item.contextId)
                             }}

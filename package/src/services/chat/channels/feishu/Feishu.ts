@@ -79,8 +79,15 @@ export class FeishuBot extends BaseChatChannel {
   private processedMessages: Set<string> = new Set(); // 用于消息去重
   private messageCleanupInterval: NodeJS.Timeout | null = null;
   private dedupeDir: string;
-  private knownChats: Map<string, { chatId: string; chatType: string }> =
+  private knownChats: Map<
+    string,
+    { chatId: string; chatType: string; chatTitle?: string }
+  > =
     new Map();
+  private chatTitleByChatId: Map<string, string> = new Map();
+  private senderNameBySenderKey: Map<string, string> = new Map();
+  private appAccessToken: string = "";
+  private appAccessTokenExpiresAtMs: number = 0;
 
   constructor(
     context: ServiceRuntime,
@@ -184,19 +191,248 @@ export class FeishuBot extends BaseChatChannel {
     return chatType !== "p2p";
   }
 
-  private extractSenderId(data: FeishuMessageEvent): string | undefined {
-    const sid =
-      data?.sender?.sender_id?.user_id ||
-      data?.sender?.sender_id?.open_id ||
-      data?.sender?.sender_id?.union_id ||
-      data?.sender?.sender_id?.chat_id;
-    return sid ? String(sid) : undefined;
+  private extractSenderIdentity(data: FeishuMessageEvent): {
+    senderId?: string;
+    idType?: "open_id" | "user_id" | "union_id";
+  } {
+    const openId = String(data?.sender?.sender_id?.open_id || "").trim();
+    if (openId) {
+      return { senderId: openId, idType: "open_id" };
+    }
+
+    const userId = String(data?.sender?.sender_id?.user_id || "").trim();
+    if (userId) {
+      return { senderId: userId, idType: "user_id" };
+    }
+
+    const unionId = String(data?.sender?.sender_id?.union_id || "").trim();
+    if (unionId) {
+      return { senderId: unionId, idType: "union_id" };
+    }
+
+    return {};
+  }
+
+  /**
+   * 解析飞书发送者姓名。
+   *
+   * 关键点（中文）
+   * - 消息事件本身不直接给 `name`，需要再查「获取单个用户信息」接口。
+   * - 依赖通讯录权限与数据范围，因此这里只做 best-effort。
+   */
+  private async resolveSenderName(params: {
+    senderId?: string;
+    idType?: "open_id" | "user_id" | "union_id";
+  }): Promise<string | undefined> {
+    const senderId = String(params.senderId || "").trim();
+    const idType = params.idType;
+    if (!senderId || !idType) return undefined;
+
+    const cacheKey = `${idType}:${senderId}`;
+    const cached = this.senderNameBySenderKey.get(cacheKey);
+    if (cached) return cached;
+
+    const token = await this.getAppAccessToken();
+    if (!token) return undefined;
+
+    const domain = (this.domain || "https://open.feishu.cn").replace(/\/+$/, "");
+    try {
+      const response = await fetch(
+        `${domain}/open-apis/contact/v3/users/${encodeURIComponent(senderId)}?user_id_type=${encodeURIComponent(idType)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (!response.ok) {
+        this.logger.debug("Feishu 用户信息查询失败", {
+          senderId,
+          idType,
+          httpStatus: response.status,
+        });
+        return undefined;
+      }
+
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            code?: number;
+            msg?: string;
+            data?: {
+              user?: {
+                name?: string;
+                nickname?: string;
+                en_name?: string;
+              };
+            };
+          }
+        | null;
+      if (payload?.code !== 0) {
+        this.logger.debug("Feishu 用户信息查询返回错误", {
+          senderId,
+          idType,
+          code: payload?.code,
+          msg: payload?.msg,
+        });
+        return undefined;
+      }
+
+      const user = payload?.data?.user;
+      const name = [user?.nickname, user?.name, user?.en_name]
+        .map((value) => String(value || "").trim())
+        .find(Boolean);
+      if (!name) return undefined;
+
+      this.senderNameBySenderKey.set(cacheKey, name);
+      return name;
+    } catch {
+      return undefined;
+    }
   }
 
   private parseTextContent(content: string): { text: string } {
     const parsed = JSON.parse(content) as FeishuTextContentPayload;
     const text = typeof parsed?.text === "string" ? parsed.text : "";
     return { text };
+  }
+
+  /**
+   * 获取 Feishu tenant_access_token（带本地缓存）。
+   *
+   * 关键点（中文）
+   * - `im/v1/chats` 与 `contact/v3/users` 要求使用 tenant/user token。
+   * - 失败时返回 undefined，不阻塞主消息流程。
+   */
+  private async getAppAccessToken(): Promise<string | undefined> {
+    const now = Date.now();
+    if (
+      this.appAccessToken &&
+      this.appAccessTokenExpiresAtMs > now + 10_000
+    ) {
+      return this.appAccessToken;
+    }
+
+    const domain = (this.domain || "https://open.feishu.cn").replace(/\/+$/, "");
+    try {
+      const response = await fetch(
+        `${domain}/open-apis/auth/v3/tenant_access_token/internal`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            app_id: this.appId,
+            app_secret: this.appSecret,
+          }),
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            code?: number;
+            tenant_access_token?: string;
+            expire?: number;
+            msg?: string;
+          }
+        | null;
+      const token =
+        typeof payload?.tenant_access_token === "string"
+          ? payload.tenant_access_token.trim()
+          : "";
+      if (!response.ok || payload?.code !== 0 || !token) {
+        this.logger.debug("Feishu tenant_access_token 获取失败", {
+          httpStatus: response.status,
+          code: payload?.code,
+          msg: payload?.msg,
+        });
+        return undefined;
+      }
+
+      const expireSeconds =
+        typeof payload?.expire === "number" && Number.isFinite(payload.expire)
+          ? payload.expire
+          : 7200;
+      this.appAccessToken = token;
+      this.appAccessTokenExpiresAtMs = Date.now() + Math.max(60, expireSeconds) * 1000;
+      return token;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * 解析飞书会话展示名（群名/会话名）。
+   *
+   * 关键点（中文）
+   * - 基于 `chat_id` 查询会话详情，结果缓存到内存。
+   * - 解析失败不影响主链路，仅缺失展示名。
+   */
+  private async resolveChatTitle(chatId: string): Promise<string | undefined> {
+    const normalizedChatId = String(chatId || "").trim();
+    if (!normalizedChatId) return undefined;
+
+    const cached = this.chatTitleByChatId.get(normalizedChatId);
+    if (cached) return cached;
+
+    const token = await this.getAppAccessToken();
+    if (!token) return undefined;
+
+    const domain = (this.domain || "https://open.feishu.cn").replace(/\/+$/, "");
+    try {
+      const response = await fetch(
+        `${domain}/open-apis/im/v1/chats/${encodeURIComponent(normalizedChatId)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (!response.ok) {
+        this.logger.debug("Feishu 群信息查询失败", {
+          chatId: normalizedChatId,
+          httpStatus: response.status,
+        });
+        return undefined;
+      }
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            code?: number;
+            msg?: string;
+            data?: {
+              name?: string;
+              chat_name?: string;
+              chat?: {
+                name?: string;
+                chat_name?: string;
+              };
+            };
+          }
+        | null;
+      if (typeof payload?.code === "number" && payload.code !== 0) {
+        this.logger.debug("Feishu 群信息查询返回错误", {
+          chatId: normalizedChatId,
+          code: payload.code,
+          msg: payload.msg,
+        });
+        return undefined;
+      }
+      const titleCandidates = [
+        payload?.data?.name,
+        payload?.data?.chat_name,
+        payload?.data?.chat?.name,
+        payload?.data?.chat?.chat_name,
+      ];
+      const title = titleCandidates
+        .map((value) => String(value || "").trim())
+        .find(Boolean);
+      if (!title) return undefined;
+      this.chatTitleByChatId.set(normalizedChatId, title);
+      return title;
+    } catch {
+      return undefined;
+    }
   }
 
   private stripAtMentions(text: string): string {
@@ -391,7 +627,8 @@ export class FeishuBot extends BaseChatChannel {
       } = data;
 
       const threadId = this.buildChatKey(chat_id);
-      const actorId = this.extractSenderId(data);
+      const senderIdentity = this.extractSenderIdentity(data);
+      const actorId = senderIdentity.senderId;
 
       // Message deduplication: check if this message has been processed
       if (this.processedMessages.has(message_id)) {
@@ -440,9 +677,18 @@ export class FeishuBot extends BaseChatChannel {
       }
 
       this.logger.info(`Received Feishu message: ${userMessage}`);
+      const actorName = await this.resolveSenderName(senderIdentity);
+      const resolvedChatTitle = await this.resolveChatTitle(chat_id);
+      const chatTitle =
+        resolvedChatTitle ||
+        (chat_type === "p2p" ? actorName : undefined);
 
       // Record this chat as a known notification target
-      this.knownChats.set(threadId, { chatId: chat_id, chatType: chat_type });
+      this.knownChats.set(threadId, {
+        chatId: chat_id,
+        chatType: chat_type,
+        ...(chatTitle ? { chatTitle } : {}),
+      });
 
       // Check if it's a command
       await this.runInChat(threadId, async () => {
@@ -460,6 +706,8 @@ export class FeishuBot extends BaseChatChannel {
             message_id,
             userMessage,
             actorId,
+            actorName,
+            chatTitle,
           );
         }
       });
@@ -526,6 +774,8 @@ Available commands:
     messageId: string,
     instructions: string,
     actorId?: string,
+    actorName?: string,
+    chatTitle?: string,
   ): Promise<void> {
     try {
       const { chatKey } = await this.enqueueMessage({
@@ -534,9 +784,15 @@ Available commands:
         chatType,
         messageId,
         userId: actorId,
+        username: actorName,
+        chatTitle,
       });
 
-      this.knownChats.set(chatKey, { chatId, chatType });
+      this.knownChats.set(chatKey, {
+        chatId,
+        chatType,
+        ...(chatTitle ? { chatTitle } : {}),
+      });
     } catch (error) {
       await this.sendErrorMessage(
         chatId,

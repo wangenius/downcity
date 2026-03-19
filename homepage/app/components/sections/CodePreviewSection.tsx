@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IconFileText, IconSettings } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const AGENT_MD_CONTENT = `# Personality
 You are a Market Researcher.
@@ -34,116 +35,74 @@ const SHIP_JSON_CONTENT = `{
   }
 }`;
 
+/**
+ * 代码预览模块。
+ * 说明：
+ * 1. 不再堆叠说明卡和代码卡，而是用一个配置面板完成认知闭环。
+ * 2. PROFILE.md 与 ship.json 分别代表“行为规则”和“执行权限”。
+ */
 export const CodePreviewSection: FC = () => {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"agent" | "ship">("agent");
-
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = activeTab === "agent" ? AGENT_MD_CONTENT : SHIP_JSON_CONTENT;
 
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="flex flex-col md:flex-row gap-12 items-center">
-          {/* Text Side */}
-          <div className="flex-1 space-y-6">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
-              {t("features:features.repo.title")}
-            </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              {t("features:features.repo.description")}
+    <section className={marketingTheme.page}>
+      <div className="grid gap-6 lg:grid-cols-[0.88fr_1.12fr] lg:items-start">
+        <div className="space-y-4">
+          <span className={marketingTheme.badge}>{isZh ? "Config Surface" : "Config Surface"}</span>
+          <h2 className={marketingTheme.sectionTitle}>{t("features:features.repo.title")}</h2>
+          <p className={marketingTheme.lead}>{t("features:features.repo.description")}</p>
+          <div className={`${marketingTheme.rail} space-y-3`}>
+            <p className={marketingTheme.body}>
+              {isZh
+                ? "Agent 的可靠性不是来自一个神秘平台，而是来自仓库里可见、可审计、可接管的配置结构。"
+                : "Agent reliability does not come from a hidden platform. It comes from visible, auditable, and takeover-friendly configuration living in the repo."}
             </p>
-            <ul className="space-y-4 pt-4">
-              <li
-                className={cn(
-                  "flex gap-3 p-2 rounded-lg transition-colors cursor-pointer",
-                  activeTab === "agent" ? "bg-primary/5" : "hover:bg-muted",
-                )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
                 onClick={() => setActiveTab("agent")}
-              >
-                <div className="mt-1 bg-primary/10 p-1 rounded h-fit">
-                  <IconFileText className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold">PROFILE.md</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {t("features:codePreview.agentMdDesc")}
-                  </p>
-                </div>
-              </li>
-              <li
                 className={cn(
-                  "flex gap-3 p-2 rounded-lg transition-colors cursor-pointer",
-                  activeTab === "ship" ? "bg-primary/5" : "hover:bg-muted",
+                  marketingTheme.chip,
+                  activeTab === "agent" ? "border-foreground/14 bg-card/92 text-foreground" : "",
                 )}
-                onClick={() => setActiveTab("ship")}
               >
-                <div className="mt-1 bg-primary/10 p-1 rounded h-fit">
-                  <IconSettings className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold">ship.json</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {t("features:codePreview.shipJsonDesc")}
-                  </p>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Code Side */}
-          <div className="flex-1 w-full max-w-lg">
-            <div className="rounded-xl overflow-hidden border shadow-2xl bg-[#1e1e1e]">
-              <div className="flex bg-[#252526] text-gray-400 text-xs font-sans border-b border-black/20">
-                <div
-                  className={cn(
-                    "px-4 py-3 flex items-center gap-2 cursor-pointer transition-colors border-t-2",
-                    activeTab === "agent"
-                      ? "bg-[#1e1e1e] border-primary text-white"
-                      : "border-transparent hover:bg-[#2d2d2d]",
-                  )}
-                  onClick={() => setActiveTab("agent")}
-                >
-                  <IconFileText size={14} className="text-blue-400" />
-                  PROFILE.md
-                </div>
-                <div
-                  className={cn(
-                    "px-4 py-3 flex items-center gap-2 cursor-pointer transition-colors border-t-2",
-                    activeTab === "ship"
-                      ? "bg-[#1e1e1e] border-yellow-500 text-white"
-                      : "border-transparent hover:bg-[#2d2d2d]",
-                  )}
-                  onClick={() => setActiveTab("ship")}
-                >
-                  <IconSettings size={14} className="text-yellow-400" />
-                  ship.json
-                </div>
-              </div>
-              <div className="p-4 overflow-x-auto h-[300px]">
-                <pre className="font-mono text-sm leading-6">
-                  {content.split("\n").map((line, i) => (
-                    <div key={i} className="table-row">
-                      <span className="table-cell select-none text-gray-700 text-right pr-4 w-8">
-                        {i + 1}
-                      </span>
-                      <span className="table-cell">
-                        <span
-                          className={
-                            line.startsWith("#")
-                              ? "text-blue-400 font-bold"
-                              : line.startsWith("-")
-                                ? "text-green-400"
-                                : "text-gray-300"
-                          }
-                        >
-                          {line}
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </pre>
-              </div>
+                <IconFileText className="size-3.5" />
+                PROFILE.md
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("ship")}
+                className={cn(
+                  marketingTheme.chip,
+                  activeTab === "ship" ? "border-foreground/14 bg-card/92 text-foreground" : "",
+                )}
+              >
+                <IconSettings className="size-3.5" />
+                ship.json
+              </button>
             </div>
+          </div>
+        </div>
+
+        <div className={`${marketingTheme.panel} overflow-hidden`}>
+          <div className="flex items-center justify-between border-b border-border/68 px-5 py-4 md:px-6">
+            <div>
+              <p className={marketingTheme.eyebrow}>{activeTab === "agent" ? "Behavior Layer" : "Execution Layer"}</p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {activeTab === "agent"
+                  ? t("features:codePreview.agentMdDesc")
+                  : t("features:codePreview.shipJsonDesc")}
+              </p>
+            </div>
+            <span className={marketingTheme.chip}>{activeTab === "agent" ? "PROFILE.md" : "ship.json"}</span>
+          </div>
+          <div className="p-4 md:p-5">
+            <pre className={marketingTheme.code}>
+              <code>{content}</code>
+            </pre>
           </div>
         </div>
       </div>

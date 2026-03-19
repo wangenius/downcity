@@ -1,16 +1,8 @@
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  IconHelp,
-  IconMap2,
-  IconMessageCircle,
-} from "@tabler/icons-react";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { IconArrowUpRight, IconHelp, IconMap2, IconMessageCircle } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const communityLinks = [
   {
@@ -32,46 +24,54 @@ const communityLinks = [
     href: "https://github.com/wangenius/downcity/discussions",
     external: true,
   },
-];
+] as const;
 
+/**
+ * 社区首页模块。
+ * 说明：
+ * 1. 用单列入口把 FAQ、Roadmap 与 Discussions 组织成同一条路径。
+ * 2. 视觉上与资源页保持同构，减少页面切换的断裂感。
+ */
 export const CommunitySection: FC = () => {
   const { i18n, t } = useTranslation();
-  const basePath = i18n.language === "zh" ? "/zh/community" : "/community";
+  const basePath = i18n.language.toLowerCase().startsWith("zh") ? "/zh/community" : "/community";
 
   return (
-    <section className="py-12 md:py-24 lg:py-32">
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
-              {t("community:title")}
-            </h2>
-            <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              {t("community:subtitle")}
-            </p>
-          </div>
-        </div>
-        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-3">
-          {communityLinks.map((item, i) => (
-            <a
-              key={i}
-              href={item.external ? item.href : `${basePath}${item.path}`}
-              target={item.external ? "_blank" : undefined}
-              rel={item.external ? "noopener noreferrer" : undefined}
-              className="block group"
-            >
-              <Card className="h-full transition-colors hover:bg-muted/50">
-                <CardHeader>
-                  <item.icon className="h-10 w-10 mb-2 text-primary group-hover:scale-110 transition-transform duration-200" />
-                  <CardTitle>{t(item.titleKey as any)}</CardTitle>
-                  <CardDescription>
-                    {t(item.descriptionKey as any)}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </a>
-          ))}
-        </div>
+    <section className={marketingTheme.pageNarrow}>
+      <header className="space-y-4">
+        <span className={marketingTheme.badge}>Community</span>
+        <h1 className={marketingTheme.pageTitle}>{t("community:title")}</h1>
+        <p className={marketingTheme.lead}>{t("community:subtitle")}</p>
+      </header>
+
+      <div className={`${marketingTheme.panel} mt-8 overflow-hidden`}>
+        {communityLinks.map((item, index) => (
+          <a
+            key={item.titleKey}
+            href={item.external ? item.href : `${basePath}${item.path}`}
+            target={item.external ? "_blank" : undefined}
+            rel={item.external ? "noopener noreferrer" : undefined}
+            className={cn(
+              "grid gap-4 px-5 py-5 transition-colors hover:bg-background/74 md:grid-cols-[3rem_minmax(0,1fr)_auto] md:items-center md:px-7",
+              index !== communityLinks.length - 1 && "border-b border-border/68",
+            )}
+          >
+            <div className="flex items-center gap-2 md:block">
+              <p className={marketingTheme.eyebrow}>{String(index + 1).padStart(2, "0")}</p>
+              <item.icon className="size-4 text-muted-foreground md:mt-3" />
+            </div>
+            <div>
+              <h2 className="font-serif text-[1.35rem] font-semibold tracking-[-0.035em] text-foreground">
+                {t(item.titleKey)}
+              </h2>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">{t(item.descriptionKey)}</p>
+            </div>
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+              {i18n.language.toLowerCase().startsWith("zh") ? "进入" : "Open"}
+              <IconArrowUpRight className="size-4" />
+            </span>
+          </a>
+        ))}
       </div>
     </section>
   );

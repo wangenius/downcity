@@ -13,6 +13,11 @@ description: Chat service responsibilities and channel integrations
 - Resolve `contextId/chatKey`, persist chat history and metadata
 - Dispatch outbound replies/actions to channels
 
+## Chat Display Name (`chatTitle`)
+
+- Chat service now stores a best-effort chat display name (`chatTitle`) in context metadata, so Console UI can show readable names (group/channel/DM peer) instead of only IDs.
+- Telegram usually provides this directly. Feishu and QQ are best-effort and may be empty depending on event payloads and permissions.
+
 ## Channel integrations
 
 - [Telegram](/en/docs/services/chat/telegram)

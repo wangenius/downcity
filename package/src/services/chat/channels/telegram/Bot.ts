@@ -13,6 +13,7 @@ import {
 } from "./Handlers.js";
 import {
   getActorName,
+  getTelegramChatTitle,
   type TelegramAttachmentType,
   type TelegramConfig,
   type TelegramUpdate,
@@ -131,6 +132,7 @@ export class TelegramBot extends BaseChatChannel {
                 : undefined;
             const chatKey = this.buildChatKey(chatId, messageThreadId);
             const from = message.from;
+            const chatTitle = getTelegramChatTitle(message.chat);
             const fromIsBot =
               from?.is_bot === true ||
               (!!this.botId &&
@@ -171,6 +173,7 @@ export class TelegramBot extends BaseChatChannel {
                 pendingReason: params.reason,
                 updateId: update.update_id,
                 chatType: message.chat.type,
+                chatTitle,
                 messageThreadId,
                 username: from?.username,
                 fromIsBot,
@@ -629,6 +632,7 @@ export class TelegramBot extends BaseChatChannel {
         from.username.toLowerCase() === this.botUsername.toLowerCase());
     const actorId = from?.id ? String(from.id) : undefined;
     const actorName = getActorName(from);
+    const chatTitle = getTelegramChatTitle(message.chat);
     const isGroup = this.isGroupChat(message.chat.type);
     const chatKey = this.buildChatKey(chatId, messageThreadId);
 
@@ -647,6 +651,7 @@ export class TelegramBot extends BaseChatChannel {
           messageThreadId,
           username: from?.username,
           actorName,
+          chatTitle,
           reason: params.reason,
           ...(params.kind ? { kind: params.kind } : {}),
           ...(fromIsBot ? { fromIsBot: true } : {}),
@@ -700,6 +705,7 @@ export class TelegramBot extends BaseChatChannel {
           text: this.buildAuditText({ rawText, hasIncomingAttachment, message }),
           meta: {
             chatType: message.chat.type,
+            chatTitle,
             messageThreadId,
             username: from?.username,
             kind: "command",
@@ -765,6 +771,7 @@ export class TelegramBot extends BaseChatChannel {
           chatId,
           instructions,
           from,
+          chatTitle,
           messageId,
           message.chat.type,
           messageThreadId,
@@ -902,6 +909,7 @@ export class TelegramBot extends BaseChatChannel {
     chatId: string,
     instructions: string,
     from?: TelegramUser,
+    chatTitle?: string,
     messageId?: string,
     chatType?: NonNullable<TelegramUpdate["message"]>["chat"]["type"],
     messageThreadId?: number,
@@ -917,6 +925,7 @@ export class TelegramBot extends BaseChatChannel {
         messageThreadId,
         userId,
         username,
+        chatTitle,
       });
     } catch (error) {
       await this.sendMessage(chatId, `❌ Execution error: ${String(error)}`, {

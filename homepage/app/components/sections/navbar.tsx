@@ -1,328 +1,178 @@
 "use client";
 
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
-import {
-  IconBrandGithub,
-  IconBrandX,
-  IconChevronDown,
-  IconLanguage,
-  IconMenu2,
-} from "@tabler/icons-react";
+import { IconBrandGithub, IconBrandX, IconMenu2 } from "@tabler/icons-react";
 import { setLang } from "@/lib/locales";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 /**
- * 全站统一导航模块。
+ * 全站导航模块。
  * 说明：
- * 1. 宽度与首页主内容对齐（max-w-6xl）。
- * 2. 采用 console-ui 风格的细边框与低对比背景。
- * 3. 提供白皮书独立入口，保证首页与长文内容分层清晰。
+ * 1. Header 保持克制，但恢复完整主导航，确保关键信息架构可见。
+ * 2. 页眉分隔线使用更轻的 hairline，避免出现过重的底边框感。
  */
 export function Navbar() {
   const { i18n, t } = useTranslation();
-  const navigate = useNavigate();
   const location = useLocation();
-  const isZh = i18n.language === "zh";
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
 
   const homePath = isZh ? "/zh" : "/";
   const startPath = isZh ? "/zh/start" : "/start";
-  const whitepaperPath = isZh ? "/zh/whitepaper" : "/whitepaper";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
-  const featuresPath = isZh ? "/zh/features" : "/features";
   const productBasePath = isZh ? "/zh/product" : "/product";
+  const communityBasePath = isZh ? "/zh/community" : "/community";
+  const whitepaperPath = isZh ? "/zh/whitepaper" : "/whitepaper";
+  const featuresPath = isZh ? "/zh/features" : "/features";
   const resourcesBasePath = isZh ? "/zh/resources" : "/resources";
-  const resourcesPath = `${resourcesBasePath}/skills`;
-  const communityPath = isZh ? "/zh/community" : "/community";
-  const isHomeActive = location.pathname === homePath;
-  const isStartActive = location.pathname === startPath;
-  const isWhitepaperActive = location.pathname === whitepaperPath;
+  const twitterUrl = "https://x.com/downcity_ai";
+  const githubUrl = "https://github.com/wangenius/downcity";
 
-  const navItemClass = cn(
-    buttonVariants({ variant: "ghost", size: "sm" }),
-    "h-9 rounded-md px-2.5 text-sm text-muted-foreground hover:bg-muted/65 hover:text-foreground",
-  );
+  const desktopLinks = [
+    { label: t("nav.product"), path: productBasePath },
+    { label: t("nav.quickStart"), path: startPath },
+    { label: t("nav.docs"), path: docsPath },
+    { label: t("nav.whitepaper"), path: whitepaperPath },
+    { label: t("nav.features"), path: featuresPath },
+    { label: t("nav.resources"), path: resourcesBasePath },
+    { label: t("nav.community"), path: communityBasePath },
+  ] as const;
 
-  const iconButtonClass = cn(
-    buttonVariants({ variant: "ghost", size: "icon" }),
-    "size-9 rounded-md text-muted-foreground hover:bg-muted/65 hover:text-foreground",
-  );
-  const homeItemClass = cn(
-    navItemClass,
-    isHomeActive ? "border border-border bg-background text-foreground" : undefined,
-  );
-  const quickStartClass = cn(
-    navItemClass,
-    isStartActive ? "border border-border bg-background text-foreground" : undefined,
-  );
-  const whitepaperClass = cn(
-    navItemClass,
-    isWhitepaperActive ? "border border-border bg-background text-foreground" : undefined,
-  );
-  const dropdownContentClass = "w-52 p-1.5 border-border/80 bg-card";
-  const dropdownItemClass = "min-h-10 px-3 py-2 text-sm";
+  const compactLinks = [
+    { label: t("nav.product"), path: productBasePath },
+    { label: t("nav.quickStart"), path: startPath },
+    { label: t("nav.docs"), path: docsPath },
+  ] as const;
+
+  const menuLinks = [
+    ...desktopLinks,
+  ] as const;
+
+  const dropdownContentClass = `${marketingTheme.panelSoft} min-w-72 p-1.5`;
+  const dropdownItemClass =
+    "min-h-10 rounded-none px-3 py-2 text-sm text-[#111113] transition-colors focus:bg-[#F5F5F6] focus:text-[#111113]";
+
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/80 bg-background/95 backdrop-blur">
-      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <div className="flex h-14 items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-1">
-            <nav className="hidden items-center gap-0.5 sm:flex">
-              <Link to={homePath} className={homeItemClass}>
-                {t("nav.home")}
-              </Link>
-              <Link to={startPath} className={quickStartClass}>
-                {t("nav.quickStart")}
-              </Link>
-              <Link to={whitepaperPath} className={whitepaperClass}>
-                {t("nav.whitepaper")}
-              </Link>
-              <Link to={featuresPath} className={navItemClass}>
-                {t("nav.features")}
-              </Link>
-              <DropdownMenu>
-                <DropdownMenuTrigger className={cn(navItemClass, "gap-1")}>
-                  {t("nav.product")}
-                  <IconChevronDown className="size-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className={dropdownContentClass}>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(productBasePath)}
-                  >
-                    {t("nav.productOverview")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${productBasePath}/console-ui`)}
-                  >
-                    {t("nav.productConsoleUi")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${productBasePath}/chrome-extension`)}
-                  >
-                    {t("nav.productChromeExtension")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${productBasePath}/sdk`)}
-                  >
-                    {t("nav.productSdk")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${productBasePath}/ui-sdk`)}
-                  >
-                    {t("nav.productUiSdk")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Link to={docsPath} className={navItemClass}>
-                {t("nav.docs")}
-              </Link>
+    <header className="sticky top-0 z-50 bg-[#FCFCFD]/90 backdrop-blur-sm">
+      <div className="mx-auto flex min-h-[60px] max-w-7xl items-center justify-between gap-4 px-3 md:px-5">
+        <Link to={homePath} className="flex min-w-0 items-center gap-3">
+          <img src="/icon-192.png" alt="Downcity" className="block h-7 w-7 shrink-0 object-contain opacity-95" />
+          <span
+            className="truncate text-[1rem] leading-none tracking-[-0.045em] text-[#111113]"
+            style={{ fontFamily: "Fraunces, serif", fontWeight: 900 }}
+          >
+            Downcity
+          </span>
+        </Link>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger className={cn(navItemClass, "gap-1")}>
-                  {t("nav.resources")}
-                  <IconChevronDown className="size-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className={dropdownContentClass}>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${resourcesBasePath}/skills`)}
-                  >
-                    {t("nav.skills")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${resourcesBasePath}/marketplace`)}
-                  >
-                    {t("nav.agentMarketplace")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${resourcesBasePath}/hosting`)}
-                  >
-                    {t("nav.hosting")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger className={cn(navItemClass, "gap-1")}>
-                  {t("nav.community")}
-                  <IconChevronDown className="size-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className={dropdownContentClass}>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(communityPath)}
-                  >
-                    {t("nav.joinCommunity")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${communityPath}/faq`)}
-                  >
-                    {t("nav.faq")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => navigate(`${communityPath}/roadmap`)}
-                  >
-                    {t("nav.roadmap")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className={dropdownItemClass}
-                    onClick={() => window.open("https://t.me/+iozIHyXr-BJhNjE1", "_blank")}
-                  >
-                    {t("nav.discussions")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </nav>
-          </div>
-
-          <div className="inline-flex shrink-0 items-center gap-0.5">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label={isZh ? "菜单" : "Menu"}
-                title={isZh ? "菜单" : "Menu"}
-                className={cn(iconButtonClass, "sm:hidden")}
-              >
-                <IconMenu2 className="size-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className={cn(dropdownContentClass, "sm:hidden")}
-              >
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(homePath)}
-                >
-                  {t("nav.home")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(startPath)}
-                >
-                  {t("nav.quickStart")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(whitepaperPath)}
-                >
-                  {t("nav.whitepaper")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(featuresPath)}
-                >
-                  {t("nav.features")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(productBasePath)}
-                >
-                  {t("nav.product")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(`${productBasePath}/console-ui`)}
-                >
-                  {t("nav.productConsoleUi")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(`${productBasePath}/chrome-extension`)}
-                >
-                  {t("nav.productChromeExtension")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(`${productBasePath}/sdk`)}
-                >
-                  {t("nav.productSdk")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(`${productBasePath}/ui-sdk`)}
-                >
-                  {t("nav.productUiSdk")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(docsPath)}
-                >
-                  {t("nav.docs")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(resourcesPath)}
-                >
-                  {t("nav.resources")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className={dropdownItemClass}
-                  onClick={() => navigate(communityPath)}
-                >
-                  {t("nav.community")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <a
-              href="https://x.com/downcity"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="X"
-              title="X"
-              className={iconButtonClass}
+        <nav className="hidden items-center gap-4 xl:flex">
+          {desktopLinks.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`inline-flex items-center py-1 text-[0.61rem] uppercase tracking-[0.22em] transition-colors ${
+                isActive(item.path) ? "text-[#111113]" : "text-[#6B7280] hover:text-[#111113]"
+              }`}
             >
-              <IconBrandX className="size-4" />
-            </a>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
-            <a
-              href="https://github.com/wangenius/downcity"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="GitHub"
-              title="GitHub"
-              className={iconButtonClass}
+        <nav className="hidden items-center gap-5 lg:flex xl:hidden">
+          {compactLinks.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`inline-flex items-center py-1 text-[0.61rem] uppercase tracking-[0.22em] transition-colors ${
+                isActive(item.path) ? "text-[#111113]" : "text-[#6B7280] hover:text-[#111113]"
+              }`}
             >
-              <IconBrandGithub className="size-4" />
-            </a>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label={isZh ? "切换语言" : "Switch language"}
-                title={isZh ? "切换语言" : "Switch language"}
-                className={iconButtonClass}
-              >
-                <IconLanguage className="size-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-32 p-1.5">
-                <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang("en")}>
-                  EN
+        <div className="hidden items-center gap-5 lg:flex">
+          <a
+            href={twitterUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Twitter"
+            title="Twitter"
+            className="inline-flex items-center gap-1.5 py-1 text-[0.61rem] uppercase tracking-[0.22em] text-[#6B7280] transition-colors hover:text-[#111113]"
+          >
+            <IconBrandX className="size-3.5" />
+            Twitter
+          </a>
+          <a
+            href={githubUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="GitHub"
+            title="GitHub"
+            className="inline-flex items-center gap-1.5 py-1 text-[0.61rem] uppercase tracking-[0.22em] text-[#6B7280] transition-colors hover:text-[#111113]"
+          >
+            <IconBrandGithub className="size-3.5" />
+            GitHub
+          </a>
+          <button
+            type="button"
+            onClick={() => setLang(isZh ? "en" : "zh")}
+            className="inline-flex items-center py-1 text-[0.61rem] uppercase tracking-[0.22em] text-[#6B7280] transition-colors hover:text-[#111113]"
+          >
+            {isZh ? "EN" : "中文"}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-end lg:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={isZh ? "菜单" : "Menu"}
+              title={isZh ? "菜单" : "Menu"}
+              className="inline-flex h-9 w-9 items-center justify-center text-[#6B7280] transition-colors hover:text-[#111113]"
+            >
+              <IconMenu2 className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className={dropdownContentClass}>
+              <DropdownMenuLabel className="px-3 py-2 text-[0.58rem] uppercase tracking-[0.24em] text-[#6B7280]">
+                Downcity
+              </DropdownMenuLabel>
+              {menuLinks.map((item) => (
+                <DropdownMenuItem key={item.path} className={dropdownItemClass} asChild>
+                  <Link to={item.path}>{item.label}</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang("zh")}>
-                  中文
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className={dropdownItemClass} asChild>
+                <a href={twitterUrl} target="_blank" rel="noreferrer">
+                  X / Twitter
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem className={dropdownItemClass} asChild>
+                <a href={githubUrl} target="_blank" rel="noreferrer">
+                  GitHub
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang(isZh ? "en" : "zh")}>
+                {isZh ? "Switch to English" : "切换到中文"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+      <div className="mx-auto h-px max-w-7xl bg-black/6" />
     </header>
   );
 }

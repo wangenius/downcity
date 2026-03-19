@@ -1,6 +1,7 @@
 import { Code, MessageSquare, Play } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 /**
  * 首页三步上手模块（高级时间线版）。
@@ -11,6 +12,10 @@ import { useTranslation } from "react-i18next";
 export function TutorialSection() {
   const { i18n, t } = useTranslation();
   const docsPath = i18n.language === "zh" ? "/zh/docs" : "/en/docs";
+  const panelClass = marketingTheme.panel;
+  const kickerClass = marketingTheme.badge;
+  const commandClass =
+    "block overflow-x-auto rounded-md border border-border/80 bg-background px-3 py-2 font-mono text-[0.78rem] leading-6";
 
   const steps = [
     {
@@ -43,16 +48,16 @@ export function TutorialSection() {
   ] as const;
 
   return (
-    <section className="home-divider py-16 md:py-20">
+    <section className="border-t border-border/85 py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <header className="home-reveal mb-10 flex flex-col gap-3 md:mb-12">
-          <span className="home-kicker">{t("tutorial:title")}</span>
+        <header className="mb-10 flex flex-col gap-3 md:mb-12">
+          <span className={kickerClass}>{t("tutorial:title")}</span>
           <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
             {t("tutorial:description")}
           </p>
         </header>
 
-        <div className="home-panel home-reveal home-reveal-delay-1 rounded-xl p-4 md:p-6">
+        <div className={`rounded-xl p-4 md:p-6 ${panelClass}`}>
           <ol className="space-y-4">
             {steps.map((step, index) => (
               <li
@@ -69,7 +74,7 @@ export function TutorialSection() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
                   <p className="text-sm leading-7 text-muted-foreground">{step.description}</p>
-                  <code className="home-command block overflow-x-auto">{step.command}</code>
+                  <code className={commandClass}>{step.command}</code>
                 </div>
 
                 {/* 关键反馈面板：每一步都给出可观察结果，减少试错成本。 */}
@@ -97,7 +102,7 @@ export function TutorialSection() {
           </ol>
         </div>
 
-        <div className="home-reveal home-reveal-delay-2 mt-8">
+        <div className="mt-8">
           <Link
             to={docsPath}
             className="inline-flex h-10 items-center justify-center rounded-lg border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"

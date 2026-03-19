@@ -83,5 +83,11 @@ export function meta() {
 }
 
 export default function Home() {
-  return <HomeRebuildSection />;
+  return (
+    <div className="min-h-screen">
+      <main>
+        <HomeRebuildSection />
+      </main>
+    </div>
+  );
 }

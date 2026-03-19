@@ -1250,7 +1250,7 @@ export class QQBot extends BaseChatChannel {
       typeof data.id === "string" ? data.id.trim() : String(data.id || "").trim();
     if (!messageId) return;
 
-    const actor = this.extractAuthorIdentity(data.author);
+    const actor = this.extractAuthorIdentity(data.author, data);
     const chatId = [
       actor.userId,
       data.user_openid,
@@ -1311,8 +1311,13 @@ export class QQBot extends BaseChatChannel {
       return;
     }
 
-    const actor = params.actor || this.extractAuthorIdentity(params.data.author);
+    const actor = params.actor || this.extractAuthorIdentity(params.data.author, params.data);
     const chatType = params.chatType;
+    const chatTitle = this.resolveInboundChatTitle({
+      chatType,
+      data: params.data,
+      actorName: actor.username,
+    });
     const isGroup = chatType === "group";
     const chatKey = this.getChatKey({ chatId, chatType });
     const rawContent = String(params.data.content || "");
@@ -1335,6 +1340,7 @@ export class QQBot extends BaseChatChannel {
         meta: {
           chatType,
           username: actor.username,
+          chatTitle,
           eventType,
           reason: opts.reason,
           ...(opts.kind ? { kind: opts.kind } : {}),
@@ -1393,7 +1399,14 @@ export class QQBot extends BaseChatChannel {
       return;
     }
 
-    await this.executeAndReply(chatId, chatType, messageId, instructions, actor);
+    await this.executeAndReply(
+      chatId,
+      chatType,
+      messageId,
+      instructions,
+      actor,
+      chatTitle,
+    );
   }
 
   /**
@@ -1414,7 +1427,12 @@ export class QQBot extends BaseChatChannel {
 
     const userMessage = this.extractTextContent(String(content || ""));
     const incomingAttachments = this.extractIncomingAttachments(data);
-    const actor = this.extractAuthorIdentity(author);
+    const actor = this.extractAuthorIdentity(author, data);
+    const chatTitle = this.resolveInboundChatTitle({
+      chatType,
+      data,
+      actorName: actor.username,
+    });
 
     if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
       this.logger.debug("忽略机器人自身消息（channel）", {
@@ -1444,8 +1462,92 @@ export class QQBot extends BaseChatChannel {
         messageId,
         instructions,
         actor,
+        chatTitle,
       );
     }
+  }
+
+  /**
+   * 解析入站会话展示名（群名/频道名/私聊对象名）。
+   *
+   * 关键点（中文）
+   * - QQ 事件字段存在平台差异：这里只做 best-effort 提取。
+   * - 失败时返回 undefined，不影响主流程。
+   */
+  private resolveInboundChatTitle(params: {
+    chatType: string;
+    data: QQMessageData;
+    actorName?: string;
+  }): string | undefined {
+    const chatType = String(params.chatType || "").trim().toLowerCase();
+    const raw = params.data as unknown as JsonObject;
+    const groupObj =
+      raw.group && typeof raw.group === "object" && !Array.isArray(raw.group)
+        ? (raw.group as JsonObject)
+        : null;
+    const channelObj =
+      raw.channel && typeof raw.channel === "object" && !Array.isArray(raw.channel)
+        ? (raw.channel as JsonObject)
+        : null;
+    const guildObj =
+      raw.guild && typeof raw.guild === "object" && !Array.isArray(raw.guild)
+        ? (raw.guild as JsonObject)
+        : null;
+
+    const candidates = [
+      chatType === "c2c" ? this.normalizeActorDisplayName(params.actorName) : "",
+      raw.group_name,
+      raw.groupName,
+      raw.group_title,
+      raw.groupTitle,
+      raw.channel_name,
+      raw.channelName,
+      raw.guild_name,
+      raw.guildName,
+      raw.chat_name,
+      raw.chatName,
+      raw.title,
+      raw.name,
+      groupObj?.name,
+      groupObj?.title,
+      channelObj?.name,
+      channelObj?.title,
+      guildObj?.name,
+      guildObj?.title,
+    ];
+    for (const candidate of candidates) {
+      const value = this.normalizeActorDisplayName(candidate);
+      if (value) return value;
+    }
+    return undefined;
+  }
+
+  /**
+   * 识别“看起来像平台标识符”的字符串（如 openid）。
+   *
+   * 关键点（中文）
+   * - 私聊场景里最常见的是长串十六进制 openid，不应当显示成 chat title。
+   * - 规则保持保守：仅过滤明显“长且机器化”的值，避免误伤正常昵称。
+   */
+  private isLikelyOpaqueIdentifier(input: string): boolean {
+    const value = String(input || "").trim();
+    if (!value) return false;
+    if (/^[0-9A-F]{24,}$/i.test(value)) return true;
+    if (/^[0-9]{18,}$/.test(value)) return true;
+    return false;
+  }
+
+  /**
+   * 规范化“可展示昵称”。
+   *
+   * 关键点（中文）
+   * - 过滤空字符串与明显 ID，避免把 `chatTitle` 写成 openid。
+   */
+  private normalizeActorDisplayName(input: unknown): string | undefined {
+    const value = String(input || "").trim();
+    if (!value) return undefined;
+    if (this.isLikelyOpaqueIdentifier(value)) return undefined;
+    return value;
   }
 
   /**
@@ -1483,10 +1585,40 @@ export class QQBot extends BaseChatChannel {
    * Notes:
    * - For C2C events, `userId` also serves as `chatId` (DM target).
    */
-  private extractAuthorIdentity(author: QQAuthor | undefined): {
+  private extractAuthorIdentity(
+    author: QQAuthor | undefined,
+    data?: QQMessageData,
+  ): {
     userId?: string;
     username?: string;
   } {
+    const rawAuthor =
+      author && typeof author === "object" && !Array.isArray(author)
+        ? (author as unknown as Record<string, unknown>)
+        : {};
+    const rawAuthorUser =
+      rawAuthor.user &&
+      typeof rawAuthor.user === "object" &&
+      !Array.isArray(rawAuthor.user)
+        ? (rawAuthor.user as Record<string, unknown>)
+        : {};
+    const rawData =
+      data && typeof data === "object" && !Array.isArray(data)
+        ? (data as unknown as Record<string, unknown>)
+        : {};
+    const rawSender =
+      rawData.sender &&
+      typeof rawData.sender === "object" &&
+      !Array.isArray(rawData.sender)
+        ? (rawData.sender as Record<string, unknown>)
+        : {};
+    const rawMember =
+      rawData.member &&
+      typeof rawData.member === "object" &&
+      !Array.isArray(rawData.member)
+        ? (rawData.member as Record<string, unknown>)
+        : {};
+
     const userIdCandidates = [
       author?.member_openid,
       author?.user_openid,
@@ -1502,6 +1634,18 @@ export class QQBot extends BaseChatChannel {
       author?.user?.user_id,
       author?.user?.openid,
       author?.user?.user_openid,
+      rawData.user_openid,
+      rawData.openid,
+      rawData.author_id,
+      rawData.user_id,
+      rawSender.user_openid,
+      rawSender.openid,
+      rawSender.id,
+      rawSender.user_id,
+      rawMember.user_openid,
+      rawMember.openid,
+      rawMember.id,
+      rawMember.user_id,
     ];
     const usernameCandidates = [
       author?.nickname,
@@ -1510,18 +1654,45 @@ export class QQBot extends BaseChatChannel {
       author?.user?.username,
       author?.user?.nickname,
       author?.user?.name,
+      rawAuthor.nick,
+      rawAuthor.display_name,
+      rawAuthor.displayName,
+      rawAuthor.member_nick,
+      rawAuthor.memberNick,
+      rawAuthor.card,
+      rawAuthor.remark,
+      rawAuthorUser.nick,
+      rawAuthorUser.display_name,
+      rawAuthorUser.displayName,
+      rawData.nickname,
+      rawData.username,
+      rawData.nick,
+      rawData.user_name,
+      rawData.userName,
+      rawData.display_name,
+      rawData.displayName,
+      rawSender.nickname,
+      rawSender.username,
+      rawSender.nick,
+      rawSender.user_name,
+      rawSender.userName,
+      rawSender.card,
+      rawMember.nickname,
+      rawMember.username,
+      rawMember.nick,
+      rawMember.card,
     ];
 
     const userId = userIdCandidates
       .map((v) => (typeof v === "string" ? v.trim() : ""))
       .find(Boolean);
     const username = usernameCandidates
-      .map((v) => (typeof v === "string" ? v.trim() : ""))
+      .map((v) => this.normalizeActorDisplayName(v))
       .find(Boolean);
 
     return {
       ...(userId ? { userId } : {}),
-      ...(username ? { username } : userId ? { username: userId } : {}),
+      ...(username ? { username } : {}),
     };
   }
 
@@ -1690,6 +1861,7 @@ export class QQBot extends BaseChatChannel {
     messageId: string,
     instructions: string,
     actor?: { userId?: string; username?: string },
+    chatTitle?: string,
   ): Promise<void> {
     try {
       await this.enqueueMessage({
@@ -1699,6 +1871,7 @@ export class QQBot extends BaseChatChannel {
         messageId,
         ...(actor?.userId ? { userId: actor.userId } : {}),
         ...(actor?.username ? { username: actor.username } : {}),
+        ...(chatTitle ? { chatTitle } : {}),
       });
     } catch (error) {
       await this.sendMessage(

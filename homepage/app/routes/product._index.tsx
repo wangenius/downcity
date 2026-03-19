@@ -1,82 +1,86 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { IconArrowUpRight } from "@tabler/icons-react";
+import { marketingTheme } from "@/lib/marketing-theme";
+import { cn } from "@/lib/utils";
 
 const PAGE = {
   zh: {
     badge: "Product",
-    title: "Downcity 产品矩阵",
-    subtitle: "不是一个单点工具，而是一组可组合的 Agent 产品：从 Console 到浏览器，再到 SDK 与 UI SDK。",
+    title: "Downcity 产品不是一个点状工具，而是一套可组合的运行界面。",
+    subtitle:
+      "同一套 runtime 逻辑，被分发到浏览器控制面、网页入口、SDK 与 UI 组件层。你面对的是不同使用场景，不是互相割裂的产品线。",
     cards: [
       {
         id: "console-ui",
         title: "Console UI",
-        desc: "在浏览器里统一管理 Agent、上下文、任务、模型和渠道状态。",
+        desc: "浏览器里的总控面板，用来观察多 Agent 的上下文、任务和状态。",
         source: "console-ui/",
       },
       {
         id: "chrome-extension",
         title: "Chrome Extension",
-        desc: "在任意网页一键把内容投递给 Agent，减少复制粘贴和切换成本。",
+        desc: "把网页内容直接投递给 Agent，缩短内容采集与执行之间的距离。",
         source: "chrome-extension/",
       },
       {
         id: "sdk",
         title: "Downcity SDK",
-        desc: "把 Downcity Runtime 能力接入你的产品、流程和业务系统。",
+        desc: "把 runtime 能力接入你自己的产品流程、服务接口与业务系统。",
         source: "package/",
       },
       {
         id: "ui-sdk",
         title: "Downcity UI SDK",
-        desc: "复用 Downcity 的 UI 组件思路，快速搭建你的 Agent 工作台。",
+        desc: "复用 Downcity 的界面语言与工作台结构，快速搭建自己的 Agent 前台。",
         source: "docs/console-ui-react-v2.mdx",
       },
     ],
     factsTitle: "产品事实",
     facts: [
-      "Console UI：独立前端包，目录为 console-ui/。",
-      "Chrome Extension：Manifest V3 插件，目录为 chrome-extension/。",
-      "Downcity SDK：核心 runtime 与命令入口位于 package/。",
-      "Downcity UI SDK：文档中以 console-ui-kit 作为组件层命名与抽离方向。",
+      "Console UI 是独立前端包，目录为 console-ui/。",
+      "Chrome Extension 基于 Manifest V3，目录为 chrome-extension/。",
+      "SDK 的核心 runtime 与命令入口位于 package/。",
+      "UI SDK 当前以 console-ui-kit 方向沉淀组件能力。",
     ],
   },
   en: {
     badge: "Product",
-    title: "Downcity Product Matrix",
+    title: "Downcity is not one isolated tool. It is a composed operating surface.",
     subtitle:
-      "Not a single tool, but a set of composable products for agents: Console, browser entry, SDK, and UI SDK.",
+      "The same runtime logic is distributed across browser control room, web entry, SDK, and UI layer. You are choosing operating contexts, not disconnected products.",
     cards: [
       {
         id: "console-ui",
         title: "Console UI",
-        desc: "Manage agents, contexts, tasks, models, and channels from one browser workspace.",
+        desc: "A browser control room for observing multi-agent context, task flow, and state.",
         source: "console-ui/",
       },
       {
         id: "chrome-extension",
         title: "Chrome Extension",
-        desc: "Send web content to your agent directly from any page with minimal context switching.",
+        desc: "Send web content straight into an agent so collection and execution stay close together.",
         source: "chrome-extension/",
       },
       {
         id: "sdk",
         title: "Downcity SDK",
-        desc: "Integrate Downcity runtime capabilities into your own product flows.",
+        desc: "Embed runtime capabilities into your own product flow, service layer, and business system.",
         source: "package/",
       },
       {
         id: "ui-sdk",
         title: "Downcity UI SDK",
-        desc: "Reuse Downcity UI patterns to build your own agent-facing workspace faster.",
+        desc: "Reuse Downcity interface patterns to build your own agent-facing workspace faster.",
         source: "docs/console-ui-react-v2.mdx",
       },
     ],
     factsTitle: "Product Facts",
     facts: [
-      "Console UI is a dedicated frontend package under console-ui/.",
-      "Chrome Extension is a Manifest V3 extension under chrome-extension/.",
-      "Downcity SDK core runtime and command entry are in package/.",
-      "Downcity UI SDK direction is documented as console-ui-kit extraction.",
+      "Console UI is a dedicated frontend package in console-ui/.",
+      "Chrome Extension is a Manifest V3 extension in chrome-extension/.",
+      "The core runtime and command entry live in package/.",
+      "UI SDK direction is currently documented as console-ui-kit extraction.",
     ],
   },
 } as const;
@@ -84,8 +88,8 @@ const PAGE = {
 /**
  * Product 概览页。
  * 说明：
- * 1. Product 仅展示真实产品线，不再使用抽象分组。
- * 2. 文案基于仓库目录与文档事实，避免空泛描述。
+ * 1. 不做营销式堆砌，而是直接表达产品矩阵里的运行位置。
+ * 2. 每个入口保留真实目录事实，帮助用户快速建立理解。
  */
 export default function ProductOverviewPage() {
   const { i18n } = useTranslation();
@@ -94,40 +98,50 @@ export default function ProductOverviewPage() {
   const basePath = isZh ? "/zh/product" : "/product";
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-6 md:py-20">
-      <section>
-        <span className="inline-flex items-center rounded-full border border-border/80 px-3 py-1 text-xs font-mono uppercase tracking-[0.12em] text-muted-foreground">
-          {content.badge}
-        </span>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">{content.title}</h1>
-        <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
-          {content.subtitle}
-        </p>
-      </section>
+    <div className={marketingTheme.pageNarrow}>
+      <header className="grid gap-6 lg:grid-cols-[1fr_0.88fr] lg:items-end">
+        <div className="space-y-4">
+          <span className={marketingTheme.badge}>{content.badge}</span>
+          <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
+        </div>
+        <div className={`${marketingTheme.rail}`}>
+          <p className={marketingTheme.lead}>{content.subtitle}</p>
+        </div>
+      </header>
 
-      <section className="mt-10 grid gap-4 md:grid-cols-2">
-        {content.cards.map((card) => (
+      <section className={`${marketingTheme.panel} mt-8 overflow-hidden`}>
+        {content.cards.map((card, index) => (
           <Link
             key={card.id}
             to={`${basePath}/${card.id}`}
-            className="rounded-xl border border-border/80 bg-background p-5 transition-colors hover:bg-muted/40 md:p-6"
+            className={cn(
+              "grid gap-4 px-5 py-5 transition-colors hover:bg-background/74 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:px-7",
+              index !== content.cards.length - 1 && "border-b border-border/68",
+            )}
           >
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              {card.source}
-            </p>
-            <h2 className="mt-2 text-lg font-semibold">{card.title}</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.desc}</p>
+            <div>
+              <p className={marketingTheme.eyebrow}>{card.source}</p>
+              <h2 className="mt-2 font-serif text-[1.45rem] font-semibold tracking-[-0.04em] text-foreground">
+                {card.title}
+              </h2>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.desc}</p>
+            </div>
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+              {isZh ? "查看" : "Open"}
+              <IconArrowUpRight className="size-4" />
+            </span>
           </Link>
         ))}
       </section>
 
-      <section className="mt-10 rounded-xl border border-border/80 p-5 md:p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          {content.factsTitle}
-        </h3>
-        <ul className="mt-3 space-y-2 text-sm leading-7 text-foreground/90">
+      <section className={`${marketingTheme.panel} mt-8 p-6 md:p-7`}>
+        <p className={marketingTheme.eyebrow}>{content.factsTitle}</p>
+        <ul className="mt-4 space-y-2.5 text-sm leading-7 text-foreground/90">
           {content.facts.map((fact) => (
-            <li key={fact}>• {fact}</li>
+            <li key={fact} className="flex items-start gap-2">
+              <span className={marketingTheme.listDot} />
+              <span>{fact}</span>
+            </li>
           ))}
         </ul>
       </section>

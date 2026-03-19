@@ -8,6 +8,7 @@ import {
   IconMessageReport,
   IconPuzzle,
 } from "@tabler/icons-react";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 /**
  * 首页平台能力模块（高级信息板版）。
@@ -20,6 +21,8 @@ export function PlatformsSection() {
   const lang = i18n.language;
   const skillsPath = lang === "zh" ? "/zh/resources/skills" : "/resources/skills";
   const discussionsUrl = "https://github.com/wangenius/downcity/discussions";
+  const panelClass = marketingTheme.panel;
+  const kickerClass = marketingTheme.badge;
 
   const platforms = [
     {
@@ -46,16 +49,16 @@ export function PlatformsSection() {
   ] as const;
 
   return (
-    <section className="home-divider py-16 md:py-20">
+    <section className="border-t border-border/85 py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <header className="home-reveal space-y-3">
-          <span className="home-kicker">{t("platforms:title")}</span>
+        <header className="space-y-3">
+          <span className={kickerClass}>{t("platforms:title")}</span>
           <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
             {t("platforms:subtitle")}
           </p>
         </header>
 
-        <div className="home-panel home-reveal home-reveal-delay-1 mt-7 overflow-hidden rounded-xl">
+        <div className={`mt-7 overflow-hidden rounded-xl ${panelClass}`}>
           {platforms.map((platform, index) => (
             <article
               key={platform.id}
@@ -81,7 +84,7 @@ export function PlatformsSection() {
 
         {/* 关键动作区：把“扩展方式”前置为并行决策，缩短用户路径。 */}
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <article className="home-panel home-reveal home-reveal-delay-2 rounded-xl p-5">
+          <article className={`rounded-xl p-5 ${panelClass}`}>
             <div className="mb-3 inline-flex rounded-md border border-border bg-muted/45 p-2 text-muted-foreground">
               <IconMessageReport className="size-4" />
             </div>
@@ -100,7 +103,7 @@ export function PlatformsSection() {
             </Link>
           </article>
 
-          <article className="home-panel home-reveal home-reveal-delay-3 rounded-xl p-5">
+          <article className={`rounded-xl p-5 ${panelClass}`}>
             <div className="mb-3 inline-flex rounded-md border border-border bg-muted/45 p-2 text-muted-foreground">
               <IconPuzzle className="size-4" />
             </div>

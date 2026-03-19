@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 export function meta() {
   const title = `${product.productName} — Examples`;
@@ -25,7 +26,7 @@ const examples = [
     featureKeys: ["cron", "webhooks", "approvals", "logs", "multiChannel"],
     tech: ["Hono", "node-cron", "Telegram Bot"],
   },
-];
+] as const;
 
 export default function Examples() {
   const { t } = useTranslation();
@@ -35,95 +36,92 @@ export default function Examples() {
       : "https://github.com/wangenius/downcity";
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">
-      <div className="w-full">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            {t("nav.examples")}
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            {t("resources:examplesPage.subtitle")}
-          </p>
-        </div>
+    <div className={marketingTheme.pageNarrow}>
+      <header className="space-y-3">
+        <span className={marketingTheme.badge}>
+          Examples
+        </span>
+        <h1 className={marketingTheme.pageTitle}>{t("nav.examples")}</h1>
+        <p className={marketingTheme.lead}>
+          {t("resources:examplesPage.subtitle")}
+        </p>
+      </header>
 
-        <div className="space-y-8">
-          {examples.map((example) => (
-            <div
-              key={example.id}
-              className="border rounded-lg p-6 hover:shadow-lg transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold mb-2">
-                    {t(`resources:examplesPage.examplesList.${example.id}.title`)}
-                  </h2>
-                  <p className="text-muted-foreground mb-4">
-                    {t(
-                      `resources:examplesPage.examplesList.${example.id}.description`,
-                    )}
-                  </p>
-                </div>
-                <a
-                  href={`${repoUrl}/tree/main/examples/${example.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
-                >
-                  {t("resources:examplesPage.viewCode")}
-                </a>
+      <section className="mt-8 space-y-4">
+        {examples.map((example, index) => (
+          <article
+            key={example.id}
+            className={`${marketingTheme.panel} p-5 md:p-6`}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className={marketingTheme.eyebrow}>
+                  Example {String(index + 1).padStart(2, "0")}
+                </p>
+                <h2 className="mt-2 font-serif text-[1.5rem] font-semibold tracking-[-0.03em] text-foreground">
+                  {t(`resources:examplesPage.examplesList.${example.id}.title`)}
+                </h2>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  {t(`resources:examplesPage.examplesList.${example.id}.description`)}
+                </p>
               </div>
+              <a
+                href={`${repoUrl}/tree/main/examples/${example.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={marketingTheme.secondaryButton}
+              >
+                {t("resources:examplesPage.viewCode")}
+              </a>
+            </div>
 
-              <div className="mb-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            <div className="mt-4 grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+              <div>
+                <h3 className="text-[0.7rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   {t("resources:examplesPage.featuresHeading")}
                 </h3>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <ul className="mt-2 space-y-1.5">
                   {example.featureKeys.map((featureKey) => (
-                    <li key={featureKey} className="flex items-center gap-2">
-                      <span className="text-primary">✓</span>
-                      <span className="text-sm">
-                        {t(
-                          `resources:examplesPage.examplesList.${example.id}.features.${featureKey}`,
-                        )}
-                      </span>
+                    <li key={featureKey} className="flex items-start gap-2 text-sm leading-7 text-muted-foreground">
+                      <span className="mt-2 inline-flex size-1.5 rounded-full bg-foreground/50" />
+                      {t(`resources:examplesPage.examplesList.${example.id}.features.${featureKey}`)}
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {example.tech.map((tech) => (
-                  <span
-                    key={tech}
-                    className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium"
-                  >
-                    {tech}
-                  </span>
-                ))}
+              <div className={`${marketingTheme.panelSoft} px-3 py-3`}>
+                <h3 className={marketingTheme.eyebrow}>Tech</h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {example.tech.map((tech) => (
+                    <span
+                      key={tech}
+                      className="inline-flex items-center rounded-full border border-border/80 bg-muted/45 px-2 py-1 text-[0.7rem] text-muted-foreground"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+          </article>
+        ))}
+      </section>
 
-        <div className="mt-12 p-6 bg-muted/50 rounded-lg border border-dashed">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">
-              {t("resources:examplesPage.contribute.title")}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {t("resources:examplesPage.contribute.description")}
-            </p>
-            <a
-              href={repoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
-            >
-              {t("resources:examplesPage.contribute.button")}
-            </a>
-          </div>
-        </div>
-      </div>
+      <section className={`${marketingTheme.panel} mt-8 p-6`}>
+        <h3 className="text-lg font-semibold">{t("resources:examplesPage.contribute.title")}</h3>
+        <p className="mt-2 text-sm leading-7 text-muted-foreground">
+          {t("resources:examplesPage.contribute.description")}
+        </p>
+        <a
+          href={repoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`mt-4 ${marketingTheme.primaryButton}`}
+        >
+          {t("resources:examplesPage.contribute.button")}
+        </a>
+      </section>
     </div>
   );
 }

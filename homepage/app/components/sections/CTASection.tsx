@@ -2,6 +2,7 @@ import type { FC } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { IconArrowRight } from "@tabler/icons-react";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const GITHUB_URL = "https://github.com/wangenius/downcity";
 
@@ -17,49 +18,30 @@ export const CTASection: FC = () => {
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
 
   return (
-    <section className="home-divider py-16 md:py-20">
+    <section className="border-t border-border/68 py-14 md:py-16">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <div className="home-panel home-reveal rounded-xl">
-          <div className="grid gap-6 p-6 md:grid-cols-[1.15fr_0.85fr] md:p-8">
-            <div className="space-y-3 md:pr-8 md:border-r md:border-border/70">
-              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                Launch Decision
-              </p>
-              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-                {t("common:ctaSection.titlePrefix")}{" "}
-                <span className="italic text-foreground/72">
-                  {t("common:ctaSection.titleItalic")}
-                </span>
-              </h2>
-              <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
-                {t("hero:subtitle")}
-              </p>
-            </div>
+        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <div className="space-y-3">
+            <p className={marketingTheme.eyebrow}>Launch Decision</p>
+            <h2 className="font-serif text-[1.9rem] font-semibold tracking-[-0.04em] text-foreground md:text-[2.25rem]">
+              {t("common:ctaSection.titlePrefix")}{" "}
+              <span className="italic text-foreground/72">{t("common:ctaSection.titleItalic")}</span>
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              {isZh
+                ? "先在一个真实仓库里跑通最小闭环，再按需加更多技能与平台。"
+                : "Close one real repo loop first, then add more skills and platforms only when needed."}
+            </p>
+          </div>
 
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  to={GITHUB_URL}
-                  target="_blank"
-                  className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  {t("common:getStarted")}
-                  <IconArrowRight className="size-4" />
-                </Link>
-                <Link
-                  to={docsPath}
-                  className="inline-flex h-10 items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/65"
-                >
-                  {t("common:readDocs")}
-                </Link>
-              </div>
-
-              <p className="text-sm leading-7 text-muted-foreground">
-                {isZh
-                  ? "建议先用现有仓库跑通最小闭环，再按需接入更多技能与平台。"
-                  : "Start with one real repo loop, then layer more skills and channels as needed."}
-              </p>
-            </div>
+          <div className="flex flex-wrap gap-3">
+            <Link to={GITHUB_URL} target="_blank" className={marketingTheme.secondaryButton}>
+              {t("common:getStarted")}
+              <IconArrowRight className="size-4" />
+            </Link>
+            <Link to={docsPath} className={marketingTheme.primaryButton}>
+              {t("common:readDocs")}
+            </Link>
           </div>
         </div>
       </div>

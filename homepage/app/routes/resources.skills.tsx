@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 export function meta() {
   const title = `${product.productName} — Skills`;
@@ -16,17 +17,14 @@ const skillDirectories = [
   {
     id: "skillsSh",
     url: "https://skills.sh",
-    icon: "🧩",
   },
   {
     id: "skillsmp",
     url: "https://skillsmp.com",
-    icon: "🛒",
   },
   {
     id: "smitherySkills",
     url: "https://smithery.ai/skills",
-    icon: "🧪",
   },
 ] as const;
 
@@ -34,57 +32,41 @@ export default function Skills() {
   const { t } = useTranslation();
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">
-      <div className="w-full">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            {t("nav.skills")}
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            {t("resources:skillsPage.subtitle")}
-          </p>
-        </div>
+    <div className={marketingTheme.pageNarrow}>
+      <header className="space-y-3">
+        <span className={marketingTheme.badge}>
+          Resources
+        </span>
+        <h1 className={marketingTheme.pageTitle}>{t("nav.skills")}</h1>
+        <p className={marketingTheme.lead}>
+          {t("resources:skillsPage.subtitle")}
+        </p>
+      </header>
 
-        <div className="w-full space-y-8">
-          <section>
-            <h2 className="text-lg font-semibold mb-3">
-              {t("resources:skillsPage.sections.skills")}
-            </h2>
-            <ul className="border rounded-lg divide-y overflow-hidden bg-background">
-              {skillDirectories.map((item) => (
-                <li key={item.id}>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl leading-none mt-0.5">
-                        {item.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold">
-                          {t(`resources:skillsPage.links.${item.id}.title`)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {t(
-                            `resources:skillsPage.links.${item.id}.description`,
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2 truncate">
-                          {item.url}
-                        </div>
-                      </div>
-                    </div>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-        </div>
-      </div>
+      <section className={`${marketingTheme.panel} mt-8 p-6`}>
+        <h2 className="text-lg font-semibold">{t("resources:skillsPage.sections.skills")}</h2>
+        <ul className="mt-4 space-y-3">
+          {skillDirectories.map((item, index) => (
+            <li key={item.id}>
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`block ${marketingTheme.panelSoft} px-4 py-3 transition-colors hover:bg-background/90`}
+              >
+                <p className={marketingTheme.eyebrow}>
+                  Directory {index + 1}
+                </p>
+                <p className="mt-1 text-sm font-semibold">{t(`resources:skillsPage.links.${item.id}.title`)}</p>
+                <p className="mt-1 text-sm leading-7 text-muted-foreground">
+                  {t(`resources:skillsPage.links.${item.id}.description`)}
+                </p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">{item.url}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

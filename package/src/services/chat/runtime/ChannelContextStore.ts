@@ -73,6 +73,9 @@ function normalizeRoute(
     ...(toOptionalTrimmedString(input.actorName)
       ? { actorName: toOptionalTrimmedString(input.actorName) }
       : {}),
+    ...(toOptionalTrimmedString(input.chatTitle)
+      ? { chatTitle: toOptionalTrimmedString(input.chatTitle) }
+      : {}),
     updatedAt:
       typeof input.updatedAt === "number" && Number.isFinite(input.updatedAt)
         ? input.updatedAt
@@ -241,6 +244,7 @@ export async function upsertChannelContextRouteByContextId(params: {
   messageId?: string;
   actorId?: string;
   actorName?: string;
+  chatTitle?: string;
 }): Promise<void> {
   const rootPath = String(params.context.rootPath || "").trim();
   const contextId = toOptionalTrimmedString(params.contextId);
@@ -274,6 +278,11 @@ export async function upsertChannelContextRouteByContextId(params: {
       ? { actorName: toOptionalTrimmedString(params.actorName) }
       : prev?.actorName
         ? { actorName: prev.actorName }
+        : {}),
+    ...(toOptionalTrimmedString(params.chatTitle)
+      ? { chatTitle: toOptionalTrimmedString(params.chatTitle) }
+      : prev?.chatTitle
+        ? { chatTitle: prev.chatTitle }
         : {}),
     updatedAt: Date.now(),
   };

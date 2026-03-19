@@ -5,6 +5,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { ConfirmDialogProvider } from "./components/ui/confirm-dialog";
 import { TooltipProvider } from "./components/ui/tooltip";
 import "./index.css";
 
@@ -16,7 +17,9 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <TooltipProvider>
-      <App />
+      <ConfirmDialogProvider>
+        <App />
+      </ConfirmDialogProvider>
     </TooltipProvider>
   </StrictMode>,
 );

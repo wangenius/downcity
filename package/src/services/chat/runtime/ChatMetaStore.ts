@@ -51,6 +51,7 @@ export async function readChatMetaByContextId(params: {
     ...(route.messageId ? { messageId: route.messageId } : {}),
     ...(route.actorId ? { actorId: route.actorId } : {}),
     ...(route.actorName ? { actorName: route.actorName } : {}),
+    ...(route.chatTitle ? { chatTitle: route.chatTitle } : {}),
   };
 }
 
@@ -67,6 +68,7 @@ export async function upsertChatMetaByContextId(params: {
   messageId?: string;
   actorId?: string;
   actorName?: string;
+  chatTitle?: string;
 }): Promise<void> {
   const contextId = normalizeContextId(params.contextId);
   const chatId = normalizeChatId(params.chatId);
@@ -83,6 +85,7 @@ export async function upsertChatMetaByContextId(params: {
     messageId: params.messageId,
     actorId: params.actorId,
     actorName: params.actorName,
+    chatTitle: params.chatTitle,
   });
 }
 
@@ -177,6 +180,7 @@ export async function removeChatMetaByContextId(params: {
       ...(route.messageId ? { messageId: route.messageId } : {}),
       ...(route.actorId ? { actorId: route.actorId } : {}),
       ...(route.actorName ? { actorName: route.actorName } : {}),
+      ...(route.chatTitle ? { chatTitle: route.chatTitle } : {}),
     },
   };
 }

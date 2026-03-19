@@ -118,8 +118,16 @@ export function filterContextsByKeyword(
   if (!term) return contexts
   return contexts.filter((item) => {
     const id = String(item.contextId || "").toLowerCase()
+    const chatId = String(item.chatId || "").toLowerCase()
+    const chatTitle = String(item.chatTitle || "").toLowerCase()
     const role = String(item.lastRole || "").toLowerCase()
     const text = String(item.lastText || "").toLowerCase()
-    return id.includes(term) || role.includes(term) || text.includes(term)
+    return (
+      id.includes(term) ||
+      chatId.includes(term) ||
+      chatTitle.includes(term) ||
+      role.includes(term) ||
+      text.includes(term)
+    )
   })
 }

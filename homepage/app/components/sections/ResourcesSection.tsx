@@ -1,16 +1,8 @@
 import type { FC } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  IconTools,
-  IconBuildingStore,
-  IconCloud,
-} from "@tabler/icons-react";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { IconArrowUpRight, IconBuildingStore, IconCloud, IconTools } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const resources = [
   {
@@ -31,40 +23,53 @@ const resources = [
     icon: IconCloud,
     path: "/hosting",
   },
-];
+] as const;
 
+/**
+ * 资源入口模块。
+ * 说明：
+ * 1. 用纵向入口列表替代松散卡片网格，让路径更清晰。
+ * 2. 每个入口只保留标题、说明与去向，保持极简。
+ */
 export const ResourcesSection: FC = () => {
   const { i18n, t } = useTranslation();
-  const basePath = i18n.language === "zh" ? "/zh/resources" : "/resources";
+  const basePath = i18n.language.toLowerCase().startsWith("zh") ? "/zh/resources" : "/resources";
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
 
   return (
-    <section className="py-12 md:py-24 lg:py-32">
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
-              {t("resources:title")}
-            </h2>
-            <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              {t("resources:subtitle")}
-            </p>
-          </div>
-        </div>
-        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
-          {resources.map((item, i) => (
-            <a key={i} href={`${basePath}${item.path}`} className="block group">
-              <Card className="h-full transition-colors hover:bg-muted/50">
-                <CardHeader>
-                  <item.icon className="h-10 w-10 mb-2 text-primary group-hover:scale-110 transition-transform duration-200" />
-                  <CardTitle>{t(item.titleKey as any)}</CardTitle>
-                  <CardDescription>
-                    {t(item.descriptionKey as any)}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </a>
-          ))}
-        </div>
+    <section className={marketingTheme.pageNarrow}>
+      <header className="space-y-4">
+        <span className={marketingTheme.badge}>Resources</span>
+        <h1 className={marketingTheme.pageTitle}>{t("resources:title")}</h1>
+        <p className={marketingTheme.lead}>{t("resources:subtitle")}</p>
+      </header>
+
+      <div className={`${marketingTheme.panel} mt-8 overflow-hidden`}>
+        {resources.map((item, index) => (
+          <a
+            key={item.path}
+            href={`${basePath}${item.path}`}
+            className={cn(
+              "grid gap-4 px-5 py-5 transition-colors hover:bg-background/74 md:grid-cols-[3rem_minmax(0,1fr)_auto] md:items-center md:px-7",
+              index !== resources.length - 1 && "border-b border-border/68",
+            )}
+          >
+            <div className="flex items-center gap-2 md:block">
+              <p className={marketingTheme.eyebrow}>{String(index + 1).padStart(2, "0")}</p>
+              <item.icon className="size-4 text-muted-foreground md:mt-3" />
+            </div>
+            <div>
+              <h2 className="font-serif text-[1.35rem] font-semibold tracking-[-0.035em] text-foreground">
+                {t(item.titleKey)}
+              </h2>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">{t(item.descriptionKey)}</p>
+            </div>
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+              {isZh ? "进入" : "Open"}
+              <IconArrowUpRight className="size-4" />
+            </span>
+          </a>
+        ))}
       </div>
     </section>
   );

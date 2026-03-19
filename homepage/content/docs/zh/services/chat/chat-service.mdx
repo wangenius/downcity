@@ -13,6 +13,11 @@ description: chat service 的职责与渠道集成
 - 解析 `contextId/chatKey`，写入 history 与 meta
 - 把回复/动作下发到具体渠道
 
+## 会话显示名（chatTitle）
+
+- Chat service 会在 context meta 中尽量记录渠道会话的显示名（`chatTitle`），用于 Console UI 展示更可读的“群名/频道名/私聊对象名”。
+- Telegram 通常可直接拿到群名/频道名；飞书与 QQ 采用 best-effort 策略（受平台事件字段与权限影响，可能缺失）。
+
 ## 渠道文档
 
 - [Telegram](/zh/docs/services/chat/telegram)

@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { cn } from "../../lib/utils";
+import { useConfirmDialog } from "../ui/confirm-dialog";
 import type {
   UiTaskItem,
   UiTaskStatusValue,
@@ -142,6 +143,7 @@ export function TasksSection(props: TasksSectionProps) {
     selectedTaskTitle,
     onSelectTaskTitle,
   } = props;
+  const confirm = useConfirmDialog();
 
   const routeTaskTitle = String(selectedTaskTitle || "").trim();
   const selectedTask = React.useMemo(
@@ -440,9 +442,13 @@ export function TasksSection(props: TasksSectionProps) {
             disabled={taskMutating || !selectedTaskTitleValue}
             onClick={async () => {
               if (!selectedTaskTitleValue) return;
-              const shouldDelete = window.confirm(
-                `确认删除任务「${selectedTaskTitleValue}」及其全部运行记录？`,
-              );
+              const shouldDelete = await confirm({
+                title: "删除任务",
+                description: `确认删除任务「${selectedTaskTitleValue}」及其全部运行记录？`,
+                confirmText: "删除",
+                cancelText: "取消",
+                confirmVariant: "destructive",
+              });
               if (!shouldDelete) return;
               setTaskMutating(true);
               try {
@@ -521,9 +527,13 @@ export function TasksSection(props: TasksSectionProps) {
                 onClick={async () => {
                   const taskTitle = String(selectedTask.title || "").trim();
                   if (!taskTitle) return;
-                  const shouldClear = window.confirm(
-                    `确认清理任务「${taskTitle}」的全部 run 记录？`,
-                  );
+                  const shouldClear = await confirm({
+                    title: "清空 Run Log",
+                    description: `确认清理任务「${taskTitle}」的全部 run 记录？`,
+                    confirmText: "清空",
+                    cancelText: "取消",
+                    confirmVariant: "destructive",
+                  });
                   if (!shouldClear) return;
                   setClearingAllRuns(true);
                   try {
@@ -605,9 +615,13 @@ export function TasksSection(props: TasksSectionProps) {
                       disabled={Boolean(run.inProgress) || deletingThisRun}
                       onClick={async () => {
                         if (!selectedTaskTitleValue || !runTimestamp) return;
-                        const shouldDelete = window.confirm(
-                          `确认删除 run「${runTimestamp}」记录？`,
-                        );
+                        const shouldDelete = await confirm({
+                          title: "删除 Run 记录",
+                          description: `确认删除 run「${runTimestamp}」记录？`,
+                          confirmText: "删除",
+                          cancelText: "取消",
+                          confirmVariant: "destructive",
+                        });
                         if (!shouldDelete) return;
                         setDeletingRunTimestamp(runTimestamp);
                         try {

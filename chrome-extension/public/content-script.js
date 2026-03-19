@@ -619,17 +619,17 @@
         .dc-trigger-btn {
           width: 30px;
           height: 30px;
-          border: 0;
+          border: 1px solid rgba(15, 23, 42, 0.12);
           border-radius: 50%;
           cursor: pointer;
-          background: #111827;
-          color: #fff;
+          background: #ffffff;
+          color: #0f172a;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.20);
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
         }
-        .dc-trigger-btn:hover { background: #0f172a; }
+        .dc-trigger-btn:hover { background: #f8fafc; }
         .dc-trigger-icon {
           width: 16px;
           height: 16px;

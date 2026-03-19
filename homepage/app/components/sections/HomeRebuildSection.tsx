@@ -1,383 +1,300 @@
-import { useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import {
-  IconArrowRight,
-  IconBrandGithub,
-  IconCheck,
-  IconCopy,
-  IconPlayerPlayFilled,
-  IconTerminal2,
-} from "@tabler/icons-react";
 
 /**
- * 首页核心模块（极简科技版，纯 Tailwind utility）。
- *
- * 设计与信息架构说明：
- * 1. 先给结论：Downcity 解决多项目并行下的上下文污染与管理失控。
- * 2. 再给模型：通过“表层业务 / 底层 Agent 城市”传达品牌隐喻。
- * 3. 最后给路径：把安装到运营闭环清晰呈现为执行路径。
+ * 首页主视觉模块。
+ * 说明：
+ * 1. 直接使用参考稿的分栏与边框语言，并修正当前实现里的高度比例问题。
+ * 2. 首页作为独立 landing，不复用全局营销页头尾，避免破坏版式完整性。
  */
 const HOME_CONTENT = {
   zh: {
-    badge: "Downcity · Operating System for Agent Cities",
-    title: "把多项目运营，压缩成一个可控系统",
-    subtitle:
-      "你看到的是业务目标；系统底层是被组织起来的 Agent 城市。每个目录是一块独立地块，持续执行、可审计、可回放。",
-    metaphorLabel: "核心隐喻",
-    metaphorQuote:
-      "Downcity 的 IP 不是科幻装饰，而是一个管理隐喻：表层是你的业务，表层之下是被组织起来的 Agent 城市。",
-    installCommand: "npm install -g downcity",
-    primaryCta: "快速开始",
-    secondaryCta: "白皮书",
-    docsPath: "/zh/docs/quickstart/getting-started",
-    whitepaperPath: "/zh/whitepaper",
-    layersTitle: "两层架构，不混线",
-    layersSubtitle: "每一层只做一件事：表层定义目标，底层组织执行。",
-    layers: [
+    frameTopLeft: "Est. MMXXIV",
+    frameBottomRightTop: "Agent",
+    frameBottomRightBottom: "Operations",
+    heroTitle: "Downcity",
+    sideTopLabel: "Function",
+    sideTopGlyph: "✤",
+    sideTopText: "把仓库、目录、任务与上下文收束成一个可接管的 AI Agent 运行单元。",
+    sideTopPath: "/zh/start",
+    sideBottomLabel: "Form",
+    sideBottomGlyph: "✦",
+    sideBottomText: "用明确的结构和边界组织业务表层，让多 Agent 协作保持秩序与审计能力。",
+    sideBottomPath: "/zh/docs",
+    cards: [
       {
-        name: "表层：业务运营层",
-        desc: "你只需要定义客户、业务线和目标节奏。",
-        points: ["客户线 / 产品线 / 个人目标分开建目录", "每个目录只表达一个真实目标", "运营侧只看进度与结果，不背工具细节"],
+        index: "01",
+        title: "PRODUCT",
+        body: "控制台、扩展、SDK 与 UI 层组成同一套运行界面，服务不同操作场景。",
+        letter: "P",
+        path: "/zh/product",
       },
       {
-        name: "底层：Agent 城市层",
-        desc: "系统在目录边界内调度 Agent、任务与上下文。",
-        points: ["目录即上下文边界，默认隔离", "Console 汇总多 Agent 状态与任务", "日志与会话落在仓库，可追责可复盘"],
-      },
-    ],
-    matrixTitle: "Agent City 控制矩阵",
-    matrixHeaders: { domain: "域", agent: "Agent", state: "状态", signal: "信号" },
-    matrixRows: [
-      { domain: "客户A增长", agent: "agent-client-a", state: "online", signal: "任务队列正常" },
-      { domain: "AI内容线", agent: "agent-ai-content", state: "online", signal: "素材更新完成" },
-      { domain: "健康OKR", agent: "agent-health", state: "idle", signal: "等待下一触发" },
-    ],
-    routeTitle: "运行路径：从目录到闭环",
-    route: [
-      { step: "01", title: "安装 Runtime", command: "npm install -g downcity" },
-      { step: "02", title: "启动 Console", command: "city console init && city console start" },
-      { step: "03", title: "在目录创建 Agent", command: "cd /path/to/repo && city agent create ." },
-      { step: "04", title: "进入持续运营", command: "city agent start" },
-    ],
-    scenariosTitle: "典型入口",
-    scenarios: [
-      {
-        title: "新客户上线",
-        desc: "建一个客户目录，拉齐资料，即刻得到一个独立 Agent 工位。",
+        index: "02",
+        title: "SYSTEM",
+        body: "从仓库到执行链路，所有结构都围绕 one folder, one agent 的运行原则展开。",
+        letter: "S",
+        path: "/zh/features",
       },
       {
-        title: "双业务并行",
-        desc: "金融与 AI 两条线分开跑，节奏互不干扰。",
-      },
-      {
-        title: "老板总控",
-        desc: "在一个 Console 里看多项目状态、任务与执行记录。",
+        index: "03",
+        title: "ACCESS",
+        body: "通过文档、白皮书与社区入口接入 Downcity，把真实业务映射进 Agent 城市。",
+        letter: "A",
+        path: "/zh/whitepaper",
       },
     ],
-    ctaTitle: "先让一个项目变成你的第一块 Agent 地块",
-    ctaDesc: "从最容易串上下文的场景开始，建立目录边界，再建立运营秩序。",
-    githubLabel: "GitHub",
-    docsLabel: "文档",
+    mobileNote: "推荐在桌面端查看完整布局",
   },
   en: {
-    badge: "Downcity · Operating System for Agent Cities",
-    title: "Compress Multi-Project Operations Into One Controllable System",
-    subtitle:
-      "What you see is business execution. Underneath is an organized city of agents. Each folder is an independent block for execution, auditability, and replay.",
-    metaphorLabel: "Core Metaphor",
-    metaphorQuote:
-      "Downcity is not sci-fi decoration. It is a management metaphor: business on the surface, an organized city of agents underneath.",
-    installCommand: "npm install -g downcity",
-    primaryCta: "Get Started",
-    secondaryCta: "Whitepaper",
-    docsPath: "/en/docs/quickstart/getting-started",
-    whitepaperPath: "/whitepaper",
-    layersTitle: "Two Layers, No Cross-Talk",
-    layersSubtitle: "Each layer has one job: define intent on top, organize execution below.",
-    layers: [
+    frameTopLeft: "Est. MMXXIV",
+    frameBottomRightTop: "Agent",
+    frameBottomRightBottom: "Operations",
+    heroTitle: "Downcity",
+    sideTopLabel: "Function",
+    sideTopGlyph: "✤",
+    sideTopText: "Turn repos, folders, tasks, and context into a takeover-ready AI agent operating unit.",
+    sideTopPath: "/start",
+    sideBottomLabel: "Form",
+    sideBottomGlyph: "✦",
+    sideBottomText: "Organize the business surface with explicit structure and boundaries so multi-agent work stays clear and auditable.",
+    sideBottomPath: "/en/docs",
+    cards: [
       {
-        name: "Surface: Business Operations",
-        desc: "Define clients, workstreams, and execution cadence.",
-        points: [
-          "Create separate folders for each client or business lane",
-          "One folder should represent one concrete goal",
-          "Operators focus on progress and outcomes",
-        ],
+        index: "01",
+        title: "PRODUCT",
+        body: "Console, extension, SDK, and UI layer form one operating surface across different workflows.",
+        letter: "P",
+        path: "/product",
       },
       {
-        name: "Below: Agent City Runtime",
-        desc: "The system orchestrates agents, tasks, and context within boundaries.",
-        points: [
-          "Folder boundaries isolate context by default",
-          "Console aggregates multi-agent status and tasks",
-          "Logs and sessions stay in repo for replay and accountability",
-        ],
-      },
-    ],
-    matrixTitle: "Agent City Control Matrix",
-    matrixHeaders: { domain: "Domain", agent: "Agent", state: "State", signal: "Signal" },
-    matrixRows: [
-      { domain: "Client A Growth", agent: "agent-client-a", state: "online", signal: "Queue healthy" },
-      { domain: "AI Content Lane", agent: "agent-ai-content", state: "online", signal: "Material sync done" },
-      { domain: "Health OKR", agent: "agent-health", state: "idle", signal: "Waiting next trigger" },
-    ],
-    routeTitle: "Runtime Path: Folder to Closed Loop",
-    route: [
-      { step: "01", title: "Install Runtime", command: "npm install -g downcity" },
-      { step: "02", title: "Start Console", command: "city console init && city console start" },
-      { step: "03", title: "Create Agent In Folder", command: "cd /path/to/repo && city agent create ." },
-      { step: "04", title: "Enter Continuous Ops", command: "city agent start" },
-    ],
-    scenariosTitle: "Entry Scenarios",
-    scenarios: [
-      {
-        title: "New client onboarding",
-        desc: "Create one client folder and immediately get one dedicated agent workstation.",
+        index: "02",
+        title: "SYSTEM",
+        body: "From repository to execution path, everything is shaped by the one folder, one agent principle.",
+        letter: "S",
+        path: "/features",
       },
       {
-        title: "Parallel business lanes",
-        desc: "Run finance and AI lanes independently without context collision.",
-      },
-      {
-        title: "Operator central view",
-        desc: "Track project status, tasks, and execution traces from one console.",
+        index: "03",
+        title: "ACCESS",
+        body: "Enter through docs, whitepaper, and community to map real operations into the agent city.",
+        letter: "A",
+        path: "/whitepaper",
       },
     ],
-    ctaTitle: "Turn one project into your first agent block",
-    ctaDesc: "Start from the lane where context bleed hurts the most. Build boundaries, then build operating order.",
-    githubLabel: "GitHub",
-    docsLabel: "Docs",
+    mobileNote: "Desktop layout recommended for full experience",
   },
 } as const;
 
-/**
- * 首页重建组件。
- * 关键节点（中文）：把用户心智从“工具列表”切到“城市运营模型”。
- */
-export function HomeRebuildSection() {
-  const { i18n } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  const isZh = i18n.language.toLowerCase().startsWith("zh");
-  const content = isZh ? HOME_CONTENT.zh : HOME_CONTENT.en;
+const frameCornerClass = "absolute z-30 h-[12px] w-[12px] bg-[#D4D4D8]";
+const hoverPanelClass = "transition-colors duration-500 hover:bg-[#F4F4F5]";
+const displayFontStyle = {
+  fontFamily: "Fraunces, serif",
+  fontWeight: 900,
+  fontVariationSettings: '"SOFT" 100, "WONK" 1',
+} as const;
+const bodyFontStyle = { fontFamily: "Lora, serif" } as const;
 
-  /** 关键节点（中文）：复制安装命令并即时反馈，降低首步阻力。 */
-  const onCopyInstall = () => {
-    navigator.clipboard.writeText(content.installCommand);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
-  };
+const dashedBorderRight = {
+  backgroundImage: "linear-gradient(to bottom, #E4E4E7 50%, rgba(255,255,255,0) 0%)",
+  backgroundPosition: "right",
+  backgroundSize: "1px 12px",
+  backgroundRepeat: "repeat-y",
+} as const;
 
-  const stateClass = (state: string) =>
-    state === "online"
-      ? "border-emerald-300/70 bg-emerald-100/60 text-emerald-700"
-      : "border-amber-300/70 bg-amber-100/65 text-amber-700";
+const dashedBorderBottom = {
+  backgroundImage: "linear-gradient(to right, #E4E4E7 50%, rgba(255,255,255,0) 0%)",
+  backgroundPosition: "bottom",
+  backgroundSize: "12px 1px",
+  backgroundRepeat: "repeat-x",
+} as const;
 
+const dashedBorderTop = {
+  backgroundImage: "linear-gradient(to right, #E4E4E7 50%, rgba(255,255,255,0) 0%)",
+  backgroundPosition: "top",
+  backgroundSize: "12px 1px",
+  backgroundRepeat: "repeat-x",
+} as const;
+
+function InfoCell({
+  glyph,
+  label,
+  text,
+  to,
+  hasBottomCorner,
+}: {
+  glyph: string;
+  label: string;
+  text: string;
+  to: string;
+  hasBottomCorner?: boolean;
+}) {
   return (
-    <div className="relative isolate min-h-screen overflow-hidden">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(130%_72%_at_92%_-12%,rgba(86,126,255,0.16),transparent_64%),linear-gradient(to_bottom,rgba(148,163,184,0.16),transparent_26%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,rgba(148,163,184,0.14)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.14)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_bottom,black_10%,transparent_84%)]"
-      />
+    <Link
+      to={to}
+      className={`relative flex min-h-[200px] flex-1 flex-col justify-between p-7 md:p-8 ${hoverPanelClass}`}
+      style={hasBottomCorner ? dashedBorderBottom : undefined}
+    >
+      <div className="flex items-start justify-between gap-6">
+        <span className="text-[2rem] text-[#18181B]/18" style={displayFontStyle}>
+          {glyph}
+        </span>
+        <span className="text-right text-[10px] uppercase tracking-[0.32em] text-[#71717A]" style={bodyFontStyle}>
+          {label}
+        </span>
+      </div>
 
-      <main className="relative mx-auto w-full max-w-6xl px-4 py-10 md:px-6 md:py-16">
-        <section className="rounded-2xl border border-border/75 bg-background/95 p-4 md:p-6 lg:p-8">
-          <span className="inline-flex items-center rounded-full border border-border/80 bg-muted/55 px-2.5 py-1 font-mono text-[0.66rem] tracking-[0.11em] text-muted-foreground uppercase">
-            {content.badge}
-          </span>
+      <p className="mt-4 max-w-[26ch] text-[13px] leading-[1.75] text-[#71717A]" style={bodyFontStyle}>
+        {text}
+      </p>
 
-          <h1 className="mt-4 max-w-[16ch] text-balance text-[clamp(2.3rem,6.3vw,5.5rem)] leading-[0.94] font-semibold tracking-[-0.034em] text-foreground">
-            {content.title}
-          </h1>
-
-          <p className="mt-3 max-w-3xl text-pretty text-[clamp(0.95rem,1.35vw,1.08rem)] leading-7 text-muted-foreground">
-            {content.subtitle}
-          </p>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onCopyInstall}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border/80 bg-background px-3 font-mono text-sm text-foreground transition hover:-translate-y-0.5 hover:bg-muted/55"
-            >
-              <IconTerminal2 className="size-4 text-muted-foreground" />
-              <span>{content.installCommand}</span>
-              {copied ? (
-                <IconCheck className="size-4 text-emerald-600" />
-              ) : (
-                <IconCopy className="size-4 text-muted-foreground" />
-              )}
-            </button>
-
-            <Link
-              to={content.docsPath}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-indigo-500 bg-indigo-600 px-4 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-indigo-700"
-            >
-              <IconPlayerPlayFilled className="size-3.5" />
-              {content.primaryCta}
-            </Link>
-
-            <Link
-              to={content.whitepaperPath}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border/80 bg-background px-4 text-sm font-medium text-foreground transition hover:-translate-y-0.5 hover:bg-muted/55"
-            >
-              {content.secondaryCta}
-            </Link>
-          </div>
-
-          <div className="mt-5 border-t border-border/75 pt-4">
-            <p className="font-mono text-[0.67rem] tracking-[0.11em] text-muted-foreground uppercase">
-              {content.metaphorLabel}
-            </p>
-            <p className="mt-2 max-w-4xl text-sm leading-7 text-foreground">{content.metaphorQuote}</p>
-          </div>
-        </section>
-
-        <section className="mt-8 border-t border-border/75 pt-4">
-          <header>
-            <h2 className="text-[clamp(1.12rem,2.2vw,1.58rem)] tracking-[-0.014em] text-foreground">
-              {content.layersTitle}
-            </h2>
-            <p className="mt-1 text-sm leading-7 text-muted-foreground">{content.layersSubtitle}</p>
-          </header>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            {content.layers.map((layer) => (
-              <article key={layer.name} className="rounded-xl border border-border/75 bg-background/95 p-4">
-                <h3 className="text-[0.96rem] font-semibold text-foreground">{layer.name}</h3>
-                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{layer.desc}</p>
-                <ul className="mt-2.5 grid gap-1.5">
-                  {layer.points.map((point) => (
-                    <li key={point} className="relative pl-4 text-[0.82rem] leading-6 text-muted-foreground">
-                      <span className="absolute top-2.5 left-0 size-1.5 rounded-full bg-indigo-500/70" />
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-8 border-t border-border/75 pt-4">
-          <header>
-            <h2 className="text-[clamp(1.12rem,2.2vw,1.58rem)] tracking-[-0.014em] text-foreground">
-              {content.matrixTitle}
-            </h2>
-          </header>
-
-          <div className="mt-3 overflow-hidden rounded-xl border border-border/75 bg-background/95">
-            <div className="grid grid-cols-2 gap-2 border-b border-border/70 bg-muted/45 px-3 py-2 md:grid-cols-[1.2fr_1.2fr_.75fr_1.3fr]">
-              <span className="font-mono text-[0.66rem] tracking-[0.08em] text-muted-foreground uppercase">
-                {content.matrixHeaders.domain}
-              </span>
-              <span className="font-mono text-[0.66rem] tracking-[0.08em] text-muted-foreground uppercase">
-                {content.matrixHeaders.agent}
-              </span>
-              <span className="font-mono text-[0.66rem] tracking-[0.08em] text-muted-foreground uppercase">
-                {content.matrixHeaders.state}
-              </span>
-              <span className="font-mono text-[0.66rem] tracking-[0.08em] text-muted-foreground uppercase">
-                {content.matrixHeaders.signal}
-              </span>
-            </div>
-
-            {content.matrixRows.map((row) => (
-              <div
-                key={`${row.domain}-${row.agent}`}
-                className="grid grid-cols-2 gap-2 border-t border-border/70 px-3 py-2 first:border-t-0 md:grid-cols-[1.2fr_1.2fr_.75fr_1.3fr]"
-              >
-                <span className="text-[0.82rem] leading-6 text-muted-foreground">{row.domain}</span>
-                <span className="font-mono text-[0.76rem] leading-6 text-muted-foreground">{row.agent}</span>
-                <span
-                  className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 font-mono text-[0.67rem] tracking-[0.06em] uppercase ${stateClass(
-                    row.state,
-                  )}`}
-                >
-                  {row.state}
-                </span>
-                <span className="text-[0.82rem] leading-6 text-muted-foreground">{row.signal}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-8 border-t border-border/75 pt-4">
-          <header>
-            <h2 className="text-[clamp(1.12rem,2.2vw,1.58rem)] tracking-[-0.014em] text-foreground">
-              {content.routeTitle}
-            </h2>
-          </header>
-
-          <ol className="mt-3 grid gap-2.5">
-            {content.route.map((item) => (
-              <li key={item.step} className="grid gap-1.5 md:grid-cols-[auto_minmax(0,1fr)] md:gap-2.5">
-                <span className="inline-flex w-fit items-center justify-center rounded-md border border-border/80 bg-muted/55 px-2 py-1 font-mono text-[0.67rem] tracking-[0.08em] text-muted-foreground">
-                  {item.step}
-                </span>
-                <div>
-                  <p className="text-sm text-muted-foreground">{item.title}</p>
-                  <code className="mt-1 block rounded-md border border-border/75 bg-background px-2.5 py-2 font-mono text-[0.78rem] leading-6 break-words whitespace-pre-wrap text-foreground">
-                    {item.command}
-                  </code>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="mt-8 border-t border-border/75 pt-4">
-          <header>
-            <h2 className="text-[clamp(1.12rem,2.2vw,1.58rem)] tracking-[-0.014em] text-foreground">
-              {content.scenariosTitle}
-            </h2>
-          </header>
-
-          <div className="mt-3 grid gap-2.5 md:grid-cols-3">
-            {content.scenarios.map((scene) => (
-              <article key={scene.title} className="rounded-xl border border-border/75 bg-background/95 p-4">
-                <h3 className="text-[0.92rem] font-semibold text-foreground">{scene.title}</h3>
-                <p className="mt-1.5 text-[0.84rem] leading-6 text-muted-foreground">{scene.desc}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-8 grid gap-3 rounded-2xl border border-border/75 bg-gradient-to-br from-background via-background to-indigo-100/20 p-4 md:grid-cols-[1.15fr_.85fr] md:items-center md:p-5">
-          <div>
-            <h2 className="text-[clamp(1.16rem,2.5vw,1.84rem)] leading-[1.25] tracking-[-0.012em] text-foreground">
-              {content.ctaTitle}
-            </h2>
-            <p className="mt-1.5 max-w-2xl text-sm leading-7 text-muted-foreground">{content.ctaDesc}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 md:justify-end">
-            <a
-              href="https://github.com/wangenius/downcity"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-indigo-500 bg-indigo-600 px-4 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-indigo-700"
-            >
-              <IconBrandGithub className="size-4" />
-              {content.githubLabel}
-              <IconArrowRight className="size-4" />
-            </a>
-
-            <Link
-              to={content.docsPath}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border/80 bg-background px-4 text-sm font-medium text-foreground transition hover:-translate-y-0.5 hover:bg-muted/55"
-            >
-              {content.docsLabel}
-            </Link>
-          </div>
-        </section>
-      </main>
-    </div>
+      {hasBottomCorner ? <div className="absolute -bottom-[6px] -left-[6px] h-[12px] w-[12px] bg-[#D4D4D8]" /> : null}
+      {!hasBottomCorner ? (
+        <div className="absolute bottom-6 right-6 flex h-10 w-10 items-center justify-center rounded-full border border-[#E4E4E7] opacity-40">
+          <div className="h-1.5 w-1.5 rounded-full bg-[#18181B]" />
+        </div>
+      ) : null}
+    </Link>
   );
 }
 
-export default HomeRebuildSection;
+function DetailCard({
+  index,
+  title,
+  body,
+  letter,
+  to,
+  showDivider,
+}: {
+  index: string;
+  title: string;
+  body: string;
+  letter: string;
+  to: string;
+  showDivider?: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={`group relative flex min-h-[220px] flex-col justify-end p-8 ${hoverPanelClass}`}
+      style={showDivider ? dashedBorderRight : undefined}
+    >
+      <div className="absolute left-8 top-8 w-full pr-14">
+        <span className="mb-2 block text-xs text-[#18181B]/35" style={displayFontStyle}>
+          {index}
+        </span>
+        <div className="h-px w-10 bg-[#E4E4E7]" />
+      </div>
+
+      <div className="relative z-10 max-w-[34ch]">
+        <h3 className="mb-3 text-[1.1rem] text-[#18181B] md:text-[1.25rem]" style={displayFontStyle}>
+          {title}
+        </h3>
+        <p className="text-[13px] leading-[1.75] text-[#71717A]" style={bodyFontStyle}>
+          {body}
+        </p>
+      </div>
+
+      <div className="absolute right-8 top-8 text-[52px] text-[#E4E4E7] opacity-36 transition-opacity duration-500 group-hover:opacity-70" style={displayFontStyle}>
+        {letter}
+      </div>
+    </Link>
+  );
+}
+
+export function HomeRebuildSection() {
+  const { i18n } = useTranslation();
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
+  const content = isZh ? HOME_CONTENT.zh : HOME_CONTENT.en;
+
+  return (
+    <main className="flex min-h-screen w-full flex-col bg-[#FAFAFA] p-4 text-[#71717A] antialiased md:p-8 lg:p-10">
+      <div className="relative flex min-h-[calc(100vh-2rem)] flex-1 flex-col border border-[#E4E4E7] md:min-h-[calc(100vh-4rem)] lg:grid lg:min-h-[calc(100vh-5rem)] lg:grid-rows-[1.85fr_1fr]">
+        <div className={`${frameCornerClass} -left-[6px] -top-[6px]`} />
+        <div className={`${frameCornerClass} -right-[6px] -top-[6px]`} />
+        <div className={`${frameCornerClass} -bottom-[6px] -left-[6px]`} />
+        <div className={`${frameCornerClass} -bottom-[6px] -right-[6px]`} />
+
+        <div className="relative flex min-h-[56vh] flex-col lg:min-h-0 lg:flex-row">
+          <div className="group relative min-h-[42vh] flex-1 overflow-hidden border-b border-[#E4E4E7] bg-[#F4F4F5] lg:min-h-0 lg:border-b-0 lg:border-r" style={dashedBorderRight}>
+            <div className="pointer-events-none absolute inset-0 opacity-20">
+              <div className="absolute bottom-0 top-0 left-1/3 w-px border-l border-dashed border-[#18181B]" />
+              <div className="absolute bottom-0 top-0 right-1/3 w-px border-l border-dashed border-[#18181B]" />
+              <div className="absolute left-0 right-0 top-1/2 h-px border-t border-dashed border-[#18181B]" />
+              <div className="absolute inset-8 rounded-full border border-[#18181B] opacity-16 md:inset-10 lg:inset-14" />
+            </div>
+
+            <div className="absolute left-8 top-8 z-20">
+              <span className="text-[11px] uppercase tracking-[0.24em] text-[#18181B]" style={bodyFontStyle}>
+                {content.frameTopLeft}
+              </span>
+            </div>
+
+            <div className="absolute bottom-8 right-8 z-20 text-right">
+              <span className="block text-[11px] uppercase tracking-[0.24em] text-[#18181B]" style={bodyFontStyle}>
+                {content.frameBottomRightTop}
+              </span>
+              <span className="block text-[11px] uppercase tracking-[0.24em] text-[#18181B]" style={bodyFontStyle}>
+                {content.frameBottomRightBottom}
+              </span>
+            </div>
+
+            <div className="relative z-10 flex h-full w-full items-center justify-center px-8 py-10 md:px-12 lg:px-10 xl:px-14">
+              <h1
+                className="select-none leading-[0.88] tracking-[-0.075em] text-[#27272A] opacity-92 mix-blend-multiply transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
+                style={{
+                  ...displayFontStyle,
+                  fontSize: "clamp(4.8rem, 13vw, 11.5rem)",
+                }}
+              >
+                {content.heroTitle}
+              </h1>
+            </div>
+
+            <div className="absolute left-1/2 top-1/2 z-0 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center opacity-38">
+              <div className="h-px w-full bg-[#18181B]" />
+              <div className="absolute h-full w-px bg-[#18181B]" />
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col bg-[#FAFAFA] lg:w-[25%] lg:min-w-[320px]">
+            <InfoCell
+              glyph={content.sideTopGlyph}
+              label={content.sideTopLabel}
+              text={content.sideTopText}
+              to={content.sideTopPath}
+              hasBottomCorner
+            />
+            <InfoCell
+              glyph={content.sideBottomGlyph}
+              label={content.sideBottomLabel}
+              text={content.sideBottomText}
+              to={content.sideBottomPath}
+            />
+          </div>
+        </div>
+
+        <div className="relative grid grid-cols-1 border-t border-[#E4E4E7] md:grid-cols-3" style={dashedBorderTop}>
+          <div className="absolute -top-[6px] left-[33.33%] z-30 ml-[-6px] hidden h-[12px] w-[12px] bg-[#D4D4D8] md:block" />
+          <div className="absolute -top-[6px] left-[66.66%] z-30 ml-[-6px] hidden h-[12px] w-[12px] bg-[#D4D4D8] md:block" />
+
+          {content.cards.map((card, index) => (
+            <DetailCard
+              key={card.index}
+              index={card.index}
+              title={card.title}
+              body={card.body}
+              letter={card.letter}
+              to={card.path}
+              showDivider={index < content.cards.length - 1}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 text-center text-xs text-[#71717A]/60 md:hidden" style={bodyFontStyle}>
+        {content.mobileNote}
+      </div>
+    </main>
+  );
+}

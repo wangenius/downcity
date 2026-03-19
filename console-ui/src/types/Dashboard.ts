@@ -204,6 +204,10 @@ export interface UiContextSummary {
    */
   chatId?: string;
   /**
+   * 渠道会话展示名（如群名、频道名、私聊对象名）。
+   */
+  chatTitle?: string;
+  /**
    * 渠道会话类型（例如 `private` / `group` / `channel`）。
    */
   chatType?: string;

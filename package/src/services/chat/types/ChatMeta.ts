@@ -30,4 +30,6 @@ export type ChatMetaV1 = {
   actorId?: string;
   /** 最近发言用户昵称 */
   actorName?: string;
+  /** 会话展示名（群名/频道名/私聊对象名） */
+  chatTitle?: string;
 };

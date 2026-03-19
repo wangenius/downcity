@@ -55,7 +55,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&family=Lora:ital,wght@0,400;0,500;1,400&family=Space+Grotesk:wght@400;500;700&family=Silkscreen:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap",
   },
 ];
 
@@ -75,7 +75,7 @@ export const meta: Route.MetaFunction = () => {
         "AI agent, GitHub, repository, automation, developer tools, AI assistant, code automation, repo as agent",
     },
     { name: "author", content: "Downcity" },
-    { name: "theme-color", content: "#000000" },
+    { name: "theme-color", content: "#f5f4ef" },
 
     // Open Graph / Facebook
     { property: "og:type", content: "website" },
@@ -93,7 +93,7 @@ export const meta: Route.MetaFunction = () => {
 
     // Twitter
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:site", content: "@downcity" },
+    { name: "twitter:site", content: "@downcity_ai" },
     {
       name: "twitter:title",
       content: "Downcity - The Repo IS The Agent",
@@ -132,6 +132,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path.startsWith("/docs/") ||
     path.startsWith("/en/docs") ||
     path.startsWith("/zh/docs");
+  const isHomeLandingPath = path === "/" || path === "/zh";
+  const showGlobalChrome = !isDocsPath && !isHomeLandingPath;
 
   // Sync i18n language with localStorage (only on client side)
   useEffect(() => {
@@ -167,12 +169,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="flex flex-col min-h-screen antialiased">
+      <body className="flex min-h-screen flex-col antialiased">
         <I18nextProvider i18n={i18next}>
           <RootProvider i18n={provider(lang)}>
-            <Toaster theme="light" richColors position="top-center" />
-            {!isDocsPath ? <Navbar /> : null}
-            {children}
+            <div className="relative flex min-h-screen flex-col">
+              {showGlobalChrome ? (
+                <>
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(70%_52%_at_50%_20%,rgba(255,255,255,0.5),transparent_56%),linear-gradient(to_bottom,rgba(255,255,255,0.08),transparent_18%)]"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,rgba(17,17,17,0.022)_1px,transparent_1px),linear-gradient(to_bottom,rgba(17,17,17,0.022)_1px,transparent_1px)] bg-[size:88px_88px] [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]"
+                  />
+                </>
+              ) : null}
+              <Toaster theme="light" richColors position="top-center" />
+              {showGlobalChrome ? <Navbar /> : null}
+              <div className="relative flex-1">{children}</div>
+            </div>
           </RootProvider>
         </I18nextProvider>
         <ScrollRestoration />
@@ -208,14 +224,22 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-        <div className="space-y-6 max-w-md mx-auto">
-          <h1 className="text-9xl font-bold font-mono tracking-tighter text-transparent bg-clip-text bg-linear-to-b from-foreground to-foreground/20 select-none">
+    <div className="relative flex min-h-screen flex-col bg-background">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(70%_52%_at_50%_20%,rgba(255,255,255,0.5),transparent_56%),linear-gradient(to_bottom,rgba(255,255,255,0.08),transparent_18%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,rgba(17,17,17,0.022)_1px,transparent_1px),linear-gradient(to_bottom,rgba(17,17,17,0.022)_1px,transparent_1px)] bg-[size:88px_88px] [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]"
+      />
+      <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
+        <div className="mx-auto max-w-md space-y-6">
+          <h1 className="select-none font-mono text-9xl tracking-[-0.08em] text-foreground/88">
             {message}
           </h1>
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold tracking-tight">
+            <h2 className="text-2xl font-semibold tracking-[-0.04em]">
               {heading}
             </h2>
             <p className="text-muted-foreground text-lg">{details}</p>
@@ -223,7 +247,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           <div className="pt-4">
             <Link
               to={homePath}
-              className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-all hover:scale-105 font-medium shadow-lg shadow-primary/20"
+              className="inline-flex min-h-11 items-center gap-2 rounded-[0.38rem] border border-black bg-black px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-88"
             >
               {i18next.t("errors.backToHome")}
             </Link>
@@ -231,16 +255,13 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         </div>
 
         {stack && (
-          <div className="mt-12 w-full max-w-4xl mx-auto p-4 overflow-x-auto rounded-lg border bg-muted/50 text-left">
+          <div className="mx-auto mt-12 w-full max-w-4xl overflow-x-auto rounded-[0.48rem] border border-black/8 bg-[rgba(245,244,239,0.78)] p-4 text-left">
             <pre className="text-xs font-mono text-muted-foreground">
               {stack}
             </pre>
           </div>
         )}
       </main>
-      
-      {/* Background decoration */}
-      <div className="fixed inset-0 -z-10 h-full w-full bg-background [background:radial-gradient(125%_125%_at_50%_10%,#000_40%,#63e_100%)] opacity-5 dark:opacity-20 pointer-events-none" />
     </div>
   );
 }

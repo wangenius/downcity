@@ -9,6 +9,7 @@ import {
   IconSparkles,
   IconTerminal2,
 } from "@tabler/icons-react";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const INSTALL_COMMAND = "npm i -g downcity";
 
@@ -48,20 +49,26 @@ export function HeroSection() {
     { label: "Workspace", value: "repo-native", state: "idle" },
     { label: "Control", value: "human-in-loop", state: "idle" },
   ] as const;
+  const panelClass = marketingTheme.panel;
+  const kickerClass = marketingTheme.badge;
+  const commandClass =
+    "rounded-md border border-border/80 bg-background px-3 py-2 font-mono text-[0.78rem] leading-6";
 
   return (
     <section className="border-b border-border/80 py-16 md:py-20 lg:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <div className="home-grid-lines grid items-start gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="relative grid items-start gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-1 left-[56%] hidden w-px bg-border/60 lg:block"
+          />
           <div className="space-y-8 pr-0 lg:pr-8">
-            <div className="home-reveal">
-              <span className="home-kicker">
-                <IconSparkles className="size-3.5" />
-                {t("hero:topBadge")}
-              </span>
-            </div>
+            <span className={kickerClass}>
+              <IconSparkles className="size-3.5" />
+              {t("hero:topBadge")}
+            </span>
 
-            <div className="home-reveal home-reveal-delay-1 space-y-5">
+            <div className="space-y-5">
               <h1 className="text-balance font-semibold leading-[0.94] tracking-tight text-[clamp(2.6rem,8.2vw,6.1rem)]">
                 {t("hero:title")}
                 <br />
@@ -73,11 +80,11 @@ export function HeroSection() {
               </p>
             </div>
 
-            <div className="home-reveal home-reveal-delay-2 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={copyCommand}
-                className="home-panel inline-flex h-11 items-center gap-3 rounded-lg px-3.5 font-mono text-sm text-foreground transition-colors hover:bg-muted/65"
+                className={`inline-flex h-11 items-center gap-3 rounded-lg px-3.5 font-mono text-sm text-foreground transition-colors hover:bg-muted/65 ${panelClass}`}
               >
                 <IconTerminal2 className="size-4 text-muted-foreground" />
                 <span>{INSTALL_COMMAND}</span>
@@ -99,7 +106,7 @@ export function HeroSection() {
               </Link>
             </div>
 
-            <div className="home-reveal home-reveal-delay-3 grid gap-2.5">
+            <div className="grid gap-2.5">
               {governanceItems.map((item) => (
                 <div
                   key={item}
@@ -112,7 +119,7 @@ export function HeroSection() {
             </div>
           </div>
 
-          <aside className="home-reveal home-reveal-delay-2 home-panel overflow-hidden rounded-xl">
+          <aside className={`overflow-hidden rounded-xl ${panelClass}`}>
             <div className="flex items-center justify-between border-b border-border/80 px-4 py-3">
               <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                 Control Plane
@@ -149,13 +156,13 @@ export function HeroSection() {
               </div>
 
               <div className="space-y-2">
-                <div className="home-command">
+                <div className={commandClass}>
                   <p className="text-muted-foreground">$ city agent create .</p>
                   <p className="mt-1 text-emerald-600 dark:text-emerald-300">
                     {t("tutorial:mock.terminal.step1.ready")}
                   </p>
                 </div>
-                <div className="home-command">
+                <div className={commandClass}>
                   <p className="text-muted-foreground">$ city agent start</p>
                   <p className="mt-1 text-emerald-600 dark:text-emerald-300">
                     {t("tutorial:mock.terminal.step2.online")}

@@ -8,6 +8,7 @@ import {
   IconShieldCheck,
   IconTools,
 } from "@tabler/icons-react";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const features = [
   {
@@ -58,28 +59,28 @@ export const FeaturesSection: FC = () => {
   const isZh = i18n.language === "zh";
 
   return (
-    <section className="home-divider py-16 md:py-20">
+    <section className="border-t border-border/85 py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <div className="home-reveal mb-8 space-y-3">
-          <p className="home-kicker">
+        <div className="mb-8 space-y-3">
+          <p className={marketingTheme.badge}>
             <IconBolt className="size-3.5" />
             {t("features:sectionLabel")}
           </p>
-          <h2 className="text-balance text-3xl font-semibold tracking-tight md:text-4xl">
+          <h2 className={`${marketingTheme.sectionTitle} text-balance`}>
             {t("features:title")}{" "}
             <span className="text-foreground/72 italic">{t("features:titleItalic")}</span>
           </h2>
-          <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
+          <p className={marketingTheme.lead}>
             {t("features:description")}
           </p>
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <aside className="home-panel home-reveal home-reveal-delay-1 rounded-xl p-5 md:p-6 lg:sticky lg:top-24">
-            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          <aside className={`${marketingTheme.panel} rounded-[1.5rem] p-5 md:p-6 lg:sticky lg:top-24`}>
+            <p className={marketingTheme.eyebrow}>
               Design Principle
             </p>
-            <h3 className="mt-3 text-2xl font-semibold leading-tight tracking-tight">
+            <h3 className="mt-3 font-serif text-[1.85rem] font-semibold leading-tight tracking-[-0.035em] text-foreground">
               {isZh ? "执行速度与治理边界同时成立" : "Execution speed with governance boundaries."}
             </h3>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
@@ -101,7 +102,7 @@ export const FeaturesSection: FC = () => {
             </div>
           </aside>
 
-          <div className="home-panel home-reveal home-reveal-delay-2 overflow-hidden rounded-xl">
+          <div className={`${marketingTheme.panel} overflow-hidden rounded-[1.5rem]`}>
             {features.map((feature, index) => (
               <article
                 key={feature.id}
@@ -116,7 +117,7 @@ export const FeaturesSection: FC = () => {
                   <feature.icon className="size-4 text-muted-foreground" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold tracking-tight">
+                  <h3 className="font-serif text-[1.45rem] font-semibold tracking-[-0.03em] text-foreground">
                     {t(feature.titleKey as never)}
                   </h3>
                   <p className="text-sm leading-7 text-muted-foreground">

@@ -1,106 +1,106 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { IconArrowRight, IconPlayerPlayFilled } from "@tabler/icons-react";
+import { marketingTheme } from "@/lib/marketing-theme";
 
-type StartSection = {
+/**
+ * 快速开始文章页。
+ * 说明：
+ * 1. 把启动流程压缩成一条线性的四步路径，减少首次接入的认知负担。
+ * 2. 用编辑式排版承接首页视觉，而不是回到旧式文档卡片。
+ */
+type StartStep = {
   title: string;
-  paragraphs: string[];
-  code?: string;
+  description: string;
+  command: string;
 };
 
 type StartContent = {
+  badge: string;
   title: string;
   intro: string;
-  sections: StartSection[];
+  steps: StartStep[];
+  notes: string[];
   nextTitle: string;
   nextDescription: string;
 };
 
 const START_GUIDE: Record<"zh" | "en", StartContent> = {
   zh: {
-    title: "快速开始 Downcity",
+    badge: "Quick Start",
+    title: "用一条最短路径，把第一个项目接入 Downcity。",
     intro:
-      "这是一篇可直接照做的启动文章。按顺序完成以下步骤，你可以在 10 分钟内跑起一个可对话、可执行的 Downcity Runtime。",
-    sections: [
+      "不要先搭复杂控制面，也不要先重构流程。直接从你已经在运行的仓库开始，四步就能把目录变成可持续运行的 Agent 工作域。",
+    steps: [
       {
-        title: "1. 安装 CLI",
-        paragraphs: [
-          "先全局安装 CLI，并确认命令可用。`downcity` 与 `city` 都可使用。",
-        ],
-        code: `npm install -g downcity\ndowncity --version`,
+        title: "安装 CLI",
+        description: "先让本地有一个明确的运行入口。`downcity` 与 `city` 都可作为命令名使用。",
+        command: "npm install -g downcity\ndowncity --version",
       },
       {
-        title: "2. 在仓库里初始化 Agent",
-        paragraphs: [
-          "进入你的项目目录后创建/初始化 agent。系统会生成 `PROFILE.md`、`ship.json` 与 `.ship/` 目录。",
-        ],
-        code: `cd /path/to/your-repo\ncity agent create .`,
+        title: "在仓库里创建 Agent",
+        description: "进入真实项目目录后初始化，让规则、权限和产物落在仓库本身，而不是外部平台。",
+        command: "cd /path/to/your-repo\ncity agent create .",
       },
       {
-        title: "3. 配置模型并启动 Runtime",
-        paragraphs: [
-          "在项目根目录写入 `.env`，然后启动 runtime（默认后台 daemon）。需要在当前终端观察日志时再用前台模式。",
-        ],
-        code: `LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# 或（前台调试）\ncity agent start --foreground`,
+        title: "配置模型并启动 Runtime",
+        description: "写入 `.env` 后启动 runtime。默认后台运行，需要观察日志时再切前台模式。",
+        command: "LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# 调试时\ncity agent start --foreground",
       },
       {
-        title: "4. 健康检查与下一步",
-        paragraphs: [
-          "启动后先确认服务健康，再进入配置、技能与任务自动化。",
-        ],
-        code: `curl http://localhost:3000/health\ncurl http://localhost:3000/api/status`,
+        title: "做一次健康检查",
+        description: "确认服务状态、再开始接技能、渠道和自动任务。先保证边界成立，再扩展自动化。",
+        command: "curl http://localhost:3000/health\ncurl http://localhost:3000/api/status",
       },
     ],
-    nextTitle: "继续深入",
-    nextDescription: "如果你已经跑通启动流程，下一步建议进入完整文档的快速开始章节。",
+    notes: [
+      "建议直接从一个真实仓库开始，不要先用玩具项目演练。",
+      "先跑一个最小闭环，再接入审批、技能和更多渠道。",
+      "如果团队多人协作，先确定目录边界，再讨论角色分工。",
+    ],
+    nextTitle: "继续进入文档",
+    nextDescription: "如果这四步已经跑通，下一步就进入完整快速开始文档，把配置、技能与任务自动化接上。",
   },
   en: {
-    title: "Quick Start Downcity",
+    badge: "Quick Start",
+    title: "Connect your first project to Downcity through one shortest path.",
     intro:
-      "This article is designed to be executable step by step. Follow it in order and you can launch a conversational Downcity runtime in about 10 minutes.",
-    sections: [
+      "Do not build a control plane first and do not rewrite workflow first. Start from the repo you already run. In four steps, the folder becomes a durable agent operating block.",
+    steps: [
       {
-        title: "1. Install CLI",
-        paragraphs: [
-          "Install the global CLI first and verify the command is available. `downcity` and `city` are equivalent.",
-        ],
-        code: `npm install -g downcity\ndowncity --version`,
+        title: "Install the CLI",
+        description: "Establish one local runtime entry point first. Both `downcity` and `city` are valid command names.",
+        command: "npm install -g downcity\ndowncity --version",
       },
       {
-        title: "2. Initialize in your repository",
-        paragraphs: [
-          "Create/init the agent project inside your repository. It creates `PROFILE.md`, `ship.json`, and `.ship/`.",
-        ],
-        code: `cd /path/to/your-repo\ncity agent create .`,
+        title: "Create the agent inside your repo",
+        description: "Initialize inside a real project so rules, permissions, and artifacts stay in the repo instead of a separate platform.",
+        command: "cd /path/to/your-repo\ncity agent create .",
       },
       {
-        title: "3. Configure model and start runtime",
-        paragraphs: [
-          "Create `.env` in project root, then start runtime (default: background daemon). Use foreground mode when you want logs in the current terminal.",
-        ],
-        code: `LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# or (foreground)\ncity agent start --foreground`,
+        title: "Configure model and start runtime",
+        description: "Create `.env`, then start the runtime. Use foreground mode only when you need live logs in the current shell.",
+        command: "LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# for debugging\ncity agent start --foreground",
       },
       {
-        title: "4. Health check and next steps",
-        paragraphs: [
-          "After startup, verify service health first, then move on to configuration, skills, and task automation.",
-        ],
-        code: `curl http://localhost:3000/health\ncurl http://localhost:3000/api/status`,
+        title: "Run a health check",
+        description: "Verify service state first, then add skills, channels, and scheduled tasks. Boundaries before expansion.",
+        command: "curl http://localhost:3000/health\ncurl http://localhost:3000/api/status",
       },
     ],
-    nextTitle: "Go Deeper",
-    nextDescription: "If startup is working, continue with the full quick-start documentation.",
+    notes: [
+      "Start from one real repository, not a demo project.",
+      "Close one minimal loop before adding approvals, skills, or extra channels.",
+      "If multiple people operate the system, define folder boundaries before role split.",
+    ],
+    nextTitle: "Continue in the docs",
+    nextDescription: "Once the four steps are working, move into the full quick-start guide and connect configuration, skills, and automation.",
   },
 };
 
-/**
- * 快速开始文章页。
- * 说明：
- * 1. 采用与首页一致的文章化结构。
- * 2. 直接给出可执行命令，降低首次上手成本。
- */
 export function StartGuideSection() {
   const { i18n } = useTranslation();
-  const isZh = i18n.language === "zh";
+  const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = isZh ? START_GUIDE.zh : START_GUIDE.en;
   const docsQuickstartPath = isZh
     ? "/zh/docs/quickstart/getting-started"
@@ -108,61 +108,67 @@ export function StartGuideSection() {
   const homePath = isZh ? "/zh" : "/";
 
   return (
-    <section className="pt-8 pb-8 md:pt-10 md:pb-10">
-      <div className="mx-auto w-full max-w-4xl px-4 md:px-6">
-        <article className="mx-auto max-w-4xl space-y-10">
-          <header className="space-y-4">
-            <h1 className="text-balance font-serif text-4xl leading-[1.12] tracking-tight md:text-5xl">
-              {content.title}
-            </h1>
-            <p className="text-base leading-8 text-muted-foreground md:text-lg">
-              {content.intro}
-            </p>
-          </header>
-
-          {content.sections.map((section) => (
-            <section key={section.title} className="space-y-4">
-              <h2 className="font-serif text-2xl leading-tight tracking-tight text-foreground md:text-3xl">
-                {section.title}
-              </h2>
-              <div className="space-y-3 text-base leading-8 text-muted-foreground md:text-lg">
-                {section.paragraphs.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </div>
-              {section.code ? (
-                <pre className="overflow-x-auto rounded-md border border-border/60 bg-muted/45 px-4 py-3">
-                  <code className="font-mono text-sm leading-7 text-foreground">
-                    {section.code}
-                  </code>
-                </pre>
-              ) : null}
-            </section>
-          ))}
-
-          <footer className="space-y-3 border-t border-border/50 pt-5">
-            <h3 className="font-serif text-2xl tracking-tight text-foreground">
-              {content.nextTitle}
-            </h3>
-            <p className="text-base leading-7 text-muted-foreground md:text-lg">
-              {content.nextDescription}
-            </p>
-            <div className="inline-flex items-center gap-3">
-              <Link
-                to={docsQuickstartPath}
-                className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-              >
-                {isZh ? "查看完整快速开始" : "Read Full Quick Start"}
-              </Link>
-              <Link
-                to={homePath}
-                className="inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-              >
-                {isZh ? "返回首页" : "Back Home"}
-              </Link>
+    <section className={marketingTheme.pageNarrow}>
+      <div className={marketingTheme.sectionGap}>
+        <header className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-end">
+          <div className="space-y-4">
+            <span className={marketingTheme.badge}>{content.badge}</span>
+            <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
+          </div>
+          <div className={`${marketingTheme.rail} space-y-4`}>
+            <p className={marketingTheme.lead}>{content.intro}</p>
+            <div className="flex flex-wrap gap-2">
+              {content.notes.map((note) => (
+                <span key={note} className={marketingTheme.chip}>
+                  {note}
+                </span>
+              ))}
             </div>
-          </footer>
-        </article>
+          </div>
+        </header>
+
+        <section className={`${marketingTheme.panel} overflow-hidden`}>
+          {content.steps.map((step, index) => (
+            <article
+              key={step.title}
+              className={index !== content.steps.length - 1 ? "border-b border-border/68 px-5 py-5 md:px-7" : "px-5 py-5 md:px-7"}
+            >
+              <div className="grid gap-4 md:grid-cols-[5rem_minmax(0,1fr)] md:gap-6">
+                <div>
+                  <p className={marketingTheme.eyebrow}>{String(index + 1).padStart(2, "0")}</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="font-serif text-[1.6rem] font-semibold tracking-[-0.04em] text-foreground">
+                      {step.title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-7 text-muted-foreground">{step.description}</p>
+                  </div>
+                  <pre className={marketingTheme.code}>
+                    <code>{step.command}</code>
+                  </pre>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <footer className={`${marketingTheme.panel} grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-end md:p-7`}>
+          <div>
+            <p className={marketingTheme.eyebrow}>{content.nextTitle}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">{content.nextDescription}</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link to={docsQuickstartPath} className={marketingTheme.primaryButton}>
+              <IconPlayerPlayFilled className="size-3.5" />
+              {isZh ? "查看完整快速开始" : "Read Full Quick Start"}
+            </Link>
+            <Link to={homePath} className={marketingTheme.secondaryButton}>
+              {isZh ? "返回首页" : "Back Home"}
+              <IconArrowRight className="size-4" />
+            </Link>
+          </div>
+        </footer>
       </div>
     </section>
   );

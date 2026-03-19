@@ -79,6 +79,14 @@ export type IncomingChatMessage = {
   userId?: string;
   username?: string;
   /**
+   * 会话展示名（群名/频道名/私聊对象名）。
+   *
+   * 说明（中文）
+   * - 由各平台适配器 best-effort 提供。
+   * - 用于 Context 列表展示，不参与路由。
+   */
+  chatTitle?: string;
+  /**
    * 可选：由上游显式覆盖主人身份判定（通常无需传，默认由 auth 模块计算）。
    */
   isMaster?: boolean;
@@ -360,6 +368,7 @@ export abstract class BaseChatChannel {
     messageId?: string;
     actorId?: string;
     actorName?: string;
+    chatTitle?: string;
   }): Promise<void> {
     await upsertChatMetaByContextId({
       context: this.context,
@@ -371,6 +380,7 @@ export abstract class BaseChatChannel {
       messageId: params.messageId,
       actorId: params.actorId,
       actorName: params.actorName,
+      chatTitle: params.chatTitle,
     });
   }
 
@@ -440,6 +450,8 @@ export abstract class BaseChatChannel {
         ? meta.messageThreadId
         : undefined;
     const chatType = typeof meta.chatType === "string" ? meta.chatType : undefined;
+    const chatTitle =
+      typeof meta.chatTitle === "string" ? meta.chatTitle.trim() || undefined : undefined;
     const resolved = await this.resolveOrCreateContextIdByTarget({
       chatId: params.chatId,
       chatType,
@@ -468,6 +480,7 @@ export abstract class BaseChatChannel {
       messageId: params.messageId,
       actorId: params.userId,
       actorName: username,
+      chatTitle,
     });
     enqueueChatQueue({
       kind: "audit",
@@ -553,6 +566,7 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       actorId: msg.userId,
       actorName: msg.username,
+      chatTitle: msg.chatTitle,
     });
 
     const { lanePosition } = enqueueChatQueue({

@@ -86,6 +86,7 @@ export type TuiContextSummary = {
   lastText?: string;
   channel?: string;
   chatId?: string;
+  chatTitle?: string;
   chatType?: string;
   threadId?: number;
 };
@@ -724,6 +725,9 @@ export async function listContextSummaries(params: {
         : {}),
       ...(typeof chatMeta?.channel === "string" ? { channel: chatMeta.channel } : {}),
       ...(typeof chatMeta?.chatId === "string" ? { chatId: chatMeta.chatId } : {}),
+      ...(typeof chatMeta?.chatTitle === "string"
+        ? { chatTitle: chatMeta.chatTitle }
+        : {}),
       ...(typeof chatMeta?.targetType === "string"
         ? { chatType: chatMeta.targetType }
         : {}),

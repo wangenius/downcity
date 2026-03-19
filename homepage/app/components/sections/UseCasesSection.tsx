@@ -11,6 +11,7 @@ import {
   IconTerminal2,
   IconUserCircle,
 } from "@tabler/icons-react";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const USE_CASE_GROUPS = [
   {
@@ -48,6 +49,8 @@ const USE_CASE_GROUPS = [
 export const UseCasesSection: FC = () => {
   const { i18n, t } = useTranslation();
   const isZh = i18n.language === "zh";
+  const panelClass = marketingTheme.panel;
+  const kickerClass = marketingTheme.badge;
 
   const laneTitles: Record<(typeof USE_CASE_GROUPS)[number]["id"], string> = {
     builder: isZh ? "构建与执行" : "Build & Execute",
@@ -56,10 +59,10 @@ export const UseCasesSection: FC = () => {
   };
 
   return (
-    <section className="home-divider py-16 md:py-20">
+    <section className="border-t border-border/85 py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <header className="home-reveal space-y-3">
-          <span className="home-kicker">{t("usecases:title")}</span>
+        <header className="space-y-3">
+          <span className={kickerClass}>{t("usecases:title")}</span>
           <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
             {t("usecases:description")}
           </p>
@@ -69,7 +72,7 @@ export const UseCasesSection: FC = () => {
           {USE_CASE_GROUPS.map((group, groupIndex) => (
             <article
               key={group.id}
-              className={`home-panel home-reveal rounded-xl p-4 md:p-5 ${
+              className={`rounded-xl p-4 md:p-5 ${panelClass} ${
                 groupIndex === 1 ? "lg:-mt-4" : ""
               } ${groupIndex === 2 ? "lg:mt-4" : ""}`}
             >
@@ -100,7 +103,7 @@ export const UseCasesSection: FC = () => {
           ))}
         </div>
 
-        <p className="home-reveal home-reveal-delay-2 mt-6 text-sm leading-7 text-muted-foreground">
+        <p className="mt-6 text-sm leading-7 text-muted-foreground">
           {t("usecases:bottom_text")}
         </p>
       </div>

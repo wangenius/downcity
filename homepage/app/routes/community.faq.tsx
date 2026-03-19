@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 export function meta() {
   const title = `${product.productName} — FAQ`;
@@ -30,7 +31,7 @@ export default function FAQ() {
   const { i18n, t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
-  const docsPath = i18n.language === "zh" ? "/zh/docs" : "/en/docs";
+  const docsPath = i18n.language.toLowerCase().startsWith("zh") ? "/zh/docs" : "/en/docs";
   const discussionsUrl =
     product.homepage?.includes("github.com") === true
       ? `${product.homepage}/discussions`
@@ -41,100 +42,94 @@ export default function FAQ() {
     : faqs;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">
-      <div className="w-full">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            {t("nav.faq")}
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            {t("community:faqPage.subtitle")}
-          </p>
-        </div>
+    <div className={marketingTheme.pageNarrow}>
+      <header className="space-y-3">
+        <span className={marketingTheme.badge}>
+          FAQ
+        </span>
+        <h1 className={marketingTheme.pageTitle}>{t("nav.faq")}</h1>
+        <p className={marketingTheme.lead}>
+          {t("community:faqPage.subtitle")}
+        </p>
+      </header>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap gap-2 mb-8 justify-center">
+      <div className="mt-6 flex flex-wrap gap-2">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className={`inline-flex h-8 items-center rounded-md border px-3 text-sm transition-colors ${
+            selectedCategory === null
+              ? "border-border/80 bg-card/76 text-foreground"
+              : "border-border/70 bg-background/74 text-muted-foreground hover:bg-muted/45 hover:text-foreground"
+          }`}
+        >
+          {t("community:faqPage.all")}
+        </button>
+        {categories.map((category) => (
           <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              selectedCategory === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted hover:bg-muted/80"
+            key={category}
+            onClick={() => setSelectedCategory(category)}
+            className={`inline-flex h-8 items-center rounded-md border px-3 text-sm transition-colors ${
+              selectedCategory === category
+                ? "border-border/80 bg-card/76 text-foreground"
+                : "border-border/70 bg-background/74 text-muted-foreground hover:bg-muted/45 hover:text-foreground"
             }`}
           >
-            {t("community:faqPage.all")}
+            {t(`community:faqPage.categories.${category}`)}
           </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                selectedCategory === category
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted hover:bg-muted/80"
-              }`}
-            >
-              {t(`community:faqPage.categories.${category}`)}
-            </button>
-          ))}
-        </div>
+        ))}
+      </div>
 
-        {/* FAQ List */}
-        <div className="space-y-4">
-          {filteredFAQs.map((faq) => (
-            <div
-              key={faq.id}
-              className="border rounded-lg overflow-hidden"
+      <section className="mt-6 space-y-3">
+        {filteredFAQs.map((faq, index) => (
+          <article
+            key={faq.id}
+            className={`${marketingTheme.panel} overflow-hidden`}
+          >
+            <button
+              onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
             >
-              <button
-                onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
-                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-muted/50 transition-colors"
-              >
-                <span className="font-medium flex-1 pr-4">
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="text-sm font-medium md:text-base">
                   {t(`community:faqPage.items.${faq.id}.question`)}
                 </span>
-                <span className="text-muted-foreground text-2xl">
-                  {openId === faq.id ? "−" : "+"}
-                </span>
-              </button>
-              {openId === faq.id && (
-                <div className="px-6 pb-4 pt-2 text-muted-foreground border-t">
-                  <p className="text-sm leading-relaxed">
-                    {t(`community:faqPage.items.${faq.id}.answer`)}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+              </span>
+              <span className="font-mono text-sm text-muted-foreground">{openId === faq.id ? "close" : "open"}</span>
+            </button>
+            {openId === faq.id ? (
+              <div className="border-t border-border/75 px-5 pb-4 pt-3 text-sm leading-7 text-muted-foreground">
+                {t(`community:faqPage.items.${faq.id}.answer`)}
+              </div>
+            ) : null}
+          </article>
+        ))}
+      </section>
 
-        <div className="mt-12 p-6 bg-muted/50 rounded-lg border border-dashed">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">
-              {t("community:faqPage.callout.title")}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {t("community:faqPage.callout.description")}
-            </p>
-            <div className="flex gap-3 justify-center flex-wrap">
-              <a
-                href={discussionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
-              >
-                {t("community:faqPage.callout.askGithub")}
-              </a>
-              <a
-                href={docsPath}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-muted hover:bg-muted/80 rounded-md transition-colors font-medium"
-              >
-                {t("community:faqPage.callout.readDocs")}
-              </a>
-            </div>
-          </div>
+      <section className={`${marketingTheme.panel} mt-8 p-6`}>
+        <h3 className="text-lg font-semibold">{t("community:faqPage.callout.title")}</h3>
+        <p className="mt-2 text-sm leading-7 text-muted-foreground">
+          {t("community:faqPage.callout.description")}
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <a
+            href={discussionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={marketingTheme.primaryButton}
+          >
+            {t("community:faqPage.callout.askGithub")}
+          </a>
+          <a
+            href={docsPath}
+            className={marketingTheme.secondaryButton}
+          >
+            {t("community:faqPage.callout.readDocs")}
+          </a>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

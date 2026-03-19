@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 const PAGE = {
   zh: {
@@ -94,13 +95,13 @@ export default function ProductOverviewPage() {
   const basePath = isZh ? "/zh/product" : "/product";
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-6 md:py-20">
+    <div className={marketingTheme.pageNarrow}>
       <section>
-        <span className="inline-flex items-center rounded-full border border-border/80 px-3 py-1 text-xs font-mono uppercase tracking-[0.12em] text-muted-foreground">
+        <span className={marketingTheme.badge}>
           {content.badge}
         </span>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">{content.title}</h1>
-        <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
+        <h1 className={`mt-5 ${marketingTheme.pageTitle}`}>{content.title}</h1>
+        <p className={`mt-4 ${marketingTheme.lead}`}>
           {content.subtitle}
         </p>
       </section>
@@ -110,22 +111,24 @@ export default function ProductOverviewPage() {
           <Link
             key={card.id}
             to={`${basePath}/${card.id}`}
-            className="rounded-xl border border-border/80 bg-background p-5 transition-colors hover:bg-muted/40 md:p-6"
+            className={`${marketingTheme.panel} p-5 transition-colors hover:bg-card/92 md:p-6`}
           >
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <p className={marketingTheme.eyebrow}>
               {card.source}
             </p>
-            <h2 className="mt-2 text-lg font-semibold">{card.title}</h2>
+            <h2 className="mt-3 font-serif text-[1.5rem] font-semibold tracking-[-0.03em] text-foreground">
+              {card.title}
+            </h2>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.desc}</p>
           </Link>
         ))}
       </section>
 
-      <section className="mt-10 rounded-xl border border-border/80 p-5 md:p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <section className={`${marketingTheme.panel} mt-10 p-5 md:p-6`}>
+        <h3 className={marketingTheme.eyebrow}>
           {content.factsTitle}
         </h3>
-        <ul className="mt-3 space-y-2 text-sm leading-7 text-foreground/90">
+        <ul className="mt-4 space-y-2 text-sm leading-7 text-foreground/90">
           {content.facts.map((fact) => (
             <li key={fact}>• {fact}</li>
           ))}

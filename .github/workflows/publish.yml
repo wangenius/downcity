@@ -44,7 +44,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          VERSION="$(node -p 'require(\"./package.json\").version')"
+          VERSION="$(node -p 'require("./package.json").version')"
           if npm view downcity versions --json | grep -q "\"${VERSION}\""; then
             echo "Version ${VERSION} already exists, skipping publish"
             exit 0

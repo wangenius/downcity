@@ -27,13 +27,13 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       // On first load, check localStorage for saved language preference
-      const savedLang = localStorage.getItem("shipmyagent-lang") as "en" | "zh" | null;
+      const savedLang = localStorage.getItem("downcity-lang") as "en" | "zh" | null;
       if (savedLang && i18next.language !== savedLang) {
         i18next.changeLanguage(savedLang);
       } else if (i18next.language !== lang) {
         // Sync with URL path and save to localStorage
         i18next.changeLanguage(lang);
-        localStorage.setItem("shipmyagent-lang", lang);
+        localStorage.setItem("downcity-lang", lang);
       }
     }
 

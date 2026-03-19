@@ -25,7 +25,7 @@ tail -f .ship/logs/$(date +%F).jsonl
 grep -Ei "error|warn|timeout|failed" .ship/logs/$(date +%F).jsonl
 
 # Inspect recent chat records
-sma chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
+city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
 ```
 
 ## LLM message logging toggle

@@ -342,7 +342,7 @@ export function SummaryCards(props: SummaryCardsProps) {
       <section className="rounded-md bg-muted/70 px-3 py-2">
         <div className="grid gap-x-6 md:grid-cols-2">
           <div>
-            <KV label="SMA" value={String(overview?.smaVersion || "-")} />
+            <KV label="DC" value={String(overview?.cityVersion || "-")} />
             <KV label="PID" value={String(selectedAgent.daemonPid || "-")} />
             <KV label="Host" value={String(selectedAgent.host || "-")} />
             <KV label="Port" value={selectedAgent.port ? String(selectedAgent.port) : "-"} />

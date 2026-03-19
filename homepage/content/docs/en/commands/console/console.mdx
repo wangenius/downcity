@@ -1,9 +1,9 @@
 ---
-title: sma console
+title: city console
 description: Global console command group for process orchestration and multi-agent governance
 ---
 
-# `sma console`
+# `city console`
 
 `console` is the global control plane.
 
@@ -13,25 +13,25 @@ Use it to manage console runtime and inspect managed agent runtimes.
 
 Top-level commands are fixed to 4:
 
-- `sma console`
-- `sma agent`
-- `sma service`
-- `sma extension`
+- `city console`
+- `city agent`
+- `city service`
+- `city extension`
 
 Under `console`, use `init/model/config/start/stop/status/agents/ui`.
 
 ## Usage
 
 ```bash
-sma console init
-sma console model <subcommand>
-sma console config <subcommand>
-sma console start
-sma console stop
-sma console restart
-sma console status
-sma console agents [--json]
-sma console ui [start|stop|restart|status] [--port 5315]
+city console init
+city console model <subcommand>
+city console config <subcommand>
+city console start
+city console stop
+city console restart
+city console status
+city console agents [--json]
+city console ui [start|stop|restart|status] [--port 5315]
 ```
 
 ## Behavior
@@ -50,26 +50,26 @@ sma console ui [start|stop|restart|status] [--port 5315]
 
 ```bash
 # 1) start global console
-sma console start
+city console start
 
 # 2) start project runtime
 cd /path/to/agent-project
-sma agent create .
-sma agent start
+city agent create .
+city agent start
 
 # 3) check status
-sma console status
-sma agent status .
+city console status
+city agent status .
 ```
 
 ## Related Commands
 
-- [`sma console init`](/en/docs/commands/console/init)
-- [`sma agent`](/en/docs/commands/agent/agent)
-- [`sma console model`](/en/docs/commands/console/model)
-- [`sma console config`](/en/docs/commands/console/config)
-- [`sma service`](/en/docs/commands/service/service)
-- [`sma extension`](/en/docs/commands/extension/extension)
+- [`city console init`](/en/docs/commands/console/init)
+- [`city agent`](/en/docs/commands/agent/agent)
+- [`city console model`](/en/docs/commands/console/model)
+- [`city console config`](/en/docs/commands/console/config)
+- [`city service`](/en/docs/commands/service/service)
+- [`city extension`](/en/docs/commands/extension/extension)
 - [Command Environment Requirements](/en/docs/commands/variables)
 
 ## Example Output (Based on Current Implementation)
@@ -77,9 +77,9 @@ sma agent status .
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma console
-sma version: 1.0.0
-Usage: sma console [options] [command]
+$ city console
+city version: 1.0.0
+Usage: city console [options] [command]
 Commands:
   run
   ui [action]

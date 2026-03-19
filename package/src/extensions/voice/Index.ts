@@ -616,7 +616,7 @@ export const voiceExtension: Extension = {
           } else {
             if (!canPromptInteractively()) {
               throw new Error(
-                'No voice models provided in non-interactive mode. Pass models explicitly, for example: "sma voice init SenseVoiceSmall".',
+                'No voice models provided in non-interactive mode. Pass models explicitly, for example: "city voice init SenseVoiceSmall".',
               );
             }
             modelIds = await selectVoiceModelsInteractively({
@@ -692,7 +692,7 @@ export const voiceExtension: Extension = {
           !installedSet.has(payload.activeModel)
         ) {
           throw new Error(
-            `active-model "${payload.activeModel}" is not installed. Remove --no-install-model or run "sma voice install ${payload.activeModel}" first.`,
+            `active-model "${payload.activeModel}" is not installed. Remove --no-install-model or run "city voice install ${payload.activeModel}" first.`,
           );
         }
         const installedFromInit = payload.installModel
@@ -879,7 +879,7 @@ export const voiceExtension: Extension = {
         if (!installed.includes(payload.modelId)) {
           return {
             success: false,
-            error: `Model "${payload.modelId}" is not installed. Run "sma voice install ${payload.modelId}" first.`,
+            error: `Model "${payload.modelId}" is not installed. Run "city voice install ${payload.modelId}" first.`,
           };
         }
         voiceConfig.provider = "local";

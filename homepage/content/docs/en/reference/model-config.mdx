@@ -16,7 +16,7 @@ Console-global model pool:
 
 - file: `~/.ship/ship.db`
 - tables: `model_providers`, `models`
-- write entrypoint: `sma console model ...`
+- write entrypoint: `city console model ...`
 
 Project-local binding:
 
@@ -25,13 +25,13 @@ Project-local binding:
 
 ## 2) Write flow
 
-1. `sma console model ...`  
+1. `city console model ...`  
 writes provider/model records into `~/.ship/ship.db`
 
 2. Console UI model switch  
 updates current agent `ship.json -> model.primary`
 
-3. `sma agent create`  
+3. `city agent create`  
 selects a model id from console pool and writes `model.primary`
 
 ## 3) Read flow at runtime
@@ -51,7 +51,7 @@ selects a model id from console pool and writes `model.primary`
 Provider `apiKey` is not stored in plaintext:
 
 - algorithm: AES-256-GCM field-level encryption
-- key priority: `SMA_MODEL_DB_KEY` env var > `~/.ship/console/model-db.key`
+- key priority: `DC_MODEL_DB_KEY` env var > `~/.ship/console/model-db.key`
 - DB field: `api_key_encrypted`
 
 ## 5) Commands
@@ -59,14 +59,14 @@ Provider `apiKey` is not stored in plaintext:
 Manage model pool globally:
 
 ```bash
-sma console model list
-sma console model get model fast
+city console model list
+city console model get model fast
 ```
 
 Bind agent to a model ID:
 
 ```bash
-sma console config set model.primary fast
+city console config set model.primary fast
 ```
 
 ## 6) Apply changes
@@ -74,7 +74,7 @@ sma console config set model.primary fast
 Restart agent after model changes:
 
 ```bash
-sma agent restart .
+city agent restart .
 ```
 
 ## Related docs

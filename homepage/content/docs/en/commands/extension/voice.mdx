@@ -1,18 +1,18 @@
 ---
-title: sma voice
+title: city voice
 description: Voice extension commands (local STT model and transcription)
 ---
 
-# `sma voice`
+# `city voice`
 
 Manage local speech-to-text via the `voice` extension.
 
-> Hierarchy note: `sma voice` is an extension action command, not a top-level command. Top-level entry is `sma extension`.
+> Hierarchy note: `city voice` is an extension action command, not a top-level command. Top-level entry is `city extension`.
 
 ## Usage
 
 ```bash
-sma voice <subcommand> [options]
+city voice <subcommand> [options]
 ```
 
 ## Subcommands (current version)
@@ -59,13 +59,13 @@ sma voice <subcommand> [options]
 ## Examples
 
 ```bash
-sma voice models
-sma voice init
-sma voice on SenseVoiceSmall
-sma voice install whisper-large-v3-turbo --force
-sma voice use whisper-large-v3-turbo
-sma voice transcribe ./demo.ogg --language en
-sma voice off
+city voice models
+city voice init
+city voice on SenseVoiceSmall
+city voice install whisper-large-v3-turbo --force
+city voice use whisper-large-v3-turbo
+city voice transcribe ./demo.ogg --language en
+city voice off
 ```
 
 ## Notes
@@ -79,13 +79,13 @@ Install-related actions perform a local pre-check first:
 This command group usually requires an active agent runtime:
 
 ```bash
-sma agent start
+city agent start
 ```
 
 In non-interactive environments (CI/scripts), pass models explicitly, for example:
 
 ```bash
-sma voice init SenseVoiceSmall
+city voice init SenseVoiceSmall
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -93,7 +93,7 @@ sma voice init SenseVoiceSmall
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma voice status
+$ city voice status
 {
   "success": true,
   "data": {
@@ -104,7 +104,7 @@ $ sma voice status
 ```
 
 ```text
-$ sma voice on SenseVoiceSmall
+$ city voice on SenseVoiceSmall
 {
   "success": true,
   "data": {

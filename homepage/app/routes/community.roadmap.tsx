@@ -93,7 +93,7 @@ export default function Roadmap() {
   const repoUrl =
     product.homepage?.includes("github.com") === true
       ? product.homepage
-      : "https://github.com/wangenius/shipmyagent";
+      : "https://github.com/wangenius/downcity";
   const issuesUrl = `${repoUrl}/issues`;
 
   return (

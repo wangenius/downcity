@@ -23,7 +23,7 @@ export function PlatformsSection() {
   const lang = i18n.language;
   const skillsPath =
     lang === "zh" ? "/zh/resources/skills" : "/resources/skills";
-  const discussionsUrl = "https://github.com/wangenius/shipmyagent/discussions";
+  const discussionsUrl = "https://github.com/wangenius/downcity/discussions";
 
   const platforms = [
     {

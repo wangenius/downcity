@@ -5,9 +5,9 @@ description: End-to-end flow from a Telegram message to agent execution and repl
 
 # Telegram: end-to-end message → agent → replies
 
-> ⚠️ **Simplified mode (2026-02-03)**: the current `shipmyagent` package disables approvals (full-permission execution). Approval-related parts of this flow are outdated.
+> ⚠️ **Simplified mode (2026-02-03)**: the current `downcity` package disables approvals (full-permission execution). Approval-related parts of this flow are outdated.
 
-This page explains how a Telegram message is translated into ShipMyAgent instructions, how `AgentRuntime` executes them, and how replies are delivered via the `chat_send` tool.
+This page explains how a Telegram message is translated into Downcity instructions, how `AgentRuntime` executes them, and how replies are delivered via the `chat_send` tool.
 
 > Code references: `package/src/adapters/telegram/bot.ts`, `package/src/adapters/base-chat-adapter.ts`, `package/src/runtime/agent/runtime.ts`, `package/src/runtime/chat/*`
 
@@ -17,7 +17,7 @@ This page explains how a Telegram message is translated into ShipMyAgent instruc
 sequenceDiagram
   participant U as User (Telegram)
   participant TG as Telegram API
-  participant BOT as ShipMyAgent TelegramBot
+  participant BOT as Downcity TelegramBot
   participant CS as ChatStore (.ship/chat/*/conversations/*.jsonl)
   participant RT as AgentRuntime
   participant T as chat_send tool
@@ -37,7 +37,7 @@ sequenceDiagram
 
 ### Chat keys (per chat / thread)
 
-ShipMyAgent uses a `chatKey` to isolate context:
+Downcity uses a `chatKey` to isolate context:
 
 - DM / regular group: `telegram-chat-<chatId>`
 - Group topics (forum threads): `telegram-chat-<chatId>-topic-<messageThreadId>`
@@ -46,7 +46,7 @@ ShipMyAgent uses a `chatKey` to isolate context:
 
 Telegram **supergroups** can enable *Topics* (also called “Forum” mode). In that mode, a single group chat is split into multiple thread-like topics. Telegram marks messages in a topic with a `message_thread_id`.
 
-ShipMyAgent treats each topic as an independent conversation context, so the bot’s memory/history is separated per topic:
+Downcity treats each topic as an independent conversation context, so the bot’s memory/history is separated per topic:
 
 - A message in the group “main chat” goes to `telegram-chat-<chatId>`
 - A message in topic `#139` goes to `telegram-chat-<chatId>-topic-139`
@@ -83,13 +83,13 @@ Before execution, the runtime uses an in-memory session history for the same `ch
 
 ### “All messages are stored” and used as context
 
-In group chats, ShipMyAgent stores all incoming messages in `messages.jsonl`, and the recent history may be injected back into the model context for the current `chatKey`.
+In group chats, Downcity stores all incoming messages in `messages.jsonl`, and the recent history may be injected back into the model context for the current `chatKey`.
 
 ## Execution
 
 ### Tool-strict (agent-controlled sending)
 
-ShipMyAgent services use a tool-strict pattern:
+Downcity services use a tool-strict pattern:
 
 - The agent uses the `chat_send` tool to deliver replies (multiple messages, staged updates, etc.)
 - The service does not automatically forward the agent’s plain text output as chat messages
@@ -107,7 +107,7 @@ Telegram executes `agentRuntime.run(...)` for the current `chatKey`.
 #### Outbound reply targeting (`reply_to_message_id`)
 
 For `chat send`, default behavior is non-reply delivery.
-Runtime only tries `reply_to_message_id` when reply mode is explicitly enabled (for example `sma chat send --reply`).
+Runtime only tries `reply_to_message_id` when reply mode is explicitly enabled (for example `city chat send --reply`).
 
 Priority:
 1. explicit `messageId` provided by the caller
@@ -117,7 +117,7 @@ Result:
 - valid numeric id exists: send as a reply-to message
 - no valid id: send normally (no reply link), `chat send` still succeeds
 
-#### Reactions (`sma chat react`)
+#### Reactions (`city chat react`)
 
 `chat react` uses Telegram `setMessageReaction`:
 - default emoji is `👍`

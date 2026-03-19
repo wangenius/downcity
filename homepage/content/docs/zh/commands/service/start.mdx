@@ -1,35 +1,35 @@
 ---
-title: sma service start
+title: city service start
 description: 启动单个 service
 ---
 
-# `sma service start`
+# `city service start`
 
 启动目标 agent 下的指定 service。
 
 ## 用法
 
 ```bash
-sma service start <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service start <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
 ```
 
 ## 示例
 
 ```bash
-sma service start task --agent my-agent
+city service start task --agent my-agent
 ```
 
 ## 相关命令
 
-- [`sma service stop`](/zh/docs/commands/service/stop)
-- [`sma service restart`](/zh/docs/commands/service/restart)
+- [`city service stop`](/zh/docs/commands/service/stop)
+- [`city service restart`](/zh/docs/commands/service/restart)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma service start task
+$ city service start task
 {
   "success": true,
   "service": "task"
@@ -37,9 +37,9 @@ $ sma service start task
 ```
 
 ```text
-$ sma service start task --agent missing-agent
+$ city service start task --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city console agents\" to inspect names."
 }
 ```

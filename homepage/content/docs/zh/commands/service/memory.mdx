@@ -1,18 +1,18 @@
 ---
-title: sma memory
+title: city memory
 description: Memory service 动作（status/index/search/get/store/flush）
 ---
 
-# `sma memory`
+# `city memory`
 
 Memory service 命令组。
 
-> 层级说明：`sma memory` 是 service 动作命令，不是一级命令。一级入口是 `sma service`。
+> 层级说明：`city memory` 是 service 动作命令，不是一级命令。一级入口是 `city service`。
 
 ## 用法
 
 ```bash
-sma memory <subcommand> [options]
+city memory <subcommand> [options]
 ```
 
 ## 子命令
@@ -27,12 +27,12 @@ sma memory <subcommand> [options]
 ## 示例
 
 ```bash
-sma memory status
-sma memory index --force
-sma memory search "release decision"
-sma memory get .ship/memory/MEMORY.md --from 10 --lines 20
-sma memory store --target longterm --content "用户偏好简洁的发布说明。"
-sma memory flush --context-id telegram-chat-123 --max-messages 40
+city memory status
+city memory index --force
+city memory search "release decision"
+city memory get .ship/memory/MEMORY.md --from 10 --lines 20
+city memory store --target longterm --content "用户偏好简洁的发布说明。"
+city memory flush --context-id telegram-chat-123 --max-messages 40
 ```
 
 ## 说明
@@ -41,7 +41,7 @@ sma memory flush --context-id telegram-chat-123 --max-messages 40
 - 先启动 agent runtime：
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## 示例输出（基于当前实现）
@@ -49,7 +49,7 @@ sma agent start
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma memory search "release decision"
+$ city memory search "release decision"
 {
   "success": true,
   "data": {
@@ -60,7 +60,7 @@ $ sma memory search "release decision"
 ```
 
 ```text
-$ sma memory flush --context-id <contextId> --max-messages 40
+$ city memory flush --context-id <contextId> --max-messages 40
 {
   "success": true,
   "data": {

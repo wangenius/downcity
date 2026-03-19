@@ -1,35 +1,35 @@
 ---
-title: sma service restart
+title: city service restart
 description: Restart a single service
 ---
 
-# `sma service restart`
+# `city service restart`
 
 Restart a single service under a target agent.
 
 ## Usage
 
 ```bash
-sma service restart <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service restart <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
 ```
 
 ## Example
 
 ```bash
-sma service restart chat --agent my-agent
+city service restart chat --agent my-agent
 ```
 
 ## Related commands
 
-- [`sma service status`](/en/docs/commands/service/status)
-- [`sma service command`](/en/docs/commands/service/command)
+- [`city service status`](/en/docs/commands/service/status)
+- [`city service command`](/en/docs/commands/service/command)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma service restart task
+$ city service restart task
 {
   "success": true,
   "service": "task"
@@ -37,7 +37,7 @@ $ sma service restart task
 ```
 
 ```text
-$ sma service restart unknown
+$ city service restart unknown
 {
   "success": false,
   "error": "<service error>"

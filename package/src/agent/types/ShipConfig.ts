@@ -15,7 +15,7 @@ export interface ShipConfig {
   version: string;
   description?: string;
   /**
-   * Runtime startup configuration used by `shipmyagent agent start`.
+   * Runtime startup configuration used by `downcity agent start`.
    * CLI flags (if provided) take precedence over this config.
    */
   start?: {
@@ -58,7 +58,7 @@ export interface ShipConfig {
        *
        * 可选值（中文）
        * - `direct`（默认）：将本轮 LLM 生成的 assistant 文本直接投递到当前会话 channel。
-       * - `cmd`：通过 shell 执行 `sma chat send` 投递用户可见消息。
+       * - `cmd`：通过 shell 执行 `city chat send` 投递用户可见消息。
        */
       method?: "cmd" | "direct";
       /**
@@ -148,7 +148,7 @@ export interface ShipConfig {
      *
      * 关键点（中文）
      * - 负责统一管理 STT 模型目录、启停开关、激活模型与转写执行策略。
-     * - 可通过 `sma voice ...` 命令组维护，不需要手改 JSON。
+     * - 可通过 `city voice ...` 命令组维护，不需要手改 JSON。
      */
     voice?: VoiceExtensionConfig;
   };

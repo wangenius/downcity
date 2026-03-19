@@ -8,16 +8,16 @@ description: Correct startup sequence for Console + Agent in about 10 minutes
 ## 1. Install
 
 ```bash
-npm install -g shipmyagent
-shipmyagent --version
+npm install -g downcity
+downcity --version
 ```
 
-> `sma` is the same binary as `shipmyagent`.
+> `downcity` and `city` are the same CLI binary.
 
 ## 2. Initialize Console (first time only)
 
 ```bash
-sma console init
+city console init
 ```
 
 This creates console-global config under `~/.ship/`.
@@ -25,16 +25,16 @@ This creates console-global config under `~/.ship/`.
 ## 3. Start Console
 
 ```bash
-sma console start
+city console start
 ```
 
-> `sma agent start` requires console to be running first.
+> `city agent start` requires console to be running first.
 
 ## 4. Initialize a repository
 
 ```bash
 cd /path/to/your-repo
-sma agent create .
+city agent create .
 ```
 
 Initialization generates:
@@ -69,20 +69,20 @@ Minimal `ship.json` example:
 Start runtime (default: background daemon):
 
 ```bash
-sma agent start
+city agent start
 ```
 
 Use foreground mode when you want logs in the current terminal:
 
 ```bash
-sma agent start --foreground
+city agent start --foreground
 ```
 
 ## 7. Verify runtime state
 
 ```bash
-sma agent status
-sma console agents
+city agent status
+city console agents
 ```
 
 Notes:
@@ -93,7 +93,7 @@ Notes:
 ## 8. Optional: start Console UI
 
 ```bash
-sma console ui start
+city console ui start
 ```
 
 ## Next

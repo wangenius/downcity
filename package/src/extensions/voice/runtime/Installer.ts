@@ -78,7 +78,7 @@ export interface VoiceModelInstallProgressEvent {
  * 判断模型在本地是否已安装。
  *
  * 关键点（中文）
- * - 优先识别安装清单 `shipmyagent.voice.install.json`。
+ * - 优先识别安装清单 `downcity.voice.install.json`。
  * - 若无清单但目录非空，也视为已存在模型，避免重复下载。
  */
 export async function detectLocalVoiceModelInstallState(input: {
@@ -99,7 +99,7 @@ export async function detectLocalVoiceModelInstallState(input: {
   source?: "manifest" | "directory";
 }> {
   const modelDir = path.resolve(input.modelsRootDir, input.modelId);
-  const manifestPath = path.join(modelDir, "shipmyagent.voice.install.json");
+  const manifestPath = path.join(modelDir, "downcity.voice.install.json");
   const hasManifest = await fsExtra.pathExists(manifestPath);
   if (hasManifest) {
     return {
@@ -296,7 +296,7 @@ export async function installVoiceModelFromHuggingFace(input: {
   }
 
   await fsExtra.writeJson(
-    path.join(modelDir, "shipmyagent.voice.install.json"),
+    path.join(modelDir, "downcity.voice.install.json"),
     {
       modelId: input.model.id,
       label: input.model.label,

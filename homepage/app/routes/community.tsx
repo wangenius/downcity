@@ -3,10 +3,10 @@ import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
 export function meta() {
-  const baseUrl = product.homepage || "https://shipmyagent.com";
+  const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — Community`;
   const description =
-    "Join the ShipMyAgent community, connect with developers, and contribute.";
+    "Join the Downcity community, connect with developers, and contribute.";
 
   return [
     { charSet: "utf-8" },

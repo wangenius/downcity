@@ -1,16 +1,16 @@
 ---
-title: sma agent status
+title: city agent status
 description: 查看指定 agent runtime 状态
 ---
 
-# `sma agent status`
+# `city agent status`
 
 查看指定 agent 的 runtime 状态。
 
 ## 用法
 
 ```bash
-sma agent status [path]
+city agent status [path]
 ```
 
 ## 行为说明
@@ -22,19 +22,19 @@ sma agent status [path]
 
 ## 相关命令
 
-- [`sma agent start`](/zh/docs/commands/agent/start)
-- [`sma agent restart`](/zh/docs/commands/agent/restart)
-- [`sma console agents`](/zh/docs/commands/console/agents)
+- [`city agent start`](/zh/docs/commands/agent/start)
+- [`city agent restart`](/zh/docs/commands/agent/restart)
+- [`city console agents`](/zh/docs/commands/console/agents)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma agent status .
-sma version: 1.0.0
+$ city agent status .
+city version: 1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK sma agent status                                    │
+│ OK city agent status                                    │
 │   project    : <projectRoot>                           │
 │   log        : <daemonLogPath>                         │
 │   state      : running                                 │
@@ -44,15 +44,15 @@ sma version: 1.0.0
 ```
 
 ```text
-$ sma agent status .
-sma version: 1.0.0
+$ city agent status .
+city version: 1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ WARN sma agent status                                  │
+│ WARN city agent status                                  │
 │   project      : <projectRoot>                         │
 │   log          : <daemonLogPath>                       │
 │   state        : stale                                 │
 │   stale_pid    : <pid>                                 │
 │   stale_reason : <reason>                              │
-│   fix          : sma agent doctor <projectRoot> --fix  │
+│   fix          : city agent doctor <projectRoot> --fix  │
 └─────────────────────────────────────────────────────────┘
 ```

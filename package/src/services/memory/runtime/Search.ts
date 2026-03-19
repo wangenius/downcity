@@ -84,7 +84,7 @@ export async function searchMemory(
       results: [],
       disabled: true,
       error: message,
-      action: "Run `sma memory index --force` to rebuild local memory index.",
+      action: "Run `city memory index --force` to rebuild local memory index.",
     };
   }
 }

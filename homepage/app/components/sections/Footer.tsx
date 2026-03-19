@@ -24,7 +24,7 @@ export const Footer: FC = () => {
             </Link>
             <p className="text-sm leading-relaxed mb-4">{t("hero:subtitle")}</p>
             <Link
-              to="https://github.com/wangenius/shipmyagent"
+              to="https://github.com/wangenius/downcity"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm hover:text-foreground transition-colors"
@@ -58,7 +58,7 @@ export const Footer: FC = () => {
               </li>
               <li>
                 <Link
-                  to="https://github.com/wangenius/shipmyagent/releases"
+                  to="https://github.com/wangenius/downcity/releases"
                   target="_blank"
                   className="hover:text-foreground transition-colors"
                 >
@@ -75,7 +75,7 @@ export const Footer: FC = () => {
             <ul className="space-y-3 text-sm">
               <li>
                 <Link
-                  to="https://github.com/wangenius/shipmyagent"
+                  to="https://github.com/wangenius/downcity"
                   target="_blank"
                   className="hover:text-foreground transition-colors"
                 >
@@ -84,7 +84,7 @@ export const Footer: FC = () => {
               </li>
               <li>
                 <Link
-                  to="https://github.com/wangenius/shipmyagent/issues"
+                  to="https://github.com/wangenius/downcity/issues"
                   target="_blank"
                   className="hover:text-foreground transition-colors"
                 >
@@ -93,7 +93,7 @@ export const Footer: FC = () => {
               </li>
               <li>
                 <Link
-                  to="https://twitter.com/shipmyagent"
+                  to="https://twitter.com/downcity"
                   target="_blank"
                   className="hover:text-foreground transition-colors"
                 >

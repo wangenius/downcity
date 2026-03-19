@@ -78,7 +78,7 @@ async function runCliExpectFailure(args) {
 }
 
 test("config get/set/unset updates nested ship.json path", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-config-cmd-"));
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-cmd-"));
   t.after(async () => {
     await fs.remove(tempRoot);
   });
@@ -121,7 +121,7 @@ test("config get/set/unset updates nested ship.json path", async (t) => {
 });
 
 test("config llm provider/model commands manage references and active model", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-config-llm-"));
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-llm-"));
   t.after(async () => {
     await fs.remove(tempRoot);
   });

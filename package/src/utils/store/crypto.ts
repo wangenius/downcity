@@ -26,7 +26,7 @@ async function resolveKeyFilePath(): Promise<string> {
 
 function loadOrCreateKeySync(): Buffer {
   if (cachedKey) return cachedKey;
-  const envKey = String(process.env.SMA_MODEL_DB_KEY || "").trim();
+  const envKey = String(process.env.DC_MODEL_DB_KEY || "").trim();
   if (envKey) {
     cachedKey = crypto.createHash("sha256").update(envKey, "utf8").digest();
     return cachedKey;

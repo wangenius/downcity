@@ -1,20 +1,20 @@
 ---
 title: FAQ
-description: 使用 ShipMyAgent 的高频问题
+description: 使用 Downcity 的高频问题
 ---
 
 # FAQ
 
-## `shipmyagent` 和 `sma` 有区别吗？
+## `downcity` 和 `city` 有区别吗？
 
-没有。`sma` 是同一个可执行文件的短命令。
+没有。`city` 是同一个可执行文件的短命令。
 
-## 为什么我执行 `sma task ...` 返回连接失败？
+## 为什么我执行 `city task ...` 返回连接失败？
 
 `task/chat/skill/voice/service/extension` 这类命令通常依赖运行中的 daemon：
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## `ship.json` 里的 `${VAR}` 没有被替换怎么办？
@@ -24,15 +24,15 @@ sma agent start
 ## 如何切换模型？
 
 ```bash
-sma console model list
-sma console config get model.primary
+city console model list
+city console config get model.primary
 ```
 
 ## 如何查看当前服务状态？
 
 ```bash
-sma service list
-sma extension list
+city service list
+city extension list
 ```
 
 ## 安装依赖时看到 `deprecated eslint@8` 和一堆子依赖告警怎么办？
@@ -42,7 +42,7 @@ sma extension list
 - `eslint@8` 告警：说明当前依赖树里还在解析 8.x。
 - `glob@7` / `rimraf@3` / `inflight` 等：多为上游工具的传递依赖。
 
-如果你只运行 `sma`，可暂时忽略；如果要清理告警，优先做两件事：
+如果你只运行 `city`，可暂时忽略；如果要清理告警，优先做两件事：
 
 1. 把项目里直接声明的 `eslint` 升到 9.x。
 2. 升级触发告警的工具包到最新主版本（若其已支持）。

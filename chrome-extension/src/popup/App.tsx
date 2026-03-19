@@ -30,7 +30,7 @@ import {
   dispatchAgentTask,
   fetchAgents,
   fetchChatKeyOptions,
-} from "../services/shipmyagentApi";
+} from "../services/downcityApi";
 import { buildPageMarkdownSnapshot } from "../services/pageMarkdown";
 import {
   appendPageSendRecord,
@@ -255,7 +255,7 @@ export function App() {
       }));
 
       if (list.length === 0) {
-        setStatus({ type: "error", text: "未发现可用 Agent，请先启动 `sma agent start`" });
+        setStatus({ type: "error", text: "未发现可用 Agent，请先启动 `city agent start`" });
       } else {
         setStatus({ type: "idle", text: "Agent 列表已刷新" });
       }
@@ -561,8 +561,8 @@ export function App() {
     <main className="popup-root">
       <header className="header-card">
         <div className="brand-block">
-          <img className="brand-logo" src="/icon-32.png" alt="ShipMyAgent logo" />
-          <h1>ShipMyAgent Share</h1>
+          <img className="brand-logo" src="/icon-32.png" alt="Downcity logo" />
+          <h1>Downcity Share</h1>
         </div>
         <button
           className="ghost-btn settings-btn"

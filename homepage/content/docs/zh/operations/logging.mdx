@@ -25,7 +25,7 @@ tail -f .ship/logs/$(date +%F).jsonl
 grep -Ei "error|warn|timeout|failed" .ship/logs/$(date +%F).jsonl
 
 # 查看某个会话最近消息
-sma chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
+city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
 ```
 
 ## LLM 请求日志开关

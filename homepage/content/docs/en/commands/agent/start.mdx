@@ -1,16 +1,16 @@
 ---
-title: sma agent start
+title: city agent start
 description: Start agent runtime (background or foreground)
 ---
 
-# `sma agent start`
+# `city agent start`
 
 Start runtime for a target agent.
 
 ## Usage
 
 ```bash
-sma agent start [path] [options]
+city agent start [path] [options]
 ```
 
 ## Key options
@@ -29,24 +29,24 @@ sma agent start [path] [options]
 
 ## Related commands
 
-- [`sma agent restart`](/en/docs/commands/agent/restart)
-- [`sma agent status`](/en/docs/commands/agent/status)
-- [`sma console start`](/en/docs/commands/console/start)
+- [`city agent restart`](/en/docs/commands/agent/restart)
+- [`city agent status`](/en/docs/commands/agent/status)
+- [`city console start`](/en/docs/commands/console/start)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma agent start .
-sma version: 1.0.0
-✅ ShipMyAgent daemon started
+$ city agent start .
+city version: 1.0.0
+✅ Downcity daemon started
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ sma agent start .
-sma version: 1.0.0
-❌ console is not running. Please run `sma console start` first.
+$ city agent start .
+city version: 1.0.0
+❌ console is not running. Please run `city console start` first.
 ```

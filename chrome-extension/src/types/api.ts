@@ -1,5 +1,5 @@
 /**
- * ShipMyAgent Console/Runtime API 类型定义。
+ * Downcity Console/Runtime API 类型定义。
  *
  * 关键点（中文）：
  * - 仅声明插件实际使用到的字段，避免无关类型噪音。

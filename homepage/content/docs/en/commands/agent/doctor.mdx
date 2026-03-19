@@ -1,16 +1,16 @@
 ---
-title: sma agent doctor
+title: city agent doctor
 description: Diagnose and optionally fix stale runtime state files
 ---
 
-# `sma agent doctor`
+# `city agent doctor`
 
 Diagnose runtime state files for a target agent and optionally clean stale pid/meta files.
 
 ## Usage
 
 ```bash
-sma agent doctor [path] [--fix]
+city agent doctor [path] [--fix]
 ```
 
 ## Key option
@@ -25,26 +25,26 @@ sma agent doctor [path] [--fix]
 
 ## Related commands
 
-- [`sma agent status`](/en/docs/commands/agent/status)
-- [`sma agent restart`](/en/docs/commands/agent/restart)
+- [`city agent status`](/en/docs/commands/agent/status)
+- [`city agent restart`](/en/docs/commands/agent/restart)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma agent doctor .
-sma version: 1.0.0
+$ city agent doctor .
+city version: 1.0.0
 ⚠️  Stale daemon state detected
    project: <projectRoot>
    stalePid: <pid>
    reason: <reasons>
    log: <daemonLogPath>
-   Run `sma agent doctor <path> --fix` to clean stale pid/meta.
+   Run `city agent doctor <path> --fix` to clean stale pid/meta.
 ```
 
 ```text
-$ sma agent doctor . --fix
-sma version: 1.0.0
+$ city agent doctor . --fix
+city version: 1.0.0
 ✅ Cleaned stale daemon pid/meta files
 ```

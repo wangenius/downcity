@@ -20,7 +20,7 @@ healthRouter.get("/health", (c) => {
 
 healthRouter.get("/api/status", (c) => {
   return c.json({
-    name: "shipmyagent",
+    name: "downcity",
     status: "running",
     timestamp: new Date().toISOString(),
   });

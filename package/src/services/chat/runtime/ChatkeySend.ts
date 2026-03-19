@@ -170,7 +170,7 @@ export async function sendTextByChatKey(params: {
       return {
         success: false,
         error:
-          "QQ requires chatType + messageId to send a reply. Ask the target user to send a message first so ShipMyAgent can record latest chat meta.",
+          "QQ requires chatType + messageId to send a reply. Ask the target user to send a message first so Downcity can record latest chat meta.",
       };
     }
   }

@@ -2,7 +2,7 @@
  * 查询后台 Agent Runtime（daemon）状态。
  *
  * 对应命令：
- * - `sma agent status [path]`
+ * - `city agent status [path]`
  */
 
 import path from "path";
@@ -27,7 +27,7 @@ import {
  * 状态规则（中文）
  * - 运行中：输出 pid / log / startedAt
  * - 已初始化但未运行：输出 not running
- * - 未初始化：提示执行 `sma agent create`
+ * - 未初始化：提示执行 `city agent create`
  */
 export async function statusCommand(cwd: string = "."): Promise<void> {
   const projectRoot = path.resolve(cwd);
@@ -63,7 +63,7 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
       rows.push(["warning", `missing init files: ${missingInitFiles.join(", ")}`]);
     }
     printPanel({
-      title: "sma agent status",
+      title: "city agent status",
       tone,
       lines: renderKeyValueLines(rows),
     });
@@ -76,9 +76,9 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
     rows.push(["stale_pid", String(pid)]);
     const reasons = await diagnoseDaemonStaleReasons(projectRoot, pid);
     rows.push(["stale_reason", reasons.map((item) => item.message).join("; ")]);
-    rows.push(["fix", `sma agent doctor ${projectRoot} --fix`]);
+    rows.push(["fix", `city agent doctor ${projectRoot} --fix`]);
     printPanel({
-      title: "sma agent status",
+      title: "city agent status",
       tone,
       lines: renderKeyValueLines(rows),
     });
@@ -89,9 +89,9 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
     tone = "error";
     rows.push(["state", "not_initialized"]);
     rows.push(["missing", missingInitFiles.join(", ")]);
-    rows.push(["fix", 'run "sma agent create" first']);
+    rows.push(["fix", 'run "city agent create" first']);
     printPanel({
-      title: "sma agent status",
+      title: "city agent status",
       tone,
       lines: renderKeyValueLines(rows),
     });
@@ -101,7 +101,7 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
   tone = "info";
   rows.push(["state", "stopped"]);
   printPanel({
-    title: "sma agent status",
+    title: "city agent status",
     tone,
     lines: renderKeyValueLines(rows),
   });

@@ -2,7 +2,7 @@
  * Voice 转写依赖安装器。
  *
  * 关键点（中文）
- * - 统一管理 `sma voice init` 的 Python 依赖安装逻辑。
+ * - 统一管理 `city voice init` 的 Python 依赖安装逻辑。
  * - 根据模型自动推导 runner（funasr / transformers-whisper）并执行 `python -m pip install`。
  * - 返回结构化安装结果，供 CLI/日志/测试复用。
  */

@@ -1,20 +1,20 @@
 ---
-title: sma agent
+title: city agent
 description: Manage Agent Runtime in the current directory or a target directory
 ---
 
-# `sma agent`
+# `city agent`
 
 Manage Agent Runtime start/restart.
 
 ## Command hierarchy
 
-Top-level commands are fixed to 4: `sma console`, `sma agent`, `sma service`, `sma extension`.
+Top-level commands are fixed to 4: `city console`, `city agent`, `city service`, `city extension`.
 
 ## Usage
 
 ```bash
-sma agent <subcommand>
+city agent <subcommand>
 ```
 
 ## Subcommands
@@ -27,33 +27,33 @@ sma agent <subcommand>
 
 ## Subcommand docs
 
-- [`sma agent create`](/en/docs/commands/agent/create)
-- [`sma agent start`](/en/docs/commands/agent/start)
-- [`sma agent status`](/en/docs/commands/agent/status)
-- [`sma agent restart`](/en/docs/commands/agent/restart)
-- [`sma agent doctor`](/en/docs/commands/agent/doctor)
+- [`city agent create`](/en/docs/commands/agent/create)
+- [`city agent start`](/en/docs/commands/agent/start)
+- [`city agent status`](/en/docs/commands/agent/status)
+- [`city agent restart`](/en/docs/commands/agent/restart)
+- [`city agent doctor`](/en/docs/commands/agent/doctor)
 
 ## Environment variable injection
 
-On every `sma` execution, CLI resolves current agent context and injects variables into the `sma` process and its child processes:
+On every `city` execution, CLI resolves current agent context and injects variables into the `city` process and its child processes:
 
-- `SMA_AGENT_PATH`: absolute path of current agent
-- `SMA_AGENT_NAME`: agent name (prefer `ship.json.name`, fallback to directory name)
+- `DC_AGENT_PATH`: absolute path of current agent
+- `DC_AGENT_NAME`: agent name (prefer `ship.json.name`, fallback to directory name)
 
 > Note: this is process-scoped injection and does not mutate your parent shell session.
 
 ## Related command
 
-- Start console first: [`sma console start`](/en/docs/commands/console/start)
+- Start console first: [`city console start`](/en/docs/commands/console/start)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma agent
-sma version: 1.0.0
-Usage: sma agent [options] [command]
+$ city agent
+city version: 1.0.0
+Usage: city agent [options] [command]
 Commands:
   create [path]
   start [path]

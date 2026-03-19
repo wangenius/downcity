@@ -1,16 +1,16 @@
 ---
-title: sma agent start
+title: city agent start
 description: 启动 agent runtime（后台或前台）
 ---
 
-# `sma agent start`
+# `city agent start`
 
 启动指定 agent 的 runtime。
 
 ## 用法
 
 ```bash
-sma agent start [path] [options]
+city agent start [path] [options]
 ```
 
 ## 常用参数
@@ -29,24 +29,24 @@ sma agent start [path] [options]
 
 ## 相关命令
 
-- [`sma agent restart`](/zh/docs/commands/agent/restart)
-- [`sma agent status`](/zh/docs/commands/agent/status)
-- [`sma console start`](/zh/docs/commands/console/start)
+- [`city agent restart`](/zh/docs/commands/agent/restart)
+- [`city agent status`](/zh/docs/commands/agent/status)
+- [`city console start`](/zh/docs/commands/console/start)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma agent start .
-sma version: 1.0.0
-✅ ShipMyAgent daemon started
+$ city agent start .
+city version: 1.0.0
+✅ Downcity daemon started
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ sma agent start .
-sma version: 1.0.0
-❌ console is not running. Please run `sma console start` first.
+$ city agent start .
+city version: 1.0.0
+❌ console is not running. Please run `city console start` first.
 ```

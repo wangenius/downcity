@@ -1,10 +1,10 @@
-# ShipMyAgent Chrome Extension
+# Downcity Chrome Extension
 
 这个目录下是一个可直接加载到 Chrome 的插件，用于：
 
 1. 获取当前网页标题与 URL。
 2. 提取当前页面正文并转换成 Markdown 文档。
-3. 选择目标 ShipMyAgent Agent。
+3. 选择目标 Downcity Agent。
 4. 以 API 附件方式把 Markdown 文档发送给 Agent 执行。
 5. 投递成功后关闭插件窗口。
 
@@ -28,7 +28,7 @@ chrome-extension/
 │  │  └─ styles.css
 │  ├─ services/
 │  │  ├─ pageMarkdown.ts
-│  │  ├─ shipmyagentApi.ts
+│  │  ├─ downcityApi.ts
 │  │  ├─ storage.ts
 │  │  └─ tab.ts
 │  └─ types/
@@ -60,9 +60,9 @@ npm run dev
 ## 使用说明
 
 1. 确保本地 Console/Agent 已启动：
-   - `sma console start`
-   - `sma console ui start --port 5315`
-   - `sma agent start`
+   - `city console start`
+   - `city console ui start --port 5315`
+   - `city agent start`
 2. 打开任意网页，点击插件图标。
 3. 在插件中选择：
    - 目标 Console（IP + 端口）

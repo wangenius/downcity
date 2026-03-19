@@ -79,7 +79,7 @@ const packageJson = JSON.parse(
 const program = new Command();
 
 /**
- * 在关键运行命令执行前打印当前 sma 版本。
+ * 在关键运行命令执行前打印当前 city 版本。
  *
  * 说明（中文）
  * - 仅用于 runtime 相关命令，避免影响 `config --json` 等结构化输出。
@@ -95,7 +95,7 @@ function withVersionBanner<TArgs extends unknown[]>(
       return (arg as { json?: unknown }).json === true;
     });
     if (!hasJsonMode) {
-      console.log(`sma version: ${packageJson.version}`);
+      console.log(`city version: ${packageJson.version}`);
     }
     await action(...args);
   };
@@ -153,8 +153,8 @@ function injectAgentContext(pathInput: string = "."): {
 } {
   const projectRoot = resolve(String(pathInput || "."));
   const agentName = resolveAgentName(projectRoot);
-  process.env.SMA_AGENT_PATH = projectRoot;
-  process.env.SMA_AGENT_NAME = agentName;
+  process.env.DC_AGENT_PATH = projectRoot;
+  process.env.DC_AGENT_NAME = agentName;
   return { projectRoot, agentName };
 }
 
@@ -166,7 +166,7 @@ async function startConsoleCommand(): Promise<void> {
 
   const existingPid = await readConsolePid();
   if (existingPid && isConsoleProcessAlive(existingPid)) {
-    console.log("ℹ️  SMA console is already running");
+    console.log("ℹ️  DC console is already running");
     console.log(`   pid: ${existingPid}`);
     return;
   }
@@ -183,7 +183,7 @@ async function startConsoleCommand(): Promise<void> {
     stdio: ["ignore", logFd, logFd],
     env: {
       ...process.env,
-      SHIPMYAGENT_CONSOLE: "1",
+      DOWNCITY_CONSOLE: "1",
     },
   });
 
@@ -194,7 +194,7 @@ async function startConsoleCommand(): Promise<void> {
 
   await fs.writeFile(pidPath, String(child.pid), "utf-8");
 
-  console.log("✅ SMA console started");
+  console.log("✅ DC console started");
   console.log(`   pid: ${child.pid}`);
   console.log(`   log: ${logPath}`);
 }
@@ -239,7 +239,7 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
 
   const consolePid = await readConsolePid();
   if (!consolePid) {
-    console.log("ℹ️  SMA console is not running");
+    console.log("ℹ️  DC console is not running");
     console.log(`   pidFile: ${pidPath}`);
     console.log(`   log: ${logPath}`);
     return;
@@ -273,10 +273,10 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
   await fs.remove(pidPath);
 
   if (isConsoleProcessAlive(consolePid)) {
-    console.log("⚠️  SMA console may still be running");
+    console.log("⚠️  DC console may still be running");
     console.log(`   pid: ${consolePid}`);
   } else {
-    console.log("✅ SMA console stopped");
+    console.log("✅ DC console stopped");
     console.log(`   pid: ${consolePid}`);
   }
   console.log(`   pidFile: ${pidPath}`);
@@ -358,7 +358,7 @@ async function resolveRegisteredAgentProjectRoot(
 
   console.error("❌ agent is not registered in console registry");
   console.error(`   project: ${projectRoot}`);
-  console.error("   fix: start agent first (`sma agent start <path>`) or run `sma console agents`");
+  console.error("   fix: start agent first (`city agent start <path>`) or run `city console agents`");
   return null;
 }
 
@@ -418,7 +418,7 @@ async function consoleStatusCommand(): Promise<void> {
     rows.splice(1, 0, ["warning", "stale pid file detected"]);
   }
   printPanel({
-    title: "sma console status",
+    title: "city console status",
     tone,
     lines: renderKeyValueLines(rows, 2),
   });
@@ -435,7 +435,7 @@ async function consoleStatusCommand(): Promise<void> {
     if (ui.url) uiRows.splice(2, 0, ["url", ui.url]);
   }
   printPanel({
-    title: "sma console ui status",
+    title: "city console ui status",
     tone: uiTone,
     lines: renderKeyValueLines(uiRows, 2),
   });
@@ -445,7 +445,7 @@ async function consoleStatusCommand(): Promise<void> {
 }
 
 program
-  .name(basename(process.argv[1] || "shipmyagent"))
+  .name(basename(process.argv[1] || "downcity"))
   .description("把一个代码仓库，启动为一个拥有自主意识和执行能力的 Agent")
   .version(packageJson.version, "-v, --version");
 
@@ -463,7 +463,7 @@ program
 
 program
   .command("start")
-  .description("启动 SMA（等价于先执行 `sma console start`，再执行 `sma console ui start`）")
+  .description("启动 CITY（等价于先执行 `city console start`，再执行 `city console ui start`）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async () => {
     await startConsoleCommand();
@@ -475,7 +475,7 @@ program
 
 program
   .command("stop")
-  .description("停止 SMA（等价于执行 `sma console stop`）")
+  .description("停止 CITY（等价于执行 `city console stop`）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async () => {
     await stopConsoleCommand();
@@ -483,7 +483,7 @@ program
 
 program
   .command("restart")
-  .description("重启 SMA（等价于先执行 `sma console restart`，再执行 `sma console ui start`）")
+  .description("重启 CITY（等价于先执行 `city console restart`，再执行 `city console ui start`）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async () => {
     await restartConsoleCommand();
@@ -552,7 +552,7 @@ consoleCommand
             if (status.url) panelRows.splice(2, 0, ["url", status.url]);
           }
           printPanel({
-            title: "sma console ui status",
+            title: "city console ui status",
             tone: status.running ? "success" : "info",
             lines: renderKeyValueLines(panelRows, 2),
           });
@@ -652,7 +652,7 @@ agent
       ) => {
         if (!(await isConsoleRunning())) {
           console.error(
-            "❌ console is not running. Please run `sma console start` first.",
+            "❌ console is not running. Please run `city console start` first.",
           );
           process.exit(1);
         }
@@ -728,7 +728,7 @@ agent
     console.log(`   log: ${getDaemonLogPath(projectRoot)}`);
 
     if (options.fix !== true) {
-      console.log("   Run `sma agent doctor <path> --fix` to clean stale pid/meta.");
+      console.log("   Run `city agent doctor <path> --fix` to clean stale pid/meta.");
       return;
     }
 

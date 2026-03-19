@@ -84,9 +84,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
 
-  const baseUrl = "https://shipmyagent.com";
-  const title = `${loaderData.title} — ShipMyAgent Docs`;
-  const description = loaderData.description || "ShipMyAgent Documentation";
+  const baseUrl = "https://downcity.ai";
+  const title = `${loaderData.title} — Downcity Docs`;
+  const description = loaderData.description || "Downcity Documentation";
   const url = `${baseUrl}${loaderData.path}`;
 
   return [
@@ -100,7 +100,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     },
     {
       name: "keywords",
-      content: "ShipMyAgent, documentation, AI agent, GitHub, tutorial, guide",
+      content: "Downcity, documentation, AI agent, GitHub, tutorial, guide",
     },
     {
       property: "og:title",
@@ -124,7 +124,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     },
     {
       property: "og:site_name",
-      content: "ShipMyAgent",
+      content: "Downcity",
     },
     {
       name: "twitter:card",

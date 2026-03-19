@@ -1,44 +1,44 @@
 ---
-title: sma console stop
+title: city console stop
 description: Stop console (and managed child agent runtimes)
 ---
 
-# `sma console stop`
+# `city console stop`
 
 Stop console (and managed child agent runtimes).
 
 ## Usage
 
 ```bash
-sma console stop
+city console stop
 ```
 
 ## Related commands
 
-- [`sma console start`](/en/docs/commands/console/start)
-- [`sma console status`](/en/docs/commands/console/status)
+- [`city console start`](/en/docs/commands/console/start)
+- [`city console status`](/en/docs/commands/console/status)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma console stop
-sma version: 1.0.0
+$ city console stop
+city version: 1.0.0
 ✅ Console UI stopped
    pid: <uiPid>
    pidFile: <uiPidPath>
    log: <uiLogPath>
-✅ SMA console stopped
+✅ DC console stopped
    pid: <pid>
    pidFile: <consolePidPath>
    log: <consoleLogPath>
 ```
 
 ```text
-$ sma console stop
-sma version: 1.0.0
-ℹ️  SMA console is not running
+$ city console stop
+city version: 1.0.0
+ℹ️  DC console is not running
    pidFile: <consolePidPath>
    log: <consoleLogPath>
 ```

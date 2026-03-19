@@ -1,6 +1,6 @@
 {
-  "name": "ShipMyAgent",
-  "short_name": "ShipMyAgent",
+  "name": "Downcity",
+  "short_name": "Downcity",
   "description": "Transform any GitHub repository into an AI agent instantly",
   "start_url": "/",
   "display": "standalone",

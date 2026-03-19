@@ -23,8 +23,8 @@ In one line:
 
 ## 2. Process Startup Model
 
-1. Start console: `sma console start`
-2. Start agent in project: `sma agent start`
+1. Start console: `city console start`
+2. Start agent in project: `city agent start`
 3. Agent runtime loads config layers (project `ship.json.services.*` + console-global `~/.ship/ship.db` `extensions_config.*` + global model pool)
 4. Inbound messages/tasks enter agent scheduling
 5. Agent invokes service/extension to complete execution
@@ -33,10 +33,10 @@ In one line:
 ## 3. Operational Checklist
 
 ```bash
-sma console status
-sma agent status .
-sma service list
-sma extension list
+city console status
+city agent status .
+city service list
+city extension list
 ```
 
 ## Related Docs
@@ -45,5 +45,5 @@ sma extension list
 - [Service vs Extension](/en/docs/concepts/service-vs-extension)
 - [Service Runtime](/en/docs/concepts/service-runtime)
 - [Extension Runtime](/en/docs/concepts/extension-runtime)
-- [`sma console`](/en/docs/commands/console/console)
-- [`sma agent`](/en/docs/commands/agent/agent)
+- [`city console`](/en/docs/commands/console/console)
+- [`city agent`](/en/docs/commands/agent/agent)

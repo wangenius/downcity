@@ -192,9 +192,9 @@ export function App() {
     <main className="options-root">
       <header className="header-card">
         <div className="brand-block">
-          <img className="brand-logo" src="/icon-32.png" alt="ShipMyAgent logo" />
+          <img className="brand-logo" src="/icon-32.png" alt="Downcity logo" />
           <div>
-            <h1>ShipMyAgent Settings</h1>
+            <h1>Downcity Settings</h1>
             <p>统一管理连接参数与常用问题模板</p>
           </div>
         </div>

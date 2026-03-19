@@ -5,7 +5,7 @@ description: 安装、启动与配置中的常见错误
 
 # 常见问题
 
-## 命令找不到（`shipmyagent: command not found`）
+## 命令找不到（`downcity: command not found`）
 
 ```bash
 npm config get prefix
@@ -15,24 +15,24 @@ export PATH=$(npm config get prefix)/bin:$PATH
 或直接用：
 
 ```bash
-npx shipmyagent --version
+npx downcity --version
 ```
 
 ## 端口冲突（5314 被占用）
 
 ```bash
 lsof -nP -iTCP:5314 -sTCP:LISTEN
-sma agent doctor . --fix
-sma agent restart .
+city agent doctor . --fix
+city agent restart .
 ```
 
-## 启动后无法调用 `sma task/chat/...`
+## 启动后无法调用 `city task/chat/...`
 
 先确认 daemon 运行中：
 
 ```bash
-sma agent start
-sma service list
+city agent start
+city service list
 ```
 
 ## LLM 配置错误
@@ -40,8 +40,8 @@ sma service list
 检查：
 
 ```bash
-sma console model list
-sma console config get model.primary
+city console model list
+city console config get model.primary
 ```
 
 并确认：

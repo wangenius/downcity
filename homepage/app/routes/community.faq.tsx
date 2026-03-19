@@ -4,7 +4,7 @@ import { product } from "@/lib/product";
 
 export function meta() {
   const title = `${product.productName} — FAQ`;
-  const description = "Frequently asked questions about ShipMyAgent";
+  const description = "Frequently asked questions about Downcity";
   return [
     { title },
     { name: "description", content: description },
@@ -34,7 +34,7 @@ export default function FAQ() {
   const discussionsUrl =
     product.homepage?.includes("github.com") === true
       ? `${product.homepage}/discussions`
-      : "https://github.com/wangenius/shipmyagent/discussions";
+      : "https://github.com/wangenius/downcity/discussions";
 
   const filteredFAQs = selectedCategory
     ? faqs.filter((faq) => faq.category === selectedCategory)

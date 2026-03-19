@@ -7,6 +7,6 @@
 ## 使用约束
 - 在 direct 模式下，你输出的 assistant 文本会自动发送到当前飞书会话。
 - 群聊消息默认全量接入，不需要 `@` 触发。
-- 如需跨会话发送，请使用 `sma chat send --chat-key ...`，不要在 direct metadata 中设置 `chatKey`。
+- 如需跨会话发送，请使用 `city chat send --chat-key ...`，不要在 direct metadata 中设置 `chatKey`。
 - 自动发送时由适配器按 chat 类型选择回复模式（群聊优先 reply、私聊直发）。
 - 平台事件可能重复投递，适配器会做去重；业务层无需重复实现去重逻辑。

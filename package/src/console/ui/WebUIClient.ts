@@ -89,7 +89,7 @@ export class WebUIClient {
           'Cache-Control': 'no-cache',
         });
       }
-      return c.text('ShipMyAgent Interactive Web UI', 200);
+      return c.text('Downcity Interactive Web UI', 200);
     });
 
     // 静态文件服务 - CSS
@@ -210,7 +210,7 @@ export class WebUIClient {
     // 根路径提示
     this.app.get('/info', (c) => {
       return c.json({
-        name: 'ShipMyAgent Interactive Web UI',
+        name: 'Downcity Interactive Web UI',
         version: this.version,
         agentApiUrl: this.context.agentApiUrl,
       });

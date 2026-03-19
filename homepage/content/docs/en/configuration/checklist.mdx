@@ -8,11 +8,11 @@ description: Production/readiness checks before rollout
 Use this checklist before release:
 
 1. Model binding
-- Verify `ship.json.model.primary` exists in `sma console model list`.
+- Verify `ship.json.model.primary` exists in `city console model list`.
 
 2. Routing and network
 - Verify `start.host/start.port` match runtime daemon.
-- Ensure no stale `SMA_SERVER_*` env values.
+- Ensure no stale `DC_SERVER_*` env values.
 
 3. Channels and services
 - Enable only required channels/services.
@@ -20,11 +20,11 @@ Use this checklist before release:
 
 4. Permissions and security
 - Confirm `permissions.exec_command.deny` covers high-risk commands.
-- Ensure `SMA_MODEL_DB_KEY` is injected securely.
+- Ensure `DC_MODEL_DB_KEY` is injected securely.
 
 5. Observability
 - Confirm log paths are writable and traceable.
-- Check `sma console status` and `sma agent status` are healthy.
+- Check `city console status` and `city agent status` are healthy.
 
 ## Related docs
 

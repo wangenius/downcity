@@ -3,7 +3,7 @@ import { product } from "@/lib/product";
 
 export function meta() {
   const title = `${product.productName} — Examples`;
-  const description = "Explore example projects and starters built with ShipMyAgent";
+  const description = "Explore example projects and starters built with Downcity";
   return [
     { title },
     { name: "description", content: description },
@@ -32,7 +32,7 @@ export default function Examples() {
   const repoUrl =
     product.homepage?.includes("github.com") === true
       ? product.homepage
-      : "https://github.com/wangenius/shipmyagent";
+      : "https://github.com/wangenius/downcity";
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">

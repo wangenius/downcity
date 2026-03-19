@@ -1,20 +1,20 @@
 ---
 title: FAQ
-description: Frequently asked questions for ShipMyAgent users
+description: Frequently asked questions for Downcity users
 ---
 
 # FAQ
 
-## Is there any difference between `shipmyagent` and `sma`?
+## Is there any difference between `downcity` and `city`?
 
-No. `sma` is the short alias of the same binary.
+No. `city` is the short alias of the same binary.
 
-## Why does `sma task ...` fail with connection errors?
+## Why does `city task ...` fail with connection errors?
 
 `task/chat/skill/voice/service/extension` commands typically require a running daemon:
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## `${VAR}` in `ship.json` is not resolved. Why?
@@ -24,15 +24,15 @@ Make sure env vars are available in process env or project `.env`, then restart 
 ## How do I switch model quickly?
 
 ```bash
-sma console model list
-sma console config get model.primary
+city console model list
+city console config get model.primary
 ```
 
 ## How can I check runtime state?
 
 ```bash
-sma service list
-sma extension list
+city service list
+city extension list
 ```
 
 ## I see `deprecated eslint@8` and deprecated subdependencies during install. Is this critical?
@@ -42,7 +42,7 @@ Usually no. These warnings are typically from dev-tooling dependency chains and 
 - `deprecated eslint@8`: your resolved tree still includes ESLint 8.x.
 - `glob@7`, `rimraf@3`, `inflight`, etc.: usually transitive dependencies from upstream tools.
 
-If you only run `sma`, you can proceed. To reduce warnings:
+If you only run `city`, you can proceed. To reduce warnings:
 
 1. Upgrade direct `eslint` dependency to 9.x.
 2. Upgrade upstream tooling packages to newer major versions when available.

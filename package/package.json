@@ -1,11 +1,11 @@
 {
-  "name": "shipmyagent",
-  "version": "1.0.285",
+  "name": "downcity",
+  "version": "1.0.288",
   "type": "module",
   "description": "把一个代码仓库，启动成一个可对话、可审计的 Agent Runtime",
   "bin": {
-    "shipmyagent": "./bin/console/commands/Index.js",
-    "sma": "./bin/console/commands/Index.js"
+    "downcity": "./bin/console/commands/Index.js",
+    "city": "./bin/console/commands/Index.js"
   },
   "scripts": {
     "build": "tsc && tsc-alias && node scripts/copy-prompt-assets.mjs",
@@ -70,5 +70,13 @@
     "@types/ws": "^8.18.1",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.7.0"
+  },
+  "homepage": "https://downcity.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangenius/downcity.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wangenius/downcity/issues"
   }
 }

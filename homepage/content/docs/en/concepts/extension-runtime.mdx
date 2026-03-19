@@ -13,28 +13,28 @@ Typical built-in extension:
 
 ## What Extension is responsible for
 
-- Provide extension lifecycle and command forwarding via `sma extension ...`
+- Provide extension lifecycle and command forwarding via `city extension ...`
 - Expose HTTP control and command routes under `/api/extensions/*`
 - Keep extension-specific config in console-global `~/.ship/ship.db` under `extensions_config.*`
 
 ## Operational commands
 
 ```bash
-sma extension list
-sma extension status voice
-sma extension restart voice
-sma extension command voice status --payload '{}'
+city extension list
+city extension status voice
+city extension restart voice
+city extension command voice status --payload '{}'
 ```
 
 If you are operating speech models directly, use:
 
 ```bash
-sma voice models
-sma voice on SenseVoiceSmall
+city voice models
+city voice on SenseVoiceSmall
 ```
 
 ## Related docs
 
-- [`sma extension`](/en/docs/commands/extension/extension)
+- [`city extension`](/en/docs/commands/extension/extension)
 - [Service vs Extension](/en/docs/concepts/service-vs-extension)
 - [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)

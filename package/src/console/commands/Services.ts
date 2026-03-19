@@ -1,5 +1,5 @@
 /**
- * `sma service` 命令组。
+ * `city service` 命令组。
  *
  * 关键点（中文）
  * - 统一管理 service runtime：list/status/start/stop/restart
@@ -38,9 +38,9 @@ function parsePortOption(value: string): number {
 
 function resolveProjectRoot(pathInput?: string): string {
   const raw = String(pathInput || ".").trim() || ".";
-  // 关键点（中文）：在 agent shell 中，默认 path="." 时优先使用注入的 SMA_AGENT_PATH。
+  // 关键点（中文）：在 agent shell 中，默认 path="." 时优先使用注入的 DC_AGENT_PATH。
   if (raw === ".") {
-    const envAgentPath = String(process.env.SMA_AGENT_PATH || "").trim();
+    const envAgentPath = String(process.env.DC_AGENT_PATH || "").trim();
     if (envAgentPath) return path.resolve(envAgentPath);
   }
   return path.resolve(raw);
@@ -90,7 +90,7 @@ async function resolveProjectRootByAgentName(agentName: string): Promise<{
 
   if (matchedRoots.length === 0) {
     return {
-      error: `Agent not found in console registry: ${agentName}. Run "sma console agents" to inspect names.`,
+      error: `Agent not found in console registry: ${agentName}. Run "city console agents" to inspect names.`,
     };
   }
   if (matchedRoots.length > 1) {
@@ -116,9 +116,9 @@ async function resolveServiceProjectRoot(options: ServiceCliBaseOptions): Promis
 
   const rawPath = String(options.path || ".").trim() || ".";
   // 关键点（中文）：在 agent shell 中，未显式传 --agent 且 path 走默认值时，
-  // 优先使用注入的 SMA_AGENT_NAME 走 registry 解析，确保多 agent 下目标稳定。
+  // 优先使用注入的 DC_AGENT_NAME 走 registry 解析，确保多 agent 下目标稳定。
   if (rawPath === ".") {
-    const envAgentName = String(process.env.SMA_AGENT_NAME || "").trim();
+    const envAgentName = String(process.env.DC_AGENT_NAME || "").trim();
     if (envAgentName) {
       const byName = await resolveProjectRootByAgentName(envAgentName);
       if (byName.projectRoot) {
@@ -138,7 +138,7 @@ async function resolveServiceProjectRoot(options: ServiceCliBaseOptions): Promis
     return {
       error:
         `Agent is not registered in console registry: ${projectRoot}. ` +
-        `Run "sma console agents" to inspect registered agents.`,
+        `Run "city console agents" to inspect registered agents.`,
     };
   }
   return { projectRoot };
@@ -229,7 +229,7 @@ async function runServiceListCommand(options: ServiceCliBaseOptions): Promise<vo
     payload: {
       error:
         remote.error ||
-        "Service list requires an active Agent server runtime. Start via `sma agent start` first.",
+        "Service list requires an active Agent server runtime. Start via `city agent start` first.",
     },
   });
 }
@@ -296,7 +296,7 @@ async function runServiceControlCommand(params: {
     payload: {
       error:
         remote.error ||
-        `Service ${params.action} requires an active Agent server runtime. Start via \`sma agent start\` first.`,
+        `Service ${params.action} requires an active Agent server runtime. Start via \`city agent start\` first.`,
     },
   });
 }
@@ -369,7 +369,7 @@ async function runServiceCommandBridge(params: {
     payload: {
       error:
         remote.error ||
-        "Service command requires an active Agent server runtime. Start via `sma agent start` first.",
+        "Service command requires an active Agent server runtime. Start via `city agent start` first.",
     },
   });
 }

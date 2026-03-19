@@ -1,18 +1,18 @@
 ---
-title: sma console config
+title: city console config
 description: 管理项目 ship.json 与 alias（不含模型池管理）
 ---
 
-# `sma console config`
+# `city console config`
 
 管理项目 `ship.json` 与 alias。
 
-> 命令名说明：配置命令是 `sma console config`，不是 `sma config`。
+> 命令名说明：配置命令是 `city console config`，不是 `city config`。
 
 ## 用法
 
 ```bash
-sma console config <subcommand>
+city console config <subcommand>
 ```
 
 ## 子命令
@@ -22,24 +22,24 @@ sma console config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> 模型池管理已迁移到独立命令：[`sma console model`](/zh/docs/commands/console/model)。
+> 模型池管理已迁移到独立命令：[`city console model`](/zh/docs/commands/console/model)。
 
 ## `extensions.*` 路径说明
 
 当 `keyPath` 以 `extensions.` 开头时，读写目标自动切换为 console 全局 `~/.ship/ship.db`（`extensions_config`）。
 
 ```bash
-sma console config get extensions.voice
-sma console config set extensions.voice.enabled true
+city console config get extensions.voice
+city console config set extensions.voice.enabled true
 ```
 
 ## 示例
 
 ```bash
-sma console config get model.primary
-sma console config set model.primary fast
-sma console config unset services.chat.channels.telegram
-sma console config alias --dry-run
+city console config get model.primary
+city console config set model.primary fast
+city console config unset services.chat.channels.telegram
+city console config alias --dry-run
 ```
 
 ## 延伸阅读
@@ -51,7 +51,7 @@ sma console config alias --dry-run
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma console config get model.primary
+$ city console config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -62,7 +62,7 @@ $ sma console config get model.primary
 ```
 
 ```text
-$ sma console config set model.primary gpt-5.4
+$ city console config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

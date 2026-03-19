@@ -1,16 +1,16 @@
 ---
-title: sma task
+title: city task
 description: task service actions（list/create/run/update/status）
 ---
 
-# `sma task`
+# `city task`
 
 任务系统命令组。
 
 ## 用法
 
 ```bash
-sma task <subcommand> [options]
+city task <subcommand> [options]
 ```
 
 ## 子命令
@@ -57,9 +57,9 @@ create 去重：只按 `title` 精确去重。
 ## 示例
 
 ```bash
-sma task list
-sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 10 * * 1-5" --activate
-sma task run daily-check
-sma task update daily-check --when "@manual"
-sma task disable daily-check
+city task list
+city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+city task run daily-check
+city task update daily-check --when "@manual"
+city task disable daily-check
 ```

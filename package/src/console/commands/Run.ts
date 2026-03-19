@@ -2,12 +2,12 @@
  * 前台启动 Agent Runtime（当前终端进程内运行）。
  *
  * 场景
- * - `sma agent start --foreground` 走这里（当前终端前台运行）
+ * - `city agent start --foreground` 走这里（当前终端前台运行）
  * - daemon 子进程也复用这里作为真正运行入口
  *
  * 说明
- * - 后台常驻启动请使用 `shipmyagent agent start`，并用
- *   `shipmyagent agent restart` 管理。
+ * - 后台常驻启动请使用 `downcity agent start`，并用
+ *   `downcity agent restart` 管理。
  */
 
 import { startServer } from "@/console/index.js";
@@ -72,8 +72,8 @@ export async function runCommand(
 
   const host = (options.host ?? "0.0.0.0").trim();
 
-  process.env.SMA_SERVER_PORT = String(port);
-  process.env.SMA_SERVER_HOST = host;
+  process.env.DC_SERVER_PORT = String(port);
+  process.env.DC_SERVER_HOST = host;
 
   // Create and start server
   const server = await startServer({
@@ -113,7 +113,7 @@ export async function runCommand(
     // Save logs
     await logger.saveAllLogs();
 
-    logger.info("👋 ShipMyAgent stopped");
+    logger.info("👋 Downcity stopped");
     process.exit(0);
   };
 
@@ -149,5 +149,5 @@ export async function runCommand(
     logger.error(`Service runtime bootstrap failed: ${String(e)}`);
   }
 
-  logger.info("=== ShipMyAgent Started ===");
+  logger.info("=== Downcity Started ===");
 }

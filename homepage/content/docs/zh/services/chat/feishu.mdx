@@ -5,7 +5,7 @@ description: 通过飞书群聊/私聊与 Agent 对话
 
 # 飞书机器人集成
 
-使用飞书（Feishu）把 ShipMyAgent 接入到飞书聊天：支持 **私聊** 与 **群聊消息全量接入**。
+使用飞书（Feishu）把 Downcity 接入到飞书聊天：支持 **私聊** 与 **群聊消息全量接入**。
 
 ## 配置步骤
 
@@ -13,7 +13,7 @@ description: 通过飞书群聊/私聊与 Agent 对话
 
 1. 进入飞书开放平台，创建应用
 2. 在应用能力中启用「机器人」
-3. 配置消息接收（ShipMyAgent 使用 **长连接 / WebSocket** 模式接收消息）
+3. 配置消息接收（Downcity 使用 **长连接 / WebSocket** 模式接收消息）
 4. 按需开通 IM 相关权限，并发布/上线到可用环境（测试/正式）
 
 > 不同应用类型（企业自建 / 商店应用）在权限与发布流程上略有差异；以飞书控制台提示为准。
@@ -43,10 +43,10 @@ description: 通过飞书群聊/私聊与 Agent 对话
 }
 ```
 
-### 3）启动 ShipMyAgent
+### 3）启动 Downcity
 
 ```bash
-sma agent start
+city agent start
 ```
 
 启动成功时，你会在日志中看到类似输出：

@@ -63,7 +63,7 @@ export default function Marketplace() {
   const repoUrl =
     product.homepage?.includes("github.com") === true
       ? product.homepage
-      : "https://github.com/wangenius/shipmyagent";
+      : "https://github.com/wangenius/downcity";
   const discussionsUrl = `${repoUrl}/discussions`;
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">

@@ -1,5 +1,5 @@
 /**
- * `sma console config` 命令组。
+ * `city console config` 命令组。
  *
  * 目标（中文）
  * - 提供 ship.json 的通用读写能力（get/set/unset）。
@@ -66,8 +66,8 @@ function readShipConfigByPath(
   if (!fs.existsSync(shipJsonPath)) {
     const hint =
       scope === "console"
-        ? 'Run "sma console init" first.'
-        : 'Run "sma agent create" first.';
+        ? 'Run "city console init" first.'
+        : 'Run "city agent create" first.';
     throw new Error(`ship.json not found at ${shipJsonPath}. ${hint}`);
   }
   const raw = fs.readJsonSync(shipJsonPath) as unknown;
@@ -239,7 +239,7 @@ function applyCommonOptions(command: Command): Command {
 }
 
 /**
- * 注册 `sma console config` 命令组。
+ * 注册 `city console config` 命令组。
  */
 export function registerConfigCommand(program: Command): void {
   const config = program
@@ -447,7 +447,7 @@ export function registerConfigCommand(program: Command): void {
 
   config
     .command("alias")
-    .description("在 .zshrc / .bashrc 中写入 `alias sma=\"shipmyagent\"`")
+    .description("在 .zshrc / .bashrc 中写入 `alias city=\"downcity\"`")
     .option("--shell <shell>", "指定写入的 shell: zsh | bash | both", "both")
     .option("--dry-run", "只打印将要修改的文件，不实际写入", false)
     .option("--print", "仅打印 alias 内容（用于 eval）", false)

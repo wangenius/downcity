@@ -3,7 +3,7 @@
  *
  * 优先级（中文）
  * 1) 显式参数 `input.contextId`
- * 2) `SMA_CTX_CONTEXT_ID`
+ * 2) `DC_CTX_CONTEXT_ID`
  */
 export function resolveContextId(input?: {
   contextId?: string;
@@ -11,7 +11,7 @@ export function resolveContextId(input?: {
   const explicit = String(input?.contextId || "").trim();
   if (explicit) return explicit;
 
-  const envContextId = String(process.env.SMA_CTX_CONTEXT_ID || "").trim();
+  const envContextId = String(process.env.DC_CTX_CONTEXT_ID || "").trim();
   if (envContextId) return envContextId;
 
   return undefined;

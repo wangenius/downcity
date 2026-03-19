@@ -14,15 +14,15 @@ tail -f .ship/logs/$(date +%F).jsonl
 ## 2) Inspect service state
 
 ```bash
-sma service list
-sma extension list
+city service list
+city extension list
 ```
 
 ## 3) Inspect conversation state
 
 ```bash
-sma chat context --chat-key ctx_xxxxxxxxxxxxxxxx
-sma chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
+city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
 ```
 
 ## 4) Inspect task artifacts

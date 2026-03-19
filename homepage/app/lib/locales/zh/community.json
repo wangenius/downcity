@@ -1,6 +1,6 @@
 {
   "title": "社区",
-  "subtitle": "加入 ShipMyAgent 开发者社区",
+  "subtitle": "加入 Downcity 开发者社区",
   "faq": {
     "title": "常见问题",
     "description": "常见问题解答"
@@ -14,7 +14,7 @@
     "description": "参与 GitHub 上的讨论"
   },
   "faqPage": {
-    "subtitle": "关于 ShipMyAgent 的常见问题",
+    "subtitle": "关于 Downcity 的常见问题",
     "all": "全部",
     "categories": {
       "security": "安全",
@@ -32,7 +32,7 @@
       },
       "llm-models": {
         "question": "支持哪些大模型（LLM）？",
-        "answer": "ShipMyAgent 支持所有与 ai-sdk v6 兼容的模型，包括 Claude（Anthropic）、GPT-4（OpenAI）等。你可以轻松切换模型，或为不同任务使用不同模型。",
+        "answer": "Downcity 支持所有与 ai-sdk v6 兼容的模型，包括 Claude（Anthropic）、GPT-4（OpenAI）等。你可以轻松切换模型，或为不同任务使用不同模型。",
         "category": "technical"
       },
       "remote-deployment": {
@@ -42,12 +42,12 @@
       },
       "comparison-copilot": {
         "question": "这和 GitHub Copilot 有什么不同？",
-        "answer": "GitHub Copilot 面向个人开发者，主要提供代码补全能力。ShipMyAgent 面向团队与企业，提供可执行的 AI 团队成员，具备安全控制、可审计性以及人类在回路的审批工作流。",
+        "answer": "GitHub Copilot 面向个人开发者，主要提供代码补全能力。Downcity 面向团队与企业，提供可执行的 AI 团队成员，具备安全控制、可审计性以及人类在回路的审批工作流。",
         "category": "general"
       },
       "memory": {
         "question": "Agent 会记住之前的对话吗？",
-        "answer": "会。ShipMyAgent 维护项目级长期记忆。Agent 的上下文是整个仓库，并会在跨会话中记住交互、审批与执行过的动作。",
+        "answer": "会。Downcity 维护项目级长期记忆。Agent 的上下文是整个仓库，并会在跨会话中记住交互、审批与执行过的动作。",
         "category": "features"
       },
       "multi-agent": {
@@ -57,12 +57,12 @@
       },
       "custom-services": {
         "question": "可以添加自定义集成吗？",
-        "answer": "当然可以。ShipMyAgent 设计上就是可扩展的。你可以添加自定义 Webhook、集成现有工具，或构建自定义技能。Webhook API 让你能轻松连接任何服务。",
+        "answer": "当然可以。Downcity 设计上就是可扩展的。你可以添加自定义 Webhook、集成现有工具，或构建自定义技能。Webhook API 让你能轻松连接任何服务。",
         "category": "service"
       },
       "pricing": {
         "question": "收费模式是什么？",
-        "answer": "ShipMyAgent 是开源（MIT License）且免费使用。你只需承担你选择的大模型 API 成本（Claude、GPT-4 等）。未来将提供带更多功能与支持的企业版本。",
+        "answer": "Downcity 是开源（MIT License）且免费使用。你只需承担你选择的大模型 API 成本（Claude、GPT-4 等）。未来将提供带更多功能与支持的企业版本。",
         "category": "general"
       }
     },
@@ -161,7 +161,7 @@
     },
     "cta": {
       "title": "想一起塑造未来？",
-      "description": "分享你的想法，帮助我们打造下一代 ShipMyAgent",
+      "description": "分享你的想法，帮助我们打造下一代 Downcity",
       "button": "提出功能需求"
     }
   }

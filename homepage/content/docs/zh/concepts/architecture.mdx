@@ -1,11 +1,11 @@
 ---
 title: 架构总览
-description: ShipMyAgent 的核心分层：console、agent、service、extension
+description: Downcity 的核心分层：console、agent、service、extension
 ---
 
 # 架构总览
 
-ShipMyAgent 现在可以直接按两大主干理解：
+Downcity 现在可以直接按两大主干理解：
 
 - `console`：全局控制与运维中台
 - `agent`：项目执行运行时
@@ -15,11 +15,11 @@ ShipMyAgent 现在可以直接按两大主干理解：
 ## 分层结构
 
 1. **Console 层（全局）**
-- 命令：`sma console ...`、`sma console config ...`、`sma service ...`、`sma extension ...`
+- 命令：`city console ...`、`city console config ...`、`city service ...`、`city extension ...`
 - 职责：全局进程管理、运维入口、模型与运行配置治理
 
 2. **Agent 层（项目）**
-- 命令：`sma agent create/on/off/status/restart ...`
+- 命令：`city agent create/on/off/status/restart ...`
 - 职责：加载项目上下文，执行模型与工具调用，落盘运行状态
 
 3. **Capability 层（运行时能力）**

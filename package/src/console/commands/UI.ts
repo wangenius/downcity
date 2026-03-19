@@ -1,8 +1,8 @@
 /**
- * `sma console ui`：console UI 进程管理与前台运行入口。
+ * `city console ui`：console UI 进程管理与前台运行入口。
  *
  * 关键点（中文）
- * - 默认 `sma console ui` 等同于 `sma console ui start`。
+ * - 默认 `city console ui` 等同于 `city console ui start`。
  * - `run` 仅供内部使用（真正启动 UI 网关进程）。
  */
 
@@ -174,7 +174,7 @@ export async function startConsoleUiCommand(params: {
 }): Promise<void> {
   if (!(await isConsoleRunning())) {
     console.error(
-      "❌ console is not running. Please run `sma console start` first.",
+      "❌ console is not running. Please run `city console start` first.",
     );
     process.exit(1);
   }
@@ -207,7 +207,7 @@ export async function startConsoleUiCommand(params: {
       stdio: ["ignore", logFd, logFd],
       env: {
         ...process.env,
-        SHIPMYAGENT_CONSOLE_UI: "1",
+        DOWNCITY_CONSOLE_UI: "1",
       },
     },
   );

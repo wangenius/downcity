@@ -21,15 +21,15 @@ what `console`, `agent`, `service`, and `extension` each own, and how one reques
 ```mermaid
 flowchart LR
   subgraph CP[Control Plane (Console)]
-    CLI[sma CLI] --> CONSOLE[sma console start\nconsole daemon]
-    CLI --> CFG[sma console config ...\nmodel/runtime config]
-    CLI --> SVCOPS[sma service ...\nservice ops]
-    CLI --> EXTOPS[sma extension ...\nextension ops]
+    CLI[city CLI] --> CONSOLE[city console start\nconsole daemon]
+    CLI --> CFG[city console config ...\nmodel/runtime config]
+    CLI --> SVCOPS[city service ...\nservice ops]
+    CLI --> EXTOPS[city extension ...\nextension ops]
     CONSOLE --> REG[~/.ship/console/agents.json\nagent registry]
   end
 
   subgraph DP[Execution Plane (Per Project)]
-    AGENTCMD[sma agent start] --> AGENTD[agent daemon]
+    AGENTCMD[city agent start] --> AGENTD[agent daemon]
     AGENTD --> SERVICES[services\nchat/skill/task/memory]
     AGENTD --> EXTS[extensions\nvoice/...]
     AGENTD --> SHIP[.ship/*\ncontext/logs/cache/tasks]
@@ -68,25 +68,25 @@ sequenceDiagram
 - `console` handles governance/ops, `agent` handles execution/persistence.
 - `service` is the core domain layer, `extension` is the optional enhancement layer.
 - `service` and `extension` are operated from console-facing commands, but execution happens inside agent runtime.
-- The model pool is managed globally via `sma console model ...`; each project binds with `model.primary`.
+- The model pool is managed globally via `city console model ...`; each project binds with `model.primary`.
 
 ## 5. Typical Command Order
 
 ```bash
 # 1) Start global console (required)
-sma console start
+city console start
 
 # 2) Init project and start agent
-sma agent create .
-sma agent start
+city agent create .
+city agent start
 
 # 3) Operate service / extension
-sma service list
-sma extension list
+city service list
+city extension list
 
 # 4) Check overall status
-sma console status
-sma agent status .
+city console status
+city agent status .
 ```
 
 ## Read Next

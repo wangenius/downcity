@@ -75,7 +75,7 @@ export interface VoiceTranscribeConfig {
    *
    * 说明（中文）
    * - 内置 `funasr` / `transformers-whisper` runner 会用该解释器执行。
-   * - `sma voice init` 在命中 PEP 668 时会自动写入 venv 的 python 路径。
+   * - `city voice init` 在命中 PEP 668 时会自动写入 venv 的 python 路径。
    * - 未设置时默认使用 `python3`。
    */
   pythonBin?: string;
@@ -114,7 +114,7 @@ export interface VoiceExtensionConfig {
    *
    * 说明（中文）
    * - 应存在于 `installedModels` 列表。
-   * - `sma voice on` 默认把首个选择项写入该字段。
+   * - `city voice on` 默认把首个选择项写入该字段。
    */
   activeModel?: VoiceModelId;
   /**

@@ -8,7 +8,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const INSTALL_COMMAND = "npm i -g shipmyagent";
+const INSTALL_COMMAND = "npm i -g downcity";
 const WHITEPAPER_DOWNLOAD_PATH = "/agent-strategy-whitepaper-2026-03-09.md";
 const WHITEPAPER_DOWNLOAD_FILENAME = "agent-strategy-whitepaper-2026-03-09.md";
 
@@ -32,7 +32,7 @@ const WHITEPAPER = {
           "在复杂的生产环境中，核心命题从来不是“大模型有多聪明”，而是团队在引入这类具备一定自主性的系统后，能否继续保持对业务目标与系统边界的绝对把控。当前主流的落地方案往往带有极强的侵入性，它们暗含了一个前提，即现有的工作流必须被重构，业务状态必须向新平台迁移，以此来迎合所谓的先进范式。这种做法本质上是在用工具规训人，迫使作为主体的人去迁就系统的逻辑。团队在短期内或许获得了某种前沿的幻觉，但在长周期的迭代中，却常常陷入一个悖论——**系统的自治能力越强，业务人员对工作底座的掌控感反而越稀薄。**",
           "更底层地看，这种掌控感的稀薄，本质上源于对**“信息损耗”**的忽视。如果业界对 Agent 的终局期待是高度类人的（Human-like），那么现实中 Human 与 Human 之间固有的沟通效率瓶颈、隐性知识丢失与上下文错位，必然也会全盘映射到 Human 与 Agent 之间。",
           "当业务人员被迫离开熟悉的工作流，去抽象的平台里使用各类表单和配置去指挥 Agent 时，实质上是在本就存在的人机沟通摩擦之上，又强加了一层“系统翻译”的损耗。每一次从自然工作流向平台表单的切换，都是一次隐性上下文的衰减。**因此，能让 Human 与 Agent 之间信息交互损耗降到最低的行为模式，才是当前阶段最好的 Agent 架构设计。**它解释了为什么工具绝不应再试图规训人，而必须主动对接人的原生业务载体。",
-          "ShipMyAgent 的设计哲学正是对这一悖论的修正。它拒绝要求组织为了拥抱 AI 而进行伤筋动骨的范式迁移，而是主张将主导权彻底交还给人类主体。在这里，“止”被具象化为一种严密的业务秩序：由人明确划定业务的护城河并掌握底层控制权，Agent 的角色则被严格限定在这些清晰的规则内，去释放高密度的执行力。",
+          "Downcity 的设计哲学正是对这一悖论的修正。它拒绝要求组织为了拥抱 AI 而进行伤筋动骨的范式迁移，而是主张将主导权彻底交还给人类主体。在这里，“止”被具象化为一种严密的业务秩序：由人明确划定业务的护城河并掌握底层控制权，Agent 的角色则被严格限定在这些清晰的规则内，去释放高密度的执行力。",
         ],
       },
       {
@@ -49,7 +49,7 @@ const WHITEPAPER = {
         paragraphs: [
           "当前大多数 AI 落地项目的最大阻力，在于极高的“重置成本”。这种重置不仅是数据的搬运，更是**组织心智与认知拓扑的毁灭与重建**。",
           "在任何真实的业务团队（运营、设计、分析、研发）里，最有价值的资产从来不只是孤立的数据本身，而是它们之间的**结构**——文件夹的分类习惯、协作文档的命名规则、任务状态的流转标记。一个团队长期使用的目录或工作空间（Workspace/Repo），本身就是这个组织做决策、定边界、分优先级的“实体化知识图谱”。它是 Human 与 Human 之间经过无数次试错磨合出的、信息损耗最低的沟通协议。",
-          "ShipMyAgent 的核心洞察在于：**最好的 Prompt 结构，就是人类已经建构好的目录结构；最好的知识库，就是人类每天都在阅读和修改的源文件。**",
+          "Downcity 的核心洞察在于：**最好的 Prompt 结构，就是人类已经建构好的目录结构；最好的知识库，就是人类每天都在阅读和修改的源文件。**",
           "我们拒绝把这些充满生命力的组织资产，生硬地切割并导入到另一个满是表单和向量数据库的抽象平台中。相反，我们让 Agent 直接“降维”进入人类原生工作区，去读取、理解并遵循现有的文件拓扑。团队不需要为了使用 AI 去学习一套全新的中台语言，Agent 直接继承了团队的隐性知识网络，实现了真正的“零摩擦冷启动”。",
         ],
       },
@@ -95,7 +95,7 @@ const WHITEPAPER = {
         paragraphs: [
           "In recent years, agent discussions have converged on one narrative: stronger models, more tools, wider channels, deeper automation. It looks like the only remaining question is capability delta. But once you move from demos to production, the problem changes shape immediately.",
           "The key question is not whether models are smart enough. It is whether teams can still control goals, boundaries, and pace after adopting agents. Many systems assume the same path: rewrite process first, migrate state first, adapt to platform first, then talk about efficiency. Tools begin to define how people work, and people start adapting to the system.",
-          "ShipMyAgent takes the opposite stance. Humans define goals and boundaries first, then agents amplify execution inside existing engineering context. In practical terms, people decide when to start, stop, and take over, while agents execute at high intensity within defined constraints. Instead of building a full control plane first, teams can start directly from existing repositories and close loops in familiar workflows.",
+          "Downcity takes the opposite stance. Humans define goals and boundaries first, then agents amplify execution inside existing engineering context. In practical terms, people decide when to start, stop, and take over, while agents execute at high intensity within defined constraints. Instead of building a full control plane first, teams can start directly from existing repositories and close loops in familiar workflows.",
         ],
       },
       {
@@ -111,8 +111,8 @@ const WHITEPAPER = {
       {
         title: "Start from Existing Assets, Not from Zero",
         paragraphs: [
-          "ShipMyAgent’s first principle is not building another platform. It is activating the project you already run. In real teams, the most valuable assets are not just source code: they are configuration habits, collaboration conventions, historical context, task trails, and quality standards.",
-          "`ship.json`, `PROFILE.md`, and artifacts in `.ship` are not merely files; they externalize how teams decide, divide work, and review outcomes. ShipMyAgent connects these assets into a sustainable execution surface, reducing rollout cost, cognitive burden, and migration friction.",
+          "Downcity’s first principle is not building another platform. It is activating the project you already run. In real teams, the most valuable assets are not just source code: they are configuration habits, collaboration conventions, historical context, task trails, and quality standards.",
+          "`ship.json`, `PROFILE.md`, and artifacts in `.ship` are not merely files; they externalize how teams decide, divide work, and review outcomes. Downcity connects these assets into a sustainable execution surface, reducing rollout cost, cognitive burden, and migration friction.",
         ],
       },
       {
@@ -125,9 +125,9 @@ const WHITEPAPER = {
       },
       {
         title:
-          "The Differentiation of ShipMyAgent: Not More Features, More Stable Human-Agent Relations",
+          "The Differentiation of Downcity: Not More Features, More Stable Human-Agent Relations",
         paragraphs: [
-          "Many products describe differentiation as feature lists. In production, real differentiation is often encoded in human-agent relations. ShipMyAgent prioritizes three fundamentals: human control is not diluted, engineering paths are not forcibly rewritten, and teams can keep iterating without hard dependency on a platform operator.",
+          "Many products describe differentiation as feature lists. In production, real differentiation is often encoded in human-agent relations. Downcity prioritizes three fundamentals: human control is not diluted, engineering paths are not forcibly rewritten, and teams can keep iterating without hard dependency on a platform operator.",
           "These priorities may look less flashy, but they decide whether a system can enter daily operation. In production, the biggest risk is not insufficient capability; it is relationship imbalance.",
           "That is why “auditable” and “replayable” are treated as baseline capabilities rather than the core narrative. The deeper question is whether humans and agents can sustain a long-term collaboration model that compounds gains instead of governance cost.",
         ],

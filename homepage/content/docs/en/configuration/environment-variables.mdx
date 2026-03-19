@@ -23,7 +23,7 @@ This page answers 4 practical questions:
 | Agent private env (DB) | `~/.ship/ship.db` `agent_env` | Yes (encrypted) | One agent (`agent_id`) | project-level secret keys |
 | Agent private env (file) | `<agent>/.env` | User-managed file | One agent | runtime overlay values |
 | Bot credentials | `~/.ship/ship.db` `channel_accounts` | Yes (encrypted fields) | Reusable by binding | Telegram/Feishu/QQ bot secrets |
-| Runtime context vars | process memory (`SMA_CTX_*`) | No | single request | channel/chat/user context |
+| Runtime context vars | process memory (`DC_CTX_*`) | No | single request | channel/chat/user context |
 
 Key points:
 
@@ -35,7 +35,7 @@ Key points:
 
 ```mermaid
 sequenceDiagram
-  participant CLI as sma agent start
+  participant CLI as city agent start
   participant DB as ~/.ship/ship.db
   participant ENV as <agent>/.env
   participant JSON as ship.json(project layers)
@@ -79,13 +79,13 @@ sequenceDiagram
 1. Global model/provider pool (`model_providers`, `models`) from `ship.db`.
 2. Extension global config from `console_secure_settings.extensions_config`.
 3. Bot account credential source of truth (`channel_accounts`).
-4. Runtime context vars (`SMA_CTX_*`) are generated at request time.
+4. Runtime context vars (`DC_CTX_*`) are generated at request time.
 
 ## 5. Save Paths
 
 1. Bot account CRUD (UI): writes `channel_accounts`.
 2. Model CRUD (CLI/UI): writes `model_providers`, `models`.
-3. Extension config (`sma console config set extensions.*`): writes `extensions_config`.
+3. Extension config (`city console config set extensions.*`): writes `extensions_config`.
 4. Channel configure action: writes `ship.json` (`enabled`, `channelAccountId`).
 5. User manual `.env` edit: affects runtime only for that agent.
 
@@ -112,9 +112,9 @@ flowchart TD
 1. Initialize console-global data once:
 
 ```bash
-sma console init
-sma console model create
-sma console config set extensions.voice.enabled true
+city console init
+city console model create
+city console config set extensions.voice.enabled true
 ```
 
 2. Create channel accounts in Console UI `Global / Channel Accounts`.

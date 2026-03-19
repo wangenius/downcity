@@ -8,16 +8,16 @@ description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
 ## 1. 安装
 
 ```bash
-npm install -g shipmyagent
-shipmyagent --version
+npm install -g downcity
+downcity --version
 ```
 
-> 可用短命令 `sma`，与 `shipmyagent` 等价。
+> `downcity` 与 `city` 都是同一个 CLI 可执行命令。
 
 ## 2. 初始化 Console（仅首次）
 
 ```bash
-sma console init
+city console init
 ```
 
 该命令会生成 Console 全局配置（位于 `~/.ship/`）。
@@ -25,16 +25,16 @@ sma console init
 ## 3. 启动 Console
 
 ```bash
-sma console start
+city console start
 ```
 
-> `sma agent start` 依赖 console 先运行。
+> `city agent start` 依赖 console 先运行。
 
 ## 4. 初始化项目
 
 ```bash
 cd /path/to/your-repo
-sma agent create .
+city agent create .
 ```
 
 初始化后会生成：
@@ -69,20 +69,20 @@ LLM_API_KEY=your_key
 启动（默认后台 daemon，适合长期运行）：
 
 ```bash
-sma agent start
+city agent start
 ```
 
 需要在当前终端前台观察日志时再用：
 
 ```bash
-sma agent start --foreground
+city agent start --foreground
 ```
 
 ## 7. 验证运行状态
 
 ```bash
-sma agent status
-sma console agents
+city agent status
+city console agents
 ```
 
 说明：
@@ -93,7 +93,7 @@ sma console agents
 ## 8. 可选：启动 Console UI
 
 ```bash
-sma console ui start
+city console ui start
 ```
 
 ## 下一步

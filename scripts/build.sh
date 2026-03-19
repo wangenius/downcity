@@ -46,5 +46,5 @@ else
   npm --prefix "$ROOT_DIR/package" run build
 fi
 
-# 关键点（中文）：每次仓库级 build 后，自动把当前 package 安装到全局 CLI（sma/shipmyagent）。
+# 关键点（中文）：每次仓库级 build 后，自动把当前 package 安装到全局 CLI（city/downcity）。
 npm install -g "$ROOT_DIR/package"

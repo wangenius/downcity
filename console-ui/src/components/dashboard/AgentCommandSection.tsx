@@ -93,13 +93,13 @@ interface CommandRecordTone {
 }
 
 /**
- * 允许自动补 `sma` 前缀的一级命令。
+ * 允许自动补 `city` 前缀的一级命令。
  *
  * 关键点（中文）
- * - 仅对已知 SMA 命令做自动补全；
+ * - 仅对已知 CITY 命令做自动补全；
  * - 其他 shell 内建/系统命令（如 `clear`/`cd`/`ls`）保持原样执行。
  */
-const SMA_COMMAND_ROOTS = new Set([
+const DC_COMMAND_ROOTS = new Set([
   "init",
   "start",
   "stop",
@@ -119,8 +119,8 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
     label: "Console",
     items: [
       { label: "Version", command: "-v", description: "查看 CLI 版本" },
-      { label: "Start SMA", command: "start", description: "启动 console 与 console ui" },
-      { label: "Stop SMA", command: "stop", description: "停止 console（含 agent）" },
+      { label: "Start DC", command: "start", description: "启动 console 与 console ui" },
+      { label: "Stop DC", command: "stop", description: "停止 console（含 agent）" },
       { label: "Console Status", command: "console status", description: "查看 console 与托管 agent 状态" },
       { label: "Console Agents", command: "console agents", description: "查看 console 托管 agent 列表" },
       { label: "UI Status", command: "console ui status", description: "查看 console UI 运行状态" },
@@ -144,7 +144,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
     items: [
       { label: "Config Get", command: "console config get", description: "读取当前 ship.json 配置" },
       { label: "Config Primary", command: "console config get model.primary", description: "读取当前项目主模型绑定" },
-      { label: "Config Alias", command: "console config alias --print", description: "打印 alias sma 配置片段" },
+      { label: "Config Alias", command: "console config alias --print", description: "打印 alias city 配置片段" },
       { label: "Model List", command: "console model list", description: "列出 provider 与模型池" },
       { label: "Model Create", command: "console model create", description: "交互式创建 provider 或 model" },
       { label: "Model Discover", command: "console model discover <providerId>", description: "探测 provider 可用模型" },
@@ -171,7 +171,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
       { label: "Chat Reconnect", command: "chat reconnect", description: "重连 chat 渠道" },
       { label: "Chat Context", command: "chat context", description: "查看当前会话上下文快照" },
       { label: "Chat History", command: "chat history --limit 30", description: "读取最近聊天历史" },
-      { label: "Chat Send", command: "chat send --text \"hello from sma\"", description: "向当前 chatKey 发送消息" },
+      { label: "Chat Send", command: "chat send --text \"hello from city\"", description: "向当前 chatKey 发送消息" },
     ],
   },
   {
@@ -290,18 +290,18 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
 
   /**
    * 解析最终执行命令（中文）
-   * - 已显式输入 `sma ...`：保持原样。
-   * - 首 token 是 SMA 已知命令/全局参数（`-v`）：自动补 `sma`。
+   * - 已显式输入 `city|downcity ...`：保持原样。
+   * - 首 token 是 CITY 已知命令/全局参数（`-v`）：自动补 `city`。
    * - 其他命令（clear/cd/ls/...）：按原始 shell 命令执行。
    */
   const resolveExecutionCommand = React.useCallback((commandTextInput: string): string => {
     const raw = String(commandTextInput || "").trim()
     if (!raw) return ""
-    if (/^sma(?:\s|$)/i.test(raw)) return raw
+    if (/^(?:city|downcity)(?:\s|$)/i.test(raw)) return raw
     const firstToken = String(raw.split(/\s+/, 1)[0] || "").trim().toLowerCase()
     if (!firstToken) return ""
-    const shouldPrefix = firstToken.startsWith("-") || SMA_COMMAND_ROOTS.has(firstToken)
-    if (shouldPrefix) return `sma ${raw}`
+    const shouldPrefix = firstToken.startsWith("-") || DC_COMMAND_ROOTS.has(firstToken)
+    if (shouldPrefix) return `city ${raw}`
     return raw
   }, [])
 
@@ -688,7 +688,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
                   navigateCommandHistory("down")
                 }
               }}
-              placeholder="输入命令后按回车执行（SMA 命令可省略 sma）"
+              placeholder="输入命令后按回车执行（CITY 命令可省略 city）"
               className="relative z-10 h-8 w-full bg-transparent font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground/80"
             />
           </div>

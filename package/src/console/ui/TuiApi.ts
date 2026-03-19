@@ -49,9 +49,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * 当前 SMA 版本号（用于 Overview 显示）。
+ * 当前 DC 版本号（用于 Overview 显示）。
  */
-const SMA_VERSION = (() => {
+const DC_VERSION = (() => {
   try {
     const pkg = fs.readJsonSync(join(__dirname, "../../../package.json")) as {
       version?: string;
@@ -154,7 +154,7 @@ export function registerTuiApiRoutes(params: {
 
       return c.json({
         success: true,
-        smaVersion: SMA_VERSION,
+        cityVersion: DC_VERSION,
         now: new Date().toISOString(),
         agent: {
           name: runtime.config.name,

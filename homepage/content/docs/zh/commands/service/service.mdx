@@ -1,23 +1,23 @@
 ---
-title: sma service
+title: city service
 description: 管理 service runtime 与 command 转发
 ---
 
-# `sma service`
+# `city service`
 
 管理 service 运行状态，并转发 service command。
 
 ## 命令层级
 
-- 一级命令：`sma service`
-- 动作命令：`sma chat` / `sma task` / `sma memory` / `sma skill`
+- 一级命令：`city service`
+- 动作命令：`city chat` / `city task` / `city memory` / `city skill`
 
 上述动作命令都属于 service 体系，不是一级命令。
 
 ## 用法
 
 ```bash
-sma service <subcommand>
+city service <subcommand>
 ```
 
 ## 子命令
@@ -31,16 +31,16 @@ sma service <subcommand>
 
 ## 子命令文档
 
-- [`sma service list`](/zh/docs/commands/service/list)
-- [`sma service status`](/zh/docs/commands/service/status)
-- [`sma service start`](/zh/docs/commands/service/start)
-- [`sma service stop`](/zh/docs/commands/service/stop)
-- [`sma service restart`](/zh/docs/commands/service/restart)
-- [`sma service command`](/zh/docs/commands/service/command)
+- [`city service list`](/zh/docs/commands/service/list)
+- [`city service status`](/zh/docs/commands/service/status)
+- [`city service start`](/zh/docs/commands/service/start)
+- [`city service stop`](/zh/docs/commands/service/stop)
+- [`city service restart`](/zh/docs/commands/service/restart)
+- [`city service command`](/zh/docs/commands/service/command)
 
 ## 说明
 
-`sma service` 必须绑定 agent 项目路径。
+`city service` 必须绑定 agent 项目路径。
 
 - 可显式传 `--path <agentProjectPath>`
 - 或传 `--agent <agentName>`，从 console registry 解析
@@ -48,31 +48,31 @@ sma service <subcommand>
 - 解析后的路径必须已登记在 console registry
 - 该路径必须包含 `ship.json` 与 `PROFILE.md`
 
-在 agent shell 内执行时，若未显式传 `--agent` 且 `--path` 使用默认值，会先使用注入的 `SMA_AGENT_NAME` 走 registry 解析；默认 `.` 也会优先解析为注入的 `SMA_AGENT_PATH`。
+在 agent shell 内执行时，若未显式传 `--agent` 且 `--path` 使用默认值，会先使用注入的 `DC_AGENT_NAME` 走 registry 解析；默认 `.` 也会优先解析为注入的 `DC_AGENT_PATH`。
 
 若同时传入，`--agent` 优先。
 
 需要先启动 agent runtime：
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## 相关动作命令
 
-- [`sma chat`](/zh/docs/commands/service/chat)
-- [`sma task`](/zh/docs/commands/service/task)
-- [`sma memory`](/zh/docs/commands/service/memory)
-- [`sma skill`](/zh/docs/commands/service/skill)
+- [`city chat`](/zh/docs/commands/service/chat)
+- [`city task`](/zh/docs/commands/service/task)
+- [`city memory`](/zh/docs/commands/service/memory)
+- [`city skill`](/zh/docs/commands/service/skill)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma service
-sma version: 1.0.0
-Usage: sma service [options] [command]
+$ city service
+city version: 1.0.0
+Usage: city service [options] [command]
 Commands:
   list
   status <serviceName>

@@ -2,7 +2,7 @@
  * Extension action CLI 注册器。
  *
  * 关键点（中文）
- * - 负责把 extension actions 挂到 commander（`sma <extension> <action>`）。
+ * - 负责把 extension actions 挂到 commander（`city <extension> <action>`）。
  * - 仅处理 CLI 参数映射与远程调用，不承载 extension runtime 状态机逻辑。
  */
 
@@ -401,7 +401,7 @@ function registerExtensionActionCommand(params: {
       payload: {
         error:
           remote.error ||
-          "Extension action requires an active Agent server runtime. Start via `sma agent start` first.",
+          "Extension action requires an active Agent server runtime. Start via `city agent start` first.",
       },
     });
   });

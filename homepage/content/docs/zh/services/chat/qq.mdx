@@ -5,7 +5,7 @@ description: 通过 QQ 群聊/私聊与 Agent 对话
 
 # QQ 机器人（QQBot）集成
 
-使用 QQ 官方机器人（QQBot）把 ShipMyAgent 接入到 QQ：支持 **群聊消息全量接入** 与 **C2C 私聊** 两种场景。
+使用 QQ 官方机器人（QQBot）把 Downcity 接入到 QQ：支持 **群聊消息全量接入** 与 **C2C 私聊** 两种场景。
 
 ## 配置步骤
 
@@ -40,10 +40,10 @@ description: 通过 QQ 群聊/私聊与 Agent 对话
 }
 ```
 
-### 3）启动 ShipMyAgent
+### 3）启动 Downcity
 
 ```bash
-sma agent start
+city agent start
 ```
 
 启动成功时，你会在日志中看到类似输出：
@@ -70,8 +70,8 @@ sma agent start
 建议先完成 voice 扩展初始化：
 
 ```bash
-sma voice on SenseVoiceSmall
-sma voice status
+city voice on SenseVoiceSmall
+city voice status
 ```
 
 说明：
@@ -80,9 +80,9 @@ sma voice status
 
 ## 常见问题排查
 
-- **启动后完全没反应**：先看启动日志；如果你用的是前台模式可 `Ctrl+C` 停止；daemon 模式用 `sma agent restart` 停止。运行日志在 `.ship/logs/`。
+- **启动后完全没反应**：先看启动日志；如果你用的是前台模式可 `Ctrl+C` 停止；daemon 模式用 `city agent restart` 停止。运行日志在 `.ship/logs/`。
 - **群里收不到消息**：检查 QQBot 控制台是否已开启群聊相关事件/权限，特别是普通群消息事件（`GROUP_MESSAGE_CREATE`）。
-- **语音消息没有被转写**：先确认 `extensions.voice.enabled=true`，再检查 voice 模型是否可用（`sma voice status`）；同时确认 QQBot 侧已开通音频事件权限（`AUDIO_ACTION`）。
+- **语音消息没有被转写**：先确认 `extensions.voice.enabled=true`，再检查 voice 模型是否可用（`city voice status`）；同时确认 QQBot 侧已开通音频事件权限（`AUDIO_ACTION`）。
 - **凭据错误/权限不足**：日志里通常会出现获取 `access_token` 或 WebSocket 鉴权失败；检查绑定的 channel account（`qq-main`）里的 `appId/appSecret/sandbox` 配置是否正确。
 - **报错 `QQ requires chatType + messageId to send a reply`**：QQ 当前走的是“被动回复”接口，需要带上触发这次对话的 `messageId` 才能回消息。只要目标 chatKey 下已经有对方发过的消息（会落盘到 `.ship/chat/<encodedChatKey>/messages/messages.jsonl`），工具就能从 history 里拿到最新 `messageId`；否则需要对方先发一条消息建立上下文。
 - **想确认 QQ 实际发了哪些字段（尤其是 username/nickname）**：开启原始事件抓取后查看落盘的 JSON 快照：

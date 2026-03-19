@@ -10,7 +10,7 @@ This page explains one thing: how `console`, `agent`, `service`, and `extension`
 ## 1) Unified Rule
 
 - Agent ports are allocated by `console`.
-- `sma agent start/restart` no longer expose `--port`.
+- `city agent start/restart` no longer expose `--port`.
 - `service/extension` commands do not rely on a fixed port by default. They resolve target agent first, then resolve endpoint by priority.
 
 ## 2) Runtime Roles
@@ -24,22 +24,22 @@ This page explains one thing: how `console`, `agent`, `service`, and `extension`
 ### agent (project runtime plane)
 
 - Each agent project maps to one daemon process.
-- Daemon startup args are persisted to project debug metadata (`.ship/.debug/shipmyagent.daemon.json`).
+- Daemon startup args are persisted to project debug metadata (`.ship/.debug/downcity.daemon.json`).
 - This process hosts runtime HTTP APIs (`/api/services/*`, `/api/extensions/*`).
 
 ### service (capability domain)
 
-- `sma service ...` and `sma <service> <action>` call agent runtime APIs.
+- `city service ...` and `city <service> <action>` call agent runtime APIs.
 - They resolve target project first, then host/port, then call `/api/services/*`.
 
 ### extension (extension domain)
 
-- `sma extension ...` and `sma <extension> <action>` call `/api/extensions/*`.
+- `city extension ...` and `city <extension> <action>` call `/api/extensions/*`.
 - `voice` has a local fallback path for selected actions when runtime is unreachable.
 
 ## 3) Agent Port Allocation and Instance Creation
 
-### `sma agent start`
+### `city agent start`
 
 1. Validate console is running.
 2. Validate project init files (`ship.json`, `PROFILE.md`).
@@ -77,9 +77,9 @@ Implementation notes:
 
 - No central lock is used (no cross-process strong lock); final truth is actual `listen` success.
 - Probing on target host avoids false positives like "`127.0.0.1` is free but `0.0.0.0` conflicts".
-- Daemon startup args are persisted in `.ship/.debug/shipmyagent.daemon.json`, and service/extension routing prefers this source.
+- Daemon startup args are persisted in `.ship/.debug/downcity.daemon.json`, and service/extension routing prefers this source.
 
-### `sma agent restart`
+### `city agent restart`
 
 1. Stop old daemon.
 2. Console allocates a port again and starts new daemon.
@@ -97,9 +97,9 @@ Note: port can change after restart by design.
 `service` target resolution order:
 
 1. `--agent <name>`
-2. if path is default `.`, prefer `SMA_AGENT_NAME`
+2. if path is default `.`, prefer `DC_AGENT_NAME`
 3. `--path` / current directory
-4. if `.` and `SMA_AGENT_PATH` exists, prefer that path
+4. if `.` and `DC_AGENT_PATH` exists, prefer that path
 
 Then hard checks:
 
@@ -113,8 +113,8 @@ Then hard checks:
 For runtime API calls (service/extension/action):
 
 1. explicit CLI `--host` / `--port` (debug use only)
-2. `SMA_SERVER_HOST/PORT`
-3. `SMA_CTX_SERVER_HOST/PORT`
+2. `DC_SERVER_HOST/PORT`
+3. `DC_CTX_SERVER_HOST/PORT`
 4. daemon meta `--host/--port`
 5. default `127.0.0.1:5314`
 
@@ -131,8 +131,8 @@ Daemon started and crashed. Port conflict is the common cause.
 Fix:
 
 ```bash
-sma agent doctor <path> --fix
-sma agent restart <path>
+city agent doctor <path> --fix
+city agent restart <path>
 ```
 
 ### “One agent is running, second agent fails to start”
@@ -142,13 +142,13 @@ Typical cause: stale state or old flow still trying to bind the same port.
 Check:
 
 ```bash
-sma console agents
+city console agents
 lsof -nP -iTCP:<port> -sTCP:LISTEN
-tail -n 200 <agentPath>/.ship/.debug/shipmyagent.daemon.log
+tail -n 200 <agentPath>/.ship/.debug/downcity.daemon.log
 ```
 
 ## 7) Recommendations
 
-- In multi-agent scenarios, prefer `sma service ... --agent <name>`.
-- Do not keep manually exported `SMA_SERVER_PORT` in shell profile.
+- In multi-agent scenarios, prefer `city service ... --agent <name>`.
+- Do not keep manually exported `DC_SERVER_PORT` in shell profile.
 - For abnormal status, run `doctor --fix`, then `restart`, then inspect daemon log.

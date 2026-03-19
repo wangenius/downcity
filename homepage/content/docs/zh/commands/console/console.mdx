@@ -1,9 +1,9 @@
 ---
-title: sma console
+title: city console
 description: 全局 console 命令组，用于进程编排与多 agent 治理
 ---
 
-# `sma console`
+# `city console`
 
 `console` 是全局控制面。
 
@@ -13,25 +13,25 @@ description: 全局 console 命令组，用于进程编排与多 agent 治理
 
 一级命令固定为 4 个：
 
-- `sma console`
-- `sma agent`
-- `sma service`
-- `sma extension`
+- `city console`
+- `city agent`
+- `city service`
+- `city extension`
 
 `console` 下面再细分 `init/model/config/start/stop/status/agents/ui`。
 
 ## 用法
 
 ```bash
-sma console init
-sma console model <subcommand>
-sma console config <subcommand>
-sma console start
-sma console stop
-sma console restart
-sma console status
-sma console agents [--json]
-sma console ui [start|stop|restart|status] [--port 5315]
+city console init
+city console model <subcommand>
+city console config <subcommand>
+city console start
+city console stop
+city console restart
+city console status
+city console agents [--json]
+city console ui [start|stop|restart|status] [--port 5315]
 ```
 
 ## 行为说明
@@ -50,26 +50,26 @@ sma console ui [start|stop|restart|status] [--port 5315]
 
 ```bash
 # 1) 启动全局 console
-sma console start
+city console start
 
 # 2) 启动项目 runtime
 cd /path/to/agent-project
-sma agent create .
-sma agent start
+city agent create .
+city agent start
 
 # 3) 查看状态
-sma console status
-sma agent status .
+city console status
+city agent status .
 ```
 
 ## 相关命令
 
-- [`sma console init`](/zh/docs/commands/console/init)
-- [`sma agent`](/zh/docs/commands/agent/agent)
-- [`sma console model`](/zh/docs/commands/console/model)
-- [`sma console config`](/zh/docs/commands/console/config)
-- [`sma service`](/zh/docs/commands/service/service)
-- [`sma extension`](/zh/docs/commands/extension/extension)
+- [`city console init`](/zh/docs/commands/console/init)
+- [`city agent`](/zh/docs/commands/agent/agent)
+- [`city console model`](/zh/docs/commands/console/model)
+- [`city console config`](/zh/docs/commands/console/config)
+- [`city service`](/zh/docs/commands/service/service)
+- [`city extension`](/zh/docs/commands/extension/extension)
 - [命令环境要求总览](/zh/docs/commands/variables)
 
 ## 示例输出（基于当前实现）
@@ -77,9 +77,9 @@ sma agent status .
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma console
-sma version: 1.0.0
-Usage: sma console [options] [command]
+$ city console
+city version: 1.0.0
+Usage: city console [options] [command]
 Commands:
   run
   ui [action]

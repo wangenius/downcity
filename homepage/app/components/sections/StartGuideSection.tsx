@@ -17,30 +17,30 @@ type StartContent = {
 
 const START_GUIDE: Record<"zh" | "en", StartContent> = {
   zh: {
-    title: "快速开始 ShipMyAgent",
+    title: "快速开始 Downcity",
     intro:
-      "这是一篇可直接照做的启动文章。按顺序完成以下步骤，你可以在 10 分钟内跑起一个可对话、可执行的 ShipMyAgent Runtime。",
+      "这是一篇可直接照做的启动文章。按顺序完成以下步骤，你可以在 10 分钟内跑起一个可对话、可执行的 Downcity Runtime。",
     sections: [
       {
         title: "1. 安装 CLI",
         paragraphs: [
-          "先全局安装 CLI，并确认命令可用。`sma` 是 `shipmyagent` 的等价短命令。",
+          "先全局安装 CLI，并确认命令可用。`downcity` 与 `city` 都可使用。",
         ],
-        code: `npm install -g shipmyagent\nshipmyagent --version`,
+        code: `npm install -g downcity\ndowncity --version`,
       },
       {
         title: "2. 在仓库里初始化 Agent",
         paragraphs: [
           "进入你的项目目录后创建/初始化 agent。系统会生成 `PROFILE.md`、`ship.json` 与 `.ship/` 目录。",
         ],
-        code: `cd /path/to/your-repo\nsma agent create .`,
+        code: `cd /path/to/your-repo\ncity agent create .`,
       },
       {
         title: "3. 配置模型并启动 Runtime",
         paragraphs: [
           "在项目根目录写入 `.env`，然后启动 runtime（默认后台 daemon）。需要在当前终端观察日志时再用前台模式。",
         ],
-        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent start\n# 或（前台调试）\nsma agent start --foreground`,
+        code: `LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# 或（前台调试）\ncity agent start --foreground`,
       },
       {
         title: "4. 健康检查与下一步",
@@ -54,30 +54,30 @@ const START_GUIDE: Record<"zh" | "en", StartContent> = {
     nextDescription: "如果你已经跑通启动流程，下一步建议进入完整文档的快速开始章节。",
   },
   en: {
-    title: "Quick Start ShipMyAgent",
+    title: "Quick Start Downcity",
     intro:
-      "This article is designed to be executable step by step. Follow it in order and you can launch a conversational ShipMyAgent runtime in about 10 minutes.",
+      "This article is designed to be executable step by step. Follow it in order and you can launch a conversational Downcity runtime in about 10 minutes.",
     sections: [
       {
         title: "1. Install CLI",
         paragraphs: [
-          "Install the global CLI first and verify the command is available. `sma` is equivalent to `shipmyagent`.",
+          "Install the global CLI first and verify the command is available. `downcity` and `city` are equivalent.",
         ],
-        code: `npm install -g shipmyagent\nshipmyagent --version`,
+        code: `npm install -g downcity\ndowncity --version`,
       },
       {
         title: "2. Initialize in your repository",
         paragraphs: [
           "Create/init the agent project inside your repository. It creates `PROFILE.md`, `ship.json`, and `.ship/`.",
         ],
-        code: `cd /path/to/your-repo\nsma agent create .`,
+        code: `cd /path/to/your-repo\ncity agent create .`,
       },
       {
         title: "3. Configure model and start runtime",
         paragraphs: [
           "Create `.env` in project root, then start runtime (default: background daemon). Use foreground mode when you want logs in the current terminal.",
         ],
-        code: `LLM_API_KEY=your_key\n\nsma start\nsma agent start\n# or (foreground)\nsma agent start --foreground`,
+        code: `LLM_API_KEY=your_key\n\ncity start\ncity agent start\n# or (foreground)\ncity agent start --foreground`,
       },
       {
         title: "4. Health check and next steps",

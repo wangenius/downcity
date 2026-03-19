@@ -158,7 +158,7 @@ function normalizeToAllowedMessageLabels(message: string): string {
 }
 
 /**
- * Unified runtime logger for ShipMyAgent.
+ * Unified runtime logger for Downcity.
  *
  * Design goals:
  * - Provide a single logger interface usable by both:

@@ -3,10 +3,10 @@ import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
 export function meta() {
-  const baseUrl = product.homepage || "https://shipmyagent.com";
+  const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — Resources`;
   const description =
-    "Skills, marketplace, and hosting resources for ShipMyAgent";
+    "Skills, marketplace, and hosting resources for Downcity";
 
   return [
     { charSet: "utf-8" },

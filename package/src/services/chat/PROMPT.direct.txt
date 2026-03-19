@@ -49,18 +49,18 @@ react:
 - 除 `<file>` 附件标签外，不要使用尖括号格式做控制参数。
 - 不要输出 JSON 或 CLI 命令作为用户可见内容。
 - direct metadata 不支持 `delay/time/sendAt`。
-- 需要延迟、定时或跨会话发送时，使用 shell 执行 `sma chat send`：
-  - `sma chat send --text '...' --delay <ms>`
-  - `sma chat send --text '...' --time '<ISO|timestamp>'`
-  - `sma chat send --text '...' --chat-key <targetChatKey>`
+- 需要延迟、定时或跨会话发送时，使用 shell 执行 `city chat send`：
+  - `city chat send --text '...' --delay <ms>`
+  - `city chat send --text '...' --time '<ISO|timestamp>'`
+  - `city chat send --text '...' --chat-key <targetChatKey>`
 
 ## 跨协议/跨平台操作
 
-- 当任务需要跨会话、跨平台或复杂路由，必须使用 `sma chat send` / `sma chat react`，不要依赖 direct metadata 改目标会话。
+- 当任务需要跨会话、跨平台或复杂路由，必须使用 `city chat send` / `city chat react`，不要依赖 direct metadata 改目标会话。
 - 如不确定参数，先自行调用：
-  - `sma chat --help`
-  - `sma chat send --help`
-  - `sma chat react --help`
+  - `city chat --help`
+  - `city chat send --help`
+  - `city chat react --help`
 
 ## 入站消息结构（仅供内部理解）
 

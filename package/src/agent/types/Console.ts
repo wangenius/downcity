@@ -82,7 +82,7 @@ export interface ConsoleAgentRegistryV1 {
 }
 
 /**
- * `sma console agents/status` 的运行时视图。
+ * `city console agents/status` 的运行时视图。
  */
 export interface ConsoleAgentRuntimeView {
   /**
@@ -96,7 +96,7 @@ export interface ConsoleAgentRuntimeView {
   registeredPid: number;
 
   /**
-   * 当前 `.ship/.debug/shipmyagent.pid` 读到的实时 pid。
+   * 当前 `.ship/.debug/downcity.pid` 读到的实时 pid。
    */
   daemonPid: number;
 

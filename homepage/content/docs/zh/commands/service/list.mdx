@@ -1,16 +1,16 @@
 ---
-title: sma service list
+title: city service list
 description: 列出当前 agent 的全部 service 运行状态
 ---
 
-# `sma service list`
+# `city service list`
 
 列出目标 agent 下所有 service 的状态。
 
 ## 用法
 
 ```bash
-sma service list [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service list [--agent <name> | --path <path>] [--host <host>] [--port <port>]
 ```
 
 ## 关键参数
@@ -26,15 +26,15 @@ sma service list [--agent <name> | --path <path>] [--host <host>] [--port <port>
 
 ## 相关命令
 
-- [`sma service status`](/zh/docs/commands/service/status)
-- [`sma service start`](/zh/docs/commands/service/start)
+- [`city service status`](/zh/docs/commands/service/status)
+- [`city service start`](/zh/docs/commands/service/start)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma service list --agent <agentName>
+$ city service list --agent <agentName>
 {
   "success": true,
   "services": [
@@ -45,9 +45,9 @@ $ sma service list --agent <agentName>
 ```
 
 ```text
-$ sma service list --agent missing-agent
+$ city service list --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city console agents\" to inspect names."
 }
 ```

@@ -1,5 +1,5 @@
 /**
- * `shipmyagent config alias`：向 shell rc 文件写入 `alias sma="shipmyagent"`。
+ * `downcity config alias`：向 shell rc 文件写入 `alias city="downcity"`。
  *
  * 关键点（中文）
  * - 通过标记块（start/end）实现幂等更新。
@@ -23,14 +23,14 @@ interface AliasOptions {
  * 幂等写入 alias block。
  *
  * 算法（中文）
- * 1) 若已存在 shipmyagent 标记块：原位替换该块
- * 2) 若已存在 `alias sma=`：视为用户自定义，跳过
+ * 1) 若已存在 downcity 标记块：原位替换该块
+ * 2) 若已存在 `alias city=`：视为用户自定义，跳过
  * 3) 否则追加到文件末尾
  */
-function upsertAliasBlock(content: string, aliasLine: string): { next: string; changed: boolean } {
-  const start = "# >>> shipmyagent alias >>>";
-  const end = "# <<< shipmyagent alias <<<";
-  const block = `${start}\n${aliasLine}\n${end}\n`;
+function upsertAliasBlock(content: string, aliasLines: string[]): { next: string; changed: boolean } {
+  const start = "# >>> downcity alias >>>";
+  const end = "# <<< downcity alias <<<";
+  const block = `${start}\n${aliasLines.join("\n")}\n${end}\n`;
 
   const startIdx = content.indexOf(start);
   const endIdx = content.indexOf(end);
@@ -42,7 +42,7 @@ function upsertAliasBlock(content: string, aliasLine: string): { next: string; c
     return { next, changed: next !== content };
   }
 
-  const aliasRegex = /^\s*alias\s+sma\s*=/m;
+  const aliasRegex = /^\s*alias\s+city\s*=/m;
   if (aliasRegex.test(content)) {
     return { next: content, changed: false };
   }
@@ -57,10 +57,10 @@ function upsertAliasBlock(content: string, aliasLine: string): { next: string; c
  * 写入 alias 到目标 shell rc 文件。
  */
 export async function aliasCommand(options: AliasOptions = {}): Promise<void> {
-  const aliasLine = `alias sma="shipmyagent"`;
+  const aliasLines = [`alias city="downcity"`];
 
   if (options.print) {
-    console.log(aliasLine);
+    console.log(aliasLines.join("\n"));
     return;
   }
 
@@ -77,7 +77,7 @@ export async function aliasCommand(options: AliasOptions = {}): Promise<void> {
   for (const rcPath of rcFiles) {
     const exists = await fs.pathExists(rcPath);
     const current = exists ? await fs.readFile(rcPath, "utf-8") : "";
-    const { next, changed } = upsertAliasBlock(current, aliasLine);
+    const { next, changed } = upsertAliasBlock(current, aliasLines);
 
     if (!changed) {
       skippedFiles.push(rcPath);

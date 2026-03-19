@@ -16,7 +16,7 @@ Typical built-in services include:
 
 ## What Service is responsible for
 
-- Provide stable runtime actions via `sma service ...`
+- Provide stable runtime actions via `city service ...`
 - Expose HTTP control and command routes under `/api/services/*`
 - Own persistent state and execution outputs under `.ship/` directories
 
@@ -27,14 +27,14 @@ Service-related configuration is under `ship.json.services.*` (for example `serv
 ## Operational commands
 
 ```bash
-sma service list
-sma service status chat
-sma service restart task
-sma service command memory search --payload '{"query":"release"}'
+city service list
+city service status chat
+city service restart task
+city service command memory search --payload '{"query":"release"}'
 ```
 
 ## Related docs
 
-- [`sma service`](/en/docs/commands/service/service)
+- [`city service`](/en/docs/commands/service/service)
 - [Service vs Extension](/en/docs/concepts/service-vs-extension)
 - [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)

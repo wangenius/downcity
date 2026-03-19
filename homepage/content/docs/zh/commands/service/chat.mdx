@@ -1,18 +1,18 @@
 ---
-title: sma chat
+title: city chat
 description: chat service actions（status/test/reconnect/open/close/configure/send/react/context/history）
 ---
 
-# `sma chat`
+# `city chat`
 
 用于向指定会话发送消息、贴表情、查看上下文和读取历史。
 
-> 层级说明：`sma chat` 是 service 动作命令，不是一级命令。一级入口是 `sma service`。
+> 层级说明：`city chat` 是 service 动作命令，不是一级命令。一级入口是 `city service`。
 
 ## 用法
 
 ```bash
-sma chat <subcommand> [options]
+city chat <subcommand> [options]
 ```
 
 ## 子命令
@@ -71,17 +71,17 @@ sma chat <subcommand> [options]
 ## 示例
 
 ```bash
-sma chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
-sma chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
-sma chat context --chat-key ctx_xxxxxxxxxxxxxxxx
-sma chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
-sma chat status
-sma chat test --channel telegram
-sma chat reconnect --channel qq
-sma chat open --channel qq
-sma chat close --channel telegram
-sma chat configuration --channel qq
-sma chat configure --channel qq --config-json '{"channelAccountId":"qq-main","enabled":true}'
+city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
+city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
+city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+city chat status
+city chat test --channel telegram
+city chat reconnect --channel qq
+city chat open --channel qq
+city chat close --channel telegram
+city chat configuration --channel qq
+city chat configure --channel qq --config-json '{"channelAccountId":"qq-main","enabled":true}'
 ```
 
 ## 说明
@@ -89,7 +89,7 @@ sma chat configure --channel qq --config-json '{"channelAccountId":"qq-main","en
 该命令组通常需要已启动的 agent runtime：
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## 示例输出（基于当前实现）
@@ -97,7 +97,7 @@ sma agent start
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma chat status
+$ city chat status
 {
   "success": true,
   "data": {
@@ -110,7 +110,7 @@ $ sma chat status
 ```
 
 ```text
-$ sma chat send --chat-key <chatKey> --text "done"
+$ city chat send --chat-key <chatKey> --text "done"
 {
   "success": true,
   "data": {

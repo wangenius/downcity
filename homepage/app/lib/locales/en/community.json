@@ -1,6 +1,6 @@
 {
   "title": "Community",
-  "subtitle": "Join the ShipMyAgent developer community",
+  "subtitle": "Join the Downcity developer community",
   "faq": {
     "title": "FAQ",
     "description": "Frequently asked questions"
@@ -14,7 +14,7 @@
     "description": "Join the conversation on GitHub"
   },
   "faqPage": {
-    "subtitle": "Frequently asked questions about ShipMyAgent",
+    "subtitle": "Frequently asked questions about Downcity",
     "all": "All",
     "categories": {
       "security": "Security",
@@ -32,7 +32,7 @@
       },
       "llm-models": {
         "question": "Which LLM models are supported?",
-        "answer": "ShipMyAgent supports all models compatible with ai-sdk v6, including Claude (Anthropic), GPT-4 (OpenAI), and many others. You can easily switch between models or use different models for different tasks.",
+        "answer": "Downcity supports all models compatible with ai-sdk v6, including Claude (Anthropic), GPT-4 (OpenAI), and many others. You can easily switch between models or use different models for different tasks.",
         "category": "technical"
       },
       "remote-deployment": {
@@ -42,12 +42,12 @@
       },
       "comparison-copilot": {
         "question": "How is this different from GitHub Copilot?",
-        "answer": "GitHub Copilot is for individual developers with code completion features. ShipMyAgent is designed for teams and enterprises, providing an executable AI team member with security controls, auditability, and human-in-the-loop approval workflows.",
+        "answer": "GitHub Copilot is for individual developers with code completion features. Downcity is designed for teams and enterprises, providing an executable AI team member with security controls, auditability, and human-in-the-loop approval workflows.",
         "category": "general"
       },
       "memory": {
         "question": "Does the Agent remember previous conversations?",
-        "answer": "Yes. ShipMyAgent maintains project-level long-term memory. The Agent's context is your entire repository, and it remembers interactions, approvals, and actions across sessions.",
+        "answer": "Yes. Downcity maintains project-level long-term memory. The Agent's context is your entire repository, and it remembers interactions, approvals, and actions across sessions.",
         "category": "features"
       },
       "multi-agent": {
@@ -57,12 +57,12 @@
       },
       "custom-services": {
         "question": "Can I add custom services?",
-        "answer": "Absolutely. ShipMyAgent is designed to be extensible. You can add custom webhooks, integrate with your existing tools, and build custom skills. The webhook API makes it easy to connect with any service.",
+        "answer": "Absolutely. Downcity is designed to be extensible. You can add custom webhooks, integrate with your existing tools, and build custom skills. The webhook API makes it easy to connect with any service.",
         "category": "service"
       },
       "pricing": {
         "question": "What's the pricing model?",
-        "answer": "ShipMyAgent is open source (MIT license) and free to use. You only pay for the LLM API costs (Claude, GPT-4, etc.) that you choose to use. Enterprise editions with additional features and support will be available in the future.",
+        "answer": "Downcity is open source (MIT license) and free to use. You only pay for the LLM API costs (Claude, GPT-4, etc.) that you choose to use. Enterprise editions with additional features and support will be available in the future.",
         "category": "general"
       }
     },
@@ -161,7 +161,7 @@
     },
     "cta": {
       "title": "Want to shape the future?",
-      "description": "Share your ideas and help us build the next generation of ShipMyAgent",
+      "description": "Share your ideas and help us build the next generation of Downcity",
       "button": "Request a Feature"
     }
   }

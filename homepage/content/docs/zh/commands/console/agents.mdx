@@ -1,16 +1,16 @@
 ---
-title: sma console agents
+title: city console agents
 description: 列出 console 托管的 agent（运行中 + 历史）
 ---
 
-# `sma console agents`
+# `city console agents`
 
 列出 console 托管的 agent（包含运行中与历史记录）。
 
 ## 用法
 
 ```bash
-sma console agents [--json]
+city console agents [--json]
 ```
 
 ## 行为说明
@@ -23,16 +23,16 @@ sma console agents [--json]
 
 ## 相关命令
 
-- [`sma console`](/zh/docs/commands/console/console)
-- [`sma console status`](/zh/docs/commands/console/status)
-- [`sma agent`](/zh/docs/commands/agent/agent)
+- [`city console`](/zh/docs/commands/console/console)
+- [`city console status`](/zh/docs/commands/console/status)
+- [`city agent`](/zh/docs/commands/agent/agent)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma console agents --json
+$ city console agents --json
 {
   "success": true,
   "count": 2,
@@ -50,8 +50,8 @@ $ sma console agents --json
 ```
 
 ```text
-$ sma console agents
-sma version: 1.0.0
+$ city console agents
+city version: 1.0.0
 ┌──────────────────────────────────────┐
 │ INFO managed agents                  │
 │   agents   : 0                       │

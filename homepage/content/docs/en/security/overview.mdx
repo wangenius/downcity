@@ -5,7 +5,7 @@ description: User-facing security model for isolation, permissions, and secret p
 
 # Security and Permissions Overview
 
-ShipMyAgent security has three layers:
+Downcity security has three layers:
 
 1. Runtime isolation: one agent runtime is bound to one `projectRoot`.
 2. Permission control: `ship.json.permissions` defines write/exec boundaries.
@@ -13,9 +13,9 @@ ShipMyAgent security has three layers:
 
 ## What to watch first
 
-1. Avoid stale `SMA_SERVER_HOST/SMA_SERVER_PORT` in your shell, or requests may hit the wrong runtime.
+1. Avoid stale `DC_SERVER_HOST/DC_SERVER_PORT` in your shell, or requests may hit the wrong runtime.
 2. Keep high-risk commands in `permissions.exec_command.deny` (for example `rm`).
-3. In production, prefer `SMA_MODEL_DB_KEY` from secret management.
+3. In production, prefer `DC_MODEL_DB_KEY` from secret management.
 
 ## Recommended reading
 

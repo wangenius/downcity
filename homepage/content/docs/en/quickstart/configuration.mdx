@@ -5,7 +5,7 @@ description: ship.json, PROFILE.md, and runtime configuration essentials
 
 # Configuration
 
-ShipMyAgent is configured with four core files:
+Downcity is configured with four core files:
 
 - `PROFILE.md`: agent role and boundaries (required)
 - `SOUL.md`: stable operating principles (optional)
@@ -16,7 +16,7 @@ ShipMyAgent is configured with four core files:
 
 ### `start` (advanced only)
 
-For `sma agent start`, ports are auto-allocated by console.
+For `city agent start`, ports are auto-allocated by console.
 
 So in normal usage you do not need `start.port` in project `ship.json`.
 
@@ -96,8 +96,8 @@ Extension config is not maintained in project `ship.json`. It is maintained in c
 Example for voice:
 
 ```bash
-sma voice on SenseVoiceSmall
-sma console config get extensions.voice
+city voice on SenseVoiceSmall
+city console config get extensions.voice
 ```
 
 ### `permissions`
@@ -122,10 +122,10 @@ Repository write and command execution policies:
 ## Useful commands
 
 ```bash
-sma console config get
-sma console config get model.primary
-sma console model list
-sma console config unset services.chat.channels.telegram
+city console config get
+city console config get model.primary
+city console model list
+city console config unset services.chat.channels.telegram
 ```
 
 ## Next

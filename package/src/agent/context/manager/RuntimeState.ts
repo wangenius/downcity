@@ -35,7 +35,7 @@ import path from "path";
 import type { LanguageModel } from "ai";
 
 /**
- * RuntimeState：ShipMyAgent 进程级运行时状态（单例）。
+ * RuntimeState：Downcity 进程级运行时状态（单例）。
  *
  * 设计目标（中文，关键节点）
  * - 单进程只服务一个 rootPath，因此把 rootPath/config/utils/logger/systems 放到全局单例里读取
@@ -372,8 +372,8 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     projectEnv,
   });
   // 关键点（中文）：统一注入当前 agent 标识，供 shell/CLI 子命令默认解析。
-  process.env.SMA_AGENT_PATH = rootPath;
-  process.env.SMA_AGENT_NAME = String(config.name || path.basename(rootPath));
+  process.env.DC_AGENT_PATH = rootPath;
+  process.env.DC_AGENT_NAME = String(config.name || path.basename(rootPath));
 
   // 关键点（中文）：先初始化 base runtime state，保证底层模块可直接读取 rootPath/config/utils/logger/systems。
   setRuntimeStateBase({

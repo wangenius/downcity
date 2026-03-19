@@ -3,7 +3,7 @@ import { product } from "@/lib/product";
 
 export function meta() {
   const title = `${product.productName} — Use Cases`;
-  const description = "Real-world applications and scenarios for ShipMyAgent";
+  const description = "Real-world applications and scenarios for Downcity";
   return [
     { title },
     { name: "description", content: description },
@@ -18,10 +18,10 @@ const useCases = [
     icon: "🤝",
     bulletKeys: ["review", "answer", "onboard", "bugs", "docs"],
     example: `# Create/init the Agent project
-sma agent create .
+city agent create .
 
 # Start the Agent (default: daemon)
-sma agent start
+city agent start
 
 # In Telegram, chat with your Agent:
 /status          # Check project status
@@ -70,7 +70,7 @@ export default function UseCases() {
   const discussionsUrl =
     product.homepage?.includes("github.com") === true
       ? `${product.homepage}/discussions`
-      : "https://github.com/wangenius/shipmyagent/discussions";
+      : "https://github.com/wangenius/downcity/discussions";
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-12 md:py-20">

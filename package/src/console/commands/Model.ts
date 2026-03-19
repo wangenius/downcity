@@ -1,5 +1,5 @@
 /**
- * `sma console model` 命令组。
+ * `city console model` 命令组。
  *
  * 设计目标（中文）
  * - 把语言模型管理从 `console config` 解耦成独立命令域。
@@ -125,7 +125,7 @@ async function runStoreCommand(
         error:
           error instanceof Error &&
           String(error.message || "").includes("unable to open database file")
-            ? 'Console model store is unavailable. Run "sma console init" first.'
+            ? 'Console model store is unavailable. Run "city console init" first.'
             : error instanceof Error
               ? error.message
               : String(error),
@@ -289,7 +289,7 @@ async function runInteractiveCreate(
     const providers = await store.listProviders();
     if (providers.length === 0) {
       throw new Error(
-        "No provider found. Please run `sma console model create` and choose provider first.",
+        "No provider found. Please run `city console model create` and choose provider first.",
       );
     }
 
@@ -381,7 +381,7 @@ async function runInteractiveCreate(
 }
 
 /**
- * 注册 `sma console model` 命令组。
+ * 注册 `city console model` 命令组。
  */
 export function registerModelCommand(program: Command): void {
   const model = program

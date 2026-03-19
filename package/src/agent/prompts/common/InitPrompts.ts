@@ -1,5 +1,5 @@
 /**
- * InitPrompts：`sma agent create` 默认 prompt 资产加载器。
+ * InitPrompts：`city agent create` 默认 prompt 资产加载器。
  *
  * 职责说明（中文）
  * - 统一管理 create 生成的 `PROFILE.md` / `SOUL.md` / `USER.md` 默认内容。

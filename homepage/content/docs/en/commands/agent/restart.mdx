@@ -1,16 +1,16 @@
 ---
-title: sma agent restart
+title: city agent restart
 description: Restart target agent runtime
 ---
 
-# `sma agent restart`
+# `city agent restart`
 
 Restart runtime for a target agent.
 
 ## Usage
 
 ```bash
-sma agent restart [path] [options]
+city agent restart [path] [options]
 ```
 
 ## Key options
@@ -25,24 +25,24 @@ sma agent restart [path] [options]
 
 ## Related commands
 
-- [`sma agent start`](/en/docs/commands/agent/start)
-- [`sma agent restart`](/en/docs/commands/agent/restart)
-- [`sma agent status`](/en/docs/commands/agent/status)
+- [`city agent start`](/en/docs/commands/agent/start)
+- [`city agent restart`](/en/docs/commands/agent/restart)
+- [`city agent status`](/en/docs/commands/agent/status)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma agent restart .
-sma version: 1.0.0
-✅ ShipMyAgent daemon restarted
+$ city agent restart .
+city version: 1.0.0
+✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ sma agent restart .
-sma version: 1.0.0
+$ city agent restart .
+city version: 1.0.0
 ❌ Failed to restart daemon: <error>
 ```

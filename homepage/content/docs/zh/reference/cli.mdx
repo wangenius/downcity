@@ -1,6 +1,6 @@
 ---
 title: CLI 命令
-description: ShipMyAgent 命令行参考入口
+description: Downcity 命令行参考入口
 ---
 
 # CLI 命令
@@ -13,35 +13,35 @@ CLI 文档按“单命令页面”组织。
 
 ## 主要命令组
 
-- [`sma agent create`](/zh/docs/commands/agent/create)
-- [`sma console`](/zh/docs/commands/console/console)
-- [`sma agent`](/zh/docs/commands/agent/agent)
-- [`sma console config`](/zh/docs/commands/console/config)
-- [`sma service`](/zh/docs/commands/service/service)
-- [`sma extension`](/zh/docs/commands/extension/extension)
-- [`sma chat`](/zh/docs/commands/service/chat)
-- [`sma voice`](/zh/docs/commands/extension/voice)
-- [`sma skill`](/zh/docs/commands/service/skill)
-- [`sma task`](/zh/docs/commands/service/task)
-- [`sma memory`](/zh/docs/commands/service/memory)
+- [`city agent create`](/zh/docs/commands/agent/create)
+- [`city console`](/zh/docs/commands/console/console)
+- [`city agent`](/zh/docs/commands/agent/agent)
+- [`city console config`](/zh/docs/commands/console/config)
+- [`city service`](/zh/docs/commands/service/service)
+- [`city extension`](/zh/docs/commands/extension/extension)
+- [`city chat`](/zh/docs/commands/service/chat)
+- [`city voice`](/zh/docs/commands/extension/voice)
+- [`city skill`](/zh/docs/commands/service/skill)
+- [`city task`](/zh/docs/commands/service/task)
+- [`city memory`](/zh/docs/commands/service/memory)
 
 ## 运行模型（简版）
 
-- `sma start`：一键启动（依次执行 `sma console start` 与 `sma console ui start`）
-- `sma stop`：一键停止（等价 `sma console stop`）
-- `sma restart`：一键重启（依次执行 `sma console restart` 与 `sma console ui start`）
-- `sma console start`：启动全局控制面
-- `sma agent create`：初始化项目运行文件
-- `sma agent start`：启动项目 agent daemon
-- `sma service ...`：运维核心 service 能力
-- `sma extension ...`：运维 extension 扩展能力
-- `sma console model ...`：管理运行时模型配置
+- `city start`：一键启动（依次执行 `city console start` 与 `city console ui start`）
+- `city stop`：一键停止（等价 `city console stop`）
+- `city restart`：一键重启（依次执行 `city console restart` 与 `city console ui start`）
+- `city console start`：启动全局控制面
+- `city agent create`：初始化项目运行文件
+- `city agent start`：启动项目 agent daemon
+- `city service ...`：运维核心 service 能力
+- `city extension ...`：运维 extension 扩展能力
+- `city console model ...`：管理运行时模型配置
 
 ## 保持最新
 
 本地帮助输出永远是最新的：
 
 ```bash
-sma --help
-sma <command> --help
+city --help
+city <command> --help
 ```

@@ -1,9 +1,9 @@
 ---
-title: sma console ui
+title: city console ui
 description: Start console UI (single instance, multi-agent view)
 ---
 
-# `sma console ui`
+# `city console ui`
 
 Manage the UI gateway hosted by `console`.
 
@@ -13,7 +13,7 @@ It is a state-first dashboard; chat input is only enabled in the built-in `conso
 ## Usage
 
 ```bash
-sma console ui [action] [options]
+city console ui [action] [options]
 ```
 
 ## Key options
@@ -30,12 +30,12 @@ sma console ui [action] [options]
 
 ## Behavior
 
-- Requires console first: `sma console start`.
+- Requires console first: `city console start`.
 - On startup, UI loads agents from console registry (running + history).
 - Global Agents panel shows runtime state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
 - Global / Overview only shows global health signals (console, fleet, channels, extensions, config risk).
-- Global / Overview now shows the current SMA version in the top summary area.
+- Global / Overview now shows the current DC version in the top summary area.
 - Global / Console Runtime shows console runtime details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
 - Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).
@@ -53,44 +53,44 @@ sma console ui [action] [options]
 - UI shows grouped `system prompt` composition (static/service/runtime).
 - Context Workspace now supports message management for all chat contexts: clear `context messages` and `chat history` independently.
 - Context Workspace now supports compact archive inspection: open the `archive` panel to review pre-compact history batches.
-- `sma console status` also shows UI status.
+- `city console status` also shows UI status.
 
 ## Typical flow
 
 ```bash
 # 1) start console
-sma console start
+city console start
 
 # 2) start multiple agents
-sma agent start /path/to/agent-a
-sma agent start /path/to/agent-b
+city agent start /path/to/agent-a
+city agent start /path/to/agent-b
 
 # 3) start UI in background
-sma console ui start --port 5315
+city console ui start --port 5315
 
 # 4) check UI status
-sma console ui status
+city console ui status
 
 # 5) restart UI (reload latest gateway code/routes)
-sma console ui restart
+city console ui restart
 
 # 6) stop UI
-sma console ui stop
+city console ui stop
 ```
 
 ## Related commands
 
-- [`sma console start`](/en/docs/commands/console/start)
-- [`sma console agents`](/en/docs/commands/console/agents)
-- [`sma agent start`](/en/docs/commands/agent/start)
+- [`city console start`](/en/docs/commands/console/start)
+- [`city console agents`](/en/docs/commands/console/agents)
+- [`city agent start`](/en/docs/commands/agent/start)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma console ui start
-sma version: 1.0.0
+$ city console ui start
+city version: 1.0.0
 ✅ Console UI started
    pid: <pid>
    url: http://127.0.0.1:5315
@@ -98,10 +98,10 @@ sma version: 1.0.0
 ```
 
 ```text
-$ sma console ui status
-sma version: 1.0.0
+$ city console ui status
+city version: 1.0.0
 ┌────────────────────────────────────────────────────┐
-│ OK sma console ui status                           │
+│ OK city console ui status                           │
 │   state    : running                               │
 │   pid      : <pid>                                 │
 │   url      : http://127.0.0.1:5315                 │

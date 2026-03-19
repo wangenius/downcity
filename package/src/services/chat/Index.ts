@@ -1278,7 +1278,7 @@ async function mapChatSendCommandInput(
   }
   if (!chatKey) {
     throw new Error(
-      "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CHAT_KEY is injected in current shell context.",
+      "Missing chatKey. Provide --chat-key or ensure DC_CTX_CHAT_KEY is injected in current shell context.",
     );
   }
 
@@ -1371,7 +1371,7 @@ function mapChatReactCommandInput(
   });
   if (!chatKey) {
     throw new Error(
-      "Missing chatKey. Provide --chat-key or ensure SMA_CTX_CHAT_KEY is injected in current shell context.",
+      "Missing chatKey. Provide --chat-key or ensure DC_CTX_CHAT_KEY is injected in current shell context.",
     );
   }
 
@@ -1632,7 +1632,7 @@ export const chatService: Service = {
             .option("--reply", "显式使用 reply_to_message 回复目标消息", false)
             .option(
               "--chat-key <chatKey>",
-              "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）",
+              "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）",
             );
         },
         mapInput: mapChatSendCommandInput,
@@ -1660,7 +1660,7 @@ export const chatService: Service = {
             .option("--message-id <id>", "目标消息 ID（默认尝试从 chat meta 回填）")
             .option(
               "--chat-key <chatKey>",
-              "目标 chatKey（不传则尝试读取 SMA_CTX_CHAT_KEY）",
+              "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）",
             );
         },
         mapInput: mapChatReactCommandInput,
@@ -1764,7 +1764,7 @@ export const chatService: Service = {
           return {
             success: false,
             error:
-              "Missing contextId. Provide --context-id/--chat-key or ensure SMA_CTX_CONTEXT_ID is injected.",
+              "Missing contextId. Provide --context-id/--chat-key or ensure DC_CTX_CONTEXT_ID is injected.",
           };
         }
 

@@ -329,7 +329,7 @@ export function SkillsSection(props: SkillsSectionProps) {
           <DialogHeader>
             <DialogTitle>Install 配置</DialogTitle>
             <DialogDescription>
-              设置 `sma skill install` 的默认参数。配置会用于当前页面的 Install 操作。
+              设置 `city skill install` 的默认参数。配置会用于当前页面的 Install 操作。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

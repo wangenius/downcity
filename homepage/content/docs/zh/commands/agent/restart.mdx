@@ -1,16 +1,16 @@
 ---
-title: sma agent restart
+title: city agent restart
 description: 重启指定 agent runtime
 ---
 
-# `sma agent restart`
+# `city agent restart`
 
 重启指定 agent 的 runtime。
 
 ## 用法
 
 ```bash
-sma agent restart [path] [options]
+city agent restart [path] [options]
 ```
 
 ## 常用参数
@@ -25,24 +25,24 @@ sma agent restart [path] [options]
 
 ## 相关命令
 
-- [`sma agent start`](/zh/docs/commands/agent/start)
-- [`sma agent restart`](/zh/docs/commands/agent/restart)
-- [`sma agent status`](/zh/docs/commands/agent/status)
+- [`city agent start`](/zh/docs/commands/agent/start)
+- [`city agent restart`](/zh/docs/commands/agent/restart)
+- [`city agent status`](/zh/docs/commands/agent/status)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma agent restart .
-sma version: 1.0.0
-✅ ShipMyAgent daemon restarted
+$ city agent restart .
+city version: 1.0.0
+✅ Downcity daemon restarted
    pid: <pid>
    log: <daemonLogPath>
 ```
 
 ```text
-$ sma agent restart .
-sma version: 1.0.0
+$ city agent restart .
+city version: 1.0.0
 ❌ Failed to restart daemon: <error>
 ```

@@ -5,9 +5,9 @@ description: Chat with your agent and receive notifications on Telegram
 
 # Telegram service
 
-> ⚠️ **Simplified mode (2026-02-03)**: the current `shipmyagent` package disables approvals (full-permission execution). Mentions of “approval prompts” in older docs may be outdated.
+> ⚠️ **Simplified mode (2026-02-03)**: the current `downcity` package disables approvals (full-permission execution). Mentions of “approval prompts” in older docs may be outdated.
 
-Use Telegram to chat with ShipMyAgent (DM or group chat).
+Use Telegram to chat with Downcity (DM or group chat).
 
 > Want the internal flow? See: [/en/docs/services/chat/telegram-message-flow](/en/docs/services/chat/telegram-message-flow)
 
@@ -45,12 +45,12 @@ Then bind it in project `ship.json`:
 }
 ```
 
-> ShipMyAgent uses a tool-strict chat mode: the agent should use the `chat_send` tool to decide when/how to send replies (multiple/staged messages are allowed).
+> Downcity uses a tool-strict chat mode: the agent should use the `chat_send` tool to decide when/how to send replies (multiple/staged messages are allowed).
 
-### 3) Start ShipMyAgent
+### 3) Start Downcity
 
 ```bash
-sma agent start
+city agent start
 ```
 
 In logs you should see:
@@ -69,8 +69,8 @@ Send `/start` (or any message) to your bot.
 
 You can send a file directly to the bot (document/photo/voice/audio/video).
 
-- If you add text while sending the file, Telegram treats it as a **caption** — ShipMyAgent will read that caption as your instruction.
-- ShipMyAgent saves the file under `.ship/.cache/telegram/` and passes it to the agent as an `@attach ...` line.
+- If you add text while sending the file, Telegram treats it as a **caption** — Downcity will read that caption as your instruction.
+- Downcity saves the file under `.ship/.cache/telegram/` and passes it to the agent as an `@attach ...` line.
 
 Example: send a PDF with caption: `Summarize this PDF and list action items.`
 
@@ -80,10 +80,10 @@ If you want to manage local voice-to-text models, use the dedicated `voice` exte
 
 ```bash
 # enable and install model
-sma voice on SenseVoiceSmall
+city voice on SenseVoiceSmall
 
 # inspect current voice config
-sma voice status
+city voice status
 ```
 
 When `extensions.voice.enabled=true`, incoming Telegram `voice/audio` attachments are transcribed in best-effort mode and appended into the user instruction.
@@ -106,8 +106,8 @@ This section explains:
 
 ### 1) How `reply_to_message` is decided
 
-When the agent runs `sma chat send`, default behavior is a normal non-reply send.
-Runtime only attempts `reply_to_message_id` when reply mode is explicitly enabled (for example `sma chat send --reply`).
+When the agent runs `city chat send`, default behavior is a normal non-reply send.
+Runtime only attempts `reply_to_message_id` when reply mode is explicitly enabled (for example `city chat send --reply`).
 
 `messageId` source priority:
 1. explicit input argument (for example `--message-id <id>`)
@@ -129,13 +129,13 @@ Examples:
 
 ```bash
 # default 👍
-sma chat react
+city chat react
 
 # custom emoji
-sma chat react --emoji '🔥'
+city chat react --emoji '🔥'
 
 # explicit target message
-sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxxx
+city chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxxx
 ```
 
 Behavior:
@@ -146,9 +146,9 @@ Behavior:
 
 ### 3) Recommended usage
 
-- Use `sma chat send` for actual user-facing answers.
-- Use `sma chat react` for short acknowledgement/attitude only.
-- Use `sma chat send --reply` only when you explicitly need thread-style targeting in busy chats.
+- Use `city chat send` for actual user-facing answers.
+- Use `city chat react` for short acknowledgement/attitude only.
+- Use `city chat send --reply` only when you explicitly need thread-style targeting in busy chats.
 - For cross-chat actions, always pass `--chat-key`.
 - In a brand-new chat with no inbound message yet, ask the user to send one message first before reply/react targeting.
 
@@ -156,6 +156,6 @@ Behavior:
 
 - **No response at all**: confirm the process is running and check `.ship/logs/<YYYY-MM-DD>.jsonl` (search for `TELEGRAM`, `telegram`, or errors).
 - **Bot doesn’t receive group messages**: in BotFather run `/setprivacy` and set it to `Disable`, then confirm the bot can read group messages.
-- **Polling doesn’t work**: if you previously set a webhook, polling (`getUpdates`) will conflict. ShipMyAgent clears webhook on startup; check logs for webhook-related errors.
+- **Polling doesn’t work**: if you previously set a webhook, polling (`getUpdates`) will conflict. Downcity clears webhook on startup; check logs for webhook-related errors.
 - **Bot can’t speak in the group**: check group permissions (the bot may be muted / not allowed to send messages).
 - **Agent says “I’ll execute” but doesn’t run tools**: explicitly ask with execution intent words (for example `run`, `execute`, `use skill`, `lookup`). Runtime will force a tool call on these turns; if it still fails, verify your model/provider actually supports tool calling.

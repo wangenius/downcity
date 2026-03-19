@@ -1,36 +1,36 @@
 ---
-title: sma service status
+title: city service status
 description: Show runtime status for a single service
 ---
 
-# `sma service status`
+# `city service status`
 
 Show status of a single service under a target agent.
 
 ## Usage
 
 ```bash
-sma service status <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service status <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
 ```
 
 ## Examples
 
 ```bash
-sma service status chat --agent my-agent
-sma service status memory --path /abs/path/to/agent
+city service status chat --agent my-agent
+city service status memory --path /abs/path/to/agent
 ```
 
 ## Related commands
 
-- [`sma service list`](/en/docs/commands/service/list)
-- [`sma service restart`](/en/docs/commands/service/restart)
+- [`city service list`](/en/docs/commands/service/list)
+- [`city service restart`](/en/docs/commands/service/restart)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma service status task
+$ city service status task
 {
   "success": true,
   "service": "task"
@@ -38,9 +38,9 @@ $ sma service status task
 ```
 
 ```text
-$ sma service status task --path /invalid/path
+$ city service status task --path /invalid/path
 {
   "success": false,
-  "error": "Agent is not registered in console registry: /invalid/path. Run \"sma console agents\" to inspect registered agents."
+  "error": "Agent is not registered in console registry: /invalid/path. Run \"city console agents\" to inspect registered agents."
 }
 ```

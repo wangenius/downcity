@@ -835,8 +835,8 @@ export class QQBot extends BaseChatChannel {
         shard: [0, 1], // [当前分片, 总分片数]
         properties: {
           $os: "linux",
-          $browser: "shipmyagent",
-          $device: "shipmyagent",
+          $browser: "downcity",
+          $device: "downcity",
         },
       },
     };
@@ -1434,7 +1434,7 @@ export class QQBot extends BaseChatChannel {
     switch (command.toLowerCase().split(" ")[0]) {
       case "/help":
       case "/帮助":
-        responseText = `🤖 ShipMyAgent Bot
+        responseText = `🤖 Downcity Bot
 
 可用命令:
 - /help 或 /帮助 - 查看帮助信息

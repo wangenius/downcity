@@ -483,7 +483,7 @@ export class FeishuBot extends BaseChatChannel {
     switch (command.toLowerCase().split(" ")[0]) {
       case "/help":
       case "/帮助":
-        responseText = `🤖 ShipMyAgent Bot
+        responseText = `🤖 Downcity Bot
 
 Available commands:
 - /help or /帮助 - View help information

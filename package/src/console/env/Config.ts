@@ -299,7 +299,7 @@ export function loadShipConfig(
   }
   if (!candidate.model || typeof candidate.model !== "object") {
     throw new Error(
-      'Invalid ship.json: missing required field model.primary in project ship.json (run "sma agent create" to regenerate)',
+      'Invalid ship.json: missing required field model.primary in project ship.json (run "city agent create" to regenerate)',
     );
   }
   const primary = String((candidate.model as { primary?: unknown }).primary || "").trim();

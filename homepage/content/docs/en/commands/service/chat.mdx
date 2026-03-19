@@ -1,18 +1,18 @@
 ---
-title: sma chat
+title: city chat
 description: Chat service actions (status/test/reconnect/open/close/configure/send/react/context/history)
 ---
 
-# `sma chat`
+# `city chat`
 
 Send messages, react to messages, inspect context, and read chat history.
 
-> Hierarchy note: `sma chat` is a service action command, not a top-level command. Top-level entry is `sma service`.
+> Hierarchy note: `city chat` is a service action command, not a top-level command. Top-level entry is `city service`.
 
 ## Usage
 
 ```bash
-sma chat <subcommand> [options]
+city chat <subcommand> [options]
 ```
 
 ## Subcommands
@@ -71,17 +71,17 @@ sma chat <subcommand> [options]
 ## Examples
 
 ```bash
-sma chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
-sma chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
-sma chat context --chat-key ctx_xxxxxxxxxxxxxxxx
-sma chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
-sma chat status
-sma chat test --channel telegram
-sma chat reconnect --channel qq
-sma chat open --channel qq
-sma chat close --channel telegram
-sma chat configuration --channel qq
-sma chat configure --channel qq --config-json '{"channelAccountId":"qq-main","enabled":true}'
+city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
+city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
+city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 50
+city chat status
+city chat test --channel telegram
+city chat reconnect --channel qq
+city chat open --channel qq
+city chat close --channel telegram
+city chat configuration --channel qq
+city chat configure --channel qq --config-json '{"channelAccountId":"qq-main","enabled":true}'
 ```
 
 ## Notes
@@ -89,7 +89,7 @@ sma chat configure --channel qq --config-json '{"channelAccountId":"qq-main","en
 This command group usually requires an active agent runtime:
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -97,7 +97,7 @@ sma agent start
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma chat status
+$ city chat status
 {
   "success": true,
   "data": {
@@ -110,7 +110,7 @@ $ sma chat status
 ```
 
 ```text
-$ sma chat send --chat-key <chatKey> --text "done"
+$ city chat send --chat-key <chatKey> --text "done"
 {
   "success": true,
   "data": {

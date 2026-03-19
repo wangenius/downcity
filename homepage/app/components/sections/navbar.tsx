@@ -198,7 +198,7 @@ export function Navbar() {
             </DropdownMenu>
 
             <a
-              href="https://x.com/shipmyagent"
+              href="https://x.com/downcity"
               target="_blank"
               rel="noreferrer"
               aria-label="X"
@@ -209,7 +209,7 @@ export function Navbar() {
             </a>
 
             <a
-              href="https://github.com/wangenius/shipmyagent"
+              href="https://github.com/wangenius/downcity"
               target="_blank"
               rel="noreferrer"
               aria-label="GitHub"

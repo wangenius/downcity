@@ -4,7 +4,7 @@
 
 - Console UI 从 package/public 静态文件彻底解耦。
 - 在仓库根目录新增独立前端包（Vite + React）。
-- sma console ui 只负责启动 UI Gateway + 加载该前端包构建产物。
+- city console ui 只负责启动 UI Gateway + 加载该前端包构建产物。
 - UI 能力继续通过 /api/* 访问现有 console/agent API，不把业务逻辑塞回后端模板。
 
 这会显著提升以下能力：
@@ -22,7 +22,7 @@
 - 使用 Vite + React + TypeScript 重建 Console UI。
 - 引入“自定义 UI 包”（Design Tokens + 组件库）。
 - UI 作为独立 workspace 包存在，独立开发、构建、发布。
-- sma console ui start 统一加载该包的 dist。
+- city console ui start 统一加载该包的 dist。
 
 ## 2.2 非目标
 
@@ -35,7 +35,7 @@
 # 3. 新目录结构（建议）
 
 ```text
-shipmyagent/
+downcity/
 ├─ package/                         # 现有 CLI/console/agent runtime
 ├─ console-ui/                      # 新：Vite + React 应用
 │  ├─ src/
@@ -69,7 +69,7 @@ shipmyagent/
 
 # 4.2 运行时加载协议
 
-sma console ui start 时：
+city console ui start 时：
 
 1. 启动 ConsoleUIGateway。
 2. Gateway 从约定路径读取 console-ui/dist：index.htmlassets/*
@@ -86,8 +86,8 @@ sma console ui start 时：
 - 框架：React 19 + TypeScript
 - 路由：React Router（或 TanStack Router，二选一）
 - 数据层：TanStack Query
-- 组件：@shipmyagent/console-ui-kit
-- 样式：Token 使用 CSS Variables（--sma-*）组件层可选 Tailwind / CSS Modules（二选一，避免混搭）
+- 组件：@downcity/console-ui-kit
+- 样式：Token 使用 CSS Variables（--city-*）组件层可选 Tailwind / CSS Modules（二选一，避免混搭）
 
 ---
 
@@ -122,12 +122,12 @@ sma console ui start 时：
 
 保留现有命令语义：
 
-- sma console ui start|stop|status
+- city console ui start|stop|status
 
 新增建议（可选）：
 
-- sma console ui build：触发 console-ui 构建（本地开发便利）
-- sma console ui dev：前端开发模式（Vite dev server + API 代理）
+- city console ui build：触发 console-ui 构建（本地开发便利）
+- city console ui dev：前端开发模式（Vite dev server + API 代理）
 
 ---
 
@@ -143,7 +143,7 @@ sma console ui start 时：
 
 1. pnpm -w --filter console-ui build
 2. 产物落地到 console-ui/dist
-3. sma console ui start 直接托管该目录
+3. city console ui start 直接托管该目录
 
 ---
 
@@ -174,7 +174,7 @@ sma console ui start 时：
 
 # 10. 验收标准
 
-- sma console ui start 可稳定加载 React UI。
+- city console ui start 可稳定加载 React UI。
 - Dashboard 核心功能完整：Agent 切换Services 控制Chat Channels test/reconnectTasks runLogs 查看Prompt 查看local_ui 对话
 - UI 代码不再位于 package/public。
 - console-ui 包可以独立 dev/build/typecheck。
@@ -198,6 +198,6 @@ sma console ui start 时：
 1. 新建 console-ui（Vite + React + TS）。
 2. 新建 packages/console-ui-kit（Button/Panel/Badge 三个最小组件）。
 3. 改 ConsoleUIGateway：静态目录改指向 console-ui/dist。
-4. 命令维持 sma console ui start|stop|status 不变。
+4. 命令维持 city console ui start|stop|status 不变。
 
 这样 1-2 天内就能把“架构方向”定住，后续迭代只在 React 包里推进。

@@ -1,18 +1,18 @@
 ---
-title: sma voice
+title: city voice
 description: Voice extension 命令（本地 STT 模型与转写管理）
 ---
 
-# `sma voice`
+# `city voice`
 
 管理本地语音识别扩展 `voice`。
 
-> 层级说明：`sma voice` 是 extension 动作命令，不是一级命令。一级入口是 `sma extension`。
+> 层级说明：`city voice` 是 extension 动作命令，不是一级命令。一级入口是 `city extension`。
 
 ## 用法
 
 ```bash
-sma voice <subcommand> [options]
+city voice <subcommand> [options]
 ```
 
 ## 子命令（当前版本）
@@ -59,13 +59,13 @@ sma voice <subcommand> [options]
 ## 示例
 
 ```bash
-sma voice models
-sma voice init
-sma voice on SenseVoiceSmall
-sma voice install whisper-large-v3-turbo --force
-sma voice use whisper-large-v3-turbo
-sma voice transcribe ./demo.ogg --language zh
-sma voice off
+city voice models
+city voice init
+city voice on SenseVoiceSmall
+city voice install whisper-large-v3-turbo --force
+city voice use whisper-large-v3-turbo
+city voice transcribe ./demo.ogg --language zh
+city voice off
 ```
 
 ## 说明
@@ -79,13 +79,13 @@ sma voice off
 该命令组通常需要已启动的 agent runtime：
 
 ```bash
-sma agent start
+city agent start
 ```
 
-如果在非交互环境（CI、脚本）使用 `sma voice init`，请显式传入模型参数，例如：
+如果在非交互环境（CI、脚本）使用 `city voice init`，请显式传入模型参数，例如：
 
 ```bash
-sma voice init SenseVoiceSmall
+city voice init SenseVoiceSmall
 ```
 
 ## 示例输出（基于当前实现）
@@ -93,7 +93,7 @@ sma voice init SenseVoiceSmall
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma voice status
+$ city voice status
 {
   "success": true,
   "data": {
@@ -104,7 +104,7 @@ $ sma voice status
 ```
 
 ```text
-$ sma voice on SenseVoiceSmall
+$ city voice on SenseVoiceSmall
 {
   "success": true,
   "data": {

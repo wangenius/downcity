@@ -104,9 +104,9 @@ export interface ConsoleUiAgentsResponse {
   success: boolean;
 
   /**
-   * 当前 SMA CLI 版本号。
+   * 当前 DC CLI 版本号。
    */
-  smaVersion: string;
+  cityVersion: string;
 
   /**
    * 当前可选的 agent 列表。

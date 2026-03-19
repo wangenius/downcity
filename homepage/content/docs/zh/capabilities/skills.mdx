@@ -5,7 +5,7 @@ description: Skill 目录、发现逻辑与 list/lookup 优先工作流
 
 # Skills
 
-ShipMyAgent 兼容 SKILL.md 形态的 skills。
+Downcity 兼容 SKILL.md 形态的 skills。
 
 ## 默认扫描目录
 
@@ -15,20 +15,20 @@ ShipMyAgent 兼容 SKILL.md 形态的 skills。
 
 ## 推荐工作流
 
-1. `sma skill list`（先看本地已安装/已学会 skills）
-2. `sma skill lookup <name>`（命中后直接读取并执行）
+1. `city skill list`（先看本地已安装/已学会 skills）
+2. `city skill lookup <name>`（命中后直接读取并执行）
 3. 若 `list` 中没有目标 skill，再执行 `find -> install -> lookup`
 
 示例：
 
 ```bash
-sma skill list
-sma skill lookup playwright
+city skill list
+city skill lookup playwright
 
 # 仅当缺失时再安装
-sma skill find playwright
-sma skill install owner/repo@playwright
-sma skill lookup playwright
+city skill find playwright
+city skill install owner/repo@playwright
+city skill lookup playwright
 ```
 
 ## 关键原则

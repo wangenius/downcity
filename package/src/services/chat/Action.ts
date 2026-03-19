@@ -66,25 +66,25 @@ export function resolveChatContextSnapshot(input?: {
     typeof requestCtx?.contextId === "string" && requestCtx.contextId.trim()
       ? requestCtx.contextId.trim()
       : undefined;
-  const envContextId = readEnvString("SMA_CTX_CONTEXT_ID");
-  const envChatKey = readEnvString("SMA_CTX_CHAT_KEY");
-  const channel = readEnvString("SMA_CTX_CHANNEL") || undefined;
+  const envContextId = readEnvString("DC_CTX_CONTEXT_ID");
+  const envChatKey = readEnvString("DC_CTX_CHAT_KEY");
+  const channel = readEnvString("DC_CTX_CHANNEL") || undefined;
   const chatId =
-    readEnvString("SMA_CTX_TARGET_ID") || readEnvString("SMA_CTX_CHAT_ID");
+    readEnvString("DC_CTX_TARGET_ID") || readEnvString("DC_CTX_CHAT_ID");
   const messageThreadId =
-    readEnvNumber("SMA_CTX_THREAD_ID") ||
-    readEnvNumber("SMA_CTX_MESSAGE_THREAD_ID");
+    readEnvNumber("DC_CTX_THREAD_ID") ||
+    readEnvNumber("DC_CTX_MESSAGE_THREAD_ID");
   const chatType =
-    readEnvString("SMA_CTX_TARGET_TYPE") ||
-    readEnvString("SMA_CTX_CHAT_TYPE");
+    readEnvString("DC_CTX_TARGET_TYPE") ||
+    readEnvString("DC_CTX_CHAT_TYPE");
   const userId =
-    readEnvString("SMA_CTX_ACTOR_ID") ||
-    readEnvString("SMA_CTX_USER_ID");
-  const messageId = readEnvString("SMA_CTX_MESSAGE_ID");
+    readEnvString("DC_CTX_ACTOR_ID") ||
+    readEnvString("DC_CTX_USER_ID");
+  const messageId = readEnvString("DC_CTX_MESSAGE_ID");
   const requestId =
     (typeof requestCtx?.requestId === "string" && requestCtx.requestId.trim()
       ? requestCtx.requestId.trim()
-      : readEnvString("SMA_CTX_REQUEST_ID")) || undefined;
+      : readEnvString("DC_CTX_REQUEST_ID")) || undefined;
 
   const contextId =
     explicitContextId ||

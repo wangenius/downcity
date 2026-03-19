@@ -5,7 +5,7 @@ description: Typical installation, startup, and config failures
 
 # Common Issues
 
-## Command not found (`shipmyagent: command not found`)
+## Command not found (`downcity: command not found`)
 
 ```bash
 npm config get prefix
@@ -15,24 +15,24 @@ export PATH=$(npm config get prefix)/bin:$PATH
 Or run directly with:
 
 ```bash
-npx shipmyagent --version
+npx downcity --version
 ```
 
 ## Port conflict (5314 already in use)
 
 ```bash
 lsof -nP -iTCP:5314 -sTCP:LISTEN
-sma agent doctor . --fix
-sma agent restart .
+city agent doctor . --fix
+city agent restart .
 ```
 
-## `sma task/chat/...` cannot connect
+## `city task/chat/...` cannot connect
 
 Make sure daemon is running:
 
 ```bash
-sma agent start
-sma service list
+city agent start
+city service list
 ```
 
 ## LLM configuration mismatch
@@ -40,8 +40,8 @@ sma service list
 Check:
 
 ```bash
-sma console model list
-sma console config get model.primary
+city console model list
+city console config get model.primary
 ```
 
 Ensure:

@@ -51,11 +51,11 @@ frontmatter 核心字段：
 
 ## CLI 示例
 
-- `sma task list [--status enabled|paused|disabled]`
-- `sma task create --title '...' --description '...' --context-id <contextId> [--when '@manual'] [--kind agent|script] [--status ...|--activate]`
-- `sma task run <title> [--reason '...']`
-- `sma task update <title> [--title ...] [--description ...] [--when ...] [--status ...|--activate] [--context-id ...]`
-- `sma task delete <title>`
+- `city task list [--status enabled|paused|disabled]`
+- `city task create --title '...' --description '...' --context-id <contextId> [--when '@manual'] [--kind agent|script] [--status ...|--activate]`
+- `city task run <title> [--reason '...']`
+- `city task update <title> [--title ...] [--description ...] [--when ...] [--status ...|--activate] [--context-id ...]`
+- `city task delete <title>`
 
 ## 关键约束
 

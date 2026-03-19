@@ -1,16 +1,16 @@
 ---
-title: sma agent status
+title: city agent status
 description: Show target agent runtime status
 ---
 
-# `sma agent status`
+# `city agent status`
 
 Show runtime status for a target agent.
 
 ## Usage
 
 ```bash
-sma agent status [path]
+city agent status [path]
 ```
 
 ## Behavior
@@ -22,19 +22,19 @@ sma agent status [path]
 
 ## Related commands
 
-- [`sma agent start`](/en/docs/commands/agent/start)
-- [`sma agent restart`](/en/docs/commands/agent/restart)
-- [`sma console agents`](/en/docs/commands/console/agents)
+- [`city agent start`](/en/docs/commands/agent/start)
+- [`city agent restart`](/en/docs/commands/agent/restart)
+- [`city console agents`](/en/docs/commands/console/agents)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma agent status .
-sma version: 1.0.0
+$ city agent status .
+city version: 1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ OK sma agent status                                    │
+│ OK city agent status                                    │
 │   project    : <projectRoot>                           │
 │   log        : <daemonLogPath>                         │
 │   state      : running                                 │
@@ -44,15 +44,15 @@ sma version: 1.0.0
 ```
 
 ```text
-$ sma agent status .
-sma version: 1.0.0
+$ city agent status .
+city version: 1.0.0
 ┌─────────────────────────────────────────────────────────┐
-│ WARN sma agent status                                  │
+│ WARN city agent status                                  │
 │   project      : <projectRoot>                         │
 │   log          : <daemonLogPath>                       │
 │   state        : stale                                 │
 │   stale_pid    : <pid>                                 │
 │   stale_reason : <reason>                              │
-│   fix          : sma agent doctor <projectRoot> --fix  │
+│   fix          : city agent doctor <projectRoot> --fix  │
 └─────────────────────────────────────────────────────────┘
 ```

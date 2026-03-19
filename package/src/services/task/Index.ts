@@ -147,7 +147,7 @@ function resolveContextIdOrThrow(input?: string): string {
   const contextId = resolveContextId({ contextId: input });
   if (!contextId) {
     throw new Error(
-      "Missing contextId. Provide --context-id or ensure SMA_CTX_CONTEXT_ID is available.",
+      "Missing contextId. Provide --context-id or ensure DC_CTX_CONTEXT_ID is available.",
     );
   }
   return contextId;
@@ -464,7 +464,7 @@ export const taskService: Service = {
             .option("--kind <kind>", "执行类型（agent|script）", "agent")
             .option(
               "--context-id <contextId>",
-              "任务执行 contextId（不传尝试使用 SMA_CTX_CONTEXT_ID）",
+              "任务执行 contextId（不传尝试使用 DC_CTX_CONTEXT_ID）",
             )
             .option(
               "--status <status>",

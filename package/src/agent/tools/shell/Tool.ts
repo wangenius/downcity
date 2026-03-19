@@ -59,7 +59,7 @@ type CommandBridgeState = {
  *
  * 关键点（中文）
  * - main 不识别具体 service，只识别统一协议字段。
- * - 仅对 CLI 命令候选（`sma`/`shipmyagent`）开启累积解析，降低额外开销。
+ * - 仅对 CLI 命令候选（`downcity`/`city`）开启累积解析，降低额外开销。
  * - 会话结束/close 时必须清理，避免内存泄漏。
  */
 const commandBridgeStates = new Map<number, CommandBridgeState>();
@@ -117,7 +117,7 @@ function toJsonObject(value: unknown): JsonObject | null {
 function shouldEnableCommandBridge(command: string): boolean {
   const raw = String(command || "").trim();
   if (!raw) return false;
-  return /(?:^|\s)(?:sma|shipmyagent)(?:\s|$)/i.test(raw);
+  return /(?:^|\s)(?:city|downcity)(?:\s|$)/i.test(raw);
 }
 
 function tryParseJsonObject(raw: string): JsonObject | null {

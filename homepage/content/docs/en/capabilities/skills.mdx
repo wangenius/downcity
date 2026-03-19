@@ -5,7 +5,7 @@ description: Skill roots, discovery behavior, and list/lookup-first workflow
 
 # Skills
 
-ShipMyAgent supports SKILL.md-based skills.
+Downcity supports SKILL.md-based skills.
 
 ## Default roots
 
@@ -15,20 +15,20 @@ ShipMyAgent supports SKILL.md-based skills.
 
 ## Recommended workflow
 
-1. `sma skill list` (check already learned/installed local skills first)
-2. `sma skill lookup <name>` (if found, read and execute directly)
+1. `city skill list` (check already learned/installed local skills first)
+2. `city skill lookup <name>` (if found, read and execute directly)
 3. If missing from `list`, then run `find -> install -> lookup`
 
 Example:
 
 ```bash
-sma skill list
-sma skill lookup playwright
+city skill list
+city skill lookup playwright
 
 # only when missing
-sma skill find playwright
-sma skill install owner/repo@playwright
-sma skill lookup playwright
+city skill find playwright
+city skill install owner/repo@playwright
+city skill lookup playwright
 ```
 
 ## Key rules

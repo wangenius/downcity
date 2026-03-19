@@ -4,10 +4,10 @@
   "copy": "Copy",
   "step1Title": "Initialize",
   "step1Desc": "Create/init an agent project in your repository.",
-  "step1Command": "npx shipmyagent agent create .",
+  "step1Command": "npx downcity agent create .",
   "step2Title": "Start Service",
   "step2Desc": "Launch the local agent service.",
-  "step2Command": "npx shipmyagent agent start",
+  "step2Command": "npx downcity agent start",
   "step3Title": "Start Using",
   "step3Desc": "Interact with your agent immediately.",
   "step3Command": "Open http://localhost:3000"

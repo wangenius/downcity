@@ -1,5 +1,5 @@
 /**
- * `sma agent create`：在目标目录生成最小可用的 ShipMyAgent 工程骨架与配置文件。
+ * `city agent create`：在目标目录生成最小可用的 Downcity 工程骨架与配置文件。
  *
  * 目标
  * - 生成 `PROFILE.md` / `SOUL.md` / `USER.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
@@ -181,7 +181,7 @@ async function appendMissingEnvEntries(params: {
   if (appendedEntries.length > 0) {
     const lines: string[] = [];
     if (!nextContent.trim()) {
-      lines.push("# ShipMyAgent 环境变量");
+      lines.push("# Downcity 环境变量");
     }
     lines.push("", `# ${params.sectionTitle}`);
     for (const entry of appendedEntries) {
@@ -230,7 +230,7 @@ export async function initCommand(
   const dotEnvPath = path.join(projectRoot, ".env");
   const dotEnvExamplePath = path.join(projectRoot, ".env.example");
 
-  console.log(`🚀 Initializing ShipMyAgent project: ${projectRoot}`);
+  console.log(`🚀 Initializing Downcity project: ${projectRoot}`);
 
   // Check if core initialization files already exist
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
@@ -242,9 +242,9 @@ export async function initCommand(
   // 关键点（中文）：模型池为空时，继续 create 只会生成“必然启动失败”的配置，这里直接中止并给出明确修复路径。
   if (consoleModelIds.length === 0) {
     console.error("❌ Console model pool is empty.");
-    console.error("   Please configure at least one model before `sma agent create`:");
-    console.error("   1) sma console model create");
-    console.error("   2) or use sma console model update/test for scripting");
+    console.error("   Please configure at least one model before `city agent create`:");
+    console.error("   1) city console model create");
+    console.error("   2) or use city console model update/test for scripting");
     process.exit(1);
   }
 
@@ -405,12 +405,12 @@ export async function initCommand(
   const envExampleEntries: EnvEntry[] = [];
   const envResult = await appendMissingEnvEntries({
     filePath: dotEnvPath,
-    sectionTitle: "ShipMyAgent Create",
+    sectionTitle: "Downcity Create",
     entries: envRealEntries,
   });
   const envExampleResult = await appendMissingEnvEntries({
     filePath: dotEnvExamplePath,
-    sectionTitle: "ShipMyAgent Create Example",
+    sectionTitle: "Downcity Create Example",
     entries: envExampleEntries,
   });
   if (envResult.appended.length > 0 || envResult.overwritten.length > 0) {
@@ -503,7 +503,7 @@ export async function initCommand(
     "Edit SOUL.md to customize your core operating principles",
     "Edit USER.md to define user goals and communication preferences",
     "Edit ship.json to modify model.primary (bind to console model id)",
-    'Use "sma console model ..." to manage global model pool',
+    'Use "city console model ..." to manage global model pool',
   ];
 
   if (selectedChannels.has("telegram")) {
@@ -521,7 +521,7 @@ export async function initCommand(
       "Bind services.chat.channels.qq.channelAccountId to an existing channel account",
     );
   }
-  nextSteps.push('Run "sma agent start" to start the agent');
+  nextSteps.push('Run "city agent start" to start the agent');
 
   console.log("Next steps:");
   for (const [idx, line] of nextSteps.entries()) {

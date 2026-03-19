@@ -1,16 +1,16 @@
 ---
-title: sma agent create
-description: Create/initialize a ShipMyAgent agent project
+title: city agent create
+description: Create/initialize a Downcity agent project
 ---
 
-# `sma agent create`
+# `city agent create`
 
-Create/initialize a ShipMyAgent agent project in the target path.
+Create/initialize a Downcity agent project in the target path.
 
 ## Usage
 
 ```bash
-sma agent create [path]
+city agent create [path]
 ```
 
 ## Arguments
@@ -26,10 +26,10 @@ sma agent create [path]
 
 ```bash
 # Initialize in current directory
-sma agent create .
+city agent create .
 
 # Initialize in another directory
-sma agent create ./my-agent-project
+city agent create ./my-agent-project
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -37,9 +37,9 @@ sma agent create ./my-agent-project
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma agent create .
-sma version: 1.0.0
-🚀 Initializing ShipMyAgent project: <projectRoot>
+$ city agent create .
+city version: 1.0.0
+🚀 Initializing Downcity project: <projectRoot>
 ✅ Created PROFILE.md
 ✅ Created SOUL.md
 ✅ Created USER.md
@@ -49,10 +49,10 @@ sma version: 1.0.0
 ```
 
 ```text
-$ sma agent create .
-sma version: 1.0.0
+$ city agent create .
+city version: 1.0.0
 ❌ Console model pool is empty.
-   Please configure at least one model before `sma agent create`:
-   1) sma console model create
-   2) or use sma console model update/test for scripting
+   Please configure at least one model before `city agent create`:
+   1) city console model create
+   2) or use city console model update/test for scripting
 ```

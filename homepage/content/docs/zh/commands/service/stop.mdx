@@ -1,35 +1,35 @@
 ---
-title: sma service stop
+title: city service stop
 description: 停止单个 service
 ---
 
-# `sma service stop`
+# `city service stop`
 
 停止目标 agent 下的指定 service。
 
 ## 用法
 
 ```bash
-sma service stop <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service stop <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
 ```
 
 ## 示例
 
 ```bash
-sma service stop task --agent my-agent
+city service stop task --agent my-agent
 ```
 
 ## 相关命令
 
-- [`sma service start`](/zh/docs/commands/service/start)
-- [`sma service status`](/zh/docs/commands/service/status)
+- [`city service start`](/zh/docs/commands/service/start)
+- [`city service status`](/zh/docs/commands/service/status)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma service stop task
+$ city service stop task
 {
   "success": true,
   "service": "task"
@@ -37,9 +37,9 @@ $ sma service stop task
 ```
 
 ```text
-$ sma service stop task --agent missing-agent
+$ city service stop task --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city console agents\" to inspect names."
 }
 ```

@@ -54,7 +54,7 @@ export async function handleTelegramCommand(
     case "/help":
       await ctx.sendMessage(
         params.chatId,
-        `🤖 ShipMyAgent Bot
+        `🤖 Downcity Bot
 
 Available commands:
 - /status - View agent status

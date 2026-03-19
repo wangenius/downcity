@@ -3,7 +3,7 @@
  *
  * 覆盖点（中文）
  * - 当 extension runtime 处于 stopped 状态时，执行 action 会自动 start。
- * - 避免调用方必须先显式执行 `sma extension start <name>`。
+ * - 避免调用方必须先显式执行 `city extension start <name>`。
  */
 
 import assert from "node:assert/strict";
@@ -104,8 +104,8 @@ test("runExtensionCommand auto-starts runtime for action command", async () => {
   assert.equal(Array.isArray(result.data?.models), true);
 });
 
-test("sma voice on falls back to local execution when daemon is unreachable", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-voice-fallback-"));
+test("city voice on falls back to local execution when daemon is unreachable", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-voice-fallback-"));
   t.after(async () => {
     await fs.remove(tempRoot);
   });

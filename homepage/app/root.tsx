@@ -61,28 +61,28 @@ export const links: Route.LinksFunction = () => [
 
 export const meta: Route.MetaFunction = () => {
   return [
-    { title: "ShipMyAgent - The Repo IS The Agent" },
+    { title: "Downcity - The Repo IS The Agent" },
     { charSet: "utf-8" },
     { name: "viewport", content: "width=device-width, initial-scale=1" },
     {
       name: "description",
       content:
-        "ShipMyAgent - Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
+        "Downcity - Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
     },
     {
       name: "keywords",
       content:
         "AI agent, GitHub, repository, automation, developer tools, AI assistant, code automation, repo as agent",
     },
-    { name: "author", content: "ShipMyAgent" },
+    { name: "author", content: "Downcity" },
     { name: "theme-color", content: "#000000" },
 
     // Open Graph / Facebook
     { property: "og:type", content: "website" },
-    { property: "og:site_name", content: "ShipMyAgent" },
+    { property: "og:site_name", content: "Downcity" },
     {
       property: "og:title",
-      content: "ShipMyAgent - The Repo IS The Agent",
+      content: "Downcity - The Repo IS The Agent",
     },
     {
       property: "og:description",
@@ -93,10 +93,10 @@ export const meta: Route.MetaFunction = () => {
 
     // Twitter
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:site", content: "@shipmyagent" },
+    { name: "twitter:site", content: "@downcity" },
     {
       name: "twitter:title",
-      content: "ShipMyAgent - The Repo IS The Agent",
+      content: "Downcity - The Repo IS The Agent",
     },
     {
       name: "twitter:description",
@@ -137,19 +137,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       // 语言优先级：显式路径前缀 > 本地保存偏好 > 路径推导默认值。
-      const savedLang = localStorage.getItem("shipmyagent-lang") as "en" | "zh" | null;
+      const savedLang = localStorage.getItem("downcity-lang") as "en" | "zh" | null;
       const resolvedLang: "en" | "zh" = hasLangPrefix ? pathLang : (savedLang ?? pathLang);
 
       if (i18next.language !== resolvedLang) {
         i18next.changeLanguage(resolvedLang);
       }
-      localStorage.setItem("shipmyagent-lang", resolvedLang);
+      localStorage.setItem("downcity-lang", resolvedLang);
       setLang(resolvedLang);
 
       const handleLanguageChanged = (next: string) => {
         const normalized: "en" | "zh" = next.startsWith("zh") ? "zh" : "en";
         setLang(normalized);
-        localStorage.setItem("shipmyagent-lang", normalized);
+        localStorage.setItem("downcity-lang", normalized);
         document.documentElement.lang = normalized;
       };
 

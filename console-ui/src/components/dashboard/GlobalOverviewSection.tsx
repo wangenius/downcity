@@ -16,9 +16,9 @@ import type {
 
 export interface GlobalOverviewSectionProps {
   /**
-   * 当前 SMA CLI 版本号。
+   * 当前 DC CLI 版本号。
    */
-  smaVersion: string
+  cityVersion: string
   /**
    * 运行中 agent 列表。
    */
@@ -47,7 +47,7 @@ export interface GlobalOverviewSectionProps {
 
 export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
   const {
-    smaVersion,
+    cityVersion,
     agents,
     extensions,
     configStatus,
@@ -103,7 +103,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
           {optionalMissingCount > 0 ? ` · optional missing ${optionalMissingCount}` : ""}
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {`SMA version: ${String(smaVersion || "-")}`}
+          {`DC version: ${String(cityVersion || "-")}`}
         </div>
       </div>
 

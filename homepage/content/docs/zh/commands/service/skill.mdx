@@ -1,18 +1,18 @@
 ---
-title: sma skill
+title: city skill
 description: skill service actions（find/install/list/lookup）
 ---
 
-# `sma skill`
+# `city skill`
 
 管理 skills 的发现、安装与读取。
 
-> 层级说明：`sma skill` 是 service 动作命令，不是一级命令。一级入口是 `sma service`。
+> 层级说明：`city skill` 是 service 动作命令，不是一级命令。一级入口是 `city service`。
 
 ## 用法
 
 ```bash
-sma skill <subcommand> [options]
+city skill <subcommand> [options]
 ```
 
 ## 子命令
@@ -31,13 +31,13 @@ sma skill <subcommand> [options]
 ## 示例
 
 ```bash
-sma skill list
-sma skill lookup playwright
+city skill list
+city skill lookup playwright
 
 # 仅当 list 中缺失时再安装
-sma skill find playwright
-sma skill install owner/repo@playwright
-sma skill lookup playwright
+city skill find playwright
+city skill install owner/repo@playwright
+city skill lookup playwright
 ```
 
 ## 推荐流程
@@ -54,7 +54,7 @@ sma skill lookup playwright
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma skill list
+$ city skill list
 {
   "success": true,
   "data": {
@@ -65,7 +65,7 @@ $ sma skill list
 ```
 
 ```text
-$ sma skill lookup playwright
+$ city skill lookup playwright
 {
   "success": true,
   "data": {

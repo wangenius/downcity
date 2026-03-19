@@ -1,9 +1,9 @@
 ---
-title: sma console model
+title: city console model
 description: 独立管理 console 全局语言模型（provider/model）
 ---
 
-# `sma console model`
+# `city console model`
 
 独立的模型管理命令域，只管理语言模型。
 
@@ -17,41 +17,41 @@ description: 独立管理 console 全局语言模型（provider/model）
 
 ```bash
 # 交互式创建（选择创建 provider 或 model）
-sma console model create
+city console model create
 
 # 列表
-sma console model list
+city console model list
 
 # 读取详情
-sma console model get provider <providerId>
-sma console model get model <modelId>
+city console model get provider <providerId>
+city console model get model <modelId>
 
 # 暂停模型（默认 enabled=true）
-sma console model pause <modelId>
-sma console model pause <modelId> --enabled false
+city console model pause <modelId>
+city console model pause <modelId> --enabled false
 
 # 发现 provider 模型（可选自动写入）
-sma console model discover <providerId>
-sma console model discover <providerId> --auto-add true --prefix openai_
+city console model discover <providerId>
+city console model discover <providerId> --auto-add true --prefix openai_
 
 # 更新 provider
-sma console model update provider <providerId> --api-key '${OPENAI_API_KEY}'
+city console model update provider <providerId> --api-key '${OPENAI_API_KEY}'
 
 # 更新 model
-sma console model update model <modelId> --name gpt-4o-mini --provider openai_main
+city console model update model <modelId> --name gpt-4o-mini --provider openai_main
 
 # 删除 provider/model
-sma console model remove provider <providerId>
-sma console model remove model <modelId>
+city console model remove provider <providerId>
+city console model remove model <modelId>
 
 # 绑定到项目（设置 ship.json.model.primary）
-sma console model use <modelId> --path /path/to/agent
+city console model use <modelId> --path /path/to/agent
 
 # 测试 provider
-sma console model test provider <providerId>
+city console model test provider <providerId>
 
 # 测试 model（真实调用）
-sma console model test model <modelId>
+city console model test model <modelId>
 ```
 
 ## create 行为
@@ -80,16 +80,16 @@ sma console model test model <modelId>
 
 ## 相关命令
 
-- [`sma console config`](/zh/docs/commands/console/config)
-- [`sma agent create`](/zh/docs/commands/agent/create)
-- [`sma agent start`](/zh/docs/commands/agent/start)
+- [`city console config`](/zh/docs/commands/console/config)
+- [`city agent create`](/zh/docs/commands/agent/create)
+- [`city agent start`](/zh/docs/commands/agent/start)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma console model list
+$ city console model list
 {
   "success": true,
   "providers": [
@@ -114,7 +114,7 @@ $ sma console model list
 ```
 
 ```text
-$ sma console model pause <modelId>
+$ city console model pause <modelId>
 {
   "success": true,
   "modelId": "<modelId>",

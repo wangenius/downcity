@@ -84,7 +84,7 @@ function isNoRunningAgentError(messageInput: string): boolean {
   const message = String(messageInput || "").toLowerCase();
   return (
     message.includes("no running agent found") ||
-    message.includes("start one via `sma agent start` first") ||
+    message.includes("start one via `city agent start` first") ||
     message.includes("no running agent selected")
   );
 }
@@ -183,9 +183,9 @@ export interface UseConsoleDashboardResult {
    */
   agents: UiAgentOption[];
   /**
-   * 当前 SMA CLI 版本号（来自 console 网关）。
+   * 当前 DC CLI 版本号（来自 console 网关）。
    */
-  smaVersion: string;
+  cityVersion: string;
   /**
    * 当前选中的 agent id。
    */
@@ -588,7 +588,7 @@ export interface UseConsoleDashboardResult {
 
 export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [agents, setAgents] = useState<UiAgentOption[]>([]);
-  const [smaVersion, setSmaVersion] = useState("");
+  const [cityVersion, setCityVersion] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState("");
 
   const [overview, setOverview] = useState<UiOverviewResponse | null>(null);
@@ -752,8 +752,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       }
 
       const list = Array.isArray(data.agents) ? data.agents : [];
-      const nextSmaVersion = String(data.smaVersion || "").trim();
-      if (nextSmaVersion) setSmaVersion(nextSmaVersion);
+      const nextCityVersion = String(data.cityVersion || "").trim();
+      if (nextCityVersion) setCityVersion(nextCityVersion);
       const preferredMatched = preferred ? list.find((item) => item.id === preferred)?.id || "" : "";
       // 关键点（中文）：仅接受显式选择（路由驱动），不再自动挑选“当前 agent”。
       const nextId = preferredMatched || "";
@@ -2172,7 +2172,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       } catch (error) {
         const message = getErrorMessage(error);
         if (/not found/i.test(message)) {
-          showToast("当前 Console UI 进程版本过旧，请先重启 `sma console ui` 后再重启 agent", "error");
+          showToast("当前 Console UI 进程版本过旧，请先重启 `city console ui` 后再重启 agent", "error");
           return;
         }
         showToast(`重启 agent 失败: ${message}`, "error");
@@ -2222,7 +2222,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       } catch (error) {
         const message = getErrorMessage(error);
         if (/not found/i.test(message)) {
-          showToast("当前 Console UI 进程版本过旧，请先重启 `sma console ui` 后再停止 agent", "error");
+          showToast("当前 Console UI 进程版本过旧，请先重启 `city console ui` 后再停止 agent", "error");
           return;
         }
         showToast(`停止 agent 失败: ${message}`, "error");
@@ -2568,7 +2568,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   return {
     agents,
-    smaVersion,
+    cityVersion,
     selectedAgentId,
     selectedAgent,
     overview,

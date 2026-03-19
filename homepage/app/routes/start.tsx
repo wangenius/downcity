@@ -2,10 +2,10 @@ import { StartGuideSection } from "@/components/sections/StartGuideSection";
 import { product } from "@/lib/product";
 
 export function meta() {
-  const baseUrl = product.homepage || "https://shipmyagent.com";
+  const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — Quick Start`;
   const description =
-    "Start ShipMyAgent quickly with an article-style walkthrough and runnable commands.";
+    "Start Downcity quickly with an article-style walkthrough and runnable commands.";
 
   return [
     { charSet: "utf-8" },

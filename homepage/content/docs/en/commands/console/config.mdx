@@ -1,18 +1,18 @@
 ---
-title: sma console config
+title: city console config
 description: Manage project ship.json and alias (model pool is separate)
 ---
 
-# `sma console config`
+# `city console config`
 
 Manage project `ship.json` and alias.
 
-> Naming note: configuration command is `sma console config`, not `sma config`.
+> Naming note: configuration command is `city console config`, not `city config`.
 
 ## Usage
 
 ```bash
-sma console config <subcommand>
+city console config <subcommand>
 ```
 
 ## Subcommands
@@ -22,24 +22,24 @@ sma console config <subcommand>
 - `unset <keyPath>`
 - `alias`
 
-> Model pool management has moved to [`sma console model`](/en/docs/commands/console/model).
+> Model pool management has moved to [`city console model`](/en/docs/commands/console/model).
 
 ## `extensions.*` path behavior
 
 When `keyPath` starts with `extensions.`, the command automatically reads/writes console-global `~/.ship/ship.db` (`extensions_config`).
 
 ```bash
-sma console config get extensions.voice
-sma console config set extensions.voice.enabled true
+city console config get extensions.voice
+city console config set extensions.voice.enabled true
 ```
 
 ## Examples
 
 ```bash
-sma console config get model.primary
-sma console config set model.primary fast
-sma console config unset services.chat.channels.telegram
-sma console config alias --dry-run
+city console config get model.primary
+city console config set model.primary fast
+city console config unset services.chat.channels.telegram
+city console config alias --dry-run
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -47,7 +47,7 @@ sma console config alias --dry-run
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma console config get model.primary
+$ city console config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
@@ -58,7 +58,7 @@ $ sma console config get model.primary
 ```
 
 ```text
-$ sma console config set model.primary gpt-5.4
+$ city console config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",

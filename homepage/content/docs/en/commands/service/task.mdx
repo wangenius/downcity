@@ -1,16 +1,16 @@
 ---
-title: sma task
+title: city task
 description: Task service actions (list/create/run/update/status)
 ---
 
-# `sma task`
+# `city task`
 
 Task system command group.
 
 ## Usage
 
 ```bash
-sma task <subcommand> [options]
+city task <subcommand> [options]
 ```
 
 ## Subcommands
@@ -57,9 +57,9 @@ Create dedup now uses exact `title` only.
 ## Examples
 
 ```bash
-sma task list
-sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 10 * * 1-5" --activate
-sma task run daily-check
-sma task update daily-check --when "@manual"
-sma task disable daily-check
+city task list
+city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+city task run daily-check
+city task update daily-check --when "@manual"
+city task disable daily-check
 ```

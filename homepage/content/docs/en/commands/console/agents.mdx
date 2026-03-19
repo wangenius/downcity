@@ -1,16 +1,16 @@
 ---
-title: sma console agents
+title: city console agents
 description: List managed agents (running + historical)
 ---
 
-# `sma console agents`
+# `city console agents`
 
 List managed agents including running and historical entries.
 
 ## Usage
 
 ```bash
-sma console agents [--json]
+city console agents [--json]
 ```
 
 ## Behavior
@@ -23,16 +23,16 @@ sma console agents [--json]
 
 ## Related commands
 
-- [`sma console`](/en/docs/commands/console/console)
-- [`sma console status`](/en/docs/commands/console/status)
-- [`sma agent`](/en/docs/commands/agent/agent)
+- [`city console`](/en/docs/commands/console/console)
+- [`city console status`](/en/docs/commands/console/status)
+- [`city agent`](/en/docs/commands/agent/agent)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma console agents --json
+$ city console agents --json
 {
   "success": true,
   "count": 2,
@@ -50,8 +50,8 @@ $ sma console agents --json
 ```
 
 ```text
-$ sma console agents
-sma version: 1.0.0
+$ city console agents
+city version: 1.0.0
 ┌──────────────────────────────────────┐
 │ INFO managed agents                  │
 │   agents   : 0                       │

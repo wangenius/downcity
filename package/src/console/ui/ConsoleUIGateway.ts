@@ -59,9 +59,9 @@ const DEFAULT_RUNTIME_PORT = 5314;
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
 
 /**
- * 当前 SMA 版本号（用于 Console Overview 显示）。
+ * 当前 DC 版本号（用于 Console Overview 显示）。
  */
-const SMA_VERSION = (() => {
+const DC_VERSION = (() => {
   try {
     const pkg = fs.readJsonSync(path.join(__dirname, "../../../package.json")) as {
       version?: string;
@@ -150,7 +150,7 @@ export class ConsoleUIGateway {
       cors({
         origin: "*",
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowHeaders: ["Content-Type", "Authorization", "X-SMA-Agent"],
+        allowHeaders: ["Content-Type", "Authorization", "X-DC-Agent"],
       }),
     );
 
@@ -424,7 +424,7 @@ export class ConsoleUIGateway {
             {
               success: false,
               error:
-                "No running agent found. Start one via `sma agent start` first.",
+                "No running agent found. Start one via `city agent start` first.",
             },
             503,
           );
@@ -523,7 +523,7 @@ export class ConsoleUIGateway {
     const queryAgent = String(reqUrl.searchParams.get("agent") || "").trim();
     if (queryAgent) return queryAgent;
     const headerAgent = String(
-      request.headers.get("x-sma-agent") || "",
+      request.headers.get("x-city-agent") || "",
     ).trim();
     if (headerAgent) return headerAgent;
     return "";
@@ -738,7 +738,7 @@ export class ConsoleUIGateway {
     const selectedAgentId = this.selectAgentId(agents, requestedAgentId);
     return {
       success: true,
-      smaVersion: SMA_VERSION,
+      cityVersion: DC_VERSION,
       agents,
       selectedAgentId,
     };
@@ -1285,7 +1285,7 @@ export class ConsoleUIGateway {
       if (
         lower === "host" ||
         lower === "content-length" ||
-        lower === "x-sma-agent"
+        lower === "x-city-agent"
       ) {
         continue;
       }

@@ -16,13 +16,13 @@ Provider `apiKey` is not stored in plaintext. It is stored in encrypted field `a
 
 Key source priority:
 
-1. `SMA_MODEL_DB_KEY`
+1. `DC_MODEL_DB_KEY`
 2. `~/.ship/console/model-db.key`
 
 ## Best practices
 
 1. Never commit `~/.ship` or any key material.
-2. Use a secret manager to inject `SMA_MODEL_DB_KEY` in team/production environments.
+2. Use a secret manager to inject `DC_MODEL_DB_KEY` in team/production environments.
 3. After key rotation, validate model connectivity through CLI and one real invocation.
 
 ## Related docs

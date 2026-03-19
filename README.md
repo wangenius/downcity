@@ -1,8 +1,8 @@
-# ShipMyAgent
+# Downcity
 
 > **把一个代码仓库，启动成一个可对话、可审计的 Agent Runtime**
 
-ShipMyAgent 是一个 Agent Runtime，它将你的本地或远程代码仓库启动为一个可对话、可执行、可审计的 AI Agent。
+Downcity 是一个 Agent Runtime，它将你的本地或远程代码仓库启动为一个可对话、可执行、可审计的 AI Agent。
 
 > ⚠️ **当前版本说明（2026-02-03）**：已暂时移除 **权限/审批（Approvals）**，默认 **全权限** 直接执行；后续再重新设计权限体系。
 
@@ -11,9 +11,9 @@ ShipMyAgent 是一个 Agent Runtime，它将你的本地或远程代码仓库启
 
 ---
 
-## 为什么选择 ShipMyAgent？
+## 为什么选择 Downcity？
 
-| 对比维度 | GitHub Copilot | ChatGPT/Claude | **ShipMyAgent** |
+| 对比维度 | GitHub Copilot | ChatGPT/Claude | **Downcity** |
 |---------|---------------|----------------|-----------------|
 | **用户** | 个人开发者 | 个人用户 | **团队/企业** |
 | **能力** | 代码补全 | 问答对话 | **可执行的 AI 团队成员** |
@@ -39,9 +39,9 @@ ShipMyAgent 是一个 Agent Runtime，它将你的本地或远程代码仓库启
 ### 安装
 
 ```bash
-npm install -g shipmyagent
+npm install -g downcity
 # 或
-pnpm add -g shipmyagent
+pnpm add -g downcity
 ```
 
 ### 初始化项目
@@ -49,9 +49,9 @@ pnpm add -g shipmyagent
 在你的项目根目录运行：
 
 ```bash
-sma start
+city start
 cd /path/to/your-repo
-sma agent create .
+city agent create .
 ```
 
 这会创建以下文件：
@@ -63,7 +63,7 @@ sma agent create .
 ### 启动 Agent
 
 ```bash
-sma agent on
+city agent start
 ```
 
 Agent 将启动并监听配置的通信渠道（如 Telegram Bot）。
@@ -166,7 +166,7 @@ You are the maintainer agent of this repository.
 
 > 注：启动时会自动加载项目根目录的 `.env`，并把 `ship.json` 里的 `${VAR_NAME}` 形式占位符替换为对应环境变量。
 
-你也可以在 `ship.json` 里配置启动参数（`sma agent on` 会读取），例如：
+你也可以在 `ship.json` 里配置启动参数（`city agent start` 会读取），例如：
 
 ```json
 {
@@ -189,7 +189,7 @@ You are the maintainer agent of this repository.
 
 ```bash
 # 启动 Agent
-sma agent on
+city agent start
 
 # 在 Telegram 中与 Agent 对话
 /status          # 查看项目状态
@@ -295,8 +295,8 @@ Telegram Bot = Your Project UI
 快速开始：
 
 ```bash
-git clone https://github.com/yourusername/shipmyagent.git
-cd shipmyagent
+git clone https://github.com/wangenius/downcity.git
+cd downcity
 pnpm install
 pnpm build
 pnpm test
@@ -332,10 +332,10 @@ MIT © [Your Name]
 
 ## Links
 
-- [Documentation](https://shipmyagent.dev)
-- [GitHub](https://github.com/yourusername/shipmyagent)
-- [Twitter](https://twitter.com/shipmyagent)
+- [Documentation](https://downcity.ai)
+- [GitHub](https://github.com/wangenius/downcity)
+- [Twitter](https://twitter.com/downcity)
 
 ---
 
-**ShipMyAgent 不是"帮你写代码"，而是定义：一个项目如何被一个 AI 长期、安全、可控地维护。**
+**Downcity 不是"帮你写代码"，而是定义：一个项目如何被一个 AI 长期、安全、可控地维护。**

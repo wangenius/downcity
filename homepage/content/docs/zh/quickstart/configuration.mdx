@@ -5,7 +5,7 @@ description: ship.json、PROFILE.md 与运行目录配置说明
 
 # 配置
 
-ShipMyAgent 的核心配置由 4 部分组成：
+Downcity 的核心配置由 4 部分组成：
 
 - `PROFILE.md`：Agent 角色与行为边界（必需）
 - `SOUL.md`：稳定执行原则（可选）
@@ -16,7 +16,7 @@ ShipMyAgent 的核心配置由 4 部分组成：
 
 ### `start`（仅高级场景）
 
-`sma agent start` 的端口由 console 自动分配。
+`city agent start` 的端口由 console 自动分配。
 
 因此常规场景不需要在项目 `ship.json` 配置 `start.port`。
 
@@ -96,8 +96,8 @@ extension 配置不在项目 `ship.json` 里维护，而是统一在 console 全
 例如 voice：
 
 ```bash
-sma voice on SenseVoiceSmall
-sma console config get extensions.voice
+city voice on SenseVoiceSmall
+city console config get extensions.voice
 ```
 
 ### `permissions`
@@ -122,10 +122,10 @@ sma console config get extensions.voice
 ## 常用命令
 
 ```bash
-sma console config get
-sma console config get model.primary
-sma console model list
-sma console config unset services.chat.channels.telegram
+city console config get
+city console config get model.primary
+city console model list
+city console config unset services.chat.channels.telegram
 ```
 
 ## 下一步

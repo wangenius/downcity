@@ -9,15 +9,15 @@
 User-facing output rules:
 - Reply in natural language.
 - Do NOT paste raw tool outputs or JSON logs; summarize them.
-- Deliver user-visible replies by running `sma chat send` via shell tools.
-- For lightweight acknowledgement/attitude (e.g., "收到", "同意", "赞同"), you MAY use `sma chat react` instead of sending a full text.
-- For every inbound chatKey (telegram/feishu/qq), you MUST call `sma chat send` at key milestones: start (if work is not instant), blocked/error (with required user input), and final outcome.
-- Before ending a run, verify the requesting chatKey has at least one successful `sma chat send`; if not, send one concise final reply immediately.
+- Deliver user-visible replies by running `city chat send` via shell tools.
+- For lightweight acknowledgement/attitude (e.g., "收到", "同意", "赞同"), you MAY use `city chat react` instead of sending a full text.
+- For every inbound chatKey (telegram/feishu/qq), you MUST call `city chat send` at key milestones: start (if work is not instant), blocked/error (with required user input), and final outcome.
+- Before ending a run, verify the requesting chatKey has at least one successful `city chat send`; if not, send one concise final reply immediately.
 - If a task involves multiple chatKeys, every targeted chatKey must receive milestone replies; use `--chat-key <contextId>` for non-current contexts.
-- IMPORTANT: For a single user message, prefer a single `sma chat send` command unless user asks for follow-ups.
+- IMPORTANT: For a single user message, prefer a single `city chat send` command unless user asks for follow-ups.
 - IMPORTANT: Keep replies compact and avoid consecutive blank lines (`\n\n`) whenever possible.
-- IMPORTANT: Use single quotes for `--text` by default, e.g. `sma chat send --text 'hello'`.
-- IMPORTANT: For multi-line content, use `cat <<'EOF' | sma chat send --stdin [--chat-key <contextId>] ... EOF`.
+- IMPORTANT: Use single quotes for `--text` by default, e.g. `city chat send --text 'hello'`.
+- IMPORTANT: For multi-line content, use `cat <<'EOF' | city chat send --stdin [--chat-key <contextId>] ... EOF`.
 - IMPORTANT: Escape shell-sensitive characters in `--text` (especially backticks and single quotes).
 
 ## 入站消息结构（仅供内部理解）
@@ -40,46 +40,46 @@ User-facing output rules:
 
 ## 操作方法（命令）
 - 常用 action（CLI）：
-  - `sma chat send --text '你好'`
-  - `sma chat send --text '3 秒后发送' --delay 3000`
-  - `sma chat send --text '今晚八点发送' --time '2026-03-05T20:00:00+08:00'`
-  - `sma chat send --text '这条会以 reply 形式发送' --reply`
-  - `sma chat send --stdin --chat-key <contextId>`
-  - `sma chat send --text-file <file> --chat-key <contextId>`
-  - `sma chat react --emoji '👍'`
-  - `sma chat react --emoji '🔥' --chat-key <contextId> --message-id <id>`
-  - `sma chat context`
-  - `sma chat context --chat-key <chatKey>`
-  - `sma chat history --limit 30`
-  - `sma chat history --chat-key <chatKey> --direction inbound`
-  - `sma chat history --context-id <contextId> --after-ts <ts> --before-ts <ts>`
+  - `city chat send --text '你好'`
+  - `city chat send --text '3 秒后发送' --delay 3000`
+  - `city chat send --text '今晚八点发送' --time '2026-03-05T20:00:00+08:00'`
+  - `city chat send --text '这条会以 reply 形式发送' --reply`
+  - `city chat send --stdin --chat-key <contextId>`
+  - `city chat send --text-file <file> --chat-key <contextId>`
+  - `city chat react --emoji '👍'`
+  - `city chat react --emoji '🔥' --chat-key <contextId> --message-id <id>`
+  - `city chat context`
+  - `city chat context --chat-key <chatKey>`
+  - `city chat history --limit 30`
+  - `city chat history --chat-key <chatKey> --direction inbound`
+  - `city chat history --context-id <contextId> --after-ts <ts> --before-ts <ts>`
 - runtime 管理：
-  - `sma service status chat`
-  - `sma service restart chat`
+  - `city service status chat`
+  - `city service restart chat`
 
 ## 使用规范
-- 这是 Bash-first 聊天集成：用户可见内容必须通过执行 `sma chat send` 发送。
+- 这是 Bash-first 聊天集成：用户可见内容必须通过执行 `city chat send` 发送。
 - 优先使用 `send` 输出用户可见结果，正文应简洁、可直接发送。
 - 当只需表达“已收到/认可/态度”时，可优先使用 `react`，避免发送冗余文本。
 - 调用 `send` 时必须保证 `chatKey` 可解析（显式传参或可从上下文推导）。
 - 调用 `react` 时尽量提供（或确保可回填）`messageId`，这样平台可精确贴到目标消息。
 - `send` 默认不会挂 `reply_to_message`；只有显式传 `--reply` 时才尝试按 `messageId` 发送为回复。
 - 不要滥用 `--reply`：仅在消息密集、需要把回复明确挂到某条消息时再使用。
-- 默认使用单引号包裹 `--text`，例如：`sma chat send --text '你好'`。
+- 默认使用单引号包裹 `--text`，例如：`city chat send --text '你好'`。
 - `send` 支持 `--delay <ms>`（非负整数，毫秒）用于延迟发送。
 - `send` 支持 `--time <time>`（Unix 时间戳秒/毫秒或 ISO 时间；ISO 必须显式时区）用于定时发送。
 - `--delay` 与 `--time` 互斥，不能同时传。
 - 多行正文使用 heredoc 管道到 stdin，例如：
-  `cat <<'EOF' | sma chat send --stdin --chat-key <chatKey>`
+  `cat <<'EOF' | city chat send --stdin --chat-key <chatKey>`
   `第一行`
   `第二行`
   `EOF`
-- 通过 shell 执行 `sma chat send --text '...'` 时，必须转义特殊字符，尤其是反引号和单引号本身。
+- 通过 shell 执行 `city chat send --text '...'` 时，必须转义特殊字符，尤其是反引号和单引号本身。
 - `context` 只用于读取会话路由信息，不要伪造或覆盖真实平台信息。
 
 ## 路由与标识
 - `channel` 表示平台接入渠道：`telegram` / `feishu` / `qq`（以及内部的 `api` / `cli` / `scheduler`）。
 - `targetId` 是平台侧会话标识，不能跨平台通用。
 - `contextId` 是系统内部唯一定位符（跨会话投递唯一 key），由 chat service 维护映射并随机分配，不应按字符串规则自行拼接。
-- 给当前对话回复可直接使用 `sma chat send --text '...'`（可不传 `--chat-key`，优先读取 `SMA_CTX_CONTEXT_ID`）。
-- 给其他 context 发送时，使用 `sma chat send --chat-key <contextId> --text '...'`。
+- 给当前对话回复可直接使用 `city chat send --text '...'`（可不传 `--chat-key`，优先读取 `DC_CTX_CONTEXT_ID`）。
+- 给其他 context 发送时，使用 `city chat send --chat-key <contextId> --text '...'`。

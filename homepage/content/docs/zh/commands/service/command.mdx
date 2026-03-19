@@ -1,16 +1,16 @@
 ---
-title: sma service command
+title: city service command
 description: 转发 service 自定义动作命令
 ---
 
-# `sma service command`
+# `city service command`
 
 把任意动作转发给指定 service。
 
 ## 用法
 
 ```bash
-sma service command <serviceName> <command> [--payload <json>] [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service command <serviceName> <command> [--payload <json>] [--agent <name> | --path <path>] [--host <host>] [--port <port>]
 ```
 
 ## 关键参数
@@ -21,22 +21,22 @@ sma service command <serviceName> <command> [--payload <json>] [--agent <name> |
 ## 示例
 
 ```bash
-sma service command task list --payload '{"status":"enabled"}' --agent my-agent
-sma service command memory search --payload '{"query":"release decision"}' --path /abs/path/to/agent
+city service command task list --payload '{"status":"enabled"}' --agent my-agent
+city service command memory search --payload '{"query":"release decision"}' --path /abs/path/to/agent
 ```
 
 ## 相关命令
 
-- [`sma service`](/zh/docs/commands/service/service)
-- [`sma task`](/zh/docs/commands/service/task)
-- [`sma memory`](/zh/docs/commands/service/memory)
+- [`city service`](/zh/docs/commands/service/service)
+- [`city task`](/zh/docs/commands/service/task)
+- [`city memory`](/zh/docs/commands/service/memory)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma service command task list --payload '{"status":"enabled"}' --agent <agentName>
+$ city service command task list --payload '{"status":"enabled"}' --agent <agentName>
 {
   "success": true,
   "service": "task",
@@ -48,9 +48,9 @@ $ sma service command task list --payload '{"status":"enabled"}' --agent <agentN
 ```
 
 ```text
-$ sma service command task list --agent missing-agent
+$ city service command task list --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"sma console agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city console agents\" to inspect names."
 }
 ```

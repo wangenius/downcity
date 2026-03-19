@@ -5,7 +5,7 @@ description: Runtime 对外 HTTP 接口与请求示例
 
 # HTTP API 参考
 
-> 面向用户的运行时 API。更多细粒度命令建议优先使用 CLI（`sma ...`）。
+> 面向用户的运行时 API。更多细粒度命令建议优先使用 CLI（`city ...`）。
 
 ## 基础接口
 
@@ -18,7 +18,7 @@ description: Runtime 对外 HTTP 接口与请求示例
 ### `GET /api/status`
 
 ```json
-{ "name": "shipmyagent", "status": "running", "timestamp": "..." }
+{ "name": "downcity", "status": "running", "timestamp": "..." }
 ```
 
 ### `POST /api/execute`
@@ -156,6 +156,6 @@ description: Runtime 对外 HTTP 接口与请求示例
 先确认 runtime 已启动：
 
 ```bash
-sma agent start
+city agent start
 curl http://localhost:5314/health
 ```

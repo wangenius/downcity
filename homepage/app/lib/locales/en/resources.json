@@ -1,6 +1,6 @@
 {
   "title": "Resources",
-  "subtitle": "Everything you need to build with ShipMyAgent",
+  "subtitle": "Everything you need to build with Downcity",
   "examples": {
     "title": "Examples",
     "description": "Explore example projects and starters"
@@ -22,7 +22,7 @@
     "description": "Managed hosting for your agents"
   },
   "hostingPage": {
-    "subtitle": "Cloud hosting and operational support for your ShipMyAgent agents",
+    "subtitle": "Cloud hosting and operational support for your Downcity agents",
     "badge": "Coming soon",
     "features": {
       "deploy": {
@@ -49,12 +49,12 @@
     }
   },
   "examplesPage": {
-    "subtitle": "Explore example projects and starters built with ShipMyAgent",
+    "subtitle": "Explore example projects and starters built with Downcity",
     "viewCode": "View Code",
     "featuresHeading": "Features",
     "contribute": {
       "title": "Want to contribute an example?",
-      "description": "Help us grow the community by sharing your ShipMyAgent projects",
+      "description": "Help us grow the community by sharing your Downcity projects",
       "button": "Submit on GitHub"
     },
     "examplesList": {
@@ -84,7 +84,7 @@
     }
   },
   "useCasesPage": {
-    "subtitle": "Real-world applications and scenarios for ShipMyAgent",
+    "subtitle": "Real-world applications and scenarios for Downcity",
     "exampleLabel": "Example",
     "callout": {
       "title": "Have a unique use case?",

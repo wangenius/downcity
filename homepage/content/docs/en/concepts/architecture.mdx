@@ -1,11 +1,11 @@
 ---
 title: Architecture Overview
-description: "Core architecture layers in ShipMyAgent: console, agent, service, and extension"
+description: "Core architecture layers in Downcity: console, agent, service, and extension"
 ---
 
 # Architecture Overview
 
-ShipMyAgent is easiest to reason about with two top-level trunks:
+Downcity is easiest to reason about with two top-level trunks:
 
 - `console`: global control and operations plane
 - `agent`: project runtime execution plane
@@ -15,11 +15,11 @@ Inside these trunks, `service` and `extension` form the capability layer.
 ## Layered Structure
 
 1. **Console Layer (global)**
-- Commands: `sma console ...`, `sma console config ...`, `sma service ...`, `sma extension ...`
+- Commands: `city console ...`, `city console config ...`, `city service ...`, `city extension ...`
 - Responsibility: global process management, operational entry points, model/runtime configuration governance
 
 2. **Agent Layer (project)**
-- Commands: `sma agent create/on/off/status/restart ...`
+- Commands: `city agent create/on/off/status/restart ...`
 - Responsibility: load project context, run model/tool execution, persist runtime state
 
 3. **Capability Layer (runtime abilities)**

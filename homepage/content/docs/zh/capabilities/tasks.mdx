@@ -47,11 +47,11 @@ kind: agent
 ## 常用命令
 
 ```bash
-sma task list
-sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
-sma task run daily-check
-sma task update daily-check --when "@manual"
-sma task disable daily-check
+city task list
+city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
+city task run daily-check
+city task update daily-check --when "@manual"
+city task disable daily-check
 ```
 
 ## 状态说明
@@ -62,4 +62,4 @@ sma task disable daily-check
 
 ## 调度生效条件
 
-任务调度依赖运行中的 runtime（建议 `sma agent start`）。
+任务调度依赖运行中的 runtime（建议 `city agent start`）。

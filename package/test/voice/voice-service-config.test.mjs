@@ -54,7 +54,7 @@ function buildRuntime(rootPath, config) {
 }
 
 test("voice install skips download when local model files already exist", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-voice-install-skip-"));
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-voice-install-skip-"));
   t.after(async () => {
     await fs.remove(tempRoot);
   });
@@ -96,7 +96,7 @@ test("voice install skips download when local model files already exist", async 
 });
 
 test("voice on/off/use updates extensions.voice config in ship.json", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-voice-service-"));
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-voice-service-"));
   t.after(async () => {
     await fs.remove(tempRoot);
   });
@@ -185,7 +185,7 @@ test("voice init command mapInput applies defaults when models are provided", as
 });
 
 test("voice init can enable extension without downloading when model already installed", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "sma-voice-init-"));
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-voice-init-"));
   t.after(async () => {
     await fs.remove(tempRoot);
   });

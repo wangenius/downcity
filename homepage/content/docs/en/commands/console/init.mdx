@@ -1,16 +1,16 @@
 ---
-title: sma console init
+title: city console init
 description: Initialize global console config (stored in ~/.ship/ship.db)
 ---
 
-# `sma console init`
+# `city console init`
 
 Initialize global console configuration.
 
 ## Usage
 
 ```bash
-sma console init [--force]
+city console init [--force]
 ```
 
 ## Behavior
@@ -25,21 +25,21 @@ sma console init [--force]
 ## Notes
 
 - This is a console-level command and does not depend on an agent project path.
-- For project-level configuration, use [`sma console config`](/en/docs/commands/console/config).
+- For project-level configuration, use [`city console config`](/en/docs/commands/console/config).
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma console init
-sma version: 1.0.0
+$ city console init
+city version: 1.0.0
 ✅ Saved console global settings into ~/.ship/ship.db (encrypted)
 ✅ Initialized ~/.ship/ship.db model store
 ```
 
 ```text
-$ sma console init
-sma version: 1.0.0
+$ city console init
+city version: 1.0.0
 ❌ API Key is required
 ```

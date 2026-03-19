@@ -63,7 +63,7 @@ function normalizeOutputChunk(raw: string): string {
 }
 
 /**
- * 对 `sma chat send` 命令做前置安全校验。
+ * 对 `city chat send` 命令做前置安全校验。
  *
  * 关键点（中文）
  * - 历史上模型会把长文本直接拼进多行 shell 命令，导致后续行被 zsh 当作独立命令解析。
@@ -73,15 +73,15 @@ function normalizeOutputChunk(raw: string): string {
  */
 export function validateChatSendCommand(cmd: string): string | null {
   const source = String(cmd ?? "");
-  if (!/\bsma\s+chat\s+send\b/.test(source)) return null;
+  if (!/\b(?:city|downcity)\s+chat\s+send\b/.test(source)) return null;
   if (!/[\r\n]/.test(source)) return null;
-  if (/\bsma\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) return null;
-  if (/\bsma\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) return null;
-  if (/\bsma\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source))
+  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) return null;
+  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) return null;
+  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source))
     return null;
   return [
-    "Unsafe `sma chat send` command: real newlines are not allowed.",
-    "If your message is multi-line, use `sma chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
+    "Unsafe `city chat send` command: real newlines are not allowed.",
+    "If your message is multi-line, use `city chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
   ].join(" ");
 }
 
@@ -165,12 +165,12 @@ export function buildShellContextEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   const contextCtx = requestContext.getStore();
 
-  setEnvString(env, "SMA_CTX_CONTEXT_ID", contextCtx?.contextId);
-  setEnvString(env, "SMA_CTX_REQUEST_ID", contextCtx?.requestId);
+  setEnvString(env, "DC_CTX_CONTEXT_ID", contextCtx?.contextId);
+  setEnvString(env, "DC_CTX_REQUEST_ID", contextCtx?.requestId);
 
-  // 关键点（中文）：把当前 server 地址透传给子进程，便于 `sma message/skill/task` 自动命中本地服务。
-  setEnvString(env, "SMA_CTX_SERVER_HOST", process.env.SMA_SERVER_HOST);
-  setEnvString(env, "SMA_CTX_SERVER_PORT", process.env.SMA_SERVER_PORT);
+  // 关键点（中文）：把当前 server 地址透传给子进程，便于 `city message/skill/task` 自动命中本地服务。
+  setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
+  setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
 
   return env;
 }

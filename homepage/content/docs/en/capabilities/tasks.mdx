@@ -44,11 +44,11 @@ Run tests, write channel-delivered body to output.md, and write summary to resul
 ## Common commands
 
 ```bash
-sma task list
-sma task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
-sma task run daily-check
-sma task update daily-check --when "@manual"
-sma task disable daily-check
+city task list
+city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 9 * * 1-5" --activate
+city task run daily-check
+city task update daily-check --when "@manual"
+city task disable daily-check
 ```
 
 ## Status
@@ -59,4 +59,4 @@ sma task disable daily-check
 
 ## Runtime requirement
 
-Scheduling only works with a running runtime (typically `sma agent start`).
+Scheduling only works with a running runtime (typically `city agent start`).

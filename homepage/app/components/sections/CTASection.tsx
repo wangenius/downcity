@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
-const GITHUB_URL = "https://github.com/wangenius/ShipMyAgent";
+const GITHUB_URL = "https://github.com/wangenius/downcity";
 
 export const CTASection: FC = () => {
   const { i18n, t } = useTranslation();

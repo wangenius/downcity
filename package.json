@@ -1,5 +1,5 @@
 {
-  "name": "shipmyagent",
+  "name": "downcity",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -14,12 +14,17 @@
     "build": "bash ./scripts/build.sh",
     "extbuild": "bash ./scripts/extbuild.sh",
     "ui": "npm --prefix ./console-ui run dev",
-    "dev":"cd examples/server-agent && shipmyagent agent on",
+    "dev": "cd examples/server-agent && downcity agent start",
     "cli": "bun run examples/cli-interactive/src/index.ts",
-    "publish":"./scripts/publish.sh"
+    "publish": "./scripts/publish.sh"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangenius/downcity.git"
+  },
+  "homepage": "https://downcity.ai"
 }

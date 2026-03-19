@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils"
 import type { DashboardView } from "@/types/Navigation"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
-const DEBUG_PANELS_COLLAPSED_STORAGE_KEY = "sma.console-ui.context.debug-panels-collapsed"
+const DEBUG_PANELS_COLLAPSED_STORAGE_KEY = "city.console-ui.context.debug-panels-collapsed"
 
 export function App() {
   const [routePathname, setRoutePathname] = React.useState<string>(() => {
@@ -56,7 +56,7 @@ export function App() {
 
   const {
     agents,
-    smaVersion,
+    cityVersion,
     selectedAgentId,
     selectedAgent,
     overview,
@@ -468,7 +468,7 @@ export function App() {
         return (
           <section>
             <GlobalOverviewSection
-              smaVersion={smaVersion}
+              cityVersion={cityVersion}
               agents={agents}
               extensions={extensions}
               configStatus={configStatus}
@@ -496,7 +496,7 @@ export function App() {
         return (
           <section>
             <GlobalOverviewSection
-              smaVersion={smaVersion}
+              cityVersion={cityVersion}
               agents={agents}
               extensions={extensions}
               configStatus={configStatus}

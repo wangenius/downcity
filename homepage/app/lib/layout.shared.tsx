@@ -12,7 +12,7 @@ export function baseOptions(): BaseLayoutProps {
             alt="icon"
             className="w-8 h-8"
           />
-          <span className="font-bold">ShipMyAgent docs</span>
+          <span className="font-bold">Downcity docs</span>
         </>
       ),
     },

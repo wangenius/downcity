@@ -1,23 +1,23 @@
 ---
-title: sma extension
+title: city extension
 description: Manage extension runtime and forward extension commands
 ---
 
-# `sma extension`
+# `city extension`
 
 Manage extension runtime state and forward extension commands.
 
 ## Command hierarchy
 
-- Top-level command: `sma extension`
-- Action command: `sma voice`
+- Top-level command: `city extension`
+- Action command: `city voice`
 
-`sma voice` is an extension action command, not a top-level command.
+`city voice` is an extension action command, not a top-level command.
 
 ## Usage
 
 ```bash
-sma extension <subcommand>
+city extension <subcommand>
 ```
 
 ## Subcommands
@@ -32,10 +32,10 @@ sma extension <subcommand>
 ## Examples
 
 ```bash
-sma extension list
-sma extension status voice
-sma extension restart voice
-sma extension command voice status --payload '{}'
+city extension list
+city extension status voice
+city extension restart voice
+city extension command voice status --payload '{}'
 ```
 
 ## Notes
@@ -43,21 +43,21 @@ sma extension command voice status --payload '{}'
 Start agent runtime first:
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## Related action command
 
-- [`sma voice`](/en/docs/commands/extension/voice)
+- [`city voice`](/en/docs/commands/extension/voice)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma extension
-sma version: 1.0.0
-Usage: sma extension [options] [command]
+$ city extension
+city version: 1.0.0
+Usage: city extension [options] [command]
 Commands:
   list
   status <extensionName>

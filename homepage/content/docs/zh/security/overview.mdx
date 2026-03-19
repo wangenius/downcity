@@ -5,7 +5,7 @@ description: 运行隔离、权限控制、密钥保护的用户视角说明
 
 # 安全与权限总览
 
-ShipMyAgent 的安全模型分为 3 层：
+Downcity 的安全模型分为 3 层：
 
 1. 运行隔离：一个 agent runtime 绑定一个 `projectRoot`，默认不会跨项目串上下文。
 2. 权限控制：通过 `ship.json.permissions` 控制仓库写入与命令执行。
@@ -13,9 +13,9 @@ ShipMyAgent 的安全模型分为 3 层：
 
 ## 你需要重点关注
 
-1. 不要在终端残留错误的 `SMA_SERVER_HOST/SMA_SERVER_PORT`，避免把命令路由到错误 runtime。
+1. 不要在终端残留错误的 `DC_SERVER_HOST/DC_SERVER_PORT`，避免把命令路由到错误 runtime。
 2. `permissions.exec_command.deny` 默认应保留高风险命令（例如 `rm`）。
-3. 生产环境优先使用 `SMA_MODEL_DB_KEY` 管理密钥，不要把明文 key 写入仓库。
+3. 生产环境优先使用 `DC_MODEL_DB_KEY` 管理密钥，不要把明文 key 写入仓库。
 
 ## 推荐阅读顺序
 

@@ -15,13 +15,13 @@ description: 解释 service/extension 的调用是否会串环境，以及 shell
 
 - 正常情况下，**不会串到其他 agent 环境**。
 - `service` / `extension` 的主调用链是 **runtime 内存分发**，不是默认走 shell。
-- 真正可能“串环境”的主要风险点是：你手动覆盖了 `host/port` 或 `SMA_SERVER_*`，把请求发到了另一套 daemon。
+- 真正可能“串环境”的主要风险点是：你手动覆盖了 `host/port` 或 `DC_SERVER_*`，把请求发到了另一套 daemon。
 
 ## 隔离边界（核心原理）
 
 当前实现是“**单进程绑定单 projectRoot**”：
 
-- 一个 `sma agent start` 运行进程只初始化一个 runtime。
+- 一个 `city agent start` 运行进程只初始化一个 runtime。
 - 这个 runtime 只绑定一个 `rootPath`（也就是一个 agent 项目目录）。
 - 该进程内的 `service` 与 `extension` 调用都复用同一份 runtime state（同一个 `config/context/logger/model`）。
 
@@ -31,7 +31,7 @@ description: 解释 service/extension 的调用是否会串环境，以及 shell
 
 ### 1) CLI 调 service / extension
 
-`sma service ...` / `sma extension ...` 的流程是：
+`city service ...` / `city extension ...` 的流程是：
 
 1. CLI 根据 `--path` 解析 `projectRoot`
 2. 再按优先级解析 daemon endpoint（下面有详细优先级）
@@ -54,21 +54,21 @@ description: 解释 service/extension 的调用是否会串环境，以及 shell
 CLI/SDK 发往 daemon 的地址优先级：
 
 1. 显式参数：`--host/--port`
-2. 环境变量：`SMA_SERVER_HOST/SMA_SERVER_PORT`（其次 `SMA_CTX_SERVER_*`）
+2. 环境变量：`DC_SERVER_HOST/DC_SERVER_PORT`（其次 `DC_CTX_SERVER_*`）
 3. 当前项目 `ship.json.start.host/port`
 4. 默认：`127.0.0.1:5314`
 
 这意味着：
 
 - 只要你给了 `--host/--port`，就会强制命中目标地址。
-- 若 shell 里残留了 `SMA_SERVER_*`，也可能把请求路由到非当前项目。
+- 若 shell 里残留了 `DC_SERVER_*`，也可能把请求路由到非当前项目。
 
 ## shell 场景怎么区分环境
 
 虽然 service/extension 主链路不依赖 shell，但有些业务会在运行期调用 shell 工具。此时：
 
 - shell 默认工作目录是当前 runtime 的 `projectRoot`（未显式指定 `workdir` 时）。
-- 子进程会注入 `SMA_CTX_SERVER_HOST/SMA_CTX_SERVER_PORT`，优先指向当前 agent runtime 所在 server。
+- 子进程会注入 `DC_CTX_SERVER_HOST/DC_CTX_SERVER_PORT`，优先指向当前 agent runtime 所在 server。
 - 还会带上当前请求上下文标识（如 context/request id），用于请求链路关联。
 
 所以在“从当前 agent 发起 shell 命令”的常见路径里，默认仍会回到当前 agent 环境。
@@ -77,16 +77,16 @@ CLI/SDK 发往 daemon 的地址优先级：
 
 常见误用：
 
-1. 在另一个终端导出了 `SMA_SERVER_PORT`，忘记清理。
+1. 在另一个终端导出了 `DC_SERVER_PORT`，忘记清理。
 2. 命令里手动写了 `--host/--port` 指向别的 agent daemon。
 3. 用了错误的 `--path`，导致读取了别的项目 `ship.json.start`。
 
 ## 自检清单（建议）
 
 1. 先看当前命令是否带了 `--host/--port`
-2. 检查 `SMA_SERVER_*` 与 `SMA_CTX_SERVER_*` 是否被覆盖
+2. 检查 `DC_SERVER_*` 与 `DC_CTX_SERVER_*` 是否被覆盖
 3. 确认 `--path` 和当前目录是否是目标项目
-4. 运行 `sma console agents` 查看各项目 daemon 端口/状态，再核对目标 endpoint
+4. 运行 `city console agents` 查看各项目 daemon 端口/状态，再核对目标 endpoint
 
 ## 相关文档
 

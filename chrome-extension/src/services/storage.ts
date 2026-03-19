@@ -12,8 +12,8 @@ import type {
   ExtensionSettings,
 } from "../types/extension";
 
-const STORAGE_KEY = "shipmyagent.extension.settings.v1";
-const SEND_HISTORY_STORAGE_KEY = "shipmyagent.extension.send.history.v1";
+const STORAGE_KEY = "downcity.extension.settings.v1";
+const SEND_HISTORY_STORAGE_KEY = "downcity.extension.send.history.v1";
 const SEND_HISTORY_MAX_COUNT = 120;
 const DEFAULT_CONSOLE_HOST = "127.0.0.1";
 const DEFAULT_CONSOLE_PORT = 5315;

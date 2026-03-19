@@ -3,7 +3,7 @@ import { product } from "@/lib/product";
 
 export function meta() {
   const title = `${product.productName} — Hosting`;
-  const description = "Managed hosting for ShipMyAgent agents";
+  const description = "Managed hosting for Downcity agents";
   return [
     { title },
     { name: "description", content: description },
@@ -24,7 +24,7 @@ export default function Hosting() {
   const repoUrl =
     product.homepage?.includes("github.com") === true
       ? product.homepage
-      : "https://github.com/wangenius/shipmyagent";
+      : "https://github.com/wangenius/downcity";
   const discussionsUrl = `${repoUrl}/discussions`;
 
   return (

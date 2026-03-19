@@ -10,7 +10,7 @@ import {
   IconTerminal2,
 } from "@tabler/icons-react";
 
-const INSTALL_COMMAND = "npm i -g shipmyagent";
+const INSTALL_COMMAND = "npm i -g downcity";
 
 /**
  * 首页首屏模块。

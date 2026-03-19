@@ -1,9 +1,9 @@
 /**
- * `shipmyagent skill`：skills 管理命令（对标 `npx skills`）。
+ * `downcity skill`：skills 管理命令（对标 `npx skills`）。
  *
  * 设计目标（中文）
  * - 尽量不自建 registry：直接复用社区的 `npx skills` 生态（find/install）
- * - 同时提供本地视角的 `list`：列出 ShipMyAgent 当前能发现的 skills（含 project/home）
+ * - 同时提供本地视角的 `list`：列出 Downcity 当前能发现的 skills（含 project/home）
  *
  * 注意（中文）
  * - 这里是 CLI 命令层，不依赖运行时 server，不读取 RuntimeState
@@ -63,7 +63,7 @@ export async function skillListCommand(cwd: string = "."): Promise<void> {
   const shipJson = path.join(projectRoot, "ship.json");
   if (!fs.existsSync(shipJson)) {
     throw new Error(
-      `ship.json not found at ${shipJson}. Run "sma agent create" first or pass the correct path.`,
+      `ship.json not found at ${shipJson}. Run "city agent create" first or pass the correct path.`,
     );
   }
 

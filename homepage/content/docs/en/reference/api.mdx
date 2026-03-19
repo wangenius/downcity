@@ -5,7 +5,7 @@ description: Public runtime HTTP endpoints with request examples
 
 # HTTP API Reference
 
-> User-facing runtime API. For most operations, CLI (`sma ...`) is recommended first.
+> User-facing runtime API. For most operations, CLI (`city ...`) is recommended first.
 
 ## Core endpoints
 
@@ -18,7 +18,7 @@ description: Public runtime HTTP endpoints with request examples
 ### `GET /api/status`
 
 ```json
-{ "name": "shipmyagent", "status": "running", "timestamp": "..." }
+{ "name": "downcity", "status": "running", "timestamp": "..." }
 ```
 
 ### `POST /api/execute`
@@ -156,6 +156,6 @@ Examples:
 Make sure runtime is up before calling APIs:
 
 ```bash
-sma agent start
+city agent start
 curl http://localhost:5314/health
 ```

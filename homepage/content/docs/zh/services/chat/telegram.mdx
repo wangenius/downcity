@@ -5,9 +5,9 @@ description: 通过 Telegram 与 Agent 对话
 
 # Telegram 集成
 
-> ⚠️ **简化模式（2026-02-03）**：当前发布的 `shipmyagent` 包已暂时移除审批（默认全权限执行）。旧文档里关于“审批提示”的描述可能已过期。
+> ⚠️ **简化模式（2026-02-03）**：当前发布的 `downcity` 包已暂时移除审批（默认全权限执行）。旧文档里关于“审批提示”的描述可能已过期。
 
-使用 Telegram 和 ShipMyAgent 对话（私聊或群聊）。
+使用 Telegram 和 Downcity 对话（私聊或群聊）。
 
 > 想了解内部怎么跑起来的？看这篇：[/zh/docs/services/chat/telegram-message-flow](/zh/docs/services/chat/telegram-message-flow)
 
@@ -44,12 +44,12 @@ description: 通过 Telegram 与 Agent 对话
 }
 ```
 
-> ShipMyAgent 的聊天回复采用 tool-strict：Agent 需要使用 `chat_send` 工具自行决定何时发消息（可以分多条、分阶段发送）。
+> Downcity 的聊天回复采用 tool-strict：Agent 需要使用 `chat_send` 工具自行决定何时发消息（可以分多条、分阶段发送）。
 
-### 3）启动 ShipMyAgent
+### 3）启动 Downcity
 
 ```bash
-sma agent start
+city agent start
 ```
 
 日志里看到以下内容说明启动成功：
@@ -68,8 +68,8 @@ sma agent start
 
 你可以直接给机器人发送文件（document/photo/voice/audio/video）。
 
-- 如果你在发送文件时同时输入文字，Telegram 会把这段文字当作 **caption（附件说明）** —— ShipMyAgent 会把 caption 当作你的指令来处理。
-- ShipMyAgent 会把文件保存到 `.ship/.cache/telegram/`，并以 `@attach ...` 的形式传给 Agent。
+- 如果你在发送文件时同时输入文字，Telegram 会把这段文字当作 **caption（附件说明）** —— Downcity 会把 caption 当作你的指令来处理。
+- Downcity 会把文件保存到 `.ship/.cache/telegram/`，并以 `@attach ...` 的形式传给 Agent。
 
 示例：发送一个 PDF，并在 caption 写：`帮我总结这个 PDF，并列出待办事项。`
 
@@ -79,10 +79,10 @@ sma agent start
 
 ```bash
 # 启用并安装模型
-sma voice on SenseVoiceSmall
+city voice on SenseVoiceSmall
 
 # 查看当前 voice 配置
-sma voice status
+city voice status
 ```
 
 当 `extensions.voice.enabled=true` 时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
@@ -105,11 +105,11 @@ sma voice status
 
 ### 1）`reply_to_message` 是怎么决定的
 
-当 Agent 执行 `sma chat send` 时，默认是普通发送，不会自动挂 reply。
+当 Agent 执行 `city chat send` 时，默认是普通发送，不会自动挂 reply。
 只有显式传了 `--reply`，运行时才会尝试附带 `reply_to_message_id`。
 
 `messageId` 的来源优先级：
-1. 显式参数（例如你在 `sma chat react --message-id <id>` 里指定）
+1. 显式参数（例如你在 `city chat react --message-id <id>` 里指定）
 2. 当前 `chatKey` 最近一次入站消息元信息（chat meta 自动维护）
 
 行为规则：
@@ -128,13 +128,13 @@ sma voice status
 
 ```bash
 # 默认 👍
-sma chat react
+city chat react
 
 # 指定表情
-sma chat react --emoji '🔥'
+city chat react --emoji '🔥'
 
 # 显式指定目标消息
-sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxxx
+city chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxxx
 ```
 
 行为规则：
@@ -145,9 +145,9 @@ sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxx
 
 ### 3）建议实践
 
-- 需要明确答复用户（结论/下一步）时：用 `sma chat send`
-- 只需快速确认态度时：优先用 `sma chat react`
-- 只有在消息很多、你希望“明确挂在某条消息下”时，再用 `sma chat send --reply`
+- 需要明确答复用户（结论/下一步）时：用 `city chat send`
+- 只需快速确认态度时：优先用 `city chat react`
+- 只有在消息很多、你希望“明确挂在某条消息下”时，再用 `city chat send --reply`
 - 跨会话操作时：显式传 `--chat-key`，避免贴错会话
 - 刚建新会话还没有入站消息时：先让对方发一条消息，再做 reply/react
 
@@ -155,6 +155,6 @@ sma chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xxx
 
 - **完全没反应**：确认进程在跑，并查看 `.ship/logs/<YYYY-MM-DD>.jsonl`（可搜索 `TELEGRAM` / `telegram` / error 关键词）。
 - **群里收不到消息**：在 BotFather 执行 `/setprivacy` 设为 `Disable`，并确认机器人已被允许读取群消息。
-- **轮询收不到（getUpdates 冲突）**：如果之前配置过 webhook，会与轮询冲突。ShipMyAgent 启动时会尝试清理 webhook；留意日志里的 webhook/Conflict 报错。
+- **轮询收不到（getUpdates 冲突）**：如果之前配置过 webhook，会与轮询冲突。Downcity 启动时会尝试清理 webhook；留意日志里的 webhook/Conflict 报错。
 - **群里发不出消息**：检查群权限/管理员设置，机器人可能被禁言或不允许发消息。
 - **Agent 口头说“我去执行”但没真正跑工具**：请在消息里明确写执行意图关键词（例如“执行 / run / 用 skill / lookup”）。这些回合运行时会强制触发一次工具调用；若仍失败，优先检查当前模型/网关是否支持工具调用。

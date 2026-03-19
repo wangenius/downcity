@@ -29,7 +29,7 @@ const communityLinks = [
     titleKey: "community:discussions.title",
     descriptionKey: "community:discussions.description",
     icon: IconMessageCircle,
-    href: "https://github.com/wangenius/shipmyagent/discussions",
+    href: "https://github.com/wangenius/downcity/discussions",
     external: true,
   },
 ];

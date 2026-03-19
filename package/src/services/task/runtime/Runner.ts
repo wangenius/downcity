@@ -557,7 +557,7 @@ async function runAgentRound(params: {
  * 执行 script 类型任务。
  *
  * 关键点（中文）
- * - 在任务配置的 contextId 语义下执行，透传 `SMA_CTX_CONTEXT_ID`
+ * - 在任务配置的 contextId 语义下执行，透传 `DC_CTX_CONTEXT_ID`
  * - 仅允许执行项目内 `.sh` 文件
  */
 async function runScriptTask(params: {
@@ -579,7 +579,7 @@ async function runScriptTask(params: {
         reject: true,
         env: {
           ...process.env,
-          SMA_CTX_CONTEXT_ID: params.contextId,
+          DC_CTX_CONTEXT_ID: params.contextId,
         },
       }),
   );

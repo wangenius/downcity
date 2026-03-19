@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "ShipMyAgent Web Share",
-  "description": "分享当前网页给指定 ShipMyAgent，并将执行结果回传到 Channel Chat。",
+  "name": "Downcity Web Share",
+  "description": "分享当前网页给指定 Downcity，并将执行结果回传到 Channel Chat。",
   "version": "0.1.1",
   "icons": {
     "16": "icon-16.png",
@@ -11,7 +11,7 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_title": "ShipMyAgent Web Share",
+    "default_title": "Downcity Web Share",
     "default_icon": {
       "16": "icon-16.png",
       "32": "icon-32.png"

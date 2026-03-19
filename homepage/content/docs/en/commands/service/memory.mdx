@@ -1,18 +1,18 @@
 ---
-title: sma memory
+title: city memory
 description: Memory service actions (status/index/search/get/store/flush)
 ---
 
-# `sma memory`
+# `city memory`
 
 Memory service command group.
 
-> Hierarchy note: `sma memory` is a service action command, not a top-level command. Top-level entry is `sma service`.
+> Hierarchy note: `city memory` is a service action command, not a top-level command. Top-level entry is `city service`.
 
 ## Usage
 
 ```bash
-sma memory <subcommand> [options]
+city memory <subcommand> [options]
 ```
 
 ## Subcommands
@@ -27,12 +27,12 @@ sma memory <subcommand> [options]
 ## Examples
 
 ```bash
-sma memory status
-sma memory index --force
-sma memory search "release decision"
-sma memory get .ship/memory/MEMORY.md --from 10 --lines 20
-sma memory store --target longterm --content "User prefers concise release notes."
-sma memory flush --context-id telegram-chat-123 --max-messages 40
+city memory status
+city memory index --force
+city memory search "release decision"
+city memory get .ship/memory/MEMORY.md --from 10 --lines 20
+city memory store --target longterm --content "User prefers concise release notes."
+city memory flush --context-id telegram-chat-123 --max-messages 40
 ```
 
 ## Notes
@@ -41,7 +41,7 @@ sma memory flush --context-id telegram-chat-123 --max-messages 40
 - Start agent runtime first:
 
 ```bash
-sma agent start
+city agent start
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -49,7 +49,7 @@ sma agent start
 The examples below are aligned with current command implementations in `package/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ sma memory search "release decision"
+$ city memory search "release decision"
 {
   "success": true,
   "data": {
@@ -60,7 +60,7 @@ $ sma memory search "release decision"
 ```
 
 ```text
-$ sma memory flush --context-id <contextId> --max-messages 40
+$ city memory flush --context-id <contextId> --max-messages 40
 {
   "success": true,
   "data": {

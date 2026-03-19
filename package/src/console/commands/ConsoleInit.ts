@@ -1,12 +1,12 @@
 /**
- * `sma init`：初始化 console（全局中台）的默认配置（`~/.ship/`）。
+ * `city init`：初始化 console（全局中台）的默认配置（`~/.ship/`）。
  *
  * 生成内容
  * - `~/.ship/ship.db`：console 全局配置与模型池（敏感字段加密）
  * - `~/.ship/schema/ship.schema.json`：给项目 ship.json 的 schema（可选）
  *
  * 关键点（中文）
- * - console 是强依赖：`sma console start` + `sma agent start` 都会使用这里的默认配置。
+ * - console 是强依赖：`city console start` + `city agent start` 都会使用这里的默认配置。
  * - console 级不再使用 `~/.ship/ship.json` 和 `~/.ship/.env`。
  * - agent 项目内 `ship.json/.env` 仍保持项目级配置职责。
  */

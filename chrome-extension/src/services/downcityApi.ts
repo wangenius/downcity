@@ -1,5 +1,5 @@
 /**
- * ShipMyAgent API 访问层。
+ * Downcity API 访问层。
  *
  * 关键点（中文）：
  * - 所有 HTTP 交互统一从这里走，UI 只关注业务流程。

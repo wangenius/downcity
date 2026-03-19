@@ -1,16 +1,16 @@
 ---
-title: sma agent create
-description: 创建/初始化一个 ShipMyAgent Agent 项目
+title: city agent create
+description: 创建/初始化一个 Downcity Agent 项目
 ---
 
-# `sma agent create`
+# `city agent create`
 
-在目标路径创建/初始化一个 ShipMyAgent Agent 项目。
+在目标路径创建/初始化一个 Downcity Agent 项目。
 
 ## 用法
 
 ```bash
-sma agent create [path]
+city agent create [path]
 ```
 
 ## 参数
@@ -26,10 +26,10 @@ sma agent create [path]
 
 ```bash
 # 在当前目录初始化
-sma agent create .
+city agent create .
 
 # 在指定目录初始化
-sma agent create ./my-agent-project
+city agent create ./my-agent-project
 ```
 
 ## 示例输出（基于当前实现）
@@ -37,9 +37,9 @@ sma agent create ./my-agent-project
 以下示例直接对齐 `package/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ sma agent create .
-sma version: 1.0.0
-🚀 Initializing ShipMyAgent project: <projectRoot>
+$ city agent create .
+city version: 1.0.0
+🚀 Initializing Downcity project: <projectRoot>
 ✅ Created PROFILE.md
 ✅ Created SOUL.md
 ✅ Created USER.md
@@ -49,10 +49,10 @@ sma version: 1.0.0
 ```
 
 ```text
-$ sma agent create .
-sma version: 1.0.0
+$ city agent create .
+city version: 1.0.0
 ❌ Console model pool is empty.
-   Please configure at least one model before `sma agent create`:
-   1) sma console model create
-   2) or use sma console model update/test for scripting
+   Please configure at least one model before `city agent create`:
+   1) city console model create
+   2) or use city console model update/test for scripting
 ```

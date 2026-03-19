@@ -2,7 +2,7 @@ import { WhitepaperSection } from "@/components/sections/WhitepaperSection";
 import { product } from "@/lib/product";
 
 export function meta() {
-  const baseUrl = product.homepage || "https://shipmyagent.com";
+  const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — The Repo IS The Agent`;
   const description = product.description;
 
@@ -42,7 +42,7 @@ export function meta() {
     },
     {
       property: "og:image:alt",
-      content: "ShipMyAgent - Transform Your Repository into an AI Agent",
+      content: "Downcity - Transform Your Repository into an AI Agent",
     },
     {
       name: "twitter:card",
@@ -66,7 +66,7 @@ export function meta() {
     },
     {
       name: "twitter:image:alt",
-      content: "ShipMyAgent - Transform Your Repository into an AI Agent",
+      content: "Downcity - Transform Your Repository into an AI Agent",
     },
     {
       tagName: "link",

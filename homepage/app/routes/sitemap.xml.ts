@@ -2,7 +2,7 @@ import { source } from "@/lib/source";
 import { product } from "@/lib/product";
 
 export const loader = async () => {
-  const baseUrl = product.homepage || "https://shipmyagent.com";
+  const baseUrl = product.homepage || "https://downcity.ai";
 
   // Get all documentation pages
   const pages = source.getPages();

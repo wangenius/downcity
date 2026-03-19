@@ -27,7 +27,7 @@ staticRouter.get("/", async (c) => {
       "Cache-Control": "no-cache",
     });
   }
-  return c.text("ShipMyAgent Agent Server", 200);
+  return c.text("Downcity Agent Server", 200);
 });
 
 staticRouter.get("/styles.css", async (c) => {

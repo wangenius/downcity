@@ -8,11 +8,11 @@ description: 上线前建议逐项确认的配置项
 上线或交付前，建议按下面顺序检查：
 
 1. 模型绑定
-- `ship.json.model.primary` 是否可在 `sma console model list` 中找到。
+- `ship.json.model.primary` 是否可在 `city console model list` 中找到。
 
 2. 网络与路由
 - `start.host/start.port` 与实际 daemon 一致。
-- 终端中没有残留错误的 `SMA_SERVER_*` 环境变量。
+- 终端中没有残留错误的 `DC_SERVER_*` 环境变量。
 
 3. 通道与服务
 - 仅启用必要的 chat channel / service。
@@ -20,11 +20,11 @@ description: 上线前建议逐项确认的配置项
 
 4. 权限与安全
 - `permissions.exec_command.deny` 已包含高风险命令。
-- `SMA_MODEL_DB_KEY` 已通过安全方式注入。
+- `DC_MODEL_DB_KEY` 已通过安全方式注入。
 
 5. 可观测性
 - 已确认日志路径可写且可回溯。
-- `sma console status`、`sma agent status` 状态正常。
+- `city console status`、`city agent status` 状态正常。
 
 ## 相关文档
 

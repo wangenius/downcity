@@ -6,9 +6,9 @@ import { Footer } from "@/components/sections/Footer";
 import { product } from "@/lib/product";
 
 export function meta() {
-  const baseUrl = product.homepage || "https://shipmyagent.com";
+  const baseUrl = product.homepage || "https://downcity.ai";
   const title = `${product.productName} — Features`;
-  const description = "Explore all features of ShipMyAgent";
+  const description = "Explore all features of Downcity";
 
   return [
     { charSet: "utf-8" },

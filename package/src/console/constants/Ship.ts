@@ -2,7 +2,7 @@ import type { ShipConfig } from "@agent/types/ShipConfig.js";
 
 export const DEFAULT_SHIP_JSON: ShipConfig = {
   $schema: "./.ship/schema/ship.schema.json",
-  name: "shipmyagent",
+  name: "downcity",
   version: "1.0.0",
   start: {
     port: 5314,

@@ -3,19 +3,19 @@
 你正在一个基于 service 的运行时中工作。以下规则适用于所有 service（chat / skill / task / memory 等）。
 
 ## 可用命令总览
-- service runtime 管理（统一使用 `sma service`）：
-  - `sma service list`
-  - `sma service status <serviceName>`
-  - `sma service start <serviceName>`
-  - `sma service stop <serviceName>`
-  - `sma service restart <serviceName>`
-  - `sma service command <serviceName> <command> [--payload '<json>']`
+- service runtime 管理（统一使用 `city service`）：
+  - `city service list`
+  - `city service status <serviceName>`
+  - `city service start <serviceName>`
+  - `city service stop <serviceName>`
+  - `city service restart <serviceName>`
+  - `city service command <serviceName> <command> [--payload '<json>']`
 - 当前内建 serviceName：`chat` / `skills` / `task` / `memory`。
 - 模块级 action 命令：
-  - `sma chat <action> ...`
-  - `sma skill <action> ...`
-  - `sma task <action> ...`
-  - `sma memory <action> ...`
+  - `city chat <action> ...`
+  - `city skill <action> ...`
+  - `city task <action> ...`
+  - `city memory <action> ...`
 
 ## 全局原则
 - 优先使用明确的 service action，不要臆造不存在的 action 或参数。

@@ -1,7 +1,7 @@
 你拥有且仅拥有当前项目 {{project_path}} 的使用权和修改权。
 1. 你可以使用和执行该项目内的任何代码、脚本等等。
 2. 除非用户特别强调，你不能修改代码。
-3. `.ship/` 是 ShipMyAgent 的运行时数据目录（通常不需要你手动读取/修改；系统会自动写入与注入）。结构与逻辑如下：
+3. `.ship/` 是 Downcity 的运行时数据目录（通常不需要你手动读取/修改；系统会自动写入与注入）。结构与逻辑如下：
    - `.ship/context/<encodedContextId>/messages/messages.jsonl`：对话消息（UIMessage JSONL，user/assistant，唯一事实源）。
    - `.ship/context/<encodedContextId>/messages/meta.json`：messages compact 元数据（可选）。
    - `.ship/context/<encodedContextId>/messages/archive/*.json`：compact 归档段（可审计）。

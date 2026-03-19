@@ -82,9 +82,9 @@ export interface UiAgentsResponse {
    */
   success?: boolean;
   /**
-   * 当前 SMA CLI 版本号。
+   * 当前 DC CLI 版本号。
    */
-  smaVersion?: string;
+  cityVersion?: string;
   /**
    * 当前可选 agent 列表。
    */
@@ -234,9 +234,9 @@ export interface UiOverviewResponse {
    */
   success?: boolean;
   /**
-   * 当前 SMA CLI 版本号。
+   * 当前 DC CLI 版本号。
    */
-  smaVersion?: string;
+  cityVersion?: string;
   /**
    * 当前 agent 基础信息。
    */

@@ -325,15 +325,15 @@ export function AppSidebar({
               onClick={() => {
                 if (sidebarMode === "agent-detail") onViewChange("globalOverview")
               }}
-              aria-label={sidebarMode === "agent-detail" ? "返回" : "SHIPMYAGENT"}
-              title={sidebarMode === "agent-detail" ? "返回" : "SHIPMYAGENT"}
+              aria-label={sidebarMode === "agent-detail" ? "返回" : "DOWNCITY"}
+              title={sidebarMode === "agent-detail" ? "返回" : "DOWNCITY"}
             >
               {sidebarMode === "agent-detail" ? (
                 <ChevronLeftIcon className="size-4" />
               ) : (
                 <img
                   src="/image.png"
-                  alt="SHIPMYAGENT"
+                  alt="DOWNCITY"
                   className="size-4 shrink-0 rounded-[3px] object-cover"
                 />
               )}
@@ -344,7 +344,7 @@ export function AppSidebar({
                 sidebarMode === "agent-list" ? "text-sm font-semibold tracking-[0.05em]" : "text-sm font-semibold",
               )}
             >
-              <span>{sidebarMode === "agent-detail" ? (selectedAgent?.name || "Agent") : "SHIPMYAGENT"}</span>
+              <span>{sidebarMode === "agent-detail" ? (selectedAgent?.name || "Agent") : "DOWNCITY"}</span>
             </span>
           </div>
         </div>

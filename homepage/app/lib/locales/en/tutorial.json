@@ -4,12 +4,12 @@
   "step1": {
     "title": "Initialize Config",
     "description": "Create an agent project in your repo. This generates `PROFILE.md` (Agent Instructions) and config files, giving your repository a unique personality and boundaries.",
-    "command": "sma agent create ."
+    "command": "city agent create ."
   },
   "step2": {
     "title": "Wake Up Runtime",
     "description": "Start the Agent Runtime locally. It takes over the repo's read/write capabilities and connects to your chat apps (e.g., Telegram), standing by as a team member.",
-    "command": "sma agent start"
+    "command": "city agent start"
   },
   "step3": {
     "title": "Collaborate Naturally",
@@ -22,7 +22,7 @@
     "terminal": {
       "windowTitle": "bash — 80x24",
       "step1": {
-        "initializing": "Initializing ShipMyAgent...",
+        "initializing": "Initializing Downcity...",
         "agentMdCreated": "✔ PROFILE.md created",
         "shipJsonCreated": "✔ ship.json created",
         "ready": "Ready to ship."
@@ -36,7 +36,7 @@
     },
     "chat": {
       "status": "Online",
-      "botName": "ShipMyAgent Bot",
+      "botName": "Downcity Bot",
       "you": "You",
       "cards": {
         "status": {

@@ -282,7 +282,7 @@ async function runTransformersWhisperRunner(params: {
 async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceConfigResolved> {
   const config = input.runtime.config.extensions?.voice;
   if (!config || config.enabled !== true) {
-    throw new Error("Voice extension is disabled. Run `sma voice on` first.");
+    throw new Error("Voice extension is disabled. Run `city voice on` first.");
   }
 
   const provider = config.provider || "local";
@@ -292,7 +292,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
 
   const modelId = config.activeModel;
   if (!modelId) {
-    throw new Error("Voice active model is not configured. Run `sma voice use <modelId>`.");
+    throw new Error("Voice active model is not configured. Run `city voice use <modelId>`.");
   }
 
   const installedModels = Array.isArray(config.installedModels)
@@ -300,7 +300,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
     : [];
   if (!installedModels.includes(modelId)) {
     throw new Error(
-      `Voice active model "${modelId}" is not installed. Run \`sma voice install ${modelId}\` first.`,
+      `Voice active model "${modelId}" is not installed. Run \`city voice install ${modelId}\` first.`,
     );
   }
 

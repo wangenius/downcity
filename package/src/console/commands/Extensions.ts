@@ -1,5 +1,5 @@
 /**
- * `sma extension` 命令组。
+ * `city extension` 命令组。
  *
  * 关键点（中文）
  * - 统一管理 extension runtime：list/status/start/stop/restart。
@@ -85,7 +85,7 @@ async function runExtensionListCommand(
     payload: {
       error:
         remote.error ||
-        "Extension list requires an active Agent server runtime. Start via `sma agent start` first.",
+        "Extension list requires an active Agent server runtime. Start via `city agent start` first.",
     },
   });
 }
@@ -130,7 +130,7 @@ async function runExtensionControlCommand(params: {
     payload: {
       error:
         remote.error ||
-        `Extension ${params.action} requires an active Agent server runtime. Start via \`sma agent start\` first.`,
+        `Extension ${params.action} requires an active Agent server runtime. Start via \`city agent start\` first.`,
     },
   });
 }
@@ -181,7 +181,7 @@ async function runExtensionCommandBridge(params: {
     payload: {
       error:
         remote.error ||
-        "Extension command requires an active Agent server runtime. Start via `sma agent start` first.",
+        "Extension command requires an active Agent server runtime. Start via `city agent start` first.",
     },
   });
 }

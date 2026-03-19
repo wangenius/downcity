@@ -2,7 +2,7 @@
  * Service action CLI 注册器。
  *
  * 关键点（中文）
- * - 负责把 service actions 挂到 commander（`sma <service> <action>`）。
+ * - 负责把 service actions 挂到 commander（`city <service> <action>`）。
  * - 仅处理 CLI 参数映射与远程调用，不承载 service runtime 状态机逻辑。
  */
 
@@ -229,7 +229,7 @@ function registerServiceActionCommand(params: {
       payload: {
         error:
           remote.error ||
-          "Service action requires an active Agent server runtime. Start via `sma agent start` first.",
+          "Service action requires an active Agent server runtime. Start via `city agent start` first.",
       },
     });
   });

@@ -1,15 +1,15 @@
 /**
- * ShipMyAgent daemon 管理（PID / 日志 / 启停）。
+ * Downcity daemon 管理（PID / 日志 / 启停）。
  *
  * 目标
- * - `shipmyagent agent start`：后台启动（终端退出后仍运行）
- * - `shipmyagent agent restart`：重启后台进程
+ * - `downcity agent start`：后台启动（终端退出后仍运行）
+ * - `downcity agent restart`：重启后台进程
  *
  * 约定
  * - 所有 daemon 相关文件都写入 `.ship/debug/`，便于排查：
- *   - `shipmyagent.pid`：进程 pid
- *   - `shipmyagent.daemon.log`：stdout/stderr 合并日志
- *   - `shipmyagent.daemon.json`：元数据（启动时间、参数等）
+ *   - `downcity.pid`：进程 pid
+ *   - `downcity.daemon.log`：stdout/stderr 合并日志
+ *   - `downcity.daemon.json`：元数据（启动时间、参数等）
  */
 
 import fs from "fs-extra";
@@ -244,7 +244,7 @@ export const startDaemonProcess = async (params: {
     stdio: ["ignore", logFd, logFd],
     env: {
       ...process.env,
-      SHIPMYAGENT_DAEMON: "1",
+      DOWNCITY_DAEMON: "1",
     },
   });
 

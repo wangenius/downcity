@@ -1,6 +1,6 @@
 {
   "title": "资源",
-  "subtitle": "构建 ShipMyAgent 所需的一切",
+  "subtitle": "构建 Downcity 所需的一切",
   "examples": {
     "title": "示例",
     "description": "探索示例项目和入门模板"
@@ -22,7 +22,7 @@
     "description": "云端托管与运行服务"
   },
   "hostingPage": {
-    "subtitle": "为你的 ShipMyAgent Agent 提供云端托管与运维支持",
+    "subtitle": "为你的 Downcity Agent 提供云端托管与运维支持",
     "badge": "即将上线",
     "features": {
       "deploy": {
@@ -49,12 +49,12 @@
     }
   },
   "examplesPage": {
-    "subtitle": "探索使用 ShipMyAgent 构建的示例项目与启动模板",
+    "subtitle": "探索使用 Downcity 构建的示例项目与启动模板",
     "viewCode": "查看代码",
     "featuresHeading": "功能",
     "contribute": {
       "title": "想贡献一个示例？",
-      "description": "分享你的 ShipMyAgent 项目，帮助我们壮大社区",
+      "description": "分享你的 Downcity 项目，帮助我们壮大社区",
       "button": "在 GitHub 提交"
     },
     "examplesList": {
@@ -84,7 +84,7 @@
     }
   },
   "useCasesPage": {
-    "subtitle": "ShipMyAgent 的真实世界应用与场景",
+    "subtitle": "Downcity 的真实世界应用与场景",
     "exampleLabel": "示例",
     "callout": {
       "title": "有更特别的用例？",

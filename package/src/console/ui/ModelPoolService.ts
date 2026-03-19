@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 封装 provider/model 的增删改查与测试逻辑，供 UI 网关复用。
- * - 与 CLI `sma console model` 保持同一数据源（ConsoleStore）。
+ * - 与 CLI `city console model` 保持同一数据源（ConsoleStore）。
  * - Provider 的密钥仅返回脱敏视图，避免在 UI 接口中泄露明文。
  */
 

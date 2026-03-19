@@ -32,14 +32,14 @@ function ensureContextFiles(projectRoot: string): void {
   // Check if initialized（启动入口一次性确认工程根目录与关键文件）
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     console.error(
-      '❌ Project not initialized. Please run "sma agent create" first',
+      '❌ Project not initialized. Please run "city agent create" first',
     );
     process.exit(1);
   }
 
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
     console.error(
-      '❌ ship.json does not exist. Please run "sma agent create" first',
+      '❌ ship.json does not exist. Please run "city agent create" first',
     );
     process.exit(1);
   }
@@ -104,14 +104,14 @@ export function ensureRuntimeModelBindingReady(projectRoot: string): void {
       console.error("❌ Model not found in console model pool");
       console.error(`   project: ${projectRoot}`);
       console.error(`   model.primary: ${primaryModelId}`);
-      console.error("   fix: run `sma console model create` or `sma console model list`");
+      console.error("   fix: run `city console model create` or `city console model list`");
       process.exit(1);
     }
     if (model.isPaused === true) {
       console.error("❌ Model is paused");
       console.error(`   project: ${projectRoot}`);
       console.error(`   model.primary: ${primaryModelId}`);
-      console.error(`   fix: run \`sma console model pause ${primaryModelId} --enabled false\``);
+      console.error(`   fix: run \`city console model pause ${primaryModelId} --enabled false\``);
       process.exit(1);
     }
   } finally {

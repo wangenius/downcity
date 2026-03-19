@@ -1,4 +1,4 @@
-export type ShipMyAgentProduct = {
+export type DowncityProduct = {
   name: string;
   productName: string;
   version: string;
@@ -6,11 +6,11 @@ export type ShipMyAgentProduct = {
   homepage?: string;
 };
 
-export const product: ShipMyAgentProduct = {
-  name: "shipmyagent",
-  productName: "ShipMyAgent",
+export const product: DowncityProduct = {
+  name: "downcity",
+  productName: "Downcity",
   version: "1.0.0",
   description:
     "Deploy your repository directly as a conversational, executable AI Agent. No extra orchestration required—just ship it.",
-  homepage: "https://github.com/wangenius/ShipMyAgent",
+  homepage: "https://downcity.ai",
 };

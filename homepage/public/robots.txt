@@ -5,4 +5,4 @@ Allow: /
 Disallow: /api/
 Disallow: /_server/
 
-Sitemap: https://shipmyagent.com/sitemap.xml
+Sitemap: https://downcity.ai/sitemap.xml

@@ -96,6 +96,6 @@ export const setLang = (language: "en" | "zh") => {
   i18n.changeLanguage(language);
   // Save to localStorage for persistence (no URL redirect needed)
   if (typeof window !== "undefined") {
-    localStorage.setItem("shipmyagent-lang", language);
+    localStorage.setItem("downcity-lang", language);
   }
 };

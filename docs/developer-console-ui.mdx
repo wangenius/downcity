@@ -8,7 +8,7 @@
 设计目标：
 
 - 前端独立开发、独立构建。
-- sma console ui start 只负责托管构建产物并代理 API。
+- city console ui start 只负责托管构建产物并代理 API。
 - 避免把页面逻辑继续写在 package/public 的手工静态脚本中。
 
 ---
@@ -23,7 +23,7 @@
 
 1. 发布前先构建 console-ui：vite build。
 2. 构建产物输出到 package/public（已在 vite.config.ts 配好）。
-3. 用户执行 sma console ui start 时，ConsoleUIGateway 直接托管这些静态文件并代理 /api/*。
+3. 用户执行 city console ui start 时，ConsoleUIGateway 直接托管这些静态文件并代理 /api/*。
 4. 不需要用户机器再跑 Vite 或前端构建。
 
 一句话：  
@@ -64,7 +64,7 @@
 
 以浏览器打开 http://127.0.0.1:3001 为例：
 
-1. 用户执行 sma console ui start。
+1. 用户执行 city console ui start。
 2. CLI 启动 Console UI Gateway 进程。
 3. 浏览器访问 /：Gateway 读取 package/public/index.html 并返回。
 4. 前端加载 /assets/*：Gateway 直接返回对应静态文件。
@@ -93,7 +93,7 @@
 
 # 6. 常见问题与排查
 
-# 6.1 sma console ui start 后页面 503
+# 6.1 city console ui start 后页面 503
 
 原因通常是 package/public/index.html 不存在。  
 
@@ -114,8 +114,8 @@
 
 检查：
 
-- sma console status / sma console ui status。
-- 目标 agent 是否在线（sma agent status）。
+- city console status / city console ui status。
+- 目标 agent 是否在线（city agent status）。
 - UI log 与 agent log 中具体 404/500 路径。
 
 ---

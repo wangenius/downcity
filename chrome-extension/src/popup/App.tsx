@@ -71,9 +71,8 @@ function buildInstructions(params: {
   const safeUrl = params.tab.url || "N/A";
   const userPrompt = String(params.taskPrompt || "").trim();
   return [
-    `附件：${params.markdownFileName}`,
-    `原文链接：${safeUrl}`,
-    `用户要求：${userPrompt || "请阅读附件并按需求处理。"}`,
+    `我浏览到了这个网页，${safeUrl}， 网页的内容保存到了（可能保存下来的有问题）：${params.markdownFileName}`,
+    `${userPrompt || "请阅读附件并按需求处理。"}`,
   ].join("\n");
 }
 

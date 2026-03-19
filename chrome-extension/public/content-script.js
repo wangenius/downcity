@@ -33,6 +33,7 @@
   const COMPOSER_MIN_WIDTH = 320;
   const COMPOSER_MAX_WIDTH = 460;
   const VIEWPORT_MARGIN = 10;
+  const TRIGGER_ICON_URL = chrome.runtime.getURL("image.png");
 
 
   const DEFAULT_SETTINGS = {
@@ -629,7 +630,12 @@
           box-shadow: 0 8px 18px rgba(15, 23, 42, 0.20);
         }
         .dc-trigger-btn:hover { background: #0f172a; }
-        .dc-trigger-btn svg { width: 14px; height: 14px; }
+        .dc-trigger-icon {
+          width: 16px;
+          height: 16px;
+          object-fit: contain;
+          display: block;
+        }
 
         .dc-composer {
           position: fixed;
@@ -791,9 +797,7 @@
 
       <div id="dcTrigger" class="dc-trigger dc-hidden">
         <button id="dcTriggerBtn" class="dc-trigger-btn" type="button" aria-label="打开输入框">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
-          </svg>
+          <img class="dc-trigger-icon" src="${TRIGGER_ICON_URL}" alt="" aria-hidden="true" />
         </button>
       </div>
 

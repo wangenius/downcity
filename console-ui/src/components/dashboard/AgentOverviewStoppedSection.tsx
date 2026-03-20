@@ -54,15 +54,14 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
           <div className="flex min-w-0 items-start gap-2">
             <img src="/image.png" alt="bot" className="mt-0.5 size-8 shrink-0 rounded-[4px] object-cover" />
             <div className="min-w-0 space-y-1">
-              <div className="truncate text-xl font-semibold leading-none text-foreground">{agent.name || "Unknown Agent"}</div>
+              <div className="truncate text-xl font-semibold leading-none text-foreground/74">{agent.name || "Unknown Agent"}</div>
               <div className="truncate text-xs text-muted-foreground">{path}</div>
             </div>
           </div>
         </div>
         <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0"
+          size="icon-sm"
+          variant="secondary"
           disabled={starting}
           title={starting ? "启动中" : "启动"}
           aria-label={starting ? "启动中" : "启动"}
@@ -79,7 +78,7 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
         </Button>
       </div>
 
-      <section className="rounded-md bg-muted/70 px-3 py-2">
+      <section className="rounded-[18px] bg-secondary/72 px-3.5 py-3">
         <BasicRow label="Model" value={model} />
         <BasicRow label="Path" value={path} />
         <BasicRow label="Host" value={String(agent.host || "-")} />
@@ -88,7 +87,7 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
         <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
           <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Status</div>
           <div className="inline-flex items-center gap-1 text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-muted-foreground/70" />
+            <span className="size-1.5 rounded-full bg-muted-foreground/45" />
             <span>stopped</span>
           </div>
         </div>

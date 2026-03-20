@@ -86,7 +86,7 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
               const openDisabled = item.enabled === true
               const closeDisabled = item.enabled !== true
               return (
-                <article key={channel} className="rounded-[20px] bg-secondary px-4 py-3">
+                <article key={channel} className="rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-secondary">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0 space-y-2">
                       <div className="text-sm font-semibold text-foreground">{channel}</div>

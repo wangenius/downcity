@@ -4,6 +4,7 @@
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { DashboardModule } from "./DashboardModule";
 import type { UiServiceItem } from "../../types/Dashboard";
 
 export interface ServicesSectionProps {
@@ -23,6 +24,11 @@ export interface ServicesSectionProps {
 
 export function ServicesSection(props: ServicesSectionProps) {
   const { services, statusBadgeVariant, onControlService } = props;
+  const runningCount = services.filter((svc) => {
+    const state = String(svc.state || svc.status || "").toLowerCase();
+    return state === "running" || state === "active" || state === "ok";
+  }).length;
+  const stoppedCount = services.length - runningCount;
 
   const badgeClass = (status?: string): string => {
     const tone = statusBadgeVariant(status);
@@ -32,14 +38,15 @@ export function ServicesSection(props: ServicesSectionProps) {
   };
 
   return (
-    <section className="space-y-3 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
-      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        Services Runtime
-      </div>
+    <DashboardModule
+      title="Services Runtime"
+      description={`运行中 ${runningCount} 个 · 其余 ${stoppedCount} 个`}
+      className="shadow-[0_1px_0_rgba(17,17,19,0.02)]"
+    >
       {services.length === 0 ? (
         <div className="py-4 text-sm text-muted-foreground">暂无 service 数据</div>
       ) : (
-        <div className="overflow-auto rounded-[18px] bg-secondary p-1.5">
+        <div className="overflow-auto rounded-[18px] bg-secondary/82 p-1.5">
           <table className="w-full border-separate border-spacing-y-1.5">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -53,7 +60,7 @@ export function ServicesSection(props: ServicesSectionProps) {
                 const name = String(svc.name || svc.service || "unknown");
                 const status = String(svc.state || svc.status || "unknown");
                 return (
-                  <tr key={name} className="bg-card">
+                  <tr key={name} className="bg-transparent transition-colors hover:bg-background/80">
                     <td className="rounded-l-[16px] px-3 py-2.5 text-sm font-medium">{name}</td>
                     <td className="px-2 py-2">
                       <Badge variant="outline" className={badgeClass(status)}>
@@ -62,13 +69,13 @@ export function ServicesSection(props: ServicesSectionProps) {
                     </td>
                     <td className="rounded-r-[16px] px-2 py-2">
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onClick={() => onControlService(name, "start")}>
+                        <Button size="sm" variant="secondary" onClick={() => onControlService(name, "start")}>
                           start
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => onControlService(name, "restart")}>
                           restart
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => onControlService(name, "stop")}>
+                        <Button size="sm" variant="destructive" onClick={() => onControlService(name, "stop")}>
                           stop
                         </Button>
                       </div>
@@ -80,6 +87,6 @@ export function ServicesSection(props: ServicesSectionProps) {
           </table>
         </div>
       )}
-    </section>
+    </DashboardModule>
   );
 }

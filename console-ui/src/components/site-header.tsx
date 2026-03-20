@@ -27,7 +27,7 @@ export function SiteHeader(props: SiteHeaderProps) {
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 bg-transparent transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
       <div className="flex w-full flex-wrap items-center gap-2 px-3 py-2 md:px-4 lg:gap-2 lg:px-5">
-        <div className="flex h-10 w-full items-center gap-2 rounded-[18px] bg-card px-2.5 shadow-[0_1px_0_rgba(17,17,19,0.02)] backdrop-blur-sm">
+        <div className="flex h-10 w-full items-center gap-2 rounded-[18px] bg-card px-2.5 backdrop-blur-sm">
           <SidebarTrigger className="-ml-0.5" />
           <h1 className="text-[0.95rem] font-medium tracking-[-0.02em] text-foreground">{compactTitle}</h1>
 

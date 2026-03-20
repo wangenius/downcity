@@ -7,6 +7,7 @@
  */
 
 import * as React from "react"
+import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import type {
   UiAgentOption,
@@ -65,18 +66,24 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
   const nonOkRequired = requiredConsoleItems.filter((item) => item.status !== "ok")
 
   const errorExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "error").length
-  const warningCount = nonOkRequired.length + errorExtensions + optionalMissingCount
   const requiredOkCount = requiredConsoleItems.length - nonOkRequired.length
   const configHealthy = nonOkRequired.length === 0
+  const configSummaryState = configHealthy
+    ? optionalMissingCount > 0
+      ? "warning"
+      : "ok"
+    : "error"
 
   const issueSignals = [
-    ...nonOkRequired.map((item) => ({
-      key: `config:${item.key}`,
-      source: "config",
-      name: item.label,
-      state: item.status,
-      detail: item.reason || item.path,
-    })),
+    ...consoleItems
+      .filter((item) => item.status !== "ok")
+      .map((item) => ({
+        key: `config:${item.key}`,
+        source: requiredConsoleKeys.has(item.key) ? "required config" : "optional config",
+        name: item.label,
+        state: item.status,
+        detail: item.reason || item.path,
+      })),
     ...extensions
       .filter((item) => String(item.state || "").toLowerCase() === "error")
       .map((item) => ({
@@ -87,86 +94,66 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
         detail: String(item.lastError || item.description || "").trim() || "-",
       })),
   ]
+  const dedupedSignals = Array.from(new Map(issueSignals.map((item) => [item.key, item])).values())
+  const totalSignals = dedupedSignals.length
 
   return (
     <section className="space-y-5">
-      <div
-        className={
-          configHealthy
-            ? "rounded-[18px] bg-emerald-500/10 px-3.5 py-3 text-emerald-800 dark:text-emerald-300"
-            : "rounded-[18px] bg-secondary px-3.5 py-3 text-muted-foreground"
-        }
+      <DashboardModule
+        title="Global Summary"
+        description="当前全局运行态与异常信号概览。"
       >
-        <div className="text-sm font-semibold">{configHealthy ? "配置正常" : "配置待完善"}</div>
-        <div className="mt-0.5 text-xs opacity-90">
-          {`required ${requiredOkCount}/${requiredConsoleItems.length}`}
-          {optionalMissingCount > 0 ? ` · optional missing ${optionalMissingCount}` : ""}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
+            {`dc ${String(cityVersion || "-")}`}
+          </span>
+          <span
+            className={
+              configSummaryState === "ok"
+                ? "inline-flex items-center rounded-full bg-emerald-500/12 px-2 py-1 text-emerald-700"
+                : configSummaryState === "warning"
+                  ? "inline-flex items-center rounded-full bg-secondary px-2 py-1 text-foreground"
+                  : "inline-flex items-center rounded-full bg-destructive/10 px-2 py-1 text-destructive"
+            }
+          >
+            {`config ${requiredOkCount}/${requiredConsoleItems.length}`}
+          </span>
+          {optionalMissingCount > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
+              {`optional missing ${optionalMissingCount}`}
+            </span>
+          ) : null}
+          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
+            {`extension errors ${errorExtensions}`}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
+            {`signals ${totalSignals}`}
+          </span>
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          {`DC version: ${String(cityVersion || "-")}`}
-        </div>
-      </div>
+      </DashboardModule>
 
-      <GlobalAgentsSection
-        agents={agents}
-        onStartAgent={onStartAgent}
-        onRestartAgent={onRestartAgent}
-        onStopAgent={onStopAgent}
-      />
+      <DashboardModule
+        title="Agent Runtime"
+        description={`共 ${agents.length} 个 agent，可直接在此启动、重启或停止。`}
+      >
+        <GlobalAgentsSection
+          agents={agents}
+          onStartAgent={onStartAgent}
+          onRestartAgent={onRestartAgent}
+          onStopAgent={onStopAgent}
+        />
+      </DashboardModule>
 
-      <section className="min-h-0 overflow-y-auto rounded-[22px] bg-card shadow-[0_1px_0_rgba(17,17,19,0.02)]">
-        {consoleItems.length === 0 ? (
-          <div className="px-4 py-5 text-sm text-muted-foreground">暂无 console 配置项</div>
-        ) : (
-          <div className="px-4 py-4">
-            <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
-            <table className="w-full table-fixed border-separate border-spacing-y-1.5 text-sm">
-              <thead>
-                <tr className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                  <th className="py-2 text-left font-medium">Config</th>
-                  <th className="w-[120px] py-2 text-left font-medium">Level</th>
-                  <th className="w-[96px] py-2 text-left font-medium">Status</th>
-                  <th className="py-2 text-left font-medium">Path</th>
-                </tr>
-              </thead>
-              <tbody>
-                {consoleItems.map((item) => {
-                  const isRequired = requiredConsoleKeys.has(item.key)
-                  const isOk = item.status === "ok"
-                  return (
-                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="bg-background align-middle">
-                      <td className="rounded-l-[16px] py-3 pr-3 pl-3">
-                        <div className="min-w-0">
-                          <div className="truncate text-[15px] font-semibold text-foreground">{item.label}</div>
-                          <div className="truncate text-[11px] text-muted-foreground">{item.key}</div>
-                        </div>
-                      </td>
-                      <td className="py-2 pr-3 text-xs text-muted-foreground">{isRequired ? "required" : "optional"}</td>
-                      <td className="py-2 pr-3 text-xs">
-                        <span className={isOk ? "text-emerald-700" : "text-muted-foreground"}>{item.status}</span>
-                      </td>
-                      <td className="rounded-r-[16px] py-2 pr-3 font-mono text-[11px] text-muted-foreground" title={item.path}>
-                        <span className="block truncate">{item.path}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-2 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
-        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          Health Signals
-        </div>
-        {issueSignals.length === 0 ? (
+      <DashboardModule
+        title="Signals"
+        description={dedupedSignals.length === 0 ? "当前没有异常信号。" : `共 ${dedupedSignals.length} 条异常信号。`}
+        className="shadow-[0_1px_0_rgba(17,17,19,0.02)]"
+      >
+        {dedupedSignals.length === 0 ? (
           <div className="py-2 text-sm text-muted-foreground">没有异常信号</div>
         ) : (
           <div className="space-y-1">
-            {issueSignals.map((signal) => (
+            {dedupedSignals.map((signal) => (
               <div
                 key={signal.key}
                 className="rounded-[16px] bg-destructive/8 px-3 py-2.5"
@@ -183,7 +170,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
             ))}
           </div>
         )}
-      </section>
+      </DashboardModule>
     </section>
   )
 }

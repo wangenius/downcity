@@ -420,6 +420,7 @@ export function App() {
           skills={skills}
           tasks={tasks}
           contexts={contexts}
+          channelAccounts={channelAccounts}
           consoleUiContextId={constants.CONSOLEUI_CONTEXT_ID}
           configStatus={configStatus}
           model={model}

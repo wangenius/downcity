@@ -253,7 +253,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant="ghost"
+                                    variant="destructive"
                                     className="h-8 w-8 p-0"
                                     disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                                     aria-label="stop"
@@ -324,7 +324,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
               取消
             </Button>
             <Button
-              variant="outline"
+              variant={confirmAction?.action === "stop" ? "destructive" : "secondary"}
               disabled={Boolean(actionLoadingKey)}
               onClick={async () => {
                 const target = confirmAction

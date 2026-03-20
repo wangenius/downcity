@@ -59,20 +59,6 @@ type FeishuMessageEvent = {
 
 type FeishuMessagePayloadType = "text" | "file";
 
-function sanitizeChatText(text: string): string {
-  if (!text) return text;
-  let out = text;
-  out = out.replace(
-    /(^|\n)Tool Result:[\s\S]*?(?=\n{2,}|$)/g,
-    "\n[工具输出已省略：我已在后台读取并提炼关键信息]\n",
-  );
-  if (out.length > 6000) {
-    out =
-      out.slice(0, 5800) + "\n\n…[truncated]（如需完整输出请回复“发完整输出”）";
-  }
-  return out;
-}
-
 export class FeishuBot extends BaseChatChannel {
   private appId: string;
   private appSecret: string;
@@ -127,7 +113,7 @@ export class FeishuBot extends BaseChatChannel {
       typeof params.chatType === "string" ? params.chatType : "p2p";
     const messageId =
       typeof params.messageId === "string" ? params.messageId : undefined;
-    const text = sanitizeChatText(String(params.text ?? ""));
+    const text = String(params.text ?? "");
 
     if (messageId && chatType !== "p2p") {
       await this.sendMessage(params.chatId, chatType, messageId, text);

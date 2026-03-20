@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ArrowRightIcon, Loader2Icon, PauseIcon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react";
 import type {
   UiAgentOption,
+  UiChannelAccountItem,
   UiConfigStatusItem,
   UiChatChannelStatus,
   UiContextSummary,
@@ -48,6 +49,10 @@ export interface SummaryCardsProps {
    * context 列表（用于 chat overview 跳转）。
    */
   contexts: UiContextSummary[];
+  /**
+   * channel account 列表（用于显示当前绑定账号名称）。
+   */
+  channelAccounts: UiChannelAccountItem[];
   /**
    * consoleui channel 默认 context id。
    */
@@ -142,6 +147,7 @@ export function SummaryCards(props: SummaryCardsProps) {
     skills,
     tasks,
     contexts,
+    channelAccounts,
     consoleUiContextId,
     configStatus,
     model,
@@ -187,17 +193,41 @@ export function SummaryCards(props: SummaryCardsProps) {
    * 关键点（中文）：统一按 channel 建索引，方便 chat overview 渲染动作禁用态。
    */
   const chatStatusByChannel = React.useMemo(() => {
-    const map = new Map<string, { enabled?: boolean; configured?: boolean }>();
+    const map = new Map<string, { enabled?: boolean; configured?: boolean; channelAccountId?: string }>();
     for (const item of chatChannels) {
       const channel = String(item.channel || "").trim().toLowerCase();
       if (!channel) continue;
+      const detail = item.detail;
+      const detailRecord =
+        detail && typeof detail === "object" && !Array.isArray(detail)
+          ? (detail as Record<string, unknown>)
+          : null;
+      const configRecord =
+        detailRecord?.config && typeof detailRecord.config === "object" && !Array.isArray(detailRecord.config)
+          ? (detailRecord.config as Record<string, unknown>)
+          : null;
       map.set(channel, {
         enabled: item.enabled,
         configured: item.configured,
+        channelAccountId: String(configRecord?.channelAccountId || "").trim(),
       });
     }
     return map;
   }, [chatChannels]);
+
+  /**
+   * 关键点（中文）：把 accountId -> 名称做本地映射，保证 agent overview 可直接显示当前绑定账号。
+   */
+  const channelAccountNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of channelAccounts) {
+      const id = String(item.id || "").trim();
+      if (!id) continue;
+      const label = String(item.name || item.id || "").trim() || id;
+      map.set(id, label);
+    }
+    return map;
+  }, [channelAccounts]);
 
   /**
    * 关键点（中文）：补齐内置 service，避免接口偶发缺项导致 UI 不显示（例如 skill）。
@@ -298,9 +328,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                 )}
               </Button>
               <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 w-7 p-0 text-destructive"
+                size="icon-sm"
+                variant="destructive"
                 onClick={() => {
                   setPendingAgentAction("stop");
                   void Promise.resolve(onStopAgent()).finally(() => setPendingAgentAction(""));
@@ -318,9 +347,8 @@ export function SummaryCards(props: SummaryCardsProps) {
             </>
           ) : (
             <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 w-7 p-0"
+              size="icon-sm"
+              variant="secondary"
               onClick={() => {
                 setPendingAgentAction("start");
                 void Promise.resolve(onStartAgent()).finally(() => setPendingAgentAction(""));
@@ -422,6 +450,7 @@ export function SummaryCards(props: SummaryCardsProps) {
           let chatItems: Array<{
             channel: string;
             link: string;
+            accountName: string;
             contextId: string;
             clickable: boolean;
           }> = [];
@@ -436,9 +465,15 @@ export function SummaryCards(props: SummaryCardsProps) {
                   const channel = String(profile.channel || "-");
                   const link = String(profile.linkState || profile.statusText || "unknown");
                   const contextId = resolveContextIdByChatProfile(channel);
+                  const status = chatStatusByChannel.get(channel.trim().toLowerCase());
+                  const channelAccountId = String(status?.channelAccountId || "").trim();
+                  const accountName = channelAccountId
+                    ? String(channelAccountNameById.get(channelAccountId) || channelAccountId)
+                    : "no binding";
                   return {
                     channel,
                     link,
+                    accountName,
                     contextId,
                     clickable: Boolean(contextId),
                   };
@@ -460,7 +495,7 @@ export function SummaryCards(props: SummaryCardsProps) {
               : [`consoleui: ${consoleUiExists ? "ok" : "missing"}`];
           }
 
-          const panelTone = index % 2 === 0 ? "bg-secondary" : "bg-secondary";
+          const panelTone = "bg-secondary";
 
           return (
             <section key={`${name}:${index}`} className={`space-y-1 rounded-[18px] px-3.5 py-3 ${panelTone}`}>
@@ -475,7 +510,11 @@ export function SummaryCards(props: SummaryCardsProps) {
                         <button
                           key={`${name}:action:${action}`}
                           type="button"
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-[10px] text-muted-foreground hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          className={
+                            action === "stop"
+                              ? "inline-flex h-6 w-6 items-center justify-center rounded-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                              : "inline-flex h-6 w-6 items-center justify-center rounded-[10px] text-muted-foreground hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          }
                           title={meta.label}
                           aria-label={meta.label}
                           disabled={isServiceActionPending(`${name}:${action}`)}
@@ -503,7 +542,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               </div>
               {isTaskOverview && taskItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                <div className="overflow-x-auto rounded-[18px]">
                   <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
@@ -518,14 +557,14 @@ export function SummaryCards(props: SummaryCardsProps) {
                         const title = String(task.title || `task-${taskIndex}`).trim();
                         const status = String(task.status || "unknown").trim().toLowerCase();
                         return (
-                          <tr key={`${name}:task:${title}:${taskIndex}`} className="bg-card text-muted-foreground">
+                          <tr key={`${name}:task:${title}:${taskIndex}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
                             <td className="max-w-0 rounded-l-[14px] py-2 pr-2 pl-2 truncate">{title}</td>
                             <td className="py-1.5 pr-2">{status}</td>
                             <td className="py-1.5 pr-2">{formatLastRun(task.lastRunTimestamp)}</td>
                             <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground"
+                                className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground"
                                 onClick={() => onOpenTask(title)}
                               >
                                 <span>open</span>
@@ -540,7 +579,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isChatOverview && chatItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                <div className="overflow-x-auto rounded-[18px]">
                   <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
@@ -551,9 +590,14 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {chatItems.map((chatItem, chatIndex) => (
-                        <tr key={`${name}:chat:${chatItem.channel}:${chatIndex}`} className="bg-card text-muted-foreground">
+                        <tr key={`${name}:chat:${chatItem.channel}:${chatIndex}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
                           <td className="rounded-l-[14px] py-2 pr-2 pl-2">{chatItem.channel}</td>
-                          <td className="py-1.5 pr-2">{chatItem.link}</td>
+                          <td className="py-1.5 pr-2">
+                            <div className="space-y-0.5">
+                              <div>{chatItem.link}</div>
+                              <div className="text-[10px] text-muted-foreground/80">{chatItem.accountName}</div>
+                            </div>
+                          </td>
                           <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
                             {(() => {
                               const normalizedChannel = String(chatItem.channel || "").trim();
@@ -572,7 +616,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                 <div className="flex flex-wrap items-center justify-end gap-1">
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     onClick={() => onOpenContext(chatItem.contextId)}
                                     disabled={!chatItem.clickable}
                                   >
@@ -581,7 +625,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                   </button>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     disabled={openDisabled || isServiceActionPending(openKey)}
                                     onClick={() => {
                                       setPendingServiceActions((prev) => ({ ...prev, [openKey]: true }));
@@ -595,7 +639,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                   </button>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     disabled={closeDisabled || isServiceActionPending(closeKey)}
                                     onClick={() => {
                                       setPendingServiceActions((prev) => ({ ...prev, [closeKey]: true }));
@@ -609,7 +653,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                   </button>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     disabled={runtimeActionDisabled || isServiceActionPending(testKey)}
                                     onClick={() => {
                                       setPendingServiceActions((prev) => ({ ...prev, [testKey]: true }));
@@ -623,7 +667,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                   </button>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     disabled={runtimeActionDisabled || isServiceActionPending(reconnectKey)}
                                     onClick={() => {
                                       setPendingServiceActions((prev) => ({ ...prev, [reconnectKey]: true }));
@@ -646,7 +690,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isSkillOverview && skills.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                <div className="overflow-x-auto rounded-[18px]">
                   <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
@@ -658,7 +702,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {skills.map((item, skillIndex) => (
-                        <tr key={`${name}:skill:${item.id || item.name || skillIndex}`} className="bg-card text-muted-foreground">
+                        <tr key={`${name}:skill:${item.id || item.name || skillIndex}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
                           <td className="rounded-l-[14px] py-2 pr-2 pl-2">{item.name || item.id || "-"}</td>
                           <td className="py-1.5 pr-2 max-w-0 truncate">{item.description || "-"}</td>
                           <td className="py-1.5 pr-2">{item.source || "-"}</td>
@@ -674,7 +718,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isMemoryOverview && memoryConfigItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                <div className="overflow-x-auto rounded-[18px]">
                   <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
@@ -685,7 +729,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {memoryConfigItems.map((item) => (
-                        <tr key={`${name}:memory:${item.key}`} className="bg-card text-muted-foreground">
+                        <tr key={`${name}:memory:${item.key}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
                           <td className="rounded-l-[14px] py-2 pr-2 pl-2">{item.label}</td>
                           <td className="py-1.5 pr-2">{item.status}</td>
                           <td className="max-w-0 rounded-r-[14px] py-1.5 pr-2 truncate">{item.path}</td>
@@ -696,7 +740,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isContextOverview && contextItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                <div className="overflow-x-auto rounded-[18px]">
                   <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
@@ -706,12 +750,12 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {contextItems.map((contextId) => (
-                        <tr key={`${name}:context:${contextId}`} className="bg-card text-muted-foreground">
+                        <tr key={`${name}:context:${contextId}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
                           <td className="max-w-0 rounded-l-[14px] py-2 pr-2 pl-2 truncate">{contextId}</td>
                           <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
                             <button
                               type="button"
-                              className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground"
+                              className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground"
                               onClick={() => onOpenContext(contextId)}
                             >
                               <span>open</span>

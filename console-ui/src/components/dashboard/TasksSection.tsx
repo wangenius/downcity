@@ -354,7 +354,7 @@ export function TasksSection(props: TasksSectionProps) {
                 <button
                   key={title}
                   type="button"
-                  className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-card px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+                  className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-secondary"
                   onClick={() => onSelectTaskTitle?.(title)}
                 >
                   <div className="min-w-0 space-y-1">
@@ -592,7 +592,7 @@ export function TasksSection(props: TasksSectionProps) {
                       type="button"
                       className={cn(
                         "min-w-0 flex-1 rounded-[18px] px-3.5 py-3 text-left transition-colors",
-                        isActive ? "bg-secondary" : "bg-card hover:bg-secondary",
+                        isActive ? "bg-secondary" : "bg-transparent hover:bg-secondary",
                       )}
                       onClick={() => {
                         setSelectedRunTimestamp(run.timestamp);

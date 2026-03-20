@@ -326,7 +326,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
               return (
                 <div
                   key={id}
-                  className="group flex items-center gap-3 rounded-[18px] bg-card px-3.5 py-3 transition-colors hover:bg-secondary"
+                  className="group flex items-center gap-3 rounded-[18px] bg-transparent px-3.5 py-3 transition-colors hover:bg-background"
                 >
                   <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${ready ? "bg-emerald-500" : "bg-zinc-400"}`} />
                   <div className="min-w-0 flex-1 space-y-1">

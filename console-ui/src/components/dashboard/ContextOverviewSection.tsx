@@ -8,6 +8,7 @@
  */
 
 import * as React from "react"
+import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -205,13 +206,22 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
 
   return (
     <div className="space-y-5">
-      <section className="space-y-3">
-        {!activeChannel ? (
+      {!activeChannel ? (
+        <DashboardModule
+          title="Channel Runtime"
+          description="当前 channel 暂无状态。"
+        >
           <section className="rounded-[18px] bg-secondary px-3.5 py-5 text-sm text-muted-foreground">
             当前 channel 暂无状态
           </section>
-        ) : (
-          <div className="space-y-4 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
+        </DashboardModule>
+      ) : (
+        <DashboardModule
+          title="Channel Runtime"
+          description={`当前 channel：${activeChannelName || "unknown"} · account ${activeChannelAccountLabel}`}
+          className="shadow-[0_1px_0_rgba(17,17,19,0.02)]"
+        >
+          <div className="space-y-4">
             <div className="flex items-start justify-between gap-3 px-1 py-1">
               <div className="min-w-0">
                 <div className="truncate text-xl font-semibold leading-none text-foreground">{activeChannelName || "unknown"}</div>
@@ -317,14 +327,14 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
             ) : null}
 
           </div>
-        )}
-      </section>
+        </DashboardModule>
+      )}
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Contexts</div>
-          <div className="text-xs text-muted-foreground">{`total ${visibleContexts.length}`}</div>
-        </div>
+      <DashboardModule
+        title="Contexts"
+        description={`当前筛选结果 ${visibleContexts.length} 条。`}
+        actions={<div className="text-xs text-muted-foreground">{`total ${visibleContexts.length}`}</div>}
+      >
 
         <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
           <Input
@@ -366,7 +376,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
               return (
                 <article
                   key={item.contextId}
-                  className={isSelected ? "rounded-[20px] bg-secondary px-4 py-3" : "rounded-[20px] bg-card px-4 py-3"}
+                  className={isSelected ? "rounded-[20px] bg-background px-4 py-3" : "rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-background"}
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
@@ -455,7 +465,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
             })}
           </div>
         )}
-      </section>
+      </DashboardModule>
     </div>
   )
 }

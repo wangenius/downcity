@@ -9,7 +9,7 @@
 import * as React from "react"
 import { Badge } from "../ui/badge"
 import { Button } from "../ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+import { DashboardModule } from "./DashboardModule"
 import type {
   UiConfigStatusItem,
   UiExtensionRuntimeItem,
@@ -83,16 +83,15 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
   return (
     <section className="space-y-5">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle>Runtime Board</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={onRefresh}>
-                refresh
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
+        <DashboardModule
+          title="Runtime Board"
+          description="Console、prompt 与 extension 的即时运行状态。"
+          actions={
+            <Button size="sm" variant="outline" onClick={onRefresh}>
+              refresh
+            </Button>
+          }
+        >
             <div className="grid gap-3 md:grid-cols-2">
               <article className="rounded-[18px] bg-secondary p-3.5">
                 <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Console Link</div>
@@ -122,14 +121,12 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
                 <p className="mt-2 text-xs text-muted-foreground">{`error ${errorExtensions} · total ${extensions.length}`}</p>
               </article>
             </div>
-          </CardContent>
-        </Card>
+        </DashboardModule>
 
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle>Health Snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-4">
+        <DashboardModule
+          title="Health Snapshot"
+          description="优先关注 required 配置项与缺失情况。"
+        >
             <div className="grid gap-2 sm:grid-cols-3">
               <article className="rounded-[18px] bg-secondary p-3.5">
                 <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Required</div>
@@ -149,34 +146,32 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
             <p className="text-xs text-muted-foreground">
               配置异常优先处理顺序：`required + missing/error` → `optional + error` → 其他。
             </p>
-          </CardContent>
-        </Card>
+        </DashboardModule>
       </div>
 
-      <Card>
-        <CardHeader className="pb-0">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Config Workbench</CardTitle>
-            <div className="flex items-center gap-1.5">
-              {([
-                ["required", `required (${requiredItems.length})`],
-                ["optional", `optional (${optionalItems.length})`],
-                ["all", `all (${consoleConfigItems.length})`],
-              ] as const).map(([key, label]) => (
-                <Button
-                  key={key}
-                  size="sm"
-                  variant={mode === key ? "secondary" : "outline"}
-                  className="h-7 px-2 text-[11px]"
-                  onClick={() => setMode(key)}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
+      <DashboardModule
+        title="Config Workbench"
+        description="按 required / optional 维度筛选 console 配置状态。"
+        actions={
+          <div className="flex items-center gap-1.5">
+            {([
+              ["required", `required (${requiredItems.length})`],
+              ["optional", `optional (${optionalItems.length})`],
+              ["all", `all (${consoleConfigItems.length})`],
+            ] as const).map(([key, label]) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={mode === key ? "secondary" : "outline"}
+                className="h-7 px-2 text-[11px]"
+                onClick={() => setMode(key)}
+              >
+                {label}
+              </Button>
+            ))}
           </div>
-        </CardHeader>
-        <CardContent className="pt-4">
+        }
+      >
           {filteredItems.length === 0 ? (
             <div className="rounded-[18px] bg-secondary px-4 py-5 text-sm text-muted-foreground">
               当前筛选下没有配置项。
@@ -227,8 +222,7 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </DashboardModule>
     </section>
   )
 }

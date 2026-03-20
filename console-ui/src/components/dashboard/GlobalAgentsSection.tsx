@@ -56,35 +56,41 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
             return (
               <article
                 key={agent.id}
-                className={isRunning ? "rounded-[20px] bg-card px-4 py-3" : "rounded-[20px] bg-secondary px-4 py-3 text-muted-foreground"}
+                className={
+                  isRunning
+                    ? "rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-background"
+                    : "rounded-[20px] bg-transparent px-4 py-3 text-muted-foreground opacity-58 transition-all hover:bg-background hover:opacity-78"
+                }
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className={isRunning ? "mt-0.5 rounded-full bg-emerald-500/12 p-2 text-emerald-700" : "mt-0.5 rounded-full bg-secondary p-2 text-muted-foreground"}>
+                    <div className={isRunning ? "mt-0.5 rounded-full bg-emerald-500/12 p-2 text-emerald-700" : "mt-0.5 rounded-full bg-secondary/80 p-2 text-muted-foreground"}>
                       <BotIcon className="size-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate text-[15px] font-semibold text-foreground">{agent.name || "unknown-agent"}</div>
+                      <div className={isRunning ? "truncate text-[15px] font-semibold text-foreground" : "truncate text-[15px] font-semibold text-foreground/72"}>
+                        {agent.name || "unknown-agent"}
+                      </div>
                       <div className="truncate font-mono text-[11px] text-muted-foreground">{agent.id}</div>
                     </div>
                   </div>
 
                   <div className="flex flex-1 flex-wrap items-center gap-2 lg:justify-end">
-                    <span className="inline-flex h-7 max-w-full items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-foreground/86">
+                    <span className={isRunning ? "inline-flex h-7 max-w-full items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-foreground/86" : "inline-flex h-7 max-w-full items-center rounded-full bg-secondary/75 px-2.5 font-mono text-[11px] text-foreground/62"}>
                       {primaryModelId || "-"}
                     </span>
-                    <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground">
+                    <span className={isRunning ? "inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground" : "inline-flex h-7 items-center rounded-full bg-secondary/75 px-2.5 font-mono text-[11px] text-muted-foreground"}>
                       {`pid ${isRunning ? String(agent.daemonPid || "-") : "-"}`}
                     </span>
-                    <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground">
+                    <span className={isRunning ? "inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground" : "inline-flex h-7 items-center rounded-full bg-secondary/75 px-2.5 font-mono text-[11px] text-muted-foreground"}>
                       {`port ${isRunning ? String(agent.port || "-") : "-"}`}
                     </span>
                     {isRunning ? (
                       <div className="ml-auto flex items-center gap-1.5">
                         <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-[10px] bg-secondary p-0 hover:bg-accent"
+                          size="icon-sm"
+                          variant="secondary"
+                          className="bg-secondary"
                           onClick={() => setConfirmAction({ agent, action: "restart" })}
                           disabled={isRestarting || isStopping}
                           aria-label="重启"
@@ -93,9 +99,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                           {isRestarting ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
                         </Button>
                         <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-[10px] bg-secondary p-0 hover:bg-accent"
+                          size="icon-sm"
+                          variant="destructive"
                           onClick={() => setConfirmAction({ agent, action: "stop" })}
                           disabled={isRestarting || isStopping}
                           aria-label="停止"
@@ -106,9 +111,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                       </div>
                     ) : (
                       <Button
-                        size="sm"
-                        variant="ghost"
-                        className="ml-auto h-8 w-8 rounded-[10px] bg-secondary p-0 hover:bg-accent"
+                        size="icon-sm"
+                        variant="secondary"
+                        className="ml-auto bg-secondary"
                         disabled={isStarting || isRestarting || isStopping}
                         aria-label="启动"
                         title="启动"
@@ -158,7 +163,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
               取消
             </Button>
             <Button
-              variant="outline"
+              variant={confirmAction?.action === "stop" ? "destructive" : "secondary"}
               disabled={Boolean(restartingAgentId || stoppingAgentId)}
               onClick={async () => {
                 const target = confirmAction

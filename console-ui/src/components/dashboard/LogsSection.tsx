@@ -2,6 +2,7 @@
  * 日志区。
  */
 
+import { DashboardModule } from "./DashboardModule";
 import type { UiLogItem } from "../../types/Dashboard";
 
 export interface LogsSectionProps {
@@ -17,24 +18,29 @@ export interface LogsSectionProps {
 
 export function LogsSection(props: LogsSectionProps) {
   const { logs, formatTime } = props;
+  const lines =
+    logs.length === 0
+      ? "暂无日志"
+      : logs
+          .map((item) => {
+            const time = formatTime(item.timestamp);
+            const level = String(item.type || item.level || "info").toUpperCase();
+            const message = String(item.message || "");
+            return `[${time}] [${level}] ${message}`;
+          })
+          .join("\n");
 
   return (
-    <section className="space-y-3">
-      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        Recent Logs
+    <DashboardModule
+      title="Recent Logs"
+      description={`最近 ${logs.length} 条日志输出。`}
+      bodyClassName="gap-0"
+    >
+      <div className="overflow-hidden rounded-[20px] bg-secondary/85">
+        <pre className="max-h-[68vh] overflow-auto px-4 py-4 font-mono text-[11px] leading-relaxed text-foreground/88">
+          {lines}
+        </pre>
       </div>
-      <pre className="max-h-[68vh] overflow-auto rounded-[22px] bg-card px-4 py-3.5 font-mono text-[11px] leading-relaxed text-foreground shadow-[0_1px_0_rgba(15,23,42,0.02)]">
-        {logs.length === 0
-          ? "暂无日志"
-          : logs
-              .map((item) => {
-                const time = formatTime(item.timestamp);
-                const level = String(item.type || item.level || "info").toUpperCase();
-                const message = String(item.message || "");
-                return `[${time}] [${level}] ${message}`;
-              })
-              .join("\n")}
-      </pre>
-    </section>
+    </DashboardModule>
   );
 }

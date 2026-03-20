@@ -169,9 +169,30 @@ export interface UpsertModelInput {
 }
 
 /**
- * Console 全局环境变量记录。
+ * Env 条目作用域。
  */
-export interface StoredGlobalEnvEntry {
+export type StoredEnvScope = "global" | "agent";
+
+/**
+ * Console Env 记录。
+ */
+export interface StoredEnvEntry {
+  /**
+   * Env 作用域。
+   *
+   * 关键点（中文）
+   * - `global` 表示 Console 全局共享变量。
+   * - `agent` 表示仅某个 agent 可见的私有变量。
+   */
+  scope: StoredEnvScope;
+  /**
+   * Agent 唯一标识（使用 projectRoot 绝对路径）。
+   *
+   * 关键点（中文）
+   * - 仅当 `scope=agent` 时有值。
+   * - `scope=global` 时为空。
+   */
+  agentId?: string;
   /**
    * 环境变量 key（例如 `OPENAI_API_KEY`）。
    */
@@ -191,35 +212,21 @@ export interface StoredGlobalEnvEntry {
 }
 
 /**
- * Agent 私有环境变量记录。
+ * Env 写入参数。
  */
-export interface StoredAgentEnvEntry {
+export interface UpsertEnvEntryInput {
   /**
-   * Agent 唯一标识（使用 projectRoot 绝对路径）。
+   * Env 作用域。
    */
-  agentId: string;
+  scope: StoredEnvScope;
   /**
-   * 环境变量 key（例如 `QQ_APP_ID`）。
+   * Agent 唯一标识（projectRoot）。
+   *
+   * 关键点（中文）
+   * - 仅 `scope=agent` 时必填。
+   * - `scope=global` 时忽略。
    */
-  key: string;
-  /**
-   * 环境变量 value（解密后的明文，仅运行时内存可见）。
-   */
-  value: string;
-  /**
-   * 创建时间（ISO 字符串）。
-   */
-  createdAt: string;
-  /**
-   * 更新时间（ISO 字符串）。
-   */
-  updatedAt: string;
-}
-
-/**
- * 全局环境变量写入参数。
- */
-export interface UpsertGlobalEnvEntryInput {
+  agentId?: string;
   /**
    * 环境变量 key。
    */
@@ -231,22 +238,43 @@ export interface UpsertGlobalEnvEntryInput {
 }
 
 /**
- * Agent 私有环境变量写入参数。
+ * 全局环境变量记录。
+ *
+ * 关键点（中文）
+ * - 作为统一 `StoredEnvEntry` 的别名保留。
+ * - 调用方可继续按全局 env 语义使用。
  */
-export interface UpsertAgentEnvEntryInput {
+export type StoredGlobalEnvEntry = StoredEnvEntry;
+
+/**
+ * Agent 私有环境变量记录。
+ *
+ * 关键点（中文）
+ * - 作为统一 `StoredEnvEntry` 的别名保留。
+ * - 调用方可继续按 agent env 语义使用。
+ */
+export type StoredAgentEnvEntry = StoredEnvEntry;
+
+/**
+ * 全局环境变量写入参数。
+ *
+ * 关键点（中文）
+ * - 作为统一 `UpsertEnvEntryInput` 的别名保留。
+ */
+export type UpsertGlobalEnvEntryInput = Omit<UpsertEnvEntryInput, "scope" | "agentId">;
+
+/**
+ * Agent 私有环境变量写入参数。
+ *
+ * 关键点（中文）
+ * - 作为统一 `UpsertEnvEntryInput` 的别名保留。
+ */
+export type UpsertAgentEnvEntryInput = Omit<UpsertEnvEntryInput, "scope"> & {
   /**
    * Agent 唯一标识（projectRoot）。
    */
   agentId: string;
-  /**
-   * 环境变量 key。
-   */
-  key: string;
-  /**
-   * 环境变量值；空字符串也允许（用于显式置空）。
-   */
-  value: string;
-}
+};
 
 /**
  * Channel Account 记录。

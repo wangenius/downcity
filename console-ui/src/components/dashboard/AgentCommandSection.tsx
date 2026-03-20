@@ -9,6 +9,7 @@
 import * as React from "react"
 import { CheckIcon, ChevronsUpDownIcon, TerminalIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -513,63 +514,78 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
     })
   }, [records.length, running])
 
+  const activeAgentBadge = activeAgentId ? activeAgentName : "未选择 agent"
+
   return (
-    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] bg-card shadow-[0_1px_0_rgba(17,17,19,0.02),0_8px_24px_rgba(17,17,19,0.02)]">
-      <div className="flex shrink-0 items-center gap-2 bg-secondary px-3 py-3">
-        <div className="min-w-0 flex-1">
-          {agents.length > 0 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="inline-flex h-9 min-w-[14rem] max-w-[24rem] items-center justify-between gap-2 rounded-[12px] bg-card px-3 text-sm text-foreground outline-none transition-colors hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/30"
-                aria-label="选择 agent"
-              >
-                <span className="truncate text-left">{activeAgentName}</span>
-                <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[24rem] max-w-[calc(100vw-2rem)]">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>选择 agent</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {agents.map((agent) => {
-                    const id = String(agent.id || "").trim()
-                    if (!id) return null
-                    const isActive = id === activeAgentId
-                    return (
-                      <DropdownMenuItem
-                        key={id}
-                        onClick={() => {
-                          setActiveAgentId(id)
-                          onSelectAgent?.(id)
-                        }}
-                        className="justify-between gap-2"
-                      >
-                        <span className="truncate">{agent.name || id}</span>
-                        {isActive ? <CheckIcon className="size-3.5 text-primary" /> : null}
-                      </DropdownMenuItem>
-                    )
-                  })}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+    <DashboardModule
+      title="Command"
+      description="在当前 agent 上直接执行命令，输出按会话顺序保留。"
+      className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+      bodyClassName="flex min-h-0 flex-1 flex-col"
+      actions={
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 text-[11px] text-muted-foreground">
+            {activeAgentBadge}
+          </span>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => setRecords([])}
+            disabled={running || records.length === 0}
+            className="text-muted-foreground hover:bg-secondary hover:text-foreground"
+            aria-label="清空输出"
+            title="清空输出"
+          >
+            <Trash2Icon className="size-4" />
+          </Button>
         </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setRecords([])}
-          disabled={running || records.length === 0}
-          className="size-8 rounded-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
-          aria-label="清空输出"
-          title="清空输出"
-        >
-          <Trash2Icon className="size-4" />
-        </Button>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        {agents.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="inline-flex h-9 min-w-[14rem] max-w-[24rem] items-center justify-between gap-2 rounded-[12px] bg-secondary px-3 text-sm text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/30"
+              aria-label="选择 agent"
+            >
+              <span className="truncate text-left">{activeAgentName}</span>
+              <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[24rem] max-w-[calc(100vw-2rem)]">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>选择 agent</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {agents.map((agent) => {
+                  const id = String(agent.id || "").trim()
+                  if (!id) return null
+                  const isActive = id === activeAgentId
+                  return (
+                    <DropdownMenuItem
+                      key={id}
+                      onClick={() => {
+                        setActiveAgentId(id)
+                        onSelectAgent?.(id)
+                      }}
+                      className="justify-between gap-2"
+                    >
+                      <span className="truncate">{agent.name || id}</span>
+                      {isActive ? <CheckIcon className="size-3.5 text-primary" /> : null}
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+        <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 text-[11px] text-muted-foreground">
+          {records.length === 0 ? "暂无执行记录" : `${records.length} 条记录`}
+        </span>
       </div>
 
-      <div className="min-h-0 flex-1 px-3 py-3">
+      <div className="min-h-0 flex-1 rounded-[20px] bg-secondary p-2">
         <div
           ref={terminalRef}
-          className="h-full overflow-auto rounded-[18px] bg-secondary px-3 py-3 font-mono text-[12px] leading-relaxed text-foreground/92"
+          className="h-full overflow-auto rounded-[18px] bg-background px-3 py-3 font-mono text-[12px] leading-relaxed text-foreground/92"
         >
           {records.length === 0 ? (
             <div className="text-muted-foreground">
@@ -607,12 +623,12 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
         </div>
       </div>
 
-      <div className="shrink-0 bg-secondary px-3 py-3">
+      <div className="space-y-2 rounded-[20px] bg-secondary px-3 py-3">
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={running || !activeAgentId}
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-[11px] text-muted-foreground hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
               aria-label="常用命令"
               title="常用命令"
             >
@@ -647,59 +663,70 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <span className="font-mono text-xs text-muted-foreground">$</span>
-          <div className="relative flex-1">
-            {inlineSuggestionSuffix ? (
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 z-0 flex h-8 items-center overflow-hidden font-mono text-[12px]"
-              >
-                <span className="invisible whitespace-pre">{command}</span>
-                <span className="whitespace-pre text-muted-foreground/45">{inlineSuggestionSuffix}</span>
-              </div>
-            ) : null}
-            <input
-              ref={inputRef}
-              value={command}
-              onChange={(event) => updateCommandInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault()
-                  void runCommand(command)
-                  return
-                }
-                if (event.key === "Tab") {
-                  const accepted = acceptInlineSuggestion("full")
-                  if (accepted) event.preventDefault()
-                  return
-                }
-                if (event.key === "ArrowRight" && (event.ctrlKey || event.metaKey)) {
-                  const accepted = acceptInlineSuggestion("word")
-                  if (accepted) event.preventDefault()
-                  return
-                }
-                if (event.key === "ArrowUp") {
-                  event.preventDefault()
-                  navigateCommandHistory("up")
-                  return
-                }
-                if (event.key === "ArrowDown") {
-                  event.preventDefault()
-                  navigateCommandHistory("down")
-                }
-              }}
-              placeholder="输入命令后按回车执行（CITY 命令可省略 city）"
-              className="relative z-10 h-8 w-full bg-transparent font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground/80"
-            />
+          <div className="relative flex h-9 flex-1 items-center rounded-[14px] bg-background px-3">
+            <span className="mr-2 font-mono text-xs text-muted-foreground">$</span>
+            <div className="relative flex-1">
+              {inlineSuggestionSuffix ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-0 flex h-8 items-center overflow-hidden font-mono text-[12px]"
+                >
+                  <span className="invisible whitespace-pre">{command}</span>
+                  <span className="whitespace-pre text-muted-foreground/45">{inlineSuggestionSuffix}</span>
+                </div>
+              ) : null}
+              <input
+                ref={inputRef}
+                value={command}
+                onChange={(event) => updateCommandInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    void runCommand(command)
+                    return
+                  }
+                  if (event.key === "Tab") {
+                    const accepted = acceptInlineSuggestion("full")
+                    if (accepted) event.preventDefault()
+                    return
+                  }
+                  if (event.key === "ArrowRight" && (event.ctrlKey || event.metaKey)) {
+                    const accepted = acceptInlineSuggestion("word")
+                    if (accepted) event.preventDefault()
+                    return
+                  }
+                  if (event.key === "ArrowUp") {
+                    event.preventDefault()
+                    navigateCommandHistory("up")
+                    return
+                  }
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault()
+                    navigateCommandHistory("down")
+                  }
+                }}
+                placeholder="输入命令后按回车执行（CITY 命令可省略 city）"
+                className="relative z-10 h-8 w-full bg-transparent font-mono text-[12px] text-foreground outline-none placeholder:text-muted-foreground/80"
+              />
+            </div>
           </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={running || !activeAgentId || !String(command || "").trim()}
+            onClick={() => void runCommand(command)}
+            className="h-9 px-3"
+          >
+            执行
+          </Button>
         </div>
 
-        <div className="pt-2 text-[11px] text-muted-foreground/80">
-          Tab 接受预测 · Ctrl/⌘ + → 接受下一个词 · ↑/↓ 浏览历史命令
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground/80">
+          <span>Tab 接受预测 · Ctrl/⌘ + → 接受下一个词 · ↑/↓ 浏览历史命令</span>
+          {!activeAgentId ? <span className="text-destructive">请先选择 agent</span> : null}
+          {errorText ? <span className="text-destructive">{errorText}</span> : null}
         </div>
-        {!activeAgentId ? <div className="pt-2 text-xs text-destructive">请先选择 agent</div> : null}
-        {errorText ? <div className="pt-2 text-xs text-destructive">{errorText}</div> : null}
       </div>
-    </section>
+    </DashboardModule>
   )
 }

@@ -686,6 +686,67 @@ export interface UiChatChannelConfigurationFieldOption {
 }
 
 /**
+ * Env 条目 scope。
+ */
+export type UiEnvScope = "global" | "agent";
+
+/**
+ * Env 管理项（来自 `/api/ui/env`）。
+ */
+export interface UiEnvItem {
+  /**
+   * 作用域（global 或 agent）。
+   */
+  scope: UiEnvScope;
+  /**
+   * 环境变量 key。
+   */
+  key: string;
+  /**
+   * 环境变量值（明文，仅在当前 UI 会话内展示）。
+   */
+  value: string;
+  /**
+   * 对于 agent 级 env，关联的 agentId（projectRoot）。
+   */
+  agentId?: string;
+  /**
+   * 创建时间（ISO 字符串）。
+   */
+  createdAt?: string;
+  /**
+   * 更新时间（ISO 字符串）。
+   */
+  updatedAt?: string;
+}
+
+/**
+ * `/api/ui/env` 响应。
+ */
+export interface UiEnvListResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 当前作用域。
+   */
+  scope?: UiEnvScope;
+  /**
+   * 当前 agentId（仅 scope=agent 时存在）。
+   */
+  agentId?: string;
+  /**
+   * 环境变量列表。
+   */
+  items?: UiEnvItem[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
  * Chat 渠道配置字段定义。
  */
 export interface UiChatChannelConfigurationField {

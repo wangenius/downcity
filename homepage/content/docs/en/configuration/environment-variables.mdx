@@ -1,6 +1,6 @@
 ---
 title: Environment Variable Strategy (Console Shared vs Agent Private)
-description: Clear scope and runtime merge logic for global_env, agent_env, channel_accounts, and <agent>/.env
+description: Clear scope and runtime merge logic for env_entries, channel_accounts, and <agent>/.env
 ---
 
 > Canonical schema doc: [Env and ship.db Database Design](/en/docs/configuration/env-shipdb-design)
@@ -19,8 +19,8 @@ This page answers 4 practical questions:
 
 | Layer | Source | Persisted | Scope | Typical content |
 |---|---|---|---|---|
-| Console shared env | `~/.ship/ship.db` `global_env` | Yes (encrypted) | All agents | shared API keys and shared placeholders |
-| Agent private env (DB) | `~/.ship/ship.db` `agent_env` | Yes (encrypted) | One agent (`agent_id`) | project-level secret keys |
+| Console shared env | `~/.ship/ship.db` `env_entries` (`scope=global`) | Yes (encrypted) | All agents | shared API keys and shared placeholders |
+| Agent private env (DB) | `~/.ship/ship.db` `env_entries` (`scope=agent`, `agent_id`) | Yes (encrypted) | One agent (`agent_id`) | project-level secret keys |
 | Agent private env (file) | `<agent>/.env` | User-managed file | One agent | runtime overlay values |
 | Bot credentials | `~/.ship/ship.db` `channel_accounts` | Yes (encrypted fields) | Reusable by binding | Telegram/Feishu/QQ bot secrets |
 | Runtime context vars | process memory (`DC_CTX_*`) | No | single request | channel/chat/user context |
@@ -41,10 +41,10 @@ sequenceDiagram
   participant JSON as ship.json(project layers)
   participant RT as Agent Runtime
 
-  CLI->>DB: Read global_env
-  CLI->>DB: Read agent_env by agent_id
+  CLI->>DB: Read env_entries where scope=global
+  CLI->>DB: Read env_entries where scope=agent and agent_id matches
   CLI->>ENV: Parse project .env
-  CLI->>CLI: Build runtime env = agent_env + .env (.env wins)
+  CLI->>CLI: Build runtime env = agent-scope DB env + .env (.env wins)
   CLI->>DB: Read extensions_config
   CLI->>JSON: Read and merge ship.json layers
   CLI->>CLI: Resolve placeholders using scoped env maps
@@ -56,7 +56,7 @@ sequenceDiagram
 
 ### 3.1 Runtime env merge
 
-1. `agent_env` (DB) loads first.
+1. Agent-scope DB env loads first.
 2. `<agent>/.env` overlays it.
 3. `.env` wins on key conflicts.
 
@@ -71,7 +71,7 @@ sequenceDiagram
 ### 4.1 Reads project `.env`
 
 1. Project-layer `${ENV_KEY}` resolution.
-2. Agent runtime process env injection (`agent_env + .env`).
+2. Agent runtime process env injection (`agent env in env_entries + .env`).
 3. Optional fallback paths in some service auth helpers.
 
 ### 4.2 Does not read project `.env`
@@ -83,11 +83,12 @@ sequenceDiagram
 
 ## 5. Save Paths
 
-1. Bot account CRUD (UI): writes `channel_accounts`.
-2. Model CRUD (CLI/UI): writes `model_providers`, `models`.
-3. Extension config (`city console config set extensions.*`): writes `extensions_config`.
-4. Channel configure action: writes `ship.json` (`enabled`, `channelAccountId`).
-5. User manual `.env` edit: affects runtime only for that agent.
+1. Console UI `Global / Env` writes `env_entries` with `scope=global` or `scope=agent`.
+2. Bot account CRUD (UI): writes `channel_accounts`.
+3. Model CRUD (CLI/UI): writes `model_providers`, `models`.
+4. Extension config (`city console config set extensions.*`): writes `extensions_config`.
+5. Channel configure action: writes `ship.json` (`enabled`, `channelAccountId`).
+6. User manual `.env` edit: affects runtime only for that agent.
 
 ## 6. FAQ and Troubleshooting
 
@@ -117,9 +118,10 @@ city console model create
 city console config set extensions.voice.enabled true
 ```
 
-2. Create channel accounts in Console UI `Global / Channel Accounts`.
-3. In each agent `ship.json`, bind channel to `channelAccountId`.
-4. Keep agent-private runtime keys in `<agent>/.env` only when needed.
+2. Manage shared env in Console UI `Global / Env` (writes `env_entries`).
+3. Create channel accounts in Console UI `Global / Channel Accounts`.
+4. In each agent `ship.json`, bind channel to `channelAccountId`.
+5. Keep agent-private runtime keys in `<agent>/.env` only when needed.
 
 ## 8. Best-Practice Checklist
 

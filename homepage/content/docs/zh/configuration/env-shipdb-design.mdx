@@ -1,6 +1,6 @@
 ---
 title: Env 与 ship.db 数据库设计
-description: 详细说明 global_env、agent_env、channel_accounts 的表结构、加密边界与运行时加载/写入逻辑
+description: 详细说明 env_entries、channel_accounts 的表结构、加密边界与运行时加载/写入逻辑
 ---
 
 # Env 与 ship.db 数据库设计
@@ -19,8 +19,8 @@ description: 详细说明 global_env、agent_env、channel_accounts 的表结构
 ```mermaid
 flowchart LR
   subgraph ConsoleGlobal[~/.ship/ship.db]
-    G[global_env]
-    A[agent_env]
+    G[env_entries(global)]
+    A[env_entries(agent)]
     B[channel_accounts]
     M1[model_providers]
     M2[models]
@@ -39,24 +39,14 @@ flowchart LR
 
 ## 3. 表结构（逐表说明）
 
-## 3.1 `global_env`
+## 3.1 `env_entries`
 
-用途：console 共享环境变量。
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `key` | TEXT PK | env key，例如 `OPENAI_API_KEY` |
-| `value_encrypted` | TEXT | AES-GCM 密文 |
-| `created_at` | TEXT | ISO 时间 |
-| `updated_at` | TEXT | ISO 时间 |
-
-## 3.2 `agent_env`
-
-用途：agent 私有环境变量（DB 版）。
+用途：统一承载 console 共享 env 与 agent 私有 env。
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `agent_id` | TEXT | agent 唯一标识（projectRoot 绝对路径） |
+| `scope` | TEXT | `global` 或 `agent` |
+| `agent_id` | TEXT | 全局行固定为空字符串；agent 行为 projectRoot 绝对路径 |
 | `key` | TEXT | env key |
 | `value_encrypted` | TEXT | AES-GCM 密文 |
 | `created_at` | TEXT | ISO 时间 |
@@ -64,10 +54,11 @@ flowchart LR
 
 约束：
 
-1. 复合主键：`(agent_id, key)`
-2. 索引：`agent_id`
+1. 复合主键：`(scope, agent_id, key)`
+2. 索引：`scope`
+3. 索引：`agent_id`
 
-## 3.3 `channel_accounts`
+## 3.2 `channel_accounts`
 
 用途：chat 渠道凭据统一管理。
 
@@ -88,7 +79,7 @@ flowchart LR
 | `created_at` | TEXT | ISO 时间 |
 | `updated_at` | TEXT | ISO 时间 |
 
-## 3.4 仍在使用的表
+## 3.3 仍在使用的表
 
 1. `model_providers` / `models`：全局模型池。
 2. `console_secure_settings`：非 env 的加密 JSON（当前用于 `extensions_config`）。
@@ -97,8 +88,7 @@ flowchart LR
 
 以下字段必须加密：
 
-1. `global_env.value_encrypted`
-2. `agent_env.value_encrypted`
+1. `env_entries.value_encrypted`
 3. `channel_accounts.*_encrypted`
 4. `console_secure_settings.value_encrypted`
 5. `model_providers.api_key_encrypted`
@@ -148,10 +138,10 @@ sequenceDiagram
   participant DOT as <agent>/.env
   participant JSON as ship.json
 
-  RT->>DB: 读取 global_env
-  RT->>DB: 按 agent_id 读取 agent_env
+  RT->>DB: 读取 env_entries(scope=global)
+  RT->>DB: 按 agent_id 读取 env_entries(scope=agent)
   RT->>DOT: 解析项目 .env
-  RT->>RT: 生成 runtime env = agent_env + .env（.env 优先）
+  RT->>RT: 生成 runtime env = agent scope DB env + .env（.env 优先）
   RT->>DB: 读取 extensions_config
   RT->>JSON: 读取并合并 ship.json 层
   RT->>RT: 解析 ${ENV_KEY}
@@ -169,8 +159,8 @@ sequenceDiagram
 ## 8. `.env` 与 DB 的关系
 
 1. `<agent>/.env` 由用户手动维护，仅注入当前 agent runtime。
-2. `agent_env` 也是 agent 私有层；最终 runtime env = `agent_env + .env`（`.env` 覆盖）。
-3. console 共享层 env 只来自 `global_env`。
+2. `env_entries(scope=agent)` 也是 agent 私有层；最终 runtime env = `agent scope DB env + .env`（`.env` 覆盖）。
+3. console 共享层 env 只来自 `env_entries(scope=global)`。
 
 ## 9. 自检清单
 

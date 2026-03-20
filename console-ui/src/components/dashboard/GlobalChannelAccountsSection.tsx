@@ -11,6 +11,7 @@ import * as React from "react"
 import { CheckIcon, ChevronDownIcon, Loader2Icon, PencilIcon, PlusIcon, SparklesIcon, Trash2Icon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -294,12 +295,10 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
 
   return (
     <section className="space-y-4">
-      <section className="space-y-3 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Channel Accounts</div>
-            <div className="text-sm text-muted-foreground">已配置 {items.length} 个，凭据完整 {readyCount} 个</div>
-          </div>
+      <DashboardModule
+        title="Channel Accounts"
+        description={`已配置 ${items.length} 个，凭据完整 ${readyCount} 个`}
+        actions={
           <Button
             type="button"
             size="sm"
@@ -311,10 +310,13 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
             <PlusIcon className="size-4" />
             新建账号
           </Button>
-        </div>
+        }
+      >
 
         {items.length === 0 ? (
-          <div className="rounded-[18px] bg-secondary py-6 text-center text-sm text-muted-foreground">暂无 channel account</div>
+          <div className="rounded-[20px] bg-secondary/85 py-6 text-center text-sm text-muted-foreground">
+            暂无 channel account
+          </div>
         ) : (
           <div className="space-y-2.5">
             {items.map((item) => {
@@ -382,7 +384,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
             })}
           </div>
         )}
-      </section>
+      </DashboardModule>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="w-[min(92vw,560px)]">

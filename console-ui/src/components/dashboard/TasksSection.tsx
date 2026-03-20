@@ -7,8 +7,10 @@
  */
 
 import * as React from "react";
+import { EllipsisIcon, Trash2Icon } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { DashboardModule } from "./DashboardModule";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +18,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { cn } from "../../lib/utils";
 import { useConfirmDialog } from "../ui/confirm-dialog";
 import type {
@@ -329,16 +340,18 @@ export function TasksSection(props: TasksSectionProps) {
 
   if (isOverviewMode) {
     return (
-      <div className="space-y-4">
-        <header className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tasks</div>
+      <DashboardModule
+        title="Tasks"
+        description="任务定义、状态与最近执行时间总览。"
+        actions={
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="outline" className="bg-secondary text-foreground">{`total ${overviewStats.total}`}</Badge>
             <Badge variant="outline" className="border-border/60 bg-primary/10 text-primary">{`running ${overviewStats.running}`}</Badge>
             <Badge variant="outline" className="border-border/60 bg-destructive/10 text-destructive">{`failed ${overviewStats.failed}`}</Badge>
             <Badge variant="outline" className="bg-secondary text-foreground">{`manual ${overviewStats.manual}`}</Badge>
           </div>
-        </header>
+        }
+      >
 
         {tasks.length === 0 ? (
           <div className="rounded-[20px] bg-secondary px-4 py-6 text-sm text-muted-foreground">暂无 task 数据</div>
@@ -373,7 +386,7 @@ export function TasksSection(props: TasksSectionProps) {
             })}
           </div>
         )}
-      </div>
+      </DashboardModule>
     );
   }
 
@@ -385,107 +398,128 @@ export function TasksSection(props: TasksSectionProps) {
   const selectedTaskStatus = String(selectedTask.status || "").trim().toLowerCase();
   const toggleTargetStatus: UiTaskStatusValue =
     selectedTaskStatus === "enabled" ? "paused" : "enabled";
-  const toggleActionLabel = toggleTargetStatus === "enabled" ? "Enable" : "Pause";
+  const toggleActionLabel = toggleTargetStatus === "enabled" ? "恢复调度" : "暂停调度";
+  const statusHint =
+    selectedTaskStatus === "paused"
+      ? "paused：保留定义，不参与调度，可随时恢复。"
+      : selectedTaskStatus === "disabled"
+        ? "disabled：显式禁用，仍保留定义，但当前作为关闭态处理。"
+        : "enabled：参与调度，按 when 正常运行。";
+
+  const handleDeleteTask = React.useCallback(async () => {
+    if (!selectedTaskTitleValue) return;
+    const shouldDelete = await confirm({
+      title: "删除任务",
+      description: `确认删除任务「${selectedTaskTitleValue}」及其全部运行记录？`,
+      confirmText: "删除",
+      cancelText: "取消",
+      confirmVariant: "destructive",
+    });
+    if (!shouldDelete) return;
+    setTaskMutating(true);
+    try {
+      const deleted = await onDeleteTask(selectedTaskTitleValue);
+      if (deleted) {
+        onSelectTaskTitle?.("");
+      }
+    } finally {
+      setTaskMutating(false);
+    }
+  }, [confirm, onDeleteTask, onSelectTaskTitle, selectedTaskTitleValue]);
+
+  const handleDisableTask = React.useCallback(async () => {
+    if (!selectedTaskTitleValue) return;
+    setTaskMutating(true);
+    try {
+      await onSetTaskStatus(selectedTaskTitleValue, "disabled");
+    } finally {
+      setTaskMutating(false);
+    }
+  }, [onSetTaskStatus, selectedTaskTitleValue]);
+
+  const handleToggleTaskStatus = React.useCallback(async () => {
+    if (!selectedTaskTitleValue) return;
+    setTaskMutating(true);
+    try {
+      await onSetTaskStatus(selectedTaskTitleValue, toggleTargetStatus);
+    } finally {
+      setTaskMutating(false);
+    }
+  }, [onSetTaskStatus, selectedTaskTitleValue, toggleTargetStatus]);
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Task Runtime</div>
-          <h2 className="truncate text-lg font-semibold tracking-tight">{String(selectedTask.title || "-")}</h2>
-          <p className="line-clamp-2 text-sm text-muted-foreground">{String(selectedTask.description || "").trim() || "无描述"}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className={badgeClass(String(selectedTask.status || "unknown"))}>
-            {String(selectedTask.status || "unknown")}
-          </Badge>
-          <Button size="sm" variant="outline" onClick={() => onSelectTaskTitle?.("")}>
-            返回列表
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={taskMutating || !selectedTaskTitleValue}
-            onClick={async () => {
-              if (!selectedTaskTitleValue) return;
-              setTaskMutating(true);
-              try {
-                await onSetTaskStatus(selectedTaskTitleValue, toggleTargetStatus);
-              } finally {
-                setTaskMutating(false);
-              }
-            }}
-          >
-            {toggleActionLabel}
-          </Button>
-          {selectedTaskStatus !== "disabled" ? (
+      <DashboardModule
+        title="Task Runtime"
+        description={String(selectedTask.description || "").trim() || "无描述"}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className={badgeClass(String(selectedTask.status || "unknown"))}>
+              {String(selectedTask.status || "unknown")}
+            </Badge>
+            <Button size="sm" variant="outline" onClick={() => onSelectTaskTitle?.("")}>
+              返回列表
+            </Button>
             <Button
               size="sm"
-              variant="outline"
-              disabled={taskMutating || !selectedTaskTitleValue}
-              onClick={async () => {
-                if (!selectedTaskTitleValue) return;
-              setTaskMutating(true);
-              try {
-                await onSetTaskStatus(selectedTaskTitleValue, "disabled");
-              } finally {
-                setTaskMutating(false);
-              }
+              onClick={() => {
+                const title = String(selectedTask.title || "").trim();
+                if (!title) return;
+                setForceLivePolling(true);
+                onRunTask(title);
+                window.setTimeout(() => {
+                  void loadRuns(title, {
+                    showLoading: false,
+                    preferInProgress: true,
+                  });
+                }, 350);
               }}
             >
-              Disable
+              Run Task
             </Button>
-          ) : null}
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={taskMutating || !selectedTaskTitleValue}
-            onClick={async () => {
-              if (!selectedTaskTitleValue) return;
-              const shouldDelete = await confirm({
-                title: "删除任务",
-                description: `确认删除任务「${selectedTaskTitleValue}」及其全部运行记录？`,
-                confirmText: "删除",
-                cancelText: "取消",
-                confirmVariant: "destructive",
-              });
-              if (!shouldDelete) return;
-              setTaskMutating(true);
-              try {
-                const deleted = await onDeleteTask(selectedTaskTitleValue);
-                if (deleted) {
-                  onSelectTaskTitle?.("");
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="icon-sm"
+                    variant="outline"
+                    disabled={taskMutating || !selectedTaskTitleValue}
+                    aria-label="任务操作"
+                    title="任务操作"
+                  />
                 }
-              } finally {
-                setTaskMutating(false);
-              }
-            }}
-          >
-            Delete Task
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              const title = String(selectedTask.title || "").trim();
-              if (!title) return;
-              setForceLivePolling(true);
-              onRunTask(title);
-              window.setTimeout(() => {
-                void loadRuns(title, {
-                  showLoading: false,
-                  preferInProgress: true,
-                });
-              }, 350);
-            }}
-          >
-            Run Task
-          </Button>
+              >
+                <EllipsisIcon className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[14rem]">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>任务操作</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => void handleToggleTaskStatus()}>
+                    {toggleActionLabel}
+                  </DropdownMenuItem>
+                  {selectedTaskStatus !== "disabled" ? (
+                    <DropdownMenuItem onClick={() => void handleDisableTask()}>
+                      设为 disabled
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => void handleDeleteTask()}>
+                  删除任务
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        }
+      >
+        <div className="text-lg font-semibold tracking-tight text-foreground">
+          {String(selectedTask.title || "-")}
         </div>
-      </header>
+        <div className="text-xs text-muted-foreground">{statusHint}</div>
+      </DashboardModule>
 
       <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
-        <section className="min-w-0 space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Definition</div>
+        <DashboardModule title="Definition" description="任务定义、触发方式与原始内容。">
           <div className="rounded-[20px] bg-secondary px-4 py-3.5">
             <div className="grid gap-1.5 text-xs text-muted-foreground">
             <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
@@ -508,20 +542,22 @@ export function TasksSection(props: TasksSectionProps) {
               <span className="text-foreground/80">lastRun</span>
               <span>{formatRunTimestampForDisplay(String(selectedTask.lastRunTimestamp || ""), formatTime)}</span>
             </div>
-          </div>
+            </div>
           </div>
 
           <div className="space-y-1">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Body</div>
-            <pre className="h-[46vh] min-h-[20rem] overflow-auto rounded-[20px] bg-card px-4 py-3.5 text-[12px] leading-relaxed text-foreground/90">
+            <pre className="h-[46vh] min-h-[20rem] overflow-auto rounded-[20px] bg-secondary px-4 py-3.5 text-[12px] leading-relaxed text-foreground/90">
               {selectedTask.body || "-"}
             </pre>
           </div>
-        </section>
+        </DashboardModule>
 
-        <section className="min-w-0 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Runtime</div>
+        <DashboardModule
+          title="Runtime"
+          description="最近执行记录、状态与运行详情。"
+          bodyClassName="min-h-0"
+          actions={
             <div className="flex items-center gap-1.5">
               <Button
                 size="sm"
@@ -559,21 +595,9 @@ export function TasksSection(props: TasksSectionProps) {
               >
                 {clearingAllRuns ? "清理中..." : "清空 Run Log"}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  void loadRuns(String(selectedTask.title || ""), {
-                    showLoading: true,
-                    preferInProgress: true,
-                  });
-                }}
-                disabled={loadingRuns || clearingAllRuns}
-              >
-                {loadingRuns ? "加载中..." : "刷新"}
-              </Button>
             </div>
-          </div>
+          }
+        >
 
           {runs.length === 0 ? (
             <div className="rounded-[18px] bg-secondary px-4 py-5 text-sm text-muted-foreground">暂无执行记录</div>
@@ -612,8 +636,9 @@ export function TasksSection(props: TasksSectionProps) {
                       </div>
                     </button>
                     <Button
-                      size="sm"
-                      variant="destructive"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="mt-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       disabled={Boolean(run.inProgress) || deletingThisRun}
                       onClick={async () => {
                         if (!selectedTaskTitleValue || !runTimestamp) return;
@@ -647,15 +672,17 @@ export function TasksSection(props: TasksSectionProps) {
                           setDeletingRunTimestamp("");
                         }
                       }}
+                      title="删除 run"
+                      aria-label="删除 run"
                     >
-                      删除
+                      {deletingThisRun ? <Trash2Icon className="size-3.5 animate-pulse" /> : <Trash2Icon className="size-3.5" />}
                     </Button>
                   </div>
                 );
               })}
             </div>
           )}
-        </section>
+        </DashboardModule>
       </div>
 
       <Dialog open={runDetailOpen} onOpenChange={setRunDetailOpen}>

@@ -59,6 +59,8 @@ import type {
   UiTaskRunSummary,
   UiTaskStatusValue,
   UiTasksResponse,
+  UiEnvItem,
+  UiEnvListResponse,
 } from "../types/Dashboard";
 
 const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
@@ -272,6 +274,14 @@ export interface UseConsoleDashboardResult {
    */
   channelAccounts: UiChannelAccountItem[];
   /**
+   * Console 全局 env 列表。
+   */
+  globalEnvItems: UiEnvItem[];
+  /**
+   * 当前选中 agent 的私有 env 列表。
+   */
+  agentEnvItems: UiEnvItem[];
+  /**
    * system prompt 数据。
    */
   prompt: UiPromptResponse | null;
@@ -379,6 +389,14 @@ export interface UseConsoleDashboardResult {
    * 刷新模型池数据。
    */
   refreshModelPool: () => Promise<void>;
+  /**
+   * 刷新 Console 全局 env。
+   */
+  refreshGlobalEnv: () => Promise<void>;
+  /**
+   * 刷新当前 agent 私有 env。
+   */
+  refreshAgentEnv: () => Promise<void>;
   /**
    * 刷新配置文件状态。
    */
@@ -573,6 +591,29 @@ export interface UseConsoleDashboardResult {
    */
   removeChannelAccount: (id: string) => Promise<void>;
   /**
+   * 新增/更新 Console 全局 env。
+   */
+  upsertGlobalEnv: (input: {
+    key: string;
+    value: string;
+  }) => Promise<void>;
+  /**
+   * 删除 Console 全局 env。
+   */
+  removeGlobalEnv: (key: string) => Promise<void>;
+  /**
+   * 新增/更新当前 agent 私有 env。
+   */
+  upsertAgentEnv: (input: {
+    agentId: string;
+    key: string;
+    value: string;
+  }) => Promise<void>;
+  /**
+   * 删除当前 agent 私有 env。
+   */
+  removeAgentEnv: (agentId: string, key: string) => Promise<void>;
+  /**
    * 执行 agent 项目目录下的 shell command。
    */
   executeAgentCommand: (input: {
@@ -619,6 +660,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [modelProviders, setModelProviders] = useState<UiModelProviderItem[]>([]);
   const [modelPoolItems, setModelPoolItems] = useState<UiModelPoolItem[]>([]);
   const [channelAccounts, setChannelAccounts] = useState<UiChannelAccountItem[]>([]);
+  const [globalEnvItems, setGlobalEnvItems] = useState<UiEnvItem[]>([]);
+  const [agentEnvItems, setAgentEnvItems] = useState<UiEnvItem[]>([]);
   const [prompt, setPrompt] = useState<UiPromptResponse | null>(null);
   const [localMessages, setLocalMessages] = useState<UiLocalMessage[]>([]);
 
@@ -1294,6 +1337,16 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setModelPoolItems(Array.isArray(data.models) ? data.models : []);
   }, [requestJson]);
 
+  const refreshGlobalEnv = useCallback(async () => {
+    const data = await requestJson<UiEnvListResponse>("/api/ui/env");
+    setGlobalEnvItems(Array.isArray(data.items) ? data.items : []);
+  }, [requestJson]);
+
+  const refreshAgentEnv = useCallback(async () => {
+    const data = await requestJson<UiEnvListResponse>("/api/ui/env?scope=agent");
+    setAgentEnvItems(Array.isArray(data.items) ? data.items : []);
+  }, [requestJson]);
+
   const refreshChannelAccounts = useCallback(async () => {
     const data = await requestJson<UiChannelAccountsResponse>("/api/ui/channel-accounts");
     setChannelAccounts(Array.isArray(data.items) ? data.items : []);
@@ -1350,8 +1403,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshModel(""),
             refreshModelPool(),
             refreshChannelAccounts(),
+            refreshGlobalEnv(),
             refreshConfigStatus(""),
           ]);
+          setAgentEnvItems([]);
           setTopbarError(false);
           setTopbarStatus("Console 在线");
           return;
@@ -1366,6 +1421,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshModel(nextAgentId),
             refreshModelPool(),
             refreshChannelAccounts(),
+            refreshGlobalEnv(),
+            refreshAgentEnv(),
             refreshConfigStatus(nextAgentId),
           ]);
           setTopbarError(false);
@@ -1388,6 +1445,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshModel(nextAgentId),
           refreshModelPool(),
           refreshChannelAccounts(),
+          refreshGlobalEnv(),
+          refreshAgentEnv(),
           refreshConfigStatus(nextAgentId),
           refreshLocalChat(nextAgentId),
         ]);
@@ -1448,8 +1507,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             refreshModel(""),
             refreshModelPool(),
             refreshChannelAccounts(),
+            refreshGlobalEnv(),
             refreshConfigStatus(""),
           ]);
+          setAgentEnvItems([]);
           setTopbarError(false);
           setTopbarStatus("Console 在线");
           return;
@@ -1476,6 +1537,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshChannelAccounts,
       refreshModel,
       refreshModelPool,
+      refreshGlobalEnv,
+      refreshAgentEnv,
       refreshOverview,
       refreshPrompt,
       refreshServices,
@@ -2610,6 +2673,103 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshChannelAccounts, refreshChatChannels, requestJson, selectedAgentId, showToast],
   );
 
+  const upsertGlobalEnv = useCallback(
+    async (input: {
+      key: string;
+      value: string;
+    }) => {
+      try {
+        await requestJson("/api/ui/env/upsert", {
+          method: "POST",
+          body: JSON.stringify({
+            scope: "global",
+            key: String(input.key || "").trim(),
+            value: String(input.value ?? ""),
+          }),
+        });
+        await refreshGlobalEnv();
+        showToast(`env ${String(input.key || "").trim()} 已保存`, "success");
+      } catch (error) {
+        showToast(`env 保存失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshGlobalEnv, requestJson, showToast],
+  );
+
+  const removeGlobalEnv = useCallback(
+    async (key: string) => {
+      try {
+        await requestJson("/api/ui/env/remove", {
+          method: "POST",
+          body: JSON.stringify({
+            scope: "global",
+            key: String(key || "").trim(),
+          }),
+        });
+        await refreshGlobalEnv();
+        showToast(`env ${String(key || "").trim()} 已删除`, "success");
+      } catch (error) {
+        showToast(`env 删除失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshGlobalEnv, requestJson, showToast],
+  );
+
+  const upsertAgentEnv = useCallback(
+    async (input: {
+      agentId: string;
+      key: string;
+      value: string;
+    }) => {
+      const agentId = String(input.agentId || "").trim();
+      if (!agentId) {
+        showToast("当前没有可写入的 agent", "error");
+        return;
+      }
+      try {
+        await requestJson("/api/ui/env/upsert", {
+          method: "POST",
+          body: JSON.stringify({
+            scope: "agent",
+            agentId,
+            key: String(input.key || "").trim(),
+            value: String(input.value ?? ""),
+          }),
+        });
+        await refreshAgentEnv();
+        showToast(`agent env ${String(input.key || "").trim()} 已保存`, "success");
+      } catch (error) {
+        showToast(`agent env 保存失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshAgentEnv, requestJson, showToast],
+  );
+
+  const removeAgentEnv = useCallback(
+    async (agentIdInput: string, key: string) => {
+      const agentId = String(agentIdInput || "").trim();
+      if (!agentId) {
+        showToast("当前没有可删除的 agent env", "error");
+        return;
+      }
+      try {
+        await requestJson("/api/ui/env/remove", {
+          method: "POST",
+          body: JSON.stringify({
+            scope: "agent",
+            agentId,
+            key: String(key || "").trim(),
+          }),
+        });
+        await refreshAgentEnv();
+        showToast(`agent env ${String(key || "").trim()} 已删除`, "success");
+      } catch (error) {
+        showToast(`agent env 删除失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshAgentEnv, requestJson, showToast],
+  );
+
   const executeAgentCommand = useCallback(
     async (input: {
       command: string;
@@ -2693,6 +2853,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     modelProviders,
     modelPoolItems,
     channelAccounts,
+    globalEnvItems,
+    agentEnvItems,
     prompt,
     localMessages,
     topbarStatus,
@@ -2719,6 +2881,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshPrompt,
     refreshModel,
     refreshModelPool,
+    refreshGlobalEnv,
+    refreshAgentEnv,
     refreshConfigStatus,
     refreshLocalChat,
     controlService,
@@ -2756,6 +2920,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     upsertChannelAccount,
     probeChannelAccount,
     removeChannelAccount,
+    upsertGlobalEnv,
+    removeGlobalEnv,
+    upsertAgentEnv,
+    removeAgentEnv,
     executeAgentCommand,
     constants: {
       CONSOLEUI_CONTEXT_ID,

@@ -5,7 +5,7 @@
  * 1. 仅加载项目根目录 `.env`（用户自管文件，不写回 DB）。
  * 2. 读取 `ship.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
  * 3. 支持配置继承：console(db 共享 extensions 层) ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
- * 4. 环境变量分层：`global_env`（console 共享）与 `agent_env`（agent 私有）都存储在 `~/.ship/ship.db`。
+ * 4. 环境变量分层：`env_entries` 单表承载 `global`（console 共享）与 `agent`（agent 私有）两种 scope。
  * 4. 统一导出 Ship 配置类型，避免业务模块直接依赖具体配置文件路径。
  */
 import dotenv from "dotenv";
@@ -18,7 +18,7 @@ import { ConsoleStore } from "@/utils/store/index.js";
 export type { ShipConfig };
 
 /**
- * 读取 console 共享环境变量（global_env）。
+ * 读取 console 共享环境变量（`env_entries.scope=global`）。
  */
 export function loadGlobalEnvFromStore(): Record<string, string> {
   const store = new ConsoleStore();
@@ -32,7 +32,7 @@ export function loadGlobalEnvFromStore(): Record<string, string> {
 }
 
 /**
- * 读取 agent 私有环境变量（agent_env）。
+ * 读取 agent 私有环境变量（`env_entries.scope=agent`）。
  */
 export function loadAgentEnvFromStore(agentId: string): Record<string, string> {
   const normalizedAgentId = String(agentId || "").trim();
@@ -51,7 +51,7 @@ export function loadAgentEnvFromStore(agentId: string): Record<string, string> {
  * 读取 agent runtime 最终环境变量快照。
  *
  * 关键点（中文）
- * - 来源：`agent_env`（DB） + `<agent>/.env`（用户文件）。
+ * - 来源：agent scope env（DB） + `<agent>/.env`（用户文件）。
  * - 冲突时 `.env` 优先，满足用户可在本地即时覆盖。
  */
 export function loadAgentRuntimeEnv(projectRoot: string): Record<string, string> {
@@ -255,7 +255,7 @@ export function loadShipConfig(
    * 读取 console 共享环境变量（模型池 / extensions）。
    *
    * 关键点（中文）
-   * - console 层只读共享 env，不读项目 .env。
+   * - console 层只读全局 scope env，不读项目 .env。
    * - 避免某个 agent 项目的 .env 反向污染 console 全局配置解析。
    */
   const resolveSharedEnvVar = (name: string): string | undefined => {

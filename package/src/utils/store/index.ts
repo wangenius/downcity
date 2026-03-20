@@ -11,12 +11,15 @@ import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import type {
+  StoredEnvEntry,
+  StoredEnvScope,
   StoredAgentEnvEntry,
   StoredChannelAccount,
   StoredChannelAccountChannel,
   StoredGlobalEnvEntry,
   StoredModel,
   StoredModelProvider,
+  UpsertEnvEntryInput,
   UpsertAgentEnvEntryInput,
   UpsertChannelAccountInput,
   UpsertGlobalEnvEntryInput,
@@ -113,27 +116,25 @@ export class ConsoleStore {
       );
     `);
     this.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS global_env (
-        key TEXT PRIMARY KEY NOT NULL,
-        value_encrypted TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-    `);
-    this.sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS agent_env (
-        agent_id TEXT NOT NULL,
+      CREATE TABLE IF NOT EXISTS env_entries (
+        scope TEXT NOT NULL,
+        agent_id TEXT NOT NULL DEFAULT '',
         key TEXT NOT NULL,
         value_encrypted TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        PRIMARY KEY (agent_id, key)
+        PRIMARY KEY (scope, agent_id, key)
       );
     `);
     this.sqlite.exec(`
-      CREATE INDEX IF NOT EXISTS agent_env_agent_id_idx
-      ON agent_env(agent_id);
+      CREATE INDEX IF NOT EXISTS env_entries_scope_idx
+      ON env_entries(scope);
     `);
+    this.sqlite.exec(`
+      CREATE INDEX IF NOT EXISTS env_entries_agent_id_idx
+      ON env_entries(agent_id);
+    `);
+    this.ensureEnvEntriesMigration();
     this.sqlite.exec(`
       CREATE TABLE IF NOT EXISTS channel_accounts (
         id TEXT PRIMARY KEY NOT NULL,
@@ -581,31 +582,283 @@ export class ConsoleStore {
   }
 
   /**
+   * 迁移历史 env 双表到统一单表 `env_entries`。
+   *
+   * 关键点（中文）
+   * - 历史版本使用 `global_env` 与 `agent_env` 分表。
+   * - 新版本统一写入 `env_entries`，启动时自动迁移旧数据。
+   * - 旧表保留不删，避免用户本地调试或回滚时直接丢失数据。
+   */
+  private ensureEnvEntriesMigration(): void {
+    const tableRows = this.sqlite
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('global_env', 'agent_env');",
+      )
+      .all() as Array<{ name?: unknown }>;
+    const tableNames = new Set(
+      tableRows.map((row) => String(row.name || "").trim()).filter(Boolean),
+    );
+    if (tableNames.has("global_env")) {
+      this.sqlite.exec(`
+        INSERT OR IGNORE INTO env_entries (
+          scope, agent_id, key, value_encrypted, created_at, updated_at
+        )
+        SELECT
+          'global',
+          '',
+          key,
+          value_encrypted,
+          created_at,
+          updated_at
+        FROM global_env;
+      `);
+    }
+    if (tableNames.has("agent_env")) {
+      this.sqlite.exec(`
+        INSERT OR IGNORE INTO env_entries (
+          scope, agent_id, key, value_encrypted, created_at, updated_at
+        )
+        SELECT
+          'agent',
+          agent_id,
+          key,
+          value_encrypted,
+          created_at,
+          updated_at
+        FROM agent_env;
+      `);
+      this.sqlite.exec(`
+        UPDATE env_entries
+        SET agent_id = ''
+        WHERE scope = 'global' AND agent_id IS NULL;
+      `);
+    }
+  }
+
+  /**
+   * 规范化 env scope。
+   */
+  private normalizeEnvScope(input: string): StoredEnvScope {
+    const scope = String(input || "").trim().toLowerCase();
+    if (scope === "agent") return "agent";
+    return "global";
+  }
+
+  /**
+   * 规范化 env 的 agent 目标。
+   *
+   * 关键点（中文）
+   * - `global` 固定为空字符串，统一作为单表中的全局占位值。
+   * - `agent` 必须是非空 projectRoot。
+   */
+  private normalizeEnvAgentTarget(scope: StoredEnvScope, agentIdInput?: string): string {
+    if (scope === "global") return "";
+    return normalizeNonEmptyText(agentIdInput || "", "agentId");
+  }
+
+  /**
+   * 解密并格式化 env 行。
+   */
+  private buildEnvEntryFromRowSync(row: {
+    scope?: unknown;
+    agent_id?: unknown;
+    key?: unknown;
+    value_encrypted?: unknown;
+    created_at?: unknown;
+    updated_at?: unknown;
+  }): StoredEnvEntry | null {
+    const scope = this.normalizeEnvScope(String(row.scope || ""));
+    const agentId = String(row.agent_id || "").trim();
+    const key = String(row.key || "").trim();
+    const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+    if (!key || !encrypted) return null;
+    return {
+      scope,
+      agentId: scope === "agent" ? agentId : undefined,
+      key,
+      value: decryptTextSync(encrypted),
+      createdAt: String(row.created_at || ""),
+      updatedAt: String(row.updated_at || ""),
+    };
+  }
+
+  /**
+   * 解密并格式化 env 行（异步）。
+   */
+  private async buildEnvEntryFromRow(row: {
+    scope?: unknown;
+    agent_id?: unknown;
+    key?: unknown;
+    value_encrypted?: unknown;
+    created_at?: unknown;
+    updated_at?: unknown;
+  }): Promise<StoredEnvEntry | null> {
+    const scope = this.normalizeEnvScope(String(row.scope || ""));
+    const agentId = String(row.agent_id || "").trim();
+    const key = String(row.key || "").trim();
+    const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
+    if (!key || !encrypted) return null;
+    return {
+      scope,
+      agentId: scope === "agent" ? agentId : undefined,
+      key,
+      value: await decryptText(encrypted),
+      createdAt: String(row.created_at || ""),
+      updatedAt: String(row.updated_at || ""),
+    };
+  }
+
+  /**
+   * 查询 env 条目（同步）。
+   */
+  listEnvEntriesSync(scopeInput?: StoredEnvScope, agentIdInput?: string): StoredEnvEntry[] {
+    const hasScope = Boolean(scopeInput);
+    const scope = hasScope ? this.normalizeEnvScope(scopeInput || "global") : undefined;
+    const hasAgentFilter = scope === "agent" && Boolean(String(agentIdInput || "").trim());
+    const agentId = hasAgentFilter
+      ? this.normalizeEnvAgentTarget(scope, agentIdInput)
+      : undefined;
+    const rows = hasAgentFilter
+      ? this.sqlite.prepare(
+          `
+          SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+          FROM env_entries
+          WHERE scope = 'agent' AND agent_id = ?
+          ORDER BY key ASC;
+          `,
+        ).all(agentId)
+      : scope === "agent"
+        ? this.sqlite.prepare(
+            `
+            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            FROM env_entries
+            WHERE scope = 'agent'
+            ORDER BY agent_id ASC, key ASC;
+            `,
+          ).all()
+        : scope === "global"
+        ? this.sqlite.prepare(
+            `
+            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            FROM env_entries
+            WHERE scope = 'global'
+            ORDER BY key ASC;
+            `,
+          ).all()
+        : this.sqlite.prepare(
+            `
+            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            FROM env_entries
+            ORDER BY scope ASC, agent_id ASC, key ASC;
+            `,
+          ).all();
+    const out: StoredEnvEntry[] = [];
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const entry = this.buildEnvEntryFromRowSync(row);
+      if (entry) out.push(entry);
+    }
+    return out;
+  }
+
+  /**
+   * 查询 env 条目（异步）。
+   */
+  async listEnvEntries(scopeInput?: StoredEnvScope, agentIdInput?: string): Promise<StoredEnvEntry[]> {
+    const hasScope = Boolean(scopeInput);
+    const scope = hasScope ? this.normalizeEnvScope(scopeInput || "global") : undefined;
+    const hasAgentFilter = scope === "agent" && Boolean(String(agentIdInput || "").trim());
+    const agentId = hasAgentFilter
+      ? this.normalizeEnvAgentTarget(scope, agentIdInput)
+      : undefined;
+    const rows = hasAgentFilter
+      ? this.sqlite.prepare(
+          `
+          SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+          FROM env_entries
+          WHERE scope = 'agent' AND agent_id = ?
+          ORDER BY key ASC;
+          `,
+        ).all(agentId)
+      : scope === "agent"
+        ? this.sqlite.prepare(
+            `
+            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            FROM env_entries
+            WHERE scope = 'agent'
+            ORDER BY agent_id ASC, key ASC;
+            `,
+          ).all()
+        : scope === "global"
+        ? this.sqlite.prepare(
+            `
+            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            FROM env_entries
+            WHERE scope = 'global'
+            ORDER BY key ASC;
+            `,
+          ).all()
+        : this.sqlite.prepare(
+            `
+            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            FROM env_entries
+            ORDER BY scope ASC, agent_id ASC, key ASC;
+            `,
+          ).all();
+    const out: StoredEnvEntry[] = [];
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const entry = await this.buildEnvEntryFromRow(row);
+      if (entry) out.push(entry);
+    }
+    return out;
+  }
+
+  /**
+   * 新增或更新 env 条目。
+   */
+  async upsertEnvEntry(input: UpsertEnvEntryInput): Promise<void> {
+    const scope = this.normalizeEnvScope(input.scope);
+    const agentId = this.normalizeEnvAgentTarget(scope, input.agentId);
+    const key = normalizeNonEmptyText(input.key, `${scope} env key`);
+    const value = String(input.value ?? "");
+    const existing = this.sqlite.prepare(
+      `
+      SELECT created_at
+      FROM env_entries
+      WHERE scope = ? AND agent_id = ? AND key = ?
+      LIMIT 1;
+      `,
+    ).get(scope, agentId, key) as { created_at?: unknown } | undefined;
+    const createdAt = String(existing?.created_at || nowIso());
+    const updatedAt = nowIso();
+    const encrypted = await encryptText(value);
+    this.sqlite.prepare(
+      `
+      INSERT INTO env_entries (scope, agent_id, key, value_encrypted, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(scope, agent_id, key) DO UPDATE SET
+        value_encrypted = excluded.value_encrypted,
+        updated_at = excluded.updated_at;
+      `,
+    ).run(scope, agentId, key, encrypted, createdAt, updatedAt);
+  }
+
+  /**
+   * 删除单个 env 条目。
+   */
+  removeEnvEntry(input: { scope: StoredEnvScope; agentId?: string; key: string }): void {
+    const scope = this.normalizeEnvScope(input.scope);
+    const agentId = this.normalizeEnvAgentTarget(scope, input.agentId);
+    const key = normalizeNonEmptyText(input.key, `${scope} env key`);
+    this.sqlite
+      .prepare("DELETE FROM env_entries WHERE scope = ? AND agent_id = ? AND key = ?;")
+      .run(scope, agentId, key);
+  }
+
+  /**
    * 列出全局环境变量（同步解密）。
    */
   listGlobalEnvEntriesSync(): StoredGlobalEnvEntry[] {
-    const rows = this.sqlite.prepare(
-      "SELECT key, value_encrypted, created_at, updated_at FROM global_env ORDER BY key ASC;",
-    ).all() as Array<{
-      key?: unknown;
-      value_encrypted?: unknown;
-      created_at?: unknown;
-      updated_at?: unknown;
-    }>;
-    const out: StoredGlobalEnvEntry[] = [];
-    for (const row of rows) {
-      const key = String(row.key || "").trim();
-      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
-      if (!key || !encrypted) continue;
-      const value = decryptTextSync(encrypted);
-      out.push({
-        key,
-        value,
-        createdAt: String(row.created_at || ""),
-        updatedAt: String(row.updated_at || ""),
-      });
-    }
-    return out;
+    return this.listEnvEntriesSync("global");
   }
 
   /**
@@ -624,28 +877,7 @@ export class ConsoleStore {
    * 列出全局环境变量（解密后）。
    */
   async listGlobalEnvEntries(): Promise<StoredGlobalEnvEntry[]> {
-    const rows = this.sqlite.prepare(
-      "SELECT key, value_encrypted, created_at, updated_at FROM global_env ORDER BY key ASC;",
-    ).all() as Array<{
-      key?: unknown;
-      value_encrypted?: unknown;
-      created_at?: unknown;
-      updated_at?: unknown;
-    }>;
-    const out: StoredGlobalEnvEntry[] = [];
-    for (const row of rows) {
-      const key = String(row.key || "").trim();
-      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
-      if (!key || !encrypted) continue;
-      const value = await decryptText(encrypted);
-      out.push({
-        key,
-        value,
-        createdAt: String(row.created_at || ""),
-        updatedAt: String(row.updated_at || ""),
-      });
-    }
-    return out;
+    return this.listEnvEntries("global");
   }
 
   /**
@@ -664,74 +896,35 @@ export class ConsoleStore {
    * 新增或更新全局环境变量。
    */
   async upsertGlobalEnvEntry(input: UpsertGlobalEnvEntryInput): Promise<void> {
-    const key = normalizeNonEmptyText(input.key, "global env key");
-    const value = String(input.value ?? "");
-    const existing = this.sqlite.prepare(
-      "SELECT created_at FROM global_env WHERE key = ? LIMIT 1;",
-    ).get(key) as { created_at?: unknown } | undefined;
-    const createdAt = String(existing?.created_at || nowIso());
-    const updatedAt = nowIso();
-    const encrypted = await encryptText(value);
-    this.sqlite.prepare(
-      `
-      INSERT INTO global_env (key, value_encrypted, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET
-        value_encrypted = excluded.value_encrypted,
-        updated_at = excluded.updated_at;
-      `,
-    ).run(key, encrypted, createdAt, updatedAt);
+    await this.upsertEnvEntry({
+      scope: "global",
+      key: input.key,
+      value: input.value,
+    });
   }
 
   /**
    * 删除单个全局环境变量。
    */
   removeGlobalEnvEntry(keyInput: string): void {
-    const key = normalizeNonEmptyText(keyInput, "global env key");
-    this.sqlite.prepare("DELETE FROM global_env WHERE key = ?;").run(key);
+    this.removeEnvEntry({
+      scope: "global",
+      key: keyInput,
+    });
   }
 
   /**
    * 清空全局环境变量。
    */
   clearGlobalEnvEntries(): void {
-    this.sqlite.exec("DELETE FROM global_env;");
+    this.sqlite.prepare("DELETE FROM env_entries WHERE scope = 'global';").run();
   }
 
   /**
    * 列出指定 agent 的私有环境变量（同步解密）。
    */
   listAgentEnvEntriesSync(agentIdInput: string): StoredAgentEnvEntry[] {
-    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
-    const rows = this.sqlite.prepare(
-      `
-      SELECT agent_id, key, value_encrypted, created_at, updated_at
-      FROM agent_env
-      WHERE agent_id = ?
-      ORDER BY key ASC;
-      `,
-    ).all(agentId) as Array<{
-      agent_id?: unknown;
-      key?: unknown;
-      value_encrypted?: unknown;
-      created_at?: unknown;
-      updated_at?: unknown;
-    }>;
-    const out: StoredAgentEnvEntry[] = [];
-    for (const row of rows) {
-      const key = String(row.key || "").trim();
-      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
-      if (!key || !encrypted) continue;
-      const value = decryptTextSync(encrypted);
-      out.push({
-        agentId,
-        key,
-        value,
-        createdAt: String(row.created_at || ""),
-        updatedAt: String(row.updated_at || ""),
-      });
-    }
-    return out;
+    return this.listEnvEntriesSync("agent", agentIdInput);
   }
 
   /**
@@ -750,36 +943,18 @@ export class ConsoleStore {
    * 列出指定 agent 的私有环境变量（解密后）。
    */
   async listAgentEnvEntries(agentIdInput: string): Promise<StoredAgentEnvEntry[]> {
-    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
-    const rows = this.sqlite.prepare(
-      `
-      SELECT agent_id, key, value_encrypted, created_at, updated_at
-      FROM agent_env
-      WHERE agent_id = ?
-      ORDER BY key ASC;
-      `,
-    ).all(agentId) as Array<{
-      agent_id?: unknown;
-      key?: unknown;
-      value_encrypted?: unknown;
-      created_at?: unknown;
-      updated_at?: unknown;
-    }>;
-    const out: StoredAgentEnvEntry[] = [];
-    for (const row of rows) {
-      const key = String(row.key || "").trim();
-      const encrypted = typeof row.value_encrypted === "string" ? row.value_encrypted : "";
-      if (!key || !encrypted) continue;
-      const value = await decryptText(encrypted);
-      out.push({
-        agentId,
-        key,
-        value,
-        createdAt: String(row.created_at || ""),
-        updatedAt: String(row.updated_at || ""),
-      });
-    }
-    return out;
+    return this.listEnvEntries("agent", agentIdInput);
+  }
+
+  /**
+   * 列出全部 agent 私有环境变量（解密后）。
+   *
+   * 关键点（中文）
+   * - 用于 Console UI 的全局 Env 工作台，不依赖当前选中的 agent。
+   * - 返回结果按 agentId、key 排序，便于前端稳定分组展示。
+   */
+  async listAllAgentEnvEntries(): Promise<StoredAgentEnvEntry[]> {
+    return this.listEnvEntries("agent");
   }
 
   /**
@@ -798,35 +973,23 @@ export class ConsoleStore {
    * 新增或更新 agent 私有环境变量。
    */
   async upsertAgentEnvEntry(input: UpsertAgentEnvEntryInput): Promise<void> {
-    const agentId = normalizeNonEmptyText(input.agentId, "agentId");
-    const key = normalizeNonEmptyText(input.key, "agent env key");
-    const value = String(input.value ?? "");
-    const existing = this.sqlite.prepare(
-      "SELECT created_at FROM agent_env WHERE agent_id = ? AND key = ? LIMIT 1;",
-    ).get(agentId, key) as { created_at?: unknown } | undefined;
-    const createdAt = String(existing?.created_at || nowIso());
-    const updatedAt = nowIso();
-    const encrypted = await encryptText(value);
-    this.sqlite.prepare(
-      `
-      INSERT INTO agent_env (agent_id, key, value_encrypted, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(agent_id, key) DO UPDATE SET
-        value_encrypted = excluded.value_encrypted,
-        updated_at = excluded.updated_at;
-      `,
-    ).run(agentId, key, encrypted, createdAt, updatedAt);
+    await this.upsertEnvEntry({
+      scope: "agent",
+      agentId: input.agentId,
+      key: input.key,
+      value: input.value,
+    });
   }
 
   /**
    * 删除指定 agent 的单个环境变量。
    */
   removeAgentEnvEntry(agentIdInput: string, keyInput: string): void {
-    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
-    const key = normalizeNonEmptyText(keyInput, "agent env key");
-    this.sqlite
-      .prepare("DELETE FROM agent_env WHERE agent_id = ? AND key = ?;")
-      .run(agentId, key);
+    this.removeEnvEntry({
+      scope: "agent",
+      agentId: agentIdInput,
+      key: keyInput,
+    });
   }
 
   /**
@@ -834,7 +997,9 @@ export class ConsoleStore {
    */
   clearAgentEnvEntries(agentIdInput: string): void {
     const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
-    this.sqlite.prepare("DELETE FROM agent_env WHERE agent_id = ?;").run(agentId);
+    this.sqlite
+      .prepare("DELETE FROM env_entries WHERE scope = 'agent' AND agent_id = ?;")
+      .run(agentId);
   }
 
   /**

@@ -9,6 +9,7 @@
 
 import * as React from "react"
 import { CheckIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
+import { DashboardModule } from "./DashboardModule"
 import { Button } from "../ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 import { Input } from "../ui/input"
@@ -71,23 +72,49 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
     return { active, inactive, error }
   }, [filtered])
 
+  const resolveStateTone = React.useCallback((stateInput?: string) => {
+    const state = String(stateInput || "").toLowerCase()
+    if (state === "error") {
+      return {
+        badge: "bg-destructive/10 text-destructive",
+        dot: "bg-destructive",
+        row: "text-foreground",
+      }
+    }
+    if (state === "running" || state === "idle") {
+      return {
+        badge: "bg-emerald-500/10 text-emerald-700",
+        dot: "bg-emerald-600",
+        row: "text-foreground",
+      }
+    }
+    return {
+      badge: "bg-secondary text-muted-foreground",
+      dot: "bg-muted-foreground/55",
+      row: "text-muted-foreground opacity-60",
+    }
+  }, [])
+
   return (
-    <section className="min-h-0 space-y-3 overflow-y-auto px-1">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
-            active {summary.active}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-            inactive {summary.inactive}
-          </span>
-          {summary.error > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">
-              error {summary.error}
-            </span>
-          ) : null}
-        </div>
+    <DashboardModule
+      title="Extensions"
+      description={`active ${summary.active} · inactive ${summary.inactive}${summary.error > 0 ? ` · error ${summary.error}` : ""}`}
+      bodyClassName="min-h-0 overflow-y-auto"
+      actions={
         <div className="flex items-center gap-1.5">
+          <div className="hidden flex-wrap items-center gap-2 text-xs md:flex">
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
+              active {summary.active}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+              inactive {summary.inactive}
+            </span>
+            {summary.error > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">
+                error {summary.error}
+              </span>
+            ) : null}
+          </div>
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -95,206 +122,171 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
             className="h-8 w-[220px]"
           />
         </div>
-      </div>
+      }
+    >
 
       {filtered.length === 0 ? (
-        <div className="py-8 text-sm text-muted-foreground">没有匹配的 extension。</div>
+        <div className="rounded-[18px] bg-secondary px-4 py-6 text-sm text-muted-foreground">没有匹配的 extension。</div>
       ) : (
-        <div>
-          <table className="w-full table-fixed border-collapse text-sm">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                <th className="py-2 text-left font-medium">Extension</th>
-                <th className="w-[100px] py-2 text-left font-medium">State</th>
-                <th className="w-[220px] py-2 text-left font-medium">Updated</th>
-                <th className="w-[360px] py-2 text-left font-medium">Info</th>
-                <th className="w-[144px] py-2 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((item) => {
-                const name = String(item.name || "unknown")
-                const state = String(item.state || "unknown").toLowerCase()
-                const supportsLifecycle = item.supportsLifecycle === true
-                const lifecycle = item.config?.lifecycle || {}
-                const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
-                const isRunning = state === "running"
-                const isIdle = state === "idle"
-                const isError = state === "error"
-                const loadingStart = actionLoadingKey === `${name}:start`
-                const loadingStop = actionLoadingKey === `${name}:stop`
-                const loadingRestart = actionLoadingKey === `${name}:restart`
-                const loadingTest = actionLoadingKey === `${name}:test`
+        <div className="space-y-2">
+          {filtered.map((item) => {
+            const name = String(item.name || "unknown")
+            const state = String(item.state || "unknown").toLowerCase()
+            const supportsLifecycle = item.supportsLifecycle === true
+            const lifecycle = item.config?.lifecycle || {}
+            const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
+            const lastError = String(item.lastError || "").trim()
+            const loadingStart = actionLoadingKey === `${name}:start`
+            const loadingStop = actionLoadingKey === `${name}:stop`
+            const loadingRestart = actionLoadingKey === `${name}:restart`
+            const loadingTest = actionLoadingKey === `${name}:test`
+            const tone = resolveStateTone(state)
+            const capabilitySummary = `lifecycle s:${lifecycle.start ? "on" : "off"} t:${lifecycle.stop ? "on" : "off"}`
 
-                return (
-                  <tr
-                    key={name}
-                    className={`align-middle ${
-                      isError
-                        ? "text-foreground"
-                        : isRunning || isIdle
-                          ? "text-foreground"
-                          : "text-muted-foreground opacity-60"
-                    }`}
-                  >
-                    <td className="py-2 pr-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-[15px] font-semibold">{name}</div>
+            return (
+              <article
+                key={name}
+                className={`rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-secondary ${tone.row}`}
+              >
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className={`mt-0.5 size-2.5 shrink-0 rounded-full ${tone.dot}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="truncate text-[15px] font-semibold text-foreground">{name}</div>
+                          <span className={`inline-flex h-6 items-center rounded-full px-2 font-mono text-[11px] ${tone.badge}`}>
+                            {state}
+                          </span>
+                        </div>
                         <div className="truncate text-[12px] text-muted-foreground">
                           {String(item.description || "").trim() || "-"}
                         </div>
                       </div>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <span
-                        className={`inline-flex h-5 items-center rounded-full px-2 font-mono text-[11px] ${
-                          isError
-                            ? "bg-destructive/10 text-destructive"
-                            : isRunning || isIdle
-                              ? "bg-emerald-500/10 text-emerald-700"
-                              : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {state}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 pl-[1.375rem] text-[11px] text-muted-foreground">
+                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
+                        {capabilitySummary}
                       </span>
-                    </td>
-                    <td className="py-2 pr-3 text-xs text-muted-foreground">
-                      <div>{formatTime(item.updatedAt)}</div>
-                      <div className="truncate">
-                        {item.lastCommand ? `${item.lastCommand} @ ${formatTime(item.lastCommandAt)}` : "-"}
-                      </div>
-                    </td>
-                    <td className="py-2 pr-3 text-xs text-muted-foreground">
-                      <div className="flex flex-wrap gap-1">
-                        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px]">
-                          lifecycle s:{lifecycle.start ? "on" : "off"} t:{lifecycle.stop ? "on" : "off"}
+                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
+                        {`actions ${actionItems.length}`}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
+                        {formatTime(item.updatedAt)}
+                      </span>
+                      {item.lastCommand ? (
+                        <span className="inline-flex max-w-full items-center truncate rounded-full bg-secondary px-2 py-0.5 font-mono">
+                          {`${item.lastCommand} @ ${formatTime(item.lastCommandAt)}`}
                         </span>
-                        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px]">
-                          actions {actionItems.length}
+                      ) : null}
+                      {lastError ? (
+                        <span className="inline-flex max-w-full items-center truncate rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">
+                          {lastError}
                         </span>
-                        {item.lastError ? (
-                          <span className="inline-flex max-w-full items-center truncate rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] text-destructive">
-                            {String(item.lastError)}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {actionItems.length === 0 ? (
-                          <span className="text-[11px] text-muted-foreground">-</span>
-                        ) : (
-                          actionItems.map((action) => {
-                            const actionName = String(action?.name || "unknown")
-                            const modeLabel = [
-                              action?.supportsCommand ? "cmd" : "",
-                              action?.supportsApi ? "api" : "",
-                            ].filter(Boolean).join("+") || "none"
-                            return (
-                              <span
-                                key={`${name}:${actionName}`}
-                                className="inline-flex h-5 items-center rounded-full bg-muted px-2 font-mono text-[11px] text-foreground/85"
-                                title={`${actionName} · ${modeLabel}${
-                                  action?.apiMethod && action?.apiPath ? ` · ${action.apiMethod} ${action.apiPath}` : ""
-                                }`}
-                              >
-                                {`${actionName}·${modeLabel}`}
-                              </span>
-                            )
-                          })
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 text-right">
-                      {supportsLifecycle ? (
-                        <div className="flex items-center justify-end gap-1">
-                          {isError ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
-                              aria-label="restart"
-                              title="restart"
-                              onClick={() => setConfirmAction({ name, action: "restart" })}
+                      ) : null}
+                    </div>
+
+                    {actionItems.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
+                        {actionItems.map((action) => {
+                          const actionName = String(action?.name || "unknown")
+                          const modeLabel = [
+                            action?.supportsCommand ? "cmd" : "",
+                            action?.supportsApi ? "api" : "",
+                          ].filter(Boolean).join("+") || "none"
+                          return (
+                            <span
+                              key={`${name}:${actionName}`}
+                              className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
+                              title={`${actionName} · ${modeLabel}${
+                                action?.apiMethod && action?.apiPath ? ` · ${action.apiMethod} ${action.apiPath}` : ""
+                              }`}
                             >
-                              {loadingRestart ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
-                            </Button>
-                          ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
-                                  disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
-                                  aria-label="test"
-                                title="test"
-                                onClick={async () => {
-                                  try {
-                                    setActionLoadingKey(`${name}:test`)
-                                    await Promise.resolve(onTest(name))
-                                  } finally {
-                                    setActionLoadingKey("")
-                                  }
-                                }}
-                              >
-                                {loadingTest ? <Loader2Icon className="size-4 animate-spin" /> : <CheckIcon className="size-4" />}
-                              </Button>
-                              {isRunning || state === "idle" ? (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0"
-                                    disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
-                                    aria-label="restart"
-                                    title="restart"
-                                    onClick={() => setConfirmAction({ name, action: "restart" })}
-                                  >
-                                    {loadingRestart ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="h-8 w-8 p-0"
-                                    disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
-                                    aria-label="stop"
-                                    title="stop"
-                                    onClick={() => setConfirmAction({ name, action: "stop" })}
-                                  >
-                                    {loadingStop ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
-                                  disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
-                                  aria-label="start"
-                                  title="start"
-                                  onClick={async () => {
-                                    try {
-                                      setActionLoadingKey(`${name}:start`)
-                                      await Promise.resolve(onControl(name, "start"))
-                                    } finally {
-                                      setActionLoadingKey("")
-                                    }
-                                  }}
-                                >
-                                  {loadingStart ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
-                                </Button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                              {`${actionName}·${modeLabel}`}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 xl:pl-4">
+                    {supportsLifecycle ? (
+                      <>
+                        {(state === "running" || state === "idle" || state === "error") ? (
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            className="text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                            aria-label="test"
+                            title="test"
+                            onClick={async () => {
+                              try {
+                                setActionLoadingKey(`${name}:test`)
+                                await Promise.resolve(onTest(name))
+                              } finally {
+                                setActionLoadingKey("")
+                              }
+                            }}
+                          >
+                            {loadingTest ? <Loader2Icon className="size-4 animate-spin" /> : <CheckIcon className="size-4" />}
+                          </Button>
+                        ) : null}
+
+                        {(state === "running" || state === "idle" || state === "error") ? (
+                          <Button
+                            size="icon-sm"
+                            variant="secondary"
+                            disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                            aria-label="restart"
+                            title="restart"
+                            onClick={() => setConfirmAction({ name, action: "restart" })}
+                          >
+                            {loadingRestart ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
+                          </Button>
+                        ) : null}
+
+                        {state === "running" || state === "idle" ? (
+                          <Button
+                            size="icon-sm"
+                            variant="destructive"
+                            disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                            aria-label="stop"
+                            title="stop"
+                            onClick={() => setConfirmAction({ name, action: "stop" })}
+                          >
+                            {loadingStop ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="icon-sm"
+                            variant="secondary"
+                            disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
+                            aria-label="start"
+                            title="start"
+                            onClick={async () => {
+                              try {
+                                setActionLoadingKey(`${name}:start`)
+                                await Promise.resolve(onControl(name, "start"))
+                              } finally {
+                                setActionLoadingKey("")
+                              }
+                            }}
+                          >
+                            {loadingStart ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </div>
+                </div>
+              </article>
+            )
+          })}
         </div>
       )}
 
@@ -349,6 +341,6 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </DashboardModule>
   )
 }

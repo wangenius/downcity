@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
@@ -32,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type {
   UiModelPoolItem,
   UiModelProviderDiscoverResult,
@@ -58,6 +59,8 @@ type ProviderFormState = {
   type: string
   baseUrl: string
   apiKey: string
+  hasExistingApiKey: boolean
+  apiKeyMasked: string
 }
 
 type ModelFormState = {
@@ -183,6 +186,8 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
     type: "openai",
     baseUrl: "",
     apiKey: "",
+    hasExistingApiKey: false,
+    apiKeyMasked: "",
   })
   const [modelForm, setModelForm] = React.useState<ModelFormState>({
     id: "",
@@ -266,6 +271,8 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
       type: "openai",
       baseUrl: "",
       apiKey: "",
+      hasExistingApiKey: false,
+      apiKeyMasked: "",
     })
   }, [])
   const resetModelForm = React.useCallback(() => {
@@ -284,9 +291,10 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
 
   return (
     <section className="space-y-4">
-      <section className="space-y-3 rounded-md bg-muted/55 px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Providers</div>
+      <DashboardModule
+        title="Providers"
+        description="配置可用的模型 Provider，支持自定义 baseUrl 与 API Key。"
+        actions={
           <HeaderAction
             label="新增 Provider"
             icon={<PlusIcon className="size-4" />}
@@ -296,7 +304,8 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
             }}
             disabled={loading}
           />
-        </div>
+        }
+      >
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[18rem] flex-1">
             <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -316,118 +325,104 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         </div>
 
         {filteredProviders.length === 0 ? (
-          <div className="py-4 text-sm text-muted-foreground">没有 provider</div>
+          <div className="rounded-[18px] bg-secondary px-3 py-3 text-sm text-muted-foreground">没有 provider</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Id</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Base URL</TableHead>
-                <TableHead>API Key</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProviders.map((item) => {
-                const providerId = String(item.id || "").trim()
-                if (!providerId) return null
-                return (
-                  <TableRow key={providerId}>
-                    <TableCell className="font-medium">{providerId}</TableCell>
-                    <TableCell>{item.type || "-"}</TableCell>
-                    <TableCell className="max-w-[20rem] truncate" title={item.baseUrl || ""}>
-                      {item.baseUrl || "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {item.hasApiKey ? item.apiKeyMasked || "configured" : "empty"}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatTime(item.updatedAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <RowAction
-                          label="编辑"
-                          icon={<PencilIcon className="size-3.5" />}
-                          onClick={() => {
-                            setProviderForm({
-                              id: providerId,
-                              type: String(item.type || "openai"),
-                              baseUrl: String(item.baseUrl || ""),
-                              apiKey: "",
-                            })
-                            setProviderEditorOpen(true)
-                          }}
-                        />
-                        <RowAction
-                          label="测试"
-                          icon={<PlayIcon className="size-3.5" />}
-                          onClick={() => {
-                            void runWithPending(`provider:test:${providerId}`, async () => {
-                              await Promise.resolve(onTestProvider(providerId))
-                            })
-                          }}
-                          loading={isPending(`provider:test:${providerId}`)}
-                        />
-                        <RowAction
-                          label="发现"
-                          icon={<WandSparklesIcon className="size-3.5" />}
-                          onClick={() => {
-                            void runWithPending(`provider:discover:${providerId}`, async () => {
-                              const prefix = discoverPrefix.trim()
-                              const result = await Promise.resolve(
-                                onDiscoverProvider({
-                                  providerId,
-                                  autoAdd: false,
-                                  prefix: prefix || undefined,
-                                }),
-                              )
-                              if (!result) return
-                              const discovered = Array.isArray(result.discoveredModels) ? result.discoveredModels : []
-                              setDiscoverResultProviderId(providerId)
-                              setDiscoverResultPrefix(prefix)
-                              setDiscoveredModelNames(discovered)
-                              const selectable = discovered.filter((remoteName) => {
-                                const normalized = String(remoteName || "").trim()
-                                if (!normalized) return false
-                                const modelId = prefix ? `${prefix}${normalized}` : normalized
-                                return !existingModelIds.has(modelId)
+          <div className="space-y-1.5">
+            {filteredProviders.map((item) => {
+              const providerId = String(item.id || "").trim()
+              if (!providerId) return null
+              return (
+                <article key={providerId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-secondary/72 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0 flex-1 text-[11px] text-muted-foreground">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="truncate text-sm font-medium text-foreground">{providerId}</span>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
+                        {item.type || "-"}
+                      </span>
+                      <span className="truncate" title={item.baseUrl || ""}>{item.baseUrl || "-"}</span>
+                      <span>{item.hasApiKey ? item.apiKeyMasked || "configured" : "empty"}</span>
+                      <span>{formatTime(item.updatedAt)}</span>
+                    </div>
+                  </div>
+                  <div className="inline-flex items-center gap-1 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                          <RowAction
+                            label="编辑"
+                            icon={<PencilIcon className="size-3.5" />}
+                            onClick={() => {
+                              setProviderForm({
+                                id: providerId,
+                                type: String(item.type || "openai"),
+                                baseUrl: String(item.baseUrl || ""),
+                                apiKey: "",
+                                hasExistingApiKey: item.hasApiKey === true,
+                                apiKeyMasked: String(item.apiKeyMasked || ""),
                               })
-                              setSelectedDiscoveredModelNames(selectable)
-                              setDiscoverDialogOpen(true)
-                            })
-                          }}
-                          loading={isPending(`provider:discover:${providerId}`)}
-                        />
-                        <RowAction
-                          label="删除"
-                          icon={<Trash2Icon className="size-3.5" />}
-                          onClick={() => {
-                            void runWithPending(`provider:delete:${providerId}`, async () => {
-                              await Promise.resolve(onRemoveProvider(providerId))
-                            })
-                          }}
-                          loading={isPending(`provider:delete:${providerId}`)}
-                          danger
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </section>
-
-      <section className="space-y-3 rounded-md bg-muted/75 px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Models</div>
-            <div className="truncate text-[11px] text-muted-foreground">
-              {`current ${String(model?.agentPrimaryModelId || "-")} · provider ${String(model?.providerType || "-")} · providers ${providers.length} · models ${poolItems.length}`}
-            </div>
+                              setProviderEditorOpen(true)
+                            }}
+                          />
+                          <RowAction
+                            label="测试"
+                            icon={<PlayIcon className="size-3.5" />}
+                            onClick={() => {
+                              void runWithPending(`provider:test:${providerId}`, async () => {
+                                await Promise.resolve(onTestProvider(providerId))
+                              })
+                            }}
+                            loading={isPending(`provider:test:${providerId}`)}
+                          />
+                          <RowAction
+                            label="发现"
+                            icon={<WandSparklesIcon className="size-3.5" />}
+                            onClick={() => {
+                              void runWithPending(`provider:discover:${providerId}`, async () => {
+                                const prefix = discoverPrefix.trim()
+                                const result = await Promise.resolve(
+                                  onDiscoverProvider({
+                                    providerId,
+                                    autoAdd: false,
+                                    prefix: prefix || undefined,
+                                  }),
+                                )
+                                if (!result) return
+                                const discovered = Array.isArray(result.discoveredModels) ? result.discoveredModels : []
+                                setDiscoverResultProviderId(providerId)
+                                setDiscoverResultPrefix(prefix)
+                                setDiscoveredModelNames(discovered)
+                                const selectable = discovered.filter((remoteName) => {
+                                  const normalized = String(remoteName || "").trim()
+                                  if (!normalized) return false
+                                  const modelId = prefix ? `${prefix}${normalized}` : normalized
+                                  return !existingModelIds.has(modelId)
+                                })
+                                setSelectedDiscoveredModelNames(selectable)
+                                setDiscoverDialogOpen(true)
+                              })
+                            }}
+                            loading={isPending(`provider:discover:${providerId}`)}
+                          />
+                          <RowAction
+                            label="删除"
+                            icon={<Trash2Icon className="size-3.5" />}
+                            onClick={() => {
+                              void runWithPending(`provider:delete:${providerId}`, async () => {
+                                await Promise.resolve(onRemoveProvider(providerId))
+                              })
+                            }}
+                            loading={isPending(`provider:delete:${providerId}`)}
+                            danger
+                          />
+                  </div>
+                </article>
+              )
+            })}
           </div>
+        )}
+      </DashboardModule>
+
+      <DashboardModule
+        title="Models"
+        description={`current ${String(model?.agentPrimaryModelId || "-")} · provider ${String(model?.providerType || "-")} · providers ${providers.length} · models ${poolItems.length}`}
+        actions={
           <HeaderAction
             label="新增 Model"
             icon={<PlusIcon className="size-4" />}
@@ -437,7 +432,8 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
             }}
             disabled={loading}
           />
-        </div>
+        }
+      >
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[18rem] flex-1">
             <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -451,158 +447,141 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         </div>
 
         {filteredModels.length === 0 ? (
-          <div className="py-4 text-sm text-muted-foreground">没有 model</div>
+          <div className="rounded-[18px] bg-secondary px-3 py-3 text-sm text-muted-foreground">没有 model</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Id</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Params</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredModels.map((item) => {
-                const modelId = String(item.id || "").trim()
-                if (!modelId) return null
-                const isPaused = item.isPaused === true
-                return (
-                  <TableRow key={modelId}>
-                    <TableCell className="font-medium">{modelId}</TableCell>
-                    <TableCell>{item.providerId || "-"}</TableCell>
-                    <TableCell>{item.name || "-"}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center gap-1 text-xs ${isPaused ? "text-muted-foreground" : "text-emerald-700"}`}>
+          <div className="space-y-1.5">
+            {filteredModels.map((item) => {
+              const modelId = String(item.id || "").trim()
+              if (!modelId) return null
+              const isPaused = item.isPaused === true
+              return (
+                <article key={modelId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-secondary/72 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0 flex-1 text-[11px] text-muted-foreground">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="truncate text-sm font-medium text-foreground">{modelId}</span>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ${isPaused ? "bg-secondary text-muted-foreground" : "bg-emerald-500/12 text-emerald-700"}`}>
                         <span className={`size-1.5 rounded-full ${isPaused ? "bg-muted-foreground/70" : "bg-emerald-600"}`} />
                         <span>{isPaused ? "paused" : "active"}</span>
                       </span>
-                    </TableCell>
-                    <TableCell className="text-[11px] text-muted-foreground">
-                      {`temp ${item.temperature ?? "-"} · max ${item.maxTokens ?? "-"} · topP ${item.topP ?? "-"}`}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatTime(item.updatedAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <RowAction
-                          label="编辑"
-                          icon={<PencilIcon className="size-3.5" />}
-                          onClick={() => {
-                            setModelForm({
-                              id: modelId,
-                              providerId: String(item.providerId || ""),
-                              name: String(item.name || ""),
-                              temperature: item.temperature === undefined ? "" : String(item.temperature),
-                              maxTokens: item.maxTokens === undefined ? "" : String(item.maxTokens),
-                              topP: item.topP === undefined ? "" : String(item.topP),
-                              frequencyPenalty: item.frequencyPenalty === undefined ? "" : String(item.frequencyPenalty),
-                              presencePenalty: item.presencePenalty === undefined ? "" : String(item.presencePenalty),
-                              anthropicVersion: String(item.anthropicVersion || ""),
-                            })
-                            setModelEditorOpen(true)
-                          }}
-                        />
-                        <RowAction
-                          label="测试"
-                          icon={<PlayIcon className="size-3.5" />}
-                          onClick={() => {
-                            setModelTestTargetId(modelId)
-                            setModelTestDialogOpen(true)
-                          }}
-                        />
-                        <RowAction
-                          label={isPaused ? "恢复" : "暂停"}
-                          icon={isPaused ? <PlayIcon className="size-3.5" /> : <PauseIcon className="size-3.5" />}
-                          onClick={() => {
-                            void runWithPending(`model:pause:${modelId}`, async () => {
-                              await Promise.resolve(onPauseModel(modelId, !isPaused))
-                            })
-                          }}
-                          loading={isPending(`model:pause:${modelId}`)}
-                        />
-                        <RowAction
-                          label="删除"
-                          icon={<Trash2Icon className="size-3.5" />}
-                          onClick={() => {
-                            void runWithPending(`model:delete:${modelId}`, async () => {
-                              await Promise.resolve(onRemoveModel(modelId))
-                            })
-                          }}
-                          loading={isPending(`model:delete:${modelId}`)}
-                          danger
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                      <span>{item.providerId || "-"}</span>
+                      <span className="truncate">{item.name || "-"}</span>
+                      <span>{`temp ${item.temperature ?? "-"}`}</span>
+                      <span>{`max ${item.maxTokens ?? "-"}`}</span>
+                      <span>{`topP ${item.topP ?? "-"}`}</span>
+                      <span>{formatTime(item.updatedAt)}</span>
+                    </div>
+                  </div>
+                  <div className="inline-flex items-center gap-1 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                          <RowAction
+                            label="编辑"
+                            icon={<PencilIcon className="size-3.5" />}
+                            onClick={() => {
+                              setModelForm({
+                                id: modelId,
+                                providerId: String(item.providerId || ""),
+                                name: String(item.name || ""),
+                                temperature: item.temperature === undefined ? "" : String(item.temperature),
+                                maxTokens: item.maxTokens === undefined ? "" : String(item.maxTokens),
+                                topP: item.topP === undefined ? "" : String(item.topP),
+                                frequencyPenalty: item.frequencyPenalty === undefined ? "" : String(item.frequencyPenalty),
+                                presencePenalty: item.presencePenalty === undefined ? "" : String(item.presencePenalty),
+                                anthropicVersion: String(item.anthropicVersion || ""),
+                              })
+                              setModelEditorOpen(true)
+                            }}
+                          />
+                          <RowAction
+                            label="测试"
+                            icon={<PlayIcon className="size-3.5" />}
+                            onClick={() => {
+                              setModelTestTargetId(modelId)
+                              setModelTestDialogOpen(true)
+                            }}
+                          />
+                          <RowAction
+                            label={isPaused ? "恢复" : "暂停"}
+                            icon={isPaused ? <PlayIcon className="size-3.5" /> : <PauseIcon className="size-3.5" />}
+                            onClick={() => {
+                              void runWithPending(`model:pause:${modelId}`, async () => {
+                                await Promise.resolve(onPauseModel(modelId, !isPaused))
+                              })
+                            }}
+                            loading={isPending(`model:pause:${modelId}`)}
+                          />
+                          <RowAction
+                            label="删除"
+                            icon={<Trash2Icon className="size-3.5" />}
+                            onClick={() => {
+                              void runWithPending(`model:delete:${modelId}`, async () => {
+                                await Promise.resolve(onRemoveModel(modelId))
+                              })
+                            }}
+                            loading={isPending(`model:delete:${modelId}`)}
+                            danger
+                          />
+                  </div>
+                </article>
+              )
+            })}
+          </div>
         )}
-      </section>
+      </DashboardModule>
 
       <Dialog open={discoverDialogOpen} onOpenChange={setDiscoverDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[min(92vw,720px)]">
           <DialogHeader>
             <DialogTitle>Discover Models</DialogTitle>
-            <DialogDescription>{`Provider: ${discoverResultProviderId || "-"} · Prefix: ${discoverResultPrefix || "(none)"}`}</DialogDescription>
+            <DialogDescription className="sr-only">
+              Discover models dialog
+            </DialogDescription>
           </DialogHeader>
           {discoveredModelNames.length === 0 ? (
             <div className="px-4 pb-2 text-sm text-muted-foreground">未发现可用模型</div>
           ) : (
-            <div className="max-h-[50vh] overflow-auto px-4 pb-2">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">Add</TableHead>
-                    <TableHead>Remote Name</TableHead>
-                    <TableHead>Model ID</TableHead>
-                    <TableHead className="text-right">State</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {discoveredModelNames.map((remoteNameRaw) => {
-                    const remoteName = String(remoteNameRaw || "").trim()
-                    const targetModelId = discoverResultPrefix ? `${discoverResultPrefix}${remoteName}` : remoteName
-                    const exists = existingModelIds.has(targetModelId)
-                    const checked = selectedDiscoveredModelNames.includes(remoteName)
-                    return (
-                      <TableRow key={`discover:${remoteName}`}>
-                        <TableCell>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={exists}
-                            onChange={(event) => {
-                              setSelectedDiscoveredModelNames((prev) => {
-                                if (!event.target.checked) return prev.filter((item) => item !== remoteName)
-                                if (prev.includes(remoteName)) return prev
-                                return [...prev, remoteName]
-                              })
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>{remoteName}</TableCell>
-                        <TableCell className="text-muted-foreground">{targetModelId}</TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">
-                          {exists ? "exists" : "new"}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+            <div className="max-h-[58vh] space-y-3 overflow-auto px-4 pb-2">
+              <div className="rounded-[18px] bg-secondary px-3 py-2 text-xs text-muted-foreground">
+                {`provider ${discoverResultProviderId || "-"} · prefix ${discoverResultPrefix || "(none)"}`}
+              </div>
+              <div className="space-y-1.5">
+                {discoveredModelNames.map((remoteNameRaw) => {
+                  const remoteName = String(remoteNameRaw || "").trim()
+                  const targetModelId = discoverResultPrefix ? `${discoverResultPrefix}${remoteName}` : remoteName
+                  const exists = existingModelIds.has(targetModelId)
+                  const checked = selectedDiscoveredModelNames.includes(remoteName)
+                  return (
+                    <label key={`discover:${remoteName}`} className="flex items-center justify-between gap-3 rounded-[14px] bg-transparent px-3 py-2.5 text-sm transition-colors hover:bg-secondary/72">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={exists}
+                          onChange={(event) => {
+                            setSelectedDiscoveredModelNames((prev) => {
+                              if (!event.target.checked) return prev.filter((item) => item !== remoteName)
+                              if (prev.includes(remoteName)) return prev
+                              return [...prev, remoteName]
+                            })
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <div className="truncate text-foreground">{remoteName}</div>
+                          <div className="truncate text-[11px] text-muted-foreground">{targetModelId}</div>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-[11px] text-muted-foreground">{exists ? "exists" : "new"}</div>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           )}
-          <DialogFooter>
-            <Button size="sm" variant="outline" onClick={() => setDiscoverDialogOpen(false)}>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button size="sm" variant="outline" className="h-9 rounded-[12px] px-4" onClick={() => setDiscoverDialogOpen(false)}>
               取消
             </Button>
             <Button
               size="sm"
+              className="h-9 rounded-[12px] px-4"
               disabled={selectedDiscoveredModelNames.length === 0 || loading || isPending("discover:add")}
               onClick={() => {
                 void runWithPending("discover:add", async () => {
@@ -630,56 +609,78 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
       </Dialog>
 
       <Dialog open={providerEditorOpen} onOpenChange={setProviderEditorOpen}>
-        <DialogContent>
+        <DialogContent className="w-[min(92vw,560px)]">
           <DialogHeader>
             <DialogTitle>Provider</DialogTitle>
-            <DialogDescription>维护 provider 配置，API Key 会加密存储。</DialogDescription>
+            <DialogDescription className="sr-only">
+              Provider editor dialog
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 overflow-y-auto px-4 pb-2">
-            <Input
-              placeholder="provider id"
-              value={providerForm.id}
-              onChange={(event) => setProviderForm((prev) => ({ ...prev, id: event.target.value }))}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-9 w-full justify-between"
-                  />
+          <div className="max-h-[62vh] space-y-3 overflow-y-auto px-4 pb-2">
+            <div className="space-y-2 rounded-[18px] bg-secondary p-3">
+              <Label className="text-xs text-muted-foreground">Provider</Label>
+              <Input
+                placeholder="provider id"
+                className="h-10 rounded-[12px]"
+                value={providerForm.id}
+                onChange={(event) => setProviderForm((prev) => ({ ...prev, id: event.target.value }))}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 w-full justify-between rounded-[12px] px-3"
+                    />
+                  }
+                >
+                  <span>{providerForm.type || "provider type"}</span>
+                  <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="min-w-[12rem]">
+                  {PROVIDER_TYPES.map((type) => (
+                    <DropdownMenuItem key={type} onClick={() => setProviderForm((prev) => ({ ...prev, type }))}>
+                      {providerForm.type === type ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
+                      <span>{type}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="space-y-2 rounded-[18px] bg-secondary p-3">
+              <Label className="text-xs text-muted-foreground">Connection</Label>
+              <Input
+                placeholder="base url (optional)"
+                className="h-10 rounded-[12px]"
+                value={providerForm.baseUrl}
+                onChange={(event) => setProviderForm((prev) => ({ ...prev, baseUrl: event.target.value }))}
+              />
+              <Input
+                placeholder={
+                  providerForm.hasExistingApiKey
+                    ? "留空保留当前 API Key"
+                    : "api key (optional)"
                 }
-              >
-                <span>{providerForm.type || "provider type"}</span>
-                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="min-w-[12rem]">
-                {PROVIDER_TYPES.map((type) => (
-                  <DropdownMenuItem key={type} onClick={() => setProviderForm((prev) => ({ ...prev, type }))}>
-                    {providerForm.type === type ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
-                    <span>{type}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Input
-              placeholder="base url (optional)"
-              value={providerForm.baseUrl}
-              onChange={(event) => setProviderForm((prev) => ({ ...prev, baseUrl: event.target.value }))}
-            />
-            <Input
-              placeholder="api key (optional)"
-              value={providerForm.apiKey}
-              onChange={(event) => setProviderForm((prev) => ({ ...prev, apiKey: event.target.value }))}
-            />
+                className="h-10 rounded-[12px]"
+                value={providerForm.apiKey}
+                onChange={(event) => setProviderForm((prev) => ({ ...prev, apiKey: event.target.value }))}
+              />
+              <div className="text-[11px] text-muted-foreground">
+                {providerForm.hasExistingApiKey
+                  ? `已配置：${providerForm.apiKeyMasked || "configured"}`
+                  : "未配置 API Key"}
+              </div>
+            </div>
           </div>
-          <DialogFooter>
-            <Button size="sm" variant="outline" onClick={() => setProviderEditorOpen(false)}>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button size="sm" variant="outline" className="h-9 rounded-[12px] px-4" onClick={() => setProviderEditorOpen(false)}>
               取消
             </Button>
             <Button
               size="sm"
+              className="h-9 rounded-[12px] px-4"
               disabled={!canSaveProvider || loading || isPending("provider:save")}
               onClick={() => {
                 void runWithPending("provider:save", async () => {
@@ -702,25 +703,31 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
       </Dialog>
 
       <Dialog open={modelTestDialogOpen} onOpenChange={setModelTestDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[min(92vw,560px)]">
           <DialogHeader>
             <DialogTitle>测试 Model</DialogTitle>
-            <DialogDescription>{`Model: ${modelTestTargetId || "-"}`}</DialogDescription>
+            <DialogDescription className="sr-only">
+              Model test dialog
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 overflow-y-auto px-4 pb-2">
+            <div className="rounded-[18px] bg-secondary px-3 py-2 text-xs text-muted-foreground">
+              {`model ${modelTestTargetId || "-"}`}
+            </div>
             <Textarea
-              className="min-h-[112px]"
+              className="min-h-[112px] rounded-[12px]"
               value={modelTestPrompt}
               onChange={(event) => setModelTestPrompt(event.target.value)}
               placeholder="输入测试 prompt"
             />
           </div>
-          <DialogFooter>
-            <Button size="sm" variant="outline" onClick={() => setModelTestDialogOpen(false)}>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button size="sm" variant="outline" className="h-9 rounded-[12px] px-4" onClick={() => setModelTestDialogOpen(false)}>
               取消
             </Button>
             <Button
               size="sm"
+              className="h-9 rounded-[12px] px-4"
               disabled={!modelTestTargetId || loading || isPending(`model:test:${modelTestTargetId}`)}
               onClick={() => {
                 void runWithPending(`model:test:${modelTestTargetId}`, async () => {
@@ -736,88 +743,100 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
       </Dialog>
 
       <Dialog open={modelEditorOpen} onOpenChange={setModelEditorOpen}>
-        <DialogContent>
+        <DialogContent className="w-[min(92vw,560px)]">
           <DialogHeader>
             <DialogTitle>Model</DialogTitle>
-            <DialogDescription>维护模型池配置，保存后立即生效。</DialogDescription>
+            <DialogDescription className="sr-only">
+              Model editor dialog
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 overflow-y-auto px-4 pb-2">
-            <Input
-              placeholder="model id"
-              value={modelForm.id}
-              onChange={(event) => setModelForm((prev) => ({ ...prev, id: event.target.value }))}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-9 w-full justify-between"
-                  />
-                }
-              >
-                <span>{modelForm.providerId || "provider"}</span>
-                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="min-w-[12rem]">
-                {providerIds.map((providerId) => (
-                  <DropdownMenuItem
-                    key={providerId}
-                    onClick={() => setModelForm((prev) => ({ ...prev, providerId }))}
-                  >
-                    {modelForm.providerId === providerId ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
-                    <span>{providerId}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Input
-              placeholder="upstream model name"
-              value={modelForm.name}
-              onChange={(event) => setModelForm((prev) => ({ ...prev, name: event.target.value }))}
-            />
-            <div className="grid grid-cols-2 gap-2">
+          <div className="max-h-[62vh] space-y-3 overflow-y-auto px-4 pb-2">
+            <div className="space-y-2 rounded-[18px] bg-secondary p-3">
+              <Label className="text-xs text-muted-foreground">Model</Label>
+              <Input
+                placeholder="model id"
+                className="h-10 rounded-[12px]"
+                value={modelForm.id}
+                onChange={(event) => setModelForm((prev) => ({ ...prev, id: event.target.value }))}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 w-full justify-between rounded-[12px] px-3"
+                    />
+                  }
+                >
+                  <span>{modelForm.providerId || "provider"}</span>
+                  <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="min-w-[12rem]">
+                  {providerIds.map((providerId) => (
+                    <DropdownMenuItem
+                      key={providerId}
+                      onClick={() => setModelForm((prev) => ({ ...prev, providerId }))}
+                    >
+                      {modelForm.providerId === providerId ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
+                      <span>{providerId}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Input
+                placeholder="upstream model name"
+                className="h-10 rounded-[12px]"
+                value={modelForm.name}
+                onChange={(event) => setModelForm((prev) => ({ ...prev, name: event.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2 rounded-[18px] bg-secondary p-3">
               <Input
                 placeholder="temperature"
+                className="h-10 rounded-[12px]"
                 value={modelForm.temperature}
                 onChange={(event) => setModelForm((prev) => ({ ...prev, temperature: event.target.value }))}
               />
               <Input
                 placeholder="max tokens"
+                className="h-10 rounded-[12px]"
                 value={modelForm.maxTokens}
                 onChange={(event) => setModelForm((prev) => ({ ...prev, maxTokens: event.target.value }))}
               />
               <Input
                 placeholder="top p"
+                className="h-10 rounded-[12px]"
                 value={modelForm.topP}
                 onChange={(event) => setModelForm((prev) => ({ ...prev, topP: event.target.value }))}
               />
               <Input
                 placeholder="anthropic version"
+                className="h-10 rounded-[12px]"
                 value={modelForm.anthropicVersion}
                 onChange={(event) => setModelForm((prev) => ({ ...prev, anthropicVersion: event.target.value }))}
               />
               <Input
                 placeholder="frequency penalty"
+                className="col-span-2 h-10 rounded-[12px]"
                 value={modelForm.frequencyPenalty}
                 onChange={(event) => setModelForm((prev) => ({ ...prev, frequencyPenalty: event.target.value }))}
-                className="col-span-2"
               />
               <Input
                 placeholder="presence penalty"
+                className="col-span-2 h-10 rounded-[12px]"
                 value={modelForm.presencePenalty}
                 onChange={(event) => setModelForm((prev) => ({ ...prev, presencePenalty: event.target.value }))}
-                className="col-span-2"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button size="sm" variant="outline" onClick={() => setModelEditorOpen(false)}>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button size="sm" variant="outline" className="h-9 rounded-[12px] px-4" onClick={() => setModelEditorOpen(false)}>
               取消
             </Button>
             <Button
               size="sm"
+              className="h-9 rounded-[12px] px-4"
               disabled={!canSaveModel || loading || isPending("model:save")}
               onClick={() => {
                 void runWithPending("model:save", async () => {

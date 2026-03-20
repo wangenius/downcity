@@ -8,7 +8,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type { UiAgentOption, UiChatChannelStatus } from "@/types/Dashboard"
 
 /**
@@ -57,24 +57,27 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
 
   if (!selectedAgent) {
     return (
-      <Card className="bg-card">
-        <CardContent className="p-5 text-sm text-muted-foreground">未选择可用 agent</CardContent>
-      </Card>
+      <DashboardModule title="Agent Channels" description="当前 agent 的 channel 运行状态。">
+        <div className="rounded-[20px] bg-secondary/85 px-4 py-5 text-sm text-muted-foreground">
+          未选择可用 agent
+        </div>
+      </DashboardModule>
     )
   }
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle>{`Agent Channels · ${selectedAgent.name || "-"}`}</CardTitle>
+    <DashboardModule
+      title="Agent Channels"
+      description={`当前 agent：${selectedAgent.name || "-"}`}
+      actions={
         <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
           {loading ? "刷新中..." : "刷新"}
         </Button>
-      </CardHeader>
-      <CardContent className="space-y-3">
+      }
+    >
         <div className="space-y-2">
           {channels.length === 0 ? (
-            <div className="rounded-[20px] bg-secondary px-4 py-5 text-sm text-muted-foreground">
+            <div className="rounded-[20px] bg-secondary/85 px-4 py-5 text-sm text-muted-foreground">
               当前没有可管理 channel 数据
             </div>
           ) : (
@@ -94,7 +97,7 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
                         {renderBooleanBadge(item.enabled, "enabled", "disabled")}
                         {renderBooleanBadge(item.configured, "configured", "unconfigured")}
                         {renderBooleanBadge(item.running, "running", "stopped")}
-                        <Badge variant="outline" className="bg-card text-muted-foreground">
+                        <Badge variant="outline" className="bg-secondary text-muted-foreground">
                           {linkState}
                         </Badge>
                       </div>
@@ -140,7 +143,6 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
             })
           )}
         </div>
-      </CardContent>
-    </Card>
+    </DashboardModule>
   )
 }

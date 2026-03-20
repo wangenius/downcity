@@ -171,34 +171,25 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
             ))}
           </div>
         }
-      >
+        >
           {filteredItems.length === 0 ? (
             <div className="rounded-[18px] bg-secondary px-4 py-5 text-sm text-muted-foreground">
               当前筛选下没有配置项。
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-[20px] bg-secondary p-1.5">
-              <table className="w-full border-separate border-spacing-y-1.5">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">File</th>
-                    <th className="px-3 py-2 font-medium">Level</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Reason</th>
-                    <th className="px-3 py-2 font-medium">Updated</th>
-                    <th className="px-3 py-2 font-medium">Path</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.map((item) => (
-                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="bg-card">
-                      <td className="rounded-l-[16px] px-3 py-3 text-sm font-medium">{item.label}</td>
-                      <td className="px-3 py-3 text-xs">
+            <div className="space-y-2 rounded-[20px] bg-secondary/85 p-2">
+              {filteredItems.map((item) => (
+                <article
+                  key={`${item.scope}:${item.key}:${item.path}`}
+                  className="rounded-[16px] bg-background/80 px-3 py-3 transition-colors hover:bg-background"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="text-sm font-medium text-foreground">{item.label}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
                         <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
                           {requiredConsoleKeys.has(item.key) ? "required" : "optional"}
                         </span>
-                      </td>
-                      <td className="px-3 py-3 text-xs">
                         <span
                           className={
                             item.status === "ok"
@@ -208,18 +199,21 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
                         >
                           {item.status}
                         </span>
-                      </td>
-                      <td className="px-3 py-3 text-xs text-muted-foreground">{item.reason || "-"}</td>
-                      <td className="px-3 py-3 text-xs text-muted-foreground">
-                        {item.mtime ? new Date(item.mtime).toLocaleString("zh-CN", { hour12: false }) : "-"}
-                      </td>
-                      <td className="max-w-[30rem] truncate rounded-r-[16px] px-3 py-3 font-mono text-[11px] text-muted-foreground" title={item.path}>
+                        <span className="text-muted-foreground">
+                          {item.mtime ? new Date(item.mtime).toLocaleString("zh-CN", { hour12: false }) : "-"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{item.reason || "-"}</div>
+                    </div>
+                    <div className="min-w-0 text-right">
+                      <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Path</div>
+                      <div className="max-w-[30rem] truncate font-mono text-[11px] text-muted-foreground" title={item.path}>
                         {item.path}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
       </DashboardModule>

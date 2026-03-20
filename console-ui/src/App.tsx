@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
 import { GlobalChannelAccountsSection } from "@/components/dashboard/GlobalChannelAccountsSection"
+import { EnvSection } from "@/components/dashboard/EnvSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
 import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspaceSection"
@@ -79,6 +80,8 @@ export function App() {
     modelProviders,
     modelPoolItems,
     channelAccounts,
+    globalEnvItems,
+    agentEnvItems,
     prompt,
     topbarStatus,
     topbarError,
@@ -130,6 +133,10 @@ export function App() {
     upsertChannelAccount,
     probeChannelAccount,
     removeChannelAccount,
+    upsertGlobalEnv,
+    removeGlobalEnv,
+    upsertAgentEnv,
+    removeAgentEnv,
     executeAgentCommand,
     constants,
     uiHelpers,
@@ -479,6 +486,51 @@ export function App() {
             />
           </section>
         )
+      case "globalEnv":
+        {
+          const envItems = [...globalEnvItems, ...agentEnvItems].sort((left, right) => {
+            const scopeCompare = String(left.scope || "global").localeCompare(String(right.scope || "global"))
+            if (scopeCompare !== 0) return scopeCompare
+            const agentCompare = String(left.agentId || "").localeCompare(String(right.agentId || ""))
+            if (agentCompare !== 0) return agentCompare
+            return String(left.key || "").localeCompare(String(right.key || ""))
+          })
+        return (
+          <section>
+            <EnvSection
+              title="Env"
+              description="统一管理全局共享与 agent 私有 env，通过范围标签区分。"
+              emptyText="暂无 env，点击右上角 + 新建。"
+              items={envItems}
+              loading={loading}
+              writable
+              agentOptions={agents.map((item) => ({
+                id: item.id,
+                name: String(item.name || item.id || "").trim() || item.id,
+              }))}
+              onUpsert={(input) => {
+                if (input.scope === "agent") {
+                  return upsertAgentEnv({
+                    agentId: String(input.agentId || "").trim(),
+                    key: input.key,
+                    value: input.value,
+                  })
+                }
+                return upsertGlobalEnv({
+                  key: input.key,
+                  value: input.value,
+                })
+              }}
+              onRemove={(input) => {
+                if (input.scope === "agent") {
+                  return removeAgentEnv(String(input.agentId || "").trim(), input.key)
+                }
+                return removeGlobalEnv(input.key)
+              }}
+            />
+          </section>
+        )
+      }
       case "agentOverview":
         return renderAgentOverviewSection()
       case "agentCommand":
@@ -785,9 +837,9 @@ export function App() {
 
         <main
           className={cn(
-            "mainview-shell flex flex-1 min-h-0 flex-col bg-secondary/70",
+            "mainview-shell flex flex-1 min-h-0 flex-col bg-transparent",
             activeView === "contextWorkspace"
-              ? "gap-0 overflow-hidden px-0 py-0 md:px-0 md:py-0"
+              ? "gap-0 overflow-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1"
               : "gap-4 overflow-y-auto overflow-x-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1",
           )}
         >

@@ -20,6 +20,12 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
     title: "Overview",
     path: "/global/overview",
   },
+  globalEnv: {
+    view: "globalEnv",
+    scope: "global",
+    title: "Env",
+    path: "/global/env",
+  },
   globalModel: {
     view: "globalModel",
     scope: "global",
@@ -103,6 +109,7 @@ const SCOPE_TITLES: Record<DashboardScope, string> = {
 const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
   "globalOverview",
   "globalCommand",
+  "globalEnv",
   "globalModel",
   "globalChannelAccounts",
   "globalAgents",

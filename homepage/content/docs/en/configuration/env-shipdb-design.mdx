@@ -1,6 +1,6 @@
 ---
 title: Env and ship.db Database Design
-description: Detailed schema, encryption model, and load/write flow for global_env, agent_env, channel_accounts, and runtime config resolution
+description: Detailed schema, encryption model, and load/write flow for env_entries, channel_accounts, and runtime config resolution
 ---
 
 # Env and ship.db Database Design
@@ -19,8 +19,8 @@ This page is the single source of truth for environment-variable storage and `~/
 ```mermaid
 flowchart LR
   subgraph ConsoleGlobal[~/.ship/ship.db]
-    G[global_env]
-    A[agent_env]
+    G[env_entries(global)]
+    A[env_entries(agent)]
     B[channel_accounts]
     M1[model_providers]
     M2[models]
@@ -39,35 +39,26 @@ flowchart LR
 
 ## 3. Table-by-Table Schema
 
-## 3.1 `global_env`
+## 3.1 `env_entries`
 
-Purpose: console-shared env values.
-
-| Column | Type | Notes |
-|---|---|---|
-| `key` | TEXT PK | Env key (for example `OPENAI_API_KEY`) |
-| `value_encrypted` | TEXT | AES-GCM encrypted value |
-| `created_at` | TEXT | ISO timestamp |
-| `updated_at` | TEXT | ISO timestamp |
-
-## 3.2 `agent_env`
-
-Purpose: agent-private env values managed in DB.
+Purpose: unified env table for both console-shared and agent-private values.
 
 | Column | Type | Notes |
 |---|---|---|
-| `agent_id` | TEXT | Agent identity (project root absolute path) |
-| `key` | TEXT | Env key |
+| `scope` | TEXT | `global` or `agent` |
+| `agent_id` | TEXT | Empty string for global rows; agent project root for agent rows |
+| `key` | TEXT | Env key (for example `OPENAI_API_KEY`) |
 | `value_encrypted` | TEXT | AES-GCM encrypted value |
 | `created_at` | TEXT | ISO timestamp |
 | `updated_at` | TEXT | ISO timestamp |
 
 Constraints:
 
-1. Primary key: `(agent_id, key)`
-2. Index: `agent_id`
+1. Primary key: `(scope, agent_id, key)`
+2. Index: `scope`
+3. Index: `agent_id`
 
-## 3.3 `channel_accounts`
+## 3.2 `channel_accounts`
 
 Purpose: central credential vault for chat channels.
 
@@ -88,7 +79,7 @@ Purpose: central credential vault for chat channels.
 | `created_at` | TEXT | ISO timestamp |
 | `updated_at` | TEXT | ISO timestamp |
 
-## 3.4 Existing tables still used
+## 3.3 Existing tables still used
 
 1. `model_providers` / `models`: global model pool.
 2. `console_secure_settings`: non-env secure JSON (currently `extensions_config`).
@@ -96,8 +87,7 @@ Purpose: central credential vault for chat channels.
 ## 4. Encryption Boundaries
 
 1. Encrypted fields:
-- `global_env.value_encrypted`
-- `agent_env.value_encrypted`
+- `env_entries.value_encrypted`
 - `channel_accounts.*_encrypted`
 - `console_secure_settings.value_encrypted`
 - model provider `api_key_encrypted`
@@ -146,10 +136,10 @@ sequenceDiagram
   participant DOT as <agent>/.env
   participant JSON as ship.json
 
-  RT->>DB: Read global_env map
-  RT->>DB: Read agent_env map by agent_id
+  RT->>DB: Read env_entries map where scope=global
+  RT->>DB: Read env_entries map where scope=agent and agent_id matches
   RT->>DOT: Parse project .env
-  RT->>RT: Build runtime env = agent_env + .env (.env wins)
+  RT->>RT: Build runtime env = agent-scope DB env + .env (.env wins)
   RT->>DB: Read extensions_config
   RT->>JSON: Load and merge ship.json layers
   RT->>RT: Resolve ${ENV_KEY} placeholders
@@ -174,8 +164,8 @@ sequenceDiagram
 ## 8. Operational Notes
 
 1. `<agent>/.env` is user-managed and runtime-only overlay.
-2. DB `agent_env` is also agent-private; both are merged with `.env` taking precedence.
-3. Console shared env is only from `global_env`.
+2. DB `env_entries(scope=agent)` is also agent-private; both are merged with `.env` taking precedence.
+3. Console shared env is only from `env_entries(scope=global)`.
 4. For new agents, no credential auto-reuse should happen unless explicitly bound to a channel account.
 
 ## 9. Quick Verification Checklist

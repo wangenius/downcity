@@ -542,64 +542,36 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               </div>
               {isTaskOverview && taskItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px]">
-                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
-                    <thead>
-                      <tr className="text-muted-foreground">
-                        <th className="py-1 pr-2 font-medium">Task</th>
-                        <th className="py-1 pr-2 font-medium">Status</th>
-                        <th className="py-1 pr-2 font-medium">Last Run</th>
-                        <th className="py-1 text-right font-medium">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {taskItems.map((task, taskIndex) => {
-                        const title = String(task.title || `task-${taskIndex}`).trim();
-                        const status = String(task.status || "unknown").trim().toLowerCase();
-                        return (
-                          <tr key={`${name}:task:${title}:${taskIndex}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
-                            <td className="max-w-0 rounded-l-[14px] py-2 pr-2 pl-2 truncate">{title}</td>
-                            <td className="py-1.5 pr-2">{status}</td>
-                            <td className="py-1.5 pr-2">{formatLastRun(task.lastRunTimestamp)}</td>
-                            <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground"
-                                onClick={() => onOpenTask(title)}
-                              >
-                                <span>open</span>
-                                <ArrowRightIcon className="size-3 shrink-0" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
+                  {taskItems.map((task, taskIndex) => {
+                    const title = String(task.title || `task-${taskIndex}`).trim();
+                    const status = String(task.status || "unknown").trim().toLowerCase();
+                    return (
+                      <div key={`${name}:task:${title}:${taskIndex}`} className="flex items-center justify-between gap-3 rounded-[14px] px-2.5 py-2 text-[11px] text-muted-foreground transition-colors hover:bg-background/80">
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="truncate text-foreground">{title}</div>
+                          <div>{`${status} · ${formatLastRun(task.lastRunTimestamp)}`}</div>
+                        </div>
+                        <button type="button" className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground" onClick={() => onOpenTask(title)}>
+                          <span>open</span>
+                          <ArrowRightIcon className="size-3 shrink-0" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
               {isChatOverview && chatItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px]">
-                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
-                    <thead>
-                      <tr className="text-muted-foreground">
-                        <th className="py-1 pr-2 font-medium">Channel</th>
-                        <th className="py-1 pr-2 font-medium">Link</th>
-                        <th className="py-1 text-right font-medium">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {chatItems.map((chatItem, chatIndex) => (
-                        <tr key={`${name}:chat:${chatItem.channel}:${chatIndex}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
-                          <td className="rounded-l-[14px] py-2 pr-2 pl-2">{chatItem.channel}</td>
-                          <td className="py-1.5 pr-2">
-                            <div className="space-y-0.5">
-                              <div>{chatItem.link}</div>
-                              <div className="text-[10px] text-muted-foreground/80">{chatItem.accountName}</div>
-                            </div>
-                          </td>
-                          <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
-                            {(() => {
+                <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
+                  {chatItems.map((chatItem, chatIndex) => (
+                    <div key={`${name}:chat:${chatItem.channel}:${chatIndex}`} className="flex flex-col gap-2 rounded-[14px] px-2.5 py-2 text-[11px] text-muted-foreground transition-colors hover:bg-background/80 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="text-foreground">{chatItem.channel}</div>
+                        <div>{chatItem.link}</div>
+                        <div className="text-[10px] text-muted-foreground/80">{chatItem.accountName}</div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-1">
+                        {(() => {
                               const normalizedChannel = String(chatItem.channel || "").trim();
                               const hasValidChannel = Boolean(normalizedChannel) && normalizedChannel !== "-";
                               const status = chatStatusByChannel.get(normalizedChannel.toLowerCase());
@@ -613,7 +585,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                               const openKey = `${name}:chat:${normalizedChannel}:open`;
                               const closeKey = `${name}:chat:${normalizedChannel}:close`;
                               return (
-                                <div className="flex flex-wrap items-center justify-end gap-1">
+                                <>
                                   <button
                                     type="button"
                                     className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
@@ -679,93 +651,51 @@ export function SummaryCards(props: SummaryCardsProps) {
                                     {isServiceActionPending(reconnectKey) ? <Loader2Icon className="size-3 animate-spin" /> : null}
                                     <span>reconnect</span>
                                   </button>
-                                </div>
+                                </>
                               );
                             })()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               {isSkillOverview && skills.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px]">
-                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
-                    <thead>
-                      <tr className="text-muted-foreground">
-                        <th className="py-1 pr-2 font-medium">Skill</th>
-                        <th className="py-1 pr-2 font-medium">Description</th>
-                        <th className="py-1 pr-2 font-medium">Source</th>
-                        <th className="py-1 pr-2 font-medium">Tools</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {skills.map((item, skillIndex) => (
-                        <tr key={`${name}:skill:${item.id || item.name || skillIndex}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
-                          <td className="rounded-l-[14px] py-2 pr-2 pl-2">{item.name || item.id || "-"}</td>
-                          <td className="py-1.5 pr-2 max-w-0 truncate">{item.description || "-"}</td>
-                          <td className="py-1.5 pr-2">{item.source || "-"}</td>
-                          <td className="max-w-0 rounded-r-[14px] py-1.5 pr-2 truncate">
-                            {Array.isArray(item.allowedTools) && item.allowedTools.length > 0
-                              ? item.allowedTools.join(", ")
-                              : "-"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
+                  {skills.map((item, skillIndex) => (
+                    <div key={`${name}:skill:${item.id || item.name || skillIndex}`} className="rounded-[14px] px-2.5 py-2 text-[11px] text-muted-foreground transition-colors hover:bg-background/80">
+                      <div className="text-foreground">{item.name || item.id || "-"}</div>
+                      <div className="mt-0.5 truncate">{item.description || "-"}</div>
+                      <div className="mt-0.5">{`${item.source || "-"} · ${Array.isArray(item.allowedTools) && item.allowedTools.length > 0 ? item.allowedTools.join(", ") : "-"}`}</div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               {isMemoryOverview && memoryConfigItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px]">
-                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
-                    <thead>
-                      <tr className="text-muted-foreground">
-                        <th className="py-1 pr-2 font-medium">Key</th>
-                        <th className="py-1 pr-2 font-medium">Status</th>
-                        <th className="py-1 pr-2 font-medium">Path</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {memoryConfigItems.map((item) => (
-                        <tr key={`${name}:memory:${item.key}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
-                          <td className="rounded-l-[14px] py-2 pr-2 pl-2">{item.label}</td>
-                          <td className="py-1.5 pr-2">{item.status}</td>
-                          <td className="max-w-0 rounded-r-[14px] py-1.5 pr-2 truncate">{item.path}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
+                  {memoryConfigItems.map((item) => (
+                    <div key={`${name}:memory:${item.key}`} className="rounded-[14px] px-2.5 py-2 text-[11px] text-muted-foreground transition-colors hover:bg-background/80">
+                      <div className="text-foreground">{item.label}</div>
+                      <div className="mt-0.5">{item.status}</div>
+                      <div className="mt-0.5 truncate font-mono" title={item.path}>{item.path}</div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               {isContextOverview && contextItems.length > 0 ? (
-                <div className="overflow-x-auto rounded-[18px]">
-                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
-                    <thead>
-                      <tr className="text-muted-foreground">
-                        <th className="py-1 pr-2 font-medium">Context ID</th>
-                        <th className="py-1 text-right font-medium">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {contextItems.map((contextId) => (
-                        <tr key={`${name}:context:${contextId}`} className="bg-transparent text-muted-foreground transition-colors hover:bg-background">
-                          <td className="max-w-0 rounded-l-[14px] py-2 pr-2 pl-2 truncate">{contextId}</td>
-                          <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-secondary hover:text-foreground"
-                              onClick={() => onOpenContext(contextId)}
-                            >
-                              <span>open</span>
-                              <ArrowRightIcon className="size-3 shrink-0" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
+                  {contextItems.map((contextId) => (
+                    <div key={`${name}:context:${contextId}`} className="flex items-center justify-between gap-3 rounded-[14px] px-2.5 py-2 text-[11px] text-muted-foreground transition-colors hover:bg-background/80">
+                      <div className="min-w-0 truncate">{contextId}</div>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground"
+                        onClick={() => onOpenContext(contextId)}
+                      >
+                        <span>open</span>
+                        <ArrowRightIcon className="size-3 shrink-0" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               {details.length > 0 ? (

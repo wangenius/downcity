@@ -45,30 +45,18 @@ export const modelsTable = sqliteTable(
 );
 
 /**
- * Console 全局环境变量表。
+ * Console Env 统一存储表。
  *
  * 关键点（中文）
+ * - 全局 env 与 agent env 共用一张表，通过 `scope` + `agentId` 区分。
+ * - `agentId` 在 `scope=global` 时固定为空字符串，避免 SQLite 复合主键中的 NULL 语义问题。
  * - value 采用密文存储，解密仅在运行时内存中进行。
- * - key 全局唯一，作为主键。
  */
-export const globalEnvTable = sqliteTable("global_env", {
-  key: text("key").primaryKey(),
-  valueEncrypted: text("value_encrypted").notNull(),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-});
-
-/**
- * Agent 私有环境变量表。
- *
- * 关键点（中文）
- * - 通过 `(agentId, key)` 复合主键隔离不同 agent。
- * - 用于注入单个 agent runtime，不参与全局共享解析。
- */
-export const agentEnvTable = sqliteTable(
-  "agent_env",
+export const envEntriesTable = sqliteTable(
+  "env_entries",
   {
-    agentId: text("agent_id").notNull(),
+    scope: text("scope").notNull(),
+    agentId: text("agent_id").notNull().default(""),
     key: text("key").notNull(),
     valueEncrypted: text("value_encrypted").notNull(),
     createdAt: text("created_at").notNull(),
@@ -76,10 +64,11 @@ export const agentEnvTable = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({
-      columns: [table.agentId, table.key],
-      name: "agent_env_agent_key_pk",
+      columns: [table.scope, table.agentId, table.key],
+      name: "env_entries_scope_agent_key_pk",
     }),
-    agentIdIdx: index("agent_env_agent_id_idx").on(table.agentId),
+    scopeIdx: index("env_entries_scope_idx").on(table.scope),
+    agentIdIdx: index("env_entries_agent_id_idx").on(table.agentId),
   }),
 );
 

@@ -219,7 +219,6 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
         <DashboardModule
           title="Channel Runtime"
           description={`当前 channel：${activeChannelName || "unknown"} · account ${activeChannelAccountLabel}`}
-          className="shadow-[0_1px_0_rgba(17,17,19,0.02)]"
         >
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-3 px-1 py-1">
@@ -425,7 +424,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                           <div className="bg-secondary px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                             context route json
                           </div>
-                          <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words bg-card px-3 py-3 font-mono text-[11px] leading-relaxed text-foreground/85">
+                          <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words bg-background/85 px-3 py-3 font-mono text-[11px] leading-relaxed text-foreground/85">
                             {routeJson}
                           </pre>
                         </PopoverContent>

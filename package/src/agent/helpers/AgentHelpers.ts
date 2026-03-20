@@ -8,14 +8,18 @@
  *
  * 职责分组（中文）
  * 1) 消息筛选：pickMergedUserMessages
- * 2) 消息转换：toModelMessages
+ * 2) 消息转换：toModelMessages（含多模态附件注入）
  * 3) 日志输出：extractAssistantTextForLog / logAssistantMessageNow
  * 4) 平台参数：buildOpenAIResponsesProviderOptions
  */
 
+import fs from "fs-extra";
+import path from "node:path";
 import {
   convertToModelMessages,
+  isFileUIPart,
   isTextUIPart,
+  type FileUIPart,
   type ModelMessage,
   type Tool,
   type ToolSet,
@@ -79,8 +83,11 @@ export async function toModelMessages(
   // 空输入快速返回，避免调用转换器的额外开销。
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
-  // 转换前先剔除 UI 层 id 字段，仅保留模型需要的数据结构。
-  const input = messages.map((message) => {
+  // 第一步（中文）：在 user 消息上注入 file parts（多模态附件）。
+  const enrichedMessages = await injectFilePartsFromAttachments(messages);
+
+  // 第二步（中文）：转换前先剔除 UI 层 id 字段，仅保留模型需要的数据结构。
+  const input = enrichedMessages.map((message) => {
     // 解构去掉 id。
     const { id: _id, ...rest } = message;
 
@@ -95,6 +102,181 @@ export async function toModelMessages(
     // 忽略历史里的不完整工具调用，提升容错性。
     ignoreIncompleteToolCalls: true,
   });
+}
+
+/**
+ * 从 `@attach` 指令行中解析附件描述。
+ *
+ * 关键点（中文）
+ * - 兼容 Telegram/Feishu/TUI 等所有注入 `@attach` 的入口。
+ * - 仅返回当前 Agent 关心的字段：类型/路径/说明。
+ */
+function parseAttachmentLinesFromText(text: string): Array<{
+  type: "photo" | "document" | "voice" | "audio" | "video";
+  path: string;
+  caption?: string;
+}> {
+  const raw = String(text || "");
+  if (!raw.trim()) return [];
+  const lines = raw.split("\n");
+  const out: Array<{
+    type: "photo" | "document" | "voice" | "audio" | "video";
+    path: string;
+    caption?: string;
+  }> = [];
+
+  for (const line of lines) {
+    const matched = line.match(
+      /^\s*@attach\s+(photo|image|document|file|voice|audio|video)\s+(.+?)(?:\s*\|\s*(.+))?\s*$/i,
+    );
+    if (!matched) continue;
+    const kindRaw = String(matched[1] || "").trim().toLowerCase();
+    const type: "photo" | "document" | "voice" | "audio" | "video" =
+      kindRaw === "image" || kindRaw === "photo"
+        ? "photo"
+        : kindRaw === "file" || kindRaw === "document"
+          ? "document"
+          : kindRaw === "video"
+            ? "video"
+            : kindRaw === "audio"
+              ? "audio"
+              : "voice";
+
+    const filePath = String(matched[2] || "").trim();
+    if (!filePath) continue;
+    const caption =
+      typeof matched[3] === "string" ? String(matched[3]).trim() : "";
+
+    out.push({
+      type,
+      path: filePath,
+      ...(caption ? { caption } : {}),
+    });
+  }
+
+  return out;
+}
+
+function guessAttachmentMediaTypeFromPath(filePath: string): string | undefined {
+  const ext = (path.extname(filePath) || "").toLowerCase();
+  if (ext === ".png") return "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".gif") return "image/gif";
+  if (ext === ".pdf") return "application/pdf";
+  if (ext === ".zip") return "application/zip";
+  if (ext === ".mp3") return "audio/mpeg";
+  if (ext === ".m4a") return "audio/mp4";
+  if (ext === ".ogg") return "audio/ogg";
+  if (ext === ".opus") return "audio/opus";
+  if (ext === ".mp4") return "video/mp4";
+  if (ext === ".mov") return "video/quicktime";
+  if (ext === ".webm") return "video/webm";
+  if (ext === ".m4v") return "video/x-m4v";
+  return undefined;
+}
+
+function buildDataUrl(mediaType: string, buffer: Buffer): string {
+  const base64 = buffer.toString("base64");
+  const safeType = mediaType || "application/octet-stream";
+  return `data:${safeType};base64,${base64}`;
+}
+
+/**
+ * 在 user 消息上注入 FileUIPart，以便多模态模型直接消费本地附件。
+ *
+ * 设计（中文）
+ * - 仅处理图片附件（type=photo 且扩展名/内容类型为 image/*），避免对非多模态模型影响过大。
+ * - 附件仍然保留原始 `@attach` 文本行，兼容纯文本模型。
+ * - 不修改持久化历史，仅在本轮执行的内存消息上注入 file parts。
+ */
+async function injectFilePartsFromAttachments(
+  messages: ContextMessageV1[],
+): Promise<ContextMessageV1[]> {
+  if (!Array.isArray(messages) || messages.length === 0) return messages;
+
+  const cwd = process.cwd();
+
+  const out: ContextMessageV1[] = [];
+
+  for (const message of messages) {
+    if (!message || typeof message !== "object" || message.role !== "user") {
+      out.push(message);
+      continue;
+    }
+    const parts = Array.isArray(message.parts) ? message.parts : [];
+    if (parts.length === 0) {
+      out.push(message);
+      continue;
+    }
+
+    // 如果已有 file parts，则认为上游已经注入过，直接跳过，避免重复。
+    if (parts.some((part) => isFileUIPart(part as FileUIPart))) {
+      out.push(message);
+      continue;
+    }
+
+    const fullText = parts
+      .map((part) => {
+        const candidate = part as unknown;
+        if (!isTextUIPart(candidate as any)) return "";
+        const value = (candidate as { text?: unknown }).text;
+        return typeof value === "string" ? value : "";
+      })
+      .filter((text) => text)
+      .join("\n");
+    if (!fullText.trim()) {
+      out.push(message);
+      continue;
+    }
+
+    const attachments = parseAttachmentLinesFromText(fullText);
+    if (attachments.length === 0) {
+      out.push(message);
+      continue;
+    }
+
+    const fileParts: FileUIPart[] = [];
+
+    for (const attachment of attachments) {
+      // 当前阶段：仅对图片附件注入 file part。
+      const mediaTypeGuess = guessAttachmentMediaTypeFromPath(attachment.path);
+      if (!mediaTypeGuess || !mediaTypeGuess.startsWith("image/")) continue;
+
+      const absPath = path.isAbsolute(attachment.path)
+        ? attachment.path
+        : path.resolve(cwd, attachment.path);
+      try {
+        const exists = await fs.pathExists(absPath);
+        if (!exists) continue;
+        const buffer = await fs.readFile(absPath);
+        const dataUrl = buildDataUrl(mediaTypeGuess, buffer);
+        const filename = path.basename(absPath) || "image";
+
+        fileParts.push({
+          type: "file",
+          mediaType: mediaTypeGuess,
+          filename,
+          url: dataUrl,
+        });
+      } catch {
+        // 忽略单个附件错误，保持主流程可用。
+        continue;
+      }
+    }
+
+    if (fileParts.length === 0) {
+      out.push(message);
+      continue;
+    }
+
+    out.push({
+      ...message,
+      parts: [...parts, ...fileParts],
+    });
+  }
+
+  return out;
 }
 
 /**

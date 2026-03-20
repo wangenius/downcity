@@ -44,6 +44,7 @@ import {
 import { ConsoleStore } from "@utils/store/index.js";
 import { registerConsoleUiModelRoutes } from "@/console/ui/ModelApiRoutes.js";
 import { registerConsoleUiChannelAccountRoutes } from "@/console/ui/ChannelAccountApiRoutes.js";
+import { registerConsoleUiEnvRoutes } from "@/console/ui/EnvApiRoutes.js";
 import { getSmaExtensions, listExtensionRuntimes } from "@/console/extension/Manager.js";
 import type {
   ConsoleUiAgentOption,
@@ -405,9 +406,8 @@ export class ConsoleUIGateway {
       buildModelResponse: (requestedAgentId) =>
         this.buildModelResponse(requestedAgentId),
     });
-    registerConsoleUiChannelAccountRoutes({
-      app: this.app,
-    });
+    registerConsoleUiChannelAccountRoutes({ app: this.app });
+    registerConsoleUiEnvRoutes({ app: this.app });
 
     // 关键点（中文）：除 `/api/ui/*` 外，其他 API 一律透传到“当前选中 agent”。
     this.app.all("/api/*", async (c) => {

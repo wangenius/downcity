@@ -83,10 +83,18 @@ function resolveAgentId(params: {
   preferredAgentId: string;
   selectedAgentId: string;
 }): string {
+  const preferred = String(params.preferredAgentId || "").trim();
+  if (preferred) {
+    const preferredRunning = params.agents.find(
+      (item) => item.id === preferred && item.running,
+    );
+    if (preferredRunning) return preferredRunning.id;
+  }
+
   const candidateList = [
-    params.preferredAgentId,
     params.selectedAgentId,
     ...(params.agents.filter((item) => item.running).map((item) => item.id)),
+    params.preferredAgentId,
     ...(params.agents.map((item) => item.id)),
   ];
 

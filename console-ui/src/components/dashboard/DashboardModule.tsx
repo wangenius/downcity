@@ -41,7 +41,12 @@ export function DashboardModule(props: DashboardModuleProps) {
   const { title, description, actions, children, className, bodyClassName } = props
 
   return (
-    <section className={cn("space-y-3 rounded-[22px] bg-secondary px-4 py-4", className)}>
+    <section
+      className={cn(
+        "space-y-3 rounded-[22px] bg-background px-4 py-4 shadow-[0_1px_0_rgba(17,17,19,0.03)] ring-1 ring-border/70",
+        className,
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{title}</div>

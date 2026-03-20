@@ -2,7 +2,7 @@
  * Feishu Bot 信息探测实现。
  *
  * 关键点（中文）
- * - 先通过 appId/appSecret 换取 access token。
+ * - 先通过 appId/appSecret 换取 tenant access token。
  * - 再尝试读取 bot profile，失败时回退到凭据推断。
  */
 
@@ -43,7 +43,7 @@ export class FeishuBotInfoProvider implements ChatChannelBotInfoProvider {
       throw new Error("Missing appId/appSecret");
     }
 
-    const authEndpoint = `${domain}/open-apis/auth/v3/app_access_token/internal`;
+    const authEndpoint = `${domain}/open-apis/auth/v3/tenant_access_token/internal`;
     const authResponse = await fetch(authEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -56,6 +56,7 @@ export class FeishuBotInfoProvider implements ChatChannelBotInfoProvider {
     let authPayload: {
       code?: number;
       msg?: string;
+      tenant_access_token?: string;
       app_access_token?: string;
     } = {};
     try {
@@ -64,7 +65,11 @@ export class FeishuBotInfoProvider implements ChatChannelBotInfoProvider {
       authPayload = {};
     }
 
-    if (!authResponse.ok || authPayload.code !== 0 || !authPayload.app_access_token) {
+    const token = pickFirstNonEmpty([
+      authPayload.tenant_access_token,
+      authPayload.app_access_token,
+    ]);
+    if (!authResponse.ok || authPayload.code !== 0 || !token) {
       const details = pickFirstNonEmpty([authPayload.msg, authRaw, `HTTP ${authResponse.status}`]);
       throw new Error(`Feishu bot info probe failed: ${details}`);
     }
@@ -76,7 +81,7 @@ export class FeishuBotInfoProvider implements ChatChannelBotInfoProvider {
       const profileResponse = await fetch(`${domain}/open-apis/bot/v3/info`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${authPayload.app_access_token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
@@ -87,24 +92,42 @@ export class FeishuBotInfoProvider implements ChatChannelBotInfoProvider {
         data?: {
           bot_name?: string;
           name?: string;
+          app_name?: string;
           open_id?: string;
           bot_open_id?: string;
+          bot_id?: string;
+          app_id?: string;
           owner?: string;
           owner_name?: string;
           owner_open_id?: string;
           creator?: string;
           creator_name?: string;
           creator_open_id?: string;
+          bot?: {
+            bot_name?: string;
+            name?: string;
+            open_id?: string;
+            bot_open_id?: string;
+            bot_id?: string;
+          };
         };
       };
       if (profileResponse.ok && profilePayload.code === 0) {
         botName = pickFirstNonEmpty([
           profilePayload.data?.bot_name,
           profilePayload.data?.name,
+          profilePayload.data?.app_name,
+          profilePayload.data?.bot?.bot_name,
+          profilePayload.data?.bot?.name,
         ]);
         botOpenId = pickFirstNonEmpty([
           profilePayload.data?.open_id,
           profilePayload.data?.bot_open_id,
+          profilePayload.data?.bot_id,
+          profilePayload.data?.bot?.open_id,
+          profilePayload.data?.bot?.bot_open_id,
+          profilePayload.data?.bot?.bot_id,
+          profilePayload.data?.app_id,
         ]);
         const owner = pickFirstNonEmpty([
           profilePayload.data?.owner_name,

@@ -12,6 +12,7 @@ Use Feishu (or Lark) to connect Downcity to:
 - route binding and context persistence
 - agent reply delivery back to Feishu
 - file attachment delivery via `@attach document <path>`
+- inbound image, video, file, and audio download with `@attach` injection into Agent execution
 
 > Want the internal execution flow? See: [/en/docs/services/chat/feishu-message-flow](/en/docs/services/chat/feishu-message-flow)
 
@@ -153,7 +154,8 @@ then the backend still did not resolve a display name.
 Current Feishu channel behavior:
 
 - inbound transport is WebSocket
-- execution currently accepts **text messages only**
+- execution accepts **text + image + video + file + audio** inputs
+- inbound image, video, file, and audio messages are downloaded into `.ship/.cache/feishu/` and injected as `@attach ...`
 - outbound replies support `@attach document|file <path>` file conversion
 - sender name and chat title are resolved on a best-effort basis
 - if resolution fails, processing still continues with raw ids

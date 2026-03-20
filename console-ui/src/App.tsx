@@ -785,7 +785,7 @@ export function App() {
 
         <main
           className={cn(
-            "mainview-shell flex flex-1 min-h-0 flex-col bg-background",
+            "mainview-shell flex flex-1 min-h-0 flex-col bg-secondary/70",
             activeView === "contextWorkspace"
               ? "gap-0 overflow-hidden px-0 py-0 md:px-0 md:py-0"
               : "gap-4 overflow-y-auto overflow-x-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1",

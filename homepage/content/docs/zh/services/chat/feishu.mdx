@@ -12,6 +12,7 @@ description: 通过飞书/Lark 把 Downcity 接入私聊与群聊，并完成名
 - 自动建立 `contextId -> chat route` 映射
 - Agent 执行结果回发到飞书
 - 支持在回复中使用 `@attach document <path>` 发送文件附件
+- 支持把飞书入站图片、视频、文件、音频下载到本地并注入 `@attach` 给 Agent
 
 > 想看内部链路细节？继续阅读：[/zh/docs/services/chat/feishu-message-flow](/zh/docs/services/chat/feishu-message-flow)
 
@@ -164,7 +165,8 @@ city agent start
 当前 `downcity` 的飞书 channel：
 
 - 入站依赖 WebSocket 事件
-- 当前只支持 **文本消息** 作为执行输入
+- 入站支持 **文本 + 图片 + 视频 + 文件 + 音频** 作为执行输入
+- 图片、视频、文件、音频会先下载到 `.ship/.cache/feishu/`，再注入为 `@attach ...`
 - 出站支持从回复文本解析 `@attach document|file <path>` 并发送文件消息
 - 会尝试 best-effort 查询：
   - 发送者姓名

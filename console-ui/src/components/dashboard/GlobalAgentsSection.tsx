@@ -58,8 +58,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                 key={agent.id}
                 className={
                   isRunning
-                    ? "rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-background"
-                    : "rounded-[20px] bg-transparent px-4 py-3 text-muted-foreground opacity-58 transition-all hover:bg-background hover:opacity-78"
+                    ? "rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-secondary"
+                    : "rounded-[20px] bg-transparent px-4 py-3 text-muted-foreground opacity-58 transition-all hover:bg-secondary hover:opacity-78"
                 }
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

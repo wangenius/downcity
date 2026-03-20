@@ -72,14 +72,15 @@ sequenceDiagram
 
 这样重连或重复事件不会把同一条消息执行多次。
 
-### 3.2 当前只把文本消息送入执行
+### 3.2 当前会把文本和常见附件送入执行
 
-当前 `downcity` 包里的飞书 channel 对执行输入的要求比较严格：
+当前 `downcity` 包里的飞书 channel 会按消息类型做归一化：
 
-- `message_type === text`：进入执行
+- `message_type === text`：直接把正文送入执行
+- `message_type === image | file | audio | media`：先下载到本地缓存，再注入 `@attach ...`
 - 其他类型：直接回错误提示
 
-所以当前版本里，飞书附件、图片、语音等 **不会像 Telegram 那样直接作为执行输入注入**。
+所以当前版本里，飞书图片、视频、文件、音频已经会像 Telegram 一样先落地到本地，再作为执行输入注入。
 
 对应实现见：
 

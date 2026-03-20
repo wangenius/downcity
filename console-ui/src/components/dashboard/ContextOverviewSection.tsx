@@ -376,7 +376,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
               return (
                 <article
                   key={item.contextId}
-                  className={isSelected ? "rounded-[20px] bg-background px-4 py-3" : "rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-background"}
+                  className={isSelected ? "rounded-[20px] bg-secondary px-4 py-3" : "rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-secondary"}
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">

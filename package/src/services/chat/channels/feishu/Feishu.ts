@@ -11,7 +11,12 @@ import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
+import type { FeishuIncomingAttachmentDescriptor } from "@services/chat/types/FeishuInboundAttachment.js";
 import { parseFeishuAttachments } from "./Shared.js";
+import {
+  buildFeishuInboundCacheFileName,
+  parseFeishuInboundMessage,
+} from "./InboundAttachment.js";
 
 /**
  * Feishu (Lark) chat channel.
@@ -34,10 +39,6 @@ interface FeishuConfig {
   enabled: boolean;
   domain?: string;
 }
-
-type FeishuTextContentPayload = {
-  text?: string;
-};
 
 type FeishuMessageEvent = {
   sender?: {
@@ -440,12 +441,6 @@ export class FeishuBot extends BaseChatChannel {
     }
   }
 
-  private parseTextContent(content: string): { text: string } {
-    const parsed = JSON.parse(content) as FeishuTextContentPayload;
-    const text = typeof parsed?.text === "string" ? parsed.text : "";
-    return { text };
-  }
-
   /**
    * 获取 Feishu tenant_access_token（带本地缓存）。
    *
@@ -813,32 +808,44 @@ export class FeishuBot extends BaseChatChannel {
 
       try {
         let userMessage = "";
+        let incomingAttachments: Array<{
+          type: "document" | "photo" | "voice" | "audio" | "video";
+          path: string;
+          desc?: string;
+        }> = [];
         try {
-          if (message_type === "text") {
-            const parsed = this.parseTextContent(content);
-            userMessage = parsed.text;
-          } else {
+          const parsed = parseFeishuInboundMessage({
+            messageType: message_type,
+            content,
+          });
+          if (parsed.unsupportedType) {
             await this.sendErrorMessage(
               chat_id,
               chat_type,
               message_id,
-              "Non-text messages not supported, please send text message",
+              `Unsupported Feishu message type: ${parsed.unsupportedType}`,
             );
             handled = true;
             return;
           }
+
+          userMessage = parsed.text;
+          incomingAttachments = await this.downloadIncomingAttachments({
+            messageId: message_id,
+            attachments: parsed.attachments,
+          });
         } catch (error) {
           await this.sendErrorMessage(
             chat_id,
             chat_type,
             message_id,
-            "Failed to parse message, please send text message",
+            `Failed to parse message: ${String(error)}`,
           );
           handled = true;
           return;
         }
 
-        this.logger.info(`Received Feishu message: ${userMessage}`);
+        this.logger.info(`Received Feishu message: ${userMessage || "[attachment]"}`);
         const actorName =
           (await this.resolveSenderName({
             ...senderIdentity,
@@ -858,19 +865,39 @@ export class FeishuBot extends BaseChatChannel {
 
         // Check if it's a command
         await this.runInChat(threadId, async () => {
-          if (userMessage.startsWith("/")) {
+          if (userMessage.startsWith("/") && incomingAttachments.length === 0) {
             await this.handleCommand(chat_id, chat_type, message_id, userMessage);
           } else {
+            const attachmentLines = incomingAttachments.map((attachment) => {
+              const rel = path.relative(this.rootPath, attachment.path);
+              const desc = attachment.desc ? ` | ${attachment.desc}` : "";
+              return `@attach ${attachment.type} ${rel}${desc}`;
+            });
+
             if (this.isGroupChat(chat_type)) {
               userMessage = this.stripAtMentions(userMessage);
-              if (!userMessage) return;
             }
+
+            const instructions =
+              [
+                attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
+                userMessage ? userMessage.trim() : undefined,
+              ]
+                .filter(Boolean)
+                .join("\n\n")
+                .trim() ||
+              (attachmentLines.length > 0
+                ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
+                : "");
+
+            if (!instructions) return;
+
             // Regular message, call Agent to execute
             await this.executeAndReply(
               chat_id,
               chat_type,
               message_id,
-              userMessage,
+              instructions,
               actorId,
               actorName,
               chatTitle,
@@ -976,6 +1003,71 @@ Available commands:
         `Execution error: ${String(error)}`,
       );
     }
+  }
+
+  /**
+   * 下载飞书入站附件并落到 `.ship/.cache/feishu`。
+   *
+   * 关键点（中文）
+   * - 下载失败时仅跳过对应附件，不阻塞整条消息。
+   * - 返回结果直接用于拼装 `@attach ...` 指令。
+   */
+  private async downloadIncomingAttachments(params: {
+    messageId: string;
+    attachments: FeishuIncomingAttachmentDescriptor[];
+  }): Promise<
+    Array<{
+      type: "document" | "photo" | "voice" | "audio" | "video";
+      path: string;
+      desc?: string;
+    }>
+  > {
+    if (!this.client || params.attachments.length === 0) return [];
+
+    const dir = path.join(getCacheDirPath(this.rootPath), "feishu");
+    await fs.ensureDir(dir);
+
+    const out: Array<{
+      type: "document" | "photo" | "voice" | "audio" | "video";
+      path: string;
+      desc?: string;
+    }> = [];
+
+    for (const attachment of params.attachments) {
+      try {
+        const resource = await this.client.im.v1.messageResource.get({
+          path: {
+            message_id: params.messageId,
+            file_key: attachment.resourceKey,
+          },
+          params: {
+            type: attachment.resourceType,
+          },
+        });
+
+        const fileName = buildFeishuInboundCacheFileName({
+          attachment,
+          messageId: params.messageId,
+          headers: resource.headers,
+        });
+        const outPath = path.join(dir, fileName);
+        await resource.writeFile(outPath);
+        out.push({
+          type: attachment.type,
+          path: outPath,
+          ...(attachment.description ? { desc: attachment.description } : {}),
+        });
+      } catch (error) {
+        this.logger.warn("Failed to download incoming Feishu attachment", {
+          messageId: params.messageId,
+          resourceKey: attachment.resourceKey,
+          resourceType: attachment.resourceType,
+          error: String(error),
+        });
+      }
+    }
+
+    return out;
   }
 
   private async sendMessage(

@@ -67,14 +67,15 @@ Feishu may redeliver messages, so the runtime uses:
 
 This prevents the same message from being executed more than once.
 
-### Current execution input: text only
+### Current execution input: text plus common attachments
 
-The current Feishu adapter only sends **text messages** into execution:
+The current Feishu adapter normalizes inbound input by message type:
 
-- `message_type === text`: execute
+- `message_type === text`: execute the text body directly
+- `message_type === image | file | audio | media`: download to local cache first, then inject as `@attach ...`
 - any other type: send an error message back
 
-So unlike Telegram, this adapter does **not** currently inject Feishu files/images/audio as executable inbound attachments.
+So Feishu images, videos, files, and audio now follow the same local-cache-plus-`@attach` pattern as Telegram.
 
 Code:
 

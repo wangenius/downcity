@@ -459,10 +459,14 @@
     const preferred = normalizeText(preferredAgentId, 240);
     if (preferred) {
       const matched = agents.find((item) => item && item.id === preferred);
-      if (matched) return matched;
+      if (matched && matched.running) return matched;
     }
     const running = agents.find((item) => item && item.running);
     if (running) return running;
+    if (preferred) {
+      const matched = agents.find((item) => item && item.id === preferred);
+      if (matched) return matched;
+    }
     return agents[0] || null;
   }
 
@@ -1223,8 +1227,15 @@
   async function submit() {
     if (state.isSending) return;
     if (state.routeErrorText) {
-      showToast("error", state.routeErrorText);
-      return;
+      await refreshRouteState({
+        ...state.lastSettings,
+        agentId: state.activeAgentId || state.lastSettings.agentId,
+        chatKey: state.activeChatKey || state.lastSettings.chatKey,
+      });
+      if (state.routeErrorText) {
+        showToast("error", state.routeErrorText);
+        return;
+      }
     }
     if (!state.activeAgentId || !state.activeChatKey) {
       showToast("error", "请先选择 Agent 与 Chat");
@@ -1302,6 +1313,13 @@
 
   ui.routeTrigger.addEventListener("click", () => {
     if (ui.routeTrigger.disabled) return;
+    if (state.routeErrorText && !state.isRouteLoading) {
+      void refreshRouteState({
+        ...state.lastSettings,
+        agentId: state.activeAgentId || state.lastSettings.agentId,
+        chatKey: state.activeChatKey || state.lastSettings.chatKey,
+      });
+    }
     setRoutePanelOpen(!state.isRoutePanelOpen);
   });
 

@@ -14,10 +14,12 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type SetStateAction,
 } from "react";
 import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
+import type { PopupSelectOption } from "../types/PopupSelect";
 import type {
   ActiveTabContext,
   ExtensionSettings,
@@ -33,11 +35,11 @@ import { buildPageMarkdownSnapshot } from "../services/pageMarkdown";
 import {
   appendPageSendRecord,
   DEFAULT_SETTINGS,
-  loadRecentAskHistory,
   loadSettings,
   saveSettings,
 } from "../services/storage";
 import { getActiveTabContext } from "../services/tab";
+import { PopupSelect } from "./PopupSelect";
 
 function readErrorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -142,13 +144,6 @@ function shortenUrl(value: string): string {
   return `${text.slice(0, 69)}...`;
 }
 
-function shortenAsk(value: string): string {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (!text) return "";
-  if (text.length <= 60) return text;
-  return `${text.slice(0, 57)}...`;
-}
-
 function normalizeInitialTaskPrompt(value: string): string {
   const incoming = String(value || "").trim();
   const defaultPrompt = String(DEFAULT_SETTINGS.taskPrompt || "").trim();
@@ -164,30 +159,11 @@ type ToastMessage = {
   text: string;
 };
 
-function getStatusToneClass(type: StatusMessage["type"]): string {
-  switch (type) {
-    case "success":
-      return "text-[#1f8a4c]";
-    case "error":
-      return "text-[#b2392e]";
-    case "loading":
-      return "text-[#af7f1f]";
-    default:
-      return "text-muted-foreground";
-  }
-}
-
 function getToastToneClass(type: ToastMessage["type"]): string {
   return type === "error"
     ? "border-[#d9b2ae] bg-[#faf5f5] text-[#7f1d1d]"
     : "border-border bg-surface text-foreground";
 }
-
-const popupFieldLabelClass =
-  "flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
-
-const popupFieldControlClass =
-  "w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60";
 
 export function App() {
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -202,8 +178,6 @@ export function App() {
 
   const [agents, setAgents] = useState<ConsoleUiAgentOption[]>([]);
   const [chatKeyOptions, setChatKeyOptions] = useState<ChatKeyOption[]>([]);
-  const [askHistory, setAskHistory] = useState<string[]>([]);
-  const [selectedAskHistoryIndex, setSelectedAskHistoryIndex] = useState("");
 
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChatKeys, setIsLoadingChatKeys] = useState(false);
@@ -242,15 +216,25 @@ export function App() {
     () => resolveLinkedChannels(selectedAgent),
     [selectedAgent],
   );
-
-  const refreshAskHistory = useCallback(async () => {
-    try {
-      const history = await loadRecentAskHistory({ limit: 12 });
-      setAskHistory(history);
-    } catch {
-      setAskHistory([]);
-    }
-  }, []);
+  const agentOptions = useMemo<PopupSelectOption[]>(
+    () =>
+      agents.map((agent) => ({
+        value: agent.id,
+        label: agent.name,
+        description: agent.running ? "在线" : "未运行",
+        disabled: false,
+      })),
+    [agents],
+  );
+  const chatOptions = useMemo<PopupSelectOption[]>(
+    () =>
+      chatKeyOptions.map((option) => ({
+        value: option.chatKey,
+        label: option.title,
+        description: option.subtitle,
+      })),
+    [chatKeyOptions],
+  );
 
   const refreshAgents = useCallback(async (params: {
     preferredAgentId: string;
@@ -397,7 +381,6 @@ export function App() {
           });
         }
 
-        await refreshAskHistory();
       } catch (error) {
         if (!isMounted) return;
         setStatus({
@@ -410,7 +393,7 @@ export function App() {
     return () => {
       isMounted = false;
     };
-  }, [refreshAgents, refreshAskHistory]);
+  }, [refreshAgents]);
 
   useEffect(() => {
     return () => {
@@ -436,33 +419,8 @@ export function App() {
     consoleBaseUrl,
   ]);
 
-  const applyAskHistoryByIndex = useCallback((indexText: string) => {
-    const normalized = String(indexText || "").trim();
-    setSelectedAskHistoryIndex(normalized);
-
-    if (!normalized) {
-      return;
-    }
-
-    const index = Number.parseInt(normalized, 10);
-    if (!Number.isFinite(index) || Number.isNaN(index)) {
-      return;
-    }
-
-    const selected = askHistory[index];
-    if (!selected) {
-      return;
-    }
-
-    setSettings((prev) => ({
-      ...prev,
-      taskPrompt: selected,
-    }));
-    setStatus({ type: "idle", text: "已填入历史 ask" });
-  }, [askHistory]);
-
   const onSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
       const agentId = String(settings.agentId || "").trim();
@@ -554,7 +512,6 @@ export function App() {
             taskPrompt,
             attachmentFileName: markdownSnapshot.fileName,
           });
-          await refreshAskHistory();
         } catch {
           // ignore local history failures
         }
@@ -573,7 +530,7 @@ export function App() {
         setIsSubmitting(false);
       }
     },
-    [refreshAskHistory, selectedAgent?.running, settings, showToast, tab],
+    [selectedAgent?.running, settings, showToast, tab],
   );
 
   const onTaskPromptKeyDown = useCallback(
@@ -589,131 +546,101 @@ export function App() {
   );
 
   return (
-    <main className="relative min-h-[520px] w-[380px] bg-background p-3">
-      <section className="rounded-[18px] border border-border bg-surface shadow-soft">
-        <header className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="inline-flex items-center gap-2.5">
-            <img
-              className="h-4 w-4 object-cover"
-              src="/icon-32.png"
-              alt="Downcity logo"
-            />
-            <div className="flex flex-col">
-              <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
-                Web Share
-              </div>
-              <div className="text-sm font-medium text-foreground">Downcity</div>
-            </div>
-          </div>
-        </header>
-
-        <div className="px-4 pt-3">
-          <div
+    <main className="relative min-h-[470px] w-[380px] bg-background p-3">
+      <section className="rounded-[12px] border border-border bg-surface p-3">
+        <header className="mb-3 flex items-center justify-between border-b border-border pb-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            Web Share
+          </span>
+          <span
             className={[
-              "text-[11px] leading-5",
-              getStatusToneClass(status.type),
+              "inline-flex max-w-[190px] items-center gap-1.5 truncate text-[10px] font-medium",
+              status.type === "error"
+                ? "text-[#7f1d1d]"
+                : status.type === "success"
+                  ? "text-[#166534]"
+                  : status.type === "loading"
+                    ? "text-[#9a6700]"
+                    : "text-muted-foreground",
             ].join(" ")}
             aria-live="polite"
           >
-            {status.text}
-          </div>
-        </div>
+            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+            <span className="truncate">{status.text}</span>
+          </span>
+        </header>
 
-        <form
-          ref={formRef}
-          className="flex flex-col gap-3 p-4"
-          onSubmit={onSubmit}
-        >
-          <div className="grid grid-cols-2 gap-2.5">
-            <label className={popupFieldLabelClass}>
-              Agent
-              <select
-                className={popupFieldControlClass}
-                value={settings.agentId}
-                onChange={(event) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    agentId: event.target.value,
-                    chatKey: "",
-                  }))
-                }
-                disabled={isLoadingAgents}
-              >
-                <option value="">{isLoadingAgents ? "加载 Agent 中..." : "请选择 Agent"}</option>
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
-                    {agent.running ? "" : "（未运行）"}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className={popupFieldLabelClass}>
-              Channel
-              <select
-                className={popupFieldControlClass}
-                value={settings.chatKey}
-                onChange={(event) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    chatKey: event.target.value,
-                  }))
-                }
-                disabled={chatKeyOptions.length === 0 || isLoadingChatKeys}
-              >
-                <option value="">
-                  {isLoadingChatKeys ? "加载 Channel Chat 中..." : "请选择 Channel Chat"}
-                </option>
-                {chatKeyOptions.map((option) => (
-                  <option key={option.chatKey} value={option.chatKey}>
-                    {option.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label className={popupFieldLabelClass}>
-            Ask 历史
-            <select
-              className={popupFieldControlClass}
-              value={selectedAskHistoryIndex}
-              onChange={(event) => applyAskHistoryByIndex(event.target.value)}
-              disabled={askHistory.length < 1}
-            >
-              <option value="">{askHistory.length < 1 ? "暂无历史 ask" : "选择历史 ask"}</option>
-              {askHistory.map((item, index) => (
-                <option key={`${index}-${item.slice(0, 20)}`} value={String(index)}>
-                  {shortenAsk(item)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className={popupFieldLabelClass}>
+        <form ref={formRef} className="flex flex-col gap-3" onSubmit={onSubmit}>
+          <label className="flex flex-col gap-1 text-[10px] font-medium tracking-[0.04em] text-muted-foreground">
             Ask
             <textarea
-              className={`${popupFieldControlClass} min-h-[132px] resize-none leading-[1.55]`}
+              className="w-full min-h-[150px] resize-none rounded-[11px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60 leading-[1.55]"
               rows={6}
               value={settings.taskPrompt}
               onChange={(event) =>
                 setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
               }
               onKeyDown={onTaskPromptKeyDown}
-              placeholder="例如：提炼这篇页面内容，给我 3 条可执行建议。"
+              placeholder="Ask for follow-up changes"
             />
           </label>
 
-          <div className="border-l border-border pl-3 text-[11px] leading-5 text-muted-foreground" title={tab.url}>
-            <div className="font-medium text-foreground">
+          <div className="grid grid-cols-2 gap-2">
+            <PopupSelect
+              label="Agent"
+              value={settings.agentId}
+              placeholder={
+                isLoadingAgents
+                  ? "加载 Agent 中..."
+                  : agents.length < 1
+                    ? "没有可用 Agent"
+                    : "请选择 Agent"
+              }
+              options={agentOptions}
+              onChange={(value) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  agentId: value,
+                  chatKey: "",
+                }))
+              }
+              disabled={isLoadingAgents}
+            />
+
+            <PopupSelect
+              label="Chat"
+              value={settings.chatKey}
+              placeholder={
+                !settings.agentId
+                  ? "请先选择 Agent"
+                  : isLoadingChatKeys
+                    ? "加载 Chat 中..."
+                    : chatOptions.length < 1
+                      ? "当前 Agent 暂无 Chat"
+                      : "请选择 Chat"
+              }
+              options={chatOptions}
+              onChange={(value) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  chatKey: value,
+                }))
+              }
+              disabled={chatOptions.length === 0 || isLoadingChatKeys}
+            />
+          </div>
+
+          <div className="border-t border-border pt-2 text-[10px] leading-[1.45] text-muted-foreground">
+            <div className="truncate text-[11px] text-foreground" title={tab.title}>
               {tab.title || "（未获取到页面标题）"}
             </div>
-            <div>{shortenUrl(tab.url)}</div>
+            <div className="truncate text-[10px]" title={tab.url}>
+              {shortenUrl(tab.url)}
+            </div>
           </div>
 
           <button
-            className="inline-flex h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center rounded-[10px] border border-primary bg-primary px-4 text-[12px] font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
             type="submit"
             disabled={isSubmitting}
           >
@@ -725,7 +652,7 @@ export function App() {
       {toast ? (
         <div
           className={[
-            "fixed bottom-3 left-1/2 z-20 max-w-[calc(100vw-28px)] -translate-x-1/2 rounded-[12px] border px-3 py-2 text-[11px] font-medium leading-[1.45] shadow-soft",
+            "fixed top-3 left-1/2 z-20 max-w-[calc(100vw-28px)] -translate-x-1/2 rounded-[11px] border px-3 py-2 text-[11px] font-medium leading-[1.45] shadow-soft",
             getToastToneClass(toast.type),
           ].join(" ")}
           data-type={toast.type}

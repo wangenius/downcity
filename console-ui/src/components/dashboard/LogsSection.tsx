@@ -19,11 +19,11 @@ export function LogsSection(props: LogsSectionProps) {
   const { logs, formatTime } = props;
 
   return (
-    <section className="space-y-2">
-      <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+    <section className="space-y-3">
+      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         Recent Logs
       </div>
-      <pre className="max-h-[68vh] overflow-auto border border-border/70 bg-background px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground">
+      <pre className="max-h-[68vh] overflow-auto rounded-[22px] bg-card px-4 py-3.5 font-mono text-[11px] leading-relaxed text-foreground shadow-[0_1px_0_rgba(15,23,42,0.02)]">
         {logs.length === 0
           ? "暂无日志"
           : logs

@@ -1,9 +1,4 @@
-/**
- * 顶栏组件。
- */
-
 import * as React from "react"
-import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 export interface SiteHeaderProps {
@@ -30,13 +25,14 @@ export function SiteHeader(props: SiteHeaderProps) {
   }, [viewLabel])
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border/80 bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full flex-wrap items-center gap-2 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto bg-border" />
-        <h1 className="text-sm font-semibold tracking-[0.01em] text-foreground">{compactTitle}</h1>
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 bg-transparent transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+      <div className="flex w-full flex-wrap items-center gap-2 px-3 py-2 md:px-4 lg:gap-2 lg:px-5">
+        <div className="flex h-10 w-full items-center gap-2 rounded-[18px] bg-card px-2.5 shadow-[0_1px_0_rgba(17,17,19,0.02)] backdrop-blur-sm">
+          <SidebarTrigger className="-ml-0.5" />
+          <h1 className="text-[0.95rem] font-medium tracking-[-0.02em] text-foreground">{compactTitle}</h1>
 
-        <div className="ml-auto flex items-center">{rightActions}</div>
+          <div className="ml-auto flex items-center">{rightActions}</div>
+        </div>
       </div>
     </header>
   )

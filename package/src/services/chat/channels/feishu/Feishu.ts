@@ -10,6 +10,8 @@ import type {
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
+import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
+import { parseFeishuAttachments } from "./Shared.js";
 
 /**
  * Feishu (Lark) chat channel.
@@ -54,6 +56,8 @@ type FeishuMessageEvent = {
     message_id: string;
   };
 };
+
+type FeishuMessagePayloadType = "text" | "file";
 
 function sanitizeChatText(text: string): string {
   if (!text) return text;
@@ -994,42 +998,8 @@ Available commands:
     messageId: string,
     text: string,
   ): Promise<void> {
-    if (!this.client) {
-      throw new Error("Feishu client is not initialized");
-    }
-    try {
-      if (chatType === "p2p") {
-        // Private chat message, send directly
-        await this.client.im.v1.message.create({
-          params: {
-            receive_id_type: "chat_id",
-          },
-          data: {
-            receive_id: chatId,
-            content: JSON.stringify({ text }),
-            msg_type: "text",
-          },
-        });
-      } else {
-        // Group chat message, reply to original message
-        await this.client.im.v1.message.reply({
-          path: {
-            message_id: messageId,
-          },
-          data: {
-            content: JSON.stringify({ text }),
-            msg_type: "text",
-          },
-        });
-      }
-    } catch (error) {
-      this.logger.error("Failed to send Feishu message", {
-        error: String(error),
-      });
-      throw error instanceof Error
-        ? error
-        : new Error(`Failed to send Feishu message: ${String(error)}`);
-    }
+    const parsed = parseFeishuAttachments(text);
+    await this.sendParsedMessage(chatId, chatType, messageId, parsed.text, parsed.attachments);
   }
 
   private async sendChatMessage(
@@ -1037,29 +1007,190 @@ Available commands:
     chatType: string,
     text: string,
   ): Promise<void> {
+    const parsed = parseFeishuAttachments(text);
+    await this.sendParsedMessage(chatId, chatType, undefined, parsed.text, parsed.attachments);
+  }
+
+  /**
+   * 统一发送“正文 + 附件”。
+   *
+   * 关键点（中文）
+   * - 附件语法来源于 `@attach` 行。
+   * - 发送顺序为：正文 -> 附件 -> 附件说明（caption）。
+   */
+  private async sendParsedMessage(
+    chatId: string,
+    chatType: string,
+    messageId: string | undefined,
+    text: string,
+    attachments: ParsedFeishuAttachmentCommand[],
+  ): Promise<void> {
+    const normalizedText = String(text || "").trim();
+    if (normalizedText) {
+      await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
+        text: normalizedText,
+      });
+    }
+
+    for (const attachment of attachments) {
+      try {
+        await this.sendAttachment(chatId, chatType, messageId, attachment);
+      } catch (error) {
+        await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
+          text: `❌ Failed to send attachment: ${attachment.pathOrUrl}\n${String(error)}`,
+        });
+      }
+    }
+  }
+
+  /**
+   * 发送飞书文件附件。
+   *
+   * 关键点（中文）
+   * - 当前统一走 `im/v1/files` 上传，再发送 `msg_type=file`。
+   * - 路径支持项目相对路径和绝对路径，不支持远程 URL。
+   */
+  private async sendAttachment(
+    chatId: string,
+    chatType: string,
+    messageId: string | undefined,
+    attachment: ParsedFeishuAttachmentCommand,
+  ): Promise<void> {
+    const localPath = await this.resolveAttachmentLocalPath(attachment.pathOrUrl);
+    const fileKey = await this.uploadFileToFeishu(localPath);
+    await this.sendPlatformMessage(chatId, chatType, messageId, "file", {
+      file_key: fileKey,
+    });
+
+    const caption = String(attachment.caption || "").trim();
+    if (caption) {
+      await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
+        text: caption,
+      });
+    }
+  }
+
+  /**
+   * 解析 `@attach` 提供的本地路径。
+   *
+   * 关键点（中文）
+   * - 远程 URL 暂不支持，避免隐式下载和额外安全风险。
+   */
+  private async resolveAttachmentLocalPath(pathOrUrl: string): Promise<string> {
+    const raw = String(pathOrUrl || "").trim();
+    if (!raw) {
+      throw new Error("Attachment path is empty");
+    }
+    if (/^https?:\/\//i.test(raw)) {
+      throw new Error("Feishu attachment currently only supports local file path");
+    }
+
+    const absPath = path.isAbsolute(raw) ? raw : path.resolve(this.rootPath, raw);
+    const exists = await fs.pathExists(absPath);
+    if (!exists) {
+      throw new Error(`Attachment file not found: ${raw}`);
+    }
+    const stat = await fs.stat(absPath);
+    if (!stat.isFile()) {
+      throw new Error(`Attachment path is not a file: ${raw}`);
+    }
+    return absPath;
+  }
+
+  /**
+   * 上传本地文件到飞书，返回 `file_key`。
+   */
+  private async uploadFileToFeishu(localPath: string): Promise<string> {
+    const token = await this.getAppAccessToken();
+    if (!token) {
+      throw new Error("Failed to get Feishu tenant_access_token");
+    }
+
+    const domain = (this.domain || "https://open.feishu.cn").replace(/\/+$/, "");
+    const fileName = path.basename(localPath) || "attachment.bin";
+    const fileBuffer = await fs.readFile(localPath);
+    const form = new FormData();
+    form.set("file_type", "stream");
+    form.set("file_name", fileName);
+    form.set("file", new Blob([fileBuffer]), fileName);
+
+    const response = await fetch(`${domain}/open-apis/im/v1/files`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | {
+          code?: number;
+          msg?: string;
+          data?: {
+            file_key?: string;
+          };
+        }
+      | null;
+    const fileKey = String(payload?.data?.file_key || "").trim();
+    if (!response.ok || payload?.code !== 0 || !fileKey) {
+      throw new Error(
+        `Feishu file upload failed: HTTP ${response.status}, code=${String(payload?.code ?? "")}, msg=${String(payload?.msg ?? "")}`,
+      );
+    }
+
+    return fileKey;
+  }
+
+  /**
+   * 按 chat 类型发送指定消息体。
+   *
+   * 关键点（中文）
+   * - p2p 或缺少 `messageId` 时走 `message.create`。
+   * - 群聊且有 `messageId` 时优先走 `message.reply`。
+   */
+  private async sendPlatformMessage(
+    chatId: string,
+    chatType: string,
+    messageId: string | undefined,
+    msgType: FeishuMessagePayloadType,
+    content: Record<string, unknown>,
+  ): Promise<void> {
     if (!this.client) {
       throw new Error("Feishu client is not initialized");
     }
     try {
-      // Send directly to chat without needing to reply to a message
+      if (chatType !== "p2p" && messageId) {
+        await this.client.im.v1.message.reply({
+          path: {
+            message_id: messageId,
+          },
+          data: {
+            content: JSON.stringify(content),
+            msg_type: msgType,
+          },
+        });
+        return;
+      }
+
       await this.client.im.v1.message.create({
         params: {
           receive_id_type: "chat_id",
         },
         data: {
           receive_id: chatId,
-          content: JSON.stringify({ text }),
-          msg_type: "text",
+          content: JSON.stringify(content),
+          msg_type: msgType,
         },
       });
     } catch (error) {
-      this.logger.error("Failed to send Feishu chat message", {
+      this.logger.error("Failed to send Feishu message", {
         error: String(error),
+        msgType,
         chatType,
       });
       throw error instanceof Error
         ? error
-        : new Error(`Failed to send Feishu chat message: ${String(error)}`);
+        : new Error(`Failed to send Feishu message: ${String(error)}`);
     }
   }
 

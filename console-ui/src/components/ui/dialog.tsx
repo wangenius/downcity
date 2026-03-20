@@ -48,7 +48,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-[min(92vw,760px)] max-h-[86vh] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border bg-background text-sm shadow-xl transition duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-starting-style:scale-[0.98]",
+          "fixed top-1/2 left-1/2 z-50 w-[min(92vw,760px)] max-h-[86vh] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[24px] bg-card text-sm shadow-[0_22px_70px_rgba(15,23,42,0.12)] transition duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:scale-[0.985] data-starting-style:scale-[0.985]",
           className,
         )}
         {...props}
@@ -108,4 +108,3 @@ export {
   DialogTitle,
   DialogDescription,
 }
-

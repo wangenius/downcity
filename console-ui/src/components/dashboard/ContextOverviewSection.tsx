@@ -204,14 +204,14 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
   }, [activeChannelAccountId, activeChannelName, activeReadonly, onChatConfigure])
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-5">
       <section className="space-y-3">
         {!activeChannel ? (
-          <section className="rounded-md bg-muted/70 px-3 py-5 text-sm text-muted-foreground">
+          <section className="rounded-[18px] bg-secondary px-3.5 py-5 text-sm text-muted-foreground">
             当前 channel 暂无状态
           </section>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
             <div className="flex items-start justify-between gap-3 px-1 py-1">
               <div className="min-w-0">
                 <div className="truncate text-xl font-semibold leading-none text-foreground">{activeChannelName || "unknown"}</div>
@@ -236,7 +236,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 min-w-[9.5rem] max-w-[12rem] justify-between gap-1 px-2 text-[11px]"
+                          className="h-8 min-w-[9.5rem] max-w-[12rem] justify-between gap-1 px-2.5 text-[11px]"
                           disabled={activeReadonly}
                         />
                       }
@@ -267,7 +267,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 px-2 text-[11px]"
+                  className="h-8 px-2.5 text-[11px]"
                   disabled={activeReadonly || activeChannel.enabled === true}
                   onClick={() => onChatAction("open", activeChannelName)}
                 >
@@ -276,7 +276,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 px-2 text-[11px]"
+                  className="h-8 px-2.5 text-[11px]"
                   disabled={activeReadonly || activeChannel.enabled !== true}
                   onClick={() => onChatAction("close", activeChannelName)}
                 >
@@ -285,7 +285,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 px-2 text-[11px]"
+                  className="h-8 px-2.5 text-[11px]"
                   disabled={activeReadonly || !(activeChannel.enabled === true && activeChannel.configured === true)}
                   onClick={() => onChatAction("test", activeChannelName)}
                 >
@@ -294,7 +294,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 px-2 text-[11px]"
+                  className="h-8 px-2.5 text-[11px]"
                   disabled={activeReadonly || !(activeChannel.enabled === true && activeChannel.configured === true)}
                   onClick={() => onChatAction("reconnect", activeChannelName)}
                 >
@@ -321,7 +321,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between border-b border-border/70 pb-2">
+        <div className="flex items-center justify-between">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Contexts</div>
           <div className="text-xs text-muted-foreground">{`total ${visibleContexts.length}`}</div>
         </div>
@@ -348,118 +348,113 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                <th className="px-0 py-2 font-medium">Context</th>
-                <th className="px-2 py-2 font-medium">Group</th>
-                <th className="px-2 py-2 font-medium">Messages</th>
-                <th className="px-2 py-2 font-medium">Updated</th>
-                <th className="px-2 py-2 font-medium">Preview</th>
-                <th className="px-2 py-2 font-medium text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleContexts.length === 0 ? (
-                <tr>
-                  <td className="px-0 py-4 text-sm text-muted-foreground" colSpan={6}>
-                    当前筛选条件下无 context
-                  </td>
-                </tr>
-              ) : (
-                visibleContexts.map((item) => {
-                  const group = resolveContextGroup(item)
-                  const isSelected = item.contextId === selectedContextId
-                  const isDeleting = String(deletingContextId || "").trim() === item.contextId
-                  const display = resolveChatDisplayName(item)
-                  const contextLabel = display.value
-                  const routeJson = buildContextRouteJson(item)
-                  const chatId = String(item.chatId || "").trim()
-                  const chatType = String(item.chatType || "").trim()
-                  return (
-                    <tr key={item.contextId} className={`border-b border-border/50 ${isSelected ? "bg-muted/25" : ""}`}>
-                      <td
-                        className="max-w-[22rem] px-0 py-2"
-                        title={`${contextLabel}\n${item.contextId}`}
-                      >
-                        <div className="truncate text-xs">{contextLabel}</div>
-                        <div className="truncate font-mono text-[11px] text-muted-foreground/85">
-                          {item.contextId}
-                        </div>
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground/90">
-                          <span className="rounded bg-muted px-1.5 py-0.5 uppercase tracking-[0.08em]">
-                            {display.source}
+        {visibleContexts.length === 0 ? (
+          <div className="rounded-[18px] bg-secondary px-4 py-5 text-sm text-muted-foreground">
+            当前筛选条件下无 context
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visibleContexts.map((item) => {
+              const group = resolveContextGroup(item)
+              const isSelected = item.contextId === selectedContextId
+              const isDeleting = String(deletingContextId || "").trim() === item.contextId
+              const display = resolveChatDisplayName(item)
+              const contextLabel = display.value
+              const routeJson = buildContextRouteJson(item)
+              const chatId = String(item.chatId || "").trim()
+              const chatType = String(item.chatType || "").trim()
+              return (
+                <article
+                  key={item.contextId}
+                  className={isSelected ? "rounded-[20px] bg-secondary px-4 py-3" : "rounded-[20px] bg-card px-4 py-3"}
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-foreground" title={`${contextLabel}\n${item.contextId}`}>
+                        {contextLabel}
+                      </div>
+                      <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground/85">
+                        {item.contextId}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/90">
+                        <span className="rounded-full bg-background px-1.5 py-0.5 uppercase tracking-[0.08em]">
+                          {group}
+                        </span>
+                        <span className="rounded-full bg-background px-1.5 py-0.5 uppercase tracking-[0.08em]">
+                          {display.source}
+                        </span>
+                        {chatType ? (
+                          <span className="rounded-full bg-background px-1.5 py-0.5 uppercase tracking-[0.08em]">
+                            {chatType}
                           </span>
-                          {chatType ? (
-                            <span className="rounded bg-muted px-1.5 py-0.5 uppercase tracking-[0.08em]">
-                              {chatType}
-                            </span>
-                          ) : null}
-                          {chatId ? (
-                            <span className="max-w-[10rem] truncate font-mono" title={chatId}>
-                              {chatId}
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-xs uppercase text-muted-foreground">{group}</td>
-                      <td className="px-2 py-2 text-sm text-muted-foreground">{item.messageCount || 0}</td>
-                      <td className="px-2 py-2 text-sm text-muted-foreground">{formatTime(item.updatedAt)}</td>
-                      <td className="max-w-[18rem] truncate px-2 py-2 text-xs text-muted-foreground" title={item.lastText || ""}>
+                        ) : null}
+                        <span className="rounded-full bg-background px-1.5 py-0.5">
+                          {`${item.messageCount || 0} msgs`}
+                        </span>
+                        <span>{formatTime(item.updatedAt)}</span>
+                        {chatId ? (
+                          <span className="max-w-[10rem] truncate font-mono" title={chatId}>
+                            {chatId}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 truncate text-xs text-muted-foreground" title={item.lastText || ""}>
                         {`${item.lastRole || "unknown"} · ${item.lastText || "(empty)"}`}
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          <Popover>
-                            <PopoverTrigger
-                              render={
-                                <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" />
-                              }
-                            >
-                              <Code2Icon className="size-3.5" />
-                              <span>Route</span>
-                            </PopoverTrigger>
-                            <PopoverContent align="end" className="w-[min(92vw,34rem)] overflow-hidden p-0">
-                              <div className="border-b border-border/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                                context route json
-                              </div>
-                              <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/85">
-                                {routeJson}
-                              </pre>
-                            </PopoverContent>
-                          </Popover>
-                          <Button size="sm" variant={isSelected ? "secondary" : "outline"} onClick={() => onOpenContext(item.contextId)}>
-                            {isSelected ? "已打开" : "打开"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={Boolean(deletingContextId)}
-                            onClick={async () => {
-                              const confirmed = await confirm({
-                                title: "删除 Context",
-                                description: `确认彻底删除 context「${item.contextId}」吗？该操作不可恢复。`,
-                                confirmText: "删除",
-                                cancelText: "取消",
-                                confirmVariant: "destructive",
-                              })
-                              if (!confirmed) return
-                              onDeleteContext(item.contextId)
-                            }}
-                          >
-                            <Trash2Icon className="size-3.5" />
-                            <span>{isDeleting ? "删除中..." : "删除"}</span>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+                      <Popover>
+                        <PopoverTrigger
+                          render={<Button size="sm" variant="outline" className="h-8 px-2.5 text-[11px]" />}
+                        >
+                          <Code2Icon className="size-3.5" />
+                          <span>Route</span>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-[min(92vw,34rem)] overflow-hidden p-0">
+                          <div className="bg-secondary px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                            context route json
+                          </div>
+                          <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words bg-card px-3 py-3 font-mono text-[11px] leading-relaxed text-foreground/85">
+                            {routeJson}
+                          </pre>
+                        </PopoverContent>
+                      </Popover>
+                      <Button
+                        size="sm"
+                        variant={isSelected ? "secondary" : "outline"}
+                        className="h-8 px-2.5"
+                        onClick={() => onOpenContext(item.contextId)}
+                      >
+                        {isSelected ? "已打开" : "打开"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 px-2.5"
+                        disabled={Boolean(deletingContextId)}
+                        onClick={async () => {
+                          const confirmed = await confirm({
+                            title: "删除 Context",
+                            description: `确认彻底删除 context「${item.contextId}」吗？该操作不可恢复。`,
+                            confirmText: "删除",
+                            cancelText: "取消",
+                            confirmVariant: "destructive",
+                          })
+                          if (!confirmed) return
+                          onDeleteContext(item.contextId)
+                        }}
+                      >
+                        <Trash2Icon className="size-3.5" />
+                        <span>{isDeleting ? "删除中..." : "删除"}</span>
+                      </Button>
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
       </section>
     </div>
   )

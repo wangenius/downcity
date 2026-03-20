@@ -93,8 +93,8 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
       <div
         className={
           configHealthy
-            ? "rounded-md bg-emerald-500/12 px-3 py-2.5 text-emerald-800 dark:text-emerald-300"
-            : "rounded-md bg-muted px-3 py-2.5 text-muted-foreground"
+            ? "rounded-[18px] bg-emerald-500/10 px-3.5 py-3 text-emerald-800 dark:text-emerald-300"
+            : "rounded-[18px] bg-secondary px-3.5 py-3 text-muted-foreground"
         }
       >
         <div className="text-sm font-semibold">{configHealthy ? "配置正常" : "配置待完善"}</div>
@@ -114,14 +114,15 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
         onStopAgent={onStopAgent}
       />
 
-      <section className="min-h-0 overflow-y-auto">
+      <section className="min-h-0 overflow-y-auto rounded-[22px] bg-card shadow-[0_1px_0_rgba(17,17,19,0.02)]">
         {consoleItems.length === 0 ? (
-          <div className="px-3 py-4 text-sm text-muted-foreground">暂无 console 配置项</div>
+          <div className="px-4 py-5 text-sm text-muted-foreground">暂无 console 配置项</div>
         ) : (
-          <div className="px-3 py-2">
-            <table className="w-full table-fixed border-collapse text-sm">
+          <div className="px-4 py-4">
+            <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+            <table className="w-full table-fixed border-separate border-spacing-y-1.5 text-sm">
               <thead>
-                <tr className="border-b border-border/60 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <tr className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                   <th className="py-2 text-left font-medium">Config</th>
                   <th className="w-[120px] py-2 text-left font-medium">Level</th>
                   <th className="w-[96px] py-2 text-left font-medium">Status</th>
@@ -133,8 +134,8 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
                   const isRequired = requiredConsoleKeys.has(item.key)
                   const isOk = item.status === "ok"
                   return (
-                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="border-b border-border/40 align-middle">
-                      <td className="py-2 pr-3">
+                    <tr key={`${item.scope}:${item.key}:${item.path}`} className="bg-background align-middle">
+                      <td className="rounded-l-[16px] py-3 pr-3 pl-3">
                         <div className="min-w-0">
                           <div className="truncate text-[15px] font-semibold text-foreground">{item.label}</div>
                           <div className="truncate text-[11px] text-muted-foreground">{item.key}</div>
@@ -144,7 +145,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
                       <td className="py-2 pr-3 text-xs">
                         <span className={isOk ? "text-emerald-700" : "text-muted-foreground"}>{item.status}</span>
                       </td>
-                      <td className="py-2 font-mono text-[11px] text-muted-foreground" title={item.path}>
+                      <td className="rounded-r-[16px] py-2 pr-3 font-mono text-[11px] text-muted-foreground" title={item.path}>
                         <span className="block truncate">{item.path}</span>
                       </td>
                     </tr>
@@ -152,11 +153,12 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-2 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
         <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
           Health Signals
         </div>
@@ -167,7 +169,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
             {issueSignals.map((signal) => (
               <div
                 key={signal.key}
-                className="rounded-md bg-destructive/8 px-3 py-2"
+                className="rounded-[16px] bg-destructive/8 px-3 py-2.5"
               >
                 <div className="flex flex-wrap items-center gap-x-2 text-sm">
                   <span className="font-medium text-foreground">{signal.name}</span>

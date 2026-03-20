@@ -514,13 +514,13 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
   }, [records.length, running])
 
   return (
-    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2">
+    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] bg-card shadow-[0_1px_0_rgba(17,17,19,0.02),0_8px_24px_rgba(17,17,19,0.02)]">
+      <div className="flex shrink-0 items-center gap-2 bg-secondary px-3 py-3">
         <div className="min-w-0 flex-1">
           {agents.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="inline-flex h-8 min-w-[14rem] max-w-[24rem] items-center justify-between gap-2 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground outline-none transition-colors hover:bg-muted/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="inline-flex h-9 min-w-[14rem] max-w-[24rem] items-center justify-between gap-2 rounded-[12px] bg-card px-3 text-sm text-foreground outline-none transition-colors hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/30"
                 aria-label="选择 agent"
               >
                 <span className="truncate text-left">{activeAgentName}</span>
@@ -558,7 +558,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
           variant="ghost"
           onClick={() => setRecords([])}
           disabled={running || records.length === 0}
-          className="size-7 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          className="size-8 rounded-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
           aria-label="清空输出"
           title="清空输出"
         >
@@ -569,7 +569,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
       <div className="min-h-0 flex-1 px-3 py-3">
         <div
           ref={terminalRef}
-          className="h-full overflow-auto font-mono text-[12px] leading-relaxed text-foreground/92"
+          className="h-full overflow-auto rounded-[18px] bg-secondary px-3 py-3 font-mono text-[12px] leading-relaxed text-foreground/92"
         >
           {records.length === 0 ? (
             <div className="text-muted-foreground">
@@ -588,14 +588,14 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
                 >
                   <div className="flex items-center gap-2">
                     <div className="text-foreground">{`$ ${record.result.command}`}</div>
-                    <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] leading-none ${tone.badgeClassName}`}>
+                    <span className={`inline-flex rounded-[10px] px-1.5 py-0.5 text-[10px] leading-none ${tone.badgeClassName}`}>
                       {tone.label}
                     </span>
                   </div>
                   <div className="text-[11px] text-muted-foreground">{`${record.result.cwd} · ${meta}`}</div>
                   {record.result.stdout ? <pre className="mt-1 whitespace-pre-wrap break-words text-foreground/95">{record.result.stdout}</pre> : null}
                   {record.result.stderr ? (
-                    <pre className="mt-1 whitespace-pre-wrap break-words rounded bg-destructive/6 px-2 py-1 text-destructive">
+                    <pre className="mt-1 whitespace-pre-wrap break-words rounded-[10px] bg-destructive/6 px-2 py-1 text-destructive">
                       {record.result.stderr}
                     </pre>
                   ) : null}
@@ -607,12 +607,12 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-border/70 px-3 py-2">
+      <div className="shrink-0 bg-secondary px-3 py-3">
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={running || !activeAgentId}
-              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/80 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
               aria-label="常用命令"
               title="常用命令"
             >

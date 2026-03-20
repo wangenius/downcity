@@ -44,99 +44,91 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   return (
     <section className="min-h-0 overflow-y-auto">
       {agents.length === 0 ? (
-        <div className="px-3 py-4 text-sm text-muted-foreground">暂无 agent</div>
+        <div className="rounded-[20px] bg-secondary px-4 py-5 text-sm text-muted-foreground">暂无 agent</div>
       ) : (
-        <div className="px-3 py-2">
-          <table className="w-full table-fixed border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border/60 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                <th className="py-2 text-left font-medium">Agent</th>
-                <th className="w-[200px] py-2 text-left font-medium">Model</th>
-                <th className="w-[88px] py-2 text-left font-medium">PID</th>
-                <th className="w-[88px] py-2 text-left font-medium">Port</th>
-                <th className="w-[104px] py-2 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agents.map((agent) => {
-                const isRunning = agent.running === true
-                const primaryModelId = String(agent.primaryModelId || "")
-                const isStarting = startingAgentId === agent.id
-                const isRestarting = restartingAgentId === agent.id
-                const isStopping = stoppingAgentId === agent.id
-                return (
-                  <tr
-                    key={agent.id}
-                    className={`border-b border-border/40 align-middle ${isRunning ? "text-foreground" : "text-muted-foreground opacity-55"}`}
-                  >
-                    <td className="py-2 pr-3">
-                      <div className="flex min-w-0 items-start gap-2">
-                        <BotIcon className={`mt-0.5 size-5 shrink-0 ${isRunning ? "text-emerald-600" : ""}`} />
-                        <div className="min-w-0">
-                          <span className="truncate text-[15px] font-semibold">{agent.name || "unknown-agent"}</span>
-                          <div className="truncate font-mono text-[11px] text-muted-foreground">{agent.id}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <span className="inline-flex h-5 max-w-full items-center rounded-full border border-border px-2 font-mono text-[11px]">
-                        {primaryModelId || "-"}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 font-mono text-xs">{isRunning ? String(agent.daemonPid || "-") : "-"}</td>
-                    <td className="py-2 pr-3 font-mono text-xs">{isRunning ? String(agent.port || "-") : "-"}</td>
-                    <td className="py-2 text-right">
-                      {isRunning ? (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-md p-0"
-                            onClick={() => setConfirmAction({ agent, action: "restart" })}
-                            disabled={isRestarting || isStopping}
-                            aria-label="重启"
-                            title="重启"
-                          >
-                            {isRestarting ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-md p-0"
-                            onClick={() => setConfirmAction({ agent, action: "stop" })}
-                            disabled={isRestarting || isStopping}
-                            aria-label="停止"
-                            title="停止"
-                          >
-                            {isStopping ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
-                          </Button>
-                        </div>
-                      ) : (
+        <div className="space-y-2">
+          {agents.map((agent) => {
+            const isRunning = agent.running === true
+            const primaryModelId = String(agent.primaryModelId || "")
+            const isStarting = startingAgentId === agent.id
+            const isRestarting = restartingAgentId === agent.id
+            const isStopping = stoppingAgentId === agent.id
+            return (
+              <article
+                key={agent.id}
+                className={isRunning ? "rounded-[20px] bg-card px-4 py-3" : "rounded-[20px] bg-secondary px-4 py-3 text-muted-foreground"}
+              >
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className={isRunning ? "mt-0.5 rounded-full bg-emerald-500/12 p-2 text-emerald-700" : "mt-0.5 rounded-full bg-secondary p-2 text-muted-foreground"}>
+                      <BotIcon className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-[15px] font-semibold text-foreground">{agent.name || "unknown-agent"}</div>
+                      <div className="truncate font-mono text-[11px] text-muted-foreground">{agent.id}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-1 flex-wrap items-center gap-2 lg:justify-end">
+                    <span className="inline-flex h-7 max-w-full items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-foreground/86">
+                      {primaryModelId || "-"}
+                    </span>
+                    <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground">
+                      {`pid ${isRunning ? String(agent.daemonPid || "-") : "-"}`}
+                    </span>
+                    <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground">
+                      {`port ${isRunning ? String(agent.port || "-") : "-"}`}
+                    </span>
+                    {isRunning ? (
+                      <div className="ml-auto flex items-center gap-1.5">
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 w-8 rounded-md p-0"
-                          disabled={isStarting || isRestarting || isStopping}
-                          aria-label="启动"
-                          title="启动"
-                          onClick={async () => {
-                            try {
-                              setStartingAgentId(agent.id)
-                              await Promise.resolve(onStartAgent(agent.id))
-                            } finally {
-                              setStartingAgentId("")
-                            }
-                          }}
+                          className="h-8 w-8 rounded-[10px] bg-secondary p-0 hover:bg-accent"
+                          onClick={() => setConfirmAction({ agent, action: "restart" })}
+                          disabled={isRestarting || isStopping}
+                          aria-label="重启"
+                          title="重启"
                         >
-                          {isStarting ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
+                          {isRestarting ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
                         </Button>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-[10px] bg-secondary p-0 hover:bg-accent"
+                          onClick={() => setConfirmAction({ agent, action: "stop" })}
+                          disabled={isRestarting || isStopping}
+                          aria-label="停止"
+                          title="停止"
+                        >
+                          {isStopping ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="ml-auto h-8 w-8 rounded-[10px] bg-secondary p-0 hover:bg-accent"
+                        disabled={isStarting || isRestarting || isStopping}
+                        aria-label="启动"
+                        title="启动"
+                        onClick={async () => {
+                          try {
+                            setStartingAgentId(agent.id)
+                            await Promise.resolve(onStartAgent(agent.id))
+                          } finally {
+                            setStartingAgentId("")
+                          }
+                        }}
+                      >
+                        {isStarting ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            )
+          })}
         </div>
       )}
 

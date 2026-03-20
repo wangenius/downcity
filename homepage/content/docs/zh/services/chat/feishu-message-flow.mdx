@@ -220,6 +220,18 @@ username: ...
 
 - [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:885)
 
+另外，当前版本支持在回复文本里写附件指令并自动转换为飞书文件消息：
+
+```text
+@attach document reports/downcity-office-hours.md
+```
+
+发送顺序是：
+
+1. 先发送正文文本（去掉 `@attach` 行）
+2. 再上传并发送附件文件消息
+3. 如果 `@attach` 包含 `| 说明`，会追加发送说明文本
+
 ## 8）为什么 `user_access_token` 测试通过，但运行时不行
 
 因为这是两条不同链路。

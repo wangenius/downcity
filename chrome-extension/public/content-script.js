@@ -11,7 +11,7 @@
  */
 
 (function bootstrapDowncityInlineComposer() {
-  if (typeof window === "undefined" || window.top !== window) {
+  if (typeof window === "undefined") {
     return;
   }
   if (document.getElementById("downcity-inline-share-root")) {
@@ -64,6 +64,12 @@
     routeBaseUrl: "",
     agentTagText: "Agent",
     routeErrorText: "",
+    isRouteLoading: false,
+    isRoutePanelOpen: false,
+    routeAgents: [],
+    routeChats: [],
+    activeAgentId: "",
+    activeChatKey: "",
     toastTimerId: null,
   };
 
@@ -74,6 +80,12 @@
       return "没有可用 Agent";
     }
     return "不可发送";
+  }
+
+  function formatChannelName(channel) {
+    if (channel === "telegram") return "Telegram";
+    if (channel === "feishu") return "Feishu";
+    return "QQ";
   }
 
   function normalizeText(input, maxChars) {
@@ -141,7 +153,30 @@
     }
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    if (!rect || (rect.width === 0 && rect.height === 0)) return null;
+    if (rect && (rect.width > 0 || rect.height > 0)) {
+      return rect;
+    }
+
+    // 关键点（中文）：部分页面（尤其 iframe / 特殊排版容器）会返回空 bounding rect，
+    // 这里退化到最后一个 client rect，尽量保证触发按钮仍然能定位。
+    const rects = Array.from(range.getClientRects()).filter(
+      (item) => item && (item.width > 0 || item.height > 0),
+    );
+    if (rects.length > 0) {
+      return rects[rects.length - 1];
+    }
+
+    const anchorElement = selection.anchorNode instanceof Element
+      ? selection.anchorNode
+      : selection.anchorNode && selection.anchorNode.parentElement
+        ? selection.anchorNode.parentElement
+        : null;
+    if (anchorElement) {
+      const fallbackRect = anchorElement.getBoundingClientRect();
+      if (fallbackRect && (fallbackRect.width > 0 || fallbackRect.height > 0)) {
+        return fallbackRect;
+      }
+    }
     return rect;
   }
 
@@ -271,6 +306,15 @@
     };
   }
 
+  async function saveSettings(settings) {
+    await storageSet("sync", {
+      [STORAGE_KEY]: {
+        ...DEFAULT_SETTINGS,
+        ...settings,
+      },
+    });
+  }
+
   function normalizePageUrl(value) {
     const raw = normalizeText(value, 1000);
     if (!raw) return "";
@@ -386,6 +430,17 @@
     return "";
   }
 
+  function resolveContextDisplayName(context, chatKey, channel) {
+    const chatTitle = normalizeText(context && context.chatTitle, 80);
+    const chatId = normalizeText(context && context.chatId, 80);
+    if (chatTitle && (!chatId || chatTitle !== chatId)) {
+      return chatTitle;
+    }
+    if (chatId) return chatId;
+    if (chatKey) return chatKey;
+    return formatChannelName(channel);
+  }
+
   function resolveLinkedChannels(agent) {
     const out = new Set();
     const profiles = Array.isArray(agent && agent.chatProfiles) ? agent.chatProfiles : [];
@@ -465,8 +520,10 @@
     ].join("\n");
   }
 
-  async function resolveRouteInfo() {
-    const settings = await loadSettings();
+  async function resolveRouteInfo(inputSettings) {
+    const settings = inputSettings && typeof inputSettings === "object"
+      ? { ...DEFAULT_SETTINGS, ...inputSettings }
+      : await loadSettings();
     const baseUrl = buildConsoleBaseUrl(settings);
     const agentsPayload = await fetchAgents(baseUrl);
     const agents = Array.isArray(agentsPayload.agents) ? agentsPayload.agents : [];
@@ -493,10 +550,13 @@
       if (!chatKey || seen.has(chatKey)) continue;
       const channel = parseContextChannel(context);
       if (linkedChannels.size > 0 && !linkedChannels.has(channel)) continue;
+      const displayName = resolveContextDisplayName(context, chatKey, channel);
 
       seen.add(chatKey);
       options.push({
         chatKey,
+        channel,
+        title: `${displayName} · ${formatChannelName(channel)}`,
         updatedAt: Number.isFinite(context && context.updatedAt) ? Number(context.updatedAt) : 0,
         messageCount: Number.isFinite(context && context.messageCount)
           ? Number(context.messageCount)
@@ -517,9 +577,47 @@
     return {
       settings,
       baseUrl,
+      agents,
+      chatOptions: options,
       targetAgent,
       targetChatKey,
     };
+  }
+
+  async function refreshRouteState(preferredSettings) {
+    state.isRouteLoading = true;
+    renderAgentTag();
+    renderRoutePanel();
+    try {
+      const routeInfo = await resolveRouteInfo(preferredSettings || state.lastSettings);
+      state.routeBaseUrl = routeInfo.baseUrl;
+      state.routeErrorText = "";
+      state.routeAgents = routeInfo.agents;
+      state.routeChats = routeInfo.chatOptions;
+      state.activeAgentId = routeInfo.targetAgent.id;
+      state.activeChatKey = routeInfo.targetChatKey;
+      state.agentTagText = toAgentOptionLabel(routeInfo.targetAgent);
+
+      const nextSettings = {
+        ...state.lastSettings,
+        agentId: routeInfo.targetAgent.id,
+        chatKey: routeInfo.targetChatKey,
+      };
+      state.lastSettings = nextSettings;
+      await saveSettings(nextSettings);
+    } catch (error) {
+      state.routeBaseUrl = "";
+      state.routeErrorText = summarizeRouteErrorText(readErrorText(error));
+      state.routeAgents = [];
+      state.routeChats = [];
+      state.activeAgentId = "";
+      state.activeChatKey = "";
+      state.agentTagText = "Agent";
+    } finally {
+      state.isRouteLoading = false;
+      renderAgentTag();
+      renderRoutePanel();
+    }
   }
 
   async function sendSelectionToAgent(params) {
@@ -531,7 +629,11 @@
       throw new Error("未能读取可发送内容");
     }
 
-    const { targetAgent, targetChatKey, baseUrl } = await resolveRouteInfo();
+    const { targetAgent, targetChatKey, baseUrl } = await resolveRouteInfo({
+      ...state.lastSettings,
+      agentId: state.activeAgentId || state.lastSettings.agentId,
+      chatKey: state.activeChatKey || state.lastSettings.chatKey,
+    });
 
     const attachment = buildContextAttachment({
       pageTitle: params.pageTitle,
@@ -615,16 +717,26 @@
           <div id="dcSlash" class="dc-slash dc-hidden"></div>
           <textarea id="dcInput" class="dc-input" rows="3" placeholder="Ask for follow-up changes"></textarea>
           <div class="dc-footer">
-            <div class="dc-agent-meta">
+            <button id="dcRouteTrigger" class="dc-route-trigger" type="button" aria-label="选择 Agent 和 Chat">
               <img class="dc-agent-icon" src="${TRIGGER_ICON_URL}" alt="" aria-hidden="true" />
               <div id="dcAgentTag" class="dc-agent-tag">Agent</div>
-            </div>
+            </button>
             <button id="dcSendBtn" class="dc-send-btn" type="button" aria-label="发送">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 18V6"></path>
                 <path d="M7 11L12 6L17 11"></path>
               </svg>
             </button>
+          </div>
+          <div id="dcRoutePanel" class="dc-route-panel dc-hidden">
+            <div class="dc-route-section">
+              <div class="dc-route-title">Agent</div>
+              <div id="dcAgentList" class="dc-route-list"></div>
+            </div>
+            <div class="dc-route-section">
+              <div class="dc-route-title">Chat</div>
+              <div id="dcChatList" class="dc-route-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -641,6 +753,10 @@
       triggerBtn: shadow.getElementById("dcTriggerBtn"),
       composer: shadow.getElementById("dcComposer"),
       input: shadow.getElementById("dcInput"),
+      routeTrigger: shadow.getElementById("dcRouteTrigger"),
+      routePanel: shadow.getElementById("dcRoutePanel"),
+      agentList: shadow.getElementById("dcAgentList"),
+      chatList: shadow.getElementById("dcChatList"),
       agentTag: shadow.getElementById("dcAgentTag"),
       sendBtn: shadow.getElementById("dcSendBtn"),
       slash: shadow.getElementById("dcSlash"),
@@ -741,11 +857,80 @@
     ui.slash.replaceChildren();
   }
 
+  function setRoutePanelOpen(open) {
+    state.isRoutePanelOpen = Boolean(open);
+    ui.routePanel.classList.toggle("dc-hidden", !state.isRoutePanelOpen);
+  }
+
+  function renderRoutePanel() {
+    const selectedAgent = state.routeAgents.find((item) => item.id === state.activeAgentId) || null;
+    const selectedChat = state.routeChats.find((item) => item.chatKey === state.activeChatKey) || null;
+    const agentLabel = state.isRouteLoading
+      ? "加载 Agent..."
+      : (selectedAgent ? toAgentOptionLabel(selectedAgent) : "选择 Agent");
+    const chatLabel = state.isRouteLoading
+      ? "加载 Chat..."
+      : (selectedChat ? selectedChat.title : "选择 Chat");
+
+    ui.routeTrigger.title = `${agentLabel} / ${chatLabel}`;
+    ui.routeTrigger.disabled = state.isSending || state.isRouteLoading || state.routeAgents.length < 1;
+
+    ui.agentList.replaceChildren();
+    if (state.routeAgents.length > 0) {
+      for (const agent of state.routeAgents) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dc-route-item";
+        button.dataset.selected = agent.id === state.activeAgentId ? "true" : "false";
+        button.textContent = toAgentOptionLabel(agent);
+        button.addEventListener("mousedown", (event) => event.preventDefault());
+        button.addEventListener("click", () => {
+          void selectAgent(agent.id);
+        });
+        ui.agentList.appendChild(button);
+      }
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "dc-route-empty";
+      empty.textContent = "没有可用 Agent";
+      ui.agentList.appendChild(empty);
+    }
+
+    ui.chatList.replaceChildren();
+    if (state.routeChats.length > 0) {
+      for (const chat of state.routeChats) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dc-route-item";
+        button.dataset.selected = chat.chatKey === state.activeChatKey ? "true" : "false";
+        button.textContent = chat.title;
+        button.addEventListener("mousedown", (event) => event.preventDefault());
+        button.addEventListener("click", () => {
+          void selectChat(chat.chatKey);
+        });
+        ui.chatList.appendChild(button);
+      }
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "dc-route-empty";
+      empty.textContent = "当前 Agent 暂无 Chat";
+      ui.chatList.appendChild(empty);
+    }
+  }
+
   function renderAgentTag() {
-    ui.agentTag.textContent = state.routeErrorText || state.agentTagText || "Agent";
+    const selectedChat = state.routeChats.find((item) => item.chatKey === state.activeChatKey) || null;
+    const chatShort = selectedChat ? normalizeText(selectedChat.title, 26) : "No Chat";
+    ui.agentTag.textContent = state.routeErrorText || `${state.agentTagText || "Agent"} · ${chatShort}`;
     ui.agentTag.dataset.state = state.routeErrorText ? "error" : "default";
-    ui.agentTag.title = state.routeErrorText || state.agentTagText || "Agent";
-    ui.sendBtn.disabled = state.isSending || Boolean(state.routeErrorText);
+    ui.routeTrigger.dataset.state = state.routeErrorText ? "error" : "default";
+    ui.agentTag.title = state.routeErrorText || `${state.agentTagText || "Agent"} / ${chatShort}`;
+    ui.sendBtn.disabled =
+      state.isSending
+      || state.isRouteLoading
+      || Boolean(state.routeErrorText)
+      || !state.activeAgentId
+      || !state.activeChatKey;
   }
 
   function placeTrigger(rect) {
@@ -806,7 +991,9 @@
       ui.composer.classList.remove("dc-hidden");
       hideTrigger();
       renderSelectionOverlay();
+      setRoutePanelOpen(false);
       renderAgentTag();
+      renderRoutePanel();
       setInputPlaceholder("idle");
       queueMicrotask(() => {
         placeComposer(state.selectionRect || state.hoverSelectionRect);
@@ -822,23 +1009,42 @@
     ui.input.value = "";
     ui.input.blur();
     hideSlashMenu();
+    setRoutePanelOpen(false);
     hideSelectionOverlay();
     setInputPlaceholder("idle");
   }
 
-  async function refreshAgentTag() {
-    try {
-      const routeInfo = await resolveRouteInfo();
-      state.routeBaseUrl = routeInfo.baseUrl;
-      state.routeErrorText = "";
-      state.agentTagText = toAgentOptionLabel(routeInfo.targetAgent);
-      renderAgentTag();
-    } catch (error) {
-      state.routeBaseUrl = "";
-      state.routeErrorText = summarizeRouteErrorText(readErrorText(error));
-      state.agentTagText = "Agent";
-      renderAgentTag();
+  async function selectAgent(agentId) {
+    const selectedId = normalizeText(agentId, 240);
+    if (!selectedId || selectedId === state.activeAgentId) {
+      setRoutePanelOpen(false);
+      return;
     }
+    setRoutePanelOpen(false);
+    const nextSettings = {
+      ...state.lastSettings,
+      agentId: selectedId,
+      chatKey: "",
+    };
+    await refreshRouteState(nextSettings);
+  }
+
+  async function selectChat(chatKey) {
+    const selectedKey = normalizeText(chatKey, 300);
+    if (!selectedKey || selectedKey === state.activeChatKey) {
+      setRoutePanelOpen(false);
+      return;
+    }
+    setRoutePanelOpen(false);
+    state.activeChatKey = selectedKey;
+    state.lastSettings = {
+      ...state.lastSettings,
+      agentId: state.activeAgentId,
+      chatKey: selectedKey,
+    };
+    await saveSettings(state.lastSettings);
+    renderRoutePanel();
+    renderAgentTag();
   }
 
   function openComposerFromSelection(selectionText, rect, rects) {
@@ -851,7 +1057,7 @@
     ui.input.value = "";
     ui.input.setSelectionRange(0, 0);
 
-    void refreshAgentTag();
+    void refreshRouteState();
     void refreshAskHistoryCommands()
       .then(() => {
         updateSlashMenuFromInput();
@@ -1001,12 +1207,16 @@
   function setSendingState(isSending) {
     state.isSending = Boolean(isSending);
     ui.input.disabled = state.isSending;
+    renderRoutePanel();
     ui.sendBtn.disabled = state.isSending;
     if (state.isSending) {
       hideSlashMenu();
+      setRoutePanelOpen(false);
       setInputPlaceholder("sending");
       return;
     }
+    renderRoutePanel();
+    renderAgentTag();
     setInputPlaceholder("idle");
   }
 
@@ -1014,6 +1224,10 @@
     if (state.isSending) return;
     if (state.routeErrorText) {
       showToast("error", state.routeErrorText);
+      return;
+    }
+    if (!state.activeAgentId || !state.activeChatKey) {
+      showToast("error", "请先选择 Agent 与 Chat");
       return;
     }
 
@@ -1060,9 +1274,17 @@
   void loadSettings()
     .then((settings) => {
       applySettingsToState(settings);
+      state.activeAgentId = settings.agentId || "";
+      state.activeChatKey = settings.chatKey || "";
+      renderRoutePanel();
+      renderAgentTag();
     })
     .catch(() => {
       applySettingsToState(DEFAULT_SETTINGS);
+      state.activeAgentId = "";
+      state.activeChatKey = "";
+      renderRoutePanel();
+      renderAgentTag();
     });
 
   void refreshAskHistoryCommands().catch(() => {
@@ -1078,8 +1300,17 @@
     openComposerFromCurrentSelection();
   });
 
+  ui.routeTrigger.addEventListener("click", () => {
+    if (ui.routeTrigger.disabled) return;
+    setRoutePanelOpen(!state.isRoutePanelOpen);
+  });
+
   ui.input.addEventListener("input", () => {
     updateSlashMenuFromInput();
+  });
+
+  ui.input.addEventListener("focus", () => {
+    setRoutePanelOpen(false);
   });
 
   ui.input.addEventListener("keydown", (event) => {
@@ -1114,6 +1345,10 @@
 
     if (key === "escape") {
       event.preventDefault();
+      if (state.isRoutePanelOpen) {
+        setRoutePanelOpen(false);
+        return;
+      }
       if (state.slashVisible) {
         hideSlashMenu();
         return;
@@ -1127,6 +1362,16 @@
   ui.sendBtn.addEventListener("click", () => {
     void submit();
   });
+
+  document.addEventListener(
+    "selectionchange",
+    () => {
+      queueMicrotask(() => {
+        refreshTriggerFromSelection();
+      });
+    },
+    true,
+  );
 
   document.addEventListener(
     "mouseup",
@@ -1155,7 +1400,14 @@
       const eventTarget = event.target;
       const clickedInsideUi = path.includes(ui.host)
         || (eventTarget instanceof Node && ui.host.contains(eventTarget));
-      if (clickedInsideUi) return;
+      if (clickedInsideUi) {
+        const clickedRouteControl = path.includes(ui.routeTrigger)
+          || path.includes(ui.routePanel);
+        if (!clickedRouteControl && state.isRoutePanelOpen) {
+          setRoutePanelOpen(false);
+        }
+        return;
+      }
 
       if (state.isOpen && !state.isSending) {
         setOpen(false);

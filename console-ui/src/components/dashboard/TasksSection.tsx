@@ -166,9 +166,9 @@ export function TasksSection(props: TasksSectionProps) {
   const badgeClass = React.useCallback(
     (status?: string): string => {
       const tone = statusBadgeVariant(status);
-      if (tone === "ok") return "border-border bg-muted/45 text-foreground";
+      if (tone === "ok") return "bg-secondary text-foreground";
       if (tone === "bad") return "border-destructive/40 bg-destructive/10 text-destructive";
-      return "border-border bg-muted/35 text-muted-foreground";
+      return "bg-card text-muted-foreground";
     },
     [statusBadgeVariant],
   );
@@ -333,15 +333,15 @@ export function TasksSection(props: TasksSectionProps) {
         <header className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tasks</div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="outline" className="border-border/60 bg-muted/45 text-foreground">{`total ${overviewStats.total}`}</Badge>
+            <Badge variant="outline" className="bg-secondary text-foreground">{`total ${overviewStats.total}`}</Badge>
             <Badge variant="outline" className="border-border/60 bg-primary/10 text-primary">{`running ${overviewStats.running}`}</Badge>
             <Badge variant="outline" className="border-border/60 bg-destructive/10 text-destructive">{`failed ${overviewStats.failed}`}</Badge>
-            <Badge variant="outline" className="border-border/60 bg-secondary/55 text-foreground">{`manual ${overviewStats.manual}`}</Badge>
+            <Badge variant="outline" className="bg-secondary text-foreground">{`manual ${overviewStats.manual}`}</Badge>
           </div>
         </header>
 
         {tasks.length === 0 ? (
-          <div className="rounded-2xl bg-muted/35 px-4 py-6 text-sm text-muted-foreground">暂无 task 数据</div>
+          <div className="rounded-[20px] bg-secondary px-4 py-6 text-sm text-muted-foreground">暂无 task 数据</div>
         ) : (
           <div className="space-y-1.5">
             {tasks.map((task) => {
@@ -354,7 +354,7 @@ export function TasksSection(props: TasksSectionProps) {
                 <button
                   key={title}
                   type="button"
-                  className="flex w-full items-start justify-between gap-3 rounded-xl bg-muted/35 px-3 py-2.5 text-left transition-colors hover:bg-muted/55"
+                  className="flex w-full items-start justify-between gap-3 rounded-[18px] bg-card px-3 py-2.5 text-left transition-colors hover:bg-secondary"
                   onClick={() => onSelectTaskTitle?.(title)}
                 >
                   <div className="min-w-0 space-y-1">
@@ -363,8 +363,8 @@ export function TasksSection(props: TasksSectionProps) {
                   </div>
                   <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1.5">
                     <Badge variant="outline" className={badgeClass(status)}>{status}</Badge>
-                    <Badge variant="outline" className="border-border/55 bg-secondary/45 text-muted-foreground">{whenLabel}</Badge>
-                    <Badge variant="outline" className="border-border/55 bg-background/60 text-muted-foreground">
+                    <Badge variant="outline" className="bg-secondary text-muted-foreground">{whenLabel}</Badge>
+                    <Badge variant="outline" className="bg-background text-muted-foreground">
                       {formatRunTimestampForDisplay(String(task.lastRunTimestamp || ""), formatTime)}
                     </Badge>
                   </div>
@@ -484,9 +484,10 @@ export function TasksSection(props: TasksSectionProps) {
       </header>
 
       <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
-        <section className="min-w-0 space-y-3 rounded-2xl bg-muted/35 p-3">
+        <section className="min-w-0 space-y-3">
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Definition</div>
-          <div className="grid gap-1.5 text-xs text-muted-foreground">
+          <div className="rounded-[20px] bg-secondary px-4 py-3.5">
+            <div className="grid gap-1.5 text-xs text-muted-foreground">
             <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
               <span className="text-foreground/80">kind</span>
               <span>{selectedTask.kind || "-"}</span>
@@ -508,16 +509,17 @@ export function TasksSection(props: TasksSectionProps) {
               <span>{formatRunTimestampForDisplay(String(selectedTask.lastRunTimestamp || ""), formatTime)}</span>
             </div>
           </div>
+          </div>
 
           <div className="space-y-1">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Body</div>
-            <pre className="h-[46vh] min-h-[20rem] overflow-auto rounded-xl bg-background/80 p-3 text-[12px] leading-relaxed text-foreground/90">
+            <pre className="h-[46vh] min-h-[20rem] overflow-auto rounded-[20px] bg-card px-4 py-3.5 text-[12px] leading-relaxed text-foreground/90">
               {selectedTask.body || "-"}
             </pre>
           </div>
         </section>
 
-        <section className="min-w-0 space-y-3 rounded-2xl bg-secondary/35 p-3">
+        <section className="min-w-0 space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Runtime</div>
             <div className="flex items-center gap-1.5">
@@ -574,7 +576,7 @@ export function TasksSection(props: TasksSectionProps) {
           </div>
 
           {runs.length === 0 ? (
-            <div className="rounded-xl bg-background/60 px-3 py-4 text-sm text-muted-foreground">暂无执行记录</div>
+            <div className="rounded-[18px] bg-secondary px-4 py-5 text-sm text-muted-foreground">暂无执行记录</div>
           ) : (
             <div className="max-h-[62vh] space-y-1.5 overflow-y-auto pr-1">
               {runs.map((run) => {
@@ -589,8 +591,8 @@ export function TasksSection(props: TasksSectionProps) {
                     <button
                       type="button"
                       className={cn(
-                        "min-w-0 flex-1 rounded-xl px-3 py-2 text-left transition-colors",
-                        isActive ? "bg-background/85" : "bg-background/55 hover:bg-background/75",
+                        "min-w-0 flex-1 rounded-[18px] px-3.5 py-3 text-left transition-colors",
+                        isActive ? "bg-secondary" : "bg-card hover:bg-secondary",
                       )}
                       onClick={() => {
                         setSelectedRunTimestamp(run.timestamp);
@@ -658,7 +660,7 @@ export function TasksSection(props: TasksSectionProps) {
 
       <Dialog open={runDetailOpen} onOpenChange={setRunDetailOpen}>
         <DialogContent className="w-[min(96vw,980px)] p-0">
-          <DialogHeader className="border-b border-border/60 px-4 py-3">
+          <DialogHeader className="bg-secondary px-4 py-4">
             <DialogTitle>
               {`Run Detail${
                 selectedRunTimestamp
@@ -675,7 +677,7 @@ export function TasksSection(props: TasksSectionProps) {
               <div className="text-sm text-muted-foreground">未找到执行详情</div>
             ) : (
               <>
-                <div className="rounded-xl bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
+                <div className="rounded-[18px] bg-secondary px-3.5 py-3 text-xs text-muted-foreground">
                   <div>{`runDir: ${selectedRunDetail.runDirRel || "-"}`}</div>
                   <div>{`status: ${normalizeRunStatus(selectedRun, selectedRunDetail)}`}</div>
                   <div>{`phase: ${String(selectedRunDetail.progress?.phase || "-")}`}</div>
@@ -688,7 +690,7 @@ export function TasksSection(props: TasksSectionProps) {
                   {(["input", "output", "result", "dialogue", "error"] as const).map((key) => (
                     <div key={key} className="space-y-1">
                       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</div>
-                      <pre className="max-h-56 overflow-auto rounded-xl bg-background/70 p-2 text-[11px] leading-relaxed">
+                      <pre className="max-h-56 overflow-auto rounded-[16px] bg-card px-3 py-2.5 text-[11px] leading-relaxed">
                         {String(selectedRunDetail.artifacts?.[key] || "-")}
                       </pre>
                     </div>

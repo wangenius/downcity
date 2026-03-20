@@ -24,7 +24,12 @@
   --dc-primary-strong: #232326;
   --dc-primary-soft: #f3f4f6;
   --dc-primary-ring: rgba(17, 17, 19, 0.08);
+  --dc-success-bg: #eef8f1;
+  --dc-success-line: #b7dfc2;
+  --dc-success-fg: #166534;
   --dc-error: #faf5f5;
+  --dc-error-line: #d9b2ae;
+  --dc-error-fg: #7f1d1d;
   --dc-font-sans: "Space Grotesk", "PingFang SC", "Noto Sans CJK SC", sans-serif;
 }
 
@@ -85,10 +90,10 @@
   position: relative;
   width: 100%;
   border: 1px solid var(--dc-line);
-  border-radius: 18px;
+  border-radius: 12px;
   background: var(--dc-bg);
-  box-shadow: var(--dc-panel-shadow);
-  padding: 10px;
+  box-shadow: none;
+  padding: 9px 9px 8px;
   font-family: var(--dc-font-sans);
   color: var(--dc-fg);
 }
@@ -108,6 +113,94 @@
   font-family: var(--dc-font-sans);
 }
 
+.dc-route-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--dc-line-soft);
+  background: transparent;
+  color: var(--dc-fg);
+  font-family: var(--dc-font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  text-align: left;
+  padding: 7px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.dc-route-item:last-child {
+  border-bottom: 0;
+}
+
+.dc-route-item:hover,
+.dc-route-item[data-selected="true"] {
+  background: var(--dc-muted-surface);
+}
+
+.dc-route-empty {
+  padding: 7px 8px;
+  color: var(--dc-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.dc-route-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 78%;
+  height: 22px;
+  border: 1px solid var(--dc-line);
+  border-radius: 999px;
+  background: var(--dc-bg);
+  padding: 0 7px;
+  cursor: pointer;
+}
+
+.dc-route-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dc-route-trigger[data-state="error"] {
+  border-color: var(--dc-error-line);
+  background: var(--dc-error);
+}
+
+.dc-route-panel {
+  margin-top: 6px;
+  border: 1px solid var(--dc-line);
+  border-radius: 10px;
+  background: var(--dc-bg);
+  overflow: hidden;
+}
+
+.dc-route-section {
+  border-bottom: 1px solid var(--dc-line-soft);
+}
+
+.dc-route-section:last-child {
+  border-bottom: 0;
+}
+
+.dc-route-title {
+  padding: 6px 8px 5px;
+  color: var(--dc-muted);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dc-route-list {
+  max-height: 126px;
+  overflow: auto;
+}
+
 .dc-input::placeholder {
   color: #8c8f98;
 }
@@ -121,21 +214,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  margin-top: 4px;
-}
-
-.dc-agent-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  max-width: 70%;
+  margin-top: 5px;
 }
 
 .dc-agent-icon {
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   object-fit: contain;
 }
 
@@ -143,22 +228,17 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  height: 22px;
+  height: 18px;
   overflow: hidden;
-  border: 1px solid var(--dc-line);
-  border-radius: 999px;
-  background: var(--dc-bg);
   color: var(--dc-muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
-  padding: 0 8px;
+  padding: 0;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .dc-agent-tag[data-state="error"] {
-  border-color: #d9b2ae;
-  background: var(--dc-error);
   color: #7f1d1d;
 }
 
@@ -250,26 +330,26 @@
 .dc-toast {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  top: 18px;
   z-index: 2147483647;
   max-width: min(84vw, 380px);
   transform: translateX(-50%);
-  border-radius: 10px;
-  padding: 8px 12px;
+  border-radius: 12px;
+  padding: 9px 14px;
   pointer-events: none;
   text-align: center;
-  color: var(--dc-fg);
+  color: var(--dc-success-fg);
   font-family: var(--dc-font-sans);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.35;
-  background: var(--dc-bg);
-  border: 1px solid var(--dc-line);
+  background: var(--dc-success-bg);
+  border: 1px solid var(--dc-success-line);
   box-shadow: var(--dc-toast-shadow);
 }
 
 .dc-toast[data-type="error"] {
   background: var(--dc-error);
-  border-color: #d9b2ae;
-  color: #7f1d1d;
+  border-color: var(--dc-error-line);
+  color: var(--dc-error-fg);
 }

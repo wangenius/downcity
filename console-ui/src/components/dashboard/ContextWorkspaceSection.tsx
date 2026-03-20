@@ -274,8 +274,8 @@ function ChatHistoryList(props: {
             <article
               key={`${String(event.id || "evt")}:${String(event.ts || "na")}:${index}`}
               className={cn(
-                "rounded-lg border px-3 py-2",
-                isInbound ? "border-border/70 bg-background" : "border-primary/20 bg-primary/5",
+                "rounded-[16px] px-3 py-2.5",
+                isInbound ? "bg-background" : "bg-secondary",
               )}
             >
               <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
@@ -317,7 +317,7 @@ function ContextMessageList(props: {
           return (
             <article
               key={`${msg.id || role}-${index}`}
-              className="rounded-lg border border-border/70 bg-background px-3 py-2"
+              className="rounded-[16px] bg-background px-3 py-2.5"
             >
               <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                 <span className="truncate font-medium uppercase tracking-[0.08em]">{role}</span>
@@ -343,7 +343,7 @@ function ContextMessageList(props: {
 function RoutePanel(props: { routeJson: string }) {
   return (
     <div className="h-full min-h-0 overflow-hidden px-3 py-3">
-      <pre className="h-full overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-background px-3 py-2 font-mono text-xs leading-relaxed text-foreground/85">
+      <pre className="h-full overflow-auto whitespace-pre-wrap break-words rounded-[16px] bg-card px-3 py-3 font-mono text-xs leading-relaxed text-foreground/85">
         {props.routeJson}
       </pre>
     </div>
@@ -363,12 +363,12 @@ function SystemPanel(props: { blocks: Array<{ title: string; content: string }> 
             <details
               key={`${block.title}-${index}`}
               open={index === 0}
-              className="rounded-lg border border-border/70 bg-background"
+              className="rounded-[16px] bg-card"
             >
               <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-foreground/85">
                 {block.title}
               </summary>
-              <div className="border-t border-border/60 px-3 py-2">
+              <div className="px-3 pb-3">
                 <pre className="max-h-[24rem] overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground/85">
                   {block.content || "(empty)"}
                 </pre>
@@ -400,7 +400,7 @@ function ArchivePanel(props: {
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[220px_minmax(0,1fr)]">
-      <div className="flex min-h-0 flex-col border-r border-border/60">
+      <div className="flex min-h-0 flex-col bg-secondary">
         <div className="flex items-center justify-between gap-2 px-3 py-2">
           <div className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             <ArchiveIcon className="size-3.5" />
@@ -433,10 +433,10 @@ function ArchivePanel(props: {
                     key={`${archiveId}-${index}`}
                     type="button"
                     className={cn(
-                      "w-full rounded-md border px-2 py-1.5 text-left text-xs transition-colors",
+                      "w-full rounded-[14px] px-2.5 py-2 text-left text-xs transition-colors",
                       active
-                        ? "border-primary/30 bg-primary/10 text-foreground"
-                        : "border-transparent text-muted-foreground hover:border-border/70 hover:bg-muted/40 hover:text-foreground",
+                        ? "bg-background text-foreground"
+                        : "text-muted-foreground hover:bg-background hover:text-foreground",
                     )}
                     onClick={() => onSelectArchive(archiveId)}
                   >
@@ -580,9 +580,9 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden xl:flex-row">
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-r border-border/60 bg-background">
-        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border/60 px-2 py-2">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[24px] bg-card shadow-[0_1px_0_rgba(17,17,19,0.02),0_8px_24px_rgba(17,17,19,0.02)] xl:flex-row">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex flex-wrap items-start justify-between gap-2 px-4 py-4">
           <div className="min-w-0">
             <div className="truncate text-base font-semibold text-foreground" title={chatDisplay.value}>
               {chatDisplay.value}
@@ -594,7 +594,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+            <div className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-1 text-[11px] text-muted-foreground">
               <span className="font-mono">{currentChannel}</span>
               <span>{`${channelHistory.length} msgs`}</span>
             </div>
@@ -606,7 +606,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="h-7 rounded-md px-2 text-[11px]"
+                    className="h-8 rounded-[11px] px-2.5 text-[11px]"
                     disabled={deletingContext || clearingContextMessages || clearingChatHistory}
                   />
                 }
@@ -640,7 +640,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
           <ChatHistoryList events={channelHistory} formatTime={formatTime} />
         </div>
 
-        <div className="border-t border-border/60 bg-muted/30 px-2 py-2">
+        <div className="px-4 py-4">
           <Textarea
             value={chatInput}
             onChange={(event) => onChangeInput(event.target.value)}
@@ -654,7 +654,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
             rows={3}
             placeholder={canSend ? "输入发给 consoleui channel 的消息..." : "当前 context 为只读，仅 consoleui channel 可发送"}
             disabled={!canSend}
-            className="min-h-[84px] resize-y rounded-md border-border/70 bg-background text-[11px]"
+            className="min-h-[84px] resize-y rounded-[14px] bg-card text-[11px]"
           />
           <div className="mt-2 flex items-center justify-between gap-2">
             <div className="text-[11px] text-muted-foreground">
@@ -668,15 +668,15 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
       </section>
 
       {!debugPanelsCollapsed ? (
-        <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-t border-border/60 bg-muted/20 xl:w-[min(40%,560px)] xl:min-w-[340px] xl:border-l xl:border-t-0">
-          <div className="flex items-center justify-between gap-2 border-b border-border/60 px-2 py-2">
+        <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background xl:w-[min(40%,560px)] xl:min-w-[340px]">
+          <div className="flex items-center justify-between gap-2 px-4 py-4">
             <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">details</div>
-            <div className="inline-flex rounded-md border border-border/70 bg-background p-0.5">
+            <div className="inline-flex rounded-[12px] bg-card p-0.5">
               <button
                 type="button"
                 className={cn(
-                  "rounded px-2 py-1 text-xs",
-                  rightTab === "route" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                  "rounded-[10px] px-2 py-1 text-xs transition-colors",
+                  rightTab === "route" ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground",
                 )}
                 onClick={() => setRightTab("route")}
               >
@@ -685,8 +685,8 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
               <button
                 type="button"
                 className={cn(
-                  "rounded px-2 py-1 text-xs",
-                  rightTab === "system" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                  "rounded-[10px] px-2 py-1 text-xs transition-colors",
+                  rightTab === "system" ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground",
                 )}
                 onClick={() => setRightTab("system")}
               >
@@ -695,8 +695,8 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
               <button
                 type="button"
                 className={cn(
-                  "rounded px-2 py-1 text-xs",
-                  rightTab === "context" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                  "rounded-[10px] px-2 py-1 text-xs transition-colors",
+                  rightTab === "context" ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground",
                 )}
                 onClick={() => setRightTab("context")}
               >
@@ -705,8 +705,8 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
               <button
                 type="button"
                 className={cn(
-                  "rounded px-2 py-1 text-xs",
-                  rightTab === "archive" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                  "rounded-[10px] px-2 py-1 text-xs transition-colors",
+                  rightTab === "archive" ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-background hover:text-foreground",
                 )}
                 onClick={() => setRightTab("archive")}
               >

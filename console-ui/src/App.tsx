@@ -696,7 +696,7 @@ export function App() {
       type="button"
       size="icon"
       variant="ghost"
-      className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+      className="size-8 rounded-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
       onClick={() => {
         // 关键点（中文）：在顶部 header 提供统一入口，不打断聊天区和右侧面板内部结构。
         setDebugPanelsCollapsed((prev) => !prev)
@@ -712,8 +712,8 @@ export function App() {
     <SidebarProvider
       style={
         {
-          "--sidebar-width": "18rem",
-          "--header-height": "3.25rem",
+          "--sidebar-width": "18.5rem",
+          "--header-height": "3.5rem",
         } as React.CSSProperties
       }
     >
@@ -787,7 +787,7 @@ export function App() {
             "mainview-shell flex flex-1 min-h-0 flex-col bg-background",
             activeView === "contextWorkspace"
               ? "gap-0 overflow-hidden px-0 py-0 md:px-0 md:py-0"
-              : "gap-4 overflow-y-auto overflow-x-hidden px-3 py-2 md:px-4 md:py-3",
+              : "gap-4 overflow-y-auto overflow-x-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1",
           )}
         >
           {renderActiveView()}

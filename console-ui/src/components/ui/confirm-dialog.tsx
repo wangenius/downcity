@@ -137,11 +137,11 @@ export function ConfirmDialogProvider(props: { children: React.ReactNode }) {
         }}
       >
         <DialogContent showCloseButton={false} className="w-[min(92vw,30rem)] p-0">
-          <DialogHeader className="border-b border-border/60 px-4 py-3">
+          <DialogHeader className="px-4 py-4">
             <DialogTitle>{options?.title || "请确认操作"}</DialogTitle>
             {description ? <DialogDescription>{description}</DialogDescription> : null}
           </DialogHeader>
-          <DialogFooter className="px-4 py-3">
+          <DialogFooter className="bg-secondary px-4 py-3">
             <Button
               type="button"
               variant="outline"
@@ -174,4 +174,3 @@ export function useConfirmDialog(): ConfirmDialogContextValue["confirm"] {
   }
   return context.confirm
 }
-

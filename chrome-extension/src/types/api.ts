@@ -136,6 +136,11 @@ export interface TuiContextSummary {
   chatId?: string;
 
   /**
+   * 平台 chat 展示名称（例如群名、会话名、昵称）。
+   */
+  chatTitle?: string;
+
+  /**
    * 平台 chat 类型（可选）。
    */
   chatType?: string;

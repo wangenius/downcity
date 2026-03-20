@@ -52,28 +52,32 @@ export function LocalChatSection(props: LocalChatSectionProps) {
 
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-0">
         <CardTitle>Local UI 对话（local_ui）</CardTitle>
         <Button size="sm" variant="outline" onClick={onRefresh}>
           刷新
         </Button>
       </CardHeader>
       <CardContent className="flex h-full flex-col gap-3">
-        <div className="max-h-64 flex-1 space-y-2 overflow-auto rounded-xl border border-neutral-200 bg-neutral-50 p-3">
+        <div className="max-h-64 flex-1 space-y-2 overflow-auto rounded-[20px] bg-secondary p-3">
           {turns.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-3 text-sm text-neutral-500">
+            <div className="rounded-[16px] bg-card p-3 text-sm text-muted-foreground">
               local_ui 暂无消息
             </div>
           ) : (
             turns.map((msg, index) => {
               const role = String(msg.role || "assistant");
               const text = String(msg.text || "").trim() || "(empty)";
+              const isUser = role === "user";
               return (
-                <article key={`${role}-${msg.ts || index}`} className="rounded-lg border border-neutral-200 bg-white p-3">
-                  <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                <article
+                  key={`${role}-${msg.ts || index}`}
+                  className={isUser ? "rounded-[16px] bg-card p-3" : "rounded-[16px] bg-background p-3"}
+                >
+                  <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                     {`${role} · ${formatTime(msg.ts)}`}
                   </div>
-                  <div className="whitespace-pre-wrap break-words text-sm text-neutral-700">{text}</div>
+                  <div className="whitespace-pre-wrap break-words text-sm text-foreground/88">{text}</div>
                 </article>
               );
             })

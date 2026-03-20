@@ -178,21 +178,35 @@ function toDateText(timestamp?: number): string {
   return date.toLocaleString("zh-CN", { hour12: false });
 }
 
-function toChatKeyTitle(parsed: ParsedChatKey): string {
+function resolveChatDisplayName(summary: TuiContextSummary, parsed: ParsedChatKey): string {
+  const chatTitle = String(summary.chatTitle || "").trim();
+  const chatId = String(summary.chatId || "").trim();
+
+  // 关键点（中文）：与 console-ui 一致，避免把 openid / chatId 本身误显示成可读名称。
+  if (chatTitle && (!chatId || chatTitle !== chatId)) {
+    return chatTitle;
+  }
+
+  if (chatId) return chatId;
+
   if (parsed.channel === "telegram") {
     if (parsed.threadId) {
-      return `Telegram · ${parsed.chatId} · Topic ${parsed.threadId}`;
+      return `Topic ${parsed.threadId}`;
     }
-    return `Telegram · ${parsed.chatId}`;
+    return parsed.chatId;
   }
 
   if (parsed.channel === "feishu") {
-    return `Feishu · ${parsed.chatId}`;
+    return parsed.chatId;
   }
 
-  return parsed.chatType
-    ? `QQ · ${parsed.chatType} · ${parsed.chatId}`
-    : `QQ · ${parsed.chatId}`;
+  return parsed.chatId;
+}
+
+function formatPlatformName(channel: ChatKeyOption["channel"]): string {
+  if (channel === "telegram") return "Telegram";
+  if (channel === "feishu") return "Feishu";
+  return "QQ";
 }
 
 function parseContextSummary(summary: TuiContextSummary): ParsedChatKey | null {
@@ -235,11 +249,12 @@ function toChatKeyOption(summary: TuiContextSummary): ChatKeyOption | null {
     ? Number(summary.messageCount)
     : 0;
   const lastText = String(summary.lastText || "").trim();
+  const displayName = resolveChatDisplayName(summary, parsed);
 
   return {
     chatKey,
     channel: parsed.channel,
-    title: toChatKeyTitle(parsed),
+    title: `${displayName} · ${formatPlatformName(parsed.channel)}`,
     subtitle: [
       `消息 ${messageCount}`,
       `更新 ${toDateText(summary.updatedAt)}`,

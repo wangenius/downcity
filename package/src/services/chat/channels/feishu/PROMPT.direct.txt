@@ -10,3 +10,6 @@
 - 如需跨会话发送，请使用 `city chat send --chat-key ...`，不要在 direct metadata 中设置 `chatKey`。
 - 自动发送时由适配器按 chat 类型选择回复模式（群聊优先 reply、私聊直发）。
 - 平台事件可能重复投递，适配器会做去重；业务层无需重复实现去重逻辑。
+- 支持在正文中使用 `@attach` 发送附件（当前按文件消息发送）：
+  - `@attach document <相对路径> | 可选说明`
+  - `@attach file <相对路径> | 可选说明`

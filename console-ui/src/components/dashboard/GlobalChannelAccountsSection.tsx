@@ -294,7 +294,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
 
   return (
     <section className="space-y-4">
-      <section className="space-y-3 rounded-xl border border-border/70 bg-background/80 p-4">
+      <section className="space-y-3 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Channel Accounts</div>
@@ -304,7 +304,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
             type="button"
             size="sm"
             variant="default"
-            className="h-9 gap-1.5 rounded-lg px-3"
+            className="h-9 gap-1.5 rounded-[12px] px-3"
             onClick={openCreateDialog}
             disabled={loading}
           >
@@ -314,7 +314,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
         </div>
 
         {items.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/70 py-6 text-center text-sm text-muted-foreground">暂无 channel account</div>
+          <div className="rounded-[18px] bg-secondary py-6 text-center text-sm text-muted-foreground">暂无 channel account</div>
         ) : (
           <div className="space-y-2.5">
             {items.map((item) => {
@@ -326,7 +326,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
               return (
                 <div
                   key={id}
-                  className="group flex items-center gap-3 rounded-lg border border-border/70 bg-background px-3.5 py-2.5 transition-colors hover:border-border hover:bg-muted/25"
+                  className="group flex items-center gap-3 rounded-[18px] bg-card px-3.5 py-3 transition-colors hover:bg-secondary"
                 >
                   <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${ready ? "bg-emerald-500" : "bg-zinc-400"}`} />
                   <div className="min-w-0 flex-1 space-y-1">
@@ -334,7 +334,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       <div className="truncate text-sm font-medium text-foreground">{item.name || id}</div>
                       <Badge
                         variant="secondary"
-                        className="h-5 rounded-md border-transparent bg-muted px-1.5 text-[11px] font-medium text-muted-foreground"
+                        className="h-5 rounded-[10px] border-border/60 bg-secondary px-1.5 text-[11px] font-medium text-muted-foreground"
                       >
                         {channelDisplayName(item.channel || "")}
                       </Badge>
@@ -349,7 +349,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 rounded-md"
+                      className="h-8 w-8 rounded-[11px]"
                       onClick={() => openEditDialog(item)}
                       title="编辑"
                       aria-label="编辑"
@@ -360,7 +360,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 rounded-md text-destructive"
+                      className="h-8 w-8 rounded-[11px] text-destructive"
                       onClick={() => {
                         void runWithPending(`bot:remove:${id}`, async () => {
                           await Promise.resolve(onRemove(id))
@@ -395,7 +395,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Channel</Label>
               {isEditing ? (
-                <div className="rounded-lg border border-border/70 bg-muted/15 px-3 py-2.5 text-sm text-foreground">
+                <div className="rounded-[16px] bg-secondary px-3 py-2.5 text-sm text-foreground">
                   {channelDisplayName(form.channel)}
                 </div>
               ) : (
@@ -405,7 +405,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-10 w-full justify-between rounded-lg px-3"
+                        className="h-10 w-full justify-between rounded-[12px] px-3"
                       />
                     }
                   >
@@ -445,17 +445,17 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
               )}
             </div>
 
-            <div className="space-y-2.5 rounded-lg border border-border/70 bg-background p-3">
+            <div className="space-y-2.5 rounded-[18px] bg-secondary p-3">
               <Label className="text-xs text-muted-foreground">Credentials</Label>
               {form.channel === "telegram" ? (
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">
                     botToken <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    type="password"
-                    placeholder="botToken"
-                    className="h-10 rounded-lg"
+                    <Input
+                      type="password"
+                      placeholder="botToken"
+                      className="h-10 rounded-[12px]"
                     value={form.botToken}
                     onChange={(event) => {
                       const value = event.target.value
@@ -473,7 +473,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                     </Label>
                     <Input
                       placeholder="appId"
-                      className="h-10 rounded-lg"
+                      className="h-10 rounded-[12px]"
                       value={form.appId}
                       onChange={(event) => {
                         const value = event.target.value
@@ -490,7 +490,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                     <Input
                       type="password"
                       placeholder="appSecret"
-                      className="h-10 rounded-lg"
+                      className="h-10 rounded-[12px]"
                       value={form.appSecret}
                       onChange={(event) => {
                         const value = event.target.value
@@ -506,7 +506,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
               {form.channel === "feishu" ? (
                 <Input
                   placeholder="domain（可选）"
-                  className="h-10 rounded-lg"
+                  className="h-10 rounded-[12px]"
                   value={form.domain}
                   onChange={(event) => setForm((prev) => ({ ...prev, domain: event.target.value }))}
                 />
@@ -519,7 +519,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-10 w-full justify-between rounded-lg px-3"
+                        className="h-10 w-full justify-between rounded-[12px] px-3"
                       />
                     }
                   >
@@ -555,13 +555,13 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
           </div>
 
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button size="sm" variant="outline" className="h-9 rounded-lg px-4" onClick={closeDialog}>
+            <Button size="sm" variant="outline" className="h-9 rounded-[12px] px-4" onClick={closeDialog}>
               取消
             </Button>
             <Button
               size="sm"
               variant="secondary"
-              className="h-9 rounded-lg px-4"
+              className="h-9 rounded-[12px] px-4"
               disabled={!requiredCredsReady(form) || isPending("bot:probe") || isPending("bot:confirm")}
               onClick={() => {
                 void runWithPending("bot:probe", async () => {
@@ -574,7 +574,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
             </Button>
             <Button
               size="sm"
-              className="h-9 rounded-lg px-4"
+              className="h-9 rounded-[12px] px-4"
               disabled={!canConfirm || isPending("bot:confirm")}
               onClick={() => {
                 void runWithPending("bot:confirm", async () => {

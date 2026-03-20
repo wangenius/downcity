@@ -6,11 +6,9 @@
  * - 支持最常用运维动作：刷新状态、连通性测试、重连。
  */
 
-import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { UiAgentOption, UiChatChannelStatus } from "@/types/Dashboard"
 
 /**
@@ -42,13 +40,13 @@ export interface AgentChannelsSectionProps {
 function renderBooleanBadge(value: boolean | undefined, trueLabel: string, falseLabel: string) {
   if (value === true) {
     return (
-      <Badge variant="outline" className="border-border bg-muted/45 text-foreground">
+      <Badge variant="outline" className="bg-secondary text-foreground">
         {trueLabel}
       </Badge>
     )
   }
   return (
-    <Badge variant="outline" className="border-border bg-muted/35 text-muted-foreground">
+    <Badge variant="outline" className="bg-secondary text-muted-foreground">
       {falseLabel}
     </Badge>
   )
@@ -59,7 +57,7 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
 
   if (!selectedAgent) {
     return (
-      <Card className="border-dashed border-border bg-card/60">
+      <Card className="bg-card">
         <CardContent className="p-5 text-sm text-muted-foreground">未选择可用 agent</CardContent>
       </Card>
     )
@@ -74,88 +72,73 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="overflow-hidden rounded-xl border border-border/70">
-          <Table>
-            <TableHeader className="bg-muted/35">
-              <TableRow className="hover:bg-muted/35">
-                <TableHead>Channel</TableHead>
-                <TableHead>Enabled</TableHead>
-                <TableHead>Configured</TableHead>
-                <TableHead>Running</TableHead>
-                <TableHead>Link</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {channels.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-sm text-muted-foreground">
-                    当前没有可管理 channel 数据
-                  </TableCell>
-                </TableRow>
-              ) : (
-                channels.map((item) => {
-                  const channel = String(item.channel || "").trim() || "unknown"
-                  const linkState = String(item.linkState || "").trim() || "-"
-                  const statusText = String(item.statusText || "").trim() || "-"
-                  const runtimeActionDisabled = !(item.enabled === true && item.configured === true)
-                  const openDisabled = item.enabled === true
-                  const closeDisabled = item.enabled !== true
-                  return (
-                    <TableRow key={channel}>
-                      <TableCell className="font-medium">{channel}</TableCell>
-                      <TableCell>{renderBooleanBadge(item.enabled, "yes", "no")}</TableCell>
-                      <TableCell>{renderBooleanBadge(item.configured, "yes", "no")}</TableCell>
-                      <TableCell>{renderBooleanBadge(item.running, "yes", "no")}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-border bg-muted/35 text-muted-foreground">
+        <div className="space-y-2">
+          {channels.length === 0 ? (
+            <div className="rounded-[20px] bg-secondary px-4 py-5 text-sm text-muted-foreground">
+              当前没有可管理 channel 数据
+            </div>
+          ) : (
+            channels.map((item) => {
+              const channel = String(item.channel || "").trim() || "unknown"
+              const linkState = String(item.linkState || "").trim() || "-"
+              const statusText = String(item.statusText || "").trim() || "-"
+              const runtimeActionDisabled = !(item.enabled === true && item.configured === true)
+              const openDisabled = item.enabled === true
+              const closeDisabled = item.enabled !== true
+              return (
+                <article key={channel} className="rounded-[20px] bg-secondary px-4 py-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="text-sm font-semibold text-foreground">{channel}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {renderBooleanBadge(item.enabled, "enabled", "disabled")}
+                        {renderBooleanBadge(item.configured, "configured", "unconfigured")}
+                        {renderBooleanBadge(item.running, "running", "stopped")}
+                        <Badge variant="outline" className="bg-card text-muted-foreground">
                           {linkState}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{statusText}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={openDisabled}
-                            onClick={() => onChannelAction("open", channel)}
-                          >
-                            open
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={closeDisabled}
-                            onClick={() => onChannelAction("close", channel)}
-                          >
-                            close
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={runtimeActionDisabled}
-                            onClick={() => onChannelAction("test", channel)}
-                          >
-                            test
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={runtimeActionDisabled}
-                            onClick={() => onChannelAction("reconnect", channel)}
-                          >
-                            reconnect
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{statusText}</div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={openDisabled}
+                        onClick={() => onChannelAction("open", channel)}
+                      >
+                        open
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={closeDisabled}
+                        onClick={() => onChannelAction("close", channel)}
+                      >
+                        close
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={runtimeActionDisabled}
+                        onClick={() => onChannelAction("test", channel)}
+                      >
+                        test
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={runtimeActionDisabled}
+                        onClick={() => onChannelAction("reconnect", channel)}
+                      >
+                        reconnect
+                      </Button>
+                    </div>
+                  </div>
+                </article>
+              )
+            })
+          )}
         </div>
       </CardContent>
     </Card>

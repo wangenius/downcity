@@ -339,7 +339,7 @@ export function SummaryCards(props: SummaryCardsProps) {
         </div>
       </div>
 
-      <section className="rounded-md bg-muted/70 px-3 py-2">
+      <section className="rounded-[18px] bg-secondary px-3.5 py-3">
         <div className="grid gap-x-6 md:grid-cols-2">
           <div>
             <KV label="DC" value={String(overview?.cityVersion || "-")} />
@@ -393,7 +393,7 @@ export function SummaryCards(props: SummaryCardsProps) {
       </section>
 
       {normalizedServices.length === 0 ? (
-        <section className="space-y-1 rounded-md bg-muted/25 px-3 py-2">
+        <section className="space-y-1 rounded-[18px] bg-secondary px-3.5 py-3">
           <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Service Overview</div>
           <div className="text-sm text-muted-foreground">暂无 service</div>
         </section>
@@ -460,10 +460,10 @@ export function SummaryCards(props: SummaryCardsProps) {
               : [`consoleui: ${consoleUiExists ? "ok" : "missing"}`];
           }
 
-          const panelTone = index % 2 === 0 ? "bg-muted/55" : "bg-muted/75";
+          const panelTone = index % 2 === 0 ? "bg-secondary" : "bg-secondary";
 
           return (
-            <section key={`${name}:${index}`} className={`space-y-1 rounded-md px-3 py-2 ${panelTone}`}>
+            <section key={`${name}:${index}`} className={`space-y-1 rounded-[18px] px-3.5 py-3 ${panelTone}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="truncate text-xs uppercase tracking-[0.12em] text-muted-foreground">{`${displayName} Overview`}</div>
                 <div className="flex items-center gap-1.5">
@@ -475,7 +475,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                         <button
                           key={`${name}:action:${action}`}
                           type="button"
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-foreground/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-[10px] text-muted-foreground hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                           title={meta.label}
                           aria-label={meta.label}
                           disabled={isServiceActionPending(`${name}:${action}`)}
@@ -503,8 +503,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               </div>
               {isTaskOverview && taskItems.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px]">
+                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
                         <th className="py-1 pr-2 font-medium">Task</th>
@@ -518,14 +518,14 @@ export function SummaryCards(props: SummaryCardsProps) {
                         const title = String(task.title || `task-${taskIndex}`).trim();
                         const status = String(task.status || "unknown").trim().toLowerCase();
                         return (
-                          <tr key={`${name}:task:${title}:${taskIndex}`} className="border-t border-border/35 text-muted-foreground">
-                            <td className="py-1.5 pr-2 max-w-0 truncate">{title}</td>
+                          <tr key={`${name}:task:${title}:${taskIndex}`} className="bg-card text-muted-foreground">
+                            <td className="max-w-0 rounded-l-[14px] py-2 pr-2 pl-2 truncate">{title}</td>
                             <td className="py-1.5 pr-2">{status}</td>
                             <td className="py-1.5 pr-2">{formatLastRun(task.lastRunTimestamp)}</td>
-                            <td className="py-1.5 text-right">
+                            <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground"
+                                className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground"
                                 onClick={() => onOpenTask(title)}
                               >
                                 <span>open</span>
@@ -540,8 +540,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isChatOverview && chatItems.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px]">
+                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
                         <th className="py-1 pr-2 font-medium">Channel</th>
@@ -551,10 +551,10 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {chatItems.map((chatItem, chatIndex) => (
-                        <tr key={`${name}:chat:${chatItem.channel}:${chatIndex}`} className="border-t border-border/35 text-muted-foreground">
-                          <td className="py-1.5 pr-2">{chatItem.channel}</td>
+                        <tr key={`${name}:chat:${chatItem.channel}:${chatIndex}`} className="bg-card text-muted-foreground">
+                          <td className="rounded-l-[14px] py-2 pr-2 pl-2">{chatItem.channel}</td>
                           <td className="py-1.5 pr-2">{chatItem.link}</td>
-                          <td className="py-1.5 text-right">
+                          <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
                             {(() => {
                               const normalizedChannel = String(chatItem.channel || "").trim();
                               const hasValidChannel = Boolean(normalizedChannel) && normalizedChannel !== "-";
@@ -572,7 +572,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                 <div className="flex flex-wrap items-center justify-end gap-1">
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     onClick={() => onOpenContext(chatItem.contextId)}
                                     disabled={!chatItem.clickable}
                                   >
@@ -581,7 +581,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                   </button>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     disabled={openDisabled || isServiceActionPending(openKey)}
                                     onClick={() => {
                                       setPendingServiceActions((prev) => ({ ...prev, [openKey]: true }));
@@ -595,7 +595,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                   </button>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     disabled={closeDisabled || isServiceActionPending(closeKey)}
                                     onClick={() => {
                                       setPendingServiceActions((prev) => ({ ...prev, [closeKey]: true }));
@@ -609,7 +609,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                                   </button>
                                   <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
                                     disabled={runtimeActionDisabled || isServiceActionPending(testKey)}
                                     onClick={() => {
                                       setPendingServiceActions((prev) => ({ ...prev, [testKey]: true }));
@@ -646,8 +646,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isSkillOverview && skills.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px]">
+                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
                         <th className="py-1 pr-2 font-medium">Skill</th>
@@ -658,11 +658,11 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {skills.map((item, skillIndex) => (
-                        <tr key={`${name}:skill:${item.id || item.name || skillIndex}`} className="border-t border-border/35 text-muted-foreground">
-                          <td className="py-1.5 pr-2">{item.name || item.id || "-"}</td>
+                        <tr key={`${name}:skill:${item.id || item.name || skillIndex}`} className="bg-card text-muted-foreground">
+                          <td className="rounded-l-[14px] py-2 pr-2 pl-2">{item.name || item.id || "-"}</td>
                           <td className="py-1.5 pr-2 max-w-0 truncate">{item.description || "-"}</td>
                           <td className="py-1.5 pr-2">{item.source || "-"}</td>
-                          <td className="py-1.5 pr-2 max-w-0 truncate">
+                          <td className="max-w-0 rounded-r-[14px] py-1.5 pr-2 truncate">
                             {Array.isArray(item.allowedTools) && item.allowedTools.length > 0
                               ? item.allowedTools.join(", ")
                               : "-"}
@@ -674,8 +674,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isMemoryOverview && memoryConfigItems.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px]">
+                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
                         <th className="py-1 pr-2 font-medium">Key</th>
@@ -685,10 +685,10 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {memoryConfigItems.map((item) => (
-                        <tr key={`${name}:memory:${item.key}`} className="border-t border-border/35 text-muted-foreground">
-                          <td className="py-1.5 pr-2">{item.label}</td>
+                        <tr key={`${name}:memory:${item.key}`} className="bg-card text-muted-foreground">
+                          <td className="rounded-l-[14px] py-2 pr-2 pl-2">{item.label}</td>
                           <td className="py-1.5 pr-2">{item.status}</td>
-                          <td className="py-1.5 pr-2 max-w-0 truncate">{item.path}</td>
+                          <td className="max-w-0 rounded-r-[14px] py-1.5 pr-2 truncate">{item.path}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -696,8 +696,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                 </div>
               ) : null}
               {isContextOverview && contextItems.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px]">
+                <div className="overflow-x-auto rounded-[18px] bg-secondary p-1.5">
+                  <table className="w-full border-separate border-spacing-y-1.5 text-left text-[11px]">
                     <thead>
                       <tr className="text-muted-foreground">
                         <th className="py-1 pr-2 font-medium">Context ID</th>
@@ -706,12 +706,12 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </thead>
                     <tbody>
                       {contextItems.map((contextId) => (
-                        <tr key={`${name}:context:${contextId}`} className="border-t border-border/35 text-muted-foreground">
-                          <td className="py-1.5 pr-2 max-w-0 truncate">{contextId}</td>
-                          <td className="py-1.5 text-right">
+                        <tr key={`${name}:context:${contextId}`} className="bg-card text-muted-foreground">
+                          <td className="max-w-0 rounded-l-[14px] py-2 pr-2 pl-2 truncate">{contextId}</td>
+                          <td className="rounded-r-[14px] py-1.5 pr-2 text-right">
                             <button
                               type="button"
-                              className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-foreground/15 hover:text-foreground"
+                              className="inline-flex items-center gap-1 rounded-[10px] px-1.5 py-1 hover:bg-background hover:text-foreground"
                               onClick={() => onOpenContext(contextId)}
                             >
                               <span>open</span>
@@ -737,7 +737,7 @@ export function SummaryCards(props: SummaryCardsProps) {
       )}
 
       {badConfigItems.length > 0 ? (
-        <section className="rounded-md bg-destructive/8 px-3 py-2">
+        <section className="rounded-[18px] bg-destructive/8 px-3.5 py-3">
           <div className="text-xs font-medium text-destructive">{`配置异常 ${badConfigItems.length} 项`}</div>
           <div className="mt-1 text-xs text-destructive/90">
             {badConfigItems.map((item) => `${item.label}(${item.reason || item.status || "unknown"})`).join(" · ")}

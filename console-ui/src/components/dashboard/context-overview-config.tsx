@@ -357,7 +357,7 @@ export function ConfigMetaBadges(props: { field: UiChatChannelConfigurationField
     <div className="flex flex-wrap items-center gap-1">
       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{field.type}</span>
       {flags.map((flag) => (
-        <span key={`${field.key}-${flag}`} className="rounded-full border border-border/80 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        <span key={`${field.key}-${flag}`} className="rounded-full bg-secondary px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
           {flag}
         </span>
       ))}
@@ -371,7 +371,7 @@ export function ConfigFieldReadonly(props: {
 }) {
   const { field, value } = props
   return (
-    <div className="space-y-1 rounded-md border border-border/70 bg-muted/30 p-3">
+    <div className="space-y-1 rounded-[16px] bg-secondary p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-foreground" title={field.label}>{field.label}</div>
@@ -379,7 +379,7 @@ export function ConfigFieldReadonly(props: {
         </div>
         <ConfigMetaBadges field={field} />
       </div>
-      <div className="break-all rounded-sm bg-background/80 px-2 py-1.5 font-mono text-xs text-foreground">{value}</div>
+      <div className="break-all rounded-[12px] bg-card px-2.5 py-2 font-mono text-xs text-foreground">{value}</div>
     </div>
   )
 }

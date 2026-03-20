@@ -209,6 +209,18 @@ Code:
 
 - [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:885)
 
+The current version also supports attachment command conversion in outbound replies:
+
+```text
+@attach document reports/downcity-office-hours.md
+```
+
+Delivery order:
+
+1. send plain text body (with `@attach` lines removed)
+2. upload local file and send Feishu `file` message
+3. if the command includes `| caption`, send caption as an extra text message
+
 ## Why manual `user_access_token` tests can pass while runtime still fails
 
 These are different token modes.

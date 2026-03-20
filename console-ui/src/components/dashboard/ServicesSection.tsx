@@ -26,23 +26,23 @@ export function ServicesSection(props: ServicesSectionProps) {
 
   const badgeClass = (status?: string): string => {
     const tone = statusBadgeVariant(status);
-    if (tone === "ok") return "border-border bg-muted/45 text-foreground";
+    if (tone === "ok") return "bg-secondary text-foreground";
     if (tone === "bad") return "border-destructive/40 bg-destructive/10 text-destructive";
-    return "border-border bg-muted/35 text-muted-foreground";
+    return "bg-card text-muted-foreground";
   };
 
   return (
-    <section className="space-y-2">
-      <div className="border-b border-border/70 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+    <section className="space-y-3 rounded-[22px] bg-card p-4 shadow-[0_1px_0_rgba(17,17,19,0.02)]">
+      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         Services Runtime
       </div>
       {services.length === 0 ? (
         <div className="py-4 text-sm text-muted-foreground">暂无 service 数据</div>
       ) : (
-        <div className="overflow-auto">
-          <table className="w-full border-collapse">
+        <div className="overflow-auto rounded-[18px] bg-secondary p-1.5">
+          <table className="w-full border-separate border-spacing-y-1.5">
             <thead>
-              <tr className="border-b border-border/70 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+              <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                 <th className="px-0 py-2 font-medium">Service</th>
                 <th className="px-2 py-2 font-medium">Status</th>
                 <th className="px-2 py-2 font-medium">Actions</th>
@@ -53,14 +53,14 @@ export function ServicesSection(props: ServicesSectionProps) {
                 const name = String(svc.name || svc.service || "unknown");
                 const status = String(svc.state || svc.status || "unknown");
                 return (
-                  <tr key={name} className="border-b border-border/50">
-                    <td className="px-0 py-2 text-sm font-medium">{name}</td>
+                  <tr key={name} className="bg-card">
+                    <td className="rounded-l-[16px] px-3 py-2.5 text-sm font-medium">{name}</td>
                     <td className="px-2 py-2">
                       <Badge variant="outline" className={badgeClass(status)}>
                         {status}
                       </Badge>
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="rounded-r-[16px] px-2 py-2">
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onClick={() => onControlService(name, "start")}>
                           start

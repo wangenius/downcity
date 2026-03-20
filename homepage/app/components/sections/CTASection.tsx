@@ -18,7 +18,7 @@ export const CTASection: FC = () => {
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
 
   return (
-    <section className="border-t border-border/68 py-14 md:py-16">
+    <section className="py-14 md:py-16">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
         <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
           <div className="space-y-3">

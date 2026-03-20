@@ -14,7 +14,14 @@
 - React 18
 - TypeScript 5.6
 - Vite 5
+- Tailwind CSS v4（popup / options / content-script 样式资源）
 - Chrome Extension Manifest V3
+
+说明：
+
+- `popup` 与 `options` 页面直接使用 Tailwind v4。
+- 页面内选区输入面板仍由 `public/content-script.js` 驱动，但其 Shadow DOM 样式已改为加载构建产物 `content-script.css`。
+- 这样既能统一 Tailwind 主题，又能继续保证宿主网页样式隔离。
 
 ## 目录结构
 
@@ -27,7 +34,13 @@ chrome-extension/
 │  ├─ popup/
 │  │  ├─ App.tsx
 │  │  ├─ main.tsx
-│  │  └─ styles.css
+│  ├─ options/
+│  │  ├─ App.tsx
+│  │  └─ main.tsx
+│  ├─ content-script/
+│  │  └─ content-script.css
+│  ├─ styles/
+│  │  └─ tailwind.css
 │  ├─ services/
 │  │  ├─ pageMarkdown.ts
 │  │  ├─ downcityApi.ts
@@ -50,7 +63,33 @@ npm install
 npm run dev
 ```
 
-`npm run dev` 会持续构建到 `chrome-extension/dist`。
+`npm run dev` 会持续构建到 `chrome-extension/dist`，其中会同时产出：
+
+- popup 页面
+- options 页面
+- `content-script.css`（供 Shadow DOM 引入）
+
+如果只想做纯编译：
+
+```bash
+npm run build:bundle
+```
+
+如果执行发布式构建：
+
+```bash
+npm run build
+# 或
+npm run build:release
+```
+
+会复用仓库根目录的 `scripts/extbuild.sh`，并在构建前自动把 extension 的 `package.json` 与 `public/manifest.json` 版本号一起提升一个 patch。
+
+在仓库根目录也可以直接执行：
+
+```bash
+npm run build:extension
+```
 
 ## 在 Chrome 中加载
 

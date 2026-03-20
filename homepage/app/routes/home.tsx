@@ -84,7 +84,7 @@ export function meta() {
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-full">
       <main>
         <HomeRebuildSection />
       </main>

@@ -19,9 +19,9 @@
   "otherSubtitle": "我们正在不断扩展支持的平台。如果你没有看到所需的平台，可以通过以下两种方式获取：",
   "solutions": {
     "discuss": {
-      "title": "在讨论区申请",
-      "description": "在我们的 GitHub Discussions 中提交功能请求。我们会根据社区需求优先考虑支持的平台。",
-      "button": "加入讨论"
+      "title": "在 Telegram 申请",
+      "description": "在我们的 Telegram 社区群组告诉我们你需要的平台。我们会根据真实社区需求安排优先级。",
+      "button": "加入 Telegram"
     },
     "skill": {
       "title": "以 Skill 方式封装",

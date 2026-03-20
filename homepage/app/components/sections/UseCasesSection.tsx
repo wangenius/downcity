@@ -59,7 +59,7 @@ export const UseCasesSection: FC = () => {
   };
 
   return (
-    <section className="border-t border-border/85 py-16 md:py-20">
+    <section className="py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
         <header className="space-y-3">
           <span className={kickerClass}>{t("usecases:title")}</span>

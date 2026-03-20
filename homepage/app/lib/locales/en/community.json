@@ -11,7 +11,7 @@
   },
   "discussions": {
     "title": "Discussions",
-    "description": "Join the conversation on GitHub"
+    "description": "Join the conversation on Telegram"
   },
   "faqPage": {
     "subtitle": "Frequently asked questions about Downcity",
@@ -69,7 +69,7 @@
     "callout": {
       "title": "Still have questions?",
       "description": "Join our community discussions or check the documentation",
-      "askGithub": "Ask on GitHub",
+      "askGithub": "Join Telegram",
       "readDocs": "Read Docs"
     }
   },

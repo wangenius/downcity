@@ -1,11 +1,12 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { marketingTheme } from "@/lib/marketing-theme";
 
 /**
  * 首页主视觉模块。
  * 说明：
  * 1. 直接使用参考稿的分栏与边框语言，并修正当前实现里的高度比例问题。
- * 2. 首页作为独立 landing，不复用全局营销页头尾，避免破坏版式完整性。
+ * 2. 首页接入全局 Header，因此主视觉高度跟随内容区而不是再次强占整屏。
  */
 const HOME_CONTENT = {
   zh: {
@@ -207,15 +208,15 @@ export function HomeRebuildSection() {
   const content = isZh ? HOME_CONTENT.zh : HOME_CONTENT.en;
 
   return (
-    <main className="flex min-h-screen w-full flex-col bg-[#FCFCFD] p-4 text-[#6B7280] antialiased md:p-8 lg:p-10">
-      <div className="relative flex min-h-[calc(100vh-2rem)] flex-1 flex-col border border-[#E7E7EB] md:min-h-[calc(100vh-4rem)] lg:grid lg:min-h-[calc(100vh-5rem)] lg:grid-rows-[1.85fr_1fr]">
+    <main className="flex min-h-full w-full flex-col bg-[#FAFAFA] px-4 pb-4 pt-2 text-[#6B7280] antialiased md:px-8 md:pb-8 md:pt-4 lg:px-10 lg:pb-10 lg:pt-5">
+      <div className="relative flex min-h-[calc(100dvh-4.5rem)] flex-1 flex-col border border-[#E7E7EB] md:min-h-[calc(100dvh-6.5rem)] lg:grid lg:min-h-[calc(100dvh-7.25rem)] lg:grid-rows-[1.85fr_1fr]">
         <div className={`${frameCornerClass} -left-[6px] -top-[6px]`} />
         <div className={`${frameCornerClass} -right-[6px] -top-[6px]`} />
         <div className={`${frameCornerClass} -bottom-[6px] -left-[6px]`} />
         <div className={`${frameCornerClass} -bottom-[6px] -right-[6px]`} />
 
         <div className="relative flex min-h-[56vh] flex-col lg:min-h-0 lg:flex-row">
-          <div className="group relative min-h-[42vh] flex-1 overflow-hidden border-b border-[#E7E7EB] bg-[#F7F7F8] lg:min-h-0 lg:border-b-0 lg:border-r" style={dashedBorderRight}>
+          <div className="group relative min-h-[42vh] flex-1 overflow-hidden border-b border-[#E7E7EB] bg-[#F3F4F6] lg:min-h-0 lg:border-b-0 lg:border-r" style={dashedBorderRight}>
             <div className="pointer-events-none absolute inset-0 opacity-20">
               <div className="absolute bottom-0 top-0 left-1/3 w-px border-l border-dashed border-[#111113]" />
               <div className="absolute bottom-0 top-0 right-1/3 w-px border-l border-dashed border-[#111113]" />
@@ -239,15 +240,21 @@ export function HomeRebuildSection() {
             </div>
 
             <div className="relative z-10 flex h-full w-full items-center justify-center px-8 py-10 md:px-12 lg:px-10 xl:px-14">
-              <h1
-                className="select-none leading-[0.88] tracking-[-0.075em] text-[#202024] opacity-92 mix-blend-multiply transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
-                style={{
-                  ...displayFontStyle,
-                  fontSize: "clamp(4.8rem, 13vw, 11.5rem)",
-                }}
-              >
-                {content.heroTitle}
-              </h1>
+              <div className="flex flex-col items-center gap-5 md:gap-6">
+                <div className={`${marketingTheme.controlSurface} flex h-12 w-12 items-center justify-center bg-[#FAFAFA]/92 shadow-[0_0_0_1px_rgba(255,255,255,0.8)_inset] backdrop-blur-sm md:h-14 md:w-14`}>
+                  <img src="/icon-192.png" alt="Downcity logo" className="h-7 w-7 object-contain opacity-95 md:h-8 md:w-8" />
+                </div>
+
+                <h1
+                  className="select-none leading-[0.88] tracking-[-0.075em] text-[#202024] opacity-92 mix-blend-multiply transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
+                  style={{
+                    ...displayFontStyle,
+                    fontSize: "clamp(4.8rem, 13vw, 11.5rem)",
+                  }}
+                >
+                  {content.heroTitle}
+                </h1>
+              </div>
             </div>
 
             <div className="absolute left-1/2 top-1/2 z-0 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center opacity-38">
@@ -256,7 +263,7 @@ export function HomeRebuildSection() {
             </div>
           </div>
 
-          <div className="flex w-full flex-col bg-[#FCFCFD] lg:w-[25%] lg:min-w-[320px]">
+          <div className="flex w-full flex-col bg-[#FAFAFA] lg:w-[25%] lg:min-w-[320px]">
             <InfoCell
               glyph={content.sideTopGlyph}
               label={content.sideTopLabel}

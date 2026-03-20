@@ -34,6 +34,7 @@
   const COMPOSER_MAX_WIDTH = 460;
   const VIEWPORT_MARGIN = 10;
   const TRIGGER_ICON_URL = chrome.runtime.getURL("image.png");
+  const CONTENT_STYLE_URL = chrome.runtime.getURL("content-script.css");
 
 
   const DEFAULT_SETTINGS = {
@@ -62,8 +63,18 @@
 
     routeBaseUrl: "",
     agentTagText: "Agent",
+    routeErrorText: "",
     toastTimerId: null,
   };
+
+  function summarizeRouteErrorText(errorText) {
+    const text = normalizeText(errorText, 160);
+    if (!text) return "不可发送";
+    if (/agent|未发现可用\s*agent|未运行/u.test(text)) {
+      return "没有可用 Agent";
+    }
+    return "不可发送";
+  }
 
   function normalizeText(input, maxChars) {
     const text = String(input || "")
@@ -215,10 +226,8 @@
       if (seen.has(dedupKey)) continue;
       seen.add(dedupKey);
       const rank = out.length + 1;
-      const preview = normalizeText(prompt, 22) || `历史问题 ${rank}`;
       out.push({
         id: `ask-history-${rank}`,
-        title: preview,
         prompt,
         command: `/h${rank}`,
         searchText: `${prompt.toLowerCase()} /h${rank}`,
@@ -591,207 +600,7 @@
 
     const shadow = host.attachShadow({ mode: "closed" });
     shadow.innerHTML = `
-      <style>
-        .dc-hidden { display: none !important; }
-        .dc-selection-overlay {
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 2147483645;
-        }
-        .dc-selection-highlight {
-          position: fixed;
-          border-radius: 5px;
-          background: linear-gradient(
-            180deg,
-            rgba(99, 102, 241, 0.12) 0%,
-            rgba(59, 130, 246, 0.18) 100%
-          );
-          box-shadow:
-            inset 0 0 0 1px rgba(37, 99, 235, 0.26),
-            0 1px 3px rgba(15, 23, 42, 0.12);
-        }
-
-        .dc-trigger {
-          position: fixed;
-          z-index: 2147483646;
-        }
-        .dc-trigger-btn {
-          width: 30px;
-          height: 30px;
-          border: 1px solid rgba(15, 23, 42, 0.12);
-          border-radius: 50%;
-          cursor: pointer;
-          background: #ffffff;
-          color: #0f172a;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
-        }
-        .dc-trigger-btn:hover { background: #f8fafc; }
-        .dc-trigger-icon {
-          width: 16px;
-          height: 16px;
-          object-fit: contain;
-          display: block;
-        }
-
-        .dc-composer {
-          position: fixed;
-          z-index: 2147483646;
-          width: min(${COMPOSER_MAX_WIDTH}px, calc(100vw - 16px));
-        }
-        .dc-shell {
-          position: relative;
-          border: 1px solid rgba(15, 23, 42, 0.12);
-          border-radius: 14px;
-          background: #ffffff;
-          box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
-          padding: 7px;
-        }
-
-        .dc-input {
-          width: 100%;
-          min-height: 62px;
-          max-height: 132px;
-          resize: none;
-          border: 0;
-          outline: none;
-          background: transparent;
-          color: #0f172a;
-          font-size: 14px;
-          line-height: 1.45;
-          padding: 2px 4px 4px;
-        }
-        .dc-input::placeholder { color: #94a3b8; }
-        .dc-input:disabled { opacity: 0.72; }
-
-        .dc-footer {
-          margin-top: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 6px;
-        }
-        .dc-agent-tag {
-          display: inline-flex;
-          align-items: center;
-          height: 22px;
-          border-radius: 999px;
-          border: 1px solid rgba(15, 23, 42, 0.14);
-          background: #ffffff;
-          color: #334155;
-          font-size: 10px;
-          font-weight: 600;
-          padding: 0 8px;
-          max-width: 70%;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .dc-send-btn {
-          width: 28px;
-          height: 28px;
-          border: 0;
-          border-radius: 50%;
-          cursor: pointer;
-          background: #111827;
-          color: #fff;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
-        }
-        .dc-send-btn svg { width: 13px; height: 13px; }
-        .dc-send-btn:hover:enabled {
-          transform: translateY(-1px);
-          background: #0f172a;
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
-        }
-        .dc-send-btn:disabled {
-          opacity: 0.55;
-          cursor: not-allowed;
-          transform: none;
-        }
-
-        .dc-slash {
-          position: absolute;
-          left: 0;
-          right: 0;
-          bottom: calc(100% + 8px);
-          border-radius: 10px;
-          overflow: hidden;
-          border: 1px solid rgba(15, 23, 42, 0.12);
-          background: #ffffff;
-          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-        }
-        .dc-slash-item {
-          width: 100%;
-          border: 0;
-          border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-          background: #fff;
-          text-align: left;
-          cursor: pointer;
-          padding: 8px 10px;
-          display: grid;
-          gap: 2px;
-        }
-        .dc-slash-item:last-child { border-bottom: 0; }
-        .dc-slash-item:hover,
-        .dc-slash-item[data-active='true'] {
-          background: #f8fafc;
-        }
-        .dc-slash-top {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .dc-slash-cmd {
-          display: inline-flex;
-          height: 16px;
-          align-items: center;
-          border-radius: 999px;
-          padding: 0 6px;
-          font-size: 9px;
-          font-weight: 700;
-          color: #1d4ed8;
-          background: rgba(37, 99, 235, 0.12);
-        }
-        .dc-slash-title {
-          font-size: 11px;
-          font-weight: 600;
-          color: #0f172a;
-          line-height: 1.3;
-        }
-        .dc-slash-sub {
-          font-size: 10px;
-          color: #475569;
-          line-height: 1.35;
-        }
-
-        .dc-toast {
-          position: fixed;
-          left: 50%;
-          bottom: 18px;
-          transform: translateX(-50%);
-          z-index: 2147483647;
-          max-width: min(84vw, 380px);
-          padding: 8px 12px;
-          border-radius: 10px;
-          font-size: 12px;
-          font-weight: 600;
-          line-height: 1.35;
-          color: #ffffff;
-          background: rgba(17, 24, 39, 0.96);
-          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
-          pointer-events: none;
-          text-align: center;
-        }
-        .dc-toast[data-type='error'] {
-          background: rgba(185, 28, 28, 0.95);
-        }
-      </style>
+      <link rel="stylesheet" href="${CONTENT_STYLE_URL}" />
 
       <div id="dcSelectionOverlay" class="dc-selection-overlay dc-hidden"></div>
 
@@ -806,7 +615,10 @@
           <div id="dcSlash" class="dc-slash dc-hidden"></div>
           <textarea id="dcInput" class="dc-input" rows="3" placeholder="Ask for follow-up changes"></textarea>
           <div class="dc-footer">
-            <div id="dcAgentTag" class="dc-agent-tag">Agent</div>
+            <div class="dc-agent-meta">
+              <img class="dc-agent-icon" src="${TRIGGER_ICON_URL}" alt="" aria-hidden="true" />
+              <div id="dcAgentTag" class="dc-agent-tag">Agent</div>
+            </div>
             <button id="dcSendBtn" class="dc-send-btn" type="button" aria-label="发送">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 18V6"></path>
@@ -930,7 +742,10 @@
   }
 
   function renderAgentTag() {
-    ui.agentTag.textContent = state.agentTagText || "Agent";
+    ui.agentTag.textContent = state.routeErrorText || state.agentTagText || "Agent";
+    ui.agentTag.dataset.state = state.routeErrorText ? "error" : "default";
+    ui.agentTag.title = state.routeErrorText || state.agentTagText || "Agent";
+    ui.sendBtn.disabled = state.isSending || Boolean(state.routeErrorText);
   }
 
   function placeTrigger(rect) {
@@ -1015,9 +830,12 @@
     try {
       const routeInfo = await resolveRouteInfo();
       state.routeBaseUrl = routeInfo.baseUrl;
+      state.routeErrorText = "";
       state.agentTagText = toAgentOptionLabel(routeInfo.targetAgent);
       renderAgentTag();
-    } catch {
+    } catch (error) {
+      state.routeBaseUrl = "";
+      state.routeErrorText = summarizeRouteErrorText(readErrorText(error));
       state.agentTagText = "Agent";
       renderAgentTag();
     }
@@ -1131,26 +949,16 @@
       button.className = "dc-slash-item";
       button.dataset.active = index === state.slashActiveIndex ? "true" : "false";
 
-      const top = document.createElement("div");
-      top.className = "dc-slash-top";
+      const content = document.createElement("span");
+      content.className = "dc-slash-text";
+      content.textContent = normalizeText(item.prompt, 72);
 
-      const cmd = document.createElement("span");
-      cmd.className = "dc-slash-cmd";
-      cmd.textContent = item.command;
+      const rank = document.createElement("span");
+      rank.className = "dc-slash-rank";
+      rank.textContent = String(index + 1);
 
-      const title = document.createElement("span");
-      title.className = "dc-slash-title";
-      title.textContent = item.title;
-
-      top.appendChild(cmd);
-      top.appendChild(title);
-
-      const sub = document.createElement("div");
-      sub.className = "dc-slash-sub";
-      sub.textContent = normalizeText(item.prompt, 90);
-
-      button.appendChild(top);
-      button.appendChild(sub);
+      button.appendChild(content);
+      button.appendChild(rank);
 
       // 关键点（中文）：阻止 mousedown 导致输入框失焦。
       button.addEventListener("mousedown", (event) => {
@@ -1204,6 +1012,10 @@
 
   async function submit() {
     if (state.isSending) return;
+    if (state.routeErrorText) {
+      showToast("error", state.routeErrorText);
+      return;
+    }
 
     const taskPrompt = normalizeText(ui.input.value, MAX_PROMPT_CHARS);
     if (!taskPrompt) {
@@ -1340,7 +1152,9 @@
     "mousedown",
     (event) => {
       const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-      const clickedInsideUi = path.includes(ui.host);
+      const eventTarget = event.target;
+      const clickedInsideUi = path.includes(ui.host)
+        || (eventTarget instanceof Node && ui.host.contains(eventTarget));
       if (clickedInsideUi) return;
 
       if (state.isOpen && !state.isSending) {

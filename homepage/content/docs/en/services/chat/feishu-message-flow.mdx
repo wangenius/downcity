@@ -1,0 +1,260 @@
+---
+title: Feishu message flow & execution
+description: How a Feishu message enters Downcity, becomes agent input, and is sent back as a reply
+---
+
+# Feishu: end-to-end message -> agent -> reply
+
+This page explains how the current Feishu channel in `downcity` works internally.
+
+> User-facing setup guide: [/en/docs/services/chat/feishu](/en/docs/services/chat/feishu)
+
+## Overview
+
+```mermaid
+sequenceDiagram
+  participant U as User (Feishu)
+  participant FS as Feishu Open Platform
+  participant BOT as Downcity FeishuBot
+  participant META as .ship/channel/meta.json
+  participant HIST as .ship/chat/<contextId>/history.jsonl
+  participant RT as Agent Runtime
+  participant SEND as Feishu send API
+
+  U->>FS: Send message
+  FS-->>BOT: im.message.receive_v1
+  BOT->>BOT: dedupe / parse / resolve sender
+  BOT->>META: update route + chat meta
+  BOT->>HIST: append inbound history
+  BOT->>RT: enqueue user message
+  RT->>SEND: send reply
+  SEND-->>U: bot reply appears in Feishu
+```
+
+## Startup
+
+When chat service starts the Feishu channel, it:
+
+1. loads `appId`, `appSecret`, and `domain` from the bound channel account
+2. creates:
+   - `Lark.Client`
+   - `Lark.WSClient`
+3. registers:
+   - `im.message.receive_v1`
+4. starts the long connection
+
+Code:
+
+- [Index.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/Index.ts:298)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:733)
+
+## Inbound parsing
+
+The channel reads these core event fields:
+
+- `message.chat_id`
+- `message.chat_type`
+- `message.message_id`
+- `message.message_type`
+- `sender.sender_id.open_id / user_id / union_id`
+
+### Deduplication
+
+Feishu may redeliver messages, so the runtime uses:
+
+- in-memory dedupe
+- file-backed dedupe under `.cache/feishu/dedupe`
+
+This prevents the same message from being executed more than once.
+
+### Current execution input: text only
+
+The current Feishu adapter only sends **text messages** into execution:
+
+- `message_type === text`: execute
+- any other type: send an error message back
+
+So unlike Telegram, this adapter does **not** currently inject Feishu files/images/audio as executable inbound attachments.
+
+Code:
+
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:816)
+
+## Sender name and chat title resolution
+
+This is the most important part of the Feishu integration.
+
+### The current runtime uses `tenant_access_token`
+
+The adapter exchanges:
+
+- `appId + appSecret`
+
+for:
+
+- `tenant_access_token`
+
+Then it calls:
+
+- `contact/v3/users/...`
+- `im/v1/chats/...`
+- `im/v1/chats/:chat_id/members`
+
+This means:
+
+- runtime display-name resolution depends on **tenant scopes**
+- a successful manual `user_access_token` test does not prove the bot path will work
+
+### Resolution order
+
+Current order:
+
+1. extract sender identity from the event
+   - prefer `open_id`
+   - then `user_id`
+   - then `union_id`
+2. call `contact/v3/users/:id`
+3. if no name is returned, try:
+   - `im/v1/chats/:chat_id/members`
+4. if still unresolved, fall back to raw ids
+
+Code:
+
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:195)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:245)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:349)
+
+## Context routing and persistence
+
+For each inbound message, the runtime creates or updates route metadata such as:
+
+- `contextId`
+- `channel`
+- `chatId`
+- `targetType`
+- `messageId`
+- `actorId`
+- `actorName`
+- `chatTitle`
+
+These are stored in:
+
+- `.ship/channel/meta.json`
+
+The internal target key is shaped like:
+
+```text
+feishu|<chatId>|<chatType>|<threadId>
+```
+
+Code:
+
+- [ChannelContextStore.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/runtime/ChannelContextStore.ts:118)
+- [BaseChatChannel.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/BaseChatChannel.ts:365)
+
+## How inbound messages enter the agent
+
+The adapter wraps the inbound platform message into a normalized user message:
+
+```text
+<info>
+channel: feishu
+context_id: ...
+chat_id: ...
+chat_type: p2p
+message_id: ...
+user_id: ...
+username: ...
+</info>
+
+user text
+```
+
+So the model sees:
+
+- which channel this came from
+- which `contextId` it belongs to
+- who sent it
+- whether this is a private or group chat
+
+Code:
+
+- [QueuedUserMessage.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/runtime/QueuedUserMessage.ts:32)
+
+Audit history is also written to:
+
+- `.ship/chat/<contextId>/history.jsonl`
+
+## Reply delivery
+
+There are two outbound paths:
+
+### Private chat (`p2p`)
+
+Uses:
+
+- `client.im.v1.message.create`
+
+and sends directly by `chat_id`.
+
+### Group chat
+
+Uses:
+
+- `client.im.v1.message.reply`
+
+to reply against the original `message_id`.
+
+Code:
+
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:885)
+
+## Why manual `user_access_token` tests can pass while runtime still fails
+
+These are different token modes.
+
+### Manual test
+
+Often uses:
+
+- `user_access_token`
+- user-authorized view
+
+### Running channel
+
+Uses:
+
+- `tenant_access_token`
+- app identity view
+
+So this is possible:
+
+1. manual `user_access_token` test returns the real name
+2. the running Feishu bot still only sees `open_id`
+
+There is no contradiction there.
+
+## Current limitations
+
+The current Feishu channel still has these limitations:
+
+- execution input is text-only
+- sender/chat display names depend on tenant scopes and contact visibility
+- `user_access_token` is not currently used for inbound metadata enrichment
+
+## Troubleshooting order
+
+If you see:
+
+- `chatTitle = null`
+- `chatDisplayNameSource = chat_id`
+- `username = unknown`
+
+check in this order:
+
+1. tenant scopes are actually effective
+2. `im.message.receive_v1` is enabled
+3. `im:chat.members:read` is effective for the app
+4. `contact:user.employee_id:readonly` is effective for the app
+5. contact visibility includes the current user
+6. send a **new** Feishu message so route metadata refreshes

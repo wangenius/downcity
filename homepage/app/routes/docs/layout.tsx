@@ -1,10 +1,15 @@
+/**
+ * 文档布局路由模块。
+ * 说明：
+ * 1. 文档页使用 Fumadocs 自身导航结构，并与主站统一为纯 Logo 品牌露出。
+ * 2. 这里负责根据 URL 切换语言树，不再输出额外品牌文字。
+ */
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { source } from "@/lib/source";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useEffect } from "react";
 import type { Route } from "./+types/layout";
 import type { Root as PageTreeRoot } from "fumadocs-core/page-tree";
-import { product } from "@/lib/product";
 import { i18n } from "@/lib/i18n";
 import i18next from "@/lib/locales";
 
@@ -49,7 +54,17 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
       key={`${lang}:${location.pathname}`}
       tree={loaderData.tree as PageTreeRoot}
       nav={{
-        title: product.productName,
+        title: (
+          <div className="flex h-10 w-10 items-center justify-center">
+            <img
+              src="/icon-192.png"
+              width={32}
+              height={32}
+              alt="Downcity"
+              className="h-8 w-8 object-contain"
+            />
+          </div>
+        ),
       }}
       sidebar={{
         defaultOpenLevel: 0,

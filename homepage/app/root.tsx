@@ -132,8 +132,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     path.startsWith("/docs/") ||
     path.startsWith("/en/docs") ||
     path.startsWith("/zh/docs");
-  const isHomeLandingPath = path === "/" || path === "/zh";
-  const showGlobalChrome = !isDocsPath && !isHomeLandingPath;
+  const showGlobalChrome = !isDocsPath;
 
   // Sync i18n language with localStorage (only on client side)
   useEffect(() => {

@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { IconArrowRight, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { marketingTheme } from "@/lib/marketing-theme";
+import { MarketingPanel } from "@/components/shared/marketing-elements";
 
 /**
  * 快速开始文章页。
@@ -127,7 +128,7 @@ export function StartGuideSection() {
           </div>
         </header>
 
-        <section className={`${marketingTheme.panel} overflow-hidden`}>
+        <MarketingPanel className="overflow-hidden">
           {content.steps.map((step, index) => (
             <article
               key={step.title}
@@ -151,9 +152,9 @@ export function StartGuideSection() {
               </div>
             </article>
           ))}
-        </section>
+        </MarketingPanel>
 
-        <footer className={`${marketingTheme.panel} grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-end md:p-7`}>
+        <MarketingPanel className="grid gap-5 p-6 md:grid-cols-[1fr_auto] md:items-end md:p-7">
           <div>
             <p className={marketingTheme.eyebrow}>{content.nextTitle}</p>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">{content.nextDescription}</p>
@@ -168,7 +169,7 @@ export function StartGuideSection() {
               <IconArrowRight className="size-4" />
             </Link>
           </div>
-        </footer>
+        </MarketingPanel>
       </div>
     </section>
   );

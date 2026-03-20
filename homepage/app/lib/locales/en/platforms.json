@@ -19,9 +19,9 @@
   "otherSubtitle": "We are constantly expanding our supported platforms. If you don't see what you need, here are two ways to get it:",
   "solutions": {
     "discuss": {
-      "title": "Request on Discussions",
-      "description": "Submit a feature request in our GitHub Discussions. We prioritize platforms based on community demand.",
-      "button": "Join Discuss"
+      "title": "Request via Telegram",
+      "description": "Tell us what platform you need in our Telegram community. We prioritize support based on real user demand.",
+      "button": "Join Telegram"
     },
     "skill": {
       "title": "Encapsulate as Skill",

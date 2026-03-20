@@ -164,6 +164,31 @@ type ToastMessage = {
   text: string;
 };
 
+function getStatusToneClass(type: StatusMessage["type"]): string {
+  switch (type) {
+    case "success":
+      return "text-[#1f8a4c]";
+    case "error":
+      return "text-[#b2392e]";
+    case "loading":
+      return "text-[#af7f1f]";
+    default:
+      return "text-muted-foreground";
+  }
+}
+
+function getToastToneClass(type: ToastMessage["type"]): string {
+  return type === "error"
+    ? "border-[#d9b2ae] bg-[#faf5f5] text-[#7f1d1d]"
+    : "border-border bg-surface text-foreground";
+}
+
+const popupFieldLabelClass =
+  "flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
+
+const popupFieldControlClass =
+  "w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60";
+
 export function App() {
   const formRef = useRef<HTMLFormElement | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -564,105 +589,149 @@ export function App() {
   );
 
   return (
-    <main className="popup-root">
-      <header className="popup-header">
-        <div className="popup-title">Downcity Share</div>
-      </header>
+    <main className="relative min-h-[520px] w-[380px] bg-background p-3">
+      <section className="rounded-[18px] border border-border bg-surface shadow-soft">
+        <header className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div className="inline-flex items-center gap-2.5">
+            <img
+              className="h-4 w-4 object-cover"
+              src="/icon-32.png"
+              alt="Downcity logo"
+            />
+            <div className="flex flex-col">
+              <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+                Web Share
+              </div>
+              <div className="text-sm font-medium text-foreground">Downcity</div>
+            </div>
+          </div>
+        </header>
 
-      <div className={`popup-status status-${status.type}`} aria-live="polite">
-        {status.text}
-      </div>
-
-      <form ref={formRef} className="popup-form" onSubmit={onSubmit}>
-        <div className="field-grid">
-          <label>
-            Agent
-            <select
-              value={settings.agentId}
-              onChange={(event) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  agentId: event.target.value,
-                  chatKey: "",
-                }))
-              }
-              disabled={isLoadingAgents}
-            >
-              <option value="">{isLoadingAgents ? "加载 Agent 中..." : "请选择 Agent"}</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                  {agent.running ? "" : "（未运行）"}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Channel Chat
-            <select
-              value={settings.chatKey}
-              onChange={(event) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  chatKey: event.target.value,
-                }))
-              }
-              disabled={chatKeyOptions.length === 0 || isLoadingChatKeys}
-            >
-              <option value="">
-                {isLoadingChatKeys ? "加载 Channel Chat 中..." : "请选择 Channel Chat"}
-              </option>
-              {chatKeyOptions.map((option) => (
-                <option key={option.chatKey} value={option.chatKey}>
-                  {option.title}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <label>
-          Ask 历史
-          <select
-            value={selectedAskHistoryIndex}
-            onChange={(event) => applyAskHistoryByIndex(event.target.value)}
-            disabled={askHistory.length < 1}
+        <div className="px-4 pt-3">
+          <div
+            className={[
+              "text-[11px] leading-5",
+              getStatusToneClass(status.type),
+            ].join(" ")}
+            aria-live="polite"
           >
-            <option value="">{askHistory.length < 1 ? "暂无历史 ask" : "选择历史 ask"}</option>
-            {askHistory.map((item, index) => (
-              <option key={`${index}-${item.slice(0, 20)}`} value={String(index)}>
-                {shortenAsk(item)}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Ask
-          <textarea
-            rows={6}
-            value={settings.taskPrompt}
-            onChange={(event) =>
-              setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
-            }
-            onKeyDown={onTaskPromptKeyDown}
-            placeholder="例如：提炼这篇页面内容，给我 3 条可执行建议。"
-          />
-        </label>
-
-        <div className="page-ref" title={tab.url}>
-          {tab.title || "（未获取到页面标题）"}
-          <span>{shortenUrl(tab.url)}</span>
+            {status.text}
+          </div>
         </div>
 
-        <button className="primary-btn" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "发送中..." : "发送到 Agent"}
-        </button>
-      </form>
+        <form
+          ref={formRef}
+          className="flex flex-col gap-3 p-4"
+          onSubmit={onSubmit}
+        >
+          <div className="grid grid-cols-2 gap-2.5">
+            <label className={popupFieldLabelClass}>
+              Agent
+              <select
+                className={popupFieldControlClass}
+                value={settings.agentId}
+                onChange={(event) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    agentId: event.target.value,
+                    chatKey: "",
+                  }))
+                }
+                disabled={isLoadingAgents}
+              >
+                <option value="">{isLoadingAgents ? "加载 Agent 中..." : "请选择 Agent"}</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                    {agent.running ? "" : "（未运行）"}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={popupFieldLabelClass}>
+              Channel
+              <select
+                className={popupFieldControlClass}
+                value={settings.chatKey}
+                onChange={(event) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    chatKey: event.target.value,
+                  }))
+                }
+                disabled={chatKeyOptions.length === 0 || isLoadingChatKeys}
+              >
+                <option value="">
+                  {isLoadingChatKeys ? "加载 Channel Chat 中..." : "请选择 Channel Chat"}
+                </option>
+                {chatKeyOptions.map((option) => (
+                  <option key={option.chatKey} value={option.chatKey}>
+                    {option.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <label className={popupFieldLabelClass}>
+            Ask 历史
+            <select
+              className={popupFieldControlClass}
+              value={selectedAskHistoryIndex}
+              onChange={(event) => applyAskHistoryByIndex(event.target.value)}
+              disabled={askHistory.length < 1}
+            >
+              <option value="">{askHistory.length < 1 ? "暂无历史 ask" : "选择历史 ask"}</option>
+              {askHistory.map((item, index) => (
+                <option key={`${index}-${item.slice(0, 20)}`} value={String(index)}>
+                  {shortenAsk(item)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={popupFieldLabelClass}>
+            Ask
+            <textarea
+              className={`${popupFieldControlClass} min-h-[132px] resize-none leading-[1.55]`}
+              rows={6}
+              value={settings.taskPrompt}
+              onChange={(event) =>
+                setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
+              }
+              onKeyDown={onTaskPromptKeyDown}
+              placeholder="例如：提炼这篇页面内容，给我 3 条可执行建议。"
+            />
+          </label>
+
+          <div className="border-l border-border pl-3 text-[11px] leading-5 text-muted-foreground" title={tab.url}>
+            <div className="font-medium text-foreground">
+              {tab.title || "（未获取到页面标题）"}
+            </div>
+            <div>{shortenUrl(tab.url)}</div>
+          </div>
+
+          <button
+            className="inline-flex h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "发送中..." : "发送到 Agent"}
+          </button>
+        </form>
+      </section>
 
       {toast ? (
-        <div className="popup-toast" data-type={toast.type} role="status" aria-live="polite">
+        <div
+          className={[
+            "fixed bottom-3 left-1/2 z-20 max-w-[calc(100vw-28px)] -translate-x-1/2 rounded-[12px] border px-3 py-2 text-[11px] font-medium leading-[1.45] shadow-soft",
+            getToastToneClass(toast.type),
+          ].join(" ")}
+          data-type={toast.type}
+          role="status"
+          aria-live="polite"
+        >
           {toast.text}
         </div>
       ) : null}

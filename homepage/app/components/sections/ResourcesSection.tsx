@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { IconArrowUpRight, IconBuildingStore, IconCloud, IconTools } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { marketingTheme } from "@/lib/marketing-theme";
+import { MarketingPanel } from "@/components/shared/marketing-elements";
 
 const resources = [
   {
@@ -44,7 +45,7 @@ export const ResourcesSection: FC = () => {
         <p className={marketingTheme.lead}>{t("resources:subtitle")}</p>
       </header>
 
-      <div className={`${marketingTheme.panel} mt-8 overflow-hidden`}>
+      <MarketingPanel className="mt-8 overflow-hidden">
         {resources.map((item, index) => (
           <a
             key={item.path}
@@ -70,7 +71,7 @@ export const ResourcesSection: FC = () => {
             </span>
           </a>
         ))}
-      </div>
+      </MarketingPanel>
     </section>
   );
 };

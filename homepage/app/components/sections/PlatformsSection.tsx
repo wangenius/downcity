@@ -8,6 +8,7 @@ import {
   IconMessageReport,
   IconPuzzle,
 } from "@tabler/icons-react";
+import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { marketingTheme } from "@/lib/marketing-theme";
 
 /**
@@ -20,7 +21,7 @@ export function PlatformsSection() {
   const { i18n, t } = useTranslation();
   const lang = i18n.language;
   const skillsPath = lang === "zh" ? "/zh/resources/skills" : "/resources/skills";
-  const discussionsUrl = "https://github.com/wangenius/downcity/discussions";
+  const discussionsUrl = COMMUNITY_LINKS.telegram;
   const panelClass = marketingTheme.panel;
   const kickerClass = marketingTheme.badge;
 
@@ -49,7 +50,7 @@ export function PlatformsSection() {
   ] as const;
 
   return (
-    <section className="border-t border-border/85 py-16 md:py-20">
+    <section className="py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
         <header className="space-y-3">
           <span className={kickerClass}>{t("platforms:title")}</span>

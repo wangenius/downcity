@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { product } from "@/lib/product";
 import { marketingTheme } from "@/lib/marketing-theme";
 
@@ -33,7 +34,7 @@ export default function Marketplace() {
     product.homepage?.includes("github.com") === true
       ? product.homepage
       : "https://github.com/wangenius/downcity";
-  const discussionsUrl = `${repoUrl}/discussions`;
+  const discussionsUrl = COMMUNITY_LINKS.telegram;
 
   return (
     <div className={marketingTheme.pageNarrow}>

@@ -1,11 +1,63 @@
 ---
 title: Feishu
-description: Integrate Downcity with Feishu/Lark chat
+description: Connect Downcity to Feishu/Lark private chats and group chats
 ---
 
-# Feishu Integration
+# Feishu integration
 
-## Required config
+Use Feishu (or Lark) to connect Downcity to:
+
+- direct messages
+- group chats
+- route binding and context persistence
+- agent reply delivery back to Feishu
+
+> Want the internal execution flow? See: [/en/docs/services/chat/feishu-message-flow](/en/docs/services/chat/feishu-message-flow)
+
+## Short version
+
+The current Feishu channel in `downcity` uses:
+
+- a **self-built Feishu app**
+- **bot + WebSocket long connection**
+- server-side **`tenant_access_token`**
+
+This is the most important thing to keep in mind:
+
+- if your manual API test works with a `user_access_token`, that does **not** mean the running bot can resolve the same user name
+- the running bot depends on **tenant scopes**, effective authorization, and contact visibility
+
+## Setup
+
+### 1) Create the app
+
+Create a **self-built app** in Feishu Open Platform and enable:
+
+1. bot capability
+2. message receiving
+3. WebSocket / long connection mode
+
+The current runtime works best with long connection mode and does not require a public webhook URL first.
+
+### 2) Subscribe to events
+
+At minimum, enable:
+
+- `im.message.receive_v1`
+
+Without this event the bot will start, but it will not receive chat messages.
+
+### 3) Create a channel account
+
+In Console UI, open `Global / Channel Accounts` and create a Feishu account such as `feishu-main`:
+
+1. `channel = feishu`
+2. fill `appId`
+3. fill `appSecret`
+4. for Lark, optionally set:
+   - `domain = https://open.larksuite.com`
+
+### 4) Bind it in `ship.json`
 
 ```json
 {
@@ -22,10 +74,37 @@ description: Integrate Downcity with Feishu/Lark chat
 }
 ```
 
-Credential source:
+### 5) Required permissions
 
-1. Create `feishu-main` in Console UI `Global / Channel Accounts`.
-2. Fill `appId`, `appSecret`, and optional `domain` (for example Lark: `https://open.larksuite.com`).
+For the current runtime, **tenant app scopes** matter most.
+
+Recommended minimum tenant scopes:
+
+- `im:message:readonly`
+- `im:message:send_as_bot`
+- `im:chat:read`
+- `im:chat:readonly`
+- `im:chat.members:read`
+- `contact:user.basic_profile:readonly`
+- `contact:user.employee_id:readonly`
+
+In practice you will often also keep:
+
+- `im:chat`
+- `im:chat.members:bot_access`
+- `contact:user.base:readonly`
+- `contact:user.id:readonly`
+
+### 6) Publish and re-authorize
+
+Checking a scope in the console is not enough.
+
+Make sure:
+
+1. the app version is published
+2. tenant admin authorization is refreshed
+3. the scopes are really enabled for the **tenant** side, not only user-side OAuth
+4. contact visibility includes the user you are testing with
 
 ## Start runtime
 
@@ -33,12 +112,107 @@ Credential source:
 city agent start
 ```
 
-## Verify channel status
+Expected logs:
 
-```bash
-city service status chat
-```
+- `Feishu channel enabled`
+- `🤖 Starting Feishu Bot...`
+- `Feishu Bot started, using long connection mode`
 
-## Group behavior
+## How to verify
 
-- Group messages are accepted directly (no `@mention` required).
+### In Console UI
+
+Check:
+
+- Feishu channel is bound to the expected channel account
+- status shows `link connected`
+
+### Send a new Feishu message
+
+Route metadata is refreshed on **new incoming messages**.
+
+If you changed permissions but did not send a new message, old metadata will stay old.
+
+### Inspect route metadata
+
+If name resolution works, the Feishu route in `.ship/channel/meta.json` should contain:
+
+- `actorName`
+- `chatTitle`
+
+If it only contains:
+
+- `actorId`
+- `chatId`
+
+then the backend still did not resolve a display name.
+
+## Important behavior
+
+Current Feishu channel behavior:
+
+- inbound transport is WebSocket
+- execution currently accepts **text messages only**
+- sender name and chat title are resolved on a best-effort basis
+- if resolution fails, processing still continues with raw ids
+
+So the channel may still work while the UI only shows `chat_id / open_id`.
+
+## `tenant_access_token` vs `user_access_token`
+
+This is the most common source of confusion.
+
+### The running channel uses `tenant_access_token`
+
+The runtime uses:
+
+- `appId + appSecret`
+- `tenant_access_token`
+
+and then calls user/chat metadata APIs with that token.
+
+So what matters is:
+
+- tenant scopes
+- contact visibility
+
+### Why manual `user_access_token` tests may still succeed
+
+A `user_access_token` represents a specific authorized user.
+
+That can return richer user-visible data, but the running bot does **not** currently use a user token for inbound chat metadata enrichment.
+
+So this is completely possible:
+
+1. your manual `user_access_token` test returns a real name
+2. the running Feishu bot still shows `unknown`
+
+## Common issues
+
+### Messages arrive, but title / username is missing
+
+Check:
+
+1. tenant scopes are really effective
+2. app version was published
+3. admin re-authorized the app
+4. contact visibility includes the user
+5. you sent a **new** Feishu message after changing permissions
+
+### I enabled user scopes, why does the bot still fail?
+
+Because the runtime uses a **tenant token**, not your manual user OAuth token.
+
+### Group title or private chat name is still missing
+
+Usually this means one of these is still not effective:
+
+- `im:chat.members:read`
+- `contact:user.employee_id:readonly`
+- contact field visibility for the current app
+
+## Related docs
+
+- [Feishu message flow](/en/docs/services/chat/feishu-message-flow)
+- [Chat Service overview](/en/docs/services/chat/chat-service)
+- [Channel configuration metadata](/en/docs/services/chat/channel-configuration)

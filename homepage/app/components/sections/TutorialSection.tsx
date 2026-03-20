@@ -48,7 +48,7 @@ export function TutorialSection() {
   ] as const;
 
   return (
-    <section className="border-t border-border/85 py-16 md:py-20">
+    <section className="py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
         <header className="mb-10 flex flex-col gap-3 md:mb-12">
           <span className={kickerClass}>{t("tutorial:title")}</span>

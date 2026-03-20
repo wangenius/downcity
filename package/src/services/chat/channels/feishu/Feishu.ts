@@ -76,6 +76,7 @@ export class FeishuBot extends BaseChatChannel {
   private client: Lark.Client | null = null;
   private wsClient: Lark.WSClient | null = null;
   private isRunning: boolean = false;
+  private processingMessages: Set<string> = new Set(); // 用于并发投递中的瞬时去重
   private processedMessages: Set<string> = new Set(); // 用于消息去重
   private messageCleanupInterval: NodeJS.Timeout | null = null;
   private dedupeDir: string;
@@ -786,92 +787,115 @@ export class FeishuBot extends BaseChatChannel {
       const threadId = this.buildChatKey(chat_id);
       const senderIdentity = this.extractSenderIdentity(data);
       const actorId = senderIdentity.senderId;
+      const normalizedMessageId = String(message_id || "").trim();
+      if (!normalizedMessageId) return;
 
       // Message deduplication: check if this message has been processed
-      if (this.processedMessages.has(message_id)) {
-        this.logger.debug(`Message already processed, skipping: ${message_id}`);
+      if (this.processedMessages.has(normalizedMessageId)) {
+        this.logger.debug(
+          `Message already processed, skipping: ${normalizedMessageId}`,
+        );
         return;
       }
 
       // Persistent dedupe (best-effort)
       const persisted = await this.loadDedupeSet(threadId);
-      if (persisted.has(message_id)) {
+      if (persisted.has(normalizedMessageId)) {
         this.logger.debug(
-          `Message already processed (persisted), skipping: ${message_id}`,
+          `Message already processed (persisted), skipping: ${normalizedMessageId}`,
         );
         return;
       }
 
-      // Mark message as processed
-      this.processedMessages.add(message_id);
-      persisted.add(message_id);
-      await this.persistDedupeSet(threadId, persisted);
+      // 关键点（中文）
+      // - 先做“处理中”瞬时去重，避免平台短时间重复投递导致并发重复执行。
+      // - 只有在命令执行 / 入队成功后，才真正写入 processed 持久去重。
+      // - 这样如果后续链路失败，平台重投时仍有机会重新处理，不会出现“收到了但没反应”。
+      if (this.processingMessages.has(normalizedMessageId)) {
+        this.logger.debug(
+          `Message is already being processed, skipping duplicate delivery: ${normalizedMessageId}`,
+        );
+        return;
+      }
+      this.processingMessages.add(normalizedMessageId);
 
-      // Parse user message
-      let userMessage = "";
+      let handled = false;
 
       try {
-        if (message_type === "text") {
-          const parsed = this.parseTextContent(content);
-          userMessage = parsed.text;
-        } else {
+        let userMessage = "";
+        try {
+          if (message_type === "text") {
+            const parsed = this.parseTextContent(content);
+            userMessage = parsed.text;
+          } else {
+            await this.sendErrorMessage(
+              chat_id,
+              chat_type,
+              message_id,
+              "Non-text messages not supported, please send text message",
+            );
+            handled = true;
+            return;
+          }
+        } catch (error) {
           await this.sendErrorMessage(
             chat_id,
             chat_type,
             message_id,
-            "Non-text messages not supported, please send text message",
+            "Failed to parse message, please send text message",
           );
+          handled = true;
           return;
         }
-      } catch (error) {
-        await this.sendErrorMessage(
-          chat_id,
-          chat_type,
-          message_id,
-          "Failed to parse message, please send text message",
-        );
-        return;
-      }
 
-      this.logger.info(`Received Feishu message: ${userMessage}`);
-      const actorName =
-        (await this.resolveSenderName({
-          ...senderIdentity,
+        this.logger.info(`Received Feishu message: ${userMessage}`);
+        const actorName =
+          (await this.resolveSenderName({
+            ...senderIdentity,
+            chatId: chat_id,
+          })) || undefined;
+        const resolvedChatTitle = await this.resolveChatTitle(chat_id);
+        const chatTitle =
+          resolvedChatTitle ||
+          (chat_type === "p2p" ? actorName : undefined);
+
+        // Record this chat as a known notification target
+        this.knownChats.set(threadId, {
           chatId: chat_id,
-        })) || undefined;
-      const resolvedChatTitle = await this.resolveChatTitle(chat_id);
-      const chatTitle =
-        resolvedChatTitle ||
-        (chat_type === "p2p" ? actorName : undefined);
+          chatType: chat_type,
+          ...(chatTitle ? { chatTitle } : {}),
+        });
 
-      // Record this chat as a known notification target
-      this.knownChats.set(threadId, {
-        chatId: chat_id,
-        chatType: chat_type,
-        ...(chatTitle ? { chatTitle } : {}),
-      });
-
-      // Check if it's a command
-      await this.runInChat(threadId, async () => {
-        if (userMessage.startsWith("/")) {
-          await this.handleCommand(chat_id, chat_type, message_id, userMessage);
-        } else {
-          if (this.isGroupChat(chat_type)) {
-            userMessage = this.stripAtMentions(userMessage);
-            if (!userMessage) return;
+        // Check if it's a command
+        await this.runInChat(threadId, async () => {
+          if (userMessage.startsWith("/")) {
+            await this.handleCommand(chat_id, chat_type, message_id, userMessage);
+          } else {
+            if (this.isGroupChat(chat_type)) {
+              userMessage = this.stripAtMentions(userMessage);
+              if (!userMessage) return;
+            }
+            // Regular message, call Agent to execute
+            await this.executeAndReply(
+              chat_id,
+              chat_type,
+              message_id,
+              userMessage,
+              actorId,
+              actorName,
+              chatTitle,
+            );
           }
-          // Regular message, call Agent to execute
-          await this.executeAndReply(
-            chat_id,
-            chat_type,
-            message_id,
-            userMessage,
-            actorId,
-            actorName,
-            chatTitle,
-          );
+        });
+        handled = true;
+      } finally {
+        this.processingMessages.delete(normalizedMessageId);
+        if (handled) {
+          this.processedMessages.add(normalizedMessageId);
+          persisted.add(normalizedMessageId);
+          await this.persistDedupeSet(threadId, persisted);
         }
-      });
+      }
     } catch (error) {
       this.logger.error("Failed to process Feishu message", {
         error: String(error),
@@ -971,8 +995,7 @@ Available commands:
     text: string,
   ): Promise<void> {
     if (!this.client) {
-      this.logger.warn("Feishu client is not initialized");
-      return;
+      throw new Error("Feishu client is not initialized");
     }
     try {
       if (chatType === "p2p") {
@@ -1003,6 +1026,9 @@ Available commands:
       this.logger.error("Failed to send Feishu message", {
         error: String(error),
       });
+      throw error instanceof Error
+        ? error
+        : new Error(`Failed to send Feishu message: ${String(error)}`);
     }
   }
 
@@ -1012,8 +1038,7 @@ Available commands:
     text: string,
   ): Promise<void> {
     if (!this.client) {
-      this.logger.warn("Feishu client is not initialized");
-      return;
+      throw new Error("Feishu client is not initialized");
     }
     try {
       // Send directly to chat without needing to reply to a message
@@ -1030,7 +1055,11 @@ Available commands:
     } catch (error) {
       this.logger.error("Failed to send Feishu chat message", {
         error: String(error),
+        chatType,
       });
+      throw error instanceof Error
+        ? error
+        : new Error(`Failed to send Feishu chat message: ${String(error)}`);
     }
   }
 

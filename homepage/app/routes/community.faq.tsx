@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { product } from "@/lib/product";
 import { marketingTheme } from "@/lib/marketing-theme";
+import {
+  MarketingPanel,
+  marketingFilterButtonClass,
+} from "@/components/shared/marketing-elements";
 
 export function meta() {
   const title = `${product.productName} — FAQ`;
@@ -32,10 +37,7 @@ export default function FAQ() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const docsPath = i18n.language.toLowerCase().startsWith("zh") ? "/zh/docs" : "/en/docs";
-  const discussionsUrl =
-    product.homepage?.includes("github.com") === true
-      ? `${product.homepage}/discussions`
-      : "https://github.com/wangenius/downcity/discussions";
+  const discussionsUrl = COMMUNITY_LINKS.telegram;
 
   const filteredFAQs = selectedCategory
     ? faqs.filter((faq) => faq.category === selectedCategory)
@@ -56,11 +58,7 @@ export default function FAQ() {
       <div className="mt-6 flex flex-wrap gap-2">
         <button
           onClick={() => setSelectedCategory(null)}
-          className={`inline-flex h-8 items-center rounded-md border px-3 text-sm transition-colors ${
-            selectedCategory === null
-              ? "border-border/80 bg-card/76 text-foreground"
-              : "border-border/70 bg-background/74 text-muted-foreground hover:bg-muted/45 hover:text-foreground"
-          }`}
+          className={marketingFilterButtonClass({ active: selectedCategory === null })}
         >
           {t("community:faqPage.all")}
         </button>
@@ -68,11 +66,7 @@ export default function FAQ() {
           <button
             key={category}
             onClick={() => setSelectedCategory(category)}
-            className={`inline-flex h-8 items-center rounded-md border px-3 text-sm transition-colors ${
-              selectedCategory === category
-                ? "border-border/80 bg-card/76 text-foreground"
-                : "border-border/70 bg-background/74 text-muted-foreground hover:bg-muted/45 hover:text-foreground"
-            }`}
+            className={marketingFilterButtonClass({ active: selectedCategory === category })}
           >
             {t(`community:faqPage.categories.${category}`)}
           </button>
@@ -81,10 +75,7 @@ export default function FAQ() {
 
       <section className="mt-6 space-y-3">
         {filteredFAQs.map((faq, index) => (
-          <article
-            key={faq.id}
-            className={`${marketingTheme.panel} overflow-hidden`}
-          >
+          <MarketingPanel key={faq.id} className="overflow-hidden">
             <button
               onClick={() => setOpenId(openId === faq.id ? null : faq.id)}
               className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
@@ -104,11 +95,11 @@ export default function FAQ() {
                 {t(`community:faqPage.items.${faq.id}.answer`)}
               </div>
             ) : null}
-          </article>
+          </MarketingPanel>
         ))}
       </section>
 
-      <section className={`${marketingTheme.panel} mt-8 p-6`}>
+      <MarketingPanel className="mt-8 p-6">
         <h3 className="text-lg font-semibold">{t("community:faqPage.callout.title")}</h3>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">
           {t("community:faqPage.callout.description")}
@@ -129,7 +120,7 @@ export default function FAQ() {
             {t("community:faqPage.callout.readDocs")}
           </a>
         </div>
-      </section>
+      </MarketingPanel>
     </div>
   );
 }

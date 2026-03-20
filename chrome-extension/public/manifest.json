@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Downcity Web Share",
   "description": "分享当前网页给指定 Downcity，并将执行结果回传到 Channel Chat。",
-  "version": "0.2.0",
+  "version": "0.2.5",
   "icons": {
     "16": "icon-16.png",
     "32": "icon-32.png",
@@ -42,7 +42,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "image.png"
+        "image.png",
+        "content-script.css"
       ],
       "matches": [
         "http://*/*",

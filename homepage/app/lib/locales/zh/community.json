@@ -11,7 +11,7 @@
   },
   "discussions": {
     "title": "讨论",
-    "description": "参与 GitHub 上的讨论"
+    "description": "加入 Telegram 社区群组讨论"
   },
   "faqPage": {
     "subtitle": "关于 Downcity 的常见问题",
@@ -69,7 +69,7 @@
     "callout": {
       "title": "还有疑问？",
       "description": "加入社区讨论，或查看文档",
-      "askGithub": "在 GitHub 提问",
+      "askGithub": "加入 Telegram",
       "readDocs": "查看文档"
     }
   },

@@ -4,6 +4,11 @@ import { useTranslation } from "react-i18next";
 import { IconFileText, IconSettings } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { marketingTheme } from "@/lib/marketing-theme";
+import {
+  MarketingPanel,
+  marketingFilterButtonClass,
+  marketingTagClass,
+} from "@/components/shared/marketing-elements";
 
 const AGENT_MD_CONTENT = `# Personality
 You are a Market Researcher.
@@ -65,8 +70,10 @@ export const CodePreviewSection: FC = () => {
                 type="button"
                 onClick={() => setActiveTab("agent")}
                 className={cn(
-                  marketingTheme.chip,
-                  activeTab === "agent" ? "border-foreground/14 bg-card/92 text-foreground" : "",
+                  marketingFilterButtonClass({
+                    active: activeTab === "agent",
+                    className: "h-auto gap-2 px-3 py-2 text-[0.62rem] uppercase tracking-[0.16em]",
+                  }),
                 )}
               >
                 <IconFileText className="size-3.5" />
@@ -76,8 +83,10 @@ export const CodePreviewSection: FC = () => {
                 type="button"
                 onClick={() => setActiveTab("ship")}
                 className={cn(
-                  marketingTheme.chip,
-                  activeTab === "ship" ? "border-foreground/14 bg-card/92 text-foreground" : "",
+                  marketingFilterButtonClass({
+                    active: activeTab === "ship",
+                    className: "h-auto gap-2 px-3 py-2 text-[0.62rem] uppercase tracking-[0.16em]",
+                  }),
                 )}
               >
                 <IconSettings className="size-3.5" />
@@ -87,7 +96,7 @@ export const CodePreviewSection: FC = () => {
           </div>
         </div>
 
-        <div className={`${marketingTheme.panel} overflow-hidden`}>
+        <MarketingPanel className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-border/68 px-5 py-4 md:px-6">
             <div>
               <p className={marketingTheme.eyebrow}>{activeTab === "agent" ? "Behavior Layer" : "Execution Layer"}</p>
@@ -97,14 +106,16 @@ export const CodePreviewSection: FC = () => {
                   : t("features:codePreview.shipJsonDesc")}
               </p>
             </div>
-            <span className={marketingTheme.chip}>{activeTab === "agent" ? "PROFILE.md" : "ship.json"}</span>
+            <span className={marketingTagClass({ tone: "soft" })}>
+              {activeTab === "agent" ? "PROFILE.md" : "ship.json"}
+            </span>
           </div>
           <div className="p-4 md:p-5">
             <pre className={marketingTheme.code}>
               <code>{content}</code>
             </pre>
           </div>
-        </div>
+        </MarketingPanel>
       </div>
     </section>
   );

@@ -9,6 +9,7 @@ import {
   IconTools,
 } from "@tabler/icons-react";
 import { marketingTheme } from "@/lib/marketing-theme";
+import { MarketingPanel } from "@/components/shared/marketing-elements";
 
 const features = [
   {
@@ -59,7 +60,7 @@ export const FeaturesSection: FC = () => {
   const isZh = i18n.language === "zh";
 
   return (
-    <section className="border-t border-border/85 py-16 md:py-20">
+    <section className="py-16 md:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
         <div className="mb-8 space-y-3">
           <p className={marketingTheme.badge}>
@@ -76,7 +77,7 @@ export const FeaturesSection: FC = () => {
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <aside className={`${marketingTheme.panel} rounded-[1.5rem] p-5 md:p-6 lg:sticky lg:top-24`}>
+          <MarketingPanel className="p-5 md:p-6 lg:sticky lg:top-24">
             <p className={marketingTheme.eyebrow}>
               Design Principle
             </p>
@@ -100,9 +101,9 @@ export const FeaturesSection: FC = () => {
                 </div>
               ))}
             </div>
-          </aside>
+          </MarketingPanel>
 
-          <div className={`${marketingTheme.panel} overflow-hidden rounded-[1.5rem]`}>
+          <MarketingPanel className="overflow-hidden">
             {features.map((feature, index) => (
               <article
                 key={feature.id}
@@ -126,7 +127,7 @@ export const FeaturesSection: FC = () => {
                 </div>
               </article>
             ))}
-          </div>
+          </MarketingPanel>
         </div>
       </div>
     </section>

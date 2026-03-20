@@ -47,11 +47,13 @@ fs.writeFileSync(manifestFile, JSON.stringify(manifestJson, null, 2) + '\n', 'ut
 console.log(`Extension version patched: ${currentVersion} -> ${nextVersion}`);
 NODE
 
-# 关键点（中文）：扩展构建优先复用仓库可用包管理器，避免环境差异导致失败。
+# 关键点（中文）：
+# 1) 该脚本对应 extension 的 release build：先自动提升 patch 版本，再执行真正的 bundle 构建。
+# 2) 真正的编译命令固定为 chrome-extension/package.json 里的 build:bundle，避免递归调用 build/build:release。
 if command -v bun >/dev/null 2>&1; then
-  (cd "$ROOT_DIR/chrome-extension" && bun run build)
+  (cd "$ROOT_DIR/chrome-extension" && bun run build:bundle)
 elif command -v pnpm >/dev/null 2>&1; then
-  pnpm -C "$ROOT_DIR/chrome-extension" build
+  pnpm -C "$ROOT_DIR/chrome-extension" build:bundle
 else
-  npm --prefix "$ROOT_DIR/chrome-extension" run build
+  npm --prefix "$ROOT_DIR/chrome-extension" run build:bundle
 fi

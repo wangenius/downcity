@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { product } from "@/lib/product";
 import { marketingTheme } from "@/lib/marketing-theme";
 
@@ -38,10 +39,7 @@ const useCases = [
 
 export default function UseCases() {
   const { t } = useTranslation();
-  const discussionsUrl =
-    product.homepage?.includes("github.com") === true
-      ? `${product.homepage}/discussions`
-      : "https://github.com/wangenius/downcity/discussions";
+  const discussionsUrl = COMMUNITY_LINKS.telegram;
 
   return (
     <div className={marketingTheme.pageNarrow}>

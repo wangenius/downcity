@@ -1,0 +1,275 @@
+/*
+ * 页面内快速发送面板的 Tailwind 样式入口。
+ *
+ * 关键点（中文）：
+ * - 该文件会被 Vite 单独构建成 `content-script.css`，供 Shadow DOM 通过 `<link>` 引入。
+ * - 继续保留现有 `.dc-*` 类名，避免一次改动触碰 1400+ 行脚本逻辑。
+ * - 使用 Tailwind v4 作为统一样式编译层，同时通过 CSS 变量对齐 popup/options 的主题色。
+ */
+
+@import "tailwindcss";
+
+:host {
+  color-scheme: light;
+  --dc-bg: #fcfcfd;
+  --dc-fg: #111113;
+  --dc-muted: #6b7280;
+  --dc-muted-surface: #f5f5f6;
+  --dc-line: #e7e7eb;
+  --dc-line-soft: #ececf1;
+  --dc-panel-shadow: 0 1px 0 rgba(17, 17, 19, 0.02);
+  --dc-trigger-shadow: 0 1px 0 rgba(17, 17, 19, 0.02);
+  --dc-toast-shadow: 0 1px 0 rgba(17, 17, 19, 0.02);
+  --dc-primary: #111113;
+  --dc-primary-strong: #232326;
+  --dc-primary-soft: #f3f4f6;
+  --dc-primary-ring: rgba(17, 17, 19, 0.08);
+  --dc-error: #faf5f5;
+  --dc-font-sans: "Space Grotesk", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+}
+
+.dc-hidden {
+  display: none !important;
+}
+
+.dc-selection-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483645;
+}
+
+.dc-selection-highlight {
+  position: fixed;
+  border-radius: 4px;
+  background: rgba(17, 17, 19, 0.04);
+  box-shadow: inset 0 0 0 1px var(--dc-primary-ring);
+}
+
+.dc-trigger {
+  position: fixed;
+  z-index: 2147483646;
+}
+
+.dc-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--dc-line);
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--dc-bg);
+  color: var(--dc-fg);
+  box-shadow: var(--dc-trigger-shadow);
+}
+
+.dc-trigger-btn:hover {
+  background: var(--dc-muted-surface);
+}
+
+.dc-trigger-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.dc-composer {
+  position: fixed;
+  z-index: 2147483646;
+}
+
+.dc-shell {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--dc-line);
+  border-radius: 18px;
+  background: var(--dc-bg);
+  box-shadow: var(--dc-panel-shadow);
+  padding: 10px;
+  font-family: var(--dc-font-sans);
+  color: var(--dc-fg);
+}
+
+.dc-input {
+  width: 100%;
+  min-height: 68px;
+  max-height: 132px;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--dc-fg);
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 2px 4px 6px;
+  font-family: var(--dc-font-sans);
+}
+
+.dc-input::placeholder {
+  color: #8c8f98;
+}
+
+.dc-input:disabled {
+  opacity: 0.72;
+}
+
+.dc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.dc-agent-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 70%;
+}
+
+.dc-agent-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.dc-agent-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  height: 22px;
+  overflow: hidden;
+  border: 1px solid var(--dc-line);
+  border-radius: 999px;
+  background: var(--dc-bg);
+  color: var(--dc-muted);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 0 8px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dc-agent-tag[data-state="error"] {
+  border-color: #d9b2ae;
+  background: var(--dc-error);
+  color: #7f1d1d;
+}
+
+.dc-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--dc-primary);
+  color: #fcfcfd;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.dc-send-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.dc-send-btn:hover:enabled {
+  background: var(--dc-primary-strong);
+}
+
+.dc-send-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dc-slash {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  overflow: hidden;
+  border: 1px solid var(--dc-line);
+  border-radius: 14px;
+  background: var(--dc-bg);
+  box-shadow: var(--dc-panel-shadow);
+}
+
+.dc-slash-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--dc-line-soft);
+  background: var(--dc-bg);
+  text-align: left;
+  cursor: pointer;
+  padding: 9px 10px;
+  font-family: var(--dc-font-sans);
+}
+
+.dc-slash-item:last-child {
+  border-bottom: 0;
+}
+
+.dc-slash-item:hover,
+.dc-slash-item[data-active="true"] {
+  background: var(--dc-muted-surface);
+}
+
+.dc-slash-text {
+  color: var(--dc-fg);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.dc-slash-rank {
+  flex: 0 0 auto;
+  color: var(--dc-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.dc-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 2147483647;
+  max-width: min(84vw, 380px);
+  transform: translateX(-50%);
+  border-radius: 10px;
+  padding: 8px 12px;
+  pointer-events: none;
+  text-align: center;
+  color: var(--dc-fg);
+  font-family: var(--dc-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  background: var(--dc-bg);
+  border: 1px solid var(--dc-line);
+  box-shadow: var(--dc-toast-shadow);
+}
+
+.dc-toast[data-type="error"] {
+  background: var(--dc-error);
+  border-color: #d9b2ae;
+  color: #7f1d1d;
+}

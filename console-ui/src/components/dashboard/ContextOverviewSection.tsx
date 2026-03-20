@@ -22,7 +22,11 @@ import {
   type ContextGroupKey,
 } from "@/lib/context-groups"
 import { parseChannelConfigSummary, parseChannelConfigurationDescriptor, parseChannelDetail } from "./context-overview-config"
-import { CheckIcon, ChevronDownIcon, Code2Icon, Trash2Icon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, Code2Icon, ExternalLinkIcon, Trash2Icon } from "lucide-react"
+
+const CHANNEL_DOCS_URL: Partial<Record<string, string>> = {
+  feishu: "https://downcity.ai/zh/docs/services/chat/feishu",
+}
 
 function toOptionalRouteText(input: unknown): string | null {
   const text = String(input || "").trim()
@@ -178,6 +182,10 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
     if (!channel || channel === "consoleui") return []
     return channelAccounts.filter((item) => String(item.channel || "").trim().toLowerCase() === channel)
   }, [activeChannelName, channelAccounts])
+  const activeChannelDocsUrl = React.useMemo(() => {
+    const channel = String(activeChannelName || "").trim().toLowerCase()
+    return channel ? CHANNEL_DOCS_URL[channel] || null : null
+  }, [activeChannelName])
   const activeChannelAccountLabel = React.useMemo(() => {
     if (!activeChannelAccountId) return "config"
     const target = activeChannelAccounts.find((item) => String(item.id || "").trim() === activeChannelAccountId)
@@ -294,6 +302,19 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                 </Button>
               </div>
             </div>
+            {activeChannelDocsUrl ? (
+              <div className="flex items-center justify-start px-1 pb-1">
+                <a
+                  href={activeChannelDocsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <span>查看飞书接入文档</span>
+                  <ExternalLinkIcon className="size-3" />
+                </a>
+              </div>
+            ) : null}
 
           </div>
         )}

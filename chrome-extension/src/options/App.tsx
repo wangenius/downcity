@@ -24,6 +24,19 @@ type OptionsStatus = {
   text: string;
 };
 
+function getStatusToneClass(type: OptionsStatus["type"]): string {
+  switch (type) {
+    case "success":
+      return "text-[#1f8a4c]";
+    case "error":
+      return "text-[#b2392e]";
+    case "loading":
+      return "text-[#af7f1f]";
+    default:
+      return "text-muted-foreground";
+  }
+}
+
 function readErrorText(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error || "未知错误");
@@ -66,6 +79,17 @@ function normalizePromptDraftList(
   }
   return out;
 }
+
+const shellClass = "rounded-[24px] border border-border bg-surface shadow-soft";
+const insetClass = "rounded-[18px] border border-border bg-muted";
+const fieldLabelClass =
+  "flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
+const fieldControlClass =
+  "w-full rounded-[12px] border border-border bg-surface px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:ring-0";
+const ghostButtonClass =
+  "inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-surface px-4 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60";
+const primaryButtonClass =
+  "inline-flex min-h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60";
 
 export function App() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -189,111 +213,150 @@ export function App() {
   }, [consoleHost, consolePortInput, defaultQuickPromptId, quickPrompts, settings]);
 
   return (
-    <main className="options-root">
-      <header className="header-card">
-        <div className="brand-block">
-          <img className="brand-logo" src="/icon-32.png" alt="Downcity logo" />
-          <div>
-            <h1>Downcity Settings</h1>
-            <p>统一管理连接参数与常用问题模板</p>
+    <main className="mx-auto my-4 flex w-[min(920px,calc(100vw-24px))] flex-col gap-4">
+      <header className="flex items-center gap-3 px-1">
+        <img
+          className="h-5 w-5 object-cover"
+          src="/image.png"
+          alt="Downcity logo"
+        />
+        <div className="flex flex-col">
+          <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+            Extension
           </div>
+          <h1 className="m-0 text-lg font-medium tracking-[-0.02em] text-foreground">
+            Downcity Settings
+          </h1>
         </div>
       </header>
 
-      <section className="card">
-        <div className="section-title">连接配置</div>
-        <div className="connection-grid">
-          <label>
-            IP / Host
-            <input
-              value={consoleHost}
-              onChange={(event) => setConsoleHost(event.target.value)}
-              placeholder="127.0.0.1"
-            />
-          </label>
-          <label>
-            Port
-            <input
-              value={consolePortInput}
-              onChange={(event) => setConsolePortInput(event.target.value)}
-              placeholder="5315"
-            />
-          </label>
-        </div>
-      </section>
-
-      <section className="card">
-        <div className="section-head">
-          <div>
-            <div className="section-title">常用问题模板</div>
-            <div className="section-subtitle">
-              默认模板：{defaultPromptTitle}（popup 可快速填入）
+      <section className={shellClass}>
+        <div className="grid gap-0">
+          <section className="border-b border-border px-5 py-5">
+            <div className="grid gap-3 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-6">
+              <div className="space-y-1">
+                <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+                  Connection
+                </div>
+                <h2 className="text-base font-medium text-foreground">连接配置</h2>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  保持一个最短路径，只配置 extension 连接到哪个 Console。
+                </p>
+              </div>
+              <div className={`${insetClass} grid gap-3 p-4 md:grid-cols-[minmax(220px,1fr)_140px]`}>
+                <label className={fieldLabelClass}>
+                  IP / Host
+                  <input
+                    className={fieldControlClass}
+                    value={consoleHost}
+                    onChange={(event) => setConsoleHost(event.target.value)}
+                    placeholder="127.0.0.1"
+                  />
+                </label>
+                <label className={fieldLabelClass}>
+                  Port
+                  <input
+                    className={fieldControlClass}
+                    value={consolePortInput}
+                    onChange={(event) => setConsolePortInput(event.target.value)}
+                    placeholder="5315"
+                  />
+                </label>
+              </div>
             </div>
-          </div>
-          <div className="head-actions">
-            <button className="ghost-btn" type="button" onClick={addPrompt}>
-              新增模板
-            </button>
-            <button className="ghost-btn" type="button" onClick={resetDefaultPrompts}>
-              恢复默认
-            </button>
-          </div>
-        </div>
+          </section>
 
-        {hasPrompts ? (
-          <div className="prompt-list">
-            {quickPrompts.map((item, index) => (
-              <article key={item.id} className="prompt-item">
-                <div className="prompt-item-head">
-                  <label className="default-radio">
-                    <input
-                      type="radio"
-                      name="defaultQuickPrompt"
-                      checked={defaultQuickPromptId === item.id}
-                      onChange={() => setDefaultQuickPromptId(item.id)}
-                    />
-                    <span>设为默认</span>
-                  </label>
-                  <button
-                    className="text-btn"
-                    type="button"
-                    onClick={() => removePrompt(item.id)}
-                  >
-                    删除
+          <section className="px-5 py-5">
+            <div className="grid gap-3 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-6">
+              <div className="space-y-1">
+                <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+                  Prompt Library
+                </div>
+                <h2 className="text-base font-medium text-foreground">常用问题模板</h2>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  默认模板：{defaultPromptTitle}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <button className={ghostButtonClass} type="button" onClick={addPrompt}>
+                    新增模板
+                  </button>
+                  <button className={ghostButtonClass} type="button" onClick={resetDefaultPrompts}>
+                    恢复默认
                   </button>
                 </div>
-                <label>
-                  模板名称 #{index + 1}
-                  <input
-                    value={item.title}
-                    onChange={(event) =>
-                      updatePromptField(item.id, "title", event.target.value)
-                    }
-                    placeholder="例如：可执行建议"
-                  />
-                </label>
-                <label>
-                  模板内容
-                  <textarea
-                    rows={4}
-                    value={item.prompt}
-                    onChange={(event) =>
-                      updatePromptField(item.id, "prompt", event.target.value)
-                    }
-                    placeholder="例如：阅读附件后，给出 3 条可执行建议。"
-                  />
-                </label>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-prompts">暂无模板，请新增或恢复默认模板。</div>
-        )}
+
+                {hasPrompts ? (
+                  <div className="grid gap-2.5">
+                    {quickPrompts.map((item, index) => (
+                      <article
+                        key={item.id}
+                        className={`${insetClass} flex flex-col gap-3 p-4`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="inline-flex items-center gap-2 text-[11px] font-medium text-foreground">
+                            <input
+                              type="radio"
+                              name="defaultQuickPrompt"
+                              checked={defaultQuickPromptId === item.id}
+                              onChange={() => setDefaultQuickPromptId(item.id)}
+                            />
+                            <span>设为默认</span>
+                          </label>
+                          <button
+                            className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            type="button"
+                            onClick={() => removePrompt(item.id)}
+                          >
+                            删除
+                          </button>
+                        </div>
+                        <label className={fieldLabelClass}>
+                          模板名称 #{index + 1}
+                          <input
+                            className={fieldControlClass}
+                            value={item.title}
+                            onChange={(event) =>
+                              updatePromptField(item.id, "title", event.target.value)
+                            }
+                            placeholder="例如：可执行建议"
+                          />
+                        </label>
+                        <label className={fieldLabelClass}>
+                          模板内容
+                          <textarea
+                            className={`${fieldControlClass} min-h-[92px] resize-y`}
+                            rows={4}
+                            value={item.prompt}
+                            onChange={(event) =>
+                              updatePromptField(item.id, "prompt", event.target.value)
+                            }
+                            placeholder="例如：阅读附件后，给出 3 条可执行建议。"
+                          />
+                        </label>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`${insetClass} px-4 py-4 text-sm text-muted-foreground`}>
+                    暂无模板，请新增或恢复默认模板。
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
       </section>
 
-      <footer className="footer-bar">
-        <div className={`status-text status-${status.type}`}>{status.text}</div>
-        <button className="primary-btn" type="button" onClick={() => void saveAllSettings()}>
+      <footer className="flex items-center justify-between gap-3 px-1">
+        <div className={`text-sm ${getStatusToneClass(status.type)}`}>{status.text}</div>
+        <button
+          className={primaryButtonClass}
+          type="button"
+          onClick={() => void saveAllSettings()}
+        >
           {isSaving ? "保存中..." : "保存设置"}
         </button>
       </footer>

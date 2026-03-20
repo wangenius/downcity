@@ -1,6 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { product } from "@/lib/product";
 import { marketingTheme } from "@/lib/marketing-theme";
+import {
+  MarketingPanel,
+  marketingTagClass,
+} from "@/components/shared/marketing-elements";
 
 export function meta() {
   const title = `${product.productName} — Examples`;
@@ -49,10 +53,7 @@ export default function Examples() {
 
       <section className="mt-8 space-y-4">
         {examples.map((example, index) => (
-          <article
-            key={example.id}
-            className={`${marketingTheme.panel} p-5 md:p-6`}
-          >
+          <MarketingPanel key={example.id} className="p-5 md:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className={marketingTheme.eyebrow}>
@@ -90,25 +91,25 @@ export default function Examples() {
                 </ul>
               </div>
 
-              <div className={`${marketingTheme.panelSoft} px-3 py-3`}>
+              <MarketingPanel tone="inset" className="px-3 py-3">
                 <h3 className={marketingTheme.eyebrow}>Tech</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {example.tech.map((tech) => (
                     <span
                       key={tech}
-                      className="inline-flex items-center rounded-full border border-border/80 bg-muted/45 px-2 py-1 text-[0.7rem] text-muted-foreground"
+                      className={marketingTagClass({ tone: "soft" })}
                     >
                       {tech}
                     </span>
                   ))}
                 </div>
-              </div>
+              </MarketingPanel>
             </div>
-          </article>
+          </MarketingPanel>
         ))}
       </section>
 
-      <section className={`${marketingTheme.panel} mt-8 p-6`}>
+      <MarketingPanel className="mt-8 p-6">
         <h3 className="text-lg font-semibold">{t("resources:examplesPage.contribute.title")}</h3>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">
           {t("resources:examplesPage.contribute.description")}
@@ -121,7 +122,7 @@ export default function Examples() {
         >
           {t("resources:examplesPage.contribute.button")}
         </a>
-      </section>
+      </MarketingPanel>
     </div>
   );
 }

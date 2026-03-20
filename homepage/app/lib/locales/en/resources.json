@@ -45,7 +45,7 @@
     "cta": {
       "title": "Want early access?",
       "description": "Tell us your hosting needs and we will notify you when managed hosting is available.",
-      "button": "Join Discussions"
+      "button": "Join Telegram"
     }
   },
   "examplesPage": {
@@ -224,7 +224,7 @@
       "title": "Be the First to Know",
       "description": "The Agent Marketplace is coming in v3. Join our community to get updates and participate in the beta.",
       "star": "Star on GitHub",
-      "joinDiscussions": "Join Discussions"
+      "joinDiscussions": "Join Telegram"
     }
   }
 }

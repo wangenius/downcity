@@ -1,32 +1,66 @@
 ---
-title: 飞书机器人
-description: 通过飞书群聊/私聊与 Agent 对话
+title: 飞书
+description: 通过飞书/Lark 把 Downcity 接入私聊与群聊，并完成名称解析、路由绑定与消息回发
 ---
 
-# 飞书机器人集成
+# 飞书集成
 
-使用飞书（Feishu）把 Downcity 接入到飞书聊天：支持 **私聊** 与 **群聊消息全量接入**。
+使用飞书（Feishu / Lark）把 Downcity 接入聊天系统，支持：
 
-## 配置步骤
+- 私聊消息接入
+- 群聊消息接入
+- 自动建立 `contextId -> chat route` 映射
+- Agent 执行结果回发到飞书
 
-### 1）在飞书开放平台创建应用并启用机器人
+> 想看内部链路细节？继续阅读：[/zh/docs/services/chat/feishu-message-flow](/zh/docs/services/chat/feishu-message-flow)
 
-1. 进入飞书开放平台，创建应用
-2. 在应用能力中启用「机器人」
-3. 配置消息接收（Downcity 使用 **长连接 / WebSocket** 模式接收消息）
-4. 按需开通 IM 相关权限，并发布/上线到可用环境（测试/正式）
+## 先说结论
 
-> 不同应用类型（企业自建 / 商店应用）在权限与发布流程上略有差异；以飞书控制台提示为准。
+当前 `downcity` 包里的飞书 channel 采用的是：
 
-### 2）创建 Channel Account 并绑定到项目
+- **飞书自建应用**
+- **机器人 + 长连接（WebSocket）**
+- **服务端使用 `tenant_access_token`**
 
-在 Console UI 的 `Global / Channel Accounts` 创建飞书账户（例如 `feishu-main`）：
+这意味着：
+
+- 你在本地手动用 `user_access_token` 测试通过，不代表运行中的 bot 也一定能拿到同样的数据。
+- 运行中的飞书 channel 是否能拿到 `chatTitle`、`actorName`，取决于 **tenant 权限是否真的生效**，以及 **通讯录可见范围** 是否覆盖目标用户。
+
+## 接入步骤
+
+### 1）在飞书开放平台创建应用
+
+建议使用 **企业自建应用**。
+
+需要完成的基础配置：
+
+1. 创建应用
+2. 打开 **机器人能力**
+3. 启用 **消息接收**
+4. 建议优先使用 **长连接（WebSocket）**
+
+Downcity 当前默认按长连接模式工作，不要求你先暴露公网 webhook 地址。
+
+### 2）添加事件订阅
+
+当前接入链路至少需要消息接收事件：
+
+- `im.message.receive_v1`
+
+如果没有这条事件，bot 启动后也收不到消息。
+
+### 3）创建 Channel Account
+
+在 Console UI 的 `Global / Channel Accounts` 创建一个飞书账户，例如 `feishu-main`：
 
 1. `channel = feishu`
-2. 填入 `appId`、`appSecret`
-3. 国际版 Lark 可设置 `domain=https://open.larksuite.com`
+2. 填入 `appId`
+3. 填入 `appSecret`
+4. 如果你接的是国际版 Lark，可填写：
+   - `domain = https://open.larksuite.com`
 
-然后在 `ship.json` 绑定该账户：
+### 4）在 `ship.json` 里绑定项目
 
 ```json
 {
@@ -43,30 +77,174 @@ description: 通过飞书群聊/私聊与 Agent 对话
 }
 ```
 
-### 3）启动 Downcity
+### 5）权限配置
+
+对于当前运行时，最关键的是 **tenant / 应用身份权限**，不是单独的 `user` 权限。
+
+最小建议至少包含：
+
+- `im:message:readonly`
+- `im:message:send_as_bot`
+- `im:chat:read`
+- `im:chat:readonly`
+- `im:chat.members:read`
+- `contact:user.basic_profile:readonly`
+- `contact:user.employee_id:readonly`
+
+如果你希望群信息、成员信息、用户名称都能被正确解析，通常还建议保留：
+
+- `im:chat`
+- `im:chat.members:bot_access`
+- `contact:user.base:readonly`
+- `contact:user.id:readonly`
+
+> 你贴出来的那份权限清单从“范围”上已经很充足，真正关键是：这些权限必须在 **tenant 侧已开通、已发布、已重新授权**。
+
+### 6）发布并重新授权
+
+飞书后台里“勾选了权限”并不等于运行时已经生效。
+
+你需要确认：
+
+1. 应用新版本已发布
+2. 管理员已重新授权
+3. 不是只开在 `user` 权限里，而是 `tenant` 权限里也真正开通
+4. 通讯录可见范围覆盖当前发消息的用户
+
+如果这些步骤没完成，运行中的 bot 依然可能出现：
+
+- `chatTitle = null`
+- `username = unknown`
+- `chatDisplayNameSource = chat_id`
+
+## 启动方式
 
 ```bash
 city agent start
 ```
 
-启动成功时，你会在日志中看到类似输出：
+启动成功后，日志里通常会看到：
 
-- `Feishu service enabled`
+- `Feishu channel enabled`
 - `🤖 Starting Feishu Bot...`
 - `Feishu Bot started, using long connection mode`
 
-## 使用方式
+## 如何验证是否真的接通
 
-### 私聊
+### 方式一：看 Console UI
 
-直接给机器人发送消息即可开始对话。
+在 Console UI 的 Channel 区域里确认：
 
-### 群聊
+- `feishu` 已绑定到正确的 channel account
+- `link connected`
 
-在群里，成员发送的普通消息会直接进入 Agent（不需要 `@` 机器人）。
+### 方式二：给 bot 发一条新消息
 
-## 常见问题排查
+飞书元信息是 **在新消息到达时** 刷新的。
 
-- **启动后完全没反应**：确认绑定的 channel account 中 `appId/appSecret` 正确；查看 `.ship/logs/` 下当天日志文件。
-- **群里不回应**：检查开放平台是否已为应用开通消息接收相关权限/事件订阅，并确认群消息事件已成功投递到应用。
-- **国际版 Lark 无法连接**：检查 channel account 的 `domain` 是否设置为 `https://open.larksuite.com`。
+如果你刚改完权限，但没有新消息进来，之前已经落盘的 route/meta 不会自动变成新名字。
+
+### 方式三：看 route / meta
+
+如果成功解析，`.ship/channel/meta.json` 对应的飞书 route 一般会出现：
+
+- `actorName`
+- `chatTitle`
+
+如果仍然只有：
+
+- `actorId`
+- `chatId`
+
+那说明后端仍然没有拿到展示名。
+
+## 当前实现的关键行为
+
+当前 `downcity` 的飞书 channel：
+
+- 入站依赖 WebSocket 事件
+- 当前只支持 **文本消息** 作为执行输入
+- 会尝试 best-effort 查询：
+  - 发送者姓名
+  - chat 标题
+- 查询不到时不会中断主链路，只会退回 ID
+
+换句话说：
+
+- 消息仍然能处理
+- 但 UI 里可能只能显示 `chat_id / open_id`
+
+## `tenant_access_token` 和 `user_access_token` 的区别
+
+这是飞书接入里最容易踩坑的一点。
+
+### 当前运行时使用的是 `tenant_access_token`
+
+Downcity 飞书 channel 的服务端链路使用：
+
+- `appId + appSecret`
+- 获取 `tenant_access_token`
+- 再去查询用户信息 / chat 信息
+
+所以真正影响运行时结果的是：
+
+- `tenant` 权限
+- 通讯录可见范围
+
+### 为什么你手动测试 `user_access_token` 可能能返回名字？
+
+因为 `user_access_token` 代表“某个授权用户本人”，很多接口会在这个视角下返回更多资料。
+
+但当前飞书 channel **并没有使用 `user_access_token` 作为入站消息元数据解析凭证**。
+
+所以你会遇到这种现象：
+
+1. 你本地拿 `user_access_token` 调接口，能查到名字
+2. 运行中的 bot 还是显示 `unknown`
+
+这并不矛盾，因为两条链路用的是 **不同类型的 token**。
+
+## 常见问题
+
+### 1）能收消息，但显示不出标题/用户名
+
+优先检查：
+
+1. `tenant` 权限是否真正生效
+2. 是否重新发布并授权
+3. 通讯录可见范围是否覆盖该用户
+4. 是否给 bot 发了一条**新的**消息来刷新 route/meta
+
+### 2）我明明开了 `user` 权限，为什么还是不行？
+
+因为当前 channel 运行时看的是 **tenant token**，不是你手动 OAuth 得到的 `user token`。
+
+### 3）群标题 / 私聊名称还是拿不到
+
+通常说明：
+
+- `im:chat.members:read` 没真正生效
+- `contact:user.employee_id:readonly` 没真正生效
+- 或者通讯录字段对当前应用不可见
+
+### 4）国际版 Lark 无法连接
+
+检查 `channel account` 的 `domain` 是否为：
+
+```text
+https://open.larksuite.com
+```
+
+## 建议的排障顺序
+
+1. 确认 channel account 绑定的是正确的飞书 app
+2. 确认 `tenant` 权限已发布并重新授权
+3. 确认事件订阅已开启 `im.message.receive_v1`
+4. 确认通讯录可见范围
+5. 发一条新消息，再看 Console UI 的 route JSON
+
+## 相关文档
+
+- [飞书消息流与执行逻辑](/zh/docs/services/chat/feishu-message-flow)
+- [Chat Service 总览](/zh/docs/services/chat/chat-service)
+- [Channel 配置元信息](/zh/docs/services/chat/channel-configuration)

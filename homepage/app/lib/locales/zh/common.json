@@ -7,6 +7,7 @@
   "nav": {
     "home": "首页",
     "quickStart": "快速开始",
+    "blog": "博客",
     "whitepaper": "白皮书",
     "docs": "文档",
     "features": "功能特性",
@@ -34,7 +35,7 @@
     "roadmap": "路线图",
     "roadmapDesc": "查看我们正在构建的内容",
     "discussions": "讨论",
-    "discussionsDesc": "加入 Telegram 群组参与讨论",
+    "discussionsDesc": "加入 Telegram 社区群组讨论",
     "joinCommunity": "加入社区",
     "viewAll": "查看全部",
     "starOnGithub": "在 GitHub 上 Star",

@@ -2,7 +2,9 @@ import type { FC } from "react";
 import { useTranslation } from "react-i18next";
 import { IconArrowUpRight, IconHelp, IconMap2, IconMessageCircle } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { COMMUNITY_LINKS } from "@/lib/community-links";
 import { marketingTheme } from "@/lib/marketing-theme";
+import { MarketingPanel } from "@/components/shared/marketing-elements";
 
 const communityLinks = [
   {
@@ -21,7 +23,7 @@ const communityLinks = [
     titleKey: "community:discussions.title",
     descriptionKey: "community:discussions.description",
     icon: IconMessageCircle,
-    href: "https://github.com/wangenius/downcity/discussions",
+    href: COMMUNITY_LINKS.telegram,
     external: true,
   },
 ] as const;
@@ -44,7 +46,7 @@ export const CommunitySection: FC = () => {
         <p className={marketingTheme.lead}>{t("community:subtitle")}</p>
       </header>
 
-      <div className={`${marketingTheme.panel} mt-8 overflow-hidden`}>
+      <MarketingPanel className="mt-8 overflow-hidden">
         {communityLinks.map((item, index) => (
           <a
             key={item.titleKey}
@@ -72,7 +74,7 @@ export const CommunitySection: FC = () => {
             </span>
           </a>
         ))}
-      </div>
+      </MarketingPanel>
     </section>
   );
 };

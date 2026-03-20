@@ -1,4 +1,4 @@
 {
   "title": "Chat Service",
-  "pages": ["chat-service", "channel-configuration", "telegram", "telegram-message-flow", "feishu", "qq"]
+  "pages": ["chat-service", "channel-configuration", "telegram", "telegram-message-flow", "feishu", "feishu-message-flow", "qq"]
 }

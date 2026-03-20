@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "bash ./scripts/build.sh",
-    "extbuild": "bash ./scripts/extbuild.sh",
+    "build:extension": "bash ./scripts/extbuild.sh",
+    "build:extension:bundle": "npm --prefix ./chrome-extension run build:bundle",
     "ui": "npm --prefix ./console-ui run dev",
     "dev": "cd examples/server-agent && downcity agent start",
     "cli": "bun run examples/cli-interactive/src/index.ts",

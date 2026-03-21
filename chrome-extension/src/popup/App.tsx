@@ -2,9 +2,9 @@
  * Popup 主界面。
  *
  * 关键点（中文）：
- * - 只保留发送主链路：选择 Agent / Channel，输入 Ask，发送。
- * - 常用预置模板已移除，改为最近 ask 历史回填。
- * - 设置入口已移除，popup 仅保留发送相关能力。
+ * - 只保留极简发送主链路：Agent 切换、Ask 输入、发送按钮。
+ * - Chat 不在 popup 中显式展示，始终自动使用当前 Agent 的首个可用会话。
+ * - 展示当前页面发送历史，并提供设置入口跳转到 options 页面。
  */
 
 import {
@@ -13,15 +13,13 @@ import {
   useMemo,
   useRef,
   useState,
-  type Dispatch,
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
-  type SetStateAction,
 } from "react";
 import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
-import type { PopupSelectOption } from "../types/PopupSelect";
 import type {
   ActiveTabContext,
+  ExtensionPageSendRecord,
   ExtensionSettings,
   StatusMessage,
 } from "../types/extension";
@@ -36,10 +34,10 @@ import {
   appendPageSendRecord,
   DEFAULT_SETTINGS,
   loadSettings,
+  loadPageSendRecords,
   saveSettings,
 } from "../services/storage";
 import { getActiveTabContext } from "../services/tab";
-import { PopupSelect } from "./PopupSelect";
 
 function readErrorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -133,18 +131,6 @@ function resolveLinkedChannels(
   return out;
 }
 
-function clearChatLoadRelatedErrorStatus(
-  setStatus: Dispatch<SetStateAction<StatusMessage>>,
-): void {
-  setStatus((prev) => {
-    if (prev.type !== "error") return prev;
-    if (!/chatkey|channel\s*chat|会话|chat\s*渠道|已连接渠道/i.test(String(prev.text || ""))) {
-      return prev;
-    }
-    return { type: "idle", text: "准备就绪" };
-  });
-}
-
 function shortenUrl(value: string): string {
   const text = String(value || "").trim();
   if (!text) return "（当前页面 URL 不可用）";
@@ -173,6 +159,16 @@ function getToastToneClass(type: ToastMessage["type"]): string {
     : "border-border bg-surface text-foreground";
 }
 
+function formatHistoryTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export function App() {
   const formRef = useRef<HTMLFormElement | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -186,6 +182,7 @@ export function App() {
 
   const [agents, setAgents] = useState<ConsoleUiAgentOption[]>([]);
   const [chatKeyOptions, setChatKeyOptions] = useState<ChatKeyOption[]>([]);
+  const [pageHistory, setPageHistory] = useState<ExtensionPageSendRecord[]>([]);
 
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChatKeys, setIsLoadingChatKeys] = useState(false);
@@ -196,10 +193,7 @@ export function App() {
     text: "准备就绪",
   });
 
-  const consoleEndpoint = useMemo(
-    () => resolveConsoleBaseUrl(settings),
-    [settings],
-  );
+  const consoleEndpoint = resolveConsoleBaseUrl(settings);
   const consoleBaseUrl = consoleEndpoint.baseUrl;
 
   const showToast = useCallback((type: ToastMessage["type"], text: string): void => {
@@ -216,32 +210,14 @@ export function App() {
     }, 2200);
   }, []);
 
-  const selectedAgent = useMemo(
-    () => agents.find((item) => item.id === settings.agentId) || null,
-    [agents, settings.agentId],
-  );
+  const selectedAgent = agents.find((item) => item.id === settings.agentId) || null;
   const linkedChannels = useMemo(
     () => resolveLinkedChannels(selectedAgent),
     [selectedAgent],
   );
-  const agentOptions = useMemo<PopupSelectOption[]>(
-    () =>
-      agents.map((agent) => ({
-        value: agent.id,
-        label: agent.name,
-        description: agent.running ? "在线" : "未运行",
-        disabled: false,
-      })),
-    [agents],
-  );
-  const chatOptions = useMemo<PopupSelectOption[]>(
-    () =>
-      chatKeyOptions.map((option) => ({
-        value: option.chatKey,
-        label: option.title,
-        description: option.subtitle,
-      })),
-    [chatKeyOptions],
+  const linkedChannelKey = useMemo(
+    () => Array.from(linkedChannels).sort().join(","),
+    [linkedChannels],
   );
 
   const refreshAgents = useCallback(async (params: {
@@ -300,7 +276,7 @@ export function App() {
       if (!baseUrl) {
         setChatKeyOptions([]);
         setSettings((prev) => ({ ...prev, chatKey: "" }));
-        clearChatLoadRelatedErrorStatus(setStatus);
+        setStatus((prev) => (prev.type === "error" ? prev : { type: "idle", text: "准备就绪" }));
         return;
       }
 
@@ -308,7 +284,7 @@ export function App() {
       if (!normalizedAgentId) {
         setChatKeyOptions([]);
         setSettings((prev) => ({ ...prev, chatKey: "" }));
-        clearChatLoadRelatedErrorStatus(setStatus);
+        setStatus((prev) => (prev.type === "error" ? prev : { type: "idle", text: "准备就绪" }));
         return;
       }
 
@@ -331,7 +307,7 @@ export function App() {
         }));
 
         if (allowedChannels.size === 0) {
-          clearChatLoadRelatedErrorStatus(setStatus);
+          setStatus((prev) => (prev.type === "error" ? prev : { type: "idle", text: "准备就绪" }));
           return;
         }
 
@@ -343,13 +319,20 @@ export function App() {
           return;
         }
 
-        clearChatLoadRelatedErrorStatus(setStatus);
+        setStatus((prev) => (prev.type === "loading" ? prev : { type: "idle", text: "准备就绪" }));
       } catch (error) {
         setChatKeyOptions([]);
         setSettings((prev) => ({ ...prev, chatKey: "" }));
+        const errorText = readErrorText(error);
+        if (/failed to fetch/i.test(errorText)) {
+          setStatus((prev) =>
+            prev.type === "loading" ? { type: "idle", text: "准备就绪" } : prev,
+          );
+          return;
+        }
         setStatus({
           type: "error",
-          text: `加载 Channel Chat 失败：${readErrorText(error)}`,
+          text: `加载 Channel Chat 失败：${errorText}`,
         });
       } finally {
         setIsLoadingChatKeys(false);
@@ -375,6 +358,15 @@ export function App() {
           taskPrompt: normalizeInitialTaskPrompt(saved.taskPrompt),
         });
         setTab(activeTab);
+        if (activeTab.url) {
+          const records = await loadPageSendRecords({
+            pageUrl: activeTab.url,
+            limit: 8,
+          });
+          if (isMounted) {
+            setPageHistory(records);
+          }
+        }
 
         const endpoint = resolveConsoleBaseUrl(saved);
         if (!endpoint.baseUrl) {
@@ -403,6 +395,14 @@ export function App() {
     };
   }, [refreshAgents]);
 
+  const refreshPageHistory = useCallback(async (pageUrl: string) => {
+    const records = await loadPageSendRecords({
+      pageUrl,
+      limit: 8,
+    });
+    setPageHistory(records);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (toastTimerRef.current !== null) {
@@ -421,10 +421,9 @@ export function App() {
     );
   }, [
     settings.agentId,
-    settings.chatKey,
-    linkedChannels,
     refreshChatKeys,
     consoleBaseUrl,
+    linkedChannelKey,
   ]);
 
   const onSubmit = useCallback(
@@ -520,6 +519,7 @@ export function App() {
             taskPrompt,
             attachmentFileName: markdownSnapshot.fileName,
           });
+          await refreshPageHistory(tab.url);
         } catch {
           // ignore local history failures
         }
@@ -538,8 +538,29 @@ export function App() {
         setIsSubmitting(false);
       }
     },
-    [selectedAgent?.running, settings, showToast, tab],
+    [refreshPageHistory, selectedAgent?.running, settings, showToast, tab],
   );
+
+  const cycleAgent = useCallback(
+    (direction: -1 | 1) => {
+      if (agents.length < 2) return;
+      const currentIndex = agents.findIndex((item) => item.id === settings.agentId);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (safeIndex + direction + agents.length) % agents.length;
+      const nextAgent = agents[nextIndex];
+      if (!nextAgent) return;
+      setSettings((prev) => ({
+        ...prev,
+        agentId: nextAgent.id,
+        chatKey: "",
+      }));
+    },
+    [agents, settings.agentId],
+  );
+
+  const openSettingsPage = useCallback(() => {
+    chrome.runtime.openOptionsPage();
+  }, []);
 
   const onTaskPromptKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -554,108 +575,145 @@ export function App() {
   );
 
   return (
-    <main className="relative min-h-[470px] w-[380px] bg-background p-3">
+    <main className="relative min-h-[520px] w-[380px] bg-background p-3 text-foreground">
       <section className="rounded-[12px] border border-border bg-surface p-3">
-        <header className="mb-3 flex items-center justify-between border-b border-border pb-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Web Share
-          </span>
-          <span
-            className={[
-              "inline-flex max-w-[190px] items-center gap-1.5 truncate text-[10px] font-medium",
-              status.type === "error"
-                ? "text-[#7f1d1d]"
-                : status.type === "success"
-                  ? "text-[#166534]"
-                  : status.type === "loading"
-                    ? "text-[#9a6700]"
-                    : "text-muted-foreground",
-            ].join(" ")}
-            aria-live="polite"
+        <header className="mb-3 flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center rounded-[10px] border border-border bg-muted px-1 py-1">
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[15px] font-medium text-muted-foreground transition-all hover:border-border hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => cycleAgent(-1)}
+              disabled={agents.length < 2 || isLoadingAgents}
+              aria-label="上一个 Agent"
+            >
+              ‹
+            </button>
+            <div className="min-w-0 flex-1 px-2 text-center">
+              <div className="truncate text-[12px] font-medium">
+                {isLoadingAgents
+                  ? "加载 Agent 中..."
+                  : selectedAgent?.name || "未选择 Agent"}
+              </div>
+              <div className="truncate text-[10px] text-muted-foreground">
+                {selectedAgent
+                  ? selectedAgent.running
+                    ? isLoadingChatKeys
+                      ? "会话加载中..."
+                      : chatKeyOptions.length > 0
+                        ? "已自动选择会话"
+                        : "暂无可用会话"
+                    : "Agent 未运行"
+                  : "请在设置中检查连接"}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[15px] font-medium text-muted-foreground transition-all hover:border-border hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => cycleAgent(1)}
+              disabled={agents.length < 2 || isLoadingAgents}
+              aria-label="下一个 Agent"
+            >
+              ›
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-border bg-[linear-gradient(180deg,#ffffff_0%,#f4f4f5_100%)] text-[14px] text-[#3f3f46] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_6px_18px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-[1px] hover:border-[#cfcfd4] hover:text-foreground"
+            onClick={openSettingsPage}
+            aria-label="打开设置"
+            title="设置"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-            <span className="truncate">{status.text}</span>
-          </span>
+            ⚙
+          </button>
         </header>
 
         <form ref={formRef} className="flex flex-col gap-3" onSubmit={onSubmit}>
-          <label className="flex flex-col gap-1 text-[10px] font-medium tracking-[0.04em] text-muted-foreground">
-            Ask
-            <textarea
-              className="w-full min-h-[150px] resize-none rounded-[11px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60 leading-[1.55]"
-              rows={6}
-              value={settings.taskPrompt}
-              onChange={(event) =>
-                setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
-              }
-              onKeyDown={onTaskPromptKeyDown}
-              placeholder="Ask for follow-up changes"
-            />
-          </label>
+          <textarea
+            className="min-h-[164px] w-full resize-none rounded-[11px] border border-border bg-muted px-3 py-3 text-[13px] leading-[1.55] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
+            rows={7}
+            value={settings.taskPrompt}
+            onChange={(event) =>
+              setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
+            }
+            onKeyDown={onTaskPromptKeyDown}
+            placeholder="输入要发送给 Agent 的内容"
+          />
 
-          <div className="grid grid-cols-2 gap-2">
-            <PopupSelect
-              label="Agent"
-              value={settings.agentId}
-              placeholder={
-                isLoadingAgents
-                  ? "加载 Agent 中..."
-                  : agents.length < 1
-                    ? "没有可用 Agent"
-                    : "请选择 Agent"
-              }
-              options={agentOptions}
-              onChange={(value) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  agentId: value,
-                  chatKey: "",
-                }))
-              }
-              disabled={isLoadingAgents}
-            />
-
-            <PopupSelect
-              label="Chat"
-              value={settings.chatKey}
-              placeholder={
-                !settings.agentId
-                  ? "请先选择 Agent"
-                  : isLoadingChatKeys
-                    ? "加载 Chat 中..."
-                    : chatOptions.length < 1
-                      ? "当前 Agent 暂无 Chat"
-                      : "请选择 Chat"
-              }
-              options={chatOptions}
-              onChange={(value) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  chatKey: value,
-                }))
-              }
-              disabled={chatOptions.length === 0 || isLoadingChatKeys}
-            />
-          </div>
-
-          <div className="border-t border-border pt-2 text-[10px] leading-[1.45] text-muted-foreground">
+          <div className="rounded-[10px] border border-border bg-muted px-3 py-2 text-[10px] leading-[1.45] text-muted-foreground">
             <div className="truncate text-[11px] text-foreground" title={tab.title}>
               {tab.title || "（未获取到页面标题）"}
             </div>
-            <div className="truncate text-[10px]" title={tab.url}>
+            <div className="truncate" title={tab.url}>
               {shortenUrl(tab.url)}
             </div>
           </div>
 
-          <button
-            className="inline-flex h-10 items-center justify-center rounded-[10px] border border-primary bg-primary px-4 text-[12px] font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "发送中..." : "发送到 Agent"}
-          </button>
+          <div className="flex items-center justify-between gap-3">
+            <div
+              className={[
+                "min-w-0 flex-1 truncate text-[10px]",
+                status.type === "error"
+                  ? "text-[#7f1d1d]"
+                  : status.type === "success"
+                    ? "text-[#166534]"
+                    : status.type === "loading"
+                      ? "text-[#9a6700]"
+                      : "text-muted-foreground",
+              ].join(" ")}
+              aria-live="polite"
+            >
+              {status.text}
+            </div>
+            <button
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-[12px] border border-[#111114] bg-[linear-gradient(180deg,#2f2f35_0%,#151519_100%)] px-4 text-[12px] font-semibold tracking-[0.01em] text-white shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_10px_24px_rgba(15,23,42,0.22)] transition-all hover:-translate-y-[1px] hover:bg-[linear-gradient(180deg,#3a3a42_0%,#19191d_100%)] disabled:cursor-not-allowed disabled:opacity-60"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "发送中..." : "发送"}
+            </button>
+          </div>
         </form>
       </section>
+
+      {pageHistory.length > 0 ? (
+        <section className="mt-3 rounded-[12px] border border-border bg-surface p-3">
+          <header className="mb-2 flex items-center justify-between">
+            <h2 className="text-[11px] font-medium text-foreground">本页发送历史</h2>
+            <span className="text-[10px] text-muted-foreground">
+              {pageHistory.length} 条
+            </span>
+          </header>
+
+          <div className="flex flex-col gap-2">
+            {pageHistory.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="flex w-full flex-col gap-1 rounded-[10px] border border-border bg-muted px-3 py-2 text-left transition hover:bg-background"
+                onClick={() =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    taskPrompt: item.taskPrompt,
+                    agentId: item.agentId || prev.agentId,
+                    chatKey: "",
+                  }))
+                }
+              >
+                <div className="line-clamp-2 text-[12px] leading-[1.45] text-foreground">
+                  {item.taskPrompt || "（空内容）"}
+                </div>
+                <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                  <span className="truncate">{formatHistoryTime(item.sentAt)}</span>
+                  <span className="truncate">
+                    {agents.find((agent) => agent.id === item.agentId)?.name || item.agentId}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {toast ? (
         <div

@@ -85,7 +85,7 @@ export function createShellContext(input: CreateShellContextInput): ShellContext
   const child = spawn(shellPath, [loginFlag, input.command], {
     cwd: input.cwd,
     stdio: "pipe",
-    env: buildShellContextEnv(),
+    env: buildShellContextEnv(input.env),
   });
 
   child.stdout.setEncoding("utf8");

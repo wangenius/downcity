@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -131,7 +132,7 @@ function HeaderAction(props: {
   return (
     <button
       type="button"
-      className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-muted-foreground hover:bg-foreground/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      className={`inline-flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-50 ${dashboardIconButtonClass}`}
       onClick={props.onClick}
       disabled={props.disabled || props.loading}
       title={props.label}
@@ -153,9 +154,9 @@ function RowAction(props: {
   return (
     <button
       type="button"
-      className={`inline-flex h-6 w-6 items-center justify-center rounded-sm hover:bg-foreground/15 ${
-        props.danger ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground"
-      } disabled:cursor-not-allowed disabled:opacity-50`}
+      className={`inline-flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-50 ${
+        props.danger ? dashboardDangerIconButtonClass : dashboardIconButtonClass
+      }`}
       onClick={props.onClick}
       disabled={props.disabled || props.loading}
       title={props.label}
@@ -325,12 +326,12 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         {filteredProviders.length === 0 ? (
           <div className="rounded-[18px] bg-secondary px-3 py-3 text-sm text-muted-foreground">没有 provider</div>
         ) : (
-          <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
+          <div className="space-y-2">
             {filteredProviders.map((item) => {
               const providerId = String(item.id || "").trim()
               if (!providerId) return null
               return (
-                <article key={providerId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-background lg:flex-row lg:items-center lg:justify-between">
+                <article key={providerId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-secondary lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1 text-[11px] text-muted-foreground">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate text-sm font-medium text-foreground">{providerId}</span>
@@ -453,13 +454,13 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         {filteredModels.length === 0 ? (
           <div className="rounded-[18px] bg-secondary px-3 py-3 text-sm text-muted-foreground">没有 model</div>
         ) : (
-          <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
+          <div className="space-y-2">
             {filteredModels.map((item) => {
               const modelId = String(item.id || "").trim()
               if (!modelId) return null
               const isPaused = item.isPaused === true
               return (
-                <article key={modelId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-background lg:flex-row lg:items-center lg:justify-between">
+                <article key={modelId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-secondary lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1 text-[11px] text-muted-foreground">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate text-sm font-medium text-foreground">{modelId}</span>

@@ -10,9 +10,10 @@ import type {
   ServiceInvokePort,
 } from "@/agent/service/ServiceRuntime.js";
 import {
+  loadGlobalEnvFromStore,
   loadAgentRuntimeEnv,
   loadShipConfig,
-  type ShipConfig
+  type ShipConfig,
 } from "@/console/env/Config.js";
 import {
   getTaskRunDir,
@@ -367,9 +368,11 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   ensureRuntimeProjectReady(rootPath);
 
   // 在启动时加载 agent runtime env 快照并读取 ship.json（支持继承/覆盖）。
+  const globalEnv = loadGlobalEnvFromStore();
   const projectEnv = loadAgentRuntimeEnv(rootPath);
   const config = loadShipConfig(rootPath, {
     projectEnv,
+    globalEnv,
   });
   // 关键点（中文）：统一注入当前 agent 标识，供 shell/CLI 子命令默认解析。
   process.env.DC_AGENT_PATH = rootPath;
@@ -401,6 +404,8 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   setShellToolRuntime({
     rootPath,
     config,
+    globalEnv,
+    agentEnv: projectEnv,
   });
 
   // 关键点（中文）：模型实例在 main 启动时创建一次，并注入给 services 复用。

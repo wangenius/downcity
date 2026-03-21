@@ -1,12 +1,11 @@
 {
   "name": "downcity-chrome-extension",
   "private": true,
-  "version": "0.2.17",
+  "version": "0.2.21",
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch",
-    "build": "npm run build:release",
-    "build:bundle": "tsc --noEmit && vite build",
+    "dev": "bash ../scripts/extdev.sh",
+    "build": "bash ../scripts/extbuild.sh",
     "build:release": "bash ../scripts/extbuild.sh"
   },
   "dependencies": {

@@ -43,6 +43,22 @@ import { formatContextResponse } from "./ShellResponse.js";
 type ShellToolRuntime = {
   rootPath: string;
   config: ShipConfig;
+  /**
+   * Console 共享环境变量快照。
+   *
+   * 关键点（中文）
+   * - 来自 `env_entries(scope=global)`。
+   * - 供 shell 子进程读取共享 key。
+   */
+  globalEnv: Record<string, string>;
+  /**
+   * 当前 agent 的运行时环境变量快照。
+   *
+   * 关键点（中文）
+   * - 已是 `agent scope env + .env` 合并后的最终结果。
+   * - 优先级高于 global env，避免共享值覆盖项目私有值。
+   */
+  agentEnv: Record<string, string>;
 };
 
 let shellToolRuntime: ShellToolRuntime | null = null;
@@ -393,6 +409,12 @@ export const exec_command = tool({
         cwd: resolveShellWorkdir(runtime.rootPath, workdir),
         shellPath: shell,
         login,
+        // 关键点（中文）：global env 先铺底，agent runtime env 后覆盖，
+        // 保证共享默认值可用，同时项目私有值优先。
+        env: {
+          ...runtime.globalEnv,
+          ...runtime.agentEnv,
+        },
       });
       if (shouldEnableCommandBridge(cmd)) {
         commandBridgeStates.set(context.id, {

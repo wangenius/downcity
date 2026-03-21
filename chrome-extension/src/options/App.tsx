@@ -2,40 +2,32 @@
  * Options 设置页。
  *
  * 关键点（中文）：
- * - 独立承载插件设置，避免 popup 过载。
- * - 支持连接配置与常用问题模板（默认模板可选）。
- * - 保存后统一落到 storage.sync，popup 自动复用。
+ * - 只保留扩展运行必需设置：Console 地址与默认 Agent。
+ * - 设置页只负责配置，不承载发送流程。
+ * - Agent 列表按当前连接地址实时拉取，保存后 popup 直接复用。
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type {
-  ExtensionQuickPromptItem,
-  ExtensionSettings,
-} from "../types/extension";
+import type { ConsoleUiAgentOption } from "../types/api";
+import type { ExtensionSettings } from "../types/extension";
 import {
-  DEFAULT_QUICK_PROMPTS,
+  buildConsoleBaseUrl,
+  fetchAgents,
+} from "../services/downcityApi";
+import {
   DEFAULT_SETTINGS,
   loadSettings,
   saveSettings,
 } from "../services/storage";
+import type { PopupSelectOption } from "../types/PopupSelect";
+import { PopupSelect } from "../popup/PopupSelect";
 
 type OptionsStatus = {
+  /** 状态类型（中文）：用于控制提示色。 */
   type: "idle" | "success" | "error" | "loading";
+  /** 状态文案（中文）：展示给用户的当前状态。 */
   text: string;
 };
-
-function getStatusToneClass(type: OptionsStatus["type"]): string {
-  switch (type) {
-    case "success":
-      return "text-[#1f8a4c]";
-    case "error":
-      return "text-[#b2392e]";
-    case "loading":
-      return "text-[#af7f1f]";
-    default:
-      return "text-muted-foreground";
-  }
-}
 
 function readErrorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -49,47 +41,28 @@ function parsePortInput(value: string): number | null {
   return Math.trunc(parsed);
 }
 
-function createQuickPromptId(): string {
-  return `quick_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+function getStatusClass(type: OptionsStatus["type"]): string {
+  if (type === "success") return "text-[#166534]";
+  if (type === "error") return "text-[#7f1d1d]";
+  if (type === "loading") return "text-[#9a6700]";
+  return "text-muted-foreground";
 }
 
-function toEditablePromptList(
-  prompts: ExtensionQuickPromptItem[],
-): ExtensionQuickPromptItem[] {
-  return prompts.map((item) => ({ ...item }));
-}
-
-function normalizePromptDraftList(
-  prompts: ExtensionQuickPromptItem[],
-): ExtensionQuickPromptItem[] {
-  const out: ExtensionQuickPromptItem[] = [];
-  const idSet = new Set<string>();
-  for (const item of prompts) {
-    const id = String(item.id || "").trim() || createQuickPromptId();
-    if (idSet.has(id)) continue;
-    const title = String(item.title || "").replace(/\s+/g, " ").trim();
-    const prompt = String(item.prompt || "").trim();
-    if (!title || !prompt) continue;
-    out.push({
-      id,
-      title: title.slice(0, 40),
-      prompt: prompt.slice(0, 5000),
-    });
-    idSet.add(id);
+function resolveAgentId(
+  agents: ConsoleUiAgentOption[],
+  preferredAgentId: string,
+  selectedAgentId: string,
+): string {
+  const preferred = String(preferredAgentId || "").trim();
+  if (preferred && agents.some((item) => item.id === preferred)) {
+    return preferred;
   }
-  return out;
+  const selected = String(selectedAgentId || "").trim();
+  if (selected && agents.some((item) => item.id === selected)) {
+    return selected;
+  }
+  return agents[0]?.id || "";
 }
-
-const shellClass = "rounded-[24px] border border-border bg-surface shadow-soft";
-const insetClass = "rounded-[18px] border border-border bg-muted";
-const fieldLabelClass =
-  "flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground";
-const fieldControlClass =
-  "w-full rounded-[12px] border border-border bg-surface px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:ring-0";
-const ghostButtonClass =
-  "inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-surface px-4 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60";
-const primaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60";
 
 export function App() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -97,23 +70,82 @@ export function App() {
   const [consolePortInput, setConsolePortInput] = useState(
     String(DEFAULT_SETTINGS.consolePort),
   );
-  const [quickPrompts, setQuickPrompts] = useState<ExtensionQuickPromptItem[]>(
-    toEditablePromptList(DEFAULT_SETTINGS.quickPrompts),
-  );
-  const [defaultQuickPromptId, setDefaultQuickPromptId] = useState(
-    DEFAULT_SETTINGS.defaultQuickPromptId,
-  );
+  const [agents, setAgents] = useState<ConsoleUiAgentOption[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [status, setStatus] = useState<OptionsStatus>({
     type: "idle",
-    text: "可编辑后点击保存",
+    text: "修改后保存即可",
   });
 
-  const hasPrompts = quickPrompts.length > 0;
-  const defaultPromptTitle = useMemo(() => {
-    const found = quickPrompts.find((item) => item.id === defaultQuickPromptId);
-    return found?.title || "未设置";
-  }, [defaultQuickPromptId, quickPrompts]);
+  const agentOptions = useMemo<PopupSelectOption[]>(
+    () =>
+      agents.map((item) => ({
+        value: item.id,
+        label: item.name,
+        description: item.running ? "在线" : "未运行",
+      })),
+    [agents],
+  );
+
+  const refreshAgents = useCallback(
+    async (params?: {
+      host?: string;
+      port?: string;
+      preferredAgentId?: string;
+    }) => {
+      const host = String(params?.host ?? consoleHost).trim() || "127.0.0.1";
+      const port = parsePortInput(String(params?.port ?? consolePortInput));
+      if (!port) {
+        setStatus({ type: "error", text: "端口范围应为 1-65535" });
+        return;
+      }
+
+      let consoleBaseUrl = "";
+      try {
+        consoleBaseUrl = buildConsoleBaseUrl({ host, port });
+      } catch (error) {
+        setStatus({ type: "error", text: readErrorText(error) });
+        return;
+      }
+
+      setIsLoadingAgents(true);
+      setStatus({ type: "loading", text: "加载 Agent 中..." });
+      try {
+        const response = await fetchAgents({ consoleBaseUrl });
+        const nextAgents = response.agents || [];
+        const nextAgentId = resolveAgentId(
+          nextAgents,
+          String(params?.preferredAgentId ?? settings.agentId),
+          response.selectedAgentId,
+        );
+
+        setAgents(nextAgents);
+        setSettings((prev) => ({
+          ...prev,
+          consoleHost: host,
+          consolePort: port,
+          agentId: nextAgentId,
+        }));
+        setStatus({
+          type: "idle",
+          text:
+            nextAgents.length > 0
+              ? `已加载 ${nextAgents.length} 个 Agent`
+              : "未发现 Agent，请先启动 city agent start",
+        });
+      } catch (error) {
+        setAgents([]);
+        setStatus({
+          type: "error",
+          text: `加载 Agent 失败：${readErrorText(error)}`,
+        });
+      } finally {
+        setIsLoadingAgents(false);
+      }
+    },
+    [consoleHost, consolePortInput, settings.agentId],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -124,50 +156,20 @@ export function App() {
         setSettings(loaded);
         setConsoleHost(loaded.consoleHost);
         setConsolePortInput(String(loaded.consolePort));
-        setQuickPrompts(toEditablePromptList(loaded.quickPrompts));
-        setDefaultQuickPromptId(loaded.defaultQuickPromptId);
-        setStatus({ type: "idle", text: "设置已加载" });
+        await refreshAgents({
+          host: loaded.consoleHost,
+          port: String(loaded.consolePort),
+          preferredAgentId: loaded.agentId,
+        });
       } catch (error) {
         if (!mounted) return;
-        setStatus({ type: "error", text: `加载失败：${readErrorText(error)}` });
+        setStatus({ type: "error", text: `初始化失败：${readErrorText(error)}` });
       }
     })();
     return () => {
       mounted = false;
     };
-  }, []);
-
-  const addPrompt = useCallback(() => {
-    setQuickPrompts((prev) => [
-      ...prev,
-      {
-        id: createQuickPromptId(),
-        title: `常用问题 ${prev.length + 1}`,
-        prompt: "",
-      },
-    ]);
-  }, []);
-
-  const updatePromptField = useCallback(
-    (id: string, field: "title" | "prompt", value: string) => {
-      setQuickPrompts((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
-      );
-    },
-    [],
-  );
-
-  const removePrompt = useCallback((id: string) => {
-    setQuickPrompts((prev) => prev.filter((item) => item.id !== id));
-    setDefaultQuickPromptId((prev) => (prev === id ? "" : prev));
-  }, []);
-
-  const resetDefaultPrompts = useCallback(() => {
-    const restored = DEFAULT_QUICK_PROMPTS.map((item) => ({ ...item }));
-    setQuickPrompts(restored);
-    setDefaultQuickPromptId(restored[0]?.id || "");
-    setStatus({ type: "idle", text: "已恢复默认常用问题模板" });
-  }, []);
+  }, [refreshAgents]);
 
   const saveAllSettings = useCallback(async () => {
     const host = String(consoleHost || "").trim() || "127.0.0.1";
@@ -177,24 +179,11 @@ export function App() {
       return;
     }
 
-    const normalizedPrompts = normalizePromptDraftList(quickPrompts);
-    if (normalizedPrompts.length === 0) {
-      setStatus({ type: "error", text: "至少保留一个有效的常用问题模板" });
-      return;
-    }
-
-    const safeDefaultQuickPromptId = normalizedPrompts.some(
-      (item) => item.id === defaultQuickPromptId,
-    )
-      ? defaultQuickPromptId
-      : normalizedPrompts[0].id;
-
     const nextSettings: ExtensionSettings = {
       ...settings,
       consoleHost: host,
       consolePort: port,
-      quickPrompts: normalizedPrompts,
-      defaultQuickPromptId: safeDefaultQuickPromptId,
+      agentId: String(settings.agentId || "").trim(),
     };
 
     setIsSaving(true);
@@ -202,160 +191,92 @@ export function App() {
     try {
       await saveSettings(nextSettings);
       setSettings(nextSettings);
-      setQuickPrompts(toEditablePromptList(nextSettings.quickPrompts));
-      setDefaultQuickPromptId(nextSettings.defaultQuickPromptId);
-      setStatus({ type: "success", text: "已保存，popup 打开后会自动生效" });
+      setStatus({ type: "success", text: "已保存，popup 会自动使用新设置" });
     } catch (error) {
       setStatus({ type: "error", text: `保存失败：${readErrorText(error)}` });
     } finally {
       setIsSaving(false);
     }
-  }, [consoleHost, consolePortInput, defaultQuickPromptId, quickPrompts, settings]);
+  }, [consoleHost, consolePortInput, settings]);
 
   return (
-    <main className="mx-auto my-4 flex w-[min(920px,calc(100vw-24px))] flex-col gap-4">
-      <header className="flex items-center gap-3 px-1">
-        <img
-          className="h-5 w-5 object-cover"
-          src="/image.png"
-          alt="Downcity logo"
-        />
-        <div className="flex flex-col">
-          <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
-            Extension
-          </div>
-          <h1 className="m-0 text-lg font-medium tracking-[-0.02em] text-foreground">
-            Downcity Settings
-          </h1>
+    <main className="mx-auto my-6 flex w-[min(720px,calc(100vw-32px))] flex-col gap-4">
+      <header className="rounded-[18px] border border-border bg-surface px-5 py-4">
+        <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
+          Extension
         </div>
+        <h1 className="mt-1 text-xl font-medium tracking-[-0.02em] text-foreground">
+          Chrome Extension Settings
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          这里只保留连接信息和默认 Agent。popup 里只负责发送。
+        </p>
       </header>
 
-      <section className={shellClass}>
-        <div className="grid gap-0">
-          <section className="border-b border-border px-5 py-5">
-            <div className="grid gap-3 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-6">
-              <div className="space-y-1">
-                <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
-                  Connection
-                </div>
-                <h2 className="text-base font-medium text-foreground">连接配置</h2>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  保持一个最短路径，只配置 extension 连接到哪个 Console。
-                </p>
-              </div>
-              <div className={`${insetClass} grid gap-3 p-4 md:grid-cols-[minmax(220px,1fr)_140px]`}>
-                <label className={fieldLabelClass}>
-                  IP / Host
-                  <input
-                    className={fieldControlClass}
-                    value={consoleHost}
-                    onChange={(event) => setConsoleHost(event.target.value)}
-                    placeholder="127.0.0.1"
-                  />
-                </label>
-                <label className={fieldLabelClass}>
-                  Port
-                  <input
-                    className={fieldControlClass}
-                    value={consolePortInput}
-                    onChange={(event) => setConsolePortInput(event.target.value)}
-                    placeholder="5315"
-                  />
-                </label>
-              </div>
+      <section className="rounded-[18px] border border-border bg-surface p-5">
+        <div className="grid gap-4">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_auto]">
+            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              IP / Host
+              <input
+                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface"
+                value={consoleHost}
+                onChange={(event) => setConsoleHost(event.target.value)}
+                placeholder="127.0.0.1"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Port
+              <input
+                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface"
+                value={consolePortInput}
+                onChange={(event) => setConsolePortInput(event.target.value)}
+                placeholder="5315"
+              />
+            </label>
+
+            <div className="flex items-end">
+              <button
+                className="inline-flex min-h-10 items-center justify-center rounded-[12px] border border-border bg-muted px-4 text-[12px] font-medium text-foreground transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                onClick={() => void refreshAgents()}
+                disabled={isLoadingAgents}
+              >
+                {isLoadingAgents ? "刷新中..." : "刷新 Agent"}
+              </button>
             </div>
-          </section>
+          </div>
 
-          <section className="px-5 py-5">
-            <div className="grid gap-3 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-6">
-              <div className="space-y-1">
-                <div className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">
-                  Prompt Library
-                </div>
-                <h2 className="text-base font-medium text-foreground">常用问题模板</h2>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  默认模板：{defaultPromptTitle}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <button className={ghostButtonClass} type="button" onClick={addPrompt}>
-                    新增模板
-                  </button>
-                  <button className={ghostButtonClass} type="button" onClick={resetDefaultPrompts}>
-                    恢复默认
-                  </button>
-                </div>
-
-                {hasPrompts ? (
-                  <div className="grid gap-2.5">
-                    {quickPrompts.map((item, index) => (
-                      <article
-                        key={item.id}
-                        className={`${insetClass} flex flex-col gap-3 p-4`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <label className="inline-flex items-center gap-2 text-[11px] font-medium text-foreground">
-                            <input
-                              type="radio"
-                              name="defaultQuickPrompt"
-                              checked={defaultQuickPromptId === item.id}
-                              onChange={() => setDefaultQuickPromptId(item.id)}
-                            />
-                            <span>设为默认</span>
-                          </label>
-                          <button
-                            className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                            type="button"
-                            onClick={() => removePrompt(item.id)}
-                          >
-                            删除
-                          </button>
-                        </div>
-                        <label className={fieldLabelClass}>
-                          模板名称 #{index + 1}
-                          <input
-                            className={fieldControlClass}
-                            value={item.title}
-                            onChange={(event) =>
-                              updatePromptField(item.id, "title", event.target.value)
-                            }
-                            placeholder="例如：可执行建议"
-                          />
-                        </label>
-                        <label className={fieldLabelClass}>
-                          模板内容
-                          <textarea
-                            className={`${fieldControlClass} min-h-[92px] resize-y`}
-                            rows={4}
-                            value={item.prompt}
-                            onChange={(event) =>
-                              updatePromptField(item.id, "prompt", event.target.value)
-                            }
-                            placeholder="例如：阅读附件后，给出 3 条可执行建议。"
-                          />
-                        </label>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={`${insetClass} px-4 py-4 text-sm text-muted-foreground`}>
-                    暂无模板，请新增或恢复默认模板。
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
+          <PopupSelect
+            label="Default Agent"
+            value={settings.agentId}
+            placeholder={
+              isLoadingAgents
+                ? "加载 Agent 中..."
+                : agentOptions.length > 0
+                  ? "请选择默认 Agent"
+                  : "暂无可用 Agent"
+            }
+            options={agentOptions}
+            onChange={(value) =>
+              setSettings((prev) => ({
+                ...prev,
+                agentId: value,
+              }))
+            }
+            disabled={isLoadingAgents || agentOptions.length === 0}
+          />
         </div>
       </section>
 
-      <footer className="flex items-center justify-between gap-3 px-1">
-        <div className={`text-sm ${getStatusToneClass(status.type)}`}>{status.text}</div>
+      <footer className="flex items-center justify-between gap-3 rounded-[18px] border border-border bg-surface px-5 py-4">
+        <div className={`text-sm ${getStatusClass(status.type)}`}>{status.text}</div>
         <button
-          className={primaryButtonClass}
+          className="inline-flex min-h-11 items-center justify-center rounded-[12px] border border-primary bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#232326] disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
           onClick={() => void saveAllSettings()}
+          disabled={isSaving}
         >
           {isSaving ? "保存中..." : "保存设置"}
         </button>

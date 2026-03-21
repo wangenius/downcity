@@ -235,7 +235,7 @@ export function SkillsSection(props: SkillsSectionProps) {
             {query ? "没有匹配的 skills。" : "暂无 skills。"}
           </div>
         ) : (
-          <div className="rounded-[18px] bg-secondary/85 p-2">
+          <div className="space-y-2">
             {filteredSkills.map((item) => {
               const id = String(item.id || "unknown")
               const name = String(item.name || "unknown")
@@ -250,7 +250,7 @@ export function SkillsSection(props: SkillsSectionProps) {
               return (
                 <div
                   key={`${source}:${id}`}
-                  className="group rounded-[14px] bg-transparent px-3 py-3 transition-colors hover:bg-background"
+                  className="group rounded-[14px] bg-transparent px-3 py-3 transition-colors hover:bg-secondary"
                 >
                   <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1 space-y-1">

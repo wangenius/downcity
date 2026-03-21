@@ -6,6 +6,7 @@ import * as React from "react";
 import { Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { useConfirmDialog } from "../ui/confirm-dialog";
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "./dashboard-action-button";
 import { DashboardModule } from "./DashboardModule";
 import type { UiServiceItem } from "../../types/Dashboard";
 
@@ -89,8 +90,9 @@ export function ServicesSection(props: ServicesSectionProps) {
                       {`runtime ${status}`}
                     </span>
                     <Button
-                      size="icon-sm"
-                      variant="secondary"
+                      size="icon"
+                      variant="ghost"
+                      className={dashboardIconButtonClass}
                       onClick={() => onControlService(name, "start")}
                       aria-label="start"
                       title="start"
@@ -98,8 +100,9 @@ export function ServicesSection(props: ServicesSectionProps) {
                       <PlayIcon className="size-4" />
                     </Button>
                     <Button
-                      size="icon-sm"
-                      variant="secondary"
+                      size="icon"
+                      variant="ghost"
+                      className={dashboardIconButtonClass}
                       onClick={() => onControlService(name, "restart")}
                       aria-label="restart"
                       title="restart"
@@ -107,8 +110,9 @@ export function ServicesSection(props: ServicesSectionProps) {
                       <RotateCwIcon className="size-4" />
                     </Button>
                     <Button
-                      size="icon-sm"
-                      variant="destructive"
+                      size="icon"
+                      variant="ghost"
+                      className={dashboardDangerIconButtonClass}
                       onClick={() => {
                         void (async () => {
                           const confirmed = await confirm({

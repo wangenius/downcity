@@ -156,14 +156,37 @@ function setEnvString(
 }
 
 /**
+ * 批量叠加 env map。
+ *
+ * 关键点（中文）
+ * - 空 key / 空 value 直接忽略，避免把无效值写进子进程环境。
+ * - 后写入的 map 会覆盖前面的同名键。
+ */
+function applyEnvMap(
+  env: NodeJS.ProcessEnv,
+  entries?: Record<string, string>,
+): void {
+  if (!entries) return;
+  for (const [rawKey, rawValue] of Object.entries(entries)) {
+    const key = String(rawKey || "").trim();
+    if (!key) continue;
+    setEnvString(env, key, rawValue);
+  }
+}
+
+/**
  * 构建子进程环境变量。
  *
  * 关键点（中文）
  * - 把 context/request 上下文字段透传给命令执行环境。
  */
-export function buildShellContextEnv(): NodeJS.ProcessEnv {
+export function buildShellContextEnv(
+  injected?: Record<string, string>,
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   const contextCtx = requestContext.getStore();
+  // 关键点（中文）：显式参数作为最终覆盖层，确保 `exec_command` 调用点可精准控制注入结果。
+  applyEnvMap(env, injected);
 
   setEnvString(env, "DC_CTX_CONTEXT_ID", contextCtx?.contextId);
   setEnvString(env, "DC_CTX_REQUEST_ID", contextCtx?.requestId);

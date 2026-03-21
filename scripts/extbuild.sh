@@ -48,12 +48,8 @@ console.log(`Extension version patched: ${currentVersion} -> ${nextVersion}`);
 NODE
 
 # 关键点（中文）：
-# 1) 该脚本对应 extension 的 release build：先自动提升 patch 版本，再执行真正的 bundle 构建。
-# 2) 真正的编译命令固定为 chrome-extension/package.json 里的 build:bundle，避免递归调用 build/build:release。
-if command -v bun >/dev/null 2>&1; then
-  (cd "$ROOT_DIR/chrome-extension" && bun run build:bundle)
-elif command -v pnpm >/dev/null 2>&1; then
-  pnpm -C "$ROOT_DIR/chrome-extension" build:bundle
-else
-  npm --prefix "$ROOT_DIR/chrome-extension" run build:bundle
-fi
+# 1) 该脚本对应 extension 的统一 build 入口：先自动提升 patch 版本，再执行类型检查与打包。
+# 2) 真正构建命令只放在这个脚本里，package.json 仅做脚本转发。
+cd "$ROOT_DIR/chrome-extension"
+npx tsc --noEmit
+npx vite build

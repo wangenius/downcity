@@ -8,6 +8,7 @@
 
 import * as React from "react";
 import { EllipsisIcon, Trash2Icon } from "lucide-react";
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "./dashboard-action-button";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { DashboardModule } from "./DashboardModule";
@@ -456,8 +457,9 @@ export function TasksSection(props: TasksSectionProps) {
             <DropdownMenuTrigger
               render={
                 <Button
-                  size="icon-sm"
-                  variant="outline"
+                  size="icon"
+                  variant="ghost"
+                  className={dashboardIconButtonClass}
                   disabled={taskMutating || !selectedTaskTitleValue}
                   aria-label="任务操作"
                   title="任务操作"
@@ -635,9 +637,9 @@ export function TasksSection(props: TasksSectionProps) {
                       </div>
                     </button>
                     <Button
-                      size="icon-sm"
+                      size="icon"
                       variant="ghost"
-                      className="mt-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      className={`mt-1 ${dashboardDangerIconButtonClass}`}
                       disabled={Boolean(run.inProgress) || deletingThisRun}
                       onClick={async () => {
                         if (!selectedTaskTitleValue || !runTimestamp) return;

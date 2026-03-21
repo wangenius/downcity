@@ -60,7 +60,16 @@ sequenceDiagram
 2. 再叠加 `<agent>/.env`。
 3. 同名键冲突时 `.env` 覆盖 DB 值。
 
-### 3.2 渠道凭据优先级
+### 3.2 `exec_command` shell 注入优先级
+
+1. shell 子进程先继承宿主进程的基础 `process.env`。
+2. 再叠加 Console 全局 env（`scope=global`）。
+3. 再叠加当前 agent runtime env（`agent scope env + <agent>/.env`）。
+4. 最后注入 `DC_CTX_*` 等请求上下文变量。
+
+因此，同名键冲突时优先级是：`DC_CTX_*` > agent runtime env > global env > 宿主进程基础 env。
+
+### 3.3 渠道凭据优先级
 
 1. `ship.json` 渠道只配置 `channelAccountId`。
 2. 真实密钥优先从 `channel_accounts` 解析。
@@ -72,7 +81,8 @@ sequenceDiagram
 
 1. 项目层 `ship.json` 的 `${ENV_KEY}` 解析。
 2. agent runtime 进程 env 注入（`env_entries` 中的 agent scope env + `.env`）。
-3. 少数 service auth 的本地兜底读取。
+3. `exec_command` shell 子进程注入（global env + 当前 agent runtime env + `DC_CTX_*`）。
+4. 少数 service auth 的本地兜底读取。
 
 ### 4.2 不会读取项目 `.env`
 

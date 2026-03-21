@@ -102,9 +102,9 @@ If you use the repo's `chrome-extension`:
 
 1. Select text on the page, then click the message button near the selection to open the inline input near the selected area.
 2. Clicking the browser extension action icon opens the extension popup; press `Cmd/Ctrl + U` to open the inline input on the page.
-3. In popup mode, use the `Ask History` selector to quickly refill recent asks.
-4. No extra quote `tag` is shown; the current selection is used directly as send context.
-5. Type `/` to quickly pick from recent ask history.
+3. The popup now stays minimal: one input box, one send button, page-level send history, and a settings button.
+4. Agent switching in the popup is intentionally minimal; Channel Chat is auto-resolved from the current Agent's first available conversation.
+5. Click a history item to refill a previous ask from the current page.
 6. Press `Cmd/Ctrl + Enter` or click the send button to submit (`Enter` for newline).
 7. Press `Esc` to close the input box.
 8. If nothing is selected, sending automatically falls back to full-page mode.

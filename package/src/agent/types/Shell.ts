@@ -39,6 +39,14 @@ export type ShellOutputPage = {
 export type CreateShellContextInput = {
   command: string;
   cwd: string;
+  /**
+   * shell 子进程需要显式注入的环境变量。
+   *
+   * 关键点（中文）
+   * - 由 runtime 在启动 `exec_command` 时按作用域合并后传入。
+   * - 仅影响当前 shell 会话，不回写全局 `process.env`。
+   */
+  env?: Record<string, string>;
   shellPath?: string;
   login?: boolean;
 };

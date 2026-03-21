@@ -9,6 +9,7 @@
 import * as React from "react"
 import { CheckIcon, ChevronsUpDownIcon, TerminalIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
@@ -578,7 +579,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
             </div>
           )}
           <Button
-            size="icon-sm"
+            size="icon"
             variant="ghost"
             onClick={() => {
               void (async () => {
@@ -593,7 +594,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
               })()
             }}
             disabled={running || records.length === 0}
-            className="text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={dashboardDangerIconButtonClass}
             aria-label="清空输出"
             title="清空输出"
           >
@@ -648,7 +649,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={running || !activeAgentId}
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-[11px] text-muted-foreground hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+              className={`inline-flex shrink-0 items-center justify-center disabled:pointer-events-none disabled:opacity-50 ${dashboardIconButtonClass}`}
               aria-label="常用命令"
               title="常用命令"
             >

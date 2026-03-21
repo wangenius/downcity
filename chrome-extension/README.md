@@ -69,13 +69,7 @@ npm run dev
 - options 页面
 - `content-script.css`（供 Shadow DOM 引入）
 
-如果只想做纯编译：
-
-```bash
-npm run build:bundle
-```
-
-如果执行发布式构建：
+如果执行构建：
 
 ```bash
 npm run build
@@ -106,7 +100,7 @@ npm run build:extension
    - `city agent start`
 2. 点击扩展图标，使用插件 popup 完成发送（在图标处打开弹窗）。
 3. 若在页面内使用选区模式：选中文本后点击选区右下角消息按钮，或按 `Cmd/Ctrl + U`，输入框会在选区左下角展开。
-4. popup 中可从 `Ask 历史` 下拉快速回填最近提问，再按 `Cmd/Ctrl + Enter` 或点击发送。
+4. popup 只保留输入框、发送按钮、本页发送历史和设置按钮；再按 `Cmd/Ctrl + Enter` 或点击发送。
 
 ## 页面内快捷发送（新）
 

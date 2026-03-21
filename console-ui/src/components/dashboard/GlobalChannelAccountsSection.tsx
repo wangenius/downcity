@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { getChannelDisplayName } from "@/lib/channel-label"
 import type { UiChannelAccountItem, UiChannelAccountProbeResult } from "@/types/Dashboard"
 
@@ -370,7 +371,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 rounded-[11px]"
+                      className={dashboardIconButtonClass}
                       onClick={() => openEditDialog(item)}
                       title="编辑"
                       aria-label="编辑"
@@ -381,7 +382,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       type="button"
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 rounded-[11px] text-destructive"
+                      className={dashboardDangerIconButtonClass}
                       onClick={() => {
                         void (async () => {
                           const confirmed = await confirm({

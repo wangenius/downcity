@@ -9,6 +9,7 @@
 
 import * as React from "react"
 import { CheckIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "./dashboard-action-button"
 import { DashboardModule } from "./DashboardModule"
 import { Button } from "../ui/button"
 import { useConfirmDialog } from "../ui/confirm-dialog"
@@ -213,9 +214,9 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                       <>
                         {(state === "running" || state === "idle" || state === "error") ? (
                           <Button
-                            size="icon-sm"
+                            size="icon"
                             variant="ghost"
-                            className="text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            className={dashboardIconButtonClass}
                             disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                             aria-label="test"
                             title="test"
@@ -234,8 +235,9 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
 
                         {(state === "running" || state === "idle" || state === "error") ? (
                           <Button
-                            size="icon-sm"
-                            variant="secondary"
+                            size="icon"
+                            variant="ghost"
+                            className={dashboardIconButtonClass}
                             disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                             aria-label="restart"
                             title="restart"
@@ -254,8 +256,9 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
 
                         {state === "running" || state === "idle" ? (
                           <Button
-                            size="icon-sm"
-                            variant="destructive"
+                            size="icon"
+                            variant="ghost"
+                            className={dashboardDangerIconButtonClass}
                             disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                             aria-label="stop"
                             title="stop"
@@ -281,8 +284,9 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                           </Button>
                         ) : (
                           <Button
-                            size="icon-sm"
-                            variant="secondary"
+                            size="icon"
+                            variant="ghost"
+                            className={dashboardIconButtonClass}
                             disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                             aria-label="start"
                             title="start"

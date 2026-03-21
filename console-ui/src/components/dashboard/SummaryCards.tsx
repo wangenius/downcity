@@ -16,6 +16,7 @@ import {
   RotateCwIcon,
   SquareIcon,
 } from "lucide-react"
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { Button } from "@/components/ui/button"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -347,8 +348,9 @@ export function SummaryCards(props: SummaryCardsProps) {
             {selectedAgent.running ? (
               <>
                 <Button
-                  size="sm"
-                  variant="outline"
+                  size="icon"
+                  variant="ghost"
+                  className={dashboardIconButtonClass}
                   onClick={() => {
                     setPendingAgentAction("restart")
                     void Promise.resolve(onRestartAgent()).finally(() => setPendingAgentAction(""))
@@ -362,8 +364,9 @@ export function SummaryCards(props: SummaryCardsProps) {
                   )}
                 </Button>
                 <Button
-                  size="sm"
-                  variant="destructive"
+                  size="icon"
+                  variant="ghost"
+                  className={dashboardDangerIconButtonClass}
                   onClick={() => {
                     void (async () => {
                       const confirmed = await confirm({
@@ -388,8 +391,9 @@ export function SummaryCards(props: SummaryCardsProps) {
               </>
             ) : (
               <Button
-                size="sm"
-                variant="secondary"
+                size="icon"
+                variant="ghost"
+                className={dashboardIconButtonClass}
                 onClick={() => {
                   setPendingAgentAction("start")
                   void Promise.resolve(onStartAgent()).finally(() => setPendingAgentAction(""))
@@ -574,8 +578,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                             type="button"
                             className={
                               action === "stop"
-                                ? "inline-flex h-8 w-8 items-center justify-center rounded-[11px] text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                : "inline-flex h-8 w-8 items-center justify-center rounded-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                ? `inline-flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-50 ${dashboardDangerIconButtonClass}`
+                                : `inline-flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-50 ${dashboardIconButtonClass}`
                             }
                             disabled={isServiceActionPending(pendingKey)}
                             onClick={() => {

@@ -10,6 +10,7 @@
 import * as React from "react"
 import { BotIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { UiAgentOption } from "@/types/Dashboard"
 
@@ -86,9 +87,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                     {isRunning ? (
                       <div className="ml-auto flex items-center gap-1.5">
                         <Button
-                          size="icon-sm"
-                          variant="secondary"
-                          className="bg-secondary"
+                          size="icon"
+                          variant="ghost"
+                          className={dashboardIconButtonClass}
                           onClick={async () => {
                             try {
                               setRestartingAgentId(agent.id)
@@ -104,8 +105,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                           {isRestarting ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
                         </Button>
                         <Button
-                          size="icon-sm"
-                          variant="destructive"
+                          size="icon"
+                          variant="ghost"
+                          className={dashboardDangerIconButtonClass}
                           onClick={() => {
                             void (async () => {
                               const confirmed = await confirm({
@@ -132,9 +134,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                       </div>
                     ) : (
                       <Button
-                        size="icon-sm"
-                        variant="secondary"
-                        className="ml-auto bg-secondary"
+                        size="icon"
+                        variant="ghost"
+                        className={`ml-auto ${dashboardIconButtonClass}`}
                         disabled={isStarting || isRestarting || isStopping}
                         aria-label="启动"
                         title="启动"

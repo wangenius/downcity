@@ -12,7 +12,7 @@ const PAGE = {
       },
       {
         title: "选区直发",
-        description: "选区右下角出现消息按钮，点击后在选区左下角展开输入框；点击扩展图标会打开插件 popup。",
+        description: "选区右下角出现消息按钮；点击扩展图标会打开极简 popup，只保留输入、发送、设置和本页历史。",
       },
       {
         title: "降低信息损耗",
@@ -29,7 +29,7 @@ const PAGE = {
     facts: [
       "源码目录：chrome-extension/",
       "技术形态：Chrome Extension Manifest V3",
-      "交互能力：选区消息按钮 + Cmd/Ctrl + U（页面内） + 扩展图标 popup",
+      "交互能力：选区消息按钮 + Cmd/Ctrl + U（页面内） + 极简 popup（输入 / 发送 / 本页历史 / 设置）",
     ],
   },
   en: {
@@ -43,7 +43,7 @@ const PAGE = {
       },
       {
         title: "Selection to agent",
-        description: "Use the selection message button or Cmd/Ctrl + U for inline send, while extension icon click opens the popup flow.",
+        description: "Use the selection message button or Cmd/Ctrl + U for inline send, while the extension popup stays intentionally minimal.",
       },
       {
         title: "Less context loss",
@@ -60,7 +60,7 @@ const PAGE = {
     facts: [
       "Source directory: chrome-extension/",
       "Technical form: Chrome Extension Manifest V3",
-      "Interaction capability: selection message button + Cmd/Ctrl + U inline + extension popup",
+      "Interaction capability: selection message button + Cmd/Ctrl + U inline + minimal popup (input / send / page history / settings)",
     ],
   },
 } as const;

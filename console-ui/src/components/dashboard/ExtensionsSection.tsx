@@ -4,14 +4,14 @@
  * 关键点（中文）
  * - 采用与 Agents 区一致的极简 table 结构。
  * - 不使用卡片分组，通过行样式表达状态差异。
- * - lifecycle 统一使用 icon action，并在 stop/restart 前确认。
+ * - lifecycle 统一使用 icon action，仅 stop 这类高风险动作需要确认。
  */
 
 import * as React from "react"
 import { CheckIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
 import { DashboardModule } from "./DashboardModule"
 import { Button } from "../ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
+import { useConfirmDialog } from "../ui/confirm-dialog"
 import { Input } from "../ui/input"
 import type { UiExtensionRuntimeItem } from "../../types/Dashboard"
 
@@ -40,12 +40,9 @@ export interface ExtensionsSectionProps {
 
 export function ExtensionsSection(props: ExtensionsSectionProps) {
   const { extensions, formatTime, onControl, onTest } = props
+  const confirm = useConfirmDialog()
   const [search, setSearch] = React.useState("")
   const [actionLoadingKey, setActionLoadingKey] = React.useState("")
-  const [confirmAction, setConfirmAction] = React.useState<{
-    name: string
-    action: "stop" | "restart"
-  } | null>(null)
 
   const filtered = extensions.filter((item) => {
     const query = search.trim().toLowerCase()
@@ -101,7 +98,7 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
       description={`active ${summary.active} · inactive ${summary.inactive}${summary.error > 0 ? ` · error ${summary.error}` : ""}`}
       bodyClassName="min-h-0 overflow-y-auto"
       actions={
-        <div className="flex items-center gap-1.5">
+        <>
           <div className="hidden flex-wrap items-center gap-2 text-xs md:flex">
             <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
               active {summary.active}
@@ -119,9 +116,9 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="搜索 extension"
-            className="h-8 w-[220px]"
+            className="w-[220px]"
           />
-        </div>
+        </>
       }
     >
 
@@ -242,7 +239,14 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                             disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                             aria-label="restart"
                             title="restart"
-                            onClick={() => setConfirmAction({ name, action: "restart" })}
+                            onClick={async () => {
+                              try {
+                                setActionLoadingKey(`${name}:restart`)
+                                await Promise.resolve(onControl(name, "restart"))
+                              } finally {
+                                setActionLoadingKey("")
+                              }
+                            }}
                           >
                             {loadingRestart ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
                           </Button>
@@ -255,7 +259,23 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
                             disabled={loadingStart || loadingStop || loadingRestart || loadingTest}
                             aria-label="stop"
                             title="stop"
-                            onClick={() => setConfirmAction({ name, action: "stop" })}
+                            onClick={() => {
+                              void (async () => {
+                                const confirmed = await confirm({
+                                  title: "停止 Extension",
+                                  description: `确认停止 "${name}"？`,
+                                  confirmText: "停止",
+                                  confirmVariant: "destructive",
+                                })
+                                if (!confirmed) return
+                                try {
+                                  setActionLoadingKey(`${name}:stop`)
+                                  await Promise.resolve(onControl(name, "stop"))
+                                } finally {
+                                  setActionLoadingKey("")
+                                }
+                              })()
+                            }}
                           >
                             {loadingStop ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
                           </Button>
@@ -289,58 +309,6 @@ export function ExtensionsSection(props: ExtensionsSectionProps) {
           })}
         </div>
       )}
-
-      <Dialog
-        open={Boolean(confirmAction)}
-        onOpenChange={(open) => {
-          if (!open && !actionLoadingKey) {
-            setConfirmAction(null)
-          }
-        }}
-      >
-        <DialogContent className="w-[min(92vw,460px)]">
-          <DialogHeader>
-            <DialogTitle>{confirmAction?.action === "stop" ? "停止 Extension" : "重启 Extension"}</DialogTitle>
-            <DialogDescription>
-              {confirmAction?.action === "stop"
-                ? `确认停止 "${confirmAction?.name || "unknown"}"？`
-                : `确认重启 "${confirmAction?.name || "unknown"}"？`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={Boolean(actionLoadingKey)}
-              onClick={() => setConfirmAction(null)}
-            >
-              取消
-            </Button>
-            <Button
-              variant={confirmAction?.action === "stop" ? "destructive" : "secondary"}
-              disabled={Boolean(actionLoadingKey)}
-              onClick={async () => {
-                const target = confirmAction
-                if (!target) return
-                try {
-                  setActionLoadingKey(`${target.name}:${target.action}`)
-                  await Promise.resolve(onControl(target.name, target.action))
-                } finally {
-                  setActionLoadingKey("")
-                  setConfirmAction(null)
-                }
-              }}
-            >
-              {actionLoadingKey
-                ? confirmAction?.action === "stop"
-                  ? "停止中..."
-                  : "重启中..."
-                : confirmAction?.action === "stop"
-                  ? "确认停止"
-                  : "确认重启"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DashboardModule>
   )
 }

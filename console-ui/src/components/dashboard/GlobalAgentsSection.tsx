@@ -4,12 +4,13 @@
  * 关键点（中文）
  * - 单列表结构：每个 agent 一行，所有关键信息与操作都在行内完成。
  * - 不需要“选中某个 agent”概念，避免额外状态切换成本。
+ * - 仅 stop 这类高风险动作保留确认，restart 直接执行。
  */
 
 import * as React from "react"
 import { BotIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { UiAgentOption } from "@/types/Dashboard"
 
 export interface GlobalAgentsSectionProps {
@@ -33,13 +34,10 @@ export interface GlobalAgentsSectionProps {
 
 export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   const { agents, onRestartAgent, onStopAgent, onStartAgent } = props
+  const confirm = useConfirmDialog()
   const [startingAgentId, setStartingAgentId] = React.useState("")
   const [restartingAgentId, setRestartingAgentId] = React.useState("")
   const [stoppingAgentId, setStoppingAgentId] = React.useState("")
-  const [confirmAction, setConfirmAction] = React.useState<{
-    agent: UiAgentOption
-    action: "restart" | "stop"
-  } | null>(null)
 
   return (
     <section className="min-h-0 overflow-y-auto">
@@ -91,7 +89,14 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                           size="icon-sm"
                           variant="secondary"
                           className="bg-secondary"
-                          onClick={() => setConfirmAction({ agent, action: "restart" })}
+                          onClick={async () => {
+                            try {
+                              setRestartingAgentId(agent.id)
+                              await Promise.resolve(onRestartAgent(agent.id))
+                            } finally {
+                              setRestartingAgentId("")
+                            }
+                          }}
                           disabled={isRestarting || isStopping}
                           aria-label="重启"
                           title="重启"
@@ -101,7 +106,23 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                         <Button
                           size="icon-sm"
                           variant="destructive"
-                          onClick={() => setConfirmAction({ agent, action: "stop" })}
+                          onClick={() => {
+                            void (async () => {
+                              const confirmed = await confirm({
+                                title: "停止 Agent",
+                                description: `确认停止 "${agent.name || "unknown-agent"}"？停止前会检查当前是否有正在执行的 context 和 task。`,
+                                confirmText: "停止",
+                                confirmVariant: "destructive",
+                              })
+                              if (!confirmed) return
+                              try {
+                                setStoppingAgentId(agent.id)
+                                await Promise.resolve(onStopAgent(agent.id))
+                              } finally {
+                                setStoppingAgentId("")
+                              }
+                            })()
+                          }}
                           disabled={isRestarting || isStopping}
                           aria-label="停止"
                           title="停止"
@@ -136,64 +157,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
           })}
         </div>
       )}
-
-      <Dialog
-        open={Boolean(confirmAction)}
-        onOpenChange={(open) => {
-          if (!open && !restartingAgentId && !stoppingAgentId) {
-            setConfirmAction(null)
-          }
-        }}
-      >
-        <DialogContent className="w-[min(92vw,460px)]">
-          <DialogHeader>
-            <DialogTitle>{confirmAction?.action === "stop" ? "停止 Agent" : "重启 Agent"}</DialogTitle>
-            <DialogDescription>
-              {confirmAction?.action === "stop"
-                ? `确认停止 "${confirmAction?.agent.name || "unknown-agent"}"？停止前会检查当前是否有正在执行的 context 和 task。`
-                : `确认重启 "${confirmAction?.agent.name || "unknown-agent"}"？重启前会检查当前是否有正在执行的 context 和 task。`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={Boolean(restartingAgentId || stoppingAgentId)}
-              onClick={() => setConfirmAction(null)}
-            >
-              取消
-            </Button>
-            <Button
-              variant={confirmAction?.action === "stop" ? "destructive" : "secondary"}
-              disabled={Boolean(restartingAgentId || stoppingAgentId)}
-              onClick={async () => {
-                const target = confirmAction
-                if (!target) return
-                try {
-                  if (target.action === "restart") {
-                    setRestartingAgentId(target.agent.id)
-                    await Promise.resolve(onRestartAgent(target.agent.id))
-                  } else {
-                    setStoppingAgentId(target.agent.id)
-                    await Promise.resolve(onStopAgent(target.agent.id))
-                  }
-                } finally {
-                  setRestartingAgentId("")
-                  setStoppingAgentId("")
-                  setConfirmAction(null)
-                }
-              }}
-            >
-              {restartingAgentId
-                ? "重启中..."
-                : stoppingAgentId
-                  ? "停止中..."
-                  : confirmAction?.action === "stop"
-                    ? "确认停止"
-                    : "确认重启"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </section>
   )
 }

@@ -12,7 +12,7 @@
     },
     "qq": {
       "name": "QQ",
-      "description": "在最受欢迎的社交平台上与你的 Agent 交互。"
+      "description": "通过 QQ 与 Agent 交互；当前为 dev 版本，建议优先用于测试与验证。"
     }
   },
   "otherTitle": "还需要更多？",

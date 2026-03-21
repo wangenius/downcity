@@ -34,6 +34,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { getChannelDisplayName } from "@/lib/channel-label"
 import { buildContextGroups, resolveContextChannel } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
@@ -576,7 +577,7 @@ export function AppSidebar({
                             }}
                           >
                             <span className={channelMainRowClass}>
-                              <span className="truncate">{group.channel}</span>
+                                <span className="truncate">{getChannelDisplayName(group.channel)}</span>
                               <span
                                 className={cn(channelStateDotClass, stateDotClass)}
                                 aria-label={`link state: ${channelState}`}

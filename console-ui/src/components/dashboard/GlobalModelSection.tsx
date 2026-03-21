@@ -21,6 +21,7 @@ import {
   WandSparklesIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -180,6 +181,7 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
     onPauseModel,
     onTestModel,
   } = props
+  const confirm = useConfirmDialog()
 
   const [providerForm, setProviderForm] = React.useState<ProviderFormState>({
     id: "",
@@ -295,44 +297,40 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         title="Providers"
         description="配置可用的模型 Provider，支持自定义 baseUrl 与 API Key。"
         actions={
-          <HeaderAction
-            label="新增 Provider"
-            icon={<PlusIcon className="size-4" />}
-            onClick={() => {
-              resetProviderForm()
-              setProviderEditorOpen(true)
-            }}
-            disabled={loading}
-          />
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[18rem] flex-1">
-            <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <>
             <Input
               value={providerQuery}
               onChange={(event) => setProviderQuery(event.target.value)}
-              placeholder="筛选 provider（id/type/baseUrl）"
-              className="h-8 pl-7"
+              placeholder="筛选 provider"
+              className="w-[220px]"
             />
-          </div>
-          <Input
-            placeholder="发现前缀（可选）"
-            value={discoverPrefix}
-            onChange={(event) => setDiscoverPrefix(event.target.value)}
-            className="h-8 w-44"
-          />
-        </div>
-
+            <Input
+              placeholder="发现前缀"
+              value={discoverPrefix}
+              onChange={(event) => setDiscoverPrefix(event.target.value)}
+              className="w-40"
+            />
+            <HeaderAction
+              label="新增 Provider"
+              icon={<PlusIcon className="size-4" />}
+              onClick={() => {
+                resetProviderForm()
+                setProviderEditorOpen(true)
+              }}
+              disabled={loading}
+            />
+          </>
+        }
+      >
         {filteredProviders.length === 0 ? (
           <div className="rounded-[18px] bg-secondary px-3 py-3 text-sm text-muted-foreground">没有 provider</div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
             {filteredProviders.map((item) => {
               const providerId = String(item.id || "").trim()
               if (!providerId) return null
               return (
-                <article key={providerId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-secondary/72 lg:flex-row lg:items-center lg:justify-between">
+                <article key={providerId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-background lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1 text-[11px] text-muted-foreground">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate text-sm font-medium text-foreground">{providerId}</span>
@@ -404,9 +402,18 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
                             label="删除"
                             icon={<Trash2Icon className="size-3.5" />}
                             onClick={() => {
-                              void runWithPending(`provider:delete:${providerId}`, async () => {
-                                await Promise.resolve(onRemoveProvider(providerId))
-                              })
+                              void (async () => {
+                                const confirmed = await confirm({
+                                  title: "删除 Provider",
+                                  description: `确认删除 provider「${providerId}」吗？关联模型也可能受影响。`,
+                                  confirmText: "删除",
+                                  confirmVariant: "destructive",
+                                })
+                                if (!confirmed) return
+                                await runWithPending(`provider:delete:${providerId}`, async () => {
+                                  await Promise.resolve(onRemoveProvider(providerId))
+                                })
+                              })()
                             }}
                             loading={isPending(`provider:delete:${providerId}`)}
                             danger
@@ -423,39 +430,36 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
         title="Models"
         description={`current ${String(model?.agentPrimaryModelId || "-")} · provider ${String(model?.providerType || "-")} · providers ${providers.length} · models ${poolItems.length}`}
         actions={
-          <HeaderAction
-            label="新增 Model"
-            icon={<PlusIcon className="size-4" />}
-            onClick={() => {
-              resetModelForm()
-              setModelEditorOpen(true)
-            }}
-            disabled={loading}
-          />
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[18rem] flex-1">
-            <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <>
+            <span className="text-xs text-muted-foreground">{`${filteredModels.length} items`}</span>
             <Input
               value={modelQuery}
               onChange={(event) => setModelQuery(event.target.value)}
-              placeholder="筛选 model（id/provider/name）"
-              className="h-8 pl-7"
+              placeholder="筛选 model"
+              className="w-[220px]"
             />
-          </div>
-        </div>
-
+            <HeaderAction
+              label="新增 Model"
+              icon={<PlusIcon className="size-4" />}
+              onClick={() => {
+                resetModelForm()
+                setModelEditorOpen(true)
+              }}
+              disabled={loading}
+            />
+          </>
+        }
+      >
         {filteredModels.length === 0 ? (
           <div className="rounded-[18px] bg-secondary px-3 py-3 text-sm text-muted-foreground">没有 model</div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
             {filteredModels.map((item) => {
               const modelId = String(item.id || "").trim()
               if (!modelId) return null
               const isPaused = item.isPaused === true
               return (
-                <article key={modelId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-secondary/72 lg:flex-row lg:items-center lg:justify-between">
+                <article key={modelId} className="group flex flex-col gap-3 rounded-[16px] bg-transparent px-3 py-3 transition-colors hover:bg-background lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1 text-[11px] text-muted-foreground">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate text-sm font-medium text-foreground">{modelId}</span>
@@ -512,9 +516,18 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
                             label="删除"
                             icon={<Trash2Icon className="size-3.5" />}
                             onClick={() => {
-                              void runWithPending(`model:delete:${modelId}`, async () => {
-                                await Promise.resolve(onRemoveModel(modelId))
-                              })
+                              void (async () => {
+                                const confirmed = await confirm({
+                                  title: "删除 Model",
+                                  description: `确认删除模型「${modelId}」吗？该操作不可恢复。`,
+                                  confirmText: "删除",
+                                  confirmVariant: "destructive",
+                                })
+                                if (!confirmed) return
+                                await runWithPending(`model:delete:${modelId}`, async () => {
+                                  await Promise.resolve(onRemoveModel(modelId))
+                                })
+                              })()
                             }}
                             loading={isPending(`model:delete:${modelId}`)}
                             danger
@@ -542,14 +555,14 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
               <div className="rounded-[18px] bg-secondary px-3 py-2 text-xs text-muted-foreground">
                 {`provider ${discoverResultProviderId || "-"} · prefix ${discoverResultPrefix || "(none)"}`}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
                 {discoveredModelNames.map((remoteNameRaw) => {
                   const remoteName = String(remoteNameRaw || "").trim()
                   const targetModelId = discoverResultPrefix ? `${discoverResultPrefix}${remoteName}` : remoteName
                   const exists = existingModelIds.has(targetModelId)
                   const checked = selectedDiscoveredModelNames.includes(remoteName)
                   return (
-                    <label key={`discover:${remoteName}`} className="flex items-center justify-between gap-3 rounded-[14px] bg-transparent px-3 py-2.5 text-sm transition-colors hover:bg-secondary/72">
+                    <label key={`discover:${remoteName}`} className="flex items-center justify-between gap-3 rounded-[14px] bg-transparent px-3 py-2.5 text-sm transition-colors hover:bg-background">
                       <div className="flex min-w-0 items-start gap-3">
                         <input
                           type="checkbox"

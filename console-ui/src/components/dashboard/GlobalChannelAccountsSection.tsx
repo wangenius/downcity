@@ -14,8 +14,10 @@ import { Button } from "@/components/ui/button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getChannelDisplayName } from "@/lib/channel-label"
 import type { UiChannelAccountItem, UiChannelAccountProbeResult } from "@/types/Dashboard"
 
 const CHANNEL_OPTIONS = [
@@ -28,7 +30,7 @@ const CHANNEL_OPTIONS = [
     value: "feishu",
   },
   {
-    label: "QQ",
+    label: "QQ (dev)",
     value: "qq",
   },
 ] as const
@@ -111,11 +113,7 @@ function isAccountCredentialReady(item: UiChannelAccountItem): boolean {
 }
 
 function channelDisplayName(channelInput: string): string {
-  const channel = String(channelInput || "").trim().toLowerCase()
-  if (channel === "telegram") return "Telegram"
-  if (channel === "feishu") return "Feishu"
-  if (channel === "qq") return "QQ"
-  return channel || "-"
+  return getChannelDisplayName(channelInput)
 }
 
 function credentialSummary(item: UiChannelAccountItem): string {
@@ -178,7 +176,9 @@ export interface GlobalChannelAccountsSectionProps {
 
 export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSectionProps) {
   const { items, loading, onUpsert, onProbe, onRemove } = props
+  const confirm = useConfirmDialog()
   const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [search, setSearch] = React.useState("")
   const [form, setForm] = React.useState<ChannelAccountFormState>(createEmptyForm)
   const [editingId, setEditingId] = React.useState("")
   const [pendingActions, setPendingActions] = React.useState<Record<string, boolean>>({})
@@ -208,6 +208,16 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
   }, [])
 
   const readyCount = items.filter((item) => isAccountCredentialReady(item)).length
+  const filteredItems = React.useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return items
+    return items.filter((item) => {
+      const id = String(item.id || "").toLowerCase()
+      const name = String(item.name || "").toLowerCase()
+      const channel = String(item.channel || "").toLowerCase()
+      return id.includes(query) || name.includes(query) || channel.includes(query)
+    })
+  }, [items, search])
 
   const openCreateDialog = () => {
     setEditingId("")
@@ -299,27 +309,36 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
         title="Channel Accounts"
         description={`已配置 ${items.length} 个，凭据完整 ${readyCount} 个`}
         actions={
-          <Button
-            type="button"
-            size="sm"
-            variant="default"
-            className="h-9 gap-1.5 rounded-[12px] px-3"
-            onClick={openCreateDialog}
-            disabled={loading}
-          >
-            <PlusIcon className="size-4" />
-            新建账号
-          </Button>
+          <>
+            <span className="text-xs text-muted-foreground">{`ready ${readyCount}/${items.length}`}</span>
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="搜索账号"
+              className="w-[220px]"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              className="gap-1.5 px-3"
+              onClick={openCreateDialog}
+              disabled={loading}
+            >
+              <PlusIcon className="size-4" />
+              新建账号
+            </Button>
+          </>
         }
       >
 
-        {items.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div className="rounded-[20px] bg-secondary/85 py-6 text-center text-sm text-muted-foreground">
             暂无 channel account
           </div>
         ) : (
           <div className="space-y-2.5">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const id = String(item.id || "").trim()
               if (!id) return null
               const ready = isAccountCredentialReady(item)
@@ -364,9 +383,18 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
                       variant="ghost"
                       className="h-8 w-8 rounded-[11px] text-destructive"
                       onClick={() => {
-                        void runWithPending(`bot:remove:${id}`, async () => {
-                          await Promise.resolve(onRemove(id))
-                        })
+                        void (async () => {
+                          const confirmed = await confirm({
+                            title: "删除 Channel Account",
+                            description: `确认删除账号「${item.name || id}」吗？该操作不可恢复。`,
+                            confirmText: "删除",
+                            confirmVariant: "destructive",
+                          })
+                          if (!confirmed) return
+                          await runWithPending(`bot:remove:${id}`, async () => {
+                            await Promise.resolve(onRemove(id))
+                          })
+                        })()
                       }}
                       disabled={isPending(`bot:remove:${id}`)}
                       title="删除"
@@ -515,42 +543,47 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
               ) : null}
 
               {form.channel === "qq" ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-10 w-full justify-between rounded-[12px] px-3"
-                      />
-                    }
-                  >
-                    <span>{form.sandbox ? "测试环境" : "生产环境"}</span>
-                    <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="min-w-[10rem]">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setForm((prev) => ({ ...prev, sandbox: false }))
-                        setProbeStatus("idle")
-                        setProbeMessage("")
-                      }}
+                <div className="space-y-2">
+                  <div className="rounded-[12px] border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-6 text-amber-950">
+                    QQ channel 当前为 dev 版本，建议仅用于测试与验证。
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-10 w-full justify-between rounded-[12px] px-3"
+                        />
+                      }
                     >
-                      {form.sandbox ? <span className="inline-block w-4" /> : <CheckIcon className="size-4" />}
-                      <span>生产环境</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setForm((prev) => ({ ...prev, sandbox: true }))
-                        setProbeStatus("idle")
-                        setProbeMessage("")
-                      }}
-                    >
-                      {form.sandbox ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
-                      <span>测试环境</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <span>{form.sandbox ? "测试环境" : "生产环境"}</span>
+                      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="min-w-[10rem]">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, sandbox: false }))
+                          setProbeStatus("idle")
+                          setProbeMessage("")
+                        }}
+                      >
+                        {form.sandbox ? <span className="inline-block w-4" /> : <CheckIcon className="size-4" />}
+                        <span>生产环境</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setForm((prev) => ({ ...prev, sandbox: true }))
+                          setProbeStatus("idle")
+                          setProbeMessage("")
+                        }}
+                      >
+                        {form.sandbox ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
+                        <span>测试环境</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               ) : null}
             </div>
 

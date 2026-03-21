@@ -12,7 +12,7 @@
     },
     "qq": {
       "name": "QQ",
-      "description": "Interact with your Agent on the most popular social platform."
+      "description": "Interact with your Agent on QQ. This channel is currently in dev and is best suited for testing and validation."
     }
   },
   "otherTitle": "Need More?",

@@ -37,6 +37,7 @@ city console ui [action] [options]
 - Global / Overview only shows global health signals (console, fleet, channels, extensions, config risk).
 - Global / Overview now shows the current DC version in the top summary area.
 - Global / Env provides manual env management for both Console-shared and agent-private entries, all stored in `~/.ship/ship.db` `env_entries`.
+- Global / Env now checks the clipboard when you click `+`; if the clipboard looks like `.env` content, it imports all detected entries in one batch, otherwise it falls back to the manual create dialog.
 - Global / Console Runtime shows console runtime details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
 - Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).

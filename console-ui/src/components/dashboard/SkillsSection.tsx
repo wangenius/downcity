@@ -2,15 +2,29 @@
  * Skills 主视图。
  *
  * 关键点（中文）
- * - 使用表格集中展示 skills 元信息，避免卡片化带来的信息密度损失。
- * - 提供 find/install 管理动作，并将安装参数作为可配置项暴露。
- * - 页面内维护最近一次动作反馈，帮助用户在同一视图内完成“管理 + 配置”闭环。
+ * - 使用统一的 DashboardModule 组织 Skills、Find / Install、Action Report 三个区块。
+ * - 列表采用“外层浅灰工作台 + 内层透明行，hover 变白”的统一结构。
+ * - 保留 find/install/config 的完整能力，但去掉旧的表格管理感。
  */
 
 import * as React from "react"
-import { Loader2Icon, RefreshCcwIcon, SearchIcon, Settings2Icon, WrenchIcon } from "lucide-react"
+import {
+  Loader2Icon,
+  RefreshCcwIcon,
+  SearchIcon,
+  Settings2Icon,
+  WrenchIcon,
+} from "lucide-react"
+import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import type {
   UiSkillFindResult,
@@ -72,6 +86,20 @@ function normalizeSourceLabel(raw: string): string {
   return "other"
 }
 
+function SurfaceTag(props: { tone?: "default" | "strong"; children: React.ReactNode }) {
+  return (
+    <span
+      className={
+        props.tone === "strong"
+          ? "inline-flex h-6 items-center rounded-full bg-background px-2.5 text-[11px] text-foreground"
+          : "inline-flex h-6 items-center rounded-full bg-background/80 px-2.5 text-[11px] text-muted-foreground"
+      }
+    >
+      {props.children}
+    </span>
+  )
+}
+
 export function SkillsSection(props: SkillsSectionProps) {
   const {
     skills,
@@ -94,7 +122,9 @@ export function SkillsSection(props: SkillsSectionProps) {
   const hasAgent = Boolean(String(selectedAgentId || "").trim())
   const query = search.trim().toLowerCase()
 
-  // 关键点（中文）：统一在前端做轻量过滤，保证表格交互即时反馈。
+  /**
+   * 关键点（中文）：列表过滤保持在前端完成，避免每次输入都触发外部请求。
+   */
   const filteredSkills = React.useMemo(() => {
     if (!query) return skills
     return skills.filter((item) => {
@@ -103,8 +133,17 @@ export function SkillsSection(props: SkillsSectionProps) {
       const description = String(item.description || "").toLowerCase()
       const source = String(item.source || "").toLowerCase()
       const path = String(item.skillMdPath || "").toLowerCase()
-      const tools = Array.isArray(item.allowedTools) ? item.allowedTools.join(" ").toLowerCase() : ""
-      return id.includes(query) || name.includes(query) || description.includes(query) || source.includes(query) || path.includes(query) || tools.includes(query)
+      const tools = Array.isArray(item.allowedTools)
+        ? item.allowedTools.join(" ").toLowerCase()
+        : ""
+      return (
+        id.includes(query) ||
+        name.includes(query) ||
+        description.includes(query) ||
+        source.includes(query) ||
+        path.includes(query) ||
+        tools.includes(query)
+      )
     })
   }, [query, skills])
 
@@ -162,167 +201,183 @@ export function SkillsSection(props: SkillsSectionProps) {
   }, [installAgent, installGlobal, installSpec, installYes, onInstallSkill])
 
   return (
-    <section className="min-h-0 space-y-3 overflow-y-auto px-1">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-            total {filteredSkills.length}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-foreground/8 px-2 py-0.5 text-foreground/85">
-            project {sourceSummary.project}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-foreground/8 px-2 py-0.5 text-foreground/85">
-            home {sourceSummary.home}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-foreground/8 px-2 py-0.5 text-foreground/85">
-            external {sourceSummary.external}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="搜索 skills"
-              className="h-8 w-[220px] pl-7"
-            />
+    <section className="space-y-4">
+      <DashboardModule
+        title="Skills"
+        actions={
+          <>
+            <SurfaceTag tone="strong">{`total ${filteredSkills.length}`}</SurfaceTag>
+            <SurfaceTag>{`project ${sourceSummary.project}`}</SurfaceTag>
+            <SurfaceTag>{`home ${sourceSummary.home}`}</SurfaceTag>
+            <SurfaceTag>{`external ${sourceSummary.external}`}</SurfaceTag>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="搜索 skills"
+                className="w-[220px] pl-8"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={loading || !hasAgent}
+              onClick={() => void onRefreshSkills()}
+            >
+              <RefreshCcwIcon className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </>
+        }
+      >
+        {filteredSkills.length === 0 ? (
+          <div className="rounded-[18px] bg-secondary/85 px-4 py-8 text-sm text-muted-foreground">
+            {query ? "没有匹配的 skills。" : "暂无 skills。"}
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8"
-            disabled={loading || !hasAgent}
-            onClick={() => void onRefreshSkills()}
-          >
-            <RefreshCcwIcon className={`mr-1 size-3.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
+        ) : (
+          <div className="rounded-[18px] bg-secondary/85 p-2">
+            {filteredSkills.map((item) => {
+              const id = String(item.id || "unknown")
+              const name = String(item.name || "unknown")
+              const source = normalizeSourceLabel(String(item.source || ""))
+              const description = String(item.description || "").trim()
+              const tools = Array.isArray(item.allowedTools) ? item.allowedTools : []
+              const path = String(item.skillMdPath || "").trim() || "-"
+              const meta = [source, tools.length > 0 ? tools.join(", ") : "no tools"]
+                .filter(Boolean)
+                .join(" · ")
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
-        <Input
-          value={findQuery}
-          onChange={(event) => setFindQuery(event.target.value)}
-          placeholder="find query，例如 playwright"
-          className="h-9"
-        />
-        <Input
-          value={installSpec}
-          onChange={(event) => setInstallSpec(event.target.value)}
-          placeholder="install spec，例如 owner/repo@playwright"
-          className="h-9"
-        />
-        <Button
-          variant="outline"
-          className="h-9 min-w-22"
-          disabled={!hasAgent || actionLoadingKey === "install" || actionLoadingKey === "find"}
-          onClick={() => void handleFind()}
-        >
-          {actionLoadingKey === "find" ? <Loader2Icon className="mr-1 size-4 animate-spin" /> : <SearchIcon className="mr-1 size-4" />}
-          Find
-        </Button>
-        <Button
-          variant="outline"
-          className="h-9 min-w-22"
-          disabled={!hasAgent || actionLoadingKey === "install" || actionLoadingKey === "find"}
-          onClick={() => void handleInstall()}
-        >
-          {actionLoadingKey === "install" ? <Loader2Icon className="mr-1 size-4 animate-spin" /> : <WrenchIcon className="mr-1 size-4" />}
-          Install
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2 text-xs text-muted-foreground">
-        <div className="truncate">
-          <span className="font-medium text-foreground/85">Install Config:</span>{" "}
-          {`global=${String(installGlobal)} · yes=${String(installYes)} · agent=${String(installAgent || "claude-code")}`}
-        </div>
-        <Button size="sm" variant="outline" className="h-7" onClick={() => setInstallConfigOpen(true)}>
-          <Settings2Icon className="mr-1 size-3.5" />
-          配置
-        </Button>
-      </div>
-
-      {actionReport ? (
-        <div className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs">
-          <div className="font-medium text-foreground">{actionReport.title}</div>
-          <div className="mt-0.5 text-muted-foreground">{actionReport.message}</div>
-          {actionReport.nextAction ? (
-            <div className="mt-1 text-muted-foreground">{`next: ${actionReport.nextAction}`}</div>
-          ) : null}
-          {Array.isArray(actionReport.workflow) && actionReport.workflow.length > 0 ? (
-            <div className="mt-1 text-muted-foreground">{`workflow: ${actionReport.workflow.join(" -> ")}`}</div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {filteredSkills.length === 0 ? (
-        <div className="py-8 text-sm text-muted-foreground">
-          {query ? "没有匹配的 skills。" : "暂无 skills。"}
-        </div>
-      ) : (
-        <div>
-          <table className="w-full table-fixed border-collapse text-sm">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                <th className="py-2 text-left font-medium">Skill</th>
-                <th className="w-[120px] py-2 text-left font-medium">Source</th>
-                <th className="w-[260px] py-2 text-left font-medium">Allowed Tools</th>
-                <th className="w-[420px] py-2 text-left font-medium">SKILL.md</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSkills.map((item) => {
-                const id = String(item.id || "unknown")
-                const name = String(item.name || "unknown")
-                const source = normalizeSourceLabel(String(item.source || ""))
-                const description = String(item.description || "").trim()
-                const tools = Array.isArray(item.allowedTools) ? item.allowedTools : []
-                const path = String(item.skillMdPath || "").trim() || "-"
-                return (
-                  <tr key={`${source}:${id}`} className="align-middle text-foreground">
-                    <td className="py-2 pr-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-[14px] font-semibold">{name}</div>
-                        <div className="truncate font-mono text-[11px] text-muted-foreground">{id}</div>
-                        {description ? <div className="truncate text-[12px] text-muted-foreground">{description}</div> : null}
+              return (
+                <div
+                  key={`${source}:${id}`}
+                  className="group rounded-[14px] bg-transparent px-3 py-3 transition-colors hover:bg-background"
+                >
+                  <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="truncate text-sm font-medium text-foreground">{name}</div>
+                        <span className="inline-flex h-5 items-center rounded-full bg-background px-2 text-[11px] text-muted-foreground">
+                          {source}
+                        </span>
                       </div>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <span className="inline-flex h-5 items-center rounded-full bg-muted px-2 text-[11px] text-muted-foreground">
-                        {source}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <div className="flex flex-wrap gap-1">
-                        {tools.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">-</span>
-                        ) : (
-                          tools.map((tool) => (
-                            <span
-                              key={`${id}:${tool}`}
-                              className="inline-flex h-5 items-center rounded-full bg-foreground/8 px-2 font-mono text-[11px] text-foreground/85"
-                            >
-                              {tool}
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <span className="block truncate font-mono text-[11px] text-muted-foreground" title={path}>
+                      <div className="truncate text-xs text-muted-foreground">{id}</div>
+                      {description ? (
+                        <div className="truncate text-xs text-muted-foreground">{description}</div>
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 text-left lg:max-w-[42rem] lg:text-right">
+                      <div className="truncate text-xs text-muted-foreground">{meta}</div>
+                      <div
+                        className="truncate font-mono text-[11px] text-muted-foreground/90"
+                        title={path}
+                      >
                         {path}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </DashboardModule>
+
+      <DashboardModule
+        title="Find / Install"
+        actions={
+          <>
+            <SurfaceTag>{`global ${String(installGlobal)}`}</SurfaceTag>
+            <SurfaceTag>{`yes ${String(installYes)}`}</SurfaceTag>
+            <SurfaceTag>{`agent ${String(installAgent || "claude-code")}`}</SurfaceTag>
+            <Button size="sm" variant="outline" onClick={() => setInstallConfigOpen(true)}>
+              <Settings2Icon className="size-3.5" />
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-[18px] bg-secondary/85 p-2">
+            <div className="rounded-[14px] bg-transparent px-3 py-3">
+              <div className="mb-2 text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                Find
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={findQuery}
+                  onChange={(event) => setFindQuery(event.target.value)}
+                  placeholder="例如 playwright"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  className="sm:min-w-24"
+                  disabled={!hasAgent || actionLoadingKey === "install" || actionLoadingKey === "find"}
+                  onClick={() => void handleFind()}
+                >
+                  {actionLoadingKey === "find" ? (
+                    <Loader2Icon className="size-4 animate-spin" />
+                  ) : (
+                    <SearchIcon className="size-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[18px] bg-secondary/85 p-2">
+            <div className="rounded-[14px] bg-transparent px-3 py-3">
+              <div className="mb-2 text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                Install
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={installSpec}
+                  onChange={(event) => setInstallSpec(event.target.value)}
+                  placeholder="例如 owner/repo@playwright"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  className="sm:min-w-24"
+                  disabled={!hasAgent || actionLoadingKey === "install" || actionLoadingKey === "find"}
+                  onClick={() => void handleInstall()}
+                >
+                  {actionLoadingKey === "install" ? (
+                    <Loader2Icon className="size-4 animate-spin" />
+                  ) : (
+                    <WrenchIcon className="size-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+      </DashboardModule>
+
+      <DashboardModule title="Action Report">
+        <div className="rounded-[18px] bg-secondary/85 p-2">
+          {actionReport ? (
+            <div className="rounded-[14px] bg-transparent px-3 py-3 text-sm">
+              <div className="text-foreground">{actionReport.title}</div>
+              <div className="mt-1 text-muted-foreground">{actionReport.message}</div>
+              {actionReport.nextAction ? (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {`next · ${actionReport.nextAction}`}
+                </div>
+              ) : null}
+              {Array.isArray(actionReport.workflow) && actionReport.workflow.length > 0 ? (
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {`workflow · ${actionReport.workflow.join(" -> ")}`}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-[14px] bg-transparent px-3 py-6 text-sm text-muted-foreground">
+              暂无动作反馈
+            </div>
+          )}
+        </div>
+      </DashboardModule>
 
       <Dialog open={installConfigOpen} onOpenChange={setInstallConfigOpen}>
         <DialogContent className="w-[min(92vw,520px)]">

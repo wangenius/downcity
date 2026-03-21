@@ -135,8 +135,10 @@ export function App() {
     removeChannelAccount,
     upsertGlobalEnv,
     removeGlobalEnv,
+    importGlobalEnv,
     upsertAgentEnv,
     removeAgentEnv,
+    importAgentEnv,
     executeAgentCommand,
     constants,
     uiHelpers,
@@ -526,6 +528,12 @@ export function App() {
                   return removeAgentEnv(String(input.agentId || "").trim(), input.key)
                 }
                 return removeGlobalEnv(input.key)
+              }}
+              onImport={(input) => {
+                if (input.scope === "agent") {
+                  return importAgentEnv(String(input.agentId || "").trim(), input.raw)
+                }
+                return importGlobalEnv(input.raw)
               }}
             />
           </section>

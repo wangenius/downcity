@@ -10,6 +10,7 @@ import * as React from "react"
 import { CheckIcon, ChevronsUpDownIcon, TerminalIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -223,6 +224,7 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
     persistSelectionInUrl = true,
     onExecute,
   } = props
+  const confirm = useConfirmDialog()
   const [activeAgentId, setActiveAgentId] = React.useState("")
   const [command, setCommand] = React.useState("")
   const [running, setRunning] = React.useState(false)
@@ -523,14 +525,73 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
       className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
       bodyClassName="flex min-h-0 flex-1 flex-col"
       actions={
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 text-[11px] text-muted-foreground">
-            {activeAgentBadge}
-          </span>
+        <>
+          {agents.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="inline-flex min-w-[11rem] max-w-[16rem] items-center gap-2 rounded-[11px] bg-secondary/85 px-2.5 text-left outline-none transition-colors hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/30"
+                aria-label="选择 agent"
+              >
+                <div className="min-w-0 flex-1 leading-none">
+                  <div className="mb-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+                    Agent
+                  </div>
+                  <div className="max-w-[12rem] truncate text-left text-[12px] text-foreground">
+                    {activeAgentBadge}
+                  </div>
+                </div>
+                <ChevronsUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[24rem] max-w-[calc(100vw-2rem)]">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>选择 agent</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {agents.map((agent) => {
+                    const id = String(agent.id || "").trim()
+                    if (!id) return null
+                    const isActive = id === activeAgentId
+                    return (
+                      <DropdownMenuItem
+                        key={id}
+                        onClick={() => {
+                          setActiveAgentId(id)
+                          onSelectAgent?.(id)
+                        }}
+                        className="justify-between gap-2"
+                      >
+                        <span className="truncate">{agent.name || id}</span>
+                        {isActive ? <CheckIcon className="size-3.5 text-primary" /> : null}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="inline-flex items-center rounded-[11px] bg-secondary/85 px-2.5">
+              <div className="leading-none">
+                <div className="mb-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+                  Agent
+                </div>
+                <div className="text-[12px] text-foreground">{activeAgentBadge}</div>
+              </div>
+            </div>
+          )}
           <Button
             size="icon-sm"
             variant="ghost"
-            onClick={() => setRecords([])}
+            onClick={() => {
+              void (async () => {
+                const confirmed = await confirm({
+                  title: "清空输出",
+                  description: "确认清空当前命令输出记录吗？",
+                  confirmText: "清空",
+                  confirmVariant: "destructive",
+                })
+                if (!confirmed) return
+                setRecords([])
+              })()
+            }}
             disabled={running || records.length === 0}
             className="text-muted-foreground hover:bg-secondary hover:text-foreground"
             aria-label="清空输出"
@@ -538,54 +599,13 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
           >
             <Trash2Icon className="size-4" />
           </Button>
-        </div>
+        </>
       }
     >
-      <div className="flex flex-wrap items-center gap-2">
-        {agents.length > 0 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="inline-flex h-9 min-w-[14rem] max-w-[24rem] items-center justify-between gap-2 rounded-[12px] bg-secondary px-3 text-sm text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/30"
-              aria-label="选择 agent"
-            >
-              <span className="truncate text-left">{activeAgentName}</span>
-              <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[24rem] max-w-[calc(100vw-2rem)]">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>选择 agent</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {agents.map((agent) => {
-                  const id = String(agent.id || "").trim()
-                  if (!id) return null
-                  const isActive = id === activeAgentId
-                  return (
-                    <DropdownMenuItem
-                      key={id}
-                      onClick={() => {
-                        setActiveAgentId(id)
-                        onSelectAgent?.(id)
-                      }}
-                      className="justify-between gap-2"
-                    >
-                      <span className="truncate">{agent.name || id}</span>
-                      {isActive ? <CheckIcon className="size-3.5 text-primary" /> : null}
-                    </DropdownMenuItem>
-                  )
-                })}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-        <span className="inline-flex h-7 items-center rounded-full bg-secondary px-2.5 text-[11px] text-muted-foreground">
-          {records.length === 0 ? "暂无执行记录" : `${records.length} 条记录`}
-        </span>
-      </div>
-
       <div className="min-h-0 flex-1 rounded-[20px] bg-secondary p-2">
         <div
           ref={terminalRef}
-          className="h-full overflow-auto rounded-[18px] bg-background px-3 py-3 font-mono text-[12px] leading-relaxed text-foreground/92"
+          className="h-full overflow-auto rounded-[18px] px-3 py-3 font-mono text-[12px] leading-relaxed text-foreground/92"
         >
           {records.length === 0 ? (
             <div className="text-muted-foreground">

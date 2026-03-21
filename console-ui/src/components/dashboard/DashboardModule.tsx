@@ -47,14 +47,27 @@ export function DashboardModule(props: DashboardModuleProps) {
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{title}</div>
-          {description ? (
-            <div className="text-sm text-muted-foreground">{description}</div>
-          ) : null}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex h-8 items-center text-xs uppercase tracking-[0.12em] text-muted-foreground">
+            {title}
+          </div>
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div
+            className={cn(
+              "flex shrink-0 items-center gap-2",
+              "[&_[data-slot=button]]:h-8",
+              "[&_[data-slot=input]]:h-8",
+              "[&_[data-slot=badge]]:h-8",
+              "[&_[data-slot=button]]:rounded-[11px]",
+              "[&_[data-slot=input]]:rounded-[11px]",
+              "[&_[data-slot=badge]]:rounded-[999px]",
+            )}
+          >
+            {actions}
+          </div>
+        ) : null}
       </div>
       <div className={cn("space-y-3", bodyClassName)}>{children}</div>
     </section>

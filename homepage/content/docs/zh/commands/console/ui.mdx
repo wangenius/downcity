@@ -39,6 +39,7 @@ city console ui [action] [options]
 - `Global / Overview` 仅展示全局级健康信号（console、agent fleet、channels、extensions、config risk）。
 - `Global / Overview` 顶部摘要区域会显示当前 DC 版本号。
 - `Global / Env` 现已支持手动维护 Console 共享 env 与 Agent 私有 env，统一写入 `~/.ship/ship.db` 的 `env_entries`。
+- `Global / Env` 点击右上角 `+` 时，会自动检测当前剪贴板是否为 `.env` 文本；若匹配则直接批量导入（支持一次多个键），否则回退到手动创建弹窗。
 - `Global / Console Runtime` 展示 console 运行态与 console 级配置文件状态。
 - `Agent`：`Overview`、`Services`、`Command`、`Tasks`、`Logs`。
 - `Agent / Overview` 聚焦当前 agent（bootstrap 配置、chat 身份、模型绑定），不再混入 global 信息。

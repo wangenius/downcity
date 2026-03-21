@@ -344,15 +344,14 @@ export function TasksSection(props: TasksSectionProps) {
         title="Tasks"
         description="任务定义、状态与最近执行时间总览。"
         actions={
-          <div className="flex flex-wrap items-center gap-1.5">
+          <>
             <Badge variant="outline" className="bg-secondary text-foreground">{`total ${overviewStats.total}`}</Badge>
             <Badge variant="outline" className="border-border/60 bg-primary/10 text-primary">{`running ${overviewStats.running}`}</Badge>
             <Badge variant="outline" className="border-border/60 bg-destructive/10 text-destructive">{`failed ${overviewStats.failed}`}</Badge>
             <Badge variant="outline" className="bg-secondary text-foreground">{`manual ${overviewStats.manual}`}</Badge>
-          </div>
+          </>
         }
       >
-
         {tasks.length === 0 ? (
           <div className="rounded-[20px] bg-secondary px-4 py-6 text-sm text-muted-foreground">暂无 task 数据</div>
         ) : (
@@ -453,65 +452,65 @@ export function TasksSection(props: TasksSectionProps) {
         title="Task Runtime"
         description={String(selectedTask.description || "").trim() || "无描述"}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className={badgeClass(String(selectedTask.status || "unknown"))}>
-              {String(selectedTask.status || "unknown")}
-            </Badge>
-            <Button size="sm" variant="outline" onClick={() => onSelectTaskTitle?.("")}>
-              返回列表
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                const title = String(selectedTask.title || "").trim();
-                if (!title) return;
-                setForceLivePolling(true);
-                onRunTask(title);
-                window.setTimeout(() => {
-                  void loadRuns(title, {
-                    showLoading: false,
-                    preferInProgress: true,
-                  });
-                }, 350);
-              }}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  disabled={taskMutating || !selectedTaskTitleValue}
+                  aria-label="任务操作"
+                  title="任务操作"
+                />
+              }
             >
-              Run Task
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    size="icon-sm"
-                    variant="outline"
-                    disabled={taskMutating || !selectedTaskTitleValue}
-                    aria-label="任务操作"
-                    title="任务操作"
-                  />
-                }
-              >
-                <EllipsisIcon className="size-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[14rem]">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>任务操作</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => void handleToggleTaskStatus()}>
-                    {toggleActionLabel}
-                  </DropdownMenuItem>
-                  {selectedTaskStatus !== "disabled" ? (
-                    <DropdownMenuItem onClick={() => void handleDisableTask()}>
-                      设为 disabled
-                    </DropdownMenuItem>
-                  ) : null}
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={() => void handleDeleteTask()}>
-                  删除任务
+              <EllipsisIcon className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[14rem]">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>任务操作</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => void handleToggleTaskStatus()}>
+                  {toggleActionLabel}
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                {selectedTaskStatus !== "disabled" ? (
+                  <DropdownMenuItem onClick={() => void handleDisableTask()}>
+                    设为 disabled
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => void handleDeleteTask()}>
+                删除任务
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       >
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={badgeClass(String(selectedTask.status || "unknown"))}>
+            {String(selectedTask.status || "unknown")}
+          </Badge>
+          <Button size="sm" variant="outline" onClick={() => onSelectTaskTitle?.("")}>
+            返回列表
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              const title = String(selectedTask.title || "").trim();
+              if (!title) return;
+              setForceLivePolling(true);
+              onRunTask(title);
+              window.setTimeout(() => {
+                void loadRuns(title, {
+                  showLoading: false,
+                  preferInProgress: true,
+                });
+              }, 350);
+            }}
+          >
+            Run Task
+          </Button>
+        </div>
         <div className="text-lg font-semibold tracking-tight text-foreground">
           {String(selectedTask.title || "-")}
         </div>

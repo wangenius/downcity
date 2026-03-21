@@ -6,6 +6,7 @@
  * - 所有 value 在 DB 中以密文存储，这里的接口只负责明文读写与删除。
  */
 
+import dotenv from "dotenv";
 import type { Hono } from "hono";
 import { ConsoleStore } from "@/utils/store/index.js";
 
@@ -23,6 +24,42 @@ function normalizeNonEmptyText(value: unknown, fieldName: string): string {
     throw new Error(`${fieldName} cannot be empty`);
   }
   return text;
+}
+
+function normalizeEnvKey(value: unknown): string {
+  const key = String(value || "").trim().toUpperCase();
+  if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) {
+    throw new Error(`invalid env key: ${String(value || "")}`);
+  }
+  return key;
+}
+
+function parseDotenvEntries(raw: unknown): Array<{ key: string; value: string }> {
+  const text = String(raw || "").replace(/^\uFEFF/, "").trim();
+  if (!text) {
+    throw new Error("clipboard env text cannot be empty");
+  }
+
+  /**
+   * 关键点（中文）
+   * - 兼容用户直接复制 `export KEY=value` 形式。
+   * - 仍然复用 `dotenv.parse`，保持 `.env` 解析行为一致。
+   */
+  const normalized = text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^(\s*)export\s+/, "$1"))
+    .join("\n");
+  const parsed = dotenv.parse(normalized);
+  const entries = Object.entries(parsed).map(([key, value]) => ({
+    key: normalizeEnvKey(key),
+    value: String(value ?? ""),
+  }));
+
+  if (entries.length === 0) {
+    throw new Error("clipboard does not contain valid .env entries");
+  }
+
+  return entries;
 }
 
 /**
@@ -152,6 +189,55 @@ export function registerConsoleUiEnvRoutes(params: {
           success: true,
           scope: "global",
           key,
+        });
+      } finally {
+        store.close();
+      }
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.post("/api/ui/env/import", async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as {
+        scope?: string;
+        agentId?: string;
+        raw?: string;
+      };
+      const scope = normalizeScope(body.scope);
+      const entries = parseDotenvEntries(body.raw);
+      const store = new ConsoleStore();
+      try {
+        if (scope === "agent") {
+          const agentId = normalizeNonEmptyText(body.agentId, "agentId");
+          for (const entry of entries) {
+            await store.upsertAgentEnvEntry({
+              agentId,
+              key: entry.key,
+              value: entry.value,
+            });
+          }
+          return c.json({
+            success: true,
+            scope,
+            agentId,
+            count: entries.length,
+            keys: entries.map((entry) => entry.key),
+          });
+        }
+
+        for (const entry of entries) {
+          await store.upsertGlobalEnvEntry({
+            key: entry.key,
+            value: entry.value,
+          });
+        }
+        return c.json({
+          success: true,
+          scope: "global",
+          count: entries.length,
+          keys: entries.map((entry) => entry.key),
         });
       } finally {
         store.close();

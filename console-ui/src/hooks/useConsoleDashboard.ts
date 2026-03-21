@@ -602,6 +602,10 @@ export interface UseConsoleDashboardResult {
    */
   removeGlobalEnv: (key: string) => Promise<void>;
   /**
+   * 从剪贴板 `.env` 文本批量导入 Console 全局 env。
+   */
+  importGlobalEnv: (raw: string) => Promise<void>;
+  /**
    * 新增/更新当前 agent 私有 env。
    */
   upsertAgentEnv: (input: {
@@ -613,6 +617,10 @@ export interface UseConsoleDashboardResult {
    * 删除当前 agent 私有 env。
    */
   removeAgentEnv: (agentId: string, key: string) => Promise<void>;
+  /**
+   * 从剪贴板 `.env` 文本批量导入 agent 私有 env。
+   */
+  importAgentEnv: (agentId: string, raw: string) => Promise<void>;
   /**
    * 执行 agent 项目目录下的 shell command。
    */
@@ -2696,6 +2704,38 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshGlobalEnv, requestJson, showToast],
   );
 
+  const importGlobalEnv = useCallback(
+    async (raw: string) => {
+      try {
+        const response = (await requestJson("/api/ui/env/import", {
+          method: "POST",
+          body: JSON.stringify({
+            scope: "global",
+            raw: String(raw || ""),
+          }),
+        })) as {
+          count?: number;
+          keys?: string[];
+        };
+        await refreshGlobalEnv();
+        const count = Number(response.count || 0);
+        const keys = Array.isArray(response.keys)
+          ? response.keys.map((item) => String(item || "").trim()).filter(Boolean)
+          : [];
+        showToast(
+          count > 0
+            ? `已批量导入 ${count} 个全局 env${keys.length ? `：${keys.slice(0, 3).join("、")}${keys.length > 3 ? "…" : ""}` : ""}`
+            : "已导入全局 env",
+          "success",
+        );
+      } catch (error) {
+        showToast(`批量导入 env 失败: ${getErrorMessage(error)}`, "error");
+        throw error;
+      }
+    },
+    [refreshGlobalEnv, requestJson, showToast],
+  );
+
   const removeGlobalEnv = useCallback(
     async (key: string) => {
       try {
@@ -2765,6 +2805,44 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         showToast(`agent env ${String(key || "").trim()} 已删除`, "success");
       } catch (error) {
         showToast(`agent env 删除失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshAgentEnv, requestJson, showToast],
+  );
+
+  const importAgentEnv = useCallback(
+    async (agentIdInput: string, raw: string) => {
+      const agentId = String(agentIdInput || "").trim();
+      if (!agentId) {
+        showToast("当前没有可写入的 agent", "error");
+        throw new Error("agentId is required");
+      }
+      try {
+        const response = (await requestJson("/api/ui/env/import", {
+          method: "POST",
+          body: JSON.stringify({
+            scope: "agent",
+            agentId,
+            raw: String(raw || ""),
+          }),
+        })) as {
+          count?: number;
+          keys?: string[];
+        };
+        await refreshAgentEnv();
+        const count = Number(response.count || 0);
+        const keys = Array.isArray(response.keys)
+          ? response.keys.map((item) => String(item || "").trim()).filter(Boolean)
+          : [];
+        showToast(
+          count > 0
+            ? `已批量导入 ${count} 个 agent env${keys.length ? `：${keys.slice(0, 3).join("、")}${keys.length > 3 ? "…" : ""}` : ""}`
+            : "已导入 agent env",
+          "success",
+        );
+      } catch (error) {
+        showToast(`批量导入 agent env 失败: ${getErrorMessage(error)}`, "error");
+        throw error;
       }
     },
     [refreshAgentEnv, requestJson, showToast],
@@ -2922,8 +3000,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     removeChannelAccount,
     upsertGlobalEnv,
     removeGlobalEnv,
+    importGlobalEnv,
     upsertAgentEnv,
     removeAgentEnv,
+    importAgentEnv,
     executeAgentCommand,
     constants: {
       CONSOLEUI_CONTEXT_ID,

@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
+import { getChannelDisplayName } from "@/lib/channel-label"
 import type { UiChannelAccountItem, UiChatChannelStatus, UiContextSummary } from "@/types/Dashboard"
 import {
   buildContextGroups,
@@ -155,6 +156,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
 
   const activeChannel = visibleChatChannels[0] || null
   const activeChannelName = String(activeChannel?.channel || "").trim()
+  const activeChannelLabel = getChannelDisplayName(activeChannelName)
   const activeLinkState = String(activeChannel?.linkState || "unknown").trim().toLowerCase()
 
   const activeDetail = React.useMemo(() => {
@@ -218,12 +220,17 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
       ) : (
         <DashboardModule
           title="Channel Runtime"
-          description={`当前 channel：${activeChannelName || "unknown"} · account ${activeChannelAccountLabel}`}
+          description={`当前 channel：${activeChannelLabel || "unknown"} · account ${activeChannelAccountLabel}`}
         >
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-3 px-1 py-1">
               <div className="min-w-0">
-                <div className="truncate text-xl font-semibold leading-none text-foreground">{activeChannelName || "unknown"}</div>
+                <div className="truncate text-xl font-semibold leading-none text-foreground">{activeChannelLabel || "unknown"}</div>
+                {activeChannelName === "qq" ? (
+                  <div className="mt-2 rounded-[12px] border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-xs leading-5 text-amber-950">
+                    QQ channel 当前为 dev 版本，建议仅用于测试与验证。
+                  </div>
+                ) : null}
                 <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                   <span
                     className={`size-1.5 rounded-full ${
@@ -332,30 +339,32 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
       <DashboardModule
         title="Contexts"
         description={`当前筛选结果 ${visibleContexts.length} 条。`}
-        actions={<div className="text-xs text-muted-foreground">{`total ${visibleContexts.length}`}</div>}
+        actions={
+          <>
+            <span className="text-xs text-muted-foreground">{`total ${visibleContexts.length}`}</span>
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="搜索 context"
+              className="w-[220px]"
+            />
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(["all", "chat", "api", "other"] as const).map((key) => (
+                <Button
+                  key={key}
+                  type="button"
+                  size="sm"
+                  variant={filter === key ? "default" : "outline"}
+                  className="px-2 text-xs"
+                  onClick={() => setFilter(key)}
+                >
+                  {key}
+                </Button>
+              ))}
+            </div>
+          </>
+        }
       >
-
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索 contextId / chatId / chatTitle / role / message"
-          />
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(["all", "chat", "api", "other"] as const).map((key) => (
-              <Button
-                key={key}
-                type="button"
-                size="sm"
-                variant={filter === key ? "default" : "outline"}
-                className="h-8 px-2 text-xs"
-                onClick={() => setFilter(key)}
-              >
-                {key}
-              </Button>
-            ))}
-          </div>
-        </div>
 
         {visibleContexts.length === 0 ? (
           <div className="rounded-[18px] bg-secondary px-4 py-5 text-sm text-muted-foreground">

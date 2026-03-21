@@ -2,8 +2,10 @@
  * Services 运行状态区。
  */
 
+import * as React from "react";
 import { Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react";
 import { Button } from "../ui/button";
+import { useConfirmDialog } from "../ui/confirm-dialog";
 import { DashboardModule } from "./DashboardModule";
 import type { UiServiceItem } from "../../types/Dashboard";
 
@@ -24,6 +26,7 @@ export interface ServicesSectionProps {
 
 export function ServicesSection(props: ServicesSectionProps) {
   const { services, statusBadgeVariant, onControlService } = props;
+  const confirm = useConfirmDialog();
   const runningCount = services.filter((svc) => {
     const state = String(svc.state || svc.status || "").toLowerCase();
     return state === "running" || state === "active" || state === "ok";
@@ -106,7 +109,18 @@ export function ServicesSection(props: ServicesSectionProps) {
                     <Button
                       size="icon-sm"
                       variant="destructive"
-                      onClick={() => onControlService(name, "stop")}
+                      onClick={() => {
+                        void (async () => {
+                          const confirmed = await confirm({
+                            title: "停止 Service",
+                            description: `确认停止 service「${name}」吗？`,
+                            confirmText: "停止",
+                            confirmVariant: "destructive",
+                          });
+                          if (!confirmed) return;
+                          onControlService(name, "stop");
+                        })();
+                      }}
                       aria-label="stop"
                       title="stop"
                       disabled={!canStop}

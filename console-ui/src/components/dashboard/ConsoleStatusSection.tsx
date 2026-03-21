@@ -10,6 +10,12 @@ import * as React from "react"
 import { Badge } from "../ui/badge"
 import { Button } from "../ui/button"
 import { DashboardModule } from "./DashboardModule"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu"
 import type {
   UiConfigStatusItem,
   UiExtensionRuntimeItem,
@@ -153,23 +159,25 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
         title="Config Workbench"
         description="按 required / optional 维度筛选 console 配置状态。"
         actions={
-          <div className="flex items-center gap-1.5">
-            {([
-              ["required", `required (${requiredItems.length})`],
-              ["optional", `optional (${optionalItems.length})`],
-              ["all", `all (${consoleConfigItems.length})`],
-            ] as const).map(([key, label]) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={mode === key ? "secondary" : "outline"}
-                className="h-7 px-2 text-[11px]"
-                onClick={() => setMode(key)}
+          <>
+            <span className="text-xs text-muted-foreground">{`${filteredItems.length} items`}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button size="sm" variant="outline" className="px-2.5 text-[11px]" />}
               >
-                {label}
-              </Button>
-            ))}
-          </div>
+                {mode === "required"
+                  ? `required (${requiredItems.length})`
+                  : mode === "optional"
+                    ? `optional (${optionalItems.length})`
+                    : `all (${consoleConfigItems.length})`}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[12rem]">
+                <DropdownMenuItem onClick={() => setMode("required")}>{`required (${requiredItems.length})`}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMode("optional")}>{`optional (${optionalItems.length})`}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMode("all")}>{`all (${consoleConfigItems.length})`}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         }
         >
           {filteredItems.length === 0 ? (

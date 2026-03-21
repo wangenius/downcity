@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -38,6 +39,29 @@ function normalizeKey(value: string): string {
 
 function isValidEnvKey(value: string): boolean {
   return /^[A-Z_][A-Z0-9_]*$/.test(normalizeKey(value))
+}
+
+function extractDotenvKeys(raw: string): string[] {
+  const lines = String(raw || "").split(/\r?\n/)
+  const keys = new Set<string>()
+  let candidateLineCount = 0
+  let invalidLineCount = 0
+
+  for (const line of lines) {
+    const trimmed = String(line || "").trim()
+    if (!trimmed || trimmed.startsWith("#")) continue
+    candidateLineCount += 1
+    const normalizedLine = trimmed.replace(/^export\s+/, "")
+    const match = normalizedLine.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=/)
+    if (!match) {
+      invalidLineCount += 1
+      continue
+    }
+    keys.add(normalizeKey(match[1]))
+  }
+
+  if (candidateLineCount === 0 || invalidLineCount > 0) return []
+  return [...keys]
 }
 
 export interface EnvSectionProps {
@@ -82,6 +106,14 @@ export interface EnvSectionProps {
     value: string
   }) => Promise<void> | void
   /**
+   * 从原始 `.env` 文本批量导入。
+   */
+  onImport?: (input: {
+    scope: UiEnvScope
+    agentId?: string
+    raw: string
+  }) => Promise<void> | void
+  /**
    * 删除 env。
    */
   onRemove?: (input: {
@@ -101,8 +133,10 @@ export function EnvSection(props: EnvSectionProps) {
     writable = true,
     agentOptions = [],
     onUpsert,
+    onImport,
     onRemove,
   } = props
+  const confirm = useConfirmDialog()
   const [draftKey, setDraftKey] = React.useState("")
   const [draftValue, setDraftValue] = React.useState("")
   const [draftScope, setDraftScope] = React.useState<UiEnvScope>("global")
@@ -141,10 +175,41 @@ export function EnvSection(props: EnvSectionProps) {
   }, [])
 
   const openCreate = React.useCallback(() => {
-    if (!writable) return
-    resetForm()
-    setEditorOpen(true)
-  }, [resetForm, writable])
+    const run = async () => {
+      if (!writable) return
+      resetForm()
+
+      /**
+       * 关键点（中文）
+       * - 只有在剪贴板明确像 `.env` 文本时才自动导入。
+       * - 其余情况一律回退到原有手动新建弹窗，避免误判影响输入流程。
+       */
+      if (onImport && typeof navigator !== "undefined" && navigator.clipboard?.readText) {
+        setPendingKey("import:clipboard")
+        try {
+          const raw = await navigator.clipboard.readText()
+          const keys = extractDotenvKeys(raw)
+          if (keys.length > 0) {
+            await Promise.resolve(
+              onImport({
+                scope: "global",
+                raw,
+              }),
+            )
+            return
+          }
+        } catch {
+          // ignore clipboard read/import failure and fallback to manual creation
+        } finally {
+          setPendingKey("")
+        }
+      }
+
+      setEditorOpen(true)
+    }
+
+    void run()
+  }, [onImport, resetForm, writable])
 
   const startEdit = React.useCallback((item: UiEnvItem) => {
     if (!writable) return
@@ -182,6 +247,13 @@ export function EnvSection(props: EnvSectionProps) {
     const normalizedKey = normalizeKey(input.key)
     const normalizedAgentId = String(input.agentId || "").trim()
     const normalizedScope = input.scope || "global"
+    const confirmed = await confirm({
+      title: "删除 Env",
+      description: `确认删除环境变量「${normalizedKey}」吗？该操作不可恢复。`,
+      confirmText: "删除",
+      confirmVariant: "destructive",
+    })
+    if (!confirmed) return
     setPendingKey(`remove:${normalizedScope}:${normalizedAgentId}:${normalizedKey}`)
     try {
       await Promise.resolve(
@@ -197,7 +269,7 @@ export function EnvSection(props: EnvSectionProps) {
     } finally {
       setPendingKey("")
     }
-  }, [editingKey, onRemove, resetForm])
+  }, [confirm, editingKey, onRemove, resetForm])
 
   const filledCount = items.filter((item) => String(item.value ?? "").length > 0).length
 
@@ -216,14 +288,20 @@ export function EnvSection(props: EnvSectionProps) {
                     size="icon"
                     className="h-8 w-8 rounded-[12px]"
                     onClick={openCreate}
-                    disabled={loading}
+                    disabled={loading || pendingKey === "import:clipboard"}
                     aria-label="新建 Env"
                   />
                 }
               >
-                <PlusIcon className="size-4" />
+                {pendingKey === "import:clipboard" ? (
+                  <Loader2Icon className="size-4 animate-spin" />
+                ) : (
+                  <PlusIcon className="size-4" />
+                )}
               </TooltipTrigger>
-              <TooltipContent>新建 Env</TooltipContent>
+              <TooltipContent>
+                {pendingKey === "import:clipboard" ? "正在检测剪贴板..." : "新建 Env"}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : null

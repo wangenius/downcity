@@ -7,7 +7,7 @@ import type {
   ServiceRuntime,
   ServiceContext,
   ServiceInvokePort,
-} from "@/agent/service/ServiceRuntime.js";
+} from "@/console/service/ServiceRuntime.js";
 import {
   loadGlobalEnvFromStore,
   loadAgentRuntimeEnv,
@@ -18,7 +18,7 @@ import {
   getTaskRunDir,
   parseTaskRunContextId,
 } from "@services/task/runtime/Paths.js";
-import { runServiceCommand } from "@agent/service/Manager.js";
+import { runServiceCommand } from "@/console/service/Manager.js";
 import { CapabilityRegistry } from "@/console/plugin/CapabilityRegistry.js";
 import { HookRegistry } from "@/console/plugin/HookRegistry.js";
 import { AssetRegistry } from "@/console/plugin/AssetRegistry.js";

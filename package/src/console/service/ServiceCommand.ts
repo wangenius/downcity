@@ -9,8 +9,8 @@
 import path from "node:path";
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import { SERVICES } from "@agent/service/Services.js";
-import type { Service, ServiceAction } from "@agent/service/ServiceManager.js";
+import { SERVICES } from "@/console/service/Services.js";
+import type { Service, ServiceAction } from "@/console/service/ServiceManager.js";
 import type { ServiceCommandResponse } from "@agent/types/Services.js";
 import { callServer } from "@/console/daemon/Client.js";
 import { printResult } from "@agent/utils/CliOutput.js";

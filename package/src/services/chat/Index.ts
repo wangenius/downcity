@@ -30,9 +30,9 @@ import {
 import type {
   Service,
   ServiceActionCommandInput,
-} from "@agent/service/ServiceManager.js";
+} from "@/console/service/ServiceManager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { ChatHistoryEventV1 } from "./types/ChatHistory.js";
 import type {
   ChatDeleteRequest,

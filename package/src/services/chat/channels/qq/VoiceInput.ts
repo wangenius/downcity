@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getCacheDirPath } from "@/console/env/Paths.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type {
   QqIncomingAttachment,
   QqInboundAttachmentKind,

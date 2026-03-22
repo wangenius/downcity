@@ -10,7 +10,7 @@ import {
   PrompterComponent,
 } from "@agent/components/PrompterComponent.js";
 import { requestContext } from "@agent/context/manager/RequestContext.js";
-import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import {
   resolveAgentSystemMessages,
   type SystemProfile,

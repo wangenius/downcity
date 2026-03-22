@@ -1,13 +1,13 @@
 /**
- * Service 注册契约类型（agent/service）。
+ * Service 注册契约类型（console/service）。
  *
  * 关键点（中文）
  * - 该类型属于进程编排层，用于承接 service runtime 注册与调度
- * - 一个 service 由多个 action 组成，agent 层只做统一注册与分发
+ * - 一个 service 由多个 action 组成，console 宿主层只做统一注册与分发
  */
 
 import type { Command } from "commander";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { Context as HonoContext } from "hono";
 

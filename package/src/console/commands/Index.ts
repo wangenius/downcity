@@ -31,7 +31,7 @@ import {
   stopConsoleUiCommand,
 } from "./UI.js";
 import type { StartOptions } from "@agent/types/Start.js";
-import { registerAllServicesForCli } from "@agent/service/ServiceCommand.js";
+import { registerAllServicesForCli } from "@/console/service/ServiceCommand.js";
 import { registerAllPluginsForCli } from "@/console/plugin/PluginCommand.js";
 import {
   cleanupStaleDaemonFiles,

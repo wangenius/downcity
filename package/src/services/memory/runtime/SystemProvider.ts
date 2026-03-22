@@ -6,7 +6,7 @@
  * - 仅注入“如何使用 memory service action”的规则。
  */
 
-import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { isMemoryEnabled } from "./Store.js";
 
 /**

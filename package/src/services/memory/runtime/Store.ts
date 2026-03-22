@@ -11,7 +11,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import type { FSWatcher } from "node:fs";
-import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type {
   MemoryDefaults,
   MemorySourceType,

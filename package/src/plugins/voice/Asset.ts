@@ -6,7 +6,7 @@
  * - Plugin 只依赖 `voice.transcriber` 这个 Asset 名称，不直接理解模型与依赖安装细节。
  */
 
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import type { Asset } from "@/types/Asset.js";

@@ -10,8 +10,8 @@ import fs from "fs-extra";
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@agent/prompts/common/PromptRenderer.js";
 import { resolvePromptGeoContext } from "@agent/prompts/variables/GeoContext.js";
-import { SERVICES } from "@agent/service/Services.js";
-import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
+import { SERVICES } from "@/console/service/Services.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 
 const CORE_PROMPT_FILE_URL = new URL("./assets/core.prompt.txt", import.meta.url);
 const SERVICE_PROMPT_FILE_URL = new URL(

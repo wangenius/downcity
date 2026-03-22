@@ -18,8 +18,8 @@ import {
   setTaskStatus,
 } from "./Action.js";
 import { resolveContextId } from "@agent/context/manager/ContextId.js";
-import type { Service } from "@agent/service/ServiceManager.js";
-import type { ServiceRuntime } from "@agent/service/ServiceRuntime.js";
+import type { Service } from "@/console/service/ServiceManager.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type {

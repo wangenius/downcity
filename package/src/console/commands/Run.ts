@@ -23,7 +23,7 @@ import { logger } from "@utils/logger/Logger.js";
 import {
   startAllServiceRuntimes,
   stopAllServiceRuntimes,
-} from "@agent/service/Manager.js";
+} from "@/console/service/Manager.js";
 
 /**
  * 运行态启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。

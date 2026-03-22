@@ -8,7 +8,7 @@
  */
 
 import { requestContext } from "@agent/context/manager/RequestContext.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
 import { setContextAvailableSkills } from "./Store.js";

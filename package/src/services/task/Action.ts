@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import {
   deriveTaskIdFromTitle,

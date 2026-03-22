@@ -13,7 +13,7 @@ import type {
   ShipContextUserMessageV1,
   ContextMessageV1,
 } from "@agent/types/ContextMessage.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {

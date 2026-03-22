@@ -15,7 +15,7 @@ import type {
   ChatAuthorizationStateFile,
 } from "@services/chat/types/Authorization.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
 
 function getAuthorizationStatePath(rootPath: string): string {

@@ -14,9 +14,9 @@ import { fileURLToPath } from "url";
 import {
   listServiceRuntimes,
   runServiceCommand,
-} from "@agent/service/Manager.js";
+} from "@/console/service/Manager.js";
 import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { resolveAgentSystemMessages } from "@agent/prompts/system/SystemDomain.js";
 import {

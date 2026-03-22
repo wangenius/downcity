@@ -6,7 +6,7 @@
  * - 授权核心模型为 role / permission / binding。
  */
 
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 import type {
   ChatAuthorizationConfig,

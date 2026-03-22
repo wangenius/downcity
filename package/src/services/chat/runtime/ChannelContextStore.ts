@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import { generateId } from "@utils/Id.js";
 import { getShipChannelDirPath, getShipChannelMetaPath } from "@/console/env/Paths.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type {
   ChannelContextMetaFileV1,
   ChannelContextRouteV1,

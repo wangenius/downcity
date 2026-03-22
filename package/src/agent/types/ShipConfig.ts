@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 作为全局共享类型，不挂在 console 目录下。
- * - 供 agent/services 多层复用，避免反向类型依赖。
+ * - 供 agent、services、console 宿主层多处复用，避免反向类型依赖。
  */
 import type { LlmConfig } from "@agent/types/LlmConfig.js";
 import type { AgentModelBindingConfig } from "@agent/types/ModelBinding.js";

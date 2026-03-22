@@ -7,7 +7,7 @@ import type {
   VoiceProvider,
   VoiceTranscribeStrategy,
 } from "@/agent/types/Voice.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { resolveVoiceModelsRootDir } from "./Paths.js";
 import type { VoiceTranscriberAssetConfig } from "@/types/VoicePlugin.js";
 

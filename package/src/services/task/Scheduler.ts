@@ -6,7 +6,7 @@
  * - cron 调度执行器由 server 注入，service 不依赖具体实现。
  */
 
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import {
   isTaskWhenManual,
   resolveTaskWhenCronExpression,

@@ -19,7 +19,7 @@ import type {
   ContextMetadataV1,
 } from "@agent/types/ContextMessage.js";
 import type { JsonObject } from "@/types/Json.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import {
   getCacheDirPath,
   getLogsDirPath,

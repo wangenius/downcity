@@ -7,7 +7,7 @@
  * - 底层数据落在 `.ship/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import {

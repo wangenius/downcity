@@ -41,5 +41,5 @@
 
 ## 边界约束
 
-- `services` 应通过 `agent/service/ServiceRuntime` 端口获取运行时能力。
+- `services` 应通过 `console/service/ServiceRuntime` 端口获取运行时能力。
 - 服务间协作优先通过运行时依赖端口（`ServiceRuntime`）而非隐式全局状态。

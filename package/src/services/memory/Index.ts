@@ -7,7 +7,7 @@
  */
 
 import type { Command } from "commander";
-import type { Service } from "@agent/service/ServiceManager.js";
+import type { Service } from "@/console/service/ServiceManager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import {
   flushMemoryAction,

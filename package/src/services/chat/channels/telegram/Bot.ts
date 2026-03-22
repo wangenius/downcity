@@ -21,7 +21,7 @@ import {
 } from "./Shared.js";
 import { buildTelegramVoiceTranscriptionInstruction } from "./VoiceInput.js";
 import { TelegramStateStore } from "./StateStore.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 
 /**

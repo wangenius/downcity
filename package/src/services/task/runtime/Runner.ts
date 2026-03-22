@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { execa } from "execa";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { Agent } from "@agent/Agent.js";
 import { withRequestContext } from "@agent/context/manager/RequestContext.js";
 import { FilePersistor } from "@/agent/context/context-agent/components/FilePersistor.js";

@@ -13,7 +13,7 @@ import {
   getShipChatContextDirPath,
   getShipContextDirPath,
 } from "@/console/env/Paths.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { clearChatQueueLane } from "@services/chat/runtime/ChatQueue.js";
 import { removeChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
 

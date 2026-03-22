@@ -8,7 +8,7 @@
 
 import type { Context as HonoContext, Hono } from "hono";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type {
   Service,
   ServiceAction,

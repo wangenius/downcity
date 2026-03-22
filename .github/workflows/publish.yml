@@ -1,0 +1,63 @@
+name: Publish downcity to npmjs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/downcity/**"
+      - ".github/workflows/publish.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-downcity
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install package dependencies
+        working-directory: packages/downcity
+        run: npm install --legacy-peer-deps
+
+      - name: Build package
+        working-directory: packages/downcity
+        run: npm run build
+
+      - name: Validate npm token and package ownership
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          WHOAMI="$(npm whoami)"
+          echo "Authenticated npm user: ${WHOAMI}"
+          npm owner ls downcity
+          if ! npm owner ls downcity | awk '{print $1}' | grep -qx "${WHOAMI}"; then
+            echo "NPM_TOKEN user '${WHOAMI}' is not an owner of 'downcity'."
+            exit 1
+          fi
+
+      - name: Check version and publish
+        working-directory: packages/downcity
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p 'require("./package.json").version')"
+          if npm view downcity versions --json | grep -q "\"${VERSION}\""; then
+            echo "Version ${VERSION} already exists, skipping publish"
+            exit 0
+          fi
+          npm publish --access public

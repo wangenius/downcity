@@ -178,7 +178,7 @@ main() {
   echo
   if confirm "推送到远程仓库? (y/N): "; then
     git push
-    print_success "🎉 发布完成! 版本 v${new_version} 已推送到远程仓库"
+    print_success "🎉 已推送到远程仓库，CI 将尝试发布 npm 版本 v${new_version}"
   else
     print_warning "已提交到本地，但未推送到远程"
     print_status "运行 'git push' 手动推送"

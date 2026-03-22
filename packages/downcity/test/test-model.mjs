@@ -3,7 +3,7 @@
  * 模型连通性测试脚本（开发测试用途）。
  *
  * 目标（中文）
- * - 放在 `package/test`，避免污染运行时代码。
+ * - 放在 `packages/downcity/test`，避免污染运行时代码。
  * - 直接读取项目的 `ship.json + .env`，验证模型 API 是否可用。
  * - 输出统一使用 `[key]: value` 风格，便于快速排查。
  */
@@ -19,7 +19,7 @@ const DEFAULT_PROMPT = "请仅回复 OK";
 function printHelp() {
   console.log("Usage:");
   console.log(
-    "  node package/test/test-model.mjs [projectPath] [--attempts <n>] [--prompt <text>] [--max-output-tokens <n>] [--verbose]",
+    "  node packages/downcity/test/test-model.mjs [projectPath] [--attempts <n>] [--prompt <text>] [--max-output-tokens <n>] [--verbose]",
   );
 }
 

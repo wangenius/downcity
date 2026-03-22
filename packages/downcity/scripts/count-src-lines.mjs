@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * 统计 package/src 下代码文件的行数。
+ * 统计 packages/downcity/src 下代码文件的行数。
  *
  * 关键点（中文）
  * - 仅统计常见代码扩展名，避免把 README、PROMPT 等文本资源计入代码行。
@@ -87,7 +87,7 @@ async function run() {
     nonEmptyLines += counts.nonEmptyLines;
   }
 
-  console.log("package/src 代码统计");
+  console.log("packages/downcity/src 代码统计");
   console.log(`文件数: ${files.length}`);
   console.log(`总行数: ${totalLines}`);
   console.log(`非空行数: ${nonEmptyLines}`);

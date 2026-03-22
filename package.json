@@ -6,7 +6,7 @@
   "workspaces": {
     "packages": [
       "console-ui",
-      "package",
+      "packages/downcity",
       "examples/*"
     ]
   },

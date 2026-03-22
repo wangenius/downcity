@@ -48,8 +48,8 @@ sequenceDiagram
 
 当前实现位于：
 
-- [Index.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/Index.ts:298)
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:733)
+- [Index.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/Index.ts:298)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:733)
 
 ## 3）入站消息解析
 
@@ -84,7 +84,7 @@ sequenceDiagram
 
 对应实现见：
 
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:816)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:816)
 
 ## 4）发送者姓名与 chat 标题解析
 
@@ -123,9 +123,9 @@ sequenceDiagram
 
 对应实现见：
 
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:195)
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:245)
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:349)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:195)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:245)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:349)
 
 ### 4.3 为什么 UI 里可能还是 `chat_id / open_id`
 
@@ -161,8 +161,8 @@ feishu|<chatId>|<chatType>|<threadId>
 
 对应实现见：
 
-- [ChannelContextStore.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/runtime/ChannelContextStore.ts:118)
-- [BaseChatChannel.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/BaseChatChannel.ts:365)
+- [ChannelContextStore.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChannelContextStore.ts:118)
+- [BaseChatChannel.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/BaseChatChannel.ts:365)
 
 ## 6）入站消息如何进入 Agent
 
@@ -191,7 +191,7 @@ username: ...
 
 对应实现见：
 
-- [QueuedUserMessage.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/runtime/QueuedUserMessage.ts:32)
+- [QueuedUserMessage.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/QueuedUserMessage.ts:32)
 
 同时审计历史会写入：
 
@@ -219,7 +219,7 @@ username: ...
 
 对应实现见：
 
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:885)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:885)
 
 另外，当前版本支持在回复文本里写附件指令并自动转换为飞书文件消息：
 

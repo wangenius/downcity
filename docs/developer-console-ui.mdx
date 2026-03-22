@@ -2,14 +2,14 @@
 
 当前仓库包含两层与 Console UI 相关的实现：
 
-- package/：CLI、console daemon、agent runtime、API 网关。
-- console-ui/：独立前端包（Vite + React），构建输出到 package/public。
+- packages/downcity/：CLI、console daemon、agent runtime、API 网关。
+- console-ui/：独立前端包（Vite + React），构建输出到 packages/downcity/public。
 
 设计目标：
 
 - 前端独立开发、独立构建。
 - city console ui start 只负责托管构建产物并代理 API。
-- 避免把页面逻辑继续写在 package/public 的手工静态脚本中。
+- 避免把页面逻辑继续写在 packages/downcity/public 的手工静态脚本中。
 
 ---
 
@@ -22,7 +22,7 @@
 生产环境
 
 1. 发布前先构建 console-ui：vite build。
-2. 构建产物输出到 package/public（已在 vite.config.ts 配好）。
+2. 构建产物输出到 packages/downcity/public（已在 vite.config.ts 配好）。
 3. 用户执行 city console ui start 时，ConsoleUIGateway 直接托管这些静态文件并代理 /api/*。
 4. 不需要用户机器再跑 Vite 或前端构建。
 
@@ -37,11 +37,11 @@
 - console-ui/index.html：前端入口模板。
 - console-ui/src/main.tsx：React 启动入口。
 - console-ui/src/App.tsx：页面主组件（当前为最小可运行版本）。
-- console-ui/vite.config.ts：构建配置，outDir 指向 ../package/public。
+- console-ui/vite.config.ts：构建配置，outDir 指向 ../packages/downcity/public。
 
 # 2.2 后端网关
 
-- package/src/console/ui/ConsoleUIGateway.ts托管 package/public 静态资源（含 Vite assets/）。提供 /api/ui/agents。代理 /api/ 到当前选中 agent runtime。提供 SPA fallback（未知前端路由回退 index.html）。
+- packages/downcity/src/console/ui/ConsoleUIGateway.ts托管 packages/downcity/public 静态资源（含 Vite assets/）。提供 /api/ui/agents。代理 /api/ 到当前选中 agent runtime。提供 SPA fallback（未知前端路由回退 index.html）。
 
 ---
 
@@ -49,13 +49,13 @@
 
 仓库级构建顺序（scripts/build.sh）：
 
-1. 先构建 console-ui（生成 package/public）。
+1. 先构建 console-ui（生成 packages/downcity/public）。
 2. 再构建 package（tsc + tsc-alias + copy prompt assets）。
 3. 最后全局安装 package（当前脚本行为）。
 
 核心点：
 
-- console-ui 的 dist 不单独发布目录，而是直接写入 package/public，保证 npm 包里天然包含 UI 产物。
+- console-ui 的 dist 不单独发布目录，而是直接写入 packages/downcity/public，保证 npm 包里天然包含 UI 产物。
 - 生产环境不依赖用户本地再执行 Vite 构建。
 
 ---
@@ -66,7 +66,7 @@
 
 1. 用户执行 city console ui start。
 2. CLI 启动 Console UI Gateway 进程。
-3. 浏览器访问 /：Gateway 读取 package/public/index.html 并返回。
+3. 浏览器访问 /：Gateway 读取 packages/downcity/public/index.html 并返回。
 4. 前端加载 /assets/*：Gateway 直接返回对应静态文件。
 5. 前端请求 /api/ui/agents：Gateway 返回 console registry 中可用 agent 列表。
 6. 前端请求 /api/tui/ 或 /api/services/：Gateway 选择当前 agent。转发请求到该 agent runtime（默认 http://127.0.0.1:3000 或按 registry/daemon meta 解析）。
@@ -95,7 +95,7 @@
 
 # 6.1 city console ui start 后页面 503
 
-原因通常是 package/public/index.html 不存在。  
+原因通常是 packages/downcity/public/index.html 不存在。  
 
 处理：
 
@@ -107,7 +107,7 @@
 检查：
 
 - console-ui 是否构建成功。
-- package/public/assets/* 是否生成。
+- packages/downcity/public/assets/* 是否生成。
 - Gateway 是否为新版（支持 assets/* + SPA fallback）。
 
 # 6.3 API 显示连接失败

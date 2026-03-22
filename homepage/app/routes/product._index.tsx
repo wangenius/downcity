@@ -27,7 +27,7 @@ const PAGE = {
         id: "sdk",
         title: "Downcity SDK",
         desc: "把 runtime 能力接入你自己的产品流程、服务接口与业务系统。",
-        source: "package/",
+        source: "packages/downcity/",
       },
       {
         id: "ui-sdk",
@@ -40,7 +40,7 @@ const PAGE = {
     facts: [
       "Console UI 是独立前端包，目录为 console-ui/。",
       "Chrome Extension 基于 Manifest V3，目录为 chrome-extension/。",
-      "SDK 的核心 runtime 与命令入口位于 package/。",
+      "SDK 的核心 runtime 与命令入口位于 packages/downcity/。",
       "UI SDK 当前以 console-ui-kit 方向沉淀组件能力。",
     ],
   },
@@ -66,7 +66,7 @@ const PAGE = {
         id: "sdk",
         title: "Downcity SDK",
         desc: "Embed runtime capabilities into your own product flow, service layer, and business system.",
-        source: "package/",
+        source: "packages/downcity/",
       },
       {
         id: "ui-sdk",
@@ -79,7 +79,7 @@ const PAGE = {
     facts: [
       "Console UI is a dedicated frontend package in console-ui/.",
       "Chrome Extension is a Manifest V3 extension in chrome-extension/.",
-      "The core runtime and command entry live in package/.",
+      "The core runtime and command entry live in packages/downcity/.",
       "UI SDK direction is currently documented as console-ui-kit extraction.",
     ],
   },

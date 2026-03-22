@@ -91,7 +91,7 @@ export class ConsoleUIGateway {
   private readonly publicDir: string;
 
   constructor() {
-    // 关键点（中文）：src/console/ui 与 bin/console/ui 都回退到 package/public。
+    // 关键点（中文）：src/console/ui 与 bin/console/ui 都回退到 packages/downcity/public。
     this.publicDir = path.join(__dirname, "../../../public");
     this.app = new Hono();
 

@@ -45,8 +45,8 @@ When chat service starts the Feishu channel, it:
 
 Code:
 
-- [Index.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/Index.ts:298)
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:733)
+- [Index.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/Index.ts:298)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:733)
 
 ## Inbound parsing
 
@@ -79,7 +79,7 @@ So Feishu images, videos, files, and audio now follow the same local-cache-plus-
 
 Code:
 
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:816)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:816)
 
 ## Sender name and chat title resolution
 
@@ -121,9 +121,9 @@ Current order:
 
 Code:
 
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:195)
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:245)
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:349)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:195)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:245)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:349)
 
 ## Context routing and persistence
 
@@ -150,8 +150,8 @@ feishu|<chatId>|<chatType>|<threadId>
 
 Code:
 
-- [ChannelContextStore.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/runtime/ChannelContextStore.ts:118)
-- [BaseChatChannel.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/BaseChatChannel.ts:365)
+- [ChannelContextStore.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChannelContextStore.ts:118)
+- [BaseChatChannel.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/BaseChatChannel.ts:365)
 
 ## How inbound messages enter the agent
 
@@ -180,7 +180,7 @@ So the model sees:
 
 Code:
 
-- [QueuedUserMessage.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/runtime/QueuedUserMessage.ts:32)
+- [QueuedUserMessage.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/QueuedUserMessage.ts:32)
 
 Audit history is also written to:
 
@@ -208,7 +208,7 @@ to reply against the original `message_id`.
 
 Code:
 
-- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/package/src/services/chat/channels/feishu/Feishu.ts:885)
+- [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:885)
 
 The current version also supports attachment command conversion in outbound replies:
 

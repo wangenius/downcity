@@ -27,7 +27,7 @@ const PAGE = {
     ],
     factsTitle: "事实对齐",
     facts: [
-      "核心源码目录：package/",
+      "核心源码目录：packages/downcity/",
       "安装命令：npm i -g downcity",
       "README 快速流程：city start → city agent create . → city agent start",
     ],
@@ -58,7 +58,7 @@ const PAGE = {
     ],
     factsTitle: "Facts",
     facts: [
-      "Core source directory: package/",
+      "Core source directory: packages/downcity/",
       "Install command: npm i -g downcity",
       "README quick flow: city start -> city agent create . -> city agent start",
     ],
@@ -69,7 +69,7 @@ const PAGE = {
  * Product Downcity SDK 页面。
  * 说明：
  * 1. 用用户集成场景说明 SDK 价值，而非堆叠底层实现。
- * 2. 事实项直接锚定 package 与 README 的现有内容。
+ * 2. 事实项直接锚定 packages/downcity 与 README 的现有内容。
  */
 export default function ProductSdkPage() {
   const { i18n } = useTranslation();

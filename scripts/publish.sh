@@ -31,7 +31,7 @@ print_error() {
 }
 
 get_current_version() {
-  node -p "require('./package/package.json').version"
+  node -p "require('./packages/downcity/package.json').version"
 }
 
 set_new_version() {
@@ -45,7 +45,7 @@ if (!newVersion) {
   process.exit(1);
 }
 
-const file = 'package/package.json';
+const file = 'packages/downcity/package.json';
 const raw = fs.readFileSync(file, 'utf8');
 const pkg = JSON.parse(raw);
 pkg.version = newVersion;

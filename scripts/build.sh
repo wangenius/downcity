@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PACKAGE_JSON="$ROOT_DIR/package/package.json"
+PACKAGE_JSON="$ROOT_DIR/packages/downcity/package.json"
 
 node --input-type=module - "$PACKAGE_JSON" <<'NODE'
 import fs from 'node:fs';
@@ -33,18 +33,18 @@ console.log(`Patched version: ${version} -> ${pkg.version}`);
 NODE
 
 # 关键点（中文）：仓库级 build 顺序固定为：
-# 1) 先构建 console-ui（输出到 package/public）
-# 2) 再构建 package（tsc + copy assets）
+# 1) 先构建 console-ui（输出到 packages/downcity/public）
+# 2) 再构建 downcity package（tsc + copy assets）
 if command -v bun >/dev/null 2>&1; then
   (cd "$ROOT_DIR/console-ui" && bun run build)
-  (cd "$ROOT_DIR/package" && bun run build)
+  (cd "$ROOT_DIR/packages/downcity" && bun run build)
 elif command -v pnpm >/dev/null 2>&1; then
   pnpm -C "$ROOT_DIR/console-ui" build
-  pnpm -C "$ROOT_DIR/package" build
+  pnpm -C "$ROOT_DIR/packages/downcity" build
 else
   npm --prefix "$ROOT_DIR/console-ui" run build
-  npm --prefix "$ROOT_DIR/package" run build
+  npm --prefix "$ROOT_DIR/packages/downcity" run build
 fi
 
 # 关键点（中文）：每次仓库级 build 后，自动把当前 package 安装到全局 CLI（city/downcity）。
-npm install -g "$ROOT_DIR/package"
+npm install -g "$ROOT_DIR/packages/downcity"

@@ -287,7 +287,7 @@ export function SummaryCards(props: SummaryCardsProps) {
     const baseOrder = ["chat", "task", "skill", "memory", "context"]
     const mapByName = new Map<string, UiServiceItem>()
     for (const item of services) {
-      const name = String(item.name || item.service || "").trim().toLowerCase()
+      const name = String(item.name || "").trim().toLowerCase()
       if (!name) continue
       if (!mapByName.has(name)) mapByName.set(name, item)
     }

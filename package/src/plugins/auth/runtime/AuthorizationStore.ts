@@ -1,5 +1,5 @@
 /**
- * Chat 授权运行时状态存储。
+ * Auth 授权运行时状态存储。
  *
  * 关键点（中文）
  * - 所有动态状态（观测用户 / 会话）统一落盘到 `.ship/chat/authorization/state.json`。
@@ -13,10 +13,10 @@ import type {
   ChatAuthorizationObservedUser,
   ChatAuthorizationSnapshot,
   ChatAuthorizationStateFile,
-} from "@services/chat/types/Authorization.js";
+} from "@/types/AuthPlugin.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
-import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
+import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 
 function getAuthorizationStatePath(rootPath: string): string {
   return path.join(rootPath, ".ship", "chat", "authorization", "state.json");
@@ -41,7 +41,6 @@ function createEmptyState(): ChatAuthorizationStateFile {
     updatedAt: Date.now(),
     usersByKey: {},
     chatsByKey: {},
-    pairingRequestsByKey: {},
   };
 }
 
@@ -61,7 +60,9 @@ function normalizeObservedUser(
     ...(normalizeText(input.lastChatTitle)
       ? { lastChatTitle: normalizeText(input.lastChatTitle) }
       : {}),
-    ...(normalizeText(input.lastChatType) ? { lastChatType: normalizeText(input.lastChatType) } : {}),
+    ...(normalizeText(input.lastChatType)
+      ? { lastChatType: normalizeText(input.lastChatType) }
+      : {}),
     firstSeenAt:
       typeof input.firstSeenAt === "number" && Number.isFinite(input.firstSeenAt)
         ? input.firstSeenAt
@@ -86,7 +87,9 @@ function normalizeObservedChat(
     chatId,
     ...(normalizeText(input.chatTitle) ? { chatTitle: normalizeText(input.chatTitle) } : {}),
     ...(normalizeText(input.chatType) ? { chatType: normalizeText(input.chatType) } : {}),
-    ...(normalizeText(input.lastActorId) ? { lastActorId: normalizeText(input.lastActorId) } : {}),
+    ...(normalizeText(input.lastActorId)
+      ? { lastActorId: normalizeText(input.lastActorId) }
+      : {}),
     ...(normalizeText(input.lastActorName)
       ? { lastActorName: normalizeText(input.lastActorName) }
       : {}),
@@ -132,9 +135,7 @@ function normalizeStateFile(
 
 async function readState(rootPath: string): Promise<ChatAuthorizationStateFile> {
   const file = getAuthorizationStatePath(rootPath);
-  const raw = (await fs.readJson(file).catch(() => null)) as
-    | Partial<ChatAuthorizationStateFile>
-    | null;
+  const raw = (await fs.readJson(file).catch(() => null)) as Partial<ChatAuthorizationStateFile> | null;
   return normalizeStateFile(raw);
 }
 
@@ -145,10 +146,7 @@ async function writeState(rootPath: string, state: ChatAuthorizationStateFile): 
 }
 
 function readAuthorizationConfig(projectRoot: string): ChatAuthorizationSnapshot["config"] {
-  const channelsConfig = readChatAuthorizationConfigSync(projectRoot).channels;
-  return {
-    channels: channelsConfig ? JSON.parse(JSON.stringify(channelsConfig)) : {},
-  };
+  return readChatAuthorizationConfigSync(projectRoot);
 }
 
 /**
@@ -192,7 +190,9 @@ export async function recordObservedAuthorizationPrincipal(params: {
       userId,
       ...(normalizeText(params.username) ? { username: normalizeText(params.username) } : {}),
       lastChatId: chatId,
-      ...(normalizeText(params.chatTitle) ? { lastChatTitle: normalizeText(params.chatTitle) } : {}),
+      ...(normalizeText(params.chatTitle)
+        ? { lastChatTitle: normalizeText(params.chatTitle) }
+        : {}),
       ...(normalizeText(params.chatType) ? { lastChatType: normalizeText(params.chatType) } : {}),
       firstSeenAt: prevUser?.firstSeenAt ?? now,
       lastSeenAt: now,
@@ -200,22 +200,6 @@ export async function recordObservedAuthorizationPrincipal(params: {
   }
 
   state.updatedAt = now;
-  await writeState(params.context.rootPath, state);
-}
-
-/**
- * 删除 pairing 请求（兼容空实现，角色模型下不再使用）。
- */
-export async function removeAuthorizationPairingRequest(params: {
-  context: ServiceRuntime;
-  channel: ChatDispatchChannel;
-  userId: string;
-}): Promise<void> {
-  const userId = normalizeText(params.userId);
-  if (!userId) return;
-  const state = await readState(params.context.rootPath);
-  delete state.pairingRequestsByKey[buildUserKey(params.channel, userId)];
-  state.updatedAt = Date.now();
   await writeState(params.context.rootPath, state);
 }
 
@@ -230,6 +214,5 @@ export async function readAuthorizationSnapshot(params: {
     config: readAuthorizationConfig(params.context.rootPath),
     users: Object.values(state.usersByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
     chats: Object.values(state.chatsByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
-    pairingRequests: [],
   };
 }

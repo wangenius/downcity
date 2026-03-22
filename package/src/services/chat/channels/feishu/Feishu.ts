@@ -876,7 +876,7 @@ export class FeishuBot extends BaseChatChannel {
           username: actorName,
         });
 
-        const authResult = this.evaluateIncomingAuthorization({
+        const authResult = await this.evaluateIncomingAuthorization({
           chatId: chat_id,
           chatType: chat_type,
           chatTitle,

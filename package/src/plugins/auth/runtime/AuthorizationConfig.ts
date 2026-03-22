@@ -1,5 +1,5 @@
 /**
- * Chat 授权配置读写工具。
+ * Auth 授权配置读写工具。
  *
  * 关键点（中文）
  * - 静态授权规则统一写入 console `~/.ship/ship.db`。
@@ -7,25 +7,25 @@
  */
 
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
-import { ConsoleStore } from "@/utils/store/index.js";
 import type {
   ChatAuthorizationConfig,
+  ChatAuthorizationChannel,
   ChatAuthorizationPermission,
   ChatAuthorizationRole,
   ChatChannelAuthorizationConfig,
-} from "@services/chat/types/Authorization.js";
-import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+} from "@/types/AuthPlugin.js";
+import {
+  CHAT_AUTHORIZATION_CHANNELS,
+  CHAT_AUTHORIZATION_PERMISSIONS,
+  createDefaultChatAuthorizationRoles,
+} from "@/types/AuthPlugin.js";
+import { ConsoleStore } from "@/utils/store/index.js";
 
 const CHAT_AUTHORIZATION_STORE_KEY = "chat_authorization";
-const CHANNELS: ChatDispatchChannel[] = ["telegram", "feishu", "qq"];
+const CHANNELS: ChatAuthorizationChannel[] = [...CHAT_AUTHORIZATION_CHANNELS];
 
 export const DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS: ChatAuthorizationPermission[] = [
-  "chat.dm.use",
-  "chat.group.use",
-  "auth.manage.users",
-  "auth.manage.roles",
-  "agent.view.logs",
-  "agent.manage",
+  ...CHAT_AUTHORIZATION_PERMISSIONS,
 ];
 
 function normalizeText(value: unknown): string | undefined {
@@ -36,36 +36,20 @@ function normalizeText(value: unknown): string | undefined {
 function normalizePermissionList(values: unknown[] | undefined): ChatAuthorizationPermission[] {
   const allowed = new Set<string>(DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS);
   if (!Array.isArray(values)) return [];
-  return [...new Set(
-    values
-      .map((value) => normalizeText(value))
-      .filter((value): value is ChatAuthorizationPermission => Boolean(value && allowed.has(value))),
-  )];
+  return [
+    ...new Set(
+      values
+        .map((value) => normalizeText(value))
+        .filter(
+          (value): value is ChatAuthorizationPermission =>
+            Boolean(value && allowed.has(value)),
+        ),
+    ),
+  ];
 }
 
 function buildDefaultRole(roleId: "default" | "member" | "admin"): ChatAuthorizationRole {
-  if (roleId === "admin") {
-    return {
-      roleId,
-      name: "Admin",
-      permissions: [...DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS],
-    };
-  }
-  if (roleId === "member") {
-    return {
-      roleId,
-      name: "Member",
-      permissions: [
-        "chat.dm.use",
-        "chat.group.use",
-      ],
-    };
-  }
-  return {
-    roleId,
-    name: "Default",
-    permissions: [],
-  };
+  return createDefaultChatAuthorizationRoles()[roleId];
 }
 
 function normalizeRoleMap(input: unknown): Record<string, ChatAuthorizationRole> {
@@ -78,9 +62,10 @@ function normalizeRoleMap(input: unknown): Record<string, ChatAuthorizationRole>
   for (const [rawRoleId, rawRole] of Object.entries(input)) {
     const roleId = normalizeText(rawRoleId);
     if (!roleId) continue;
-    const roleObj = rawRole && typeof rawRole === "object" && !Array.isArray(rawRole)
-      ? rawRole as { name?: unknown; permissions?: unknown[]; roleId?: unknown }
-      : null;
+    const roleObj =
+      rawRole && typeof rawRole === "object" && !Array.isArray(rawRole)
+        ? (rawRole as { name?: unknown; permissions?: unknown[]; roleId?: unknown })
+        : null;
     if (!roleObj) continue;
     roles[roleId] = {
       roleId,
@@ -91,7 +76,10 @@ function normalizeRoleMap(input: unknown): Record<string, ChatAuthorizationRole>
   return roles;
 }
 
-function normalizeBindingMap(input: unknown, roles: Record<string, ChatAuthorizationRole>): Record<string, string> {
+function normalizeBindingMap(
+  input: unknown,
+  roles: Record<string, ChatAuthorizationRole>,
+): Record<string, string> {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   const out: Record<string, string> = {};
   for (const [rawId, rawRoleId] of Object.entries(input)) {
@@ -107,12 +95,13 @@ function normalizeChannelConfig(
   input: unknown,
   roles: Record<string, ChatAuthorizationRole>,
 ): ChatChannelAuthorizationConfig {
-  const raw = input && typeof input === "object" && !Array.isArray(input)
-    ? input as {
-      defaultUserRoleId?: unknown;
-      userRoles?: unknown;
-    }
-    : {};
+  const raw =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as {
+          defaultUserRoleId?: unknown;
+          userRoles?: unknown;
+        })
+      : {};
   const defaultUserRoleId = normalizeText(raw.defaultUserRoleId) || "default";
   return {
     defaultUserRoleId: roles[defaultUserRoleId] ? defaultUserRoleId : "default",
@@ -121,21 +110,22 @@ function normalizeChannelConfig(
 }
 
 function normalizeAuthorizationConfig(input: unknown): ChatAuthorizationConfig {
-  const raw = input && typeof input === "object" && !Array.isArray(input)
-    ? input as { roles?: unknown; channels?: Record<string, unknown> }
-    : {};
+  const raw =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as { roles?: unknown; channels?: Record<string, unknown> })
+      : {};
   const roles = normalizeRoleMap(raw.roles);
-  const channels: Partial<Record<ChatDispatchChannel, ChatChannelAuthorizationConfig>> = {};
+  const channels: Partial<Record<ChatAuthorizationChannel, ChatChannelAuthorizationConfig>> = {};
   for (const channel of CHANNELS) {
     channels[channel] = normalizeChannelConfig(raw.channels?.[channel], roles);
   }
   return { roles, channels };
 }
 
-function cloneAuthorizationConfig(input: ChatAuthorizationConfig | undefined): ChatAuthorizationConfig {
-  return normalizeAuthorizationConfig(
-    input ? JSON.parse(JSON.stringify(input)) : {},
-  );
+function cloneAuthorizationConfig(
+  input: ChatAuthorizationConfig | undefined,
+): ChatAuthorizationConfig {
+  return normalizeAuthorizationConfig(input ? JSON.parse(JSON.stringify(input)) : {});
 }
 
 function readAuthorizationConfigFromStoreSync(projectRoot: string): ChatAuthorizationConfig {
@@ -176,7 +166,7 @@ async function writeAuthorizationConfigToStore(params: {
 
 function ensureChannelConfig(
   config: ChatAuthorizationConfig,
-  channel: ChatDispatchChannel,
+  channel: ChatAuthorizationChannel,
 ): ChatChannelAuthorizationConfig {
   config.roles = normalizeRoleMap(config.roles);
   config.channels ??= {};
@@ -218,7 +208,7 @@ export async function writeChatAuthorizationConfig(params: {
 }
 
 /**
- * 读取渠道的角色列表。
+ * 读取角色列表。
  */
 export function listChatAuthorizationRoles(params: {
   config: ChatAuthorizationConfig;
@@ -232,7 +222,7 @@ export function listChatAuthorizationRoles(params: {
  */
 export async function setChatAuthorizationUserRole(params: {
   context: ServiceRuntime;
-  channel: ChatDispatchChannel;
+  channel: ChatAuthorizationChannel;
   userId: string;
   roleId: string;
 }): Promise<void> {

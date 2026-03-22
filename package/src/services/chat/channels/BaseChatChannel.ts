@@ -21,11 +21,10 @@ import {
   appendOutboundChatHistory,
 } from "@services/chat/runtime/ChatHistoryStore.js";
 import {
-  evaluateIncomingChatAuthorization,
-  resolveAuthorizedUserRole,
-} from "@services/chat/runtime/AuthorizationPolicy.js";
-import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
-import { recordObservedAuthorizationPrincipal } from "@services/chat/runtime/AuthorizationStore.js";
+  evaluateIncomingAuthorizationViaPlugin,
+  observeAuthorizationPrincipalViaPlugin,
+  resolveAuthorizedUserRoleViaPlugin,
+} from "@/plugins/auth/Runtime.js";
 
 type ChannelUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -182,8 +181,8 @@ export abstract class BaseChatChannel {
   protected async observeIncomingAuthorization(
     params: IncomingAuthorizationParams,
   ): Promise<void> {
-    await recordObservedAuthorizationPrincipal({
-      context: this.context,
+    await observeAuthorizationPrincipalViaPlugin({
+      runtime: this.context,
       channel: this.channel,
       chatId: params.chatId,
       chatType: params.chatType,
@@ -196,14 +195,12 @@ export abstract class BaseChatChannel {
   /**
    * 执行入站授权判定。
    */
-  protected evaluateIncomingAuthorization(
+  protected async evaluateIncomingAuthorization(
     params: IncomingAuthorizationParams,
-  ): IncomingAuthorizationResult {
-    const authorizationConfig = readChatAuthorizationConfigSync(this.context.rootPath);
-    const result = evaluateIncomingChatAuthorization({
-      config: this.context.config,
+  ): Promise<IncomingAuthorizationResult> {
+    const result = await evaluateIncomingAuthorizationViaPlugin({
+      runtime: this.context,
       channel: this.channel,
-      authorizationConfig,
       input: {
         channel: this.channel,
         chatId: params.chatId,
@@ -594,10 +591,10 @@ export abstract class BaseChatChannel {
   protected async enqueueMessage(
     msg: IncomingChatMessage,
   ): Promise<{ chatKey: string; position: number }> {
-    const userRole = resolveAuthorizedUserRole({
+    const userRole = await resolveAuthorizedUserRoleViaPlugin({
+      runtime: this.context,
       channel: this.channel,
       userId: msg.userId,
-      rootPath: this.context.rootPath,
     });
     const permissionExtra: JsonObject = {
       roleId: userRole?.roleId || "unknown",

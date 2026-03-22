@@ -1344,7 +1344,7 @@ export class QQBot extends BaseChatChannel {
       username: actor.username,
     });
 
-    const authResult = this.evaluateIncomingAuthorization({
+    const authResult = await this.evaluateIncomingAuthorization({
       chatId,
       chatType,
       chatTitle,
@@ -1477,7 +1477,7 @@ export class QQBot extends BaseChatChannel {
       username: actor.username,
     });
 
-    const authResult = this.evaluateIncomingAuthorization({
+    const authResult = await this.evaluateIncomingAuthorization({
       chatId: channelId,
       chatType,
       chatTitle,

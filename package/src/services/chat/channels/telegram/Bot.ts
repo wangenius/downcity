@@ -655,7 +655,7 @@ export class TelegramBot extends BaseChatChannel {
       username: actorName,
     });
 
-    const authResult = this.evaluateIncomingAuthorization({
+    const authResult = await this.evaluateIncomingAuthorization({
       chatId,
       chatType: message.chat.type,
       chatTitle,

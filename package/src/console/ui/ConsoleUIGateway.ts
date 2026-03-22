@@ -49,8 +49,8 @@ import { ConsoleStore } from "@utils/store/index.js";
 import { registerConsoleUiModelRoutes } from "@/console/ui/ModelApiRoutes.js";
 import { registerConsoleUiChannelAccountRoutes } from "@/console/ui/ChannelAccountApiRoutes.js";
 import { registerConsoleUiEnvRoutes } from "@/console/ui/EnvApiRoutes.js";
-import { PLUGINS } from "@/console/plugin/Plugins.js";
-import { getPluginRuntimeState } from "@/agent/context/manager/RuntimeState.js";
+import { registerConsoleUiAgentRuntimeRoutes } from "@/console/ui/AgentRuntimeApiRoutes.js";
+import { registerConsoleUiPluginRoutes } from "@/console/ui/PluginApiRoutes.js";
 import type {
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
@@ -420,57 +420,6 @@ export class ConsoleUIGateway {
       }
     });
 
-    this.app.get("/api/ui/plugins", async (c) => {
-      try {
-        const runtime = getPluginRuntimeState();
-        const plugins = runtime.plugins.list();
-        const pluginConfigMap = new Map(
-          PLUGINS.map((plugin) => {
-            const actions = Object.entries(plugin.actions || {}).map(
-              ([actionName, action]) => ({
-                name: actionName,
-                supportsCommand: Boolean(action?.command),
-                supportsApi: Boolean(action?.api),
-                commandDescription: String(action?.command?.description || "").trim(),
-                apiMethod: String(action?.api?.method || "").trim().toUpperCase(),
-                apiPath: String(action?.api?.path || "").trim(),
-              }),
-            );
-            return [
-              plugin.name,
-              {
-                actions,
-              },
-            ] as const;
-          }),
-        );
-        const availabilityList = await Promise.all(
-          plugins.map(async (plugin) => [
-            plugin.name,
-            await runtime.plugins.availability(plugin.name),
-          ] as const),
-        );
-        const availabilityMap = new Map(availabilityList);
-        return c.json({
-          success: true,
-          plugins: plugins.map((item) => ({
-            ...item,
-            availability: availabilityMap.get(item.name) || {
-              enabled: false,
-              available: false,
-              reasons: ["unknown"],
-              missingAssets: [],
-            },
-            config: pluginConfigMap.get(item.name) || {
-              actions: [],
-            },
-          })),
-        });
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
     registerConsoleUiModelRoutes({
       app: this.app,
       readRequestedAgentId: (request) => this.readRequestedAgentId(request),
@@ -481,6 +430,18 @@ export class ConsoleUIGateway {
     });
     registerConsoleUiChannelAccountRoutes({ app: this.app });
     registerConsoleUiEnvRoutes({ app: this.app });
+    registerConsoleUiAgentRuntimeRoutes({
+      app: this.app,
+      readRequestedAgentId: (request) => this.readRequestedAgentId(request),
+      resolveSelectedAgent: (requestedAgentId) =>
+        this.resolveSelectedAgent(requestedAgentId),
+    });
+    registerConsoleUiPluginRoutes({
+      app: this.app,
+      readRequestedAgentId: (request) => this.readRequestedAgentId(request),
+      resolveSelectedAgent: (requestedAgentId) =>
+        this.resolveSelectedAgent(requestedAgentId),
+    });
 
     // 关键点（中文）：除 `/api/ui/*` 外，其他 API 一律透传到“当前选中 agent”。
     this.app.all("/api/*", async (c) => {

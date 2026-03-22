@@ -6,7 +6,7 @@
  * - 供 chat 入站执行与其他复用入口共用，避免重复实现。
  */
 
-import type { ChatAuthorizationPermission } from "@services/chat/types/Authorization.js";
+import type { ChatAuthorizationPermission } from "@/types/AuthPlugin.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 
 function normalizeInfoValue(value: unknown): string {

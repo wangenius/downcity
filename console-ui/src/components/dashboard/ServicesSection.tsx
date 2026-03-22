@@ -29,7 +29,7 @@ export function ServicesSection(props: ServicesSectionProps) {
   const { services, statusBadgeVariant, onControlService } = props;
   const confirm = useConfirmDialog();
   const runningCount = services.filter((svc) => {
-    const state = String(svc.state || svc.status || "").toLowerCase();
+    const state = String(svc.state || "").toLowerCase();
     return state === "running" || state === "active" || state === "ok";
   }).length;
   const stoppedCount = services.length - runningCount;
@@ -58,8 +58,8 @@ export function ServicesSection(props: ServicesSectionProps) {
       ) : (
         <div className="space-y-2">
           {services.map((svc) => {
-            const name = String(svc.name || svc.service || "unknown");
-            const status = String(svc.state || svc.status || "unknown").toLowerCase();
+            const name = String(svc.name || "").trim() || "unknown";
+            const status = String(svc.state || "").toLowerCase() || "unknown";
             const tone = statusBadgeVariant(status);
             const isRunning = tone === "ok";
             const canStop = isRunning;

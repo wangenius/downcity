@@ -8,6 +8,7 @@ import type {
   UiAgentCreatePayload,
   UiAgentInitializationInput,
   UiAgentsResponse,
+  UiAgentRuntimeStatusResponse,
   UiChatActionResult,
   UiChatChannelStatus,
   UiChatHistoryEvent,
@@ -446,7 +447,7 @@ export interface UseConsoleDashboardResult {
    */
   runAuthorizationAction: (input: {
     action: "setUserRole";
-    channel: "telegram" | "feishu" | "qq";
+    channel: string;
     userId?: string;
     roleId?: string;
   }) => Promise<void>;
@@ -1021,53 +1022,22 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         }
 
         try {
-          const servicesData = await requestJson<UiServicesResponse>("/api/tui/services", {}, targetAgentId);
-          const serviceList = Array.isArray(servicesData.services) ? servicesData.services : [];
-          if (serviceList.length === 0) {
+          const runtimeStatus = await requestJson<UiAgentRuntimeStatusResponse>(
+            `/api/ui/agents/runtime-status?agent=${encodeURIComponent(targetAgentId)}`,
+          );
+          if (runtimeStatus.running !== true) {
             await wait(intervalMs);
             continue;
           }
-          const allReady = serviceList.every((item) => {
-            const state = String(item.state || item.status || "").trim().toLowerCase();
-            return ["running", "ok", "active", "enabled", "success", "idle"].includes(state);
-          });
-          if (!allReady) {
+          if (runtimeStatus.serverReady !== true) {
             await wait(intervalMs);
             continue;
           }
-
-          const hasChatService = serviceList.some((item) => {
-            const name = String(item.name || item.service || "").trim().toLowerCase();
-            return name === "chat";
-          });
-          if (!hasChatService) return { running: true, servicesReady: true };
-
-          try {
-            await requestJson<UiChatStatusResponse>(
-              "/api/services/command",
-              {
-                method: "POST",
-                body: JSON.stringify({
-                  serviceName: "chat",
-                  command: "status",
-                  payload: {},
-                }),
-              },
-              targetAgentId,
-            );
+          if (runtimeStatus.servicesReady === true) {
             return { running: true, servicesReady: true };
-          } catch (chatError) {
-            const chatMessage = getErrorMessage(chatError);
-            if (/404|not found|unknown action|unknown service/i.test(chatMessage)) {
-              // 老 runtime 无 chat.status，按服务就绪降级放行。
-              return { running: true, servicesReady: true };
-            }
-            if (isChatServiceNotReadyError(chatMessage) || isAgentUnavailableError(chatMessage)) {
-              await wait(intervalMs);
-              continue;
-            }
-            throw chatError;
           }
+          await wait(intervalMs);
+          continue;
         } catch (error) {
           const message = getErrorMessage(error);
           if (!isAgentUnavailableError(message)) {
@@ -1084,8 +1054,14 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const refreshPlugins = useCallback(
-    async () => {
-      const data = await requestJson<UiPluginsResponse>("/api/ui/plugins");
+    async (agentId: string) => {
+      if (!agentId) {
+        setPlugins([]);
+        return;
+      }
+      const data = await requestJson<UiPluginsResponse>(
+        `/api/ui/plugins?agent=${encodeURIComponent(agentId)}`,
+      );
       const list = Array.isArray(data.plugins) ? data.plugins : [];
       setPlugins(normalizePluginRuntimeItems(list));
     },
@@ -1128,25 +1104,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         return normalizedChannels;
       } catch (error) {
         const message = getErrorMessage(error);
-        // 关键点（中文）：兼容旧 runtime 不支持 chat.status 的场景。
-        if (/404|not found|unknown action|unknown service/i.test(message)) {
-          const fallbackChannels: UiChatChannelStatus[] = [
-            {
-              channel: "consoleui",
-              enabled: true,
-              configured: true,
-              running: true,
-              linkState: "connected",
-              statusText: "console-ui built-in channel",
-              detail: {
-                readonly: true,
-                managedBy: "console-ui",
-              },
-            },
-          ];
-          setChatChannels(fallbackChannels);
-          return fallbackChannels;
-        }
         // 关键点（中文）：启动窗口内 chat 服务未就绪时降级为空，避免误报失败。
         if (isChatServiceNotReadyError(message) || isAgentUnavailableError(message)) {
           const fallbackChannels: UiChatChannelStatus[] = [
@@ -1407,8 +1364,14 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setGlobalEnvItems(Array.isArray(data.items) ? data.items : []);
   }, [requestJson]);
 
-  const refreshAgentEnv = useCallback(async () => {
-    const data = await requestJson<UiEnvListResponse>("/api/ui/env?scope=agent");
+  const refreshAgentEnv = useCallback(async (agentId: string) => {
+    if (!agentId) {
+      setAgentEnvItems([]);
+      return;
+    }
+    const data = await requestJson<UiEnvListResponse>(
+      `/api/ui/env?scope=agent&agent=${encodeURIComponent(agentId)}`,
+    );
     setAgentEnvItems(Array.isArray(data.items) ? data.items : []);
   }, [requestJson]);
 
@@ -1473,7 +1436,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           clearPanelDataForNoAgent();
           // 关键点（中文）：无 agent 也要保留并刷新全局 model/pool/config 信息。
           await Promise.allSettled([
-            refreshPlugins(),
+            refreshPlugins(""),
             refreshModel(""),
             refreshModelPool(),
             refreshChannelAccounts(),
@@ -1491,12 +1454,12 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           // 关键点（中文）：未启动 agent 仅渲染静态概览，避免请求 runtime 接口造成 503 噪音。
           clearPanelDataForNoAgent();
           await Promise.allSettled([
-            refreshPlugins(),
+            refreshPlugins(""),
             refreshModel(nextAgentId),
             refreshModelPool(),
             refreshChannelAccounts(),
             refreshGlobalEnv(),
-            refreshAgentEnv(),
+            refreshAgentEnv(nextAgentId),
             refreshConfigStatus(nextAgentId),
           ]);
           setTopbarError(false);
@@ -1511,7 +1474,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
         await Promise.all([
           refreshAuthorization(nextAgentId),
-          refreshPlugins(),
+          refreshPlugins(nextAgentId),
           refreshOverview(nextAgentId),
           refreshServices(nextAgentId),
           refreshSkills(nextAgentId),
@@ -1521,7 +1484,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           refreshModelPool(),
           refreshChannelAccounts(),
           refreshGlobalEnv(),
-          refreshAgentEnv(),
+          refreshAgentEnv(nextAgentId),
           refreshConfigStatus(nextAgentId),
           refreshLocalChat(nextAgentId),
         ]);
@@ -1578,7 +1541,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           setSelectedAgentId("");
           // 关键点（中文）：离线自愈分支同样要保留并刷新全局 model/pool/config。
           await Promise.allSettled([
-            refreshPlugins(),
+            refreshPlugins(""),
             refreshModel(""),
             refreshModelPool(),
             refreshChannelAccounts(),
@@ -1656,7 +1619,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           `plugin ${pluginName} ${actionName}: ${message}`,
           result?.success ? "success" : "error",
         );
-        await refreshPlugins();
+        await refreshPlugins(selectedAgentId);
       } catch (error) {
         showToast(`plugin 操作失败: ${getErrorMessage(error)}`, "error");
       }
@@ -1771,7 +1734,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const runAuthorizationAction = useCallback(
     async (input: {
       action: "setUserRole";
-      channel: "telegram" | "feishu" | "qq";
+      channel: string;
       userId?: string;
       roleId?: string;
     }) => {
@@ -2951,7 +2914,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             value: String(input.value ?? ""),
           }),
         });
-        await refreshAgentEnv();
+        await refreshAgentEnv(agentId);
         showToast(`agent env ${String(input.key || "").trim()} 已保存`, "success");
       } catch (error) {
         showToast(`agent env 保存失败: ${getErrorMessage(error)}`, "error");
@@ -2976,7 +2939,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
             key: String(key || "").trim(),
           }),
         });
-        await refreshAgentEnv();
+        await refreshAgentEnv(agentId);
         showToast(`agent env ${String(key || "").trim()} 已删除`, "success");
       } catch (error) {
         showToast(`agent env 删除失败: ${getErrorMessage(error)}`, "error");
@@ -3004,7 +2967,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           count?: number;
           keys?: string[];
         };
-        await refreshAgentEnv();
+        await refreshAgentEnv(agentId);
         const count = Number(response.count || 0);
         const keys = Array.isArray(response.keys)
           ? response.keys.map((item) => String(item || "").trim()).filter(Boolean)

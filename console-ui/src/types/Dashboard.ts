@@ -340,6 +340,36 @@ export interface UiOverviewResponse {
 /**
  * 单个授权角色。
  */
+export type UiChatAuthorizationPermission =
+  | "chat.dm.use"
+  | "chat.group.use"
+  | "auth.manage.users"
+  | "auth.manage.roles"
+  | "agent.view.logs"
+  | "agent.manage"
+  | string;
+
+/**
+ * auth 目录快照。
+ */
+export interface UiChatAuthorizationCatalog {
+  /**
+   * auth 支持的渠道列表。
+   */
+  channels?: string[];
+  /**
+   * 权限列表。
+   */
+  permissions?: UiChatAuthorizationPermission[];
+  /**
+   * 权限展示文案映射。
+   */
+  permissionLabels?: Record<string, string>;
+}
+
+/**
+ * 单个授权角色。
+ */
 export interface UiChatAuthorizationRole {
   /**
    * 角色唯一标识。
@@ -352,14 +382,7 @@ export interface UiChatAuthorizationRole {
   /**
    * 角色权限列表。
    */
-  permissions?: Array<
-    | "chat.dm.use"
-    | "chat.group.use"
-    | "auth.manage.users"
-    | "auth.manage.roles"
-    | "agent.view.logs"
-    | "agent.manage"
-  >;
+  permissions?: UiChatAuthorizationPermission[];
 }
 
 /**
@@ -461,6 +484,10 @@ export interface UiChatAuthorizationResponse {
    */
   success?: boolean;
   /**
+   * auth 目录快照。
+   */
+  catalog?: UiChatAuthorizationCatalog;
+  /**
    * 授权配置。
    */
   config?: {
@@ -471,7 +498,7 @@ export interface UiChatAuthorizationResponse {
     /**
      * 按渠道拆分的绑定配置。
      */
-    channels?: Partial<Record<"telegram" | "feishu" | "qq", UiChatAuthorizationChannelConfig>>;
+    channels?: Partial<Record<string, UiChatAuthorizationChannelConfig>>;
   };
   /**
    * 已观测用户列表。
@@ -488,21 +515,13 @@ export interface UiChatAuthorizationResponse {
  */
 export interface UiServiceItem {
   /**
-   * Service 名称（新字段）。
+   * Service 名称。
    */
-  name?: string;
+  name: string;
   /**
-   * Service 名称（兼容字段）。
+   * Service 状态。
    */
-  service?: string;
-  /**
-   * Service 状态（新字段）。
-   */
-  state?: string;
-  /**
-   * Service 状态（兼容字段）。
-   */
-  status?: string;
+  state: string;
 }
 
 /**
@@ -920,6 +939,40 @@ export interface UiEnvListResponse {
    * 环境变量列表。
    */
   items?: UiEnvItem[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * `/api/ui/agents/runtime-status` 响应。
+ */
+export interface UiAgentRuntimeStatusResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * agent 进程是否仍处于运行中。
+   */
+  running?: boolean;
+  /**
+   * runtime HTTP 服务是否已可访问。
+   */
+  serverReady?: boolean;
+  /**
+   * 关键 service 是否已完成启动。
+   */
+  servicesReady?: boolean;
+  /**
+   * 当前 runtime 是否包含 chat service。
+   */
+  hasChatService?: boolean;
+  /**
+   * 当前探活阶段的说明。
+   */
+  reason?: string;
   /**
    * 错误信息。
    */

@@ -1,5 +1,5 @@
 /**
- * Chat 授权判定逻辑。
+ * Auth 授权判定逻辑。
  *
  * 关键点（中文）
  * - 角色模型替代旧的 allowlist/pairing 模型。
@@ -9,21 +9,22 @@
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
 import type {
   ChatAuthorizationConfig,
+  ChatAuthorizationChannel,
   ChatAuthorizationEvaluateInput,
   ChatAuthorizationEvaluateResult,
   ChatAuthorizationPermission,
   ChatAuthorizationRole,
   ChatChannelAuthorizationConfig,
-} from "@services/chat/types/Authorization.js";
-import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
+} from "@/types/AuthPlugin.js";
+import { createDefaultChatAuthorizationRoles } from "@/types/AuthPlugin.js";
+import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 
 function normalizeText(value: unknown): string | undefined {
   const text = String(value || "").trim();
   return text ? text : undefined;
 }
 
-function isDirectMessage(channel: ChatDispatchChannel, chatType?: string): boolean {
+function isDirectMessage(channel: ChatAuthorizationChannel, chatType?: string): boolean {
   const type = String(chatType || "").trim().toLowerCase();
   if (!type) return true;
   if (channel === "telegram") return type === "private";
@@ -32,42 +33,18 @@ function isDirectMessage(channel: ChatDispatchChannel, chatType?: string): boole
   return false;
 }
 
-function buildDefaultRoles(): Record<string, ChatAuthorizationRole> {
-  return {
-    default: { roleId: "default", name: "Default", permissions: [] },
-    member: {
-      roleId: "member",
-      name: "Member",
-      permissions: [
-        "chat.dm.use",
-        "chat.group.use",
-      ],
-    },
-    admin: {
-      roleId: "admin",
-      name: "Admin",
-      permissions: [
-        "chat.dm.use",
-        "chat.group.use",
-        "auth.manage.users",
-        "auth.manage.roles",
-        "agent.view.logs",
-        "agent.manage",
-      ],
-    },
-  };
-}
-
 function resolveAuthorizationRoles(
   authorizationConfig?: ChatAuthorizationConfig,
 ): Record<string, ChatAuthorizationRole> {
   const raw = authorizationConfig?.roles;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return buildDefaultRoles();
-  return Object.keys(raw).length > 0 ? raw : buildDefaultRoles();
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return createDefaultChatAuthorizationRoles();
+  }
+  return Object.keys(raw).length > 0 ? raw : createDefaultChatAuthorizationRoles();
 }
 
 function resolveChannelAuthorizationConfig(
-  channel: ChatDispatchChannel,
+  channel: ChatAuthorizationChannel,
   authorizationConfig?: ChatAuthorizationConfig,
 ): ChatChannelAuthorizationConfig {
   const raw = authorizationConfig?.channels?.[channel];
@@ -89,7 +66,10 @@ function resolveRole(
   return { roleId: "default", name: "Default", permissions: [] };
 }
 
-function hasPermission(role: ChatAuthorizationRole, permission: ChatAuthorizationPermission): boolean {
+function hasPermission(
+  role: ChatAuthorizationRole,
+  permission: ChatAuthorizationPermission,
+): boolean {
   return role.permissions.includes(permission);
 }
 
@@ -108,7 +88,7 @@ function resolveUserRole(params: {
  * 解析用户授权角色。
  */
 export function resolveAuthorizedUserRole(params: {
-  channel: ChatDispatchChannel;
+  channel: ChatAuthorizationChannel;
   userId?: string;
   authorizationConfig?: ChatAuthorizationConfig;
   rootPath?: string;
@@ -120,12 +100,11 @@ export function resolveAuthorizedUserRole(params: {
     (params.rootPath ? readChatAuthorizationConfigSync(params.rootPath) : undefined);
   const roles = resolveAuthorizationRoles(authorizationConfig);
   const channelConfig = resolveChannelAuthorizationConfig(params.channel, authorizationConfig);
-  const userRole = resolveUserRole({
+  return resolveUserRole({
     roles,
     channelConfig,
     userId,
   });
-  return userRole;
 }
 
 /**
@@ -133,7 +112,7 @@ export function resolveAuthorizedUserRole(params: {
  */
 export function evaluateIncomingChatAuthorization(params: {
   config: ShipConfig;
-  channel: ChatDispatchChannel;
+  channel: ChatAuthorizationChannel;
   input: ChatAuthorizationEvaluateInput;
   authorizationConfig?: ChatAuthorizationConfig;
 }): ChatAuthorizationEvaluateResult {

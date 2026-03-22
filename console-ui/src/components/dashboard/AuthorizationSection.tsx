@@ -24,21 +24,17 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import type {
   UiAgentOption,
+  UiChatAuthorizationCatalog,
   UiChatAuthorizationChannelConfig,
   UiChatAuthorizationChat,
+  UiChatAuthorizationPermission,
   UiChatAuthorizationResponse,
   UiChatAuthorizationRole,
   UiChatAuthorizationUser,
 } from "@/types/Dashboard"
 
-type AuthorizationChannel = "telegram" | "feishu" | "qq"
-type AuthorizationPermission =
-  | "chat.dm.use"
-  | "chat.group.use"
-  | "auth.manage.users"
-  | "auth.manage.roles"
-  | "agent.view.logs"
-  | "agent.manage"
+type AuthorizationChannel = string
+type AuthorizationPermission = UiChatAuthorizationPermission
 
 type AuthorizationFormState = {
   roles: Record<string, UiChatAuthorizationRole>
@@ -53,25 +49,6 @@ type AuthorizationActionInput = {
 }
 
 type DirectoryChannelFilter = "all" | AuthorizationChannel
-
-const AUTHORIZATION_CHANNELS: AuthorizationChannel[] = ["telegram", "feishu", "qq"]
-const PERMISSIONS: AuthorizationPermission[] = [
-  "chat.dm.use",
-  "chat.group.use",
-  "auth.manage.users",
-  "auth.manage.roles",
-  "agent.view.logs",
-  "agent.manage",
-]
-
-const PERMISSION_LABELS: Record<AuthorizationPermission, string> = {
-  "chat.dm.use": "DM",
-  "chat.group.use": "Group",
-  "auth.manage.users": "Users",
-  "auth.manage.roles": "Roles",
-  "agent.view.logs": "Logs",
-  "agent.manage": "Agent",
-}
 
 function normalizeText(value: unknown): string {
   return String(value || "").trim()
@@ -98,27 +75,44 @@ function normalizeRoleRecord(
   return out
 }
 
-function buildDefaultRoles(): Record<string, UiChatAuthorizationRole> {
-  return {
-    default: { roleId: "default", name: "Default", permissions: [] },
-    member: {
-      roleId: "member",
-      name: "Member",
-      permissions: ["chat.dm.use", "chat.group.use"],
-    },
-    admin: {
-      roleId: "admin",
-      name: "Admin",
-      permissions: [...PERMISSIONS],
-    },
-  }
+function resolveAuthorizationChannels(
+  catalog: UiChatAuthorizationCatalog | undefined,
+): AuthorizationChannel[] {
+  return (Array.isArray(catalog?.channels) ? catalog.channels : [])
+    .map((channel) => normalizeText(channel).toLowerCase())
+    .filter(Boolean)
+    .filter((channel, index, array) => array.indexOf(channel) === index)
 }
 
-function cloneConfig(input: UiChatAuthorizationResponse["config"]): AuthorizationFormState {
-  const rawRoles = normalizeRoleRecord(input?.roles)
+function resolveAuthorizationPermissions(
+  catalog: UiChatAuthorizationCatalog | undefined,
+): AuthorizationPermission[] {
+  return (Array.isArray(catalog?.permissions) ? catalog.permissions : [])
+    .map((permission) => normalizeText(permission))
+    .filter(Boolean)
+    .filter((permission, index, array) => array.indexOf(permission) === index) as AuthorizationPermission[]
+}
+
+function resolvePermissionLabels(
+  catalog: UiChatAuthorizationCatalog | undefined,
+): Record<string, string> {
+  return catalog?.permissionLabels && typeof catalog.permissionLabels === "object"
+    ? catalog.permissionLabels
+    : {}
+}
+
+function cloneConfig(
+  input: UiChatAuthorizationResponse["config"],
+  channels: AuthorizationChannel[],
+): AuthorizationFormState {
   return {
-    roles: Object.keys(rawRoles).length > 0 ? rawRoles : buildDefaultRoles(),
-    channels: JSON.parse(JSON.stringify(input?.channels || {})) as AuthorizationFormState["channels"],
+    roles: normalizeRoleRecord(input?.roles),
+    channels: channels.reduce((result, channel) => {
+      result[channel] = JSON.parse(
+        JSON.stringify((input?.channels || {})[channel] || {}),
+      ) as UiChatAuthorizationChannelConfig
+      return result
+    }, {} as AuthorizationFormState["channels"]),
   }
 }
 
@@ -172,16 +166,17 @@ function isGroupChat(chat: UiChatAuthorizationChat): boolean {
   return type !== "" && type !== "private" && type !== "p2p" && type !== "c2c"
 }
 
-function isAuthorizationChannel(value: string): value is AuthorizationChannel {
-  return AUTHORIZATION_CHANNELS.includes(value as AuthorizationChannel)
+function isAuthorizationChannel(value: string, channels: AuthorizationChannel[]): value is AuthorizationChannel {
+  return channels.includes(value as AuthorizationChannel)
 }
 
 function buildConfigPayload(
   form: AuthorizationFormState,
+  channels: AuthorizationChannel[],
 ): NonNullable<UiChatAuthorizationResponse["config"]> {
   return {
     roles: normalizeRoleRecord(form.roles),
-    channels: AUTHORIZATION_CHANNELS.reduce((result, channel) => {
+    channels: channels.reduce((result, channel) => {
       const current = getChannelConfig(form, channel)
       result[channel] = {
         defaultUserRoleId: normalizeText(current.defaultUserRoleId) || "default",
@@ -195,12 +190,13 @@ function buildConfigPayload(
 function countRoleAssignments(params: {
   roleId: string
   channels: AuthorizationFormState["channels"]
+  authorizationChannels: AuthorizationChannel[]
   users: UiChatAuthorizationUser[]
 }): { users: number } {
   let userCount = 0
   for (const user of params.users) {
     const channel = normalizeText(user.channel).toLowerCase()
-    if (!isAuthorizationChannel(channel)) continue
+    if (!isAuthorizationChannel(channel, params.authorizationChannels)) continue
     const channelConfig = params.channels[channel]
     if (getUserRoleId(user, channelConfig) === params.roleId) userCount += 1
   }
@@ -266,15 +262,28 @@ export interface AuthorizationSectionProps {
 
 export function AuthorizationSection(props: AuthorizationSectionProps) {
   const { authorization, selectedAgent, formatTime, onRefresh, onSaveConfig, onRunAction } = props
-  const [form, setForm] = React.useState<AuthorizationFormState>(() => cloneConfig(undefined))
+  const catalog = React.useMemo(() => authorization?.catalog, [authorization?.catalog])
+  const authorizationChannels = React.useMemo(
+    () => resolveAuthorizationChannels(catalog),
+    [catalog],
+  )
+  const permissionCatalog = React.useMemo(
+    () => resolveAuthorizationPermissions(catalog),
+    [catalog],
+  )
+  const permissionLabels = React.useMemo(
+    () => resolvePermissionLabels(catalog),
+    [catalog],
+  )
+  const [form, setForm] = React.useState<AuthorizationFormState>(() => cloneConfig(undefined, []))
   const [saving, setSaving] = React.useState(false)
   const [newRoleDraft, setNewRoleDraft] = React.useState("")
   const [channelFilter, setChannelFilter] = React.useState<DirectoryChannelFilter>("all")
   const [searchKeyword, setSearchKeyword] = React.useState("")
 
   React.useEffect(() => {
-    setForm(cloneConfig(authorization?.config))
-  }, [authorization?.config])
+    setForm(cloneConfig(authorization?.config, authorizationChannels))
+  }, [authorization?.config, authorizationChannels])
 
   const observedUsers = React.useMemo(
     () => (Array.isArray(authorization?.users) ? authorization.users : []),
@@ -285,10 +294,17 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
     [authorization?.chats],
   )
   const roles = React.useMemo(() => getRoles(form), [form])
-  const currentPayload = React.useMemo(() => buildConfigPayload(form), [form])
+  const currentPayload = React.useMemo(
+    () => buildConfigPayload(form, authorizationChannels),
+    [authorizationChannels, form],
+  )
   const persistedPayload = React.useMemo(
-    () => buildConfigPayload(cloneConfig(authorization?.config)),
-    [authorization?.config],
+    () =>
+      buildConfigPayload(
+        cloneConfig(authorization?.config, authorizationChannels),
+        authorizationChannels,
+      ),
+    [authorization?.config, authorizationChannels],
   )
   const hasUnsavedChanges = React.useMemo(
     () => JSON.stringify(currentPayload) !== JSON.stringify(persistedPayload),
@@ -303,20 +319,20 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
     const keyword = normalizeText(searchKeyword).toLowerCase()
     return observedUsers.filter((user) => {
       const channel = normalizeText(user.channel).toLowerCase()
-      if (!isAuthorizationChannel(channel)) return false
+      if (!isAuthorizationChannel(channel, authorizationChannels)) return false
       if (channelFilter !== "all" && channel !== channelFilter) return false
       return matchesKeyword(
         [user.username, user.userId, user.lastChatId, user.lastChatTitle, user.lastChatType],
         keyword,
       )
     })
-  }, [channelFilter, observedUsers, searchKeyword])
+  }, [authorizationChannels, channelFilter, observedUsers, searchKeyword])
 
   const filteredChats = React.useMemo(() => {
     const keyword = normalizeText(searchKeyword).toLowerCase()
     return observedChats.filter((chat) => {
       const channel = normalizeText(chat.channel).toLowerCase()
-      if (!isAuthorizationChannel(channel)) return false
+      if (!isAuthorizationChannel(channel, authorizationChannels)) return false
       if (!isGroupChat(chat)) return false
       if (channelFilter !== "all" && channel !== channelFilter) return false
       return matchesKeyword(
@@ -324,7 +340,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
         keyword,
       )
     })
-  }, [channelFilter, observedChats, searchKeyword])
+  }, [authorizationChannels, channelFilter, observedChats, searchKeyword])
 
   const handleSave = React.useCallback(async () => {
     try {
@@ -424,6 +440,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
               const assignment = countRoleAssignments({
                 roleId: role.roleId,
                 channels: form.channels,
+                authorizationChannels,
                 users: observedUsers,
               })
               return (
@@ -477,7 +494,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {PERMISSIONS.map((permission) => {
+                      {permissionCatalog.map((permission) => {
                         const enabled = hasPermission(role, permission)
                         return (
                           <button
@@ -510,7 +527,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
                               })
                             }}
                           >
-                            {PERMISSION_LABELS[permission]}
+                            {permissionLabels[permission] || permission}
                           </button>
                         )
                       })}
@@ -527,7 +544,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
           description="每个平台只需要一个默认分组。未单独分配的用户，会直接继承这里的设置。"
         >
           <div className="space-y-2">
-            {AUTHORIZATION_CHANNELS.map((channel) => {
+            {authorizationChannels.map((channel) => {
               const channelConfig = getChannelConfig(form, channel)
               return (
                 <article
@@ -595,7 +612,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {(["all", ...AUTHORIZATION_CHANNELS] as DirectoryChannelFilter[]).map((item) => (
+              {(["all", ...authorizationChannels] as DirectoryChannelFilter[]).map((item) => (
                 <Button
                   key={`channel-filter:${item}`}
                   type="button"
@@ -624,7 +641,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
           <div className="space-y-2">
             {filteredUsers.map((user) => {
               const channel = normalizeText(user.channel).toLowerCase()
-              if (!isAuthorizationChannel(channel)) return null
+              if (!isAuthorizationChannel(channel, authorizationChannels)) return null
               const channelConfig = getChannelConfig(form, channel)
               const roleId = getUserRoleId(user, channelConfig)
               const role = roles.find((item) => item.roleId === roleId)
@@ -703,7 +720,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
           <div className="space-y-2">
             {filteredChats.map((chat) => {
               const channel = normalizeText(chat.channel).toLowerCase()
-              if (!isAuthorizationChannel(channel)) return null
+              if (!isAuthorizationChannel(channel, authorizationChannels)) return null
               return (
                 <article
                   key={`${chat.channel}:${chat.chatId}`}

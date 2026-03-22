@@ -118,7 +118,7 @@ npm run build:extension
 执行流程：
 
 - 先抓取当前页面正文并生成 Markdown 文档（best-effort）。
-- 再调用 `POST /api/tui/contexts/<chatKey>/execute?agent=<agentId>`。
+- 再调用 `POST /api/dashboard/contexts/<chatKey>/execute?agent=<agentId>`。
 - Markdown 会通过 `attachments` 字段上传，runtime 会落盘并注入 `@attach` 指令给 Agent。
 - 投递成功后立即关闭页面输入面板，结果在当前选中的 chatKey 会话查看。
 

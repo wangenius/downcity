@@ -76,6 +76,41 @@ export const CHAT_AUTHORIZATION_PERMISSION_LABELS: Record<
 };
 
 /**
+ * 权限说明文案映射。
+ */
+export const CHAT_AUTHORIZATION_PERMISSION_DESCRIPTIONS: Record<
+  ChatAuthorizationPermission,
+  string
+> = {
+  "chat.dm.use": "允许用户在私聊场景中直接向 agent 发送请求并得到响应。",
+  "chat.group.use": "允许用户在群聊或频道场景中触发 agent 执行对话与任务。",
+  "auth.manage.users": "允许修改用户与权限组之间的绑定关系。",
+  "auth.manage.roles": "允许编辑权限组定义，以及调整各渠道的新用户默认组。",
+  "agent.view.logs": "允许查看当前 agent 的运行日志与排障信息。",
+  "agent.manage": "允许执行高权限管理动作，例如变更配置、操作服务与任务。",
+};
+
+/**
+ * 单个权限展示元信息。
+ */
+export interface ChatAuthorizationPermissionMeta {
+  /**
+   * 权限稳定标识。
+   */
+  permission: ChatAuthorizationPermission;
+
+  /**
+   * 权限展示名。
+   */
+  name: string;
+
+  /**
+   * 权限说明。
+   */
+  description: string;
+}
+
+/**
  * auth 目录快照。
  */
 export interface ChatAuthorizationCatalog {
@@ -93,6 +128,11 @@ export interface ChatAuthorizationCatalog {
    * 权限展示文案映射。
    */
   permissionLabels: Record<ChatAuthorizationPermission, string>;
+
+  /**
+   * 权限展示元信息。
+   */
+  permissionMeta: Record<ChatAuthorizationPermission, ChatAuthorizationPermissionMeta>;
 }
 
 /**
@@ -102,6 +142,16 @@ export const CHAT_AUTHORIZATION_CATALOG: ChatAuthorizationCatalog = {
   channels: [...CHAT_AUTHORIZATION_CHANNELS],
   permissions: [...CHAT_AUTHORIZATION_PERMISSIONS],
   permissionLabels: { ...CHAT_AUTHORIZATION_PERMISSION_LABELS },
+  permissionMeta: Object.fromEntries(
+    CHAT_AUTHORIZATION_PERMISSIONS.map((permission) => [
+      permission,
+      {
+        permission,
+        name: CHAT_AUTHORIZATION_PERMISSION_LABELS[permission],
+        description: CHAT_AUTHORIZATION_PERMISSION_DESCRIPTIONS[permission],
+      },
+    ]),
+  ) as Record<ChatAuthorizationPermission, ChatAuthorizationPermissionMeta>,
 };
 
 /**
@@ -119,6 +169,11 @@ export interface ChatAuthorizationRole {
   name: string;
 
   /**
+   * 角色说明。
+   */
+  description?: string;
+
+  /**
    * 角色拥有的权限集合。
    */
   permissions: ChatAuthorizationPermission[];
@@ -129,15 +184,22 @@ export interface ChatAuthorizationRole {
  */
 export function createDefaultChatAuthorizationRoles(): Record<string, ChatAuthorizationRole> {
   return {
-    default: { roleId: "default", name: "Default", permissions: [] },
+    default: {
+      roleId: "default",
+      name: "Default",
+      description: "新用户的起始权限组，不授予任何消息或管理能力。",
+      permissions: [],
+    },
     member: {
       roleId: "member",
       name: "Member",
+      description: "标准协作者，可在私聊与群聊中使用 agent。",
       permissions: ["chat.dm.use", "chat.group.use"],
     },
     admin: {
       roleId: "admin",
       name: "Admin",
+      description: "完全管理权限，可调整授权、查看日志并执行 agent 管理动作。",
       permissions: [...CHAT_AUTHORIZATION_PERMISSIONS],
     },
   };

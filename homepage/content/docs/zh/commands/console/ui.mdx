@@ -48,6 +48,8 @@ city console ui [action] [options]
 - `Agent / Authorization` 已重构为角色权限模型：维护 `role -> permission`，再把用户绑定到角色。
 - `Agent / Authorization` 的配置统一写入 console `~/.ship/ship.db`，不会明文落到项目 `ship.json`。
 - `Agent / Authorization` 中新用户会落到默认角色；群聊/频道是否可用，取决于当前发消息用户所属权限组。
+- `Agent / Authorization` 现已改为“概览 + 目录”工作台：主页面只显示角色摘要、渠道默认组摘要、权限说明与用户目录。
+- `Agent / Authorization` 中角色编辑与渠道默认组配置都收进 dialog；角色支持维护 `name` / `description`，并可删除非保留角色。
 - 如果你想完整了解这套模型，可继续阅读：[权限说明](/zh/docs/security/permissions)。
 - `Agent / Overview` 的 `chat overview` 现支持 channel 级快捷动作：`open` / `close` / `test` / `reconnect`，可直接做连通性与开关操作。
 - `Agent / Command` 提供终端风格命令面板：在当前 agent 项目根目录执行 shell 命令，并展示 stdout/stderr 与退出码。

@@ -152,7 +152,7 @@ export interface TuiContextSummary {
 }
 
 /**
- * `/api/tui/contexts` 响应体。
+ * `/api/dashboard/contexts` 响应体。
  */
 export interface TuiContextsResponse {
   /**
@@ -207,7 +207,7 @@ export interface ChatKeyOption {
 }
 
 /**
- * `/api/tui/contexts/:contextId/execute` 请求体。
+ * `/api/dashboard/contexts/:contextId/execute` 请求体。
  */
 export type TuiContextExecuteAttachmentType =
   | "document"
@@ -247,7 +247,7 @@ export interface TuiContextExecuteAttachmentInput {
 }
 
 /**
- * `/api/tui/contexts/:contextId/execute` 请求体。
+ * `/api/dashboard/contexts/:contextId/execute` 请求体。
  */
 export interface TuiContextExecuteRequestBody {
   /**

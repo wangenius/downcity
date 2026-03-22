@@ -11,89 +11,19 @@ import { useEffect, useMemo, useState } from "react";
 import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
 import type { ExtensionSettings } from "../types/extension";
 import {
-  buildConsoleBaseUrl,
   fetchAgents,
   fetchChatKeyOptions,
 } from "../services/downcityApi";
+import { resolveAgentId, resolveChatKey, resolveLinkedChannels } from "../services/chatRouting";
+import { buildConsoleBaseUrl, parsePortInput } from "../services/consoleBase";
 import {
   DEFAULT_SETTINGS,
   loadSettings,
   saveSettings,
 } from "../services/storage";
+import { getStatusClass, readErrorText, type OptionsStatus } from "./helpers";
 import type { PopupSelectOption } from "../types/PopupSelect";
 import { PopupSelect } from "../popup/PopupSelect";
-
-type OptionsStatus = {
-  /** 状态类型（中文）：用于控制提示色。 */
-  type: "idle" | "success" | "error" | "loading";
-  /** 状态文案（中文）：展示给用户的当前状态。 */
-  text: string;
-};
-
-function readErrorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error || "未知错误");
-}
-
-function parsePortInput(value: string): number | null {
-  const parsed = Number.parseInt(String(value || "").trim(), 10);
-  if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return null;
-  if (parsed < 1 || parsed > 65535) return null;
-  return Math.trunc(parsed);
-}
-
-function getStatusClass(type: OptionsStatus["type"]): string {
-  if (type === "success") return "text-[#166534]";
-  if (type === "error") return "text-[#7f1d1d]";
-  if (type === "loading") return "text-[#9a6700]";
-  return "text-muted-foreground";
-}
-
-function resolveAgentId(
-  agents: ConsoleUiAgentOption[],
-  preferredAgentId: string,
-  selectedAgentId: string,
-): string {
-  const preferred = String(preferredAgentId || "").trim();
-  if (preferred && agents.some((item) => item.id === preferred)) {
-    return preferred;
-  }
-  const selected = String(selectedAgentId || "").trim();
-  if (selected && agents.some((item) => item.id === selected)) {
-    return selected;
-  }
-  return agents[0]?.id || "";
-}
-
-function resolveLinkedChannels(
-  agent: ConsoleUiAgentOption | null | undefined,
-): Set<"telegram" | "feishu" | "qq"> {
-  const out = new Set<"telegram" | "feishu" | "qq">();
-  const profiles = Array.isArray(agent?.chatProfiles) ? agent.chatProfiles : [];
-  for (const profile of profiles) {
-    const channel = String(profile?.channel || "").trim().toLowerCase();
-    const linkState = String(profile?.linkState || "").trim().toLowerCase();
-    if (linkState !== "connected") continue;
-    if (channel === "telegram" || channel === "feishu" || channel === "qq") {
-      out.add(channel);
-    }
-  }
-  return out;
-}
-
-function resolveChatKey(
-  options: ChatKeyOption[],
-  preferredChatKey: string,
-): string {
-  const preferred = String(preferredChatKey || "").trim();
-  if (preferred && options.some((item) => item.chatKey === preferred)) {
-    return preferred;
-  }
-  if (options.length === 1) {
-    return options[0]?.chatKey || "";
-  }
-  return "";
-}
 
 export function App() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -210,11 +140,11 @@ export function App() {
     try {
       const response = await fetchAgents({ consoleBaseUrl });
       const nextAgents = response.agents || [];
-      const nextAgentId = resolveAgentId(
-        nextAgents,
-        params.preferredAgentId,
-        response.selectedAgentId,
-      );
+      const nextAgentId = resolveAgentId({
+        agents: nextAgents,
+        preferredAgentId: params.preferredAgentId,
+        selectedAgentId: response.selectedAgentId,
+      });
 
       setAgents(nextAgents);
       setSettings((prev) => ({

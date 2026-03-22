@@ -19,8 +19,8 @@ test("resolveAuthorizedUserRole returns the bound permission group and falls bac
   };
   const authorizationConfig = {
     roles: {
-      default: { roleId: "default", name: "Default", permissions: [] },
-      admin: { roleId: "admin", name: "Admin", permissions: ["agent.manage"] },
+      default: { roleId: "default", name: "Default", description: "Default role", permissions: [] },
+      admin: { roleId: "admin", name: "Admin", description: "Admin role", permissions: ["agent.manage"] },
     },
     channels: {
       feishu: {
@@ -63,11 +63,12 @@ test("evaluateIncomingChatAuthorization uses only user role permissions", () => 
   };
   const authorizationConfig = {
     roles: {
-      default: { roleId: "default", name: "Default", permissions: [] },
-      member: { roleId: "member", name: "Member", permissions: ["chat.dm.use"] },
+      default: { roleId: "default", name: "Default", description: "Default role", permissions: [] },
+      member: { roleId: "member", name: "Member", description: "DM role", permissions: ["chat.dm.use"] },
       group_member: {
         roleId: "group_member",
         name: "Group Member",
+        description: "Group role",
         permissions: ["chat.dm.use", "chat.group.use"],
       },
     },
@@ -98,6 +99,7 @@ test("evaluateIncomingChatAuthorization uses only user role permissions", () => 
       decision: "block",
       isOwner: false,
       userRoleId: "default",
+      userPermissions: [],
       reason: "dm_role_blocked",
     },
   );
@@ -118,6 +120,7 @@ test("evaluateIncomingChatAuthorization uses only user role permissions", () => 
       decision: "allow",
       isOwner: false,
       userRoleId: "member",
+      userPermissions: ["chat.dm.use"],
       reason: "dm_role_allowed",
     },
   );
@@ -138,6 +141,7 @@ test("evaluateIncomingChatAuthorization uses only user role permissions", () => 
       decision: "block",
       isOwner: false,
       userRoleId: "default",
+      userPermissions: [],
       reason: "user_group_permission_blocked",
     },
   );
@@ -158,6 +162,7 @@ test("evaluateIncomingChatAuthorization uses only user role permissions", () => 
       decision: "allow",
       isOwner: false,
       userRoleId: "group_member",
+      userPermissions: ["chat.dm.use", "chat.group.use"],
       reason: "group_user_role_allowed",
     },
   );

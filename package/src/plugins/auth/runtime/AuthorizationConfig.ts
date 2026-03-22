@@ -53,26 +53,37 @@ function buildDefaultRole(roleId: "default" | "member" | "admin"): ChatAuthoriza
 }
 
 function normalizeRoleMap(input: unknown): Record<string, ChatAuthorizationRole> {
-  const roles: Record<string, ChatAuthorizationRole> = {
-    default: buildDefaultRole("default"),
-    member: buildDefaultRole("member"),
-    admin: buildDefaultRole("admin"),
-  };
-  if (!input || typeof input !== "object" || Array.isArray(input)) return roles;
+  const defaultRoles = createDefaultChatAuthorizationRoles();
+  if (!input || typeof input !== "object" || Array.isArray(input)) return defaultRoles;
+  const roles: Record<string, ChatAuthorizationRole> = {};
   for (const [rawRoleId, rawRole] of Object.entries(input)) {
     const roleId = normalizeText(rawRoleId);
     if (!roleId) continue;
     const roleObj =
       rawRole && typeof rawRole === "object" && !Array.isArray(rawRole)
-        ? (rawRole as { name?: unknown; permissions?: unknown[]; roleId?: unknown })
+        ? (rawRole as {
+            name?: unknown;
+            description?: unknown;
+            permissions?: unknown[];
+            roleId?: unknown;
+          })
         : null;
     if (!roleObj) continue;
+    const builtinRole = defaultRoles[roleId];
     roles[roleId] = {
       roleId,
-      name: normalizeText(roleObj.name) || roleId,
+      name: normalizeText(roleObj.name) || builtinRole?.name || roleId,
+      ...(normalizeText(roleObj.description) || builtinRole?.description
+        ? {
+            description:
+              normalizeText(roleObj.description) || builtinRole?.description || undefined,
+          }
+        : {}),
       permissions: normalizePermissionList(roleObj.permissions),
     };
   }
+  if (Object.keys(roles).length === 0) return defaultRoles;
+  if (!roles.default) roles.default = buildDefaultRole("default");
   return roles;
 }
 

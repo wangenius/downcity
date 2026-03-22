@@ -430,7 +430,7 @@
 
   async function fetchContexts(baseUrl, agentId) {
     const payload = await requestJson(
-      `${baseUrl}/api/tui/contexts?agent=${encodeURIComponent(agentId)}&limit=500`,
+      `${baseUrl}/api/dashboard/contexts?agent=${encodeURIComponent(agentId)}&limit=500`,
       { method: "GET" },
     );
     if (payload.success !== true) {
@@ -678,7 +678,7 @@
       sourceType: params.sourceType,
     });
 
-    const executeUrl = `${baseUrl}/api/tui/contexts/${encodeURIComponent(targetChatKey)}/execute?agent=${encodeURIComponent(targetAgent.id)}`;
+    const executeUrl = `${baseUrl}/api/dashboard/contexts/${encodeURIComponent(targetChatKey)}/execute?agent=${encodeURIComponent(targetAgent.id)}`;
 
     const response = await fetch(executeUrl, {
       method: "POST",

@@ -46,6 +46,8 @@ city console ui [action] [options]
 - Agent / Authorization is now role-based: manage `role -> permission`, then bind users to roles.
 - Agent / Authorization is stored in console `~/.ship/ship.db`, not written back to project `ship.json` in plaintext.
 - In Agent / Authorization, new users fall back to default roles, and whether a group/channel message is allowed depends on the speaking user's permission group.
+- Agent / Authorization now uses an overview + directory layout: the main page keeps role summaries, channel default summaries, a permission glossary, and the user directory.
+- Role editing and channel default configuration now live in dialogs; roles support `name` / `description`, and non-reserved roles can be deleted.
 - For the full model, see [Permissions](/en/docs/security/permissions).
 - Agent / Overview now exposes channel-level chat quick actions in chat overview: `open` / `close` / `test` / `reconnect`.
 - Agent / Command provides a terminal-style panel that runs shell commands in the selected agent project root and shows stdout/stderr with exit code.

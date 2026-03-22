@@ -25,11 +25,11 @@ import type {
   StatusMessage,
 } from "../types/extension";
 import {
-  buildConsoleBaseUrl,
   dispatchAgentTask,
   fetchAgents,
   fetchChatKeyOptions,
 } from "../services/downcityApi";
+import { resolveAgentId, resolveChatKey, resolveLinkedChannels } from "../services/chatRouting";
 import { buildPageMarkdownSnapshot } from "../services/pageMarkdown";
 import {
   appendPageSendRecord,
@@ -39,140 +39,17 @@ import {
   saveSettings,
 } from "../services/storage";
 import { getActiveTabContext } from "../services/tab";
+import {
+  buildPopupInstructions,
+  formatHistoryTime,
+  getToastToneClass,
+  normalizeInitialTaskPrompt,
+  readErrorText,
+  resolvePopupConsoleBaseUrl,
+  shortenUrl,
+  type PopupToastMessage,
+} from "./helpers";
 import { PopupSelect } from "./PopupSelect";
-
-function readErrorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error || "未知错误");
-}
-
-function resolveConsoleBaseUrl(settings: ExtensionSettings): {
-  baseUrl: string;
-  errorText?: string;
-} {
-  try {
-    return {
-      baseUrl: buildConsoleBaseUrl({
-        host: settings.consoleHost,
-        port: settings.consolePort,
-      }),
-    };
-  } catch (error) {
-    return {
-      baseUrl: "",
-      errorText: readErrorText(error),
-    };
-  }
-}
-
-function buildInstructions(params: {
-  tab: ActiveTabContext;
-  taskPrompt: string;
-  markdownFileName: string;
-}): string {
-  const safeUrl = params.tab.url || "N/A";
-  const userPrompt = String(params.taskPrompt || "").trim();
-  return [
-    `我浏览到了这个网页，${safeUrl}， 网页的内容保存到了（可能保存下来的有问题）：${params.markdownFileName}`,
-    `${userPrompt || "请阅读附件并按需求处理。"}`,
-  ].join("\n");
-}
-
-function resolveAgentId(params: {
-  agents: ConsoleUiAgentOption[];
-  preferredAgentId: string;
-  selectedAgentId: string;
-}): string {
-  const preferred = String(params.preferredAgentId || "").trim();
-  if (preferred) {
-    const preferredRunning = params.agents.find(
-      (item) => item.id === preferred && item.running,
-    );
-    if (preferredRunning) return preferredRunning.id;
-  }
-
-  const candidateList = [
-    params.selectedAgentId,
-    ...(params.agents.filter((item) => item.running).map((item) => item.id)),
-    params.preferredAgentId,
-    ...(params.agents.map((item) => item.id)),
-  ];
-
-  for (const id of candidateList) {
-    const normalized = String(id || "").trim();
-    if (!normalized) continue;
-    if (params.agents.some((item) => item.id === normalized)) {
-      return normalized;
-    }
-  }
-
-  return "";
-}
-
-function resolveChatKey(options: ChatKeyOption[], preferredChatKey: string): string {
-  const preferred = String(preferredChatKey || "").trim();
-  if (preferred && options.some((item) => item.chatKey === preferred)) {
-    return preferred;
-  }
-  if (options.length === 1) {
-    return options[0]?.chatKey || "";
-  }
-  return "";
-}
-
-function resolveLinkedChannels(
-  agent: ConsoleUiAgentOption | null | undefined,
-): Set<"telegram" | "feishu" | "qq"> {
-  const out = new Set<"telegram" | "feishu" | "qq">();
-  const profiles = Array.isArray(agent?.chatProfiles) ? agent?.chatProfiles : [];
-  for (const profile of profiles) {
-    const channel = String(profile?.channel || "").trim().toLowerCase();
-    const linkState = String(profile?.linkState || "").trim().toLowerCase();
-    if (linkState !== "connected") continue;
-    if (channel === "telegram" || channel === "feishu" || channel === "qq") {
-      out.add(channel);
-    }
-  }
-  return out;
-}
-
-function shortenUrl(value: string): string {
-  const text = String(value || "").trim();
-  if (!text) return "（当前页面 URL 不可用）";
-  if (text.length <= 72) return text;
-  return `${text.slice(0, 69)}...`;
-}
-
-function normalizeInitialTaskPrompt(value: string): string {
-  const incoming = String(value || "").trim();
-  const defaultPrompt = String(DEFAULT_SETTINGS.taskPrompt || "").trim();
-  if (!incoming) return "";
-  if (incoming === defaultPrompt) return "";
-  return incoming;
-}
-
-type ToastMessage = {
-  /** Toast 类型（中文）：成功或失败。 */
-  type: "success" | "error";
-  /** Toast 文本（中文）：展示给用户的提示内容。 */
-  text: string;
-};
-
-function getToastToneClass(type: ToastMessage["type"]): string {
-  return type === "error"
-    ? "border-[#d9b2ae] bg-[#faf5f5] text-[#7f1d1d]"
-    : "border-border bg-surface text-foreground";
-}
-
-function formatHistoryTime(timestamp: number): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
 
 export function App() {
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -192,16 +69,16 @@ export function App() {
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChatKeys, setIsLoadingChatKeys] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [toast, setToast] = useState<PopupToastMessage | null>(null);
   const [status, setStatus] = useState<StatusMessage>({
     type: "idle",
     text: "准备就绪",
   });
 
-  const consoleEndpoint = resolveConsoleBaseUrl(settings);
+  const consoleEndpoint = resolvePopupConsoleBaseUrl(settings);
   const consoleBaseUrl = consoleEndpoint.baseUrl;
 
-  const showToast = useCallback((type: ToastMessage["type"], text: string): void => {
+  const showToast = useCallback((type: PopupToastMessage["type"], text: string): void => {
     const message = String(text || "").trim();
     if (!message) return;
     if (toastTimerRef.current !== null) {
@@ -382,7 +259,7 @@ export function App() {
           }
         }
 
-        const endpoint = resolveConsoleBaseUrl(saved);
+        const endpoint = resolvePopupConsoleBaseUrl(saved);
         if (!endpoint.baseUrl) {
           setStatus({
             type: "error",
@@ -447,7 +324,7 @@ export function App() {
       const agentId = String(settings.agentId || "").trim();
       const chatKey = String(settings.chatKey || "").trim();
       const taskPrompt = String(settings.taskPrompt || "").trim();
-      const activeConsoleBaseUrl = resolveConsoleBaseUrl(settings).baseUrl;
+      const activeConsoleBaseUrl = resolvePopupConsoleBaseUrl(settings).baseUrl;
 
       if (!agentId) {
         const message = "请选择目标 Agent";
@@ -504,7 +381,7 @@ export function App() {
           agentId,
           contextId: chatKey,
           body: {
-            instructions: buildInstructions({
+            instructions: buildPopupInstructions({
               tab,
               taskPrompt,
               markdownFileName: markdownSnapshot.fileName,

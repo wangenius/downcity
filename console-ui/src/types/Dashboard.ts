@@ -350,6 +350,24 @@ export type UiChatAuthorizationPermission =
   | string;
 
 /**
+ * 单个权限的展示元信息。
+ */
+export interface UiChatAuthorizationPermissionMeta {
+  /**
+   * 权限稳定标识。
+   */
+  permission: UiChatAuthorizationPermission;
+  /**
+   * 权限展示名。
+   */
+  name: string;
+  /**
+   * 权限说明。
+   */
+  description: string;
+}
+
+/**
  * auth 目录快照。
  */
 export interface UiChatAuthorizationCatalog {
@@ -365,6 +383,10 @@ export interface UiChatAuthorizationCatalog {
    * 权限展示文案映射。
    */
   permissionLabels?: Record<string, string>;
+  /**
+   * 权限展示元信息映射。
+   */
+  permissionMeta?: Record<string, UiChatAuthorizationPermissionMeta>;
 }
 
 /**
@@ -379,6 +401,10 @@ export interface UiChatAuthorizationRole {
    * 角色展示名。
    */
   name: string;
+  /**
+   * 角色说明。
+   */
+  description?: string;
   /**
    * 角色权限列表。
    */

@@ -618,7 +618,7 @@ export function SummaryCards(props: SummaryCardsProps) {
                   <div className="space-y-3 rounded-[14px] bg-transparent px-3 py-3">
                     <div className="min-w-0 space-y-1">
                       <div className="text-xs text-muted-foreground">
-                        {service.description || service.service || "-"}
+                        {service.description || service.name || service.service || "-"}
                       </div>
                     </div>
 

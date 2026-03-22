@@ -69,6 +69,40 @@ Recommended flow:
 
 This cleanly separates secret management and per-agent channel runtime config.
 
+## In multi-agent setups: what is shared and what is isolated
+
+This boundary is important:
+
+- Bot credentials behind `channelAccountId` are shared globally in `ship.db`
+- `chat` authorization rules are isolated per agent, even when multiple agents reuse the same channel account
+
+That means multiple agents can bind the same Telegram / Feishu / QQ bot account while still having different:
+
+- default roles
+- user role bindings
+- who can use DMs
+- who can trigger the agent from group chats
+
+In practice:
+
+- Channel Account decides which bot identity connects to the platform
+- Chat Authorization decides who is allowed to use this specific agent
+
+### Example
+
+For example:
+
+1. `agent-A` and `agent-B` both bind the same `channelAccountId`
+2. `agent-A` assigns one user to `admin`
+3. `agent-B` does not assign that role
+
+Result:
+
+- the user is allowed in `agent-A`
+- the same user can still be blocked in `agent-B`
+
+So reusing bot credentials means reusing the platform identity, not reusing authorization policy.
+
 ### How bot info is fetched
 
 You do not need to manually enter bot name, bot id, or identity.  

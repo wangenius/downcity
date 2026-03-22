@@ -174,16 +174,18 @@ function buildConfigPayload(
   form: AuthorizationFormState,
   channels: AuthorizationChannel[],
 ): NonNullable<UiChatAuthorizationResponse["config"]> {
+  const nextChannels = channels.reduce((result, channel) => {
+    const current = getChannelConfig(form, channel)
+    result[channel] = {
+      defaultUserRoleId: normalizeText(current.defaultUserRoleId) || "default",
+      userRoles: { ...(current.userRoles || {}) },
+    }
+    return result
+  }, {} as Record<string, UiChatAuthorizationChannelConfig>)
+
   return {
     roles: normalizeRoleRecord(form.roles),
-    channels: channels.reduce((result, channel) => {
-      const current = getChannelConfig(form, channel)
-      result[channel] = {
-        defaultUserRoleId: normalizeText(current.defaultUserRoleId) || "default",
-        userRoles: { ...(current.userRoles || {}) },
-      }
-      return result
-    }, {} as NonNullable<UiChatAuthorizationResponse["config"]>["channels"]),
+    channels: nextChannels,
   }
 }
 
@@ -487,8 +489,8 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
                       </div>
 
                       <div className="text-xs text-muted-foreground">
-                        {role.permissions.length > 0
-                          ? `${role.permissions.length} permissions`
+                        {(role.permissions || []).length > 0
+                          ? `${(role.permissions || []).length} permissions`
                           : "no permissions"}
                       </div>
                     </div>

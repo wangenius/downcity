@@ -19,6 +19,12 @@ description: chat service 的职责与渠道集成
 - 是否允许进入 Agent，不看群本身，而是看当前发消息用户所属的权限组。
 - 新用户如果还没有显式分组，会自动使用默认权限组。
 
+## 多 Agent 授权隔离
+
+- `chat` 的授权规则是按 agent 隔离的，不是全局共享一套。
+- 即使多个 agent 绑定了同一个 channel account，它们的默认权限组、用户角色绑定和授权结果也可以完全不同。
+- 换句话说，共享的是 bot 接入凭据，不是授权策略。
+
 完整说明见：[权限说明](/zh/docs/security/permissions)
 
 ## 会话显示名（chatTitle）

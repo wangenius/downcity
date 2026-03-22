@@ -214,7 +214,7 @@ export interface UiOverviewContextItem {
 }
 
 /**
- * TUI context 摘要项。
+ * Dashboard context 摘要项。
  */
 export interface UiContextSummary {
   /**
@@ -262,7 +262,7 @@ export interface UiContextSummary {
 }
 
 /**
- * `/api/tui/contexts` 响应。
+ * `/api/dashboard/contexts` 响应。
  */
 export interface UiContextsResponse {
   /**
@@ -276,7 +276,7 @@ export interface UiContextsResponse {
 }
 
 /**
- * `/api/tui/overview` 响应。
+ * `/api/dashboard/overview` 响应。
  */
 export interface UiOverviewResponse {
   /**
@@ -518,14 +518,29 @@ export interface UiServiceItem {
    * Service 名称。
    */
   name: string;
+
+  /**
+   * 兼容旧字段的 service 名称。
+   */
+  service?: string;
   /**
    * Service 状态。
    */
   state: string;
+
+  /**
+   * 兼容旧字段的状态值。
+   */
+  status?: string;
+
+  /**
+   * Service 描述。
+   */
+  description?: string;
 }
 
 /**
- * `/api/tui/services` 响应。
+ * `/api/dashboard/services` 响应。
  */
 export interface UiServicesResponse {
   /**
@@ -1313,7 +1328,7 @@ export interface UiTaskItem {
 }
 
 /**
- * `/api/tui/tasks` 响应。
+ * `/api/dashboard/tasks` 响应。
  */
 export interface UiTasksResponse {
   /**
@@ -1565,7 +1580,7 @@ export interface UiTaskRunDetail {
 }
 
 /**
- * `/api/tui/tasks/:title/runs` 响应。
+ * `/api/dashboard/tasks/:title/runs` 响应。
  */
 export interface UiTaskRunsResponse {
   /**
@@ -1587,7 +1602,7 @@ export interface UiTaskRunsResponse {
 }
 
 /**
- * `/api/tui/tasks/:title/runs/:timestamp` 响应。
+ * `/api/dashboard/tasks/:title/runs/:timestamp` 响应。
  */
 export interface UiTaskRunDetailResponse extends UiTaskRunDetail {
   /**
@@ -1683,7 +1698,7 @@ export interface UiLogItem {
 }
 
 /**
- * `/api/tui/logs` 响应。
+ * `/api/dashboard/logs` 响应。
  */
 export interface UiLogsResponse {
   /**
@@ -1729,7 +1744,7 @@ export interface UiPromptSection {
 }
 
 /**
- * `/api/tui/system-prompt` 响应。
+ * `/api/dashboard/system-prompt` 响应。
  */
 export interface UiPromptResponse {
   /**
@@ -1773,7 +1788,7 @@ export interface UiLocalMessage {
 }
 
 /**
- * context 时间线消息项（来自 `/api/tui/contexts/:id/messages`）。
+ * context 时间线消息项（来自 `/api/dashboard/contexts/:id/messages`）。
  */
 export interface UiContextTimelineMessage {
   /**
@@ -1807,7 +1822,7 @@ export interface UiContextTimelineMessage {
 }
 
 /**
- * `/api/tui/contexts/:id/messages` 响应。
+ * `/api/dashboard/contexts/:id/messages` 响应。
  */
 export interface UiContextMessagesResponse {
   /**
@@ -1847,7 +1862,7 @@ export interface UiContextArchiveSummary {
 }
 
 /**
- * `/api/tui/contexts/:id/archives` 响应。
+ * `/api/dashboard/contexts/:id/archives` 响应。
  */
 export interface UiContextArchivesResponse {
   /**
@@ -1865,7 +1880,7 @@ export interface UiContextArchivesResponse {
 }
 
 /**
- * `/api/tui/contexts/:id/archives/:archiveId` 响应。
+ * `/api/dashboard/contexts/:id/archives/:archiveId` 响应。
  */
 export interface UiContextArchiveDetailResponse {
   /**
@@ -2011,7 +2026,7 @@ export interface UiChatHistoryEvent {
 }
 
 /**
- * `/api/tui/contexts/:id/messages` 响应。
+ * `/api/dashboard/contexts/:id/messages` 响应。
  */
 export interface UiLocalMessagesResponse {
   /**

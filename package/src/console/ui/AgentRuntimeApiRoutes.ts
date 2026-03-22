@@ -97,7 +97,7 @@ async function probeSelectedAgentRuntime(
   let servicesPayload: ServicesResponse;
   try {
     servicesPayload = await fetchRuntimeJson<ServicesResponse>(
-      new URL("/api/tui/services", baseUrl).toString(),
+      new URL("/api/dashboard/services", baseUrl).toString(),
     );
   } catch (error) {
     return {

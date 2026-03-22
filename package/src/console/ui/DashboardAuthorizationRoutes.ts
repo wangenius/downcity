@@ -1,8 +1,8 @@
 /**
- * TUI Authorization 路由。
+ * Dashboard Authorization 路由。
  *
  * 关键点（中文）
- * - 单独承接 `/api/tui/authorization*`，避免 TuiApi 文件继续膨胀。
+ * - 单独承接 `/api/dashboard/authorization*`，避免 DashboardApiRoutes 文件继续膨胀。
  * - 授权页面的数据统一通过 auth plugin API 读取与写入。
  */
 
@@ -29,13 +29,13 @@ function normalizeChatChannel(value: unknown): ChatAuthorizationChannel | null {
 /**
  * 注册 authorization 相关路由。
  */
-export function registerTuiAuthorizationRoutes(params: {
+export function registerDashboardAuthorizationRoutes(params: {
   app: Hono;
   getServiceRuntimeState: () => ServiceRuntime;
 }): void {
   const { app, getServiceRuntimeState } = params;
 
-  app.get("/api/tui/authorization", async (c) => {
+  app.get("/api/dashboard/authorization", async (c) => {
     try {
       const payload = await readAuthDashboardPayload(getServiceRuntimeState());
       return c.json({
@@ -47,7 +47,7 @@ export function registerTuiAuthorizationRoutes(params: {
     }
   });
 
-  app.post("/api/tui/authorization/config", async (c) => {
+  app.post("/api/dashboard/authorization/config", async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
         config?: ChatAuthorizationConfig;
@@ -65,7 +65,7 @@ export function registerTuiAuthorizationRoutes(params: {
     }
   });
 
-  app.post("/api/tui/authorization/action", async (c) => {
+  app.post("/api/dashboard/authorization/action", async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
         action?: string;

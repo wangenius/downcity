@@ -20,7 +20,7 @@ import {
 } from "./routes/services.js";
 import { pluginsRouter } from "./routes/plugins.js";
 import { staticRouter } from "./routes/static.js";
-import { tuiRouter } from "@console/ui/tui/Router.js";
+import { dashboardRouter } from "@console/ui/dashboard/Router.js";
 
 /**
  * Server 启动参数。
@@ -69,7 +69,7 @@ export function createServerApp(): Hono {
   app.route("/", servicesRouter);
   app.route("/", pluginsRouter);
   app.route("/", executeRouter);
-  app.route("/", tuiRouter);
+  app.route("/", dashboardRouter);
 
   return app;
 }

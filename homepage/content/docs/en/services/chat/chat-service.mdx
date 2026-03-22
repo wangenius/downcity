@@ -19,6 +19,12 @@ description: Chat service responsibilities and channel integrations
 - Access is judged by the speaking user's permission group, not by the group chat itself.
 - If the user has no explicit assignment yet, the default group is used automatically.
 
+## Multi-agent authorization isolation
+
+- `chat` authorization rules are isolated per agent rather than shared globally.
+- Even if multiple agents bind the same channel account, their default roles, user role bindings, and authorization results can still differ.
+- In short, bot credentials are shared, but authorization policy is not.
+
 Full explanation: [Permissions](/en/docs/security/permissions)
 
 ## Chat Display Name (`chatTitle`)

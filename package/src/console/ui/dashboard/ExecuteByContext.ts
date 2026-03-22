@@ -1,5 +1,5 @@
 /**
- * TUI execute by context helper。
+ * Dashboard execute by context helper。
  *
  * 关键点（中文）
  * - chatKey 上下文优先复用 chat 平台队列链路（与平台入站执行一致）。
@@ -9,7 +9,7 @@
 import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
-import type { TuiContextExecuteAttachmentInput } from "@/types/TuiContextExecute.js";
+import type { DashboardContextExecuteAttachmentInput } from "@/types/DashboardContextExecute.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
 import { appendInboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
@@ -29,7 +29,7 @@ export async function executeByContextId(params: {
   serviceRuntime: ServiceRuntime;
   contextId: string;
   instructions: string;
-  attachments?: TuiContextExecuteAttachmentInput[];
+  attachments?: DashboardContextExecuteAttachmentInput[];
 }) {
   const contextId = String(params.contextId || "").trim();
   const instructions = String(params.instructions || "").trim();
@@ -80,7 +80,7 @@ export async function executeByContextId(params: {
         extra: ingressExtra,
       });
     } catch (error) {
-      params.runtime.logger.warn("TUI execute chat history append failed", {
+      params.runtime.logger.warn("Dashboard execute chat history append failed", {
         contextId,
         error: String(error),
       });

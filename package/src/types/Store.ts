@@ -325,10 +325,6 @@ export interface StoredChannelAccount {
    */
   sandbox?: boolean;
   /**
-   * 主人鉴权 ID（可选）。
-   */
-  authId?: string;
-  /**
    * 创建时间（ISO 字符串）。
    */
   createdAt: string;
@@ -386,8 +382,4 @@ export interface UpsertChannelAccountInput {
    * QQ 沙箱模式，可选。
    */
   sandbox?: boolean;
-  /**
-   * 主人鉴权 ID，可选。
-   */
-  authId?: string;
 }

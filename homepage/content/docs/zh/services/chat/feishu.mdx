@@ -81,17 +81,13 @@ Downcity 当前默认按长连接模式工作，不要求你先暴露公网 webh
 
 ### 5）权限配置
 
-从当前版本开始，飞书不建议再把“谁是主人”单独理解成一个 `FEISHU_AUTH_ID`。
-
 含义是：
 
-- `ownerIds`：谁会被判定为 `is_master=yes`
-- `dmPolicy`：私聊是开放、审批制、白名单制还是禁用
-- `allowFrom`：私聊白名单
-- `groupPolicy`：群聊是否开放或只允许特定群
-- `groupAllowFrom`：允许接入的群 ID
+- `role`：权限分组，例如 `default`、`member`、`admin`
+- `permission`：分组拥有的权限，例如 `chat.dm.use`、`chat.group.use`、`agent.manage`
+- `user -> role`：某个飞书用户属于哪个角色
 
-这些配置统一保存在 console `~/.ship/ship.db`，并可直接在 Console UI 的 `Agent / Authorization` 页面管理，不会明文写到项目 `ship.json`。
+这些配置统一保存在 console `~/.ship/ship.db`，并可直接在 Console UI 的 `Agent / Authorization` 页面管理，不会明文写到项目 `ship.json`。新用户会自动落到默认角色，不再走审批流程；群聊/频道是否可用，只看当前发消息 user 的角色权限。
 
 对于当前运行时，最关键的是 **tenant / 应用身份权限**，不是单独的 `user` 权限。
 
@@ -266,3 +262,4 @@ https://open.larksuite.com
 - [飞书消息流与执行逻辑](/zh/docs/services/chat/feishu-message-flow)
 - [Chat Service 总览](/zh/docs/services/chat/chat-service)
 - [Channel 配置元信息](/zh/docs/services/chat/channel-configuration)
+- [权限说明](/zh/docs/security/permissions)

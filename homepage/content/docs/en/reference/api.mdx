@@ -56,54 +56,60 @@ Supported `action`: `start | stop | restart | status`.
 }
 ```
 
-## Extension runtime API
+## Plugin runtime API
 
-### `GET /api/extensions/list`
+### `GET /api/plugins/list`
 
-List extension runtime states.
+List registered plugins.
 
-### `POST /api/extensions/control`
+### `POST /api/plugins/availability`
 
 ```json
-{ "extensionName": "voice", "action": "status" }
+{ "pluginName": "voice" }
 ```
 
-### `POST /api/extensions/command`
+### `POST /api/plugins/action`
 
 ```json
 {
-  "extensionName": "voice",
-  "command": "status",
+  "pluginName": "voice",
+  "actionName": "status",
   "payload": {}
 }
 ```
 
 ## Console UI API (summary)
 
-### `GET /api/ui/extensions`
+### `GET /api/ui/plugins`
 
-Returns extension runtime state plus config summary (used by Console UI panels).
+Returns plugin summary plus availability state (used by Console UI panels).
 
 Example:
 
 ```json
 {
   "success": true,
-  "extensions": [
+  "plugins": [
     {
       "name": "voice",
-      "state": "idle",
-      "supportsLifecycle": true,
-      "supportsCommand": true,
+      "actions": ["status", "on", "off"],
+      "capabilities": ["audio.transcribe"],
+      "requiredAssets": ["voice.transcriber"],
+      "hasSystem": true,
+      "hasAvailability": true,
+      "availability": {
+        "enabled": true,
+        "available": true,
+        "reasons": []
+      },
       "config": {
-        "lifecycle": { "start": true, "stop": true, "command": true },
         "actions": [
           {
             "name": "status",
             "supportsCommand": true,
             "supportsApi": true,
-            "apiMethod": "GET",
-            "apiPath": "/extension/voice/status"
+            "apiMethod": "",
+            "apiPath": ""
           }
         ]
       }
@@ -141,15 +147,15 @@ Notes:
 
 ## Direct action routes
 
-Each service/extension action also has a default route:
+Each service/plugin action also has a default route:
 
 - `/service/<serviceName>/<actionName>`
-- `/extension/<extensionName>/<actionName>`
+- `/api/plugins/action`
 
 Examples:
 
 - `POST /service/chat/send`
-- `GET /extension/voice/status`
+- `POST /api/plugins/action`
 
 ## Debug baseline
 

@@ -50,11 +50,11 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
     title: "Agents",
     path: "/global/agents",
   },
-  globalExtensions: {
-    view: "globalExtensions",
+  globalPlugins: {
+    view: "globalPlugins",
     scope: "global",
-    title: "Extensions",
-    path: "/global/extensions",
+    title: "Plugins",
+    path: "/global/plugins",
   },
   agentOverview: {
     view: "agentOverview",
@@ -119,7 +119,7 @@ const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
   "globalModel",
   "globalChannelAccounts",
   "globalAgents",
-  "globalExtensions",
+  "globalPlugins",
   "agentOverview",
   "agentAuthorization",
   "agentSkills",

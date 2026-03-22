@@ -11,7 +11,7 @@ No. `city` is the short alias of the same binary.
 
 ## Why does `city task ...` fail with connection errors?
 
-`task/chat/skill/voice/service/extension` commands typically require a running daemon:
+`task/chat/skill/voice/service/plugin` commands typically require a running daemon:
 
 ```bash
 city agent start
@@ -32,7 +32,7 @@ city console config get model.primary
 
 ```bash
 city service list
-city extension list
+city plugin list
 ```
 
 ## I see `deprecated eslint@8` and deprecated subdependencies during install. Is this critical?

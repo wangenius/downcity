@@ -51,18 +51,29 @@ agent 启动时：
 
 任何一步缺失都会启动失败。
 
-## 4) 配置加载优先级
+## 4) Plugin / Asset 配置
 
-运行时会合并多层配置：
+插件行为配置写在项目 `ship.json` 的 `plugins.*`。
 
-1. `~/.ship/ship.db` 中的 `extensions_config`（全局）
-2. 项目目录链上的 `ship.json`
+插件依赖的底层资源配置写在项目 `ship.json` 的 `assets.*`。
 
-其中：
+例如 voice：
 
-- `model.primary` 来自项目层；
-- 模型池来自全局 SQLite；
-- `extensions.*` 只从 console 全局 `~/.ship/ship.db` 的 `extensions_config` 读取，项目层不允许配置。
+```json
+{
+  "plugins": {
+    "voice": {
+      "enabled": true
+    }
+  },
+  "assets": {
+    "voice.transcriber": {
+      "provider": "local",
+      "modelId": "SenseVoiceSmall"
+    }
+  }
+}
+```
 
 ## 5) Chat 渠道绑定
 

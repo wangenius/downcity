@@ -27,7 +27,7 @@ description: Integrate Downcity with QQ Bot
 Credential source:
 
 1. Create `qq-main` in Console UI `Global / Channel Accounts`.
-2. Fill `appId`, `appSecret`, and optional `sandbox/authId` in that channel account.
+2. Fill `appId`, `appSecret`, and optional `sandbox` in that channel account.
 
 ## Start runtime
 
@@ -48,7 +48,7 @@ city service status chat
 
 ## Voice messages (voice/audio)
 
-When `extensions.voice.enabled=true`, QQ inbound `voice/audio` attachments are transcribed in best-effort mode and the transcript is appended to the user instruction.
+When the `voice` plugin is enabled and the `voice.transcriber` asset is available, QQ inbound `voice/audio` attachments are transcribed in best-effort mode and the transcript is appended to the user instruction.
 
 Recommended setup:
 

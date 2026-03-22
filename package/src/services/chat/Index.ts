@@ -281,8 +281,6 @@ async function startTelegramChannel(context: ServiceRuntime): Promise<void> {
   const account = resolveChannelAccount(context, "telegram");
   const token = String(account?.botToken || "").trim();
   if (!token) return;
-  const authId = String(account?.authId || "").trim();
-  if (authId) context.env.TELEGRAM_AUTH_ID = authId;
   channelState.telegram = createTelegramBot(
     {
       enabled: true,
@@ -302,8 +300,6 @@ async function startFeishuChannel(context: ServiceRuntime): Promise<void> {
   const appId = String(account?.appId || "").trim();
   const appSecret = String(account?.appSecret || "").trim();
   if (!appId || !appSecret) return;
-  const authId = String(account?.authId || "").trim();
-  if (authId) context.env.FEISHU_AUTH_ID = authId;
   channelState.feishu = await createFeishuBot(
     {
       enabled: true,
@@ -325,8 +321,6 @@ async function startQQChannel(context: ServiceRuntime): Promise<void> {
   const appId = String(account?.appId || "").trim();
   const appSecret = String(account?.appSecret || "").trim();
   if (!appId || !appSecret) return;
-  const authId = String(account?.authId || "").trim();
-  if (authId) context.env.QQ_AUTH_ID = authId;
   channelState.qq = await createQQBot(
     {
       enabled: true,

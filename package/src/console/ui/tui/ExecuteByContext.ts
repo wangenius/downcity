@@ -56,7 +56,6 @@ export async function executeByContextId(params: {
       chatType: dispatchTarget.chatType,
       threadId: dispatchTarget.messageThreadId,
       messageId: dispatchTarget.messageId,
-      masterStatus: "unknown",
       text: executeInput,
     });
     const ingressExtra: JsonObject = {

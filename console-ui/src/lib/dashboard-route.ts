@@ -83,7 +83,7 @@ export function toDashboardPath(
   if (view === "globalChannelAccounts") return "/global/channel-accounts"
   if (view === "globalCommand") return "/global/command"
   if (view === "globalAgents") return "/global/agents"
-  if (view === "globalExtensions") return "/global/extensions"
+  if (view === "globalPlugins") return "/global/plugins"
   if (view === "agentOverview") return `/${encodeURIComponent(agentSegment)}/overview`
   if (view === "agentAuthorization") return `/${encodeURIComponent(agentSegment)}/authorization`
   if (view === "agentSkills") return `/${encodeURIComponent(agentSegment)}/skills`

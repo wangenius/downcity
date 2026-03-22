@@ -28,8 +28,30 @@ function toTranscriptText(data: unknown): string {
   return text.trim();
 }
 
+async function invokeAudioTranscribe(params: {
+  context: ServiceRuntime;
+  audioPath: string;
+}): Promise<{
+  success: boolean;
+  data?: unknown;
+  error?: string;
+}> {
+  if (!params.context.capabilities?.has("audio.transcribe")) {
+    return {
+      success: false,
+      error: "audio.transcribe capability is not available",
+    };
+  }
+  return params.context.capabilities.invoke({
+    capability: "audio.transcribe",
+    payload: {
+      audioPath: params.audioPath,
+    },
+  });
+}
+
 /**
- * 调用 voice extension 对 Telegram voice/audio 附件进行转写。
+ * 调用语音转写能力对 Telegram voice/audio 附件进行转写。
  *
  * 关键点（中文）
  * - 仅处理 `voice` / `audio` 类型附件。
@@ -51,16 +73,13 @@ export async function buildTelegramVoiceTranscriptionInstruction(params: {
 
   const transcriptBlocks: string[] = [];
   for (const item of voiceItems) {
-    const invoke = await params.context.extensions.invoke({
-      extension: "voice",
-      action: "transcribe",
-      payload: {
-        audioPath: item.path,
-      },
+    const invoke = await invokeAudioTranscribe({
+      context: params.context,
+      audioPath: item.path,
     });
 
     if (!invoke.success) {
-      params.logger.warn("Voice extension transcription failed", {
+      params.logger.warn("Voice transcription capability failed", {
         chatId: params.chatId,
         messageId: params.messageId,
         chatKey: params.chatKey,

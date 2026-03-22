@@ -24,13 +24,21 @@ city console config <subcommand>
 
 > Model pool management has moved to [`city console model`](/en/docs/commands/console/model).
 
-## `extensions.*` path behavior
+## Plugin config
 
-When `keyPath` starts with `extensions.`, the command automatically reads/writes console-global `~/.ship/ship.db` (`extensions_config`).
+`city console config` now reads and writes project `ship.json` only.
+
+For plugin configuration, edit:
+
+- `plugins.*` for plugin behavior
+- `assets.*` for plugin dependency config
+
+Examples:
 
 ```bash
-city console config get extensions.voice
-city console config set extensions.voice.enabled true
+city console config get plugins.voice
+city console config set plugins.voice.enabled true
+city console config set 'assets.voice.transcriber.modelId' '\"SenseVoiceSmall\"'
 ```
 
 ## Examples

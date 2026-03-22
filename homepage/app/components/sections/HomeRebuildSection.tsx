@@ -64,7 +64,7 @@ const HOME_CONTENT = {
       {
         index: "01",
         title: "PRODUCT",
-        body: "Console, extension, SDK, and UI layer form one operating surface across different workflows.",
+        body: "Console, plugin, SDK, and UI layer form one operating surface across different workflows.",
         letter: "P",
         path: "/product",
       },

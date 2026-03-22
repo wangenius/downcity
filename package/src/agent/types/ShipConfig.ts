@@ -7,7 +7,7 @@
  */
 import type { LlmConfig } from "@agent/types/LlmConfig.js";
 import type { AgentModelBindingConfig } from "@agent/types/ModelBinding.js";
-import type { VoiceExtensionConfig } from "@agent/types/Voice.js";
+import type { JsonObject } from "@/types/Json.js";
 
 export interface ShipConfig {
   $schema?: string;
@@ -135,22 +135,32 @@ export interface ShipConfig {
     };
   };
   /**
-   * extensions 配置。
+   * plugins 配置。
    *
    * 关键点（中文）
-   * - 扩展能力统一放在 console 全局 `~/.ship/ship.db` 的 `extensions_config` 下。
-   * - 运行时会把该全局层合并到 `config.extensions` 供 service 调用。
-   * - agent 项目 `ship.json` 不应配置该字段。
+   * - 新插件体系的行为配置统一收敛到该字段。
+   * - key 为 plugin 名称，value 为对应插件的结构化配置对象。
+   * - 当前阶段允许各 plugin 自定义字段，但必须保持 JSON 可序列化。
    */
-  extensions?: {
+  plugins?: {
     /**
-     * Voice extension（本地语音识别）配置。
-     *
-     * 关键点（中文）
-     * - 负责统一管理 STT 模型目录、启停开关、激活模型与转写执行策略。
-     * - 可通过 `city voice ...` 命令组维护，不需要手改 JSON。
+     * 插件配置对象映射。
      */
-    voice?: VoiceExtensionConfig;
+    [pluginName: string]: JsonObject;
+  };
+  /**
+   * assets 配置。
+   *
+   * 关键点（中文）
+   * - 新资产体系的底层资源配置统一收敛到该字段。
+   * - key 为 asset 名称，value 为对应资产的结构化配置对象。
+   * - 插件应只依赖 asset 名称，不直接理解 value 内部实现细节。
+   */
+  assets?: {
+    /**
+     * 资产配置对象映射。
+     */
+    [assetName: string]: JsonObject;
   };
   /**
    * Agent 模型绑定配置。

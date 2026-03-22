@@ -13,7 +13,7 @@ import {
   resolveVoiceRunnerByModel,
   resolveVoiceRunnersByModels,
   resolveVoiceStrategyByModel,
-} from "../../bin/extensions/voice/runtime/DependencyInstaller.js";
+} from "../../bin/plugins/voice/runtime/DependencyInstaller.js";
 
 test("resolveVoiceRunnerByModel maps each model to expected runner", () => {
   assert.equal(resolveVoiceRunnerByModel("SenseVoiceSmall"), "funasr");

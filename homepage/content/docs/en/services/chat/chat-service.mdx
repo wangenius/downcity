@@ -13,6 +13,14 @@ description: Chat service responsibilities and channel integrations
 - Resolve `contextId/chatKey`, persist chat history and metadata
 - Dispatch outbound replies/actions to channels
 
+## Chat authorization
+
+- When chat service receives a message, it first identifies the speaking user and the source platform.
+- Access is judged by the speaking user's permission group, not by the group chat itself.
+- If the user has no explicit assignment yet, the default group is used automatically.
+
+Full explanation: [Permissions](/en/docs/security/permissions)
+
 ## Chat Display Name (`chatTitle`)
 
 - Chat service now stores a best-effort chat display name (`chatTitle`) in context metadata, so Console UI can show readable names (group/channel/DM peer) instead of only IDs.

@@ -4,7 +4,7 @@ import { marketingTheme } from "@/lib/marketing-theme";
 
 export function meta() {
   const title = `${product.productName} — Skills`;
-  const description = "Skill directories and extension resources";
+  const description = "Skill directories and plugin resources";
   return [
     { title },
     { name: "description", content: description },

@@ -12,6 +12,8 @@ import type {
 import type { JsonValue } from "@/types/Json.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { AssetPort } from "@/types/Asset.js";
+import type { CapabilityPort, PluginPort } from "@/types/Plugin.js";
 
 /**
  * Service 运行时端口类型。
@@ -37,31 +39,6 @@ export type ServiceInvokeResult = {
  */
 export type ServiceInvokePort = {
   invoke(params: ServiceInvokeParams): Promise<ServiceInvokeResult>;
-};
-
-/**
- * Extension 调用参数（services -> extensions）。
- */
-export type ExtensionInvokeParams = {
-  extension: string;
-  action: string;
-  payload?: JsonValue;
-};
-
-/**
- * Extension 调用结果。
- */
-export type ExtensionInvokeResult = {
-  success: boolean;
-  data?: JsonValue;
-  error?: string;
-};
-
-/**
- * Extension 调用端口（services -> extensions）。
- */
-export type ExtensionInvokePort = {
-  invoke(params: ExtensionInvokeParams): Promise<ExtensionInvokeResult>;
 };
 
 /**
@@ -167,9 +144,37 @@ export type ServiceRuntime = {
    * 跨 service action 调用入口。
    */
   invoke: ServiceInvokePort;
+  /**
+   * Service 调用别名端口。
+   *
+   * 关键点（中文）
+   * - 新插件体系统一使用 `runtime.services.invoke(...)` 语义。
+   * - 这里与 `invoke` 指向同一实现，仅做命名兼容层。
+   */
+  services: ServiceInvokePort;
 
   /**
-   * 跨 extension action 调用入口。
+   * 跨 plugin capability 调用入口。
+   *
+   * 关键点（中文）
+   * - 新插件体系下，主动能力调用统一走 capability 名称。
+   * - 调用方不应再直接依赖具体 plugin 名称。
    */
-  extensions: ExtensionInvokePort;
+  capabilities: CapabilityPort;
+  /**
+   * Asset 调用入口。
+   *
+   * 关键点（中文）
+   * - 用于检查、安装、解析插件依赖的底层资源对象。
+   * - 插件和业务代码都应通过该端口消费 asset，而不是直接拼底层实现路径。
+   */
+  assets: AssetPort;
+  /**
+   * Plugin 调用入口。
+   *
+   * 关键点（中文）
+   * - 用于列出 plugin、检查可用性与运行显式 plugin action。
+   * - plugin 不维护独立 runtime 状态机，这里只暴露声明式能力面。
+   */
+  plugins: PluginPort;
 };

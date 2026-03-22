@@ -22,7 +22,7 @@ Console 全局配置统一存储在：
 2. Console 共享 env（`global_env`）
 3. Agent 私有 env（`agent_env`）
 4. Bot 账号凭据池（`channel_accounts`）
-5. Console 全局 extension 配置（`extensions_config`）
+5. 项目 plugin 配置（`plugins.*`、`assets.*`）
 
 其中敏感字段（如 API Key）采用加密存储。
 
@@ -53,7 +53,7 @@ Console 全局配置统一存储在：
 2. Agent 的 `.env` 只在当前 agent runtime 内生效，不污染全局 `process.env`。
 3. `ship.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
-5. extension 配置来自 `extensions_config`。
+5. plugin 配置来自项目 `ship.json`。
 
 ## 常用操作
 
@@ -63,11 +63,11 @@ Console 全局配置统一存储在：
 city console init
 ```
 
-查看/修改 console 级扩展配置：
+查看/修改项目 plugin 配置：
 
 ```bash
-city console config get extensions.voice
-city console config set extensions.voice.enabled true
+city console config get plugins.voice
+city console config set plugins.voice.enabled true
 ```
 
 管理模型池：

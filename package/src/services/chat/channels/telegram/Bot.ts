@@ -636,6 +636,17 @@ export class TelegramBot extends BaseChatChannel {
     const isGroup = this.isGroupChat(message.chat.type);
     const chatKey = this.buildChatKey(chatId, messageThreadId);
 
+    if (!actorId) {
+      this.logger.warn("Telegram 消息缺少发送者 userId，已忽略", {
+        chatId,
+        chatType: message.chat.type,
+        messageId,
+        messageThreadId,
+        hasFrom: !!from,
+      });
+      return;
+    }
+
     await this.observeIncomingAuthorization({
       chatId,
       chatType: message.chat.type,
@@ -652,21 +663,7 @@ export class TelegramBot extends BaseChatChannel {
       username: actorName,
     });
     if (authResult.decision !== "allow") {
-      if (authResult.decision === "pairing") {
-        await this.createPairingRequest({
-          chatId,
-          chatType: message.chat.type,
-          chatTitle,
-          userId: actorId,
-          username: actorName,
-        });
-        await this.sendAuthorizationText({
-          chatId,
-          chatType: message.chat.type,
-          messageThreadId,
-          text: this.buildPairingRequiredText({ userId: actorId }),
-        });
-      } else if (!isGroup) {
+      if (!isGroup) {
         await this.sendAuthorizationText({
           chatId,
           chatType: message.chat.type,

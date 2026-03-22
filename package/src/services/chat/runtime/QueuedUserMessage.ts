@@ -6,19 +6,13 @@
  * - 供 chat 入站执行与其他复用入口共用，避免重复实现。
  */
 
-import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
+import type { ChatAuthorizationPermission } from "@services/chat/types/Authorization.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 
 function normalizeInfoValue(value: unknown): string {
   const text = String(value ?? "").replace(/\r?\n/g, " ").trim();
   if (!text) return "";
   return text.replace(/</g, "&#60;").replace(/>/g, "&#62;");
-}
-
-function formatIsMaster(status: ChatMasterStatus): "yes" | "no" | "unknown" {
-  if (status === "master") return "yes";
-  if (status === "guest") return "no";
-  return "unknown";
 }
 
 /**
@@ -38,7 +32,8 @@ export function buildQueuedUserMessageWithInfo(params: {
   messageId?: string;
   userId?: string;
   username?: string;
-  masterStatus: ChatMasterStatus;
+  roleId?: string;
+  permissions?: ChatAuthorizationPermission[];
   text: string;
 }): string {
   const infoLines = [
@@ -53,7 +48,8 @@ export function buildQueuedUserMessageWithInfo(params: {
     `message_id: ${normalizeInfoValue(params.messageId || "unknown")}`,
     `user_id: ${normalizeInfoValue(params.userId || "unknown")}`,
     `username: ${normalizeInfoValue(params.username || "unknown")}`,
-    `is_master: ${normalizeInfoValue(formatIsMaster(params.masterStatus))}`,
+    `role_id: ${normalizeInfoValue(params.roleId || "unknown")}`,
+    `permissions: ${normalizeInfoValue((params.permissions || []).join("," ) || "none")}`,
     `received_at: ${new Date().toISOString()}`,
   ];
   const infoBlock = `<info>\n${infoLines.join("\n")}\n</info>`;

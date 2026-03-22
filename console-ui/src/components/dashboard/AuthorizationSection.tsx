@@ -2,69 +2,124 @@
  * Agent 授权管理主视图。
  *
  * 关键点（中文）
- * - 参考 openclaw 的授权心智模型：区分 owner、DM policy、group policy、pairing。
- * - 以“先看待审批，再管配置，再看观测对象”的顺序组织，方便运维排障。
+ * - 角色是全局定义，只维护一套 role / permission。
+ * - 平台仅区分来源渠道，负责 user 到 role 的绑定。
+ * - 页面按“摘要 -> 角色与默认分组 -> 用户目录”组织，避免配置页过重。
  */
 
 import * as React from "react"
-import { CheckIcon, RefreshCcwIcon, ShieldCheckIcon, ShieldOffIcon, UserCheckIcon, UserMinusIcon, XIcon } from "lucide-react"
+import {
+  MessagesSquareIcon,
+  RefreshCcwIcon,
+  SearchIcon,
+  ShieldCheckIcon,
+  SlidersHorizontalIcon,
+  UsersIcon,
+} from "lucide-react"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 import type {
   UiAgentOption,
   UiChatAuthorizationChannelConfig,
   UiChatAuthorizationChat,
   UiChatAuthorizationResponse,
+  UiChatAuthorizationRole,
   UiChatAuthorizationUser,
 } from "@/types/Dashboard"
 
 type AuthorizationChannel = "telegram" | "feishu" | "qq"
-type AuthorizationDmPolicy = "open" | "pairing" | "allowlist" | "disabled"
-type AuthorizationGroupPolicy = "open" | "allowlist" | "disabled"
+type AuthorizationPermission =
+  | "chat.dm.use"
+  | "chat.group.use"
+  | "auth.manage.users"
+  | "auth.manage.roles"
+  | "agent.view.logs"
+  | "agent.manage"
 
 type AuthorizationFormState = {
+  roles: Record<string, UiChatAuthorizationRole>
   channels: Partial<Record<AuthorizationChannel, UiChatAuthorizationChannelConfig>>
 }
 
 type AuthorizationActionInput = {
-  action:
-    | "approvePairing"
-    | "rejectPairing"
-    | "grantUser"
-    | "revokeUser"
-    | "setOwner"
-    | "grantGroup"
-    | "revokeGroup"
+  action: "setUserRole"
   channel: AuthorizationChannel
   userId?: string
-  chatId?: string
-  enabled?: boolean
-  asOwner?: boolean
+  roleId?: string
 }
 
-const AUTHORIZATION_CHANNELS: AuthorizationChannel[] = ["telegram", "feishu", "qq"]
-const DM_POLICIES: AuthorizationDmPolicy[] = ["open", "pairing", "allowlist", "disabled"]
-const GROUP_POLICIES: AuthorizationGroupPolicy[] = ["open", "allowlist", "disabled"]
+type DirectoryChannelFilter = "all" | AuthorizationChannel
 
-function cloneConfig(
-  input: UiChatAuthorizationResponse["config"],
-): AuthorizationFormState {
+const AUTHORIZATION_CHANNELS: AuthorizationChannel[] = ["telegram", "feishu", "qq"]
+const PERMISSIONS: AuthorizationPermission[] = [
+  "chat.dm.use",
+  "chat.group.use",
+  "auth.manage.users",
+  "auth.manage.roles",
+  "agent.view.logs",
+  "agent.manage",
+]
+
+const PERMISSION_LABELS: Record<AuthorizationPermission, string> = {
+  "chat.dm.use": "DM",
+  "chat.group.use": "Group",
+  "auth.manage.users": "Users",
+  "auth.manage.roles": "Roles",
+  "agent.view.logs": "Logs",
+  "agent.manage": "Agent",
+}
+
+function normalizeText(value: unknown): string {
+  return String(value || "").trim()
+}
+
+function normalizeRoleId(value: unknown): string {
+  return normalizeText(value).toLowerCase().replace(/\s+/g, "-")
+}
+
+function normalizeRoleRecord(
+  input: Record<string, UiChatAuthorizationRole> | undefined,
+): Record<string, UiChatAuthorizationRole> {
+  const raw = input && typeof input === "object" ? input : {}
+  const out: Record<string, UiChatAuthorizationRole> = {}
+  for (const [rawRoleId, role] of Object.entries(raw)) {
+    const roleId = normalizeRoleId(role?.roleId || rawRoleId)
+    if (!roleId) continue
+    out[roleId] = {
+      roleId,
+      name: normalizeText(role?.name) || roleId,
+      permissions: [...new Set((role?.permissions || []).filter(Boolean))] as AuthorizationPermission[],
+    }
+  }
+  return out
+}
+
+function buildDefaultRoles(): Record<string, UiChatAuthorizationRole> {
   return {
-    channels: JSON.parse(JSON.stringify(input?.channels || {})) as AuthorizationFormState["channels"],
+    default: { roleId: "default", name: "Default", permissions: [] },
+    member: {
+      roleId: "member",
+      name: "Member",
+      permissions: ["chat.dm.use", "chat.group.use"],
+    },
+    admin: {
+      roleId: "admin",
+      name: "Admin",
+      permissions: [...PERMISSIONS],
+    },
   }
 }
 
-function normalizeStringList(values: string[] | undefined): string[] {
-  if (!Array.isArray(values)) return []
-  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
-}
-
-function listToMultilineText(values: string[] | undefined): string {
-  return normalizeStringList(values).join("\n")
-}
-
-function multilineTextToList(value: string): string[] {
-  return normalizeStringList(value.split(/\r?\n/g))
+function cloneConfig(input: UiChatAuthorizationResponse["config"]): AuthorizationFormState {
+  const rawRoles = normalizeRoleRecord(input?.roles)
+  return {
+    roles: Object.keys(rawRoles).length > 0 ? rawRoles : buildDefaultRoles(),
+    channels: JSON.parse(JSON.stringify(input?.channels || {})) as AuthorizationFormState["channels"],
+  }
 }
 
 function getChannelConfig(
@@ -80,6 +135,7 @@ function updateChannelConfig(
   patch: UiChatAuthorizationChannelConfig,
 ): AuthorizationFormState {
   return {
+    ...state,
     channels: {
       ...state.channels,
       [channel]: {
@@ -90,109 +146,201 @@ function updateChannelConfig(
   }
 }
 
-function renderPolicyButtonClass(active: boolean): string {
-  return active
-    ? "h-8 rounded-[11px] bg-foreground text-background hover:bg-foreground/90"
-    : "h-8 rounded-[11px] bg-secondary text-foreground hover:bg-secondary/80"
+function getRoles(state: AuthorizationFormState): UiChatAuthorizationRole[] {
+  return Object.values(normalizeRoleRecord(state.roles)).sort((a, b) =>
+    a.roleId.localeCompare(b.roleId),
+  )
 }
 
-function getUserFlags(
+function getUserRoleId(
   user: UiChatAuthorizationUser,
   channelConfig: UiChatAuthorizationChannelConfig | undefined,
-): { isOwner: boolean; isAllowed: boolean } {
-  const ownerIds = normalizeStringList(channelConfig?.ownerIds)
-  const allowFrom = normalizeStringList(channelConfig?.allowFrom)
-  return {
-    isOwner: ownerIds.includes(String(user.userId || "").trim()),
-    isAllowed: allowFrom.includes(String(user.userId || "").trim()),
-  }
+): string {
+  const explicit = normalizeText(channelConfig?.userRoles?.[user.userId])
+  return explicit || normalizeText(channelConfig?.defaultUserRoleId) || "default"
+}
+
+function hasPermission(
+  role: UiChatAuthorizationRole | undefined,
+  permission: AuthorizationPermission,
+): boolean {
+  return Array.isArray(role?.permissions) && role.permissions.includes(permission)
 }
 
 function isGroupChat(chat: UiChatAuthorizationChat): boolean {
-  const type = String(chat.chatType || "").trim().toLowerCase()
-  return type !== "" && type !== "private" && type !== "p2p"
+  const type = normalizeText(chat.chatType).toLowerCase()
+  return type !== "" && type !== "private" && type !== "p2p" && type !== "c2c"
+}
+
+function isAuthorizationChannel(value: string): value is AuthorizationChannel {
+  return AUTHORIZATION_CHANNELS.includes(value as AuthorizationChannel)
+}
+
+function buildConfigPayload(
+  form: AuthorizationFormState,
+): NonNullable<UiChatAuthorizationResponse["config"]> {
+  return {
+    roles: normalizeRoleRecord(form.roles),
+    channels: AUTHORIZATION_CHANNELS.reduce((result, channel) => {
+      const current = getChannelConfig(form, channel)
+      result[channel] = {
+        defaultUserRoleId: normalizeText(current.defaultUserRoleId) || "default",
+        userRoles: { ...(current.userRoles || {}) },
+      }
+      return result
+    }, {} as NonNullable<UiChatAuthorizationResponse["config"]>["channels"]),
+  }
+}
+
+function countRoleAssignments(params: {
+  roleId: string
+  channels: AuthorizationFormState["channels"]
+  users: UiChatAuthorizationUser[]
+}): { users: number } {
+  let userCount = 0
+  for (const user of params.users) {
+    const channel = normalizeText(user.channel).toLowerCase()
+    if (!isAuthorizationChannel(channel)) continue
+    const channelConfig = params.channels[channel]
+    if (getUserRoleId(user, channelConfig) === params.roleId) userCount += 1
+  }
+  return { users: userCount }
+}
+
+function getChannelSurfaceClass(channel: AuthorizationChannel): string {
+  if (channel === "telegram") return "border-sky-500/20 bg-sky-500/8 text-sky-700"
+  if (channel === "feishu") return "border-blue-500/20 bg-blue-500/8 text-blue-700"
+  return "border-emerald-500/20 bg-emerald-500/8 text-emerald-700"
+}
+
+function matchesKeyword(parts: Array<string | undefined>, keyword: string): boolean {
+  if (!keyword) return true
+  const haystack = parts.map((part) => normalizeText(part).toLowerCase()).join(" ")
+  return haystack.includes(keyword)
+}
+
+function StatChip(props: {
+  label: string
+  value: React.ReactNode
+  tone?: "default" | "success"
+  icon?: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "inline-flex min-w-[8.25rem] items-center gap-2 rounded-full border px-3 py-2",
+        props.tone === "success"
+          ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-700"
+          : "border-border/70 bg-secondary/60 text-foreground",
+      )}
+    >
+      {props.icon ? <span className="text-muted-foreground">{props.icon}</span> : null}
+      <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{props.label}</span>
+      <span className="ml-auto text-sm font-semibold">{props.value}</span>
+    </div>
+  )
+}
+
+function ChannelBadge(props: { channel: AuthorizationChannel }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-6 items-center rounded-full border px-2.5 text-[11px]",
+        getChannelSurfaceClass(props.channel),
+      )}
+    >
+      {props.channel}
+    </span>
+  )
 }
 
 export interface AuthorizationSectionProps {
-  /**
-   * 当前 agent 的授权快照。
-   */
   authorization: UiChatAuthorizationResponse | null
-  /**
-   * 当前是否处于 dashboard 刷新中。
-   */
   loading: boolean
-  /**
-   * 当前选中的 agent。
-   */
   selectedAgent: UiAgentOption | null
-  /**
-   * 时间格式化函数。
-   */
   formatTime: (ts?: number | string) => string
-  /**
-   * 刷新授权快照。
-   */
   onRefresh: () => Promise<void>
-  /**
-   * 保存授权配置。
-   */
   onSaveConfig: (config: NonNullable<UiChatAuthorizationResponse["config"]>) => Promise<void>
-  /**
-   * 执行授权动作。
-   */
   onRunAction: (input: AuthorizationActionInput) => Promise<void>
 }
 
 export function AuthorizationSection(props: AuthorizationSectionProps) {
-  const { authorization, loading, selectedAgent, formatTime, onRefresh, onSaveConfig, onRunAction } = props
+  const { authorization, selectedAgent, formatTime, onRefresh, onSaveConfig, onRunAction } = props
   const [form, setForm] = React.useState<AuthorizationFormState>(() => cloneConfig(undefined))
   const [saving, setSaving] = React.useState(false)
+  const [newRoleDraft, setNewRoleDraft] = React.useState("")
+  const [channelFilter, setChannelFilter] = React.useState<DirectoryChannelFilter>("all")
+  const [searchKeyword, setSearchKeyword] = React.useState("")
 
   React.useEffect(() => {
     setForm(cloneConfig(authorization?.config))
   }, [authorization?.config])
 
   const observedUsers = React.useMemo(
-    () => Array.isArray(authorization?.users) ? authorization.users : [],
+    () => (Array.isArray(authorization?.users) ? authorization.users : []),
     [authorization?.users],
   )
   const observedChats = React.useMemo(
-    () => Array.isArray(authorization?.chats) ? authorization.chats : [],
+    () => (Array.isArray(authorization?.chats) ? authorization.chats : []),
     [authorization?.chats],
   )
-  const pairingRequests = React.useMemo(
-    () => Array.isArray(authorization?.pairingRequests) ? authorization.pairingRequests : [],
-    [authorization?.pairingRequests],
+  const roles = React.useMemo(() => getRoles(form), [form])
+  const currentPayload = React.useMemo(() => buildConfigPayload(form), [form])
+  const persistedPayload = React.useMemo(
+    () => buildConfigPayload(cloneConfig(authorization?.config)),
+    [authorization?.config],
   )
+  const hasUnsavedChanges = React.useMemo(
+    () => JSON.stringify(currentPayload) !== JSON.stringify(persistedPayload),
+    [currentPayload, persistedPayload],
+  )
+  const groupChatCount = React.useMemo(
+    () => observedChats.filter(isGroupChat).length,
+    [observedChats],
+  )
+
+  const filteredUsers = React.useMemo(() => {
+    const keyword = normalizeText(searchKeyword).toLowerCase()
+    return observedUsers.filter((user) => {
+      const channel = normalizeText(user.channel).toLowerCase()
+      if (!isAuthorizationChannel(channel)) return false
+      if (channelFilter !== "all" && channel !== channelFilter) return false
+      return matchesKeyword(
+        [user.username, user.userId, user.lastChatId, user.lastChatTitle, user.lastChatType],
+        keyword,
+      )
+    })
+  }, [channelFilter, observedUsers, searchKeyword])
+
+  const filteredChats = React.useMemo(() => {
+    const keyword = normalizeText(searchKeyword).toLowerCase()
+    return observedChats.filter((chat) => {
+      const channel = normalizeText(chat.channel).toLowerCase()
+      if (!isAuthorizationChannel(channel)) return false
+      if (!isGroupChat(chat)) return false
+      if (channelFilter !== "all" && channel !== channelFilter) return false
+      return matchesKeyword(
+        [chat.chatTitle, chat.chatId, chat.chatType, chat.lastActorId, chat.lastActorName],
+        keyword,
+      )
+    })
+  }, [channelFilter, observedChats, searchKeyword])
 
   const handleSave = React.useCallback(async () => {
     try {
       setSaving(true)
-      await onSaveConfig({
-        channels: AUTHORIZATION_CHANNELS.reduce((result, channel) => {
-          const current = getChannelConfig(form, channel)
-          result[channel] = {
-            ownerIds: normalizeStringList(current.ownerIds),
-            dmPolicy: (String(current.dmPolicy || "pairing").trim().toLowerCase() || "pairing") as AuthorizationDmPolicy,
-            allowFrom: normalizeStringList(current.allowFrom),
-            groupPolicy: (String(current.groupPolicy || "allowlist").trim().toLowerCase() || "allowlist") as AuthorizationGroupPolicy,
-            groupAllowFrom: normalizeStringList(current.groupAllowFrom),
-          }
-          return result
-        }, {} as NonNullable<UiChatAuthorizationResponse["config"]>["channels"]),
-      })
+      await onSaveConfig(currentPayload)
     } finally {
       setSaving(false)
     }
-  }, [form, onSaveConfig])
+  }, [currentPayload, onSaveConfig])
 
   return (
     <section className="space-y-5">
       <DashboardModule
         title="Authorization"
-        description={`当前 agent：${String(selectedAgent?.name || selectedAgent?.id || "未选择").trim() || "未选择"}。owner 决定 is_master，高权限用户不再依赖单个 authId。`}
-        actions={(
+        description={`当前 agent：${normalizeText(selectedAgent?.name || selectedAgent?.id || "未选择") || "未选择"}。这里只有权限组，没有 master 身份；收到消息时，只按发消息用户所属分组做判断。`}
+        actions={
           <>
             <Button
               type="button"
@@ -208,304 +356,378 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
               type="button"
               size="sm"
               className="rounded-[11px]"
-              disabled={saving}
+              disabled={saving || !hasUnsavedChanges}
               onClick={() => void handleSave()}
             >
-              Save
+              {saving ? "Saving" : "Save"}
             </Button>
           </>
-        )}
+        }
       >
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
-            {`pairing ${pairingRequests.length}`}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
-            {`users ${observedUsers.length}`}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
-            {`chats ${observedChats.length}`}
-          </span>
-          {loading ? <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">syncing</span> : null}
+        <div className="flex flex-wrap gap-2.5">
+          <StatChip label="Roles" value={roles.length} icon={<ShieldCheckIcon className="size-3.5" />} />
+          <StatChip label="Users" value={observedUsers.length} icon={<UsersIcon className="size-3.5" />} />
+          <StatChip label="Groups" value={groupChatCount} icon={<MessagesSquareIcon className="size-3.5" />} />
+          <StatChip
+            label="Draft"
+            value={hasUnsavedChanges ? "Pending" : "Synced"}
+            tone={hasUnsavedChanges ? "default" : "success"}
+            icon={<SlidersHorizontalIcon className="size-3.5" />}
+          />
+        </div>
+
+        <div className="rounded-[18px] border border-border/70 bg-secondary/35 px-4 py-3 text-sm text-muted-foreground">
+          新用户先进入各平台默认分组；群聊和频道本身不配置权限，只记录最近活跃会话。真正放行与否，始终取决于发消息用户自己的分组。
         </div>
       </DashboardModule>
 
-      <DashboardModule
-        title="Pairing Requests"
-        description="未授权私聊用户会先进入待审批队列。审批通过后自动加入 DM allowlist。"
-      >
-        {pairingRequests.length === 0 ? (
-          <div className="rounded-[16px] bg-secondary px-4 py-4 text-sm text-muted-foreground">当前没有待审批请求</div>
-        ) : (
+      <div className="grid gap-5 xl:grid-cols-[1.55fr_0.95fr]">
+        <DashboardModule
+          title="Roles"
+          description="只维护一套全局权限组。平台只负责把用户绑定到组，不再单独引入主人、群白名单或审批流。"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              className="h-10 min-w-[13rem] rounded-[14px] bg-secondary/70"
+              value={newRoleDraft}
+              onChange={(event) => setNewRoleDraft(event.target.value)}
+              placeholder="new role id"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-10 rounded-[14px] bg-secondary/70 px-4"
+              onClick={() => {
+                const roleId = normalizeRoleId(newRoleDraft)
+                if (!roleId) return
+                setForm((current) => ({
+                  ...current,
+                  roles: {
+                    ...current.roles,
+                    [roleId]: {
+                      roleId,
+                      name: roleId,
+                      permissions: [],
+                    },
+                  },
+                }))
+                setNewRoleDraft("")
+              }}
+            >
+              Add Role
+            </Button>
+          </div>
+
           <div className="space-y-2">
-            {pairingRequests.map((item) => {
-              const channel = String(item.channel || "").trim().toLowerCase() as AuthorizationChannel
+            {roles.map((role) => {
+              const assignment = countRoleAssignments({
+                roleId: role.roleId,
+                channels: form.channels,
+                users: observedUsers,
+              })
               return (
-                <article key={`${item.channel}:${item.userId}`} className="rounded-[18px] bg-secondary/55 px-4 py-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground">{item.username || item.userId}</span>
-                        <span className="rounded-full bg-background px-2 py-0.5 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                          {item.channel}
-                        </span>
-                        <span className="font-mono text-xs text-muted-foreground">{item.userId}</span>
+                <article
+                  key={`role:${role.roleId}`}
+                  className="rounded-[18px] border border-border/60 bg-secondary/35 px-4 py-4 transition-colors hover:bg-secondary/50"
+                >
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="bg-background/80 font-mono text-[11px] text-muted-foreground"
+                          >
+                            {role.roleId}
+                          </Badge>
+                          <Badge
+                            variant="secondary"
+                            className="bg-background/80 text-muted-foreground"
+                          >
+                            {`${assignment.users} users`}
+                          </Badge>
+                          {hasPermission(role, "agent.manage") ? (
+                            <Badge className="bg-emerald-600 text-white">admin</Badge>
+                          ) : null}
+                        </div>
+                        <input
+                          className="h-10 w-full rounded-[12px] border border-transparent bg-background/90 px-3 text-sm text-foreground outline-none transition focus-visible:ring-3 focus-visible:ring-ring/30"
+                          value={role.name}
+                          onChange={(event) => {
+                            setForm((current) => ({
+                              ...current,
+                              roles: {
+                                ...current.roles,
+                                [role.roleId]: {
+                                  ...role,
+                                  name: event.target.value,
+                                },
+                              },
+                            }))
+                          }}
+                        />
                       </div>
+
                       <div className="text-xs text-muted-foreground">
-                        {`${item.chatTitle || item.chatId || "-"} · ${item.chatType || "private"} · updated ${formatTime(item.updatedAt)}`}
+                        {role.permissions.length > 0
+                          ? `${role.permissions.length} permissions`
+                          : "no permissions"}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-[11px]"
-                        onClick={() => void onRunAction({ action: "approvePairing", channel, userId: item.userId })}
-                      >
-                        <CheckIcon className="mr-1.5 size-4" />
-                        Approve
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-[11px]"
-                        onClick={() => void onRunAction({ action: "approvePairing", channel, userId: item.userId, asOwner: true })}
-                      >
-                        <ShieldCheckIcon className="mr-1.5 size-4" />
-                        Make Owner
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-[11px]"
-                        onClick={() => void onRunAction({ action: "rejectPairing", channel, userId: item.userId })}
-                      >
-                        <XIcon className="mr-1.5 size-4" />
-                        Reject
-                      </Button>
+
+                    <div className="flex flex-wrap gap-2">
+                      {PERMISSIONS.map((permission) => {
+                        const enabled = hasPermission(role, permission)
+                        return (
+                          <button
+                            key={`${role.roleId}:${permission}`}
+                            type="button"
+                            className={
+                              enabled
+                                ? "inline-flex h-8 items-center rounded-full border border-foreground/10 bg-foreground px-3 text-[11px] font-medium text-background transition hover:bg-foreground/85"
+                                : "inline-flex h-8 items-center rounded-full border border-border/60 bg-background/85 px-3 text-[11px] font-medium text-muted-foreground transition hover:bg-background hover:text-foreground"
+                            }
+                            onClick={() => {
+                              setForm((current) => {
+                                const currentRole = current.roles[role.roleId] || role
+                                const permissions = new Set(currentRole.permissions || [])
+                                if (permissions.has(permission)) {
+                                  permissions.delete(permission)
+                                } else {
+                                  permissions.add(permission)
+                                }
+                                return {
+                                  ...current,
+                                  roles: {
+                                    ...current.roles,
+                                    [role.roleId]: {
+                                      ...currentRole,
+                                      permissions: [...permissions] as AuthorizationPermission[],
+                                    },
+                                  },
+                                }
+                              })
+                            }}
+                          >
+                            {PERMISSION_LABELS[permission]}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 </article>
               )
             })}
           </div>
-        )}
-      </DashboardModule>
+        </DashboardModule>
+
+        <DashboardModule
+          title="Channel Defaults"
+          description="每个平台只需要一个默认分组。未单独分配的用户，会直接继承这里的设置。"
+        >
+          <div className="space-y-2">
+            {AUTHORIZATION_CHANNELS.map((channel) => {
+              const channelConfig = getChannelConfig(form, channel)
+              return (
+                <article
+                  key={channel}
+                  className="rounded-[18px] border border-border/60 bg-secondary/35 px-4 py-4"
+                >
+                  <div className="mb-3 flex items-center gap-2">
+                    <ChannelBadge channel={channel} />
+                    <span className="text-sm font-medium text-foreground">default group</span>
+                  </div>
+                  <label className="block space-y-2">
+                    <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                      New User
+                    </div>
+                    <select
+                      className="h-10 w-full rounded-[14px] border border-transparent bg-background/90 px-3 text-sm outline-none transition focus-visible:ring-3 focus-visible:ring-ring/30"
+                      value={normalizeText(channelConfig.defaultUserRoleId) || "default"}
+                      onChange={(event) => {
+                        setForm((current) =>
+                          updateChannelConfig(current, channel, {
+                            defaultUserRoleId: event.target.value,
+                          }),
+                        )
+                      }}
+                    >
+                      {roles.map((role) => (
+                        <option key={`${channel}:default-user:${role.roleId}`} value={role.roleId}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </article>
+              )
+            })}
+          </div>
+
+          <div className="rounded-[18px] border border-dashed border-border/70 bg-background/40 px-4 py-3 text-sm text-muted-foreground">
+            如果一个用户在对应平台还没有显式绑定角色，就会直接使用这里的默认分组。
+          </div>
+        </DashboardModule>
+      </div>
 
       <DashboardModule
-        title="Channel Policies"
-        description="每个 agent 都有独立授权配置。这里直接写入 console ship.db 的 agent 级加密配置。"
+        title="Directory"
+        description="这是日常最常用的工作区。上半部分管理用户分组，下半部分只观察最近活跃的群聊与频道。"
       >
-        <div className="space-y-4">
-          {AUTHORIZATION_CHANNELS.map((channel) => {
-            const config = getChannelConfig(form, channel)
-            const ownerCount = normalizeStringList(config.ownerIds).length
-            const userCount = normalizeStringList(config.allowFrom).length
-            const groupCount = normalizeStringList(config.groupAllowFrom).length
-            return (
-              <article key={channel} className="rounded-[20px] bg-secondary/40 px-4 py-4">
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold uppercase tracking-[0.1em] text-foreground">{channel}</span>
-                  <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">{`owner ${ownerCount}`}</span>
-                  <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">{`dm allow ${userCount}`}</span>
-                  <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">{`group allow ${groupCount}`}</span>
-                </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-foreground">Users</div>
+            <div className="text-xs text-muted-foreground">
+              按平台筛选、搜索后，直接把用户切换到目标分组。
+            </div>
+          </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">DM Policy</div>
-                    <div className="flex flex-wrap gap-2">
-                      {DM_POLICIES.map((policy) => (
-                        <Button
-                          key={`${channel}:dm:${policy}`}
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className={renderPolicyButtonClass(String(config.dmPolicy || "pairing") === policy)}
-                          onClick={() => {
-                            setForm((current) => updateChannelConfig(current, channel, { dmPolicy: policy }))
-                          }}
-                        >
-                          {policy}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative min-w-[14rem]">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="h-10 rounded-[14px] bg-secondary/70 pl-9"
+                value={searchKeyword}
+                onChange={(event) => setSearchKeyword(event.target.value)}
+                placeholder="search user / chat / id"
+              />
+            </div>
 
-                  <div className="space-y-2">
-                    <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Group Policy</div>
-                    <div className="flex flex-wrap gap-2">
-                      {GROUP_POLICIES.map((policy) => (
-                        <Button
-                          key={`${channel}:group:${policy}`}
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className={renderPolicyButtonClass(String(config.groupPolicy || "allowlist") === policy)}
-                          onClick={() => {
-                            setForm((current) => updateChannelConfig(current, channel, { groupPolicy: policy }))
-                          }}
-                        >
-                          {policy}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 lg:grid-cols-3">
-                    <label className="space-y-2">
-                      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Owner IDs</div>
-                      <textarea
-                        className="min-h-32 w-full rounded-[16px] border border-border bg-background px-3 py-2 text-sm outline-none ring-0 placeholder:text-muted-foreground"
-                        value={listToMultilineText(config.ownerIds)}
-                        onChange={(event) => {
-                          setForm((current) => updateChannelConfig(current, channel, {
-                            ownerIds: multilineTextToList(event.target.value),
-                          }))
-                        }}
-                        placeholder="one user id per line"
-                      />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">DM Allowlist</div>
-                      <textarea
-                        className="min-h-32 w-full rounded-[16px] border border-border bg-background px-3 py-2 text-sm outline-none ring-0 placeholder:text-muted-foreground"
-                        value={listToMultilineText(config.allowFrom)}
-                        onChange={(event) => {
-                          setForm((current) => updateChannelConfig(current, channel, {
-                            allowFrom: multilineTextToList(event.target.value),
-                          }))
-                        }}
-                        placeholder="one user id per line"
-                      />
-                    </label>
-                    <label className="space-y-2">
-                      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Group Allowlist</div>
-                      <textarea
-                        className="min-h-32 w-full rounded-[16px] border border-border bg-background px-3 py-2 text-sm outline-none ring-0 placeholder:text-muted-foreground"
-                        value={listToMultilineText(config.groupAllowFrom)}
-                        onChange={(event) => {
-                          setForm((current) => updateChannelConfig(current, channel, {
-                            groupAllowFrom: multilineTextToList(event.target.value),
-                          }))
-                        }}
-                        placeholder="one chat id per line"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </article>
-            )
-          })}
+            <div className="flex flex-wrap gap-2">
+              {(["all", ...AUTHORIZATION_CHANNELS] as DirectoryChannelFilter[]).map((item) => (
+                <Button
+                  key={`channel-filter:${item}`}
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className={cn(
+                    "rounded-[12px]",
+                    item === channelFilter ? "bg-secondary" : "",
+                  )}
+                  onClick={() => setChannelFilter(item)}
+                >
+                  {item}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
-      </DashboardModule>
 
-      <DashboardModule
-        title="Observed Users"
-        description="这里是运行时观测到的用户快照。owner / allowlist 状态直接按当前 ship.json 配置叠加显示。"
-      >
-        {observedUsers.length === 0 ? (
-          <div className="rounded-[16px] bg-secondary px-4 py-4 text-sm text-muted-foreground">还没有观测到 chat 用户</div>
+        <Separator className="bg-border/70" />
+
+        {filteredUsers.length === 0 ? (
+          <div className="rounded-[18px] bg-secondary/50 px-4 py-6 text-sm text-muted-foreground">
+            没有匹配的用户。
+          </div>
         ) : (
           <div className="space-y-2">
-            {observedUsers.map((user) => {
-              const channel = String(user.channel || "").trim().toLowerCase() as AuthorizationChannel
-              const flags = getUserFlags(user, authorization?.config?.channels?.[channel])
+            {filteredUsers.map((user) => {
+              const channel = normalizeText(user.channel).toLowerCase()
+              if (!isAuthorizationChannel(channel)) return null
+              const channelConfig = getChannelConfig(form, channel)
+              const roleId = getUserRoleId(user, channelConfig)
+              const role = roles.find((item) => item.roleId === roleId)
               return (
-                <article key={`${user.channel}:${user.userId}`} className="rounded-[18px] bg-secondary/55 px-4 py-3">
+                <article
+                  key={`${user.channel}:${user.userId}`}
+                  className="rounded-[18px] border border-border/60 bg-secondary/35 px-4 py-3 transition-colors hover:bg-secondary/50"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
+                    <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground">{user.username || user.userId}</span>
-                        <span className="rounded-full bg-background px-2 py-0.5 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                          {user.channel}
+                        <span className="truncate font-medium text-foreground">
+                          {user.username || user.userId}
                         </span>
-                        {flags.isOwner ? <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] text-emerald-700">owner</span> : null}
-                        {flags.isAllowed ? <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">allowed</span> : null}
+                        <ChannelBadge channel={channel} />
+                        {hasPermission(role, "agent.manage") ? (
+                          <Badge className="bg-emerald-600 text-white">admin</Badge>
+                        ) : null}
+                        {hasPermission(role, "chat.group.use") ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-background/80 text-muted-foreground"
+                          >
+                            group enabled
+                          </Badge>
+                        ) : null}
                       </div>
                       <div className="font-mono text-xs text-muted-foreground">{user.userId}</div>
                       <div className="text-xs text-muted-foreground">
                         {`${user.lastChatTitle || user.lastChatId || "-"} · ${user.lastChatType || "-"} · seen ${formatTime(user.lastSeenAt)}`}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-[11px]"
-                        onClick={() => void onRunAction({ action: flags.isAllowed ? "revokeUser" : "grantUser", channel, userId: user.userId })}
-                      >
-                        {flags.isAllowed ? <UserMinusIcon className="mr-1.5 size-4" /> : <UserCheckIcon className="mr-1.5 size-4" />}
-                        {flags.isAllowed ? "Revoke" : "Grant"}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="rounded-[11px]"
-                        onClick={() => void onRunAction({ action: "setOwner", channel, userId: user.userId, enabled: !flags.isOwner })}
-                      >
-                        {flags.isOwner ? <ShieldOffIcon className="mr-1.5 size-4" /> : <ShieldCheckIcon className="mr-1.5 size-4" />}
-                        {flags.isOwner ? "Unset Owner" : "Set Owner"}
-                      </Button>
-                    </div>
+
+                    <select
+                      className="h-10 min-w-[11rem] rounded-[14px] border border-transparent bg-background/90 px-3 text-sm outline-none transition focus-visible:ring-3 focus-visible:ring-ring/30"
+                      value={roleId}
+                      onChange={(event) => {
+                        void onRunAction({
+                          action: "setUserRole",
+                          channel,
+                          userId: user.userId,
+                          roleId: event.target.value,
+                        })
+                      }}
+                    >
+                      {roles.map((roleItem) => (
+                        <option
+                          key={`${channel}:user:${user.userId}:${roleItem.roleId}`}
+                          value={roleItem.roleId}
+                        >
+                          {roleItem.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </article>
               )
             })}
           </div>
         )}
-      </DashboardModule>
 
-      <DashboardModule
-        title="Observed Chats"
-        description="群聊 / 频道授权管理。仅展示非私聊会话，方便直接维护 group allowlist。"
-      >
-        {observedChats.filter(isGroupChat).length === 0 ? (
-          <div className="rounded-[16px] bg-secondary px-4 py-4 text-sm text-muted-foreground">还没有观测到群聊或频道</div>
+        <Separator className="bg-border/70" />
+
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-foreground">Observed Groups</div>
+          <div className="text-xs text-muted-foreground">
+            群聊和频道只用于观测最近活跃会话，不参与权限判断。
+          </div>
+        </div>
+
+        {filteredChats.length === 0 ? (
+          <div className="rounded-[18px] bg-secondary/50 px-4 py-6 text-sm text-muted-foreground">
+            没有匹配的群聊或频道。
+          </div>
         ) : (
           <div className="space-y-2">
-            {observedChats.filter(isGroupChat).map((chat) => {
-              const channel = String(chat.channel || "").trim().toLowerCase() as AuthorizationChannel
-              const allowed = normalizeStringList(authorization?.config?.channels?.[channel]?.groupAllowFrom).includes(
-                String(chat.chatId || "").trim(),
-              )
+            {filteredChats.map((chat) => {
+              const channel = normalizeText(chat.channel).toLowerCase()
+              if (!isAuthorizationChannel(channel)) return null
               return (
-                <article key={`${chat.channel}:${chat.chatId}`} className="rounded-[18px] bg-secondary/55 px-4 py-3">
+                <article
+                  key={`${chat.channel}:${chat.chatId}`}
+                  className="rounded-[18px] border border-border/60 bg-secondary/35 px-4 py-3"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
+                    <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-foreground">{chat.chatTitle || chat.chatId}</span>
-                        <span className="rounded-full bg-background px-2 py-0.5 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-                          {chat.channel}
+                        <span className="truncate font-medium text-foreground">
+                          {chat.chatTitle || chat.chatId}
                         </span>
-                        <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
+                        <ChannelBadge channel={channel} />
+                        <Badge
+                          variant="secondary"
+                          className="bg-background/80 text-muted-foreground"
+                        >
                           {chat.chatType || "group"}
-                        </span>
-                        {allowed ? <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] text-emerald-700">allowed</span> : null}
+                        </Badge>
                       </div>
                       <div className="font-mono text-xs text-muted-foreground">{chat.chatId}</div>
                       <div className="text-xs text-muted-foreground">
                         {`last actor ${chat.lastActorName || chat.lastActorId || "-"} · seen ${formatTime(chat.lastSeenAt)}`}
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="rounded-[11px]"
-                      onClick={() => void onRunAction({
-                        action: allowed ? "revokeGroup" : "grantGroup",
-                        channel,
-                        chatId: chat.chatId,
-                      })}
-                    >
-                      {allowed ? "Revoke Group" : "Grant Group"}
-                    </Button>
                   </div>
                 </article>
               )

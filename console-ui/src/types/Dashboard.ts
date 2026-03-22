@@ -338,29 +338,42 @@ export interface UiOverviewResponse {
 }
 
 /**
+ * 单个授权角色。
+ */
+export interface UiChatAuthorizationRole {
+  /**
+   * 角色唯一标识。
+   */
+  roleId: string;
+  /**
+   * 角色展示名。
+   */
+  name: string;
+  /**
+   * 角色权限列表。
+   */
+  permissions?: Array<
+    | "chat.dm.use"
+    | "chat.group.use"
+    | "auth.manage.users"
+    | "auth.manage.roles"
+    | "agent.view.logs"
+    | "agent.manage"
+  >;
+}
+
+/**
  * 单渠道授权配置。
  */
 export interface UiChatAuthorizationChannelConfig {
   /**
-   * owner 用户 ID 列表。
+   * 新用户默认角色。
    */
-  ownerIds?: string[];
+  defaultUserRoleId?: string;
   /**
-   * 私聊访问策略。
+   * 用户角色绑定表。
    */
-  dmPolicy?: "open" | "pairing" | "allowlist" | "disabled";
-  /**
-   * 私聊 allowlist。
-   */
-  allowFrom?: string[];
-  /**
-   * 群聊访问策略。
-   */
-  groupPolicy?: "open" | "allowlist" | "disabled";
-  /**
-   * 群 / 频道 allowlist。
-   */
-  groupAllowFrom?: string[];
+  userRoles?: Record<string, string>;
 }
 
 /**
@@ -440,44 +453,6 @@ export interface UiChatAuthorizationChat {
 }
 
 /**
- * pending pairing 请求。
- */
-export interface UiChatAuthorizationPairingRequest {
-  /**
-   * 渠道名。
-   */
-  channel: "telegram" | "feishu" | "qq" | string;
-  /**
-   * 用户 ID。
-   */
-  userId: string;
-  /**
-   * 用户名 / 展示名。
-   */
-  username?: string;
-  /**
-   * 最近会话 ID。
-   */
-  chatId?: string;
-  /**
-   * 最近会话标题。
-   */
-  chatTitle?: string;
-  /**
-   * 最近会话类型。
-   */
-  chatType?: string;
-  /**
-   * 首次创建时间戳。
-   */
-  createdAt?: number;
-  /**
-   * 最近更新时间戳。
-   */
-  updatedAt?: number;
-}
-
-/**
  * authorization 页面数据快照。
  */
 export interface UiChatAuthorizationResponse {
@@ -486,9 +461,16 @@ export interface UiChatAuthorizationResponse {
    */
   success?: boolean;
   /**
-   * 渠道授权配置。
+   * 授权配置。
    */
   config?: {
+    /**
+     * 全局角色定义表。
+     */
+    roles?: Record<string, UiChatAuthorizationRole>;
+    /**
+     * 按渠道拆分的绑定配置。
+     */
     channels?: Partial<Record<"telegram" | "feishu" | "qq", UiChatAuthorizationChannelConfig>>;
   };
   /**
@@ -499,10 +481,6 @@ export interface UiChatAuthorizationResponse {
    * 已观测会话列表。
    */
   chats?: UiChatAuthorizationChat[];
-  /**
-   * pending pairing 请求列表。
-   */
-  pairingRequests?: UiChatAuthorizationPairingRequest[];
 }
 
 /**
@@ -731,110 +709,116 @@ export interface UiSkillCommandResponse<TData> {
 }
 
 /**
- * Extension 运行时快照。
+ * Plugin action 摘要。
  */
-export interface UiExtensionRuntimeItem {
+export interface UiPluginActionItem {
   /**
-   * extension 名称。
+   * action 名称。
    */
   name?: string;
   /**
-   * extension 描述信息。
-   */
-  description?: string;
-  /**
-   * extension 运行状态。
-   */
-  state?: string;
-  /**
-   * 最近更新时间戳。
-   */
-  updatedAt?: number;
-  /**
-   * 最近错误信息。
-   */
-  lastError?: string;
-  /**
-   * 最近命令名。
-   */
-  lastCommand?: string;
-  /**
-   * 最近命令时间戳。
-   */
-  lastCommandAt?: number;
-  /**
-   * 是否支持 lifecycle 控制。
-   */
-  supportsLifecycle?: boolean;
-  /**
-   * 是否支持 command 调用。
+   * 是否支持 CLI command。
    */
   supportsCommand?: boolean;
   /**
-   * extension 配置摘要（由 console ui 接口返回）。
+   * 是否支持 HTTP API。
+   */
+  supportsApi?: boolean;
+  /**
+   * CLI command 描述。
+   */
+  commandDescription?: string;
+  /**
+   * API method（若存在）。
+   */
+  apiMethod?: string;
+  /**
+   * API path（若存在）。
+   */
+  apiPath?: string;
+}
+
+/**
+ * Plugin 可用性摘要。
+ */
+export interface UiPluginAvailability {
+  /**
+   * Plugin 是否已启用。
+   */
+  enabled?: boolean;
+  /**
+   * Plugin 当前是否可用。
+   */
+  available?: boolean;
+  /**
+   * 不可用原因列表。
+   */
+  reasons?: string[];
+  /**
+   * 缺失的 asset 列表。
+   */
+  missingAssets?: string[];
+}
+
+/**
+ * Plugin 运行时快照。
+ */
+export interface UiPluginRuntimeItem {
+  /**
+   * Plugin 名称。
+   */
+  name?: string;
+  /**
+   * 暴露的 capability 名称列表。
+   */
+  capabilities?: string[];
+  /**
+   * 依赖的 asset 名称列表。
+   */
+  requiredAssets?: string[];
+  /**
+   * 是否声明了 system 注入。
+   */
+  hasSystem?: boolean;
+  /**
+   * 是否声明了 availability 检查。
+   */
+  hasAvailability?: boolean;
+  /**
+   * 归一化后的展示状态。
+   */
+  state?: string;
+  /**
+   * 归一化后的错误摘要。
+   */
+  lastError?: string;
+  /**
+   * Plugin 可用性结果。
+   */
+  availability?: UiPluginAvailability;
+  /**
+   * Plugin 配置摘要（由 console ui 接口返回）。
    */
   config?: {
     /**
-     * 生命周期钩子支持情况。
-     */
-    lifecycle?: {
-      /**
-       * 是否支持 start。
-       */
-      start?: boolean;
-      /**
-       * 是否支持 stop。
-       */
-      stop?: boolean;
-      /**
-       * 是否支持 lifecycle.command。
-       */
-      command?: boolean;
-    };
-    /**
      * action 能力清单。
      */
-    actions?: Array<{
-      /**
-       * action 名称。
-       */
-      name?: string;
-      /**
-       * 是否支持 CLI command。
-       */
-      supportsCommand?: boolean;
-      /**
-       * 是否支持 HTTP API。
-       */
-      supportsApi?: boolean;
-      /**
-       * CLI command 描述。
-       */
-      commandDescription?: string;
-      /**
-       * API method（若存在）。
-       */
-      apiMethod?: string;
-      /**
-       * API path（若存在）。
-       */
-      apiPath?: string;
-    }>;
+    actions?: UiPluginActionItem[];
   };
 }
 
 /**
- * `/api/extensions/list` 响应。
+ * `/api/ui/plugins` 响应。
  */
-export interface UiExtensionsResponse {
+export interface UiPluginsResponse {
   /**
    * 请求是否成功。
    */
   success?: boolean;
   /**
-   * extension 列表。
+   * plugin 列表。
    */
-  extensions?: UiExtensionRuntimeItem[];
+  plugins?: UiPluginRuntimeItem[];
   /**
    * 错误信息。
    */
@@ -2254,10 +2238,6 @@ export interface UiChannelAccountItem {
    * QQ 沙箱开关。
    */
   sandbox?: boolean;
-  /**
-   * 主人鉴权 ID。
-   */
-  authId?: string;
   /**
    * 是否已配置 botToken。
    */

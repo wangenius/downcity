@@ -1,45 +1,42 @@
 ---
 title: 架构总览
-description: Downcity 的核心分层：console、agent、service、extension
+description: Downcity 的核心分层：console、agent、service、plugin、capability、asset
 ---
 
 # 架构总览
 
-Downcity 现在可以直接按两大主干理解：
+Downcity 最容易理解的方式，是先看两条主干：
 
-- `console`：全局控制与运维中台
-- `agent`：项目执行运行时
+- `console`：全局控制与运维面
+- `agent`：项目级运行与执行面
 
-在这两大主干内部，`service` 与 `extension` 作为能力层被统一调度。
+在 agent runtime 内部，再由 `service`、`plugin`、`capability`、`asset` 组成执行层。
 
 ## 分层结构
 
 1. **Console 层（全局）**
-- 命令：`city console ...`、`city console config ...`、`city service ...`、`city extension ...`
-- 职责：全局进程管理、运维入口、模型与运行配置治理
+- 命令：`city console ...`、`city console config ...`
+- 职责：进程管理、registry、模型池、全局存储
 
 2. **Agent 层（项目）**
-- 命令：`city agent create/on/off/status/restart ...`
-- 职责：加载项目上下文，执行模型与工具调用，落盘运行状态
+- 命令：`city agent create/start/status/restart ...`
+- 职责：加载单个项目，持有单个 runtime，把痕迹写入 `.ship/`
 
-3. **Capability 层（运行时能力）**
-- `service`：核心业务域（`chat` / `skill` / `task` / `memory`）
-- `extension`：共享扩展域（如 `voice`）
+3. **Service 层（核心工作流）**
+- 例如 `chat`、`skill`、`task`、`memory`
+- 负责业务流程与用户主路径
 
-4. **State 层（可审计落盘）**
-- 路径：`.ship/context`、`.ship/logs`、`.ship/.cache`、`.ship/tasks`、`.ship/debug`
-- 目标：可回放、可定位、可审计
+4. **Plugin 层（可选增强）**
+- 例如 `voice`
+- 暴露 actions、capabilities、hooks、system prompt 片段
 
-## 架构原则
+5. **Capability + Asset 层**
+- `capability`：稳定调用契约，例如 `audio.transcribe`
+- `asset`：插件依赖的可安装资源，负责 install/check/config/use
 
-- 控制与执行分离：`console` 负责管控，`agent` 负责执行。
-- 核心与扩展分离：`service` 是核心，`extension` 是增强。
-- 命令入口统一：同一套能力可通过 CLI/HTTP 访问。
-- 配置变更前置：模型等关键配置先通过 console 入口管理，再进入 agent 执行。
+## 架构规则
 
-## 延伸阅读
-
-- [架构逻辑图](/zh/docs/concepts/logic-map)
-- [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)
-- [Service Runtime](/zh/docs/concepts/service-runtime)
-- [Extension Runtime](/zh/docs/concepts/extension-runtime)
+- 控制与执行分离：`console` 负责管，`agent` 负责跑。
+- 工作流与增强分离：`service` 负责流程，`plugin` 负责增强。
+- 契约与实现分离：service 调 capability，不碰 plugin 私有细节。
+- 行为与依赖分离：plugin 声明所需 asset，asset 自己管理安装与可用性。

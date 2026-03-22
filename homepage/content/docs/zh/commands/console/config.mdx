@@ -24,13 +24,21 @@ city console config <subcommand>
 
 > 模型池管理已迁移到独立命令：[`city console model`](/zh/docs/commands/console/model)。
 
-## `extensions.*` 路径说明
+## Plugin 配置
 
-当 `keyPath` 以 `extensions.` 开头时，读写目标自动切换为 console 全局 `~/.ship/ship.db`（`extensions_config`）。
+`city console config` 现在只读写项目 `ship.json`。
+
+插件相关配置请改为：
+
+- `plugins.*` 管理插件行为
+- `assets.*` 管理插件依赖资源
+
+示例：
 
 ```bash
-city console config get extensions.voice
-city console config set extensions.voice.enabled true
+city console config get plugins.voice
+city console config set plugins.voice.enabled true
+city console config set 'assets.voice.transcriber.modelId' '\"SenseVoiceSmall\"'
 ```
 
 ## 示例

@@ -1,13 +1,24 @@
 ---
-title: 权限配置
-description: ship.json 中 permissions 的设计与推荐实践
+title: 权限
+description: 了解 Ship 的两层权限模型：Agent 运行权限与聊天用户权限
 ---
 
-# 权限配置
+# 权限
 
-`ship.json.permissions` 用于定义 agent 的操作边界。
+Ship 里有两套不同的权限：
 
-## 最小配置示例
+1. `Agent 运行权限`
+2. `聊天用户权限`
+
+这两套权限解决的是完全不同的问题，建议分开理解。
+
+## 1. Agent 运行权限
+
+这一层决定 Agent 自己能做什么，例如能不能读仓库、写文件、执行命令。
+
+这部分仍然通过项目里的 `ship.json.permissions` 配置。
+
+### 最小配置示例
 
 ```json
 {
@@ -27,7 +38,7 @@ description: ship.json 中 permissions 的设计与推荐实践
 }
 ```
 
-## 字段说明
+### 字段说明
 
 - `read_repo`：是否允许读取仓库内容。
 - `write_repo.requiresApproval`：写仓库是否要求确认。
@@ -36,13 +47,70 @@ description: ship.json 中 permissions 的设计与推荐实践
 - `exec_command.denyRequiresApproval`：命中 `deny` 时是否允许人工确认放行。
 - `exec_command.maxOutputChars/maxOutputLines`：单次命令输出上限。
 
-## 推荐策略
+### 推荐策略
 
 1. 生产环境保持 `deny` 默认值，并按需增加风险命令。
 2. CI 或共享机器建议开启 `requiresApproval`。
 3. 遇到输出被截断时，优先细化命令范围，不要无上限放大输出。
 
+## 2. 聊天用户权限
+
+这一层决定“谁可以和 Agent 说话，以及能做什么”。
+
+当前聊天权限采用的是纯权限组模型：
+
+- 每个用户属于一个权限组
+- 每个权限组拥有一组权限
+- 收到消息时，系统只根据“发消息的用户”来判断是否允许
+
+这里没有 `master`、`owner` 一类的特殊身份概念，统一都是权限组。
+
+### 核心规则
+
+- 新用户进入系统后，会先落到默认权限组。
+- 私聊消息是否允许，取决于该用户是否拥有对应私聊权限。
+- 群聊、频道里的消息，也只看“当前发消息的用户”的权限。
+- 群本身不是权限主体，不单独配置群权限。
+- 用户来自哪个平台需要区分，例如 Telegram 用户、飞书用户、QQ 用户会分别识别。
+
+### 配置保存在哪里
+
+聊天用户权限不会写进项目 `ship.json`。
+
+这部分统一保存在 Console 的 `~/.ship/ship.db` 中，便于集中管理，也不会把用户权限明文散落到项目配置里。
+
+### 在哪里管理
+
+可以直接在 Console UI 的 `Agent / Authorization` 页面管理：
+
+- 查看当前权限组
+- 配置某个组拥有哪些权限
+- 设置默认权限组
+- 把具体用户分配到指定权限组
+
+### 一个常见的分组方式
+
+- `default`：新用户默认组，权限最低
+- `member`：允许正常私聊、群聊使用
+- `admin`：在 `member` 的基础上增加管理类权限
+
+你不需要配置审批流，也不需要做额外 pairing。大多数场景下，把用户放进合适的权限组就够了。
+
+## 一条消息是怎么判断的
+
+当一条聊天消息进入系统时，判断顺序可以理解为：
+
+1. 识别消息来自哪个平台，以及是谁发的。
+2. 根据平台用户标识，查到这个用户绑定的权限组。
+3. 如果没有显式绑定，就使用该平台的默认权限组。
+4. 根据消息类型判断需要哪类权限，例如私聊权限或群聊权限。
+5. 只有发消息用户具备对应权限时，这条消息才会继续进入 Agent。
+
+所以即使消息来自群聊，真正决定是否放行的仍然是“发消息的人”。
+
 ## 相关文档
 
+- [Console UI](/zh/docs/commands/console/ui)
+- [Chat Service](/zh/docs/services/chat/chat-service)
 - [配置总览](/zh/docs/configuration/overview)
 - [ship.json 参考](/zh/docs/reference/ship-json)

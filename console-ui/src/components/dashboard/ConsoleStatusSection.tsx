@@ -18,7 +18,7 @@ import {
 } from "../ui/dropdown-menu"
 import type {
   UiConfigStatusItem,
-  UiExtensionRuntimeItem,
+  UiPluginRuntimeItem,
 } from "../../types/Dashboard"
 
 type ConfigViewMode = "required" | "optional" | "all"
@@ -37,9 +37,9 @@ export interface ConsoleStatusSectionProps {
    */
   hasPrompt: boolean
   /**
-   * extension 列表。
+   * plugin 列表。
    */
-  extensions: UiExtensionRuntimeItem[]
+  plugins: UiPluginRuntimeItem[]
   /**
    * 配置文件状态列表。
    */
@@ -70,14 +70,14 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
     topbarStatus,
     topbarError,
     hasPrompt,
-    extensions,
+    plugins,
     configStatus,
     onRefresh,
   } = props
   const [mode, setMode] = React.useState<ConfigViewMode>("required")
 
-  const runningExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "running").length
-  const errorExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "error").length
+  const availablePlugins = plugins.filter((item) => String(item.state || "").toLowerCase() === "available").length
+  const unavailablePlugins = plugins.filter((item) => String(item.state || "").toLowerCase() === "unavailable").length
   const consoleConfigItems = configStatus.filter((item) => item.scope === "console")
   const requiredConsoleKeys = new Set(["ship_db", "console_pid", "agents_registry"])
   const requiredItems = consoleConfigItems.filter((item) => requiredConsoleKeys.has(item.key))
@@ -91,7 +91,7 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <DashboardModule
           title="Runtime Board"
-          description="Console、prompt 与 extension 的即时运行状态。"
+          description="Console、prompt 与 plugin 的即时运行状态。"
           actions={
             <Button size="sm" variant="outline" onClick={onRefresh}>
               refresh
@@ -118,13 +118,13 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
               </article>
 
               <article className="rounded-[18px] bg-secondary p-3.5 md:col-span-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Extensions</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Plugins</div>
                 <div className="mt-2">
-                  <Badge variant="outline" className={errorExtensions > 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-500/12 text-emerald-700"}>
-                    {`${runningExtensions}/${extensions.length} running`}
+                  <Badge variant="outline" className={unavailablePlugins > 0 ? "bg-destructive/10 text-destructive" : "bg-emerald-500/12 text-emerald-700"}>
+                    {`${availablePlugins}/${plugins.length} available`}
                   </Badge>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">{`error ${errorExtensions} · total ${extensions.length}`}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{`unavailable ${unavailablePlugins} · total ${plugins.length}`}</p>
               </article>
             </div>
         </DashboardModule>

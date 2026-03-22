@@ -148,7 +148,8 @@ function buildInfoAttrs(info: Record<string, string>): string[] {
     "message_id",
     "user_id",
     "username",
-    "is_master",
+    "role_id",
+    "permissions",
     "received_at",
   ];
 

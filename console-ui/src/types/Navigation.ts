@@ -21,7 +21,7 @@ export type DashboardView =
   | "globalChannelAccounts"
   | "globalCommand"
   | "globalAgents"
-  | "globalExtensions"
+  | "globalPlugins"
   | "agentOverview"
   | "agentAuthorization"
   | "agentSkills"

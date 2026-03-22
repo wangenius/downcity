@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 兼容多种 QQ 附件字段命名（attachments/files/file_info/audio/voice）。
- * - 仅 voice/audio 触发 voice extension；失败时不中断主流程。
+ * - 仅 voice/audio 触发语音转写 capability；失败时不中断主流程。
  */
 
 import assert from "node:assert/strict";
@@ -84,11 +84,14 @@ test("extractQqIncomingAttachments supports string voice/audio fields", () => {
   );
 });
 
-test("voice/audio attachments call extension and produce transcript blocks", async () => {
+test("voice/audio attachments call capability and produce transcript blocks", async () => {
   const rootPath = "/tmp/demo-root";
   const invokePayloads = [];
   const context = {
-    extensions: {
+    capabilities: {
+      has(name) {
+        return name === "audio.transcribe";
+      },
       async invoke(params) {
         invokePayloads.push(params.payload.audioPath);
         if (params.payload.audioPath.endsWith("a.ogg")) {
@@ -131,13 +134,16 @@ test("voice/audio attachments call extension and produce transcript blocks", asy
   assert.match(text, /语音转写/);
 });
 
-test("voice extension failure is ignored and returns empty transcript", async () => {
+test("voice capability failure is ignored and returns empty transcript", async () => {
   const context = {
-    extensions: {
+    capabilities: {
+      has(name) {
+        return name === "audio.transcribe";
+      },
       async invoke() {
         return {
           success: false,
-          error: "voice extension disabled",
+          error: "voice capability disabled",
         };
       },
     },

@@ -158,7 +158,6 @@ export class ChannelAccountService {
       creator?: string;
       domain?: string;
       sandbox: boolean;
-      authId?: string;
       hasBotToken: boolean;
       hasAppId: boolean;
       hasAppSecret: boolean;
@@ -182,7 +181,6 @@ export class ChannelAccountService {
           creator: item.creator,
           domain: item.domain,
           sandbox: item.sandbox === true,
-          authId: item.authId,
           hasBotToken: !!String(item.botToken || "").trim(),
           hasAppId: !!String(item.appId || "").trim(),
           hasAppSecret: !!String(item.appSecret || "").trim(),
@@ -213,7 +211,6 @@ export class ChannelAccountService {
     appSecret?: string;
     domain?: string;
     sandbox?: boolean;
-    authId?: string;
     clearBotToken?: boolean;
     clearAppId?: boolean;
     clearAppSecret?: boolean;
@@ -275,7 +272,6 @@ export class ChannelAccountService {
         appSecret: nextAppSecret,
         domain: normalizeOptionalText(input.domain),
         sandbox: input.sandbox === true,
-        authId: normalizeOptionalText(input.authId),
       });
       return { id };
     } finally {

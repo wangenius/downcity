@@ -1,0 +1,33 @@
+---
+title: city plugin
+description: Inspect plugin availability and dispatch plugin actions
+---
+
+# `city plugin`
+
+`city plugin` is the generic entry for the new plugin system.
+
+Use it when you want to:
+
+- inspect which plugins are registered
+- check whether a plugin is available in the current agent runtime
+- dispatch a plugin action without using the plugin's short alias
+
+## Common examples
+
+```bash
+city plugin list
+city plugin status voice
+city plugin action voice status
+```
+
+## Notes
+
+- `city plugin ...` talks to the target agent runtime, so start the runtime first with `city agent start`.
+- Plugin behavior config is stored in project `ship.json` under `plugins.*`.
+- Plugin dependency config is stored in project `ship.json` under `assets.*`.
+
+## Related
+
+- [`city voice`](/en/docs/commands/plugin/voice)
+- [`CLI Commands`](/en/docs/reference/cli)

@@ -13,7 +13,7 @@ import type {
   UiAgentCreatePayload,
   UiAgentOption,
   UiConfigStatusItem,
-  UiExtensionRuntimeItem,
+  UiPluginRuntimeItem,
   UiModelPoolItem,
 } from "@/types/Dashboard"
 
@@ -31,9 +31,9 @@ export interface GlobalOverviewSectionProps {
    */
   modelPoolItems: UiModelPoolItem[]
   /**
-   * extension 列表。
+   * plugin 列表。
    */
-  extensions: UiExtensionRuntimeItem[]
+  plugins: UiPluginRuntimeItem[]
   /**
    * 配置文件状态列表。
    */
@@ -72,7 +72,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
     cityVersion,
     agents,
     modelPoolItems,
-    extensions,
+    plugins,
     configStatus,
     onCreateAgent,
     onPickAgentDirectory,
@@ -90,7 +90,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
   ).length
   const nonOkRequired = requiredConsoleItems.filter((item) => item.status !== "ok")
 
-  const errorExtensions = extensions.filter((item) => String(item.state || "").toLowerCase() === "error").length
+  const unavailablePlugins = plugins.filter((item) => String(item.state || "").toLowerCase() === "unavailable").length
   const requiredOkCount = requiredConsoleItems.length - nonOkRequired.length
   const configHealthy = nonOkRequired.length === 0
   const configSummaryState = configHealthy
@@ -109,14 +109,14 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
         state: item.status,
         detail: item.reason || item.path,
       })),
-    ...extensions
-      .filter((item) => String(item.state || "").toLowerCase() === "error")
+    ...plugins
+      .filter((item) => String(item.state || "").toLowerCase() === "unavailable")
       .map((item) => ({
-        key: `ext:${String(item.name || "unknown")}`,
-        source: "extension",
+        key: `plugin:${String(item.name || "unknown")}`,
+        source: "plugin",
         name: String(item.name || "unknown"),
-        state: String(item.state || "error"),
-        detail: String(item.lastError || item.description || "").trim() || "-",
+        state: String(item.state || "unavailable"),
+        detail: String(item.lastError || "").trim() || "-",
       })),
   ]
   const dedupedSignals = Array.from(new Map(issueSignals.map((item) => [item.key, item])).values())
@@ -149,7 +149,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
             </span>
           ) : null}
           <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
-            {`extension errors ${errorExtensions}`}
+            {`plugin unavailable ${unavailablePlugins}`}
           </span>
           <span className="inline-flex items-center rounded-full bg-secondary px-2 py-1">
             {`signals ${totalSignals}`}

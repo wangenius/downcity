@@ -89,15 +89,16 @@ Skills discovery roots:
 }
 ```
 
-### `extensions.*` (note)
+### `plugins.*` / `assets.*`
 
-Extension config is not maintained in project `ship.json`. It is maintained in console-global `~/.ship/ship.db`.
+Plugin config is maintained in project `ship.json`.
 
 Example for voice:
 
 ```bash
 city voice on SenseVoiceSmall
-city console config get extensions.voice
+city console config get plugins.voice
+city console config get 'assets.voice.transcriber'
 ```
 
 ### `permissions`

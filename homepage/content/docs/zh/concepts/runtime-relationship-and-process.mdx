@@ -1,49 +1,29 @@
 ---
-title: 关系与进程模型
-description: console、agent、service、extension 的协作关系与进程启动顺序
+title: Runtime 关系与进程顺序
+description: console、agent、service、plugin、capability、asset 的协作关系与启动顺序
 ---
 
-# 关系与进程模型
-
-本文聚焦两件事：
-
-- 四类角色如何协作
-- 进程如何启动与连接
+# Runtime 关系与进程顺序
 
 ## 1. 角色关系
 
-- `console` 是控制中心：维护 agent registry，承接 `config/service/extension` 运维命令。
-- `agent` 是执行中心：在项目内处理消息、任务、工具调用与落盘。
-- `service` 是业务域：承载核心流程能力。
-- `extension` 是扩展域：承载跨 agent 共享的增强能力。
+- `console`：管理 registry、模型池、共享存储、UI。
+- `agent`：持有单个项目 runtime。
+- `service`：执行业务主流程。
+- `plugin`：提供可选增强。
+- `capability`：对外暴露稳定契约。
+- `asset`：负责依赖资源的安装与可用性。
 
-可以用一句话概括：
+一句话总结：
 
-`console` 负责“管”，`agent` 负责“跑”，`service/extension` 负责“提供能力”。
+`console` 负责管，`agent` 负责跑，`service` 负责编排，`plugin` 负责增强，`asset` 负责依赖。
 
-## 2. 进程启动模型
+## 2. 启动顺序
 
-1. 启动 console：`city console start`
-2. 在项目内启动 agent：`city agent start`
-3. agent runtime 加载配置（项目 `ship.json.services.*` + console 全局 `~/.ship/ship.db` 的 `extensions_config.*` + 全局模型池）
-4. 入站消息/任务进入 agent 调度
-5. agent 调用 service/extension 完成执行
-6. 执行轨迹写入 `.ship/*`
-
-## 3. 运维检查清单
-
-```bash
-city console status
-city agent status .
-city service list
-city extension list
-```
-
-## 相关文档
-
-- [架构逻辑图](/zh/docs/concepts/logic-map)
-- [Service 与 Extension 区别](/zh/docs/concepts/service-vs-extension)
-- [Service Runtime](/zh/docs/concepts/service-runtime)
-- [Extension Runtime](/zh/docs/concepts/extension-runtime)
-- [`city console`](/zh/docs/commands/console/console)
-- [`city agent`](/zh/docs/commands/agent/agent)
+1. `city console start`
+2. `city agent start`
+3. agent 从 `ship.json` 加载项目配置
+4. runtime 组装 services、plugins、capabilities、assets
+5. 消息或任务进入 service 工作流
+6. service 在需要时调用 capability
+7. 运行痕迹写入 `.ship/*`

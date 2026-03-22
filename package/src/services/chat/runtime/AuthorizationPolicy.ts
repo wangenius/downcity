@@ -2,8 +2,8 @@
  * Chat 授权判定逻辑。
  *
  * 关键点（中文）
- * - 设计目标参考 openclaw：区分 DM / 群聊策略、allowlist 与 pairing。
- * - 这里只负责纯判定，不触碰 IO；配套的动态请求落盘由 AuthorizationStore 负责。
+ * - 角色模型替代旧的 allowlist/pairing 模型。
+ * - 判定统一走“用户角色 + 权限集合”，群聊只看发言用户自身权限。
  */
 
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
@@ -11,93 +11,121 @@ import type {
   ChatAuthorizationConfig,
   ChatAuthorizationEvaluateInput,
   ChatAuthorizationEvaluateResult,
+  ChatAuthorizationPermission,
+  ChatAuthorizationRole,
   ChatChannelAuthorizationConfig,
 } from "@services/chat/types/Authorization.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
 
 function normalizeText(value: unknown): string | undefined {
   const text = String(value || "").trim();
   return text ? text : undefined;
 }
 
-function normalizeList(values: unknown[] | undefined): string[] {
-  if (!Array.isArray(values)) return [];
-  return values.map((value) => normalizeText(value)).filter(Boolean) as string[];
+function isDirectMessage(channel: ChatDispatchChannel, chatType?: string): boolean {
+  const type = String(chatType || "").trim().toLowerCase();
+  if (!type) return true;
+  if (channel === "telegram") return type === "private";
+  if (channel === "feishu") return type === "p2p";
+  if (channel === "qq") return type === "private" || type === "c2c";
+  return false;
+}
+
+function buildDefaultRoles(): Record<string, ChatAuthorizationRole> {
+  return {
+    default: { roleId: "default", name: "Default", permissions: [] },
+    member: {
+      roleId: "member",
+      name: "Member",
+      permissions: [
+        "chat.dm.use",
+        "chat.group.use",
+      ],
+    },
+    admin: {
+      roleId: "admin",
+      name: "Admin",
+      permissions: [
+        "chat.dm.use",
+        "chat.group.use",
+        "auth.manage.users",
+        "auth.manage.roles",
+        "agent.view.logs",
+        "agent.manage",
+      ],
+    },
+  };
+}
+
+function resolveAuthorizationRoles(
+  authorizationConfig?: ChatAuthorizationConfig,
+): Record<string, ChatAuthorizationRole> {
+  const raw = authorizationConfig?.roles;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return buildDefaultRoles();
+  return Object.keys(raw).length > 0 ? raw : buildDefaultRoles();
 }
 
 function resolveChannelAuthorizationConfig(
-  config: ShipConfig,
   channel: ChatDispatchChannel,
   authorizationConfig?: ChatAuthorizationConfig,
 ): ChatChannelAuthorizationConfig {
   const raw = authorizationConfig?.channels?.[channel];
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return {};
+    return {
+      defaultUserRoleId: "default",
+      userRoles: {},
+    };
   }
   return raw;
 }
 
-function isDirectMessage(channel: ChatDispatchChannel, chatType?: string): boolean {
-  const type = String(chatType || "").trim().toLowerCase();
-  if (!type) return true;
-  if (channel === "telegram") {
-    return type === "private";
-  }
-  if (channel === "feishu") {
-    return type === "p2p";
-  }
-  if (channel === "qq") {
-    return type === "private";
-  }
-  return false;
+function resolveRole(
+  roleId: string | undefined,
+  roles: Record<string, ChatAuthorizationRole> | undefined,
+): ChatAuthorizationRole {
+  if (roleId && roles?.[roleId]) return roles[roleId];
+  if (roles?.default) return roles.default;
+  return { roleId: "default", name: "Default", permissions: [] };
+}
+
+function hasPermission(role: ChatAuthorizationRole, permission: ChatAuthorizationPermission): boolean {
+  return role.permissions.includes(permission);
+}
+
+function resolveUserRole(params: {
+  roles: Record<string, ChatAuthorizationRole>;
+  channelConfig: ChatChannelAuthorizationConfig;
+  userId?: string;
+}): ChatAuthorizationRole {
+  const userId = normalizeText(params.userId);
+  const defaultRoleId = normalizeText(params.channelConfig.defaultUserRoleId) || "default";
+  const boundRoleId = userId ? normalizeText(params.channelConfig.userRoles?.[userId]) : undefined;
+  return resolveRole(boundRoleId || defaultRoleId, params.roles);
 }
 
 /**
- * 读取当前渠道 owner 列表。
- *
- * 关键点（中文）
- * - 新授权模型优先读取 console `ship.db` 中的 ownerIds。
- * - 为兼容旧版配置，若 ownerIds 为空则回退到 legacy channel account authId。
+ * 解析用户授权角色。
  */
-export function resolveOwnerIdsForChannel(params: {
-  config: ShipConfig;
+export function resolveAuthorizedUserRole(params: {
   channel: ChatDispatchChannel;
-  env?: Record<string, string>;
-  authorizationConfig?: ChatAuthorizationConfig;
-}): string[] {
-  const cfg = resolveChannelAuthorizationConfig(
-    params.config,
-    params.channel,
-    params.authorizationConfig,
-  );
-  const explicitOwnerIds = normalizeList(cfg.ownerIds);
-  if (explicitOwnerIds.length > 0) return explicitOwnerIds;
-
-  const legacyEnvKey =
-    params.channel === "telegram"
-      ? "TELEGRAM_AUTH_ID"
-      : params.channel === "feishu"
-        ? "FEISHU_AUTH_ID"
-        : "QQ_AUTH_ID";
-  const legacyOwnerId = normalizeText(params.env?.[legacyEnvKey]);
-  return legacyOwnerId ? [legacyOwnerId] : [];
-}
-
-/**
- * 解析 owner 身份。
- */
-export function resolveOwnerMatch(params: {
-  config: ShipConfig;
-  channel: ChatDispatchChannel;
-  env?: Record<string, string>;
   userId?: string;
   authorizationConfig?: ChatAuthorizationConfig;
-}): "master" | "guest" | "unknown" {
+  rootPath?: string;
+}): ChatAuthorizationRole | undefined {
   const userId = normalizeText(params.userId);
-  if (!userId) return "unknown";
-  const ownerIds = resolveOwnerIdsForChannel(params);
-  if (ownerIds.length === 0) return "guest";
-  return ownerIds.includes(userId) ? "master" : "guest";
+  if (!userId) return undefined;
+  const authorizationConfig =
+    params.authorizationConfig ||
+    (params.rootPath ? readChatAuthorizationConfigSync(params.rootPath) : undefined);
+  const roles = resolveAuthorizationRoles(authorizationConfig);
+  const channelConfig = resolveChannelAuthorizationConfig(params.channel, authorizationConfig);
+  const userRole = resolveUserRole({
+    roles,
+    channelConfig,
+    userId,
+  });
+  return userRole;
 }
 
 /**
@@ -109,98 +137,50 @@ export function evaluateIncomingChatAuthorization(params: {
   input: ChatAuthorizationEvaluateInput;
   authorizationConfig?: ChatAuthorizationConfig;
 }): ChatAuthorizationEvaluateResult {
-  const cfg = resolveChannelAuthorizationConfig(
-    params.config,
+  const channelConfig = resolveChannelAuthorizationConfig(
     params.channel,
     params.authorizationConfig,
   );
-  const userId = normalizeText(params.input.userId);
-  const chatId = normalizeText(params.input.chatId);
-  const chatType = normalizeText(params.input.chatType);
-  const direct = isDirectMessage(params.channel, chatType);
-  const ownerIds = normalizeList(cfg.ownerIds);
-  const allowFrom = normalizeList(cfg.allowFrom);
-  const groupAllowFrom = normalizeList(cfg.groupAllowFrom);
-  const isOwner = !!(userId && ownerIds.includes(userId));
-  const isAllowedUser = !!(userId && allowFrom.includes(userId));
-  const dmPolicy = cfg.dmPolicy || "pairing";
-  const groupPolicy = cfg.groupPolicy || "allowlist";
+  const roles = resolveAuthorizationRoles(params.authorizationConfig);
+  const direct = isDirectMessage(params.channel, params.input.chatType);
+  const userRole = resolveUserRole({
+    roles,
+    channelConfig,
+    userId: params.input.userId,
+  });
+  const isOwner = hasPermission(userRole, "agent.manage");
 
   if (direct) {
-    if (dmPolicy === "disabled") {
-      return {
-        decision: "block",
-        isOwner,
-        reason: "dm_policy_disabled",
-      };
-    }
-    if (dmPolicy === "open") {
-      return {
+    return hasPermission(userRole, "chat.dm.use")
+      ? {
+          decision: "allow",
+          isOwner,
+          userRoleId: userRole.roleId,
+          userPermissions: [...userRole.permissions],
+          reason: "dm_role_allowed",
+        }
+      : {
+          decision: "block",
+          isOwner,
+          userRoleId: userRole.roleId,
+          userPermissions: [...userRole.permissions],
+          reason: "dm_role_blocked",
+        };
+  }
+
+  return hasPermission(userRole, "chat.group.use")
+    ? {
         decision: "allow",
         isOwner,
-        reason: "dm_policy_open",
-      };
-    }
-    if (isOwner || isAllowedUser) {
-      return {
-        decision: "allow",
-        isOwner,
-        reason: isOwner ? "owner_allowed" : "allowlist_allowed",
-      };
-    }
-    if (dmPolicy === "pairing") {
-      return {
-        decision: "pairing",
-        isOwner,
-        reason: "dm_policy_pairing_required",
-      };
-    }
-    return {
-      decision: "block",
-      isOwner,
-      reason: "dm_policy_allowlist_blocked",
-    };
-  }
-
-  if (groupPolicy === "disabled") {
-    return {
-      decision: "block",
-      isOwner,
-      reason: "group_policy_disabled",
-    };
-  }
-
-  if (groupPolicy === "allowlist") {
-    if (!chatId || !groupAllowFrom.includes(chatId)) {
-      return {
+        userRoleId: userRole.roleId,
+        userPermissions: [...userRole.permissions],
+        reason: "group_user_role_allowed",
+      }
+    : {
         decision: "block",
         isOwner,
-        reason: "group_not_in_allowlist",
+        userRoleId: userRole.roleId,
+        userPermissions: [...userRole.permissions],
+        reason: "user_group_permission_blocked",
       };
-    }
-  }
-
-  const groupConfig =
-    chatId && cfg.groups && typeof cfg.groups === "object" ? cfg.groups[chatId] : undefined;
-  const groupUserAllowFrom = normalizeList(groupConfig?.allowFrom);
-  if (groupUserAllowFrom.length > 0) {
-    if (!userId || !groupUserAllowFrom.includes(userId)) {
-      return {
-        decision: "block",
-        isOwner,
-        reason: "group_user_not_in_allowlist",
-      };
-    }
-  }
-
-  return {
-    decision: "allow",
-    isOwner,
-    reason:
-      groupPolicy === "open"
-        ? "group_policy_open"
-        : groupUserAllowFrom.length > 0
-          ? "group_allowlist_and_user_allowlist_allowed"
-          : "group_allowlist_allowed",
-  };
 }

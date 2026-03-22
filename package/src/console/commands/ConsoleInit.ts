@@ -129,7 +129,6 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
     if (allowOverwrite) {
       modelStore.clearAll();
     }
-    modelStore.setExtensionsConfigSync({});
     await modelStore.upsertProvider({
       id: "default",
       type: providerType,

@@ -2,69 +2,155 @@
  * Chat 授权配置读写工具。
  *
  * 关键点（中文）
- * - 授权静态规则统一写入 console `~/.ship/ship.db`，不再写回项目 `ship.json`。
- * - agent 级配置通过 `agentId = projectRoot` 隔离，供 runtime 与 Console UI 共用。
+ * - 静态授权规则统一写入 console `~/.ship/ship.db`。
+ * - 授权核心模型为 role / permission / binding。
  */
 
 import type { ServiceRuntime } from "@/agent/service/ServiceRuntime.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 import type {
   ChatAuthorizationConfig,
+  ChatAuthorizationPermission,
+  ChatAuthorizationRole,
   ChatChannelAuthorizationConfig,
 } from "@services/chat/types/Authorization.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import { removeAuthorizationPairingRequest } from "@services/chat/runtime/AuthorizationStore.js";
 
 const CHAT_AUTHORIZATION_STORE_KEY = "chat_authorization";
+const CHANNELS: ChatDispatchChannel[] = ["telegram", "feishu", "qq"];
+
+export const DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS: ChatAuthorizationPermission[] = [
+  "chat.dm.use",
+  "chat.group.use",
+  "auth.manage.users",
+  "auth.manage.roles",
+  "agent.view.logs",
+  "agent.manage",
+];
 
 function normalizeText(value: unknown): string | undefined {
   const text = String(value || "").trim();
   return text ? text : undefined;
 }
 
-function normalizeStringList(values: string[] | undefined): string[] | undefined {
-  if (!Array.isArray(values)) return undefined;
-  const normalized = [...new Set(values.map((value) => normalizeText(value)).filter(Boolean) as string[])];
-  return normalized.length > 0 ? normalized : undefined;
+function normalizePermissionList(values: unknown[] | undefined): ChatAuthorizationPermission[] {
+  const allowed = new Set<string>(DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS);
+  if (!Array.isArray(values)) return [];
+  return [...new Set(
+    values
+      .map((value) => normalizeText(value))
+      .filter((value): value is ChatAuthorizationPermission => Boolean(value && allowed.has(value))),
+  )];
 }
 
-function cloneAuthorizationConfig(
-  input: ChatAuthorizationConfig | undefined,
-): ChatAuthorizationConfig {
-  if (!input || typeof input !== "object") return {};
-  return JSON.parse(JSON.stringify(input)) as ChatAuthorizationConfig;
-}
-
-function ensureMutableAuthorizationConfig(config: ChatAuthorizationConfig): ChatAuthorizationConfig {
-  config.channels ??= {};
-  return config;
-}
-
-function ensureMutableChannelAuthorizationConfig(
-  config: ChatAuthorizationConfig,
-  channel: ChatDispatchChannel,
-): ChatChannelAuthorizationConfig {
-  config.channels ??= {};
-  const current = config.channels[channel];
-  if (!current || typeof current !== "object" || Array.isArray(current)) {
-    config.channels[channel] = {};
+function buildDefaultRole(roleId: "default" | "member" | "admin"): ChatAuthorizationRole {
+  if (roleId === "admin") {
+    return {
+      roleId,
+      name: "Admin",
+      permissions: [...DEFAULT_CHAT_AUTHORIZATION_PERMISSIONS],
+    };
   }
-  return config.channels[channel] as ChatChannelAuthorizationConfig;
+  if (roleId === "member") {
+    return {
+      roleId,
+      name: "Member",
+      permissions: [
+        "chat.dm.use",
+        "chat.group.use",
+      ],
+    };
+  }
+  return {
+    roleId,
+    name: "Default",
+    permissions: [],
+  };
+}
+
+function normalizeRoleMap(input: unknown): Record<string, ChatAuthorizationRole> {
+  const roles: Record<string, ChatAuthorizationRole> = {
+    default: buildDefaultRole("default"),
+    member: buildDefaultRole("member"),
+    admin: buildDefaultRole("admin"),
+  };
+  if (!input || typeof input !== "object" || Array.isArray(input)) return roles;
+  for (const [rawRoleId, rawRole] of Object.entries(input)) {
+    const roleId = normalizeText(rawRoleId);
+    if (!roleId) continue;
+    const roleObj = rawRole && typeof rawRole === "object" && !Array.isArray(rawRole)
+      ? rawRole as { name?: unknown; permissions?: unknown[]; roleId?: unknown }
+      : null;
+    if (!roleObj) continue;
+    roles[roleId] = {
+      roleId,
+      name: normalizeText(roleObj.name) || roleId,
+      permissions: normalizePermissionList(roleObj.permissions),
+    };
+  }
+  return roles;
+}
+
+function normalizeBindingMap(input: unknown, roles: Record<string, ChatAuthorizationRole>): Record<string, string> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: Record<string, string> = {};
+  for (const [rawId, rawRoleId] of Object.entries(input)) {
+    const entityId = normalizeText(rawId);
+    const roleId = normalizeText(rawRoleId);
+    if (!entityId || !roleId || !roles[roleId]) continue;
+    out[entityId] = roleId;
+  }
+  return out;
+}
+
+function normalizeChannelConfig(
+  input: unknown,
+  roles: Record<string, ChatAuthorizationRole>,
+): ChatChannelAuthorizationConfig {
+  const raw = input && typeof input === "object" && !Array.isArray(input)
+    ? input as {
+      defaultUserRoleId?: unknown;
+      userRoles?: unknown;
+    }
+    : {};
+  const defaultUserRoleId = normalizeText(raw.defaultUserRoleId) || "default";
+  return {
+    defaultUserRoleId: roles[defaultUserRoleId] ? defaultUserRoleId : "default",
+    userRoles: normalizeBindingMap(raw.userRoles, roles),
+  };
+}
+
+function normalizeAuthorizationConfig(input: unknown): ChatAuthorizationConfig {
+  const raw = input && typeof input === "object" && !Array.isArray(input)
+    ? input as { roles?: unknown; channels?: Record<string, unknown> }
+    : {};
+  const roles = normalizeRoleMap(raw.roles);
+  const channels: Partial<Record<ChatDispatchChannel, ChatChannelAuthorizationConfig>> = {};
+  for (const channel of CHANNELS) {
+    channels[channel] = normalizeChannelConfig(raw.channels?.[channel], roles);
+  }
+  return { roles, channels };
+}
+
+function cloneAuthorizationConfig(input: ChatAuthorizationConfig | undefined): ChatAuthorizationConfig {
+  return normalizeAuthorizationConfig(
+    input ? JSON.parse(JSON.stringify(input)) : {},
+  );
 }
 
 function readAuthorizationConfigFromStoreSync(projectRoot: string): ChatAuthorizationConfig {
   const normalizedProjectRoot = normalizeText(projectRoot);
-  if (!normalizedProjectRoot) return {};
+  if (!normalizedProjectRoot) return normalizeAuthorizationConfig({});
   const store = new ConsoleStore();
   try {
-    return cloneAuthorizationConfig(
+    return normalizeAuthorizationConfig(
       store.getAgentSecureSettingJsonSync<ChatAuthorizationConfig>(
         normalizedProjectRoot,
         CHAT_AUTHORIZATION_STORE_KEY,
-      ) || undefined,
+      ) || {},
     );
   } catch {
-    return {};
+    return normalizeAuthorizationConfig({});
   } finally {
     store.close();
   }
@@ -75,20 +161,27 @@ async function writeAuthorizationConfigToStore(params: {
   nextConfig: ChatAuthorizationConfig;
 }): Promise<void> {
   const normalizedProjectRoot = normalizeText(params.projectRoot);
-  if (!normalizedProjectRoot) {
-    throw new Error("projectRoot is required");
-  }
-  const nextConfig = cloneAuthorizationConfig(params.nextConfig);
+  if (!normalizedProjectRoot) throw new Error("projectRoot is required");
   const store = new ConsoleStore();
   try {
     await store.setAgentSecureSettingJson(
       normalizedProjectRoot,
       CHAT_AUTHORIZATION_STORE_KEY,
-      nextConfig,
+      normalizeAuthorizationConfig(params.nextConfig),
     );
   } finally {
     store.close();
   }
+}
+
+function ensureChannelConfig(
+  config: ChatAuthorizationConfig,
+  channel: ChatDispatchChannel,
+): ChatChannelAuthorizationConfig {
+  config.roles = normalizeRoleMap(config.roles);
+  config.channels ??= {};
+  config.channels[channel] = normalizeChannelConfig(config.channels[channel], config.roles);
+  return config.channels[channel] as ChatChannelAuthorizationConfig;
 }
 
 /**
@@ -125,165 +218,35 @@ export async function writeChatAuthorizationConfig(params: {
 }
 
 /**
- * 允许指定用户访问当前渠道 DM。
+ * 读取渠道的角色列表。
  */
-export async function grantChatAuthorizationUser(params: {
+export function listChatAuthorizationRoles(params: {
+  config: ChatAuthorizationConfig;
+}): ChatAuthorizationRole[] {
+  const config = normalizeAuthorizationConfig(params.config);
+  return Object.values(config.roles || {}).sort((a, b) => a.roleId.localeCompare(b.roleId));
+}
+
+/**
+ * 设置用户角色。
+ */
+export async function setChatAuthorizationUserRole(params: {
   context: ServiceRuntime;
   channel: ChatDispatchChannel;
   userId: string;
-  asOwner?: boolean;
+  roleId: string;
 }): Promise<void> {
   const userId = normalizeText(params.userId);
-  if (!userId) {
-    throw new Error("userId is required");
-  }
-
-  const authorization = ensureMutableAuthorizationConfig(
+  const roleId = normalizeText(params.roleId);
+  if (!userId || !roleId) throw new Error("userId and roleId are required");
+  const authorization = cloneAuthorizationConfig(
     readAuthorizationConfigFromStoreSync(params.context.rootPath),
   );
-  const channelConfig = ensureMutableChannelAuthorizationConfig(
-    authorization,
-    params.channel,
-  );
-  const nextAllowFrom = new Set(channelConfig.allowFrom || []);
-  nextAllowFrom.add(userId);
-  channelConfig.allowFrom = normalizeStringList([...nextAllowFrom]);
-
-  if (params.asOwner === true) {
-    const nextOwnerIds = new Set(channelConfig.ownerIds || []);
-    nextOwnerIds.add(userId);
-    channelConfig.ownerIds = normalizeStringList([...nextOwnerIds]);
-  }
-
-  await writeAuthorizationConfigToStore({
-    projectRoot: params.context.rootPath,
-    nextConfig: authorization,
-  });
-  await removeAuthorizationPairingRequest({
-    context: params.context,
-    channel: params.channel,
-    userId,
-  });
-}
-
-/**
- * 撤销指定用户 DM 授权。
- */
-export async function revokeChatAuthorizationUser(params: {
-  context: ServiceRuntime;
-  channel: ChatDispatchChannel;
-  userId: string;
-}): Promise<void> {
-  const userId = normalizeText(params.userId);
-  if (!userId) return;
-
-  const authorization = ensureMutableAuthorizationConfig(
-    readAuthorizationConfigFromStoreSync(params.context.rootPath),
-  );
-  const channelConfig = ensureMutableChannelAuthorizationConfig(
-    authorization,
-    params.channel,
-  );
-  channelConfig.allowFrom = normalizeStringList(
-    (channelConfig.allowFrom || []).filter((item) => item !== userId),
-  );
-  channelConfig.ownerIds = normalizeStringList(
-    (channelConfig.ownerIds || []).filter((item) => item !== userId),
-  );
-
-  await writeAuthorizationConfigToStore({
-    projectRoot: params.context.rootPath,
-    nextConfig: authorization,
-  });
-}
-
-/**
- * 切换指定用户的 owner 标记。
- */
-export async function setChatAuthorizationOwner(params: {
-  context: ServiceRuntime;
-  channel: ChatDispatchChannel;
-  userId: string;
-  enabled: boolean;
-}): Promise<void> {
-  const userId = normalizeText(params.userId);
-  if (!userId) {
-    throw new Error("userId is required");
-  }
-  const authorization = ensureMutableAuthorizationConfig(
-    readAuthorizationConfigFromStoreSync(params.context.rootPath),
-  );
-  const channelConfig = ensureMutableChannelAuthorizationConfig(
-    authorization,
-    params.channel,
-  );
-  const nextOwnerIds = new Set(channelConfig.ownerIds || []);
-  if (params.enabled) {
-    nextOwnerIds.add(userId);
-    const nextAllowFrom = new Set(channelConfig.allowFrom || []);
-    nextAllowFrom.add(userId);
-    channelConfig.allowFrom = normalizeStringList([...nextAllowFrom]);
-  } else {
-    nextOwnerIds.delete(userId);
-  }
-  channelConfig.ownerIds = normalizeStringList([...nextOwnerIds]);
-
-  await writeAuthorizationConfigToStore({
-    projectRoot: params.context.rootPath,
-    nextConfig: authorization,
-  });
-}
-
-/**
- * 允许指定群 / 频道访问。
- */
-export async function grantChatAuthorizationGroup(params: {
-  context: ServiceRuntime;
-  channel: ChatDispatchChannel;
-  chatId: string;
-}): Promise<void> {
-  const chatId = normalizeText(params.chatId);
-  if (!chatId) {
-    throw new Error("chatId is required");
-  }
-  const authorization = ensureMutableAuthorizationConfig(
-    readAuthorizationConfigFromStoreSync(params.context.rootPath),
-  );
-  const channelConfig = ensureMutableChannelAuthorizationConfig(
-    authorization,
-    params.channel,
-  );
-  const nextGroupAllowFrom = new Set(channelConfig.groupAllowFrom || []);
-  nextGroupAllowFrom.add(chatId);
-  channelConfig.groupAllowFrom = normalizeStringList([...nextGroupAllowFrom]);
-
-  await writeAuthorizationConfigToStore({
-    projectRoot: params.context.rootPath,
-    nextConfig: authorization,
-  });
-}
-
-/**
- * 撤销指定群 / 频道授权。
- */
-export async function revokeChatAuthorizationGroup(params: {
-  context: ServiceRuntime;
-  channel: ChatDispatchChannel;
-  chatId: string;
-}): Promise<void> {
-  const chatId = normalizeText(params.chatId);
-  if (!chatId) return;
-  const authorization = ensureMutableAuthorizationConfig(
-    readAuthorizationConfigFromStoreSync(params.context.rootPath),
-  );
-  const channelConfig = ensureMutableChannelAuthorizationConfig(
-    authorization,
-    params.channel,
-  );
-  channelConfig.groupAllowFrom = normalizeStringList(
-    (channelConfig.groupAllowFrom || []).filter((item) => item !== chatId),
-  );
-
+  authorization.roles = normalizeRoleMap(authorization.roles);
+  const channelConfig = ensureChannelConfig(authorization, params.channel);
+  if (!authorization.roles?.[roleId]) throw new Error(`Unknown roleId: ${roleId}`);
+  channelConfig.userRoles ??= {};
+  channelConfig.userRoles[userId] = roleId;
   await writeAuthorizationConfigToStore({
     projectRoot: params.context.rootPath,
     nextConfig: authorization,

@@ -1,4 +1,4 @@
 {
   "title": "Commands",
-  "pages": ["console", "agent", "service", "extension"]
+  "pages": ["console", "agent", "service", "plugin"]
 }

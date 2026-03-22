@@ -1,51 +1,36 @@
 ---
 title: Service Runtime
-description: Service 的职责、运行位置与运维方式
+description: 说明 Service 是什么、在哪里运行，以及如何与 plugin 和 capability 协作
 ---
 
 # Service Runtime
 
-Service 是 Agent Runtime 里的核心业务模块。
+Service 是核心业务工作流模块。
 
-常见内置 service：
+典型内置 service：
 
 - `chat`
 - `skill`
 - `task`
 - `memory`
 
-## 1. Service 的核心职责
+## Service 应该负责什么
 
-- 对外提供 command/action（CLI 与 HTTP 都可调用）。
-- 通过注册机制告诉 agent：有哪些能力、每个 action 的入参与语义是什么。
-- 承载业务流程与状态落盘（`.ship/*`）。
+- 用户主流程
+- 运行时编排
+- 上下文感知执行
+- 稳定的 service actions
 
-## 2. 调用方向（关键）
+## Service 不应该负责什么
 
-- `agent -> service`：agent 在执行阶段调度 service action。
-- `service -> service`：service 之间可以互调。
-- `service -> extension`：service 可以直接调用 extension 能力。
-- `extension -/-> service`：extension 不负责反向编排业务流程。
+- 外部依赖的 install/check/config
+- plugin 私有实现细节
+- 可复用但应解耦的增强逻辑
 
-例如：`chat` service 在语音附件场景会直接调用 `voice` extension 的转写 action。
+## 推荐调用模型
 
-## 3. 作用域与隔离
+- service -> capability
+- capability -> plugin 实现
+- plugin -> asset
 
-- Service 配置是 **每个 agent 项目独立** 的：`ship.json.services.*`。
-- 不同 agent 可启用不同 service 组合、不同参数与不同运行环境。
-
-## 4. 常用运维命令
-
-```bash
-city service list
-city service status chat
-city service restart task
-city service command memory search --payload '{"query":"release"}'
-```
-
-## 相关文档
-
-- [`city service`](/zh/docs/commands/service/service)
-- [Service 与 Extension 区别](/zh/docs/concepts/service-vs-extension)
-- [Extension Runtime](/zh/docs/concepts/extension-runtime)
-- [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)
+例如 `chat` 不需要知道 voice 模型细节，只调用 `audio.transcribe` 即可。

@@ -1,154 +1,32 @@
 ---
 title: 端口与实例生命周期
-description: 说明 console、agent、service、extension 的端口分配、调用链路与实例生成规则
+description: 说明 console、agent、service、plugin 的端口分配、路由与生命周期
 ---
 
 # 端口与实例生命周期
 
-这页集中说明一个问题：`console`、`agent`、`service`、`extension` 在运行时如何协同，尤其是端口由谁分配、命令如何路由、实例何时创建和销毁。
+## 统一规则
 
-## 1) 统一原则
+- agent 端口由 `console` 分配。
+- `city agent start/restart` 不要求用户手工管端口。
+- `service` / `plugin` 命令先找目标 agent，再找 endpoint。
 
-- `agent` 端口由 `console` 统一分配。
-- `city agent start/restart` 不再提供 `--port`。
-- `service/extension` 命令默认不直连“固定端口”，而是先解析目标 agent，再按优先级解析 endpoint。
+## 运行时角色
 
-## 2) 四层运行角色
+### console
 
-### console（全局控制面）
+- 维护 `~/.ship/console/agents.json`
+- 启停 agent daemon
+- 分配端口
 
-- 负责维护全局 registry（`~/.ship/console/agents.json`）。
-- 负责管理 agent daemon 生命周期（启动、停止、重启、状态汇总）。
-- 负责给 agent 分配运行端口（自动挑选可用端口）。
+### agent
 
-### agent（项目运行面）
+- 一个项目对应一个 daemon
+- runtime API 包括 `/api/services/*`、`/api/plugins/*`
+- debug 信息写入 `.ship/.debug`
 
-- 每个 agent 项目对应一个 daemon 进程。
-- daemon 启动参数会写入项目级调试元信息（`.ship/.debug/downcity.daemon.json`）。
-- 该进程承载 HTTP runtime API（`/api/services/*`、`/api/extensions/*` 等）。
+### service / plugin
 
-### service（能力域）
-
-- `city service ...` 与 `city <service> <action>` 都是调用 agent runtime API。
-- 先解析“目标 agent 项目”，再解析 host/port，最后请求 `/api/services/*`。
-
-### extension（扩展域）
-
-- `city extension ...` 与 `city <extension> <action>` 通过 `/api/extensions/*` 访问 agent runtime。
-- `voice` 在 runtime 不可达时存在本地兜底执行路径（仅特定动作）。
-
-## 3) agent 端口分配与实例生成
-
-### 启动 `city agent start`
-
-1. 校验 console 已启动。
-2. 校验项目初始化文件（`ship.json`、`PROFILE.md`）。
-3. console 分配一个可用端口。
-4. 以 daemon 方式拉起前台子进程：
-
-```bash
-agent start <projectRoot> --foreground true --port <allocatedPort> --host <host>
-```
-
-5. 写入 `.ship/.debug` 下的 pid/log/meta。
-6. 登记到 console registry。
-
-### 自动分配算法（当前实现）
-
-- 分配入口：`console/daemon/PortAllocator`
-- 默认端口范围：`5314-6399`（保留 `5315` 给 Console UI）
-- 探测 host：使用 agent 实际监听 host（默认 `0.0.0.0`）
-- 分配策略：从小到大顺序扫描，返回第一个可监听端口
-- 失败条件：范围内无可用端口，启动报错
-
-等价伪代码：
-
-```text
-host = start.host || "0.0.0.0"
-for port in [5314..6399]:
-  if port == 5315:
-    continue
-  if canListen(host, port):
-    return port
-throw "No available port"
-```
-
-实现特性说明：
-
-- 没有中心锁（不做跨进程强一致分布式锁），最终以真实 `listen` 成功为准。
-- 因为按目标 host 探测，可避免“127.0.0.1 看起来可用，但 0.0.0.0 实际冲突”的误判。
-- daemon 启动参数会写入 `.ship/.debug/downcity.daemon.json`，后续 service/extension 会优先参考该信息路由。
-
-### 重启 `city agent restart`
-
-1. 停止旧 daemon。
-2. console 重新分配端口并拉起新进程。
-3. 刷新 registry 记录。
-
-说明：重启后端口可能变化，这是设计预期。
-
-### 与 Console UI 端口关系
-
-- Console UI 默认端口固定为 `5315`。
-- agent 自动分配会跳过 `5315`，避免与 UI 冲突。
-
-## 4) service/extension 调用如何找到目标 agent
-
-`service` 命令目标解析顺序：
-
-1. `--agent <name>`
-2. 若 path 默认 `.`，优先 `DC_AGENT_NAME`
-3. `--path` / 当前目录
-4. 若为 `.` 且存在 `DC_AGENT_PATH`，优先该路径
-
-然后强校验：
-
-- 目标必须已在 console registry 注册。
-- 目标目录必须包含 `ship.json` 与 `PROFILE.md`（service 命令）。
-
-`extension` 命令默认按 `--path`/当前目录解析目标项目，再走 endpoint 解析。
-
-## 5) endpoint（host/port）解析顺序
-
-service/extension/action 调用 runtime API 时，解析优先级：
-
-1. CLI 显式 `--host` / `--port`（仅调试建议使用）
-2. `DC_SERVER_HOST/PORT`
-3. `DC_CTX_SERVER_HOST/PORT`
-4. daemon meta 中记录的 `--host/--port`
-5. 默认 `127.0.0.1:5314`
-
-归一化规则：
-
-- `0.0.0.0` / `::` 会转为 `127.0.0.1` 供客户端连接。
-
-## 6) 常见端口问题与处理
-
-### `state=stale` 且 `pid file exists but process is not alive`
-
-表示 daemon 启动后异常退出（常见是端口冲突）。
-
-处理：
-
-```bash
-city agent doctor <path> --fix
-city agent restart <path>
-```
-
-### “已有 agent 在跑，第二个 agent 启动失败”
-
-典型原因是旧版本或脏状态导致尝试监听同端口。
-
-排查：
-
-```bash
-city console agents
-lsof -nP -iTCP:<port> -sTCP:LISTEN
-tail -n 200 <agentPath>/.ship/.debug/downcity.daemon.log
-```
-
-## 7) 实践建议
-
-- 多 agent 并行时，优先使用 `city service ... --agent <name>`。
-- 不要在 shell 长期保留手工导出的 `DC_SERVER_PORT`。
-- 遇到状态异常先 `doctor --fix`，再 `restart`，最后看 daemon log。
+- `city service ...` 走 service 路由
+- `city plugin ...` 走 plugin 路由
+- 都在目标 runtime 内部分发

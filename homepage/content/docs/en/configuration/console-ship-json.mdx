@@ -22,7 +22,7 @@ Console-global config is unified in:
 2. Console-global env (`global_env`)
 3. Agent-private env (`agent_env`)
 4. Bot account vault (`channel_accounts`)
-5. Console-global extension config (`extensions_config`)
+5. Project plugin config (`plugins.*`, `assets.*`)
 
 Sensitive fields (such as API keys) are stored encrypted.
 
@@ -53,7 +53,7 @@ Key behavior:
 2. `.env` remains agent-local and does not mutate global `process.env`.
 3. `ship.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
-5. Extension config is read from `extensions_config`.
+5. Plugin config is read from project `ship.json`.
 
 ## Common operations
 
@@ -63,11 +63,11 @@ Initialize Console (writes into `ship.db`):
 city console init
 ```
 
-Read/update console extension config:
+Read/update project plugin config:
 
 ```bash
-city console config get extensions.voice
-city console config set extensions.voice.enabled true
+city console config get plugins.voice
+city console config set plugins.voice.enabled true
 ```
 
 Manage model pool:

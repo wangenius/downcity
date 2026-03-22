@@ -1,0 +1,43 @@
+---
+title: city voice
+description: Manage the built-in voice plugin and its transcriber asset
+---
+
+# `city voice`
+
+`city voice` is the short command group for the built-in voice plugin.
+
+## What it manages
+
+- plugin behavior such as enable/disable
+- the `voice.transcriber` asset
+- active transcription model
+- local audio transcription
+
+## Common examples
+
+```bash
+# enable voice and install a model
+city voice on SenseVoiceSmall
+
+# inspect plugin + asset status
+city voice status
+
+# switch active model
+city voice use whisper-large-v3-turbo
+
+# transcribe one local file
+city voice transcribe ./demo.ogg
+```
+
+## Notes
+
+- `city voice on` enables the plugin and optionally installs the asset in one step.
+- The voice plugin exposes the `audio.transcribe` capability to chat channels such as Telegram and QQ.
+- Configuration is persisted to project `ship.json` under `plugins.voice` and `assets["voice.transcriber"]`.
+
+## Related
+
+- [`city plugin`](/en/docs/commands/plugin/plugin)
+- [`Telegram`](/en/docs/services/chat/telegram)
+- [`QQ`](/en/docs/services/chat/qq)

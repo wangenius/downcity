@@ -1,0 +1,33 @@
+---
+title: city plugin
+description: 查看插件可用性并转发插件动作
+---
+
+# `city plugin`
+
+`city plugin` 是新插件系统的通用入口。
+
+适合用来：
+
+- 查看当前 agent runtime 注册了哪些 plugin
+- 检查某个 plugin 是否可用
+- 不使用短命令别名时，显式调用某个 plugin action
+
+## 常用示例
+
+```bash
+city plugin list
+city plugin status voice
+city plugin action voice status
+```
+
+## 说明
+
+- `city plugin ...` 需要连接目标 agent runtime，所以先执行 `city agent start`。
+- plugin 行为配置写入项目 `ship.json` 的 `plugins.*`。
+- plugin 依赖的 asset 配置写入项目 `ship.json` 的 `assets.*`。
+
+## 相关页面
+
+- [`city voice`](/zh/docs/commands/plugin/voice)
+- [`CLI 命令`](/zh/docs/reference/cli)

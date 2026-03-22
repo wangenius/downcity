@@ -41,8 +41,8 @@ import type {
   UiChannelAccountProbeResult,
   UiOverviewResponse,
   UiPromptResponse,
-  UiExtensionRuntimeItem,
-  UiExtensionsResponse,
+  UiPluginRuntimeItem,
+  UiPluginsResponse,
   UiServiceItem,
   UiServicesResponse,
   UiSkillListResponse,
@@ -143,6 +143,25 @@ function formatTime(ts?: number | string): string {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
+function normalizePluginState(item: UiPluginRuntimeItem): string {
+  const enabled = item.availability?.enabled === true;
+  const available = item.availability?.available === true;
+  if (!enabled) return "disabled";
+  if (available) return "available";
+  return "unavailable";
+}
+
+function normalizePluginRuntimeItems(items: UiPluginRuntimeItem[]): UiPluginRuntimeItem[] {
+  return items.map((item) => {
+    const reasons = Array.isArray(item.availability?.reasons) ? item.availability?.reasons : [];
+    return {
+      ...item,
+      state: normalizePluginState(item),
+      lastError: reasons.length > 0 ? reasons.join("; ") : "",
+    };
+  });
+}
+
 /**
  * 异步等待工具。
  */
@@ -217,9 +236,9 @@ export interface UseConsoleDashboardResult {
    */
   skills: UiSkillSummaryItem[];
   /**
-   * extension 状态列表。
+   * plugin 状态列表。
    */
-  extensions: UiExtensionRuntimeItem[];
+  plugins: UiPluginRuntimeItem[];
   /**
    * chat 渠道状态列表。
    */
@@ -357,9 +376,9 @@ export interface UseConsoleDashboardResult {
    */
   refreshChatChannels: (agentId: string) => Promise<UiChatChannelStatus[]>;
   /**
-   * 刷新 extension 状态。
+   * 刷新 plugin 状态。
    */
-  refreshExtensions: () => Promise<void>;
+  refreshPlugins: () => Promise<void>;
   /**
    * 刷新 skills 列表。
    */
@@ -426,32 +445,19 @@ export interface UseConsoleDashboardResult {
    * 执行授权动作。
    */
   runAuthorizationAction: (input: {
-    action:
-      | "approvePairing"
-      | "rejectPairing"
-      | "grantUser"
-      | "revokeUser"
-      | "setOwner"
-      | "grantGroup"
-      | "revokeGroup";
+    action: "setUserRole";
     channel: "telegram" | "feishu" | "qq";
     userId?: string;
-    chatId?: string;
-    enabled?: boolean;
-    asOwner?: boolean;
+    roleId?: string;
   }) => Promise<void>;
   /**
    * 控制 service。
    */
   controlService: (serviceName: string, action: string) => Promise<void>;
   /**
-   * 控制 extension。
+   * 运行 plugin action。
    */
-  controlExtension: (extensionName: string, action: "start" | "stop" | "restart") => Promise<void>;
-  /**
-   * 测试 extension 可用性（status）。
-   */
-  testExtension: (extensionName: string) => Promise<void>;
+  runPluginAction: (pluginName: string, actionName: string) => Promise<void>;
   /**
    * 执行 chat 渠道动作。
    */
@@ -619,7 +625,6 @@ export interface UseConsoleDashboardResult {
     appSecret?: string;
     domain?: string;
     sandbox?: boolean;
-    authId?: string;
     clearBotToken?: boolean;
     clearAppId?: boolean;
     clearAppSecret?: boolean;
@@ -702,7 +707,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [authorization, setAuthorization] = useState<UiChatAuthorizationResponse | null>(null);
   const [services, setServices] = useState<UiServiceItem[]>([]);
   const [skills, setSkills] = useState<UiSkillSummaryItem[]>([]);
-  const [extensions, setExtensions] = useState<UiExtensionRuntimeItem[]>([]);
+  const [plugins, setPlugins] = useState<UiPluginRuntimeItem[]>([]);
   const [chatChannels, setChatChannels] = useState<UiChatChannelStatus[]>([]);
   const [contexts, setContexts] = useState<UiContextSummary[]>([]);
   const [selectedContextId, setSelectedContextId] = useState("");
@@ -828,7 +833,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setAuthorization(null);
     setServices([]);
     setSkills([]);
-    // 关键点（中文）：extensions 作为全局页信息，保留上次快照，避免无 agent 时整块消失。
+    // 关键点（中文）：plugins 作为全局页信息，保留上次快照，避免无 agent 时整块消失。
     setChatChannels([]);
     setContexts([]);
     setSelectedContextId("");
@@ -1078,10 +1083,11 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
-  const refreshExtensions = useCallback(
+  const refreshPlugins = useCallback(
     async () => {
-      const data = await requestJson<UiExtensionsResponse>("/api/ui/extensions");
-      setExtensions(Array.isArray(data.extensions) ? data.extensions : []);
+      const data = await requestJson<UiPluginsResponse>("/api/ui/plugins");
+      const list = Array.isArray(data.plugins) ? data.plugins : [];
+      setPlugins(normalizePluginRuntimeItems(list));
     },
     [requestJson],
   );
@@ -1467,7 +1473,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           clearPanelDataForNoAgent();
           // 关键点（中文）：无 agent 也要保留并刷新全局 model/pool/config 信息。
           await Promise.allSettled([
-            refreshExtensions(),
+            refreshPlugins(),
             refreshModel(""),
             refreshModelPool(),
             refreshChannelAccounts(),
@@ -1485,7 +1491,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           // 关键点（中文）：未启动 agent 仅渲染静态概览，避免请求 runtime 接口造成 503 噪音。
           clearPanelDataForNoAgent();
           await Promise.allSettled([
-            refreshExtensions(),
+            refreshPlugins(),
             refreshModel(nextAgentId),
             refreshModelPool(),
             refreshChannelAccounts(),
@@ -1505,7 +1511,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
         await Promise.all([
           refreshAuthorization(nextAgentId),
-          refreshExtensions(),
+          refreshPlugins(),
           refreshOverview(nextAgentId),
           refreshServices(nextAgentId),
           refreshSkills(nextAgentId),
@@ -1572,7 +1578,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           setSelectedAgentId("");
           // 关键点（中文）：离线自愈分支同样要保留并刷新全局 model/pool/config。
           await Promise.allSettled([
-            refreshExtensions(),
+            refreshPlugins(),
             refreshModel(""),
             refreshModelPool(),
             refreshChannelAccounts(),
@@ -1599,7 +1605,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshContextArchives,
       refreshContextMessages,
       refreshContexts,
-      refreshExtensions,
+      refreshPlugins,
       refreshAuthorization,
       refreshLocalChat,
       refreshLogs,
@@ -1634,43 +1640,28 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshServices, refreshSkills, requestJson, selectedAgentId, showToast],
   );
 
-  const controlExtension = useCallback(
-    async (extensionName: string, action: "start" | "stop" | "restart") => {
-      try {
-        await requestJson("/api/extensions/control", {
-          method: "POST",
-          body: JSON.stringify({ extensionName, action }),
-        });
-        showToast(`extension ${extensionName} ${action} 已执行`, "success");
-        await refreshExtensions();
-      } catch (error) {
-        showToast(`extension 操作失败: ${getErrorMessage(error)}`, "error");
-      }
-    },
-    [refreshExtensions, requestJson, showToast],
-  );
-
-  const testExtension = useCallback(
-    async (extensionName: string) => {
+  const runPluginAction = useCallback(
+    async (pluginName: string, actionName: string) => {
       try {
         const result = await requestJson<{
           success?: boolean;
           message?: string;
-          extension?: {
-            state?: string;
-          };
-        }>("/api/extensions/control", {
+          error?: string;
+        }>("/api/plugins/action", {
           method: "POST",
-          body: JSON.stringify({ extensionName, action: "status" }),
+          body: JSON.stringify({ pluginName, actionName }),
         });
-        const state = String(result?.extension?.state || "").trim() || "unknown";
-        showToast(`extension ${extensionName} test: ${state}`, result?.success ? "success" : "error");
-        await refreshExtensions();
+        const message = String(result?.message || result?.error || `${pluginName} ${actionName}`).trim();
+        showToast(
+          `plugin ${pluginName} ${actionName}: ${message}`,
+          result?.success ? "success" : "error",
+        );
+        await refreshPlugins();
       } catch (error) {
-        showToast(`extension test 失败: ${getErrorMessage(error)}`, "error");
+        showToast(`plugin 操作失败: ${getErrorMessage(error)}`, "error");
       }
     },
-    [refreshExtensions, requestJson, showToast],
+    [refreshPlugins, requestJson, showToast],
   );
 
   const runChatChannelAction = useCallback(
@@ -1779,19 +1770,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   const runAuthorizationAction = useCallback(
     async (input: {
-      action:
-        | "approvePairing"
-        | "rejectPairing"
-        | "grantUser"
-        | "revokeUser"
-        | "setOwner"
-        | "grantGroup"
-        | "revokeGroup";
+      action: "setUserRole";
       channel: "telegram" | "feishu" | "qq";
       userId?: string;
-      chatId?: string;
-      enabled?: boolean;
-      asOwner?: boolean;
+      roleId?: string;
     }) => {
       if (!selectedAgentId) {
         showToast("当前无可用 agent", "error");
@@ -2792,7 +2774,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       appSecret?: string;
       domain?: string;
       sandbox?: boolean;
-      authId?: string;
       clearBotToken?: boolean;
       clearAppId?: boolean;
       clearAppSecret?: boolean;
@@ -3110,7 +3091,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     authorization,
     services,
     skills,
-    extensions,
+    plugins,
     chatChannels,
     contexts,
     selectedContextId,
@@ -3145,7 +3126,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshDashboard,
     refreshAuthorization,
     refreshChatChannels,
-    refreshExtensions,
+    refreshPlugins,
     refreshSkills,
     refreshContexts,
     refreshChannelHistory,
@@ -3160,8 +3141,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshConfigStatus,
     refreshLocalChat,
     controlService,
-    controlExtension,
-    testExtension,
+    runPluginAction,
     runChatChannelAction,
     configureChatChannel,
     saveAuthorizationConfig,

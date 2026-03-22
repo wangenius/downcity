@@ -45,7 +45,6 @@ type ChannelAccountFormState = {
   creator: string
   domain: string
   sandbox: boolean
-  authId: string
   botToken: string
   appId: string
   appSecret: string
@@ -71,7 +70,6 @@ function createEmptyForm(): ChannelAccountFormState {
     creator: "",
     domain: "",
     sandbox: false,
-    authId: "",
     botToken: "",
     appId: "",
     appSecret: "",
@@ -134,13 +132,11 @@ function buildMetaText(item: UiChannelAccountItem): string {
   const identity = String(item.identity || "").trim()
   const owner = String(item.owner || "").trim()
   const creator = String(item.creator || "").trim()
-  const authId = String(item.authId || "").trim()
   const domain = String(item.domain || "").trim()
   const channel = String(item.channel || "").trim().toLowerCase()
   if (identity) parts.push(`Bot: ${identity}`)
   if (owner) parts.push(`Owner: ${owner}`)
   if (creator) parts.push(`Creator: ${creator}`)
-  if (authId) parts.push(`Auth: ${authId}`)
   if (channel === "feishu" && domain) parts.push(`Domain: ${domain}`)
   if (channel === "qq") parts.push(`Sandbox: ${item.sandbox === true ? "on" : "off"}`)
   parts.push(`Creds: ${credentialSummary(item)}`)
@@ -162,7 +158,6 @@ export interface GlobalChannelAccountsSectionProps {
     appSecret?: string
     domain?: string
     sandbox?: boolean
-    authId?: string
   }) => Promise<void> | void
   onProbe: (input: {
     channel: string
@@ -239,7 +234,6 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
       creator: String(item.creator || "").trim(),
       domain: String(item.domain || "").trim(),
       sandbox: item.sandbox === true,
-      authId: String(item.authId || "").trim(),
       botToken: "",
       appId: "",
       appSecret: "",
@@ -295,7 +289,6 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
         creator: trimText(form.creator) || undefined,
         domain: trimText(form.domain) || undefined,
         sandbox: form.sandbox,
-        authId: trimText(form.authId) || undefined,
         botToken: trimText(form.botToken) || undefined,
         appId: trimText(form.appId) || undefined,
         appSecret: trimText(form.appSecret) || undefined,

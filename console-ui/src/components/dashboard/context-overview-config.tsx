@@ -280,7 +280,6 @@ function resolveEnvFallbackSummaryKey(envKey: string): string | undefined {
   if (key.endsWith("_BOT_TOKEN")) return "botTokenConfigured"
   if (key.endsWith("_APP_SECRET")) return "appSecretConfigured"
   if (key.endsWith("_APP_ID")) return "appId"
-  if (key.endsWith("_AUTH_ID")) return "authId"
   if (key.endsWith("_DOMAIN")) return "domain"
   if (key.endsWith("_SANDBOX")) return "sandbox"
   return undefined

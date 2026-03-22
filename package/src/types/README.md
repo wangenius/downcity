@@ -12,6 +12,18 @@
 - `Json.ts`
   - 定义 `JsonPrimitive`、`JsonValue`、`JsonObject`。
   - 作为跨模块传输结构化数据时的统一约束（配置、日志 details、服务 payload 等）。
+- `Asset.ts`
+  - 定义 `Asset`、`AssetPort`、`AssetCheckResult`、`AssetInstallResult`。
+  - 用于新的插件资产体系，统一表达底层资源对象与其调用协议。
+- `Plugin.ts`
+  - 定义 `Plugin`、`PluginAction`、`CapabilityPort`、`PluginPort` 等。
+  - 用于新的声明式插件体系，统一表达插件行为、可用性与显式调用协议。
+- `VoicePlugin.ts`
+  - 定义 `VoicePluginConfig`、`VoiceTranscriberAssetConfig`、`VoiceTranscriberHandle`。
+  - 用于 voice 插件第一阶段迁移，拆分插件行为配置与底层转写资产配置。
+- `PluginApi.ts`
+  - 定义 `PluginListResponse`、`PluginAvailabilityResponse`、`PluginActionResponse`。
+  - 用于 plugin CLI / HTTP 桥接层，统一描述管理面协议。
 
 ## 设计原则
 

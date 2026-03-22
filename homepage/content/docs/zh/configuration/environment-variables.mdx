@@ -45,7 +45,6 @@ sequenceDiagram
   CLI->>DB: 读取 env_entries(scope=agent, agent_id 匹配)
   CLI->>ENV: 解析项目 .env
   CLI->>CLI: 生成 runtime env = agent scope DB env + .env（.env 优先）
-  CLI->>DB: 读取 extensions_config
   CLI->>JSON: 读取并合并 ship.json
   CLI->>CLI: 按作用域解析 ${ENV_KEY}
   CLI->>DB: 按 channelAccountId 解析渠道账户
@@ -87,7 +86,7 @@ sequenceDiagram
 ### 4.2 不会读取项目 `.env`
 
 1. 模型池（`model_providers`、`models`）只来自 `ship.db`。
-2. extension 全局配置来自 `console_secure_settings.extensions_config`。
+2. plugin 配置来自项目 `ship.json`（`plugins.*`、`assets.*`）。
 3. bot 凭据源只来自 `channel_accounts`。
 4. `DC_CTX_*` 是请求时生成，不属于配置持久层。
 
@@ -96,7 +95,7 @@ sequenceDiagram
 1. Console UI `Global / Env`：写 `env_entries`（`scope=global/agent`）。
 2. Channel Accounts 页面：写 `channel_accounts`。
 3. 模型管理（CLI/UI）：写 `model_providers`、`models`。
-4. `extensions.*` 配置：写 `extensions_config`。
+4. `plugins.*` / `assets.*` 配置：写项目 `ship.json`。
 5. 渠道配置：仅写 `ship.json` 的 `enabled` 与 `channelAccountId`。
 6. 用户手工改 `<agent>/.env`：仅影响当前 agent runtime。
 
@@ -125,7 +124,7 @@ flowchart TD
 ```bash
 city console init
 city console model create
-city console config set extensions.voice.enabled true
+city plugin action voice configure --payload '{"enabled": true}'
 ```
 
 2. 在 Console UI `Global / Env` 维护共享 env（写 `env_entries`）。

@@ -93,7 +93,6 @@ export const channelAccountsTable = sqliteTable(
     appSecretEncrypted: text("app_secret_encrypted"),
     domain: text("domain"),
     sandbox: integer("sandbox"),
-    authId: text("auth_id"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },

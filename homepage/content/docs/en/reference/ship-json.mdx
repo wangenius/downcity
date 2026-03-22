@@ -25,7 +25,7 @@ Model config is now split into two layers:
 
 `model.primary` must match an existing model id in `~/.ship/ship.db`.
 
-Project `ship.json` should not configure `extensions.*`.
+Project `ship.json` should use `plugins.*` and `assets.*` for plugin configuration.
 
 ## Console-global model pool
 
@@ -52,10 +52,28 @@ At agent runtime:
 
 If any link is missing, startup fails fast.
 
-## Extension scope
+## Plugin scope
 
-`extensions.*` is console-global and loaded from `~/.ship/ship.db` (`extensions_config`).
-Project-level `ship.json` is not the place to configure extensions.
+Plugin behavior is configured in project `ship.json` under `plugins.*`.
+Plugin dependencies are configured in project `ship.json` under `assets.*`.
+
+Example for voice:
+
+```json
+{
+  "plugins": {
+    "voice": {
+      "enabled": true
+    }
+  },
+  "assets": {
+    "voice.transcriber": {
+      "provider": "local",
+      "modelId": "SenseVoiceSmall"
+    }
+  }
+}
+```
 
 ## Chat channel binding
 

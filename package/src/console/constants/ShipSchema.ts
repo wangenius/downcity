@@ -105,7 +105,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
         },
       },
     },
-    extensions: {
+    plugins: {
       type: "object",
       additionalProperties: true,
       properties: {
@@ -114,8 +114,22 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
           additionalProperties: true,
           properties: {
             enabled: { type: "boolean" },
-            provider: { type: "string", enum: ["local"] },
-            activeModel: {
+            injectPrompt: { type: "boolean" },
+            augmentMessage: { type: "boolean" },
+          },
+        },
+      },
+    },
+    assets: {
+      type: "object",
+      additionalProperties: true,
+      properties: {
+        "voice.transcriber": {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            provider: { type: "string", enum: ["local", "command"] },
+            modelId: {
               type: "string",
               enum: [
                 "SenseVoiceSmall",
@@ -124,6 +138,14 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
               ],
             },
             modelsDir: { type: "string" },
+            pythonBin: { type: "string" },
+            command: { type: "string" },
+            language: { type: "string" },
+            timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+            strategy: {
+              type: "string",
+              enum: ["auto", "funasr", "transformers-whisper", "command"],
+            },
             installedModels: {
               type: "array",
               items: {
@@ -133,25 +155,6 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
                   "paraformer-zh-streaming",
                   "whisper-large-v3-turbo",
                 ],
-              },
-            },
-            transcribe: {
-              type: "object",
-              additionalProperties: true,
-              properties: {
-                strategy: {
-                  type: "string",
-                  enum: [
-                    "auto",
-                    "funasr",
-                    "transformers-whisper",
-                    "command",
-                  ],
-                },
-                command: { type: "string" },
-                timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
-                pythonBin: { type: "string" },
-                language: { type: "string" },
               },
             },
           },

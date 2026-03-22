@@ -6,7 +6,6 @@ import { createModel } from "@console/model/CreateModel.js";
 import type {
   ServiceRuntime,
   ServiceContext,
-  ExtensionInvokePort,
   ServiceInvokePort,
 } from "@/agent/service/ServiceRuntime.js";
 import {
@@ -20,7 +19,11 @@ import {
   parseTaskRunContextId,
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@agent/service/Manager.js";
-import { runExtensionCommand } from "@console/extension/Manager.js";
+import { CapabilityRegistry } from "@/console/plugin/CapabilityRegistry.js";
+import { HookRegistry } from "@/console/plugin/HookRegistry.js";
+import { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
+import { PluginRegistry } from "@/console/plugin/PluginRegistry.js";
+import { registerBuiltinPlugins } from "@/console/plugin/Plugins.js";
 import { setShellToolRuntime, shellTools } from "@agent/tools/shell/Tool.js";
 import { getRequestContext } from "@agent/context/manager/RequestContext.js";
 import { FilePersistor } from "@/agent/context/context-agent/components/FilePersistor.js";
@@ -32,6 +35,20 @@ import {
   PromptRuntime,
 } from "@agent/prompts/PromptRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
+import type {
+  AssetInstallInput,
+  AssetPort,
+  AssetCheckResult,
+  AssetInstallResult,
+  StructuredConfig,
+} from "@/types/Asset.js";
+import type {
+  CapabilityInvokeResult,
+  CapabilityPort,
+  PluginAvailability,
+  PluginPort,
+  PluginRuntimeView,
+} from "@/types/Plugin.js";
 import path from "path";
 import type { LanguageModel } from "ai";
 
@@ -74,6 +91,21 @@ let base: RuntimeStateBase | null = null;
 let ready: RuntimeState | null = null;
 let promptRuntime: PromptRuntime | null = null;
 let serviceModel: LanguageModel | null = null;
+
+const capabilityRegistry = new CapabilityRegistry(() => getPluginRuntimeState());
+const hookRegistry = new HookRegistry(() => getPluginRuntimeState());
+const assetRegistry = new AssetRegistry(() => getPluginRuntimeState());
+const pluginRegistry = new PluginRegistry({
+  runtimeResolver: () => getPluginRuntimeState(),
+  capabilityRegistry,
+  hookRegistry,
+  assetRegistry,
+});
+
+registerBuiltinPlugins({
+  assetRegistry,
+  pluginRegistry,
+});
 
 /**
  * 读取 service 运行时模型（必填）。
@@ -184,50 +216,83 @@ const serviceInvokePort: ServiceInvokePort = {
 };
 
 /**
- * extension 调用端口实现。
+ * capability 调用端口实现。
  *
  * 关键点（中文）
- * - services 通过 extensions.invoke 调用 extension action。
- * - main 侧负责分发与错误语义统一。
+ * - 主动能力调用统一通过 capability 名称路由。
+ * - 这是新插件体系最核心的显式调用入口。
  */
-const extensionInvokePort: ExtensionInvokePort = {
+const capabilityInvokePort: CapabilityPort = {
+  list(): string[] {
+    return capabilityRegistry.list();
+  },
+  has(capabilityName: string): boolean {
+    return capabilityRegistry.has(capabilityName);
+  },
   async invoke(params: {
-    extension: string;
+    capability: string;
+    payload?: JsonValue;
+  }): Promise<CapabilityInvokeResult> {
+    return capabilityRegistry.invoke(params);
+  },
+};
+
+/**
+ * asset 调用端口实现。
+ *
+ * 关键点（中文）
+ * - Asset 负责底层资源检查、安装、解析与配置读写。
+ * - Plugin 与业务代码都不应直接拼装模型/依赖安装逻辑。
+ */
+const assetPort: AssetPort = {
+  list() {
+    return assetRegistry.list();
+  },
+  async check(assetName: string): Promise<AssetCheckResult> {
+    return assetRegistry.check(assetName);
+  },
+  async install<TInstallInput extends AssetInstallInput = AssetInstallInput>(
+    assetName: string,
+    input?: TInstallInput,
+  ): Promise<AssetInstallResult> {
+    return assetRegistry.install(assetName, input);
+  },
+  async use<THandle = unknown>(assetName: string): Promise<THandle> {
+    return assetRegistry.use<THandle>(assetName);
+  },
+  async getConfig<TConfig extends StructuredConfig = StructuredConfig>(
+    assetName: string,
+  ): Promise<TConfig | null> {
+    return assetRegistry.getConfig<TConfig>(assetName);
+  },
+  async setConfig<TConfig extends StructuredConfig = StructuredConfig>(
+    assetName: string,
+    value: Partial<TConfig>,
+  ): Promise<TConfig> {
+    return assetRegistry.setConfig<TConfig>(assetName, value);
+  },
+};
+
+/**
+ * plugin 调用端口实现。
+ *
+ * 关键点（中文）
+ * - Plugin 不再维护运行状态，而是暴露声明式能力面。
+ * - 当前先支持 list / availability / runAction 三个最小能力。
+ */
+const pluginPort: PluginPort = {
+  list(): PluginRuntimeView[] {
+    return pluginRegistry.list();
+  },
+  async availability(pluginName: string): Promise<PluginAvailability> {
+    return pluginRegistry.availability(pluginName);
+  },
+  async runAction(params: {
+    plugin: string;
     action: string;
     payload?: JsonValue;
   }) {
-    const extensionName = String(params.extension || "").trim();
-    const action = String(params.action || "").trim();
-    if (!extensionName) {
-      return {
-        success: false,
-        error: "extensions.invoke.extension is required",
-      };
-    }
-    if (!action) {
-      return {
-        success: false,
-        error: "extensions.invoke.action is required",
-      };
-    }
-
-    const result = await runExtensionCommand({
-      extensionName,
-      command: action,
-      payload: params.payload,
-      context: getServiceRuntimeState(),
-    });
-    if (!result.success) {
-      return {
-        success: false,
-        error: result.message || "extension invoke failed",
-      };
-    }
-
-    return {
-      success: true,
-      ...(result.data !== undefined ? { data: result.data } : {}),
-    };
+    return pluginRegistry.runAction(params);
   },
 };
 
@@ -283,7 +348,10 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
     systems: input.systems,
     context: buildServiceContext(input),
     invoke: serviceInvokePort,
-    extensions: extensionInvokePort,
+    services: serviceInvokePort,
+    capabilities: capabilityInvokePort,
+    assets: assetPort,
+    plugins: pluginPort,
   };
 }
 
@@ -292,6 +360,17 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
  */
 export function getServiceRuntimeState(): ServiceRuntime {
   return buildServiceRuntime(getRuntimeState());
+}
+
+/**
+ * 获取完整 plugin runtime state。
+ *
+ * 关键点（中文）
+ * - 第一阶段直接复用 ServiceRuntime 作为 PluginRuntime 实现对象。
+ * - 这样可以最小成本接入新插件体系，同时保持现有运行时结构稳定。
+ */
+export function getPluginRuntimeState(): ServiceRuntime {
+  return getServiceRuntimeState();
 }
 
 /**

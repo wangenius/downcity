@@ -4,7 +4,7 @@
  * CLI 程序入口模块。
  *
  * 职责说明：
- * 1. 组装所有一级命令（init/console/agent/config/service/extension）。
+ * 1. 组装所有一级命令（init/console/agent/config/service/plugin）。
  * 2. 统一处理命令行参数解析规则（端口、布尔值）。
  */
 import { readFileSync, existsSync } from "fs";
@@ -20,7 +20,7 @@ import { consoleInitCommand } from "./ConsoleInit.js";
 import { restartCommand } from "./Restart.js";
 import { runCommand } from "./Run.js";
 import { registerServicesCommand } from "./Services.js";
-import { registerExtensionsCommand } from "./Extensions.js";
+import { registerPluginsCommand } from "./Plugins.js";
 import { startCommand } from "./Start.js";
 import { statusCommand } from "./Status.js";
 import {
@@ -32,7 +32,7 @@ import {
 } from "./UI.js";
 import type { StartOptions } from "@agent/types/Start.js";
 import { registerAllServicesForCli } from "@agent/service/ServiceCommand.js";
-import { registerAllExtensionsForCli } from "@console/extension/ExtensionCommand.js";
+import { registerAllPluginsForCli } from "@/console/plugin/PluginCommand.js";
 import {
   cleanupStaleDaemonFiles,
   diagnoseDaemonStaleReasons,
@@ -752,12 +752,12 @@ registerConfigCommand(consoleCommand);
 registerModelCommand(consoleCommand);
 
 registerServicesCommand(program);
-registerExtensionsCommand(program);
+registerPluginsCommand(program);
 
 // 服务命令统一注册（chat / skill / task / future services）
 registerAllServicesForCli(program);
-// 扩展命令统一注册（voice / future extensions）
-registerAllExtensionsForCli(program);
+// 插件命令统一注册（voice / future plugins）
+registerAllPluginsForCli(program);
 
 program.showHelpAfterError();
 program.showSuggestionAfterError();

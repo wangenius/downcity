@@ -1043,7 +1043,7 @@ export class QQBot extends BaseChatChannel {
 
     // 群聊和 C2C 消息
     const GROUP_AND_C2C_EVENT = 1 << 25;
-    // 语音/音频事件（用于 voice extension 转写链路）
+    // 语音/音频事件（用于 voice plugin 转写链路）
     const AUDIO_ACTION = 1 << 29;
 
     // 返回需要订阅的 intents
@@ -1313,6 +1313,15 @@ export class QQBot extends BaseChatChannel {
 
     const actor = params.actor || this.extractAuthorIdentity(params.data.author, params.data);
     const chatType = params.chatType;
+    if (!actor.userId) {
+      this.logger.warn("QQ 入站消息缺少发送者 userId，已忽略", {
+        eventType,
+        chatId,
+        chatType,
+        messageId,
+      });
+      return;
+    }
     const chatTitle = this.resolveInboundChatTitle({
       chatType,
       data: params.data,
@@ -1343,20 +1352,7 @@ export class QQBot extends BaseChatChannel {
       username: actor.username,
     });
     if (authResult.decision !== "allow") {
-      if (authResult.decision === "pairing") {
-        await this.createPairingRequest({
-          chatId,
-          chatType,
-          chatTitle,
-          userId: actor.userId,
-          username: actor.username,
-        });
-        await this.sendAuthorizationText({
-          chatId,
-          chatType,
-          text: this.buildPairingRequiredText({ userId: actor.userId }),
-        });
-      } else if (!isGroup) {
+      if (!isGroup) {
         await this.sendAuthorizationText({
           chatId,
           chatType,

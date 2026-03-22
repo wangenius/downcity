@@ -42,7 +42,6 @@ export function registerConsoleUiChannelAccountRoutes(params: { app: Hono }): vo
         appSecret?: string;
         domain?: string;
         sandbox?: boolean;
-        authId?: string;
         clearBotToken?: boolean;
         clearAppId?: boolean;
         clearAppSecret?: boolean;
@@ -59,7 +58,6 @@ export function registerConsoleUiChannelAccountRoutes(params: { app: Hono }): vo
         appSecret: body.appSecret,
         domain: body.domain,
         sandbox: body.sandbox === true,
-        authId: body.authId,
         clearBotToken: body.clearBotToken === true,
         clearAppId: body.clearAppId === true,
         clearAppSecret: body.clearAppSecret === true,

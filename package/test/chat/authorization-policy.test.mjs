@@ -2,99 +2,81 @@
  * chat authorization 策略测试（node:test）。
  *
  * 关键点（中文）
- * - `is_master` 应优先基于新的 ownerIds 判定，而不是旧版单个 authId。
- * - DM / 群聊权限要区分 pairing、allowlist 与 group allowlist。
+ * - DM / 群聊权限统一只基于 user role。
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
   evaluateIncomingChatAuthorization,
-  resolveOwnerMatch,
+  resolveAuthorizedUserRole,
 } from "../../bin/services/chat/runtime/AuthorizationPolicy.js";
-import { resolveFeishuMasterStatus } from "../../bin/services/chat/channels/feishu/Auth.js";
 
-test("resolveOwnerMatch prefers configured ownerIds and only returns unknown when userId is missing", () => {
+test("resolveAuthorizedUserRole returns the bound permission group and falls back to default", () => {
   const config = {
     name: "demo",
     version: "1.0.0",
   };
   const authorizationConfig = {
+    roles: {
+      default: { roleId: "default", name: "Default", permissions: [] },
+      admin: { roleId: "admin", name: "Admin", permissions: ["agent.manage"] },
+    },
     channels: {
       feishu: {
-        ownerIds: ["ou_owner"],
+        defaultUserRoleId: "default",
+        userRoles: {
+          ou_admin: "admin",
+        },
       },
     },
   };
 
   assert.equal(
-    resolveOwnerMatch({
-      config,
+    resolveAuthorizedUserRole({
       channel: "feishu",
-      userId: "ou_owner",
+      userId: "ou_admin",
       authorizationConfig,
-    }),
-    "master",
+    })?.roleId,
+    "admin",
   );
   assert.equal(
-    resolveOwnerMatch({
-      config,
+    resolveAuthorizedUserRole({
       channel: "feishu",
       userId: "ou_guest",
       authorizationConfig,
-    }),
-    "guest",
+    })?.roleId,
+    "default",
   );
   assert.equal(
-    resolveOwnerMatch({
-      config,
+    resolveAuthorizedUserRole({
       channel: "feishu",
     }),
-    "unknown",
+    undefined,
   );
 });
 
-test("resolveFeishuMasterStatus still falls back to legacy FEISHU_AUTH_ID when ownerIds are not configured", () => {
-  const config = {
-    name: "demo",
-    version: "1.0.0",
-  };
-
-  assert.equal(
-    resolveFeishuMasterStatus({
-      config,
-      env: { FEISHU_AUTH_ID: "ou_legacy_owner" },
-      userId: "ou_legacy_owner",
-    }),
-    "master",
-  );
-  assert.equal(
-    resolveFeishuMasterStatus({
-      config,
-      env: { FEISHU_AUTH_ID: "ou_legacy_owner" },
-      userId: "ou_other",
-    }),
-    "guest",
-  );
-});
-
-test("evaluateIncomingChatAuthorization supports DM pairing and group allowlist like openclaw", () => {
+test("evaluateIncomingChatAuthorization uses only user role permissions", () => {
   const config = {
     name: "demo",
     version: "1.0.0",
   };
   const authorizationConfig = {
+    roles: {
+      default: { roleId: "default", name: "Default", permissions: [] },
+      member: { roleId: "member", name: "Member", permissions: ["chat.dm.use"] },
+      group_member: {
+        roleId: "group_member",
+        name: "Group Member",
+        permissions: ["chat.dm.use", "chat.group.use"],
+      },
+    },
     channels: {
       feishu: {
-        ownerIds: ["ou_owner"],
-        dmPolicy: "pairing",
-        allowFrom: ["ou_allowed"],
-        groupPolicy: "allowlist",
-        groupAllowFrom: ["oc_group_1"],
-        groups: {
-          oc_group_1: {
-            allowFrom: ["ou_group_member"],
-          },
+        defaultUserRoleId: "default",
+        userRoles: {
+          ou_allowed: "member",
+          ou_group_member: "group_member",
         },
       },
     },
@@ -113,9 +95,10 @@ test("evaluateIncomingChatAuthorization supports DM pairing and group allowlist 
       },
     }),
     {
-      decision: "pairing",
+      decision: "block",
       isOwner: false,
-      reason: "dm_policy_pairing_required",
+      userRoleId: "default",
+      reason: "dm_role_blocked",
     },
   );
 
@@ -134,7 +117,8 @@ test("evaluateIncomingChatAuthorization supports DM pairing and group allowlist 
     {
       decision: "allow",
       isOwner: false,
-      reason: "allowlist_allowed",
+      userRoleId: "member",
+      reason: "dm_role_allowed",
     },
   );
 
@@ -153,7 +137,8 @@ test("evaluateIncomingChatAuthorization supports DM pairing and group allowlist 
     {
       decision: "block",
       isOwner: false,
-      reason: "group_user_not_in_allowlist",
+      userRoleId: "default",
+      reason: "user_group_permission_blocked",
     },
   );
 
@@ -172,7 +157,8 @@ test("evaluateIncomingChatAuthorization supports DM pairing and group allowlist 
     {
       decision: "allow",
       isOwner: false,
-      reason: "group_allowlist_and_user_allowlist_allowed",
+      userRoleId: "group_member",
+      reason: "group_user_role_allowed",
     },
   );
 });

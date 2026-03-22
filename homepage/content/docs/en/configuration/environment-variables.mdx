@@ -45,7 +45,6 @@ sequenceDiagram
   CLI->>DB: Read env_entries where scope=agent and agent_id matches
   CLI->>ENV: Parse project .env
   CLI->>CLI: Build runtime env = agent-scope DB env + .env (.env wins)
-  CLI->>DB: Read extensions_config
   CLI->>JSON: Read and merge ship.json layers
   CLI->>CLI: Resolve placeholders using scoped env maps
   CLI->>DB: Resolve channel channel account by channelAccountId
@@ -87,7 +86,7 @@ So key precedence inside `exec_command` shell sessions is: `DC_CTX_*` > agent ru
 ### 4.2 Does not read project `.env`
 
 1. Global model/provider pool (`model_providers`, `models`) from `ship.db`.
-2. Extension global config from `console_secure_settings.extensions_config`.
+2. Plugin config from project `ship.json` (`plugins.*`, `assets.*`).
 3. Bot account credential source of truth (`channel_accounts`).
 4. Runtime context vars (`DC_CTX_*`) are generated at request time.
 
@@ -96,7 +95,7 @@ So key precedence inside `exec_command` shell sessions is: `DC_CTX_*` > agent ru
 1. Console UI `Global / Env` writes `env_entries` with `scope=global` or `scope=agent`.
 2. Bot account CRUD (UI): writes `channel_accounts`.
 3. Model CRUD (CLI/UI): writes `model_providers`, `models`.
-4. Extension config (`city console config set extensions.*`): writes `extensions_config`.
+4. Plugin config (`city plugin action ...` or `city voice ...`): writes project `ship.json`.
 5. Channel configure action: writes `ship.json` (`enabled`, `channelAccountId`).
 6. User manual `.env` edit: affects runtime only for that agent.
 
@@ -125,7 +124,7 @@ flowchart TD
 ```bash
 city console init
 city console model create
-city console config set extensions.voice.enabled true
+city plugin action voice configure --payload '{"enabled": true}'
 ```
 
 2. Manage shared env in Console UI `Global / Env` (writes `env_entries`).

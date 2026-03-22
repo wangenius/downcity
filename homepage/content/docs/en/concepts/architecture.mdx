@@ -1,6 +1,6 @@
 ---
 title: Architecture Overview
-description: "Core architecture layers in Downcity: console, agent, service, and extension"
+description: "Core architecture layers in Downcity: console, agent, service, plugin, capability, and asset"
 ---
 
 # Architecture Overview
@@ -10,36 +10,39 @@ Downcity is easiest to reason about with two top-level trunks:
 - `console`: global control and operations plane
 - `agent`: project runtime execution plane
 
-Inside these trunks, `service` and `extension` form the capability layer.
+Inside the agent runtime, `service`, `plugin`, `capability`, and `asset` form the execution layer.
 
 ## Layered Structure
 
 1. **Console Layer (global)**
-- Commands: `city console ...`, `city console config ...`, `city service ...`, `city extension ...`
-- Responsibility: global process management, operational entry points, model/runtime configuration governance
+- Commands: `city console ...`, `city console config ...`
+- Responsibility: process management, registry, model pool, global storage
 
 2. **Agent Layer (project)**
-- Commands: `city agent create/on/off/status/restart ...`
-- Responsibility: load project context, run model/tool execution, persist runtime state
+- Commands: `city agent create/start/status/restart ...`
+- Responsibility: load one project, own one runtime, persist traces in `.ship/`
 
-3. **Capability Layer (runtime abilities)**
-- `service`: core domains (`chat` / `skill` / `task` / `memory`)
-- `extension`: shared optional capabilities (for example `voice`)
+3. **Service Layer (core workflows)**
+- Stable business domains such as `chat`, `skill`, `task`, `memory`
+- Own orchestration and user-facing workflows
 
-4. **State Layer (auditable persistence)**
-- Paths: `.ship/context`, `.ship/logs`, `.ship/.cache`, `.ship/tasks`, `.ship/debug`
-- Goal: replayability, diagnosability, auditability
+4. **Plugin Layer (optional enhancements)**
+- Optional modules such as `voice`
+- Expose actions, capabilities, hooks, and system prompt fragments
+
+5. **Capability + Asset Layer**
+- `capability`: stable runtime contract such as `audio.transcribe`
+- `asset`: installable dependency or runtime resource required by plugins
 
 ## Architecture Rules
 
 - Separate control from execution: `console` governs, `agent` executes.
-- Separate core from optional: `service` is core, `extension` is enhancement.
-- Keep command entry unified: same abilities are accessible through CLI/HTTP.
-- Apply critical config first: model/runtime config is managed via console-facing commands before agent execution.
+- Separate workflow from enhancement: `service` owns business flow, `plugin` augments it.
+- Separate contract from implementation: services call capabilities, not plugin internals.
+- Separate behavior from dependency: plugin declares required assets, asset owns install/check/config/use.
 
 ## Read Next
 
 - [Architecture Logic Map](/en/docs/concepts/logic-map)
 - [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
 - [Service Runtime](/en/docs/concepts/service-runtime)
-- [Extension Runtime](/en/docs/concepts/extension-runtime)

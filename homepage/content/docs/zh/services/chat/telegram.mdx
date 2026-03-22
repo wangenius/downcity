@@ -75,7 +75,7 @@ city agent start
 
 ### 本地 STT 模型管理
 
-如果你要统一管理本地语音转写模型，请使用独立的 `voice` extension 命令组：
+如果你要统一管理本地语音转写模型，请使用独立的 `voice` plugin 命令组：
 
 ```bash
 # 启用并安装模型
@@ -85,7 +85,7 @@ city voice on SenseVoiceSmall
 city voice status
 ```
 
-当 `extensions.voice.enabled=true` 时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
+当 `voice` plugin 已启用，且 `voice.transcriber` asset 可用时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
 
 ### 群聊 / 超级群
 

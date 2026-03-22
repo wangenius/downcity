@@ -11,11 +11,9 @@ import path from "node:path";
 import fs from "fs-extra";
 import type { Command } from "commander";
 import { getShipJsonPath } from "@/console/env/Paths.js";
-import { getConsoleShipDbPath } from "@/console/runtime/ConsolePaths.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
-import { ConsoleStore } from "@/utils/store/index.js";
 
 function parseBooleanOption(value: string | undefined): boolean {
   if (value === undefined) return true;
@@ -55,10 +53,6 @@ function parseConfigValue(rawValue: string): unknown {
   }
 }
 
-function isConsoleScopedConfigPath(pathTokens: string[]): boolean {
-  return pathTokens.length > 0 && pathTokens[0] === "extensions";
-}
-
 function readShipConfigByPath(
   shipJsonPath: string,
   scope: "project" | "console",
@@ -83,40 +77,6 @@ function readShipConfigByPath(
 
 function readShipConfig(projectRoot: string): { shipJsonPath: string; config: ShipConfig } {
   return readShipConfigByPath(getShipJsonPath(projectRoot), "project");
-}
-
-function readConsoleStoreConfig(): { consoleStorePath: string; config: ShipConfig } {
-  const store = new ConsoleStore();
-  try {
-    const raw = store.getExtensionsConfigSync<Record<string, unknown>>();
-    const extensions =
-      raw && typeof raw === "object" && !Array.isArray(raw)
-        ? raw
-        : {};
-    return {
-      consoleStorePath: getConsoleShipDbPath(),
-      config: {
-        name: "console",
-        version: "1.0.0",
-        extensions: extensions as ShipConfig["extensions"],
-      },
-    };
-  } finally {
-    store.close();
-  }
-}
-
-function writeConsoleStoreConfig(config: ShipConfig): void {
-  const store = new ConsoleStore();
-  try {
-    const extensions =
-      config.extensions && typeof config.extensions === "object"
-        ? config.extensions
-        : {};
-    store.setExtensionsConfigSync(extensions);
-  } finally {
-    store.close();
-  }
 }
 
 function writeShipConfig(shipJsonPath: string, config: ShipConfig): void {
@@ -253,44 +213,6 @@ export function registerConfigCommand(program: Command): void {
       .description("读取 ship.json（可选读取单个路径）")
       .helpOption("--help", "display help for command"),
   ).action((keyPath: string | undefined, options: { path?: string; json?: boolean }) => {
-    if (keyPath) {
-      const pathTokens = parseConfigPath(keyPath);
-      if (isConsoleScopedConfigPath(pathTokens)) {
-        const asJson = options.json !== false;
-        try {
-          const { consoleStorePath, config: shipConfig } = readConsoleStoreConfig();
-          const got = getByPath(
-            shipConfig as unknown as Record<string, unknown>,
-            pathTokens,
-          );
-          if (!got.found) {
-            throw new Error(`Config path not found: ${keyPath}`);
-          }
-          printResult({
-            asJson,
-            success: true,
-            title: "config value loaded",
-            payload: {
-              scope: "console",
-              consoleStorePath,
-              keyPath,
-              value: got.value,
-            },
-          });
-        } catch (error) {
-          printResult({
-            asJson,
-            success: false,
-            title: "config command failed",
-            payload: {
-              error: error instanceof Error ? error.message : String(error),
-            },
-          });
-          process.exitCode = 1;
-        }
-        return;
-      }
-    }
     runConfigCommand(options, ({ config: shipConfig }) => {
       if (!keyPath) {
         return {
@@ -325,43 +247,6 @@ export function registerConfigCommand(program: Command): void {
       options: { path?: string; json?: boolean },
     ) => {
       const pathTokens = parseConfigPath(keyPath);
-      if (isConsoleScopedConfigPath(pathTokens)) {
-        const asJson = options.json !== false;
-        try {
-          const { consoleStorePath, config: shipConfig } = readConsoleStoreConfig();
-          const parsed = parseConfigValue(value);
-          const changed = setByPath(
-            shipConfig as unknown as Record<string, unknown>,
-            pathTokens,
-            parsed,
-          );
-          writeConsoleStoreConfig(shipConfig);
-          printResult({
-            asJson,
-            success: true,
-            title: "config value updated",
-            payload: {
-              scope: "console",
-              consoleStorePath,
-              keyPath,
-              value: parsed,
-              existed: changed.existed,
-              previous: changed.previous,
-            },
-          });
-        } catch (error) {
-          printResult({
-            asJson,
-            success: false,
-            title: "config command failed",
-            payload: {
-              error: error instanceof Error ? error.message : String(error),
-            },
-          });
-          process.exitCode = 1;
-        }
-        return;
-      }
       runConfigCommand(options, ({ config: shipConfig }) => {
         const parsed = parseConfigValue(value);
         const changed = setByPath(
@@ -390,42 +275,6 @@ export function registerConfigCommand(program: Command): void {
       .helpOption("--help", "display help for command"),
   ).action((keyPath: string, options: { path?: string; json?: boolean }) => {
     const pathTokens = parseConfigPath(keyPath);
-    if (isConsoleScopedConfigPath(pathTokens)) {
-      const asJson = options.json !== false;
-      try {
-        const { consoleStorePath, config: shipConfig } = readConsoleStoreConfig();
-        const removed = unsetByPath(
-          shipConfig as unknown as Record<string, unknown>,
-          pathTokens,
-        );
-        if (!removed.removed) {
-          throw new Error(`Config path not found: ${keyPath}`);
-        }
-        writeConsoleStoreConfig(shipConfig);
-        printResult({
-          asJson,
-          success: true,
-          title: "config value removed",
-          payload: {
-              scope: "console",
-              consoleStorePath,
-              keyPath,
-              previous: removed.previous,
-          },
-        });
-      } catch (error) {
-        printResult({
-          asJson,
-          success: false,
-          title: "config command failed",
-          payload: {
-            error: error instanceof Error ? error.message : String(error),
-          },
-        });
-        process.exitCode = 1;
-      }
-      return;
-    }
     runConfigCommand(options, ({ config: shipConfig }) => {
       const removed = unsetByPath(
         shipConfig as unknown as Record<string, unknown>,

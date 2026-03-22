@@ -39,7 +39,7 @@ const PAGE = {
     highlights: [
       {
         title: "One view for runtime status",
-        description: "Track agents, services, extensions, and tasks in one workspace instead of many terminals.",
+        description: "Track agents, services, plugins, and tasks in one workspace instead of many terminals.",
       },
       {
         title: "Traceable contexts and sessions",

@@ -49,7 +49,8 @@ import { ConsoleStore } from "@utils/store/index.js";
 import { registerConsoleUiModelRoutes } from "@/console/ui/ModelApiRoutes.js";
 import { registerConsoleUiChannelAccountRoutes } from "@/console/ui/ChannelAccountApiRoutes.js";
 import { registerConsoleUiEnvRoutes } from "@/console/ui/EnvApiRoutes.js";
-import { getSmaExtensions, listExtensionRuntimes } from "@/console/extension/Manager.js";
+import { PLUGINS } from "@/console/plugin/Plugins.js";
+import { getPluginRuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import type {
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
@@ -419,13 +420,13 @@ export class ConsoleUIGateway {
       }
     });
 
-    this.app.get("/api/ui/extensions", async (c) => {
+    this.app.get("/api/ui/plugins", async (c) => {
       try {
-        const runtimes = listExtensionRuntimes();
-        const extensions = getSmaExtensions();
-        const extensionConfigMap = new Map(
-          extensions.map((extension) => {
-            const actions = Object.entries(extension.actions || {}).map(
+        const runtime = getPluginRuntimeState();
+        const plugins = runtime.plugins.list();
+        const pluginConfigMap = new Map(
+          PLUGINS.map((plugin) => {
+            const actions = Object.entries(plugin.actions || {}).map(
               ([actionName, action]) => ({
                 name: actionName,
                 supportsCommand: Boolean(action?.command),
@@ -436,24 +437,31 @@ export class ConsoleUIGateway {
               }),
             );
             return [
-              extension.name,
+              plugin.name,
               {
-                lifecycle: {
-                  start: Boolean(extension.lifecycle?.start),
-                  stop: Boolean(extension.lifecycle?.stop),
-                  command: Boolean(extension.lifecycle?.command),
-                },
                 actions,
               },
             ] as const;
           }),
         );
+        const availabilityList = await Promise.all(
+          plugins.map(async (plugin) => [
+            plugin.name,
+            await runtime.plugins.availability(plugin.name),
+          ] as const),
+        );
+        const availabilityMap = new Map(availabilityList);
         return c.json({
           success: true,
-          extensions: runtimes.map((item) => ({
+          plugins: plugins.map((item) => ({
             ...item,
-            config: extensionConfigMap.get(item.name) || {
-              lifecycle: { start: false, stop: false, command: false },
+            availability: availabilityMap.get(item.name) || {
+              enabled: false,
+              available: false,
+              reasons: ["unknown"],
+              missingAssets: [],
+            },
+            config: pluginConfigMap.get(item.name) || {
               actions: [],
             },
           })),

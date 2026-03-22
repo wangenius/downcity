@@ -778,6 +778,14 @@ export class FeishuBot extends BaseChatChannel {
       const actorId = senderIdentity.senderId;
       const normalizedMessageId = String(message_id || "").trim();
       if (!normalizedMessageId) return;
+      if (!actorId) {
+        this.logger.warn("飞书消息缺少发送者 userId/open_id，已忽略", {
+          chatId: chat_id,
+          chatType: chat_type,
+          messageId: normalizedMessageId,
+        });
+        return;
+      }
 
       // Message deduplication: check if this message has been processed
       if (this.processedMessages.has(normalizedMessageId)) {
@@ -876,20 +884,7 @@ export class FeishuBot extends BaseChatChannel {
           username: actorName,
         });
         if (authResult.decision !== "allow") {
-          if (authResult.decision === "pairing") {
-            await this.createPairingRequest({
-              chatId: chat_id,
-              chatType: chat_type,
-              chatTitle,
-              userId: actorId,
-              username: actorName,
-            });
-            await this.sendAuthorizationText({
-              chatId: chat_id,
-              chatType: chat_type,
-              text: this.buildPairingRequiredText({ userId: actorId }),
-            });
-          } else if (chat_type === "p2p") {
+          if (chat_type === "p2p") {
             await this.sendAuthorizationText({
               chatId: chat_id,
               chatType: chat_type,

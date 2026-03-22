@@ -1,0 +1,43 @@
+---
+title: city voice
+description: 管理内置 voice plugin 与它依赖的转写 asset
+---
+
+# `city voice`
+
+`city voice` 是内置 voice plugin 的短命令组。
+
+## 它负责什么
+
+- 启用或关闭 voice plugin
+- 管理 `voice.transcriber` asset
+- 切换当前转写模型
+- 转写本地音频文件
+
+## 常用示例
+
+```bash
+# 启用 voice，并安装模型
+city voice on SenseVoiceSmall
+
+# 查看 plugin + asset 状态
+city voice status
+
+# 切换当前模型
+city voice use whisper-large-v3-turbo
+
+# 转写一个本地音频文件
+city voice transcribe ./demo.ogg
+```
+
+## 说明
+
+- `city voice on` 会在一步里完成“启用 plugin + 可选安装 asset”。
+- voice plugin 会向聊天渠道暴露 `audio.transcribe` capability，Telegram / QQ 的语音消息会通过它转写。
+- 配置会持久化到项目 `ship.json` 的 `plugins.voice` 和 `assets["voice.transcriber"]`。
+
+## 相关页面
+
+- [`city plugin`](/zh/docs/commands/plugin/plugin)
+- [`Telegram`](/zh/docs/services/chat/telegram)
+- [`QQ`](/zh/docs/services/chat/qq)

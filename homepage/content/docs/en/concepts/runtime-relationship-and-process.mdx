@@ -1,34 +1,32 @@
 ---
 title: Runtime Relationship & Process
-description: Collaboration model and process order across console, agent, service, and extension
+description: Collaboration model and process order across console, agent, service, plugin, capability, and asset
 ---
 
 # Runtime Relationship & Process
 
-This page focuses on two things:
-
-- how the four roles collaborate
-- how runtime processes are started and connected
-
 ## 1. Role Relationship
 
-- `console` is the control center: manages agent registry and receives `config/service/extension` operational commands.
-- `agent` is the execution center: handles message/task/tool execution and persistence in each project.
-- `service` is the core domain layer: provides primary business workflows.
-- `extension` is the optional capability layer: provides shared enhancements across agents.
+- `console`: manages registry, shared storage, model pool, and UI.
+- `agent`: owns one project runtime.
+- `service`: executes core workflows.
+- `plugin`: adds optional enhancements.
+- `capability`: provides stable runtime contracts.
+- `asset`: provides install/check/config/use for dependencies.
 
 In one line:
 
-`console` governs, `agent` runs, `service/extension` provide capabilities.
+`console` governs, `agent` runs, `service` orchestrates, `plugin` augments, `asset` supplies dependencies.
 
 ## 2. Process Startup Model
 
 1. Start console: `city console start`
-2. Start agent in project: `city agent start`
-3. Agent runtime loads config layers (project `ship.json.services.*` + console-global `~/.ship/ship.db` `extensions_config.*` + global model pool)
-4. Inbound messages/tasks enter agent scheduling
-5. Agent invokes service/extension to complete execution
-6. Runtime traces are persisted to `.ship/*`
+2. Start agent: `city agent start`
+3. Agent loads project config from `ship.json`
+4. Runtime assembles services, plugins, capabilities, and assets
+5. Inbound messages/tasks enter service workflows
+6. Services invoke capabilities when optional enhancements are needed
+7. Runtime traces are persisted to `.ship/*`
 
 ## 3. Operational Checklist
 
@@ -36,14 +34,12 @@ In one line:
 city console status
 city agent status .
 city service list
-city extension list
+city plugin list
 ```
 
 ## Related Docs
 
 - [Architecture Logic Map](/en/docs/concepts/logic-map)
-- [Service vs Extension](/en/docs/concepts/service-vs-extension)
 - [Service Runtime](/en/docs/concepts/service-runtime)
-- [Extension Runtime](/en/docs/concepts/extension-runtime)
 - [`city console`](/en/docs/commands/console/console)
 - [`city agent`](/en/docs/commands/agent/agent)

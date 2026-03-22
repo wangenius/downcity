@@ -44,14 +44,9 @@ import {
 import { ConsoleStore } from "@utils/store/index.js";
 import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
 import { readAuthorizationSnapshot } from "@services/chat/runtime/AuthorizationStore.js";
-import { removeAuthorizationPairingRequest } from "@services/chat/runtime/AuthorizationStore.js";
 import {
-  grantChatAuthorizationGroup,
-  grantChatAuthorizationUser,
   readChatAuthorizationConfig,
-  revokeChatAuthorizationGroup,
-  revokeChatAuthorizationUser,
-  setChatAuthorizationOwner,
+  setChatAuthorizationUserRole,
   writeChatAuthorizationConfig,
 } from "@services/chat/runtime/AuthorizationConfig.js";
 import type { ChatAuthorizationConfig } from "@services/chat/types/Authorization.js";
@@ -287,9 +282,7 @@ export function registerTuiApiRoutes(params: {
         action?: string;
         channel?: string;
         userId?: string;
-        chatId?: string;
-        enabled?: boolean;
-        asOwner?: boolean;
+        roleId?: string;
       };
       const action = String(body.action || "").trim();
       const channel = normalizeChatChannel(body.channel);
@@ -297,43 +290,12 @@ export function registerTuiApiRoutes(params: {
         return c.json({ success: false, error: "Missing action/channel" }, 400);
       }
 
-      if (action === "approvePairing" || action === "grantUser") {
-        await grantChatAuthorizationUser({
+      if (action === "setUserRole") {
+        await setChatAuthorizationUserRole({
           context: serviceRuntime,
           channel,
           userId: String(body.userId || "").trim(),
-          asOwner: body.asOwner === true,
-        });
-      } else if (action === "revokeUser") {
-        await revokeChatAuthorizationUser({
-          context: serviceRuntime,
-          channel,
-          userId: String(body.userId || "").trim(),
-        });
-      } else if (action === "rejectPairing") {
-        await removeAuthorizationPairingRequest({
-          context: serviceRuntime,
-          channel,
-          userId: String(body.userId || "").trim(),
-        });
-      } else if (action === "setOwner") {
-        await setChatAuthorizationOwner({
-          context: serviceRuntime,
-          channel,
-          userId: String(body.userId || "").trim(),
-          enabled: body.enabled === true,
-        });
-      } else if (action === "grantGroup") {
-        await grantChatAuthorizationGroup({
-          context: serviceRuntime,
-          channel,
-          chatId: String(body.chatId || "").trim(),
-        });
-      } else if (action === "revokeGroup") {
-        await revokeChatAuthorizationGroup({
-          context: serviceRuntime,
-          channel,
-          chatId: String(body.chatId || "").trim(),
+          roleId: String(body.roleId || "").trim(),
         });
       } else {
         return c.json({ success: false, error: `Unsupported action: ${action}` }, 400);

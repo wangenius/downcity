@@ -139,7 +139,7 @@ const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.Reac
   globalChannelAccounts: <BotIcon />,
   globalCommand: <TerminalIcon />,
   globalAgents: <Layers3Icon />,
-  globalExtensions: <PuzzleIcon />,
+  globalPlugins: <PuzzleIcon />,
   agentOverview: <Layers3Icon />,
   agentAuthorization: <ShieldCheckIcon />,
   agentSkills: <SparklesIcon />,
@@ -235,7 +235,7 @@ export function AppSidebar({
     [globalItems],
   )
   const agentItems = React.useMemo(() => listPrimaryPagesByScope("agent"), [])
-  const globalViews: DashboardView[] = ["globalOverview", "globalCommand", "globalEnv", "globalModel", "globalChannelAccounts", "globalAgents", "globalExtensions"]
+  const globalViews: DashboardView[] = ["globalOverview", "globalCommand", "globalEnv", "globalModel", "globalChannelAccounts", "globalAgents", "globalPlugins"]
   const sidebarMode: SidebarMode = globalViews.includes(activeView) ? "agent-list" : "agent-detail"
   const [navDirection, setNavDirection] = React.useState<"forward" | "back">("forward")
   const [hoveredAgentId, setHoveredAgentId] = React.useState("")

@@ -20,19 +20,12 @@ import {
   appendInboundChatHistory,
   appendOutboundChatHistory,
 } from "@services/chat/runtime/ChatHistoryStore.js";
-import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
-import { resolveTelegramMasterStatus } from "@services/chat/channels/telegram/Auth.js";
-import { resolveFeishuMasterStatus } from "@services/chat/channels/feishu/Auth.js";
-import { resolveQqMasterStatus } from "@services/chat/channels/qq/Auth.js";
 import {
   evaluateIncomingChatAuthorization,
-  resolveOwnerMatch,
+  resolveAuthorizedUserRole,
 } from "@services/chat/runtime/AuthorizationPolicy.js";
 import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
-import {
-  recordObservedAuthorizationPrincipal,
-  upsertAuthorizationPairingRequest,
-} from "@services/chat/runtime/AuthorizationStore.js";
+import { recordObservedAuthorizationPrincipal } from "@services/chat/runtime/AuthorizationStore.js";
 
 type ChannelUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -95,10 +88,6 @@ export type IncomingChatMessage = {
    * - 用于 Context 列表展示，不参与路由。
    */
   chatTitle?: string;
-  /**
-   * 可选：由上游显式覆盖主人身份判定（通常无需传，默认由 auth 模块计算）。
-   */
-  isMaster?: boolean;
 };
 
 /**
@@ -116,7 +105,7 @@ export type IncomingAuthorizationParams = {
  * 入站授权判定结果。
  */
 export type IncomingAuthorizationResult = {
-  decision: "allow" | "block" | "pairing";
+  decision: "allow" | "block";
   reason: string;
   isOwner: boolean;
 };
@@ -228,47 +217,10 @@ export abstract class BaseChatChannel {
   }
 
   /**
-   * 创建 / 更新 pairing 请求。
-   */
-  protected async createPairingRequest(
-    params: IncomingAuthorizationParams,
-  ): Promise<void> {
-    const userId = String(params.userId || "").trim();
-    if (!userId) return;
-    await upsertAuthorizationPairingRequest({
-      context: this.context,
-      channel: this.channel,
-      userId,
-      username: params.username,
-      chatId: params.chatId,
-      chatTitle: params.chatTitle,
-      chatType: params.chatType,
-    });
-  }
-
-  /**
-   * 生成 pairing 提示文案。
-   */
-  protected buildPairingRequiredText(params: { userId?: string }): string {
-    const idLabel =
-      this.channel === "telegram"
-        ? "Telegram user id"
-        : this.channel === "feishu"
-          ? "Feishu user id"
-          : "QQ user id";
-    const userId = String(params.userId || "").trim() || "unknown";
-    return [
-      "当前会话尚未获得授权，已创建待审批请求。",
-      `你的 ${idLabel}: ${userId}`,
-      "请在 Console UI 的 Agent / Authorization 页面审批后再重试。",
-    ].join("\n");
-  }
-
-  /**
    * 生成未授权提示文案。
    */
   protected buildUnauthorizedBlockedText(): string {
-    return "当前会话未被授权，已拒绝处理。请在 Console UI 的 Agent / Authorization 页面配置后再重试。";
+    return "当前会话权限不足，已拒绝处理。请在 Console UI 的 Agent / Authorization 页面调整角色后再重试。";
   }
 
   /**
@@ -642,19 +594,14 @@ export abstract class BaseChatChannel {
   protected async enqueueMessage(
     msg: IncomingChatMessage,
   ): Promise<{ chatKey: string; position: number }> {
-    const explicitMasterStatus: ChatMasterStatus | undefined =
-      typeof msg.isMaster === "boolean"
-        ? msg.isMaster
-          ? "master"
-          : "guest"
-        : undefined;
-    const masterStatus =
-      explicitMasterStatus ||
-      this.resolveMasterStatusByChannel({ userId: msg.userId });
-    const masterExtra: JsonObject = {
-      masterStatus,
-      ...(masterStatus === "master" ? { isMaster: true } : {}),
-      ...(masterStatus === "guest" ? { isMaster: false } : {}),
+    const userRole = resolveAuthorizedUserRole({
+      channel: this.channel,
+      userId: msg.userId,
+      rootPath: this.context.rootPath,
+    });
+    const permissionExtra: JsonObject = {
+      roleId: userRole?.roleId || "unknown",
+      permissions: userRole?.permissions || [],
     };
 
     const chatKey = await this.resolveOrCreateContextIdByTarget({
@@ -676,7 +623,8 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       userId: msg.userId,
       username: msg.username,
-      masterStatus,
+      roleId: userRole?.roleId,
+      permissions: userRole?.permissions,
       text: msg.text,
     });
 
@@ -690,7 +638,7 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       actorId: msg.userId,
       actorName: msg.username,
-      extra: masterExtra,
+      extra: permissionExtra,
     });
 
     await this.updateChatMeta({
@@ -715,52 +663,9 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       actorId: msg.userId,
       actorName: msg.username,
-      extra: masterExtra,
+      extra: permissionExtra,
     });
 
     return { chatKey, position: lanePosition };
-  }
-
-  /**
-   * 按 channel 分发主人鉴权逻辑。
-   *
-   * 关键点（中文）
-   * - 鉴权实现放在各自 channel 的 `Auth.ts` 中。
-   * - Base 仅负责统一分发，避免集中式“全平台鉴权模块”。
-   */
-  private resolveMasterStatusByChannel(params: {
-    userId?: string;
-  }): ChatMasterStatus {
-    if (this.channel === "telegram") {
-      return resolveTelegramMasterStatus({
-        config: this.context.config,
-        env: this.context.env,
-        rootPath: this.context.rootPath,
-        userId: params.userId,
-      });
-    }
-    if (this.channel === "feishu") {
-      return resolveFeishuMasterStatus({
-        config: this.context.config,
-        env: this.context.env,
-        rootPath: this.context.rootPath,
-        userId: params.userId,
-      });
-    }
-    if (this.channel === "qq") {
-      return resolveQqMasterStatus({
-        config: this.context.config,
-        env: this.context.env,
-        rootPath: this.context.rootPath,
-        userId: params.userId,
-      });
-    }
-    return resolveOwnerMatch({
-      config: this.context.config,
-      channel: this.channel,
-      env: this.context.env,
-      userId: params.userId,
-      authorizationConfig: readChatAuthorizationConfigSync(this.context.rootPath),
-    });
   }
 }

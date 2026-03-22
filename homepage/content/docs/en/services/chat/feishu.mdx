@@ -78,17 +78,13 @@ In Console UI, open `Global / Channel Accounts` and create a Feishu account such
 
 ### 5) Required permissions
 
-From this version on, Feishu ownership should no longer be modeled as only one `FEISHU_AUTH_ID`.
-
 Meaning:
 
-- `ownerIds`: who should be treated as `is_master=yes`
-- `dmPolicy`: whether DMs are open, pairing-based, allowlist-based, or disabled
-- `allowFrom`: DM allowlist
-- `groupPolicy`: whether groups are open or restricted
-- `groupAllowFrom`: allowed group ids
+- `role`: a permission group such as `default`, `member`, or `admin`
+- `permission`: permissions owned by that group, such as `chat.dm.use`, `chat.group.use`, or `agent.manage`
+- `user -> role`: which role a Feishu user belongs to
 
-The same config is now stored in console `~/.ship/ship.db` and managed in Console UI under `Agent / Authorization`, instead of being written to project `ship.json` in plaintext.
+The same config is now stored in console `~/.ship/ship.db` and managed in Console UI under `Agent / Authorization`, instead of being written to project `ship.json` in plaintext. New users fall back to default roles, so no pairing flow is required; group/channel usage depends only on the speaking user's role.
 
 For the current runtime, **tenant app scopes** matter most.
 
@@ -234,3 +230,4 @@ Usually this means one of these is still not effective:
 - [Feishu message flow](/en/docs/services/chat/feishu-message-flow)
 - [Chat Service overview](/en/docs/services/chat/chat-service)
 - [Channel configuration metadata](/en/docs/services/chat/channel-configuration)
+- [Permissions](/en/docs/security/permissions)

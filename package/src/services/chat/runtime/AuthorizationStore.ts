@@ -2,7 +2,7 @@
  * Chat 授权运行时状态存储。
  *
  * 关键点（中文）
- * - 所有动态状态（观测用户 / 会话 / pairing 请求）统一落盘到 `.ship/chat/authorization/state.json`。
+ * - 所有动态状态（观测用户 / 会话）统一落盘到 `.ship/chat/authorization/state.json`。
  * - 静态授权配置保存在 console `ship.db`，不和运行时观测数据混写。
  */
 
@@ -11,7 +11,6 @@ import path from "node:path";
 import type {
   ChatAuthorizationObservedChat,
   ChatAuthorizationObservedUser,
-  ChatAuthorizationPairingRequest,
   ChatAuthorizationSnapshot,
   ChatAuthorizationStateFile,
 } from "@services/chat/types/Authorization.js";
@@ -102,32 +101,6 @@ function normalizeObservedChat(
   };
 }
 
-function normalizePairingRequest(
-  input: Partial<ChatAuthorizationPairingRequest> | null | undefined,
-): ChatAuthorizationPairingRequest | null {
-  if (!input || typeof input !== "object") return null;
-  const channel = normalizeText(input.channel) as ChatDispatchChannel | undefined;
-  const userId = normalizeText(input.userId);
-  if (!channel || !userId) return null;
-  return {
-    v: 1,
-    channel,
-    userId,
-    ...(normalizeText(input.username) ? { username: normalizeText(input.username) } : {}),
-    ...(normalizeText(input.chatId) ? { chatId: normalizeText(input.chatId) } : {}),
-    ...(normalizeText(input.chatTitle) ? { chatTitle: normalizeText(input.chatTitle) } : {}),
-    ...(normalizeText(input.chatType) ? { chatType: normalizeText(input.chatType) } : {}),
-    createdAt:
-      typeof input.createdAt === "number" && Number.isFinite(input.createdAt)
-        ? input.createdAt
-        : Date.now(),
-    updatedAt:
-      typeof input.updatedAt === "number" && Number.isFinite(input.updatedAt)
-        ? input.updatedAt
-        : Date.now(),
-  };
-}
-
 function normalizeStateFile(
   input: Partial<ChatAuthorizationStateFile> | null | undefined,
 ): ChatAuthorizationStateFile {
@@ -154,16 +127,6 @@ function normalizeStateFile(
       out.chatsByKey[key] = normalized;
     }
   }
-
-  const pairing = input?.pairingRequestsByKey;
-  if (pairing && typeof pairing === "object") {
-    for (const [key, value] of Object.entries(pairing)) {
-      const normalized = normalizePairingRequest(value);
-      if (!normalized) continue;
-      out.pairingRequestsByKey[key] = normalized;
-    }
-  }
-
   return out;
 }
 
@@ -241,44 +204,7 @@ export async function recordObservedAuthorizationPrincipal(params: {
 }
 
 /**
- * upsert pairing 待审批请求。
- */
-export async function upsertAuthorizationPairingRequest(params: {
-  context: ServiceRuntime;
-  channel: ChatDispatchChannel;
-  userId: string;
-  username?: string;
-  chatId?: string;
-  chatTitle?: string;
-  chatType?: string;
-}): Promise<ChatAuthorizationPairingRequest> {
-  const userId = normalizeText(params.userId);
-  if (!userId) {
-    throw new Error("userId is required");
-  }
-  const now = Date.now();
-  const state = await readState(params.context.rootPath);
-  const key = buildUserKey(params.channel, userId);
-  const prev = state.pairingRequestsByKey[key];
-  const next: ChatAuthorizationPairingRequest = {
-    v: 1,
-    channel: params.channel,
-    userId,
-    ...(normalizeText(params.username) ? { username: normalizeText(params.username) } : {}),
-    ...(normalizeText(params.chatId) ? { chatId: normalizeText(params.chatId) } : {}),
-    ...(normalizeText(params.chatTitle) ? { chatTitle: normalizeText(params.chatTitle) } : {}),
-    ...(normalizeText(params.chatType) ? { chatType: normalizeText(params.chatType) } : {}),
-    createdAt: prev?.createdAt ?? now,
-    updatedAt: now,
-  };
-  state.pairingRequestsByKey[key] = next;
-  state.updatedAt = now;
-  await writeState(params.context.rootPath, state);
-  return next;
-}
-
-/**
- * 删除 pairing 请求。
+ * 删除 pairing 请求（兼容空实现，角色模型下不再使用）。
  */
 export async function removeAuthorizationPairingRequest(params: {
   context: ServiceRuntime;
@@ -304,8 +230,6 @@ export async function readAuthorizationSnapshot(params: {
     config: readAuthorizationConfig(params.context.rootPath),
     users: Object.values(state.usersByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
     chats: Object.values(state.chatsByKey).sort((a, b) => b.lastSeenAt - a.lastSeenAt),
-    pairingRequests: Object.values(state.pairingRequestsByKey).sort(
-      (a, b) => b.updatedAt - a.updatedAt,
-    ),
+    pairingRequests: [],
   };
 }

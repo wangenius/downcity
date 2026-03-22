@@ -24,10 +24,6 @@ import {
   startAllServiceRuntimes,
   stopAllServiceRuntimes,
 } from "@agent/service/Manager.js";
-import {
-  startAllExtensionRuntimes,
-  stopAllExtensionRuntimes,
-} from "@console/extension/Manager.js";
 
 /**
  * 运行态启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
@@ -82,7 +78,7 @@ export async function runCommand(
   });
 
   // 处理进程信号
-  // 停机顺序（中文）：services -> extensions -> API server -> flush logs。
+  // 停机顺序（中文）：services -> API server -> flush logs。
   let isShuttingDown = false;
   const shutdown = async (signal: string) => {
     if (isShuttingDown) return;
@@ -100,13 +96,6 @@ export async function runCommand(
       // ignore
     }
 
-    // Stop extension runtimes
-    try {
-      await stopAllExtensionRuntimes(getServiceRuntimeState());
-    } catch {
-      // ignore
-    }
-
     // 停止服务器
     await server.stop();
 
@@ -119,21 +108,6 @@ export async function runCommand(
 
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
-
-  // 启动 extension runtimes（优先于 service，供 service 调用）。
-  try {
-    const extensionLifecycle = await startAllExtensionRuntimes(
-      getServiceRuntimeState(),
-    );
-    for (const item of extensionLifecycle.results) {
-      if (item.success) continue;
-      logger.error(
-        `Extension runtime start failed: ${item.extension?.name || "unknown"} - ${item.error || "unknown error"}`,
-      );
-    }
-  } catch (e) {
-    logger.error(`Extension runtime bootstrap failed: ${String(e)}`);
-  }
 
   // 启动 service runtimes（含 task cron 等模块内生命周期逻辑）
   // 调度策略（中文）：单服务失败不阻断主服务启动，仅记录日志。

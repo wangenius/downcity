@@ -4,7 +4,7 @@
  * 职责说明：
  * 1. 仅加载项目根目录 `.env`（用户自管文件，不写回 DB）。
  * 2. 读取 `ship.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
- * 3. 支持配置继承：console(db 共享 extensions 层) ->（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
+ * 3. 支持配置继承：（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
  * 4. 环境变量分层：`env_entries` 单表承载 `global`（console 共享）与 `agent`（agent 私有）两种 scope。
  * 4. 统一导出 Ship 配置类型，避免业务模块直接依赖具体配置文件路径。
  */
@@ -166,49 +166,12 @@ function readShipJsonLayer(
   return resolveEnvPlaceholdersDeep(raw, resolveEnvVar);
 }
 
-function readConsoleExtensionsLayerFromStore(
-  resolveEnvVar: (name: string) => string | undefined,
-): ResolvedConfigValue {
-  let store: ConsoleStore | null = null;
-  try {
-    store = new ConsoleStore();
-    const raw = store.getExtensionsConfigSync<Record<string, unknown>>();
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
-    return resolveEnvPlaceholdersDeep(
-      {
-        extensions: raw as ResolvedConfigValue,
-      },
-      resolveEnvVar,
-    );
-  } catch {
-    return undefined;
-  } finally {
-    store?.close();
-  }
-}
-
 /**
- * 提取 console 全局共享层（仅允许共享能力字段）。
+ * 校验项目层是否误配废弃的 `extensions` 字段。
  *
  * 关键点（中文）
- * - 只把 `extensions` 注入到 agent 运行时配置。
- * - `services.*`、`model.*` 等项目语义字段不允许来自 console 全局层。
- */
-function pickConsoleSharedLayer(layer: ResolvedConfigValue): ResolvedConfigValue {
-  if (!isPlainObject(layer)) return undefined;
-  const shared: { [key: string]: ResolvedConfigValue } = {};
-  if (Object.prototype.hasOwnProperty.call(layer, "extensions")) {
-    shared.extensions = (layer as { extensions?: ResolvedConfigValue }).extensions;
-  }
-  return shared;
-}
-
-/**
- * 校验项目层是否误配 extensions。
- *
- * 关键点（中文）
- * - `extensions` 统一由 console 全局层（`~/.ship/ship.db`）管理。
- * - agent 项目 `ship.json` 只允许配置绑定与项目级参数，不允许写 `extensions`。
+ * - 新版本统一使用 `plugins` / `assets`。
+ * - 发现旧字段时直接报错，避免继续沿用已删除方案。
  */
 function assertNoProjectExtensionsLayer(
   filePath: string,
@@ -217,7 +180,7 @@ function assertNoProjectExtensionsLayer(
   if (!isPlainObject(layer)) return;
   if (!Object.prototype.hasOwnProperty.call(layer, "extensions")) return;
   throw new Error(
-    `Invalid ship.json: extensions must be configured in console ~/.ship/ship.db, not project file (${filePath})`,
+    `Invalid ship.json: legacy "extensions" config is no longer supported. Use "plugins" and "assets" instead (${filePath})`,
   );
 }
 
@@ -252,17 +215,6 @@ export function loadShipConfig(
     ...projectDotenv,
   };
   /**
-   * 读取 console 共享环境变量（模型池 / extensions）。
-   *
-   * 关键点（中文）
-   * - console 层只读全局 scope env，不读项目 .env。
-   * - 避免某个 agent 项目的 .env 反向污染 console 全局配置解析。
-   */
-  const resolveSharedEnvVar = (name: string): string | undefined => {
-    const sharedValue = String(globalEnv[name] || "").trim();
-    return sharedValue || undefined;
-  };
-  /**
    * 读取 agent 项目私有环境变量（services）。
    *
    * 关键点（中文）
@@ -274,15 +226,12 @@ export function loadShipConfig(
     return projectValue || undefined;
   };
 
-  const operationLayerRaw = readConsoleExtensionsLayerFromStore(resolveSharedEnvVar);
-  const operationLayer = pickConsoleSharedLayer(operationLayerRaw);
-
   const ancestorShipJsonPaths = collectAncestorShipJsonPaths(projectRoot);
   if (ancestorShipJsonPaths.length === 0) {
     throw new Error("ship.json not found in project directory");
   }
 
-  let merged: unknown = operationLayer;
+  let merged: unknown = undefined;
   for (const p of ancestorShipJsonPaths) {
     const layer = readShipJsonLayer(p, resolveProjectEnvVar);
     assertNoProjectExtensionsLayer(p, layer);

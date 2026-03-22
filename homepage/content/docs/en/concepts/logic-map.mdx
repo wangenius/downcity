@@ -1,47 +1,48 @@
 ---
 title: Architecture Logic Map
-description: Concepts page 2 explaining responsibilities and interaction of console, agent, service, and extension
+description: Concepts page 2 explaining responsibilities and interaction of console, agent, service, plugin, capability, and asset
 ---
 
 # Architecture Logic Map
 
-This is the second page in Concepts. It focuses on one thing:
+This page answers one thing:
 
-what `console`, `agent`, `service`, and `extension` each own, and how one request flows across them.
+what `console`, `agent`, `service`, `plugin`, `capability`, and `asset` each own, and how one request flows across them.
 
 ## 1. Responsibility Boundaries
 
-- `console`: global control plane. Starts/stops console daemon, manages agent registry, and provides unified ops entry for `service` / `extension` / `config`.
-- `agent`: project-scoped execution plane. Loads project context, runs model/tool execution, and persists runtime traces to `.ship/`.
-- `service`: core domain modules (`chat` / `skill` / `task` / `memory`) for primary workflows.
-- `extension`: shared optional capability modules (for example `voice`), managed from console side and invoked by agents when needed.
+- `console`: global control plane. Starts/stops daemons, manages registry, model pool, env, and shared storage.
+- `agent`: project-scoped execution plane. Loads project config and context, owns one runtime, persists traces.
+- `service`: core domain workflows such as chat/task/memory.
+- `plugin`: optional enhancement modules such as voice.
+- `capability`: stable invocation contract exposed by plugins.
+- `asset`: installable dependency/resource used by plugins.
 
-## 2. System Relationship (Control Plane vs Execution Plane)
+## 2. System Relationship
 
 ```mermaid
 flowchart LR
-  subgraph CP[Control Plane (Console)]
-    CLI[city CLI] --> CONSOLE[city console start\nconsole daemon]
-    CLI --> CFG[city console config ...\nmodel/runtime config]
-    CLI --> SVCOPS[city service ...\nservice ops]
-    CLI --> EXTOPS[city extension ...\nextension ops]
-    CONSOLE --> REG[~/.ship/console/agents.json\nagent registry]
+  subgraph CP["Control Plane (Console)"]
+    CLI["city CLI"] --> CONSOLE["city console start"]
+    CLI --> CFG["console config / model / env"]
+    CLI --> AGENTOPS["city agent ..."]
+    CLI --> PLUGINOPS["city plugin ..."]
+    CONSOLE --> REG["~/.ship/console/agents.json"]
   end
 
-  subgraph DP[Execution Plane (Per Project)]
-    AGENTCMD[city agent start] --> AGENTD[agent daemon]
-    AGENTD --> SERVICES[services\nchat/skill/task/memory]
-    AGENTD --> EXTS[extensions\nvoice/...]
-    AGENTD --> SHIP[.ship/*\ncontext/logs/cache/tasks]
+  subgraph DP["Execution Plane (Per Project)"]
+    AGENT["agent daemon"] --> SERVICES["services"]
+    AGENT --> PLUGINS["plugins"]
+    PLUGINS --> CAPS["capabilities"]
+    PLUGINS --> ASSETS["assets"]
+    AGENT --> SHIP[".ship/*"]
   end
 
-  CONSOLE --> AGENTD
-  SVCOPS --> AGENTD
-  EXTOPS --> AGENTD
-  CFG --> AGENTD
+  CFG --> AGENT
+  PLUGINOPS --> AGENT
 ```
 
-## 3. Request Flow (Simplified)
+## 3. Request Flow
 
 ```mermaid
 sequenceDiagram
@@ -49,48 +50,42 @@ sequenceDiagram
   participant Channel as Telegram/Feishu/QQ
   participant Agent as agent daemon
   participant Service as service(chat/skill/task/memory)
-  participant Ext as extension(voice/...)
+  participant Capability as capability(audio.transcribe)
+  participant Asset as asset(voice.transcriber)
   participant Disk as .ship/
 
   User->>Channel: Send message
   Channel->>Agent: Inbound event
-  Agent->>Disk: Append context/messages
-  Agent->>Service: Dispatch domain actions
-  Service-->>Agent: Return domain result
-  Agent->>Ext: Invoke optional capability
-  Ext-->>Agent: Return extension result
+  Agent->>Disk: Persist context
+  Agent->>Service: Run workflow
+  Service->>Capability: Invoke stable contract
+  Capability->>Asset: Use installed dependency
+  Asset-->>Capability: Return result
+  Capability-->>Service: Return result
+  Service-->>Agent: Return workflow output
   Agent->>Disk: Persist logs/cache/tasks
-  Agent-->>Channel: Send user-visible reply
+  Agent-->>Channel: Send reply
 ```
 
 ## 4. Key Rules
 
-- `console` handles governance/ops, `agent` handles execution/persistence.
-- `service` is the core domain layer, `extension` is the optional enhancement layer.
-- `service` and `extension` are operated from console-facing commands, but execution happens inside agent runtime.
-- The model pool is managed globally via `city console model ...`; each project binds with `model.primary`.
+- `console` handles governance, `agent` handles runtime execution.
+- `service` is core workflow, `plugin` is optional enhancement.
+- services depend on capabilities, not plugin-private details.
+- plugins depend on assets, not raw model/install logic.
 
 ## 5. Typical Command Order
 
 ```bash
-# 1) Start global console (required)
 city console start
-
-# 2) Init project and start agent
 city agent create .
 city agent start
-
-# 3) Operate service / extension
 city service list
-city extension list
-
-# 4) Check overall status
+city plugin list
 city console status
-city agent status .
 ```
 
 ## Read Next
 
 - [Architecture Overview](/en/docs/concepts/architecture)
 - [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
-- [Message Processing Flow](/en/docs/concepts/message-processing)

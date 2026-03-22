@@ -13,6 +13,14 @@ description: chat service 的职责与渠道集成
 - 解析 `contextId/chatKey`，写入 history 与 meta
 - 把回复/动作下发到具体渠道
 
+## 聊天权限判断
+
+- Chat service 收到消息后，会先识别发消息的用户身份与来源平台。
+- 是否允许进入 Agent，不看群本身，而是看当前发消息用户所属的权限组。
+- 新用户如果还没有显式分组，会自动使用默认权限组。
+
+完整说明见：[权限说明](/zh/docs/security/permissions)
+
 ## 会话显示名（chatTitle）
 
 - Chat service 会在 context meta 中尽量记录渠道会话的显示名（`chatTitle`），用于 Console UI 展示更可读的“群名/频道名/私聊对象名”。

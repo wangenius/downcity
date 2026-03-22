@@ -2,53 +2,53 @@
  * Chat 授权模型类型定义。
  *
  * 关键点（中文）
- * - 统一承载 chat 渠道的 owner / allowlist / pairing / group policy。
- * - 配置层（console `ship.db`）与运行时状态层（.ship/chat/authorization/state.json）共用同一套领域模型。
- * - 所有字段都以“用户可管理”为目标设计，便于 Console UI 直接消费。
+ * - 授权核心模型改为：角色（role）+ 权限（permission）+ 绑定（binding）。
+ * - 新用户与新群会落到默认角色，不再走 pairing / 审批流程。
+ * - 静态配置保存在 console `ship.db`，运行时观测数据仍落本地 state.json。
  */
 
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 
 /**
- * 私聊访问策略。
+ * 可配置的授权权限。
  *
- * 含义（中文）
- * - `open`：任何私聊用户都可直接触发。
- * - `pairing`：未授权用户会创建待审批请求，审批后进入 allowlist。
- * - `allowlist`：只有 allowFrom 内用户可触发。
- * - `disabled`：完全关闭私聊入口。
+ * 说明（中文）
+ * - `chat.dm.use`：允许该角色用户在私聊触发 agent。
+ * - `chat.group.use`：允许该角色用户在群聊/频道触发 agent。
+ * - `auth.manage.users`：允许管理用户/群的角色归属。
+ * - `auth.manage.roles`：允许编辑角色与角色权限。
+ * - `agent.view.logs`：允许查看 agent 日志等较高读权限。
+ * - `agent.manage`：允许进行 runtime/配置等管理动作。
  */
-export type ChatAuthorizationDmPolicy =
-  | "open"
-  | "pairing"
-  | "allowlist"
-  | "disabled";
+export type ChatAuthorizationPermission =
+  | "chat.dm.use"
+  | "chat.group.use"
+  | "auth.manage.users"
+  | "auth.manage.roles"
+  | "agent.view.logs"
+  | "agent.manage";
 
 /**
- * 群聊访问策略。
- *
- * 含义（中文）
- * - `open`：任何群都可触发。
- * - `allowlist`：只有 groupAllowFrom 内的群可触发。
- * - `disabled`：完全关闭群聊 / 频道入口。
+ * 单个角色定义。
  */
-export type ChatAuthorizationGroupPolicy =
-  | "open"
-  | "allowlist"
-  | "disabled";
-
-/**
- * 单个群/频道的细粒度授权配置。
- */
-export interface ChatAuthorizationGroupConfig {
+export interface ChatAuthorizationRole {
   /**
-   * 该群内允许触发的用户 ID 列表。
+   * 角色唯一标识。
    *
    * 说明（中文）
-   * - 为空或缺省表示不额外限制发言者。
-   * - 命中后才允许该群内的对应用户触发。
+   * - 例如：`default`、`member`、`admin`。
    */
-  allowFrom?: string[];
+  roleId: string;
+
+  /**
+   * 角色展示名。
+   */
+  name: string;
+
+  /**
+   * 角色拥有的权限集合。
+   */
+  permissions: ChatAuthorizationPermission[];
 }
 
 /**
@@ -56,63 +56,39 @@ export interface ChatAuthorizationGroupConfig {
  */
 export interface ChatChannelAuthorizationConfig {
   /**
-   * 当前渠道的 owner 用户 ID 列表。
+   * 新用户默认角色 ID。
    *
    * 说明（中文）
-   * - owner 仅用于 `is_master` / 高权限标识。
-   * - owner 通常也是 allowFrom 成员，但两者职责不同。
+   * - 当某个用户没有显式绑定角色时，自动使用该角色。
    */
-  ownerIds?: string[];
+  defaultUserRoleId?: string;
 
   /**
-   * 私聊访问策略。
-   */
-  dmPolicy?: ChatAuthorizationDmPolicy;
-
-  /**
-   * 私聊允许用户列表。
+   * 用户角色绑定表。
    *
    * 说明（中文）
-   * - 与 `dmPolicy=allowlist|pairing` 配合使用。
-   * - pairing 审批通过后通常会把用户加入这里。
+   * - key 为平台原始 userId。
+   * - value 为目标 `roleId`。
    */
-  allowFrom?: string[];
+  userRoles?: Record<string, string>;
 
-  /**
-   * 群聊访问策略。
-   */
-  groupPolicy?: ChatAuthorizationGroupPolicy;
-
-  /**
-   * 允许触发的群 / 频道 ID 列表。
-   *
-   * 说明（中文）
-   * - 仅在 `groupPolicy=allowlist` 时生效。
-   */
-  groupAllowFrom?: string[];
-
-  /**
-   * 单个群/频道的附加授权配置。
-   *
-   * 说明（中文）
-   * - key 为平台原始 chatId。
-   * - 当前仅支持群内发言者 allowlist。
-   */
-  groups?: Record<string, ChatAuthorizationGroupConfig>;
 }
 
 /**
  * chat 授权总配置。
- *
- * 说明（中文）
- * - 静态配置保存在 console `~/.ship/ship.db` 的 agent 级加密配置中。
  */
 export interface ChatAuthorizationConfig {
   /**
-   * 各渠道授权配置。
+   * 全局角色定义表。
    *
    * 说明（中文）
-   * - 未配置的渠道会使用默认策略。
+   * - 角色不按平台拆分，所有平台共享同一套角色与权限模型。
+   * - 平台差异只体现在用户/会话绑定关系上。
+   */
+  roles?: Record<string, ChatAuthorizationRole>;
+
+  /**
+   * 各渠道授权绑定配置。
    */
   channels?: Partial<Record<ChatDispatchChannel, ChatChannelAuthorizationConfig>>;
 }
@@ -133,9 +109,6 @@ export interface ChatAuthorizationEvaluateInput {
 
   /**
    * 当前消息所属会话类型。
-   *
-   * 说明（中文）
-   * - 用于区分私聊 / 群聊 / 频道。
    */
   chatType?: string;
 
@@ -150,7 +123,7 @@ export interface ChatAuthorizationEvaluateInput {
   username?: string;
 
   /**
-   * 当前会话展示名（群名 / 私聊对象名 / 频道名）。
+   * 当前会话展示名。
    */
   chatTitle?: string;
 }
@@ -158,10 +131,7 @@ export interface ChatAuthorizationEvaluateInput {
 /**
  * 授权判定结果。
  */
-export type ChatAuthorizationDecision =
-  | "allow"
-  | "block"
-  | "pairing";
+export type ChatAuthorizationDecision = "allow" | "block";
 
 /**
  * 运行时授权结果。
@@ -173,15 +143,22 @@ export interface ChatAuthorizationEvaluateResult {
   decision: ChatAuthorizationDecision;
 
   /**
-   * 当前用户是否 owner。
+   * 当前用户是否拥有高权限。
    */
   isOwner: boolean;
 
   /**
+   * 当前用户匹配到的角色 ID。
+   */
+  userRoleId: string;
+
+  /**
+   * 当前用户匹配到的权限列表。
+   */
+  userPermissions: ChatAuthorizationPermission[];
+
+  /**
    * 结果原因。
-   *
-   * 说明（中文）
-   * - 主要用于日志、UI 调试与审计展示。
    */
   reason: string;
 }
@@ -287,91 +264,11 @@ export interface ChatAuthorizationObservedChat {
 }
 
 /**
- * pairing 待审批请求。
- */
-export interface ChatAuthorizationPairingRequest {
-  /**
-   * 记录版本号。
-   */
-  v: 1;
-
-  /**
-   * 渠道名。
-   */
-  channel: ChatDispatchChannel;
-
-  /**
-   * 请求用户 ID。
-   */
-  userId: string;
-
-  /**
-   * 请求用户最近一次用户名 / 展示名。
-   */
-  username?: string;
-
-  /**
-   * 最近一次发起请求的会话 ID。
-   */
-  chatId?: string;
-
-  /**
-   * 最近一次发起请求的会话标题。
-   */
-  chatTitle?: string;
-
-  /**
-   * 最近一次发起请求的会话类型。
-   */
-  chatType?: string;
-
-  /**
-   * 首次请求时间戳（毫秒）。
-   */
-  createdAt: number;
-
-  /**
-   * 最近更新时间戳（毫秒）。
-   */
-  updatedAt: number;
-}
-
-/**
- * 授权运行时状态文件。
- */
-export interface ChatAuthorizationStateFile {
-  /**
-   * 状态文件版本号。
-   */
-  v: 1;
-
-  /**
-   * 文件最近更新时间戳（毫秒）。
-   */
-  updatedAt: number;
-
-  /**
-   * 按 `channel:userId` 建索引的用户观测快照。
-   */
-  usersByKey: Record<string, ChatAuthorizationObservedUser>;
-
-  /**
-   * 按 `channel:chatId` 建索引的会话观测快照。
-   */
-  chatsByKey: Record<string, ChatAuthorizationObservedChat>;
-
-  /**
-   * 按 `channel:userId` 建索引的 pending pairing 请求。
-   */
-  pairingRequestsByKey: Record<string, ChatAuthorizationPairingRequest>;
-}
-
-/**
- * Console UI / mainview 使用的授权摘要。
+ * 授权快照。
  */
 export interface ChatAuthorizationSnapshot {
   /**
-   * 当前 agent 的授权配置快照。
+   * 当前静态授权配置。
    */
   config: ChatAuthorizationConfig;
 
@@ -386,7 +283,40 @@ export interface ChatAuthorizationSnapshot {
   chats: ChatAuthorizationObservedChat[];
 
   /**
-   * 当前 pending pairing 请求列表。
+   * 兼容字段。
+   *
+   * 说明（中文）
+   * - 角色模型下已不再使用 pairing，这里固定为空数组供旧 UI/接口平滑降级。
    */
-  pairingRequests: ChatAuthorizationPairingRequest[];
+  pairingRequests: [];
+}
+
+/**
+ * 运行时状态文件结构。
+ */
+export interface ChatAuthorizationStateFile {
+  /**
+   * 状态文件版本号。
+   */
+  v: 1;
+
+  /**
+   * 最近更新时间戳（毫秒）。
+   */
+  updatedAt: number;
+
+  /**
+   * 用户快照索引。
+   */
+  usersByKey: Record<string, ChatAuthorizationObservedUser>;
+
+  /**
+   * 会话快照索引。
+   */
+  chatsByKey: Record<string, ChatAuthorizationObservedChat>;
+
+  /**
+   * 兼容字段。
+   */
+  pairingRequestsByKey: Record<string, never>;
 }

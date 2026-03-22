@@ -1,97 +1,64 @@
 ---
 title: 架构逻辑图
-
-description: Concepts 第二页，解释 console、agent、service、extension 的职责边界与协作链路
+description: 解释 console、agent、service、plugin、capability、asset 的职责边界与协作链路
 ---
 
 # 架构逻辑图
 
-这页是 Concepts 的第二页，专门回答一件事：
+这页回答一个问题：
 
-`console`、`agent`、`service`、`extension` 分别负责什么，如何协作，以及一条消息如何穿过这四层。
+`console`、`agent`、`service`、`plugin`、`capability`、`asset` 各自负责什么，以及一次请求如何穿过它们。
 
-## 1. 四个角色的职责边界
+## 1. 职责边界
 
-- `console`：全局控制面。负责启动/停止 console 进程、管理 agent daemon 清单、提供 `service/extension/config` 统一运维入口。
-- `agent`：项目级执行面。负责加载当前项目上下文、运行推理与工具调用、把执行轨迹写入 `.ship/`。
-- `service`：核心业务能力模块（如 `chat` / `skill` / `task` / `memory`），直接承载业务流程。
-- `extension`：共享型扩展能力（如 `voice`），由 console 侧统一管理，供 agent 在运行时按需调用。
+- `console`：全局控制面。管理 daemon、registry、模型池、env、共享存储。
+- `agent`：项目执行面。加载项目配置与上下文，持有单个 runtime。
+- `service`：核心业务流程。
+- `plugin`：可选增强模块。
+- `capability`：稳定调用契约。
+- `asset`：插件依赖资源。
 
-## 2. 总体关系图（控制面 vs 执行面）
+## 2. 系统关系
 
 ```mermaid
 flowchart LR
-  subgraph CP[控制面（Console）]
-    CLI[city CLI] --> CONSOLE[city console start\nconsole daemon]
-    CLI --> CFG[city console config ...\n模型与运行配置]
-    CLI --> SVCOPS[city service ...\nservice 运维]
-    CLI --> EXTOPS[city extension ...\nextension 运维]
-    CONSOLE --> REG[~/.ship/console/agents.json\nagent registry]
+  subgraph CP["控制面（Console）"]
+    CLI["city CLI"] --> CONSOLE["city console start"]
+    CLI --> CFG["console config / model / env"]
+    CLI --> AGENTOPS["city agent ..."]
+    CLI --> PLUGINOPS["city plugin ..."]
+    CONSOLE --> REG["~/.ship/console/agents.json"]
   end
 
-  subgraph DP[执行面（按项目）]
-    AGENTCMD[city agent start] --> AGENTD[agent daemon]
-    AGENTD --> SERVICES[services\nchat/skill/task/memory]
-    AGENTD --> EXTS[extensions\nvoice/...]
-    AGENTD --> SHIP[.ship/*\ncontext/logs/cache/tasks]
+  subgraph DP["执行面（Per Project）"]
+    AGENT["agent daemon"] --> SERVICES["services"]
+    AGENT --> PLUGINS["plugins"]
+    PLUGINS --> CAPS["capabilities"]
+    PLUGINS --> ASSETS["assets"]
+    AGENT --> SHIP[".ship/*"]
   end
 
-  CONSOLE --> AGENTD
-  SVCOPS --> AGENTD
-  EXTOPS --> AGENTD
-  CFG --> AGENTD
+  CFG --> AGENT
+  PLUGINOPS --> AGENT
 ```
 
-## 3. 请求执行链路（简化）
+## 3. 请求流
 
 ```mermaid
 sequenceDiagram
-  participant User as 用户
+  participant User as User
   participant Channel as Telegram/Feishu/QQ
   participant Agent as agent daemon
   participant Service as service(chat/skill/task/memory)
-  participant Ext as extension(voice/...)
-  participant Disk as .ship/
+  participant Capability as capability(audio.transcribe)
+  participant Asset as asset(voice.transcriber)
 
   User->>Channel: 发送消息
-  Channel->>Agent: 入站事件
-  Agent->>Disk: 写入 context/messages
-  Agent->>Service: 分发业务动作
+  Channel->>Agent: 进入 runtime
+  Agent->>Service: 执行业务流程
+  Service->>Capability: 调稳定契约
+  Capability->>Asset: 使用依赖资源
+  Asset-->>Capability: 返回结果
+  Capability-->>Service: 返回结果
   Service-->>Agent: 返回业务结果
-  Agent->>Ext: 按需调用扩展能力
-  Ext-->>Agent: 返回扩展结果
-  Agent->>Disk: 写入 logs/cache/tasks
-  Agent-->>Channel: 回发用户可见结果
 ```
-
-## 4. 关键原则
-
-- `console` 管“运维与治理”，`agent` 管“执行与落盘”。
-- `service` 是核心域，`extension` 是可选增强域。
-- `service` / `extension` 都由 console 统一暴露运维接口，但真正执行发生在 agent runtime 内。
-- 模型池通过 `city console model ...` 在 console 全局层管理；项目只通过 `model.primary` 绑定模型 ID。
-
-## 5. 常用命令顺序
-
-```bash
-# 1) 启动全局 console（必须）
-city console start
-
-# 2) 初始化项目并启动 agent
-city agent create .
-city agent start
-
-# 3) 运维 service / extension
-city service list
-city extension list
-
-# 4) 查看整体状态
-city console status
-city agent status .
-```
-
-## 延伸阅读
-
-- [架构总览](/zh/docs/concepts/architecture)
-- [关系与进程模型](/zh/docs/concepts/runtime-relationship-and-process)
-- [消息处理链路](/zh/docs/concepts/message-processing)

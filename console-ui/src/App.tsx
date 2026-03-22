@@ -13,7 +13,7 @@ import { EnvSection } from "@/components/dashboard/EnvSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
 import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
 import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspaceSection"
-import { ExtensionsSection } from "@/components/dashboard/ExtensionsSection"
+import { PluginsSection } from "@/components/dashboard/PluginsSection"
 import { GlobalOverviewSection } from "@/components/dashboard/GlobalOverviewSection"
 import { LogsSection } from "@/components/dashboard/LogsSection"
 import { SkillsSection } from "@/components/dashboard/SkillsSection"
@@ -66,7 +66,7 @@ export function App() {
     authorization,
     services,
     skills,
-    extensions,
+    plugins,
     chatChannels,
     contexts,
     selectedContextId,
@@ -101,8 +101,7 @@ export function App() {
     refreshSkills,
     refreshContextArchives,
     controlService,
-    controlExtension,
-    testExtension,
+    runPluginAction,
     runChatChannelAction,
     configureChatChannel,
     refreshAuthorization,
@@ -328,7 +327,7 @@ export function App() {
       activeView !== "globalChannelAccounts" &&
       activeView !== "globalCommand" &&
       activeView !== "globalAgents" &&
-      activeView !== "globalExtensions"
+      activeView !== "globalPlugins"
     if (!agentScopedView || !selectedAgentId) return
     const expectedPath = toDashboardPath(activeView, {
       contextId: activeView === "contextWorkspace" ? selectedContextId : undefined,
@@ -488,7 +487,7 @@ export function App() {
               cityVersion={cityVersion}
               agents={agents}
               modelPoolItems={modelPoolItems}
-              extensions={extensions}
+              plugins={plugins}
               configStatus={configStatus}
               onCreateAgent={(input) => createAgent(input)}
               onPickAgentDirectory={() => pickAgentDirectory()}
@@ -593,7 +592,7 @@ export function App() {
               cityVersion={cityVersion}
               agents={agents}
               modelPoolItems={modelPoolItems}
-              extensions={extensions}
+              plugins={plugins}
               configStatus={configStatus}
               onCreateAgent={(input) => createAgent(input)}
               onPickAgentDirectory={() => pickAgentDirectory()}
@@ -655,15 +654,14 @@ export function App() {
             />
           </section>
         )
-      case "globalExtensions":
+      case "globalPlugins":
         return (
           <section>
-            <ExtensionsSection
-              extensions={extensions}
+            <PluginsSection
+              plugins={plugins}
               formatTime={uiHelpers.formatTime}
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
-              onControl={(name, action) => void controlExtension(name, action)}
-              onTest={(name) => void testExtension(name)}
+              onRunAction={(name, action) => void runPluginAction(name, action)}
             />
           </section>
         )

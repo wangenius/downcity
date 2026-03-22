@@ -148,7 +148,6 @@ export class ConsoleStore {
         app_secret_encrypted TEXT,
         domain TEXT,
         sandbox INTEGER,
-        auth_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -565,20 +564,6 @@ export class ConsoleStore {
         `,
       )
       .run(settingKey, encrypted, now, now);
-  }
-
-  /**
-   * 读取 console extensions 配置（同步）。
-   */
-  getExtensionsConfigSync<T extends object>(): T | null {
-    return this.getSecureSettingJsonSync<T>("extensions_config");
-  }
-
-  /**
-   * 写入 console extensions 配置（同步）。
-   */
-  setExtensionsConfigSync(value: unknown): void {
-    this.setSecureSettingJsonSync("extensions_config", value);
   }
 
   /**
@@ -1075,7 +1060,7 @@ export class ConsoleStore {
           SELECT
             id, channel, name, identity, owner, creator,
             bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
-            domain, sandbox, auth_id, created_at, updated_at
+            domain, sandbox, created_at, updated_at
           FROM channel_accounts
           WHERE channel = ?
           ORDER BY name ASC, id ASC;
@@ -1086,7 +1071,7 @@ export class ConsoleStore {
           SELECT
             id, channel, name, identity, owner, creator,
             bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
-            domain, sandbox, auth_id, created_at, updated_at
+            domain, sandbox, created_at, updated_at
           FROM channel_accounts
           ORDER BY channel ASC, name ASC, id ASC;
           `,
@@ -1117,7 +1102,6 @@ export class ConsoleStore {
         appSecret: optionalTrimmedText(appSecret),
         domain: optionalTrimmedText(String(row.domain || "")),
         sandbox: Number(row.sandbox || 0) === 1,
-        authId: optionalTrimmedText(String(row.auth_id || "")),
         createdAt: String(row.created_at || ""),
         updatedAt: String(row.updated_at || ""),
       });
@@ -1145,7 +1129,7 @@ export class ConsoleStore {
           SELECT
             id, channel, name, identity, owner, creator,
             bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
-            domain, sandbox, auth_id, created_at, updated_at
+            domain, sandbox, created_at, updated_at
           FROM channel_accounts
           WHERE channel = ?
           ORDER BY name ASC, id ASC;
@@ -1156,7 +1140,7 @@ export class ConsoleStore {
           SELECT
             id, channel, name, identity, owner, creator,
             bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
-            domain, sandbox, auth_id, created_at, updated_at
+            domain, sandbox, created_at, updated_at
           FROM channel_accounts
           ORDER BY channel ASC, name ASC, id ASC;
           `,
@@ -1187,7 +1171,6 @@ export class ConsoleStore {
         appSecret: optionalTrimmedText(appSecret),
         domain: optionalTrimmedText(String(row.domain || "")),
         sandbox: Number(row.sandbox || 0) === 1,
-        authId: optionalTrimmedText(String(row.auth_id || "")),
         createdAt: String(row.created_at || ""),
         updatedAt: String(row.updated_at || ""),
       });
@@ -1236,9 +1219,9 @@ export class ConsoleStore {
       INSERT INTO channel_accounts (
         id, channel, name, identity, owner, creator,
         bot_token_encrypted, app_id_encrypted, app_secret_encrypted,
-        domain, sandbox, auth_id, created_at, updated_at
+        domain, sandbox, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         channel = excluded.channel,
         name = excluded.name,
@@ -1250,7 +1233,6 @@ export class ConsoleStore {
         app_secret_encrypted = excluded.app_secret_encrypted,
         domain = excluded.domain,
         sandbox = excluded.sandbox,
-        auth_id = excluded.auth_id,
         updated_at = excluded.updated_at;
       `,
     ).run(
@@ -1265,7 +1247,6 @@ export class ConsoleStore {
       appSecretEncrypted,
       optionalTrimmedText(input.domain) || null,
       input.sandbox === true ? 1 : 0,
-      optionalTrimmedText(input.authId) || null,
       createdAt,
       updatedAt,
     );

@@ -76,7 +76,7 @@ Example: send a PDF with caption: `Summarize this PDF and list action items.`
 
 ### Local STT model management
 
-If you want to manage local voice-to-text models, use the dedicated `voice` extension command group:
+If you want to manage local voice-to-text models, use the dedicated `voice` plugin command group:
 
 ```bash
 # enable and install model
@@ -86,7 +86,7 @@ city voice on SenseVoiceSmall
 city voice status
 ```
 
-When `extensions.voice.enabled=true`, incoming Telegram `voice/audio` attachments are transcribed in best-effort mode and appended into the user instruction.
+When the `voice` plugin is enabled and the `voice.transcriber` asset is available, incoming Telegram `voice/audio` attachments are transcribed in best-effort mode and appended into the user instruction.
 
 ### Group / supergroup
 

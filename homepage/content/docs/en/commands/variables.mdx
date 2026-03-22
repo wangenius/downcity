@@ -9,14 +9,14 @@ This page answers one question: what environment each `city` command group needs
 
 ## 0) Top-level command boundary
 
-Top-level commands are only:
+Top-level command groups are:
 
 - `city console`
 - `city agent`
 - `city service`
-- `city extension`
+- `city plugin`
 
-Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city voice` are action commands under service/extension systems, not top-level commands.
+Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city voice` are action commands under service/plugin systems, not top-level commands.
 
 ## 1) Environment by command group
 
@@ -31,9 +31,9 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city v
 | `city console config ...` | Valid `ship.json` exists under target path | `--path` | Reads/writes project config; does not call runtime API |
 | `city console config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
 | `city service ...` | Target runtime is reachable; project is registered; project has `ship.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
-| `city extension ...` | Target runtime is reachable | `--path`, `--host`, `--port` | `voice` extension has local fallback when remote runtime is unreachable |
+| `city plugin ...` | Target runtime is reachable; project is registered; project has `ship.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
 | `city <service> <action>` (e.g. `city chat ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
-| `city <extension> <action>` (e.g. `city voice ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/extensions/command` |
+| `city <plugin> <action>` (e.g. `city voice ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
 
 ## 2) Context env requirements for common commands
 
@@ -54,7 +54,6 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city v
 - The only path is binding `services.chat.channels.<channel>.channelAccountId` in `ship.json`.
 - Real credentials (`botToken` / `appId` / `appSecret`) are stored in global `~/.ship/ship.db` (`channel_accounts`).
 - `ship.json` and agent `.env` no longer carry these credentials.
-- Optional: only master auth IDs can be provided via env (`TELEGRAM_AUTH_ID` / `FEISHU_AUTH_ID` / `QQ_AUTH_ID`).
 
 ## 3) `city service` target agent resolution order
 
@@ -72,7 +71,7 @@ Still must satisfy:
 
 ## 4) Runtime API endpoint resolution order (`host/port`)
 
-For runtime API calls (service/extension/action commands):
+For runtime API calls (service/plugin/action commands):
 
 1. explicit CLI args: `--host` / `--port`
 2. env vars: `DC_SERVER_HOST/PORT`

@@ -2,8 +2,8 @@
  * Telegram 语音附件转写桥接测试（node:test）。
  *
  * 关键点（中文）
- * - 仅 voice/audio 附件会触发 extension 调用。
- * - extension 失败时不中断主流程（返回空文本）。
+ * - 仅 voice/audio 附件会触发语音转写 capability 调用。
+ * - capability 失败时不中断主流程（返回空文本）。
  */
 
 import assert from "node:assert/strict";
@@ -21,10 +21,13 @@ function createLogger() {
   };
 }
 
-test("voice/audio attachments call extension and produce transcript blocks", async () => {
+test("voice/audio attachments call capability and produce transcript blocks", async () => {
   const rootPath = "/tmp/demo-root";
   const context = {
-    extensions: {
+    capabilities: {
+      has(name) {
+        return name === "audio.transcribe";
+      },
       async invoke(params) {
         if (params.payload.audioPath.endsWith("a.ogg")) {
           return { success: true, data: { text: "第一段语音" } };
@@ -53,13 +56,16 @@ test("voice/audio attachments call extension and produce transcript blocks", asy
   assert.match(text, /语音转写/);
 });
 
-test("extension failure is ignored and returns empty transcript", async () => {
+test("capability failure is ignored and returns empty transcript", async () => {
   const context = {
-    extensions: {
+    capabilities: {
+      has(name) {
+        return name === "audio.transcribe";
+      },
       async invoke() {
         return {
           success: false,
-          error: "voice extension disabled",
+          error: "voice capability disabled",
         };
       },
     },

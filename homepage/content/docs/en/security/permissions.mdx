@@ -1,13 +1,24 @@
 ---
-title: Permissions Configuration
-description: How to configure and reason about ship.json permissions
+title: Permissions
+description: Understand Ship's two permission layers: agent runtime permissions and chat user authorization
 ---
 
-# Permissions Configuration
+# Permissions
 
-`ship.json.permissions` defines the operational boundary for an agent.
+Ship has two different permission layers:
 
-## Minimal example
+1. `Agent runtime permissions`
+2. `Chat user authorization`
+
+They solve different problems and should be understood separately.
+
+## 1. Agent runtime permissions
+
+This layer defines what the agent itself is allowed to do, such as reading the repo, writing files, or executing commands.
+
+This is still configured in project `ship.json.permissions`.
+
+### Minimal example
 
 ```json
 {
@@ -27,7 +38,7 @@ description: How to configure and reason about ship.json permissions
 }
 ```
 
-## Field semantics
+### Field semantics
 
 - `read_repo`: allow repository reads.
 - `write_repo.requiresApproval`: require approval before repository writes.
@@ -36,13 +47,70 @@ description: How to configure and reason about ship.json permissions
 - `exec_command.denyRequiresApproval`: whether denied commands can be manually approved.
 - `exec_command.maxOutputChars/maxOutputLines`: command output limits.
 
-## Recommended policy
+### Recommended policy
 
 1. Keep baseline deny list for production and add risk-specific rules.
 2. On CI/shared hosts, enable `requiresApproval`.
 3. If output is truncated, narrow command scope first instead of unlimited output.
 
+## 2. Chat user authorization
+
+This layer decides who is allowed to talk to the agent and what they are allowed to do.
+
+The current model is a pure permission-group model:
+
+- each user belongs to one permission group
+- each permission group owns a set of permissions
+- every incoming message is judged only by the speaking user
+
+There is no special `master` or `owner` identity in this model. Everything is handled through permission groups.
+
+### Core rules
+
+- New users fall into the default permission group.
+- Whether a direct message is allowed depends on that user's DM permission.
+- Group or channel messages are also judged only by the speaking user's permissions.
+- A group itself is not a permission subject.
+- The user platform is distinguished, so Telegram, Feishu, and QQ users are tracked separately.
+
+### Where it is stored
+
+Chat user authorization is not written back to project `ship.json`.
+
+It is stored in Console `~/.ship/ship.db`, which keeps permission management centralized and avoids exposing user authorization in plaintext project config.
+
+### Where to manage it
+
+Use Console UI under `Agent / Authorization` to:
+
+- view permission groups
+- edit which permissions belong to each group
+- choose the default group
+- assign users to groups
+
+### A common group layout
+
+- `default`: lowest privilege, for new users
+- `member`: normal DM and group usage
+- `admin`: `member` permissions plus management permissions
+
+Most setups do not need approval flows or pairing. In practice, placing users into the right group is enough.
+
+## How a message is judged
+
+When a chat message enters the system, the flow is:
+
+1. Identify which platform it came from and who sent it.
+2. Look up the user's assigned permission group.
+3. If no explicit assignment exists, use the default group for that platform.
+4. Determine which permission is required for this message type, such as DM or group usage.
+5. Only then is the message allowed to continue into the agent.
+
+So even when a message comes from a group chat, the final decision is still based on the speaking user.
+
 ## Related docs
 
+- [Console UI](/en/docs/commands/console/ui)
+- [Chat Service](/en/docs/services/chat/chat-service)
 - [Configuration Overview](/en/docs/configuration/overview)
 - [ship.json Reference](/en/docs/reference/ship-json)

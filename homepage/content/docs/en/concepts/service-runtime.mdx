@@ -1,11 +1,11 @@
 ---
 title: Service Runtime
-description: What Service is, where it runs, and how to operate it
+description: What Service is, where it runs, and how it works with plugins and capabilities
 ---
 
 # Service Runtime
 
-Service is the runtime module type for core business capabilities.
+Services are the runtime module type for core business workflows.
 
 Typical built-in services include:
 
@@ -14,27 +14,31 @@ Typical built-in services include:
 - `task`
 - `memory`
 
-## What Service is responsible for
+## What Service Owns
 
-- Provide stable runtime actions via `city service ...`
-- Expose HTTP control and command routes under `/api/services/*`
-- Own persistent state and execution outputs under `.ship/` directories
+- user-facing workflows
+- runtime orchestration
+- context-aware execution
+- stable service commands and actions
 
-## Configuration scope
+## What Service Does Not Own
 
-Service-related configuration is under `ship.json.services.*` (for example `services.chat`, `services.skills`).
+- install/check/config of external dependencies
+- plugin-private implementation details
+- reusable optional enhancements that should be decoupled
 
-## Operational commands
+## Recommended Interaction Model
+
+- service -> capability
+- capability -> plugin implementation
+- plugin -> asset
+
+For example, `chat` does not need to know voice model details. It invokes `audio.transcribe`, and the voice plugin plus its asset handle the rest.
+
+## Typical Commands
 
 ```bash
 city service list
 city service status chat
-city service restart task
-city service command memory search --payload '{"query":"release"}'
+city service command chat status
 ```
-
-## Related docs
-
-- [`city service`](/en/docs/commands/service/service)
-- [Service vs Extension](/en/docs/concepts/service-vs-extension)
-- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)

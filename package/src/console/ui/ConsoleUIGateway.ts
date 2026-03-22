@@ -10,7 +10,7 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, execFile } from "node:child_process";
 import fs from "fs-extra";
 import path from "node:path";
 import { basename } from "node:path";
@@ -25,6 +25,10 @@ import {
 } from "@/console/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/console/daemon/CliArgs.js";
 import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js";
+import {
+  initializeAgentProject,
+  isAgentProjectInitialized,
+} from "@/console/project/AgentInitializer.js";
 import {
   getProfileMdPath,
   getShipJsonPath,
@@ -184,14 +188,75 @@ export class ConsoleUIGateway {
         const body = (await c.req.json().catch(() => ({}))) as {
           agentId?: unknown;
           projectRoot?: unknown;
+          initializeIfNeeded?: unknown;
+          initialization?: {
+            agentName?: unknown;
+            primaryModelId?: unknown;
+            forceOverwriteShipJson?: unknown;
+          };
         };
         const rawProject = String(body.projectRoot || body.agentId || "").trim();
         if (!rawProject) {
           return c.json({ success: false, error: "projectRoot is required" }, 400);
         }
         const projectRoot = path.resolve(rawProject);
+        const payload = await this.startAgentByProjectRoot(projectRoot, {
+          initializeIfNeeded: body.initializeIfNeeded === true,
+          initialization: body.initialization,
+        });
+        return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.post("/api/ui/agents/create", async (c) => {
+      try {
+        const body = (await c.req.json().catch(() => ({}))) as {
+          projectRoot?: unknown;
+          agentName?: unknown;
+          primaryModelId?: unknown;
+          autoStart?: unknown;
+          forceOverwriteShipJson?: unknown;
+        };
+        const rawProject = String(body.projectRoot || "").trim();
+        if (!rawProject) {
+          return c.json({ success: false, error: "projectRoot is required" }, 400);
+        }
+        const projectRoot = path.resolve(rawProject);
+        const initResult = await initializeAgentProject({
+          projectRoot,
+          agentName: String(body.agentName || "").trim() || undefined,
+          primaryModelId: String(body.primaryModelId || "").trim(),
+          forceOverwriteShipJson: body.forceOverwriteShipJson === true,
+        });
+
+        const shouldAutoStart = body.autoStart !== false;
+        if (!shouldAutoStart) {
+          return c.json({
+            success: true,
+            created: true,
+            started: false,
+            projectRoot,
+            agentName: initResult.agentName,
+            message: "created",
+          });
+        }
+
         const payload = await this.startAgentByProjectRoot(projectRoot);
         return c.json(payload);
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.post("/api/ui/system/pick-directory", async (c) => {
+      try {
+        const directoryPath = await this.pickDirectoryPath();
+        return c.json({
+          success: true,
+          directoryPath,
+        });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
       }
@@ -544,6 +609,27 @@ export class ConsoleUIGateway {
     if (!Number.isFinite(raw) || Number.isNaN(raw)) return undefined;
     if (!Number.isInteger(raw) || raw < 1 || raw > 65535) return undefined;
     return raw;
+  }
+
+  private async pickDirectoryPath(): Promise<string> {
+    if (process.platform !== "darwin") {
+      throw new Error("System directory picker is currently only supported on macOS.");
+    }
+    const script = 'POSIX path of (choose folder with prompt "Select Agent Project Directory")';
+    const stdout = await new Promise<string>((resolve, reject) => {
+      execFile("osascript", ["-e", script], (error, output) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(String(output || ""));
+      });
+    });
+    const directoryPath = path.resolve(String(stdout || "").trim());
+    if (!directoryPath) {
+      throw new Error("No directory selected.");
+    }
+    return directoryPath;
   }
 
   private pickArgValue(args: string[], flag: string): string | undefined {
@@ -1113,7 +1199,14 @@ export class ConsoleUIGateway {
     });
   }
 
-  private async startAgentByProjectRoot(projectRoot: string): Promise<{
+  private async startAgentByProjectRoot(projectRoot: string, options?: {
+    initializeIfNeeded?: boolean;
+    initialization?: {
+      agentName?: unknown;
+      primaryModelId?: unknown;
+      forceOverwriteShipJson?: unknown;
+    };
+  }): Promise<{
     success: boolean;
     projectRoot: string;
     started: boolean;
@@ -1134,12 +1227,27 @@ export class ConsoleUIGateway {
       };
     }
 
-    const profilePath = getProfileMdPath(normalizedRoot);
-    const shipPath = getShipJsonPath(normalizedRoot);
-    if (!(await fs.pathExists(profilePath)) || !(await fs.pathExists(shipPath))) {
-      throw new Error(
-        `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and ship.json`,
-      );
+    const projectReady = await isAgentProjectInitialized(normalizedRoot);
+    if (!projectReady) {
+      if (options?.initializeIfNeeded !== true) {
+        throw new Error(
+          `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and ship.json`,
+        );
+      }
+      await initializeAgentProject({
+        projectRoot: normalizedRoot,
+        agentName: String(options.initialization?.agentName || "").trim() || undefined,
+        primaryModelId: String(options.initialization?.primaryModelId || "").trim(),
+        forceOverwriteShipJson: options.initialization?.forceOverwriteShipJson === true,
+      });
+    } else {
+      const profilePath = getProfileMdPath(normalizedRoot);
+      const shipPath = getShipJsonPath(normalizedRoot);
+      if (!(await fs.pathExists(profilePath)) || !(await fs.pathExists(shipPath))) {
+        throw new Error(
+          `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and ship.json`,
+        );
+      }
     }
 
     ensureRuntimeModelBindingReady(normalizedRoot);

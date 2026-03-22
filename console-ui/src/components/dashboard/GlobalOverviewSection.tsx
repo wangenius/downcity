@@ -10,9 +10,11 @@ import * as React from "react"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import type {
+  UiAgentCreatePayload,
   UiAgentOption,
   UiConfigStatusItem,
   UiExtensionRuntimeItem,
+  UiModelPoolItem,
 } from "@/types/Dashboard"
 
 export interface GlobalOverviewSectionProps {
@@ -25,6 +27,10 @@ export interface GlobalOverviewSectionProps {
    */
   agents: UiAgentOption[]
   /**
+   * 当前可用模型池。
+   */
+  modelPoolItems: UiModelPoolItem[]
+  /**
    * extension 列表。
    */
   extensions: UiExtensionRuntimeItem[]
@@ -33,9 +39,24 @@ export interface GlobalOverviewSectionProps {
    */
   configStatus: UiConfigStatusItem[]
   /**
+   * 新建 agent。
+   */
+  onCreateAgent: (input: UiAgentCreatePayload) => void
+  /**
+   * 打开系统目录选择器。
+   */
+  onPickAgentDirectory: () => Promise<string>
+  /**
    * 启动 agent。
    */
   onStartAgent: (agentId: string) => void
+  /**
+   * 初始化并启动 agent。
+   */
+  onStartAgentWithInitialization: (agentId: string, input: {
+    agentName?: string
+    primaryModelId: string
+  }) => void
   /**
    * 重启 agent。
    */
@@ -50,9 +71,13 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
   const {
     cityVersion,
     agents,
+    modelPoolItems,
     extensions,
     configStatus,
+    onCreateAgent,
+    onPickAgentDirectory,
     onStartAgent,
+    onStartAgentWithInitialization,
     onRestartAgent,
     onStopAgent,
   } = props
@@ -138,7 +163,11 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
       >
         <GlobalAgentsSection
           agents={agents}
+          modelPoolItems={modelPoolItems}
+          onCreateAgent={onCreateAgent}
+          onPickAgentDirectory={onPickAgentDirectory}
           onStartAgent={onStartAgent}
+          onStartAgentWithInitialization={onStartAgentWithInitialization}
           onRestartAgent={onRestartAgent}
           onStopAgent={onStopAgent}
         />

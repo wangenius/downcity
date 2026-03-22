@@ -33,6 +33,8 @@ city console ui [action] [options]
 - Requires console first: `city console start`.
 - On startup, UI loads agents from console registry (running + history).
 - Global Agents panel shows runtime state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
+- Global Agents now supports creating a new agent directly from the UI: choose a project directory with the system folder picker, then provide name and primary model to create and start it in one flow.
+- For directories that are not initialized yet, Global Agents also supports initialize-on-start: it creates `PROFILE.md`, `SOUL.md`, `USER.md`, `ship.json`, and `.ship/` before starting the runtime.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
 - Global / Overview only shows global health signals (console, fleet, channels, extensions, config risk).
 - Global / Overview now shows the current DC version in the top summary area.
@@ -41,6 +43,9 @@ city console ui [action] [options]
 - Global / Console Runtime shows console runtime details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
 - Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).
+- Agent / Authorization is now available for every agent, with an openclaw-inspired authorization model: owner, DM policy, group policy, allowlists, and pairing approval in one place.
+- Agent / Authorization is stored in console `~/.ship/ship.db`, not written back to project `ship.json` in plaintext.
+- In Agent / Authorization, owner directly drives `is_master`. When `ownerIds` is configured, runtime no longer depends on a single `FEISHU_AUTH_ID / TELEGRAM_AUTH_ID / QQ_AUTH_ID`.
 - Agent / Overview now exposes channel-level chat quick actions in chat overview: `open` / `close` / `test` / `reconnect`.
 - Agent / Command provides a terminal-style panel that runs shell commands in the selected agent project root and shows stdout/stderr with exit code.
 - Agent / Command now supports inline command prediction and keyboard accelerators: `Tab` accepts full suggestion, `Ctrl/Cmd + →` accepts next word, and `↑/↓` navigates session history.

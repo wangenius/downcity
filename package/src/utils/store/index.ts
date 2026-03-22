@@ -582,6 +582,68 @@ export class ConsoleStore {
   }
 
   /**
+   * 构造 agent 加密配置项 key。
+   *
+   * 关键点（中文）
+   * - agent 级敏感配置统一复用 console_secure_settings。
+   * - key 格式固定，避免不同业务各自拼接导致命名漂移。
+   */
+  private buildAgentSecureSettingKey(agentIdInput: string, keyInput: string): string {
+    const agentId = normalizeNonEmptyText(agentIdInput, "agentId");
+    const key = normalizeNonEmptyText(keyInput, "agent secure setting key");
+    return `agent:${agentId}:${key}`;
+  }
+
+  /**
+   * 同步读取 agent 加密配置项（JSON）。
+   */
+  getAgentSecureSettingJsonSync<T>(agentIdInput: string, keyInput: string): T | null {
+    return this.getSecureSettingJsonSync<T>(
+      this.buildAgentSecureSettingKey(agentIdInput, keyInput),
+    );
+  }
+
+  /**
+   * 同步写入 agent 加密配置项（JSON）。
+   */
+  setAgentSecureSettingJsonSync(agentIdInput: string, keyInput: string, value: unknown): void {
+    this.setSecureSettingJsonSync(
+      this.buildAgentSecureSettingKey(agentIdInput, keyInput),
+      value,
+    );
+  }
+
+  /**
+   * 删除 agent 加密配置项。
+   */
+  removeAgentSecureSetting(agentIdInput: string, keyInput: string): void {
+    this.removeSecureSetting(this.buildAgentSecureSettingKey(agentIdInput, keyInput));
+  }
+
+  /**
+   * 异步读取 agent 加密配置项（JSON）。
+   */
+  async getAgentSecureSettingJson<T>(agentIdInput: string, keyInput: string): Promise<T | null> {
+    return this.getSecureSettingJson<T>(
+      this.buildAgentSecureSettingKey(agentIdInput, keyInput),
+    );
+  }
+
+  /**
+   * 异步写入 agent 加密配置项（JSON）。
+   */
+  async setAgentSecureSettingJson(
+    agentIdInput: string,
+    keyInput: string,
+    value: unknown,
+  ): Promise<void> {
+    await this.setSecureSettingJson(
+      this.buildAgentSecureSettingKey(agentIdInput, keyInput),
+      value,
+    );
+  }
+
+  /**
    * 迁移历史 env 双表到统一单表 `env_entries`。
    *
    * 关键点（中文）

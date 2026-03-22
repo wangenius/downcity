@@ -115,8 +115,12 @@ export class FeishuBot extends BaseChatChannel {
     const messageId =
       typeof params.messageId === "string" ? params.messageId : undefined;
     const text = String(params.text ?? "");
+    const shouldReplyToMessage = params.replyToMessage === true;
 
-    if (messageId && chatType !== "p2p") {
+    // 关键点（中文）
+    // - 飞书群聊里只有显式 reply 时才挂到目标消息。
+    // - 普通发送即使带着历史 messageId，也必须走 create，避免引用错位。
+    if (shouldReplyToMessage && messageId && chatType !== "p2p") {
       await this.sendMessage(params.chatId, chatType, messageId, text);
     } else {
       await this.sendChatMessage(params.chatId, chatType, text);
@@ -855,6 +859,46 @@ export class FeishuBot extends BaseChatChannel {
         const chatTitle =
           resolvedChatTitle ||
           (chat_type === "p2p" ? actorName : undefined);
+
+        await this.observeIncomingAuthorization({
+          chatId: chat_id,
+          chatType: chat_type,
+          chatTitle,
+          userId: actorId,
+          username: actorName,
+        });
+
+        const authResult = this.evaluateIncomingAuthorization({
+          chatId: chat_id,
+          chatType: chat_type,
+          chatTitle,
+          userId: actorId,
+          username: actorName,
+        });
+        if (authResult.decision !== "allow") {
+          if (authResult.decision === "pairing") {
+            await this.createPairingRequest({
+              chatId: chat_id,
+              chatType: chat_type,
+              chatTitle,
+              userId: actorId,
+              username: actorName,
+            });
+            await this.sendAuthorizationText({
+              chatId: chat_id,
+              chatType: chat_type,
+              text: this.buildPairingRequiredText({ userId: actorId }),
+            });
+          } else if (chat_type === "p2p") {
+            await this.sendAuthorizationText({
+              chatId: chat_id,
+              chatType: chat_type,
+              text: this.buildUnauthorizedBlockedText(),
+            });
+          }
+          handled = true;
+          return;
+        }
 
         // Record this chat as a known notification target
         this.knownChats.set(threadId, {

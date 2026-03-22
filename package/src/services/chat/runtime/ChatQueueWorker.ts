@@ -29,6 +29,7 @@ import { sendActionByChatKey } from "./ChatkeySend.js";
 import { resolveChatMethod } from "./ChatMethod.js";
 import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
+import { pickLastSuccessfulChatSendText } from "./UserVisibleText.js";
 import { sendChatTextByChatKey } from "../Action.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
@@ -621,22 +622,27 @@ export class ChatQueueWorker {
       // 关键点（中文）
       // - step 文本用于中途反馈；最终消息用于收口。
       // - 若最终文本与最近一次 step 已发送文本完全一致，则跳过最终 direct 回发，避免重复。
-      // - 失败场景：必须回发最终失败信息（即使已有 step 输出）。
+      // - 无论成功/失败，只要 direct/cmd 没有把最终可见文本送到 channel，都要强制兜底回发。
       const assistantText = extractTextFromUiMessage(result.assistantMessage).trim();
+      const userVisibleText = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
+      const finalChannelText = assistantText || userVisibleText;
       const duplicatedWithStep =
-        assistantText.length > 0 &&
-        assistantText === lastDirectDispatchedStepText;
+        finalChannelText.length > 0 &&
+        finalChannelText === lastDirectDispatchedStepText;
       const dispatchedDirect = duplicatedWithStep
         ? true
         : await this.dispatchAssistantMessageDirect({
             contextId: runItem.contextId,
             assistantMessage: result.assistantMessage,
           });
-      // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里强制兜底回发。
-      if (!dispatchedDirect && result.success === false) {
+      // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里无论成功/失败都强制兜底回发。
+      if (!dispatchedDirect && finalChannelText) {
         await this.dispatchTextToChannel({
           contextId: runItem.contextId,
-          text: assistantText || "❌ 执行失败，请稍后重试。",
+          text:
+            result.success === false
+              ? finalChannelText || "❌ 执行失败，请稍后重试。"
+              : finalChannelText,
           messageId: runItem.messageId,
         });
       }

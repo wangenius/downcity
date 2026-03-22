@@ -70,6 +70,7 @@
     routeChats: [],
     activeAgentId: "",
     activeChatKey: "",
+    routeRefreshSeq: 0,
     toastTimerId: null,
   };
 
@@ -236,6 +237,26 @@
     }
 
     return bodyText;
+  }
+
+  function getSafePageMeta() {
+    const fallbackUrl = normalizeText(window.location && window.location.href, 1000) || "about:blank";
+    const fallbackTitle = normalizeText(document.title, 200) || "未命名页面";
+    const htmlLang = normalizeText(
+      document.documentElement && document.documentElement.getAttribute("lang"),
+      40,
+    );
+    const metaLang = normalizeText(
+      document.querySelector('meta[http-equiv="content-language"]') &&
+        document.querySelector('meta[http-equiv="content-language"]').getAttribute("content"),
+      40,
+    );
+
+    return {
+      url: fallbackUrl,
+      title: fallbackTitle,
+      lang: htmlLang || metaLang || "zh-CN",
+    };
   }
 
   function isEditableTarget(target) {
@@ -423,10 +444,6 @@
     if (channelFromField === "telegram" || channelFromField === "feishu" || channelFromField === "qq") {
       return channelFromField;
     }
-    const contextId = normalizeText(context.contextId, 300).toLowerCase();
-    if (contextId.startsWith("telegram-chat-")) return "telegram";
-    if (contextId.startsWith("feishu-chat-")) return "feishu";
-    if (contextId.startsWith("qq-")) return "qq";
     return "";
   }
 
@@ -475,7 +492,10 @@
     if (preferred && options.some((item) => item.chatKey === preferred)) {
       return preferred;
     }
-    return options[0] ? options[0].chatKey : "";
+    if (options.length === 1) {
+      return options[0] ? options[0].chatKey : "";
+    }
+    return "";
   }
 
   function toAgentOptionLabel(agent) {
@@ -486,6 +506,7 @@
   function buildContextAttachment(params) {
     const safeTitle = normalizeText(params.pageTitle, 120) || "Untitled Page";
     const safeUrl = normalizeText(params.pageUrl, 1000) || "about:blank";
+    const safeLang = normalizeText(params.pageLang, 40) || "zh-CN";
     const safeText = normalizeText(
       params.contentText,
       params.sourceType === "selection" ? MAX_SELECTION_TEXT_CHARS : MAX_PAGE_TEXT_CHARS,
@@ -501,6 +522,7 @@
         `# ${title}`,
         "",
         `> Source: ${safeUrl}`,
+        `> Language: ${safeLang}`,
         `> Captured At: ${nowIso}`,
         `> Scope: ${isSelection ? "Selection" : "Full Page"}`,
         "",
@@ -553,6 +575,7 @@
       const chatKey = normalizeText(context && context.contextId, 300);
       if (!chatKey || seen.has(chatKey)) continue;
       const channel = parseContextChannel(context);
+      if (!channel) continue;
       if (linkedChannels.size > 0 && !linkedChannels.has(channel)) continue;
       const displayName = resolveContextDisplayName(context, chatKey, channel);
 
@@ -575,6 +598,9 @@
 
     const targetChatKey = resolveTargetChatKey(options, settings.chatKey);
     if (!targetChatKey) {
+      if (options.length > 1) {
+        throw new Error("未选择目标 Channel Chat，请先打开设置页明确选择");
+      }
       throw new Error("未找到可用 Channel Chat，请先让聊天渠道收到过消息");
     }
 
@@ -589,11 +615,14 @@
   }
 
   async function refreshRouteState(preferredSettings) {
+    const requestSeq = state.routeRefreshSeq + 1;
+    state.routeRefreshSeq = requestSeq;
     state.isRouteLoading = true;
     renderAgentTag();
     renderRoutePanel();
     try {
       const routeInfo = await resolveRouteInfo(preferredSettings || state.lastSettings);
+      if (requestSeq !== state.routeRefreshSeq) return;
       state.routeBaseUrl = routeInfo.baseUrl;
       state.routeErrorText = "";
       state.routeAgents = routeInfo.agents;
@@ -610,6 +639,7 @@
       state.lastSettings = nextSettings;
       await saveSettings(nextSettings);
     } catch (error) {
+      if (requestSeq !== state.routeRefreshSeq) return;
       state.routeBaseUrl = "";
       state.routeErrorText = summarizeRouteErrorText(readErrorText(error));
       state.routeAgents = [];
@@ -618,6 +648,7 @@
       state.activeChatKey = "";
       state.agentTagText = "Agent";
     } finally {
+      if (requestSeq !== state.routeRefreshSeq) return;
       state.isRouteLoading = false;
       renderAgentTag();
       renderRoutePanel();
@@ -642,6 +673,7 @@
     const attachment = buildContextAttachment({
       pageTitle: params.pageTitle,
       pageUrl: params.pageUrl,
+      pageLang: params.pageLang,
       contentText,
       sourceType: params.sourceType,
     });
@@ -748,7 +780,8 @@
       <div id="dcToast" class="dc-toast dc-hidden" data-type="success"></div>
     `;
 
-    document.documentElement.appendChild(host);
+    const mountTarget = document.body || document.documentElement;
+    mountTarget.appendChild(host);
 
     return {
       host,
@@ -907,7 +940,8 @@
         button.type = "button";
         button.className = "dc-route-item";
         button.dataset.selected = chat.chatKey === state.activeChatKey ? "true" : "false";
-        button.textContent = chat.title;
+        button.textContent = normalizeText(chat.title, 72);
+        button.title = chat.title;
         button.addEventListener("mousedown", (event) => event.preventDefault());
         button.addEventListener("click", () => {
           void selectChat(chat.chatKey);
@@ -929,12 +963,7 @@
     ui.agentTag.dataset.state = state.routeErrorText ? "error" : "default";
     ui.routeTrigger.dataset.state = state.routeErrorText ? "error" : "default";
     ui.agentTag.title = state.routeErrorText || `${state.agentTagText || "Agent"} / ${chatShort}`;
-    ui.sendBtn.disabled =
-      state.isSending
-      || state.isRouteLoading
-      || Boolean(state.routeErrorText)
-      || !state.activeAgentId
-      || !state.activeChatKey;
+    ui.sendBtn.disabled = state.isSending;
   }
 
   function placeTrigger(rect) {
@@ -1049,6 +1078,10 @@
     await saveSettings(state.lastSettings);
     renderRoutePanel();
     renderAgentTag();
+    const selectedChat = state.routeChats.find((item) => item.chatKey === selectedKey) || null;
+    if (selectedChat) {
+      showToast("success", `已切换到 ${normalizeText(selectedChat.title, 32)}`);
+    }
   }
 
   function openComposerFromSelection(selectionText, rect, rects) {
@@ -1226,20 +1259,24 @@
 
   async function submit() {
     if (state.isSending) return;
-    if (state.routeErrorText) {
+    if (
+      state.isRouteLoading
+      || state.routeErrorText
+      || !state.activeAgentId
+      || !state.activeChatKey
+    ) {
       await refreshRouteState({
         ...state.lastSettings,
         agentId: state.activeAgentId || state.lastSettings.agentId,
         chatKey: state.activeChatKey || state.lastSettings.chatKey,
       });
-      if (state.routeErrorText) {
-        showToast("error", state.routeErrorText);
+      if (state.routeErrorText || !state.activeAgentId || !state.activeChatKey) {
+        showToast(
+          "error",
+          state.routeErrorText || "当前没有可用 Agent 或 Chat，请先检查设置",
+        );
         return;
       }
-    }
-    if (!state.activeAgentId || !state.activeChatKey) {
-      showToast("error", "请先选择 Agent 与 Chat");
-      return;
     }
 
     const taskPrompt = normalizeText(ui.input.value, MAX_PROMPT_CHARS);
@@ -1259,9 +1296,11 @@
 
     try {
       setSendingState(true);
+      const pageMeta = getSafePageMeta();
       const result = await sendSelectionToAgent({
-        pageTitle: document.title || "未命名页面",
-        pageUrl: window.location.href || "",
+        pageTitle: pageMeta.title,
+        pageUrl: pageMeta.url,
+        pageLang: pageMeta.lang,
         contentText,
         sourceType,
         taskPrompt,
@@ -1270,7 +1309,8 @@
         state.agentTagText = result.agentLabel;
       }
       await refreshAskHistoryCommands().catch(() => {});
-      showToast("success", "发送成功");
+      const selectedChat = state.routeChats.find((item) => item.chatKey === state.activeChatKey) || null;
+      showToast("success", `已发送到 ${normalizeText(selectedChat && selectedChat.title, 36) || "目标会话"}`);
       setOpen(false);
     } catch (error) {
       const errorText = readErrorText(error);
@@ -1313,22 +1353,19 @@
 
   ui.routeTrigger.addEventListener("click", () => {
     if (ui.routeTrigger.disabled) return;
-    if (state.routeErrorText && !state.isRouteLoading) {
-      void refreshRouteState({
-        ...state.lastSettings,
-        agentId: state.activeAgentId || state.lastSettings.agentId,
-        chatKey: state.activeChatKey || state.lastSettings.chatKey,
-      });
-    }
-    setRoutePanelOpen(!state.isRoutePanelOpen);
+    const nextOpen = !state.isRoutePanelOpen;
+    setRoutePanelOpen(nextOpen);
+    if (!nextOpen) return;
+    void refreshRouteState({
+      ...state.lastSettings,
+      agentId: state.activeAgentId || state.lastSettings.agentId,
+      chatKey: state.activeChatKey || state.lastSettings.chatKey,
+    });
   });
+
 
   ui.input.addEventListener("input", () => {
     updateSlashMenuFromInput();
-  });
-
-  ui.input.addEventListener("focus", () => {
-    setRoutePanelOpen(false);
   });
 
   ui.input.addEventListener("keydown", (event) => {
@@ -1419,11 +1456,6 @@
       const clickedInsideUi = path.includes(ui.host)
         || (eventTarget instanceof Node && ui.host.contains(eventTarget));
       if (clickedInsideUi) {
-        const clickedRouteControl = path.includes(ui.routeTrigger)
-          || path.includes(ui.routePanel);
-        if (!clickedRouteControl && state.isRoutePanelOpen) {
-          setRoutePanelOpen(false);
-        }
         return;
       }
 

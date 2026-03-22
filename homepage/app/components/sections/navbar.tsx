@@ -179,18 +179,22 @@ export function Navbar() {
 
     return (
       <Popover key={group.label}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              desktopNavItemClass,
-              active ? desktopNavItemActiveClass : desktopNavItemInactiveClass,
-            )}
-          >
-            <span>{group.label}</span>
-            <IconChevronDown className="size-3.5" />
-          </button>
-        </PopoverTrigger>
+        <PopoverTrigger
+          render={(triggerProps) => (
+            <button
+              type="button"
+              {...triggerProps}
+              className={cn(
+                desktopNavItemClass,
+                active ? desktopNavItemActiveClass : desktopNavItemInactiveClass,
+                triggerProps.className,
+              )}
+            >
+              <span>{group.label}</span>
+              <IconChevronDown className="size-3.5" />
+            </button>
+          )}
+        />
         <PopoverContent align="start" sideOffset={10} className={popoverContentClass}>
           <div className="space-y-1">
             {group.items.map((item) =>
@@ -304,52 +308,60 @@ export function Navbar() {
               <IconMenu2 className="size-4.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={dropdownContentClass}>
-              <DropdownMenuLabel className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-[#71717A]">
+              <div className="px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-[#71717A]">
                 Downcity
-              </DropdownMenuLabel>
+              </div>
               {groupedLinks.map((group) => (
-                <div key={group.label}>
+                <DropdownMenuGroup key={group.label}>
                   <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-[#71717A]">
                     {group.label}
                   </DropdownMenuLabel>
                   {group.items.map((item) =>
                     "path" in item ? (
-                      <DropdownMenuItem key={item.path} className={dropdownItemClass} asChild>
-                        <Link to={item.path}>{item.label}</Link>
-                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        key={item.path}
+                        className={dropdownItemClass}
+                        render={(itemProps) => <Link {...itemProps} to={item.path}>{item.label}</Link>}
+                      />
                     ) : (
-                      <DropdownMenuItem key={item.href} className={dropdownItemClass} asChild>
-                        <a href={item.href} target="_blank" rel="noreferrer">
-                          <span className="flex items-center gap-1.5">
-                            <span>{item.label}</span>
-                            <IconArrowUpRight className="size-3.5 text-[#71717A]" />
-                          </span>
-                        </a>
-                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        key={item.href}
+                        className={dropdownItemClass}
+                        render={(itemProps) => (
+                          <a {...itemProps} href={item.href} target="_blank" rel="noreferrer">
+                            <span className="flex items-center gap-1.5">
+                              <span>{item.label}</span>
+                              <IconArrowUpRight className="size-3.5 text-[#71717A]" />
+                            </span>
+                          </a>
+                        )}
+                      />
                     ),
                   )}
                   <DropdownMenuSeparator />
-                </div>
+                </DropdownMenuGroup>
               ))}
-              <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-[#71717A]">
-                {isZh ? "直达" : "Direct"}
-              </DropdownMenuLabel>
-              {directLinks.map((item) => (
-                <DropdownMenuItem key={item.path} className={dropdownItemClass} asChild>
-                  <Link to={item.path}>{item.label}</Link>
-                </DropdownMenuItem>
-              ))}
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="px-3 pb-1 pt-2 text-[0.62rem] uppercase tracking-[0.14em] text-[#71717A]">
+                  {isZh ? "直达" : "Direct"}
+                </DropdownMenuLabel>
+                {directLinks.map((item) => (
+                  <DropdownMenuItem
+                    key={item.path}
+                    className={dropdownItemClass}
+                    render={(itemProps) => <Link {...itemProps} to={item.path}>{item.label}</Link>}
+                  />
+                ))}
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className={dropdownItemClass} asChild>
-                <a href={twitterUrl} target="_blank" rel="noreferrer">
-                  X
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem className={dropdownItemClass} asChild>
-                <a href={githubUrl} target="_blank" rel="noreferrer">
-                  GitHub
-                </a>
-              </DropdownMenuItem>
+              <DropdownMenuItem
+                className={dropdownItemClass}
+                render={(itemProps) => <a {...itemProps} href={twitterUrl} target="_blank" rel="noreferrer">X</a>}
+              />
+              <DropdownMenuItem
+                className={dropdownItemClass}
+                render={(itemProps) => <a {...itemProps} href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>}
+              />
               <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang(isZh ? "en" : "zh")}>
                 {isZh ? "Switch to English" : "切换到中文"}
               </DropdownMenuItem>

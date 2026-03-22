@@ -6,6 +6,7 @@ import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
+import { AuthorizationSection } from "@/components/dashboard/AuthorizationSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
 import { GlobalChannelAccountsSection } from "@/components/dashboard/GlobalChannelAccountsSection"
 import { EnvSection } from "@/components/dashboard/EnvSection"
@@ -62,6 +63,7 @@ export function App() {
     selectedAgentId,
     selectedAgent,
     overview,
+    authorization,
     services,
     skills,
     extensions,
@@ -103,6 +105,9 @@ export function App() {
     testExtension,
     runChatChannelAction,
     configureChatChannel,
+    refreshAuthorization,
+    saveAuthorizationConfig,
+    runAuthorizationAction,
     runSkillFind,
     runSkillInstall,
     runTask,
@@ -120,6 +125,8 @@ export function App() {
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
+    createAgent,
+    pickAgentDirectory,
     restartAgentFromHistory,
     stopAgentFromHistory,
     upsertModelProvider,
@@ -480,9 +487,21 @@ export function App() {
             <GlobalOverviewSection
               cityVersion={cityVersion}
               agents={agents}
+              modelPoolItems={modelPoolItems}
               extensions={extensions}
               configStatus={configStatus}
+              onCreateAgent={(input) => createAgent(input)}
+              onPickAgentDirectory={() => pickAgentDirectory()}
               onStartAgent={(agentId) => startAgentFromHistory(agentId)}
+              onStartAgentWithInitialization={(agentId, options) =>
+                startAgentFromHistory(agentId, {
+                  initializeIfNeeded: true,
+                  initialization: {
+                    projectRoot: agentId,
+                    agentName: options.agentName,
+                    primaryModelId: options.primaryModelId,
+                  },
+                })}
               onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
               onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
             />
@@ -541,6 +560,20 @@ export function App() {
       }
       case "agentOverview":
         return renderAgentOverviewSection()
+      case "agentAuthorization":
+        return (
+          <section>
+            <AuthorizationSection
+              authorization={authorization}
+              loading={loading}
+              selectedAgent={selectedAgent}
+              formatTime={uiHelpers.formatTime}
+              onRefresh={() => refreshAuthorization(selectedAgentId)}
+              onSaveConfig={(config) => saveAuthorizationConfig(config)}
+              onRunAction={(input) => runAuthorizationAction(input)}
+            />
+          </section>
+        )
       case "agentCommand":
         return (
           <section className="flex min-h-0 flex-1">
@@ -559,9 +592,21 @@ export function App() {
             <GlobalOverviewSection
               cityVersion={cityVersion}
               agents={agents}
+              modelPoolItems={modelPoolItems}
               extensions={extensions}
               configStatus={configStatus}
+              onCreateAgent={(input) => createAgent(input)}
+              onPickAgentDirectory={() => pickAgentDirectory()}
               onStartAgent={(agentId) => startAgentFromHistory(agentId)}
+              onStartAgentWithInitialization={(agentId, options) =>
+                startAgentFromHistory(agentId, {
+                  initializeIfNeeded: true,
+                  initialization: {
+                    projectRoot: agentId,
+                    agentName: options.agentName,
+                    primaryModelId: options.primaryModelId,
+                  },
+                })}
               onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
               onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
             />

@@ -1,0 +1,504 @@
+# 插件系统重构草案
+
+## 1. 结论先行
+
+当前 `extension` 设计不是最优。
+
+问题不在“能不能工作”，而在于它把几类不同问题揉成了一层：
+
+1. 业务能力
+2. 生命周期
+3. CLI 暴露
+4. HTTP 暴露
+5. 跨模块调用
+6. 配置持久化
+
+这导致调用链过长、抽象边界模糊、`voice` 被多处特判，整体上有“为了抽象而抽象”的倾向。
+
+更合适的方向不是再造一套复杂的 `PluginManager + HookManager + MiddlewareManager + CapabilityManager` 大框架，而是采用一个更克制的模型：
+
+1. `service` 继续负责显式入口和主业务
+2. `plugin` 只负责“增强”和“插入时机”
+3. 主动调用走 `capability`
+4. 被动增强走 `hook`
+5. 插件不再拥有独立 runtime 状态机
+
+一句话：`service` 是主干，`plugin` 是挂件，不要让插件再长成第二套 service 系统。
+
+## 2. 当前设计里哪些地方属于“脱裤子放屁”
+
+### 2.1 插件自己维护独立 runtime 状态机
+
+如果插件只是对运行时做增强，而不是独立对外提供常驻进程能力，那么单独的：
+
+1. `start`
+2. `stop`
+3. `restart`
+4. `status`
+
+多数情况下都没有必要。
+
+对 `voice` 来说，真正需要运行的是“转写能力”和“消息前增强逻辑”，而不是一个独立 runtime。
+
+所以：
+
+- `service` 需要 runtime 管理，因为它确实可能承载 channel、cron、queue
+- `plugin` 通常不需要 runtime 管理，因为它只是挂到某些时机上执行
+
+### 2.2 用插件名做业务调用
+
+像下面这种：
+
+```ts
+context.extensions.invoke({
+  extension: "voice",
+  action: "transcribe",
+  payload: { audioPath },
+});
+```
+
+本质上让业务代码依赖了实现名，而不是能力名。
+
+这会导致：
+
+1. chat service 依赖 `voice`
+2. 插件重命名会影响业务
+3. 后续多实现竞争时无法替换
+
+更合理的是：
+
+```ts
+const transcribe = runtime.capabilities.get("audio.transcribe");
+const result = await transcribe({ audioPath });
+```
+
+### 2.3 把 CLI/API 作为插件核心模型的一部分
+
+CLI 和 API 只是“管理入口”，不是插件的核心抽象。
+
+`voice install`、`voice use`、`voice status` 这些命令本质上是：
+
+1. 资源安装
+2. 配置切换
+3. 状态查看
+
+它们应该是插件的附属管理面，而不是插件运行模型本身。
+
+### 2.4 同时引入 hook、middleware、action、lifecycle 四套心智
+
+如果一套系统里同时有：
+
+1. action
+2. hook
+3. middleware
+4. lifecycle
+
+但每一套都只用到一点点，就容易变成学习成本远大于收益。
+
+最小化后，应该只保留两种主语义：
+
+1. `capability`：显式调用
+2. `hook`：按时机增强
+
+`middleware` 不单独成为一等概念，只作为部分 hook 的执行模式存在。
+
+## 3. 吸收 service 的优点
+
+当前 `service` 体系有三个优点值得保留：
+
+### 3.1 运行时注入对象足够薄
+
+`ServiceRuntime` 只暴露稳定端口：
+
+1. `logger`
+2. `config`
+3. `env`
+4. `context`
+5. `invoke`
+
+这类“薄 runtime”是好设计。
+
+插件也应该吃同样风格的 runtime，而不是再重新定义一套很重的上下文对象。
+
+### 3.2 显式入口清晰
+
+`service` 的 action 适合承载显式命令和显式 API。
+
+例如：
+
+1. `chat send`
+2. `task run`
+3. `memory search`
+
+这些都不是 hook 场景。
+
+所以插件系统不要试图替代 service，而是只解决 service 不擅长的“时机增强”问题。
+
+### 3.3 service 是业务所有者
+
+谁处理聊天消息，谁就应该是 chat service。
+
+插件最多只能说：
+
+1. 我在消息进入前补充点东西
+2. 我在消息发出后做点副作用
+3. 我提供一个业务可调用的能力
+
+插件不应该反客为主，变成业务编排中心。
+
+## 4. 最小可行新模型
+
+新的插件模型只保留三块：
+
+1. `Plugin`
+2. `HookRegistry`
+3. `CapabilityRegistry`
+
+### 4.1 Plugin 定义
+
+```ts
+export interface Plugin {
+  name: string;
+  setup(context: PluginSetupContext): void | Promise<void>;
+}
+```
+
+### 4.2 PluginSetupContext 定义
+
+```ts
+export interface PluginSetupContext {
+  runtime: PluginRuntime;
+  hooks: HookRegistry;
+  capabilities: CapabilityRegistry;
+  config: PluginConfigRegistry;
+}
+```
+
+### 4.3 PluginRuntime 定义
+
+插件 runtime 不要重新发明轮子，直接吸收 `ServiceRuntime` 的优点：
+
+```ts
+export interface PluginRuntime {
+  cwd: string;
+  rootPath: string;
+  logger: Logger;
+  config: ShipConfig;
+  env: Record<string, string>;
+  systems: string[];
+  context: ServiceContext;
+  services: ServiceInvokePort;
+}
+```
+
+注意：
+
+1. 不再保留 `extensions.invoke`
+2. 插件之间不直接互调
+3. 插件通过 `capability` 协作
+
+## 5. Hook 设计
+
+Hook 不宜过多。
+
+先只定义稳定、明确、有业务意义的几个时机：
+
+```ts
+export type HookName =
+  | "runtime:boot"
+  | "message:received"
+  | "message:before-agent"
+  | "response:before-send"
+  | "response:sent"
+  | "runtime:shutdown";
+```
+
+注册形式：
+
+```ts
+hooks.on("message:before-agent", async (state) => {
+  return state;
+});
+```
+
+为了避免额外造一套 middleware 框架，hook 先只支持两种执行方式：
+
+1. `emit`：通知型，不改值
+2. `waterfall`：串行变换输入输出
+
+```ts
+export interface HookRegistry {
+  on<T>(name: HookName, handler: (value: T) => Promise<void> | void): void;
+  transform<T>(name: HookName, handler: (value: T) => Promise<T> | T): void;
+  emit<T>(name: HookName, value: T): Promise<void>;
+  run<T>(name: HookName, value: T): Promise<T>;
+}
+```
+
+不要一开始就上 `next()` 风格 middleware。
+
+原因很简单：
+
+1. waterfall 已经够覆盖 80% 场景
+2. middleware 适合 HTTP / request pipeline
+3. 当前系统里插件更多是“增强消息”，不是“接管控制流”
+
+## 6. Capability 设计
+
+Capability 是插件最核心的主动调用方式。
+
+```ts
+export interface CapabilityRegistry {
+  register<TInput, TOutput>(
+    name: string,
+    handler: (input: TInput) => Promise<TOutput> | TOutput,
+  ): void;
+
+  get<TInput, TOutput>(
+    name: string,
+  ): ((input: TInput) => Promise<TOutput>) | null;
+}
+```
+
+约束：
+
+1. 调用方只依赖 capability 名
+2. 不依赖插件名
+3. 一个 capability 默认只允许一个实现
+4. 若未来需要多实现，再显式引入 provider 优先级，不提前设计
+
+## 7. voice 插件在新模型下的样子
+
+### 7.1 voice 插件职责
+
+在新模型下，`voice` 插件只做两件事：
+
+1. 注册 `audio.transcribe`
+2. 在 `message:before-agent` 时把语音附件转成文本增强 prompt
+
+### 7.2 voice 插件伪代码
+
+```ts
+export const voicePlugin: Plugin = {
+  name: "voice",
+
+  async setup(ctx) {
+    ctx.capabilities.register("audio.transcribe", async (input: {
+      audioPath: string;
+      language?: string;
+    }) => {
+      const config = await ctx.config.get("voice");
+      if (!config.enabled) {
+        return {
+          success: false,
+          error: "voice plugin disabled",
+        };
+      }
+
+      return await transcribeVoiceAudio({
+        runtime: ctx.runtime,
+        audioPath: input.audioPath,
+        language: input.language,
+      });
+    });
+
+    ctx.hooks.transform("message:before-agent", async (state) => {
+      const voiceAttachments = state.attachments.filter((item) => {
+        return item.type === "voice" || item.type === "audio";
+      });
+
+      if (voiceAttachments.length === 0) return state;
+
+      const transcribe = ctx.capabilities.get<
+        { audioPath: string; language?: string },
+        { success: boolean; text?: string; error?: string }
+      >("audio.transcribe");
+
+      if (!transcribe) return state;
+
+      const blocks: string[] = [];
+      for (const item of voiceAttachments) {
+        const result = await transcribe({
+          audioPath: item.path,
+        });
+
+        if (!result.success || !result.text) continue;
+
+        blocks.push(`【语音转写 ${item.type}: ${item.path}】\n${result.text}`);
+      }
+
+      if (blocks.length === 0) return state;
+
+      return {
+        ...state,
+        promptAugments: [...state.promptAugments, blocks.join("\n\n")],
+      };
+    });
+  },
+};
+```
+
+## 8. 调用路径应该有多简单
+
+目标是让调用链回到最短路径。
+
+### 8.1 被动增强场景
+
+不要让 chat service 手动找 `voice` 插件。
+
+而是：
+
+```ts
+const prepared = await hooks.run("message:before-agent", messageState);
+```
+
+插件自己在这个阶段完成增强。
+
+### 8.2 主动调用场景
+
+如果业务真的需要主动调用，就直接拿 capability：
+
+```ts
+const transcribe = runtime.capabilities.get("audio.transcribe");
+if (transcribe) {
+  const result = await transcribe({ audioPath });
+}
+```
+
+而不是：
+
+```ts
+runtime.extensions.invoke({
+  extension: "voice",
+  action: "transcribe",
+  payload: { audioPath },
+});
+```
+
+## 9. 管理面如何保留
+
+插件不承担 CLI/API 的核心抽象，不代表不能有管理入口。
+
+建议单独保留一个“插件管理附属面”：
+
+```ts
+export interface PluginAdmin {
+  commands?: PluginCommandDefinition[];
+  api?: PluginApiDefinition[];
+}
+```
+
+然后：
+
+```ts
+export interface Plugin {
+  name: string;
+  setup(context: PluginSetupContext): void | Promise<void>;
+  admin?: PluginAdmin;
+}
+```
+
+这样 `voice install`、`voice use`、`voice status` 仍然可以存在，但它们只是管理资源与配置，不再决定插件运行模型。
+
+## 10. 配置模型
+
+配置不应再统一固化成 `extensions.*`。
+
+改成插件自行声明：
+
+```ts
+export interface PluginConfigDefinition<T> {
+  plugin: string;
+  scope: "global" | "project";
+  defaultValue: T;
+}
+```
+
+例如 voice：
+
+```ts
+export const voiceConfig = {
+  plugin: "voice",
+  scope: "global",
+  defaultValue: {
+    enabled: false,
+    activeModel: undefined,
+    installedModels: [],
+    modelsDir: undefined,
+    transcribe: {},
+  },
+};
+```
+
+这样以后别的插件不必被迫走全局配置。
+
+## 11. 是否最优
+
+如果“最优”指理论上最通用，那不是。
+
+但如果“最优”指当前仓库阶段下：
+
+1. 足够简单
+2. 强解耦
+3. 调用短
+4. 迁移成本可控
+
+那我认为这版是更优的。
+
+核心原因是它避免了两种过度设计：
+
+1. 不把插件做成第二套 service
+2. 不把 hook/middleware/capability 全部做成超大框架
+
+它选择的是一个更克制的平衡：
+
+1. 显式业务继续归 `service`
+2. 运行时增强归 `plugin`
+3. 主动能力调用走 `capability`
+4. 被动插桩走 `hook`
+
+## 12. 迁移建议
+
+建议分三步迁移：
+
+### 第一步
+
+先引入：
+
+1. `CapabilityRegistry`
+2. `HookRegistry`
+3. `Plugin` 基础契约
+
+但保留旧 `extension`。
+
+### 第二步
+
+把 `voice.transcribe` 改造成 `audio.transcribe` capability。
+
+同时让 chat message pipeline 接入：
+
+1. `message:before-agent`
+
+### 第三步
+
+删除：
+
+1. `extensions.invoke`
+2. extension runtime state machine
+3. extension command 主调度模型
+
+只保留插件管理附属面。
+
+## 13. 最终建议
+
+新的插件系统不应该问：
+
+“插件有什么 action？”
+
+而应该问：
+
+1. “插件在哪些时机插入？”
+2. “插件提供哪些能力？”
+3. “插件如何被配置和管理？”
+
+当这三个问题拆开以后，系统会自然比当前 `extension` 模型更简单，也更不容易耦合失控。

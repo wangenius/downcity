@@ -13,201 +13,19 @@
 import path from "path";
 import prompts from "prompts";
 import fs from "fs-extra";
+import { getProfileMdPath, getShipJsonPath, getSoulMdPath, getUserMdPath } from "@/console/env/Paths.js";
 import {
-  getProfileMdPath,
-  getSoulMdPath,
-  getUserMdPath,
-  getShipJsonPath,
-  getShipDirPath,
-  getLogsDirPath,
-  getCacheDirPath,
-  getShipSchemaPath,
-  getShipContextRootDirPath,
-  getShipConfigDirPath,
-  getShipDataDirPath,
-  getShipProfileDirPath,
-  getShipProfileOtherPath,
-  getShipProfilePrimaryPath,
-  getShipDebugDirPath,
-  getShipPublicDirPath,
-  getShipTasksDirPath,
-} from "@/console/env/Paths.js";
-import { ensureDir, saveJson } from "@/utils/storage/index.js";
-import type { ShipConfig } from "@/console/env/Config.js";
-import { SHIP_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
-import { DEFAULT_SHIP_JSON } from "@/console/constants/Ship.js";
-import { ConsoleStore } from "@utils/store/index.js";
-import {
-  DEFAULT_PROFILE_MD_TEMPLATE,
-  DEFAULT_SOUL_MD_TEMPLATE,
-  DEFAULT_USER_MD_TEMPLATE,
-} from "@agent/prompts/common/InitPrompts.js";
-import { renderTemplateVariables } from "@/utils/Template.js";
+  initializeAgentProject,
+  listConsoleModelChoices,
+  normalizeDefaultAgentName,
+} from "@/console/project/AgentInitializer.js";
+import type { AgentProjectChannel } from "@/types/AgentProject.js";
 
 type InitPromptResponse = {
   name?: string;
   primaryModelId?: string;
   channels?: string[];
 };
-
-type EnvEntry = {
-  key: string;
-  value: string;
-};
-
-/**
- * 规范化默认 Agent 名称。
- *
- * 关键点（中文）
- * - 仅用于“默认值”推导，不改写用户手动输入。
- * - 将目录名里的 `_` / `-` 统一转换为空格，提升默认展示可读性。
- */
-function normalizeDefaultAgentName(input: string): string {
-  const normalized = String(input || "")
-    .trim()
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return normalized;
-}
-
-/**
- * 读取 console 全局模型 ID 列表。
- */
-async function listConsoleModelChoices(): Promise<Array<{ title: string; value: string }>> {
-  const store = new ConsoleStore();
-  try {
-    const models = store.listModels();
-    const providers = await store.listProviders();
-    const providerMap = new Map(providers.map((item) => [item.id, item] as const));
-    return models
-      .map((item) => {
-        const id = String(item.id || "").trim();
-        if (!id) return null;
-        const providerId = String(item.providerId || "").trim();
-        const providerType = String(providerMap.get(providerId)?.type || "").trim();
-        const providerLabel = providerId
-          ? providerType
-            ? `${providerId} (${providerType})`
-            : providerId
-          : "-";
-        return {
-          title: `${id} · ${providerLabel}`,
-          value: id,
-        };
-      })
-      .filter((item): item is { title: string; value: string } => item !== null);
-  } finally {
-    store.close();
-  }
-}
-
-function parseEnvKeys(content: string): Set<string> {
-  const out = new Set<string>();
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = String(rawLine || "").trim();
-    if (!line || line.startsWith("#")) continue;
-    const matched = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=/);
-    if (!matched) continue;
-    out.add(matched[1]);
-  }
-  return out;
-}
-
-function escapeRegExp(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * 仅向 env 文件追加缺失键（不覆盖已有键）。
- *
- * 关键点（中文）
- * - 用户已有的 env 配置永远优先，不会被 init 覆盖。
- * - 仅当键不存在时才追加，满足“原来有就跳过，原来没有就写入”。
- */
-async function appendMissingEnvEntries(params: {
-  filePath: string;
-  sectionTitle: string;
-  entries: EnvEntry[];
-  overwriteKeys?: Set<string>;
-}): Promise<{
-  appended: string[];
-  overwritten: string[];
-  skipped: string[];
-}> {
-  const filePath = String(params.filePath || "").trim();
-  if (!filePath) return { appended: [], overwritten: [], skipped: [] };
-  const entries = Array.isArray(params.entries)
-    ? params.entries.filter((item) => {
-        const key = String(item?.key || "").trim();
-        return Boolean(key);
-      })
-    : [];
-  if (entries.length === 0) return { appended: [], overwritten: [], skipped: [] };
-  const overwriteKeys = params.overwriteKeys || new Set<string>();
-
-  let existing = "";
-  if (await fs.pathExists(filePath)) {
-    existing = await fs.readFile(filePath, "utf-8");
-  }
-  const existingKeys = parseEnvKeys(existing);
-  const appendedEntries: EnvEntry[] = [];
-  const skippedEntries: EnvEntry[] = [];
-  const overwrittenEntries: EnvEntry[] = [];
-  let nextContent = existing;
-
-  for (const entry of entries) {
-    if (!existingKeys.has(entry.key)) {
-      appendedEntries.push(entry);
-      continue;
-    }
-    if (!overwriteKeys.has(entry.key)) {
-      skippedEntries.push(entry);
-      continue;
-    }
-    const linePattern = new RegExp(
-      `^${escapeRegExp(entry.key)}\\s*=.*$`,
-      "gm",
-    );
-    if (linePattern.test(nextContent)) {
-      nextContent = nextContent.replace(linePattern, `${entry.key}=${entry.value}`);
-    } else {
-      appendedEntries.push(entry);
-      continue;
-    }
-    overwrittenEntries.push(entry);
-  }
-
-  if (appendedEntries.length > 0) {
-    const lines: string[] = [];
-    if (!nextContent.trim()) {
-      lines.push("# Downcity 环境变量");
-    }
-    lines.push("", `# ${params.sectionTitle}`);
-    for (const entry of appendedEntries) {
-      lines.push(`${entry.key}=${entry.value}`);
-    }
-    let chunk = lines.join("\n");
-    if (nextContent && !nextContent.endsWith("\n")) {
-      chunk = `\n${chunk}`;
-    }
-    nextContent = `${nextContent}${chunk}\n`;
-  }
-
-  if (
-    appendedEntries.length > 0 ||
-    overwrittenEntries.length > 0 ||
-    !(await fs.pathExists(filePath))
-  ) {
-    await fs.writeFile(filePath, nextContent, "utf-8");
-  }
-
-  return {
-    appended: appendedEntries.map((item) => item.key),
-    overwritten: overwrittenEntries.map((item) => item.key),
-    skipped: skippedEntries.map((item) => item.key),
-  };
-}
 
 /**
  * init 命令入口。
@@ -227,8 +45,6 @@ export async function initCommand(
   const defaultAgentName =
     normalizeDefaultAgentName(projectBaseName) || projectBaseName;
   let allowOverwrite = Boolean(options.force);
-  const dotEnvPath = path.join(projectRoot, ".env");
-  const dotEnvExamplePath = path.join(projectRoot, ".env.example");
 
   console.log(`🚀 Initializing Downcity project: ${projectRoot}`);
 
@@ -300,197 +116,58 @@ export async function initCommand(
   const agentName =
     String(response.name || "").trim() || defaultAgentName;
   const primaryModelId = String(response.primaryModelId || "").trim() || "default";
-  const initTemplateVariables = {
-    agent_name: agentName,
-  };
-
-  // Create configuration files
-  const profileMdPath = getProfileMdPath(projectRoot);
-  const soulMdPath = getSoulMdPath(projectRoot);
-  const userMdPath = getUserMdPath(projectRoot);
-  const shipJsonPath = getShipJsonPath(projectRoot);
-  const staticPromptFiles = [
-    {
-      filename: "PROFILE.md",
-      exists: existingProfileMd,
-      filePath: profileMdPath,
-      content: renderTemplateVariables(
-        DEFAULT_PROFILE_MD_TEMPLATE,
-        initTemplateVariables,
-      ),
-    },
-    {
-      filename: "SOUL.md",
-      exists: existingSoulMd,
-      filePath: soulMdPath,
-      content: renderTemplateVariables(
-        DEFAULT_SOUL_MD_TEMPLATE,
-        initTemplateVariables,
-      ),
-    },
-    {
-      filename: "USER.md",
-      exists: existingUserMd,
-      filePath: userMdPath,
-      content: renderTemplateVariables(
-        DEFAULT_USER_MD_TEMPLATE,
-        initTemplateVariables,
-      ),
-    },
-  ] as const;
-
-  // 关键点（中文）：静态 prompt 文件统一走同一套写入逻辑，仅通过文件名与模板区分。
-  for (const file of staticPromptFiles) {
-    if (file.exists) {
-      console.log(`⏭️  Skipped existing ${file.filename}`);
-      continue;
-    }
-    await fs.writeFile(file.filePath, file.content);
-    console.log(`✅ Created ${file.filename}`);
-  }
-
-  const selectedChannels = new Set<string>(
-    Array.isArray(response.channels) ? (response.channels as string[]) : [],
-  );
-
-  const channelsConfig: NonNullable<
-    NonNullable<NonNullable<ShipConfig["services"]>["chat"]>["channels"]
-  > = {};
-  if (selectedChannels.has("telegram")) {
-    channelsConfig.telegram = {
-      enabled: true,
-    };
-  }
-  if (selectedChannels.has("feishu")) {
-    channelsConfig.feishu = {
-      enabled: true,
-    };
-  }
-  if (selectedChannels.has("qq")) {
-    channelsConfig.qq = {
-      enabled: true,
-    };
-  }
-
-  const shipConfig: ShipConfig = {
-    $schema: DEFAULT_SHIP_JSON.$schema,
-    name: agentName,
-    version: "1.0.0",
-    model: {
-      primary: primaryModelId,
-    },
-    // 关键点（中文）：所有服务相关配置统一放入 `services`。
-    services: {
-      // skills 扫描目录统一使用 `.agents/skills`（project/home 默认 roots）
-      skills: { paths: [".agents/skills"] },
-      ...(Object.keys(channelsConfig).length > 0
-        ? {
-            chat: {
-              method: "direct",
-              channels: channelsConfig,
-            },
-          }
-        : {}),
-    },
-  };
-
-  await saveJson(shipJsonPath, shipConfig);
-  console.log(`✅ Created ship.json`);
-
-  // Create .env and .env.example
-  // 关键点（中文）
-  // - `.env` 写入真实值（仅追加缺失键，不覆盖已有键）
-  // - `.env.example` 写入示例值（便于团队同步所需变量）
-  const envRealEntries: EnvEntry[] = [];
-  const envExampleEntries: EnvEntry[] = [];
-  const envResult = await appendMissingEnvEntries({
-    filePath: dotEnvPath,
-    sectionTitle: "Downcity Create",
-    entries: envRealEntries,
+  const selectedChannels = Array.isArray(response.channels)
+    ? (response.channels as AgentProjectChannel[])
+    : [];
+  const initResult = await initializeAgentProject({
+    projectRoot,
+    agentName,
+    primaryModelId,
+    channels: selectedChannels,
+    forceOverwriteShipJson: allowOverwrite,
   });
-  const envExampleResult = await appendMissingEnvEntries({
-    filePath: dotEnvExamplePath,
-    sectionTitle: "Downcity Create Example",
-    entries: envExampleEntries,
-  });
-  if (envResult.appended.length > 0 || envResult.overwritten.length > 0) {
-    const detail = [
-      envResult.appended.length > 0
-        ? `added: ${envResult.appended.join(", ")}`
-        : "",
-      envResult.overwritten.length > 0
-        ? `overwritten: ${envResult.overwritten.join(", ")}`
-        : "",
-    ]
-      .filter(Boolean)
-      .join("; ");
-    console.log(`✅ Updated .env (${detail})`);
-  } else {
-    console.log("⏭️  Skipped .env (no new entries)");
+
+  if (!existingProfileMd && initResult.createdFiles.includes("PROFILE.md")) {
+    console.log("✅ Created PROFILE.md");
+  } else if (existingProfileMd) {
+    console.log("⏭️  Skipped existing PROFILE.md");
   }
-  if (envExampleResult.appended.length > 0) {
-    console.log(
-      `✅ Updated .env.example (added: ${envExampleResult.appended.join(", ")})`,
-    );
-  } else {
-    console.log("⏭️  Skipped .env.example (no new entries)");
+  if (!existingSoulMd && initResult.createdFiles.includes("SOUL.md")) {
+    console.log("✅ Created SOUL.md");
+  } else if (existingSoulMd) {
+    console.log("⏭️  Skipped existing SOUL.md");
+  }
+  if (!existingUserMd && initResult.createdFiles.includes("USER.md")) {
+    console.log("✅ Created USER.md");
+  } else if (existingUserMd) {
+    console.log("⏭️  Skipped existing USER.md");
   }
 
-  // Create .ship directory structure
-  const dirs = [
-    getShipDirPath(projectRoot),
-    getShipTasksDirPath(projectRoot),
-    getLogsDirPath(projectRoot),
-    getCacheDirPath(projectRoot),
-    getShipProfileDirPath(projectRoot),
-    getShipDataDirPath(projectRoot),
-    getShipContextRootDirPath(projectRoot),
-    getShipPublicDirPath(projectRoot),
-    getShipConfigDirPath(projectRoot),
-    path.join(projectRoot, ".agents", "skills"),
-    path.join(getShipDirPath(projectRoot), "schema"),
-    getShipDebugDirPath(projectRoot),
-  ];
-
-  for (const dir of dirs) {
-    await ensureDir(dir);
-  }
-  console.log(`✅ Created .ship/ directory structure`);
-
-  // Write JSON schema for ship.json (for editor validation via "$schema")
-  const shipSchemaPath = getShipSchemaPath(projectRoot);
-  await ensureDir(path.dirname(shipSchemaPath));
-  await saveJson(shipSchemaPath, SHIP_JSON_SCHEMA);
-  console.log(`✅ Created ship.schema.json`);
-
-  // Create profile memory files (optional, but recommended)
-  try {
-    await ensureDir(getShipProfileDirPath(projectRoot));
-    await fs.ensureFile(getShipProfilePrimaryPath(projectRoot));
-    await fs.ensureFile(getShipProfileOtherPath(projectRoot));
-  } catch {
-    // ignore
-  }
+  console.log("✅ Created ship.json");
+  console.log("⏭️  Skipped .env (no new entries)");
+  console.log("⏭️  Skipped .env.example (no new entries)");
+  console.log("✅ Created .ship/ directory structure");
+  console.log("✅ Created ship.schema.json");
 
   console.log("\n🎉 Initialization complete!\n");
   console.log(`📦 Agent model.primary: ${primaryModelId}`);
   console.log("🌐 Model pool source: ~/.ship/ship.db (console global)\n");
 
-  if (selectedChannels.has("feishu")) {
+  if (selectedChannels.includes("feishu")) {
     console.log("📱 Feishu chat channel enabled");
     console.log(
       "   Please bind services.chat.channels.feishu.channelAccountId to a channel account in Console UI",
     );
     console.log("   Manage credentials in Global / Channel Accounts\n");
   }
-  if (selectedChannels.has("telegram")) {
+  if (selectedChannels.includes("telegram")) {
     console.log("📱 Telegram chat channel enabled");
     console.log(
       "   Please bind services.chat.channels.telegram.channelAccountId to a channel account in Console UI",
     );
     console.log("   Manage credentials in Global / Channel Accounts\n");
   }
-  if (selectedChannels.has("qq")) {
+  if (selectedChannels.includes("qq")) {
     console.log("📱 QQ chat channel enabled");
     console.log(
       "   Please bind services.chat.channels.qq.channelAccountId to a channel account in Console UI",
@@ -506,17 +183,17 @@ export async function initCommand(
     'Use "city console model ..." to manage global model pool',
   ];
 
-  if (selectedChannels.has("telegram")) {
+  if (selectedChannels.includes("telegram")) {
     nextSteps.push(
       "Bind services.chat.channels.telegram.channelAccountId to an existing channel account",
     );
   }
-  if (selectedChannels.has("feishu")) {
+  if (selectedChannels.includes("feishu")) {
     nextSteps.push(
       "Bind services.chat.channels.feishu.channelAccountId to an existing channel account",
     );
   }
-  if (selectedChannels.has("qq")) {
+  if (selectedChannels.includes("qq")) {
     nextSteps.push(
       "Bind services.chat.channels.qq.channelAccountId to an existing channel account",
     );

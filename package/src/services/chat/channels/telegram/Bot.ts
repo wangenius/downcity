@@ -636,6 +636,47 @@ export class TelegramBot extends BaseChatChannel {
     const isGroup = this.isGroupChat(message.chat.type);
     const chatKey = this.buildChatKey(chatId, messageThreadId);
 
+    await this.observeIncomingAuthorization({
+      chatId,
+      chatType: message.chat.type,
+      chatTitle,
+      userId: actorId,
+      username: actorName,
+    });
+
+    const authResult = this.evaluateIncomingAuthorization({
+      chatId,
+      chatType: message.chat.type,
+      chatTitle,
+      userId: actorId,
+      username: actorName,
+    });
+    if (authResult.decision !== "allow") {
+      if (authResult.decision === "pairing") {
+        await this.createPairingRequest({
+          chatId,
+          chatType: message.chat.type,
+          chatTitle,
+          userId: actorId,
+          username: actorName,
+        });
+        await this.sendAuthorizationText({
+          chatId,
+          chatType: message.chat.type,
+          messageThreadId,
+          text: this.buildPairingRequiredText({ userId: actorId }),
+        });
+      } else if (!isGroup) {
+        await this.sendAuthorizationText({
+          chatId,
+          chatType: message.chat.type,
+          messageThreadId,
+          text: this.buildUnauthorizedBlockedText(),
+        });
+      }
+      return;
+    }
+
     const enqueueGroupAudit = async (params: {
       reason: string;
       kind?: string;

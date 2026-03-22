@@ -81,6 +81,18 @@ Downcity 当前默认按长连接模式工作，不要求你先暴露公网 webh
 
 ### 5）权限配置
 
+从当前版本开始，飞书不建议再把“谁是主人”单独理解成一个 `FEISHU_AUTH_ID`。
+
+含义是：
+
+- `ownerIds`：谁会被判定为 `is_master=yes`
+- `dmPolicy`：私聊是开放、审批制、白名单制还是禁用
+- `allowFrom`：私聊白名单
+- `groupPolicy`：群聊是否开放或只允许特定群
+- `groupAllowFrom`：允许接入的群 ID
+
+这些配置统一保存在 console `~/.ship/ship.db`，并可直接在 Console UI 的 `Agent / Authorization` 页面管理，不会明文写到项目 `ship.json`。
+
 对于当前运行时，最关键的是 **tenant / 应用身份权限**，不是单独的 `user` 权限。
 
 最小建议至少包含：
@@ -168,6 +180,8 @@ city agent start
 - 入站支持 **文本 + 图片 + 视频 + 文件 + 音频** 作为执行输入
 - 图片、视频、文件、音频会先下载到 `.ship/.cache/feishu/`，再注入为 `@attach ...`
 - 出站支持从回复文本解析 `@attach document|file <path>` 并发送文件消息
+- 普通 AI 文本回复默认走普通发送，不会自动引用“当前最新消息”
+- 只有显式 reply 时，才会绑定到目标 `message_id`
 - 会尝试 best-effort 查询：
   - 发送者姓名
   - chat 标题

@@ -161,6 +161,36 @@ export function resolveChatKey(input?: {
 }
 
 /**
+ * 解析当前发送应绑定的 reply messageId。
+ *
+ * 关键点（中文）
+ * - 只有显式 reply 且未手动传入 messageId 时才尝试补全。
+ * - 仅在目标 chatKey 与当前请求上下文一致时，才复用 `DC_CTX_MESSAGE_ID` / ALS 快照。
+ * - 这样可把一次 run 固定到触发它的那条消息，避免处理中被后续新消息覆盖。
+ */
+function resolveReplyMessageIdForChatSend(params: {
+  chatKey: string;
+  context: ServiceRuntime;
+  replyToMessage: boolean;
+  explicitMessageId?: string;
+}): string | undefined {
+  const explicitMessageId =
+    typeof params.explicitMessageId === "string" && params.explicitMessageId.trim()
+      ? params.explicitMessageId.trim()
+      : undefined;
+  if (explicitMessageId) return explicitMessageId;
+  if (params.replyToMessage !== true) return undefined;
+
+  const snapshot = resolveChatContextSnapshot({
+    context: params.context,
+  });
+  const snapshotChatKey = String(snapshot.chatKey || "").trim();
+  const snapshotMessageId = String(snapshot.messageId || "").trim();
+  if (!snapshotChatKey || !snapshotMessageId) return undefined;
+  return snapshotChatKey === params.chatKey ? snapshotMessageId : undefined;
+}
+
+/**
  * 规范化 `chat send` 文本。
  *
  * 关键点（中文）
@@ -275,10 +305,13 @@ export async function sendChatTextByChatKey(params: {
     };
   }
 
-  const messageId =
-    typeof params.messageId === "string" && params.messageId.trim()
-      ? params.messageId.trim()
-      : undefined;
+  const replyToMessage = params.replyToMessage === true;
+  const messageId = resolveReplyMessageIdForChatSend({
+    context: params.context,
+    chatKey,
+    replyToMessage,
+    explicitMessageId: params.messageId,
+  });
   const targetWaitMs = resolveTargetWaitMs({ delayMs, sendAtMs });
   if (params.nonBlockingDelay === true && targetWaitMs > 0) {
     // 关键点（中文）：异步调度延迟发送，让调用方可立即结束当前 run。
@@ -289,7 +322,7 @@ export async function sendChatTextByChatKey(params: {
           context: params.context,
           chatKey,
           text,
-          replyToMessage: params.replyToMessage === true,
+          replyToMessage,
           ...(messageId ? { messageId } : {}),
         });
         if (!delayed.success) {
@@ -317,7 +350,7 @@ export async function sendChatTextByChatKey(params: {
     context: params.context,
     chatKey,
     text,
-    replyToMessage: params.replyToMessage === true,
+    replyToMessage,
     ...(messageId ? { messageId } : {}),
   });
   return {

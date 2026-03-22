@@ -1,4 +1,7 @@
 import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
+import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import { resolveOwnerMatch } from "@services/chat/runtime/AuthorizationPolicy.js";
+import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
 
 /**
  * Telegram channel 鉴权模块。
@@ -27,14 +30,22 @@ function readTelegramAuthId(params: {
  * 判定 Telegram 用户身份状态。
  */
 export function resolveTelegramMasterStatus(params: {
+  config: ShipConfig;
   env?: Record<string, string>;
   userId?: string;
+  rootPath?: string;
 }): ChatMasterStatus {
-  const userId = normalizeAuthId(params.userId);
-  if (!userId) return "unknown";
-  const authId = readTelegramAuthId({
+  const legacyAuthId = readTelegramAuthId({
     env: params.env,
   });
-  if (!authId) return "unknown";
-  return userId === authId ? "master" : "guest";
+  const authorizationConfig = params.rootPath
+    ? readChatAuthorizationConfigSync(params.rootPath)
+    : undefined;
+  return resolveOwnerMatch({
+    config: params.config,
+    channel: "telegram",
+    env: legacyAuthId ? { TELEGRAM_AUTH_ID: legacyAuthId } : params.env,
+    userId: params.userId,
+    authorizationConfig,
+  });
 }

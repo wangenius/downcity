@@ -43,6 +43,19 @@ import {
 } from "@/console/env/Paths.js";
 import { ConsoleStore } from "@utils/store/index.js";
 import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
+import { readAuthorizationSnapshot } from "@services/chat/runtime/AuthorizationStore.js";
+import { removeAuthorizationPairingRequest } from "@services/chat/runtime/AuthorizationStore.js";
+import {
+  grantChatAuthorizationGroup,
+  grantChatAuthorizationUser,
+  readChatAuthorizationConfig,
+  revokeChatAuthorizationGroup,
+  revokeChatAuthorizationUser,
+  setChatAuthorizationOwner,
+  writeChatAuthorizationConfig,
+} from "@services/chat/runtime/AuthorizationConfig.js";
+import type { ChatAuthorizationConfig } from "@services/chat/types/Authorization.js";
+import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 
 const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
 const __filename = fileURLToPath(import.meta.url);
@@ -65,6 +78,12 @@ const DC_VERSION = (() => {
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
+}
+
+function normalizeChatChannel(value: unknown): ChatDispatchChannel | null {
+  const text = String(value || "").trim().toLowerCase();
+  if (text === "telegram" || text === "feishu" || text === "qq") return text;
+  return null;
 }
 
 function toSystemMessageText(message: SystemModelMessage): string {
@@ -211,6 +230,124 @@ export function registerTuiApiRoutes(params: {
       return c.json({
         success: true,
         contexts: enrichedContexts,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.get("/api/tui/authorization", async (c) => {
+    try {
+      const serviceRuntime = params.getServiceRuntimeState();
+      const snapshot = await readAuthorizationSnapshot({
+        context: serviceRuntime,
+      });
+      return c.json({
+        success: true,
+        config: readChatAuthorizationConfig(serviceRuntime),
+        users: snapshot.users,
+        chats: snapshot.chats,
+        pairingRequests: snapshot.pairingRequests,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.post("/api/tui/authorization/config", async (c) => {
+    try {
+      const serviceRuntime = params.getServiceRuntimeState();
+      const body = (await c.req.json().catch(() => ({}))) as {
+        config?: ChatAuthorizationConfig;
+      };
+      await writeChatAuthorizationConfig({
+        context: serviceRuntime,
+        nextConfig:
+          body.config && typeof body.config === "object" ? body.config : {},
+      });
+      const snapshot = await readAuthorizationSnapshot({
+        context: serviceRuntime,
+      });
+      return c.json({
+        success: true,
+        config: readChatAuthorizationConfig(serviceRuntime),
+        users: snapshot.users,
+        chats: snapshot.chats,
+        pairingRequests: snapshot.pairingRequests,
+      });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.post("/api/tui/authorization/action", async (c) => {
+    try {
+      const serviceRuntime = params.getServiceRuntimeState();
+      const body = (await c.req.json().catch(() => ({}))) as {
+        action?: string;
+        channel?: string;
+        userId?: string;
+        chatId?: string;
+        enabled?: boolean;
+        asOwner?: boolean;
+      };
+      const action = String(body.action || "").trim();
+      const channel = normalizeChatChannel(body.channel);
+      if (!action || !channel) {
+        return c.json({ success: false, error: "Missing action/channel" }, 400);
+      }
+
+      if (action === "approvePairing" || action === "grantUser") {
+        await grantChatAuthorizationUser({
+          context: serviceRuntime,
+          channel,
+          userId: String(body.userId || "").trim(),
+          asOwner: body.asOwner === true,
+        });
+      } else if (action === "revokeUser") {
+        await revokeChatAuthorizationUser({
+          context: serviceRuntime,
+          channel,
+          userId: String(body.userId || "").trim(),
+        });
+      } else if (action === "rejectPairing") {
+        await removeAuthorizationPairingRequest({
+          context: serviceRuntime,
+          channel,
+          userId: String(body.userId || "").trim(),
+        });
+      } else if (action === "setOwner") {
+        await setChatAuthorizationOwner({
+          context: serviceRuntime,
+          channel,
+          userId: String(body.userId || "").trim(),
+          enabled: body.enabled === true,
+        });
+      } else if (action === "grantGroup") {
+        await grantChatAuthorizationGroup({
+          context: serviceRuntime,
+          channel,
+          chatId: String(body.chatId || "").trim(),
+        });
+      } else if (action === "revokeGroup") {
+        await revokeChatAuthorizationGroup({
+          context: serviceRuntime,
+          channel,
+          chatId: String(body.chatId || "").trim(),
+        });
+      } else {
+        return c.json({ success: false, error: `Unsupported action: ${action}` }, 400);
+      }
+
+      const snapshot = await readAuthorizationSnapshot({
+        context: serviceRuntime,
+      });
+      return c.json({
+        success: true,
+        config: readChatAuthorizationConfig(serviceRuntime),
+        users: snapshot.users,
+        chats: snapshot.chats,
+        pairingRequests: snapshot.pairingRequests,
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);

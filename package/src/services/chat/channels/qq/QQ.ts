@@ -1327,6 +1327,45 @@ export class QQBot extends BaseChatChannel {
       ? this.stripBotMention(rawContent)
       : this.extractTextContent(rawContent);
 
+    await this.observeIncomingAuthorization({
+      chatId,
+      chatType,
+      chatTitle,
+      userId: actor.userId,
+      username: actor.username,
+    });
+
+    const authResult = this.evaluateIncomingAuthorization({
+      chatId,
+      chatType,
+      chatTitle,
+      userId: actor.userId,
+      username: actor.username,
+    });
+    if (authResult.decision !== "allow") {
+      if (authResult.decision === "pairing") {
+        await this.createPairingRequest({
+          chatId,
+          chatType,
+          chatTitle,
+          userId: actor.userId,
+          username: actor.username,
+        });
+        await this.sendAuthorizationText({
+          chatId,
+          chatType,
+          text: this.buildPairingRequiredText({ userId: actor.userId }),
+        });
+      } else if (!isGroup) {
+        await this.sendAuthorizationText({
+          chatId,
+          chatType,
+          text: this.buildUnauthorizedBlockedText(),
+        });
+      }
+      return;
+    }
+
     const enqueueAudit = async (opts: { reason: string; kind?: string }): Promise<void> => {
       await this.enqueueAuditMessage({
         chatId,
@@ -1433,6 +1472,25 @@ export class QQBot extends BaseChatChannel {
       data,
       actorName: actor.username,
     });
+
+    await this.observeIncomingAuthorization({
+      chatId: channelId,
+      chatType,
+      chatTitle,
+      userId: actor.userId,
+      username: actor.username,
+    });
+
+    const authResult = this.evaluateIncomingAuthorization({
+      chatId: channelId,
+      chatType,
+      chatTitle,
+      userId: actor.userId,
+      username: actor.username,
+    });
+    if (authResult.decision !== "allow") {
+      return;
+    }
 
     if (actor.userId && this.botUserId && actor.userId === this.botUserId) {
       this.logger.debug("忽略机器人自身消息（channel）", {

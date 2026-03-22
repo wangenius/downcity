@@ -19,6 +19,7 @@ import {
   ServerCogIcon,
   RadarIcon,
   TerminalIcon,
+  ShieldCheckIcon,
 } from "lucide-react"
 import type { UiAgentOption, UiChatChannelStatus, UiContextSummary, UiTaskItem } from "@/types/Dashboard"
 import type { DashboardView } from "@/types/Navigation"
@@ -140,6 +141,7 @@ const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.Reac
   globalAgents: <Layers3Icon />,
   globalExtensions: <PuzzleIcon />,
   agentOverview: <Layers3Icon />,
+  agentAuthorization: <ShieldCheckIcon />,
   agentSkills: <SparklesIcon />,
   agentServices: <ServerCogIcon />,
   agentCommand: <TerminalIcon />,

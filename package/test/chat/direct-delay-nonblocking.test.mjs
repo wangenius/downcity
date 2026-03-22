@@ -7,8 +7,12 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import { sendChatTextByChatKey } from "../../bin/services/chat/Action.js";
+import { upsertChatMetaByContextId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
@@ -16,18 +20,24 @@ import {
 } from "../../bin/services/chat/runtime/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
-const CHAT_KEY = "telegram-chat-10001";
+const CHAT_KEY = "ctx_direct_delay";
 
-function buildRuntime() {
+function buildRuntime(rootPath) {
   return {
-    rootPath: "",
+    rootPath,
+    env: {},
     logger: {
       warn() {},
+      info() {},
+      error() {},
+      debug() {},
     },
   };
 }
 
-test("sendChatTextByChatKey schedules delayed send without blocking when nonBlockingDelay=true", async () => {
+test("sendChatTextByChatKey schedules delayed send without blocking when nonBlockingDelay=true", { concurrency: false }, async () => {
+  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-direct-delay-"));
+  const runtime = buildRuntime(rootPath);
   const previous = getChatSender(TELEGRAM_CHANNEL);
   const calls = [];
   registerChatSender(TELEGRAM_CHANNEL, {
@@ -41,9 +51,16 @@ test("sendChatTextByChatKey schedules delayed send without blocking when nonBloc
   });
 
   try {
+    await upsertChatMetaByContextId({
+      context: runtime,
+      contextId: CHAT_KEY,
+      channel: TELEGRAM_CHANNEL,
+      chatId: "10001",
+    });
+
     const start = Date.now();
     const result = await sendChatTextByChatKey({
-      context: buildRuntime(),
+      context: runtime,
       chatKey: CHAT_KEY,
       text: "delayed-message",
       delayMs: 120,
@@ -69,10 +86,13 @@ test("sendChatTextByChatKey schedules delayed send without blocking when nonBloc
     } else {
       unregisterChatSender(TELEGRAM_CHANNEL);
     }
+    await fs.rm(rootPath, { recursive: true, force: true });
   }
 });
 
-test("sendChatTextByChatKey keeps blocking behavior by default", async () => {
+test("sendChatTextByChatKey keeps blocking behavior by default", { concurrency: false }, async () => {
+  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-direct-delay-"));
+  const runtime = buildRuntime(rootPath);
   const previous = getChatSender(TELEGRAM_CHANNEL);
   const calls = [];
   registerChatSender(TELEGRAM_CHANNEL, {
@@ -86,9 +106,16 @@ test("sendChatTextByChatKey keeps blocking behavior by default", async () => {
   });
 
   try {
+    await upsertChatMetaByContextId({
+      context: runtime,
+      contextId: CHAT_KEY,
+      channel: TELEGRAM_CHANNEL,
+      chatId: "10001",
+    });
+
     const start = Date.now();
     const result = await sendChatTextByChatKey({
-      context: buildRuntime(),
+      context: runtime,
       chatKey: CHAT_KEY,
       text: "blocking-message",
       delayMs: 120,
@@ -108,5 +135,6 @@ test("sendChatTextByChatKey keeps blocking behavior by default", async () => {
     } else {
       unregisterChatSender(TELEGRAM_CHANNEL);
     }
+    await fs.rm(rootPath, { recursive: true, force: true });
   }
 });

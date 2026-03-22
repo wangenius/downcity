@@ -24,6 +24,15 @@ import type { ChatMasterStatus } from "@services/chat/types/ChatAuth.js";
 import { resolveTelegramMasterStatus } from "@services/chat/channels/telegram/Auth.js";
 import { resolveFeishuMasterStatus } from "@services/chat/channels/feishu/Auth.js";
 import { resolveQqMasterStatus } from "@services/chat/channels/qq/Auth.js";
+import {
+  evaluateIncomingChatAuthorization,
+  resolveOwnerMatch,
+} from "@services/chat/runtime/AuthorizationPolicy.js";
+import { readChatAuthorizationConfigSync } from "@services/chat/runtime/AuthorizationConfig.js";
+import {
+  recordObservedAuthorizationPrincipal,
+  upsertAuthorizationPairingRequest,
+} from "@services/chat/runtime/AuthorizationStore.js";
 
 type ChannelUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -93,6 +102,26 @@ export type IncomingChatMessage = {
 };
 
 /**
+ * 入站授权判定输入。
+ */
+export type IncomingAuthorizationParams = {
+  chatId: string;
+  chatType?: string;
+  userId?: string;
+  username?: string;
+  chatTitle?: string;
+};
+
+/**
+ * 入站授权判定结果。
+ */
+export type IncomingAuthorizationResult = {
+  decision: "allow" | "block" | "pairing";
+  reason: string;
+  isOwner: boolean;
+};
+
+/**
  * Chat channel 基类。
  *
  * 关键点（中文）
@@ -135,6 +164,112 @@ export abstract class BaseChatChannel {
   protected sendActionToPlatform?(
     params: ChannelSendActionParams,
   ): Promise<void>;
+
+  /**
+   * 发送授权提示文本。
+   *
+   * 关键点（中文）
+   * - 一律按普通消息发送，不挂 reply，避免把“权限提示”误挂到某条消息下面。
+   */
+  protected async sendAuthorizationText(params: {
+    chatId: string;
+    text: string;
+    chatType?: string;
+    messageThreadId?: number;
+  }): Promise<void> {
+    await this.sendTextToPlatform({
+      chatId: params.chatId,
+      text: params.text,
+      ...(typeof params.chatType === "string" ? { chatType: params.chatType } : {}),
+      ...(typeof params.messageThreadId === "number"
+        ? { messageThreadId: params.messageThreadId }
+        : {}),
+    });
+  }
+
+  /**
+   * 记录入站观测主体。
+   */
+  protected async observeIncomingAuthorization(
+    params: IncomingAuthorizationParams,
+  ): Promise<void> {
+    await recordObservedAuthorizationPrincipal({
+      context: this.context,
+      channel: this.channel,
+      chatId: params.chatId,
+      chatType: params.chatType,
+      chatTitle: params.chatTitle,
+      userId: params.userId,
+      username: params.username,
+    });
+  }
+
+  /**
+   * 执行入站授权判定。
+   */
+  protected evaluateIncomingAuthorization(
+    params: IncomingAuthorizationParams,
+  ): IncomingAuthorizationResult {
+    const authorizationConfig = readChatAuthorizationConfigSync(this.context.rootPath);
+    const result = evaluateIncomingChatAuthorization({
+      config: this.context.config,
+      channel: this.channel,
+      authorizationConfig,
+      input: {
+        channel: this.channel,
+        chatId: params.chatId,
+        chatType: params.chatType,
+        userId: params.userId,
+        username: params.username,
+        chatTitle: params.chatTitle,
+      },
+    });
+    return result;
+  }
+
+  /**
+   * 创建 / 更新 pairing 请求。
+   */
+  protected async createPairingRequest(
+    params: IncomingAuthorizationParams,
+  ): Promise<void> {
+    const userId = String(params.userId || "").trim();
+    if (!userId) return;
+    await upsertAuthorizationPairingRequest({
+      context: this.context,
+      channel: this.channel,
+      userId,
+      username: params.username,
+      chatId: params.chatId,
+      chatTitle: params.chatTitle,
+      chatType: params.chatType,
+    });
+  }
+
+  /**
+   * 生成 pairing 提示文案。
+   */
+  protected buildPairingRequiredText(params: { userId?: string }): string {
+    const idLabel =
+      this.channel === "telegram"
+        ? "Telegram user id"
+        : this.channel === "feishu"
+          ? "Feishu user id"
+          : "QQ user id";
+    const userId = String(params.userId || "").trim() || "unknown";
+    return [
+      "当前会话尚未获得授权，已创建待审批请求。",
+      `你的 ${idLabel}: ${userId}`,
+      "请在 Console UI 的 Agent / Authorization 页面审批后再重试。",
+    ].join("\n");
+  }
+
+  /**
+   * 生成未授权提示文案。
+   */
+  protected buildUnauthorizedBlockedText(): string {
+    return "当前会话未被授权，已拒绝处理。请在 Console UI 的 Agent / Authorization 页面配置后再重试。";
+  }
 
   /**
    * 是否在 `sendToolText` 成功后自动写入 outbound chat history。
@@ -598,22 +733,34 @@ export abstract class BaseChatChannel {
   }): ChatMasterStatus {
     if (this.channel === "telegram") {
       return resolveTelegramMasterStatus({
+        config: this.context.config,
         env: this.context.env,
+        rootPath: this.context.rootPath,
         userId: params.userId,
       });
     }
     if (this.channel === "feishu") {
       return resolveFeishuMasterStatus({
+        config: this.context.config,
         env: this.context.env,
+        rootPath: this.context.rootPath,
         userId: params.userId,
       });
     }
     if (this.channel === "qq") {
       return resolveQqMasterStatus({
+        config: this.context.config,
         env: this.context.env,
+        rootPath: this.context.rootPath,
         userId: params.userId,
       });
     }
-    return "unknown";
+    return resolveOwnerMatch({
+      config: this.context.config,
+      channel: this.channel,
+      env: this.context.env,
+      userId: params.userId,
+      authorizationConfig: readChatAuthorizationConfigSync(this.context.rootPath),
+    });
   }
 }

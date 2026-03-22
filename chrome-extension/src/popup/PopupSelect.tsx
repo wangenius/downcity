@@ -83,14 +83,14 @@ export function PopupSelect(props: PopupSelectProps) {
   return (
     <label
       htmlFor={fieldId}
-      className="flex flex-col gap-1 text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+      className="flex min-w-0 flex-col gap-1 text-[9px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
     >
       {props.label}
-      <div ref={rootRef} className="relative">
+      <div ref={rootRef} className="relative min-w-0">
         <button
           id={fieldId}
           type="button"
-          className="flex min-h-[40px] w-full items-center justify-between gap-2 rounded-[10px] border border-border bg-muted px-2.5 py-2 text-left text-[12px] normal-case tracking-normal text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-[40px] w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-[10px] border border-border bg-muted px-2.5 py-2 text-left text-[12px] normal-case tracking-normal text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => {
             if (props.disabled) return;
             setOpen((prev) => !prev);
@@ -123,14 +123,14 @@ export function PopupSelect(props: PopupSelectProps) {
         </button>
 
         {open ? (
-          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-20 overflow-hidden rounded-[10px] border border-border bg-surface">
+          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-20 max-w-full overflow-hidden rounded-[10px] border border-border bg-surface">
             <div role="listbox" className="max-h-56 overflow-auto py-0.5">
               {props.options.length > 0 ? (
                 props.options.map((item) => (
                   <button
                     key={item.value}
                     type="button"
-                    className="flex w-full items-start justify-between gap-2 border-b border-border/60 px-2.5 py-2 text-left last:border-b-0 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full min-w-0 items-start justify-between gap-2 border-b border-border/60 px-2.5 py-2 text-left last:border-b-0 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={item.disabled}
                     onClick={() => {
                       if (item.disabled) return;
@@ -139,11 +139,17 @@ export function PopupSelect(props: PopupSelectProps) {
                     }}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12px] font-medium normal-case tracking-normal text-foreground">
+                      <span
+                        className="block truncate text-[12px] font-medium normal-case tracking-normal text-foreground"
+                        title={item.label}
+                      >
                         {item.label}
                       </span>
                       {item.description ? (
-                        <span className="mt-0.5 block truncate text-[10px] normal-case tracking-normal text-muted-foreground">
+                        <span
+                          className="mt-0.5 block truncate text-[10px] normal-case tracking-normal text-muted-foreground"
+                          title={item.description}
+                        >
                           {item.description}
                         </span>
                       ) : null}

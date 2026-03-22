@@ -78,6 +78,18 @@ In Console UI, open `Global / Channel Accounts` and create a Feishu account such
 
 ### 5) Required permissions
 
+From this version on, Feishu ownership should no longer be modeled as only one `FEISHU_AUTH_ID`.
+
+Meaning:
+
+- `ownerIds`: who should be treated as `is_master=yes`
+- `dmPolicy`: whether DMs are open, pairing-based, allowlist-based, or disabled
+- `allowFrom`: DM allowlist
+- `groupPolicy`: whether groups are open or restricted
+- `groupAllowFrom`: allowed group ids
+
+The same config is now stored in console `~/.ship/ship.db` and managed in Console UI under `Agent / Authorization`, instead of being written to project `ship.json` in plaintext.
+
 For the current runtime, **tenant app scopes** matter most.
 
 Recommended minimum tenant scopes:
@@ -157,6 +169,8 @@ Current Feishu channel behavior:
 - execution accepts **text + image + video + file + audio** inputs
 - inbound image, video, file, and audio messages are downloaded into `.ship/.cache/feishu/` and injected as `@attach ...`
 - outbound replies support `@attach document|file <path>` file conversion
+- normal AI text replies are sent as plain messages by default and do not auto-reply to the latest message
+- a Feishu reply link is used only when reply mode is explicitly requested for a target `message_id`
 - sender name and chat title are resolved on a best-effort basis
 - if resolution fails, processing still continues with raw ids
 

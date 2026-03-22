@@ -17,6 +17,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
+import type { PopupSelectOption } from "../types/PopupSelect";
 import type {
   ActiveTabContext,
   ExtensionPageSendRecord,
@@ -38,6 +39,7 @@ import {
   saveSettings,
 } from "../services/storage";
 import { getActiveTabContext } from "../services/tab";
+import { PopupSelect } from "./PopupSelect";
 
 function readErrorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -112,7 +114,10 @@ function resolveChatKey(options: ChatKeyOption[], preferredChatKey: string): str
   if (preferred && options.some((item) => item.chatKey === preferred)) {
     return preferred;
   }
-  return options[0]?.chatKey || "";
+  if (options.length === 1) {
+    return options[0]?.chatKey || "";
+  }
+  return "";
 }
 
 function resolveLinkedChannels(
@@ -214,6 +219,15 @@ export function App() {
   const linkedChannels = useMemo(
     () => resolveLinkedChannels(selectedAgent),
     [selectedAgent],
+  );
+  const chatOptions = useMemo<PopupSelectOption[]>(
+    () =>
+      chatKeyOptions.map((item) => ({
+        value: item.chatKey,
+        label: item.title,
+        description: item.subtitle,
+      })),
+    [chatKeyOptions],
   );
   const linkedChannelKey = useMemo(
     () => Array.from(linkedChannels).sort().join(","),
@@ -448,7 +462,7 @@ export function App() {
         return;
       }
       if (!chatKey) {
-        const message = "请选择 Channel Chat";
+        const message = "请先点击设置，选择目标 Channel Chat";
         setStatus({ type: "error", text: message });
         showToast("error", message);
         return;
@@ -599,9 +613,13 @@ export function App() {
                   ? selectedAgent.running
                     ? isLoadingChatKeys
                       ? "会话加载中..."
-                      : chatKeyOptions.length > 0
-                        ? "已自动选择会话"
-                        : "暂无可用会话"
+                      : settings.chatKey
+                        ? "目标会话已设置"
+                        : chatKeyOptions.length === 1
+                          ? "已自动选择唯一会话"
+                          : chatKeyOptions.length > 1
+                            ? "请在下方选择会话"
+                            : "暂无可用会话"
                     : "Agent 未运行"
                   : "请在设置中检查连接"}
               </div>
@@ -638,6 +656,28 @@ export function App() {
             }
             onKeyDown={onTaskPromptKeyDown}
             placeholder="输入要发送给 Agent 的内容"
+          />
+
+          <PopupSelect
+            label="Channel Chat"
+            value={settings.chatKey}
+            placeholder={
+              !settings.agentId
+                ? "请先选择 Agent"
+                : isLoadingChatKeys
+                  ? "加载 Chat 中..."
+                  : chatOptions.length > 0
+                    ? "请选择目标 Channel Chat"
+                    : "暂无可用 Channel Chat"
+            }
+            options={chatOptions}
+            onChange={(value) =>
+              setSettings((prev) => ({
+                ...prev,
+                chatKey: value,
+              }))
+            }
+            disabled={!settings.agentId || isLoadingChatKeys || chatOptions.length === 0}
           />
 
           <div className="rounded-[10px] border border-border bg-muted px-3 py-2 text-[10px] leading-[1.45] text-muted-foreground">

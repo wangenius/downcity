@@ -237,7 +237,9 @@ function parseContextSummary(summary: TuiContextSummary): ParsedChatKey | null {
       ...(chatType ? { chatType } : {}),
     };
   }
-  return parseChatKey(String(summary.contextId || "").trim());
+  // 关键点（中文）：extension 侧不再回退解析 legacy contextId。
+  // 只认服务端明确给出的 chat meta，避免已删除/残留目录被误识别成可发会话。
+  return null;
 }
 
 function toChatKeyOption(summary: TuiContextSummary): ChatKeyOption | null {

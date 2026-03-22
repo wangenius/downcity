@@ -5,6 +5,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   UiAgentOption,
+  UiAgentCreatePayload,
+  UiAgentInitializationInput,
   UiAgentsResponse,
   UiChatActionResult,
   UiChatChannelStatus,
@@ -16,6 +18,7 @@ import type {
   UiContextArchivesResponse,
   UiContextArchiveSummary,
   UiChatDeleteResponse,
+  UiChatAuthorizationResponse,
   UiContextClearResponse,
   UiCommandExecuteResponse,
   UiCommandExecuteResult,
@@ -202,6 +205,10 @@ export interface UseConsoleDashboardResult {
    */
   overview: UiOverviewResponse | null;
   /**
+   * 当前 agent 的授权快照。
+   */
+  authorization: UiChatAuthorizationResponse | null;
+  /**
    * service 状态列表。
    */
   services: UiServiceItem[];
@@ -342,6 +349,10 @@ export interface UseConsoleDashboardResult {
    */
   refreshDashboard: (preferredAgentId?: string) => Promise<void>;
   /**
+   * 刷新授权快照。
+   */
+  refreshAuthorization: (agentId: string) => Promise<void>;
+  /**
    * 刷新 chat 渠道状态。
    */
   refreshChatChannels: (agentId: string) => Promise<UiChatChannelStatus[]>;
@@ -405,6 +416,30 @@ export interface UseConsoleDashboardResult {
    * 刷新 consoleui channel 消息。
    */
   refreshLocalChat: (agentId: string) => Promise<void>;
+  /**
+   * 保存授权配置。
+   */
+  saveAuthorizationConfig: (
+    config: NonNullable<UiChatAuthorizationResponse["config"]>,
+  ) => Promise<void>;
+  /**
+   * 执行授权动作。
+   */
+  runAuthorizationAction: (input: {
+    action:
+      | "approvePairing"
+      | "rejectPairing"
+      | "grantUser"
+      | "revokeUser"
+      | "setOwner"
+      | "grantGroup"
+      | "revokeGroup";
+    channel: "telegram" | "feishu" | "qq";
+    userId?: string;
+    chatId?: string;
+    enabled?: boolean;
+    asOwner?: boolean;
+  }) => Promise<void>;
   /**
    * 控制 service。
    */
@@ -492,7 +527,21 @@ export interface UseConsoleDashboardResult {
   /**
    * 启动历史 agent（未运行记录）。
    */
-  startAgentFromHistory: (agentId: string) => Promise<void>;
+  startAgentFromHistory: (
+    agentId: string,
+    options?: {
+      initializeIfNeeded?: boolean;
+      initialization?: UiAgentInitializationInput;
+    },
+  ) => Promise<void>;
+  /**
+   * 新建 agent。
+   */
+  createAgent: (input: UiAgentCreatePayload) => Promise<void>;
+  /**
+   * 打开系统目录选择器。
+   */
+  pickAgentDirectory: () => Promise<string>;
   /**
    * 重启指定 agent（运行前检查 context/task 执行状态）。
    */
@@ -650,6 +699,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [selectedAgentId, setSelectedAgentId] = useState("");
 
   const [overview, setOverview] = useState<UiOverviewResponse | null>(null);
+  const [authorization, setAuthorization] = useState<UiChatAuthorizationResponse | null>(null);
   const [services, setServices] = useState<UiServiceItem[]>([]);
   const [skills, setSkills] = useState<UiSkillSummaryItem[]>([]);
   const [extensions, setExtensions] = useState<UiExtensionRuntimeItem[]>([]);
@@ -775,6 +825,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   const clearPanelDataForNoAgent = useCallback(() => {
     setOverview(null);
+    setAuthorization(null);
     setServices([]);
     setSkills([]);
     // 关键点（中文）：extensions 作为全局页信息，保留上次快照，避免无 agent 时整块消失。
@@ -1397,6 +1448,15 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
+  const refreshAuthorization = useCallback(
+    async (agentId: string) => {
+      if (!agentId) return;
+      const data = await requestJson<UiChatAuthorizationResponse>("/api/tui/authorization", {}, agentId);
+      setAuthorization(data);
+    },
+    [requestJson],
+  );
+
   const refreshDashboard = useCallback(
     async (preferredAgentId?: string) => {
       setLoading(true);
@@ -1444,6 +1504,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         ]);
 
         await Promise.all([
+          refreshAuthorization(nextAgentId),
           refreshExtensions(),
           refreshOverview(nextAgentId),
           refreshServices(nextAgentId),
@@ -1539,6 +1600,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       refreshContextMessages,
       refreshContexts,
       refreshExtensions,
+      refreshAuthorization,
       refreshLocalChat,
       refreshLogs,
       refreshConfigStatus,
@@ -1689,6 +1751,68 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       }
     },
     [refreshDashboard, requestJson, selectedAgentId, showToast],
+  );
+
+  const saveAuthorizationConfig = useCallback(
+    async (config: NonNullable<UiChatAuthorizationResponse["config"]>) => {
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return;
+      }
+      try {
+        const data = await requestJson<UiChatAuthorizationResponse>(
+          "/api/tui/authorization/config",
+          {
+            method: "POST",
+            body: JSON.stringify({ config }),
+          },
+          selectedAgentId,
+        );
+        setAuthorization(data);
+        showToast("authorization 配置已保存", "success");
+      } catch (error) {
+        showToast(`保存 authorization 失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [requestJson, selectedAgentId, showToast],
+  );
+
+  const runAuthorizationAction = useCallback(
+    async (input: {
+      action:
+        | "approvePairing"
+        | "rejectPairing"
+        | "grantUser"
+        | "revokeUser"
+        | "setOwner"
+        | "grantGroup"
+        | "revokeGroup";
+      channel: "telegram" | "feishu" | "qq";
+      userId?: string;
+      chatId?: string;
+      enabled?: boolean;
+      asOwner?: boolean;
+    }) => {
+      if (!selectedAgentId) {
+        showToast("当前无可用 agent", "error");
+        return;
+      }
+      try {
+        const data = await requestJson<UiChatAuthorizationResponse>(
+          "/api/tui/authorization/action",
+          {
+            method: "POST",
+            body: JSON.stringify(input),
+          },
+          selectedAgentId,
+        );
+        setAuthorization(data);
+        showToast(`authorization ${input.action} 已执行`, "success");
+      } catch (error) {
+        showToast(`authorization ${input.action} 失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [requestJson, selectedAgentId, showToast],
   );
 
   const runSkillFind = useCallback(
@@ -2279,7 +2403,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const startAgentFromHistory = useCallback(
-    async (agentId: string) => {
+    async (
+      agentId: string,
+      options?: {
+        initializeIfNeeded?: boolean;
+        initialization?: UiAgentInitializationInput;
+      },
+    ) => {
       const targetAgentId = String(agentId || "").trim();
       if (!targetAgentId) return;
       try {
@@ -2289,7 +2419,16 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           pid?: number;
         }>("/api/ui/agents/start", {
           method: "POST",
-          body: JSON.stringify({ agentId: targetAgentId }),
+          body: JSON.stringify({
+            agentId: targetAgentId,
+            initializeIfNeeded: options?.initializeIfNeeded === true,
+            initialization: options?.initialization
+              ? {
+                agentName: options.initialization.agentName,
+                primaryModelId: options.initialization.primaryModelId,
+              }
+              : undefined,
+          }),
         });
 
         const readyState = await waitAgentReady(targetAgentId, {
@@ -2314,6 +2453,61 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     },
     [refreshDashboard, requestJson, showToast, waitAgentReady],
   );
+
+  const createAgent = useCallback(
+    async (input: UiAgentCreatePayload) => {
+      const projectRoot = String(input.projectRoot || "").trim();
+      if (!projectRoot) return;
+      try {
+        const data = await requestJson<{
+          success?: boolean;
+          started?: boolean;
+          pid?: number;
+          projectRoot?: string;
+          agentName?: string;
+        }>("/api/ui/agents/create", {
+          method: "POST",
+          body: JSON.stringify({
+            projectRoot,
+            agentName: input.agentName,
+            primaryModelId: input.primaryModelId,
+            autoStart: input.autoStart !== false,
+          }),
+        });
+
+        if (input.autoStart === false || data.started !== true) {
+          await refreshDashboard(projectRoot);
+          showToast(`agent 已创建：${String(data.agentName || projectRoot)}`, "success");
+          return;
+        }
+
+        const readyState = await waitAgentReady(projectRoot, {
+          maxRetry: 120,
+          intervalMs: 500,
+        });
+        if (readyState.running && readyState.servicesReady) {
+          await refreshDashboard(projectRoot);
+          showToast(`agent 已创建并启动（pid ${String(data.pid || "-")}）`, "success");
+          return;
+        }
+
+        showToast("agent 创建成功，但启动超时：服务未全部就绪", "error");
+      } catch (error) {
+        showToast(`创建 agent 失败: ${getErrorMessage(error)}`, "error");
+      }
+    },
+    [refreshDashboard, requestJson, showToast, waitAgentReady],
+  );
+
+  const pickAgentDirectory = useCallback(async (): Promise<string> => {
+    const data = await requestJson<{
+      success?: boolean;
+      directoryPath?: string;
+    }>("/api/ui/system/pick-directory", {
+      method: "POST",
+    });
+    return String(data.directoryPath || "").trim();
+  }, [requestJson]);
 
   const restartAgentFromHistory = useCallback(
     async (agentId: string) => {
@@ -2913,6 +3107,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     selectedAgentId,
     selectedAgent,
     overview,
+    authorization,
     services,
     skills,
     extensions,
@@ -2948,6 +3143,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     handleAgentChange,
     handleContextChange,
     refreshDashboard,
+    refreshAuthorization,
     refreshChatChannels,
     refreshExtensions,
     refreshSkills,
@@ -2968,6 +3164,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     testExtension,
     runChatChannelAction,
     configureChatChannel,
+    saveAuthorizationConfig,
+    runAuthorizationAction,
     runSkillFind,
     runSkillInstall,
     runSkillLookup,
@@ -2985,6 +3183,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
+    createAgent,
+    pickAgentDirectory,
     restartAgentFromHistory,
     stopAgentFromHistory,
     upsertModelProvider,

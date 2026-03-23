@@ -95,6 +95,7 @@ city voice status
 说明：
 - 如果群开启了 **Topics（话题）**，机器人会尽量在同一个话题里回复。
 - 群里发送文件时，caption 会作为指令文本一并处理，不需要额外 `@bot`。
+- 用户如果是“回复某条 Telegram 消息”再发新消息，运行时会把被引用消息正文（以及可用的 quote 片段）一并注入给 Agent。
 - Agent 执行期间会周期性发送 `sendChatAction(typing)`，你会看到 Telegram 的“正在输入”提示，直到结果发出。
 
 ## 回复关联与贴表情逻辑（重点）

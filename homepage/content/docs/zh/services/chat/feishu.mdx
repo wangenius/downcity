@@ -175,6 +175,7 @@ city agent start
 - 入站依赖 WebSocket 事件
 - 入站支持 **文本 + 图片 + 视频 + 文件 + 音频** 作为执行输入
 - 图片、视频、文件、音频会先下载到 `.ship/.cache/feishu/`，再注入为 `@attach ...`
+- 用户如果是在飞书里 reply 某条消息再发新消息，运行时会根据 `parent_id` best-effort 回查父消息正文，并一并注入给 Agent
 - 出站支持从回复文本解析 `@attach document|file <path>` 并发送文件消息
 - 普通 AI 文本回复默认走普通发送，不会自动引用“当前最新消息”
 - 只有显式 reply 时，才会绑定到目标 `message_id`

@@ -21,7 +21,13 @@ import {
 } from "./Shared.js";
 import { buildTelegramVoiceTranscriptionInstruction } from "./VoiceInput.js";
 import { TelegramStateStore } from "./StateStore.js";
+import { extractTelegramReplyContext } from "./ReplyContext.js";
+import {
+  buildReplyContextExtra,
+  buildReplyContextInstruction,
+} from "@services/chat/runtime/ReplyContextFormatter.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 
 /**
@@ -780,27 +786,32 @@ export class TelegramBot extends BaseChatChannel {
             chatKey,
           });
         }
+        const replyContext = extractTelegramReplyContext(message);
 
         const instructions =
-          [
-            attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
-            await buildTelegramVoiceTranscriptionInstruction({
-              context: this.context,
-              logger: this.logger,
-              rootPath: this.rootPath,
-              chatId,
-              messageId,
-              chatKey,
-              attachments: incomingAttachments,
-            }),
-            cleaned ? cleaned.trim() : undefined,
-          ]
-            .filter(Boolean)
-            .join("\n\n")
-            .trim() ||
-          (attachmentLines.length > 0
-            ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
-            : "");
+          buildReplyContextInstruction({
+            text:
+              [
+                attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
+                await buildTelegramVoiceTranscriptionInstruction({
+                  context: this.context,
+                  logger: this.logger,
+                  rootPath: this.rootPath,
+                  chatId,
+                  messageId,
+                  chatKey,
+                  attachments: incomingAttachments,
+                }),
+                cleaned ? cleaned.trim() : undefined,
+              ]
+                .filter(Boolean)
+                .join("\n\n")
+                .trim() ||
+              (attachmentLines.length > 0
+                ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
+                : ""),
+            replyContext,
+          });
 
         if (!instructions) return;
 
@@ -813,6 +824,7 @@ export class TelegramBot extends BaseChatChannel {
           messageId,
           message.chat.type,
           messageThreadId,
+          buildReplyContextExtra(replyContext),
         );
       }
     });
@@ -951,6 +963,7 @@ export class TelegramBot extends BaseChatChannel {
     messageId?: string,
     chatType?: NonNullable<TelegramUpdate["message"]>["chat"]["type"],
     messageThreadId?: number,
+    extra?: JsonObject,
   ): Promise<void> {
     try {
       const userId = from?.id ? String(from.id) : undefined;
@@ -964,6 +977,7 @@ export class TelegramBot extends BaseChatChannel {
         userId,
         username,
         chatTitle,
+        ...(extra ? { extra } : {}),
       });
     } catch (error) {
       await this.sendMessage(chatId, `❌ Execution error: ${String(error)}`, {

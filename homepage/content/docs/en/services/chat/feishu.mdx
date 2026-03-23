@@ -164,6 +164,7 @@ Current Feishu channel behavior:
 - inbound transport is WebSocket
 - execution accepts **text + image + video + file + audio** inputs
 - inbound image, video, file, and audio messages are downloaded into `.ship/.cache/feishu/` and injected as `@attach ...`
+- when a user replies to a Feishu message, runtime will best-effort fetch the parent message body from `parent_id` and inject it into the Agent input
 - outbound replies support `@attach document|file <path>` file conversion
 - normal AI text replies are sent as plain messages by default and do not auto-reply to the latest message
 - a Feishu reply link is used only when reply mode is explicitly requested for a target `message_id`

@@ -12,11 +12,17 @@ import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
 import type { FeishuIncomingAttachmentDescriptor } from "@services/chat/types/FeishuInboundAttachment.js";
+import type { InboundReplyContext } from "@services/chat/types/ReplyContext.js";
 import { parseFeishuAttachments } from "./Shared.js";
 import {
   buildFeishuInboundCacheFileName,
   parseFeishuInboundMessage,
 } from "./InboundAttachment.js";
+import { buildFeishuReplyContext } from "./ReplyContext.js";
+import {
+  buildReplyContextExtra,
+  buildReplyContextInstruction,
+} from "@services/chat/runtime/ReplyContextFormatter.js";
 
 /**
  * Feishu (Lark) chat channel.
@@ -55,6 +61,8 @@ type FeishuMessageEvent = {
     message_type: string;
     chat_type: string;
     message_id: string;
+    root_id?: string;
+    parent_id?: string;
   };
 };
 
@@ -591,6 +599,80 @@ export class FeishuBot extends BaseChatChannel {
   }
 
   /**
+   * 查询飞书 reply 的父消息内容。
+   *
+   * 关键点（中文）
+   * - 飞书 receive 事件只给 `parent_id/root_id`，不直接附带父消息正文。
+   * - 这里通过 `message.get` best-effort 回查父消息，失败时不阻塞主链路。
+   */
+  private async resolveReplyContext(params: {
+    parentMessageId?: string;
+  }): Promise<InboundReplyContext | undefined> {
+    const parentMessageId = String(params.parentMessageId || "").trim();
+    if (!parentMessageId) return undefined;
+
+    const token = await this.getAppAccessToken();
+    if (!token) return undefined;
+
+    const domain = (this.domain || "https://open.feishu.cn").replace(/\/+$/, "");
+    try {
+      const response = await fetch(
+        `${domain}/open-apis/im/v1/messages/${encodeURIComponent(parentMessageId)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            code?: number;
+            msg?: string;
+            data?: {
+              items?: Array<{
+                message_id?: string;
+                msg_type?: string;
+                sender?: {
+                  id?: string;
+                  sender_type?: string;
+                };
+                body?: {
+                  content?: string;
+                };
+              }>;
+            };
+          }
+        | null;
+      if (!response.ok || payload?.code !== 0) {
+        this.logger.debug("Feishu reply 父消息查询失败", {
+          parentMessageId,
+          httpStatus: response.status,
+          code: payload?.code ?? null,
+          msg: payload?.msg ?? null,
+        });
+        return undefined;
+      }
+
+      const item = Array.isArray(payload?.data?.items) ? payload?.data?.items[0] : undefined;
+      if (!item) return undefined;
+      return buildFeishuReplyContext({
+        messageId:
+          typeof item.message_id === "string" ? item.message_id : parentMessageId,
+        messageType: item.msg_type,
+        content: item.body?.content,
+      });
+    } catch (error) {
+      this.logger.debug("Feishu reply 父消息查询异常", {
+        parentMessageId,
+        error: String(error),
+      });
+      return undefined;
+    }
+  }
+
+  /**
    * 读取 Feishu runtime 快照。
    *
    * 关键点（中文）
@@ -770,6 +852,7 @@ export class FeishuBot extends BaseChatChannel {
           message_type,
           chat_type,
           message_id,
+          parent_id,
         },
       } = data;
 
@@ -825,6 +908,7 @@ export class FeishuBot extends BaseChatChannel {
           path: string;
           desc?: string;
         }> = [];
+        let replyContext: InboundReplyContext | undefined;
         try {
           const parsed = parseFeishuInboundMessage({
             messageType: message_type,
@@ -845,6 +929,9 @@ export class FeishuBot extends BaseChatChannel {
           incomingAttachments = await this.downloadIncomingAttachments({
             messageId: message_id,
             attachments: parsed.attachments,
+          });
+          replyContext = await this.resolveReplyContext({
+            parentMessageId: parent_id,
           });
         } catch (error) {
           await this.sendErrorMessage(
@@ -918,16 +1005,20 @@ export class FeishuBot extends BaseChatChannel {
             }
 
             const instructions =
-              [
-                attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
-                userMessage ? userMessage.trim() : undefined,
-              ]
-                .filter(Boolean)
-                .join("\n\n")
-                .trim() ||
-              (attachmentLines.length > 0
-                ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
-                : "");
+              buildReplyContextInstruction({
+                text:
+                  [
+                    attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
+                    userMessage ? userMessage.trim() : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join("\n\n")
+                    .trim() ||
+                  (attachmentLines.length > 0
+                    ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
+                    : ""),
+                replyContext,
+              });
 
             if (!instructions) return;
 
@@ -940,6 +1031,7 @@ export class FeishuBot extends BaseChatChannel {
               actorId,
               actorName,
               chatTitle,
+              buildReplyContextExtra(replyContext),
             );
           }
         });
@@ -1017,6 +1109,7 @@ Available commands:
     actorId?: string,
     actorName?: string,
     chatTitle?: string,
+    extra?: JsonObject,
   ): Promise<void> {
     try {
       const { chatKey } = await this.enqueueMessage({
@@ -1027,6 +1120,7 @@ Available commands:
         userId: actorId,
         username: actorName,
         chatTitle,
+        ...(extra ? { extra } : {}),
       });
 
       this.knownChats.set(chatKey, {

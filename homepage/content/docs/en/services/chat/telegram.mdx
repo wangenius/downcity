@@ -96,6 +96,7 @@ When the `voice` plugin is enabled and the `voice.transcriber` asset is availabl
 Notes:
 - If your group uses **Topics**, replies are sent back to the same topic.
 - For file messages in groups, the caption is treated as instruction text; no extra mention is required.
+- If a user sends a new message as a Telegram reply, the referenced message body and available quote snippet are also injected into the Agent input.
 - While the agent is running, Telegram shows a periodic **typing** indicator (`sendChatAction`) until the result is sent.
 
 ## Reply-to and Reaction Logic (Important)

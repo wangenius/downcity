@@ -87,6 +87,14 @@ export type IncomingChatMessage = {
    * - 用于 Context 列表展示，不参与路由。
    */
   chatTitle?: string;
+  /**
+   * 入站附加元信息。
+   *
+   * 说明（中文）
+   * - 用于透传 reply 上下文等平台特有信息。
+   * - 会进入 history / context metadata，但不改变基础路由语义。
+   */
+  extra?: ChannelUserMessageMeta;
 };
 
 /**
@@ -596,7 +604,10 @@ export abstract class BaseChatChannel {
       channel: this.channel,
       userId: msg.userId,
     });
-    const permissionExtra: JsonObject = {
+    const inboundExtra =
+      msg.extra && typeof msg.extra === "object" ? stripUndefinedMeta(msg.extra) : {};
+    const mergedExtra: JsonObject = {
+      ...inboundExtra,
       roleId: userRole?.roleId || "unknown",
       permissions: userRole?.permissions || [],
     };
@@ -635,7 +646,7 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       actorId: msg.userId,
       actorName: msg.username,
-      extra: permissionExtra,
+      extra: mergedExtra,
     });
 
     await this.updateChatMeta({
@@ -660,7 +671,7 @@ export abstract class BaseChatChannel {
       messageId: msg.messageId,
       actorId: msg.userId,
       actorName: msg.username,
-      extra: permissionExtra,
+      extra: mergedExtra,
     });
 
     return { chatKey, position: lanePosition };

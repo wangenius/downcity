@@ -740,17 +740,17 @@
     shadow.innerHTML = `
       <link rel="stylesheet" href="${CONTENT_STYLE_URL}" />
 
-      <div id="dcSelectionOverlay" class="dc-selection-overlay dc-hidden"></div>
+      <div id="dcSelectionOverlay" class="dc-selection-overlay dc-hidden" hidden></div>
 
-      <div id="dcTrigger" class="dc-trigger dc-hidden">
+      <div id="dcTrigger" class="dc-trigger dc-hidden" hidden>
         <button id="dcTriggerBtn" class="dc-trigger-btn" type="button" aria-label="打开输入框">
           <img class="dc-trigger-icon" src="${TRIGGER_ICON_URL}" alt="" aria-hidden="true" />
         </button>
       </div>
 
-      <div id="dcComposer" class="dc-composer dc-hidden">
+      <div id="dcComposer" class="dc-composer dc-hidden" hidden>
         <div class="dc-shell">
-          <div id="dcSlash" class="dc-slash dc-hidden"></div>
+          <div id="dcSlash" class="dc-slash dc-hidden" hidden></div>
           <textarea id="dcInput" class="dc-input" rows="3" placeholder="Ask for follow-up changes"></textarea>
           <div class="dc-footer">
             <button id="dcRouteTrigger" class="dc-route-trigger" type="button" aria-label="选择 Agent 和 Chat">
@@ -764,7 +764,7 @@
               </svg>
             </button>
           </div>
-          <div id="dcRoutePanel" class="dc-route-panel dc-hidden">
+          <div id="dcRoutePanel" class="dc-route-panel dc-hidden" hidden>
             <div class="dc-route-section">
               <div class="dc-route-title">Agent</div>
               <div id="dcAgentList" class="dc-route-list"></div>
@@ -777,7 +777,7 @@
         </div>
       </div>
 
-      <div id="dcToast" class="dc-toast dc-hidden" data-type="success"></div>
+      <div id="dcToast" class="dc-toast dc-hidden" data-type="success" hidden></div>
     `;
 
     const mountTarget = document.body || document.documentElement;
@@ -804,14 +804,53 @@
   const ui = mountUi();
   const DEFAULT_INPUT_PLACEHOLDER = "Ask for follow-up changes";
 
+  function isEventInsideUi(event) {
+    if (!event) return false;
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    const eventTarget = event.target;
+    return path.includes(ui.host)
+      || (eventTarget instanceof Node && ui.host.contains(eventTarget));
+  }
+
+  function isSelectionKeyboardEvent(event) {
+    const key = String(event && event.key ? event.key : "").toLowerCase();
+    const withModifier = Boolean(event && (event.metaKey || event.ctrlKey));
+    if (event && event.shiftKey) return true;
+    if (
+      key === "arrowleft"
+      || key === "arrowright"
+      || key === "arrowup"
+      || key === "arrowdown"
+      || key === "home"
+      || key === "end"
+      || key === "pageup"
+      || key === "pagedown"
+    ) {
+      return true;
+    }
+    return withModifier && key === "a";
+  }
+
+  function stopUiKeyboardPropagation(event) {
+    // 关键点（中文）：宿主页面常常绑定全局快捷键；
+    // 扩展输入框里的按键不应该再透传给页面。
+    event.stopPropagation();
+  }
+
+  function setNodeHidden(node, hidden) {
+    if (!node) return;
+    node.hidden = Boolean(hidden);
+    node.classList.toggle("dc-hidden", Boolean(hidden));
+  }
+
   function hideTrigger() {
-    ui.trigger.classList.add("dc-hidden");
+    setNodeHidden(ui.trigger, true);
     state.hoverSelectionText = "";
     state.hoverSelectionRect = null;
   }
 
   function hideSelectionOverlay() {
-    ui.selectionOverlay.classList.add("dc-hidden");
+    setNodeHidden(ui.selectionOverlay, true);
     ui.selectionOverlay.replaceChildren();
   }
 
@@ -820,7 +859,7 @@
       clearTimeout(state.toastTimerId);
       state.toastTimerId = null;
     }
-    ui.toast.classList.add("dc-hidden");
+    setNodeHidden(ui.toast, true);
     ui.toast.textContent = "";
   }
 
@@ -833,9 +872,9 @@
     }
     ui.toast.dataset.type = type === "error" ? "error" : "success";
     ui.toast.textContent = message;
-    ui.toast.classList.remove("dc-hidden");
+    setNodeHidden(ui.toast, false);
     state.toastTimerId = setTimeout(() => {
-      ui.toast.classList.add("dc-hidden");
+      setNodeHidden(ui.toast, true);
       ui.toast.textContent = "";
       state.toastTimerId = null;
     }, 2200);
@@ -871,7 +910,7 @@
       ui.selectionOverlay.appendChild(node);
     }
 
-    ui.selectionOverlay.classList.remove("dc-hidden");
+    setNodeHidden(ui.selectionOverlay, false);
   }
 
   function setInputPlaceholder(type, text) {
@@ -890,13 +929,13 @@
     state.slashVisible = false;
     state.slashSuggestions = [];
     state.slashActiveIndex = 0;
-    ui.slash.classList.add("dc-hidden");
+    setNodeHidden(ui.slash, true);
     ui.slash.replaceChildren();
   }
 
   function setRoutePanelOpen(open) {
     state.isRoutePanelOpen = Boolean(open);
-    ui.routePanel.classList.toggle("dc-hidden", !state.isRoutePanelOpen);
+    setNodeHidden(ui.routePanel, !state.isRoutePanelOpen);
   }
 
   function renderRoutePanel() {
@@ -984,7 +1023,7 @@
 
     ui.trigger.style.left = `${Math.round(left)}px`;
     ui.trigger.style.top = `${Math.round(top)}px`;
-    ui.trigger.classList.remove("dc-hidden");
+    setNodeHidden(ui.trigger, false);
   }
 
   function placeComposer(rect) {
@@ -1021,7 +1060,7 @@
   function setOpen(open) {
     state.isOpen = Boolean(open);
     if (state.isOpen) {
-      ui.composer.classList.remove("dc-hidden");
+      setNodeHidden(ui.composer, false);
       hideTrigger();
       renderSelectionOverlay();
       setRoutePanelOpen(false);
@@ -1038,7 +1077,7 @@
 
     state.isSending = false;
     state.selectionRects = [];
-    ui.composer.classList.add("dc-hidden");
+    setNodeHidden(ui.composer, true);
     ui.input.value = "";
     ui.input.blur();
     hideSlashMenu();
@@ -1182,7 +1221,7 @@
       return;
     }
 
-    ui.slash.classList.remove("dc-hidden");
+    setNodeHidden(ui.slash, false);
     ui.slash.replaceChildren();
 
     for (let index = 0; index < state.slashSuggestions.length; index += 1) {
@@ -1368,7 +1407,12 @@
     updateSlashMenuFromInput();
   });
 
+  ui.input.addEventListener("keydown", stopUiKeyboardPropagation, true);
+  ui.input.addEventListener("keypress", stopUiKeyboardPropagation, true);
+  ui.input.addEventListener("keyup", stopUiKeyboardPropagation, true);
+
   ui.input.addEventListener("keydown", (event) => {
+    stopUiKeyboardPropagation(event);
     if (event.isComposing) return;
     const key = String(event.key || "").toLowerCase();
 
@@ -1419,19 +1463,14 @@
   });
 
   document.addEventListener(
-    "selectionchange",
-    () => {
-      queueMicrotask(() => {
-        refreshTriggerFromSelection();
-      });
-    },
-    true,
-  );
-
-  document.addEventListener(
     "mouseup",
-    () => {
+    (event) => {
+      if (isEventInsideUi(event)) {
+        return;
+      }
       queueMicrotask(() => {
+        // 关键点（中文）：只有在用户完成鼠标选区后才刷新 trigger，
+        // 避免刷新页面或脚本恢复选区时直接把 icon 显示出来。
         refreshTriggerFromSelection();
       });
     },
@@ -1440,7 +1479,10 @@
 
   document.addEventListener(
     "keyup",
-    () => {
+    (event) => {
+      if (isEventInsideUi(event) || !isSelectionKeyboardEvent(event)) {
+        return;
+      }
       queueMicrotask(() => {
         refreshTriggerFromSelection();
       });
@@ -1451,11 +1493,7 @@
   document.addEventListener(
     "mousedown",
     (event) => {
-      const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-      const eventTarget = event.target;
-      const clickedInsideUi = path.includes(ui.host)
-        || (eventTarget instanceof Node && ui.host.contains(eventTarget));
-      if (clickedInsideUi) {
+      if (isEventInsideUi(event)) {
         return;
       }
 
@@ -1493,6 +1531,9 @@
     "keydown",
     (event) => {
       if (event.isComposing) return;
+      if (isEventInsideUi(event)) {
+        return;
+      }
       const key = String(event.key || "").toLowerCase();
       const withModifier = event.metaKey || event.ctrlKey;
 

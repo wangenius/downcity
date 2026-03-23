@@ -18,6 +18,9 @@ export interface TelegramUpdate {
     message_thread_id?: number;
     text?: string;
     caption?: string;
+    quote?: {
+      text?: string;
+    };
     chat: {
       id: number;
       type?: "private" | "group" | "supergroup" | "channel";
@@ -62,6 +65,42 @@ export interface TelegramUpdate {
     };
     reply_to_message?: {
       message_id?: number;
+      text?: string;
+      caption?: string;
+      document?: {
+        file_id: string;
+        file_name?: string;
+        mime_type?: string;
+        file_size?: number;
+      };
+      photo?: Array<{
+        file_id: string;
+        width?: number;
+        height?: number;
+        file_size?: number;
+      }>;
+      voice?: {
+        file_id: string;
+        mime_type?: string;
+        file_size?: number;
+        duration?: number;
+      };
+      audio?: {
+        file_id: string;
+        file_name?: string;
+        mime_type?: string;
+        file_size?: number;
+        duration?: number;
+      };
+      video?: {
+        file_id: string;
+        file_name?: string;
+        mime_type?: string;
+        file_size?: number;
+        duration?: number;
+        width?: number;
+        height?: number;
+      };
       from?: {
         id: number;
         username?: string;

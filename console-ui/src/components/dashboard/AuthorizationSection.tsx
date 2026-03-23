@@ -2,14 +2,13 @@
  * Agent 授权管理主视图。
  *
  * 关键点（中文）
- * - 主页面只保留运营视角的摘要与目录，复杂配置收进 dialog，减轻认知负担。
- * - 授权模型仍然是 role / permission / binding；这里只是重新组织交互层级。
- * - 角色与权限都展示 name + description，避免用户面对原始字符串猜含义。
+ * - 页面只保留最小摘要与用户目录。
+ * - 策略配置收进紧凑弹窗，避免大面积留白和层级跳转。
+ * - 权限说明完全来自后端目录元数据，前端只做展示。
  */
 
 import * as React from "react"
 import {
-  LockKeyholeIcon,
   MessagesSquareIcon,
   PlusIcon,
   RefreshCcwIcon,
@@ -34,7 +33,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import type {
   UiAgentOption,
@@ -51,6 +51,7 @@ import type {
 type AuthorizationChannel = string
 type AuthorizationPermission = UiChatAuthorizationPermission
 type DirectoryChannelFilter = "all" | AuthorizationChannel
+type SettingsView = "roles" | "defaults"
 
 type AuthorizationPermissionDetail = UiChatAuthorizationPermissionMeta & {
   name: string
@@ -128,8 +129,7 @@ function resolvePermissionCatalog(
     return {
       permission,
       name: normalizeText(meta?.name) || normalizeText(permissionLabels[permission]) || permission,
-      description:
-        normalizeText(meta?.description) || "该权限已接入 auth runtime，用于实际入站消息授权判定。",
+      description: normalizeText(meta?.description),
     }
   })
 }
@@ -337,14 +337,14 @@ function StatChip(props: {
   return (
     <div
       className={cn(
-        "inline-flex min-w-[8.25rem] items-center gap-2 rounded-full border px-3 py-2",
+        "inline-flex min-w-[7.5rem] items-center gap-2 rounded-full border px-3 py-1.5",
         props.tone === "success"
           ? "border-emerald-500/20 bg-emerald-500/8 text-emerald-700"
           : "border-border/70 bg-secondary/60 text-foreground",
       )}
     >
       {props.icon ? <span className="text-muted-foreground">{props.icon}</span> : null}
-      <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{props.label}</span>
+      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{props.label}</span>
       <span className="ml-auto text-sm font-semibold">{props.value}</span>
     </div>
   )
@@ -354,37 +354,12 @@ function ChannelBadge(props: { channel: AuthorizationChannel }) {
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center rounded-full border px-2.5 text-[11px]",
+        "inline-flex h-5 items-center rounded-full border px-2 text-[10px]",
         getChannelSurfaceClass(props.channel),
       )}
     >
       {props.channel}
     </span>
-  )
-}
-
-function RoleBadge(props: { role: UiChatAuthorizationRole; compact?: boolean }) {
-  return (
-    <div
-      className={cn(
-        "rounded-[16px] border border-border/70 bg-background/85 px-3 py-2",
-        props.compact ? "min-w-[9rem]" : "",
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <span className="truncate text-sm font-medium text-foreground">{props.role.name}</span>
-        {PROTECTED_ROLE_IDS.has(props.role.roleId) ? (
-          <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[10px]">
-            reserved
-          </Badge>
-        ) : null}
-      </div>
-      {!props.compact ? (
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          {normalizeText(props.role.description) || "未填写角色说明。"}
-        </p>
-      ) : null}
-    </div>
   )
 }
 
@@ -412,9 +387,8 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
   )
   const [form, setForm] = React.useState<AuthorizationFormState>(() => cloneConfig(undefined, []))
   const [saving, setSaving] = React.useState(false)
-  const [roleDialogOpen, setRoleDialogOpen] = React.useState(false)
-  const [channelDefaultsDialogOpen, setChannelDefaultsDialogOpen] = React.useState(false)
-  const [selectedRoleId, setSelectedRoleId] = React.useState("default")
+  const [settingsDialogOpen, setSettingsDialogOpen] = React.useState(false)
+  const [settingsView, setSettingsView] = React.useState<SettingsView>("roles")
   const [newRoleDraft, setNewRoleDraft] = React.useState("")
   const [channelFilter, setChannelFilter] = React.useState<DirectoryChannelFilter>("all")
   const [searchKeyword, setSearchKeyword] = React.useState("")
@@ -453,21 +427,6 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
     [observedChats],
   )
 
-  React.useEffect(() => {
-    if (roles.length === 0) {
-      setSelectedRoleId("default")
-      return
-    }
-    if (!roles.some((role) => role.roleId === selectedRoleId)) {
-      setSelectedRoleId(roles[0]?.roleId || "default")
-    }
-  }, [roles, selectedRoleId])
-
-  const selectedRole = React.useMemo(
-    () => roles.find((role) => role.roleId === selectedRoleId) || roles[0],
-    [roles, selectedRoleId],
-  )
-
   const filteredUsers = React.useMemo(() => {
     const keyword = normalizeText(searchKeyword).toLowerCase()
     return observedUsers.filter((user) => {
@@ -480,20 +439,6 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
       )
     })
   }, [authorizationChannels, channelFilter, observedUsers, searchKeyword])
-
-  const filteredChats = React.useMemo(() => {
-    const keyword = normalizeText(searchKeyword).toLowerCase()
-    return observedChats.filter((chat) => {
-      const channel = normalizeText(chat.channel).toLowerCase()
-      if (!isAuthorizationChannel(channel, authorizationChannels)) return false
-      if (!isGroupChat(chat)) return false
-      if (channelFilter !== "all" && channel !== channelFilter) return false
-      return matchesKeyword(
-        [chat.chatTitle, chat.chatId, chat.chatType, chat.lastActorId, chat.lastActorName],
-        keyword,
-      )
-    })
-  }, [authorizationChannels, channelFilter, observedChats, searchKeyword])
 
   const handleSave = React.useCallback(async () => {
     try {
@@ -518,43 +463,43 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
         },
       },
     }))
-    setSelectedRoleId(roleId)
     setNewRoleDraft("")
   }, [newRoleDraft, roles])
 
-  const handleDeleteRole = React.useCallback(async () => {
-    if (!selectedRole || !canDeleteRole(selectedRole.roleId)) return
+  const handleDeleteRole = React.useCallback(async (role: UiChatAuthorizationRole) => {
+    if (!canDeleteRole(role.roleId)) return
     const accepted = await confirm({
-      title: `删除角色 ${selectedRole.name}`,
-      description: "删除后，引用该角色的默认分组和用户绑定会回退到 default。",
+      title: `删除角色 ${role.name}`,
+      description: "删除后会回退到 default。",
       confirmText: "删除",
       confirmVariant: "destructive",
     })
     if (!accepted) return
-    setForm((current) => removeRoleFromState(current, selectedRole.roleId))
-  }, [confirm, selectedRole])
+    setForm((current) => removeRoleFromState(current, role.roleId))
+  }, [confirm])
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-4">
       <DashboardModule
         title="Authorization"
-        description={`当前 agent：${normalizeText(selectedAgent?.name || selectedAgent?.id || "未选择") || "未选择"}。授权判断始终基于发消息用户自己的权限组，群聊与频道本身不持有权限。`}
+        description={normalizeText(selectedAgent?.name || selectedAgent?.id || "未选择")}
+        bodyClassName="space-y-2.5"
         actions={
           <>
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              className="rounded-[11px]"
+              className="rounded-[10px]"
               onClick={() => void onRefresh()}
             >
-              <RefreshCcwIcon className="mr-1.5 size-4" />
+              <RefreshCcwIcon className="mr-1 size-4" />
               Refresh
             </Button>
             <Button
               type="button"
               size="sm"
-              className="rounded-[11px]"
+              className="rounded-[10px]"
               disabled={saving || !hasUnsavedChanges}
               onClick={() => void handleSave()}
             >
@@ -563,7 +508,7 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
           </>
         }
       >
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <StatChip label="Roles" value={roles.length} icon={<ShieldCheckIcon className="size-3.5" />} />
           <StatChip label="Users" value={observedUsers.length} icon={<UsersIcon className="size-3.5" />} />
           <StatChip label="Groups" value={groupChatCount} icon={<MessagesSquareIcon className="size-3.5" />} />
@@ -573,155 +518,61 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
             tone={hasUnsavedChanges ? "default" : "success"}
             icon={<SlidersHorizontalIcon className="size-3.5" />}
           />
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <article className="rounded-[22px] border border-border/70 bg-[linear-gradient(135deg,rgba(17,17,19,0.02),rgba(17,17,19,0.0))] p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-sm font-medium text-foreground">Role Policy</div>
-                <p className="max-w-[34rem] text-sm leading-6 text-muted-foreground">
-                  权限组仍然是核心模型，但配置不再堆在主页面。你可以在弹窗里维护角色的 name、description 和 permission 组合。
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                className="rounded-[12px] bg-background/85"
-                onClick={() => setRoleDialogOpen(true)}
-              >
-                <Settings2Icon className="mr-1.5 size-4" />
-                Manage Roles
-              </Button>
-            </div>
-
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {roles.slice(0, 6).map((role) => (
-                <RoleBadge key={role.roleId} role={role} compact />
-              ))}
-            </div>
-          </article>
-
-          <article className="rounded-[22px] border border-border/70 bg-secondary/35 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-sm font-medium text-foreground">Channel Defaults</div>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  每个平台只保留一个新用户默认组。未显式绑定的用户，会直接继承这里的角色。
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                className="rounded-[12px] bg-background/85"
-                onClick={() => setChannelDefaultsDialogOpen(true)}
-              >
-                <Settings2Icon className="mr-1.5 size-4" />
-                Edit Defaults
-              </Button>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {authorizationChannels.map((channel) => {
-                const channelConfig = getChannelConfig(form, channel)
-                const roleId = normalizeText(channelConfig.defaultUserRoleId) || "default"
-                const role = roles.find((item) => item.roleId === roleId)
-                return (
-                  <div
-                    key={`default:${channel}`}
-                    className="flex flex-wrap items-start justify-between gap-3 rounded-[16px] border border-border/60 bg-background/80 px-3 py-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <ChannelBadge channel={channel} />
-                        <span className="text-sm font-medium text-foreground">{role?.name || roleId}</span>
-                      </div>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {normalizeText(role?.description) || "未填写角色说明。"}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="bg-background/90 font-mono text-[11px]">
-                      {roleId}
-                    </Badge>
-                  </div>
-                )
-              })}
-            </div>
-          </article>
-        </div>
-
-        <div className="rounded-[20px] border border-border/70 bg-secondary/30 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <LockKeyholeIcon className="size-4 text-muted-foreground" />
-            <div className="text-sm font-medium text-foreground">Permission Catalog</div>
-          </div>
-          <div className="grid gap-3 xl:grid-cols-2">
-            {permissionCatalog.map((permission) => (
-              <article
-                key={permission.permission}
-                className="rounded-[16px] border border-border/60 bg-background/85 px-3 py-3"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="text-sm font-medium text-foreground">{permission.name}</div>
-                  <Badge variant="outline" className="bg-background/90 font-mono text-[11px]">
-                    {permission.permission}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{permission.description}</p>
-              </article>
-            ))}
-          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="ml-auto rounded-[10px]"
+            onClick={() => {
+              setSettingsView("roles")
+              setSettingsDialogOpen(true)
+            }}
+          >
+            <Settings2Icon className="mr-1 size-4" />
+            Policy
+          </Button>
         </div>
       </DashboardModule>
 
       <DashboardModule
         title="Directory"
-        description="日常只需要在这里处理用户分组。上半部分可直接调整用户角色，下半部分只观察最近活跃的群聊与频道。"
+        description="Users"
+        bodyClassName="space-y-2.5"
       >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-foreground">Users</div>
-            <div className="text-xs text-muted-foreground">
-              先按平台筛选，再搜索用户或会话；角色切换会立即写回授权配置。
-            </div>
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative min-w-[14rem]">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-9 rounded-[12px] bg-secondary/70 pl-9"
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
+              placeholder="search user / chat / id"
+            />
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative min-w-[14rem]">
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="h-10 rounded-[14px] bg-secondary/70 pl-9"
-                value={searchKeyword}
-                onChange={(event) => setSearchKeyword(event.target.value)}
-                placeholder="search user / chat / id"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {(["all", ...authorizationChannels] as DirectoryChannelFilter[]).map((item) => (
-                <Button
-                  key={`channel-filter:${item}`}
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className={cn("rounded-[12px]", item === channelFilter ? "bg-secondary" : "")}
-                  onClick={() => setChannelFilter(item)}
-                >
-                  {item}
-                </Button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(["all", ...authorizationChannels] as DirectoryChannelFilter[]).map((item) => (
+              <Button
+                key={`channel-filter:${item}`}
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={cn("rounded-[10px]", item === channelFilter ? "bg-secondary" : "")}
+                onClick={() => setChannelFilter(item)}
+              >
+                {item}
+              </Button>
+            ))}
           </div>
         </div>
 
         <Separator className="bg-border/70" />
 
         {filteredUsers.length === 0 ? (
-          <div className="rounded-[18px] bg-secondary/50 px-4 py-6 text-sm text-muted-foreground">
+          <div className="rounded-[12px] bg-secondary/40 px-3 py-5 text-sm text-muted-foreground">
             没有匹配的用户。
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {filteredUsers.map((user) => {
               const channel = normalizeText(user.channel).toLowerCase()
               if (!isAuthorizationChannel(channel, authorizationChannels)) return null
@@ -732,109 +583,51 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
               return (
                 <article
                   key={`${user.channel}:${user.userId}`}
-                  className="rounded-[18px] border border-border/60 bg-secondary/35 px-4 py-3 transition-colors hover:bg-secondary/50"
+                  className="rounded-[12px] border border-border/60 bg-secondary/25 px-3 py-2"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="truncate font-medium text-foreground">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-sm font-medium text-foreground">
                           {user.username || user.userId}
                         </span>
                         <ChannelBadge channel={channel} />
-                        <Badge
-                          variant="secondary"
-                          className="bg-background/80 text-muted-foreground"
-                        >
-                          {explicitRoleId ? "custom binding" : "channel default"}
+                        <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[10px]">
+                          {explicitRoleId ? "custom" : "default"}
                         </Badge>
                         {hasPermission(role, "agent.manage") ? (
-                          <Badge className="bg-emerald-600 text-white">admin</Badge>
+                          <Badge className="h-5 rounded-full bg-emerald-600 px-1.5 text-[10px] text-white">
+                            admin
+                          </Badge>
                         ) : null}
                       </div>
-                      <div className="font-mono text-xs text-muted-foreground">{user.userId}</div>
-                      <div className="text-xs leading-5 text-muted-foreground">
-                        {normalizeText(role?.description) || "未填写角色说明。"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {`${user.lastChatTitle || user.lastChatId || "-"} · ${user.lastChatType || "-"} · seen ${formatTime(user.lastSeenAt)}`}
+                      <div className="font-mono text-[11px] text-muted-foreground">{user.userId}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {`${user.lastChatTitle || user.lastChatId || "-"} · ${user.lastChatType || "-"} · ${formatTime(user.lastSeenAt)}`}
                       </div>
                     </div>
 
-                    <div className="min-w-[12rem] space-y-1">
-                      <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                        Role
-                      </div>
-                      <select
-                        className="h-10 w-full rounded-[14px] border border-transparent bg-background/90 px-3 text-sm outline-none transition focus-visible:ring-3 focus-visible:ring-ring/30"
-                        value={roleId}
-                        onChange={(event) => {
-                          void onRunAction({
-                            action: "setUserRole",
-                            channel,
-                            userId: user.userId,
-                            roleId: event.target.value,
-                          })
-                        }}
-                      >
-                        {roles.map((roleItem) => (
-                          <option
-                            key={`${channel}:user:${user.userId}:${roleItem.roleId}`}
-                            value={roleItem.roleId}
-                          >
-                            {roleItem.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        )}
-
-        <Separator className="bg-border/70" />
-
-        <div className="space-y-1">
-          <div className="text-sm font-medium text-foreground">Observed Groups</div>
-          <div className="text-xs text-muted-foreground">
-            群聊与频道只用于观测近期活跃会话，不参与授权判断。
-          </div>
-        </div>
-
-        {filteredChats.length === 0 ? (
-          <div className="rounded-[18px] bg-secondary/50 px-4 py-6 text-sm text-muted-foreground">
-            没有匹配的群聊或频道。
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredChats.map((chat) => {
-              const channel = normalizeText(chat.channel).toLowerCase()
-              if (!isAuthorizationChannel(channel, authorizationChannels)) return null
-              return (
-                <article
-                  key={`${chat.channel}:${chat.chatId}`}
-                  className="rounded-[18px] border border-border/60 bg-secondary/35 px-4 py-3"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="truncate font-medium text-foreground">
-                          {chat.chatTitle || chat.chatId}
-                        </span>
-                        <ChannelBadge channel={channel} />
-                        <Badge
-                          variant="secondary"
-                          className="bg-background/80 text-muted-foreground"
+                    <select
+                      className="h-9 min-w-[10.5rem] rounded-[10px] border border-transparent bg-background/90 px-3 text-sm outline-none transition focus-visible:ring-3 focus-visible:ring-ring/30"
+                      value={roleId}
+                      onChange={(event) => {
+                        void onRunAction({
+                          action: "setUserRole",
+                          channel,
+                          userId: user.userId,
+                          roleId: event.target.value,
+                        })
+                      }}
+                    >
+                      {roles.map((roleItem) => (
+                        <option
+                          key={`${channel}:user:${user.userId}:${roleItem.roleId}`}
+                          value={roleItem.roleId}
                         >
-                          {chat.chatType || "group"}
-                        </Badge>
-                      </div>
-                      <div className="font-mono text-xs text-muted-foreground">{chat.chatId}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {`last actor ${chat.lastActorName || chat.lastActorId || "-"} · seen ${formatTime(chat.lastSeenAt)}`}
-                      </div>
-                    </div>
+                          {roleItem.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </article>
               )
@@ -843,303 +636,226 @@ export function AuthorizationSection(props: AuthorizationSectionProps) {
         )}
       </DashboardModule>
 
-      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent className="w-[min(96vw,1040px)] p-0">
-          <DialogHeader className="border-b border-border/70 bg-secondary/45 px-5 py-4">
-            <DialogTitle>Role Policy</DialogTitle>
-            <DialogDescription>
-              在这里维护角色的 name、description 和权限组合。删除角色后，相关默认绑定会回退到 `default`。
-            </DialogDescription>
+      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+        <DialogContent className="w-[min(96vw,920px)] p-0">
+          <DialogHeader className="border-b border-border/70 bg-secondary/35 px-4 py-3">
+            <DialogTitle>Policy</DialogTitle>
+            <DialogDescription className="sr-only">Authorization policy editor</DialogDescription>
           </DialogHeader>
 
-          <div className="grid max-h-[76vh] gap-0 overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)]">
-            <div className="border-b border-border/70 bg-background/75 p-4 lg:border-r lg:border-b-0">
-              <div className="flex gap-2">
-                <Input
-                  value={newRoleDraft}
-                  onChange={(event) => setNewRoleDraft(event.target.value)}
-                  placeholder="new role id"
-                  className="h-10 rounded-[14px] bg-secondary/70"
-                />
-                <Button
-                  type="button"
-                  className="h-10 rounded-[14px] px-3"
-                  onClick={handleCreateRole}
-                >
-                  <PlusIcon className="size-4" />
-                </Button>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {roles.map((role) => {
-                  const assignment = countRoleAssignments({
-                    roleId: role.roleId,
-                    channels: form.channels,
-                    authorizationChannels,
-                    users: observedUsers,
-                  })
-                  const active = role.roleId === selectedRole?.roleId
-                  return (
-                    <button
-                      key={`role-nav:${role.roleId}`}
-                      type="button"
-                      className={cn(
-                        "block w-full rounded-[18px] border px-3 py-3 text-left transition",
-                        active
-                          ? "border-foreground/12 bg-secondary text-foreground"
-                          : "border-border/70 bg-background hover:bg-secondary/50",
-                      )}
-                      onClick={() => setSelectedRoleId(role.roleId)}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium">{role.name}</div>
-                          <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                            {role.roleId}
-                          </div>
-                        </div>
-                        {PROTECTED_ROLE_IDS.has(role.roleId) ? (
-                          <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[10px]">
-                            reserved
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <div className="mt-2 text-xs leading-5 text-muted-foreground">
-                        {`${assignment.users} users · ${assignment.defaults} defaults`}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
+          <Tabs
+            value={settingsView}
+            onValueChange={(value) => setSettingsView(value as SettingsView)}
+            className="gap-0"
+          >
+            <div className="border-b border-border/70 px-4 py-2">
+              <TabsList className="rounded-[10px] bg-secondary/70 p-0.5">
+                <TabsTrigger value="roles" className="rounded-[8px] px-2.5 text-xs">
+                  Roles
+                </TabsTrigger>
+                <TabsTrigger value="defaults" className="rounded-[8px] px-2.5 text-xs">
+                  Defaults
+                </TabsTrigger>
+              </TabsList>
             </div>
 
-            <div className="min-h-0 overflow-y-auto p-5">
-              {selectedRole ? (
-                <div className="space-y-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <DialogTitle className="text-lg">{selectedRole.name}</DialogTitle>
-                        <Badge variant="outline" className="bg-background/90 font-mono text-[11px]">
-                          {selectedRole.roleId}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        角色只负责描述“这个人能做什么”，具体绑定发生在用户目录和 channel default。
-                      </p>
-                    </div>
+            <TabsContent value="roles" className="max-h-[72vh] overflow-y-auto p-4">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={newRoleDraft}
+                    onChange={(event) => setNewRoleDraft(event.target.value)}
+                    placeholder="new role id"
+                    className="h-9 rounded-[12px] bg-secondary/70"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-[10px] px-3"
+                    onClick={handleCreateRole}
+                  >
+                    <PlusIcon className="size-4" />
+                  </Button>
+                </div>
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="rounded-[12px] text-destructive hover:bg-destructive/8 hover:text-destructive"
-                      disabled={!canDeleteRole(selectedRole.roleId)}
-                      onClick={() => void handleDeleteRole()}
-                    >
-                      <Trash2Icon className="mr-1.5 size-4" />
-                      Delete Role
-                    </Button>
-                  </div>
-
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <label className="space-y-2">
-                      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Name</div>
-                      <Input
-                        value={selectedRole.name}
-                        className="h-11 rounded-[16px] bg-secondary/65"
-                        onChange={(event) => {
-                          const value = event.target.value
-                          setForm((current) => ({
-                            ...current,
-                            roles: {
-                              ...current.roles,
-                              [selectedRole.roleId]: {
-                                ...(current.roles[selectedRole.roleId] || selectedRole),
-                                name: value,
-                              },
-                            },
-                          }))
-                        }}
-                      />
-                    </label>
-
-                    <label className="space-y-2">
-                      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                        Description
-                      </div>
-                      <Textarea
-                        value={selectedRole.description || ""}
-                        className="min-h-[88px] rounded-[16px] bg-secondary/65"
-                        onChange={(event) => {
-                          const value = event.target.value
-                          setForm((current) => ({
-                            ...current,
-                            roles: {
-                              ...current.roles,
-                              [selectedRole.roleId]: {
-                                ...(current.roles[selectedRole.roleId] || selectedRole),
-                                description: value,
-                              },
-                            },
-                          }))
-                        }}
-                        placeholder="写清楚这个角色通常给谁、覆盖什么边界。"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-medium text-foreground">Permissions</div>
-                        <p className="text-sm text-muted-foreground">
-                          这些权限会被 auth runtime 实际用于消息放行与管理动作控制。
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="bg-secondary text-muted-foreground">
-                        {(selectedRole.permissions || []).length} enabled
-                      </Badge>
-                    </div>
-
-                    <div className="grid gap-3 xl:grid-cols-2">
-                      {permissionCatalog.map((permission) => {
-                        const enabled = hasPermission(selectedRole, permission.permission)
-                        return (
-                          <button
-                            key={`${selectedRole.roleId}:${permission.permission}`}
-                            type="button"
-                            className={cn(
-                              "rounded-[18px] border px-4 py-4 text-left transition",
-                              enabled
-                                ? "border-foreground/10 bg-foreground text-background"
-                                : "border-border/70 bg-background hover:bg-secondary/45",
-                            )}
-                            onClick={() => {
-                              setForm((current) => {
-                                const currentRole = current.roles[selectedRole.roleId] || selectedRole
-                                const permissions = new Set(currentRole.permissions || [])
-                                if (permissions.has(permission.permission)) {
-                                  permissions.delete(permission.permission)
-                                } else {
-                                  permissions.add(permission.permission)
-                                }
-                                return {
+                <TooltipProvider>
+                  <div className="space-y-2">
+                    {roles.map((role) => {
+                      const assignment = countRoleAssignments({
+                        roleId: role.roleId,
+                        channels: form.channels,
+                        authorizationChannels,
+                        users: observedUsers,
+                      })
+                      return (
+                        <article
+                          key={`role-card:${role.roleId}`}
+                          className="rounded-[12px] border border-border/70 bg-background/85 px-3 py-2.5"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Input
+                              value={role.name}
+                              className="h-8 min-w-[10rem] flex-1 rounded-[10px] bg-secondary/60"
+                              onChange={(event) => {
+                                const value = event.target.value
+                                setForm((current) => ({
                                   ...current,
                                   roles: {
                                     ...current.roles,
-                                    [selectedRole.roleId]: {
-                                      ...currentRole,
-                                      permissions: [...permissions] as AuthorizationPermission[],
+                                    [role.roleId]: {
+                                      ...(current.roles[role.roleId] || role),
+                                      name: value,
                                     },
                                   },
-                                }
-                              })
-                            }}
-                          >
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-medium">{permission.name}</span>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "h-5 rounded-full px-1.5 font-mono text-[10px]",
-                                  enabled
-                                    ? "border-white/18 bg-white/10 text-white"
-                                    : "bg-background/90 text-muted-foreground",
-                                )}
-                              >
-                                {permission.permission}
+                                }))
+                              }}
+                            />
+                            <Badge variant="outline" className="bg-background/90 font-mono text-[10px]">
+                              {role.roleId}
+                            </Badge>
+                            <Badge variant="secondary" className="bg-secondary text-[10px] text-muted-foreground">
+                              {`${assignment.users}/${assignment.defaults}`}
+                            </Badge>
+                            {PROTECTED_ROLE_IDS.has(role.roleId) ? (
+                              <Badge variant="outline" className="h-5 rounded-full px-1.5 text-[10px]">
+                                reserved
                               </Badge>
-                            </div>
-                            <p
-                              className={cn(
-                                "mt-2 text-sm leading-6",
-                                enabled ? "text-background/82" : "text-muted-foreground",
-                              )}
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="ml-auto rounded-[8px] px-2 text-destructive hover:bg-destructive/8 hover:text-destructive"
+                              disabled={!canDeleteRole(role.roleId)}
+                              onClick={() => void handleDeleteRole(role)}
                             >
-                              {permission.description}
-                            </p>
-                          </button>
-                        )
-                      })}
-                    </div>
+                              <Trash2Icon className="size-4" />
+                            </Button>
+                          </div>
+
+                          <div className="mt-2">
+                            <Input
+                              value={role.description || ""}
+                              className="h-8 rounded-[10px] bg-secondary/60"
+                              onChange={(event) => {
+                                const value = event.target.value
+                                setForm((current) => ({
+                                  ...current,
+                                  roles: {
+                                    ...current.roles,
+                                    [role.roleId]: {
+                                      ...(current.roles[role.roleId] || role),
+                                      description: value,
+                                    },
+                                  },
+                                }))
+                              }}
+                              placeholder="description"
+                            />
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {permissionCatalog.map((permission) => {
+                              const enabled = hasPermission(role, permission.permission)
+                              return (
+                                <Tooltip key={`${role.roleId}:${permission.permission}`}>
+                                  <TooltipTrigger
+                                    render={
+                                      <button
+                                        type="button"
+                                        className={cn(
+                                          "inline-flex h-7 items-center rounded-[9px] border px-2 text-[11px] font-medium transition",
+                                          enabled
+                                            ? "border-foreground/10 bg-foreground text-background"
+                                            : "border-border/70 bg-background text-muted-foreground hover:bg-secondary/45 hover:text-foreground",
+                                        )}
+                                        onClick={() => {
+                                          setForm((current) => {
+                                            const currentRole = current.roles[role.roleId] || role
+                                            const permissions = new Set(currentRole.permissions || [])
+                                            if (permissions.has(permission.permission)) {
+                                              permissions.delete(permission.permission)
+                                            } else {
+                                              permissions.add(permission.permission)
+                                            }
+                                            return {
+                                              ...current,
+                                              roles: {
+                                                ...current.roles,
+                                                [role.roleId]: {
+                                                  ...currentRole,
+                                                  permissions: [...permissions] as AuthorizationPermission[],
+                                                },
+                                              },
+                                            }
+                                          })
+                                        }}
+                                      >
+                                        {permission.name}
+                                      </button>
+                                    }
+                                  />
+                                  {permission.description ? (
+                                    <TooltipContent>{permission.description}</TooltipContent>
+                                  ) : null}
+                                </Tooltip>
+                              )
+                            })}
+                          </div>
+                        </article>
+                      )
+                    })}
                   </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
+                </TooltipProvider>
+              </div>
+            </TabsContent>
 
-          <DialogFooter className="border-t border-border/70 bg-background px-5 py-4">
-            <Button type="button" variant="outline" onClick={() => setRoleDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <TabsContent value="defaults" className="max-h-[72vh] overflow-y-auto p-4">
+              <div className="space-y-1.5">
+                {authorizationChannels.map((channel) => {
+                  const channelConfig = getChannelConfig(form, channel)
+                  const roleId = normalizeText(channelConfig.defaultUserRoleId) || "default"
+                  const role = roles.find((item) => item.roleId === roleId)
+                  return (
+                    <article
+                      key={`channel-default:${channel}`}
+                      className="rounded-[12px] border border-border/70 bg-secondary/28 px-3 py-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ChannelBadge channel={channel} />
+                          <div className="text-sm font-medium text-foreground">
+                            {role?.name || resolveRoleFallbackName(roleId, roles)}
+                          </div>
+                        </div>
 
-      <Dialog open={channelDefaultsDialogOpen} onOpenChange={setChannelDefaultsDialogOpen}>
-        <DialogContent className="w-[min(92vw,720px)] p-0">
-          <DialogHeader className="border-b border-border/70 bg-secondary/45 px-5 py-4">
-            <DialogTitle>Channel Defaults</DialogTitle>
-            <DialogDescription>
-              这里只决定“新用户第一次出现时落到哪个角色”。显式绑定仍然在目录里逐个用户维护。
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="max-h-[72vh] space-y-3 overflow-y-auto p-5">
-            {authorizationChannels.map((channel) => {
-              const channelConfig = getChannelConfig(form, channel)
-              const roleId = normalizeText(channelConfig.defaultUserRoleId) || "default"
-              const role = roles.find((item) => item.roleId === roleId)
-              return (
-                <article
-                  key={`channel-default:${channel}`}
-                  className="rounded-[20px] border border-border/70 bg-secondary/28 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-2">
-                      <ChannelBadge channel={channel} />
-                      <div>
-                        <div className="text-sm font-medium text-foreground">New User Default Role</div>
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          当前默认分组：{role?.name || resolveRoleFallbackName(roleId, roles)}
-                        </p>
+                        <select
+                          className="h-8 min-w-[12rem] rounded-[10px] border border-transparent bg-background/90 px-3 text-sm outline-none transition focus-visible:ring-3 focus-visible:ring-ring/30"
+                          value={roleId}
+                          onChange={(event) => {
+                            setForm((current) =>
+                              updateChannelConfig(current, channel, {
+                                defaultUserRoleId: event.target.value,
+                              }),
+                            )
+                          }}
+                        >
+                          {roles.map((roleItem) => (
+                            <option key={`${channel}:default-user:${roleItem.roleId}`} value={roleItem.roleId}>
+                              {roleItem.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                    </div>
+                    </article>
+                  )
+                })}
+              </div>
+            </TabsContent>
+          </Tabs>
 
-                    <div className="min-w-[16rem]">
-                      <select
-                        className="h-11 w-full rounded-[16px] border border-transparent bg-background/90 px-3 text-sm outline-none transition focus-visible:ring-3 focus-visible:ring-ring/30"
-                        value={roleId}
-                        onChange={(event) => {
-                          setForm((current) =>
-                            updateChannelConfig(current, channel, {
-                              defaultUserRoleId: event.target.value,
-                            }),
-                          )
-                        }}
-                      >
-                        {roles.map((roleItem) => (
-                          <option key={`${channel}:default-user:${roleItem.roleId}`} value={roleItem.roleId}>
-                            {roleItem.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 rounded-[16px] border border-border/60 bg-background/85 px-3 py-3">
-                    <div className="text-sm font-medium text-foreground">{role?.name || roleId}</div>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      {normalizeText(role?.description) || "未填写角色说明。"}
-                    </p>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-
-          <DialogFooter className="border-t border-border/70 bg-background px-5 py-4">
-            <Button type="button" variant="outline" onClick={() => setChannelDefaultsDialogOpen(false)}>
+          <DialogFooter className="border-t border-border/70 bg-background px-4 py-3">
+            <Button type="button" variant="outline" onClick={() => setSettingsDialogOpen(false)}>
               Close
             </Button>
           </DialogFooter>

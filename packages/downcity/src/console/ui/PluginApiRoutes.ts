@@ -2,9 +2,9 @@
  * Console UI Plugin 路由。
  *
  * 关键点（中文）
- * - UI 网关不直接依赖本地 runtime state，避免多 agent 场景读到未初始化状态。
- * - 插件数据只从“当前选中的 agent runtime”拉取。
- * - 不做旧结构兼容，也不返回静态 fallback 清单。
+ * - Console UI 的 plugin 面板首先展示“已注册的内建 plugin 清单”，不应因为 agent/runtime 短暂不可用而整块消失。
+ * - 当目标 agent runtime 可访问时，再叠加 runtime list + availability，补齐启用态、依赖缺失等动态信息。
+ * - 这样能同时满足“架构上 plugin 属于 console/package 注册信息”和“运行时可用性属于 agent/runtime 状态”两层语义。
  */
 
 import type { Hono } from "hono";
@@ -30,6 +30,13 @@ type PluginUiItem = PluginRuntimeView & {
   config: {
     actions: PluginActionConfigItem[];
   };
+};
+
+type PluginUiResponse = {
+  success: boolean;
+  plugins: PluginUiItem[];
+  runtimeConnected: boolean;
+  runtimeError?: string;
 };
 
 type PluginListResponse = {
@@ -75,6 +82,55 @@ function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[]
       },
     ] as const),
   );
+}
+
+function buildStaticPluginViews(): PluginRuntimeView[] {
+  return PLUGINS.map((plugin) => ({
+    name: plugin.name,
+    actions: Object.keys(plugin.actions || {}).sort((a, b) => a.localeCompare(b)),
+    pipelines: Object.keys(plugin.hooks?.pipeline || {}).sort((a, b) =>
+      a.localeCompare(b),
+    ),
+    guards: Object.keys(plugin.hooks?.guard || {}).sort((a, b) =>
+      a.localeCompare(b),
+    ),
+    effects: Object.keys(plugin.hooks?.effect || {}).sort((a, b) =>
+      a.localeCompare(b),
+    ),
+    resolves: Object.keys(plugin.resolves || {}).sort((a, b) =>
+      a.localeCompare(b),
+    ),
+    requiredAssets: Array.isArray(plugin.requirements?.assets)
+      ? [...plugin.requirements.assets].sort((a, b) => a.localeCompare(b))
+      : [],
+    hasSystem: typeof plugin.system === "function",
+    hasAvailability: typeof plugin.availability === "function",
+  })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function buildStaticPluginPayload(params?: {
+  runtimeError?: string;
+  runtimeConnected?: boolean;
+}): PluginUiResponse {
+  const configMap = buildPluginConfigMap();
+  const reason = String(params?.runtimeError || "").trim();
+  return {
+    success: true,
+    runtimeConnected: params?.runtimeConnected === true,
+    ...(reason ? { runtimeError: reason } : {}),
+    plugins: buildStaticPluginViews().map((view) => ({
+      ...view,
+      availability: {
+        enabled: true,
+        available: false,
+        reasons: reason ? [reason] : ["Runtime availability is not loaded yet."],
+        missingAssets: [],
+      },
+      config: configMap.get(view.name) || {
+        actions: [],
+      },
+    })),
+  };
 }
 
 async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
@@ -123,10 +179,9 @@ async function loadRuntimePluginAvailability(
   return payload.availability;
 }
 
-async function buildRuntimePluginPayload(selectedAgent: ConsoleUiAgentOption): Promise<{
-  success: boolean;
-  plugins: PluginUiItem[];
-}> {
+async function buildRuntimePluginPayload(
+  selectedAgent: ConsoleUiAgentOption,
+): Promise<PluginUiResponse> {
   const baseUrl = String(selectedAgent.baseUrl || "").trim();
   const configMap = buildPluginConfigMap();
   const runtimeViews = await loadRuntimePluginViews(baseUrl);
@@ -143,6 +198,7 @@ async function buildRuntimePluginPayload(selectedAgent: ConsoleUiAgentOption): P
   );
   return {
     success: true,
+    runtimeConnected: true,
     plugins,
   };
 }
@@ -174,15 +230,23 @@ export function registerConsoleUiPluginRoutes(params: {
       const selectedAgent = await params.resolveSelectedAgent(requestedAgentId);
       if (!selectedAgent || !selectedAgent.baseUrl) {
         return c.json(
-          {
-            success: false,
-            error: "No running agent selected.",
-          },
-          503,
+          buildStaticPluginPayload({
+            runtimeConnected: false,
+            runtimeError: "No running agent selected.",
+          }),
         );
       }
 
-      return c.json(await buildRuntimePluginPayload(selectedAgent));
+      try {
+        return c.json(await buildRuntimePluginPayload(selectedAgent));
+      } catch (runtimeError) {
+        return c.json(
+          buildStaticPluginPayload({
+            runtimeConnected: false,
+            runtimeError: getErrorMessage(runtimeError),
+          }),
+        );
+      }
     } catch (error) {
       return c.json(
         {

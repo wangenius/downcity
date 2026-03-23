@@ -659,6 +659,8 @@ export function App() {
           <section>
             <PluginsSection
               plugins={plugins}
+              hasRunningAgent={selectedAgent?.running === true}
+              selectedAgentName={String(selectedAgent?.name || "").trim()}
               formatTime={uiHelpers.formatTime}
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
               onRunAction={(name, action) => void runPluginAction(name, action)}

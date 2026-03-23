@@ -21,6 +21,16 @@ export interface PluginsSectionProps {
    */
   plugins: UiPluginRuntimeItem[]
   /**
+   * 当前是否存在运行中的 agent。
+   * - plugin 数据来自运行中 agent runtime。
+   * - 没有运行中 agent 时，页面应提示原因，而不是误导成“没有 plugin”。
+   */
+  hasRunningAgent: boolean
+  /**
+   * 当前选中 agent 的展示名。
+   */
+  selectedAgentName?: string
+  /**
    * 时间格式化（保留签名，供上层兼容）。
    */
   formatTime: (ts?: number | string) => string
@@ -39,7 +49,7 @@ function hasAction(actionItems: UiPluginActionItem[], actionName: string): boole
 }
 
 export function PluginsSection(props: PluginsSectionProps) {
-  const { plugins, onRunAction } = props
+  const { plugins, hasRunningAgent, selectedAgentName, onRunAction } = props
   const confirm = useConfirmDialog()
   const [search, setSearch] = React.useState("")
   const [actionLoadingKey, setActionLoadingKey] = React.useState("")
@@ -121,8 +131,14 @@ export function PluginsSection(props: PluginsSectionProps) {
         </>
       }
     >
-      {filtered.length === 0 ? (
-        <div className="rounded-[18px] bg-secondary px-4 py-6 text-sm text-muted-foreground">没有匹配的 plugin。</div>
+      {!hasRunningAgent && filtered.length === 0 ? (
+        <div className="rounded-[18px] bg-secondary px-4 py-6 text-sm text-muted-foreground">
+          {selectedAgentName
+            ? `${selectedAgentName} 当前未运行，Console UI 无法读取 runtime plugins。先启动 agent 再查看。`
+            : "当前没有运行中的 agent，Console UI 无法读取 runtime plugins。先启动 agent 再查看。"}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-[18px] bg-secondary px-4 py-6 text-sm text-muted-foreground">当前运行中的 agent 没有可展示的 plugin。</div>
       ) : (
         <div className="space-y-2">
           {filtered.map((item) => {

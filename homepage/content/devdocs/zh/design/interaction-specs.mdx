@@ -1,0 +1,34 @@
+---
+title: 设计与交互规范
+description: 给协作者使用的 UI 架构、交互边界与产品设计方向
+---
+
+# 设计与交互规范
+
+这一节把旧的 Console UI 重构草稿整理成稳定的协作文档。
+
+## Scope 模型
+
+- `Global`：console 级概览、模型管理、agent 列表、扩展状态
+- `Agent`：当前 agent 的 services、tasks、logs 与运行控制
+- `Context`：消息时间线、context 元信息、prompt 检查、local UI 输入
+
+## Domain 模型
+
+- `Observe`：状态与摘要
+- `Operate`：显式操作，如 start、stop、restart、reconnect、run
+- `Inspect`：日志、历史、prompt 组成、run detail、诊断信息
+
+## UX 约束
+
+不要把所有控制项摊平成一个页面。一个协作者进入任意界面时，都应该能立刻回答：
+
+1. 我现在作用的是哪一层？
+2. 我当前是在看状态、做操作，还是在排查？
+
+## 产品级规范
+
+- 用户文档写在 `/docs`
+- 系统设计与实现边界写在 `/devdocs`
+- UI 页面要表达真实 runtime 事实，不要用空泛营销语言替代
+- 架构结论可以从草稿开始，但一旦进入实现指导，就要整理成稳定页面

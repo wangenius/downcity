@@ -210,6 +210,11 @@ export function SummaryCards(props: SummaryCardsProps) {
   const overviewContexts = Array.isArray(overview?.contexts?.items) ? overview.contexts.items : []
   const consoleUiExists = overviewContexts.some((item) => item.contextId === consoleUiContextId)
   const chatProfiles = Array.isArray(selectedAgent?.chatProfiles) ? selectedAgent.chatProfiles : []
+  const executingContexts = React.useMemo(
+    () => contexts.filter((item) => item.executing === true),
+    [contexts],
+  )
+  const agentExecuting = executingContexts.length > 0
   const agentConfigItems = configStatus.filter((item) => item.scope === "agent")
   const badConfigItems = agentConfigItems.filter(
     (item) => String(item.status || "").toLowerCase() !== "ok",
@@ -344,6 +349,9 @@ export function SummaryCards(props: SummaryCardsProps) {
           <>
             <SurfaceTag tone={selectedAgent.running ? "success" : "default"}>
               {selectedAgent.running ? "running" : "stopped"}
+            </SurfaceTag>
+            <SurfaceTag tone={agentExecuting ? "success" : "default"}>
+              {agentExecuting ? `executing ${executingContexts.length}` : "idle"}
             </SurfaceTag>
             {selectedAgent.running ? (
               <>

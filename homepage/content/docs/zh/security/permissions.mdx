@@ -27,7 +27,7 @@ Ship 里有两套不同的权限：
     "write_repo": {
       "requiresApproval": false
     },
-    "exec_command": {
+    "shell": {
       "deny": ["rm"],
       "requiresApproval": false,
       "denyRequiresApproval": true,
@@ -42,10 +42,10 @@ Ship 里有两套不同的权限：
 
 - `read_repo`：是否允许读取仓库内容。
 - `write_repo.requiresApproval`：写仓库是否要求确认。
-- `exec_command.deny`：直接阻断的命令前缀列表。
-- `exec_command.requiresApproval`：普通命令是否需要确认。
-- `exec_command.denyRequiresApproval`：命中 `deny` 时是否允许人工确认放行。
-- `exec_command.maxOutputChars/maxOutputLines`：单次命令输出上限。
+- `shell.deny`：直接阻断的命令前缀列表。
+- `shell.requiresApproval`：普通命令是否需要确认。
+- `shell.denyRequiresApproval`：命中 `deny` 时是否允许人工确认放行。
+- `shell.maxOutputChars/maxOutputLines`：单次命令输出上限。
 
 ### 推荐策略
 

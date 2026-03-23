@@ -1,45 +1,40 @@
 ---
 title: Architecture Logic Map
-description: Concepts page 2 explaining responsibilities and interaction of console, agent, service, plugin, capability, and asset
+description: Explains the responsibilities and interaction of console, agent, service, plugin, and asset
 ---
 
 # Architecture Logic Map
 
-This page answers one thing:
+This page answers one question:
 
-what `console`, `agent`, `service`, `plugin`, `capability`, and `asset` each own, and how one request flows across them.
+what `console`, `agent`, `service`, `plugin`, and `asset` each own, and how one request flows across them.
 
 ## 1. Responsibility Boundaries
 
-- `console`: global control plane. Starts/stops daemons, manages registry, model pool, env, and shared storage.
-- `agent`: project-scoped execution plane. Loads project config and context, owns one runtime, persists traces.
-- `service`: core domain workflows such as chat/task/memory.
-- `plugin`: optional enhancement modules such as voice.
-- `capability`: stable invocation contract exposed by plugins.
-- `asset`: installable dependency/resource used by plugins.
+- `console`: global control plane for daemon, registry, model pool, env, and shared storage
+- `agent`: per-project execution plane that loads project config and owns one runtime
+- `service`: core workflow with lifecycle ownership
+- `plugin`: optional enhancement module that passively attaches to service-defined points
+- `asset`: installable dependency or resource behind plugins
 
 ## 2. System Relationship
 
 ```mermaid
 flowchart LR
-  subgraph CP["Control Plane (Console)"]
-    CLI["city CLI"] --> CONSOLE["city console start"]
-    CLI --> CFG["console config / model / env"]
-    CLI --> AGENTOPS["city agent ..."]
-    CLI --> PLUGINOPS["city plugin ..."]
-    CONSOLE --> REG["~/.ship/console/agents.json"]
+  subgraph CP["Control Plane"]
+    CLI["city CLI"] --> CONSOLE["console"]
+    CONSOLE --> REG["registry / config / UI gateway"]
   end
 
   subgraph DP["Execution Plane (Per Project)"]
     AGENT["agent daemon"] --> SERVICES["services"]
-    AGENT --> PLUGINS["plugins"]
-    PLUGINS --> CAPS["capabilities"]
+    SERVICES --> POINTS["service-defined plugin points"]
+    PLUGINS["plugins"] --> POINTS
     PLUGINS --> ASSETS["assets"]
     AGENT --> SHIP[".ship/*"]
   end
 
-  CFG --> AGENT
-  PLUGINOPS --> AGENT
+  REG --> AGENT
 ```
 
 ## 3. Request Flow
@@ -49,43 +44,26 @@ sequenceDiagram
   participant User as User
   participant Channel as Telegram/Feishu/QQ
   participant Agent as agent daemon
-  participant Service as service(chat/skill/task/memory)
-  participant Capability as capability(audio.transcribe)
-  participant Asset as asset(voice.transcriber)
-  participant Disk as .ship/
+  participant Service as service(chat/task/memory)
+  participant Plugin as plugin(voice/auth)
+  participant Asset as asset
 
-  User->>Channel: Send message
-  Channel->>Agent: Inbound event
-  Agent->>Disk: Persist context
-  Agent->>Service: Run workflow
-  Service->>Capability: Invoke stable contract
-  Capability->>Asset: Use installed dependency
-  Asset-->>Capability: Return result
-  Capability-->>Service: Return result
-  Service-->>Agent: Return workflow output
-  Agent->>Disk: Persist logs/cache/tasks
-  Agent-->>Channel: Send reply
+  User->>Channel: send message
+  Channel->>Agent: enter runtime
+  Agent->>Service: execute workflow
+  Service->>Plugin: trigger extension point
+  Plugin->>Asset: use dependency
+  Asset-->>Plugin: return result
+  Plugin-->>Service: return augmented result
+  Service-->>Agent: return business result
 ```
 
-## 4. Key Rules
+## 4. A Real-World Reading
 
-- `console` handles governance, `agent` handles runtime execution.
-- `service` is core workflow, `plugin` is optional enhancement.
-- services depend on capabilities, not plugin-private details.
-- plugins depend on assets, not raw model/install logic.
+In `chat`:
 
-## 5. Typical Command Order
-
-```bash
-city console start
-city agent create .
-city agent start
-city service list
-city plugin list
-city console status
-```
-
-## Read Next
-
-- [Architecture Overview](/en/docs/concepts/architecture)
-- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
+- the service builds the inbound message
+- plugins join only at fixed points
+- `voice` can add transcription
+- `auth` can validate access and resolve roles
+- `chat` still decides whether to enqueue, when to reply, and what to persist

@@ -12,7 +12,7 @@ import type { JsonObject } from "@/types/Json.js";
 import type { DashboardContextExecuteAttachmentInput } from "@/types/DashboardContextExecute.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
-import { appendInboundChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
+import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { buildExecuteInputText } from "./Helpers.js";
@@ -65,12 +65,11 @@ export async function executeByContextId(params: {
     };
 
     try {
-      await appendInboundChatHistory({
+      await appendExecIngress({
         context: params.serviceRuntime,
         contextId,
         channel: dispatchTarget.channel,
         chatId: dispatchTarget.chatId,
-        ingressKind: "exec",
         text: queuedText,
         ...(dispatchTarget.chatType ? { targetType: dispatchTarget.chatType } : {}),
         ...(typeof dispatchTarget.messageThreadId === "number"
@@ -80,7 +79,7 @@ export async function executeByContextId(params: {
         extra: ingressExtra,
       });
     } catch (error) {
-      params.runtime.logger.warn("Dashboard execute chat history append failed", {
+      params.runtime.logger.warn("Dashboard execute ingress append failed", {
         contextId,
         error: String(error),
       });
@@ -97,6 +96,7 @@ export async function executeByContextId(params: {
         ? { threadId: dispatchTarget.messageThreadId }
         : {}),
       ...(dispatchTarget.messageId ? { messageId: dispatchTarget.messageId } : {}),
+      contextPersisted: true,
       extra: ingressExtra,
     });
 

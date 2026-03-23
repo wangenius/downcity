@@ -1,42 +1,58 @@
 ---
 title: 架构总览
-description: Downcity 的核心分层：console、agent、service、plugin、capability、asset
+description: Downcity 的核心分层：console、agent、service、plugin 与 asset
 ---
 
 # 架构总览
 
-Downcity 最容易理解的方式，是先看两条主干：
+Downcity 可以先看成两条主干：
 
 - `console`：全局控制与运维面
-- `agent`：项目级运行与执行面
+- `agent`：单项目运行与执行面
 
-在 agent runtime 内部，再由 `service`、`plugin`、`capability`、`asset` 组成执行层。
+而在 agent runtime 内部，真正承接业务的是三层：
+
+- `service`：主业务流程
+- `plugin`：被动扩展层
+- `asset`：插件依赖资源
 
 ## 分层结构
 
 1. **Console 层（全局）**
-- 命令：`city console ...`、`city console config ...`
-- 职责：进程管理、registry、模型池、全局存储
+- 负责 registry、模型池、全局配置、UI gateway
 
 2. **Agent 层（项目）**
-- 命令：`city agent create/start/status/restart ...`
-- 职责：加载单个项目，持有单个 runtime，把痕迹写入 `.ship/`
+- 负责加载单个项目、持有单个 runtime、写入 `.ship/`
 
 3. **Service 层（核心工作流）**
-- 例如 `chat`、`skill`、`task`、`memory`
-- 负责业务流程与用户主路径
+- 例如 `chat`、`task`、`memory`、`skills`
+- 拥有生命周期、工作流和稳定 action
 
 4. **Plugin 层（可选增强）**
-- 例如 `voice`
-- 暴露 actions、capabilities、hooks、system prompt 片段
+- 例如 `voice`、`auth`
+- 通过 service 预先定义好的扩展点接入
+- 负责增强、校验、改写、解析，但不拥有独立生命周期
 
-5. **Capability + Asset 层**
-- `capability`：稳定调用契约，例如 `audio.transcribe`
-- `asset`：插件依赖的可安装资源，负责 install/check/config/use
+5. **Asset 层（依赖资源）**
+- 负责 install / check / config / use
+- 为 plugin 提供模型、二进制、第三方依赖等底层能力
 
-## 架构规则
+## 一条最重要的边界
 
-- 控制与执行分离：`console` 负责管，`agent` 负责跑。
-- 工作流与增强分离：`service` 负责流程，`plugin` 负责增强。
-- 契约与实现分离：service 调 capability，不碰 plugin 私有细节。
-- 行为与依赖分离：plugin 声明所需 asset，asset 自己管理安装与可用性。
+- `service` 主动参与 agent 执行周期
+- `plugin` 不主动跑，只在 service 需要时被接入
+
+所以：
+
+- 主流程放在 service
+- 扩展逻辑放在 plugin
+- 依赖资源放在 asset
+
+## 一个直观例子
+
+在聊天场景里：
+
+- `chat` service 负责消息进入、入队、执行、回复
+- `voice` plugin 在语音相关节点上补充转写
+- `auth` plugin 在鉴权和角色解析节点上接入
+- `voice.transcriber` asset 提供实际转写依赖

@@ -258,7 +258,7 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
             },
           ],
         },
-        exec_command: {
+        shell: {
           anyOf: [
             { type: "boolean" },
             {

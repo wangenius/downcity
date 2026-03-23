@@ -14,7 +14,7 @@ Downcity 的安全模型分为 3 层：
 ## 你需要重点关注
 
 1. 不要在终端残留错误的 `DC_SERVER_HOST/DC_SERVER_PORT`，避免把命令路由到错误 runtime。
-2. `permissions.exec_command.deny` 默认应保留高风险命令（例如 `rm`）。
+2. `permissions.shell.deny` 默认应保留高风险命令（例如 `rm`）。
 3. 生产环境优先使用 `DC_MODEL_DB_KEY` 管理密钥，不要把明文 key 写入仓库。
 
 ## 推荐阅读顺序

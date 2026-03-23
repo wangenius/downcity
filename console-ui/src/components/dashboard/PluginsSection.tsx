@@ -130,7 +130,12 @@ export function PluginsSection(props: PluginsSectionProps) {
             const state = String(item.state || "unknown").toLowerCase()
             const availability = item.availability || {}
             const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
-            const capabilityItems = Array.isArray(item.capabilities) ? item.capabilities : []
+            const pipelineItems = Array.isArray(item.pipelines) ? item.pipelines : []
+            const guardItems = Array.isArray(item.guards) ? item.guards : []
+            const effectItems = Array.isArray(item.effects) ? item.effects : []
+            const resolveItems = Array.isArray(item.resolves) ? item.resolves : []
+            const pluginPointCount =
+              pipelineItems.length + guardItems.length + effectItems.length + resolveItems.length
             const requiredAssets = Array.isArray(item.requiredAssets) ? item.requiredAssets : []
             const lastError = String(item.lastError || "").trim()
             const tone = resolveStateTone(state)
@@ -172,7 +177,7 @@ export function PluginsSection(props: PluginsSectionProps) {
 
                     <div className="flex flex-wrap items-center gap-1.5 pl-[1.375rem] text-[11px] text-muted-foreground">
                       <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
-                        {`capabilities ${capabilityItems.length}`}
+                        {`points ${pluginPointCount}`}
                       </span>
                       <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
                         {`assets ${requiredAssets.length}`}
@@ -187,14 +192,53 @@ export function PluginsSection(props: PluginsSectionProps) {
                       ) : null}
                     </div>
 
-                    {capabilityItems.length > 0 ? (
+                    {pipelineItems.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
-                        {capabilityItems.map((capability) => (
+                        {pipelineItems.map((pointName) => (
                           <span
-                            key={`${name}:capability:${capability}`}
+                            key={`${name}:pipeline:${pointName}`}
                             className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
                           >
-                            {capability}
+                            {`pipeline · ${pointName}`}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {guardItems.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
+                        {guardItems.map((pointName) => (
+                          <span
+                            key={`${name}:guard:${pointName}`}
+                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
+                          >
+                            {`guard · ${pointName}`}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {effectItems.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
+                        {effectItems.map((pointName) => (
+                          <span
+                            key={`${name}:effect:${pointName}`}
+                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
+                          >
+                            {`effect · ${pointName}`}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {resolveItems.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
+                        {resolveItems.map((pointName) => (
+                          <span
+                            key={`${name}:resolve:${pointName}`}
+                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
+                          >
+                            {`resolve · ${pointName}`}
                           </span>
                         ))}
                       </div>

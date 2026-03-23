@@ -1,6 +1,6 @@
 ---
 title: 调用路由与隔离
-description: 解释 service、plugin、capability 的调用为什么不会串 agent 环境，以及路由如何解析
+description: 解释 service、plugin、asset 的调用为什么不会串 agent 环境，以及路由如何解析
 ---
 
 # 调用路由与隔离
@@ -8,7 +8,7 @@ description: 解释 service、plugin、capability 的调用为什么不会串 ag
 ## 简短答案
 
 - 一个 agent runtime 只绑定一个项目根目录。
-- `service`、`plugin`、`capability` 默认都在这个 runtime 内执行。
+- `service`、`plugin`、`asset` 默认都在这个 runtime 内执行。
 - 只有显式改了 host/port 或 target project，才会跨 agent 路由。
 
 ## 主调用链
@@ -20,11 +20,11 @@ description: 解释 service、plugin、capability 的调用为什么不会串 ag
 3. 调 `/api/services/*` 或 `/api/plugins/*`
 4. 在当前 runtime 内分发
 
-### 2）service -> capability
+### 2）service -> plugin 点
 
-service 应该调 capability，而不是直接耦合 plugin 私有实现。
+service 不应该直接依赖 plugin 私有实现，而是只在自己定义好的扩展点上触发 plugin。
 
-- capability 调度发生在进程内
+- plugin 点调度发生在进程内
 - 复用同一份 runtime state
 - 默认不经过 shell
 

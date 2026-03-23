@@ -110,7 +110,7 @@ Repository write and command execution policies:
   "permissions": {
     "read_repo": true,
     "write_repo": { "requiresApproval": false },
-    "exec_command": {
+    "shell": {
       "deny": ["rm"],
       "requiresApproval": false,
       "maxOutputChars": 12000,

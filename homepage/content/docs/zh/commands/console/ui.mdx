@@ -45,6 +45,7 @@ city console ui [action] [options]
 - `Global / Console Runtime` 展示 console 运行态与 console 级配置文件状态。
 - `Agent`：`Overview`、`Authorization`、`Services`、`Command`、`Tasks`、`Logs`。
 - `Agent / Overview` 聚焦当前 agent（bootstrap 配置、chat 身份、模型绑定），不再混入 global 信息。
+- `Agent / Overview` 现会额外显示当前 agent 是否有 context 正在执行，以及执行中的 context 数量。
 - `Agent / Authorization` 已重构为角色权限模型：维护 `role -> permission`，再把用户绑定到角色。
 - `Agent / Authorization` 的配置统一写入 console `~/.ship/ship.db`，不会明文落到项目 `ship.json`。
 - `Agent / Authorization` 中新用户会落到默认角色；群聊/频道是否可用，取决于当前发消息用户所属权限组。
@@ -63,6 +64,7 @@ city console ui [action] [options]
 - `Context Overview` 支持直接修改 channel 参数（例如 qq 的 `appId/appSecret/sandbox`），保存后自动重载该渠道。
 - 只有 `consoleui` channel 支持发送消息；其他 context 在 UI 中为只读。
 - `Context Workspace` 会展示当前 context 的消息历史、channel 历史、system prompt 解析结果。
+- `Context Overview` 与 `Context Workspace` 现都会显示当前 context 是否正在执行（`executing` / `idle`）。
 - `Context Workspace` 现支持消息管理：所有 chat context 都可分别清理 `context messages` 与 `chat history`。
 - `Context Workspace` 现支持查看 compact archive：可在右侧 `archive` 面板按归档批次查看被 compact 折叠前的历史消息。
 - `city console status` 会同时显示 console 与 UI 状态。

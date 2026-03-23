@@ -1,45 +1,29 @@
 ---
 title: Runtime Relationship & Process
-description: Collaboration model and process order across console, agent, service, plugin, capability, and asset
+description: Collaboration model and process order across console, agent, service, plugin, and asset
 ---
 
 # Runtime Relationship & Process
 
-## 1. Role Relationship
+## 1. Role Summary
 
-- `console`: manages registry, shared storage, model pool, and UI.
-- `agent`: owns one project runtime.
-- `service`: executes core workflows.
-- `plugin`: adds optional enhancements.
-- `capability`: provides stable runtime contracts.
-- `asset`: provides install/check/config/use for dependencies.
+- `console`: manages registry, model pool, shared storage, and UI
+- `agent`: owns one project runtime
+- `service`: owns the main workflow and lifecycle
+- `plugin`: provides optional enhancement through service-defined points
+- `asset`: owns dependency install and availability
 
-In one line:
+In one sentence:
 
-`console` governs, `agent` runs, `service` orchestrates, `plugin` augments, `asset` supplies dependencies.
+`console` governs, `agent` executes, `service` orchestrates, `plugin` augments, and `asset` supports dependencies.
 
-## 2. Process Startup Model
+## 2. Startup Order
 
-1. Start console: `city console start`
-2. Start agent: `city agent start`
-3. Agent loads project config from `ship.json`
-4. Runtime assembles services, plugins, capabilities, and assets
-5. Inbound messages/tasks enter service workflows
-6. Services invoke capabilities when optional enhancements are needed
-7. Runtime traces are persisted to `.ship/*`
-
-## 3. Operational Checklist
-
-```bash
-city console status
-city agent status .
-city service list
-city plugin list
-```
-
-## Related Docs
-
-- [Architecture Logic Map](/en/docs/concepts/logic-map)
-- [Service Runtime](/en/docs/concepts/service-runtime)
-- [`city console`](/en/docs/commands/console/console)
-- [`city agent`](/en/docs/commands/agent/agent)
+1. `city console start`
+2. `city agent start`
+3. agent loads project config from `ship.json`
+4. runtime assembles services, plugins, and assets
+5. plugins register `pipeline / guard / effect / resolve` handlers on service-defined points
+6. messages or tasks enter a service workflow
+7. services trigger those plugin points at the right stages
+8. runtime traces are written into `.ship/*`

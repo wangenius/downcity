@@ -4,13 +4,15 @@
  * 关键点（中文）
  * - Voice Plugin 只依赖 `voice.transcriber` Asset。
  * - 具体模型、依赖安装、命令模板等实现细节全部下沉到 Asset。
- * - 当前先提供能力与显式 Action，消息 Hook 后续再逐步迁移接入。
+ * - 当前作为 chat 入站消息增强中间件接入语音转写。
  */
 
 import type { Plugin } from "@/types/Plugin.js";
+import type { ChatInboundAugmentInput } from "@/types/ChatPlugin.js";
 import type { VoicePluginConfig } from "@/types/VoicePlugin.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { persistProjectPluginConfig } from "@/console/plugin/ProjectConfigStore.js";
+import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import {
   listVoiceModels,
   resolveVoicePluginModelId,
@@ -80,6 +82,27 @@ function readVoiceAssetConfig(runtime: {
   return current as JsonObject;
 }
 
+async function transcribeWithVoiceAsset(params: {
+  runtime: {
+    assets: {
+      use<T = unknown>(assetName: string): Promise<T>;
+    };
+  };
+  audioPath: string;
+  language?: string;
+}): Promise<{ success: boolean; text?: string; error?: string }> {
+  const transcriber = await params.runtime.assets.use<{
+    transcribe(input: {
+      audioPath: string;
+      language?: string;
+    }): Promise<{ success: boolean; text?: string; error?: string }>;
+  }>("voice.transcriber");
+  return transcriber.transcribe({
+    audioPath: params.audioPath,
+    ...(params.language ? { language: params.language } : {}),
+  });
+}
+
 /**
  * 读取 Voice Plugin 配置。
  */
@@ -141,29 +164,50 @@ export const voicePlugin: Plugin = {
       missingAssets: assetStatus.available ? [] : ["voice.transcriber"],
     };
   },
-  capabilities: {
-    "audio.transcribe": async ({ runtime, payload }) => {
-      const pluginStatus = await voicePlugin.availability!(runtime);
-      if (!pluginStatus.enabled || !pluginStatus.available) {
-        return {
-          success: false,
-          error: pluginStatus.reasons.join("; "),
-        };
-      }
+  hooks: {
+    pipeline: {
+      [CHAT_PLUGIN_POINTS.augmentInbound]: [
+        async ({ runtime, value }) => {
+          const input = value as unknown as ChatInboundAugmentInput;
+          const voiceAttachments = (Array.isArray(input.attachments) ? input.attachments : []).filter(
+            (item) =>
+              (item.kind === "voice" || item.kind === "audio") &&
+              typeof item.path === "string" &&
+              item.path.trim(),
+          );
+          if (voiceAttachments.length === 0) {
+            return input as unknown as JsonValue;
+          }
 
-      const transcriber = await runtime.assets.use<{
-        transcribe(input: {
-          audioPath: string;
-          language?: string;
-        }): Promise<{ success: boolean; text?: string; error?: string }>;
-      }>("voice.transcriber");
-      return transcriber.transcribe({
-        audioPath: String((payload as { audioPath?: unknown }).audioPath || ""),
-        language:
-          typeof (payload as { language?: unknown }).language === "string"
-            ? ((payload as { language?: string }).language as string)
-            : undefined,
-      });
+          const pluginSections = Array.isArray(input.pluginSections)
+            ? [...input.pluginSections]
+            : [];
+
+          for (const attachment of voiceAttachments) {
+            try {
+              const result = await transcribeWithVoiceAsset({
+                runtime,
+                audioPath: String(attachment.path || "").trim(),
+              });
+              const text = typeof result.text === "string" ? result.text.trim() : "";
+              if (!text) continue;
+
+              const absPath = String(attachment.path || "").trim();
+              const rel = absPath.startsWith(`${runtime.rootPath}/`)
+                ? absPath.slice(runtime.rootPath.length + 1)
+                : absPath;
+              pluginSections.push(`【语音转写 ${attachment.kind}: ${rel}】\n${text}`);
+            } catch {
+              // 关键点（中文）：转写失败不阻塞主链路，保持 best-effort。
+            }
+          }
+
+          return {
+            ...input,
+            pluginSections,
+          } as unknown as JsonValue;
+        },
+      ],
     },
   },
   actions: {
@@ -439,14 +483,27 @@ export const voicePlugin: Plugin = {
         },
       },
       execute: async ({ runtime, payload }) => {
-        const result = await runtime.capabilities.invoke({
-          capability: "audio.transcribe",
-          payload,
+        const pluginStatus = await voicePlugin.availability!(runtime);
+        if (!pluginStatus.enabled || !pluginStatus.available) {
+          return {
+            success: false,
+            error: pluginStatus.reasons.join("; "),
+            message: pluginStatus.reasons.join("; "),
+          };
+        }
+        const result = await transcribeWithVoiceAsset({
+          runtime,
+          audioPath: String((payload as { audioPath?: unknown }).audioPath || ""),
+          language:
+            typeof (payload as { language?: unknown }).language === "string"
+              ? String((payload as { language?: unknown }).language || "")
+              : undefined,
         });
         return {
           success: result.success,
-          ...(result.data !== undefined ? { data: result.data } : {}),
-          ...(result.error ? { error: result.error, message: result.error } : {}),
+          ...(result !== undefined ? { data: result } : {}),
+          ...(result.success ? {} : { error: result.error || "transcribe failed" }),
+          ...(result.success ? {} : { message: result.error || "transcribe failed" }),
         };
       },
     },

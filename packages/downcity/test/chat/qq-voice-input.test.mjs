@@ -3,26 +3,19 @@
  *
  * 关键点（中文）
  * - 兼容多种 QQ 附件字段命名（attachments/files/file_info/audio/voice）。
- * - 仅 voice/audio 触发语音转写 capability；失败时不中断主流程。
+ * - 语音增强应通过 augmentInbound pipeline 完成。
  */
 
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 import {
-  buildQqVoiceTranscriptionInstruction,
   extractQqIncomingAttachments,
+  resolveQqAttachmentLocalPath,
 } from "../../bin/services/chat/channels/qq/VoiceInput.js";
-
-function createLogger() {
-  return {
-    info() {},
-    warn() {},
-    error() {},
-    debug() {},
-    log() {},
-  };
-}
+import { buildChatInboundText } from "../../bin/services/chat/runtime/InboundAugment.js";
+import { CHAT_PLUGIN_POINTS } from "../../bin/services/chat/runtime/PluginPoints.js";
+import { voicePlugin } from "../../bin/plugins/voice/Plugin.js";
 
 test("extractQqIncomingAttachments supports mixed QQ payload fields", () => {
   const attachments = extractQqIncomingAttachments({
@@ -84,49 +77,70 @@ test("extractQqIncomingAttachments supports string voice/audio fields", () => {
   );
 });
 
-test("voice/audio attachments call capability and produce transcript blocks", async () => {
+test("resolveQqAttachmentLocalPath reuses local path", async () => {
+  const rootPath = "/tmp/demo-root";
+  const localPath = await resolveQqAttachmentLocalPath({
+    rootPath,
+    attachment: {
+      kind: "voice",
+      raw: {},
+      localPath: path.join(rootPath, "cache/a.ogg"),
+    },
+  });
+  assert.equal(localPath, path.join(rootPath, "cache/a.ogg"));
+});
+
+test("voice plugin pipeline augments inbound sections for qq attachments", async () => {
   const rootPath = "/tmp/demo-root";
   const invokePayloads = [];
-  const context = {
-    capabilities: {
-      has(name) {
-        return name === "audio.transcribe";
-      },
-      async invoke(params) {
-        invokePayloads.push(params.payload.audioPath);
-        if (params.payload.audioPath.endsWith("a.ogg")) {
-          return { success: true, data: { text: "第一段QQ语音" } };
-        }
-        return { success: true, data: { text: "第二段QQ音频" } };
+  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
+  const next = await handler({
+    runtime: {
+      rootPath,
+      assets: {
+        async use(assetName) {
+          assert.equal(assetName, "voice.transcriber");
+          return {
+            async transcribe(payload) {
+              invokePayloads.push(payload.audioPath);
+              if (payload.audioPath.endsWith("a.ogg")) {
+                return { text: "第一段QQ语音" };
+              }
+              return { text: "第二段QQ音频" };
+            },
+          };
+        },
       },
     },
-  };
-
-  const text = await buildQqVoiceTranscriptionInstruction({
-    context,
-    logger: createLogger(),
-    rootPath,
-    chatId: "20001",
-    messageId: "99",
-    chatKey: "qq-group-20001",
-    attachments: [
-      {
-        kind: "voice",
-        raw: {},
-        localPath: path.join(rootPath, "cache/a.ogg"),
-      },
-      {
-        kind: "audio",
-        raw: {},
-        localPath: path.join(rootPath, "cache/b.mp3"),
-      },
-      {
-        kind: "photo",
-        raw: {},
-        localPath: path.join(rootPath, "cache/c.jpg"),
-      },
-    ],
+    plugin: "voice",
+    value: {
+      channel: "qq",
+      chatId: "20001",
+      messageId: "99",
+      chatKey: "qq-group-20001",
+      rootPath,
+      bodyText: "hello",
+      pluginSections: [],
+      attachments: [
+        {
+          channel: "qq",
+          kind: "voice",
+          path: path.join(rootPath, "cache/a.ogg"),
+        },
+        {
+          channel: "qq",
+          kind: "audio",
+          path: path.join(rootPath, "cache/b.mp3"),
+        },
+        {
+          channel: "qq",
+          kind: "photo",
+          path: path.join(rootPath, "cache/c.jpg"),
+        },
+      ],
+    },
   });
+  const text = buildChatInboundText(next);
 
   assert.equal(invokePayloads.length, 2);
   assert.match(text, /第一段QQ语音/);
@@ -134,36 +148,35 @@ test("voice/audio attachments call capability and produce transcript blocks", as
   assert.match(text, /语音转写/);
 });
 
-test("voice capability failure is ignored and returns empty transcript", async () => {
-  const context = {
-    capabilities: {
-      has(name) {
-        return name === "audio.transcribe";
-      },
-      async invoke() {
-        return {
-          success: false,
-          error: "voice capability disabled",
-        };
+test("voice plugin pipeline ignores resolve failures for qq attachments", async () => {
+  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
+  const next = await handler({
+    runtime: {
+      rootPath: "/tmp/demo-root",
+      assets: {
+        async use() {
+          throw new Error("voice plugin disabled");
+        },
       },
     },
-  };
-
-  const text = await buildQqVoiceTranscriptionInstruction({
-    context,
-    logger: createLogger(),
-    rootPath: "/tmp/demo-root",
-    chatId: "20001",
-    messageId: "99",
-    chatKey: "qq-group-20001",
-    attachments: [
-      {
-        kind: "voice",
-        raw: {},
-        localPath: "/tmp/demo-root/cache/a.ogg",
-      },
-    ],
+    plugin: "voice",
+    value: {
+      channel: "qq",
+      chatId: "20001",
+      messageId: "99",
+      chatKey: "qq-group-20001",
+      rootPath: "/tmp/demo-root",
+      bodyText: "hello",
+      pluginSections: [],
+      attachments: [
+        {
+          channel: "qq",
+          kind: "voice",
+          path: "/tmp/demo-root/cache/a.ogg",
+        },
+      ],
+    },
   });
 
-  assert.equal(text, "");
+  assert.equal(buildChatInboundText(next), "hello");
 });

@@ -376,6 +376,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
               const group = resolveContextGroup(item)
               const isSelected = item.contextId === selectedContextId
               const isDeleting = String(deletingContextId || "").trim() === item.contextId
+              const isExecuting = item.executing === true
               const display = resolveChatDisplayName(item)
               const contextLabel = display.value
               const routeJson = buildContextRouteJson(item)
@@ -406,6 +407,15 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                             {chatType}
                           </span>
                         ) : null}
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 uppercase tracking-[0.08em] ${
+                            isExecuting
+                              ? "bg-primary/12 text-primary"
+                              : "bg-background text-muted-foreground"
+                          }`}
+                        >
+                          {isExecuting ? "executing" : "idle"}
+                        </span>
                         <span className="rounded-full bg-background px-1.5 py-0.5">
                           {`${item.messageCount || 0} msgs`}
                         </span>

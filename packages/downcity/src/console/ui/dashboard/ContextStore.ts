@@ -24,6 +24,7 @@ export async function listContextSummaries(params: {
   projectRoot: string;
   serviceRuntime?: ServiceRuntime;
   limit: number;
+  executingContextIds?: Set<string>;
 }): Promise<DashboardContextSummary[]> {
   const rootDir = getShipContextRootDirPath(params.projectRoot);
   if (!(await fs.pathExists(rootDir))) return [];
@@ -66,6 +67,7 @@ export async function listContextSummaries(params: {
       ...(typeof chatMeta?.chatTitle === "string" ? { chatTitle: chatMeta.chatTitle } : {}),
       ...(typeof chatMeta?.targetType === "string" ? { chatType: chatMeta.targetType } : {}),
       ...(typeof chatMeta?.threadId === "number" ? { threadId: chatMeta.threadId } : {}),
+      ...(params.executingContextIds?.has(contextId) ? { executing: true } : {}),
     });
   }
 

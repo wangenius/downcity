@@ -129,9 +129,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // 文档页使用 fumadocs 自身导航，不展示站点全局 Header。
   const isDocsPath =
     path === "/docs" ||
+    path === "/devdocs" ||
     path.startsWith("/docs/") ||
+    path.startsWith("/devdocs/") ||
     path.startsWith("/en/docs") ||
-    path.startsWith("/zh/docs");
+    path.startsWith("/zh/docs") ||
+    path.startsWith("/en/devdocs") ||
+    path.startsWith("/zh/devdocs");
   const showGlobalChrome = !isDocsPath;
 
   // Sync i18n language with localStorage (only on client side)

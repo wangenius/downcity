@@ -1,0 +1,13 @@
+{
+  "title": "开发文档",
+  "pages": [
+    "index",
+    "philosophy",
+    "architecture",
+    "package",
+    "console-ui",
+    "chrome-extension",
+    "design",
+    "platform"
+  ]
+}

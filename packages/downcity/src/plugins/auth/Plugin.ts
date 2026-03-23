@@ -4,15 +4,15 @@
  * 关键点（中文）
  * - auth 是内建且必需的 plugin，不走可选启停语义。
  * - 所有 chat 授权配置仍然保存在 `ship.db`，动态观测态仍落 `.ship/chat/authorization/state.json`。
- * - plugin 只负责统一暴露 capability / action 边界，不改变底层存储模型。
+ * - plugin 只负责统一暴露 plugin 点 / action 边界，不改变底层存储模型。
  */
 
 import type { Plugin } from "@/types/Plugin.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import {
   AUTH_ACTIONS,
-  AUTH_CAPABILITIES,
   type AuthObservePrincipalPayload,
   type AuthSetUserRolePayload,
   type AuthWriteConfigPayload,
@@ -82,47 +82,58 @@ export const authPlugin: Plugin = {
       missingAssets: [],
     };
   },
-  capabilities: {
-    [AUTH_CAPABILITIES.observePrincipal]: async ({ runtime, payload }) => {
-      const input = toRecord(payload) as unknown as AuthObservePrincipalPayload;
+  hooks: {
+    guard: {
+      [CHAT_PLUGIN_POINTS.authorizeIncoming]: [
+        async ({ runtime, value }) => {
+          const input =
+            value && typeof value === "object" && !Array.isArray(value)
+              ? (value as Record<string, unknown>)
+              : {};
+          const evaluateInput = toEvaluateInput(input);
+          const authorizationConfig = readChatAuthorizationConfig(runtime as ServiceRuntime);
+          const result = evaluateIncomingChatAuthorization({
+            config: (runtime as ServiceRuntime).config,
+            channel: evaluateInput.channel,
+            input: evaluateInput,
+            authorizationConfig,
+          });
+          if (result.decision !== "allow") {
+            throw new Error(result.reason || "chat authorization blocked");
+          }
+        },
+      ],
+    },
+    effect: {
+      [CHAT_PLUGIN_POINTS.observePrincipal]: [
+        async ({ runtime, value }) => {
+          const input = toRecord(value) as unknown as AuthObservePrincipalPayload;
+          const channel = toChannel(input.channel);
+          if (!channel) {
+            throw new Error("chat.observePrincipal requires a valid channel");
+          }
+          await recordObservedAuthorizationPrincipal({
+            context: runtime as ServiceRuntime,
+            channel,
+            chatId: String(input.chatId || "").trim(),
+            ...(typeof input.chatType === "string" ? { chatType: input.chatType.trim() } : {}),
+            ...(typeof input.chatTitle === "string" ? { chatTitle: input.chatTitle.trim() } : {}),
+            ...(typeof input.userId === "string" ? { userId: input.userId.trim() } : {}),
+            ...(typeof input.username === "string" ? { username: input.username.trim() } : {}),
+          });
+        },
+      ],
+    },
+  },
+  resolves: {
+    [CHAT_PLUGIN_POINTS.resolveUserRole]: async ({ runtime, value }) => {
+      const input =
+        value && typeof value === "object" && !Array.isArray(value)
+          ? (value as Record<string, unknown>)
+          : {};
       const channel = toChannel(input.channel);
       if (!channel) {
-        throw new Error("auth.observe_principal requires a valid channel");
-      }
-      await recordObservedAuthorizationPrincipal({
-        context: runtime as ServiceRuntime,
-        channel,
-        chatId: String(input.chatId || "").trim(),
-        ...(typeof input.chatType === "string" ? { chatType: input.chatType.trim() } : {}),
-        ...(typeof input.chatTitle === "string" ? { chatTitle: input.chatTitle.trim() } : {}),
-        ...(typeof input.userId === "string" ? { userId: input.userId.trim() } : {}),
-        ...(typeof input.username === "string" ? { username: input.username.trim() } : {}),
-      });
-      return { observed: true } as JsonValue;
-    },
-    [AUTH_CAPABILITIES.authorizeIncoming]: async ({ runtime, payload }) => {
-      const input =
-        payload && typeof payload === "object" && !Array.isArray(payload)
-          ? (payload as Record<string, unknown>)
-          : {};
-      const evaluateInput = toEvaluateInput(input);
-      const authorizationConfig = readChatAuthorizationConfig(runtime as ServiceRuntime);
-      const result = evaluateIncomingChatAuthorization({
-        config: (runtime as ServiceRuntime).config,
-        channel: evaluateInput.channel,
-        input: evaluateInput,
-        authorizationConfig,
-      });
-      return result as unknown as JsonValue;
-    },
-    [AUTH_CAPABILITIES.resolveUserRole]: async ({ runtime, payload }) => {
-      const input =
-        payload && typeof payload === "object" && !Array.isArray(payload)
-          ? (payload as Record<string, unknown>)
-          : {};
-      const channel = toChannel(input.channel);
-      if (!channel) {
-        throw new Error("auth.resolve_user_role requires a valid channel");
+        throw new Error("chat.resolveUserRole requires a valid channel");
       }
       const role = resolveAuthorizedUserRole({
         channel,

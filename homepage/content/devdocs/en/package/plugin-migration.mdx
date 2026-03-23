@@ -1,0 +1,154 @@
+---
+title: Plugin Migration Plan
+description: How to move from the old capability-oriented design to service-owned plugin points
+---
+
+# Plugin Migration Plan
+
+This page is a practical migration guide for future code changes.
+
+## Migration Goal
+
+Move from the old model:
+
+- plugins expose capabilities
+- services call capabilities
+- explicit calls, hooks, and providers are mixed together
+
+to the new model:
+
+- services define their own extension points
+- runtime provides `pipeline / guard / effect / resolve`
+- plugins only implement those points
+- assets only handle dependencies
+
+## Decision Rules
+
+### What should be a service
+
+Prefer a service if any of these are true:
+
+- it has lifecycle
+- it actively participates in the agent execution cycle
+- it is tightly coupled to current agent state
+- it owns a primary workflow
+
+### What should be a plugin
+
+Prefer a plugin if these are true:
+
+- it only inserts logic at a workflow point
+- it has no standalone lifecycle
+- it does not run on its own
+- it behaves more like middleware, validation, or a provider
+
+### What should be an asset
+
+- models
+- CLI dependencies
+- external binaries
+- low-level installation and configuration resources
+
+## How to Choose the Four Semantics
+
+### `pipeline`
+
+Use for serial transformation.
+
+Good for:
+
+- inbound augmentation
+- reply rewriting
+- metadata enrichment
+
+### `guard`
+
+Use for serial validation that interrupts on error.
+
+Good for:
+
+- authorization
+- input validation
+- pre-execution interception
+
+### `effect`
+
+Use for side effects only.
+
+Good for:
+
+- observation
+- metrics
+- audit logs
+
+### `resolve`
+
+Use for single-owner value resolution.
+
+Good for:
+
+- role resolution
+- transcription
+- any unique provider
+
+## Standard Migration Steps
+
+1. decide whether the logic should remain in a service
+2. if it is not a primary workflow, choose the matching plugin semantic
+3. define a stable point name in the service
+4. move the old plugin logic into `hooks` or `resolves`
+5. replace old capability calls with `runtime.plugins.*`
+6. push dependency install and availability checks into assets
+7. update `/docs` or `/devdocs`
+
+## Pseudocode Template
+
+```ts
+export const TASK_PLUGIN_POINTS = {
+  beforeRun: "task.beforeRun",
+  afterRun: "task.afterRun",
+  resolveExecutor: "task.resolveExecutor",
+} as const;
+
+await runtime.plugins.guard(TASK_PLUGIN_POINTS.beforeRun, input);
+const executor = await runtime.plugins.resolve(
+  TASK_PLUGIN_POINTS.resolveExecutor,
+  input,
+);
+await runtime.plugins.effect(TASK_PLUGIN_POINTS.afterRun, result);
+
+export const somePlugin: Plugin = {
+  name: "some",
+  hooks: {
+    guard: {
+      [TASK_PLUGIN_POINTS.beforeRun]: [async ({ value }) => {
+        // ...
+      }],
+    },
+    effect: {
+      [TASK_PLUGIN_POINTS.afterRun]: [async ({ value }) => {
+        // ...
+      }],
+    },
+  },
+  resolves: {
+    [TASK_PLUGIN_POINTS.resolveExecutor]: async ({ value }) => {
+      return {};
+    },
+  },
+};
+```
+
+## Existing Migrated Reference Cases
+
+- `chat.observePrincipal`: auth
+- `chat.authorizeIncoming`: auth
+- `chat.resolveUserRole`: auth
+- `chat.augmentInbound`: voice
+
+## What to Check Next
+
+- whether a service still imports concrete plugin module paths directly
+- whether a plugin is trying to own workflow instead of implementing service points
+- whether dependency installation still leaks outside assets
+- whether docs still describe capability as the core abstraction

@@ -4,9 +4,13 @@ import { join } from "node:path";
 import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
 import {
-  buildQqVoiceTranscriptionInstruction,
   extractQqIncomingAttachments,
+  resolveQqAttachmentLocalPath,
 } from "./VoiceInput.js";
+import {
+  augmentChatInboundInput,
+  buildChatInboundText,
+} from "@services/chat/runtime/InboundAugment.js";
 import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
@@ -1817,23 +1821,51 @@ export class QQBot extends BaseChatChannel {
     attachments: QqIncomingAttachment[];
   }): Promise<string> {
     const text = String(params.userMessage || "").trim();
-    const hasVoiceAttachment = params.attachments.some(
-      (item) => item.kind === "voice" || item.kind === "audio",
+    const resolvedAttachments = await Promise.all(
+      params.attachments.map(async (attachment) => {
+        const base = {
+          channel: "qq" as const,
+          kind: attachment.kind,
+          ...(attachment.fileName ? { fileName: attachment.fileName } : {}),
+          ...(attachment.contentType ? { contentType: attachment.contentType } : {}),
+          ...(attachment.attachmentId ? { attachmentId: attachment.attachmentId } : {}),
+        };
+        if (attachment.kind !== "voice" && attachment.kind !== "audio") {
+          return {
+            ...base,
+            ...(attachment.localPath ? { path: attachment.localPath } : {}),
+          };
+        }
+        try {
+          const localPath = await resolveQqAttachmentLocalPath({
+            rootPath: this.rootPath,
+            attachment,
+            authToken: await this.getAuthToken(),
+          });
+          return {
+            ...base,
+            ...(localPath ? { path: localPath } : {}),
+          };
+        } catch {
+          return base;
+        }
+      }),
     );
-    if (!hasVoiceAttachment) return text;
 
-    const transcript = await buildQqVoiceTranscriptionInstruction({
-      context: this.context,
-      logger: this.logger,
-      rootPath: this.rootPath,
-      chatId: params.chatId,
-      messageId: params.messageId,
-      chatKey: params.chatKey,
-      attachments: params.attachments,
-      resolveAuthToken: async () => this.getAuthToken(),
-    });
-
-    return [transcript || undefined, text || undefined].filter(Boolean).join("\n\n");
+    return buildChatInboundText(
+      await augmentChatInboundInput({
+        runtime: this.context,
+        input: {
+          channel: "qq",
+          chatId: params.chatId,
+          chatKey: params.chatKey,
+          messageId: params.messageId,
+          rootPath: this.rootPath,
+          bodyText: text || undefined,
+          attachments: resolvedAttachments,
+        },
+      }),
+    );
   }
 
   /**

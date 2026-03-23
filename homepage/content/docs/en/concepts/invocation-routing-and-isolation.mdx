@@ -1,34 +1,32 @@
 ---
-title: Invocation Routing and Isolation
-description: Explain why service, plugin, and capability calls do not cross agent environments and how routing works
+title: Invocation Routing & Isolation
+description: Explain why service, plugin, and asset calls do not cross agent environments and how routing works
 ---
 
-# Invocation Routing and Isolation
+# Invocation Routing & Isolation
 
 ## Short Answer
 
-- One agent runtime is bound to one project root.
-- `service`, `plugin`, and `capability` calls stay inside that runtime by default.
-- Cross-agent routing happens only when host/port or target project is explicitly overridden.
+- one agent runtime binds to one project root
+- `service`, `plugin`, and `asset` calls stay inside that runtime by default
+- cross-agent routing only happens when you explicitly change host/port or target project
 
-## Main Call Paths
+## Main Call Path
 
 ### 1) CLI -> service / plugin
 
-For `city service ...` and `city plugin ...`, the flow is:
+1. resolve the target project
+2. resolve the daemon endpoint
+3. call `/api/services/*` or `/api/plugins/*`
+4. dispatch inside the current runtime
 
-1. Resolve target project
-2. Resolve daemon endpoint
-3. Call `/api/services/*` or `/api/plugins/*`
-4. Dispatch inside the current runtime
+### 2) service -> plugin points
 
-### 2) service -> capability
+Services should not depend on plugin-private implementation. They only trigger the extension points they define.
 
-Services should call capabilities rather than plugin-private implementation.
-
-- capability dispatch is in-process
+- plugin-point dispatch is in-process
 - the same runtime state is reused
-- no extra shell hop is required
+- shell is not involved by default
 
 ## Endpoint Resolution Priority
 
@@ -37,18 +35,3 @@ Services should call capabilities rather than plugin-private implementation.
 3. `DC_CTX_SERVER_HOST/DC_CTX_SERVER_PORT`
 4. current project runtime metadata
 5. default `127.0.0.1:5314`
-
-## Shell Scenarios
-
-Shell tools may still run inside a service or plugin workflow. In that case:
-
-- default workdir is the current project root
-- subprocess env includes `DC_CTX_*`
-- commands route back to the same runtime unless explicitly overridden
-
-## Troubleshooting Checklist
-
-1. Check explicit `--host/--port`
-2. Check `DC_SERVER_*` and `DC_CTX_SERVER_*`
-3. Confirm `--path` or current directory points to the target project
-4. Run `city console agents` to inspect registered runtimes

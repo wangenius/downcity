@@ -23,6 +23,10 @@ import {
   buildReplyContextExtra,
   buildReplyContextInstruction,
 } from "@services/chat/runtime/ReplyContextFormatter.js";
+import {
+  augmentChatInboundInput,
+  buildChatInboundText,
+} from "@services/chat/runtime/InboundAugment.js";
 
 /**
  * Feishu (Lark) chat channel.
@@ -1007,13 +1011,28 @@ export class FeishuBot extends BaseChatChannel {
             const instructions =
               buildReplyContextInstruction({
                 text:
-                  [
-                    attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
-                    userMessage ? userMessage.trim() : undefined,
-                  ]
-                    .filter(Boolean)
-                    .join("\n\n")
-                    .trim() ||
+                  buildChatInboundText(
+                    await augmentChatInboundInput({
+                      runtime: this.context,
+                      input: {
+                        channel: "feishu",
+                        chatId: chat_id,
+                        chatType: chat_type,
+                        chatKey: threadId,
+                        messageId: message_id,
+                        rootPath: this.rootPath,
+                        attachmentText:
+                          attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
+                        bodyText: userMessage ? userMessage.trim() : undefined,
+                        attachments: incomingAttachments.map((attachment) => ({
+                          channel: "feishu" as const,
+                          kind: attachment.type,
+                          path: attachment.path,
+                          desc: attachment.desc,
+                        })),
+                      },
+                    }),
+                  ) ||
                   (attachmentLines.length > 0
                     ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
                     : ""),

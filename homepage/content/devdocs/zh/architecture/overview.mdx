@@ -1,0 +1,46 @@
+---
+title: 工作区架构总览
+description: 仓库级目录结构、构建职责与文档边界说明
+---
+
+# 工作区架构总览
+
+这个仓库围绕一个核心 runtime package 展开，再向外分出多个产品面。
+
+## 主要工作区
+
+- `packages/downcity/`：核心 runtime package，包含 CLI 入口、console 进程、agent runtime、service 体系、plugin 体系与 HTTP 路由
+- `console-ui/`：浏览器里的控制台前端
+- `chrome-extension/`：把网页上下文送入 agent 的浏览器扩展
+- `homepage/`：官网、用户文档 `/docs` 与开发文档 `/devdocs`
+- `docs/`：历史开发草稿，现已整理进 `/devdocs`
+
+## 边界规则
+
+- `/docs` 只写用户向文档
+- `/devdocs` 只写开发者向文档
+- runtime 逻辑放在 `packages/downcity/`
+- 产品界面只消费 runtime API，不复制 runtime 编排逻辑
+
+## 当前统一架构哲学
+
+- `console` 负责全局治理，不负责单个 agent 的业务执行
+- `agent` 负责单项目 runtime，不负责跨项目治理
+- `service` 拥有生命周期和业务工作流
+- `plugin` 是被动扩展层，通过 service 定义的点接入
+- `asset` 只负责底层依赖，不承接业务流程
+
+## 构建关系
+
+```text
+console-ui build -> packages/downcity/public
+chrome-extension build -> chrome-extension/dist
+homepage build -> 官网与文档站
+packages/downcity build -> CLI / runtime package
+```
+
+## 文档维护规则
+
+- 影响用户使用方式的 package 变更，需要更新 `/docs`
+- 架构、实现、设计规范，统一更新 `/devdocs`
+- 历史草稿可以保留在 `<root>/docs`，但持续维护面应转到 `/devdocs`

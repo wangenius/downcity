@@ -14,11 +14,40 @@ description: 说明 console registry 何时写入、runtime 如何执行 service
 ## 2. Runtime 执行
 
 - 一个 agent 进程绑定一个 `rootPath`
-- runtime 组装 services、plugins、capabilities、assets
-- service 在需要时调用 capability
+- runtime 组装 services、plugins、assets
+- plugin 向 service 已定义的扩展点注册 `pipeline / guard / effect / resolve`
+- service 在自己的工作流节点触发这些扩展点
 
 ## 3. Shell 流程
 
-- shell 是会话式，不是一次性 exec
+- shell 现在由独立的 `shellService` 维护状态，而不是由 agent tool 自己直接持有进程表
+- 启动命令会返回 `shell_id`；它和 chat `contextId` 不是同一个东西
+- 长任务期间，agent 应优先使用 `shell_status` / `shell_wait` 查询状态，而不是高频空轮询
 - 默认工作目录是当前项目根目录
 - 子进程会注入 `DC_CTX_*` 环境变量
+- shell 结束后，如果该会话属于真实 chat context，service 会回投一条内部消息到原 chat，再由主 agent 自己回复用户
+
+## 关系图
+
+```mermaid
+flowchart TD
+  A["city agent start"] --> B["start daemon"]
+  B --> C["write debug metadata"]
+  B --> D["upsert console registry"]
+  D --> E["console registry"]
+
+  F["city service / city plugin"] --> G["runtime APIs"]
+  G --> H["runtime dispatcher"]
+  H --> I["service workflow"]
+  I --> J["plugin point dispatch"]
+  J --> K["asset use (optional)"]
+
+  L["agent shell_start"] --> M["shellService"]
+  M --> N["shell_id session"]
+  N --> O["inject DC_CTX_* env"]
+  O --> P["shell subprocess"]
+  P --> Q["shell_status / shell_wait / shell_read"]
+  P --> R["shell exit event"]
+  R --> S["enqueue internal chat message"]
+  S --> T["main agent replies user"]
+```

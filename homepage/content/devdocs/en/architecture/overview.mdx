@@ -1,0 +1,46 @@
+---
+title: Workspace Architecture
+description: Repo-level structure, build responsibilities, and documentation boundaries
+---
+
+# Workspace Architecture
+
+The repository is organized around one runtime package and multiple product surfaces around it.
+
+## Primary Workspaces
+
+- `packages/downcity/`: the runtime package, CLI entry, console process, agent runtime, service system, plugin system, and HTTP routes
+- `console-ui/`: the browser control surface built with Vite + React
+- `chrome-extension/`: the browser extension for sending live page context into agents
+- `homepage/`: the marketing site plus both `/docs` and `/devdocs`
+- `docs/`: historical draft notes that have now been consolidated into `/devdocs`
+
+## Boundary Rules
+
+- `/docs` is user-facing only
+- `/devdocs` is developer-facing only
+- Package runtime logic stays in `packages/downcity/`
+- Product surfaces should consume runtime APIs instead of duplicating runtime logic
+
+## Current Architecture Philosophy
+
+- `console` owns global governance, not per-agent business execution
+- `agent` owns a single-project runtime, not cross-project orchestration
+- `service` owns lifecycle and business workflow
+- `plugin` is a passive extension layer that attaches through service-defined points
+- `asset` owns low-level dependencies, not workflow logic
+
+## Build Relationships
+
+```text
+console-ui build -> packages/downcity/public
+chrome-extension build -> chrome-extension/dist
+homepage build -> standalone docs + marketing site
+packages/downcity build -> CLI/runtime package
+```
+
+## Documentation Policy
+
+- User-impacting package changes should update `/docs`
+- Implementation, architecture, and design rationale should live in `/devdocs`
+- Historical drafts can stay in `<root>/docs`, but `/devdocs` is the maintained surface

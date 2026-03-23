@@ -1,0 +1,41 @@
+---
+title: Chrome Extension Architecture
+description: How the extension captures page context and dispatches work to Downcity
+---
+
+# Chrome Extension Architecture
+
+`chrome-extension/` is the browser-side entry point for pushing live web context into an agent.
+
+## Responsibilities
+
+- capture the current page title and URL
+- extract readable content and convert it to Markdown
+- resolve target agent and chat context
+- dispatch execution requests to the Downcity Console gateway
+
+## Main Modules
+
+- `src/popup/`: popup UI for direct send flow
+- `src/options/`: settings page
+- `src/services/downcityApi.ts`: API boundary for agents, contexts, and task dispatch
+- `src/services/pageMarkdown.ts`: structured content extraction and Markdown generation
+- `src/services/storage.ts`: persisted extension preferences
+- `public/content-script.js`: in-page interaction layer for selected text flow
+
+## Execution Flow
+
+```text
+user action
+  -> popup or content script
+    -> capture page / selection context
+      -> build Markdown attachment
+        -> POST to console gateway
+          -> agent context execution
+```
+
+## Design Notes
+
+- Popup and options are React pages
+- The in-page selection panel still relies on a content script, but its style pipeline is aligned with Tailwind output
+- Request dispatch prefers `sendBeacon` with a `keepalive fetch` fallback so the popup can close immediately after enqueue

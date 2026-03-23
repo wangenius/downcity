@@ -33,7 +33,7 @@ city voice transcribe ./demo.ogg
 ## Notes
 
 - `city voice on` enables the plugin and optionally installs the asset in one step.
-- The voice plugin exposes the `audio.transcribe` capability to chat channels such as Telegram and QQ.
+- The voice plugin attaches to chat-defined voice extension points, so Telegram and QQ voice messages can be transcribed and merged into inbound content.
 - Configuration is persisted to project `ship.json` under `plugins.voice` and `assets["voice.transcriber"]`.
 
 ## Related

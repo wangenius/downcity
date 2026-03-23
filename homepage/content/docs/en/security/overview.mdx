@@ -14,7 +14,7 @@ Downcity security has three layers:
 ## What to watch first
 
 1. Avoid stale `DC_SERVER_HOST/DC_SERVER_PORT` in your shell, or requests may hit the wrong runtime.
-2. Keep high-risk commands in `permissions.exec_command.deny` (for example `rm`).
+2. Keep high-risk commands in `permissions.shell.deny` (for example `rm`).
 3. In production, prefer `DC_MODEL_DB_KEY` from secret management.
 
 ## Recommended reading

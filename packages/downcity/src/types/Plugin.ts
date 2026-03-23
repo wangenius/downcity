@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - Plugin 是运行时增强单元，不维护独立 runtime 状态机。
- * - Plugin 通过 actions / hooks / capabilities / system 声明行为。
+ * - Plugin 通过 actions / hooks / resolves / system 声明行为。
  * - Plugin 只声明依赖哪些 Asset，不直接理解底层资源实现细节。
  */
 
@@ -67,58 +67,6 @@ export interface PluginServiceInvokePort {
 }
 
 /**
- * Capability 调用参数。
- */
-export interface CapabilityInvokeParams {
-  /**
-   * Capability 稳定名称。
-   */
-  capability: string;
-  /**
-   * 调用 payload（可选）。
-   */
-  payload?: JsonValue;
-}
-
-/**
- * Capability 调用结果。
- */
-export interface CapabilityInvokeResult {
-  /**
-   * 调用是否成功。
-   */
-  success: boolean;
-  /**
-   * 结构化返回数据（可选）。
-   */
-  data?: JsonValue;
-  /**
-   * 错误信息（可选）。
-   */
-  error?: string;
-}
-
-/**
- * Capability 调用端口。
- */
-export interface CapabilityPort {
-  /**
-   * 列出全部已注册 Capability 名称。
-   */
-  list(): string[];
-  /**
-   * 判断 Capability 是否已注册。
-   */
-  has(capabilityName: string): boolean;
-  /**
-   * 调用指定 Capability。
-   */
-  invoke(
-    params: CapabilityInvokeParams,
-  ): Promise<CapabilityInvokeResult>;
-}
-
-/**
  * Plugin 运行时概览。
  */
 export interface PluginRuntimeView {
@@ -131,9 +79,21 @@ export interface PluginRuntimeView {
    */
   actions: string[];
   /**
-   * Plugin Capability 名称列表。
+   * Plugin pipeline 点名称列表。
    */
-  capabilities: string[];
+  pipelines: string[];
+  /**
+   * Plugin guard 点名称列表。
+   */
+  guards: string[];
+  /**
+   * Plugin effect 点名称列表。
+   */
+  effects: string[];
+  /**
+   * Plugin resolve 点名称列表。
+   */
+  resolves: string[];
   /**
    * Plugin 依赖 Asset 名称列表。
    */
@@ -199,6 +159,25 @@ export interface PluginPort {
      */
     payload?: JsonValue;
   }): Promise<PluginActionResult<JsonValue>>;
+  /**
+   * 运行 pipeline 点，按顺序链式变换值。
+   */
+  pipeline<T = JsonValue>(pointName: string, value: T): Promise<T>;
+  /**
+   * 运行 guard 点；任一插件抛错即终止。
+   */
+  guard<T = JsonValue>(pointName: string, value: T): Promise<void>;
+  /**
+   * 运行 effect 点；只执行副作用。
+   */
+  effect<T = JsonValue>(pointName: string, value: T): Promise<void>;
+  /**
+   * 运行 resolve 点；要求存在且仅存在一个处理器。
+   */
+  resolve<TInput = JsonValue, TOutput = JsonValue>(
+    pointName: string,
+    value: TInput,
+  ): Promise<TOutput>;
 }
 
 /**
@@ -217,10 +196,6 @@ export interface PluginRuntime extends AssetRuntimeLike {
    * Service 调用端口。
    */
   services: PluginServiceInvokePort;
-  /**
-   * Capability 调用端口。
-   */
-  capabilities: CapabilityPort;
   /**
    * Asset 调用端口。
    */
@@ -264,82 +239,82 @@ export interface PluginRequirements {
 }
 
 /**
- * Plugin Capability 处理器。
+ * Plugin pipeline 处理器。
  */
-export type PluginCapability<
-  TInput extends JsonValue = JsonValue,
-  TOutput extends JsonValue = JsonValue,
+export type PluginPipelineHook<
+  TValue extends JsonValue = JsonValue,
 > = (params: {
   /**
    * 当前插件运行时。
    */
   runtime: PluginRuntime;
   /**
-   * 输入 payload。
+   * 当前值。
    */
-  payload: TInput;
+  value: TValue;
   /**
    * 当前插件名称。
    */
   plugin: string;
-}) => Promise<TOutput> | TOutput;
+}) => Promise<TValue> | TValue;
 
 /**
- * Plugin Capability 映射。
+ * Plugin guard 处理器。
+ *
+ * 关键点（中文）
+ * - 不返回结果；若需阻断流程，直接抛错。
  */
-export type PluginCapabilities = {
-  [capabilityName: string]: PluginCapability<JsonValue, JsonValue>;
-};
-
-/**
- * Plugin 事件型 Hook。
- */
-export type PluginEventHook<T = JsonValue> = (params: {
-  /**
-   * 当前插件运行时。
-   */
+export type PluginGuardHook<TValue extends JsonValue = JsonValue> = (params: {
   runtime: PluginRuntime;
-  /**
-   * 当前值。
-   */
-  value: T;
-  /**
-   * 当前插件名称。
-   */
+  value: TValue;
   plugin: string;
 }) => Promise<void> | void;
 
 /**
- * Plugin 变换型 Hook。
+ * Plugin effect 处理器。
  */
-export type PluginTransformHook<T = JsonValue> = (params: {
-  /**
-   * 当前插件运行时。
-   */
+export type PluginEffectHook<TValue extends JsonValue = JsonValue> = (params: {
   runtime: PluginRuntime;
-  /**
-   * 当前值。
-   */
-  value: T;
-  /**
-   * 当前插件名称。
-   */
+  value: TValue;
   plugin: string;
-}) => Promise<T> | T;
+}) => Promise<void> | void;
+
+/**
+ * Plugin resolve 处理器。
+ */
+export type PluginResolveHook<
+  TInput extends JsonValue = JsonValue,
+  TOutput extends JsonValue = JsonValue,
+> = (params: {
+  runtime: PluginRuntime;
+  value: TInput;
+  plugin: string;
+}) => Promise<TOutput> | TOutput;
 
 /**
  * Plugin Hook 定义集合。
  */
 export interface PluginHooks {
   /**
-   * 事件型 Hook 映射。
+   * pipeline 点映射。
    */
-  on?: Record<string, PluginEventHook<JsonValue>[]>;
+  pipeline?: Record<string, PluginPipelineHook<JsonValue>[]>;
   /**
-   * 变换型 Hook 映射。
+   * guard 点映射。
    */
-  transform?: Record<string, PluginTransformHook<JsonValue>[]>;
+  guard?: Record<string, PluginGuardHook<JsonValue>[]>;
+  /**
+   * effect 点映射。
+   */
+  effect?: Record<string, PluginEffectHook<JsonValue>[]>;
 }
+
+/**
+ * Plugin resolve 点集合。
+ */
+export type PluginResolves = {
+  [pointName: string]: PluginResolveHook<JsonValue, JsonValue>;
+};
 
 /**
  * Plugin Action 执行结果。
@@ -479,9 +454,9 @@ export interface Plugin {
    */
   hooks?: PluginHooks;
   /**
-   * Plugin Capability 集合（可选）。
+   * Plugin resolve 点集合（可选）。
    */
-  capabilities?: PluginCapabilities;
+  resolves?: PluginResolves;
   /**
    * Plugin system 文本构建器（可选）。
    */

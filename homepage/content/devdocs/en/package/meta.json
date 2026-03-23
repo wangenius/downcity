@@ -1,0 +1,8 @@
+{
+  "title": "Package",
+  "pages": [
+    "runtime-and-services",
+    "module-breakdown",
+    "plugin-migration"
+  ]
+}

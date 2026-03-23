@@ -59,7 +59,7 @@ sequenceDiagram
 2. 再叠加 `<agent>/.env`。
 3. 同名键冲突时 `.env` 覆盖 DB 值。
 
-### 3.2 `exec_command` shell 注入优先级
+### 3.2 `shell` 会话注入优先级
 
 1. shell 子进程先继承宿主进程的基础 `process.env`。
 2. 再叠加 Console 全局 env（`scope=global`）。
@@ -80,7 +80,7 @@ sequenceDiagram
 
 1. 项目层 `ship.json` 的 `${ENV_KEY}` 解析。
 2. agent runtime 进程 env 注入（`env_entries` 中的 agent scope env + `.env`）。
-3. `exec_command` shell 子进程注入（global env + 当前 agent runtime env + `DC_CTX_*`）。
+3. `shell` 子进程注入（global env + 当前 agent runtime env + `DC_CTX_*`）。
 4. 少数 service auth 的本地兜底读取。
 
 ### 4.2 不会读取项目 `.env`

@@ -1,148 +1,12 @@
 /**
- * Shell 辅助函数集合。
+ * Shell 工具辅助函数。
  *
  * 关键点（中文）
- * - 仅包含可复用的辅助逻辑（预算、输出处理、环境变量、等待策略）。
- * - 不持有全局会话 map，避免与执行流程状态耦合。
+ * - shell 会话生命周期已经迁移到 `shellService`。
+ * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
  */
 
-import path from "path";
-import { randomBytes } from "crypto";
 import { requestContext } from "@agent/context/manager/RequestContext.js";
-import type {
-  ShellContext,
-  ShellOutputPage,
-  OutputLimits,
-} from "@agent/types/Shell.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
-
-export const DEFAULT_MAX_OUTPUT_CHARS = 12_000;
-export const DEFAULT_MAX_OUTPUT_LINES = 200;
-export const APPROX_CHARS_PER_TOKEN = 4;
-
-export const DEFAULT_SHELL_COMMAND_YIELD_MS = 10_000;
-export const DEFAULT_WRITE_STDIN_YIELD_MS = 250;
-export const MIN_EMPTY_WRITE_STDIN_YIELD_MS = 5_000;
-export const MIN_YIELD_TIME_MS = 50;
-export const MAX_YIELD_TIME_MS = 30_000;
-
-/**
- * 会话缓存上限。
- *
- * 关键点（中文）
- * - 缓存的是“尚未被读取”的输出。
- * - 超出上限时丢弃最旧部分，保证进程不会无限吃内存。
- */
-export const MAX_CONTEXT_PENDING_CHARS = 1_000_000;
-
-export function clampYieldTimeMs(
-  value: number | undefined,
-  fallback: number,
-): number {
-  const n =
-    typeof value === "number" && Number.isFinite(value)
-      ? Math.floor(value)
-      : fallback;
-  return Math.min(MAX_YIELD_TIME_MS, Math.max(MIN_YIELD_TIME_MS, n));
-}
-
-export function generateChunkId(): string {
-  return randomBytes(3).toString("hex");
-}
-
-export function approxTokenCountFromChars(chars: number): number {
-  if (chars <= 0) return 0;
-  return Math.ceil(chars / APPROX_CHARS_PER_TOKEN);
-}
-
-function normalizeOutputChunk(raw: string): string {
-  if (!raw) return "";
-  return raw
-    .replace(/\r\n/g, "\n")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
-}
-
-/**
- * 对 `city chat send` 命令做前置安全校验。
- *
- * 关键点（中文）
- * - 历史上模型会把长文本直接拼进多行 shell 命令，导致后续行被 zsh 当作独立命令解析。
- * - 这会出现“前面已发送，后面才报错”的副作用（用户看到重复/异常消息）。
- * - 默认建议多行正文通过 `--stdin`（here-doc/pipe）或 `--text-file` 传入。
- * - 兼容需求：若显式使用 `--text`，允许命令中包含真实换行。
- */
-export function validateChatSendCommand(cmd: string): string | null {
-  const source = String(cmd ?? "");
-  if (!/\b(?:city|downcity)\s+chat\s+send\b/.test(source)) return null;
-  if (!/[\r\n]/.test(source)) return null;
-  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) return null;
-  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) return null;
-  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source))
-    return null;
-  return [
-    "Unsafe `city chat send` command: real newlines are not allowed.",
-    "If your message is multi-line, use `city chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
-  ].join(" ");
-}
-
-/**
- * 解析输出预算。
- *
- * 配置来源（中文）
- * - `ship.json.permissions.exec_command.maxOutputChars/maxOutputLines`
- * - 工具入参 `max_output_tokens` 会进一步收紧 maxChars
- */
-export function resolveOutputLimits(
-  config: ShipConfig,
-  maxOutputTokens?: number,
-): OutputLimits {
-  const cfg = config.permissions?.exec_command;
-  const cfgObject = cfg && typeof cfg === "object" ? cfg : undefined;
-  const maxCharsRaw = cfgObject?.maxOutputChars;
-  const maxLinesRaw = cfgObject?.maxOutputLines;
-
-  const maxChars =
-    typeof maxCharsRaw === "number" &&
-    Number.isFinite(maxCharsRaw) &&
-    maxCharsRaw >= 500
-      ? Math.floor(maxCharsRaw)
-      : DEFAULT_MAX_OUTPUT_CHARS;
-
-  const maxLines =
-    typeof maxLinesRaw === "number" &&
-    Number.isFinite(maxLinesRaw) &&
-    maxLinesRaw >= 20
-      ? Math.floor(maxLinesRaw)
-      : DEFAULT_MAX_OUTPUT_LINES;
-
-  const byTokens =
-    typeof maxOutputTokens === "number" &&
-    Number.isFinite(maxOutputTokens) &&
-    maxOutputTokens > 0
-      ? Math.max(200, Math.floor(maxOutputTokens * APPROX_CHARS_PER_TOKEN))
-      : null;
-
-  return {
-    maxChars: byTokens == null ? maxChars : Math.min(maxChars, byTokens),
-    maxLines,
-  };
-}
-
-/**
- * 解析命令工作目录。
- *
- * - 空值回退 projectRoot；相对路径按 projectRoot 解析。
- */
-export function resolveShellWorkdir(
-  projectRoot: string,
-  workdir?: string,
-): string {
-  const trimmed = String(workdir ?? "").trim();
-  if (!trimmed) return projectRoot;
-  return path.isAbsolute(trimmed)
-    ? trimmed
-    : path.resolve(projectRoot, trimmed);
-}
 
 function setEnvString(
   env: NodeJS.ProcessEnv,
@@ -155,13 +19,6 @@ function setEnvString(
   env[key] = trimmed;
 }
 
-/**
- * 批量叠加 env map。
- *
- * 关键点（中文）
- * - 空 key / 空 value 直接忽略，避免把无效值写进子进程环境。
- * - 后写入的 map 会覆盖前面的同名键。
- */
 function applyEnvMap(
   env: NodeJS.ProcessEnv,
   entries?: Record<string, string>,
@@ -175,206 +32,50 @@ function applyEnvMap(
 }
 
 /**
- * 构建子进程环境变量。
+ * 对 `city chat send` 命令做前置安全校验。
  *
  * 关键点（中文）
- * - 把 context/request 上下文字段透传给命令执行环境。
+ * - 历史上模型会把长文本直接拼进多行 shell 命令，导致后续行被 zsh 当作独立命令解析。
+ * - 这会出现“前面已发送，后面才报错”的副作用。
+ * - 默认建议多行正文通过 `--stdin`、`--text-file` 或显式 `--text` 传入。
+ */
+export function validateChatSendCommand(cmd: string): string | null {
+  const source = String(cmd ?? "");
+  if (!/\b(?:city|downcity)\s+chat\s+send\b/.test(source)) return null;
+  if (!/[\r\n]/.test(source)) return null;
+  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--stdin(?:\s|$)/.test(source)) {
+    return null;
+  }
+  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text(?:\s|$)/.test(source)) {
+    return null;
+  }
+  if (/\b(?:city|downcity)\s+chat\s+send\b[\s\S]*\s--text-file(?:\s|$)/.test(source)) {
+    return null;
+  }
+  return [
+    "Unsafe `city chat send` command: real newlines are not allowed.",
+    "If your message is multi-line, use `city chat send --stdin` (with heredoc/pipe), `--text-file`, or explicit `--text`.",
+  ].join(" ");
+}
+
+/**
+ * 构建 shell 子进程环境变量。
+ *
+ * 关键点（中文）
+ * - 当前仍用于 shell tool/service 与相关测试。
+ * - 优先级：显式注入 > 当前请求上下文 `DC_CTX_*` > 宿主进程环境。
  */
 export function buildShellContextEnv(
   injected?: Record<string, string>,
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
   const contextCtx = requestContext.getStore();
-  // 关键点（中文）：显式参数作为最终覆盖层，确保 `exec_command` 调用点可精准控制注入结果。
-  applyEnvMap(env, injected);
 
+  applyEnvMap(env, injected);
   setEnvString(env, "DC_CTX_CONTEXT_ID", contextCtx?.contextId);
   setEnvString(env, "DC_CTX_REQUEST_ID", contextCtx?.requestId);
-
-  // 关键点（中文）：把当前 server 地址透传给子进程，便于 `city message/skill/task` 自动命中本地服务。
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
   setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
 
   return env;
-}
-
-export function touchContext(context: ShellContext): void {
-  context.lastActiveAt = Date.now();
-}
-
-export function notifyContextWaiters(context: ShellContext): void {
-  const waiters = Array.from(context.waiters);
-  context.waiters.clear();
-  for (const resolve of waiters) resolve();
-}
-
-/**
- * 追加进程输出到会话缓冲区。
- *
- * - 达到上限后截断最旧内容，并累计 `droppedChars`。
- */
-export function appendContextOutput(context: ShellContext, raw: string): void {
-  const chunk = normalizeOutputChunk(raw);
-  if (!chunk) return;
-
-  context.pendingOutput += chunk;
-
-  if (context.pendingOutput.length > MAX_CONTEXT_PENDING_CHARS) {
-    const overflow = context.pendingOutput.length - MAX_CONTEXT_PENDING_CHARS;
-    context.pendingOutput = context.pendingOutput.slice(overflow);
-    context.droppedChars += overflow;
-  }
-
-  touchContext(context);
-  notifyContextWaiters(context);
-}
-
-function splitOutputPage(
-  text: string,
-  limits: OutputLimits,
-): {
-  head: string;
-  tail: string;
-} {
-  if (!text) return { head: "", tail: "" };
-
-  const byChar = text.slice(0, Math.min(text.length, limits.maxChars));
-  let head = byChar;
-
-  if (limits.maxLines > 0) {
-    const lines = byChar.split("\n");
-    if (lines.length > limits.maxLines) {
-      head = lines.slice(0, limits.maxLines).join("\n");
-    }
-  }
-
-  return {
-    head,
-    tail: text.slice(head.length),
-  };
-}
-
-/**
- * 消费一页输出并更新会话缓冲区。
- */
-export function consumeContextOutputPage(
-  context: ShellContext,
-  limits: OutputLimits,
-): ShellOutputPage {
-  const text = context.pendingOutput;
-  const originalChars = text.length;
-  const originalLines = text ? text.split("\n").length : 0;
-  const droppedChars = context.droppedChars;
-  context.droppedChars = 0;
-
-  if (!text) {
-    return {
-      output: "",
-      hasMoreOutput: false,
-      originalChars,
-      originalLines,
-      droppedChars,
-    };
-  }
-
-  const { head, tail } = splitOutputPage(text, limits);
-  context.pendingOutput = tail;
-  touchContext(context);
-
-  return {
-    output: head,
-    hasMoreOutput: tail.length > 0,
-    originalChars,
-    originalLines,
-    droppedChars,
-  };
-}
-
-/**
- * 等待会话信号（输出到达或进程退出）。
- */
-async function waitForContextSignal(
-  context: ShellContext,
-  timeoutMs: number,
-): Promise<boolean> {
-  if (timeoutMs <= 0) return false;
-
-  return await new Promise<boolean>((resolve) => {
-    let resolved = false;
-
-    const onSignal = () => {
-      if (resolved) return;
-      resolved = true;
-      clearTimeout(timer);
-      context.waiters.delete(onSignal);
-      resolve(true);
-    };
-
-    const timer = setTimeout(() => {
-      if (resolved) return;
-      resolved = true;
-      context.waiters.delete(onSignal);
-      resolve(false);
-    }, timeoutMs);
-
-    context.waiters.add(onSignal);
-  });
-}
-
-/**
- * 在一个 yield 窗口内收集输出。
- *
- * 关键点（中文）
- * - 若已经有输出，会再短等 30ms 抓取“紧随其后的块”，减少碎片化。
- */
-export async function collectOutputUntilDeadline(
-  context: ShellContext,
-  yieldTimeMs: number,
-): Promise<void> {
-  const deadline = Date.now() + yieldTimeMs;
-
-  while (Date.now() < deadline) {
-    if (context.pendingOutput.length > 0) {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) return;
-      const gotMore = await waitForContextSignal(
-        context,
-        Math.min(30, remaining),
-      );
-      if (!gotMore) return;
-      continue;
-    }
-
-    if (context.exited) return;
-
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) return;
-    const signaled = await waitForContextSignal(context, remaining);
-    if (!signaled) return;
-  }
-}
-
-/**
- * 向会话 stdin 写入输入。
- */
-export async function writeContextStdin(
-  context: ShellContext,
-  chars: string,
-): Promise<void> {
-  if (!chars) return;
-  if (context.exited) throw new Error(`Context ${context.id} already exited`);
-  if (!context.child.stdin.writable)
-    throw new Error(`Context ${context.id} stdin is closed`);
-
-  await new Promise<void>((resolve, reject) => {
-    context.child.stdin.write(chars, (err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve();
-    });
-  });
-
-  touchContext(context);
 }

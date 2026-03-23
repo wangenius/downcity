@@ -23,6 +23,7 @@ import { ContextAgentDispatcher } from "@agent/context/context-agent/ContextAgen
 export class ContextManager {
   private readonly dispatcher: ContextAgentDispatcher;
   private readonly runAfterContextUpdated?: (contextId: string) => Promise<void>;
+  private readonly executingContextIds: Set<string> = new Set();
 
   /**
    * 构造函数：装配组件。
@@ -68,13 +69,41 @@ export class ContextManager {
     const query = String(params.query || "").trim();
     const agent = this.dispatcher.getAgent(contextId);
     const requestContext = params.requestContext || {};
-    return await withRequestContext(
-      {
-        contextId,
-        ...requestContext,
-      },
-      () => agent.run({ query }),
-    );
+    this.executingContextIds.add(contextId);
+    try {
+      return await withRequestContext(
+        {
+          contextId,
+          ...requestContext,
+        },
+        () => agent.run({ query }),
+      );
+    } finally {
+      this.executingContextIds.delete(contextId);
+    }
+  }
+
+  /**
+   * 判断指定 context 是否正在执行。
+   */
+  isContextExecuting(contextId: string): boolean {
+    const key = String(contextId || "").trim();
+    if (!key) return false;
+    return this.executingContextIds.has(key);
+  }
+
+  /**
+   * 返回当前正在执行的 context id 列表。
+   */
+  listExecutingContextIds(): string[] {
+    return [...this.executingContextIds];
+  }
+
+  /**
+   * 返回当前执行中的 context 数量。
+   */
+  getExecutingContextCount(): number {
+    return this.executingContextIds.size;
   }
 
   /**
@@ -103,7 +132,8 @@ export class ContextManager {
    */
   async appendUserMessage(params: {
     contextId: string;
-    text: string;
+    message?: ContextMessageV1 | null;
+    text?: string;
     requestId?: string;
     extra?: JsonObject;
   }): Promise<void> {
@@ -112,8 +142,18 @@ export class ContextManager {
 
     try {
       const persistor = this.dispatcher.getPersistor(contextId);
+      const message = params.message;
+      if (message && typeof message === "object") {
+        await persistor.append(message);
+        void this.afterContextUpdatedAsync(contextId);
+        return;
+      }
+
+      const fallbackText = String(params.text || "").trim();
+      if (!fallbackText) return;
+
       const msg = persistor.userText({
-        text: params.text,
+        text: fallbackText,
         metadata: {
           contextId,
           requestId: params.requestId,

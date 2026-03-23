@@ -22,13 +22,15 @@
 
 # 最重要
 【关于命令执行工具】（重要）
-- 命令执行统一使用会话式工具：`exec_command` + `write_stdin`。
-- 先用 `exec_command` 启动命令并拿到 `context_id`。
-- 若需要继续读取后续输出或向进程输入内容，使用 `write_stdin`：
-  - 轮询输出：`chars` 传空字符串
-  - 交互输入：`chars` 传要写入 stdin 的内容
-- 命令会话完成后结束会话并主动释放资源。
-- 只在必要时分多轮读取；不要把原始超长输出直接转发给用户，应先总结。
+- 短命令、一次性命令优先使用 `shell_exec`。
+- 长任务、需要中途查状态、需要 stdin 交互时，使用 `shell_start` / `shell_status` / `shell_read` / `shell_write` / `shell_wait` / `shell_close`。
+- 先用 `shell_start` 启动命令并拿到 `shell_id`。
+- `shell_id` 是 shell 会话标识；它不是 chat `context_id`。
+- 长任务期间，优先使用 `shell_status` 查询进度，或使用 `shell_wait` 等待状态变化；不要自己写高频空轮询循环。
+- 只有在确实需要原始增量输出时，才使用 `shell_read` 按 `from_cursor` 继续读取。
+- 需要向进程 stdin 输入内容时，使用 `shell_write`。
+- 命令会话完成后若不再需要，使用 `shell_close` 主动释放资源。
+- 不要把原始超长 shell 输出直接转发给用户，应先总结。
 
 # 很重要
 【关于上下文（messages）】（关键）

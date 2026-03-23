@@ -93,7 +93,10 @@ Example:
     {
       "name": "voice",
       "actions": ["status", "on", "off"],
-      "capabilities": ["audio.transcribe"],
+      "pipelines": ["chat.augmentInbound"],
+      "guards": [],
+      "effects": [],
+      "resolves": [],
       "requiredAssets": ["voice.transcriber"],
       "hasSystem": true,
       "hasAvailability": true,

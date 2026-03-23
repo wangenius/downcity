@@ -45,6 +45,7 @@ export function Navbar() {
   const homePath = isZh ? "/zh" : "/";
   const startPath = isZh ? "/zh/start" : "/start";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
+  const devdocsPath = isZh ? "/zh/devdocs" : "/en/devdocs";
   const productBasePath = isZh ? "/zh/product" : "/product";
   const communityBasePath = isZh ? "/zh/community" : "/community";
   const whitepaperPath = isZh ? "/zh/whitepaper" : "/whitepaper";
@@ -86,11 +87,12 @@ export function Navbar() {
   const docsGroup = {
     kind: "group",
     label: t("nav.docs"),
-    activePaths: [docsPath],
+    activePaths: [docsPath, devdocsPath],
     items: [
       { label: t("nav.docs"), description: isZh ? "完整文档目录" : "Full documentation index", path: docsPath },
       { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "从最短路径开始" : "Start with the shortest path", path: docsQuickstartPath },
       { label: "CLI", description: isZh ? "命令入口与参数" : "Command entry points and flags", path: docsCliPath },
+      { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
     ],
   } as const;
 

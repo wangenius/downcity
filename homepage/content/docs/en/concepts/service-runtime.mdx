@@ -1,44 +1,47 @@
 ---
 title: Service Runtime
-description: What Service is, where it runs, and how it works with plugins and capabilities
+description: What a service is, where it runs, and how it works with plugins and assets
 ---
 
 # Service Runtime
 
-Services are the runtime module type for core business workflows.
+A service is the core workflow module in Downcity.
 
-Typical built-in services include:
+Typical built-in services:
 
 - `chat`
-- `skill`
 - `task`
 - `memory`
+- `skills`
+- `shell`
 
-## What Service Owns
+## What a Service Should Own
 
 - user-facing workflows
 - runtime orchestration
 - context-aware execution
-- stable service commands and actions
+- stable service actions
+- the extension points that plugins may attach to
 
-## What Service Does Not Own
+## What a Service Should Not Own
 
-- install/check/config of external dependencies
+- install/check/switch logic for low-level dependencies
 - plugin-private implementation details
-- reusable optional enhancements that should be decoupled
+- enhancement logic that can stay decoupled
 
-## Recommended Interaction Model
+## Recommended Collaboration Model
 
-- service -> capability
-- capability -> plugin implementation
-- plugin -> asset
+- service -> triggers its own plugin points
+- plugin -> implements those points
+- asset -> provides plugin dependencies
 
-For example, `chat` does not need to know voice model details. It invokes `audio.transcribe`, and the voice plugin plus its asset handle the rest.
+For example, `chat` does not need to know transcription model details.  
+It only triggers its own voice-related extension points while processing audio attachments. The `voice` plugin implements them, and assets provide the underlying dependency.
 
-## Typical Commands
+## Why This Matters
 
-```bash
-city service list
-city service status chat
-city service command chat status
-```
+- workflows stay coherent
+- plugins stay passive and focused
+- dependency management stays separate from business orchestration
+
+For command execution, the agent also no longer owns shell processes directly. `shellService` manages `shell_id` sessions instead.

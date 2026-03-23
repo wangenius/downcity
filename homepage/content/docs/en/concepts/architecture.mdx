@@ -1,48 +1,57 @@
 ---
 title: Architecture Overview
-description: "Core architecture layers in Downcity: console, agent, service, plugin, capability, and asset"
+description: "Core architecture layers in Downcity: console, agent, service, plugin, and asset"
 ---
 
 # Architecture Overview
 
-Downcity is easiest to reason about with two top-level trunks:
+Downcity is easiest to understand through two top-level trunks:
 
-- `console`: global control and operations plane
-- `agent`: project runtime execution plane
+- `console`: the global control and operations plane
+- `agent`: the per-project execution plane
 
-Inside the agent runtime, `service`, `plugin`, `capability`, and `asset` form the execution layer.
+Inside an agent runtime, the execution layer is built from:
+
+- `service`: workflow owners
+- `plugin`: passive extensions
+- `asset`: dependency resources
 
 ## Layered Structure
 
-1. **Console Layer (global)**
-- Commands: `city console ...`, `city console config ...`
-- Responsibility: process management, registry, model pool, global storage
+1. **Console Layer**
+- owns registry, model pool, global config, and the UI gateway
 
-2. **Agent Layer (project)**
-- Commands: `city agent create/start/status/restart ...`
-- Responsibility: load one project, own one runtime, persist traces in `.ship/`
+2. **Agent Layer**
+- loads one project, owns one runtime, and persists traces into `.ship/`
 
-3. **Service Layer (core workflows)**
-- Stable business domains such as `chat`, `skill`, `task`, `memory`
-- Own orchestration and user-facing workflows
+3. **Service Layer**
+- domains like `chat`, `task`, `memory`, and `skills`
+- own lifecycle, workflow, and stable actions
 
-4. **Plugin Layer (optional enhancements)**
-- Optional modules such as `voice`
-- Expose actions, capabilities, hooks, and system prompt fragments
+4. **Plugin Layer**
+- modules like `voice` and `auth`
+- attach through extension points defined by services
+- augment, validate, transform, or resolve behavior without owning a lifecycle
 
-5. **Capability + Asset Layer**
-- `capability`: stable runtime contract such as `audio.transcribe`
-- `asset`: installable dependency or runtime resource required by plugins
+5. **Asset Layer**
+- installable or configurable dependencies behind plugins
 
-## Architecture Rules
+## The Most Important Boundary
 
-- Separate control from execution: `console` governs, `agent` executes.
-- Separate workflow from enhancement: `service` owns business flow, `plugin` augments it.
-- Separate contract from implementation: services call capabilities, not plugin internals.
-- Separate behavior from dependency: plugin declares required assets, asset owns install/check/config/use.
+- `service` actively participates in the agent execution cycle
+- `plugin` does not run on its own and only participates when a service triggers it
 
-## Read Next
+So:
 
-- [Architecture Logic Map](/en/docs/concepts/logic-map)
-- [Runtime Relationship & Process](/en/docs/concepts/runtime-relationship-and-process)
-- [Service Runtime](/en/docs/concepts/service-runtime)
+- main workflows belong in services
+- extensions belong in plugins
+- dependencies belong in assets
+
+## A Concrete Example
+
+In chat flows:
+
+- the `chat` service owns inbound messages, queueing, execution, and replies
+- the `voice` plugin adds transcription behavior at voice-related points
+- the `auth` plugin adds authorization and role resolution
+- the `voice.transcriber` asset provides the real dependency

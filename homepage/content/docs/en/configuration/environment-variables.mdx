@@ -59,14 +59,14 @@ sequenceDiagram
 2. `<agent>/.env` overlays it.
 3. `.env` wins on key conflicts.
 
-### 3.2 `exec_command` shell injection
+### 3.2 `shell` session injection
 
 1. A shell subprocess starts from the host process `process.env`.
 2. Console shared env (`scope=global`) overlays that base.
 3. Current agent runtime env (`agent-scope DB env + <agent>/.env`) overlays shared env.
 4. Request-scoped context vars such as `DC_CTX_*` are injected last.
 
-So key precedence inside `exec_command` shell sessions is: `DC_CTX_*` > agent runtime env > global env > host process env.
+So key precedence inside `shell` sessions is: `DC_CTX_*` > agent runtime env > global env > host process env.
 
 ### 3.3 Channel credential resolution
 
@@ -80,7 +80,7 @@ So key precedence inside `exec_command` shell sessions is: `DC_CTX_*` > agent ru
 
 1. Project-layer `${ENV_KEY}` resolution.
 2. Agent runtime process env injection (`agent env in env_entries + .env`).
-3. `exec_command` shell subprocess injection (global env + current agent runtime env + `DC_CTX_*`).
+3. `shell` subprocess injection (global env + current agent runtime env + `DC_CTX_*`).
 4. Optional fallback paths in some service auth helpers.
 
 ### 4.2 Does not read project `.env`

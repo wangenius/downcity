@@ -111,6 +111,11 @@ export interface DashboardContextSummary {
    * 线程 id。
    */
   threadId?: number;
+
+  /**
+   * 当前 context 是否正在执行。
+   */
+  executing?: boolean;
 }
 
 /**

@@ -2,80 +2,54 @@
  * Shell 工具类型定义。
  *
  * 关键点（中文）
- * - 统一沉淀 `exec_command/write_stdin/close_shell` 相关类型。
- * - 保证工具实现文件聚焦流程逻辑，避免类型噪音。
+ * - 统一沉淀 `shell_start/shell_status/shell_read/shell_write/shell_wait/shell_close` 类型。
+ * - `shell_id` 与 chat `contextId` 严格分离，避免语义混淆。
  */
 
-import type { ChildProcessWithoutNullStreams } from "child_process";
-
-export type OutputLimits = {
-  maxChars: number;
-  maxLines: number;
-};
-
-export type ShellContext = {
-  id: number;
-  command: string;
-  cwd: string;
-  child: ChildProcessWithoutNullStreams;
-  pendingOutput: string;
-  droppedChars: number;
-  exited: boolean;
-  exitCode: number | null;
-  waiters: Set<() => void>;
-  cleanupTimer: NodeJS.Timeout | null;
-  createdAt: number;
-  lastActiveAt: number;
-};
-
-export type ShellOutputPage = {
-  output: string;
-  hasMoreOutput: boolean;
-  originalChars: number;
-  originalLines: number;
-  droppedChars: number;
-};
-
-export type CreateShellContextInput = {
-  command: string;
-  cwd: string;
-  /**
-   * shell 子进程需要显式注入的环境变量。
-   *
-   * 关键点（中文）
-   * - 由 runtime 在启动 `exec_command` 时按作用域合并后传入。
-   * - 仅影响当前 shell 会话，不回写全局 `process.env`。
-   */
-  env?: Record<string, string>;
-  shellPath?: string;
-  login?: boolean;
-};
-
-export type CloseShellContextResult = {
-  contextId: number;
-  wasRunning: boolean;
-  pendingOutputChars: number;
-  droppedChars: number;
-  exitCode: number | null;
-};
-
-export type ShellCommandInput = {
+export type ShellStartInput = {
   cmd: string;
   workdir?: string;
   shell?: string;
   login?: boolean;
-  yield_time_ms?: number;
+  inline_wait_ms?: number;
+  max_output_tokens?: number;
+  auto_notify_on_exit?: boolean;
+};
+
+export type ShellExecInput = {
+  cmd: string;
+  workdir?: string;
+  shell?: string;
+  login?: boolean;
+  timeout_ms?: number;
+  max_output_tokens?: number;
+};
+
+export type ShellStatusInput = {
+  shell_id?: string;
+  cmd?: string;
+};
+
+export type ShellReadInput = {
+  shell_id: string;
+  from_cursor?: number;
   max_output_tokens?: number;
 };
 
 export type ShellWriteInput = {
-  context_id: number;
-  chars?: string;
-  yield_time_ms?: number;
+  shell_id: string;
+  chars: string;
+};
+
+export type ShellWaitInput = {
+  shell_id: string;
+  after_version?: number;
+  from_cursor?: number;
+  timeout_ms?: number;
   max_output_tokens?: number;
 };
 
 export type ShellCloseInput = {
-  context_id: number;
+  shell_id: string;
   force?: boolean;
 };

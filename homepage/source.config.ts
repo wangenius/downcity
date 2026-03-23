@@ -13,6 +13,10 @@ export const docs = defineDocs({
   dir: "content/docs",
 });
 
+export const devdocs = defineDocs({
+  dir: "content/devdocs",
+});
+
 export default defineConfig({
   mdxOptions: {
     remarkPlugins: (v) => [

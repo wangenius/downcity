@@ -60,17 +60,6 @@ function createRuntime() {
           return { success: false, error: "unused" };
         },
       },
-      capabilities: {
-        list() {
-          return [];
-        },
-        has() {
-          return false;
-        },
-        async invoke() {
-          return { success: false, error: "unused" };
-        },
-      },
       assets: {
         list() {
           return [];
@@ -132,6 +121,11 @@ function createRuntime() {
             message: "unused",
           };
         },
+        async pipeline(_pointName, value) {
+          return value;
+        },
+        async guard() {},
+        async effect() {},
       },
     },
   };

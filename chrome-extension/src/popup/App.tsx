@@ -52,7 +52,6 @@ import {
 import { PopupSelect } from "./PopupSelect";
 
 export function App() {
-  const formRef = useRef<HTMLFormElement | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -317,10 +316,8 @@ export function App() {
     linkedChannelKey,
   ]);
 
-  const onSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-
+  const submitTask = useCallback(
+    async () => {
       const agentId = String(settings.agentId || "").trim();
       const chatKey = String(settings.chatKey || "").trim();
       const taskPrompt = String(settings.taskPrompt || "").trim();
@@ -432,6 +429,14 @@ export function App() {
     [refreshPageHistory, selectedAgent?.running, settings, showToast, tab],
   );
 
+  const onSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void submitTask();
+    },
+    [submitTask],
+  );
+
   const cycleAgent = useCallback(
     (direction: -1 | 1) => {
       if (agents.length < 2) return;
@@ -459,10 +464,11 @@ export function App() {
       if (event.key !== "Enter") return;
       if (!event.metaKey && !event.ctrlKey) return;
       event.preventDefault();
+      event.stopPropagation();
       if (isSubmitting) return;
-      formRef.current?.requestSubmit();
+      void submitTask();
     },
-    [isSubmitting],
+    [isSubmitting, submitTask],
   );
 
   return (
@@ -523,7 +529,7 @@ export function App() {
           </button>
         </header>
 
-        <form ref={formRef} className="flex flex-col gap-3" onSubmit={onSubmit}>
+        <form className="flex flex-col gap-3" onSubmit={onSubmit}>
           <textarea
             className="min-h-[164px] w-full resize-none rounded-[11px] border border-border bg-muted px-3 py-3 text-[13px] leading-[1.55] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
             rows={7}

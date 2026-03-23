@@ -7,7 +7,6 @@
  */
 
 import type { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
-import type { CapabilityRegistry } from "@/console/plugin/CapabilityRegistry.js";
 import type { HookRegistry } from "@/console/plugin/HookRegistry.js";
 import type {
   Plugin,
@@ -26,8 +25,6 @@ type RuntimeResolver = () => PluginRuntime;
 export class PluginRegistry {
   private readonly runtimeResolver: RuntimeResolver;
 
-  private readonly capabilityRegistry: CapabilityRegistry;
-
   private readonly hookRegistry: HookRegistry;
 
   private readonly assetRegistry: AssetRegistry;
@@ -36,12 +33,10 @@ export class PluginRegistry {
 
   constructor(params: {
     runtimeResolver: RuntimeResolver;
-    capabilityRegistry: CapabilityRegistry;
     hookRegistry: HookRegistry;
     assetRegistry: AssetRegistry;
   }) {
     this.runtimeResolver = params.runtimeResolver;
-    this.capabilityRegistry = params.capabilityRegistry;
     this.hookRegistry = params.hookRegistry;
     this.assetRegistry = params.assetRegistry;
   }
@@ -59,25 +54,64 @@ export class PluginRegistry {
     }
     this.plugins.set(key, plugin);
 
-    for (const [capabilityName, handler] of Object.entries(
-      plugin.capabilities || {},
+    for (const [hookName, handlers] of Object.entries(
+      plugin.hooks?.pipeline || {},
     )) {
-      this.capabilityRegistry.register(capabilityName, key, handler);
-    }
-
-    for (const [hookName, handlers] of Object.entries(plugin.hooks?.on || {})) {
       for (const handler of handlers) {
-        this.hookRegistry.on(hookName, key, handler);
+        this.hookRegistry.pipeline(hookName, key, handler);
       }
     }
 
     for (const [hookName, handlers] of Object.entries(
-      plugin.hooks?.transform || {},
+      plugin.hooks?.guard || {},
     )) {
       for (const handler of handlers) {
-        this.hookRegistry.transform(hookName, key, handler);
+        this.hookRegistry.guard(hookName, key, handler);
       }
     }
+
+    for (const [hookName, handlers] of Object.entries(
+      plugin.hooks?.effect || {},
+    )) {
+      for (const handler of handlers) {
+        this.hookRegistry.effect(hookName, key, handler);
+      }
+    }
+
+    for (const [pointName, handler] of Object.entries(plugin.resolves || {})) {
+      this.hookRegistry.resolve(pointName, key, handler);
+    }
+  }
+
+  /**
+   * 运行 pipeline 点。
+   */
+  async pipeline<T = JsonValue>(pointName: string, value: T): Promise<T> {
+    return this.hookRegistry.pipelineValue(pointName, value);
+  }
+
+  /**
+   * 运行 guard 点。
+   */
+  async guard<T = JsonValue>(pointName: string, value: T): Promise<void> {
+    return this.hookRegistry.guardValue(pointName, value);
+  }
+
+  /**
+   * 运行 effect 点。
+   */
+  async effect<T = JsonValue>(pointName: string, value: T): Promise<void> {
+    return this.hookRegistry.effectValue(pointName, value);
+  }
+
+  /**
+   * 运行 resolve 点。
+   */
+  async resolve<TInput = JsonValue, TOutput = JsonValue>(
+    pointName: string,
+    value: TInput,
+  ): Promise<TOutput> {
+    return this.hookRegistry.resolveValue<TInput, TOutput>(pointName, value);
   }
 
   /**
@@ -97,7 +131,16 @@ export class PluginRegistry {
         actions: Object.keys(plugin.actions || {}).sort((a, b) =>
           a.localeCompare(b),
         ),
-        capabilities: Object.keys(plugin.capabilities || {}).sort((a, b) =>
+        pipelines: Object.keys(plugin.hooks?.pipeline || {}).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+        guards: Object.keys(plugin.hooks?.guard || {}).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+        effects: Object.keys(plugin.hooks?.effect || {}).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+        resolves: Object.keys(plugin.resolves || {}).sort((a, b) =>
           a.localeCompare(b),
         ),
         requiredAssets: Array.isArray(plugin.requirements?.assets)

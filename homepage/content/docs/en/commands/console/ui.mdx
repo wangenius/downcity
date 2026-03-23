@@ -43,6 +43,7 @@ city console ui [action] [options]
 - Global / Console Runtime shows console runtime details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
 - Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).
+- Agent / Overview now also shows whether the current agent has any executing contexts, plus the executing context count.
 - Agent / Authorization is now role-based: manage `role -> permission`, then bind users to roles.
 - Agent / Authorization is stored in console `~/.ship/ship.db`, not written back to project `ship.json` in plaintext.
 - In Agent / Authorization, new users fall back to default roles, and whether a group/channel message is allowed depends on the speaking user's permission group.
@@ -61,6 +62,7 @@ city console ui [action] [options]
 - Context Overview can edit channel parameters directly (for example QQ `appId/appSecret/sandbox`) and auto-reload that channel after save.
 - Chat input is fixed to the built-in `consoleui` channel; UI cannot publish instructions to arbitrary contexts.
 - UI shows grouped `system prompt` composition (static/service/runtime).
+- Context Overview and Context Workspace now show whether a context is currently executing (`executing` / `idle`).
 - Context Workspace now supports message management for all chat contexts: clear `context messages` and `chat history` independently.
 - Context Workspace now supports compact archive inspection: open the `archive` panel to review pre-compact history batches.
 - `city console status` also shows UI status.

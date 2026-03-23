@@ -21,9 +21,21 @@ export interface PluginView {
    */
   actions: string[];
   /**
-   * 已声明的 Capability 名称列表。
+   * 已声明的 pipeline 点名称列表。
    */
-  capabilities: string[];
+  pipelines: string[];
+  /**
+   * 已声明的 guard 点名称列表。
+   */
+  guards: string[];
+  /**
+   * 已声明的 effect 点名称列表。
+   */
+  effects: string[];
+  /**
+   * 已声明的 resolve 点名称列表。
+   */
+  resolves: string[];
   /**
    * 依赖的 Asset 名称列表。
    */

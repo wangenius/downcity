@@ -1,102 +1,187 @@
 /**
- * Hook 注册表。
+ * Plugin 点注册表。
  *
  * 关键点（中文）
- * - 统一收集 Plugin 的事件型 Hook 与变换型 Hook。
- * - 先只支持 emit / transform 两种执行模型，避免过早引入 middleware。
+ * - 统一管理 pipeline / guard / effect / resolve 四类 plugin 点。
+ * - service 只依赖固定执行语义，不再自己拼装扩展调度逻辑。
  */
 
 import type { JsonValue } from "@/types/Json.js";
 import type {
-  PluginEventHook,
+  PluginEffectHook,
+  PluginGuardHook,
+  PluginPipelineHook,
+  PluginResolveHook,
   PluginRuntime,
-  PluginTransformHook,
 } from "@/types/Plugin.js";
 
 type RuntimeResolver = () => PluginRuntime;
 
-type EventHookRecord = {
+type PipelineRecord = {
   pluginName: string;
-  handler: PluginEventHook<JsonValue>;
+  handler: PluginPipelineHook<JsonValue>;
 };
 
-type TransformHookRecord = {
+type GuardRecord = {
   pluginName: string;
-  handler: PluginTransformHook<JsonValue>;
+  handler: PluginGuardHook<JsonValue>;
+};
+
+type EffectRecord = {
+  pluginName: string;
+  handler: PluginEffectHook<JsonValue>;
+};
+
+type ResolveRecord = {
+  pluginName: string;
+  handler: PluginResolveHook<JsonValue, JsonValue>;
 };
 
 /**
- * HookRegistry：Hook 注册与运行实现。
+ * HookRegistry：Plugin 点注册与执行实现。
  */
 export class HookRegistry {
   private readonly runtimeResolver: RuntimeResolver;
 
-  private readonly eventHooks = new Map<string, EventHookRecord[]>();
+  private readonly pipelineHooks = new Map<string, PipelineRecord[]>();
 
-  private readonly transformHooks = new Map<string, TransformHookRecord[]>();
+  private readonly guardHooks = new Map<string, GuardRecord[]>();
+
+  private readonly effectHooks = new Map<string, EffectRecord[]>();
+
+  private readonly resolveHooks = new Map<string, ResolveRecord>();
 
   constructor(runtimeResolver: RuntimeResolver) {
     this.runtimeResolver = runtimeResolver;
   }
 
   /**
-   * 注册事件型 Hook。
+   * 注册 pipeline 点。
    */
-  on(
-    hookName: string,
+  pipeline(
+    pointName: string,
     pluginName: string,
-    handler: PluginEventHook<JsonValue>,
+    handler: PluginPipelineHook<JsonValue>,
   ): void {
-    const key = String(hookName || "").trim();
+    const key = String(pointName || "").trim();
     if (!key) {
-      throw new Error("Hook name is required");
+      throw new Error("Pipeline point name is required");
     }
-    const bucket = this.eventHooks.get(key) || [];
+    const bucket = this.pipelineHooks.get(key) || [];
     bucket.push({
       pluginName: String(pluginName || "").trim(),
       handler,
     });
-    this.eventHooks.set(key, bucket);
+    this.pipelineHooks.set(key, bucket);
   }
 
   /**
-   * 注册变换型 Hook。
+   * 注册 guard 点。
    */
-  transform(
-    hookName: string,
+  guard(
+    pointName: string,
     pluginName: string,
-    handler: PluginTransformHook<JsonValue>,
+    handler: PluginGuardHook<JsonValue>,
   ): void {
-    const key = String(hookName || "").trim();
+    const key = String(pointName || "").trim();
     if (!key) {
-      throw new Error("Hook name is required");
+      throw new Error("Guard point name is required");
     }
-    const bucket = this.transformHooks.get(key) || [];
+    const bucket = this.guardHooks.get(key) || [];
     bucket.push({
       pluginName: String(pluginName || "").trim(),
       handler,
     });
-    this.transformHooks.set(key, bucket);
+    this.guardHooks.set(key, bucket);
   }
 
   /**
-   * 列出已注册 Hook 名称。
+   * 注册 effect 点。
+   */
+  effect(
+    pointName: string,
+    pluginName: string,
+    handler: PluginEffectHook<JsonValue>,
+  ): void {
+    const key = String(pointName || "").trim();
+    if (!key) {
+      throw new Error("Effect point name is required");
+    }
+    const bucket = this.effectHooks.get(key) || [];
+    bucket.push({
+      pluginName: String(pluginName || "").trim(),
+      handler,
+    });
+    this.effectHooks.set(key, bucket);
+  }
+
+  /**
+   * 注册 resolve 点。
+   *
+   * 关键点（中文）
+   * - resolve 语义要求单点单处理器，避免 service 侧再做二次仲裁。
+   */
+  resolve(
+    pointName: string,
+    pluginName: string,
+    handler: PluginResolveHook<JsonValue, JsonValue>,
+  ): void {
+    const key = String(pointName || "").trim();
+    if (!key) {
+      throw new Error("Resolve point name is required");
+    }
+    if (this.resolveHooks.has(key)) {
+      throw new Error(`Resolve point already registered: ${key}`);
+    }
+    this.resolveHooks.set(key, {
+      pluginName: String(pluginName || "").trim(),
+      handler,
+    });
+  }
+
+  /**
+   * 列出所有已注册 plugin 点。
    */
   list(): string[] {
     const keys = new Set<string>([
-      ...this.eventHooks.keys(),
-      ...this.transformHooks.keys(),
+      ...this.pipelineHooks.keys(),
+      ...this.guardHooks.keys(),
+      ...this.effectHooks.keys(),
+      ...this.resolveHooks.keys(),
     ]);
     return Array.from(keys).sort((a, b) => a.localeCompare(b));
   }
 
   /**
-   * 触发事件型 Hook。
+   * 运行 pipeline 点。
    */
-  async emit<T = JsonValue>(hookName: string, value: T): Promise<void> {
-    const key = String(hookName || "").trim();
+  async pipelineValue<T = JsonValue>(pointName: string, value: T): Promise<T> {
+    const key = String(pointName || "").trim();
+    if (!key) return value;
+    const bucket = this.pipelineHooks.get(key) || [];
+    if (bucket.length === 0) return value;
+
+    const runtime = this.runtimeResolver();
+    let current = value as JsonValue;
+    for (const item of bucket) {
+      current = await item.handler({
+        runtime,
+        value: current,
+        plugin: item.pluginName,
+      });
+    }
+    return current as T;
+  }
+
+  /**
+   * 运行 guard 点。
+   */
+  async guardValue<T = JsonValue>(pointName: string, value: T): Promise<void> {
+    const key = String(pointName || "").trim();
     if (!key) return;
-    const bucket = this.eventHooks.get(key) || [];
+    const bucket = this.guardHooks.get(key) || [];
+    if (bucket.length === 0) return;
+
     const runtime = this.runtimeResolver();
     for (const item of bucket) {
       await item.handler({
@@ -108,22 +193,44 @@ export class HookRegistry {
   }
 
   /**
-   * 运行变换型 Hook。
+   * 运行 effect 点。
    */
-  async run<T = JsonValue>(hookName: string, value: T): Promise<T> {
-    const key = String(hookName || "").trim();
-    if (!key) return value;
-    const bucket = this.transformHooks.get(key) || [];
-    if (bucket.length === 0) return value;
+  async effectValue<T = JsonValue>(pointName: string, value: T): Promise<void> {
+    const key = String(pointName || "").trim();
+    if (!key) return;
+    const bucket = this.effectHooks.get(key) || [];
+    if (bucket.length === 0) return;
+
     const runtime = this.runtimeResolver();
-    let current = value as JsonValue;
     for (const item of bucket) {
-      current = await item.handler({
+      await item.handler({
         runtime,
-        value: current,
+        value: value as JsonValue,
         plugin: item.pluginName,
       });
     }
-    return current as T;
+  }
+
+  /**
+   * 运行 resolve 点。
+   */
+  async resolveValue<TInput = JsonValue, TOutput = JsonValue>(
+    pointName: string,
+    value: TInput,
+  ): Promise<TOutput> {
+    const key = String(pointName || "").trim();
+    if (!key) {
+      throw new Error("Resolve point name is required");
+    }
+    const record = this.resolveHooks.get(key);
+    if (!record) {
+      throw new Error(`No plugin resolver registered for point: ${key}`);
+    }
+
+    return await record.handler({
+      runtime: this.runtimeResolver(),
+      value: value as JsonValue,
+      plugin: record.pluginName,
+    }) as TOutput;
   }
 }

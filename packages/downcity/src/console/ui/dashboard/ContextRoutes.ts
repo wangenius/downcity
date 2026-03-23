@@ -95,10 +95,12 @@ export function registerDashboardContextRoutes(
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"));
+      const executingContextIds = new Set(runtime.contextManager.listExecutingContextIds());
       const contexts = await listContextSummaries({
         projectRoot: runtime.rootPath,
         serviceRuntime: params.getServiceRuntimeState(),
         limit,
+        executingContextIds,
       });
       const hasConsoleUiContext = contexts.some(
         (item) => String(item.contextId || "").trim() === CONSOLEUI_CONTEXT_ID,
@@ -113,6 +115,7 @@ export function registerDashboardContextRoutes(
               lastRole: "system" as const,
               lastText: "consoleui channel",
               channel: "consoleui",
+              ...(executingContextIds.has(CONSOLEUI_CONTEXT_ID) ? { executing: true } : {}),
             },
             ...contexts,
           ];

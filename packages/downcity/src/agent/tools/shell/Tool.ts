@@ -1,67 +1,39 @@
 /**
- * Shell context tools（Codex 风格）。
+ * Shell tools（service 化版本）。
  *
  * 设计目标（中文）
- * - 只提供会话式命令工具：`exec_command` + `write_stdin` + `close_shell`
- * - 工具定义只负责参数协议与流程编排
- * - 会话状态管理与通用辅助逻辑统一下沉到 `utils/`
+ * - shell 子进程生命周期统一由 `shellService` 承担。
+ * - tool 只负责 agent 协议适配、运行时桥接协议与错误语义整理。
  */
 
 import { z } from "zod";
 import { tool } from "ai";
 import { generateId } from "@utils/Id.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type {
   ShellCloseInput,
-  ShellCommandInput,
+  ShellExecInput,
+  ShellReadInput,
+  ShellStartInput,
+  ShellStatusInput,
+  ShellWaitInput,
   ShellWriteInput,
 } from "@agent/types/Shell.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { ServiceInvokeResult } from "@/console/service/ServiceRuntime.js";
+import type { ShellActionResponse } from "@services/shell/types/ShellService.js";
 import {
   enqueueInjectedUserMessage,
   requestContext,
 } from "@agent/context/manager/RequestContext.js";
-import {
-  DEFAULT_SHELL_COMMAND_YIELD_MS,
-  DEFAULT_WRITE_STDIN_YIELD_MS,
-  MIN_EMPTY_WRITE_STDIN_YIELD_MS,
-  clampYieldTimeMs,
-  collectOutputUntilDeadline,
-  consumeContextOutputPage,
-  resolveShellWorkdir,
-  resolveOutputLimits,
-  validateChatSendCommand,
-  writeContextStdin,
-} from "./ShellHelpers.js";
-import {
-  closeShellContext,
-  createShellContext,
-  getContextOrThrow,
-} from "./ShellContextManager.js";
-import { formatContextResponse } from "./ShellResponse.js";
+import { validateChatSendCommand } from "./ShellHelpers.js";
 
 type ShellToolRuntime = {
-  rootPath: string;
-  config: ShipConfig;
-  /**
-   * Console 共享环境变量快照。
-   *
-   * 关键点（中文）
-   * - 来自 `env_entries(scope=global)`。
-   * - 供 shell 子进程读取共享 key。
-   */
-  globalEnv: Record<string, string>;
-  /**
-   * 当前 agent 的运行时环境变量快照。
-   *
-   * 关键点（中文）
-   * - 已是 `agent scope env + .env` 合并后的最终结果。
-   * - 优先级高于 global env，避免共享值覆盖项目私有值。
-   */
-  agentEnv: Record<string, string>;
+  invokeService: (params: {
+    service: string;
+    action: string;
+    payload?: JsonValue;
+  }) => Promise<ServiceInvokeResult>;
 };
-
-let shellToolRuntime: ShellToolRuntime | null = null;
 
 type CommandBridgeState = {
   /**
@@ -70,18 +42,19 @@ type CommandBridgeState = {
   bufferedOutput: string;
 };
 
-/**
- * 通用命令桥接状态表（按 shell context_id）。
- *
- * 关键点（中文）
- * - main 不识别具体 service，只识别统一协议字段。
- * - 仅对 CLI 命令候选（`downcity`/`city`）开启累积解析，降低额外开销。
- * - 会话结束/close 时必须清理，避免内存泄漏。
- */
-const commandBridgeStates = new Map<number, CommandBridgeState>();
+let shellToolRuntime: ShellToolRuntime | null = null;
 
 /**
- * 注入 shell 工具所需的最小运行时快照。
+ * 通用命令桥接状态表（按 shell_id）。
+ *
+ * 关键点（中文）
+ * - 仍然只对 `city/downcity` 命令开启，避免无意义的全量累积。
+ * - `shellService` 不感知桥接协议，保持职责单一。
+ */
+const commandBridgeStates = new Map<string, CommandBridgeState>();
+
+/**
+ * 注入 shell tools 所需的最小运行时能力。
  */
 export function setShellToolRuntime(next: ShellToolRuntime): void {
   shellToolRuntime = next;
@@ -90,50 +63,13 @@ export function setShellToolRuntime(next: ShellToolRuntime): void {
 function requireShellToolRuntime(): ShellToolRuntime {
   if (shellToolRuntime) return shellToolRuntime;
   throw new Error(
-    "Shell tool runtime is not initialized. Ensure initRuntimeState() has completed before using shell tools.",
+    "Shell tool runtime is not initialized. Ensure runtime startup has completed before using shell tools.",
   );
-}
-
-/**
- * 构建标准错误响应。
- */
-function formatToolError(prefix: string, error: unknown): { success: false; error: string } {
-  return {
-    success: false,
-    error: `${prefix}: ${String(error)}`,
-  };
-}
-
-/**
- * 计算 `write_stdin` 的有效等待时间。
- *
- * 关键点（中文）
- * - 空输入轮询时使用更大的最小等待时间，减少高频空轮询。
- */
-function resolveWriteStdinYieldMs(
-  input: string,
-  yieldTimeMs: number | undefined,
-): number {
-  const clamped = clampYieldTimeMs(
-    yieldTimeMs,
-    DEFAULT_WRITE_STDIN_YIELD_MS,
-  );
-  if (input) return clamped;
-  return Math.max(MIN_EMPTY_WRITE_STDIN_YIELD_MS, clamped);
 }
 
 function toJsonObject(value: unknown): JsonObject | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as JsonObject;
-}
-
-/**
- * 判断命令是否需要开启桥接协议解析。
- */
-function shouldEnableCommandBridge(command: string): boolean {
-  const raw = String(command || "").trim();
-  if (!raw) return false;
-  return /(?:^|\s)(?:city|downcity)(?:\s|$)/i.test(raw);
 }
 
 function tryParseJsonObject(raw: string): JsonObject | null {
@@ -143,7 +79,6 @@ function tryParseJsonObject(raw: string): JsonObject | null {
     const parsed = JSON.parse(text) as unknown;
     return toJsonObject(parsed);
   } catch {
-    // 关键点（中文）：容错处理前后杂音，尽量从首个 `{` 到末尾 `}` 提取 JSON。
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
     if (firstBrace < 0 || lastBrace <= firstBrace) return null;
@@ -157,9 +92,12 @@ function tryParseJsonObject(raw: string): JsonObject | null {
   }
 }
 
-/**
- * 注入一条 user 文本消息（通用协议）。
- */
+function shouldEnableCommandBridge(command: string): boolean {
+  const raw = String(command || "").trim();
+  if (!raw) return false;
+  return /(?:^|\s)(?:city|downcity)(?:\s|$)/i.test(raw);
+}
+
 function injectUserTextMessage(params: {
   text: string;
   note?: string;
@@ -184,17 +122,9 @@ function injectUserTextMessage(params: {
     },
     parts: [{ type: "text", text }],
   });
-
   return true;
 }
 
-/**
- * 提取命令结果中的运行时桥接协议块。
- *
- * 关键点（中文）
- * - main 只识别 `__ship` 协议，不依赖具体 service 语义。
- * - 协议位置：`payload.__ship` 或 `payload.data.__ship`。
- */
 function extractRuntimeBridgeBlock(payload: JsonObject): {
   injectUserMessages: Array<{ text: string; note?: string }>;
   suppressToolOutput: boolean;
@@ -233,9 +163,7 @@ function extractRuntimeBridgeBlock(payload: JsonObject): {
 
 function sanitizeBridgeMarkers(payload: JsonObject): JsonObject {
   const cloned = JSON.parse(JSON.stringify(payload)) as JsonObject;
-  if ("__ship" in cloned) {
-    delete cloned.__ship;
-  }
+  if ("__ship" in cloned) delete cloned.__ship;
   const data = toJsonObject(cloned.data);
   if (data && "__ship" in data) {
     delete data.__ship;
@@ -243,14 +171,69 @@ function sanitizeBridgeMarkers(payload: JsonObject): JsonObject {
   return cloned;
 }
 
-/**
- * 对 shell 命令结果应用“通用运行时桥接协议”。
- */
+function flattenShellActionResponse(params: {
+  response: ShellActionResponse;
+  startedAt: number;
+}): JsonObject {
+  const shell = params.response.shell;
+  const chunk = params.response.chunk;
+  return {
+    success: true,
+    shell_id: shell.shellId,
+    status: shell.status,
+    cmd: shell.cmd,
+    cwd: shell.cwd,
+    pid: typeof shell.pid === "number" ? shell.pid : null,
+    version: shell.version,
+    started_at: shell.startedAt,
+    updated_at: shell.updatedAt,
+    ended_at: typeof shell.endedAt === "number" ? shell.endedAt : null,
+    exit_code: typeof shell.exitCode === "number" ? shell.exitCode : null,
+    output: chunk?.output || "",
+    start_cursor: typeof chunk?.startCursor === "number" ? chunk.startCursor : null,
+    end_cursor: typeof chunk?.endCursor === "number" ? chunk.endCursor : null,
+    original_chars: chunk?.originalChars ?? 0,
+    original_lines: chunk?.originalLines ?? 0,
+    has_more_output: chunk?.hasMoreOutput === true,
+    last_output_preview: shell.lastOutputPreview || "",
+    output_chars: shell.outputChars,
+    dropped_chars: shell.droppedChars,
+    auto_notify_on_exit: shell.autoNotifyOnExit,
+    notification_sent: shell.notificationSent,
+    owner_context_id: shell.ownerContextId || null,
+    owner_request_id: shell.ownerRequestId || null,
+    external_refs: shell.externalRefs,
+    wall_time_seconds: Math.max(0, (Date.now() - params.startedAt) / 1000),
+    ...(params.response.note ? { note: params.response.note } : {}),
+  };
+}
+
+function flattenShellExecResponse(params: {
+  response: ShellActionResponse;
+  startedAt: number;
+}): JsonObject {
+  const shell = params.response.shell;
+  const chunk = params.response.chunk;
+  return {
+    success: true,
+    status: shell.status,
+    cmd: shell.cmd,
+    cwd: shell.cwd,
+    exit_code: typeof shell.exitCode === "number" ? shell.exitCode : null,
+    output: chunk?.output || "",
+    original_chars: chunk?.originalChars ?? 0,
+    original_lines: chunk?.originalLines ?? 0,
+    external_refs: shell.externalRefs,
+    wall_time_seconds: Math.max(0, (Date.now() - params.startedAt) / 1000),
+    ...(params.response.note ? { note: params.response.note } : {}),
+  };
+}
+
 function bridgeCommandResponse(params: {
-  contextId: number;
+  shellId: string;
   response: JsonObject;
 }): JsonObject {
-  const state = commandBridgeStates.get(params.contextId);
+  const state = commandBridgeStates.get(params.shellId);
   if (!state) return params.response;
 
   const rawOutput =
@@ -264,11 +247,15 @@ function bridgeCommandResponse(params: {
     typeof params.response.exit_code === "number"
       ? params.response.exit_code
       : null;
-  const completed = !hasMoreOutput && exitCode !== null;
+  const status = String(params.response.status || "").trim();
+  const completed =
+    !hasMoreOutput &&
+    exitCode !== null &&
+    status !== "running" &&
+    status !== "starting";
   if (!completed) return params.response;
 
-  commandBridgeStates.delete(params.contextId);
-
+  commandBridgeStates.delete(params.shellId);
   const payload = tryParseJsonObject(state.bufferedOutput);
   if (!payload) return params.response;
   const bridge = extractRuntimeBridgeBlock(payload);
@@ -276,12 +263,7 @@ function bridgeCommandResponse(params: {
 
   let injectedCount = 0;
   for (const item of bridge.injectUserMessages) {
-    if (
-      injectUserTextMessage({
-        text: item.text,
-        note: item.note,
-      })
-    ) {
+    if (injectUserTextMessage(item)) {
       injectedCount += 1;
     }
   }
@@ -304,14 +286,43 @@ function bridgeCommandResponse(params: {
   };
 }
 
-const shellCommandInputSchema = z.object({
+async function invokeShellAction<TPayload extends JsonValue = JsonValue>(params: {
+  action: string;
+  payload: TPayload;
+}): Promise<ShellActionResponse> {
+  const runtime = requireShellToolRuntime();
+  const result = await runtime.invokeService({
+    service: "shell",
+    action: params.action,
+    payload: params.payload,
+  });
+  if (!result.success) {
+    throw new Error(result.error || `shell.${params.action} failed`);
+  }
+  const data = toJsonObject(result.data);
+  if (!data) {
+    throw new Error(`shell.${params.action} returned invalid data`);
+  }
+  const response = data as unknown as ShellActionResponse;
+  if (!response.shell || typeof response.shell.shellId !== "string") {
+    throw new Error(`shell.${params.action} returned invalid shell payload`);
+  }
+  return response;
+}
+
+function formatToolError(prefix: string, error: unknown): { success: false; error: string } {
+  return {
+    success: false,
+    error: `${prefix}: ${String(error)}`,
+  };
+}
+
+const shellStartInputSchema = z.object({
   cmd: z.string().describe("Shell command to execute."),
   workdir: z
     .string()
     .optional()
-    .describe(
-      "Optional working directory. Relative path is resolved from project root.",
-    ),
+    .describe("Optional working directory. Relative path is resolved from project root."),
   shell: z
     .string()
     .optional()
@@ -321,281 +332,562 @@ const shellCommandInputSchema = z.object({
     .optional()
     .default(true)
     .describe("Whether to run shell as login shell (-lc). false uses -c."),
-  yield_time_ms: z
+  inline_wait_ms: z
     .number()
     .optional()
-    .default(DEFAULT_SHELL_COMMAND_YIELD_MS)
-    .describe("How long to wait for output before yielding."),
+    .default(1200)
+    .describe("How long to inline-wait for initial output before returning."),
   max_output_tokens: z
     .number()
     .optional()
-    .describe("Maximum output tokens per response chunk."),
+    .describe("Maximum output tokens returned in a single read chunk."),
+  auto_notify_on_exit: z
+    .boolean()
+    .optional()
+    .describe("Whether the shell service should auto-return to the owning chat agent when the command exits."),
 });
 
-const writeStdinInputSchema = z.object({
-  context_id: z.number().describe("Identifier returned by exec_command."),
-  chars: z
+const shellExecInputSchema = z.object({
+  cmd: z.string().describe("Shell command to execute once and wait until completion."),
+  workdir: z
     .string()
     .optional()
-    .default("")
-    .describe("Bytes to write to stdin; empty means poll only."),
-  yield_time_ms: z
+    .describe("Optional working directory. Relative path is resolved from project root."),
+  shell: z
+    .string()
+    .optional()
+    .describe("Optional shell executable path. Example: /bin/zsh"),
+  login: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe("Whether to run shell as login shell (-lc). false uses -c."),
+  timeout_ms: z
     .number()
     .optional()
-    .default(DEFAULT_WRITE_STDIN_YIELD_MS)
-    .describe("How long to wait for output before yielding."),
+    .default(60000)
+    .describe("Total timeout for one-shot execution. Use shell_start for long-running commands."),
   max_output_tokens: z
     .number()
     .optional()
-    .describe("Maximum output tokens per response chunk."),
+    .describe("Maximum output tokens returned in the final result."),
 });
 
-const closeShellInputSchema = z.object({
-  context_id: z.number().describe("Identifier returned by exec_command."),
+const shellStatusInputSchema = z.object({
+  shell_id: z.string().optional().describe("Existing shell identifier."),
+  cmd: z
+    .string()
+    .optional()
+    .describe("Optional command substring to resolve the latest shell in the current chat."),
+});
+
+const shellReadInputSchema = z.object({
+  shell_id: z.string().describe("Existing shell identifier."),
+  from_cursor: z
+    .number()
+    .optional()
+    .describe("Character cursor to continue reading from."),
+  max_output_tokens: z
+    .number()
+    .optional()
+    .describe("Maximum output tokens returned in this chunk."),
+});
+
+const shellWriteInputSchema = z.object({
+  shell_id: z.string().describe("Existing shell identifier."),
+  chars: z.string().describe("Bytes to write to stdin."),
+});
+
+const shellWaitInputSchema = z.object({
+  shell_id: z.string().describe("Existing shell identifier."),
+  after_version: z
+    .number()
+    .optional()
+    .describe("Only return once the shell version is greater than this value."),
+  from_cursor: z
+    .number()
+    .optional()
+    .describe("Character cursor to continue reading from after the wait."),
+  timeout_ms: z
+    .number()
+    .optional()
+    .default(10000)
+    .describe("Maximum time to wait for state/output changes."),
+  max_output_tokens: z
+    .number()
+    .optional()
+    .describe("Maximum output tokens returned in this chunk."),
+});
+
+const shellCloseInputSchema = z.object({
+  shell_id: z.string().describe("Existing shell identifier."),
   force: z
     .boolean()
     .optional()
     .default(false)
-    .describe(
-      "Whether to force-kill context process (SIGKILL). Default false uses SIGTERM.",
-    ),
+    .describe("Whether to force-kill the shell with SIGKILL."),
 });
 
 /**
- * `exec_command`：启动命令会话。
+ * `shell_start`：启动 shell 会话。
  */
-export const exec_command = tool({
+export const shell_start = tool({
   description:
-    "Start a shell command context. Returns context_id for follow-up polling/input via write_stdin.",
-  inputSchema: shellCommandInputSchema,
+    "Start a shell session. Returns shell_id plus initial status/output. Long-running commands should usually be checked later with shell_status or shell_wait instead of repeated polling.",
+  inputSchema: shellStartInputSchema,
   execute: async ({
     cmd,
     workdir,
     shell,
     login = true,
-    yield_time_ms = DEFAULT_SHELL_COMMAND_YIELD_MS,
+    inline_wait_ms = 1200,
     max_output_tokens,
-  }: ShellCommandInput) => {
+    auto_notify_on_exit,
+  }: ShellStartInput) => {
     const startedAt = Date.now();
 
     try {
-      // 关键点（中文）：直接打印工具调用关键节点，便于排查“模型是否真的发起了工具调用”。
       console.log(
-        "[shell-tool] exec_command:start",
+        "[shell-tool] shell_start:start",
         JSON.stringify({
           cmd,
           workdir: workdir || "",
           shell: shell || "",
           login,
-          yield_time_ms,
+          inline_wait_ms,
           max_output_tokens: max_output_tokens ?? null,
+          auto_notify_on_exit: auto_notify_on_exit ?? null,
         }),
       );
+
       const validationError = validateChatSendCommand(cmd);
       if (validationError) {
         console.log(
-          "[shell-tool] exec_command:rejected",
+          "[shell-tool] shell_start:rejected",
           JSON.stringify({ reason: validationError }),
         );
         return {
           success: false,
-          error: `exec_command rejected: ${validationError}`,
+          error: `shell_start rejected: ${validationError}`,
         };
       }
 
-      const runtime = requireShellToolRuntime();
-      const context = createShellContext({
-        command: cmd,
-        cwd: resolveShellWorkdir(runtime.rootPath, workdir),
-        shellPath: shell,
-        login,
-        // 关键点（中文）：global env 先铺底，agent runtime env 后覆盖，
-        // 保证共享默认值可用，同时项目私有值优先。
-        env: {
-          ...runtime.globalEnv,
-          ...runtime.agentEnv,
+      const response = await invokeShellAction({
+        action: "start",
+        payload: {
+          cmd,
+          ...(workdir ? { cwd: workdir } : {}),
+          ...(shell ? { shell } : {}),
+          login,
+          inlineWaitMs: inline_wait_ms,
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
+          ...(typeof auto_notify_on_exit === "boolean"
+            ? { autoNotifyOnExit: auto_notify_on_exit }
+            : {}),
         },
       });
+
+      const shellId = response.shell.shellId;
       if (shouldEnableCommandBridge(cmd)) {
-        commandBridgeStates.set(context.id, {
-          bufferedOutput: "",
-        });
+        commandBridgeStates.set(shellId, { bufferedOutput: "" });
       }
 
-      await collectOutputUntilDeadline(
-        context,
-        clampYieldTimeMs(yield_time_ms, DEFAULT_SHELL_COMMAND_YIELD_MS),
-      );
-
-      const page = consumeContextOutputPage(
-        context,
-        resolveOutputLimits(runtime.config, max_output_tokens),
-      );
-      const response = formatContextResponse({ context, page, startedAt });
-      const bridgedResponse = bridgeCommandResponse({
-        contextId: context.id,
+      const flatResponse = flattenShellActionResponse({
         response,
+        startedAt,
+      });
+      const bridgedResponse = bridgeCommandResponse({
+        shellId,
+        response: flatResponse,
       });
       console.log(
-        "[shell-tool] exec_command:done",
+        "[shell-tool] shell_start:done",
         JSON.stringify({
-          context_id: bridgedResponse.context_id,
-          running: bridgedResponse.running,
-          has_more_output: bridgedResponse.has_more_output,
-          output_chars: String(bridgedResponse.output || "").length,
+          shell_id: shellId,
+          status: bridgedResponse.status,
           exit_code: bridgedResponse.exit_code ?? null,
+          output_chars: String(bridgedResponse.output || "").length,
+          has_more_output: bridgedResponse.has_more_output === true,
         }),
       );
       return bridgedResponse;
     } catch (error) {
       console.log(
-        "[shell-tool] exec_command:error",
+        "[shell-tool] shell_start:error",
         JSON.stringify({ error: String(error) }),
       );
-      return formatToolError("exec_command failed", error);
+      return formatToolError("shell_start failed", error);
     }
   },
 });
 
 /**
- * `write_stdin`：向现有会话写入输入或轮询输出。
+ * `shell_exec`：一次性执行并等待完成。
  */
-export const write_stdin = tool({
+export const shell_exec = tool({
   description:
-    "Write chars to an existing exec context and return next output chunk. Use empty chars to poll.",
-  inputSchema: writeStdinInputSchema,
+    "Execute a short shell command in one-shot mode and wait for completion. Prefer shell_start for long-running or interactive commands.",
+  inputSchema: shellExecInputSchema,
   execute: async ({
-    context_id,
-    chars = "",
-    yield_time_ms = DEFAULT_WRITE_STDIN_YIELD_MS,
+    cmd,
+    workdir,
+    shell,
+    login = true,
+    timeout_ms = 60000,
     max_output_tokens,
-  }: ShellWriteInput) => {
+  }: ShellExecInput) => {
     const startedAt = Date.now();
 
     try {
-      // 关键点（中文）：区分“轮询”与“写入”，方便确认是否真的进入循环读取。
       console.log(
-        "[shell-tool] write_stdin:start",
+        "[shell-tool] shell_exec:start",
         JSON.stringify({
-          context_id,
-          mode: chars ? "write" : "poll",
-          input_chars: String(chars || "").length,
-          yield_time_ms,
+          cmd,
+          workdir: workdir || "",
+          shell: shell || "",
+          login,
+          timeout_ms,
           max_output_tokens: max_output_tokens ?? null,
         }),
       );
-      const runtime = requireShellToolRuntime();
-      const context = getContextOrThrow(context_id);
-      const input = String(chars ?? "");
 
-      if (input) {
-        await writeContextStdin(context, input);
+      const validationError = validateChatSendCommand(cmd);
+      if (validationError) {
+        console.log(
+          "[shell-tool] shell_exec:rejected",
+          JSON.stringify({ reason: validationError }),
+        );
+        return {
+          success: false,
+          error: `shell_exec rejected: ${validationError}`,
+        };
       }
 
-      await collectOutputUntilDeadline(
-        context,
-        resolveWriteStdinYieldMs(input, yield_time_ms),
-      );
-
-      const page = consumeContextOutputPage(
-        context,
-        resolveOutputLimits(runtime.config, max_output_tokens),
-      );
-      const response = formatContextResponse({ context, page, startedAt });
-      const bridgedResponse = bridgeCommandResponse({
-        contextId: context.id,
-        response,
+      const response = await invokeShellAction({
+        action: "exec",
+        payload: {
+          cmd,
+          ...(workdir ? { cwd: workdir } : {}),
+          ...(shell ? { shell } : {}),
+          login,
+          timeoutMs: timeout_ms,
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
+        },
       });
+
+      const shellId = response.shell.shellId;
+      if (shouldEnableCommandBridge(cmd)) {
+        commandBridgeStates.set(shellId, { bufferedOutput: "" });
+      }
+      const flatResponse = flattenShellExecResponse({
+        response,
+        startedAt,
+      });
+      const bridgedResponse = shouldEnableCommandBridge(cmd)
+        ? (() => {
+            const withInternalShellId = {
+              ...flatResponse,
+              shell_id: shellId,
+              has_more_output: false,
+            } as JsonObject;
+            const bridged = bridgeCommandResponse({
+              shellId,
+              response: withInternalShellId,
+            });
+            if ("shell_id" in bridged) delete bridged.shell_id;
+            if ("has_more_output" in bridged) delete bridged.has_more_output;
+            return bridged;
+          })()
+        : flatResponse;
+
       console.log(
-        "[shell-tool] write_stdin:done",
+        "[shell-tool] shell_exec:done",
         JSON.stringify({
-          context_id: bridgedResponse.context_id,
-          running: bridgedResponse.running,
-          has_more_output: bridgedResponse.has_more_output,
-          output_chars: String(bridgedResponse.output || "").length,
+          status: bridgedResponse.status,
           exit_code: bridgedResponse.exit_code ?? null,
+          output_chars: String(bridgedResponse.output || "").length,
         }),
       );
       return bridgedResponse;
     } catch (error) {
       console.log(
-        "[shell-tool] write_stdin:error",
-        JSON.stringify({ context_id, error: String(error) }),
+        "[shell-tool] shell_exec:error",
+        JSON.stringify({ error: String(error) }),
       );
-      return formatToolError("write_stdin failed", error);
+      return formatToolError("shell_exec failed", error);
     }
   },
 });
 
 /**
- * `close_shell`：主动关闭并回收会话。
+ * `shell_status`：查询 shell 当前状态。
  */
-export const close_shell = tool({
+export const shell_status = tool({
   description:
-    "Close an existing exec context and release resources. Use force=true to send SIGKILL.",
-  inputSchema: closeShellInputSchema,
-  execute: async ({
-    context_id,
-    force = false,
-  }: ShellCloseInput) => {
+    "Query the current status of a shell session. Prefer this to ask for progress during long-running commands.",
+  inputSchema: shellStatusInputSchema,
+  execute: async ({ shell_id, cmd }: ShellStatusInput) => {
+    const startedAt = Date.now();
     try {
       console.log(
-        "[shell-tool] close_shell:start",
-        JSON.stringify({ context_id, force }),
+        "[shell-tool] shell_status:start",
+        JSON.stringify({ shell_id: shell_id || "", cmd: cmd || "" }),
       );
-      // 关键点（中文）：关闭会话时同步清理桥接状态。
-      commandBridgeStates.delete(context_id);
-      const context = getContextOrThrow(context_id);
-      const result = closeShellContext(context, force);
-
-      const response = {
-        success: true,
-        context_id: result.contextId,
-        closed: true,
-        was_running: result.wasRunning,
-        exit_code: result.exitCode,
-        pending_output_chars: result.pendingOutputChars,
-        dropped_chars: result.droppedChars,
-        ...(result.pendingOutputChars > 0
-          ? {
-              note: `Dropped ${result.pendingOutputChars} pending output chars while closing context.`,
-            }
-          : {}),
-      };
+      const response = await invokeShellAction({
+        action: "status",
+        payload: {
+          ...(shell_id ? { shellId: shell_id } : {}),
+          ...(cmd ? { cmd } : {}),
+          includeCompleted: true,
+        },
+      });
+      const flatResponse = flattenShellActionResponse({
+        response,
+        startedAt,
+      });
       console.log(
-        "[shell-tool] close_shell:done",
+        "[shell-tool] shell_status:done",
         JSON.stringify({
-          context_id: response.context_id,
-          closed: response.closed,
-          was_running: response.was_running,
-          exit_code: response.exit_code ?? null,
+          shell_id: flatResponse.shell_id,
+          status: flatResponse.status,
+          version: flatResponse.version,
+          exit_code: flatResponse.exit_code ?? null,
         }),
       );
-      return response;
+      return flatResponse;
     } catch (error) {
-      const err = String(error ?? "");
-      // 关键点（中文）：close 是“释放资源”语义，重复 close 应视为幂等成功而非失败。
-      if (err.includes("Unknown context_id")) {
-        console.log(
-          "[shell-tool] close_shell:already_closed",
-          JSON.stringify({ context_id }),
-        );
-        return {
-          success: true,
-          context_id,
-          closed: false,
-          was_running: false,
-          exit_code: null,
-          pending_output_chars: 0,
-          dropped_chars: 0,
-          note: `Context ${context_id} already closed or expired.`,
-        };
-      }
       console.log(
-        "[shell-tool] close_shell:error",
-        JSON.stringify({ context_id, error: err }),
+        "[shell-tool] shell_status:error",
+        JSON.stringify({ shell_id: shell_id || "", error: String(error) }),
       );
-      return formatToolError("close_shell failed", error);
+      return formatToolError("shell_status failed", error);
+    }
+  },
+});
+
+/**
+ * `shell_read`：读取 shell 输出增量。
+ */
+export const shell_read = tool({
+  description:
+    "Read output from a shell session starting at a character cursor. Use this only when you truly need the raw incremental output.",
+  inputSchema: shellReadInputSchema,
+  execute: async ({
+    shell_id,
+    from_cursor,
+    max_output_tokens,
+  }: ShellReadInput) => {
+    const startedAt = Date.now();
+    try {
+      console.log(
+        "[shell-tool] shell_read:start",
+        JSON.stringify({
+          shell_id,
+          from_cursor: from_cursor ?? null,
+          max_output_tokens: max_output_tokens ?? null,
+        }),
+      );
+      const response = await invokeShellAction({
+        action: "read",
+        payload: {
+          shellId: shell_id,
+          ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
+          includeCompleted: true,
+        },
+      });
+      const flatResponse = flattenShellActionResponse({
+        response,
+        startedAt,
+      });
+      const bridgedResponse = bridgeCommandResponse({
+        shellId: shell_id,
+        response: flatResponse,
+      });
+      console.log(
+        "[shell-tool] shell_read:done",
+        JSON.stringify({
+          shell_id,
+          status: bridgedResponse.status,
+          exit_code: bridgedResponse.exit_code ?? null,
+          output_chars: String(bridgedResponse.output || "").length,
+          has_more_output: bridgedResponse.has_more_output === true,
+        }),
+      );
+      return bridgedResponse;
+    } catch (error) {
+      console.log(
+        "[shell-tool] shell_read:error",
+        JSON.stringify({ shell_id, error: String(error) }),
+      );
+      return formatToolError("shell_read failed", error);
+    }
+  },
+});
+
+/**
+ * `shell_write`：向 shell stdin 写入内容。
+ */
+export const shell_write = tool({
+  description:
+    "Write text to the stdin of an existing shell session.",
+  inputSchema: shellWriteInputSchema,
+  execute: async ({ shell_id, chars }: ShellWriteInput) => {
+    const startedAt = Date.now();
+    try {
+      console.log(
+        "[shell-tool] shell_write:start",
+        JSON.stringify({
+          shell_id,
+          input_chars: String(chars || "").length,
+        }),
+      );
+      const response = await invokeShellAction({
+        action: "write",
+        payload: {
+          shellId: shell_id,
+          chars,
+        },
+      });
+      const flatResponse = flattenShellActionResponse({
+        response,
+        startedAt,
+      });
+      console.log(
+        "[shell-tool] shell_write:done",
+        JSON.stringify({
+          shell_id,
+          status: flatResponse.status,
+          version: flatResponse.version,
+        }),
+      );
+      return flatResponse;
+    } catch (error) {
+      console.log(
+        "[shell-tool] shell_write:error",
+        JSON.stringify({ shell_id, error: String(error) }),
+      );
+      return formatToolError("shell_write failed", error);
+    }
+  },
+});
+
+/**
+ * `shell_wait`：等待 shell 状态或输出变化。
+ */
+export const shell_wait = tool({
+  description:
+    "Wait for a shell session to change state or produce more output. Prefer this over manual high-frequency polling loops.",
+  inputSchema: shellWaitInputSchema,
+  execute: async ({
+    shell_id,
+    after_version,
+    from_cursor,
+    timeout_ms = 10000,
+    max_output_tokens,
+  }: ShellWaitInput) => {
+    const startedAt = Date.now();
+    try {
+      console.log(
+        "[shell-tool] shell_wait:start",
+        JSON.stringify({
+          shell_id,
+          after_version: after_version ?? null,
+          from_cursor: from_cursor ?? null,
+          timeout_ms,
+          max_output_tokens: max_output_tokens ?? null,
+        }),
+      );
+      const response = await invokeShellAction({
+        action: "wait",
+        payload: {
+          shellId: shell_id,
+          ...(typeof after_version === "number"
+            ? { afterVersion: after_version }
+            : {}),
+          ...(typeof from_cursor === "number" ? { fromCursor: from_cursor } : {}),
+          timeoutMs: timeout_ms,
+          ...(typeof max_output_tokens === "number"
+            ? { maxOutputTokens: max_output_tokens }
+            : {}),
+        },
+      });
+      const flatResponse = flattenShellActionResponse({
+        response,
+        startedAt,
+      });
+      const bridgedResponse = bridgeCommandResponse({
+        shellId: shell_id,
+        response: flatResponse,
+      });
+      console.log(
+        "[shell-tool] shell_wait:done",
+        JSON.stringify({
+          shell_id,
+          status: bridgedResponse.status,
+          version: bridgedResponse.version,
+          exit_code: bridgedResponse.exit_code ?? null,
+          output_chars: String(bridgedResponse.output || "").length,
+        }),
+      );
+      return bridgedResponse;
+    } catch (error) {
+      console.log(
+        "[shell-tool] shell_wait:error",
+        JSON.stringify({ shell_id, error: String(error) }),
+      );
+      return formatToolError("shell_wait failed", error);
+    }
+  },
+});
+
+/**
+ * `shell_close`：关闭 shell 会话。
+ */
+export const shell_close = tool({
+  description:
+    "Close an existing shell session and release resources. Use force=true to send SIGKILL.",
+  inputSchema: shellCloseInputSchema,
+  execute: async ({ shell_id, force = false }: ShellCloseInput) => {
+    const startedAt = Date.now();
+    try {
+      console.log(
+        "[shell-tool] shell_close:start",
+        JSON.stringify({ shell_id, force }),
+      );
+      commandBridgeStates.delete(shell_id);
+      const response = await invokeShellAction({
+        action: "close",
+        payload: {
+          shellId: shell_id,
+          force,
+        },
+      });
+      const flatResponse = flattenShellActionResponse({
+        response,
+        startedAt,
+      });
+      console.log(
+        "[shell-tool] shell_close:done",
+        JSON.stringify({
+          shell_id,
+          status: flatResponse.status,
+          exit_code: flatResponse.exit_code ?? null,
+        }),
+      );
+      return flatResponse;
+    } catch (error) {
+      console.log(
+        "[shell-tool] shell_close:error",
+        JSON.stringify({ shell_id, error: String(error) }),
+      );
+      return formatToolError("shell_close failed", error);
     }
   },
 });
@@ -604,7 +896,11 @@ export const close_shell = tool({
  * Shell 工具导出集合。
  */
 export const shellTools = {
-  exec_command,
-  write_stdin,
-  close_shell,
+  shell_exec,
+  shell_start,
+  shell_status,
+  shell_read,
+  shell_write,
+  shell_wait,
+  shell_close,
 };

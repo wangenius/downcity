@@ -1,0 +1,32 @@
+---
+title: Downcity 开发文档
+description: 面向仓库协作者的架构、实现逻辑与设计规范说明
+---
+
+# Downcity 开发文档
+
+现在 `/docs` 只保留用户文档，`/devdocs` 专门承接开发者文档。这里整理的是仓库协作者真正需要的内容：工作区结构、运行时关系、产品边界、设计规范，以及从 `<root>/docs` 沉淀出来的草稿结论。
+
+## 建议阅读顺序
+
+1. [设计哲学与方法论](/zh/devdocs/philosophy/principles)
+2. [工作区架构总览](/zh/devdocs/architecture/overview)
+3. [系统架构逻辑](/zh/devdocs/architecture/system-logic)
+4. [Package Runtime 与 Services](/zh/devdocs/package/runtime-and-services)
+5. [Package 模块拆解](/zh/devdocs/package/module-breakdown)
+6. [Plugin 迁移方案](/zh/devdocs/package/plugin-migration)
+7. [Console UI 数据流与信息架构](/zh/devdocs/console-ui/dataflow-and-ia)
+8. [Chrome Extension 请求流](/zh/devdocs/chrome-extension/request-flow)
+9. [设计与交互规范](/zh/devdocs/design/interaction-specs)
+10. [权限与插件实现整理](/zh/devdocs/platform/authorization-and-plugin-drafts)
+
+## 这里整理了什么
+
+- 之前放在 `<root>/docs` 下的开发草稿
+- 当前 `packages/downcity/`、`console-ui/`、`chrome-extension/` 的真实实现结构
+- 运行时边界、调用链路与职责划分
+- Console UI 的信息架构与设计约束
+
+## 面向对象
+
+这部分是给维护者、产品工程师、前端工程师与 runtime 协作者看的，不是终端用户文档入口。

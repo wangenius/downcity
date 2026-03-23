@@ -1,0 +1,34 @@
+---
+title: Design and Interaction Specs
+description: UI architecture, interaction boundaries, and product design direction for contributors
+---
+
+# Design and Interaction Specs
+
+This section consolidates the earlier Console UI restructuring notes into a stable contributor-facing reference.
+
+## Scope Model
+
+- `Global`: console-level overview, model management, agent list, extension-level status
+- `Agent`: services, tasks, logs, and runtime operations for the selected agent
+- `Context`: message timeline, context metadata, prompt inspection, local UI input
+
+## Domain Model
+
+- `Observe`: status and summaries
+- `Operate`: explicit actions such as start, stop, restart, reconnect, run
+- `Inspect`: logs, history, prompt composition, run detail, diagnostics
+
+## UX Constraint
+
+Do not flatten all controls into one page. A contributor should always be able to answer:
+
+1. What scope am I currently affecting?
+2. Am I observing, operating, or inspecting?
+
+## Product-Level Conventions
+
+- User-facing docs belong in `/docs`
+- Developer-facing system thinking belongs in `/devdocs`
+- UI surfaces should expose real runtime facts, not vague marketing abstractions
+- Draft architecture decisions can start as notes, but should be consolidated into stable pages when they become implementation guidance

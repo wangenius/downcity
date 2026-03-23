@@ -1,6 +1,6 @@
 ---
 title: Console Registration, Runtime Execution, and Shell Flow
-description: Explain console registry write timing, how agent runtime executes services/plugins, and how shell env injection works
+description: Explains console registry writes, runtime execution, and shell environment injection
 ---
 
 # Console Registration, Runtime Execution, and Shell Flow
@@ -8,22 +8,26 @@ description: Explain console registry write timing, how agent runtime executes s
 ## 1. Console Registration
 
 - registry file: `~/.ship/console/agents.json`
-- registry stores known agents and last known daemon metadata
-- daemon startup must upsert registry successfully, otherwise startup rolls back
+- stores known agents and latest daemon metadata
+- daemon startup must write registry successfully or roll back
 
 ## 2. Runtime Execution
 
 - one agent process binds to one `rootPath`
-- runtime assembles services, plugins, capabilities, and assets
-- service workflows invoke capabilities when optional plugin functionality is needed
+- runtime assembles services, plugins, and assets
+- plugins register `pipeline / guard / effect / resolve` handlers on service-defined points
+- services trigger those points during their workflow
 
 ## 3. Shell Flow
 
-- shell is session-based, not one-shot exec
-- default workdir is runtime `rootPath`
-- subprocess env includes `DC_CTX_CONTEXT_ID`, `DC_CTX_REQUEST_ID`, `DC_CTX_SERVER_HOST`, `DC_CTX_SERVER_PORT`
+- shell state is now owned by `shellService`, not by the agent tool directly
+- starting a command returns a `shell_id`; it is not the same as a chat `contextId`
+- for long-running jobs, prefer `shell_status` or `shell_wait` over tight polling
+- default working directory is the current project root
+- subprocesses receive injected `DC_CTX_*` environment variables
+- when shell exits for a real chat context, the service can enqueue an internal chat message and let the main agent reply
 
-## Relationship Diagram
+## Diagram
 
 ```mermaid
 flowchart TD
@@ -35,10 +39,15 @@ flowchart TD
   F["city service / city plugin"] --> G["runtime APIs"]
   G --> H["runtime dispatcher"]
   H --> I["service workflow"]
-  I --> J["capability invoke"]
+  I --> J["plugin point dispatch"]
   J --> K["asset use"]
 
-  L["agent shell exec"] --> M["shell session"]
-  M --> N["inject DC_CTX_* env"]
-  N --> O["shell subprocess"]
+  L["agent shell_start"] --> M["shellService"]
+  M --> N["shell_id session"]
+  N --> O["inject DC_CTX_* env"]
+  O --> P["shell subprocess"]
+  P --> Q["shell_status / shell_wait / shell_read"]
+  P --> R["shell exit event"]
+  R --> S["enqueue internal chat message"]
+  S --> T["main agent replies user"]
 ```

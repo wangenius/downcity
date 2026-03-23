@@ -32,7 +32,7 @@ You can run tools in ./scripts/:
 const SHIP_JSON_CONTENT = `{
   "name": "developer-agent",
   "permissions": {
-    "exec_command": {
+    "shell": {
       "requiresApproval": false,
       "maxOutputChars": 12000,
       "maxOutputLines": 200

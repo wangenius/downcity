@@ -19,7 +19,6 @@ import {
   parseTaskRunContextId,
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@/console/service/Manager.js";
-import { CapabilityRegistry } from "@/console/plugin/CapabilityRegistry.js";
 import { HookRegistry } from "@/console/plugin/HookRegistry.js";
 import { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
 import { PluginRegistry } from "@/console/plugin/PluginRegistry.js";
@@ -43,8 +42,6 @@ import type {
   StructuredConfig,
 } from "@/types/Asset.js";
 import type {
-  CapabilityInvokeResult,
-  CapabilityPort,
   PluginAvailability,
   PluginPort,
   PluginRuntimeView,
@@ -92,12 +89,10 @@ let ready: RuntimeState | null = null;
 let promptRuntime: PromptRuntime | null = null;
 let serviceModel: LanguageModel | null = null;
 
-const capabilityRegistry = new CapabilityRegistry(() => getPluginRuntimeState());
 const hookRegistry = new HookRegistry(() => getPluginRuntimeState());
 const assetRegistry = new AssetRegistry(() => getPluginRuntimeState());
 const pluginRegistry = new PluginRegistry({
   runtimeResolver: () => getPluginRuntimeState(),
-  capabilityRegistry,
   hookRegistry,
   assetRegistry,
 });
@@ -216,28 +211,6 @@ const serviceInvokePort: ServiceInvokePort = {
 };
 
 /**
- * capability 调用端口实现。
- *
- * 关键点（中文）
- * - 主动能力调用统一通过 capability 名称路由。
- * - 这是新插件体系最核心的显式调用入口。
- */
-const capabilityInvokePort: CapabilityPort = {
-  list(): string[] {
-    return capabilityRegistry.list();
-  },
-  has(capabilityName: string): boolean {
-    return capabilityRegistry.has(capabilityName);
-  },
-  async invoke(params: {
-    capability: string;
-    payload?: JsonValue;
-  }): Promise<CapabilityInvokeResult> {
-    return capabilityRegistry.invoke(params);
-  },
-};
-
-/**
  * asset 调用端口实现。
  *
  * 关键点（中文）
@@ -294,6 +267,21 @@ const pluginPort: PluginPort = {
   }) {
     return pluginRegistry.runAction(params);
   },
+  async pipeline<T = JsonValue>(pointName: string, value: T): Promise<T> {
+    return pluginRegistry.pipeline(pointName, value);
+  },
+  async guard<T = JsonValue>(pointName: string, value: T): Promise<void> {
+    return pluginRegistry.guard(pointName, value);
+  },
+  async effect<T = JsonValue>(pointName: string, value: T): Promise<void> {
+    return pluginRegistry.effect(pointName, value);
+  },
+  async resolve<TInput = JsonValue, TOutput = JsonValue>(
+    pointName: string,
+    value: TInput,
+  ): Promise<TOutput> {
+    return pluginRegistry.resolve<TInput, TOutput>(pointName, value);
+  },
 };
 
 /**
@@ -349,7 +337,6 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
     context: buildServiceContext(input),
     invoke: serviceInvokePort,
     services: serviceInvokePort,
-    capabilities: capabilityInvokePort,
     assets: assetPort,
     plugins: pluginPort,
   };
@@ -479,14 +466,6 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     systems,
   });
 
-  // 关键点（中文）：在 runtime 初始化阶段注入 shell 所需快照，避免 tools/shell 反向依赖 RuntimeState。
-  setShellToolRuntime({
-    rootPath,
-    config,
-    globalEnv,
-    agentEnv: projectEnv,
-  });
-
   // 关键点（中文）：模型实例在 main 启动时创建一次，并注入给 services 复用。
   // 模型是 ServiceContext 必需能力，初始化失败直接中断启动（fail-fast）。
   serviceModel = null;
@@ -571,6 +550,9 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     env: projectEnv,
     systems,
     contextManager,
+  });
+  setShellToolRuntime({
+    invokeService: (params) => serviceInvokePort.invoke(params),
   });
   startRuntimeHotReload();
 }

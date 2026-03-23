@@ -101,6 +101,14 @@ export default [
     route("zh/docs/*", "routes/docs/page.tsx", { id: "docs-zh" }),
   ]),
 
+  // Developer docs routes with layout
+  layout("routes/devdocs/layout.tsx", [
+    route("en/devdocs/*", "routes/devdocs/page.tsx", { id: "devdocs-en" }),
+    route("devdocs/*", "routes/devdocs/redirect.tsx", { id: "devdocs-redirect" }),
+    route("zh/devdocs/*", "routes/devdocs/page.tsx", { id: "devdocs-zh" }),
+  ]),
+
   // API routes
   route("api/search", "routes/docs/search.ts"),
+  route("api/devdocs/search", "routes/devdocs/search.ts"),
 ] satisfies RouteConfig;

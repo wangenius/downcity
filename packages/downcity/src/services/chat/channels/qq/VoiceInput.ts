@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getCacheDirPath } from "@/console/env/Paths.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type {
   QqIncomingAttachment,
   QqInboundAttachmentKind,
@@ -358,128 +357,26 @@ async function downloadRemoteAttachment(params: {
   return outPath;
 }
 
-function toTranscriptText(data: unknown): string {
-  if (!data || typeof data !== "object") return "";
-  const text = (data as { text?: unknown }).text;
-  if (typeof text !== "string") return "";
-  return text.trim();
-}
-
-async function invokeAudioTranscribe(params: {
-  context: ServiceRuntime;
-  audioPath: string;
-}): Promise<{
-  success: boolean;
-  data?: unknown;
-  error?: string;
-}> {
-  if (!params.context.capabilities?.has("audio.transcribe")) {
-    return {
-      success: false,
-      error: "audio.transcribe capability is not available",
-    };
-  }
-  return params.context.capabilities.invoke({
-    capability: "audio.transcribe",
-    payload: {
-      audioPath: params.audioPath,
-    },
-  });
-}
-
 /**
- * 调用语音转写能力对 QQ 入站 voice/audio 附件做转写。
+ * 解析 QQ 入站附件的本地路径。
  *
  * 关键点（中文）
- * - 仅处理 `voice` / `audio` 类型附件。
- * - 附件下载或转写任一失败都不阻塞主流程（best-effort）。
+ * - 本地已有路径优先直接复用。
+ * - 远程 URL 会按需下载到 cache，再返回绝对路径。
  */
-export async function buildQqVoiceTranscriptionInstruction(params: {
-  context: ServiceRuntime;
-  logger: Logger;
+export async function resolveQqAttachmentLocalPath(params: {
   rootPath: string;
-  chatId: string;
-  messageId?: string;
-  chatKey: string;
-  attachments: QqIncomingAttachment[];
-  resolveAuthToken?: () => Promise<string>;
+  attachment: QqIncomingAttachment;
+  authToken?: string;
 }): Promise<string> {
-  const voiceItems = params.attachments.filter(
-    (item) => item.kind === "voice" || item.kind === "audio",
-  );
-  if (voiceItems.length === 0) return "";
-
-  let authTokenCache: string | undefined;
-  const getAuthToken = async (): Promise<string | undefined> => {
-    if (!params.resolveAuthToken) return undefined;
-    if (typeof authTokenCache === "string") return authTokenCache;
-    authTokenCache = await params.resolveAuthToken();
-    return authTokenCache;
-  };
-
-  const transcriptBlocks: string[] = [];
-  for (const item of voiceItems) {
-    let localPath = "";
-    try {
-      const rawLocal = toStringOrEmpty(item.localPath);
-      if (rawLocal) {
-        localPath = path.isAbsolute(rawLocal)
-          ? rawLocal
-          : path.resolve(params.rootPath, rawLocal);
-      } else if (item.url) {
-        localPath = await downloadRemoteAttachment({
-          rootPath: params.rootPath,
-          attachment: item,
-          authToken: await getAuthToken(),
-        });
-      }
-    } catch (error) {
-      params.logger.warn("QQ voice attachment download failed", {
-        chatId: params.chatId,
-        messageId: params.messageId,
-        chatKey: params.chatKey,
-        attachmentId: item.attachmentId,
-        attachmentUrl: item.url,
-        error: String(error),
-      });
-      continue;
-    }
-
-    if (!localPath) {
-      params.logger.warn("QQ voice attachment skipped: local path unavailable", {
-        chatId: params.chatId,
-        messageId: params.messageId,
-        chatKey: params.chatKey,
-        attachmentId: item.attachmentId,
-      });
-      continue;
-    }
-
-    const invoke = await invokeAudioTranscribe({
-      context: params.context,
-      audioPath: localPath,
-    });
-    if (!invoke.success) {
-      params.logger.warn("QQ voice transcription capability failed", {
-        chatId: params.chatId,
-        messageId: params.messageId,
-        chatKey: params.chatKey,
-        attachmentId: item.attachmentId,
-        attachmentPath: localPath,
-        error: invoke.error,
-      });
-      continue;
-    }
-
-    const transcript = toTranscriptText(invoke.data);
-    if (!transcript) continue;
-
-    const rel = path.relative(params.rootPath, localPath);
-    transcriptBlocks.push([
-      `【语音转写 ${item.kind}: ${rel}】`,
-      transcript,
-    ].join("\n"));
+  const rawLocal = toStringOrEmpty(params.attachment.localPath);
+  if (rawLocal) {
+    return path.isAbsolute(rawLocal)
+      ? rawLocal
+      : path.resolve(params.rootPath, rawLocal);
   }
-
-  return transcriptBlocks.join("\n\n").trim();
+  if (params.attachment.url) {
+    return downloadRemoteAttachment(params);
+  }
+  return "";
 }

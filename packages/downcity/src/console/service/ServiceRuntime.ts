@@ -13,7 +13,7 @@ import type { JsonValue } from "@/types/Json.js";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
 import type { AssetPort } from "@/types/Asset.js";
-import type { CapabilityPort, PluginPort } from "@/types/Plugin.js";
+import type { PluginPort } from "@/types/Plugin.js";
 
 /**
  * Service 运行时端口类型。
@@ -50,6 +50,12 @@ export type ServicePersistor = {
   append(message: ContextMessageV1): Promise<void>;
   size(): Promise<number>;
   meta(): Promise<Record<string, unknown>>;
+  userText(params: {
+    text: string;
+    metadata: Omit<ContextMetadataV1, "v" | "ts"> &
+      Partial<Pick<ContextMetadataV1, "ts">>;
+    id?: string;
+  }): ContextMessageV1;
   assistantText(params: {
     text: string;
     metadata: Omit<ContextMetadataV1, "v" | "ts"> &
@@ -83,7 +89,8 @@ export type ServiceContext = {
   afterContextUpdatedAsync(contextId: string): Promise<void>;
   appendUserMessage(params: {
     contextId: string;
-    text: string;
+    message?: ContextMessageV1 | null;
+    text?: string;
     requestId?: string;
     extra?: ContextMetadataV1["extra"];
   }): Promise<void>;
@@ -153,14 +160,6 @@ export type ServiceRuntime = {
    */
   services: ServiceInvokePort;
 
-  /**
-   * 跨 plugin capability 调用入口。
-   *
-   * 关键点（中文）
-   * - 新插件体系下，主动能力调用统一走 capability 名称。
-   * - 调用方不应再直接依赖具体 plugin 名称。
-   */
-  capabilities: CapabilityPort;
   /**
    * Asset 调用入口。
    *

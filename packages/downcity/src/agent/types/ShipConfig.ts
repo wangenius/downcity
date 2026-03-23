@@ -248,7 +248,7 @@ export interface ShipConfig {
           paths?: string[];
           requiresApproval: boolean;
         };
-    exec_command?:
+    shell?:
       | boolean
       | {
           deny?: string[];
@@ -256,7 +256,7 @@ export interface ShipConfig {
           requiresApproval: boolean;
           denyRequiresApproval?: boolean;
           /**
-           * `exec_command` / `write_stdin` 返回给模型的输出最大字符数。
+           * shell 工具返回给模型的输出最大字符数。
            *
            * 说明（中文）
            * - 工具结果会进入下一轮 LLM messages。
@@ -265,7 +265,7 @@ export interface ShipConfig {
            */
           maxOutputChars?: number;
           /**
-           * `exec_command` / `write_stdin` 返回给模型的输出最大行数。
+           * shell 工具返回给模型的输出最大行数。
            * 默认值：200。
            */
           maxOutputLines?: number;

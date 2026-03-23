@@ -1,0 +1,120 @@
+---
+title: Package Runtime and Services
+description: Relationship between CLI, console, agent runtime, services, plugins, and the UI gateway
+---
+
+# Package Runtime and Services
+
+`packages/downcity/` is the core runtime package for the whole system. It is not just an SDK. It is the executable runtime body.
+
+## Main Runtime Areas
+
+- `src/console/`: CLI commands, console daemon lifecycle, model/config management, service control, UI gateway routes
+- `src/agent/`: agent assembly, prompt building, persistence, orchestration, runtime types
+- `src/services/`: chat, task, memory, skills, and other service actions/prompts
+- `src/plugins/`: plugin implementations such as auth and voice
+- `src/types/`: shared contracts across runtime surfaces
+- `src/utils/`: storage, logging, ids, templates, and common helpers
+
+## Runtime Relationship
+
+```text
+CLI command
+  -> console command layer
+    -> console runtime / registry / daemon management
+      -> selected agent runtime
+        -> services / plugins / context execution
+```
+
+## ServiceRuntime Design
+
+The service layer intentionally uses a thin injected runtime:
+
+- parsed config
+- agent-level env snapshot
+- context access
+- cross-service invoke
+- asset and plugin ports
+
+This keeps services focused on business flow rather than process orchestration.
+
+The plugin runtime port exposed to services has now converged on four semantics:
+
+- `plugins.pipeline(...)`
+- `plugins.guard(...)`
+- `plugins.effect(...)`
+- `plugins.resolve(...)`
+
+## Console UI Gateway
+
+`src/console/ui/ConsoleUIGateway.ts` is the bridge between product surfaces and runtime:
+
+- serves Console UI build artifacts from `packages/downcity/public`
+- provides console-level helper APIs such as `/api/ui/*`
+- proxies `/api/*` to the selected agent runtime
+- keeps console-level behavior independent from any one page
+
+## The Real Boundary Between Service and Plugin
+
+### Service
+
+A service is a runtime service with lifecycle.
+
+Typical traits:
+
+- starts, stops, or otherwise participates with the agent runtime
+- is tightly coupled to current agent state
+- may actively receive input, schedule work, or perform workflow steps
+- owns a workflow rather than a single ability
+
+### Plugin
+
+A plugin is not a service. It is an extension mechanism.
+
+Typical traits:
+
+- no standalone lifecycle
+- does not actively participate on its own
+- does not own a separate runtime state machine
+- attaches through predefined extension points
+
+## Structure in the Current Code
+
+In the current source tree:
+
+- `src/types/Plugin.ts` defines plugin types, runtime view, and the four hook semantics
+- `src/console/plugin/HookRegistry.ts` executes those four semantics
+- `src/console/plugin/PluginRegistry.ts` owns plugin registration, availability, and action dispatch
+- `src/services/chat/runtime/PluginPoints.ts` defines stable point names owned by chat
+
+So execution semantics are defined by the runtime, point names are defined by each service, and plugins only implement them.
+
+## Real Chat Flow
+
+### Inbound
+
+- channel receives a message
+- chat builds the base inbound payload
+- `plugins.pipeline(chat.augmentInbound)` lets plugins augment content
+- `plugins.effect(chat.observePrincipal)` records subject metadata
+- `plugins.guard(chat.authorizeIncoming)` enforces authorization
+- `plugins.resolve(chat.resolveUserRole)` resolves role information
+- if there is a voice attachment, the plugin attached to `chat.augmentInbound` handles content enrichment directly
+
+### Enqueue
+
+- `plugins.pipeline(chat.beforeEnqueue)` can rewrite data before enqueue
+- chat enqueues the job
+- `plugins.effect(chat.afterEnqueue)` runs side effects such as audit or metrics
+
+### Reply
+
+- agent run finishes
+- `plugins.pipeline(chat.beforeReply)` can rewrite reply text
+- chat sends the reply
+- `plugins.effect(chat.afterReply)` handles side effects after send
+
+### voice plugin
+
+- mainly participates in `chat.augmentInbound`
+- directly calls the `voice.transcriber` asset inside that middleware step and merges transcript text back into inbound content

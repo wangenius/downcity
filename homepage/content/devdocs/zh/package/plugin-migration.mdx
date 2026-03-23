@@ -1,0 +1,157 @@
+---
+title: Plugin 迁移方案
+description: 从旧的 capability 导向设计迁到现在的 service-owned plugin points 模型
+---
+
+# Plugin 迁移方案
+
+这页不是抽象讨论，而是给后续继续改代码时直接使用的迁移规则。
+
+## 迁移目标
+
+把旧模型：
+
+- plugin 提供 capability
+- service 主动调用 capability
+- plugin 同时混合显式调用、hook、provider 语义
+
+迁到新模型：
+
+- service 定义自己的扩展点
+- runtime 统一提供 `pipeline / guard / effect / resolve`
+- plugin 只实现这些点
+- asset 只负责依赖
+
+## 判断规则
+
+### 什么应该是 service
+
+满足任一特征就优先考虑 service：
+
+- 有生命周期
+- 主动参与 agent 执行周期
+- 与 agent 当前状态强相关
+- 承接一整段主业务流程
+
+### 什么应该是 plugin
+
+满足这些特征就优先考虑 plugin：
+
+- 只是在某个流程节点插逻辑
+- 没有独立生命周期
+- 不主动跑
+- 更像中间件、校验器、提供器
+
+### 什么应该是 asset
+
+- 模型
+- CLI 依赖
+- 外部二进制
+- 底层资源安装与配置
+
+## 四种 plugin 语义怎么选
+
+### `pipeline`
+
+用于串行改写值。
+
+适合：
+
+- 入站消息增强
+- 回复文本重写
+- metadata 补充
+
+### `guard`
+
+用于串行校验，抛错即阻断。
+
+适合：
+
+- 鉴权
+- 输入合法性检查
+- 执行前拦截
+
+### `effect`
+
+用于副作用，不返回值。
+
+适合：
+
+- 观测记录
+- 统计埋点
+- 审计日志
+
+### `resolve`
+
+用于单点单实现，返回确定结果。
+
+适合：
+
+- 角色解析
+- 语音转写
+- 某个领域唯一 provider
+
+## 标准迁移步骤
+
+1. 先确定这段逻辑是不是应该继续存在于 service
+2. 如果不是主流程，就先找它属于哪一种 plugin 语义
+3. 由 service 新建稳定点名
+4. 把旧 plugin 逻辑迁到对应 `hooks` 或 `resolves`
+5. 把 service 里的旧 capability 调用替换成 `runtime.plugins.*`
+6. 把依赖安装与可用性检查下沉到 asset
+7. 更新 `/docs` 或 `/devdocs`
+
+## 伪代码模板
+
+```ts
+// service 定义点名
+export const TASK_PLUGIN_POINTS = {
+  beforeRun: "task.beforeRun",
+  afterRun: "task.afterRun",
+  resolveExecutor: "task.resolveExecutor",
+} as const;
+
+// service 使用点
+await runtime.plugins.guard(TASK_PLUGIN_POINTS.beforeRun, input);
+const executor = await runtime.plugins.resolve(
+  TASK_PLUGIN_POINTS.resolveExecutor,
+  input,
+);
+await runtime.plugins.effect(TASK_PLUGIN_POINTS.afterRun, result);
+
+// plugin 实现点
+export const somePlugin: Plugin = {
+  name: "some",
+  hooks: {
+    guard: {
+      [TASK_PLUGIN_POINTS.beforeRun]: [async ({ value }) => {
+        // ...
+      }],
+    },
+    effect: {
+      [TASK_PLUGIN_POINTS.afterRun]: [async ({ value }) => {
+        // ...
+      }],
+    },
+  },
+  resolves: {
+    [TASK_PLUGIN_POINTS.resolveExecutor]: async ({ value }) => {
+      return { /* ... */ };
+    },
+  },
+};
+```
+
+## 当前已完成迁移的参考样板
+
+- `chat.observePrincipal`：auth
+- `chat.authorizeIncoming`：auth
+- `chat.resolveUserRole`：auth
+- `chat.augmentInbound`：voice
+
+## 下一步继续迁移时重点检查什么
+
+- service 里是否还存在直接依赖具体 plugin 模块路径
+- plugin 是否在定义自己的主流程，而不是实现 service 点
+- 依赖安装逻辑是否还混在 plugin action 之外
+- 文档里是否还把 capability 当成核心抽象

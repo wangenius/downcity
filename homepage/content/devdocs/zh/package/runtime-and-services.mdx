@@ -1,0 +1,128 @@
+---
+title: Package Runtime 与 Services
+description: CLI、console、agent runtime、services、plugins 与 UI gateway 的关系
+---
+
+# Package Runtime 与 Services
+
+`packages/downcity/` 是整个系统的核心运行包。它不是一个单纯 SDK，而是可执行系统本体。
+
+## 主要运行层
+
+- `src/console/`：CLI 命令、console daemon 生命周期、模型与配置管理、service 控制、UI gateway 路由
+- `src/agent/`：agent 组装、prompt 生成、持久化、编排与运行时类型
+- `src/services/`：chat、task、memory、skills 等 service 的 action 与 prompt
+- `src/plugins/`：auth、voice 等插件实现
+- `src/types/`：跨运行面共享的类型契约
+- `src/utils/`：存储、日志、id、模板与公共运行工具
+
+## 运行关系
+
+```text
+CLI 命令
+  -> console 命令层
+    -> console runtime / registry / daemon 管理
+      -> 选中的 agent runtime
+        -> services / plugins / context 执行
+```
+
+## ServiceRuntime 设计
+
+当前 service 体系刻意保持“薄注入”：
+
+- 已解析 config
+- agent 级 env 快照
+- context 访问入口
+- 跨 service invoke
+- asset、plugin 端口
+
+这样 service 模块只关心业务流，不关心进程编排细节。
+
+当前 `runtime.plugins` 对 service 暴露的统一调用面已经固定为四种语义：
+
+- `plugins.pipeline(...)`
+- `plugins.guard(...)`
+- `plugins.effect(...)`
+- `plugins.resolve(...)`
+
+## Console UI Gateway
+
+`src/console/ui/ConsoleUIGateway.ts` 是前端产品面和 runtime 之间的桥：
+
+- 托管 `packages/downcity/public` 下的 Console UI 构建产物
+- 提供 `/api/ui/*` 这类 Console 级辅助接口
+- 把 `/api/*` 代理到当前选中的 agent runtime
+- 保持 console 级能力不依赖某一个具体页面
+
+## Service 和 Plugin 的真正边界
+
+### Service
+
+service 是有生命周期的 runtime 服务。
+
+它的典型特征：
+
+- 会跟 agent runtime 一起启动、停止、重启或参与运行态
+- 与当前 agent 的状态强相关
+- 可能主动接收输入、主动调度、主动执行某类行为
+- 不只是暴露一个能力点，而是承接一整段业务流程
+
+### Plugin
+
+plugin 不是服务，而是扩展机制。
+
+它的典型特征：
+
+- 没有独立生命周期
+- 不主动参与 agent 执行周期
+- 与 agent 当前运行状态不形成一套独立耦合关系
+- 通过 service / runtime 预先定义好的扩展点接入
+
+## 从类型层看现在的结构
+
+在当前源码里：
+
+- `src/types/Plugin.ts` 定义 plugin 类型、runtime 视图与四种 hook 类型
+- `src/console/plugin/HookRegistry.ts` 负责四种点的注册与执行
+- `src/console/plugin/PluginRegistry.ts` 负责 plugin 注册、可用性检查、action 调度
+- `src/services/chat/runtime/PluginPoints.ts` 定义 chat service 自己的稳定扩展点
+
+也就是说，扩展语义由 runtime 统一定义，点名由具体 service 定义，plugin 只实现。
+
+## 现在 chat 的真实逻辑
+
+### 1. 入站
+
+- channel 收到消息
+- chat service 构造基础 inbound payload
+- `plugins.pipeline(chat.augmentInbound)` 允许插件追加内容
+- `plugins.effect(chat.observePrincipal)` 记录主体信息
+- `plugins.guard(chat.authorizeIncoming)` 做鉴权
+- `plugins.resolve(chat.resolveUserRole)` 解析角色
+- 如有语音附件，由接入 `chat.augmentInbound` 的 plugin 直接处理内容增强
+
+### 2. 入队
+
+- `plugins.pipeline(chat.beforeEnqueue)` 在入队前改写
+- service 执行 enqueue
+- `plugins.effect(chat.afterEnqueue)` 做落盘、观测、统计等副作用
+
+### 3. 回复
+
+- agent run 完成后
+- `plugins.pipeline(chat.beforeReply)` 在发出前改写文本
+- service 发送回复
+- `plugins.effect(chat.afterReply)` 做回执、统计、审计
+
+## 对应到现有 plugin
+
+### auth plugin
+
+- 主要参与 `chat.observePrincipal`
+- 主要参与 `chat.authorizeIncoming`
+- 主要参与 `chat.resolveUserRole`
+
+### voice plugin
+
+- 主要参与 `chat.augmentInbound`
+- 在这个 middleware 点里直接调用 `voice.transcriber` asset，把转写结果拼回消息正文

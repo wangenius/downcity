@@ -1,18 +1,19 @@
 ---
 title: Service Runtime
-description: 说明 Service 是什么、在哪里运行，以及如何与 plugin 和 capability 协作
+description: 说明 Service 是什么、在哪里运行，以及如何与 plugin、asset 协作
 ---
 
 # Service Runtime
 
-Service 是核心业务工作流模块。
+Service 是 Downcity 里的核心业务工作流模块。
 
 典型内置 service：
 
 - `chat`
-- `skill`
 - `task`
 - `memory`
+- `skills`
+- `shell`
 
 ## Service 应该负责什么
 
@@ -20,17 +21,27 @@ Service 是核心业务工作流模块。
 - 运行时编排
 - 上下文感知执行
 - 稳定的 service actions
+- 定义允许 plugin 接入的扩展点
 
 ## Service 不应该负责什么
 
-- 外部依赖的 install/check/config
+- 底层依赖的安装、检查、切换
 - plugin 私有实现细节
-- 可复用但应解耦的增强逻辑
+- 可以抽离出去的增强逻辑
 
-## 推荐调用模型
+## 推荐协作模型
 
-- service -> capability
-- capability -> plugin 实现
-- plugin -> asset
+- service -> 触发自己的 plugin 点
+- plugin -> 实现这些点
+- asset -> 提供 plugin 依赖
 
-例如 `chat` 不需要知道 voice 模型细节，只调用 `audio.transcribe` 即可。
+例如 `chat` 不需要知道具体转写模型细节。  
+它只负责在处理语音附件时触发自己的语音相关扩展点，真正的实现由 `voice` plugin 提供，底层依赖再由 asset 解决。
+
+## 这样设计的好处
+
+- 主流程不会散落到多个插件里
+- 插件不会长成第二套 runtime
+- 依赖安装与业务编排可以分开维护
+
+对于命令执行，agent 现在也不再直接持有 shell 进程表，而是通过 `shellService` 管理 `shell_id` 会话。

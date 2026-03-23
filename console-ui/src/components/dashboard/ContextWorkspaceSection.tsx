@@ -525,6 +525,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
   }, [selectedContext, selectedContextId])
 
   const canSend = currentChannel === "consoleui"
+  const contextExecuting = selectedContext?.executing === true
 
   const currentChannelStatus = React.useMemo(() => {
     if (currentChannel === "consoleui") return "connected"
@@ -597,6 +598,22 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
             <div className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-[11px] text-muted-foreground">
               <span className="font-mono">{currentChannel}</span>
               <span>{`${channelHistory.length} msgs`}</span>
+            </div>
+            <div
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px]",
+                contextExecuting
+                  ? "bg-primary/12 text-primary"
+                  : "bg-secondary text-muted-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-flex size-1.5 rounded-full",
+                  contextExecuting ? "bg-primary" : "bg-muted-foreground/60",
+                )}
+              />
+              <span>{contextExecuting ? "executing" : "idle"}</span>
             </div>
             <StatusBadge state={currentChannelStatus} />
             <DropdownMenu>

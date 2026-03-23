@@ -1,85 +1,92 @@
 /**
- * Telegram 语音附件转写桥接测试（node:test）。
+ * Telegram 入站增强测试（node:test）。
  *
  * 关键点（中文）
- * - 仅 voice/audio 附件会触发语音转写 capability 调用。
- * - capability 失败时不中断主流程（返回空文本）。
+ * - 语音附件增强应走 chat augmentInbound pipeline。
+ * - voice plugin 只追加 pluginSections，不直接改 service 文本拼装逻辑。
  */
 
 import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
-import { buildTelegramVoiceTranscriptionInstruction } from "../../bin/services/chat/channels/telegram/VoiceInput.js";
+import { buildChatInboundText } from "../../bin/services/chat/runtime/InboundAugment.js";
+import { CHAT_PLUGIN_POINTS } from "../../bin/services/chat/runtime/PluginPoints.js";
+import { voicePlugin } from "../../bin/plugins/voice/Plugin.js";
 
-function createLogger() {
-  return {
-    info() {},
-    warn() {},
-    error() {},
-    debug() {},
-    log() {},
-  };
-}
-
-test("voice/audio attachments call capability and produce transcript blocks", async () => {
+test("voice plugin pipeline augments inbound sections for telegram attachments", async () => {
   const rootPath = "/tmp/demo-root";
-  const context = {
-    capabilities: {
-      has(name) {
-        return name === "audio.transcribe";
-      },
-      async invoke(params) {
-        if (params.payload.audioPath.endsWith("a.ogg")) {
-          return { success: true, data: { text: "第一段语音" } };
-        }
-        return { success: true, data: { text: "第二段音频" } };
-      },
-    },
-  };
-
-  const text = await buildTelegramVoiceTranscriptionInstruction({
-    context,
-    logger: createLogger(),
+  const runtime = {
     rootPath,
-    chatId: "10001",
-    messageId: "88",
-    chatKey: "telegram-chat-10001",
-    attachments: [
-      { type: "voice", path: path.join(rootPath, "cache/a.ogg") },
-      { type: "audio", path: path.join(rootPath, "cache/b.mp3") },
-      { type: "photo", path: path.join(rootPath, "cache/c.jpg") },
-    ],
-  });
-
-  assert.match(text, /第一段语音/);
-  assert.match(text, /第二段音频/);
-  assert.match(text, /语音转写/);
-});
-
-test("capability failure is ignored and returns empty transcript", async () => {
-  const context = {
-    capabilities: {
-      has(name) {
-        return name === "audio.transcribe";
-      },
-      async invoke() {
+    assets: {
+      async use(assetName) {
+        assert.equal(assetName, "voice.transcriber");
         return {
-          success: false,
-          error: "voice capability disabled",
+          async transcribe(payload) {
+        if (payload.audioPath.endsWith("a.ogg")) {
+          return { text: "第一段语音" };
+        }
+        return { text: "第二段音频" };
+          },
         };
       },
     },
   };
+  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
 
-  const text = await buildTelegramVoiceTranscriptionInstruction({
-    context,
-    logger: createLogger(),
-    rootPath: "/tmp/demo-root",
-    chatId: "10001",
-    messageId: "88",
-    chatKey: "telegram-chat-10001",
-    attachments: [{ type: "voice", path: "/tmp/demo-root/cache/a.ogg" }],
+  const next = await handler({
+    runtime,
+    plugin: "voice",
+    value: {
+      channel: "telegram",
+      chatId: "10001",
+      messageId: "88",
+      chatKey: "telegram-chat-10001",
+      rootPath,
+      attachmentText: "@attach voice cache/a.ogg\n@attach audio cache/b.mp3",
+      bodyText: "hello",
+      pluginSections: [],
+      attachments: [
+        { channel: "telegram", kind: "voice", path: path.join(rootPath, "cache/a.ogg") },
+        { channel: "telegram", kind: "audio", path: path.join(rootPath, "cache/b.mp3") },
+        { channel: "telegram", kind: "photo", path: path.join(rootPath, "cache/c.jpg") },
+      ],
+    },
+  });
+  const text = buildChatInboundText(next);
+
+  assert.match(text, /第一段语音/);
+  assert.match(text, /第二段音频/);
+  assert.match(text, /语音转写/);
+  assert.match(text, /@attach voice/);
+  assert.match(text, /hello/);
+});
+
+test("voice plugin pipeline ignores resolve failures and keeps base text", async () => {
+  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
+  const next = await handler({
+    runtime: {
+      rootPath: "/tmp/demo-root",
+      assets: {
+        async use() {
+          throw new Error("voice plugin disabled");
+        },
+      },
+    },
+    plugin: "voice",
+    value: {
+      channel: "telegram",
+      chatId: "10001",
+      messageId: "88",
+      chatKey: "telegram-chat-10001",
+      rootPath: "/tmp/demo-root",
+      attachmentText: undefined,
+      bodyText: "hello",
+      pluginSections: [],
+      attachments: [
+        { channel: "telegram", kind: "voice", path: "/tmp/demo-root/cache/a.ogg" },
+      ],
+    },
   });
 
-  assert.equal(text, "");
+  assert.equal(buildChatInboundText(next), "hello");
 });

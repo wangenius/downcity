@@ -2,12 +2,13 @@
  * Auth Plugin 类型与契约定义。
  *
  * 关键点（中文）
- * - 统一维护 auth plugin 的领域类型、capability/action 名称、payload 契约。
- * - 业务层不应散落硬编码字符串，如 `auth.authorize_incoming`、`set-user-role`。
+ * - 统一维护 auth plugin 的领域类型、plugin point/action 名称、payload 契约。
+ * - 业务层不应散落硬编码字符串，如 `chat.authorizeIncoming`、`set-user-role`。
  * - chat / console / plugin runtime 都从这里共享同一份边界定义。
  */
 
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
+import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 
 /**
  * auth plugin 稳定名称。
@@ -25,12 +26,12 @@ export const CHAT_AUTHORIZATION_CHANNELS = ["telegram", "feishu", "qq"] as const
 export type ChatAuthorizationChannel = (typeof CHAT_AUTHORIZATION_CHANNELS)[number];
 
 /**
- * auth capability 名称集合。
+ * auth plugin 点名称集合。
  */
-export const AUTH_CAPABILITIES = {
-  observePrincipal: "auth.observe_principal",
-  authorizeIncoming: "auth.authorize_incoming",
-  resolveUserRole: "auth.resolve_user_role",
+export const AUTH_PLUGIN_POINTS = {
+  observePrincipal: CHAT_PLUGIN_POINTS.observePrincipal,
+  authorizeIncoming: CHAT_PLUGIN_POINTS.authorizeIncoming,
+  resolveUserRole: CHAT_PLUGIN_POINTS.resolveUserRole,
 } as const;
 
 /**
@@ -462,7 +463,7 @@ export interface ChatAuthorizationStateFile {
 }
 
 /**
- * capability: 记录观测主体输入。
+ * plugin effect 输入：记录观测主体。
  */
 export interface AuthObservePrincipalPayload {
   /**
@@ -492,7 +493,7 @@ export interface AuthObservePrincipalPayload {
 }
 
 /**
- * capability: 记录观测主体输出。
+ * plugin effect 输出：记录观测主体结果。
  */
 export interface AuthObservePrincipalResult {
   /**
@@ -502,7 +503,7 @@ export interface AuthObservePrincipalResult {
 }
 
 /**
- * capability: 查询用户角色输入。
+ * plugin resolve 输入：查询用户角色。
  */
 export interface AuthResolveUserRolePayload {
   /**

@@ -1,0 +1,48 @@
+---
+title: Console UI Architecture
+description: React app structure, data flow, and the current information architecture model
+---
+
+# Console UI Architecture
+
+`console-ui/` is the dedicated browser control room for Downcity. It is a frontend workspace, not a copy of backend runtime logic.
+
+## Current Stack
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- Shadcn-style component organization
+
+## Build and Runtime
+
+- Dev mode proxies `/api` and `/health` to the Console UI gateway
+- Production build outputs directly into `packages/downcity/public`
+- `city console ui` serves those assets through the gateway
+
+## App Shape
+
+- `src/App.tsx`: shell, route-derived view selection, top-level state transitions
+- `src/hooks/useConsoleDashboard.ts`: orchestration hook for fetching dashboard data and binding mutations
+- `src/lib/dashboard-*`: request, query, mutation, and route helpers
+- `src/components/`: page sections, sidebar, layout primitives, and dashboard panels
+- `src/types/`: UI-facing type contracts
+
+## Information Architecture
+
+The current direction follows a three-layer model consolidated from the earlier redesign drafts:
+
+1. `Scope`: Global, Agent, Context
+2. `Domain`: Observe, Operate, Inspect
+3. `Navigation`: sidebar grouping and route mapping
+
+This avoids mixing global controls, agent runtime state, and context-level debugging into one undifferentiated dashboard.
+
+## Implementation Rule
+
+Console UI should remain an API client:
+
+- runtime ownership stays in `packages/downcity/`
+- view composition stays in `console-ui/`
+- design conventions and IA rules should be documented here, not buried inside one component file

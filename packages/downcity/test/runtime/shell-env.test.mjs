@@ -2,7 +2,7 @@
  * Shell env 注入测试（node:test）。
  *
  * 关键点（中文）
- * - 确认 `exec_command` 传入的 env 会覆盖宿主进程基础 env。
+ * - 确认 shell 工具传入的 env 会覆盖宿主进程基础 env。
  * - 确认 `DC_CTX_*` 请求上下文变量仍会被注入。
  */
 

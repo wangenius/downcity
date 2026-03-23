@@ -259,6 +259,10 @@ export interface UiContextSummary {
    * 最后一条消息摘要。
    */
   lastText?: string;
+  /**
+   * 当前 context 是否正在执行。
+   */
+  executing?: boolean;
 }
 
 /**
@@ -829,9 +833,21 @@ export interface UiPluginRuntimeItem {
    */
   name?: string;
   /**
-   * 暴露的 capability 名称列表。
+   * 暴露的 pipeline 点名称列表。
    */
-  capabilities?: string[];
+  pipelines?: string[];
+  /**
+   * 暴露的 guard 点名称列表。
+   */
+  guards?: string[];
+  /**
+   * 暴露的 effect 点名称列表。
+   */
+  effects?: string[];
+  /**
+   * 暴露的 resolve 点名称列表。
+   */
+  resolves?: string[];
   /**
    * 依赖的 asset 名称列表。
    */

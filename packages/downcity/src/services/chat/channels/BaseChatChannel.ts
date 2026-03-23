@@ -20,11 +20,16 @@ import {
   appendInboundChatHistory,
   appendOutboundChatHistory,
 } from "@services/chat/runtime/ChatHistoryStore.js";
+import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
 import {
-  evaluateIncomingAuthorizationViaPlugin,
-  observeAuthorizationPrincipalViaPlugin,
-  resolveAuthorizedUserRoleViaPlugin,
-} from "@/plugins/auth/Runtime.js";
+  guardIncomingChat,
+  observeIncomingChatPrincipal,
+  resolveIncomingChatUserRole,
+} from "@services/chat/runtime/PluginRuntime.js";
+import {
+  emitChatEnqueueEffect,
+  prepareChatEnqueue,
+} from "@services/chat/runtime/EnqueueDispatch.js";
 
 type ChannelUserMessageMeta = {
   [key: string]: JsonValue | undefined;
@@ -114,7 +119,6 @@ export type IncomingAuthorizationParams = {
 export type IncomingAuthorizationResult = {
   decision: "allow" | "block";
   reason: string;
-  isOwner: boolean;
 };
 
 /**
@@ -189,7 +193,7 @@ export abstract class BaseChatChannel {
   protected async observeIncomingAuthorization(
     params: IncomingAuthorizationParams,
   ): Promise<void> {
-    await observeAuthorizationPrincipalViaPlugin({
+    await observeIncomingChatPrincipal({
       runtime: this.context,
       channel: this.channel,
       chatId: params.chatId,
@@ -206,19 +210,29 @@ export abstract class BaseChatChannel {
   protected async evaluateIncomingAuthorization(
     params: IncomingAuthorizationParams,
   ): Promise<IncomingAuthorizationResult> {
-    const result = await evaluateIncomingAuthorizationViaPlugin({
-      runtime: this.context,
-      channel: this.channel,
-      input: {
+    try {
+      await guardIncomingChat({
+        runtime: this.context,
         channel: this.channel,
-        chatId: params.chatId,
-        chatType: params.chatType,
-        userId: params.userId,
-        username: params.username,
-        chatTitle: params.chatTitle,
-      },
-    });
-    return result;
+        input: {
+          channel: this.channel,
+          chatId: params.chatId,
+          chatType: params.chatType,
+          userId: params.userId,
+          username: params.username,
+          chatTitle: params.chatTitle,
+        },
+      });
+      return {
+        decision: "allow",
+        reason: "allow",
+      };
+    } catch (error) {
+      return {
+        decision: "block",
+        reason: String(error || "blocked"),
+      };
+    }
   }
 
   /**
@@ -574,18 +588,55 @@ export abstract class BaseChatChannel {
       actorName: username,
       chatTitle,
     });
-    enqueueChatQueue({
+    const preparedAudit = await prepareChatEnqueue({
+      runtime: this.context,
+      input: {
+        kind: "audit",
+        channel: this.channel,
+        chatKey: contextId,
+        chatId: params.chatId,
+        text: params.text,
+        ...(chatType ? { chatType } : {}),
+        ...(typeof messageThreadId === "number" ? { threadId: messageThreadId } : {}),
+        ...(typeof params.messageId === "string" ? { messageId: params.messageId } : {}),
+        ...(typeof params.userId === "string" ? { actorId: params.userId } : {}),
+        ...(typeof username === "string" ? { actorName: username } : {}),
+        extra,
+      },
+    });
+    const auditEnqueued = enqueueChatQueue({
       kind: "audit",
       channel: this.channel,
       targetId: params.chatId,
       contextId,
-      actorId: params.userId,
-      actorName: username,
-      messageId: params.messageId,
-      text: params.text,
-      threadId: messageThreadId,
-      targetType: chatType,
-      extra,
+      ...(typeof preparedAudit.actorId === "string"
+        ? { actorId: preparedAudit.actorId }
+        : {}),
+      ...(typeof preparedAudit.actorName === "string"
+        ? { actorName: preparedAudit.actorName }
+        : {}),
+      ...(typeof preparedAudit.messageId === "string"
+        ? { messageId: preparedAudit.messageId }
+        : {}),
+      text: preparedAudit.text,
+      ...(typeof preparedAudit.threadId === "number"
+        ? { threadId: preparedAudit.threadId }
+        : {}),
+      ...(typeof preparedAudit.chatType === "string"
+        ? { targetType: preparedAudit.chatType }
+        : {}),
+      extra:
+        preparedAudit.extra && typeof preparedAudit.extra === "object"
+          ? (preparedAudit.extra as JsonObject)
+          : extra,
+    });
+    await emitChatEnqueueEffect({
+      runtime: this.context,
+      input: {
+        ...preparedAudit,
+        itemId: auditEnqueued.itemId,
+        lanePosition: auditEnqueued.lanePosition,
+      },
     });
   }
 
@@ -599,7 +650,7 @@ export abstract class BaseChatChannel {
   protected async enqueueMessage(
     msg: IncomingChatMessage,
   ): Promise<{ chatKey: string; position: number }> {
-    const userRole = await resolveAuthorizedUserRoleViaPlugin({
+    const userRole = await resolveIncomingChatUserRole({
       runtime: this.context,
       channel: this.channel,
       userId: msg.userId,
@@ -621,7 +672,7 @@ export abstract class BaseChatChannel {
       throw new Error("Failed to resolve contextId for incoming chat message");
     }
 
-    const queuedText = buildQueuedUserMessageWithInfo({
+    const rawQueuedText = buildQueuedUserMessageWithInfo({
       channel: this.channel,
       contextId: chatKey,
       chatKey,
@@ -635,18 +686,52 @@ export abstract class BaseChatChannel {
       permissions: userRole?.permissions,
       text: msg.text,
     });
+    const preparedExec = await prepareChatEnqueue({
+      runtime: this.context,
+      input: {
+        kind: "exec",
+        channel: this.channel,
+        chatKey,
+        chatId: msg.chatId,
+        text: rawQueuedText,
+        ...(msg.chatType ? { chatType: msg.chatType } : {}),
+        ...(typeof msg.messageThreadId === "number"
+          ? { threadId: msg.messageThreadId }
+          : {}),
+        ...(typeof msg.messageId === "string" ? { messageId: msg.messageId } : {}),
+        ...(typeof msg.userId === "string" ? { actorId: msg.userId } : {}),
+        ...(typeof msg.username === "string" ? { actorName: msg.username } : {}),
+        extra: mergedExtra,
+      },
+    });
+    const queuedText = preparedExec.text;
+    const queuedExtra =
+      preparedExec.extra && typeof preparedExec.extra === "object"
+        ? (preparedExec.extra as JsonObject)
+        : mergedExtra;
 
-    await this.appendInboundHistory({
+    await appendExecIngress({
+      context: this.context,
       contextId: chatKey,
+      channel: this.channel,
       chatId: msg.chatId,
-      ingressKind: "exec",
       text: queuedText,
-      targetType: msg.chatType,
-      threadId: msg.messageThreadId,
-      messageId: msg.messageId,
-      actorId: msg.userId,
-      actorName: msg.username,
-      extra: mergedExtra,
+      ...(typeof preparedExec.chatType === "string"
+        ? { targetType: preparedExec.chatType }
+        : {}),
+      ...(typeof preparedExec.threadId === "number"
+        ? { threadId: preparedExec.threadId }
+        : {}),
+      ...(typeof preparedExec.messageId === "string"
+        ? { messageId: preparedExec.messageId }
+        : {}),
+      ...(typeof preparedExec.actorId === "string"
+        ? { actorId: preparedExec.actorId }
+        : {}),
+      ...(typeof preparedExec.actorName === "string"
+        ? { actorName: preparedExec.actorName }
+        : {}),
+      extra: queuedExtra,
     });
 
     await this.updateChatMeta({
@@ -660,20 +745,39 @@ export abstract class BaseChatChannel {
       chatTitle: msg.chatTitle,
     });
 
-    const { lanePosition } = enqueueChatQueue({
+    const execEnqueued = enqueueChatQueue({
       kind: "exec",
       channel: this.channel,
       targetId: msg.chatId,
       contextId: chatKey,
       text: queuedText,
-      targetType: msg.chatType,
-      threadId: msg.messageThreadId,
-      messageId: msg.messageId,
-      actorId: msg.userId,
-      actorName: msg.username,
-      extra: mergedExtra,
+      ...(typeof preparedExec.chatType === "string"
+        ? { targetType: preparedExec.chatType }
+        : {}),
+      ...(typeof preparedExec.threadId === "number"
+        ? { threadId: preparedExec.threadId }
+        : {}),
+      ...(typeof preparedExec.messageId === "string"
+        ? { messageId: preparedExec.messageId }
+        : {}),
+      ...(typeof preparedExec.actorId === "string"
+        ? { actorId: preparedExec.actorId }
+        : {}),
+      ...(typeof preparedExec.actorName === "string"
+        ? { actorName: preparedExec.actorName }
+        : {}),
+      contextPersisted: true,
+      extra: queuedExtra,
+    });
+    await emitChatEnqueueEffect({
+      runtime: this.context,
+      input: {
+        ...preparedExec,
+        itemId: execEnqueued.itemId,
+        lanePosition: execEnqueued.lanePosition,
+      },
     });
 
-    return { chatKey, position: lanePosition };
+    return { chatKey, position: execEnqueued.lanePosition };
   }
 }

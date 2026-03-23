@@ -27,7 +27,7 @@ This is still configured in project `ship.json.permissions`.
     "write_repo": {
       "requiresApproval": false
     },
-    "exec_command": {
+    "shell": {
       "deny": ["rm"],
       "requiresApproval": false,
       "denyRequiresApproval": true,
@@ -42,10 +42,10 @@ This is still configured in project `ship.json.permissions`.
 
 - `read_repo`: allow repository reads.
 - `write_repo.requiresApproval`: require approval before repository writes.
-- `exec_command.deny`: blocked command prefix list.
-- `exec_command.requiresApproval`: require approval for general commands.
-- `exec_command.denyRequiresApproval`: whether denied commands can be manually approved.
-- `exec_command.maxOutputChars/maxOutputLines`: command output limits.
+- `shell.deny`: blocked command prefix list.
+- `shell.requiresApproval`: require approval for general commands.
+- `shell.denyRequiresApproval`: whether denied commands can be manually approved.
+- `shell.maxOutputChars/maxOutputLines`: command output limits.
 
 ### Recommended policy
 

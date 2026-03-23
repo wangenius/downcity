@@ -19,13 +19,16 @@ import {
   type TelegramUpdate,
   type TelegramUser,
 } from "./Shared.js";
-import { buildTelegramVoiceTranscriptionInstruction } from "./VoiceInput.js";
 import { TelegramStateStore } from "./StateStore.js";
 import { extractTelegramReplyContext } from "./ReplyContext.js";
 import {
   buildReplyContextExtra,
   buildReplyContextInstruction,
 } from "@services/chat/runtime/ReplyContextFormatter.js";
+import {
+  augmentChatInboundInput,
+  buildChatInboundText,
+} from "@services/chat/runtime/InboundAugment.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
@@ -791,22 +794,28 @@ export class TelegramBot extends BaseChatChannel {
         const instructions =
           buildReplyContextInstruction({
             text:
-              [
-                attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
-                await buildTelegramVoiceTranscriptionInstruction({
-                  context: this.context,
-                  logger: this.logger,
-                  rootPath: this.rootPath,
-                  chatId,
-                  messageId,
-                  chatKey,
-                  attachments: incomingAttachments,
+              buildChatInboundText(
+                await augmentChatInboundInput({
+                  runtime: this.context,
+                  input: {
+                    channel: "telegram",
+                    chatId,
+                    chatType: message.chat.type,
+                    chatKey,
+                    messageId,
+                    rootPath: this.rootPath,
+                    attachmentText:
+                      attachmentLines.length > 0 ? attachmentLines.join("\n") : undefined,
+                    bodyText: cleaned ? cleaned.trim() : undefined,
+                    attachments: incomingAttachments.map((attachment) => ({
+                      channel: "telegram" as const,
+                      kind: attachment.type,
+                      path: attachment.path,
+                      desc: attachment.desc,
+                    })),
+                  },
                 }),
-                cleaned ? cleaned.trim() : undefined,
-              ]
-                .filter(Boolean)
-                .join("\n\n")
-                .trim() ||
+              ) ||
               (attachmentLines.length > 0
                 ? `${attachmentLines.join("\n")}\n\n请查看以上附件。`
                 : ""),

@@ -31,6 +31,11 @@ import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import { pickLastSuccessfulChatSendText } from "./UserVisibleText.js";
 import { sendChatTextByChatKey } from "../Action.js";
+import {
+  emitChatReplyEffect,
+  prepareChatReplyText,
+  resolveChatReplyTarget,
+} from "./ReplyDispatch.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
 const CHANNEL_ERROR_TEXT_MAX_LENGTH = 480;
@@ -281,7 +286,7 @@ export class ChatQueueWorker {
     return drained.length > 0 ? [first, ...drained] : [first];
   }
 
-  private shouldAppendHistory(item: ChatQueueItem): boolean {
+  private shouldAppendContextMessage(item: ChatQueueItem): boolean {
     return item.kind === "exec";
   }
 
@@ -299,8 +304,9 @@ export class ChatQueueWorker {
     };
   }
 
-  private async appendHistory(item: ChatQueueItem): Promise<void> {
-    if (!this.shouldAppendHistory(item)) return;
+  private async appendContextMessageIfNeeded(item: ChatQueueItem): Promise<void> {
+    if (!this.shouldAppendContextMessage(item)) return;
+    if (item.contextPersisted === true) return;
     await this.requireContext().appendUserMessage({
       contextId: item.contextId,
       text: item.text,
@@ -391,6 +397,7 @@ export class ChatQueueWorker {
   private async dispatchAssistantTextDirect(params: {
     contextId: string;
     assistantText: string;
+    phase?: "step" | "final" | "error";
   }): Promise<boolean> {
     if (!this.isDirectModeEnabled()) return false;
 
@@ -403,12 +410,50 @@ export class ChatQueueWorker {
 
     if (plan.text) {
       dispatched = true;
+      const target = await resolveChatReplyTarget({
+        runtime: this.runtime,
+        chatKey: plan.text.chatKey,
+      });
+      const preparedText = await prepareChatReplyText({
+        runtime: this.runtime,
+        input: {
+          chatKey: plan.text.chatKey,
+          ...(target.channel ? { channel: target.channel } : {}),
+          ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
+          ...(typeof plan.text.messageId === "string"
+            ? { messageId: plan.text.messageId }
+            : typeof target.messageId === "string"
+              ? { messageId: target.messageId }
+              : {}),
+          text: plan.text.text,
+          phase: params.phase || "final",
+          mode: "direct",
+        },
+      });
       const textResult = await sendChatTextByChatKey({
         context: this.runtime,
         chatKey: plan.text.chatKey,
-        text: plan.text.text,
+        text: preparedText,
         replyToMessage: plan.text.replyToMessage,
         messageId: plan.text.messageId,
+      });
+      await emitChatReplyEffect({
+        runtime: this.runtime,
+        input: {
+          chatKey: plan.text.chatKey,
+          ...(target.channel ? { channel: target.channel } : {}),
+          ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
+          ...(typeof plan.text.messageId === "string"
+            ? { messageId: plan.text.messageId }
+            : typeof target.messageId === "string"
+              ? { messageId: target.messageId }
+              : {}),
+          text: preparedText,
+          phase: params.phase || "final",
+          mode: "direct",
+          success: textResult.success,
+          ...(textResult.success ? {} : { error: textResult.error || "chat send failed" }),
+        },
       });
       if (!textResult.success) {
         this.logger.warn("Direct chat text dispatch failed", {
@@ -451,6 +496,7 @@ export class ChatQueueWorker {
     return this.dispatchAssistantTextDirect({
       contextId: params.contextId,
       assistantText: extractTextFromUiMessage(params.assistantMessage),
+      phase: "final",
     });
   }
 
@@ -465,19 +511,58 @@ export class ChatQueueWorker {
     contextId: string;
     text: string;
     messageId?: string;
+    phase?: "step" | "final" | "error";
   }): Promise<boolean> {
     const text = String(params.text || "").trim();
     if (!text) return false;
+    const target = await resolveChatReplyTarget({
+      runtime: this.runtime,
+      chatKey: params.contextId,
+    });
+    const preparedText = await prepareChatReplyText({
+      runtime: this.runtime,
+      input: {
+        chatKey: params.contextId,
+        ...(target.channel ? { channel: target.channel } : {}),
+        ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
+        ...(typeof params.messageId === "string"
+          ? { messageId: params.messageId }
+          : typeof target.messageId === "string"
+            ? { messageId: target.messageId }
+            : {}),
+        text,
+        phase: params.phase || "final",
+        mode: "fallback",
+      },
+    });
 
     const result = await sendChatTextByChatKey({
       context: this.runtime,
       chatKey: params.contextId,
-      text,
+      text: preparedText,
       // 关键点（中文）：优先以 reply 形式返回到触发消息，增强用户感知。
       replyToMessage: true,
       ...(typeof params.messageId === "string" && params.messageId
         ? { messageId: params.messageId }
         : {}),
+    });
+    await emitChatReplyEffect({
+      runtime: this.runtime,
+      input: {
+        chatKey: params.contextId,
+        ...(target.channel ? { channel: target.channel } : {}),
+        ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
+        ...(typeof params.messageId === "string"
+          ? { messageId: params.messageId }
+          : typeof target.messageId === "string"
+            ? { messageId: target.messageId }
+            : {}),
+        text: preparedText,
+        phase: params.phase || "final",
+        mode: "fallback",
+        success: result.success,
+        ...(result.success ? {} : { error: result.error || "chat send failed" }),
+      },
     });
 
     if (!result.success) {
@@ -497,7 +582,7 @@ export class ChatQueueWorker {
     }
 
     if (first.kind === "audit") {
-      await this.appendHistory(first);
+      await this.appendContextMessageIfNeeded(first);
       return;
     }
 
@@ -511,7 +596,7 @@ export class ChatQueueWorker {
         if (item.control?.type === "clear") clearRequested = true;
         continue;
       }
-      await this.appendHistory(item);
+      await this.appendContextMessageIfNeeded(item);
       if (item.kind === "exec") {
         runItem = item;
       }
@@ -527,7 +612,7 @@ export class ChatQueueWorker {
           continue;
         }
 
-        await this.appendHistory(item);
+        await this.appendContextMessageIfNeeded(item);
         if (item.kind === "exec") {
           const text = String(item.text ?? "").trim();
           if (text) {
@@ -559,6 +644,7 @@ export class ChatQueueWorker {
       const dispatched = await this.dispatchAssistantTextDirect({
         contextId: runItem.contextId,
         assistantText: stepText,
+        phase: "step",
       });
       // 关键点（中文）：记录最近一次已发送的 step 文本，避免最终消息重复回发。
       if (dispatched) {
@@ -598,6 +684,7 @@ export class ChatQueueWorker {
         contextId: runItem.contextId,
         text: channelErrorText,
         messageId: runItem.messageId,
+        phase: "error",
       });
       return;
     } finally {
@@ -644,6 +731,7 @@ export class ChatQueueWorker {
               ? finalChannelText || "❌ 执行失败，请稍后重试。"
               : finalChannelText,
           messageId: runItem.messageId,
+          phase: result.success === false ? "error" : "final",
         });
       }
     } catch {

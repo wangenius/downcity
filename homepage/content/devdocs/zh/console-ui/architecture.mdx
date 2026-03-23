@@ -1,0 +1,48 @@
+---
+title: Console UI 架构
+description: React 前端结构、数据流与当前信息架构模型
+---
+
+# Console UI 架构
+
+`console-ui/` 是 Downcity 的浏览器控制面。它是独立前端工作区，不是后端 runtime 逻辑的翻版。
+
+## 当前技术栈
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- Shadcn 风格的组件组织方式
+
+## 构建与运行
+
+- 开发态通过 Vite proxy 把 `/api`、`/health` 转发到 Console UI gateway
+- 生产构建直接输出到 `packages/downcity/public`
+- `city console ui` 负责托管这些静态产物
+
+## 代码组织
+
+- `src/App.tsx`：应用外壳、基于路径的视图切换、顶层状态切换
+- `src/hooks/useConsoleDashboard.ts`：dashboard 的查询、刷新、mutation 编排中枢
+- `src/lib/dashboard-*`：请求、查询、mutation、路由辅助
+- `src/components/`：侧边栏、页面 section、布局原语与 dashboard 面板
+- `src/types/`：UI 面类型契约
+
+## 信息架构方向
+
+当前方向来自旧稿里的 IA 重构结论，已经整理成三个维度：
+
+1. `Scope`：Global / Agent / Context
+2. `Domain`：Observe / Operate / Inspect
+3. `Navigation`：侧边栏分组与路由映射
+
+这样能避免把全局控制、agent 运行态、context 排障信息混在同一层里。
+
+## 实现约束
+
+Console UI 只做 API client：
+
+- runtime 所有权留在 `packages/downcity/`
+- 视图组装放在 `console-ui/`
+- 设计规范与 IA 约束写进文档，而不是散落在单个组件文件里

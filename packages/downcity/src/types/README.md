@@ -16,7 +16,7 @@
   - 定义 `Asset`、`AssetPort`、`AssetCheckResult`、`AssetInstallResult`。
   - 用于新的插件资产体系，统一表达底层资源对象与其调用协议。
 - `Plugin.ts`
-  - 定义 `Plugin`、`PluginAction`、`CapabilityPort`、`PluginPort` 等。
+  - 定义 `Plugin`、`PluginAction`、`PluginPort` 等。
   - 用于新的声明式插件体系，统一表达插件行为、可用性与显式调用协议。
 - `VoicePlugin.ts`
   - 定义 `VoicePluginConfig`、`VoiceTranscriberAssetConfig`、`VoiceTranscriberHandle`。

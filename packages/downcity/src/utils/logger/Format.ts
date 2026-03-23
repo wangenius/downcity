@@ -214,7 +214,7 @@ function extractFunctionCallExecCommandCmd(message: JsonObject): string | undefi
   if (itemType !== "function_call") return undefined;
 
   const name = getStringField(message, "name");
-  if (name !== "exec_command") return undefined;
+  if (name !== "shell_start" && name !== "shell_exec") return undefined;
 
   const argsObj = parsePossibleJsonObject(message.arguments);
   if (!argsObj) return undefined;

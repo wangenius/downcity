@@ -33,7 +33,7 @@ city voice transcribe ./demo.ogg
 ## 说明
 
 - `city voice on` 会在一步里完成“启用 plugin + 可选安装 asset”。
-- voice plugin 会向聊天渠道暴露 `audio.transcribe` capability，Telegram / QQ 的语音消息会通过它转写。
+- voice plugin 会接入 `chat` service 定义的语音相关扩展点，Telegram / QQ 的语音消息会通过这些点完成转写与正文增强。
 - 配置会持久化到项目 `ship.json` 的 `plugins.voice` 和 `assets["voice.transcriber"]`。
 
 ## 相关页面

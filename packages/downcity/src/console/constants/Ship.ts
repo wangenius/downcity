@@ -24,7 +24,7 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
     write_repo: {
       requiresApproval: false,
     },
-    exec_command: {
+    shell: {
       deny: ["rm"],
       requiresApproval: false,
       denyRequiresApproval: true,

@@ -1,0 +1,13 @@
+{
+  "title": "Devdocs",
+  "pages": [
+    "index",
+    "philosophy",
+    "architecture",
+    "package",
+    "console-ui",
+    "chrome-extension",
+    "design",
+    "platform"
+  ]
+}

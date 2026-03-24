@@ -13,6 +13,12 @@ description: Chat service responsibilities and channel integrations
 - Resolve `contextId/chatKey`, persist chat history and metadata
 - Dispatch outbound replies/actions to channels
 
+## Default Execution Policy
+
+- For low-risk requests with clear intent, the Agent should default to executing directly instead of repeatedly asking about event titles, default platforms, or obvious time expressions.
+- For time expressions like "tomorrow", "2 PM", or "2 hours earlier", the Agent should first resolve them into absolute times using the current chat timezone, then state the exact execution time in the reply.
+- If an action depends on system permissions or third-party connectivity (for example Reminders, Calendar, or chat delivery), the Agent should probe availability first; if blocked, it should report the real blocker instead of promising success and then asking follow-up questions.
+
 ## Chat authorization
 
 - When chat service receives a message, it first identifies the speaking user and the source platform.

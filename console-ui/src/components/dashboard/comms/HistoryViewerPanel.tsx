@@ -38,18 +38,18 @@ function getTimelineVisualTone(roleInput?: string): {
   const role = String(roleInput || "unknown").trim()
   if (role === "tool-call") {
     return {
-      cardClassName: "border border-sky-200/80 bg-sky-50/72 dark:border-sky-900/60 dark:bg-sky-950/20",
-      roleBadgeClassName: "bg-sky-500/12 text-sky-700 dark:bg-sky-400/14 dark:text-sky-200",
-      toolBadgeClassName: "bg-background/88 text-sky-800 ring-1 ring-sky-200/70 dark:bg-sky-950/35 dark:text-sky-100 dark:ring-sky-800/80",
-      textClassName: "font-mono text-[11px] leading-[1.6] text-sky-950/88 dark:text-sky-50/88",
+      cardClassName: "border border-border/70 bg-secondary/88 dark:bg-muted/58",
+      roleBadgeClassName: "bg-foreground text-background dark:bg-foreground dark:text-background",
+      toolBadgeClassName: "bg-background/92 text-foreground ring-1 ring-border/70 dark:bg-background/70 dark:ring-border/80",
+      textClassName: "font-mono text-[11px] leading-[1.6] text-foreground/96",
     }
   }
   if (role === "tool-result") {
     return {
-      cardClassName: "border border-emerald-200/80 bg-emerald-50/72 dark:border-emerald-900/60 dark:bg-emerald-950/20",
-      roleBadgeClassName: "bg-emerald-500/12 text-emerald-700 dark:bg-emerald-400/14 dark:text-emerald-200",
-      toolBadgeClassName: "bg-background/88 text-emerald-800 ring-1 ring-emerald-200/70 dark:bg-emerald-950/35 dark:text-emerald-100 dark:ring-emerald-800/80",
-      textClassName: "font-mono text-[11px] leading-[1.6] text-emerald-950/88 dark:text-emerald-50/88",
+      cardClassName: "border border-border/55 bg-background/90 dark:bg-background/88",
+      roleBadgeClassName: "bg-secondary text-foreground/86 dark:bg-secondary dark:text-foreground/86",
+      toolBadgeClassName: "bg-secondary/82 text-foreground/78 ring-1 ring-border/60 dark:bg-muted/72 dark:ring-border/70",
+      textClassName: "font-mono text-[11px] leading-[1.6] text-foreground/82",
     }
   }
   if (role === "user") {

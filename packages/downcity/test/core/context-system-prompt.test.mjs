@@ -8,7 +8,10 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildContextSystemPrompt } from "../../bin/agent/prompts/System.js";
+import {
+  DEFAULT_SHIP_PROMPTS,
+  buildContextSystemPrompt,
+} from "../../bin/agent/prompts/System.js";
 
 test("buildContextSystemPrompt returns empty text for chat mode", () => {
   const prompt = buildContextSystemPrompt({
@@ -32,4 +35,16 @@ test("buildContextSystemPrompt keeps runtime context and task rules for task mod
   assert.equal(prompt.includes("- ContextId: task-run--123"), false);
   assert.equal(prompt.includes("- Request ID: req-2"), false);
   assert.equal(prompt.includes("Task-run output rules:"), true);
+});
+
+test("default core prompt enforces decisive execution and preflight checks", () => {
+  assert.equal(DEFAULT_SHIP_PROMPTS.includes("默认先执行，再沟通"), true);
+  assert.equal(
+    DEFAULT_SHIP_PROMPTS.includes("先探测可用性，再决定是否承诺“我来创建/发送/写入”"),
+    true,
+  );
+  assert.equal(
+    DEFAULT_SHIP_PROMPTS.includes("应先按当前用户时区解析为绝对时间"),
+    true,
+  );
 });

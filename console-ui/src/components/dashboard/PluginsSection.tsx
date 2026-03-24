@@ -113,7 +113,7 @@ function PluginSwitch(props: {
       disabled={disabled || syncing}
       aria-busy={syncing}
       aria-pressed={checked}
-      className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition-all disabled:pointer-events-none disabled:opacity-50 ${
+      className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-all disabled:pointer-events-none disabled:opacity-50 ${
         checked
           ? "border-foreground/10 bg-foreground/80"
           : "border-border/70 bg-secondary"
@@ -125,11 +125,11 @@ function PluginSwitch(props: {
         </span>
       ) : null}
       <span
-        className={`absolute flex size-6 items-center justify-center rounded-full bg-background shadow-sm transition-transform ${
-          checked ? "translate-x-7" : "translate-x-1"
+        className={`absolute flex size-[18px] items-center justify-center rounded-full bg-background shadow-sm transition-transform ${
+          checked ? "translate-x-[1.15rem]" : "translate-x-[0.2rem]"
         }`}
       >
-        {syncing ? <Loader2Icon className="size-3 animate-spin text-foreground/70" /> : null}
+        {syncing ? <Loader2Icon className="size-2.5 animate-spin text-foreground/70" /> : null}
       </span>
     </button>
   )
@@ -341,33 +341,8 @@ export function PluginsSection(props: PluginsSectionProps) {
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 flex-col items-start gap-2 lg:min-w-[250px] lg:items-end">
-                    {canToggle ? (
-                      <PluginSwitch
-                        checked={effectiveEnabled}
-                        syncing={toggleLoading}
-                        disabled={statusLoading || doctorLoading}
-                        onClick={() => {
-                          const nextAction = effectiveEnabled ? "off" : "on"
-                          if (nextAction === "off") {
-                            void (async () => {
-                              const confirmed = await confirm({
-                                title: "关闭 Plugin",
-                                description: `确认关闭 "${name}"？`,
-                                confirmText: "关闭",
-                                confirmVariant: "destructive",
-                              })
-                              if (!confirmed) return
-                              await executeAction(name, "toggle", "off")
-                            })()
-                            return
-                          }
-                          void executeAction(name, "toggle", "on")
-                        }}
-                      />
-                    ) : null}
-
-                    <div className="flex items-center gap-1 rounded-full bg-secondary/70 p-1">
+                  <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1 lg:justify-end">
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
                         className="inline-flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-[12px] text-muted-foreground transition-colors hover:border-border/60 hover:bg-background hover:text-foreground"
@@ -406,6 +381,32 @@ export function PluginsSection(props: PluginsSectionProps) {
                           />
                         ) : null}
                     </div>
+                    {canToggle ? (
+                      <div className="ml-1 flex items-center pl-1">
+                        <PluginSwitch
+                          checked={effectiveEnabled}
+                          syncing={toggleLoading}
+                          disabled={statusLoading || doctorLoading}
+                          onClick={() => {
+                            const nextAction = effectiveEnabled ? "off" : "on"
+                            if (nextAction === "off") {
+                              void (async () => {
+                                const confirmed = await confirm({
+                                  title: "关闭 Plugin",
+                                  description: `确认关闭 "${name}"？`,
+                                  confirmText: "关闭",
+                                  confirmVariant: "destructive",
+                                })
+                                if (!confirmed) return
+                                await executeAction(name, "toggle", "off")
+                              })()
+                              return
+                            }
+                            void executeAction(name, "toggle", "on")
+                          }}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 

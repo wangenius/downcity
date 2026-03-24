@@ -21,7 +21,7 @@ frontmatter 核心字段：
 
 常见产物：
 - `input.md`
-- `output.md`（成功发送到 channel 的正文）
+- `output.md`（本次任务的最终输出正文）
 - `result.md`（执行摘要）
 - `run.json`
 - `run-progress.json`
@@ -62,7 +62,7 @@ frontmatter 核心字段：
 - `title` 唯一；create 去重仅按 `title` 精确匹配。
 - `when=time:...` 触发后会自动置为 `paused`，并回退为 `when=@manual`。
 - `run` 为异步受理：立即返回 `accepted=true`、`executionId`，后台继续执行。
-- agent 任务要求 `chat_send` 成功；若发送失败，任务判定失败。
+- agent 任务默认只要求产生有效输出；仅当任务正文明确要求外发时，才应发送到外部 channel。
 
 ## 建议
 

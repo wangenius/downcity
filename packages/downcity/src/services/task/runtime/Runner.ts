@@ -380,7 +380,9 @@ function pickLastChatSendDeliveredText(parts: unknown): ChatSendOutputPick {
 }
 
 function pickAgentOutput(assistantMessage: AgentResult["assistantMessage"]): ChatSendOutputPick {
-  // 关键点（中文）：task 成功要求 chat_send 成功送达。
+  // 关键点（中文）：
+  // - 若存在 `chat_send`，优先取其文本与送达状态。
+  // - 若不存在 `chat_send`，退化为普通 assistant 文本输出。
   const picked = pickLastChatSendDeliveredText(
     (assistantMessage as { parts?: unknown } | null)?.parts,
   );
@@ -836,7 +838,6 @@ export async function runTaskNow(params: {
     for (let round = 1; round <= maxDialogueRounds; round++) {
       dialogueRounds = round;
       let executorRoundOutput = "";
-      let executorDelivered = false;
       await runProgress.update({
         status: "running",
         phase: "agent_executor_round",
@@ -861,7 +862,6 @@ export async function runTaskNow(params: {
           actorName: "scheduler",
         });
         executorRoundOutput = executorRound.outputText;
-        executorDelivered = executorRound.delivered;
         outputText = executorRound.outputText;
 
         // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
@@ -882,22 +882,6 @@ export async function runTaskNow(params: {
           status: "running",
           phase: "agent_executor_round",
           message: `执行器在第 ${round} 轮失败: ${summarizeText(String(e), 160)}`,
-          round,
-          maxRounds: maxDialogueRounds,
-        });
-        break;
-      }
-
-      if (!executorDelivered) {
-        executionStatus = "failure";
-        status = "failure";
-        resultStatus = "not_checked";
-        resultErrors = [];
-        errorText = "chat_send delivery failed: output was not successfully sent to channel";
-        await runProgress.update({
-          status: "running",
-          phase: "agent_executor_round",
-          message: "执行器输出未成功发送到 channel，任务判定失败",
           round,
           maxRounds: maxDialogueRounds,
         });

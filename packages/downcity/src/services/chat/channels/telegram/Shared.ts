@@ -246,6 +246,20 @@ export function parseTelegramAttachments(text: string): {
     pathOrUrl: string;
     caption?: string;
   }>;
+  segments: Array<
+    | {
+        kind: "text";
+        text: string;
+      }
+    | {
+        kind: "attachment";
+        attachment: {
+          type: TelegramAttachmentType;
+          pathOrUrl: string;
+          caption?: string;
+        };
+      }
+  >;
 } {
   const parsed = parseChatMessageMarkup(text);
   const attachments: Array<{
@@ -275,7 +289,43 @@ export function parseTelegramAttachments(text: string): {
     };
   }).filter((item) => item.pathOrUrl);
 
-  return { text: parsed.bodyText, attachments };
+  const segments = parsed.segments.flatMap((segment) => {
+    if (segment.kind === "text") {
+      return segment.text
+        ? [{
+            kind: "text" as const,
+            text: segment.text,
+          }]
+        : [];
+    }
+    const kindRaw = String(segment.file.type || "").toLowerCase();
+    const type: TelegramAttachmentType =
+      kindRaw === "image" || kindRaw === "photo"
+        ? "photo"
+        : kindRaw === "file" || kindRaw === "document"
+          ? "document"
+          : kindRaw === "video"
+            ? "video"
+            : kindRaw === "audio"
+              ? "audio"
+              : "voice";
+    const pathOrUrl = String(segment.file.path || "").trim();
+    if (!pathOrUrl) return [];
+    const caption =
+      typeof segment.file.caption === "string"
+        ? String(segment.file.caption).trim()
+        : undefined;
+    return [{
+      kind: "attachment" as const,
+      attachment: {
+        type,
+        pathOrUrl,
+        ...(caption ? { caption } : {}),
+      },
+    }];
+  });
+
+  return { text: parsed.bodyText, attachments, segments };
 }
 
 function formatActorName(name: string): string {

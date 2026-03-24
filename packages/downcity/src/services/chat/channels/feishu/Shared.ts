@@ -31,6 +31,16 @@ function normalizeAttachmentType(value: string): FeishuAttachmentType {
 export function parseFeishuAttachments(text: string): {
   text: string;
   attachments: ParsedFeishuAttachmentCommand[];
+  segments: Array<
+    | {
+        kind: "text";
+        text: string;
+      }
+    | {
+        kind: "attachment";
+        attachment: ParsedFeishuAttachmentCommand;
+      }
+  >;
 } {
   const parsed = parseChatMessageMarkup(text);
   const attachments: ParsedFeishuAttachmentCommand[] = parsed.files.map((file) => ({
@@ -41,8 +51,32 @@ export function parseFeishuAttachments(text: string): {
       : {}),
   })).filter((item) => item.pathOrUrl);
 
+  const segments = parsed.segments.flatMap((segment) => {
+    if (segment.kind === "text") {
+      return segment.text
+        ? [{
+            kind: "text" as const,
+            text: segment.text,
+          }]
+        : [];
+    }
+    const attachment = {
+      type: normalizeAttachmentType(segment.file.type),
+      pathOrUrl: String(segment.file.path || "").trim(),
+      ...(typeof segment.file.caption === "string" && segment.file.caption.trim()
+        ? { caption: segment.file.caption.trim() }
+        : {}),
+    } satisfies ParsedFeishuAttachmentCommand;
+    if (!attachment.pathOrUrl) return [];
+    return [{
+      kind: "attachment" as const,
+      attachment,
+    }];
+  });
+
   return {
     text: parsed.bodyText,
     attachments,
+    segments,
   };
 }

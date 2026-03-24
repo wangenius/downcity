@@ -26,6 +26,7 @@ import {
 } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import { parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup.js";
 
 /**
  * 过滤回调返回值中的 user 文本消息。
@@ -105,10 +106,10 @@ export async function toModelMessages(
 }
 
 /**
- * 从 `@attach` 指令行中解析附件描述。
+ * 从 `<file>` 标签中解析附件描述。
  *
  * 关键点（中文）
- * - 兼容 Telegram/Feishu/TUI 等所有注入 `@attach` 的入口。
+ * - 兼容 Telegram/Feishu/TUI 等所有注入 `<file>` 的入口。
  * - 仅返回当前 Agent 关心的字段：类型/路径/说明。
  */
 function parseAttachmentLinesFromText(text: string): Array<{
@@ -118,43 +119,13 @@ function parseAttachmentLinesFromText(text: string): Array<{
 }> {
   const raw = String(text || "");
   if (!raw.trim()) return [];
-  const lines = raw.split("\n");
-  const out: Array<{
-    type: "photo" | "document" | "voice" | "audio" | "video";
-    path: string;
-    caption?: string;
-  }> = [];
-
-  for (const line of lines) {
-    const matched = line.match(
-      /^\s*@attach\s+(photo|image|document|file|voice|audio|video)\s+(.+?)(?:\s*\|\s*(.+))?\s*$/i,
-    );
-    if (!matched) continue;
-    const kindRaw = String(matched[1] || "").trim().toLowerCase();
-    const type: "photo" | "document" | "voice" | "audio" | "video" =
-      kindRaw === "image" || kindRaw === "photo"
-        ? "photo"
-        : kindRaw === "file" || kindRaw === "document"
-          ? "document"
-          : kindRaw === "video"
-            ? "video"
-            : kindRaw === "audio"
-              ? "audio"
-              : "voice";
-
-    const filePath = String(matched[2] || "").trim();
-    if (!filePath) continue;
-    const caption =
-      typeof matched[3] === "string" ? String(matched[3]).trim() : "";
-
-    out.push({
-      type,
-      path: filePath,
-      ...(caption ? { caption } : {}),
-    });
-  }
-
-  return out;
+  return parseChatMessageMarkup(raw).files.map((file) => ({
+    type: file.type,
+    path: file.path,
+    ...(typeof file.caption === "string" && file.caption.trim()
+      ? { caption: file.caption.trim() }
+      : {}),
+  }));
 }
 
 function guessAttachmentMediaTypeFromPath(filePath: string): string | undefined {
@@ -187,7 +158,7 @@ function buildDataUrl(mediaType: string, buffer: Buffer): string {
  *
  * 设计（中文）
  * - 仅处理图片附件（type=photo 且扩展名/内容类型为 image/*），避免对非多模态模型影响过大。
- * - 附件仍然保留原始 `@attach` 文本行，兼容纯文本模型。
+ * - 附件仍然保留原始 `<file>` 标签文本，兼容纯文本模型。
  * - 不修改持久化历史，仅在本轮执行的内存消息上注入 file parts。
  */
 async function injectFilePartsFromAttachments(

@@ -6,7 +6,7 @@
 - `<file ...>...</file>`：表示附件
 - `react`：只在 direct 模式额外支持
 
-也就是说，不再把 `@attach` 暴露给模型或用户侧。核心解析在 [ChatMessageMarkup.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChatMessageMarkup.ts) 和 [ChatSendMetadata.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChatSendMetadata.ts)。
+也就是说，附件协议统一为 `<file>`。核心解析在 [ChatMessageMarkup.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChatMessageMarkup.ts) 和 [ChatSendMetadata.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChatSendMetadata.ts)。
 
 ```mermaid
 flowchart TD

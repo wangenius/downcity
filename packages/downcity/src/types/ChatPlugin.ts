@@ -90,7 +90,7 @@ export interface ChatInboundAugmentInput {
    * service 已生成的附件文本块。
    *
    * 说明（中文）
-   * - 一般是 `@attach ...` 行拼接后的结果。
+   * - 一般是 `<file ...>` 标签拼接后的结果。
    */
   attachmentText?: string;
   /**

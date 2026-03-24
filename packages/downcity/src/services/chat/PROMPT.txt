@@ -51,7 +51,7 @@
   - `time` / `sendAt` / `sendAtMs`：定时发送
   - `reply`：是否按 reply 发送
   - `messageId`：显式指定 reply 目标消息
-- `send` 正文中的附件统一使用 `<file type="...">path</file>`，不要使用 `@attach`。
+- `send` 正文中的附件统一使用 `<file type="...">path</file>`。
 - 多附件可输出多个 `<file>` 标签；附件路径必须是项目内可访问的相对路径。
 - 当只需表达“已收到/认可/态度”时，可优先使用 `react`，避免发送冗余文本。
 - 调用 `send` 时必须保证 `chatKey` 可解析（显式传参或可从上下文推导）。

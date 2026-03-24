@@ -3,12 +3,13 @@
  *
  * 关键点（中文）
  * - 负责把 API 传入的附件规范化并落盘。
- * - 最终统一转成 `@attach` 指令注入到 user message。
+ * - 最终统一转成 `<file>` 标签注入到 user message。
  */
 
 import fs from "fs-extra";
 import path from "node:path";
 import { getCacheDirPath } from "@/console/env/Paths.js";
+import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
 import type {
   DashboardContextExecuteAttachmentInput,
   DashboardContextExecuteAttachmentType,
@@ -175,9 +176,11 @@ function toAttachmentLine(params: {
   relativePath: string;
   caption?: string;
 }): string {
-  return params.caption
-    ? `@attach ${params.type} ${params.relativePath} | ${params.caption}`
-    : `@attach ${params.type} ${params.relativePath}`;
+  return renderChatMessageFileTag({
+    type: params.type,
+    path: params.relativePath,
+    ...(params.caption ? { caption: params.caption } : {}),
+  });
 }
 
 /**

@@ -51,6 +51,46 @@ export interface ChatMessageFileTag {
 }
 
 /**
+ * 一段有序文本片段。
+ */
+export interface ChatMessageTextSegment {
+  /**
+   * 片段类型。
+   */
+  kind: "text";
+
+  /**
+   * 片段文本。
+   *
+   * 说明（中文）
+   * - 已做 trim，保证不会出现纯空白文本段。
+   */
+  text: string;
+}
+
+/**
+ * 一段有序附件片段。
+ */
+export interface ChatMessageFileSegment {
+  /**
+   * 片段类型。
+   */
+  kind: "file";
+
+  /**
+   * 附件内容。
+   */
+  file: ChatMessageFileTag;
+}
+
+/**
+ * 按消息真实顺序排列的片段。
+ */
+export type ChatMessageSegment =
+  | ChatMessageTextSegment
+  | ChatMessageFileSegment;
+
+/**
  * 一段 chat 消息正文解析后的结果。
  */
 export interface ParsedChatMessageMarkup {
@@ -65,6 +105,9 @@ export interface ParsedChatMessageMarkup {
 
   /**
    * 去掉 frontmatter 与 `<file>` 标签后的纯正文。
+   *
+   * 说明（中文）
+   * - 会把多段文本按消息原始顺序合并，中间使用空行分隔。
    */
   bodyText: string;
 
@@ -72,6 +115,11 @@ export interface ParsedChatMessageMarkup {
    * 按出现顺序提取出的附件标签列表。
    */
   files: ChatMessageFileTag[];
+
+  /**
+   * 按消息实际顺序提取出的有序片段。
+   */
+  segments: ChatMessageSegment[];
 }
 
 /**

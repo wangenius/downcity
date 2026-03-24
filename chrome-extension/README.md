@@ -125,7 +125,7 @@ npm run build:extension
 - 全页模式会优先挑选质量最高的 `main/article` 主体区块；若存在多个强相关主体区块，会合并输出。
 - 页面图片会尽量从 `currentSrc/src/srcset/data-*` 中解析真实地址，并在整页快照中附带图片引用。
 - 再调用 `POST /api/dashboard/contexts/<chatKey>/execute?agent=<agentId>`。
-- Markdown 会通过 `attachments` 字段上传，runtime 会落盘并注入 `@attach` 指令给 Agent。
+- Markdown 会通过 `attachments` 字段上传，runtime 会落盘并注入 `<file>` 标签给 Agent。
 - 投递成功后立即关闭页面输入面板，结果在当前选中的 chatKey 会话查看。
 
 ## 设计变更说明

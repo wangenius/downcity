@@ -161,7 +161,6 @@ export class TelegramApiClient {
     opts?: { messageThreadId?: number; replyToMessageId?: number },
   ): Promise<void> {
     const parsed = parseTelegramAttachments(sanitizeChatText(text));
-    const chunks = splitTelegramMessage(parsed.text);
     const message_thread_id =
       typeof opts?.messageThreadId === "number"
         ? opts.messageThreadId
@@ -170,34 +169,38 @@ export class TelegramApiClient {
       typeof opts?.replyToMessageId === "number" && opts.replyToMessageId > 0
         ? opts.replyToMessageId
         : undefined;
-    for (const chunk of chunks) {
-      if (!chunk) continue;
-      try {
-        await this.requestJson("sendMessage", {
-          chat_id: chatId,
-          text: chunk,
-          parse_mode: "Markdown",
-          ...(message_thread_id ? { message_thread_id } : {}),
-          ...(reply_to_message_id ? { reply_to_message_id } : {}),
-        });
-      } catch {
-        // Fallback to plain text (Markdown is strict and often fails)
-        try {
-          await this.requestJson("sendMessage", {
-            chat_id: chatId,
-            text: chunk,
-            ...(message_thread_id ? { message_thread_id } : {}),
-            ...(reply_to_message_id ? { reply_to_message_id } : {}),
-          });
-        } catch (error2) {
-          this.logger.error(`Failed to send message: ${String(error2)}`);
+    for (const segment of parsed.segments) {
+      if (segment.kind === "text") {
+        const chunks = splitTelegramMessage(segment.text);
+        for (const chunk of chunks) {
+          if (!chunk) continue;
+          try {
+            await this.requestJson("sendMessage", {
+              chat_id: chatId,
+              text: chunk,
+              parse_mode: "Markdown",
+              ...(message_thread_id ? { message_thread_id } : {}),
+              ...(reply_to_message_id ? { reply_to_message_id } : {}),
+            });
+          } catch {
+            // Fallback to plain text (Markdown is strict and often fails)
+            try {
+              await this.requestJson("sendMessage", {
+                chat_id: chatId,
+                text: chunk,
+                ...(message_thread_id ? { message_thread_id } : {}),
+                ...(reply_to_message_id ? { reply_to_message_id } : {}),
+              });
+            } catch (error2) {
+              this.logger.error(`Failed to send message: ${String(error2)}`);
+            }
+          }
         }
+        continue;
       }
-    }
 
-    for (const att of parsed.attachments) {
       try {
-        await this.sendAttachment(chatId, att, {
+        await this.sendAttachment(chatId, segment.attachment, {
           messageThreadId: message_thread_id,
           replyToMessageId: reply_to_message_id,
         });
@@ -205,7 +208,7 @@ export class TelegramApiClient {
         try {
           await this.requestJson("sendMessage", {
             chat_id: chatId,
-            text: `❌ Failed to send ${att.type}: ${String(e)}`,
+            text: `❌ Failed to send ${segment.attachment.type}: ${String(e)}`,
             ...(message_thread_id ? { message_thread_id } : {}),
             ...(reply_to_message_id ? { reply_to_message_id } : {}),
           });

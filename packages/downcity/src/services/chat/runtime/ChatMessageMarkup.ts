@@ -3,18 +3,21 @@
  *
  * 关键点（中文）
  * - 统一处理 frontmatter metadata 与 `<file>` 附件标签。
- * - 所有用户/模型可见的消息协议都应复用这里，避免 direct/cmd/channel 各自漂移。
+ * - 解析结果保留 `segments[]`，用于按正文与附件的真实顺序发送。
  */
 
 import yaml from "js-yaml";
 import type {
+  ChatMessageFileSegment,
   ChatMessageFileTag,
   ChatMessageFileType,
+  ChatMessageSegment,
+  ChatMessageTextSegment,
   ParsedChatMessageMarkup,
 } from "@services/chat/types/ChatMessageMarkup.js";
 
-const FILE_TAG_REGEXP = /<file\b([^>]*)>([\s\S]*?)<\/file>/gi;
-const FILE_SELF_CLOSING_TAG_REGEXP = /<file\b([^>]*)\/>/gi;
+const FILE_TAG_REGEXP =
+  /<file\b([^>]*?)(?:>([\s\S]*?)<\/file>|\/>)/gi;
 const FRONTMATTER_REGEXP = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/;
 
 function normalizeText(value: unknown): string {
@@ -23,10 +26,6 @@ function normalizeText(value: unknown): string {
 
 /**
  * 解析标签属性。
- *
- * 说明（中文）
- * - 支持单引号和双引号属性值。
- * - 未做 HTML 实体解码，保持协议最简。
  */
 function parseTagAttributes(rawAttrs: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -58,9 +57,6 @@ export function normalizeChatMessageFileType(value: unknown): ChatMessageFileTyp
 
 /**
  * 提取 frontmatter metadata。
- *
- * 关键点（中文）
- * - frontmatter 非法时按“无 metadata”处理，避免误删正文。
  */
 export function extractChatMessageFrontmatter(params: {
   source: string;
@@ -97,56 +93,82 @@ export function extractChatMessageFrontmatter(params: {
   };
 }
 
+function toTextSegment(text: string): ChatMessageTextSegment | null {
+  const normalized = normalizeText(text);
+  if (!normalized) return null;
+  return {
+    kind: "text",
+    text: normalized,
+  };
+}
+
+function toFileSegment(file: ChatMessageFileTag): ChatMessageFileSegment | null {
+  const path = normalizeText(file.path);
+  if (!path) return null;
+  return {
+    kind: "file",
+    file: {
+      path,
+      type: normalizeChatMessageFileType(file.type),
+      ...(normalizeText(file.caption)
+        ? { caption: normalizeText(file.caption) }
+        : {}),
+    },
+  };
+}
+
 /**
- * 提取 `<file>` 标签列表。
+ * 提取 `<file>` 标签，并保留正文/附件的真实顺序。
  */
-export function extractChatMessageFileTags(source: string): ChatMessageFileTag[] {
-  const out: ChatMessageFileTag[] = [];
+export function extractChatMessageSegments(source: string): ChatMessageSegment[] {
+  const out: ChatMessageSegment[] = [];
   const text = String(source || "");
 
   FILE_TAG_REGEXP.lastIndex = 0;
-  let blockMatch: RegExpExecArray | null = null;
+  let cursor = 0;
+  let match: RegExpExecArray | null = null;
   while (true) {
-    blockMatch = FILE_TAG_REGEXP.exec(text);
-    if (!blockMatch) break;
-    const attrs = parseTagAttributes(blockMatch[1] || "");
-    const path = normalizeText(blockMatch[2]);
-    if (!path) continue;
-    const caption = normalizeText(attrs.caption);
-    out.push({
+    match = FILE_TAG_REGEXP.exec(text);
+    if (!match) break;
+
+    const rawBefore = text.slice(cursor, match.index);
+    const textSegment = toTextSegment(rawBefore);
+    if (textSegment) out.push(textSegment);
+
+    const attrs = parseTagAttributes(match[1] || "");
+    const path = normalizeText(match[2] || attrs.path);
+    const fileSegment = toFileSegment({
       path,
       type: normalizeChatMessageFileType(attrs.type),
-      ...(caption ? { caption } : {}),
+      ...(normalizeText(attrs.caption) ? { caption: normalizeText(attrs.caption) } : {}),
     });
+    if (fileSegment) out.push(fileSegment);
+    cursor = match.index + match[0].length;
   }
 
-  FILE_SELF_CLOSING_TAG_REGEXP.lastIndex = 0;
-  let selfMatch: RegExpExecArray | null = null;
-  while (true) {
-    selfMatch = FILE_SELF_CLOSING_TAG_REGEXP.exec(text);
-    if (!selfMatch) break;
-    const attrs = parseTagAttributes(selfMatch[1] || "");
-    const path = normalizeText(attrs.path);
-    if (!path) continue;
-    const caption = normalizeText(attrs.caption);
-    out.push({
-      path,
-      type: normalizeChatMessageFileType(attrs.type),
-      ...(caption ? { caption } : {}),
-    });
-  }
-
+  const trailingText = toTextSegment(text.slice(cursor));
+  if (trailingText) out.push(trailingText);
   return out;
 }
 
 /**
- * 移除正文中的 `<file>` 标签，仅保留自然语言正文。
+ * 提取 `<file>` 标签列表。
+ */
+export function extractChatMessageFileTags(source: string): ChatMessageFileTag[] {
+  return extractChatMessageSegments(source)
+    .filter((segment): segment is ChatMessageFileSegment => segment.kind === "file")
+    .map((segment) => segment.file);
+}
+
+/**
+ * 移除正文中的 `<file>` 标签，仅保留文本段。
  */
 export function stripChatMessageFileTags(source: string): string {
-  return String(source || "")
-    .replace(FILE_TAG_REGEXP, "")
-    .replace(FILE_SELF_CLOSING_TAG_REGEXP, "")
-    .trim();
+  return buildChatMessageText({
+    segments: extractChatMessageSegments(source).filter(
+      (segment): segment is ChatMessageTextSegment => segment.kind === "text",
+    ),
+  });
 }
 
 function normalizeTagAttributeValue(value: string, quote: '"' | "'"): string {
@@ -158,9 +180,6 @@ function normalizeTagAttributeValue(value: string, quote: '"' | "'"): string {
 
 /**
  * 渲染一条标准化 `<file>` 标签。
- *
- * 关键点（中文）
- * - 统一输出 block 形式，便于 direct/cmd/inbound 都保持一致文本。
  */
 export function renderChatMessageFileTag(file: ChatMessageFileTag): string {
   const path = normalizeText(file.path);
@@ -175,6 +194,11 @@ export function renderChatMessageFileTag(file: ChatMessageFileTag): string {
   return `<file type="${type}"${captionAttr}>${path}</file>`;
 }
 
+function renderChatMessageSegment(segment: ChatMessageSegment): string {
+  if (segment.kind === "text") return normalizeText(segment.text);
+  return renderChatMessageFileTag(segment.file);
+}
+
 /**
  * 把附件列表渲染回统一的 `<file>` 文本块。
  */
@@ -186,19 +210,33 @@ export function buildChatMessageFileBlock(files: ChatMessageFileTag[]): string {
 }
 
 /**
- * 把“正文 + 附件标签”重建成统一消息文本。
+ * 把片段重建成统一消息文本。
  */
 export function buildChatMessageText(params: {
   bodyText?: string;
   files?: ChatMessageFileTag[];
+  segments?: ChatMessageSegment[];
 }): string {
-  const bodyText = normalizeText(params.bodyText);
-  const fileBlock = buildChatMessageFileBlock(
-    Array.isArray(params.files) ? params.files : [],
-  );
-  return [bodyText, fileBlock]
+  const segments = Array.isArray(params.segments)
+    ? params.segments
+    : [
+        ...(normalizeText(params.bodyText)
+          ? [{
+              kind: "text",
+              text: normalizeText(params.bodyText),
+            } satisfies ChatMessageTextSegment]
+          : []),
+        ...(Array.isArray(params.files)
+          ? params.files
+              .map((file) => toFileSegment(file))
+              .filter((item): item is ChatMessageFileSegment => Boolean(item))
+          : []),
+      ];
+
+  return segments
+    .map((segment) => renderChatMessageSegment(segment))
     .filter((item) => normalizeText(item).length > 0)
-    .join(bodyText && fileBlock ? "\n\n" : "")
+    .join("\n\n")
     .trim();
 }
 
@@ -209,10 +247,17 @@ export function parseChatMessageMarkup(source: string): ParsedChatMessageMarkup 
   const extracted = extractChatMessageFrontmatter({
     source: String(source || ""),
   });
-  const files = extractChatMessageFileTags(extracted.body);
+  const segments = extractChatMessageSegments(extracted.body);
   return {
     metadata: extracted.metadata,
-    bodyText: stripChatMessageFileTags(extracted.body),
-    files,
+    bodyText: buildChatMessageText({
+      segments: segments.filter(
+        (segment): segment is ChatMessageTextSegment => segment.kind === "text",
+      ),
+    }),
+    files: segments
+      .filter((segment): segment is ChatMessageFileSegment => segment.kind === "file")
+      .map((segment) => segment.file),
+    segments,
   };
 }

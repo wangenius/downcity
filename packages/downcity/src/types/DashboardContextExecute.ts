@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一描述 `/api/dashboard/contexts/:contextId/execute` 的扩展请求体。
- * - 支持通过 API 传入附件（路径或内容），由服务端落盘后注入 `@attach` 指令。
+ * - 支持通过 API 传入附件（路径或内容），由服务端落盘后注入 `<file>` 标签。
  */
 
 /**
@@ -25,7 +25,7 @@ export interface DashboardContextExecuteAttachmentInput {
    *
    * 说明（中文）
    * - 默认按 `document` 处理。
-   * - 会映射为 `@attach <type> ...` 指令。
+   * - 会映射为 `<file type="...">...</file>`。
    */
   type?: DashboardContextExecuteAttachmentType | string;
 
@@ -50,7 +50,7 @@ export interface DashboardContextExecuteAttachmentInput {
    * 附件说明（可选）。
    *
    * 说明（中文）
-   * - 会拼接到 `@attach ... | caption` 右侧。
+   * - 会映射到 `<file caption="...">`。
    */
   caption?: string;
 
@@ -93,7 +93,7 @@ export interface DashboardContextExecuteRequestBody {
    * 附件列表（可选）。
    *
    * 说明（中文）
-   * - 服务端会将附件落盘后，自动把 `@attach` 行注入到 user message 顶部。
+   * - 服务端会将附件落盘后，自动把 `<file>` 标签注入到 user message 顶部。
    */
   attachments?: DashboardContextExecuteAttachmentInput[];
 }

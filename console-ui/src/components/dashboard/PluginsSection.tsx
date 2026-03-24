@@ -8,7 +8,7 @@
  */
 
 import * as React from "react"
-import { ActivityIcon, ChevronDownIcon, Loader2Icon, WrenchIcon } from "lucide-react"
+import { ActivityIcon, ChevronDownIcon, Loader2Icon, PowerIcon, WrenchIcon } from "lucide-react"
 import { DashboardModule } from "./DashboardModule"
 import { useConfirmDialog } from "../ui/confirm-dialog"
 import { Input } from "../ui/input"
@@ -98,58 +98,26 @@ function getCardTone(mode: "enabled" | "disabled" | "unavailable"): {
   }
 }
 
-function PluginSwitch(props: {
-  checked: boolean
-  syncing: boolean
-  disabled?: boolean
-  onClick: () => void
-}) {
-  const { checked, syncing, disabled = false, onClick } = props
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled || syncing}
-      aria-busy={syncing}
-      aria-pressed={checked}
-      className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border transition-all disabled:pointer-events-none disabled:opacity-50 ${
-        checked
-          ? "border-foreground/10 bg-foreground/80"
-          : "border-border/70 bg-secondary"
-      } ${syncing ? "shadow-[0_0_0_3px_rgba(24,119,242,0.08)]" : ""}`}
-    >
-      {syncing ? (
-        <span className="absolute inset-0 overflow-hidden rounded-full">
-          <span className="absolute inset-y-0 left-[-35%] w-[55%] animate-[plugin-switch-glide_0.9s_linear_infinite] rounded-full bg-white/18" />
-        </span>
-      ) : null}
-      <span
-        className={`absolute flex size-[18px] items-center justify-center rounded-full bg-background shadow-sm transition-transform ${
-          checked ? "translate-x-[1.15rem]" : "translate-x-[0.2rem]"
-        }`}
-      >
-        {syncing ? <Loader2Icon className="size-2.5 animate-spin text-foreground/70" /> : null}
-      </span>
-    </button>
-  )
-}
-
 function ToolAction(props: {
   icon: React.ReactNode
   label: string
   loading: boolean
   disabled?: boolean
+  tone?: "default" | "danger"
   onClick: () => void
 }) {
-  const { icon, label, loading, disabled = false, onClick } = props
+  const { icon, label, loading, disabled = false, tone = "default", onClick } = props
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-[12px] text-muted-foreground transition-colors hover:border-border/60 hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+      className={`inline-flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-[12px] transition-colors disabled:pointer-events-none disabled:opacity-50 ${
+        tone === "danger"
+          ? "text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+          : "text-muted-foreground hover:border-border/60 hover:bg-background hover:text-foreground"
+      }`}
     >
       {loading ? <Loader2Icon className="size-3.5 animate-spin" /> : icon}
       <span>{label}</span>
@@ -382,30 +350,30 @@ export function PluginsSection(props: PluginsSectionProps) {
                         ) : null}
                     </div>
                     {canToggle ? (
-                      <div className="ml-1 flex items-center pl-1">
-                        <PluginSwitch
-                          checked={effectiveEnabled}
-                          syncing={toggleLoading}
-                          disabled={statusLoading || doctorLoading}
-                          onClick={() => {
-                            const nextAction = effectiveEnabled ? "off" : "on"
-                            if (nextAction === "off") {
-                              void (async () => {
-                                const confirmed = await confirm({
-                                  title: "关闭 Plugin",
-                                  description: `确认关闭 "${name}"？`,
-                                  confirmText: "关闭",
-                                  confirmVariant: "destructive",
-                                })
-                                if (!confirmed) return
-                                await executeAction(name, "toggle", "off")
-                              })()
-                              return
-                            }
-                            void executeAction(name, "toggle", "on")
-                          }}
-                        />
-                      </div>
+                      <ToolAction
+                        icon={<PowerIcon className="size-3.5" />}
+                        label={effectiveEnabled ? "Disable" : "Enable"}
+                        loading={toggleLoading}
+                        disabled={statusLoading || doctorLoading}
+                        tone={effectiveEnabled ? "danger" : "default"}
+                        onClick={() => {
+                          const nextAction = effectiveEnabled ? "off" : "on"
+                          if (nextAction === "off") {
+                            void (async () => {
+                              const confirmed = await confirm({
+                                title: "关闭 Plugin",
+                                description: `确认关闭 "${name}"？`,
+                                confirmText: "关闭",
+                                confirmVariant: "destructive",
+                              })
+                              if (!confirmed) return
+                              await executeAction(name, "toggle", "off")
+                            })()
+                            return
+                          }
+                          void executeAction(name, "toggle", "on")
+                        }}
+                      />
                     ) : null}
                   </div>
                 </div>

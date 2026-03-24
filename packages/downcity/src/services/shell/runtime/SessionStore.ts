@@ -9,6 +9,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
 import fs from "fs-extra";
+import { loadGlobalEnvFromStore } from "@/console/env/Config.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { generateId } from "@utils/Id.js";
 import { requestContext } from "@agent/context/manager/RequestContext.js";
@@ -132,6 +133,19 @@ function splitOutputByLimits(
 
 function buildShellEnv(runtime: ServiceRuntime): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
+
+  // 关键点（中文）
+  // - shell 子进程需要继承 console 级 global env。
+  // - 这里显式从 store 读取，避免把 ServiceRuntime.env 语义扩大成“全局+agent 混合态”。
+  // - 冲突时仍由后续 agent runtime env 覆盖，保持文档声明的优先级。
+  const globalEnv = loadGlobalEnvFromStore();
+  for (const [key, value] of Object.entries(globalEnv)) {
+    const normalizedKey = String(key || "").trim();
+    const normalizedValue = String(value || "").trim();
+    if (!normalizedKey || !normalizedValue) continue;
+    env[normalizedKey] = normalizedValue;
+  }
+
   for (const [key, value] of Object.entries(runtime.env || {})) {
     const normalizedKey = String(key || "").trim();
     const normalizedValue = String(value || "").trim();

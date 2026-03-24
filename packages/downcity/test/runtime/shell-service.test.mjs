@@ -11,6 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import fs from "fs-extra";
+import { ConsoleStore } from "../../bin/utils/store/index.js";
 import {
   closeShellSession,
   execShellCommand,
@@ -106,5 +107,49 @@ test("shell service can execute a one-shot shell command", async () => {
     assert.match(executed.chunk.output, /quick-one-shot/);
   } finally {
     await fs.remove(rootPath);
+  }
+});
+
+test("shell service injects console global env and lets agent env override conflicts", async () => {
+  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-shell-global-env-"));
+  const consoleHome = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-console-home-"));
+  const previousHome = process.env.HOME;
+  process.env.HOME = consoleHome;
+
+  const runtime = createRuntimeStub(rootPath);
+  runtime.env = {
+    SHARED_KEY: "agent",
+    AGENT_ONLY: "agent-only",
+  };
+
+  const store = new ConsoleStore();
+
+  try {
+    await store.upsertGlobalEnvEntry({
+      key: "SHARED_KEY",
+      value: "global",
+    });
+    await store.upsertGlobalEnvEntry({
+      key: "GLOBAL_ONLY",
+      value: "global-only",
+    });
+
+    const executed = await execShellCommand(runtime, {
+      cmd: "printf '%s|%s|%s' \"$GLOBAL_ONLY\" \"$AGENT_ONLY\" \"$SHARED_KEY\"",
+      shell: "/bin/bash",
+      login: false,
+      timeoutMs: 5000,
+      maxOutputTokens: 200,
+    });
+
+    assert.equal(executed.shell.status, "completed");
+    assert.equal(executed.shell.exitCode, 0);
+    assert.equal(executed.chunk.output, "global-only|agent-only|agent");
+  } finally {
+    store.close();
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    await fs.remove(rootPath);
+    await fs.remove(consoleHome);
   }
 });

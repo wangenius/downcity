@@ -20,6 +20,8 @@ import {
 } from "./Action.js";
 import { readChatHistory } from "./runtime/ChatHistoryStore.js";
 import { resolveChatMethod, type ChatMethod } from "./runtime/ChatMethod.js";
+import { listChannelContextRoutes } from "./runtime/ChannelContextStore.js";
+import { readChatMetaByContextId } from "./runtime/ChatMetaStore.js";
 import { createTelegramBot } from "./channels/telegram/Bot.js";
 import { createFeishuBot } from "./channels/feishu/Feishu.js";
 import { createQQBot } from "./channels/qq/QQ.js";
@@ -37,6 +39,9 @@ import type { ChatHistoryEventV1 } from "./types/ChatHistory.js";
 import type {
   ChatDeleteRequest,
   ChatHistoryRequest,
+  ChatInfoRequest,
+  ChatListItemV1,
+  ChatListRequest,
   ChatReactRequest,
 } from "./types/ChatCommand.js";
 import type { TelegramBot } from "./channels/telegram/Bot.js";
@@ -50,6 +55,11 @@ import type {
 import type { ChatChannelConfigurationField } from "./types/ChannelConfiguration.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 import type { StoredChannelAccount } from "@/types/Store.js";
+import {
+  getShipChannelMetaPath,
+  getShipChatContextDirPath,
+  getShipChatHistoryPath,
+} from "@/console/env/Paths.js";
 
 type ChatChannelState = {
   telegram: TelegramBot | null;
@@ -73,6 +83,8 @@ type ChatContextActionPayload = {
 type ChatHistoryActionPayload = ChatHistoryRequest;
 type ChatReactActionPayload = ChatReactRequest;
 type ChatDeleteActionPayload = ChatDeleteRequest;
+type ChatListActionPayload = ChatListRequest;
+type ChatInfoActionPayload = ChatInfoRequest;
 type ChatStatusActionPayload = {
   channel?: ChatChannelName;
 };
@@ -951,6 +963,128 @@ async function executeChatConfigureAction(params: {
   };
 }
 
+async function executeChatListAction(params: {
+  context: ServiceRuntime;
+  payload: ChatListActionPayload;
+}) {
+  const rawChannel = String(params.payload.channel || "").trim();
+  const channel = rawChannel ? resolveChatChannelNameOrThrow(rawChannel) : undefined;
+  const rawLimit =
+    typeof params.payload.limit === "number" && Number.isFinite(params.payload.limit)
+      ? Math.trunc(params.payload.limit)
+      : undefined;
+  const limit = rawLimit && rawLimit > 0 ? Math.min(rawLimit, 500) : 50;
+  const q = String(params.payload.q || "").trim();
+  const qLower = q ? q.toLowerCase() : "";
+
+  const meta = await listChannelContextRoutes({ context: params.context });
+
+  const matches = (value?: string): boolean => {
+    if (!qLower) return true;
+    const text = String(value || "").trim().toLowerCase();
+    return text ? text.includes(qLower) : false;
+  };
+
+  const filtered = meta.routes
+    .filter((route) => (channel ? route.channel === channel : true))
+    .filter((route) => {
+      if (!qLower) return true;
+      return (
+        matches(route.contextId) ||
+        matches(route.chatId) ||
+        matches(route.chatTitle) ||
+        matches(route.actorName) ||
+        matches(route.actorId) ||
+        matches(route.targetType)
+      );
+    });
+
+  const total = filtered.length;
+  const chats: ChatListItemV1[] = filtered.slice(0, limit).map((route) => ({
+    chatKey: route.contextId,
+    contextId: route.contextId,
+    channel: route.channel,
+    chatId: route.chatId,
+    ...(route.targetType ? { targetType: route.targetType } : {}),
+    ...(typeof route.threadId === "number" ? { threadId: route.threadId } : {}),
+    ...(route.chatTitle ? { chatTitle: route.chatTitle } : {}),
+    ...(route.actorName ? { actorName: route.actorName } : {}),
+    ...(route.actorId ? { actorId: route.actorId } : {}),
+    updatedAt: route.updatedAt,
+    isoUpdatedAt: new Date(route.updatedAt).toISOString(),
+  }));
+
+  return {
+    success: true,
+    data: {
+      metaUpdatedAt: meta.updatedAt,
+      metaIsoUpdatedAt: new Date(meta.updatedAt).toISOString(),
+      total,
+      count: chats.length,
+      chats,
+    },
+  };
+}
+
+async function executeChatInfoAction(params: {
+  context: ServiceRuntime;
+  payload: ChatInfoActionPayload;
+}) {
+  const explicitContextId = String(params.payload.contextId || "").trim();
+  const explicitChatKey = String(params.payload.chatKey || "").trim();
+  const snapshot = resolveChatContextSnapshot({
+    context: params.context,
+    ...(explicitContextId ? { contextId: explicitContextId } : {}),
+    ...(explicitChatKey ? { chatKey: explicitChatKey } : {}),
+  });
+
+  const contextId = String(explicitContextId || snapshot.contextId || "").trim();
+  const chatKey = String(explicitChatKey || snapshot.chatKey || contextId || "").trim();
+  if (!contextId) {
+    return {
+      success: false,
+      error:
+        "Missing contextId. Provide --context-id/--chat-key or ensure DC_CTX_CONTEXT_ID/DC_CTX_CHAT_KEY is injected.",
+    };
+  }
+
+  const route = await readChatMetaByContextId({
+    context: params.context,
+    contextId,
+  });
+
+  const toPosixRelativePath = (absPath: string): string =>
+    path.relative(params.context.rootPath, absPath).split(path.sep).join("/");
+
+  const channelMetaPath = toPosixRelativePath(
+    getShipChannelMetaPath(params.context.rootPath),
+  );
+  const chatDirPath = toPosixRelativePath(
+    getShipChatContextDirPath(params.context.rootPath, contextId),
+  );
+  const historyPath = toPosixRelativePath(
+    getShipChatHistoryPath(params.context.rootPath, contextId),
+  );
+
+  return {
+    success: true,
+    data: {
+      contextId,
+      chatKey,
+      context: snapshot,
+      route,
+      ...(route
+        ? { routeIsoUpdatedAt: new Date(route.updatedAt).toISOString() }
+        : {}),
+      paths: {
+        channelMetaPath,
+        chatDirPath,
+        historyPath,
+      },
+    },
+  };
+}
+
 function getStringOpt(opts: Record<string, JsonValue>, key: string): string {
   return typeof opts[key] === "string" ? String(opts[key]).trim() : "";
 }
@@ -990,6 +1124,61 @@ function mapChatChannelApiQueryInput(query?: {
   if (!channelRaw) return {};
   return {
     channel: resolveChatChannelNameOrThrow(channelRaw),
+  };
+}
+
+function mapChatListCommandInput(
+  input: ServiceActionCommandInput,
+): ChatListActionPayload {
+  const channelRaw = getStringOpt(input.opts, "channel");
+  const limitRaw = getStringOpt(input.opts, "limit");
+  const q = getStringOpt(input.opts, "q");
+  const channel = channelRaw ? resolveChatChannelNameOrThrow(channelRaw) : undefined;
+  const limit = limitRaw ? parsePositiveIntOptionOrThrow(limitRaw, "limit") : undefined;
+  return {
+    ...(channel ? { channel } : {}),
+    ...(typeof limit === "number" ? { limit } : {}),
+    ...(q ? { q } : {}),
+  };
+}
+
+function mapChatListApiInput(query?: {
+  channel?: string;
+  limit?: string;
+  q?: string;
+}): ChatListActionPayload {
+  const channelRaw = String(query?.channel || "").trim();
+  const limitRaw = String(query?.limit || "").trim();
+  const q = String(query?.q || "").trim();
+  const channel = channelRaw ? resolveChatChannelNameOrThrow(channelRaw) : undefined;
+  const limit = limitRaw ? parsePositiveIntOptionOrThrow(limitRaw, "limit") : undefined;
+  return {
+    ...(channel ? { channel } : {}),
+    ...(typeof limit === "number" ? { limit } : {}),
+    ...(q ? { q } : {}),
+  };
+}
+
+function mapChatInfoCommandInput(
+  input: ServiceActionCommandInput,
+): ChatInfoActionPayload {
+  const chatKey = getStringOpt(input.opts, "chatKey");
+  const contextId = getStringOpt(input.opts, "contextId");
+  return {
+    ...(chatKey ? { chatKey } : {}),
+    ...(contextId ? { contextId } : {}),
+  };
+}
+
+function mapChatInfoApiInput(query?: {
+  chatKey?: string;
+  contextId?: string;
+}): ChatInfoActionPayload {
+  const chatKey = String(query?.chatKey || "").trim();
+  const contextId = String(query?.contextId || "").trim();
+  return {
+    ...(chatKey ? { chatKey } : {}),
+    ...(contextId ? { contextId } : {}),
   };
 }
 
@@ -1666,6 +1855,60 @@ export const chatService: Service = {
         return executeChatConfigureAction({
           context: params.context,
           payload: params.payload as ChatConfigureActionPayload,
+        });
+      },
+    },
+    list: {
+      command: {
+        description: "列出当前 agent 已记录的 chat 会话（chatTitle/chatKey）",
+        configure(command: Command) {
+          command
+            .option("--channel <name>", "渠道过滤（telegram|feishu|qq）")
+            .option("--limit <n>", "返回最近 N 条（默认 50）")
+            .option("--q <text>", "关键词过滤（title/chatId/contextId/actor）");
+        },
+        mapInput: mapChatListCommandInput,
+      },
+      api: {
+        method: "GET",
+        mapInput(c) {
+          return mapChatListApiInput({
+            channel: c.req.query("channel"),
+            limit: c.req.query("limit"),
+            q: c.req.query("q"),
+          });
+        },
+      },
+      async execute(params) {
+        return executeChatListAction({
+          context: params.context,
+          payload: params.payload as ChatListActionPayload,
+        });
+      },
+    },
+    info: {
+      command: {
+        description: "查看指定 chat 会话信息（路由/本地路径/上下文快照）",
+        configure(command: Command) {
+          command
+            .option("--chat-key <chatKey>", "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）")
+            .option("--context-id <contextId>", "显式指定 contextId（优先级更高）");
+        },
+        mapInput: mapChatInfoCommandInput,
+      },
+      api: {
+        method: "GET",
+        mapInput(c) {
+          return mapChatInfoApiInput({
+            chatKey: c.req.query("chatKey"),
+            contextId: c.req.query("contextId"),
+          });
+        },
+      },
+      async execute(params) {
+        return executeChatInfoAction({
+          context: params.context,
+          payload: params.payload as ChatInfoActionPayload,
         });
       },
     },

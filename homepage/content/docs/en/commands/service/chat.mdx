@@ -1,6 +1,6 @@
 ---
 title: city chat
-description: Chat service actions (status/test/reconnect/open/close/configure/send/react/context/delete/history)
+description: Chat service actions (status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history)
 ---
 
 # `city chat`
@@ -24,6 +24,8 @@ city chat <subcommand> [options]
 - `close`: disable a channel (`enabled=false` in `ship.json`, and stop runtime channel)
 - `configuration`: inspect channel configuration schema (field name/type/description/source)
 - `configure`: update channel parameters (`ship.json` patch, restart channel by default)
+- `list`: list conversations recorded by current agent (chatTitle/chatKey)
+- `info`: show one conversation info (route snapshot + local paths + context snapshot)
 - `send`: send message
 - `react`: react to message (primarily Telegram)
 - `context`: view conversation context snapshot
@@ -43,6 +45,17 @@ city chat <subcommand> [options]
 ## `configuration` key options
 
 - `--channel <telegram|feishu|qq>`: inspect one channel only (all channels if omitted)
+
+## `list` key options
+
+- `--channel <telegram|feishu|qq>`: filter by channel
+- `--limit <n>`: return at most N items (default 50)
+- `--q <text>`: keyword filter (title/chatId/contextId/actor)
+
+## `info` key options
+
+- `--chat-key <chatKey>`: target conversation (fallback to `DC_CTX_CHAT_KEY`)
+- `--context-id <contextId>`: explicit context id (higher priority)
 
 ## `send` key options
 
@@ -77,6 +90,8 @@ city chat <subcommand> [options]
 ## Examples
 
 ```bash
+city chat list --limit 20
+city chat info --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx

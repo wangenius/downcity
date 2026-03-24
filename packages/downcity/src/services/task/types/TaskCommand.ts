@@ -93,6 +93,8 @@ export type TaskListItemView = {
   when: string;
   /** 任务状态。 */
   status: string;
+  /** 当前是否正在执行。 */
+  running?: boolean;
   /** 任务上下文标识。 */
   contextId: string;
   /** 任务执行类型。 */

@@ -60,6 +60,22 @@ function summarizeText(text: string, maxChars: number): string {
   return t.slice(0, Math.max(0, maxChars - 3)).trimEnd() + "...";
 }
 
+/**
+ * 将任意对象序列化为调试快照文本。
+ *
+ * 关键点（中文）
+ * - 用于把 assistantMessage 等结构安全落盘。
+ * - 即使对象不可 JSON 化，也尽量保留可读字符串。
+ */
+function serializeDebugSnapshot(value: unknown, maxChars = 40_000): string {
+  try {
+    const text = JSON.stringify(value, null, 2);
+    return summarizeText(text, maxChars);
+  } catch {
+    return summarizeText(String(value), maxChars);
+  }
+}
+
 type RunProgressSnapshot = {
   status: ShipTaskRunProgressStatusV1;
   phase: ShipTaskRunProgressPhaseV1;
@@ -156,10 +172,19 @@ type UserSimulatorDecision = {
 };
 
 type DialogueRoundRecord = {
+  reviewEnabled: boolean;
   round: number;
+  executorQuery: string;
   executorOutput: string;
+  executorDelivered: boolean;
+  executorAssistantMessageSnapshot?: string;
+  validationResultStatus: ShipTaskRunResultStatusV1;
   ruleErrors: string[];
+  userSimulatorQuery?: string;
+  userSimulatorOutput?: string;
+  userSimulatorAssistantMessageSnapshot?: string;
   userSimulator: UserSimulatorDecision;
+  feedbackForNextRound?: string;
 };
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
@@ -847,6 +872,13 @@ export async function runTaskNow(params: {
     for (let round = 1; round <= maxDialogueRounds; round++) {
       dialogueRounds = round;
       let executorRoundOutput = "";
+      let executorDelivered = false;
+      let executorQuery = "";
+      let executorAssistantMessageSnapshot = "";
+      let validationResultStatus: ShipTaskRunResultStatusV1 = "not_checked";
+      let userSimulatorQuery = "";
+      let userSimulatorOutput = "";
+      let userSimulatorAssistantMessageSnapshot = "";
       await runProgress.update({
         status: "running",
         phase: "agent_executor_round",
@@ -856,7 +888,7 @@ export async function runTaskNow(params: {
       });
 
       try {
-        const executorQuery = buildExecutorRoundQuery({
+        executorQuery = buildExecutorRoundQuery({
           taskBody: task.body,
           round,
           ...(outputText ? { lastOutputText: outputText } : {}),
@@ -871,7 +903,11 @@ export async function runTaskNow(params: {
           actorName: "scheduler",
         });
         executorRoundOutput = executorRound.outputText;
+        executorDelivered = executorRound.delivered;
         outputText = executorRound.outputText;
+        executorAssistantMessageSnapshot = serializeDebugSnapshot(
+          executorRound.rawResult.assistantMessage,
+        );
 
         // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
         try {
@@ -900,6 +936,7 @@ export async function runTaskNow(params: {
       const validation = await validateTaskResult({
         outputText: executorRoundOutput,
       });
+      validationResultStatus = validation.resultStatus;
       lastRoundRuleErrors = [...validation.errors];
 
       let decision: UserSimulatorDecision = {
@@ -920,7 +957,7 @@ export async function runTaskNow(params: {
           maxRounds: maxDialogueRounds,
         });
         try {
-          const simulatorQuery = buildUserSimulatorQuery({
+          userSimulatorQuery = buildUserSimulatorQuery({
             taskTitle: task.frontmatter.title,
             taskDescription: task.frontmatter.description,
             taskBody: task.body,
@@ -933,10 +970,14 @@ export async function runTaskNow(params: {
             taskAgentRuntime,
             contextId: userSimulatorContextId,
             taskId: task.taskId,
-            query: simulatorQuery,
+            query: userSimulatorQuery,
             actorId: "user_simulator",
             actorName: "user_simulator",
           });
+          userSimulatorOutput = simulatorRound.outputText;
+          userSimulatorAssistantMessageSnapshot = serializeDebugSnapshot(
+            simulatorRound.rawResult.assistantMessage,
+          );
           decision = parseUserSimulatorDecision(simulatorRound.outputText);
         } catch (e) {
           decision = {
@@ -956,14 +997,58 @@ export async function runTaskNow(params: {
       userSimulatorScore = decision.score;
       lastRoundDecision = decision;
 
-      dialogueRecords.push({
+      const feedbackLines: string[] = [];
+      if (validation.errors.length > 0) {
+        feedbackLines.push("系统规则校验失败：");
+        for (const item of validation.errors) feedbackLines.push(`- ${item}`);
+      }
+      if (decision.reply) {
+        feedbackLines.push("模拟用户回复：");
+        feedbackLines.push(decision.reply);
+      }
+      if (decision.reason) {
+        feedbackLines.push(`模拟用户理由：${decision.reason}`);
+      }
+      lastFeedback = feedbackLines.join("\n").trim();
+
+      const roundRecord: DialogueRoundRecord = {
+        reviewEnabled,
         round,
+        executorQuery,
         executorOutput: executorRoundOutput,
+        executorDelivered,
+        ...(executorAssistantMessageSnapshot
+          ? { executorAssistantMessageSnapshot }
+          : {}),
+        validationResultStatus,
         ruleErrors: [...validation.errors],
+        ...(userSimulatorQuery ? { userSimulatorQuery } : {}),
+        ...(userSimulatorOutput ? { userSimulatorOutput } : {}),
+        ...(userSimulatorAssistantMessageSnapshot
+          ? { userSimulatorAssistantMessageSnapshot }
+          : {}),
         userSimulator: {
           ...decision,
           satisfied: roundSatisfied,
         },
+        ...(lastFeedback ? { feedbackForNextRound: lastFeedback } : {}),
+      };
+      dialogueRecords.push(roundRecord);
+      context.logger.info("[TASK] Agent task round evaluated", {
+        taskId: task.taskId,
+        executionId,
+        round,
+        reviewEnabled,
+        executorDelivered,
+        validationResultStatus,
+        ruleErrors: validation.errors,
+        userSimulatorSatisfied: roundSatisfied,
+        userSimulatorReason: decision.reason,
+        ...(decision.reply ? { userSimulatorReply: summarizeText(decision.reply, 500) } : {}),
+        ...(userSimulatorOutput
+          ? { userSimulatorOutput: summarizeText(userSimulatorOutput, 1000) }
+          : {}),
+        ...(lastFeedback ? { feedbackForNextRound: summarizeText(lastFeedback, 1000) } : {}),
       });
 
       if (roundSatisfied) {
@@ -981,19 +1066,6 @@ export async function runTaskNow(params: {
         break;
       }
 
-      const feedbackLines: string[] = [];
-      if (validation.errors.length > 0) {
-        feedbackLines.push("系统规则校验失败：");
-        for (const item of validation.errors) feedbackLines.push(`- ${item}`);
-      }
-      if (decision.reply) {
-        feedbackLines.push("模拟用户回复：");
-        feedbackLines.push(decision.reply);
-      }
-      if (decision.reason) {
-        feedbackLines.push(`模拟用户理由：${decision.reason}`);
-      }
-      lastFeedback = feedbackLines.join("\n").trim();
       if (reviewEnabled && round < maxDialogueRounds) {
         await runProgress.update({
           status: "running",
@@ -1085,12 +1157,30 @@ export async function runTaskNow(params: {
   for (const round of dialogueRecords) {
     dialogueLines.push(`## Round ${round.round}`);
     dialogueLines.push("");
+    dialogueLines.push(`- reviewEnabled: \`${String(round.reviewEnabled)}\``);
+    dialogueLines.push(`- executorDelivered: \`${String(round.executorDelivered)}\``);
+    dialogueLines.push(`- validationResultStatus: \`${round.validationResultStatus}\``);
+    dialogueLines.push("");
+    dialogueLines.push("### Executor query");
+    dialogueLines.push("");
+    dialogueLines.push("```");
+    dialogueLines.push(summarizeText(round.executorQuery, 4000) || "_(empty query)_");
+    dialogueLines.push("```");
+    dialogueLines.push("");
     dialogueLines.push("### Executor output preview");
     dialogueLines.push("");
     dialogueLines.push("```");
     dialogueLines.push(summarizeText(round.executorOutput, 1200) || "_(empty output)_");
     dialogueLines.push("```");
     dialogueLines.push("");
+    if (round.executorAssistantMessageSnapshot) {
+      dialogueLines.push("### Executor raw assistantMessage snapshot");
+      dialogueLines.push("");
+      dialogueLines.push("```json");
+      dialogueLines.push(round.executorAssistantMessageSnapshot);
+      dialogueLines.push("```");
+      dialogueLines.push("");
+    }
     dialogueLines.push("### Rule checks");
     dialogueLines.push("");
     if (round.ruleErrors.length === 0) {
@@ -1108,11 +1198,39 @@ export async function runTaskNow(params: {
     if (round.userSimulator.reason) {
       dialogueLines.push(`- reason: ${round.userSimulator.reason}`);
     }
+    if (round.userSimulatorQuery) {
+      dialogueLines.push("");
+      dialogueLines.push("query:");
+      dialogueLines.push("```");
+      dialogueLines.push(summarizeText(round.userSimulatorQuery, 4000));
+      dialogueLines.push("```");
+    }
+    if (round.userSimulatorOutput) {
+      dialogueLines.push("");
+      dialogueLines.push("output:");
+      dialogueLines.push("```");
+      dialogueLines.push(summarizeText(round.userSimulatorOutput, 2000));
+      dialogueLines.push("```");
+    }
     if (round.userSimulator.reply) {
       dialogueLines.push("");
       dialogueLines.push("reply:");
       dialogueLines.push("```");
       dialogueLines.push(summarizeText(round.userSimulator.reply, 1200));
+      dialogueLines.push("```");
+    }
+    if (round.userSimulatorAssistantMessageSnapshot) {
+      dialogueLines.push("");
+      dialogueLines.push("raw assistantMessage snapshot:");
+      dialogueLines.push("```json");
+      dialogueLines.push(round.userSimulatorAssistantMessageSnapshot);
+      dialogueLines.push("```");
+    }
+    if (round.feedbackForNextRound) {
+      dialogueLines.push("");
+      dialogueLines.push("feedbackForNextRound:");
+      dialogueLines.push("```");
+      dialogueLines.push(summarizeText(round.feedbackForNextRound, 2000));
       dialogueLines.push("```");
     }
     dialogueLines.push("");
@@ -1166,6 +1284,11 @@ export async function runTaskNow(params: {
   resultLines.push(`## Artifacts`);
   resultLines.push("");
   resultLines.push(`- messages: ${toMdLink(path.posix.join(runDirRel, "messages.jsonl"))}`);
+  if (taskKind === "agent" && reviewEnabled) {
+    resultLines.push(
+      `- userSimulatorMessages: ${toMdLink(path.posix.join(runDirRel, "user-simulator/messages.jsonl"))}`,
+    );
+  }
   resultLines.push(`- input: ${toMdLink(path.posix.join(runDirRel, "input.md"))}`);
   resultLines.push(`- output: ${toMdLink(path.posix.join(runDirRel, "output.md"))}`);
   resultLines.push(`- result: ${toMdLink(path.posix.join(runDirRel, "result.md"))}`);

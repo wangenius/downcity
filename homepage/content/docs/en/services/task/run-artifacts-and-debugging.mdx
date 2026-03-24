@@ -21,8 +21,9 @@ Every task execution creates a run directory:
 | `run.json` | final status payload |
 | `run-progress.json` | live progress snapshot |
 | `dialogue.md` | multi-round summary (`agent`) |
-| `dialogue.json` | structured round records (`agent`) |
+| `dialogue.json` | structured round records (`agent`, including query / output / raw assistantMessage snapshots / feedback) |
 | `messages.jsonl` | execution context message stream |
+| `user-simulator/messages.jsonl` | user-simulator context message stream (only when `review=true`) |
 | `error.md` | failure summary |
 
 ## `run.json` key fields
@@ -39,6 +40,13 @@ Every task execution creates a run directory:
 
 - `resultStatus=invalid`
   - usually output too short
+  - for `review=true` agent tasks, inspect `dialogue.md` / `dialogue.json` first for each round's:
+    - executor query
+    - executor output
+    - user simulator query
+    - user simulator output
+    - raw assistantMessage snapshot
+    - feedbackForNextRound
 
 - `executionStatus=failure`
   - usually script execution failure, agent runtime failure, or failed `chat_send` delivery

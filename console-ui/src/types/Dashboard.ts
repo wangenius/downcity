@@ -1362,6 +1362,10 @@ export interface UiTaskItem {
    */
   status?: string;
   /**
+   * 当前是否正在执行。
+   */
+  running?: boolean;
+  /**
    * 触发条件（@manual | cron | time:ISO8601）。
    */
   when?: string;

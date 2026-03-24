@@ -21,8 +21,9 @@ description: run 目录文件语义、状态判读、排障步骤与常见错误
 | `run.json` | 最终状态机结果 |
 | `run-progress.json` | 执行中实时进度快照 |
 | `dialogue.md` | 多轮执行摘要（agent） |
-| `dialogue.json` | 多轮结构化记录（agent） |
+| `dialogue.json` | 多轮结构化记录（agent，包含 query / output / 原始 assistantMessage 快照 / feedback） |
 | `messages.jsonl` | 执行上下文消息流 |
+| `user-simulator/messages.jsonl` | 模拟用户上下文消息流（仅 `review=true` 时） |
 | `error.md` | 失败摘要（失败时） |
 
 ## `run.json` 重点字段
@@ -39,6 +40,13 @@ description: run 目录文件语义、状态判读、排障步骤与常见错误
 
 - `resultStatus=invalid`
   - 常见是输出过短。
+  - 对 `review=true` 的 agent 任务，优先打开 `dialogue.md` / `dialogue.json` 看每轮的：
+    - executor query
+    - executor output
+    - user simulator query
+    - user simulator output
+    - raw assistantMessage snapshot
+    - feedbackForNextRound
 
 - `executionStatus=failure`
   - 常见是脚本执行失败、agent 调用异常，或 `chat_send` 发送失败。

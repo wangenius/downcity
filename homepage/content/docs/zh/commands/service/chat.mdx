@@ -1,6 +1,6 @@
 ---
 title: city chat
-description: chat service actions（status/test/reconnect/open/close/configure/send/react/context/delete/history）
+description: chat service actions（status/test/reconnect/open/close/configuration/configure/list/info/send/react/context/delete/history）
 ---
 
 # `city chat`
@@ -24,6 +24,8 @@ city chat <subcommand> [options]
 - `close`：关闭渠道（写入 `ship.json` 为 `enabled=false`，并停止运行）
 - `configuration`：查看渠道配置元信息（字段名/类型/说明/来源）
 - `configure`：更新渠道参数（写入 `ship.json`，默认重载该渠道）
+- `list`：列出当前 agent 已记录的会话（chatTitle/chatKey）
+- `info`：查看指定会话信息（路由快照/本地路径/上下文快照）
 - `send`：发送消息
 - `react`：给消息贴表情（当前主要 Telegram）
 - `context`：查看当前会话上下文快照
@@ -43,6 +45,17 @@ city chat <subcommand> [options]
 ## `configuration` 常用选项
 
 - `--channel <telegram|feishu|qq>`：仅查看指定渠道（不传则返回全部）
+
+## `list` 常用选项
+
+- `--channel <telegram|feishu|qq>`：渠道过滤
+- `--limit <n>`：返回最近 N 条（默认 50）
+- `--q <text>`：关键词过滤（title/chatId/contextId/actor）
+
+## `info` 常用选项
+
+- `--chat-key <chatKey>`：目标会话（不传则尝试读取 `DC_CTX_CHAT_KEY`）
+- `--context-id <contextId>`：显式指定 contextId（优先级更高）
 
 ## `send` 常用选项
 
@@ -77,6 +90,8 @@ city chat <subcommand> [options]
 ## 示例
 
 ```bash
+city chat list --limit 20
+city chat info --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx

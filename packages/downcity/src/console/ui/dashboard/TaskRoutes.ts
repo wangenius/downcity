@@ -24,6 +24,40 @@ import {
 } from "./Helpers.js";
 
 /**
+ * 读取任务当前是否仍在执行。
+ */
+async function readTaskRunningState(params: {
+  projectRoot: string;
+  title: string;
+  lastRunTimestamp?: string;
+}): Promise<boolean> {
+  const title = String(params.title || "").trim();
+  const timestamp = String(params.lastRunTimestamp || "").trim();
+  if (!title || !timestamp || !TASK_RUN_DIR_REGEX.test(timestamp)) return false;
+
+  let taskId = "";
+  try {
+    taskId = await resolveTaskIdByTitle({
+      projectRoot: params.projectRoot,
+      title,
+    });
+  } catch {
+    return false;
+  }
+
+  const progressPath = join(
+    getShipTasksDirPath(params.projectRoot),
+    taskId,
+    timestamp,
+    "run-progress.json",
+  );
+  const progress = (await fs.readJson(progressPath).catch(() => null)) as {
+    status?: string;
+  } | null;
+  return String(progress?.status || "").trim().toLowerCase() === "running";
+}
+
+/**
  * 注册任务与日志路由。
  */
 export function registerDashboardTaskRoutes(
@@ -40,9 +74,19 @@ export function registerDashboardTaskRoutes(
         ...(status ? { status: status as "enabled" | "paused" | "disabled" } : {}),
       });
       const tasks = Array.isArray(result.tasks) ? result.tasks : [];
+      const tasksWithRunning = await Promise.all(
+        tasks.map(async (task) => {
+          const running = await readTaskRunningState({
+            projectRoot: runtime.rootPath,
+            title: String(task.title || "").trim(),
+            lastRunTimestamp: task.lastRunTimestamp,
+          });
+          return running ? { ...task, running } : task;
+        }),
+      );
       return c.json({
         success: true,
-        tasks,
+        tasks: tasksWithRunning,
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);

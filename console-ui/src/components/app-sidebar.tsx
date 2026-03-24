@@ -169,6 +169,7 @@ function isChannelStarted(status: UiChatChannelStatus | undefined, fallbackByIte
  * 判断任务是否正在执行。
  */
 function isTaskRunning(task: UiTaskItem): boolean {
+  if (task.running === true) return true
   return String(task.status || "").trim().toLowerCase() === "running"
 }
 

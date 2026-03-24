@@ -176,6 +176,37 @@ export async function readChannelContextRouteByContextId(params: {
 }
 
 /**
+ * 列出当前 agent 已记录的所有渠道路由条目。
+ *
+ * 关键点（中文）
+ * - 数据源为 `.ship/channel/meta.json` 的 `routesByContextId`。
+ * - 默认按 `updatedAt` 倒序返回，便于展示“最近活跃”会话。
+ */
+export async function listChannelContextRoutes(params: {
+  context: ServiceRuntime;
+}): Promise<{
+  updatedAt: number;
+  routes: ChannelContextRouteV1[];
+}> {
+  const rootPath = String(params.context.rootPath || "").trim();
+  if (!rootPath) {
+    return {
+      updatedAt: Date.now(),
+      routes: [],
+    };
+  }
+  const file = await readMetaFile({ rootPath });
+  const routes = Object.values(file.routesByContextId)
+    .map((route) => normalizeRoute(route))
+    .filter((route): route is ChannelContextRouteV1 => Boolean(route))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+  return {
+    updatedAt: file.updatedAt,
+    routes,
+  };
+}
+
+/**
  * 根据渠道目标查找已有 contextId（不自动创建）。
  */
 export async function resolveChannelContextIdByTarget(params: {

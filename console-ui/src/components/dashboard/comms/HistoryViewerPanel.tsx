@@ -2,7 +2,71 @@
  * 历史消息查看面板。
  */
 
+import { cn } from "@/lib/utils"
 import type { UiChatHistoryEvent, UiContextTimelineMessage } from "@/types/Dashboard"
+
+/**
+ * 生成时间线角色标签。
+ *
+ * 关键点（中文）
+ * - tool-call / tool-result 需要补出具体 toolName，避免只看到笼统类型。
+ */
+function formatTimelineRoleLabel(params: {
+  role?: string
+  toolName?: string
+}): string {
+  const role = String(params.role || "unknown").trim()
+  const toolName = String(params.toolName || "").trim()
+  if ((role === "tool-call" || role === "tool-result") && toolName) {
+    return `${role} · ${toolName}`
+  }
+  return role || "unknown"
+}
+
+/**
+ * 生成时间线视觉样式。
+ *
+ * 关键点（中文）
+ * - 在只读历史面板里也要保持和主工作区一致的语义区分。
+ */
+function getTimelineVisualTone(roleInput?: string): {
+  cardClassName: string
+  roleBadgeClassName: string
+  toolBadgeClassName: string
+  textClassName: string
+} {
+  const role = String(roleInput || "unknown").trim()
+  if (role === "tool-call") {
+    return {
+      cardClassName: "border border-sky-200/80 bg-sky-50/72 dark:border-sky-900/60 dark:bg-sky-950/20",
+      roleBadgeClassName: "bg-sky-500/12 text-sky-700 dark:bg-sky-400/14 dark:text-sky-200",
+      toolBadgeClassName: "bg-background/88 text-sky-800 ring-1 ring-sky-200/70 dark:bg-sky-950/35 dark:text-sky-100 dark:ring-sky-800/80",
+      textClassName: "font-mono text-[11px] leading-[1.6] text-sky-950/88 dark:text-sky-50/88",
+    }
+  }
+  if (role === "tool-result") {
+    return {
+      cardClassName: "border border-emerald-200/80 bg-emerald-50/72 dark:border-emerald-900/60 dark:bg-emerald-950/20",
+      roleBadgeClassName: "bg-emerald-500/12 text-emerald-700 dark:bg-emerald-400/14 dark:text-emerald-200",
+      toolBadgeClassName: "bg-background/88 text-emerald-800 ring-1 ring-emerald-200/70 dark:bg-emerald-950/35 dark:text-emerald-100 dark:ring-emerald-800/80",
+      textClassName: "font-mono text-[11px] leading-[1.6] text-emerald-950/88 dark:text-emerald-50/88",
+    }
+  }
+  if (role === "user") {
+    return {
+      cardClassName: "border border-border/55 bg-secondary/42",
+      roleBadgeClassName: "bg-secondary text-foreground/78",
+      toolBadgeClassName: "bg-secondary text-muted-foreground",
+      textClassName: "text-xs text-foreground/92",
+    }
+  }
+  return {
+    cardClassName: "border border-border/45 bg-background/80",
+    roleBadgeClassName: "bg-secondary text-foreground/78",
+    toolBadgeClassName: "bg-secondary text-muted-foreground",
+    textClassName: "text-xs text-foreground/90",
+  }
+}
 
 export interface HistoryViewerPanelProps {
   /**
@@ -55,11 +119,41 @@ export function HistoryViewerPanel(props: HistoryViewerPanelProps) {
             ) : (
               contextMessages.map((msg, index) => {
                 const role = String(msg.role || "unknown")
+                const roleLabel = formatTimelineRoleLabel({
+                  role,
+                  toolName: msg.toolName,
+                })
+                const tone = getTimelineVisualTone(role)
+                const toolName = String(msg.toolName || "").trim()
                 const text = String(msg.text || "").trim() || "(empty)"
                 return (
-                  <article key={`${msg.id || index}`} className="rounded-[16px] bg-background/80 px-3 py-2.5">
-                    <div className="mb-1 text-[11px] text-muted-foreground">{`${role} · ${formatTime(msg.ts)}`}</div>
-                    <div className="whitespace-pre-wrap break-all text-xs text-foreground/90">{text}</div>
+                  <article key={`${msg.id || index}`} className={cn("rounded-[16px] px-3 py-2.5", tone.cardClassName)}>
+                    <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "inline-flex h-5 max-w-full items-center rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.1em]",
+                            tone.roleBadgeClassName,
+                          )}
+                          title={roleLabel}
+                        >
+                          <span className="truncate">{role}</span>
+                        </span>
+                        {toolName ? (
+                          <span
+                            className={cn(
+                              "inline-flex h-5 max-w-[min(44vw,14rem)] items-center rounded-full px-2 font-mono text-[10px]",
+                              tone.toolBadgeClassName,
+                            )}
+                            title={toolName}
+                          >
+                            <span className="truncate">{toolName}</span>
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 font-mono text-[10px]">{formatTime(msg.ts)}</span>
+                    </div>
+                    <div className={cn("whitespace-pre-wrap break-all", tone.textClassName)}>{text}</div>
                   </article>
                 )
               })

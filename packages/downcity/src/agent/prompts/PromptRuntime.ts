@@ -2,7 +2,7 @@
  * PromptRuntime：prompt 运行时模块。
  *
  * 关键点（中文）
- * - 统一管理 PROFILE.md / SOUL.md / USER.md 的加载与热重载。
+ * - 统一管理 PROFILE.md / SOUL.md 的加载与热重载。
  * - 仅依赖“当前 systems 读取 + systems 应用”回调，不耦合 RuntimeState 具体实现。
  */
 
@@ -13,8 +13,6 @@ import {
   getProfileMdPath,
   getSoulMdCandidatePaths,
   getSoulMdPath,
-  getUserMdCandidatePaths,
-  getUserMdPath,
 } from "@/console/env/Paths.js";
 import fs from "fs-extra";
 import path from "node:path";
@@ -26,8 +24,8 @@ const DEFAULT_HOT_RELOAD_DEBOUNCE_MS = 300;
  * 静态 prompt 文件规范。
  */
 type StaticPromptFileSpec = {
-  key: "profile" | "soul" | "user";
-  reloadReason: "profile_md_changed" | "soul_md_changed" | "user_md_changed";
+  key: "profile" | "soul";
+  reloadReason: "profile_md_changed" | "soul_md_changed";
   defaultPath: (rootPath: string) => string;
   candidatePaths: (rootPath: string) => string[];
   fallbackText?: string;
@@ -47,12 +45,6 @@ You are a helpful project assistant.`,
     reloadReason: "soul_md_changed",
     defaultPath: getSoulMdPath,
     candidatePaths: getSoulMdCandidatePaths,
-  },
-  {
-    key: "user",
-    reloadReason: "user_md_changed",
-    defaultPath: getUserMdPath,
-    candidatePaths: getUserMdCandidatePaths,
   },
 ];
 
@@ -189,7 +181,6 @@ export class PromptRuntime {
       filename: filename || undefined,
       profileMdPath: pathByKey.get("profile") || getProfileMdPath(this.rootPath),
       soulMdPath: pathByKey.get("soul") || getSoulMdPath(this.rootPath),
-      userMdPath: pathByKey.get("user") || getUserMdPath(this.rootPath),
     });
   }
 
@@ -263,7 +254,7 @@ export class PromptRuntime {
       }
     }
 
-    // PROFILE.md / SOUL.md / USER.md：监听项目根目录（文件替换/重命名也能捕获）。
+    // PROFILE.md / SOUL.md：监听项目根目录（文件替换/重命名也能捕获）。
     attachWatcher(this.rootPath, {}, (_eventType, filename) => {
       const basename = filename ? path.basename(filename) : "";
       const changedReason = staticPromptFileNameToReason.get(basename);
@@ -290,7 +281,6 @@ export class PromptRuntime {
     this.logger.info("Runtime hot reload enabled", {
       profileMdPath: pathByKey.get("profile") || getProfileMdPath(this.rootPath),
       soulMdPath: pathByKey.get("soul") || getSoulMdPath(this.rootPath),
-      userMdPath: pathByKey.get("user") || getUserMdPath(this.rootPath),
       watchers: watchers.length,
     });
   }

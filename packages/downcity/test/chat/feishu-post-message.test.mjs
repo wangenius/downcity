@@ -125,7 +125,7 @@ test("shouldUseFeishuPostMessage only enables post for structured content", () =
   );
 });
 
-test("FeishuBot sends multiline text and photos as post", { concurrency: false }, async () => {
+test("FeishuBot sends text and attachments in original order", { concurrency: false }, async () => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-feishu-post-"));
   const runtime = buildRuntime(rootPath);
   const bot = new FeishuBot(runtime, "app-id", "app-secret", undefined);
@@ -140,8 +140,15 @@ test("FeishuBot sends multiline text and photos as post", { concurrency: false }
       content,
     });
   };
-  bot.resolveAttachmentLocalPath = async () => "/tmp/fixture-map.png";
-  bot.uploadImageToFeishu = async () => "img_uploaded_002";
+  bot.sendAttachment = async (chatId, chatType, messageId, attachment) => {
+    calls.push({
+      chatId,
+      chatType,
+      messageId,
+      msgType: "attachment",
+      content: attachment,
+    });
+  };
 
   try {
     await bot.sendChatMessage(
@@ -149,33 +156,54 @@ test("FeishuBot sends multiline text and photos as post", { concurrency: false }
       "group",
       [
         "明天下午喝个咖啡？",
+        '<file type="document" caption="资料">fixtures/brief.pdf</file>',
         "2点？",
-        "",
         '<file type="photo" caption="门店位置图">fixtures/map.png</file>',
       ].join("\n"),
     );
 
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].msgType, "post");
-    const payload = JSON.parse(calls[0].content);
-    assert.deepEqual(payload.zh_cn.content[0], [
-      { tag: "text", text: "明天下午喝个咖啡？" },
+    assert.deepEqual(calls, [
+      {
+        chatId: "oc_xxx",
+        chatType: "group",
+        messageId: undefined,
+        msgType: "text",
+        content: {
+          text: "明天下午喝个咖啡？",
+        },
+      },
+      {
+        chatId: "oc_xxx",
+        chatType: "group",
+        messageId: undefined,
+        msgType: "attachment",
+        content: {
+          type: "document",
+          pathOrUrl: "fixtures/brief.pdf",
+          caption: "资料",
+        },
+      },
+      {
+        chatId: "oc_xxx",
+        chatType: "group",
+        messageId: undefined,
+        msgType: "text",
+        content: {
+          text: "2点？",
+        },
+      },
+      {
+        chatId: "oc_xxx",
+        chatType: "group",
+        messageId: undefined,
+        msgType: "attachment",
+        content: {
+          type: "photo",
+          pathOrUrl: "fixtures/map.png",
+          caption: "门店位置图",
+        },
+      },
     ]);
-    assert.deepEqual(payload.zh_cn.content[1], [
-      { tag: "text", text: "2点？" },
-    ]);
-    assert.ok(
-      payload.zh_cn.content.some(
-        (line) =>
-          Array.isArray(line) &&
-          line.some(
-            (item) =>
-              item &&
-              item.tag === "img" &&
-              item.image_key === "img_uploaded_002",
-          ),
-      ),
-    );
   } finally {
     await fs.rm(rootPath, { recursive: true, force: true });
   }

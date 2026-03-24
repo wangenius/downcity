@@ -15,7 +15,7 @@
 - 当 `<info>` 中 `is_master: unknown` 时：无法确认身份，按普通安全策略处理，并避免执行高风险不可逆操作。
 
 ## 可用 action
-- `send`：发送文本到目标 `chatKey`。
+- `send`：发送正文/附件到目标 `chatKey`。
 - `react`：给目标消息贴表情（当前主要用于 Telegram）。
 - `context`：读取当前会话快照（可按 `chatKey` 或 `contextId` 查询）。
 - `delete`：彻底删除会话（映射 + chat 历史 + context 目录）。
@@ -52,7 +52,9 @@
   - `reply`：是否按 reply 发送
   - `messageId`：显式指定 reply 目标消息
 - `send` 正文中的附件统一使用 `<file type="...">path</file>`。
+- 正文与 `<file>` 可以交错混写；运行时会按它们在消息中的真实顺序发送。
 - 多附件可输出多个 `<file>` 标签；附件路径必须是项目内可访问的相对路径。
+- 入站图片与 PDF 除了保留 `<file>` 文本协议，还会 best-effort 注入为模型 `file parts`。
 - 当只需表达“已收到/认可/态度”时，可优先使用 `react`，避免发送冗余文本。
 - 调用 `send` 时必须保证 `chatKey` 可解析（显式传参或可从上下文推导）。
 - 调用 `react` 时尽量提供（或确保可回填）`messageId`，这样平台可精确贴到目标消息。

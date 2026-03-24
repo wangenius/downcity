@@ -2,7 +2,7 @@
  * InitPrompts：`city agent create` 默认 prompt 资产加载器。
  *
  * 职责说明（中文）
- * - 统一管理 create 生成的 `PROFILE.md` / `SOUL.md` / `USER.md` 默认内容。
+ * - 统一管理 create 生成的 `PROFILE.md` / `SOUL.md` 默认内容。
  * - 资源集中在 `prompts/common/assets/init/*.txt`，避免散落在 constants。
  */
 
@@ -14,10 +14,6 @@ const PROFILE_TEMPLATE_FILE_URL = new URL(
 );
 const SOUL_TEMPLATE_FILE_URL = new URL(
   "./assets/init/SOUL.md.txt",
-  import.meta.url,
-);
-const USER_TEMPLATE_FILE_URL = new URL(
-  "./assets/init/USER.md.txt",
   import.meta.url,
 );
 
@@ -53,12 +49,4 @@ export const DEFAULT_PROFILE_MD_TEMPLATE = loadInitTemplate(
 export const DEFAULT_SOUL_MD_TEMPLATE = loadInitTemplate(
   SOUL_TEMPLATE_FILE_URL,
   "SOUL.md",
-);
-
-/**
- * `USER.md` 默认模板。
- */
-export const DEFAULT_USER_MD_TEMPLATE = loadInitTemplate(
-  USER_TEMPLATE_FILE_URL,
-  "USER.md",
 );

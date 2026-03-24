@@ -26,7 +26,7 @@ import {
 } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
-import { parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup.js";
+import { parseChatMessageMarkup } from "../../services/chat/runtime/ChatMessageMarkup.js";
 
 /**
  * 过滤回调返回值中的 user 文本消息。
@@ -157,7 +157,7 @@ function buildDataUrl(mediaType: string, buffer: Buffer): string {
  * 在 user 消息上注入 FileUIPart，以便多模态模型直接消费本地附件。
  *
  * 设计（中文）
- * - 仅处理图片附件（type=photo 且扩展名/内容类型为 image/*），避免对非多模态模型影响过大。
+ * - 当前处理图片与 PDF，便于多模态模型直接理解截图和文档。
  * - 附件仍然保留原始 `<file>` 标签文本，兼容纯文本模型。
  * - 不修改持久化历史，仅在本轮执行的内存消息上注入 file parts。
  */
@@ -210,9 +210,14 @@ async function injectFilePartsFromAttachments(
     const fileParts: FileUIPart[] = [];
 
     for (const attachment of attachments) {
-      // 当前阶段：仅对图片附件注入 file part。
+      // 当前阶段：对图片与 PDF 注入 file part。
       const mediaTypeGuess = guessAttachmentMediaTypeFromPath(attachment.path);
-      if (!mediaTypeGuess || !mediaTypeGuess.startsWith("image/")) continue;
+      if (
+        !mediaTypeGuess ||
+        (!mediaTypeGuess.startsWith("image/") && mediaTypeGuess !== "application/pdf")
+      ) {
+        continue;
+      }
 
       const absPath = path.isAbsolute(attachment.path)
         ? attachment.path

@@ -13,6 +13,7 @@ description: 通过飞书/Lark 把 Downcity 接入私聊与群聊，并完成名
 - Agent 执行结果回发到飞书
 - 支持在回复中使用 `<file type="document">path</file>` 发送文件附件
 - 支持把飞书入站图片、视频、文件、音频下载到本地并注入 `<file ...>` 给 Agent
+- 支持把飞书入站图片和 PDF best-effort 注入为模型 `file parts`
 
 > 想看内部链路细节？继续阅读：[/zh/docs/services/chat/feishu-message-flow](/zh/docs/services/chat/feishu-message-flow)
 
@@ -176,8 +177,9 @@ city agent start
 - 入站支持 **文本 + post 富文本 + 图片 + 视频 + 文件 + 音频** 作为执行输入
 - `post` 内的文本 / 链接 / @ 会先归一化成纯文本，图片 / 媒体会先下载到 `.ship/.cache/feishu/`，再注入为 `<file ...>`
 - 图片、视频、文件、音频会先下载到 `.ship/.cache/feishu/`，再注入为 `<file ...>`
+- 入站图片和 PDF 会继续 best-effort 注入为模型 `file parts`，便于多模态模型直接读取
 - 用户如果是在飞书里 reply 某条消息再发新消息，运行时会根据 `parent_id` best-effort 回查父消息正文，并一并注入给 Agent
-- 出站支持从回复文本解析 `<file ...>`；多行正文、链接、图片会尽量合并发送为飞书 `post`
+- 出站支持从回复文本解析 `<file ...>`，并按正文与附件在原消息里的实际顺序逐段发送
 - 普通 AI 文本回复默认走普通发送，不会自动引用“当前最新消息”
 - 只有显式 reply 时，才会绑定到目标 `message_id`
 - 会尝试 best-effort 查询：
@@ -189,6 +191,7 @@ city agent start
 
 - 消息仍然能处理
 - 但 UI 里可能只能显示 `chat_id / open_id`
+- 如果消息里是“文本 + 附件 + 文本”交错结构，飞书出站也会尽量保持这个顺序
 
 ## `tenant_access_token` 和 `user_access_token` 的区别
 

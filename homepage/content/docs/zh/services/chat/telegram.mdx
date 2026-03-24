@@ -70,6 +70,7 @@ city agent start
 
 - 如果你在发送文件时同时输入文字，Telegram 会把这段文字当作 **caption（附件说明）** —— Downcity 会把 caption 当作你的指令来处理。
 - Downcity 会把文件保存到 `.ship/.cache/telegram/`，并以 `<file ...>` 的形式传给 Agent。
+- 对图片和 PDF，运行时还会 best-effort 注入为模型可读的 `file parts`；即使模型不支持多模态，原始 `<file>` 文本协议也会保留。
 
 示例：发送一个 PDF，并在 caption 写：`帮我总结这个 PDF，并列出待办事项。`
 
@@ -97,6 +98,7 @@ city voice status
 - 群里发送文件时，caption 会作为指令文本一并处理，不需要额外 `@bot`。
 - 用户如果是“回复某条 Telegram 消息”再发新消息，运行时会把被引用消息正文（以及可用的 quote 片段）一并注入给 Agent。
 - Agent 执行期间会周期性发送 `sendChatAction(typing)`，你会看到 Telegram 的“正在输入”提示，直到结果发出。
+- 如果 Agent 用 `chat send` 发送“正文 + 附件”混合消息，Telegram 会按正文和附件在原消息里的实际顺序逐段发送。
 
 ## 回复关联与贴表情逻辑（重点）
 

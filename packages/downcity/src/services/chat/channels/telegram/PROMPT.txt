@@ -16,6 +16,7 @@
 ## 附件能力
 - 支持在回复正文中使用 `<file>` 标签发送附件（document/photo/voice/audio/video）。
 - 附件路径必须是项目内可访问的相对路径。
+- 如果正文和附件交错出现，Telegram 会按原始顺序逐段发送。
 - 常用格式：
   - `<file type="document">相对路径</file>`
   - `<file type="photo">相对路径</file>`

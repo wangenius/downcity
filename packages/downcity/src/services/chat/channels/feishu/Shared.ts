@@ -9,7 +9,7 @@ import { parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup
  *
  * 关键点（中文）
  * - 解析回复文本中的 `<file ...>` 附件标签。
- * - 返回“净化后的正文 + 附件列表”，便于出站顺序发送。
+ * - 返回“净化后的正文 + 附件列表 + 有序 segments”，便于按真实顺序出站。
  */
 
 function normalizeAttachmentType(value: string): FeishuAttachmentType {
@@ -27,6 +27,7 @@ function normalizeAttachmentType(value: string): FeishuAttachmentType {
  * 说明（中文）
  * - `<file>` 标签会从正文中移除并写入 attachments。
  * - 其他自然语言正文保持原样，支持正文与附件混写。
+ * - `segments` 会保留文本与附件的原始交错顺序。
  */
 export function parseFeishuAttachments(text: string): {
   text: string;
@@ -51,14 +52,25 @@ export function parseFeishuAttachments(text: string): {
       : {}),
   })).filter((item) => item.pathOrUrl);
 
-  const segments = parsed.segments.flatMap((segment) => {
+  const segments: Array<
+    | {
+        kind: "text";
+        text: string;
+      }
+    | {
+        kind: "attachment";
+        attachment: ParsedFeishuAttachmentCommand;
+      }
+  > = [];
+  for (const segment of parsed.segments) {
     if (segment.kind === "text") {
-      return segment.text
-        ? [{
-            kind: "text" as const,
-            text: segment.text,
-          }]
-        : [];
+      if (segment.text) {
+        segments.push({
+          kind: "text",
+          text: segment.text,
+        });
+      }
+      continue;
     }
     const attachment = {
       type: normalizeAttachmentType(segment.file.type),
@@ -67,12 +79,12 @@ export function parseFeishuAttachments(text: string): {
         ? { caption: segment.file.caption.trim() }
         : {}),
     } satisfies ParsedFeishuAttachmentCommand;
-    if (!attachment.pathOrUrl) return [];
-    return [{
-      kind: "attachment" as const,
+    if (!attachment.pathOrUrl) continue;
+    segments.push({
+      kind: "attachment",
       attachment,
-    }];
-  });
+    });
+  }
 
   return {
     text: parsed.bodyText,

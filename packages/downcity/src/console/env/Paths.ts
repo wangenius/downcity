@@ -13,7 +13,7 @@ import path from "path";
  *
  * 关键点（中文）
  * - 统一使用大写文件名：`PROFILE.md`。
- * - 与 SOUL/USER 一起作为静态 prompt 入口。
+ * - 与 SOUL 一起作为静态 prompt 入口。
  */
 export const PROFILE_MD_FILE_CANDIDATES = ["PROFILE.md"] as const;
 
@@ -40,23 +40,6 @@ export function getSoulMdPath(cwd: string): string {
 
 export function getSoulMdCandidatePaths(cwd: string): string[] {
   return SOUL_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
-}
-
-/**
- * USER.md 候选文件名（按优先级从高到低）。
- *
- * 关键点（中文）
- * - 统一使用大写文件名：`USER.md`。
- * - 用于注入“用户画像与偏好”类静态提示词。
- */
-export const USER_MD_FILE_CANDIDATES = ["USER.md"] as const;
-
-export function getUserMdPath(cwd: string): string {
-  return path.join(cwd, USER_MD_FILE_CANDIDATES[0]);
-}
-
-export function getUserMdCandidatePaths(cwd: string): string[] {
-  return USER_MD_FILE_CANDIDATES.map((filename) => path.join(cwd, filename));
 }
 
 export function getShipJsonPath(cwd: string): string {

@@ -81,6 +81,7 @@ So Feishu `post`, images, videos, files, and audio now follow the same normalize
 - text / links / mentions inside `post` are converted into plain execution text
 - images / media inside `post` are converted into downloadable attachments
 - all downloadable assets are finally injected as `<file ...>`
+- images and PDFs are also best-effort injected as model `file parts`
 
 ### Automatic ack reaction
 
@@ -237,11 +238,27 @@ The current version also supports `<file>` conversion in outbound replies:
 <file type="document">reports/downcity-office-hours.md</file>
 ```
 
-Delivery order:
+Delivery now follows the actual message structure:
 
-1. send plain text body (with `<file>` tags removed)
-2. upload local file and send Feishu `file` message
-3. if the tag includes `caption`, send caption as an extra text message
+1. parse the message into ordered `segments[]`
+2. send text segments in source order
+3. upload/send attachment segments in source order
+
+So if the source message is:
+
+```text
+Part one
+
+<file type="document" caption="Reference">reports/a.pdf</file>
+
+Part two
+```
+
+Feishu receives it in the same order:
+
+1. text: `Part one`
+2. attachment: `reports/a.pdf`
+3. text: `Part two`
 
 ## Why manual `user_access_token` tests can pass while runtime still fails
 
@@ -273,7 +290,6 @@ There is no contradiction there.
 The current Feishu channel still has these limitations:
 
 - complex `post` styling (bold/italic/layout) is currently downgraded to plain text instead of preserving visual style
-- outbound `post` currently merges text, links, and images only; files/audio/video are still sent as follow-up standalone messages
 - sender/chat display names depend on tenant scopes and contact visibility
 - `user_access_token` is not currently used for inbound metadata enrichment
 

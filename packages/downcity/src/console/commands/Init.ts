@@ -2,7 +2,7 @@
  * `city agent create`：在目标目录生成最小可用的 Downcity 工程骨架与配置文件。
  *
  * 目标
- * - 生成 `PROFILE.md` / `SOUL.md` / `USER.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
+ * - 生成 `PROFILE.md` / `SOUL.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
  * - 通过交互式问题收集必要配置（模型、channels 等）
  *
  * 设计要点
@@ -13,7 +13,7 @@
 import path from "path";
 import prompts from "prompts";
 import fs from "fs-extra";
-import { getProfileMdPath, getShipJsonPath, getSoulMdPath, getUserMdPath } from "@/console/env/Paths.js";
+import { getProfileMdPath, getShipJsonPath, getSoulMdPath } from "@/console/env/Paths.js";
 import {
   initializeAgentProject,
   listConsoleModelChoices,
@@ -51,7 +51,6 @@ export async function initCommand(
   // Check if core initialization files already exist
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
-  const existingUserMd = fs.existsSync(getUserMdPath(projectRoot));
   const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
   const consoleModelChoices = await listConsoleModelChoices();
   const consoleModelIds = consoleModelChoices.map((item) => item.value);
@@ -137,11 +136,6 @@ export async function initCommand(
   } else if (existingSoulMd) {
     console.log("⏭️  Skipped existing SOUL.md");
   }
-  if (!existingUserMd && initResult.createdFiles.includes("USER.md")) {
-    console.log("✅ Created USER.md");
-  } else if (existingUserMd) {
-    console.log("⏭️  Skipped existing USER.md");
-  }
 
   console.log("✅ Created ship.json");
   console.log("⏭️  Skipped .env (no new entries)");
@@ -178,7 +172,6 @@ export async function initCommand(
   const nextSteps: string[] = [
     "Edit PROFILE.md to customize agent behavior",
     "Edit SOUL.md to customize your core operating principles",
-    "Edit USER.md to define user goals and communication preferences",
     "Edit ship.json to modify model.primary (bind to console model id)",
     'Use "city console model ..." to manage global model pool',
   ];

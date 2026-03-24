@@ -146,7 +146,7 @@ export function stopRuntimeHotReload(): void {
 }
 
 /**
- * 启动 runtime 文件热重载监听（PROFILE.md / SOUL.md / USER.md）。
+ * 启动 runtime 文件热重载监听（PROFILE.md / SOUL.md）。
  */
 function startRuntimeHotReload(): void {
   stopRuntimeHotReload();

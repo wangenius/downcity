@@ -236,8 +236,9 @@ export function guessMimeType(fileName: string): string | undefined {
  * 从文本中解析 `<file ...>` 附件标签。
  *
  * 说明（中文）
- * - 返回“清理后的正文 + 附件列表”
+ * - 返回“清理后的正文 + 附件列表 + 有序 segments”
  * - `<file>` 标签会从正文中移除，便于自然语言与附件混写
+ * - `segments` 会保留正文与附件的真实顺序，供出站逐段发送
  */
 export function parseTelegramAttachments(text: string): {
   text: string;
@@ -289,14 +290,29 @@ export function parseTelegramAttachments(text: string): {
     };
   }).filter((item) => item.pathOrUrl);
 
-  const segments = parsed.segments.flatMap((segment) => {
+  const segments: Array<
+    | {
+        kind: "text";
+        text: string;
+      }
+    | {
+        kind: "attachment";
+        attachment: {
+          type: TelegramAttachmentType;
+          pathOrUrl: string;
+          caption?: string;
+        };
+      }
+  > = [];
+  for (const segment of parsed.segments) {
     if (segment.kind === "text") {
-      return segment.text
-        ? [{
-            kind: "text" as const,
-            text: segment.text,
-          }]
-        : [];
+      if (segment.text) {
+        segments.push({
+          kind: "text",
+          text: segment.text,
+        });
+      }
+      continue;
     }
     const kindRaw = String(segment.file.type || "").toLowerCase();
     const type: TelegramAttachmentType =
@@ -310,20 +326,20 @@ export function parseTelegramAttachments(text: string): {
               ? "audio"
               : "voice";
     const pathOrUrl = String(segment.file.path || "").trim();
-    if (!pathOrUrl) return [];
+    if (!pathOrUrl) continue;
     const caption =
       typeof segment.file.caption === "string"
         ? String(segment.file.caption).trim()
         : undefined;
-    return [{
-      kind: "attachment" as const,
+    segments.push({
+      kind: "attachment",
       attachment: {
         type,
         pathOrUrl,
         ...(caption ? { caption } : {}),
       },
-    }];
-  });
+    });
+  }
 
   return { text: parsed.bodyText, attachments, segments };
 }

@@ -143,6 +143,71 @@ function stripInfoTag(raw: string): { text: string; info: string } {
   return { text, info }
 }
 
+/**
+ * 生成时间线角色标签。
+ *
+ * 关键点（中文）
+ * - tool-call / tool-result 需要把具体 toolName 一起展示出来。
+ * - 普通 user / assistant 仍保持原有简洁标签。
+ */
+function formatTimelineRoleLabel(params: {
+  role?: string
+  toolName?: string
+}): string {
+  const role = String(params.role || "unknown").trim()
+  const toolName = String(params.toolName || "").trim()
+  if ((role === "tool-call" || role === "tool-result") && toolName) {
+    return `${role} · ${toolName}`
+  }
+  return role || "unknown"
+}
+
+/**
+ * 生成时间线卡片样式。
+ *
+ * 关键点（中文）
+ * - tool-call / tool-result 需要明显区别于普通 user / assistant。
+ * - 这里统一返回卡片、角色标签、tool 标签与正文样式，避免视觉分叉。
+ */
+function getTimelineVisualTone(roleInput?: string): {
+  cardClassName: string
+  roleBadgeClassName: string
+  toolBadgeClassName: string
+  textClassName: string
+} {
+  const role = String(roleInput || "unknown").trim()
+  if (role === "tool-call") {
+    return {
+      cardClassName: "border border-sky-200/80 bg-sky-50/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] dark:border-sky-900/60 dark:bg-sky-950/20",
+      roleBadgeClassName: "bg-sky-500/12 text-sky-700 dark:bg-sky-400/14 dark:text-sky-200",
+      toolBadgeClassName: "bg-background/88 text-sky-800 ring-1 ring-sky-200/70 dark:bg-sky-950/35 dark:text-sky-100 dark:ring-sky-800/80",
+      textClassName: "font-mono text-[10px] leading-[1.6] text-sky-950/88 dark:text-sky-50/88",
+    }
+  }
+  if (role === "tool-result") {
+    return {
+      cardClassName: "border border-emerald-200/80 bg-emerald-50/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] dark:border-emerald-900/60 dark:bg-emerald-950/20",
+      roleBadgeClassName: "bg-emerald-500/12 text-emerald-700 dark:bg-emerald-400/14 dark:text-emerald-200",
+      toolBadgeClassName: "bg-background/88 text-emerald-800 ring-1 ring-emerald-200/70 dark:bg-emerald-950/35 dark:text-emerald-100 dark:ring-emerald-800/80",
+      textClassName: "font-mono text-[10px] leading-[1.6] text-emerald-950/88 dark:text-emerald-50/88",
+    }
+  }
+  if (role === "user") {
+    return {
+      cardClassName: "border border-border/55 bg-secondary/42",
+      roleBadgeClassName: "bg-secondary text-foreground/78",
+      toolBadgeClassName: "bg-secondary text-muted-foreground",
+      textClassName: "text-[10px] leading-[1.55] text-foreground/92",
+    }
+  }
+  return {
+    cardClassName: "border border-border/45 bg-background",
+    roleBadgeClassName: "bg-secondary text-foreground/78",
+    toolBadgeClassName: "bg-secondary text-muted-foreground",
+    textClassName: "text-[10px] leading-[1.55] text-foreground/90",
+  }
+}
+
 function resolveChatDisplayName(params: {
   chatTitle?: string
   chatId?: string
@@ -312,18 +377,45 @@ function ContextMessageList(props: {
       ) : (
         items.map((msg, index) => {
           const role = String(msg.role || "unknown")
+          const roleLabel = formatTimelineRoleLabel({
+            role,
+            toolName: msg.toolName,
+          })
+          const tone = getTimelineVisualTone(role)
+          const toolName = String(msg.toolName || "").trim()
           const parsed = stripInfoTag(String(msg.text || ""))
           const timeLabel = formatTime(msg.ts)
           return (
             <article
               key={`${msg.id || role}-${index}`}
-              className="rounded-[16px] bg-background px-3 py-2.5"
+              className={cn("rounded-[16px] px-3 py-2.5", tone.cardClassName)}
             >
               <div className="mb-1 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                <span className="truncate font-medium uppercase tracking-[0.08em]">{role}</span>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "inline-flex h-5 max-w-full items-center rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.1em]",
+                      tone.roleBadgeClassName,
+                    )}
+                    title={roleLabel}
+                  >
+                    <span className="truncate">{role}</span>
+                  </span>
+                  {toolName ? (
+                    <span
+                      className={cn(
+                        "inline-flex h-5 max-w-[min(52vw,16rem)] items-center rounded-full px-2 font-mono text-[10px]",
+                        tone.toolBadgeClassName,
+                      )}
+                      title={toolName}
+                    >
+                      <span className="truncate">{toolName}</span>
+                    </span>
+                  ) : null}
+                </div>
                 <span className="shrink-0 font-mono text-[10px]">{timeLabel}</span>
               </div>
-              <div className="whitespace-pre-wrap break-words text-[10px] leading-[1.5] text-foreground/90">{parsed.text}</div>
+              <div className={cn("whitespace-pre-wrap break-words", tone.textClassName)}>{parsed.text}</div>
               {parsed.info ? (
                 <details className="mt-2 text-xs text-muted-foreground">
                   <summary className="cursor-pointer select-none">info</summary>

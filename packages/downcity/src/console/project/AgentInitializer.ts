@@ -25,7 +25,6 @@ import {
   getShipSchemaPath,
   getShipTasksDirPath,
   getSoulMdPath,
-  getUserMdPath,
 } from "@/console/env/Paths.js";
 import { DEFAULT_SHIP_JSON } from "@/console/constants/Ship.js";
 import { SHIP_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
@@ -33,7 +32,6 @@ import type { ShipConfig } from "@/console/env/Config.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
-  DEFAULT_USER_MD_TEMPLATE,
 } from "@agent/prompts/common/InitPrompts.js";
 import { renderTemplateVariables } from "@/utils/Template.js";
 import { ensureDir, saveJson } from "@/utils/storage/index.js";
@@ -250,7 +248,6 @@ export async function initializeAgentProject(
 
   const profileMdPath = getProfileMdPath(projectRoot);
   const soulMdPath = getSoulMdPath(projectRoot);
-  const userMdPath = getUserMdPath(projectRoot);
   const shipJsonPath = getShipJsonPath(projectRoot);
   const existingShipJson = await fs.pathExists(shipJsonPath);
   if (existingShipJson && input.forceOverwriteShipJson !== true) {
@@ -270,11 +267,6 @@ export async function initializeAgentProject(
       filename: "SOUL.md",
       filePath: soulMdPath,
       content: renderTemplateVariables(DEFAULT_SOUL_MD_TEMPLATE, initTemplateVariables),
-    },
-    {
-      filename: "USER.md",
-      filePath: userMdPath,
-      content: renderTemplateVariables(DEFAULT_USER_MD_TEMPLATE, initTemplateVariables),
     },
   ] as const;
 

@@ -12,17 +12,12 @@ import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
 import type { FeishuIncomingAttachmentDescriptor } from "@services/chat/types/FeishuInboundAttachment.js";
-import type { FeishuPostInlineImage } from "@services/chat/types/FeishuPost.js";
 import type { InboundReplyContext } from "@services/chat/types/ReplyContext.js";
 import { parseFeishuAttachments } from "./Shared.js";
 import {
   buildFeishuInboundCacheFileName,
   parseFeishuInboundMessage,
 } from "./InboundAttachment.js";
-import {
-  buildFeishuPostMessageContent,
-  shouldUseFeishuPostMessage,
-} from "./PostMessage.js";
 import { buildFeishuReplyContext } from "./ReplyContext.js";
 import {
   buildReplyContextExtra,
@@ -1283,7 +1278,7 @@ Available commands:
     text: string,
   ): Promise<void> {
     const parsed = parseFeishuAttachments(text);
-    await this.sendParsedMessage(chatId, chatType, messageId, parsed.text, parsed.attachments);
+    await this.sendParsedMessage(chatId, chatType, messageId, parsed.segments);
   }
 
   private async sendChatMessage(
@@ -1292,7 +1287,7 @@ Available commands:
     text: string,
   ): Promise<void> {
     const parsed = parseFeishuAttachments(text);
-    await this.sendParsedMessage(chatId, chatType, undefined, parsed.text, parsed.attachments);
+    await this.sendParsedMessage(chatId, chatType, undefined, parsed.segments);
   }
 
   /**
@@ -1300,88 +1295,41 @@ Available commands:
    *
    * 关键点（中文）
    * - 附件语法来源于 `<file>` 标签。
-   * - 当正文包含多行/链接/图片时，优先合并为飞书 `post`。
-   * - 其他附件继续按平台原生类型顺序补发，保持能力完整。
+   * - 按正文与附件的真实顺序逐段发送，避免“先正文后附件”打乱用户意图。
    */
   private async sendParsedMessage(
     chatId: string,
     chatType: string,
     messageId: string | undefined,
-    text: string,
-    attachments: ParsedFeishuAttachmentCommand[],
-  ): Promise<void> {
-    const normalizedText = String(text || "").trim();
-    const photoAttachments = attachments.filter((item) => item.type === "photo");
-    const remainingAttachments = attachments.filter((item) => item.type !== "photo");
-
-    let emittedPost = false;
-    if (
-      shouldUseFeishuPostMessage({
-        text: normalizedText,
-        inlineImages: photoAttachments.map((item) => ({
-          imageKey: item.pathOrUrl,
-          ...(item.caption ? { caption: item.caption } : {}),
-        })),
-      })
-    ) {
-      try {
-        const inlineImages = await this.prepareInlinePostImages(photoAttachments);
-        const postPayload = buildFeishuPostMessageContent({
-          text: normalizedText,
-          inlineImages,
-        });
-        if (postPayload) {
-          await this.sendPlatformMessage(chatId, chatType, messageId, "post", postPayload);
-          emittedPost = true;
+    segments: Array<
+      | {
+          kind: "text";
+          text: string;
         }
-      } catch (error) {
-        this.logger.warn("Failed to build Feishu post payload, fallback to plain messages", {
-          chatId,
-          chatType,
-          messageId,
-          error: String(error),
+      | {
+          kind: "attachment";
+          attachment: ParsedFeishuAttachmentCommand;
+        }
+    >,
+  ): Promise<void> {
+    for (const segment of segments) {
+      if (segment.kind === "text") {
+        const normalizedText = String(segment.text || "").trim();
+        if (!normalizedText) continue;
+        await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
+          text: normalizedText,
         });
+        continue;
       }
-    }
 
-    if (!emittedPost && normalizedText) {
-      await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
-        text: normalizedText,
-      });
-    }
-
-    const attachmentsToSend = emittedPost ? remainingAttachments : attachments;
-    for (const attachment of attachmentsToSend) {
       try {
-        await this.sendAttachment(chatId, chatType, messageId, attachment);
+        await this.sendAttachment(chatId, chatType, messageId, segment.attachment);
       } catch (error) {
         await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
-          text: `❌ Failed to send attachment: ${attachment.pathOrUrl}\n${String(error)}`,
+          text: `❌ Failed to send attachment: ${segment.attachment.pathOrUrl}\n${String(error)}`,
         });
       }
     }
-  }
-
-  /**
-   * 预上传将要内联到 `post` 里的图片。
-   *
-   * 关键点（中文）
-   * - 只处理 `photo` 类型，且必须是本地图片文件。
-   * - 任意一张图片失败都会抛错，让上层整体回退到普通消息链路，避免半条 post。
-   */
-  private async prepareInlinePostImages(
-    attachments: ParsedFeishuAttachmentCommand[],
-  ): Promise<FeishuPostInlineImage[]> {
-    const out: FeishuPostInlineImage[] = [];
-    for (const attachment of attachments) {
-      const localPath = await this.resolveAttachmentLocalPath(attachment.pathOrUrl);
-      const imageKey = await this.uploadImageToFeishu(localPath);
-      out.push({
-        imageKey,
-        ...(attachment.caption ? { caption: attachment.caption } : {}),
-      });
-    }
-    return out;
   }
 
   /**

@@ -124,7 +124,7 @@ export function buildContextSystemPrompt(input: {
  *
  * 关键点（中文）
  * - task 执行上下文可替换默认 core prompt（`DEFAULT_SHIP_PROMPTS`）为任务专用提示词。
- * - PROFILE/SOUL/USER 等其他静态提示保持不变。
+ * - PROFILE/SOUL 等其他静态提示保持不变。
  */
 export function resolveStaticSystemPrompts(input: {
   /**

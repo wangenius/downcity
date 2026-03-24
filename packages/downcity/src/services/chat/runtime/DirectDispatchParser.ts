@@ -18,6 +18,7 @@ import {
   parseChatMessageMarkup,
 } from "@services/chat/runtime/ChatMessageMarkup.js";
 import { parseChatSendOptionsFromMetadata } from "@services/chat/runtime/ChatSendMetadata.js";
+import type { ChatMessageSegment } from "@services/chat/types/ChatMessageMarkup.js";
 
 function normalizeText(value: unknown): string {
   return String(value ?? "").trim();
@@ -65,12 +66,7 @@ function parseReactionsFromMetadata(
 function resolveTextPlan(params: {
   fallbackChatKey: string;
   metadata: Record<string, unknown>;
-  bodyText: string;
-  files: Array<{
-    path: string;
-    type: "document" | "photo" | "voice" | "audio" | "video";
-    caption?: string;
-  }>;
+  segments: ChatMessageSegment[];
 }): ResolvedDirectTextPayload | null {
   const sendOptions = parseChatSendOptionsFromMetadata({
     metadata: params.metadata,
@@ -78,8 +74,7 @@ function resolveTextPlan(params: {
   });
   const chatKey = normalizeText(sendOptions.chatKey || params.fallbackChatKey);
   const text = buildChatMessageText({
-    bodyText: params.bodyText,
-    files: params.files,
+    segments: params.segments,
   });
   if (!chatKey || !text) return null;
 
@@ -147,8 +142,7 @@ export function parseDirectDispatchAssistantText(params: {
   const textPlan = resolveTextPlan({
     fallbackChatKey,
     metadata: parsed.metadata,
-    bodyText: parsed.bodyText,
-    files: parsed.files,
+    segments: parsed.segments,
   });
   const reactionPlans = resolveReactionPlans({
     fallbackChatKey,

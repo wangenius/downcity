@@ -68,10 +68,17 @@ city chat <subcommand> [options]
 - `--reply`：reply_to_message 发送
 - `--message-id <id>`：显式指定 reply 目标消息 ID
 
+关于 `--delay` / `--time`：
+
+- 命令在 runtime 接收后会立即返回，实际发送由后台内存调度到点执行
+- 如果 runtime 在发送前重启或退出，这类尚未发出的消息不会自动恢复
+- 需要持久化、可恢复的定时任务时，优先使用 `task` service
+
 `send` 的正文还支持：
 
 - 可选 frontmatter metadata，字段语义与 `chat send` 参数一致（如 `chatKey`、`delay`、`time`、`reply`、`messageId`）
 - 使用 `<file type="...">path</file>` 发送附件
+- 文本和 `<file>` 可以交错混写；发送时会按它们在正文中的实际顺序逐段发出
 
 ## `react` 常用选项
 
@@ -104,8 +111,15 @@ cat <<'EOF' | city chat send --stdin --chat-key ctx_xxxxxxxxxxxxxxxx
 reply: true
 messageId: "128"
 ---
-这是今天的报告。
-<file type="document">reports/daily.md</file>
+这是今天的报告开头。
+
+<file type="document" caption="日报 PDF">reports/daily.pdf</file>
+
+请重点看第 3 页。
+
+<file type="photo" caption="图表截图">assets/chart.png</file>
+
+最后给我一个三行结论。
 EOF
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
@@ -127,6 +141,12 @@ city chat configure --channel qq --config-json '{"channelAccountId":"qq-main","e
 ```bash
 city agent start
 ```
+
+关于附件协议：
+
+- `send` 只认统一协议：frontmatter metadata + `<file ...>...</file>`
+- 不再使用 `@attach`
+- 如果下游 channel 支持附件，运行时会把正文和附件按实际顺序切分发送
 
 ## 示例输出（基于当前实现）
 

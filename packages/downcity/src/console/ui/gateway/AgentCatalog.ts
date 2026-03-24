@@ -16,7 +16,6 @@ import {
   getShipMemoryIndexPath,
   getShipSchemaPath,
   getSoulMdPath,
-  getUserMdPath,
 } from "@/console/env/Paths.js";
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
 import {
@@ -517,12 +516,6 @@ export async function buildConsoleUiConfigStatusResponse(params: {
         scope: "agent",
         label: "SOUL.md",
         filePath: getSoulMdPath(cwd),
-      }),
-      readConsoleUiConfigFileStatus({
-        key: "user_md",
-        scope: "agent",
-        label: "USER.md",
-        filePath: getUserMdPath(cwd),
       }),
       readConsoleUiConfigFileStatus({
         key: "ship_json",

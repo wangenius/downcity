@@ -71,6 +71,7 @@ You can send a file directly to the bot (document/photo/voice/audio/video).
 
 - If you add text while sending the file, Telegram treats it as a **caption** — Downcity will read that caption as your instruction.
 - Downcity saves the file under `.ship/.cache/telegram/` and passes it to the agent as a `<file ...>` block.
+- For images and PDFs, runtime also best-effort injects model-readable `file parts`; the original `<file>` text protocol is still kept as fallback.
 
 Example: send a PDF with caption: `Summarize this PDF and list action items.`
 
@@ -98,6 +99,7 @@ Notes:
 - For file messages in groups, the caption is treated as instruction text; no extra mention is required.
 - If a user sends a new message as a Telegram reply, the referenced message body and available quote snippet are also injected into the Agent input.
 - While the agent is running, Telegram shows a periodic **typing** indicator (`sendChatAction`) until the result is sent.
+- If the agent sends a mixed text + attachment reply via `chat send`, Telegram delivers each piece in the actual order it appears in the source message.
 
 ## Reply-to and Reaction Logic (Important)
 

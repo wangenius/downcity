@@ -1373,8 +1373,7 @@ function parseChatSendTextProtocol(params: {
 
   return {
     text: buildChatMessageText({
-      bodyText: parsed.bodyText,
-      files: parsed.files,
+      segments: parsed.segments,
     }),
     ...(chatKey ? { chatKey } : {}),
     ...(typeof delayMs === "number" ? { delayMs } : {}),
@@ -1616,12 +1615,18 @@ async function executeChatSendAction(params: {
     };
   }
 
+  const shouldScheduleInBackground =
+    typeof params.payload.delayMs === "number" ||
+    typeof params.payload.sendAtMs === "number";
   const result = await sendChatTextByChatKey({
     context: params.context,
     chatKey,
     text: String(params.payload.text || ""),
     delayMs: params.payload.delayMs,
     sendAtMs: params.payload.sendAtMs,
+    // 关键点（中文）：service action 面向 CLI/API，定时或延迟发送应立即返回，
+    // 由 runtime 在后台内存中继续等待并到点投递，避免 HTTP 请求长时间挂起。
+    ...(shouldScheduleInBackground ? { nonBlockingDelay: true } : {}),
     replyToMessage: params.payload.replyToMessage === true,
     ...(typeof params.payload.messageId === "string" && params.payload.messageId.trim()
       ? { messageId: params.payload.messageId.trim() }

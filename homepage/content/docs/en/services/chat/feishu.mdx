@@ -13,6 +13,7 @@ Use Feishu (or Lark) to connect Downcity to:
 - agent reply delivery back to Feishu
 - file attachment delivery via `<file type="document">path</file>`
 - inbound image, video, file, and audio download with `<file ...>` injection into Agent execution
+- best-effort model `file parts` injection for inbound images and PDFs
 
 > Want the internal execution flow? See: [/en/docs/services/chat/feishu-message-flow](/en/docs/services/chat/feishu-message-flow)
 
@@ -165,14 +166,16 @@ Current Feishu channel behavior:
 - execution accepts **text + rich `post` + image + video + file + audio** inputs
 - text / links / mentions inside `post` are normalized into plain text, while `post` images / media are downloaded into `.ship/.cache/feishu/` and injected as `<file ...>`
 - inbound image, video, file, and audio messages are downloaded into `.ship/.cache/feishu/` and injected as `<file ...>`
+- inbound images and PDFs are also best-effort injected as model `file parts` for multimodal models
 - when a user replies to a Feishu message, runtime will best-effort fetch the parent message body from `parent_id` and inject it into the Agent input
-- outbound replies support `<file ...>` conversion; multiline text, links, and images are merged into Feishu `post` when possible
+- outbound replies support `<file ...>` conversion and are delivered segment-by-segment in the actual text/attachment order from the source message
 - normal AI text replies are sent as plain messages by default and do not auto-reply to the latest message
 - a Feishu reply link is used only when reply mode is explicitly requested for a target `message_id`
 - sender name and chat title are resolved on a best-effort basis
 - if resolution fails, processing still continues with raw ids
 
 So the channel may still work while the UI only shows `chat_id / open_id`.
+If a reply is structured as text -> attachment -> text, outbound delivery keeps that same order instead of forcing “text first, attachments later”.
 
 ## `tenant_access_token` vs `user_access_token`
 

@@ -86,6 +86,8 @@ Then the final `instructions` passed to the agent are prefixed with `<file ...>`
 Summarize this PDF and list action items.
 ```
 
+For images and PDFs, runtime also best-effort injects model `file parts`, while keeping the original `<file>` text protocol as fallback.
+
 ## Persistence: ChatStore
 
 Every incoming message is appended to a per-chat JSONL file:
@@ -115,6 +117,7 @@ Telegram executes `agentRuntime.run(...)` for the current `chatKey`.
 - Primary delivery path: the model calls `chat_send` to send replies (tool-strict).
 - Fallback: if the model forgets to call `chat_send`, the adapter sends the final plain-text output.
 - Messages are chunked for Telegram size limits; Markdown is attempted first, then it falls back to plain text.
+- Mixed text + attachment replies are first parsed into ordered segments, then sent in the actual order they appeared in the source message.
 
 ### Reply targeting and reactions (`reply_to_message` + `chat react`)
 

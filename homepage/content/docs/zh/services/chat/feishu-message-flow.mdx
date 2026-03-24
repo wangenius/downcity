@@ -86,6 +86,7 @@ sequenceDiagram
 - `post` 内的文本 / 链接 / @ 会转成自然语言文本
 - `post` 内的图片 / 媒体会转成附件占位并下载到本地
 - 所有可下载附件最终都会以 `<file ...>` 形式注入执行输入
+- 其中图片和 PDF 还会 best-effort 注入为模型 `file parts`
 
 ### 3.3 自动确认 reaction
 
@@ -248,11 +249,27 @@ username: ...
 <file type="document">reports/downcity-office-hours.md</file>
 ```
 
-发送顺序是：
+发送顺序现在按消息实际结构执行：
 
-1. 先发送正文文本（去掉 `<file>` 标签）
-2. 再上传并发送附件文件消息
-3. 如果 `<file>` 包含 `caption`，会追加发送说明文本
+1. 先把整条消息解析成有序片段 `segments[]`
+2. 文本片段按原顺序发送为飞书文本消息
+3. 附件片段按原顺序上传并发送为对应附件消息
+
+也就是说，如果原消息是：
+
+```text
+第一段
+
+<file type="document" caption="资料">reports/a.pdf</file>
+
+第二段
+```
+
+飞书收到的顺序就是：
+
+1. 文本：`第一段`
+2. 附件：`reports/a.pdf`
+3. 文本：`第二段`
 
 ## 8）为什么 `user_access_token` 测试通过，但运行时不行
 
@@ -280,7 +297,6 @@ username: ...
 当前 `downcity` 包里的飞书 channel 仍有这些限制：
 
 - `post` 里的复杂样式（加粗、斜体、分栏等）当前会退化成纯文本，不保留视觉样式
-- `post` 出站当前只会把正文、链接、图片合并为富文本；文件/音频/视频仍作为后续独立消息发送
 - 名称解析依赖 tenant 权限与通讯录可见范围
 - `user_access_token` 不参与当前消息元数据补全逻辑
 

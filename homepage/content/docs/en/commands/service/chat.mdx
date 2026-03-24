@@ -68,10 +68,17 @@ city chat <subcommand> [options]
 - `--reply`: send as `reply_to_message`
 - `--message-id <id>`: explicitly set the reply target message ID
 
+About `--delay` / `--time`:
+
+- the command returns as soon as runtime accepts the request, while actual delivery is scheduled in runtime memory
+- if runtime exits or restarts before delivery, pending delayed/scheduled sends are not restored automatically
+- for durable and recoverable scheduling, prefer the `task` service
+
 `send` body also supports:
 
 - optional frontmatter metadata with the same meaning as `chat send` parameters (`chatKey`, `delay`, `time`, `reply`, `messageId`)
 - attachments via `<file type="...">path</file>`
+- text and `<file>` blocks can be interleaved; delivery preserves their actual order in the message body
 
 ## `react` key options
 
@@ -104,8 +111,15 @@ cat <<'EOF' | city chat send --stdin --chat-key ctx_xxxxxxxxxxxxxxxx
 reply: true
 messageId: "128"
 ---
-Here is today's report.
-<file type="document">reports/daily.md</file>
+Here is the opening note for today's report.
+
+<file type="document" caption="Daily report PDF">reports/daily.pdf</file>
+
+Please focus on page 3.
+
+<file type="photo" caption="Chart preview">assets/chart.png</file>
+
+Then give me a three-line conclusion.
 EOF
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
@@ -127,6 +141,12 @@ This command group usually requires an active agent runtime:
 ```bash
 city agent start
 ```
+
+Attachment protocol notes:
+
+- `send` now uses one unified protocol only: frontmatter metadata + `<file ...>...</file>`
+- `@attach` is no longer used
+- when the target channel supports attachments, runtime sends text and attachments in their actual interleaved order
 
 ## Example Output (Based on Current Implementation)
 

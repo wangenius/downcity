@@ -5,7 +5,19 @@ description: kind=agent behavior, use cases, and output expectations
 
 # Agent Task Mode
 
-`kind=agent` executes task body through the agent and converges results via multi-round evaluator flow.
+`kind=agent` executes task body through the agent. It is single-round by default; only `review: true` enables the executor plus user-simulator multi-round review flow.
+
+## What It Fits
+
+- tasks that require reasoning and iteration
+- research / analysis / summarization
+- human-readable reusable deliverables
+
+## What It Is Not
+
+- not a normal chat turn
+- not a database-backed task queue
+- not a mode that requires external channel delivery by default
 
 ## Use cases
 
@@ -15,13 +27,87 @@ description: kind=agent behavior, use cases, and output expectations
 
 ## Execution characteristics
 
-- multi-round execution (default max: 3)
+- single-round execution by default
+- automatic multi-round review only when `review: true` (default max: 3)
 - live progress events visible in Console UI
 - final output written to `output.md`, with summary in `result.md`
+
+## Current Execution Logic
+
+1. Load `task.md` and parse frontmatter plus body.
+2. Create a new run directory: `./.ship/task/<taskId>/<timestamp>/`.
+3. Write `input.md` and `run-progress.json`.
+4. Create a task-specific runtime instead of reusing normal chat history.
+5. Let the executor agent produce a result.
+6. If `review: true`, let the user-simulator agent evaluate whether the result satisfies the task goal.
+7. If `review: true` and the result is not good enough, feed the previous output plus simulator feedback back into the executor, up to 3 rounds.
+8. If review is disabled, finish after the first valid output.
+9. Write `output.md`, `result.md`, `dialogue.*`, `run.json`, and `error.md` when needed.
+
+## Success Rules
+
+- an `agent` task now only requires valid single-round output text by default
+- successful `chat_send` delivery is no longer required by default
+- if `review: true`, the output also goes through simulator review and up to 3 rounds of revision
+- if the task body explicitly asks for external delivery, that requirement belongs to the task itself
+
+## Context Model
+
+- `contextId` is stored in task definition as the task semantic context
+- execution uses a separate task run context
+- task execution therefore does not directly reuse normal chat message history
+
+## Diagram
+
+```mermaid
+flowchart TD
+    A["task.md<br/>title / when / description / contextId / kind / status"] --> B["Task Service<br/>create / update / run / status / delete"]
+
+    B --> C["Manual Run API<br/>POST /api/dashboard/tasks/run"]
+    B --> D["Scheduler<br/>cron / time"]
+
+    C --> E["runTaskDefinition()<br/>async acceptance"]
+    D --> F["runTaskNow()<br/>automatic trigger"]
+
+    E --> F
+
+    F --> G["load task.md"]
+    G --> H["generate timestamp"]
+    H --> I["create run directory<br/>.ship/task/<taskId>/<timestamp>/"]
+    I --> J["write input.md / run-progress.json"]
+
+    J --> K{"kind"}
+    K -->|agent| L["create task runtime<br/>executor context + user simulator context"]
+    K -->|script| M["write task-script.sh and execute"]
+
+    L --> N["executor agent round 1"]
+    N --> O["validate output text"]
+    O --> P{"review = true?"}
+
+    P -->|no| R["success"]
+    P -->|yes| Q["user simulator evaluates"]
+
+    Q --> S{"satisfied and valid?"}
+    S -->|yes| R["success"]
+    S -->|no| T{"round < 3?"}
+    T -->|yes| U["revise with feedback"]
+    U --> N
+    T -->|no| V["failure"]
+
+    M --> W{"script output valid?"}
+    W -->|yes| R
+    W -->|no| V
+
+    R --> X["write output.md / result.md / run.json / dialogue.*"]
+    V --> Y["write error.md / result.md / run.json"]
+    X --> Z["Console UI scans run directories and shows records"]
+    Y --> Z
+```
 
 ## Best practices
 
 - write explicit goals, boundaries, and acceptance criteria
+- keep review off by default; only set `review: true` when you really need review-and-revise behavior
 - require auditable outputs when possible
 - do not put raw shell scripts in agent tasks
 
@@ -35,6 +121,7 @@ contextId: research
 when: 0 8 * * *
 status: enabled
 kind: agent
+review: true
 ---
 
 Generate today's market research summary including:

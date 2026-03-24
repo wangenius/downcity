@@ -90,6 +90,7 @@ export async function listTaskDefinitions(params: {
       status: task.status,
       contextId: task.contextId,
       kind: task.kind || "agent",
+      ...(task.kind === "agent" ? { review: Boolean(task.review) } : {}),
       taskMdPath: task.taskMdPath,
       ...(task.lastRunTimestamp ? { lastRunTimestamp: task.lastRunTimestamp } : {}),
     })),
@@ -157,6 +158,7 @@ export async function createTaskDefinition(params: {
         when: whenNormalized.value,
         contextId,
         kind,
+        ...(kind === "agent" && req.review === true ? { review: true } : {}),
         status,
       },
       body,
@@ -236,6 +238,12 @@ export async function updateTaskDefinition(params: {
     const kind = normalizeTaskKind(
       req.kind === undefined ? current.frontmatter.kind : req.kind,
     );
+    const review =
+      kind === "agent"
+        ? req.review === undefined
+          ? Boolean(current.frontmatter.review)
+          : req.review === true
+        : false;
 
     const status =
       req.status === undefined
@@ -264,6 +272,7 @@ export async function updateTaskDefinition(params: {
         when: whenNormalized.value,
         contextId,
         kind,
+        ...(kind === "agent" && review ? { review: true } : {}),
         status,
       },
       body,

@@ -20,6 +20,8 @@ export type ShipTaskFrontmatterV1 = {
   contextId: string;
   /** 任务执行类型（agent=交给 agent 执行；script=直接执行 task 正文脚本） */
   kind?: ShipTaskKind;
+  /** 是否启用 review 多轮复核（仅 `kind=agent` 生效；默认 false，false 时单轮执行） */
+  review?: boolean;
   /** 启停状态 */
   status: ShipTaskStatus;
 };

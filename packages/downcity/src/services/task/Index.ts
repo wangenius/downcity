@@ -89,6 +89,16 @@ function getBooleanField(body: JsonObject, key: string): boolean {
   return body[key] === true;
 }
 
+function parseBooleanLike(value: JsonValue | undefined): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return undefined;
+}
+
 function getOptionalTaskStatusField(
   body: JsonObject,
   key: string,
@@ -125,6 +135,13 @@ function getBooleanOpt(
 ): boolean | undefined {
   const value = opts[key];
   return typeof value === "boolean" ? value : undefined;
+}
+
+function getBooleanLikeOpt(
+  opts: Record<string, JsonValue>,
+  key: string,
+): boolean | undefined {
+  return parseBooleanLike(opts[key]);
 }
 
 function readTaskStatusOrThrow(value?: string): ShipTaskStatus | undefined {
@@ -220,6 +237,7 @@ function mapTaskCreateCommandInput(
 
   const contextId = resolveContextIdOrThrow(getStringOpt(opts, "contextId"));
   const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
+  const review = getBooleanLikeOpt(opts, "review");
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
   const activate = getBooleanOpt(opts, "activate") === true;
   if (activate && status && status !== "enabled") {
@@ -233,6 +251,7 @@ function mapTaskCreateCommandInput(
     description,
     contextId,
     ...(kind ? { kind } : {}),
+    ...(typeof review === "boolean" ? { review } : {}),
     ...(resolvedStatus ? { status: resolvedStatus } : {}),
     ...(typeof getStringOpt(opts, "body") === "string"
       ? { body: getStringOpt(opts, "body") }
@@ -247,6 +266,7 @@ function mapTaskUpdateCommandInput(params: {
 }): TaskUpdateRequest {
   const opts = params.opts;
   const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
+  const review = getBooleanLikeOpt(opts, "review");
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
   const activate = getBooleanOpt(opts, "activate") === true;
 
@@ -278,6 +298,7 @@ function mapTaskUpdateCommandInput(params: {
     typeof getStringOpt(opts, "description") === "string" ||
     typeof getStringOpt(opts, "contextId") === "string" ||
     typeof kind === "string" ||
+    typeof review === "boolean" ||
     getBooleanOpt(opts, "clearWhen") === true ||
     typeof resolvedStatus === "string" ||
     typeof getStringOpt(opts, "body") === "string" ||
@@ -302,6 +323,7 @@ function mapTaskUpdateCommandInput(params: {
       ? { contextId: getStringOpt(opts, "contextId") }
       : {}),
     ...(typeof kind === "string" ? { kind } : {}),
+    ...(typeof review === "boolean" ? { review } : {}),
     ...(getBooleanOpt(opts, "clearWhen") ? { clearWhen: true } : {}),
     ...(typeof resolvedStatus === "string" ? { status: resolvedStatus } : {}),
     ...(typeof getStringOpt(opts, "body") === "string"
@@ -348,6 +370,9 @@ function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
     description: getStringField(body, "description"),
     contextId: getStringField(body, "contextId"),
     kind: getOptionalTaskKindField(body, "kind"),
+    ...(typeof parseBooleanLike(body.review) === "boolean"
+      ? { review: parseBooleanLike(body.review) }
+      : {}),
     status: resolvedStatus,
     body: getOptionalStringField(body, "body"),
     overwrite: getBooleanField(body, "overwrite"),
@@ -387,6 +412,9 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
       : {}),
     ...(getOptionalTaskKindField(body, "kind")
       ? { kind: getOptionalTaskKindField(body, "kind") }
+      : {}),
+    ...(typeof parseBooleanLike(body.review) === "boolean"
+      ? { review: parseBooleanLike(body.review) }
       : {}),
     ...(getBooleanField(body, "clearWhen") ? { clearWhen: true } : {}),
     ...(resolvedStatus ? { status: resolvedStatus } : {}),
@@ -462,6 +490,7 @@ export const taskService: Service = {
             .requiredOption("--description <description>", "任务描述")
             .option("--when <when>", "触发条件（@manual | cron | time:ISO8601）", "@manual")
             .option("--kind <kind>", "执行类型（agent|script）", "agent")
+            .option("--review <review>", "是否启用 review 多轮复核（true|false）")
             .option(
               "--context-id <contextId>",
               "任务执行 contextId（不传尝试使用 DC_CTX_CONTEXT_ID）",
@@ -612,6 +641,7 @@ export const taskService: Service = {
             .option("--description <description>", "任务描述")
             .option("--when <when>", "触发条件（@manual | cron | time:ISO8601）")
             .option("--kind <kind>", "执行类型（agent|script）")
+            .option("--review <review>", "是否启用 review 多轮复核（true|false）")
             .option("--clear-when", "清空 when（回退为 @manual）", false)
             .option("--context-id <contextId>", "任务执行 contextId")
             .option("--status <status>", "状态（enabled|paused|disabled）")

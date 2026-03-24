@@ -31,7 +31,8 @@ frontmatter 核心字段：
 ## 执行类型（kind）
 
 1. `kind=agent`
-- 将正文交给 agent 执行（带模拟用户评估）
+- 将正文交给 agent 执行
+- 默认单轮完成；仅当 frontmatter 显式设置 `review: true` 时启用模拟用户多轮复核
 - 适合研究、分析、报告生成
 
 2. `kind=script`
@@ -67,5 +68,6 @@ frontmatter 核心字段：
 ## 建议
 
 - 先 `list`，再 `create`/`update`。
+- 简单内容生成任务优先保持默认单轮；只有确实需要“先生成、再复核、再修订”时再设置 `review: true`。
 - script 任务正文保持纯脚本，不要混入冗余自然语言。
 - 反馈结果时优先返回：`title`、`executionId`、`runDirRel`。

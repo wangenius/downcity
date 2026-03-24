@@ -163,6 +163,7 @@ type DialogueRoundRecord = {
 };
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
+const DEFAULT_SINGLE_ROUND = 1;
 
 type ScriptExecutionResult = {
   outputText: string;
@@ -697,8 +698,14 @@ export async function runTaskNow(params: {
   const dialogueJsonPath = path.join(runDirAbs, "dialogue.json");
   const metaJsonPath = path.join(runDirAbs, "run.json");
   const progressJsonPath = path.join(runDirAbs, "run-progress.json");
-  const maxDialogueRounds = DEFAULT_MAX_DIALOGUE_ROUNDS;
   const taskKind: ShipTaskKind = task.frontmatter.kind || "agent";
+  const reviewEnabled = taskKind === "agent" && task.frontmatter.review === true;
+  const maxDialogueRounds =
+    taskKind === "agent"
+      ? reviewEnabled
+        ? DEFAULT_MAX_DIALOGUE_ROUNDS
+        : DEFAULT_SINGLE_ROUND
+      : DEFAULT_SINGLE_ROUND;
   const runProgress = createRunProgressWriter({
     progressJsonPath,
     taskId: task.taskId,
@@ -721,6 +728,7 @@ export async function runTaskNow(params: {
       `- status: \`${task.frontmatter.status}\``,
       `- contextId: \`${task.frontmatter.contextId}\``,
       `- kind: \`${taskKind}\``,
+      ...(taskKind === "agent" ? [`- review: \`${String(reviewEnabled)}\``] : []),
       `- maxDialogueRounds: \`${maxDialogueRounds}\``,
       ``,
       `## Body`,
@@ -828,8 +836,9 @@ export async function runTaskNow(params: {
       });
     }
   } else {
-    // phase 1（agent）：双 agent 多轮对话（executor <-> user-simulator）
-    // 关键点（中文）：直到“规则校验通过 + 模拟用户满意”或达到最大轮数。
+    // phase 1（agent）：
+    // - 默认单轮执行
+    // - 仅当 `review=true` 时启用“执行器 + 模拟用户”的多轮修订
     let lastRoundRuleErrors: string[] = [];
     let lastRoundDecision: UserSimulatorDecision | null = null;
     let lastFeedback = "";
@@ -894,44 +903,49 @@ export async function runTaskNow(params: {
       lastRoundRuleErrors = [...validation.errors];
 
       let decision: UserSimulatorDecision = {
-        satisfied: false,
-        reply: "",
-        reason: "user simulator did not run",
+        satisfied: validation.errors.length === 0,
+        reply: validation.errors.length === 0 ? "single-round execution accepted" : "",
+        reason:
+          validation.errors.length === 0
+            ? "review disabled"
+            : "review disabled and validation failed",
         raw: "",
       };
-      await runProgress.update({
-        status: "running",
-        phase: "agent_user_simulator_round",
-        message: `模拟用户正在评估第 ${round}/${maxDialogueRounds} 轮结果`,
-        round,
-        maxRounds: maxDialogueRounds,
-      });
-      try {
-        const simulatorQuery = buildUserSimulatorQuery({
-          taskTitle: task.frontmatter.title,
-          taskDescription: task.frontmatter.description,
-          taskBody: task.body,
+      if (reviewEnabled) {
+        await runProgress.update({
+          status: "running",
+          phase: "agent_user_simulator_round",
+          message: `模拟用户正在评估第 ${round}/${maxDialogueRounds} 轮结果`,
           round,
           maxRounds: maxDialogueRounds,
-          executorOutputText: executorRoundOutput,
-          ruleErrors: validation.errors,
         });
-        const simulatorRound = await runAgentRound({
-          taskAgentRuntime,
-          contextId: userSimulatorContextId,
-          taskId: task.taskId,
-          query: simulatorQuery,
-          actorId: "user_simulator",
-          actorName: "user_simulator",
-        });
-        decision = parseUserSimulatorDecision(simulatorRound.outputText);
-      } catch (e) {
-        decision = {
-          satisfied: false,
-          reply: "",
-          reason: `user simulator failed: ${String(e)}`,
-          raw: String(e),
-        };
+        try {
+          const simulatorQuery = buildUserSimulatorQuery({
+            taskTitle: task.frontmatter.title,
+            taskDescription: task.frontmatter.description,
+            taskBody: task.body,
+            round,
+            maxRounds: maxDialogueRounds,
+            executorOutputText: executorRoundOutput,
+            ruleErrors: validation.errors,
+          });
+          const simulatorRound = await runAgentRound({
+            taskAgentRuntime,
+            contextId: userSimulatorContextId,
+            taskId: task.taskId,
+            query: simulatorQuery,
+            actorId: "user_simulator",
+            actorName: "user_simulator",
+          });
+          decision = parseUserSimulatorDecision(simulatorRound.outputText);
+        } catch (e) {
+          decision = {
+            satisfied: false,
+            reply: "",
+            reason: `user simulator failed: ${String(e)}`,
+            raw: String(e),
+          };
+        }
       }
 
       // 关键点（中文）：系统规则校验失败时，强制判定不满意。
@@ -980,13 +994,15 @@ export async function runTaskNow(params: {
         feedbackLines.push(`模拟用户理由：${decision.reason}`);
       }
       lastFeedback = feedbackLines.join("\n").trim();
-      await runProgress.update({
-        status: "running",
-        phase: "validating",
-        message: `第 ${round} 轮未通过，继续下一轮修订`,
-        round,
-        maxRounds: maxDialogueRounds,
-      });
+      if (reviewEnabled && round < maxDialogueRounds) {
+        await runProgress.update({
+          status: "running",
+          phase: "validating",
+          message: `第 ${round} 轮未通过，继续下一轮修订`,
+          round,
+          maxRounds: maxDialogueRounds,
+        });
+      }
     }
 
     if (!ok) {

@@ -32,6 +32,16 @@ const REQUIRED_FIELDS: Array<keyof ShipTaskFrontmatterV1> = [
 
 type TaskRawValue = JsonValue | undefined;
 
+function normalizeTaskReview(input: TaskRawValue): boolean | null {
+  if (typeof input === "boolean") return input;
+  if (typeof input !== "string") return null;
+  const value = input.trim().toLowerCase();
+  if (!value) return null;
+  if (["true", "1", "yes", "on"].includes(value)) return true;
+  if (["false", "0", "no", "off"].includes(value)) return false;
+  return null;
+}
+
 /**
  * cron alias 映射表。
  */
@@ -268,6 +278,7 @@ export function parseTaskMarkdown(params: {
     description: String(meta.description).trim(),
     contextId: String(meta.contextId).trim(),
     kind,
+    ...(kind === "agent" && normalizeTaskReview(meta.review) === true ? { review: true } : {}),
     status,
   };
 
@@ -312,6 +323,7 @@ export function buildTaskMarkdown(params: {
     description: String(frontmatter.description || "").trim(),
     contextId: String(frontmatter.contextId || "").trim(),
     kind,
+    ...(kind === "agent" ? { review: Boolean(frontmatter.review) } : {}),
     status: String(frontmatter.status || "").trim(),
   };
 

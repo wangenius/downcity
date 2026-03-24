@@ -1382,6 +1382,10 @@ export interface UiTaskItem {
    */
   kind?: "agent" | "script" | string;
   /**
+   * 是否启用 review 多轮复核。
+   */
+  review?: boolean;
+  /**
    * 任务正文文件路径。
    */
   taskMdPath?: string;

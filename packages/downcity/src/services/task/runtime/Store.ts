@@ -33,6 +33,7 @@ export type TaskListItem = {
   status: string;
   contextId: string;
   kind?: "agent" | "script";
+  review?: boolean;
   taskMdPath: string;
   lastRunTimestamp?: string;
 };
@@ -115,6 +116,9 @@ export async function listTasks(projectRoot: string): Promise<TaskListItem[]> {
       status: parsed.task.frontmatter.status,
       contextId: parsed.task.frontmatter.contextId,
       kind: parsed.task.frontmatter.kind || "agent",
+      ...(parsed.task.frontmatter.kind === "agent"
+        ? { review: Boolean(parsed.task.frontmatter.review) }
+        : {}),
       taskMdPath: parsed.task.taskMdPath,
       ...(lastRunTimestamp ? { lastRunTimestamp } : {}),
     });

@@ -23,6 +23,7 @@ description: task.md schema、when 触发语义、create/update/run/list 协议
 | `when` | 是 | 触发条件：`@manual` / cron / `time:ISO8601` |
 | `status` | 是 | `enabled` / `paused` / `disabled` |
 | `kind` | 否 | `agent`（默认）或 `script` |
+| `review` | 否 | 仅 `kind=agent` 生效；`true` 时启用模拟用户多轮复核，默认单轮 |
 
 ## `when` 语义
 
@@ -63,9 +64,10 @@ one-shot 触发成功后，任务会自动：
 2. 后台启动 `runTaskNow(...)`。
 3. 立即返回：`accepted=true`、`message`、`executionId`。
 
-`agent` 任务额外约束：
-- 只有 `chat_send` 成功发送后才会判定成功。
-- 若发送失败，会进入 `executionStatus=failure`。
+`agent` 任务当前规则：
+- 默认单轮执行。
+- 仅当 `review=true` 时启用模拟用户多轮复核。
+- 默认只要求产生有效输出文本，不再默认要求 `chat_send` 成功。
 
 ## CLI 与 API
 

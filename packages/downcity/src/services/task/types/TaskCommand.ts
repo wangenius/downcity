@@ -15,13 +15,23 @@ import type {
 } from "./Task.js";
 
 export type TaskCreateRequest = {
+  /** 任务名称。 */
   title: string;
+  /** 触发条件。 */
   when: string;
+  /** 任务描述。 */
   description: string;
+  /** 任务上下文标识。 */
   contextId: string;
+  /** 任务执行类型。 */
   kind?: ShipTaskKind;
+  /** 是否启用 review 多轮复核。 */
+  review?: boolean;
+  /** 任务状态。 */
   status?: ShipTaskStatus;
+  /** 任务正文。 */
   body?: string;
+  /** 是否覆盖已有定义。 */
   overwrite?: boolean;
 };
 
@@ -41,15 +51,27 @@ export type TaskCreateResponse = {
 };
 
 export type TaskUpdateRequest = {
+  /** 当前任务名称。 */
   title: string;
+  /** 新任务名称。 */
   titleNext?: string;
+  /** 新触发条件。 */
   when?: string;
+  /** 是否清空触发条件并回退到 `@manual`。 */
   clearWhen?: boolean;
+  /** 新任务描述。 */
   description?: string;
+  /** 新上下文标识。 */
   contextId?: string;
+  /** 新任务执行类型。 */
   kind?: ShipTaskKind;
+  /** 是否启用 review 多轮复核。 */
+  review?: boolean;
+  /** 新任务状态。 */
   status?: ShipTaskStatus;
+  /** 新任务正文。 */
   body?: string;
+  /** 是否清空正文。 */
   clearBody?: boolean;
 };
 
@@ -61,14 +83,25 @@ export type TaskUpdateResponse = {
 };
 
 export type TaskListItemView = {
+  /** 任务名称。 */
   title: string;
+  /** 任务描述。 */
   description: string;
+  /** 任务正文。 */
   body?: string;
+  /** 触发条件。 */
   when: string;
+  /** 任务状态。 */
   status: string;
+  /** 任务上下文标识。 */
   contextId: string;
+  /** 任务执行类型。 */
   kind?: ShipTaskKind;
+  /** 是否启用 review 多轮复核。 */
+  review?: boolean;
+  /** 任务定义文件相对路径。 */
   taskMdPath: string;
+  /** 最近一次运行时间戳。 */
   lastRunTimestamp?: string;
 };
 

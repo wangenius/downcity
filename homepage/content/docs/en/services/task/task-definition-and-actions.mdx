@@ -23,6 +23,7 @@ description: task.md schema, when trigger semantics, and action contracts
 | `when` | Yes | Trigger: `@manual` / cron / `time:ISO8601` |
 | `status` | Yes | `enabled` / `paused` / `disabled` |
 | `kind` | No | `agent` (default) or `script` |
+| `review` | No | Only used by `kind=agent`; enables user-simulator multi-round review when `true`, otherwise single-round |
 
 ## `when` semantics
 
@@ -63,9 +64,10 @@ No semantic-similarity dedup is applied.
 2. start `runTaskNow(...)` in background
 3. return immediately with `accepted=true`, `message`, and `executionId`
 
-Additional `agent` rule:
-- success requires successful `chat_send` delivery
-- delivery failure is treated as `executionStatus=failure`
+Current `agent` rules:
+- single-round by default
+- multi-round review only when `review=true`
+- valid output text is enough by default; successful `chat_send` delivery is no longer required
 
 ## CLI and API
 

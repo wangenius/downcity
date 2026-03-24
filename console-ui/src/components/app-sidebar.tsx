@@ -11,6 +11,7 @@ import {
   ChevronRightIcon,
   Layers3Icon,
   KeyRoundIcon,
+  Loader2Icon,
   MessageSquareTextIcon,
   PuzzleIcon,
   SparklesIcon,
@@ -164,6 +165,31 @@ function isChannelStarted(status: UiChatChannelStatus | undefined, fallbackByIte
   return fallbackByItems
 }
 
+/**
+ * 判断任务是否正在执行。
+ */
+function isTaskRunning(task: UiTaskItem): boolean {
+  return String(task.status || "").trim().toLowerCase() === "running"
+}
+
+/**
+ * 侧边栏右侧活动指示。
+ */
+function SidebarActivityIndicator(props: { active: boolean; label: string }) {
+  if (!props.active) {
+    return <span aria-hidden="true" className="inline-flex h-4 w-4 shrink-0" />
+  }
+  return (
+    <span
+      className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-sidebar-foreground/60"
+      aria-label={props.label}
+      title={props.label}
+    >
+      <Loader2Icon className="size-3 animate-spin" />
+    </span>
+  )
+}
+
 export function AppSidebar({
   activeView,
   agents,
@@ -277,7 +303,7 @@ export function AppSidebar({
     "data-[active=true]:bg-sidebar-accent/75",
     "hover:bg-sidebar-accent/45",
   )
-  const chatItemRowClass = "grid w-full min-w-0 grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5"
+  const chatItemRowClass = "grid w-full min-w-0 grid-cols-[1rem_minmax(0,1fr)_1rem] items-center gap-1.5"
   const chatItemIconClass = "inline-flex size-4 items-center justify-center text-muted-foreground"
   const chatItemTextClass = "min-w-0 truncate text-[10px] font-medium"
   const normalizedSelectedChannel = String(selectedChatChannel || "").trim().toLowerCase()
@@ -605,6 +631,7 @@ export function AppSidebar({
                                 const normalizedTitle = chatTitle && (!chatId || chatTitle !== chatId) ? chatTitle : ""
                                 const label = normalizedTitle || chatId || contextId
                                 const isActive = activeView === "contextWorkspace" && selectedContextId === contextId
+                                const isExecuting = item.executing === true
                                 return (
                                   <SidebarMenuItem key={contextId} className="min-w-0">
                                     <SidebarMenuButton
@@ -618,6 +645,7 @@ export function AppSidebar({
                                           <MessageSquareTextIcon className="h-2.5 w-2.5" />
                                         </span>
                                         <span className={chatItemTextClass}>{label}</span>
+                                        <SidebarActivityIndicator active={isExecuting} label="会话执行中" />
                                       </span>
                                     </SidebarMenuButton>
                                   </SidebarMenuItem>
@@ -650,6 +678,7 @@ export function AppSidebar({
                   {tasks.map((task) => {
                     const title = String(task.title || "").trim()
                     if (!title) return null
+                    const taskRunning = isTaskRunning(task)
                     return (
                       <SidebarMenuItem key={`task:${title}`}>
                         <SidebarMenuButton
@@ -663,7 +692,7 @@ export function AppSidebar({
                               <RadarIcon className="size-4" />
                             </span>
                             <span className="truncate">{title}</span>
-                            <span />
+                            <SidebarActivityIndicator active={taskRunning} label="任务执行中" />
                           </span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

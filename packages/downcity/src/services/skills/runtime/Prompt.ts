@@ -25,22 +25,16 @@ export function renderClaudeSkillsPromptSection(
 ): string {
   const roots = getClaudeSkillSearchRoots(projectRoot, config);
   const allowExternal = Boolean(config.services?.skills?.allowExternalPaths);
-  const visibleSkills = skills.slice(0, 40);
 
   const skillsSection =
-    visibleSkills.length > 0
-      ? visibleSkills
+    skills.length > 0
+      ? skills
           .map((skill) => {
             const desc = skill.description ? ` - ${skill.description}` : "";
             return `- **${skill.name}**${desc}`;
           })
           .join("\n")
       : "- (none)";
-
-  const moreSkillsLine =
-    skills.length > visibleSkills.length
-      ? `- ...and ${skills.length - visibleSkills.length} more`
-      : "";
 
   const rootsSection =
     roots.length > 0
@@ -63,7 +57,6 @@ export function renderClaudeSkillsPromptSection(
     "",
     "## Available Skills",
     skillsSection,
-    moreSkillsLine,
     "",
     "## Skill Roots (scan order, higher wins on conflicts)",
     rootsSection,

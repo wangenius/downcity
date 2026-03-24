@@ -66,7 +66,7 @@ sequenceDiagram
 - 回退 `keepalive fetch`
 - 不等待完整执行结果，只保证请求已发出
 
-### `popup/App.tsx`
+### `extension-popup/App.tsx`
 
 职责：
 
@@ -75,13 +75,13 @@ sequenceDiagram
 - 选择 agent / chatKey
 - 调用抓取与 dispatch
 
-## 为什么不在 popup 里等结果
+## 为什么不在 Extension Popup 里等结果
 
-因为扩展 popup 是短生命周期界面。
+因为 Extension Popup 是短生命周期界面。
 
-如果你要求 popup 负责等完整任务执行结束，会带来三个问题：
+如果你要求 Extension Popup 负责等完整任务执行结束，会带来三个问题：
 
-1. popup 关闭后状态丢失
+1. Extension Popup 关闭后状态丢失
 2. 用户需要在扩展里等待，而不是回到主工作流
 3. 扩展承担了不该承担的“对话面职责”
 

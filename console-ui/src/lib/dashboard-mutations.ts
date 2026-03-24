@@ -24,6 +24,7 @@ import type {
   UiSkillInstallPayload,
   UiSkillInstallResult,
   UiSkillLookupResult,
+  UiPluginActionExecutionResult,
   UiTaskMutationResponse,
   UiTaskRunDeleteResponse,
   UiTaskRunsClearResponse,
@@ -67,7 +68,7 @@ export async function runPluginActionMutation(params: {
   selectedAgentId: string;
   refreshPlugins: (agentId: string) => Promise<void>;
   showToast: ShowToast;
-}): Promise<void> {
+}): Promise<UiPluginActionExecutionResult> {
   try {
     const result = await params.requestJson<{
       success?: boolean;
@@ -80,13 +81,26 @@ export async function runPluginActionMutation(params: {
     const message = String(
       result?.message || result?.error || `${params.pluginName} ${params.actionName}`,
     ).trim();
+    const shouldRefreshPlugins =
+      params.actionName === "on" || params.actionName === "off";
+    if (shouldRefreshPlugins && params.selectedAgentId) {
+      void params.refreshPlugins(params.selectedAgentId).catch(() => undefined);
+    }
     params.showToast(
       `plugin ${params.pluginName} ${params.actionName}: ${message}`,
       result?.success ? "success" : "error",
     );
-    await params.refreshPlugins(params.selectedAgentId);
+    return {
+      success: result?.success === true,
+      message,
+    };
   } catch (error) {
-    params.showToast(`plugin 操作失败: ${getErrorMessage(error)}`, "error");
+    const message = getErrorMessage(error);
+    params.showToast(`plugin 操作失败: ${message}`, "error");
+    return {
+      success: false,
+      message,
+    };
   }
 }
 

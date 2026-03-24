@@ -4,7 +4,7 @@
  * 关键点（中文）：
  * - 该文件会被 Vite 单独构建成 `content-script.css`，供 Shadow DOM 通过 `<link>` 引入。
  * - 继续保留现有 `.dc-*` 类名，避免一次改动触碰 1400+ 行脚本逻辑。
- * - 使用 Tailwind v4 作为统一样式编译层，同时通过 CSS 变量对齐 popup/options 的主题色。
+ * - 使用 Tailwind v4 作为统一样式编译层，同时通过 CSS 变量对齐扩展弹窗/options 的主题色。
  */
 
 @import "tailwindcss";

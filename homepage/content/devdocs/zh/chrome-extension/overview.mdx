@@ -1,0 +1,30 @@
+---
+title: Chrome Extension 总览
+description: 扩展在仓库中的职责、模块边界、实现入口与维护原则
+---
+
+# Chrome Extension 总览
+
+`chrome-extension/` 是浏览器侧的上下文采集与任务投递入口。
+
+它不负责承载完整对话，只负责：
+
+- 采集网页上下文
+- 选择目标 Agent / Chat
+- 生成 Markdown 附件
+- 把请求投递到 Console Gateway
+
+## 主要实现入口
+
+- `src/extension-popup/`：Extension Popup UI
+- `src/options/`：设置页
+- `src/inline-composer/`：页内输入框、选区交互、页内发送逻辑
+- `src/services/pageMarkdown.ts`：整页结构化抓取与 Markdown 生成
+
+## 维护原则
+
+1. Extension Popup 负责“明确发送”
+2. Inline Composer 负责“页内就近发送”
+3. 扩展只负责投递，不等待完整执行结果
+4. 页面抓取优先结构化，而不是粗暴 `innerText`
+5. extension 改动后必须重新执行 `npm run build:extension`

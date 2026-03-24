@@ -195,6 +195,115 @@ async function extractPageFromTab(tabId: number): Promise<PageExtractResult> {
               return !isVisible(element);
             }
 
+            function resolveAbsoluteUrl(input: string): string {
+              const raw = String(input || "").trim();
+              if (!raw) return "";
+              try {
+                return new URL(raw, location.href).toString();
+              } catch {
+                return raw;
+              }
+            }
+
+            function pickLargestSrcsetCandidate(input: string): string {
+              const items = String(input || "")
+                .split(",")
+                .map((part) => part.trim())
+                .filter(Boolean);
+              if (items.length < 1) return "";
+
+              let bestUrl = "";
+              let bestScore = -1;
+              for (const item of items) {
+                const [urlPart, descriptor] = item.split(/\s+/, 2);
+                const score = descriptor?.endsWith("w")
+                  ? Number.parseInt(descriptor.slice(0, -1), 10)
+                  : descriptor?.endsWith("x")
+                    ? Number.parseFloat(descriptor.slice(0, -1)) * 1000
+                    : 0;
+                if (score > bestScore) {
+                  bestUrl = urlPart || "";
+                  bestScore = score;
+                }
+              }
+              return bestUrl;
+            }
+
+            function resolveImageSource(element: Element): string {
+              if (!(element instanceof HTMLImageElement)) return "";
+              const candidates = [
+                element.currentSrc,
+                element.getAttribute("src"),
+                element.getAttribute("data-src"),
+                element.getAttribute("data-original"),
+                element.getAttribute("data-lazy-src"),
+                element.getAttribute("data-url"),
+                element.getAttribute("data-image"),
+                pickLargestSrcsetCandidate(element.getAttribute("srcset") || ""),
+                pickLargestSrcsetCandidate(element.getAttribute("data-srcset") || ""),
+              ];
+
+              for (const candidate of candidates) {
+                const resolved = resolveAbsoluteUrl(String(candidate || ""));
+                if (resolved) return resolved;
+              }
+              return "";
+            }
+
+            function resolveImageAlt(element: Element): string {
+              const figure = element.closest("figure");
+              const figcaption = figure?.querySelector("figcaption");
+              return cleanPlainText(
+                element.getAttribute("alt") ||
+                  element.getAttribute("title") ||
+                  figcaption?.textContent ||
+                  "image",
+              );
+            }
+
+            function measureLinkDensity(element: Element): number {
+              const textLength = cleanPlainText(element.textContent || "").length;
+              if (textLength < 1) return 0;
+              const linkLength = Array.from(element.querySelectorAll("a"))
+                .map((link) => cleanPlainText(link.textContent || "").length)
+                .reduce((sum, item) => sum + item, 0);
+              return Math.min(1, linkLength / textLength);
+            }
+
+            function computeRootScore(element: Element): {
+              element: Element;
+              score: number;
+              textLength: number;
+            } | null {
+              if (shouldDropElement(element)) return null;
+              const textLength = cleanPlainText(element.textContent || "").length;
+              if (textLength < 200) return null;
+
+              const paragraphCount = element.querySelectorAll("p").length;
+              const headingCount = element.querySelectorAll("h1,h2,h3").length;
+              const imageCount = element.querySelectorAll("img").length;
+              const listCount = element.querySelectorAll("li").length;
+              const linkDensity = measureLinkDensity(element);
+              const tag = element.tagName.toLowerCase();
+
+              let score = 0;
+              score += Math.min(420, textLength * 0.025);
+              score += Math.min(180, paragraphCount * 18);
+              score += Math.min(72, listCount * 4);
+              score += Math.min(64, imageCount * 8);
+              score += headingCount > 0 ? 90 : 0;
+              score -= linkDensity * 260;
+
+              if (tag === "main") score += 180;
+              if (tag === "article") score += 160;
+              if (element.matches("[role='main']")) score += 160;
+              if (element.id === "main" || element.id === "content") score += 120;
+              if (element.matches(".content, .article, .post, .entry-content")) score += 90;
+              if (element.matches(".feed, .list")) score -= 30;
+
+              return { element, score, textLength };
+            }
+
             function pickLanguage(className: string): string {
               const match = String(className || "").match(
                 /(?:language|lang)-([a-z0-9_+-]+)/i,
@@ -222,9 +331,9 @@ async function extractPageFromTab(tabId: number): Promise<PageExtractResult> {
                 return toCodeInline(node.textContent || "");
               }
               if (tag === "img") {
-                const src = String(node.getAttribute("src") || "").trim();
+                const src = resolveImageSource(node);
                 if (!src) return "";
-                const alt = cleanPlainText(node.getAttribute("alt") || "image");
+                const alt = resolveImageAlt(node) || "image";
                 return `![${escapeMarkdown(alt || "image")}](${src})`;
               }
 
@@ -397,9 +506,9 @@ async function extractPageFromTab(tabId: number): Promise<PageExtractResult> {
               }
 
               if (tag === "img") {
-                const src = String(element.getAttribute("src") || "").trim();
+                const src = resolveImageSource(element);
                 if (!src) return "";
-                const alt = renderInlineChildren(element) || element.getAttribute("alt") || "image";
+                const alt = renderInlineChildren(element) || resolveImageAlt(element) || "image";
                 return `![${escapeMarkdown(cleanPlainText(alt) || "image")}](${src})\n\n`;
               }
 
@@ -449,26 +558,48 @@ async function extractPageFromTab(tabId: number): Promise<PageExtractResult> {
                 ".feed",
                 ".list",
               ];
-              const all: Element[] = [];
+              const candidates: Array<{
+                element: Element;
+                score: number;
+                textLength: number;
+              }> = [];
               for (const selector of selectors) {
                 const nodes = Array.from(document.querySelectorAll(selector));
                 for (const node of nodes) {
                   if (!(node instanceof Element)) continue;
-                  if (shouldDropElement(node)) continue;
-                  const text = cleanPlainText(node.textContent || "");
-                  if (text.length < 120) continue;
-                  all.push(node);
+                  const candidate = computeRootScore(node);
+                  if (!candidate) continue;
+                  candidates.push(candidate);
                 }
               }
 
-              const deduped: Element[] = [];
-              for (const node of all) {
-                if (deduped.some((existing) => existing === node)) continue;
-                if (deduped.some((existing) => existing.contains(node))) continue;
-                deduped.push(node);
+              candidates.sort((left, right) => {
+                if (left.score !== right.score) return right.score - left.score;
+                return right.textLength - left.textLength;
+              });
+
+              const selected: typeof candidates = [];
+              const topScore = candidates[0]?.score || 0;
+              for (const candidate of candidates) {
+                const overlaps = selected.some(
+                  (existing) =>
+                    existing.element === candidate.element ||
+                    existing.element.contains(candidate.element) ||
+                    candidate.element.contains(existing.element),
+                );
+                if (overlaps) continue;
+                if (
+                  selected.length > 0 &&
+                  candidate.score < topScore * 0.72 &&
+                  candidate.textLength < 1600
+                ) {
+                  continue;
+                }
+                selected.push(candidate);
+                if (selected.length >= 4) break;
               }
 
-              if (deduped.length > 0) return deduped.slice(0, 4);
+              if (selected.length > 0) return selected.map((item) => item.element);
               if (document.body instanceof Element) return [document.body];
               if (document.documentElement instanceof Element) return [document.documentElement];
               return [];

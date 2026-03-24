@@ -101,13 +101,14 @@ city console ui start
 如果你在使用仓库内的 `chrome-extension`：
 
 1. 在网页中选中文本后，选区右下角会出现消息按钮，点击后输入框会在选区左下角展开。
-2. 点击浏览器扩展图标会打开插件 popup；按 `Cmd/Ctrl + U` 可直接打开页面内输入框。
-3. popup 只保留极简输入框、发送按钮、本页发送历史，以及一个设置按钮。
-4. popup 中 Agent 切换为极简模式；Channel Chat 会按当前 Agent 自动选择首个可用会话。
+2. 点击浏览器扩展图标会打开 Extension Popup；按 `Cmd/Ctrl + U` 可直接打开页内输入框（Inline Composer）。
+3. Extension Popup 只保留极简输入框、发送按钮、本页发送历史，以及一个设置按钮。
+4. Extension Popup 中 Agent 切换为极简模式；Channel Chat 会按当前 Agent 自动选择首个可用会话。
 5. 点击历史记录可快速回填当前页面之前发送过的内容。
 6. 输入需求后按 `Cmd/Ctrl + Enter` 或点击发送按钮提交（`Enter` 换行）。
 7. 若当前没有选区，发送时会自动按页面全文模式投递。
 8. 按 `Esc` 可关闭输入框。
+9. 全页模式会优先抓取最像正文的 `main/article` 区块；若页面存在多个强相关主体区块，会合并正文并附带页面图片引用。
 
 ## 下一步
 

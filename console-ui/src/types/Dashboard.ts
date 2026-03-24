@@ -833,6 +833,14 @@ export interface UiPluginRuntimeItem {
    */
   name?: string;
   /**
+   * Plugin 展示标题。
+   */
+  title?: string;
+  /**
+   * Plugin 面向人类的用途说明。
+   */
+  description?: string;
+  /**
    * 暴露的 pipeline 点名称列表。
    */
   pipelines?: string[];
@@ -881,6 +889,20 @@ export interface UiPluginRuntimeItem {
      */
     actions?: UiPluginActionItem[];
   };
+}
+
+/**
+ * Plugin action 执行结果。
+ */
+export interface UiPluginActionExecutionResult {
+  /**
+   * action 是否执行成功。
+   */
+  success: boolean
+  /**
+   * 返回给 UI 的结果文案。
+   */
+  message: string
 }
 
 /**

@@ -1,0 +1,61 @@
+---
+title: Chrome Extension 总览
+description: Chrome 扩展能做什么、适合什么场景，以及它和 Agent Runtime 的关系
+---
+
+# Chrome Extension 总览
+
+Chrome Extension 是 Downcity 的网页上下文入口。
+
+它负责把“正在看的网页”和“想让 Agent 做的事”连接起来，让你不用来回复制正文、切换聊天窗口、手动整理引用内容。
+
+## 它适合什么场景
+
+- 你正在读一篇文章，想立刻让 Agent 总结、改写、翻译或提炼要点
+- 你只选中了网页中的一小段内容，想就地发问
+- 你希望把网页上下文作为附件送进已有的 Channel Chat
+- 你想在浏览器里快速把页面交给某个本地 Agent 处理
+
+## 它提供两种入口
+
+### 1. Extension Popup
+
+适合：
+
+- 明确选择 Agent
+- 输入完整任务说明
+- 查看当前页面发送历史
+
+### 2. 页内输入框（Inline Composer）
+
+适合：
+
+- 在网页里选中一段文字后立刻追问
+- 不离开当前阅读现场完成发送
+- 使用 `Cmd/Ctrl + U` 打开页内输入框
+
+## 它会发送什么
+
+### 选区模式
+
+- 发送当前选中的文本
+- 以 Markdown 附件形式上传
+- 适合做局部分析、问答、解释
+
+### 全页模式
+
+- 优先抓取最像正文的 `main/article` 主体区块
+- 如果页面存在多个强相关主体区块，会合并输出
+- 会尽量附带页面中的图片引用
+
+## 它不会做什么
+
+- 不在扩展内等待完整执行结果
+- 不把自己做成第二个 Console UI
+- 不负责长期保存对话，结果仍然回到原本的 chat/context
+
+## 推荐阅读
+
+1. [安装与连接](/zh/docs/chrome-extension/install-and-connect)
+2. [使用说明](/zh/docs/chrome-extension/usage)
+3. [故障排查](/zh/docs/chrome-extension/troubleshooting)

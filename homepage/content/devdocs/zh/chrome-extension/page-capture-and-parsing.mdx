@@ -1,0 +1,56 @@
+---
+title: 页面抓取与解析
+description: 整页抓取、选区抓取、正文根节点选择、多 article/main 场景与图片解析逻辑
+---
+
+# 页面抓取与解析
+
+## 两条抓取链路
+
+### 1. Extension Popup 整页抓取
+
+入口在 `src/services/pageMarkdown.ts`。
+
+职责：
+
+- 注入当前 tab
+- 识别正文候选根节点
+- 过滤广告、导航、隐藏元素
+- 把结构化 DOM 转成 Markdown
+
+### 2. Inline Composer 轻量抓取
+
+入口在 `src/inline-composer/pageContext.ts`。
+
+职责：
+
+- 读取当前选区
+- 无选区时退化为整页文本快照
+- 提取与正文相关的图片引用
+
+## 多个 `article/main` 怎么处理
+
+当前实现不是“只取第一个”。
+
+而是：
+
+1. 收集多个正文候选区块
+2. 按文本长度、段落数、标题数、图片数、link density 做评分
+3. 选最像正文的根节点
+4. 若存在多个强相关主体区块，则合并输出
+
+这样可以减少 feed/list 页面误抓整页导航的概率。
+
+## 图片解析怎么做
+
+当前会优先尝试：
+
+- `currentSrc`
+- `src`
+- `srcset`
+- `data-src`
+- `data-original`
+- `data-lazy-src`
+- 其他 `data-*` 图片字段
+
+整页模式下，图片会作为 Markdown 引用追加到快照中，而不是单独上传二进制文件。

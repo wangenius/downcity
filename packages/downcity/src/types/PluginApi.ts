@@ -17,6 +17,14 @@ export interface PluginView {
    */
   name: string;
   /**
+   * Plugin 展示标题。
+   */
+  title: string;
+  /**
+   * Plugin 面向人类的用途说明。
+   */
+  description: string;
+  /**
    * 已声明的 Action 名称列表。
    */
   actions: string[];

@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "quickstart",
+    "chrome-extension",
     "concepts",
     "capabilities",
     "configuration",

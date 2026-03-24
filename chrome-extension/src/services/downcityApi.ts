@@ -80,7 +80,7 @@ export async function fetchChatKeyOptions(
  * 投递 Agent 任务（异步，不等待执行完成）。
  *
  * 关键点（中文）：
- * - 优先使用 sendBeacon，支持 popup 关闭后的请求续传。
+ * - 优先使用 sendBeacon，支持扩展弹窗关闭后的请求续传。
  * - sendBeacon 不可用时，回退到 keepalive fetch。
  * - 只确认“请求已发起”，不等待后端执行结束。
  */

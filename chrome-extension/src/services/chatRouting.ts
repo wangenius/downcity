@@ -3,7 +3,7 @@
  *
  * 关键点（中文）：
  * - 统一处理 Agent 选择、已连接渠道过滤、默认 chatKey 选择。
- * - popup / options / API 列表转换都复用同一套规则。
+ * - 扩展弹窗 / options / API 列表转换都复用同一套规则。
  */
 
 import type {

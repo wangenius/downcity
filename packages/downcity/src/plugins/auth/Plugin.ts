@@ -74,6 +74,9 @@ function toSnapshotData(snapshot: ChatAuthorizationSnapshot): JsonValue {
  */
 export const authPlugin: Plugin = {
   name: "auth",
+  title: "User Authorization System",
+  description:
+    "Controls who can talk to the agent in chat channels, records observed users and chats, and resolves each user's effective role for downstream service decisions.",
   availability() {
     return {
       enabled: true,

@@ -1,0 +1,61 @@
+---
+title: Usage
+description: How to use the Extension Popup, Inline Composer, shortcuts, page history, and full-page capture flow
+---
+
+# Usage
+
+## Extension Popup Flow
+
+1. Click the extension icon in the browser toolbar
+2. Choose the target Agent
+3. Choose the target Channel Chat
+4. Write the task prompt
+5. Click send or press `Cmd/Ctrl + Enter`
+
+The Extension Popup is best for a deliberate, explicit dispatch.
+
+## Inline Composer Flow
+
+### Option 1: Select text first
+
+1. Select text on the page
+2. Click the small message button near the selection
+3. Type your follow-up prompt
+
+### Option 2: Open with shortcut
+
+Press `Cmd/Ctrl + U` to open the inline composer.
+
+If no text is selected, the extension falls back to full-page mode.
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl + U`: open the inline composer
+- `Cmd/Ctrl + Enter`: send
+- `Esc`: close the inline composer
+
+If a slash panel or route panel is open, `Esc` closes those first.
+
+## What Happens During Send
+
+### Selection Mode
+
+- reads the selected text
+- wraps it as a Markdown attachment
+- dispatches it with your task prompt
+
+### Full Page Mode
+
+- picks the strongest content root from page candidates
+- merges multiple strong roots when needed
+- resolves image references
+- uploads a Markdown snapshot
+
+## Why Page History Exists
+
+The Extension Popup keeps recent send history for the current page so you can:
+
+- revisit previous asks
+- reuse similar prompts
+- reduce repetitive typing

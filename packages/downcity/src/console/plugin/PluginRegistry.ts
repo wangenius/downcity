@@ -128,6 +128,8 @@ export class PluginRegistry {
     return Array.from(this.plugins.values())
       .map((plugin) => ({
         name: plugin.name,
+        title: String(plugin.title || plugin.name || "").trim(),
+        description: String(plugin.description || "").trim(),
         actions: Object.keys(plugin.actions || {}).sort((a, b) =>
           a.localeCompare(b),
         ),

@@ -134,6 +134,9 @@ function readVoicePluginConfig(runtime: {
  */
 export const voicePlugin: Plugin = {
   name: "voice",
+  title: "Voice Message Transcription",
+  description:
+    "Detects voice and audio attachments in inbound chat messages, runs transcription through the configured voice asset, and appends readable text so the agent can work with spoken input like normal message content.",
   config: {
     plugin: "voice",
     scope: "project",

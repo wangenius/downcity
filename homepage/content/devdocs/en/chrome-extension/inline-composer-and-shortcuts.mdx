@@ -1,0 +1,39 @@
+---
+title: Inline Composer and Shortcuts
+description: The content-script interaction layer, Shadow DOM UI, selection trigger, shortcuts, and state handling
+---
+
+# Inline Composer and Shortcuts
+
+## UI Structure
+
+The Inline Composer is mounted by `src/inline-composer/ui.ts` inside a Shadow DOM tree so host-page styles do not leak into extension UI.
+
+Main nodes:
+
+- selection highlight layer
+- trigger button
+- input composer
+- Agent/Chat route panel
+- slash history suggestions
+- toast
+
+## Shortcuts
+
+- `Cmd/Ctrl + U`: open the inline composer
+- `Cmd/Ctrl + Enter`: send
+- `Esc`: close subpanels or the entire composer
+
+Notes:
+
+- `Cmd/Ctrl + U` is an Inline Composer shortcut, not an Extension Popup shortcut
+- if the content script is emitted as an imported chunk graph, Chrome will fail to load it
+
+## Current Constraint
+
+The content script must remain a directly injectable single-file artifact.
+
+That is why build verification should confirm:
+
+- `dist/content-script.js` can load as a classic script
+- no runtime `import` chunks are required

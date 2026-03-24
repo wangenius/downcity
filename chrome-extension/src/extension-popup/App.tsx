@@ -1,9 +1,9 @@
 /**
- * Popup 主界面。
+ * Extension Popup 主界面。
  *
  * 关键点（中文）：
  * - 只保留极简发送主链路：Agent 切换、Ask 输入、发送按钮。
- * - Chat 不在 popup 中显式展示，始终自动使用当前 Agent 的首个可用会话。
+ * - Chat 不在扩展弹窗中显式展示，始终自动使用当前 Agent 的首个可用会话。
  * - 展示当前页面发送历史，并提供设置入口跳转到 options 页面。
  */
 
@@ -17,7 +17,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
-import type { PopupSelectOption } from "../types/PopupSelect";
+import type { ExtensionSelectOption } from "../types/ExtensionSelect";
 import type {
   ActiveTabContext,
   ExtensionPageSendRecord,
@@ -40,18 +40,18 @@ import {
 } from "../services/storage";
 import { getActiveTabContext } from "../services/tab";
 import {
-  buildPopupInstructions,
+  buildExtensionPopupInstructions,
   formatHistoryTime,
   getToastToneClass,
   normalizeInitialTaskPrompt,
   readErrorText,
-  resolvePopupConsoleBaseUrl,
+  resolveExtensionPopupConsoleBaseUrl,
   shortenUrl,
-  type PopupToastMessage,
+  type ExtensionPopupToastMessage,
 } from "./helpers";
-import { PopupSelect } from "./PopupSelect";
+import { ExtensionPopupSelect } from "./ExtensionPopupSelect";
 
-export function App() {
+export function ExtensionPopupApp() {
   const toastTimerRef = useRef<number | null>(null);
 
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -68,16 +68,16 @@ export function App() {
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChatKeys, setIsLoadingChatKeys] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<PopupToastMessage | null>(null);
+  const [toast, setToast] = useState<ExtensionPopupToastMessage | null>(null);
   const [status, setStatus] = useState<StatusMessage>({
     type: "idle",
     text: "准备就绪",
   });
 
-  const consoleEndpoint = resolvePopupConsoleBaseUrl(settings);
+  const consoleEndpoint = resolveExtensionPopupConsoleBaseUrl(settings);
   const consoleBaseUrl = consoleEndpoint.baseUrl;
 
-  const showToast = useCallback((type: PopupToastMessage["type"], text: string): void => {
+  const showToast = useCallback((type: ExtensionPopupToastMessage["type"], text: string): void => {
     const message = String(text || "").trim();
     if (!message) return;
     if (toastTimerRef.current !== null) {
@@ -96,7 +96,7 @@ export function App() {
     () => resolveLinkedChannels(selectedAgent),
     [selectedAgent],
   );
-  const chatOptions = useMemo<PopupSelectOption[]>(
+  const chatOptions = useMemo<ExtensionSelectOption[]>(
     () =>
       chatKeyOptions.map((item) => ({
         value: item.chatKey,
@@ -258,7 +258,7 @@ export function App() {
           }
         }
 
-        const endpoint = resolvePopupConsoleBaseUrl(saved);
+        const endpoint = resolveExtensionPopupConsoleBaseUrl(saved);
         if (!endpoint.baseUrl) {
           setStatus({
             type: "error",
@@ -321,7 +321,7 @@ export function App() {
       const agentId = String(settings.agentId || "").trim();
       const chatKey = String(settings.chatKey || "").trim();
       const taskPrompt = String(settings.taskPrompt || "").trim();
-      const activeConsoleBaseUrl = resolvePopupConsoleBaseUrl(settings).baseUrl;
+      const activeConsoleBaseUrl = resolveExtensionPopupConsoleBaseUrl(settings).baseUrl;
 
       if (!agentId) {
         const message = "请选择目标 Agent";
@@ -378,7 +378,7 @@ export function App() {
           agentId,
           contextId: chatKey,
           body: {
-            instructions: buildPopupInstructions({
+            instructions: buildExtensionPopupInstructions({
               tab,
               taskPrompt,
               markdownFileName: markdownSnapshot.fileName,
@@ -541,7 +541,7 @@ export function App() {
             placeholder="输入要发送给 Agent 的内容"
           />
 
-          <PopupSelect
+          <ExtensionPopupSelect
             label="Channel Chat"
             value={settings.chatKey}
             placeholder={

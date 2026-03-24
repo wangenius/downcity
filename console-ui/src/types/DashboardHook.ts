@@ -27,6 +27,7 @@ import type {
   UiModelProviderItem,
   UiModelSummary,
   UiOverviewResponse,
+  UiPluginActionExecutionResult,
   UiPluginRuntimeItem,
   UiPromptResponse,
   UiServiceItem,
@@ -380,7 +381,10 @@ export interface UseConsoleDashboardResult {
   /**
    * 运行 plugin action。
    */
-  runPluginAction: (pluginName: string, actionName: string) => Promise<void>;
+  runPluginAction: (
+    pluginName: string,
+    actionName: string,
+  ) => Promise<UiPluginActionExecutionResult>;
 
   /**
    * 执行 chat 渠道动作。

@@ -87,6 +87,8 @@ function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[]
 function buildStaticPluginViews(): PluginRuntimeView[] {
   return PLUGINS.map((plugin) => ({
     name: plugin.name,
+    title: String(plugin.title || plugin.name || "").trim(),
+    description: String(plugin.description || "").trim(),
     actions: Object.keys(plugin.actions || {}).sort((a, b) => a.localeCompare(b)),
     pipelines: Object.keys(plugin.hooks?.pipeline || {}).sort((a, b) =>
       a.localeCompare(b),

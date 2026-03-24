@@ -1,0 +1,30 @@
+---
+title: Chrome Extension Overview
+description: The extension's role in the repo, its module boundaries, entry points, and maintenance rules
+---
+
+# Chrome Extension Overview
+
+`chrome-extension/` is the browser-side context-capture and dispatch surface.
+
+It does not host full conversations. Its responsibilities are:
+
+- capture web context
+- choose Agent / Chat targets
+- build Markdown attachments
+- dispatch requests to the Console gateway
+
+## Main Entry Points
+
+- `src/extension-popup/`: Extension Popup UI
+- `src/options/`: settings page
+- `src/inline-composer/`: Inline Composer, selection flow, in-page dispatch logic
+- `src/services/pageMarkdown.ts`: structured full-page capture and Markdown generation
+
+## Maintenance Rules
+
+1. Extension Popup is for explicit dispatch
+2. Inline Composer is for in-page dispatch
+3. the extension dispatches work but does not wait for final execution
+4. page capture should stay structured, not devolve into raw `innerText`
+5. after extension changes, always run `npm run build:extension`

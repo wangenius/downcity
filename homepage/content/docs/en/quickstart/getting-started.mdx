@@ -101,13 +101,14 @@ city console ui start
 If you use the repo's `chrome-extension`:
 
 1. Select text on the page, then click the message button near the selection to open the inline input near the selected area.
-2. Clicking the browser extension action icon opens the extension popup; press `Cmd/Ctrl + U` to open the inline input on the page.
-3. The popup now stays minimal: one input box, one send button, page-level send history, and a settings button.
-4. Agent switching in the popup is intentionally minimal; Channel Chat is auto-resolved from the current Agent's first available conversation.
+2. Clicking the browser extension action icon opens the Extension Popup; press `Cmd/Ctrl + U` to open the Inline Composer on the page.
+3. The Extension Popup stays minimal: one input box, one send button, page-level send history, and a settings button.
+4. Agent switching in the Extension Popup is intentionally minimal; Channel Chat is auto-resolved from the current Agent's first available conversation.
 5. Click a history item to refill a previous ask from the current page.
 6. Press `Cmd/Ctrl + Enter` or click the send button to submit (`Enter` for newline).
 7. Press `Esc` to close the input box.
 8. If nothing is selected, sending automatically falls back to full-page mode.
+9. Full-page mode prefers the strongest `main/article` content region; if the page has multiple strong content roots, it merges them and includes page image references.
 
 ## Next
 

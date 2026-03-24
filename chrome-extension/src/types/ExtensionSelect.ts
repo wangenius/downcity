@@ -1,15 +1,15 @@
 /**
- * Popup 自定义下拉选择器类型。
+ * Extension Popup 自定义下拉选择器类型。
  *
  * 关键点（中文）：
- * - 统一 popup 中 Agent / Chat / Ask 历史的选择项结构。
+ * - 统一扩展弹窗中 Agent / Chat / Ask 历史的选择项结构。
  * - 避免在 UI 组件里散落匿名对象，降低后续重构成本。
  */
 
 /**
  * 自定义下拉项。
  */
-export interface PopupSelectOption {
+export interface ExtensionSelectOption {
   /**
    * 选项唯一值。
    */

@@ -1,0 +1,39 @@
+---
+title: 页内输入框与快捷键
+description: content-script 的交互层、Shadow DOM UI、选区触发器、快捷键与状态管理
+---
+
+# 页内输入框与快捷键
+
+## UI 结构
+
+页内输入框由 `src/inline-composer/ui.ts` 挂载到 Shadow DOM 中，避免宿主页面样式污染。
+
+主要节点：
+
+- 选区高亮层
+- 触发按钮
+- 输入框
+- Agent/Chat 路由面板
+- slash 历史建议
+- toast
+
+## 快捷键
+
+- `Cmd/Ctrl + U`：打开页内输入框
+- `Cmd/Ctrl + Enter`：发送
+- `Esc`：关闭子面板或整个输入框
+
+注意：
+
+- `Cmd/Ctrl + U` 是页内输入框快捷键，不是浏览器 action 的 Extension Popup 快捷键
+- 若 content script 构建成带 `import` 的分包脚本，Chrome 会直接加载失败
+
+## 近期约束
+
+content script 必须保持为可直接注入的单文件产物。
+
+这也是为什么构建后要检查：
+
+- `dist/content-script.js` 可以被作为 classic script 加载
+- 不能依赖运行时 `import` chunk

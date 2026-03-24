@@ -1,7 +1,11 @@
 {
   "title": "Chrome Extension",
   "pages": [
+    "overview",
     "architecture",
-    "request-flow"
+    "request-flow",
+    "page-capture-and-parsing",
+    "inline-composer-and-shortcuts",
+    "build-and-release"
   ]
 }

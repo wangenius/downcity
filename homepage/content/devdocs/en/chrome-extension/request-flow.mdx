@@ -66,7 +66,7 @@ Key design points:
 - fall back to `keepalive fetch`
 - do not wait for the final execution result, only ensure the request was sent
 
-### `popup/App.tsx`
+### `extension-popup/App.tsx`
 
 Responsibilities:
 
@@ -75,13 +75,13 @@ Responsibilities:
 - choose agent and chatKey
 - trigger capture and dispatch
 
-## Why the popup does not wait for the result
+## Why the Extension Popup does not wait for the result
 
-Because the popup is a short-lived UI surface.
+Because the Extension Popup is a short-lived UI surface.
 
-If the popup waits for full task completion, it creates three problems:
+If the Extension Popup waits for full task completion, it creates three problems:
 
-1. popup state disappears when it closes
+1. Extension Popup state disappears when it closes
 2. users wait inside the extension instead of returning to their main workflow
 3. the extension starts taking on responsibilities that belong to the chat surface
 
@@ -90,7 +90,7 @@ So the current strategy is:
 - the extension is responsible for dispatch
 - users read results back in the normal chat or context surface
 
-## Why popup and content script both exist
+## Why Extension Popup and Inline Composer both exist
 
 ### Popup
 

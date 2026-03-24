@@ -1,0 +1,63 @@
+---
+title: 安装与连接
+description: 如何构建、加载并把 Chrome 扩展连接到本地 Downcity Console 和 Agent
+---
+
+# 安装与连接
+
+## 前置条件
+
+在使用扩展前，你通常需要先启动：
+
+```bash
+city console start
+city console ui start
+city agent start
+```
+
+如果你是从仓库本地加载扩展，还需要先构建扩展产物：
+
+```bash
+npm run build:extension
+```
+
+## 在 Chrome 中加载
+
+1. 打开 `chrome://extensions`
+2. 打开右上角 `开发者模式`
+3. 点击 `加载已解压的扩展程序`
+4. 选择 `chrome-extension/dist`
+
+## 第一次连接要配置什么
+
+扩展默认连接：
+
+- Host: `127.0.0.1`
+- Port: `5315`
+
+如果你的 Console UI 不在默认地址，打开扩展设置页修改：
+
+- Console Host
+- Console Port
+- 默认 Agent
+- 默认 Channel Chat
+
+## Agent 和 Chat 怎么选
+
+扩展会先从 Console 拉取 Agent 列表，再读取该 Agent 的可用 chat context。
+
+如果没有可用 Chat，通常说明：
+
+- 对应渠道还没有产生过历史消息
+- Agent 还没运行
+- Console 地址配置错了
+
+## 更新扩展后该做什么
+
+每次改了 extension 代码后，先重新构建：
+
+```bash
+npm run build:extension
+```
+
+然后回到 `chrome://extensions`，点击该扩展的刷新按钮。

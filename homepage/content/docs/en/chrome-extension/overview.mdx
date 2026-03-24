@@ -1,0 +1,61 @@
+---
+title: Chrome Extension Overview
+description: What the Chrome extension does, when to use it, and how it fits into the Agent Runtime
+---
+
+# Chrome Extension Overview
+
+The Chrome extension is Downcity's web-context entry point.
+
+It connects "the page you're looking at" with "the task you want an Agent to do", so you do not need to manually copy content, switch to chat, and reconstruct context by hand.
+
+## Best Use Cases
+
+- You are reading an article and want an Agent to summarize, translate, rewrite, or extract actions
+- You selected a small part of a page and want to ask a local follow-up question
+- You want to send a page snapshot into an existing Channel Chat
+- You want a browser-native way to hand a live page to a local Agent
+
+## Two Entry Points
+
+### 1. Extension Popup
+
+Best for:
+
+- explicitly choosing an Agent
+- writing a full task prompt
+- reviewing page-level send history
+
+### 2. Inline Composer
+
+Best for:
+
+- asking about a selected quote without leaving the page
+- starting from the live reading context
+- using `Cmd/Ctrl + U` to open the page-level composer
+
+## What Gets Sent
+
+### Selection Mode
+
+- the selected text
+- wrapped as a Markdown attachment
+- optimized for focused follow-up questions
+
+### Full Page Mode
+
+- the strongest `main/article` content region
+- multiple strong content roots merged when needed
+- image references attached when they can be resolved
+
+## What It Does Not Do
+
+- wait for the full execution result inside the extension
+- become a second Console UI
+- replace the original chat/context where results are returned
+
+## Recommended Reading
+
+1. [Install and Connect](/en/docs/chrome-extension/install-and-connect)
+2. [Usage](/en/docs/chrome-extension/usage)
+3. [Troubleshooting](/en/docs/chrome-extension/troubleshooting)

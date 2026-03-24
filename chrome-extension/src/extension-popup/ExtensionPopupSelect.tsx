@@ -1,15 +1,15 @@
 /**
- * Popup 自定义下拉选择器。
+ * Extension Popup 自定义下拉选择器。
  *
  * 关键点（中文）：
- * - 使用轻量受控弹层替代浏览器原生 select，保证 popup 风格一致。
+ * - 使用轻量受控弹层替代浏览器原生 select，保证扩展弹窗风格一致。
  * - 统一支持主文案、辅助说明与禁用态，适配 Agent / Chat / Ask 历史三类场景。
  */
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { PopupSelectOption } from "../types/PopupSelect";
+import type { ExtensionSelectOption } from "../types/ExtensionSelect";
 
-export interface PopupSelectProps {
+export interface ExtensionPopupSelectProps {
   /**
    * 字段标签。
    */
@@ -28,7 +28,7 @@ export interface PopupSelectProps {
   /**
    * 可选项列表。
    */
-  options: PopupSelectOption[];
+  options: ExtensionSelectOption[];
 
   /**
    * 值变化回调。
@@ -41,7 +41,7 @@ export interface PopupSelectProps {
   disabled?: boolean;
 }
 
-export function PopupSelect(props: PopupSelectProps) {
+export function ExtensionPopupSelect(props: ExtensionPopupSelectProps) {
   const fieldId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);

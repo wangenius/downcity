@@ -1,0 +1,73 @@
+---
+title: Troubleshooting
+description: Common Chrome extension issues and how to debug them, including connection failures, shortcut problems, and inline composer issues
+---
+
+# Troubleshooting
+
+## 1. The Inline Composer Does Not Appear
+
+Check:
+
+- whether the page is `http://` or `https://`
+- whether the extension was refreshed in `chrome://extensions`
+- whether the content script loaded successfully on that page
+
+If you updated extension code, rebuild first:
+
+```bash
+npm run build:extension
+```
+
+Then refresh the unpacked extension.
+
+## 2. `Cmd/Ctrl + U` Does Nothing
+
+Possible causes:
+
+- the content script did not inject successfully
+- focus is currently inside an input/editor/contenteditable region
+- the browser is still using an old unpacked build
+
+Try again on a normal page after refreshing the extension.
+
+## 3. `Cmd/Ctrl + Enter` Does Not Send
+
+Check that:
+
+- the inline composer is already open
+- the input actually contains text
+- Agent and Chat are selected correctly
+- Console and Agent are running
+
+If the page script failed to load, send shortcuts will not register either.
+
+## 4. No Available Agent
+
+This usually means:
+
+- `city agent start` is not running
+- the Console address is wrong
+- the current Agent is offline
+
+## 5. No Available Chat
+
+The extension does not invent a chat context.
+
+This usually means:
+
+- that channel has not received messages yet
+- the current Agent has no connected chat channels
+- you have not selected a target Chat yet
+
+## 6. The Captured Body Looks Wrong
+
+Full-page capture is best-effort, not a perfect browser-reader clone.
+
+The current logic:
+
+- prefers the most article-like `main/article` root
+- filters nav, sidebars, and hidden content
+- merges multiple strong content roots when needed
+
+Very custom page layouts can still confuse the extractor.

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）：
  * - 统一处理 Console 基础地址的构建与校验。
- * - popup / options / API 访问层全部复用，避免各自维护一套 host/port 规则。
+ * - 扩展弹窗 / options / API 访问层全部复用，避免各自维护一套 host/port 规则。
  */
 
 /**

@@ -1,0 +1,56 @@
+---
+title: Page Capture and Parsing
+description: Full-page capture, selection capture, content-root scoring, multi-article/main handling, and image extraction logic
+---
+
+# Page Capture and Parsing
+
+## Two Capture Paths
+
+### 1. Extension Popup full-page capture
+
+Entry: `src/services/pageMarkdown.ts`
+
+Responsibilities:
+
+- inject into the current tab
+- identify candidate content roots
+- filter ads, nav, and hidden elements
+- convert structured DOM into Markdown
+
+### 2. Content-script lightweight capture
+
+Entry: `src/inline-composer/pageContext.ts`
+
+Responsibilities:
+
+- read the current selection
+- fall back to a full-page text snapshot when nothing is selected
+- extract image references related to the content root
+
+## How Multiple `article/main` Roots Are Handled
+
+The implementation does not just take the first one.
+
+Instead it:
+
+1. collects multiple candidate content roots
+2. scores them by text length, paragraph count, headings, images, and link density
+3. keeps the strongest content root
+4. merges additional strong roots when they look like part of the same main body
+
+This reduces the chance of treating feed/list containers as the final article body.
+
+## How Image Resolution Works
+
+The extractor now tries:
+
+- `currentSrc`
+- `src`
+- `srcset`
+- `data-src`
+- `data-original`
+- `data-lazy-src`
+- other `data-*` image attributes
+
+In full-page mode, images are appended as Markdown references rather than uploaded as binary attachments.

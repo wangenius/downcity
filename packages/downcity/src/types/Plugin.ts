@@ -75,6 +75,14 @@ export interface PluginRuntimeView {
    */
   name: string;
   /**
+   * Plugin 面向用户界面的展示标题。
+   */
+  title: string;
+  /**
+   * Plugin 面向人类的用途说明。
+   */
+  description: string;
+  /**
    * Plugin Action 名称列表。
    */
   actions: string[];
@@ -441,6 +449,14 @@ export interface Plugin {
    * Plugin 稳定名称。
    */
   name: string;
+  /**
+   * Plugin 面向用户界面的展示标题。
+   */
+  title: string;
+  /**
+   * Plugin 面向人类的用途说明。
+   */
+  description: string;
   /**
    * Plugin 配置定义（可选）。
    */

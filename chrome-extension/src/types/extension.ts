@@ -2,7 +2,7 @@
  * Chrome 插件内部类型定义。
  *
  * 关键点（中文）：
- * - 统一收口 popup 表单、运行状态与页面上下文类型。
+ * - 统一收口扩展弹窗表单、运行状态与页面上下文类型。
  * - 避免在 UI 代码中散落匿名对象类型。
  */
 
@@ -41,7 +41,7 @@ export interface ExtensionSettings {
   quickPrompts: ExtensionQuickPromptItem[];
 
   /**
-   * 默认常用问题模板 id（用于 popup 快速填入默认值）。
+   * 默认常用问题模板 id（用于扩展弹窗快速填入默认值）。
    */
   defaultQuickPromptId: string;
 }

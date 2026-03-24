@@ -236,10 +236,11 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const refreshPlugins = useCallback(
     async (agentId: string) => {
       if (!agentId) {
-        setPlugins([]);
         return;
       }
-      setPlugins(await queryPlugins(requestJson, agentId));
+      const nextPlugins = await queryPlugins(requestJson, agentId);
+      setPlugins(nextPlugins);
+      return nextPlugins;
     },
     [requestJson],
   );
@@ -493,7 +494,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   const runPluginAction = useCallback(
     async (pluginName: string, actionName: string) => {
-      await runPluginActionMutation({
+      return runPluginActionMutation({
         requestJson,
         pluginName,
         actionName,
@@ -502,7 +503,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         showToast,
       });
     },
-    [refreshPlugins, requestJson, showToast],
+    [refreshPlugins, requestJson, selectedAgentId, showToast],
   );
 
   const runChatChannelAction = useCallback(

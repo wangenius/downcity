@@ -1,5 +1,5 @@
 /**
- * Popup 纯工具函数。
+ * Extension Popup 纯工具函数。
  *
  * 关键点（中文）：
  * - 仅承载无副作用的字符串/样式/展示工具。
@@ -11,9 +11,9 @@ import { DEFAULT_SETTINGS } from "../services/storage";
 import type { ActiveTabContext, ExtensionSettings } from "../types/extension";
 
 /**
- * Popup toast 消息。
+ * Extension Popup toast 消息。
  */
-export interface PopupToastMessage {
+export interface ExtensionPopupToastMessage {
   /**
    * toast 类型。
    */
@@ -33,9 +33,9 @@ export function readErrorText(error: unknown): string {
 }
 
 /**
- * 解析 popup 当前应使用的 Console 地址。
+ * 解析扩展弹窗当前应使用的 Console 地址。
  */
-export function resolvePopupConsoleBaseUrl(settings: ExtensionSettings): {
+export function resolveExtensionPopupConsoleBaseUrl(settings: ExtensionSettings): {
   /**
    * 最终 Base URL。
    */
@@ -63,7 +63,7 @@ export function resolvePopupConsoleBaseUrl(settings: ExtensionSettings): {
 /**
  * 生成发送给 Agent 的说明文本。
  */
-export function buildPopupInstructions(params: {
+export function buildExtensionPopupInstructions(params: {
   /**
    * 当前活动标签页。
    */
@@ -86,7 +86,7 @@ export function buildPopupInstructions(params: {
 }
 
 /**
- * 缩短 URL 供 popup 展示。
+ * 缩短 URL 供扩展弹窗展示。
  */
 export function shortenUrl(value: string): string {
   const text = String(value || "").trim();
@@ -109,7 +109,7 @@ export function normalizeInitialTaskPrompt(value: string): string {
 /**
  * 计算 toast 样式。
  */
-export function getToastToneClass(type: PopupToastMessage["type"]): string {
+export function getToastToneClass(type: ExtensionPopupToastMessage["type"]): string {
   return type === "error"
     ? "border-[#d9b2ae] bg-[#faf5f5] text-[#7f1d1d]"
     : "border-border bg-surface text-foreground";

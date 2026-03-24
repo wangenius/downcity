@@ -1,0 +1,34 @@
+---
+title: 构建与发布约束
+description: 扩展的构建入口、manifest 约束、content-script 产物要求与协作注意事项
+---
+
+# 构建与发布约束
+
+## 统一构建入口
+
+扩展构建统一通过：
+
+```bash
+npm run build:extension
+```
+
+它会：
+
+1. 自动提升 extension patch 版本
+2. 执行 TypeScript 检查
+3. 输出 `chrome-extension/dist`
+
+## 为什么不能只跑局部构建
+
+因为 extension 有几个硬约束：
+
+- `manifest.json` 依赖稳定文件名
+- content script 不能随便变成 module/chunk 形式
+- Extension Popup / options / Inline Composer 必须一起验证
+
+## 协作注意事项
+
+- 改 extension 后一定要重新 build
+- 如果改了用户可见行为，也要同步更新 `/docs`
+- 如果改了实现边界、构建规则或交互设计，也要同步更新 `/devdocs`

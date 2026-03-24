@@ -22,8 +22,8 @@ import {
   saveSettings,
 } from "../services/storage";
 import { getStatusClass, readErrorText, type OptionsStatus } from "./helpers";
-import type { PopupSelectOption } from "../types/PopupSelect";
-import { PopupSelect } from "../popup/PopupSelect";
+import type { ExtensionSelectOption } from "../types/ExtensionSelect";
+import { ExtensionPopupSelect } from "../extension-popup/ExtensionPopupSelect";
 
 export function App() {
   const [settings, setSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
@@ -41,7 +41,7 @@ export function App() {
     text: "修改后保存即可",
   });
 
-  const agentOptions = useMemo<PopupSelectOption[]>(
+  const agentOptions = useMemo<ExtensionSelectOption[]>(
     () =>
       agents.map((item) => ({
         value: item.id,
@@ -51,7 +51,7 @@ export function App() {
     [agents],
   );
 
-  const chatSelectOptions = useMemo<PopupSelectOption[]>(
+  const chatSelectOptions = useMemo<ExtensionSelectOption[]>(
     () =>
       chatOptions.map((item) => ({
         value: item.chatKey,
@@ -251,7 +251,7 @@ export function App() {
     try {
       await saveSettings(nextSettings);
       setSettings(nextSettings);
-      setStatus({ type: "success", text: "已保存，popup 和页面内发送会使用新设置" });
+      setStatus({ type: "success", text: "已保存，扩展弹窗和页内输入框会使用新设置" });
     } catch (error) {
       setStatus({ type: "error", text: `保存失败：${readErrorText(error)}` });
     } finally {
@@ -308,7 +308,7 @@ export function App() {
             </div>
           </div>
 
-          <PopupSelect
+          <ExtensionPopupSelect
             label="Default Agent"
             value={settings.agentId}
             placeholder={
@@ -323,7 +323,7 @@ export function App() {
             disabled={isLoadingAgents || agentOptions.length === 0}
           />
 
-          <PopupSelect
+          <ExtensionPopupSelect
             label="Default Chat"
             value={settings.chatKey}
             placeholder={

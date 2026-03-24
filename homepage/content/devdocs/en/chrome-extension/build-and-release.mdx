@@ -1,0 +1,34 @@
+---
+title: Build and Release Constraints
+description: Build entry points, manifest constraints, content-script output rules, and contributor expectations
+---
+
+# Build and Release Constraints
+
+## Unified Build Entry
+
+The extension build should go through:
+
+```bash
+npm run build:extension
+```
+
+It will:
+
+1. bump the extension patch version
+2. run TypeScript validation
+3. emit `chrome-extension/dist`
+
+## Why Local Partial Builds Are Not Enough
+
+The extension has a few hard constraints:
+
+- `manifest.json` depends on stable file names
+- the content script cannot silently turn into a module/chunk graph
+- Extension Popup, options, and Inline Composer should be validated together
+
+## Contributor Expectations
+
+- always rebuild after extension changes
+- if user-facing behavior changes, update `/docs`
+- if architecture, build rules, or implementation boundaries change, update `/devdocs`

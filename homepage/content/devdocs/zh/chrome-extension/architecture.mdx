@@ -16,18 +16,18 @@ description: 浏览器扩展如何抓取页面上下文并把任务投递给 Dow
 
 ## 主要模块
 
-- `src/popup/`：扩展弹窗 UI
+- `src/extension-popup/`：扩展弹窗 UI
 - `src/options/`：设置页
 - `src/services/downcityApi.ts`：访问 agent、context、任务投递的 API 边界
 - `src/services/pageMarkdown.ts`：页面结构化抓取与 Markdown 生成
 - `src/services/storage.ts`：扩展本地偏好存储
-- `public/content-script.js`：选区 hoverbar 与页内发送面板
+- `src/inline-composer/`：Inline Composer 交互与页内发送逻辑
 
 ## 执行链路
 
 ```text
 用户操作
-  -> popup 或 content script
+  -> Extension Popup 或 Inline Composer
     -> 采集页面 / 选区上下文
       -> 生成 Markdown 附件
         -> POST 到 console gateway
@@ -36,6 +36,6 @@ description: 浏览器扩展如何抓取页面上下文并把任务投递给 Dow
 
 ## 设计说明
 
-- popup 与 options 是 React 页面
+- Extension Popup 与 options 是 React 页面
 - 页面内选区面板仍然由 content script 驱动，但样式产物已经接入统一构建链
-- 请求投递优先用 `sendBeacon`，回退到 `keepalive fetch`，确保 popup 关闭后请求仍能继续发出
+- 请求投递优先用 `sendBeacon`，回退到 `keepalive fetch`，确保扩展弹窗关闭后请求仍能继续发出

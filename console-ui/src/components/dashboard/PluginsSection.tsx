@@ -1,19 +1,24 @@
 /**
- * Plugin 状态区。
+ * Plugin 状态卡片区。
  *
  * 关键点（中文）
- * - plugin 不再暴露 lifecycle 状态机，只展示启用/可用/依赖与 action。
- * - UI 只提供无需额外参数的快捷 action，避免把复杂安装流塞进 dashboard。
+ * - 这一区域把 plugin 当成“状态卡片”，不是命令面板。
+ * - toggle 负责启用态切换；status / doctor 是辅助检查工具。
+ * - UI 采用“本地即时切换 + 后台刷新校准”的模型，避免状态延迟感。
  */
 
 import * as React from "react"
-import { CheckIcon, Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react"
-import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "./dashboard-action-button"
+import { ActivityIcon, ChevronDownIcon, Loader2Icon, WrenchIcon } from "lucide-react"
 import { DashboardModule } from "./DashboardModule"
-import { Button } from "../ui/button"
 import { useConfirmDialog } from "../ui/confirm-dialog"
 import { Input } from "../ui/input"
-import type { UiPluginActionItem, UiPluginRuntimeItem } from "../../types/Dashboard"
+import type {
+  UiPluginActionExecutionResult,
+  UiPluginActionItem,
+  UiPluginRuntimeItem,
+} from "../../types/Dashboard"
+
+type PendingActionKind = "toggle" | "status" | "doctor"
 
 export interface PluginsSectionProps {
   /**
@@ -22,8 +27,6 @@ export interface PluginsSectionProps {
   plugins: UiPluginRuntimeItem[]
   /**
    * 当前是否存在运行中的 agent。
-   * - plugin 数据来自运行中 agent runtime。
-   * - 没有运行中 agent 时，页面应提示原因，而不是误导成“没有 plugin”。
    */
   hasRunningAgent: boolean
   /**
@@ -41,94 +44,213 @@ export interface PluginsSectionProps {
   /**
    * 运行无需额外参数的 plugin action。
    */
-  onRunAction: (pluginName: string, actionName: string) => void
+  onRunAction: (
+    pluginName: string,
+    actionName: string,
+  ) => Promise<UiPluginActionExecutionResult>
 }
 
 function hasAction(actionItems: UiPluginActionItem[], actionName: string): boolean {
   return actionItems.some((item) => String(item.name || "").trim() === actionName)
 }
 
+function getSnapshotMode(item: UiPluginRuntimeItem): "enabled" | "disabled" | "unavailable" {
+  const raw = String(item.state || "").trim().toLowerCase()
+  if (raw === "disabled") return "disabled"
+  if (raw === "available") return "enabled"
+  return "unavailable"
+}
+
+function getSnapshotEnabled(item: UiPluginRuntimeItem): boolean {
+  return getSnapshotMode(item) !== "disabled"
+}
+
+function getCardTone(mode: "enabled" | "disabled" | "unavailable"): {
+  cardClass: string
+  badgeLabel: string
+  badgeClass: string
+  dotClass: string
+} {
+  if (mode === "enabled") {
+    return {
+      cardClass:
+        "border-border/55 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--background)_96%,var(--secondary)_4%)_0%,var(--background)_100%)] hover:border-border/70",
+      badgeLabel: "Enabled",
+      badgeClass: "bg-emerald-500/10 text-emerald-700",
+      dotClass: "bg-emerald-600",
+    }
+  }
+  if (mode === "disabled") {
+    return {
+      cardClass:
+        "border-border/50 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--background)_98%,var(--secondary)_2%)_0%,color-mix(in_oklab,var(--background)_95%,var(--secondary)_5%)_100%)] hover:border-border/65",
+      badgeLabel: "Disabled",
+      badgeClass: "border border-border/60 bg-background text-muted-foreground",
+      dotClass: "bg-muted-foreground/35",
+    }
+  }
+  return {
+    cardClass:
+      "border-amber-200/70 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--background)_97%,oklch(0.92_0.02_85)_3%)_0%,color-mix(in_oklab,var(--background)_93%,oklch(0.92_0.02_85)_7%)_100%)] hover:border-amber-300/70",
+    badgeLabel: "Unavailable",
+    badgeClass: "bg-amber-500/10 text-amber-700",
+    dotClass: "bg-amber-500",
+  }
+}
+
+function PluginSwitch(props: {
+  checked: boolean
+  syncing: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  const { checked, syncing, disabled = false, onClick } = props
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || syncing}
+      aria-busy={syncing}
+      aria-pressed={checked}
+      className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition-all disabled:pointer-events-none disabled:opacity-50 ${
+        checked
+          ? "border-foreground/10 bg-foreground/80"
+          : "border-border/70 bg-secondary"
+      } ${syncing ? "shadow-[0_0_0_3px_rgba(24,119,242,0.08)]" : ""}`}
+    >
+      {syncing ? (
+        <span className="absolute inset-0 overflow-hidden rounded-full">
+          <span className="absolute inset-y-0 left-[-35%] w-[55%] animate-[plugin-switch-glide_0.9s_linear_infinite] rounded-full bg-white/18" />
+        </span>
+      ) : null}
+      <span
+        className={`absolute flex size-6 items-center justify-center rounded-full bg-background shadow-sm transition-transform ${
+          checked ? "translate-x-7" : "translate-x-1"
+        }`}
+      >
+        {syncing ? <Loader2Icon className="size-3 animate-spin text-foreground/70" /> : null}
+      </span>
+    </button>
+  )
+}
+
+function ToolAction(props: {
+  icon: React.ReactNode
+  label: string
+  loading: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  const { icon, label, loading, disabled = false, onClick } = props
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || loading}
+      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-[12px] text-muted-foreground transition-colors hover:border-border/60 hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+    >
+      {loading ? <Loader2Icon className="size-3.5 animate-spin" /> : icon}
+      <span>{label}</span>
+    </button>
+  )
+}
+
 export function PluginsSection(props: PluginsSectionProps) {
   const { plugins, hasRunningAgent, selectedAgentName, onRunAction } = props
   const confirm = useConfirmDialog()
   const [search, setSearch] = React.useState("")
-  const [actionLoadingKey, setActionLoadingKey] = React.useState("")
+  const [pendingActions, setPendingActions] = React.useState<Record<string, PendingActionKind | null>>({})
+  const [enabledOverrides, setEnabledOverrides] = React.useState<Record<string, boolean | undefined>>({})
+  const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({})
 
-  const filtered = plugins.filter((item) => {
+  React.useEffect(() => {
+    setEnabledOverrides((current) => {
+      let changed = false
+      const next = { ...current }
+      for (const plugin of plugins) {
+        const key = String(plugin.name || "").trim()
+        if (!key) continue
+        const override = next[key]
+        if (override === undefined) continue
+        if (override === getSnapshotEnabled(plugin)) {
+          delete next[key]
+          changed = true
+        }
+      }
+      return changed ? next : current
+    })
+  }, [plugins])
+
+  const filtered = React.useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return true
-    return String(item.name || "").toLowerCase().includes(query)
-  })
+    return plugins.filter((item) => {
+      if (!query) return true
+      return String(item.name || "").toLowerCase().includes(query)
+    })
+  }, [plugins, search])
 
   const summary = React.useMemo(() => {
-    let available = 0
+    let enabled = 0
     let disabled = 0
     let unavailable = 0
     for (const item of filtered) {
-      const state = String(item.state || "").toLowerCase()
-      if (state === "available") {
-        available += 1
-        continue
-      }
-      if (state === "disabled") {
-        disabled += 1
-        continue
-      }
-      unavailable += 1
+      const mode = getSnapshotMode(item)
+      if (mode === "enabled") enabled += 1
+      else if (mode === "disabled") disabled += 1
+      else unavailable += 1
     }
-    return { available, disabled, unavailable }
+    return { enabled, disabled, unavailable }
   }, [filtered])
 
-  const resolveStateTone = React.useCallback((stateInput?: string) => {
-    const state = String(stateInput || "").toLowerCase()
-    if (state === "available") {
-      return {
-        badge: "bg-emerald-500/10 text-emerald-700",
-        dot: "bg-emerald-600",
-        row: "text-foreground",
+  const executeAction = React.useCallback(
+    async (pluginName: string, pendingKind: PendingActionKind, actionName: string) => {
+      const startedAt = Date.now()
+      setPendingActions((current) => ({
+        ...current,
+        [pluginName]: pendingKind,
+      }))
+
+      try {
+        const result = await onRunAction(pluginName, actionName)
+
+        if (pendingKind === "toggle") {
+          const targetEnabled = actionName === "on"
+          if (result.success) {
+            setEnabledOverrides((current) => ({
+              ...current,
+              [pluginName]: targetEnabled,
+            }))
+          }
+          const elapsed = Date.now() - startedAt
+          if (elapsed < 260) {
+            await new Promise((resolve) => window.setTimeout(resolve, 260 - elapsed))
+          }
+          return
+        }
+      } finally {
+        setPendingActions((current) => ({
+          ...current,
+          [pluginName]: null,
+        }))
       }
-    }
-    if (state === "disabled") {
-      return {
-        badge: "bg-secondary text-muted-foreground",
-        dot: "bg-muted-foreground/55",
-        row: "text-muted-foreground opacity-80",
-      }
-    }
-    return {
-      badge: "bg-destructive/10 text-destructive",
-      dot: "bg-destructive",
-      row: "text-foreground",
-    }
-  }, [])
+    },
+    [onRunAction],
+  )
 
   return (
     <DashboardModule
       title="Plugins"
-      description={`available ${summary.available} · disabled ${summary.disabled}${summary.unavailable > 0 ? ` · unavailable ${summary.unavailable}` : ""}`}
+      description={`enabled ${summary.enabled} · disabled ${summary.disabled}${summary.unavailable > 0 ? ` · unavailable ${summary.unavailable}` : ""}`}
       bodyClassName="min-h-0 overflow-y-auto"
       actions={
-        <>
-          <div className="hidden flex-wrap items-center gap-2 text-xs md:flex">
-            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">
-              available {summary.available}
-            </span>
-            <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
-              disabled {summary.disabled}
-            </span>
-            {summary.unavailable > 0 ? (
-              <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">
-                unavailable {summary.unavailable}
-              </span>
-            ) : null}
-          </div>
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索 plugin"
-            className="w-[220px]"
-          />
-        </>
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="搜索 plugin"
+          className="w-[220px]"
+        />
       }
     >
       {!hasRunningAgent && filtered.length === 0 ? (
@@ -138,264 +260,235 @@ export function PluginsSection(props: PluginsSectionProps) {
             : "当前没有运行中的 agent，Console UI 无法读取 runtime plugins。先启动 agent 再查看。"}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-[18px] bg-secondary px-4 py-6 text-sm text-muted-foreground">当前运行中的 agent 没有可展示的 plugin。</div>
+        <div className="rounded-[18px] bg-secondary px-4 py-6 text-sm text-muted-foreground">
+          当前运行中的 agent 没有可展示的 plugin。
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filtered.map((item) => {
-            const name = String(item.name || "unknown")
-            const state = String(item.state || "unknown").toLowerCase()
-            const availability = item.availability || {}
+            const name = String(item.name || "unknown").trim() || "unknown"
+            const title = String(item.title || name).trim() || name
             const actionItems = Array.isArray(item.config?.actions) ? item.config?.actions : []
-            const pipelineItems = Array.isArray(item.pipelines) ? item.pipelines : []
-            const guardItems = Array.isArray(item.guards) ? item.guards : []
-            const effectItems = Array.isArray(item.effects) ? item.effects : []
-            const resolveItems = Array.isArray(item.resolves) ? item.resolves : []
-            const pluginPointCount =
-              pipelineItems.length + guardItems.length + effectItems.length + resolveItems.length
-            const requiredAssets = Array.isArray(item.requiredAssets) ? item.requiredAssets : []
-            const lastError = String(item.lastError || "").trim()
-            const tone = resolveStateTone(state)
-            const loadingStatus = actionLoadingKey === `${name}:status`
-            const loadingDoctor = actionLoadingKey === `${name}:doctor`
-            const loadingOn = actionLoadingKey === `${name}:on`
-            const loadingOff = actionLoadingKey === `${name}:off`
+            const description = String(item.description || "").trim()
+            const snapshotMode = getSnapshotMode(item)
+            const snapshotEnabled = getSnapshotEnabled(item)
+            const effectiveEnabled = enabledOverrides[name] ?? snapshotEnabled
+            const pending = pendingActions[name] || null
+            const toggleLoading = pending === "toggle"
+            const statusLoading = pending === "status"
+            const doctorLoading = pending === "doctor"
             const canRunStatus = hasAction(actionItems, "status")
             const canRunDoctor = hasAction(actionItems, "doctor")
             const canRunOn = hasAction(actionItems, "on")
             const canRunOff = hasAction(actionItems, "off")
+            const canToggle = canRunOn || canRunOff
+            const tone = getCardTone(
+              effectiveEnabled
+                ? snapshotMode === "unavailable"
+                  ? "unavailable"
+                  : "enabled"
+                : "disabled",
+            )
+            const reasons = Array.isArray(item.availability?.reasons) ? item.availability?.reasons : []
+            const availabilityMessage =
+              snapshotMode === "unavailable"
+                ? reasons.filter((entry) => String(entry || "").trim()).join("; ")
+                : ""
+            const expanded = expandedItems[name] === true
+            const pipelineItems = Array.isArray(item.pipelines) ? item.pipelines : []
+            const guardItems = Array.isArray(item.guards) ? item.guards : []
+            const effectItems = Array.isArray(item.effects) ? item.effects : []
+            const resolveItems = Array.isArray(item.resolves) ? item.resolves : []
+            const requiredAssets = Array.isArray(item.requiredAssets) ? item.requiredAssets : []
 
             return (
               <article
                 key={name}
-                className={`rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-secondary ${tone.row}`}
+                className={`rounded-[24px] border px-5 py-4 shadow-[0_1px_0_rgba(17,17,19,0.02)] transition-all ${tone.cardClass}`}
               >
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className={`mt-0.5 size-2.5 shrink-0 rounded-full ${tone.dot}`} />
+                      <div className="mt-0.5 flex shrink-0 flex-col items-center">
+                        <div className={`size-2.5 rounded-full ${tone.dotClass}`} />
+                        <div className="mt-2 h-full min-h-10 w-px bg-border/55" />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="truncate text-[15px] font-semibold text-foreground">{name}</div>
-                          <span className={`inline-flex h-6 items-center rounded-full px-2 font-mono text-[11px] ${tone.badge}`}>
-                            {state}
+                          <div className="truncate text-[16px] font-semibold tracking-[-0.02em] text-foreground">{title}</div>
+                          <span className="inline-flex h-6 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground">
+                            {name}
                           </span>
-                          {item.hasSystem ? (
-                            <span className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85">
-                              system
+                          <span className={`inline-flex h-6 items-center rounded-full px-2.5 font-mono text-[11px] ${tone.badgeClass}`}>
+                            {tone.badgeLabel}
+                          </span>
+                          {toggleLoading ? (
+                            <span className="inline-flex h-6 items-center gap-1 rounded-full bg-primary/10 px-2.5 text-[11px] font-medium text-primary">
+                              <Loader2Icon className="size-3 animate-spin" />
+                              <span>Updating</span>
                             </span>
                           ) : null}
                         </div>
-                        <div className="truncate text-[12px] text-muted-foreground">
-                          {`enabled ${availability.enabled === true ? "yes" : "no"} · available ${availability.available === true ? "yes" : "no"}`}
+                        {description ? (
+                          <div className="mt-1 max-w-2xl text-[13px] leading-6 text-foreground/72">{description}</div>
+                        ) : null}
+                        {availabilityMessage ? (
+                          <div className="mt-3 rounded-[14px] bg-amber-500/8 px-3 py-2 text-[12px] leading-5 text-amber-700">
+                            {availabilityMessage}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 flex-col items-start gap-2 lg:min-w-[250px] lg:items-end">
+                    {canToggle ? (
+                      <PluginSwitch
+                        checked={effectiveEnabled}
+                        syncing={toggleLoading}
+                        disabled={statusLoading || doctorLoading}
+                        onClick={() => {
+                          const nextAction = effectiveEnabled ? "off" : "on"
+                          if (nextAction === "off") {
+                            void (async () => {
+                              const confirmed = await confirm({
+                                title: "关闭 Plugin",
+                                description: `确认关闭 "${name}"？`,
+                                confirmText: "关闭",
+                                confirmVariant: "destructive",
+                              })
+                              if (!confirmed) return
+                              await executeAction(name, "toggle", "off")
+                            })()
+                            return
+                          }
+                          void executeAction(name, "toggle", "on")
+                        }}
+                      />
+                    ) : null}
+
+                    <div className="flex items-center gap-1 rounded-full bg-secondary/70 p-1">
+                      <button
+                        type="button"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-[12px] text-muted-foreground transition-colors hover:border-border/60 hover:bg-background hover:text-foreground"
+                        onClick={() =>
+                          setExpandedItems((current) => ({
+                            ...current,
+                            [name]: !expanded,
+                          }))
+                        }
+                      >
+                        <ChevronDownIcon
+                          className={`size-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
+                        />
+                        <span>{expanded ? "Hide details" : "Show details"}</span>
+                      </button>
+                      {canRunStatus ? (
+                          <ToolAction
+                            icon={<ActivityIcon className="size-3.5" />}
+                            label="Status"
+                            loading={statusLoading}
+                            disabled={toggleLoading || doctorLoading}
+                            onClick={() => {
+                              void executeAction(name, "status", "status")
+                            }}
+                          />
+                        ) : null}
+                      {canRunDoctor ? (
+                          <ToolAction
+                            icon={<WrenchIcon className="size-3.5" />}
+                            label="Doctor"
+                            loading={doctorLoading}
+                            disabled={toggleLoading || statusLoading}
+                            onClick={() => {
+                              void executeAction(name, "doctor", "doctor")
+                            }}
+                          />
+                        ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                {expanded ? (
+                  <div className="mt-4 border-t border-border/55 pt-4">
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                          Hooks
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {pipelineItems.map((entry) => (
+                            <span
+                              key={`${name}:pipeline:${entry}`}
+                              className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 font-mono text-[11px] text-foreground/82"
+                            >
+                              {`pipeline · ${entry}`}
+                            </span>
+                          ))}
+                          {guardItems.map((entry) => (
+                            <span
+                              key={`${name}:guard:${entry}`}
+                              className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 font-mono text-[11px] text-foreground/82"
+                            >
+                              {`guard · ${entry}`}
+                            </span>
+                          ))}
+                          {effectItems.map((entry) => (
+                            <span
+                              key={`${name}:effect:${entry}`}
+                              className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 font-mono text-[11px] text-foreground/82"
+                            >
+                              {`effect · ${entry}`}
+                            </span>
+                          ))}
+                          {resolveItems.map((entry) => (
+                            <span
+                              key={`${name}:resolve:${entry}`}
+                              className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 font-mono text-[11px] text-foreground/82"
+                            >
+                              {`resolve · ${entry}`}
+                            </span>
+                          ))}
+                          {pipelineItems.length === 0 &&
+                          guardItems.length === 0 &&
+                          effectItems.length === 0 &&
+                          resolveItems.length === 0 ? (
+                            <span className="text-[12px] text-muted-foreground">No hooks declared.</span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                          Capabilities
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {requiredAssets.map((entry) => (
+                            <span
+                              key={`${name}:asset:${entry}`}
+                              className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 font-mono text-[11px] text-foreground/82"
+                            >
+                              {entry}
+                            </span>
+                          ))}
+                          {actionItems.map((entry) => (
+                            <span
+                              key={`${name}:action:${String(entry.name || "unknown")}`}
+                              className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 font-mono text-[11px] text-foreground/82"
+                            >
+                              {String(entry.name || "unknown")}
+                            </span>
+                          ))}
+                          {requiredAssets.length === 0 && actionItems.length === 0 ? (
+                            <span className="text-[12px] text-muted-foreground">
+                              No additional capabilities exposed.
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 pl-[1.375rem] text-[11px] text-muted-foreground">
-                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
-                        {`points ${pluginPointCount}`}
-                      </span>
-                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
-                        {`assets ${requiredAssets.length}`}
-                      </span>
-                      <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5">
-                        {`actions ${actionItems.length}`}
-                      </span>
-                      {lastError ? (
-                        <span className="inline-flex max-w-full items-center truncate rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">
-                          {lastError}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {pipelineItems.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
-                        {pipelineItems.map((pointName) => (
-                          <span
-                            key={`${name}:pipeline:${pointName}`}
-                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
-                          >
-                            {`pipeline · ${pointName}`}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {guardItems.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
-                        {guardItems.map((pointName) => (
-                          <span
-                            key={`${name}:guard:${pointName}`}
-                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
-                          >
-                            {`guard · ${pointName}`}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {effectItems.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
-                        {effectItems.map((pointName) => (
-                          <span
-                            key={`${name}:effect:${pointName}`}
-                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
-                          >
-                            {`effect · ${pointName}`}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {resolveItems.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
-                        {resolveItems.map((pointName) => (
-                          <span
-                            key={`${name}:resolve:${pointName}`}
-                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
-                          >
-                            {`resolve · ${pointName}`}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {requiredAssets.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
-                        {requiredAssets.map((assetName) => (
-                          <span
-                            key={`${name}:asset:${assetName}`}
-                            className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
-                          >
-                            {assetName}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {actionItems.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 pl-[1.375rem]">
-                        {actionItems.map((action) => {
-                          const actionName = String(action?.name || "unknown")
-                          const modeLabel = [
-                            action?.supportsCommand ? "cmd" : "",
-                            action?.supportsApi ? "api" : "",
-                          ].filter(Boolean).join("+") || "none"
-                          return (
-                            <span
-                              key={`${name}:action:${actionName}`}
-                              className="inline-flex h-6 items-center rounded-full bg-secondary px-2 font-mono text-[11px] text-foreground/85"
-                              title={`${actionName} · ${modeLabel}${
-                                action?.apiMethod && action?.apiPath ? ` · ${action.apiMethod} ${action.apiPath}` : ""
-                              }`}
-                            >
-                              {`${actionName}·${modeLabel}`}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    ) : null}
                   </div>
-
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 xl:pl-4">
-                    {canRunStatus ? (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={dashboardIconButtonClass}
-                        disabled={loadingStatus || loadingDoctor || loadingOn || loadingOff}
-                        aria-label="status"
-                        title="status"
-                        onClick={async () => {
-                          try {
-                            setActionLoadingKey(`${name}:status`)
-                            await Promise.resolve(onRunAction(name, "status"))
-                          } finally {
-                            setActionLoadingKey("")
-                          }
-                        }}
-                      >
-                        {loadingStatus ? <Loader2Icon className="size-4 animate-spin" /> : <CheckIcon className="size-4" />}
-                      </Button>
-                    ) : null}
-
-                    {canRunDoctor ? (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={dashboardIconButtonClass}
-                        disabled={loadingStatus || loadingDoctor || loadingOn || loadingOff}
-                        aria-label="doctor"
-                        title="doctor"
-                        onClick={async () => {
-                          try {
-                            setActionLoadingKey(`${name}:doctor`)
-                            await Promise.resolve(onRunAction(name, "doctor"))
-                          } finally {
-                            setActionLoadingKey("")
-                          }
-                        }}
-                      >
-                        {loadingDoctor ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
-                      </Button>
-                    ) : null}
-
-                    {canRunOn ? (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={dashboardIconButtonClass}
-                        disabled={loadingStatus || loadingDoctor || loadingOn || loadingOff}
-                        aria-label="on"
-                        title="on"
-                        onClick={async () => {
-                          try {
-                            setActionLoadingKey(`${name}:on`)
-                            await Promise.resolve(onRunAction(name, "on"))
-                          } finally {
-                            setActionLoadingKey("")
-                          }
-                        }}
-                      >
-                        {loadingOn ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
-                      </Button>
-                    ) : null}
-
-                    {canRunOff ? (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={dashboardDangerIconButtonClass}
-                        disabled={loadingStatus || loadingDoctor || loadingOn || loadingOff}
-                        aria-label="off"
-                        title="off"
-                        onClick={() => {
-                          void (async () => {
-                            const confirmed = await confirm({
-                              title: "关闭 Plugin",
-                              description: `确认关闭 "${name}"？`,
-                              confirmText: "关闭",
-                              confirmVariant: "destructive",
-                            })
-                            if (!confirmed) return
-                            try {
-                              setActionLoadingKey(`${name}:off`)
-                              await Promise.resolve(onRunAction(name, "off"))
-                            } finally {
-                              setActionLoadingKey("")
-                            }
-                          })()
-                        }}
-                      >
-                        {loadingOff ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
-                      </Button>
-                    ) : null}
-
-                    {!canRunStatus && !canRunDoctor && !canRunOn && !canRunOff ? (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    ) : null}
-                  </div>
-                </div>
+                ) : null}
               </article>
             )
           })}

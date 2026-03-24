@@ -1,0 +1,63 @@
+---
+title: Install and Connect
+description: How to build, load, and connect the Chrome extension to your local Downcity Console and Agent
+---
+
+# Install and Connect
+
+## Prerequisites
+
+Before using the extension, you will usually want these running:
+
+```bash
+city console start
+city console ui start
+city agent start
+```
+
+If you load the extension from this repo, build it first:
+
+```bash
+npm run build:extension
+```
+
+## Load It in Chrome
+
+1. Open `chrome://extensions`
+2. Enable `Developer mode`
+3. Click `Load unpacked`
+4. Choose `chrome-extension/dist`
+
+## First-Time Configuration
+
+The default extension target is:
+
+- Host: `127.0.0.1`
+- Port: `5315`
+
+If your Console UI is elsewhere, open the extension settings page and update:
+
+- Console Host
+- Console Port
+- default Agent
+- default Channel Chat
+
+## How Agent and Chat Selection Works
+
+The extension first asks Console for the Agent list, then reads the available chat contexts for that Agent.
+
+If no Chat is available, it usually means:
+
+- that channel has no message history yet
+- the Agent is not running
+- the Console address is wrong
+
+## After Updating the Extension
+
+Whenever extension code changes, rebuild it:
+
+```bash
+npm run build:extension
+```
+
+Then go back to `chrome://extensions` and press the refresh button for the unpacked extension.

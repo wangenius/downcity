@@ -2,7 +2,7 @@
  * Feishu 入站附件类型定义。
  *
  * 关键点（中文）
- * - 统一描述飞书消息中的附件资源，供 channel 下载落地后再转成 `@attach` 指令。
+ * - 统一描述飞书消息中的附件资源，供 channel 下载落地后再转成 `<file>` 标签。
  * - 把“平台原始 message_type”和“Agent 侧附件语义类型”拆开，避免后续多模态扩展时耦合。
  */
 
@@ -13,10 +13,12 @@ import type { FeishuAttachmentType } from "@services/chat/types/FeishuAttachment
  *
  * 说明（中文）
  * - `media` 在飞书中通常表示视频类消息。
+ * - `post` 为飞书富文本消息，内部可能夹带文本、链接、@、图片等节点。
  * - `video` 作为兜底兼容值保留，便于兼容新旧 payload 或未来扩展。
  */
 export type FeishuInboundMessageType =
   | "text"
+  | "post"
   | "image"
   | "file"
   | "audio"
@@ -89,7 +91,7 @@ export interface FeishuIncomingAttachmentDescriptor {
    * Agent 侧附件类型。
    *
    * 说明（中文）
-   * - 会直接映射到 `@attach <type> ...`。
+   * - 会直接映射到 `<file type="...">...</file>`。
    */
   type: FeishuAttachmentType;
 
@@ -122,7 +124,7 @@ export interface FeishuIncomingAttachmentDescriptor {
    * 可选的附件说明。
    *
    * 说明（中文）
-   * - 当前主要用于生成更友好的 `@attach ... | desc`。
+   * - 当前主要用于生成更友好的 `<file caption="...">` 文案。
    */
   description?: string;
 

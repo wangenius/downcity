@@ -45,6 +45,14 @@
 ## 使用规范
 - 这是 Bash-first 聊天集成：用户可见内容必须通过执行 `city chat send` 发送。
 - 优先使用 `send` 输出用户可见结果，正文应简洁、可直接发送。
+- `send` 正文支持可选 frontmatter metadata，字段语义与命令参数一致：
+  - `chatKey`：目标会话
+  - `delay` / `delayMs`：延迟发送
+  - `time` / `sendAt` / `sendAtMs`：定时发送
+  - `reply`：是否按 reply 发送
+  - `messageId`：显式指定 reply 目标消息
+- `send` 正文中的附件统一使用 `<file type="...">path</file>`，不要使用 `@attach`。
+- 多附件可输出多个 `<file>` 标签；附件路径必须是项目内可访问的相对路径。
 - 当只需表达“已收到/认可/态度”时，可优先使用 `react`，避免发送冗余文本。
 - 调用 `send` 时必须保证 `chatKey` 可解析（显式传参或可从上下文推导）。
 - 调用 `react` 时尽量提供（或确保可回填）`messageId`，这样平台可精确贴到目标消息。
@@ -53,6 +61,7 @@
 - 默认使用单引号包裹 `--text`，例如：`city chat send --text '你好'`。
 - `send` 支持 `--delay <ms>`（非负整数，毫秒）用于延迟发送。
 - `send` 支持 `--time <time>`（Unix 时间戳秒/毫秒或 ISO 时间；ISO 必须显式时区）用于定时发送。
+- `send` 支持 `--message-id <id>` 显式指定 reply 目标消息。
 - `--delay` 与 `--time` 互斥，不能同时传。
 - 多行正文使用 heredoc 管道到 stdin，例如：
   `cat <<'EOF' | city chat send --stdin --chat-key <chatKey>`

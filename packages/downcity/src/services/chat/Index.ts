@@ -13,13 +13,16 @@ import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import {
   deleteChatByChatKey,
+  normalizeChatSendText,
   resolveChatContextSnapshot,
   resolveChatKey,
   sendChatActionByChatKey,
   sendChatTextByChatKey,
 } from "./Action.js";
+import { buildChatMessageText, parseChatMessageMarkup } from "./runtime/ChatMessageMarkup.js";
 import { readChatHistory } from "./runtime/ChatHistoryStore.js";
 import { resolveChatMethod, type ChatMethod } from "./runtime/ChatMethod.js";
+import { parseChatSendOptionsFromMetadata } from "./runtime/ChatSendMetadata.js";
 import { listChannelContextRoutes } from "./runtime/ChannelContextStore.js";
 import { readChatMetaByContextId } from "./runtime/ChatMetaStore.js";
 import { createTelegramBot } from "./channels/telegram/Bot.js";
@@ -60,6 +63,7 @@ import {
   getShipChatContextDirPath,
   getShipChatHistoryPath,
 } from "@/console/env/Paths.js";
+import { getRequestContext } from "@agent/context/manager/RequestContext.js";
 
 type ChatChannelState = {
   telegram: TelegramBot | null;
@@ -73,6 +77,7 @@ type ChatSendActionPayload = {
   delayMs?: number;
   sendAtMs?: number;
   replyToMessage?: boolean;
+  messageId?: string;
 };
 
 type ChatContextActionPayload = {
@@ -195,28 +200,39 @@ const CHAT_CHANNEL_PROMPTS: Record<
   },
 };
 
+function resolveCurrentChatPromptChannel(
+  channel: string,
+): "telegram" | "feishu" | "qq" | null {
+  if (channel === "telegram" || channel === "feishu" || channel === "qq") {
+    return channel;
+  }
+  return null;
+}
+
 /**
- * 构建当前启用 channel 的提示词片段。
+ * 构建当前请求所属 channel 的提示词片段。
  *
  * 关键点（中文）
- * - 仅注入已启用 channel，避免给模型引入未接入平台的噪音规则。
+ * - 仅注入当前 context 对应的 channel prompt，避免把其他平台规则混入本轮会话。
+ * - 若当前 context 不是 chat channel（如 consoleui）或尚无路由元信息，则不注入 channel prompt。
  */
-function buildEnabledChannelPrompts(
+async function buildCurrentChannelPrompts(
   context: ServiceRuntime,
   method: ChatMethod,
-): string[] {
-  const prompts: string[] = [];
-  const channels = context.config.services?.chat?.channels || {};
-  if (channels.telegram?.enabled) {
-    prompts.push(CHAT_CHANNEL_PROMPTS.telegram[method]);
-  }
-  if (channels.feishu?.enabled) {
-    prompts.push(CHAT_CHANNEL_PROMPTS.feishu[method]);
-  }
-  if (channels.qq?.enabled) {
-    prompts.push(CHAT_CHANNEL_PROMPTS.qq[method]);
-  }
-  return prompts;
+): Promise<string[]> {
+  const contextId = String(getRequestContext()?.contextId || "").trim();
+  if (!contextId) return [];
+  const meta = await readChatMetaByContextId({
+    context,
+    contextId,
+  }).catch(() => null);
+  const channel = resolveCurrentChatPromptChannel(
+    String(meta?.channel || "")
+      .trim()
+      .toLowerCase(),
+  );
+  if (!channel) return [];
+  return [CHAT_CHANNEL_PROMPTS[channel][method]].filter(Boolean);
 }
 
 let channelState: ChatChannelState = {
@@ -1311,6 +1327,63 @@ function parseSendTimeOptionOrThrow(value: string, fieldName: string): number {
   return parsed;
 }
 
+/**
+ * 解析 chat send 正文协议。
+ *
+ * 关键点（中文）
+ * - 正文支持 frontmatter metadata，字段语义与 `city chat send` 参数一致。
+ * - `<file>` 为唯一附件协议；会保留在规范化正文里，交给渠道出站阶段解析。
+ * - 显式 CLI/API 参数优先，但与 metadata 冲突的 delay/time 组合会报错。
+ */
+function parseChatSendTextProtocol(params: {
+  rawText: string;
+  explicitChatKey?: string;
+  explicitDelayMs?: number;
+  explicitSendAtMs?: number;
+  explicitReplyToMessage?: boolean;
+  explicitMessageId?: string;
+}): ChatSendActionPayload {
+  const parsed = parseChatMessageMarkup(normalizeChatSendText(params.rawText));
+  const metadataOptions = parseChatSendOptionsFromMetadata({
+    metadata: parsed.metadata,
+    strict: true,
+  });
+
+  const delayMs =
+    typeof params.explicitDelayMs === "number"
+      ? params.explicitDelayMs
+      : metadataOptions.delayMs;
+  const sendAtMs =
+    typeof params.explicitSendAtMs === "number"
+      ? params.explicitSendAtMs
+      : metadataOptions.sendAtMs;
+  if (typeof delayMs === "number" && typeof sendAtMs === "number") {
+    throw new Error("`delay` and `time` cannot be used together.");
+  }
+
+  const chatKey = resolveChatKey({
+    chatKey: params.explicitChatKey || metadataOptions.chatKey,
+  });
+  const messageId = String(
+    params.explicitMessageId || metadataOptions.messageId || "",
+  ).trim();
+  const replyToMessage =
+    params.explicitReplyToMessage === true ||
+    metadataOptions.replyToMessage === true;
+
+  return {
+    text: buildChatMessageText({
+      bodyText: parsed.bodyText,
+      files: parsed.files,
+    }),
+    ...(chatKey ? { chatKey } : {}),
+    ...(typeof delayMs === "number" ? { delayMs } : {}),
+    ...(typeof sendAtMs === "number" ? { sendAtMs } : {}),
+    ...(replyToMessage ? { replyToMessage: true } : {}),
+    ...(messageId ? { messageId } : {}),
+  };
+}
+
 function parseOptionalTimestampOrThrow(
   value: string,
   fieldName: string,
@@ -1452,12 +1525,10 @@ async function mapChatSendCommandInput(
     text = await fs.readFile(filePath, "utf8");
   }
 
-  const chatKey = resolveChatKey({
-    chatKey: getStringOpt(input.opts, "chatKey"),
-  });
   const delayRaw = getStringOpt(input.opts, "delay");
   const timeRaw = getStringOpt(input.opts, "time");
   const replyToMessage = getBooleanOpt(input.opts, "reply");
+  const messageId = getStringOpt(input.opts, "messageId");
   const delayMs = delayRaw
     ? parseNonNegativeIntOptionOrThrow(delayRaw, "delay")
     : undefined;
@@ -1465,6 +1536,17 @@ async function mapChatSendCommandInput(
   if (typeof delayMs === "number" && typeof sendAtMs === "number") {
     throw new Error("`--delay` and `--time` cannot be used together.");
   }
+  const payload = parseChatSendTextProtocol({
+    rawText: text,
+    explicitChatKey: getStringOpt(input.opts, "chatKey"),
+    ...(typeof delayMs === "number" ? { explicitDelayMs: delayMs } : {}),
+    ...(typeof sendAtMs === "number" ? { explicitSendAtMs: sendAtMs } : {}),
+    ...(replyToMessage ? { explicitReplyToMessage: true } : {}),
+    ...(messageId ? { explicitMessageId: messageId } : {}),
+  });
+  const chatKey = resolveChatKey({
+    chatKey: payload.chatKey,
+  });
   if (!chatKey) {
     throw new Error(
       "Missing chatKey. Provide --chat-key or ensure DC_CTX_CHAT_KEY is injected in current shell context.",
@@ -1472,11 +1554,12 @@ async function mapChatSendCommandInput(
   }
 
   return {
-    text,
+    text: payload.text,
     chatKey,
-    ...(typeof delayMs === "number" ? { delayMs } : {}),
-    ...(typeof sendAtMs === "number" ? { sendAtMs } : {}),
-    ...(replyToMessage ? { replyToMessage: true } : {}),
+    ...(typeof payload.delayMs === "number" ? { delayMs: payload.delayMs } : {}),
+    ...(typeof payload.sendAtMs === "number" ? { sendAtMs: payload.sendAtMs } : {}),
+    ...(payload.replyToMessage === true ? { replyToMessage: true } : {}),
+    ...(payload.messageId ? { messageId: payload.messageId } : {}),
   };
 }
 
@@ -1505,14 +1588,17 @@ function mapChatSendApiInput(body: JsonValue): ChatSendActionPayload {
   if (typeof delayMs === "number" && typeof sendAtMs === "number") {
     throw new Error("`delayMs` and `sendAtMs` cannot be used together.");
   }
-  return {
-    text: String(payload.text ?? ""),
-    chatKey:
+  return parseChatSendTextProtocol({
+    rawText: String(payload.text ?? ""),
+    explicitChatKey:
       typeof payload.chatKey === "string" ? payload.chatKey.trim() : undefined,
-    ...(typeof delayMs === "number" ? { delayMs } : {}),
-    ...(typeof sendAtMs === "number" ? { sendAtMs } : {}),
-    ...(replyRaw === true ? { replyToMessage: true } : {}),
-  };
+    ...(typeof delayMs === "number" ? { explicitDelayMs: delayMs } : {}),
+    ...(typeof sendAtMs === "number" ? { explicitSendAtMs: sendAtMs } : {}),
+    ...(replyRaw === true ? { explicitReplyToMessage: true } : {}),
+    ...(typeof payload.messageId === "string" || typeof payload.messageId === "number"
+      ? { explicitMessageId: String(payload.messageId).trim() }
+      : {}),
+  });
 }
 
 async function executeChatSendAction(params: {
@@ -1537,6 +1623,9 @@ async function executeChatSendAction(params: {
     delayMs: params.payload.delayMs,
     sendAtMs: params.payload.sendAtMs,
     replyToMessage: params.payload.replyToMessage === true,
+    ...(typeof params.payload.messageId === "string" && params.payload.messageId.trim()
+      ? { messageId: params.payload.messageId.trim() }
+      : {}),
   });
   if (!result.success) {
     return {
@@ -1694,9 +1783,9 @@ async function executeChatDeleteAction(params: {
 
 export const chatService: Service = {
   name: "chat",
-  system: (context) => {
+  system: async (context) => {
     const method = resolveChatMethod(context.config);
-    return [CHAT_SERVICE_PROMPTS[method], ...buildEnabledChannelPrompts(context, method)]
+    return [CHAT_SERVICE_PROMPTS[method], ...(await buildCurrentChannelPrompts(context, method))]
       .filter(Boolean)
       .join("\n\n");
   },
@@ -1926,6 +2015,7 @@ export const chatService: Service = {
               "定时发送时间（Unix 时间戳秒/毫秒或 ISO 时间）",
             )
             .option("--reply", "显式使用 reply_to_message 回复目标消息", false)
+            .option("--message-id <id>", "显式指定 reply 目标消息 ID")
             .option(
               "--chat-key <chatKey>",
               "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）",

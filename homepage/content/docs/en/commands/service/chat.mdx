@@ -66,6 +66,12 @@ city chat <subcommand> [options]
 - `--delay <ms>`: delayed send
 - `--time <time>`: scheduled send (unix sec/ms or ISO)
 - `--reply`: send as `reply_to_message`
+- `--message-id <id>`: explicitly set the reply target message ID
+
+`send` body also supports:
+
+- optional frontmatter metadata with the same meaning as `chat send` parameters (`chatKey`, `delay`, `time`, `reply`, `messageId`)
+- attachments via `<file type="...">path</file>`
 
 ## `react` key options
 
@@ -93,6 +99,14 @@ city chat <subcommand> [options]
 city chat list --limit 20
 city chat info --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+cat <<'EOF' | city chat send --stdin --chat-key ctx_xxxxxxxxxxxxxxxx
+---
+reply: true
+messageId: "128"
+---
+Here is today's report.
+<file type="document">reports/daily.md</file>
+EOF
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat delete --chat-key ctx_xxxxxxxxxxxxxxxx

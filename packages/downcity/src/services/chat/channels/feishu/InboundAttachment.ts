@@ -4,13 +4,14 @@ import type {
   FeishuInboundMessageType,
   FeishuIncomingAttachmentDescriptor,
 } from "@services/chat/types/FeishuInboundAttachment.js";
+import { parseFeishuPostMessageContent } from "./PostMessage.js";
 
 /**
  * Feishu 入站附件工具。
  *
  * 关键点（中文）
  * - 负责把飞书原始 `message_type + content` 归一化成可下载的附件描述。
- * - 负责生成本地缓存文件名与 `@attach` 指令展示名，避免这些细节继续堆在主 channel 文件里。
+ * - 负责生成本地缓存文件名与 `<file>` 标签展示名，避免这些细节继续堆在主 channel 文件里。
  */
 
 function asObject(content: string): Record<string, unknown> {
@@ -25,6 +26,7 @@ function normalizeMessageType(value: string): FeishuInboundMessageType | undefin
   const text = String(value || "").trim().toLowerCase();
   if (
     text === "text" ||
+    text === "post" ||
     text === "image" ||
     text === "file" ||
     text === "audio" ||
@@ -188,6 +190,7 @@ function defaultExtByAttachmentType(
  *
  * 说明（中文）
  * - 文本消息返回正文。
+ * - `post` 消息会降级成“纯文本 + 附件占位”。
  * - 附件消息返回归一化附件描述；正文通常为空。
  * - 不支持的 `message_type` 会返回 `unsupportedType`，由上层决定是否提示用户。
  */
@@ -212,6 +215,12 @@ export function parseFeishuInboundMessage(params: {
   if (messageType === "text") {
     const text = typeof payload.text === "string" ? payload.text : "";
     return { text, attachments: [] };
+  }
+
+  if (messageType === "post") {
+    return parseFeishuPostMessageContent({
+      content: params.content,
+    });
   }
 
   const descriptor = buildDescriptor(messageType, payload);

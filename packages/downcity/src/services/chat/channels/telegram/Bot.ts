@@ -29,6 +29,7 @@ import {
   augmentChatInboundInput,
   buildChatInboundText,
 } from "@services/chat/runtime/InboundAugment.js";
+import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
@@ -820,8 +821,13 @@ export class TelegramBot extends BaseChatChannel {
           incomingAttachments = await this.saveIncomingAttachments(message);
           for (const att of incomingAttachments) {
             const rel = path.relative(this.rootPath, att.path);
-            const desc = att.desc ? ` | ${att.desc}` : "";
-            attachmentLines.push(`@attach ${att.type} ${rel}${desc}`);
+            attachmentLines.push(
+              renderChatMessageFileTag({
+                type: att.type,
+                path: rel,
+                ...(att.desc ? { caption: att.desc } : {}),
+              }),
+            );
           }
         } catch (e) {
           this.logger.warn("Failed to save incoming Telegram attachment(s)", {

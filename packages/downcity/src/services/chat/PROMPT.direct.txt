@@ -6,13 +6,17 @@
 
 ## 参数传递协议
 
-文本顶部可用 frontmatter metadata (optional)：
+文本顶部可用 frontmatter metadata (optional)，字段语义与 `city chat send` 保持一致：
 
-- `reply`：目标 `message_id`(群聊推荐)。设置后按该消息 ID reply。
+- `chatKey`：目标 `chatKey`。
+- `delay` / `delayMs`：延迟发送毫秒数。
+- `time` / `sendAt` / `sendAtMs`：定时发送时间。
+- `reply`：是否使用 reply 语义发送。
+- `messageId`：目标 `message_id`（群聊推荐）。
 - `react`：发送表情反应。
   - 单个字符串：`react: "👍"`
   - 或对象/数组：`emoji/big`
-  - 设置 `reply` 时，`react` 会优先复用该 `message_id` 作为目标消息。
+  - 设置 `messageId` 时，`react` 会优先复用该消息作为目标消息。
 - 附件使用 `<file type="...">path</file>`（支持 `document/photo/voice/audio/video`）。
 - 附件路径必须是项目内可访问的相对路径。多附件可输出多个 `<file>` 标签。
 
@@ -20,7 +24,8 @@
 
 ```text
 ---
-reply: "128"
+reply: true
+messageId: "128"
 react:
   - emoji: "✅"
 ---
@@ -31,12 +36,7 @@ react:
 ### 协议约束
 
 - frontmatter 必须位于文本最开头（`---` 包裹）。
-- `reply` 的值必须是目标 `message_id`。
 - 除 `<file>` 附件标签外，不要使用尖括号格式做控制参数。
-- 需要延迟、定时或跨会话发送时，使用 shell 执行 `city chat send`：
-  - `city chat send --text '...' --delay <ms>`
-  - `city chat send --text '...' --time '<ISO|timestamp>'`
-  - `city chat send --text '...' --chat-key <targetChatKey>`
 
 ## 跨协议/跨平台操作
 

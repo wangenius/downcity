@@ -42,7 +42,8 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
       messageId: "88",
       chatKey: "telegram-chat-10001",
       rootPath,
-      attachmentText: "@attach voice cache/a.ogg\n@attach audio cache/b.mp3",
+      attachmentText:
+        '<file type="voice">cache/a.ogg</file>\n<file type="audio">cache/b.mp3</file>',
       bodyText: "hello",
       pluginSections: [],
       attachments: [
@@ -57,7 +58,7 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
   assert.match(text, /第一段语音/);
   assert.match(text, /第二段音频/);
   assert.match(text, /语音转写/);
-  assert.match(text, /@attach voice/);
+  assert.match(text, /<file type="voice">/);
   assert.match(text, /hello/);
 });
 

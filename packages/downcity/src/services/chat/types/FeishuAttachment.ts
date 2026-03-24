@@ -2,7 +2,7 @@
  * Feishu 附件指令类型定义。
  *
  * 关键点（中文）
- * - 当前用于解析回复文本中的 `@attach ...` 指令。
+ * - 当前用于解析回复文本中的 `<file ...>` 标签。
  * - 解析结果由 Feishu channel 在出站阶段转换为平台文件消息。
  */
 
@@ -20,15 +20,14 @@ export type FeishuAttachmentType =
   | "video";
 
 /**
- * 一条 `@attach` 指令解析后的结构。
+ * 一条 `<file>` 标签解析后的结构。
  */
 export interface ParsedFeishuAttachmentCommand {
   /**
    * 附件类型。
    *
    * 说明（中文）
-   * - 由 `@attach` 第二段字段解析得到。
-   * - `file` 会被归一化为 `document`，`image` 会被归一化为 `photo`。
+   * - 由 `<file type="...">` 的 `type` 属性解析得到。
    */
   type: FeishuAttachmentType;
 

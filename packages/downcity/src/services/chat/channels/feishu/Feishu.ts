@@ -12,12 +12,17 @@ import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
 import type { FeishuIncomingAttachmentDescriptor } from "@services/chat/types/FeishuInboundAttachment.js";
+import type { FeishuPostInlineImage } from "@services/chat/types/FeishuPost.js";
 import type { InboundReplyContext } from "@services/chat/types/ReplyContext.js";
 import { parseFeishuAttachments } from "./Shared.js";
 import {
   buildFeishuInboundCacheFileName,
   parseFeishuInboundMessage,
 } from "./InboundAttachment.js";
+import {
+  buildFeishuPostMessageContent,
+  shouldUseFeishuPostMessage,
+} from "./PostMessage.js";
 import { buildFeishuReplyContext } from "./ReplyContext.js";
 import {
   buildReplyContextExtra,
@@ -27,6 +32,7 @@ import {
   augmentChatInboundInput,
   buildChatInboundText,
 } from "@services/chat/runtime/InboundAugment.js";
+import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
 
 /**
  * Feishu (Lark) chat channel.
@@ -70,7 +76,7 @@ type FeishuMessageEvent = {
   };
 };
 
-type FeishuMessagePayloadType = "text" | "file";
+type FeishuMessagePayloadType = "text" | "file" | "image" | "post";
 
 export class FeishuBot extends BaseChatChannel {
   /**
@@ -1045,8 +1051,11 @@ export class FeishuBot extends BaseChatChannel {
           } else {
             const attachmentLines = incomingAttachments.map((attachment) => {
               const rel = path.relative(this.rootPath, attachment.path);
-              const desc = attachment.desc ? ` | ${attachment.desc}` : "";
-              return `@attach ${attachment.type} ${rel}${desc}`;
+              return renderChatMessageFileTag({
+                type: attachment.type,
+                path: rel,
+                ...(attachment.desc ? { caption: attachment.desc } : {}),
+              });
             });
 
             if (this.isGroupChat(chat_type)) {
@@ -1207,7 +1216,7 @@ Available commands:
    *
    * 关键点（中文）
    * - 下载失败时仅跳过对应附件，不阻塞整条消息。
-   * - 返回结果直接用于拼装 `@attach ...` 指令。
+   * - 返回结果直接用于拼装 `<file ...>` 标签。
    */
   private async downloadIncomingAttachments(params: {
     messageId: string;
@@ -1290,8 +1299,9 @@ Available commands:
    * 统一发送“正文 + 附件”。
    *
    * 关键点（中文）
-   * - 附件语法来源于 `@attach` 行。
-   * - 发送顺序为：正文 -> 附件 -> 附件说明（caption）。
+   * - 附件语法来源于 `<file>` 标签。
+   * - 当正文包含多行/链接/图片时，优先合并为飞书 `post`。
+   * - 其他附件继续按平台原生类型顺序补发，保持能力完整。
    */
   private async sendParsedMessage(
     chatId: string,
@@ -1301,13 +1311,47 @@ Available commands:
     attachments: ParsedFeishuAttachmentCommand[],
   ): Promise<void> {
     const normalizedText = String(text || "").trim();
-    if (normalizedText) {
+    const photoAttachments = attachments.filter((item) => item.type === "photo");
+    const remainingAttachments = attachments.filter((item) => item.type !== "photo");
+
+    let emittedPost = false;
+    if (
+      shouldUseFeishuPostMessage({
+        text: normalizedText,
+        inlineImages: photoAttachments.map((item) => ({
+          imageKey: item.pathOrUrl,
+          ...(item.caption ? { caption: item.caption } : {}),
+        })),
+      })
+    ) {
+      try {
+        const inlineImages = await this.prepareInlinePostImages(photoAttachments);
+        const postPayload = buildFeishuPostMessageContent({
+          text: normalizedText,
+          inlineImages,
+        });
+        if (postPayload) {
+          await this.sendPlatformMessage(chatId, chatType, messageId, "post", postPayload);
+          emittedPost = true;
+        }
+      } catch (error) {
+        this.logger.warn("Failed to build Feishu post payload, fallback to plain messages", {
+          chatId,
+          chatType,
+          messageId,
+          error: String(error),
+        });
+      }
+    }
+
+    if (!emittedPost && normalizedText) {
       await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
         text: normalizedText,
       });
     }
 
-    for (const attachment of attachments) {
+    const attachmentsToSend = emittedPost ? remainingAttachments : attachments;
+    for (const attachment of attachmentsToSend) {
       try {
         await this.sendAttachment(chatId, chatType, messageId, attachment);
       } catch (error) {
@@ -1319,10 +1363,33 @@ Available commands:
   }
 
   /**
+   * 预上传将要内联到 `post` 里的图片。
+   *
+   * 关键点（中文）
+   * - 只处理 `photo` 类型，且必须是本地图片文件。
+   * - 任意一张图片失败都会抛错，让上层整体回退到普通消息链路，避免半条 post。
+   */
+  private async prepareInlinePostImages(
+    attachments: ParsedFeishuAttachmentCommand[],
+  ): Promise<FeishuPostInlineImage[]> {
+    const out: FeishuPostInlineImage[] = [];
+    for (const attachment of attachments) {
+      const localPath = await this.resolveAttachmentLocalPath(attachment.pathOrUrl);
+      const imageKey = await this.uploadImageToFeishu(localPath);
+      out.push({
+        imageKey,
+        ...(attachment.caption ? { caption: attachment.caption } : {}),
+      });
+    }
+    return out;
+  }
+
+  /**
    * 发送飞书文件附件。
    *
    * 关键点（中文）
-   * - 当前统一走 `im/v1/files` 上传，再发送 `msg_type=file`。
+   * - 图片走 `im/v1/images`，便于原生展示与 `post` 内联复用。
+   * - 其他附件继续走 `im/v1/files` 上传，再发送 `msg_type=file`。
    * - 路径支持项目相对路径和绝对路径，不支持远程 URL。
    */
   private async sendAttachment(
@@ -1332,10 +1399,17 @@ Available commands:
     attachment: ParsedFeishuAttachmentCommand,
   ): Promise<void> {
     const localPath = await this.resolveAttachmentLocalPath(attachment.pathOrUrl);
-    const fileKey = await this.uploadFileToFeishu(localPath);
-    await this.sendPlatformMessage(chatId, chatType, messageId, "file", {
-      file_key: fileKey,
-    });
+    if (attachment.type === "photo") {
+      const imageKey = await this.uploadImageToFeishu(localPath);
+      await this.sendPlatformMessage(chatId, chatType, messageId, "image", {
+        image_key: imageKey,
+      });
+    } else {
+      const fileKey = await this.uploadFileToFeishu(localPath);
+      await this.sendPlatformMessage(chatId, chatType, messageId, "file", {
+        file_key: fileKey,
+      });
+    }
 
     const caption = String(attachment.caption || "").trim();
     if (caption) {
@@ -1346,7 +1420,7 @@ Available commands:
   }
 
   /**
-   * 解析 `@attach` 提供的本地路径。
+   * 解析 `<file>` 提供的本地路径。
    *
    * 关键点（中文）
    * - 远程 URL 暂不支持，避免隐式下载和额外安全风险。
@@ -1417,6 +1491,32 @@ Available commands:
   }
 
   /**
+   * 上传本地图片到飞书，返回 `image_key`。
+   *
+   * 关键点（中文）
+   * - 统一使用 SDK 的 `im.v1.image.create`，与平台图片消息能力保持一致。
+   * - 仅用于 message 场景，不复用 avatar 类型。
+   */
+  private async uploadImageToFeishu(localPath: string): Promise<string> {
+    if (!this.client) {
+      throw new Error("Feishu client is not initialized");
+    }
+
+    const fileBuffer = await fs.readFile(localPath);
+    const payload = await this.client.im.v1.image.create({
+      data: {
+        image_type: "message",
+        image: fileBuffer,
+      },
+    });
+    const imageKey = String(payload?.image_key || "").trim();
+    if (!imageKey) {
+      throw new Error(`Feishu image upload failed: ${localPath}`);
+    }
+    return imageKey;
+  }
+
+  /**
    * 按 chat 类型发送指定消息体。
    *
    * 关键点（中文）
@@ -1428,11 +1528,13 @@ Available commands:
     chatType: string,
     messageId: string | undefined,
     msgType: FeishuMessagePayloadType,
-    content: Record<string, unknown>,
+    content: Record<string, unknown> | string,
   ): Promise<void> {
     if (!this.client) {
       throw new Error("Feishu client is not initialized");
     }
+    const serializedContent =
+      typeof content === "string" ? content : JSON.stringify(content);
     try {
       if (chatType !== "p2p" && messageId) {
         await this.client.im.v1.message.reply({
@@ -1440,7 +1542,7 @@ Available commands:
             message_id: messageId,
           },
           data: {
-            content: JSON.stringify(content),
+            content: serializedContent,
             msg_type: msgType,
           },
         });
@@ -1453,7 +1555,7 @@ Available commands:
         },
         data: {
           receive_id: chatId,
-          content: JSON.stringify(content),
+          content: serializedContent,
           msg_type: msgType,
         },
       });

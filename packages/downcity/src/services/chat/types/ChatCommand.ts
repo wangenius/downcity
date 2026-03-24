@@ -24,6 +24,7 @@ export type ChatSendRequest = {
   delayMs?: number;
   sendAtMs?: number;
   replyToMessage?: boolean;
+  messageId?: string;
 };
 
 export type ChatSendResponse = {

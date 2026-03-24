@@ -64,6 +64,7 @@ city console ui [action] [options]
 - `Context Overview` 支持直接修改 channel 参数（例如 qq 的 `appId/appSecret/sandbox`），保存后自动重载该渠道。
 - 只有 `consoleui` channel 支持发送消息；其他 context 在 UI 中为只读。
 - `Context Workspace` 会展示当前 context 的消息历史、channel 历史、system prompt 解析结果。
+- chat context 的 `system prompt` 现在只注入“当前 context 所属 channel”的规则，不再把其他已启用 channel 的 prompt 一起拼进去。
 - `Context Overview` 与 `Context Workspace` 现都会显示当前 context 是否正在执行（`executing` / `idle`）。
 - `Context Workspace` 现支持消息管理：所有 chat context 都可分别清理 `context messages` 与 `chat history`。
 - `Context Workspace` 现支持查看 compact archive：可在右侧 `archive` 面板按归档批次查看被 compact 折叠前的历史消息。

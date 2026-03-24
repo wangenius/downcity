@@ -1,0 +1,89 @@
+**统一协议**
+
+现在只有一套消息协议：
+
+- frontmatter metadata：表示 `chat send` 参数
+- `<file ...>...</file>`：表示附件
+- `react`：只在 direct 模式额外支持
+
+也就是说，不再把 `@attach` 暴露给模型或用户侧。核心解析在 [ChatMessageMarkup.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChatMessageMarkup.ts) 和 [ChatSendMetadata.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChatSendMetadata.ts)。
+
+```mermaid
+flowchart TD
+    A["消息文本输入"] --> B["统一协议解析
+    frontmatter + <file>"]
+    B --> C["正文 bodyText"]
+    B --> D["发送参数
+    chatKey / delay / time / reply / messageId"]
+    B --> E["附件 files[]"]
+
+    D --> F["sendChatTextByChatKey"]
+    C --> G["重建规范化消息
+    bodyText + <file>"]
+    E --> G
+    G --> F
+
+    F --> H{"目标 channel"}
+    H --> I["Telegram
+    解析 <file> 并发真实附件"]
+    H --> J["Feishu
+    解析 <file> 并发真实附件"]
+    H --> K["QQ
+    发现 <file> 直接报不支持"]
+```
+
+**两条入口**
+
+```mermaid
+flowchart LR
+    A["direct assistant 输出"] --> B["DirectDispatchParser"]
+    C["city chat send
+    --text / --stdin / --text-file"] --> D["Index.ts 解析正文协议"]
+
+    B --> E["统一发送参数 + 规范化正文"]
+    D --> E
+
+    E --> F["Action.ts / ChatkeySend.ts"]
+    F --> G["channel dispatcher"]
+```
+
+- direct 入口在 [DirectDispatchParser.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/DirectDispatchParser.ts)
+- `city chat send` 入口在 [Index.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/Index.ts)
+- 实际发送在 [Action.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/Action.ts) 和 [ChatkeySend.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/runtime/ChatkeySend.ts)
+
+**入站到模型**
+
+入站附件也统一注入成 `<file>`，这样模型看到的协议和它输出的协议一致。
+
+```mermaid
+flowchart TD
+    A["Telegram / Feishu 收到用户附件"] --> B["下载到 .ship/.cache/..."]
+    B --> C["转成 <file type='...'>相对路径</file>"]
+    C --> D["buildChatInboundText"]
+    D --> E["Agent / 模型"]
+    E --> F["模型仍用同样的 <file> 协议回包"]
+```
+
+- Telegram 入站注入在 [Bot.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/telegram/Bot.ts)
+- Feishu 入站注入在 [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts)
+
+**一个例子**
+
+```text
+---
+chatKey: ctx_xxx
+reply: true
+messageId: "128"
+---
+这是今天的报告。
+<file type="document" caption="日报">reports/daily.md</file>
+```
+
+这段现在的含义是：
+
+- `chatKey=ctx_xxx`
+- 以 reply 方式发到 `messageId=128`
+- 正文是“这是今天的报告。”
+- 再带一个 document 附件 `reports/daily.md`
+
+如果你愿意，我可以再给你画一张“direct 模式 vs city chat send”的对比图。

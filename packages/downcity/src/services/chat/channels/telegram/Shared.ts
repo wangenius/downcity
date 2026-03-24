@@ -1,4 +1,5 @@
 import path from "path";
+import { parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup.js";
 
 /**
  * Telegram 集成配置。
@@ -232,11 +233,11 @@ export function guessMimeType(fileName: string): string | undefined {
 }
 
 /**
- * 从文本中解析 `@attach ...` 指令。
+ * 从文本中解析 `<file ...>` 附件标签。
  *
  * 说明（中文）
  * - 返回“清理后的正文 + 附件列表”
- * - 未匹配的行保持原样，便于自然语言与附件混写
+ * - `<file>` 标签会从正文中移除，便于自然语言与附件混写
  */
 export function parseTelegramAttachments(text: string): {
   text: string;
@@ -246,25 +247,13 @@ export function parseTelegramAttachments(text: string): {
     caption?: string;
   }>;
 } {
-  const raw = String(text || "");
-  const lines = raw.split("\n");
+  const parsed = parseChatMessageMarkup(text);
   const attachments: Array<{
     type: TelegramAttachmentType;
     pathOrUrl: string;
     caption?: string;
-  }> = [];
-  const kept: string[] = [];
-
-  for (const line of lines) {
-    const m = line.match(
-      /^\s*@attach\s+(photo|image|document|file|voice|audio|video)\s+(.+?)(?:\s*\|\s*(.+))?\s*$/i,
-    );
-    if (!m) {
-      kept.push(line);
-      continue;
-    }
-
-    const kindRaw = m[1].toLowerCase();
+  }> = parsed.files.map((file) => {
+    const kindRaw = String(file.type || "").toLowerCase();
     const type: TelegramAttachmentType =
       kindRaw === "image" || kindRaw === "photo"
         ? "photo"
@@ -276,13 +265,17 @@ export function parseTelegramAttachments(text: string): {
             ? "audio"
             : "voice";
 
-    const pathOrUrl = String(m[2] || "").trim();
-    const caption = typeof m[3] === "string" ? String(m[3]).trim() : undefined;
-    if (!pathOrUrl) continue;
-    attachments.push({ type, pathOrUrl, caption: caption || undefined });
-  }
+    const pathOrUrl = String(file.path || "").trim();
+    const caption =
+      typeof file.caption === "string" ? String(file.caption).trim() : undefined;
+    return {
+      type,
+      pathOrUrl,
+      ...(caption ? { caption } : {}),
+    };
+  }).filter((item) => item.pathOrUrl);
 
-  return { text: kept.join("\n").trim(), attachments };
+  return { text: parsed.bodyText, attachments };
 }
 
 function formatActorName(name: string): string {

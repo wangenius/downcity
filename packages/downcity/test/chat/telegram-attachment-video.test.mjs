@@ -2,8 +2,8 @@
  * Telegram 附件 video 能力测试（node:test）。
  *
  * 关键点（中文）
- * - `@attach video ...` 能被正确解析。
- * - direct `<file type="video">` 会被转换为 `@attach video ...`。
+ * - `<file type="video">...` 能被正确解析。
+ * - direct 模式会保留 `<file>` 协议，交给渠道出站阶段处理。
  * - 常见视频扩展名可推断 MIME，避免上传时类型缺失。
  */
 
@@ -19,8 +19,8 @@ test("parseTelegramAttachments supports video type", () => {
   const parsed = parseTelegramAttachments(
     [
       "请看视频并总结",
-      "@attach video assets/demo.mp4 | 演示视频",
-      "@attach photo assets/cover.png | 封面图",
+      '<file type="video" caption="演示视频">assets/demo.mp4</file>',
+      '<file type="photo" caption="封面图">assets/cover.png</file>',
     ].join("\n"),
   );
 
@@ -38,7 +38,7 @@ test("parseTelegramAttachments supports video type", () => {
   });
 });
 
-test("parseDirectDispatchAssistantText converts <file type=video> to @attach video", () => {
+test("parseDirectDispatchAssistantText keeps <file> tags for channel parsing", () => {
   const plan = parseDirectDispatchAssistantText({
     fallbackChatKey: "telegram-chat-10001",
     assistantText: `本次结果如下
@@ -49,7 +49,7 @@ test("parseDirectDispatchAssistantText converts <file type=video> to @attach vid
   assert.ok(plan.text, "expected text plan");
   assert.equal(
     plan.text.text,
-    "本次结果如下\n\n@attach video assets/output/demo.mp4",
+    '本次结果如下\n\n<file type="video">assets/output/demo.mp4</file>',
   );
 });
 
@@ -59,4 +59,3 @@ test("guessMimeType covers common video extensions", () => {
   assert.equal(guessMimeType("demo.webm"), "video/webm");
   assert.equal(guessMimeType("demo.m4v"), "video/x-m4v");
 });
-

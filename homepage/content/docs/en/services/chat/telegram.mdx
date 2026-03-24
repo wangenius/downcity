@@ -70,7 +70,7 @@ Send `/start` (or any message) to your bot.
 You can send a file directly to the bot (document/photo/voice/audio/video).
 
 - If you add text while sending the file, Telegram treats it as a **caption** — Downcity will read that caption as your instruction.
-- Downcity saves the file under `.ship/.cache/telegram/` and passes it to the agent as an `@attach ...` line.
+- Downcity saves the file under `.ship/.cache/telegram/` and passes it to the agent as a `<file ...>` block.
 
 Example: send a PDF with caption: `Summarize this PDF and list action items.`
 

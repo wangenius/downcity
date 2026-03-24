@@ -69,7 +69,7 @@ city agent start
 你可以直接给机器人发送文件（document/photo/voice/audio/video）。
 
 - 如果你在发送文件时同时输入文字，Telegram 会把这段文字当作 **caption（附件说明）** —— Downcity 会把 caption 当作你的指令来处理。
-- Downcity 会把文件保存到 `.ship/.cache/telegram/`，并以 `@attach ...` 的形式传给 Agent。
+- Downcity 会把文件保存到 `.ship/.cache/telegram/`，并以 `<file ...>` 的形式传给 Agent。
 
 示例：发送一个 PDF，并在 caption 写：`帮我总结这个 PDF，并列出待办事项。`
 

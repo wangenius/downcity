@@ -11,8 +11,8 @@ Use Feishu (or Lark) to connect Downcity to:
 - group chats
 - route binding and context persistence
 - agent reply delivery back to Feishu
-- file attachment delivery via `@attach document <path>`
-- inbound image, video, file, and audio download with `@attach` injection into Agent execution
+- file attachment delivery via `<file type="document">path</file>`
+- inbound image, video, file, and audio download with `<file ...>` injection into Agent execution
 
 > Want the internal execution flow? See: [/en/docs/services/chat/feishu-message-flow](/en/docs/services/chat/feishu-message-flow)
 
@@ -162,10 +162,11 @@ then the backend still did not resolve a display name.
 Current Feishu channel behavior:
 
 - inbound transport is WebSocket
-- execution accepts **text + image + video + file + audio** inputs
-- inbound image, video, file, and audio messages are downloaded into `.ship/.cache/feishu/` and injected as `@attach ...`
+- execution accepts **text + rich `post` + image + video + file + audio** inputs
+- text / links / mentions inside `post` are normalized into plain text, while `post` images / media are downloaded into `.ship/.cache/feishu/` and injected as `<file ...>`
+- inbound image, video, file, and audio messages are downloaded into `.ship/.cache/feishu/` and injected as `<file ...>`
 - when a user replies to a Feishu message, runtime will best-effort fetch the parent message body from `parent_id` and inject it into the Agent input
-- outbound replies support `@attach document|file <path>` file conversion
+- outbound replies support `<file ...>` conversion; multiline text, links, and images are merged into Feishu `post` when possible
 - normal AI text replies are sent as plain messages by default and do not auto-reply to the latest message
 - a Feishu reply link is used only when reply mode is explicitly requested for a target `message_id`
 - sender name and chat title are resolved on a best-effort basis

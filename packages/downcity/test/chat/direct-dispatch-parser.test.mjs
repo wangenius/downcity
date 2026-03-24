@@ -2,25 +2,22 @@
  * direct dispatch parser 行为测试（node:test）。
  *
  * 关键点（中文）
- * - direct frontmatter 仅支持 `reply/react`。
- * - `delay/time/sendAt/sendAtMs` 在 direct 模式下应被忽略，不能进入发送参数。
+ * - direct frontmatter 与 `city chat send` 参数对齐。
+ * - `react` 仍作为 direct 模式的额外能力保留。
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import { parseDirectDispatchAssistantText } from "../../bin/services/chat/runtime/DirectDispatchParser.js";
 
-test("parseDirectDispatchAssistantText keeps only minimal metadata protocol in direct mode", () => {
+test("parseDirectDispatchAssistantText aligns frontmatter with chat send options", () => {
   const plan = parseDirectDispatchAssistantText({
     fallbackChatKey: "telegram-chat-999",
     assistantText: `---
 chatKey: telegram-chat-123
-reply: "556"
-message_id: "778"
+reply: true
+messageId: "778"
 delay: 3000
-time: 2026-03-08T20:00:00+08:00
-sendAt: 2026-03-08T21:00:00+08:00
-sendAtMs: 1767225600000
 reactions: "❌"
 react:
   - emoji: "👍"
@@ -33,18 +30,18 @@ hello direct`,
 
   assert.ok(plan, "expected non-null direct dispatch plan");
   assert.ok(plan.text, "expected text plan");
-  assert.equal(plan.text.chatKey, "telegram-chat-999");
+  assert.equal(plan.text.chatKey, "telegram-chat-123");
   assert.equal(plan.text.replyToMessage, true);
-  assert.equal(plan.text.messageId, "556");
+  assert.equal(plan.text.messageId, "778");
   assert.equal(plan.text.text, "hello direct");
 
-  // 关键点（中文）：delay/time 字段必须被忽略，避免 direct 自动调度。
-  assert.equal(Object.hasOwn(plan.text, "delayMs"), false);
-  assert.equal(Object.hasOwn(plan.text, "sendAtMs"), false);
+  // 关键点（中文）：frontmatter 应按 chat send 语义保留最终调度参数。
+  assert.equal(plan.text.delayMs, 3000);
+  assert.equal(plan.text.sendAtMs, undefined);
 
   assert.equal(plan.reactions.length, 1);
   assert.equal(plan.reactions[0].emoji, "👍");
-  assert.equal(plan.reactions[0].chatKey, "telegram-chat-999");
-  assert.equal(plan.reactions[0].messageId, "556");
+  assert.equal(plan.reactions[0].chatKey, "telegram-chat-123");
+  assert.equal(plan.reactions[0].messageId, "778");
   assert.equal(plan.reactions[0].big, true);
 });

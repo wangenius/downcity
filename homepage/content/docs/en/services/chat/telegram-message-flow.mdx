@@ -72,16 +72,16 @@ This reaction is **best-effort**:
 - if it succeeds, the user gets an immediate lightweight acknowledgment
 - if it fails, command handling and agent execution continue normally
 
-### Attachments: local cache + `@attach` lines
+### Attachments: local cache + `<file>` tags
 
 Incoming files (document/photo/voice/audio/video) are downloaded and stored under:
 
 - `.ship/.cache/telegram/`
 
-Then the final `instructions` passed to the agent are prefixed with `@attach ...` lines, e.g.:
+Then the final `instructions` passed to the agent are prefixed with `<file ...>` tags, e.g.:
 
 ```text
-@attach document .ship/.cache/telegram/1738...-report.pdf | report.pdf
+<file type="document" caption="report.pdf">.ship/.cache/telegram/1738...-report.pdf</file>
 
 Summarize this PDF and list action items.
 ```

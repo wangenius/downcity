@@ -3,46 +3,16 @@
  *
  * 关键点（中文）
  * - 仅用于 `services.chat.method = direct` 的 assistant 出站解析。
- * - 目标是让模型在“纯文本默认发送”的基础上，按需携带结构化参数。
+ * - frontmatter metadata 语义与 `city chat send` 保持一致，再额外支持 `react`。
  */
 
-export type DirectFileType =
-  | "document"
-  | "photo"
-  | "voice"
-  | "audio"
-  | "video";
+import type {
+  ChatMessageFileTag,
+  ChatMessageFileType,
+} from "@services/chat/types/ChatMessageMarkup.js";
 
-/**
- * 解析后的附件标签参数（来自 `<file>` 标签）。
- */
-export interface DirectFileTagPayload {
-  /**
-   * 附件在项目内的相对路径。
-   *
-   * 说明（中文）
-   * - 该路径会被拼接进平台可识别的附件指令。
-   * - 不能为空字符串。
-   */
-  path: string;
-
-  /**
-   * 附件类型。
-   *
-   * 说明（中文）
-   * - 若缺省，默认使用 `document`。
-   * - 仅允许 `document/photo/voice/audio/video` 五种值。
-   */
-  type: DirectFileType;
-
-  /**
-   * 可选附件说明。
-   *
-   * 说明（中文）
-   * - 存在时会跟随附件一起发送给用户。
-   */
-  caption?: string;
-}
+export type DirectFileType = ChatMessageFileType;
+export type DirectFileTagPayload = ChatMessageFileTag;
 
 /**
  * 解析后的反应参数（来自 frontmatter metadata）。
@@ -82,19 +52,35 @@ export interface ResolvedDirectTextPayload {
   /**
    * 是否以 reply 语义发送正文。
    *
-   * 说明（中文）
-   * - 当 metadata 提供 `reply`（目标 `message_id`）时自动为 true。
-   * - `reply` 必须是目标 `message_id`，不接受布尔值。
-   */
+ * 说明（中文）
+ * - 语义与 `city chat send --reply` 一致。
+ * - 当 metadata 提供 `reply: true` 或显式 `messageId` 时自动为 true。
+  */
   replyToMessage: boolean;
 
   /**
    * 可选 reply 目标消息 ID。
    *
    * 说明（中文）
-   * - 来自 metadata 的 `reply`。
+   * - 来自 metadata 的 `messageId`，或 `reply` 的旧式 messageId 写法。
    */
   messageId?: string;
+
+  /**
+   * 可选延迟发送毫秒数。
+   *
+   * 说明（中文）
+   * - 与 `city chat send --delay` 对齐。
+   */
+  delayMs?: number;
+
+  /**
+   * 可选定时发送毫秒时间戳。
+   *
+   * 说明（中文）
+   * - 与 `city chat send --time` 对齐。
+   */
+  sendAtMs?: number;
 }
 
 /**

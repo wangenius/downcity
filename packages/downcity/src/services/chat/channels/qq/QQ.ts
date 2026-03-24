@@ -2,6 +2,7 @@ import WebSocket, { type RawData } from "ws";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
+import { parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup.js";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
 import {
   extractQqIncomingAttachments,
@@ -259,6 +260,11 @@ export class QQBot extends BaseChatChannel {
   protected async sendTextToPlatform(
     params: ChannelSendTextParams,
   ): Promise<void> {
+    const parsedMessage = parseChatMessageMarkup(String(params.text ?? ""));
+    if (parsedMessage.files.length > 0) {
+      throw new Error("QQ outbound attachment is not supported yet.");
+    }
+
     const chatType = typeof params.chatType === "string" ? params.chatType : "";
     const messageId =
       typeof params.messageId === "string" ? params.messageId : "";
@@ -273,7 +279,7 @@ export class QQBot extends BaseChatChannel {
       params.chatId,
       chatType,
       messageId,
-      String(params.text ?? ""),
+      parsedMessage.bodyText,
       nextSeq,
     );
   }

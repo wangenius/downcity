@@ -197,7 +197,7 @@ function resolveReplyMessageIdForChatSend(params: {
  * - 当文本只包含字面量转义（如 `\n`）且没有真实换行时，自动解码为真实控制字符。
  * - 这样可兼容模型/脚本把多行文本写成 `\\n` 的场景，避免用户看到原样 `\n`。
  */
-function normalizeChatSendText(raw: string): string {
+export function normalizeChatSendText(raw: string): string {
   const text = String(raw ?? "");
   if (!text) return text;
 

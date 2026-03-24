@@ -77,10 +77,15 @@ sequenceDiagram
 当前 `downcity` 包里的飞书 channel 会按消息类型做归一化：
 
 - `message_type === text`：直接把正文送入执行
-- `message_type === image | file | audio | media`：先下载到本地缓存，再注入 `@attach ...`
+- `message_type === post`：把富文本降级成“纯文本 + 可下载附件”
+- `message_type === image | file | audio | media`：先下载到本地缓存，再注入 `<file ...>`
 - 其他类型：直接回错误提示
 
-所以当前版本里，飞书图片、视频、文件、音频已经会像 Telegram 一样先落地到本地，再作为执行输入注入。
+所以当前版本里，飞书 `post`、图片、视频、文件、音频都会像 Telegram 一样被归一化后送入执行：
+
+- `post` 内的文本 / 链接 / @ 会转成自然语言文本
+- `post` 内的图片 / 媒体会转成附件占位并下载到本地
+- 所有可下载附件最终都会以 `<file ...>` 形式注入执行输入
 
 ### 3.3 自动确认 reaction
 
@@ -237,17 +242,17 @@ username: ...
 
 - [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:885)
 
-另外，当前版本支持在回复文本里写附件指令并自动转换为飞书文件消息：
+另外，当前版本支持在回复文本里写 `<file>` 标签并自动转换为飞书文件消息：
 
 ```text
-@attach document reports/downcity-office-hours.md
+<file type="document">reports/downcity-office-hours.md</file>
 ```
 
 发送顺序是：
 
-1. 先发送正文文本（去掉 `@attach` 行）
+1. 先发送正文文本（去掉 `<file>` 标签）
 2. 再上传并发送附件文件消息
-3. 如果 `@attach` 包含 `| 说明`，会追加发送说明文本
+3. 如果 `<file>` 包含 `caption`，会追加发送说明文本
 
 ## 8）为什么 `user_access_token` 测试通过，但运行时不行
 
@@ -274,7 +279,8 @@ username: ...
 
 当前 `downcity` 包里的飞书 channel 仍有这些限制：
 
-- 入站执行只支持文本消息
+- `post` 里的复杂样式（加粗、斜体、分栏等）当前会退化成纯文本，不保留视觉样式
+- `post` 出站当前只会把正文、链接、图片合并为富文本；文件/音频/视频仍作为后续独立消息发送
 - 名称解析依赖 tenant 权限与通讯录可见范围
 - `user_access_token` 不参与当前消息元数据补全逻辑
 

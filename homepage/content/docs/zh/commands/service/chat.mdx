@@ -66,6 +66,12 @@ city chat <subcommand> [options]
 - `--delay <ms>`：延迟发送
 - `--time <time>`：定时发送（时间戳秒/毫秒或 ISO）
 - `--reply`：reply_to_message 发送
+- `--message-id <id>`：显式指定 reply 目标消息 ID
+
+`send` 的正文还支持：
+
+- 可选 frontmatter metadata，字段语义与 `chat send` 参数一致（如 `chatKey`、`delay`、`time`、`reply`、`messageId`）
+- 使用 `<file type="...">path</file>` 发送附件
 
 ## `react` 常用选项
 
@@ -93,6 +99,14 @@ city chat <subcommand> [options]
 city chat list --limit 20
 city chat info --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat send --chat-key ctx_xxxxxxxxxxxxxxxx --text "done"
+cat <<'EOF' | city chat send --stdin --chat-key ctx_xxxxxxxxxxxxxxxx
+---
+reply: true
+messageId: "128"
+---
+这是今天的报告。
+<file type="document">reports/daily.md</file>
+EOF
 city chat react --chat-key ctx_xxxxxxxxxxxxxxxx --emoji "✅"
 city chat context --chat-key ctx_xxxxxxxxxxxxxxxx
 city chat delete --chat-key ctx_xxxxxxxxxxxxxxxx

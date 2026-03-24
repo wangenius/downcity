@@ -2,12 +2,13 @@ import type {
   FeishuAttachmentType,
   ParsedFeishuAttachmentCommand,
 } from "@services/chat/types/FeishuAttachment.js";
+import { parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup.js";
 
 /**
  * Feishu channel 公共工具。
  *
  * 关键点（中文）
- * - 解析回复文本中的 `@attach ...` 指令。
+ * - 解析回复文本中的 `<file ...>` 附件标签。
  * - 返回“净化后的正文 + 附件列表”，便于出站顺序发送。
  */
 
@@ -21,43 +22,27 @@ function normalizeAttachmentType(value: string): FeishuAttachmentType {
 }
 
 /**
- * 从文本中解析 `@attach` 指令。
+ * 从文本中解析 `<file>` 附件标签。
  *
  * 说明（中文）
- * - 匹配行会从正文中移除并写入 attachments。
- * - 未匹配行保持原样，支持普通文本与附件指令混写。
+ * - `<file>` 标签会从正文中移除并写入 attachments。
+ * - 其他自然语言正文保持原样，支持正文与附件混写。
  */
 export function parseFeishuAttachments(text: string): {
   text: string;
   attachments: ParsedFeishuAttachmentCommand[];
 } {
-  const raw = String(text || "");
-  const lines = raw.split("\n");
-  const attachments: ParsedFeishuAttachmentCommand[] = [];
-  const kept: string[] = [];
-
-  for (const line of lines) {
-    const matched = line.match(
-      /^\s*@attach\s+(photo|image|document|file|voice|audio|video)\s+(.+?)(?:\s*\|\s*(.+))?\s*$/i,
-    );
-    if (!matched) {
-      kept.push(line);
-      continue;
-    }
-
-    const pathOrUrl = String(matched[2] || "").trim();
-    if (!pathOrUrl) continue;
-    const caption =
-      typeof matched[3] === "string" ? String(matched[3]).trim() : "";
-    attachments.push({
-      type: normalizeAttachmentType(matched[1] || ""),
-      pathOrUrl,
-      ...(caption ? { caption } : {}),
-    });
-  }
+  const parsed = parseChatMessageMarkup(text);
+  const attachments: ParsedFeishuAttachmentCommand[] = parsed.files.map((file) => ({
+    type: normalizeAttachmentType(file.type),
+    pathOrUrl: String(file.path || "").trim(),
+    ...(typeof file.caption === "string" && file.caption.trim()
+      ? { caption: file.caption.trim() }
+      : {}),
+  })).filter((item) => item.pathOrUrl);
 
   return {
-    text: kept.join("\n").trim(),
+    text: parsed.bodyText,
     attachments,
   };
 }

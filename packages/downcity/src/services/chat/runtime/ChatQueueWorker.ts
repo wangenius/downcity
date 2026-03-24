@@ -391,7 +391,7 @@ export class ChatQueueWorker {
    * 关键点（中文）
    * - 支持 frontmatter metadata 协议：`reply/react`。
    * - direct metadata 不支持 delay/time；定时或延迟请走 `city chat send`。
-   * - 附件能力保留 `<file>` 标签（会在 parser 中转换为附件指令行）。
+   * - 附件能力保留 `<file>` 标签，并交给渠道出站阶段统一解析。
    * - 仅消费用户可见文本与控制协议，不转发工具日志/结构化输出。
    * - 发送失败只记录 warning，不中断主执行流程。
    */
@@ -437,6 +437,12 @@ export class ChatQueueWorker {
         text: preparedText,
         replyToMessage: plan.text.replyToMessage,
         messageId: plan.text.messageId,
+        ...(typeof plan.text.delayMs === "number"
+          ? { delayMs: plan.text.delayMs }
+          : {}),
+        ...(typeof plan.text.sendAtMs === "number"
+          ? { sendAtMs: plan.text.sendAtMs }
+          : {}),
       });
       await emitChatReplyEffect({
         runtime: this.runtime,

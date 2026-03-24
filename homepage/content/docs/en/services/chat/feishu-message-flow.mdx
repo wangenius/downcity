@@ -72,10 +72,15 @@ This prevents the same message from being executed more than once.
 The current Feishu adapter normalizes inbound input by message type:
 
 - `message_type === text`: execute the text body directly
-- `message_type === image | file | audio | media`: download to local cache first, then inject as `@attach ...`
+- `message_type === post`: downgrade rich text into plain text plus downloadable attachments
+- `message_type === image | file | audio | media`: download to local cache first, then inject as `<file ...>`
 - any other type: send an error message back
 
-So Feishu images, videos, files, and audio now follow the same local-cache-plus-`@attach` pattern as Telegram.
+So Feishu `post`, images, videos, files, and audio now follow the same normalized execution flow:
+
+- text / links / mentions inside `post` are converted into plain execution text
+- images / media inside `post` are converted into downloadable attachments
+- all downloadable assets are finally injected as `<file ...>`
 
 ### Automatic ack reaction
 
@@ -226,17 +231,17 @@ Code:
 
 - [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:885)
 
-The current version also supports attachment command conversion in outbound replies:
+The current version also supports `<file>` conversion in outbound replies:
 
 ```text
-@attach document reports/downcity-office-hours.md
+<file type="document">reports/downcity-office-hours.md</file>
 ```
 
 Delivery order:
 
-1. send plain text body (with `@attach` lines removed)
+1. send plain text body (with `<file>` tags removed)
 2. upload local file and send Feishu `file` message
-3. if the command includes `| caption`, send caption as an extra text message
+3. if the tag includes `caption`, send caption as an extra text message
 
 ## Why manual `user_access_token` tests can pass while runtime still fails
 
@@ -267,7 +272,8 @@ There is no contradiction there.
 
 The current Feishu channel still has these limitations:
 
-- execution input is text-only
+- complex `post` styling (bold/italic/layout) is currently downgraded to plain text instead of preserving visual style
+- outbound `post` currently merges text, links, and images only; files/audio/video are still sent as follow-up standalone messages
 - sender/chat display names depend on tenant scopes and contact visibility
 - `user_access_token` is not currently used for inbound metadata enrichment
 

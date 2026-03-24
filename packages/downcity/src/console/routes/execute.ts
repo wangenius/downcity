@@ -8,6 +8,7 @@
  */
 
 import { Hono } from "hono";
+import { drainDeferredPersistedUserMessages } from "@agent/context/manager/RequestContext.js";
 import { getRuntimeState } from "@agent/context/manager/RuntimeState.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 
@@ -94,6 +95,15 @@ executeRouter.post("/api/execute", async (c) => {
           actorId,
         },
       });
+      const deferredInjectedMessages = drainDeferredPersistedUserMessages(
+        contextId,
+      );
+      for (const message of deferredInjectedMessages) {
+        await runtime.contextManager.appendUserMessage({
+          contextId,
+          message,
+        });
+      }
     } catch {
       // ignore
     }

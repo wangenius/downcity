@@ -22,6 +22,7 @@ import type {
 import type { ServiceInvokeResult } from "@/console/service/ServiceRuntime.js";
 import type { ShellActionResponse } from "@services/shell/types/ShellService.js";
 import {
+  enqueueDeferredPersistedUserMessage,
   enqueueInjectedUserMessage,
   requestContext,
 } from "@agent/context/manager/RequestContext.js";
@@ -98,14 +99,15 @@ function shouldEnableCommandBridge(command: string): boolean {
   return /(?:^|\s)(?:city|downcity)(?:\s|$)/i.test(raw);
 }
 
-function injectUserTextMessage(params: {
+async function injectUserTextMessage(params: {
   text: string;
   note?: string;
-}): boolean {
+}): Promise<boolean> {
   const store = requestContext.getStore();
   const contextId = String(store?.contextId || "").trim();
   const text = String(params.text || "").trim();
   if (!contextId || !text) return false;
+  const note = String(params.note || "runtime_injected_user_message");
 
   enqueueInjectedUserMessage({
     id: `u:${contextId}:${generateId()}`,
@@ -117,7 +119,24 @@ function injectUserTextMessage(params: {
       source: "ingress",
       kind: "normal",
       extra: {
-        note: String(params.note || "runtime_injected_user_message"),
+        note,
+      },
+    },
+    parts: [{ type: "text", text }],
+  });
+
+  enqueueDeferredPersistedUserMessage(contextId, {
+    id: `u:${contextId}:${generateId()}`,
+    role: "user",
+    metadata: {
+      v: 1,
+      ts: Date.now(),
+      contextId,
+      source: "ingress",
+      kind: "normal",
+      extra: {
+        note,
+        injectedBy: "shell_runtime_bridge",
       },
     },
     parts: [{ type: "text", text }],
@@ -229,10 +248,10 @@ function flattenShellExecResponse(params: {
   };
 }
 
-function bridgeCommandResponse(params: {
+async function bridgeCommandResponse(params: {
   shellId: string;
   response: JsonObject;
-}): JsonObject {
+}): Promise<JsonObject> {
   const state = commandBridgeStates.get(params.shellId);
   if (!state) return params.response;
 
@@ -263,7 +282,7 @@ function bridgeCommandResponse(params: {
 
   let injectedCount = 0;
   for (const item of bridge.injectUserMessages) {
-    if (injectUserTextMessage(item)) {
+    if (await injectUserTextMessage(item)) {
       injectedCount += 1;
     }
   }
@@ -498,7 +517,7 @@ export const shell_start = tool({
         response,
         startedAt,
       });
-      const bridgedResponse = bridgeCommandResponse({
+      const bridgedResponse = await bridgeCommandResponse({
         shellId,
         response: flatResponse,
       });
@@ -588,13 +607,13 @@ export const shell_exec = tool({
         startedAt,
       });
       const bridgedResponse = shouldEnableCommandBridge(cmd)
-        ? (() => {
+        ? await (async () => {
             const withInternalShellId = {
               ...flatResponse,
               shell_id: shellId,
               has_more_output: false,
             } as JsonObject;
-            const bridged = bridgeCommandResponse({
+            const bridged = await bridgeCommandResponse({
               shellId,
               response: withInternalShellId,
             });
@@ -706,7 +725,7 @@ export const shell_read = tool({
         response,
         startedAt,
       });
-      const bridgedResponse = bridgeCommandResponse({
+      const bridgedResponse = await bridgeCommandResponse({
         shellId: shell_id,
         response: flatResponse,
       });
@@ -822,7 +841,7 @@ export const shell_wait = tool({
         response,
         startedAt,
       });
-      const bridgedResponse = bridgeCommandResponse({
+      const bridgedResponse = await bridgeCommandResponse({
         shellId: shell_id,
         response: flatResponse,
       });

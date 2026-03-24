@@ -50,6 +50,19 @@ export type RequestContext = {
 export const requestContext = new AsyncLocalStorage<RequestContext>();
 
 /**
+ * 待持久化的运行时注入 user 消息队列（按 contextId）。
+ *
+ * 关键点（中文）
+ * - requestContext 中的 injectedUserMessages 只负责“下一 step 临时可见”。
+ * - 为了让时间线顺序稳定，这里把“真正写入历史”的动作延后到
+ *   assistant message 落盘之后再统一执行。
+ */
+const deferredPersistedUserMessagesByContext = new Map<
+  string,
+  ShipContextUserMessageV1[]
+>();
+
+/**
  * 在当前异步调用链内绑定请求上下文。
  */
 export function withRequestContext<T>(ctx: RequestContext, fn: () => T): T {
@@ -92,4 +105,31 @@ export function drainInjectedUserMessages(): ShipContextUserMessageV1[] {
   const out = [...store.injectedUserMessages];
   store.injectedUserMessages = [];
   return out;
+}
+
+/**
+ * 入队一条“待持久化 user 消息”。
+ */
+export function enqueueDeferredPersistedUserMessage(
+  contextId: string,
+  message: ShipContextUserMessageV1,
+): void {
+  const key = String(contextId || "").trim();
+  if (!key || !message) return;
+  const current = deferredPersistedUserMessagesByContext.get(key) || [];
+  current.push(message);
+  deferredPersistedUserMessagesByContext.set(key, current);
+}
+
+/**
+ * 读取并清空指定 context 的待持久化 user 消息。
+ */
+export function drainDeferredPersistedUserMessages(
+  contextId: string,
+): ShipContextUserMessageV1[] {
+  const key = String(contextId || "").trim();
+  if (!key) return [];
+  const current = deferredPersistedUserMessagesByContext.get(key) || [];
+  deferredPersistedUserMessagesByContext.delete(key);
+  return [...current];
 }

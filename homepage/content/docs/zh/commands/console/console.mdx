@@ -41,7 +41,7 @@ city console ui [start|stop|restart|status] [--port 5315]
 - `config`：管理项目级 `ship.json` 与 alias。
 - `start`：后台启动 console。
 - `stop`：停止 console，并停止其托管的子 agent runtime。
-- `restart`：重启 console。
+- `restart`：重启 console，并自动恢复重启前正在运行的托管 agent。
 - `status`：查看 console 进程状态与活跃 agent 清单。
 - `agents`：打印当前活跃托管 agent 列表。
 - `ui`：管理单实例 UI（start/stop/restart/status），并可在页面内切换查看不同 agent。

@@ -49,7 +49,7 @@ Every task execution creates a run directory:
     - feedbackForNextRound
 
 - `executionStatus=failure`
-  - usually script execution failure, agent runtime failure, or failed `chat_send` delivery
+  - usually script execution failure, agent runtime failure, failed `chat_send` delivery, or an agent run that only performed tool calls without producing any user-visible output
 
 - `Task skipped (already running)`
   - overlap trigger skipped by per-task serial guard

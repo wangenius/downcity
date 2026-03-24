@@ -42,6 +42,14 @@ import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.j
  * - 统一走 BaseChatChannel 入队（history 由 process 写入），确保调度语义一致
  */
 export class TelegramBot extends BaseChatChannel {
+  /**
+   * 入站确认 reaction。
+   *
+   * 说明（中文）
+   * - 对齐 openclaw 的 ack 语义：用户消息通过授权后，先轻量回应，再继续处理。
+   * - 这里固定使用 `👀`，表示“已收到，开始处理”。
+   */
+  private static readonly INBOUND_ACK_EMOJI = "👀";
   private botToken: string;
   private lastUpdateId: number = 0;
   private pollingInterval: ReturnType<typeof setInterval> | null = null;
@@ -246,6 +254,32 @@ export class TelegramBot extends BaseChatChannel {
       return `telegram-chat-${chatId}-topic-${messageThreadId}`;
     }
     return `telegram-chat-${chatId}`;
+  }
+
+  /**
+   * 给入站消息补一个 best-effort 的确认 reaction。
+   *
+   * 关键点（中文）
+   * - reaction 失败不能阻塞后续命令/Agent 执行。
+   * - 只在拿到有效 `message_id` 时尝试。
+   */
+  private async sendInboundAckReaction(params: {
+    chatId: string;
+    messageId?: string;
+  }): Promise<void> {
+    const parsedMessageId = this.parseTelegramMessageId(params.messageId);
+    if (!parsedMessageId) return;
+    try {
+      await this.api.setMessageReaction(params.chatId, parsedMessageId, {
+        emoji: TelegramBot.INBOUND_ACK_EMOJI,
+      });
+    } catch (error) {
+      this.logger.warn("Telegram 入站 ack reaction 失败，继续处理消息", {
+        chatId: params.chatId,
+        messageId: params.messageId,
+        error: String(error),
+      });
+    }
   }
 
   protected getChatKey(params: ChannelChatKeyParams): string {
@@ -741,6 +775,14 @@ export class TelegramBot extends BaseChatChannel {
         await enqueueGroupAudit({ reason: "empty_payload" });
         return;
       }
+
+      // 关键点（中文）
+      // - 对齐 openclaw：通过授权后，先给入站消息一个轻量 ack reaction。
+      // - 失败不影响主流程，避免因为平台 reaction 能力抖动导致消息丢处理。
+      await this.sendInboundAckReaction({
+        chatId,
+        messageId,
+      });
 
       // Check if it's a command
       if (rawText.startsWith("/")) {

@@ -10,6 +10,7 @@ import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { DashboardContextExecuteAttachmentInput } from "@/types/DashboardContextExecute.js";
+import { drainDeferredPersistedUserMessages } from "@agent/context/manager/RequestContext.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
 import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
@@ -130,6 +131,15 @@ export async function executeByContextId(params: {
         note: "assistant_message_missing",
       },
     });
+    const deferredInjectedMessages = drainDeferredPersistedUserMessages(
+      contextId,
+    );
+    for (const message of deferredInjectedMessages) {
+      await params.runtime.contextManager.appendUserMessage({
+        contextId,
+        message,
+      });
+    }
   } catch {
     // ignore
   }

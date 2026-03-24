@@ -38,6 +38,7 @@ import {
   diagnoseDaemonStaleReasons,
   getDaemonLogPath,
   isProcessAlive as isDaemonProcessAlive,
+  readDaemonMeta,
   readDaemonPid,
   stopDaemonProcess,
 } from "@/console/daemon/Manager.js";
@@ -283,9 +284,75 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
   console.log(`   log: ${logPath}`);
 }
 
-async function restartConsoleCommand(): Promise<void> {
+/**
+ * 从 daemon meta 中提取可恢复的启动参数。
+ *
+ * 关键点（中文）
+ * - 当前只恢复用户真正可见的 `host` 语义；
+ * - `port` 始终由 console 重新分配，避免复用脏端口。
+ */
+async function resolveRestartOptionsFromProjectRoot(
+  projectRoot: string,
+): Promise<StartOptions> {
+  const meta = await readDaemonMeta(projectRoot);
+  if (!meta || !Array.isArray(meta.args)) {
+    return {};
+  }
+
+  const hostIndex = meta.args.findIndex((item) => item === "--host");
+  if (hostIndex < 0) {
+    return {};
+  }
+
+  const host = String(meta.args[hostIndex + 1] || "").trim();
+  if (!host) {
+    return {};
+  }
+
+  return { host };
+}
+
+/**
+ * 重启后恢复此前仍在运行的 agent daemon。
+ *
+ * 关键点（中文）
+ * - 仅恢复“重启前处于运行态”的 agent；
+ * - 单个 agent 恢复失败不会中断整体 console 恢复流程。
+ */
+async function restartManagedConsoleAgents(): Promise<void> {
+  const runningAgents = await resolveRunningConsoleAgents();
+  const restartOptionsMap = new Map<string, StartOptions>();
+  for (const item of runningAgents) {
+    restartOptionsMap.set(
+      item.projectRoot,
+      await resolveRestartOptionsFromProjectRoot(item.projectRoot),
+    );
+  }
+
   await stopConsoleCommand();
   await startConsoleCommand();
+
+  if (runningAgents.length === 0) {
+    return;
+  }
+
+  console.log(`Restarting ${runningAgents.length} managed agents...`);
+  for (const item of runningAgents) {
+    try {
+      // 关键点（中文）：console 已经重新拉起，此处直接复用 agent start 逻辑补登记与端口分配。
+      await startCommand(
+        item.projectRoot,
+        restartOptionsMap.get(item.projectRoot) || {},
+      );
+    } catch (error) {
+      console.log(`❌ restart failed: ${item.projectRoot}`);
+      console.log(`   error: ${String(error)}`);
+    }
+  }
+}
+
+async function restartConsoleCommand(): Promise<void> {
+  await restartManagedConsoleAgents();
 }
 
 async function runConsoleRuntimeCommand(): Promise<void> {
@@ -483,7 +550,7 @@ program
 
 program
   .command("restart")
-  .description("重启 CITY（等价于先执行 `city console restart`，再执行 `city console ui start`）")
+  .description("重启 CITY（先重启 console 并恢复已运行 agent，再执行 `city console ui start`）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async () => {
     await restartConsoleCommand();
@@ -584,7 +651,7 @@ consoleCommand
 
 consoleCommand
   .command("restart")
-  .description("重启 console（先停子 agent，再重启）")
+  .description("重启 console（先停子 agent，再重启并恢复原先运行中的 agent）")
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async () => {
     await restartConsoleCommand();

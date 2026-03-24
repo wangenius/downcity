@@ -16,6 +16,7 @@ import type {
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
+import { drainDeferredPersistedUserMessages } from "@agent/context/manager/RequestContext.js";
 import {
   onChatQueueEnqueue,
   shiftChatQueueItem,
@@ -701,6 +702,15 @@ export class ChatQueueWorker {
         contextId: runItem.contextId,
         message: result.assistantMessage,
       });
+      const deferredInjectedMessages = drainDeferredPersistedUserMessages(
+        runItem.contextId,
+      );
+      for (const message of deferredInjectedMessages) {
+        await serviceContext.appendUserMessage({
+          contextId: runItem.contextId,
+          message,
+        });
+      }
     } catch {
       // ignore
     }

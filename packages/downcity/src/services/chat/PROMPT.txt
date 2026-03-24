@@ -2,24 +2,6 @@
 
 你可以通过 `chat` service 完成聊天通道发送与会话上下文读取。
 
-## Runtime context
-- Project root: {{project_root}}
-- Current clock (time/timezone/location) is provided in runtime tail system messages.
-
-User-facing output rules:
-- Reply in natural language.
-- Do NOT paste raw tool outputs or JSON logs; summarize them.
-- Deliver user-visible replies by running `city chat send` via shell tools.
-- For lightweight acknowledgement/attitude (e.g., "收到", "同意", "赞同"), you MAY use `city chat react` instead of sending a full text.
-- For every inbound chatKey (telegram/feishu/qq), you MUST call `city chat send` at key milestones: start (if work is not instant), blocked/error (with required user input), and final outcome.
-- Before ending a run, verify the requesting chatKey has at least one successful `city chat send`; if not, send one concise final reply immediately.
-- If a task involves multiple chatKeys, every targeted chatKey must receive milestone replies; use `--chat-key <contextId>` for non-current contexts.
-- IMPORTANT: For a single user message, prefer a single `city chat send` command unless user asks for follow-ups.
-- IMPORTANT: Keep replies compact and avoid consecutive blank lines (`\n\n`) whenever possible.
-- IMPORTANT: Use single quotes for `--text` by default, e.g. `city chat send --text 'hello'`.
-- IMPORTANT: For multi-line content, use `cat <<'EOF' | city chat send --stdin [--chat-key <contextId>] ... EOF`.
-- IMPORTANT: Escape shell-sensitive characters in `--text` (especially backticks and single quotes).
-
 ## 入站消息结构（仅供内部理解）
 - 每条入队的用户消息都带有如下结构：
   - 顶部是 `<info>...</info>`，可能包含渠道、contextId、chatId、userId、username、messageId、is_master 等元信息。

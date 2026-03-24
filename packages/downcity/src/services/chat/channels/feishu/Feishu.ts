@@ -73,6 +73,14 @@ type FeishuMessageEvent = {
 type FeishuMessagePayloadType = "text" | "file";
 
 export class FeishuBot extends BaseChatChannel {
+  /**
+   * 飞书入站确认 reaction 类型。
+   *
+   * 说明（中文）
+   * - 飞书 reaction API 使用 `emoji_type`，不是直接传 Unicode emoji。
+   * - 这里选择 `OK` 作为更轻量的“已收到”反馈。
+   */
+  private static readonly INBOUND_ACK_REACTION_TYPE = "OK";
   private appId: string;
   private appSecret: string;
   private domain?: string;
@@ -113,6 +121,36 @@ export class FeishuBot extends BaseChatChannel {
 
   private buildChatKey(chatId: string): string {
     return `feishu-chat-${chatId}`;
+  }
+
+  /**
+   * 给飞书入站消息补一个 best-effort 的确认 reaction。
+   *
+   * 关键点（中文）
+   * - 只在 client/messageId 可用时发送。
+   * - 失败只记日志，不阻塞后续命令/Agent 执行。
+   */
+  private async sendInboundAckReaction(params: {
+    messageId?: string;
+  }): Promise<void> {
+    const messageId = String(params.messageId || "").trim();
+    if (!messageId || !this.client?.im?.v1?.messageReaction?.create) return;
+    try {
+      await this.client.im.v1.messageReaction.create({
+        path: { message_id: messageId },
+        data: {
+          reaction_type: {
+            emoji_type: FeishuBot.INBOUND_ACK_REACTION_TYPE,
+          },
+        },
+      });
+    } catch (error) {
+      this.logger.warn("飞书入站 ack reaction 失败，继续处理消息", {
+        messageId,
+        reactionType: FeishuBot.INBOUND_ACK_REACTION_TYPE,
+        error: String(error),
+      });
+    }
   }
 
   protected getChatKey(params: ChannelChatKeyParams): string {
@@ -991,6 +1029,13 @@ export class FeishuBot extends BaseChatChannel {
           chatId: chat_id,
           chatType: chat_type,
           ...(chatTitle ? { chatTitle } : {}),
+        });
+
+        // 关键点（中文）
+        // - 对齐 openclaw：消息通过授权后，先给一个轻量 ack reaction，再进入命令/Agent 流程。
+        // - 失败不影响主链路，保证“能处理消息”优先。
+        await this.sendInboundAckReaction({
+          messageId: message_id,
         });
 
         // Check if it's a command

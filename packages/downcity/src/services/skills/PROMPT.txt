@@ -1,31 +1,10 @@
-# Skills Service 使用说明
+# Skills Service
 
-你可以通过 `skill` service 管理技能发现、安装与内容读取。
+skill 是你拥有的技能。用户的提出的需求和任务，你都需要先考虑利用相关的skill来高质量的完成。
 
-## 可用 action
-- `list`：列出当前已经学会（本地可发现）的技能。
-- `find`：查找当前未学会的技能（底层调用 `npx skills find`）。
-- `install`：下载/学习未学会技能（底层调用 `npx skills add`，支持仓库 spec）。
-- `lookup`：读取已学会技能的 `SKILL.md` 内容（无 pin 持久化）；在 agent 运行时会通过 `<skill>...</skill>` user message 注入。
 
-## 操作方法（命令）
-- 常用 action（CLI）：
-  - `city skill find <query>`
-  - `city skill install <spec> [--global] [--yes] [--agent <agent>]`
-  - `city skill list`
-  - `city skill lookup <name>`
-- runtime 管理：
-  - `city service status skill`
-  - `city service restart skill`
+## 使用
 
-## 使用规范
-- system 会附带 `Runtime Skills Inventory` 动态清单；其中 `Available Skills` 列表即“已安装/已学会”。
-- 使用任意 skill 前，必须先执行 `lookup` 获取该 skill 的最新 `SKILL.md`。
-- `list` 列出的 skill 都是本地已学会/已安装，不需要再次 `install`。
-- 若目标已在 `list` 中，应直接 `lookup`，不要引导重复安装。
-- `find` 和 `install` 只用于“`list` 中不存在”的缺失技能。
-- `install` 完成后会同步到本地 skills 目录，随后执行 `lookup`。
-- `lookup` 的 tool-result 仅返回执行状态；技能原文会通过下一条 user message 注入，并使用 `<skill>...</skill>` 包裹。
-- 推荐顺序：优先 `list/lookup`；仅在缺失时 `find/install`；安装后再 `lookup`。
-- 只要任务与 skill 描述匹配，尽量优先使用已学会 skill。
-- 对用户反馈时应明确技能状态变化：已安装、已读取或失败原因。
+使用技能时需要首先通过 `city skill lookup <name>` 命令载入对应的技能内容。
+
+你也可以使用 `city skill --help` 命令对skill进行其他操作。比如 `list`, `find`, `install`等等。

@@ -15,10 +15,13 @@
  */
 
 import {
+  getToolName,
+  isTextUIPart,
+  isToolUIPart,
   streamText,
   stepCountIs,
   type LanguageModel,
-  type ModelMessage
+  type ModelMessage,
 } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
 import { CompactorComponent } from "@agent/components/CompactorComponent.js";
@@ -37,6 +40,7 @@ import type {
   AgentRunInput,
 } from "@agent/types/Agent.js";
 import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import type { JsonObject } from "@/types/Json.js";
 
 /**
  * 可压缩错误的最大重试次数。
@@ -47,6 +51,113 @@ const MAX_COMPACTION_RETRY_ATTEMPTS = 3;
  * 单次 tool-loop 允许的最大 step 数。
  */
 const MAX_TOOL_LOOP_STEPS = 64;
+
+/**
+ * 调试日志中的文本预览最大长度。
+ */
+const DEBUG_TEXT_PREVIEW_MAX_CHARS = 180;
+
+function toJsonObject(value: unknown): JsonObject | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as JsonObject;
+}
+
+function toInlinePreview(value: unknown): string {
+  const normalized = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  return normalized.length > DEBUG_TEXT_PREVIEW_MAX_CHARS
+    ? `${normalized.slice(0, DEBUG_TEXT_PREVIEW_MAX_CHARS)}...`
+    : normalized;
+}
+
+function pickToolNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const record = toJsonObject(item);
+      return typeof record?.toolName === "string" ? record.toolName : "";
+    })
+    .filter((name) => Boolean(name))
+    .slice(0, 8);
+}
+
+function pickResponseMessageRoles(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const record = toJsonObject(item);
+      return typeof record?.role === "string" ? record.role : "";
+    })
+    .filter((role) => Boolean(role))
+    .slice(0, 8);
+}
+
+/**
+ * 汇总单个 step 的关键信号，便于定位“为什么没有继续下一轮”。
+ */
+function summarizeStepForDebug(stepResult: unknown): JsonObject {
+  const record = toJsonObject(stepResult) || {};
+  const usage = toJsonObject(record.usage);
+  const response = toJsonObject(record.response);
+  const toolCalls = Array.isArray(record.toolCalls) ? record.toolCalls : [];
+  const toolResults = Array.isArray(record.toolResults) ? record.toolResults : [];
+  const responseMessages = Array.isArray(response?.messages)
+    ? response.messages
+    : [];
+
+  return {
+    finishReason:
+      typeof record.finishReason === "string" ? record.finishReason : null,
+    rawFinishReason:
+      typeof record.rawFinishReason === "string" ? record.rawFinishReason : null,
+    textLength: typeof record.text === "string" ? record.text.length : 0,
+    textPreview: toInlinePreview(record.text),
+    toolCallCount: toolCalls.length,
+    toolCallNames: pickToolNames(toolCalls),
+    toolResultCount: toolResults.length,
+    toolResultNames: pickToolNames(toolResults),
+    responseMessageCount: responseMessages.length,
+    responseMessageRoles: pickResponseMessageRoles(responseMessages),
+    inputTokens:
+      typeof usage?.inputTokens === "number" ? usage.inputTokens : null,
+    outputTokens:
+      typeof usage?.outputTokens === "number" ? usage.outputTokens : null,
+    totalTokens:
+      typeof usage?.totalTokens === "number" ? usage.totalTokens : null,
+  };
+}
+
+function summarizeUiMessageForDebug(
+  message: ContextMessageV1 | null | undefined,
+): JsonObject {
+  const parts = Array.isArray(message?.parts) ? message.parts : [];
+  const text = parts
+    .filter(isTextUIPart)
+    .map((part) => String(part.text ?? ""))
+    .join("\n")
+    .trim();
+  const toolNames = parts
+    .filter(isToolUIPart)
+    .map((part) => String(getToolName(part) || ""))
+    .filter((name) => Boolean(name))
+    .slice(0, 8);
+  const partTypes = parts
+    .map((part) => {
+      const record = toJsonObject(part);
+      return typeof record?.type === "string" ? record.type : "unknown";
+    })
+    .slice(0, 12);
+
+  return {
+    role: typeof message?.role === "string" ? message.role : null,
+    partCount: parts.length,
+    partTypes,
+    textLength: text.length,
+    textPreview: toInlinePreview(text),
+    toolPartCount: toolNames.length,
+    toolNames,
+  };
+}
 
 /**
  * Agent 构造参数。
@@ -285,6 +396,7 @@ export class Agent {
   ): Promise<AgentResult> {
     // 记录开始时间，用于 finish 日志。
     const startTime = Date.now();
+    const contextId = String(this.persistor.contextId || "").trim();
 
     // 防御性兜底：确保 system 至少是数组。
     const system = Array.isArray(input.system) ? input.system : [];
@@ -334,7 +446,27 @@ export class Agent {
       };
 
       // 从 orchestrator 获取 step 完成回调（用于中间输出处理）。
-      const onStepFinish = this.orchestrator.createOnStepFinishHandler();
+      const orchestratorOnStepFinish =
+        this.orchestrator.createOnStepFinishHandler();
+      let stepCount = 0;
+      let totalToolCallCount = 0;
+      let totalToolResultCount = 0;
+      const onStepFinish = async (stepResult: unknown): Promise<void> => {
+        stepCount += 1;
+        const summary = summarizeStepForDebug(stepResult);
+        totalToolCallCount +=
+          typeof summary.toolCallCount === "number" ? summary.toolCallCount : 0;
+        totalToolResultCount +=
+          typeof summary.toolResultCount === "number"
+            ? summary.toolResultCount
+            : 0;
+        await this.logger.log("info", "[agent] step.finish", {
+          contextId,
+          stepIndex: stepCount,
+          ...summary,
+        });
+        await orchestratorOnStepFinish(stepResult);
+      };
 
       // 从 orchestrator 获取 step 准备回调（用于 step 间消息并入）。
       const prepareStep = this.orchestrator.createPrepareStepHandler({
@@ -367,6 +499,11 @@ export class Agent {
         result,
       });
 
+      await this.logger.log("info", "[agent] final.message", {
+        contextId,
+        ...summarizeUiMessageForDebug(finalAssistantUiMessage),
+      });
+
       // 输出 assistant 文本日志。
       await logAssistantMessageNow(this.logger, finalAssistantUiMessage);
 
@@ -375,7 +512,11 @@ export class Agent {
 
       // 写入 finish 日志。
       await this.logger.log("info", "[agent] finish", {
+        contextId,
         duration,
+        stepCount,
+        totalToolCallCount,
+        totalToolResultCount,
       });
 
       // 返回成功结果。
@@ -419,6 +560,7 @@ export class Agent {
   }): Promise<ContextMessageV1> {
     // 用于接收 onFinish 传出的结构化 assistant 消息。
     let streamedAssistantMessage: ContextMessageV1 | null = null;
+    let uiFinishSummary: JsonObject | null = null;
 
     // 创建 UI message stream。
     const uiStream = params.result.toUIMessageStream<ContextMessageV1>({
@@ -429,6 +571,13 @@ export class Agent {
       // 在 finish 时收敛最终 responseMessage。
       onFinish: (event) => {
         streamedAssistantMessage = event.responseMessage ?? null;
+        uiFinishSummary = {
+          isContinuation: event.isContinuation,
+          isAborted: event.isAborted,
+          finishReason:
+            typeof event.finishReason === "string" ? event.finishReason : null,
+          ...summarizeUiMessageForDebug(event.responseMessage),
+        };
       },
     });
 
@@ -436,6 +585,13 @@ export class Agent {
     for await (const _ of uiStream) {
       // 此处只为驱动流消费，不处理 chunk。
     }
+
+    await this.logger.log("info", "[agent] ui.finish", {
+      contextId: String(this.persistor.contextId || "").trim(),
+      ...(uiFinishSummary || {
+        responseMessageMissing: true,
+      }),
+    });
 
     // 如果拿到结构化消息，直接返回。
     if (streamedAssistantMessage) return streamedAssistantMessage;
@@ -448,6 +604,12 @@ export class Agent {
       // 读取文本失败时保持空串。
       assistantText = "";
     }
+
+    await this.logger.log("warn", "[agent] final.message.fallback", {
+      contextId: String(this.persistor.contextId || "").trim(),
+      assistantTextLength: assistantText.length,
+      assistantTextPreview: toInlinePreview(assistantText),
+    });
 
     // 用回退文本构造标准 assistant 消息并返回。
     return this.orchestrator.buildFallbackAssistantMessage(

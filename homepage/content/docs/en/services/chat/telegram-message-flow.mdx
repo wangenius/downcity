@@ -58,6 +58,20 @@ In groups, non-empty messages can be considered for execution.
 - No `@mention` or reply is required.
 - No initiator/admin gate is applied; group messages are accepted uniformly.
 
+### Automatic ack reaction
+
+In the current release, once an inbound Telegram message:
+
+- passes authorization checks
+- and before it enters command handling or agent execution
+
+the bot first adds a `👀` reaction to that exact user message to indicate "received, processing".
+
+This reaction is **best-effort**:
+
+- if it succeeds, the user gets an immediate lightweight acknowledgment
+- if it fails, command handling and agent execution continue normally
+
 ### Attachments: local cache + `@attach` lines
 
 Incoming files (document/photo/voice/audio/video) are downloaded and stored under:

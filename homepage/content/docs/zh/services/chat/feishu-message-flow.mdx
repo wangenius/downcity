@@ -82,6 +82,22 @@ sequenceDiagram
 
 所以当前版本里，飞书图片、视频、文件、音频已经会像 Telegram 一样先落地到本地，再作为执行输入注入。
 
+### 3.3 自动确认 reaction
+
+当前版本里，飞书入站消息在：
+
+- 通过授权校验之后
+- 进入命令处理 / Agent 执行之前
+
+会先对用户那条消息自动补一个 reaction，表示“已经收到，开始处理”。
+
+当前实现使用飞书消息 reaction API 的 `OK` 类型。
+
+这个 reaction 是 **best-effort**：
+
+- 贴成功：用户会先看到一个轻量确认
+- 贴失败：不会阻塞后续命令或 Agent 执行
+
 对应实现见：
 
 - [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:816)

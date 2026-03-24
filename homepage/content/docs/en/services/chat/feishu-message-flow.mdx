@@ -77,6 +77,22 @@ The current Feishu adapter normalizes inbound input by message type:
 
 So Feishu images, videos, files, and audio now follow the same local-cache-plus-`@attach` pattern as Telegram.
 
+### Automatic ack reaction
+
+In the current release, once an inbound Feishu message:
+
+- passes authorization checks
+- and before it enters command handling or agent execution
+
+the bot first adds a lightweight reaction to the triggering user message to signal "received, processing".
+
+The current implementation uses Feishu message reaction type `OK`.
+
+This reaction is **best-effort**:
+
+- if it succeeds, the user sees an immediate acknowledgment
+- if it fails, command handling and agent execution continue normally
+
 Code:
 
 - [Feishu.ts](/Users/wangenius/Documents/github/shipmyagent/packages/downcity/src/services/chat/channels/feishu/Feishu.ts:816)

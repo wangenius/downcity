@@ -12,7 +12,10 @@ import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { Agent } from "@agent/Agent.js";
-import { withRequestContext } from "@agent/context/manager/RequestContext.js";
+import {
+  drainDeferredPersistedUserMessages,
+  withRequestContext,
+} from "@agent/context/manager/RequestContext.js";
 import { FilePersistor } from "@/agent/context/context-agent/components/FilePersistor.js";
 import { SummaryCompactor } from "@/agent/context/context-agent/components/SummaryCompactor.js";
 import { RuntimeOrchestrator } from "@/agent/context/context-agent/components/RuntimeOrchestrator.js";
@@ -574,6 +577,13 @@ async function runAgentRound(params: {
     throw new Error(reason);
   }
 
+  // 关键点（中文）：
+  // - 若执行器没有产出任何用户可见文本，只做了工具调用/检查，则视为执行失败。
+  // - 这种情况说明 agent 没有真正完成任务，不应再退化为“结果校验不通过”。
+  if (!String(outputPick.text || "").trim()) {
+    throw new Error("agent produced no user-visible output");
+  }
+
   return {
     outputText: outputPick.text,
     delivered: outputPick.delivered,
@@ -633,6 +643,12 @@ async function appendExecutorAssistantMessage(params: {
   const assistantMessage = params.rawResult?.assistantMessage;
   if (assistantMessage && typeof assistantMessage === "object") {
     await persistor.append(assistantMessage);
+    const deferredInjectedMessages = drainDeferredPersistedUserMessages(
+      params.runContextId,
+    );
+    for (const message of deferredInjectedMessages) {
+      await persistor.append(message);
+    }
     return;
   }
 }

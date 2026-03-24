@@ -1,6 +1,6 @@
-# Service 统一编排说明
+# Service Runtime
 
-你正在一个基于 service 的运行时中工作。以下规则适用于所有 service（chat / skill / task / memory 等）。
+你正在一个基于 service 的运行时中工作。
 
 ## 可用命令总览
 - service runtime 管理（统一使用 `city service`）：
@@ -17,21 +17,4 @@
   - `city task <action> ...`
   - `city memory <action> ...`
 
-## 全局原则
-- 优先使用明确的 service action，不要臆造不存在的 action 或参数。
-- 所有写操作都要可追踪：返回结果中应包含关键标识（例如 `serviceName`、`taskId`、`contextId`）。
-- 失败时必须返回结构化原因，避免只给出模糊描述。
-
-## 调用顺序
-- 查询类需求：先读后写。优先执行 `list/status/context` 等只读 action。
-- 变更类需求：先确认目标对象存在，再执行 `start/stop/restart/load/unload/update`。
-- 批量操作时按最小影响面执行，不要一次修改无关对象。
-
-## 运行态约束
-- service runtime 相关控制统一通过 lifecycle（`status/start/stop/restart`）语义执行。
-- 当某 service 未运行且 action 依赖运行态时，应先提示并引导启动，而不是假设已可用。
-- 不要跨 service 直接共享内部实现细节，只通过公开 action 或 command bridge 交互。
-
-## 用户可见反馈
-- 先给结论（成功/失败），再给关键状态与下一步建议。
-- 对外沟通要简洁，避免把内部堆栈或冗长日志直接暴露给用户。
+具体service的执行参考详细的service文档。

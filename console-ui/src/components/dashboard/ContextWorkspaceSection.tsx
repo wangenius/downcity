@@ -358,22 +358,21 @@ function SystemPanel(props: { blocks: Array<{ title: string; content: string }> 
       {blocks.length === 0 ? (
         <div className="py-8 text-center text-xs text-muted-foreground">暂无 system 内容</div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {blocks.map((block, index) => (
-            <details
+            <section
               key={`${block.title}-${index}`}
-              open={index === 0}
-              className="rounded-[16px] bg-secondary/85"
+              className="rounded-[18px] border border-border/45 bg-secondary/85 px-3 py-3"
             >
-              <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-foreground/85">
+              <div className="border-b border-border/40 pb-2 text-xs font-medium text-foreground/85">
                 {block.title}
-              </summary>
-              <div className="px-3 pb-3">
-                <pre className="max-h-[24rem] overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground/85">
+              </div>
+              <div className="pt-3">
+                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground/85">
                   {block.content || "(empty)"}
                 </pre>
               </div>
-            </details>
+            </section>
           ))}
         </div>
       )}

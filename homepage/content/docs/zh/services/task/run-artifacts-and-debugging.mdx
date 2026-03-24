@@ -49,7 +49,7 @@ description: run 目录文件语义、状态判读、排障步骤与常见错误
     - feedbackForNextRound
 
 - `executionStatus=failure`
-  - 常见是脚本执行失败、agent 调用异常，或 `chat_send` 发送失败。
+  - 常见是脚本执行失败、agent 调用异常、`chat_send` 发送失败，或 agent 只做了工具调用但没有产出任何用户可见正文。
 
 - `Task skipped (already running)`
   - 同一任务重叠触发被串行保护跳过。

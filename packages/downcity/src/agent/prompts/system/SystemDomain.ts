@@ -9,72 +9,26 @@
 import fs from "fs-extra";
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@agent/prompts/common/PromptRenderer.js";
-import { resolvePromptGeoContext } from "@agent/prompts/variables/GeoContext.js";
 import { SERVICES } from "@/console/service/Services.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 
-const CORE_PROMPT_FILE_URL = new URL("./assets/core.prompt.txt", import.meta.url);
+const CORE_PROMPT_FILE_URL = new URL(
+  "./assets/core.prompt.txt",
+  import.meta.url,
+);
 const SERVICE_PROMPT_FILE_URL = new URL(
   "./assets/service.prompt.txt",
   import.meta.url,
 );
-const TASK_PROMPT_FILE_URL = new URL("./assets/task.prompt.txt", import.meta.url);
+const TASK_PROMPT_FILE_URL = new URL(
+  "./assets/task.prompt.txt",
+  import.meta.url,
+);
 
 const DEFAULT_DISABLED_SERVICE_NAMES: string[] = [];
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
-}
-
-/**
- * 生成“当前时间”文本（按时区）。
- */
-function getCurrentTimeString(timezone: string): string {
-  try {
-    // 关键点（中文）：统一格式，减少模型解析歧义。
-    const formatted = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    })
-      .format(new Date())
-      .replace(" ", "T");
-    return `${formatted} (${timezone})`;
-  } catch {
-    return new Date().toISOString();
-  }
-}
-
-/**
- * 构建每轮“动态时钟尾部”system 文本。
- *
- * 关键点（中文）
- * - 仅保留“最新时间/地点”动态信息，缩小动态 token 面积。
- * - 该段应放到 system 最后，提升前缀缓存命中率。
- */
-async function buildRuntimeClockTailPrompt(): Promise<string> {
-  let timezone = "UTC";
-  let location = "Unknown";
-  try {
-    const geo = await resolvePromptGeoContext();
-    timezone = String(geo.timezone || "").trim() || "UTC";
-    location = String(geo.location || "").trim() || "Unknown";
-  } catch {
-    // ignore
-  }
-
-  return [
-    "Runtime clock (authoritative):",
-    `- Current time: ${getCurrentTimeString(timezone)}`,
-    `- Timezone: ${timezone}`,
-    `- Location: ${location}`,
-    "- Treat this block as the source of truth for 'now'/'today' questions.",
-  ].join("\n");
 }
 
 /**
@@ -322,10 +276,6 @@ export async function buildAgentSystemMessages(input: {
   const runtimeRuleMessages: SystemModelMessage[] = runtimeSystemText
     ? [{ role: "system", content: runtimeSystemText }]
     : [];
-  const runtimeClockTail = normalizeSystemText(await buildRuntimeClockTailPrompt());
-  const runtimeClockMessages: SystemModelMessage[] = runtimeClockTail
-    ? [{ role: "system", content: runtimeClockTail }]
-    : [];
 
   const staticSystemMessages = await transformPromptsIntoSystemMessages(
     resolveStaticSystemPrompts({
@@ -350,7 +300,6 @@ export async function buildAgentSystemMessages(input: {
     ...staticSystemMessages,
     ...serviceSystemMessages,
     ...runtimeRuleMessages,
-    ...runtimeClockMessages,
   ];
 }
 

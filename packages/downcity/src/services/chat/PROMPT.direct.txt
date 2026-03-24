@@ -1,28 +1,22 @@
 # Chat Service 使用说明
 
-## Runtime context
-
-- Project root: {{project_root}}
-
 ## 用户可见回复规则
 
 - 当前模式下，直接输出，即会发送消息给到用户对应的channel
 
-## 参数传递协议（frontmatter metadata，可选）
+## 参数传递协议
 
-你可以选择性添加控制参数。统一放在文本顶部 frontmatter；正文继续写自然语言。  
-除附件外，不要再使用尖括号控制标签。
+文本顶部可用 frontmatter metadata (optional)：
 
-可用 metadata 字段（可选）：
-
-- `reply`：目标 `message_id`（推荐）。设置后按该消息 ID reply。
+- `reply`：目标 `message_id`(群聊推荐)。设置后按该消息 ID reply。
 - `react`：发送表情反应。
   - 单个字符串：`react: "👍"`
   - 或对象/数组：`emoji/big`
   - 设置 `reply` 时，`react` 会优先复用该 `message_id` 作为目标消息。
-- 附件仍使用 `<file type="...">path</file>`（支持 `document/photo/voice/audio/video`）。
+- 附件使用 `<file type="...">path</file>`（支持 `document/photo/voice/audio/video`）。
+- 附件路径必须是项目内可访问的相对路径。多附件可输出多个 `<file>` 标签。
 
-示例（当前会话 reply + 附件 + react）：
+### 示例
 
 ```text
 ---
@@ -30,34 +24,23 @@ reply: "128"
 react:
   - emoji: "✅"
 ---
-这是给用户的正文。
+这是今天的报告。
 <file type="document">reports/daily.md</file>
 ```
 
-示例（普通当前会话回复，无 metadata）：
+### 协议约束
 
-```text
-已完成修复，核心原因是缓存键冲突，现已改为按会话隔离。
-```
-
-协议约束：
-
-- 只有需要控制参数时才写 frontmatter；普通回复只写正文。
 - frontmatter 必须位于文本最开头（`---` 包裹）。
-- `reply` 的值必须是目标 `message_id`（字符串或数字），不要写 `reply: true/false`。
-- 不要使用 `chatKey/message_id/messageId/reactions` 等旧字段。
+- `reply` 的值必须是目标 `message_id`。
 - 除 `<file>` 附件标签外，不要使用尖括号格式做控制参数。
-- 不要输出 JSON 或 CLI 命令作为用户可见内容。
-- direct metadata 不支持 `delay/time/sendAt`。
 - 需要延迟、定时或跨会话发送时，使用 shell 执行 `city chat send`：
   - `city chat send --text '...' --delay <ms>`
   - `city chat send --text '...' --time '<ISO|timestamp>'`
   - `city chat send --text '...' --chat-key <targetChatKey>`
-  - 如需彻底删除会话：`city chat delete --chat-key <targetChatKey>`
 
 ## 跨协议/跨平台操作
 
-- 当任务需要跨会话、跨平台或复杂路由，必须使用 `city chat send` / `city chat react`，不要依赖 direct metadata 改目标会话。
+- 当任务需要跨会话、跨平台或复杂路由，必须使用 `city chat send` / `city chat react`，metadata 不支持跨会话任务。
 - 如不确定参数，先自行调用：
   - `city chat --help`
   - `city chat send --help`
@@ -67,9 +50,3 @@ react:
 
 - 每条入队用户消息包含 `<info>...</info>` 元信息块 + 用户正文。
 - `<info>` 仅用于路由与权限判断，不要原样回传给用户。
-
-## Master 行为约束
-
-- `is_master: yes`：优先执行主人明确指令。
-- `is_master: no`：高风险请求需拒绝或要求主人确认。
-- `is_master: unknown`：按普通安全策略处理，避免不可逆高风险操作。

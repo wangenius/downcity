@@ -19,7 +19,6 @@ import {
   isTextUIPart,
   isToolUIPart,
   streamText,
-  stepCountIs,
   type LanguageModel,
   type ModelMessage,
 } from "ai";
@@ -53,9 +52,59 @@ const MAX_COMPACTION_RETRY_ATTEMPTS = 3;
 const MAX_TOOL_LOOP_STEPS = 64;
 
 /**
+ * text-only 提醒续跑的最大次数。
+ *
+ * 关键点（中文）
+ * - 仅用于“模型明显承诺下一步、但没有实际调用工具”的兜底。
+ * - 设置较小上限，避免进入无界自催促循环。
+ */
+const MAX_TEXT_ONLY_CONTINUATIONS = 3;
+
+/**
+ * 不完整响应自动恢复的最大次数。
+ *
+ * 关键点（中文）
+ * - 仅针对 provider 流异常结束这类“本该继续、但响应被截断”的情况。
+ * - 只补一次，避免在 provider 异常持续时进入长时间空转。
+ */
+const MAX_INCOMPLETE_RESPONSE_RECOVERIES = 1;
+
+/**
  * 调试日志中的文本预览最大长度。
  */
 const DEBUG_TEXT_PREVIEW_MAX_CHARS = 180;
+
+/**
+ * UI tool part 中表示“尚未完成”的状态集合。
+ */
+const INCOMPLETE_TOOL_PART_STATES = new Set([
+  "input-streaming",
+  "input-available",
+  "output-streaming",
+]);
+
+/**
+ * 可能表示“只是描述下一步、还没真正执行”的文本模式。
+ *
+ * 关键点（中文）
+ * - 这里故意只匹配非常明显的“我现在开始/接下来我会”类表达。
+ * - 不做泛化判断，避免把正常最终答案误判为继续执行。
+ */
+const TEXT_ONLY_CONTINUATION_PATTERNS: ReadonlyArray<{
+  name: string;
+  pattern: RegExp;
+}> = [
+  { name: "zh_start_now", pattern: /我现在开始/ },
+  { name: "zh_next_will", pattern: /接下来我会/ },
+  { name: "zh_will_do", pattern: /我会(?:先|继续|开始|基于|按)/ },
+  { name: "zh_after_finish", pattern: /写完.*发你|完成后.*发你/ },
+  { name: "zh_fill_write", pattern: /开始(?:填充|写|补全)/ },
+  { name: "zh_one_by_one", pattern: /先把.+写完整/ },
+  { name: "en_start_now", pattern: /\bi(?:'m| am)?\s+(?:now\s+)?(?:starting|going to start)\b/i },
+  { name: "en_next_will", pattern: /\bnext,\s*i(?:'ll| will)\b/i },
+  { name: "en_will_do", pattern: /\bi(?:'ll| will)\s+(?:start|continue|write|fill|complete)\b/i },
+  { name: "en_after_finish", pattern: /\bafter (?:that|this),?\s*i(?:'ll| will)\b/i },
+];
 
 function toJsonObject(value: unknown): JsonObject | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -92,6 +141,36 @@ function pickResponseMessageRoles(value: unknown): string[] {
     .slice(0, 8);
 }
 
+function summarizeResponseBodyForDebug(body: unknown): JsonObject {
+  const bodyRecord = toJsonObject(body);
+  if (!bodyRecord) return {};
+
+  const outputItems = Array.isArray(bodyRecord.output) ? bodyRecord.output : [];
+  const outputTypes = outputItems
+    .map((item) => {
+      const record = toJsonObject(item);
+      return typeof record?.type === "string" ? record.type : "";
+    })
+    .filter((type) => Boolean(type))
+    .slice(0, 12);
+  const functionCallNames = outputItems
+    .map((item) => {
+      const record = toJsonObject(item);
+      if (record?.type !== "function_call") return "";
+      return typeof record.name === "string" ? record.name : "";
+    })
+    .filter((name) => Boolean(name))
+    .slice(0, 8);
+
+  return {
+    responseBodyKeys: Object.keys(bodyRecord).slice(0, 12),
+    responseOutputCount: outputItems.length,
+    responseOutputTypes: outputTypes,
+    responseHasFunctionCall: functionCallNames.length > 0,
+    responseFunctionCallNames: functionCallNames,
+  };
+}
+
 /**
  * 汇总单个 step 的关键信号，便于定位“为什么没有继续下一轮”。
  */
@@ -124,6 +203,7 @@ function summarizeStepForDebug(stepResult: unknown): JsonObject {
       typeof usage?.outputTokens === "number" ? usage.outputTokens : null,
     totalTokens:
       typeof usage?.totalTokens === "number" ? usage.totalTokens : null,
+    ...summarizeResponseBodyForDebug(response?.body),
   };
 }
 
@@ -157,6 +237,179 @@ function summarizeUiMessageForDebug(
     toolPartCount: toolNames.length,
     toolNames,
   };
+}
+
+function mergeAssistantUiMessages(
+  base: ContextMessageV1 | null,
+  incoming: ContextMessageV1,
+): ContextMessageV1 {
+  if (!base) return incoming;
+  const baseMetadata = base.metadata;
+  const incomingMetadata = incoming.metadata;
+  return {
+    ...base,
+    metadata: {
+      v: incomingMetadata?.v ?? baseMetadata?.v ?? 1,
+      ts: incomingMetadata?.ts ?? baseMetadata?.ts ?? Date.now(),
+      contextId:
+        incomingMetadata?.contextId ?? baseMetadata?.contextId ?? "",
+      ...(baseMetadata || {}),
+      ...(incomingMetadata || {}),
+    },
+    parts: [
+      ...(Array.isArray(base.parts) ? base.parts : []),
+      ...(Array.isArray(incoming.parts) ? incoming.parts : []),
+    ],
+  };
+}
+
+function pickIncompleteToolParts(
+  message: ContextMessageV1 | null | undefined,
+): Array<{
+  toolName: string;
+  state: string;
+}> {
+  const parts = Array.isArray(message?.parts) ? message.parts : [];
+  return parts
+    .filter(isToolUIPart)
+    .map((part) => ({
+      toolName: String(getToolName(part) || "unknown_tool"),
+      state:
+        typeof (toJsonObject(part)?.state) === "string"
+          ? String(toJsonObject(part)?.state)
+          : "",
+    }))
+    .filter((item) => INCOMPLETE_TOOL_PART_STATES.has(item.state))
+    .slice(0, 8);
+}
+
+function looksLikeIncompleteText(text: string): boolean {
+  const normalized = String(text || "").trim();
+  if (!normalized) return false;
+  if (normalized.endsWith("```")) return false;
+  if (/[。！？.!?]$/.test(normalized)) return false;
+  if (/[:：\-（(`]$/.test(normalized)) return true;
+  if (/#{1,6}\s*$/.test(normalized)) return true;
+  if (/^- [^\n]*$/m.test(normalized.split("\n").slice(-1)[0] || "")) return true;
+  return true;
+}
+
+function buildIncompleteResponseRecoveryNudge(recoveryIndex: number): string {
+  const round = Math.max(1, recoveryIndex);
+  return [
+    `系统恢复提醒（第 ${round} 次）：上一轮响应在流式阶段异常中断。`,
+    "不要复述已完成内容。",
+    "请从中断处继续；如果需要工具，请重新发起完整工具调用。",
+    "只有在答案完整结束、任务真正完成、或明确受阻时才停止。",
+  ].join("\n");
+}
+
+function detectIncompleteResponse(params: {
+  stepResult: unknown;
+  assistantMessage: ContextMessageV1 | null | undefined;
+}): {
+  reason: string;
+  details: JsonObject;
+} | null {
+  const record = toJsonObject(params.stepResult) || {};
+  const finishReason = typeof record.finishReason === "string"
+    ? record.finishReason
+    : "";
+  const rawFinishReason = typeof record.rawFinishReason === "string"
+    ? record.rawFinishReason
+    : "";
+  const text = typeof record.text === "string" ? record.text.trim() : "";
+  const toolCalls = Array.isArray(record.toolCalls) ? record.toolCalls : [];
+  const toolResults = Array.isArray(record.toolResults) ? record.toolResults : [];
+  const usage = toJsonObject(record.usage);
+  const incompleteToolParts = pickIncompleteToolParts(params.assistantMessage);
+
+  if (incompleteToolParts.length > 0) {
+    return {
+      reason: "incomplete_tool_part",
+      details: {
+        finishReason: finishReason || null,
+        rawFinishReason: rawFinishReason || null,
+        incompleteToolParts,
+        textPreview: toInlinePreview(text),
+      },
+    };
+  }
+
+  if (finishReason !== "other") return null;
+
+  if (!text) {
+    return {
+      reason: "finish_reason_other_empty",
+      details: {
+        finishReason,
+        rawFinishReason: rawFinishReason || null,
+        toolCallCount: toolCalls.length,
+        toolResultCount: toolResults.length,
+      },
+    };
+  }
+
+  if (looksLikeIncompleteText(text)) {
+    return {
+      reason: "finish_reason_other_truncated_text",
+      details: {
+        finishReason,
+        rawFinishReason: rawFinishReason || null,
+        textLength: text.length,
+        textPreview: toInlinePreview(text),
+        toolCallCount: toolCalls.length,
+        toolResultCount: toolResults.length,
+        inputTokens:
+          typeof usage?.inputTokens === "number" ? usage.inputTokens : null,
+        outputTokens:
+          typeof usage?.outputTokens === "number" ? usage.outputTokens : null,
+        totalTokens:
+          typeof usage?.totalTokens === "number" ? usage.totalTokens : null,
+      },
+    };
+  }
+
+  return {
+    reason: "finish_reason_other",
+    details: {
+      finishReason,
+      rawFinishReason: rawFinishReason || null,
+      textLength: text.length,
+      textPreview: toInlinePreview(text),
+    },
+  };
+}
+
+function detectTextOnlyContinuationReason(stepResult: unknown): string | null {
+  const record = toJsonObject(stepResult) || {};
+  const finishReason = typeof record.finishReason === "string"
+    ? record.finishReason
+    : "";
+  const text = typeof record.text === "string" ? record.text.trim() : "";
+  const toolCalls = Array.isArray(record.toolCalls) ? record.toolCalls : [];
+
+  if (!text || toolCalls.length > 0) return null;
+  if (finishReason && finishReason !== "stop") return null;
+
+  for (const candidate of TEXT_ONLY_CONTINUATION_PATTERNS) {
+    if (candidate.pattern.test(text)) {
+      return candidate.name;
+    }
+  }
+  return null;
+}
+
+function buildTextOnlyContinuationNudge(
+  continuationIndex: number,
+): string {
+  const round = Math.max(1, continuationIndex);
+  return [
+    `系统续跑提醒（第 ${round} 次）：继续执行当前任务。`,
+    "不要只描述计划、下一步或“我接下来会做什么”。",
+    "如果需要工具，请直接调用工具并产出实际结果。",
+    "只有在任务真正完成、明确受阻、或必须等待用户提供信息时才停止。",
+  ].join("\n");
 }
 
 /**
@@ -406,12 +659,12 @@ export class Agent {
 
     try {
       // 核心步骤 1（中文）：把 context messages 转成模型输入消息。
-      let baseContextMessages = Array.isArray(input.messages)
+      let runtimeContextMessages = Array.isArray(input.messages)
         ? [...input.messages]
         : [];
 
       // 根据当前基线消息生成模型消息。
-      let baseModelMessages = await toModelMessages(baseContextMessages, tools);
+      let baseModelMessages = await toModelMessages(runtimeContextMessages, tools);
 
       // 核心步骤 2（中文）：定义“step 间新增 user 消息并入器”。
       const appendMergedUserMessages = async (
@@ -424,7 +677,7 @@ export class Agent {
         if (mergedMessages.length === 0) return [];
 
         // 子步骤 B（中文）：更新 context 基线，保证后续全量重算时可见这些新增消息。
-        baseContextMessages = [...baseContextMessages, ...mergedMessages];
+        runtimeContextMessages = [...runtimeContextMessages, ...mergedMessages];
 
         // 先尝试只转换新增消息，减少重复计算。
         const mergedModelMessages = await toModelMessages(
@@ -439,7 +692,7 @@ export class Agent {
         }
 
         // 子步骤 C（中文）：增量不可用时回退为全量重算，保证一致性。
-        baseModelMessages = await toModelMessages(baseContextMessages, tools);
+        baseModelMessages = await toModelMessages(runtimeContextMessages, tools);
 
         // 返回空，表示本次 prepareStep 不注入增量片段。
         return [];
@@ -474,38 +727,200 @@ export class Agent {
         appendMergedUserMessages,
       });
 
-      // 核心步骤 3（中文）：启动 streamText 工具循环。
-      const result = streamText({
-        // 指定模型。
-        model: this.model,
-        // 指定 system。
-        system,
-        // 注入 step 完成钩子。
-        onStepFinish,
-        // 注入 step 准备钩子。
-        prepareStep,
-        // 注入消息基线。
-        messages: baseModelMessages,
-        // 注入工具集。
-        tools,
-        // 注入 provider 选项。
-        providerOptions: buildOpenAIResponsesProviderOptions(),
-        // 限制最大 step 数，避免无界循环。
-        stopWhen: [stepCountIs(MAX_TOOL_LOOP_STEPS)],
-      });
+      // 核心步骤 3（中文）：改为显式外层循环，由 runtime 自己决定是否继续下一步。
+      let finalAssistantUiMessage: ContextMessageV1 | null = null;
+      let textOnlyContinuationCount = 0;
+      let incompleteResponseRecoveryCount = 0;
+
+      while (stepCount < MAX_TOOL_LOOP_STEPS) {
+        const result = streamText({
+          // 指定模型。
+          model: this.model,
+          // 指定 system。
+          system,
+          // 注入 step 完成钩子。
+          onStepFinish,
+          // 注入 step 准备钩子。
+          prepareStep,
+          // 注入消息基线。
+          messages: baseModelMessages,
+          // 注入工具集。
+          tools,
+          // 注入 provider 选项。
+          providerOptions: buildOpenAIResponsesProviderOptions(),
+        });
+
+        // 单步收敛 UI assistant 消息，并累计为本轮最终消息。
+        const stepAssistantUiMessage = await this.collectFinalAssistantMessage({
+          result,
+        });
+
+        const executedSteps = await result.steps;
+        const lastStep = executedSteps[executedSteps.length - 1];
+        if (!lastStep) break;
+
+        const incompleteResponse = detectIncompleteResponse({
+          stepResult: lastStep,
+          assistantMessage: stepAssistantUiMessage,
+        });
+        const shouldRecoverIncompleteResponse =
+          incompleteResponse !== null &&
+          incompleteResponseRecoveryCount < MAX_INCOMPLETE_RESPONSE_RECOVERIES;
+
+        const textOnlyContinuationReason =
+          detectTextOnlyContinuationReason(lastStep);
+        const shouldContinueForToolCalls = lastStep.toolCalls.length > 0;
+        const shouldContinueForTextOnly =
+          !shouldContinueForToolCalls &&
+          textOnlyContinuationReason !== null &&
+          Object.keys(tools).length > 0 &&
+          textOnlyContinuationCount < MAX_TEXT_ONLY_CONTINUATIONS;
+
+        await this.logger.log("info", "[agent] loop.decision", {
+          contextId,
+          stepIndex: stepCount,
+          continueForToolCalls: shouldContinueForToolCalls,
+          continueForTextOnly: shouldContinueForTextOnly,
+          continueForIncompleteRecovery: shouldRecoverIncompleteResponse,
+          textOnlyContinuationReason,
+          textOnlyContinuationCount,
+          incompleteResponseReason: incompleteResponse?.reason ?? null,
+          incompleteResponseRecoveryCount,
+          toolCallCount: lastStep.toolCalls.length,
+          toolResultCount: lastStep.toolResults.length,
+          finishReason: lastStep.finishReason,
+          textPreview: toInlinePreview(lastStep.text),
+        });
+
+        if (shouldRecoverIncompleteResponse && incompleteResponse) {
+          incompleteResponseRecoveryCount += 1;
+          await this.logger.log("warn", "[agent] incomplete_response.recover", {
+            contextId,
+            stepIndex: stepCount,
+            recoveryCount: incompleteResponseRecoveryCount,
+            reason: incompleteResponse.reason,
+            ...incompleteResponse.details,
+          });
+          const recoveryMessage = this.persistor.userText({
+            text: buildIncompleteResponseRecoveryNudge(
+              incompleteResponseRecoveryCount,
+            ),
+            metadata: {
+              contextId,
+              extra: {
+                internal: "agent_incomplete_response_recover",
+                reason: incompleteResponse.reason,
+                stepIndex: stepCount,
+              },
+            },
+          });
+          runtimeContextMessages = [...runtimeContextMessages, recoveryMessage];
+          const recoveryModelMessages = await toModelMessages(
+            [recoveryMessage],
+            tools,
+          );
+          if (recoveryModelMessages.length > 0) {
+            baseModelMessages = [...baseModelMessages, ...recoveryModelMessages];
+          } else {
+            baseModelMessages = await toModelMessages(
+              runtimeContextMessages,
+              tools,
+            );
+          }
+          continue;
+        }
+
+        if (incompleteResponse) {
+          await this.logger.log("error", "[agent] incomplete_response", {
+            contextId,
+            stepIndex: stepCount,
+            reason: incompleteResponse.reason,
+            recoveryCount: incompleteResponseRecoveryCount,
+            ...incompleteResponse.details,
+          });
+          throw new Error(
+            `Agent received incomplete response (${incompleteResponse.reason})`,
+          );
+        }
+
+        const responseMessages = Array.isArray(lastStep.response?.messages)
+          ? lastStep.response.messages
+          : [];
+        if (responseMessages.length > 0) {
+          baseModelMessages = [...baseModelMessages, ...responseMessages];
+        }
+
+        finalAssistantUiMessage = mergeAssistantUiMessages(
+          finalAssistantUiMessage,
+          stepAssistantUiMessage,
+        );
+
+        // 关键点（中文）：把本 step 的 assistant UI 消息并入运行时上下文，保证后续全量重算不丢历史。
+        runtimeContextMessages = [...runtimeContextMessages, stepAssistantUiMessage];
+
+        if (shouldContinueForToolCalls) {
+          textOnlyContinuationCount = 0;
+          incompleteResponseRecoveryCount = 0;
+          continue;
+        }
+
+        if (shouldContinueForTextOnly) {
+          textOnlyContinuationCount += 1;
+          incompleteResponseRecoveryCount = 0;
+          const continuationMessage = this.persistor.userText({
+            text: buildTextOnlyContinuationNudge(textOnlyContinuationCount),
+            metadata: {
+              contextId,
+              extra: {
+                internal: "agent_loop_auto_continue",
+                reason: textOnlyContinuationReason,
+                stepIndex: stepCount,
+              },
+            },
+          });
+          runtimeContextMessages = [...runtimeContextMessages, continuationMessage];
+          const continuationModelMessages = await toModelMessages(
+            [continuationMessage],
+            tools,
+          );
+          if (continuationModelMessages.length > 0) {
+            baseModelMessages = [
+              ...baseModelMessages,
+              ...continuationModelMessages,
+            ];
+          } else {
+            baseModelMessages = await toModelMessages(
+              runtimeContextMessages,
+              tools,
+            );
+          }
+          continue;
+        }
+
+        break;
+      }
+
+      if (stepCount >= MAX_TOOL_LOOP_STEPS) {
+        await this.logger.log("warn", "[agent] loop.max_steps_reached", {
+          contextId,
+          stepCount,
+          totalToolCallCount,
+          totalToolResultCount,
+        });
+      }
 
       // 核心步骤 4（中文）：收敛最终 assistant 消息。
-      const finalAssistantUiMessage = await this.collectFinalAssistantMessage({
-        result,
-      });
+      const finalMessage =
+        finalAssistantUiMessage ||
+        this.orchestrator.buildFallbackAssistantMessage("Execution completed");
 
       await this.logger.log("info", "[agent] final.message", {
         contextId,
-        ...summarizeUiMessageForDebug(finalAssistantUiMessage),
+        ...summarizeUiMessageForDebug(finalMessage),
       });
 
       // 输出 assistant 文本日志。
-      await logAssistantMessageNow(this.logger, finalAssistantUiMessage);
+      await logAssistantMessageNow(this.logger, finalMessage);
 
       // 计算耗时。
       const duration = Date.now() - startTime;
@@ -522,7 +937,7 @@ export class Agent {
       // 返回成功结果。
       return {
         success: true,
-        assistantMessage: finalAssistantUiMessage,
+        assistantMessage: finalMessage,
       };
     } catch (error) {
       // 可压缩错误上抛，让上层 runWithRetry 统一处理重试。

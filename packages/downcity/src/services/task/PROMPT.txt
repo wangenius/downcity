@@ -63,6 +63,10 @@ frontmatter 核心字段：
 - `title` 唯一；create 去重仅按 `title` 精确匹配。
 - `when=time:...` 触发后会自动置为 `paused`，并回退为 `when=@manual`。
 - `run` 为异步受理：立即返回 `accepted=true`、`message`、`executionId`；调用方应把它视为“任务已进入后台执行，结果会自动发送，当前流程无需阻塞等待”。
+- 如果 `run` 返回 `accepted=true`：
+  - 不要手动把 task 产出再转发给用户。
+  - 不要主动读取 run 目录、`run-progress.json`、`output.md` 做轮询。
+  - 只有当用户明确要求排查、查看产物或确认执行细节时，才进入 run 目录检查。
 - agent 任务默认只要求产生有效输出；仅当任务正文明确要求外发时，才应发送到外部 channel。
 
 ## 建议

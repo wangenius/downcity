@@ -100,25 +100,6 @@ city console config get plugins.voice
 city console config get 'assets.voice.transcriber'
 ```
 
-### `permissions`
-
-Repository write and command execution policies:
-
-```json
-{
-  "permissions": {
-    "read_repo": true,
-    "write_repo": { "requiresApproval": false },
-    "shell": {
-      "deny": ["rm"],
-      "requiresApproval": false,
-      "maxOutputChars": 12000,
-      "maxOutputLines": 200
-    }
-  }
-}
-```
-
 ## Useful commands
 
 ```bash

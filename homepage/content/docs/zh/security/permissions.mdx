@@ -1,59 +1,17 @@
 ---
 title: 权限
-description: "了解 Ship 的两层权限模型：Agent 运行权限与聊天用户权限"
+description: "了解 Ship 当前的聊天用户权限模型"
 ---
 
 # 权限
 
-Ship 里有两套不同的权限：
+当前版本面向用户暴露的权限系统，是 `聊天用户权限`。
 
-1. `Agent 运行权限`
-2. `聊天用户权限`
+项目 `downcity.json` 不再提供单独的 `permissions` 配置块。
 
-这两套权限解决的是完全不同的问题，建议分开理解。
+运行时执行边界由当前版本的内建行为负责；而“谁可以和 Agent 说话，以及能做什么”则由聊天授权控制。
 
-## 1. Agent 运行权限
-
-这一层决定 Agent 自己能做什么，例如能不能读仓库、写文件、执行命令。
-
-这部分仍然通过项目里的 `downcity.json.permissions` 配置。
-
-### 最小配置示例
-
-```json
-{
-  "permissions": {
-    "read_repo": true,
-    "write_repo": {
-      "requiresApproval": false
-    },
-    "shell": {
-      "deny": ["rm"],
-      "requiresApproval": false,
-      "denyRequiresApproval": true,
-      "maxOutputChars": 12000,
-      "maxOutputLines": 200
-    }
-  }
-}
-```
-
-### 字段说明
-
-- `read_repo`：是否允许读取仓库内容。
-- `write_repo.requiresApproval`：写仓库是否要求确认。
-- `shell.deny`：直接阻断的命令前缀列表。
-- `shell.requiresApproval`：普通命令是否需要确认。
-- `shell.denyRequiresApproval`：命中 `deny` 时是否允许人工确认放行。
-- `shell.maxOutputChars/maxOutputLines`：单次命令输出上限。
-
-### 推荐策略
-
-1. 生产环境保持 `deny` 默认值，并按需增加风险命令。
-2. CI 或共享机器建议开启 `requiresApproval`。
-3. 遇到输出被截断时，优先细化命令范围，不要无上限放大输出。
-
-## 2. 聊天用户权限
+## 聊天用户权限
 
 这一层决定“谁可以和 Agent 说话，以及能做什么”。
 
@@ -113,4 +71,3 @@ Ship 里有两套不同的权限：
 - [Console UI](/zh/docs/commands/console/ui)
 - [Chat Service](/zh/docs/services/chat/chat-service)
 - [配置总览](/zh/docs/configuration/overview)
-- [downcity.json 参考](/zh/docs/reference/downcity-json)

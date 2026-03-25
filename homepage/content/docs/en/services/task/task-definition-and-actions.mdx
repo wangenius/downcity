@@ -70,6 +70,11 @@ The `message` explicitly tells the caller:
 - the agent can continue the next steps immediately
 - there is no need to wait for the task to finish
 
+Caller behavior rules:
+- do not manually forward the task output again after `accepted=true`
+- do not proactively read the run directory, `run-progress.json`, or `output.md` to poll
+- only inspect run artifacts when the user explicitly asks for debugging or execution details
+
 Current `agent` rules:
 - single-round by default
 - multi-round review only when `review=true`

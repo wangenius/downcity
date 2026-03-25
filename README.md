@@ -142,13 +142,6 @@ You are the maintainer agent of this repository.
       }
     }
   },
-  "permissions": {
-    "shell": {
-      "requiresApproval": false,
-      "maxOutputChars": 12000,
-      "maxOutputLines": 200
-    }
-  },
   "services": {
     "chat": {
       "channels": {
@@ -162,7 +155,7 @@ You are the maintainer agent of this repository.
 }
 ```
 
-`permissions.shell.maxOutputChars` 与 `permissions.shell.maxOutputLines` 用于限制 shell 工具输出回灌到 LLM 的体积（默认分别为 `12000` 和 `200`），可显著降低第三方 OpenAI-compatible 网关出现 `Parameter error` 的概率。
+shell 工具输出回灌到 LLM 的体积会由运行时内建限制控制（默认字符上限 `12000`、行数上限 `200`），可显著降低第三方 OpenAI-compatible 网关出现 `Parameter error` 的概率。
 
 > 注：启动时会自动加载项目根目录的 `.env`，并把 `downcity.json` 里的 `${VAR_NAME}` 形式占位符替换为对应环境变量。
 

@@ -31,6 +31,7 @@ description: kind=agent 的执行行为、适用场景与输出要求
 - `review: true` 时自动多轮（默认最多 3 轮）
 - 每轮都有进度事件（Console UI 可实时查看）
 - 最终输出正文写入 `output.md`，并在 `result.md` 写摘要
+- 同时把执行器的 query / reply 落到 run 目录下的 `messages.jsonl`，便于 debug
 
 ## 当前执行逻辑
 

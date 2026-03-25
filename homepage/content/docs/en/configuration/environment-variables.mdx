@@ -139,3 +139,17 @@ city plugin action voice configure --payload '{"enabled": true}'
 3. Use `<agent>/.env` as agent-local runtime overlay only.
 4. Validate channel status via `chat status` after changing bindings.
 5. If values look inherited, check both `channelAccountId` and project `.env`.
+
+## 9. Homepage Agent Marketplace
+
+The homepage community marketplace now uses PostgreSQL-compatible storage and works well with Supabase.
+
+Required runtime variables:
+
+1. `DATABASE_URL`: point this to your Supabase Postgres connection string so repository submissions and review states can be stored centrally.
+
+Behavior:
+
+1. Public submissions are inserted with `review_status = pending`.
+2. Managers approve or reject records manually in Supabase.
+3. Only `approved` records are shown on the public marketplace page.

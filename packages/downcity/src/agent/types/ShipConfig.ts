@@ -240,37 +240,4 @@ export interface ShipConfig {
       enabled?: boolean;
     };
   };
-  permissions?: {
-    read_repo: boolean | { paths?: string[] };
-    write_repo?:
-      | boolean
-      | {
-          paths?: string[];
-          requiresApproval: boolean;
-        };
-    shell?:
-      | boolean
-      | {
-          deny?: string[];
-          allow?: string[];
-          requiresApproval: boolean;
-          denyRequiresApproval?: boolean;
-          /**
-           * shell 工具返回给模型的输出最大字符数。
-           *
-           * 说明（中文）
-           * - 工具结果会进入下一轮 LLM messages。
-           * - 过大时可能触发 provider 参数校验失败。
-           * 默认值：12000。
-           */
-          maxOutputChars?: number;
-          /**
-           * shell 工具返回给模型的输出最大行数。
-           * 默认值：200。
-           */
-          maxOutputLines?: number;
-        };
-    open_pr?: boolean;
-    merge?: boolean;
-  };
 }

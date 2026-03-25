@@ -100,25 +100,6 @@ city console config get plugins.voice
 city console config get 'assets.voice.transcriber'
 ```
 
-### `permissions`
-
-仓库写入与命令执行权限：
-
-```json
-{
-  "permissions": {
-    "read_repo": true,
-    "write_repo": { "requiresApproval": false },
-    "shell": {
-      "deny": ["rm"],
-      "requiresApproval": false,
-      "maxOutputChars": 12000,
-      "maxOutputLines": 200
-    }
-  }
-}
-```
-
 ## 常用命令
 
 ```bash

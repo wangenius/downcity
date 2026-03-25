@@ -139,3 +139,17 @@ city plugin action voice configure --payload '{"enabled": true}'
 3. `<agent>/.env` 仅作 agent 私有运行时叠加。
 4. 渠道配置变更后执行 `chat status` 进行验收。
 5. 出现“像复用旧值”的情况时，优先检查 `channelAccountId` 与 `.env`。
+
+## 9. Homepage Agent 社区资源
+
+Homepage 里的 Agent 社区资源现在可以接 PostgreSQL 兼容数据库，推荐直接使用 Supabase。
+
+需要的运行时变量：
+
+1. `DATABASE_URL`：指向你的 Supabase Postgres 连接串，用来统一保存仓库提交与审核状态。
+
+行为说明：
+
+1. 所有公开提交都会先以 `review_status = pending` 写入数据库。
+2. 管理员直接在 Supabase 后台手动执行通过或拒绝。
+3. 只有 `approved` 状态的记录才会显示在公开 marketplace 页面上。

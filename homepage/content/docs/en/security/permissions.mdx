@@ -1,59 +1,17 @@
 ---
 title: Permissions
-description: "Understand Ship's two permission layers: agent runtime permissions and chat user authorization"
+description: "Understand Ship's current chat user authorization model"
 ---
 
 # Permissions
 
-Ship has two different permission layers:
+The user-facing permission system in the current version is `chat user authorization`.
 
-1. `Agent runtime permissions`
-2. `Chat user authorization`
+Project `downcity.json` no longer exposes a separate `permissions` block.
 
-They solve different problems and should be understood separately.
+Runtime execution boundaries follow the built-in behavior of the current release, while chat authorization controls who can talk to the agent and what they can do.
 
-## 1. Agent runtime permissions
-
-This layer defines what the agent itself is allowed to do, such as reading the repo, writing files, or executing commands.
-
-This is still configured in project `downcity.json.permissions`.
-
-### Minimal example
-
-```json
-{
-  "permissions": {
-    "read_repo": true,
-    "write_repo": {
-      "requiresApproval": false
-    },
-    "shell": {
-      "deny": ["rm"],
-      "requiresApproval": false,
-      "denyRequiresApproval": true,
-      "maxOutputChars": 12000,
-      "maxOutputLines": 200
-    }
-  }
-}
-```
-
-### Field semantics
-
-- `read_repo`: allow repository reads.
-- `write_repo.requiresApproval`: require approval before repository writes.
-- `shell.deny`: blocked command prefix list.
-- `shell.requiresApproval`: require approval for general commands.
-- `shell.denyRequiresApproval`: whether denied commands can be manually approved.
-- `shell.maxOutputChars/maxOutputLines`: command output limits.
-
-### Recommended policy
-
-1. Keep baseline deny list for production and add risk-specific rules.
-2. On CI/shared hosts, enable `requiresApproval`.
-3. If output is truncated, narrow command scope first instead of unlimited output.
-
-## 2. Chat user authorization
+## Chat user authorization
 
 This layer decides who is allowed to talk to the agent and what they are allowed to do.
 
@@ -113,4 +71,3 @@ So even when a message comes from a group chat, the final decision is still base
 - [Console UI](/en/docs/commands/console/ui)
 - [Chat Service](/en/docs/services/chat/chat-service)
 - [Configuration Overview](/en/docs/configuration/overview)
-- [downcity.json Reference](/en/docs/reference/downcity-json)

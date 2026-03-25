@@ -203,6 +203,40 @@ type TaskAgentRuntime = {
 };
 
 /**
+ * 把 task round 的 user query 落盘到对应 run context。
+ *
+ * 关键点（中文）
+ * - 复用 ContextAgent 的 persistor 语义，确保 run 目录里的 messages.jsonl
+ *   既有 user query，也有 assistant reply，方便 debug。
+ * - 失败不阻塞主流程，因为 debug 落盘不能影响任务本身执行。
+ */
+async function appendTaskRoundUserMessage(params: {
+  taskAgentRuntime: TaskAgentRuntime;
+  contextId: string;
+  taskId: string;
+  query: string;
+  actorId: string;
+  actorName: string;
+}): Promise<void> {
+  const text = String(params.query || "").trim();
+  if (!text) return;
+  const persistor = params.taskAgentRuntime.getPersistor(params.contextId);
+  await persistor.append(
+    persistor.userText({
+      text,
+      metadata: {
+        contextId: params.contextId,
+        extra: {
+          taskId: params.taskId,
+          actorId: params.actorId,
+          actorName: params.actorName,
+        },
+      },
+    }),
+  );
+}
+
+/**
  * 构建 task 专用 Agent 运行时（独立于 ContextManager 的 Agent 缓存）。
  *
  * 关键点（中文）
@@ -560,6 +594,19 @@ async function runAgentRound(params: {
   actorId: string;
   actorName: string;
 }): Promise<{ outputText: string; delivered: boolean; rawResult: AgentResult }> {
+  try {
+    await appendTaskRoundUserMessage({
+      taskAgentRuntime: params.taskAgentRuntime,
+      contextId: params.contextId,
+      taskId: params.taskId,
+      query: params.query,
+      actorId: params.actorId,
+      actorName: params.actorName,
+    });
+  } catch {
+    // ignore
+  }
+
   const result = await withRequestContext(
     {
       contextId: params.contextId,
@@ -631,20 +678,20 @@ async function runScriptTask(params: {
 }
 
 /**
- * 把 executor 的 assistant 消息落盘到 run context persistor。
+ * 把 task agent 的 assistant 消息落盘到对应 run context persistor。
  */
-async function appendExecutorAssistantMessage(params: {
+async function appendTaskAssistantMessage(params: {
   taskAgentRuntime: TaskAgentRuntime;
-  runContextId: string;
+  contextId: string;
   taskId: string;
   rawResult: AgentResult;
 }): Promise<void> {
-  const persistor = params.taskAgentRuntime.getPersistor(params.runContextId);
+  const persistor = params.taskAgentRuntime.getPersistor(params.contextId);
   const assistantMessage = params.rawResult?.assistantMessage;
   if (assistantMessage && typeof assistantMessage === "object") {
     await persistor.append(assistantMessage);
     const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-      params.runContextId,
+      params.contextId,
     );
     for (const message of deferredInjectedMessages) {
       await persistor.append(message);
@@ -927,9 +974,9 @@ export async function runTaskNow(params: {
 
         // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
         try {
-          await appendExecutorAssistantMessage({
+          await appendTaskAssistantMessage({
             taskAgentRuntime,
-            runContextId,
+            contextId: runContextId,
             taskId: task.taskId,
             rawResult: executorRound.rawResult,
           });
@@ -994,6 +1041,16 @@ export async function runTaskNow(params: {
           userSimulatorAssistantMessageSnapshot = serializeDebugSnapshot(
             simulatorRound.rawResult.assistantMessage,
           );
+          try {
+            await appendTaskAssistantMessage({
+              taskAgentRuntime,
+              contextId: userSimulatorContextId,
+              taskId: task.taskId,
+              rawResult: simulatorRound.rawResult,
+            });
+          } catch {
+            // ignore
+          }
           decision = parseUserSimulatorDecision(simulatorRound.outputText);
         } catch (e) {
           decision = {
@@ -1169,6 +1226,12 @@ export async function runTaskNow(params: {
   dialogueLines.push(`- maxDialogueRounds: \`${maxDialogueRounds}\``);
   dialogueLines.push(`- dialogueRounds: \`${dialogueRounds}\``);
   dialogueLines.push(`- userSimulatorSatisfied: \`${String(userSimulatorSatisfied)}\``);
+  dialogueLines.push(`- messages: ${toMdLink(path.posix.join(runDirRel, "messages.jsonl"))}`);
+  if (reviewEnabled) {
+    dialogueLines.push(
+      `- userSimulatorMessages: ${toMdLink(path.posix.join(runDirRel, "user-simulator/messages.jsonl"))}`,
+    );
+  }
   dialogueLines.push("");
   for (const round of dialogueRecords) {
     dialogueLines.push(`## Round ${round.round}`);

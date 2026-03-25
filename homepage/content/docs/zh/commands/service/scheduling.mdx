@@ -194,6 +194,98 @@ Service action scheduling 和 `task` 的边界可以这样理解：
 如果你的需求是“把某个现成 action 晚点执行一次”，优先用本页这套调度。  
 如果你的需求是“定义一个长期自动化任务”，优先用 [`city task`](/zh/docs/commands/service/task)。
 
+## 排查与管理命令
+
+除了创建调度任务，现在还可以直接管理本地 schedule 库。
+
+入口统一使用：
+
+```bash
+city service schedule <subcommand>
+```
+
+当前支持：
+
+- `list`
+- `info <jobId>`
+- `cancel <jobId>`
+
+这些命令直接读取当前 agent 项目的 `.downcity/schedule.sqlite`，不要求 runtime 当前在线。
+
+### `list`
+
+查看调度任务列表。
+
+常用参数：
+
+- `--status <pending|running|succeeded|failed|cancelled>`：按状态过滤
+- `--limit <n>`：限制返回条数
+- `--path <path>`：指定 agent 项目路径
+- `--agent <name>`：通过 console registry 解析 agent
+
+示例：
+
+```bash
+city service schedule list --path /abs/path/to/agent
+city service schedule list --status pending --limit 20 --path /abs/path/to/agent
+```
+
+### `info <jobId>`
+
+查看单个调度任务详情。
+
+会返回：
+
+- service/action
+- payload
+- runAtMs
+- status
+- error（若存在）
+
+示例：
+
+```bash
+city service schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+```
+
+### `cancel <jobId>`
+
+取消一条尚未执行的调度任务。
+
+规则：
+
+- 只允许取消 `pending`
+- `running` / `succeeded` / `failed` / `cancelled` 都不会被再次取消
+
+示例：
+
+```bash
+city service schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+```
+
+## 排查建议
+
+如果你怀疑某条定时 action 没有按预期执行，可以按这个顺序排查：
+
+1. 先看列表
+
+```bash
+city service schedule list --status pending --path /abs/path/to/agent
+city service schedule list --status failed --path /abs/path/to/agent
+```
+
+2. 再看单条详情
+
+```bash
+city service schedule info <jobId> --path /abs/path/to/agent
+```
+
+3. 如果只是想阻止它继续执行，取消 pending job
+
+```bash
+city service schedule cancel <jobId> --path /abs/path/to/agent
+```
+
 ## 相关文档
 
 - [`city service`](/zh/docs/commands/service/service)

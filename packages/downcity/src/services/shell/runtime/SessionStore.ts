@@ -89,17 +89,6 @@ function resolveOutputLimits(params: {
   maxChars: number;
   maxLines: number;
 } {
-  const cfg = params.runtime.config.permissions?.shell;
-  const config =
-    cfg && typeof cfg === "object" && !Array.isArray(cfg) ? cfg : undefined;
-  const configChars =
-    typeof config?.maxOutputChars === "number" && config.maxOutputChars >= 500
-      ? Math.floor(config.maxOutputChars)
-      : DEFAULT_MAX_OUTPUT_CHARS;
-  const configLines =
-    typeof config?.maxOutputLines === "number" && config.maxOutputLines >= 20
-      ? Math.floor(config.maxOutputLines)
-      : DEFAULT_MAX_OUTPUT_LINES;
   const byTokens =
     typeof params.maxOutputTokens === "number" &&
     Number.isFinite(params.maxOutputTokens) &&
@@ -107,8 +96,11 @@ function resolveOutputLimits(params: {
       ? Math.max(200, Math.floor(params.maxOutputTokens * APPROX_CHARS_PER_TOKEN))
       : null;
   return {
-    maxChars: byTokens == null ? configChars : Math.min(configChars, byTokens),
-    maxLines: configLines,
+    maxChars:
+      byTokens == null
+        ? DEFAULT_MAX_OUTPUT_CHARS
+        : Math.min(DEFAULT_MAX_OUTPUT_CHARS, byTokens),
+    maxLines: DEFAULT_MAX_OUTPUT_LINES,
   };
 }
 

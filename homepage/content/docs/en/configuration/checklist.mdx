@@ -18,9 +18,9 @@ Use this checklist before release:
 - Enable only required channels/services.
 - Run one send/receive test per enabled channel.
 
-4. Permissions and security
-- Confirm `permissions.shell.deny` covers high-risk commands.
+4. Security and secrets
 - Ensure `DC_MODEL_DB_KEY` is injected securely.
+- Verify chat authorization groups and channel-account bindings are correct.
 
 5. Observability
 - Confirm log paths are writable and traceable.

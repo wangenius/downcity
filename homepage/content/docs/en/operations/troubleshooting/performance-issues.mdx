@@ -16,18 +16,7 @@ description: Reduce response latency and long task execution time
 
 1. Use faster models for high-frequency interactions.
 2. Reduce task frequency to avoid overlaps.
-3. Cap command output size:
-
-```json
-{
-  "permissions": {
-    "shell": {
-      "maxOutputChars": 12000,
-      "maxOutputLines": 200
-    }
-  }
-}
-```
+3. Keep command output focused by narrowing the command scope and avoiding large noisy logs.
 
 4. Tune context compaction:
 

@@ -22,8 +22,8 @@ description: run 目录文件语义、状态判读、排障步骤与常见错误
 | `run-progress.json` | 执行中实时进度快照 |
 | `dialogue.md` | 多轮执行摘要（agent） |
 | `dialogue.json` | 多轮结构化记录（agent，包含 query / output / 原始 assistantMessage 快照 / feedback） |
-| `messages.jsonl` | 执行上下文消息流 |
-| `user-simulator/messages.jsonl` | 模拟用户上下文消息流（仅 `review=true` 时） |
+| `messages.jsonl` | 执行上下文消息流（包含执行器的 query / assistant reply） |
+| `user-simulator/messages.jsonl` | 模拟用户上下文消息流（仅 `review=true` 时，包含 simulator 的 query / assistant reply） |
 | `error.md` | 失败摘要（失败时） |
 
 ## `run.json` 重点字段

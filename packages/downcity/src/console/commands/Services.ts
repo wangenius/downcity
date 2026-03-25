@@ -14,6 +14,8 @@ import { printResult } from "@agent/utils/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
 import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
+import { ServiceScheduleStore } from "@/console/service/schedule/Store.js";
+import type { ScheduledJobStatus } from "@/types/ServiceSchedule.js";
 import type {
   ServiceCliBaseOptions,
   ServiceCommandResponse,
@@ -34,6 +36,33 @@ function parsePortOption(value: string): number {
     throw new Error(`Invalid port: ${value}`);
   }
   return port;
+}
+
+function parsePositiveIntOption(value: string, fieldName: string): number {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+    throw new Error(`Invalid ${fieldName}: ${value}`);
+  }
+  return parsed;
+}
+
+function normalizeScheduledJobStatus(
+  value: string | undefined,
+): ScheduledJobStatus | undefined {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return undefined;
+  if (
+    text === "pending" ||
+    text === "running" ||
+    text === "succeeded" ||
+    text === "failed" ||
+    text === "cancelled"
+  ) {
+    return text;
+  }
+  throw new Error(
+    `Invalid schedule status: ${value}. Use pending|running|succeeded|failed|cancelled.`,
+  );
 }
 
 function resolveProjectRoot(pathInput?: string): string {
@@ -142,6 +171,26 @@ async function resolveServiceProjectRoot(options: ServiceCliBaseOptions): Promis
     };
   }
   return { projectRoot };
+}
+
+/**
+ * 解析 schedule 管理命令目标路径。
+ *
+ * 关键点（中文）
+ * - schedule 命令面向本地持久化排查，不要求 agent 当前已注册或正在运行。
+ * - 显式 `--agent` 时仍然走 registry 解析；否则直接使用本地 path。
+ */
+async function resolveScheduleProjectRoot(options: ServiceCliBaseOptions): Promise<{
+  projectRoot?: string;
+  error?: string;
+}> {
+  const explicitAgent = String(options.agent || "").trim();
+  if (explicitAgent) {
+    return resolveProjectRootByAgentName(explicitAgent);
+  }
+  return {
+    projectRoot: resolveProjectRoot(options.path),
+  };
 }
 
 /**
@@ -374,6 +423,237 @@ async function runServiceCommandBridge(params: {
   });
 }
 
+async function runServiceScheduleListCommand(params: {
+  options: ServiceCliBaseOptions;
+  statusRaw?: string;
+  limitRaw?: string;
+}): Promise<void> {
+  const resolved = await resolveScheduleProjectRoot(params.options);
+  if (!resolved.projectRoot) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule list failed",
+      payload: {
+        error: resolved.error || "Failed to resolve agent project path",
+      },
+    });
+    return;
+  }
+  const projectRoot = resolved.projectRoot;
+  const pathError = validateAgentProjectRoot(projectRoot);
+  if (pathError) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule list failed",
+      payload: {
+        error: pathError,
+      },
+    });
+    return;
+  }
+
+  try {
+    const status = normalizeScheduledJobStatus(params.statusRaw);
+    const limit = params.limitRaw
+      ? parsePositiveIntOption(params.limitRaw, "limit")
+      : 100;
+    const store = new ServiceScheduleStore(projectRoot);
+    try {
+      const jobs = store.listJobs({ status, limit });
+      printResult({
+        asJson: params.options.json,
+        success: true,
+        title: "service schedule listed",
+        payload: {
+          ...(status ? { status } : {}),
+          limit,
+          count: jobs.length,
+          jobs,
+        },
+      });
+    } finally {
+      store.close();
+    }
+  } catch (error) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule list failed",
+      payload: {
+        error: String(error),
+      },
+    });
+  }
+}
+
+async function runServiceScheduleInfoCommand(params: {
+  jobId: string;
+  options: ServiceCliBaseOptions;
+}): Promise<void> {
+  const resolved = await resolveScheduleProjectRoot(params.options);
+  if (!resolved.projectRoot) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule info failed",
+      payload: {
+        error: resolved.error || "Failed to resolve agent project path",
+      },
+    });
+    return;
+  }
+  const projectRoot = resolved.projectRoot;
+  const pathError = validateAgentProjectRoot(projectRoot);
+  if (pathError) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule info failed",
+      payload: {
+        error: pathError,
+      },
+    });
+    return;
+  }
+
+  const jobId = String(params.jobId || "").trim();
+  if (!jobId) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule info failed",
+      payload: {
+        error: "jobId is required",
+      },
+    });
+    return;
+  }
+
+  const store = new ServiceScheduleStore(projectRoot);
+  try {
+    const job = store.getJobById(jobId);
+    if (!job) {
+      printResult({
+        asJson: params.options.json,
+        success: false,
+        title: "service schedule info failed",
+        payload: {
+          error: `Scheduled job not found: ${jobId}`,
+        },
+      });
+      return;
+    }
+    printResult({
+      asJson: params.options.json,
+      success: true,
+      title: "service schedule info ok",
+      payload: {
+        job,
+      },
+    });
+  } finally {
+    store.close();
+  }
+}
+
+async function runServiceScheduleCancelCommand(params: {
+  jobId: string;
+  options: ServiceCliBaseOptions;
+}): Promise<void> {
+  const resolved = await resolveScheduleProjectRoot(params.options);
+  if (!resolved.projectRoot) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule cancel failed",
+      payload: {
+        error: resolved.error || "Failed to resolve agent project path",
+      },
+    });
+    return;
+  }
+  const projectRoot = resolved.projectRoot;
+  const pathError = validateAgentProjectRoot(projectRoot);
+  if (pathError) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule cancel failed",
+      payload: {
+        error: pathError,
+      },
+    });
+    return;
+  }
+
+  const jobId = String(params.jobId || "").trim();
+  if (!jobId) {
+    printResult({
+      asJson: params.options.json,
+      success: false,
+      title: "service schedule cancel failed",
+      payload: {
+        error: "jobId is required",
+      },
+    });
+    return;
+  }
+
+  const store = new ServiceScheduleStore(projectRoot);
+  try {
+    const current = store.getJobById(jobId);
+    if (!current) {
+      printResult({
+        asJson: params.options.json,
+        success: false,
+        title: "service schedule cancel failed",
+        payload: {
+          error: `Scheduled job not found: ${jobId}`,
+        },
+      });
+      return;
+    }
+    if (current.status !== "pending") {
+      printResult({
+        asJson: params.options.json,
+        success: false,
+        title: "service schedule cancel failed",
+        payload: {
+          error: `Only pending jobs can be cancelled. Current status: ${current.status}`,
+          job: current,
+        },
+      });
+      return;
+    }
+
+    const cancelled = store.cancelPendingJob(jobId);
+    if (!cancelled) {
+      printResult({
+        asJson: params.options.json,
+        success: false,
+        title: "service schedule cancel failed",
+        payload: {
+          error: `Failed to cancel scheduled job: ${jobId}`,
+        },
+      });
+      return;
+    }
+
+    printResult({
+      asJson: params.options.json,
+      success: true,
+      title: "service schedule cancelled",
+      payload: {
+        job: store.getJobById(jobId),
+      },
+    });
+  } finally {
+    store.close();
+  }
+}
+
 /**
  * 注册 `service` 命令组。
  */
@@ -482,4 +762,51 @@ export function registerServicesCommand(program: Command): void {
         });
       },
     );
+
+  const schedule = service
+    .command("schedule")
+    .description("查看和管理持久化 schedule 任务")
+    .helpOption("--help", "display help for command");
+
+  schedule
+    .command("list")
+    .description("列出当前 agent 的调度任务")
+    .option("--status <status>", "状态过滤（pending|running|succeeded|failed|cancelled）")
+    .option("--limit <n>", "返回条数（默认 100）")
+    .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
+    .option("--json [enabled]", "以 JSON 输出", true)
+    .action(async (opts: ServiceCliBaseOptions & { status?: string; limit?: string }) => {
+      await runServiceScheduleListCommand({
+        options: opts,
+        statusRaw: opts.status,
+        limitRaw: opts.limit,
+      });
+    });
+
+  schedule
+    .command("info <jobId>")
+    .description("查看单个调度任务详情")
+    .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
+    .option("--json [enabled]", "以 JSON 输出", true)
+    .action(async (jobId: string, opts: ServiceCliBaseOptions) => {
+      await runServiceScheduleInfoCommand({
+        jobId,
+        options: opts,
+      });
+    });
+
+  schedule
+    .command("cancel <jobId>")
+    .description("取消一个尚未执行的调度任务")
+    .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--agent <name>", "agent 名称（从 console registry 解析）")
+    .option("--json [enabled]", "以 JSON 输出", true)
+    .action(async (jobId: string, opts: ServiceCliBaseOptions) => {
+      await runServiceScheduleCancelCommand({
+        jobId,
+        options: opts,
+      });
+    });
 }

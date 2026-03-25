@@ -1,6 +1,6 @@
 ---
 title: Security and Permissions Overview
-description: User-facing security model for isolation, permissions, and secret protection
+description: User-facing security model for isolation, chat authorization, and secret protection
 ---
 
 # Security and Permissions Overview
@@ -8,13 +8,13 @@ description: User-facing security model for isolation, permissions, and secret p
 Downcity security has three layers:
 
 1. Runtime isolation: one agent runtime is bound to one `projectRoot`.
-2. Permission control: `downcity.json.permissions` defines write/exec boundaries.
+2. Chat authorization: user roles decide who can send messages into the agent.
 3. Data protection: model provider `apiKey` is encrypted in `~/.downcity/downcity.db`.
 
 ## What to watch first
 
 1. Avoid stale `DC_SERVER_HOST/DC_SERVER_PORT` in your shell, or requests may hit the wrong runtime.
-2. Keep high-risk commands in `permissions.shell.deny` (for example `rm`).
+2. New users fall into the lowest authorization group by default, so review chat roles before rollout.
 3. In production, prefer `DC_MODEL_DB_KEY` from secret management.
 
 ## Recommended reading

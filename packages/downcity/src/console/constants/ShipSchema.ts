@@ -230,54 +230,5 @@ export const SHIP_JSON_SCHEMA: JsonObject = {
         },
       },
     },
-    permissions: {
-      type: "object",
-      additionalProperties: true,
-      properties: {
-        read_repo: {
-          anyOf: [
-            { type: "boolean" },
-            {
-              type: "object",
-              additionalProperties: true,
-              properties: { paths: { type: "array", items: { type: "string" } } },
-            },
-          ],
-        },
-        write_repo: {
-          anyOf: [
-            { type: "boolean" },
-            {
-              type: "object",
-              additionalProperties: true,
-              properties: {
-                paths: { type: "array", items: { type: "string" } },
-                requiresApproval: { type: "boolean" },
-              },
-              required: ["requiresApproval"],
-            },
-          ],
-        },
-        shell: {
-          anyOf: [
-            { type: "boolean" },
-            {
-              type: "object",
-              additionalProperties: true,
-              properties: {
-                deny: { type: "array", items: { type: "string" } },
-                allow: { type: "array", items: { type: "string" } },
-                requiresApproval: { type: "boolean" },
-                maxOutputChars: { type: "integer", minimum: 500, maximum: 200000 },
-                maxOutputLines: { type: "integer", minimum: 20, maximum: 5000 },
-              },
-              required: ["requiresApproval"],
-            },
-          ],
-        },
-        open_pr: { type: "boolean" },
-        merge: { type: "boolean" },
-      },
-    },
   },
 };

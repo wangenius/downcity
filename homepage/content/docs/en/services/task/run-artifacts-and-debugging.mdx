@@ -22,8 +22,8 @@ Every task execution creates a run directory:
 | `run-progress.json` | live progress snapshot |
 | `dialogue.md` | multi-round summary (`agent`) |
 | `dialogue.json` | structured round records (`agent`, including query / output / raw assistantMessage snapshots / feedback) |
-| `messages.jsonl` | execution context message stream |
-| `user-simulator/messages.jsonl` | user-simulator context message stream (only when `review=true`) |
+| `messages.jsonl` | execution context message stream (including executor query / assistant reply) |
+| `user-simulator/messages.jsonl` | user-simulator context message stream (only when `review=true`, including simulator query / assistant reply) |
 | `error.md` | failure summary |
 
 ## `run.json` key fields

@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import Database from "better-sqlite3";
 import path from "node:path";
-import { and, asc, eq, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { scheduledJobsTable } from "./Schema.js";
 import type {
@@ -128,6 +128,37 @@ export class ServiceScheduleStore {
   }
 
   /**
+   * 列出任务。
+   *
+   * 说明（中文）
+   * - 默认按 `runAtMs` 升序返回，便于排查“接下来会执行什么”。
+   * - 可选状态过滤与数量限制，避免一次输出过多记录。
+   */
+  listJobs(params?: {
+    status?: ScheduledJobStatus;
+    limit?: number;
+  }): ScheduledJobRecord[] {
+    const limit =
+      typeof params?.limit === "number" && Number.isFinite(params.limit)
+        ? Math.max(1, Math.trunc(params.limit))
+        : 100;
+    const status = params?.status;
+    const query = this.db.select().from(scheduledJobsTable);
+    const rows =
+      typeof status === "string" && status
+        ? query
+            .where(eq(scheduledJobsTable.status, status))
+            .orderBy(asc(scheduledJobsTable.runAtMs), desc(scheduledJobsTable.createdAt))
+            .limit(limit)
+            .all()
+        : query
+            .orderBy(asc(scheduledJobsTable.runAtMs), desc(scheduledJobsTable.createdAt))
+            .limit(limit)
+            .all();
+    return rows.map((row) => this.toJobRecord(row));
+  }
+
+  /**
    * 列出已到点且待执行的任务。
    */
   listDuePendingJobs(nowMs: number): ScheduledJobRecord[] {
@@ -211,6 +242,29 @@ export class ServiceScheduleStore {
       jobId,
       status: "cancelled",
     });
+  }
+
+  /**
+   * 取消待执行任务。
+   *
+   * 关键点（中文）
+   * - 仅允许取消 `pending`，避免打断已经开始执行的任务。
+   */
+  cancelPendingJob(jobId: string): boolean {
+    const result = this.db.update(scheduledJobsTable)
+      .set({
+        status: "cancelled",
+        updatedAt: Date.now(),
+        error: null,
+      })
+      .where(
+        and(
+          eq(scheduledJobsTable.id, String(jobId || "").trim()),
+          eq(scheduledJobsTable.status, "pending"),
+        ),
+      )
+      .run();
+    return Number(result.changes || 0) > 0;
   }
 
   /**

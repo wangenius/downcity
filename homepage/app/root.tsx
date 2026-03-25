@@ -43,7 +43,11 @@ const { provider } = defineI18nUI(i18n, {
 
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
-  { rel: "icon", href: "/icon.png", type: "image/png", sizes: "400x400" },
+  // favicon 使用 ico + 多尺寸 png，避免部分浏览器对 svg favicon 兼容性不稳定。
+  { rel: "icon", href: "/favicon.ico?v=20260325", type: "image/x-icon" },
+  { rel: "shortcut icon", href: "/favicon.ico?v=20260325", type: "image/x-icon" },
+  { rel: "icon", href: "/favicon-32x32.png?v=20260325", type: "image/png", sizes: "32x32" },
+  { rel: "icon", href: "/favicon-16x16.png?v=20260325", type: "image/png", sizes: "16x16" },
   { rel: "icon", href: "/icon-192.png", type: "image/png", sizes: "192x192" },
   { rel: "apple-touch-icon", href: "/icon-192.png", sizes: "180x180" },
   { rel: "manifest", href: "/site.webmanifest" },

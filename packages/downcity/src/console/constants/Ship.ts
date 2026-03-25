@@ -19,19 +19,6 @@ export const DEFAULT_SHIP_JSON: ShipConfig = {
       compactRatio: 0.5,
     },
   },
-  permissions: {
-    read_repo: true,
-    write_repo: {
-      requiresApproval: false,
-    },
-    shell: {
-      deny: ["rm"],
-      requiresApproval: false,
-      denyRequiresApproval: true,
-      maxOutputChars: 12000,
-      maxOutputLines: 200,
-    },
-  },
   services: {
     chat: {
       method: "direct",

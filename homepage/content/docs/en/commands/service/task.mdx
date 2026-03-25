@@ -56,6 +56,8 @@ Create dedup now uses exact `title` only.
 
 `message` tells the caller that the task has started, the result will be sent to the user automatically when it finishes, and the agent can continue immediately without waiting for task completion.
 
+After `accepted=true`, the caller should not manually forward the task output again or proactively read run artifacts for polling. Only inspect run files when the user explicitly asks for debugging or execution details.
+
 ## Examples
 
 ```bash

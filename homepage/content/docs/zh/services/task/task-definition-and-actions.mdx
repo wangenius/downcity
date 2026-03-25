@@ -70,6 +70,11 @@ one-shot 触发成功后，任务会自动：
 - 可以直接继续后续流程
 - 无需等待 task 完成
 
+调用方行为约束：
+- 不要在 `accepted=true` 后手动把 task 产出再转发一次。
+- 不要主动读取 run 目录、`run-progress.json`、`output.md` 做轮询。
+- 只有用户明确要求排查或查看产物时，才去检查 run 目录。
+
 `agent` 任务当前规则：
 - 默认单轮执行。
 - 仅当 `review=true` 时启用模拟用户多轮复核。

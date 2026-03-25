@@ -194,6 +194,98 @@ Think of the boundary like this:
 If your need is “run this existing action once, later”, use this scheduling feature.  
 If your need is “define an ongoing automation job”, use [`city task`](/en/docs/commands/service/task).
 
+## Inspection And Management Commands
+
+Besides creating scheduled jobs, you can now inspect and manage the local schedule store directly.
+
+Use:
+
+```bash
+city service schedule <subcommand>
+```
+
+Currently supported:
+
+- `list`
+- `info <jobId>`
+- `cancel <jobId>`
+
+These commands read the current agent project's `.downcity/schedule.sqlite` directly, so they do not require the runtime to be currently online.
+
+### `list`
+
+List scheduled jobs.
+
+Key options:
+
+- `--status <pending|running|succeeded|failed|cancelled>`: filter by status
+- `--limit <n>`: limit result size
+- `--path <path>`: target agent project path
+- `--agent <name>`: resolve agent via console registry
+
+Examples:
+
+```bash
+city service schedule list --path /abs/path/to/agent
+city service schedule list --status pending --limit 20 --path /abs/path/to/agent
+```
+
+### `info <jobId>`
+
+Show one scheduled job in detail.
+
+Returned fields include:
+
+- service/action
+- payload
+- runAtMs
+- status
+- error (when present)
+
+Example:
+
+```bash
+city service schedule info sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+```
+
+### `cancel <jobId>`
+
+Cancel a job that has not started yet.
+
+Rules:
+
+- only `pending` jobs can be cancelled
+- `running` / `succeeded` / `failed` / `cancelled` jobs are not cancelled again
+
+Example:
+
+```bash
+city service schedule cancel sched_xxxxxxxxxxxxxxxx --path /abs/path/to/agent
+```
+
+## Troubleshooting Flow
+
+If one delayed or scheduled action did not behave as expected, a simple flow is:
+
+1. Check the lists
+
+```bash
+city service schedule list --status pending --path /abs/path/to/agent
+city service schedule list --status failed --path /abs/path/to/agent
+```
+
+2. Inspect one job
+
+```bash
+city service schedule info <jobId> --path /abs/path/to/agent
+```
+
+3. Cancel a pending job if you want to stop it before execution
+
+```bash
+city service schedule cancel <jobId> --path /abs/path/to/agent
+```
+
 ## Related Docs
 
 - [`city service`](/en/docs/commands/service/service)

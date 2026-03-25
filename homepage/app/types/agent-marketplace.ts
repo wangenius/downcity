@@ -118,44 +118,20 @@ export interface ReviewAgentMarketplaceSubmissionInput {
  * 公共提交表单值。
  */
 export interface AgentMarketplaceSubmissionFormValues {
-  /** Agent 名称输入框值。 */
-  agentName: string;
   /** 仓库链接输入框值。 */
   repositoryUrl: string;
-  /** 简介输入框值。 */
-  description: string;
-  /** 分类选择值。 */
-  category: string;
-  /** 提交者名称输入框值。 */
-  submitterName: string;
   /** 提交者邮箱输入框值。 */
   submitterEmail: string;
-  /** 主页链接输入框值。 */
-  homepageUrl: string;
-  /** 演示链接输入框值。 */
-  demoUrl: string;
 }
 
 /**
  * 公共提交表单错误集合。
  */
 export interface AgentMarketplaceSubmissionFormErrors {
-  /** Agent 名称字段错误。 */
-  agentName?: string;
   /** 仓库链接字段错误。 */
   repositoryUrl?: string;
-  /** 简介字段错误。 */
-  description?: string;
-  /** 分类字段错误。 */
-  category?: string;
-  /** 提交者名称字段错误。 */
-  submitterName?: string;
   /** 提交者邮箱字段错误。 */
   submitterEmail?: string;
-  /** 主页链接字段错误。 */
-  homepageUrl?: string;
-  /** 演示链接字段错误。 */
-  demoUrl?: string;
   /** 表单级通用错误。 */
   form?: string;
 }

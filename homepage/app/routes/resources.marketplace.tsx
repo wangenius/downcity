@@ -21,14 +21,11 @@ import {
   createAgentMarketplaceSubmission,
 } from "@/services/agent-marketplace/repository";
 import {
-  isAgentMarketplaceCategory,
-  normalizePublicUrl,
   normalizeRepositoryUrl,
   normalizeTextInput,
 } from "@/services/agent-marketplace/normalization";
 import type {
   AgentMarketplaceSubmissionActionData,
-  AgentMarketplaceCategory,
   AgentMarketplaceSubmissionFormErrors,
   AgentMarketplaceSubmissionFormValues,
 } from "@/types/agent-marketplace";
@@ -38,7 +35,7 @@ const MARKETPLACE_PAGE = {
     badge: "Supabase-backed",
     title: "Agent Marketplace",
     subtitle:
-      "Submit your agent repository, send it into the review queue, and automatically publish approved community agents here.",
+      "Submit only your email and repository URL. The rest of the marketplace metadata can be completed by the admin in Supabase.",
     liveTitle: "Approved community agents",
     liveEmptyTitle: "No approved agents yet",
     liveEmptyDescription:
@@ -48,7 +45,7 @@ const MARKETPLACE_PAGE = {
       {
         title: "Submit repository",
         description:
-          "Share a public code repository plus a short description of what the agent does.",
+          "Share your email address and a public repository URL.",
       },
       {
         title: "Review in database",
@@ -63,29 +60,17 @@ const MARKETPLACE_PAGE = {
     ],
     formTitle: "Submit your agent",
     formDescription:
-      "Every submission is stored in Supabase with a pending review status. Once approved, it becomes visible in this resource page.",
+      "This form only asks for the minimum. We store the submission in Supabase as pending, and the admin fills in the rest later.",
     successTitle: "Submission received",
     successDescription:
-      "Your repository has been added to the review queue. We will publish it here after approval.",
+      "Your repository has been added to the review queue. The admin can complete the details in Supabase before approving it.",
     formFields: {
-      agentName: "Agent name",
       repositoryUrl: "Repository URL",
-      description: "What does this agent do?",
-      category: "Category",
-      submitterName: "Your name",
       submitterEmail: "Email",
-      homepageUrl: "Project homepage (optional)",
-      demoUrl: "Demo URL (optional)",
     },
     placeholders: {
-      agentName: "Production Incident Agent",
       repositoryUrl: "https://github.com/your-org/incident-agent",
-      description:
-        "Explain the core workflow, target users, and what makes this agent useful.",
-      submitterName: "Jane Doe",
       submitterEmail: "jane@example.com",
-      homepageUrl: "https://example.com/incident-agent",
-      demoUrl: "https://youtu.be/demo",
     },
     categoryLabels: {
       development: "Development",
@@ -95,7 +80,6 @@ const MARKETPLACE_PAGE = {
     },
     helper: {
       repositoryUrl: "Public GitHub, GitLab, or any public code repository URL.",
-      description: "Keep it concrete so reviewers can quickly understand the agent.",
     },
     buttons: {
       submit: "Submit for review",
@@ -109,14 +93,8 @@ const MARKETPLACE_PAGE = {
     approvedAtLabel: "Approved",
     errors: {
       invalidIntent: "Unsupported form action.",
-      agentName: "Please provide an agent name between 2 and 80 characters.",
       repositoryUrl: "Please provide a valid public repository URL.",
-      description: "Please provide a description between 24 and 600 characters.",
-      category: "Please choose a valid category.",
-      submitterName: "Please provide your name between 2 and 80 characters.",
       submitterEmail: "Please provide a valid email address.",
-      homepageUrl: "Please provide a valid homepage URL.",
-      demoUrl: "Please provide a valid demo URL.",
       duplicate:
         "This repository has already been submitted. We will review the existing entry.",
       unknown: "We could not save your submission. Please try again.",
@@ -126,7 +104,7 @@ const MARKETPLACE_PAGE = {
     badge: "Supabase 驱动",
     title: "Agent 社区资源",
     subtitle:
-      "提交你的 Agent 代码仓库，进入审核队列；审核通过后，会自动显示在这个社区资源页里。",
+      "用户提交时只需要填写邮箱和仓库链接，剩余信息由管理员在 Supabase 中补充并审核。",
     liveTitle: "已通过审核的社区 Agent",
     liveEmptyTitle: "暂时还没有已通过的 Agent",
     liveEmptyDescription:
@@ -136,7 +114,7 @@ const MARKETPLACE_PAGE = {
       {
         title: "提交代码仓库",
         description:
-          "填写公开代码仓库地址，并补充一段明确描述，让审核者快速理解 Agent 的用途。",
+          "只填写邮箱和公开代码仓库地址即可。",
       },
       {
         title: "在数据库中审核",
@@ -151,29 +129,17 @@ const MARKETPLACE_PAGE = {
     ],
     formTitle: "提交你的 Agent",
     formDescription:
-      "每一条提交都会先写入 Supabase，并以待审核状态保存。审核通过后才会公开展示。",
+      "这里只收最少信息。记录会先写入 Supabase，剩下的展示信息由管理员后续补全。",
     successTitle: "提交成功",
     successDescription:
-      "你的仓库已经进入审核队列，审核通过后会显示在这个资源页中。",
+      "你的仓库已经进入审核队列，管理员会在 Supabase 中补充信息并完成审核。",
     formFields: {
-      agentName: "Agent 名称",
       repositoryUrl: "代码仓库地址",
-      description: "这个 Agent 是做什么的？",
-      category: "分类",
-      submitterName: "你的名字",
       submitterEmail: "邮箱",
-      homepageUrl: "项目主页（可选）",
-      demoUrl: "演示链接（可选）",
     },
     placeholders: {
-      agentName: "Production Incident Agent",
       repositoryUrl: "https://github.com/your-org/incident-agent",
-      description:
-        "请明确说明核心流程、面向谁、解决什么问题，以及为什么值得收录到社区资源里。",
-      submitterName: "张三",
       submitterEmail: "zhangsan@example.com",
-      homepageUrl: "https://example.com/incident-agent",
-      demoUrl: "https://youtu.be/demo",
     },
     categoryLabels: {
       development: "开发",
@@ -183,7 +149,6 @@ const MARKETPLACE_PAGE = {
     },
     helper: {
       repositoryUrl: "支持 GitHub、GitLab 或任意公开代码仓库链接。",
-      description: "尽量写具体，能帮助审核者更快判断是否适合社区展示。",
     },
     buttons: {
       submit: "提交审核",
@@ -197,14 +162,8 @@ const MARKETPLACE_PAGE = {
     approvedAtLabel: "通过时间",
     errors: {
       invalidIntent: "不支持的表单动作。",
-      agentName: "请填写 2 到 80 个字符之间的 Agent 名称。",
       repositoryUrl: "请填写有效的公开代码仓库地址。",
-      description: "请填写 24 到 600 个字符之间的描述。",
-      category: "请选择合法的分类。",
-      submitterName: "请填写 2 到 80 个字符之间的名字。",
       submitterEmail: "请填写有效的邮箱地址。",
-      homepageUrl: "请填写有效的项目主页链接。",
-      demoUrl: "请填写有效的演示链接。",
       duplicate: "这个仓库已经提交过了，我们会继续审核已有记录。",
       unknown: "提交保存失败，请稍后重试。",
     },
@@ -218,14 +177,8 @@ const FIELD_CLASS_NAME =
 
 function createEmptyFormValues(): AgentMarketplaceSubmissionFormValues {
   return {
-    agentName: "",
     repositoryUrl: "",
-    description: "",
-    category: "development",
-    submitterName: "",
     submitterEmail: "",
-    homepageUrl: "",
-    demoUrl: "",
   };
 }
 
@@ -242,6 +195,27 @@ function formatDisplayDate(value: string | Date | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString().slice(0, 10);
+}
+
+/**
+ * 从仓库地址提取默认 Agent 名称。
+ */
+function deriveAgentNameFromRepositoryUrl(repositoryUrl: string) {
+  try {
+    const url = new URL(repositoryUrl);
+    const segments = url.pathname.split("/").filter(Boolean);
+    const repositoryName = segments.at(-1) ?? "community-agent";
+    return repositoryName.slice(0, 80);
+  } catch {
+    return "community-agent";
+  }
+}
+
+/**
+ * 从邮箱生成默认提交者名称。
+ */
+function deriveSubmitterNameFromEmail(email: string) {
+  return (email.split("@")[0] || "community-submitter").slice(0, 80);
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -278,14 +252,8 @@ export async function action({ request }: Route.ActionArgs) {
   const intent = normalizeTextInput(formData.get("intent"));
 
   const values: AgentMarketplaceSubmissionFormValues = {
-    agentName: normalizeTextInput(formData.get("agentName")),
     repositoryUrl: normalizeTextInput(formData.get("repositoryUrl")),
-    description: normalizeTextInput(formData.get("description")),
-    category: normalizeTextInput(formData.get("category")),
-    submitterName: normalizeTextInput(formData.get("submitterName")),
     submitterEmail: normalizeTextInput(formData.get("submitterEmail")),
-    homepageUrl: normalizeTextInput(formData.get("homepageUrl")),
-    demoUrl: normalizeTextInput(formData.get("demoUrl")),
   };
 
   if (intent !== "submit") {
@@ -301,10 +269,6 @@ export async function action({ request }: Route.ActionArgs) {
 
   const errors: AgentMarketplaceSubmissionFormErrors = {};
 
-  if (values.agentName.length < 2 || values.agentName.length > 80) {
-    errors.agentName = content.errors.agentName;
-  }
-
   let normalizedRepositoryUrl = "";
   try {
     normalizedRepositoryUrl = normalizeRepositoryUrl(values.repositoryUrl);
@@ -312,38 +276,8 @@ export async function action({ request }: Route.ActionArgs) {
     errors.repositoryUrl = content.errors.repositoryUrl;
   }
 
-  if (values.description.length < 24 || values.description.length > 600) {
-    errors.description = content.errors.description;
-  }
-
-  if (!isAgentMarketplaceCategory(values.category)) {
-    errors.category = content.errors.category;
-  }
-
-  if (values.submitterName.length < 2 || values.submitterName.length > 80) {
-    errors.submitterName = content.errors.submitterName;
-  }
-
   if (!isValidEmail(values.submitterEmail)) {
     errors.submitterEmail = content.errors.submitterEmail;
-  }
-
-  let normalizedHomepageUrl = "";
-  if (values.homepageUrl) {
-    try {
-      normalizedHomepageUrl = normalizePublicUrl(values.homepageUrl);
-    } catch {
-      errors.homepageUrl = content.errors.homepageUrl;
-    }
-  }
-
-  let normalizedDemoUrl = "";
-  if (values.demoUrl) {
-    try {
-      normalizedDemoUrl = normalizePublicUrl(values.demoUrl);
-    } catch {
-      errors.demoUrl = content.errors.demoUrl;
-    }
   }
 
   if (Object.keys(errors).length > 0) {
@@ -353,7 +287,6 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 
-  const category = values.category as AgentMarketplaceCategory;
   const existing =
     await findAgentMarketplaceSubmissionByNormalizedRepositoryUrl(
       normalizedRepositoryUrl,
@@ -370,16 +303,19 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   try {
+    const derivedAgentName = deriveAgentNameFromRepositoryUrl(normalizedRepositoryUrl);
+    const derivedSubmitterName = deriveSubmitterNameFromEmail(values.submitterEmail);
+
     await createAgentMarketplaceSubmission({
-      agentName: values.agentName,
+      agentName: derivedAgentName,
       repositoryUrl: normalizedRepositoryUrl,
       normalizedRepositoryUrl,
-      description: values.description,
-      category,
-      submitterName: values.submitterName,
+      description: "Pending admin review. Marketplace metadata will be completed in Supabase.",
+      category: "development",
+      submitterName: derivedSubmitterName,
       submitterEmail: values.submitterEmail,
-      homepageUrl: normalizedHomepageUrl || null,
-      demoUrl: normalizedDemoUrl || null,
+      homepageUrl: null,
+      demoUrl: null,
     });
   } catch {
     return data<AgentMarketplaceSubmissionActionData>(
@@ -569,21 +505,6 @@ export default function Marketplace({
 
               <label className="block">
                 <span className="text-sm font-medium text-foreground">
-                  {content.formFields.agentName}
-                </span>
-                <input
-                  name="agentName"
-                  defaultValue={formValues.agentName}
-                  className={FIELD_CLASS_NAME}
-                  placeholder={content.placeholders.agentName}
-                />
-                {formErrors?.agentName ? (
-                  <p className="mt-2 text-xs text-red-600">{formErrors.agentName}</p>
-                ) : null}
-              </label>
-
-              <label className="block">
-                <span className="text-sm font-medium text-foreground">
                   {content.formFields.repositoryUrl}
                 </span>
                 <input
@@ -602,102 +523,17 @@ export default function Marketplace({
 
               <label className="block">
                 <span className="text-sm font-medium text-foreground">
-                  {content.formFields.description}
-                </span>
-                <textarea
-                  name="description"
-                  defaultValue={formValues.description}
-                  className={`${FIELD_CLASS_NAME} min-h-36 resize-y`}
-                  placeholder={content.placeholders.description}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {content.helper.description}
-                </p>
-                {formErrors?.description ? (
-                  <p className="mt-2 text-xs text-red-600">{formErrors.description}</p>
-                ) : null}
-              </label>
-
-              <label className="block">
-                <span className="text-sm font-medium text-foreground">
-                  {content.formFields.category}
-                </span>
-                <select
-                  name="category"
-                  defaultValue={formValues.category}
-                  className={FIELD_CLASS_NAME}
-                >
-                  {Object.entries(content.categoryLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                {formErrors?.category ? (
-                  <p className="mt-2 text-xs text-red-600">{formErrors.category}</p>
-                ) : null}
-              </label>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">
-                    {content.formFields.submitterName}
-                  </span>
-                  <input
-                    name="submitterName"
-                    defaultValue={formValues.submitterName}
-                    className={FIELD_CLASS_NAME}
-                    placeholder={content.placeholders.submitterName}
-                  />
-                  {formErrors?.submitterName ? (
-                    <p className="mt-2 text-xs text-red-600">{formErrors.submitterName}</p>
-                  ) : null}
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">
-                    {content.formFields.submitterEmail}
-                  </span>
-                  <input
-                    name="submitterEmail"
-                    type="email"
-                    defaultValue={formValues.submitterEmail}
-                    className={FIELD_CLASS_NAME}
-                    placeholder={content.placeholders.submitterEmail}
-                  />
-                  {formErrors?.submitterEmail ? (
-                    <p className="mt-2 text-xs text-red-600">{formErrors.submitterEmail}</p>
-                  ) : null}
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="text-sm font-medium text-foreground">
-                  {content.formFields.homepageUrl}
+                  {content.formFields.submitterEmail}
                 </span>
                 <input
-                  name="homepageUrl"
-                  defaultValue={formValues.homepageUrl}
+                  name="submitterEmail"
+                  type="email"
+                  defaultValue={formValues.submitterEmail}
                   className={FIELD_CLASS_NAME}
-                  placeholder={content.placeholders.homepageUrl}
+                  placeholder={content.placeholders.submitterEmail}
                 />
-                {formErrors?.homepageUrl ? (
-                  <p className="mt-2 text-xs text-red-600">{formErrors.homepageUrl}</p>
-                ) : null}
-              </label>
-
-              <label className="block">
-                <span className="text-sm font-medium text-foreground">
-                  {content.formFields.demoUrl}
-                </span>
-                <input
-                  name="demoUrl"
-                  defaultValue={formValues.demoUrl}
-                  className={FIELD_CLASS_NAME}
-                  placeholder={content.placeholders.demoUrl}
-                />
-                {formErrors?.demoUrl ? (
-                  <p className="mt-2 text-xs text-red-600">{formErrors.demoUrl}</p>
+                {formErrors?.submitterEmail ? (
+                  <p className="mt-2 text-xs text-red-600">{formErrors.submitterEmail}</p>
                 ) : null}
               </label>
 

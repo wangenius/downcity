@@ -26,7 +26,7 @@ export type DaemonHttpMethod = "GET" | "POST" | "PUT" | "DELETE";
  * JSON API 调用参数。
  *
  * 关键点（中文）
- * - `projectRoot` 用于解析 ship.json 与默认 endpoint。
+ * - `projectRoot` 用于解析 downcity.json 与默认 endpoint。
  * - `host/port` 可显式覆盖自动解析结果。
  */
 export type DaemonJsonApiCallParams = {

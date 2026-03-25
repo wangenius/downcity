@@ -2,8 +2,8 @@
  * Auth 授权运行时状态存储。
  *
  * 关键点（中文）
- * - 所有动态状态（观测用户 / 会话）统一落盘到 `.ship/chat/authorization/state.json`。
- * - 静态授权配置保存在 console `ship.db`，不和运行时观测数据混写。
+ * - 所有动态状态（观测用户 / 会话）统一落盘到 `.downcity/chat/authorization/state.json`。
+ * - 静态授权配置保存在 console `downcity.db`，不和运行时观测数据混写。
  */
 
 import fs from "fs-extra";
@@ -19,7 +19,7 @@ import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 
 function getAuthorizationStatePath(rootPath: string): string {
-  return path.join(rootPath, ".ship", "chat", "authorization", "state.json");
+  return path.join(rootPath, ".downcity", "chat", "authorization", "state.json");
 }
 
 function normalizeText(value: unknown): string | undefined {

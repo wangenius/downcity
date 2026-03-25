@@ -27,7 +27,7 @@ function createRuntime() {
   const assetInstalls = [];
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-voice-plugin-"));
   fs.writeFileSync(
-    path.join(rootPath, "ship.json"),
+    path.join(rootPath, "downcity.json"),
     `${JSON.stringify({
       name: "demo",
       version: "1.0.0",

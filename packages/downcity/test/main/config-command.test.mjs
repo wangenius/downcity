@@ -2,7 +2,7 @@
  * config 命令组测试（node:test）。
  *
  * 覆盖点（中文）
- * - 验证 `config get/set/unset` 对 ship.json 的通用读写行为。
+ * - 验证 `config get/set/unset` 对 downcity.json 的通用读写行为。
  * - 验证 `config llm provider/model` 的增改删与 activeModel 切换行为。
  * - 验证 provider 被 model 引用时的删除保护。
  */
@@ -20,7 +20,7 @@ const CLI_ENTRY = path.resolve(process.cwd(), "bin/console/commands/Index.js");
 
 function createBaseShipConfig() {
   return {
-    $schema: "./.ship/schema/ship.schema.json",
+    $schema: "./.downcity/schema/downcity.schema.json",
     name: "config-test-agent",
     version: "1.0.0",
     llm: {
@@ -77,12 +77,12 @@ async function runCliExpectFailure(args) {
   }
 }
 
-test("config get/set/unset updates nested ship.json path", async (t) => {
+test("config get/set/unset updates nested downcity.json path", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-cmd-"));
   t.after(async () => {
     await fs.remove(tempRoot);
   });
-  await fs.writeJson(path.join(tempRoot, "ship.json"), createBaseShipConfig(), {
+  await fs.writeJson(path.join(tempRoot, "downcity.json"), createBaseShipConfig(), {
     spaces: 2,
   });
 
@@ -116,7 +116,7 @@ test("config get/set/unset updates nested ship.json path", async (t) => {
   ]);
   assert.equal(unsetResult.success, true);
 
-  const saved = await fs.readJson(path.join(tempRoot, "ship.json"));
+  const saved = await fs.readJson(path.join(tempRoot, "downcity.json"));
   assert.equal(saved.services.chat.queue.maxConcurrency, undefined);
 });
 
@@ -125,7 +125,7 @@ test("config llm provider/model commands manage references and active model", as
   t.after(async () => {
     await fs.remove(tempRoot);
   });
-  await fs.writeJson(path.join(tempRoot, "ship.json"), createBaseShipConfig(), {
+  await fs.writeJson(path.join(tempRoot, "downcity.json"), createBaseShipConfig(), {
     spaces: 2,
   });
 
@@ -224,7 +224,7 @@ test("config llm provider/model commands manage references and active model", as
   ]);
   assert.equal(removeDefaultProvider.success, true);
 
-  const saved = await fs.readJson(path.join(tempRoot, "ship.json"));
+  const saved = await fs.readJson(path.join(tempRoot, "downcity.json"));
   assert.equal(saved.llm.activeModel, "fast");
   assert.equal(saved.llm.providers.openai_main.type, "openai");
   assert.equal(saved.llm.providers.default, undefined);

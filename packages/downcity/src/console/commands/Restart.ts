@@ -33,7 +33,7 @@ export async function restartCommand(
   }
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
     console.error(
-      '❌ ship.json does not exist. Please run "city agent create" first',
+      '❌ downcity.json does not exist. Please run "city agent create" first',
     );
     process.exit(1);
   }

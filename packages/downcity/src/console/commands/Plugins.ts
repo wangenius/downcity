@@ -138,7 +138,7 @@ async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<
 function validateAgentProjectRoot(projectRoot: string): string | null {
   const missing: string[] = [];
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
-    missing.push("ship.json");
+    missing.push("downcity.json");
   }
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     missing.push("PROFILE.md");

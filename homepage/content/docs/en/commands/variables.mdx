@@ -22,16 +22,16 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city v
 
 | Command Group | Required Environment | Optional Environment | Notes |
 | --- | --- | --- | --- |
-| `city console init` | Writable `~/.ship/` | Pre-set `LLM_API_KEY` (can be used as default init input) | Writes `~/.ship/ship.db` (sensitive fields encrypted) |
-| `city console start/stop/restart/status/agents` | Writable `~/.ship/console/` | None | Manages global console process and registry |
+| `city console init` | Writable `~/.downcity/` | Pre-set `LLM_API_KEY` (can be used as default init input) | Writes `~/.downcity/downcity.db` (sensitive fields encrypted) |
+| `city console start/stop/restart/status/agents` | Writable `~/.downcity/console/` | None | Manages global console process and registry |
 | `city console ui` | Console is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
-| `city agent create` | Writable target directory | None | Generates `ship.json`, `PROFILE.md`, `.ship/` |
-| `city agent start` | Console is running; project has `ship.json` + `PROFILE.md` | `--host` | Agent port is always allocated by console and then registered into console registry |
+| `city agent create` | Writable target directory | None | Generates `downcity.json`, `PROFILE.md`, `.downcity/` |
+| `city agent start` | Console is running; project has `downcity.json` + `PROFILE.md` | `--host` | Agent port is always allocated by console and then registered into console registry |
 | `city agent restart/status/doctor` | Target agent is registered in console registry | None | Operates through registry resolution, not arbitrary path only |
-| `city console config ...` | Valid `ship.json` exists under target path | `--path` | Reads/writes project config; does not call runtime API |
+| `city console config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call runtime API |
 | `city console config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
-| `city service ...` | Target runtime is reachable; project is registered; project has `ship.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
-| `city plugin ...` | Target runtime is reachable; project is registered; project has `ship.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
+| `city service ...` | Target runtime is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
+| `city plugin ...` | Target runtime is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
 | `city <service> <action>` (e.g. `city chat ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
 | `city <plugin> <action>` (e.g. `city voice ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
 
@@ -51,9 +51,9 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city v
 
 ### Chat channel credentials
 
-- The only path is binding `services.chat.channels.<channel>.channelAccountId` in `ship.json`.
-- Real credentials (`botToken` / `appId` / `appSecret`) are stored in global `~/.ship/ship.db` (`channel_accounts`).
-- `ship.json` and agent `.env` no longer carry these credentials.
+- The only path is binding `services.chat.channels.<channel>.channelAccountId` in `downcity.json`.
+- Real credentials (`botToken` / `appId` / `appSecret`) are stored in global `~/.downcity/downcity.db` (`channel_accounts`).
+- `downcity.json` and agent `.env` no longer carry these credentials.
 
 ## 3) `city service` target agent resolution order
 
@@ -67,7 +67,7 @@ For `city service list/status/start/stop/restart/command`:
 Still must satisfy:
 
 - resolved path is registered in console registry
-- resolved path contains `ship.json` and `PROFILE.md`
+- resolved path contains `downcity.json` and `PROFILE.md`
 
 ## 4) Runtime API endpoint resolution order (`host/port`)
 
@@ -76,7 +76,7 @@ For runtime API calls (service/plugin/action commands):
 1. explicit CLI args: `--host` / `--port`
 2. env vars: `DC_SERVER_HOST/PORT`
 3. env vars: `DC_CTX_SERVER_HOST/PORT`
-4. daemon meta args (`.ship/.debug/downcity.daemon.json`)
+4. daemon meta args (`.downcity/.debug/downcity.daemon.json`)
 5. default: `127.0.0.1:5314`
 
 Normalization rule:

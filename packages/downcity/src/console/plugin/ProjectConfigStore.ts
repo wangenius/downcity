@@ -2,7 +2,7 @@
  * Plugin / Asset 项目配置持久化工具。
  *
  * 关键点（中文）
- * - 新插件体系的用户配置统一写回项目 `ship.json`。
+ * - 新插件体系的用户配置统一写回项目 `downcity.json`。
  * - 这里只负责 `plugins` / `assets` 两个配置域，避免把 runtime 合并态整包落盘。
  * - 这样既能保证重启后配置仍然生效，也能避免把 console 全局配置误写进项目文件。
  */
@@ -23,7 +23,7 @@ type PersistableSections = {
 };
 
 function getProjectShipJsonPath(projectRoot: string): string {
-  return path.join(path.resolve(projectRoot), "ship.json");
+  return path.join(path.resolve(projectRoot), "downcity.json");
 }
 
 async function readProjectShipConfig(projectRoot: string): Promise<ShipConfig> {
@@ -31,13 +31,13 @@ async function readProjectShipConfig(projectRoot: string): Promise<ShipConfig> {
   const raw = await fs.readFile(shipJsonPath, "utf-8");
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(`Invalid ship.json: expected object (${shipJsonPath})`);
+    throw new Error(`Invalid downcity.json: expected object (${shipJsonPath})`);
   }
   return parsed as ShipConfig;
 }
 
 /**
- * 将 plugins / assets 配置块写回项目 `ship.json`。
+ * 将 plugins / assets 配置块写回项目 `downcity.json`。
  */
 export async function persistProjectPluginConfig(params: {
   /**

@@ -60,10 +60,10 @@ export async function skillInstallCommand(
 
 export async function skillListCommand(cwd: string = "."): Promise<void> {
   const projectRoot = path.resolve(String(cwd || "."));
-  const shipJson = path.join(projectRoot, "ship.json");
+  const shipJson = path.join(projectRoot, "downcity.json");
   if (!fs.existsSync(shipJson)) {
     throw new Error(
-      `ship.json not found at ${shipJson}. Run "city agent create" first or pass the correct path.`,
+      `downcity.json not found at ${shipJson}. Run "city agent create" first or pass the correct path.`,
     );
   }
 

@@ -1,20 +1,20 @@
 ---
-title: ship.json Reference
-description: Current ship.json layering, loading behavior, and key fields
+title: downcity.json Reference
+description: Current downcity.json layering, loading behavior, and key fields
 ---
 
-# `ship.json` Reference
+# `downcity.json` Reference
 
 Model config is now split into two layers:
 
-1. `~/.ship/ship.db` (console-global SQLite) manages the full model pool
-2. Project `ship.json` (agent-local) only sets `model.primary`
+1. `~/.downcity/downcity.db` (console-global SQLite) manages the full model pool
+2. Project `downcity.json` (agent-local) only sets `model.primary`
 
 ## Agent project minimal shape
 
 ```json
 {
-  "$schema": "./.ship/schema/ship.schema.json",
+  "$schema": "./.downcity/schema/downcity.schema.json",
   "name": "my-agent",
   "version": "1.0.0",
   "model": {
@@ -23,13 +23,13 @@ Model config is now split into two layers:
 }
 ```
 
-`model.primary` must match an existing model id in `~/.ship/ship.db`.
+`model.primary` must match an existing model id in `~/.downcity/downcity.db`.
 
-Project `ship.json` should use `plugins.*` and `assets.*` for plugin configuration.
+Project `downcity.json` should use `plugins.*` and `assets.*` for plugin configuration.
 
 ## Console-global model pool
 
-Full model management stays in `~/.ship/ship.db`:
+Full model management stays in `~/.downcity/downcity.db`:
 
 - providers table
 - models table
@@ -54,8 +54,8 @@ If any link is missing, startup fails fast.
 
 ## Plugin scope
 
-Plugin behavior is configured in project `ship.json` under `plugins.*`.
-Plugin dependencies are configured in project `ship.json` under `assets.*`.
+Plugin behavior is configured in project `downcity.json` under `plugins.*`.
+Plugin dependencies are configured in project `downcity.json` under `assets.*`.
 
 Example for voice:
 
@@ -77,7 +77,7 @@ Example for voice:
 
 ## Chat channel binding
 
-Chat channels in `ship.json` should bind to a global channel account id:
+Chat channels in `downcity.json` should bind to a global channel account id:
 
 ```json
 {
@@ -94,7 +94,7 @@ Chat channels in `ship.json` should bind to a global channel account id:
 }
 ```
 
-`channelAccountId` resolves to `channel_accounts.id` in `~/.ship/ship.db`.
+`channelAccountId` resolves to `channel_accounts.id` in `~/.downcity/downcity.db`.
 
 ## Related docs
 

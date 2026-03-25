@@ -42,7 +42,7 @@ export type ChatChannelRuntimeSnapshot = {
    */
   channel: ChatChannelName;
   /**
-   * 是否在配置中启用（`ship.json` 的 `services.chat.channels.<channel>.enabled`）。
+   * 是否在配置中启用（`downcity.json` 的 `services.chat.channels.<channel>.enabled`）。
    */
   enabled: boolean;
   /**

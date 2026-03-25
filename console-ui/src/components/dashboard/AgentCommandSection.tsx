@@ -145,7 +145,7 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
   {
     label: "Config & Model",
     items: [
-      { label: "Config Get", command: "console config get", description: "读取当前 ship.json 配置" },
+      { label: "Config Get", command: "console config get", description: "读取当前 downcity.json 配置" },
       { label: "Config Primary", command: "console config get model.primary", description: "读取当前项目主模型绑定" },
       { label: "Config Alias", command: "console config alias --print", description: "打印 alias city 配置片段" },
       { label: "Model List", command: "console model list", description: "列出 provider 与模型池" },

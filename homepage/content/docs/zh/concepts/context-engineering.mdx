@@ -8,11 +8,11 @@ description: Repo is the Agent 在运行时的落地方式
 Downcity 把“上下文”拆成可组合、可落盘的几层数据：
 
 1. `PROFILE.md` / `SOUL.md`
-2. `ship.json` 配置
-3. `.ship/context/<contextId>/messages/messages.jsonl` 对话历史
-4. `.ship/memory/MEMORY.md` 长期记忆
-5. `.ship/memory/daily/<YYYY-MM-DD>.md` 每日增量记忆
-6. `.ship/context/<contextId>/memory/working.md` 会话工作记忆（可选）
+2. `downcity.json` 配置
+3. `.downcity/context/<contextId>/messages/messages.jsonl` 对话历史
+4. `.downcity/memory/MEMORY.md` 长期记忆
+5. `.downcity/memory/daily/<YYYY-MM-DD>.md` 每日增量记忆
+6. `.downcity/context/<contextId>/memory/working.md` 会话工作记忆（可选）
 
 ## 为什么这样设计
 
@@ -25,4 +25,4 @@ Downcity 把“上下文”拆成可组合、可落盘的几层数据：
 
 - `PROFILE.md` 写清楚边界、目标、风格。
 - 用 `contextId` 区分不同渠道/用户/业务流。
-- 定期查看 `.ship/logs/<date>.jsonl` 与任务 run 目录。
+- 定期查看 `.downcity/logs/<date>.jsonl` 与任务 run 目录。

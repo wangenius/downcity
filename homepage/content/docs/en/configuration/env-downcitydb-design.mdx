@@ -1,16 +1,16 @@
 ---
-title: Env and ship.db Design
+title: Env and downcity.db Design
 description: Explain how env, channel accounts, model pool, and project plugin config are separated
 ---
 
-# Env and ship.db Design
+# Env and downcity.db Design
 
 Use one rule:
 
-- shared secrets and shared infrastructure live in `~/.ship/ship.db`
-- project behavior lives in `ship.json`
+- shared secrets and shared infrastructure live in `~/.downcity/downcity.db`
+- project behavior lives in `downcity.json`
 
-## `ship.db` owns
+## `downcity.db` owns
 
 - `env_entries`
 - `channel_accounts`
@@ -18,7 +18,7 @@ Use one rule:
 - `models`
 - other console-owned encrypted settings
 
-## Project `ship.json` owns
+## Project `downcity.json` owns
 
 - `model.primary`
 - `services.*`
@@ -33,9 +33,9 @@ Use one rule:
 
 ## Runtime load order
 
-1. read global env from `ship.db`
-2. read agent-private env from `ship.db`
+1. read global env from `downcity.db`
+2. read agent-private env from `downcity.db`
 3. read project `.env`
-4. read project `ship.json`
+4. read project `downcity.json`
 5. resolve `plugins.*` and `assets.*`
-6. resolve channel credentials and model pool from `ship.db`
+6. resolve channel credentials and model pool from `downcity.db`

@@ -1,11 +1,11 @@
 ---
 title: city console config
-description: 管理项目 ship.json 与 alias（不含模型池管理）
+description: 管理项目 downcity.json 与 alias（不含模型池管理）
 ---
 
 # `city console config`
 
-管理项目 `ship.json` 与 alias。
+管理项目 `downcity.json` 与 alias。
 
 > 命令名说明：配置命令是 `city console config`，不是 `city config`。
 
@@ -26,7 +26,7 @@ city console config <subcommand>
 
 ## Plugin 配置
 
-`city console config` 现在只读写项目 `ship.json`。
+`city console config` 现在只读写项目 `downcity.json`。
 
 插件相关配置请改为：
 
@@ -52,7 +52,7 @@ city console config alias --dry-run
 
 ## 延伸阅读
 
-- [ship.json 参考](/zh/docs/reference/ship-json)
+- [downcity.json 参考](/zh/docs/reference/downcity-json)
 
 ## 示例输出（基于当前实现）
 
@@ -63,7 +63,7 @@ $ city console config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
-  "shipJsonPath": "<projectRoot>/ship.json",
+  "shipJsonPath": "<projectRoot>/downcity.json",
   "keyPath": "model.primary",
   "value": "<modelId>"
 }
@@ -74,7 +74,7 @@ $ city console config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",
-  "shipJsonPath": "<projectRoot>/ship.json",
+  "shipJsonPath": "<projectRoot>/downcity.json",
   "keyPath": "model.primary",
   "value": "gpt-5.4",
   "existed": true,

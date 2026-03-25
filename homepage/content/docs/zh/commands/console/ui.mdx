@@ -34,20 +34,20 @@ city console ui [action] [options]
 - UI 启动后会读取 console registry 中的 agent 列表（运行中 + 历史）。
 - `Global Agents` 面板会展示每个 agent 的运行状态、runtime 地址、当前绑定模型与 chat 身份快照（例如 Telegram bot 用户名）；对历史记录可直接点击“启动”重新拉起。
 - `Global Agents` 右上角支持直接新建 agent：通过系统目录选择器选中项目目录后，再交互填写名称与主模型，可一键“创建并启动”。
-- 对尚未完成初始化的目录，`Global Agents` 现支持“初始化并启动”：会先补齐 `PROFILE.md`、`SOUL.md`、`ship.json` 与 `.ship/` 结构，再拉起 runtime。
+- 对尚未完成初始化的目录，`Global Agents` 现支持“初始化并启动”：会先补齐 `PROFILE.md`、`SOUL.md`、`downcity.json` 与 `.downcity/` 结构，再拉起 runtime。
 - 侧边栏按三层分区：`Global` / `Agent` / `Context`。
 - `Global`：全局概览、console runtime、model 管理、agents 管理、plugins。
 - `Global / Model` 现已支持 provider/model 全量操作（创建、更新、测试、发现、暂停、删除）。
 - `Global / Overview` 仅展示全局级健康信号（console、agent fleet、channels、plugins、config risk）。
 - `Global / Overview` 顶部摘要区域会显示当前 DC 版本号。
-- `Global / Env` 现已支持手动维护 Console 共享 env 与 Agent 私有 env，统一写入 `~/.ship/ship.db` 的 `env_entries`。
+- `Global / Env` 现已支持手动维护 Console 共享 env 与 Agent 私有 env，统一写入 `~/.downcity/downcity.db` 的 `env_entries`。
 - `Global / Env` 点击右上角 `+` 时，会自动检测当前剪贴板是否为 `.env` 文本；若匹配则直接批量导入（支持一次多个键），否则回退到手动创建弹窗。
 - `Global / Console Runtime` 展示 console 运行态与 console 级配置文件状态。
 - `Agent`：`Overview`、`Authorization`、`Services`、`Command`、`Tasks`、`Logs`。
 - `Agent / Overview` 聚焦当前 agent（bootstrap 配置、chat 身份、模型绑定），不再混入 global 信息。
 - `Agent / Overview` 现会额外显示当前 agent 是否有 context 正在执行，以及执行中的 context 数量。
 - `Agent / Authorization` 已重构为角色权限模型：维护 `role -> permission`，再把用户绑定到角色。
-- `Agent / Authorization` 的配置统一写入 console `~/.ship/ship.db`，不会明文落到项目 `ship.json`。
+- `Agent / Authorization` 的配置统一写入 console `~/.downcity/downcity.db`，不会明文落到项目 `downcity.json`。
 - `Agent / Authorization` 中新用户会落到默认角色；群聊/频道是否可用，取决于当前发消息用户所属权限组。
 - `Agent / Authorization` 现已改为“概览 + 目录”工作台：主页面只显示角色摘要、渠道默认组摘要、权限说明与用户目录。
 - `Agent / Authorization` 中角色编辑与渠道默认组配置都收进 dialog；角色支持维护 `name` / `description`，并可删除非保留角色。

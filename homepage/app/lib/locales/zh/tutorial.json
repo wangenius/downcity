@@ -24,7 +24,7 @@
       "step1": {
         "initializing": "正在初始化 Downcity...",
         "agentMdCreated": "✔ 已生成 PROFILE.md",
-        "shipJsonCreated": "✔ 已生成 ship.json",
+        "shipJsonCreated": "✔ 已生成 downcity.json",
         "ready": "准备起航。"
       },
       "step2": {

@@ -3,8 +3,8 @@
  *
  * 职责说明：
  * 1. 仅加载项目根目录 `.env`（用户自管文件，不写回 DB）。
- * 2. 读取 `ship.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
- * 3. 支持配置继承：（可选）上级目录 ship.json -> 当前项目 ship.json 覆盖。
+ * 2. 读取 `downcity.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
+ * 3. 支持配置继承：（可选）上级目录 downcity.json -> 当前项目 downcity.json 覆盖。
  * 4. 环境变量分层：`env_entries` 单表承载 `global`（console 共享）与 `agent`（agent 私有）两种 scope。
  * 4. 统一导出 Ship 配置类型，避免业务模块直接依赖具体配置文件路径。
  */
@@ -72,7 +72,7 @@ export function loadAgentRuntimeEnv(projectRoot: string): Record<string, string>
  */
 export function loadProjectDotenv(projectRoot: string): Record<string, string> {
   // 关键点（中文）
-  // - console 级配置不再走 `~/.ship/.env`（统一迁移到 ship.db）
+  // - console 级配置不再走 `~/.downcity/.env`（统一迁移到 downcity.db）
   // - 仅解析项目 `.env`（agent 级）
   const projectEnvPath = path.join(projectRoot, ".env");
   if (!fs.existsSync(projectEnvPath)) {
@@ -134,7 +134,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * 深合并：对象递归合并，数组与标量以 override 为准。
  *
  * 关键点（中文）
- * - ship.json 的“继承/覆盖”语义：越靠近 agent 项目的配置优先级越高。
+ * - downcity.json 的“继承/覆盖”语义：越靠近 agent 项目的配置优先级越高。
  * - 数组不做 concat，避免出现重复 paths / models。
  */
 function deepMerge(base: unknown, override: unknown): unknown {
@@ -180,7 +180,7 @@ function assertNoProjectExtensionsLayer(
   if (!isPlainObject(layer)) return;
   if (!Object.prototype.hasOwnProperty.call(layer, "extensions")) return;
   throw new Error(
-    `Invalid ship.json: legacy "extensions" config is no longer supported. Use "plugins" and "assets" instead (${filePath})`,
+    `Invalid downcity.json: legacy "extensions" config is no longer supported. Use "plugins" and "assets" instead (${filePath})`,
   );
 }
 
@@ -189,7 +189,7 @@ function collectAncestorShipJsonPaths(projectRoot: string): string[] {
   const resolvedRoot = path.resolve(projectRoot);
   let dir = resolvedRoot;
   while (true) {
-    const candidate = path.join(dir, "ship.json");
+    const candidate = path.join(dir, "downcity.json");
     if (fs.existsSync(candidate)) paths.push(candidate);
     const parent = path.dirname(dir);
     if (parent === dir) break;
@@ -228,7 +228,7 @@ export function loadShipConfig(
 
   const ancestorShipJsonPaths = collectAncestorShipJsonPaths(projectRoot);
   if (ancestorShipJsonPaths.length === 0) {
-    throw new Error("ship.json not found in project directory");
+    throw new Error("downcity.json not found in project directory");
   }
 
   let merged: unknown = undefined;
@@ -239,21 +239,21 @@ export function loadShipConfig(
   }
 
   if (!merged || typeof merged !== "object" || Array.isArray(merged)) {
-    throw new Error("Invalid ship.json: expected object");
+    throw new Error("Invalid downcity.json: expected object");
   }
 
   const candidate = merged as Partial<ShipConfig>;
   if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
-    throw new Error("Invalid ship.json: missing required fields name/version");
+    throw new Error("Invalid downcity.json: missing required fields name/version");
   }
   if (!candidate.model || typeof candidate.model !== "object") {
     throw new Error(
-      'Invalid ship.json: missing required field model.primary in project ship.json (run "city agent create" to regenerate)',
+      'Invalid downcity.json: missing required field model.primary in project downcity.json (run "city agent create" to regenerate)',
     );
   }
   const primary = String((candidate.model as { primary?: unknown }).primary || "").trim();
   if (!primary) {
-    throw new Error("Invalid ship.json: model.primary cannot be empty");
+    throw new Error("Invalid downcity.json: model.primary cannot be empty");
   }
   return candidate as ShipConfig;
 }

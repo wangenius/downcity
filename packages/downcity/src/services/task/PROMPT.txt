@@ -4,7 +4,7 @@
 
 ## 任务模型
 
-每个任务定义在 `./.ship/task/<title>/task.md`，包含：
+每个任务定义在 `./.downcity/task/<title>/task.md`，包含：
 - frontmatter（结构化字段）
 - body（任务正文）
 
@@ -17,7 +17,7 @@ frontmatter 核心字段：
 - `kind`：`agent|script`（默认 `agent`）
 
 执行时会产生 run 目录：
-- `./.ship/task/<title>/<timestamp>/`
+- `./.downcity/task/<title>/<timestamp>/`
 
 常见产物：
 - `input.md`
@@ -62,7 +62,7 @@ frontmatter 核心字段：
 
 - `title` 唯一；create 去重仅按 `title` 精确匹配。
 - `when=time:...` 触发后会自动置为 `paused`，并回退为 `when=@manual`。
-- `run` 为异步受理：立即返回 `accepted=true`、`executionId`，后台继续执行。
+- `run` 为异步受理：立即返回 `accepted=true`、`message`、`executionId`；调用方应把它视为“任务已进入后台执行，结果会自动发送，当前流程无需阻塞等待”。
 - agent 任务默认只要求产生有效输出；仅当任务正文明确要求外发时，才应发送到外部 channel。
 
 ## 建议

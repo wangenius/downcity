@@ -2,7 +2,7 @@
  * FilePersistor：基于 JSONL 的会话持久化组件实现。
  *
  * 关键点（中文）
- * - 以 `.ship/context/<contextId>/messages/messages.jsonl` 为事实源。
+ * - 以 `.downcity/context/<contextId>/messages/messages.jsonl` 为事实源。
  * - append 与 compact 共用同一把文件锁，避免并发覆盖。
  * - 对 Agent 暴露统一的 Persistor 组件接口。
  */
@@ -40,7 +40,7 @@ type FilePersistorOptions = {
 };
 
 function getShipDirPath(rootPath: string): string {
-  return path.join(rootPath, ".ship");
+  return path.join(rootPath, ".downcity");
 }
 
 function getShipContextRootDirPath(rootPath: string): string {

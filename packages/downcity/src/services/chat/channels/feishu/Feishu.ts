@@ -1207,7 +1207,7 @@ Available commands:
   }
 
   /**
-   * 下载飞书入站附件并落到 `.ship/.cache/feishu`。
+   * 下载飞书入站附件并落到 `.downcity/.cache/feishu`。
    *
    * 关键点（中文）
    * - 下载失败时仅跳过对应附件，不阻塞整条消息。

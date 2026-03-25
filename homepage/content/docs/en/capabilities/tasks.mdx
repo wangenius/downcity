@@ -5,7 +5,7 @@ description: Task definition, scheduling, and CLI operations
 
 # Tasks
 
-Task definitions live in `.ship/task/<taskId>/task.md`.
+Task definitions live in `.downcity/task/<taskId>/task.md`.
 
 ## Minimal task example
 
@@ -24,14 +24,14 @@ Run tasks, write the final output body to `output.md`, and write a summary to `r
 
 ## Result Delivery
 
-- Task runs only write artifacts under `.ship/task/<taskId>/<timestamp>/`.
+- Task runs only write artifacts under `.downcity/task/<taskId>/<timestamp>/`.
 - Results are not auto-sent to chat channels.
 - `contextId` is used as the task execution context identifier.
 
 ## Directory layout
 
 ```text
-.ship/task/
+.downcity/task/
   <taskId>/
     task.md
     <timestamp>/

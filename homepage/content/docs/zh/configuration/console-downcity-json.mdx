@@ -1,22 +1,22 @@
 ---
-title: Console 配置存储（ship.db）
-description: Console 全局配置已统一收敛到 ~/.ship/ship.db（含加密存储）
+title: Console 配置存储（downcity.db）
+description: Console 全局配置已统一收敛到 ~/.downcity/downcity.db（含加密存储）
 ---
 
-# Console 配置存储（ship.db）
+# Console 配置存储（downcity.db）
 
 从当前版本开始，Console 不再使用：
 
-1. `~/.ship/ship.json`
-2. `~/.ship/.env`
+1. `~/.downcity/downcity.json`
+2. `~/.downcity/.env`
 
 Console 全局配置统一存储在：
 
-- `~/.ship/ship.db`
+- `~/.downcity/downcity.db`
 
 ## 存储内容
 
-`ship.db` 中主要包含以下数据域：
+`downcity.db` 中主要包含以下数据域：
 
 1. 模型池（providers/models）
 2. Console 共享 env（`global_env`）
@@ -30,13 +30,13 @@ Console 全局配置统一存储在：
 
 以下文件仍然是 Agent 项目级配置（保留不变）：
 
-1. `<agent>/ship.json`
+1. `<agent>/downcity.json`
 2. `<agent>/.env`
 
 也就是：
 
-- Console：`~/.ship/ship.db`
-- Agent：项目目录下的 `ship.json/.env`
+- Console：`~/.downcity/downcity.db`
+- Agent：项目目录下的 `downcity.json/.env`
 
 ## 环境变量作用域（重要）
 
@@ -45,19 +45,19 @@ Console 全局配置统一存储在：
 1. Console 共享 env：`global_env`
 2. Agent 私有 DB env：`agent_env`
 3. Agent 本地运行时覆盖：`<agent>/.env`（用户维护）
-4. Chat 渠道凭据：`channel_accounts`（由 `ship.json` 的 `channelAccountId` 绑定）
+4. Chat 渠道凭据：`channel_accounts`（由 `downcity.json` 的 `channelAccountId` 绑定）
 
 关键行为：
 
 1. runtime env 最终是 `agent_env + <agent>/.env`（`.env` 优先）。
 2. Agent 的 `.env` 只在当前 agent runtime 内生效，不污染全局 `process.env`。
-3. `ship.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
+3. `downcity.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
-5. plugin 配置来自项目 `ship.json`。
+5. plugin 配置来自项目 `downcity.json`。
 
 ## 常用操作
 
-初始化 Console（写入 `ship.db`）：
+初始化 Console（写入 `downcity.db`）：
 
 ```bash
 city console init
@@ -79,15 +79,15 @@ city console model create
 
 ## 相关文档
 
-- [Env 与 ship.db 数据库设计](/zh/docs/configuration/env-shipdb-design)
+- [Env 与 downcity.db 数据库设计](/zh/docs/configuration/env-downcitydb-design)
 - [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)
 
 ## 运行文件
 
 以下运行文件仍保留在文件系统（非配置）：
 
-1. `~/.ship/console/console.pid`
-2. `~/.ship/console/ui.pid`
-3. `~/.ship/console/console.log`
-4. `~/.ship/console/ui.log`
-5. `~/.ship/console/agents.json`
+1. `~/.downcity/console/console.pid`
+2. `~/.downcity/console/ui.pid`
+3. `~/.downcity/console/console.log`
+4. `~/.downcity/console/ui.log`
+5. `~/.downcity/console/agents.json`

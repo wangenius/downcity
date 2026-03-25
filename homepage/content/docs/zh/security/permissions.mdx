@@ -16,7 +16,7 @@ Ship 里有两套不同的权限：
 
 这一层决定 Agent 自己能做什么，例如能不能读仓库、写文件、执行命令。
 
-这部分仍然通过项目里的 `ship.json.permissions` 配置。
+这部分仍然通过项目里的 `downcity.json.permissions` 配置。
 
 ### 最小配置示例
 
@@ -75,9 +75,9 @@ Ship 里有两套不同的权限：
 
 ### 配置保存在哪里
 
-聊天用户权限不会写进项目 `ship.json`。
+聊天用户权限不会写进项目 `downcity.json`。
 
-这部分统一保存在 Console 的 `~/.ship/ship.db` 中，便于集中管理，也不会把用户权限明文散落到项目配置里。
+这部分统一保存在 Console 的 `~/.downcity/downcity.db` 中，便于集中管理，也不会把用户权限明文散落到项目配置里。
 
 ### 在哪里管理
 
@@ -113,4 +113,4 @@ Ship 里有两套不同的权限：
 - [Console UI](/zh/docs/commands/console/ui)
 - [Chat Service](/zh/docs/services/chat/chat-service)
 - [配置总览](/zh/docs/configuration/overview)
-- [ship.json 参考](/zh/docs/reference/ship-json)
+- [downcity.json 参考](/zh/docs/reference/downcity-json)

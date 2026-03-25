@@ -1,11 +1,11 @@
 ---
-title: Project Configuration (ship.json)
+title: Project Configuration (downcity.json)
 description: Most-used project-level fields and practical cautions
 ---
 
-# Project Configuration (ship.json)
+# Project Configuration (downcity.json)
 
-`ship.json` is the project runtime entrypoint.
+`downcity.json` is the project runtime entrypoint.
 
 ```json
 {
@@ -26,7 +26,7 @@ description: Most-used project-level fields and practical cautions
 
 1. `model.primary` must resolve in the global model pool.
 2. `start.host/start.port` affects default CLI routing.
-3. Keep project-level config in `ship.json`, including `services`, `plugins`, and `assets`.
+3. Keep project-level config in `downcity.json`, including `services`, `plugins`, and `assets`.
 
 ## Common commands
 
@@ -38,6 +38,6 @@ city console config set start.port 3100
 
 ## Related docs
 
-- [ship.json Reference](/en/docs/reference/ship-json)
+- [downcity.json Reference](/en/docs/reference/downcity-json)
 - [Quickstart Configuration](/en/docs/quickstart/configuration)
 - [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)

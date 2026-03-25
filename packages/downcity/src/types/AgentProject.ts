@@ -29,7 +29,7 @@ export interface AgentProjectInitializationInput {
   agentName?: string;
 
   /**
-   * 绑定到 `ship.json.model.primary` 的模型 ID。
+   * 绑定到 `downcity.json.model.primary` 的模型 ID。
    */
   primaryModelId: string;
 
@@ -37,12 +37,12 @@ export interface AgentProjectInitializationInput {
    * 需要启用的 chat channels。
    *
    * 关键点（中文）
-   * - 仅写入用户选择的渠道，未选择的渠道不会写入 `ship.json`。
+   * - 仅写入用户选择的渠道，未选择的渠道不会写入 `downcity.json`。
    */
   channels?: AgentProjectChannel[];
 
   /**
-   * 是否允许覆盖已存在的 `ship.json`。
+   * 是否允许覆盖已存在的 `downcity.json`。
    */
   forceOverwriteShipJson?: boolean;
 }

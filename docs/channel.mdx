@@ -61,7 +61,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A["Telegram / Feishu 收到用户附件"] --> B["下载到 .ship/.cache/..."]
+    A["Telegram / Feishu 收到用户附件"] --> B["下载到 .downcity/.cache/..."]
     B --> C["转成 <file type='...'>相对路径</file>"]
     C --> D["buildChatInboundText"]
     D --> E["Agent / 模型"]

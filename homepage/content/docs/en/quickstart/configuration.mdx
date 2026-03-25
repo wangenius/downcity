@@ -1,6 +1,6 @@
 ---
 title: Configuration
-description: ship.json, PROFILE.md, and runtime configuration essentials
+description: downcity.json, PROFILE.md, and runtime configuration essentials
 ---
 
 # Configuration
@@ -9,15 +9,15 @@ Downcity is configured with three core files:
 
 - `PROFILE.md`: agent role and boundaries (required)
 - `SOUL.md`: stable operating principles (optional)
-- `ship.json`: runtime configuration (required)
+- `downcity.json`: runtime configuration (required)
 
-## Key `ship.json` fields
+## Key `downcity.json` fields
 
 ### `start` (advanced only)
 
 For `city agent start`, ports are auto-allocated by console.
 
-So in normal usage you do not need `start.port` in project `ship.json`.
+So in normal usage you do not need `start.port` in project `downcity.json`.
 
 Only configure `start` when manually running foreground runtime or debugging special host binding:
 
@@ -66,7 +66,7 @@ Chat channels and queue behavior:
 }
 ```
 
-`channelAccountId` binds to the global channel account registry in `~/.ship/ship.db` (`channel_accounts`).
+`channelAccountId` binds to the global channel account registry in `~/.downcity/downcity.db` (`channel_accounts`).
 
 `services.chat.queue` notes:
 - `maxConcurrency`: max lane concurrency across different chat keys.
@@ -90,7 +90,7 @@ Skills discovery roots:
 
 ### `plugins.*` / `assets.*`
 
-Plugin config is maintained in project `ship.json`.
+Plugin config is maintained in project `downcity.json`.
 
 Example for voice:
 
@@ -131,5 +131,5 @@ city console config unset services.chat.channels.telegram
 ## Next
 
 - [CLI Reference](/en/docs/reference/cli)
-- [`.ship/` Directory](/en/docs/reference/dot-ship)
+- [`.downcity/` Directory](/en/docs/reference/dot-downcity)
 - [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)

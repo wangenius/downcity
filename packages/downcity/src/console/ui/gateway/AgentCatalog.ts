@@ -478,7 +478,7 @@ export async function buildConsoleUiConfigStatusResponse(params: {
     readConsoleUiConfigFileStatus({
       key: "ship_db",
       scope: "console",
-      label: "Console ship.db",
+      label: "Console downcity.db",
       filePath: getConsoleShipDbPath(),
     }),
     readConsoleUiConfigFileStatus({
@@ -520,19 +520,19 @@ export async function buildConsoleUiConfigStatusResponse(params: {
       readConsoleUiConfigFileStatus({
         key: "ship_json",
         scope: "agent",
-        label: "Agent ship.json",
+        label: "Agent downcity.json",
         filePath: getShipJsonPath(cwd),
       }),
       readConsoleUiConfigFileStatus({
         key: "ship_schema",
         scope: "agent",
-        label: ".ship/schema/ship.schema.json",
+        label: ".downcity/schema/downcity.schema.json",
         filePath: getShipSchemaPath(cwd),
       }),
       readConsoleUiConfigFileStatus({
         key: "memory_index",
         scope: "agent",
-        label: ".ship/memory/index.sqlite",
+        label: ".downcity/memory/index.sqlite",
         filePath: getShipMemoryIndexPath(cwd),
       }),
     ]);

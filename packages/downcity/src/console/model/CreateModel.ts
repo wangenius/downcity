@@ -48,7 +48,7 @@ function normalizeOptionalBaseUrl(value: string | undefined): string | undefined
  * provider 默认 baseUrl。
  *
  * 关键点（中文）
- * - 当 `ship.json.llm.providers.<id>.baseUrl` 省略时，按 provider type 自动补全。
+ * - 当 `downcity.json.llm.providers.<id>.baseUrl` 省略时，按 provider type 自动补全。
  * - 保持“只配置 provider type + apiKey + modelName”也能跑通常见 provider。
  */
 function resolveProviderDefaultBaseUrl(

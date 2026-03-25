@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - auth 是内建且必需的 plugin，不走可选启停语义。
- * - 所有 chat 授权配置仍然保存在 `ship.db`，动态观测态仍落 `.ship/chat/authorization/state.json`。
+ * - 所有 chat 授权配置仍然保存在 `downcity.db`，动态观测态仍落 `.downcity/chat/authorization/state.json`。
  * - plugin 只负责统一暴露 plugin 点 / action 边界，不改变底层存储模型。
  */
 

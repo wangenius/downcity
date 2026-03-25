@@ -20,10 +20,10 @@ city chat <subcommand> [options]
 - `status`：查看渠道连接状态
 - `test`：测试渠道连通性
 - `reconnect`：重连渠道（默认全部，可按渠道）
-- `open`：打开渠道（写入 `ship.json` 为 `enabled=true`，已配置会尝试启动）
-- `close`：关闭渠道（写入 `ship.json` 为 `enabled=false`，并停止运行）
+- `open`：打开渠道（写入 `downcity.json` 为 `enabled=true`，已配置会尝试启动）
+- `close`：关闭渠道（写入 `downcity.json` 为 `enabled=false`，并停止运行）
 - `configuration`：查看渠道配置元信息（字段名/类型/说明/来源）
-- `configure`：更新渠道参数（写入 `ship.json`，默认重载该渠道）
+- `configure`：更新渠道参数（写入 `downcity.json`，默认重载该渠道）
 - `list`：列出当前 agent 已记录的会话（chatTitle/chatKey）
 - `info`：查看指定会话信息（路由快照/本地路径/上下文快照）
 - `send`：发送消息
@@ -70,9 +70,15 @@ city chat <subcommand> [options]
 
 关于 `--delay` / `--time`：
 
-- 命令在 runtime 接收后会立即返回，实际发送由后台内存调度到点执行
-- 如果 runtime 在发送前重启或退出，这类尚未发出的消息不会自动恢复
-- 需要持久化、可恢复的定时任务时，优先使用 `task` service
+- 命令在 runtime 接收后会立即返回，实际发送由持久化调度器到点执行
+- 调度任务会写入当前 agent 项目的 `.downcity/schedule.sqlite`
+- 如果 runtime 重启，未完成消息会在下次启动后自动恢复
+- `--delay` 与 `--time` 不能同时使用
+- 该能力只面向 one-shot 延迟/定时发送；cron 或长期工作流仍建议使用 `task` service
+
+更详细的说明、恢复行为与 API 示例见：
+
+- [`Service Action 定时执行`](/zh/docs/commands/service/scheduling)
 
 `send` 的正文还支持：
 

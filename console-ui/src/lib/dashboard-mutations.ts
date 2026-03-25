@@ -159,7 +159,7 @@ export async function runChatChannelActionMutation(params: {
       }
     } else if (params.action === "open" || params.action === "close") {
       params.showToast(
-        `${params.channel || "chat"} ${params.action} 已执行（已写入 ship.json）`,
+        `${params.channel || "chat"} ${params.action} 已执行（已写入 downcity.json）`,
         "success",
       );
     } else {

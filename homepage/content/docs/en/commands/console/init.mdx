@@ -1,6 +1,6 @@
 ---
 title: city console init
-description: Initialize global console config (stored in ~/.ship/ship.db)
+description: Initialize global console config (stored in ~/.downcity/downcity.db)
 ---
 
 # `city console init`
@@ -15,8 +15,8 @@ city console init [--force]
 
 ## Behavior
 
-- Writes/updates `~/.ship/ship.db` (global config + model pool)
-- Generates `~/.ship/schema/ship.schema.json` (editor schema)
+- Writes/updates `~/.downcity/downcity.db` (global config + model pool)
+- Generates `~/.downcity/schema/downcity.schema.json` (editor schema)
 
 ## Key option
 
@@ -34,8 +34,8 @@ The examples below are aligned with current command implementations in `packages
 ```text
 $ city console init
 city version: 1.0.0
-✅ Saved console global settings into ~/.ship/ship.db (encrypted)
-✅ Initialized ~/.ship/ship.db model store
+✅ Saved console global settings into ~/.downcity/downcity.db (encrypted)
+✅ Initialized ~/.downcity/downcity.db model store
 ```
 
 ```text

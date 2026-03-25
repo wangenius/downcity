@@ -1,0 +1,203 @@
+---
+title: Service Scheduling
+description: 通用 service action 延迟/定时执行说明
+---
+
+# Service Action 定时执行
+
+Downcity 现在支持为任意 service action 追加 one-shot 调度参数：
+
+- `--delay <ms>`：延迟执行
+- `--time <time>`：定时执行
+
+这套能力适用于：
+
+- `city chat send`
+- `city memory search`
+- `city skill lookup`
+- `city service command <service> <action>`
+- 以及对应的专用 action API `/service/<service>/<action>`
+
+它的目标是让“晚一点执行一次”这类需求，不需要单独建 `task`。
+
+## 适用场景
+
+适合：
+
+- 10 分钟后发一条 chat 消息
+- 今晚 21:00 再做一次 memory flush
+- 明天早上再执行一次某个 service action
+
+不适合：
+
+- 每天/每周反复执行
+- 复杂工作流
+- cron
+- 需要多轮产物审计的长期任务
+
+这些场景仍建议使用 [`city task`](/zh/docs/commands/service/task)。
+
+## 两种入口
+
+现在有两种用户可见入口，都会走同一套持久化调度器：
+
+1. CLI 动作命令
+
+```bash
+city chat send --chat-key ctx_xxx --text "今晚提醒你" --time "2026-03-25T21:00:00+08:00"
+city memory flush --context-id telegram-chat-123 --delay 600000
+```
+
+2. HTTP action API
+
+```http
+POST /service/chat/send
+Content-Type: application/json
+
+{
+  "chatKey": "ctx_xxx",
+  "text": "今晚提醒你",
+  "time": "2026-03-25T21:00:00+08:00"
+}
+```
+
+不管走哪扇门，最终都会先写入调度库，再到点执行。
+
+## 参数格式
+
+### `--delay <ms>`
+
+使用非负整数毫秒。
+
+示例：
+
+```bash
+city chat send --chat-key ctx_xxx --text "10 秒后发" --delay 10000
+```
+
+### `--time <time>`
+
+支持两类格式：
+
+- Unix 时间戳秒/毫秒
+- 带时区的 ISO 时间
+
+示例：
+
+```bash
+city chat send --chat-key ctx_xxx --text "今晚九点发" --time "2026-03-25T21:00:00+08:00"
+city memory flush --context-id telegram-chat-123 --time 1774443600
+```
+
+注意：
+
+- ISO 时间必须显式带时区，例如 `+08:00` 或 `Z`
+- `--delay` 与 `--time` 不能同时使用
+
+## 持久化位置
+
+调度任务会写入当前 agent 项目的：
+
+```text
+.downcity/schedule.sqlite
+```
+
+这意味着：
+
+- runtime 接收请求后可以立即返回
+- runtime 重启后，未完成任务仍会保留
+- 下次启动时会继续恢复执行
+
+## 运行时行为
+
+一条带调度参数的 service action 会经历这些状态：
+
+- `pending`：已创建，等待到点
+- `running`：到点后，调度器正在执行
+- `succeeded`：执行成功
+- `failed`：执行失败
+- `cancelled`：已取消
+
+启动恢复规则：
+
+- 如果 runtime 上次退出时任务还是 `pending`，下次启动会继续等待或补执行
+- 如果 runtime 上次退出时任务是 `running`，下次启动会先回退为 `pending`，再重新尝试
+
+## 返回结果
+
+当命令被成功接受为调度任务时，返回结果类似：
+
+```json
+{
+  "success": true,
+  "data": {
+    "scheduled": true,
+    "jobId": "sched_xxxxxxxxxxxxxxxx",
+    "runAtMs": 1774443600000,
+    "status": "pending"
+  }
+}
+```
+
+这里表示：
+
+- 本次没有立即执行 action
+- 已经创建持久化调度任务
+- `jobId` 是这次调度记录的唯一 ID
+
+## 示例
+
+### 1. 延迟发送 chat
+
+```bash
+city chat send \
+  --chat-key ctx_xxx \
+  --text "10 分钟后提醒你" \
+  --delay 600000
+```
+
+### 2. 定时执行 memory flush
+
+```bash
+city memory flush \
+  --context-id telegram-chat-123 \
+  --time "2026-03-25T23:00:00+08:00"
+```
+
+### 3. 通过通用 command 调度 action
+
+```bash
+city service command chat send \
+  --payload '{"chatKey":"ctx_xxx","text":"稍后发送"}' \
+  --time "2026-03-25T21:00:00+08:00"
+```
+
+### 4. 通过 HTTP action API 调度
+
+```bash
+curl -X POST http://127.0.0.1:5314/service/chat/send \
+  -H 'content-type: application/json' \
+  -d '{
+    "chatKey": "ctx_xxx",
+    "text": "稍后发送",
+    "time": "2026-03-25T21:00:00+08:00"
+  }'
+```
+
+## 与 task 的区别
+
+Service action scheduling 和 `task` 的边界可以这样理解：
+
+- service action scheduling：为“现成 action”增加一次性的 delay/time
+- task：定义长期、可编辑、可复用的任务
+
+如果你的需求是“把某个现成 action 晚点执行一次”，优先用本页这套调度。  
+如果你的需求是“定义一个长期自动化任务”，优先用 [`city task`](/zh/docs/commands/service/task)。
+
+## 相关文档
+
+- [`city service`](/zh/docs/commands/service/service)
+- [`city service command`](/zh/docs/commands/service/command)
+- [`city chat`](/zh/docs/commands/service/chat)
+- [`city memory`](/zh/docs/commands/service/memory)
+- [`city task`](/zh/docs/commands/service/task)

@@ -44,7 +44,7 @@ const SHIP_JSON_CONTENT = `{
  * 代码预览模块。
  * 说明：
  * 1. 不再堆叠说明卡和代码卡，而是用一个配置面板完成认知闭环。
- * 2. PROFILE.md 与 ship.json 分别代表“行为规则”和“执行权限”。
+ * 2. PROFILE.md 与 downcity.json 分别代表“行为规则”和“执行权限”。
  */
 export const CodePreviewSection: FC = () => {
   const { i18n, t } = useTranslation();
@@ -90,7 +90,7 @@ export const CodePreviewSection: FC = () => {
                 )}
               >
                 <IconSettings className="size-3.5" />
-                ship.json
+                downcity.json
               </button>
             </div>
           </div>
@@ -107,7 +107,7 @@ export const CodePreviewSection: FC = () => {
               </p>
             </div>
             <span className={marketingTagClass({ tone: "soft" })}>
-              {activeTab === "agent" ? "PROFILE.md" : "ship.json"}
+              {activeTab === "agent" ? "PROFILE.md" : "downcity.json"}
             </span>
           </div>
           <div className="p-4 md:p-5">

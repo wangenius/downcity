@@ -30,14 +30,17 @@ city memory <subcommand> [options]
 city memory status
 city memory index --force
 city memory search "release decision"
-city memory get .ship/memory/MEMORY.md --from 10 --lines 20
+city memory get .downcity/memory/MEMORY.md --from 10 --lines 20
 city memory store --target longterm --content "User prefers concise release notes."
 city memory flush --context-id telegram-chat-123 --max-messages 40
+city memory flush --context-id telegram-chat-123 --time "2026-03-25T23:00:00+08:00"
 ```
 
 ## Notes
 
 - Memory is enabled by default (zero config). Disable only when needed: `context.memory.enabled=false`.
+- All memory actions also support common one-shot scheduling via `--delay` / `--time`.
+- For detailed behavior, see [`Service Action Scheduling`](/en/docs/commands/service/scheduling).
 - Start agent runtime first:
 
 ```bash

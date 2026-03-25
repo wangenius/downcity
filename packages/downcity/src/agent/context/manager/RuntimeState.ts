@@ -416,8 +416,8 @@ export function getRuntimeState(): RuntimeState {
  *
  * 阶段说明（中文）
  * 1) 解析 rootPath + 绑定 logger 落盘目录
- * 2) 校验关键文件并确保 `.ship` 目录结构
- * 3) 加载 dotenv + ship.json，建立 base runtime state
+ * 2) 校验关键文件并确保 `.downcity` 目录结构
+ * 3) 加载 dotenv + downcity.json，建立 base runtime state
  * 4) 初始化 ContextManager + ChatQueueWorker，建立 ready runtime state
  */
 
@@ -427,13 +427,13 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   const resolvedCwd = String(cwd || "").trim() || ".";
   const rootPath = path.resolve(resolvedCwd);
 
-  // 关键点（中文）：绑定 logger 的落盘目录（.ship/logs/*）到当前 rootPath。
+  // 关键点（中文）：绑定 logger 的落盘目录（.downcity/logs/*）到当前 rootPath。
   // 这样可以移除全局 ROOT/CWD 单例模块，避免初始化时序与 import 副作用。
   defaultLogger.bindProjectRoot(rootPath);
 
   ensureRuntimeProjectReady(rootPath);
 
-  // 在启动时加载 agent runtime env 快照并读取 ship.json（支持继承/覆盖）。
+  // 在启动时加载 agent runtime env 快照并读取 downcity.json（支持继承/覆盖）。
   const globalEnv = loadGlobalEnvFromStore();
   const projectEnv = loadAgentRuntimeEnv(rootPath);
   const config = loadShipConfig(rootPath, {

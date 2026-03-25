@@ -2,8 +2,8 @@
  * Console 模型存储（SQLite + Drizzle）。
  *
  * 关键点（中文）
- * - 数据文件：`~/.ship/ship.db`
- * - provider / model 配置统一落到 SQLite，不再依赖 ship.json 的 llm 节点。
+ * - 数据文件：`~/.downcity/downcity.db`
+ * - provider / model 配置统一落到 SQLite，不再依赖 downcity.json 的 llm 节点。
  * - provider.apiKey 采用字段级加密存储。
  */
 import fs from "fs-extra";

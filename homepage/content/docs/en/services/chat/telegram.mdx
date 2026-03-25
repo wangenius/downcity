@@ -28,7 +28,7 @@ Create a Telegram channel account in Console UI `Global / Channel Accounts`:
 2. channel: `telegram`
 3. bot token: token from BotFather
 
-Then bind it in project `ship.json`:
+Then bind it in project `downcity.json`:
 
 ```json
 {
@@ -70,7 +70,7 @@ Send `/start` (or any message) to your bot.
 You can send a file directly to the bot (document/photo/voice/audio/video).
 
 - If you add text while sending the file, Telegram treats it as a **caption** — Downcity will read that caption as your instruction.
-- Downcity saves the file under `.ship/.cache/telegram/` and passes it to the agent as a `<file ...>` block.
+- Downcity saves the file under `.downcity/.cache/telegram/` and passes it to the agent as a `<file ...>` block.
 - For images and PDFs, runtime also best-effort injects model-readable `file parts`; the original `<file>` text protocol is still kept as fallback.
 
 Example: send a PDF with caption: `Summarize this PDF and list action items.`
@@ -157,7 +157,7 @@ Behavior:
 
 ## Troubleshooting
 
-- **No response at all**: confirm the process is running and check `.ship/logs/<YYYY-MM-DD>.jsonl` (search for `TELEGRAM`, `telegram`, or errors).
+- **No response at all**: confirm the process is running and check `.downcity/logs/<YYYY-MM-DD>.jsonl` (search for `TELEGRAM`, `telegram`, or errors).
 - **Bot doesn’t receive group messages**: in BotFather run `/setprivacy` and set it to `Disable`, then confirm the bot can read group messages.
 - **Polling doesn’t work**: if you previously set a webhook, polling (`getUpdates`) will conflict. Downcity clears webhook on startup; check logs for webhook-related errors.
 - **Bot can’t speak in the group**: check group permissions (the bot may be muted / not allowed to send messages).

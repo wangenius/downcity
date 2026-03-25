@@ -7,8 +7,8 @@ description: Model storage, encryption behavior, and key management guidance
 
 Model config uses a split design:
 
-1. Global model pool in `~/.ship/ship.db`
-2. Project-level binding in `<project>/ship.json` as `model.primary`
+1. Global model pool in `~/.downcity/downcity.db`
+2. Project-level binding in `<project>/downcity.json` as `model.primary`
 
 ## How apiKey is protected
 
@@ -17,11 +17,11 @@ Provider `apiKey` is not stored in plaintext. It is stored in encrypted field `a
 Key source priority:
 
 1. `DC_MODEL_DB_KEY`
-2. `~/.ship/console/model-db.key`
+2. `~/.downcity/console/model-db.key`
 
 ## Best practices
 
-1. Never commit `~/.ship` or any key material.
+1. Never commit `~/.downcity` or any key material.
 2. Use a secret manager to inject `DC_MODEL_DB_KEY` in team/production environments.
 3. After key rotation, validate model connectivity through CLI and one real invocation.
 

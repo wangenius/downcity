@@ -20,20 +20,20 @@ bun.*
 package/bin
 !examples/demo-agent/bin
 # Runtime data
-.ship/logs/
-.ship/approvals/
-.ship/runs/
-.ship/queue/
-.ship/chats/
-.ship/.cache/
-.ship/public/
-**/.ship/logs/
-**/.ship/approvals/
-**/.ship/runs/
-**/.ship/queue/
-**/.ship/chats/
-**/.ship/.cache/
-**/.ship/public/
+.downcity/logs/
+.downcity/approvals/
+.downcity/runs/
+.downcity/queue/
+.downcity/chats/
+.downcity/.cache/
+.downcity/public/
+**/.downcity/logs/
+**/.downcity/approvals/
+**/.downcity/runs/
+**/.downcity/queue/
+**/.downcity/chats/
+**/.downcity/.cache/
+**/.downcity/public/
 .secrets
 
 # Chrome extension signed artifacts

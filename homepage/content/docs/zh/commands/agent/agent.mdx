@@ -38,7 +38,7 @@ city agent <subcommand>
 每次执行 `city` 时，CLI 会自动推导当前 agent 上下文，并在 `city` 进程及其子进程中注入：
 
 - `DC_AGENT_PATH`：当前 agent 绝对路径
-- `DC_AGENT_NAME`：当前 agent 名称（优先 `ship.json.name`，否则目录名）
+- `DC_AGENT_NAME`：当前 agent 名称（优先 `downcity.json.name`，否则目录名）
 
 > 注意：这是进程级注入，不会直接回写你当前 shell 会话的环境变量。
 

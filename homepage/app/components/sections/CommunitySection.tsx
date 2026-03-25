@@ -48,31 +48,38 @@ export const CommunitySection: FC = () => {
 
       <MarketingPanel className="mt-8 overflow-hidden">
         {communityLinks.map((item, index) => (
-          <a
-            key={item.titleKey}
-            href={item.external ? item.href : `${basePath}${item.path}`}
-            target={item.external ? "_blank" : undefined}
-            rel={item.external ? "noopener noreferrer" : undefined}
-            className={cn(
-              "grid gap-4 px-5 py-5 transition-colors hover:bg-background/74 md:grid-cols-[3rem_minmax(0,1fr)_auto] md:items-center md:px-7",
-              index !== communityLinks.length - 1 && "border-b border-border/68",
-            )}
-          >
-            <div className="flex items-center gap-2 md:block">
-              <p className={marketingTheme.eyebrow}>{String(index + 1).padStart(2, "0")}</p>
-              <item.icon className="size-4 text-muted-foreground md:mt-3" />
-            </div>
-            <div>
-              <h2 className="font-serif text-[1.35rem] font-semibold tracking-[-0.035em] text-foreground">
-                {t(item.titleKey)}
-              </h2>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">{t(item.descriptionKey)}</p>
-            </div>
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-              {i18n.language.toLowerCase().startsWith("zh") ? "进入" : "Open"}
-              <IconArrowUpRight className="size-4" />
-            </span>
-          </a>
+          (() => {
+            const isExternal = "external" in item && item.external === true;
+            const href = "href" in item ? item.href : `${basePath}${item.path}`;
+
+            return (
+              <a
+                key={item.titleKey}
+                href={href}
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noopener noreferrer" : undefined}
+                className={cn(
+                  "grid gap-4 px-5 py-5 transition-colors hover:bg-background/74 md:grid-cols-[3rem_minmax(0,1fr)_auto] md:items-center md:px-7",
+                  index !== communityLinks.length - 1 && "border-b border-border/68",
+                )}
+              >
+                <div className="flex items-center gap-2 md:block">
+                  <p className={marketingTheme.eyebrow}>{String(index + 1).padStart(2, "0")}</p>
+                  <item.icon className="size-4 text-muted-foreground md:mt-3" />
+                </div>
+                <div>
+                  <h2 className="font-serif text-[1.35rem] font-semibold tracking-[-0.035em] text-foreground">
+                    {t(item.titleKey)}
+                  </h2>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">{t(item.descriptionKey)}</p>
+                </div>
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+                  {i18n.language.toLowerCase().startsWith("zh") ? "进入" : "Open"}
+                  <IconArrowUpRight className="size-4" />
+                </span>
+              </a>
+            );
+          })()
         ))}
       </MarketingPanel>
     </section>

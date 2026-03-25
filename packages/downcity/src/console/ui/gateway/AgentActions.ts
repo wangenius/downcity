@@ -177,7 +177,7 @@ export async function startConsoleUiAgentByProjectRoot(params: {
   if (!projectReady) {
     if (params.initializeIfNeeded !== true) {
       throw new Error(
-        `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and ship.json`,
+        `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and downcity.json`,
       );
     }
     await initializeAgentProject({
@@ -191,7 +191,7 @@ export async function startConsoleUiAgentByProjectRoot(params: {
     const shipPath = getShipJsonPath(normalizedRoot);
     if (!(await fs.pathExists(profilePath)) || !(await fs.pathExists(shipPath))) {
       throw new Error(
-        `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and ship.json`,
+        `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and downcity.json`,
       );
     }
   }

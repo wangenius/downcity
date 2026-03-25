@@ -38,7 +38,7 @@ city agent <subcommand>
 On every `city` execution, CLI resolves current agent context and injects variables into the `city` process and its child processes:
 
 - `DC_AGENT_PATH`: absolute path of current agent
-- `DC_AGENT_NAME`: agent name (prefer `ship.json.name`, fallback to directory name)
+- `DC_AGENT_NAME`: agent name (prefer `downcity.json.name`, fallback to directory name)
 
 > Note: this is process-scoped injection and does not mutate your parent shell session.
 

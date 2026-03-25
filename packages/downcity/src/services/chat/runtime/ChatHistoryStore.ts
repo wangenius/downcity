@@ -2,7 +2,7 @@
  * ChatHistoryStore：聊天事件流持久化。
  *
  * 关键点（中文）
- * - 写入 `.ship/chat/<contextId>/history.jsonl`（append-only）。
+ * - 写入 `.downcity/chat/<contextId>/history.jsonl`（append-only）。
  * - 记录 inbound（audit/exec）与 outbound 事件。
  * - 与 context message history 分离，避免审计噪声进入模型上下文。
  */

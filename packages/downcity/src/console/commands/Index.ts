@@ -132,7 +132,7 @@ const sleep = async (ms: number): Promise<void> =>
 
 function resolveAgentName(projectRoot: string): string {
   const fallback = basename(projectRoot);
-  const shipJsonPath = join(projectRoot, "ship.json");
+  const shipJsonPath = join(projectRoot, "downcity.json");
   if (!existsSync(shipJsonPath)) return fallback;
 
   try {
@@ -521,8 +521,8 @@ program.helpOption("--help", "display help for command");
 
 program
   .command("init")
-  .description("初始化 console（模型/插件等全局配置，写入 ~/.ship/ship.db）")
-  .option("--force [enabled]", "允许清空并重建 ~/.ship/ship.db 中的 console 数据（危险操作）", parseBoolean)
+  .description("初始化 console（模型/插件等全局配置，写入 ~/.downcity/downcity.db）")
+  .option("--force [enabled]", "允许清空并重建 ~/.downcity/downcity.db 中的 console 数据（危险操作）", parseBoolean)
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (options: { force?: boolean }) => {
     await consoleInitCommand(options);
@@ -697,7 +697,7 @@ const agent = program
 agent
   .command("create [path]")
   .description("创建/初始化一个 Agent 项目")
-  .option("-f, --force [enabled]", "允许覆盖已有 ship.json（危险操作）", parseBoolean)
+  .option("-f, --force [enabled]", "允许覆盖已有 downcity.json（危险操作）", parseBoolean)
   .helpOption("--help", "display help for command")
   .action(withVersionBanner(async (cwd: string = ".", options: { force?: boolean }) => {
     await initCommand(cwd, options);

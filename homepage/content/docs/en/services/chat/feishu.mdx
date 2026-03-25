@@ -60,7 +60,7 @@ In Console UI, open `Global / Channel Accounts` and create a Feishu account such
 4. for Lark, optionally set:
    - `domain = https://open.larksuite.com`
 
-### 4) Bind it in `ship.json`
+### 4) Bind it in `downcity.json`
 
 ```json
 {
@@ -85,7 +85,7 @@ Meaning:
 - `permission`: permissions owned by that group, such as `chat.dm.use`, `chat.group.use`, or `agent.manage`
 - `user -> role`: which role a Feishu user belongs to
 
-The same config is now stored in console `~/.ship/ship.db` and managed in Console UI under `Agent / Authorization`, instead of being written to project `ship.json` in plaintext. New users fall back to default roles, so no pairing flow is required; group/channel usage depends only on the speaking user's role.
+The same config is now stored in console `~/.downcity/downcity.db` and managed in Console UI under `Agent / Authorization`, instead of being written to project `downcity.json` in plaintext. New users fall back to default roles, so no pairing flow is required; group/channel usage depends only on the speaking user's role.
 
 For the current runtime, **tenant app scopes** matter most.
 
@@ -146,7 +146,7 @@ If you changed permissions but did not send a new message, old metadata will sta
 
 ### Inspect route metadata
 
-If name resolution works, the Feishu route in `.ship/channel/meta.json` should contain:
+If name resolution works, the Feishu route in `.downcity/channel/meta.json` should contain:
 
 - `actorName`
 - `chatTitle`
@@ -164,8 +164,8 @@ Current Feishu channel behavior:
 
 - inbound transport is WebSocket
 - execution accepts **text + rich `post` + image + video + file + audio** inputs
-- text / links / mentions inside `post` are normalized into plain text, while `post` images / media are downloaded into `.ship/.cache/feishu/` and injected as `<file ...>`
-- inbound image, video, file, and audio messages are downloaded into `.ship/.cache/feishu/` and injected as `<file ...>`
+- text / links / mentions inside `post` are normalized into plain text, while `post` images / media are downloaded into `.downcity/.cache/feishu/` and injected as `<file ...>`
+- inbound image, video, file, and audio messages are downloaded into `.downcity/.cache/feishu/` and injected as `<file ...>`
 - inbound images and PDFs are also best-effort injected as model `file parts` for multimodal models
 - when a user replies to a Feishu message, runtime will best-effort fetch the parent message body from `parent_id` and inject it into the Agent input
 - outbound replies support `<file ...>` conversion and are delivered segment-by-segment in the actual text/attachment order from the source message

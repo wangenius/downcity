@@ -2,7 +2,7 @@
  * `city console config` 命令组。
  *
  * 目标（中文）
- * - 提供 ship.json 的通用读写能力（get/set/unset）。
+ * - 提供 downcity.json 的通用读写能力（get/set/unset）。
  * - 提供 alias 写入能力。
  * - 所有输出统一支持 JSON（默认）与可读文本两种模式。
  */
@@ -62,15 +62,15 @@ function readShipConfigByPath(
       scope === "console"
         ? 'Run "city console init" first.'
         : 'Run "city agent create" first.';
-    throw new Error(`ship.json not found at ${shipJsonPath}. ${hint}`);
+    throw new Error(`downcity.json not found at ${shipJsonPath}. ${hint}`);
   }
   const raw = fs.readJsonSync(shipJsonPath) as unknown;
   if (!isPlainObject(raw)) {
-    throw new Error("Invalid ship.json: expected object");
+    throw new Error("Invalid downcity.json: expected object");
   }
   const candidate = raw as Partial<ShipConfig>;
   if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
-    throw new Error("Invalid ship.json: missing required fields name/version");
+    throw new Error("Invalid downcity.json: missing required fields name/version");
   }
   return { shipJsonPath, config: candidate as ShipConfig };
 }
@@ -204,13 +204,13 @@ function applyCommonOptions(command: Command): Command {
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command("config")
-    .description("管理 ship.json 配置与 alias")
+    .description("管理 downcity.json 配置与 alias")
     .helpOption("--help", "display help for command");
 
   applyCommonOptions(
     config
       .command("get [keyPath]")
-      .description("读取 ship.json（可选读取单个路径）")
+      .description("读取 downcity.json（可选读取单个路径）")
       .helpOption("--help", "display help for command"),
   ).action((keyPath: string | undefined, options: { path?: string; json?: boolean }) => {
     runConfigCommand(options, ({ config: shipConfig }) => {
@@ -238,7 +238,7 @@ export function registerConfigCommand(program: Command): void {
   applyCommonOptions(
     config
       .command("set <keyPath> <value>")
-      .description("设置 ship.json 指定路径的值（value 支持 JSON 字面量）")
+      .description("设置 downcity.json 指定路径的值（value 支持 JSON 字面量）")
       .helpOption("--help", "display help for command"),
   ).action(
     (
@@ -271,7 +271,7 @@ export function registerConfigCommand(program: Command): void {
   applyCommonOptions(
     config
       .command("unset <keyPath>")
-      .description("删除 ship.json 指定路径")
+      .description("删除 downcity.json 指定路径")
       .helpOption("--help", "display help for command"),
   ).action((keyPath: string, options: { path?: string; json?: boolean }) => {
     const pathTokens = parseConfigPath(keyPath);

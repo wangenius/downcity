@@ -16,13 +16,26 @@ city service command <serviceName> <command> [--payload <json>] [--agent <name> 
 ## 关键参数
 
 - `--payload <json>`：动作入参，支持 JSON 字符串；非 JSON 会按字符串透传
+- `--delay <ms>`：延迟执行该 action
+- `--time <time>`：定时执行该 action（Unix 时间戳秒/毫秒或带时区 ISO 时间）
 - `--agent <name>` / `--path <path>`：目标 agent 解析
+
+关于 `--delay` / `--time`：
+
+- 调度任务会持久化到当前 agent 项目的 `.downcity/schedule.sqlite`
+- runtime 重启后，未完成任务会自动恢复
+- `--delay` 与 `--time` 不能同时使用
+
+更完整说明见：
+
+- [`Service Action 定时执行`](/zh/docs/commands/service/scheduling)
 
 ## 示例
 
 ```bash
 city service command task list --payload '{"status":"enabled"}' --agent my-agent
 city service command memory search --payload '{"query":"release decision"}' --path /abs/path/to/agent
+city service command chat send --payload '{"chatKey":"ctx_xxx","text":"later"}' --time "2026-03-25T21:00:00+08:00" --path /abs/path/to/agent
 ```
 
 ## 相关命令

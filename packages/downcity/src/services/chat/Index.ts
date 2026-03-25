@@ -63,7 +63,10 @@ import {
   getShipChatContextDirPath,
   getShipChatHistoryPath,
 } from "@/console/env/Paths.js";
-import { getRequestContext } from "@agent/context/manager/RequestContext.js";
+import {
+  buildCurrentChatEnvironmentPrompt,
+  resolveCurrentChatEnvironmentPromptInput,
+} from "@services/chat/runtime/SystemPrompt.js";
 
 type ChatChannelState = {
   telegram: TelegramBot | null;
@@ -220,14 +223,10 @@ async function buildCurrentChannelPrompts(
   context: ServiceRuntime,
   method: ChatMethod,
 ): Promise<string[]> {
-  const contextId = String(getRequestContext()?.contextId || "").trim();
-  if (!contextId) return [];
-  const meta = await readChatMetaByContextId({
-    context,
-    contextId,
-  }).catch(() => null);
+  const chatEnvironment = await resolveCurrentChatEnvironmentPromptInput(context);
+  if (!chatEnvironment) return [];
   const channel = resolveCurrentChatPromptChannel(
-    String(meta?.channel || "")
+    String(chatEnvironment.channel || "")
       .trim()
       .toLowerCase(),
   );
@@ -474,7 +473,7 @@ function getChatChannelStatus(
  *
  * 关键点（中文）
  * - 不返回明文密钥，只返回布尔“是否已配置”。
- * - 字段命名尽量贴近 `ship.json`，便于前端直接映射编辑。
+ * - 字段命名尽量贴近 `downcity.json`，便于前端直接映射编辑。
  */
 function buildChatChannelConfigSummary(
   context: ServiceRuntime,
@@ -510,11 +509,11 @@ function buildChatChannelConfigSummary(
 }
 
 /**
- * 更新内存配置与 ship.json 中的 channel enabled 状态。
+ * 更新内存配置与 downcity.json 中的 channel enabled 状态。
  *
  * 关键点（中文）
  * - 先更新 runtime `context.config`，保证当前进程立刻可见。
- * - 再落盘到项目 `ship.json`，保证重启后状态一致。
+ * - 再落盘到项目 `downcity.json`，保证重启后状态一致。
  */
 async function setChatChannelEnabled(params: {
   context: ServiceRuntime;
@@ -533,7 +532,7 @@ async function setChatChannelEnabled(params: {
   const channelConfig = (channelConfigs[channel] ??= {});
   channelConfig.enabled = enabled;
 
-  const shipPath = path.join(context.rootPath, "ship.json");
+  const shipPath = path.join(context.rootPath, "downcity.json");
   let shipJson: Record<string, unknown> = {};
   try {
     const raw = await fs.readFile(shipPath, "utf-8");
@@ -679,7 +678,7 @@ function applyChannelPatch(
 }
 
 /**
- * 更新单个 channel 配置（内存 + ship.json）。
+ * 更新单个 channel 配置（内存 + downcity.json）。
  *
  * 关键点（中文）
  * - 与 `setChatChannelEnabled` 一样保持“先内存后落盘”。
@@ -703,7 +702,7 @@ async function setChatChannelConfig(params: {
   const channelConfig = (channelConfigs[channel] ??= {});
   applyChannelPatch(channelConfig, patch);
 
-  const shipPath = path.join(context.rootPath, "ship.json");
+  const shipPath = path.join(context.rootPath, "downcity.json");
   let shipJson: Record<string, unknown> = {};
   try {
     const raw = await fs.readFile(shipPath, "utf-8");
@@ -1790,7 +1789,11 @@ export const chatService: Service = {
   name: "chat",
   system: async (context) => {
     const method = resolveChatMethod(context.config);
-    return [CHAT_SERVICE_PROMPTS[method], ...(await buildCurrentChannelPrompts(context, method))]
+    return [
+      CHAT_SERVICE_PROMPTS[method],
+      await buildCurrentChatEnvironmentPrompt(context),
+      ...(await buildCurrentChannelPrompts(context, method)),
+    ]
       .filter(Boolean)
       .join("\n\n");
   },
@@ -1927,7 +1930,7 @@ export const chatService: Service = {
     },
     configure: {
       command: {
-        description: "更新 chat 渠道参数（写入 ship.json，可选立即重载）",
+        description: "更新 chat 渠道参数（写入 downcity.json，可选立即重载）",
         configure(command: Command) {
           command
             .requiredOption("--channel <name>", "指定渠道（telegram|feishu|qq）")
@@ -2014,11 +2017,6 @@ export const chatService: Service = {
             .option("--text <text>", "消息正文")
             .option("--stdin", "从标准输入读取消息正文", false)
             .option("--text-file <file>", "从文件读取消息正文（相对当前目录）")
-            .option("--delay <ms>", "延迟发送毫秒数（非负整数）")
-            .option(
-              "--time <time>",
-              "定时发送时间（Unix 时间戳秒/毫秒或 ISO 时间）",
-            )
             .option("--reply", "显式使用 reply_to_message 回复目标消息", false)
             .option("--message-id <id>", "显式指定 reply 目标消息 ID")
             .option(

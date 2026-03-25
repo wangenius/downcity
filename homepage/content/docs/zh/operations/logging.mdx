@@ -1,6 +1,6 @@
 ---
 title: 日志与审计
-description: ".ship 目录下的日志、会话与任务审计数据"
+description: ".downcity 目录下的日志、会话与任务审计数据"
 ---
 
 # 日志与审计
@@ -8,7 +8,7 @@ description: ".ship 目录下的日志、会话与任务审计数据"
 ## 关键路径
 
 ```text
-.ship/
+.downcity/
   logs/<YYYY-MM-DD>.jsonl
   context/<contextId>/messages/messages.jsonl
   task/<taskId>/<timestamp>/run.json
@@ -19,10 +19,10 @@ description: ".ship 目录下的日志、会话与任务审计数据"
 
 ```bash
 # 查看当天运行日志
-tail -f .ship/logs/$(date +%F).jsonl
+tail -f .downcity/logs/$(date +%F).jsonl
 
 # 搜索错误
-grep -Ei "error|warn|timeout|failed" .ship/logs/$(date +%F).jsonl
+grep -Ei "error|warn|timeout|failed" .downcity/logs/$(date +%F).jsonl
 
 # 查看某个会话最近消息
 city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
@@ -30,7 +30,7 @@ city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
 
 ## LLM 请求日志开关
 
-`ship.json` 中：
+`downcity.json` 中：
 
 ```json
 {

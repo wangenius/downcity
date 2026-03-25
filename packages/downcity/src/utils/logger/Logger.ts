@@ -164,7 +164,7 @@ function normalizeToAllowedMessageLabels(message: string): string {
  * - Provide a single logger interface usable by both:
  *   - system/runtime components (server, scheduler, tool executor, etc.)
  *   - agent/LLM execution (LLM request/response logging expects `logger.log(...)`)
- * - Persist logs as JSONL to `.ship/logs/<YYYY-MM-DD>.jsonl` (one line per entry).
+ * - Persist logs as JSONL to `.downcity/logs/<YYYY-MM-DD>.jsonl` (one line per entry).
  * - Keep console output human-friendly, but make disk logs machine-friendly.
  *
  * Notes:
@@ -207,7 +207,7 @@ export class Logger {
    * 关键点（中文）
    * - 我们约束“一个进程只服务一个 projectRoot”。
    * - Logger 作为单例存在，但落盘目录必须在启动入口初始化后才能确定。
-   * - 未绑定 projectRoot 时，只打印到 console，不写入 `.ship/logs/*`。
+   * - 未绑定 projectRoot 时，只打印到 console，不写入 `.downcity/logs/*`。
    */
   bindProjectRoot(projectRoot: string): void {
     const root = String(projectRoot || "").trim();
@@ -318,7 +318,7 @@ export class Logger {
 
   /**
    * 落盘算法（中文）
-   * - 日志按自然日分片：`.ship/logs/YYYY-MM-DD.jsonl`。
+   * - 日志按自然日分片：`.downcity/logs/YYYY-MM-DD.jsonl`。
    * - 每条日志一行 JSON，便于 grep/流式消费。
    */
   private async saveToFile(entry: LogEntry): Promise<void> {

@@ -18,7 +18,7 @@ description: runTaskNow 的执行阶段、进度快照与结果判定
 ## 手动触发与调度触发
 
 - 手动触发：Console UI 调用 `/api/dashboard/tasks/run`
-- 手动触发当前是“异步受理”，接口先返回 `accepted=true`，后台继续执行
+- 手动触发当前是“异步受理”，接口先返回 `accepted=true`、提示文案与 `executionId`，后台继续执行
 - 调度触发：由 task scheduler 根据 cron 或 one-shot time 自动触发
 - 调度器对同一 `taskId` 有串行保护；手动触发目前没有同级别防重入
 

@@ -29,7 +29,7 @@ Downcity 是一个 Agent Runtime，它将你的本地或远程代码仓库启动
 - **Repo is the Agent** - 你的代码仓库就是 Agent 的上下文和记忆
 - **可对话** - 通过 Telegram / Discord / 飞书与 Agent 交互
 - **可执行** - 通过 shell 工具（如 `shell_exec` / `shell_start` / `shell_status` / `shell_wait` / `shell_close`）直接操作仓库与环境
-- **完全可审计** - 日志与对话记录落盘（`.ship/logs` / `.ship/chat/.../conversations`）
+- **完全可审计** - 日志与对话记录落盘（`.downcity/logs` / `.downcity/chat/.../conversations`）
 - **全权限（临时）** - 当前版本默认不做权限/审批拦截
 
 ---
@@ -57,8 +57,8 @@ city agent create .
 这会创建以下文件：
 
 - `PROFILE.md` - Agent 宪法 / 行为规范
-- `ship.json` - Runtime 配置
-- `.ship/` - Agent 运行时目录
+- `downcity.json` - Runtime 配置
+- `.downcity/` - Agent 运行时目录
 
 ### 启动 Agent
 
@@ -76,8 +76,8 @@ Agent 将启动并监听配置的通信渠道（如 Telegram Bot）。
 your-project/
 ├─ src/                  # 你的业务代码
 ├─ PROFILE.md              # Agent 宪法（必选）
-├─ ship.json             # Runtime 配置
-├─ .ship/
+├─ downcity.json             # Runtime 配置
+├─ .downcity/
 │   ├─ routes/           # 对外接口（webhook / command）
 │   ├─ logs/             # 行为日志
 │   ├─ chats/            # 对话记录
@@ -119,7 +119,7 @@ You are the maintainer agent of this repository.
 - No speculation without evidence
 ```
 
-### ship.json - Runtime 配置
+### downcity.json - Runtime 配置
 
 ```json
 {
@@ -164,9 +164,9 @@ You are the maintainer agent of this repository.
 
 `permissions.shell.maxOutputChars` 与 `permissions.shell.maxOutputLines` 用于限制 shell 工具输出回灌到 LLM 的体积（默认分别为 `12000` 和 `200`），可显著降低第三方 OpenAI-compatible 网关出现 `Parameter error` 的概率。
 
-> 注：启动时会自动加载项目根目录的 `.env`，并把 `ship.json` 里的 `${VAR_NAME}` 形式占位符替换为对应环境变量。
+> 注：启动时会自动加载项目根目录的 `.env`，并把 `downcity.json` 里的 `${VAR_NAME}` 形式占位符替换为对应环境变量。
 
-你也可以在 `ship.json` 里配置启动参数（`city agent start` 会读取），例如：
+你也可以在 `downcity.json` 里配置启动参数（`city agent start` 会读取），例如：
 
 ```json
 {
@@ -320,7 +320,7 @@ A: v1 主要支持本地运行，v2 将支持远程部署。
 
 ### Q: 安全性如何保证？
 
-A: 当前版本不提供最小权限与审批；只提供审计（`.ship/logs` / `.ship/chat/.../conversations`）与可追溯的执行过程。更严格的权限体系会在后续版本重新设计。
+A: 当前版本不提供最小权限与审批；只提供审计（`.downcity/logs` / `.downcity/chat/.../conversations`）与可追溯的执行过程。更严格的权限体系会在后续版本重新设计。
 
 ---
 

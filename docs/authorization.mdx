@@ -17,7 +17,7 @@ flowchart TD
   end
 
   subgraph Runtime["权限运行时"]
-    R1["AuthorizationConfig.ts<br/>ship.db 读写 / 归一化"]
+    R1["AuthorizationConfig.ts<br/>downcity.db 读写 / 归一化"]
     R2["AuthorizationPolicy.ts<br/>权限判定"]
     R3["AuthorizationStore.ts<br/>观测 user/chat"]
     R4["QueuedUserMessage.ts<br/>写入 role_id / permissions"]
@@ -87,7 +87,7 @@ sequenceDiagram
   B->>S: 记录观测到的 user/chat
 
   A->>B: evaluateIncomingAuthorization(...)
-  B->>C: 读取 ship.db 权限配置
+  B->>C: 读取 downcity.db 权限配置
   C-->>B: roles + channel.userRoles + defaultUserRoleId
   B->>O: 判定 allow/block
   O-->>B: decision + userRoleId + userPermissions
@@ -112,7 +112,7 @@ packages/downcity/src/services/chat/
 │
 ├── runtime/
 │   ├── AuthorizationConfig.ts
-│   │  只负责读写 ship.db 权限配置
+│   │  只负责读写 downcity.db 权限配置
 │   ├── AuthorizationPolicy.ts
 │   │  只负责判定 allow / block
 │   ├── AuthorizationStore.ts
@@ -138,4 +138,4 @@ packages/downcity/src/services/chat/
 - `BaseChatChannel.ts` 管“把消息接进来后怎么走”
 - 各平台 adapter 只负责“把平台消息翻译成统一输入”
 
-如果你要，我下一步可以再给你画一张“ship.db 里权限数据结构图”。
+如果你要，我下一步可以再给你画一张“downcity.db 里权限数据结构图”。

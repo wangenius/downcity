@@ -47,7 +47,7 @@ export class TelegramChannelConfiguration extends ChatChannelConfiguration {
             key: "channelAccountId",
             label: "Channel Account ID",
             description:
-              "Bind channel to a channel account row in ~/.ship/ship.db channel_accounts.",
+              "Bind channel to a channel account row in ~/.downcity/downcity.db channel_accounts.",
             type: "string",
             source: "ship_json",
             required: false,

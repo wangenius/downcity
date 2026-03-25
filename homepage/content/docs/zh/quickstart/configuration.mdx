@@ -1,6 +1,6 @@
 ---
 title: 配置
-description: ship.json、PROFILE.md 与运行目录配置说明
+description: downcity.json、PROFILE.md 与运行目录配置说明
 ---
 
 # 配置
@@ -9,15 +9,15 @@ Downcity 的核心配置由 3 部分组成：
 
 - `PROFILE.md`：Agent 角色与行为边界（必需）
 - `SOUL.md`：稳定执行原则（可选）
-- `ship.json`：运行时配置（必需）
+- `downcity.json`：运行时配置（必需）
 
-## `ship.json` 关键字段
+## `downcity.json` 关键字段
 
 ### `start`（仅高级场景）
 
 `city agent start` 的端口由 console 自动分配。
 
-因此常规场景不需要在项目 `ship.json` 配置 `start.port`。
+因此常规场景不需要在项目 `downcity.json` 配置 `start.port`。
 
 仅在你手动运行前台 runtime 或调试特殊网络绑定时，才考虑配置：
 
@@ -66,7 +66,7 @@ agent 绑定模型 ID（映射到 console 全局模型池）：
 }
 ```
 
-`channelAccountId` 会绑定到 `~/.ship/ship.db` 的全局 bot 账户池（`channel_accounts`）。
+`channelAccountId` 会绑定到 `~/.downcity/downcity.db` 的全局 bot 账户池（`channel_accounts`）。
 
 `services.chat.queue` 说明：
 - `maxConcurrency`：不同 chatKey lane 的全局并发上限。
@@ -90,7 +90,7 @@ agent 绑定模型 ID（映射到 console 全局模型池）：
 
 ### `plugins.*` / `assets.*`
 
-插件配置现在写在项目 `ship.json` 里。
+插件配置现在写在项目 `downcity.json` 里。
 
 例如 voice：
 
@@ -131,6 +131,6 @@ city console config unset services.chat.channels.telegram
 ## 下一步
 
 - [CLI 参考](/zh/docs/reference/cli)
-- [ship.json 参考](/zh/docs/reference/ship-json)
-- [`.ship/` 目录说明](/zh/docs/reference/dot-ship)
+- [downcity.json 参考](/zh/docs/reference/downcity-json)
+- [`.downcity/` 目录说明](/zh/docs/reference/dot-downcity)
 - [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)

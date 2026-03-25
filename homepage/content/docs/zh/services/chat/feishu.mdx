@@ -63,7 +63,7 @@ Downcity 当前默认按长连接模式工作，不要求你先暴露公网 webh
 4. 如果你接的是国际版 Lark，可填写：
    - `domain = https://open.larksuite.com`
 
-### 4）在 `ship.json` 里绑定项目
+### 4）在 `downcity.json` 里绑定项目
 
 ```json
 {
@@ -88,7 +88,7 @@ Downcity 当前默认按长连接模式工作，不要求你先暴露公网 webh
 - `permission`：分组拥有的权限，例如 `chat.dm.use`、`chat.group.use`、`agent.manage`
 - `user -> role`：某个飞书用户属于哪个角色
 
-这些配置统一保存在 console `~/.ship/ship.db`，并可直接在 Console UI 的 `Agent / Authorization` 页面管理，不会明文写到项目 `ship.json`。新用户会自动落到默认角色，不再走审批流程；群聊/频道是否可用，只看当前发消息 user 的角色权限。
+这些配置统一保存在 console `~/.downcity/downcity.db`，并可直接在 Console UI 的 `Agent / Authorization` 页面管理，不会明文写到项目 `downcity.json`。新用户会自动落到默认角色，不再走审批流程；群聊/频道是否可用，只看当前发消息 user 的角色权限。
 
 对于当前运行时，最关键的是 **tenant / 应用身份权限**，不是单独的 `user` 权限。
 
@@ -157,7 +157,7 @@ city agent start
 
 ### 方式三：看 route / meta
 
-如果成功解析，`.ship/channel/meta.json` 对应的飞书 route 一般会出现：
+如果成功解析，`.downcity/channel/meta.json` 对应的飞书 route 一般会出现：
 
 - `actorName`
 - `chatTitle`
@@ -175,8 +175,8 @@ city agent start
 
 - 入站依赖 WebSocket 事件
 - 入站支持 **文本 + post 富文本 + 图片 + 视频 + 文件 + 音频** 作为执行输入
-- `post` 内的文本 / 链接 / @ 会先归一化成纯文本，图片 / 媒体会先下载到 `.ship/.cache/feishu/`，再注入为 `<file ...>`
-- 图片、视频、文件、音频会先下载到 `.ship/.cache/feishu/`，再注入为 `<file ...>`
+- `post` 内的文本 / 链接 / @ 会先归一化成纯文本，图片 / 媒体会先下载到 `.downcity/.cache/feishu/`，再注入为 `<file ...>`
+- 图片、视频、文件、音频会先下载到 `.downcity/.cache/feishu/`，再注入为 `<file ...>`
 - 入站图片和 PDF 会继续 best-effort 注入为模型 `file parts`，便于多模态模型直接读取
 - 用户如果是在飞书里 reply 某条消息再发新消息，运行时会根据 `parent_id` best-effort 回查父消息正文，并一并注入给 Agent
 - 出站支持从回复文本解析 `<file ...>`，并按正文与附件在原消息里的实际顺序逐段发送

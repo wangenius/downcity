@@ -30,14 +30,17 @@ city memory <subcommand> [options]
 city memory status
 city memory index --force
 city memory search "release decision"
-city memory get .ship/memory/MEMORY.md --from 10 --lines 20
+city memory get .downcity/memory/MEMORY.md --from 10 --lines 20
 city memory store --target longterm --content "用户偏好简洁的发布说明。"
 city memory flush --context-id telegram-chat-123 --max-messages 40
+city memory flush --context-id telegram-chat-123 --time "2026-03-25T23:00:00+08:00"
 ```
 
 ## 说明
 
 - Memory 默认开启（零配置）。如需关闭：`context.memory.enabled=false`。
+- 所有 memory action 也支持通用 `--delay` / `--time` one-shot 调度。
+- 更详细说明见 [`Service Action 定时执行`](/zh/docs/commands/service/scheduling)。
 - 先启动 agent runtime：
 
 ```bash

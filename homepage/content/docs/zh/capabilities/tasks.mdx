@@ -5,7 +5,7 @@ description: 任务定义、调度与 CLI 操作
 
 # Tasks
 
-任务定义存放在 `.ship/task/<taskId>/task.md`。
+任务定义存放在 `.downcity/task/<taskId>/task.md`。
 
 > 想看完整执行链路（状态机、校验规则、run 目录语义、排障）：  
 > 参考 [Task Service 详细说明](/zh/docs/services/task/task-service)。
@@ -27,14 +27,14 @@ kind: agent
 
 ## 执行结果通知
 
-- 任务完成后只会写入 `.ship/task/<taskId>/<timestamp>/` 产物。
+- 任务完成后只会写入 `.downcity/task/<taskId>/<timestamp>/` 产物。
 - 不会自动把结果发送到 chat channel。
 - `contextId` 仅作为任务执行上下文标识使用。
 
 ## 目录结构
 
 ```text
-.ship/task/
+.downcity/task/
   <taskId>/
     task.md
     <timestamp>/

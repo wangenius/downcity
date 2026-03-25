@@ -37,7 +37,7 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
     missingInitFiles.push("PROFILE.md");
   }
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
-    missingInitFiles.push("ship.json");
+    missingInitFiles.push("downcity.json");
   }
 
   const pid = await readDaemonPid(projectRoot);

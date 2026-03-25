@@ -57,7 +57,7 @@ Downcity 采用的是“Human with Agent”，不是“Human or Agent”。
 - 文件夹是边界
 - 文档是规则
 - 配置是契约
-- `.ship/` 是运行痕迹
+- `.downcity/` 是运行痕迹
 
 ### 2. 人类保留解释权
 
@@ -132,7 +132,7 @@ flowchart TD
   S --> HP["Hook Plugins<br/>middleware / interceptors"]
   S --> PP["Provider Plugins<br/>transcriber / auth / adapters"]
   PP --> T["Assets<br/>install / check / use"]
-  A --> D["Durable Traces<br/>.ship / logs / conversations / task runs"]
+  A --> D["Durable Traces<br/>.downcity / logs / conversations / task runs"]
 ```
 
 这张图表达的不是代码依赖，而是思想依赖：
@@ -141,7 +141,7 @@ flowchart TD
 - console 与 agent 都是围绕它服务
 - service 定义主流程与扩展点
 - plugin 只负责以 hook / provider 方式接入
-- `.ship/` 不是附属缓存，而是可审计的运行痕迹层
+- `.downcity/` 不是附属缓存，而是可审计的运行痕迹层
 
 ## 你可以怎样用这套哲学判断设计取舍
 

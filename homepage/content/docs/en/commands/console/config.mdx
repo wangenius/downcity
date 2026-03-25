@@ -1,11 +1,11 @@
 ---
 title: city console config
-description: Manage project ship.json and alias (model pool is separate)
+description: Manage project downcity.json and alias (model pool is separate)
 ---
 
 # `city console config`
 
-Manage project `ship.json` and alias.
+Manage project `downcity.json` and alias.
 
 > Naming note: configuration command is `city console config`, not `city config`.
 
@@ -26,7 +26,7 @@ city console config <subcommand>
 
 ## Plugin config
 
-`city console config` now reads and writes project `ship.json` only.
+`city console config` now reads and writes project `downcity.json` only.
 
 For plugin configuration, edit:
 
@@ -59,7 +59,7 @@ $ city console config get model.primary
 {
   "success": true,
   "projectRoot": "<projectRoot>",
-  "shipJsonPath": "<projectRoot>/ship.json",
+  "shipJsonPath": "<projectRoot>/downcity.json",
   "keyPath": "model.primary",
   "value": "<modelId>"
 }
@@ -70,7 +70,7 @@ $ city console config set model.primary gpt-5.4
 {
   "success": true,
   "projectRoot": "<projectRoot>",
-  "shipJsonPath": "<projectRoot>/ship.json",
+  "shipJsonPath": "<projectRoot>/downcity.json",
   "keyPath": "model.primary",
   "value": "gpt-5.4",
   "existed": true,

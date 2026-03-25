@@ -4,7 +4,7 @@ import type { JsonObject } from "@/types/Json.js";
  * Context 消息：以 UIMessage[] 作为唯一事实源。
  *
  * 关键点（中文）
- * - 持久化存储在 `.ship/context/<encodedContextId>/messages/messages.jsonl`
+ * - 持久化存储在 `.downcity/context/<encodedContextId>/messages/messages.jsonl`
  * - 默认只存 `role=user|assistant`
  * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
  */

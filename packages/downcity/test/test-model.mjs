@@ -4,7 +4,7 @@
  *
  * 目标（中文）
  * - 放在 `packages/downcity/test`，避免污染运行时代码。
- * - 直接读取项目的 `ship.json + .env`，验证模型 API 是否可用。
+ * - 直接读取项目的 `downcity.json + .env`，验证模型 API 是否可用。
  * - 输出统一使用 `[key]: value` 风格，便于快速排查。
  */
 
@@ -386,11 +386,11 @@ async function requestGemini(params) {
 async function run() {
   const { projectPath, options } = parseArgs(process.argv.slice(2));
   const projectRoot = path.resolve(projectPath);
-  const shipJsonPath = path.join(projectRoot, "ship.json");
+  const shipJsonPath = path.join(projectRoot, "downcity.json");
   const envPath = path.join(projectRoot, ".env");
 
   if (!fs.existsSync(shipJsonPath)) {
-    console.error(`[error]: ship.json not found at ${shipJsonPath}`);
+    console.error(`[error]: downcity.json not found at ${shipJsonPath}`);
     process.exit(1);
   }
 

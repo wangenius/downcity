@@ -85,6 +85,14 @@ export type IncomingChatMessage = {
   userId?: string;
   username?: string;
   /**
+   * 用户时区。
+   *
+   * 说明（中文）
+   * - 仅在上游显式提供时传入。
+   * - 第三方 IM 平台 bot 通常不会直接提供该字段。
+   */
+  userTimezone?: string;
+  /**
    * 会话展示名（群名/频道名/私聊对象名）。
    *
    * 说明（中文）
@@ -494,7 +502,7 @@ export abstract class BaseChatChannel {
    * 记录入站 chat 事件（审计流）。
    *
    * 关键点（中文）
-   * - 跟 context message history 分离，写入 `.ship/chat/<contextId>/history.jsonl`。
+   * - 跟 context message history 分离，写入 `.downcity/chat/<contextId>/history.jsonl`。
    * - 写入失败不阻塞主链路，但会记录 warning。
    */
   private async appendInboundHistory(params: {
@@ -673,17 +681,12 @@ export abstract class BaseChatChannel {
     }
 
     const rawQueuedText = buildQueuedUserMessageWithInfo({
-      channel: this.channel,
-      contextId: chatKey,
-      chatKey,
-      chatId: msg.chatId,
-      chatType: msg.chatType,
-      threadId: msg.messageThreadId,
       messageId: msg.messageId,
       userId: msg.userId,
       username: msg.username,
       roleId: userRole?.roleId,
       permissions: userRole?.permissions,
+      userTimezone: msg.userTimezone,
       text: msg.text,
     });
     const preparedExec = await prepareChatEnqueue({

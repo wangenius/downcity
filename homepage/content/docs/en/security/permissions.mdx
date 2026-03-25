@@ -16,7 +16,7 @@ They solve different problems and should be understood separately.
 
 This layer defines what the agent itself is allowed to do, such as reading the repo, writing files, or executing commands.
 
-This is still configured in project `ship.json.permissions`.
+This is still configured in project `downcity.json.permissions`.
 
 ### Minimal example
 
@@ -75,9 +75,9 @@ There is no special `master` or `owner` identity in this model. Everything is ha
 
 ### Where it is stored
 
-Chat user authorization is not written back to project `ship.json`.
+Chat user authorization is not written back to project `downcity.json`.
 
-It is stored in Console `~/.ship/ship.db`, which keeps permission management centralized and avoids exposing user authorization in plaintext project config.
+It is stored in Console `~/.downcity/downcity.db`, which keeps permission management centralized and avoids exposing user authorization in plaintext project config.
 
 ### Where to manage it
 
@@ -113,4 +113,4 @@ So even when a message comes from a group chat, the final decision is still base
 - [Console UI](/en/docs/commands/console/ui)
 - [Chat Service](/en/docs/services/chat/chat-service)
 - [Configuration Overview](/en/docs/configuration/overview)
-- [ship.json Reference](/en/docs/reference/ship-json)
+- [downcity.json Reference](/en/docs/reference/downcity-json)

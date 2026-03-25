@@ -43,6 +43,9 @@ test("chat service system injects only the current channel prompt", async () => 
       contextId: "ctx_feishu_only",
       channel: "feishu",
       chatId: "oc_123",
+      targetType: "group",
+      threadId: 42,
+      chatTitle: "研发群",
     });
 
     const prompt = await withRequestContext(
@@ -54,6 +57,14 @@ test("chat service system injects only the current channel prompt", async () => 
     );
 
     assert.equal(prompt.includes("当前模式下，直接输出，即会发送消息给到用户对应的channel"), true);
+    assert.equal(prompt.includes("# Current Chat Environment"), true);
+    assert.equal(prompt.includes("- channel: feishu"), true);
+    assert.equal(prompt.includes("- context_id: ctx_feishu_only"), true);
+    assert.equal(prompt.includes("- chat_key: ctx_feishu_only"), true);
+    assert.equal(prompt.includes("- chat_id: oc_123"), true);
+    assert.equal(prompt.includes("- chat_type: group"), true);
+    assert.equal(prompt.includes("- thread_id: 42"), true);
+    assert.equal(prompt.includes("- chat_title: 研发群"), true);
     assert.equal(prompt.includes("# Feishu Channel"), true);
     assert.equal(prompt.includes("# QQ Adapter 使用说明（direct 模式）"), false);
   } finally {
@@ -75,6 +86,7 @@ test("chat service system skips channel prompts when current context is not a ch
     );
 
     assert.equal(prompt.includes("当前模式下，直接输出，即会发送消息给到用户对应的channel"), true);
+    assert.equal(prompt.includes("# Current Chat Environment"), false);
     assert.equal(prompt.includes("# Feishu Channel"), false);
     assert.equal(prompt.includes("# QQ Adapter 使用说明（direct 模式）"), false);
   } finally {

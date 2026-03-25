@@ -18,7 +18,7 @@ description: runTaskNow stages, live progress snapshots, and final status rules
 ## Manual vs Scheduled Trigger
 
 - manual trigger: Console UI calls `/api/dashboard/tasks/run`
-- manual trigger is currently async acceptance: the API returns `accepted=true` first and the run continues in background
+- manual trigger is currently async acceptance: the API returns `accepted=true`, a guidance `message`, and `executionId` first, then the run continues in background
 - scheduled trigger: task scheduler starts runs from cron or one-shot time rules
 - scheduler has same-`taskId` serialization; manual trigger currently does not have the same anti-reentry protection
 

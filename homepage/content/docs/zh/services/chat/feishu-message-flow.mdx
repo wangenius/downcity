@@ -16,8 +16,8 @@ sequenceDiagram
   participant U as 用户（飞书）
   participant FS as Feishu Open Platform
   participant BOT as Downcity FeishuBot
-  participant META as .ship/channel/meta.json
-  participant HIST as .ship/chat/<contextId>/history.jsonl
+  participant META as .downcity/channel/meta.json
+  participant HIST as .downcity/chat/<contextId>/history.jsonl
   participant RT as Agent Runtime
   participant SEND as Feishu send API
 
@@ -173,7 +173,7 @@ sequenceDiagram
 
 这些信息会落到：
 
-- `.ship/channel/meta.json`
+- `.downcity/channel/meta.json`
 
 目标键的结构大致是：
 
@@ -217,7 +217,7 @@ username: ...
 
 同时审计历史会写入：
 
-- `.ship/chat/<contextId>/history.jsonl`
+- `.downcity/chat/<contextId>/history.jsonl`
 
 ## 7）回复是怎么发出去的
 

@@ -2253,7 +2253,7 @@ interface QQEventCaptureConfig {
  *
  * Env:
  * - `SHIP_QQ_CAPTURE_EVENTS=dispatch|all`
- * - `SHIP_QQ_CAPTURE_DIR=...` (optional; defaults to `${projectRoot}/.ship/.debug/qq-events`)
+ * - `SHIP_QQ_CAPTURE_DIR=...` (optional; defaults to `${projectRoot}/.downcity/.debug/qq-events`)
  */
 function getQqEventCaptureConfig(projectRoot: string): QQEventCaptureConfig {
   const raw = String(process.env.SHIP_QQ_CAPTURE_EVENTS ?? "")
@@ -2263,7 +2263,7 @@ function getQqEventCaptureConfig(projectRoot: string): QQEventCaptureConfig {
     return {
       enabled: false,
       mode: "dispatch",
-      dir: join(projectRoot, ".ship", ".debug", "qq-events"),
+      dir: join(projectRoot, ".downcity", ".debug", "qq-events"),
     };
   }
 
@@ -2274,7 +2274,7 @@ function getQqEventCaptureConfig(projectRoot: string): QQEventCaptureConfig {
     typeof process.env.SHIP_QQ_CAPTURE_DIR === "string" &&
     process.env.SHIP_QQ_CAPTURE_DIR.trim()
       ? process.env.SHIP_QQ_CAPTURE_DIR.trim()
-      : join(projectRoot, ".ship", ".debug", "qq-events");
+      : join(projectRoot, ".downcity", ".debug", "qq-events");
 
   return { enabled: true, mode, dir };
 }

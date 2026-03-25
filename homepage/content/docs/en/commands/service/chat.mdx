@@ -20,10 +20,10 @@ city chat <subcommand> [options]
 - `status`: show channel link status
 - `test`: run channel connectivity checks
 - `reconnect`: reconnect channels (all by default, or one channel)
-- `open`: enable a channel (`enabled=true` in `ship.json`, then try to start if configured)
-- `close`: disable a channel (`enabled=false` in `ship.json`, and stop runtime channel)
+- `open`: enable a channel (`enabled=true` in `downcity.json`, then try to start if configured)
+- `close`: disable a channel (`enabled=false` in `downcity.json`, and stop runtime channel)
 - `configuration`: inspect channel configuration schema (field name/type/description/source)
-- `configure`: update channel parameters (`ship.json` patch, restart channel by default)
+- `configure`: update channel parameters (`downcity.json` patch, restart channel by default)
 - `list`: list conversations recorded by current agent (chatTitle/chatKey)
 - `info`: show one conversation info (route snapshot + local paths + context snapshot)
 - `send`: send message
@@ -70,9 +70,15 @@ city chat <subcommand> [options]
 
 About `--delay` / `--time`:
 
-- the command returns as soon as runtime accepts the request, while actual delivery is scheduled in runtime memory
-- if runtime exits or restarts before delivery, pending delayed/scheduled sends are not restored automatically
-- for durable and recoverable scheduling, prefer the `task` service
+- the command returns as soon as runtime accepts the request, while actual delivery is handled by the persistent scheduler
+- scheduled jobs are written to the current agent project's `.downcity/schedule.sqlite`
+- unfinished delayed/scheduled sends are restored after runtime restart
+- `--delay` and `--time` cannot be used together
+- this is intended for one-shot delayed/scheduled sends; use `task` service for cron or longer workflows
+
+For detailed behavior, recovery rules, and API examples, see:
+
+- [`Service Action Scheduling`](/en/docs/commands/service/scheduling)
 
 `send` body also supports:
 

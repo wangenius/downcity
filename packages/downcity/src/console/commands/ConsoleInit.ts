@@ -1,14 +1,14 @@
 /**
- * `city init`：初始化 console（全局中台）的默认配置（`~/.ship/`）。
+ * `city init`：初始化 console（全局中台）的默认配置（`~/.downcity/`）。
  *
  * 生成内容
- * - `~/.ship/ship.db`：console 全局配置与模型池（敏感字段加密）
- * - `~/.ship/schema/ship.schema.json`：给项目 ship.json 的 schema（可选）
+ * - `~/.downcity/downcity.db`：console 全局配置与模型池（敏感字段加密）
+ * - `~/.downcity/schema/downcity.schema.json`：给项目 downcity.json 的 schema（可选）
  *
  * 关键点（中文）
  * - console 是强依赖：`city console start` + `city agent start` 都会使用这里的默认配置。
- * - console 级不再使用 `~/.ship/ship.json` 和 `~/.ship/.env`。
- * - agent 项目内 `ship.json/.env` 仍保持项目级配置职责。
+ * - console 级不再使用 `~/.downcity/downcity.json` 和 `~/.downcity/.env`。
+ * - agent 项目内 `downcity.json/.env` 仍保持项目级配置职责。
  */
 
 import path from "node:path";
@@ -63,7 +63,7 @@ const INIT_DEFAULT_BASE_URL_BY_PROVIDER: Partial<Record<LlmProviderType, string>
 export async function consoleInitCommand(options?: { force?: boolean }): Promise<void> {
   const operationRoot = getConsoleRootDirPath();
   const schemaDir = path.join(operationRoot, "schema");
-  const schemaPath = path.join(schemaDir, "ship.schema.json");
+  const schemaPath = path.join(schemaDir, "downcity.schema.json");
 
   await fs.ensureDir(operationRoot);
   const allowOverwrite = options?.force === true;
@@ -79,12 +79,12 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
     {
       type: "password",
       name: "apiKey",
-      message: "请输入 API Key（将加密写入 ~/.ship/ship.db）",
+      message: "请输入 API Key（将加密写入 ~/.downcity/downcity.db）",
     },
     {
       type: "text",
       name: "modelName",
-      message: "默认模型名（将写入 ~/.ship/ship.db）",
+      message: "默认模型名（将写入 ~/.downcity/downcity.db）",
       initial: (_prev: unknown, values: { providerType?: LlmProviderType }) => {
         const t = (values?.providerType || "openai") as LlmProviderType;
         return INIT_DEFAULT_MODEL_BY_PROVIDER[t] || "gpt-4o-mini";
@@ -144,8 +144,8 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   } finally {
     modelStore.close();
   }
-  console.log("✅ Saved console global settings into ~/.ship/ship.db (encrypted)");
-  console.log("✅ Initialized ~/.ship/ship.db model store");
+  console.log("✅ Saved console global settings into ~/.downcity/downcity.db (encrypted)");
+  console.log("✅ Initialized ~/.downcity/downcity.db model store");
 
   // 关键点（中文）：skills 仅使用 `~/.agents/skills`，不做 built-in/claude 自动同步。
 }

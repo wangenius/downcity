@@ -1,11 +1,11 @@
 ---
-title: 项目配置（ship.json）
-description: ship.json 中用户最常用字段与注意事项
+title: 项目配置（downcity.json）
+description: downcity.json 中用户最常用字段与注意事项
 ---
 
-# 项目配置（ship.json）
+# 项目配置（downcity.json）
 
-`ship.json` 是项目级运行入口，常用字段如下：
+`downcity.json` 是项目级运行入口，常用字段如下：
 
 ```json
 {
@@ -26,7 +26,7 @@ description: ship.json 中用户最常用字段与注意事项
 
 1. `model.primary` 必须能在全局模型池中解析到。
 2. `start.host/start.port` 会影响 CLI 的默认路由目标。
-3. 项目层统一在 `ship.json` 中维护 `services`、`plugins`、`assets`。
+3. 项目层统一在 `downcity.json` 中维护 `services`、`plugins`、`assets`。
 
 ## 常用命令
 
@@ -38,6 +38,6 @@ city console config set start.port 3100
 
 ## 相关文档
 
-- [ship.json 参考](/zh/docs/reference/ship-json)
+- [downcity.json 参考](/zh/docs/reference/downcity-json)
 - [快速开始配置](/zh/docs/quickstart/configuration)
 - [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)

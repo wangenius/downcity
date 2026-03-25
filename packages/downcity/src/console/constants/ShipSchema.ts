@@ -2,15 +2,15 @@ import type { JsonObject } from "@/types/Json.js";
 
 export const SHIP_JSON_SCHEMA: JsonObject = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
-  $id: "https://downcity.ai/schemas/ship.schema.json",
-  title: "Downcity ship.json",
+  $id: "https://downcity.ai/schemas/downcity.schema.json",
+  title: "Downcity downcity.json",
   type: "object",
   additionalProperties: true,
   properties: {
     $schema: {
       type: "string",
       description:
-        "JSON Schema reference for editor/IDE validation (e.g. ./.ship/schema/ship.schema.json).",
+        "JSON Schema reference for editor/IDE validation (e.g. ./.downcity/schema/downcity.schema.json).",
     },
     name: { type: "string" },
     version: { type: "string" },

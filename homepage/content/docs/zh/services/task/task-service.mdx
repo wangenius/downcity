@@ -9,7 +9,7 @@ description: task service 全览：职责、边界、链路与专题文档导航
 
 ## 你在这里会看到什么
 
-- 任务定义如何落盘到 `.ship/task/<taskId>/task.md`
+- 任务定义如何落盘到 `.downcity/task/<taskId>/task.md`
 - 调度如何注册（统一使用 `when`）
 - 执行如何进行（`agent` / `script`）
 - 结果如何判定（`executionStatus` / `resultStatus` / `status`）
@@ -27,5 +27,5 @@ description: task service 全览：职责、边界、链路与专题文档导航
 ## 运行边界
 
 - `task` 只处理任务系统本身，不负责 chat 渠道发消息。
-- `run` 是异步受理：立刻返回 `accepted=true` 与 `executionId`。
+- `run` 是异步受理：立刻返回 `accepted=true`、`message` 与 `executionId`。
 - 任务结果默认写入 run 目录，不自动回发到 chat channel。

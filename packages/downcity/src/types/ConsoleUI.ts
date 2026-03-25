@@ -16,7 +16,7 @@ export interface ConsoleUiAgentOption {
   id: string;
 
   /**
-   * agent 显示名称（优先 ship.json.name，回退目录名）。
+   * agent 显示名称（优先 downcity.json.name，回退目录名）。
    */
   name: string;
 
@@ -89,7 +89,7 @@ export interface ConsoleUiAgentOption {
   }>;
 
   /**
-   * 当前 agent 的 `ship.json.model.primary`。
+   * 当前 agent 的 `downcity.json.model.primary`。
    */
   primaryModelId?: string;
 }

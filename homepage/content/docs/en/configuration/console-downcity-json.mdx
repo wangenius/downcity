@@ -1,22 +1,22 @@
 ---
-title: Console Config Storage (ship.db)
-description: Console-global config is now unified in ~/.ship/ship.db with encrypted sensitive fields
+title: Console Config Storage (downcity.db)
+description: Console-global config is now unified in ~/.downcity/downcity.db with encrypted sensitive fields
 ---
 
-# Console Config Storage (ship.db)
+# Console Config Storage (downcity.db)
 
 From current versions, Console no longer uses:
 
-1. `~/.ship/ship.json`
-2. `~/.ship/.env`
+1. `~/.downcity/downcity.json`
+2. `~/.downcity/.env`
 
 Console-global config is unified in:
 
-- `~/.ship/ship.db`
+- `~/.downcity/downcity.db`
 
 ## What is stored
 
-`ship.db` contains these major groups:
+`downcity.db` contains these major groups:
 
 1. Model pool (providers/models)
 2. Console-global env (`global_env`)
@@ -30,13 +30,13 @@ Sensitive fields (such as API keys) are stored encrypted.
 
 These files remain agent-project-level config (unchanged):
 
-1. `<agent>/ship.json`
+1. `<agent>/downcity.json`
 2. `<agent>/.env`
 
 So the split is:
 
-- Console: `~/.ship/ship.db`
-- Agent: project-local `ship.json/.env`
+- Console: `~/.downcity/downcity.db`
+- Agent: project-local `downcity.json/.env`
 
 ## Environment Variable Scope (Important)
 
@@ -45,19 +45,19 @@ Current versions use explicit layers:
 1. Console-global shared env: `global_env`
 2. Agent-private env in DB: `agent_env`
 3. Agent-local runtime overlay: `<agent>/.env` (user-managed)
-4. Chat channel credentials: `channel_accounts` (bound by `ship.json` `channelAccountId`)
+4. Chat channel credentials: `channel_accounts` (bound by `downcity.json` `channelAccountId`)
 
 Key behavior:
 
 1. Runtime env map is `agent_env + <agent>/.env` (`.env` wins).
 2. `.env` remains agent-local and does not mutate global `process.env`.
-3. `ship.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
+3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
-5. Plugin config is read from project `ship.json`.
+5. Plugin config is read from project `downcity.json`.
 
 ## Common operations
 
-Initialize Console (writes into `ship.db`):
+Initialize Console (writes into `downcity.db`):
 
 ```bash
 city console init
@@ -79,15 +79,15 @@ city console model create
 
 ## Related docs
 
-- [Env and ship.db Database Design](/en/docs/configuration/env-shipdb-design)
+- [Env and downcity.db Database Design](/en/docs/configuration/env-downcitydb-design)
 - [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)
 
 ## Runtime files
 
 These runtime files stay in filesystem (not config):
 
-1. `~/.ship/console/console.pid`
-2. `~/.ship/console/ui.pid`
-3. `~/.ship/console/console.log`
-4. `~/.ship/console/ui.log`
-5. `~/.ship/console/agents.json`
+1. `~/.downcity/console/console.pid`
+2. `~/.downcity/console/ui.pid`
+3. `~/.downcity/console/console.log`
+4. `~/.downcity/console/ui.log`
+5. `~/.downcity/console/agents.json`

@@ -11,7 +11,7 @@ Dedicated model management command group for language models only.
 
 - `create` is the only interactive command.
 - All others (`list/pause/update/test`) are non-interactive for automation.
-- Provider `apiKey` is stored in `~/.ship/ship.db` and encrypted on write.
+- Provider `apiKey` is stored in `~/.downcity/downcity.db` and encrypted on write.
 
 ## Usage
 
@@ -44,7 +44,7 @@ city console model update model <modelId> --name gpt-4o-mini --provider openai_m
 city console model remove provider <providerId>
 city console model remove model <modelId>
 
-# Bind model to project (set ship.json.model.primary)
+# Bind model to project (set downcity.json.model.primary)
 city console model use <modelId> --path /path/to/agent
 
 # Test provider
@@ -65,7 +65,7 @@ city console model test model <modelId>
 - `get`: read a single provider/model detail.
 - `discover`: fetch provider model list and optionally `--auto-add` to local pool.
 - `remove`: remove provider/model (provider removal fails if referenced).
-- `use`: bind project `ship.json.model.primary` to a model ID.
+- `use`: bind project `downcity.json.model.primary` to a model ID.
 
 ## pause Behavior
 

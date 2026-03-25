@@ -122,8 +122,8 @@ function resolveAllowedReadPath(runtime: ServiceRuntime, relPath: string): strin
     throw new Error("path is required");
   }
   const absPath = path.resolve(runtime.rootPath, normalized);
-  const memoryRoot = path.resolve(path.join(runtime.rootPath, ".ship", "memory"));
-  const contextRoot = path.resolve(path.join(runtime.rootPath, ".ship", "context"));
+  const memoryRoot = path.resolve(path.join(runtime.rootPath, ".downcity", "memory"));
+  const contextRoot = path.resolve(path.join(runtime.rootPath, ".downcity", "context"));
   const isMemoryPath = isWithin(memoryRoot, absPath);
   const isWorkingPath =
     isWithin(contextRoot, absPath) && normalized.endsWith("/memory/working.md");

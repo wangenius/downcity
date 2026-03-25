@@ -1,6 +1,6 @@
 ---
 title: Logging & Audit
-description: "Runtime logs, conversation history, and task audit artifacts under .ship"
+description: "Runtime logs, conversation history, and task audit artifacts under .downcity"
 ---
 
 # Logging & Audit
@@ -8,7 +8,7 @@ description: "Runtime logs, conversation history, and task audit artifacts under
 ## Key paths
 
 ```text
-.ship/
+.downcity/
   logs/<YYYY-MM-DD>.jsonl
   context/<contextId>/messages/messages.jsonl
   task/<taskId>/<timestamp>/run.json
@@ -19,10 +19,10 @@ description: "Runtime logs, conversation history, and task audit artifacts under
 
 ```bash
 # Follow today's runtime logs
-tail -f .ship/logs/$(date +%F).jsonl
+tail -f .downcity/logs/$(date +%F).jsonl
 
 # Search failures
-grep -Ei "error|warn|timeout|failed" .ship/logs/$(date +%F).jsonl
+grep -Ei "error|warn|timeout|failed" .downcity/logs/$(date +%F).jsonl
 
 # Inspect recent chat records
 city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
@@ -30,7 +30,7 @@ city chat history --chat-key ctx_xxxxxxxxxxxxxxxx --limit 30
 
 ## LLM message logging toggle
 
-In `ship.json`:
+In `downcity.json`:
 
 ```json
 {

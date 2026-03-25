@@ -59,6 +59,10 @@ servicesRouter.post("/api/services/command", async (c) => {
   const body = await c.req.json().catch(() => null);
   const serviceName = String(body?.serviceName || "").trim();
   const command = String(body?.command || "").trim();
+  const schedule =
+    body?.schedule && typeof body.schedule === "object" && !Array.isArray(body.schedule)
+      ? body.schedule
+      : undefined;
 
   if (!serviceName) {
     return c.json({ success: false, error: "serviceName is required" }, 400);
@@ -71,6 +75,7 @@ servicesRouter.post("/api/services/command", async (c) => {
     serviceName,
     command,
     payload: body?.payload,
+    schedule,
     context: getServiceRuntimeState(),
   });
   return c.json(result, result.success ? 200 : 400);

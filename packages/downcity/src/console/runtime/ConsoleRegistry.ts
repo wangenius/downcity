@@ -1,5 +1,5 @@
 /**
- * ConsoleRegistry：console 维护的 agent registry（`~/.ship@/console/agents.json`）。
+ * ConsoleRegistry：console 维护的 agent registry（`~/.downcity@/console/agents.json`）。
  *
  * 关键点（中文）
  * - registry 只维护“console 认知到的 agent 项目列表”，用于统一观测/批量管理。

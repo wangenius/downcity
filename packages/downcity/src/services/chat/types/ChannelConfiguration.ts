@@ -70,7 +70,7 @@ export interface ChatChannelConfigurationField {
    */
   type: ChatChannelConfigurationFieldType;
   /**
-   * 字段值来源（ship.json / channel account / env fallback）。
+   * 字段值来源（downcity.json / channel account / env fallback）。
    */
   source: ChatChannelConfigurationFieldSource;
   /**
@@ -145,7 +145,7 @@ export interface ChatChannelConfigurationDescriptor {
    */
   fields: {
     /**
-     * `ship.json` 可声明字段。
+     * `downcity.json` 可声明字段。
      */
     ship: ChatChannelConfigurationField[];
     /**

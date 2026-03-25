@@ -9,7 +9,7 @@
 
 1. `logger/Logger.ts`
    - 提供进程级单例 logger。
-   - 支持控制台输出 + `.ship/logs/YYYY-MM-DD.jsonl` 结构化落盘。
+   - 支持控制台输出 + `.downcity/logs/YYYY-MM-DD.jsonl` 结构化落盘。
    - 通过 `bindProjectRoot` 绑定当前工程的日志目录。
 2. `logger/Fetch.ts`
    - 封装 `fetch`，在请求发往 LLM 前写入日志。

@@ -15,7 +15,7 @@ export interface UiAgentOption {
    */
   id: string;
   /**
-   * Agent 展示名（ship.json.name 或目录名）。
+   * Agent 展示名（downcity.json.name 或目录名）。
    */
   name: string;
   /**
@@ -51,7 +51,7 @@ export interface UiAgentOption {
    */
   updatedAt?: string;
   /**
-   * 当前 agent 的 `ship.json.model.primary`。
+   * 当前 agent 的 `downcity.json.model.primary`。
    */
   primaryModelId?: string;
   /**
@@ -1154,7 +1154,7 @@ export interface UiChatChannelConfigurationDescriptor {
    */
   fields: {
     /**
-     * `ship.json` 字段。
+     * `downcity.json` 字段。
      */
     ship: UiChatChannelConfigurationField[];
     /**

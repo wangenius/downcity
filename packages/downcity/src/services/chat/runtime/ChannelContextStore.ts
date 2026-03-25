@@ -2,7 +2,7 @@
  * ChannelContextStore：渠道目标与 contextId 映射存储。
  *
  * 关键点（中文）
- * - 映射文件位于 `.ship/channel/meta.json`。
+ * - 映射文件位于 `.downcity/channel/meta.json`。
  * - contextId 由服务端随机生成并持久化，不依赖字符串拼接规则。
  * - 统一提供“按目标找 contextId / 按 contextId 找目标”能力。
  */
@@ -179,7 +179,7 @@ export async function readChannelContextRouteByContextId(params: {
  * 列出当前 agent 已记录的所有渠道路由条目。
  *
  * 关键点（中文）
- * - 数据源为 `.ship/channel/meta.json` 的 `routesByContextId`。
+ * - 数据源为 `.downcity/channel/meta.json` 的 `routesByContextId`。
  * - 默认按 `updatedAt` 倒序返回，便于展示“最近活跃”会话。
  */
 export async function listChannelContextRoutes(params: {

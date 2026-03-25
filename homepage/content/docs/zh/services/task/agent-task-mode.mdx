@@ -35,7 +35,7 @@ description: kind=agent 的执行行为、适用场景与输出要求
 ## 当前执行逻辑
 
 1. 读取 `task.md`，解析 frontmatter 与正文。
-2. 为本次执行创建新的 run 目录：`./.ship/task/<taskId>/<timestamp>/`。
+2. 为本次执行创建新的 run 目录：`./.downcity/task/<taskId>/<timestamp>/`。
 3. 写入 `input.md` 与 `run-progress.json`，把输入快照和实时进度落盘。
 4. 创建 task 专用 runtime，不复用普通聊天上下文。
 5. 执行器 agent 先生成结果。
@@ -73,7 +73,7 @@ flowchart TD
 
     F --> G["读取 task.md"]
     G --> H["生成 timestamp"]
-    H --> I["创建 run 目录<br/>.ship/task/<taskId>/<timestamp>/"]
+    H --> I["创建 run 目录<br/>.downcity/task/<taskId>/<timestamp>/"]
     I --> J["写 input.md / run-progress.json"]
 
     J --> K{"kind"}

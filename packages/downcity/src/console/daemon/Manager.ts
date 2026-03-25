@@ -6,7 +6,7 @@
  * - `downcity agent restart`：重启后台进程
  *
  * 约定
- * - 所有 daemon 相关文件都写入 `.ship/debug/`，便于排查：
+ * - 所有 daemon 相关文件都写入 `.downcity/debug/`，便于排查：
  *   - `downcity.pid`：进程 pid
  *   - `downcity.daemon.log`：stdout/stderr 合并日志
  *   - `downcity.daemon.json`：元数据（启动时间、参数等）

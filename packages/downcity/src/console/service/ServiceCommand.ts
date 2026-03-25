@@ -9,12 +9,14 @@
 import path from "node:path";
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
+import type { ServiceCommandScheduleInput } from "@/types/ServiceSchedule.js";
 import { SERVICES } from "@/console/service/Services.js";
 import type { Service, ServiceAction } from "@/console/service/ServiceManager.js";
 import type { ServiceCommandResponse } from "@agent/types/Services.js";
 import { callServer } from "@/console/daemon/Client.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import { parsePortOption } from "@agent/utils/Checker.js";
+import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
 
 type ServiceCliBridgeOptions = {
   path?: string;
@@ -63,7 +65,7 @@ function toJsonValue(input: unknown): JsonValue | undefined {
 function toServiceActionCommandOpts(
   options: Record<string, unknown>,
 ): Record<string, JsonValue> {
-  const reservedKeys = new Set(["path", "host", "port", "json"]);
+  const reservedKeys = new Set(["path", "host", "port", "json", "delay", "time"]);
   const normalized: Record<string, JsonValue> = {};
   for (const [key, value] of Object.entries(options)) {
     if (reservedKeys.has(key)) continue;
@@ -122,6 +124,27 @@ function isPlainOptionsObject(
   );
 }
 
+/**
+ * 判断 command 是否已定义指定长参数。
+ */
+function hasLongOption(command: Command, longFlag: string): boolean {
+  return command.options.some((item) => item.long === longFlag);
+}
+
+/**
+ * 从 CLI 选项中提取通用调度输入。
+ */
+function extractCommandScheduleInput(
+  options: Record<string, unknown>,
+): ServiceCommandScheduleInput | undefined {
+  const runAtMs = parseScheduledRunAtMsOrThrow({
+    delay: options.delay as string | number | undefined,
+    time: options.time as string | number | undefined,
+  });
+  if (typeof runAtMs !== "number") return undefined;
+  return { runAtMs };
+}
+
 function registerServiceActionCommand(params: {
   program: Command;
   service: Service;
@@ -148,6 +171,15 @@ function registerServiceActionCommand(params: {
     .option("--json [enabled]", "以 JSON 输出", true);
 
   commandSpec.configure?.(actionCommand);
+  if (!hasLongOption(actionCommand, "--delay")) {
+    actionCommand.option("--delay <ms>", "延迟执行毫秒数（所有 service action 通用）");
+  }
+  if (!hasLongOption(actionCommand, "--time")) {
+    actionCommand.option(
+      "--time <time>",
+      "定时执行时间（Unix 时间戳秒/毫秒或 ISO 时间，所有 service action 通用）",
+    );
+  }
 
   actionCommand.action(async (...rawArgs: unknown[]) => {
     const last = rawArgs.at(-1);
@@ -173,6 +205,20 @@ function registerServiceActionCommand(params: {
         })();
     const actionOptions = toServiceActionCommandOpts(allOptions);
     const bridgeOptions = toServiceCliBridgeOptions(allOptions);
+    let schedule: ServiceCommandScheduleInput | undefined;
+    try {
+      schedule = extractCommandScheduleInput(allOptions);
+    } catch (error) {
+      printResult({
+        asJson: bridgeOptions.json,
+        success: false,
+        title: `${params.service.name}.${params.actionName} failed`,
+        payload: {
+          error: `Failed to parse schedule input: ${String(error)}`,
+        },
+      });
+      return;
+    }
 
     let payload: JsonValue;
     try {
@@ -202,7 +248,8 @@ function registerServiceActionCommand(params: {
         serviceName: params.service.name,
         command: params.actionName,
         payload,
-      },
+        ...(schedule ? { schedule } : {}),
+      } as unknown as JsonValue,
     });
 
     if (remote.success && remote.data) {

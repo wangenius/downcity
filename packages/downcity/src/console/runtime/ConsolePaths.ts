@@ -2,9 +2,9 @@
  * ConsolePaths：Console（全局控制面）相关路径规则。
  *
  * 关键点（中文）
- * - console 运行在用户目录 `~/.ship/` 下，作为“全局中台”。
- * - `~/.ship/ship.db`：console 的 SQLite 数据库（模型池 + 全局配置）。
- * - `~/.ship/console/*`：console 进程与 registry 的运行文件（pid/log/agents）。
+ * - console 运行在用户目录 `~/.downcity/` 下，作为“全局中台”。
+ * - `~/.downcity/downcity.db`：console 的 SQLite 数据库（模型池 + 全局配置）。
+ * - `~/.downcity/console/*`：console 进程与 registry 的运行文件（pid/log/agents）。
  */
 
 import os from "node:os";
@@ -14,21 +14,21 @@ import path from "node:path";
  * console 根目录（用户级）。
  */
 export function getConsoleRootDirPath(): string {
-  return path.join(os.homedir(), ".ship");
+  return path.join(os.homedir(), ".downcity");
 }
 
 /**
- * 历史兼容：console 旧版 ship.json 路径（当前不再使用）。
+ * 历史兼容：console 旧版 downcity.json 路径（当前不再使用）。
  */
 export function getConsoleShipJsonPath(): string {
-  return path.join(getConsoleRootDirPath(), "ship.json");
+  return path.join(getConsoleRootDirPath(), "downcity.json");
 }
 
 /**
  * console 默认 SQLite 数据库路径（用户级）。
  */
 export function getConsoleShipDbPath(): string {
-  return path.join(getConsoleRootDirPath(), "ship.db");
+  return path.join(getConsoleRootDirPath(), "downcity.db");
 }
 
 /**

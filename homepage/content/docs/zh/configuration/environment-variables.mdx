@@ -3,7 +3,7 @@ title: 环境变量配置逻辑（Console 共享 vs Agent 私有）
 description: 说明 env_entries、channel_accounts 与 <agent>/.env 的作用域和运行时合并规则
 ---
 
-> 标准设计文档： [Env 与 ship.db 数据库设计](/zh/docs/configuration/env-shipdb-design)
+> 标准设计文档： [Env 与 downcity.db 数据库设计](/zh/docs/configuration/env-downcitydb-design)
 
 
 # 环境变量配置逻辑（Console 共享 vs Agent 私有）
@@ -19,33 +19,33 @@ description: 说明 env_entries、channel_accounts 与 <agent>/.env 的作用域
 
 | 层 | 数据源 | 是否持久化 | 作用范围 | 典型内容 |
 |---|---|---|---|---|
-| Console 全局 env | `~/.ship/ship.db` `env_entries`（`scope=global`） | 是（加密） | 所有 agent | 全局共享 key、共享占位符 |
-| Agent 私有 env（DB） | `~/.ship/ship.db` `env_entries`（`scope=agent` + `agent_id`） | 是（加密） | 单个 agent（`agent_id`） | 项目私有密钥 |
+| Console 全局 env | `~/.downcity/downcity.db` `env_entries`（`scope=global`） | 是（加密） | 所有 agent | 全局共享 key、共享占位符 |
+| Agent 私有 env（DB） | `~/.downcity/downcity.db` `env_entries`（`scope=agent` + `agent_id`） | 是（加密） | 单个 agent（`agent_id`） | 项目私有密钥 |
 | Agent 私有 env（文件） | `<agent>/.env` | 用户文件 | 单个 agent | 运行时叠加值 |
-| Bot 凭据池 | `~/.ship/ship.db` `channel_accounts` | 是（敏感字段加密） | 被多个 agent 绑定复用 | Telegram/Feishu/QQ 密钥 |
+| Bot 凭据池 | `~/.downcity/downcity.db` `channel_accounts` | 是（敏感字段加密） | 被多个 agent 绑定复用 | Telegram/Feishu/QQ 密钥 |
 | 运行时上下文 | 进程内存（`DC_CTX_*`） | 否 | 单次请求 | channel/chat/user 上下文 |
 
 关键点：
 
-1. 持久化的 env 类数据统一在 `ship.db` 加密存储。
+1. 持久化的 env 类数据统一在 `downcity.db` 加密存储。
 2. `<agent>/.env` 是该 agent 的运行时叠加层。
-3. `ship.json` 只做绑定（如 `channelAccountId`），不保存明文凭据。
+3. `downcity.json` 只做绑定（如 `channelAccountId`），不保存明文凭据。
 
 ## 2. 运行时数据流（图示）
 
 ```mermaid
 sequenceDiagram
   participant CLI as city agent start
-  participant DB as ~/.ship/ship.db
+  participant DB as ~/.downcity/downcity.db
   participant ENV as <agent>/.env
-  participant JSON as ship.json(项目层)
+  participant JSON as downcity.json(项目层)
   participant RT as Agent Runtime
 
   CLI->>DB: 读取 env_entries(scope=global)
   CLI->>DB: 读取 env_entries(scope=agent, agent_id 匹配)
   CLI->>ENV: 解析项目 .env
   CLI->>CLI: 生成 runtime env = agent scope DB env + .env（.env 优先）
-  CLI->>JSON: 读取并合并 ship.json
+  CLI->>JSON: 读取并合并 downcity.json
   CLI->>CLI: 按作用域解析 ${ENV_KEY}
   CLI->>DB: 按 channelAccountId 解析渠道账户
   CLI->>RT: 启动服务与渠道
@@ -70,7 +70,7 @@ sequenceDiagram
 
 ### 3.3 渠道凭据优先级
 
-1. `ship.json` 渠道只配置 `channelAccountId`。
+1. `downcity.json` 渠道只配置 `channelAccountId`。
 2. 真实密钥优先从 `channel_accounts` 解析。
 3. 如果绑定缺失或凭据不完整，则 `config_missing`。
 
@@ -78,15 +78,15 @@ sequenceDiagram
 
 ### 4.1 会读取项目 `.env`
 
-1. 项目层 `ship.json` 的 `${ENV_KEY}` 解析。
+1. 项目层 `downcity.json` 的 `${ENV_KEY}` 解析。
 2. agent runtime 进程 env 注入（`env_entries` 中的 agent scope env + `.env`）。
 3. `shell` 子进程注入（global env + 当前 agent runtime env + `DC_CTX_*`）。
 4. 少数 service auth 的本地兜底读取。
 
 ### 4.2 不会读取项目 `.env`
 
-1. 模型池（`model_providers`、`models`）只来自 `ship.db`。
-2. plugin 配置来自项目 `ship.json`（`plugins.*`、`assets.*`）。
+1. 模型池（`model_providers`、`models`）只来自 `downcity.db`。
+2. plugin 配置来自项目 `downcity.json`（`plugins.*`、`assets.*`）。
 3. bot 凭据源只来自 `channel_accounts`。
 4. `DC_CTX_*` 是请求时生成，不属于配置持久层。
 
@@ -95,8 +95,8 @@ sequenceDiagram
 1. Console UI `Global / Env`：写 `env_entries`（`scope=global/agent`）。
 2. Channel Accounts 页面：写 `channel_accounts`。
 3. 模型管理（CLI/UI）：写 `model_providers`、`models`。
-4. `plugins.*` / `assets.*` 配置：写项目 `ship.json`。
-5. 渠道配置：仅写 `ship.json` 的 `enabled` 与 `channelAccountId`。
+4. `plugins.*` / `assets.*` 配置：写项目 `downcity.json`。
+5. 渠道配置：仅写 `downcity.json` 的 `enabled` 与 `channelAccountId`。
 6. 用户手工改 `<agent>/.env`：仅影响当前 agent runtime。
 
 ## 6. 常见问题与排查
@@ -110,7 +110,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  A["channel 显示已配置"] --> B["先看 ship.json 的 channelAccountId"]
+  A["channel 显示已配置"] --> B["先看 downcity.json 的 channelAccountId"]
   B -->|有绑定| C["到 channel_accounts 查对应 account"]
   B -->|无绑定| D["检查 <agent>/.env 回退键"]
   C --> E["来源是 channel account"]
@@ -129,13 +129,13 @@ city plugin action voice configure --payload '{"enabled": true}'
 
 2. 在 Console UI `Global / Env` 维护共享 env（写 `env_entries`）。
 3. 在 Console UI `Global / Channel Accounts` 创建账号。
-4. 在 agent `ship.json` 里绑定 `channelAccountId`。
+4. 在 agent `downcity.json` 里绑定 `channelAccountId`。
 5. 仅在需要时使用 `<agent>/.env` 做项目级运行时覆盖。
 
 ## 8. 最佳实践
 
-1. 持久化密钥全部放进 `ship.db` 加密表。
-2. `ship.json` 只写绑定，不写明文密钥。
+1. 持久化密钥全部放进 `downcity.db` 加密表。
+2. `downcity.json` 只写绑定，不写明文密钥。
 3. `<agent>/.env` 仅作 agent 私有运行时叠加。
 4. 渠道配置变更后执行 `chat status` 进行验收。
 5. 出现“像复用旧值”的情况时，优先检查 `channelAccountId` 与 `.env`。

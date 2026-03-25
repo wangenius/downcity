@@ -1,0 +1,203 @@
+---
+title: Service Scheduling
+description: Common delayed and scheduled execution for service actions
+---
+
+# Service Action Scheduling
+
+Downcity now supports one-shot scheduling options for any service action:
+
+- `--delay <ms>`: delayed execution
+- `--time <time>`: scheduled execution
+
+This applies to:
+
+- `city chat send`
+- `city memory search`
+- `city skill lookup`
+- `city service command <service> <action>`
+- and the dedicated action API `/service/<service>/<action>`
+
+The goal is simple: if you only need to run one existing action later, you do not need to create a `task`.
+
+## Good Fits
+
+Use this when you want to:
+
+- send a chat message 10 minutes later
+- run a memory flush at 21:00
+- execute one service action tomorrow morning
+
+Do not use it for:
+
+- recurring schedules
+- cron
+- longer workflows
+- long-lived jobs that need richer task artifacts
+
+For those, use [`city task`](/en/docs/commands/service/task).
+
+## Two Entry Points
+
+There are now two user-facing entry points, and both go through the same persistent scheduler:
+
+1. CLI action commands
+
+```bash
+city chat send --chat-key ctx_xxx --text "remind me tonight" --time "2026-03-25T21:00:00+08:00"
+city memory flush --context-id telegram-chat-123 --delay 600000
+```
+
+2. HTTP action API
+
+```http
+POST /service/chat/send
+Content-Type: application/json
+
+{
+  "chatKey": "ctx_xxx",
+  "text": "remind me tonight",
+  "time": "2026-03-25T21:00:00+08:00"
+}
+```
+
+No matter which entry you use, Downcity writes the scheduled job first and executes it later.
+
+## Parameter Formats
+
+### `--delay <ms>`
+
+Use a non-negative integer in milliseconds.
+
+Example:
+
+```bash
+city chat send --chat-key ctx_xxx --text "send in 10 seconds" --delay 10000
+```
+
+### `--time <time>`
+
+Supported formats:
+
+- Unix timestamp in seconds or milliseconds
+- timezone-aware ISO datetime
+
+Examples:
+
+```bash
+city chat send --chat-key ctx_xxx --text "send at 9pm" --time "2026-03-25T21:00:00+08:00"
+city memory flush --context-id telegram-chat-123 --time 1774443600
+```
+
+Notes:
+
+- ISO datetime must include a timezone offset such as `+08:00` or `Z`
+- `--delay` and `--time` cannot be used together
+
+## Persistence Location
+
+Scheduled jobs are stored in the current agent project at:
+
+```text
+.downcity/schedule.sqlite
+```
+
+This means:
+
+- the runtime can return immediately after accepting the request
+- unfinished jobs survive runtime restart
+- the next runtime start restores and continues them
+
+## Runtime Behavior
+
+A scheduled service action moves through these states:
+
+- `pending`: accepted and waiting
+- `running`: picked up by the scheduler and currently executing
+- `succeeded`: execution finished successfully
+- `failed`: execution finished with an error
+- `cancelled`: cancelled and no longer executed
+
+Restart recovery rules:
+
+- if a job was still `pending`, it will be resumed later or executed immediately if overdue
+- if a job was left in `running`, startup resets it back to `pending` and retries it
+
+## Return Shape
+
+When a command is accepted as a scheduled job, the response looks like this:
+
+```json
+{
+  "success": true,
+  "data": {
+    "scheduled": true,
+    "jobId": "sched_xxxxxxxxxxxxxxxx",
+    "runAtMs": 1774443600000,
+    "status": "pending"
+  }
+}
+```
+
+This means:
+
+- the action was not executed immediately
+- a persistent scheduled job was created
+- `jobId` is the unique identifier for that scheduled record
+
+## Examples
+
+### 1. Delay a chat send
+
+```bash
+city chat send \
+  --chat-key ctx_xxx \
+  --text "remind me in 10 minutes" \
+  --delay 600000
+```
+
+### 2. Schedule a memory flush
+
+```bash
+city memory flush \
+  --context-id telegram-chat-123 \
+  --time "2026-03-25T23:00:00+08:00"
+```
+
+### 3. Schedule through the generic command bridge
+
+```bash
+city service command chat send \
+  --payload '{"chatKey":"ctx_xxx","text":"send later"}' \
+  --time "2026-03-25T21:00:00+08:00"
+```
+
+### 4. Schedule through the HTTP action API
+
+```bash
+curl -X POST http://127.0.0.1:5314/service/chat/send \
+  -H 'content-type: application/json' \
+  -d '{
+    "chatKey": "ctx_xxx",
+    "text": "send later",
+    "time": "2026-03-25T21:00:00+08:00"
+  }'
+```
+
+## Difference From `task`
+
+Think of the boundary like this:
+
+- service action scheduling: add one-shot `delay/time` to an existing action
+- `task`: define a reusable long-lived automation task
+
+If your need is “run this existing action once, later”, use this scheduling feature.  
+If your need is “define an ongoing automation job”, use [`city task`](/en/docs/commands/service/task).
+
+## Related Docs
+
+- [`city service`](/en/docs/commands/service/service)
+- [`city service command`](/en/docs/commands/service/command)
+- [`city chat`](/en/docs/commands/service/chat)
+- [`city memory`](/en/docs/commands/service/memory)
+- [`city task`](/en/docs/commands/service/task)

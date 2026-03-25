@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 入站消息到达时由 services/chat 写入
  * - 出站按 contextId/chatKey 发送时由 services/chat 读取
- * - 底层数据落在 `.ship/channel/meta.json`，由 ChannelContextStore 统一维护
+ * - 底层数据落在 `.downcity/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";

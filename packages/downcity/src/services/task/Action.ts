@@ -60,7 +60,7 @@ function buildDefaultTaskBody(): string {
     "",
     "# 约束",
     "",
-    "- 尽量使用可审计的方式：关键中间产物写入 `./.ship/task/<title>/<timestamp>/` 下的 markdown 文件。",
+    "- 尽量使用可审计的方式：关键中间产物写入 `./.downcity/task/<title>/<timestamp>/` 下的 markdown 文件。",
     "",
   ].join("\n");
 }
@@ -368,7 +368,8 @@ export async function runTaskDefinition(params: {
     return {
       success: true,
       accepted: true,
-      message: "任务已经开始执行",
+      // 关键点（中文）：这里直接返回给 agent 作为 tool result，提醒它这是异步任务，无需等待完成即可继续后续流程。
+      message: "任务已经开始执行，完成后 task 会自动发送给用户。请直接继续后续流程，无需等待 task 完成。",
       executionId,
       title,
     };

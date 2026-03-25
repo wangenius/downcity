@@ -2,7 +2,7 @@
  * Env Paths：路径构造工具模块。
  *
  * 职责说明：
- * 1. 统一管理项目内 `.ship` 及其子目录/文件路径规则。
+ * 1. 统一管理项目内 `.downcity` 及其子目录/文件路径规则。
  * 2. 避免路径字符串在不同模块重复拼接，降低维护成本。
  * 3. 通过集中入口保证目录结构调整时只需改动一处。
  */
@@ -43,15 +43,15 @@ export function getSoulMdCandidatePaths(cwd: string): string[] {
 }
 
 export function getShipJsonPath(cwd: string): string {
-  return path.join(cwd, "ship.json");
+  return path.join(cwd, "downcity.json");
 }
 
 export function getShipDirPath(cwd: string): string {
-  return path.join(cwd, ".ship");
+  return path.join(cwd, ".downcity");
 }
 
 export function getShipSchemaPath(cwd: string): string {
-  return path.join(getShipDirPath(cwd), "schema", "ship.schema.json");
+  return path.join(getShipDirPath(cwd), "schema", "downcity.schema.json");
 }
 
 export function getShipConfigDirPath(cwd: string): string {
@@ -82,7 +82,7 @@ export function getShipProfileOtherPath(cwd: string): string {
  * Memory 根目录（V2）。
  *
  * 关键点（中文）
- * - `.ship/memory` 为跨会话记忆目录。
+ * - `.downcity/memory` 为跨会话记忆目录。
  */
 export function getShipMemoryDirPath(cwd: string): string {
   return path.join(getShipDirPath(cwd), "memory");
@@ -117,6 +117,16 @@ export function getShipMemoryIndexPath(cwd: string): string {
   return path.join(getShipMemoryDirPath(cwd), "index.sqlite");
 }
 
+/**
+ * Service Schedule SQLite 路径。
+ *
+ * 关键点（中文）
+ * - 调度任务属于项目 runtime 本地状态，因此放在项目 `.downcity/` 下。
+ */
+export function getShipScheduleDbPath(cwd: string): string {
+  return path.join(getShipDirPath(cwd), "schedule.sqlite");
+}
+
 export function getShipDataDirPath(cwd: string): string {
   return path.join(getShipDirPath(cwd), "data");
 }
@@ -133,7 +143,7 @@ export function getShipContextDirPath(cwd: string, contextId: string): string {
  * Context Messages（会话上下文消息，唯一事实源）。
  *
  * 关键点（中文）
- * - `.ship/context/<encodedContextId>/messages/messages.jsonl`：每行一个 UIMessage（user/assistant）
+ * - `.downcity/context/<encodedContextId>/messages/messages.jsonl`：每行一个 UIMessage（user/assistant）
  * - compact 会把被折叠的原始段写入 `messages/archive/*`（可审计）
  */
 export function getShipContextMessagesDirPath(

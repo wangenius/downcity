@@ -2,10 +2,10 @@
   "title": "配置",
   "pages": [
     "overview",
-    "console-ship-json",
+    "console-downcity-json",
     "project",
     "environment-variables",
-    "env-shipdb-design",
+    "env-downcitydb-design",
     "model",
     "checklist"
   ]

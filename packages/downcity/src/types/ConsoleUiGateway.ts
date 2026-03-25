@@ -14,14 +14,14 @@ export interface ConsoleUiDaemonMeta {
    * 启动 daemon 时记录的原始参数列表。
    *
    * 说明（中文）
-   * - 来自 `.ship/daemon/*.json`。
+   * - 来自 `.downcity/daemon/*.json`。
    * - 保持 `unknown`，避免过早假设参数格式。
    */
   args?: unknown;
 }
 
 /**
- * ship.json 中的模型配置。
+ * downcity.json 中的模型配置。
  */
 export interface ConsoleUiShipModelConfig {
   /**
@@ -76,7 +76,7 @@ export interface ConsoleUiShipChatServiceConfig {
 }
 
 /**
- * ship.json 中的 services 配置。
+ * downcity.json 中的 services 配置。
  */
 export interface ConsoleUiShipServicesConfig {
   /**
@@ -86,7 +86,7 @@ export interface ConsoleUiShipServicesConfig {
 }
 
 /**
- * ship.json 中的启动配置。
+ * downcity.json 中的启动配置。
  */
 export interface ConsoleUiShipStartConfig {
   /**
@@ -101,7 +101,7 @@ export interface ConsoleUiShipStartConfig {
 }
 
 /**
- * ship.json 宽松结构。
+ * downcity.json 宽松结构。
  */
 export interface ConsoleUiShipJson {
   /**

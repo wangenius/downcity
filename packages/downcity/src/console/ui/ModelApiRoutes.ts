@@ -99,7 +99,7 @@ export function registerConsoleUiModelRoutes(params: {
       const shipJsonPath = getShipJsonPath(selectedAgent.projectRoot);
       if (!(await fs.pathExists(shipJsonPath))) {
         return c.json(
-          { success: false, error: `ship.json not found: ${shipJsonPath}` },
+          { success: false, error: `downcity.json not found: ${shipJsonPath}` },
           400,
         );
       }

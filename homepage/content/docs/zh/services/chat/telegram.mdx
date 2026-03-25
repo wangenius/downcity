@@ -27,7 +27,7 @@ description: 通过 Telegram 与 Agent 对话
 1. `channel = telegram`
 2. 填入 BotFather 生成的 `botToken`
 
-然后在 `ship.json` 里绑定这个账户：
+然后在 `downcity.json` 里绑定这个账户：
 
 ```json
 {
@@ -69,7 +69,7 @@ city agent start
 你可以直接给机器人发送文件（document/photo/voice/audio/video）。
 
 - 如果你在发送文件时同时输入文字，Telegram 会把这段文字当作 **caption（附件说明）** —— Downcity 会把 caption 当作你的指令来处理。
-- Downcity 会把文件保存到 `.ship/.cache/telegram/`，并以 `<file ...>` 的形式传给 Agent。
+- Downcity 会把文件保存到 `.downcity/.cache/telegram/`，并以 `<file ...>` 的形式传给 Agent。
 - 对图片和 PDF，运行时还会 best-effort 注入为模型可读的 `file parts`；即使模型不支持多模态，原始 `<file>` 文本协议也会保留。
 
 示例：发送一个 PDF，并在 caption 写：`帮我总结这个 PDF，并列出待办事项。`
@@ -156,7 +156,7 @@ city chat react --emoji '✅' --message-id 12345 --chat-key telegram-chat--100xx
 
 ## 常见问题排查
 
-- **完全没反应**：确认进程在跑，并查看 `.ship/logs/<YYYY-MM-DD>.jsonl`（可搜索 `TELEGRAM` / `telegram` / error 关键词）。
+- **完全没反应**：确认进程在跑，并查看 `.downcity/logs/<YYYY-MM-DD>.jsonl`（可搜索 `TELEGRAM` / `telegram` / error 关键词）。
 - **群里收不到消息**：在 BotFather 执行 `/setprivacy` 设为 `Disable`，并确认机器人已被允许读取群消息。
 - **轮询收不到（getUpdates 冲突）**：如果之前配置过 webhook，会与轮询冲突。Downcity 启动时会尝试清理 webhook；留意日志里的 webhook/Conflict 报错。
 - **群里发不出消息**：检查群权限/管理员设置，机器人可能被禁言或不允许发消息。

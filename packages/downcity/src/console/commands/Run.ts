@@ -24,13 +24,17 @@ import {
   startAllServiceRuntimes,
   stopAllServiceRuntimes,
 } from "@/console/service/Manager.js";
+import {
+  startServiceScheduleRuntime,
+  stopServiceScheduleRuntime,
+} from "@/console/service/schedule/Runtime.js";
 
 /**
  * 运行态启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *
  * 职责（中文）
  * - 初始化 runtime 状态（配置、日志、services 依赖）
- * - 解析并合并启动参数（CLI > ship.json > 默认值）
+ * - 解析并合并启动参数（CLI > downcity.json > 默认值）
  * - 启动主 HTTP 服务
  * - 启动 service runtimes（例如 task cron）
  * - 统一处理进程信号并优雅停机
@@ -89,6 +93,13 @@ export async function runCommand(
     // 先停掉文件监听，避免关停阶段触发额外重载。
     stopRuntimeHotReload();
 
+    // 先停持久化调度器，避免关停过程中继续触发新的 service action。
+    try {
+      await stopServiceScheduleRuntime();
+    } catch {
+      // ignore
+    }
+
     // Stop service runtimes
     try {
       await stopAllServiceRuntimes(getServiceRuntimeState());
@@ -121,6 +132,12 @@ export async function runCommand(
     }
   } catch (e) {
     logger.error(`Service runtime bootstrap failed: ${String(e)}`);
+  }
+
+  try {
+    await startServiceScheduleRuntime(getServiceRuntimeState());
+  } catch (e) {
+    logger.error(`Service schedule runtime bootstrap failed: ${String(e)}`);
   }
 
   logger.info("=== Downcity Started ===");

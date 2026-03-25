@@ -8,7 +8,7 @@ description: task.md schema、when 触发语义、create/update/run/list 协议
 ## 任务定义文件
 
 ```text
-.ship/task/<taskId>/task.md
+.downcity/task/<taskId>/task.md
 ```
 
 `taskId` 由 `title` 归一化生成，`title` 需要保持唯一。
@@ -63,6 +63,12 @@ one-shot 触发成功后，任务会自动：
 1. 校验任务存在。
 2. 后台启动 `runTaskNow(...)`。
 3. 立即返回：`accepted=true`、`message`、`executionId`。
+
+其中 `message` 会明确告诉调用方：
+- 任务已经开始执行
+- 完成后 task 会自动发送给用户
+- 可以直接继续后续流程
+- 无需等待 task 完成
 
 `agent` 任务当前规则：
 - 默认单轮执行。

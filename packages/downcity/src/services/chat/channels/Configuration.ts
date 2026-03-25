@@ -27,10 +27,9 @@ export abstract class ChatChannelConfiguration {
   abstract describe(): ChatChannelConfigurationDescriptor;
 
   /**
-   * 返回可通过 `chat.configure` 写入的 ship.json 字段定义。
+   * 返回可通过 `chat.configure` 写入的 downcity.json 字段定义。
    */
   getWritableShipFields(): ChatChannelConfigurationField[] {
     return this.describe().fields.ship.filter((field) => field.writable);
   }
 }
-

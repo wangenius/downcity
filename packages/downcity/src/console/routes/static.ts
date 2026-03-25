@@ -3,7 +3,7 @@
  *
  * 职责说明：
  * 1. 提供根目录前端静态文件访问。
- * 2. 提供 `.ship/public` 的受限文件暴露。
+ * 2. 提供 `.downcity/public` 的受限文件暴露。
  * 3. 只处理静态资源协议，不承载业务逻辑。
  */
 
@@ -54,9 +54,9 @@ staticRouter.get("/app.js", async (c) => {
   return c.text("Not Found", 404);
 });
 
-staticRouter.get("/ship/public/*", async (c) => {
+staticRouter.get("/downcity/public/*", async (c) => {
   const root = getShipPublicDirPath(getRuntimeState().rootPath);
-  const prefix = "/ship/public/";
+  const prefix = "/downcity/public/";
   const requestPath = c.req.path;
   const rel = requestPath.startsWith(prefix)
     ? requestPath.slice(prefix.length)

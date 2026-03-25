@@ -16,7 +16,7 @@ export interface ConsoleUiAgentOption {
   id: string;
 
   /**
-   * Agent 展示名称（通常来自 ship.json.name）。
+   * Agent 展示名称（通常来自 downcity.json.name）。
    */
   name: string;
 

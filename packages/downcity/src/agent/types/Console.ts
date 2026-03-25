@@ -96,7 +96,7 @@ export interface ConsoleAgentRuntimeView {
   registeredPid: number;
 
   /**
-   * 当前 `.ship/.debug/downcity.pid` 读到的实时 pid。
+   * 当前 `.downcity/.debug/downcity.pid` 读到的实时 pid。
    */
   daemonPid: number;
 

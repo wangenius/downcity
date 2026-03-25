@@ -251,7 +251,7 @@ export async function initializeAgentProject(
   const shipJsonPath = getShipJsonPath(projectRoot);
   const existingShipJson = await fs.pathExists(shipJsonPath);
   if (existingShipJson && input.forceOverwriteShipJson !== true) {
-    throw new Error(`ship.json already exists: ${shipJsonPath}`);
+    throw new Error(`downcity.json already exists: ${shipJsonPath}`);
   }
 
   const initTemplateVariables = {
@@ -312,7 +312,7 @@ export async function initializeAgentProject(
     },
   };
   await saveJson(shipJsonPath, shipConfig);
-  createdFiles.push("ship.json");
+  createdFiles.push("downcity.json");
 
   await appendMissingEnvEntries({
     filePath: dotEnvPath,
@@ -346,7 +346,7 @@ export async function initializeAgentProject(
   const shipSchemaPath = getShipSchemaPath(projectRoot);
   await ensureDir(path.dirname(shipSchemaPath));
   await saveJson(shipSchemaPath, SHIP_JSON_SCHEMA);
-  createdFiles.push(".ship/schema/ship.schema.json");
+  createdFiles.push(".downcity/schema/downcity.schema.json");
 
   try {
     await ensureDir(getShipProfileDirPath(projectRoot));

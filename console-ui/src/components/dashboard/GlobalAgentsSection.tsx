@@ -318,7 +318,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
             <DialogDescription className="text-xs leading-5">
               {dialogMode === "create"
                 ? "创建新的 agent 项目骨架，并立即启动到 Console UI。"
-                : "当目标目录还没完成初始化时，可以在启动前补齐 PROFILE.md、ship.json 和 .ship 结构。"}
+                : "当目标目录还没完成初始化时，可以在启动前补齐 PROFILE.md、downcity.json 和 .downcity 结构。"}
             </DialogDescription>
           </DialogHeader>
 

@@ -15,7 +15,7 @@ description: How console, agent, service, and plugin coordinate on port allocati
 
 ### console
 
-- Maintains `~/.ship/console/agents.json`
+- Maintains `~/.downcity/console/agents.json`
 - Starts/stops/restarts agent daemons
 - Allocates agent ports
 
@@ -23,7 +23,7 @@ description: How console, agent, service, and plugin coordinate on port allocati
 
 - One project maps to one daemon
 - Runtime HTTP APIs include `/api/services/*` and `/api/plugins/*`
-- Debug metadata is persisted to `.ship/.debug`
+- Debug metadata is persisted to `.downcity/.debug`
 
 ### service / plugin
 

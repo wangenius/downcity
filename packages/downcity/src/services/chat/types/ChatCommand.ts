@@ -77,7 +77,7 @@ export type ChatHistoryRequest = {
  * Chat 会话列表请求。
  *
  * 关键点（中文）
- * - 仅列出当前 agent 本地已记录的 chat context（来自 `.ship/channel/meta.json`）。
+ * - 仅列出当前 agent 本地已记录的 chat context（来自 `.downcity/channel/meta.json`）。
  * - 不会向外部平台拉取“全部会话”，因为平台侧通常需要额外权限且成本高。
  */
 export type ChatListRequest = {

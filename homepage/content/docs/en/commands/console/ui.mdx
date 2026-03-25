@@ -34,18 +34,18 @@ city console ui [action] [options]
 - On startup, UI loads agents from console registry (running + history).
 - Global Agents panel shows runtime state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
 - Global Agents now supports creating a new agent directly from the UI: choose a project directory with the system folder picker, then provide name and primary model to create and start it in one flow.
-- For directories that are not initialized yet, Global Agents also supports initialize-on-start: it creates `PROFILE.md`, `SOUL.md`, `ship.json`, and `.ship/` before starting the runtime.
+- For directories that are not initialized yet, Global Agents also supports initialize-on-start: it creates `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/` before starting the runtime.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
 - Global / Overview only shows global health signals (console, fleet, channels, plugins, config risk).
 - Global / Overview now shows the current DC version in the top summary area.
-- Global / Env provides manual env management for both Console-shared and agent-private entries, all stored in `~/.ship/ship.db` `env_entries`.
+- Global / Env provides manual env management for both Console-shared and agent-private entries, all stored in `~/.downcity/downcity.db` `env_entries`.
 - Global / Env now checks the clipboard when you click `+`; if the clipboard looks like `.env` content, it imports all detected entries in one batch, otherwise it falls back to the manual create dialog.
 - Global / Console Runtime shows console runtime details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
 - Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).
 - Agent / Overview now also shows whether the current agent has any executing contexts, plus the executing context count.
 - Agent / Authorization is now role-based: manage `role -> permission`, then bind users to roles.
-- Agent / Authorization is stored in console `~/.ship/ship.db`, not written back to project `ship.json` in plaintext.
+- Agent / Authorization is stored in console `~/.downcity/downcity.db`, not written back to project `downcity.json` in plaintext.
 - In Agent / Authorization, new users fall back to default roles, and whether a group/channel message is allowed depends on the speaking user's permission group.
 - Agent / Authorization now uses an overview + directory layout: the main page keeps role summaries, channel default summaries, a permission glossary, and the user directory.
 - Role editing and channel default configuration now live in dialogs; roles support `name` / `description`, and non-reserved roles can be deleted.

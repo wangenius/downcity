@@ -37,6 +37,25 @@ city service <subcommand>
 - [`city service stop`](/en/docs/commands/service/stop)
 - [`city service restart`](/en/docs/commands/service/restart)
 - [`city service command`](/en/docs/commands/service/command)
+- [`Service Action Scheduling`](/en/docs/commands/service/scheduling)
+
+## Common Scheduled Execution
+
+All service action commands now support common scheduling options:
+
+- `--delay <ms>`: delay execution
+- `--time <time>`: schedule execution (Unix sec/ms timestamp or timezone-aware ISO datetime)
+
+Notes:
+
+- scheduled jobs are persisted in the current agent project at `.downcity/schedule.sqlite`
+- unfinished jobs are restored after runtime restart
+- `--delay` and `--time` cannot be used together
+- this is for one-shot delayed/scheduled execution; use `task` service for cron and longer workflows
+
+For detailed behavior, recovery rules, and HTTP examples, see:
+
+- [`Service Action Scheduling`](/en/docs/commands/service/scheduling)
 
 ## Notes
 
@@ -46,7 +65,7 @@ city service <subcommand>
 - Or pass `--agent <agentName>` to resolve from console registry
 - If omitted, it uses current directory `.`
 - The resolved path must be registered in console registry
-- The resolved path must contain `ship.json` and `PROFILE.md`
+- The resolved path must contain `downcity.json` and `PROFILE.md`
 
 Inside agent shell, when `--agent` is omitted and `--path` uses default, it first resolves by injected `DC_AGENT_NAME` via registry; default `.` also prefers injected `DC_AGENT_PATH`.
 

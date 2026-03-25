@@ -4,7 +4,7 @@
  * 对应用户命令：`city agent start`
  *
  * 行为
- * - 在 `.ship/debug/` 写入 pid/log/meta 文件
+ * - 在 `.downcity/debug/` 写入 pid/log/meta 文件
  * - 通过 `node <commands/index.js> agent start ...` 启动真正的前台逻辑，但以 detached 方式在后台运行
  *
  * 注意
@@ -50,7 +50,7 @@ export async function startCommand(
   }
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
     console.error(
-      '❌ ship.json does not exist. Please run "city agent create" first',
+      '❌ downcity.json does not exist. Please run "city agent create" first',
     );
     process.exit(1);
   }

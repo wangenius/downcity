@@ -9,6 +9,7 @@
 import type { Context as HonoContext, Hono } from "hono";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ServiceCommandScheduleInput } from "@/types/ServiceSchedule.js";
 import type {
   Service,
   ServiceAction,
@@ -17,6 +18,9 @@ import type {
   ServiceRuntimeState,
 } from "./ServiceManager.js";
 import { SERVICES } from "./Services.js";
+import { ServiceScheduleStore } from "./schedule/Store.js";
+import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
+import { normalizeRunAtMsOrThrow } from "./schedule/Time.js";
 
 type ServiceRuntimeRecord = {
   service: Service;
@@ -297,6 +301,7 @@ export async function runServiceCommand(params: {
   serviceName: string;
   command: string;
   payload?: JsonValue;
+  schedule?: JsonValue | ServiceCommandScheduleInput;
   context: ServiceRuntime;
 }): Promise<ServiceCommandResult & { service?: ServiceRuntimeSnapshot }> {
   const service = resolveServiceByName(params.serviceName);
@@ -321,6 +326,51 @@ export async function runServiceCommand(params: {
   markServiceCommand(record, command);
 
   const action = resolveServiceAction(service, command);
+  if (params.schedule !== undefined && params.schedule !== null) {
+    if (!action) {
+      return {
+        success: false,
+        service: toRuntimeSnapshot(record),
+        message: `Scheduling only supports service actions. "${service.name}.${command}" is not a schedulable action.`,
+      };
+    }
+
+    try {
+      const scheduleInput = params.schedule as Partial<ServiceCommandScheduleInput>;
+      const runAtMs = normalizeRunAtMsOrThrow(
+        scheduleInput.runAtMs,
+        "schedule.runAtMs",
+      );
+      const store = new ServiceScheduleStore(params.context.rootPath);
+      try {
+        const job = store.createJob({
+          serviceName: service.name,
+          actionName: command,
+          payload: params.payload ?? null,
+          runAtMs,
+        });
+        return {
+          success: true,
+          service: toRuntimeSnapshot(record),
+          data: {
+            scheduled: true,
+            jobId: job.id,
+            runAtMs: job.runAtMs,
+            status: job.status,
+          },
+        };
+      } finally {
+        store.close();
+      }
+    } catch (error) {
+      return {
+        success: false,
+        service: toRuntimeSnapshot(record),
+        message: String(error),
+      };
+    }
+  }
+
   if (action) {
     if (record.state !== "running") {
       return {
@@ -502,24 +552,151 @@ function toQueryPayload(c: HonoContext): JsonObject {
   return payload;
 }
 
+/**
+ * 识别 API 层的通用调度参数。
+ *
+ * 关键点（中文）
+ * - 专用 action API 与统一 `/api/services/command` 共用同一套 delay/time 语义。
+ * - 一旦识别为调度参数，就会在传给 action.mapInput 前剥离，避免二次调度。
+ */
+function extractApiScheduleInputFromRawPayload(
+  rawPayload: JsonValue,
+): ServiceCommandScheduleInput | undefined {
+  if (!rawPayload || typeof rawPayload !== "object" || Array.isArray(rawPayload)) {
+    return undefined;
+  }
+  const record = rawPayload as Record<string, unknown>;
+  const nestedSchedule =
+    record.schedule && typeof record.schedule === "object" && !Array.isArray(record.schedule)
+      ? (record.schedule as Record<string, unknown>)
+      : undefined;
+  const nestedRunAtMs = nestedSchedule?.runAtMs;
+  const topLevelDelay = record.delayMs ?? record.delay;
+  const topLevelTime = record.sendAtMs ?? record.sendAt ?? record.time;
+
+  if (nestedRunAtMs !== undefined && (topLevelDelay !== undefined || topLevelTime !== undefined)) {
+    throw new Error("`schedule.runAtMs` cannot be used together with `delay/time`.");
+  }
+
+  if (nestedRunAtMs !== undefined) {
+    return {
+      runAtMs: normalizeRunAtMsOrThrow(
+        nestedRunAtMs as string | number | undefined,
+        "schedule.runAtMs",
+      ),
+    };
+  }
+
+  const runAtMs = parseScheduledRunAtMsOrThrow({
+    delay: topLevelDelay as string | number | undefined,
+    time: topLevelTime as string | number | undefined,
+  });
+  if (typeof runAtMs !== "number") return undefined;
+  return { runAtMs };
+}
+
+/**
+ * 从原始 payload 中移除 API 层保留的通用调度字段。
+ */
+function stripApiScheduleFields(rawPayload: JsonValue): JsonValue {
+  if (!rawPayload || typeof rawPayload !== "object" || Array.isArray(rawPayload)) {
+    return rawPayload;
+  }
+  const record = rawPayload as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (
+      key === "schedule" ||
+      key === "delay" ||
+      key === "delayMs" ||
+      key === "time" ||
+      key === "sendAt" ||
+      key === "sendAtMs"
+    ) {
+      continue;
+    }
+    next[key] = value;
+  }
+  return next as JsonValue;
+}
+
+/**
+ * 用预读取后的原始 payload 构造 mapInput 专用上下文。
+ *
+ * 关键点（中文）
+ * - 让 route 层可以先统一处理调度参数，再把“净化后的请求体/查询”交给 action 自己解析。
+ */
+function createApiMapInputContext(params: {
+  context: HonoContext;
+  rawPayload: JsonValue;
+}): HonoContext {
+  const sanitizedPayload = stripApiScheduleFields(params.rawPayload);
+  const originalReq = params.context.req;
+  const sanitizedQuery =
+    sanitizedPayload && typeof sanitizedPayload === "object" && !Array.isArray(sanitizedPayload)
+      ? (sanitizedPayload as Record<string, string>)
+      : {};
+  const requestShim = {
+    ...originalReq,
+    async json() {
+      return sanitizedPayload;
+    },
+    query(key?: string) {
+      if (typeof key === "string") {
+        return sanitizedQuery[key];
+      }
+      return sanitizedQuery;
+    },
+  };
+  return {
+    ...params.context,
+    req: requestShim as typeof params.context.req,
+  } as HonoContext;
+}
+
 async function mapServiceActionApiPayload(params: {
   action: ServiceAction<JsonValue, JsonValue>;
   method: "GET" | "POST" | "PUT" | "DELETE";
   context: HonoContext;
-}): Promise<JsonValue> {
+}): Promise<{
+  payload: JsonValue;
+  schedule?: ServiceCommandScheduleInput;
+}> {
+  let rawPayload: JsonValue;
+  if (params.method === "GET") {
+    rawPayload = toQueryPayload(params.context);
+  } else {
+    try {
+      rawPayload = (await params.context.req.json()) as JsonValue;
+    } catch {
+      throw new Error("Invalid JSON body");
+    }
+  }
+
+  const schedule = extractApiScheduleInputFromRawPayload(rawPayload);
+  const mapInputContext = createApiMapInputContext({
+    context: params.context,
+    rawPayload,
+  });
+
   if (params.action.api?.mapInput) {
-    return await params.action.api.mapInput(params.context);
+    return {
+      payload: await params.action.api.mapInput(mapInputContext),
+      ...(schedule ? { schedule } : {}),
+    };
   }
 
   if (params.method === "GET") {
-    return toQueryPayload(params.context);
+    return {
+      payload: stripApiScheduleFields(rawPayload),
+      ...(schedule ? { schedule } : {}),
+    };
   }
 
-  try {
-    return (await params.context.req.json()) as JsonValue;
-  } catch {
-    throw new Error("Invalid JSON body");
-  }
+  return {
+    payload: stripApiScheduleFields(rawPayload),
+    ...(schedule ? { schedule } : {}),
+  };
 }
 
 function registerServiceActionApiRoute(params: {
@@ -541,12 +718,15 @@ function registerServiceActionApiRoute(params: {
 
   const handler = wrapServiceRouteHandler(params.service.name, async (c) => {
     let payload: JsonValue;
+    let schedule: ServiceCommandScheduleInput | undefined;
     try {
-      payload = await mapServiceActionApiPayload({
+      const mapped = await mapServiceActionApiPayload({
         action: params.action,
         method,
         context: c,
       });
+      payload = mapped.payload;
+      schedule = mapped.schedule;
     } catch (error) {
       return c.json(
         {
@@ -557,12 +737,20 @@ function registerServiceActionApiRoute(params: {
       );
     }
 
-    const result = await invokeServiceAction({
-      service: params.service,
-      actionName: params.actionName,
-      payload,
-      context: params.context,
-    });
+    const result = schedule
+      ? await runServiceCommand({
+          serviceName: params.service.name,
+          command: params.actionName,
+          payload,
+          schedule,
+          context: params.context,
+        })
+      : await invokeServiceAction({
+          service: params.service,
+          actionName: params.actionName,
+          payload,
+          context: params.context,
+        });
     return c.json(result, result.success ? 200 : 400);
   });
 

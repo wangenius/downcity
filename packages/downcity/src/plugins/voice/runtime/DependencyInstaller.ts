@@ -19,7 +19,7 @@ const execFileAsync = promisify(execFileCb);
 const DEFAULT_PYTHON_BIN = "python3";
 const DEFAULT_PIP_TIMEOUT_MS = 300_000;
 const OUTPUT_TAIL_LIMIT = 1200;
-const DEFAULT_VENV_DIR = path.join(os.homedir(), ".ship", "venvs", "voice");
+const DEFAULT_VENV_DIR = path.join(os.homedir(), ".downcity", "venvs", "voice");
 
 /**
  * Voice 依赖 runner 类型。
@@ -131,7 +131,7 @@ export interface VoiceDependencyInstallInput {
    *
    * 说明（中文）
    * - 当系统 Python 命中 PEP 668（不允许全局 pip install）时，自动回退到该目录。
-   * - 默认 `~/.ship/venvs/voice`。
+   * - 默认 `~/.downcity/venvs/voice`。
    */
   venvDir?: string;
 }

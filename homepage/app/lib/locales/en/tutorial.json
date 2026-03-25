@@ -24,7 +24,7 @@
       "step1": {
         "initializing": "Initializing Downcity...",
         "agentMdCreated": "✔ PROFILE.md created",
-        "shipJsonCreated": "✔ ship.json created",
+        "shipJsonCreated": "✔ downcity.json created",
         "ready": "Ready to ship."
       },
       "step2": {

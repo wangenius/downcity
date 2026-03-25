@@ -2,9 +2,9 @@
  * ChatContextDelete：按 contextId 彻底删除 chat 会话数据。
  *
  * 关键点（中文）
- * - 删除路由映射（`.ship/channel/meta.json`）
- * - 删除 chat 审计目录（`.ship/chat/<contextId>/`）
- * - 删除 core context 目录（`.ship/context/<contextId>/`）
+ * - 删除路由映射（`.downcity/channel/meta.json`）
+ * - 删除 chat 审计目录（`.downcity/chat/<contextId>/`）
+ * - 删除 core context 目录（`.downcity/context/<contextId>/`）
  * - 清理运行中 agent 与队列，避免残留任务继续执行
  */
 

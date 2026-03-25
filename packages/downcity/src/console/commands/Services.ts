@@ -47,7 +47,7 @@ function resolveProjectRoot(pathInput?: string): string {
 }
 
 /**
- * 读取 agent 显示名（优先 ship.json.name，其次目录名）。
+ * 读取 agent 显示名（优先 downcity.json.name，其次目录名）。
  */
 function readAgentName(projectRoot: string): string {
   const shipJsonPath = getShipJsonPath(projectRoot);
@@ -153,7 +153,7 @@ async function resolveServiceProjectRoot(options: ServiceCliBaseOptions): Promis
 function validateAgentProjectRoot(projectRoot: string): string | null {
   const missing: string[] = [];
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
-    missing.push("ship.json");
+    missing.push("downcity.json");
   }
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     missing.push("PROFILE.md");

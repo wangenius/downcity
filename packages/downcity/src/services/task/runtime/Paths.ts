@@ -2,9 +2,9 @@
  * Task System paths and identifiers.
  *
  * 约定（中文）
- * - task root: `./.ship/task/`
- * - definition: `./.ship/task/<taskId>/task.md`
- * - run dir: `./.ship/task/<taskId>/<timestamp>/`
+ * - task root: `./.downcity/task/`
+ * - definition: `./.downcity/task/<taskId>/task.md`
+ * - run dir: `./.downcity/task/<taskId>/<timestamp>/`
  *
  * 同时定义“task run contextId”格式，用于把 Agent 的 contextStore 映射到 run 目录：
  * - `task-run:<taskId>:<timestamp>`

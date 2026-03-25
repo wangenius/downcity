@@ -2,11 +2,11 @@
  * `city agent create`：在目标目录生成最小可用的 Downcity 工程骨架与配置文件。
  *
  * 目标
- * - 生成 `PROFILE.md` / `SOUL.md` / `ship.json` / `.ship/` 目录结构与 schema 文件
+ * - 生成 `PROFILE.md` / `SOUL.md` / `downcity.json` / `.downcity/` 目录结构与 schema 文件
  * - 通过交互式问题收集必要配置（模型、channels 等）
  *
  * 设计要点
- * - Chat channels 支持多选：仅写入用户选择的 channels（未选择的不出现在 `ship.json`）
+ * - Chat channels 支持多选：仅写入用户选择的 channels（未选择的不出现在 `downcity.json`）
  * - 避免写入无意义的默认值：能省则省，保持配置简洁
  */
 
@@ -63,14 +63,14 @@ export async function initCommand(
     process.exit(1);
   }
 
-  // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 ship.json 已存在时询问覆盖。
+  // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
   if (existingShipJson) {
     if (!allowOverwrite) {
       const confirmResponse = (await prompts({
         type: "confirm",
         name: "overwrite",
         message:
-          "ship.json already exists. Overwrite existing ship.json and continue?",
+          "downcity.json already exists. Overwrite existing downcity.json and continue?",
         initial: false,
       })) as { overwrite?: boolean };
 
@@ -99,7 +99,7 @@ export async function initCommand(
       initial: 0,
     },
     {
-      // 关键交互: Chat channels 允许多选，未选择的就不写入 ship.json
+      // 关键交互: Chat channels 允许多选，未选择的就不写入 downcity.json
       type: "multiselect",
       name: "channels",
       message: "Select chat channels (multi-select)",
@@ -111,7 +111,7 @@ export async function initCommand(
     },
   ])) as InitPromptResponse;
 
-  // 关键点（中文）：agent_name 同时用于 `ship.json.name` 与 init 模板变量渲染，避免两处来源不一致。
+  // 关键点（中文）：agent_name 同时用于 `downcity.json.name` 与 init 模板变量渲染，避免两处来源不一致。
   const agentName =
     String(response.name || "").trim() || defaultAgentName;
   const primaryModelId = String(response.primaryModelId || "").trim() || "default";
@@ -137,15 +137,15 @@ export async function initCommand(
     console.log("⏭️  Skipped existing SOUL.md");
   }
 
-  console.log("✅ Created ship.json");
+  console.log("✅ Created downcity.json");
   console.log("⏭️  Skipped .env (no new entries)");
   console.log("⏭️  Skipped .env.example (no new entries)");
-  console.log("✅ Created .ship/ directory structure");
-  console.log("✅ Created ship.schema.json");
+  console.log("✅ Created .downcity/ directory structure");
+  console.log("✅ Created downcity.schema.json");
 
   console.log("\n🎉 Initialization complete!\n");
   console.log(`📦 Agent model.primary: ${primaryModelId}`);
-  console.log("🌐 Model pool source: ~/.ship/ship.db (console global)\n");
+  console.log("🌐 Model pool source: ~/.downcity/downcity.db (console global)\n");
 
   if (selectedChannels.includes("feishu")) {
     console.log("📱 Feishu chat channel enabled");
@@ -172,7 +172,7 @@ export async function initCommand(
   const nextSteps: string[] = [
     "Edit PROFILE.md to customize agent behavior",
     "Edit SOUL.md to customize your core operating principles",
-    "Edit ship.json to modify model.primary (bind to console model id)",
+    "Edit downcity.json to modify model.primary (bind to console model id)",
     'Use "city console model ..." to manage global model pool',
   ];
 

@@ -8,11 +8,11 @@ description: How “Repo is the Agent” is implemented in runtime
 Downcity keeps context in composable, persisted layers:
 
 1. `PROFILE.md` / `SOUL.md`
-2. `ship.json` runtime config
-3. `.ship/context/<contextId>/messages/messages.jsonl` conversation history
-4. `.ship/memory/MEMORY.md` long-term memory
-5. `.ship/memory/daily/<YYYY-MM-DD>.md` daily memory increments
-6. `.ship/context/<contextId>/memory/working.md` context working memory (optional)
+2. `downcity.json` runtime config
+3. `.downcity/context/<contextId>/messages/messages.jsonl` conversation history
+4. `.downcity/memory/MEMORY.md` long-term memory
+5. `.downcity/memory/daily/<YYYY-MM-DD>.md` daily memory increments
+6. `.downcity/context/<contextId>/memory/working.md` context working memory (optional)
 
 ## Why this model
 
@@ -25,4 +25,4 @@ Downcity keeps context in composable, persisted layers:
 
 - Keep clear boundaries and goals in `PROFILE.md`.
 - Use meaningful `contextId` per channel/user/workflow.
-- Inspect `.ship/logs/<date>.jsonl` and task run artifacts regularly.
+- Inspect `.downcity/logs/<date>.jsonl` and task run artifacts regularly.

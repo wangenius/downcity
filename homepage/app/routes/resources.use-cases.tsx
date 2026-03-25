@@ -23,7 +23,7 @@ const useCases = [
   {
     id: "worker",
     bulletKeys: ["todo", "deps", "reports", "quality", "tests"],
-    example: `# In .ship/tasks/daily-todo-scan.md:\n---\nid: daily-todo-scan\ncron: "0 9 * * *"\nnotify: telegram\n---\n\nScan the repository for TODO comments.\nSummarize them by file.\nSuggest which ones should be prioritized.`,
+    example: `# In .downcity/tasks/daily-todo-scan.md:\n---\nid: daily-todo-scan\ncron: "0 9 * * *"\nnotify: telegram\n---\n\nScan the repository for TODO comments.\nSummarize them by file.\nSuggest which ones should be prioritized.`,
   },
   {
     id: "interface",

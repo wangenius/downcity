@@ -2,8 +2,8 @@
  * ProjectSetup：runtime 启动前项目结构准备模块。
  *
  * 关键点（中文）
- * - 统一校验初始化必要文件（PROFILE.md / ship.json）。
- * - 统一确保 `.ship/*` 目录结构存在，避免调用方重复拼装目录逻辑。
+ * - 统一校验初始化必要文件（PROFILE.md / downcity.json）。
+ * - 统一确保 `.downcity/*` 目录结构存在，避免调用方重复拼装目录逻辑。
  */
 
 import fs from "fs-extra";
@@ -39,14 +39,14 @@ function ensureContextFiles(projectRoot: string): void {
 
   if (!fs.existsSync(getShipJsonPath(projectRoot))) {
     console.error(
-      '❌ ship.json does not exist. Please run "city agent create" first',
+      '❌ downcity.json does not exist. Please run "city agent create" first',
     );
     process.exit(1);
   }
 }
 
 /**
- * 确保 `.ship` 运行目录结构完整。
+ * 确保 `.downcity` 运行目录结构完整。
  */
 function ensureShipDirectories(projectRoot: string): void {
   // 关键点（中文）：尽量只在启动时确保目录结构存在，避免在 Agent/Tool 执行过程中反复 ensure。
@@ -75,7 +75,7 @@ export function ensureRuntimeProjectReady(projectRoot: string): void {
  * 校验项目模型绑定是否可用于启动。
  *
  * 关键点（中文）
- * - `ship.json.model.primary` 必须存在且在 console 模型池中可解析。
+ * - `downcity.json.model.primary` 必须存在且在 console 模型池中可解析。
  * - 若模型被 pause，也要在启动前直接拒绝，避免进程拉起后秒退。
  */
 export function ensureRuntimeModelBindingReady(projectRoot: string): void {
@@ -84,14 +84,14 @@ export function ensureRuntimeModelBindingReady(projectRoot: string): void {
     const config = loadShipConfig(projectRoot);
     primaryModelId = String(config.model?.primary || "").trim();
   } catch (error) {
-    console.error("❌ Invalid ship.json model binding");
+    console.error("❌ Invalid downcity.json model binding");
     console.error(`   project: ${projectRoot}`);
     console.error(`   error: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 
   if (!primaryModelId) {
-    console.error("❌ Invalid ship.json model binding");
+    console.error("❌ Invalid downcity.json model binding");
     console.error(`   project: ${projectRoot}`);
     console.error("   error: model.primary is required");
     process.exit(1);

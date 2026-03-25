@@ -106,7 +106,7 @@ export class TelegramApiClient {
   }
 
   /**
-   * 下载 Telegram 文件并保存到 `.ship/.cache/telegram`。
+   * 下载 Telegram 文件并保存到 `.downcity/.cache/telegram`。
    *
    * 说明（中文）
    * - 文件名会做安全化处理，避免路径注入

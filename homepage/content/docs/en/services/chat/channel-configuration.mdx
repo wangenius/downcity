@@ -12,15 +12,15 @@ This descriptor directly controls:
 - Which fields Console UI renders
 - Which fields are editable
 - Field types (`string` / `boolean` / `number` / `secret` / `enum`)
-- Field source (`ship.json`)
+- Field source (`downcity.json`)
 
 ## Why this design
 
 - Remove frontend hardcoding for per-channel fields
 - Centralize validation in `chat.configure`
 - Keep clear boundaries:
-  - Agent service (`ship.json`): channel binding + runtime toggles only
-  - Global Channel Accounts (`ship.db`): all bot information (token/appId/appSecret/name/owner/creator)
+  - Agent service (`downcity.json`): channel binding + runtime toggles only
+  - Global Channel Accounts (`downcity.db`): all bot information (token/appId/appSecret/name/owner/creator)
 
 ## Agent Service Scope
 
@@ -55,7 +55,7 @@ Backend then:
 1. Filters fields by channel descriptor whitelist
 2. Normalizes and validates by field type
 3. Updates in-memory runtime config
-4. Persists to project `ship.json`
+4. Persists to project `downcity.json`
 5. Restarts/reloads channel if requested (default: restart)
 
 ## Relationship with Channel Accounts
@@ -73,7 +73,7 @@ This cleanly separates secret management and per-agent channel runtime config.
 
 This boundary is important:
 
-- Bot credentials behind `channelAccountId` are shared globally in `ship.db`
+- Bot credentials behind `channelAccountId` are shared globally in `downcity.db`
 - `chat` authorization rules are isolated per agent, even when multiple agents reuse the same channel account
 
 That means multiple agents can bind the same Telegram / Feishu / QQ bot account while still having different:
@@ -155,5 +155,5 @@ Because rendering is metadata-driven from `detail.configuration`, not hardcoded.
 ## Related docs
 
 - [Chat Service Commands](/en/docs/commands/service/chat)
-- [Env + ship.db design](/en/docs/configuration/env-shipdb-design)
-- [Console ship.json configuration](/en/docs/configuration/console-ship-json)
+- [Env + downcity.db design](/en/docs/configuration/env-downcitydb-design)
+- [Console downcity.json configuration](/en/docs/configuration/console-downcity-json)

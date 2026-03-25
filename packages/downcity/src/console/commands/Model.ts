@@ -269,7 +269,7 @@ async function runInteractiveCreate(
         payload: {
           providerId,
           providerType,
-          encryptedStorage: "provider.apiKey will be stored encrypted in ~/.ship/ship.db",
+          encryptedStorage: "provider.apiKey will be stored encrypted in ~/.downcity/downcity.db",
           ...(discovery
             ? {
                 test: {

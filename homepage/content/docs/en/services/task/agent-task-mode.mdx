@@ -35,7 +35,7 @@ description: kind=agent behavior, use cases, and output expectations
 ## Current Execution Logic
 
 1. Load `task.md` and parse frontmatter plus body.
-2. Create a new run directory: `./.ship/task/<taskId>/<timestamp>/`.
+2. Create a new run directory: `./.downcity/task/<taskId>/<timestamp>/`.
 3. Write `input.md` and `run-progress.json`.
 4. Create a task-specific runtime instead of reusing normal chat history.
 5. Let the executor agent produce a result.
@@ -73,7 +73,7 @@ flowchart TD
 
     F --> G["load task.md"]
     G --> H["generate timestamp"]
-    H --> I["create run directory<br/>.ship/task/<taskId>/<timestamp>/"]
+    H --> I["create run directory<br/>.downcity/task/<taskId>/<timestamp>/"]
     I --> J["write input.md / run-progress.json"]
 
     J --> K{"kind"}

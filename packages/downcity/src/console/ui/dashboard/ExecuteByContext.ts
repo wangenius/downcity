@@ -50,12 +50,6 @@ export async function executeByContextId(params: {
   });
   if (dispatchTarget) {
     const queuedText = buildQueuedUserMessageWithInfo({
-      channel: dispatchTarget.channel,
-      contextId,
-      chatKey: contextId,
-      chatId: dispatchTarget.chatId,
-      chatType: dispatchTarget.chatType,
-      threadId: dispatchTarget.messageThreadId,
       messageId: dispatchTarget.messageId,
       text: executeInput,
     });

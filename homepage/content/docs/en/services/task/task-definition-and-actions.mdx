@@ -8,7 +8,7 @@ description: task.md schema, when trigger semantics, and action contracts
 ## Task definition file
 
 ```text
-.ship/task/<taskId>/task.md
+.downcity/task/<taskId>/task.md
 ```
 
 `taskId` is derived from normalized `title`, and `title` should stay unique.
@@ -63,6 +63,12 @@ No semantic-similarity dedup is applied.
 1. verify task exists
 2. start `runTaskNow(...)` in background
 3. return immediately with `accepted=true`, `message`, and `executionId`
+
+The `message` explicitly tells the caller:
+- the task has started
+- the task result will be sent to the user automatically when it finishes
+- the agent can continue the next steps immediately
+- there is no need to wait for the task to finish
 
 Current `agent` rules:
 - single-round by default

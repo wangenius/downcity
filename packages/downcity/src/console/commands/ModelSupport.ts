@@ -182,7 +182,7 @@ export function resolveProjectRoot(pathInput?: string): string {
 }
 
 /**
- * 设置项目 `ship.json.model.primary`。
+ * 设置项目 `downcity.json.model.primary`。
  *
  * 关键点（中文）
  * - 仅更新绑定字段，不触碰其他运行配置。
@@ -195,11 +195,11 @@ export function setProjectPrimaryModel(projectRoot: string, modelId: string): {
 } {
   const shipJsonPath = getShipJsonPath(projectRoot);
   if (!fs.existsSync(shipJsonPath)) {
-    throw new Error(`ship.json not found at ${shipJsonPath}`);
+    throw new Error(`downcity.json not found at ${shipJsonPath}`);
   }
   const raw = fs.readJsonSync(shipJsonPath) as Partial<ShipConfig>;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error(`Invalid ship.json: expected object (${shipJsonPath})`);
+    throw new Error(`Invalid downcity.json: expected object (${shipJsonPath})`);
   }
   const previousPrimary = String(raw.model?.primary || "").trim();
   const nextPrimary = String(modelId || "").trim();

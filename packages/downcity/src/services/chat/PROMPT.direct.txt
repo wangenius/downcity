@@ -49,4 +49,6 @@ react:
 ## 入站消息结构（仅供内部理解）
 
 - 每条入队用户消息包含 `<info>...</info>` 元信息块 + 用户正文。
-- `<info>` 仅用于路由与权限判断，不要原样回传给用户。
+- `<info>` 仅保留 user/request 元信息，例如 `user_id`、`username`、`message_id`、`permissions`、`received_at`。
+- 当前 chat 路由环境（例如 `channel`、`context_id`、`chat_key`、`chat_id`）会通过 system prompt 单独注入，不再混在 `<info>` 里。
+- `<info>` 不要原样回传给用户。

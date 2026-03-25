@@ -45,4 +45,4 @@ Content-Type: application/json
 
 By default the runtime logs every LLM request payload (messages + system) to help debugging.
 
-- Disable: set `llm.logMessages=false` in `ship.json`
+- Disable: set `llm.logMessages=false` in `downcity.json`

@@ -50,7 +50,7 @@ export interface MemorySearchResultItem {
    */
   source: MemorySourceType;
   /**
-   * 引用标记（例如：`.ship/memory/MEMORY.md#L12-L20`）。
+   * 引用标记（例如：`.downcity/memory/MEMORY.md#L12-L20`）。
    */
   citation: string;
 }

@@ -2,7 +2,7 @@
  * Auth 授权配置读写工具。
  *
  * 关键点（中文）
- * - 静态授权规则统一写入 console `~/.ship/ship.db`。
+ * - 静态授权规则统一写入 console `~/.downcity/downcity.db`。
  * - 授权核心模型为 role / permission / binding。
  */
 

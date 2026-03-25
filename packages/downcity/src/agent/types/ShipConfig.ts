@@ -113,21 +113,21 @@ export interface ShipConfig {
         telegram?: {
           enabled: boolean;
           /**
-           * 绑定的 channel account id（来源：console 全局 `~/.ship/ship.db`）。
+           * 绑定的 channel account id（来源：console 全局 `~/.downcity/downcity.db`）。
            */
           channelAccountId?: string;
         };
         feishu?: {
           enabled: boolean;
           /**
-           * 绑定的 channel account id（来源：console 全局 `~/.ship/ship.db`）。
+           * 绑定的 channel account id（来源：console 全局 `~/.downcity/downcity.db`）。
            */
           channelAccountId?: string;
         };
         qq?: {
           enabled: boolean;
           /**
-           * 绑定的 channel account id（来源：console 全局 `~/.ship/ship.db`）。
+           * 绑定的 channel account id（来源：console 全局 `~/.downcity/downcity.db`）。
            */
           channelAccountId?: string;
         };
@@ -167,7 +167,7 @@ export interface ShipConfig {
    *
    * 关键点（中文）
    * - agent 只声明绑定关系（`model.primary`）。
-   * - provider/models 的完整配置统一由 console 全局 `~/.ship/ship.db` 管理。
+   * - provider/models 的完整配置统一由 console 全局 `~/.downcity/downcity.db` 管理。
    */
   model?: AgentModelBindingConfig;
   /**
@@ -175,14 +175,14 @@ export interface ShipConfig {
    *
    * 关键点（中文）
    * - 运行时会读取该字段创建真实模型实例。
-   * - 对于项目内 `ship.json`，通常不需要显式写该字段。
+   * - 对于项目内 `downcity.json`，通常不需要显式写该字段。
    */
   llm?: LlmConfig;
   /**
    * 上下文管理（工程向配置）。
    *
    * 说明
-   * - 对话消息以 UIMessage[] 为唯一事实源（.ship/context/<contextId>/messages/messages.jsonl）。
+   * - 对话消息以 UIMessage[] 为唯一事实源（.downcity/context/<contextId>/messages/messages.jsonl）。
    * - Agent 每次执行直接把 UIMessage[] 转成 ModelMessage[] 作为 messages 输入。
    * - 超出上下文窗口时会自动 compact（更早段压缩为摘要 + 保留最近窗口）。
    */

@@ -7,29 +7,29 @@ description: "Real model implementation flow: SQLite storage, encryption, bindin
 
 Model implementation has two layers:
 
-1. Console-global model pool in `~/.ship/ship.db` (SQLite)
-2. Project-local `model.primary` in each agent `ship.json`
+1. Console-global model pool in `~/.downcity/downcity.db` (SQLite)
+2. Project-local `model.primary` in each agent `downcity.json`
 
 ## 1) Persistence layout
 
 Console-global model pool:
 
-- file: `~/.ship/ship.db`
+- file: `~/.downcity/downcity.db`
 - tables: `model_providers`, `models`
 - write entrypoint: `city console model ...`
 
 Project-local binding:
 
-- file: `<project>/ship.json`
+- file: `<project>/downcity.json`
 - field: `model.primary`
 
 ## 2) Write flow
 
 1. `city console model ...`  
-writes provider/model records into `~/.ship/ship.db`
+writes provider/model records into `~/.downcity/downcity.db`
 
 2. Console UI model switch  
-updates current agent `ship.json -> model.primary`
+updates current agent `downcity.json -> model.primary`
 
 3. `city agent create`  
 selects a model id from console pool and writes `model.primary`
@@ -51,7 +51,7 @@ selects a model id from console pool and writes `model.primary`
 Provider `apiKey` is not stored in plaintext:
 
 - algorithm: AES-256-GCM field-level encryption
-- key priority: `DC_MODEL_DB_KEY` env var > `~/.ship/console/model-db.key`
+- key priority: `DC_MODEL_DB_KEY` env var > `~/.downcity/console/model-db.key`
 - DB field: `api_key_encrypted`
 
 ## 5) Commands
@@ -79,4 +79,4 @@ city agent restart .
 
 ## Related docs
 
-- [ship.json Reference](/en/docs/reference/ship-json)
+- [downcity.json Reference](/en/docs/reference/downcity-json)

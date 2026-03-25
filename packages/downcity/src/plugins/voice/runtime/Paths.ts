@@ -18,7 +18,7 @@ export function resolveVoiceModelsRootDir(input: {
   projectRoot: string;
   modelsDir?: string;
 }): string {
-  const fallback = path.join(os.homedir(), ".ship", "models", "voice");
+  const fallback = path.join(os.homedir(), ".downcity", "models", "voice");
   const raw = expandHomePath(String(input.modelsDir || fallback).trim());
   if (!raw) return path.resolve(fallback);
   if (path.isAbsolute(raw)) return path.resolve(raw);

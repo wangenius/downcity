@@ -1,7 +1,7 @@
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
 
 export const DEFAULT_SHIP_JSON: ShipConfig = {
-  $schema: "./.ship/schema/ship.schema.json",
+  $schema: "./.downcity/schema/downcity.schema.json",
   name: "downcity",
   version: "1.0.0",
   start: {

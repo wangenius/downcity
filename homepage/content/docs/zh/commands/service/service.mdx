@@ -37,6 +37,25 @@ city service <subcommand>
 - [`city service stop`](/zh/docs/commands/service/stop)
 - [`city service restart`](/zh/docs/commands/service/restart)
 - [`city service command`](/zh/docs/commands/service/command)
+- [`Service Action 定时执行`](/zh/docs/commands/service/scheduling)
+
+## 通用定时执行
+
+所有 service action 命令现在都支持通用调度参数：
+
+- `--delay <ms>`：延迟执行
+- `--time <time>`：定时执行（Unix 时间戳秒/毫秒或带时区 ISO 时间）
+
+说明：
+
+- 调度任务会持久化到当前 agent 项目的 `.downcity/schedule.sqlite`
+- runtime 重启后，会继续恢复尚未完成的任务
+- `--delay` 与 `--time` 不能同时使用
+- 该能力面向 one-shot 延迟/定时执行；cron 与长期工作流仍建议使用 `task` service
+
+更详细的说明、恢复行为与 HTTP 入口示例，见：
+
+- [`Service Action 定时执行`](/zh/docs/commands/service/scheduling)
 
 ## 说明
 
@@ -46,7 +65,7 @@ city service <subcommand>
 - 或传 `--agent <agentName>`，从 console registry 解析
 - 不传时默认使用当前目录 `.`
 - 解析后的路径必须已登记在 console registry
-- 该路径必须包含 `ship.json` 与 `PROFILE.md`
+- 该路径必须包含 `downcity.json` 与 `PROFILE.md`
 
 在 agent shell 内执行时，若未显式传 `--agent` 且 `--path` 使用默认值，会先使用注入的 `DC_AGENT_NAME` 走 registry 解析；默认 `.` 也会优先解析为注入的 `DC_AGENT_PATH`。
 

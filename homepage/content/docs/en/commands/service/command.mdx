@@ -16,13 +16,26 @@ city service command <serviceName> <command> [--payload <json>] [--agent <name> 
 ## Key options
 
 - `--payload <json>`: action input payload; JSON string is supported, non-JSON is passed as plain string
+- `--delay <ms>`: delay this action
+- `--time <time>`: schedule this action (Unix sec/ms timestamp or timezone-aware ISO datetime)
 - `--agent <name>` / `--path <path>`: target agent resolution
+
+About `--delay` / `--time`:
+
+- scheduled jobs are persisted in the current agent project at `.downcity/schedule.sqlite`
+- unfinished jobs are automatically restored after runtime restart
+- `--delay` and `--time` cannot be used together
+
+For the full behavior and examples, see:
+
+- [`Service Action Scheduling`](/en/docs/commands/service/scheduling)
 
 ## Examples
 
 ```bash
 city service command task list --payload '{"status":"enabled"}' --agent my-agent
 city service command memory search --payload '{"query":"release decision"}' --path /abs/path/to/agent
+city service command chat send --payload '{"chatKey":"ctx_xxx","text":"later"}' --time "2026-03-25T21:00:00+08:00" --path /abs/path/to/agent
 ```
 
 ## Related commands

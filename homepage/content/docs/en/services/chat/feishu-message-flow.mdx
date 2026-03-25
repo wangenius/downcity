@@ -16,8 +16,8 @@ sequenceDiagram
   participant U as User (Feishu)
   participant FS as Feishu Open Platform
   participant BOT as Downcity FeishuBot
-  participant META as .ship/channel/meta.json
-  participant HIST as .ship/chat/<contextId>/history.jsonl
+  participant META as .downcity/channel/meta.json
+  participant HIST as .downcity/chat/<contextId>/history.jsonl
   participant RT as Agent Runtime
   participant SEND as Feishu send API
 
@@ -162,7 +162,7 @@ For each inbound message, the runtime creates or updates route metadata such as:
 
 These are stored in:
 
-- `.ship/channel/meta.json`
+- `.downcity/channel/meta.json`
 
 The internal target key is shaped like:
 
@@ -206,7 +206,7 @@ Code:
 
 Audit history is also written to:
 
-- `.ship/chat/<contextId>/history.jsonl`
+- `.downcity/chat/<contextId>/history.jsonl`
 
 ## Reply delivery
 

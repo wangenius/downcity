@@ -1,9 +1,9 @@
 /**
- * Dashboard execute by context helper。
+ * Dashboard execute by session helper。
  *
  * 关键点（中文）
- * - chatKey 上下文优先复用 chat 平台队列链路（与平台入站执行一致）。
- * - 非 chat 上下文保留原有直接执行语义。
+ * - chatKey session 优先复用 chat 平台队列链路（与平台入站执行一致）。
+ * - 非 chat session 保留原有直接执行语义。
  */
 
 import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
@@ -35,21 +35,21 @@ export async function executeBySessionId(params: {
   instructions: string;
   attachments?: DashboardSessionExecuteAttachmentInput[];
 }) {
-  const contextId = String(params.sessionId || "").trim();
+  const sessionId = String(params.sessionId || "").trim();
   const instructions = String(params.instructions || "").trim();
-  if (!contextId) throw new Error("Missing sessionId");
+  if (!sessionId) throw new Error("Missing sessionId");
   if (!instructions) throw new Error("Missing instructions");
 
   const executeInput = await buildExecuteInputText({
     projectRoot: params.runtime.rootPath,
-    sessionId: contextId,
+    sessionId,
     instructions,
     attachments: params.attachments,
   });
 
   const dispatchTarget = await resolveDispatchTargetByChatKey({
     context: params.serviceRuntime,
-    chatKey: contextId,
+    chatKey: sessionId,
   });
   if (dispatchTarget) {
     const queuedText = buildQueuedUserMessageWithInfo({
@@ -57,7 +57,7 @@ export async function executeBySessionId(params: {
       text: executeInput,
     });
     const ingressExtra: JsonObject = {
-      source: "tui_context_execute",
+      source: "tui_session_execute",
       ingressKind: "exec",
       trigger: "api_execute",
     };
@@ -65,7 +65,7 @@ export async function executeBySessionId(params: {
     try {
       await appendExecIngress({
         context: params.serviceRuntime,
-        sessionId: contextId,
+        sessionId,
         channel: dispatchTarget.channel,
         chatId: dispatchTarget.chatId,
         text: queuedText,
@@ -78,7 +78,7 @@ export async function executeBySessionId(params: {
       });
     } catch (error) {
       params.runtime.logger.warn("Dashboard execute ingress append failed", {
-        contextId,
+        sessionId,
         error: String(error),
       });
     }
@@ -87,14 +87,14 @@ export async function executeBySessionId(params: {
       kind: "exec",
       channel: dispatchTarget.channel,
       targetId: dispatchTarget.chatId,
-      contextId,
+      sessionId,
       text: queuedText,
       ...(dispatchTarget.chatType ? { targetType: dispatchTarget.chatType } : {}),
       ...(typeof dispatchTarget.messageThreadId === "number"
         ? { threadId: dispatchTarget.messageThreadId }
         : {}),
       ...(dispatchTarget.messageId ? { messageId: dispatchTarget.messageId } : {}),
-      contextPersisted: true,
+      sessionPersisted: true,
       extra: ingressExtra,
     });
 
@@ -108,12 +108,12 @@ export async function executeBySessionId(params: {
   }
 
   await params.runtime.sessionManager.appendUserMessage({
-    contextId,
+    sessionId,
     text: executeInput,
   });
 
   const result = await params.runtime.sessionManager.run({
-    contextId,
+    sessionId,
     query: executeInput,
   });
 
@@ -121,21 +121,21 @@ export async function executeBySessionId(params: {
   try {
     if (!hasPersistedAssistantSteps(result.assistantMessage)) {
       await params.runtime.sessionManager.appendAssistantMessage({
-        contextId,
+        sessionId,
         message: result.assistantMessage,
         fallbackText: userVisible,
         extra: {
-          via: "tui_context_execute",
+          via: "tui_session_execute",
           note: "assistant_message_missing",
         },
       });
     }
     const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-      contextId,
+      sessionId,
     );
     for (const message of deferredInjectedMessages) {
       await params.runtime.sessionManager.appendUserMessage({
-        contextId,
+        sessionId,
         message,
       });
     }

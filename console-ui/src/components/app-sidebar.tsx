@@ -102,9 +102,9 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    */
   onAgentEnter: (agentId: string) => void
   /**
-   * 打开 context workspace 并选中 context。
+   * 打开 session workspace 并选中 session。
    */
-  onContextOpen: (contextId: string) => void
+  onSessionOpen: (sessionId: string) => void
   /**
    * 打开任务详情。
    */
@@ -206,7 +206,7 @@ export function AppSidebar({
   onViewChange,
   onAgentChange,
   onAgentEnter,
-  onContextOpen,
+  onSessionOpen,
   onTaskOpen,
   onChannelOpen,
   topbarStatus,
@@ -624,21 +624,21 @@ export function AppSidebar({
                           <div className={chatChildrenLayoutClass}>
                             <SidebarMenu className={chatChildrenMenuClass}>
                               {group.items.map((item) => {
-                                const contextId = String(item.contextId || "").trim()
-                                if (!contextId) return null
+                                const sessionId = String(item.sessionId || "").trim()
+                                if (!sessionId) return null
                                 const chatTitle = String(item.chatTitle || "").trim()
                                 const chatId = String(item.chatId || "").trim()
                                 // 关键点（中文）：QQ 等渠道可能把 openid 回填到 chatTitle，这里做兜底清洗。
                                 const normalizedTitle = chatTitle && (!chatId || chatTitle !== chatId) ? chatTitle : ""
-                                const label = normalizedTitle || chatId || contextId
-                                const isActive = activeView === "contextWorkspace" && selectedSessionId === contextId
+                                const label = normalizedTitle || chatId || sessionId
+                                const isActive = activeView === "contextWorkspace" && selectedSessionId === sessionId
                                 const isExecuting = item.executing === true
                                 return (
-                                  <SidebarMenuItem key={contextId} className="min-w-0">
+                                  <SidebarMenuItem key={sessionId} className="min-w-0">
                                     <SidebarMenuButton
-                                      tooltip={normalizedTitle ? `${normalizedTitle} · ${contextId}` : contextId}
+                                      tooltip={normalizedTitle ? `${normalizedTitle} · ${sessionId}` : sessionId}
                                       isActive={isActive}
-                                      onClick={() => onContextOpen(contextId)}
+                                      onClick={() => onSessionOpen(sessionId)}
                                       className={chatItemButtonClass}
                                     >
                                       <span className={chatItemRowClass}>

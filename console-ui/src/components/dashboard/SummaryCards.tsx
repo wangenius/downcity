@@ -71,7 +71,7 @@ export interface SummaryCardsProps {
   /**
    * consoleui channel 默认 session id。
    */
-  consoleUiContextId: string
+  consoleUiSessionId: string
   /**
    * 配置状态列表。
    */
@@ -103,7 +103,7 @@ export interface SummaryCardsProps {
   /**
    * 打开 session workspace。
    */
-  onOpenContext: (contextId: string) => void
+  onOpenSession: (sessionId: string) => void
   /**
    * 控制 service 生命周期。
    */
@@ -192,7 +192,7 @@ export function SummaryCards(props: SummaryCardsProps) {
     tasks,
     sessions,
     channelAccounts,
-    consoleUiContextId,
+    consoleUiSessionId,
     configStatus,
     model,
     onSwitchModel,
@@ -200,15 +200,15 @@ export function SummaryCards(props: SummaryCardsProps) {
     onRestartAgent,
     onStopAgent,
     onOpenTask,
-    onOpenContext,
+    onOpenSession,
     onControlService,
     chatChannels,
     onChatAction,
   } = props
   const confirm = useConfirmDialog()
 
-  const overviewContexts = Array.isArray(overview?.contexts?.items) ? overview.contexts.items : []
-  const consoleUiExists = overviewContexts.some((item) => item.contextId === consoleUiContextId)
+  const overviewSessions = Array.isArray(overview?.sessions?.items) ? overview.sessions.items : []
+  const consoleUiExists = overviewSessions.some((item) => item.sessionId === consoleUiSessionId)
   const chatProfiles = Array.isArray(selectedAgent?.chatProfiles) ? selectedAgent.chatProfiles : []
   const executingSessions = React.useMemo(
     () => sessions.filter((item) => item.executing === true),
@@ -313,15 +313,15 @@ export function SummaryCards(props: SummaryCardsProps) {
     return merged
   }, [services])
 
-  const resolveContextIdByChatProfile = React.useCallback(
+  const resolveSessionIdByChatProfile = React.useCallback(
     (channelInput?: string): string => {
       const channel = String(channelInput || "").trim().toLowerCase()
       if (!channel) return ""
-      const contextCandidates = sessions
-        .map((item) => String(item.contextId || "").trim())
-        .filter((contextId) => contextId.startsWith(`${channel}-`))
-      if (contextCandidates.length === 0) return ""
-      return contextCandidates[0] || ""
+      const sessionCandidates = sessions
+        .map((item) => String(item.sessionId || "").trim())
+        .filter((sessionId) => sessionId.startsWith(`${channel}-`))
+      if (sessionCandidates.length === 0) return ""
+      return sessionCandidates[0] || ""
     },
     [sessions],
   )
@@ -536,7 +536,7 @@ export function SummaryCards(props: SummaryCardsProps) {
               ? chatProfiles.map((profile) => {
                   const channel = String(profile.channel || "-")
                   const link = String(profile.linkState || profile.statusText || "unknown")
-                  const contextId = resolveContextIdByChatProfile(channel)
+                  const sessionId = resolveSessionIdByChatProfile(channel)
                   const status = chatStatusByChannel.get(channel.trim().toLowerCase())
                   const channelAccountId = String(status?.channelAccountId || "").trim()
                   const accountName = channelAccountId
@@ -545,8 +545,8 @@ export function SummaryCards(props: SummaryCardsProps) {
                   return {
                     channel,
                     link,
-                    contextId,
-                    clickable: Boolean(contextId),
+                    sessionId,
+                    clickable: Boolean(sessionId),
                     enabled: status?.enabled === true,
                     configured: status?.configured === true,
                     accountName,
@@ -556,15 +556,15 @@ export function SummaryCards(props: SummaryCardsProps) {
 
             const taskItems = isTaskOverview ? tasks.slice(0, 5) : []
             const skillItems = isSkillOverview ? skills.slice(0, 5) : []
-            const contextItems = isContextOverview
-              ? sessions.slice(0, 5).map((item) => String(item.contextId || "-"))
+            const sessionItems = isContextOverview
+              ? sessions.slice(0, 5).map((item) => String(item.sessionId || "-"))
               : []
 
             const detailLines = isMemoryOverview
               ? memoryConfigItems.length > 0
                 ? memoryConfigItems.map((item) => `${item.label} · ${item.status}`)
                 : ["无 memory 配置"]
-              : isContextOverview && contextItems.length === 0
+              : isContextOverview && sessionItems.length === 0
                 ? [`consoleui · ${consoleUiExists ? "ok" : "missing"}`]
                 : !isTaskOverview && !isChatOverview && !isSkillOverview && !isContextOverview
                   ? ["无额外明细"]
@@ -659,10 +659,10 @@ export function SummaryCards(props: SummaryCardsProps) {
                                 <button
                                   type="button"
                                   className="inline-flex h-7 items-center rounded-[10px] px-2.5 transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-55"
-                                  onClick={() => onOpenContext(chatItem.contextId)}
+                                  onClick={() => onOpenSession(chatItem.sessionId)}
                                   disabled={!chatItem.clickable}
                                 >
-                                  context
+                                  session
                                 </button>
                                 <button
                                   type="button"
@@ -790,18 +790,18 @@ export function SummaryCards(props: SummaryCardsProps) {
                     </div>
                   ) : null}
 
-                  {isContextOverview && contextItems.length > 0 ? (
+                  {isContextOverview && sessionItems.length > 0 ? (
                     <div className="space-y-1.5">
-                      {contextItems.map((contextId) => (
+                      {sessionItems.map((sessionId) => (
                         <div
-                          key={`${name}:context:${contextId}`}
+                          key={`${name}:session:${sessionId}`}
                           className="flex items-center justify-between gap-3 rounded-[12px] px-2 py-2 text-xs text-muted-foreground transition-colors hover:bg-background"
                         >
-                          <div className="min-w-0 truncate">{contextId}</div>
+                          <div className="min-w-0 truncate">{sessionId}</div>
                           <button
                             type="button"
                             className="inline-flex h-7 items-center gap-1 rounded-[10px] px-2.5 transition-colors hover:bg-secondary hover:text-foreground"
-                            onClick={() => onOpenContext(contextId)}
+                            onClick={() => onOpenSession(sessionId)}
                           >
                             <span>open</span>
                             <ArrowRightIcon className="size-3 shrink-0" />

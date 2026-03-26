@@ -20,13 +20,13 @@ import type { DashboardSessionExecuteRequestBody } from "@/types/DashboardSessio
 import type { DashboardRouteRegistrationParams } from "@/types/DashboardRoutes.js";
 import {
   decodeMaybe,
-  listContextSummaries,
-  loadContextMessagesFromFile,
+  listSessionSummaries,
+  loadSessionMessagesFromFile,
   toLimit,
   toUiMessageTimeline,
 } from "./Helpers.js";
 import { executeBySessionId } from "./ExecuteBySession.js";
-const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
+const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 
 function normalizeSystemText(input: string | null | undefined): string {
   return String(input || "").trim();
@@ -85,7 +85,7 @@ function toSystemPromptPayload(messages: SystemModelMessage[]): {
 /**
  * 注册上下文相关路由。
  */
-export function registerDashboardContextRoutes(
+export function registerDashboardSessionRoutes(
   params: DashboardRouteRegistrationParams,
 ): void {
   const { app } = params;
@@ -94,33 +94,33 @@ export function registerDashboardContextRoutes(
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"));
-      const executingContextIds = new Set(runtime.sessionManager.listExecutingContextIds());
-      const contexts = await listContextSummaries({
+      const executingSessionIds = new Set(runtime.sessionManager.listExecutingSessionIds());
+      const sessions = await listSessionSummaries({
         projectRoot: runtime.rootPath,
         serviceRuntime: params.getServiceRuntimeState(),
         limit,
-        executingContextIds,
+        executingSessionIds,
       });
-      const hasConsoleUiContext = contexts.some(
-        (item) => String(item.sessionId || "").trim() === CONSOLEUI_CONTEXT_ID,
+      const hasConsoleUiSession = sessions.some(
+        (item) => String(item.sessionId || "").trim() === CONSOLEUI_SESSION_ID,
       );
-      const enrichedContexts = hasConsoleUiContext
-        ? contexts
+      const enrichedSessions = hasConsoleUiSession
+        ? sessions
         : [
             {
-              sessionId: CONSOLEUI_CONTEXT_ID,
+              sessionId: CONSOLEUI_SESSION_ID,
               messageCount: 0,
               updatedAt: Date.now(),
               lastRole: "system" as const,
               lastText: "consoleui channel",
               channel: "consoleui",
-              ...(executingContextIds.has(CONSOLEUI_CONTEXT_ID) ? { executing: true } : {}),
+              ...(executingSessionIds.has(CONSOLEUI_SESSION_ID) ? { executing: true } : {}),
             },
-            ...contexts,
+            ...sessions,
           ];
       return c.json({
         success: true,
-        sessions: enrichedContexts,
+        sessions: enrichedSessions,
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
@@ -131,19 +131,19 @@ export function registerDashboardContextRoutes(
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"), 200);
-      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!contextId) {
+      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+      if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
-      const filePath = getDowncitySessionMessagesPath(runtime.rootPath, contextId);
-      const messages = await loadContextMessagesFromFile(filePath);
+      const filePath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
+      const messages = await loadSessionMessagesFromFile(filePath);
       const sliced = messages
         .slice(-limit)
         .flatMap((message) => toUiMessageTimeline(message));
       return c.json({
         success: true,
-        sessionId: contextId,
+        sessionId,
         total: sliced.length,
         rawTotal: messages.length,
         messages: sliced,
@@ -156,20 +156,20 @@ export function registerDashboardContextRoutes(
   app.delete("/api/dashboard/sessions/:sessionId/messages", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!contextId) {
+      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+      if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
-      const messagesPath = getDowncitySessionMessagesPath(runtime.rootPath, contextId);
+      const messagesPath = getDowncitySessionMessagesPath(runtime.rootPath, sessionId);
       const messagesDirPath = dirname(messagesPath);
       await fs.remove(messagesDirPath);
       // 关键点（中文）：清理消息文件后，同步清掉内存中的 agent，避免旧上下文继续运行。
-      runtime.sessionManager.clearAgent(contextId);
+      runtime.sessionManager.clearAgent(sessionId);
 
       return c.json({
         success: true,
-        sessionId: contextId,
+        sessionId,
         cleared: true,
       });
     } catch (error) {
@@ -180,17 +180,17 @@ export function registerDashboardContextRoutes(
   app.delete("/api/dashboard/sessions/:sessionId/chat-history", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!contextId) {
+      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+      if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
-      const historyPath = getDowncityChatHistoryPath(runtime.rootPath, contextId);
+      const historyPath = getDowncityChatHistoryPath(runtime.rootPath, sessionId);
       await fs.remove(historyPath);
 
       return c.json({
         success: true,
-        sessionId: contextId,
+        sessionId,
         cleared: true,
       });
     } catch (error) {
@@ -202,19 +202,19 @@ export function registerDashboardContextRoutes(
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"), 100);
-      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
-      if (!contextId) {
+      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+      if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
       const archiveDirPath = getDowncitySessionMessagesArchiveDirPath(
         runtime.rootPath,
-        contextId,
+        sessionId,
       );
       if (!(await fs.pathExists(archiveDirPath))) {
         return c.json({
           success: true,
-          sessionId: contextId,
+          sessionId,
           archives: [],
         });
       }
@@ -233,7 +233,7 @@ export function registerDashboardContextRoutes(
 
         const archivePath = getDowncitySessionMessagesArchivePath(
           runtime.rootPath,
-          contextId,
+          sessionId,
           archiveId,
         );
         const payload = (await fs.readJson(archivePath).catch(() => null)) as
@@ -273,7 +273,7 @@ export function registerDashboardContextRoutes(
 
       return c.json({
         success: true,
-        sessionId: contextId,
+        sessionId,
         archives: archives.slice(0, limit),
       });
     } catch (error) {
@@ -284,9 +284,9 @@ export function registerDashboardContextRoutes(
   app.get("/api/dashboard/sessions/:sessionId/archives/:archiveId", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       const archiveId = decodeMaybe(String(c.req.param("archiveId") || "").trim());
-      if (!contextId) {
+      if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       if (!archiveId) {
@@ -295,7 +295,7 @@ export function registerDashboardContextRoutes(
 
       const archivePath = getDowncitySessionMessagesArchivePath(
         runtime.rootPath,
-        contextId,
+        sessionId,
         archiveId,
       );
       if (!(await fs.pathExists(archivePath))) {
@@ -325,7 +325,7 @@ export function registerDashboardContextRoutes(
 
       return c.json({
         success: true,
-        sessionId: contextId,
+        sessionId,
         archiveId,
         ...(typeof archivedAt === "number" ? { archivedAt } : {}),
         total: messages.length,
@@ -340,12 +340,12 @@ export function registerDashboardContextRoutes(
   app.get("/api/dashboard/system-prompt", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId =
+      const sessionId =
         decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
-        CONSOLEUI_CONTEXT_ID;
+        CONSOLEUI_SESSION_ID;
       const systemMessages = await resolveAgentSystemMessages({
         projectRoot: runtime.rootPath,
-        contextId,
+        contextId: sessionId,
         requestId: `ui-system-preview-${Date.now()}`,
         profile: "chat",
         staticSystemPrompts: runtime.systems,
@@ -353,7 +353,7 @@ export function registerDashboardContextRoutes(
       });
       return c.json({
         success: true,
-        sessionId: contextId,
+        sessionId,
         ...toSystemPromptPayload(systemMessages),
       });
     } catch (error) {
@@ -364,10 +364,10 @@ export function registerDashboardContextRoutes(
   app.post("/api/dashboard/sessions/:sessionId/execute", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+      const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       const body = (await c.req.json().catch(() => ({}))) as Partial<DashboardSessionExecuteRequestBody>;
       const instructions = String(body.instructions || "").trim();
-      if (!contextId) {
+      if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       if (!instructions) {
@@ -377,13 +377,13 @@ export function registerDashboardContextRoutes(
       const result = await executeBySessionId({
         runtime,
         serviceRuntime: params.getServiceRuntimeState(),
-        sessionId: contextId,
+        sessionId,
         instructions,
         attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
       });
       return c.json({
         success: true,
-        sessionId: contextId,
+        sessionId,
         result,
       });
     } catch (error) {

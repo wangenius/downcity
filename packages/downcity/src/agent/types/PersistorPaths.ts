@@ -9,7 +9,7 @@ export type PersistorPathOverrides = {
   /**
    * Session 根目录（通常是 `.downcity/session/<encodedSessionId>`）。
    */
-  contextDirPath?: string;
+  sessionDirPath?: string;
 
   /**
    * 消息目录（通常是 `.../messages`）。

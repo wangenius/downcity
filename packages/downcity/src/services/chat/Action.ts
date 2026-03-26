@@ -2,7 +2,7 @@
  * Chat command services.
  *
  * 关键点（中文）
- * - chat 语义（chatKey 与 sessionId/contextId 映射）统一收口在本模块
+ * - chat 语义（chatKey 与 sessionId 映射）统一收口在本模块
  * - 通过 RequestContext（ALS）读取当前请求上下文
  */
 
@@ -67,8 +67,8 @@ export function resolveChatContextSnapshot(input?: {
     typeof requestCtx?.sessionId === "string" && requestCtx.sessionId.trim()
       ? requestCtx.sessionId.trim()
       : undefined;
-  const envContextId =
-    readEnvString("DC_SESSION_ID") || readEnvString("DC_CTX_CONTEXT_ID");
+  const envSessionId =
+    readEnvString("DC_SESSION_ID") || readEnvString("DC_CTX_SESSION_ID");
   const envChatKey = readEnvString("DC_CTX_CHAT_KEY");
   const channel = readEnvString("DC_CTX_CHANNEL") || undefined;
   const chatId =
@@ -88,19 +88,19 @@ export function resolveChatContextSnapshot(input?: {
       ? requestCtx.requestId.trim()
       : readEnvString("DC_CTX_REQUEST_ID")) || undefined;
 
-  const contextId =
+  const sessionId =
     explicitSessionId ||
     requestSessionId ||
-    envContextId ||
+    envSessionId ||
     explicitChatKey ||
     envChatKey;
   const chatKey =
     explicitChatKey ||
-    mapContextIdToChatKey(contextId) ||
+    mapSessionIdToChatKey(sessionId) ||
     envChatKey;
 
   const snapshot: ChatContextSnapshot = {
-    ...(contextId ? { sessionId: contextId } : {}),
+    ...(sessionId ? { sessionId } : {}),
     ...(chatKey ? { chatKey } : {}),
     channel,
     chatId,
@@ -115,14 +115,14 @@ export function resolveChatContextSnapshot(input?: {
 }
 
 /**
- * 将 contextId 映射为可发送的 chatKey。
+ * 将 sessionId 映射为可发送的 chatKey。
  *
  * 关键点（中文）
- * - 当前实现下：chat service 内部把 contextId 视作可发送 chatKey。
- * - 不再依赖字符串规则推导（contextId 可为随机值）。
+ * - 当前实现下：chat service 内部把 sessionId 视作可发送 chatKey。
+ * - 不再依赖字符串规则推导（sessionId 可为随机值）。
  */
-export function mapContextIdToChatKey(contextId?: string): string | undefined {
-  const key = String(contextId || "").trim();
+export function mapSessionIdToChatKey(sessionId?: string): string | undefined {
+  const key = String(sessionId || "").trim();
   if (!key) return undefined;
   return key;
 }
@@ -401,10 +401,10 @@ export async function sendChatActionByChatKey(params: {
 }
 
 /**
- * 按 contextId 发送文本。
+ * 按 sessionId 发送文本。
  *
  * 关键点（中文）
- * - contextId -> chatKey 映射关系只在 chat service 内部维护。
+ * - sessionId -> chatKey 映射关系只在 chat service 内部维护。
  */
 export async function sendChatTextByContextId(params: {
   context: ServiceRuntime;
@@ -415,8 +415,8 @@ export async function sendChatTextByContextId(params: {
   replyToMessage?: boolean;
   messageId?: string;
 }): Promise<{ success: boolean; sessionId: string; error?: string }> {
-  const contextId = String(params.sessionId || "").trim();
-  if (!contextId) {
+  const sessionId = String(params.sessionId || "").trim();
+  if (!sessionId) {
     return {
       success: false,
       sessionId: "",
@@ -426,7 +426,7 @@ export async function sendChatTextByContextId(params: {
 
   const result = await sendChatTextByChatKey({
     context: params.context,
-    chatKey: contextId,
+    chatKey: sessionId,
     text: params.text,
     delayMs: params.delayMs,
     sendAtMs: params.sendAtMs,
@@ -437,17 +437,17 @@ export async function sendChatTextByContextId(params: {
   });
   return {
     success: Boolean(result.success),
-    sessionId: contextId,
+    sessionId,
     ...(result.success ? {} : { error: result.error || "chat send failed" }),
   };
 }
 
 /**
- * 按 chatKey/contextId 彻底删除 chat 会话。
+ * 按 chatKey/sessionId 彻底删除 chat 会话。
  *
  * 关键点（中文）
- * - chatKey 与 contextId 在 chat service 内部等价使用。
- * - 删除包含：路由映射 + chat 审计目录 + context 目录 + 运行态清理。
+ * - chatKey 与 sessionId 在 chat service 内部等价使用。
+ * - 删除包含：路由映射 + chat 审计目录 + session 目录 + 运行态清理。
  */
 export async function deleteChatByChatKey(params: {
   context: ServiceRuntime;
@@ -459,18 +459,18 @@ export async function deleteChatByChatKey(params: {
     chatKey: params.chatKey,
     sessionId: params.sessionId,
   });
-  const contextId = String(chatKey || "").trim();
-  if (!contextId) {
+  const sessionId = String(chatKey || "").trim();
+  if (!sessionId) {
     return {
       success: false,
       error:
-        "Missing chatKey/sessionId. Provide --chat-key or --session-id, or ensure DC_CTX_CHAT_KEY/DC_CTX_CONTEXT_ID is injected.",
+        "Missing chatKey/sessionId. Provide --chat-key or --session-id, or ensure DC_CTX_CHAT_KEY/DC_CTX_SESSION_ID is injected.",
     };
   }
 
   const result = await deleteChatContextById({
     context: params.context,
-    sessionId: contextId,
+    sessionId,
   });
   return {
     success: result.success,

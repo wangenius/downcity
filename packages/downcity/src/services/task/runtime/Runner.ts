@@ -262,16 +262,16 @@ function createTaskAgentRuntime(params: {
     getRuntime: () => runtime,
     profile: "task",
   });
-  const persistorsByContextId = new Map<string, FilePersistor>();
-  const agentsByContextId = new Map<string, Agent>();
+  const persistorsBySessionId = new Map<string, FilePersistor>();
+  const agentsBySessionId = new Map<string, Agent>();
 
   const resolveTaskPersistor = (sessionId: string): FilePersistor => {
-    const existing = persistorsByContextId.get(sessionId);
+    const existing = persistorsBySessionId.get(sessionId);
     if (existing) return existing;
 
     const key = String(sessionId || "").trim();
     if (!key) {
-      throw new Error("TaskAgentRuntime requires a non-empty contextId");
+      throw new Error("TaskAgentRuntime requires a non-empty sessionId");
     }
     const runMessagesDirPath =
       key === runContextId
@@ -286,7 +286,7 @@ function createTaskAgentRuntime(params: {
       ...(runMessagesDirPath
         ? {
             paths: {
-              contextDirPath: runMessagesDirPath,
+              sessionDirPath: runMessagesDirPath,
               messagesDirPath: runMessagesDirPath,
               messagesFilePath: path.join(runMessagesDirPath, "messages.jsonl"),
               metaFilePath: path.join(runMessagesDirPath, "meta.json"),
@@ -295,7 +295,7 @@ function createTaskAgentRuntime(params: {
           }
         : {}),
     });
-    persistorsByContextId.set(key, created);
+    persistorsBySessionId.set(key, created);
     return created;
   };
 
@@ -306,9 +306,9 @@ function createTaskAgentRuntime(params: {
     getAgent(sessionId: string): Agent {
       const key = String(sessionId || "").trim();
       if (!key) {
-        throw new Error("TaskAgentRuntime.getAgent requires a non-empty contextId");
+        throw new Error("TaskAgentRuntime.getAgent requires a non-empty sessionId");
       }
-      const existing = agentsByContextId.get(key);
+      const existing = agentsBySessionId.get(key);
       if (existing) return existing;
 
       const persistor = resolveTaskPersistor(key);
@@ -324,7 +324,7 @@ function createTaskAgentRuntime(params: {
         orchestrator,
         prompter: system,
       });
-      agentsByContextId.set(key, created);
+      agentsBySessionId.set(key, created);
       return created;
     },
   };

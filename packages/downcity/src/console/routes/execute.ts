@@ -74,15 +74,15 @@ executeRouter.post("/api/execute", async (c) => {
   }
 
   try {
-    const contextId = `api:chat:${chatId}`;
+    const sessionId = `api:chat:${chatId}`;
     const runtime = getRuntimeState();
     await runtime.sessionManager.appendUserMessage({
-      contextId,
+      sessionId,
       text: String(instructions),
     });
 
     const result = await runtime.sessionManager.run({
-      contextId,
+      sessionId,
       query: String(instructions),
     });
 
@@ -90,7 +90,7 @@ executeRouter.post("/api/execute", async (c) => {
     try {
       if (!hasPersistedAssistantSteps(result.assistantMessage)) {
         await runtime.sessionManager.appendAssistantMessage({
-          contextId,
+          sessionId,
           message: result.assistantMessage,
           fallbackText: userVisible,
           extra: {
@@ -101,11 +101,11 @@ executeRouter.post("/api/execute", async (c) => {
         });
       }
       const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-        contextId,
+        sessionId,
       );
       for (const message of deferredInjectedMessages) {
         await runtime.sessionManager.appendUserMessage({
-          contextId,
+          sessionId,
           message,
         });
       }

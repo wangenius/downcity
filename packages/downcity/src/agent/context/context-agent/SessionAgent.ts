@@ -2,8 +2,7 @@
  * SessionAgent：Session 场景运行装配器。
  *
  * 关键点（中文）
- * - 负责在当前 `contextId` 作用域内装配 Agent 所需核心组件。
- * - 这里的 `contextId` 仍是现有内部标识，但语义上表示 Session。
+ * - 负责在当前 `sessionId` 作用域内装配 Agent 所需核心组件。
  * - 具体 run loop 仍由 `agent/Agent` 执行。
  */
 
@@ -28,12 +27,12 @@ type SessionAgentOptions = {
   logger: Logger;
 
   /**
-   * 当前 context 对应的 persistor。
+   * 当前 session 对应的 persistor。
    */
   persistor: PersistorComponent;
 
   /**
-   * 当前 context 对应的 compactor。
+   * 当前 session 对应的 compactor。
    */
   compactor: CompactorComponent;
 
@@ -62,7 +61,7 @@ export class SessionAgent {
       compactor: options.compactor,
       prompter: options.system,
       orchestrator: new RuntimeOrchestrator({
-        sessionId: options.persistor.contextId,
+        sessionId: options.persistor.sessionId,
         getTools: options.getTools,
       }),
     });

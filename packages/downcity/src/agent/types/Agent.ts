@@ -9,7 +9,7 @@
 
 import type { Tool } from "ai";
 import type { SessionMessageV1 } from "./SessionMessage.js";
-import type { ContextSystemMessage } from "./ContextSystemMessage.js";
+import type { SessionSystemMessage } from "./SessionSystemMessage.js";
 
 /**
  * Assistant step 回调入参。
@@ -65,7 +65,7 @@ export interface AgentExecuteInput {
   /**
    * 当前轮 system messages。
    */
-  system: ContextSystemMessage[];
+  system: SessionSystemMessage[];
 
   /**
    * 当前轮 context 语义消息历史。

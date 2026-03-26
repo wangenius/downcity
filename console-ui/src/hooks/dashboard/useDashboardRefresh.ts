@@ -9,7 +9,7 @@
 import { useCallback } from "react";
 import type { MutableRefObject } from "react";
 import { dashboardApiRoutes } from "../../lib/dashboard-api";
-import { CONSOLEUI_CONTEXT_ID, getErrorMessage, isAgentUnavailableError } from "./shared";
+import { CONSOLEUI_SESSION_ID, getErrorMessage, isAgentUnavailableError } from "./shared";
 import type {
   UiAgentOption,
   UiAgentsResponse,
@@ -45,10 +45,10 @@ function resolveNextSessionId(params: {
   currentSessionId: string;
 }): string {
   const byCurrent =
-    params.sessions.find((item) => item.contextId === params.currentSessionId)?.contextId || "";
+    params.sessions.find((item) => item.sessionId === params.currentSessionId)?.sessionId || "";
   const consoleUi =
-    params.sessions.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
-  const fallback = params.sessions[0]?.contextId || "";
+    params.sessions.find((item) => item.sessionId === CONSOLEUI_SESSION_ID)?.sessionId || "";
+  const fallback = params.sessions[0]?.sessionId || "";
   return byCurrent || consoleUi || fallback;
 }
 
@@ -92,14 +92,14 @@ export function useDashboardRefresh(params: {
   refreshTasks: (agentId: string) => Promise<void>;
   refreshLogs: (agentId: string) => Promise<void>;
   refreshLocalChat: (agentId: string) => Promise<void>;
-  refreshChannelHistory: (agentId: string, contextId: string) => Promise<void>;
-  refreshSessionMessages: (agentId: string, contextId: string) => Promise<void>;
-  refreshSessionArchives: (agentId: string, contextId: string) => Promise<UiSessionArchiveSummary[]>;
-  refreshPrompt: (agentId: string, contextId?: string) => Promise<void>;
+  refreshChannelHistory: (agentId: string, sessionId: string) => Promise<void>;
+  refreshSessionMessages: (agentId: string, sessionId: string) => Promise<void>;
+  refreshSessionArchives: (agentId: string, sessionId: string) => Promise<UiSessionArchiveSummary[]>;
+  refreshPrompt: (agentId: string, sessionId?: string) => Promise<void>;
   showToast: (message: string, type?: DashboardToastType) => void;
 }): {
   refreshDashboard: (preferredAgentId?: string) => Promise<void>;
-  handleSessionChange: (contextId: string) => Promise<void>;
+  handleSessionChange: (sessionId: string) => Promise<void>;
 } {
   const refreshDashboard = useCallback(
     async (preferredAgentId?: string) => {
@@ -163,18 +163,18 @@ export function useDashboardRefresh(params: {
           params.refreshLocalChat(nextAgentId),
         ]);
 
-        const nextContextId = resolveNextSessionId({
+        const nextSessionId = resolveNextSessionId({
           sessions: sessionList,
           currentSessionId: String(params.selectedSessionIdRef.current || "").trim(),
         });
-        params.setSelectedSessionId(nextContextId);
+        params.setSelectedSessionId(nextSessionId);
 
-        if (nextContextId) {
+        if (nextSessionId) {
           await Promise.all([
-            params.refreshChannelHistory(nextAgentId, nextContextId),
-            params.refreshSessionMessages(nextAgentId, nextContextId),
-            params.refreshSessionArchives(nextAgentId, nextContextId),
-            params.refreshPrompt(nextAgentId, nextContextId),
+            params.refreshChannelHistory(nextAgentId, nextSessionId),
+            params.refreshSessionMessages(nextAgentId, nextSessionId),
+            params.refreshSessionArchives(nextAgentId, nextSessionId),
+            params.refreshPrompt(nextAgentId, nextSessionId),
           ]);
         } else {
           clearSessionView({
@@ -237,15 +237,15 @@ export function useDashboardRefresh(params: {
   );
 
   const handleSessionChange = useCallback(
-    async (contextId: string) => {
-      const nextContextId = String(contextId || "").trim();
-      params.setSelectedSessionId(nextContextId);
-      if (!params.selectedAgentId || !nextContextId) return;
+    async (sessionId: string) => {
+      const nextSessionId = String(sessionId || "").trim();
+      params.setSelectedSessionId(nextSessionId);
+      if (!params.selectedAgentId || !nextSessionId) return;
       await Promise.all([
-        params.refreshChannelHistory(params.selectedAgentId, nextContextId),
-        params.refreshSessionMessages(params.selectedAgentId, nextContextId),
-        params.refreshSessionArchives(params.selectedAgentId, nextContextId),
-        params.refreshPrompt(params.selectedAgentId, nextContextId),
+        params.refreshChannelHistory(params.selectedAgentId, nextSessionId),
+        params.refreshSessionMessages(params.selectedAgentId, nextSessionId),
+        params.refreshSessionArchives(params.selectedAgentId, nextSessionId),
+        params.refreshPrompt(params.selectedAgentId, nextSessionId),
       ]);
     },
     [params],

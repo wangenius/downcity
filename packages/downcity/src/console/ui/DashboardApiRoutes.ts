@@ -8,7 +8,7 @@
 
 import type { DashboardRouteRegistrationParams } from "@/types/DashboardRoutes.js";
 import { registerDashboardAuthorizationRoutes } from "@/console/ui/DashboardAuthorizationRoutes.js";
-import { registerDashboardContextRoutes } from "@/console/ui/dashboard/ContextRoutes.js";
+import { registerDashboardSessionRoutes } from "@/console/ui/dashboard/SessionRoutes.js";
 import { registerDashboardModelRoutes } from "@/console/ui/dashboard/ModelRoutes.js";
 import { registerDashboardOverviewRoutes } from "@/console/ui/dashboard/OverviewRoutes.js";
 import { registerDashboardTaskRoutes } from "@/console/ui/dashboard/TaskRoutes.js";
@@ -24,7 +24,7 @@ export function registerDashboardApiRoutes(
     getServiceRuntimeState: params.getServiceRuntimeState,
   });
   registerDashboardOverviewRoutes(params);
-  registerDashboardContextRoutes(params);
+  registerDashboardSessionRoutes(params);
   registerDashboardModelRoutes(params);
   registerDashboardTaskRoutes(params);
 }

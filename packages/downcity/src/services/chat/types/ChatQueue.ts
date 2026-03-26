@@ -20,7 +20,7 @@ export type ChatQueueItem = {
   kind: ChatQueueItemKind;
   channel: "telegram" | "feishu" | "qq";
   targetId: string;
-  contextId: string;
+  sessionId: string;
   text: string;
   targetType?: string;
   threadId?: number;
@@ -28,13 +28,13 @@ export type ChatQueueItem = {
   actorId?: string;
   actorName?: string;
   /**
-   * 该消息是否已在 ingress 边界写入 context messages。
+   * 该消息是否已在 ingress 边界写入 session messages。
    *
    * 关键点（中文）
    * - 为 true 时，queue worker 不再重复补写
    * - 允许历史入口继续依赖 worker 的兜底写入逻辑
    */
-  contextPersisted?: boolean;
+  sessionPersisted?: boolean;
   extra?: JsonObject;
   control?: ChatQueueControl;
 };

@@ -23,8 +23,8 @@ import { buildChatMessageText, parseChatMessageMarkup } from "./runtime/ChatMess
 import { readChatHistory } from "./runtime/ChatHistoryStore.js";
 import { resolveChatMethod, type ChatMethod } from "./runtime/ChatMethod.js";
 import { parseChatSendOptionsFromMetadata } from "./runtime/ChatSendMetadata.js";
-import { listChannelContextRoutes } from "./runtime/ChannelContextStore.js";
-import { readChatMetaByContextId } from "./runtime/ChatMetaStore.js";
+import { listChannelSessionRoutes } from "./runtime/ChannelContextStore.js";
+import { readChatMetaBySessionId } from "./runtime/ChatMetaStore.js";
 import { createTelegramBot } from "./channels/telegram/Bot.js";
 import { createFeishuBot } from "./channels/feishu/Feishu.js";
 import { createQQBot } from "./channels/qq/QQ.js";
@@ -992,7 +992,7 @@ async function executeChatListAction(params: {
   const q = String(params.payload.q || "").trim();
   const qLower = q ? q.toLowerCase() : "";
 
-  const meta = await listChannelContextRoutes({ context: params.context });
+  const meta = await listChannelSessionRoutes({ context: params.context });
 
   const matches = (value?: string): boolean => {
     if (!qLower) return true;
@@ -1005,7 +1005,7 @@ async function executeChatListAction(params: {
     .filter((route) => {
       if (!qLower) return true;
       return (
-        matches(route.contextId) ||
+        matches(route.sessionId) ||
         matches(route.chatId) ||
         matches(route.chatTitle) ||
         matches(route.actorName) ||
@@ -1016,8 +1016,8 @@ async function executeChatListAction(params: {
 
   const total = filtered.length;
   const chats: ChatListItemV1[] = filtered.slice(0, limit).map((route) => ({
-    chatKey: route.contextId,
-    sessionId: route.contextId,
+    chatKey: route.sessionId,
+    sessionId: route.sessionId,
     channel: route.channel,
     chatId: route.chatId,
     ...(route.targetType ? { targetType: route.targetType } : {}),
@@ -1053,9 +1053,9 @@ async function executeChatInfoAction(params: {
     ...(explicitChatKey ? { chatKey: explicitChatKey } : {}),
   });
 
-  const contextId = String(explicitSessionId || snapshot.sessionId || "").trim();
-  const chatKey = String(explicitChatKey || snapshot.chatKey || contextId || "").trim();
-  if (!contextId) {
+  const sessionId = String(explicitSessionId || snapshot.sessionId || "").trim();
+  const chatKey = String(explicitChatKey || snapshot.chatKey || sessionId || "").trim();
+  if (!sessionId) {
     return {
       success: false,
       error:
@@ -1063,9 +1063,9 @@ async function executeChatInfoAction(params: {
     };
   }
 
-  const route = await readChatMetaByContextId({
+  const route = await readChatMetaBySessionId({
     context: params.context,
-    contextId,
+    sessionId,
   });
 
   const toPosixRelativePath = (absPath: string): string =>
@@ -1075,16 +1075,16 @@ async function executeChatInfoAction(params: {
     getDowncityChannelMetaPath(params.context.rootPath),
   );
   const chatDirPath = toPosixRelativePath(
-    getDowncityChatContextDirPath(params.context.rootPath, contextId),
+    getDowncityChatContextDirPath(params.context.rootPath, sessionId),
   );
   const historyPath = toPosixRelativePath(
-    getDowncityChatHistoryPath(params.context.rootPath, contextId),
+    getDowncityChatHistoryPath(params.context.rootPath, sessionId),
   );
 
   return {
     success: true,
     data: {
-      sessionId: contextId,
+      sessionId,
       chatKey,
       context: snapshot,
       route,
@@ -2168,21 +2168,21 @@ export const chatService: Service = {
         });
         const explicitSessionId = String(payload.sessionId || "").trim();
         const explicitChatKey = String(payload.chatKey || "").trim();
-        // 关键点（中文）：history 查询优先显式参数，避免被当前请求上下文的 contextId 覆盖。
-        const contextId = String(
+        // 关键点（中文）：history 查询优先显式参数，避免被当前请求上下文的 sessionId 覆盖。
+        const sessionId = String(
           explicitSessionId || explicitChatKey || snapshot.sessionId || "",
         ).trim();
-        if (!contextId) {
+        if (!sessionId) {
           return {
             success: false,
             error:
-              "Missing sessionId. Provide --session-id/--chat-key or ensure DC_CTX_CONTEXT_ID is injected.",
+              "Missing sessionId. Provide --session-id/--chat-key or ensure DC_CTX_SESSION_ID is injected.",
           };
         }
 
         const historyResult = await readChatHistory({
           context: params.context,
-          contextId,
+          sessionId,
           limit: payload.limit,
           direction: payload.direction || "all",
           beforeTs: payload.beforeTs,

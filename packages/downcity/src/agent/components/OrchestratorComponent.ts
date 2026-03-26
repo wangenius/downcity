@@ -8,7 +8,7 @@
 
 import type { ModelMessage, Tool } from "ai";
 import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
-import type { ContextSystemMessage } from "@agent/types/ContextSystemMessage.js";
+import type { SessionSystemMessage } from "@agent/types/SessionSystemMessage.js";
 import { AgentComponent } from "./AgentComponent.js";
 
 /**
@@ -43,7 +43,7 @@ export abstract class OrchestratorComponent extends AgentComponent {
       /**
        * 当前轮 system 消息。
        */
-      system: ContextSystemMessage[];
+      system: SessionSystemMessage[];
       /**
        * 将新增 user 消息转换为可追加的模型消息。
        */
@@ -52,7 +52,7 @@ export abstract class OrchestratorComponent extends AgentComponent {
       ) => Promise<ModelMessage[]>;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{
-    system: ContextSystemMessage[];
+    system: SessionSystemMessage[];
     messages?: ModelMessage[];
   }>;
 

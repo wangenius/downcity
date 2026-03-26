@@ -2,8 +2,8 @@
  * ChannelContext 类型定义。
  *
  * 关键点（中文）
- * - 描述渠道目标（platform target）与内部 contextId 的映射结构。
- * - 映射由 chat service 维护，contextId 对外保持稳定但不可推导。
+ * - 描述渠道目标（platform target）与内部 sessionId 的映射结构。
+ * - 映射由 chat service 维护，sessionId 对外保持稳定但不可推导。
  */
 
 import type { ChatDispatchChannel } from "./ChatDispatcher.js";
@@ -31,7 +31,7 @@ export type ChannelContextTarget = {
 };
 
 /**
- * `contextId -> 渠道目标` 路由条目。
+ * `sessionId -> 渠道目标` 路由条目。
  */
 export type ChannelContextRouteV1 = {
   /**
@@ -39,9 +39,9 @@ export type ChannelContextRouteV1 = {
    */
   v: 1;
   /**
-   * 内部 contextId（随机生成，不可推导）。
+   * 内部 sessionId（随机生成，不可推导）。
    */
-  contextId: string;
+  sessionId: string;
   /**
    * 渠道类型（telegram/feishu/qq）。
    */
@@ -97,14 +97,14 @@ export type ChannelContextMetaFileV1 = {
    */
   updatedAt: number;
   /**
-   * 目标键 -> contextId 映射索引。
+   * 目标键 -> sessionId 映射索引。
    *
    * 说明（中文）
    * - 目标键由 `channel/chatId/targetType/threadId` 归一化后拼接。
    */
-  contextIdByTargetKey: Record<string, string>;
+  sessionIdByTargetKey: Record<string, string>;
   /**
-   * contextId -> 路由信息映射索引。
+   * sessionId -> 路由信息映射索引。
    */
-  routesByContextId: Record<string, ChannelContextRouteV1>;
+  routesBySessionId: Record<string, ChannelContextRouteV1>;
 };

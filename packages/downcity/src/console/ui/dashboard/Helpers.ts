@@ -9,11 +9,11 @@
 export { toLimit, toOptionalString, decodeMaybe } from "./CommonHelpers.js";
 export { buildExecuteInputText } from "./ExecuteInput.js";
 export {
-  loadContextMessagesFromFile,
+  loadSessionMessagesFromFile,
   resolveUiMessagePreview,
   toUiMessageTimeline,
 } from "./MessageTimeline.js";
-export { listContextSummaries } from "./ContextStore.js";
+export { listSessionSummaries } from "./SessionStore.js";
 export {
   TASK_RUN_DIR_REGEX,
   listTaskRuns,

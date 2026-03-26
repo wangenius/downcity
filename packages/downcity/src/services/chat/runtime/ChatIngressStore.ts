@@ -2,7 +2,7 @@
  * ChatIngressStore：统一处理 chat 入站消息的持久化。
  *
  * 关键点（中文）
- * - `exec` 入站既要写 `chat history`，也要写 `context messages`
+ * - `exec` 入站既要写 `chat history`，也要写 `session messages`
  * - 把持久化职责固定在 ingress 边界，避免遗漏到 queue worker
  * - 后续 extension / dashboard / 其他外部入口都应复用这里
  */
@@ -27,12 +27,12 @@ export function buildExecIngressExtra(extra?: JsonObject): JsonObject {
 }
 
 /**
- * 仅写入 context messages。
+ * 仅写入 session messages。
  *
  * 说明（中文）
  * - 适用于已经有其他审计链路，或只需要补齐模型上下文的场景
  */
-export async function appendExecContextMessage(params: {
+export async function appendExecSessionMessage(params: {
   context: ServiceRuntime;
   sessionId: string;
   text: string;
@@ -50,7 +50,7 @@ export async function appendExecContextMessage(params: {
  *
  * 流程（中文）
  * 1. 先写 `chat history` 审计流
- * 2. 再写 `context messages`，保证模型上下文可见
+ * 2. 再写 `session messages`，保证模型上下文可见
  */
 export async function appendExecIngress(params: {
   context: ServiceRuntime;
@@ -68,7 +68,7 @@ export async function appendExecIngress(params: {
   const execExtra = buildExecIngressExtra(params.extra);
   await appendInboundChatHistory({
     context: params.context,
-    contextId: params.sessionId,
+    sessionId: params.sessionId,
     channel: params.channel,
     chatId: params.chatId,
     ingressKind: "exec",
@@ -80,7 +80,7 @@ export async function appendExecIngress(params: {
     ...(params.actorName ? { actorName: params.actorName } : {}),
     extra: execExtra,
   });
-  await appendExecContextMessage({
+  await appendExecSessionMessage({
     context: params.context,
     sessionId: params.sessionId,
     text: params.text,

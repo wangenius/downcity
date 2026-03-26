@@ -19,9 +19,9 @@ export type DashboardRouteState = {
    */
   agentSegment?: string
   /**
-   * 当视图为 context workspace 时的 contextId。
+   * 当视图为 context workspace 时的 sessionId。
    */
-  contextId?: string
+  sessionId?: string
   /**
    * 当视图为 context 页面时的 channel。
    */
@@ -65,7 +65,7 @@ export function toAgentRouteSegment(raw: string): string {
 export function toDashboardPath(
   view: DashboardView,
   options?: {
-    contextId?: string
+    sessionId?: string
     taskTitle?: string
     agentSegment?: string
     channel?: string
@@ -100,12 +100,12 @@ export function toDashboardPath(
     return `/${encodeURIComponent(agentSegment)}/channel/${encodeURIComponent(channel)}`
   }
   if (view === "contextWorkspace") {
-    const normalizedContextId = String(options?.contextId || "").trim()
+    const normalizedSessionId = String(options?.sessionId || "").trim()
     const channel = toChannelRouteSegment(String(options?.channel || ""))
-    if (!normalizedContextId) {
+    if (!normalizedSessionId) {
       return `/${encodeURIComponent(agentSegment)}/channel/${encodeURIComponent(channel)}`
     }
-    return `/${encodeURIComponent(agentSegment)}/channel/${encodeURIComponent(channel)}/chat/${encodeURIComponent(normalizedContextId)}`
+    return `/${encodeURIComponent(agentSegment)}/channel/${encodeURIComponent(channel)}/chat/${encodeURIComponent(normalizedSessionId)}`
   }
   return "/global/overview"
 }
@@ -153,17 +153,17 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
         const channel = parts.length >= 3 ? decodeURIComponent(String(parts[2] || "").trim()) : ""
         const third = String(parts[3] || "").trim().toLowerCase()
         if (third === "chat") {
-          const contextId = parts.length >= 5 ? decodeURIComponent(parts.slice(4).join("/")) : ""
-          if (contextId) {
-            return { view: "contextWorkspace", agentSegment, channel, contextId }
+          const sessionId = parts.length >= 5 ? decodeURIComponent(parts.slice(4).join("/")) : ""
+          if (sessionId) {
+            return { view: "contextWorkspace", agentSegment, channel, sessionId }
           }
         }
         return { view: "contextOverview", agentSegment, channel }
       }
       if (second === "chat") {
-        const contextId = parts.length >= 3 ? decodeURIComponent(parts.slice(2).join("/")) : ""
-        if (contextId) {
-          return { view: "contextWorkspace", agentSegment, contextId }
+        const sessionId = parts.length >= 3 ? decodeURIComponent(parts.slice(2).join("/")) : ""
+        if (sessionId) {
+          return { view: "contextWorkspace", agentSegment, sessionId }
         }
         return { view: "contextOverview", agentSegment }
       }

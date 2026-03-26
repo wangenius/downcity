@@ -15,13 +15,13 @@ import type {
   ChatDispatchChannel,
 } from "@services/chat/types/ChatDispatcher.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
-import { readChatMetaByContextId } from "./ChatMetaStore.js";
+import { readChatMetaBySessionId } from "./ChatMetaStore.js";
 
 /**
  * 解析实际分发目标。
  *
  * 规则（中文）
- * - 仅使用 services/chat 维护的 context 路由映射。
+ * - 仅使用 services/chat 维护的 session 路由映射。
  * - 不再支持 legacy chatKey 字符串解析回退。
  */
 export async function resolveDispatchTargetByChatKey(params: {
@@ -34,9 +34,9 @@ export async function resolveDispatchTargetByChatKey(params: {
   messageThreadId?: number;
   messageId?: string;
 } | null> {
-  const storedMeta = await readChatMetaByContextId({
+  const storedMeta = await readChatMetaBySessionId({
     context: params.context,
-    contextId: params.chatKey,
+    sessionId: params.chatKey,
   });
   const channel = storedMeta?.channel;
   const chatId = String(storedMeta?.chatId || "").trim();
@@ -69,7 +69,7 @@ export async function resolveDispatchTargetByChatKey(params: {
  * 按 chatKey 发送文本到对应平台。
  *
  * 流程（中文）
- * 1) 通过 contextId 读取映射并定位 channel dispatcher
+ * 1) 通过 sessionId 读取映射并定位 channel dispatcher
  * 2) 从 chat meta 回填 chatType/threadId/messageId
  * 3) 合并参数后调用 dispatcher 发送
  */
@@ -90,7 +90,7 @@ export async function sendTextByChatKey(params: {
   if (!target) {
     return {
       success: false,
-      error: `Unsupported contextId for dispatch: ${chatKey}`,
+      error: `Unsupported sessionId for dispatch: ${chatKey}`,
     };
   }
 
@@ -135,7 +135,7 @@ export async function sendTextByChatKey(params: {
  * 按 chatKey 发送平台动作（typing/react）。
  *
  * 流程（中文）
- * 1) 通过 contextId 读取映射并定位 channel dispatcher
+ * 1) 通过 sessionId 读取映射并定位 channel dispatcher
  * 2) 合并目标元信息与显式参数（显式 messageId 优先）
  * 3) 调用 dispatcher.sendAction
  */
@@ -156,7 +156,7 @@ export async function sendActionByChatKey(params: {
   if (!target) {
     return {
       success: false,
-      error: `Unsupported contextId for dispatch: ${chatKey}`,
+      error: `Unsupported sessionId for dispatch: ${chatKey}`,
     };
   }
 

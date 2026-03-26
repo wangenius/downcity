@@ -293,9 +293,9 @@ export function toUiMessageTimeline(
 }
 
 /**
- * 读取上下文消息文件。
+ * 读取 session 消息文件。
  */
-export async function loadContextMessagesFromFile(
+export async function loadSessionMessagesFromFile(
   filePath: string,
 ): Promise<SessionMessageV1[]> {
   if (!(await fs.pathExists(filePath))) return [];

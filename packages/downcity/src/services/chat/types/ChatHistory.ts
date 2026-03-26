@@ -2,7 +2,7 @@
  * ChatHistory 类型定义。
  *
  * 关键点（中文）
- * - chat history 是聊天平台事件流（审计向），与 context message history 分离。
+ * - chat history 是聊天平台事件流（审计向），与 session message history 分离。
  * - 支持入站（inbound）与出站（outbound）事件，便于完整回放对话链路。
  */
 
@@ -16,7 +16,7 @@ type ChatHistoryBaseEventV1 = {
   v: 1;
   id: string;
   ts: number;
-  contextId: string;
+  sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
   text: string;

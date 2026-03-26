@@ -12,7 +12,7 @@ export interface PromptSectionProps {
    */
   prompt: UiPromptResponse | null;
   /**
-   * local ui context id。
+   * local ui session id。
    */
   localUiSessionId: string;
   /**
@@ -30,7 +30,7 @@ export function PromptSection(props: PromptSectionProps) {
       title="Prompt"
       description={
         prompt && sections.length > 0
-          ? `context: ${prompt.contextId || localUiSessionId} · messages ${prompt.totalMessages || 0} · chars ${prompt.totalChars || 0}`
+          ? `session: ${prompt.sessionId || localUiSessionId} · messages ${prompt.totalMessages || 0} · chars ${prompt.totalChars || 0}`
           : "暂无 prompt 数据"
       }
       actions={

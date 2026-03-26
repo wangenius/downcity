@@ -587,9 +587,9 @@ export class Agent {
    * - compactor 先尝试压缩，再由 persistor 产出消息基线。
    */
   private async prepareExecuteInput(query: string): Promise<AgentExecuteInput> {
-    // 基础安全检查：persistor 必须携带 contextId。
-    if (!String(this.persistor.contextId || "").trim()) {
-      throw new Error("Agent.run requires persistor.contextId");
+    // 基础安全检查：persistor 必须携带 sessionId。
+    if (!String(this.persistor.sessionId || "").trim()) {
+      throw new Error("Agent.run requires persistor.sessionId");
     }
 
     // 让 orchestrator 组装运行上下文（例如 tools 与 request 作用域）。
@@ -649,7 +649,7 @@ export class Agent {
   ): Promise<AgentResult> {
     // 记录开始时间，用于 finish 日志。
     const startTime = Date.now();
-    const contextId = String(this.persistor.contextId || "").trim();
+    const sessionId = String(this.persistor.sessionId || "").trim();
 
     // 防御性兜底：确保 system 至少是数组。
     const system = Array.isArray(input.system) ? input.system : [];
@@ -658,13 +658,13 @@ export class Agent {
     const tools = input.tools;
 
     try {
-      // 核心步骤 1（中文）：把 context messages 转成模型输入消息。
-      let runtimeContextMessages = Array.isArray(input.messages)
+      // 核心步骤 1（中文）：把 session messages 转成模型输入消息。
+      let runtimeSessionMessages = Array.isArray(input.messages)
         ? [...input.messages]
         : [];
 
       // 根据当前基线消息生成模型消息。
-      let baseModelMessages = await toModelMessages(runtimeContextMessages, tools);
+      let baseModelMessages = await toModelMessages(runtimeSessionMessages, tools);
 
       // 核心步骤 2（中文）：定义“step 间新增 user 消息并入器”。
       const appendMergedUserMessages = async (
@@ -677,7 +677,7 @@ export class Agent {
         if (mergedMessages.length === 0) return [];
 
         // 子步骤 B（中文）：更新 context 基线，保证后续全量重算时可见这些新增消息。
-        runtimeContextMessages = [...runtimeContextMessages, ...mergedMessages];
+        runtimeSessionMessages = [...runtimeSessionMessages, ...mergedMessages];
 
         // 先尝试只转换新增消息，减少重复计算。
         const mergedModelMessages = await toModelMessages(
@@ -692,7 +692,7 @@ export class Agent {
         }
 
         // 子步骤 C（中文）：增量不可用时回退为全量重算，保证一致性。
-        baseModelMessages = await toModelMessages(runtimeContextMessages, tools);
+        baseModelMessages = await toModelMessages(runtimeSessionMessages, tools);
 
         // 返回空，表示本次 prepareStep 不注入增量片段。
         return [];
@@ -714,7 +714,7 @@ export class Agent {
             ? summary.toolResultCount
             : 0;
         await this.logger.log("info", "[agent] step.finish", {
-          contextId,
+          contextId: sessionId,
           stepIndex: stepCount,
           ...summary,
         });
@@ -777,7 +777,7 @@ export class Agent {
           textOnlyContinuationCount < MAX_TEXT_ONLY_CONTINUATIONS;
 
         await this.logger.log("info", "[agent] loop.decision", {
-          contextId,
+          contextId: sessionId,
           stepIndex: stepCount,
           continueForToolCalls: shouldContinueForToolCalls,
           continueForTextOnly: shouldContinueForTextOnly,
@@ -795,7 +795,7 @@ export class Agent {
         if (shouldRecoverIncompleteResponse && incompleteResponse) {
           incompleteResponseRecoveryCount += 1;
           await this.logger.log("warn", "[agent] incomplete_response.recover", {
-            contextId,
+            contextId: sessionId,
             stepIndex: stepCount,
             recoveryCount: incompleteResponseRecoveryCount,
             reason: incompleteResponse.reason,
@@ -806,7 +806,7 @@ export class Agent {
               incompleteResponseRecoveryCount,
             ),
             metadata: {
-              sessionId: contextId,
+              sessionId,
               extra: {
                 internal: "agent_incomplete_response_recover",
                 reason: incompleteResponse.reason,
@@ -814,7 +814,7 @@ export class Agent {
               },
             },
           });
-          runtimeContextMessages = [...runtimeContextMessages, recoveryMessage];
+          runtimeSessionMessages = [...runtimeSessionMessages, recoveryMessage];
           const recoveryModelMessages = await toModelMessages(
             [recoveryMessage],
             tools,
@@ -823,7 +823,7 @@ export class Agent {
             baseModelMessages = [...baseModelMessages, ...recoveryModelMessages];
           } else {
             baseModelMessages = await toModelMessages(
-              runtimeContextMessages,
+              runtimeSessionMessages,
               tools,
             );
           }
@@ -832,7 +832,7 @@ export class Agent {
 
         if (incompleteResponse) {
           await this.logger.log("error", "[agent] incomplete_response", {
-            contextId,
+            contextId: sessionId,
             stepIndex: stepCount,
             reason: incompleteResponse.reason,
             recoveryCount: incompleteResponseRecoveryCount,
@@ -856,7 +856,7 @@ export class Agent {
         );
 
         // 关键点（中文）：把本 step 的 assistant UI 消息并入运行时上下文，保证后续全量重算不丢历史。
-        runtimeContextMessages = [...runtimeContextMessages, stepAssistantUiMessage];
+        runtimeSessionMessages = [...runtimeSessionMessages, stepAssistantUiMessage];
 
         if (shouldContinueForToolCalls) {
           textOnlyContinuationCount = 0;
@@ -870,7 +870,7 @@ export class Agent {
           const continuationMessage = this.persistor.userText({
             text: buildTextOnlyContinuationNudge(textOnlyContinuationCount),
             metadata: {
-              sessionId: contextId,
+              sessionId,
               extra: {
                 internal: "agent_loop_auto_continue",
                 reason: textOnlyContinuationReason,
@@ -878,7 +878,7 @@ export class Agent {
               },
             },
           });
-          runtimeContextMessages = [...runtimeContextMessages, continuationMessage];
+          runtimeSessionMessages = [...runtimeSessionMessages, continuationMessage];
           const continuationModelMessages = await toModelMessages(
             [continuationMessage],
             tools,
@@ -890,7 +890,7 @@ export class Agent {
             ];
           } else {
             baseModelMessages = await toModelMessages(
-              runtimeContextMessages,
+              runtimeSessionMessages,
               tools,
             );
           }
@@ -902,7 +902,7 @@ export class Agent {
 
       if (stepCount >= MAX_TOOL_LOOP_STEPS) {
         await this.logger.log("warn", "[agent] loop.max_steps_reached", {
-          contextId,
+          contextId: sessionId,
           stepCount,
           totalToolCallCount,
           totalToolResultCount,
@@ -915,7 +915,7 @@ export class Agent {
         this.orchestrator.buildFallbackAssistantMessage("Execution completed");
 
       await this.logger.log("info", "[agent] final.message", {
-        contextId,
+        contextId: sessionId,
         ...summarizeUiMessageForDebug(finalMessage),
       });
 
@@ -927,7 +927,7 @@ export class Agent {
 
       // 写入 finish 日志。
       await this.logger.log("info", "[agent] finish", {
-        contextId,
+        contextId: sessionId,
         duration,
         stepCount,
         totalToolCallCount,
@@ -1002,7 +1002,7 @@ export class Agent {
     }
 
     await this.logger.log("info", "[agent] ui.finish", {
-      sessionId: String(this.persistor.contextId || "").trim(),
+      sessionId: String(this.persistor.sessionId || "").trim(),
       ...(uiFinishSummary || {
         responseMessageMissing: true,
       }),
@@ -1021,7 +1021,7 @@ export class Agent {
     }
 
     await this.logger.log("warn", "[agent] final.message.fallback", {
-      sessionId: String(this.persistor.contextId || "").trim(),
+      sessionId: String(this.persistor.sessionId || "").trim(),
       assistantTextLength: assistantText.length,
       assistantTextPreview: toInlinePreview(assistantText),
     });

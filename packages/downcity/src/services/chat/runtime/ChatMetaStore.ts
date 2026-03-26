@@ -1,9 +1,9 @@
 /**
- * ChatMetaStore：按 contextId 维护 chat 路由元信息。
+ * ChatMetaStore：按 sessionId 维护 chat 路由元信息。
  *
  * 关键点（中文）
  * - 入站消息到达时由 services/chat 写入
- * - 出站按 contextId/chatKey 发送时由 services/chat 读取
+ * - 出站按 sessionId/chatKey 发送时由 services/chat 读取
  * - 底层数据落在 `.downcity/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 
@@ -11,15 +11,15 @@ import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import {
-  removeChannelContextRouteByContextId,
-  readChannelContextRouteByContextId,
-  resolveChannelContextIdByTarget,
-  resolveOrCreateChannelContextIdByTarget,
-  upsertChannelContextRouteByContextId,
+  removeChannelSessionRouteBySessionId,
+  readChannelSessionRouteBySessionId,
+  resolveChannelSessionIdByTarget,
+  resolveOrCreateChannelSessionIdByTarget,
+  upsertChannelSessionRouteBySessionId,
 } from "./ChannelContextStore.js";
 
-function normalizeContextId(contextId: string): string {
-  return String(contextId || "").trim();
+function normalizeSessionId(sessionId: string): string {
+  return String(sessionId || "").trim();
 }
 
 function normalizeChatId(chatId: string): string {
@@ -27,23 +27,23 @@ function normalizeChatId(chatId: string): string {
 }
 
 /**
- * 读取指定 contextId 的 chat meta。
+ * 读取指定 sessionId 的 chat meta。
  */
-export async function readChatMetaByContextId(params: {
+export async function readChatMetaBySessionId(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
 }): Promise<ChatMetaV1 | null> {
-  const contextId = normalizeContextId(params.contextId);
-  if (!contextId) return null;
-  const route = await readChannelContextRouteByContextId({
+  const sessionId = normalizeSessionId(params.sessionId);
+  if (!sessionId) return null;
+  const route = await readChannelSessionRouteBySessionId({
     context: params.context,
-    contextId,
+    sessionId,
   });
   if (!route) return null;
   return {
     v: 1,
     updatedAt: route.updatedAt,
-    sessionId: route.contextId,
+    sessionId: route.sessionId,
     channel: route.channel,
     chatId: route.chatId,
     ...(route.targetType ? { targetType: route.targetType } : {}),
@@ -56,11 +56,11 @@ export async function readChatMetaByContextId(params: {
 }
 
 /**
- * 更新指定 contextId 的 chat meta（全量覆盖最近快照）。
+ * 更新指定 sessionId 的 chat meta（全量覆盖最近快照）。
  */
-export async function upsertChatMetaByContextId(params: {
+export async function upsertChatMetaBySessionId(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
   targetType?: string;
@@ -70,12 +70,12 @@ export async function upsertChatMetaByContextId(params: {
   actorName?: string;
   chatTitle?: string;
 }): Promise<void> {
-  const contextId = normalizeContextId(params.contextId);
+  const sessionId = normalizeSessionId(params.sessionId);
   const chatId = normalizeChatId(params.chatId);
-  if (!contextId || !chatId) return;
-  await upsertChannelContextRouteByContextId({
+  if (!sessionId || !chatId) return;
+  await upsertChannelSessionRouteBySessionId({
     context: params.context,
-    contextId,
+    sessionId,
     target: {
       channel: params.channel,
       chatId,
@@ -90,9 +90,9 @@ export async function upsertChatMetaByContextId(params: {
 }
 
 /**
- * 通过渠道目标查找已有 contextId。
+ * 通过渠道目标查找已有 sessionId。
  */
-export async function resolveContextIdByChatTarget(params: {
+export async function resolveSessionIdByChatTarget(params: {
   context: ServiceRuntime;
   channel: ChatDispatchChannel;
   chatId: string;
@@ -101,7 +101,7 @@ export async function resolveContextIdByChatTarget(params: {
 }): Promise<string | null> {
   const chatId = normalizeChatId(params.chatId);
   if (!chatId) return null;
-  return await resolveChannelContextIdByTarget({
+  return await resolveChannelSessionIdByTarget({
     context: params.context,
     target: {
       channel: params.channel,
@@ -113,9 +113,9 @@ export async function resolveContextIdByChatTarget(params: {
 }
 
 /**
- * 通过渠道目标解析或创建 contextId。
+ * 通过渠道目标解析或创建 sessionId。
  */
-export async function resolveOrCreateContextIdByChatTarget(params: {
+export async function resolveOrCreateSessionIdByChatTarget(params: {
   context: ServiceRuntime;
   channel: ChatDispatchChannel;
   chatId: string;
@@ -124,7 +124,7 @@ export async function resolveOrCreateContextIdByChatTarget(params: {
 }): Promise<string | null> {
   const chatId = normalizeChatId(params.chatId);
   if (!chatId) return null;
-  return await resolveOrCreateChannelContextIdByTarget({
+  return await resolveOrCreateChannelSessionIdByTarget({
     context: params.context,
     target: {
       channel: params.channel,
@@ -136,29 +136,29 @@ export async function resolveOrCreateContextIdByChatTarget(params: {
 }
 
 /**
- * 删除指定 contextId 的 chat meta 映射。
+ * 删除指定 sessionId 的 chat meta 映射。
  *
  * 关键点（中文）
- * - 删除后该 contextId 不再可用于 chatKey 路由发送。
- * - 若同一 target 重新收到入站消息，会创建新的 contextId。
+ * - 删除后该 sessionId 不再可用于 chatKey 路由发送。
+ * - 若同一 target 重新收到入站消息，会创建新的 sessionId。
  */
-export async function removeChatMetaByContextId(params: {
+export async function removeChatMetaBySessionId(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
 }): Promise<{
   removed: boolean;
   route: ChatMetaV1 | null;
 }> {
-  const contextId = normalizeContextId(params.contextId);
-  if (!contextId) {
+  const sessionId = normalizeSessionId(params.sessionId);
+  if (!sessionId) {
     return {
       removed: false,
       route: null,
     };
   }
-  const result = await removeChannelContextRouteByContextId({
+  const result = await removeChannelSessionRouteBySessionId({
     context: params.context,
-    contextId,
+    sessionId,
   });
   const route = result.route;
   if (!route) {
@@ -172,7 +172,7 @@ export async function removeChatMetaByContextId(params: {
     route: {
       v: 1,
       updatedAt: route.updatedAt,
-      sessionId: route.contextId,
+      sessionId: route.sessionId,
       channel: route.channel,
       chatId: route.chatId,
       ...(route.targetType ? { targetType: route.targetType } : {}),

@@ -9,12 +9,12 @@
 import type { UiSessionSummary } from "@/types/Dashboard"
 
 /**
- * context 分组键。
+ * session 分组键。
  */
 export type SessionGroupKey = "chat" | "api" | "other"
 
 /**
- * context 分组结构。
+ * session 分组结构。
  */
 export interface SessionGroup {
   /**
@@ -46,11 +46,11 @@ function resolveSessionChannelFromSessionId(sessionIdInput: string): string {
 }
 
 /**
- * 解析 context 对应渠道。
+ * 解析 session 对应渠道。
  *
  * 关键点（中文）
- * - 优先使用后端回传的 `context.channel`（新映射唯一事实源）。
- * - 仅保留 `consoleui` 与 `api` 的本地识别，不再兼容旧 contextId 前缀规则。
+ * - 优先使用后端回传的 `session.channel`（新映射唯一事实源）。
+ * - 仅保留 `consoleui` 与 `api` 的本地识别，不再兼容旧 sessionId 前缀规则。
  */
 export function resolveSessionChannel(input: UiSessionSummary | string): string {
   if (typeof input === "string") {
@@ -60,11 +60,11 @@ export function resolveSessionChannel(input: UiSessionSummary | string): string 
   if (KNOWN_CHAT_CHANNELS.has(channel)) return channel
   if (channel === "api") return "api"
   if (channel && channel !== "other") return channel
-  return resolveSessionChannelFromSessionId(input.contextId)
+  return resolveSessionChannelFromSessionId(input.sessionId)
 }
 
 /**
- * 解析 contextId 对应分组。
+ * 解析 sessionId 对应分组。
  */
 export function resolveSessionGroup(input: UiSessionSummary | string): SessionGroupKey {
   const channel = resolveSessionChannel(input)
@@ -74,14 +74,14 @@ export function resolveSessionGroup(input: UiSessionSummary | string): SessionGr
 }
 
 /**
- * context 排序：updatedAt desc -> contextId asc。
+ * session 排序：updatedAt desc -> sessionId asc。
  */
 export function sortSessions(sessions: UiSessionSummary[]): UiSessionSummary[] {
   return [...sessions].sort((a, b) => {
     const aTime = Number(a.updatedAt || 0)
     const bTime = Number(b.updatedAt || 0)
     if (aTime !== bTime) return bTime - aTime
-    return a.contextId.localeCompare(b.contextId)
+    return a.sessionId.localeCompare(b.sessionId)
   })
 }
 
@@ -108,7 +108,7 @@ export function buildSessionGroups(sessions: UiSessionSummary[]): SessionGroup[]
 }
 
 /**
- * 按关键词过滤 context。
+ * 按关键词过滤 session。
  */
 export function filterSessionsByKeyword(
   sessions: UiSessionSummary[],
@@ -117,7 +117,7 @@ export function filterSessionsByKeyword(
   const term = String(keyword || "").trim().toLowerCase()
   if (!term) return sessions
   return sessions.filter((item) => {
-    const id = String(item.contextId || "").toLowerCase()
+    const id = String(item.sessionId || "").toLowerCase()
     const chatId = String(item.chatId || "").toLowerCase()
     const chatTitle = String(item.chatTitle || "").toLowerCase()
     const role = String(item.lastRole || "").toLowerCase()

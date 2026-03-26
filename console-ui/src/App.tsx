@@ -164,11 +164,11 @@ export function App() {
     [agents, selectedAgent, selectedAgentId],
   )
 
-  const resolveChannelFromContextId = React.useCallback((contextIdInput?: string): string => {
-    const contextId = String(contextIdInput || "").trim()
-    if (!contextId) return ""
-    const target = sessions.find((item) => String(item.contextId || "").trim() === contextId)
-    return resolveSessionChannel(target || contextId)
+  const resolveChannelFromSessionId = React.useCallback((sessionIdInput?: string): string => {
+    const sessionId = String(sessionIdInput || "").trim()
+    if (!sessionId) return ""
+    const target = sessions.find((item) => String(item.sessionId || "").trim() === sessionId)
+    return resolveSessionChannel(target || sessionId)
   }, [sessions])
 
   const availableChatChannels = React.useMemo(() => {
@@ -212,7 +212,7 @@ export function App() {
     (
       view: DashboardView,
       options?: {
-        contextId?: string
+        sessionId?: string
         taskTitle?: string
         agentId?: string
         channel?: string
@@ -223,7 +223,7 @@ export function App() {
       const hasExplicitAgentForGlobalOverview =
         view === "globalOverview" && Boolean(String(options?.agentId || "").trim())
       const nextPath = toDashboardPath(view, {
-        contextId: options?.contextId,
+        sessionId: options?.sessionId,
         taskTitle: options?.taskTitle,
         channel: options?.channel,
         agentSegment: hasExplicitAgentForGlobalOverview || view !== "globalOverview"
@@ -271,16 +271,16 @@ export function App() {
 
     if (
       parsed.view === "contextWorkspace" &&
-      parsed.contextId &&
+      parsed.sessionId &&
       (!hasAgentSegment || !parsedAgentId || parsedAgentId === selectedAgentId)
     ) {
       const routeChannel = String(parsed.channel || "").trim().toLowerCase()
       if (routeChannel) {
         setFocusedChatChannel(routeChannel)
       } else {
-        setFocusedChatChannel(resolveChannelFromContextId(parsed.contextId))
+        setFocusedChatChannel(resolveChannelFromSessionId(parsed.sessionId))
       }
-      void handleSessionChange(parsed.contextId)
+      void handleSessionChange(parsed.sessionId)
     }
 
     setRouteHydrated(true)
@@ -305,14 +305,14 @@ export function App() {
       if (parsedAgentId && parsedAgentId !== selectedAgentId) {
         handleAgentChange(parsedAgentId)
       }
-      if (parsed.view === "contextWorkspace" && parsed.contextId && (!parsedAgentId || parsedAgentId === selectedAgentId)) {
+      if (parsed.view === "contextWorkspace" && parsed.sessionId && (!parsedAgentId || parsedAgentId === selectedAgentId)) {
         const routeChannel = String(parsed.channel || "").trim().toLowerCase()
         if (routeChannel) {
           setFocusedChatChannel(routeChannel)
         } else {
-          setFocusedChatChannel(resolveChannelFromContextId(parsed.contextId))
+          setFocusedChatChannel(resolveChannelFromSessionId(parsed.sessionId))
         }
-        void handleSessionChange(parsed.contextId)
+        void handleSessionChange(parsed.sessionId)
       }
     }
     window.addEventListener("popstate", onPopState)
@@ -330,12 +330,12 @@ export function App() {
       activeView !== "globalPlugins"
     if (!agentScopedView || !selectedAgentId) return
     const expectedPath = toDashboardPath(activeView, {
-      contextId: activeView === "contextWorkspace" ? selectedSessionId : undefined,
+      sessionId: activeView === "contextWorkspace" ? selectedSessionId : undefined,
       taskTitle: activeView === "agentTasks" ? selectedTaskTitle : undefined,
       channel: activeView === "contextOverview"
         ? effectiveFocusedChatChannel
         : activeView === "contextWorkspace"
-          ? resolveChannelFromContextId(selectedSessionId)
+          ? resolveChannelFromSessionId(selectedSessionId)
           : undefined,
       agentSegment: resolveAgentRouteSegment(selectedAgentId),
     })
@@ -346,7 +346,7 @@ export function App() {
     activeView,
     effectiveFocusedChatChannel,
     resolveAgentRouteSegment,
-    resolveChannelFromContextId,
+    resolveChannelFromSessionId,
     routeHydrated,
     selectedAgentId,
     selectedSessionId,
@@ -436,7 +436,7 @@ export function App() {
           tasks={tasks}
           sessions={sessions}
           channelAccounts={channelAccounts}
-          consoleUiContextId={constants.CONSOLEUI_CONTEXT_ID}
+          consoleUiSessionId={constants.CONSOLEUI_SESSION_ID}
           configStatus={configStatus}
           model={model}
           onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
@@ -458,14 +458,14 @@ export function App() {
             setSelectedTaskTitle(normalizedTaskTitle)
             navigateToView("agentTasks", { taskTitle: normalizedTaskTitle })
           }}
-              onOpenContext={(contextId) => {
-                const normalizedContextId = String(contextId || "").trim()
-                if (!normalizedContextId) return
+              onOpenSession={(sessionId) => {
+                const normalizedSessionId = String(sessionId || "").trim()
+                if (!normalizedSessionId) return
                 navigateToView("contextWorkspace", {
-                  contextId: normalizedContextId,
-                  channel: resolveChannelFromContextId(normalizedContextId),
+                  sessionId: normalizedSessionId,
+                  channel: resolveChannelFromSessionId(normalizedSessionId),
                 })
-                void handleSessionChange(normalizedContextId)
+                void handleSessionChange(normalizedSessionId)
               }}
           onControlService={(serviceName, action) => controlService(serviceName, action)}
           chatChannels={chatChannels}
@@ -720,10 +720,10 @@ export function App() {
               focusedChannel={effectiveFocusedChatChannel}
               formatTime={uiHelpers.formatTime}
               onOpenSession={(sessionId) => {
-                setFocusedChatChannel(resolveChannelFromContextId(sessionId))
+                setFocusedChatChannel(resolveChannelFromSessionId(sessionId))
                 navigateToView("contextWorkspace", {
-                  contextId: sessionId,
-                  channel: resolveChannelFromContextId(sessionId),
+                  sessionId: sessionId,
+                  channel: resolveChannelFromSessionId(sessionId),
                 })
                 void handleSessionChange(sessionId)
               }}
@@ -782,12 +782,12 @@ export function App() {
                   archiveId,
                 )
               }}
-              onSelectSession={(contextId) => {
+              onSelectSession={(sessionId) => {
                 navigateToView("contextWorkspace", {
-                  contextId,
-                  channel: resolveChannelFromContextId(contextId),
+                  sessionId,
+                  channel: resolveChannelFromSessionId(sessionId),
                 })
-                void handleSessionChange(contextId)
+                void handleSessionChange(sessionId)
               }}
             />
           </section>
@@ -837,13 +837,13 @@ export function App() {
         selectedChatChannel={effectiveFocusedChatChannel}
         onViewChange={(view) => {
           if (view === "contextWorkspace") {
-            const nextContextId = selectedSessionId || constants.CONSOLEUI_CONTEXT_ID
-            setFocusedChatChannel(resolveChannelFromContextId(nextContextId))
+            const nextSessionId = selectedSessionId || constants.CONSOLEUI_SESSION_ID
+            setFocusedChatChannel(resolveChannelFromSessionId(nextSessionId))
             navigateToView("contextWorkspace", {
-              contextId: nextContextId,
-              channel: resolveChannelFromContextId(nextContextId),
+              sessionId: nextSessionId,
+              channel: resolveChannelFromSessionId(nextSessionId),
             })
-            void handleSessionChange(nextContextId)
+            void handleSessionChange(nextSessionId)
             return
           }
           if (view !== "contextOverview") {
@@ -871,13 +871,13 @@ export function App() {
           setFocusedChatChannel(normalizedChannel)
           navigateToView("contextOverview", { channel: normalizedChannel })
         }}
-        onContextOpen={(contextId) => {
-          setFocusedChatChannel(resolveChannelFromContextId(contextId))
+        onSessionOpen={(sessionId) => {
+          setFocusedChatChannel(resolveChannelFromSessionId(sessionId))
           navigateToView("contextWorkspace", {
-            contextId,
-            channel: resolveChannelFromContextId(contextId),
+            sessionId: sessionId,
+            channel: resolveChannelFromSessionId(sessionId),
           })
-          void handleSessionChange(contextId)
+          void handleSessionChange(sessionId)
         }}
         topbarStatus={topbarStatus}
         topbarError={topbarError}

@@ -1,5 +1,5 @@
 /**
- * Context 压缩模块。
+ * Session 压缩模块。
  *
  * 关键职责（中文）
  * - 评估当前消息是否超出输入预算。
@@ -23,7 +23,7 @@ import type {
 } from "@agent/types/SessionMessage.js";
 import type { SessionMessagesMetaV1 } from "@agent/types/SessionMessagesMeta.js";
 
-export type ContextCompactParams = {
+export type SessionCompactParams = {
   model: LanguageModel;
   system: Array<SystemModelMessage>;
   keepLastMessages: number;
@@ -32,9 +32,9 @@ export type ContextCompactParams = {
   compactRatio: number;
 };
 
-type ContextCompactDeps = {
+type SessionCompactDeps = {
   rootPath: string;
-  contextId: string;
+  sessionId: string;
   withWriteLock: <T>(fn: () => Promise<T>) => Promise<T>;
   loadAll: () => Promise<SessionMessageV1[]>;
   createSummaryMessage: (params: {
@@ -48,15 +48,15 @@ type ContextCompactDeps = {
 };
 
 /**
- * 对当前 context messages 做一次 best-effort compact（必要时）。
+ * 对当前 session messages 做一次 best-effort compact（必要时）。
  *
  * 注意（中文）
  * - compact 会 rewrite `messages.jsonl`（不是纯 append-only），因此必须防并发覆盖
  * - 这里做两阶段锁：先 snapshot 再生成摘要，最后再锁定写入，降低锁持有时间
  */
-export async function compactContextMessageIfNeeded(
-  deps: ContextCompactDeps,
-  params: ContextCompactParams,
+export async function compactSessionMessagesIfNeeded(
+  deps: SessionCompactDeps,
+  params: SessionCompactParams,
 ): Promise<{ compacted: boolean; reason?: string }> {
   const logger = getLogger(deps.rootPath, "info");
 
@@ -81,7 +81,7 @@ export async function compactContextMessageIfNeeded(
   const systemText = (params.system || [])
     .map((m) => String(m.content ?? ""))
     .join("\n\n");
-  // 关键点（中文）：context messages 现在可能包含 tool parts/output，必须把它们计入预算估算，否则会低估 token。
+  // 关键点（中文）：session messages 现在可能包含 tool parts/output，必须把它们计入预算估算，否则会低估 token。
   let messagesJson = "";
   try {
     messagesJson = JSON.stringify(snapshot);
@@ -130,9 +130,9 @@ export async function compactContextMessageIfNeeded(
   } catch (e) {
     await logger.log(
       "warn",
-      "Context messages compact summary failed, fallback to lossy truncation",
+      "Session messages compact summary failed, fallback to lossy truncation",
       {
-        contextId: deps.contextId,
+        sessionId: deps.sessionId,
         error: String(e),
       },
     );
@@ -149,7 +149,7 @@ export async function compactContextMessageIfNeeded(
   const archiveId = `compact-${Date.now()}-${generateId()}`;
 
   // phase 2：写入（短锁，且避免覆盖新追加）
-  // - 以“当前最新 context messages”为准重算 currentOlder/currentKept，避免覆盖并发新消息。
+  // - 以“当前最新 session messages”为准重算 currentOlder/currentKept，避免覆盖并发新消息。
   await deps.withWriteLock(async () => {
     const current = await deps.loadAll();
     if (!current.length) return;
@@ -172,7 +172,7 @@ export async function compactContextMessageIfNeeded(
         archivePath,
         {
           v: 1,
-          contextId: deps.contextId,
+          sessionId: deps.sessionId,
           archivedAt: Date.now(),
           messages: currentOlder,
         },

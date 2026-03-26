@@ -8,7 +8,7 @@
 
 import { dashboardApiRoutes } from "./dashboard-api";
 import {
-  CONSOLEUI_CONTEXT_ID,
+  CONSOLEUI_SESSION_ID,
   getErrorMessage,
   isAgentUnavailableError,
   isChatServiceNotReadyError,
@@ -335,15 +335,15 @@ export async function querySessions(
 ): Promise<UiSessionSummary[]> {
   if (!agentId) return [];
   const data = await requestJson<UiSessionsResponse>(dashboardApiRoutes.sessions(120), {}, agentId);
-  const list = Array.isArray(data.contexts) ? data.contexts : [];
-  const hasConsoleUiContext = list.some(
-    (item) => String(item.contextId || "").trim() === CONSOLEUI_CONTEXT_ID,
+  const list = Array.isArray(data.sessions) ? data.sessions : [];
+  const hasConsoleUiSession = list.some(
+    (item) => String(item.sessionId || "").trim() === CONSOLEUI_SESSION_ID,
   );
-  return hasConsoleUiContext
+  return hasConsoleUiSession
     ? list
     : [
         {
-          contextId: CONSOLEUI_CONTEXT_ID,
+          sessionId: CONSOLEUI_SESSION_ID,
           channel: "consoleui",
           messageCount: 0,
           updatedAt: Date.now(),
@@ -357,9 +357,9 @@ export async function querySessions(
 export async function queryChannelHistory(
   requestJson: RequestJson,
   agentId: string,
-  contextId: string,
+  sessionId: string,
 ): Promise<UiChatHistoryEvent[]> {
-  if (!agentId || !contextId) return [];
+  if (!agentId || !sessionId) return [];
   try {
     const data = await requestJson<UiChatStatusResponse>(
       dashboardApiRoutes.servicesCommand(),
@@ -369,7 +369,7 @@ export async function queryChannelHistory(
           serviceName: "chat",
           command: "history",
           payload: {
-            contextId,
+            contextId: sessionId,
             limit: 80,
           },
         }),
@@ -377,33 +377,33 @@ export async function queryChannelHistory(
       agentId,
     );
     const events = Array.isArray(data?.data?.events) ? data.data.events : [];
-    if (events.length > 0 || !String(contextId || "").startsWith("consoleui-")) {
+    if (events.length > 0 || !String(sessionId || "").startsWith("consoleui-")) {
       return events;
     }
   } catch (error) {
     const isConsoleUi =
-      String(contextId || "").trim().toLowerCase().startsWith("consoleui-") ||
-      String(contextId || "").trim().toLowerCase() === "local_ui";
+      String(sessionId || "").trim().toLowerCase().startsWith("consoleui-") ||
+      String(sessionId || "").trim().toLowerCase() === "local_ui";
     if (!isConsoleUi) throw error;
   }
 
   const fallbackData = await requestJson<UiSessionMessagesResponse>(
-    dashboardApiRoutes.sessionMessages(contextId, 100),
+    dashboardApiRoutes.sessionMessages(sessionId, 100),
     {},
     agentId,
   );
   const timeline = Array.isArray(fallbackData.messages) ? fallbackData.messages : [];
-  return toHistoryEventsFromTimeline(contextId, timeline);
+  return toHistoryEventsFromTimeline(sessionId, timeline);
 }
 
 export async function querySessionMessages(
   requestJson: RequestJson,
   agentId: string,
-  contextId: string,
+  sessionId: string,
 ): Promise<UiSessionTimelineMessage[]> {
-  if (!agentId || !contextId) return [];
+  if (!agentId || !sessionId) return [];
   const data = await requestJson<UiSessionMessagesResponse>(
-    dashboardApiRoutes.sessionMessages(contextId, 100),
+    dashboardApiRoutes.sessionMessages(sessionId, 100),
     {},
     agentId,
   );
@@ -413,11 +413,11 @@ export async function querySessionMessages(
 export async function querySessionArchiveDetail(
   requestJson: RequestJson,
   agentId: string,
-  contextId: string,
+  sessionId: string,
   archiveId: string,
 ): Promise<UiSessionArchiveDetailResponse> {
   return requestJson<UiSessionArchiveDetailResponse>(
-    dashboardApiRoutes.sessionArchiveDetail(contextId, archiveId),
+    dashboardApiRoutes.sessionArchiveDetail(sessionId, archiveId),
     {},
     agentId,
   );
@@ -426,12 +426,12 @@ export async function querySessionArchiveDetail(
 export async function querySessionArchives(
   requestJson: RequestJson,
   agentId: string,
-  contextId: string,
+  sessionId: string,
 ): Promise<UiSessionArchiveSummary[]> {
-  if (!agentId || !contextId) return [];
+  if (!agentId || !sessionId) return [];
   try {
     const data = await requestJson<UiSessionArchivesResponse>(
-      dashboardApiRoutes.sessionArchives(contextId, 80),
+      dashboardApiRoutes.sessionArchives(sessionId, 80),
       {},
       agentId,
     );
@@ -519,14 +519,14 @@ export async function queryChannelAccounts(
 export async function queryPrompt(
   requestJson: RequestJson,
   agentId: string,
-  contextId?: string,
+  sessionId?: string,
 ): Promise<UiPromptResponse | null> {
   if (!agentId) return null;
-  const resolvedContextId =
-    String(contextId || CONSOLEUI_CONTEXT_ID).trim() || CONSOLEUI_CONTEXT_ID;
+  const resolvedSessionId =
+    String(sessionId || CONSOLEUI_SESSION_ID).trim() || CONSOLEUI_SESSION_ID;
   try {
     return await requestJson<UiPromptResponse>(
-      dashboardApiRoutes.systemPrompt(resolvedContextId),
+      dashboardApiRoutes.systemPrompt(resolvedSessionId),
       {},
       agentId,
     );
@@ -542,7 +542,7 @@ export async function queryLocalMessages(
 ): Promise<UiLocalMessage[]> {
   if (!agentId) return [];
   const data = await requestJson<UiLocalMessagesResponse>(
-    dashboardApiRoutes.localMessages(CONSOLEUI_CONTEXT_ID, 80),
+    dashboardApiRoutes.localMessages(CONSOLEUI_SESSION_ID, 80),
     {},
     agentId,
   );

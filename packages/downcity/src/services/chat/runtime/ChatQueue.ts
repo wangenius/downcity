@@ -55,7 +55,7 @@ export function onChatQueueEnqueue(listener: EnqueueListener): () => void {
 export function enqueueChatQueue(
   params: ChatQueueEnqueueParams,
 ): ChatQueueEnqueueResult {
-  const laneKey = normalizeLaneKey(params.contextId);
+  const laneKey = normalizeLaneKey(params.sessionId);
   const lane = getLane(laneKey);
   const item: ChatQueueItem = {
     ...params,

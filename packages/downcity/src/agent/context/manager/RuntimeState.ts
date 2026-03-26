@@ -297,7 +297,7 @@ function buildServiceSession(input: RuntimeState): ServiceSession {
     getPersistor: (sessionId) => input.sessionManager.getPersistor(sessionId),
     run: (params) =>
       input.sessionManager.run({
-        contextId: params.sessionId,
+        sessionId: params.sessionId,
         query: params.query,
         ...(params.onStepCallback || params.onAssistantStepCallback
           ? {
@@ -314,10 +314,10 @@ function buildServiceSession(input: RuntimeState): ServiceSession {
       }),
     clearAgent: (sessionId) => input.sessionManager.clearAgent(sessionId),
     afterSessionUpdatedAsync: (sessionId) =>
-      input.sessionManager.afterContextUpdatedAsync(sessionId),
+      input.sessionManager.afterSessionUpdatedAsync(sessionId),
     appendUserMessage: (params) =>
       input.sessionManager.appendUserMessage({
-        contextId: params.sessionId,
+        sessionId: params.sessionId,
         message: params.message,
         text: params.text,
         requestId: params.requestId,
@@ -325,7 +325,7 @@ function buildServiceSession(input: RuntimeState): ServiceSession {
       }),
     appendAssistantMessage: (params) =>
       input.sessionManager.appendAssistantMessage({
-        contextId: params.sessionId,
+        sessionId: params.sessionId,
         message: params.message,
         fallbackText: params.fallbackText,
         requestId: params.requestId,
@@ -503,8 +503,8 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   const dispatcher = new SessionAgentDispatcher({
     model: requireServiceModel(),
     logger: defaultLogger,
-    createPersistor: (contextId) => {
-      const parsedRun = parseTaskRunContextId(contextId);
+    createPersistor: (sessionId) => {
+      const parsedRun = parseTaskRunContextId(sessionId);
       const paths = parsedRun
         ? (() => {
             const runDir = getTaskRunDir(
@@ -513,7 +513,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
               parsedRun.timestamp,
             );
             return {
-              contextDirPath: runDir,
+              sessionDirPath: runDir,
               messagesDirPath: runDir,
               messagesFilePath: path.join(runDir, "messages.jsonl"),
               metaFilePath: path.join(runDir, "meta.json"),
@@ -523,7 +523,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
         : undefined;
       return new FilePersistor({
         rootPath,
-        contextId,
+        sessionId,
         ...(paths ? { paths } : {}),
       });
     },

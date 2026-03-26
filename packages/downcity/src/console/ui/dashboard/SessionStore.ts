@@ -1,8 +1,8 @@
 /**
- * Dashboard 上下文数据读取 helper。
+ * Dashboard 会话数据读取 helper。
  *
  * 关键点（中文）
- * - 负责上下文列表聚合。
+ * - 负责会话列表聚合。
  * - 只返回 dashboard 视图需要的摘要字段。
  */
 
@@ -12,33 +12,33 @@ import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
 } from "@/console/env/Paths.js";
-import { readChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
-import type { DashboardContextSummary } from "@/types/DashboardData.js";
+import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
+import type { DashboardSessionSummary } from "@/types/DashboardData.js";
 import { decodeMaybe, truncateText } from "./CommonHelpers.js";
-import { loadContextMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
+import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageTimeline.js";
 
 /**
- * 枚举上下文摘要。
+ * 枚举 session 摘要。
  */
-export async function listContextSummaries(params: {
+export async function listSessionSummaries(params: {
   projectRoot: string;
   serviceRuntime?: ServiceRuntime;
   limit: number;
-  executingContextIds?: Set<string>;
-}): Promise<DashboardContextSummary[]> {
+  executingSessionIds?: Set<string>;
+}): Promise<DashboardSessionSummary[]> {
   const rootDir = getDowncitySessionRootDirPath(params.projectRoot);
   if (!(await fs.pathExists(rootDir))) return [];
 
   const entries = await fs.readdir(rootDir, { withFileTypes: true });
-  const items: DashboardContextSummary[] = [];
+  const items: DashboardSessionSummary[] = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const contextId = decodeMaybe(entry.name);
-    if (!contextId) continue;
+    const sessionId = decodeMaybe(entry.name);
+    if (!sessionId) continue;
 
-    const filePath = getDowncitySessionMessagesPath(params.projectRoot, contextId);
-    const messages = await loadContextMessagesFromFile(filePath);
+    const filePath = getDowncitySessionMessagesPath(params.projectRoot, sessionId);
+    const messages = await loadSessionMessagesFromFile(filePath);
     const last = messages.at(-1);
     const lastTs =
       typeof last?.metadata?.ts === "number" ? last.metadata.ts : undefined;
@@ -48,14 +48,14 @@ export async function listContextSummaries(params: {
       .catch(() => null);
     const updatedAt = lastTs || (stat ? stat.mtimeMs : undefined);
     const chatMeta = params.serviceRuntime
-      ? await readChatMetaByContextId({
+      ? await readChatMetaBySessionId({
           context: params.serviceRuntime,
-          contextId,
+          sessionId,
         })
       : null;
 
     items.push({
-      sessionId: contextId,
+      sessionId,
       messageCount: messages.length,
       ...(typeof updatedAt === "number" ? { updatedAt } : {}),
       ...(last?.role ? { lastRole: last.role } : {}),
@@ -67,7 +67,7 @@ export async function listContextSummaries(params: {
       ...(typeof chatMeta?.chatTitle === "string" ? { chatTitle: chatMeta.chatTitle } : {}),
       ...(typeof chatMeta?.targetType === "string" ? { chatType: chatMeta.targetType } : {}),
       ...(typeof chatMeta?.threadId === "number" ? { threadId: chatMeta.threadId } : {}),
-      ...(params.executingContextIds?.has(contextId) ? { executing: true } : {}),
+      ...(params.executingSessionIds?.has(sessionId) ? { executing: true } : {}),
     });
   }
 

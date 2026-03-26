@@ -1,10 +1,10 @@
 /**
- * ChannelContextStore：渠道目标与 contextId 映射存储。
+ * ChannelContextStore：渠道目标与 sessionId 映射存储。
  *
  * 关键点（中文）
  * - 映射文件位于 `.downcity/channel/meta.json`。
- * - contextId 由服务端随机生成并持久化，不依赖字符串拼接规则。
- * - 统一提供“按目标找 contextId / 按 contextId 找目标”能力。
+ * - sessionId 由服务端随机生成并持久化，不依赖字符串拼接规则。
+ * - 统一提供“按目标找 sessionId / 按 sessionId 找目标”能力。
  */
 
 import fs from "fs-extra";
@@ -49,13 +49,13 @@ function normalizeRoute(
   input: Partial<ChannelContextRouteV1> | null | undefined,
 ): ChannelContextRouteV1 | null {
   if (!input || typeof input !== "object") return null;
-  const contextId = toOptionalTrimmedString(input.contextId);
+  const sessionId = toOptionalTrimmedString(input.sessionId);
   const channel = toOptionalTrimmedString(input.channel);
   const chatId = toOptionalTrimmedString(input.chatId);
-  if (!contextId || !channel || !chatId) return null;
+  if (!sessionId || !channel || !chatId) return null;
   return {
     v: 1,
-    contextId,
+    sessionId,
     channel: channel as ChannelContextRouteV1["channel"],
     chatId,
     ...(toOptionalTrimmedString(input.targetType)
@@ -86,30 +86,30 @@ function normalizeRoute(
 function normalizeMetaFile(
   input: Partial<ChannelContextMetaFileV1> | null | undefined,
 ): ChannelContextMetaFileV1 {
-  const routesByContextId: Record<string, ChannelContextRouteV1> = {};
-  const contextIdByTargetKey: Record<string, string> = {};
+  const routesBySessionId: Record<string, ChannelContextRouteV1> = {};
+  const sessionIdByTargetKey: Record<string, string> = {};
   const rawRoutes =
-    input && typeof input === "object" && input.routesByContextId
-      ? input.routesByContextId
+    input && typeof input === "object" && input.routesBySessionId
+      ? input.routesBySessionId
       : {};
   if (rawRoutes && typeof rawRoutes === "object") {
-    for (const [contextId, rawRoute] of Object.entries(rawRoutes)) {
+    for (const [sessionId, rawRoute] of Object.entries(rawRoutes)) {
       const route = normalizeRoute(rawRoute as Partial<ChannelContextRouteV1>);
       if (!route) continue;
-      routesByContextId[contextId] = route;
+      routesBySessionId[sessionId] = route;
     }
   }
 
   const rawTargetMap =
-    input && typeof input === "object" && input.contextIdByTargetKey
-      ? input.contextIdByTargetKey
+    input && typeof input === "object" && input.sessionIdByTargetKey
+      ? input.sessionIdByTargetKey
       : {};
   if (rawTargetMap && typeof rawTargetMap === "object") {
-    for (const [targetKey, contextIdRaw] of Object.entries(rawTargetMap)) {
-      const contextId = toOptionalTrimmedString(contextIdRaw);
-      if (!targetKey || !contextId) continue;
-      if (!routesByContextId[contextId]) continue;
-      contextIdByTargetKey[targetKey] = contextId;
+    for (const [targetKey, sessionIdRaw] of Object.entries(rawTargetMap)) {
+      const sessionId = toOptionalTrimmedString(sessionIdRaw);
+      if (!targetKey || !sessionId) continue;
+      if (!routesBySessionId[sessionId]) continue;
+      sessionIdByTargetKey[targetKey] = sessionId;
     }
   }
 
@@ -119,8 +119,8 @@ function normalizeMetaFile(
       typeof input?.updatedAt === "number" && Number.isFinite(input.updatedAt)
         ? input.updatedAt
         : Date.now(),
-    contextIdByTargetKey,
-    routesByContextId,
+    sessionIdByTargetKey,
+    routesBySessionId,
   };
 }
 
@@ -162,27 +162,27 @@ async function writeMetaFile(params: {
 }
 
 /**
- * 通过 contextId 读取路由信息。
+ * 通过 sessionId 读取路由信息。
  */
-export async function readChannelContextRouteByContextId(params: {
+export async function readChannelSessionRouteBySessionId(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
 }): Promise<ChannelContextRouteV1 | null> {
   const rootPath = String(params.context.rootPath || "").trim();
-  const contextId = toOptionalTrimmedString(params.contextId);
-  if (!rootPath || !contextId) return null;
+  const sessionId = toOptionalTrimmedString(params.sessionId);
+  if (!rootPath || !sessionId) return null;
   const file = await readMetaFile({ rootPath });
-  return normalizeRoute(file.routesByContextId[contextId]);
+  return normalizeRoute(file.routesBySessionId[sessionId]);
 }
 
 /**
  * 列出当前 agent 已记录的所有渠道路由条目。
  *
  * 关键点（中文）
- * - 数据源为 `.downcity/channel/meta.json` 的 `routesByContextId`。
+ * - 数据源为 `.downcity/channel/meta.json` 的 `routesBySessionId`。
  * - 默认按 `updatedAt` 倒序返回，便于展示“最近活跃”会话。
  */
-export async function listChannelContextRoutes(params: {
+export async function listChannelSessionRoutes(params: {
   context: ServiceRuntime;
 }): Promise<{
   updatedAt: number;
@@ -196,7 +196,7 @@ export async function listChannelContextRoutes(params: {
     };
   }
   const file = await readMetaFile({ rootPath });
-  const routes = Object.values(file.routesByContextId)
+  const routes = Object.values(file.routesBySessionId)
     .map((route) => normalizeRoute(route))
     .filter((route): route is ChannelContextRouteV1 => Boolean(route))
     .sort((a, b) => b.updatedAt - a.updatedAt);
@@ -207,9 +207,9 @@ export async function listChannelContextRoutes(params: {
 }
 
 /**
- * 根据渠道目标查找已有 contextId（不自动创建）。
+ * 根据渠道目标查找已有 sessionId（不自动创建）。
  */
-export async function resolveChannelContextIdByTarget(params: {
+export async function resolveChannelSessionIdByTarget(params: {
   context: ServiceRuntime;
   target: ChannelContextTarget;
 }): Promise<string | null> {
@@ -218,15 +218,15 @@ export async function resolveChannelContextIdByTarget(params: {
   const targetKey = buildChannelTargetKey(params.target);
   if (!targetKey) return null;
   const file = await readMetaFile({ rootPath });
-  const contextId = toOptionalTrimmedString(file.contextIdByTargetKey[targetKey]);
-  if (!contextId) return null;
-  return file.routesByContextId[contextId] ? contextId : null;
+  const sessionId = toOptionalTrimmedString(file.sessionIdByTargetKey[targetKey]);
+  if (!sessionId) return null;
+  return file.routesBySessionId[sessionId] ? sessionId : null;
 }
 
 /**
- * 根据渠道目标解析或创建 contextId。
+ * 根据渠道目标解析或创建 sessionId。
  */
-export async function resolveOrCreateChannelContextIdByTarget(params: {
+export async function resolveOrCreateChannelSessionIdByTarget(params: {
   context: ServiceRuntime;
   target: ChannelContextTarget;
 }): Promise<string | null> {
@@ -238,20 +238,20 @@ export async function resolveOrCreateChannelContextIdByTarget(params: {
   if (!targetKey) return null;
 
   const file = await readMetaFile({ rootPath });
-  const existingContextId = toOptionalTrimmedString(file.contextIdByTargetKey[targetKey]);
+  const existingSessionId = toOptionalTrimmedString(file.sessionIdByTargetKey[targetKey]);
   if (
-    existingContextId &&
-    file.routesByContextId[existingContextId] &&
-    normalizeRoute(file.routesByContextId[existingContextId])
+    existingSessionId &&
+    file.routesBySessionId[existingSessionId] &&
+    normalizeRoute(file.routesBySessionId[existingSessionId])
   ) {
-    return existingContextId;
+    return existingSessionId;
   }
 
-  const nextContextId = `ctx_${generateId()}`;
-  file.contextIdByTargetKey[targetKey] = nextContextId;
-  file.routesByContextId[nextContextId] = {
+  const nextSessionId = `ctx_${generateId()}`;
+  file.sessionIdByTargetKey[targetKey] = nextSessionId;
+  file.routesBySessionId[nextSessionId] = {
     v: 1,
-    contextId: nextContextId,
+    sessionId: nextSessionId,
     channel: normalizedTarget.channel,
     chatId: normalizedTarget.chatId,
     ...(normalizedTarget.targetType ? { targetType: normalizedTarget.targetType } : {}),
@@ -262,15 +262,15 @@ export async function resolveOrCreateChannelContextIdByTarget(params: {
   };
   file.updatedAt = Date.now();
   await writeMetaFile({ rootPath, file });
-  return nextContextId;
+  return nextSessionId;
 }
 
 /**
- * 更新指定 contextId 的渠道路由信息。
+ * 更新指定 sessionId 的渠道路由信息。
  */
-export async function upsertChannelContextRouteByContextId(params: {
+export async function upsertChannelSessionRouteBySessionId(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   target: ChannelContextTarget;
   messageId?: string;
   actorId?: string;
@@ -278,17 +278,17 @@ export async function upsertChannelContextRouteByContextId(params: {
   chatTitle?: string;
 }): Promise<void> {
   const rootPath = String(params.context.rootPath || "").trim();
-  const contextId = toOptionalTrimmedString(params.contextId);
+  const sessionId = toOptionalTrimmedString(params.sessionId);
   const normalizedTarget = normalizeTarget(params.target);
-  if (!rootPath || !contextId || !normalizedTarget) return;
+  if (!rootPath || !sessionId || !normalizedTarget) return;
   const targetKey = buildChannelTargetKey(normalizedTarget);
   if (!targetKey) return;
 
   const file = await readMetaFile({ rootPath });
-  const prev = normalizeRoute(file.routesByContextId[contextId]);
+  const prev = normalizeRoute(file.routesBySessionId[sessionId]);
   const nextRoute: ChannelContextRouteV1 = {
     v: 1,
-    contextId,
+    sessionId,
     channel: normalizedTarget.channel,
     chatId: normalizedTarget.chatId,
     ...(normalizedTarget.targetType ? { targetType: normalizedTarget.targetType } : {}),
@@ -318,29 +318,29 @@ export async function upsertChannelContextRouteByContextId(params: {
     updatedAt: Date.now(),
   };
 
-  file.routesByContextId[contextId] = nextRoute;
-  file.contextIdByTargetKey[targetKey] = contextId;
+  file.routesBySessionId[sessionId] = nextRoute;
+  file.sessionIdByTargetKey[targetKey] = sessionId;
   file.updatedAt = Date.now();
   await writeMetaFile({ rootPath, file });
 }
 
 /**
- * 删除指定 contextId 的渠道路由映射。
+ * 删除指定 sessionId 的渠道路由映射。
  *
  * 关键点（中文）
- * - 会同步清理 `routesByContextId` 与 `contextIdByTargetKey` 双索引。
+ * - 会同步清理 `routesBySessionId` 与 `sessionIdByTargetKey` 双索引。
  * - 仅影响 chat 路由，不触碰 context/chat 历史文件。
  */
-export async function removeChannelContextRouteByContextId(params: {
+export async function removeChannelSessionRouteBySessionId(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
 }): Promise<{
   removed: boolean;
   route: ChannelContextRouteV1 | null;
 }> {
   const rootPath = String(params.context.rootPath || "").trim();
-  const contextId = toOptionalTrimmedString(params.contextId);
-  if (!rootPath || !contextId) {
+  const sessionId = toOptionalTrimmedString(params.sessionId);
+  if (!rootPath || !sessionId) {
     return {
       removed: false,
       route: null,
@@ -348,7 +348,7 @@ export async function removeChannelContextRouteByContextId(params: {
   }
 
   const file = await readMetaFile({ rootPath });
-  const route = normalizeRoute(file.routesByContextId[contextId]);
+  const route = normalizeRoute(file.routesBySessionId[sessionId]);
   if (!route) {
     return {
       removed: false,
@@ -356,12 +356,12 @@ export async function removeChannelContextRouteByContextId(params: {
     };
   }
 
-  delete file.routesByContextId[contextId];
-  for (const [targetKey, mappedContextId] of Object.entries(
-    file.contextIdByTargetKey,
+  delete file.routesBySessionId[sessionId];
+  for (const [targetKey, mappedSessionId] of Object.entries(
+    file.sessionIdByTargetKey,
   )) {
-    if (mappedContextId === contextId) {
-      delete file.contextIdByTargetKey[targetKey];
+    if (mappedSessionId === sessionId) {
+      delete file.sessionIdByTargetKey[targetKey];
     }
   }
 

@@ -211,14 +211,14 @@ function getTimelineVisualTone(roleInput?: string): {
 function resolveChatDisplayName(params: {
   chatTitle?: string
   chatId?: string
-  contextId: string
-}): { value: string; source: "title" | "chat_id" | "context_id" } {
+  sessionId: string
+}): { value: string; source: "title" | "chat_id" | "session_id" } {
   const chatTitle = String(params.chatTitle || "").trim()
   const chatId = String(params.chatId || "").trim()
   // 关键点（中文）：`chatTitle===chatId` 时认为标题无效，避免把 openid 误显示为昵称。
   if (chatTitle && (!chatId || chatTitle !== chatId)) return { value: chatTitle, source: "title" }
   if (chatId) return { value: chatId, source: "chat_id" }
-  return { value: String(params.contextId || "").trim() || "unknown", source: "context_id" }
+  return { value: String(params.sessionId || "").trim() || "unknown", source: "session_id" }
 }
 
 function buildSessionRouteJson(params: {
@@ -232,12 +232,12 @@ function buildSessionRouteJson(params: {
   const displayName = resolveChatDisplayName({
     chatTitle: params.chatTitle,
     chatId: params.chatId,
-    contextId: params.selectedSessionId,
+    sessionId: params.selectedSessionId,
   })
 
   return JSON.stringify(
     {
-      contextId: toOptionalRouteText(params.selectedSessionId),
+      sessionId: toOptionalRouteText(params.selectedSessionId),
       channel: toOptionalRouteText(params.channel),
       chatId: toOptionalRouteText(params.chatId),
       chatTitle: toOptionalRouteText(params.chatTitle),
@@ -606,7 +606,7 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
   const [rightTab, setRightTab] = React.useState<RightTab>("route")
 
   const selectedSession = React.useMemo(
-    () => sessions.find((item) => String(item.contextId || "").trim() === selectedSessionId) || null,
+    () => sessions.find((item) => String(item.sessionId || "").trim() === selectedSessionId) || null,
     [sessions, selectedSessionId],
   )
 
@@ -632,7 +632,7 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
       resolveChatDisplayName({
         chatTitle: selectedSession?.chatTitle,
         chatId: selectedSession?.chatId,
-        contextId: selectedSessionId,
+        sessionId: selectedSessionId,
       }),
     [selectedSession, selectedSessionId],
   )

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 消费 services/chat 的队列模块
- * - 通过 RequestContext（ALS）透传 contextId
+ * - 通过 RequestContext（ALS）透传 sessionId
  * - 支持 step 边界合并（同 lane 新消息可插入当前 run）
  */
 
@@ -290,7 +290,7 @@ export class ChatQueueWorker {
     return drained.length > 0 ? [first, ...drained] : [first];
   }
 
-  private shouldAppendContextMessage(item: ChatQueueItem): boolean {
+  private shouldAppendSessionMessage(item: ChatQueueItem): boolean {
     return item.kind === "exec";
   }
 
@@ -308,11 +308,11 @@ export class ChatQueueWorker {
     };
   }
 
-  private async appendContextMessageIfNeeded(item: ChatQueueItem): Promise<void> {
-    if (!this.shouldAppendContextMessage(item)) return;
-    if (item.contextPersisted === true) return;
+  private async appendSessionMessageIfNeeded(item: ChatQueueItem): Promise<void> {
+    if (!this.shouldAppendSessionMessage(item)) return;
+    if (item.sessionPersisted === true) return;
     await this.requireContext().appendUserMessage({
-      sessionId: item.contextId,
+      sessionId: item.sessionId,
       text: item.text,
       extra: this.buildIngressExtra(item),
     });
@@ -322,8 +322,8 @@ export class ChatQueueWorker {
     const control = item.control;
     if (!control) return false;
     if (control.type === "clear") {
-      this.requireContext().clearAgent(item.contextId);
-      clearChatQueueLane(item.contextId);
+      this.requireContext().clearAgent(item.sessionId);
+      clearChatQueueLane(item.sessionId);
       return true;
     }
     return false;
@@ -592,7 +592,7 @@ export class ChatQueueWorker {
     }
 
     if (first.kind === "audit") {
-      await this.appendContextMessageIfNeeded(first);
+      await this.appendSessionMessageIfNeeded(first);
       return;
     }
 
@@ -606,7 +606,7 @@ export class ChatQueueWorker {
         if (item.control?.type === "clear") clearRequested = true;
         continue;
       }
-      await this.appendContextMessageIfNeeded(item);
+      await this.appendSessionMessageIfNeeded(item);
       if (item.kind === "exec") {
         runItem = item;
       }
@@ -622,17 +622,17 @@ export class ChatQueueWorker {
           continue;
         }
 
-        await this.appendContextMessageIfNeeded(item);
+        await this.appendSessionMessageIfNeeded(item);
         if (item.kind === "exec") {
           const text = String(item.text ?? "").trim();
           if (text) {
             mergedExecMessages.push({
-              id: `u:${item.contextId}:${item.id}`,
+              id: `u:${item.sessionId}:${item.id}`,
               role: "user",
               metadata: {
                 v: 1,
                 ts: Date.now(),
-                sessionId: item.contextId,
+                sessionId: item.sessionId,
                 source: "ingress",
                 kind: "normal",
                 extra: this.buildIngressExtra(item),
@@ -652,7 +652,7 @@ export class ChatQueueWorker {
       const stepText = String(params.text || "").trim();
       if (!stepText) return;
       const dispatched = await this.dispatchAssistantTextDirect({
-        sessionId: runItem.contextId,
+        sessionId: runItem.sessionId,
         assistantText: stepText,
         phase: "step",
       });
@@ -666,7 +666,7 @@ export class ChatQueueWorker {
     let result: AgentResult;
     try {
       result = await serviceContext.run({
-        sessionId: runItem.contextId,
+        sessionId: runItem.sessionId,
         query: runItem.text,
         onStepCallback,
         onAssistantStepCallback,
@@ -674,13 +674,13 @@ export class ChatQueueWorker {
     } catch (error) {
       const channelErrorText = buildChannelErrorText(error);
       this.logger.error("ChatQueueWorker execution failed", {
-        sessionId: runItem.contextId,
+        sessionId: runItem.sessionId,
         error: String(error),
       });
 
       try {
         await serviceContext.appendAssistantMessage({
-          sessionId: runItem.contextId,
+          sessionId: runItem.sessionId,
           fallbackText: channelErrorText,
           extra: {
             note: "chat_queue_worker_run_failed",
@@ -691,7 +691,7 @@ export class ChatQueueWorker {
       }
 
       await this.dispatchTextToChannel({
-        sessionId: runItem.contextId,
+        sessionId: runItem.sessionId,
         text: channelErrorText,
         messageId: runItem.messageId,
         phase: "error",
@@ -702,23 +702,23 @@ export class ChatQueueWorker {
     }
 
     if (clearRequested) {
-      serviceContext.clearAgent(runItem.contextId);
-      clearChatQueueLane(runItem.contextId);
+      serviceContext.clearAgent(runItem.sessionId);
+      clearChatQueueLane(runItem.sessionId);
     }
 
     try {
       if (!hasPersistedAssistantSteps(result.assistantMessage)) {
         await serviceContext.appendAssistantMessage({
-          sessionId: runItem.contextId,
+          sessionId: runItem.sessionId,
           message: result.assistantMessage,
         });
       }
       const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-        runItem.contextId,
+        runItem.sessionId,
       );
       for (const message of deferredInjectedMessages) {
         await serviceContext.appendUserMessage({
-          sessionId: runItem.contextId,
+          sessionId: runItem.sessionId,
           message,
         });
       }
@@ -740,13 +740,13 @@ export class ChatQueueWorker {
       const dispatchedDirect = duplicatedWithStep
         ? true
         : await this.dispatchAssistantMessageDirect({
-            sessionId: runItem.contextId,
+            sessionId: runItem.sessionId,
             assistantMessage: result.assistantMessage,
           });
       // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里无论成功/失败都强制兜底回发。
       if (!dispatchedDirect && finalChannelText) {
         await this.dispatchTextToChannel({
-          sessionId: runItem.contextId,
+          sessionId: runItem.sessionId,
           text:
             result.success === false
               ? finalChannelText || "❌ 执行失败，请稍后重试。"

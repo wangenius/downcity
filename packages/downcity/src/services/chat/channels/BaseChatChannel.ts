@@ -11,9 +11,9 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
 import {
-  resolveContextIdByChatTarget,
-  resolveOrCreateContextIdByChatTarget,
-  upsertChatMetaByContextId,
+  resolveSessionIdByChatTarget,
+  resolveOrCreateSessionIdByChatTarget,
+  upsertChatMetaBySessionId,
 } from "@services/chat/runtime/ChatMetaStore.js";
 import { deleteChatContextById } from "@services/chat/runtime/ChatContextDelete.js";
 import {
@@ -72,7 +72,7 @@ export type ChannelSendActionParams = ChannelChatKeyParams & {
  * 入站消息统一结构（跨平台最小公共字段）。
  *
  * 说明（中文）
- * - chatId 是平台原始会话标识（非 contextId）
+ * - chatId 是平台原始会话标识（非 sessionId）
  * - messageThreadId 用于支持 topic/thread 细粒度并发
  * - 该结构只描述“接收侧”，不包含平台发送参数
  */
@@ -262,19 +262,19 @@ export abstract class BaseChatChannel {
   }
 
   /**
-   * 通过渠道目标解析或创建 contextId。
+   * 通过渠道目标解析或创建 sessionId。
    *
    * 关键点（中文）
-   * - contextId 由映射存储维护，不能通过字符串规则推导。
+   * - sessionId 由映射存储维护，不能通过字符串规则推导。
    */
-  private async resolveOrCreateContextIdByTarget(params: {
+  private async resolveOrCreateSessionIdByTarget(params: {
     chatId: string;
     chatType?: string;
     messageThreadId?: number;
   }): Promise<string | null> {
     const chatId = String(params.chatId || "").trim();
     if (!chatId) return null;
-    return await resolveOrCreateContextIdByChatTarget({
+    return await resolveOrCreateSessionIdByChatTarget({
       context: this.context,
       channel: this.channel,
       chatId,
@@ -289,7 +289,7 @@ export abstract class BaseChatChannel {
    * 在工具侧文本发送成功后补齐 outbound history。
    *
    * 关键点（中文）
-   * - 通过渠道目标映射解析 contextId，保证与 inbound/history 查询对齐。
+   * - 通过渠道目标映射解析 sessionId，保证与 inbound/history 查询对齐。
    * - 仅做审计落盘，不影响发送结果语义。
    */
   private async appendToolOutboundHistory(
@@ -299,17 +299,17 @@ export abstract class BaseChatChannel {
     const text = String(params.text ?? "");
     if (!chatId || !text.trim()) return;
 
-    const contextId = await this.resolveOrCreateContextIdByTarget({
+    const sessionId = await this.resolveOrCreateSessionIdByTarget({
       chatId,
       chatType: params.chatType,
       messageThreadId: params.messageThreadId,
     });
-    if (!contextId) return;
+    if (!sessionId) return;
 
     try {
       await appendOutboundChatHistory({
         context: this.context,
-        contextId,
+        sessionId,
         channel: this.channel,
         chatId,
         text,
@@ -328,7 +328,7 @@ export abstract class BaseChatChannel {
       this.logger.warn("Failed to append outbound chat history", {
         error: String(error),
         channel: this.channel,
-        contextId,
+        sessionId,
         chatId,
       });
     }
@@ -400,20 +400,20 @@ export abstract class BaseChatChannel {
   }
 
   /**
-   * 清理某个 contextId 对应的 agent 会话状态。
+   * 清理某个 sessionId 对应的 agent 会话状态。
    *
    * 说明（中文）
    * - 只清理 runtime/context 层状态，不直接删历史文件
    * - 常用于用户触发“重置对话”类命令
    */
-  clearChat(contextId: string): void {
-    const key = String(contextId || "").trim();
+  clearChat(sessionId: string): void {
+    const key = String(sessionId || "").trim();
     if (!key) return;
     enqueueChatQueue({
       kind: "control",
       channel: this.channel,
       targetId: key,
-      contextId: key,
+      sessionId: key,
       text: "",
       control: { type: "clear" },
     });
@@ -421,12 +421,12 @@ export abstract class BaseChatChannel {
   }
 
   /**
-   * 按渠道目标清理会话（映射到内部 contextId）。
+   * 按渠道目标清理会话（映射到内部 sessionId）。
    */
   protected async clearChatByTarget(params: ChannelChatKeyParams): Promise<void> {
     const chatId = String(params.chatId || "").trim();
     if (!chatId) return;
-    const contextId = await resolveContextIdByChatTarget({
+    const sessionId = await resolveSessionIdByChatTarget({
       context: this.context,
       channel: this.channel,
       chatId,
@@ -435,7 +435,7 @@ export abstract class BaseChatChannel {
         ? { threadId: params.messageThreadId }
         : {}),
     });
-    if (!contextId) {
+    if (!sessionId) {
       this.logger.info("Skip clear chat: context mapping not found", {
         channel: this.channel,
         chatId,
@@ -446,13 +446,13 @@ export abstract class BaseChatChannel {
     }
     const deleted = await deleteChatContextById({
       context: this.context,
-      sessionId: contextId,
+      sessionId,
     });
     if (!deleted.success) {
       this.logger.warn("Failed to delete chat context by target", {
         channel: this.channel,
         chatId,
-        contextId,
+        sessionId,
         error: deleted.error || "delete failed",
       });
       return;
@@ -460,7 +460,7 @@ export abstract class BaseChatChannel {
     this.logger.info("Deleted chat context by target", {
       channel: this.channel,
       chatId,
-      contextId,
+      sessionId,
       removedMeta: deleted.removedMeta,
       removedChatDir: deleted.removedChatDir,
       removedContextDir: deleted.removedContextDir,
@@ -468,14 +468,14 @@ export abstract class BaseChatChannel {
   }
 
   /**
-   * 维护 contextId 对应的 chat 路由元信息。
+   * 维护 sessionId 对应的 chat 路由元信息。
    *
    * 关键点（中文）
    * - 由 chat 服务在入站阶段维护，不依赖 core message metadata
    * - 仅做 best-effort，不阻塞主链路
    */
   private async updateChatMeta(params: {
-    contextId: string;
+    sessionId: string;
     chatId: string;
     targetType?: string;
     threadId?: number;
@@ -484,9 +484,9 @@ export abstract class BaseChatChannel {
     actorName?: string;
     chatTitle?: string;
   }): Promise<void> {
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: this.context,
-      contextId: params.contextId,
+      sessionId: params.sessionId,
       channel: this.channel,
       chatId: params.chatId,
       targetType: params.targetType,
@@ -502,11 +502,11 @@ export abstract class BaseChatChannel {
    * 记录入站 chat 事件（审计流）。
    *
    * 关键点（中文）
-   * - 跟 context message history 分离，写入 `.downcity/chat/<contextId>/history.jsonl`。
+   * - 跟 session message history 分离，写入 `.downcity/chat/<sessionId>/history.jsonl`。
    * - 写入失败不阻塞主链路，但会记录 warning。
    */
   private async appendInboundHistory(params: {
-    contextId: string;
+    sessionId: string;
     chatId: string;
     ingressKind: "audit" | "exec";
     text: string;
@@ -520,7 +520,7 @@ export abstract class BaseChatChannel {
     try {
       await appendInboundChatHistory({
         context: this.context,
-        contextId: params.contextId,
+        sessionId: params.sessionId,
         channel: this.channel,
         chatId: params.chatId,
         ingressKind: params.ingressKind,
@@ -536,7 +536,7 @@ export abstract class BaseChatChannel {
       this.logger.warn("Failed to append inbound chat history", {
         error: String(error),
         channel: this.channel,
-        contextId: params.contextId,
+        sessionId: params.sessionId,
         chatId: params.chatId,
         ingressKind: params.ingressKind,
       });
@@ -548,7 +548,7 @@ export abstract class BaseChatChannel {
    *
    * 说明（中文）
    * - 先落 `chat history`（审计流），再入队
-   * - channel/targetId/contextId 三元组由 channel 层统一补齐
+   * - channel/targetId/sessionId 三元组由 channel 层统一补齐
    */
   protected async enqueueAuditMessage(params: {
     chatId: string;
@@ -566,16 +566,16 @@ export abstract class BaseChatChannel {
     const chatType = typeof meta.chatType === "string" ? meta.chatType : undefined;
     const chatTitle =
       typeof meta.chatTitle === "string" ? meta.chatTitle.trim() || undefined : undefined;
-    const resolved = await this.resolveOrCreateContextIdByTarget({
+    const resolved = await this.resolveOrCreateSessionIdByTarget({
       chatId: params.chatId,
       chatType,
       messageThreadId,
     });
-    const contextId = String(resolved || "").trim();
-    if (!contextId) return;
+    const sessionId = String(resolved || "").trim();
+    if (!sessionId) return;
     const extra = stripUndefinedMeta(meta);
     await this.appendInboundHistory({
-      contextId,
+      sessionId,
       chatId: params.chatId,
       ingressKind: "audit",
       text: params.text,
@@ -587,7 +587,7 @@ export abstract class BaseChatChannel {
       extra,
     });
     await this.updateChatMeta({
-      contextId,
+      sessionId,
       chatId: params.chatId,
       targetType: chatType,
       threadId: messageThreadId,
@@ -601,7 +601,7 @@ export abstract class BaseChatChannel {
       input: {
         kind: "audit",
         channel: this.channel,
-        chatKey: contextId,
+        chatKey: sessionId,
         chatId: params.chatId,
         text: params.text,
         ...(chatType ? { chatType } : {}),
@@ -616,7 +616,7 @@ export abstract class BaseChatChannel {
       kind: "audit",
       channel: this.channel,
       targetId: params.chatId,
-      contextId,
+      sessionId,
       ...(typeof preparedAudit.actorId === "string"
         ? { actorId: preparedAudit.actorId }
         : {}),
@@ -635,8 +635,8 @@ export abstract class BaseChatChannel {
         : {}),
       extra:
         preparedAudit.extra && typeof preparedAudit.extra === "object"
-          ? (preparedAudit.extra as JsonObject)
-          : extra,
+            ? (preparedAudit.extra as JsonObject)
+            : extra,
     });
     await emitChatEnqueueEffect({
       runtime: this.context,
@@ -671,13 +671,13 @@ export abstract class BaseChatChannel {
       permissions: userRole?.permissions || [],
     };
 
-    const chatKey = await this.resolveOrCreateContextIdByTarget({
+    const chatKey = await this.resolveOrCreateSessionIdByTarget({
       chatId: msg.chatId,
       chatType: msg.chatType,
       messageThreadId: msg.messageThreadId,
     });
     if (!chatKey) {
-      throw new Error("Failed to resolve contextId for incoming chat message");
+      throw new Error("Failed to resolve sessionId for incoming chat message");
     }
 
     const rawQueuedText = buildQueuedUserMessageWithInfo({
@@ -738,7 +738,7 @@ export abstract class BaseChatChannel {
     });
 
     await this.updateChatMeta({
-      contextId: chatKey,
+      sessionId: chatKey,
       chatId: msg.chatId,
       targetType: msg.chatType,
       threadId: msg.messageThreadId,
@@ -752,7 +752,7 @@ export abstract class BaseChatChannel {
       kind: "exec",
       channel: this.channel,
       targetId: msg.chatId,
-      contextId: chatKey,
+      sessionId: chatKey,
       text: queuedText,
       ...(typeof preparedExec.chatType === "string"
         ? { targetType: preparedExec.chatType }
@@ -769,7 +769,7 @@ export abstract class BaseChatChannel {
       ...(typeof preparedExec.actorName === "string"
         ? { actorName: preparedExec.actorName }
         : {}),
-      contextPersisted: true,
+      sessionPersisted: true,
       extra: queuedExtra,
     });
     await emitChatEnqueueEffect({

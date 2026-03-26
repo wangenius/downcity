@@ -244,31 +244,29 @@ export interface UiConfigStatusResponse {
 /**
  * Context 概览项。
  */
-export interface UiOverviewContextItem {
+export interface UiOverviewSessionItem {
   /**
-   * Context 唯一标识。
+   * Session 唯一标识。
    */
-  contextId?: string;
+  sessionId?: string;
 }
-
-export type UiOverviewSessionItem = UiOverviewContextItem
 
 /**
  * Dashboard session 摘要项。
  */
 export interface UiSessionSummary {
   /**
-   * context 唯一标识。
+   * session 唯一标识。
    */
-  contextId: string;
+  sessionId: string;
   /**
-   * context 关联的渠道名称（例如 `telegram` / `qq` / `feishu` / `consoleui`）。
-   * - 由后端按 `contextId -> channel` 映射解析后回传。
+   * session 关联的渠道名称（例如 `telegram` / `qq` / `feishu` / `consoleui`）。
+   * - 由后端按 `sessionId -> channel` 映射解析后回传。
    * - 当历史数据缺失映射时可能为空，前端需自行回退解析。
    */
   channel?: string;
   /**
-   * 该 context 对应的渠道侧会话标识（如 telegram chat id / qq openid）。
+   * 该 session 对应的渠道侧会话标识（如 telegram chat id / qq openid）。
    */
   chatId?: string;
   /**
@@ -300,7 +298,7 @@ export interface UiSessionSummary {
    */
   lastText?: string;
   /**
-   * 当前 context 是否正在执行。
+   * 当前 session 是否正在执行。
    */
   executing?: boolean;
 }
@@ -316,7 +314,7 @@ export interface UiSessionsResponse {
   /**
    * context 列表。
    */
-  contexts?: UiSessionSummary[];
+  sessions?: UiSessionSummary[];
 }
 
 /**
@@ -343,7 +341,7 @@ export interface UiOverviewResponse {
   /**
    * 上下文统计信息。
    */
-  contexts?: {
+  sessions?: {
     /**
      * context 总数。
      */
@@ -351,7 +349,7 @@ export interface UiOverviewResponse {
     /**
      * context 列表。
      */
-    items?: UiOverviewContextItem[];
+    items?: UiOverviewSessionItem[];
   };
   /**
    * 任务统计信息。
@@ -1864,9 +1862,9 @@ export interface UiPromptResponse {
    */
   success?: boolean;
   /**
-   * 当前 context id。
+   * 当前 session id。
    */
-  contextId?: string;
+  sessionId?: string;
   /**
    * 消息总数。
    */
@@ -1942,9 +1940,9 @@ export interface UiSessionMessagesResponse {
    */
   success?: boolean;
   /**
-   * context id。
+   * session id。
    */
-  contextId?: string;
+  sessionId?: string;
   /**
    * 时间线消息列表。
    */
@@ -1982,9 +1980,9 @@ export interface UiSessionArchivesResponse {
    */
   success?: boolean;
   /**
-   * context id。
+   * session id。
    */
-  contextId?: string;
+  sessionId?: string;
   /**
    * archive 列表。
    */
@@ -2000,9 +1998,9 @@ export interface UiSessionArchiveDetailResponse {
    */
   success?: boolean;
   /**
-   * context id。
+   * session id。
    */
-  contextId?: string;
+  sessionId?: string;
   /**
    * archive id。
    */
@@ -2034,9 +2032,9 @@ export interface UiSessionClearResponse {
    */
   success?: boolean;
   /**
-   * context id。
+   * session id。
    */
-  contextId?: string;
+  sessionId?: string;
   /**
    * 是否完成清理。
    */

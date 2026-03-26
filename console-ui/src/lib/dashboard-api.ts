@@ -94,27 +94,25 @@ export const dashboardApiRoutes = {
       : "/api/ui/config-status",
   uiAgentEnv: (agentId: string) =>
     `/api/ui/env?scope=agent&agent=${encodeURIComponent(agentId)}`,
-  overview: (contextLimit = 40) =>
-    `/api/dashboard/overview?contextLimit=${encodeURIComponent(String(contextLimit))}`,
+  overview: (sessionLimit = 40) =>
+    `/api/dashboard/overview?sessionLimit=${encodeURIComponent(String(sessionLimit))}`,
   services: () => "/api/dashboard/services",
   sessions: (limit = 120) =>
     `/api/dashboard/sessions?limit=${encodeURIComponent(String(limit))}`,
-  contexts: (limit = 120) =>
-    `/api/dashboard/sessions?limit=${encodeURIComponent(String(limit))}`,
-  sessionMessages: (contextId: string, limit = 100) =>
-    `/api/dashboard/sessions/${encodeURIComponent(contextId)}/messages?limit=${encodeURIComponent(String(limit))}`,
-  sessionArchives: (contextId: string, limit = 80) =>
-    `/api/dashboard/sessions/${encodeURIComponent(contextId)}/archives?limit=${encodeURIComponent(String(limit))}`,
-  sessionArchiveDetail: (contextId: string, archiveId: string) =>
-    `/api/dashboard/sessions/${encodeURIComponent(contextId)}/archives/${encodeURIComponent(archiveId)}`,
-  sessionExecute: (contextId: string) =>
-    `/api/dashboard/sessions/${encodeURIComponent(contextId)}/execute`,
-  sessionClearMessages: (contextId: string) =>
-    `/api/dashboard/sessions/${encodeURIComponent(contextId)}/messages`,
-  sessionClearChatHistory: (contextId: string) =>
-    `/api/dashboard/sessions/${encodeURIComponent(contextId)}/chat-history`,
-  systemPrompt: (contextId: string) =>
-    `/api/dashboard/system-prompt?contextId=${encodeURIComponent(contextId)}`,
+  sessionMessages: (sessionId: string, limit = 100) =>
+    `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages?limit=${encodeURIComponent(String(limit))}`,
+  sessionArchives: (sessionId: string, limit = 80) =>
+    `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/archives?limit=${encodeURIComponent(String(limit))}`,
+  sessionArchiveDetail: (sessionId: string, archiveId: string) =>
+    `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/archives/${encodeURIComponent(archiveId)}`,
+  sessionExecute: (sessionId: string) =>
+    `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/execute`,
+  sessionClearMessages: (sessionId: string) =>
+    `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages`,
+  sessionClearChatHistory: (sessionId: string) =>
+    `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/chat-history`,
+  systemPrompt: (sessionId: string) =>
+    `/api/dashboard/system-prompt?sessionId=${encodeURIComponent(sessionId)}`,
   tasks: () => "/api/dashboard/tasks",
   taskRun: () => "/api/dashboard/tasks/run",
   taskStatus: (title: string) =>
@@ -130,8 +128,8 @@ export const dashboardApiRoutes = {
   authorization: () => "/api/dashboard/authorization",
   authorizationConfig: () => "/api/dashboard/authorization/config",
   authorizationAction: () => "/api/dashboard/authorization/action",
-  localMessages: (contextId: string, limit = 80) =>
-    `/api/dashboard/sessions/${encodeURIComponent(contextId)}/messages?limit=${encodeURIComponent(String(limit))}`,
+  localMessages: (sessionId: string, limit = 80) =>
+    `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/messages?limit=${encodeURIComponent(String(limit))}`,
   servicesCommand: () => "/api/services/command",
   servicesControl: () => "/api/services/control",
   pluginsAction: () => "/api/plugins/action",

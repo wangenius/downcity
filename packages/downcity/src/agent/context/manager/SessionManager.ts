@@ -22,32 +22,32 @@ import { SessionAgentDispatcher } from "@agent/context/context-agent/SessionAgen
  */
 export class SessionManager {
   private readonly dispatcher: SessionAgentDispatcher;
-  private readonly runAfterContextUpdated?: (contextId: string) => Promise<void>;
-  private readonly executingContextIds: Set<string> = new Set();
+  private readonly runAfterSessionUpdated?: (sessionId: string) => Promise<void>;
+  private readonly executingSessionIds: Set<string> = new Set();
 
   /**
    * 构造函数：装配组件。
    */
   constructor(params: {
     dispatcher: SessionAgentDispatcher;
-    runAfterContextUpdated?: (contextId: string) => Promise<void>;
+    runAfterSessionUpdated?: (sessionId: string) => Promise<void>;
   }) {
     this.dispatcher = params.dispatcher;
-    this.runAfterContextUpdated = params.runAfterContextUpdated;
+    this.runAfterSessionUpdated = params.runAfterSessionUpdated;
   }
 
   /**
    * 获取（或创建）Persistor。
    */
-  getPersistor(contextId: string) {
-    return this.dispatcher.getPersistor(contextId);
+  getPersistor(sessionId: string) {
+    return this.dispatcher.getPersistor(sessionId);
   }
 
   /**
    * 获取（或创建）SessionAgent。
    */
-  getAgent(contextId: string) {
-    return this.dispatcher.getAgent(contextId);
+  getAgent(sessionId: string) {
+    return this.dispatcher.getAgent(sessionId);
   }
 
   /**
@@ -55,19 +55,19 @@ export class SessionManager {
    *
    * 关键点（中文）
    * - 收敛 `dispatcher.getAgent + withRequestContext + sessionAgent.run`。
-   * - 调用方只传 `contextId/query` 与可选运行态覆盖参数。
+   * - 调用方只传 `sessionId/query` 与可选运行态覆盖参数。
    */
   async run(params: {
-    contextId: string;
+    sessionId: string;
     query: string;
     requestContext?: Omit<RequestContext, "sessionId">;
   }): Promise<AgentResult> {
-    const contextId = String(params.contextId || "").trim();
-    if (!contextId) {
-      throw new Error("SessionManager.run requires a non-empty contextId");
+    const sessionId = String(params.sessionId || "").trim();
+    if (!sessionId) {
+      throw new Error("SessionManager.run requires a non-empty sessionId");
     }
     const query = String(params.query || "").trim();
-    const agent = this.dispatcher.getAgent(contextId);
+    const agent = this.dispatcher.getAgent(sessionId);
     const requestContext = params.requestContext || {};
     let persistedAssistantStepCount = 0;
     const providedOnAssistantStepCallback = requestContext.onAssistantStepCallback;
@@ -79,12 +79,12 @@ export class SessionManager {
       if (!stepText) return;
 
       await this.appendAssistantMessage({
-        contextId,
+        sessionId,
         fallbackText: stepText,
         extra: {
           internal: "assistant_step",
           stepIndex: step.stepIndex,
-          persistedBy: "context_manager_run",
+          persistedBy: "session_manager_run",
         },
       });
       persistedAssistantStepCount += 1;
@@ -93,11 +93,11 @@ export class SessionManager {
         await providedOnAssistantStepCallback(step);
       }
     };
-    this.executingContextIds.add(contextId);
+    this.executingSessionIds.add(sessionId);
     try {
       const result = await withRequestContext(
         {
-          sessionId: contextId,
+          sessionId,
           ...requestContext,
           onAssistantStepCallback: wrappedOnAssistantStepCallback,
         },
@@ -113,7 +113,7 @@ export class SessionManager {
             ...(result.assistantMessage.metadata || {
               v: 1 as const,
               ts: Date.now(),
-              sessionId: contextId,
+              sessionId,
             }),
             extra: {
               ...(
@@ -130,49 +130,49 @@ export class SessionManager {
         },
       };
     } finally {
-      this.executingContextIds.delete(contextId);
+      this.executingSessionIds.delete(sessionId);
     }
   }
 
   /**
-   * 判断指定 context 是否正在执行。
+   * 判断指定 session 是否正在执行。
    */
-  isContextExecuting(contextId: string): boolean {
-    const key = String(contextId || "").trim();
+  isSessionExecuting(sessionId: string): boolean {
+    const key = String(sessionId || "").trim();
     if (!key) return false;
-    return this.executingContextIds.has(key);
+    return this.executingSessionIds.has(key);
   }
 
   /**
-   * 返回当前正在执行的 context id 列表。
+   * 返回当前正在执行的 session id 列表。
    */
-  listExecutingContextIds(): string[] {
-    return [...this.executingContextIds];
+  listExecutingSessionIds(): string[] {
+    return [...this.executingSessionIds];
   }
 
   /**
-   * 返回当前执行中的 context 数量。
+   * 返回当前执行中的 session 数量。
    */
-  getExecutingContextCount(): number {
-    return this.executingContextIds.size;
+  getExecutingSessionCount(): number {
+    return this.executingSessionIds.size;
   }
 
   /**
    * 清理 SessionAgent 缓存。
    */
-  clearAgent(contextId?: string): void {
-    this.dispatcher.clearAgent(contextId);
+  clearAgent(sessionId?: string): void {
+    this.dispatcher.clearAgent(sessionId);
   }
 
   /**
    * 触发会话更新回调。
    */
-  async afterContextUpdatedAsync(contextId: string): Promise<void> {
-    const key = String(contextId || "").trim();
+  async afterSessionUpdatedAsync(sessionId: string): Promise<void> {
+    const key = String(sessionId || "").trim();
     if (!key) return;
-    if (!this.runAfterContextUpdated) return;
+    if (!this.runAfterSessionUpdated) return;
     try {
-      await this.runAfterContextUpdated(key);
+      await this.runAfterSessionUpdated(key);
     } catch {
       // ignore
     }
@@ -182,21 +182,21 @@ export class SessionManager {
    * 追加一条 user 消息到历史。
    */
   async appendUserMessage(params: {
-    contextId: string;
+    sessionId: string;
     message?: SessionMessageV1 | null;
     text?: string;
     requestId?: string;
     extra?: JsonObject;
   }): Promise<void> {
-    const contextId = String(params.contextId || "").trim();
-    if (!contextId) return;
+    const sessionId = String(params.sessionId || "").trim();
+    if (!sessionId) return;
 
     try {
-      const persistor = this.dispatcher.getPersistor(contextId);
+      const persistor = this.dispatcher.getPersistor(sessionId);
       const message = params.message;
       if (message && typeof message === "object") {
         await persistor.append(message);
-        void this.afterContextUpdatedAsync(contextId);
+        void this.afterSessionUpdatedAsync(sessionId);
         return;
       }
 
@@ -206,13 +206,13 @@ export class SessionManager {
       const msg = persistor.userText({
         text: fallbackText,
         metadata: {
-          sessionId: contextId,
+          sessionId,
           requestId: params.requestId,
           extra: params.extra,
         } as Omit<SessionMetadataV1, "v" | "ts">,
       });
       await persistor.append(msg);
-      void this.afterContextUpdatedAsync(contextId);
+      void this.afterSessionUpdatedAsync(sessionId);
     } catch {
       // ignore
     }
@@ -222,21 +222,21 @@ export class SessionManager {
    * 追加一条 assistant 消息到历史。
    */
   async appendAssistantMessage(params: {
-    contextId: string;
+    sessionId: string;
     message?: SessionMessageV1 | null;
     fallbackText?: string;
     requestId?: string;
     extra?: JsonObject;
   }): Promise<void> {
-    const contextId = String(params.contextId || "").trim();
-    if (!contextId) return;
+    const sessionId = String(params.sessionId || "").trim();
+    if (!sessionId) return;
 
     try {
-      const persistor = this.dispatcher.getPersistor(contextId);
+      const persistor = this.dispatcher.getPersistor(sessionId);
       const message = params.message;
       if (message && typeof message === "object") {
         await persistor.append(message);
-        void this.afterContextUpdatedAsync(contextId);
+        void this.afterSessionUpdatedAsync(sessionId);
         return;
       }
 
@@ -247,7 +247,7 @@ export class SessionManager {
         persistor.assistantText({
           text: fallbackText,
           metadata: {
-            sessionId: contextId,
+            sessionId,
             requestId: params.requestId,
             extra: params.extra,
           },
@@ -255,7 +255,7 @@ export class SessionManager {
           source: "egress",
         }),
       );
-      void this.afterContextUpdatedAsync(contextId);
+      void this.afterSessionUpdatedAsync(sessionId);
     } catch {
       // ignore
     }

@@ -17,7 +17,7 @@ import type {
   OrchestratorComposeResult,
 } from "@agent/components/OrchestratorComponent.js";
 import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
-import type { ContextSystemMessage } from "@agent/types/ContextSystemMessage.js";
+import type { SessionSystemMessage } from "@agent/types/SessionSystemMessage.js";
 import type { Tool } from "ai";
 
 type RuntimeOrchestratorOptions = {
@@ -68,13 +68,13 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
 
   createPrepareStepHandler(
     input: {
-      system: ContextSystemMessage[];
+      system: SessionSystemMessage[];
       appendMergedUserMessages: (
         messages: SessionMessageV1[],
       ) => Promise<ModelMessage[]>;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{
-    system: ContextSystemMessage[];
+    system: SessionSystemMessage[];
     messages?: ModelMessage[];
   }> {
     return async ({
@@ -82,7 +82,7 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
     }: {
       messages?: ModelMessage[];
     }): Promise<{
-      system: ContextSystemMessage[];
+      system: SessionSystemMessage[];
       messages?: ModelMessage[];
     }> => {
       const injectedMessages = drainInjectedUserMessages();

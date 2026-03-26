@@ -11,7 +11,7 @@ import type {
   SessionMessageV1,
   SessionMetadataV1,
 } from "@agent/types/SessionMessage.js";
-import type { ContextSystemMessage } from "@agent/types/ContextSystemMessage.js";
+import type { SessionSystemMessage } from "@agent/types/SessionSystemMessage.js";
 import { AgentComponent } from "./AgentComponent.js";
 
 /**
@@ -31,7 +31,7 @@ export type PersistorPrepareInput = {
   /**
    * 当前轮 system messages。
    */
-  system: ContextSystemMessage[];
+  system: SessionSystemMessage[];
 
   /**
    * 当前模型实例。
@@ -56,7 +56,7 @@ export type PersistorCompactInput = {
   /**
    * 当前轮 system messages。
    */
-  system: ContextSystemMessage[];
+  system: SessionSystemMessage[];
 
   /**
    * 保留最近消息条数。
@@ -95,7 +95,7 @@ export abstract class PersistorComponent extends AgentComponent {
   /**
    * 当前会话 ID。
    */
-  abstract readonly contextId: string;
+  abstract readonly sessionId: string;
 
   /**
    * 为本轮 Agent 执行准备模型输入消息。

@@ -59,9 +59,9 @@ export interface DashboardTimelineEvent {
 }
 
 /**
- * Dashboard 上下文摘要。
+ * Dashboard 会话摘要。
  */
-export interface DashboardContextSummary {
+export interface DashboardSessionSummary {
   /**
    * 会话 ID。
    *

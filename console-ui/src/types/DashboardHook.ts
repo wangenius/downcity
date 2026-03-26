@@ -266,7 +266,7 @@ export interface UseConsoleDashboardResult {
   /**
    * 切换当前 session。
    */
-  handleSessionChange: (contextId: string) => Promise<void>;
+  handleSessionChange: (sessionId: string) => Promise<void>;
 
   /**
    * 手动刷新 dashboard。
@@ -301,31 +301,31 @@ export interface UseConsoleDashboardResult {
   /**
    * 刷新 chat history。
    */
-  refreshChannelHistory: (agentId: string, contextId: string) => Promise<void>;
+  refreshChannelHistory: (agentId: string, sessionId: string) => Promise<void>;
 
   /**
    * 刷新 session message 历史。
    */
-  refreshSessionMessages: (agentId: string, contextId: string) => Promise<void>;
+  refreshSessionMessages: (agentId: string, sessionId: string) => Promise<void>;
 
   /**
    * 刷新 compact archive 列表。
    */
-  refreshSessionArchives: (agentId: string, contextId: string) => Promise<UiSessionArchiveSummary[]>;
+  refreshSessionArchives: (agentId: string, sessionId: string) => Promise<UiSessionArchiveSummary[]>;
 
   /**
    * 加载 archive 详情。
    */
   loadSessionArchiveMessages: (
     agentId: string,
-    contextId: string,
+    sessionId: string,
     archiveId: string,
   ) => Promise<void>;
 
   /**
    * 刷新 prompt。
    */
-  refreshPrompt: (agentId: string, contextId?: string) => Promise<void>;
+  refreshPrompt: (agentId: string, sessionId?: string) => Promise<void>;
 
   /**
    * 刷新模型信息。
@@ -455,17 +455,17 @@ export interface UseConsoleDashboardResult {
   /**
    * 清理指定 session 的消息历史。
    */
-  clearSessionMessages: (contextId: string) => Promise<void>;
+  clearSessionMessages: (sessionId: string) => Promise<void>;
 
   /**
    * 清理指定 context 的 chat history。
    */
-  clearChatHistory: (contextId: string) => Promise<void>;
+  clearChatHistory: (sessionId: string) => Promise<void>;
 
   /**
    * 完整删除指定 session。
    */
-  deleteChatSession: (contextId: string) => Promise<boolean>;
+  deleteChatSession: (sessionId: string) => Promise<boolean>;
 
   /**
    * 切换 active model。
@@ -662,7 +662,7 @@ export interface UseConsoleDashboardResult {
    * 常量集合。
    */
   constants: {
-    CONSOLEUI_CONTEXT_ID: string;
+    CONSOLEUI_SESSION_ID: string;
   };
 
   /**

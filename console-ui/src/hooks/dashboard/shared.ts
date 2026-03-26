@@ -12,7 +12,7 @@ import type {
   UiSessionTimelineMessage,
 } from "../../types/Dashboard";
 
-export const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
+export const CONSOLEUI_SESSION_ID = "consoleui-chat-main";
 
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -108,18 +108,14 @@ export function wait(ms: number): Promise<void> {
   });
 }
 
-export function isConsoleUiContext(contextIdInput: string): boolean {
-  const contextId = String(contextIdInput || "").trim().toLowerCase();
-  if (!contextId) return false;
-  return contextId.startsWith("consoleui-") || contextId === "local_ui";
-}
-
 export function isConsoleUiSession(sessionIdInput: string): boolean {
-  return isConsoleUiContext(sessionIdInput);
+  const sessionId = String(sessionIdInput || "").trim().toLowerCase();
+  if (!sessionId) return false;
+  return sessionId.startsWith("consoleui-") || sessionId === "local_ui";
 }
 
 export function toHistoryEventsFromTimeline(
-  contextId: string,
+  sessionId: string,
   timeline: UiSessionTimelineMessage[],
 ): UiChatHistoryEvent[] {
   return timeline.map((item, index) => {
@@ -132,8 +128,8 @@ export function toHistoryEventsFromTimeline(
           ? Date.parse(String(tsRaw || ""))
           : Date.now();
     return {
-      id: String(item.id || `${contextId}:timeline:${index}`),
-      contextId,
+      id: String(item.id || `${sessionId}:timeline:${index}`),
+      contextId: sessionId,
       channel: "consoleui",
       direction: role === "user" ? "inbound" : "outbound",
       ts: tsNumber,

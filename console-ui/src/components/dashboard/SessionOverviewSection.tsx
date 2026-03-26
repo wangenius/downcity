@@ -37,22 +37,22 @@ function toOptionalRouteText(input: unknown): string | null {
 
 function resolveChatDisplayName(item: UiSessionSummary): {
   value: string
-  source: "title" | "chat_id" | "context_id"
+  source: "title" | "chat_id" | "session_id"
 } {
   const chatTitle = String(item.chatTitle || "").trim()
   const chatId = String(item.chatId || "").trim()
   // 关键点（中文）：避免把 `chatTitle===chatId`（常见 openid）误判成可读标题。
   if (chatTitle && (!chatId || chatTitle !== chatId)) return { value: chatTitle, source: "title" }
   if (chatId) return { value: chatId, source: "chat_id" }
-  const contextId = String(item.contextId || "").trim() || "unknown"
-  return { value: contextId, source: "context_id" }
+  const sessionId = String(item.sessionId || "").trim() || "unknown"
+  return { value: sessionId, source: "session_id" }
 }
 
 function buildSessionRouteJson(item: UiSessionSummary): string {
   const display = resolveChatDisplayName(item)
   return JSON.stringify(
     {
-      contextId: toOptionalRouteText(item.contextId),
+      sessionId: toOptionalRouteText(item.sessionId),
       channel: toOptionalRouteText(resolveSessionChannel(item)),
       chatId: toOptionalRouteText(item.chatId),
       chatTitle: toOptionalRouteText(item.chatTitle),
@@ -374,8 +374,8 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
           <div className="space-y-2">
             {visibleSessions.map((item) => {
               const group = resolveSessionGroup(item)
-              const isSelected = item.contextId === selectedSessionId
-              const isDeleting = String(deletingSessionId || "").trim() === item.contextId
+              const isSelected = item.sessionId === selectedSessionId
+              const isDeleting = String(deletingSessionId || "").trim() === item.sessionId
               const isExecuting = item.executing === true
               const display = resolveChatDisplayName(item)
               const contextLabel = display.value
@@ -384,16 +384,16 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
               const chatType = String(item.chatType || "").trim()
               return (
                 <article
-                  key={item.contextId}
+                  key={item.sessionId}
                   className={isSelected ? "rounded-[20px] bg-secondary px-4 py-3" : "rounded-[20px] bg-transparent px-4 py-3 transition-colors hover:bg-secondary"}
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-foreground" title={`${contextLabel}\n${item.contextId}`}>
+                      <div className="truncate text-sm font-medium text-foreground" title={`${contextLabel}\n${item.sessionId}`}>
                         {contextLabel}
                       </div>
                       <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground/85">
-                        {item.contextId}
+                        {item.sessionId}
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/90">
                         <span className="rounded-full bg-background px-1.5 py-0.5 uppercase tracking-[0.08em]">
@@ -452,7 +452,7 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
                         size="sm"
                         variant={isSelected ? "secondary" : "outline"}
                         className="h-8 px-2.5"
-                        onClick={() => onOpenSession(item.contextId)}
+                        onClick={() => onOpenSession(item.sessionId)}
                       >
                         {isSelected ? "已打开" : "打开"}
                       </Button>
@@ -464,13 +464,13 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
                         onClick={async () => {
                           const confirmed = await confirm({
                             title: "删除 Session",
-                            description: `确认彻底删除 session「${item.contextId}」吗？该操作不可恢复。`,
+                            description: `确认彻底删除 session「${item.sessionId}」吗？该操作不可恢复。`,
                             confirmText: "删除",
                             cancelText: "取消",
                             confirmVariant: "destructive",
                           })
                           if (!confirmed) return
-                          onDeleteSession(item.contextId)
+                          onDeleteSession(item.sessionId)
                         }}
                       >
                         <Trash2Icon className="size-3.5" />

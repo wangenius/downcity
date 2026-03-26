@@ -14,8 +14,8 @@ import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { generateId } from "@utils/Id.js";
 import { requestContext } from "@agent/context/manager/RequestContext.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
-import { appendExecContextMessage } from "@services/chat/runtime/ChatIngressStore.js";
-import { readChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
+import { appendExecSessionMessage } from "@services/chat/runtime/ChatIngressStore.js";
+import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 import type {
   ShellActionResponse,
   ShellCloseRequest,
@@ -239,9 +239,9 @@ async function emitChatCompletionEvent(
   const ownerContextId = String(snapshot.ownerContextId || "").trim();
   if (!ownerContextId || snapshot.notificationSent !== false) return;
 
-  const meta = await readChatMetaByContextId({
+  const meta = await readChatMetaBySessionId({
     context: runtime,
-    contextId: ownerContextId,
+    sessionId: ownerContextId,
   });
   if (!meta) return;
 
@@ -262,7 +262,7 @@ async function emitChatCompletionEvent(
   lines.push("请根据当前 shell 的状态，主动向用户简洁汇报结果或最新进展。");
   const text = lines.join("\n");
 
-  await appendExecContextMessage({
+  await appendExecSessionMessage({
     context: runtime,
     sessionId: ownerContextId,
     text,
@@ -280,14 +280,14 @@ async function emitChatCompletionEvent(
     kind: "exec",
     channel: meta.channel,
     targetId: meta.chatId,
-    contextId: ownerContextId,
+    sessionId: ownerContextId,
     text,
     ...(meta.targetType ? { targetType: meta.targetType } : {}),
     ...(typeof meta.threadId === "number" ? { threadId: meta.threadId } : {}),
     ...(meta.messageId ? { messageId: meta.messageId } : {}),
     ...(meta.actorId ? { actorId: meta.actorId } : {}),
     ...(meta.actorName ? { actorName: meta.actorName } : {}),
-    contextPersisted: true,
+    sessionPersisted: true,
     extra: {
       note: "shell_session_auto_notify",
       internal: true,
@@ -545,9 +545,9 @@ export async function startShellSession(
   const ownerRequestId = resolveOwnerRequestId();
   const canAutoNotifyByContext = ownerContextId
     ? Boolean(
-        await readChatMetaByContextId({
+        await readChatMetaBySessionId({
           context: runtime,
-          contextId: ownerContextId,
+          sessionId: ownerContextId,
         }),
       )
     : false;

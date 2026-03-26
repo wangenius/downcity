@@ -10,7 +10,7 @@
 import { getRequestContext } from "@agent/context/manager/RequestContext.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { ChatEnvironmentPromptInput } from "@/types/ChatPromptContext.js";
-import { readChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
+import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 
 function normalizePromptValue(value: unknown, fallback: string): string {
   const text = String(value ?? "").trim();
@@ -29,9 +29,9 @@ export async function resolveCurrentChatEnvironmentPromptInput(
   const sessionId = String(getRequestContext()?.sessionId || "").trim();
   if (!sessionId) return null;
 
-  const meta = await readChatMetaByContextId({
+  const meta = await readChatMetaBySessionId({
     context,
-    contextId: sessionId,
+    sessionId,
   }).catch(() => null);
   if (!meta?.channel || !meta.chatId) return null;
 

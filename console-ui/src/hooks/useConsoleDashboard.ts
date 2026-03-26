@@ -47,14 +47,14 @@ import {
   setTaskStatusMutation,
 } from "../lib/dashboard-mutations";
 import {
-  CONSOLEUI_CONTEXT_ID,
+  CONSOLEUI_SESSION_ID,
   formatTime,
   getErrorMessage,
   isNotFoundError,
   statusBadgeVariant,
 } from "./dashboard/shared";
 import { useDashboardRefresh } from "./dashboard/useDashboardRefresh";
-import { useDashboardSessionActions } from "./dashboard/useDashboardContextActions";
+import { useDashboardSessionActions } from "./dashboard/useDashboardSessionActions";
 import { useDashboardResourceActions } from "./dashboard/useDashboardResourceActions";
 import type {
   UiAgentOption,
@@ -266,24 +266,24 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const refreshChannelHistory = useCallback(
-    async (agentId: string, contextId: string) => {
-      if (!agentId || !contextId) return;
-      setChannelHistory(await queryChannelHistory(requestJson, agentId, contextId));
+    async (agentId: string, sessionId: string) => {
+      if (!agentId || !sessionId) return;
+      setChannelHistory(await queryChannelHistory(requestJson, agentId, sessionId));
     },
     [requestJson],
   );
 
   const refreshSessionMessages = useCallback(
-    async (agentId: string, contextId: string) => {
-      if (!agentId || !contextId) return;
-      setSessionMessages(await querySessionMessages(requestJson, agentId, contextId));
+    async (agentId: string, sessionId: string) => {
+      if (!agentId || !sessionId) return;
+      setSessionMessages(await querySessionMessages(requestJson, agentId, sessionId));
     },
     [requestJson],
   );
 
   const loadSessionArchiveMessages = useCallback(
-    async (agentId: string, contextId: string, archiveId: string) => {
-      if (!agentId || !contextId || !archiveId) {
+    async (agentId: string, sessionId: string, archiveId: string) => {
+      if (!agentId || !sessionId || !archiveId) {
         setSelectedArchiveId("");
         setSessionArchiveMessages([]);
         return;
@@ -294,7 +294,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         return;
       }
       try {
-        const data = await querySessionArchiveDetail(requestJson, agentId, contextId, archiveId);
+        const data = await querySessionArchiveDetail(requestJson, agentId, sessionId, archiveId);
         archiveApiStateRef.current = "supported";
         setSelectedArchiveId(archiveId);
         setSessionArchiveMessages(Array.isArray(data.messages) ? data.messages : []);
@@ -314,8 +314,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const refreshSessionArchives = useCallback(
-    async (agentId: string, contextId: string): Promise<UiSessionArchiveSummary[]> => {
-      if (!agentId || !contextId) {
+    async (agentId: string, sessionId: string): Promise<UiSessionArchiveSummary[]> => {
+      if (!agentId || !sessionId) {
         setSessionArchives([]);
         setSelectedArchiveId("");
         setSessionArchiveMessages([]);
@@ -329,7 +329,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       }
       let archives: UiSessionArchiveSummary[] = [];
       try {
-        archives = await querySessionArchives(requestJson, agentId, contextId);
+        archives = await querySessionArchives(requestJson, agentId, sessionId);
         archiveApiStateRef.current = "supported";
       } catch (error) {
         const message = getErrorMessage(error);
@@ -353,7 +353,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         return archives;
       }
 
-      await loadSessionArchiveMessages(agentId, contextId, nextArchiveId);
+      await loadSessionArchiveMessages(agentId, sessionId, nextArchiveId);
       return archives;
     },
     [loadSessionArchiveMessages, requestJson],
@@ -412,10 +412,11 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   }, [requestJson]);
 
   const refreshPrompt = useCallback(
-    async (agentId: string, contextId?: string) => {
+    async (agentId: string, sessionId?: string) => {
       if (!agentId) return;
-      const resolvedContextId = String(contextId || CONSOLEUI_CONTEXT_ID).trim() || CONSOLEUI_CONTEXT_ID;
-      setPrompt(await queryPrompt(requestJson, agentId, resolvedContextId));
+      const resolvedSessionId =
+        String(sessionId || CONSOLEUI_SESSION_ID).trim() || CONSOLEUI_SESSION_ID;
+      setPrompt(await queryPrompt(requestJson, agentId, resolvedSessionId));
     },
     [requestJson],
   );
@@ -910,7 +911,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     importAgentEnv,
     executeAgentCommand,
     constants: {
-      CONSOLEUI_CONTEXT_ID,
+      CONSOLEUI_SESSION_ID,
     },
     uiHelpers: {
       formatTime,

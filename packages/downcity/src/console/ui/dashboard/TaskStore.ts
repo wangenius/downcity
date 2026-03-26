@@ -16,7 +16,7 @@ import type {
   DashboardTaskRunSummary,
 } from "@/types/DashboardData.js";
 import { truncateText } from "./CommonHelpers.js";
-import { loadContextMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
+import { loadSessionMessagesFromFile, toUiMessageTimeline } from "./MessageTimeline.js";
 
 export const TASK_RUN_DIR_REGEX = /^\d{8}-\d{6}-\d{3}$/;
 
@@ -180,7 +180,7 @@ export async function readTaskRunDetail(params: {
   };
 
   const messagesPath = path.join(runDir, "messages.jsonl");
-  const messages = await loadContextMessagesFromFile(messagesPath);
+  const messages = await loadSessionMessagesFromFile(messagesPath);
   const progress = await readJson<{
     status?: string;
     phase?: string;

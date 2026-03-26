@@ -11,7 +11,7 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { listServiceRuntimes } from "@/console/service/Manager.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
-import { listContextSummaries, readRecentLogs, toLimit } from "./Helpers.js";
+import { listSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
 import type { DashboardRouteRegistrationParams } from "@/types/DashboardRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,11 +43,14 @@ export function registerDashboardOverviewRoutes(
   app.get("/api/dashboard/overview", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextLimit = toLimit(c.req.query("contextLimit"), 20);
-      const contexts = await listContextSummaries({
+      const sessionLimit = toLimit(
+        c.req.query("sessionLimit") || c.req.query("contextLimit"),
+        20,
+      );
+      const sessions = await listSessionSummaries({
         projectRoot: runtime.rootPath,
         serviceRuntime: params.getServiceRuntimeState(),
-        limit: contextLimit,
+        limit: sessionLimit,
       });
       const services = listServiceRuntimes();
       const taskResult = await listTaskDefinitions({
@@ -73,9 +76,9 @@ export function registerDashboardOverviewRoutes(
           name: runtime.config.name,
           status: "running",
         },
-        contexts: {
-          total: contexts.length,
-          items: contexts,
+        sessions: {
+          total: sessions.length,
+          items: sessions,
         },
         services,
         tasks: {

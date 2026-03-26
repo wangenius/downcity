@@ -1,5 +1,5 @@
 /**
- * FilePersistor：基于 JSONL 的会话持久化组件实现。
+ * FilePersistor：基于 JSONL 的 session 持久化组件实现。
  *
  * 关键点（中文）
  * - 以 `.downcity/session/<sessionId>/messages/messages.jsonl` 为事实源。
@@ -19,12 +19,12 @@ import {
 } from "ai";
 import { generateId } from "@utils/Id.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import { compactContextMessageIfNeeded } from "@/agent/context/context-agent/components/SummaryCompact.js";
+import { compactSessionMessagesIfNeeded } from "@/agent/context/context-agent/components/SummaryCompact.js";
 import type {
   SessionMessageV1,
   SessionMetadataV1,
 } from "@agent/types/SessionMessage.js";
-import type { ContextSystemMessage } from "@agent/types/ContextSystemMessage.js";
+import type { SessionSystemMessage } from "@agent/types/SessionSystemMessage.js";
 import type { SessionMessagesMetaV1 } from "@agent/types/SessionMessagesMeta.js";
 import type { PersistorPathOverrides } from "@agent/types/PersistorPaths.js";
 import {
@@ -35,7 +35,6 @@ import {
 
 type FilePersistorOptions = {
   rootPath: string;
-  contextId?: string;
   sessionId?: string;
   paths?: PersistorPathOverrides;
 };
@@ -64,18 +63,14 @@ function getDowncitySessionMessagesDirPath(
 
 export class FilePersistor extends PersistorComponent {
   readonly name = "file_persistor";
-  readonly contextId: string;
+  readonly sessionId: string;
 
   private readonly rootPath: string;
-  private readonly overrideContextDirPath?: string;
+  private readonly overrideSessionDirPath?: string;
   private readonly overrideMessagesDirPath?: string;
   private readonly overrideMessagesFilePath?: string;
   private readonly overrideMetaFilePath?: string;
   private readonly overrideArchiveDirPath?: string;
-
-  get sessionId(): string {
-    return this.contextId;
-  }
 
   constructor(options: FilePersistorOptions) {
     super();
@@ -83,15 +78,15 @@ export class FilePersistor extends PersistorComponent {
     if (!rootPath) {
       throw new Error("FilePersistor requires a non-empty rootPath");
     }
-    const sessionId = String(options.sessionId || options.contextId || "").trim();
+    const sessionId = String(options.sessionId || "").trim();
     if (!sessionId) {
       throw new Error("FilePersistor requires a non-empty sessionId");
     }
 
     this.rootPath = rootPath;
-    this.contextId = sessionId;
-    this.overrideContextDirPath = this.readOptionalPath(
-      options.paths?.contextDirPath,
+    this.sessionId = sessionId;
+    this.overrideSessionDirPath = this.readOptionalPath(
+      options.paths?.sessionDirPath,
     );
     this.overrideMessagesDirPath = this.readOptionalPath(
       options.paths?.messagesDirPath,
@@ -114,8 +109,8 @@ export class FilePersistor extends PersistorComponent {
 
   private getMessagesDirPath(): string {
     if (this.overrideMessagesDirPath) return this.overrideMessagesDirPath;
-    if (this.overrideContextDirPath) {
-      return path.join(this.overrideContextDirPath, "messages");
+    if (this.overrideSessionDirPath) {
+      return path.join(this.overrideSessionDirPath, "messages");
     }
     return getDowncitySessionMessagesDirPath(this.rootPath, this.sessionId);
   }
@@ -145,7 +140,7 @@ export class FilePersistor extends PersistorComponent {
   }
 
   private getLockFilePath(): string {
-    return path.join(this.getMessagesDirPath(), ".context.lock");
+    return path.join(this.getMessagesDirPath(), ".session.lock");
   }
 
   private async ensureLayout(): Promise<void> {
@@ -255,7 +250,7 @@ export class FilePersistor extends PersistorComponent {
           const age = Date.now() - stat.mtimeMs;
           if (age > staleMs) {
             await fs.remove(lockPath);
-            await logger.log("warn", "Removed stale context lock", {
+            await logger.log("warn", "Removed stale session lock", {
               sessionId: this.sessionId,
               lockPath,
               ageMs: age,
@@ -286,7 +281,7 @@ export class FilePersistor extends PersistorComponent {
     }
   }
 
-  private normalizeSystem(system: ContextSystemMessage[]): ContextSystemMessage[] {
+  private normalizeSystem(system: SessionSystemMessage[]): SessionSystemMessage[] {
     if (!Array.isArray(system)) return [];
     return system.filter((item) => item && typeof item === "object");
   }
@@ -295,7 +290,7 @@ export class FilePersistor extends PersistorComponent {
     return tools && typeof tools === "object" ? { ...tools } : {};
   }
 
-  private readUserContextMessageText(message: SessionMessageV1): string {
+  private readUserSessionMessageText(message: SessionMessageV1): string {
     if (!message || typeof message !== "object" || message.role !== "user") {
       return "";
     }
@@ -323,7 +318,7 @@ export class FilePersistor extends PersistorComponent {
       const item = messages[index];
       if (!item || typeof item !== "object") continue;
       if (item.role !== "user") continue;
-      return this.readUserContextMessageText(item) === target;
+      return this.readUserSessionMessageText(item) === target;
     }
     return false;
   }
@@ -347,10 +342,10 @@ export class FilePersistor extends PersistorComponent {
     compacted: boolean;
     reason?: string;
   }> {
-    return await compactContextMessageIfNeeded(
+    return await compactSessionMessagesIfNeeded(
       {
         rootPath: this.rootPath,
-        contextId: this.sessionId,
+        sessionId: this.sessionId,
         withWriteLock: (fn) => this.withWriteLock(fn),
         loadAll: () => this.list(),
         createSummaryMessage: ({ text, sourceRange }) => ({

@@ -2,9 +2,9 @@
  * ChatHistoryStore：聊天事件流持久化。
  *
  * 关键点（中文）
- * - 写入 `.downcity/chat/<contextId>/history.jsonl`（append-only）。
+ * - 写入 `.downcity/chat/<sessionId>/history.jsonl`（append-only）。
  * - 记录 inbound（audit/exec）与 outbound 事件。
- * - 与 context message history 分离，避免审计噪声进入模型上下文。
+ * - 与 session message history 分离，避免审计噪声进入模型上下文。
  */
 
 import fs from "fs-extra";
@@ -41,7 +41,7 @@ function toOptionalObject(value: JsonObject | undefined): JsonObject | undefined
 }
 
 function buildInboundEvent(params: {
-  contextId: string;
+  sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
   ingressKind: ChatHistoryIngressKind;
@@ -59,7 +59,7 @@ function buildInboundEvent(params: {
     ts: Date.now(),
     direction: "inbound",
     ingressKind: params.ingressKind,
-    contextId: params.contextId,
+    sessionId: params.sessionId,
     channel: params.channel,
     chatId: params.chatId,
     text: params.text,
@@ -73,7 +73,7 @@ function buildInboundEvent(params: {
 }
 
 function buildOutboundEvent(params: {
-  contextId: string;
+  sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
   text: string;
@@ -89,7 +89,7 @@ function buildOutboundEvent(params: {
     id: `chat:${generateId()}`,
     ts: Date.now(),
     direction: "outbound",
-    contextId: params.contextId,
+    sessionId: params.sessionId,
     channel: params.channel,
     chatId: params.chatId,
     text: params.text,
@@ -112,7 +112,7 @@ function isChatHistoryEventV1(value: unknown): value is ChatHistoryEventV1 {
   if (obj.v !== 1) return false;
   if (!isValidHistoryDirection(obj.direction)) return false;
   if (typeof obj.id !== "string" || !obj.id.trim()) return false;
-  if (typeof obj.contextId !== "string" || !obj.contextId.trim()) return false;
+  if (typeof obj.sessionId !== "string" || !obj.sessionId.trim()) return false;
   if (typeof obj.channel !== "string" || !obj.channel.trim()) return false;
   if (typeof obj.chatId !== "string" || !obj.chatId.trim()) return false;
   if (typeof obj.text !== "string") return false;
@@ -133,7 +133,7 @@ function isChatHistoryEventV1(value: unknown): value is ChatHistoryEventV1 {
  */
 export async function appendInboundChatHistory(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
   ingressKind: ChatHistoryIngressKind;
@@ -146,12 +146,12 @@ export async function appendInboundChatHistory(params: {
   extra?: JsonObject;
 }): Promise<void> {
   const rootPath = normalizeTrimmedString(params.context.rootPath);
-  const contextId = normalizeTrimmedString(params.contextId);
+  const sessionId = normalizeTrimmedString(params.sessionId);
   const chatId = normalizeTrimmedString(params.chatId);
-  if (!rootPath || !contextId || !chatId) return;
+  if (!rootPath || !sessionId || !chatId) return;
 
   const event = buildInboundEvent({
-    contextId,
+    sessionId,
     channel: params.channel,
     chatId,
     ingressKind: params.ingressKind,
@@ -164,7 +164,7 @@ export async function appendInboundChatHistory(params: {
     extra: toOptionalObject(params.extra),
   });
 
-  const file = getDowncityChatHistoryPath(rootPath, contextId);
+  const file = getDowncityChatHistoryPath(rootPath, sessionId);
   await fs.ensureDir(path.dirname(file));
   await fs.appendFile(file, JSON.stringify(event) + "\n", "utf8");
 }
@@ -178,7 +178,7 @@ export async function appendInboundChatHistory(params: {
  */
 export async function appendOutboundChatHistory(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
   text: string;
@@ -190,12 +190,12 @@ export async function appendOutboundChatHistory(params: {
   extra?: JsonObject;
 }): Promise<void> {
   const rootPath = normalizeTrimmedString(params.context.rootPath);
-  const contextId = normalizeTrimmedString(params.contextId);
+  const sessionId = normalizeTrimmedString(params.sessionId);
   const chatId = normalizeTrimmedString(params.chatId);
-  if (!rootPath || !contextId || !chatId) return;
+  if (!rootPath || !sessionId || !chatId) return;
 
   const event = buildOutboundEvent({
-    contextId,
+    sessionId,
     channel: params.channel,
     chatId,
     text: String(params.text ?? ""),
@@ -207,13 +207,13 @@ export async function appendOutboundChatHistory(params: {
     extra: toOptionalObject(params.extra),
   });
 
-  const file = getDowncityChatHistoryPath(rootPath, contextId);
+  const file = getDowncityChatHistoryPath(rootPath, sessionId);
   await fs.ensureDir(path.dirname(file));
   await fs.appendFile(file, JSON.stringify(event) + "\n", "utf8");
 }
 
 /**
- * 读取 chat 历史事件（按 contextId）。
+ * 读取 chat 历史事件（按 sessionId）。
  *
  * 关键点（中文）
  * - 默认返回最近 N 条（按时间升序）。
@@ -221,16 +221,16 @@ export async function appendOutboundChatHistory(params: {
  */
 export async function readChatHistory(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   limit?: number;
   direction?: ChatHistoryDirection | "all";
   beforeTs?: number;
   afterTs?: number;
 }): Promise<{ historyPath: string; events: ChatHistoryEventV1[] }> {
   const rootPath = normalizeTrimmedString(params.context.rootPath);
-  const contextId = normalizeTrimmedString(params.contextId);
-  const historyPath = getDowncityChatHistoryPath(rootPath, contextId);
-  if (!rootPath || !contextId) {
+  const sessionId = normalizeTrimmedString(params.sessionId);
+  const historyPath = getDowncityChatHistoryPath(rootPath, sessionId);
+  if (!rootPath || !sessionId) {
     return {
       historyPath,
       events: [],

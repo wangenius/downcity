@@ -2,7 +2,7 @@
  * SessionAgentDispatcher：SessionAgent 分流与缓存管理器。
  *
  * 关键点（中文）
- * - 管理 `contextId -> SessionAgent/Persistor` 映射。
+ * - 管理 `sessionId -> SessionAgent/Persistor` 映射。
  * - 把“创建哪个 agent、复用哪个 persistor”的职责从 SessionManager 中移出。
  * - 只负责分流与实例生命周期，不负责 request scope 绑定。
  */
@@ -29,9 +29,9 @@ type SessionAgentDispatcherOptions = {
   logger: Logger;
 
   /**
-   * 创建 context 对应的 persistor。
+   * 创建 session 对应的 persistor。
    */
-  createPersistor: (contextId: string) => PersistorComponent;
+  createPersistor: (sessionId: string) => PersistorComponent;
 
   /**
    * 消息压缩器。
@@ -59,8 +59,8 @@ export class SessionAgentDispatcher {
   private readonly compactor: CompactorComponent;
   private readonly system: PrompterComponent;
   private readonly getTools: SessionAgentDispatcherOptions["getTools"];
-  private readonly agentsByContextId: Map<string, SessionAgent> = new Map();
-  private readonly persistorsByContextId: Map<string, PersistorComponent> =
+  private readonly agentsBySessionId: Map<string, SessionAgent> = new Map();
+  private readonly persistorsBySessionId: Map<string, PersistorComponent> =
     new Map();
 
   constructor(options: SessionAgentDispatcherOptions) {
@@ -75,33 +75,33 @@ export class SessionAgentDispatcher {
   /**
    * 获取（或创建）Persistor。
    */
-  getPersistor(contextId: string): PersistorComponent {
-    const key = String(contextId || "").trim();
+  getPersistor(sessionId: string): PersistorComponent {
+    const key = String(sessionId || "").trim();
     if (!key) {
       throw new Error(
-        "SessionAgentDispatcher.getPersistor requires a non-empty contextId",
+        "SessionAgentDispatcher.getPersistor requires a non-empty sessionId",
       );
     }
 
-    const existing = this.persistorsByContextId.get(key);
+    const existing = this.persistorsBySessionId.get(key);
     if (existing) return existing;
     const created = this.createPersistor(key);
-    this.persistorsByContextId.set(key, created);
+    this.persistorsBySessionId.set(key, created);
     return created;
   }
 
   /**
    * 获取（或创建）SessionAgent。
    */
-  getAgent(contextId: string): SessionAgent {
-    const key = String(contextId || "").trim();
+  getAgent(sessionId: string): SessionAgent {
+    const key = String(sessionId || "").trim();
     if (!key) {
       throw new Error(
-        "SessionAgentDispatcher.getAgent requires a non-empty contextId",
+        "SessionAgentDispatcher.getAgent requires a non-empty sessionId",
       );
     }
 
-    const existing = this.agentsByContextId.get(key);
+    const existing = this.agentsBySessionId.get(key);
     if (existing) return existing;
     const created = new SessionAgent({
       model: this.model,
@@ -111,18 +111,18 @@ export class SessionAgentDispatcher {
       system: this.system,
       getTools: this.getTools,
     });
-    this.agentsByContextId.set(key, created);
+    this.agentsBySessionId.set(key, created);
     return created;
   }
 
   /**
    * 清理 SessionAgent 缓存。
    */
-  clearAgent(contextId?: string): void {
-    if (typeof contextId === "string" && contextId.trim()) {
-      this.agentsByContextId.delete(contextId.trim());
+  clearAgent(sessionId?: string): void {
+    if (typeof sessionId === "string" && sessionId.trim()) {
+      this.agentsBySessionId.delete(sessionId.trim());
       return;
     }
-    this.agentsByContextId.clear();
+    this.agentsBySessionId.clear();
   }
 }

@@ -14,7 +14,7 @@ import {
   readDaemonMeta,
   readDaemonPid,
 } from "@/console/daemon/Manager.js";
-import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath } from "@/console/env/Paths.js";
 import {
   printPanel,
   renderKeyValueLines,
@@ -36,7 +36,7 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {
     missingInitFiles.push("PROFILE.md");
   }
-  if (!fs.existsSync(getShipJsonPath(projectRoot))) {
+  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
     missingInitFiles.push("downcity.json");
   }
 

@@ -24,8 +24,8 @@ import {
 } from "@/console/project/AgentInitializer.js";
 import {
   getProfileMdPath,
-  getShipContextRootDirPath,
-  getShipJsonPath,
+  getDowncitySessionRootDirPath,
+  getDowncityJsonPath,
 } from "@/console/env/Paths.js";
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 
@@ -188,7 +188,7 @@ export async function startConsoleUiAgentByProjectRoot(params: {
     });
   } else {
     const profilePath = getProfileMdPath(normalizedRoot);
-    const shipPath = getShipJsonPath(normalizedRoot);
+    const shipPath = getDowncityJsonPath(normalizedRoot);
     if (!(await fs.pathExists(profilePath)) || !(await fs.pathExists(shipPath))) {
       throw new Error(
         `Project not ready: ${normalizedRoot}. Required files: PROFILE.md and downcity.json`,
@@ -227,12 +227,12 @@ export async function inspectConsoleUiAgentRestartSafety(params: {
   const activeContexts: string[] = [];
   const activeTasks: string[] = [];
 
-  const contextRootDir = getShipContextRootDirPath(normalizedRoot);
-  if (await fs.pathExists(contextRootDir)) {
-    const entries = await fs.readdir(contextRootDir, { withFileTypes: true });
+  const sessionRootDir = getDowncitySessionRootDirPath(normalizedRoot);
+  if (await fs.pathExists(sessionRootDir)) {
+    const entries = await fs.readdir(sessionRootDir, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
-      const lockFilePath = path.join(contextRootDir, entry.name, "messages", ".context.lock");
+      const lockFilePath = path.join(sessionRootDir, entry.name, "messages", ".context.lock");
       if (!(await fs.pathExists(lockFilePath))) continue;
       try {
         activeContexts.push(decodeURIComponent(entry.name));

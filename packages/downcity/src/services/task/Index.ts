@@ -17,7 +17,7 @@ import {
   updateTaskDefinition,
   setTaskStatus,
 } from "./Action.js";
-import { resolveContextId } from "@agent/context/manager/ContextId.js";
+import { resolveSessionId } from "@agent/context/manager/SessionId.js";
 import type { Service } from "@/console/service/ServiceManager.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { ShipTaskKind, ShipTaskStatus } from "./types/Task.js";
@@ -161,7 +161,7 @@ function readTaskKindOrThrow(value?: string): ShipTaskKind | undefined {
 }
 
 function resolveContextIdOrThrow(input?: string): string {
-  const contextId = resolveContextId({ contextId: input });
+  const contextId = resolveSessionId({ sessionId: input });
   if (!contextId) {
     throw new Error(
       "Missing contextId. Provide --context-id or ensure DC_CTX_CONTEXT_ID is available.",

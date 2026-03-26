@@ -2,7 +2,7 @@
  * Chat command services.
  *
  * 关键点（中文）
- * - chat 语义（chatKey 与 contextId 映射）统一收口在本模块
+ * - chat 语义（chatKey 与 sessionId/contextId 映射）统一收口在本模块
  * - 通过 RequestContext（ALS）读取当前请求上下文
  */
 
@@ -55,19 +55,20 @@ function readEnvNumber(name: string): number | undefined {
  * 3) 环境变量回退
  */
 export function resolveChatContextSnapshot(input?: {
-  contextId?: string;
+  sessionId?: string;
   chatKey?: string;
   context?: ServiceRuntime;
 }): ChatContextSnapshot {
   const requestCtx = requestContext.getStore();
 
-  const explicitContextId = String(input?.contextId || "").trim();
+  const explicitSessionId = String(input?.sessionId || "").trim();
   const explicitChatKey = String(input?.chatKey || "").trim();
-  const requestContextId =
-    typeof requestCtx?.contextId === "string" && requestCtx.contextId.trim()
-      ? requestCtx.contextId.trim()
+  const requestSessionId =
+    typeof requestCtx?.sessionId === "string" && requestCtx.sessionId.trim()
+      ? requestCtx.sessionId.trim()
       : undefined;
-  const envContextId = readEnvString("DC_CTX_CONTEXT_ID");
+  const envContextId =
+    readEnvString("DC_SESSION_ID") || readEnvString("DC_CTX_CONTEXT_ID");
   const envChatKey = readEnvString("DC_CTX_CHAT_KEY");
   const channel = readEnvString("DC_CTX_CHANNEL") || undefined;
   const chatId =
@@ -88,8 +89,8 @@ export function resolveChatContextSnapshot(input?: {
       : readEnvString("DC_CTX_REQUEST_ID")) || undefined;
 
   const contextId =
-    explicitContextId ||
-    requestContextId ||
+    explicitSessionId ||
+    requestSessionId ||
     envContextId ||
     explicitChatKey ||
     envChatKey;
@@ -99,7 +100,7 @@ export function resolveChatContextSnapshot(input?: {
     envChatKey;
 
   const snapshot: ChatContextSnapshot = {
-    ...(contextId ? { contextId } : {}),
+    ...(contextId ? { sessionId: contextId } : {}),
     ...(chatKey ? { chatKey } : {}),
     channel,
     chatId,
@@ -127,19 +128,19 @@ export function mapContextIdToChatKey(contextId?: string): string | undefined {
 }
 
 /**
- * 提取最终 contextId。
+ * 提取最终 sessionId。
  */
-export function resolveContextId(input?: {
-  contextId?: string;
+export function resolveSessionId(input?: {
+  sessionId?: string;
   chatKey?: string;
   context?: ServiceRuntime;
 }): string | undefined {
   const snapshot = resolveChatContextSnapshot({
-    contextId: input?.contextId,
+    sessionId: input?.sessionId,
     chatKey: input?.chatKey,
     context: input?.context,
   });
-  const key = String(snapshot.contextId || "").trim();
+  const key = String(snapshot.sessionId || "").trim();
   return key ? key : undefined;
 }
 
@@ -148,12 +149,12 @@ export function resolveContextId(input?: {
  */
 export function resolveChatKey(input?: {
   chatKey?: string;
-  contextId?: string;
+  sessionId?: string;
   context?: ServiceRuntime;
 }): string | undefined {
   const snapshot = resolveChatContextSnapshot({
     chatKey: input?.chatKey,
-    contextId: input?.contextId,
+    sessionId: input?.sessionId,
     context: input?.context,
   });
   const key = String(snapshot.chatKey || "").trim();
@@ -407,19 +408,19 @@ export async function sendChatActionByChatKey(params: {
  */
 export async function sendChatTextByContextId(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   text: string;
   delayMs?: number;
   sendAtMs?: number;
   replyToMessage?: boolean;
   messageId?: string;
-}): Promise<{ success: boolean; contextId: string; error?: string }> {
-  const contextId = String(params.contextId || "").trim();
+}): Promise<{ success: boolean; sessionId: string; error?: string }> {
+  const contextId = String(params.sessionId || "").trim();
   if (!contextId) {
     return {
       success: false,
-      contextId: "",
-      error: "Missing contextId",
+      sessionId: "",
+      error: "Missing sessionId",
     };
   }
 
@@ -436,7 +437,7 @@ export async function sendChatTextByContextId(params: {
   });
   return {
     success: Boolean(result.success),
-    contextId,
+    sessionId: contextId,
     ...(result.success ? {} : { error: result.error || "chat send failed" }),
   };
 }
@@ -451,19 +452,19 @@ export async function sendChatTextByContextId(params: {
 export async function deleteChatByChatKey(params: {
   context: ServiceRuntime;
   chatKey?: string;
-  contextId?: string;
+  sessionId?: string;
 }): Promise<ChatDeleteResponse> {
   const chatKey = resolveChatKey({
     context: params.context,
     chatKey: params.chatKey,
-    contextId: params.contextId,
+    sessionId: params.sessionId,
   });
   const contextId = String(chatKey || "").trim();
   if (!contextId) {
     return {
       success: false,
       error:
-        "Missing chatKey/contextId. Provide --chat-key or --context-id, or ensure DC_CTX_CHAT_KEY/DC_CTX_CONTEXT_ID is injected.",
+        "Missing chatKey/sessionId. Provide --chat-key or --session-id, or ensure DC_CTX_CHAT_KEY/DC_CTX_CONTEXT_ID is injected.",
     };
   }
 
@@ -473,7 +474,7 @@ export async function deleteChatByChatKey(params: {
   });
   return {
     success: result.success,
-    contextId: result.sessionId,
+    sessionId: result.sessionId,
     deleted: result.deleted,
     removedMeta: result.removedMeta,
     removedChatDir: result.removedChatDir,

@@ -4,7 +4,7 @@
 
 import * as React from "react";
 import { Loader2Icon, PlayIcon, RotateCwIcon, SquareIcon } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "@downcity/ui";
 import { useConfirmDialog } from "../ui/confirm-dialog";
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "./dashboard-action-button";
 import { DashboardModule } from "./DashboardModule";

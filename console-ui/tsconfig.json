@@ -11,8 +11,7 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@downcity/ui": ["../types/downcity-ui.d.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]

@@ -12,7 +12,7 @@ import type { Command } from "commander";
 import { callServer } from "@/console/daemon/Client.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
-import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath } from "@/console/env/Paths.js";
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
 import type {
   PluginActionResponse,
@@ -51,7 +51,7 @@ function resolveProjectRoot(pathInput?: string): string {
 }
 
 function readAgentName(projectRoot: string): string {
-  const shipJsonPath = getShipJsonPath(projectRoot);
+  const shipJsonPath = getDowncityJsonPath(projectRoot);
   const fallback = path.basename(projectRoot);
   if (!fs.existsSync(shipJsonPath)) return fallback;
   try {
@@ -137,7 +137,7 @@ async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<
 
 function validateAgentProjectRoot(projectRoot: string): string | null {
   const missing: string[] = [];
-  if (!fs.existsSync(getShipJsonPath(projectRoot))) {
+  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
     missing.push("downcity.json");
   }
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {

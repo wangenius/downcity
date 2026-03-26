@@ -12,9 +12,9 @@ import { basename } from "node:path";
 import { getDaemonLogPath, getDaemonMetaPath, isProcessAlive, readDaemonPid } from "@/console/daemon/Manager.js";
 import {
   getProfileMdPath,
-  getShipJsonPath,
-  getShipMemoryIndexPath,
-  getShipSchemaPath,
+  getDowncityJsonPath,
+  getDowncityMemoryIndexPath,
+  getDowncitySchemaPath,
   getSoulMdPath,
 } from "@/console/env/Paths.js";
 import { isAgentProjectInitialized } from "@/console/project/AgentInitializer.js";
@@ -179,7 +179,7 @@ async function buildAgentOption(
   let displayName = basename(projectRoot);
   let ship: ConsoleUiShipJson | null = null;
   try {
-    const shipPath = getShipJsonPath(projectRoot);
+    const shipPath = getDowncityJsonPath(projectRoot);
     if (await fs.pathExists(shipPath)) {
       ship = (await fs.readJson(shipPath)) as ConsoleUiShipJson;
       const name = String(ship?.name || "").trim();
@@ -309,7 +309,7 @@ export async function inspectConsoleUiAgentDirectory(
   projectRoot: string,
 ): Promise<ConsoleUiAgentDirectoryInspection> {
   const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
-  const shipPath = getShipJsonPath(normalizedRoot);
+  const shipPath = getDowncityJsonPath(normalizedRoot);
   const profilePath = getProfileMdPath(normalizedRoot);
   const hasShipJson = await fs.pathExists(shipPath);
   const hasProfileMd = await fs.pathExists(profilePath);
@@ -374,7 +374,7 @@ export async function buildConsoleUiModelResponse(params: {
   let agentPrimaryModelId = "";
   if (selectedAgent) {
     try {
-      const shipPath = getShipJsonPath(selectedAgent.projectRoot);
+      const shipPath = getDowncityJsonPath(selectedAgent.projectRoot);
       if (await fs.pathExists(shipPath)) {
         const ship = (await fs.readJson(shipPath)) as ConsoleUiShipJson;
         agentPrimaryModelId = String(ship?.model?.primary || "").trim();
@@ -564,19 +564,19 @@ export async function buildConsoleUiConfigStatusResponse(params: {
         key: "ship_json",
         scope: "agent",
         label: "Agent downcity.json",
-        filePath: getShipJsonPath(cwd),
+        filePath: getDowncityJsonPath(cwd),
       }),
       readConsoleUiConfigFileStatus({
         key: "ship_schema",
         scope: "agent",
         label: ".downcity/schema/downcity.schema.json",
-        filePath: getShipSchemaPath(cwd),
+        filePath: getDowncitySchemaPath(cwd),
       }),
       readConsoleUiConfigFileStatus({
         key: "memory_index",
         scope: "agent",
         label: ".downcity/memory/index.sqlite",
-        filePath: getShipMemoryIndexPath(cwd),
+        filePath: getDowncityMemoryIndexPath(cwd),
       }),
     ]);
   }

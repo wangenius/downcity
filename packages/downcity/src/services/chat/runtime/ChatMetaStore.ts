@@ -43,7 +43,7 @@ export async function readChatMetaByContextId(params: {
   return {
     v: 1,
     updatedAt: route.updatedAt,
-    contextId: route.contextId,
+    sessionId: route.contextId,
     channel: route.channel,
     chatId: route.chatId,
     ...(route.targetType ? { targetType: route.targetType } : {}),
@@ -172,7 +172,7 @@ export async function removeChatMetaByContextId(params: {
     route: {
       v: 1,
       updatedAt: route.updatedAt,
-      contextId: route.contextId,
+      sessionId: route.contextId,
       channel: route.channel,
       chatId: route.chatId,
       ...(route.targetType ? { targetType: route.targetType } : {}),

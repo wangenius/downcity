@@ -21,23 +21,23 @@ function normalizePromptValue(value: unknown, fallback: string): string {
  * 解析当前请求的 chat 环境输入。
  *
  * 说明（中文）
- * - 非 chat context 或尚未建立 chat route 时返回 `null`。
+ * - 非 chat session 或尚未建立 chat route 时返回 `null`。
  */
 export async function resolveCurrentChatEnvironmentPromptInput(
   context: ServiceRuntime,
 ): Promise<ChatEnvironmentPromptInput | null> {
-  const contextId = String(getRequestContext()?.contextId || "").trim();
-  if (!contextId) return null;
+  const sessionId = String(getRequestContext()?.sessionId || "").trim();
+  if (!sessionId) return null;
 
   const meta = await readChatMetaByContextId({
     context,
-    contextId,
+    contextId: sessionId,
   }).catch(() => null);
   if (!meta?.channel || !meta.chatId) return null;
 
   return {
-    contextId: meta.contextId,
-    chatKey: meta.contextId,
+    sessionId: meta.sessionId,
+    chatKey: meta.sessionId,
     channel: meta.channel,
     chatId: meta.chatId,
     ...(meta.targetType ? { chatType: meta.targetType } : {}),
@@ -54,7 +54,7 @@ export function buildChatEnvironmentPrompt(input: ChatEnvironmentPromptInput): s
     "# Current Chat Environment",
     "以下字段只描述当前 chat 会话环境与路由，不是用户身份信息：",
     `- channel: ${normalizePromptValue(input.channel, "unknown")}`,
-    `- context_id: ${normalizePromptValue(input.contextId, "unknown")}`,
+    `- session_id: ${normalizePromptValue(input.sessionId, "unknown")}`,
     `- chat_key: ${normalizePromptValue(input.chatKey, "unknown")}`,
     `- chat_id: ${normalizePromptValue(input.chatId, "unknown")}`,
     `- chat_type: ${normalizePromptValue(input.chatType, "unknown")}`,

@@ -12,7 +12,7 @@ import type { Command } from "commander";
 import { callServer } from "@/console/daemon/Client.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
-import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath } from "@/console/env/Paths.js";
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
 import { ServiceScheduleStore } from "@/console/service/schedule/Store.js";
 import type { ScheduledJobStatus } from "@/types/ServiceSchedule.js";
@@ -79,7 +79,7 @@ function resolveProjectRoot(pathInput?: string): string {
  * 读取 agent 显示名（优先 downcity.json.name，其次目录名）。
  */
 function readAgentName(projectRoot: string): string {
-  const shipJsonPath = getShipJsonPath(projectRoot);
+  const shipJsonPath = getDowncityJsonPath(projectRoot);
   const fallback = path.basename(projectRoot);
   if (!fs.existsSync(shipJsonPath)) return fallback;
   try {
@@ -201,7 +201,7 @@ async function resolveScheduleProjectRoot(options: ServiceCliBaseOptions): Promi
  */
 function validateAgentProjectRoot(projectRoot: string): string | null {
   const missing: string[] = [];
-  if (!fs.existsSync(getShipJsonPath(projectRoot))) {
+  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
     missing.push("downcity.json");
   }
   if (!fs.existsSync(getProfileMdPath(projectRoot))) {

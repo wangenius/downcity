@@ -1,15 +1,15 @@
 /**
- * Dashboard Context Execute API 类型定义。
+ * Dashboard Session Execute API 类型定义。
  *
  * 关键点（中文）
- * - 统一描述 `/api/dashboard/contexts/:contextId/execute` 的扩展请求体。
+ * - 统一描述 `/api/dashboard/sessions/:sessionId/execute` 的扩展请求体。
  * - 支持通过 API 传入附件（路径或内容），由服务端落盘后注入 `<file>` 标签。
  */
 
 /**
  * Dashboard execute 附件类型。
  */
-export type DashboardContextExecuteAttachmentType =
+export type DashboardSessionExecuteAttachmentType =
   | "document"
   | "photo"
   | "voice"
@@ -19,7 +19,7 @@ export type DashboardContextExecuteAttachmentType =
 /**
  * Dashboard execute 单个附件入参。
  */
-export interface DashboardContextExecuteAttachmentInput {
+export interface DashboardSessionExecuteAttachmentInput {
   /**
    * 附件类型。
    *
@@ -27,7 +27,7 @@ export interface DashboardContextExecuteAttachmentInput {
    * - 默认按 `document` 处理。
    * - 会映射为 `<file type="...">...</file>`。
    */
-  type?: DashboardContextExecuteAttachmentType | string;
+  type?: DashboardSessionExecuteAttachmentType | string;
 
   /**
    * 附件相对路径（相对项目根目录）。
@@ -83,7 +83,7 @@ export interface DashboardContextExecuteAttachmentInput {
 /**
  * Dashboard execute 请求体。
  */
-export interface DashboardContextExecuteRequestBody {
+export interface DashboardSessionExecuteRequestBody {
   /**
    * 用户自然语言指令。
    */
@@ -95,5 +95,5 @@ export interface DashboardContextExecuteRequestBody {
    * 说明（中文）
    * - 服务端会将附件落盘后，自动把 `<file>` 标签注入到 user message 顶部。
    */
-  attachments?: DashboardContextExecuteAttachmentInput[];
+  attachments?: DashboardSessionExecuteAttachmentInput[];
 }

@@ -6,7 +6,7 @@ import {
 import type { JsonObject } from "@/types/Json.js";
 
 export type LlmLogContext = {
-  contextId?: string;
+  sessionId?: string;
   requestId?: string;
 };
 
@@ -30,17 +30,17 @@ export function createLlmLoggingFetch(args: {
     if (args.enabled) {
       try {
         parsedRequest = parseFetchRequestForLog(input, init, {
-          incrementalKey: ctx?.contextId,
+          incrementalKey: ctx?.sessionId,
         });
 
         if (parsedRequest) {
-          const contextId = ctx?.contextId;
+          const sessionId = ctx?.sessionId;
           const requestId = ctx?.requestId;
           const message = String(parsedRequest.requestText || "").trim();
 
           await args.logger.log("info", message.slice(0, maxChars), {
             ...parsedRequest.meta,
-            ...(contextId ? { contextId } : {}),
+            ...(sessionId ? { sessionId } : {}),
             ...(requestId ? { requestId } : {}),
           });
         }
@@ -60,7 +60,7 @@ export function createLlmLoggingFetch(args: {
             error: String(error || "unknown_error"),
             ...(parsedRequest?.url ? { url: parsedRequest.url } : {}),
             ...(parsedRequest?.method ? { method: parsedRequest.method } : {}),
-            ...(ctx?.contextId ? { contextId: ctx.contextId } : {}),
+            ...(ctx?.sessionId ? { sessionId: ctx.sessionId } : {}),
             ...(ctx?.requestId ? { requestId: ctx.requestId } : {}),
           });
         } catch {
@@ -83,7 +83,7 @@ export function createLlmLoggingFetch(args: {
             String(parsedResponse.responseText || "").slice(0, maxChars),
             {
               ...parsedResponse.meta,
-              ...(ctx?.contextId ? { contextId: ctx.contextId } : {}),
+              ...(ctx?.sessionId ? { sessionId: ctx.sessionId } : {}),
               ...(ctx?.requestId ? { requestId: ctx.requestId } : {}),
             },
           );

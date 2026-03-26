@@ -63,9 +63,13 @@ export interface DashboardTimelineEvent {
  */
 export interface DashboardContextSummary {
   /**
-   * 上下文 id。
+   * 会话 ID。
+   *
+   * 说明（中文）
+   * - 对外统一使用 `sessionId` 语义。
+   * - 当前内部仍映射到既有 `contextId` 存储体系。
    */
-  contextId: string;
+  sessionId: string;
 
   /**
    * 消息数量。
@@ -113,7 +117,7 @@ export interface DashboardContextSummary {
   threadId?: number;
 
   /**
-   * 当前 context 是否正在执行。
+   * 当前 session 是否正在执行。
    */
   executing?: boolean;
 }

@@ -72,7 +72,8 @@ export function buildShellContextEnv(
   const contextCtx = requestContext.getStore();
 
   applyEnvMap(env, injected);
-  setEnvString(env, "DC_CTX_CONTEXT_ID", contextCtx?.contextId);
+  setEnvString(env, "DC_CTX_CONTEXT_ID", contextCtx?.sessionId);
+  setEnvString(env, "DC_SESSION_ID", contextCtx?.sessionId);
   setEnvString(env, "DC_CTX_REQUEST_ID", contextCtx?.requestId);
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
   setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);

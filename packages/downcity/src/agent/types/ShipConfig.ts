@@ -182,7 +182,7 @@ export interface ShipConfig {
    * 上下文管理（工程向配置）。
    *
    * 说明
-   * - 对话消息以 UIMessage[] 为唯一事实源（.downcity/context/<contextId>/messages/messages.jsonl）。
+   * - 对话消息以 UIMessage[] 为唯一事实源（`.downcity/session/<sessionId>/messages/messages.jsonl`）。
    * - Agent 每次执行直接把 UIMessage[] 转成 ModelMessage[] 作为 messages 输入。
    * - 超出上下文窗口时会自动 compact（更早段压缩为摘要 + 保留最近窗口）。
    */

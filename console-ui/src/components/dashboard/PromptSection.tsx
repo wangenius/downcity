@@ -2,7 +2,7 @@
  * Prompt 构成区。
  */
 
-import { Button } from "../ui/button";
+import { Button } from "@downcity/ui";
 import { DashboardModule } from "./DashboardModule";
 import type { UiPromptResponse } from "../../types/Dashboard";
 
@@ -14,7 +14,7 @@ export interface PromptSectionProps {
   /**
    * local ui context id。
    */
-  localUiContextId: string;
+  localUiSessionId: string;
   /**
    * 刷新动作。
    */
@@ -22,7 +22,7 @@ export interface PromptSectionProps {
 }
 
 export function PromptSection(props: PromptSectionProps) {
-  const { prompt, localUiContextId, onRefresh } = props;
+  const { prompt, localUiSessionId, onRefresh } = props;
   const sections = Array.isArray(prompt?.sections) ? prompt.sections : [];
 
   return (
@@ -30,7 +30,7 @@ export function PromptSection(props: PromptSectionProps) {
       title="Prompt"
       description={
         prompt && sections.length > 0
-          ? `context: ${prompt.contextId || localUiContextId} · messages ${prompt.totalMessages || 0} · chars ${prompt.totalChars || 0}`
+          ? `context: ${prompt.contextId || localUiSessionId} · messages ${prompt.totalMessages || 0} · chars ${prompt.totalChars || 0}`
           : "暂无 prompt 数据"
       }
       actions={
@@ -42,7 +42,7 @@ export function PromptSection(props: PromptSectionProps) {
     >
       {sections.length === 0 ? (
         <div className="rounded-[20px] bg-secondary/85 px-4 py-6 text-sm text-muted-foreground">
-          当前 context 还没有可展示的 prompt 分段
+          当前 session 还没有可展示的 prompt 分段
         </div>
       ) : (
         <div className="min-w-0 space-y-3 rounded-[20px] bg-secondary/85 p-3">

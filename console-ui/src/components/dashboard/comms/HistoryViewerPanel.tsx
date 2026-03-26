@@ -3,7 +3,7 @@
  */
 
 import { cn } from "@/lib/utils"
-import type { UiChatHistoryEvent, UiContextTimelineMessage } from "@/types/Dashboard"
+import type { UiChatHistoryEvent, UiSessionTimelineMessage } from "@/types/Dashboard"
 
 /**
  * 生成时间线角色标签。
@@ -76,7 +76,7 @@ export interface HistoryViewerPanelProps {
   /**
    * context 消息历史列表。
    */
-  contextMessages: UiContextTimelineMessage[]
+  sessionMessages: UiSessionTimelineMessage[]
   /**
    * 时间格式化函数。
    */
@@ -84,7 +84,7 @@ export interface HistoryViewerPanelProps {
 }
 
 export function HistoryViewerPanel(props: HistoryViewerPanelProps) {
-  const { channelHistory, contextMessages, formatTime } = props
+  const { channelHistory, sessionMessages, formatTime } = props
 
   return (
     <section className="min-w-0 space-y-3">
@@ -112,12 +112,12 @@ export function HistoryViewerPanel(props: HistoryViewerPanelProps) {
         </div>
 
         <div className="min-w-0 space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Context Messages</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Session Messages</div>
           <div className="max-h-[56vh] min-w-0 space-y-2 overflow-auto rounded-[20px] bg-secondary/85 p-2">
-            {contextMessages.length === 0 ? (
-              <div className="text-xs text-muted-foreground">暂无 context message history</div>
+            {sessionMessages.length === 0 ? (
+              <div className="text-xs text-muted-foreground">暂无 session message history</div>
             ) : (
-              contextMessages.map((msg, index) => {
+              sessionMessages.map((msg, index) => {
                 const role = String(msg.role || "unknown")
                 const roleLabel = formatTimelineRoleLabel({
                   role,

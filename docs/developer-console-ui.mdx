@@ -49,9 +49,11 @@
 
 仓库级构建顺序（scripts/build.sh）：
 
-1. 先构建 console-ui（生成 packages/downcity/public）。
-2. 再构建 package（tsc + tsc-alias + copy prompt assets）。
-3. 最后全局安装 package（当前脚本行为）。
+1. 先构建 `@downcity/ui`，保证 workspace 消费方使用最新 dist。
+2. 再构建 `homepage/`。
+3. 再构建 console-ui（生成 packages/downcity/public）。
+4. 再构建 package（tsc + tsc-alias + copy prompt assets）。
+5. 最后全局安装 package（当前脚本行为）。
 
 核心点：
 

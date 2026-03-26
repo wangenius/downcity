@@ -1,5 +1,5 @@
 /**
- * Context 列表总览区。
+ * Session 列表总览区。
  *
  * 关键点（中文）
  * - 渠道主视图的 configuration 采用右上角 dropdown menu 直接切换 channel account。
@@ -9,19 +9,19 @@
 
 import * as React from "react"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+import { Input } from "@downcity/ui"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { getChannelDisplayName } from "@/lib/channel-label"
-import type { UiChannelAccountItem, UiChatChannelStatus, UiContextSummary } from "@/types/Dashboard"
+import type { UiChannelAccountItem, UiChatChannelStatus, UiSessionSummary } from "@/types/Dashboard"
 import {
-  buildContextGroups,
-  filterContextsByKeyword,
-  resolveContextChannel,
-  resolveContextGroup,
-  type ContextGroupKey,
+  buildSessionGroups,
+  filterSessionsByKeyword,
+  resolveSessionChannel,
+  resolveSessionGroup,
+  type SessionGroupKey,
 } from "@/lib/context-groups"
 import { parseChannelConfigSummary, parseChannelConfigurationDescriptor, parseChannelDetail } from "./context-overview-config"
 import { CheckIcon, ChevronDownIcon, Code2Icon, ExternalLinkIcon, Trash2Icon } from "lucide-react"
@@ -35,7 +35,7 @@ function toOptionalRouteText(input: unknown): string | null {
   return text || null
 }
 
-function resolveChatDisplayName(item: UiContextSummary): {
+function resolveChatDisplayName(item: UiSessionSummary): {
   value: string
   source: "title" | "chat_id" | "context_id"
 } {
@@ -48,12 +48,12 @@ function resolveChatDisplayName(item: UiContextSummary): {
   return { value: contextId, source: "context_id" }
 }
 
-function buildContextRouteJson(item: UiContextSummary): string {
+function buildSessionRouteJson(item: UiSessionSummary): string {
   const display = resolveChatDisplayName(item)
   return JSON.stringify(
     {
       contextId: toOptionalRouteText(item.contextId),
-      channel: toOptionalRouteText(resolveContextChannel(item)),
+      channel: toOptionalRouteText(resolveSessionChannel(item)),
       chatId: toOptionalRouteText(item.chatId),
       chatTitle: toOptionalRouteText(item.chatTitle),
       chatDisplayName: toOptionalRouteText(display.value),
@@ -69,11 +69,11 @@ function buildContextRouteJson(item: UiContextSummary): string {
   )
 }
 
-export interface ContextOverviewSectionProps {
+export interface SessionOverviewSectionProps {
   /**
-   * context 摘要列表。
+   * session 摘要列表。
    */
-  contexts: UiContextSummary[]
+  contexts: UiSessionSummary[]
   /**
    * chat 渠道状态列表。
    */
@@ -83,9 +83,9 @@ export interface ContextOverviewSectionProps {
    */
   channelAccounts: UiChannelAccountItem[]
   /**
-   * 当前选中的 context id。
+   * 当前选中的 session id。
    */
-  selectedContextId: string
+  selectedSessionId: string
   /**
    * 当前聚焦的渠道。
    */
@@ -95,17 +95,17 @@ export interface ContextOverviewSectionProps {
    */
   formatTime: (ts?: number | string) => string
   /**
-   * 打开 context workspace。
+   * 打开 session workspace。
    */
-  onOpenContext: (contextId: string) => void
+  onOpenSession: (contextId: string) => void
   /**
-   * 删除指定 context。
+   * 删除指定 session。
    */
-  onDeleteContext: (contextId: string) => void
+  onDeleteSession: (contextId: string) => void
   /**
-   * 正在删除的 context id。
+   * 正在删除的 session id。
    */
-  deletingContextId?: string
+  deletingSessionId?: string
   /**
    * 渠道动作。
    */
@@ -116,29 +116,29 @@ export interface ContextOverviewSectionProps {
   onChatConfigure: (channel: string, config: Record<string, unknown>) => void
 }
 
-export function ContextOverviewSection(props: ContextOverviewSectionProps) {
+export function SessionOverviewSection(props: SessionOverviewSectionProps) {
   const {
     contexts,
     chatChannels,
     channelAccounts,
-    selectedContextId,
+    selectedSessionId,
     focusedChannel,
     formatTime,
-    onOpenContext,
-    onDeleteContext,
-    deletingContextId,
+    onOpenSession,
+    onDeleteSession,
+    deletingSessionId,
     onChatAction,
     onChatConfigure,
   } = props
   const confirm = useConfirmDialog()
 
   const [search, setSearch] = React.useState("")
-  const [filter, setFilter] = React.useState<"all" | ContextGroupKey>("all")
+  const [filter, setFilter] = React.useState<"all" | SessionGroupKey>("all")
 
   const normalizedFocusedChannel = String(focusedChannel || "").trim().toLowerCase()
   const contextsInFocusedChannel = React.useMemo(() => {
     if (!normalizedFocusedChannel) return []
-    return contexts.filter((item) => resolveContextChannel(item) === normalizedFocusedChannel)
+    return contexts.filter((item) => resolveSessionChannel(item) === normalizedFocusedChannel)
   }, [contexts, normalizedFocusedChannel])
 
   const visibleChatChannels = React.useMemo(() => {
@@ -148,9 +148,9 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
     )
   }, [chatChannels, normalizedFocusedChannel])
 
-  const filteredContexts = filterContextsByKeyword(contextsInFocusedChannel, search)
-  const grouped = buildContextGroups(filteredContexts)
-  const visibleContexts = grouped
+  const filteredSessions = filterSessionsByKeyword(contextsInFocusedChannel, search)
+  const grouped = buildSessionGroups(filteredSessions)
+  const visibleSessions = grouped
     .filter((group) => (filter === "all" ? true : group.key === filter))
     .flatMap((group) => group.items)
 
@@ -337,15 +337,15 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
       )}
 
       <DashboardModule
-        title="Contexts"
-        description={`当前筛选结果 ${visibleContexts.length} 条。`}
+        title="Sessions"
+        description={`当前筛选结果 ${visibleSessions.length} 条。`}
         actions={
           <>
-            <span className="text-xs text-muted-foreground">{`total ${visibleContexts.length}`}</span>
+            <span className="text-xs text-muted-foreground">{`total ${visibleSessions.length}`}</span>
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="搜索 context"
+              placeholder="搜索 session"
               className="w-[220px]"
             />
             <div className="flex flex-wrap items-center gap-1.5">
@@ -366,20 +366,20 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
         }
       >
 
-        {visibleContexts.length === 0 ? (
+        {visibleSessions.length === 0 ? (
           <div className="rounded-[18px] bg-secondary px-4 py-5 text-sm text-muted-foreground">
-            当前筛选条件下无 context
+            当前筛选条件下无 session
           </div>
         ) : (
           <div className="space-y-2">
-            {visibleContexts.map((item) => {
-              const group = resolveContextGroup(item)
-              const isSelected = item.contextId === selectedContextId
-              const isDeleting = String(deletingContextId || "").trim() === item.contextId
+            {visibleSessions.map((item) => {
+              const group = resolveSessionGroup(item)
+              const isSelected = item.contextId === selectedSessionId
+              const isDeleting = String(deletingSessionId || "").trim() === item.contextId
               const isExecuting = item.executing === true
               const display = resolveChatDisplayName(item)
               const contextLabel = display.value
-              const routeJson = buildContextRouteJson(item)
+              const routeJson = buildSessionRouteJson(item)
               const chatId = String(item.chatId || "").trim()
               const chatType = String(item.chatType || "").trim()
               return (
@@ -452,7 +452,7 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                         size="sm"
                         variant={isSelected ? "secondary" : "outline"}
                         className="h-8 px-2.5"
-                        onClick={() => onOpenContext(item.contextId)}
+                        onClick={() => onOpenSession(item.contextId)}
                       >
                         {isSelected ? "已打开" : "打开"}
                       </Button>
@@ -460,17 +460,17 @@ export function ContextOverviewSection(props: ContextOverviewSectionProps) {
                         size="sm"
                         variant="destructive"
                         className="h-8 px-2.5"
-                        disabled={Boolean(deletingContextId)}
+                        disabled={Boolean(deletingSessionId)}
                         onClick={async () => {
                           const confirmed = await confirm({
-                            title: "删除 Context",
-                            description: `确认彻底删除 context「${item.contextId}」吗？该操作不可恢复。`,
+                            title: "删除 Session",
+                            description: `确认彻底删除 session「${item.contextId}」吗？该操作不可恢复。`,
                             confirmText: "删除",
                             cancelText: "取消",
                             confirmVariant: "destructive",
                           })
                           if (!confirmed) return
-                          onDeleteContext(item.contextId)
+                          onDeleteSession(item.contextId)
                         }}
                       >
                         <Trash2Icon className="size-3.5" />

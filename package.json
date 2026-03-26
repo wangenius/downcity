@@ -3,19 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "workspaces": [
-    "console-ui",
-    "homepage",
-    "packages/downcity",
-    "packages/downcity-ui",
-    "examples/*"
-  ],
+  "packageManager": "pnpm@10.22.0",
   "scripts": {
     "build": "bash ./scripts/build.sh",
+    "build:homepage": "pnpm -C homepage build",
     "build:extension": "bash ./scripts/extbuild.sh",
+    "install:ws": "pnpm install",
+    "dev:ui-sdk": "pnpm -C packages/downcity-ui dev",
+    "dev:homepage": "pnpm -C homepage dev",
+    "homepage": "pnpm -C homepage dev",
     "ui": "npm --prefix ./console-ui run dev",
-    "dev": "cd examples/server-agent && downcity agent start",
-    "cli": "bun run examples/cli-interactive/src/index.ts",
     "publish": "./scripts/publish.sh",
     "publish:ui": "./scripts/publish-ui.sh"
   },

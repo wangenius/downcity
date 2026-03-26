@@ -12,50 +12,50 @@ import { dashboardApiRoutes } from "../../lib/dashboard-api";
 import {
   CONSOLEUI_CONTEXT_ID,
   getErrorMessage,
-  isConsoleUiContext,
+  isConsoleUiSession,
 } from "./shared";
 import type {
   UiChatDeleteResponse,
   UiChatHistoryEvent,
-  UiContextArchiveSummary,
-  UiContextClearResponse,
-  UiContextSummary,
-  UiContextTimelineMessage,
+  UiSessionArchiveSummary,
+  UiSessionClearResponse,
+  UiSessionSummary,
+  UiSessionTimelineMessage,
   UiPromptResponse,
 } from "../../types/Dashboard";
 import type { DashboardToastType } from "../../types/DashboardHook";
 
-function clearContextViewState(params: {
-  setSelectedContextId?: (value: string) => void;
+function clearSessionViewState(params: {
+  setSelectedSessionId?: (value: string) => void;
   setChannelHistory: (value: UiChatHistoryEvent[]) => void;
-  setContextMessages: (value: UiContextTimelineMessage[]) => void;
-  setContextArchives: (value: UiContextArchiveSummary[]) => void;
+  setSessionMessages: (value: UiSessionTimelineMessage[]) => void;
+  setSessionArchives: (value: UiSessionArchiveSummary[]) => void;
   setSelectedArchiveId: (value: string) => void;
-  setContextArchiveMessages: (value: UiContextTimelineMessage[]) => void;
+  setSessionArchiveMessages: (value: UiSessionTimelineMessage[]) => void;
   setPrompt: (value: UiPromptResponse | null) => void;
 }): void {
-  params.setSelectedContextId?.("");
+  params.setSelectedSessionId?.("");
   params.setChannelHistory([]);
-  params.setContextMessages([]);
-  params.setContextArchives([]);
+  params.setSessionMessages([]);
+  params.setSessionArchives([]);
   params.setSelectedArchiveId("");
-  params.setContextArchiveMessages([]);
+  params.setSessionArchiveMessages([]);
   params.setPrompt(null);
 }
 
-function resolveNextContextId(params: {
-  contexts: UiContextSummary[];
-  currentContextId: string;
+function resolveNextSessionId(params: {
+  contexts: UiSessionSummary[];
+  currentSessionId: string;
 }): string {
   const preservedCurrent =
-    params.contexts.find((item) => item.contextId === params.currentContextId)?.contextId || "";
-  const consoleUiContext =
+    params.contexts.find((item) => item.contextId === params.currentSessionId)?.contextId || "";
+  const consoleUiSession =
     params.contexts.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
-  const fallbackContext = params.contexts[0]?.contextId || "";
-  return preservedCurrent || consoleUiContext || fallbackContext;
+  const fallbackSession = params.contexts[0]?.contextId || "";
+  return preservedCurrent || consoleUiSession || fallbackSession;
 }
 
-export function useDashboardContextActions(params: {
+export function useDashboardSessionActions(params: {
   requestJson: <T>(
     path: string,
     options?: RequestInit,
@@ -64,37 +64,37 @@ export function useDashboardContextActions(params: {
   selectedAgentId: string;
   chatInput: string;
   sending: boolean;
-  clearingContextMessages: boolean;
+  clearingSessionMessages: boolean;
   clearingChatHistory: boolean;
-  deletingContextId: string;
-  selectedContextIdRef: MutableRefObject<string>;
+  deletingSessionId: string;
+  selectedSessionIdRef: MutableRefObject<string>;
   setSending: (value: boolean) => void;
-  setClearingContextMessages: (value: boolean) => void;
+  setClearingSessionMessages: (value: boolean) => void;
   setClearingChatHistory: (value: boolean) => void;
-  setDeletingContextId: (value: string) => void;
+  setDeletingSessionId: (value: string) => void;
   setChatInput: (value: string) => void;
-  setSelectedContextId: (value: string) => void;
+  setSelectedSessionId: (value: string) => void;
   setChannelHistory: (value: UiChatHistoryEvent[]) => void;
-  setContextMessages: (value: UiContextTimelineMessage[]) => void;
-  setContextArchives: (value: UiContextArchiveSummary[]) => void;
+  setSessionMessages: (value: UiSessionTimelineMessage[]) => void;
+  setSessionArchives: (value: UiSessionArchiveSummary[]) => void;
   setSelectedArchiveId: (value: string) => void;
-  setContextArchiveMessages: (value: UiContextTimelineMessage[]) => void;
+  setSessionArchiveMessages: (value: UiSessionTimelineMessage[]) => void;
   setPrompt: (value: UiPromptResponse | null) => void;
   refreshLocalChat: (agentId: string) => Promise<void>;
   refreshChannelHistory: (agentId: string, contextId: string) => Promise<void>;
-  refreshContextMessages: (agentId: string, contextId: string) => Promise<void>;
-  refreshContextArchives: (agentId: string, contextId: string) => Promise<UiContextArchiveSummary[]>;
+  refreshSessionMessages: (agentId: string, contextId: string) => Promise<void>;
+  refreshSessionArchives: (agentId: string, contextId: string) => Promise<UiSessionArchiveSummary[]>;
   refreshPrompt: (agentId: string, contextId?: string) => Promise<void>;
   refreshLogs: (agentId: string) => Promise<void>;
   refreshOverview: (agentId: string) => Promise<void>;
-  refreshContexts: (agentId: string) => Promise<UiContextSummary[]>;
+  refreshSessions: (agentId: string) => Promise<UiSessionSummary[]>;
   refreshChatChannels: (agentId: string) => Promise<unknown>;
   showToast: (message: string, type?: DashboardToastType) => void;
 }): {
   sendConsoleUiMessage: () => Promise<void>;
-  clearContextMessages: (contextIdInput: string) => Promise<void>;
+  clearSessionMessages: (contextIdInput: string) => Promise<void>;
   clearChatHistory: (contextIdInput: string) => Promise<void>;
-  deleteChatContext: (contextIdInput: string) => Promise<boolean>;
+  deleteChatSession: (contextIdInput: string) => Promise<boolean>;
 } {
   const sendConsoleUiMessage = useCallback(async () => {
     if (params.sending) return;
@@ -107,22 +107,22 @@ export function useDashboardContextActions(params: {
 
     params.setSending(true);
     try {
-      const currentContextId = String(params.selectedContextIdRef.current || "").trim();
-      const targetContextId =
-        currentContextId.startsWith("consoleui-") || currentContextId === "local_ui"
-          ? currentContextId
+      const currentSessionId = String(params.selectedSessionIdRef.current || "").trim();
+      const targetSessionId =
+        currentSessionId.startsWith("consoleui-") || currentSessionId === "local_ui"
+          ? currentSessionId
           : CONSOLEUI_CONTEXT_ID;
-      await params.requestJson(dashboardApiRoutes.contextExecute(targetContextId), {
+      await params.requestJson(dashboardApiRoutes.sessionExecute(targetSessionId), {
         method: "POST",
         body: JSON.stringify({ instructions }),
       });
       params.setChatInput("");
       await Promise.all([
         params.refreshLocalChat(params.selectedAgentId),
-        params.refreshChannelHistory(params.selectedAgentId, targetContextId),
-        params.refreshContextMessages(params.selectedAgentId, targetContextId),
-        params.refreshContextArchives(params.selectedAgentId, targetContextId),
-        params.refreshPrompt(params.selectedAgentId, targetContextId),
+        params.refreshChannelHistory(params.selectedAgentId, targetSessionId),
+        params.refreshSessionMessages(params.selectedAgentId, targetSessionId),
+        params.refreshSessionArchives(params.selectedAgentId, targetSessionId),
+        params.refreshPrompt(params.selectedAgentId, targetSessionId),
         params.refreshLogs(params.selectedAgentId),
         params.refreshOverview(params.selectedAgentId),
       ]);
@@ -134,7 +134,7 @@ export function useDashboardContextActions(params: {
     }
   }, [params]);
 
-  const clearContextMessages = useCallback(
+  const clearSessionMessages = useCallback(
     async (contextIdInput: string) => {
       const contextId = String(contextIdInput || "").trim();
       if (!contextId) return;
@@ -142,29 +142,29 @@ export function useDashboardContextActions(params: {
         params.showToast("当前无可用 agent", "error");
         return;
       }
-      if (params.clearingContextMessages) return;
+      if (params.clearingSessionMessages) return;
 
-      params.setClearingContextMessages(true);
+      params.setClearingSessionMessages(true);
       try {
-        await params.requestJson<UiContextClearResponse>(
-          dashboardApiRoutes.contextClearMessages(contextId),
+        await params.requestJson<UiSessionClearResponse>(
+          dashboardApiRoutes.sessionClearMessages(contextId),
           { method: "DELETE" },
           params.selectedAgentId,
         );
         await Promise.all([
-          params.refreshContexts(params.selectedAgentId),
+          params.refreshSessions(params.selectedAgentId),
           params.refreshChannelHistory(params.selectedAgentId, contextId),
-          params.refreshContextMessages(params.selectedAgentId, contextId),
-          params.refreshContextArchives(params.selectedAgentId, contextId),
+          params.refreshSessionMessages(params.selectedAgentId, contextId),
+          params.refreshSessionArchives(params.selectedAgentId, contextId),
           params.refreshPrompt(params.selectedAgentId, contextId),
           params.refreshOverview(params.selectedAgentId),
           params.refreshLogs(params.selectedAgentId),
         ]);
-        params.showToast("context messages 已清理", "success");
+        params.showToast("session messages 已清理", "success");
       } catch (error) {
-        params.showToast(`清理 context messages 失败: ${getErrorMessage(error)}`, "error");
+        params.showToast(`清理 session messages 失败: ${getErrorMessage(error)}`, "error");
       } finally {
-        params.setClearingContextMessages(false);
+        params.setClearingSessionMessages(false);
       }
     },
     [params],
@@ -174,8 +174,8 @@ export function useDashboardContextActions(params: {
     async (contextIdInput: string) => {
       const contextId = String(contextIdInput || "").trim();
       if (!contextId) return;
-      if (isConsoleUiContext(contextId)) {
-        await clearContextMessages(contextId);
+      if (isConsoleUiSession(contextId)) {
+        await clearSessionMessages(contextId);
         return;
       }
       if (!params.selectedAgentId) {
@@ -186,8 +186,8 @@ export function useDashboardContextActions(params: {
 
       params.setClearingChatHistory(true);
       try {
-        await params.requestJson<UiContextClearResponse>(
-          dashboardApiRoutes.contextClearChatHistory(contextId),
+        await params.requestJson<UiSessionClearResponse>(
+          dashboardApiRoutes.sessionClearChatHistory(contextId),
           { method: "DELETE" },
           params.selectedAgentId,
         );
@@ -202,10 +202,10 @@ export function useDashboardContextActions(params: {
         params.setClearingChatHistory(false);
       }
     },
-    [clearContextMessages, params],
+    [clearSessionMessages, params],
   );
 
-  const deleteChatContext = useCallback(
+  const deleteChatSession = useCallback(
     async (contextIdInput: string): Promise<boolean> => {
       const contextId = String(contextIdInput || "").trim();
       if (!contextId) return false;
@@ -213,9 +213,9 @@ export function useDashboardContextActions(params: {
         params.showToast("当前无可用 agent", "error");
         return false;
       }
-      if (params.deletingContextId) return false;
+      if (params.deletingSessionId) return false;
 
-      params.setDeletingContextId(contextId);
+      params.setDeletingSessionId(contextId);
       try {
         const data = await params.requestJson<UiChatDeleteResponse>(
           dashboardApiRoutes.servicesCommand(),
@@ -231,28 +231,28 @@ export function useDashboardContextActions(params: {
         );
         const deleted = data?.data?.deleted === true;
 
-        const contextList = await params.refreshContexts(params.selectedAgentId);
-        const nextContextId = resolveNextContextId({
+        const contextList = await params.refreshSessions(params.selectedAgentId);
+        const nextSessionId = resolveNextSessionId({
           contexts: contextList,
-          currentContextId: String(params.selectedContextIdRef.current || "").trim(),
+          currentSessionId: String(params.selectedSessionIdRef.current || "").trim(),
         });
 
-        if (nextContextId) {
-          params.setSelectedContextId(nextContextId);
+        if (nextSessionId) {
+          params.setSelectedSessionId(nextSessionId);
           await Promise.all([
-            params.refreshChannelHistory(params.selectedAgentId, nextContextId),
-            params.refreshContextMessages(params.selectedAgentId, nextContextId),
-            params.refreshContextArchives(params.selectedAgentId, nextContextId),
-            params.refreshPrompt(params.selectedAgentId, nextContextId),
+            params.refreshChannelHistory(params.selectedAgentId, nextSessionId),
+            params.refreshSessionMessages(params.selectedAgentId, nextSessionId),
+            params.refreshSessionArchives(params.selectedAgentId, nextSessionId),
+            params.refreshPrompt(params.selectedAgentId, nextSessionId),
           ]);
         } else {
-          clearContextViewState({
-            setSelectedContextId: params.setSelectedContextId,
+          clearSessionViewState({
+            setSelectedSessionId: params.setSelectedSessionId,
             setChannelHistory: params.setChannelHistory,
-            setContextMessages: params.setContextMessages,
-            setContextArchives: params.setContextArchives,
+            setSessionMessages: params.setSessionMessages,
+            setSessionArchives: params.setSessionArchives,
             setSelectedArchiveId: params.setSelectedArchiveId,
-            setContextArchiveMessages: params.setContextArchiveMessages,
+            setSessionArchiveMessages: params.setSessionArchiveMessages,
             setPrompt: params.setPrompt,
           });
         }
@@ -265,15 +265,15 @@ export function useDashboardContextActions(params: {
         ]);
 
         params.showToast(
-          deleted ? `已删除 context: ${contextId}` : `context 不存在，已同步状态: ${contextId}`,
+          deleted ? `已删除 session: ${contextId}` : `context 不存在，已同步状态: ${contextId}`,
           "success",
         );
         return deleted;
       } catch (error) {
-        params.showToast(`删除 context 失败: ${getErrorMessage(error)}`, "error");
+        params.showToast(`删除 session 失败: ${getErrorMessage(error)}`, "error");
         return false;
       } finally {
-        params.setDeletingContextId("");
+        params.setDeletingSessionId("");
       }
     },
     [params],
@@ -281,8 +281,10 @@ export function useDashboardContextActions(params: {
 
   return {
     sendConsoleUiMessage,
-    clearContextMessages,
+    clearSessionMessages,
     clearChatHistory,
-    deleteChatContext,
+    deleteChatSession,
   };
 }
+
+export const useDashboardContextActions = useDashboardSessionActions;

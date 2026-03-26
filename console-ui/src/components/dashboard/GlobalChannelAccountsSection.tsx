@@ -9,14 +9,21 @@
 
 import * as React from "react"
 import { CheckIcon, ChevronDownIcon, Loader2Icon, PencilIcon, PlusIcon, SparklesIcon, Trash2Icon } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+} from "@downcity/ui"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { getChannelDisplayName } from "@/lib/channel-label"
 import type { UiChannelAccountItem, UiChannelAccountProbeResult } from "@/types/Dashboard"

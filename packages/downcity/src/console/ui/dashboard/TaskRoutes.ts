@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import { join } from "path";
-import { getShipTasksDirPath } from "@/console/env/Paths.js";
+import { getDowncityTasksDirPath } from "@/console/env/Paths.js";
 import { runServiceCommand } from "@/console/service/Manager.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
@@ -46,7 +46,7 @@ async function readTaskRunningState(params: {
   }
 
   const progressPath = join(
-    getShipTasksDirPath(params.projectRoot),
+    getDowncityTasksDirPath(params.projectRoot),
     taskId,
     timestamp,
     "run-progress.json",
@@ -214,7 +214,7 @@ export function registerDashboardTaskRoutes(
       } catch {
         return c.json({ success: false, error: "Task not found" }, 404);
       }
-      const runDir = join(getShipTasksDirPath(runtime.rootPath), taskId, timestamp);
+      const runDir = join(getDowncityTasksDirPath(runtime.rootPath), taskId, timestamp);
       if (!(await fs.pathExists(runDir))) {
         return c.json({ success: false, error: "Run not found" }, 404);
       }
@@ -260,7 +260,7 @@ export function registerDashboardTaskRoutes(
         return c.json({ success: false, error: "Task not found" }, 404);
       }
 
-      const taskDir = join(getShipTasksDirPath(runtime.rootPath), taskId);
+      const taskDir = join(getDowncityTasksDirPath(runtime.rootPath), taskId);
       if (!(await fs.pathExists(taskDir))) {
         return c.json({
           success: true,

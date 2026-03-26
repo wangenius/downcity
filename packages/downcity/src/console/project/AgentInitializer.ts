@@ -12,18 +12,18 @@ import {
   getCacheDirPath,
   getLogsDirPath,
   getProfileMdPath,
-  getShipConfigDirPath,
-  getShipContextRootDirPath,
-  getShipDataDirPath,
-  getShipDebugDirPath,
-  getShipDirPath,
-  getShipJsonPath,
-  getShipProfileDirPath,
-  getShipProfileOtherPath,
-  getShipProfilePrimaryPath,
-  getShipPublicDirPath,
-  getShipSchemaPath,
-  getShipTasksDirPath,
+  getDowncityConfigDirPath,
+  getDowncityDataDirPath,
+  getDowncityDebugDirPath,
+  getDowncityDirPath,
+  getDowncityJsonPath,
+  getDowncityProfileDirPath,
+  getDowncityProfileOtherPath,
+  getDowncityProfilePrimaryPath,
+  getDowncityPublicDirPath,
+  getDowncitySchemaPath,
+  getDowncitySessionRootDirPath,
+  getDowncityTasksDirPath,
   getSoulMdPath,
 } from "@/console/env/Paths.js";
 import { DEFAULT_SHIP_JSON } from "@/console/constants/Ship.js";
@@ -217,7 +217,7 @@ function normalizeChannels(input: AgentProjectChannel[] | undefined): AgentProje
 export async function isAgentProjectInitialized(projectRoot: string): Promise<boolean> {
   const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
   const profileReady = await fs.pathExists(getProfileMdPath(normalizedRoot));
-  const shipReady = await fs.pathExists(getShipJsonPath(normalizedRoot));
+  const shipReady = await fs.pathExists(getDowncityJsonPath(normalizedRoot));
   return profileReady && shipReady;
 }
 
@@ -248,7 +248,7 @@ export async function initializeAgentProject(
 
   const profileMdPath = getProfileMdPath(projectRoot);
   const soulMdPath = getSoulMdPath(projectRoot);
-  const shipJsonPath = getShipJsonPath(projectRoot);
+  const shipJsonPath = getDowncityJsonPath(projectRoot);
   const existingShipJson = await fs.pathExists(shipJsonPath);
   if (existingShipJson && input.forceOverwriteShipJson !== true) {
     throw new Error(`downcity.json already exists: ${shipJsonPath}`);
@@ -326,32 +326,32 @@ export async function initializeAgentProject(
   });
 
   const dirs = [
-    getShipDirPath(projectRoot),
-    getShipTasksDirPath(projectRoot),
+    getDowncityDirPath(projectRoot),
+    getDowncityTasksDirPath(projectRoot),
     getLogsDirPath(projectRoot),
     getCacheDirPath(projectRoot),
-    getShipProfileDirPath(projectRoot),
-    getShipDataDirPath(projectRoot),
-    getShipContextRootDirPath(projectRoot),
-    getShipPublicDirPath(projectRoot),
-    getShipConfigDirPath(projectRoot),
+    getDowncityProfileDirPath(projectRoot),
+    getDowncityDataDirPath(projectRoot),
+    getDowncitySessionRootDirPath(projectRoot),
+    getDowncityPublicDirPath(projectRoot),
+    getDowncityConfigDirPath(projectRoot),
     path.join(projectRoot, ".agents", "skills"),
-    path.join(getShipDirPath(projectRoot), "schema"),
-    getShipDebugDirPath(projectRoot),
+    path.join(getDowncityDirPath(projectRoot), "schema"),
+    getDowncityDebugDirPath(projectRoot),
   ];
   for (const dir of dirs) {
     await ensureDir(dir);
   }
 
-  const shipSchemaPath = getShipSchemaPath(projectRoot);
+  const shipSchemaPath = getDowncitySchemaPath(projectRoot);
   await ensureDir(path.dirname(shipSchemaPath));
   await saveJson(shipSchemaPath, SHIP_JSON_SCHEMA);
   createdFiles.push(".downcity/schema/downcity.schema.json");
 
   try {
-    await ensureDir(getShipProfileDirPath(projectRoot));
-    await fs.ensureFile(getShipProfilePrimaryPath(projectRoot));
-    await fs.ensureFile(getShipProfileOtherPath(projectRoot));
+    await ensureDir(getDowncityProfileDirPath(projectRoot));
+    await fs.ensureFile(getDowncityProfilePrimaryPath(projectRoot));
+    await fs.ensureFile(getDowncityProfileOtherPath(projectRoot));
   } catch {
     // ignore optional profile memory bootstrap errors
   }

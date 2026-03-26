@@ -1,8 +1,8 @@
 /**
- * ChatMeta：chat 服务维护的 context 路由元信息。
+ * ChatMeta：chat 服务维护的 session 路由元信息。
  *
  * 关键点（中文）
- * - 只描述“如何把 contextId 路由回平台 chat”
+ * - 只描述“如何把 sessionId 路由回平台 chat”
  * - 由 services/chat 在接收入站消息时更新
  * - 不属于 core context message schema
  */
@@ -15,7 +15,7 @@ export type ChatMetaV1 = {
   /** 更新时间戳（ms） */
   updatedAt: number;
   /** 会话 ID */
-  contextId: string;
+  sessionId: string;
   /** 平台通道 */
   channel: ChatDispatchChannel;
   /** 平台 chatId */

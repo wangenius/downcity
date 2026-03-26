@@ -50,12 +50,12 @@ city chat <subcommand> [options]
 
 - `--channel <telegram|feishu|qq>`：渠道过滤
 - `--limit <n>`：返回最近 N 条（默认 50）
-- `--q <text>`：关键词过滤（title/chatId/contextId/actor）
+- `--q <text>`：关键词过滤（title/chatId/sessionId/actor）
 
 ## `info` 常用选项
 
 - `--chat-key <chatKey>`：目标会话（不传则尝试读取 `DC_CTX_CHAT_KEY`）
-- `--context-id <contextId>`：显式指定 contextId（优先级更高）
+- `--session-id <sessionId>`：显式指定 sessionId（优先级更高）
 
 ## `send` 常用选项
 
@@ -96,12 +96,12 @@ city chat <subcommand> [options]
 ## `delete` 常用选项
 
 - `--chat-key <chatKey>`
-- `--context-id <contextId>`
+- `--session-id <sessionId>`
 
 ## `history` 常用选项
 
 - `--chat-key <chatKey>`
-- `--context-id <contextId>`
+- `--session-id <sessionId>`
 - `--limit <n>`
 - `--direction <all|inbound|outbound>`
 - `--before-ts <ts>` / `--after-ts <ts>`（毫秒）

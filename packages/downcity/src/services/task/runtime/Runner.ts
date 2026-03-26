@@ -198,8 +198,8 @@ type ScriptExecutionResult = {
 };
 
 type TaskAgentRuntime = {
-  getAgent(contextId: string): Agent;
-  getPersistor(contextId: string): FilePersistor;
+  getAgent(sessionId: string): Agent;
+  getPersistor(sessionId: string): FilePersistor;
 };
 
 /**
@@ -212,7 +212,7 @@ type TaskAgentRuntime = {
  */
 async function appendTaskRoundUserMessage(params: {
   taskAgentRuntime: TaskAgentRuntime;
-  contextId: string;
+  sessionId: string;
   taskId: string;
   query: string;
   actorId: string;
@@ -220,12 +220,12 @@ async function appendTaskRoundUserMessage(params: {
 }): Promise<void> {
   const text = String(params.query || "").trim();
   if (!text) return;
-  const persistor = params.taskAgentRuntime.getPersistor(params.contextId);
+  const persistor = params.taskAgentRuntime.getPersistor(params.sessionId);
   await persistor.append(
     persistor.userText({
       text,
       metadata: {
-        contextId: params.contextId,
+        sessionId: params.sessionId,
         extra: {
           taskId: params.taskId,
           actorId: params.actorId,
@@ -265,11 +265,11 @@ function createTaskAgentRuntime(params: {
   const persistorsByContextId = new Map<string, FilePersistor>();
   const agentsByContextId = new Map<string, Agent>();
 
-  const resolveTaskPersistor = (contextId: string): FilePersistor => {
-    const existing = persistorsByContextId.get(contextId);
+  const resolveTaskPersistor = (sessionId: string): FilePersistor => {
+    const existing = persistorsByContextId.get(sessionId);
     if (existing) return existing;
 
-    const key = String(contextId || "").trim();
+    const key = String(sessionId || "").trim();
     if (!key) {
       throw new Error("TaskAgentRuntime requires a non-empty contextId");
     }
@@ -282,7 +282,7 @@ function createTaskAgentRuntime(params: {
 
     const created = new FilePersistor({
       rootPath: runtime.rootPath,
-      contextId: key,
+      sessionId: key,
       ...(runMessagesDirPath
         ? {
             paths: {
@@ -300,11 +300,11 @@ function createTaskAgentRuntime(params: {
   };
 
   return {
-    getPersistor(contextId: string): FilePersistor {
-      return resolveTaskPersistor(contextId);
+    getPersistor(sessionId: string): FilePersistor {
+      return resolveTaskPersistor(sessionId);
     },
-    getAgent(contextId: string): Agent {
-      const key = String(contextId || "").trim();
+    getAgent(sessionId: string): Agent {
+      const key = String(sessionId || "").trim();
       if (!key) {
         throw new Error("TaskAgentRuntime.getAgent requires a non-empty contextId");
       }
@@ -313,7 +313,7 @@ function createTaskAgentRuntime(params: {
 
       const persistor = resolveTaskPersistor(key);
       const orchestrator = new RuntimeOrchestrator({
-        contextId: key,
+        sessionId: key,
         getTools: () => shellTools,
       });
       const created = new Agent({
@@ -588,7 +588,7 @@ function buildUserSimulatorQuery(params: {
  */
 async function runAgentRound(params: {
   taskAgentRuntime: TaskAgentRuntime;
-  contextId: string;
+  sessionId: string;
   taskId: string;
   query: string;
   actorId: string;
@@ -597,7 +597,7 @@ async function runAgentRound(params: {
   try {
     await appendTaskRoundUserMessage({
       taskAgentRuntime: params.taskAgentRuntime,
-      contextId: params.contextId,
+      sessionId: params.sessionId,
       taskId: params.taskId,
       query: params.query,
       actorId: params.actorId,
@@ -609,10 +609,10 @@ async function runAgentRound(params: {
 
   const result = await withRequestContext(
     {
-      contextId: params.contextId,
+      sessionId: params.sessionId,
     },
     () =>
-      params.taskAgentRuntime.getAgent(params.contextId).run({
+      params.taskAgentRuntime.getAgent(params.sessionId).run({
         query: params.query,
       }),
   );
@@ -647,7 +647,7 @@ async function runAgentRound(params: {
  */
 async function runScriptTask(params: {
   runDirAbs: string;
-  contextId: string;
+  sessionId: string;
   scriptBody: string;
 }): Promise<ScriptExecutionResult> {
   const body = String(params.scriptBody || "");
@@ -657,14 +657,14 @@ async function runScriptTask(params: {
   await fs.writeFile(scriptAbs, body.endsWith("\n") ? body : `${body}\n`, "utf-8");
 
   const execResult = await withRequestContext(
-    { contextId: params.contextId },
+    { sessionId: params.sessionId },
     () =>
       execa("sh", [scriptAbs], {
         cwd: params.runDirAbs,
         reject: true,
         env: {
           ...process.env,
-          DC_CTX_CONTEXT_ID: params.contextId,
+          DC_CTX_CONTEXT_ID: params.sessionId,
         },
       }),
   );
@@ -682,16 +682,16 @@ async function runScriptTask(params: {
  */
 async function appendTaskAssistantMessage(params: {
   taskAgentRuntime: TaskAgentRuntime;
-  contextId: string;
+  sessionId: string;
   taskId: string;
   rawResult: AgentResult;
 }): Promise<void> {
-  const persistor = params.taskAgentRuntime.getPersistor(params.contextId);
+  const persistor = params.taskAgentRuntime.getPersistor(params.sessionId);
   const assistantMessage = params.rawResult?.assistantMessage;
   if (assistantMessage && typeof assistantMessage === "object") {
     await persistor.append(assistantMessage);
     const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-      params.contextId,
+      params.sessionId,
     );
     for (const message of deferredInjectedMessages) {
       await persistor.append(message);
@@ -814,7 +814,7 @@ export async function runTaskNow(params: {
       `- title: ${task.frontmatter.title}`,
       `- when: \`${task.frontmatter.when}\``,
       `- status: \`${task.frontmatter.status}\``,
-      `- contextId: \`${task.frontmatter.contextId}\``,
+      `- sessionId: \`${task.frontmatter.contextId}\``,
       `- kind: \`${taskKind}\``,
       ...(taskKind === "agent" ? [`- review: \`${String(reviewEnabled)}\``] : []),
       `- maxDialogueRounds: \`${maxDialogueRounds}\``,
@@ -872,7 +872,7 @@ export async function runTaskNow(params: {
     try {
       const scriptResult = await runScriptTask({
         runDirAbs,
-        contextId: task.frontmatter.contextId,
+        sessionId: task.frontmatter.contextId,
         scriptBody: task.body,
       });
       outputText = scriptResult.outputText;
@@ -959,7 +959,7 @@ export async function runTaskNow(params: {
         });
         const executorRound = await runAgentRound({
           taskAgentRuntime,
-          contextId: runContextId,
+          sessionId: runContextId,
           taskId: task.taskId,
           query: executorQuery,
           actorId: "scheduler",
@@ -976,7 +976,7 @@ export async function runTaskNow(params: {
         try {
           await appendTaskAssistantMessage({
             taskAgentRuntime,
-            contextId: runContextId,
+            sessionId: runContextId,
             taskId: task.taskId,
             rawResult: executorRound.rawResult,
           });
@@ -1031,7 +1031,7 @@ export async function runTaskNow(params: {
           });
           const simulatorRound = await runAgentRound({
             taskAgentRuntime,
-            contextId: userSimulatorContextId,
+            sessionId: userSimulatorContextId,
             taskId: task.taskId,
             query: userSimulatorQuery,
             actorId: "user_simulator",
@@ -1044,7 +1044,7 @@ export async function runTaskNow(params: {
           try {
             await appendTaskAssistantMessage({
               taskAgentRuntime,
-              contextId: userSimulatorContextId,
+              sessionId: userSimulatorContextId,
               taskId: task.taskId,
               rawResult: simulatorRound.rawResult,
             });

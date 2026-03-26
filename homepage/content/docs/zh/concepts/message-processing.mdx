@@ -8,16 +8,16 @@ description: 从消息进入到回复回发的端到端流程
 以 chat 渠道为例，一条消息的主流程如下：
 
 1. 渠道适配器接收入站消息。
-2. 解析 `contextId` / `chatKey`，写入历史与元信息。
+2. 解析 `sessionId` / `chatKey`，写入历史与元信息。
 3. Runtime 按会话串行调度并执行 Agent。
 4. Agent 调用工具（如 `chat send`）产出用户可见回复。
 5. 回复回发到渠道并写入日志。
 
 ## 关键目录
 
-- `.downcity/context/<contextId>/messages/messages.jsonl`
+- `.downcity/session/<sessionId>/messages/messages.jsonl`
 - `.downcity/channel/meta.json`
-- `.downcity/chat/<contextId>/history.jsonl`
+- `.downcity/chat/<sessionId>/history.jsonl`
 - `.downcity/logs/<YYYY-MM-DD>.jsonl`
 
 ## 排障入口

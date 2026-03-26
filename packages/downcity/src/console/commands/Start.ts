@@ -14,7 +14,7 @@
 import path from "path";
 import fs from "fs-extra";
 import { fileURLToPath } from "url";
-import { getProfileMdPath, getShipJsonPath } from "@/console/env/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath } from "@/console/env/Paths.js";
 import { startDaemonProcess } from "@/console/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/console/daemon/CliArgs.js";
 import type { StartOptions } from "@agent/types/Start.js";
@@ -48,7 +48,7 @@ export async function startCommand(
     );
     process.exit(1);
   }
-  if (!fs.existsSync(getShipJsonPath(projectRoot))) {
+  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
     console.error(
       '❌ downcity.json does not exist. Please run "city agent create" first',
     );

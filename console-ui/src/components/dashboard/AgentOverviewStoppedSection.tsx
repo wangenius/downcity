@@ -8,7 +8,7 @@
 
 import * as React from "react"
 import { Loader2Icon, PlayIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 import type { UiAgentOption } from "@/types/Dashboard"
 
 export interface AgentOverviewStoppedSectionProps {

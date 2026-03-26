@@ -146,9 +146,10 @@ function buildShellEnv(runtime: ServiceRuntime): NodeJS.ProcessEnv {
   }
 
   const request = requestContext.getStore();
-  const contextId = String(request?.contextId || "").trim();
+  const sessionId = String(request?.sessionId || "").trim();
   const requestId = String(request?.requestId || "").trim();
-  if (contextId) env.DC_CTX_CONTEXT_ID = contextId;
+  if (sessionId) env.DC_SESSION_ID = sessionId;
+  if (sessionId) env.DC_CTX_CONTEXT_ID = sessionId;
   if (requestId) env.DC_CTX_REQUEST_ID = requestId;
   if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
   if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;
@@ -164,7 +165,7 @@ function resolveShellCwd(runtime: ServiceRuntime, cwd?: string): string {
 function resolveOwnerContextId(explicit?: string): string | undefined {
   const fromInput = String(explicit || "").trim();
   if (fromInput) return fromInput;
-  const fromRequest = String(requestContext.getStore()?.contextId || "").trim();
+  const fromRequest = String(requestContext.getStore()?.sessionId || "").trim();
   return fromRequest || undefined;
 }
 

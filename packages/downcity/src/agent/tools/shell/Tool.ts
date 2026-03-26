@@ -104,18 +104,18 @@ async function injectUserTextMessage(params: {
   note?: string;
 }): Promise<boolean> {
   const store = requestContext.getStore();
-  const contextId = String(store?.contextId || "").trim();
+  const sessionId = String(store?.sessionId || "").trim();
   const text = String(params.text || "").trim();
-  if (!contextId || !text) return false;
+  if (!sessionId || !text) return false;
   const note = String(params.note || "runtime_injected_user_message");
 
   enqueueInjectedUserMessage({
-    id: `u:${contextId}:${generateId()}`,
+    id: `u:${sessionId}:${generateId()}`,
     role: "user",
     metadata: {
       v: 1,
       ts: Date.now(),
-      contextId,
+      sessionId,
       source: "ingress",
       kind: "normal",
       extra: {
@@ -125,13 +125,13 @@ async function injectUserTextMessage(params: {
     parts: [{ type: "text", text }],
   });
 
-  enqueueDeferredPersistedUserMessage(contextId, {
-    id: `u:${contextId}:${generateId()}`,
+  enqueueDeferredPersistedUserMessage(sessionId, {
+    id: `u:${sessionId}:${generateId()}`,
     role: "user",
     metadata: {
       v: 1,
       ts: Date.now(),
-      contextId,
+      sessionId,
       source: "ingress",
       kind: "normal",
       extra: {

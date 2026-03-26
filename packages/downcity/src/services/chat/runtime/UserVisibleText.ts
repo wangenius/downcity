@@ -7,7 +7,7 @@
  * - 因此需要一个稳定的、与 Agent 解耦的提取逻辑（属于 chat/egress 语义）
  */
 
-import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
 import {
   extractTextFromUiMessage,
   extractToolCallsFromUiMessage,
@@ -21,7 +21,7 @@ import {
  * - 不影响 channel 发送；只影响 context messages 的最终 append 策略。
  */
 export function hasPersistedAssistantSteps(
-  message: ContextMessageV1 | null | undefined,
+  message: SessionMessageV1 | null | undefined,
 ): boolean {
   const extra = message?.metadata?.extra;
   if (!extra || typeof extra !== "object" || Array.isArray(extra)) return false;
@@ -36,7 +36,7 @@ export function hasPersistedAssistantSteps(
  * - 若无 tool call，则回退到 message 文本内容。
  */
 export function pickLastSuccessfulChatSendText(
-  message: ContextMessageV1 | null | undefined,
+  message: SessionMessageV1 | null | undefined,
 ): string {
   const toolCalls = extractToolCallsFromUiMessage(message);
   // 关键点（中文）：优先从 chat_send 的 input.text 还原"用户可见回复"。

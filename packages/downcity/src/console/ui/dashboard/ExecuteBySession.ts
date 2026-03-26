@@ -9,7 +9,7 @@
 import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
-import type { DashboardContextExecuteAttachmentInput } from "@/types/DashboardContextExecute.js";
+import type { DashboardSessionExecuteAttachmentInput } from "@/types/DashboardSessionExecute.js";
 import { drainDeferredPersistedUserMessages } from "@agent/context/manager/RequestContext.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
@@ -22,27 +22,27 @@ import {
 import { buildExecuteInputText } from "./Helpers.js";
 
 /**
- * 在指定 context 中执行一轮请求。
+ * 在指定 session 中执行一轮请求。
  *
  * 说明（中文）
- * - 若 `contextId` 能解析为 chat 分发目标，则改为入 chat queue。
- * - 否则按普通 context 同步执行。
+ * - 若 `sessionId` 能解析为 chat 分发目标，则改为入 chat queue。
+ * - 否则按普通 session 同步执行。
  */
-export async function executeByContextId(params: {
+export async function executeBySessionId(params: {
   runtime: RuntimeState;
   serviceRuntime: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   instructions: string;
-  attachments?: DashboardContextExecuteAttachmentInput[];
+  attachments?: DashboardSessionExecuteAttachmentInput[];
 }) {
-  const contextId = String(params.contextId || "").trim();
+  const contextId = String(params.sessionId || "").trim();
   const instructions = String(params.instructions || "").trim();
-  if (!contextId) throw new Error("Missing contextId");
+  if (!contextId) throw new Error("Missing sessionId");
   if (!instructions) throw new Error("Missing instructions");
 
   const executeInput = await buildExecuteInputText({
     projectRoot: params.runtime.rootPath,
-    contextId,
+    sessionId: contextId,
     instructions,
     attachments: params.attachments,
   });

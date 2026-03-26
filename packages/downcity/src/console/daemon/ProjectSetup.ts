@@ -14,15 +14,15 @@ import {
   getCacheDirPath,
   getLogsDirPath,
   getProfileMdPath,
-  getShipConfigDirPath,
-  getShipContextRootDirPath,
-  getShipDataDirPath,
-  getShipDebugDirPath,
-  getShipDirPath,
-  getShipJsonPath,
-  getShipProfileDirPath,
-  getShipPublicDirPath,
-  getShipTasksDirPath,
+  getDowncityConfigDirPath,
+  getDowncityDataDirPath,
+  getDowncityDebugDirPath,
+  getDowncityDirPath,
+  getDowncityJsonPath,
+  getDowncityProfileDirPath,
+  getDowncityPublicDirPath,
+  getDowncitySessionRootDirPath,
+  getDowncityTasksDirPath,
 } from "@/console/env/Paths.js";
 
 /**
@@ -37,7 +37,7 @@ function ensureContextFiles(projectRoot: string): void {
     process.exit(1);
   }
 
-  if (!fs.existsSync(getShipJsonPath(projectRoot))) {
+  if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
     console.error(
       '❌ downcity.json does not exist. Please run "city agent create" first',
     );
@@ -50,17 +50,17 @@ function ensureContextFiles(projectRoot: string): void {
  */
 function ensureShipDirectories(projectRoot: string): void {
   // 关键点（中文）：尽量只在启动时确保目录结构存在，避免在 Agent/Tool 执行过程中反复 ensure。
-  fs.ensureDirSync(getShipDirPath(projectRoot));
-  fs.ensureDirSync(getShipTasksDirPath(projectRoot));
+  fs.ensureDirSync(getDowncityDirPath(projectRoot));
+  fs.ensureDirSync(getDowncityTasksDirPath(projectRoot));
   fs.ensureDirSync(getLogsDirPath(projectRoot));
   fs.ensureDirSync(getCacheDirPath(projectRoot));
-  fs.ensureDirSync(getShipProfileDirPath(projectRoot));
-  fs.ensureDirSync(getShipDataDirPath(projectRoot));
-  fs.ensureDirSync(getShipContextRootDirPath(projectRoot));
-  fs.ensureDirSync(getShipPublicDirPath(projectRoot));
-  fs.ensureDirSync(getShipConfigDirPath(projectRoot));
-  fs.ensureDirSync(path.join(getShipDirPath(projectRoot), "schema"));
-  fs.ensureDirSync(getShipDebugDirPath(projectRoot));
+  fs.ensureDirSync(getDowncityProfileDirPath(projectRoot));
+  fs.ensureDirSync(getDowncityDataDirPath(projectRoot));
+  fs.ensureDirSync(getDowncitySessionRootDirPath(projectRoot));
+  fs.ensureDirSync(getDowncityPublicDirPath(projectRoot));
+  fs.ensureDirSync(getDowncityConfigDirPath(projectRoot));
+  fs.ensureDirSync(path.join(getDowncityDirPath(projectRoot), "schema"));
+  fs.ensureDirSync(getDowncityDebugDirPath(projectRoot));
 }
 
 /**

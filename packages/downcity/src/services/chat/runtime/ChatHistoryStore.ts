@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { generateId } from "@utils/Id.js";
-import { getShipChatHistoryPath } from "@/console/env/Paths.js";
+import { getDowncityChatHistoryPath } from "@/console/env/Paths.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
@@ -164,7 +164,7 @@ export async function appendInboundChatHistory(params: {
     extra: toOptionalObject(params.extra),
   });
 
-  const file = getShipChatHistoryPath(rootPath, contextId);
+  const file = getDowncityChatHistoryPath(rootPath, contextId);
   await fs.ensureDir(path.dirname(file));
   await fs.appendFile(file, JSON.stringify(event) + "\n", "utf8");
 }
@@ -207,7 +207,7 @@ export async function appendOutboundChatHistory(params: {
     extra: toOptionalObject(params.extra),
   });
 
-  const file = getShipChatHistoryPath(rootPath, contextId);
+  const file = getDowncityChatHistoryPath(rootPath, contextId);
   await fs.ensureDir(path.dirname(file));
   await fs.appendFile(file, JSON.stringify(event) + "\n", "utf8");
 }
@@ -229,7 +229,7 @@ export async function readChatHistory(params: {
 }): Promise<{ historyPath: string; events: ChatHistoryEventV1[] }> {
   const rootPath = normalizeTrimmedString(params.context.rootPath);
   const contextId = normalizeTrimmedString(params.contextId);
-  const historyPath = getShipChatHistoryPath(rootPath, contextId);
+  const historyPath = getDowncityChatHistoryPath(rootPath, contextId);
   if (!rootPath || !contextId) {
     return {
       historyPath,

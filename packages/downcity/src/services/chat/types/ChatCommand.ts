@@ -7,7 +7,7 @@
  */
 
 export type ChatContextSnapshot = {
-  contextId?: string;
+  sessionId?: string;
   chatKey?: string;
   channel?: string;
   chatId?: string;
@@ -49,12 +49,12 @@ export type ChatReactResponse = {
 
 export type ChatDeleteRequest = {
   chatKey?: string;
-  contextId?: string;
+  sessionId?: string;
 };
 
 export type ChatDeleteResponse = {
   success: boolean;
-  contextId?: string;
+  sessionId?: string;
   deleted?: boolean;
   removedMeta?: boolean;
   removedChatDir?: boolean;
@@ -66,7 +66,7 @@ export type ChatHistoryDirection = "all" | "inbound" | "outbound";
 
 export type ChatHistoryRequest = {
   chatKey?: string;
-  contextId?: string;
+  sessionId?: string;
   limit?: number;
   direction?: ChatHistoryDirection;
   beforeTs?: number;
@@ -99,7 +99,7 @@ export type ChatListRequest = {
    * 关键词查询。
    *
    * 说明（中文）
-   * - 会在 `contextId/chatId/chatTitle/actorName/actorId` 中做包含匹配（不区分大小写）。
+   * - 会在 `sessionId/chatId/chatTitle/actorName/actorId` 中做包含匹配（不区分大小写）。
    */
   q?: string;
 };
@@ -112,13 +112,17 @@ export type ChatListItemV1 = {
    * 可发送的 chatKey。
    *
    * 关键点（中文）
-   * - 当前实现下 `chatKey === contextId`。
+   * - 当前实现下 `chatKey === sessionId`。
    */
   chatKey: string;
   /**
-   * 内部 contextId（随机生成，不可推导）。
+   * 对外稳定的 sessionId。
+   *
+   * 说明（中文）
+   * - 当前内部仍映射到既有 `contextId` 存储体系。
+   * - 对调用方不再暴露 `contextId` 命名。
    */
-  contextId: string;
+  sessionId: string;
   /**
    * 渠道类型（telegram/feishu/qq）。
    */
@@ -166,7 +170,7 @@ export type ChatInfoRequest = {
    */
   chatKey?: string;
   /**
-   * 显式 contextId（优先级高于 chatKey）。
+   * 显式 sessionId（优先级高于 chatKey）。
    */
-  contextId?: string;
+  sessionId?: string;
 };

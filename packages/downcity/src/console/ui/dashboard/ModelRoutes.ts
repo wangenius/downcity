@@ -7,7 +7,7 @@
  */
 
 import fs from "fs-extra";
-import { getShipJsonPath } from "@/console/env/Paths.js";
+import { getDowncityJsonPath } from "@/console/env/Paths.js";
 import { ConsoleStore } from "@utils/store/index.js";
 import type { DashboardRouteRegistrationParams } from "@/types/DashboardRoutes.js";
 
@@ -80,7 +80,7 @@ export function registerDashboardModelRoutes(
         );
       }
 
-      const shipJsonPath = getShipJsonPath(runtime.rootPath);
+      const shipJsonPath = getDowncityJsonPath(runtime.rootPath);
       const agentShip = (await fs.readJson(shipJsonPath)) as {
         model?: { primary?: string };
       };

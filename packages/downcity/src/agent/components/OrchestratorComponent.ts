@@ -7,7 +7,7 @@
  */
 
 import type { ModelMessage, Tool } from "ai";
-import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
 import type { ContextSystemMessage } from "@agent/types/ContextSystemMessage.js";
 import { AgentComponent } from "./AgentComponent.js";
 
@@ -48,7 +48,7 @@ export abstract class OrchestratorComponent extends AgentComponent {
        * 将新增 user 消息转换为可追加的模型消息。
        */
       appendMergedUserMessages: (
-        messages: ContextMessageV1[],
+        messages: SessionMessageV1[],
       ) => Promise<ModelMessage[]>;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{
@@ -67,5 +67,5 @@ export abstract class OrchestratorComponent extends AgentComponent {
    * 关键点（中文）
    * - fallback 消息构造由 orchestrator 内部实现，Agent 不直接依赖 persistor。
    */
-  abstract buildFallbackAssistantMessage(text: string): ContextMessageV1;
+  abstract buildFallbackAssistantMessage(text: string): SessionMessageV1;
 }

@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
-import { getShipJsonPath } from "@/console/env/Paths.js";
+import { getDowncityJsonPath } from "@/console/env/Paths.js";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
 
 const OPENAI_COMPAT_PROVIDER_TYPES = new Set<LlmProviderType>([
@@ -193,7 +193,7 @@ export function setProjectPrimaryModel(projectRoot: string, modelId: string): {
   previousPrimary: string;
   nextPrimary: string;
 } {
-  const shipJsonPath = getShipJsonPath(projectRoot);
+  const shipJsonPath = getDowncityJsonPath(projectRoot);
   if (!fs.existsSync(shipJsonPath)) {
     throw new Error(`downcity.json not found at ${shipJsonPath}`);
   }

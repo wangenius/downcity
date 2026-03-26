@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - 用于把 persistor 落盘路径定向到自定义目录（例如 task run 目录）。
- * - 每个字段都为可选，未提供时回退到默认 `.downcity/context/<encodedContextId>/messages/*`。
+ * - 每个字段都为可选，未提供时回退到默认 `.downcity/session/<encodedSessionId>/messages/*`。
  */
 export type PersistorPathOverrides = {
   /**
-   * Context 根目录（通常是 `.downcity/context/<encodedContextId>`）。
+   * Session 根目录（通常是 `.downcity/session/<encodedSessionId>`）。
    */
   contextDirPath?: string;
 

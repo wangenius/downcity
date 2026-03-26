@@ -40,7 +40,7 @@ import { getChannelDisplayName } from "@/lib/channel-label"
 import { buildContextGroups, resolveContextChannel } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 
 export type { DashboardView }
 

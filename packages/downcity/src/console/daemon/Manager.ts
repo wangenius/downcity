@@ -15,7 +15,7 @@
 import fs from "fs-extra";
 import path from "path";
 import { spawn } from "child_process";
-import { getShipDebugDirPath } from "@/console/env/Paths.js";
+import { getDowncityDebugDirPath } from "@/console/env/Paths.js";
 import {
   DAEMON_LOG_FILENAME,
   DAEMON_META_FILENAME,
@@ -38,19 +38,19 @@ const sleep = async (ms: number): Promise<void> =>
  * 计算 daemon pid 文件路径。
  */
 export const getDaemonPidPath = (projectRoot: string): string =>
-  path.join(getShipDebugDirPath(projectRoot), DAEMON_PID_FILENAME);
+  path.join(getDowncityDebugDirPath(projectRoot), DAEMON_PID_FILENAME);
 
 /**
  * 计算 daemon 日志文件路径。
  */
 export const getDaemonLogPath = (projectRoot: string): string =>
-  path.join(getShipDebugDirPath(projectRoot), DAEMON_LOG_FILENAME);
+  path.join(getDowncityDebugDirPath(projectRoot), DAEMON_LOG_FILENAME);
 
 /**
  * 计算 daemon 元数据文件路径。
  */
 export const getDaemonMetaPath = (projectRoot: string): string =>
-  path.join(getShipDebugDirPath(projectRoot), DAEMON_META_FILENAME);
+  path.join(getDowncityDebugDirPath(projectRoot), DAEMON_META_FILENAME);
 
 /**
  * 读取 daemon pid。
@@ -205,7 +205,7 @@ export const writeDaemonFiles = async (
   projectRoot: string,
   meta: DaemonMeta,
 ): Promise<void> => {
-  await fs.ensureDir(getShipDebugDirPath(projectRoot));
+  await fs.ensureDir(getDowncityDebugDirPath(projectRoot));
   await fs.writeFile(getDaemonPidPath(projectRoot), String(meta.pid), "utf-8");
   await fs.writeJson(getDaemonMetaPath(projectRoot), meta, { spaces: 2 });
 };
@@ -226,7 +226,7 @@ export const startDaemonProcess = async (params: {
 }): Promise<{ pid: number; logPath: string }> => {
   const { projectRoot, cliPath, args } = params;
 
-  await fs.ensureDir(getShipDebugDirPath(projectRoot));
+  await fs.ensureDir(getDowncityDebugDirPath(projectRoot));
   await cleanupStaleDaemonFiles(projectRoot);
 
   const existingPid = await readDaemonPid(projectRoot);

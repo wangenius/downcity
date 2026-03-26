@@ -63,9 +63,9 @@ export class PromptSystem extends PrompterComponent {
 
   async resolve() {
     const ctx = requestContext.getStore();
-    const contextId = String(ctx?.contextId || "").trim();
-    if (!contextId) {
-      throw new Error("PromptSystem.resolve requires a non-empty contextId");
+    const sessionId = String(ctx?.sessionId || "").trim();
+    if (!sessionId) {
+      throw new Error("PromptSystem.resolve requires a non-empty sessionId");
     }
     const requestId = String(ctx?.requestId || "").trim();
     if (!requestId) {
@@ -73,7 +73,7 @@ export class PromptSystem extends PrompterComponent {
     }
     return await resolveAgentSystemMessages({
       projectRoot: this.projectRoot,
-      contextId,
+      contextId: sessionId,
       requestId,
       profile: this.profile,
       staticSystemPrompts: this.getStaticSystemPrompts(),

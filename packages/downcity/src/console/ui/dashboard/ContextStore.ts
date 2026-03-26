@@ -9,8 +9,8 @@
 import fs from "fs-extra";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import {
-  getShipContextMessagesPath,
-  getShipContextRootDirPath,
+  getDowncitySessionMessagesPath,
+  getDowncitySessionRootDirPath,
 } from "@/console/env/Paths.js";
 import { readChatMetaByContextId } from "@services/chat/runtime/ChatMetaStore.js";
 import type { DashboardContextSummary } from "@/types/DashboardData.js";
@@ -26,7 +26,7 @@ export async function listContextSummaries(params: {
   limit: number;
   executingContextIds?: Set<string>;
 }): Promise<DashboardContextSummary[]> {
-  const rootDir = getShipContextRootDirPath(params.projectRoot);
+  const rootDir = getDowncitySessionRootDirPath(params.projectRoot);
   if (!(await fs.pathExists(rootDir))) return [];
 
   const entries = await fs.readdir(rootDir, { withFileTypes: true });
@@ -37,7 +37,7 @@ export async function listContextSummaries(params: {
     const contextId = decodeMaybe(entry.name);
     if (!contextId) continue;
 
-    const filePath = getShipContextMessagesPath(params.projectRoot, contextId);
+    const filePath = getDowncitySessionMessagesPath(params.projectRoot, contextId);
     const messages = await loadContextMessagesFromFile(filePath);
     const last = messages.at(-1);
     const lastTs =
@@ -55,7 +55,7 @@ export async function listContextSummaries(params: {
       : null;
 
     items.push({
-      contextId,
+      sessionId: contextId,
       messageCount: messages.length,
       ...(typeof updatedAt === "number" ? { updatedAt } : {}),
       ...(last?.role ? { lastRole: last.role } : {}),

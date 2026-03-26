@@ -16,16 +16,16 @@ import {
   WrenchIcon,
 } from "lucide-react"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
-import { Button } from "@/components/ui/button"
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+  Input,
+} from "@downcity/ui"
 import type {
   UiSkillFindResult,
   UiSkillInstallPayload,

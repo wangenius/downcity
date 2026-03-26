@@ -20,21 +20,21 @@ import {
   Trash2Icon,
   WandSparklesIcon,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useConfirmDialog } from "@/components/ui/confirm-dialog"
-import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+  Input,
+  Label,
+  Textarea,
+} from "@downcity/ui"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
+import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type {
   UiModelPoolItem,

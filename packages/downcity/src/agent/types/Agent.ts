@@ -8,7 +8,7 @@
  */
 
 import type { Tool } from "ai";
-import type { ContextMessageV1 } from "./ContextMessage.js";
+import type { SessionMessageV1 } from "./SessionMessage.js";
 import type { ContextSystemMessage } from "./ContextSystemMessage.js";
 
 /**
@@ -45,7 +45,7 @@ export interface AgentResult {
   /**
    * 最终 assistant 消息。
    */
-  assistantMessage: ContextMessageV1;
+  assistantMessage: SessionMessageV1;
 }
 
 /**
@@ -70,7 +70,7 @@ export interface AgentExecuteInput {
   /**
    * 当前轮 context 语义消息历史。
    */
-  messages: ContextMessageV1[];
+  messages: SessionMessageV1[];
 
   /**
    * 当前轮可用工具集合。

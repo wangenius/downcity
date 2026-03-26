@@ -50,12 +50,12 @@ city chat <subcommand> [options]
 
 - `--channel <telegram|feishu|qq>`: filter by channel
 - `--limit <n>`: return at most N items (default 50)
-- `--q <text>`: keyword filter (title/chatId/contextId/actor)
+- `--q <text>`: keyword filter (title/chatId/sessionId/actor)
 
 ## `info` key options
 
 - `--chat-key <chatKey>`: target conversation (fallback to `DC_CTX_CHAT_KEY`)
-- `--context-id <contextId>`: explicit context id (higher priority)
+- `--session-id <sessionId>`: explicit session id (higher priority)
 
 ## `send` key options
 
@@ -96,12 +96,12 @@ For detailed behavior, recovery rules, and API examples, see:
 ## `delete` key options
 
 - `--chat-key <chatKey>`
-- `--context-id <contextId>`
+- `--session-id <sessionId>`
 
 ## `history` key options
 
 - `--chat-key <chatKey>`
-- `--context-id <contextId>`
+- `--session-id <sessionId>`
 - `--limit <n>`
 - `--direction <all|inbound|outbound>`
 - `--before-ts <ts>` / `--after-ts <ts>` (milliseconds)

@@ -20,9 +20,7 @@ import {
   UsersIcon,
 } from "lucide-react"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { useConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Badge, Button } from "@downcity/ui"
 import {
   Dialog,
   DialogContent,
@@ -30,11 +28,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+  Input,
+  Separator,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@downcity/ui"
+import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import type {
   UiAgentOption,

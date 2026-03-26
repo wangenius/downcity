@@ -11,8 +11,8 @@ import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
 import { GlobalChannelAccountsSection } from "@/components/dashboard/GlobalChannelAccountsSection"
 import { EnvSection } from "@/components/dashboard/EnvSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
-import { ContextOverviewSection } from "@/components/dashboard/ContextOverviewSection"
-import { ContextWorkspaceSection } from "@/components/dashboard/ContextWorkspaceSection"
+import { SessionOverviewSection } from "@/components/dashboard/SessionOverviewSection"
+import { SessionWorkspaceSection } from "@/components/dashboard/SessionWorkspaceSection"
 import { PluginsSection } from "@/components/dashboard/PluginsSection"
 import { GlobalOverviewSection } from "@/components/dashboard/GlobalOverviewSection"
 import { LogsSection } from "@/components/dashboard/LogsSection"
@@ -21,7 +21,7 @@ import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { TasksSection } from "@/components/dashboard/TasksSection"
 import { ToastMessage } from "@/components/dashboard/ToastMessage"
 import { SiteHeader } from "@/components/site-header"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
@@ -712,7 +712,7 @@ export function App() {
       case "contextOverview":
         return (
           <section>
-            <ContextOverviewSection
+            <SessionOverviewSection
               contexts={contexts}
               selectedContextId={selectedContextId}
               chatChannels={chatChannels}
@@ -739,7 +739,7 @@ export function App() {
       case "contextWorkspace":
         return (
           <section className="h-full min-h-0">
-            <ContextWorkspaceSection
+            <SessionWorkspaceSection
               selectedContextId={selectedContextId}
               contexts={contexts}
               channelHistory={channelHistory}

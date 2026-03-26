@@ -62,7 +62,7 @@ export class SessionAgent {
       compactor: options.compactor,
       prompter: options.system,
       orchestrator: new RuntimeOrchestrator({
-        contextId: options.persistor.contextId,
+        sessionId: options.persistor.contextId,
         getTools: options.getTools,
       }),
     });

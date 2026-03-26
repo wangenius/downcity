@@ -10,9 +10,9 @@
 import { withRequestContext } from "@agent/context/manager/RequestContext.js";
 import type { RequestContext } from "@agent/context/manager/RequestContext.js";
 import type {
-  ContextMessageV1,
-  ContextMetadataV1,
-} from "@agent/types/ContextMessage.js";
+  SessionMessageV1,
+  SessionMetadataV1,
+} from "@agent/types/SessionMessage.js";
 import type { AgentResult } from "@agent/types/Agent.js";
 import type { JsonObject } from "@/types/Json.js";
 import { SessionAgentDispatcher } from "@agent/context/context-agent/SessionAgentDispatcher.js";
@@ -60,7 +60,7 @@ export class SessionManager {
   async run(params: {
     contextId: string;
     query: string;
-    requestContext?: Omit<RequestContext, "contextId">;
+    requestContext?: Omit<RequestContext, "sessionId">;
   }): Promise<AgentResult> {
     const contextId = String(params.contextId || "").trim();
     if (!contextId) {
@@ -97,7 +97,7 @@ export class SessionManager {
     try {
       const result = await withRequestContext(
         {
-          contextId,
+          sessionId: contextId,
           ...requestContext,
           onAssistantStepCallback: wrappedOnAssistantStepCallback,
         },
@@ -113,7 +113,7 @@ export class SessionManager {
             ...(result.assistantMessage.metadata || {
               v: 1 as const,
               ts: Date.now(),
-              contextId,
+              sessionId: contextId,
             }),
             extra: {
               ...(
@@ -183,7 +183,7 @@ export class SessionManager {
    */
   async appendUserMessage(params: {
     contextId: string;
-    message?: ContextMessageV1 | null;
+    message?: SessionMessageV1 | null;
     text?: string;
     requestId?: string;
     extra?: JsonObject;
@@ -206,10 +206,10 @@ export class SessionManager {
       const msg = persistor.userText({
         text: fallbackText,
         metadata: {
-          contextId,
+          sessionId: contextId,
           requestId: params.requestId,
           extra: params.extra,
-        } as Omit<ContextMetadataV1, "v" | "ts">,
+        } as Omit<SessionMetadataV1, "v" | "ts">,
       });
       await persistor.append(msg);
       void this.afterContextUpdatedAsync(contextId);
@@ -223,7 +223,7 @@ export class SessionManager {
    */
   async appendAssistantMessage(params: {
     contextId: string;
-    message?: ContextMessageV1 | null;
+    message?: SessionMessageV1 | null;
     fallbackText?: string;
     requestId?: string;
     extra?: JsonObject;
@@ -247,7 +247,7 @@ export class SessionManager {
         persistor.assistantText({
           text: fallbackText,
           metadata: {
-            contextId,
+            sessionId: contextId,
             requestId: params.requestId,
             extra: params.extra,
           },

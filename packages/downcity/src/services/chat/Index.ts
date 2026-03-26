@@ -59,9 +59,9 @@ import type { ChatChannelConfigurationField } from "./types/ChannelConfiguration
 import { ConsoleStore } from "@/utils/store/index.js";
 import type { StoredChannelAccount } from "@/types/Store.js";
 import {
-  getShipChannelMetaPath,
-  getShipChatContextDirPath,
-  getShipChatHistoryPath,
+  getDowncityChannelMetaPath,
+  getDowncityChatContextDirPath,
+  getDowncityChatHistoryPath,
 } from "@/console/env/Paths.js";
 import {
   buildCurrentChatEnvironmentPrompt,
@@ -85,7 +85,7 @@ type ChatSendActionPayload = {
 
 type ChatContextActionPayload = {
   chatKey?: string;
-  contextId?: string;
+  sessionId?: string;
 };
 
 type ChatHistoryActionPayload = ChatHistoryRequest;
@@ -1017,7 +1017,7 @@ async function executeChatListAction(params: {
   const total = filtered.length;
   const chats: ChatListItemV1[] = filtered.slice(0, limit).map((route) => ({
     chatKey: route.contextId,
-    contextId: route.contextId,
+    sessionId: route.contextId,
     channel: route.channel,
     chatId: route.chatId,
     ...(route.targetType ? { targetType: route.targetType } : {}),
@@ -1045,21 +1045,21 @@ async function executeChatInfoAction(params: {
   context: ServiceRuntime;
   payload: ChatInfoActionPayload;
 }) {
-  const explicitContextId = String(params.payload.contextId || "").trim();
+  const explicitSessionId = String(params.payload.sessionId || "").trim();
   const explicitChatKey = String(params.payload.chatKey || "").trim();
   const snapshot = resolveChatContextSnapshot({
     context: params.context,
-    ...(explicitContextId ? { contextId: explicitContextId } : {}),
+    ...(explicitSessionId ? { sessionId: explicitSessionId } : {}),
     ...(explicitChatKey ? { chatKey: explicitChatKey } : {}),
   });
 
-  const contextId = String(explicitContextId || snapshot.contextId || "").trim();
+  const contextId = String(explicitSessionId || snapshot.sessionId || "").trim();
   const chatKey = String(explicitChatKey || snapshot.chatKey || contextId || "").trim();
   if (!contextId) {
     return {
       success: false,
       error:
-        "Missing contextId. Provide --context-id/--chat-key or ensure DC_CTX_CONTEXT_ID/DC_CTX_CHAT_KEY is injected.",
+        "Missing sessionId. Provide --session-id/--chat-key or ensure DC_CTX_CONTEXT_ID/DC_CTX_CHAT_KEY is injected.",
     };
   }
 
@@ -1072,19 +1072,19 @@ async function executeChatInfoAction(params: {
     path.relative(params.context.rootPath, absPath).split(path.sep).join("/");
 
   const channelMetaPath = toPosixRelativePath(
-    getShipChannelMetaPath(params.context.rootPath),
+    getDowncityChannelMetaPath(params.context.rootPath),
   );
   const chatDirPath = toPosixRelativePath(
-    getShipChatContextDirPath(params.context.rootPath, contextId),
+    getDowncityChatContextDirPath(params.context.rootPath, contextId),
   );
   const historyPath = toPosixRelativePath(
-    getShipChatHistoryPath(params.context.rootPath, contextId),
+    getDowncityChatHistoryPath(params.context.rootPath, contextId),
   );
 
   return {
     success: true,
     data: {
-      contextId,
+      sessionId: contextId,
       chatKey,
       context: snapshot,
       route,
@@ -1178,22 +1178,22 @@ function mapChatInfoCommandInput(
   input: ServiceActionCommandInput,
 ): ChatInfoActionPayload {
   const chatKey = getStringOpt(input.opts, "chatKey");
-  const contextId = getStringOpt(input.opts, "contextId");
+  const sessionId = getStringOpt(input.opts, "sessionId");
   return {
     ...(chatKey ? { chatKey } : {}),
-    ...(contextId ? { contextId } : {}),
+    ...(sessionId ? { sessionId } : {}),
   };
 }
 
 function mapChatInfoApiInput(query?: {
   chatKey?: string;
-  contextId?: string;
+  sessionId?: string;
 }): ChatInfoActionPayload {
   const chatKey = String(query?.chatKey || "").trim();
-  const contextId = String(query?.contextId || "").trim();
+  const sessionId = String(query?.sessionId || "").trim();
   return {
     ...(chatKey ? { chatKey } : {}),
-    ...(contextId ? { contextId } : {}),
+    ...(sessionId ? { sessionId } : {}),
   };
 }
 
@@ -1408,7 +1408,7 @@ function mapChatHistoryCommandInput(
   input: ServiceActionCommandInput,
 ): ChatHistoryActionPayload {
   const chatKey = getStringOpt(input.opts, "chatKey");
-  const contextId = getStringOpt(input.opts, "contextId");
+  const sessionId = getStringOpt(input.opts, "sessionId");
   const direction = readHistoryDirectionOrThrow(
     getStringOpt(input.opts, "direction"),
   );
@@ -1433,7 +1433,7 @@ function mapChatHistoryCommandInput(
 
   return {
     ...(chatKey ? { chatKey } : {}),
-    ...(contextId ? { contextId } : {}),
+    ...(sessionId ? { sessionId } : {}),
     ...(typeof limit === "number" ? { limit } : {}),
     ...(direction ? { direction } : {}),
     ...(typeof beforeTs === "number" ? { beforeTs } : {}),
@@ -1443,7 +1443,7 @@ function mapChatHistoryCommandInput(
 
 function mapChatHistoryApiInput(query: {
   chatKey?: string;
-  contextId?: string;
+  sessionId?: string;
   limit?: string;
   direction?: string;
   beforeTs?: string;
@@ -1471,10 +1471,10 @@ function mapChatHistoryApiInput(query: {
   }
 
   const chatKey = String(query.chatKey || "").trim();
-  const contextId = String(query.contextId || "").trim();
+  const sessionId = String(query.sessionId || "").trim();
   return {
     ...(chatKey ? { chatKey } : {}),
-    ...(contextId ? { contextId } : {}),
+    ...(sessionId ? { sessionId } : {}),
     ...(typeof limit === "number" ? { limit } : {}),
     ...(direction ? { direction } : {}),
     ...(typeof beforeTs === "number" ? { beforeTs } : {}),
@@ -1736,10 +1736,10 @@ function mapChatDeleteCommandInput(
   input: ServiceActionCommandInput,
 ): ChatDeleteActionPayload {
   const chatKey = getStringOpt(input.opts, "chatKey");
-  const contextId = getStringOpt(input.opts, "contextId");
+  const sessionId = getStringOpt(input.opts, "sessionId");
   return {
     ...(chatKey ? { chatKey } : {}),
-    ...(contextId ? { contextId } : {}),
+    ...(sessionId ? { sessionId } : {}),
   };
 }
 
@@ -1750,11 +1750,11 @@ function mapChatDeleteApiInput(body: JsonValue): ChatDeleteActionPayload {
   const payload = body as JsonObject;
   const chatKey =
     typeof payload.chatKey === "string" ? payload.chatKey.trim() : "";
-  const contextId =
-    typeof payload.contextId === "string" ? payload.contextId.trim() : "";
+  const sessionId =
+    typeof payload.sessionId === "string" ? payload.sessionId.trim() : "";
   return {
     ...(chatKey ? { chatKey } : {}),
-    ...(contextId ? { contextId } : {}),
+    ...(sessionId ? { sessionId } : {}),
   };
 }
 
@@ -1765,7 +1765,7 @@ async function executeChatDeleteAction(params: {
   const result = await deleteChatByChatKey({
     context: params.context,
     ...(params.payload.chatKey ? { chatKey: params.payload.chatKey } : {}),
-    ...(params.payload.contextId ? { contextId: params.payload.contextId } : {}),
+    ...(params.payload.sessionId ? { sessionId: params.payload.sessionId } : {}),
   });
   if (!result.success) {
     return {
@@ -1776,7 +1776,7 @@ async function executeChatDeleteAction(params: {
   return {
     success: true,
     data: {
-      contextId: result.contextId || null,
+      sessionId: result.sessionId || null,
       deleted: result.deleted === true,
       removedMeta: result.removedMeta === true,
       removedChatDir: result.removedChatDir === true,
@@ -1962,7 +1962,7 @@ export const chatService: Service = {
           command
             .option("--channel <name>", "渠道过滤（telegram|feishu|qq）")
             .option("--limit <n>", "返回最近 N 条（默认 50）")
-            .option("--q <text>", "关键词过滤（title/chatId/contextId/actor）");
+            .option("--q <text>", "关键词过滤（title/chatId/sessionId/actor）");
         },
         mapInput: mapChatListCommandInput,
       },
@@ -1989,7 +1989,7 @@ export const chatService: Service = {
         configure(command: Command) {
           command
             .option("--chat-key <chatKey>", "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）")
-            .option("--context-id <contextId>", "显式指定 contextId（优先级更高）");
+            .option("--session-id <sessionId>", "显式指定 sessionId（优先级更高）");
         },
         mapInput: mapChatInfoCommandInput,
       },
@@ -1998,7 +1998,7 @@ export const chatService: Service = {
         mapInput(c) {
           return mapChatInfoApiInput({
             chatKey: c.req.query("chatKey"),
-            contextId: c.req.query("contextId"),
+            sessionId: c.req.query("sessionId"),
           });
         },
       },
@@ -2084,10 +2084,10 @@ export const chatService: Service = {
         method: "GET",
         mapInput(c) {
           const chatKey = String(c.req.query("chatKey") || "").trim();
-          const contextId = String(c.req.query("contextId") || "").trim();
+          const sessionId = String(c.req.query("sessionId") || "").trim();
           return {
             ...(chatKey ? { chatKey } : {}),
-            ...(contextId ? { contextId } : {}),
+            ...(sessionId ? { sessionId } : {}),
           };
         },
       },
@@ -2096,7 +2096,7 @@ export const chatService: Service = {
         const snapshot = resolveChatContextSnapshot({
           context: params.context,
           ...(payload.chatKey ? { chatKey: payload.chatKey } : {}),
-          ...(payload.contextId ? { contextId: payload.contextId } : {}),
+          ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
         });
         return {
           success: true,
@@ -2112,7 +2112,7 @@ export const chatService: Service = {
         configure(command: Command) {
           command
             .option("--chat-key <chatKey>", "显式指定 chatKey")
-            .option("--context-id <contextId>", "显式指定 contextId");
+            .option("--session-id <sessionId>", "显式指定 sessionId");
         },
         mapInput: mapChatDeleteCommandInput,
       },
@@ -2135,7 +2135,7 @@ export const chatService: Service = {
         configure(command: Command) {
           command
             .option("--chat-key <chatKey>", "显式覆盖 chatKey")
-            .option("--context-id <contextId>", "显式覆盖 contextId")
+            .option("--session-id <sessionId>", "显式覆盖 sessionId")
             .option("--limit <n>", "返回最近 N 条（默认 30）")
             .option(
               "--direction <direction>",
@@ -2151,7 +2151,7 @@ export const chatService: Service = {
         mapInput(c) {
           return mapChatHistoryApiInput({
             chatKey: c.req.query("chatKey"),
-            contextId: c.req.query("contextId"),
+            sessionId: c.req.query("sessionId"),
             limit: c.req.query("limit"),
             direction: c.req.query("direction"),
             beforeTs: c.req.query("beforeTs"),
@@ -2164,19 +2164,19 @@ export const chatService: Service = {
         const snapshot = resolveChatContextSnapshot({
           context: params.context,
           ...(payload.chatKey ? { chatKey: payload.chatKey } : {}),
-          ...(payload.contextId ? { contextId: payload.contextId } : {}),
+          ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
         });
-        const explicitContextId = String(payload.contextId || "").trim();
+        const explicitSessionId = String(payload.sessionId || "").trim();
         const explicitChatKey = String(payload.chatKey || "").trim();
         // 关键点（中文）：history 查询优先显式参数，避免被当前请求上下文的 contextId 覆盖。
         const contextId = String(
-          explicitContextId || explicitChatKey || snapshot.contextId || "",
+          explicitSessionId || explicitChatKey || snapshot.sessionId || "",
         ).trim();
         if (!contextId) {
           return {
             success: false,
             error:
-              "Missing contextId. Provide --context-id/--chat-key or ensure DC_CTX_CONTEXT_ID is injected.",
+              "Missing sessionId. Provide --session-id/--chat-key or ensure DC_CTX_CONTEXT_ID is injected.",
           };
         }
 

@@ -17,10 +17,10 @@ import type {
   MemoryStoreResponse,
 } from "@services/memory/types/Memory.js";
 import {
-  getShipContextDirPath,
-  getShipMemoryDailyDirPath,
-  getShipMemoryDailyPath,
-  getShipMemoryLongTermPath,
+  getDowncityMemoryDailyDirPath,
+  getDowncityMemoryDailyPath,
+  getDowncityMemoryLongTermPath,
+  getDowncitySessionDirPath,
 } from "@/console/env/Paths.js";
 import { markMemoryDirty } from "./Store.js";
 
@@ -49,12 +49,12 @@ function resolveStoreTargetPath(
   sessionId?: string,
 ): { absPath: string; relPath: string } {
   if (target === "longterm") {
-    const absPath = getShipMemoryLongTermPath(runtime.rootPath);
+    const absPath = getDowncityMemoryLongTermPath(runtime.rootPath);
     return { absPath, relPath: toRelPath(runtime.rootPath, absPath) };
   }
   if (target === "daily") {
     const date = resolveDateStamp();
-    const absPath = getShipMemoryDailyPath(runtime.rootPath, date);
+    const absPath = getDowncityMemoryDailyPath(runtime.rootPath, date);
     return { absPath, relPath: toRelPath(runtime.rootPath, absPath) };
   }
   const key = String(sessionId || "").trim();
@@ -62,7 +62,7 @@ function resolveStoreTargetPath(
     throw new Error("sessionId is required for working memory");
   }
   const absPath = path.join(
-    getShipContextDirPath(runtime.rootPath, key),
+    getDowncitySessionDirPath(runtime.rootPath, key),
     "memory",
     "working.md",
   );
@@ -123,10 +123,10 @@ function resolveAllowedReadPath(runtime: ServiceRuntime, relPath: string): strin
   }
   const absPath = path.resolve(runtime.rootPath, normalized);
   const memoryRoot = path.resolve(path.join(runtime.rootPath, ".downcity", "memory"));
-  const contextRoot = path.resolve(path.join(runtime.rootPath, ".downcity", "context"));
+  const sessionRoot = path.resolve(path.join(runtime.rootPath, ".downcity", "session"));
   const isMemoryPath = isWithin(memoryRoot, absPath);
   const isWorkingPath =
-    isWithin(contextRoot, absPath) && normalized.endsWith("/memory/working.md");
+    isWithin(sessionRoot, absPath) && normalized.endsWith("/memory/working.md");
   if (!isMemoryPath && !isWorkingPath) {
     throw new Error("path is not allowed");
   }
@@ -173,6 +173,6 @@ export async function getMemory(
  * 初始化 memory 目录结构（幂等）。
  */
 export async function ensureMemoryDirectories(rootPath: string): Promise<void> {
-  const memoryDailyDir = getShipMemoryDailyDirPath(rootPath);
+  const memoryDailyDir = getDowncityMemoryDailyDirPath(rootPath);
   await fs.mkdir(memoryDailyDir, { recursive: true });
 }

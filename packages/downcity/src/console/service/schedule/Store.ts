@@ -19,7 +19,7 @@ import type {
 } from "@/types/ServiceSchedule.js";
 import type { JsonValue } from "@/types/Json.js";
 import { generateId } from "@/utils/Id.js";
-import { getShipScheduleDbPath } from "@/console/env/Paths.js";
+import { getDowncityScheduleDbPath } from "@/console/env/Paths.js";
 
 type ScheduledJobRow = typeof scheduledJobsTable.$inferSelect;
 
@@ -32,7 +32,7 @@ export class ServiceScheduleStore {
   private readonly db: ReturnType<typeof drizzle>;
 
   constructor(projectRoot: string) {
-    const dbPath = getShipScheduleDbPath(projectRoot);
+    const dbPath = getDowncityScheduleDbPath(projectRoot);
     fs.ensureDirSync(path.dirname(dbPath));
     this.sqlite = new Database(dbPath);
     this.sqlite.pragma("journal_mode = WAL");

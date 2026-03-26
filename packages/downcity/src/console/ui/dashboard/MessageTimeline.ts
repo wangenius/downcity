@@ -14,9 +14,9 @@ import {
   type UIMessagePart,
 } from "ai";
 import type {
-  ContextMessageV1,
-  ContextMetadataV1,
-} from "@agent/types/ContextMessage.js";
+  SessionMessageV1,
+  SessionMetadataV1,
+} from "@agent/types/SessionMessage.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
 import type { DashboardTimelineEvent, DashboardTimelineRole } from "@/types/DashboardData.js";
@@ -77,7 +77,7 @@ function extractMessageText(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function extractAssistantToolSummary(message: ContextMessageV1): string {
+function extractAssistantToolSummary(message: SessionMessageV1): string {
   const toolCalls = extractToolCallsFromUiMessage(message);
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) return "";
   const toolNames = Array.from(
@@ -141,14 +141,14 @@ function extractToolResultOutput(part: ToolPartCompatShape): unknown {
 }
 
 function toUiMessageEvent(params: {
-  message: ContextMessageV1;
+  message: SessionMessageV1;
   role: DashboardTimelineRole;
   text: string;
   sequence: number;
   toolName?: string;
 }): DashboardTimelineEvent {
   const { message, role, text, sequence, toolName } = params;
-  const metadata = (message.metadata || null) as ContextMetadataV1 | null;
+  const metadata = (message.metadata || null) as SessionMetadataV1 | null;
 
   return {
     id: `${String(message.id || "")}:${sequence}`,
@@ -161,7 +161,7 @@ function toUiMessageEvent(params: {
   };
 }
 
-function resolveUiMessageText(message: ContextMessageV1): string {
+function resolveUiMessageText(message: SessionMessageV1): string {
   const plainText = extractMessageText(message.parts);
   if (plainText) return plainText;
 
@@ -177,7 +177,7 @@ function resolveUiMessageText(message: ContextMessageV1): string {
  * 转成 dashboard 时间线。
  */
 export function toUiMessageTimeline(
-  message: ContextMessageV1,
+  message: SessionMessageV1,
 ): DashboardTimelineEvent[] {
   if (message.role !== "assistant") {
     return [
@@ -297,14 +297,14 @@ export function toUiMessageTimeline(
  */
 export async function loadContextMessagesFromFile(
   filePath: string,
-): Promise<ContextMessageV1[]> {
+): Promise<SessionMessageV1[]> {
   if (!(await fs.pathExists(filePath))) return [];
   const raw = await fs.readFile(filePath, "utf-8");
   const lines = raw.split("\n").filter(Boolean);
-  const out: ContextMessageV1[] = [];
+  const out: SessionMessageV1[] = [];
   for (const line of lines) {
     try {
-      const item = JSON.parse(line) as ContextMessageV1;
+      const item = JSON.parse(line) as SessionMessageV1;
       if (!item || typeof item !== "object") continue;
       if (item.role !== "user" && item.role !== "assistant") continue;
       out.push(item);
@@ -318,6 +318,6 @@ export async function loadContextMessagesFromFile(
 /**
  * 读取适合摘要展示的消息预览文本。
  */
-export function resolveUiMessagePreview(message: ContextMessageV1): string {
+export function resolveUiMessagePreview(message: SessionMessageV1): string {
   return resolveUiMessageText(message);
 }

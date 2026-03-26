@@ -11,7 +11,7 @@
  */
 
 import path from "node:path";
-import { getShipTasksDirPath } from "@/console/env/Paths.js";
+import { getDowncityTasksDirPath } from "@/console/env/Paths.js";
 
 /**
  * taskId 允许字符：
@@ -61,7 +61,7 @@ export function normalizeTaskId(input: string): string {
 }
 
 export function getTaskRootDir(projectRoot: string): string {
-  return getShipTasksDirPath(projectRoot);
+  return getDowncityTasksDirPath(projectRoot);
 }
 
 export function getTaskDir(projectRoot: string, taskId: string): string {

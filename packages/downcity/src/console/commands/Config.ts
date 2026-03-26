@@ -10,7 +10,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { Command } from "commander";
-import { getShipJsonPath } from "@/console/env/Paths.js";
+import { getDowncityJsonPath } from "@/console/env/Paths.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
 import type { ShipConfig } from "@agent/types/ShipConfig.js";
@@ -76,7 +76,7 @@ function readShipConfigByPath(
 }
 
 function readShipConfig(projectRoot: string): { shipJsonPath: string; config: ShipConfig } {
-  return readShipConfigByPath(getShipJsonPath(projectRoot), "project");
+  return readShipConfigByPath(getDowncityJsonPath(projectRoot), "project");
 }
 
 function writeShipConfig(shipJsonPath: string, config: ShipConfig): void {

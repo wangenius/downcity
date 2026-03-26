@@ -8,9 +8,9 @@
 
 import type { LanguageModel, Tool } from "ai";
 import type {
-  ContextMessageV1,
-  ContextMetadataV1,
-} from "@agent/types/ContextMessage.js";
+  SessionMessageV1,
+  SessionMetadataV1,
+} from "@agent/types/SessionMessage.js";
 import type { ContextSystemMessage } from "@agent/types/ContextSystemMessage.js";
 import { AgentComponent } from "./AgentComponent.js";
 
@@ -100,7 +100,7 @@ export abstract class PersistorComponent extends AgentComponent {
   /**
    * 为本轮 Agent 执行准备模型输入消息。
    */
-  abstract prepare(input: PersistorPrepareInput): Promise<ContextMessageV1[]>;
+  abstract prepare(input: PersistorPrepareInput): Promise<SessionMessageV1[]>;
 
   /**
    * 执行一次 compact（best-effort）。
@@ -113,17 +113,17 @@ export abstract class PersistorComponent extends AgentComponent {
   /**
    * 追加一条消息到历史。
    */
-  abstract append(message: ContextMessageV1): Promise<void>;
+  abstract append(message: SessionMessageV1): Promise<void>;
 
   /**
    * 读取完整消息历史。
    */
-  abstract list(): Promise<ContextMessageV1[]>;
+  abstract list(): Promise<SessionMessageV1[]>;
 
   /**
    * 读取消息区间 [start, end)。
    */
-  abstract slice(start: number, end: number): Promise<ContextMessageV1[]>;
+  abstract slice(start: number, end: number): Promise<SessionMessageV1[]>;
 
   /**
    * 读取消息总条数。
@@ -147,14 +147,14 @@ export abstract class PersistorComponent extends AgentComponent {
     /**
      * 消息元信息（除 schema 字段）。
      */
-    metadata: Omit<ContextMetadataV1, "v" | "ts"> &
-      Partial<Pick<ContextMetadataV1, "ts">>;
+    metadata: Omit<SessionMetadataV1, "v" | "ts"> &
+      Partial<Pick<SessionMetadataV1, "ts">>;
 
     /**
      * 可选消息 ID（默认自动生成）。
      */
     id?: string;
-  }): ContextMessageV1;
+  }): SessionMessageV1;
 
   /**
    * 构造 assistant 文本消息。
@@ -168,8 +168,8 @@ export abstract class PersistorComponent extends AgentComponent {
     /**
      * 消息元信息（除 schema 字段）。
      */
-    metadata: Omit<ContextMetadataV1, "v" | "ts"> &
-      Partial<Pick<ContextMetadataV1, "ts">>;
+    metadata: Omit<SessionMetadataV1, "v" | "ts"> &
+      Partial<Pick<SessionMetadataV1, "ts">>;
 
     /**
      * 可选消息 ID（默认自动生成）。
@@ -185,7 +185,7 @@ export abstract class PersistorComponent extends AgentComponent {
      * 消息来源（egress/compact）。
      */
     source?: "egress" | "compact";
-  }): ContextMessageV1;
+  }): SessionMessageV1;
 
   /**
    * 可选初始化钩子。

@@ -14,7 +14,7 @@ import {
   type UIMessagePart,
   type UITools,
 } from "ai";
-import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
@@ -30,7 +30,7 @@ type ToolPartCompatShape = {
   arguments?: JsonValue;
 };
 
-function toUiParts(message: ContextMessageV1 | null | undefined): AnyUiMessagePart[] {
+function toUiParts(message: SessionMessageV1 | null | undefined): AnyUiMessagePart[] {
   return Array.isArray(message?.parts) ? message.parts : [];
 }
 
@@ -59,7 +59,7 @@ function toToolInput(rawInput: JsonValue | object | undefined): JsonObject {
  * 从 UIMessage 中提取纯文本。
  */
 export function extractTextFromUiMessage(
-  message: ContextMessageV1 | null | undefined,
+  message: SessionMessageV1 | null | undefined,
 ): string {
   const parts = toUiParts(message);
   return parts
@@ -73,7 +73,7 @@ export function extractTextFromUiMessage(
  * 从 UIMessage 中提取 tool 调用记录。
  */
 export function extractToolCallsFromUiMessage(
-  message: ContextMessageV1 | null | undefined,
+  message: SessionMessageV1 | null | undefined,
 ): ToolCallSummary[] {
   const parts = toUiParts(message);
   const out: ToolCallSummary[] = [];

@@ -12,7 +12,7 @@ description: Runtime data layout and what each folder is for
 ```text
 .downcity/
   logs/
-  context/
+  session/
   memory/
   channel/
   chat/
@@ -30,7 +30,7 @@ description: Runtime data layout and what each folder is for
 
 Daily JSONL logs: `<YYYY-MM-DD>.jsonl`.
 
-### `.downcity/context/<contextId>/messages/`
+### `.downcity/session/<sessionId>/messages/`
 
 Conversation source-of-truth (`messages.jsonl`) with compact metadata/archive.
 
@@ -47,7 +47,7 @@ Chat metadata and history event stream.
 
 ### `.downcity/channel/meta.json`
 
-Channel-target to `contextId` mapping snapshot (managed by chat service).
+Channel-target to `sessionId` mapping snapshot (managed by chat service).
 
 ### `.downcity/task/`
 
@@ -60,4 +60,4 @@ Skills are discovered from `.agents/skills` (project) and `~/.agents/skills` (us
 ## Security guidance
 
 - `.downcity/` may contain sensitive conversations and execution traces.
-- For debugging, prioritize `logs`, `task`, and `context`.
+- For debugging, prioritize `logs`, `task`, and `session`.

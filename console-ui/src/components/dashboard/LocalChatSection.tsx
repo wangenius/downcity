@@ -3,9 +3,9 @@
  */
 
 import type { KeyboardEvent } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@downcity/ui";
 import { DashboardModule } from "./DashboardModule";
-import { Textarea } from "../ui/textarea";
+import { Textarea } from "@downcity/ui";
 import type { UiLocalMessage } from "../../types/Dashboard";
 
 export interface LocalChatSectionProps {

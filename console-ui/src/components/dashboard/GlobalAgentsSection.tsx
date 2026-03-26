@@ -17,12 +17,19 @@ import {
   SquareIcon,
   WandSparklesIcon,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+} from "@downcity/ui"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import type { UiAgentDirectoryInspection, UiAgentOption, UiModelPoolItem } from "@/types/Dashboard"
 
 type AgentFormState = {

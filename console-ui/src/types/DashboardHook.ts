@@ -286,7 +286,7 @@ export interface UseConsoleDashboardResult {
   /**
    * 刷新 plugin 状态。
    */
-  refreshPlugins: (agentId: string) => Promise<void>;
+  refreshPlugins: (agentId: string) => Promise<UiPluginRuntimeItem[] | void>;
 
   /**
    * 刷新 skills 列表。

@@ -1,9 +1,9 @@
 import type { LanguageModel } from "ai";
 import type {
-  ContextMetadataV1,
-  ContextMessageV1,
-  ShipContextUserMessageV1,
-} from "@agent/types/ContextMessage.js";
+  SessionMetadataV1,
+  SessionMessageV1,
+  SessionUserMessageV1,
+} from "@agent/types/SessionMessage.js";
 import type {
   AgentAssistantStepCallback,
   AgentResult,
@@ -45,25 +45,25 @@ export type ServiceInvokePort = {
  * 会话 Persistor 端口。
  */
 export type ServicePersistor = {
-  list(): Promise<ContextMessageV1[]>;
-  slice(start: number, end: number): Promise<ContextMessageV1[]>;
-  append(message: ContextMessageV1): Promise<void>;
+  list(): Promise<SessionMessageV1[]>;
+  slice(start: number, end: number): Promise<SessionMessageV1[]>;
+  append(message: SessionMessageV1): Promise<void>;
   size(): Promise<number>;
   meta(): Promise<Record<string, unknown>>;
   userText(params: {
     text: string;
-    metadata: Omit<ContextMetadataV1, "v" | "ts"> &
-      Partial<Pick<ContextMetadataV1, "ts">>;
+    metadata: Omit<SessionMetadataV1, "v" | "ts"> &
+      Partial<Pick<SessionMetadataV1, "ts">>;
     id?: string;
-  }): ContextMessageV1;
+  }): SessionMessageV1;
   assistantText(params: {
     text: string;
-    metadata: Omit<ContextMetadataV1, "v" | "ts"> &
-      Partial<Pick<ContextMetadataV1, "ts">>;
+    metadata: Omit<SessionMetadataV1, "v" | "ts"> &
+      Partial<Pick<SessionMetadataV1, "ts">>;
     id?: string;
     kind?: "normal" | "summary";
     source?: "egress" | "compact";
-  }): ContextMessageV1;
+  }): SessionMessageV1;
 };
 
 /**
@@ -82,24 +82,24 @@ export type ServiceSession = {
   run(params: {
     sessionId: string;
     query: string;
-    onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
+    onStepCallback?: () => Promise<SessionUserMessageV1[]>;
     onAssistantStepCallback?: AgentAssistantStepCallback;
   }): Promise<AgentResult>;
   clearAgent(sessionId?: string): void;
   afterSessionUpdatedAsync(sessionId: string): Promise<void>;
   appendUserMessage(params: {
     sessionId: string;
-    message?: ContextMessageV1 | null;
+    message?: SessionMessageV1 | null;
     text?: string;
     requestId?: string;
-    extra?: ContextMetadataV1["extra"];
+    extra?: SessionMetadataV1["extra"];
   }): Promise<void>;
   appendAssistantMessage(params: {
     sessionId: string;
-    message?: ContextMessageV1 | null;
+    message?: SessionMessageV1 | null;
     fallbackText?: string;
     requestId?: string;
-    extra?: ContextMetadataV1["extra"];
+    extra?: SessionMetadataV1["extra"];
   }): Promise<void>;
   model: LanguageModel;
 };

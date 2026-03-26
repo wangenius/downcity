@@ -26,6 +26,7 @@ import type {
   UiSkillInstallResult,
   UiSkillLookupResult,
   UiPluginActionExecutionResult,
+  UiPluginRuntimeItem,
   UiTaskMutationResponse,
   UiTaskRunDeleteResponse,
   UiTaskRunsClearResponse,
@@ -67,7 +68,7 @@ export async function runPluginActionMutation(params: {
   pluginName: string;
   actionName: string;
   selectedAgentId: string;
-  refreshPlugins: (agentId: string) => Promise<void>;
+  refreshPlugins: (agentId: string) => Promise<UiPluginRuntimeItem[] | void>;
   showToast: ShowToast;
 }): Promise<UiPluginActionExecutionResult> {
   try {

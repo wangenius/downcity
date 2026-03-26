@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import { generateId } from "@utils/Id.js";
-import { getShipChannelDirPath, getShipChannelMetaPath } from "@/console/env/Paths.js";
+import { getDowncityChannelDirPath, getDowncityChannelMetaPath } from "@/console/env/Paths.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type {
   ChannelContextMetaFileV1,
@@ -144,7 +144,7 @@ export function buildChannelTargetKey(target: ChannelContextTarget): string {
 async function readMetaFile(params: {
   rootPath: string;
 }): Promise<ChannelContextMetaFileV1> {
-  const filePath = getShipChannelMetaPath(params.rootPath);
+  const filePath = getDowncityChannelMetaPath(params.rootPath);
   const raw = (await fs.readJson(filePath).catch(() => null)) as
     | Partial<ChannelContextMetaFileV1>
     | null;
@@ -155,8 +155,8 @@ async function writeMetaFile(params: {
   rootPath: string;
   file: ChannelContextMetaFileV1;
 }): Promise<void> {
-  const dirPath = getShipChannelDirPath(params.rootPath);
-  const filePath = getShipChannelMetaPath(params.rootPath);
+  const dirPath = getDowncityChannelDirPath(params.rootPath);
+  const filePath = getDowncityChannelMetaPath(params.rootPath);
   await fs.ensureDir(dirPath);
   await fs.writeJson(filePath, params.file, { spaces: 2 });
 }

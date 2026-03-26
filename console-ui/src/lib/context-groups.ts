@@ -131,3 +131,30 @@ export function filterContextsByKeyword(
     )
   })
 }
+
+export type SessionGroupKey = ContextGroupKey
+export type SessionGroup = ContextGroup
+export type UiSessionSummary = UiContextSummary
+
+export function resolveSessionChannel(input: UiContextSummary | string): string {
+  return resolveContextChannel(input)
+}
+
+export function resolveSessionGroup(input: UiContextSummary | string): ContextGroupKey {
+  return resolveContextGroup(input)
+}
+
+export function sortSessions(contexts: UiContextSummary[]): UiContextSummary[] {
+  return sortContexts(contexts)
+}
+
+export function buildSessionGroups(contexts: UiContextSummary[]): ContextGroup[] {
+  return buildContextGroups(contexts)
+}
+
+export function filterSessionsByKeyword(
+  contexts: UiContextSummary[],
+  keyword: string,
+): UiContextSummary[] {
+  return filterContextsByKeyword(contexts, keyword)
+}

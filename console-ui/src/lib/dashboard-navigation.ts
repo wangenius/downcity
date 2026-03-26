@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 将导航结构作为单一事实源，统一驱动 Sidebar、Header 与路由映射。
- * - 明确区分 Global / Agent / Context 的页面边界，避免内容错位。
+ * - 明确区分 Global / Agent / Session 的页面边界，避免内容错位。
  */
 
 import type {
@@ -109,7 +109,7 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
 const SCOPE_TITLES: Record<DashboardScope, string> = {
   global: "Global",
   agent: "Agent",
-  context: "Context",
+  context: "Session",
 };
 
 const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
@@ -151,7 +151,7 @@ export function listPrimaryPagesByScope(scope: DashboardScope): DashboardPageMet
  */
 export function getDashboardViewLabel(view: DashboardView): string {
   if (view === "contextWorkspace") {
-    return "Context / Workspace";
+    return "Session / Workspace";
   }
   const page = PAGES[view];
   return `${SCOPE_TITLES[page.scope]} / ${page.title}`;

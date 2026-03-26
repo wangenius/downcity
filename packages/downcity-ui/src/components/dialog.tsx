@@ -1,26 +1,34 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { XIcon } from "lucide-react"
+/**
+ * Downcity Dialog 组件组。
+ *
+ * 关键说明（中文）
+ * - 用于确认、编辑、详情查看等需要阻断上下文的弹窗场景。
+ * - 默认提供统一遮罩、容器、标题区与关闭按钮样式。
+ */
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import type * as React from "react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { XIcon } from "lucide-react";
+
+import { cn } from "../lib/utils";
+import { Button } from "./button";
 
 function Dialog(props: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
 function DialogTrigger(props: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
 function DialogPortal(props: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
 function DialogClose(props: DialogPrimitive.Close.Props) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
 function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
@@ -33,7 +41,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
       )}
       {...props}
     />
-  )
+  );
 }
 
 function DialogContent({
@@ -65,15 +73,27 @@ function DialogContent({
         ) : null}
       </DialogPrimitive.Popup>
     </DialogPortal>
-  )
+  );
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="dialog-header" className={cn("flex flex-col gap-0.5 p-4 pr-12", className)} {...props} />
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn("flex flex-col gap-0.5 p-4 pr-12", className)}
+      {...props}
+    />
+  );
 }
 
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="dialog-footer" className={cn("flex items-center justify-end gap-2 p-4", className)} {...props} />
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn("flex items-center justify-end gap-2 p-4", className)}
+      {...props}
+    />
+  );
 }
 
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
@@ -83,7 +103,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
       className={cn("text-base font-medium text-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
@@ -93,7 +113,7 @@ function DialogDescription({ className, ...props }: DialogPrimitive.Description.
       className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -107,4 +127,4 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-}
+};

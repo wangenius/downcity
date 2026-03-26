@@ -121,9 +121,9 @@ description: Runtime 对外 HTTP 接口与请求示例
 }
 ```
 
-### `POST /api/tui/contexts/:contextId/execute`
+### `POST /api/dashboard/sessions/:sessionId/execute`
 
-在指定上下文执行一轮（例如你在 UI 里选中的 chatKey）。
+在指定会话执行一轮（例如你在 UI 里选中的 chatKey）。
 
 带附件请求示例：
 
@@ -143,9 +143,9 @@ description: Runtime 对外 HTTP 接口与请求示例
 
 说明：
 
-- `contextId` 应传 runtime 返回的目标上下文 ID。聊天场景下该 ID 由 chat service 维护映射（不再要求可由平台字段直接拼接）。
+- `sessionId` 应传 runtime 返回的目标会话 ID。聊天场景下该 ID 由 chat service 维护映射（不再要求可由平台字段直接拼接）。
 - 附件会先被 runtime 落盘，再以 `<file ...>` 标签自动注入到用户消息前部。
-- 当 `contextId` 映射到 chat 会话时，会复用 chat 平台同一条执行队列（与平台入站消息一致），并在执行前写入 chat history。
+- 当 `sessionId` 映射到 chat 会话时，会复用 chat 平台同一条执行队列（与平台入站消息一致），并在执行前写入 chat history。
 - chat 上下文调用会立即返回排队结果（`queued=true`、`queueItemId`、`queuePosition`）。
 
 ## Action 直连路由

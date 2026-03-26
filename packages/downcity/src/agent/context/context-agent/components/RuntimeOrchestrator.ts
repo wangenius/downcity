@@ -16,15 +16,15 @@ import { OrchestratorComponent } from "@agent/components/OrchestratorComponent.j
 import type {
   OrchestratorComposeResult,
 } from "@agent/components/OrchestratorComponent.js";
-import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
 import type { ContextSystemMessage } from "@agent/types/ContextSystemMessage.js";
 import type { Tool } from "ai";
 
 type RuntimeOrchestratorOptions = {
   /**
-   * 可选默认 context id。
+   * 可选默认 session id。
    */
-  contextId?: string;
+  sessionId?: string;
 
   /**
    * 读取当前可用工具集合。
@@ -37,12 +37,12 @@ type RuntimeOrchestratorOptions = {
  */
 export class RuntimeOrchestrator extends OrchestratorComponent {
   readonly name = "runtime_orchestrator";
-  private readonly contextId: string;
+  private readonly sessionId: string;
   private readonly getTools: RuntimeOrchestratorOptions["getTools"];
 
   constructor(options: RuntimeOrchestratorOptions) {
     super();
-    this.contextId = String(options.contextId || "").trim();
+    this.sessionId = String(options.sessionId || "").trim();
     this.getTools = options.getTools;
   }
 
@@ -50,16 +50,16 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
     const requestId = generateId();
     const tools = this.getTools();
     const ctx = requestContext.getStore();
-    const contextId = String(ctx?.contextId || this.contextId || "").trim();
-    if (!contextId) {
+    const sessionId = String(ctx?.sessionId || this.sessionId || "").trim();
+    if (!sessionId) {
       throw new Error(
-        "RuntimeOrchestrator.compose requires a contextId from requestContext or options.contextId",
+        "RuntimeOrchestrator.compose requires a sessionId from requestContext or options.sessionId",
       );
     }
-    // 关键点（中文）：requestId/contextId 统一回填到请求上下文，后续组件直接读取。
+    // 关键点（中文）：requestId/sessionId 统一回填到请求上下文，后续组件直接读取。
     if (ctx && typeof ctx === "object") {
       ctx.requestId = requestId;
-      if (!ctx.contextId) ctx.contextId = contextId;
+      if (!ctx.sessionId) ctx.sessionId = sessionId;
     }
     return {
       tools,
@@ -70,7 +70,7 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
     input: {
       system: ContextSystemMessage[];
       appendMergedUserMessages: (
-        messages: ContextMessageV1[],
+        messages: SessionMessageV1[],
       ) => Promise<ModelMessage[]>;
     },
   ): (input: { messages?: ModelMessage[] }) => Promise<{
@@ -146,22 +146,22 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
   /**
    * 构造 fallback assistant 消息。
    */
-  buildFallbackAssistantMessage(text: string): ContextMessageV1 {
+  buildFallbackAssistantMessage(text: string): SessionMessageV1 {
     const ctx = requestContext.getStore();
-    const contextId = String(ctx?.contextId || this.contextId || "").trim();
-    if (!contextId) {
+    const sessionId = String(ctx?.sessionId || this.sessionId || "").trim();
+    if (!sessionId) {
       throw new Error(
-        "RuntimeOrchestrator.buildFallbackAssistantMessage requires a contextId from requestContext or options.contextId",
+        "RuntimeOrchestrator.buildFallbackAssistantMessage requires a sessionId from requestContext or options.sessionId",
       );
     }
     const requestId = String(ctx?.requestId || "").trim();
     return {
-      id: `a:${contextId}:${generateId()}`,
+      id: `a:${sessionId}:${generateId()}`,
       role: "assistant",
       metadata: {
         v: 1,
         ts: Date.now(),
-        contextId,
+        sessionId,
         ...(requestId ? { requestId } : {}),
         source: "egress",
         kind: "normal",

@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { ShipContextUserMessageV1 } from "@agent/types/ContextMessage.js";
+import type { SessionUserMessageV1 } from "@agent/types/SessionMessage.js";
 import type { AgentAssistantStepCallback } from "@agent/types/Agent.js";
 
 /**
@@ -7,10 +7,10 @@ import type { AgentAssistantStepCallback } from "@agent/types/Agent.js";
  *
  * 关键点（中文）
  * - 这是 runtime 层请求作用域上下文，不属于具体 service 模块。
- * - 统一承载请求链需要透传的字段（如 `contextId/requestId`）。
+ * - 统一承载请求链需要透传的字段（如 `sessionId/requestId`）。
  */
 export type RequestContext = {
-  contextId?: string;
+  sessionId?: string;
   requestId?: string;
   /**
    * step 边界合并回调（可选）。
@@ -19,7 +19,7 @@ export type RequestContext = {
    * - 由调用侧（如 chat queue）注入。
    * - Orchestrator 从 RequestContext 读取并编排到本轮运行上下文。
    */
-  onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
+  onStepCallback?: () => Promise<SessionUserMessageV1[]>;
 
   /**
    * assistant step 完成回调（可选）。
@@ -37,7 +37,7 @@ export type RequestContext = {
    * - 用于在 tool 执行后向下一 step 注入结构化 user 消息。
    * - 队列内容由 service 侧通过统一协议下发，main 不感知业务语义。
    */
-  injectedUserMessages?: ShipContextUserMessageV1[];
+  injectedUserMessages?: SessionUserMessageV1[];
 };
 
 /**
@@ -45,21 +45,21 @@ export type RequestContext = {
  *
  * 关键点（中文）
  * - 同一条异步调用链内可读取一致的 RequestContext。
- * - 用于把 `contextId/requestId` 从入口透传到 service 与工具层。
+ * - 用于把 `sessionId/requestId` 从入口透传到 service 与工具层。
  */
 export const requestContext = new AsyncLocalStorage<RequestContext>();
 
 /**
- * 待持久化的运行时注入 user 消息队列（按 contextId）。
+ * 待持久化的运行时注入 user 消息队列（按 sessionId）。
  *
  * 关键点（中文）
  * - requestContext 中的 injectedUserMessages 只负责“下一 step 临时可见”。
  * - 为了让时间线顺序稳定，这里把“真正写入历史”的动作延后到
  *   assistant message 落盘之后再统一执行。
  */
-const deferredPersistedUserMessagesByContext = new Map<
+const deferredPersistedUserMessagesBySession = new Map<
   string,
-  ShipContextUserMessageV1[]
+  SessionUserMessageV1[]
 >();
 
 /**
@@ -83,7 +83,7 @@ export function getRequestContext(): RequestContext | undefined {
  * - 若当前不在请求上下文内，静默忽略（fail-open）。
  */
 export function enqueueInjectedUserMessage(
-  message: ShipContextUserMessageV1,
+  message: SessionUserMessageV1,
 ): void {
   const store = requestContext.getStore();
   if (!store || !message) return;
@@ -99,7 +99,7 @@ export function enqueueInjectedUserMessage(
  * 关键点（中文）
  * - 采用 drain 语义，确保每条注入消息只在下一 step 使用一次。
  */
-export function drainInjectedUserMessages(): ShipContextUserMessageV1[] {
+export function drainInjectedUserMessages(): SessionUserMessageV1[] {
   const store = requestContext.getStore();
   if (!store || !Array.isArray(store.injectedUserMessages)) return [];
   const out = [...store.injectedUserMessages];
@@ -111,25 +111,25 @@ export function drainInjectedUserMessages(): ShipContextUserMessageV1[] {
  * 入队一条“待持久化 user 消息”。
  */
 export function enqueueDeferredPersistedUserMessage(
-  contextId: string,
-  message: ShipContextUserMessageV1,
+  sessionId: string,
+  message: SessionUserMessageV1,
 ): void {
-  const key = String(contextId || "").trim();
+  const key = String(sessionId || "").trim();
   if (!key || !message) return;
-  const current = deferredPersistedUserMessagesByContext.get(key) || [];
+  const current = deferredPersistedUserMessagesBySession.get(key) || [];
   current.push(message);
-  deferredPersistedUserMessagesByContext.set(key, current);
+  deferredPersistedUserMessagesBySession.set(key, current);
 }
 
 /**
- * 读取并清空指定 context 的待持久化 user 消息。
+ * 读取并清空指定 session 的待持久化 user 消息。
  */
 export function drainDeferredPersistedUserMessages(
-  contextId: string,
-): ShipContextUserMessageV1[] {
-  const key = String(contextId || "").trim();
+  sessionId: string,
+): SessionUserMessageV1[] {
+  const key = String(sessionId || "").trim();
   if (!key) return [];
-  const current = deferredPersistedUserMessagesByContext.get(key) || [];
-  deferredPersistedUserMessagesByContext.delete(key);
+  const current = deferredPersistedUserMessagesBySession.get(key) || [];
+  deferredPersistedUserMessagesBySession.delete(key);
   return [...current];
 }

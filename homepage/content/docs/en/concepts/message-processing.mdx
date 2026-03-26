@@ -8,16 +8,16 @@ description: End-to-end flow from inbound message to outbound reply
 For chat channels, the runtime flow is:
 
 1. Channel adapter receives inbound message.
-2. Runtime resolves `contextId` / `chatKey` and persists history/meta.
+2. Runtime resolves `sessionId` / `chatKey` and persists history/meta.
 3. Agent execution is scheduled serially per conversation.
 4. Agent uses tools (for example, `chat send`) to generate user-visible output.
 5. Reply is dispatched to channel and logged.
 
 ## Key directories
 
-- `.downcity/context/<contextId>/messages/messages.jsonl`
+- `.downcity/session/<sessionId>/messages/messages.jsonl`
 - `.downcity/channel/meta.json`
-- `.downcity/chat/<contextId>/history.jsonl`
+- `.downcity/chat/<sessionId>/history.jsonl`
 - `.downcity/logs/<YYYY-MM-DD>.jsonl`
 
 ## Debug entry

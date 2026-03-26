@@ -6,8 +6,7 @@
  * - 支持最常用运维动作：刷新状态、连通性测试、重连。
  */
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge, Button } from "@downcity/ui"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type { UiAgentOption, UiChatChannelStatus } from "@/types/Dashboard"
 

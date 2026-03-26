@@ -10,9 +10,9 @@
 import type { Logger } from "@utils/logger/Logger.js";
 import type { AgentResult } from "@agent/types/Agent.js";
 import type {
-  ShipContextUserMessageV1,
-  ContextMessageV1,
-} from "@agent/types/ContextMessage.js";
+  SessionUserMessageV1,
+  SessionMessageV1,
+} from "@agent/types/SessionMessage.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
@@ -399,7 +399,7 @@ export class ChatQueueWorker {
    * - 发送失败只记录 warning，不中断主执行流程。
    */
   private async dispatchAssistantTextDirect(params: {
-    contextId: string;
+    sessionId: string;
     assistantText: string;
     phase?: "step" | "final" | "error";
   }): Promise<boolean> {
@@ -407,7 +407,7 @@ export class ChatQueueWorker {
 
     const plan = parseDirectDispatchAssistantText({
       assistantText: params.assistantText,
-      fallbackChatKey: params.contextId,
+      fallbackChatKey: params.sessionId,
     });
     if (!plan) return false;
     let dispatched = false;
@@ -467,7 +467,7 @@ export class ChatQueueWorker {
       });
       if (!textResult.success) {
         this.logger.warn("Direct chat text dispatch failed", {
-          contextId: params.contextId,
+          sessionId: params.sessionId,
           targetChatKey: plan.text.chatKey,
           error: textResult.error || "chat send failed",
         });
@@ -486,7 +486,7 @@ export class ChatQueueWorker {
       });
       if (!reactResult.success) {
         this.logger.warn("Direct chat reaction dispatch failed", {
-          contextId: params.contextId,
+          sessionId: params.sessionId,
           targetChatKey: reaction.chatKey,
           error: reactResult.error || "chat react failed",
         });
@@ -500,11 +500,11 @@ export class ChatQueueWorker {
    * direct 模式：从 assistant UIMessage 中提取文本并投递。
    */
   private async dispatchAssistantMessageDirect(params: {
-    contextId: string;
-    assistantMessage: ContextMessageV1 | null | undefined;
+    sessionId: string;
+    assistantMessage: SessionMessageV1 | null | undefined;
   }): Promise<boolean> {
     return this.dispatchAssistantTextDirect({
-      contextId: params.contextId,
+      sessionId: params.sessionId,
       assistantText: extractTextFromUiMessage(params.assistantMessage),
       phase: "final",
     });
@@ -518,7 +518,7 @@ export class ChatQueueWorker {
    * - 直接按 chatKey 分发，确保失败信息可见。
    */
   private async dispatchTextToChannel(params: {
-    contextId: string;
+    sessionId: string;
     text: string;
     messageId?: string;
     phase?: "step" | "final" | "error";
@@ -527,12 +527,12 @@ export class ChatQueueWorker {
     if (!text) return false;
     const target = await resolveChatReplyTarget({
       runtime: this.runtime,
-      chatKey: params.contextId,
+      chatKey: params.sessionId,
     });
     const preparedText = await prepareChatReplyText({
       runtime: this.runtime,
       input: {
-        chatKey: params.contextId,
+        chatKey: params.sessionId,
         ...(target.channel ? { channel: target.channel } : {}),
         ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
         ...(typeof params.messageId === "string"
@@ -548,7 +548,7 @@ export class ChatQueueWorker {
 
     const result = await sendChatTextByChatKey({
       context: this.runtime,
-      chatKey: params.contextId,
+      chatKey: params.sessionId,
       text: preparedText,
       // 关键点（中文）：优先以 reply 形式返回到触发消息，增强用户感知。
       replyToMessage: true,
@@ -559,7 +559,7 @@ export class ChatQueueWorker {
     await emitChatReplyEffect({
       runtime: this.runtime,
       input: {
-        chatKey: params.contextId,
+        chatKey: params.sessionId,
         ...(target.channel ? { channel: target.channel } : {}),
         ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
         ...(typeof params.messageId === "string"
@@ -577,7 +577,7 @@ export class ChatQueueWorker {
 
     if (!result.success) {
       this.logger.warn("ChatQueueWorker forced channel dispatch failed", {
-        contextId: params.contextId,
+        sessionId: params.sessionId,
         error: result.error || "chat send failed",
       });
       return false;
@@ -612,10 +612,10 @@ export class ChatQueueWorker {
       }
     }
 
-    const onStepCallback = async (): Promise<ShipContextUserMessageV1[]> => {
+    const onStepCallback = async (): Promise<SessionUserMessageV1[]> => {
       const drainedItems = drainChatQueueLane(laneKey);
       if (drainedItems.length === 0) return [];
-      const mergedExecMessages: ShipContextUserMessageV1[] = [];
+      const mergedExecMessages: SessionUserMessageV1[] = [];
       for (const item of drainedItems) {
         if (item.kind === "control") {
           if (item.control?.type === "clear") clearRequested = true;
@@ -632,7 +632,7 @@ export class ChatQueueWorker {
               metadata: {
                 v: 1,
                 ts: Date.now(),
-                contextId: item.contextId,
+                sessionId: item.contextId,
                 source: "ingress",
                 kind: "normal",
                 extra: this.buildIngressExtra(item),
@@ -652,7 +652,7 @@ export class ChatQueueWorker {
       const stepText = String(params.text || "").trim();
       if (!stepText) return;
       const dispatched = await this.dispatchAssistantTextDirect({
-        contextId: runItem.contextId,
+        sessionId: runItem.contextId,
         assistantText: stepText,
         phase: "step",
       });
@@ -674,7 +674,7 @@ export class ChatQueueWorker {
     } catch (error) {
       const channelErrorText = buildChannelErrorText(error);
       this.logger.error("ChatQueueWorker execution failed", {
-        contextId: runItem.contextId,
+        sessionId: runItem.contextId,
         error: String(error),
       });
 
@@ -691,7 +691,7 @@ export class ChatQueueWorker {
       }
 
       await this.dispatchTextToChannel({
-        contextId: runItem.contextId,
+        sessionId: runItem.contextId,
         text: channelErrorText,
         messageId: runItem.messageId,
         phase: "error",
@@ -740,13 +740,13 @@ export class ChatQueueWorker {
       const dispatchedDirect = duplicatedWithStep
         ? true
         : await this.dispatchAssistantMessageDirect({
-            contextId: runItem.contextId,
+            sessionId: runItem.contextId,
             assistantMessage: result.assistantMessage,
           });
       // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里无论成功/失败都强制兜底回发。
       if (!dispatchedDirect && finalChannelText) {
         await this.dispatchTextToChannel({
-          contextId: runItem.contextId,
+          sessionId: runItem.contextId,
           text:
             result.success === false
               ? finalChannelText || "❌ 执行失败，请稍后重试。"

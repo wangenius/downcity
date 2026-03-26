@@ -15,19 +15,19 @@ import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js
  */
 export interface ChatEnvironmentPromptInput {
   /**
-   * 当前会话对应的内部 contextId。
+   * 当前会话对应的 sessionId。
    *
    * 说明（中文）
-   * - 这是系统内部唯一会话标识。
-   * - 用于 context manager、chat history 与 chat 路由查找。
+   * - 对外统一使用 `sessionId` 语义。
+   * - 当前内部仍映射到既有 `contextId` 存储体系。
    */
-  contextId: string;
+  sessionId: string;
 
   /**
    * 当前 chatKey。
    *
    * 说明（中文）
-   * - chat service 里通常与 `contextId` 一致。
+   * - chat service 里通常与 `sessionId` 一致。
    * - 保留独立字段，避免未来路由键语义调整时影响调用方。
    */
   chatKey: string;

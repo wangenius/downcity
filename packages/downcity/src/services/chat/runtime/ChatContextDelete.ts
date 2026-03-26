@@ -4,14 +4,14 @@
  * 关键点（中文）
  * - 删除路由映射（`.downcity/channel/meta.json`）
  * - 删除 chat 审计目录（`.downcity/chat/<contextId>/`）
- * - 删除 core context 目录（`.downcity/context/<contextId>/`）
+ * - 删除 core session 目录（`.downcity/session/<sessionId>/`）
  * - 清理运行中 agent 与队列，避免残留任务继续执行
  */
 
 import fs from "fs-extra";
 import {
-  getShipChatContextDirPath,
-  getShipContextDirPath,
+  getDowncityChatContextDirPath,
+  getDowncitySessionDirPath,
 } from "@/console/env/Paths.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { clearChatQueueLane } from "@services/chat/runtime/ChatQueue.js";
@@ -62,8 +62,8 @@ export async function deleteChatContextById(params: {
       contextId,
     });
 
-    const chatDir = getShipChatContextDirPath(params.context.rootPath, contextId);
-    const contextDir = getShipContextDirPath(params.context.rootPath, contextId);
+    const chatDir = getDowncityChatContextDirPath(params.context.rootPath, contextId);
+    const contextDir = getDowncitySessionDirPath(params.context.rootPath, contextId);
     const hadChatDir = await fs.pathExists(chatDir);
     const hadContextDir = await fs.pathExists(contextDir);
     if (hadChatDir) {

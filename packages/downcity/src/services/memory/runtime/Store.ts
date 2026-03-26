@@ -17,10 +17,10 @@ import type {
   MemorySourceType,
 } from "@services/memory/types/Memory.js";
 import {
-  getShipContextRootDirPath,
-  getShipDirPath,
-  getShipMemoryDailyDirPath,
-  getShipMemoryLongTermPath,
+  getDowncityDirPath,
+  getDowncityMemoryDailyDirPath,
+  getDowncityMemoryLongTermPath,
+  getDowncitySessionRootDirPath,
 } from "@/console/env/Paths.js";
 import {
   MemoryIndexer,
@@ -144,7 +144,7 @@ export async function listMemorySourceFiles(
   rootPath: string,
 ): Promise<MemorySourceFile[]> {
   const out: MemorySourceFile[] = [];
-  const longterm = getShipMemoryLongTermPath(rootPath);
+  const longterm = getDowncityMemoryLongTermPath(rootPath);
   if (await pathExists(longterm)) {
     out.push({
       source: "longterm",
@@ -153,7 +153,7 @@ export async function listMemorySourceFiles(
     });
   }
 
-  const dailyDir = getShipMemoryDailyDirPath(rootPath);
+  const dailyDir = getDowncityMemoryDailyDirPath(rootPath);
   for (const abs of await listMarkdownFilesRecursively(dailyDir)) {
     out.push({
       source: "daily",
@@ -162,20 +162,20 @@ export async function listMemorySourceFiles(
     });
   }
 
-  const contextRootDir = getShipContextRootDirPath(rootPath);
-  let contexts: fs.Dirent[] = [];
+  const sessionRootDir = getDowncitySessionRootDirPath(rootPath);
+  let sessions: fs.Dirent[] = [];
   try {
-    contexts = await fsp.readdir(contextRootDir, { withFileTypes: true });
+    sessions = await fsp.readdir(sessionRootDir, { withFileTypes: true });
   } catch {
-    contexts = [];
+    sessions = [];
   }
-  for (const contextDir of contexts) {
-    if (!contextDir.isDirectory() || contextDir.isSymbolicLink()) {
+  for (const sessionDir of sessions) {
+    if (!sessionDir.isDirectory() || sessionDir.isSymbolicLink()) {
       continue;
     }
     const workingPath = path.join(
-      contextRootDir,
-      contextDir.name,
+      sessionRootDir,
+      sessionDir.name,
       "memory",
       "working.md",
     );
@@ -279,7 +279,7 @@ export async function startMemoryRuntime(runtime: ServiceRuntime): Promise<void>
   }
 
   if (state.watchers.length === 0) {
-    registerWatcher(runtime, state, getShipDirPath(runtime.rootPath));
+    registerWatcher(runtime, state, getDowncityDirPath(runtime.rootPath));
   }
   if (!state.intervalTimer) {
     state.intervalTimer = setInterval(() => {

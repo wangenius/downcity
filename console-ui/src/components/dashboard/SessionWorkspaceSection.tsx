@@ -1,5 +1,5 @@
 /**
- * Context 工作区（只在选中 context 后展示）。
+ * Session 工作区（只在选中 session 后展示）。
  *
  * 关键点（中文）
  * - 页面布局保持极简：左侧聊天主区，右侧调试区。
@@ -8,7 +8,7 @@
 
 import * as React from "react"
 import { ArchiveIcon, MoreHorizontalIcon, RefreshCcwIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,28 +16,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Textarea } from "@/components/ui/textarea"
+import { Textarea } from "@downcity/ui"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
-import { resolveContextChannel } from "@/lib/context-groups"
+import { resolveSessionChannel } from "@/lib/context-groups"
 import { cn } from "@/lib/utils"
 import type {
-  UiContextArchiveSummary,
+  UiSessionArchiveSummary,
   UiChatChannelStatus,
   UiChatHistoryEvent,
-  UiContextSummary,
-  UiContextTimelineMessage,
+  UiSessionSummary,
+  UiSessionTimelineMessage,
   UiPromptResponse,
 } from "@/types/Dashboard"
 
-export interface ContextWorkspaceSectionProps {
+export interface SessionWorkspaceSectionProps {
   /**
-   * 当前选中的 context id。
+   * 当前选中的 session id。
    */
-  selectedContextId: string
+  selectedSessionId: string
   /**
-   * context 列表。
+   * session 列表。
    */
-  contexts: UiContextSummary[]
+  contexts: UiSessionSummary[]
   /**
    * channel 历史。
    */
@@ -47,13 +47,13 @@ export interface ContextWorkspaceSectionProps {
    */
   chatChannels: UiChatChannelStatus[]
   /**
-   * context 消息历史。
+   * session 消息历史。
    */
-  contextMessages: UiContextTimelineMessage[]
+  sessionMessages: UiSessionTimelineMessage[]
   /**
    * compact archive 列表。
    */
-  contextArchives: UiContextArchiveSummary[]
+  sessionArchives: UiSessionArchiveSummary[]
   /**
    * 当前选中的 archive id。
    */
@@ -61,7 +61,7 @@ export interface ContextWorkspaceSectionProps {
   /**
    * archive 消息历史。
    */
-  contextArchiveMessages: UiContextTimelineMessage[]
+  contextArchiveMessages: UiSessionTimelineMessage[]
   /**
    * prompt 数据。
    */
@@ -79,17 +79,17 @@ export interface ContextWorkspaceSectionProps {
    */
   sending: boolean
   /**
-   * 是否正在清理 context messages。
+   * 是否正在清理 session messages。
    */
-  clearingContextMessages: boolean
+  clearingSessionMessages: boolean
   /**
    * 是否正在清理 chat history。
    */
   clearingChatHistory: boolean
   /**
-   * 是否正在删除当前 context。
+   * 是否正在删除当前 session。
    */
-  deletingContext: boolean
+  deletingSession: boolean
   /**
    * 时间格式化。
    */
@@ -103,17 +103,17 @@ export interface ContextWorkspaceSectionProps {
    */
   onSendConsoleUiMessage: () => void
   /**
-   * 清理当前 context messages。
+   * 清理当前 session messages。
    */
-  onClearContextMessages: () => void
+  onClearSessionMessages: () => void
   /**
    * 清理当前 chat history。
    */
   onClearChatHistory: () => void
   /**
-   * 完整删除当前 context。
+   * 完整删除当前 session。
    */
-  onDeleteContext: () => void
+  onDeleteSession: () => void
   /**
    * 刷新 archive 列表。
    */
@@ -123,9 +123,9 @@ export interface ContextWorkspaceSectionProps {
    */
   onSelectArchive: (archiveId: string) => void
   /**
-   * 切换 context。
+   * 切换 session。
    */
-  onSelectContext: (contextId: string) => void
+  onSelectSession: (contextId: string) => void
 }
 
 type RightTab = "route" | "system" | "context" | "archive"
@@ -221,8 +221,8 @@ function resolveChatDisplayName(params: {
   return { value: String(params.contextId || "").trim() || "unknown", source: "context_id" }
 }
 
-function buildContextRouteJson(params: {
-  selectedContextId: string
+function buildSessionRouteJson(params: {
+  selectedSessionId: string
   channel: string
   chatId?: string
   chatTitle?: string
@@ -232,12 +232,12 @@ function buildContextRouteJson(params: {
   const displayName = resolveChatDisplayName({
     chatTitle: params.chatTitle,
     chatId: params.chatId,
-    contextId: params.selectedContextId,
+    contextId: params.selectedSessionId,
   })
 
   return JSON.stringify(
     {
-      contextId: toOptionalRouteText(params.selectedContextId),
+      contextId: toOptionalRouteText(params.selectedSessionId),
       channel: toOptionalRouteText(params.channel),
       chatId: toOptionalRouteText(params.chatId),
       chatTitle: toOptionalRouteText(params.chatTitle),
@@ -364,8 +364,8 @@ function ChatHistoryList(props: {
   )
 }
 
-function ContextMessageList(props: {
-  items: UiContextTimelineMessage[]
+function SessionMessageList(props: {
+  items: UiSessionTimelineMessage[]
   formatTime: (ts?: number | string) => string
 }) {
   const { items, formatTime } = props
@@ -373,7 +373,7 @@ function ContextMessageList(props: {
   return (
     <div className="h-full min-h-0 space-y-2 overflow-y-auto px-3 py-3">
       {items.length === 0 ? (
-        <div className="py-8 text-center text-xs text-muted-foreground">暂无 context messages</div>
+        <div className="py-8 text-center text-xs text-muted-foreground">暂无 session messages</div>
       ) : (
         items.map((msg, index) => {
           const role = String(msg.role || "unknown")
@@ -473,9 +473,9 @@ function SystemPanel(props: { blocks: Array<{ title: string; content: string }> 
 }
 
 function ArchivePanel(props: {
-  archives: UiContextArchiveSummary[]
+  archives: UiSessionArchiveSummary[]
   selectedArchiveId: string
-  archiveMessages: UiContextTimelineMessage[]
+  archiveMessages: UiSessionTimelineMessage[]
   formatTime: (ts?: number | string) => string
   onSelectArchive: (archiveId: string) => void
   onRefreshArchives: () => void
@@ -547,7 +547,7 @@ function ArchivePanel(props: {
       </div>
       <div className="min-h-0 overflow-hidden rounded-r-[18px] bg-background/55">
         {selectedArchiveId ? (
-          <ContextMessageList items={archiveMessages} formatTime={formatTime} />
+          <SessionMessageList items={archiveMessages} formatTime={formatTime} />
         ) : (
           <div className="flex h-full items-center justify-center px-4 text-xs text-muted-foreground">
             请选择左侧 archive 查看 compact 前的历史消息
@@ -575,29 +575,29 @@ function StatusBadge(props: { state: string }) {
   )
 }
 
-export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
+export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
   const {
-    selectedContextId,
+    selectedSessionId,
     contexts,
     channelHistory,
     chatChannels,
-    contextMessages,
-    contextArchives,
+    sessionMessages,
+    sessionArchives,
     selectedArchiveId,
     contextArchiveMessages,
     prompt,
     chatInput,
     debugPanelsCollapsed,
     sending,
-    clearingContextMessages,
+    clearingSessionMessages,
     clearingChatHistory,
-    deletingContext,
+    deletingSession,
     formatTime,
     onChangeInput,
     onSendConsoleUiMessage,
-    onClearContextMessages,
+    onClearSessionMessages,
     onClearChatHistory,
-    onDeleteContext,
+    onDeleteSession,
     onRefreshArchives,
     onSelectArchive,
   } = props
@@ -605,18 +605,18 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
   const confirm = useConfirmDialog()
   const [rightTab, setRightTab] = React.useState<RightTab>("route")
 
-  const selectedContext = React.useMemo(
-    () => contexts.find((item) => String(item.contextId || "").trim() === selectedContextId) || null,
-    [contexts, selectedContextId],
+  const selectedSession = React.useMemo(
+    () => contexts.find((item) => String(item.contextId || "").trim() === selectedSessionId) || null,
+    [contexts, selectedSessionId],
   )
 
   const currentChannel = React.useMemo(() => {
-    const channel = resolveContextChannel(selectedContext || selectedContextId)
+    const channel = resolveSessionChannel(selectedSession || selectedSessionId)
     return channel === "other" ? "unknown" : channel
-  }, [selectedContext, selectedContextId])
+  }, [selectedSession, selectedSessionId])
 
   const canSend = currentChannel === "consoleui"
-  const contextExecuting = selectedContext?.executing === true
+  const contextExecuting = selectedSession?.executing === true
 
   const currentChannelStatus = React.useMemo(() => {
     if (currentChannel === "consoleui") return "connected"
@@ -630,44 +630,44 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
   const chatDisplay = React.useMemo(
     () =>
       resolveChatDisplayName({
-        chatTitle: selectedContext?.chatTitle,
-        chatId: selectedContext?.chatId,
-        contextId: selectedContextId,
+        chatTitle: selectedSession?.chatTitle,
+        chatId: selectedSession?.chatId,
+        contextId: selectedSessionId,
       }),
-    [selectedContext, selectedContextId],
+    [selectedSession, selectedSessionId],
   )
 
   const currentRouteJson = React.useMemo(
     () =>
-      buildContextRouteJson({
-        selectedContextId,
+      buildSessionRouteJson({
+        selectedSessionId,
         channel: currentChannel,
-        chatId: selectedContext?.chatId,
-        chatTitle: selectedContext?.chatTitle,
-        chatType: selectedContext?.chatType,
-        threadId: selectedContext?.threadId,
+        chatId: selectedSession?.chatId,
+        chatTitle: selectedSession?.chatTitle,
+        chatType: selectedSession?.chatType,
+        threadId: selectedSession?.threadId,
       }),
-    [currentChannel, selectedContext, selectedContextId],
+    [currentChannel, selectedSession, selectedSessionId],
   )
   const systemBlocks = React.useMemo(() => resolveSystemBlocks(prompt), [prompt])
 
-  const handleDeleteContext = React.useCallback(async () => {
+  const handleDeleteSession = React.useCallback(async () => {
     const confirmed = await confirm({
       title: "删除 Chat",
-      description: `确认彻底删除 context「${selectedContextId}」吗？该操作不可恢复。`,
+      description: `确认彻底删除 session「${selectedSessionId}」吗？该操作不可恢复。`,
       confirmText: "删除",
       cancelText: "取消",
       confirmVariant: "destructive",
     })
     if (!confirmed) return
-    onDeleteContext()
-  }, [confirm, onDeleteContext, selectedContextId])
+    onDeleteSession()
+  }, [confirm, onDeleteSession, selectedSessionId])
 
   React.useEffect(() => {
     setRightTab("route")
-  }, [selectedContextId])
+  }, [selectedSessionId])
 
-  if (!selectedContextId) {
+  if (!selectedSessionId) {
     return <div className="py-6 text-sm text-muted-foreground">请选择一个 context 进入工作区</div>
   }
 
@@ -679,8 +679,8 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
             <div className="truncate text-base font-semibold text-foreground" title={chatDisplay.value}>
               {chatDisplay.value}
             </div>
-            <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground" title={selectedContextId}>
-              {selectedContextId}
+            <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground" title={selectedSessionId}>
+              {selectedSessionId}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">{`source: ${chatDisplay.source}`}</div>
           </div>
@@ -715,7 +715,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
                     size="sm"
                     variant="outline"
                     className="h-8 rounded-[11px] px-2.5 text-[11px]"
-                    disabled={deletingContext || clearingContextMessages || clearingChatHistory}
+                    disabled={deletingSession || clearingSessionMessages || clearingChatHistory}
                   />
                 }
               >
@@ -723,8 +723,8 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
                 <span>操作</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem disabled={clearingContextMessages} onClick={onClearContextMessages}>
-                  {clearingContextMessages ? "清理 context 中..." : "清理 context messages"}
+                <DropdownMenuItem disabled={clearingSessionMessages} onClick={onClearSessionMessages}>
+                  {clearingSessionMessages ? "清理 context 中..." : "清理 session messages"}
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={clearingChatHistory} onClick={onClearChatHistory}>
                   {clearingChatHistory ? "清理 history 中..." : "清理 chat history"}
@@ -732,12 +732,12 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
-                  disabled={deletingContext}
+                  disabled={deletingSession}
                   onClick={() => {
-                    void handleDeleteContext()
+                    void handleDeleteSession()
                   }}
                 >
-                  {deletingContext ? "删除中..." : "删除 chat"}
+                  {deletingSession ? "删除中..." : "删除 chat"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -760,7 +760,7 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
               onSendConsoleUiMessage()
             }}
             rows={3}
-            placeholder={canSend ? "输入发给 consoleui channel 的消息..." : "当前 context 为只读，仅 consoleui channel 可发送"}
+            placeholder={canSend ? "输入发给 consoleui channel 的消息..." : "当前 session 为只读，仅 consoleui channel 可发送"}
             disabled={!canSend}
             className="min-h-[84px] resize-y rounded-[14px] bg-secondary/85 text-[11px] focus-visible:bg-secondary"
           />
@@ -829,10 +829,10 @@ export function ContextWorkspaceSection(props: ContextWorkspaceSectionProps) {
             ) : rightTab === "system" ? (
               <SystemPanel blocks={systemBlocks} />
             ) : rightTab === "context" ? (
-              <ContextMessageList items={contextMessages} formatTime={formatTime} />
+              <SessionMessageList items={sessionMessages} formatTime={formatTime} />
             ) : (
               <ArchivePanel
-                archives={contextArchives}
+                archives={sessionArchives}
                 selectedArchiveId={selectedArchiveId}
                 archiveMessages={contextArchiveMessages}
                 formatTime={formatTime}

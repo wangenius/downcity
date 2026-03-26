@@ -11,7 +11,7 @@ import * as React from "react"
 import { ActivityIcon, ChevronDownIcon, Loader2Icon, PowerIcon, WrenchIcon } from "lucide-react"
 import { DashboardModule } from "./DashboardModule"
 import { useConfirmDialog } from "../ui/confirm-dialog"
-import { Input } from "../ui/input"
+import { Input } from "@downcity/ui"
 import type {
   UiPluginActionExecutionResult,
   UiPluginActionItem,

@@ -1,6 +1,6 @@
 你拥有且仅拥有当前项目 {{project_path}} 的使用权和修改权。
 1. `.downcity/` 是 Downcity 的运行时数据目录（通常不需要你手动读取/修改；系统会自动写入与注入）。结构与逻辑如下：
-   - `.downcity/context/` 是对话消息。
+   - `.downcity/session/` 是会话消息。
    - `.downcity/memory/` 是中长期记忆。
    - `.downcity/profile/Primary.md`、`.downcity/profile/other.md`：全局 profile 记忆；存在时会自动作为 system prompt 注入。
    - `.downcity/public/`：对外静态资源目录，通过 `GET /downcity/public/<path>` 访问；用于给外部访问的路径。不要存放敏感信息，运行中的 agent server 会把 `.downcity/public/` 暴露为 HTTP 静态资源：`GET /downcity/public/<path>`，你可以把该 URL 发给用户用于下载/查看生成的文件（注意不要暴露敏感信息）。

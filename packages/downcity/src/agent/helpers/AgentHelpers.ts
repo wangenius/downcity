@@ -25,7 +25,7 @@ import {
   type ToolSet,
 } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
 import { parseChatMessageMarkup } from "../../services/chat/runtime/ChatMessageMarkup.js";
 
 /**
@@ -33,12 +33,12 @@ import { parseChatMessageMarkup } from "../../services/chat/runtime/ChatMessageM
  *
  * 关键点（中文）
  * - 用途：从 onStepCallback 返回的消息里挑出可并入推理上下文的 user 文本。
- * - 输入：任意 ContextMessageV1[]（可能混有 assistant/tool/空消息）。
+ * - 输入：任意 SessionMessageV1[]（可能混有 assistant/tool/空消息）。
  * - 输出：只包含“非空 user 文本”的消息数组。
  */
 export function pickMergedUserMessages(
-  messages: ContextMessageV1[],
-): ContextMessageV1[] {
+  messages: SessionMessageV1[],
+): SessionMessageV1[] {
   // 如果不是数组，直接返回空数组，避免后续 filter 报错。
   if (!Array.isArray(messages)) return [];
 
@@ -78,7 +78,7 @@ export function pickMergedUserMessages(
  * - 输出：可直接喂给 streamText 的 messages。
  */
 export async function toModelMessages(
-  messages: ContextMessageV1[],
+  messages: SessionMessageV1[],
   tools: Record<string, Tool>,
 ): Promise<ModelMessage[]> {
   // 空输入快速返回，避免调用转换器的额外开销。
@@ -162,13 +162,13 @@ function buildDataUrl(mediaType: string, buffer: Buffer): string {
  * - 不修改持久化历史，仅在本轮执行的内存消息上注入 file parts。
  */
 async function injectFilePartsFromAttachments(
-  messages: ContextMessageV1[],
-): Promise<ContextMessageV1[]> {
+  messages: SessionMessageV1[],
+): Promise<SessionMessageV1[]> {
   if (!Array.isArray(messages) || messages.length === 0) return messages;
 
   const cwd = process.cwd();
 
-  const out: ContextMessageV1[] = [];
+  const out: SessionMessageV1[] = [];
 
   for (const message of messages) {
     if (!message || typeof message !== "object" || message.role !== "user") {
@@ -263,7 +263,7 @@ async function injectFilePartsFromAttachments(
  * - 输入：完整 UIMessage（可能含非 text parts）。
  * - 输出：拼接后的文本字符串。
  */
-export function extractAssistantTextForLog(message: ContextMessageV1): string {
+export function extractAssistantTextForLog(message: SessionMessageV1): string {
   // 没有 parts 时直接返回空串。
   if (!Array.isArray(message.parts)) return "";
 
@@ -289,7 +289,7 @@ export function extractAssistantTextForLog(message: ContextMessageV1): string {
  */
 export async function logAssistantMessageNow(
   logger: Logger,
-  message: ContextMessageV1,
+  message: SessionMessageV1,
 ): Promise<void> {
   // 先提取可读文本；如果为空则用 `-` 占位。
   const text = extractAssistantTextForLog(message) || "-";

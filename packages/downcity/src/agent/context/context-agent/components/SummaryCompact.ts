@@ -18,10 +18,10 @@ import {
 import { generateId } from "@utils/Id.js";
 import { getLogger } from "@utils/logger/Logger.js";
 import type {
-  ContextMessageV1,
-  ContextMetadataV1,
-} from "@agent/types/ContextMessage.js";
-import type { ShipContextMessagesMetaV1 } from "@agent/types/ContextMessagesMeta.js";
+  SessionMessageV1,
+  SessionMetadataV1,
+} from "@agent/types/SessionMessage.js";
+import type { SessionMessagesMetaV1 } from "@agent/types/SessionMessagesMeta.js";
 
 export type ContextCompactParams = {
   model: LanguageModel;
@@ -36,15 +36,15 @@ type ContextCompactDeps = {
   rootPath: string;
   contextId: string;
   withWriteLock: <T>(fn: () => Promise<T>) => Promise<T>;
-  loadAll: () => Promise<ContextMessageV1[]>;
+  loadAll: () => Promise<SessionMessageV1[]>;
   createSummaryMessage: (params: {
     text: string;
-    sourceRange?: ContextMetadataV1["sourceRange"];
-  }) => ContextMessageV1;
+    sourceRange?: SessionMetadataV1["sourceRange"];
+  }) => SessionMessageV1;
   getArchiveDirPath: () => string;
   getMessagesFilePath: () => string;
-  readMetaUnsafe: () => Promise<ShipContextMessagesMetaV1>;
-  writeMetaUnsafe: (next: ShipContextMessagesMetaV1) => Promise<void>;
+  readMetaUnsafe: () => Promise<SessionMessagesMetaV1>;
+  writeMetaUnsafe: (next: SessionMessagesMetaV1) => Promise<void>;
 };
 
 /**
@@ -64,7 +64,7 @@ export async function compactContextMessageIfNeeded(
   // phase 1：snapshot（短锁）
   // - 仅负责拿一致性快照，不做耗时的模型调用。
   // - 目的是把锁持有时间降到最低。
-  let snapshot: ContextMessageV1[] = [];
+  let snapshot: SessionMessageV1[] = [];
   let snapshotTailId = "";
   await deps.withWriteLock(async () => {
     snapshot = await deps.loadAll();
@@ -246,7 +246,7 @@ function estimateTokensApproxFromText(text: string): number {
  * - 统一把 user/assistant 内容线性化，作为 compact 摘要输入。
  * - tool 原始结构不会原样输出，避免把噪声日志喂给摘要模型。
  */
-function extractPlainTextFromMessages(messages: ContextMessageV1[]): string {
+function extractPlainTextFromMessages(messages: SessionMessageV1[]): string {
   const lines: string[] = [];
   for (const m of messages) {
     if (!m || typeof m !== "object") continue;

@@ -9,21 +9,22 @@
 import * as React from "react"
 import { CheckIcon, ChevronDownIcon, ClipboardPasteIcon, InfoIcon, KeyboardIcon, Loader2Icon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
-import { Button } from "@/components/ui/button"
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@downcity/ui"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Input, Label, Textarea } from "@downcity/ui"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import type { UiEnvItem, UiEnvScope } from "@/types/Dashboard"
 

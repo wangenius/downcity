@@ -13,7 +13,7 @@
 import path from "path";
 import prompts from "prompts";
 import fs from "fs-extra";
-import { getProfileMdPath, getShipJsonPath, getSoulMdPath } from "@/console/env/Paths.js";
+import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/console/env/Paths.js";
 import {
   initializeAgentProject,
   listConsoleModelChoices,
@@ -51,7 +51,7 @@ export async function initCommand(
   // Check if core initialization files already exist
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
   const existingSoulMd = fs.existsSync(getSoulMdPath(projectRoot));
-  const existingShipJson = fs.existsSync(getShipJsonPath(projectRoot));
+  const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
   const consoleModelChoices = await listConsoleModelChoices();
   const consoleModelIds = consoleModelChoices.map((item) => item.value);
   // 关键点（中文）：模型池为空时，继续 create 只会生成“必然启动失败”的配置，这里直接中止并给出明确修复路径。

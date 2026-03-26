@@ -7,15 +7,15 @@
  */
 
 import * as React from "react"
-import { Button } from "@/components/ui/button"
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@downcity/ui"
 
 export type ConfirmDialogOptions = {
   /**

@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   DropdownMenu,

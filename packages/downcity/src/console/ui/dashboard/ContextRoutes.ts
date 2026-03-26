@@ -1,8 +1,8 @@
 /**
- * Dashboard 上下文路由。
+ * Dashboard 会话路由。
  *
  * 关键点（中文）
- * - 聚合 contexts/messages/archives/system-prompt/execute 相关接口。
+ * - 聚合 sessions/messages/archives/system-prompt/execute 相关接口。
  * - 仅负责编排请求与响应；消息读取、时间线映射、执行拼装复用 helper。
  */
 
@@ -11,14 +11,13 @@ import fs from "fs-extra";
 import { dirname } from "path";
 import { resolveAgentSystemMessages } from "@agent/prompts/system/SystemDomain.js";
 import {
-  getShipChatHistoryPath,
-  getShipContextMessagesArchiveDirPath,
-  getShipContextMessagesArchivePath,
-  getShipContextMessagesPath,
+  getDowncityChatHistoryPath,
+  getDowncitySessionMessagesArchiveDirPath,
+  getDowncitySessionMessagesArchivePath,
+  getDowncitySessionMessagesPath,
 } from "@/console/env/Paths.js";
-import type { DashboardContextExecuteRequestBody } from "@/types/DashboardContextExecute.js";
+import type { DashboardSessionExecuteRequestBody } from "@/types/DashboardSessionExecute.js";
 import type { DashboardRouteRegistrationParams } from "@/types/DashboardRoutes.js";
-import { executeByContextId } from "./ExecuteByContext.js";
 import {
   decodeMaybe,
   listContextSummaries,
@@ -26,7 +25,7 @@ import {
   toLimit,
   toUiMessageTimeline,
 } from "./Helpers.js";
-
+import { executeBySessionId } from "./ExecuteBySession.js";
 const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
 
 function normalizeSystemText(input: string | null | undefined): string {
@@ -91,7 +90,7 @@ export function registerDashboardContextRoutes(
 ): void {
   const { app } = params;
 
-  app.get("/api/dashboard/contexts", async (c) => {
+  app.get("/api/dashboard/sessions", async (c) => {
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"));
@@ -103,13 +102,13 @@ export function registerDashboardContextRoutes(
         executingContextIds,
       });
       const hasConsoleUiContext = contexts.some(
-        (item) => String(item.contextId || "").trim() === CONSOLEUI_CONTEXT_ID,
+        (item) => String(item.sessionId || "").trim() === CONSOLEUI_CONTEXT_ID,
       );
       const enrichedContexts = hasConsoleUiContext
         ? contexts
         : [
             {
-              contextId: CONSOLEUI_CONTEXT_ID,
+              sessionId: CONSOLEUI_CONTEXT_ID,
               messageCount: 0,
               updatedAt: Date.now(),
               lastRole: "system" as const,
@@ -121,30 +120,30 @@ export function registerDashboardContextRoutes(
           ];
       return c.json({
         success: true,
-        contexts: enrichedContexts,
+        sessions: enrichedContexts,
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
     }
   });
 
-  app.get("/api/dashboard/contexts/:contextId/messages", async (c) => {
+  app.get("/api/dashboard/sessions/:sessionId/messages", async (c) => {
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"), 200);
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
+      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!contextId) {
-        return c.json({ success: false, error: "Missing contextId" }, 400);
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
-      const filePath = getShipContextMessagesPath(runtime.rootPath, contextId);
+      const filePath = getDowncitySessionMessagesPath(runtime.rootPath, contextId);
       const messages = await loadContextMessagesFromFile(filePath);
       const sliced = messages
         .slice(-limit)
         .flatMap((message) => toUiMessageTimeline(message));
       return c.json({
         success: true,
-        contextId,
+        sessionId: contextId,
         total: sliced.length,
         rawTotal: messages.length,
         messages: sliced,
@@ -154,15 +153,15 @@ export function registerDashboardContextRoutes(
     }
   });
 
-  app.delete("/api/dashboard/contexts/:contextId/messages", async (c) => {
+  app.delete("/api/dashboard/sessions/:sessionId/messages", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
+      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!contextId) {
-        return c.json({ success: false, error: "Missing contextId" }, 400);
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
-      const messagesPath = getShipContextMessagesPath(runtime.rootPath, contextId);
+      const messagesPath = getDowncitySessionMessagesPath(runtime.rootPath, contextId);
       const messagesDirPath = dirname(messagesPath);
       await fs.remove(messagesDirPath);
       // 关键点（中文）：清理消息文件后，同步清掉内存中的 agent，避免旧上下文继续运行。
@@ -170,7 +169,7 @@ export function registerDashboardContextRoutes(
 
       return c.json({
         success: true,
-        contextId,
+        sessionId: contextId,
         cleared: true,
       });
     } catch (error) {
@@ -178,20 +177,20 @@ export function registerDashboardContextRoutes(
     }
   });
 
-  app.delete("/api/dashboard/contexts/:contextId/chat-history", async (c) => {
+  app.delete("/api/dashboard/sessions/:sessionId/chat-history", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
+      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!contextId) {
-        return c.json({ success: false, error: "Missing contextId" }, 400);
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
-      const historyPath = getShipChatHistoryPath(runtime.rootPath, contextId);
+      const historyPath = getDowncityChatHistoryPath(runtime.rootPath, contextId);
       await fs.remove(historyPath);
 
       return c.json({
         success: true,
-        contextId,
+        sessionId: contextId,
         cleared: true,
       });
     } catch (error) {
@@ -199,23 +198,23 @@ export function registerDashboardContextRoutes(
     }
   });
 
-  app.get("/api/dashboard/contexts/:contextId/archives", async (c) => {
+  app.get("/api/dashboard/sessions/:sessionId/archives", async (c) => {
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"), 100);
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
+      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!contextId) {
-        return c.json({ success: false, error: "Missing contextId" }, 400);
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
 
-      const archiveDirPath = getShipContextMessagesArchiveDirPath(
+      const archiveDirPath = getDowncitySessionMessagesArchiveDirPath(
         runtime.rootPath,
         contextId,
       );
       if (!(await fs.pathExists(archiveDirPath))) {
         return c.json({
           success: true,
-          contextId,
+          sessionId: contextId,
           archives: [],
         });
       }
@@ -232,7 +231,7 @@ export function registerDashboardContextRoutes(
         const archiveId = decodeMaybe(entry.name.slice(0, -5));
         if (!archiveId) continue;
 
-        const archivePath = getShipContextMessagesArchivePath(
+        const archivePath = getDowncitySessionMessagesArchivePath(
           runtime.rootPath,
           contextId,
           archiveId,
@@ -274,7 +273,7 @@ export function registerDashboardContextRoutes(
 
       return c.json({
         success: true,
-        contextId,
+        sessionId: contextId,
         archives: archives.slice(0, limit),
       });
     } catch (error) {
@@ -282,19 +281,19 @@ export function registerDashboardContextRoutes(
     }
   });
 
-  app.get("/api/dashboard/contexts/:contextId/archives/:archiveId", async (c) => {
+  app.get("/api/dashboard/sessions/:sessionId/archives/:archiveId", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
+      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       const archiveId = decodeMaybe(String(c.req.param("archiveId") || "").trim());
       if (!contextId) {
-        return c.json({ success: false, error: "Missing contextId" }, 400);
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       if (!archiveId) {
         return c.json({ success: false, error: "Missing archiveId" }, 400);
       }
 
-      const archivePath = getShipContextMessagesArchivePath(
+      const archivePath = getDowncitySessionMessagesArchivePath(
         runtime.rootPath,
         contextId,
         archiveId,
@@ -326,7 +325,7 @@ export function registerDashboardContextRoutes(
 
       return c.json({
         success: true,
-        contextId,
+        sessionId: contextId,
         archiveId,
         ...(typeof archivedAt === "number" ? { archivedAt } : {}),
         total: messages.length,
@@ -342,7 +341,7 @@ export function registerDashboardContextRoutes(
     try {
       const runtime = params.getRuntimeState();
       const contextId =
-        decodeMaybe(String(c.req.query("contextId") || "").trim()) ||
+        decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
         CONSOLEUI_CONTEXT_ID;
       const systemMessages = await resolveAgentSystemMessages({
         projectRoot: runtime.rootPath,
@@ -354,7 +353,7 @@ export function registerDashboardContextRoutes(
       });
       return c.json({
         success: true,
-        contextId,
+        sessionId: contextId,
         ...toSystemPromptPayload(systemMessages),
       });
     } catch (error) {
@@ -362,29 +361,29 @@ export function registerDashboardContextRoutes(
     }
   });
 
-  app.post("/api/dashboard/contexts/:contextId/execute", async (c) => {
+  app.post("/api/dashboard/sessions/:sessionId/execute", async (c) => {
     try {
       const runtime = params.getRuntimeState();
-      const contextId = decodeMaybe(String(c.req.param("contextId") || "").trim());
-      const body = (await c.req.json().catch(() => ({}))) as Partial<DashboardContextExecuteRequestBody>;
+      const contextId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
+      const body = (await c.req.json().catch(() => ({}))) as Partial<DashboardSessionExecuteRequestBody>;
       const instructions = String(body.instructions || "").trim();
       if (!contextId) {
-        return c.json({ success: false, error: "Missing contextId" }, 400);
+        return c.json({ success: false, error: "Missing sessionId" }, 400);
       }
       if (!instructions) {
         return c.json({ success: false, error: "Missing instructions" }, 400);
       }
 
-      const result = await executeByContextId({
+      const result = await executeBySessionId({
         runtime,
         serviceRuntime: params.getServiceRuntimeState(),
-        contextId,
+        sessionId: contextId,
         instructions,
         attachments: Array.isArray(body.attachments) ? body.attachments : undefined,
       });
       return c.json({
         success: true,
-        contextId,
+        sessionId: contextId,
         result,
       });
     } catch (error) {

@@ -8,7 +8,7 @@
 
 import type { Hono } from "hono";
 import fs from "fs-extra";
-import { getShipJsonPath } from "@/console/env/Paths.js";
+import { getDowncityJsonPath } from "@/console/env/Paths.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 import { ModelPoolService } from "@/console/ui/ModelPoolService.js";
@@ -96,7 +96,7 @@ export function registerConsoleUiModelRoutes(params: {
         store.close();
       }
 
-      const shipJsonPath = getShipJsonPath(selectedAgent.projectRoot);
+      const shipJsonPath = getDowncityJsonPath(selectedAgent.projectRoot);
       if (!(await fs.pathExists(shipJsonPath))) {
         return c.json(
           { success: false, error: `downcity.json not found: ${shipJsonPath}` },

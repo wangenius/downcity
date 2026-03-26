@@ -4,9 +4,9 @@
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { TooltipProvider } from "@downcity/ui";
 import { App } from "./App";
 import { ConfirmDialogProvider } from "./components/ui/confirm-dialog";
-import { TooltipProvider } from "./components/ui/tooltip";
 import "./index.css";
 
 const rootElement = document.getElementById("root");

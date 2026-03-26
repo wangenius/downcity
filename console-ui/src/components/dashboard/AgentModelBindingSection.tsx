@@ -7,7 +7,7 @@
  */
 
 import * as React from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { UiAgentOption, UiModelSummary } from "@/types/Dashboard"
 import { CheckIcon, ChevronDownIcon } from "lucide-react"

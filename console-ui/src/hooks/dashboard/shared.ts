@@ -114,6 +114,10 @@ export function isConsoleUiContext(contextIdInput: string): boolean {
   return contextId.startsWith("consoleui-") || contextId === "local_ui";
 }
 
+export function isConsoleUiSession(sessionIdInput: string): boolean {
+  return isConsoleUiContext(sessionIdInput);
+}
+
 export function toHistoryEventsFromTimeline(
   contextId: string,
   timeline: UiContextTimelineMessage[],

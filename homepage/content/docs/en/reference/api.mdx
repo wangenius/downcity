@@ -121,9 +121,9 @@ Example:
 }
 ```
 
-### `POST /api/tui/contexts/:contextId/execute`
+### `POST /api/dashboard/sessions/:sessionId/execute`
 
-Execute one turn in a specific context (for example a selected chatKey).
+Execute one turn in a specific session (for example a selected chatKey).
 
 Request body example with attachment:
 
@@ -143,9 +143,9 @@ Request body example with attachment:
 
 Notes:
 
-- `contextId` should be the exact target context returned by runtime. For chat contexts, this is an opaque ID managed by chat service (not a parseable platform key).
+- `sessionId` should be the exact target session returned by runtime. For chat sessions, this is an opaque ID managed by chat service (not a parseable platform key).
 - Attachments are materialized by runtime and injected as `<file ...>` tags before the user instruction.
-- If `contextId` maps to a chat conversation, execution is enqueued into the same chat service queue (same behavior as platform inbound messages), and chat history is appended before execution.
+- If `sessionId` maps to a chat conversation, execution is enqueued into the same chat service queue (same behavior as platform inbound messages), and chat history is appended before execution.
 - Chat-context calls return immediately with queue metadata (`queued=true`, `queueItemId`, `queuePosition`).
 
 ## Direct action routes

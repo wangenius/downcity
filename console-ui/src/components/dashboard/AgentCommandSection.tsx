@@ -8,7 +8,7 @@
 
 import * as React from "react"
 import { CheckIcon, ChevronsUpDownIcon, TerminalIcon, Trash2Icon } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@downcity/ui"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"

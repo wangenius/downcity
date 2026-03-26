@@ -36,12 +36,13 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -52,10 +53,8 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
   },

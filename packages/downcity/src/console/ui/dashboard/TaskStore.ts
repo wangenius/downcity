@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { getLogsDirPath, getShipTasksDirPath } from "@/console/env/Paths.js";
+import { getLogsDirPath, getDowncityTasksDirPath } from "@/console/env/Paths.js";
 import { resolveTaskIdByTitle } from "@services/task/runtime/Store.js";
 import type {
   DashboardLogEntry,
@@ -69,7 +69,7 @@ export async function readRecentLogs(params: {
 
 async function resolveTaskDir(projectRoot: string, title: string): Promise<string> {
   const taskId = await resolveTaskIdByTitle({ projectRoot, title });
-  return path.join(getShipTasksDirPath(projectRoot), taskId);
+  return path.join(getDowncityTasksDirPath(projectRoot), taskId);
 }
 
 /**

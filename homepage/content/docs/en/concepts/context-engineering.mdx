@@ -9,20 +9,20 @@ Downcity keeps context in composable, persisted layers:
 
 1. `PROFILE.md` / `SOUL.md`
 2. `downcity.json` runtime config
-3. `.downcity/context/<contextId>/messages/messages.jsonl` conversation history
+3. `.downcity/session/<sessionId>/messages/messages.jsonl` session history
 4. `.downcity/memory/MEMORY.md` long-term memory
 5. `.downcity/memory/daily/<YYYY-MM-DD>.md` daily memory increments
-6. `.downcity/context/<contextId>/memory/working.md` context working memory (optional)
+6. `.downcity/session/<sessionId>/memory/working.md` session working memory (optional)
 
 ## Why this model
 
 - History is auditable and explicit.
 - Long conversations can be compacted safely.
-- Context isolation by `contextId` avoids cross-conversation bleed.
+- Session isolation by `sessionId` avoids cross-conversation bleed.
 - Memory retrieval is budgeted via `memory.search -> memory.get`, instead of full-file injection.
 
 ## Practical tips
 
 - Keep clear boundaries and goals in `PROFILE.md`.
-- Use meaningful `contextId` per channel/user/workflow.
+- Use meaningful `sessionId` per channel/user/workflow.
 - Inspect `.downcity/logs/<date>.jsonl` and task run artifacts regularly.

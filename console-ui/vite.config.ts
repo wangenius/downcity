@@ -18,9 +18,9 @@ const API_TARGET =
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
+    dedupe: ["react", "react-dom"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@downcity/ui": path.resolve(__dirname, "../packages/downcity-ui/src/index.ts"),
     },
   },
   server: {

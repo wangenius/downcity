@@ -38,7 +38,7 @@ import type {
   AgentResult,
   AgentRunInput,
 } from "@agent/types/Agent.js";
-import type { ContextMessageV1 } from "@agent/types/ContextMessage.js";
+import type { SessionMessageV1 } from "@agent/types/SessionMessage.js";
 import type { JsonObject } from "@/types/Json.js";
 
 /**
@@ -208,7 +208,7 @@ function summarizeStepForDebug(stepResult: unknown): JsonObject {
 }
 
 function summarizeUiMessageForDebug(
-  message: ContextMessageV1 | null | undefined,
+  message: SessionMessageV1 | null | undefined,
 ): JsonObject {
   const parts = Array.isArray(message?.parts) ? message.parts : [];
   const text = parts
@@ -240,9 +240,9 @@ function summarizeUiMessageForDebug(
 }
 
 function mergeAssistantUiMessages(
-  base: ContextMessageV1 | null,
-  incoming: ContextMessageV1,
-): ContextMessageV1 {
+  base: SessionMessageV1 | null,
+  incoming: SessionMessageV1,
+): SessionMessageV1 {
   if (!base) return incoming;
   const baseMetadata = base.metadata;
   const incomingMetadata = incoming.metadata;
@@ -251,8 +251,8 @@ function mergeAssistantUiMessages(
     metadata: {
       v: incomingMetadata?.v ?? baseMetadata?.v ?? 1,
       ts: incomingMetadata?.ts ?? baseMetadata?.ts ?? Date.now(),
-      contextId:
-        incomingMetadata?.contextId ?? baseMetadata?.contextId ?? "",
+      sessionId:
+        incomingMetadata?.sessionId ?? baseMetadata?.sessionId ?? "",
       ...(baseMetadata || {}),
       ...(incomingMetadata || {}),
     },
@@ -264,7 +264,7 @@ function mergeAssistantUiMessages(
 }
 
 function pickIncompleteToolParts(
-  message: ContextMessageV1 | null | undefined,
+  message: SessionMessageV1 | null | undefined,
 ): Array<{
   toolName: string;
   state: string;
@@ -306,7 +306,7 @@ function buildIncompleteResponseRecoveryNudge(recoveryIndex: number): string {
 
 function detectIncompleteResponse(params: {
   stepResult: unknown;
-  assistantMessage: ContextMessageV1 | null | undefined;
+  assistantMessage: SessionMessageV1 | null | undefined;
 }): {
   reason: string;
   details: JsonObject;
@@ -668,7 +668,7 @@ export class Agent {
 
       // 核心步骤 2（中文）：定义“step 间新增 user 消息并入器”。
       const appendMergedUserMessages = async (
-        messages: ContextMessageV1[],
+        messages: SessionMessageV1[],
       ): Promise<ModelMessage[]> => {
         // 子步骤 A（中文）：过滤出有效 user 文本消息。
         const mergedMessages = pickMergedUserMessages(messages);
@@ -728,7 +728,7 @@ export class Agent {
       });
 
       // 核心步骤 3（中文）：改为显式外层循环，由 runtime 自己决定是否继续下一步。
-      let finalAssistantUiMessage: ContextMessageV1 | null = null;
+      let finalAssistantUiMessage: SessionMessageV1 | null = null;
       let textOnlyContinuationCount = 0;
       let incompleteResponseRecoveryCount = 0;
 
@@ -806,7 +806,7 @@ export class Agent {
               incompleteResponseRecoveryCount,
             ),
             metadata: {
-              contextId,
+              sessionId: contextId,
               extra: {
                 internal: "agent_incomplete_response_recover",
                 reason: incompleteResponse.reason,
@@ -870,7 +870,7 @@ export class Agent {
           const continuationMessage = this.persistor.userText({
             text: buildTextOnlyContinuationNudge(textOnlyContinuationCount),
             metadata: {
-              contextId,
+              sessionId: contextId,
               extra: {
                 internal: "agent_loop_auto_continue",
                 reason: textOnlyContinuationReason,
@@ -972,13 +972,13 @@ export class Agent {
    */
   private async collectFinalAssistantMessage(params: {
     result: ReturnType<typeof streamText>;
-  }): Promise<ContextMessageV1> {
+  }): Promise<SessionMessageV1> {
     // 用于接收 onFinish 传出的结构化 assistant 消息。
-    let streamedAssistantMessage: ContextMessageV1 | null = null;
+    let streamedAssistantMessage: SessionMessageV1 | null = null;
     let uiFinishSummary: JsonObject | null = null;
 
     // 创建 UI message stream。
-    const uiStream = params.result.toUIMessageStream<ContextMessageV1>({
+    const uiStream = params.result.toUIMessageStream<SessionMessageV1>({
       // 不发送 reasoning 片段。
       sendReasoning: false,
       // 不发送来源片段。
@@ -1002,7 +1002,7 @@ export class Agent {
     }
 
     await this.logger.log("info", "[agent] ui.finish", {
-      contextId: String(this.persistor.contextId || "").trim(),
+      sessionId: String(this.persistor.contextId || "").trim(),
       ...(uiFinishSummary || {
         responseMessageMissing: true,
       }),
@@ -1021,7 +1021,7 @@ export class Agent {
     }
 
     await this.logger.log("warn", "[agent] final.message.fallback", {
-      contextId: String(this.persistor.contextId || "").trim(),
+      sessionId: String(this.persistor.contextId || "").trim(),
       assistantTextLength: assistantText.length,
       assistantTextPreview: toInlinePreview(assistantText),
     });

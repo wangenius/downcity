@@ -10,7 +10,7 @@
 import { Hono } from "hono";
 import fs from "fs-extra";
 import path from "path";
-import { getShipPublicDirPath } from "@/console/env/Paths.js";
+import { getDowncityPublicDirPath } from "@/console/env/Paths.js";
 import { getRuntimeState } from "@agent/context/manager/RuntimeState.js";
 
 /**
@@ -55,7 +55,7 @@ staticRouter.get("/app.js", async (c) => {
 });
 
 staticRouter.get("/downcity/public/*", async (c) => {
-  const root = getShipPublicDirPath(getRuntimeState().rootPath);
+  const root = getDowncityPublicDirPath(getRuntimeState().rootPath);
   const prefix = "/downcity/public/";
   const requestPath = c.req.path;
   const rel = requestPath.startsWith(prefix)

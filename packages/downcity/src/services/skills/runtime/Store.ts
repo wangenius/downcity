@@ -1,5 +1,5 @@
 /**
- * Context skills state store（service 内部状态）。
+ * Session skills state store（service 内部状态）。
  *
  * 关键点（中文）
  * - 这是 skills service 的运行时状态容器
@@ -8,39 +8,39 @@
 
 import type { ClaudeSkill } from "@services/skills/types/ClaudeSkill.js";
 import type {
-  ContextSkillStateInternal,
-  ContextSkillStateSnapshot,
+  SessionSkillStateInternal,
+  SessionSkillStateSnapshot,
 } from "./Types.js";
 
-const contextSkillStateStore = new Map<string, ContextSkillStateInternal>();
+const sessionSkillStateStore = new Map<string, SessionSkillStateInternal>();
 
 /**
- * 归一化 contextId。
+ * 归一化 sessionId。
  *
  * 关键点（中文）
- * - 空 contextId 视为调用错误，直接抛异常，避免污染全局状态。
+ * - 空 sessionId 视为调用错误，直接抛异常，避免污染全局状态。
  */
-function normalizeContextId(contextId: string): string {
-  const value = String(contextId || "").trim();
+function normalizeSessionId(sessionId: string): string {
+  const value = String(sessionId || "").trim();
   if (!value) {
-    throw new Error("contextId is required for context skills state");
+    throw new Error("sessionId is required for session skills state");
   }
   return value;
 }
 
 /**
- * 获取或创建 context 技能状态。
+ * 获取或创建 session 技能状态。
  */
-function getOrCreateState(contextId: string): ContextSkillStateInternal {
-  const key = normalizeContextId(contextId);
-  const existing = contextSkillStateStore.get(key);
+function getOrCreateState(sessionId: string): SessionSkillStateInternal {
+  const key = normalizeSessionId(sessionId);
+  const existing = sessionSkillStateStore.get(key);
   if (existing) return existing;
 
-  const created: ContextSkillStateInternal = {
+  const created: SessionSkillStateInternal = {
     allSkillsById: new Map(),
     updatedAt: Date.now(),
   };
-  contextSkillStateStore.set(key, created);
+  sessionSkillStateStore.set(key, created);
   return created;
 }
 
@@ -50,8 +50,8 @@ function getOrCreateState(contextId: string): ContextSkillStateInternal {
  * 算法（中文）
  * - 以 id 归一化后整体替换，避免残留脏状态。
  */
-export function setContextAvailableSkills(contextId: string, skills: ClaudeSkill[]): void {
-  const state = getOrCreateState(contextId);
+export function setSessionAvailableSkills(sessionId: string, skills: ClaudeSkill[]): void {
+  const state = getOrCreateState(sessionId);
   const next = new Map<string, ClaudeSkill>();
 
   for (const skill of Array.isArray(skills) ? skills : []) {
@@ -67,20 +67,20 @@ export function setContextAvailableSkills(contextId: string, skills: ClaudeSkill
 /**
  * 获取会话技能状态快照。
  */
-export function getContextSkillState(contextId: string): ContextSkillStateSnapshot {
-  const key = normalizeContextId(contextId);
-  const state = contextSkillStateStore.get(key);
+export function getSessionSkillState(sessionId: string): SessionSkillStateSnapshot {
+  const key = normalizeSessionId(sessionId);
+  const state = sessionSkillStateStore.get(key);
 
   if (!state) {
     return {
-      contextId: key,
+      sessionId: key,
       allSkills: [],
       updatedAt: 0,
     };
   }
 
   return {
-    contextId: key,
+    sessionId: key,
     allSkills: Array.from(state.allSkillsById.values()),
     updatedAt: state.updatedAt,
   };
@@ -89,7 +89,7 @@ export function getContextSkillState(contextId: string): ContextSkillStateSnapsh
 /**
  * 清理会话技能状态。
  */
-export function clearContextSkillState(contextId: string): void {
-  const key = normalizeContextId(contextId);
-  contextSkillStateStore.delete(key);
+export function clearSessionSkillState(sessionId: string): void {
+  const key = normalizeSessionId(sessionId);
+  sessionSkillStateStore.delete(key);
 }

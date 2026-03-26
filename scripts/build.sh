@@ -33,15 +33,23 @@ console.log(`Patched version: ${version} -> ${pkg.version}`);
 NODE
 
 # 关键点（中文）：仓库级 build 顺序固定为：
-# 1) 先构建 console-ui（输出到 packages/downcity/public）
-# 2) 再构建 downcity package（tsc + copy assets）
+# 1) 先构建 @downcity/ui，保证 workspace 消费方拿到最新 dist
+# 2) 再构建 homepage
+# 3) 再构建 console-ui（输出到 packages/downcity/public）
+# 4) 最后构建 downcity package（tsc + copy assets）
 if command -v bun >/dev/null 2>&1; then
+  (cd "$ROOT_DIR/packages/downcity-ui" && bun run build)
+  (cd "$ROOT_DIR/homepage" && bun run build)
   (cd "$ROOT_DIR/console-ui" && bun run build)
   (cd "$ROOT_DIR/packages/downcity" && bun run build)
 elif command -v pnpm >/dev/null 2>&1; then
+  pnpm -C "$ROOT_DIR/packages/downcity-ui" build
+  pnpm -C "$ROOT_DIR/homepage" build
   pnpm -C "$ROOT_DIR/console-ui" build
   pnpm -C "$ROOT_DIR/packages/downcity" build
 else
+  npm --prefix "$ROOT_DIR/packages/downcity-ui" run build
+  npm --prefix "$ROOT_DIR/homepage" run build
   npm --prefix "$ROOT_DIR/console-ui" run build
   npm --prefix "$ROOT_DIR/packages/downcity" run build
 fi

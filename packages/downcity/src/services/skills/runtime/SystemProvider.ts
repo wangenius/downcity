@@ -11,11 +11,11 @@ import { requestContext } from "@agent/context/manager/RequestContext.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
-import { setContextAvailableSkills } from "./Store.js";
+import { setSessionAvailableSkills } from "./Store.js";
 
-function getCurrentContextId(): string {
+function getCurrentSessionId(): string {
   const request = requestContext.getStore();
-  return String(request?.contextId || "").trim();
+  return String(request?.sessionId || "").trim();
 }
 
 /**
@@ -23,20 +23,20 @@ function getCurrentContextId(): string {
  *
  * 算法流程（中文）
  * 1) 扫描可用 skills
- * 2) 更新 context 的可用技能快照（仅用于观察态）
+ * 2) 更新 session 的可用技能快照（仅用于观察态）
  * 3) 输出 skills overview 文本
  */
 export async function buildSkillsSystemText(
   runtime: ServiceRuntime,
 ): Promise<string> {
-  const contextId = getCurrentContextId();
+  const sessionId = getCurrentSessionId();
   const discoveredSkills = discoverClaudeSkillsSync(
     runtime.rootPath,
     runtime.config,
   );
 
-  if (contextId) {
-    setContextAvailableSkills(contextId, discoveredSkills);
+  if (sessionId) {
+    setSessionAvailableSkills(sessionId, discoveredSkills);
   }
 
   return renderClaudeSkillsPromptSection(

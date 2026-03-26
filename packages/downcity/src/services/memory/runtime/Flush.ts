@@ -45,14 +45,14 @@ export async function flushMemory(
   runtime: ServiceRuntime,
   payload: MemoryFlushPayload,
 ): Promise<MemoryFlushResponse> {
-  const contextId = String(payload.contextId || "").trim();
-  if (!contextId) {
-    throw new Error("contextId is required");
+  const sessionId = String(payload.sessionId || "").trim();
+  if (!sessionId) {
+    throw new Error("sessionId is required");
   }
   const maxMessages = Number.isFinite(payload.maxMessages)
     ? Math.max(1, Math.floor(payload.maxMessages as number))
     : 30;
-  const persistor = runtime.context.getPersistor(contextId);
+  const persistor = runtime.session.getPersistor(sessionId);
   const total = await persistor.size();
   const start = Math.max(0, total - maxMessages);
   const messages = await persistor.slice(start, total);
@@ -64,7 +64,7 @@ export async function flushMemory(
       ? lines.join("\n\n")
       : "本次 flush 未找到可写入的用户/助手文本内容。";
   const content = [
-    `Flush Context: ${contextId}`,
+    `Flush Session: ${sessionId}`,
     `Window: ${start}-${Math.max(start, total - 1)}`,
     "",
     summary,
@@ -79,4 +79,3 @@ export async function flushMemory(
     writtenChars: saved.writtenChars,
   };
 }
-

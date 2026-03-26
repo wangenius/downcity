@@ -11,7 +11,7 @@ description: 用最直白的方式说明 Downcity 为什么需要 Memory、Memor
 
 1. 为什么一定要有 Memory
 2. Memory 到底在系统里管什么
-3. 它和 `ContextAgent`、`memory service`、`memoryAgent`、`LLM` 分别是什么关系
+3. 它和 `SessionAgent`、`memory service`、`memoryAgent`、`LLM` 分别是什么关系
 4. 理想状态下，Memory 最终应该长什么样
 
 说明：
@@ -36,8 +36,7 @@ description: 用最直白的方式说明 Downcity 为什么需要 Memory、Memor
 
 ### 第三句：Memory 不是另一个主 Agent
 
-- Downcity 当前真正的主执行体在代码里叫 `ContextAgent`
-- 但从语义上更接近 `SessionAgent`
+- Downcity 当前真正的主执行体就是 `SessionAgent`
 - Memory 的正确位置是一个长期状态系统，由 `memory service` 承载
 
 ## 为什么一定要有 Memory
@@ -110,9 +109,9 @@ flowchart LR
 
 | 角色 | 真正职责 | 不负责什么 |
 | --- | --- | --- |
-| `ContextAgent` | 执行当前这一步，回答问题，调用工具，推进任务；语义上更接近 `SessionAgent` | 不负责长期整理所有记忆 |
+| `SessionAgent` | 执行当前这一步，回答问题，调用工具，推进任务 | 不负责长期整理所有记忆 |
 | `memory service` | 承载 Memory 的读写、检索、整理、投影 | 不是主对话 Agent |
-| `memoryAgent` | `memory service` 内部的后台整理角色 | 不是和 `ContextAgent` 平级的第二主 Agent |
+| `memoryAgent` | `memory service` 内部的后台整理角色 | 不是和 `SessionAgent` 平级的第二主 Agent |
 | `LLM` | 在需要时参与推理、归纳、改写 | 不是 Memory 本身 |
 
 ## 最重要的边界
@@ -134,8 +133,8 @@ Memory 是从历史里筛出来、以后还要继续用的部分。
 
 主循环仍然是：
 
-- `ContextAgent` 收到输入
-- `ContextAgent` 推进当前执行
+- `SessionAgent` 收到输入
+- `SessionAgent` 推进当前执行
 
 Memory 主要改变：
 
@@ -210,7 +209,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  Q["当前请求"] --> CA["ContextAgent"]
+  Q["当前请求"] --> CA["SessionAgent"]
   CA --> R["Recall 少量 Memory"]
   R --> CA
   CA --> OUT["当前回答 / 当前动作"]
@@ -260,7 +259,7 @@ flowchart LR
 
 我理想中的 Downcity Memory，有这 6 个特征：
 
-1. `ContextAgent` 仍然是唯一主执行体
+1. `SessionAgent` 仍然是唯一主执行体
 2. `memory service` 是 Memory 的唯一宿主
 3. `memoryAgent` 只是 service 内部的后台整理角色
 4. 热路径轻，冷路径重

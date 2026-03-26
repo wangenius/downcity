@@ -45,7 +45,7 @@ Downcity 现在支持为任意 service action 追加 one-shot 调度参数：
 
 ```bash
 city chat send --chat-key ctx_xxx --text "今晚提醒你" --time "2026-03-25T21:00:00+08:00"
-city memory flush --context-id telegram-chat-123 --delay 600000
+city memory flush --session-id telegram-chat-123 --delay 600000
 ```
 
 2. HTTP action API
@@ -86,7 +86,7 @@ city chat send --chat-key ctx_xxx --text "10 秒后发" --delay 10000
 
 ```bash
 city chat send --chat-key ctx_xxx --text "今晚九点发" --time "2026-03-25T21:00:00+08:00"
-city memory flush --context-id telegram-chat-123 --time 1774443600
+city memory flush --session-id telegram-chat-123 --time 1774443600
 ```
 
 注意：
@@ -160,7 +160,7 @@ city chat send \
 
 ```bash
 city memory flush \
-  --context-id telegram-chat-123 \
+  --session-id telegram-chat-123 \
   --time "2026-03-25T23:00:00+08:00"
 ```
 

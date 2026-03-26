@@ -1,6 +1,6 @@
 ---
 title: memoryAgent 工作逻辑
-description: 解释 memoryAgent 在 Downcity 里的真实定位、职责、触发方式、工作节奏和与 ContextAgent 的关系
+description: 解释 memoryAgent 在 Downcity 里的真实定位、职责、触发方式、工作节奏和与 SessionAgent 的关系
 ---
 
 # memoryAgent 工作逻辑
@@ -27,11 +27,11 @@ memoryAgent 到底是什么，它到底怎么工作？
 
 先把几个常见误解排除掉。
 
-### 它不是和 `ContextAgent` 平级的主 Agent
+### 它不是和 `SessionAgent` 平级的主 Agent
 
 主执行体仍然是：
 
-- `ContextAgent`
+- `SessionAgent`
 
 ### 它不是一个必须长期常驻对话的角色
 
@@ -53,24 +53,24 @@ Memory 是状态系统。
 
 | 角色 | 主要目标 | 时间尺度 |
 | --- | --- | --- |
-| `ContextAgent` | 把当前这一步做好 | 秒级 |
+| `SessionAgent` | 把当前这一步做好 | 秒级 |
 | `memoryAgent` | 把过去整理成长期状态 | 分钟、小时、天 |
 
 一句话：
 
 ```text
-ContextAgent 负责现在，memoryAgent 负责时间。
+SessionAgent 负责现在，memoryAgent 负责时间。
 ```
 
 ## memoryAgent 在系统里的位置
 
 ```mermaid
 flowchart LR
-  CA["ContextAgent"]
+  CA["SessionAgent"]
   MS["memory service"]
   MA["memoryAgent"]
   CORE["Scratchpad / Journal / Canon"]
-  MODEL["runtime.context.model"]
+  MODEL["runtime.session.model"]
 
   CA --> MS
   MS --> CORE
@@ -169,7 +169,7 @@ flowchart LR
 例如：
 
 - `Journal` 新增很多条
-- 某个 `contextId` 长时间活跃
+- 某个 `Session` 长时间活跃
 - 某一类候选记忆积累到一定量
 
 ### 3. 手动触发
@@ -187,7 +187,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  DAY["白天<br/>ContextAgent 持续执行"] --> CAP["memory service 轻量 capture"]
+  DAY["白天<br/>SessionAgent 持续执行"] --> CAP["memory service 轻量 capture"]
   CAP --> NIGHT["夜里 / 空闲时"]
   NIGHT --> MA["memoryAgent 整理 Journal / Canon"]
   MA --> VIEW["更新 Projection 与索引"]
@@ -289,16 +289,16 @@ flowchart TD
 - 规则先过一遍
 - 模型只处理真正复杂的部分
 
-## 它和 `ContextAgent` 到底怎么协作
+## 它和 `SessionAgent` 到底怎么协作
 
 最简单的理解方式是：
 
-- `ContextAgent` 产生日志
+- `SessionAgent` 产生日志
 - `memoryAgent` 整理日志
 
 ```mermaid
 sequenceDiagram
-  participant C as ContextAgent
+  participant C as SessionAgent
   participant M as memory service
   participant A as memoryAgent
   participant Core as Memory Core

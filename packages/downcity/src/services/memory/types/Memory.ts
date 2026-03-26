@@ -154,7 +154,7 @@ export interface MemoryStorePayload {
   /**
    * 目标会话 ID（`working` 目标必填）。
    */
-  contextId?: string;
+  sessionId?: string;
 }
 
 /**
@@ -214,7 +214,7 @@ export interface MemoryFlushPayload {
   /**
    * 目标会话 ID。
    */
-  contextId: string;
+  sessionId: string;
   /**
    * 可选最大提取消息条数。
    */
@@ -339,4 +339,3 @@ export type MemoryActionPayload =
   | MemoryIndexPayload
   | MemoryFlushPayload
   | Record<string, JsonValue>;
-

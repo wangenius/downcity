@@ -67,35 +67,35 @@ export type ServicePersistor = {
 };
 
 /**
- * 会话 Agent 端口。
+ * Session Agent 端口。
  */
-export type ServiceContextAgent = {
+export type ServiceSessionAgent = {
   run(params: AgentRunInput): Promise<AgentResult>;
 };
 
 /**
- * service 会话能力。
+ * service Session 能力。
  */
-export type ServiceContext = {
-  getAgent(contextId: string): ServiceContextAgent;
-  getPersistor(contextId: string): ServicePersistor;
+export type ServiceSession = {
+  getAgent(sessionId: string): ServiceSessionAgent;
+  getPersistor(sessionId: string): ServicePersistor;
   run(params: {
-    contextId: string;
+    sessionId: string;
     query: string;
     onStepCallback?: () => Promise<ShipContextUserMessageV1[]>;
     onAssistantStepCallback?: AgentAssistantStepCallback;
   }): Promise<AgentResult>;
-  clearAgent(contextId?: string): void;
-  afterContextUpdatedAsync(contextId: string): Promise<void>;
+  clearAgent(sessionId?: string): void;
+  afterSessionUpdatedAsync(sessionId: string): Promise<void>;
   appendUserMessage(params: {
-    contextId: string;
+    sessionId: string;
     message?: ContextMessageV1 | null;
     text?: string;
     requestId?: string;
     extra?: ContextMetadataV1["extra"];
   }): Promise<void>;
   appendAssistantMessage(params: {
-    contextId: string;
+    sessionId: string;
     message?: ContextMessageV1 | null;
     fallbackText?: string;
     requestId?: string;
@@ -143,9 +143,13 @@ export type ServiceRuntime = {
   systems: string[];
 
   /**
-   * 会话能力入口。
+   * Session 能力入口。
+   *
+   * 关键点（中文）
+   * - 对 service 暴露的会话主轴统一命名为 `session`。
+   * - `sessionId` 是外部语义；当前内部仍映射到既有 `contextId` 存储体系。
    */
-  context: ServiceContext;
+  session: ServiceSession;
 
   /**
    * 跨 service action 调用入口。

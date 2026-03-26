@@ -213,9 +213,12 @@ export interface PluginRuntime extends AssetRuntimeLike {
    */
   plugins: PluginPort;
   /**
-   * 运行时上下文对象（插件可按需窄化）。
+   * 运行时 Session 对象（插件可按需窄化）。
+   *
+   * 关键点（中文）
+   * - 第一阶段与 ServiceRuntime 对齐，统一改为 `session` 语义。
    */
-  context: unknown;
+  session: unknown;
 }
 
 /**

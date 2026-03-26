@@ -46,7 +46,7 @@ function isWithin(parentPath: string, childPath: string): boolean {
 function resolveStoreTargetPath(
   runtime: ServiceRuntime,
   target: MemorySourceType,
-  contextId?: string,
+  sessionId?: string,
 ): { absPath: string; relPath: string } {
   if (target === "longterm") {
     const absPath = getShipMemoryLongTermPath(runtime.rootPath);
@@ -57,9 +57,9 @@ function resolveStoreTargetPath(
     const absPath = getShipMemoryDailyPath(runtime.rootPath, date);
     return { absPath, relPath: toRelPath(runtime.rootPath, absPath) };
   }
-  const key = String(contextId || "").trim();
+  const key = String(sessionId || "").trim();
   if (!key) {
-    throw new Error("contextId is required for working memory");
+    throw new Error("sessionId is required for working memory");
   }
   const absPath = path.join(
     getShipContextDirPath(runtime.rootPath, key),
@@ -97,7 +97,7 @@ export async function storeMemory(
   if (!content) {
     throw new Error("content is required");
   }
-  const resolved = resolveStoreTargetPath(runtime, target, payload.contextId);
+  const resolved = resolveStoreTargetPath(runtime, target, payload.sessionId);
   await fs.mkdir(path.dirname(resolved.absPath), { recursive: true });
   const exists = await fs
     .access(resolved.absPath)
@@ -176,4 +176,3 @@ export async function ensureMemoryDirectories(rootPath: string): Promise<void> {
   const memoryDailyDir = getShipMemoryDailyDirPath(rootPath);
   await fs.mkdir(memoryDailyDir, { recursive: true });
 }
-

@@ -312,7 +312,7 @@ export class ChatQueueWorker {
     if (!this.shouldAppendContextMessage(item)) return;
     if (item.contextPersisted === true) return;
     await this.requireContext().appendUserMessage({
-      contextId: item.contextId,
+      sessionId: item.contextId,
       text: item.text,
       extra: this.buildIngressExtra(item),
     });
@@ -666,7 +666,7 @@ export class ChatQueueWorker {
     let result: AgentResult;
     try {
       result = await serviceContext.run({
-        contextId: runItem.contextId,
+        sessionId: runItem.contextId,
         query: runItem.text,
         onStepCallback,
         onAssistantStepCallback,
@@ -680,7 +680,7 @@ export class ChatQueueWorker {
 
       try {
         await serviceContext.appendAssistantMessage({
-          contextId: runItem.contextId,
+          sessionId: runItem.contextId,
           fallbackText: channelErrorText,
           extra: {
             note: "chat_queue_worker_run_failed",
@@ -709,7 +709,7 @@ export class ChatQueueWorker {
     try {
       if (!hasPersistedAssistantSteps(result.assistantMessage)) {
         await serviceContext.appendAssistantMessage({
-          contextId: runItem.contextId,
+          sessionId: runItem.contextId,
           message: result.assistantMessage,
         });
       }
@@ -718,7 +718,7 @@ export class ChatQueueWorker {
       );
       for (const message of deferredInjectedMessages) {
         await serviceContext.appendUserMessage({
-          contextId: runItem.contextId,
+          sessionId: runItem.contextId,
           message,
         });
       }
@@ -761,12 +761,12 @@ export class ChatQueueWorker {
   }
 
   /**
-   * 读取 context 端口。
+   * 读取 session 端口。
    *
    * 关键点（中文）
    * - 在使用点显式校验，避免隐藏依赖来源。
    */
   private requireContext() {
-    return this.runtime.context;
+    return this.runtime.session;
   }
 }

@@ -21,8 +21,8 @@ city memory <subcommand> [options]
 - `index`
 - `search <query>`
 - `get <memoryPath> [--from <line>] [--lines <count>]`
-- `store --content <text> [--target <longterm|daily|working>] [--context-id <contextId>]`
-- `flush --context-id <contextId> [--max-messages <count>]`
+- `store --content <text> [--target <longterm|daily|working>] [--session-id <sessionId>]`
+- `flush --session-id <sessionId> [--max-messages <count>]`
 
 ## 示例
 
@@ -32,8 +32,8 @@ city memory index --force
 city memory search "release decision"
 city memory get .downcity/memory/MEMORY.md --from 10 --lines 20
 city memory store --target longterm --content "用户偏好简洁的发布说明。"
-city memory flush --context-id telegram-chat-123 --max-messages 40
-city memory flush --context-id telegram-chat-123 --time "2026-03-25T23:00:00+08:00"
+city memory flush --session-id telegram-chat-123 --max-messages 40
+city memory flush --session-id telegram-chat-123 --time "2026-03-25T23:00:00+08:00"
 ```
 
 ## 说明
@@ -63,7 +63,7 @@ $ city memory search "release decision"
 ```
 
 ```text
-$ city memory flush --context-id <contextId> --max-messages 40
+$ city memory flush --session-id <sessionId> --max-messages 40
 {
   "success": true,
   "data": {

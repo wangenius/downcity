@@ -3,6 +3,19 @@
   "version": "0.1.0",
   "description": "Downcity UI SDK for React and Tailwind CSS applications.",
   "type": "module",
+  "license": "MIT",
+  "homepage": "https://downcity.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangenius/downcity.git",
+    "directory": "packages/downcity-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/wangenius/downcity/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "sideEffects": [
     "./src/styles.css"
   ],
@@ -23,7 +36,8 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -38,9 +52,18 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
-  }
+  },
+  "keywords": [
+    "downcity",
+    "ui",
+    "react",
+    "tailwind",
+    "agent"
+  ]
 }

@@ -263,7 +263,7 @@ async function emitChatCompletionEvent(
 
   await appendExecContextMessage({
     context: runtime,
-    contextId: ownerContextId,
+    sessionId: ownerContextId,
     text,
     extra: {
       note: "shell_session_auto_notify",

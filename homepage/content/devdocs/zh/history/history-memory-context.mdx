@@ -79,12 +79,12 @@ flowchart LR
 
 - `contextId`
 - `.downcity/context/<contextId>/messages/messages.jsonl`
-- `ContextAgent` / persistor / compact / archive
+- `SessionAgent` / persistor / compact / archive
 
 说明：
 
-- 今天代码里还叫 `context`
-- 但语义上更像 `session`
+- 这套目录和内部标识还沿用 `contextId`
+- 但语义上已经明确收敛为 `session`
 
 ### Memory
 

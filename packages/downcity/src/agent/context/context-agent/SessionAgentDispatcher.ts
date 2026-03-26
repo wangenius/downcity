@@ -1,9 +1,9 @@
 /**
- * ContextAgentDispatcher：ContextAgent 分流与缓存管理器。
+ * SessionAgentDispatcher：SessionAgent 分流与缓存管理器。
  *
  * 关键点（中文）
- * - 管理 `contextId -> ContextAgent/Persistor` 映射。
- * - 把“创建哪个 agent、复用哪个 persistor”的职责从 ContextManager 中移出。
+ * - 管理 `contextId -> SessionAgent/Persistor` 映射。
+ * - 把“创建哪个 agent、复用哪个 persistor”的职责从 SessionManager 中移出。
  * - 只负责分流与实例生命周期，不负责 request scope 绑定。
  */
 
@@ -12,12 +12,12 @@ import type { Logger } from "@utils/logger/Logger.js";
 import { PersistorComponent } from "@agent/components/PersistorComponent.js";
 import { CompactorComponent } from "@agent/components/CompactorComponent.js";
 import { PrompterComponent } from "@agent/components/PrompterComponent.js";
-import { ContextAgent } from "@agent/context/context-agent/ContextAgent.js";
+import { SessionAgent } from "@agent/context/context-agent/SessionAgent.js";
 
 /**
- * ContextAgentDispatcher 构造参数。
+ * SessionAgentDispatcher 构造参数。
  */
-type ContextAgentDispatcherOptions = {
+type SessionAgentDispatcherOptions = {
   /**
    * 当前模型实例。
    */
@@ -50,20 +50,20 @@ type ContextAgentDispatcherOptions = {
 };
 
 /**
- * ContextAgentDispatcher 默认实现。
+ * SessionAgentDispatcher 默认实现。
  */
-export class ContextAgentDispatcher {
+export class SessionAgentDispatcher {
   private readonly model: LanguageModel;
   private readonly logger: Logger;
-  private readonly createPersistor: ContextAgentDispatcherOptions["createPersistor"];
+  private readonly createPersistor: SessionAgentDispatcherOptions["createPersistor"];
   private readonly compactor: CompactorComponent;
   private readonly system: PrompterComponent;
-  private readonly getTools: ContextAgentDispatcherOptions["getTools"];
-  private readonly agentsByContextId: Map<string, ContextAgent> = new Map();
+  private readonly getTools: SessionAgentDispatcherOptions["getTools"];
+  private readonly agentsByContextId: Map<string, SessionAgent> = new Map();
   private readonly persistorsByContextId: Map<string, PersistorComponent> =
     new Map();
 
-  constructor(options: ContextAgentDispatcherOptions) {
+  constructor(options: SessionAgentDispatcherOptions) {
     this.model = options.model;
     this.logger = options.logger;
     this.createPersistor = options.createPersistor;
@@ -79,7 +79,7 @@ export class ContextAgentDispatcher {
     const key = String(contextId || "").trim();
     if (!key) {
       throw new Error(
-        "ContextAgentDispatcher.getPersistor requires a non-empty contextId",
+        "SessionAgentDispatcher.getPersistor requires a non-empty contextId",
       );
     }
 
@@ -91,19 +91,19 @@ export class ContextAgentDispatcher {
   }
 
   /**
-   * 获取（或创建）ContextAgent。
+   * 获取（或创建）SessionAgent。
    */
-  getAgent(contextId: string): ContextAgent {
+  getAgent(contextId: string): SessionAgent {
     const key = String(contextId || "").trim();
     if (!key) {
       throw new Error(
-        "ContextAgentDispatcher.getAgent requires a non-empty contextId",
+        "SessionAgentDispatcher.getAgent requires a non-empty contextId",
       );
     }
 
     const existing = this.agentsByContextId.get(key);
     if (existing) return existing;
-    const created = new ContextAgent({
+    const created = new SessionAgent({
       model: this.model,
       logger: this.logger,
       persistor: this.getPersistor(key),
@@ -116,7 +116,7 @@ export class ContextAgentDispatcher {
   }
 
   /**
-   * 清理 ContextAgent 缓存。
+   * 清理 SessionAgent 缓存。
    */
   clearAgent(contextId?: string): void {
     if (typeof contextId === "string" && contextId.trim()) {

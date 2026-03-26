@@ -34,12 +34,12 @@ export function buildExecIngressExtra(extra?: JsonObject): JsonObject {
  */
 export async function appendExecContextMessage(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   text: string;
   extra?: JsonObject;
 }): Promise<void> {
-  await params.context.context.appendUserMessage({
-    contextId: params.contextId,
+  await params.context.session.appendUserMessage({
+    sessionId: params.sessionId,
     text: params.text,
     extra: buildExecIngressExtra(params.extra),
   });
@@ -54,7 +54,7 @@ export async function appendExecContextMessage(params: {
  */
 export async function appendExecIngress(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
   text: string;
@@ -68,7 +68,7 @@ export async function appendExecIngress(params: {
   const execExtra = buildExecIngressExtra(params.extra);
   await appendInboundChatHistory({
     context: params.context,
-    contextId: params.contextId,
+    contextId: params.sessionId,
     channel: params.channel,
     chatId: params.chatId,
     ingressKind: "exec",
@@ -82,7 +82,7 @@ export async function appendExecIngress(params: {
   });
   await appendExecContextMessage({
     context: params.context,
-    contextId: params.contextId,
+    sessionId: params.sessionId,
     text: params.text,
     extra: execExtra,
   });

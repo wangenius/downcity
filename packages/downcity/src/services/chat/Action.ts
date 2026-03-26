@@ -469,11 +469,11 @@ export async function deleteChatByChatKey(params: {
 
   const result = await deleteChatContextById({
     context: params.context,
-    contextId,
+    sessionId: contextId,
   });
   return {
     success: result.success,
-    contextId: result.contextId,
+    contextId: result.sessionId,
     deleted: result.deleted,
     removedMeta: result.removedMeta,
     removedChatDir: result.removedChatDir,

@@ -1,10 +1,10 @@
 /**
- * ContextManager：会话生命周期编排器（main 层）。
+ * SessionManager：会话生命周期编排器（main 层）。
  *
  * 关键职责（中文）
  * - 负责 request scope 绑定与统一运行入口。
  * - 负责用户消息与助手消息入库。
- * - 通过 `ContextAgentDispatcher` 访问 ContextAgent/Persistor。
+ * - 通过 `SessionAgentDispatcher` 访问 SessionAgent/Persistor。
  */
 
 import { withRequestContext } from "@agent/context/manager/RequestContext.js";
@@ -15,13 +15,13 @@ import type {
 } from "@agent/types/ContextMessage.js";
 import type { AgentResult } from "@agent/types/Agent.js";
 import type { JsonObject } from "@/types/Json.js";
-import { ContextAgentDispatcher } from "@agent/context/context-agent/ContextAgentDispatcher.js";
+import { SessionAgentDispatcher } from "@agent/context/context-agent/SessionAgentDispatcher.js";
 
 /**
- * ContextManager：统一会话运行管理容器。
+ * SessionManager：统一会话运行管理容器。
  */
-export class ContextManager {
-  private readonly dispatcher: ContextAgentDispatcher;
+export class SessionManager {
+  private readonly dispatcher: SessionAgentDispatcher;
   private readonly runAfterContextUpdated?: (contextId: string) => Promise<void>;
   private readonly executingContextIds: Set<string> = new Set();
 
@@ -29,7 +29,7 @@ export class ContextManager {
    * 构造函数：装配组件。
    */
   constructor(params: {
-    dispatcher: ContextAgentDispatcher;
+    dispatcher: SessionAgentDispatcher;
     runAfterContextUpdated?: (contextId: string) => Promise<void>;
   }) {
     this.dispatcher = params.dispatcher;
@@ -44,17 +44,17 @@ export class ContextManager {
   }
 
   /**
-   * 获取（或创建）ContextAgent。
+   * 获取（或创建）SessionAgent。
    */
   getAgent(contextId: string) {
     return this.dispatcher.getAgent(contextId);
   }
 
   /**
-   * 执行一次 Context run（统一调用链）。
+   * 执行一次 Session run（统一调用链）。
    *
    * 关键点（中文）
-   * - 收敛 `dispatcher.getAgent + withRequestContext + contextAgent.run`。
+   * - 收敛 `dispatcher.getAgent + withRequestContext + sessionAgent.run`。
    * - 调用方只传 `contextId/query` 与可选运行态覆盖参数。
    */
   async run(params: {
@@ -64,7 +64,7 @@ export class ContextManager {
   }): Promise<AgentResult> {
     const contextId = String(params.contextId || "").trim();
     if (!contextId) {
-      throw new Error("ContextManager.run requires a non-empty contextId");
+      throw new Error("SessionManager.run requires a non-empty contextId");
     }
     const query = String(params.query || "").trim();
     const agent = this.dispatcher.getAgent(contextId);
@@ -158,7 +158,7 @@ export class ContextManager {
   }
 
   /**
-   * 清理 ContextAgent 缓存。
+   * 清理 SessionAgent 缓存。
    */
   clearAgent(contextId?: string): void {
     this.dispatcher.clearAgent(contextId);

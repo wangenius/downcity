@@ -1,6 +1,6 @@
 ---
 title: Session 总览
-description: 重新定义 Downcity 里的 Session，说明 sessionId、SessionAgent、messages.jsonl、RequestContext 与 run 的关系
+description: 重新定义 Downcity 里的 Session，说明 contextId、SessionAgent、messages.jsonl、RequestContext 与 run 的关系
 ---
 
 # Session 总览
@@ -20,7 +20,7 @@ description: 重新定义 Downcity 里的 Session，说明 sessionId、SessionAg
 也就是说，当前代码里的：
 
 - `contextId`
-- `ContextAgent`
+- `SessionAgent`
 - `messages.jsonl`
 - persistor
 - compact / archive
@@ -59,9 +59,9 @@ Session 是会话本体，Context 只是这次送给模型的输入。
 
 - `sessionId`
 
-### 2. `ContextAgent`
+### 2. `SessionAgent`
 
-今天代码里还叫 `ContextAgent`，但语义上更像：
+现在代码里的主执行装配器已经改名为：
 
 - `SessionAgent`
 

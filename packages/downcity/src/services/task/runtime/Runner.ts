@@ -237,7 +237,7 @@ async function appendTaskRoundUserMessage(params: {
 }
 
 /**
- * 构建 task 专用 Agent 运行时（独立于 ContextManager 的 Agent 缓存）。
+ * 构建 task 专用 Agent 运行时（独立于 SessionManager 的 Agent 缓存）。
  *
  * 关键点（中文）
  * - task 场景使用独立 Agent 实例，不复用 `context.run/getAgent`。
@@ -317,7 +317,7 @@ function createTaskAgentRuntime(params: {
         getTools: () => shellTools,
       });
       const created = new Agent({
-        model: runtime.context.model,
+        model: runtime.session.model,
         logger: runtime.logger,
         persistor,
         compactor,

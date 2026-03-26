@@ -65,7 +65,7 @@ export async function executeByContextId(params: {
     try {
       await appendExecIngress({
         context: params.serviceRuntime,
-        contextId,
+        sessionId: contextId,
         channel: dispatchTarget.channel,
         chatId: dispatchTarget.chatId,
         text: queuedText,
@@ -107,12 +107,12 @@ export async function executeByContextId(params: {
     };
   }
 
-  await params.runtime.contextManager.appendUserMessage({
+  await params.runtime.sessionManager.appendUserMessage({
     contextId,
     text: executeInput,
   });
 
-  const result = await params.runtime.contextManager.run({
+  const result = await params.runtime.sessionManager.run({
     contextId,
     query: executeInput,
   });
@@ -120,7 +120,7 @@ export async function executeByContextId(params: {
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
   try {
     if (!hasPersistedAssistantSteps(result.assistantMessage)) {
-      await params.runtime.contextManager.appendAssistantMessage({
+      await params.runtime.sessionManager.appendAssistantMessage({
         contextId,
         message: result.assistantMessage,
         fallbackText: userVisible,
@@ -134,7 +134,7 @@ export async function executeByContextId(params: {
       contextId,
     );
     for (const message of deferredInjectedMessages) {
-      await params.runtime.contextManager.appendUserMessage({
+      await params.runtime.sessionManager.appendUserMessage({
         contextId,
         message,
       });

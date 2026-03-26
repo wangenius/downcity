@@ -19,21 +19,20 @@ description: 从 packages/downcity 的真实主轴出发，说明 Memory Service
 
 ### 1. 主模型是在 runtime 启动时统一创建的
 
-当前主模型实例在 `packages/downcity/src/agent/context/manager/RuntimeState.ts` 启动阶段创建，并通过 `ServiceRuntime.context.model` 暴露给系统使用。
+当前主模型实例在 `packages/downcity/src/agent/context/manager/RuntimeState.ts` 启动阶段创建，并通过 `ServiceRuntime.session.model` 暴露给系统使用。
 
 这意味着：
 
 - 模型生命周期属于 runtime
 - 不是某个 service 自己偷偷管理一套模型
 
-### 2. 主执行体今天代码里叫 `ContextAgent`
+### 2. 主执行体是 `SessionAgent`
 
-`packages/downcity/src/agent/context/context-agent/ContextAgent.ts` 里的 `ContextAgent`，本质上是当前 `contextId` 下的 Agent 装配器。
+`packages/downcity/src/agent/context/context-agent/SessionAgent.ts` 里的 `SessionAgent`，本质上是当前 `contextId` 下的 Agent 装配器。
 
 说明：
 
-- 从代码命名上它还叫 `ContextAgent`
-- 但从新的文档语义上，它更接近 `SessionAgent`
+- 代码命名和文档语义现在已经统一为 `SessionAgent`
 
 它负责：
 
@@ -51,7 +50,7 @@ description: 从 packages/downcity 的真实主轴出发，说明 Memory Service
 
 而不是：
 
-- 平级于 `ContextAgent` 的另一套长期架构中心
+- 平级于 `SessionAgent` 的另一套长期架构中心
 
 ### 4. service 层是能力编排层
 
@@ -70,7 +69,7 @@ description: 从 packages/downcity 的真实主轴出发，说明 Memory Service
 在当前 package 逻辑里，Memory 的正确位置是：
 
 - `memory service` 是宿主
-- `ContextAgent` 是使用者
+- `SessionAgent` 是使用者
 - `memoryAgent` 是 `memory service` 内部的后台整理角色
 - `LLM` 是被借用的整理能力，不是 Memory 的宿主
 
@@ -80,8 +79,8 @@ description: 从 packages/downcity 的真实主轴出发，说明 Memory Service
 flowchart TD
   RS["RuntimeState<br/>创建共享 model"]
   SR["ServiceRuntime<br/>统一注入 context / invoke / services"]
-  SM["Session Manager<br/>(today still named ContextManager)"]
-  SA["Session Agent<br/>(today still named ContextAgent)"]
+  SM["SessionManager"]
+  SA["SessionAgent"]
   MS["memory service"]
   MA["memoryAgent<br/>maintenance role"]
   CORE["Memory Core<br/>Scratchpad / Journal / Canon"]
@@ -120,7 +119,7 @@ flowchart TD
 
 就是：
 
-- `ContextAgent`
+- `SessionAgent`
 
 它是系统当前面对请求、推进执行的主入口。
 
@@ -283,7 +282,7 @@ flowchart LR
 
 - 怎么查
 - 怎么拿
-- 这次该给 `ContextAgent` 什么 memory pack
+- 这次该给 `SessionAgent` 什么 memory pack
 
 ### 3. Maintenance Loop
 
@@ -308,7 +307,7 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-  participant C as ContextAgent
+  participant C as SessionAgent
   participant M as memory service
   participant R as Recall Facade
   participant Core as Memory Core
@@ -327,13 +326,13 @@ sequenceDiagram
 
 ### 场景二：当前上下文更新了
 
-当前 package 里，`ContextManager.afterContextUpdatedAsync` 已经为 Memory 这样的异步后处理留出了入口。
+当前 package 里，`ServiceRuntime.session.afterSessionUpdatedAsync` 与底层 `SessionManager.afterContextUpdatedAsync` 已经为 Memory 这样的异步后处理留出了入口。
 
 最合理的 V3 行为是：
 
 ```mermaid
 sequenceDiagram
-  participant C as ContextAgent
+  participant C as SessionAgent
   participant M as memory service
   participant S as Scratchpad
   participant J as Journal
@@ -378,10 +377,10 @@ sequenceDiagram
 
 - Memory 是一套状态逻辑
 - `memory service` 是它的宿主
-- `ContextAgent` 和后台维护都通过这个宿主来读写它
+- `SessionAgent` 和后台维护都通过这个宿主来读写它
 
 ## 一句话总结
 
 ```text
-Memory Service 是 Downcity 里负责长期状态的宿主：在线时为 ContextAgent 提供记忆，离线时把零散经验慢慢整理成稳定状态。
+Memory Service 是 Downcity 里负责长期状态的宿主：在线时为 SessionAgent 提供记忆，离线时把零散经验慢慢整理成稳定状态。
 ```

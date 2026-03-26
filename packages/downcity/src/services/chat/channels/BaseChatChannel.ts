@@ -446,7 +446,7 @@ export abstract class BaseChatChannel {
     }
     const deleted = await deleteChatContextById({
       context: this.context,
-      contextId,
+      sessionId: contextId,
     });
     if (!deleted.success) {
       this.logger.warn("Failed to delete chat context by target", {
@@ -715,7 +715,7 @@ export abstract class BaseChatChannel {
 
     await appendExecIngress({
       context: this.context,
-      contextId: chatKey,
+      sessionId: chatKey,
       channel: this.channel,
       chatId: msg.chatId,
       text: queuedText,

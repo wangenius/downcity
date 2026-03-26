@@ -1,11 +1,11 @@
 import { logger as defaultLogger, type Logger } from "@utils/logger/Logger.js";
-import { ContextManager } from "@agent/context/manager/ContextManager.js";
-import { ContextAgentDispatcher } from "@agent/context/context-agent/ContextAgentDispatcher.js";
+import { SessionManager } from "@agent/context/manager/SessionManager.js";
+import { SessionAgentDispatcher } from "@agent/context/context-agent/SessionAgentDispatcher.js";
 import { ChatQueueWorker } from "@services/chat/runtime/ChatQueueWorker.js";
 import { createModel } from "@console/model/CreateModel.js";
 import type {
   ServiceRuntime,
-  ServiceContext,
+  ServiceSession,
   ServiceInvokePort,
 } from "@/console/service/ServiceRuntime.js";
 import {
@@ -58,7 +58,7 @@ import type { LanguageModel } from "ai";
  *
  * 初始化时序（关键节点）
  * - 启动入口先 `setRuntimeStateBase(...)`
- * - 初始化 ContextManager + ChatQueueWorker 后再 `setRuntimeState(...)`
+ * - 初始化 SessionManager + ChatQueueWorker 后再 `setRuntimeState(...)`
  * - 业务模块只调用 `getRuntimeState()`（未 ready 会抛错）
  */
 export type RuntimeStateBase = {
@@ -81,7 +81,7 @@ export type RuntimeStateBase = {
 };
 
 export type RuntimeState = RuntimeStateBase & {
-  contextManager: ContextManager;
+  sessionManager: SessionManager;
 };
 
 let base: RuntimeStateBase | null = null;
@@ -106,7 +106,7 @@ registerBuiltinPlugins({
  * 读取 service 运行时模型（必填）。
  *
  * 关键点（中文）
- * - `ServiceContext.model` 是必需能力；若缺失则视为启动链路异常。
+ * - `ServiceSession.model` 是必需能力；若缺失则视为启动链路异常。
  */
 function requireServiceModel(): LanguageModel {
   if (serviceModel) return serviceModel;
@@ -285,19 +285,19 @@ const pluginPort: PluginPort = {
 };
 
 /**
- * 构建 service context（会话管理 + 模型）。
+ * 构建 service session（会话管理 + 模型）。
  *
  * 关键点（中文）
- * - `context` 字段是 service 侧访问会话与模型能力的唯一入口。
- * - 这里不直接暴露 ContextManager 实例，避免上层依赖具体实现细节。
+ * - `session` 字段是 service 侧访问会话与模型能力的唯一入口。
+ * - 这里不直接暴露 SessionManager 实例，避免上层依赖具体实现细节。
  */
-function buildServiceContext(input: RuntimeState): ServiceContext {
+function buildServiceSession(input: RuntimeState): ServiceSession {
   return {
-    getAgent: (contextId) => input.contextManager.getAgent(contextId),
-    getPersistor: (contextId) => input.contextManager.getPersistor(contextId),
+    getAgent: (sessionId) => input.sessionManager.getAgent(sessionId),
+    getPersistor: (sessionId) => input.sessionManager.getPersistor(sessionId),
     run: (params) =>
-      input.contextManager.run({
-        contextId: params.contextId,
+      input.sessionManager.run({
+        contextId: params.sessionId,
         query: params.query,
         ...(params.onStepCallback || params.onAssistantStepCallback
           ? {
@@ -312,13 +312,25 @@ function buildServiceContext(input: RuntimeState): ServiceContext {
             }
           : {}),
       }),
-    clearAgent: (contextId) => input.contextManager.clearAgent(contextId),
-    afterContextUpdatedAsync: (contextId) =>
-      input.contextManager.afterContextUpdatedAsync(contextId),
+    clearAgent: (sessionId) => input.sessionManager.clearAgent(sessionId),
+    afterSessionUpdatedAsync: (sessionId) =>
+      input.sessionManager.afterContextUpdatedAsync(sessionId),
     appendUserMessage: (params) =>
-      input.contextManager.appendUserMessage(params),
+      input.sessionManager.appendUserMessage({
+        contextId: params.sessionId,
+        message: params.message,
+        text: params.text,
+        requestId: params.requestId,
+        extra: params.extra,
+      }),
     appendAssistantMessage: (params) =>
-      input.contextManager.appendAssistantMessage(params),
+      input.sessionManager.appendAssistantMessage({
+        contextId: params.sessionId,
+        message: params.message,
+        fallbackText: params.fallbackText,
+        requestId: params.requestId,
+        extra: params.extra,
+      }),
     model: requireServiceModel(),
   };
 }
@@ -334,7 +346,7 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
     config: input.config,
     env: input.env,
     systems: input.systems,
-    context: buildServiceContext(input),
+    session: buildServiceSession(input),
     invoke: serviceInvokePort,
     services: serviceInvokePort,
     assets: assetPort,
@@ -407,7 +419,7 @@ export function getRuntimeState(): RuntimeState {
     );
   }
   throw new Error(
-    "Runtime state is not ready yet. Ensure ContextManager is initialized before access.",
+    "Runtime state is not ready yet. Ensure SessionManager is initialized before access.",
   );
 }
 
@@ -418,7 +430,7 @@ export function getRuntimeState(): RuntimeState {
  * 1) 解析 rootPath + 绑定 logger 落盘目录
  * 2) 校验关键文件并确保 `.downcity` 目录结构
  * 3) 加载 dotenv + downcity.json，建立 base runtime state
- * 4) 初始化 ContextManager + ChatQueueWorker，建立 ready runtime state
+ * 4) 初始化 SessionManager + ChatQueueWorker，建立 ready runtime state
  */
 
 export async function initRuntimeState(cwd: string): Promise<void> {
@@ -467,14 +479,14 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   });
 
   // 关键点（中文）：模型实例在 main 启动时创建一次，并注入给 services 复用。
-  // 模型是 ServiceContext 必需能力，初始化失败直接中断启动（fail-fast）。
+  // 模型是 ServiceSession 必需能力，初始化失败直接中断启动（fail-fast）。
   serviceModel = null;
   serviceModel = await createModel({
     config,
     getRequestContext,
   });
 
-  let contextManager: ContextManager;
+  let sessionManager: SessionManager;
   const compactor = new SummaryCompactor({
     keepLastMessages: config.context?.messages?.keepLastMessages,
     maxInputTokensApprox: config.context?.messages?.maxInputTokensApprox,
@@ -488,7 +500,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     getRuntime: () => getServiceRuntimeState(),
     profile: "chat",
   });
-  const dispatcher = new ContextAgentDispatcher({
+  const dispatcher = new SessionAgentDispatcher({
     model: requireServiceModel(),
     logger: defaultLogger,
     createPersistor: (contextId) => {
@@ -519,7 +531,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     system,
     getTools: () => shellTools,
   });
-  contextManager = new ContextManager({
+  sessionManager = new SessionManager({
     dispatcher,
   });
 
@@ -530,7 +542,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     config,
     env: projectEnv,
     systems,
-    contextManager,
+    sessionManager,
   };
   const chatWorkerRuntime: ServiceRuntime = buildServiceRuntime(
     runtimeStateForServices,
@@ -549,7 +561,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     config,
     env: projectEnv,
     systems,
-    contextManager,
+    sessionManager,
   });
   setShellToolRuntime({
     invokeService: (params) => serviceInvokePort.invoke(params),

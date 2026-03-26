@@ -29,32 +29,32 @@ function normalizeContextId(contextId: string): string {
  */
 export async function deleteChatContextById(params: {
   context: ServiceRuntime;
-  contextId: string;
+  sessionId: string;
 }): Promise<{
   success: boolean;
-  contextId: string;
+  sessionId: string;
   deleted: boolean;
   removedMeta: boolean;
   removedChatDir: boolean;
   removedContextDir: boolean;
   error?: string;
 }> {
-  const contextId = normalizeContextId(params.contextId);
+  const contextId = normalizeContextId(params.sessionId);
   if (!contextId) {
     return {
       success: false,
-      contextId: "",
+      sessionId: "",
       deleted: false,
       removedMeta: false,
       removedChatDir: false,
       removedContextDir: false,
-      error: "Missing contextId",
+      error: "Missing sessionId",
     };
   }
 
   try {
     // 关键点（中文）：先停执行，再删文件，避免删除过程中仍有任务写入。
-    params.context.context.clearAgent(contextId);
+    params.context.session.clearAgent(contextId);
     clearChatQueueLane(contextId);
 
     const removedMetaResult = await removeChatMetaByContextId({
@@ -78,7 +78,7 @@ export async function deleteChatContextById(params: {
 
     return {
       success: true,
-      contextId,
+      sessionId: contextId,
       deleted,
       removedMeta: removedMetaResult.removed,
       removedChatDir: hadChatDir,
@@ -87,7 +87,7 @@ export async function deleteChatContextById(params: {
   } catch (error) {
     return {
       success: false,
-      contextId,
+      sessionId: contextId,
       deleted: false,
       removedMeta: false,
       removedChatDir: false,

@@ -1,8 +1,9 @@
 /**
- * ContextAgent：Context 场景运行装配器。
+ * SessionAgent：Session 场景运行装配器。
  *
  * 关键点（中文）
  * - 负责在当前 `contextId` 作用域内装配 Agent 所需核心组件。
+ * - 这里的 `contextId` 仍是现有内部标识，但语义上表示 Session。
  * - 具体 run loop 仍由 `agent/Agent` 执行。
  */
 
@@ -15,7 +16,7 @@ import { PrompterComponent } from "@agent/components/PrompterComponent.js";
 import { RuntimeOrchestrator } from "@agent/context/context-agent/components/RuntimeOrchestrator.js";
 import type { AgentResult, AgentRunInput } from "@agent/types/Agent.js";
 
-type ContextAgentOptions = {
+type SessionAgentOptions = {
   /**
    * 当前模型实例。
    */
@@ -48,12 +49,12 @@ type ContextAgentOptions = {
 };
 
 /**
- * ContextAgent 默认实现。
+ * SessionAgent 默认实现。
  */
-export class ContextAgent {
+export class SessionAgent {
   private readonly agent: Agent;
 
-  constructor(options: ContextAgentOptions) {
+  constructor(options: SessionAgentOptions) {
     this.agent = new Agent({
       model: options.model,
       logger: options.logger,
@@ -68,7 +69,7 @@ export class ContextAgent {
   }
 
   /**
-   * 运行当前 context 的一次请求。
+   * 运行当前 session 的一次请求。
    */
   async run(input: AgentRunInput): Promise<AgentResult> {
     return await this.agent.run(input);

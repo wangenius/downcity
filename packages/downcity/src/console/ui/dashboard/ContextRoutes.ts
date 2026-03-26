@@ -95,7 +95,7 @@ export function registerDashboardContextRoutes(
     try {
       const runtime = params.getRuntimeState();
       const limit = toLimit(c.req.query("limit"));
-      const executingContextIds = new Set(runtime.contextManager.listExecutingContextIds());
+      const executingContextIds = new Set(runtime.sessionManager.listExecutingContextIds());
       const contexts = await listContextSummaries({
         projectRoot: runtime.rootPath,
         serviceRuntime: params.getServiceRuntimeState(),
@@ -166,7 +166,7 @@ export function registerDashboardContextRoutes(
       const messagesDirPath = dirname(messagesPath);
       await fs.remove(messagesDirPath);
       // 关键点（中文）：清理消息文件后，同步清掉内存中的 agent，避免旧上下文继续运行。
-      runtime.contextManager.clearAgent(contextId);
+      runtime.sessionManager.clearAgent(contextId);
 
       return c.json({
         success: true,

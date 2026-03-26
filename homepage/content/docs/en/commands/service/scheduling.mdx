@@ -45,7 +45,7 @@ There are now two user-facing entry points, and both go through the same persist
 
 ```bash
 city chat send --chat-key ctx_xxx --text "remind me tonight" --time "2026-03-25T21:00:00+08:00"
-city memory flush --context-id telegram-chat-123 --delay 600000
+city memory flush --session-id telegram-chat-123 --delay 600000
 ```
 
 2. HTTP action API
@@ -86,7 +86,7 @@ Examples:
 
 ```bash
 city chat send --chat-key ctx_xxx --text "send at 9pm" --time "2026-03-25T21:00:00+08:00"
-city memory flush --context-id telegram-chat-123 --time 1774443600
+city memory flush --session-id telegram-chat-123 --time 1774443600
 ```
 
 Notes:
@@ -160,7 +160,7 @@ city chat send \
 
 ```bash
 city memory flush \
-  --context-id telegram-chat-123 \
+  --session-id telegram-chat-123 \
   --time "2026-03-25T23:00:00+08:00"
 ```
 

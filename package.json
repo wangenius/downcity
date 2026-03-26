@@ -3,22 +3,21 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "workspaces": {
-    "packages": [
-      "console-ui",
-      "homepage",
-      "packages/downcity",
-      "packages/downcity-ui",
-      "examples/*"
-    ]
-  },
+  "workspaces": [
+    "console-ui",
+    "homepage",
+    "packages/downcity",
+    "packages/downcity-ui",
+    "examples/*"
+  ],
   "scripts": {
     "build": "bash ./scripts/build.sh",
     "build:extension": "bash ./scripts/extbuild.sh",
     "ui": "npm --prefix ./console-ui run dev",
     "dev": "cd examples/server-agent && downcity agent start",
     "cli": "bun run examples/cli-interactive/src/index.ts",
-    "publish": "./scripts/publish.sh"
+    "publish": "./scripts/publish.sh",
+    "publish:ui": "./scripts/publish-ui.sh"
   },
   "devDependencies": {
     "@types/bun": "latest"

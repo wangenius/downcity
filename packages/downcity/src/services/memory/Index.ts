@@ -207,7 +207,7 @@ export const memoryService: Service = {
           command
             .requiredOption("--content <text>", "写入内容")
             .option("--target <target>", "写入层（longterm|daily|working）")
-            .option("--context-id <contextId>", "working 目标必填");
+            .option("--session-id <sessionId>", "working 目标必填");
         },
         mapInput({ opts }) {
           const payload: JsonObject = {
@@ -216,8 +216,8 @@ export const memoryService: Service = {
           if (typeof opts.target === "string") {
             payload.target = String(opts.target).trim();
           }
-          if (typeof opts.contextId === "string") {
-            payload.contextId = String(opts.contextId).trim();
+          if (typeof opts.sessionId === "string") {
+            payload.sessionId = String(opts.sessionId).trim();
           }
           return payload;
         },
@@ -237,7 +237,7 @@ export const memoryService: Service = {
             target === "longterm" || target === "daily" || target === "working"
               ? target
               : undefined,
-          contextId: readOptionalString(body, "contextId"),
+          sessionId: readOptionalString(body, "sessionId"),
         });
       },
     },
@@ -246,12 +246,12 @@ export const memoryService: Service = {
         description: "将当前会话最近消息刷写到 daily memory",
         configure(command: Command) {
           command
-            .requiredOption("--context-id <contextId>", "会话 ID")
+            .requiredOption("--session-id <sessionId>", "会话 ID")
             .option("--max-messages <number>", "提取消息窗口", parsePositiveInteger);
         },
         mapInput({ opts }) {
           const payload: JsonObject = {
-            contextId: String(opts.contextId || ""),
+            sessionId: String(opts.sessionId || ""),
           };
           if (typeof opts.maxMessages === "number") {
             payload.maxMessages = opts.maxMessages;
@@ -268,7 +268,7 @@ export const memoryService: Service = {
       async execute(params) {
         const body = readBodyObject(params.payload);
         return await flushMemoryAction(params.context, {
-          contextId: readString(body, "contextId"),
+          sessionId: readString(body, "sessionId"),
           maxMessages: readOptionalNumber(body, "maxMessages"),
         });
       },

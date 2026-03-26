@@ -1,0 +1,71 @@
+name: Publish @downcity/ui to npmjs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/downcity-ui/**"
+      - ".github/workflows/publish-ui.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-downcity-ui
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install package dependencies
+        working-directory: packages/downcity-ui
+        run: npm install --workspaces=false
+
+      - name: Build package
+        working-directory: packages/downcity-ui
+        run: npm run build
+
+      - name: Validate npm token and package ownership
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          WHOAMI="$(npm whoami)"
+          echo "Authenticated npm user: ${WHOAMI}"
+          if npm view @downcity/ui version >/dev/null 2>&1; then
+            npm owner ls @downcity/ui
+            if ! npm owner ls @downcity/ui | awk '{print $1}' | grep -qx "${WHOAMI}"; then
+              echo "NPM_TOKEN user '${WHOAMI}' is not an owner of '@downcity/ui'."
+              exit 1
+            fi
+          else
+            echo "@downcity/ui is not published yet. Skipping owner check for first publish."
+          fi
+
+      - name: Check version and publish
+        working-directory: packages/downcity-ui
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p 'require("./package.json").version')"
+          if npm view @downcity/ui versions --json >/tmp/downcity-ui-versions.json 2>/dev/null; then
+            if grep -q "\"${VERSION}\"" /tmp/downcity-ui-versions.json; then
+              echo "Version ${VERSION} already exists, skipping publish"
+              exit 0
+            fi
+          else
+            echo "@downcity/ui has no published versions yet. Continuing with first publish."
+          fi
+          npm publish --access public

@@ -1,0 +1,10 @@
+{
+  "title": "Memory",
+  "pages": [
+    "overview",
+    "philosophy",
+    "framework",
+    "memory-agent",
+    "v3-design"
+  ]
+}

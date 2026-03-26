@@ -120,6 +120,51 @@ export interface ConsoleUiAgentsResponse {
 }
 
 /**
+ * 目录探测结果。
+ */
+export interface ConsoleUiAgentDirectoryInspection {
+  /**
+   * 探测的项目绝对路径。
+   */
+  projectRoot: string;
+
+  /**
+   * 该目录是否已满足最小 agent 初始化条件。
+   */
+  initialized: boolean;
+
+  /**
+   * `downcity.json` 是否存在。
+   */
+  hasShipJson: boolean;
+
+  /**
+   * `PROFILE.md` 是否存在。
+   */
+  hasProfileMd: boolean;
+
+  /**
+   * 该目录是否已出现在 console registry 中。
+   */
+  knownAgent: boolean;
+
+  /**
+   * 若已登记，当前 daemon 是否运行中。
+   */
+  running: boolean;
+
+  /**
+   * 展示名称（优先 downcity.json.name，回退目录名）。
+   */
+  displayName: string;
+
+  /**
+   * 当前读取到的主模型 ID（若存在）。
+   */
+  primaryModelId?: string;
+}
+
+/**
  * Console UI 后台进程元数据。
  */
 export interface ConsoleUiRuntimeMeta {

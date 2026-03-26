@@ -2,9 +2,9 @@
  * Global 作用域的 agent 管理页。
  *
  * 关键点（中文）
- * - 在同一列表中统一承载“创建 / 启动 / 初始化并启动 / 重启 / 停止”。
- * - 初始化动作只在用户显式触发时执行，避免误覆盖现有项目配置。
- * - 新建与初始化共用同一弹窗表单，减少维护分叉。
+ * - 主路径是“打开文件夹”，而不是先创建一个抽象的 agent 条目。
+ * - 只有目录缺少 `downcity.json` / `PROFILE.md` 时，才进入初始化并启动流程。
+ * - 已初始化目录直接启动，降低首次使用理解成本。
  */
 
 import * as React from "react"
@@ -13,7 +13,6 @@ import {
   FolderOpenIcon,
   Loader2Icon,
   PlayIcon,
-  PlusIcon,
   RotateCwIcon,
   SquareIcon,
   WandSparklesIcon,
@@ -24,9 +23,7 @@ import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { UiAgentCreatePayload, UiAgentOption, UiModelPoolItem } from "@/types/Dashboard"
-
-type AgentDialogMode = "create" | "initialize"
+import type { UiAgentDirectoryInspection, UiAgentOption, UiModelPoolItem } from "@/types/Dashboard"
 
 type AgentFormState = {
   projectRoot: string
@@ -42,6 +39,13 @@ function createEmptyForm(defaultModelId: string): AgentFormState {
   }
 }
 
+function deriveFolderName(projectRoot: string): string {
+  const normalized = String(projectRoot || "").trim().replace(/[\\/]+$/, "")
+  if (!normalized) return "selected-folder"
+  const segments = normalized.split(/[\\/]/).filter(Boolean)
+  return segments[segments.length - 1] || normalized
+}
+
 export interface GlobalAgentsSectionProps {
   /**
    * 当前可用 agent 列表。
@@ -52,13 +56,13 @@ export interface GlobalAgentsSectionProps {
    */
   modelPoolItems: UiModelPoolItem[]
   /**
-   * 新建 agent。
-   */
-  onCreateAgent: (input: UiAgentCreatePayload) => void
-  /**
    * 打开系统目录选择器。
    */
   onPickAgentDirectory: () => Promise<string>
+  /**
+   * 探测目录是否已初始化。
+   */
+  onInspectAgentDirectory: (projectRoot: string) => Promise<UiAgentDirectoryInspection | null>
   /**
    * 重启运行中的 agent。
    */
@@ -84,8 +88,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   const {
     agents,
     modelPoolItems,
-    onCreateAgent,
     onPickAgentDirectory,
+    onInspectAgentDirectory,
     onRestartAgent,
     onStopAgent,
     onStartAgent,
@@ -96,7 +100,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   const [restartingAgentId, setRestartingAgentId] = React.useState("")
   const [stoppingAgentId, setStoppingAgentId] = React.useState("")
   const [dialogOpen, setDialogOpen] = React.useState(false)
-  const [dialogMode, setDialogMode] = React.useState<AgentDialogMode>("create")
   const [dialogTargetAgentId, setDialogTargetAgentId] = React.useState("")
   const [pickingDirectory, setPickingDirectory] = React.useState(false)
   const activeModelOptions = React.useMemo(
@@ -123,45 +126,90 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
 
   const resetDialog = React.useCallback(() => {
     setDialogOpen(false)
-    setDialogMode("create")
     setDialogTargetAgentId("")
     setSubmittingDialog(false)
     setForm(createEmptyForm(defaultModelId))
   }, [defaultModelId])
 
-  const openCreateDialog = React.useCallback(() => {
-    setDialogMode("create")
-    setDialogTargetAgentId("")
-    setForm(createEmptyForm(defaultModelId))
-    setDialogOpen(true)
-  }, [defaultModelId])
-
-  const openInitializeDialog = React.useCallback((agent: UiAgentOption) => {
-    setDialogMode("initialize")
-    setDialogTargetAgentId(agent.id)
+  const openInitializeDialog = React.useCallback((input: {
+    agentId?: string
+    projectRoot: string
+    agentName?: string
+    primaryModelId?: string
+  }) => {
+    setDialogTargetAgentId(String(input.agentId || input.projectRoot || "").trim())
     setForm({
-      projectRoot: String(agent.projectRoot || agent.id || "").trim(),
-      agentName: String(agent.name || "").trim(),
-      primaryModelId: String(agent.primaryModelId || defaultModelId || "").trim(),
+      projectRoot: String(input.projectRoot || "").trim(),
+      agentName: String(input.agentName || "").trim(),
+      primaryModelId: String(input.primaryModelId || defaultModelId || "").trim(),
     })
     setDialogOpen(true)
   }, [defaultModelId])
 
-  const pickDirectory = React.useCallback(async () => {
+  const handleOpenFolder = React.useCallback(async () => {
     try {
       setPickingDirectory(true)
-      const nextPath = await onPickAgentDirectory()
-      if (!nextPath) return
-      setForm((current) => ({ ...current, projectRoot: nextPath }))
+      const projectRoot = await onPickAgentDirectory()
+      if (!projectRoot) return
+      const inspection = await onInspectAgentDirectory(projectRoot)
+      if (!inspection) return
+      if (inspection.initialized) {
+        try {
+          setStartingAgentId(inspection.projectRoot)
+          await Promise.resolve(onStartAgent(inspection.projectRoot))
+        } finally {
+          setStartingAgentId("")
+        }
+        return
+      }
+      openInitializeDialog({
+        agentId: inspection.knownAgent ? inspection.projectRoot : "",
+        projectRoot: inspection.projectRoot,
+        agentName: inspection.displayName,
+        primaryModelId: inspection.primaryModelId,
+      })
     } finally {
       setPickingDirectory(false)
     }
-  }, [onPickAgentDirectory])
+  }, [onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, openInitializeDialog])
+
+  const pickDirectoryForDialog = React.useCallback(async () => {
+    try {
+      setPickingDirectory(true)
+      const projectRoot = await onPickAgentDirectory()
+      if (!projectRoot) return
+      const inspection = await onInspectAgentDirectory(projectRoot)
+      if (!inspection) return
+      if (inspection.initialized) {
+        resetDialog()
+        try {
+          setStartingAgentId(inspection.projectRoot)
+          await Promise.resolve(onStartAgent(inspection.projectRoot))
+        } finally {
+          setStartingAgentId("")
+        }
+        return
+      }
+      setForm((current) => ({
+        ...current,
+        projectRoot: inspection.projectRoot,
+        agentName: inspection.displayName || current.agentName,
+        primaryModelId: inspection.primaryModelId || current.primaryModelId,
+      }))
+    } finally {
+      setPickingDirectory(false)
+    }
+  }, [onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, resetDialog])
 
   const canSubmitDialog =
     Boolean(String(form.projectRoot || "").trim()) &&
     Boolean(String(form.primaryModelId || "").trim()) &&
     activeModelOptions.length > 0
+  const resolvedAgentName = String(form.agentName || "").trim() || deriveFolderName(form.projectRoot)
+  const selectedModelLabel = React.useMemo(() => {
+    const matched = activeModelOptions.find((item) => String(item.id || "").trim() === String(form.primaryModelId || "").trim())
+    return String(matched?.name || matched?.id || form.primaryModelId || "").trim()
+  }, [activeModelOptions, form.primaryModelId])
 
   return (
     <section className="min-h-0 overflow-y-auto">
@@ -172,16 +220,17 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
           size="sm"
           variant="ghost"
           className={dashboardIconButtonClass}
-          onClick={openCreateDialog}
-          aria-label="新建 Agent"
-          title="新建 Agent"
+          onClick={() => void handleOpenFolder()}
+          disabled={pickingDirectory}
+          aria-label="打开文件夹"
+          title="打开文件夹"
         >
-          <PlusIcon className="size-4" />
+          {pickingDirectory ? <Loader2Icon className="size-4 animate-spin" /> : <FolderOpenIcon className="size-4" />}
         </Button>
       </div>
 
       {agents.length === 0 ? (
-        <div className="rounded-[20px] bg-secondary px-4 py-5 text-sm text-muted-foreground">暂无 agent，点击右上角 + 新建</div>
+        <div className="rounded-[20px] bg-secondary px-4 py-5 text-sm text-muted-foreground">暂无 agent，点击右上角打开文件夹</div>
       ) : (
         <div className="space-y-2">
           {agents.map((agent) => {
@@ -279,7 +328,12 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                           disabled={isStarting || isRestarting || isStopping}
                           aria-label="初始化并启动"
                           title="初始化并启动"
-                          onClick={() => openInitializeDialog(agent)}
+                          onClick={() => openInitializeDialog({
+                            agentId: agent.id,
+                            projectRoot: String(agent.projectRoot || agent.id || "").trim(),
+                            agentName: String(agent.name || "").trim(),
+                            primaryModelId: String(agent.primaryModelId || "").trim(),
+                          })}
                         >
                           <WandSparklesIcon className="size-4" />
                         </Button>
@@ -312,19 +366,52 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : resetDialog())}>
-        <DialogContent className="w-[min(92vw,560px)]">
-          <DialogHeader>
-            <DialogTitle>{dialogMode === "create" ? "新建 Agent" : "初始化并启动 Agent"}</DialogTitle>
-            <DialogDescription className="text-xs leading-5">
-              {dialogMode === "create"
-                ? "创建新的 agent 项目骨架，并立即启动到 Console UI。"
-                : "当目标目录还没完成初始化时，可以在启动前补齐 PROFILE.md、downcity.json 和 .downcity 结构。"}
-            </DialogDescription>
+        <DialogContent className="w-[min(92vw,640px)] overflow-hidden border border-border/80 bg-[linear-gradient(180deg,rgba(250,250,250,0.98),rgba(246,247,249,0.98))] p-0 shadow-[0_28px_90px_rgba(15,23,42,0.14)]">
+          <DialogHeader className="gap-3 border-b border-border/70 px-5 py-5 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-[16px] border border-foreground/8 bg-foreground/[0.03] p-2.5 text-foreground">
+                <WandSparklesIcon className="size-4" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <DialogTitle className="text-[1.05rem] font-semibold tracking-[0.01em]">初始化并启动 Agent</DialogTitle>
+                <DialogDescription className="max-w-[46ch] text-[12px] leading-5 text-muted-foreground">
+                  当前文件夹还没有完成 Downcity 初始化。确认后会补齐运行骨架，再把它接入 Console。
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="rounded-[18px] border border-border/75 bg-background/78 px-3 py-3">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Folder</div>
+                <div className="mt-1 truncate text-sm font-medium text-foreground" title={form.projectRoot || "-"}>
+                  {deriveFolderName(form.projectRoot)}
+                </div>
+              </div>
+              <div className="rounded-[18px] border border-border/75 bg-background/78 px-3 py-3">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Agent Name</div>
+                <div className="mt-1 truncate text-sm font-medium text-foreground" title={resolvedAgentName}>
+                  {resolvedAgentName}
+                </div>
+              </div>
+              <div className="rounded-[18px] border border-border/75 bg-background/78 px-3 py-3">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Primary Model</div>
+                <div className="mt-1 truncate text-sm font-medium text-foreground" title={selectedModelLabel || "-"}>
+                  {selectedModelLabel || "-"}
+                </div>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="agent-project-root">项目路径</Label>
+          <div className="space-y-4 px-5 py-5 sm:px-6">
+            <div className="rounded-[22px] border border-border/75 bg-background/82 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Source Folder</div>
+                  <div className="mt-1 text-sm font-medium text-foreground">选择要接入的项目目录</div>
+                </div>
+                <span className="inline-flex items-center rounded-full border border-border/70 bg-secondary/75 px-2.5 py-1 text-[11px] text-muted-foreground">
+                  step 1
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <Input
                   id="agent-project-root"
@@ -332,86 +419,116 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                   placeholder="请选择目录"
                   readOnly
                   disabled
+                  className="h-11 rounded-[14px] border-border/80 bg-secondary/55 px-3 font-mono text-[12px] text-foreground/88"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   className={dashboardIconButtonClass}
-                  onClick={() => void pickDirectory()}
-                  disabled={dialogMode === "initialize" || pickingDirectory}
+                  onClick={() => void pickDirectoryForDialog()}
+                  disabled={pickingDirectory}
                   aria-label="选择目录"
                   title="选择目录"
                 >
                   {pickingDirectory ? <Loader2Icon className="size-4 animate-spin" /> : <FolderOpenIcon className="size-4" />}
                 </Button>
               </div>
+              <p className="mt-3 text-[12px] leading-5 text-muted-foreground">
+                已初始化目录会直接启动；只有缺少 `downcity.json` 或 `PROFILE.md` 时才会进入当前流程。
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="agent-name">Agent 名称</Label>
-              <Input
-                id="agent-name"
-                value={form.agentName}
-                placeholder="my-agent"
-                onChange={(event) => setForm((current) => ({ ...current, agentName: event.target.value }))}
-              />
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              <div className="rounded-[22px] border border-border/75 bg-background/82 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Identity</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">确认这个文件夹在 Console 里的名称</div>
+                  </div>
+                  <span className="inline-flex items-center rounded-full border border-border/70 bg-secondary/75 px-2.5 py-1 text-[11px] text-muted-foreground">
+                    step 2
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agent-name" className="text-[12px] font-medium text-foreground/82">Agent 名称</Label>
+                  <Input
+                    id="agent-name"
+                    value={form.agentName}
+                    placeholder={deriveFolderName(form.projectRoot)}
+                    className="h-11 rounded-[14px] border-border/80 bg-background px-3 text-sm"
+                    onChange={(event) => setForm((current) => ({ ...current, agentName: event.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-[22px] border border-border/75 bg-background/82 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Runtime</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">选择首次启动使用的主模型</div>
+                  </div>
+                  <span className="inline-flex items-center rounded-full border border-border/70 bg-secondary/75 px-2.5 py-1 text-[11px] text-muted-foreground">
+                    step 3
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agent-model" className="text-[12px] font-medium text-foreground/82">主模型</Label>
+                  <select
+                    id="agent-model"
+                    className="flex h-11 w-full rounded-[14px] border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={form.primaryModelId}
+                    onChange={(event) => setForm((current) => ({ ...current, primaryModelId: event.target.value }))}
+                    disabled={activeModelOptions.length === 0}
+                  >
+                    {activeModelOptions.length === 0 ? (
+                      <option value="">请先在 Global / Model 创建可用模型</option>
+                    ) : null}
+                    {activeModelOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {String(item.id || "").trim()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="agent-model">主模型</Label>
-              <select
-                id="agent-model"
-                className="flex h-10 w-full rounded-[12px] border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                value={form.primaryModelId}
-                onChange={(event) => setForm((current) => ({ ...current, primaryModelId: event.target.value }))}
-                disabled={activeModelOptions.length === 0}
-              >
-                {activeModelOptions.length === 0 ? (
-                  <option value="">请先在 Global / Model 创建可用模型</option>
-                ) : null}
-                {activeModelOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {String(item.id || "").trim()}
-                  </option>
-                ))}
-              </select>
+            <div className="rounded-[20px] border border-dashed border-border/85 bg-secondary/45 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">What Will Be Created</div>
+              <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-foreground/78">
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`PROFILE.md`</span>
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`SOUL.md`</span>
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`downcity.json`</span>
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`.downcity/*`</span>
+              </div>
             </div>
-
           </div>
 
-          <DialogFooter className="gap-2 sm:justify-end">
+          <DialogFooter className="border-t border-border/70 bg-background/74 px-5 py-4 sm:px-6 sm:justify-end">
             <Button type="button" variant="ghost" onClick={resetDialog} disabled={submittingDialog}>
               取消
             </Button>
             <Button
               type="button"
               disabled={!canSubmitDialog || submittingDialog}
+              className="min-w-[8.5rem] rounded-[14px] bg-foreground px-4 text-background hover:bg-foreground/92"
               onClick={async () => {
                 try {
                   setSubmittingDialog(true)
-                  if (dialogMode === "create") {
-                    await Promise.resolve(onCreateAgent({
-                      projectRoot: form.projectRoot.trim(),
+                  await Promise.resolve(onStartAgentWithInitialization(
+                    dialogTargetAgentId || form.projectRoot.trim(),
+                    {
                       agentName: form.agentName.trim() || undefined,
                       primaryModelId: form.primaryModelId.trim(),
-                      autoStart: true,
-                    }))
-                  } else {
-                    await Promise.resolve(onStartAgentWithInitialization(
-                      dialogTargetAgentId || form.projectRoot.trim(),
-                      {
-                        agentName: form.agentName.trim() || undefined,
-                        primaryModelId: form.primaryModelId.trim(),
-                      },
-                    ))
-                  }
+                    },
+                  ))
                   resetDialog()
                 } finally {
                   setSubmittingDialog(false)
                 }
               }}
             >
-              {submittingDialog ? <Loader2Icon className="size-4 animate-spin" /> : dialogMode === "create" ? "创建并启动" : "初始化并启动"}
+              {submittingDialog ? <Loader2Icon className="size-4 animate-spin" /> : "初始化并启动"}
             </Button>
           </DialogFooter>
         </DialogContent>

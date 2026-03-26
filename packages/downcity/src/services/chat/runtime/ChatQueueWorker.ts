@@ -30,7 +30,10 @@ import { sendActionByChatKey } from "./ChatkeySend.js";
 import { resolveChatMethod } from "./ChatMethod.js";
 import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
-import { pickLastSuccessfulChatSendText } from "./UserVisibleText.js";
+import {
+  hasPersistedAssistantSteps,
+  pickLastSuccessfulChatSendText,
+} from "./UserVisibleText.js";
 import { sendChatTextByChatKey } from "../Action.js";
 import {
   emitChatReplyEffect,
@@ -704,10 +707,12 @@ export class ChatQueueWorker {
     }
 
     try {
-      await serviceContext.appendAssistantMessage({
-        contextId: runItem.contextId,
-        message: result.assistantMessage,
-      });
+      if (!hasPersistedAssistantSteps(result.assistantMessage)) {
+        await serviceContext.appendAssistantMessage({
+          contextId: runItem.contextId,
+          message: result.assistantMessage,
+        });
+      }
       const deferredInjectedMessages = drainDeferredPersistedUserMessages(
         runItem.contextId,
       );

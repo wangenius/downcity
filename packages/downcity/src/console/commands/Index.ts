@@ -45,6 +45,7 @@ import {
 import { ensureRuntimeModelBindingReady } from "@/console/daemon/ProjectSetup.js";
 import { allocateAvailablePort } from "@/console/daemon/PortAllocator.js";
 import {
+  ensureConsoleAgentRegistry,
   listConsoleAgents,
   markConsoleAgentStopped,
 } from "@/console/runtime/ConsoleRegistry.js";
@@ -62,6 +63,7 @@ import {
   isConsoleRunning,
   readConsolePid,
 } from "@/console/runtime/ConsoleRuntime.js";
+import { sweepDetachedCityProcesses } from "@/console/runtime/ProcessSweep.js";
 import {
   printPanel,
   renderKeyValueLines,
@@ -164,6 +166,7 @@ async function startConsoleCommand(): Promise<void> {
   const pidPath = getConsolePidPath();
   const logPath = getConsoleLogPath();
   await fs.ensureDir(consoleDir);
+  await ensureConsoleAgentRegistry();
 
   const existingPid = await readConsolePid();
   if (existingPid && isConsoleProcessAlive(existingPid)) {
@@ -173,6 +176,17 @@ async function startConsoleCommand(): Promise<void> {
   }
   if (existingPid) {
     await fs.remove(pidPath);
+  }
+
+  // 关键点（中文）：若 pid 文件已丢失，但旧 console 进程仍在后台存活，这里先清理孤儿进程。
+  const sweep = await sweepDetachedCityProcesses({
+    includeConsole: true,
+  });
+  for (const item of sweep.stopped) {
+    console.log(`⚠️  cleaned orphan DC console process: pid=${item.pid}`);
+  }
+  for (const item of sweep.alive) {
+    console.log(`⚠️  orphan DC console process is still alive: pid=${item.pid}`);
   }
 
   const cliPath = resolve(__dirname, "./Index.js");
@@ -238,11 +252,31 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
     }
   }
 
+  const sweepOrphans = async (): Promise<void> => {
+    const orphanSweep = await sweepDetachedCityProcesses({
+      includeConsole: true,
+      includeUi: true,
+      includeAgent: true,
+      timeoutMs,
+    });
+    for (const item of orphanSweep.stopped) {
+      console.log(`✅ orphan process stopped`);
+      console.log(`   pid: ${item.pid}`);
+      console.log(`   command: ${item.command}`);
+    }
+    for (const item of orphanSweep.alive) {
+      console.log(`⚠️  orphan process may still be running`);
+      console.log(`   pid: ${item.pid}`);
+      console.log(`   command: ${item.command}`);
+    }
+  };
+
   const consolePid = await readConsolePid();
   if (!consolePid) {
     console.log("ℹ️  DC console is not running");
     console.log(`   pidFile: ${pidPath}`);
     console.log(`   log: ${logPath}`);
+    await sweepOrphans();
     return;
   }
 
@@ -251,6 +285,7 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
     console.log("⚠️  Stale console pid file detected; cleaned up");
     console.log(`   pidFile: ${pidPath}`);
     console.log(`   log: ${logPath}`);
+    await sweepOrphans();
     return;
   }
 
@@ -282,6 +317,9 @@ async function stopConsoleCommand(params?: { timeoutMs?: number }): Promise<void
   }
   console.log(`   pidFile: ${pidPath}`);
   console.log(`   log: ${logPath}`);
+
+  // 关键点（中文）：最后做一次全量兜底，清理没有 pid 文件的旧 console / ui / agent daemon。
+  await sweepOrphans();
 }
 
 /**
@@ -359,6 +397,7 @@ async function runConsoleRuntimeCommand(): Promise<void> {
   const consoleDir = getConsoleRuntimeDirPath();
   const pidPath = getConsolePidPath();
   await fs.ensureDir(consoleDir);
+  await ensureConsoleAgentRegistry();
   await fs.writeFile(pidPath, String(process.pid), "utf-8");
 
   const shutdown = async (): Promise<void> => {

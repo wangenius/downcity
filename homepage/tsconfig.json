@@ -28,7 +28,8 @@
       "@/*": ["./app/*"],
       "@/.source": ["./.source/server"],
       "@/.source/browser": ["./.source/browser"],
-      "fumadocs-mdx:collections/*": [".source/*"]
+      "fumadocs-mdx:collections/*": [".source/*"],
+      "@downcity/ui": ["../types/downcity-ui.d.ts"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,

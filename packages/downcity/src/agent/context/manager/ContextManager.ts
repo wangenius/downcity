@@ -69,15 +69,66 @@ export class ContextManager {
     const query = String(params.query || "").trim();
     const agent = this.dispatcher.getAgent(contextId);
     const requestContext = params.requestContext || {};
+    let persistedAssistantStepCount = 0;
+    const providedOnAssistantStepCallback = requestContext.onAssistantStepCallback;
+    const wrappedOnAssistantStepCallback = async (step: {
+      text: string;
+      stepIndex: number;
+    }): Promise<void> => {
+      const stepText = String(step.text || "").trim();
+      if (!stepText) return;
+
+      await this.appendAssistantMessage({
+        contextId,
+        fallbackText: stepText,
+        extra: {
+          internal: "assistant_step",
+          stepIndex: step.stepIndex,
+          persistedBy: "context_manager_run",
+        },
+      });
+      persistedAssistantStepCount += 1;
+
+      if (typeof providedOnAssistantStepCallback === "function") {
+        await providedOnAssistantStepCallback(step);
+      }
+    };
     this.executingContextIds.add(contextId);
     try {
-      return await withRequestContext(
+      const result = await withRequestContext(
         {
           contextId,
           ...requestContext,
+          onAssistantStepCallback: wrappedOnAssistantStepCallback,
         },
         () => agent.run({ query }),
       );
+      if (persistedAssistantStepCount <= 0) return result;
+
+      return {
+        ...result,
+        assistantMessage: {
+          ...result.assistantMessage,
+          metadata: {
+            ...(result.assistantMessage.metadata || {
+              v: 1 as const,
+              ts: Date.now(),
+              contextId,
+            }),
+            extra: {
+              ...(
+                result.assistantMessage.metadata?.extra &&
+                  typeof result.assistantMessage.metadata.extra === "object" &&
+                  !Array.isArray(result.assistantMessage.metadata.extra)
+                  ? result.assistantMessage.metadata.extra
+                  : {}
+              ),
+              assistantStepMessagesPersisted: true,
+              assistantStepCount: persistedAssistantStepCount,
+            },
+          },
+        },
+      };
     } finally {
       this.executingContextIds.delete(contextId);
     }

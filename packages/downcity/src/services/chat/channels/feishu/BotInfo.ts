@@ -4,6 +4,7 @@
  * 关键点（中文）
  * - 先通过 appId/appSecret 换取 tenant access token。
  * - 再尝试读取 bot profile，失败时回退到凭据推断。
+ * - 官方接口返回体核心字段在 `bot.app_name` / `bot.open_id`，这里同时兼容旧兜底结构。
  */
 
 import type {
@@ -24,6 +25,41 @@ function normalizeDomain(input: string): string {
   const text = String(input || "").trim();
   return (text || "https://open.feishu.cn").replace(/\/+$/, "");
 }
+
+type FeishuBotInfoPayload = {
+  code?: number;
+  msg?: string;
+  bot?: {
+    activate_status?: number;
+    app_name?: string;
+    avatar_url?: string;
+    ip_white_list?: string[];
+    open_id?: string;
+  };
+  data?: {
+    bot_name?: string;
+    name?: string;
+    app_name?: string;
+    open_id?: string;
+    bot_open_id?: string;
+    bot_id?: string;
+    app_id?: string;
+    owner?: string;
+    owner_name?: string;
+    owner_open_id?: string;
+    creator?: string;
+    creator_name?: string;
+    creator_open_id?: string;
+    bot?: {
+      bot_name?: string;
+      name?: string;
+      app_name?: string;
+      open_id?: string;
+      bot_open_id?: string;
+      bot_id?: string;
+    };
+  };
+};
 
 /**
  * Feishu 渠道 Bot 信息探测器。
@@ -86,41 +122,21 @@ export class FeishuBotInfoProvider implements ChatChannelBotInfoProvider {
         },
       });
       const profileRaw = await profileResponse.text();
-      const profilePayload = JSON.parse(profileRaw) as {
-        code?: number;
-        msg?: string;
-        data?: {
-          bot_name?: string;
-          name?: string;
-          app_name?: string;
-          open_id?: string;
-          bot_open_id?: string;
-          bot_id?: string;
-          app_id?: string;
-          owner?: string;
-          owner_name?: string;
-          owner_open_id?: string;
-          creator?: string;
-          creator_name?: string;
-          creator_open_id?: string;
-          bot?: {
-            bot_name?: string;
-            name?: string;
-            open_id?: string;
-            bot_open_id?: string;
-            bot_id?: string;
-          };
-        };
-      };
+      const profilePayload = JSON.parse(profileRaw) as FeishuBotInfoPayload;
       if (profileResponse.ok && profilePayload.code === 0) {
+        // 关键点（中文）：官方文档当前返回 `bot.app_name` / `bot.open_id`。
+        // 为了兼容历史或不同网关形态，保留对旧 `data.*` 结构的兜底读取。
         botName = pickFirstNonEmpty([
+          profilePayload.bot?.app_name,
           profilePayload.data?.bot_name,
           profilePayload.data?.name,
           profilePayload.data?.app_name,
           profilePayload.data?.bot?.bot_name,
           profilePayload.data?.bot?.name,
+          profilePayload.data?.bot?.app_name,
         ]);
         botOpenId = pickFirstNonEmpty([
+          profilePayload.bot?.open_id,
           profilePayload.data?.open_id,
           profilePayload.data?.bot_open_id,
           profilePayload.data?.bot_id,

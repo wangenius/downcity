@@ -1,0 +1,52 @@
+---
+title: UI SDK
+description: Build agent-facing React interfaces with the Downcity UI SDK
+---
+
+# UI SDK
+
+`@downcity/ui` is the React + Tailwind component package extracted from Downcity's shared interface layer.
+
+## What It Includes
+
+- Console-style primitives such as `Button`, `Badge`, `Card`, `DropdownMenu`, `Popover`, and `Toaster`
+- A shared `cn` utility for Tailwind class composition
+- Theme tokens in `styles.css` for Downcity's default surface, border, and interactive colors
+
+## Install
+
+```bash
+npm install @downcity/ui
+```
+
+## Use In A Tailwind App
+
+Import Tailwind first, then import the SDK stylesheet in your app CSS:
+
+```css
+@import "tailwindcss";
+@import "@downcity/ui/styles.css";
+```
+
+Then import components in React:
+
+```tsx
+import { Button, Card, CardContent } from "@downcity/ui";
+
+export function ExampleCard() {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between gap-4">
+        <span>Run an agent task</span>
+        <Button>Open Console</Button>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Current Scope
+
+- The package is focused on reusable primitives instead of product-specific screens
+- Theme defaults follow Downcity's neutral console palette
+- Host apps can still extend styling with `className`

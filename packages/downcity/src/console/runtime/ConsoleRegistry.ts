@@ -123,6 +123,21 @@ async function writeConsoleAgentRegistry(
 }
 
 /**
+ * 确保 console agent registry 文件存在。
+ *
+ * 关键点（中文）
+ * - 空 console 也应拥有显式的空 registry，避免 UI 将“尚未启动任何 agent”误判为异常。
+ * - 若文件已存在则不覆盖，保持历史记录不丢失。
+ */
+export async function ensureConsoleAgentRegistry(): Promise<void> {
+  await fs.ensureDir(CONSOLE_DIR);
+  if (await fs.pathExists(CONSOLE_AGENTS_FILE)) {
+    return;
+  }
+  await writeConsoleAgentRegistry(buildEmptyRegistry());
+}
+
+/**
  * 获取 console agent registry 文件路径。
  */
 export function getConsoleAgentsRegistryPath(): string {

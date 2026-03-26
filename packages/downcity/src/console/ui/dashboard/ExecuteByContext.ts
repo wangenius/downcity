@@ -15,7 +15,10 @@ import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
 import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
-import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
+import {
+  hasPersistedAssistantSteps,
+  pickLastSuccessfulChatSendText,
+} from "@services/chat/runtime/UserVisibleText.js";
 import { buildExecuteInputText } from "./Helpers.js";
 
 /**
@@ -116,15 +119,17 @@ export async function executeByContextId(params: {
 
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
   try {
-    await params.runtime.contextManager.appendAssistantMessage({
-      contextId,
-      message: result.assistantMessage,
-      fallbackText: userVisible,
-      extra: {
-        via: "tui_context_execute",
-        note: "assistant_message_missing",
-      },
-    });
+    if (!hasPersistedAssistantSteps(result.assistantMessage)) {
+      await params.runtime.contextManager.appendAssistantMessage({
+        contextId,
+        message: result.assistantMessage,
+        fallbackText: userVisible,
+        extra: {
+          via: "tui_context_execute",
+          note: "assistant_message_missing",
+        },
+      });
+    }
     const deferredInjectedMessages = drainDeferredPersistedUserMessages(
       contextId,
     );

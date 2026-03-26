@@ -14,6 +14,21 @@ import {
 } from "./UIMessageTransformer.js";
 
 /**
+ * 判断 assistant message 是否声明“本轮 step 消息已单独持久化”。
+ *
+ * 关键点（中文）
+ * - 该标记只用于避免在 run 结束时把最终 merged assistant 再重复写入 context。
+ * - 不影响 channel 发送；只影响 context messages 的最终 append 策略。
+ */
+export function hasPersistedAssistantSteps(
+  message: ContextMessageV1 | null | undefined,
+): boolean {
+  const extra = message?.metadata?.extra;
+  if (!extra || typeof extra !== "object" || Array.isArray(extra)) return false;
+  return extra.assistantStepMessagesPersisted === true;
+}
+
+/**
  * 提取策略（中文）
  * - 倒序扫描：优先使用最后一次 `chat_send`，与最终用户感知一致。
  * - 优先使用 chat_send 的 input.text（需结合 tool output 判断成功）。

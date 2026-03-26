@@ -10,7 +10,7 @@ import * as React from "react"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
 import type {
-  UiAgentCreatePayload,
+  UiAgentDirectoryInspection,
   UiAgentOption,
   UiConfigStatusItem,
   UiPluginRuntimeItem,
@@ -39,13 +39,13 @@ export interface GlobalOverviewSectionProps {
    */
   configStatus: UiConfigStatusItem[]
   /**
-   * 新建 agent。
-   */
-  onCreateAgent: (input: UiAgentCreatePayload) => void
-  /**
    * 打开系统目录选择器。
    */
   onPickAgentDirectory: () => Promise<string>
+  /**
+   * 探测目录是否已初始化。
+   */
+  onInspectAgentDirectory: (projectRoot: string) => Promise<UiAgentDirectoryInspection | null>
   /**
    * 启动 agent。
    */
@@ -74,8 +74,8 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
     modelPoolItems,
     plugins,
     configStatus,
-    onCreateAgent,
     onPickAgentDirectory,
+    onInspectAgentDirectory,
     onStartAgent,
     onStartAgentWithInitialization,
     onRestartAgent,
@@ -164,8 +164,8 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
         <GlobalAgentsSection
           agents={agents}
           modelPoolItems={modelPoolItems}
-          onCreateAgent={onCreateAgent}
           onPickAgentDirectory={onPickAgentDirectory}
+          onInspectAgentDirectory={onInspectAgentDirectory}
           onStartAgent={onStartAgent}
           onStartAgentWithInitialization={onStartAgentWithInitialization}
           onRestartAgent={onRestartAgent}

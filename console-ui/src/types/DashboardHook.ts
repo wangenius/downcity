@@ -8,6 +8,7 @@
 
 import type {
   UiAgentCreatePayload,
+  UiAgentDirectoryInspection,
   UiAgentInitializationInput,
   UiAgentOption,
   UiChannelAccountItem,
@@ -496,6 +497,11 @@ export interface UseConsoleDashboardResult {
    * 打开系统目录选择器。
    */
   pickAgentDirectory: () => Promise<string>;
+
+  /**
+   * 探测目录是否已初始化为 agent 项目。
+   */
+  inspectAgentDirectory: (projectRoot: string) => Promise<UiAgentDirectoryInspection | null>;
 
   /**
    * 重启指定 agent。

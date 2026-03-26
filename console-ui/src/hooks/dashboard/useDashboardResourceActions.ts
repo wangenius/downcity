@@ -13,6 +13,7 @@ import {
   discoverModelProviderMutation,
   executeAgentCommandMutation,
   importEnvMutation,
+  inspectAgentDirectoryMutation,
   pickAgentDirectoryMutation,
   probeChannelAccountMutation,
   restartAgentFromHistoryMutation,
@@ -25,6 +26,7 @@ import {
 import { getErrorMessage } from "./shared";
 import type {
   UiAgentCreatePayload,
+  UiAgentDirectoryInspection,
   UiAgentInitializationInput,
   UiChannelAccountProbeResult,
   UiCommandExecuteResult,
@@ -59,6 +61,7 @@ export function useDashboardResourceActions(params: {
   ) => Promise<void>;
   createAgent: (input: UiAgentCreatePayload) => Promise<void>;
   pickAgentDirectory: () => Promise<string>;
+  inspectAgentDirectory: (projectRoot: string) => Promise<UiAgentDirectoryInspection | null>;
   restartAgentFromHistory: (agentId: string) => Promise<void>;
   stopAgentFromHistory: (agentId: string) => Promise<void>;
   upsertModelProvider: (input: {
@@ -189,6 +192,13 @@ export function useDashboardResourceActions(params: {
   const pickAgentDirectory = useCallback(async (): Promise<string> => {
     return pickAgentDirectoryMutation(params.requestJson);
   }, [params]);
+
+  const inspectAgentDirectory = useCallback(
+    async (projectRoot: string): Promise<UiAgentDirectoryInspection | null> => {
+      return inspectAgentDirectoryMutation(params.requestJson, projectRoot);
+    },
+    [params],
+  );
 
   const restartAgentFromHistory = useCallback(
     async (agentId: string) => {
@@ -603,6 +613,7 @@ export function useDashboardResourceActions(params: {
     startAgentFromHistory,
     createAgent,
     pickAgentDirectory,
+    inspectAgentDirectory,
     restartAgentFromHistory,
     stopAgentFromHistory,
     upsertModelProvider,

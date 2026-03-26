@@ -23,6 +23,7 @@ import {
   buildConsoleUiAgentsResponse,
   buildConsoleUiConfigStatusResponse,
   buildConsoleUiModelResponse,
+  inspectConsoleUiAgentDirectory,
   listKnownConsoleAgents,
   readConsoleUiConfigFileStatus,
   readRequestedConsoleAgentId,
@@ -47,6 +48,7 @@ import type {
   ConsoleUiAgentsResponse,
   ConsoleUiConfigFileStatusItem,
   ConsoleUiConfigStatusResponse,
+  ConsoleUiAgentDirectoryInspection,
 } from "@/types/ConsoleUI.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -202,6 +204,26 @@ export class ConsoleUIGateway {
         return c.json({
           success: true,
           directoryPath,
+        });
+      } catch (error) {
+        return c.json({ success: false, error: String(error) }, 500);
+      }
+    });
+
+    this.app.post("/api/ui/agents/inspect", async (c) => {
+      try {
+        const body = (await c.req.json().catch(() => ({}))) as {
+          projectRoot?: unknown;
+          agentId?: unknown;
+        };
+        const rawProject = String(body.projectRoot || body.agentId || "").trim();
+        if (!rawProject) {
+          return c.json({ success: false, error: "projectRoot is required" }, 400);
+        }
+        const inspection = await this.inspectAgentDirectory(rawProject);
+        return c.json({
+          success: true,
+          inspection,
         });
       } catch (error) {
         return c.json({ success: false, error: String(error) }, 500);
@@ -539,6 +561,15 @@ export class ConsoleUIGateway {
     requestedAgentId: string,
   ): Promise<ConsoleUiAgentOption | null> {
     return resolveConsoleAgentById(requestedAgentId);
+  }
+
+  /**
+   * 探测目录状态，用于“打开文件夹”流程。
+   */
+  private async inspectAgentDirectory(
+    projectRoot: string,
+  ): Promise<ConsoleUiAgentDirectoryInspection> {
+    return inspectConsoleUiAgentDirectory(projectRoot);
   }
 
   /**

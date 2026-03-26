@@ -1,0 +1,52 @@
+---
+title: UI SDK
+description: 使用 Downcity UI SDK 构建面向 Agent 的 React 界面
+---
+
+# UI SDK
+
+`@downcity/ui` 是从 Downcity 共享界面层中抽离出来的 React + Tailwind 组件包。
+
+## 包含内容
+
+- Console 风格的基础组件：`Button`、`Badge`、`Card`、`DropdownMenu`、`Popover`、`Toaster`
+- 用于合并 Tailwind 类名的 `cn` 工具
+- `styles.css` 里的主题令牌，用于注入 Downcity 默认的界面色板与交互变量
+
+## 安装
+
+```bash
+npm install @downcity/ui
+```
+
+## 在 Tailwind 应用中使用
+
+先在应用样式入口引入 Tailwind，再引入 SDK 样式：
+
+```css
+@import "tailwindcss";
+@import "@downcity/ui/styles.css";
+```
+
+然后在 React 中导入组件：
+
+```tsx
+import { Button, Card, CardContent } from "@downcity/ui";
+
+export function ExampleCard() {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between gap-4">
+        <span>运行一个 Agent 任务</span>
+        <Button>打开 Console</Button>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## 当前范围
+
+- 目前聚焦在可复用基础组件，不包含产品级页面模板
+- 默认主题沿用 Downcity Console 的中性色界面风格
+- 宿主应用仍然可以通过 `className` 做进一步定制

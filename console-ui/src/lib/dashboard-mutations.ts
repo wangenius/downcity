@@ -10,6 +10,7 @@ import { dashboardApiRoutes } from "./dashboard-api";
 import { getErrorMessage } from "../hooks/dashboard/shared";
 import type {
   UiAgentCreatePayload,
+  UiAgentDirectoryInspection,
   UiAgentInitializationInput,
   UiAgentsResponse,
   UiChannelAccountProbeResult,
@@ -534,6 +535,24 @@ export async function pickAgentDirectoryMutation(
     { method: "POST" },
   );
   return String(data.directoryPath || "").trim();
+}
+
+export async function inspectAgentDirectoryMutation(
+  requestJson: RequestJson,
+  projectRoot: string,
+): Promise<UiAgentDirectoryInspection | null> {
+  const normalizedRoot = String(projectRoot || "").trim();
+  if (!normalizedRoot) return null;
+  const data = await requestJson<{
+    inspection?: UiAgentDirectoryInspection;
+  }>(
+    dashboardApiRoutes.uiAgentInspect(),
+    {
+      method: "POST",
+      body: JSON.stringify({ projectRoot: normalizedRoot }),
+    },
+  );
+  return data.inspection || null;
 }
 
 export async function restartAgentFromHistoryMutation(params: {

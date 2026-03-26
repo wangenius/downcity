@@ -1,4 +1,4 @@
 {
   "title": "Reference",
-  "pages": ["cli", "downcity-json", "model-config", "dot-downcity", "api"]
+  "pages": ["cli", "downcity-json", "model-config", "dot-downcity", "api", "ui-sdk"]
 }

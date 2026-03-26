@@ -20,6 +20,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@downcity/ui": path.resolve(__dirname, "../packages/downcity-ui/src/index.ts"),
     },
   },
   server: {

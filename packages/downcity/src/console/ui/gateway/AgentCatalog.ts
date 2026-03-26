@@ -17,6 +17,7 @@ import {
   getShipSchemaPath,
   getSoulMdPath,
 } from "@/console/env/Paths.js";
+import { isAgentProjectInitialized } from "@/console/project/AgentInitializer.js";
 import { listConsoleAgents } from "@/console/runtime/ConsoleRegistry.js";
 import {
   getConsoleAgentRegistryPath,
@@ -29,6 +30,7 @@ import type {
   ConsoleUiAgentsResponse,
   ConsoleUiConfigFileStatusItem,
   ConsoleUiConfigStatusResponse,
+  ConsoleUiAgentDirectoryInspection,
 } from "@/types/ConsoleUI.js";
 import type {
   ConsoleUiChatChannelStatus,
@@ -298,6 +300,47 @@ export async function resolveConsoleAgentById(
   if (!targetId) return null;
   const agents = await listKnownConsoleAgents();
   return agents.find((item) => item.id === targetId) || null;
+}
+
+/**
+ * 探测目录是否已具备 agent 运行条件。
+ */
+export async function inspectConsoleUiAgentDirectory(
+  projectRoot: string,
+): Promise<ConsoleUiAgentDirectoryInspection> {
+  const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
+  const shipPath = getShipJsonPath(normalizedRoot);
+  const profilePath = getProfileMdPath(normalizedRoot);
+  const hasShipJson = await fs.pathExists(shipPath);
+  const hasProfileMd = await fs.pathExists(profilePath);
+  const initialized = await isAgentProjectInitialized(normalizedRoot);
+  const knownAgents = await listKnownConsoleAgents();
+  const matched = knownAgents.find((item) => item.projectRoot === normalizedRoot) || null;
+
+  let displayName = basename(normalizedRoot);
+  let primaryModelId = "";
+  if (hasShipJson) {
+    try {
+      const ship = (await fs.readJson(shipPath)) as ConsoleUiShipJson;
+      displayName = String(ship?.name || "").trim() || displayName;
+      primaryModelId = String(ship?.model?.primary || "").trim();
+    } catch {
+      // ignore parse failures
+    }
+  } else if (matched?.name) {
+    displayName = matched.name;
+  }
+
+  return {
+    projectRoot: normalizedRoot,
+    initialized,
+    hasShipJson,
+    hasProfileMd,
+    knownAgent: matched !== null,
+    running: matched?.running === true,
+    displayName,
+    primaryModelId: primaryModelId || matched?.primaryModelId || undefined,
+  };
 }
 
 /**

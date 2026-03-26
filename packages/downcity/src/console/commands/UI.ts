@@ -18,6 +18,7 @@ import {
   isConsoleProcessAlive,
   isConsoleRunning,
 } from "@/console/runtime/ConsoleRuntime.js";
+import { sweepDetachedCityProcesses } from "@/console/runtime/ProcessSweep.js";
 import { createConsoleUIGateway } from "@console/ui/ConsoleUIGateway.js";
 import type {
   ConsoleUiRuntimeMeta,
@@ -188,6 +189,17 @@ export async function startConsoleUiCommand(params: {
     return;
   }
 
+  // 关键点（中文）：没有 pid 文件但可能还有旧版 UI 孤儿进程占着端口，先做一次兜底清扫。
+  const sweep = await sweepDetachedCityProcesses({
+    includeUi: true,
+  });
+  for (const item of sweep.stopped) {
+    console.log(`⚠️  cleaned orphan Console UI process: pid=${item.pid}`);
+  }
+  for (const item of sweep.alive) {
+    console.log(`⚠️  orphan Console UI process is still alive: pid=${item.pid}`);
+  }
+
   const host = String(params.options?.host || DEFAULT_UI_HOST).trim() || DEFAULT_UI_HOST;
   const port =
     typeof params.options?.port === "number" && Number.isInteger(params.options.port)
@@ -225,6 +237,23 @@ export async function startConsoleUiCommand(params: {
   await fs.writeFile(getConsoleUiPidPath(), String(child.pid), "utf-8");
   await fs.writeJson(getConsoleUiMetaPath(), meta, { spaces: 2 });
 
+  // 关键点（中文）：等待子进程完成实际监听，避免“启动命令成功但端口已被占用导致秒退”时误报成功。
+  const startedAt = Date.now();
+  let childAlive = true;
+  while (Date.now() - startedAt < 1_500) {
+    if (!isConsoleProcessAlive(child.pid)) {
+      childAlive = false;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (!childAlive) {
+    await cleanupConsoleUiStateFiles();
+    throw new Error(
+      `Console UI exited before becoming ready. Please check log: ${logPath}`,
+    );
+  }
+
   console.log("✅ Console UI started");
   console.log(`   pid: ${child.pid}`);
   console.log(`   url: http://${normalizeHost(host)}:${port}`);
@@ -255,6 +284,23 @@ export async function stopConsoleUiCommand(params?: {
   const timeoutMs = params?.timeoutMs ?? 8000;
   const status = await getConsoleUiRuntimeStatus();
   if (!status.running || !status.pid) {
+    const sweep = await sweepDetachedCityProcesses({
+      includeUi: true,
+      timeoutMs,
+    });
+    if (sweep.stopped.length > 0 || sweep.alive.length > 0) {
+      for (const item of sweep.stopped) {
+        console.log(`✅ orphan Console UI stopped`);
+        console.log(`   pid: ${item.pid}`);
+      }
+      for (const item of sweep.alive) {
+        console.log("⚠️  orphan Console UI may still be running");
+        console.log(`   pid: ${item.pid}`);
+      }
+      console.log(`   pidFile: ${status.pidPath}`);
+      console.log(`   log: ${status.logPath}`);
+      return;
+    }
     console.log("ℹ️  Console UI is not running");
     console.log(`   pidFile: ${status.pidPath}`);
     console.log(`   log: ${status.logPath}`);

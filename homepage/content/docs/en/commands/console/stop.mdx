@@ -7,6 +7,12 @@ description: Stop console (and managed child agent runtimes)
 
 Stop console (and managed child agent runtimes).
 
+The current implementation also tries to clean up detached orphan processes:
+
+- `console run` processes that are still alive without a pid file
+- `console ui run` processes that are still alive without a pid file
+- agent daemons (`agent start --foreground true`) that are still alive without a pid file
+
 ## Usage
 
 ```bash
@@ -33,6 +39,9 @@ city version: 1.0.0
    pid: <pid>
    pidFile: <consolePidPath>
    log: <consoleLogPath>
+✅ orphan process stopped
+   pid: <orphanPid>
+   command: <orphanCommand>
 ```
 
 ```text

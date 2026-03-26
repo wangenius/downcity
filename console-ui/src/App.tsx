@@ -124,8 +124,8 @@ export function App() {
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
-    createAgent,
     pickAgentDirectory,
+    inspectAgentDirectory,
     restartAgentFromHistory,
     stopAgentFromHistory,
     upsertModelProvider,
@@ -489,8 +489,8 @@ export function App() {
               modelPoolItems={modelPoolItems}
               plugins={plugins}
               configStatus={configStatus}
-              onCreateAgent={(input) => createAgent(input)}
               onPickAgentDirectory={() => pickAgentDirectory()}
+              onInspectAgentDirectory={(projectRoot) => inspectAgentDirectory(projectRoot)}
               onStartAgent={(agentId) => startAgentFromHistory(agentId)}
               onStartAgentWithInitialization={(agentId, options) =>
                 startAgentFromHistory(agentId, {
@@ -594,8 +594,8 @@ export function App() {
               modelPoolItems={modelPoolItems}
               plugins={plugins}
               configStatus={configStatus}
-              onCreateAgent={(input) => createAgent(input)}
               onPickAgentDirectory={() => pickAgentDirectory()}
+              onInspectAgentDirectory={(projectRoot) => inspectAgentDirectory(projectRoot)}
               onStartAgent={(agentId) => startAgentFromHistory(agentId)}
               onStartAgentWithInitialization={(agentId, options) =>
                 startAgentFromHistory(agentId, {

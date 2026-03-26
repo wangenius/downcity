@@ -1,5 +1,6 @@
 "use client";
 
+import type * as React from "react";
 import { Link, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -182,7 +183,7 @@ export function Navbar() {
     return (
       <Popover key={group.label}>
         <PopoverTrigger
-          render={(triggerProps) => (
+          render={(triggerProps: React.ComponentPropsWithoutRef<"button">) => (
             <button
               type="button"
               {...triggerProps}
@@ -323,13 +324,13 @@ export function Navbar() {
                       <DropdownMenuItem
                         key={item.path}
                         className={dropdownItemClass}
-                        render={(itemProps) => <Link {...itemProps} to={item.path}>{item.label}</Link>}
+                        render={(itemProps: React.ComponentPropsWithoutRef<"a">) => <Link {...itemProps} to={item.path}>{item.label}</Link>}
                       />
                     ) : (
                       <DropdownMenuItem
                         key={item.href}
                         className={dropdownItemClass}
-                        render={(itemProps) => (
+                        render={(itemProps: React.ComponentPropsWithoutRef<"a">) => (
                           <a {...itemProps} href={item.href} target="_blank" rel="noreferrer">
                             <span className="flex items-center gap-1.5">
                               <span>{item.label}</span>
@@ -351,18 +352,18 @@ export function Navbar() {
                   <DropdownMenuItem
                     key={item.path}
                     className={dropdownItemClass}
-                    render={(itemProps) => <Link {...itemProps} to={item.path}>{item.label}</Link>}
+                    render={(itemProps: React.ComponentPropsWithoutRef<"a">) => <Link {...itemProps} to={item.path}>{item.label}</Link>}
                   />
                 ))}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className={dropdownItemClass}
-                render={(itemProps) => <a {...itemProps} href={twitterUrl} target="_blank" rel="noreferrer">X</a>}
+                render={(itemProps: React.ComponentPropsWithoutRef<"a">) => <a {...itemProps} href={twitterUrl} target="_blank" rel="noreferrer">X</a>}
               />
               <DropdownMenuItem
                 className={dropdownItemClass}
-                render={(itemProps) => <a {...itemProps} href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>}
+                render={(itemProps: React.ComponentPropsWithoutRef<"a">) => <a {...itemProps} href={githubUrl} target="_blank" rel="noreferrer">GitHub</a>}
               />
               <DropdownMenuItem className={dropdownItemClass} onClick={() => setLang(isZh ? "en" : "zh")}>
                 {isZh ? "Switch to English" : "切换到中文"}

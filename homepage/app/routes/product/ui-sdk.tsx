@@ -27,9 +27,9 @@ const PAGE = {
     ],
     factsTitle: "事实对齐",
     facts: [
-      "文档命名：console-ui-kit（见 docs/console-ui-react-v2.mdx）",
-      "命名参考：@downcity/console-ui-kit",
-      "当前组件能力来源：console-ui 的真实页面与交互沉淀",
+      "包名：@downcity/ui",
+      "源码目录：packages/downcity-ui/",
+      "当前组件能力来源：console-ui 与 homepage 的基础组件抽离",
     ],
   },
   en: {
@@ -58,9 +58,9 @@ const PAGE = {
     ],
     factsTitle: "Facts",
     facts: [
-      "Documentation naming: console-ui-kit (see docs/console-ui-react-v2.mdx)",
-      "Naming reference: @downcity/console-ui-kit",
-      "Current capability source: patterns extracted from console-ui workflows",
+      "Package name: @downcity/ui",
+      "Source directory: packages/downcity-ui/",
+      "Current capability source: shared primitives extracted from console-ui and homepage",
     ],
   },
 } as const;

@@ -138,6 +138,7 @@ export const dashboardApiRoutes = {
   uiChannelAccounts: () => "/api/ui/channel-accounts",
   uiAgentStart: () => "/api/ui/agents/start",
   uiAgentCreate: () => "/api/ui/agents/create",
+  uiAgentInspect: () => "/api/ui/agents/inspect",
   uiPickDirectory: () => "/api/ui/system/pick-directory",
   uiAgentRestart: () => "/api/ui/agents/restart",
   uiAgentStop: () => "/api/ui/agents/stop",

@@ -14,6 +14,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./app"),
       "~": path.resolve(__dirname, "./app"),
       "@/.source": path.resolve(__dirname, "./.source/server"),
+      "@downcity/ui": path.resolve(__dirname, "../packages/downcity-ui/src/index.ts"),
     },
   },
 

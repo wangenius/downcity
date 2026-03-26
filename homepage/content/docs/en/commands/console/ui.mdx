@@ -31,10 +31,12 @@ city console ui [action] [options]
 ## Behavior
 
 - Requires console first: `city console start`.
+- `start` / `restart` first try to clean up old `console ui run` processes that are still holding the UI port without a tracked pid file.
 - On startup, UI loads agents from console registry (running + history).
 - Global Agents panel shows runtime state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
-- Global Agents now supports creating a new agent directly from the UI: choose a project directory with the system folder picker, then provide name and primary model to create and start it in one flow.
-- For directories that are not initialized yet, Global Agents also supports initialize-on-start: it creates `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/` before starting the runtime.
+- The primary action in Global Agents is now "Open Folder": first choose a project directory with the system folder picker.
+- If that directory already has `downcity.json` and meets the minimum initialization requirements, UI starts the agent directly.
+- Only directories that are not initialized yet enter the initialize-on-start flow, which creates `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/` before starting the runtime.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
 - Global / Overview only shows global health signals (console, fleet, channels, plugins, config risk).
 - Global / Overview now shows the current DC version in the top summary area.

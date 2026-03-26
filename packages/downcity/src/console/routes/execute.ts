@@ -10,7 +10,10 @@
 import { Hono } from "hono";
 import { drainDeferredPersistedUserMessages } from "@agent/context/manager/RequestContext.js";
 import { getRuntimeState } from "@agent/context/manager/RuntimeState.js";
-import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
+import {
+  hasPersistedAssistantSteps,
+  pickLastSuccessfulChatSendText,
+} from "@services/chat/runtime/UserVisibleText.js";
 
 /**
  * 执行入口路由。
@@ -85,16 +88,18 @@ executeRouter.post("/api/execute", async (c) => {
 
     const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
     try {
-      await runtime.contextManager.appendAssistantMessage({
-        contextId,
-        message: result.assistantMessage,
-        fallbackText: userVisible,
-        extra: {
-          via: "api_execute",
-          note: "assistant_message_missing",
-          actorId,
-        },
-      });
+      if (!hasPersistedAssistantSteps(result.assistantMessage)) {
+        await runtime.contextManager.appendAssistantMessage({
+          contextId,
+          message: result.assistantMessage,
+          fallbackText: userVisible,
+          extra: {
+            via: "api_execute",
+            note: "assistant_message_missing",
+            actorId,
+          },
+        });
+      }
       const deferredInjectedMessages = drainDeferredPersistedUserMessages(
         contextId,
       );

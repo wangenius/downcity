@@ -7,6 +7,12 @@ description: 停止 console（并停止其托管的子 agent runtime）
 
 停止 console（并停止其托管的子 agent runtime）。
 
+当前实现还会额外尝试清理“失联的旧进程”：
+
+- 没有 pid 文件但仍在后台运行的 `console run`
+- 没有 pid 文件但仍在后台运行的 `console ui run`
+- 没有 pid 文件但仍在后台运行的 agent daemon（`agent start --foreground true`）
+
 ## 用法
 
 ```bash
@@ -33,6 +39,9 @@ city version: 1.0.0
    pid: <pid>
    pidFile: <consolePidPath>
    log: <consoleLogPath>
+✅ orphan process stopped
+   pid: <orphanPid>
+   command: <orphanCommand>
 ```
 
 ```text

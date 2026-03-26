@@ -10,7 +10,7 @@
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 import type {
   AssetPort,
   AssetRuntimeLike,
@@ -199,7 +199,7 @@ export interface PluginRuntime extends AssetRuntimeLike {
   /**
    * 当前配置对象。
    */
-  config: ShipConfig;
+  config: DowncityConfig;
   /**
    * Service 调用端口。
    */

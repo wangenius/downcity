@@ -254,9 +254,9 @@ export interface UiOverviewContextItem {
 export type UiOverviewSessionItem = UiOverviewContextItem
 
 /**
- * Dashboard context 摘要项。
+ * Dashboard session 摘要项。
  */
-export interface UiContextSummary {
+export interface UiSessionSummary {
   /**
    * context 唯一标识。
    */
@@ -305,12 +305,10 @@ export interface UiContextSummary {
   executing?: boolean;
 }
 
-export type UiSessionSummary = UiContextSummary
-
 /**
- * `/api/dashboard/contexts` 响应。
+ * `/api/dashboard/sessions` 响应。
  */
-export interface UiContextsResponse {
+export interface UiSessionsResponse {
   /**
    * 请求是否成功。
    */
@@ -318,10 +316,8 @@ export interface UiContextsResponse {
   /**
    * context 列表。
    */
-  contexts?: UiContextSummary[];
+  contexts?: UiSessionSummary[];
 }
-
-export type UiSessionsResponse = UiContextsResponse
 
 /**
  * `/api/dashboard/overview` 响应。
@@ -1692,7 +1688,7 @@ export interface UiTaskRunDetail {
   /**
    * 执行消息时间线。
    */
-  messages?: UiContextTimelineMessage[];
+  messages?: UiSessionTimelineMessage[];
 }
 
 /**
@@ -1904,9 +1900,9 @@ export interface UiLocalMessage {
 }
 
 /**
- * context 时间线消息项（来自 `/api/dashboard/contexts/:id/messages`）。
+ * session 时间线消息项（来自 `/api/dashboard/sessions/:id/messages`）。
  */
-export interface UiContextTimelineMessage {
+export interface UiSessionTimelineMessage {
   /**
    * 消息 id。
    */
@@ -1937,12 +1933,10 @@ export interface UiContextTimelineMessage {
   toolName?: string;
 }
 
-export type UiSessionTimelineMessage = UiContextTimelineMessage
-
 /**
- * `/api/dashboard/contexts/:id/messages` 响应。
+ * `/api/dashboard/sessions/:id/messages` 响应。
  */
-export interface UiContextMessagesResponse {
+export interface UiSessionMessagesResponse {
   /**
    * 请求是否成功。
    */
@@ -1954,15 +1948,13 @@ export interface UiContextMessagesResponse {
   /**
    * 时间线消息列表。
    */
-  messages?: UiContextTimelineMessage[];
+  messages?: UiSessionTimelineMessage[];
 }
 
-export type UiSessionMessagesResponse = UiContextMessagesResponse
-
 /**
- * context compact archive 摘要项。
+ * session compact archive 摘要项。
  */
-export interface UiContextArchiveSummary {
+export interface UiSessionArchiveSummary {
   /**
    * archive 唯一标识（文件名去掉 `.json` 后解码）。
    */
@@ -1981,12 +1973,10 @@ export interface UiContextArchiveSummary {
   path?: string;
 }
 
-export type UiSessionArchiveSummary = UiContextArchiveSummary
-
 /**
- * `/api/dashboard/contexts/:id/archives` 响应。
+ * `/api/dashboard/sessions/:id/archives` 响应。
  */
-export interface UiContextArchivesResponse {
+export interface UiSessionArchivesResponse {
   /**
    * 请求是否成功。
    */
@@ -1998,15 +1988,13 @@ export interface UiContextArchivesResponse {
   /**
    * archive 列表。
    */
-  archives?: UiContextArchiveSummary[];
+  archives?: UiSessionArchiveSummary[];
 }
 
-export type UiSessionArchivesResponse = UiContextArchivesResponse
-
 /**
- * `/api/dashboard/contexts/:id/archives/:archiveId` 响应。
+ * `/api/dashboard/sessions/:id/archives/:archiveId` 响应。
  */
-export interface UiContextArchiveDetailResponse {
+export interface UiSessionArchiveDetailResponse {
   /**
    * 请求是否成功。
    */
@@ -2034,15 +2022,13 @@ export interface UiContextArchiveDetailResponse {
   /**
    * archive 中可展示的时间线消息列表。
    */
-  messages?: UiContextTimelineMessage[];
+  messages?: UiSessionTimelineMessage[];
 }
-
-export type UiSessionArchiveDetailResponse = UiContextArchiveDetailResponse
 
 /**
  * 通用“清理成功”响应。
  */
-export interface UiContextClearResponse {
+export interface UiSessionClearResponse {
   /**
    * 请求是否成功。
    */
@@ -2056,8 +2042,6 @@ export interface UiContextClearResponse {
    */
   cleared?: boolean;
 }
-
-export type UiSessionClearResponse = UiContextClearResponse
 
 /**
  * chat.delete 返回数据。

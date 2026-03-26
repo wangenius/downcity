@@ -29,12 +29,6 @@ import type {
   UiChatHistoryEvent,
   UiChatStatusResponse,
   UiConfigStatusResponse,
-  UiContextArchiveDetailResponse,
-  UiContextArchivesResponse,
-  UiContextArchiveSummary,
-  UiContextMessagesResponse,
-  UiContextSummary,
-  UiContextsResponse,
   UiEnvListResponse,
   UiLocalMessagesResponse,
   UiLogsResponse,
@@ -58,7 +52,13 @@ import type {
   UiChannelAccountItem,
   UiEnvItem,
   UiLocalMessage,
-  UiContextTimelineMessage,
+  UiSessionArchiveDetailResponse,
+  UiSessionArchivesResponse,
+  UiSessionArchiveSummary,
+  UiSessionMessagesResponse,
+  UiSessionSummary,
+  UiSessionsResponse,
+  UiSessionTimelineMessage,
 } from "../types/Dashboard";
 
 type RequestJson = <T>(
@@ -329,12 +329,12 @@ export async function queryChatChannels(
   }
 }
 
-export async function queryContexts(
+export async function querySessions(
   requestJson: RequestJson,
   agentId: string,
-): Promise<UiContextSummary[]> {
+): Promise<UiSessionSummary[]> {
   if (!agentId) return [];
-  const data = await requestJson<UiContextsResponse>(dashboardApiRoutes.contexts(120), {}, agentId);
+  const data = await requestJson<UiSessionsResponse>(dashboardApiRoutes.sessions(120), {}, agentId);
   const list = Array.isArray(data.contexts) ? data.contexts : [];
   const hasConsoleUiContext = list.some(
     (item) => String(item.contextId || "").trim() === CONSOLEUI_CONTEXT_ID,
@@ -387,8 +387,8 @@ export async function queryChannelHistory(
     if (!isConsoleUi) throw error;
   }
 
-  const fallbackData = await requestJson<UiContextMessagesResponse>(
-    dashboardApiRoutes.contextMessages(contextId, 100),
+  const fallbackData = await requestJson<UiSessionMessagesResponse>(
+    dashboardApiRoutes.sessionMessages(contextId, 100),
     {},
     agentId,
   );
@@ -396,42 +396,42 @@ export async function queryChannelHistory(
   return toHistoryEventsFromTimeline(contextId, timeline);
 }
 
-export async function queryContextMessages(
+export async function querySessionMessages(
   requestJson: RequestJson,
   agentId: string,
   contextId: string,
-): Promise<UiContextTimelineMessage[]> {
+): Promise<UiSessionTimelineMessage[]> {
   if (!agentId || !contextId) return [];
-  const data = await requestJson<UiContextMessagesResponse>(
-    dashboardApiRoutes.contextMessages(contextId, 100),
+  const data = await requestJson<UiSessionMessagesResponse>(
+    dashboardApiRoutes.sessionMessages(contextId, 100),
     {},
     agentId,
   );
   return Array.isArray(data.messages) ? data.messages : [];
 }
 
-export async function queryContextArchiveDetail(
+export async function querySessionArchiveDetail(
   requestJson: RequestJson,
   agentId: string,
   contextId: string,
   archiveId: string,
-): Promise<UiContextArchiveDetailResponse> {
-  return requestJson<UiContextArchiveDetailResponse>(
-    dashboardApiRoutes.contextArchiveDetail(contextId, archiveId),
+): Promise<UiSessionArchiveDetailResponse> {
+  return requestJson<UiSessionArchiveDetailResponse>(
+    dashboardApiRoutes.sessionArchiveDetail(contextId, archiveId),
     {},
     agentId,
   );
 }
 
-export async function queryContextArchives(
+export async function querySessionArchives(
   requestJson: RequestJson,
   agentId: string,
   contextId: string,
-): Promise<UiContextArchiveSummary[]> {
+): Promise<UiSessionArchiveSummary[]> {
   if (!agentId || !contextId) return [];
   try {
-    const data = await requestJson<UiContextArchivesResponse>(
-      dashboardApiRoutes.contextArchives(contextId, 80),
+    const data = await requestJson<UiSessionArchivesResponse>(
+      dashboardApiRoutes.sessionArchives(contextId, 80),
       {},
       agentId,
     );
@@ -441,6 +441,7 @@ export async function queryContextArchives(
     throw error;
   }
 }
+
 
 export async function queryTasks(
   requestJson: RequestJson,

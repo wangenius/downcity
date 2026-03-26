@@ -22,7 +22,7 @@ import {
   TerminalIcon,
   ShieldCheckIcon,
 } from "lucide-react"
-import type { UiAgentOption, UiChatChannelStatus, UiContextSummary, UiTaskItem } from "@/types/Dashboard"
+import type { UiAgentOption, UiChatChannelStatus, UiSessionSummary, UiTaskItem } from "@/types/Dashboard"
 import type { DashboardView } from "@/types/Navigation"
 import {
   Sidebar,
@@ -37,7 +37,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { getChannelDisplayName } from "@/lib/channel-label"
-import { buildContextGroups, resolveContextChannel } from "@/lib/context-groups"
+import { buildSessionGroups, resolveSessionChannel } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@downcity/ui"
@@ -66,13 +66,13 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    */
   routeAgentId: string
   /**
-   * context 列表。
+   * session 列表。
    */
-  contexts: UiContextSummary[]
+  sessions: UiSessionSummary[]
   /**
-   * 当前选中 context。
+   * 当前选中 session。
    */
-  selectedContextId: string
+  selectedSessionId: string
   /**
    * 当前 agent 下任务列表。
    */
@@ -197,8 +197,8 @@ export function AppSidebar({
   selectedAgentId,
   routePathname,
   routeAgentId,
-  contexts,
-  selectedContextId,
+  sessions,
+  selectedSessionId,
   tasks,
   selectedTaskTitle,
   selectedChatChannel,
@@ -215,21 +215,21 @@ export function AppSidebar({
   onRefresh,
   ...props
 }: AppSidebarProps) {
-  const groupedContexts = buildContextGroups(contexts)
+  const groupedSessions = buildSessionGroups(sessions)
   const chatGroup = React.useMemo(
-    () => groupedContexts.find((group) => group.key === "chat") ?? null,
-    [groupedContexts],
+    () => groupedSessions.find((group) => group.key === "chat") ?? null,
+    [groupedSessions],
   )
-  const otherContextGroups = React.useMemo(
-    () => groupedContexts.filter((group) => group.key !== "chat"),
-    [groupedContexts],
+  const otherSessionGroups = React.useMemo(
+    () => groupedSessions.filter((group) => group.key !== "chat"),
+    [groupedSessions],
   )
   const chatItems = React.useMemo(
-    () => [...(chatGroup?.items || []), ...otherContextGroups.flatMap((group) => group.items)],
-    [chatGroup, otherContextGroups],
+    () => [...(chatGroup?.items || []), ...otherSessionGroups.flatMap((group) => group.items)],
+    [chatGroup, otherSessionGroups],
   )
   const chatChannelGroups = React.useMemo(() => {
-    const buckets: Record<string, UiContextSummary[]> = {}
+    const buckets: Record<string, UiSessionSummary[]> = {}
     const ensureBucket = (channelInput: string) => {
       const channel = String(channelInput || "").trim().toLowerCase()
       if (!channel) return
@@ -238,7 +238,7 @@ export function AppSidebar({
       }
     }
     for (const item of chatItems) {
-      const channel = resolveContextChannel(item)
+      const channel = resolveSessionChannel(item)
       ensureBucket(channel)
       buckets[channel].push(item)
     }
@@ -631,7 +631,7 @@ export function AppSidebar({
                                 // 关键点（中文）：QQ 等渠道可能把 openid 回填到 chatTitle，这里做兜底清洗。
                                 const normalizedTitle = chatTitle && (!chatId || chatTitle !== chatId) ? chatTitle : ""
                                 const label = normalizedTitle || chatId || contextId
-                                const isActive = activeView === "contextWorkspace" && selectedContextId === contextId
+                                const isActive = activeView === "contextWorkspace" && selectedSessionId === contextId
                                 const isExecuting = item.executing === true
                                 return (
                                   <SidebarMenuItem key={contextId} className="min-w-0">

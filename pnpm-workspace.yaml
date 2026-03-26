@@ -1,7 +1,10 @@
 packages:
-  - "console-ui"
-  - "homepage"
-  - "packages/downcity"
-  - "packages/downcity-ui"
-  - "chrome-extension"
-  - "examples/*"
+  - console-ui
+  - homepage
+  - packages/downcity
+  - packages/downcity-ui
+  - chrome-extension
+  - examples/*
+
+onlyBuiltDependencies:
+  - better-sqlite3

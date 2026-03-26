@@ -37,7 +37,7 @@ export interface SessionWorkspaceSectionProps {
   /**
    * session 列表。
    */
-  contexts: UiSessionSummary[]
+  sessions: UiSessionSummary[]
   /**
    * channel 历史。
    */
@@ -61,7 +61,7 @@ export interface SessionWorkspaceSectionProps {
   /**
    * archive 消息历史。
    */
-  contextArchiveMessages: UiSessionTimelineMessage[]
+  sessionArchiveMessages: UiSessionTimelineMessage[]
   /**
    * prompt 数据。
    */
@@ -125,7 +125,7 @@ export interface SessionWorkspaceSectionProps {
   /**
    * 切换 session。
    */
-  onSelectSession: (contextId: string) => void
+  onSelectSession: (sessionId: string) => void
 }
 
 type RightTab = "route" | "system" | "context" | "archive"
@@ -578,13 +578,13 @@ function StatusBadge(props: { state: string }) {
 export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
   const {
     selectedSessionId,
-    contexts,
+    sessions,
     channelHistory,
     chatChannels,
     sessionMessages,
     sessionArchives,
     selectedArchiveId,
-    contextArchiveMessages,
+    sessionArchiveMessages,
     prompt,
     chatInput,
     debugPanelsCollapsed,
@@ -606,8 +606,8 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
   const [rightTab, setRightTab] = React.useState<RightTab>("route")
 
   const selectedSession = React.useMemo(
-    () => contexts.find((item) => String(item.contextId || "").trim() === selectedSessionId) || null,
-    [contexts, selectedSessionId],
+    () => sessions.find((item) => String(item.contextId || "").trim() === selectedSessionId) || null,
+    [sessions, selectedSessionId],
   )
 
   const currentChannel = React.useMemo(() => {
@@ -834,7 +834,7 @@ export function SessionWorkspaceSection(props: SessionWorkspaceSectionProps) {
               <ArchivePanel
                 archives={sessionArchives}
                 selectedArchiveId={selectedArchiveId}
-                archiveMessages={contextArchiveMessages}
+                archiveMessages={sessionArchiveMessages}
                 formatTime={formatTime}
                 onSelectArchive={onSelectArchive}
                 onRefreshArchives={onRefreshArchives}

@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { loadShipConfig } from "@/console/env/Config.js";
+import { loadDowncityConfig } from "@/console/env/Config.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 import {
   getCacheDirPath,
@@ -81,7 +81,7 @@ export function ensureRuntimeProjectReady(projectRoot: string): void {
 export function ensureRuntimeModelBindingReady(projectRoot: string): void {
   let primaryModelId = "";
   try {
-    const config = loadShipConfig(projectRoot);
+    const config = loadDowncityConfig(projectRoot);
     primaryModelId = String(config.model?.primary || "").trim();
   } catch (error) {
     console.error("❌ Invalid downcity.json model binding");

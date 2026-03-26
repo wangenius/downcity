@@ -1,8 +1,8 @@
 {
   "name": "downcity",
-  "version": "1.0.369",
+  "version": "1.0.375",
   "type": "module",
-  "description": "把一个代码仓库，启动成一个可对话、可审计的 Agent Runtime",
+  "description": "每一个文件仓库都是一个Agent，搭建你的Agent City",
   "bin": {
     "downcity": "./bin/console/commands/Index.js",
     "city": "./bin/console/commands/Index.js"

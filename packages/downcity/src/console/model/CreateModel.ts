@@ -19,7 +19,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { type LanguageModel } from "ai";
 import { createLlmLoggingFetch } from "@utils/logger/Fetch.js";
 import { getLogger } from "@utils/logger/Logger.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
 import { ConsoleStore } from "@utils/store/index.js";
 
@@ -136,7 +136,7 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
  * 4) 创建带日志拦截的 fetch，并按 provider type 分发到 SDK 工厂。
  */
 export async function createModel(input: {
-  config: ShipConfig;
+  config: DowncityConfig;
   getRequestContext?: () => ModelLogContext | undefined;
 }): Promise<LanguageModel> {
   const logger = getLogger();

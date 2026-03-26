@@ -2,7 +2,7 @@
  * Console Dashboard 刷新编排 Hook。
  *
  * 关键点（中文）
- * - 集中管理整页刷新与 context 切换后的联动刷新。
+ * - 集中管理整页刷新与 session 切换后的联动刷新。
  * - 保持 `useConsoleDashboard` 主文件只负责状态装配，避免刷新流程继续膨胀。
  */
 
@@ -14,41 +14,41 @@ import type {
   UiAgentOption,
   UiAgentsResponse,
   UiChatHistoryEvent,
-  UiContextArchiveSummary,
   UiChatChannelStatus,
-  UiContextSummary,
-  UiContextTimelineMessage,
   UiEnvItem,
   UiPluginRuntimeItem,
   UiPromptResponse,
+  UiSessionArchiveSummary,
+  UiSessionSummary,
+  UiSessionTimelineMessage,
 } from "../../types/Dashboard";
 import type { DashboardToastType } from "../../types/DashboardHook";
 
-function clearContextView(params: {
+function clearSessionView(params: {
   setChannelHistory: (value: UiChatHistoryEvent[]) => void;
-  setContextMessages: (value: UiContextTimelineMessage[]) => void;
-  setContextArchives: (value: UiContextArchiveSummary[]) => void;
+  setSessionMessages: (value: UiSessionTimelineMessage[]) => void;
+  setSessionArchives: (value: UiSessionArchiveSummary[]) => void;
   setSelectedArchiveId: (value: string) => void;
-  setContextArchiveMessages: (value: UiContextTimelineMessage[]) => void;
+  setSessionArchiveMessages: (value: UiSessionTimelineMessage[]) => void;
   setPrompt: (value: UiPromptResponse | null) => void;
 }): void {
   params.setChannelHistory([]);
-  params.setContextMessages([]);
-  params.setContextArchives([]);
+  params.setSessionMessages([]);
+  params.setSessionArchives([]);
   params.setSelectedArchiveId("");
-  params.setContextArchiveMessages([]);
+  params.setSessionArchiveMessages([]);
   params.setPrompt(null);
 }
 
-function resolveNextContextId(params: {
-  contexts: UiContextSummary[];
-  currentContextId: string;
+function resolveNextSessionId(params: {
+  sessions: UiSessionSummary[];
+  currentSessionId: string;
 }): string {
   const byCurrent =
-    params.contexts.find((item) => item.contextId === params.currentContextId)?.contextId || "";
+    params.sessions.find((item) => item.contextId === params.currentSessionId)?.contextId || "";
   const consoleUi =
-    params.contexts.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
-  const fallback = params.contexts[0]?.contextId || "";
+    params.sessions.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
+  const fallback = params.sessions[0]?.contextId || "";
   return byCurrent || consoleUi || fallback;
 }
 
@@ -59,18 +59,18 @@ export function useDashboardRefresh(params: {
     preferredAgentId?: string,
   ) => Promise<T>;
   selectedAgentId: string;
-  selectedContextIdRef: MutableRefObject<string>;
+  selectedSessionIdRef: MutableRefObject<string>;
   setSelectedAgentId: (value: string) => void;
-  setSelectedContextId: (value: string) => void;
+  setSelectedSessionId: (value: string) => void;
   setAgentEnvItems: (value: UiEnvItem[]) => void;
   setTopbarError: (value: boolean) => void;
   setTopbarStatus: (value: string) => void;
   setLoading: (value: boolean) => void;
   setChannelHistory: (value: UiChatHistoryEvent[]) => void;
-  setContextMessages: (value: UiContextTimelineMessage[]) => void;
-  setContextArchives: (value: UiContextArchiveSummary[]) => void;
+  setSessionMessages: (value: UiSessionTimelineMessage[]) => void;
+  setSessionArchives: (value: UiSessionArchiveSummary[]) => void;
   setSelectedArchiveId: (value: string) => void;
-  setContextArchiveMessages: (value: UiContextTimelineMessage[]) => void;
+  setSessionArchiveMessages: (value: UiSessionTimelineMessage[]) => void;
   setPrompt: (value: UiPromptResponse | null) => void;
   clearPanelDataForNoAgent: () => void;
   refreshAgents: (
@@ -84,7 +84,7 @@ export function useDashboardRefresh(params: {
   refreshConfigStatus: (agentId: string) => Promise<void>;
   refreshAgentEnv: (agentId: string) => Promise<void>;
   refreshChatChannels: (agentId: string) => Promise<UiChatChannelStatus[]>;
-  refreshContexts: (agentId: string) => Promise<UiContextSummary[]>;
+  refreshSessions: (agentId: string) => Promise<UiSessionSummary[]>;
   refreshAuthorization: (agentId: string) => Promise<void>;
   refreshOverview: (agentId: string) => Promise<void>;
   refreshServices: (agentId: string) => Promise<void>;
@@ -93,13 +93,13 @@ export function useDashboardRefresh(params: {
   refreshLogs: (agentId: string) => Promise<void>;
   refreshLocalChat: (agentId: string) => Promise<void>;
   refreshChannelHistory: (agentId: string, contextId: string) => Promise<void>;
-  refreshContextMessages: (agentId: string, contextId: string) => Promise<void>;
-  refreshContextArchives: (agentId: string, contextId: string) => Promise<UiContextArchiveSummary[]>;
+  refreshSessionMessages: (agentId: string, contextId: string) => Promise<void>;
+  refreshSessionArchives: (agentId: string, contextId: string) => Promise<UiSessionArchiveSummary[]>;
   refreshPrompt: (agentId: string, contextId?: string) => Promise<void>;
   showToast: (message: string, type?: DashboardToastType) => void;
 }): {
   refreshDashboard: (preferredAgentId?: string) => Promise<void>;
-  handleContextChange: (contextId: string) => Promise<void>;
+  handleSessionChange: (contextId: string) => Promise<void>;
 } {
   const refreshDashboard = useCallback(
     async (preferredAgentId?: string) => {
@@ -141,9 +141,9 @@ export function useDashboardRefresh(params: {
           return;
         }
 
-        const [, contextList] = await Promise.all([
+        const [, sessionList] = await Promise.all([
           params.refreshChatChannels(nextAgentId),
-          params.refreshContexts(nextAgentId),
+          params.refreshSessions(nextAgentId),
         ]);
 
         await Promise.all([
@@ -163,26 +163,26 @@ export function useDashboardRefresh(params: {
           params.refreshLocalChat(nextAgentId),
         ]);
 
-        const nextContextId = resolveNextContextId({
-          contexts: contextList,
-          currentContextId: String(params.selectedContextIdRef.current || "").trim(),
+        const nextContextId = resolveNextSessionId({
+          sessions: sessionList,
+          currentSessionId: String(params.selectedSessionIdRef.current || "").trim(),
         });
-        params.setSelectedContextId(nextContextId);
+        params.setSelectedSessionId(nextContextId);
 
         if (nextContextId) {
           await Promise.all([
             params.refreshChannelHistory(nextAgentId, nextContextId),
-            params.refreshContextMessages(nextAgentId, nextContextId),
-            params.refreshContextArchives(nextAgentId, nextContextId),
+            params.refreshSessionMessages(nextAgentId, nextContextId),
+            params.refreshSessionArchives(nextAgentId, nextContextId),
             params.refreshPrompt(nextAgentId, nextContextId),
           ]);
         } else {
-          clearContextView({
+          clearSessionView({
             setChannelHistory: params.setChannelHistory,
-            setContextMessages: params.setContextMessages,
-            setContextArchives: params.setContextArchives,
+            setSessionMessages: params.setSessionMessages,
+            setSessionArchives: params.setSessionArchives,
             setSelectedArchiveId: params.setSelectedArchiveId,
-            setContextArchiveMessages: params.setContextArchiveMessages,
+            setSessionArchiveMessages: params.setSessionArchiveMessages,
             setPrompt: params.setPrompt,
           });
         }
@@ -236,15 +236,15 @@ export function useDashboardRefresh(params: {
     [params],
   );
 
-  const handleContextChange = useCallback(
+  const handleSessionChange = useCallback(
     async (contextId: string) => {
       const nextContextId = String(contextId || "").trim();
-      params.setSelectedContextId(nextContextId);
+      params.setSelectedSessionId(nextContextId);
       if (!params.selectedAgentId || !nextContextId) return;
       await Promise.all([
         params.refreshChannelHistory(params.selectedAgentId, nextContextId),
-        params.refreshContextMessages(params.selectedAgentId, nextContextId),
-        params.refreshContextArchives(params.selectedAgentId, nextContextId),
+        params.refreshSessionMessages(params.selectedAgentId, nextContextId),
+        params.refreshSessionArchives(params.selectedAgentId, nextContextId),
         params.refreshPrompt(params.selectedAgentId, nextContextId),
       ]);
     },
@@ -253,6 +253,6 @@ export function useDashboardRefresh(params: {
 
   return {
     refreshDashboard,
-    handleContextChange,
+    handleSessionChange,
   };
 }

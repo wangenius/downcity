@@ -8,8 +8,8 @@
 
 import type {
   UiChatHistoryEvent,
-  UiContextTimelineMessage,
   UiPluginRuntimeItem,
+  UiSessionTimelineMessage,
 } from "../../types/Dashboard";
 
 export const CONSOLEUI_CONTEXT_ID = "consoleui-chat-main";
@@ -120,7 +120,7 @@ export function isConsoleUiSession(sessionIdInput: string): boolean {
 
 export function toHistoryEventsFromTimeline(
   contextId: string,
-  timeline: UiContextTimelineMessage[],
+  timeline: UiSessionTimelineMessage[],
 ): UiChatHistoryEvent[] {
   return timeline.map((item, index) => {
     const role = String(item.role || "").trim().toLowerCase();

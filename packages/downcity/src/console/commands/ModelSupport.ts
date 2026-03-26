@@ -10,7 +10,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
 import { getDowncityJsonPath } from "@/console/env/Paths.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 
 const OPENAI_COMPAT_PROVIDER_TYPES = new Set<LlmProviderType>([
   "openai",
@@ -197,15 +197,15 @@ export function setProjectPrimaryModel(projectRoot: string, modelId: string): {
   if (!fs.existsSync(shipJsonPath)) {
     throw new Error(`downcity.json not found at ${shipJsonPath}`);
   }
-  const raw = fs.readJsonSync(shipJsonPath) as Partial<ShipConfig>;
+  const raw = fs.readJsonSync(shipJsonPath) as Partial<DowncityConfig>;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`Invalid downcity.json: expected object (${shipJsonPath})`);
   }
   const previousPrimary = String(raw.model?.primary || "").trim();
   const nextPrimary = String(modelId || "").trim();
   if (!nextPrimary) throw new Error("modelId cannot be empty");
-  const nextConfig: ShipConfig = {
-    ...(raw as ShipConfig),
+  const nextConfig: DowncityConfig = {
+    ...(raw as DowncityConfig),
     model: {
       ...(raw.model || {}),
       primary: nextPrimary,

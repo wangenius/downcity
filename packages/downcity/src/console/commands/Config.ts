@@ -13,7 +13,7 @@ import type { Command } from "commander";
 import { getDowncityJsonPath } from "@/console/env/Paths.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import { aliasCommand } from "./Alias.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 
 function parseBooleanOption(value: string | undefined): boolean {
   if (value === undefined) return true;
@@ -53,34 +53,34 @@ function parseConfigValue(rawValue: string): unknown {
   }
 }
 
-function readShipConfigByPath(
-  shipJsonPath: string,
+function readDowncityConfigByPath(
+  downcityJsonPath: string,
   scope: "project" | "console",
-): { shipJsonPath: string; config: ShipConfig } {
-  if (!fs.existsSync(shipJsonPath)) {
+): { downcityJsonPath: string; config: DowncityConfig } {
+  if (!fs.existsSync(downcityJsonPath)) {
     const hint =
       scope === "console"
         ? 'Run "city console init" first.'
         : 'Run "city agent create" first.';
-    throw new Error(`downcity.json not found at ${shipJsonPath}. ${hint}`);
+    throw new Error(`downcity.json not found at ${downcityJsonPath}. ${hint}`);
   }
-  const raw = fs.readJsonSync(shipJsonPath) as unknown;
+  const raw = fs.readJsonSync(downcityJsonPath) as unknown;
   if (!isPlainObject(raw)) {
     throw new Error("Invalid downcity.json: expected object");
   }
-  const candidate = raw as Partial<ShipConfig>;
+  const candidate = raw as Partial<DowncityConfig>;
   if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
     throw new Error("Invalid downcity.json: missing required fields name/version");
   }
-  return { shipJsonPath, config: candidate as ShipConfig };
+  return { downcityJsonPath, config: candidate as DowncityConfig };
 }
 
-function readShipConfig(projectRoot: string): { shipJsonPath: string; config: ShipConfig } {
-  return readShipConfigByPath(getDowncityJsonPath(projectRoot), "project");
+function readDowncityConfig(projectRoot: string): { downcityJsonPath: string; config: DowncityConfig } {
+  return readDowncityConfigByPath(getDowncityJsonPath(projectRoot), "project");
 }
 
-function writeShipConfig(shipJsonPath: string, config: ShipConfig): void {
-  fs.writeJsonSync(shipJsonPath, config, { spaces: 2 });
+function writeDowncityConfig(downcityJsonPath: string, config: DowncityConfig): void {
+  fs.writeJsonSync(downcityJsonPath, config, { spaces: 2 });
 }
 
 function getByPath(
@@ -153,8 +153,8 @@ function runConfigCommand(
   options: { path?: string; json?: boolean },
   handler: (input: {
     projectRoot: string;
-    shipJsonPath: string;
-    config: ShipConfig;
+    downcityJsonPath: string;
+    config: DowncityConfig;
   }) => {
     title: string;
     payload: Record<string, unknown>;
@@ -164,10 +164,10 @@ function runConfigCommand(
   const asJson = options.json !== false;
   try {
     const projectRoot = resolveProjectRoot(options.path);
-    const { shipJsonPath, config } = readShipConfig(projectRoot);
-    const result = handler({ projectRoot, shipJsonPath, config });
+    const { downcityJsonPath, config } = readDowncityConfig(projectRoot);
+    const result = handler({ projectRoot, downcityJsonPath, config });
     if (result.save) {
-      writeShipConfig(shipJsonPath, config);
+      writeDowncityConfig(downcityJsonPath, config);
     }
     printResult({
       asJson,
@@ -175,7 +175,7 @@ function runConfigCommand(
       title: result.title,
       payload: {
         projectRoot,
-        shipJsonPath,
+        downcityJsonPath,
         ...result.payload,
       },
     });
@@ -213,15 +213,15 @@ export function registerConfigCommand(program: Command): void {
       .description("读取 downcity.json（可选读取单个路径）")
       .helpOption("--help", "display help for command"),
   ).action((keyPath: string | undefined, options: { path?: string; json?: boolean }) => {
-    runConfigCommand(options, ({ config: shipConfig }) => {
+    runConfigCommand(options, ({ config: downcityConfig }) => {
       if (!keyPath) {
         return {
           title: "config loaded",
-          payload: { config: shipConfig },
+          payload: { config: downcityConfig },
         };
       }
       const pathTokens = parseConfigPath(keyPath);
-      const got = getByPath(shipConfig as unknown as Record<string, unknown>, pathTokens);
+      const got = getByPath(downcityConfig as unknown as Record<string, unknown>, pathTokens);
       if (!got.found) {
         throw new Error(`Config path not found: ${keyPath}`);
       }
@@ -247,10 +247,10 @@ export function registerConfigCommand(program: Command): void {
       options: { path?: string; json?: boolean },
     ) => {
       const pathTokens = parseConfigPath(keyPath);
-      runConfigCommand(options, ({ config: shipConfig }) => {
+      runConfigCommand(options, ({ config: downcityConfig }) => {
         const parsed = parseConfigValue(value);
         const changed = setByPath(
-          shipConfig as unknown as Record<string, unknown>,
+          downcityConfig as unknown as Record<string, unknown>,
           pathTokens,
           parsed,
         );
@@ -275,9 +275,9 @@ export function registerConfigCommand(program: Command): void {
       .helpOption("--help", "display help for command"),
   ).action((keyPath: string, options: { path?: string; json?: boolean }) => {
     const pathTokens = parseConfigPath(keyPath);
-    runConfigCommand(options, ({ config: shipConfig }) => {
+    runConfigCommand(options, ({ config: downcityConfig }) => {
       const removed = unsetByPath(
-        shipConfig as unknown as Record<string, unknown>,
+        downcityConfig as unknown as Record<string, unknown>,
         pathTokens,
       );
       if (!removed.removed) {

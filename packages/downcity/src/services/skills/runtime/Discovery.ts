@@ -10,7 +10,7 @@ import fs from "fs-extra";
 import yaml from "js-yaml";
 import path from "path";
 import type { Dirent, Stats } from "node:fs";
-import type { ShipConfig } from "@/console/env/Config.js";
+import type { DowncityConfig } from "@/console/env/Config.js";
 import { parseFrontMatter } from "./Frontmatter.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";
 import { isSubpath } from "./Utils.js";
@@ -33,7 +33,7 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
  */
 export function discoverClaudeSkillsSync(
   projectRoot: string,
-  config: ShipConfig,
+  config: DowncityConfig,
 ): ClaudeSkill[] {
   const root = String(projectRoot || "").trim();
   if (!root) return [];

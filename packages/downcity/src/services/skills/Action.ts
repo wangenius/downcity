@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { discoverClaudeSkillsSync } from "./runtime/Discovery.js";
-import { loadShipConfig } from "@/console/env/Config.js";
+import { loadDowncityConfig } from "@/console/env/Config.js";
 import type { ClaudeSkill } from "./types/ClaudeSkill.js";
 import type { JsonValue } from "@/types/Json.js";
 import type {
@@ -108,7 +108,7 @@ export function searchLearnedSkills(
 
 function getSkills(projectRoot: string): ClaudeSkill[] {
   const root = path.resolve(projectRoot);
-  const config = loadShipConfig(root);
+  const config = loadDowncityConfig(root);
   return discoverClaudeSkillsSync(root, config);
 }
 

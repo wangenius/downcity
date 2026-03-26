@@ -73,7 +73,7 @@ export interface SessionOverviewSectionProps {
   /**
    * session 摘要列表。
    */
-  contexts: UiSessionSummary[]
+  sessions: UiSessionSummary[]
   /**
    * chat 渠道状态列表。
    */
@@ -97,11 +97,11 @@ export interface SessionOverviewSectionProps {
   /**
    * 打开 session workspace。
    */
-  onOpenSession: (contextId: string) => void
+  onOpenSession: (sessionId: string) => void
   /**
    * 删除指定 session。
    */
-  onDeleteSession: (contextId: string) => void
+  onDeleteSession: (sessionId: string) => void
   /**
    * 正在删除的 session id。
    */
@@ -118,7 +118,7 @@ export interface SessionOverviewSectionProps {
 
 export function SessionOverviewSection(props: SessionOverviewSectionProps) {
   const {
-    contexts,
+    sessions,
     chatChannels,
     channelAccounts,
     selectedSessionId,
@@ -136,10 +136,10 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
   const [filter, setFilter] = React.useState<"all" | SessionGroupKey>("all")
 
   const normalizedFocusedChannel = String(focusedChannel || "").trim().toLowerCase()
-  const contextsInFocusedChannel = React.useMemo(() => {
+  const sessionsInFocusedChannel = React.useMemo(() => {
     if (!normalizedFocusedChannel) return []
-    return contexts.filter((item) => resolveSessionChannel(item) === normalizedFocusedChannel)
-  }, [contexts, normalizedFocusedChannel])
+    return sessions.filter((item) => resolveSessionChannel(item) === normalizedFocusedChannel)
+  }, [sessions, normalizedFocusedChannel])
 
   const visibleChatChannels = React.useMemo(() => {
     if (!normalizedFocusedChannel) return []
@@ -148,7 +148,7 @@ export function SessionOverviewSection(props: SessionOverviewSectionProps) {
     )
   }, [chatChannels, normalizedFocusedChannel])
 
-  const filteredSessions = filterSessionsByKeyword(contextsInFocusedChannel, search)
+  const filteredSessions = filterSessionsByKeyword(sessionsInFocusedChannel, search)
   const grouped = buildSessionGroups(filteredSessions)
   const visibleSessions = grouped
     .filter((group) => (filter === "all" ? true : group.key === filter))

@@ -1,5 +1,5 @@
 /**
- * Ship 配置类型定义。
+ * Downcity 配置类型定义。
  *
  * 关键点（中文）
  * - 作为全局共享类型，不挂在 console 目录下。
@@ -9,7 +9,7 @@ import type { LlmConfig } from "@agent/types/LlmConfig.js";
 import type { AgentModelBindingConfig } from "@agent/types/ModelBinding.js";
 import type { JsonObject } from "@/types/Json.js";
 
-export interface ShipConfig {
+export interface DowncityConfig {
   $schema?: string;
   name: string;
   version: string;

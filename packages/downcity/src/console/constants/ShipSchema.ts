@@ -1,6 +1,6 @@
 import type { JsonObject } from "@/types/Json.js";
 
-export const SHIP_JSON_SCHEMA: JsonObject = {
+export const DOWNCITY_JSON_SCHEMA: JsonObject = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://downcity.ai/schemas/downcity.schema.json",
   title: "Downcity downcity.json",

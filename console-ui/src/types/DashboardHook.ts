@@ -17,9 +17,6 @@ import type {
   UiChatChannelStatus,
   UiChatHistoryEvent,
   UiConfigStatusItem,
-  UiContextArchiveSummary,
-  UiContextSummary,
-  UiContextTimelineMessage,
   UiEnvItem,
   UiLocalMessage,
   UiLogItem,
@@ -32,6 +29,9 @@ import type {
   UiPluginRuntimeItem,
   UiPromptResponse,
   UiServiceItem,
+  UiSessionArchiveSummary,
+  UiSessionSummary,
+  UiSessionTimelineMessage,
   UiSkillFindResult,
   UiSkillInstallPayload,
   UiSkillInstallResult,
@@ -119,14 +119,14 @@ export interface UseConsoleDashboardResult {
   chatChannels: UiChatChannelStatus[];
 
   /**
-   * context 摘要列表。
+   * session 摘要列表。
    */
-  contexts: UiContextSummary[];
+  sessions: UiSessionSummary[];
 
   /**
-   * 当前选中的 contextId。
+   * 当前选中的 sessionId。
    */
-  selectedContextId: string;
+  selectedSessionId: string;
 
   /**
    * chat history 事件列表。
@@ -134,14 +134,14 @@ export interface UseConsoleDashboardResult {
   channelHistory: UiChatHistoryEvent[];
 
   /**
-   * context 时间线消息列表。
+   * session 时间线消息列表。
    */
-  contextMessages: UiContextTimelineMessage[];
+  sessionMessages: UiSessionTimelineMessage[];
 
   /**
    * compact archive 列表。
    */
-  contextArchives: UiContextArchiveSummary[];
+  sessionArchives: UiSessionArchiveSummary[];
 
   /**
    * 当前选中的 archive id。
@@ -151,7 +151,7 @@ export interface UseConsoleDashboardResult {
   /**
    * 当前选中 archive 的消息时间线。
    */
-  contextArchiveMessages: UiContextTimelineMessage[];
+  sessionArchiveMessages: UiSessionTimelineMessage[];
 
   /**
    * 任务状态列表。
@@ -229,9 +229,9 @@ export interface UseConsoleDashboardResult {
   sending: boolean;
 
   /**
-   * 是否正在清理 context messages。
+   * 是否正在清理 session messages。
    */
-  clearingContextMessages: boolean;
+  clearingSessionMessages: boolean;
 
   /**
    * 是否正在清理 chat history。
@@ -239,9 +239,9 @@ export interface UseConsoleDashboardResult {
   clearingChatHistory: boolean;
 
   /**
-   * 正在删除的 context id。
+   * 正在删除的 session id。
    */
-  deletingContextId: string;
+  deletingSessionId: string;
 
   /**
    * consoleui channel 输入框内容。
@@ -264,9 +264,9 @@ export interface UseConsoleDashboardResult {
   handleAgentChange: (nextAgentId: string) => void;
 
   /**
-   * 切换当前 context。
+   * 切换当前 session。
    */
-  handleContextChange: (contextId: string) => Promise<void>;
+  handleSessionChange: (contextId: string) => Promise<void>;
 
   /**
    * 手动刷新 dashboard。
@@ -294,9 +294,9 @@ export interface UseConsoleDashboardResult {
   refreshSkills: (agentId: string) => Promise<void>;
 
   /**
-   * 刷新 context 列表。
+   * 刷新 session 列表。
    */
-  refreshContexts: (agentId: string) => Promise<UiContextSummary[]>;
+  refreshSessions: (agentId: string) => Promise<UiSessionSummary[]>;
 
   /**
    * 刷新 chat history。
@@ -304,19 +304,19 @@ export interface UseConsoleDashboardResult {
   refreshChannelHistory: (agentId: string, contextId: string) => Promise<void>;
 
   /**
-   * 刷新 context message 历史。
+   * 刷新 session message 历史。
    */
-  refreshContextMessages: (agentId: string, contextId: string) => Promise<void>;
+  refreshSessionMessages: (agentId: string, contextId: string) => Promise<void>;
 
   /**
    * 刷新 compact archive 列表。
    */
-  refreshContextArchives: (agentId: string, contextId: string) => Promise<UiContextArchiveSummary[]>;
+  refreshSessionArchives: (agentId: string, contextId: string) => Promise<UiSessionArchiveSummary[]>;
 
   /**
    * 加载 archive 详情。
    */
-  loadContextArchiveMessages: (
+  loadSessionArchiveMessages: (
     agentId: string,
     contextId: string,
     archiveId: string,
@@ -453,9 +453,9 @@ export interface UseConsoleDashboardResult {
   sendConsoleUiMessage: () => Promise<void>;
 
   /**
-   * 清理指定 context 的消息历史。
+   * 清理指定 session 的消息历史。
    */
-  clearContextMessages: (contextId: string) => Promise<void>;
+  clearSessionMessages: (contextId: string) => Promise<void>;
 
   /**
    * 清理指定 context 的 chat history。
@@ -463,9 +463,9 @@ export interface UseConsoleDashboardResult {
   clearChatHistory: (contextId: string) => Promise<void>;
 
   /**
-   * 完整删除指定 context。
+   * 完整删除指定 session。
    */
-  deleteChatContext: (contextId: string) => Promise<boolean>;
+  deleteChatSession: (contextId: string) => Promise<boolean>;
 
   /**
    * 切换 active model。

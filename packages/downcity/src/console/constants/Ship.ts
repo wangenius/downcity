@@ -1,6 +1,6 @@
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 
-export const DEFAULT_SHIP_JSON: ShipConfig = {
+export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
   $schema: "./.downcity/schema/downcity.schema.json",
   name: "downcity",
   version: "1.0.0",

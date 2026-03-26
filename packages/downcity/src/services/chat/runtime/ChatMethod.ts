@@ -6,14 +6,14 @@
  * - 未配置或非法值统一回退到 `direct`，保证默认直发与行为稳定。
  */
 
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 
 export type ChatMethod = "cmd" | "direct";
 
 /**
  * 解析当前生效的 chat 投递方式。
  */
-export function resolveChatMethod(config: ShipConfig | null | undefined): ChatMethod {
+export function resolveChatMethod(config: DowncityConfig | null | undefined): ChatMethod {
   const method = String(config?.services?.chat?.method || "")
     .trim()
     .toLowerCase();

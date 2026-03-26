@@ -15,7 +15,7 @@ import fs from "fs-extra";
 import { execa } from "execa";
 import { discoverClaudeSkillsSync } from "./runtime/Discovery.js";
 import { getClaudeSkillSearchRoots } from "./runtime/Paths.js";
-import { loadShipConfig } from "@/console/env/Config.js";
+import { loadDowncityConfig } from "@/console/env/Config.js";
 
 async function runNpxSkills(args: string[], opts?: { yes?: boolean }): Promise<number> {
   const yes = opts?.yes !== false;
@@ -67,7 +67,7 @@ export async function skillListCommand(cwd: string = "."): Promise<void> {
     );
   }
 
-  const config = loadShipConfig(projectRoot);
+  const config = loadDowncityConfig(projectRoot);
   const roots = getClaudeSkillSearchRoots(projectRoot, config);
   const skills = discoverClaudeSkillsSync(projectRoot, config);
 

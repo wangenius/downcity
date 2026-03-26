@@ -11,8 +11,8 @@ import type {
 import {
   loadGlobalEnvFromStore,
   loadAgentRuntimeEnv,
-  loadShipConfig,
-  type ShipConfig,
+  loadDowncityConfig,
+  type DowncityConfig,
 } from "@/console/env/Config.js";
 import {
   getTaskRunDir,
@@ -72,7 +72,7 @@ export type RuntimeStateBase = {
    */
   rootPath: string;
   logger: Logger;
-  config: ShipConfig;
+  config: DowncityConfig;
   /**
    * 当前 agent 的 `.env` 快照（局部作用域）。
    */
@@ -448,7 +448,7 @@ export async function initRuntimeState(cwd: string): Promise<void> {
   // 在启动时加载 agent runtime env 快照并读取 downcity.json（支持继承/覆盖）。
   const globalEnv = loadGlobalEnvFromStore();
   const projectEnv = loadAgentRuntimeEnv(rootPath);
-  const config = loadShipConfig(rootPath, {
+  const config = loadDowncityConfig(rootPath, {
     projectEnv,
     globalEnv,
   });

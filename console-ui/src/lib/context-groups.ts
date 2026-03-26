@@ -1,34 +1,34 @@
 /**
- * Context 分组工具。
+ * Session 分组工具。
  *
  * 关键点（中文）
  * - 统一 Sidebar 与 Context Overview 的分组、排序、搜索逻辑。
  * - 避免页面间出现不同分组规则导致的认知偏差。
  */
 
-import type { UiContextSummary } from "@/types/Dashboard"
+import type { UiSessionSummary } from "@/types/Dashboard"
 
 /**
  * context 分组键。
  */
-export type ContextGroupKey = "chat" | "api" | "other"
+export type SessionGroupKey = "chat" | "api" | "other"
 
 /**
  * context 分组结构。
  */
-export interface ContextGroup {
+export interface SessionGroup {
   /**
    * 分组键，用于程序判断与路由状态关联。
    */
-  key: ContextGroupKey
+  key: SessionGroupKey
   /**
    * 分组展示标题，用于 UI 标签显示。
    */
   title: string
   /**
-   * 分组内 context 列表，按更新时间降序。
+   * 分组内 session 列表，按更新时间降序。
    */
-  items: UiContextSummary[]
+  items: UiSessionSummary[]
 }
 
 const KNOWN_CHAT_CHANNELS = new Set(["telegram", "qq", "feishu", "consoleui"])
@@ -37,11 +37,11 @@ function normalizeText(input: unknown): string {
   return String(input || "").trim().toLowerCase()
 }
 
-function resolveContextChannelFromContextId(contextIdInput: string): string {
-  const contextId = normalizeText(contextIdInput)
-  if (!contextId) return "other"
-  if (contextId.startsWith("api:")) return "api"
-  if (contextId.startsWith("consoleui-") || contextId === "local_ui") return "consoleui"
+function resolveSessionChannelFromSessionId(sessionIdInput: string): string {
+  const sessionId = normalizeText(sessionIdInput)
+  if (!sessionId) return "other"
+  if (sessionId.startsWith("api:")) return "api"
+  if (sessionId.startsWith("consoleui-") || sessionId === "local_ui") return "consoleui"
   return "other"
 }
 
@@ -52,22 +52,22 @@ function resolveContextChannelFromContextId(contextIdInput: string): string {
  * - 优先使用后端回传的 `context.channel`（新映射唯一事实源）。
  * - 仅保留 `consoleui` 与 `api` 的本地识别，不再兼容旧 contextId 前缀规则。
  */
-export function resolveContextChannel(input: UiContextSummary | string): string {
+export function resolveSessionChannel(input: UiSessionSummary | string): string {
   if (typeof input === "string") {
-    return resolveContextChannelFromContextId(input)
+    return resolveSessionChannelFromSessionId(input)
   }
   const channel = normalizeText(input.channel)
   if (KNOWN_CHAT_CHANNELS.has(channel)) return channel
   if (channel === "api") return "api"
   if (channel && channel !== "other") return channel
-  return resolveContextChannelFromContextId(input.contextId)
+  return resolveSessionChannelFromSessionId(input.contextId)
 }
 
 /**
  * 解析 contextId 对应分组。
  */
-export function resolveContextGroup(input: UiContextSummary | string): ContextGroupKey {
-  const channel = resolveContextChannel(input)
+export function resolveSessionGroup(input: UiSessionSummary | string): SessionGroupKey {
+  const channel = resolveSessionChannel(input)
   if (channel === "api") return "api"
   if (channel === "other") return "other"
   return "chat"
@@ -76,8 +76,8 @@ export function resolveContextGroup(input: UiContextSummary | string): ContextGr
 /**
  * context 排序：updatedAt desc -> contextId asc。
  */
-export function sortContexts(contexts: UiContextSummary[]): UiContextSummary[] {
-  return [...contexts].sort((a, b) => {
+export function sortSessions(sessions: UiSessionSummary[]): UiSessionSummary[] {
+  return [...sessions].sort((a, b) => {
     const aTime = Number(a.updatedAt || 0)
     const bTime = Number(b.updatedAt || 0)
     if (aTime !== bTime) return bTime - aTime
@@ -88,18 +88,18 @@ export function sortContexts(contexts: UiContextSummary[]): UiContextSummary[] {
 /**
  * 构建分组列表。
  */
-export function buildContextGroups(contexts: UiContextSummary[]): ContextGroup[] {
-  const sorted = sortContexts(contexts)
-  const groupMap: Record<ContextGroupKey, UiContextSummary[]> = {
+export function buildSessionGroups(sessions: UiSessionSummary[]): SessionGroup[] {
+  const sorted = sortSessions(sessions)
+  const groupMap: Record<SessionGroupKey, UiSessionSummary[]> = {
     chat: [],
     api: [],
     other: [],
   }
   for (const item of sorted) {
-    const key = resolveContextGroup(item)
+    const key = resolveSessionGroup(item)
     groupMap[key].push(item)
   }
-  const groups: ContextGroup[] = [
+  const groups: SessionGroup[] = [
     { key: "chat", title: "chat:*", items: groupMap.chat },
     { key: "api", title: "api:*", items: groupMap.api },
     { key: "other", title: "other", items: groupMap.other },
@@ -110,13 +110,13 @@ export function buildContextGroups(contexts: UiContextSummary[]): ContextGroup[]
 /**
  * 按关键词过滤 context。
  */
-export function filterContextsByKeyword(
-  contexts: UiContextSummary[],
+export function filterSessionsByKeyword(
+  sessions: UiSessionSummary[],
   keyword: string,
-): UiContextSummary[] {
+): UiSessionSummary[] {
   const term = String(keyword || "").trim().toLowerCase()
-  if (!term) return contexts
-  return contexts.filter((item) => {
+  if (!term) return sessions
+  return sessions.filter((item) => {
     const id = String(item.contextId || "").toLowerCase()
     const chatId = String(item.chatId || "").toLowerCase()
     const chatTitle = String(item.chatTitle || "").toLowerCase()
@@ -130,31 +130,4 @@ export function filterContextsByKeyword(
       text.includes(term)
     )
   })
-}
-
-export type SessionGroupKey = ContextGroupKey
-export type SessionGroup = ContextGroup
-export type UiSessionSummary = UiContextSummary
-
-export function resolveSessionChannel(input: UiContextSummary | string): string {
-  return resolveContextChannel(input)
-}
-
-export function resolveSessionGroup(input: UiContextSummary | string): ContextGroupKey {
-  return resolveContextGroup(input)
-}
-
-export function sortSessions(contexts: UiContextSummary[]): UiContextSummary[] {
-  return sortContexts(contexts)
-}
-
-export function buildSessionGroups(contexts: UiContextSummary[]): ContextGroup[] {
-  return buildContextGroups(contexts)
-}
-
-export function filterSessionsByKeyword(
-  contexts: UiContextSummary[],
-  keyword: string,
-): UiContextSummary[] {
-  return filterContextsByKeyword(contexts, keyword)
 }

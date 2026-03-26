@@ -26,9 +26,9 @@ import {
   getDowncityTasksDirPath,
   getSoulMdPath,
 } from "@/console/env/Paths.js";
-import { DEFAULT_SHIP_JSON } from "@/console/constants/Ship.js";
-import { SHIP_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
-import type { ShipConfig } from "@/console/env/Config.js";
+import { DEFAULT_DOWNCITY_JSON } from "@/console/constants/Ship.js";
+import { DOWNCITY_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
+import type { DowncityConfig } from "@/console/env/Config.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
@@ -280,7 +280,7 @@ export async function initializeAgentProject(
   }
 
   const channelsConfig: NonNullable<
-    NonNullable<NonNullable<ShipConfig["services"]>["chat"]>["channels"]
+    NonNullable<NonNullable<DowncityConfig["services"]>["chat"]>["channels"]
   > = {};
   if (channels.includes("telegram")) {
     channelsConfig.telegram = { enabled: true };
@@ -292,8 +292,8 @@ export async function initializeAgentProject(
     channelsConfig.qq = { enabled: true };
   }
 
-  const shipConfig: ShipConfig = {
-    $schema: DEFAULT_SHIP_JSON.$schema,
+  const shipConfig: DowncityConfig = {
+    $schema: DEFAULT_DOWNCITY_JSON.$schema,
     name: agentName,
     version: "1.0.0",
     model: {
@@ -345,7 +345,7 @@ export async function initializeAgentProject(
 
   const shipSchemaPath = getDowncitySchemaPath(projectRoot);
   await ensureDir(path.dirname(shipSchemaPath));
-  await saveJson(shipSchemaPath, SHIP_JSON_SCHEMA);
+  await saveJson(shipSchemaPath, DOWNCITY_JSON_SCHEMA);
   createdFiles.push(".downcity/schema/downcity.schema.json");
 
   try {

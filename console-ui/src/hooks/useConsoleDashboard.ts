@@ -12,10 +12,10 @@ import {
   queryChannelHistory,
   queryChatChannels,
   queryConfigStatus,
-  queryContextArchiveDetail,
-  queryContextArchives,
-  queryContextMessages,
-  queryContexts,
+  querySessionArchiveDetail,
+  querySessionArchives,
+  querySessionMessages,
+  querySessions,
   queryGlobalEnv,
   queryLocalMessages,
   queryLogs,
@@ -54,17 +54,17 @@ import {
   statusBadgeVariant,
 } from "./dashboard/shared";
 import { useDashboardRefresh } from "./dashboard/useDashboardRefresh";
-import { useDashboardContextActions } from "./dashboard/useDashboardContextActions";
+import { useDashboardSessionActions } from "./dashboard/useDashboardContextActions";
 import { useDashboardResourceActions } from "./dashboard/useDashboardResourceActions";
 import type {
   UiAgentOption,
   UiChatChannelStatus,
   UiChatHistoryEvent,
   UiConfigStatusItem,
-  UiContextArchiveSummary,
+  UiSessionArchiveSummary,
   UiChatAuthorizationResponse,
-  UiContextSummary,
-  UiContextTimelineMessage,
+  UiSessionSummary,
+  UiSessionTimelineMessage,
   UiLocalMessage,
   UiLogItem,
   UiModelPoolItem,
@@ -103,13 +103,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [skills, setSkills] = useState<UiSkillSummaryItem[]>([]);
   const [plugins, setPlugins] = useState<UiPluginRuntimeItem[]>([]);
   const [chatChannels, setChatChannels] = useState<UiChatChannelStatus[]>([]);
-  const [contexts, setContexts] = useState<UiContextSummary[]>([]);
-  const [selectedContextId, setSelectedContextId] = useState("");
+  const [sessions, setSessions] = useState<UiSessionSummary[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState("");
   const [channelHistory, setChannelHistory] = useState<UiChatHistoryEvent[]>([]);
-  const [contextMessages, setContextMessages] = useState<UiContextTimelineMessage[]>([]);
-  const [contextArchives, setContextArchives] = useState<UiContextArchiveSummary[]>([]);
+  const [sessionMessages, setSessionMessages] = useState<UiSessionTimelineMessage[]>([]);
+  const [sessionArchives, setSessionArchives] = useState<UiSessionArchiveSummary[]>([]);
   const [selectedArchiveId, setSelectedArchiveId] = useState("");
-  const [contextArchiveMessages, setContextArchiveMessages] = useState<UiContextTimelineMessage[]>([]);
+  const [sessionArchiveMessages, setSessionArchiveMessages] = useState<UiSessionTimelineMessage[]>([]);
   const [tasks, setTasks] = useState<UiTaskItem[]>([]);
   const [logs, setLogs] = useState<UiLogItem[]>([]);
   const [model, setModel] = useState<UiModelSummary | null>(null);
@@ -126,20 +126,20 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [topbarError, setTopbarError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [clearingContextMessages, setClearingContextMessages] = useState(false);
+  const [clearingSessionMessages, setClearingSessionMessages] = useState(false);
   const [clearingChatHistory, setClearingChatHistory] = useState(false);
-  const [deletingContextId, setDeletingContextId] = useState("");
+  const [deletingSessionId, setDeletingSessionId] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [toast, setToast] = useState<DashboardToastState | null>(null);
   const toastTimerRef = useRef<number | null>(null);
-  const selectedContextIdRef = useRef("");
+  const selectedSessionIdRef = useRef("");
   const selectedArchiveIdRef = useRef("");
   const refreshDashboardRef = useRef<((preferredAgentId?: string) => Promise<void>) | null>(null);
   const archiveApiStateRef = useRef<"unknown" | "supported" | "unsupported">("unknown");
 
   useEffect(() => {
-    selectedContextIdRef.current = selectedContextId;
-  }, [selectedContextId]);
+    selectedSessionIdRef.current = selectedSessionId;
+  }, [selectedSessionId]);
 
   useEffect(() => {
     selectedArchiveIdRef.current = selectedArchiveId;
@@ -180,13 +180,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setSkills([]);
     // 关键点（中文）：plugins 作为全局页信息，保留上次快照，避免无 agent 时整块消失。
     setChatChannels([]);
-    setContexts([]);
-    setSelectedContextId("");
+    setSessions([]);
+    setSelectedSessionId("");
     setChannelHistory([]);
-    setContextMessages([]);
-    setContextArchives([]);
+    setSessionMessages([]);
+    setSessionArchives([]);
     setSelectedArchiveId("");
-    setContextArchiveMessages([]);
+    setSessionArchiveMessages([]);
     setTasks([]);
     setLogs([]);
     setPrompt(null);
@@ -255,11 +255,11 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
-  const refreshContexts = useCallback(
-    async (agentId: string): Promise<UiContextSummary[]> => {
+  const refreshSessions = useCallback(
+    async (agentId: string): Promise<UiSessionSummary[]> => {
       if (!agentId) return [];
-      const nextList = await queryContexts(requestJson, agentId);
-      setContexts(nextList);
+      const nextList = await querySessions(requestJson, agentId);
+      setSessions(nextList);
       return nextList;
     },
     [requestJson],
@@ -273,38 +273,38 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
-  const refreshContextMessages = useCallback(
+  const refreshSessionMessages = useCallback(
     async (agentId: string, contextId: string) => {
       if (!agentId || !contextId) return;
-      setContextMessages(await queryContextMessages(requestJson, agentId, contextId));
+      setSessionMessages(await querySessionMessages(requestJson, agentId, contextId));
     },
     [requestJson],
   );
 
-  const loadContextArchiveMessages = useCallback(
+  const loadSessionArchiveMessages = useCallback(
     async (agentId: string, contextId: string, archiveId: string) => {
       if (!agentId || !contextId || !archiveId) {
         setSelectedArchiveId("");
-        setContextArchiveMessages([]);
+        setSessionArchiveMessages([]);
         return;
       }
       if (archiveApiStateRef.current === "unsupported") {
         setSelectedArchiveId("");
-        setContextArchiveMessages([]);
+        setSessionArchiveMessages([]);
         return;
       }
       try {
-        const data = await queryContextArchiveDetail(requestJson, agentId, contextId, archiveId);
+        const data = await querySessionArchiveDetail(requestJson, agentId, contextId, archiveId);
         archiveApiStateRef.current = "supported";
         setSelectedArchiveId(archiveId);
-        setContextArchiveMessages(Array.isArray(data.messages) ? data.messages : []);
+        setSessionArchiveMessages(Array.isArray(data.messages) ? data.messages : []);
       } catch (error) {
         const message = getErrorMessage(error);
         if (isNotFoundError(message)) {
           // 关键点（中文）：兼容旧 console 网关未实现 archive 接口，前端降级为空态。
           archiveApiStateRef.current = "unsupported";
           setSelectedArchiveId("");
-          setContextArchiveMessages([]);
+          setSessionArchiveMessages([]);
           return;
         }
         throw error;
@@ -313,23 +313,23 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
-  const refreshContextArchives = useCallback(
-    async (agentId: string, contextId: string): Promise<UiContextArchiveSummary[]> => {
+  const refreshSessionArchives = useCallback(
+    async (agentId: string, contextId: string): Promise<UiSessionArchiveSummary[]> => {
       if (!agentId || !contextId) {
-        setContextArchives([]);
+        setSessionArchives([]);
         setSelectedArchiveId("");
-        setContextArchiveMessages([]);
+        setSessionArchiveMessages([]);
         return [];
       }
       if (archiveApiStateRef.current === "unsupported") {
-        setContextArchives([]);
+        setSessionArchives([]);
         setSelectedArchiveId("");
-        setContextArchiveMessages([]);
+        setSessionArchiveMessages([]);
         return [];
       }
-      let archives: UiContextArchiveSummary[] = [];
+      let archives: UiSessionArchiveSummary[] = [];
       try {
-        archives = await queryContextArchives(requestJson, agentId, contextId);
+        archives = await querySessionArchives(requestJson, agentId, contextId);
         archiveApiStateRef.current = "supported";
       } catch (error) {
         const message = getErrorMessage(error);
@@ -337,7 +337,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         archiveApiStateRef.current = "unsupported";
         archives = [];
       }
-      setContextArchives(archives);
+      setSessionArchives(archives);
 
       const currentArchiveId = String(selectedArchiveIdRef.current || "").trim();
       const firstArchiveId = String(archives[0]?.archiveId || "").trim();
@@ -349,14 +349,14 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
       if (!nextArchiveId) {
         setSelectedArchiveId("");
-        setContextArchiveMessages([]);
+        setSessionArchiveMessages([]);
         return archives;
       }
 
-      await loadContextArchiveMessages(agentId, contextId, nextArchiveId);
+      await loadSessionArchiveMessages(agentId, contextId, nextArchiveId);
       return archives;
     },
-    [loadContextArchiveMessages, requestJson],
+    [loadSessionArchiveMessages, requestJson],
   );
 
   const refreshTasks = useCallback(
@@ -436,21 +436,21 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
-  const { refreshDashboard, handleContextChange } = useDashboardRefresh({
+  const { refreshDashboard, handleSessionChange } = useDashboardRefresh({
     requestJson,
     selectedAgentId,
-    selectedContextIdRef,
+    selectedSessionIdRef,
     setSelectedAgentId,
-    setSelectedContextId,
+    setSelectedSessionId,
     setAgentEnvItems,
     setTopbarError,
     setTopbarStatus,
     setLoading,
     setChannelHistory,
-    setContextMessages,
-    setContextArchives,
+    setSessionMessages,
+    setSessionArchives,
     setSelectedArchiveId,
-    setContextArchiveMessages,
+    setSessionArchiveMessages,
     setPrompt,
     clearPanelDataForNoAgent,
     refreshAgents,
@@ -462,7 +462,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshConfigStatus,
     refreshAgentEnv,
     refreshChatChannels,
-    refreshContexts,
+    refreshSessions,
     refreshAuthorization,
     refreshOverview,
     refreshServices,
@@ -471,8 +471,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshLogs,
     refreshLocalChat,
     refreshChannelHistory,
-    refreshContextMessages,
-    refreshContextArchives,
+    refreshSessionMessages,
+    refreshSessionArchives,
     refreshPrompt,
     showToast,
   });
@@ -704,38 +704,38 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
 
   const {
     sendConsoleUiMessage,
-    clearContextMessages,
+    clearSessionMessages,
     clearChatHistory,
-    deleteChatContext,
-  } = useDashboardContextActions({
+    deleteChatSession,
+  } = useDashboardSessionActions({
     requestJson,
     selectedAgentId,
     chatInput,
     sending,
-    clearingContextMessages,
+    clearingSessionMessages,
     clearingChatHistory,
-    deletingContextId,
-    selectedContextIdRef,
+    deletingSessionId,
+    selectedSessionIdRef: selectedSessionIdRef,
     setSending,
-    setClearingContextMessages,
+    setClearingSessionMessages,
     setClearingChatHistory,
-    setDeletingContextId,
+    setDeletingSessionId,
     setChatInput,
-    setSelectedContextId,
+    setSelectedSessionId: setSelectedSessionId,
     setChannelHistory,
-    setContextMessages,
-    setContextArchives,
+    setSessionMessages: setSessionMessages,
+    setSessionArchives: setSessionArchives,
     setSelectedArchiveId,
-    setContextArchiveMessages,
+    setSessionArchiveMessages: setSessionArchiveMessages,
     setPrompt,
     refreshLocalChat,
     refreshChannelHistory,
-    refreshContextMessages,
-    refreshContextArchives,
+    refreshSessionMessages,
+    refreshSessionArchives,
     refreshPrompt,
     refreshLogs,
     refreshOverview,
-    refreshContexts,
+    refreshSessions,
     refreshChatChannels,
     showToast,
   });
@@ -816,13 +816,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     skills,
     plugins,
     chatChannels,
-    contexts,
-    selectedContextId,
+    sessions,
+    selectedSessionId,
     channelHistory,
-    contextMessages,
-    contextArchives,
+    sessionMessages,
+    sessionArchives,
     selectedArchiveId,
-    contextArchiveMessages,
+    sessionArchiveMessages,
     tasks,
     logs,
     model,
@@ -838,24 +838,24 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     topbarError,
     loading,
     sending,
-    clearingContextMessages,
+    clearingSessionMessages,
     clearingChatHistory,
-    deletingContextId,
+    deletingSessionId,
     chatInput,
     toast,
     setChatInput,
     handleAgentChange,
-    handleContextChange,
+    handleSessionChange,
     refreshDashboard,
     refreshAuthorization,
     refreshChatChannels,
     refreshPlugins,
     refreshSkills,
-    refreshContexts,
+    refreshSessions,
     refreshChannelHistory,
-    refreshContextMessages,
-    refreshContextArchives,
-    loadContextArchiveMessages,
+    refreshSessionMessages,
+    refreshSessionArchives,
+    loadSessionArchiveMessages,
     refreshPrompt,
     refreshModel,
     refreshModelPool,
@@ -880,9 +880,9 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     clearTaskRuns,
     loadTaskRunDetail,
     sendConsoleUiMessage,
-    clearContextMessages,
+    clearSessionMessages,
     clearChatHistory,
-    deleteChatContext,
+    deleteChatSession,
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,

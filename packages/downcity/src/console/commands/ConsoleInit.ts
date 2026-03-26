@@ -15,7 +15,7 @@ import path from "node:path";
 import fs from "fs-extra";
 import prompts from "prompts";
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
-import { SHIP_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
+import { DOWNCITY_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
 import { saveJson } from "@/utils/storage/index.js";
 import {
   getConsoleRootDirPath,
@@ -122,7 +122,7 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
 
   // 写入 schema（给编辑器使用）
   await fs.ensureDir(schemaDir);
-  await saveJson(schemaPath, SHIP_JSON_SCHEMA);
+  await saveJson(schemaPath, DOWNCITY_JSON_SCHEMA);
 
   const modelStore = new ConsoleStore();
   try {

@@ -11,7 +11,7 @@ import type {
 } from "@agent/types/Agent.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 import type { AssetPort } from "@/types/Asset.js";
 import type { PluginPort } from "@/types/Plugin.js";
 
@@ -126,7 +126,7 @@ export type ServiceRuntime = {
   /**
    * 已解析的 ship 配置对象。
    */
-  config: ShipConfig;
+  config: DowncityConfig;
 
   /**
    * 当前 agent 的 `.env` 快照（仅本项目可见）。

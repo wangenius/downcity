@@ -8,7 +8,7 @@
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
@@ -51,7 +51,7 @@ export interface AssetRuntimeLike {
   /**
    * 当前运行时已解析配置。
    */
-  config: ShipConfig;
+  config: DowncityConfig;
   /**
    * 当前项目环境变量快照。
    */

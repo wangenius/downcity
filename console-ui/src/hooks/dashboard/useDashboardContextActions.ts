@@ -44,14 +44,14 @@ function clearSessionViewState(params: {
 }
 
 function resolveNextSessionId(params: {
-  contexts: UiSessionSummary[];
+  sessions: UiSessionSummary[];
   currentSessionId: string;
 }): string {
   const preservedCurrent =
-    params.contexts.find((item) => item.contextId === params.currentSessionId)?.contextId || "";
+    params.sessions.find((item) => item.contextId === params.currentSessionId)?.contextId || "";
   const consoleUiSession =
-    params.contexts.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
-  const fallbackSession = params.contexts[0]?.contextId || "";
+    params.sessions.find((item) => item.contextId === CONSOLEUI_CONTEXT_ID)?.contextId || "";
+  const fallbackSession = params.sessions[0]?.contextId || "";
   return preservedCurrent || consoleUiSession || fallbackSession;
 }
 
@@ -231,9 +231,9 @@ export function useDashboardSessionActions(params: {
         );
         const deleted = data?.data?.deleted === true;
 
-        const contextList = await params.refreshSessions(params.selectedAgentId);
+        const sessionList = await params.refreshSessions(params.selectedAgentId);
         const nextSessionId = resolveNextSessionId({
-          contexts: contextList,
+          sessions: sessionList,
           currentSessionId: String(params.selectedSessionIdRef.current || "").trim(),
         });
 

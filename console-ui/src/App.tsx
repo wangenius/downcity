@@ -25,7 +25,7 @@ import { Button } from "@downcity/ui"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useConsoleDashboard } from "@/hooks/useConsoleDashboard"
 import { getDashboardViewLabel } from "@/lib/dashboard-navigation"
-import { resolveContextChannel } from "@/lib/context-groups"
+import { resolveSessionChannel } from "@/lib/context-groups"
 import { parseDashboardPath, toAgentRouteSegment, toDashboardPath } from "@/lib/dashboard-route"
 import { cn } from "@/lib/utils"
 import type { DashboardView } from "@/types/Navigation"
@@ -68,13 +68,13 @@ export function App() {
     skills,
     plugins,
     chatChannels,
-    contexts,
-    selectedContextId,
+    sessions,
+    selectedSessionId,
     channelHistory,
-    contextMessages,
-    contextArchives,
+    sessionMessages,
+    sessionArchives,
     selectedArchiveId,
-    contextArchiveMessages,
+    sessionArchiveMessages,
     tasks,
     logs,
     model,
@@ -89,17 +89,17 @@ export function App() {
     topbarError,
     loading,
     sending,
-    clearingContextMessages,
+    clearingSessionMessages,
     clearingChatHistory,
-    deletingContextId,
+    deletingSessionId,
     chatInput,
     toast,
     setChatInput,
     handleAgentChange,
-    handleContextChange,
+    handleSessionChange,
     refreshDashboard,
     refreshSkills,
-    refreshContextArchives,
+    refreshSessionArchives,
     controlService,
     runPluginAction,
     runChatChannelAction,
@@ -117,10 +117,10 @@ export function App() {
     clearTaskRuns,
     loadTaskRunDetail,
     sendConsoleUiMessage,
-    clearContextMessages,
+    clearSessionMessages,
     clearChatHistory,
-    deleteChatContext,
-    loadContextArchiveMessages,
+    deleteChatSession,
+    loadSessionArchiveMessages,
     switchModel,
     switchModelForAgent,
     startAgentFromHistory,
@@ -167,9 +167,9 @@ export function App() {
   const resolveChannelFromContextId = React.useCallback((contextIdInput?: string): string => {
     const contextId = String(contextIdInput || "").trim()
     if (!contextId) return ""
-    const target = contexts.find((item) => String(item.contextId || "").trim() === contextId)
-    return resolveContextChannel(target || contextId)
-  }, [contexts])
+    const target = sessions.find((item) => String(item.contextId || "").trim() === contextId)
+    return resolveSessionChannel(target || contextId)
+  }, [sessions])
 
   const availableChatChannels = React.useMemo(() => {
     const channelSet = new Set<string>()
@@ -177,8 +177,8 @@ export function App() {
       const channel = String(item.channel || "").trim().toLowerCase()
       if (channel) channelSet.add(channel)
     }
-    for (const item of contexts) {
-      const channel = resolveContextChannel(item)
+    for (const item of sessions) {
+      const channel = resolveSessionChannel(item)
       if (channel) channelSet.add(channel)
     }
     const preferredOrder = ["telegram", "qq", "feishu", "consoleui", "other"]
@@ -187,7 +187,7 @@ export function App() {
       .filter((channel) => !preferredOrder.includes(channel))
       .sort((a, b) => a.localeCompare(b))
     return [...orderedKnown, ...orderedExtra]
-  }, [chatChannels, contexts])
+  }, [chatChannels, sessions])
   const effectiveFocusedChatChannel = React.useMemo(() => {
     const normalized = String(focusedChatChannel || "").trim().toLowerCase()
     if (normalized && availableChatChannels.includes(normalized)) return normalized
@@ -280,13 +280,13 @@ export function App() {
       } else {
         setFocusedChatChannel(resolveChannelFromContextId(parsed.contextId))
       }
-      void handleContextChange(parsed.contextId)
+      void handleSessionChange(parsed.contextId)
     }
 
     setRouteHydrated(true)
   }, [
     agents.length,
-    handleContextChange,
+    handleSessionChange,
     handleAgentChange,
     resolveAgentIdByRouteSegment,
     routeHydrated,
@@ -312,12 +312,12 @@ export function App() {
         } else {
           setFocusedChatChannel(resolveChannelFromContextId(parsed.contextId))
         }
-        void handleContextChange(parsed.contextId)
+        void handleSessionChange(parsed.contextId)
       }
     }
     window.addEventListener("popstate", onPopState)
     return () => window.removeEventListener("popstate", onPopState)
-  }, [handleContextChange, handleAgentChange, resolveAgentIdByRouteSegment, selectedAgentId])
+  }, [handleSessionChange, handleAgentChange, resolveAgentIdByRouteSegment, selectedAgentId])
 
   React.useEffect(() => {
     if (typeof window === "undefined") return
@@ -330,12 +330,12 @@ export function App() {
       activeView !== "globalPlugins"
     if (!agentScopedView || !selectedAgentId) return
     const expectedPath = toDashboardPath(activeView, {
-      contextId: activeView === "contextWorkspace" ? selectedContextId : undefined,
+      contextId: activeView === "contextWorkspace" ? selectedSessionId : undefined,
       taskTitle: activeView === "agentTasks" ? selectedTaskTitle : undefined,
       channel: activeView === "contextOverview"
         ? effectiveFocusedChatChannel
         : activeView === "contextWorkspace"
-          ? resolveChannelFromContextId(selectedContextId)
+          ? resolveChannelFromContextId(selectedSessionId)
           : undefined,
       agentSegment: resolveAgentRouteSegment(selectedAgentId),
     })
@@ -349,7 +349,7 @@ export function App() {
     resolveChannelFromContextId,
     routeHydrated,
     selectedAgentId,
-    selectedContextId,
+    selectedSessionId,
     selectedTaskTitle,
   ])
 
@@ -434,7 +434,7 @@ export function App() {
           services={services}
           skills={skills}
           tasks={tasks}
-          contexts={contexts}
+          sessions={sessions}
           channelAccounts={channelAccounts}
           consoleUiContextId={constants.CONSOLEUI_CONTEXT_ID}
           configStatus={configStatus}
@@ -465,7 +465,7 @@ export function App() {
                   contextId: normalizedContextId,
                   channel: resolveChannelFromContextId(normalizedContextId),
                 })
-                void handleContextChange(normalizedContextId)
+                void handleSessionChange(normalizedContextId)
               }}
           onControlService={(serviceName, action) => controlService(serviceName, action)}
           chatChannels={chatChannels}
@@ -713,24 +713,24 @@ export function App() {
         return (
           <section>
             <SessionOverviewSection
-              contexts={contexts}
-              selectedContextId={selectedContextId}
+              sessions={sessions}
+              selectedSessionId={selectedSessionId}
               chatChannels={chatChannels}
               channelAccounts={channelAccounts}
               focusedChannel={effectiveFocusedChatChannel}
               formatTime={uiHelpers.formatTime}
-              onOpenContext={(contextId) => {
-                setFocusedChatChannel(resolveChannelFromContextId(contextId))
+              onOpenSession={(sessionId) => {
+                setFocusedChatChannel(resolveChannelFromContextId(sessionId))
                 navigateToView("contextWorkspace", {
-                  contextId,
-                  channel: resolveChannelFromContextId(contextId),
+                  contextId: sessionId,
+                  channel: resolveChannelFromContextId(sessionId),
                 })
-                void handleContextChange(contextId)
+                void handleSessionChange(sessionId)
               }}
-              onDeleteContext={(contextId) => {
-                void deleteChatContext(contextId)
+              onDeleteSession={(sessionId) => {
+                void deleteChatSession(sessionId)
               }}
-              deletingContextId={deletingContextId}
+              deletingSessionId={deletingSessionId}
               onChatAction={(action, channel) => void runChatChannelAction(action, channel)}
               onChatConfigure={(channel, config) => void configureChatChannel(channel, config)}
             />
@@ -740,54 +740,54 @@ export function App() {
         return (
           <section className="h-full min-h-0">
             <SessionWorkspaceSection
-              selectedContextId={selectedContextId}
-              contexts={contexts}
+              selectedSessionId={selectedSessionId}
+              sessions={sessions}
               channelHistory={channelHistory}
               chatChannels={chatChannels}
-              contextMessages={contextMessages}
-              contextArchives={contextArchives}
+              sessionMessages={sessionMessages}
+              sessionArchives={sessionArchives}
               selectedArchiveId={selectedArchiveId}
-              contextArchiveMessages={contextArchiveMessages}
+              sessionArchiveMessages={sessionArchiveMessages}
               prompt={prompt}
               chatInput={chatInput}
               debugPanelsCollapsed={debugPanelsCollapsed}
               sending={sending}
-              clearingContextMessages={clearingContextMessages}
+              clearingSessionMessages={clearingSessionMessages}
               clearingChatHistory={clearingChatHistory}
-              deletingContext={Boolean(deletingContextId)}
+              deletingSession={Boolean(deletingSessionId)}
               formatTime={uiHelpers.formatTime}
               onChangeInput={setChatInput}
               onSendConsoleUiMessage={() => void sendConsoleUiMessage()}
-              onClearContextMessages={() => {
-                if (!selectedContextId) return
-                void clearContextMessages(selectedContextId)
+              onClearSessionMessages={() => {
+                if (!selectedSessionId) return
+                void clearSessionMessages(selectedSessionId)
               }}
               onClearChatHistory={() => {
-                if (!selectedContextId) return
-                void clearChatHistory(selectedContextId)
+                if (!selectedSessionId) return
+                void clearChatHistory(selectedSessionId)
               }}
-              onDeleteContext={() => {
-                if (!selectedContextId) return
-                void deleteChatContext(selectedContextId)
+              onDeleteSession={() => {
+                if (!selectedSessionId) return
+                void deleteChatSession(selectedSessionId)
               }}
               onRefreshArchives={() => {
-                if (!selectedAgentId || !selectedContextId) return
-                void refreshContextArchives(selectedAgentId, selectedContextId)
+                if (!selectedAgentId || !selectedSessionId) return
+                void refreshSessionArchives(selectedAgentId, selectedSessionId)
               }}
               onSelectArchive={(archiveId) => {
-                if (!selectedAgentId || !selectedContextId) return
-                void loadContextArchiveMessages(
+                if (!selectedAgentId || !selectedSessionId) return
+                void loadSessionArchiveMessages(
                   selectedAgentId,
-                  selectedContextId,
+                  selectedSessionId,
                   archiveId,
                 )
               }}
-              onSelectContext={(contextId) => {
+              onSelectSession={(contextId) => {
                 navigateToView("contextWorkspace", {
                   contextId,
                   channel: resolveChannelFromContextId(contextId),
                 })
-                void handleContextChange(contextId)
+                void handleSessionChange(contextId)
               }}
             />
           </section>
@@ -829,21 +829,21 @@ export function App() {
         selectedAgentId={selectedAgentId}
         routePathname={routePathname}
         routeAgentId={routeAgentId}
-        contexts={contexts}
+        sessions={sessions}
         chatChannels={chatChannels}
-        selectedContextId={selectedContextId}
+        selectedSessionId={selectedSessionId}
         tasks={tasks}
         selectedTaskTitle={selectedTaskTitle}
         selectedChatChannel={effectiveFocusedChatChannel}
         onViewChange={(view) => {
           if (view === "contextWorkspace") {
-            const nextContextId = selectedContextId || constants.CONSOLEUI_CONTEXT_ID
+            const nextContextId = selectedSessionId || constants.CONSOLEUI_CONTEXT_ID
             setFocusedChatChannel(resolveChannelFromContextId(nextContextId))
             navigateToView("contextWorkspace", {
               contextId: nextContextId,
               channel: resolveChannelFromContextId(nextContextId),
             })
-            void handleContextChange(nextContextId)
+            void handleSessionChange(nextContextId)
             return
           }
           if (view !== "contextOverview") {
@@ -877,7 +877,7 @@ export function App() {
             contextId,
             channel: resolveChannelFromContextId(contextId),
           })
-          void handleContextChange(contextId)
+          void handleSessionChange(contextId)
         }}
         topbarStatus={topbarStatus}
         topbarError={topbarError}

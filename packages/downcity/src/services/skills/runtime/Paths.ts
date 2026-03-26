@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { ShipConfig } from "@/console/env/Config.js";
+import type { DowncityConfig } from "@/console/env/Config.js";
 import type { SkillRoot } from "@services/skills/types/SkillRoot.js";
 import { expandHome, uniqStrings } from "./Utils.js";
 
@@ -37,7 +37,7 @@ function resolveSkillRootPath(projectRoot: string, raw: string): string {
 
 export function getClaudeSkillSearchRoots(
   projectRoot: string,
-  config: ShipConfig,
+  config: DowncityConfig,
 ): SkillRoot[] {
   const configured = Array.isArray(config.services?.skills?.paths)
     ? config.services.skills.paths.map((x) => String(x))
@@ -120,7 +120,7 @@ export function getClaudeSkillSearchRoots(
 // Back-compat（内部仅用于 prompt 展示）：保留旧 API 形状，避免外部 import 立刻断裂。
 export function getClaudeSkillSearchPaths(
   projectRoot: string,
-  config: ShipConfig,
+  config: DowncityConfig,
 ): { raw: string[]; resolved: string[] } {
   const roots = getClaudeSkillSearchRoots(projectRoot, config);
   return {

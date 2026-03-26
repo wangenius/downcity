@@ -6,7 +6,7 @@
  * - 判定统一走“用户角色 + 权限集合”，群聊只看发言用户自身权限。
  */
 
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,
@@ -111,7 +111,7 @@ export function resolveAuthorizedUserRole(params: {
  * 执行入站授权判定。
  */
 export function evaluateIncomingChatAuthorization(params: {
-  config: ShipConfig;
+  config: DowncityConfig;
   channel: ChatAuthorizationChannel;
   input: ChatAuthorizationEvaluateInput;
   authorizationConfig?: ChatAuthorizationConfig;

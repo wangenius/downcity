@@ -97,6 +97,8 @@ export const dashboardApiRoutes = {
   overview: (contextLimit = 40) =>
     `/api/dashboard/overview?contextLimit=${encodeURIComponent(String(contextLimit))}`,
   services: () => "/api/dashboard/services",
+  sessions: (limit = 120) =>
+    `/api/dashboard/sessions?limit=${encodeURIComponent(String(limit))}`,
   contexts: (limit = 120) =>
     `/api/dashboard/sessions?limit=${encodeURIComponent(String(limit))}`,
   sessionMessages: (contextId: string, limit = 100) =>

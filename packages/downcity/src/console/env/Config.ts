@@ -6,16 +6,16 @@
  * 2. 读取 `downcity.json` 并将 `${ENV_KEY}` 占位符解析为环境变量值。
  * 3. 支持配置继承：（可选）上级目录 downcity.json -> 当前项目 downcity.json 覆盖。
  * 4. 环境变量分层：`env_entries` 单表承载 `global`（console 共享）与 `agent`（agent 私有）两种 scope。
- * 4. 统一导出 Ship 配置类型，避免业务模块直接依赖具体配置文件路径。
+ * 4. 统一导出 Downcity 配置类型，避免业务模块直接依赖具体配置文件路径。
  */
 import dotenv from "dotenv";
 import fs from "fs-extra";
 import path from "path";
-import type { ShipConfig } from "@agent/types/ShipConfig.js";
+import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 
-export type { ShipConfig };
+export type { DowncityConfig };
 
 /**
  * 读取 console 共享环境变量（`env_entries.scope=global`）。
@@ -199,14 +199,14 @@ function collectAncestorShipJsonPaths(projectRoot: string): string[] {
   return paths.reverse();
 }
 
-export function loadShipConfig(
+export function loadDowncityConfig(
   projectRoot: string,
   options?: {
     projectEnv?: Record<string, string>;
     agentEnv?: Record<string, string>;
     globalEnv?: Record<string, string>;
   },
-): ShipConfig {
+): DowncityConfig {
   const projectDotenv = options?.projectEnv ?? loadProjectDotenv(projectRoot);
   const agentEnv = options?.agentEnv ?? loadAgentEnvFromStore(projectRoot);
   const globalEnv = options?.globalEnv ?? loadGlobalEnvFromStore();
@@ -242,7 +242,7 @@ export function loadShipConfig(
     throw new Error("Invalid downcity.json: expected object");
   }
 
-  const candidate = merged as Partial<ShipConfig>;
+  const candidate = merged as Partial<DowncityConfig>;
   if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
     throw new Error("Invalid downcity.json: missing required fields name/version");
   }
@@ -255,5 +255,5 @@ export function loadShipConfig(
   if (!primary) {
     throw new Error("Invalid downcity.json: model.primary cannot be empty");
   }
-  return candidate as ShipConfig;
+  return candidate as DowncityConfig;
 }

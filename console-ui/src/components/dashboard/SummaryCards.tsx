@@ -31,10 +31,10 @@ import type {
   UiChannelAccountItem,
   UiChatChannelStatus,
   UiConfigStatusItem,
-  UiContextSummary,
   UiModelSummary,
   UiOverviewResponse,
   UiServiceItem,
+  UiSessionSummary,
   UiSkillSummaryItem,
   UiTaskItem,
 } from "../../types/Dashboard"
@@ -61,15 +61,15 @@ export interface SummaryCardsProps {
    */
   tasks: UiTaskItem[]
   /**
-   * context 列表（用于 chat overview 跳转）。
+   * session 列表（用于 chat overview 跳转）。
    */
-  contexts: UiContextSummary[]
+  sessions: UiSessionSummary[]
   /**
    * channel account 列表（用于显示当前绑定账号名称）。
    */
   channelAccounts: UiChannelAccountItem[]
   /**
-   * consoleui channel 默认 context id。
+   * consoleui channel 默认 session id。
    */
   consoleUiContextId: string
   /**
@@ -101,7 +101,7 @@ export interface SummaryCardsProps {
    */
   onOpenTask: (taskTitle: string) => void
   /**
-   * 打开 context workspace。
+   * 打开 session workspace。
    */
   onOpenContext: (contextId: string) => void
   /**
@@ -190,7 +190,7 @@ export function SummaryCards(props: SummaryCardsProps) {
     services,
     skills,
     tasks,
-    contexts,
+    sessions,
     channelAccounts,
     consoleUiContextId,
     configStatus,
@@ -210,11 +210,11 @@ export function SummaryCards(props: SummaryCardsProps) {
   const overviewContexts = Array.isArray(overview?.contexts?.items) ? overview.contexts.items : []
   const consoleUiExists = overviewContexts.some((item) => item.contextId === consoleUiContextId)
   const chatProfiles = Array.isArray(selectedAgent?.chatProfiles) ? selectedAgent.chatProfiles : []
-  const executingContexts = React.useMemo(
-    () => contexts.filter((item) => item.executing === true),
-    [contexts],
+  const executingSessions = React.useMemo(
+    () => sessions.filter((item) => item.executing === true),
+    [sessions],
   )
-  const agentExecuting = executingContexts.length > 0
+  const agentExecuting = executingSessions.length > 0
   const agentConfigItems = configStatus.filter((item) => item.scope === "agent")
   const badConfigItems = agentConfigItems.filter(
     (item) => String(item.status || "").toLowerCase() !== "ok",
@@ -317,13 +317,13 @@ export function SummaryCards(props: SummaryCardsProps) {
     (channelInput?: string): string => {
       const channel = String(channelInput || "").trim().toLowerCase()
       if (!channel) return ""
-      const contextCandidates = contexts
+      const contextCandidates = sessions
         .map((item) => String(item.contextId || "").trim())
         .filter((contextId) => contextId.startsWith(`${channel}-`))
       if (contextCandidates.length === 0) return ""
       return contextCandidates[0] || ""
     },
-    [contexts],
+    [sessions],
   )
 
   /**
@@ -351,7 +351,7 @@ export function SummaryCards(props: SummaryCardsProps) {
               {selectedAgent.running ? "running" : "stopped"}
             </SurfaceTag>
             <SurfaceTag tone={agentExecuting ? "success" : "default"}>
-              {agentExecuting ? `executing ${executingContexts.length}` : "idle"}
+              {agentExecuting ? `executing ${executingSessions.length}` : "idle"}
             </SurfaceTag>
             {selectedAgent.running ? (
               <>
@@ -557,7 +557,7 @@ export function SummaryCards(props: SummaryCardsProps) {
             const taskItems = isTaskOverview ? tasks.slice(0, 5) : []
             const skillItems = isSkillOverview ? skills.slice(0, 5) : []
             const contextItems = isContextOverview
-              ? contexts.slice(0, 5).map((item) => String(item.contextId || "-"))
+              ? sessions.slice(0, 5).map((item) => String(item.contextId || "-"))
               : []
 
             const detailLines = isMemoryOverview

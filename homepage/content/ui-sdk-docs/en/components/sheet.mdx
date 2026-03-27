@@ -1,0 +1,69 @@
+---
+title: Sheet
+description: Use for side panels, drawers, and longer contextual editing flows
+---
+
+# Sheet
+
+`Sheet` works well for longer, panel-like interaction.
+
+## Import
+
+```tsx
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  Button,
+} from "@downcity/ui";
+```
+
+## Basic Example
+
+```tsx
+import {
+  Button,
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@downcity/ui";
+
+export function SettingsSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger render={<Button size="sm" />}>Open settings</SheetTrigger>
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>Model Settings</SheetTitle>
+          <SheetDescription>Edit runtime settings here.</SheetDescription>
+        </SheetHeader>
+        <div className="px-4">Form fields go here.</div>
+        <SheetFooter>
+          <Button size="sm">Save</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+```
+
+## Supported Sides
+
+- `top`
+- `right`
+- `bottom`
+- `left`
+
+## Usage Notes
+
+- Prefer `Sheet` for long forms and side-panel workflows
+- Do not omit `SheetTitle`
+- Use `showCloseButton={false}` when you need full manual control

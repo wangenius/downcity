@@ -14,7 +14,7 @@ Downcity 可以先看成两条主干：
 
 - `service`：主业务流程
 - `plugin`：被动扩展层
-- `asset`：插件依赖资源
+- `asset`：plugin 依赖资源
 
 ## 分层结构
 
@@ -25,17 +25,18 @@ Downcity 可以先看成两条主干：
 - 负责加载单个项目、持有单个 runtime、写入 `.downcity/`
 
 3. **Service 层（核心工作流）**
-- 例如 `chat`、`task`、`memory`、`skills`
+- 例如 `shell`、`chat`、`task`、`memory`
 - 拥有生命周期、工作流和稳定 action
 
 4. **Plugin 层（可选增强）**
-- 例如 `voice`、`auth`
+- 例如 `skill`、`voice`、`auth`
 - 通过 service 预先定义好的扩展点接入
 - 负责增强、校验、改写、解析，但不拥有独立生命周期
 
 5. **Asset 层（依赖资源）**
 - 负责 install / check / config / use
 - 为 plugin 提供模型、二进制、第三方依赖等底层能力
+- 应理解为 plugin dependency 基础设施，而不是独立业务流程层
 
 ## 一条最重要的边界
 
@@ -46,7 +47,7 @@ Downcity 可以先看成两条主干：
 
 - 主流程放在 service
 - 扩展逻辑放在 plugin
-- 依赖资源放在 asset
+- plugin 依赖资源放在 asset
 
 ## 一个直观例子
 

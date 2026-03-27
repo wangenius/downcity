@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一沉淀 `shell_start/shell_status/shell_read/shell_write/shell_wait/shell_close` 类型。
- * - `shell_id` 与 chat `contextId` 严格分离，避免语义混淆。
+ * - `shell_id` 与 chat `sessionId` 严格分离，避免语义混淆。
  */
 
 export type ShellStartInput = {

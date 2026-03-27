@@ -12,7 +12,6 @@ Service 是 Downcity 里的核心业务工作流模块。
 - `chat`
 - `task`
 - `memory`
-- `skills`
 - `shell`
 
 ## Service 应该负责什么
@@ -34,6 +33,18 @@ Service 是 Downcity 里的核心业务工作流模块。
 - service -> 触发自己的 plugin 点
 - plugin -> 实现这些点
 - asset -> 提供 plugin 依赖
+
+在运行时接口上，这三者也已经分开：
+
+- `ServiceRuntime` 不暴露 `assets`
+- `PluginRuntime` 暴露 `assets`
+- asset 只作为 plugin dependency 被 plugin 消费
+
+是否真的执行某个 plugin，不由 service 临时判断，而由项目配置里的 `plugins.<name>.enabled` 决定。
+
+- enabled = `true`：允许该 plugin 进入 hook / `plugin.system` 注入链路
+- enabled = `false`：该 plugin 仍然可以被管理和查看状态，但不会参与主执行流程
+- 未显式配置 `enabled`：回退到 plugin 自己声明的默认值
 
 例如 `chat` 不需要知道具体转写模型细节。  
 它只负责在处理语音附件时触发自己的语音相关扩展点，真正的实现由 `voice` plugin 提供，底层依赖再由 asset 解决。

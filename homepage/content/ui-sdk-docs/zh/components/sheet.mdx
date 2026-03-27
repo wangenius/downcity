@@ -1,0 +1,74 @@
+---
+title: Sheet
+description: 用于侧边抽屉、设置面板和上下文工具层
+---
+
+# Sheet
+
+`Sheet` 适合承载比 `Dialog` 更长、更像面板的内容。
+
+## 导入
+
+```tsx
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  Button,
+} from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import {
+  Button,
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@downcity/ui";
+
+export function SettingsSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger render={<Button size="sm" />}>打开设置</SheetTrigger>
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>Model Settings</SheetTitle>
+          <SheetDescription>在这里编辑运行参数。</SheetDescription>
+        </SheetHeader>
+        <div className="px-4">这里放表单内容。</div>
+        <SheetFooter>
+          <Button size="sm">保存</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+```
+
+## 可用方向
+
+- `top`
+- `right`
+- `bottom`
+- `left`
+
+## 使用建议
+
+- 长表单优先用 `Sheet`
+- `SheetTitle` 不要省略
+- 关闭按钮可通过 `showCloseButton={false}` 关闭
+
+## 继续阅读
+
+- [Dialog](/zh/ui-sdk-docs/components/dialog)
+- [Card](/zh/ui-sdk-docs/components/card)

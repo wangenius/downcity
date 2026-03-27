@@ -97,13 +97,13 @@ export interface ConsoleUiAgentsResponse {
 }
 
 /**
- * TUI context 摘要。
+ * TUI session 摘要。
  */
 export interface TuiContextSummary {
   /**
-   * 上下文唯一标识。
+   * 会话唯一标识（chatKey）。
    */
-  contextId: string;
+  sessionId: string;
 
   /**
    * 消息总数。
@@ -152,7 +152,7 @@ export interface TuiContextSummary {
 }
 
 /**
- * `/api/dashboard/contexts` 响应体。
+ * `/api/dashboard/sessions` 响应体。
  */
 export interface TuiContextsResponse {
   /**
@@ -161,9 +161,9 @@ export interface TuiContextsResponse {
   success: boolean;
 
   /**
-   * 上下文列表。
+   * 会话列表。
    */
-  contexts?: TuiContextSummary[];
+  sessions?: TuiContextSummary[];
 
   /**
    * 错误信息。
@@ -207,7 +207,7 @@ export interface ChatKeyOption {
 }
 
 /**
- * `/api/dashboard/contexts/:contextId/execute` 请求体。
+ * `/api/dashboard/sessions/:sessionId/execute` 请求体。
  */
 export type TuiContextExecuteAttachmentType =
   | "document"
@@ -247,7 +247,7 @@ export interface TuiContextExecuteAttachmentInput {
 }
 
 /**
- * `/api/dashboard/contexts/:contextId/execute` 请求体。
+ * `/api/dashboard/sessions/:sessionId/execute` 请求体。
  */
 export interface TuiContextExecuteRequestBody {
   /**

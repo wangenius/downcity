@@ -6,7 +6,7 @@
  * - 避免所有业务类型集中堆到全局 types/
  */
 
-export type ChatContextSnapshot = {
+export type ChatSessionSnapshot = {
   sessionId?: string;
   chatKey?: string;
   channel?: string;
@@ -58,7 +58,7 @@ export type ChatDeleteResponse = {
   deleted?: boolean;
   removedMeta?: boolean;
   removedChatDir?: boolean;
-  removedContextDir?: boolean;
+  removedSessionDir?: boolean;
   error?: string;
 };
 
@@ -119,8 +119,7 @@ export type ChatListItemV1 = {
    * 对外稳定的 sessionId。
    *
    * 说明（中文）
-   * - 当前内部仍映射到既有 `contextId` 存储体系。
-   * - 对调用方不再暴露 `contextId` 命名。
+   * - 当前内部以 session 语义统一建模。
    */
   sessionId: string;
   /**

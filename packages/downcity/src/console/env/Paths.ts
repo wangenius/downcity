@@ -228,18 +228,18 @@ export function getDowncityDebugDirPath(cwd: string): string {
  * Chat 元信息目录（由 services/chat 维护）。
  *
  * 关键点（中文）
- * - 该目录存放 `contextId -> chat` 的最近映射快照
- * - 与 core context messages 分离，避免把平台路由细节耦合进 core
+ * - 该目录存放 `sessionId -> chat` 的最近映射快照
+ * - 与 core session messages 分离，避免把平台路由细节耦合进 core
  */
 export function getDowncityChatDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "chat");
 }
 
 /**
- * Channel 目录（channel -> contextId 映射）。
+ * Channel 目录（channel -> sessionId 映射）。
  *
  * 关键点（中文）
- * - 专门承载渠道目标与内部 contextId 的映射关系。
+ * - 专门承载渠道目标与内部 sessionId 的映射关系。
  * - 与 `chat/` 审计事件目录分离，避免职责混淆。
  */
 export function getDowncityChannelDirPath(cwd: string): string {
@@ -260,24 +260,24 @@ export function getDowncityChatMetaDirPath(cwd: string): string {
   return path.join(getDowncityChatDirPath(cwd), "meta");
 }
 
-export function getDowncityChatMetaPath(cwd: string, contextId: string): string {
+export function getDowncityChatMetaPath(cwd: string, sessionId: string): string {
   return path.join(
     getDowncityChatMetaDirPath(cwd),
-    `${encodeURIComponent(String(contextId || "").trim())}.json`,
+    `${encodeURIComponent(String(sessionId || "").trim())}.json`,
   );
 }
 
 /**
- * Chat 会话目录（按 contextId 组织）。
+ * Chat 会话目录（按 sessionId 组织）。
  *
  * 关键点（中文）
  * - 用于存放聊天事件流（history.jsonl）等审计向数据。
  * - 与 `chat/meta` 分离，避免路由快照与事件流混在一起。
  */
-export function getDowncityChatContextDirPath(cwd: string, contextId: string): string {
+export function getDowncityChatSessionDirPath(cwd: string, sessionId: string): string {
   return path.join(
     getDowncityChatDirPath(cwd),
-    encodeURIComponent(String(contextId || "").trim()),
+    encodeURIComponent(String(sessionId || "").trim()),
   );
 }
 
@@ -288,6 +288,6 @@ export function getDowncityChatContextDirPath(cwd: string, contextId: string): s
  * - 每行一条 chat 事件（当前为 inbound）。
  * - 设计为 append-only，便于审计与回放。
  */
-export function getDowncityChatHistoryPath(cwd: string, contextId: string): string {
-  return path.join(getDowncityChatContextDirPath(cwd, contextId), "history.jsonl");
+export function getDowncityChatHistoryPath(cwd: string, sessionId: string): string {
+  return path.join(getDowncityChatSessionDirPath(cwd, sessionId), "history.jsonl");
 }

@@ -9,6 +9,7 @@
 import type { Hono } from "hono";
 import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { PluginRuntime } from "@/types/Plugin.js";
 
 /**
  * Dashboard 路由注册入参。
@@ -28,4 +29,9 @@ export interface DashboardRouteRegistrationParams {
    * 读取当前 service runtime 状态。
    */
   getServiceRuntimeState: () => ServiceRuntime;
+
+  /**
+   * 读取当前 plugin runtime 状态。
+   */
+  getPluginRuntimeState: () => PluginRuntime;
 }

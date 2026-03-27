@@ -15,7 +15,7 @@ what `console`, `agent`, `service`, `plugin`, and `asset` each own, and how one 
 - `agent`: per-project execution plane that loads project config and owns one runtime
 - `service`: core workflow with lifecycle ownership
 - `plugin`: optional enhancement module that passively attaches to service-defined points
-- `asset`: installable dependency or resource behind plugins
+- `asset`: installable plugin dependency resource behind plugins
 
 ## 2. System Relationship
 
@@ -30,7 +30,7 @@ flowchart LR
     AGENT["agent daemon"] --> SERVICES["services"]
     SERVICES --> POINTS["service-defined plugin points"]
     PLUGINS["plugins"] --> POINTS
-    PLUGINS --> ASSETS["assets"]
+    PLUGINS --> ASSETS["plugin dependencies"]
     AGENT --> SHIP[".downcity/*"]
   end
 

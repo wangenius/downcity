@@ -471,10 +471,7 @@ export function bootstrapInlineComposer(): void {
     renderRoutePanel();
 
     try {
-      const routeInfo = await resolveRouteInfo({
-        ...state.lastSettings,
-        ...(preferredSettings || {}),
-      });
+      const routeInfo = await resolveRouteInfo(preferredSettings || {});
       if (requestSeq !== state.routeRefreshSeq) return;
 
       state.routeBaseUrl = routeInfo.baseUrl;
@@ -517,7 +514,6 @@ export function bootstrapInlineComposer(): void {
     }
     setRoutePanelOpen(false);
     await refreshRouteState({
-      ...state.lastSettings,
       agentId: selectedId,
       chatKey: "",
     });
@@ -724,9 +720,8 @@ export function bootstrapInlineComposer(): void {
       !state.activeChatKey
     ) {
       await refreshRouteState({
-        ...state.lastSettings,
-        agentId: state.activeAgentId || state.lastSettings.agentId,
-        chatKey: state.activeChatKey || state.lastSettings.chatKey,
+        ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
+        ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
       });
       if (state.routeErrorText || !state.activeAgentId || !state.activeChatKey) {
         showToast("error", state.routeErrorText || "当前没有可用 Agent 或 Chat，请先检查设置");
@@ -824,9 +819,8 @@ export function bootstrapInlineComposer(): void {
     setRoutePanelOpen(nextOpen);
     if (!nextOpen) return;
     void refreshRouteState({
-      ...state.lastSettings,
-      agentId: state.activeAgentId || state.lastSettings.agentId,
-      chatKey: state.activeChatKey || state.lastSettings.chatKey,
+      ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
+      ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
     });
   });
 

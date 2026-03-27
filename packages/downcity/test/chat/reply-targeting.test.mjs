@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { sendChatTextByChatKey } from "../../bin/services/chat/Action.js";
-import { upsertChatMetaByContextId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
@@ -46,9 +46,9 @@ test("sendChatTextByChatKey locks reply target to current request message id", {
     },
   });
 
-  await upsertChatMetaByContextId({
+  await upsertChatMetaBySessionId({
     context: runtime,
-    contextId: "ctx_reply_lock",
+    sessionId: "ctx_reply_lock",
     channel: "telegram",
     chatId: "chat-1",
     messageId: "latest-meta-message",
@@ -56,12 +56,10 @@ test("sendChatTextByChatKey locks reply target to current request message id", {
 
   const previousEnv = {
     chatKey: process.env.DC_CTX_CHAT_KEY,
-    contextId: process.env.DC_CTX_CONTEXT_ID,
     messageId: process.env.DC_CTX_MESSAGE_ID,
   };
 
   process.env.DC_CTX_CHAT_KEY = "ctx_reply_lock";
-  process.env.DC_CTX_CONTEXT_ID = "ctx_reply_lock";
   process.env.DC_CTX_MESSAGE_ID = "trigger-message";
 
   try {
@@ -87,11 +85,6 @@ test("sendChatTextByChatKey locks reply target to current request message id", {
       delete process.env.DC_CTX_CHAT_KEY;
     } else {
       process.env.DC_CTX_CHAT_KEY = previousEnv.chatKey;
-    }
-    if (previousEnv.contextId === undefined) {
-      delete process.env.DC_CTX_CONTEXT_ID;
-    } else {
-      process.env.DC_CTX_CONTEXT_ID = previousEnv.contextId;
     }
     if (previousEnv.messageId === undefined) {
       delete process.env.DC_CTX_MESSAGE_ID;

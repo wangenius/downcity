@@ -12,10 +12,10 @@ import {
   sendActionByChatKey,
   sendTextByChatKey,
 } from "./runtime/ChatkeySend.js";
-import { deleteChatContextById } from "./runtime/ChatContextDelete.js";
+import { deleteChatSessionById } from "./runtime/ChatSessionDelete.js";
 import type { ChatDispatchAction } from "./types/ChatDispatcher.js";
 import type {
-  ChatContextSnapshot,
+  ChatSessionSnapshot,
   ChatDeleteResponse,
   ChatReactResponse,
   ChatSendResponse,
@@ -54,11 +54,11 @@ function readEnvNumber(name: string): number | undefined {
  * 2) RequestContext（ALS）
  * 3) 环境变量回退
  */
-export function resolveChatContextSnapshot(input?: {
+export function resolveChatSessionSnapshot(input?: {
   sessionId?: string;
   chatKey?: string;
   context?: ServiceRuntime;
-}): ChatContextSnapshot {
+}): ChatSessionSnapshot {
   const requestCtx = requestContext.getStore();
 
   const explicitSessionId = String(input?.sessionId || "").trim();
@@ -67,8 +67,7 @@ export function resolveChatContextSnapshot(input?: {
     typeof requestCtx?.sessionId === "string" && requestCtx.sessionId.trim()
       ? requestCtx.sessionId.trim()
       : undefined;
-  const envSessionId =
-    readEnvString("DC_SESSION_ID") || readEnvString("DC_CTX_SESSION_ID");
+  const envSessionId = readEnvString("DC_SESSION_ID");
   const envChatKey = readEnvString("DC_CTX_CHAT_KEY");
   const channel = readEnvString("DC_CTX_CHANNEL") || undefined;
   const chatId =
@@ -99,7 +98,7 @@ export function resolveChatContextSnapshot(input?: {
     mapSessionIdToChatKey(sessionId) ||
     envChatKey;
 
-  const snapshot: ChatContextSnapshot = {
+  const snapshot: ChatSessionSnapshot = {
     ...(sessionId ? { sessionId } : {}),
     ...(chatKey ? { chatKey } : {}),
     channel,
@@ -135,7 +134,7 @@ export function resolveSessionId(input?: {
   chatKey?: string;
   context?: ServiceRuntime;
 }): string | undefined {
-  const snapshot = resolveChatContextSnapshot({
+  const snapshot = resolveChatSessionSnapshot({
     sessionId: input?.sessionId,
     chatKey: input?.chatKey,
     context: input?.context,
@@ -152,7 +151,7 @@ export function resolveChatKey(input?: {
   sessionId?: string;
   context?: ServiceRuntime;
 }): string | undefined {
-  const snapshot = resolveChatContextSnapshot({
+  const snapshot = resolveChatSessionSnapshot({
     chatKey: input?.chatKey,
     sessionId: input?.sessionId,
     context: input?.context,
@@ -182,7 +181,7 @@ function resolveReplyMessageIdForChatSend(params: {
   if (explicitMessageId) return explicitMessageId;
   if (params.replyToMessage !== true) return undefined;
 
-  const snapshot = resolveChatContextSnapshot({
+  const snapshot = resolveChatSessionSnapshot({
     context: params.context,
   });
   const snapshotChatKey = String(snapshot.chatKey || "").trim();
@@ -406,7 +405,7 @@ export async function sendChatActionByChatKey(params: {
  * 关键点（中文）
  * - sessionId -> chatKey 映射关系只在 chat service 内部维护。
  */
-export async function sendChatTextByContextId(params: {
+export async function sendChatTextBySessionId(params: {
   context: ServiceRuntime;
   sessionId: string;
   text: string;
@@ -464,11 +463,11 @@ export async function deleteChatByChatKey(params: {
     return {
       success: false,
       error:
-        "Missing chatKey/sessionId. Provide --chat-key or --session-id, or ensure DC_CTX_CHAT_KEY/DC_CTX_SESSION_ID is injected.",
+        "Missing chatKey/sessionId. Provide --chat-key or --session-id, or ensure DC_CTX_CHAT_KEY/DC_SESSION_ID is injected.",
     };
   }
 
-  const result = await deleteChatContextById({
+  const result = await deleteChatSessionById({
     context: params.context,
     sessionId,
   });
@@ -478,7 +477,7 @@ export async function deleteChatByChatKey(params: {
     deleted: result.deleted,
     removedMeta: result.removedMeta,
     removedChatDir: result.removedChatDir,
-    removedContextDir: result.removedContextDir,
+    removedSessionDir: result.removedSessionDir,
     ...(result.success ? {} : { error: result.error || "chat delete failed" }),
   };
 }

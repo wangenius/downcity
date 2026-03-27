@@ -1,28 +1,20 @@
 ---
-title: Skill Service
-description: Skill discovery, install, list, and lookup service
+title: Skill Service (Migrated)
+description: Skill has moved from service to plugin; this page keeps the migration note only
 ---
 
-# Skill Service
+# Skill Service (Migrated)
 
-`skill` service manages local learned skills.
+`skill` no longer belongs to the service system. It has moved into the plugin system.
 
-## Responsibilities
+Use these pages instead:
 
-- Find skills
-- Install skills
-- List learned skills
-- Lookup `SKILL.md` content for execution context injection
-- Persist injected skill content into context messages for debugging and replay
+- [`city skill`](/en/docs/commands/plugin/skill)
+- [`city plugin`](/en/docs/commands/plugin/plugin)
 
-## Runtime operations
+## Migration summary
 
-```bash
-city service status skill
-city service command skill list --payload '{}'
-```
-
-## Related docs
-
-- [`city service`](/en/docs/commands/service/service)
-- [`city skill`](/en/docs/commands/service/skill)
+- `skill` has no independent lifecycle
+- `skill` does not own a main workflow
+- `skill` now exposes `find / install / list / lookup` through plugin actions
+- the runtime skills overview system text is now provided by `skill plugin`

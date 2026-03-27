@@ -1,0 +1,24 @@
+{
+  "title": "组件",
+  "pages": [
+    "index",
+    "button",
+    "badge",
+    "card",
+    "checkbox",
+    "dialog",
+    "dropdown-menu",
+    "input",
+    "label",
+    "popover",
+    "separator",
+    "sheet",
+    "skeleton",
+    "tabs",
+    "textarea",
+    "toggle",
+    "toggle-group",
+    "tooltip",
+    "toaster"
+  ]
+}

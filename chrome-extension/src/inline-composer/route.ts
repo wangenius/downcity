@@ -318,13 +318,13 @@ async function fetchContexts(
   agentId: string,
 ): Promise<TuiContextSummary[]> {
   const payload = await requestJson<TuiContextsResponse>(
-    `${baseUrl}/api/dashboard/contexts?agent=${encodeURIComponent(agentId)}&limit=500`,
+    `${baseUrl}/api/dashboard/sessions?agent=${encodeURIComponent(agentId)}&limit=500`,
     { method: "GET" },
   );
   if (payload.success !== true) {
-    throw new Error(payload.error || "加载上下文列表失败");
+    throw new Error(payload.error || "加载会话列表失败");
   }
-  return Array.isArray(payload.contexts) ? payload.contexts : [];
+  return Array.isArray(payload.sessions) ? payload.sessions : [];
 }
 
 function parseContextChannel(
@@ -533,7 +533,7 @@ export async function resolveRouteInfo(
   const seen = new Set<string>();
 
   for (const context of contexts) {
-    const chatKey = normalizeText(context.contextId, 300);
+    const chatKey = normalizeText(context.sessionId, 300);
     if (!chatKey || seen.has(chatKey)) continue;
     const channel = parseContextChannel(context);
     if (!channel) continue;
@@ -587,7 +587,7 @@ export async function sendPageContextToAgent(
 ): Promise<SendToAgentResult> {
   const { targetAgent, targetChatKey, baseUrl } = await resolveRouteInfo(routeSettings);
   const attachment = buildContextAttachment(params);
-  const executeUrl = `${baseUrl}/api/dashboard/contexts/${encodeURIComponent(targetChatKey)}/execute?agent=${encodeURIComponent(targetAgent.id)}`;
+  const executeUrl = `${baseUrl}/api/dashboard/sessions/${encodeURIComponent(targetChatKey)}/execute?agent=${encodeURIComponent(targetAgent.id)}`;
 
   const body: TuiContextExecuteRequestBody = {
     instructions: buildInstructions({

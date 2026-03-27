@@ -73,14 +73,15 @@ Chat channels and queue behavior:
 - `mergeDebounceMs`: short debounce window for batching consecutive inbound messages in one run.
 - `mergeMaxWaitMs`: hard cap for the batching wait to avoid unbounded delay.
 
-### `services.skills`
+### `plugins.skill`
 
 Skills discovery roots:
 
 ```json
 {
-  "services": {
-    "skills": {
+  "plugins": {
+    "skill": {
+      "enabled": true,
       "paths": [".agents/skills"],
       "allowExternalPaths": false
     }

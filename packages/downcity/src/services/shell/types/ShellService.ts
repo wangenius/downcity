@@ -2,7 +2,7 @@
  * Shell service 类型定义。
  *
  * 关键点（中文）
- * - `shell_id` 是 shell 会话的唯一标识，与 chat `contextId` 严格区分。
+ * - `shell_id` 是 shell 会话的唯一标识，与 chat `sessionId` 严格区分。
  * - 这些类型同时服务于 service 层状态管理与 agent tool 协议。
  */
 
@@ -96,7 +96,7 @@ export type ShellStartRequest = {
   inlineWaitMs?: number;
   /** 单次读取输出返回给模型的 token 上限。 */
   maxOutputTokens?: number;
-  /** 显式指定 owner contextId；为空时优先从 RequestContext 推断。 */
+  /** 显式指定 owner sessionId；为空时优先从 RequestContext 推断。 */
   ownerContextId?: string;
   /** 是否在 shell 结束后自动回投主 chat agent。 */
   autoNotifyOnExit?: boolean;
@@ -136,7 +136,7 @@ export type ShellQueryRequest = {
   shellId?: string;
   /** 命令关键字；用于在当前 context 下查找最近匹配会话。 */
   cmd?: string;
-  /** 指定 owner contextId；为空时优先从 RequestContext 推断。 */
+  /** 指定 owner sessionId；为空时优先从 RequestContext 推断。 */
   ownerContextId?: string;
   /** 是否允许匹配已结束会话。 */
   includeCompleted?: boolean;

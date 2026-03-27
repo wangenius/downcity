@@ -1,0 +1,10 @@
+/**
+ * Downcity UI SDK Tailwind 扫描入口。
+ *
+ * 关键说明（中文）
+ * - 该文件只负责为宿主应用声明 Downcity UI 包产物的 Tailwind 扫描来源。
+ * - 设计上与主题样式入口分离，避免把 source 声明隐式塞进 `styles.css`。
+ * - 宿主应用应在 `@import "tailwindcss";` 之后显式引入本文件。
+ */
+
+@source "../dist";

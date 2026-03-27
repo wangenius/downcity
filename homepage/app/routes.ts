@@ -108,7 +108,17 @@ export default [
     route("zh/devdocs/*", "routes/devdocs/page.tsx", { id: "devdocs-zh" }),
   ]),
 
+  // UI SDK docs routes with layout
+  layout("routes/ui-sdk-docs/layout.tsx", [
+    route("en/ui-sdk-docs/*", "routes/ui-sdk-docs/page.tsx", { id: "ui-sdk-docs-en" }),
+    route("ui-sdk-docs/*", "routes/ui-sdk-docs/redirect.tsx", {
+      id: "ui-sdk-docs-redirect",
+    }),
+    route("zh/ui-sdk-docs/*", "routes/ui-sdk-docs/page.tsx", { id: "ui-sdk-docs-zh" }),
+  ]),
+
   // API routes
   route("api/search", "routes/docs/search.ts"),
   route("api/devdocs/search", "routes/devdocs/search.ts"),
+  route("api/ui-sdk-docs/search", "routes/ui-sdk-docs/search.ts"),
 ] satisfies RouteConfig;

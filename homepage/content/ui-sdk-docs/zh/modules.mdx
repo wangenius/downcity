@@ -1,0 +1,200 @@
+---
+title: UI SDK 模块总览
+description: 完整查看 @downcity/ui 的导出模块、组件分组和可用变体
+---
+
+# UI SDK 模块总览
+
+本页用于完整列出 `@downcity/ui` 的公开模块，方便在开发时快速确认可复用能力，而不必去翻源码。
+
+## 工具与类型
+
+### `cn`
+
+- 用途：合并 Tailwind 类名，并自动处理冲突类
+- 适合场景：在组件封装或条件样式分支中安全组合 `className`
+
+### `DowncityButtonVariant`
+
+- 可选值：`default`、`outline`、`secondary`、`ghost`、`destructive`、`link`
+
+### `DowncityButtonSize`
+
+- 可选值：`default`、`xs`、`sm`、`lg`、`icon`、`icon-xs`、`icon-sm`、`icon-lg`
+
+### `DowncityCardSize`
+
+- 可选值：`default`、`sm`
+
+### `DowncityDropdownMenuItemVariant`
+
+- 可选值：`default`、`destructive`
+
+### `DowncityToasterTheme`
+
+- 可选值：`light`、`dark`、`system`
+
+## 样式模块
+
+### `@downcity/ui/source.css`
+
+- 作用：声明 Tailwind 扫描来源
+- 特点：不注入主题样式
+
+### `@downcity/ui/styles.css`
+
+- 作用：注入 Downcity UI 设计令牌与基础层
+- 特点：不负责源码扫描声明
+
+## 动作与状态模块
+
+### `Button`
+
+- 导出：`Button`、`buttonVariants`
+- 用途：主操作、次操作、图标按钮
+
+### `Badge`
+
+- 导出：`Badge`、`badgeVariants`
+- 用途：状态标签、分类标签、轻量统计
+
+### `Toggle`
+
+- 导出：`Toggle`、`toggleVariants`
+- 用途：单个状态开关
+
+### `ToggleGroup`
+
+- 导出：`ToggleGroup`、`ToggleGroupItem`
+- 用途：按钮组切换
+
+## 表单模块
+
+### `Input`
+
+- 导出：`Input`
+- 用途：单行输入、搜索框、短配置
+
+### `Textarea`
+
+- 导出：`Textarea`
+- 导出类型：`TextareaProps`
+- 用途：Prompt、长说明、多行配置
+
+### `Checkbox`
+
+- 导出：`Checkbox`
+- 用途：多选配置、权限勾选
+
+### `Label`
+
+- 导出：`Label`
+- 用途：字段标题、表单命名
+
+## 容器与展示模块
+
+### `Card`
+
+- 导出：
+  - `Card`
+  - `CardHeader`
+  - `CardTitle`
+  - `CardDescription`
+  - `CardAction`
+  - `CardContent`
+  - `CardFooter`
+
+### `Separator`
+
+- 导出：`Separator`
+- 支持方向：`horizontal`、`vertical`
+
+### `Skeleton`
+
+- 导出：`Skeleton`
+- 用途：加载占位
+
+### `Tabs`
+
+- 导出：
+  - `Tabs`
+  - `TabsList`
+  - `TabsTrigger`
+  - `TabsContent`
+  - `tabsListVariants`
+
+## 浮层与反馈模块
+
+### `Dialog`
+
+- 导出：
+  - `Dialog`
+  - `DialogTrigger`
+  - `DialogPortal`
+  - `DialogClose`
+  - `DialogOverlay`
+  - `DialogContent`
+  - `DialogHeader`
+  - `DialogFooter`
+  - `DialogTitle`
+  - `DialogDescription`
+
+### `Sheet`
+
+- 导出：
+  - `Sheet`
+  - `SheetTrigger`
+  - `SheetClose`
+  - `SheetPortal`
+  - `SheetOverlay`
+  - `SheetContent`
+  - `SheetHeader`
+  - `SheetFooter`
+  - `SheetTitle`
+  - `SheetDescription`
+
+### `DropdownMenu`
+
+- 导出：
+  - `DropdownMenu`
+  - `DropdownMenuTrigger`
+  - `DropdownMenuPortal`
+  - `DropdownMenuContent`
+  - `DropdownMenuGroup`
+  - `DropdownMenuLabel`
+  - `DropdownMenuItem`
+  - `DropdownMenuCheckboxItem`
+  - `DropdownMenuRadioGroup`
+  - `DropdownMenuRadioItem`
+  - `DropdownMenuSeparator`
+  - `DropdownMenuShortcut`
+  - `DropdownMenuSub`
+  - `DropdownMenuSubTrigger`
+  - `DropdownMenuSubContent`
+
+### `Popover`
+
+- 导出：
+  - `Popover`
+  - `PopoverTrigger`
+  - `PopoverContent`
+
+### `Tooltip`
+
+- 导出：
+  - `Tooltip`
+  - `TooltipTrigger`
+  - `TooltipContent`
+  - `TooltipProvider`
+
+### `Toaster`
+
+- 导出：`Toaster`
+- 基于：`sonner`
+
+## 建议阅读
+
+- [UI SDK](/zh/ui-sdk-docs)
+- [组件总览](/zh/ui-sdk-docs/components)
+- [宿主交互设计](/zh/ui-sdk-docs/host-integration)
+- [UI SDK 开发指南](/zh/ui-sdk-docs/development)

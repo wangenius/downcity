@@ -129,6 +129,7 @@ export function toHistoryEventsFromTimeline(
           : Date.now();
     return {
       id: String(item.id || `${sessionId}:timeline:${index}`),
+      sessionId,
       contextId: sessionId,
       channel: "consoleui",
       direction: role === "user" ? "inbound" : "outbound",

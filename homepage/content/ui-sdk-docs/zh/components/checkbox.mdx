@@ -1,0 +1,40 @@
+---
+title: Checkbox
+description: 用于勾选配置项、权限项和多选状态
+---
+
+# Checkbox
+
+`Checkbox` 适合布尔选择和多选列表。
+
+## 导入
+
+```tsx
+import { Checkbox, Label } from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import { Checkbox, Label } from "@downcity/ui";
+
+export function AutoRunField() {
+  return (
+    <div className="flex items-center gap-2">
+      <Checkbox id="auto-run" defaultChecked />
+      <Label htmlFor="auto-run">启动后自动执行</Label>
+    </div>
+  );
+}
+```
+
+## 使用建议
+
+- 总是配合 `Label` 使用
+- 多个相关勾选项建议放进同一个 `CardContent` 或字段组
+- 单个开关如果更像按钮切换，可以考虑 `Toggle`
+
+## 继续阅读
+
+- [Label](/zh/ui-sdk-docs/components/label)
+- [Toggle](/zh/ui-sdk-docs/components/toggle)

@@ -14,8 +14,8 @@ import type {
   ChatAuthorizationSnapshot,
   ChatAuthorizationStateFile,
 } from "@/types/AuthPlugin.js";
+import type { RuntimeBase } from "@/types/Asset.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 
 function getAuthorizationStatePath(rootPath: string): string {
@@ -153,7 +153,7 @@ function readAuthorizationConfig(projectRoot: string): ChatAuthorizationSnapshot
  * 记录观测到的用户 / 会话。
  */
 export async function recordObservedAuthorizationPrincipal(params: {
-  context: ServiceRuntime;
+  context: Pick<RuntimeBase, "rootPath">;
   channel: ChatDispatchChannel;
   chatId: string;
   chatType?: string;
@@ -207,7 +207,7 @@ export async function recordObservedAuthorizationPrincipal(params: {
  * 读取授权快照（配置 + 动态状态）。
  */
 export async function readAuthorizationSnapshot(params: {
-  context: ServiceRuntime;
+  context: Pick<RuntimeBase, "rootPath">;
 }): Promise<ChatAuthorizationSnapshot> {
   const state = await readState(params.context.rootPath);
   return {

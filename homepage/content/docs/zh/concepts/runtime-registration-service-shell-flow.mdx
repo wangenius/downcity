@@ -14,7 +14,7 @@ description: 说明 console registry 何时写入、runtime 如何执行 service
 ## 2. Runtime 执行
 
 - 一个 agent 进程绑定一个 `rootPath`
-- runtime 组装 services、plugins、assets
+- runtime 组装 `ServiceRuntime`、`PluginRuntime` 与 asset 基础设施
 - plugin 向 service 已定义的扩展点注册 `pipeline / guard / effect / resolve`
 - service 在自己的工作流节点触发这些扩展点
 

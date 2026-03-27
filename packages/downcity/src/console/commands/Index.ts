@@ -860,9 +860,9 @@ registerModelCommand(consoleCommand);
 registerServicesCommand(program);
 registerPluginsCommand(program);
 
-// 服务命令统一注册（chat / skill / task / future services）
+// 服务命令统一注册（chat / task / memory / shell / future services）
 registerAllServicesForCli(program);
-// 插件命令统一注册（voice / future plugins）
+// 插件命令统一注册（skill / voice / future plugins）
 registerAllPluginsForCli(program);
 
 program.showHelpAfterError();

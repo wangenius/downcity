@@ -28,10 +28,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./source.css": "./src/source.css",
     "./styles.css": "./src/styles.css"
   },
   "files": [
     "dist",
+    "src/source.css",
     "src/styles.css"
   ],
   "scripts": {

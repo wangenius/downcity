@@ -47,7 +47,7 @@ export async function fetchChatKeyOptions(
   const normalizedAgentId = String(agentId || "").trim();
   if (!normalizedAgentId) return [];
 
-  const url = `${resolveConsoleBaseUrl(options?.consoleBaseUrl)}/api/dashboard/contexts?agent=${encodeURIComponent(normalizedAgentId)}&limit=500`;
+  const url = `${resolveConsoleBaseUrl(options?.consoleBaseUrl)}/api/dashboard/sessions?agent=${encodeURIComponent(normalizedAgentId)}&limit=500`;
   const payload = await requestJson<TuiContextsResponse>(url, {
     method: "GET",
   });
@@ -56,7 +56,7 @@ export async function fetchChatKeyOptions(
     throw new Error(payload.error || "加载 chatKey 列表失败");
   }
 
-  const contexts = Array.isArray(payload.contexts) ? payload.contexts : [];
+  const contexts = Array.isArray(payload.sessions) ? payload.sessions : [];
   const seen = new Set<string>();
   const outOptions: ChatKeyOption[] = [];
 
@@ -87,15 +87,15 @@ export async function fetchChatKeyOptions(
 export function dispatchAgentTask(params: {
   consoleBaseUrl?: string;
   agentId: string;
-  contextId: string;
+  sessionId: string;
   body: TuiContextExecuteRequestBody;
 }): boolean {
   const agentId = String(params.agentId || "").trim();
-  const contextId = String(params.contextId || "").trim();
+  const sessionId = String(params.sessionId || "").trim();
   if (!agentId) return false;
-  if (!contextId) return false;
+  if (!sessionId) return false;
 
-  const url = `${resolveConsoleBaseUrl(params.consoleBaseUrl)}/api/dashboard/contexts/${encodeURIComponent(contextId)}/execute?agent=${encodeURIComponent(agentId)}`;
+  const url = `${resolveConsoleBaseUrl(params.consoleBaseUrl)}/api/dashboard/sessions/${encodeURIComponent(sessionId)}/execute?agent=${encodeURIComponent(agentId)}`;
   const bodyText = JSON.stringify(params.body);
 
   try {

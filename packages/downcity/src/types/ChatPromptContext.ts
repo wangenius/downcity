@@ -19,7 +19,7 @@ export interface ChatEnvironmentPromptInput {
    *
    * 说明（中文）
    * - 对外统一使用 `sessionId` 语义。
-   * - 当前内部仍映射到既有 `contextId` 存储体系。
+   * - chat service 内部统一按 session 语义路由与持久化。
    */
   sessionId: string;
 

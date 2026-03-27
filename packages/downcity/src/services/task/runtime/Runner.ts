@@ -11,6 +11,7 @@ import fs from "fs-extra";
 import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { PluginRuntime } from "@/types/Plugin.js";
 import { Agent } from "@agent/Agent.js";
 import {
   drainDeferredPersistedUserMessages,
@@ -36,7 +37,7 @@ import type {
 import type { AgentResult } from "@agent/types/Agent.js";
 import type { JsonObject } from "@/types/Json.js";
 import {
-  createTaskRunContextId,
+  createTaskRunSessionId,
   formatTaskRunTimestamp,
   getTaskRunDir,
 } from "./Paths.js";
@@ -203,6 +204,54 @@ type TaskAgentRuntime = {
 };
 
 /**
+ * 为独立 task agent 组装最小 plugin runtime 视图。
+ *
+ * 关键点（中文）
+ * - task runner 只有 service runtime，没有完整 plugin asset 基础设施。
+ * - 这里提供一个只用于 system 装配的只读适配层；若某 plugin 强依赖 asset，会在 availability 阶段自动 fail-open 跳过。
+ */
+function createTaskPluginRuntime(runtime: ServiceRuntime): PluginRuntime {
+  return {
+    ...runtime,
+    invoke: runtime.invoke,
+    services: runtime.services,
+    assets: {
+      list() {
+        return [];
+      },
+      async check() {
+        return {
+          available: false,
+          reasons: [
+            "asset runtime is not mounted in standalone task prompt assembly",
+          ],
+        };
+      },
+      async install() {
+        return {
+          success: false,
+          message:
+            "asset install is unavailable in standalone task prompt assembly",
+        };
+      },
+      async use() {
+        throw new Error(
+          "asset runtime is not mounted in standalone task prompt assembly",
+        );
+      },
+      async getConfig() {
+        return null;
+      },
+      async setConfig() {
+        throw new Error(
+          "asset runtime is not mounted in standalone task prompt assembly",
+        );
+      },
+    },
+  };
+}
+
+/**
  * 把 task round 的 user query 落盘到对应 run context。
  *
  * 关键点（中文）
@@ -241,15 +290,15 @@ async function appendTaskRoundUserMessage(params: {
  *
  * 关键点（中文）
  * - task 场景使用独立 Agent 实例，不复用 `context.run/getAgent`。
- * - system 档位固定为 `task`，避免在 system 域根据 contextId 推断。
+ * - system 档位固定为 `task`，避免在 system 域根据 sessionId 推断。
  */
 function createTaskAgentRuntime(params: {
   runtime: ServiceRuntime;
   runDirAbs: string;
-  runContextId: string;
-  userSimulatorContextId: string;
+  runSessionId: string;
+  userSimulatorSessionId: string;
 }): TaskAgentRuntime {
-  const { runtime, runDirAbs, runContextId, userSimulatorContextId } = params;
+  const { runtime, runDirAbs, runSessionId, userSimulatorSessionId } = params;
   const compactor = new SummaryCompactor({
     keepLastMessages: runtime.config.context?.messages?.keepLastMessages,
     maxInputTokensApprox: runtime.config.context?.messages?.maxInputTokensApprox,
@@ -260,6 +309,7 @@ function createTaskAgentRuntime(params: {
     projectRoot: runtime.rootPath,
     getStaticSystemPrompts: () => runtime.systems,
     getRuntime: () => runtime,
+    getPluginRuntime: () => createTaskPluginRuntime(runtime),
     profile: "task",
   });
   const persistorsBySessionId = new Map<string, FilePersistor>();
@@ -274,9 +324,9 @@ function createTaskAgentRuntime(params: {
       throw new Error("TaskAgentRuntime requires a non-empty sessionId");
     }
     const runMessagesDirPath =
-      key === runContextId
+      key === runSessionId
         ? runDirAbs
-        : key === userSimulatorContextId
+        : key === userSimulatorSessionId
           ? path.join(runDirAbs, "user-simulator")
           : undefined;
 
@@ -642,7 +692,7 @@ async function runAgentRound(params: {
  * 执行 script 类型任务。
  *
  * 关键点（中文）
- * - 在任务配置的 contextId 语义下执行，透传 `DC_CTX_CONTEXT_ID`
+ * - 在任务配置的 sessionId 语义下执行，透传 `DC_SESSION_ID`
  * - 仅允许执行项目内 `.sh` 文件
  */
 async function runScriptTask(params: {
@@ -664,7 +714,7 @@ async function runScriptTask(params: {
         reject: true,
         env: {
           ...process.env,
-          DC_CTX_CONTEXT_ID: params.sessionId,
+          DC_SESSION_ID: params.sessionId,
         },
       }),
   );
@@ -814,7 +864,7 @@ export async function runTaskNow(params: {
       `- title: ${task.frontmatter.title}`,
       `- when: \`${task.frontmatter.when}\``,
       `- status: \`${task.frontmatter.status}\``,
-      `- sessionId: \`${task.frontmatter.contextId}\``,
+      `- sessionId: \`${task.frontmatter.sessionId}\``,
       `- kind: \`${taskKind}\``,
       ...(taskKind === "agent" ? [`- review: \`${String(reviewEnabled)}\``] : []),
       `- maxDialogueRounds: \`${maxDialogueRounds}\``,
@@ -835,13 +885,13 @@ export async function runTaskNow(params: {
     ...(taskKind === "agent" ? { maxRounds: maxDialogueRounds } : {}),
   });
 
-  const runContextId = createTaskRunContextId(task.taskId, timestamp);
-  const userSimulatorContextId = `task-user-sim:${task.taskId}:${timestamp}`;
+  const runSessionId = createTaskRunSessionId(task.taskId, timestamp);
+  const userSimulatorSessionId = `task-user-sim:${task.taskId}:${timestamp}`;
   const taskAgentRuntime = createTaskAgentRuntime({
     runtime: context,
     runDirAbs,
-    runContextId,
-    userSimulatorContextId,
+    runSessionId,
+    userSimulatorSessionId,
   });
 
   let ok = false;
@@ -872,7 +922,7 @@ export async function runTaskNow(params: {
     try {
       const scriptResult = await runScriptTask({
         runDirAbs,
-        sessionId: task.frontmatter.contextId,
+        sessionId: task.frontmatter.sessionId,
         scriptBody: task.body,
       });
       outputText = scriptResult.outputText;
@@ -959,7 +1009,7 @@ export async function runTaskNow(params: {
         });
         const executorRound = await runAgentRound({
           taskAgentRuntime,
-          sessionId: runContextId,
+          sessionId: runSessionId,
           taskId: task.taskId,
           query: executorQuery,
           actorId: "scheduler",
@@ -976,7 +1026,7 @@ export async function runTaskNow(params: {
         try {
           await appendTaskAssistantMessage({
             taskAgentRuntime,
-            sessionId: runContextId,
+            sessionId: runSessionId,
             taskId: task.taskId,
             rawResult: executorRound.rawResult,
           });
@@ -1031,7 +1081,7 @@ export async function runTaskNow(params: {
           });
           const simulatorRound = await runAgentRound({
             taskAgentRuntime,
-            sessionId: userSimulatorContextId,
+            sessionId: userSimulatorSessionId,
             taskId: task.taskId,
             query: userSimulatorQuery,
             actorId: "user_simulator",
@@ -1044,7 +1094,7 @@ export async function runTaskNow(params: {
           try {
             await appendTaskAssistantMessage({
               taskAgentRuntime,
-              sessionId: userSimulatorContextId,
+              sessionId: userSimulatorSessionId,
               taskId: task.taskId,
               rawResult: simulatorRound.rawResult,
             });
@@ -1321,7 +1371,7 @@ export async function runTaskNow(params: {
     taskId: task.taskId,
     timestamp,
     executionId,
-    contextId: task.frontmatter.contextId,
+    sessionId: task.frontmatter.sessionId,
     trigger: params.trigger,
     status,
     executionStatus,

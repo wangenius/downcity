@@ -8,14 +8,12 @@
 
 import type { Service } from "./ServiceManager.js";
 import { chatService } from "@services/chat/Index.js";
-import { skillsService } from "@services/skills/Index.js";
 import { taskService } from "@services/task/Index.js";
 import { memoryService } from "@services/memory/Index.js";
 import { shellService } from "@services/shell/Index.js";
 
 export const SERVICES: Service[] = [
   chatService,
-  skillsService,
   taskService,
   memoryService,
   shellService,

@@ -66,8 +66,7 @@ export interface DashboardSessionSummary {
    * 会话 ID。
    *
    * 说明（中文）
-   * - 对外统一使用 `sessionId` 语义。
-   * - 当前内部仍映射到既有 `contextId` 存储体系。
+   * - 对内对外统一使用 `sessionId` 语义。
    */
   sessionId: string;
 

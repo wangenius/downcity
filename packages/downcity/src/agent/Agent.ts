@@ -714,7 +714,7 @@ export class Agent {
             ? summary.toolResultCount
             : 0;
         await this.logger.log("info", "[agent] step.finish", {
-          contextId: sessionId,
+          sessionId,
           stepIndex: stepCount,
           ...summary,
         });
@@ -777,7 +777,7 @@ export class Agent {
           textOnlyContinuationCount < MAX_TEXT_ONLY_CONTINUATIONS;
 
         await this.logger.log("info", "[agent] loop.decision", {
-          contextId: sessionId,
+          sessionId,
           stepIndex: stepCount,
           continueForToolCalls: shouldContinueForToolCalls,
           continueForTextOnly: shouldContinueForTextOnly,
@@ -795,7 +795,7 @@ export class Agent {
         if (shouldRecoverIncompleteResponse && incompleteResponse) {
           incompleteResponseRecoveryCount += 1;
           await this.logger.log("warn", "[agent] incomplete_response.recover", {
-            contextId: sessionId,
+            sessionId,
             stepIndex: stepCount,
             recoveryCount: incompleteResponseRecoveryCount,
             reason: incompleteResponse.reason,
@@ -832,7 +832,7 @@ export class Agent {
 
         if (incompleteResponse) {
           await this.logger.log("error", "[agent] incomplete_response", {
-            contextId: sessionId,
+            sessionId,
             stepIndex: stepCount,
             reason: incompleteResponse.reason,
             recoveryCount: incompleteResponseRecoveryCount,
@@ -902,7 +902,7 @@ export class Agent {
 
       if (stepCount >= MAX_TOOL_LOOP_STEPS) {
         await this.logger.log("warn", "[agent] loop.max_steps_reached", {
-          contextId: sessionId,
+          sessionId,
           stepCount,
           totalToolCallCount,
           totalToolResultCount,
@@ -915,7 +915,7 @@ export class Agent {
         this.orchestrator.buildFallbackAssistantMessage("Execution completed");
 
       await this.logger.log("info", "[agent] final.message", {
-        contextId: sessionId,
+        sessionId,
         ...summarizeUiMessageForDebug(finalMessage),
       });
 
@@ -927,7 +927,7 @@ export class Agent {
 
       // 写入 finish 日志。
       await this.logger.log("info", "[agent] finish", {
-        contextId: sessionId,
+        sessionId,
         duration,
         stepCount,
         totalToolCallCount,

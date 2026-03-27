@@ -16,7 +16,7 @@
 - 短命令、一次性命令优先使用 `shell_exec`。
 - 长任务、需要中途查状态、需要 stdin 交互时，使用 `shell_start` / `shell_status` / `shell_read` / `shell_write` / `shell_wait` / `shell_close`。
 - 先用 `shell_start` 启动命令并拿到 `shell_id`。
-- `shell_id` 是 shell 会话标识；它不是 chat `context_id`。
+- `shell_id` 是 shell 会话标识；它不是 chat `session_id`。
 - 长任务期间，优先使用 `shell_status` 查询进度，或使用 `shell_wait` 等待状态变化；不要自己写高频空轮询循环。
 - 只有在确实需要原始增量输出时，才使用 `shell_read` 按 `from_cursor` 继续读取。
 - 需要向进程 stdin 输入内容时，使用 `shell_write`。

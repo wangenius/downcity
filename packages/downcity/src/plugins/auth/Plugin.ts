@@ -9,7 +9,6 @@
 
 import type { Plugin } from "@/types/Plugin.js";
 import type { JsonValue } from "@/types/Json.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import {
   AUTH_ACTIONS,
@@ -94,9 +93,9 @@ export const authPlugin: Plugin = {
               ? (value as Record<string, unknown>)
               : {};
           const evaluateInput = toEvaluateInput(input);
-          const authorizationConfig = readChatAuthorizationConfig(runtime as ServiceRuntime);
+          const authorizationConfig = readChatAuthorizationConfig(runtime);
           const result = evaluateIncomingChatAuthorization({
-            config: (runtime as ServiceRuntime).config,
+            config: runtime.config,
             channel: evaluateInput.channel,
             input: evaluateInput,
             authorizationConfig,
@@ -116,7 +115,7 @@ export const authPlugin: Plugin = {
             throw new Error("chat.observePrincipal requires a valid channel");
           }
           await recordObservedAuthorizationPrincipal({
-            context: runtime as ServiceRuntime,
+            context: runtime,
             channel,
             chatId: String(input.chatId || "").trim(),
             ...(typeof input.chatType === "string" ? { chatType: input.chatType.trim() } : {}),
@@ -141,7 +140,7 @@ export const authPlugin: Plugin = {
       const role = resolveAuthorizedUserRole({
         channel,
         userId: String(input.userId || "").trim(),
-        rootPath: (runtime as ServiceRuntime).rootPath,
+        rootPath: runtime.rootPath,
       });
       return ((role || null) as unknown) as JsonValue;
     },
@@ -150,7 +149,7 @@ export const authPlugin: Plugin = {
     [AUTH_ACTIONS.snapshot]: {
       execute: async ({ runtime }) => {
         const snapshot = await readAuthorizationSnapshot({
-          context: runtime as ServiceRuntime,
+          context: runtime,
         });
         return {
           success: true,
@@ -162,7 +161,7 @@ export const authPlugin: Plugin = {
       execute: async ({ runtime }) => {
         return {
           success: true,
-          data: readChatAuthorizationConfig(runtime as ServiceRuntime) as unknown as JsonValue,
+          data: readChatAuthorizationConfig(runtime) as unknown as JsonValue,
         };
       },
     },
@@ -174,12 +173,12 @@ export const authPlugin: Plugin = {
             ? (body.config as ChatAuthorizationConfig)
             : {};
         await writeChatAuthorizationConfig({
-          context: runtime as ServiceRuntime,
+          context: runtime,
           nextConfig,
         });
         return {
           success: true,
-          data: readChatAuthorizationConfig(runtime as ServiceRuntime) as unknown as JsonValue,
+          data: readChatAuthorizationConfig(runtime) as unknown as JsonValue,
         };
       },
     },
@@ -195,14 +194,14 @@ export const authPlugin: Plugin = {
           };
         }
         await setChatAuthorizationUserRole({
-          context: runtime as ServiceRuntime,
+          context: runtime,
           channel,
           userId: String(body.userId || "").trim(),
           roleId: String(body.roleId || "").trim(),
         });
         return {
           success: true,
-          data: readChatAuthorizationConfig(runtime as ServiceRuntime) as unknown as JsonValue,
+          data: readChatAuthorizationConfig(runtime) as unknown as JsonValue,
         };
       },
     },

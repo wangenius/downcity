@@ -2,7 +2,7 @@
 
 ## 模块定位
 
-`services/` 是业务能力层，承载可注册的服务模块（chat/skills/task 等）以及对应 runtime 能力。  
+`services/` 是业务能力层，承载可注册的服务模块（chat/task/memory/shell 等）以及对应 runtime 能力。  
 每个服务通过 `ServiceEntry` 实现 `Service` 契约，并用 `actions` 对象声明可用能力。
 
 ## 实现概览
@@ -11,13 +11,10 @@
    - 提供 `chat send/context` 能力与 `/service/chat/*` 接口。
    - 维护平台适配器（Telegram/Feishu/QQ）与发送分发逻辑。
    - `runtime/` 包含队列、幂等、发送注册表、文本标准化等执行细节。
-2. `skills/`
-   - 提供技能发现、列表、安装、查阅能力。
-   - `lookup` 读取 `SKILL.md` 后通过运行时协议注入 user message（无 pin 持久化）。
-3. `task/`
+2. `task/`
    - 管理任务定义（`task.md` frontmatter + body）与执行入口。
    - 支持任务 CRUD、状态切换、立即执行、cron 调度运行时。
-4. `memory/`
+3. `memory/`
    - 负责上下文记忆提取、压缩与备份策略。
    - 由 `agent/context/manager/ContextManager` 在上下文更新后异步触发，不阻塞主对话链路。
 
@@ -25,8 +22,6 @@
 
 - `chat/ServiceEntry.ts`
 - `chat/Service.ts`
-- `skills/ServiceEntry.ts`
-- `skills/Service.ts`
 - `task/ServiceEntry.ts`
 - `task/Service.ts`
 - `memory/runtime/Service.ts`

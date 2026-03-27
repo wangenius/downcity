@@ -6,7 +6,7 @@ import { i18n } from "./i18n";
  * 开发者文档 source 装载模块。
  * 说明：
  * 1. `docs` 仅保留用户向说明；`devdocs` 单独承接架构、实现与设计规范。
- * 2. 这里与用户文档并行维护，避免两类受众混在同一棵树里。
+ * 2. UI SDK 相关文档已经迁移到独立的 `ui-sdk-docs`，这里不再承载该部分内容。
  */
 export const devSource = loader({
   baseUrl: "/devdocs",

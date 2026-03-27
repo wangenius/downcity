@@ -13,7 +13,7 @@ import path from "node:path";
 import test from "node:test";
 import { withRequestContext } from "../../bin/agent/context/manager/RequestContext.js";
 import { chatService } from "../../bin/services/chat/Index.js";
-import { upsertChatMetaByContextId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 
 function createRuntime(rootPath) {
   return {
@@ -38,9 +38,9 @@ test("chat service system injects only the current channel prompt", async () => 
   const runtime = createRuntime(rootPath);
 
   try {
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: runtime,
-      contextId: "ctx_feishu_only",
+      sessionId: "ctx_feishu_only",
       channel: "feishu",
       chatId: "oc_123",
       targetType: "group",
@@ -50,7 +50,7 @@ test("chat service system injects only the current channel prompt", async () => 
 
     const prompt = await withRequestContext(
       {
-        contextId: "ctx_feishu_only",
+        sessionId: "ctx_feishu_only",
         requestId: "req_feishu_only",
       },
       () => chatService.system(runtime),
@@ -59,7 +59,7 @@ test("chat service system injects only the current channel prompt", async () => 
     assert.equal(prompt.includes("当前模式下，直接输出，即会发送消息给到用户对应的channel"), true);
     assert.equal(prompt.includes("# Current Chat Environment"), true);
     assert.equal(prompt.includes("- channel: feishu"), true);
-    assert.equal(prompt.includes("- context_id: ctx_feishu_only"), true);
+    assert.equal(prompt.includes("- session_id: ctx_feishu_only"), true);
     assert.equal(prompt.includes("- chat_key: ctx_feishu_only"), true);
     assert.equal(prompt.includes("- chat_id: oc_123"), true);
     assert.equal(prompt.includes("- chat_type: group"), true);
@@ -79,7 +79,7 @@ test("chat service system skips channel prompts when current context is not a ch
   try {
     const prompt = await withRequestContext(
       {
-        contextId: "consoleui-chat-main",
+        sessionId: "consoleui-chat-main",
         requestId: "req_consoleui_only",
       },
       () => chatService.system(runtime),

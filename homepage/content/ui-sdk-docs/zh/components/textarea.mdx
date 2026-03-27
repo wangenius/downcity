@@ -1,0 +1,50 @@
+---
+title: Textarea
+description: 用于长文本、Prompt 和多行配置输入
+---
+
+# Textarea
+
+`Textarea` 用于多行文本编辑。
+
+## 导入
+
+```tsx
+import { Textarea, Label } from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import { Label, Textarea } from "@downcity/ui";
+
+export function PromptField() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="system-prompt">System Prompt</Label>
+      <Textarea id="system-prompt" placeholder="输入系统提示词" />
+    </div>
+  );
+}
+```
+
+## 适合场景
+
+- Prompt
+- 说明文本
+- 多行配置片段
+
+## 相关导出
+
+- `Textarea`
+- `TextareaProps`
+
+## 使用建议
+
+- 长文本统一用 `Textarea`
+- 如果只是简短字段，优先使用 [Input](/zh/ui-sdk-docs/components/input)
+
+## 继续阅读
+
+- [Input](/zh/ui-sdk-docs/components/input)
+- [Label](/zh/ui-sdk-docs/components/label)

@@ -531,8 +531,8 @@ export function TasksSection(props: TasksSectionProps) {
               <span>{formatWhenLabel(selectedTask.when)}</span>
             </div>
             <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
-              <span className="text-foreground/80">context</span>
-              <span className="truncate font-mono" title={selectedTask.contextId || ""}>{selectedTask.contextId || "-"}</span>
+              <span className="text-foreground/80">session</span>
+              <span className="truncate font-mono" title={selectedTask.sessionId || ""}>{selectedTask.sessionId || "-"}</span>
             </div>
             <div className="grid grid-cols-[84px_minmax(0,1fr)] gap-2">
               <span className="text-foreground/80">file</span>

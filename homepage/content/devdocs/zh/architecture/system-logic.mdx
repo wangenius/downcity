@@ -14,7 +14,7 @@ Downcity 可以先粗分成四层：
 1. 入口层：CLI、Console UI、Chrome Extension、HTTP API
 2. 控制层：console
 3. 执行层：agent runtime
-4. 业务层：services / plugins / assets
+4. 业务层：services / plugins / plugin dependency assets
 
 ```mermaid
 flowchart LR
@@ -36,7 +36,7 @@ flowchart LR
   subgraph Business["业务层"]
     SERVICES["Services"]
     PLUGINS["Plugins"]
-    ASSETS["Assets"]
+    ASSETS["Plugin Dependency Assets"]
   end
 
   CLI --> CONSOLE
@@ -88,7 +88,7 @@ Agent 是单项目执行面，负责：
 - `chat`
 - `task`
 - `memory`
-- `skills`
+- `shell`
 
 ### Plugin
 
@@ -123,6 +123,8 @@ Agent 是单项目执行面，负责：
 - 模型
 - CLI 工具
 - 第三方依赖
+
+也就是说，asset 最好理解成 plugin dependency，而不是和 service / plugin 并列的第三个 workflow owner。
 
 ## 当前真实落地的 chat plugin 点
 

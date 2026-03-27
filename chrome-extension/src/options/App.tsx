@@ -269,17 +269,17 @@ export function App() {
           Chrome Extension Settings
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          在这里明确设置默认 Agent 和目标会话，避免扩展把消息发到错误聊天。
+          配置 Console 连接、默认 Agent 与默认会话，保存后会立即生效。
         </p>
       </header>
 
       <section className="rounded-[18px] border border-border bg-surface p-5">
-        <div className="grid min-w-0 gap-4">
-          <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_140px_auto]">
+        <div className="grid min-w-0 gap-5">
+          <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
             <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               IP / Host
               <input
-                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface"
+                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
                 value={consoleHost}
                 onChange={(event) => setConsoleHost(event.target.value)}
                 placeholder="127.0.0.1"
@@ -289,7 +289,7 @@ export function App() {
             <label className="flex min-w-0 flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Port
               <input
-                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface"
+                className="w-full rounded-[12px] border border-border bg-muted px-3 py-2.5 text-[12px] text-foreground outline-none transition focus:border-border-strong focus:bg-surface"
                 value={consolePortInput}
                 onChange={(event) => setConsolePortInput(event.target.value)}
                 placeholder="5315"

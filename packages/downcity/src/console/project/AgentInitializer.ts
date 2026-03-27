@@ -299,17 +299,23 @@ export async function initializeAgentProject(
     model: {
       primary: primaryModelId,
     },
-    services: {
-      skills: { paths: [".agents/skills"] },
-      ...(Object.keys(channelsConfig).length > 0
-        ? {
+    plugins: {
+      skill: {
+        enabled: true,
+        paths: [".agents/skills"],
+        allowExternalPaths: false,
+      },
+    },
+    ...(Object.keys(channelsConfig).length > 0
+      ? {
+          services: {
             chat: {
               method: "direct",
               channels: channelsConfig,
             },
-          }
-        : {}),
-    },
+          },
+        }
+      : {}),
   };
   await saveJson(shipJsonPath, shipConfig);
   createdFiles.push("downcity.json");

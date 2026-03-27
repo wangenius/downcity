@@ -376,7 +376,7 @@ export function ExtensionPopupApp() {
         const accepted = dispatchAgentTask({
           consoleBaseUrl: activeConsoleBaseUrl,
           agentId,
-          contextId: chatKey,
+          sessionId: chatKey,
           body: {
             instructions: buildExtensionPopupInstructions({
               tab,
@@ -472,44 +472,43 @@ export function ExtensionPopupApp() {
   );
 
   return (
-    <main className="relative min-h-[520px] w-[380px] bg-background p-3 text-foreground">
+    <main className="min-h-[520px] w-[380px] bg-background p-3 text-foreground">
       <section className="rounded-[12px] border border-border bg-surface p-3">
         <header className="mb-3 flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center rounded-[10px] border border-border bg-muted px-1 py-1">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12px] font-medium">
+              {isLoadingAgents ? "加载 Agent 中..." : selectedAgent?.name || "未选择 Agent"}
+            </div>
+            <div className="truncate text-[10px] text-muted-foreground">
+              {selectedAgent
+                ? selectedAgent.running
+                  ? isLoadingChatKeys
+                    ? "会话加载中..."
+                    : settings.chatKey
+                      ? "目标会话已设置"
+                      : chatKeyOptions.length === 1
+                        ? "已自动选择唯一会话"
+                        : chatKeyOptions.length > 1
+                          ? "请在下方选择会话"
+                          : "暂无可用会话"
+                  : "Agent 未运行"
+                : "请在设置中检查连接"}
+            </div>
+          </div>
+
+          <div className="flex items-center rounded-[10px] border border-border bg-muted p-0.5">
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[15px] font-medium text-muted-foreground transition-all hover:border-border hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[15px] text-muted-foreground transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               onClick={() => cycleAgent(-1)}
               disabled={agents.length < 2 || isLoadingAgents}
               aria-label="上一个 Agent"
             >
               ‹
             </button>
-            <div className="min-w-0 flex-1 px-2 text-center">
-              <div className="truncate text-[12px] font-medium">
-                {isLoadingAgents
-                  ? "加载 Agent 中..."
-                  : selectedAgent?.name || "未选择 Agent"}
-              </div>
-              <div className="truncate text-[10px] text-muted-foreground">
-                {selectedAgent
-                  ? selectedAgent.running
-                    ? isLoadingChatKeys
-                      ? "会话加载中..."
-                      : settings.chatKey
-                        ? "目标会话已设置"
-                        : chatKeyOptions.length === 1
-                          ? "已自动选择唯一会话"
-                          : chatKeyOptions.length > 1
-                            ? "请在下方选择会话"
-                            : "暂无可用会话"
-                    : "Agent 未运行"
-                  : "请在设置中检查连接"}
-              </div>
-            </div>
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[15px] font-medium text-muted-foreground transition-all hover:border-border hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[15px] text-muted-foreground transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               onClick={() => cycleAgent(1)}
               disabled={agents.length < 2 || isLoadingAgents}
               aria-label="下一个 Agent"
@@ -520,7 +519,7 @@ export function ExtensionPopupApp() {
 
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-border bg-[linear-gradient(180deg,#ffffff_0%,#f4f4f5_100%)] text-[14px] text-[#3f3f46] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_6px_18px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-[1px] hover:border-[#cfcfd4] hover:text-foreground"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-surface text-[14px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
             onClick={openSettingsPage}
             aria-label="打开设置"
             title="设置"
@@ -531,7 +530,7 @@ export function ExtensionPopupApp() {
 
         <form className="flex flex-col gap-3" onSubmit={onSubmit}>
           <textarea
-            className="min-h-[164px] w-full resize-none rounded-[11px] border border-border bg-muted px-3 py-3 text-[13px] leading-[1.55] text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-h-[164px] w-full resize-none rounded-[10px] border border-border bg-muted px-3 py-3 text-[13px] leading-[1.55] text-foreground outline-none transition focus:border-border-strong focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
             rows={7}
             value={settings.taskPrompt}
             onChange={(event) =>
@@ -577,11 +576,11 @@ export function ExtensionPopupApp() {
               className={[
                 "min-w-0 flex-1 truncate text-[10px]",
                 status.type === "error"
-                  ? "text-[#7f1d1d]"
+                  ? "text-error"
                   : status.type === "success"
-                    ? "text-[#166534]"
+                    ? "text-success"
                     : status.type === "loading"
-                      ? "text-[#9a6700]"
+                      ? "text-warning"
                       : "text-muted-foreground",
               ].join(" ")}
               aria-live="polite"
@@ -589,7 +588,7 @@ export function ExtensionPopupApp() {
               {status.text}
             </div>
             <button
-              className="inline-flex h-10 shrink-0 items-center justify-center rounded-[12px] border border-[#111114] bg-[linear-gradient(180deg,#2f2f35_0%,#151519_100%)] px-4 text-[12px] font-semibold tracking-[0.01em] text-white shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_10px_24px_rgba(15,23,42,0.22)] transition-all hover:-translate-y-[1px] hover:bg-[linear-gradient(180deg,#3a3a42_0%,#19191d_100%)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-[10px] border border-primary bg-primary px-4 text-[12px] font-medium text-primary-foreground transition disabled:cursor-not-allowed disabled:opacity-60"
               type="submit"
               disabled={isSubmitting}
             >
@@ -603,9 +602,7 @@ export function ExtensionPopupApp() {
         <section className="mt-3 rounded-[12px] border border-border bg-surface p-3">
           <header className="mb-2 flex items-center justify-between">
             <h2 className="text-[11px] font-medium text-foreground">本页发送历史</h2>
-            <span className="text-[10px] text-muted-foreground">
-              {pageHistory.length} 条
-            </span>
+            <span className="text-[10px] text-muted-foreground">{pageHistory.length} 条</span>
           </header>
 
           <div className="flex flex-col gap-2">
@@ -641,7 +638,7 @@ export function ExtensionPopupApp() {
       {toast ? (
         <div
           className={[
-            "fixed top-3 left-1/2 z-20 max-w-[calc(100vw-28px)] -translate-x-1/2 rounded-[11px] border px-3 py-2 text-[11px] font-medium leading-[1.45] shadow-soft",
+            "fixed top-3 left-1/2 z-20 max-w-[calc(100vw-28px)] -translate-x-1/2 rounded-[10px] border px-3 py-2 text-[11px] font-medium leading-[1.45] shadow-soft",
             getToastToneClass(toast.type),
           ].join(" ")}
           data-type={toast.type}

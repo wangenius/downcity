@@ -32,8 +32,8 @@ export function readErrorText(error: unknown): string {
  * 获取状态颜色类名。
  */
 export function getStatusClass(type: OptionsStatus["type"]): string {
-  if (type === "success") return "text-[#166534]";
-  if (type === "error") return "text-[#7f1d1d]";
-  if (type === "loading") return "text-[#9a6700]";
+  if (type === "success") return "text-success";
+  if (type === "error") return "text-error";
+  if (type === "loading") return "text-warning";
   return "text-muted-foreground";
 }

@@ -20,7 +20,7 @@ import {
   stopServiceScheduleRuntime,
 } from "../../bin/console/service/schedule/Runtime.js";
 import { ServiceScheduleStore } from "../../bin/console/service/schedule/Store.js";
-import { upsertChatMetaByContextId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
@@ -71,9 +71,9 @@ test("runServiceCommand creates persistent scheduled job and runtime executes it
     });
     await startServiceScheduleRuntime(runtime);
 
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: runtime,
-      contextId: CHAT_KEY,
+      sessionId: CHAT_KEY,
       channel: TELEGRAM_CHANNEL,
       chatId: "10001",
     });
@@ -157,9 +157,9 @@ test("service schedule runtime restores pending job after restart", { concurrenc
       action: "start",
       context: runtime,
     });
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: runtime,
-      contextId: CHAT_KEY,
+      sessionId: CHAT_KEY,
       channel: TELEGRAM_CHANNEL,
       chatId: "10001",
     });

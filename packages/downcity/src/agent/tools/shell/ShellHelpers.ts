@@ -63,7 +63,7 @@ export function validateChatSendCommand(cmd: string): string | null {
  *
  * 关键点（中文）
  * - 当前仍用于 shell tool/service 与相关测试。
- * - 优先级：显式注入 > 当前请求上下文 `DC_CTX_*` > 宿主进程环境。
+ * - 优先级：显式注入 > 当前请求上下文变量 > 宿主进程环境。
  */
 export function buildShellContextEnv(
   injected?: Record<string, string>,
@@ -72,7 +72,6 @@ export function buildShellContextEnv(
   const contextCtx = requestContext.getStore();
 
   applyEnvMap(env, injected);
-  setEnvString(env, "DC_CTX_CONTEXT_ID", contextCtx?.sessionId);
   setEnvString(env, "DC_SESSION_ID", contextCtx?.sessionId);
   setEnvString(env, "DC_CTX_REQUEST_ID", contextCtx?.requestId);
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);

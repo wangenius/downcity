@@ -15,7 +15,7 @@ import {
   resolveOrCreateSessionIdByChatTarget,
   upsertChatMetaBySessionId,
 } from "@services/chat/runtime/ChatMetaStore.js";
-import { deleteChatContextById } from "@services/chat/runtime/ChatContextDelete.js";
+import { deleteChatSessionById } from "@services/chat/runtime/ChatSessionDelete.js";
 import {
   appendInboundChatHistory,
   appendOutboundChatHistory,
@@ -444,7 +444,7 @@ export abstract class BaseChatChannel {
       });
       return;
     }
-    const deleted = await deleteChatContextById({
+    const deleted = await deleteChatSessionById({
       context: this.context,
       sessionId,
     });
@@ -463,7 +463,7 @@ export abstract class BaseChatChannel {
       sessionId,
       removedMeta: deleted.removedMeta,
       removedChatDir: deleted.removedChatDir,
-      removedContextDir: deleted.removedContextDir,
+      removedSessionDir: deleted.removedSessionDir,
     });
   }
 

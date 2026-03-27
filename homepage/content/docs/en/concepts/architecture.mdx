@@ -14,7 +14,7 @@ Inside an agent runtime, the execution layer is built from:
 
 - `service`: workflow owners
 - `plugin`: passive extensions
-- `asset`: dependency resources
+- `asset`: plugin dependency resources
 
 ## Layered Structure
 
@@ -25,16 +25,17 @@ Inside an agent runtime, the execution layer is built from:
 - loads one project, owns one runtime, and persists traces into `.downcity/`
 
 3. **Service Layer**
-- domains like `chat`, `task`, `memory`, and `skills`
+- domains like `shell`, `chat`, `task`, and `memory`
 - own lifecycle, workflow, and stable actions
 
 4. **Plugin Layer**
-- modules like `voice` and `auth`
+- modules like `skill`, `voice`, and `auth`
 - attach through extension points defined by services
 - augment, validate, transform, or resolve behavior without owning a lifecycle
 
 5. **Asset Layer**
 - installable or configurable dependencies behind plugins
+- should be understood as plugin dependency infrastructure, not a separate business workflow layer
 
 ## The Most Important Boundary
 
@@ -45,7 +46,7 @@ So:
 
 - main workflows belong in services
 - extensions belong in plugins
-- dependencies belong in assets
+- plugin dependencies belong in assets
 
 ## A Concrete Example
 

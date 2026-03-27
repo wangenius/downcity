@@ -1,0 +1,64 @@
+---
+title: ToggleGroup
+description: 用于多个切换按钮的单选或多选组合
+---
+
+# ToggleGroup
+
+`ToggleGroup` 用于把多个 `Toggle` 组合成一个切换栏。
+
+## 导入
+
+```tsx
+import { ToggleGroup, ToggleGroupItem } from "@downcity/ui";
+```
+
+## 单选示例
+
+```tsx
+import { ToggleGroup, ToggleGroupItem } from "@downcity/ui";
+
+export function ViewModeToggle() {
+  return (
+    <ToggleGroup defaultValue={["list"]}>
+      <ToggleGroupItem value="list">List</ToggleGroupItem>
+      <ToggleGroupItem value="grid">Grid</ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+```
+
+## 多选示例
+
+```tsx
+import { ToggleGroup, ToggleGroupItem } from "@downcity/ui";
+
+export function FilterToggleGroup() {
+  return (
+    <ToggleGroup multiple defaultValue={["task", "memory"]}>
+      <ToggleGroupItem value="task">Task</ToggleGroupItem>
+      <ToggleGroupItem value="memory">Memory</ToggleGroupItem>
+      <ToggleGroupItem value="skill">Skill</ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+```
+
+## 可用附加能力
+
+- `multiple`
+- `orientation`
+- `spacing`
+- `variant`
+- `size`
+
+## 使用建议
+
+- 2 到 5 个清晰选项很适合 `ToggleGroup`
+- 单选和多选都可以，但都建议保持短标签
+- 如果是面板切换，优先考虑 [Tabs](/zh/ui-sdk-docs/components/tabs)
+
+## 继续阅读
+
+- [Toggle](/zh/ui-sdk-docs/components/toggle)
+- [Tabs](/zh/ui-sdk-docs/components/tabs)

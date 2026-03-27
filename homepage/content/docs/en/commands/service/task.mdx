@@ -28,7 +28,7 @@ city task <subcommand> [options]
 
 - `--title <title>` (required)
 - `--description <description>` (required)
-- `--context-id <contextId>` (required)
+- `--session-id <sessionId>` (required)
 - `--when <when>` (default `@manual`, supports cron and `time:ISO8601`)
 - `--kind <agent|script>`
 - `--status <enabled|paused|disabled>` or `--activate`
@@ -42,7 +42,7 @@ Create dedup now uses exact `title` only.
 - `--title <title>` / `--description <description>`
 - `--when <when>` / `--clear-when`
 - `--kind <agent|script>`
-- `--context-id <contextId>`
+- `--session-id <sessionId>`
 - `--status <status>` / `--activate`
 - `--body <body>` / `--clear-body`
 
@@ -62,7 +62,7 @@ After `accepted=true`, the caller should not manually forward the task output ag
 
 ```bash
 city task list
-city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+city task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
 city task run daily-check
 city task update daily-check --when "@manual"
 city task disable daily-check

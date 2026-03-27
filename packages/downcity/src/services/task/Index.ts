@@ -160,14 +160,14 @@ function readTaskKindOrThrow(value?: string): ShipTaskKind | undefined {
   throw new Error(`Invalid task kind: ${value}`);
 }
 
-function resolveContextIdOrThrow(input?: string): string {
-  const contextId = resolveSessionId({ sessionId: input });
-  if (!contextId) {
+function resolveSessionIdOrThrow(input?: string): string {
+  const sessionId = resolveSessionId({ sessionId: input });
+  if (!sessionId) {
     throw new Error(
-      "Missing contextId. Provide --context-id or ensure DC_CTX_CONTEXT_ID is available.",
+      "Missing sessionId. Provide --session-id or ensure DC_SESSION_ID is available.",
     );
   }
-  return contextId;
+  return sessionId;
 }
 
 /**
@@ -235,7 +235,7 @@ function mapTaskCreateCommandInput(
   if (!title) throw new Error("Missing title");
   if (!description) throw new Error("Missing description");
 
-  const contextId = resolveContextIdOrThrow(getStringOpt(opts, "contextId"));
+  const sessionId = resolveSessionIdOrThrow(getStringOpt(opts, "sessionId"));
   const kind = readTaskKindOrThrow(getStringOpt(opts, "kind"));
   const review = getBooleanLikeOpt(opts, "review");
   const status = readTaskStatusOrThrow(getStringOpt(opts, "status"));
@@ -249,7 +249,7 @@ function mapTaskCreateCommandInput(
     title,
     when: String(getStringOpt(opts, "when") || "@manual").trim() || "@manual",
     description,
-    contextId,
+    sessionId,
     ...(kind ? { kind } : {}),
     ...(typeof review === "boolean" ? { review } : {}),
     ...(resolvedStatus ? { status: resolvedStatus } : {}),
@@ -296,7 +296,7 @@ function mapTaskUpdateCommandInput(params: {
     typeof getStringOpt(opts, "title") === "string" ||
     typeof getStringOpt(opts, "when") === "string" ||
     typeof getStringOpt(opts, "description") === "string" ||
-    typeof getStringOpt(opts, "contextId") === "string" ||
+    typeof getStringOpt(opts, "sessionId") === "string" ||
     typeof kind === "string" ||
     typeof review === "boolean" ||
     getBooleanOpt(opts, "clearWhen") === true ||
@@ -319,8 +319,8 @@ function mapTaskUpdateCommandInput(params: {
     ...(typeof getStringOpt(opts, "description") === "string"
       ? { description: getStringOpt(opts, "description") }
       : {}),
-    ...(typeof getStringOpt(opts, "contextId") === "string"
-      ? { contextId: getStringOpt(opts, "contextId") }
+    ...(typeof getStringOpt(opts, "sessionId") === "string"
+      ? { sessionId: getStringOpt(opts, "sessionId") }
       : {}),
     ...(typeof kind === "string" ? { kind } : {}),
     ...(typeof review === "boolean" ? { review } : {}),
@@ -368,7 +368,7 @@ function mapTaskCreateApiInput(body: JsonObject): TaskCreateRequest {
     title: getStringField(body, "title"),
     when: getStringField(body, "when"),
     description: getStringField(body, "description"),
-    contextId: getStringField(body, "contextId"),
+    sessionId: getStringField(body, "sessionId"),
     kind: getOptionalTaskKindField(body, "kind"),
     ...(typeof parseBooleanLike(body.review) === "boolean"
       ? { review: parseBooleanLike(body.review) }
@@ -407,8 +407,8 @@ function mapTaskUpdateApiInput(body: JsonObject): TaskUpdateRequest {
     ...(getOptionalStringField(body, "when")
       ? { when: getOptionalStringField(body, "when") }
       : {}),
-    ...(getOptionalStringField(body, "contextId")
-      ? { contextId: getOptionalStringField(body, "contextId") }
+    ...(getOptionalStringField(body, "sessionId")
+      ? { sessionId: getOptionalStringField(body, "sessionId") }
       : {}),
     ...(getOptionalTaskKindField(body, "kind")
       ? { kind: getOptionalTaskKindField(body, "kind") }
@@ -492,8 +492,8 @@ export const taskService: Service = {
             .option("--kind <kind>", "执行类型（agent|script）", "agent")
             .option("--review <review>", "是否启用 review 多轮复核（true|false）")
             .option(
-              "--context-id <contextId>",
-              "任务执行 contextId（不传尝试使用 DC_CTX_CONTEXT_ID）",
+              "--session-id <sessionId>",
+              "任务执行 sessionId（不传尝试使用 DC_SESSION_ID）",
             )
             .option(
               "--status <status>",
@@ -643,7 +643,7 @@ export const taskService: Service = {
             .option("--kind <kind>", "执行类型（agent|script）")
             .option("--review <review>", "是否启用 review 多轮复核（true|false）")
             .option("--clear-when", "清空 when（回退为 @manual）", false)
-            .option("--context-id <contextId>", "任务执行 contextId")
+            .option("--session-id <sessionId>", "任务执行 sessionId")
             .option("--status <status>", "状态（enabled|paused|disabled）")
             .option(
               "--activate",

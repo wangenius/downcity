@@ -369,7 +369,7 @@ export async function queryChannelHistory(
           serviceName: "chat",
           command: "history",
           payload: {
-            contextId: sessionId,
+            sessionId,
             limit: 80,
           },
         }),

@@ -7,7 +7,7 @@ import type {
   VoiceProvider,
   VoiceTranscribeStrategy,
 } from "@/agent/types/Voice.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { RuntimeBase } from "@/types/Asset.js";
 import { resolveVoiceModelsRootDir } from "./Paths.js";
 import type { VoiceTranscriberAssetConfig } from "@/types/VoicePlugin.js";
 
@@ -20,9 +20,9 @@ const DEFAULT_TRANSCRIBE_TIMEOUT_MS = 120_000;
  */
 export interface VoiceTranscribeInput {
   /**
-   * service runtime（用于读取配置/根目录/日志）。
+   * 运行时上下文（用于读取配置/根目录/日志）。
    */
-  runtime: ServiceRuntime;
+  runtime: RuntimeBase;
   /**
    * 待转写音频路径（相对项目根目录或绝对路径）。
    */
@@ -101,7 +101,7 @@ function normalizeStrategy(strategy?: VoiceTranscribeStrategy): VoiceTranscribeS
   return "auto";
 }
 
-function toAbsoluteAudioPath(runtime: ServiceRuntime, input: string): string {
+function toAbsoluteAudioPath(runtime: RuntimeBase, input: string): string {
   const raw = String(input || "").trim();
   if (!raw) {
     throw new Error("voice transcribe requires audioPath");

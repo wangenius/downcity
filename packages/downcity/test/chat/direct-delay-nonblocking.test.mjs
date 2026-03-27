@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { sendChatTextByChatKey } from "../../bin/services/chat/Action.js";
-import { upsertChatMetaByContextId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
@@ -51,9 +51,9 @@ test("sendChatTextByChatKey schedules delayed send without blocking when nonBloc
   });
 
   try {
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: runtime,
-      contextId: CHAT_KEY,
+      sessionId: CHAT_KEY,
       channel: TELEGRAM_CHANNEL,
       chatId: "10001",
     });
@@ -106,9 +106,9 @@ test("sendChatTextByChatKey keeps blocking behavior by default", { concurrency: 
   });
 
   try {
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: runtime,
-      contextId: CHAT_KEY,
+      sessionId: CHAT_KEY,
       channel: TELEGRAM_CHANNEL,
       chatId: "10001",
     });

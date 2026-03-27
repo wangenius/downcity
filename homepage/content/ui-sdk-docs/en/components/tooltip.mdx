@@ -1,0 +1,51 @@
+---
+title: Tooltip
+description: Use for short hints, hotkey labels, and low-priority helper text
+---
+
+# Tooltip
+
+`Tooltip` is for very short supporting information.
+
+## Import
+
+```tsx
+import {
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  Button,
+} from "@downcity/ui";
+```
+
+## Basic Example
+
+```tsx
+import {
+  Button,
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@downcity/ui";
+
+export function RefreshTooltip() {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={<Button size="icon-sm" variant="ghost" />}>
+          R
+        </TooltipTrigger>
+        <TooltipContent>Refresh data</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+```
+
+## Usage Notes
+
+- Keep the content short
+- Great for hotkeys and icon meaning
+- Switch to `Popover` for richer content

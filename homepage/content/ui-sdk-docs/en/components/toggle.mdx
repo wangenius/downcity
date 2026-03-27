@@ -1,0 +1,51 @@
+---
+title: Toggle
+description: Use for single pressed-state controls and toolbar toggles
+---
+
+# Toggle
+
+`Toggle` is for a single pressed-state action.
+
+## Import
+
+```tsx
+import { Toggle } from "@downcity/ui";
+```
+
+## Basic Example
+
+```tsx
+import { Toggle } from "@downcity/ui";
+import { BoldIcon } from "lucide-react";
+
+export function BoldToggle() {
+  return (
+    <Toggle aria-label="Toggle bold">
+      <BoldIcon />
+    </Toggle>
+  );
+}
+```
+
+## Variants
+
+- `default`
+- `outline`
+
+## Sizes
+
+- `default`
+- `sm`
+- `lg`
+
+## Usage Notes
+
+- Use `Toggle` for a single on/off pressed state
+- Use `ToggleGroup` for grouped options
+- It works especially well in icon-based toolbars
+
+## Related Exports
+
+- `Toggle`
+- `toggleVariants`

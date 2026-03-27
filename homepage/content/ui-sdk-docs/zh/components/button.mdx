@@ -1,0 +1,76 @@
+---
+title: Button
+description: 用于主操作、次操作、工具栏按钮和图标按钮
+---
+
+# Button
+
+`Button` 是 `@downcity/ui` 里最基础的动作组件。
+
+## 导入
+
+```tsx
+import { Button } from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import { Button } from "@downcity/ui";
+
+export function SaveButton() {
+  return <Button size="sm">保存</Button>;
+}
+```
+
+## 常用变体
+
+- `default`
+- `outline`
+- `secondary`
+- `ghost`
+- `destructive`
+- `link`
+
+## 常用尺寸
+
+- `default`
+- `xs`
+- `sm`
+- `lg`
+- `icon`
+- `icon-xs`
+- `icon-sm`
+- `icon-lg`
+
+## 图标按钮
+
+```tsx
+import { Button } from "@downcity/ui";
+import { SettingsIcon } from "lucide-react";
+
+export function SettingsAction() {
+  return (
+    <Button size="icon-sm" variant="ghost" aria-label="打开设置">
+      <SettingsIcon />
+    </Button>
+  );
+}
+```
+
+## 使用建议
+
+- 页面级主操作优先用 `size="sm"` 或 `size="default"`
+- 工具栏操作优先用 `variant="ghost"`
+- 危险操作优先用 `variant="destructive"`
+- 图标按钮优先用 `icon-*` 尺寸，不要手动写 `w-* h-*`
+
+## 相关导出
+
+- `Button`
+- `buttonVariants`
+
+## 继续阅读
+
+- [Badge](/zh/ui-sdk-docs/components/badge)
+- [Toggle](/zh/ui-sdk-docs/components/toggle)

@@ -10,11 +10,18 @@
   - `city service stop <serviceName>`
   - `city service restart <serviceName>`
   - `city service command <serviceName> <command> [--payload '<json>']`
-- 当前内建 serviceName：`chat` / `skills` / `task` / `memory`。
+- plugin 管理（统一使用 `city plugin`）：
+  - `city plugin list`
+  - `city plugin status <pluginName>`
+  - `city plugin action <pluginName> <action> [--payload '<json>']`
+- 当前内建 serviceName：`shell` / `chat` / `task` / `memory`。
+- 当前内建 pluginName：`auth` / `skill` / `voice`。
 - 模块级 action 命令：
+  - `city shell <action> ...`
   - `city chat <action> ...`
+  - `city plugin action <plugin> <action> ...`
   - `city skill <action> ...`
   - `city task <action> ...`
   - `city memory <action> ...`
 
-具体service的执行参考详细的service文档。
+具体 service / plugin 的执行参考对应文档。

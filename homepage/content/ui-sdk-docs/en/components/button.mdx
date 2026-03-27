@@ -1,0 +1,71 @@
+---
+title: Button
+description: Use for primary actions, secondary actions, toolbar controls, and icon buttons
+---
+
+# Button
+
+`Button` is the core action primitive in `@downcity/ui`.
+
+## Import
+
+```tsx
+import { Button } from "@downcity/ui";
+```
+
+## Basic Example
+
+```tsx
+import { Button } from "@downcity/ui";
+
+export function SaveButton() {
+  return <Button size="sm">Save</Button>;
+}
+```
+
+## Variants
+
+- `default`
+- `outline`
+- `secondary`
+- `ghost`
+- `destructive`
+- `link`
+
+## Sizes
+
+- `default`
+- `xs`
+- `sm`
+- `lg`
+- `icon`
+- `icon-xs`
+- `icon-sm`
+- `icon-lg`
+
+## Icon Button
+
+```tsx
+import { Button } from "@downcity/ui";
+import { SettingsIcon } from "lucide-react";
+
+export function SettingsAction() {
+  return (
+    <Button size="icon-sm" variant="ghost" aria-label="Open settings">
+      <SettingsIcon />
+    </Button>
+  );
+}
+```
+
+## Usage Notes
+
+- Use `size="sm"` or `size="default"` for page-level actions
+- Use `variant="ghost"` for toolbar controls
+- Use `variant="destructive"` for destructive actions
+- Prefer `icon-*` sizes instead of hand-written `w-* h-*`
+
+## Related Exports
+
+- `Button`
+- `buttonVariants`

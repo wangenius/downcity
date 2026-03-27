@@ -345,11 +345,12 @@ export function registerDashboardSessionRoutes(
         CONSOLEUI_SESSION_ID;
       const systemMessages = await resolveAgentSystemMessages({
         projectRoot: runtime.rootPath,
-        contextId: sessionId,
+        sessionId,
         requestId: `ui-system-preview-${Date.now()}`,
         profile: "chat",
         staticSystemPrompts: runtime.systems,
         runtime: params.getServiceRuntimeState(),
+        pluginRuntime: params.getPluginRuntimeState(),
       });
       return c.json({
         success: true,

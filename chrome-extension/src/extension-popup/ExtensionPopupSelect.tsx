@@ -90,7 +90,7 @@ export function ExtensionPopupSelect(props: ExtensionPopupSelectProps) {
         <button
           id={fieldId}
           type="button"
-          className="flex min-h-[40px] w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-[10px] border border-border bg-muted px-2.5 py-2 text-left text-[12px] normal-case tracking-normal text-foreground outline-none transition focus:border-[#d9d9de] focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-[40px] w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-[10px] border border-border bg-muted px-2.5 py-2 text-left text-[12px] normal-case tracking-normal text-foreground outline-none transition focus:border-border-strong focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => {
             if (props.disabled) return;
             setOpen((prev) => !prev);

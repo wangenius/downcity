@@ -1,77 +1,13 @@
 ---
 title: city skill
-description: Skill service actions (find/install/list/lookup)
+description: Skill has moved to the plugin system; this page keeps the migration note only
 ---
 
 # `city skill`
 
-Manage skill discovery, installation, and lookup.
+`city skill` has moved to the plugin system.
 
-> Hierarchy note: `city skill` is a service action command, not a top-level command. Top-level entry is `city service`.
+Use these pages instead:
 
-## Usage
-
-```bash
-city skill <subcommand> [options]
-```
-
-## Subcommands
-
-- `find <query>`
-- `install <spec>`
-- `list`
-- `lookup <name>`
-
-## `install` key options
-
-- `-g, --global`: global install (default true)
-- `-y, --yes`: skip confirmation (default true)
-- `--agent <agent>`: default `claude-code`
-
-## Examples
-
-```bash
-city skill list
-city skill lookup playwright
-
-# install only when missing from `list`
-city skill find playwright
-city skill install owner/repo@playwright
-city skill lookup playwright
-```
-
-## Recommended flow
-
-`list -> lookup` (if missing, then `find -> install -> lookup`)
-
-## Runtime behavior
-
-- In Agent runtime, `lookup` tool output returns status only.
-- Skill content is injected through the next user message wrapped in `<skill>...</skill>`.
-- Injected skill content is also persisted into context messages so you can verify it in the timeline.
-
-## Example Output (Based on Current Implementation)
-
-The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
-
-```text
-$ city skill list
-{
-  "success": true,
-  "data": {
-    "success": true,
-    "skills": []
-  }
-}
-```
-
-```text
-$ city skill lookup playwright
-{
-  "success": true,
-  "data": {
-    "success": true,
-    "name": "playwright"
-  }
-}
-```
+- [`city skill`](/en/docs/commands/plugin/skill)
+- [`city plugin`](/en/docs/commands/plugin/plugin)

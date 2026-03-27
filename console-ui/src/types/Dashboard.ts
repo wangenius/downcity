@@ -1416,9 +1416,9 @@ export interface UiTaskItem {
    */
   body?: string;
   /**
-   * 任务所属 contextId。
+   * 任务所属 sessionId。
    */
-  contextId?: string;
+  sessionId?: string;
   /**
    * 任务类型（agent/script）。
    */
@@ -2046,7 +2046,11 @@ export interface UiSessionClearResponse {
  */
 export interface UiChatDeleteResult {
   /**
-   * 被删除的 context id。
+   * 被删除的 session id。
+   */
+  sessionId?: string | null;
+  /**
+   * 兼容字段：被删除的 context id。
    */
   contextId?: string | null;
   /**
@@ -2062,7 +2066,11 @@ export interface UiChatDeleteResult {
    */
   removedChatDir?: boolean;
   /**
-   * 是否删除了 context 目录。
+   * 是否删除了 session 目录。
+   */
+  removedSessionDir?: boolean;
+  /**
+   * 兼容字段：是否删除了 context 目录。
    */
   removedContextDir?: boolean;
 }
@@ -2114,7 +2122,11 @@ export interface UiChatHistoryEvent {
    */
   text?: string;
   /**
-   * context id。
+   * session id。
+   */
+  sessionId?: string;
+  /**
+   * 兼容字段：context id。
    */
   contextId?: string;
   /**

@@ -1,0 +1,59 @@
+---
+title: ToggleGroup
+description: Use for grouped single-select or multi-select toggle controls
+---
+
+# ToggleGroup
+
+`ToggleGroup` groups multiple `Toggle` items into one control strip.
+
+## Import
+
+```tsx
+import { ToggleGroup, ToggleGroupItem } from "@downcity/ui";
+```
+
+## Single-Select Example
+
+```tsx
+import { ToggleGroup, ToggleGroupItem } from "@downcity/ui";
+
+export function ViewModeToggle() {
+  return (
+    <ToggleGroup defaultValue={["list"]}>
+      <ToggleGroupItem value="list">List</ToggleGroupItem>
+      <ToggleGroupItem value="grid">Grid</ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+```
+
+## Multi-Select Example
+
+```tsx
+import { ToggleGroup, ToggleGroupItem } from "@downcity/ui";
+
+export function FilterToggleGroup() {
+  return (
+    <ToggleGroup multiple defaultValue={["task", "memory"]}>
+      <ToggleGroupItem value="task">Task</ToggleGroupItem>
+      <ToggleGroupItem value="memory">Memory</ToggleGroupItem>
+      <ToggleGroupItem value="skill">Skill</ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+```
+
+## Useful Props
+
+- `multiple`
+- `orientation`
+- `spacing`
+- `variant`
+- `size`
+
+## Usage Notes
+
+- Best for 2 to 5 short options
+- Works for both single and multiple pressed states
+- Use `Tabs` instead when the control switches between content panels

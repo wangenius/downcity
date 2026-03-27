@@ -100,9 +100,9 @@ flowchart TD
 
 这是主业务层。现在的核心包括：
 
+- `shell`
 - `chat`
 - `task`
-- `skills`
 - `memory`
 
 ### `chat`
@@ -132,17 +132,6 @@ flowchart TD
 
 它也是典型 service，因为它本身就可能主动触发执行。
 
-### `skills`
-
-负责：
-
-- 发现技能
-- 安装技能
-- lookup 技能内容
-- system 注入技能上下文
-
-它虽然不像 chat 那样有外部 channel，但它会直接参与 agent 的技能工作流与运行注入，所以仍然属于 service。
-
 ### `memory`
 
 负责：
@@ -158,6 +147,7 @@ flowchart TD
 当前内建方向包括：
 
 - auth
+- skill
 - voice
 
 使用它们时要记住：

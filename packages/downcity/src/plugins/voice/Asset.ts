@@ -6,10 +6,9 @@
  * - Plugin 只依赖 `voice.transcriber` 这个 Asset 名称，不直接理解模型与依赖安装细节。
  */
 
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import type { Asset } from "@/types/Asset.js";
+import type { Asset, AssetRuntimeLike } from "@/types/Asset.js";
 import type { JsonObject } from "@/types/Json.js";
 import type {
   VoiceTranscriberAssetConfig,
@@ -37,7 +36,7 @@ import { persistProjectPluginConfig } from "@/console/plugin/ProjectConfigStore.
 const execFileAsync = promisify(execFileCb);
 
 function normalizeAssetConfig(
-  runtime: ServiceRuntime,
+  runtime: AssetRuntimeLike,
 ): VoiceTranscriberAssetConfig {
   const current = runtime.config.assets?.["voice.transcriber"];
   if (!current || typeof current !== "object" || Array.isArray(current)) {
@@ -63,7 +62,7 @@ function toJsonObject(
 }
 
 async function checkLocalProviderAvailability(
-  runtime: ServiceRuntime,
+  runtime: AssetRuntimeLike,
   config: VoiceTranscriberAssetConfig,
 ): Promise<{ available: boolean; reasons: string[] }> {
   const reasons: string[] = [];
@@ -123,8 +122,7 @@ export const voiceTranscriberAsset: Asset<
     },
   },
   async check(runtime) {
-    const serviceRuntime = runtime as ServiceRuntime;
-    const config = normalizeAssetConfig(serviceRuntime);
+    const config = normalizeAssetConfig(runtime);
     if (config.provider === "command") {
       const command = String(config.command || "").trim();
       return {
@@ -132,11 +130,10 @@ export const voiceTranscriberAsset: Asset<
         reasons: command ? [] : ["voice transcriber command is missing"],
       };
     }
-    return checkLocalProviderAvailability(serviceRuntime, config);
+    return checkLocalProviderAvailability(runtime, config);
   },
   async install(runtime, input) {
-    const serviceRuntime = runtime as ServiceRuntime;
-    const config = normalizeAssetConfig(serviceRuntime);
+    const config = normalizeAssetConfig(runtime);
     if (config.provider === "command") {
       return {
         success: true,
@@ -154,7 +151,7 @@ export const voiceTranscriberAsset: Asset<
         : [resolveVoiceModelId(String(config.modelId || "SenseVoiceSmall")) || "SenseVoiceSmall"];
 
     const modelsRootDir = resolveVoiceModelsRootDir({
-      projectRoot: serviceRuntime.rootPath,
+      projectRoot: runtime.rootPath,
       modelsDir: input?.modelsDir || config.modelsDir,
     });
 
@@ -198,14 +195,14 @@ export const voiceTranscriberAsset: Asset<
       strategy: resolveVoiceStrategyByModel(activeModelId),
       installedModels: selectedModelIds,
     };
-    if (!serviceRuntime.config.assets) {
-      serviceRuntime.config.assets = {};
+    if (!runtime.config.assets) {
+      runtime.config.assets = {};
     }
-    serviceRuntime.config.assets["voice.transcriber"] = toJsonObject(nextConfig);
+    runtime.config.assets["voice.transcriber"] = toJsonObject(nextConfig);
     await persistProjectPluginConfig({
-      projectRoot: serviceRuntime.rootPath,
+      projectRoot: runtime.rootPath,
       sections: {
-        assets: serviceRuntime.config.assets,
+        assets: runtime.config.assets,
       },
     });
 
@@ -220,12 +217,11 @@ export const voiceTranscriberAsset: Asset<
     };
   },
   async resolve(runtime) {
-    const serviceRuntime = runtime as ServiceRuntime;
     return {
       async transcribe(input) {
         try {
           const result = await transcribeVoiceAudio({
-            runtime: serviceRuntime,
+            runtime,
             audioPath: input.audioPath,
             language: input.language,
           });

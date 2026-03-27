@@ -9,11 +9,10 @@
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { Logger } from "@utils/logger/Logger.js";
-import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
+import type { ServiceSession } from "@/console/service/ServiceRuntime.js";
 import type {
   AssetPort,
-  AssetRuntimeLike,
+  RuntimeBase,
   StructuredConfig,
 } from "@/types/Asset.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
@@ -191,15 +190,14 @@ export interface PluginPort {
 /**
  * Plugin 运行时对象。
  */
-export interface PluginRuntime extends AssetRuntimeLike {
+export interface PluginRuntime extends RuntimeBase {
   /**
-   * 统一日志器。
+   * Service 调用别名端口。
+   *
+   * 关键点（中文）
+   * - 与 `services` 指向同一语义，仅保留给需要 `runtime.invoke(...)` 兼容面的插件内部工具。
    */
-  logger: Logger;
-  /**
-   * 当前配置对象。
-   */
-  config: DowncityConfig;
+  invoke: PluginServiceInvokePort;
   /**
    * Service 调用端口。
    */
@@ -218,7 +216,7 @@ export interface PluginRuntime extends AssetRuntimeLike {
    * 关键点（中文）
    * - 第一阶段与 ServiceRuntime 对齐，统一改为 `session` 语义。
    */
-  session: unknown;
+  session: ServiceSession;
 }
 
 /**

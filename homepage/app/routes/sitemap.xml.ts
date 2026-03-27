@@ -1,5 +1,6 @@
 import { source } from "@/lib/source";
 import { devSource } from "@/lib/dev-source";
+import { uiSdkDocsSource } from "@/lib/ui-sdk-docs-source";
 import { product } from "@/lib/product";
 
 export const loader = async () => {
@@ -8,6 +9,7 @@ export const loader = async () => {
   // Get all documentation pages
   const pages = source.getPages();
   const devPages = devSource.getPages();
+  const uiSdkPages = uiSdkDocsSource.getPages();
 
   const staticPages = [
     {
@@ -70,6 +72,12 @@ export const loader = async () => {
       changeFrequency: "weekly" as const,
       priority: 0.7,
     },
+    {
+      url: `${baseUrl}/ui-sdk-docs`,
+      lastModified: new Date().toISOString(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    },
   ];
 
   // Add documentation pages
@@ -87,7 +95,14 @@ export const loader = async () => {
     priority: 0.6,
   }));
 
-  const allPages = [...staticPages, ...docsPages, ...developerDocsPages];
+  const uiSdkDocumentationPages = uiSdkPages.map((page) => ({
+    url: `${baseUrl}${page.path}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  const allPages = [...staticPages, ...docsPages, ...developerDocsPages, ...uiSdkDocumentationPages];
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

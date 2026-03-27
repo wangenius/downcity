@@ -10,6 +10,11 @@ import path from "node:path";
 import fs from "node:fs";
 import type { Command } from "commander";
 import { callServer } from "@/console/daemon/Client.js";
+import {
+  buildStaticPluginAvailability,
+  findStaticPluginRuntimeView,
+  listStaticPluginRuntimeViews,
+} from "@/console/plugin/Catalog.js";
 import { printResult } from "@agent/utils/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
 import { getProfileMdPath, getDowncityJsonPath } from "@/console/env/Paths.js";
@@ -158,29 +163,89 @@ function parseCommandPayload(raw?: string): JsonValue | undefined {
   }
 }
 
+function printStaticPluginListFallback(params: {
+  projectRoot?: string;
+  asJson?: boolean;
+  title: string;
+  reason: string;
+}): void {
+  printResult({
+    asJson: params.asJson,
+    success: true,
+    title: params.title,
+    payload: {
+      plugins: listStaticPluginRuntimeViews().map((plugin) => ({
+        ...plugin,
+        availability: buildStaticPluginAvailability({
+          pluginName: plugin.name,
+          projectRoot: params.projectRoot,
+          runtimeError: params.reason,
+        }),
+      })),
+      runtimeConnected: false,
+      message: params.reason,
+    },
+  });
+}
+
+function printStaticPluginStatusFallback(params: {
+  pluginName: string;
+  projectRoot?: string;
+  asJson?: boolean;
+  title: string;
+  reason: string;
+}): void {
+  const plugin = findStaticPluginRuntimeView(params.pluginName);
+  if (!plugin) {
+    printResult({
+      asJson: params.asJson,
+      success: false,
+      title: params.title,
+      payload: {
+        error: `Unknown plugin: ${params.pluginName}`,
+      },
+    });
+    return;
+  }
+
+  printResult({
+    asJson: params.asJson,
+    success: true,
+    title: params.title,
+    payload: {
+      plugin,
+      availability: buildStaticPluginAvailability({
+        pluginName: plugin.name,
+        projectRoot: params.projectRoot,
+        runtimeError: params.reason,
+      }),
+      runtimeConnected: false,
+      message: params.reason,
+    },
+  });
+}
+
 async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void> {
   const resolved = await resolvePluginProjectRoot(options);
   if (!resolved.projectRoot) {
-    printResult({
+    printStaticPluginListFallback({
+      projectRoot: undefined,
       asJson: options.json,
-      success: false,
-      title: "plugin list failed",
-      payload: {
-        error: resolved.error || "Failed to resolve agent project path",
-      },
+      title: "plugins listed (static catalog)",
+      reason:
+        resolved.error ||
+        "Agent project path is not resolved. Showing console-side plugin catalog only.",
     });
     return;
   }
 
   const pathError = validateAgentProjectRoot(resolved.projectRoot);
   if (pathError) {
-    printResult({
+    printStaticPluginListFallback({
+      projectRoot: resolved.projectRoot,
       asJson: options.json,
-      success: false,
-      title: "plugin list failed",
-      payload: {
-        error: pathError,
-      },
+      title: "plugins listed (static catalog)",
+      reason: `${pathError} Showing console-side plugin catalog only.`,
     });
     return;
   }
@@ -208,15 +273,13 @@ async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void
     return;
   }
 
-  printResult({
+  printStaticPluginListFallback({
+    projectRoot: resolved.projectRoot,
     asJson: options.json,
-    success: false,
-    title: "plugin list failed",
-    payload: {
-      error:
-        remote.error ||
-        "Plugin list requires an active Agent server runtime. Start via `city agent start` first.",
-    },
+    title: "plugins listed (static catalog)",
+    reason:
+      remote.error ||
+      "Agent runtime is unavailable. Showing console-side plugin catalog only.",
   });
 }
 
@@ -226,26 +289,26 @@ async function runPluginAvailabilityCommand(params: {
 }): Promise<void> {
   const resolved = await resolvePluginProjectRoot(params.options);
   if (!resolved.projectRoot) {
-    printResult({
+    printStaticPluginStatusFallback({
+      pluginName: params.pluginName,
+      projectRoot: undefined,
       asJson: params.options.json,
-      success: false,
-      title: "plugin status failed",
-      payload: {
-        error: resolved.error || "Failed to resolve agent project path",
-      },
+      title: "plugin status (static catalog)",
+      reason:
+        resolved.error ||
+        "Agent project path is not resolved. Showing console-side plugin metadata only.",
     });
     return;
   }
 
   const pathError = validateAgentProjectRoot(resolved.projectRoot);
   if (pathError) {
-    printResult({
+    printStaticPluginStatusFallback({
+      pluginName: params.pluginName,
+      projectRoot: resolved.projectRoot,
       asJson: params.options.json,
-      success: false,
-      title: "plugin status failed",
-      payload: {
-        error: pathError,
-      },
+      title: "plugin status (static catalog)",
+      reason: `${pathError} Showing console-side plugin metadata only.`,
     });
     return;
   }
@@ -277,15 +340,14 @@ async function runPluginAvailabilityCommand(params: {
     return;
   }
 
-  printResult({
+  printStaticPluginStatusFallback({
+    pluginName: params.pluginName,
+    projectRoot: resolved.projectRoot,
     asJson: params.options.json,
-    success: false,
-    title: "plugin status failed",
-    payload: {
-      error:
-        remote.error ||
-        "Plugin status requires an active Agent server runtime. Start via `city agent start` first.",
-    },
+    title: "plugin status (static catalog)",
+    reason:
+      remote.error ||
+      "Agent runtime is unavailable. Showing console-side plugin metadata only.",
   });
 }
 

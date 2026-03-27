@@ -410,10 +410,9 @@ export class ChatQueueWorker {
       fallbackChatKey: params.sessionId,
     });
     if (!plan) return false;
-    let dispatched = false;
+    let textDispatchSucceeded = false;
 
     if (plan.text) {
-      dispatched = true;
       const target = await resolveChatReplyTarget({
         runtime: this.runtime,
         chatKey: plan.text.chatKey,
@@ -471,11 +470,12 @@ export class ChatQueueWorker {
           targetChatKey: plan.text.chatKey,
           error: textResult.error || "chat send failed",
         });
+      } else {
+        textDispatchSucceeded = true;
       }
     }
 
     for (const reaction of plan.reactions) {
-      dispatched = true;
       const reactResult = await sendActionByChatKey({
         context: this.runtime,
         chatKey: reaction.chatKey,
@@ -493,7 +493,7 @@ export class ChatQueueWorker {
       }
     }
 
-    return dispatched;
+    return textDispatchSucceeded;
   }
 
   /**

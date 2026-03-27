@@ -2,6 +2,7 @@
   "title": "Package",
   "pages": [
     "runtime-and-services",
+    "runtime-evolution",
     "module-breakdown",
     "plugin-migration"
   ]

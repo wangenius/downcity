@@ -1,0 +1,44 @@
+---
+title: Popover
+description: Use for lightweight panels, helper content, and contextual controls
+---
+
+# Popover
+
+`Popover` is for small non-blocking panels.
+
+## Import
+
+```tsx
+import { Popover, PopoverTrigger, PopoverContent, Button } from "@downcity/ui";
+```
+
+## Basic Example
+
+```tsx
+import { Button, Popover, PopoverTrigger, PopoverContent } from "@downcity/ui";
+
+export function FilterPopover() {
+  return (
+    <Popover>
+      <PopoverTrigger render={<Button size="sm" variant="ghost" />}>
+        Filter
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-4">
+        Put small filters or helper content here.
+      </PopoverContent>
+    </Popover>
+  );
+}
+```
+
+## Good Fits
+
+- Lightweight settings
+- Helper content
+- Small filter panels
+
+## Usage Notes
+
+- Use `Popover` for short non-blocking interaction
+- Switch to `Dialog` or `Sheet` for larger flows

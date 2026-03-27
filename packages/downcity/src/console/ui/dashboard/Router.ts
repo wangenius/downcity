@@ -10,6 +10,7 @@
 import { Hono } from "hono";
 import {
   getRuntimeState,
+  getPluginRuntimeState,
   getServiceRuntimeState,
 } from "@/agent/context/manager/RuntimeState.js";
 import { registerDashboardApiRoutes } from "@console/ui/DashboardApiRoutes.js";
@@ -23,4 +24,5 @@ registerDashboardApiRoutes({
   app: dashboardRouter,
   getRuntimeState,
   getServiceRuntimeState,
+  getPluginRuntimeState,
 });

@@ -143,7 +143,7 @@ function parseContextSummary(summary: TuiContextSummary): ParsedChatKey | null {
  * 将 context 摘要转换成 chat 选项。
  */
 export function toChatKeyOption(summary: TuiContextSummary): ChatKeyOption | null {
-  const chatKey = String(summary.contextId || "").trim();
+  const chatKey = String(summary.sessionId || "").trim();
   const parsed = parseContextSummary(summary);
   if (!parsed) return null;
 

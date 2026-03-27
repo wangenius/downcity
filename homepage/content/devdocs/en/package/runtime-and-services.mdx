@@ -11,8 +11,8 @@ description: Relationship between CLI, console, agent runtime, services, plugins
 
 - `src/console/`: CLI commands, console daemon lifecycle, model/config management, service control, UI gateway routes
 - `src/agent/`: agent assembly, prompt building, persistence, orchestration, runtime types
-- `src/services/`: chat, task, memory, skills, and other service actions/prompts
-- `src/plugins/`: plugin implementations such as auth and voice
+- `src/services/`: shell, chat, task, memory, and other workflow owners
+- `src/plugins/`: plugin implementations such as auth, skill, and voice
 - `src/types/`: shared contracts across runtime surfaces
 - `src/utils/`: storage, logging, ids, templates, and common helpers
 
@@ -34,9 +34,12 @@ The service layer intentionally uses a thin injected runtime:
 - agent-level env snapshot
 - context access
 - cross-service invoke
-- asset and plugin ports
+- plugin port
 
 This keeps services focused on business flow rather than process orchestration.
+
+The asset port is now part of the plugin runtime surface, not the service runtime surface.
+Services call plugins, and plugins may call assets.
 
 The plugin runtime port exposed to services has now converged on four semantics:
 

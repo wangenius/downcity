@@ -31,7 +31,7 @@ export type TaskListItem = {
   body?: string;
   when: string;
   status: string;
-  contextId: string;
+  sessionId: string;
   kind?: "agent" | "script";
   review?: boolean;
   taskMdPath: string;
@@ -114,7 +114,7 @@ export async function listTasks(projectRoot: string): Promise<TaskListItem[]> {
       ...(parsed.task.body ? { body: parsed.task.body } : {}),
       when: parsed.task.frontmatter.when,
       status: parsed.task.frontmatter.status,
-      contextId: parsed.task.frontmatter.contextId,
+      sessionId: parsed.task.frontmatter.sessionId,
       kind: parsed.task.frontmatter.kind || "agent",
       ...(parsed.task.frontmatter.kind === "agent"
         ? { review: Boolean(parsed.task.frontmatter.review) }

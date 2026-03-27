@@ -12,6 +12,7 @@ export {
   resolveSystemContextProfile,
   resolveStaticSystemPrompts,
   loadServiceSystemPrompts,
+  loadPluginSystemPrompts,
   buildAgentSystemMessages,
   resolveAgentSystemMessages,
 } from "@agent/prompts/system/SystemDomain.js";

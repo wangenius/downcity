@@ -1,28 +1,20 @@
 ---
-title: Skill Service
-description: skill 发现、安装、列表、查阅 service
+title: Skill Service（已迁移）
+description: skill 已从 service 迁到 plugin；本页仅保留迁移说明
 ---
 
-# Skill Service
+# Skill Service（已迁移）
 
-`skill` service 负责本地已学习技能的管理。
+`skill` 已不再属于 service 体系，而是迁到 `plugin` 体系。
 
-## 职责
+当前请改看：
 
-- 查找 skill
-- 安装 skill
-- 列出已学会 skill
-- 查阅 `SKILL.md` 并注入执行上下文
-- 将 `lookup` 注入的 skill 正文持久化到 context messages，便于调试与回放
+- [`city skill`](/zh/docs/commands/plugin/skill)
+- [`city plugin`](/zh/docs/commands/plugin/plugin)
 
-## 运行态操作
+## 迁移后的判断
 
-```bash
-city service status skill
-city service command skill list --payload '{}'
-```
-
-## 相关文档
-
-- [`city service`](/zh/docs/commands/service/service)
-- [`city skill`](/zh/docs/commands/service/skill)
+- `skill` 没有独立 lifecycle
+- `skill` 不拥有主流程
+- `skill` 通过 plugin actions 提供 `find / install / list / lookup`
+- skills overview system 文本也改由 `skill plugin` 提供

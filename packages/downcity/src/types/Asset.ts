@@ -12,30 +12,14 @@ import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
- * 允许 optional 字段的结构化配置对象。
- */
-export type StructuredConfig = {
-  [key: string]: JsonValue | undefined;
-};
-
-/**
- * Asset 安装输入。
+ * Runtime 基础上下文。
  *
- * 说明（中文）
- * - 允许直接传单个 JSON 值。
- * - 也允许传带 optional 字段的结构化对象。
+ * 关键点（中文）
+ * - 这是 service / plugin / asset 共用的最小宿主上下文。
+ * - 只包含路径、配置、环境与日志这些稳定底座能力。
+ * - 不包含 session、plugin、asset 等更高层语义端口。
  */
-export type AssetInstallInput = JsonValue | StructuredConfig;
-
-/**
- * Asset 作用域。
- */
-export type AssetScope = "global" | "project";
-
-/**
- * Asset 运行时上下文。
- */
-export interface AssetRuntimeLike {
+export interface RuntimeBase {
   /**
    * 当前命令工作目录。
    */
@@ -61,6 +45,32 @@ export interface AssetRuntimeLike {
    */
   systems: string[];
 }
+
+/**
+ * 允许 optional 字段的结构化配置对象。
+ */
+export type StructuredConfig = {
+  [key: string]: JsonValue | undefined;
+};
+
+/**
+ * Asset 安装输入。
+ *
+ * 说明（中文）
+ * - 允许直接传单个 JSON 值。
+ * - 也允许传带 optional 字段的结构化对象。
+ */
+export type AssetInstallInput = JsonValue | StructuredConfig;
+
+/**
+ * Asset 作用域。
+ */
+export type AssetScope = "global" | "project";
+
+/**
+ * Asset 运行时上下文。
+ */
+export interface AssetRuntimeLike extends RuntimeBase {}
 
 /**
  * Asset 配置定义。

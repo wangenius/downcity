@@ -28,7 +28,7 @@ city task <subcommand> [options]
 
 - `--title <title>`（必填）
 - `--description <description>`（必填）
-- `--context-id <contextId>`（必填）
+- `--session-id <sessionId>`（必填）
 - `--when <when>`（默认 `@manual`，支持 cron / `time:ISO8601`）
 - `--kind <agent|script>`
 - `--status <enabled|paused|disabled>` 或 `--activate`
@@ -42,7 +42,7 @@ create 去重：只按 `title` 精确去重。
 - `--title <title>` / `--description <description>`
 - `--when <when>` / `--clear-when`
 - `--kind <agent|script>`
-- `--context-id <contextId>`
+- `--session-id <sessionId>`
 - `--status <status>` / `--activate`
 - `--body <body>` / `--clear-body`
 
@@ -62,7 +62,7 @@ create 去重：只按 `title` 精确去重。
 
 ```bash
 city task list
-city task create --title "Daily check" --description "Run tests" --context-id telegram-chat-123 --when "0 10 * * 1-5" --activate
+city task create --title "Daily check" --description "Run tests" --session-id telegram-chat-123 --when "0 10 * * 1-5" --activate
 city task run daily-check
 city task update daily-check --when "@manual"
 city task disable daily-check

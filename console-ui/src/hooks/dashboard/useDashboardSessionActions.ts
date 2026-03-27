@@ -224,7 +224,7 @@ export function useDashboardSessionActions(params: {
             body: JSON.stringify({
               serviceName: "chat",
               command: "delete",
-              payload: { contextId: sessionId },
+              payload: { sessionId },
             }),
           },
           params.selectedAgentId,

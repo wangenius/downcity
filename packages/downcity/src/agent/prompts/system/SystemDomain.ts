@@ -9,8 +9,11 @@
 import fs from "fs-extra";
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@agent/prompts/common/PromptRenderer.js";
+import { isPluginEnabledInConfig } from "@/console/plugin/Activation.js";
+import { PLUGINS } from "@/console/plugin/Plugins.js";
 import { SERVICES } from "@/console/service/Services.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { PluginRuntime } from "@/types/Plugin.js";
 
 const CORE_PROMPT_FILE_URL = new URL(
   "./assets/core.prompt.txt",
@@ -78,7 +81,7 @@ export function buildContextSystemPrompt(input: {
   /**
    * 当前会话 ID。
    */
-  contextId: string;
+  sessionId: string;
 
   /**
    * 当前请求 ID。
@@ -226,6 +229,48 @@ export async function loadServiceSystemPrompts(input: {
 }
 
 /**
+ * 收集 plugin 维度的 system 文本。
+ *
+ * 关键点（中文）
+ * - plugin.system 在语义上属于“增强注入”，不再要求能力必须伪装成 service。
+ * - 若 plugin 显式声明 availability 且当前 unavailable，则跳过其 system 注入。
+ * - 单个 plugin 加载失败走 fail-open，不阻断主链路。
+ */
+export async function loadPluginSystemPrompts(input: {
+  /**
+   * 当前 plugin runtime。
+   */
+  runtime: PluginRuntime;
+}): Promise<string[]> {
+  const out: string[] = [];
+
+  for (const plugin of PLUGINS) {
+    if (typeof plugin.system !== "function") continue;
+    try {
+      if (
+        !isPluginEnabledInConfig({
+          plugin,
+          config: input.runtime.config,
+        })
+      ) {
+        continue;
+      }
+      if (typeof plugin.availability === "function") {
+        const availability = await plugin.availability(input.runtime);
+        if (!availability.available) continue;
+      }
+      const text = normalizeSystemText(await plugin.system(input.runtime));
+      if (!text) continue;
+      out.push(text);
+    } catch {
+      // fail-open
+    }
+  }
+
+  return out;
+}
+
+/**
  * 统一构建一次 Agent 运行所需的 system messages。
  *
  * 关键点（中文）
@@ -240,7 +285,7 @@ export async function buildAgentSystemMessages(input: {
   /**
    * 当前会话 ID。
    */
-  contextId: string;
+  sessionId: string;
 
   /**
    * 当前请求 ID。
@@ -266,10 +311,15 @@ export async function buildAgentSystemMessages(input: {
    * service system 文本集合（main service + services + memory）。
    */
   serviceSystemPrompts: string[];
+
+  /**
+   * plugin system 文本集合。
+   */
+  pluginSystemPrompts: string[];
 }): Promise<SystemModelMessage[]> {
   const runtimeSystemText = buildContextSystemPrompt({
     projectRoot: input.projectRoot,
-    contextId: input.contextId,
+    sessionId: input.sessionId,
     requestId: input.requestId,
     mode: input.mode,
   });
@@ -296,9 +346,18 @@ export async function buildAgentSystemMessages(input: {
     },
   );
 
+  const pluginSystemMessages = await transformPromptsIntoSystemMessages(
+    Array.isArray(input.pluginSystemPrompts) ? input.pluginSystemPrompts : [],
+    {
+      projectPath: input.projectRoot,
+      variableMode: "stable",
+    },
+  );
+
   return [
     ...staticSystemMessages,
     ...serviceSystemMessages,
+    ...pluginSystemMessages,
     ...runtimeRuleMessages,
   ];
 }
@@ -315,7 +374,7 @@ export async function resolveAgentSystemMessages(input: {
   /**
    * 当前会话 ID。
    */
-  contextId: string;
+  sessionId: string;
 
   /**
    * 当前请求 ID。
@@ -336,11 +395,16 @@ export async function resolveAgentSystemMessages(input: {
    * 当前 service runtime。
    */
   runtime: ServiceRuntime;
+
+  /**
+   * 当前 plugin runtime。
+   */
+  pluginRuntime: PluginRuntime;
 }): Promise<SystemModelMessage[]> {
   const profile = resolveSystemContextProfile(input.profile);
   return await buildAgentSystemMessages({
     projectRoot: input.projectRoot,
-    contextId: input.contextId,
+    sessionId: input.sessionId,
     requestId: input.requestId,
     mode: profile.mode,
     replaceDefaultCorePrompt: profile.replaceDefaultCorePrompt,
@@ -348,6 +412,9 @@ export async function resolveAgentSystemMessages(input: {
     serviceSystemPrompts: await loadServiceSystemPrompts({
       runtime: input.runtime,
       disabledServiceNames: profile.disableServiceSystems,
+    }),
+    pluginSystemPrompts: await loadPluginSystemPrompts({
+      runtime: input.pluginRuntime,
     }),
   });
 }

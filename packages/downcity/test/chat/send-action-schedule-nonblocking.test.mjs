@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { chatService } from "../../bin/services/chat/Index.js";
-import { upsertChatMetaByContextId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
@@ -53,9 +53,9 @@ test("chat send service action schedules sendAtMs without blocking", { concurren
   });
 
   try {
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: runtime,
-      contextId: CHAT_KEY,
+      sessionId: CHAT_KEY,
       channel: TELEGRAM_CHANNEL,
       chatId: "10001",
     });

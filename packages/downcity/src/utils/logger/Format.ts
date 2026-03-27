@@ -15,7 +15,7 @@ const UNLIMITED_LOG_CHARS = Number.MAX_SAFE_INTEGER;
  *
  * 关键点（中文）
  * - 用于 LLM 请求日志的增量打印，避免每轮都重复输出全量历史 messages。
- * - key 建议使用 contextId；无 key 时保持原有行为（全量打印）。
+ * - key 建议使用 sessionId；无 key 时保持原有行为（全量打印）。
  */
 const lastLoggedMessagesCountByKey = new Map<string, number>();
 
@@ -147,6 +147,7 @@ function buildInfoAttrs(info: Record<string, string>): string[] {
     "received_at",
     "user_timezone",
     "channel",
+    "session_id",
     "context_id",
     "chat_key",
     "chat_id",

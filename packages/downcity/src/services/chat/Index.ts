@@ -14,7 +14,7 @@ import type { Command } from "commander";
 import {
   deleteChatByChatKey,
   normalizeChatSendText,
-  resolveChatContextSnapshot,
+  resolveChatSessionSnapshot,
   resolveChatKey,
   sendChatActionByChatKey,
   sendChatTextByChatKey,
@@ -60,7 +60,7 @@ import { ConsoleStore } from "@/utils/store/index.js";
 import type { StoredChannelAccount } from "@/types/Store.js";
 import {
   getDowncityChannelMetaPath,
-  getDowncityChatContextDirPath,
+  getDowncityChatSessionDirPath,
   getDowncityChatHistoryPath,
 } from "@/console/env/Paths.js";
 import {
@@ -83,7 +83,7 @@ type ChatSendActionPayload = {
   messageId?: string;
 };
 
-type ChatContextActionPayload = {
+type ChatSessionActionPayload = {
   chatKey?: string;
   sessionId?: string;
 };
@@ -1047,7 +1047,7 @@ async function executeChatInfoAction(params: {
 }) {
   const explicitSessionId = String(params.payload.sessionId || "").trim();
   const explicitChatKey = String(params.payload.chatKey || "").trim();
-  const snapshot = resolveChatContextSnapshot({
+  const snapshot = resolveChatSessionSnapshot({
     context: params.context,
     ...(explicitSessionId ? { sessionId: explicitSessionId } : {}),
     ...(explicitChatKey ? { chatKey: explicitChatKey } : {}),
@@ -1059,7 +1059,7 @@ async function executeChatInfoAction(params: {
     return {
       success: false,
       error:
-        "Missing sessionId. Provide --session-id/--chat-key or ensure DC_CTX_CONTEXT_ID/DC_CTX_CHAT_KEY is injected.",
+        "Missing sessionId. Provide --session-id/--chat-key or ensure DC_SESSION_ID/DC_CTX_CHAT_KEY is injected.",
     };
   }
 
@@ -1075,7 +1075,7 @@ async function executeChatInfoAction(params: {
     getDowncityChannelMetaPath(params.context.rootPath),
   );
   const chatDirPath = toPosixRelativePath(
-    getDowncityChatContextDirPath(params.context.rootPath, sessionId),
+    getDowncityChatSessionDirPath(params.context.rootPath, sessionId),
   );
   const historyPath = toPosixRelativePath(
     getDowncityChatHistoryPath(params.context.rootPath, sessionId),
@@ -1780,7 +1780,7 @@ async function executeChatDeleteAction(params: {
       deleted: result.deleted === true,
       removedMeta: result.removedMeta === true,
       removedChatDir: result.removedChatDir === true,
-      removedContextDir: result.removedContextDir === true,
+      removedSessionDir: result.removedSessionDir === true,
     },
   };
 }
@@ -2092,8 +2092,8 @@ export const chatService: Service = {
         },
       },
       async execute(params) {
-        const payload = params.payload as ChatContextActionPayload;
-        const snapshot = resolveChatContextSnapshot({
+        const payload = params.payload as ChatSessionActionPayload;
+        const snapshot = resolveChatSessionSnapshot({
           context: params.context,
           ...(payload.chatKey ? { chatKey: payload.chatKey } : {}),
           ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
@@ -2161,7 +2161,7 @@ export const chatService: Service = {
       },
       async execute(params) {
         const payload = params.payload as ChatHistoryActionPayload;
-        const snapshot = resolveChatContextSnapshot({
+        const snapshot = resolveChatSessionSnapshot({
           context: params.context,
           ...(payload.chatKey ? { chatKey: payload.chatKey } : {}),
           ...(payload.sessionId ? { sessionId: payload.sessionId } : {}),
@@ -2176,7 +2176,7 @@ export const chatService: Service = {
           return {
             success: false,
             error:
-              "Missing sessionId. Provide --session-id/--chat-key or ensure DC_CTX_SESSION_ID is injected.",
+              "Missing sessionId. Provide --session-id/--chat-key or ensure DC_SESSION_ID is injected.",
           };
         }
 

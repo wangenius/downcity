@@ -1,0 +1,46 @@
+---
+title: Input
+description: 用于单行文本、搜索词和短配置项输入
+---
+
+# Input
+
+`Input` 是最常用的单行输入组件。
+
+## 导入
+
+```tsx
+import { Input, Label } from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import { Input, Label } from "@downcity/ui";
+
+export function ModelInput() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="model">Model</Label>
+      <Input id="model" placeholder="gpt-5.4" />
+    </div>
+  );
+}
+```
+
+## 适合场景
+
+- 单行文本
+- 搜索框
+- 模型名、路径、键值等短字段
+
+## 使用建议
+
+- 配合 `Label` 使用
+- 长文本请切换到 [Textarea](/zh/ui-sdk-docs/components/textarea)
+- 错误态优先通过原生 `aria-invalid` 传达
+
+## 继续阅读
+
+- [Textarea](/zh/ui-sdk-docs/components/textarea)
+- [Label](/zh/ui-sdk-docs/components/label)

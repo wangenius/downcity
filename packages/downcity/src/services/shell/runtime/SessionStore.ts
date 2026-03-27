@@ -149,7 +149,6 @@ function buildShellEnv(runtime: ServiceRuntime): NodeJS.ProcessEnv {
   const sessionId = String(request?.sessionId || "").trim();
   const requestId = String(request?.requestId || "").trim();
   if (sessionId) env.DC_SESSION_ID = sessionId;
-  if (sessionId) env.DC_CTX_CONTEXT_ID = sessionId;
   if (requestId) env.DC_CTX_REQUEST_ID = requestId;
   if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
   if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;

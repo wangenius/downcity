@@ -16,6 +16,7 @@ import type {
 } from "@/types/Plugin.js";
 
 type RuntimeResolver = () => PluginRuntime;
+type PluginEnabledChecker = (pluginName: string, runtime: PluginRuntime) => boolean;
 
 type PipelineRecord = {
   pluginName: string;
@@ -42,6 +43,7 @@ type ResolveRecord = {
  */
 export class HookRegistry {
   private readonly runtimeResolver: RuntimeResolver;
+  private readonly pluginEnabledChecker: PluginEnabledChecker;
 
   private readonly pipelineHooks = new Map<string, PipelineRecord[]>();
 
@@ -51,8 +53,12 @@ export class HookRegistry {
 
   private readonly resolveHooks = new Map<string, ResolveRecord>();
 
-  constructor(runtimeResolver: RuntimeResolver) {
-    this.runtimeResolver = runtimeResolver;
+  constructor(params: {
+    runtimeResolver: RuntimeResolver;
+    pluginEnabledChecker: PluginEnabledChecker;
+  }) {
+    this.runtimeResolver = params.runtimeResolver;
+    this.pluginEnabledChecker = params.pluginEnabledChecker;
   }
 
   /**
@@ -164,6 +170,7 @@ export class HookRegistry {
     const runtime = this.runtimeResolver();
     let current = value as JsonValue;
     for (const item of bucket) {
+      if (!this.pluginEnabledChecker(item.pluginName, runtime)) continue;
       current = await item.handler({
         runtime,
         value: current,
@@ -184,6 +191,7 @@ export class HookRegistry {
 
     const runtime = this.runtimeResolver();
     for (const item of bucket) {
+      if (!this.pluginEnabledChecker(item.pluginName, runtime)) continue;
       await item.handler({
         runtime,
         value: value as JsonValue,
@@ -203,6 +211,7 @@ export class HookRegistry {
 
     const runtime = this.runtimeResolver();
     for (const item of bucket) {
+      if (!this.pluginEnabledChecker(item.pluginName, runtime)) continue;
       await item.handler({
         runtime,
         value: value as JsonValue,
@@ -226,9 +235,13 @@ export class HookRegistry {
     if (!record) {
       throw new Error(`No plugin resolver registered for point: ${key}`);
     }
+    const runtime = this.runtimeResolver();
+    if (!this.pluginEnabledChecker(record.pluginName, runtime)) {
+      throw new Error(`No active plugin resolver registered for point: ${key}`);
+    }
 
     return await record.handler({
-      runtime: this.runtimeResolver(),
+      runtime,
       value: value as JsonValue,
       plugin: record.pluginName,
     }) as TOutput;

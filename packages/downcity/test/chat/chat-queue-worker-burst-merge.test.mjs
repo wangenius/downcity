@@ -60,7 +60,7 @@ function createWorkerHarness(queueConfig) {
         },
         async appendUserMessage(params) {
           appendedUserMessages.push({
-            contextId: params.contextId,
+            sessionId: params.sessionId,
             text: params.text,
           });
         },
@@ -86,7 +86,7 @@ function enqueueExec(params) {
     kind: "exec",
     channel: "telegram",
     targetId: "chat-merge-test",
-    contextId: params.laneKey,
+    sessionId: params.laneKey,
     text: params.text,
     messageId: params.messageId,
   });

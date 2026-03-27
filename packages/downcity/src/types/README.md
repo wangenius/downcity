@@ -13,8 +13,10 @@
   - 定义 `JsonPrimitive`、`JsonValue`、`JsonObject`。
   - 作为跨模块传输结构化数据时的统一约束（配置、日志 details、服务 payload 等）。
 - `Asset.ts`
-  - 定义 `Asset`、`AssetPort`、`AssetCheckResult`、`AssetInstallResult`。
-  - 用于新的插件资产体系，统一表达底层资源对象与其调用协议。
+  - 定义 `RuntimeBase`、`Asset`、`AssetPort`、`AssetCheckResult`、`AssetInstallResult`。
+  - `RuntimeBase` 是 service / plugin / asset 共用的最小宿主上下文。
+  - 其余类型用于新的插件依赖体系，统一表达底层资源对象与其调用协议。
+  - 语义上它更接近 plugin dependency，而不是和 service 并列的一等业务能力。
 - `Plugin.ts`
   - 定义 `Plugin`、`PluginAction`、`PluginPort` 等。
   - 用于新的声明式插件体系，统一表达插件行为、可用性与显式调用协议。

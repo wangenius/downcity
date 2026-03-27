@@ -13,6 +13,12 @@ description: 重新梳理 runtime、service、plugin 的职责边界、调用关
 - `service` 是主业务流程拥有者
 - `plugin` 是被动增强单元
 
+补一条当前实现口径：
+
+- plugin 是否进入执行链路，由项目配置 `downcity.json > plugins.<name>.enabled` 决定
+- 如果没有显式写 `enabled`，则回退到 plugin 自己声明的默认值
+- disabled plugin 不参与 hook 执行，也不会注入 `plugin.system`
+
 如果一个模块没有生命周期、不拥有主流程、只是被某个流程节点调用，那它就不应该被理解成 `service`。
 
 ## 一句话模型
@@ -30,7 +36,7 @@ Downcity 当前可以按四层来理解：
 1. 入口层：CLI、Console UI、Chrome Extension、HTTP API
 2. 控制层：console
 3. 执行层：agent runtime
-4. 业务层：services / plugins / assets
+4. 业务层：services / plugins / plugin dependency assets
 
 ```mermaid
 flowchart LR
@@ -52,7 +58,7 @@ flowchart LR
   subgraph Business["业务层"]
     SERVICES["Services<br/>主流程"]
     PLUGINS["Plugins<br/>增强逻辑"]
-    ASSETS["Assets<br/>依赖资源"]
+    ASSETS["Plugin Dependency Assets<br/>依赖资源"]
   end
 
   CLI --> CONSOLE
@@ -71,7 +77,160 @@ flowchart LR
 - `agent runtime` 负责单项目执行
 - `service` 负责业务主流程
 - `plugin` 通过预定义点接入流程
-- `asset` 负责底层依赖
+- `asset` 负责 plugin 依赖
+
+## runtime 启动逻辑
+
+如果只看启动链路，可以把当前系统理解成两段：
+
+1. 先启动全局控制面
+2. 再启动单项目 runtime
+
+也就是说，真正“跑业务”的不是 `console`，而是某个具体项目的 `agent runtime`。
+
+### 启动总图
+
+```mermaid
+flowchart TD
+  A["city console start"] --> B["console runtime 启动"]
+  B --> C["维护全局 registry / model pool / gateway"]
+
+  D["city agent start <project>"] --> E["校验 console 已运行"]
+  E --> F["校验项目初始化文件"]
+  F --> G["后台或前台拉起 agent 进程"]
+  G --> H["加载项目 config / env / systems"]
+  H --> I["初始化 RuntimeState"]
+  I --> J["创建 session / model / prompt runtime"]
+  J --> K["创建 HookRegistry / AssetRegistry / PluginRegistry"]
+  K --> L["注册 builtin plugins 与 assets"]
+  L --> M["组装 services 的 runtime 注入对象"]
+  M --> N["按需启动 service lifecycle"]
+  N --> O["接收消息 / 命令 / task，进入 service workflow"]
+  O --> P["service 在流程节点调用 plugins"]
+```
+
+### 详细顺序
+
+#### 第一步：启动 `console`
+
+`city console start` 负责拉起全局控制面。  
+它不是某个项目的业务 runtime，而是所有 agent 的上层控制器。
+
+它主要负责：
+
+- 维护 console registry
+- 管理多个 agent 项目的登记信息
+- 提供 Console UI gateway
+- 维护全局模型池、共享配置与控制入口
+
+#### 第二步：启动某个项目的 `agent runtime`
+
+`city agent start <project>` 不是直接在当前 CLI 进程里“顺手跑几个模块”，而是拉起一个真正的 agent 进程。
+
+这一步里会先做前置校验：
+
+- `console` 是否已经运行
+- 项目初始化文件是否存在
+- `downcity.json` 是否存在
+- runtime model binding 是否可用
+
+然后再以前台或后台 daemon 的方式启动 agent。
+
+#### 第三步：agent 进程组装 `runtime`
+
+agent 进程启动后，会开始组装当前项目的运行时状态。
+
+这一阶段会做的事包括：
+
+- 加载项目级 config
+- 加载当前 agent 的 env 快照
+- 加载静态 systems
+- 创建 `RuntimeState`
+- 创建 `SessionManager`
+- 创建 service 使用的 model
+- 启动 prompt 热更新能力
+
+这一步完成后，系统才有一个真正可供 service 消费的宿主运行环境。
+
+#### 第四步：组装 plugin / asset 基础设施
+
+当前 agent runtime 里，plugin 不是“临时扫出来顺手执行”的，而是先被注册进统一注册表。
+
+这一步主要是：
+
+- 创建 `HookRegistry`
+- 创建 `AssetRegistry`
+- 创建 `PluginRegistry`
+- 注册 builtin plugins
+- 注册 builtin assets
+
+注册完成后，runtime 才拥有：
+
+- plugin action 调度能力
+- `pipeline / guard / effect / resolve` 执行能力
+- plugin dependency 的 asset availability / install / use 能力
+
+#### 第五步：给 service 注入统一 runtime 端口
+
+service 并不是自己去读全局单例到处拼东西，而是通过统一 `ServiceRuntime` 端口拿能力。
+
+service 看到的是：
+
+- `config`
+- `env`
+- `logger`
+- `session`
+- `invoke`
+- `plugins`
+
+`assets` 不再属于 `ServiceRuntime` 的能力面。  
+现在的口径是：
+
+- `ServiceRuntime` 只暴露 service 真正需要的业务与调度端口
+- `PluginRuntime` 才暴露 `assets`，用于 plugin 访问自己的依赖资源
+
+#### 第六步：service 开始接管业务流程
+
+当消息、任务、service command 或 plugin action 进入 runtime 时，真正承接主流程的是 service。
+
+流程会变成：
+
+- 外部输入进入 runtime
+- runtime 把输入路由到对应 service
+- service 在自己的工作流里决定主流程怎么走
+- service 在合适节点触发 plugin
+- plugin 如有需要再使用 asset
+
+### 一个更贴近真实调用方向的图
+
+```mermaid
+sequenceDiagram
+  participant CLI as CLI
+  participant Console as Console Runtime
+  participant Agent as Agent Runtime
+  participant S as Service
+  participant P as Plugin
+  participant A as Asset
+
+  CLI->>Console: city console start
+  Console-->>CLI: console ready
+
+  CLI->>Console: city agent start <project>
+  Console->>Agent: spawn agent daemon / foreground runtime
+  Agent->>Agent: load config/env/systems
+  Agent->>Agent: init RuntimeState + session/model
+  Agent->>Agent: create HookRegistry / AssetRegistry / PluginRegistry
+  Agent->>Agent: register builtin plugins/assets
+
+  Note over Agent,S: runtime 已可对 service 注入统一端口
+
+  CLI->>Agent: incoming message / service command / plugin action
+  Agent->>S: dispatch to service workflow
+  S->>P: invoke pipeline / guard / effect / resolve
+  P->>A: use asset if needed
+  S-->>Agent: workflow result
+  Agent-->>CLI: response / side effects / persisted traces
+```
 
 ## 为什么必须区分三层
 

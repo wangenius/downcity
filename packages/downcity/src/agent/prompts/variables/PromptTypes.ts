@@ -14,10 +14,16 @@ export interface PromptGeoContext {
 }
 
 export interface PromptVariables {
+  /** 当前时间（含时区）。 */
   currentTime: string;
+  /** 地理位置描述。 */
   location: string;
+  /** 项目路径。 */
   projectPath: string;
+  /** 项目根路径。 */
   projectRoot: string;
-  contextId: string;
+  /** 会话标识。 */
+  sessionId: string;
+  /** 请求标识。 */
   requestId: string;
 }

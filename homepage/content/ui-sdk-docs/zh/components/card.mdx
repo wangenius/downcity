@@ -1,0 +1,76 @@
+---
+title: Card
+description: 用于构建结构化信息块、设置面板和摘要容器
+---
+
+# Card
+
+`Card` 是信息容器组件组，适合承载一块结构清晰的内容。
+
+## 导入
+
+```tsx
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  Button,
+} from "@downcity/ui";
+
+export function AgentCard() {
+  return (
+    <Card className="max-w-md">
+      <CardHeader>
+        <CardTitle>Agent Settings</CardTitle>
+        <CardDescription>管理模型与执行参数</CardDescription>
+      </CardHeader>
+      <CardContent>这里放表单或摘要内容。</CardContent>
+      <CardFooter className="justify-end">
+        <Button size="sm">保存</Button>
+      </CardFooter>
+    </Card>
+  );
+}
+```
+
+## 子组件
+
+- `Card`
+- `CardHeader`
+- `CardTitle`
+- `CardDescription`
+- `CardAction`
+- `CardContent`
+- `CardFooter`
+
+## 尺寸
+
+- `size="default"`
+- `size="sm"`
+
+## 使用建议
+
+- 尽量使用完整结构，不要所有内容都直接塞进 `CardContent`
+- 右上角辅助操作放进 `CardAction`
+- 底部操作区放进 `CardFooter`
+
+## 继续阅读
+
+- [Input](/zh/ui-sdk-docs/components/input)
+- [Tabs](/zh/ui-sdk-docs/components/tabs)

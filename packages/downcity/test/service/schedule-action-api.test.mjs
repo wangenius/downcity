@@ -21,7 +21,7 @@ import {
   stopServiceScheduleRuntime,
 } from "../../bin/console/service/schedule/Runtime.js";
 import { ServiceScheduleStore } from "../../bin/console/service/schedule/Store.js";
-import { upsertChatMetaByContextId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
@@ -74,9 +74,9 @@ test("dedicated action api uses persistent schedule for chat send", { concurrenc
     });
     await startServiceScheduleRuntime(runtime);
 
-    await upsertChatMetaByContextId({
+    await upsertChatMetaBySessionId({
       context: runtime,
-      contextId: CHAT_KEY,
+      sessionId: CHAT_KEY,
       channel: TELEGRAM_CHANNEL,
       chatId: "10001",
     });

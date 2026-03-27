@@ -12,6 +12,7 @@
     "build:homepage": "pnpm -C homepage build",
     "build:extension": "bash ./scripts/extbuild.sh",
     "install:ws": "pnpm install",
+    "dev:consoleui": "pnpm -C console-ui dev",
     "dev:ui-sdk": "pnpm -C packages/downcity-ui dev",
     "dev:homepage": "pnpm -C homepage dev",
     "homepage": "pnpm -C homepage dev",

@@ -24,7 +24,7 @@ import type { LlmProviderType } from "@agent/types/LlmConfig.js";
 import { ConsoleStore } from "@utils/store/index.js";
 
 type ModelLogContext = {
-  contextId?: string;
+  sessionId?: string;
   requestId?: string;
 };
 

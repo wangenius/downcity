@@ -88,7 +88,7 @@ export async function listTaskDefinitions(params: {
         : {}),
       when: task.when,
       status: task.status,
-      contextId: task.contextId,
+      sessionId: task.sessionId,
       kind: task.kind || "agent",
       ...(task.kind === "agent" ? { review: Boolean(task.review) } : {}),
       taskMdPath: task.taskMdPath,
@@ -118,12 +118,12 @@ export async function createTaskDefinition(params: {
     };
   }
   const whenNormalized = normalizeTaskWhen(String(req.when || "@manual").trim() || "@manual");
-  const contextId = String(req.contextId || "").trim();
+  const sessionId = String(req.sessionId || "").trim();
   const kind = normalizeTaskKind(req.kind);
 
   if (!title) return { success: false, error: "Missing title" };
   if (!description) return { success: false, error: "Missing description" };
-  if (!contextId) return { success: false, error: "Missing contextId" };
+  if (!sessionId) return { success: false, error: "Missing sessionId" };
   if (!whenNormalized.ok) return { success: false, error: whenNormalized.error };
 
   const status = resolveTaskStatus(req.status, "paused");
@@ -156,7 +156,7 @@ export async function createTaskDefinition(params: {
         title,
         description,
         when: whenNormalized.value,
-        contextId,
+        sessionId,
         kind,
         ...(kind === "agent" && req.review === true ? { review: true } : {}),
         status,
@@ -232,9 +232,9 @@ export async function updateTaskDefinition(params: {
     const whenNormalized = normalizeTaskWhen(whenInput);
     if (!whenNormalized.ok) return { success: false, error: whenNormalized.error };
 
-    const contextId =
-      typeof req.contextId === "string" ? req.contextId.trim() : current.frontmatter.contextId;
-    if (!contextId) return { success: false, error: "contextId cannot be empty" };
+    const sessionId =
+      typeof req.sessionId === "string" ? req.sessionId.trim() : current.frontmatter.sessionId;
+    if (!sessionId) return { success: false, error: "sessionId cannot be empty" };
     const kind = normalizeTaskKind(
       req.kind === undefined ? current.frontmatter.kind : req.kind,
     );
@@ -270,7 +270,7 @@ export async function updateTaskDefinition(params: {
         title: nextTitle,
         description,
         when: whenNormalized.value,
-        contextId,
+        sessionId,
         kind,
         ...(kind === "agent" && review ? { review: true } : {}),
         status,

@@ -1,0 +1,187 @@
+---
+title: UI SDK Modules
+description: Review the complete public export surface of @downcity/ui
+---
+
+# UI SDK Modules
+
+This page lists the full public module surface of `@downcity/ui`.
+
+## Utilities and Types
+
+### `cn`
+
+- Purpose: merge Tailwind classes and resolve conflicts safely
+
+### `DowncityButtonVariant`
+
+- Values: `default`, `outline`, `secondary`, `ghost`, `destructive`, `link`
+
+### `DowncityButtonSize`
+
+- Values: `default`, `xs`, `sm`, `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
+
+### `DowncityCardSize`
+
+- Values: `default`, `sm`
+
+### `DowncityDropdownMenuItemVariant`
+
+- Values: `default`, `destructive`
+
+### `DowncityToasterTheme`
+
+- Values: `light`, `dark`, `system`
+
+## Style Modules
+
+### `@downcity/ui/source.css`
+
+- Role: declare the Tailwind scanning source
+
+### `@downcity/ui/styles.css`
+
+- Role: provide design tokens and the base layer
+
+## Actions and State Modules
+
+### `Button`
+
+- Exports: `Button`, `buttonVariants`
+
+### `Badge`
+
+- Exports: `Badge`, `badgeVariants`
+
+### `Toggle`
+
+- Exports: `Toggle`, `toggleVariants`
+
+### `ToggleGroup`
+
+- Exports: `ToggleGroup`, `ToggleGroupItem`
+
+## Form Modules
+
+### `Input`
+
+- Exports: `Input`
+
+### `Textarea`
+
+- Exports: `Textarea`
+- Exported type: `TextareaProps`
+
+### `Checkbox`
+
+- Exports: `Checkbox`
+
+### `Label`
+
+- Exports: `Label`
+
+## Containers and Display Modules
+
+### `Card`
+
+- Exports:
+  - `Card`
+  - `CardHeader`
+  - `CardTitle`
+  - `CardDescription`
+  - `CardAction`
+  - `CardContent`
+  - `CardFooter`
+
+### `Separator`
+
+- Exports: `Separator`
+
+### `Skeleton`
+
+- Exports: `Skeleton`
+
+### `Tabs`
+
+- Exports:
+  - `Tabs`
+  - `TabsList`
+  - `TabsTrigger`
+  - `TabsContent`
+  - `tabsListVariants`
+
+## Overlays and Feedback Modules
+
+### `Dialog`
+
+- Exports:
+  - `Dialog`
+  - `DialogTrigger`
+  - `DialogPortal`
+  - `DialogClose`
+  - `DialogOverlay`
+  - `DialogContent`
+  - `DialogHeader`
+  - `DialogFooter`
+  - `DialogTitle`
+  - `DialogDescription`
+
+### `Sheet`
+
+- Exports:
+  - `Sheet`
+  - `SheetTrigger`
+  - `SheetClose`
+  - `SheetPortal`
+  - `SheetOverlay`
+  - `SheetContent`
+  - `SheetHeader`
+  - `SheetFooter`
+  - `SheetTitle`
+  - `SheetDescription`
+
+### `DropdownMenu`
+
+- Exports:
+  - `DropdownMenu`
+  - `DropdownMenuTrigger`
+  - `DropdownMenuPortal`
+  - `DropdownMenuContent`
+  - `DropdownMenuGroup`
+  - `DropdownMenuLabel`
+  - `DropdownMenuItem`
+  - `DropdownMenuCheckboxItem`
+  - `DropdownMenuRadioGroup`
+  - `DropdownMenuRadioItem`
+  - `DropdownMenuSeparator`
+  - `DropdownMenuShortcut`
+  - `DropdownMenuSub`
+  - `DropdownMenuSubTrigger`
+  - `DropdownMenuSubContent`
+
+### `Popover`
+
+- Exports:
+  - `Popover`
+  - `PopoverTrigger`
+  - `PopoverContent`
+
+### `Tooltip`
+
+- Exports:
+  - `Tooltip`
+  - `TooltipTrigger`
+  - `TooltipContent`
+  - `TooltipProvider`
+
+### `Toaster`
+
+- Exports: `Toaster`
+- Built on: `sonner`
+
+## Recommended Reading
+
+- [UI SDK](/en/ui-sdk-docs)
+- [Components](/en/ui-sdk-docs/components)
+- [Host Integration](/en/ui-sdk-docs/host-integration)
+- [UI SDK Development](/en/ui-sdk-docs/development)

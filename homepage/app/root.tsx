@@ -134,12 +134,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const isDocsPath =
     path === "/docs" ||
     path === "/devdocs" ||
+    path === "/ui-sdk-docs" ||
     path.startsWith("/docs/") ||
     path.startsWith("/devdocs/") ||
+    path.startsWith("/ui-sdk-docs/") ||
     path.startsWith("/en/docs") ||
     path.startsWith("/zh/docs") ||
     path.startsWith("/en/devdocs") ||
-    path.startsWith("/zh/devdocs");
+    path.startsWith("/zh/devdocs") ||
+    path.startsWith("/en/ui-sdk-docs") ||
+    path.startsWith("/zh/ui-sdk-docs");
   const showGlobalChrome = !isDocsPath;
 
   // Sync i18n language with localStorage (only on client side)

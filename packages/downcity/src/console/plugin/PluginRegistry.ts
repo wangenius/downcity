@@ -7,6 +7,7 @@
  */
 
 import type { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
+import { isPluginEnabledInConfig } from "@/console/plugin/Activation.js";
 import type { HookRegistry } from "@/console/plugin/HookRegistry.js";
 import type {
   Plugin,
@@ -173,12 +174,10 @@ export class PluginRegistry {
     }
 
     const runtime = this.runtimeResolver();
-    const pluginConfig = runtime.config.plugins?.[plugin.name];
-    const enabled =
-      Boolean(pluginConfig) &&
-      typeof pluginConfig === "object" &&
-      !Array.isArray(pluginConfig) &&
-      (pluginConfig as { enabled?: unknown }).enabled !== false;
+    const enabled = isPluginEnabledInConfig({
+      plugin,
+      config: runtime.config,
+    });
 
     if (!enabled) {
       return {
@@ -235,6 +234,19 @@ export class PluginRegistry {
       };
     }
 
+    const runtime = this.runtimeResolver();
+    const enabled = isPluginEnabledInConfig({
+      plugin,
+      config: runtime.config,
+    });
+    if (!enabled) {
+      return {
+        success: false,
+        error: `Plugin "${plugin.name}" is disabled`,
+        message: `Plugin "${plugin.name}" is disabled`,
+      };
+    }
+
     const action = plugin.actions?.[actionName];
     if (!action) {
       return {
@@ -246,7 +258,7 @@ export class PluginRegistry {
 
     try {
       return await action.execute({
-        runtime: this.runtimeResolver(),
+        runtime,
         payload: (params.payload ?? {}) as JsonValue,
         pluginName: plugin.name,
         actionName,

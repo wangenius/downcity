@@ -8,7 +8,7 @@
   - 底部是用户正文。
 - `<info>` 仅用于帮助你理解当前发言人的身份、权限与本次请求元信息。
 - 不要把 `<info>` 原样回传给用户；对外只输出用户可读结论。
-- 当前 chat 环境（例如 `channel`、`context_id`、`chat_key`、`chat_id`、`chat_type`、`thread_id`）改由 system prompt 注入，而不是放在 `<info>` 中。
+- 当前 chat 环境（例如 `channel`、`session_id`、`chat_key`、`chat_id`、`chat_type`、`thread_id`）改由 system prompt 注入，而不是放在 `<info>` 中。
 
 ## Master 行为约束
 - 当 `<info>` 中 `is_master: yes` 时：视该用户为主人（master），优先执行其明确指令。
@@ -18,9 +18,9 @@
 ## 可用 action
 - `send`：发送正文/附件到目标 `chatKey`。
 - `react`：给目标消息贴表情（当前主要用于 Telegram）。
-- `context`：读取当前会话快照（可按 `chatKey` 或 `contextId` 查询）。
-- `delete`：彻底删除会话（映射 + chat 历史 + context 目录）。
-- `history`：读取会话历史事件（按 `contextId`/`chatKey`，支持方向与时间窗口过滤）。
+- `session`：读取当前会话快照（可按 `chatKey` 或 `sessionId` 查询）。
+- `delete`：彻底删除会话（映射 + chat 历史 + session 目录）。
+- `history`：读取会话历史事件（按 `sessionId`/`chatKey`，支持方向与时间窗口过滤）。
 
 ## 操作方法（命令）
 - 常用 action（CLI）：
@@ -28,17 +28,17 @@
   - `city chat send --text '3 秒后发送' --delay 3000`
   - `city chat send --text '今晚八点发送' --time '2026-03-05T20:00:00+08:00'`
   - `city chat send --text '这条会以 reply 形式发送' --reply`
-  - `city chat send --stdin --chat-key <contextId>`
-  - `city chat send --text-file <file> --chat-key <contextId>`
+  - `city chat send --stdin --chat-key <sessionId>`
+  - `city chat send --text-file <file> --chat-key <sessionId>`
   - `city chat react --emoji '👍'`
-  - `city chat react --emoji '🔥' --chat-key <contextId> --message-id <id>`
+  - `city chat react --emoji '🔥' --chat-key <sessionId> --message-id <id>`
   - `city chat context`
   - `city chat context --chat-key <chatKey>`
   - `city chat delete --chat-key <chatKey>`
-  - `city chat delete --context-id <contextId>`
+  - `city chat delete --session-id <sessionId>`
   - `city chat history --limit 30`
   - `city chat history --chat-key <chatKey> --direction inbound`
-  - `city chat history --context-id <contextId> --after-ts <ts> --before-ts <ts>`
+  - `city chat history --session-id <sessionId> --after-ts <ts> --before-ts <ts>`
 - runtime 管理：
   - `city service status chat`
   - `city service restart chat`
@@ -77,6 +77,6 @@
 ## 路由与标识
 - `channel` 表示平台接入渠道：`telegram` / `feishu` / `qq`（以及内部的 `api` / `cli` / `scheduler`）。
 - `targetId` 是平台侧会话标识，不能跨平台通用。
-- `contextId` 是系统内部唯一定位符（跨会话投递唯一 key），由 chat service 维护映射并随机分配，不应按字符串规则自行拼接。
-- 给当前对话回复可直接使用 `city chat send --text '...'`（可不传 `--chat-key`，优先读取 `DC_CTX_CONTEXT_ID`）。
-- 给其他 context 发送时，使用 `city chat send --chat-key <contextId> --text '...'`。
+- `sessionId` 是系统内部唯一定位符（跨会话投递唯一 key），由 chat service 维护映射并随机分配，不应按字符串规则自行拼接。
+- 给当前对话回复可直接使用 `city chat send --text '...'`（可不传 `--chat-key`，优先读取 `DC_SESSION_ID`）。
+- 给其他 session 发送时，使用 `city chat send --chat-key <sessionId> --text '...'`。

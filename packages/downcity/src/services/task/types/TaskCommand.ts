@@ -21,8 +21,8 @@ export type TaskCreateRequest = {
   when: string;
   /** 任务描述。 */
   description: string;
-  /** 任务上下文标识。 */
-  contextId: string;
+  /** 任务会话标识。 */
+  sessionId: string;
   /** 任务执行类型。 */
   kind?: ShipTaskKind;
   /** 是否启用 review 多轮复核。 */
@@ -61,8 +61,8 @@ export type TaskUpdateRequest = {
   clearWhen?: boolean;
   /** 新任务描述。 */
   description?: string;
-  /** 新上下文标识。 */
-  contextId?: string;
+  /** 新会话标识。 */
+  sessionId?: string;
   /** 新任务执行类型。 */
   kind?: ShipTaskKind;
   /** 是否启用 review 多轮复核。 */
@@ -95,8 +95,8 @@ export type TaskListItemView = {
   status: string;
   /** 当前是否正在执行。 */
   running?: boolean;
-  /** 任务上下文标识。 */
-  contextId: string;
+  /** 任务会话标识。 */
+  sessionId: string;
   /** 任务执行类型。 */
   kind?: ShipTaskKind;
   /** 是否启用 review 多轮复核。 */

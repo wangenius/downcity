@@ -10,7 +10,7 @@ description: Inspect plugin availability and dispatch plugin actions
 Use it when you want to:
 
 - inspect which plugins are registered
-- check whether a plugin is available in the current agent runtime
+- inspect a plugin's static enabled state and runtime availability
 - dispatch a plugin action without using the plugin's short alias
 
 ## Common examples
@@ -23,11 +23,16 @@ city plugin action voice status
 
 ## Notes
 
-- `city plugin ...` talks to the target agent runtime, so start the runtime first with `city agent start`.
+- `city plugin list` and `city plugin status` fall back to the console-side static plugin catalog when runtime is unavailable, and they try to reflect plugin enabled state from project `downcity.json`.
+- `city plugin action ...` still talks to the target agent runtime, so start the runtime first with `city agent start`.
 - Plugin behavior config is stored in project `downcity.json` under `plugins.*`.
 - Plugin dependency config is stored in project `downcity.json` under `assets.*`.
+- `plugins.<name>.enabled` controls whether a plugin enters the real execution path. When disabled, its hooks and `plugin.system` injection are skipped.
+- Disabled plugins also have their explicit `plugin action` calls rejected by the registry instead of executing the action body.
+- If `plugins.<name>` exists but does not explicitly set `enabled`, runtime falls back to the plugin's own default instead of forcing it to `true`.
 
 ## Related
 
+- [`city skill`](/en/docs/commands/plugin/skill)
 - [`city voice`](/en/docs/commands/plugin/voice)
 - [`CLI Commands`](/en/docs/reference/cli)

@@ -1,0 +1,56 @@
+---
+title: city skill
+description: Skill plugin actions (find/install/list/lookup)
+---
+
+# `city skill`
+
+Manage skill discovery, installation, and lookup.
+
+> Hierarchy note: `city skill` now belongs to the plugin action system. It is provided by the `skill` plugin, not by a service.
+
+## Usage
+
+```bash
+city skill <subcommand> [options]
+```
+
+## Subcommands
+
+- `find <query>`
+- `install <spec>`
+- `list`
+- `lookup <name>`
+
+## `install` key options
+
+- `-g, --global`: global install (default true)
+- `-y, --yes`: skip confirmation (default true)
+- `--agent <agent>`: default `claude-code`
+
+## Examples
+
+```bash
+city skill list
+city skill lookup playwright
+
+# install only when missing from `list`
+city skill find playwright
+city skill install owner/repo@playwright
+city skill lookup playwright
+```
+
+## Recommended flow
+
+`list -> lookup` (if missing, then `find -> install -> lookup`)
+
+## Runtime behavior
+
+- In Agent runtime, `lookup` tool output returns status only.
+- Skill content is injected through the next user message wrapped in `<skill>...</skill>`.
+- Injected skill content is also persisted into context messages so you can verify it in the timeline.
+
+## Related
+
+- [`city plugin`](/en/docs/commands/plugin/plugin)
+- [`CLI Commands`](/en/docs/reference/cli)

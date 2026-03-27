@@ -30,7 +30,7 @@ export async function transformPromptsIntoSystemMessages(
     /**
      * 会话 ID（用于模板变量）。
      */
-    contextId?: string;
+    sessionId?: string;
 
     /**
      * 请求 ID（用于模板变量）。

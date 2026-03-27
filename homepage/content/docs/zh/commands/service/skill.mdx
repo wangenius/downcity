@@ -1,77 +1,13 @@
 ---
 title: city skill
-description: skill service actions（find/install/list/lookup）
+description: skill 已迁到 plugin 体系；本页仅保留迁移说明
 ---
 
 # `city skill`
 
-管理 skills 的发现、安装与读取。
+`city skill` 已迁到 plugin 体系。
 
-> 层级说明：`city skill` 是 service 动作命令，不是一级命令。一级入口是 `city service`。
+请改看：
 
-## 用法
-
-```bash
-city skill <subcommand> [options]
-```
-
-## 子命令
-
-- `find <query>`
-- `install <spec>`
-- `list`
-- `lookup <name>`
-
-## `install` 常用参数
-
-- `-g, --global`：全局安装（默认 true）
-- `-y, --yes`：跳过确认（默认 true）
-- `--agent <agent>`：默认 `claude-code`
-
-## 示例
-
-```bash
-city skill list
-city skill lookup playwright
-
-# 仅当 list 中缺失时再安装
-city skill find playwright
-city skill install owner/repo@playwright
-city skill lookup playwright
-```
-
-## 推荐流程
-
-`list -> lookup`（缺失时再 `find -> install -> lookup`）
-
-## 运行时行为说明
-
-- 在 Agent 运行时，`lookup` 的工具返回只包含执行状态。
-- 技能正文会通过下一条 user message 注入，并使用 `<skill>...</skill>` 包裹。
-- 注入后的 skill 正文会同步持久化到 context messages，方便你在时间线里确认它是否真的生效。
-
-## 示例输出（基于当前实现）
-
-以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
-
-```text
-$ city skill list
-{
-  "success": true,
-  "data": {
-    "success": true,
-    "skills": []
-  }
-}
-```
-
-```text
-$ city skill lookup playwright
-{
-  "success": true,
-  "data": {
-    "success": true,
-    "name": "playwright"
-  }
-}
-```
+- [`city skill`](/zh/docs/commands/plugin/skill)
+- [`city plugin`](/zh/docs/commands/plugin/plugin)

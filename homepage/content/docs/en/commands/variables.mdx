@@ -41,15 +41,13 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city v
 
 - If `--chat-key` is omitted, it tries `DC_CTX_CHAT_KEY`
 - If `--session-id` is omitted, it first tries `DC_SESSION_ID`
-- Internal fallback still supports `DC_CTX_CONTEXT_ID`
 - In agent shell, these `DC_CTX_*` variables are usually injected automatically
 
 ### `city task ...`
 
-- Task creation/run needs `contextId`
-- You can pass `--context-id` explicitly
+- Task creation/run needs `sessionId`
+- You can pass `--session-id` explicitly
 - Or first fallback to `DC_SESSION_ID`
-- Internal fallback still supports `DC_CTX_CONTEXT_ID`
 
 ### Chat channel credentials
 
@@ -97,7 +95,6 @@ Normalization rule:
 ### Injected into agent shell subprocess
 
 - `DC_SESSION_ID`
-- `DC_CTX_CONTEXT_ID`
 - `DC_CTX_REQUEST_ID`
 - `DC_CTX_SERVER_HOST`
 - `DC_CTX_SERVER_PORT`

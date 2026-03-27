@@ -16,9 +16,10 @@ import {
 } from "@/console/env/Config.js";
 import {
   getTaskRunDir,
-  parseTaskRunContextId,
+  parseTaskRunSessionId,
 } from "@services/task/runtime/Paths.js";
 import { runServiceCommand } from "@/console/service/Manager.js";
+import { isPluginEnabledInConfig } from "@/console/plugin/Activation.js";
 import { HookRegistry } from "@/console/plugin/HookRegistry.js";
 import { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
 import { PluginRegistry } from "@/console/plugin/PluginRegistry.js";
@@ -44,6 +45,7 @@ import type {
 import type {
   PluginAvailability,
   PluginPort,
+  PluginRuntime,
   PluginRuntimeView,
 } from "@/types/Plugin.js";
 import path from "path";
@@ -89,13 +91,26 @@ let ready: RuntimeState | null = null;
 let promptRuntime: PromptRuntime | null = null;
 let serviceModel: LanguageModel | null = null;
 
-const hookRegistry = new HookRegistry(() => getPluginRuntimeState());
+let pluginRegistryRef: PluginRegistry | null = null;
+
+const hookRegistry = new HookRegistry({
+  runtimeResolver: () => getPluginRuntimeState(),
+  pluginEnabledChecker: (pluginName, runtime) => {
+    const plugin = pluginRegistryRef?.get(pluginName);
+    if (!plugin) return false;
+    return isPluginEnabledInConfig({
+      plugin,
+      config: runtime.config,
+    });
+  },
+});
 const assetRegistry = new AssetRegistry(() => getPluginRuntimeState());
 const pluginRegistry = new PluginRegistry({
   runtimeResolver: () => getPluginRuntimeState(),
   hookRegistry,
   assetRegistry,
 });
+pluginRegistryRef = pluginRegistry;
 
 registerBuiltinPlugins({
   assetRegistry,
@@ -349,6 +364,28 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
     session: buildServiceSession(input),
     invoke: serviceInvokePort,
     services: serviceInvokePort,
+    plugins: pluginPort,
+  };
+}
+
+/**
+ * 构建 plugin runtime。
+ *
+ * 关键点（中文）
+ * - plugin runtime 是独立视图，不再复用 ServiceRuntime。
+ * - `assets` 只暴露给 plugin，不再成为 service 的一级能力面。
+ */
+function buildPluginRuntime(input: RuntimeState): PluginRuntime {
+  return {
+    cwd: input.cwd,
+    rootPath: input.rootPath,
+    logger: input.logger,
+    config: input.config,
+    env: input.env,
+    systems: input.systems,
+    session: buildServiceSession(input),
+    invoke: serviceInvokePort,
+    services: serviceInvokePort,
     assets: assetPort,
     plugins: pluginPort,
   };
@@ -365,11 +402,11 @@ export function getServiceRuntimeState(): ServiceRuntime {
  * 获取完整 plugin runtime state。
  *
  * 关键点（中文）
- * - 第一阶段直接复用 ServiceRuntime 作为 PluginRuntime 实现对象。
- * - 这样可以最小成本接入新插件体系，同时保持现有运行时结构稳定。
+ * - plugin runtime 与 service runtime 现在显式分离。
+ * - service 不再暴露 `assets`，plugin 仍可通过专用 runtime 访问 asset 基础设施。
  */
-export function getPluginRuntimeState(): ServiceRuntime {
-  return getServiceRuntimeState();
+export function getPluginRuntimeState(): PluginRuntime {
+  return buildPluginRuntime(getRuntimeState());
 }
 
 /**
@@ -498,13 +535,14 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     projectRoot: rootPath,
     getStaticSystemPrompts: () => getRuntimeStateBase().systems,
     getRuntime: () => getServiceRuntimeState(),
+    getPluginRuntime: () => getPluginRuntimeState(),
     profile: "chat",
   });
   const dispatcher = new SessionAgentDispatcher({
     model: requireServiceModel(),
     logger: defaultLogger,
     createPersistor: (sessionId) => {
-      const parsedRun = parseTaskRunContextId(sessionId);
+      const parsedRun = parseTaskRunSessionId(sessionId);
       const paths = parsedRun
         ? (() => {
             const runDir = getTaskRunDir(

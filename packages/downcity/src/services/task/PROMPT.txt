@@ -12,7 +12,7 @@ frontmatter 核心字段：
 - `title`：任务唯一标识（唯一）
 - `description`：任务描述
 - `when`：触发条件，支持：`@manual` / cron / `time:<ISO8601-with-timezone>`
-- `contextId`：任务执行上下文
+- `sessionId`：任务执行会话
 - `status`：`enabled|paused|disabled`
 - `kind`：`agent|script`（默认 `agent`）
 
@@ -53,9 +53,9 @@ frontmatter 核心字段：
 ## CLI 示例
 
 - `city task list [--status enabled|paused|disabled]`
-- `city task create --title '...' --description '...' --context-id <contextId> [--when '@manual'] [--kind agent|script] [--status ...|--activate]`
+- `city task create --title '...' --description '...' --session-id <sessionId> [--when '@manual'] [--kind agent|script] [--status ...|--activate]`
 - `city task run <title> [--reason '...']`
-- `city task update <title> [--title ...] [--description ...] [--when ...] [--status ...|--activate] [--context-id ...]`
+- `city task update <title> [--title ...] [--description ...] [--when ...] [--status ...|--activate] [--session-id ...]`
 - `city task delete <title>`
 
 ## 关键约束

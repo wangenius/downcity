@@ -17,6 +17,10 @@ export const devdocs = defineDocs({
   dir: "content/devdocs",
 });
 
+export const uiSdkDocs = defineDocs({
+  dir: "content/ui-sdk-docs",
+});
+
 export default defineConfig({
   mdxOptions: {
     remarkPlugins: (v) => [

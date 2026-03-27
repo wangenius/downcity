@@ -8,10 +8,13 @@
  */
 
 import type { Hono } from "hono";
-import { PLUGINS } from "@/console/plugin/Plugins.js";
+import {
+  buildStaticPluginAvailability,
+  findBuiltinPlugin,
+  listStaticPluginRuntimeViews,
+} from "@/console/plugin/Catalog.js";
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 import type {
-  Plugin,
   PluginAvailability,
   PluginRuntimeView,
 } from "@/types/Plugin.js";
@@ -60,7 +63,10 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-function buildPluginActionConfig(plugin: Plugin): PluginActionConfigItem[] {
+function buildPluginActionConfig(
+  plugin: ReturnType<typeof findBuiltinPlugin>,
+): PluginActionConfigItem[] {
+  if (!plugin) return [];
   return Object.entries(plugin.actions || {})
     .map(([actionName, action]) => ({
       name: actionName,
@@ -75,42 +81,17 @@ function buildPluginActionConfig(plugin: Plugin): PluginActionConfigItem[] {
 
 function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[] }> {
   return new Map(
-    PLUGINS.map((plugin) => [
-      plugin.name,
+    listStaticPluginRuntimeViews().map((view) => [
+      view.name,
       {
-        actions: buildPluginActionConfig(plugin),
+        actions: buildPluginActionConfig(findBuiltinPlugin(view.name)),
       },
     ] as const),
   );
 }
 
-function buildStaticPluginViews(): PluginRuntimeView[] {
-  return PLUGINS.map((plugin) => ({
-    name: plugin.name,
-    title: String(plugin.title || plugin.name || "").trim(),
-    description: String(plugin.description || "").trim(),
-    actions: Object.keys(plugin.actions || {}).sort((a, b) => a.localeCompare(b)),
-    pipelines: Object.keys(plugin.hooks?.pipeline || {}).sort((a, b) =>
-      a.localeCompare(b),
-    ),
-    guards: Object.keys(plugin.hooks?.guard || {}).sort((a, b) =>
-      a.localeCompare(b),
-    ),
-    effects: Object.keys(plugin.hooks?.effect || {}).sort((a, b) =>
-      a.localeCompare(b),
-    ),
-    resolves: Object.keys(plugin.resolves || {}).sort((a, b) =>
-      a.localeCompare(b),
-    ),
-    requiredAssets: Array.isArray(plugin.requirements?.assets)
-      ? [...plugin.requirements.assets].sort((a, b) => a.localeCompare(b))
-      : [],
-    hasSystem: typeof plugin.system === "function",
-    hasAvailability: typeof plugin.availability === "function",
-  })).sort((a, b) => a.name.localeCompare(b.name));
-}
-
 function buildStaticPluginPayload(params?: {
+  projectRoot?: string;
   runtimeError?: string;
   runtimeConnected?: boolean;
 }): PluginUiResponse {
@@ -120,14 +101,13 @@ function buildStaticPluginPayload(params?: {
     success: true,
     runtimeConnected: params?.runtimeConnected === true,
     ...(reason ? { runtimeError: reason } : {}),
-    plugins: buildStaticPluginViews().map((view) => ({
+    plugins: listStaticPluginRuntimeViews().map((view) => ({
       ...view,
-      availability: {
-        enabled: true,
-        available: false,
-        reasons: reason ? [reason] : ["Runtime availability is not loaded yet."],
-        missingAssets: [],
-      },
+      availability: buildStaticPluginAvailability({
+        pluginName: view.name,
+        projectRoot: params?.projectRoot,
+        runtimeError: reason,
+      }),
       config: configMap.get(view.name) || {
         actions: [],
       },
@@ -233,6 +213,7 @@ export function registerConsoleUiPluginRoutes(params: {
       if (!selectedAgent || !selectedAgent.baseUrl) {
         return c.json(
           buildStaticPluginPayload({
+            projectRoot: selectedAgent?.projectRoot,
             runtimeConnected: false,
             runtimeError: "No running agent selected.",
           }),
@@ -244,6 +225,7 @@ export function registerConsoleUiPluginRoutes(params: {
       } catch (runtimeError) {
         return c.json(
           buildStaticPluginPayload({
+            projectRoot: selectedAgent.projectRoot,
             runtimeConnected: false,
             runtimeError: getErrorMessage(runtimeError),
           }),

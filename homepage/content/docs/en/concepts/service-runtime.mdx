@@ -12,7 +12,6 @@ Typical built-in services:
 - `chat`
 - `task`
 - `memory`
-- `skills`
 - `shell`
 
 ## What a Service Should Own
@@ -34,6 +33,18 @@ Typical built-in services:
 - service -> triggers its own plugin points
 - plugin -> implements those points
 - asset -> provides plugin dependencies
+
+The runtime surface is now split the same way:
+
+- `ServiceRuntime` does not expose `assets`
+- `PluginRuntime` exposes `assets`
+- assets stay plugin dependencies rather than service-facing workflow primitives
+
+Whether a plugin actually participates in execution is not decided ad hoc by a service. It is controlled by project config at `plugins.<name>.enabled`.
+
+- enabled = `true`: the plugin may enter hook execution and `plugin.system` injection
+- enabled = `false`: the plugin can still be managed and inspected, but it does not join the main workflow
+- no explicit `enabled`: runtime falls back to the plugin's declared default
 
 For example, `chat` does not need to know transcription model details.  
 It only triggers its own voice-related extension points while processing audio attachments. The `voice` plugin implements them, and assets provide the underlying dependency.

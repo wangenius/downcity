@@ -73,14 +73,15 @@ agent 绑定模型 ID（映射到 console 全局模型池）：
 - `mergeDebounceMs`：连续入站消息的短防抖窗口，窗口内消息会尽量并入同一次 run。
 - `mergeMaxWaitMs`：合并等待的硬上限，避免持续来消息导致无限延迟。
 
-### `services.skills`
+### `plugins.skill`
 
 配置 skills 扫描目录：
 
 ```json
 {
-  "services": {
-    "skills": {
+  "plugins": {
+    "skill": {
+      "enabled": true,
       "paths": [".agents/skills"],
       "allowExternalPaths": false
     }

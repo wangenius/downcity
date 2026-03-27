@@ -11,7 +11,7 @@ Downcity supports SKILL.md-based skills.
 
 - Project-level: `.agents/skills`
 - User-level: `~/.agents/skills`
-- Extra roots: `downcity.json.services.skills.paths`
+- Extra roots: `downcity.json.plugins.skill.paths`
 
 ## Recommended workflow
 
@@ -44,8 +44,9 @@ city skill lookup playwright
 
 ```json
 {
-  "services": {
-    "skills": {
+  "plugins": {
+    "skill": {
+      "enabled": true,
       "paths": [".agents/skills"],
       "allowExternalPaths": false
     }

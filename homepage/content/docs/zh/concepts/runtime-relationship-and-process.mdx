@@ -22,7 +22,7 @@ description: console、agent、service、plugin、asset 的协作关系与启动
 1. `city console start`
 2. `city agent start`
 3. agent 从 `downcity.json` 加载项目配置
-4. runtime 组装 services、plugins、assets
+4. runtime 分别组装 `ServiceRuntime`、`PluginRuntime` 与 asset 基础设施
 5. plugins 向 service 已定义的扩展点注册 `pipeline / guard / effect / resolve`
 6. 消息或任务进入 service 工作流
 7. service 在合适节点触发这些 plugin 点

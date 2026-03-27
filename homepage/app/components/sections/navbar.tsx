@@ -47,6 +47,7 @@ export function Navbar() {
   const startPath = isZh ? "/zh/start" : "/start";
   const docsPath = isZh ? "/zh/docs" : "/en/docs";
   const devdocsPath = isZh ? "/zh/devdocs" : "/en/devdocs";
+  const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
   const productBasePath = isZh ? "/zh/product" : "/product";
   const communityBasePath = isZh ? "/zh/community" : "/community";
   const whitepaperPath = isZh ? "/zh/whitepaper" : "/whitepaper";
@@ -94,6 +95,11 @@ export function Navbar() {
       { label: isZh ? "快速开始文档" : "Quick Start Guide", description: isZh ? "从最短路径开始" : "Start with the shortest path", path: docsQuickstartPath },
       { label: "CLI", description: isZh ? "命令入口与参数" : "Command entry points and flags", path: docsCliPath },
       { label: t("nav.devdocs"), description: isZh ? "架构、实现与设计规范" : "Architecture, implementation, and design docs", path: devdocsPath },
+      {
+        label: isZh ? "UI SDK 文档" : "UI SDK Docs",
+        description: isZh ? "独立的 UI SDK 接入、模块与开发文档" : "Standalone docs for UI SDK integration, modules, and development",
+        path: uiSdkDocsPath,
+      },
     ],
   } as const;
 

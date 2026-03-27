@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { marketingTheme } from "@/lib/marketing-theme";
 
@@ -5,6 +6,8 @@ const PAGE = {
   zh: {
     title: "Product · Downcity UI SDK",
     subtitle: "把 Downcity 的交互语言复用到你的产品里，让 Agent 工作台搭建更快、更统一。",
+    docsCtaLabel: "查看 UI SDK 文档",
+    docsCtaHint: "接入方式、模块清单、开发指南都在独立的 ui-sdk-docs 中。",
     highlights: [
       {
         title: "统一视觉与交互",
@@ -36,6 +39,8 @@ const PAGE = {
     title: "Product · Downcity UI SDK",
     subtitle:
       "Reuse Downcity's interaction language in your own product and build agent workspaces with consistent UX.",
+    docsCtaLabel: "Open UI SDK Docs",
+    docsCtaHint: "Integration, modules, and implementation guidance live in the standalone ui-sdk-docs site.",
     highlights: [
       {
         title: "Consistent visual and interaction model",
@@ -75,11 +80,18 @@ export default function ProductUiSdkPage() {
   const { i18n } = useTranslation();
   const isZh = i18n.language.toLowerCase().startsWith("zh");
   const content = isZh ? PAGE.zh : PAGE.en;
+  const uiSdkDocsPath = isZh ? "/zh/ui-sdk-docs" : "/en/ui-sdk-docs";
 
   return (
     <div className={marketingTheme.pageNarrow}>
       <h1 className={marketingTheme.pageTitle}>{content.title}</h1>
       <p className={`mt-4 ${marketingTheme.lead}`}>{content.subtitle}</p>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Link to={uiSdkDocsPath} className={marketingTheme.primaryButton}>
+          {content.docsCtaLabel}
+        </Link>
+        <p className="text-sm leading-7 text-muted-foreground">{content.docsCtaHint}</p>
+      </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         {content.highlights.map((item) => (

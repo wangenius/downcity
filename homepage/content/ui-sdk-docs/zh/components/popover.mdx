@@ -1,0 +1,49 @@
+---
+title: Popover
+description: 用于轻量说明、小型配置面板和上下文补充操作
+---
+
+# Popover
+
+`Popover` 适合非阻断式的小面板。
+
+## 导入
+
+```tsx
+import { Popover, PopoverTrigger, PopoverContent, Button } from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import { Button, Popover, PopoverTrigger, PopoverContent } from "@downcity/ui";
+
+export function FilterPopover() {
+  return (
+    <Popover>
+      <PopoverTrigger render={<Button size="sm" variant="ghost" />}>
+        筛选
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-4">
+        这里可以放轻量筛选项或说明文字。
+      </PopoverContent>
+    </Popover>
+  );
+}
+```
+
+## 适合场景
+
+- 轻量设置
+- 说明补充
+- 小块筛选面板
+
+## 使用建议
+
+- 简短操作适合 `Popover`
+- 内容复杂或需要阻断时，切换到 `Dialog` 或 `Sheet`
+
+## 继续阅读
+
+- [DropdownMenu](/zh/ui-sdk-docs/components/dropdown-menu)
+- [Dialog](/zh/ui-sdk-docs/components/dialog)

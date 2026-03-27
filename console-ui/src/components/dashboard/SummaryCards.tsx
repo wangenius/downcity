@@ -53,7 +53,7 @@ export interface SummaryCardsProps {
    */
   services: UiServiceItem[]
   /**
-   * skills 列表快照（来自 skill service 的 list）。
+   * skills 列表快照（来自 skill plugin 的 list / lookup 能力）。
    */
   skills: UiSkillSummaryItem[]
   /**

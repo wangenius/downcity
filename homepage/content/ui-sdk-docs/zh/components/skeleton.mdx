@@ -1,0 +1,43 @@
+---
+title: Skeleton
+description: 用于加载占位和内容未就绪状态
+---
+
+# Skeleton
+
+`Skeleton` 用于等待数据时的占位骨架。
+
+## 导入
+
+```tsx
+import { Skeleton } from "@downcity/ui";
+```
+
+## 最小示例
+
+```tsx
+import { Card, CardContent, Skeleton } from "@downcity/ui";
+
+export function LoadingCard() {
+  return (
+    <Card className="max-w-md">
+      <CardContent className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## 使用建议
+
+- 通过 `className` 决定尺寸和形状
+- 与真实布局尽量保持一致
+- 不要用 `Skeleton` 承载真实内容
+
+## 继续阅读
+
+- [Card](/zh/ui-sdk-docs/components/card)
+- [Separator](/zh/ui-sdk-docs/components/separator)

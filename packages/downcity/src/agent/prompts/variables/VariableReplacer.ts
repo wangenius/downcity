@@ -50,9 +50,9 @@ async function buildPromptVariables(options?: {
   projectPath?: string;
 
   /**
-   * 会话 ID（用于 `context_id`）。
+   * 会话 ID（用于 `session_id`）。
    */
-  contextId?: string;
+  sessionId?: string;
 
   /**
    * 请求 ID（用于 `request_id`）。
@@ -72,20 +72,20 @@ async function buildPromptVariables(options?: {
       location: "[See runtime clock tail message]",
       projectPath,
       projectRoot: projectPath,
-      contextId: "[Runtime context id]",
+      sessionId: "[Runtime session id]",
       requestId: "[Runtime request id]",
     };
   }
 
   const geo = await resolvePromptGeoContext();
-  const contextId = String(options?.contextId || "").trim() || "unknown";
+  const sessionId = String(options?.sessionId || "").trim() || "unknown";
   const requestId = String(options?.requestId || "").trim() || "unknown";
   return {
     currentTime: getCurrentTimeString(geo.timezone),
     location: geo.location,
     projectPath,
     projectRoot: projectPath,
-    contextId,
+    sessionId,
     requestId,
   };
 }
@@ -98,7 +98,7 @@ async function buildPromptVariables(options?: {
  * - `{{location}}`
  * - `{{project_path}}`
  * - `{{project_root}}`
- * - `{{context_id}}`
+ * - `{{session_id}}`
  * - `{{request_id}}`
  */
 export async function replaceVariablesInPrompts(
@@ -110,9 +110,9 @@ export async function replaceVariablesInPrompts(
     projectPath?: string;
 
     /**
-     * 会话 ID（用于 `context_id`）。
+     * 会话 ID（用于 `session_id`）。
      */
-    contextId?: string;
+    sessionId?: string;
 
     /**
      * 请求 ID（用于 `request_id`）。
@@ -132,7 +132,7 @@ export async function replaceVariablesInPrompts(
     location: variables.location,
     project_path: variables.projectPath,
     project_root: variables.projectRoot,
-    context_id: variables.contextId,
+    session_id: variables.sessionId,
     request_id: variables.requestId,
   });
 }

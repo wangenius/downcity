@@ -27,28 +27,9 @@ export interface DowncityConfig {
    *
    * 关键点（中文）
    * - 所有服务相关配置统一收敛到 `services` 下，避免顶层散落字段。
-   * - 例如：`services.skills`、`services.chat.channels`。
+   * - 例如：`services.chat.channels`、`services.chat.queue`。
    */
   services?: {
-    /**
-     * Claude Code-compatible skills 配置。
-     *
-     * 默认会扫描：
-     * - 项目内：`.agents/skills/`
-     * - 用户目录：`~/.agents/skills/`
-     */
-    skills?: {
-      /**
-       * Extra skill root directories to scan. Relative paths are resolved from project root.
-       * Example: [".agents/skills", ".my/skills"]
-       */
-      paths?: string[];
-      /**
-       * Allow scanning skill paths outside the project root (absolute paths or `~`).
-       * Default: false.
-       */
-      allowExternalPaths?: boolean;
-    };
     /**
      * Chat service 配置。
      */
@@ -139,6 +120,7 @@ export interface DowncityConfig {
    *
    * 关键点（中文）
    * - 新插件体系的行为配置统一收敛到该字段。
+   * - plugin 私有配置（例如 `plugins.skill.paths`）也放在这里。
    * - key 为 plugin 名称，value 为对应插件的结构化配置对象。
    * - 当前阶段允许各 plugin 自定义字段，但必须保持 JSON 可序列化。
    */

@@ -14,7 +14,7 @@ description: Explains console registry writes, runtime execution, and shell envi
 ## 2. Runtime Execution
 
 - one agent process binds to one `rootPath`
-- runtime assembles services, plugins, and assets
+- runtime assembles `ServiceRuntime`, `PluginRuntime`, and asset infrastructure
 - plugins register `pipeline / guard / effect / resolve` handlers on service-defined points
 - services trigger those points during their workflow
 

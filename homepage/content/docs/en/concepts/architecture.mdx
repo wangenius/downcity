@@ -1,6 +1,6 @@
 ---
 title: Architecture Overview
-description: "Core architecture layers in Downcity: console, agent, service, plugin, and asset"
+description: "Core architecture layers in Downcity: console, agent, service, and plugin"
 ---
 
 # Architecture Overview
@@ -14,7 +14,6 @@ Inside an agent runtime, the execution layer is built from:
 
 - `service`: workflow owners
 - `plugin`: passive extensions
-- `asset`: plugin dependency resources
 
 ## Layered Structure
 
@@ -33,10 +32,6 @@ Inside an agent runtime, the execution layer is built from:
 - attach through extension points defined by services
 - augment, validate, transform, or resolve behavior without owning a lifecycle
 
-5. **Asset Layer**
-- installable or configurable dependencies behind plugins
-- should be understood as plugin dependency infrastructure, not a separate business workflow layer
-
 ## The Most Important Boundary
 
 - `service` actively participates in the agent execution cycle
@@ -46,7 +41,7 @@ So:
 
 - main workflows belong in services
 - extensions belong in plugins
-- plugin dependencies belong in assets
+- plugin dependencies stay inside plugin-owned config and helpers
 
 ## A Concrete Example
 
@@ -55,4 +50,4 @@ In chat flows:
 - the `chat` service owns inbound messages, queueing, execution, and replies
 - the `voice` plugin adds transcription behavior at voice-related points
 - the `auth` plugin adds authorization and role resolution
-- the `voice.transcriber` asset provides the real dependency
+- the `voice` plugin owns its transcription dependency handling

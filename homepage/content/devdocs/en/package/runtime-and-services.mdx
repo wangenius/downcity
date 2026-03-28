@@ -38,8 +38,8 @@ The service layer intentionally uses a thin injected runtime:
 
 This keeps services focused on business flow rather than process orchestration.
 
-The asset port is now part of the plugin runtime surface, not the service runtime surface.
-Services call plugins, and plugins may call assets.
+Plugins now receive the same runtime surface as services.
+Services call plugins, and each plugin owns its own dependency handling internally.
 
 The plugin runtime port exposed to services has now converged on four semantics:
 
@@ -120,4 +120,5 @@ So execution semantics are defined by the runtime, point names are defined by ea
 ### voice plugin
 
 - mainly participates in `chat.augmentInbound`
-- directly calls the `voice.transcriber` asset inside that middleware step and merges transcript text back into inbound content
+- reads its own transcription config from `plugins.voice`
+- resolves transcription dependencies inside the plugin and merges transcript text back into inbound content

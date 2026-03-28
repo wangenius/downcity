@@ -1,6 +1,6 @@
 ---
 title: Invocation Routing & Isolation
-description: Explain why service, plugin, and asset calls do not cross agent environments and how routing works
+description: Explain why service and plugin calls do not cross agent environments and how routing works
 ---
 
 # Invocation Routing & Isolation
@@ -8,7 +8,7 @@ description: Explain why service, plugin, and asset calls do not cross agent env
 ## Short Answer
 
 - one agent runtime binds to one project root
-- `service`, `plugin`, and `asset` calls stay inside that runtime by default
+- `service` and `plugin` calls stay inside that runtime by default
 - cross-agent routing only happens when you explicitly change host/port or target project
 
 ## Main Call Path

@@ -4,17 +4,13 @@
  * 关键点（中文）
  * - Plugin 是运行时增强单元，不维护独立 runtime 状态机。
  * - Plugin 通过 actions / hooks / resolves / system 声明行为。
- * - Plugin 只声明依赖哪些 Asset，不直接理解底层资源实现细节。
+ * - Plugin 的依赖实现应内聚在插件内部，而不是挂成 runtime 公共能力。
  */
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { ServiceSession } from "@/console/service/ServiceRuntime.js";
-import type {
-  AssetPort,
-  RuntimeBase,
-  StructuredConfig,
-} from "@/types/Asset.js";
+import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { StructuredConfig } from "@/types/ExecutionContext.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
@@ -102,10 +98,6 @@ export interface PluginRuntimeView {
    */
   resolves: string[];
   /**
-   * Plugin 依赖 Asset 名称列表。
-   */
-  requiredAssets: string[];
-  /**
    * 是否声明了 system 注入。
    */
   hasSystem: boolean;
@@ -131,10 +123,6 @@ export interface PluginAvailability {
    * 不可用原因列表。
    */
   reasons: string[];
-  /**
-   * 缺失 Asset 列表（可选）。
-   */
-  missingAssets?: string[];
 }
 
 /**
@@ -190,34 +178,7 @@ export interface PluginPort {
 /**
  * Plugin 运行时对象。
  */
-export interface PluginRuntime extends RuntimeBase {
-  /**
-   * Service 调用别名端口。
-   *
-   * 关键点（中文）
-   * - 与 `services` 指向同一语义，仅保留给需要 `runtime.invoke(...)` 兼容面的插件内部工具。
-   */
-  invoke: PluginServiceInvokePort;
-  /**
-   * Service 调用端口。
-   */
-  services: PluginServiceInvokePort;
-  /**
-   * Asset 调用端口。
-   */
-  assets: AssetPort;
-  /**
-   * Plugin 调用端口。
-   */
-  plugins: PluginPort;
-  /**
-   * 运行时 Session 对象（插件可按需窄化）。
-   *
-   * 关键点（中文）
-   * - 第一阶段与 ServiceRuntime 对齐，统一改为 `session` 语义。
-   */
-  session: ServiceSession;
-}
+export type PluginRuntime = ServiceRuntime;
 
 /**
  * Plugin 配置定义。
@@ -235,16 +196,6 @@ export interface PluginConfigDefinition<T extends StructuredConfig = StructuredC
    * 默认配置值。
    */
   defaultValue: T;
-}
-
-/**
- * Plugin 依赖定义。
- */
-export interface PluginRequirements {
-  /**
-   * 依赖的 Asset 名称列表。
-   */
-  assets?: string[];
 }
 
 /**
@@ -484,8 +435,4 @@ export interface Plugin {
   availability?: (
     runtime: PluginRuntime,
   ) => Promise<PluginAvailability> | PluginAvailability;
-  /**
-   * Plugin 依赖定义（可选）。
-   */
-  requirements?: PluginRequirements;
 }

@@ -11,7 +11,6 @@ import fs from "fs-extra";
 import path from "node:path";
 import { execa } from "execa";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
-import type { PluginRuntime } from "@/types/Plugin.js";
 import { Agent } from "@agent/Agent.js";
 import {
   drainDeferredPersistedUserMessages,
@@ -204,54 +203,6 @@ type TaskAgentRuntime = {
 };
 
 /**
- * 为独立 task agent 组装最小 plugin runtime 视图。
- *
- * 关键点（中文）
- * - task runner 只有 service runtime，没有完整 plugin asset 基础设施。
- * - 这里提供一个只用于 system 装配的只读适配层；若某 plugin 强依赖 asset，会在 availability 阶段自动 fail-open 跳过。
- */
-function createTaskPluginRuntime(runtime: ServiceRuntime): PluginRuntime {
-  return {
-    ...runtime,
-    invoke: runtime.invoke,
-    services: runtime.services,
-    assets: {
-      list() {
-        return [];
-      },
-      async check() {
-        return {
-          available: false,
-          reasons: [
-            "asset runtime is not mounted in standalone task prompt assembly",
-          ],
-        };
-      },
-      async install() {
-        return {
-          success: false,
-          message:
-            "asset install is unavailable in standalone task prompt assembly",
-        };
-      },
-      async use() {
-        throw new Error(
-          "asset runtime is not mounted in standalone task prompt assembly",
-        );
-      },
-      async getConfig() {
-        return null;
-      },
-      async setConfig() {
-        throw new Error(
-          "asset runtime is not mounted in standalone task prompt assembly",
-        );
-      },
-    },
-  };
-}
-
-/**
  * 把 task round 的 user query 落盘到对应 run context。
  *
  * 关键点（中文）
@@ -309,7 +260,6 @@ function createTaskAgentRuntime(params: {
     projectRoot: runtime.rootPath,
     getStaticSystemPrompts: () => runtime.systems,
     getRuntime: () => runtime,
-    getPluginRuntime: () => createTaskPluginRuntime(runtime),
     profile: "task",
   });
   const persistorsBySessionId = new Map<string, FilePersistor>();

@@ -7,9 +7,9 @@ import type {
   VoiceProvider,
   VoiceTranscribeStrategy,
 } from "@/agent/types/Voice.js";
-import type { RuntimeBase } from "@/types/Asset.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import { resolveVoiceModelsRootDir } from "./Paths.js";
-import type { VoiceTranscriberAssetConfig } from "@/types/VoicePlugin.js";
+import type { VoicePluginConfig } from "@/types/VoicePlugin.js";
 
 const execShellAsync = promisify(execWithShell);
 const execFileAsync = promisify(execFileCb);
@@ -22,7 +22,7 @@ export interface VoiceTranscribeInput {
   /**
    * 运行时上下文（用于读取配置/根目录/日志）。
    */
-  runtime: RuntimeBase;
+  runtime: ExecutionContext;
   /**
    * 待转写音频路径（相对项目根目录或绝对路径）。
    */
@@ -64,7 +64,7 @@ export interface VoiceTranscribeResult {
 }
 
 type VoiceConfigResolved = {
-  config: VoiceTranscriberAssetConfig;
+  config: VoicePluginConfig;
   modelId: VoiceModelId;
   provider: VoiceProvider;
   modelDir: string;
@@ -101,7 +101,7 @@ function normalizeStrategy(strategy?: VoiceTranscribeStrategy): VoiceTranscribeS
   return "auto";
 }
 
-function toAbsoluteAudioPath(runtime: RuntimeBase, input: string): string {
+function toAbsoluteAudioPath(runtime: ExecutionContext, input: string): string {
   const raw = String(input || "").trim();
   if (!raw) {
     throw new Error("voice transcribe requires audioPath");
@@ -288,12 +288,6 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
     !Array.isArray(input.runtime.config.plugins.voice)
       ? input.runtime.config.plugins.voice
       : null;
-  const assetConfig =
-    input.runtime.config.assets?.["voice.transcriber"] &&
-    typeof input.runtime.config.assets["voice.transcriber"] === "object" &&
-    !Array.isArray(input.runtime.config.assets["voice.transcriber"])
-      ? input.runtime.config.assets["voice.transcriber"]
-      : null;
 
   const enabled =
     pluginConfig && (pluginConfig as { enabled?: unknown }).enabled === true;
@@ -302,7 +296,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
   }
 
   const provider = String(
-    (assetConfig as { provider?: unknown } | null)?.provider || "local",
+    (pluginConfig as { provider?: unknown } | null)?.provider || "local",
   ) as VoiceProvider;
   if (!["local", "command"].includes(provider)) {
     throw new Error(`Unsupported voice provider: ${provider}`);
@@ -310,7 +304,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
 
   const modelId =
     String(
-      (assetConfig as { modelId?: unknown } | null)?.modelId || "SenseVoiceSmall",
+      (pluginConfig as { modelId?: unknown } | null)?.modelId || "SenseVoiceSmall",
     ).trim() || "SenseVoiceSmall";
   if (!modelId && provider === "local") {
     throw new Error("Voice active model is not configured. Run `city voice use <modelId>`.");
@@ -319,7 +313,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
   const modelsRootDir = resolveVoiceModelsRootDir({
     projectRoot: input.runtime.rootPath,
     modelsDir: String(
-      (assetConfig as { modelsDir?: unknown } | null)?.modelsDir || "",
+      (pluginConfig as { modelsDir?: unknown } | null)?.modelsDir || "",
     ).trim(),
   });
   const modelDir = path.resolve(modelsRootDir, modelId);
@@ -337,17 +331,17 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
   }
 
   const commandTemplate = String(
-    (assetConfig as { command?: unknown } | null)?.command || "",
+    (pluginConfig as { command?: unknown } | null)?.command || "",
   ).trim();
   const strategy = normalizeStrategy(
-    ((assetConfig as { strategy?: unknown } | null)?.strategy as
+    ((pluginConfig as { strategy?: unknown } | null)?.strategy as
       | VoiceTranscribeStrategy
       | undefined) ||
       (provider === "command" ? "command" : "auto"),
   );
 
   return {
-    config: (assetConfig as VoiceTranscriberAssetConfig | null) || {
+    config: (pluginConfig as VoicePluginConfig | null) || {
       provider: "local",
     },
     modelId: modelId as VoiceModelId,
@@ -355,15 +349,15 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
     modelDir,
     audioPath,
     timeoutMs: normalizeTimeoutMs(
-      (assetConfig as { timeoutMs?: unknown } | null)?.timeoutMs as number | undefined,
+      (pluginConfig as { timeoutMs?: unknown } | null)?.timeoutMs as number | undefined,
     ),
     language: normalizeLanguage(
       input.language ||
-        String((assetConfig as { language?: unknown } | null)?.language || ""),
+        String((pluginConfig as { language?: unknown } | null)?.language || ""),
     ),
     pythonBin: normalizePythonBin(
       String(
-        (assetConfig as { pythonBin?: unknown } | null)?.pythonBin || "",
+        (pluginConfig as { pythonBin?: unknown } | null)?.pythonBin || "",
       ),
     ),
     commandTemplate: commandTemplate || undefined,
@@ -402,7 +396,7 @@ export async function transcribeVoiceAudio(
         const template = String(resolved.commandTemplate || "").trim();
         if (!template) {
           throw new Error(
-            "Voice transcribe strategy=command requires assets.voice.transcriber.command",
+            "Voice transcribe strategy=command requires plugins.voice.command",
           );
         }
         text = await runCustomCommand({

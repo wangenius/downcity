@@ -24,7 +24,6 @@ function createLogger() {
 }
 
 function createRuntime() {
-  const assetInstalls = [];
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-voice-plugin-"));
   fs.writeFileSync(
     path.join(rootPath, "downcity.json"),
@@ -38,7 +37,6 @@ function createRuntime() {
     "utf-8",
   );
   return {
-    assetInstalls,
     runtime: {
       cwd: ".",
       rootPath,
@@ -49,8 +47,12 @@ function createRuntime() {
         model: {
           primary: "demo-model",
         },
-        plugins: {},
-        assets: {},
+        plugins: {
+          voice: {
+            provider: "command",
+            command: "printf 'ok\\n'",
+          },
+        },
       },
       env: {},
       systems: [],
@@ -58,48 +60,6 @@ function createRuntime() {
       services: {
         async invoke() {
           return { success: false, error: "unused" };
-        },
-      },
-      assets: {
-        list() {
-          return [];
-        },
-        async check() {
-          return {
-            available: true,
-            reasons: [],
-          };
-        },
-        async install(assetName, payload) {
-          assetInstalls.push({
-            assetName,
-            payload,
-          });
-          return {
-            success: true,
-            message: "installed",
-            details: {
-              assetName,
-            },
-          };
-        },
-        async use() {
-          return {
-            async transcribe() {
-              return {
-                success: true,
-                text: "ok",
-              };
-            },
-          };
-        },
-        async getConfig() {
-          return {
-            provider: "local",
-          };
-        },
-        async setConfig() {
-          return {};
         },
       },
       plugins: {
@@ -111,7 +71,6 @@ function createRuntime() {
             enabled: true,
             available: true,
             reasons: [],
-            missingAssets: [],
           };
         },
         async runAction() {
@@ -149,8 +108,8 @@ test("voice plugin configure action writes plugin config", async () => {
   assert.equal(runtime.config.plugins.voice.injectPrompt, false);
 });
 
-test("voice plugin install action delegates to voice.transcriber asset", async () => {
-  const { runtime, assetInstalls } = createRuntime();
+test("voice plugin install action no longer depends on runtime.assets", async () => {
+  const { runtime } = createRuntime();
 
   const result = await voicePlugin.actions.install.execute({
     runtime,
@@ -162,12 +121,9 @@ test("voice plugin install action delegates to voice.transcriber asset", async (
   });
 
   assert.equal(result.success, true);
-  assert.equal(assetInstalls.length, 1);
-  assert.equal(assetInstalls[0].assetName, "voice.transcriber");
-  assert.equal(assetInstalls[0].payload.force, true);
 });
 
-test("voice plugin status action returns plugin and asset snapshots", async () => {
+test("voice plugin status action returns plugin and transcriber snapshots", async () => {
   const { runtime } = createRuntime();
 
   await voicePlugin.actions.configure.execute({
@@ -188,6 +144,5 @@ test("voice plugin status action returns plugin and asset snapshots", async () =
 
   assert.equal(result.success, true);
   assert.equal(result.data.plugin.enabled, true);
-  assert.equal(result.data.availability.available, true);
-  assert.equal(result.data.asset.provider, "local");
+  assert.equal(result.data.transcriber.provider, "command");
 });

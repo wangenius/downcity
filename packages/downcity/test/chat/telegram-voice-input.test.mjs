@@ -7,6 +7,8 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { buildChatInboundText } from "../../bin/services/chat/runtime/InboundAugment.js";
@@ -14,20 +16,19 @@ import { CHAT_PLUGIN_POINTS } from "../../bin/services/chat/runtime/PluginPoints
 import { voicePlugin } from "../../bin/plugins/voice/Plugin.js";
 
 test("voice plugin pipeline augments inbound sections for telegram attachments", async () => {
-  const rootPath = "/tmp/demo-root";
+  const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-voice-telegram-"));
+  fs.mkdirSync(path.join(rootPath, "cache"), { recursive: true });
+  fs.writeFileSync(path.join(rootPath, "cache/a.ogg"), "");
+  fs.writeFileSync(path.join(rootPath, "cache/b.mp3"), "");
   const runtime = {
     rootPath,
-    assets: {
-      async use(assetName) {
-        assert.equal(assetName, "voice.transcriber");
-        return {
-          async transcribe(payload) {
-        if (payload.audioPath.endsWith("a.ogg")) {
-          return { text: "第一段语音" };
-        }
-        return { text: "第二段音频" };
-          },
-        };
+    config: {
+      plugins: {
+        voice: {
+          enabled: true,
+          provider: "command",
+          command: "printf '统一转写文本\\n'",
+        },
       },
     },
   };
@@ -55,8 +56,7 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
   });
   const text = buildChatInboundText(next);
 
-  assert.match(text, /第一段语音/);
-  assert.match(text, /第二段音频/);
+  assert.match(text, /统一转写文本/);
   assert.match(text, /语音转写/);
   assert.match(text, /<file type="voice">/);
   assert.match(text, /hello/);
@@ -67,9 +67,11 @@ test("voice plugin pipeline ignores resolve failures and keeps base text", async
   const next = await handler({
     runtime: {
       rootPath: "/tmp/demo-root",
-      assets: {
-        async use() {
-          throw new Error("voice plugin disabled");
+      config: {
+        plugins: {
+          voice: {
+            enabled: false,
+          },
         },
       },
     },

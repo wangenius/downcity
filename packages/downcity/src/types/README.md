@@ -12,20 +12,22 @@
 - `Json.ts`
   - 定义 `JsonPrimitive`、`JsonValue`、`JsonObject`。
   - 作为跨模块传输结构化数据时的统一约束（配置、日志 details、服务 payload 等）。
-- `Asset.ts`
-  - 定义 `RuntimeBase`、`Asset`、`AssetPort`、`AssetCheckResult`、`AssetInstallResult`。
-  - `RuntimeBase` 是 service / plugin / asset 共用的最小宿主上下文。
-  - 其余类型用于新的插件依赖体系，统一表达底层资源对象与其调用协议。
-  - 语义上它更接近 plugin dependency，而不是和 service 并列的一等业务能力。
+- `ExecutionContext.ts`
+  - 定义 `ExecutionContext`、`StructuredConfig`。
+  - `ExecutionContext` 是 service / plugin 共用的最小执行上下文。
+  - 用于承载路径、配置、环境与日志这些稳定底座能力。
 - `Plugin.ts`
   - 定义 `Plugin`、`PluginAction`、`PluginPort` 等。
   - 用于新的声明式插件体系，统一表达插件行为、可用性与显式调用协议。
 - `VoicePlugin.ts`
-  - 定义 `VoicePluginConfig`、`VoiceTranscriberAssetConfig`、`VoiceTranscriberHandle`。
-  - 用于 voice 插件第一阶段迁移，拆分插件行为配置与底层转写资产配置。
+  - 定义 `VoicePluginConfig`、`VoiceTranscriberConfig`、`VoiceTranscriberHandle`。
+  - 用于 voice plugin 的行为配置与转写依赖配置。
 - `PluginApi.ts`
   - 定义 `PluginListResponse`、`PluginAvailabilityResponse`、`PluginActionResponse`。
   - 用于 plugin CLI / HTTP 桥接层，统一描述管理面协议。
+- `AuthDashboard.ts`
+  - 定义 `AuthDashboardPayload`。
+  - 用于 dashboard authorization 页面，统一描述 auth 管理面的返回结构。
 
 ## 设计原则
 

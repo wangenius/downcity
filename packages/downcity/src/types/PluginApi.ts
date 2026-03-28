@@ -45,10 +45,6 @@ export interface PluginView {
    */
   resolves: string[];
   /**
-   * 依赖的 Asset 名称列表。
-   */
-  requiredAssets: string[];
-  /**
    * 是否声明了 system 注入。
    */
   hasSystem: boolean;
@@ -74,10 +70,6 @@ export interface PluginAvailabilityView {
    * 不可用原因列表。
    */
   reasons: string[];
-  /**
-   * 缺失的 Asset 名称列表（可选）。
-   */
-  missingAssets?: string[];
 }
 
 /**

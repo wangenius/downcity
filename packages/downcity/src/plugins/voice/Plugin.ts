@@ -1,9 +1,9 @@
 /**
- * Voice Plugin（第一阶段实现）。
+ * Voice Plugin。
  *
  * 关键点（中文）
- * - Voice Plugin 只依赖 `voice.transcriber` Asset。
- * - 具体模型、依赖安装、命令模板等实现细节全部下沉到 Asset。
+ * - Voice Plugin 现在自己内聚转写依赖，不再暴露独立依赖端口心智。
+ * - 具体模型、依赖安装、命令模板等实现细节全部收敛到 plugin 内部 dependency helper。
  * - 当前作为 chat 入站消息增强中间件接入语音转写。
  */
 
@@ -17,6 +17,13 @@ import {
   listVoiceModels,
   resolveVoicePluginModelId,
 } from "@/plugins/voice/ModelCatalog.js";
+import {
+  checkVoiceTranscriber,
+  installVoiceTranscriber,
+  readVoiceTranscriberConfig,
+  transcribeWithVoiceDependency,
+  writeVoiceTranscriberConfig,
+} from "@/plugins/voice/Dependency.js";
 
 function toJsonObject(input: Record<string, unknown> | null | undefined): JsonObject | null {
   if (!input) return null;
@@ -70,41 +77,11 @@ function getBooleanOpt(
   return defaultValue;
 }
 
-function readVoiceAssetConfig(runtime: {
-  config: {
-    assets?: Record<string, unknown>;
-  };
-}): JsonObject {
-  const current = runtime.config.assets?.["voice.transcriber"];
-  if (!current || typeof current !== "object" || Array.isArray(current)) {
-    return {};
-  }
-  return current as JsonObject;
-}
-
-async function transcribeWithVoiceAsset(params: {
-  runtime: {
-    assets: {
-      use<T = unknown>(assetName: string): Promise<T>;
-    };
-  };
-  audioPath: string;
-  language?: string;
-}): Promise<{ success: boolean; text?: string; error?: string }> {
-  const transcriber = await params.runtime.assets.use<{
-    transcribe(input: {
-      audioPath: string;
-      language?: string;
-    }): Promise<{ success: boolean; text?: string; error?: string }>;
-  }>("voice.transcriber");
-  return transcriber.transcribe({
-    audioPath: params.audioPath,
-    ...(params.language ? { language: params.language } : {}),
-  });
-}
-
 /**
  * 读取 Voice Plugin 配置。
+ *
+ * 关键点（中文）
+ * - 行为配置与转写依赖配置统一收敛到 `plugins.voice`。
  */
 function readVoicePluginConfig(runtime: {
   config: {
@@ -126,7 +103,45 @@ function readVoicePluginConfig(runtime: {
       typeof normalized.augmentMessage === "boolean"
         ? normalized.augmentMessage
         : true,
+    provider:
+      normalized.provider === "command" || normalized.provider === "local"
+        ? normalized.provider
+        : "local",
+    ...(typeof normalized.modelId === "string" ? { modelId: normalized.modelId } : {}),
+    ...(typeof normalized.modelsDir === "string" ? { modelsDir: normalized.modelsDir } : {}),
+    ...(typeof normalized.pythonBin === "string" ? { pythonBin: normalized.pythonBin } : {}),
+    ...(typeof normalized.command === "string" ? { command: normalized.command } : {}),
+    ...(typeof normalized.language === "string" ? { language: normalized.language } : {}),
+    ...(typeof normalized.timeoutMs === "number" ? { timeoutMs: normalized.timeoutMs } : {}),
+    ...(typeof normalized.strategy === "string" ? { strategy: normalized.strategy } : {}),
+    ...(Array.isArray(normalized.installedModels)
+      ? { installedModels: normalized.installedModels }
+      : {}),
   };
+}
+
+/**
+ * 写入完整 voice plugin 配置。
+ */
+async function writeVoicePluginConfig(params: {
+  runtime: {
+    rootPath: string;
+    config: {
+      plugins?: Record<string, unknown>;
+    };
+  };
+  value: VoicePluginConfig;
+}): Promise<void> {
+  if (!params.runtime.config.plugins) {
+    params.runtime.config.plugins = {};
+  }
+  params.runtime.config.plugins.voice = (toJsonObject(params.value) || {}) as JsonObject;
+  await persistProjectPluginConfig({
+    projectRoot: params.runtime.rootPath,
+    sections: {
+      plugins: params.runtime.config.plugins as Record<string, JsonObject>,
+    },
+  });
 }
 
 /**
@@ -136,7 +151,7 @@ export const voicePlugin: Plugin = {
   name: "voice",
   title: "Voice Message Transcription",
   description:
-    "Detects voice and audio attachments in inbound chat messages, runs transcription through the configured voice asset, and appends readable text so the agent can work with spoken input like normal message content.",
+    "Detects voice and audio attachments in inbound chat messages, runs transcription through the configured voice dependency, and appends readable text so the agent can work with spoken input like normal message content.",
   config: {
     plugin: "voice",
     scope: "project",
@@ -144,10 +159,9 @@ export const voicePlugin: Plugin = {
       enabled: false,
       injectPrompt: true,
       augmentMessage: true,
+      provider: "local",
+      modelId: "SenseVoiceSmall",
     },
-  },
-  requirements: {
-    assets: ["voice.transcriber"],
   },
   async availability(runtime) {
     const config = readVoicePluginConfig(runtime);
@@ -156,15 +170,13 @@ export const voicePlugin: Plugin = {
         enabled: false,
         available: false,
         reasons: ["voice plugin disabled"],
-        missingAssets: ["voice.transcriber"],
       };
     }
-    const assetStatus = await runtime.assets.check("voice.transcriber");
+    const dependencyStatus = await checkVoiceTranscriber(runtime);
     return {
       enabled: true,
-      available: assetStatus.available,
-      reasons: assetStatus.reasons,
-      missingAssets: assetStatus.available ? [] : ["voice.transcriber"],
+      available: dependencyStatus.available,
+      reasons: dependencyStatus.reasons,
     };
   },
   hooks: {
@@ -188,7 +200,7 @@ export const voicePlugin: Plugin = {
 
           for (const attachment of voiceAttachments) {
             try {
-              const result = await transcribeWithVoiceAsset({
+              const result = await transcribeWithVoiceDependency({
                 runtime,
                 audioPath: String(attachment.path || "").trim(),
               });
@@ -224,7 +236,7 @@ export const voicePlugin: Plugin = {
       execute: async ({ runtime }) => {
         const config = readVoicePluginConfig(runtime);
         const availability = await voicePlugin.availability!(runtime);
-        const assetConfig = await runtime.assets.getConfig("voice.transcriber");
+        const transcriberConfig = readVoiceTranscriberConfig(runtime);
         return {
           success: true,
           data: {
@@ -233,16 +245,16 @@ export const voicePlugin: Plugin = {
               enabled: availability.enabled,
               available: availability.available,
               reasons: availability.reasons,
-              missingAssets: availability.missingAssets || [],
             },
-            asset: toJsonObject((assetConfig || null) as Record<string, unknown> | null),
+            transcriber:
+              toJsonObject((transcriberConfig || null) as Record<string, unknown> | null),
           },
         };
       },
     },
     install: {
       command: {
-        description: "安装 voice 转写资产",
+        description: "安装 voice 转写依赖",
         configure(command) {
           command
             .argument("[models...]")
@@ -274,7 +286,13 @@ export const voicePlugin: Plugin = {
         },
       },
       execute: async ({ runtime, payload }) => {
-        const result = await runtime.assets.install("voice.transcriber", payload);
+        const result = await installVoiceTranscriber({
+          runtime,
+          input:
+            payload && typeof payload === "object" && !Array.isArray(payload)
+              ? payload
+              : undefined,
+        });
         return {
           success: result.success,
           ...(result.message ? { message: result.message } : {}),
@@ -292,15 +310,9 @@ export const voicePlugin: Plugin = {
             ? payload
             : {}),
         };
-        if (!runtime.config.plugins) {
-          runtime.config.plugins = {};
-        }
-        runtime.config.plugins.voice = (toJsonObject(next) || {}) as JsonObject;
-        await persistProjectPluginConfig({
-          projectRoot: runtime.rootPath,
-          sections: {
-            plugins: runtime.config.plugins,
-          },
+        await writeVoicePluginConfig({
+          runtime,
+          value: next,
         });
         return {
           success: true,
@@ -312,14 +324,14 @@ export const voicePlugin: Plugin = {
     },
     on: {
       command: {
-        description: "启用 voice plugin，并可选安装转写资产",
+        description: "启用 voice plugin，并可选安装转写依赖",
         configure(command) {
           command
             .argument("[models...]")
             .option("--active-model <modelId>", "安装完成后设为当前模型")
             .option("--models-dir <path>", "模型目录（可选）")
             .option("--python <bin>", "Python 可执行文件（默认 python3）")
-            .option("--no-install", "仅启用 plugin，不安装资产")
+            .option("--no-install", "仅启用 plugin，不安装依赖")
             .option("--no-install-deps", "跳过依赖安装")
             .option("--force", "强制覆盖已存在资源")
             .option("--hf-token <token>", "HuggingFace token（可选）")
@@ -362,36 +374,31 @@ export const voicePlugin: Plugin = {
               ? ((payload as { augmentMessage?: boolean }).augmentMessage as boolean)
               : true,
         };
-        if (!runtime.config.plugins) {
-          runtime.config.plugins = {};
-        }
-        runtime.config.plugins.voice = (toJsonObject(nextConfig) || {}) as JsonObject;
+        await writeVoicePluginConfig({
+          runtime,
+          value: nextConfig,
+        });
         if ((payload as { install?: unknown }).install !== false) {
-          const installResult = await runtime.assets.install("voice.transcriber", {
-            ...(payload && typeof payload === "object" && !Array.isArray(payload)
-              ? payload
-              : {}),
+          const installResult = await installVoiceTranscriber({
+            runtime,
+            input:
+              payload && typeof payload === "object" && !Array.isArray(payload)
+                ? payload
+                : undefined,
           });
           if (!installResult.success) {
             return {
               success: false,
-              error: installResult.message || "voice asset install failed",
-              message: installResult.message || "voice asset install failed",
+              error: installResult.message || "voice dependency install failed",
+              message: installResult.message || "voice dependency install failed",
             };
           }
         }
-        await persistProjectPluginConfig({
-          projectRoot: runtime.rootPath,
-          sections: {
-            plugins: runtime.config.plugins,
-            assets: runtime.config.assets,
-          },
-        });
         return {
           success: true,
           data: {
             plugin: toJsonObject(nextConfig) || {},
-            asset: toJsonObject(readVoiceAssetConfig(runtime)) || {},
+            transcriber: toJsonObject(readVoiceTranscriberConfig(runtime)) || {},
           },
         };
       },
@@ -408,15 +415,9 @@ export const voicePlugin: Plugin = {
           ...readVoicePluginConfig(runtime),
           enabled: false,
         };
-        if (!runtime.config.plugins) {
-          runtime.config.plugins = {};
-        }
-        runtime.config.plugins.voice = (toJsonObject(nextConfig) || {}) as JsonObject;
-        await persistProjectPluginConfig({
-          projectRoot: runtime.rootPath,
-          sections: {
-            plugins: runtime.config.plugins,
-          },
+        await writeVoicePluginConfig({
+          runtime,
+          value: nextConfig,
         });
         return {
           success: true,
@@ -428,7 +429,7 @@ export const voicePlugin: Plugin = {
     },
     use: {
       command: {
-        description: "切换 voice 当前转写资产模型",
+        description: "切换 voice 当前转写模型",
         configure(command) {
           command.argument("<modelId>");
         },
@@ -452,14 +453,17 @@ export const voicePlugin: Plugin = {
             message: `Unsupported voice model: ${modelId}`,
           };
         }
-        const assetConfig = await runtime.assets.setConfig("voice.transcriber", {
-          ...readVoiceAssetConfig(runtime),
-          modelId: resolvedModelId,
+        const transcriberConfig = await writeVoiceTranscriberConfig({
+          runtime,
+          value: {
+            ...readVoiceTranscriberConfig(runtime),
+            modelId: resolvedModelId,
+          },
         });
         return {
           success: true,
           data: {
-            asset: toJsonObject(assetConfig) || {},
+            transcriber: toJsonObject(transcriberConfig as Record<string, unknown>) || {},
           },
         };
       },
@@ -494,7 +498,7 @@ export const voicePlugin: Plugin = {
             message: pluginStatus.reasons.join("; "),
           };
         }
-        const result = await transcribeWithVoiceAsset({
+        const result = await transcribeWithVoiceDependency({
           runtime,
           audioPath: String((payload as { audioPath?: unknown }).audioPath || ""),
           language:
@@ -512,7 +516,7 @@ export const voicePlugin: Plugin = {
     },
     models: {
       command: {
-        description: "列出内置 voice 资产支持的模型目录",
+        description: "列出内置 voice 支持的模型目录",
         mapInput() {
           return {};
         },
@@ -528,14 +532,14 @@ export const voicePlugin: Plugin = {
     },
     doctor: {
       command: {
-        description: "检查 voice plugin 与转写资产可用性",
+        description: "检查 voice plugin 与转写依赖可用性",
         mapInput() {
           return {};
         },
       },
       execute: async ({ runtime }) => {
         const availability = await voicePlugin.availability!(runtime);
-        const assetStatus = await runtime.assets.check("voice.transcriber");
+        const dependencyStatus = await checkVoiceTranscriber(runtime);
         return {
           success: availability.available,
           data: {
@@ -543,13 +547,12 @@ export const voicePlugin: Plugin = {
               enabled: availability.enabled,
               available: availability.available,
               reasons: availability.reasons,
-              missingAssets: availability.missingAssets || [],
             },
-            assetStatus: {
-              available: assetStatus.available,
-              reasons: assetStatus.reasons,
-              ...(assetStatus.details !== undefined
-                ? { details: assetStatus.details }
+            transcriberStatus: {
+              available: dependencyStatus.available,
+              reasons: dependencyStatus.reasons,
+              ...(dependencyStatus.details !== undefined
+                ? { details: dependencyStatus.details }
                 : {}),
             },
           },

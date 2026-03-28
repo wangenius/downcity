@@ -116,18 +116,6 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
             enabled: { type: "boolean" },
             injectPrompt: { type: "boolean" },
             augmentMessage: { type: "boolean" },
-          },
-        },
-      },
-    },
-    assets: {
-      type: "object",
-      additionalProperties: true,
-      properties: {
-        "voice.transcriber": {
-          type: "object",
-          additionalProperties: true,
-          properties: {
             provider: { type: "string", enum: ["local", "command"] },
             modelId: {
               type: "string",

@@ -3,10 +3,9 @@
  *
  * 关键点（中文）
  * - 统一管理 Plugin 注册、可用性检查与显式 Action 运行。
- * - Plugin 自身不维护 runtime 状态机；可用性由 requirements / availability 决定。
+ * - Plugin 自身不维护 runtime 状态机；可用性由 enabled 配置与 plugin 自定义 availability 决定。
  */
 
-import type { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
 import { isPluginEnabledInConfig } from "@/console/plugin/Activation.js";
 import type { HookRegistry } from "@/console/plugin/HookRegistry.js";
 import type {
@@ -28,18 +27,14 @@ export class PluginRegistry {
 
   private readonly hookRegistry: HookRegistry;
 
-  private readonly assetRegistry: AssetRegistry;
-
   private readonly plugins = new Map<string, Plugin>();
 
   constructor(params: {
     runtimeResolver: RuntimeResolver;
     hookRegistry: HookRegistry;
-    assetRegistry: AssetRegistry;
   }) {
     this.runtimeResolver = params.runtimeResolver;
     this.hookRegistry = params.hookRegistry;
-    this.assetRegistry = params.assetRegistry;
   }
 
   /**
@@ -146,9 +141,6 @@ export class PluginRegistry {
         resolves: Object.keys(plugin.resolves || {}).sort((a, b) =>
           a.localeCompare(b),
         ),
-        requiredAssets: Array.isArray(plugin.requirements?.assets)
-          ? [...plugin.requirements.assets].sort((a, b) => a.localeCompare(b))
-          : [],
         hasSystem: typeof plugin.system === "function",
         hasAvailability: typeof plugin.availability === "function",
       }))
@@ -165,7 +157,6 @@ export class PluginRegistry {
         enabled: false,
         available: false,
         reasons: [`Unknown plugin: ${pluginName}`],
-        missingAssets: [],
       };
     }
 
@@ -184,27 +175,12 @@ export class PluginRegistry {
         enabled: false,
         available: false,
         reasons: [`Plugin "${plugin.name}" is disabled`],
-        missingAssets: Array.isArray(plugin.requirements?.assets)
-          ? [...plugin.requirements.assets]
-          : [],
       };
     }
-
-    const missingAssets: string[] = [];
-    const reasons: string[] = [];
-    for (const assetName of plugin.requirements?.assets || []) {
-      const checked = await this.assetRegistry.check(assetName);
-      if (!checked.available) {
-        missingAssets.push(assetName);
-        reasons.push(...checked.reasons);
-      }
-    }
-
     return {
       enabled: true,
-      available: reasons.length === 0,
-      reasons,
-      missingAssets,
+      available: true,
+      reasons: [],
     };
   }
 

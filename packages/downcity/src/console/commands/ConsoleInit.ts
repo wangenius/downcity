@@ -15,7 +15,7 @@ import path from "node:path";
 import fs from "fs-extra";
 import prompts from "prompts";
 import type { LlmProviderType } from "@agent/types/LlmConfig.js";
-import { DOWNCITY_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
+import { DOWNCITY_JSON_SCHEMA } from "@/console/constants/DowncitySchema.js";
 import { saveJson } from "@/utils/storage/index.js";
 import {
   getConsoleRootDirPath,

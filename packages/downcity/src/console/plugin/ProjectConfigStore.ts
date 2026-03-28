@@ -1,9 +1,9 @@
 /**
- * Plugin / Asset 项目配置持久化工具。
+ * Plugin 项目配置持久化工具。
  *
  * 关键点（中文）
  * - 新插件体系的用户配置统一写回项目 `downcity.json`。
- * - 这里只负责 `plugins` / `assets` 两个配置域，避免把 runtime 合并态整包落盘。
+ * - 这里只负责 `plugins` 配置域，避免把 runtime 合并态整包落盘。
  * - 这样既能保证重启后配置仍然生效，也能避免把 console 全局配置误写进项目文件。
  */
 
@@ -16,10 +16,6 @@ type PersistableSections = {
    * 插件配置块（可选）。
    */
   plugins?: DowncityConfig["plugins"];
-  /**
-   * 资产配置块（可选）。
-   */
-  assets?: DowncityConfig["assets"];
 };
 
 function getProjectDowncityJsonPath(projectRoot: string): string {
@@ -37,7 +33,7 @@ async function readProjectDowncityConfig(projectRoot: string): Promise<DowncityC
 }
 
 /**
- * 将 plugins / assets 配置块写回项目 `downcity.json`。
+ * 将 plugins 配置块写回项目 `downcity.json`。
  */
 export async function persistProjectPluginConfig(params: {
   /**
@@ -55,9 +51,6 @@ export async function persistProjectPluginConfig(params: {
     ...current,
     ...(params.sections.plugins !== undefined
       ? { plugins: params.sections.plugins }
-      : {}),
-    ...(params.sections.assets !== undefined
-      ? { assets: params.sections.assets }
       : {}),
   };
   await fs.writeFile(downcityJsonPath, `${JSON.stringify(next, null, 2)}\n`, "utf-8");

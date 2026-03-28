@@ -26,8 +26,8 @@ import {
   getDowncityTasksDirPath,
   getSoulMdPath,
 } from "@/console/env/Paths.js";
-import { DEFAULT_DOWNCITY_JSON } from "@/console/constants/Ship.js";
-import { DOWNCITY_JSON_SCHEMA } from "@/console/constants/ShipSchema.js";
+import { DEFAULT_DOWNCITY_JSON } from "@/console/constants/DowncityDefault.js";
+import { DOWNCITY_JSON_SCHEMA } from "@/console/constants/DowncitySchema.js";
 import type { DowncityConfig } from "@/console/env/Config.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,

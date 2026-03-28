@@ -81,7 +81,6 @@ export const authPlugin: Plugin = {
       enabled: true,
       available: true,
       reasons: [],
-      missingAssets: [],
     };
   },
   hooks: {

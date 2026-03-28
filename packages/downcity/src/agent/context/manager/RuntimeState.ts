@@ -21,7 +21,6 @@ import {
 import { runServiceCommand } from "@/console/service/Manager.js";
 import { isPluginEnabledInConfig } from "@/console/plugin/Activation.js";
 import { HookRegistry } from "@/console/plugin/HookRegistry.js";
-import { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
 import { PluginRegistry } from "@/console/plugin/PluginRegistry.js";
 import { registerBuiltinPlugins } from "@/console/plugin/Plugins.js";
 import { setShellToolRuntime, shellTools } from "@agent/tools/shell/Tool.js";
@@ -35,13 +34,7 @@ import {
   PromptRuntime,
 } from "@agent/prompts/PromptRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
-import type {
-  AssetInstallInput,
-  AssetPort,
-  AssetCheckResult,
-  AssetInstallResult,
-  StructuredConfig,
-} from "@/types/Asset.js";
+import type { StructuredConfig } from "@/types/ExecutionContext.js";
 import type {
   PluginAvailability,
   PluginPort,
@@ -104,16 +97,13 @@ const hookRegistry = new HookRegistry({
     });
   },
 });
-const assetRegistry = new AssetRegistry(() => getPluginRuntimeState());
 const pluginRegistry = new PluginRegistry({
   runtimeResolver: () => getPluginRuntimeState(),
   hookRegistry,
-  assetRegistry,
 });
 pluginRegistryRef = pluginRegistry;
 
 registerBuiltinPlugins({
-  assetRegistry,
   pluginRegistry,
 });
 
@@ -226,42 +216,6 @@ const serviceInvokePort: ServiceInvokePort = {
 };
 
 /**
- * asset 调用端口实现。
- *
- * 关键点（中文）
- * - Asset 负责底层资源检查、安装、解析与配置读写。
- * - Plugin 与业务代码都不应直接拼装模型/依赖安装逻辑。
- */
-const assetPort: AssetPort = {
-  list() {
-    return assetRegistry.list();
-  },
-  async check(assetName: string): Promise<AssetCheckResult> {
-    return assetRegistry.check(assetName);
-  },
-  async install<TInstallInput extends AssetInstallInput = AssetInstallInput>(
-    assetName: string,
-    input?: TInstallInput,
-  ): Promise<AssetInstallResult> {
-    return assetRegistry.install(assetName, input);
-  },
-  async use<THandle = unknown>(assetName: string): Promise<THandle> {
-    return assetRegistry.use<THandle>(assetName);
-  },
-  async getConfig<TConfig extends StructuredConfig = StructuredConfig>(
-    assetName: string,
-  ): Promise<TConfig | null> {
-    return assetRegistry.getConfig<TConfig>(assetName);
-  },
-  async setConfig<TConfig extends StructuredConfig = StructuredConfig>(
-    assetName: string,
-    value: Partial<TConfig>,
-  ): Promise<TConfig> {
-    return assetRegistry.setConfig<TConfig>(assetName, value);
-  },
-};
-
-/**
  * plugin 调用端口实现。
  *
  * 关键点（中文）
@@ -369,29 +323,6 @@ function buildServiceRuntime(input: RuntimeState): ServiceRuntime {
 }
 
 /**
- * 构建 plugin runtime。
- *
- * 关键点（中文）
- * - plugin runtime 是独立视图，不再复用 ServiceRuntime。
- * - `assets` 只暴露给 plugin，不再成为 service 的一级能力面。
- */
-function buildPluginRuntime(input: RuntimeState): PluginRuntime {
-  return {
-    cwd: input.cwd,
-    rootPath: input.rootPath,
-    logger: input.logger,
-    config: input.config,
-    env: input.env,
-    systems: input.systems,
-    session: buildServiceSession(input),
-    invoke: serviceInvokePort,
-    services: serviceInvokePort,
-    assets: assetPort,
-    plugins: pluginPort,
-  };
-}
-
-/**
  * 获取完整 service runtime state。
  */
 export function getServiceRuntimeState(): ServiceRuntime {
@@ -402,11 +333,11 @@ export function getServiceRuntimeState(): ServiceRuntime {
  * 获取完整 plugin runtime state。
  *
  * 关键点（中文）
- * - plugin runtime 与 service runtime 现在显式分离。
- * - service 不再暴露 `assets`，plugin 仍可通过专用 runtime 访问 asset 基础设施。
+ * - plugin runtime 与 service runtime 现在复用同一套执行上下文。
+ * - 保留该函数只为维持调用语义清晰，返回值与 service runtime 等价。
  */
 export function getPluginRuntimeState(): PluginRuntime {
-  return buildPluginRuntime(getRuntimeState());
+  return getServiceRuntimeState();
 }
 
 /**
@@ -535,7 +466,6 @@ export async function initRuntimeState(cwd: string): Promise<void> {
     projectRoot: rootPath,
     getStaticSystemPrompts: () => getRuntimeStateBase().systems,
     getRuntime: () => getServiceRuntimeState(),
-    getPluginRuntime: () => getPluginRuntimeState(),
     profile: "chat",
   });
   const dispatcher = new SessionAgentDispatcher({

@@ -11,7 +11,6 @@ import {
 } from "@agent/components/PrompterComponent.js";
 import { requestContext } from "@agent/context/manager/RequestContext.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
-import type { PluginRuntime } from "@/types/Plugin.js";
 import {
   resolveAgentSystemMessages,
   type SystemProfile,
@@ -34,11 +33,6 @@ type PromptSystemOptions = {
   getRuntime: () => ServiceRuntime;
 
   /**
-   * 读取 plugin runtime（用于加载 plugin system 文本）。
-   */
-  getPluginRuntime: () => PluginRuntime;
-
-  /**
    * system 档位（默认 chat）。
    */
   profile?: SystemProfile;
@@ -53,7 +47,6 @@ export class PromptSystem extends PrompterComponent {
   private readonly projectRoot: string;
   private readonly getStaticSystemPrompts: PromptSystemOptions["getStaticSystemPrompts"];
   private readonly getRuntime: PromptSystemOptions["getRuntime"];
-  private readonly getPluginRuntime: PromptSystemOptions["getPluginRuntime"];
   private readonly profile: SystemProfile;
 
   constructor(options: PromptSystemOptions) {
@@ -65,7 +58,6 @@ export class PromptSystem extends PrompterComponent {
     this.projectRoot = projectRoot;
     this.getStaticSystemPrompts = options.getStaticSystemPrompts;
     this.getRuntime = options.getRuntime;
-    this.getPluginRuntime = options.getPluginRuntime;
     this.profile = options.profile === "task" ? "task" : "chat";
   }
 
@@ -86,7 +78,6 @@ export class PromptSystem extends PrompterComponent {
       profile: this.profile,
       staticSystemPrompts: this.getStaticSystemPrompts(),
       runtime: this.getRuntime(),
-      pluginRuntime: this.getPluginRuntime(),
     });
   }
 }

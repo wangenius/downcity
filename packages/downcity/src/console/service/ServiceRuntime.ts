@@ -10,7 +10,7 @@ import type {
   AgentRunInput,
 } from "@agent/types/Agent.js";
 import type { JsonValue } from "@/types/Json.js";
-import type { RuntimeBase } from "@/types/Asset.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { PluginPort } from "@/types/Plugin.js";
 
 /**
@@ -105,7 +105,7 @@ export type ServiceSession = {
 /**
  * ServiceRuntime（统一注入对象）。
  */
-export type ServiceRuntime = RuntimeBase & {
+export type ServiceRuntime = ExecutionContext & {
   /**
    * Session 能力入口。
    *

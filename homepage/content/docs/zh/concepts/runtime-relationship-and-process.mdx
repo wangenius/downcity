@@ -1,6 +1,6 @@
 ---
 title: Runtime 关系与进程顺序
-description: console、agent、service、plugin、asset 的协作关系与启动顺序
+description: console、agent、service、plugin 的协作关系与启动顺序
 ---
 
 # Runtime 关系与进程顺序
@@ -11,18 +11,18 @@ description: console、agent、service、plugin、asset 的协作关系与启动
 - `agent`：持有单个项目 runtime。
 - `service`：执行业务主流程并拥有生命周期。
 - `plugin`：通过 service 定义的点提供可选增强。
-- `asset`：负责依赖资源的安装与可用性。
+- plugin：在内部处理自己的依赖解析与配置。
 
 一句话总结：
 
-`console` 负责管，`agent` 负责跑，`service` 负责编排，`plugin` 负责增强，`asset` 负责依赖。
+`console` 负责管，`agent` 负责跑，`service` 负责编排，`plugin` 负责增强并内聚依赖。
 
 ## 2. 启动顺序
 
 1. `city console start`
 2. `city agent start`
 3. agent 从 `downcity.json` 加载项目配置
-4. runtime 分别组装 `ServiceRuntime`、`PluginRuntime` 与 asset 基础设施
+4. runtime 组装统一执行上下文，并注册 service / plugin 基础设施
 5. plugins 向 service 已定义的扩展点注册 `pipeline / guard / effect / resolve`
 6. 消息或任务进入 service 工作流
 7. service 在合适节点触发这些 plugin 点

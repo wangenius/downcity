@@ -170,7 +170,7 @@ function readShipJsonLayer(
  * 校验项目层是否误配废弃的 `extensions` 字段。
  *
  * 关键点（中文）
- * - 新版本统一使用 `plugins` / `assets`。
+ * - 新版本统一使用 `plugins`。
  * - 发现旧字段时直接报错，避免继续沿用已删除方案。
  */
 function assertNoProjectExtensionsLayer(
@@ -180,7 +180,7 @@ function assertNoProjectExtensionsLayer(
   if (!isPlainObject(layer)) return;
   if (!Object.prototype.hasOwnProperty.call(layer, "extensions")) return;
   throw new Error(
-    `Invalid downcity.json: legacy "extensions" config is no longer supported. Use "plugins" and "assets" instead (${filePath})`,
+    `Invalid downcity.json: legacy "extensions" config is no longer supported. Use "plugins" instead (${filePath})`,
   );
 }
 

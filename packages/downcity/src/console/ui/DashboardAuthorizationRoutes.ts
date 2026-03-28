@@ -12,7 +12,7 @@ import {
   readAuthDashboardPayload,
   setAuthDashboardUserRole,
   writeAuthDashboardConfig,
-} from "@/plugins/auth/Api.js";
+} from "@/console/ui/dashboard/AuthDashboardService.js";
 import {
   isChatAuthorizationChannel,
   type AuthSetUserRolePayload,

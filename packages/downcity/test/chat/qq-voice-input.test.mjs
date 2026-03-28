@@ -7,6 +7,8 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
@@ -91,24 +93,21 @@ test("resolveQqAttachmentLocalPath reuses local path", async () => {
 });
 
 test("voice plugin pipeline augments inbound sections for qq attachments", async () => {
-  const rootPath = "/tmp/demo-root";
-  const invokePayloads = [];
+  const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-voice-qq-"));
+  fs.mkdirSync(path.join(rootPath, "cache"), { recursive: true });
+  fs.writeFileSync(path.join(rootPath, "cache/a.ogg"), "");
+  fs.writeFileSync(path.join(rootPath, "cache/b.mp3"), "");
   const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
   const next = await handler({
     runtime: {
       rootPath,
-      assets: {
-        async use(assetName) {
-          assert.equal(assetName, "voice.transcriber");
-          return {
-            async transcribe(payload) {
-              invokePayloads.push(payload.audioPath);
-              if (payload.audioPath.endsWith("a.ogg")) {
-                return { text: "第一段QQ语音" };
-              }
-              return { text: "第二段QQ音频" };
-            },
-          };
+      config: {
+        plugins: {
+          voice: {
+            enabled: true,
+            provider: "command",
+            command: "printf '统一QQ转写文本\\n'",
+          },
         },
       },
     },
@@ -142,9 +141,7 @@ test("voice plugin pipeline augments inbound sections for qq attachments", async
   });
   const text = buildChatInboundText(next);
 
-  assert.equal(invokePayloads.length, 2);
-  assert.match(text, /第一段QQ语音/);
-  assert.match(text, /第二段QQ音频/);
+  assert.match(text, /统一QQ转写文本/);
   assert.match(text, /语音转写/);
 });
 
@@ -153,9 +150,11 @@ test("voice plugin pipeline ignores resolve failures for qq attachments", async 
   const next = await handler({
     runtime: {
       rootPath: "/tmp/demo-root",
-      assets: {
-        async use() {
-          throw new Error("voice plugin disabled");
+      config: {
+        plugins: {
+          voice: {
+            enabled: false,
+          },
         },
       },
     },

@@ -25,8 +25,7 @@ city plugin action voice status
 
 - `city plugin list` / `city plugin status` 在没有可用 runtime 时，会回退显示 console 侧静态 plugin catalog，并尽量结合项目 `downcity.json` 反映 plugin 启用态。
 - `city plugin action ...` 仍然需要连接目标 agent runtime，所以执行前请先运行 `city agent start`。
-- plugin 行为配置写入项目 `downcity.json` 的 `plugins.*`。
-- plugin 依赖的 asset 配置写入项目 `downcity.json` 的 `assets.*`。
+- plugin 配置统一写入项目 `downcity.json` 的 `plugins.*`。
 - `plugins.<name>.enabled` 控制 plugin 是否进入真实执行链路。关闭后，该 plugin 的 hook 与 `plugin.system` 注入都会被跳过。
 - disabled plugin 的显式 `plugin action` 也会被 registry 拒绝，不再继续执行 action 本体。
 - 如果 `plugins.<name>` 存在但没有显式写 `enabled`，runtime 会回退到该 plugin 自己声明的默认值，而不是一律视为启用。

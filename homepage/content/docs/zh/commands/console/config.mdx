@@ -30,15 +30,14 @@ city console config <subcommand>
 
 插件相关配置请改为：
 
-- `plugins.*` 管理插件行为
-- `assets.*` 管理插件依赖资源
+- `plugins.*` 同时管理插件行为与插件自己的依赖配置
 
 示例：
 
 ```bash
 city console config get plugins.voice
 city console config set plugins.voice.enabled true
-city console config set 'assets.voice.transcriber.modelId' '\"SenseVoiceSmall\"'
+city console config set plugins.voice.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## 示例

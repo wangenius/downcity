@@ -1,6 +1,6 @@
 ---
 title: city voice
-description: Manage the built-in voice plugin and its transcriber asset
+description: Manage the built-in voice plugin and its transcription config
 ---
 
 # `city voice`
@@ -10,7 +10,7 @@ description: Manage the built-in voice plugin and its transcriber asset
 ## What it manages
 
 - plugin behavior such as enable/disable
-- the `voice.transcriber` asset
+- voice transcription config
 - active transcription model
 - local audio transcription
 
@@ -20,7 +20,7 @@ description: Manage the built-in voice plugin and its transcriber asset
 # enable voice and install a model
 city voice on SenseVoiceSmall
 
-# inspect plugin + asset status
+# inspect plugin + transcriber status
 city voice status
 
 # switch active model
@@ -32,9 +32,9 @@ city voice transcribe ./demo.ogg
 
 ## Notes
 
-- `city voice on` enables the plugin and optionally installs the asset in one step.
+- `city voice on` enables the plugin and optionally prepares its transcription dependency in one step.
 - The voice plugin attaches to chat-defined voice extension points, so Telegram and QQ voice messages can be transcribed and merged into inbound content.
-- Configuration is persisted to project `downcity.json` under `plugins.voice` and `assets["voice.transcriber"]`.
+- Configuration is persisted to project `downcity.json` under `plugins.voice`.
 
 ## Related
 

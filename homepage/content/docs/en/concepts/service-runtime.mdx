@@ -1,6 +1,6 @@
 ---
 title: Service Runtime
-description: What a service is, where it runs, and how it works with plugins and assets
+description: What a service is, where it runs, and how it works with plugins
 ---
 
 # Service Runtime
@@ -32,13 +32,13 @@ Typical built-in services:
 
 - service -> triggers its own plugin points
 - plugin -> implements those points
-- asset -> provides plugin dependencies
+- plugin -> owns its dependencies internally
 
 The runtime surface is now split the same way:
 
-- `ServiceRuntime` does not expose `assets`
-- `PluginRuntime` exposes `assets`
-- assets stay plugin dependencies rather than service-facing workflow primitives
+- `ServiceRuntime` and `PluginRuntime` now share the same execution context shape
+- runtime injects context only and does not expose a separate public dependency port
+- plugin dependencies stay encapsulated inside each plugin
 
 Whether a plugin actually participates in execution is not decided ad hoc by a service. It is controlled by project config at `plugins.<name>.enabled`.
 
@@ -47,12 +47,12 @@ Whether a plugin actually participates in execution is not decided ad hoc by a s
 - no explicit `enabled`: runtime falls back to the plugin's declared default
 
 For example, `chat` does not need to know transcription model details.  
-It only triggers its own voice-related extension points while processing audio attachments. The `voice` plugin implements them, and assets provide the underlying dependency.
+It only triggers its own voice-related extension points while processing audio attachments. The `voice` plugin implements them and handles the transcription dependency itself.
 
 ## Why This Matters
 
 - workflows stay coherent
 - plugins stay passive and focused
-- dependency management stays separate from business orchestration
+- dependency details do not leak into service orchestration
 
 For command execution, the agent also no longer owns shell processes directly. `shellService` manages `shell_id` sessions instead.

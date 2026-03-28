@@ -34,7 +34,6 @@ function createRuntime(config = {}) {
         primary: "default",
       },
       plugins: {},
-      assets: {},
       ...config,
     },
     env: {},
@@ -43,26 +42,6 @@ function createRuntime(config = {}) {
     services: {
       async invoke() {
         return { success: false, error: "unused" };
-      },
-    },
-    assets: {
-      list() {
-        return [];
-      },
-      async check() {
-        return { available: true, reasons: [] };
-      },
-      async install() {
-        return { success: true, message: "ok" };
-      },
-      async use() {
-        return {};
-      },
-      async getConfig() {
-        return null;
-      },
-      async setConfig() {
-        return {};
       },
     },
     plugins: {
@@ -74,7 +53,6 @@ function createRuntime(config = {}) {
           enabled: true,
           available: true,
           reasons: [],
-          missingAssets: [],
         };
       },
       async runAction() {
@@ -210,4 +188,19 @@ test("plugin registry still allows actions for enabled plugins", async () => {
 
   assert.equal(result.success, true);
   assert.deepEqual(result.data, { ok: true });
+});
+
+test("plugin runtime view no longer exposes requiredAssets metadata", async () => {
+  const runtime = createRuntime();
+  const { pluginRegistry } = createRegistry(runtime);
+
+  pluginRegistry.register({
+    name: "demo",
+    title: "Demo",
+    description: "demo plugin",
+    actions: {},
+  });
+
+  const views = pluginRegistry.list();
+  assert.equal("requiredAssets" in views[0], false);
 });

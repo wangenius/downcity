@@ -132,14 +132,12 @@ export const skillPlugin: Plugin = {
         enabled: false,
         available: false,
         reasons: ["skill plugin disabled"],
-        missingAssets: [],
       };
     }
     return {
       enabled: true,
       available: true,
       reasons: [],
-      missingAssets: [],
     };
   },
   async system(runtime) {

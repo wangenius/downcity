@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 负责把 plugin actions 挂到 commander（`city <plugin> <action>`）。
- * - 仅处理 CLI 参数映射与远程调用，不承载 plugin runtime/asset 状态逻辑。
+ * - 仅处理 CLI 参数映射与远程调用，不承载 plugin runtime/依赖状态逻辑。
  */
 
 import path from "node:path";

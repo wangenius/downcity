@@ -25,7 +25,7 @@ Model config is now split into two layers:
 
 `model.primary` must match an existing model id in `~/.downcity/downcity.db`.
 
-Project `downcity.json` should use `plugins.*` and `assets.*` for plugin configuration.
+Project `downcity.json` should keep plugin configuration under `plugins.*`.
 
 ## Console-global model pool
 
@@ -55,7 +55,7 @@ If any link is missing, startup fails fast.
 ## Plugin scope
 
 Plugin behavior is configured in project `downcity.json` under `plugins.*`.
-Plugin dependencies are configured in project `downcity.json` under `assets.*`.
+If a plugin needs extra models, command templates, or local paths, keep them under that plugin's own config block.
 
 Example for voice:
 
@@ -63,11 +63,7 @@ Example for voice:
 {
   "plugins": {
     "voice": {
-      "enabled": true
-    }
-  },
-  "assets": {
-    "voice.transcriber": {
+      "enabled": true,
       "provider": "local",
       "modelId": "SenseVoiceSmall"
     }

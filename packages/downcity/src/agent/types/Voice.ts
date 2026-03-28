@@ -3,7 +3,7 @@
  *
  * 设计目标（中文）
  * - 统一描述 voice 领域里的稳定枚举类型。
- * - 让 plugin / asset / runtime 共用一套模型与策略定义。
+ * - 让 plugin / runtime 共用一套模型与策略定义。
  */
 
 /**

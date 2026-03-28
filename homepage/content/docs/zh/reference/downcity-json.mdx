@@ -51,11 +51,11 @@ agent 启动时：
 
 任何一步缺失都会启动失败。
 
-## 4) Plugin / Asset 配置
+## 4) Plugin 配置
 
 插件行为配置写在项目 `downcity.json` 的 `plugins.*`。
 
-插件依赖的底层资源配置写在项目 `downcity.json` 的 `assets.*`。
+插件如果需要额外模型、命令模板或本地路径，也直接写在对应的 `plugins.<name>.*` 下。
 
 例如 voice：
 
@@ -63,11 +63,7 @@ agent 启动时：
 {
   "plugins": {
     "voice": {
-      "enabled": true
-    }
-  },
-  "assets": {
-    "voice.transcriber": {
+      "enabled": true,
       "provider": "local",
       "modelId": "SenseVoiceSmall"
     }

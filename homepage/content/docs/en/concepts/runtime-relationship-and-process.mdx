@@ -1,6 +1,6 @@
 ---
 title: Runtime Relationship & Process
-description: Collaboration model and process order across console, agent, service, plugin, and asset
+description: Collaboration model and process order across console, agent, service, and plugin
 ---
 
 # Runtime Relationship & Process
@@ -11,18 +11,18 @@ description: Collaboration model and process order across console, agent, servic
 - `agent`: owns one project runtime
 - `service`: owns the main workflow and lifecycle
 - `plugin`: provides optional enhancement through service-defined points
-- `asset`: owns dependency install and availability
+- `plugin`: handles its own dependency resolution and config internally
 
 In one sentence:
 
-`console` governs, `agent` executes, `service` orchestrates, `plugin` augments, and `asset` supports dependencies.
+`console` governs, `agent` executes, `service` orchestrates, and `plugin` augments while owning its dependencies.
 
 ## 2. Startup Order
 
 1. `city console start`
 2. `city agent start`
 3. agent loads project config from `downcity.json`
-4. runtime assembles `ServiceRuntime`, `PluginRuntime`, and asset infrastructure
+4. runtime assembles the shared execution context and registers service/plugin infrastructure
 5. plugins register `pipeline / guard / effect / resolve` handlers on service-defined points
 6. messages or tasks enter a service workflow
 7. services trigger those plugin points at the right stages

@@ -169,7 +169,6 @@ flowchart TD
   AGENT --> RT["RuntimeState"]
   RT --> SVC["Services"]
   RT --> PR["PluginRegistry"]
-  RT --> AR["AssetRegistry"]
   SVC --> PR
 ```
 
@@ -179,7 +178,7 @@ flowchart TD
 - builtin plugin 在 agent runtime 初始化时注册
 - `skill` 已经属于 plugin
 - `plugin.system` 已接入主 system 装配链路
-- `AssetRegistry` 仍然在 agent runtime 内显式建模
+- plugin 自己负责组织依赖与配置，asset 不再作为一级 runtime 概念
 
 ### 目标
 

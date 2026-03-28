@@ -13,7 +13,6 @@ import { isPluginEnabledInConfig } from "@/console/plugin/Activation.js";
 import { PLUGINS } from "@/console/plugin/Plugins.js";
 import { SERVICES } from "@/console/service/Services.js";
 import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
-import type { PluginRuntime } from "@/types/Plugin.js";
 
 const CORE_PROMPT_FILE_URL = new URL(
   "./assets/core.prompt.txt",
@@ -238,9 +237,9 @@ export async function loadServiceSystemPrompts(input: {
  */
 export async function loadPluginSystemPrompts(input: {
   /**
-   * 当前 plugin runtime。
+   * 当前统一执行上下文。
    */
-  runtime: PluginRuntime;
+  runtime: ServiceRuntime;
 }): Promise<string[]> {
   const out: string[] = [];
 
@@ -396,10 +395,6 @@ export async function resolveAgentSystemMessages(input: {
    */
   runtime: ServiceRuntime;
 
-  /**
-   * 当前 plugin runtime。
-   */
-  pluginRuntime: PluginRuntime;
 }): Promise<SystemModelMessage[]> {
   const profile = resolveSystemContextProfile(input.profile);
   return await buildAgentSystemMessages({
@@ -414,7 +409,7 @@ export async function resolveAgentSystemMessages(input: {
       disabledServiceNames: profile.disableServiceSystems,
     }),
     pluginSystemPrompts: await loadPluginSystemPrompts({
-      runtime: input.pluginRuntime,
+      runtime: input.runtime,
     }),
   });
 }

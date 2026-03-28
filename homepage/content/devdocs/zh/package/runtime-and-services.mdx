@@ -36,7 +36,7 @@ Downcity 当前可以按四层来理解：
 1. 入口层：CLI、Console UI、Chrome Extension、HTTP API
 2. 控制层：console
 3. 执行层：agent runtime
-4. 业务层：services / plugins / plugin dependency assets
+4. 业务层：services / plugins
 
 ```mermaid
 flowchart LR
@@ -58,7 +58,6 @@ flowchart LR
   subgraph Business["业务层"]
     SERVICES["Services<br/>主流程"]
     PLUGINS["Plugins<br/>增强逻辑"]
-    ASSETS["Plugin Dependency Assets<br/>依赖资源"]
   end
 
   CLI --> CONSOLE
@@ -68,7 +67,6 @@ flowchart LR
   CONSOLE --> AGENT
   AGENT --> SERVICES
   SERVICES --> PLUGINS
-  PLUGINS --> ASSETS
 ```
 
 这里最重要的不是目录，而是调用方向：
@@ -77,7 +75,7 @@ flowchart LR
 - `agent runtime` 负责单项目执行
 - `service` 负责业务主流程
 - `plugin` 通过预定义点接入流程
-- `asset` 负责 plugin 依赖
+- plugin 自己内聚依赖细节
 
 ## runtime 启动逻辑
 
@@ -101,8 +99,8 @@ flowchart TD
   G --> H["加载项目 config / env / systems"]
   H --> I["初始化 RuntimeState"]
   I --> J["创建 session / model / prompt runtime"]
-  J --> K["创建 HookRegistry / AssetRegistry / PluginRegistry"]
-  K --> L["注册 builtin plugins 与 assets"]
+  J --> K["创建 HookRegistry / PluginRegistry"]
+  K --> L["注册 builtin plugins"]
   L --> M["组装 services 的 runtime 注入对象"]
   M --> N["按需启动 service lifecycle"]
   N --> O["接收消息 / 命令 / task，进入 service workflow"]
@@ -152,23 +150,21 @@ agent 进程启动后，会开始组装当前项目的运行时状态。
 
 这一步完成后，系统才有一个真正可供 service 消费的宿主运行环境。
 
-#### 第四步：组装 plugin / asset 基础设施
+#### 第四步：组装 plugin 基础设施
 
 当前 agent runtime 里，plugin 不是“临时扫出来顺手执行”的，而是先被注册进统一注册表。
 
 这一步主要是：
 
 - 创建 `HookRegistry`
-- 创建 `AssetRegistry`
 - 创建 `PluginRegistry`
 - 注册 builtin plugins
-- 注册 builtin assets
 
 注册完成后，runtime 才拥有：
 
 - plugin action 调度能力
 - `pipeline / guard / effect / resolve` 执行能力
-- plugin dependency 的 asset availability / install / use 能力
+- plugin dependency 的内部解析与执行能力
 
 #### 第五步：给 service 注入统一 runtime 端口
 
@@ -183,11 +179,10 @@ service 看到的是：
 - `invoke`
 - `plugins`
 
-`assets` 不再属于 `ServiceRuntime` 的能力面。  
 现在的口径是：
 
-- `ServiceRuntime` 只暴露 service 真正需要的业务与调度端口
-- `PluginRuntime` 才暴露 `assets`，用于 plugin 访问自己的依赖资源
+- `ServiceRuntime` 与 `PluginRuntime` 使用同一套执行上下文
+- runtime 只负责注入统一上下文，不对外暴露 asset 概念
 
 #### 第六步：service 开始接管业务流程
 
@@ -199,7 +194,7 @@ service 看到的是：
 - runtime 把输入路由到对应 service
 - service 在自己的工作流里决定主流程怎么走
 - service 在合适节点触发 plugin
-- plugin 如有需要再使用 asset
+- plugin 在内部解析并使用自己的依赖
 
 ### 一个更贴近真实调用方向的图
 
@@ -210,7 +205,6 @@ sequenceDiagram
   participant Agent as Agent Runtime
   participant S as Service
   participant P as Plugin
-  participant A as Asset
 
   CLI->>Console: city console start
   Console-->>CLI: console ready
@@ -219,15 +213,14 @@ sequenceDiagram
   Console->>Agent: spawn agent daemon / foreground runtime
   Agent->>Agent: load config/env/systems
   Agent->>Agent: init RuntimeState + session/model
-  Agent->>Agent: create HookRegistry / AssetRegistry / PluginRegistry
-  Agent->>Agent: register builtin plugins/assets
+  Agent->>Agent: create HookRegistry / PluginRegistry
+  Agent->>Agent: register builtin plugins
 
   Note over Agent,S: runtime 已可对 service 注入统一端口
 
   CLI->>Agent: incoming message / service command / plugin action
   Agent->>S: dispatch to service workflow
   S->>P: invoke pipeline / guard / effect / resolve
-  P->>A: use asset if needed
   S-->>Agent: workflow result
   Agent-->>CLI: response / side effects / persisted traces
 ```

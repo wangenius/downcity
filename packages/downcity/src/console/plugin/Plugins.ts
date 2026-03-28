@@ -7,12 +7,10 @@
  * - 当前阶段注册 auth / voice 两个内建 plugin。
  */
 
-import type { AssetRegistry } from "@/console/plugin/AssetRegistry.js";
 import type { PluginRegistry } from "@/console/plugin/PluginRegistry.js";
 import type { Plugin } from "@/types/Plugin.js";
 import { authPlugin } from "@/plugins/auth/Plugin.js";
 import { skillPlugin } from "@/plugins/skill/Plugin.js";
-import { voiceTranscriberAsset } from "@/plugins/voice/Asset.js";
 import { voicePlugin } from "@/plugins/voice/Plugin.js";
 
 /**
@@ -24,10 +22,8 @@ export const PLUGINS: Plugin[] = [authPlugin, skillPlugin, voicePlugin];
  * 注册全部内建插件体系对象。
  */
 export function registerBuiltinPlugins(params: {
-  assetRegistry: AssetRegistry;
   pluginRegistry: PluginRegistry;
 }): void {
-  params.assetRegistry.register(voiceTranscriberAsset);
   for (const plugin of PLUGINS) {
     params.pluginRegistry.register(plugin);
   }

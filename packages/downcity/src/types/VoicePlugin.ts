@@ -1,9 +1,9 @@
 /**
- * Voice Plugin / Asset 类型定义。
+ * Voice Plugin 类型定义。
  *
  * 关键点（中文）
- * - 把 Voice 的“插件行为配置”和“转写资产配置”拆开。
- * - 插件层不再直接暴露模型目录、pip 包等实现细节；这些字段收敛到 Asset 配置。
+ * - Voice 的行为配置与转写依赖配置统一收敛到 `plugins.voice`。
+ * - 这里的类型名直接反映 plugin 自身能力，不再保留 asset 心智。
  */
 
 import type { JsonValue } from "@/types/Json.js";
@@ -28,12 +28,48 @@ export interface VoicePluginConfig {
    * 是否在消息进入 Agent 前自动增强语音内容。
    */
   augmentMessage?: boolean;
+  /**
+   * 转写提供者类型。
+   */
+  provider?: "local" | "command";
+  /**
+   * 当前激活模型 ID（可选）。
+   */
+  modelId?: string;
+  /**
+   * 模型根目录（可选）。
+   */
+  modelsDir?: string;
+  /**
+   * Python 可执行文件（可选）。
+   */
+  pythonBin?: string;
+  /**
+   * 自定义命令模板（可选）。
+   */
+  command?: string;
+  /**
+   * 默认语言提示（可选）。
+   */
+  language?: string;
+  /**
+   * 转写超时时间（毫秒，可选）。
+   */
+  timeoutMs?: number;
+  /**
+   * 本地推理策略（可选）。
+   */
+  strategy?: "auto" | "funasr" | "transformers-whisper" | "command";
+  /**
+   * 已安装模型列表（可选）。
+   */
+  installedModels?: string[];
 }
 
 /**
- * Voice 转写 Asset 配置。
+ * Voice 转写配置。
  */
-export interface VoiceTranscriberAssetConfig {
+export interface VoiceTranscriberConfig {
   /**
    * 兼容统一结构化配置约束的索引签名。
    */
@@ -50,7 +86,7 @@ export interface VoiceTranscriberAssetConfig {
    * 本地模型 ID（可选）。
    *
    * 说明（中文）
-   * - 这是 Asset 内部实现字段，不应由 Plugin 直接感知。
+   * - 这是 voice plugin 内部依赖字段，不要求其他 service 直接感知。
    */
   modelId?: string;
   /**
@@ -92,9 +128,9 @@ export interface VoiceTranscriberAssetConfig {
 }
 
 /**
- * Voice 转写 Asset 安装输入。
+ * Voice 转写安装输入。
  */
-export interface VoiceTranscriberAssetInstallInput {
+export interface VoiceTranscriberInstallInput {
   /**
    * 兼容统一结构化配置约束的索引签名。
    */

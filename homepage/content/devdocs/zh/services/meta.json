@@ -1,0 +1,11 @@
+{
+  "title": "Services",
+  "pages": [
+    "service-principles",
+    "service-design-logic",
+    "system-map",
+    "chat-design",
+    "task-design",
+    "memory-design"
+  ]
+}

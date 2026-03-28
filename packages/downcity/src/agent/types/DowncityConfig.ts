@@ -131,20 +131,6 @@ export interface DowncityConfig {
     [pluginName: string]: JsonObject;
   };
   /**
-   * assets 配置。
-   *
-   * 关键点（中文）
-   * - 新资产体系的底层资源配置统一收敛到该字段。
-   * - key 为 asset 名称，value 为对应资产的结构化配置对象。
-   * - 插件应只依赖 asset 名称，不直接理解 value 内部实现细节。
-   */
-  assets?: {
-    /**
-     * 资产配置对象映射。
-     */
-    [assetName: string]: JsonObject;
-  };
-  /**
    * Agent 模型绑定配置。
    *
    * 关键点（中文）

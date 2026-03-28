@@ -38,9 +38,6 @@ export function toStaticPluginRuntimeView(plugin: Plugin): PluginRuntimeView {
     resolves: Object.keys(plugin.resolves || {}).sort((a, b) =>
       a.localeCompare(b),
     ),
-    requiredAssets: Array.isArray(plugin.requirements?.assets)
-      ? [...plugin.requirements.assets].sort((a, b) => a.localeCompare(b))
-      : [],
     hasSystem: typeof plugin.system === "function",
     hasAvailability: typeof plugin.availability === "function",
   };
@@ -110,7 +107,6 @@ export function buildStaticPluginAvailability(params: {
       enabled: false,
       available: false,
       reasons: [`Unknown plugin: ${params.pluginName}`],
-      missingAssets: [],
     };
   }
 
@@ -125,9 +121,6 @@ export function buildStaticPluginAvailability(params: {
       enabled: false,
       available: false,
       reasons: [`Plugin "${plugin.name}" is disabled in project config.`],
-      missingAssets: Array.isArray(plugin.requirements?.assets)
-        ? [...plugin.requirements.assets]
-        : [],
     };
   }
 
@@ -138,6 +131,5 @@ export function buildStaticPluginAvailability(params: {
     reasons: runtimeReason
       ? [`Runtime unavailable: ${runtimeReason}`]
       : ["Static catalog view only. Runtime availability is not loaded."],
-    missingAssets: [],
   };
 }

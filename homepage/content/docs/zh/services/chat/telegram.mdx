@@ -86,7 +86,7 @@ city voice on SenseVoiceSmall
 city voice status
 ```
 
-当 `voice` plugin 已启用，且 `voice.transcriber` asset 可用时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
+当 `voice` plugin 已启用，且 `plugins.voice` 中的转写配置可用时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
 
 ### 群聊 / 超级群
 

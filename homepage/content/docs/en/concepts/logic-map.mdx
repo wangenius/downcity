@@ -1,13 +1,13 @@
 ---
 title: Architecture Logic Map
-description: Explains the responsibilities and interaction of console, agent, service, plugin, and asset
+description: Explains the responsibilities and interaction of console, agent, service, and plugin
 ---
 
 # Architecture Logic Map
 
 This page answers one question:
 
-what `console`, `agent`, `service`, `plugin`, and `asset` each own, and how one request flows across them.
+what `console`, `agent`, `service`, and `plugin` each own, and how one request flows across them.
 
 ## 1. Responsibility Boundaries
 
@@ -15,7 +15,7 @@ what `console`, `agent`, `service`, `plugin`, and `asset` each own, and how one 
 - `agent`: per-project execution plane that loads project config and owns one runtime
 - `service`: core workflow with lifecycle ownership
 - `plugin`: optional enhancement module that passively attaches to service-defined points
-- `asset`: installable plugin dependency resource behind plugins
+- each plugin owns its dependency and config details internally
 
 ## 2. System Relationship
 
@@ -30,7 +30,6 @@ flowchart LR
     AGENT["agent daemon"] --> SERVICES["services"]
     SERVICES --> POINTS["service-defined plugin points"]
     PLUGINS["plugins"] --> POINTS
-    PLUGINS --> ASSETS["plugin dependencies"]
     AGENT --> SHIP[".downcity/*"]
   end
 
@@ -46,14 +45,11 @@ sequenceDiagram
   participant Agent as agent daemon
   participant Service as service(chat/task/memory)
   participant Plugin as plugin(voice/auth)
-  participant Asset as asset
 
   User->>Channel: send message
   Channel->>Agent: enter runtime
   Agent->>Service: execute workflow
   Service->>Plugin: trigger extension point
-  Plugin->>Asset: use dependency
-  Asset-->>Plugin: return result
   Plugin-->>Service: return augmented result
   Service-->>Agent: return business result
 ```

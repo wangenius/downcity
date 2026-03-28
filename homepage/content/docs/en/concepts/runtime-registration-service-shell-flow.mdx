@@ -14,7 +14,7 @@ description: Explains console registry writes, runtime execution, and shell envi
 ## 2. Runtime Execution
 
 - one agent process binds to one `rootPath`
-- runtime assembles `ServiceRuntime`, `PluginRuntime`, and asset infrastructure
+- runtime assembles the shared execution context and registers service/plugin infrastructure
 - plugins register `pipeline / guard / effect / resolve` handlers on service-defined points
 - services trigger those points during their workflow
 
@@ -40,7 +40,6 @@ flowchart TD
   G --> H["runtime dispatcher"]
   H --> I["service workflow"]
   I --> J["plugin point dispatch"]
-  J --> K["asset use"]
 
   L["agent shell_start"] --> M["shellService"]
   M --> N["shell_id session"]

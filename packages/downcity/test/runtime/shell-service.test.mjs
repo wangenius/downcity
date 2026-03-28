@@ -44,7 +44,6 @@ function createRuntimeStub(rootPath) {
     context: {},
     invoke: {},
     services: {},
-    assets: {},
     plugins: {},
   };
 }

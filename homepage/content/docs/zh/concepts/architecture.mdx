@@ -1,6 +1,6 @@
 ---
 title: 架构总览
-description: Downcity 的核心分层：console、agent、service、plugin 与 asset
+description: Downcity 的核心分层：console、agent、service 与 plugin
 ---
 
 # 架构总览
@@ -10,11 +10,10 @@ Downcity 可以先看成两条主干：
 - `console`：全局控制与运维面
 - `agent`：单项目运行与执行面
 
-而在 agent runtime 内部，真正承接业务的是三层：
+而在 agent runtime 内部，真正承接业务的是两层：
 
 - `service`：主业务流程
 - `plugin`：被动扩展层
-- `asset`：plugin 依赖资源
 
 ## 分层结构
 
@@ -33,11 +32,6 @@ Downcity 可以先看成两条主干：
 - 通过 service 预先定义好的扩展点接入
 - 负责增强、校验、改写、解析，但不拥有独立生命周期
 
-5. **Asset 层（依赖资源）**
-- 负责 install / check / config / use
-- 为 plugin 提供模型、二进制、第三方依赖等底层能力
-- 应理解为 plugin dependency 基础设施，而不是独立业务流程层
-
 ## 一条最重要的边界
 
 - `service` 主动参与 agent 执行周期
@@ -47,7 +41,7 @@ Downcity 可以先看成两条主干：
 
 - 主流程放在 service
 - 扩展逻辑放在 plugin
-- plugin 依赖资源放在 asset
+- plugin 自己内聚依赖细节
 
 ## 一个直观例子
 
@@ -56,4 +50,4 @@ Downcity 可以先看成两条主干：
 - `chat` service 负责消息进入、入队、执行、回复
 - `voice` plugin 在语音相关节点上补充转写
 - `auth` plugin 在鉴权和角色解析节点上接入
-- `voice.transcriber` asset 提供实际转写依赖
+- voice plugin 自己负责组织转写依赖与配置

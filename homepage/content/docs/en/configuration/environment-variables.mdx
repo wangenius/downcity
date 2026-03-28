@@ -86,7 +86,7 @@ So key precedence inside `shell` sessions is: `DC_CTX_*` > agent runtime env > g
 ### 4.2 Does not read project `.env`
 
 1. Global model/provider pool (`model_providers`, `models`) from `downcity.db`.
-2. Plugin config from project `downcity.json` (`plugins.*`, `assets.*`).
+2. Plugin config from project `downcity.json` (`plugins.*`, including plugin-owned dependency config).
 3. Bot account credential source of truth (`channel_accounts`).
 4. Runtime context vars (`DC_CTX_*`) are generated at request time.
 

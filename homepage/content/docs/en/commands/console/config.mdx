@@ -30,15 +30,14 @@ city console config <subcommand>
 
 For plugin configuration, edit:
 
-- `plugins.*` for plugin behavior
-- `assets.*` for plugin dependency config
+- `plugins.*` for plugin behavior and plugin-owned dependency config
 
 Examples:
 
 ```bash
 city console config get plugins.voice
 city console config set plugins.voice.enabled true
-city console config set 'assets.voice.transcriber.modelId' '\"SenseVoiceSmall\"'
+city console config set plugins.voice.modelId '\"SenseVoiceSmall\"'
 ```
 
 ## Examples

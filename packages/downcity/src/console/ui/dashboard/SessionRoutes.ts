@@ -350,7 +350,6 @@ export function registerDashboardSessionRoutes(
         profile: "chat",
         staticSystemPrompts: runtime.systems,
         runtime: params.getServiceRuntimeState(),
-        pluginRuntime: params.getPluginRuntimeState(),
       });
       return c.json({
         success: true,

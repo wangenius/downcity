@@ -10,8 +10,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   withRequestContext,
-} from "../../bin/agent/context/manager/RequestContext.js";
-import { buildShellContextEnv } from "../../bin/agent/tools/shell/ShellHelpers.js";
+} from "../../bin/sessions/RequestContext.js";
+import { buildShellContextEnv } from "../../bin/sessions/tools/shell/ShellHelpers.js";
 
 test("buildShellContextEnv applies injected env and preserves request context vars", () => {
   const previousSharedKey = process.env.SHARED_KEY;
@@ -27,7 +27,7 @@ test("buildShellContextEnv applies injected env and preserves request context va
   try {
     const env = withRequestContext(
       {
-        contextId: "ctx-1",
+        sessionId: "ctx-1",
         requestId: "req-1",
       },
       () =>
@@ -42,7 +42,7 @@ test("buildShellContextEnv applies injected env and preserves request context va
     assert.equal(env.GLOBAL_ONLY, "global-only");
     assert.equal(env.AGENT_ONLY, "agent-only");
     assert.equal(env.SHARED_KEY, "agent");
-    assert.equal(env.DC_CTX_CONTEXT_ID, "ctx-1");
+    assert.equal(env.DC_SESSION_ID, "ctx-1");
     assert.equal(env.DC_CTX_REQUEST_ID, "req-1");
     assert.equal(env.DC_CTX_SERVER_HOST, "127.0.0.1");
     assert.equal(env.DC_CTX_SERVER_PORT, "5314");

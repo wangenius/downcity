@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import {
   deriveTaskIdFromTitle,
@@ -292,7 +292,7 @@ export async function updateTaskDefinition(params: {
 }
 
 export async function runTaskDefinition(params: {
-  context: ServiceRuntime;
+  context: ExecutionRuntime;
   projectRoot: string;
   request: TaskRunRequest;
 }): Promise<TaskRunResponse> {

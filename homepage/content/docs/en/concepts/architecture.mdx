@@ -1,53 +1,100 @@
 ---
 title: Architecture Overview
-description: "Core architecture layers in Downcity: console, agent, service, and plugin"
+description: "Core architecture layers in Downcity: console, agent, execution runtime, session, service, and plugin"
 ---
 
 # Architecture Overview
 
-Downcity is easiest to understand through two top-level trunks:
+To understand Downcity, start with 5 concepts:
 
-- `console`: the global control and operations plane
-- `agent`: the per-project execution plane
+- `console`: the global control plane
+- `agent`: the per-project host process
+- `execution runtime`: the unified capability view injected into services and plugins
+- `session`: the actual execution instance for one conversation or one task run
+- `service / plugin`: workflow modules and passive extension modules
 
-Inside an agent runtime, the execution layer is built from:
+## The Most Important Reading Order
 
-- `service`: workflow owners
-- `plugin`: passive extensions
+Read the system from top to bottom:
+
+1. `console` manages globally
+2. `agent` hosts one project
+3. `execution runtime` exposes a unified execution surface
+4. `session` is where one real execution happens
+5. `service` owns workflows and `plugin` augments them
+
+That means:
+
+- `agent` is not each individual conversation turn
+- `session` is the real execution unit for chat and task runs
+- `plugin` is neither a service nor an independent runtime
 
 ## Layered Structure
 
 1. **Console Layer**
-- owns registry, model pool, global config, and the UI gateway
+- owns registry, model pool, global config, and UI gateway
+- resolves the target agent for commands and runtime requests
 
 2. **Agent Layer**
-- loads one project, owns one runtime, and persists traces into `.downcity/`
+- one project maps to one agent process
+- loads project config, creates execution runtime, and owns the session registry
+- persists runtime traces into `.downcity/`
 
-3. **Service Layer**
-- domains like `shell`, `chat`, `task`, and `memory`
-- own lifecycle, workflow, and stable actions
+3. **Execution Runtime**
+- exposes `session / services / plugins / logger / config / env`
+- is the shared execution-facing surface used by services and plugins
+- is not a second host process, only a view derived from the agent
 
-4. **Plugin Layer**
-- modules like `skill`, `voice`, and `auth`
-- attach through extension points defined by services
-- augment, validate, transform, or resolve behavior without owning a lifecycle
+4. **Session Layer**
+- one chat conversation is one session
+- one task run is also one session
+- prompt assembly, history, tools, and model execution all happen around the session
+
+5. **Service Layer**
+- domains such as `chat`, `task`, `memory`, and `shell`
+- own lifecycle and workflow orchestration
+- decide when to create, reuse, or clear sessions
+
+6. **Plugin Layer**
+- modules such as `skill`, `voice`, and `auth`
+- attach only through service-defined extension points
+- do not own lifecycle and do not own a separate runtime
+
+## One Diagram
+
+```mermaid
+flowchart TD
+  C["Console"] --> A["Agent"]
+  A --> ER["Execution Runtime"]
+  A --> SR["Session Registry"]
+  SR --> S["Session"]
+  ER --> SV["Services"]
+  ER --> PL["Plugins"]
+  SV --> S
+  SV -. trigger plugin points .-> PL
+```
 
 ## The Most Important Boundary
 
-- `service` actively participates in the agent execution cycle
-- `plugin` does not run on its own and only participates when a service triggers it
+- `service` actively participates in the main workflow
+- `plugin` joins only at fixed points
+- `session` owns execution state
+- `agent` owns host state
 
 So:
 
-- main workflows belong in services
-- extensions belong in plugins
-- plugin dependencies stay inside plugin-owned config and helpers
+- workflows belong in services
+- execution state belongs in sessions
+- host state belongs in the agent
+- extension logic belongs in plugins
+- plugin dependencies stay inside the plugin
 
 ## A Concrete Example
 
 In chat flows:
 
-- the `chat` service owns inbound messages, queueing, execution, and replies
-- the `voice` plugin adds transcription behavior at voice-related points
-- the `auth` plugin adds authorization and role resolution
-- the `voice` plugin owns its transcription dependency handling
+- the `chat` service owns ingress, queueing, session selection, execution, and replies
+- `execution runtime` injects unified access to session and plugin capabilities
+- the `voice` plugin adds transcription at voice-related points
+- the `auth` plugin joins authorization-related points
+- the real model run still happens inside the target `session`

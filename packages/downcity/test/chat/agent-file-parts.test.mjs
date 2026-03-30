@@ -11,7 +11,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { toModelMessages } from "../../bin/agent/helpers/AgentHelpers.js";
+import { toModelMessages } from "../../bin/sessions/helpers/SessionHelpers.js";
 
 test("toModelMessages injects pdf file parts from <file> tags", async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-agent-pdf-"));

@@ -19,14 +19,14 @@ city agent start
 
 ### zsh: permission denied: downcity
 
-这不是 `sudo` / 系统管理员权限问题，通常是因为 `pnpm` 的 `.bin/downcity` 可能是软链到实际入口文件（例如 `.../downcity/bin/console/commands/Index.js`），而目标文件缺少可执行位（`+x`）。
+这不是 `sudo` / 系统管理员权限问题，通常是因为 `pnpm` 的 `.bin/downcity` 可能是软链到实际入口文件（例如 `.../downcity/bin/main/commands/Index.js`），而目标文件缺少可执行位（`+x`）。
 
 ```bash
 # 本地依赖安装（仓库内）
-chmod +x node_modules/downcity/bin/console/commands/Index.js
+chmod +x node_modules/downcity/bin/main/commands/Index.js
 
 # 或者直接用 node 执行（不依赖可执行位）
-node node_modules/downcity/bin/console/commands/Index.js agent start .
+node node_modules/downcity/bin/main/commands/Index.js agent start .
 ```
 
 ## access

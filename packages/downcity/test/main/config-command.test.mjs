@@ -1,9 +1,9 @@
 /**
- * config 命令组测试（node:test）。
+ * config / console model 命令测试（node:test）。
  *
  * 覆盖点（中文）
- * - 验证 `config get/set/unset` 对 downcity.json 的通用读写行为。
- * - 验证 `config llm provider/model` 的增改删与 activeModel 切换行为。
+ * - 验证 `console config get/set/unset` 对 downcity.json 的通用读写行为。
+ * - 验证 `console model add/update/remove/use` 的非交互脚本化能力。
  * - 验证 provider 被 model 引用时的删除保护。
  */
 
@@ -16,28 +16,15 @@ import test from "node:test";
 import fs from "fs-extra";
 
 const execFileAsync = promisify(execFile);
-const CLI_ENTRY = path.resolve(process.cwd(), "bin/console/commands/Index.js");
+const CLI_ENTRY = path.resolve(process.cwd(), "bin/main/commands/Index.js");
 
-function createBaseShipConfig() {
+function createBaseConfig() {
   return {
     $schema: "./.downcity/schema/downcity.schema.json",
     name: "config-test-agent",
     version: "1.0.0",
-    llm: {
-      activeModel: "default",
-      providers: {
-        default: {
-          type: "anthropic",
-          apiKey: "${LLM_API_KEY}",
-        },
-      },
-      models: {
-        default: {
-          provider: "default",
-          name: "claude-sonnet-4-5",
-          temperature: 0.7,
-        },
-      },
+    model: {
+      primary: "default",
     },
     services: {
       chat: {
@@ -49,31 +36,37 @@ function createBaseShipConfig() {
   };
 }
 
-async function runCli(args) {
+async function runCli(args, options = {}) {
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
     [CLI_ENTRY, ...args],
     {
       cwd: process.cwd(),
+      env: {
+        ...process.env,
+        ...(options.env || {}),
+      },
     },
   );
   return { stdout, stderr };
 }
 
-async function runCliJson(args) {
-  const { stdout } = await runCli(args);
+async function runCliJson(args, options = {}) {
+  const { stdout } = await runCli(args, options);
   return JSON.parse(stdout);
 }
 
-async function runCliExpectFailure(args) {
+async function runCliExpectFailure(args, options = {}) {
   try {
-    await runCli(args);
+    await runCli(args, options);
     assert.fail(`Expected command to fail: ${args.join(" ")}`);
   } catch (error) {
-    assert.equal(typeof error?.stdout, "string");
-    const output = JSON.parse(error.stdout);
-    assert.equal(output.success, false);
-    return output;
+    if (typeof error?.stdout === "string" && error.stdout.trim()) {
+      const output = JSON.parse(error.stdout);
+      assert.equal(output.success, false);
+      return output;
+    }
+    throw error;
   }
 }
 
@@ -82,11 +75,12 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   t.after(async () => {
     await fs.remove(tempRoot);
   });
-  await fs.writeJson(path.join(tempRoot, "downcity.json"), createBaseShipConfig(), {
+  await fs.writeJson(path.join(tempRoot, "downcity.json"), createBaseConfig(), {
     spaces: 2,
   });
 
   const setResult = await runCliJson([
+    "console",
     "config",
     "set",
     "services.chat.queue.maxConcurrency",
@@ -98,6 +92,7 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   assert.equal(setResult.value, 4);
 
   const getResult = await runCliJson([
+    "console",
     "config",
     "get",
     "services.chat.queue.maxConcurrency",
@@ -108,6 +103,7 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   assert.equal(getResult.value, 4);
 
   const unsetResult = await runCliJson([
+    "console",
     "config",
     "unset",
     "services.chat.queue.maxConcurrency",
@@ -120,36 +116,38 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   assert.equal(saved.services.chat.queue.maxConcurrency, undefined);
 });
 
-test("config llm provider/model commands manage references and active model", async (t) => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-llm-"));
+test("console model commands manage provider/model lifecycle and project binding", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-model-project-"));
+  const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-model-home-"));
+  const cliEnv = { HOME: tempHome };
+
   t.after(async () => {
     await fs.remove(tempRoot);
+    await fs.remove(tempHome);
   });
-  await fs.writeJson(path.join(tempRoot, "downcity.json"), createBaseShipConfig(), {
+  await fs.writeJson(path.join(tempRoot, "downcity.json"), createBaseConfig(), {
     spaces: 2,
   });
 
   const addProvider = await runCliJson([
-    "config",
-    "llm",
-    "provider",
+    "console",
+    "model",
     "add",
+    "provider",
     "openai_main",
     "--type",
     "openai",
     "--api-key",
     "${OPENAI_API_KEY}",
-    "--path",
-    tempRoot,
-  ]);
+  ], { env: cliEnv });
   assert.equal(addProvider.success, true);
   assert.equal(addProvider.providerId, "openai_main");
 
   const addModel = await runCliJson([
-    "config",
-    "llm",
+    "console",
     "model",
     "add",
+    "model",
     "fast",
     "--provider",
     "openai_main",
@@ -157,78 +155,83 @@ test("config llm provider/model commands manage references and active model", as
     "gpt-4o",
     "--temperature",
     "0.3",
-    "--path",
-    tempRoot,
-  ]);
+  ], { env: cliEnv });
   assert.equal(addModel.success, true);
   assert.equal(addModel.modelId, "fast");
+  assert.equal(addModel.model.providerId, "openai_main");
 
-  const activate = await runCliJson([
-    "config",
-    "llm",
+  const useModel = await runCliJson([
+    "console",
     "model",
-    "activate",
+    "use",
     "fast",
     "--path",
     tempRoot,
-  ]);
-  assert.equal(activate.success, true);
-  assert.equal(activate.activeModel, "fast");
+  ], { env: cliEnv });
+  assert.equal(useModel.success, true);
+  assert.equal(useModel.nextPrimary, "fast");
 
   const removeRefProvider = await runCliExpectFailure([
-    "config",
-    "llm",
-    "provider",
+    "console",
+    "model",
     "remove",
+    "provider",
     "openai_main",
-    "--path",
-    tempRoot,
-  ]);
+  ], { env: cliEnv });
   assert.match(String(removeRefProvider.error), /referenced by models/i);
 
   const updateModel = await runCliJson([
-    "config",
-    "llm",
+    "console",
     "model",
     "update",
+    "model",
     "fast",
     "--max-tokens",
     "2048",
     "--clear-temperature",
-    "--path",
-    tempRoot,
-  ]);
+  ], { env: cliEnv });
   assert.equal(updateModel.success, true);
   assert.equal(updateModel.model.maxTokens, 2048);
   assert.equal(updateModel.model.temperature, undefined);
 
-  const removeDefaultModel = await runCliJson([
-    "config",
-    "llm",
+  const getProvider = await runCliJson([
+    "console",
+    "model",
+    "get",
+    "provider",
+    "openai_main",
+  ], { env: cliEnv });
+  assert.equal(getProvider.success, true);
+  assert.equal(getProvider.providerId, "openai_main");
+
+  const getModel = await runCliJson([
+    "console",
+    "model",
+    "get",
+    "model",
+    "fast",
+  ], { env: cliEnv });
+  assert.equal(getModel.success, true);
+  assert.equal(getModel.model.id, "fast");
+
+  const removeModel = await runCliJson([
+    "console",
     "model",
     "remove",
-    "default",
-    "--path",
-    tempRoot,
-  ]);
-  assert.equal(removeDefaultModel.success, true);
+    "model",
+    "fast",
+  ], { env: cliEnv });
+  assert.equal(removeModel.success, true);
 
-  const removeDefaultProvider = await runCliJson([
-    "config",
-    "llm",
-    "provider",
+  const removeProvider = await runCliJson([
+    "console",
+    "model",
     "remove",
-    "default",
-    "--path",
-    tempRoot,
-  ]);
-  assert.equal(removeDefaultProvider.success, true);
+    "provider",
+    "openai_main",
+  ], { env: cliEnv });
+  assert.equal(removeProvider.success, true);
 
   const saved = await fs.readJson(path.join(tempRoot, "downcity.json"));
-  assert.equal(saved.llm.activeModel, "fast");
-  assert.equal(saved.llm.providers.openai_main.type, "openai");
-  assert.equal(saved.llm.providers.default, undefined);
-  assert.equal(saved.llm.models.fast.provider, "openai_main");
-  assert.equal(saved.llm.models.fast.maxTokens, 2048);
-  assert.equal(saved.llm.models.fast.temperature, undefined);
+  assert.equal(saved.model.primary, "fast");
 });

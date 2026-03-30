@@ -3,731 +3,52 @@
  *
  * 职责（中文）
  * - 创建 run 目录（timestamp）
- * - 以“干净历史”调用当前 runtime 的 Agent（逻辑与正常 chat 一致）
+ * - 以“干净历史”调用当前 runtime 的 SessionCore（逻辑与正常 chat 一致）
  * - 把执行过程与结果写入 run 目录（messages.jsonl / output.md / result.md / error.md）
  */
 
 import fs from "fs-extra";
 import path from "node:path";
-import { execa } from "execa";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
-import { Agent } from "@agent/Agent.js";
-import {
-  drainDeferredPersistedUserMessages,
-  withRequestContext,
-} from "@agent/context/manager/RequestContext.js";
-import { FilePersistor } from "@/agent/context/context-agent/components/FilePersistor.js";
-import { SummaryCompactor } from "@/agent/context/context-agent/components/SummaryCompactor.js";
-import { RuntimeOrchestrator } from "@/agent/context/context-agent/components/RuntimeOrchestrator.js";
-import { PromptSystem } from "@agent/prompts/system/PromptSystem.js";
-import { shellTools } from "@agent/tools/shell/Tool.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type {
+  DialogueRoundRecord,
+  UserSimulatorDecision,
+} from "@/types/TaskRunner.js";
 import type {
   ShipTaskKind,
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunMetaV1,
-  ShipTaskRunProgressEventV1,
-  ShipTaskRunProgressPhaseV1,
-  ShipTaskRunProgressStatusV1,
-  ShipTaskRunProgressV1,
   ShipTaskRunResultStatusV1,
   ShipTaskRunStatusV1,
   ShipTaskRunTriggerV1,
 } from "@services/task/types/Task.js";
-import type { AgentResult } from "@agent/types/Agent.js";
-import type { JsonObject } from "@/types/Json.js";
 import {
   createTaskRunSessionId,
   formatTaskRunTimestamp,
   getTaskRunDir,
 } from "./Paths.js";
 import { ensureRunDir, readTask } from "./Store.js";
-
-/**
- * 把相对路径渲染为 markdown 行内链接文本。
- */
-function toMdLink(relPath: string): string {
-  const p = String(relPath || "").trim();
-  return p ? `\`${p}\`` : "";
-}
-
-/**
- * 文本摘要裁剪。
- *
- * 关键点（中文）
- * - 用于 result.md/error 通知，避免写入超长原文。
- */
-function summarizeText(text: string, maxChars: number): string {
-  const t = String(text ?? "").trim();
-  if (!t) return "";
-  if (t.length <= maxChars) return t;
-  return t.slice(0, Math.max(0, maxChars - 3)).trimEnd() + "...";
-}
-
-/**
- * 将任意对象序列化为调试快照文本。
- *
- * 关键点（中文）
- * - 用于把 assistantMessage 等结构安全落盘。
- * - 即使对象不可 JSON 化，也尽量保留可读字符串。
- */
-function serializeDebugSnapshot(value: unknown, maxChars = 40_000): string {
-  try {
-    const text = JSON.stringify(value, null, 2);
-    return summarizeText(text, maxChars);
-  } catch {
-    return summarizeText(String(value), maxChars);
-  }
-}
-
-type RunProgressSnapshot = {
-  status: ShipTaskRunProgressStatusV1;
-  phase: ShipTaskRunProgressPhaseV1;
-  message: string;
-  round?: number;
-  maxRounds?: number;
-  endedAt?: number;
-  runStatus?: ShipTaskRunStatusV1;
-  executionStatus?: ShipTaskRunExecutionStatusV1;
-  resultStatus?: ShipTaskRunResultStatusV1;
-};
-
-/**
- * 持续写入运行进度快照（run-progress.json）。
- *
- * 关键点（中文）
- * - run.json 只在结束时写入；该快照用于 UI 展示“执行中过程”。
- * - 写入失败不会阻塞主流程，避免影响任务执行。
- */
-function createRunProgressWriter(params: {
-  progressJsonPath: string;
-  taskId: string;
-  timestamp: string;
-  trigger: ShipTaskRunTriggerV1;
-  kind: ShipTaskKind;
-  startedAt: number;
-}) {
-  const events: ShipTaskRunProgressEventV1[] = [];
-  let current: RunProgressSnapshot = {
-    status: "running",
-    phase: "preparing",
-    message: "任务已唤起，正在准备执行环境",
-  };
-
-  const persist = async (): Promise<void> => {
-    const now = Date.now();
-    const payload: ShipTaskRunProgressV1 = {
-      v: 1,
-      taskId: params.taskId,
-      timestamp: params.timestamp,
-      trigger: params.trigger,
-      kind: params.kind,
-      status: current.status,
-      phase: current.phase,
-      message: current.message,
-      startedAt: params.startedAt,
-      updatedAt: now,
-      ...(typeof current.endedAt === "number" ? { endedAt: current.endedAt } : {}),
-      ...(current.runStatus ? { runStatus: current.runStatus } : {}),
-      ...(current.executionStatus ? { executionStatus: current.executionStatus } : {}),
-      ...(current.resultStatus ? { resultStatus: current.resultStatus } : {}),
-      ...(typeof current.round === "number" ? { round: current.round } : {}),
-      ...(typeof current.maxRounds === "number" ? { maxRounds: current.maxRounds } : {}),
-      events: [...events],
-    };
-    try {
-      await fs.writeJson(params.progressJsonPath, payload, { spaces: 2 });
-    } catch {
-      // ignore
-    }
-  };
-
-  const update = async (next: RunProgressSnapshot): Promise<void> => {
-    current = { ...current, ...next };
-    events.push({
-      at: Date.now(),
-      phase: current.phase,
-      message: current.message,
-      ...(typeof current.round === "number" ? { round: current.round } : {}),
-      ...(typeof current.maxRounds === "number" ? { maxRounds: current.maxRounds } : {}),
-    });
-    if (events.length > 40) {
-      events.splice(0, events.length - 40);
-    }
-    await persist();
-  };
-
-  return {
-    update,
-  };
-}
-
-type TaskResultValidation = {
-  resultStatus: ShipTaskRunResultStatusV1;
-  errors: string[];
-};
-
-type UserSimulatorDecision = {
-  satisfied: boolean;
-  reply: string;
-  reason: string;
-  score?: number;
-  raw: string;
-};
-
-type DialogueRoundRecord = {
-  reviewEnabled: boolean;
-  round: number;
-  executorQuery: string;
-  executorOutput: string;
-  executorDelivered: boolean;
-  executorAssistantMessageSnapshot?: string;
-  validationResultStatus: ShipTaskRunResultStatusV1;
-  ruleErrors: string[];
-  userSimulatorQuery?: string;
-  userSimulatorOutput?: string;
-  userSimulatorAssistantMessageSnapshot?: string;
-  userSimulator: UserSimulatorDecision;
-  feedbackForNextRound?: string;
-};
+import {
+  createRunProgressWriter,
+  serializeDebugSnapshot,
+  summarizeText,
+  toMdLink,
+} from "./TaskRunnerProgress.js";
+import {
+  appendTaskAssistantMessage,
+  createTaskSessionRuntime,
+} from "./TaskRunnerSession.js";
+import {
+  buildExecutorRoundQuery,
+  buildUserSimulatorQuery,
+  parseUserSimulatorDecision,
+  runAgentRound,
+  runScriptTask,
+  validateTaskResult,
+} from "./TaskRunnerRound.js";
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
 const DEFAULT_SINGLE_ROUND = 1;
-
-type ScriptExecutionResult = {
-  outputText: string;
-};
-
-type TaskAgentRuntime = {
-  getAgent(sessionId: string): Agent;
-  getPersistor(sessionId: string): FilePersistor;
-};
-
-/**
- * 把 task round 的 user query 落盘到对应 run context。
- *
- * 关键点（中文）
- * - 复用 ContextAgent 的 persistor 语义，确保 run 目录里的 messages.jsonl
- *   既有 user query，也有 assistant reply，方便 debug。
- * - 失败不阻塞主流程，因为 debug 落盘不能影响任务本身执行。
- */
-async function appendTaskRoundUserMessage(params: {
-  taskAgentRuntime: TaskAgentRuntime;
-  sessionId: string;
-  taskId: string;
-  query: string;
-  actorId: string;
-  actorName: string;
-}): Promise<void> {
-  const text = String(params.query || "").trim();
-  if (!text) return;
-  const persistor = params.taskAgentRuntime.getPersistor(params.sessionId);
-  await persistor.append(
-    persistor.userText({
-      text,
-      metadata: {
-        sessionId: params.sessionId,
-        extra: {
-          taskId: params.taskId,
-          actorId: params.actorId,
-          actorName: params.actorName,
-        },
-      },
-    }),
-  );
-}
-
-/**
- * 构建 task 专用 Agent 运行时（独立于 SessionManager 的 Agent 缓存）。
- *
- * 关键点（中文）
- * - task 场景使用独立 Agent 实例，不复用 `context.run/getAgent`。
- * - system 档位固定为 `task`，避免在 system 域根据 sessionId 推断。
- */
-function createTaskAgentRuntime(params: {
-  runtime: ServiceRuntime;
-  runDirAbs: string;
-  runSessionId: string;
-  userSimulatorSessionId: string;
-}): TaskAgentRuntime {
-  const { runtime, runDirAbs, runSessionId, userSimulatorSessionId } = params;
-  const compactor = new SummaryCompactor({
-    keepLastMessages: runtime.config.context?.messages?.keepLastMessages,
-    maxInputTokensApprox: runtime.config.context?.messages?.maxInputTokensApprox,
-    archiveOnCompact: runtime.config.context?.messages?.archiveOnCompact,
-    compactRatio: runtime.config.context?.messages?.compactRatio,
-  });
-  const system = new PromptSystem({
-    projectRoot: runtime.rootPath,
-    getStaticSystemPrompts: () => runtime.systems,
-    getRuntime: () => runtime,
-    profile: "task",
-  });
-  const persistorsBySessionId = new Map<string, FilePersistor>();
-  const agentsBySessionId = new Map<string, Agent>();
-
-  const resolveTaskPersistor = (sessionId: string): FilePersistor => {
-    const existing = persistorsBySessionId.get(sessionId);
-    if (existing) return existing;
-
-    const key = String(sessionId || "").trim();
-    if (!key) {
-      throw new Error("TaskAgentRuntime requires a non-empty sessionId");
-    }
-    const runMessagesDirPath =
-      key === runSessionId
-        ? runDirAbs
-        : key === userSimulatorSessionId
-          ? path.join(runDirAbs, "user-simulator")
-          : undefined;
-
-    const created = new FilePersistor({
-      rootPath: runtime.rootPath,
-      sessionId: key,
-      ...(runMessagesDirPath
-        ? {
-            paths: {
-              sessionDirPath: runMessagesDirPath,
-              messagesDirPath: runMessagesDirPath,
-              messagesFilePath: path.join(runMessagesDirPath, "messages.jsonl"),
-              metaFilePath: path.join(runMessagesDirPath, "meta.json"),
-              archiveDirPath: path.join(runMessagesDirPath, "archive"),
-            },
-          }
-        : {}),
-    });
-    persistorsBySessionId.set(key, created);
-    return created;
-  };
-
-  return {
-    getPersistor(sessionId: string): FilePersistor {
-      return resolveTaskPersistor(sessionId);
-    },
-    getAgent(sessionId: string): Agent {
-      const key = String(sessionId || "").trim();
-      if (!key) {
-        throw new Error("TaskAgentRuntime.getAgent requires a non-empty sessionId");
-      }
-      const existing = agentsBySessionId.get(key);
-      if (existing) return existing;
-
-      const persistor = resolveTaskPersistor(key);
-      const orchestrator = new RuntimeOrchestrator({
-        sessionId: key,
-        getTools: () => shellTools,
-      });
-      const created = new Agent({
-        model: runtime.session.model,
-        logger: runtime.logger,
-        persistor,
-        compactor,
-        orchestrator,
-        prompter: system,
-      });
-      agentsBySessionId.set(key, created);
-      return created;
-    },
-  };
-}
-
-/**
- * 从文本中提取 JSON 对象（支持 ```json 代码块）。
- */
-function tryExtractJsonObject(text: string): JsonObject | null {
-  const raw = String(text ?? "").trim();
-  if (!raw) return null;
-
-  const tryParse = (s: string): JsonObject | null => {
-    try {
-      const parsed = JSON.parse(s);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as JsonObject;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  };
-
-  const direct = tryParse(raw);
-  if (direct) return direct;
-
-  const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i);
-  if (fenced?.[1]) {
-    const parsed = tryParse(fenced[1].trim());
-    if (parsed) return parsed;
-  }
-
-  const loose = raw.match(/\{[\s\S]*\}/);
-  if (loose?.[0]) {
-    const parsed = tryParse(loose[0]);
-    if (parsed) return parsed;
-  }
-
-  return null;
-}
-
-function parsePossibleJsonObject(value: unknown): JsonObject | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as JsonObject;
-  }
-  if (typeof value !== "string") return null;
-  return tryExtractJsonObject(value);
-}
-
-function extractTextFromAssistantMessageParts(parts: unknown): string {
-  if (!Array.isArray(parts)) return "";
-  const texts: string[] = [];
-  for (const part of parts) {
-    if (!part || typeof part !== "object") continue;
-    const p = part as { type?: unknown; text?: unknown };
-    // 关键点（中文）：兼容 text/input_text 两种文本 part。
-    if (p.type !== "text" && p.type !== "input_text") continue;
-    if (typeof p.text !== "string") continue;
-    const value = p.text.trim();
-    if (!value) continue;
-    texts.push(value);
-  }
-  return texts.join("\n").trim();
-}
-
-type ChatSendOutputPick = {
-  text: string;
-  delivered: boolean;
-};
-
-function pickLastChatSendDeliveredText(parts: unknown): ChatSendOutputPick {
-  if (!Array.isArray(parts)) return { text: "", delivered: false };
-  for (let i = parts.length - 1; i >= 0; i -= 1) {
-    const part = parts[i];
-    if (!part || typeof part !== "object") continue;
-    const p = part as {
-      type?: unknown;
-      toolName?: unknown;
-      tool?: unknown;
-      input?: unknown;
-      rawInput?: unknown;
-      arguments?: unknown;
-      output?: unknown;
-      result?: unknown;
-      state?: unknown;
-      errorText?: unknown;
-      error?: unknown;
-    };
-    if (p.type !== "tool-call") continue;
-    const toolName = String(p.toolName ?? p.tool ?? "").trim();
-    if (toolName !== "chat_send") continue;
-    const inputObject = parsePossibleJsonObject(
-      p.input ?? p.rawInput ?? p.arguments,
-    );
-    if (!inputObject) continue;
-    const text = String(inputObject.text ?? "").trim();
-    if (!text) continue;
-
-    const state = String(p.state ?? "").trim();
-    if (state === "output-error" || state === "output-denied") {
-      return { text, delivered: false };
-    }
-
-    const outputObject = parsePossibleJsonObject(p.output ?? p.result);
-    if (outputObject) {
-      const success = outputObject.success;
-      if (success === true) return { text, delivered: true };
-      if (success === false) return { text, delivered: false };
-    }
-
-    if (state === "output-available") return { text, delivered: true };
-    return { text, delivered: false };
-  }
-  return { text: "", delivered: false };
-}
-
-function pickAgentOutput(assistantMessage: AgentResult["assistantMessage"]): ChatSendOutputPick {
-  // 关键点（中文）：
-  // - 若存在 `chat_send`，优先取其文本与送达状态。
-  // - 若不存在 `chat_send`，退化为普通 assistant 文本输出。
-  const picked = pickLastChatSendDeliveredText(
-    (assistantMessage as { parts?: unknown } | null)?.parts,
-  );
-  if (picked.text) return picked;
-  return {
-    text: extractTextFromAssistantMessageParts(
-    (assistantMessage as { parts?: unknown } | null)?.parts,
-    ),
-    delivered: false,
-  };
-}
-
-/**
- * 解析模拟用户 agent 的判定结果。
- *
- * 关键点（中文）
- * - 优先 JSON 协议
- * - JSON 失败时使用保守启发式，默认不满意
- */
-function parseUserSimulatorDecision(outputText: string): UserSimulatorDecision {
-  const raw = String(outputText ?? "").trim();
-  const obj = tryExtractJsonObject(raw);
-  if (obj) {
-    const satisfiedRaw = obj.satisfied;
-    const satisfied =
-      satisfiedRaw === true ||
-      (typeof satisfiedRaw === "string" && satisfiedRaw.trim().toLowerCase() === "true");
-    const reply = String(obj.reply ?? "").trim();
-    const reason = String(obj.reason ?? "").trim();
-    const scoreRaw = obj.score;
-    const score =
-      typeof scoreRaw === "number"
-        ? scoreRaw
-        : typeof scoreRaw === "string" && /^(\d+)(\.\d+)?$/.test(scoreRaw.trim())
-          ? Number(scoreRaw)
-          : undefined;
-    const normalizedScore =
-      typeof score === "number" && Number.isFinite(score) && score >= 0 && score <= 10
-        ? score
-        : undefined;
-    return {
-      satisfied,
-      reply,
-      reason,
-      ...(typeof normalizedScore === "number" ? { score: normalizedScore } : {}),
-      raw,
-    };
-  }
-
-  const lower = raw.toLowerCase();
-  const likelySatisfied =
-    (lower.includes("satisfied") || lower.includes("满意") || lower.includes("通过")) &&
-    !lower.includes("not satisfied") &&
-    !lower.includes("不满意");
-
-  return {
-    satisfied: likelySatisfied,
-    reply: raw,
-    reason: likelySatisfied ? "heuristic satisfied" : "heuristic not satisfied",
-    raw,
-  };
-}
-
-/**
- * 构造执行 agent 的轮次输入。
- */
-function buildExecutorRoundQuery(params: {
-  taskBody: string;
-  round: number;
-  lastOutputText?: string;
-  lastFeedback?: string;
-}): string {
-  if (params.round <= 1) return params.taskBody;
-  return [
-    "# 任务目标（保持不变）",
-    "",
-    params.taskBody || "_(empty body)_",
-    "",
-    `# 这是第 ${params.round} 轮执行`,
-    "",
-    "请根据以下“模拟用户反馈”和“上一轮输出”进行修订，并给出新的完整结果。",
-    "",
-    "## 模拟用户反馈",
-    "",
-    params.lastFeedback ? params.lastFeedback : "_(no feedback)_",
-    "",
-    "## 上一轮输出",
-    "",
-    params.lastOutputText ? params.lastOutputText : "_(empty output)_",
-    "",
-  ].join("\n");
-}
-
-/**
- * 构造模拟用户 agent 的判定输入。
- */
-function buildUserSimulatorQuery(params: {
-  taskTitle: string;
-  taskDescription: string;
-  taskBody: string;
-  round: number;
-  maxRounds: number;
-  executorOutputText: string;
-  ruleErrors: string[];
-}): string {
-  const ruleSection =
-    params.ruleErrors.length > 0
-      ? params.ruleErrors.map((x) => `- ${x}`).join("\n")
-      : "- (none)";
-  return [
-    "你是一个“模拟用户”Agent。你要根据任务目标审阅执行结果，并给出用户回复。",
-    "",
-    "请严格输出 JSON 对象（不要输出 markdown）：",
-    '{"satisfied": boolean, "reply": string, "reason": string, "score": number}',
-    "",
-    "规则：",
-    "1) 如果结果还不满足目标，satisfied 必须是 false，reply 要像用户一样明确提出修改要求。",
-    "2) 如果已经满足，satisfied=true，reply 给简短确认。",
-    "3) score 范围 0-10。",
-    "4) 如果系统规则校验有失败项（见下方），必须判定为不满意。",
-    "",
-    `任务标题: ${params.taskTitle}`,
-    `任务描述: ${params.taskDescription}`,
-    `当前轮次: ${params.round}/${params.maxRounds}`,
-    "",
-    "任务正文：",
-    params.taskBody || "_(empty body)_",
-    "",
-    "系统规则校验失败项：",
-    ruleSection,
-    "",
-    "执行 Agent 本轮输出：",
-    params.executorOutputText || "_(empty output)_",
-    "",
-  ].join("\n");
-}
-
-/**
- * 执行一轮 agent.run。
- */
-async function runAgentRound(params: {
-  taskAgentRuntime: TaskAgentRuntime;
-  sessionId: string;
-  taskId: string;
-  query: string;
-  actorId: string;
-  actorName: string;
-}): Promise<{ outputText: string; delivered: boolean; rawResult: AgentResult }> {
-  try {
-    await appendTaskRoundUserMessage({
-      taskAgentRuntime: params.taskAgentRuntime,
-      sessionId: params.sessionId,
-      taskId: params.taskId,
-      query: params.query,
-      actorId: params.actorId,
-      actorName: params.actorName,
-    });
-  } catch {
-    // ignore
-  }
-
-  const result = await withRequestContext(
-    {
-      sessionId: params.sessionId,
-    },
-    () =>
-      params.taskAgentRuntime.getAgent(params.sessionId).run({
-        query: params.query,
-      }),
-  );
-  const outputPick = pickAgentOutput(result.assistantMessage);
-
-  // 关键点（中文）：agent.run 可能返回 success=false 但不抛异常；这里必须转为执行失败，避免误判为“多轮不满意”。
-  if (!result.success) {
-    const reason = outputPick.text || "agent run returned success=false";
-    throw new Error(reason);
-  }
-
-  // 关键点（中文）：
-  // - 若执行器没有产出任何用户可见文本，只做了工具调用/检查，则视为执行失败。
-  // - 这种情况说明 agent 没有真正完成任务，不应再退化为“结果校验不通过”。
-  if (!String(outputPick.text || "").trim()) {
-    throw new Error("agent produced no user-visible output");
-  }
-
-  return {
-    outputText: outputPick.text,
-    delivered: outputPick.delivered,
-    rawResult: result,
-  };
-}
-
-/**
- * 执行 script 类型任务。
- *
- * 关键点（中文）
- * - 在任务配置的 sessionId 语义下执行，透传 `DC_SESSION_ID`
- * - 仅允许执行项目内 `.sh` 文件
- */
-async function runScriptTask(params: {
-  runDirAbs: string;
-  sessionId: string;
-  scriptBody: string;
-}): Promise<ScriptExecutionResult> {
-  const body = String(params.scriptBody || "");
-  if (!body.trim()) throw new Error("script task body cannot be empty");
-
-  const scriptAbs = path.join(params.runDirAbs, "task-script.sh");
-  await fs.writeFile(scriptAbs, body.endsWith("\n") ? body : `${body}\n`, "utf-8");
-
-  const execResult = await withRequestContext(
-    { sessionId: params.sessionId },
-    () =>
-      execa("sh", [scriptAbs], {
-        cwd: params.runDirAbs,
-        reject: true,
-        env: {
-          ...process.env,
-          DC_SESSION_ID: params.sessionId,
-        },
-      }),
-  );
-
-  const stdout = String(execResult.stdout || "").trim();
-  const stderr = String(execResult.stderr || "").trim();
-  const combined = [stdout, stderr].filter(Boolean).join("\n");
-  return {
-    outputText: combined,
-  };
-}
-
-/**
- * 把 task agent 的 assistant 消息落盘到对应 run context persistor。
- */
-async function appendTaskAssistantMessage(params: {
-  taskAgentRuntime: TaskAgentRuntime;
-  sessionId: string;
-  taskId: string;
-  rawResult: AgentResult;
-}): Promise<void> {
-  const persistor = params.taskAgentRuntime.getPersistor(params.sessionId);
-  const assistantMessage = params.rawResult?.assistantMessage;
-  if (assistantMessage && typeof assistantMessage === "object") {
-    await persistor.append(assistantMessage);
-    const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-      params.sessionId,
-    );
-    for (const message of deferredInjectedMessages) {
-      await persistor.append(message);
-    }
-    return;
-  }
-}
-
-/**
- * 校验任务结果是否满足“必须有结果”的规则。
- *
- * 关键点（中文）
- * - 统一要求输出至少 1 个字符。
- */
-async function validateTaskResult(params: {
-  outputText: string;
-}): Promise<TaskResultValidation> {
-  const errors: string[] = [];
-  const minOutputChars = 1;
-  const outputChars = String(params.outputText ?? "").trim().length;
-  if (outputChars < minOutputChars) {
-    errors.push(`output too short: got ${outputChars}, expected >= ${minOutputChars}`);
-  }
-
-  if (errors.length > 0) {
-    return {
-      resultStatus: "invalid",
-      errors,
-    };
-  }
-
-  return {
-    resultStatus: "valid",
-    errors: [],
-  };
-}
 
 /**
  * 立即执行任务定义。
@@ -742,7 +63,7 @@ async function validateTaskResult(params: {
  * - `runDir`/`runDirRel`：执行产物目录。
  */
 export async function runTaskNow(params: {
-  context: ServiceRuntime;
+  context: ExecutionRuntime;
   taskId: string;
   trigger: ShipTaskRunTriggerV1;
   executionId?: string;
@@ -837,7 +158,7 @@ export async function runTaskNow(params: {
 
   const runSessionId = createTaskRunSessionId(task.taskId, timestamp);
   const userSimulatorSessionId = `task-user-sim:${task.taskId}:${timestamp}`;
-  const taskAgentRuntime = createTaskAgentRuntime({
+  const taskSessionRuntime = createTaskSessionRuntime({
     runtime: context,
     runDirAbs,
     runSessionId,
@@ -958,7 +279,7 @@ export async function runTaskNow(params: {
           ...(lastFeedback ? { lastFeedback } : {}),
         });
         const executorRound = await runAgentRound({
-          taskAgentRuntime,
+          taskSessionRuntime,
           sessionId: runSessionId,
           taskId: task.taskId,
           query: executorQuery,
@@ -975,7 +296,7 @@ export async function runTaskNow(params: {
         // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
         try {
           await appendTaskAssistantMessage({
-            taskAgentRuntime,
+            taskSessionRuntime,
             sessionId: runSessionId,
             taskId: task.taskId,
             rawResult: executorRound.rawResult,
@@ -1030,7 +351,7 @@ export async function runTaskNow(params: {
             ruleErrors: validation.errors,
           });
           const simulatorRound = await runAgentRound({
-            taskAgentRuntime,
+            taskSessionRuntime,
             sessionId: userSimulatorSessionId,
             taskId: task.taskId,
             query: userSimulatorQuery,
@@ -1043,7 +364,7 @@ export async function runTaskNow(params: {
           );
           try {
             await appendTaskAssistantMessage({
-              taskAgentRuntime,
+              taskSessionRuntime,
               sessionId: userSimulatorSessionId,
               taskId: task.taskId,
               rawResult: simulatorRound.rawResult,

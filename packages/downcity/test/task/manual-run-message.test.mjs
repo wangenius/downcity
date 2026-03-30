@@ -63,7 +63,7 @@ test("runTaskDefinition returns guidance message for manual async acceptance", a
       request: {
         title: "manual-run-message",
         description: "验证手动执行返回文案",
-        contextId: "ctx_manual_message",
+        sessionId: "ctx_manual_message",
         when: "@manual",
         kind: "script",
         body: "printf 'manual-run-ok\\n'",

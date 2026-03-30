@@ -20,7 +20,7 @@ title: Memory Architecture
 ```mermaid
 flowchart TB
   U[User / Channel]
-  SA[SessionAgent]
+  SA[SessionRuntime]
   HS[History Store]
   MS[Memory Service]
   CA[Contextualization]
@@ -38,9 +38,9 @@ flowchart TB
 
 ## 这张图怎么理解
 
-### 1. SessionAgent 是前台执行者
+### 1. SessionRuntime 是前台执行者
 
-SessionAgent 负责一轮真实交互：
+SessionRuntime 负责一轮真实交互：
 
 1. 接收用户输入。
 2. 追加 history。
@@ -49,7 +49,7 @@ SessionAgent 负责一轮真实交互：
 5. 写回 assistant message。
 6. 必要时触发 memory 写入。
 
-也就是说，SessionAgent 不负责“拥有 memory”，但它负责“驱动 memory”。
+也就是说，SessionRuntime 不负责“拥有 memory”，但它负责“驱动 memory”。
 
 ### 2. Memory service 是后台治理者
 
@@ -75,19 +75,19 @@ Memory service 不应该承担整轮对话执行。
 ```mermaid
 sequenceDiagram
   participant User
-  participant SessionAgent
+  participant SessionRuntime
   participant History
   participant Memory
   participant LLM
 
-  User->>SessionAgent: 新消息
-  SessionAgent->>History: append user message
-  SessionAgent->>Memory: search relevant memory
-  Memory-->>SessionAgent: memory snippets
-  SessionAgent->>LLM: build context and run
-  LLM-->>SessionAgent: assistant output
-  SessionAgent->>History: append assistant message
-  SessionAgent->>Memory: optional store / update
+  User->>SessionRuntime: 新消息
+  SessionRuntime->>History: append user message
+  SessionRuntime->>Memory: search relevant memory
+  Memory-->>SessionRuntime: memory snippets
+  SessionRuntime->>LLM: build context and run
+  LLM-->>SessionRuntime: assistant output
+  SessionRuntime->>History: append assistant message
+  SessionRuntime->>Memory: optional store / update
 ```
 
 在线链路要轻。
@@ -147,16 +147,16 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  SR[ServiceRuntime]
+  ER[ExecutionRuntime]
   SS[session]
   MS[memory service]
   CS[chat service]
   TS[task service]
 
-  SR --> SS
-  SR --> MS
-  SR --> CS
-  SR --> TS
+  ER --> SS
+  ER --> MS
+  ER --> CS
+  ER --> TS
 
   CS --> SS
   TS --> SS
@@ -165,7 +165,7 @@ flowchart LR
 
 解释：
 
-1. `ServiceRuntime.session`
+1. `ExecutionRuntime.session`
    是所有 service 共享的会话主轴。
 2. `chat service`
    负责把渠道消息映射到 session。
@@ -195,7 +195,7 @@ flowchart LR
 
 而是：
 
-`用户 -> SessionAgent -> LLM`
+`用户 -> SessionRuntime -> LLM`
 
 同时：
 
@@ -203,6 +203,6 @@ flowchart LR
 
 ## 最后收束成一句话
 
-SessionAgent 处理“当前这轮怎么做”。
+SessionRuntime 处理“当前这轮怎么做”。
 
 Memory service 处理“过去的东西怎么沉淀，未来怎么再取回来”。

@@ -6,7 +6,7 @@
  * - cron 调度执行器由 server 注入，service 不依赖具体实现。
  */
 
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import {
   isTaskWhenManual,
   resolveTaskWhenCronExpression,
@@ -23,7 +23,7 @@ function formatTaskLogMessage(message: string): string {
 }
 
 export async function registerTaskCronJobs(params: {
-  context: ServiceRuntime;
+  context: ExecutionRuntime;
   engine: ServiceCronEngine;
 }): Promise<{ tasksFound: number; jobsScheduled: number }> {
   const runtime = params.context;

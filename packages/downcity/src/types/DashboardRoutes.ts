@@ -7,8 +7,8 @@
  */
 
 import type { Hono } from "hono";
-import type { RuntimeState } from "@/agent/context/manager/RuntimeState.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { AgentRuntime } from "@agent/AgentRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 
 /**
  * Dashboard 路由注册入参。
@@ -20,13 +20,12 @@ export interface DashboardRouteRegistrationParams {
   app: Hono;
 
   /**
-   * 读取当前 runtime 状态。
+   * 读取当前 agent runtime 状态。
    */
-  getRuntimeState: () => RuntimeState;
+  getAgentRuntime: () => AgentRuntime;
 
   /**
-   * 读取当前 service runtime 状态。
+   * 读取当前统一执行运行时。
    */
-  getServiceRuntimeState: () => ServiceRuntime;
-
+  getExecutionRuntime: () => ExecutionRuntime;
 }

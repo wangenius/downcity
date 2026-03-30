@@ -31,8 +31,8 @@ import {
   resolveVoiceStrategyByModel,
 } from "@/plugins/voice/runtime/DependencyInstaller.js";
 import { resolveVoiceModelsRootDir } from "@/plugins/voice/runtime/Paths.js";
-import type { VoiceModelId } from "@/agent/types/Voice.js";
-import { persistProjectPluginConfig } from "@/console/plugin/ProjectConfigStore.js";
+import type { VoiceModelId } from "@/types/Voice.js";
+import { persistProjectPluginConfig } from "@/main/plugin/ProjectConfigStore.js";
 
 const execFileAsync = promisify(execFileCb);
 

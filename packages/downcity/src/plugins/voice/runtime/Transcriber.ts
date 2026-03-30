@@ -6,7 +6,7 @@ import type {
   VoiceModelId,
   VoiceProvider,
   VoiceTranscribeStrategy,
-} from "@/agent/types/Voice.js";
+} from "@/types/Voice.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import { resolveVoiceModelsRootDir } from "./Paths.js";
 import type { VoicePluginConfig } from "@/types/VoicePlugin.js";

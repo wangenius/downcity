@@ -6,7 +6,7 @@
  * - 仅服务 agent 执行生命周期，不覆盖手动 `chat send`。
  */
 
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { ChatReplyDispatchInput, ChatReplyEffectInput } from "@/types/ChatPlugin.js";
 import type { JsonValue } from "@/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
@@ -21,7 +21,7 @@ function normalizeText(value: string | undefined): string {
  * 回复前文本增强。
  */
 export async function prepareChatReplyText(params: {
-  runtime: ServiceRuntime;
+  runtime: ExecutionRuntime;
   input: ChatReplyDispatchInput;
 }): Promise<string> {
   const input = {
@@ -45,7 +45,7 @@ export async function prepareChatReplyText(params: {
  * 回复后事件分发。
  */
 export async function emitChatReplyEffect(params: {
-  runtime: ServiceRuntime;
+  runtime: ExecutionRuntime;
   input: ChatReplyEffectInput;
 }): Promise<void> {
   await params.runtime.plugins.effect(
@@ -58,7 +58,7 @@ export async function emitChatReplyEffect(params: {
  * 基于 chatKey 补齐回复目标上下文。
  */
 export async function resolveChatReplyTarget(params: {
-  runtime: ServiceRuntime;
+  runtime: ExecutionRuntime;
   chatKey: string;
 }): Promise<{
   channel?: ChatDispatchChannel;

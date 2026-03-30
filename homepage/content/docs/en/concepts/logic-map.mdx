@@ -1,21 +1,22 @@
 ---
 title: Architecture Logic Map
-description: Explains the responsibilities and interaction of console, agent, service, and plugin
+description: Explains how console, agent, execution runtime, session, service, and plugin collaborate
 ---
 
 # Architecture Logic Map
 
 This page answers one question:
 
-what `console`, `agent`, `service`, and `plugin` each own, and how one request flows across them.
+how one request moves from `console` / `agent` into real execution and back to the user.
 
 ## 1. Responsibility Boundaries
 
-- `console`: global control plane for daemon, registry, model pool, env, and shared storage
-- `agent`: per-project execution plane that loads project config and owns one runtime
-- `service`: core workflow with lifecycle ownership
-- `plugin`: optional enhancement module that passively attaches to service-defined points
-- each plugin owns its dependency and config details internally
+- `console`: global control plane for daemon, registry, model pool, and shared storage
+- `agent`: project host that loads config and owns the session registry
+- `execution runtime`: the shared capability surface injected into the execution chain
+- `session`: where prompt, tools, history, and model execution actually happen
+- `service`: main business workflow and domain orchestration
+- `plugin`: passive extension module that joins only at fixed points
 
 ## 2. System Relationship
 
@@ -23,13 +24,17 @@ what `console`, `agent`, `service`, and `plugin` each own, and how one request f
 flowchart LR
   subgraph CP["Control Plane"]
     CLI["city CLI"] --> CONSOLE["console"]
-    CONSOLE --> REG["registry / config / UI gateway"]
+    CONSOLE --> REG["registry / model pool / UI"]
   end
 
   subgraph DP["Execution Plane (Per Project)"]
-    AGENT["agent daemon"] --> SERVICES["services"]
-    SERVICES --> POINTS["service-defined plugin points"]
-    PLUGINS["plugins"] --> POINTS
+    AGENT["agent"] --> ER["execution runtime"]
+    AGENT --> SR["session registry"]
+    SR --> SESSION["session"]
+    ER --> SERVICES["services"]
+    ER --> PLUGINS["plugins"]
+    SERVICES --> SESSION
+    SERVICES -. trigger plugin points .-> PLUGINS
     AGENT --> SHIP[".downcity/*"]
   end
 
@@ -42,24 +47,34 @@ flowchart LR
 sequenceDiagram
   participant User as User
   participant Channel as Telegram/Feishu/QQ
-  participant Agent as agent daemon
   participant Service as service(chat/task/memory)
+  participant Runtime as execution runtime
   participant Plugin as plugin(voice/auth)
+  participant Session as session
 
-  User->>Channel: send message
-  Channel->>Agent: enter runtime
-  Agent->>Service: execute workflow
-  Service->>Plugin: trigger extension point
-  Plugin-->>Service: return augmented result
-  Service-->>Agent: return business result
+  User->>Channel: send message / trigger task
+  Channel->>Service: enter service workflow
+  Service->>Runtime: read shared capabilities
+  Service->>Plugin: trigger fixed plugin points
+  Service->>Session: enter target session
+  Session-->>Service: return result
+  Service-->>User: reply or persist outcome
 ```
 
 ## 4. A Real-World Reading
 
 In `chat`:
 
-- the service builds the inbound message
-- plugins join only at fixed points
-- `voice` can add transcription
-- `auth` can validate access and resolve roles
-- `chat` still decides whether to enqueue, when to reply, and what to persist
+- `chat service` receives the channel message
+- it maintains the mapping from channel target to `sessionId`
+- `voice plugin` may add transcription at fixed points
+- `auth plugin` may validate access and resolve roles
+- `chat service` still decides whether to enqueue, when to reply, and what to persist
+
+## 5. What Most Users Should Remember
+
+- you usually operate an agent
+- the real execution unit is the session
+- services own the main path
+- plugins are the extension layer
+- execution runtime is the glue that keeps those capabilities aligned

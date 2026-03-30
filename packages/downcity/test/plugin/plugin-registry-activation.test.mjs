@@ -11,9 +11,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { HookRegistry } from "../../bin/console/plugin/HookRegistry.js";
-import { PluginRegistry } from "../../bin/console/plugin/PluginRegistry.js";
-import { isPluginEnabledInConfig } from "../../bin/console/plugin/Activation.js";
+import { HookRegistry } from "../../bin/main/plugin/HookRegistry.js";
+import { PluginRegistry } from "../../bin/main/plugin/PluginRegistry.js";
+import { isPluginEnabledInConfig } from "../../bin/main/plugin/Activation.js";
 
 function createRuntime(config = {}) {
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-plugin-registry-"));

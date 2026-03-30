@@ -11,7 +11,7 @@ import type { Plugin } from "@/types/Plugin.js";
 import type { ChatInboundAugmentInput } from "@/types/ChatPlugin.js";
 import type { VoicePluginConfig } from "@/types/VoicePlugin.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import { persistProjectPluginConfig } from "@/console/plugin/ProjectConfigStore.js";
+import { persistProjectPluginConfig } from "@/main/plugin/ProjectConfigStore.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import {
   listVoiceModels,

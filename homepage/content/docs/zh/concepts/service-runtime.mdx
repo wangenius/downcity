@@ -1,11 +1,71 @@
 ---
-title: Service Runtime
-description: 说明 Service 是什么、在哪里运行，以及如何与 plugin 协作
+title: Execution Runtime 与 Session
+description: 说明统一执行运行时是什么，session 是什么，以及它们和 service/plugin 的关系
 ---
 
-# Service Runtime
+# Execution Runtime 与 Session
 
-Service 是 Downcity 里的核心业务工作流模块。
+这页只回答 3 个问题：
+
+1. `execution runtime` 是什么
+2. `session` 是什么
+3. `service` 和 `plugin` 怎么接进来
+
+## 1. Execution Runtime 是什么
+
+`execution runtime` 不是一个新进程，也不是一个独立系统。
+
+它更准确的意思是：
+
+**agent 在执行期间，对 service / plugin 暴露的一套统一能力视图。**
+
+通常包括：
+
+- `config`
+- `env`
+- `logger`
+- `session`
+- `services`
+- `plugins`
+
+所以它解决的是“执行时大家怎么拿到同一套能力”的问题，而不是“谁是宿主”的问题。
+
+## 2. Session 是什么
+
+`session` 才是真正的一次执行实例。
+
+你可以把它理解成：
+
+- 一条 chat 对话 = 一个 session
+- 一次 task run = 一个 session
+- 后续的 history、prompt、tool、assistant output 都围绕这个 session 发生
+
+这也是为什么现在很多用户侧概念都统一收敛到 `sessionId`：
+
+- 语义更稳定
+- chat 和 task 可以共用同一套执行主轴
+- 不再需要把各种执行实例拆成很多平级概念
+
+## 3. Execution Runtime 和 Session 的关系
+
+```mermaid
+flowchart LR
+  A["Agent"] --> ER["Execution Runtime"]
+  A --> SR["Session Registry"]
+  SR --> S["Session"]
+  ER --> SP["runtime.session"]
+  SP --> S
+```
+
+要点是：
+
+- `agent` 持有 session registry
+- `execution runtime` 暴露 `runtime.session`
+- `service` 和 `plugin` 不直接拥有 session，它们是通过 `runtime.session` 使用 session 能力
+
+## 4. Service 应该负责什么
+
+service 是主流程模块。
 
 典型内置 service：
 
@@ -14,45 +74,71 @@ Service 是 Downcity 里的核心业务工作流模块。
 - `memory`
 - `shell`
 
-## Service 应该负责什么
+service 应该负责：
 
 - 用户主流程
-- 运行时编排
-- 上下文感知执行
-- 稳定的 service actions
+- 工作流编排
+- 领域状态
+- 稳定 action
 - 定义允许 plugin 接入的扩展点
 
-## Service 不应该负责什么
+service 不应该负责：
 
-- 底层依赖的安装、检查、切换
 - plugin 私有实现细节
-- 可以抽离出去的增强逻辑
+- plugin 的依赖安装与内部切换
+- 把主流程拆碎到 plugin 里
 
-## 推荐协作模型
+## 5. Plugin 应该负责什么
 
-- service -> 触发自己的 plugin 点
-- plugin -> 实现这些点
-- plugin -> 在内部处理自己的依赖
+plugin 是被动扩展层。
 
-在运行时接口上，这三者也已经分开：
+它的职责是：
 
-- `ServiceRuntime` 与 `PluginRuntime` 现在共享同一套执行上下文
-- runtime 只负责注入上下文，不再对外暴露独立依赖端口
-- plugin 依赖由 plugin 自己封装
+- 在固定扩展点增强流程
+- 做 guard / pipeline / effect / resolve
+- 管理自己的依赖、配置和内部实现
 
-是否真的执行某个 plugin，不由 service 临时判断，而由项目配置里的 `plugins.<name>.enabled` 决定。
+plugin 不应该：
 
-- enabled = `true`：允许该 plugin 进入 hook / `plugin.system` 注入链路
-- enabled = `false`：该 plugin 仍然可以被管理和查看状态，但不会参与主执行流程
-- 未显式配置 `enabled`：回退到 plugin 自己声明的默认值
+- 拥有独立生命周期
+- 变成第二套 service
+- 再维护一套独立 runtime
 
-例如 `chat` 不需要知道具体转写模型细节。  
-它只负责在处理语音附件时触发自己的语音相关扩展点，真正的实现由 `voice` plugin 提供，转写依赖与配置也由该 plugin 自己处理。
+## 6. 它们如何协作
 
-## 这样设计的好处
+```mermaid
+sequenceDiagram
+  participant User as User
+  participant Service as service
+  participant Runtime as execution runtime
+  participant Plugin as plugin
+  participant Session as session
 
-- 主流程不会散落到多个插件里
-- 插件不会长成第二套 runtime
-- 依赖细节不会泄漏进 service 编排层
+  User->>Service: 发起请求
+  Service->>Runtime: 读取统一执行能力
+  Service->>Plugin: 在固定点触发扩展
+  Service->>Session: 进入或复用 session 执行
+  Session-->>Service: 返回结果
+  Service-->>User: 返回最终结果
+```
 
-对于命令执行，agent 现在也不再直接持有 shell 进程表，而是通过 `shellService` 管理 `shell_id` 会话。
+## 7. 一个聊天例子
+
+在 chat 场景里：
+
+- `chat service` 接收 Telegram / Feishu / QQ 消息
+- 它通过映射找到目标 `sessionId`
+- 然后通过 `runtime.session` 进入该 session 执行
+- 如果有语音附件，就触发 `voice plugin`
+- 如果需要鉴权，就触发 `auth plugin`
+- 最后由 `chat service` 决定如何回复渠道
+
+## 8. 最终记忆法
+
+一句话记：
+
+- `agent` 是宿主
+- `execution runtime` 是统一执行视图
+- `session` 是真正执行单元
+- `service` 负责主流程
+- `plugin` 负责被动增强

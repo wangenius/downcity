@@ -6,8 +6,8 @@
  * - 所有动作统一返回结构化结果，失败不抛给上层。
  */
 
-import type { ServiceActionResult } from "@/console/service/ServiceManager.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ServiceActionResult } from "@/types/Service.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { JsonValue } from "@/types/Json.js";
 import type {
   MemoryFlushPayload,
@@ -21,7 +21,7 @@ import { searchMemory } from "./runtime/Search.js";
 import {
   MEMORY_DEFAULTS,
   ensureMemoryIndexed,
-  getOrCreateMemoryState,
+  type MemoryRuntimeState,
 } from "./runtime/Store.js";
 import { getMemory, storeMemory } from "./runtime/Writer.js";
 
@@ -29,10 +29,10 @@ import { getMemory, storeMemory } from "./runtime/Writer.js";
  * status action。
  */
 export async function statusMemoryAction(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const state = getOrCreateMemoryState(runtime);
     const stats = state.indexer.status();
     return {
       success: true,
@@ -63,12 +63,12 @@ export async function statusMemoryAction(
  * index action。
  */
 export async function indexMemoryAction(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   payload: MemoryIndexPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const state = getOrCreateMemoryState(runtime);
-    const result = await ensureMemoryIndexed(runtime, {
+    const result = await ensureMemoryIndexed(runtime, state, {
       force: payload.force === true,
       reason: payload.force ? "manual-force" : "manual",
     });
@@ -92,11 +92,12 @@ export async function indexMemoryAction(
  * search action。
  */
 export async function searchMemoryAction(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   payload: MemorySearchPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const response = await searchMemory(runtime, payload);
+    const response = await searchMemory(runtime, state, payload);
     return {
       success: true,
       data: response as unknown as JsonValue,
@@ -113,7 +114,7 @@ export async function searchMemoryAction(
  * get action。
  */
 export async function getMemoryAction(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
   payload: MemoryGetPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
@@ -131,11 +132,12 @@ export async function getMemoryAction(
  * store action。
  */
 export async function storeMemoryAction(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   payload: MemoryStorePayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const data = await storeMemory(runtime, payload);
+    const data = await storeMemory(runtime, state, payload);
     return { success: true, data: data as unknown as JsonValue };
   } catch (error) {
     return {
@@ -149,11 +151,12 @@ export async function storeMemoryAction(
  * flush action。
  */
 export async function flushMemoryAction(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   payload: MemoryFlushPayload,
 ): Promise<ServiceActionResult> {
   try {
-    const data = await flushMemory(runtime, payload);
+    const data = await flushMemory(runtime, state, payload);
     return { success: true, data: data as unknown as JsonValue };
   } catch (error) {
     return {

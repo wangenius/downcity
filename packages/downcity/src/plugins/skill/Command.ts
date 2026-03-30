@@ -11,7 +11,7 @@ import fs from "fs-extra";
 import { execa } from "execa";
 import { discoverClaudeSkillsSync } from "@/plugins/skill/runtime/Discovery.js";
 import { getClaudeSkillSearchRoots } from "@/plugins/skill/runtime/Paths.js";
-import { loadDowncityConfig } from "@/console/env/Config.js";
+import { loadDowncityConfig } from "@/main/env/Config.js";
 
 async function runNpxSkills(args: string[], opts?: { yes?: boolean }): Promise<number> {
   const yes = opts?.yes !== false;

@@ -1,6 +1,6 @@
 ---
 title: Runtime Relationship & Process
-description: Collaboration model and process order across console, agent, service, and plugin
+description: Collaboration model and startup/process order across console, agent, execution runtime, session, service, and plugin
 ---
 
 # Runtime Relationship & Process
@@ -8,22 +8,90 @@ description: Collaboration model and process order across console, agent, servic
 ## 1. Role Summary
 
 - `console`: manages registry, model pool, shared storage, and UI
-- `agent`: owns one project runtime
-- `service`: owns the main workflow and lifecycle
-- `plugin`: provides optional enhancement through service-defined points
-- `plugin`: handles its own dependency resolution and config internally
+- `agent`: the host process for one project
+- `execution runtime`: the unified capability surface injected during execution
+- `session`: a concrete execution instance
+- `service`: the main workflow module
+- `plugin`: an extension module that joins only at fixed points
 
 In one sentence:
 
-`console` governs, `agent` executes, `service` orchestrates, and `plugin` augments while owning its dependencies.
+`console` governs, `agent` hosts, `execution runtime` injects, `session` executes, `service` orchestrates, and `plugin` augments.
 
-## 2. Startup Order
+## 2. What Happens at Startup
 
-1. `city console start`
-2. `city agent start`
-3. agent loads project config from `downcity.json`
-4. runtime assembles the shared execution context and registers service/plugin infrastructure
-5. plugins register `pipeline / guard / effect / resolve` handlers on service-defined points
-6. messages or tasks enter a service workflow
-7. services trigger those plugin points at the right stages
-8. runtime traces are written into `.downcity/*`
+When you run:
+
+```bash
+city agent start
+```
+
+The usual order is:
+
+1. the agent reads project config and env
+2. the agent initializes logger, model, and session registry
+3. the agent assembles the shared `execution runtime`
+4. the agent registers service and plugin infrastructure
+5. services become available
+6. plugins register hook / resolve / effect behavior
+7. runtime traces continue to be written into `.downcity/*`
+
+The key point:
+
+- services and plugins are available after startup
+- but no specific session execution has started yet
+
+## 3. When Real Execution Starts
+
+Real execution begins only when an external request arrives, for example:
+
+- Telegram delivers a message
+- dashboard executes a target session
+- task scheduler triggers one task run
+
+Then the order is usually:
+
+1. the request enters a service
+2. the service resolves the target `sessionId`
+3. the service creates or reuses a session
+4. the service triggers plugins at fixed points
+5. the service enters execution through `runtime.session`
+6. the session returns a result
+7. the service decides how to reply or persist state
+
+## 4. One Timeline Diagram
+
+```mermaid
+sequenceDiagram
+  participant Console as console
+  participant Agent as agent
+  participant Runtime as execution runtime
+  participant Service as service
+  participant Plugin as plugin
+  participant Session as session
+
+  Console->>Agent: city agent start
+  Agent->>Runtime: assemble runtime
+  Agent->>Service: register services
+  Agent->>Plugin: register plugins
+
+  Service->>Plugin: trigger fixed points on request
+  Service->>Session: run through runtime.session
+  Session-->>Service: result
+```
+
+## 5. The Most Common Confusion
+
+Do not mix up these 2 states:
+
+1. `agent` has started
+2. a `session` is actively executing
+
+`agent` is the long-lived host.
+`session` is the execution instance created or reused on demand.
+
+So:
+
+- one agent can host many sessions
+- one service routes different requests into different sessions
+- plugins do not create a separate execution axis

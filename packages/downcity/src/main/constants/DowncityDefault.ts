@@ -1,0 +1,38 @@
+import type { DowncityConfig } from "@/types/DowncityConfig.js";
+
+export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
+  $schema: "./.downcity/schema/downcity.schema.json",
+  name: "downcity",
+  version: "1.0.0",
+  start: {
+    port: 5314,
+    host: "0.0.0.0",
+  },
+  model: {
+    primary: "default",
+  },
+  context: {
+    messages: {
+      keepLastMessages: 30,
+      maxInputTokensApprox: 128000,
+      archiveOnCompact: true,
+      compactRatio: 0.5,
+    },
+  },
+  services: {
+    chat: {
+      method: "direct",
+      queue: {
+        maxConcurrency: 2,
+        mergeDebounceMs: 600,
+        mergeMaxWaitMs: 2000,
+      },
+      channels: {
+        telegram: {
+          enabled: false,
+          channelAccountId: undefined,
+        },
+      },
+    },
+  },
+};

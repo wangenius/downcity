@@ -57,6 +57,8 @@ const CRON_ALIAS_TO_EXPRESSION: Record<string, string> = {
 
 const ISO_DATETIME_WITH_TZ_REGEXP =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/i;
+const ISO_DATETIME_WITHOUT_TZ_REGEXP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/i;
 
 function normalizeCronExpression(raw: string): string | null {
   const value = String(raw || "").trim();
@@ -121,6 +123,14 @@ export function normalizeTaskWhen(
     const normalized = normalizeOneShotTime(raw);
     if (!normalized.ok) return normalized;
     return { ok: true, value: `time:${normalized.value}` };
+  }
+
+  if (ISO_DATETIME_WITHOUT_TZ_REGEXP.test(raw)) {
+    return {
+      ok: false,
+      error:
+        `Invalid when time: "${raw}" (expected ISO8601 datetime with timezone, e.g. 2026-03-08T10:30:00+08:00 or Z)`,
+    };
   }
 
   const cronExpression = normalizeCronExpression(raw);

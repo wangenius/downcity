@@ -7,7 +7,7 @@
  * - 后续 extension / dashboard / 其他外部入口都应复用这里
  */
 
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import { appendInboundChatHistory } from "./ChatHistoryStore.js";
@@ -33,7 +33,7 @@ export function buildExecIngressExtra(extra?: JsonObject): JsonObject {
  * - 适用于已经有其他审计链路，或只需要补齐模型上下文的场景
  */
 export async function appendExecSessionMessage(params: {
-  context: ServiceRuntime;
+  context: ExecutionRuntime;
   sessionId: string;
   text: string;
   extra?: JsonObject;
@@ -53,7 +53,7 @@ export async function appendExecSessionMessage(params: {
  * 2. 再写 `session messages`，保证模型上下文可见
  */
 export async function appendExecIngress(params: {
-  context: ServiceRuntime;
+  context: ExecutionRuntime;
   sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;

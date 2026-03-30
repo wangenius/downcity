@@ -6,7 +6,7 @@
  * - 未配置或非法值统一回退到 `direct`，保证默认直发与行为稳定。
  */
 
-import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/types/DowncityConfig.js";
 
 export type ChatMethod = "cmd" | "direct";
 

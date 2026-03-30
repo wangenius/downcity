@@ -13,7 +13,7 @@ import path from "node:path";
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 import test from "node:test";
-import { ServiceScheduleStore } from "../../bin/console/service/schedule/Store.js";
+import { ServiceScheduleStore } from "../../bin/main/service/schedule/Store.js";
 
 const execFile = promisify(execFileCallback);
 
@@ -33,7 +33,7 @@ async function createAgentProjectFixture() {
 async function runCityCommand(args, cwd) {
   const { stdout } = await execFile(
     process.execPath,
-    ["bin/console/commands/Index.js", ...args],
+    ["bin/main/commands/Index.js", ...args],
     {
       cwd,
       env: {

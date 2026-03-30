@@ -6,14 +6,14 @@
  * - 仅注入“如何使用 memory service action”的规则。
  */
 
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import { isMemoryEnabled } from "./Store.js";
 
 /**
  * 构建 memory service 的 system 文本。
  */
 export async function buildMemoryServiceSystemText(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
 ): Promise<string> {
   const enabled = isMemoryEnabled(runtime);
   if (!enabled) {

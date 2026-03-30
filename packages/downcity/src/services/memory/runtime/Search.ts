@@ -6,7 +6,7 @@
  * - 检索前确保索引同步（dirty 时自动补齐）。
  */
 
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type {
   MemorySearchPayload,
   MemorySearchResponse,
@@ -14,7 +14,7 @@ import type {
 import {
   MEMORY_DEFAULTS,
   ensureMemoryIndexed,
-  getOrCreateMemoryState,
+  type MemoryRuntimeState,
 } from "./Store.js";
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -26,10 +26,10 @@ function clampNumber(value: number, min: number, max: number): number {
  * 执行检索。
  */
 export async function searchMemory(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   payload: MemorySearchPayload,
 ): Promise<MemorySearchResponse> {
-  const state = getOrCreateMemoryState(runtime);
   if (!state.enabled) {
     return {
       backend: "builtin",
@@ -64,7 +64,7 @@ export async function searchMemory(
   );
 
   try {
-    await ensureMemoryIndexed(runtime, { reason: "search" });
+    await ensureMemoryIndexed(runtime, state, { reason: "search" });
     const results = state.indexer.search({
       query,
       maxResults,
@@ -88,4 +88,3 @@ export async function searchMemory(
     };
   }
 }
-

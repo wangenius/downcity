@@ -1,4 +1,4 @@
-import type { VoiceModelCatalogItem, VoiceModelId } from "@agent/types/Voice.js";
+import type { VoiceModelCatalogItem, VoiceModelId } from "@/types/Voice.js";
 
 /**
  * Voice 内置模型目录。

@@ -6,7 +6,7 @@ import type {
   ChatDispatcher,
 } from "@services/chat/types/ChatDispatcher.js";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
@@ -139,13 +139,13 @@ export type IncomingAuthorizationResult = {
  */
 export abstract class BaseChatChannel {
   readonly channel: ChatDispatchChannel;
-  protected readonly context: ServiceRuntime;
+  protected readonly context: ExecutionRuntime;
   protected readonly rootPath: string;
   protected readonly logger: Logger;
 
   protected constructor(params: {
     channel: ChatDispatchChannel;
-    context: ServiceRuntime;
+    context: ExecutionRuntime;
   }) {
     this.channel = params.channel;
     this.context = params.context;

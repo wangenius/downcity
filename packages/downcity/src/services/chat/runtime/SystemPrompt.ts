@@ -7,8 +7,8 @@
  * - 统一从 request context + ChatMetaStore 读取当前 chat 元信息。
  */
 
-import { getRequestContext } from "@agent/context/manager/RequestContext.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import { getRequestContext } from "@sessions/RequestContext.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { ChatEnvironmentPromptInput } from "@/types/ChatPromptContext.js";
 import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 
@@ -24,7 +24,7 @@ function normalizePromptValue(value: unknown, fallback: string): string {
  * - 非 chat session 或尚未建立 chat route 时返回 `null`。
  */
 export async function resolveCurrentChatEnvironmentPromptInput(
-  context: ServiceRuntime,
+  context: ExecutionRuntime,
 ): Promise<ChatEnvironmentPromptInput | null> {
   const sessionId = String(getRequestContext()?.sessionId || "").trim();
   if (!sessionId) return null;
@@ -76,7 +76,7 @@ export function buildChatEnvironmentPrompt(input: ChatEnvironmentPromptInput): s
  * 读取并渲染当前请求的 chat 环境 prompt。
  */
 export async function buildCurrentChatEnvironmentPrompt(
-  context: ServiceRuntime,
+  context: ExecutionRuntime,
 ): Promise<string> {
   const input = await resolveCurrentChatEnvironmentPromptInput(context);
   if (!input) return "";

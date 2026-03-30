@@ -2,106 +2,28 @@
  * CreateModel 测试（node:test）。
  *
  * 关键点（中文）
- * - 测试对象是 `src` 的编译产物（`bin`），确保运行时代码可执行。
+ * - 测试对象是 `bin` 编译产物，确保运行时代码可执行。
+ * - 当前模型解析基于 `agent.model.primary + ConsoleStore(SQLite)`。
  * - 使用 mock fetch 避免网络依赖，稳定验证模型调用链路。
  */
 
 import assert from "node:assert/strict";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import fs from "fs-extra";
 import { generateText } from "ai";
-import { createModel } from "../../bin/console/model/CreateModel.js";
+import { createModel } from "../../bin/main/model/CreateModel.js";
+import { ConsoleStore } from "../../bin/utils/store/index.js";
 
-function createBaseConfig() {
+function createAgentConfig(primaryModelId) {
   return {
     name: "test-agent",
     version: "1.0.0",
-    llm: {
-      activeModel: "default",
-      providers: {
-        default: {
-          type: "open-responses",
-          baseUrl: "https://example.com/v1",
-          apiKey: "test-api-key",
-        },
-      },
-      models: {
-        default: {
-          provider: "default",
-          name: "gpt-5.2",
-        },
-      },
-      logMessages: false,
+    model: {
+      primary: primaryModelId,
     },
-  };
-}
-
-function createOpenCompatibleConfig() {
-  return {
-    name: "test-agent",
-    version: "1.0.0",
     llm: {
-      activeModel: "default",
-      providers: {
-        default: {
-          type: "open-compatible",
-          baseUrl: "https://compatible.example.com/v1",
-          apiKey: "test-api-key",
-        },
-      },
-      models: {
-        default: {
-          provider: "default",
-          name: "gpt-4o-mini",
-        },
-      },
-      logMessages: false,
-    },
-  };
-}
-
-function createGeminiConfig() {
-  return {
-    name: "test-agent",
-    version: "1.0.0",
-    llm: {
-      activeModel: "quality",
-      providers: {
-        google: {
-          type: "gemini",
-          baseUrl: "",
-          apiKey: "test-gemini-key",
-        },
-      },
-      models: {
-        quality: {
-          provider: "google",
-          name: "gemini-2.5-pro",
-        },
-      },
-      logMessages: false,
-    },
-  };
-}
-
-function createMoonshotConfig() {
-  return {
-    name: "test-agent",
-    version: "1.0.0",
-    llm: {
-      activeModel: "default",
-      providers: {
-        moonshot: {
-          type: "moonshot",
-          baseUrl: "",
-          apiKey: "test-moonshot-key",
-        },
-      },
-      models: {
-        default: {
-          provider: "moonshot",
-          name: "moonshot-v1-8k",
-        },
-      },
       logMessages: false,
     },
   };
@@ -113,7 +35,20 @@ function resolveRequestUrl(input) {
   return input.url;
 }
 
-test("createModel: open-responses provider can generate text with mocked responses endpoint", async () => {
+async function withSeededConsoleStore(t, seed, callback) {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-model-store-"));
+  const store = new ConsoleStore(path.join(tempDir, "downcity.db"));
+  try {
+    await store.upsertProvider(seed.provider);
+    store.upsertModel(seed.model);
+    await callback(store);
+  } finally {
+    store.close();
+    await fs.remove(tempDir);
+  }
+}
+
+test("createModel: open-responses provider can generate text with mocked responses endpoint", async (t) => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -160,26 +95,44 @@ test("createModel: open-responses provider can generate text with mocked respons
   };
 
   try {
-    const model = await createModel({ config: createBaseConfig() });
-    const result = await generateText({
-      model,
-      prompt: "reply OK",
-      maxOutputTokens: 16,
-    });
+    await withSeededConsoleStore(
+      t,
+      {
+        provider: {
+          id: "default",
+          type: "open-responses",
+          baseUrl: "https://example.com/v1",
+          apiKey: "test-api-key",
+        },
+        model: {
+          id: "default",
+          providerId: "default",
+          name: "gpt-5.2",
+        },
+      },
+      async (store) => {
+        const model = await createModel({
+          config: createAgentConfig("default"),
+          store,
+        });
+        const result = await generateText({
+          model,
+          prompt: "reply OK",
+          maxOutputTokens: 16,
+        });
 
-    assert.equal(result.text.trim(), "OK");
-    assert.equal(mockFetchCalls.length, 1);
-    assert.equal(
-      mockFetchCalls[0].url,
-      "https://example.com/v1/responses",
+        assert.equal(result.text.trim(), "OK");
+        assert.equal(mockFetchCalls.length, 1);
+        assert.equal(mockFetchCalls[0].url, "https://example.com/v1/responses");
+        assert.match(mockFetchCalls[0].body, /"model":"gpt-5\.2"/);
+      },
     );
-    assert.match(mockFetchCalls[0].body, /"model":"gpt-5\.2"/);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("createModel: open-compatible provider uses chat completions endpoint", async () => {
+test("createModel: open-compatible provider uses chat completions endpoint", async (t) => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -217,26 +170,47 @@ test("createModel: open-compatible provider uses chat completions endpoint", asy
   };
 
   try {
-    const model = await createModel({ config: createOpenCompatibleConfig() });
-    const result = await generateText({
-      model,
-      prompt: "reply OK",
-      maxOutputTokens: 16,
-    });
+    await withSeededConsoleStore(
+      t,
+      {
+        provider: {
+          id: "default",
+          type: "open-compatible",
+          baseUrl: "https://compatible.example.com/v1",
+          apiKey: "test-api-key",
+        },
+        model: {
+          id: "default",
+          providerId: "default",
+          name: "gpt-4o-mini",
+        },
+      },
+      async (store) => {
+        const model = await createModel({
+          config: createAgentConfig("default"),
+          store,
+        });
+        const result = await generateText({
+          model,
+          prompt: "reply OK",
+          maxOutputTokens: 16,
+        });
 
-    assert.equal(result.text.trim(), "OK");
-    assert.equal(mockFetchCalls.length, 1);
-    assert.equal(
-      mockFetchCalls[0].url,
-      "https://compatible.example.com/v1/chat/completions",
+        assert.equal(result.text.trim(), "OK");
+        assert.equal(mockFetchCalls.length, 1);
+        assert.equal(
+          mockFetchCalls[0].url,
+          "https://compatible.example.com/v1/chat/completions",
+        );
+        assert.match(mockFetchCalls[0].body, /"model":"gpt-4o-mini"/);
+      },
     );
-    assert.match(mockFetchCalls[0].body, /"model":"gpt-4o-mini"/);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("createModel: moonshot provider uses chat completions endpoint with default base url", async () => {
+test("createModel: moonshot provider uses chat completions endpoint with default base url", async (t) => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -275,31 +249,51 @@ test("createModel: moonshot provider uses chat completions endpoint with default
   };
 
   try {
-    const model = await createModel({ config: createMoonshotConfig() });
-    const result = await generateText({
-      model,
-      prompt: "reply OK",
-      maxOutputTokens: 16,
-    });
+    await withSeededConsoleStore(
+      t,
+      {
+        provider: {
+          id: "moonshot",
+          type: "moonshot",
+          apiKey: "test-moonshot-key",
+        },
+        model: {
+          id: "default",
+          providerId: "moonshot",
+          name: "moonshot-v1-8k",
+        },
+      },
+      async (store) => {
+        const model = await createModel({
+          config: createAgentConfig("default"),
+          store,
+        });
+        const result = await generateText({
+          model,
+          prompt: "reply OK",
+          maxOutputTokens: 16,
+        });
 
-    assert.equal(result.text.trim(), "OK");
-    assert.equal(mockFetchCalls.length, 1);
-    assert.equal(
-      mockFetchCalls[0].url,
-      "https://api.moonshot.ai/v1/chat/completions",
+        assert.equal(result.text.trim(), "OK");
+        assert.equal(mockFetchCalls.length, 1);
+        assert.equal(
+          mockFetchCalls[0].url,
+          "https://api.moonshot.cn/v1/chat/completions",
+        );
+        const requestHeaders = mockFetchCalls[0].headers || {};
+        const normalizedHeaders =
+          requestHeaders instanceof Headers
+            ? Object.fromEntries(requestHeaders.entries())
+            : requestHeaders;
+        assert.equal(normalizedHeaders.authorization, "Bearer test-moonshot-key");
+      },
     );
-    const requestHeaders = mockFetchCalls[0].headers || {};
-    const normalizedHeaders =
-      requestHeaders instanceof Headers
-        ? Object.fromEntries(requestHeaders.entries())
-        : requestHeaders;
-    assert.equal(normalizedHeaders.authorization, "Bearer test-moonshot-key");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("createModel: gemini provider uses native google endpoint", async () => {
+test("createModel: gemini provider uses native google endpoint", async (t) => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -339,43 +333,75 @@ test("createModel: gemini provider uses native google endpoint", async () => {
   };
 
   try {
-    const model = await createModel({ config: createGeminiConfig() });
-    const result = await generateText({
-      model,
-      prompt: "reply OK",
-      maxOutputTokens: 16,
-    });
+    await withSeededConsoleStore(
+      t,
+      {
+        provider: {
+          id: "google",
+          type: "gemini",
+          apiKey: "test-gemini-key",
+        },
+        model: {
+          id: "quality",
+          providerId: "google",
+          name: "gemini-2.5-pro",
+        },
+      },
+      async (store) => {
+        const model = await createModel({
+          config: createAgentConfig("quality"),
+          store,
+        });
+        const result = await generateText({
+          model,
+          prompt: "reply OK",
+          maxOutputTokens: 16,
+        });
 
-    assert.equal(result.text.trim(), "OK");
-    assert.equal(mockFetchCalls.length, 1);
-    assert.match(
-      mockFetchCalls[0].url,
-      /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-2\.5-pro:generateContent$/,
+        assert.equal(result.text.trim(), "OK");
+        assert.equal(mockFetchCalls.length, 1);
+        assert.match(
+          mockFetchCalls[0].url,
+          /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-2\.5-pro:generateContent$/,
+        );
+        const requestHeaders = mockFetchCalls[0].headers || {};
+        const normalizedHeaders =
+          requestHeaders instanceof Headers
+            ? Object.fromEntries(requestHeaders.entries())
+            : requestHeaders;
+        assert.equal(normalizedHeaders["x-goog-api-key"], "test-gemini-key");
+      },
     );
-    const requestHeaders = mockFetchCalls[0].headers || {};
-    const normalizedHeaders =
-      requestHeaders instanceof Headers
-        ? Object.fromEntries(requestHeaders.entries())
-        : requestHeaders;
-    assert.equal(normalizedHeaders["x-goog-api-key"], "test-gemini-key");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("createModel: throws when model is missing", async () => {
-  const config = createBaseConfig();
-  config.llm.models.default.name = "${}";
-  await assert.rejects(
-    () => createModel({ config }),
-    /No LLM model name configured/i,
+test("createModel: throws when model is missing", async (t) => {
+  await withSeededConsoleStore(
+    t,
+    {
+      provider: {
+        id: "default",
+        type: "open-responses",
+        apiKey: "test-api-key",
+      },
+      model: {
+        id: "default",
+        providerId: "default",
+        name: "${}",
+      },
+    },
+    async (store) => {
+      await assert.rejects(
+        () => createModel({ config: createAgentConfig("default"), store }),
+        /No LLM model name configured/i,
+      );
+    },
   );
 });
 
-test("createModel: throws when api key is missing and env fallback is empty", async () => {
-  const config = createBaseConfig();
-  delete config.llm.providers.default.apiKey;
-
+test("createModel: throws when api key is missing and env fallback is empty", async (t) => {
   const oldAnthropic = process.env.ANTHROPIC_API_KEY;
   const oldOpenAI = process.env.OPENAI_API_KEY;
   const oldGeneric = process.env.API_KEY;
@@ -385,9 +411,25 @@ test("createModel: throws when api key is missing and env fallback is empty", as
   process.env.API_KEY = "";
 
   try {
-    await assert.rejects(
-      () => createModel({ config }),
-      /No API Key configured/i,
+    await withSeededConsoleStore(
+      t,
+      {
+        provider: {
+          id: "default",
+          type: "open-responses",
+        },
+        model: {
+          id: "default",
+          providerId: "default",
+          name: "gpt-5.2",
+        },
+      },
+      async (store) => {
+        await assert.rejects(
+          () => createModel({ config: createAgentConfig("default"), store }),
+          /No API Key configured/i,
+        );
+      },
     );
   } finally {
     if (oldAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;

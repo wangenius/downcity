@@ -1,11 +1,71 @@
 ---
-title: Service Runtime
-description: What a service is, where it runs, and how it works with plugins
+title: Execution Runtime & Session
+description: What the unified execution runtime is, what a session is, and how services and plugins connect to them
 ---
 
-# Service Runtime
+# Execution Runtime & Session
 
-A service is the core workflow module in Downcity.
+This page answers 3 questions:
+
+1. what `execution runtime` is
+2. what a `session` is
+3. how `service` and `plugin` connect to them
+
+## 1. What Execution Runtime Means
+
+`execution runtime` is not a new process and not a separate subsystem.
+
+It is more precisely:
+
+**the unified capability surface that an agent exposes to services and plugins during execution.**
+
+It usually includes:
+
+- `config`
+- `env`
+- `logger`
+- `session`
+- `services`
+- `plugins`
+
+So it solves the question "how do execution modules access the same capabilities?" rather than "who is the host?"
+
+## 2. What a Session Is
+
+A `session` is the real execution instance.
+
+You can read it as:
+
+- one chat conversation = one session
+- one task run = one session
+- history, prompt building, tool use, and assistant output all happen around that session
+
+This is why many user-facing concepts now converge on `sessionId`:
+
+- the meaning stays stable
+- chat and task can share the same execution axis
+- the system does not need many parallel execution identities
+
+## 3. Relationship Between Execution Runtime and Session
+
+```mermaid
+flowchart LR
+  A["Agent"] --> ER["Execution Runtime"]
+  A --> SR["Session Registry"]
+  SR --> S["Session"]
+  ER --> SP["runtime.session"]
+  SP --> S
+```
+
+The key points are:
+
+- the `agent` owns the session registry
+- `execution runtime` exposes `runtime.session`
+- services and plugins do not own sessions directly; they use session capabilities through `runtime.session`
+
+## 4. What a Service Should Own
+
+A service is the main workflow module.
 
 Typical built-in services:
 
@@ -14,45 +74,71 @@ Typical built-in services:
 - `memory`
 - `shell`
 
-## What a Service Should Own
+A service should own:
 
 - user-facing workflows
-- runtime orchestration
-- context-aware execution
-- stable service actions
-- the extension points that plugins may attach to
+- orchestration
+- domain state
+- stable actions
+- extension points that plugins may attach to
 
-## What a Service Should Not Own
+A service should not own:
 
-- install/check/switch logic for low-level dependencies
 - plugin-private implementation details
-- enhancement logic that can stay decoupled
+- plugin dependency installation and internal switching logic
+- fragmented workflow logic that really belongs in the main path
 
-## Recommended Collaboration Model
+## 5. What a Plugin Should Own
 
-- service -> triggers its own plugin points
-- plugin -> implements those points
-- plugin -> owns its dependencies internally
+A plugin is the passive extension layer.
 
-The runtime surface is now split the same way:
+Its job is to:
 
-- `ServiceRuntime` and `PluginRuntime` now share the same execution context shape
-- runtime injects context only and does not expose a separate public dependency port
-- plugin dependencies stay encapsulated inside each plugin
+- enhance workflow at fixed extension points
+- implement guard / pipeline / effect / resolve behaviors
+- manage its own dependencies, config, and internal implementation
 
-Whether a plugin actually participates in execution is not decided ad hoc by a service. It is controlled by project config at `plugins.<name>.enabled`.
+A plugin should not:
 
-- enabled = `true`: the plugin may enter hook execution and `plugin.system` injection
-- enabled = `false`: the plugin can still be managed and inspected, but it does not join the main workflow
-- no explicit `enabled`: runtime falls back to the plugin's declared default
+- own an independent lifecycle
+- turn into a second service
+- introduce another standalone runtime concept
 
-For example, `chat` does not need to know transcription model details.  
-It only triggers its own voice-related extension points while processing audio attachments. The `voice` plugin implements them and handles the transcription dependency itself.
+## 6. How They Work Together
 
-## Why This Matters
+```mermaid
+sequenceDiagram
+  participant User as User
+  participant Service as service
+  participant Runtime as execution runtime
+  participant Plugin as plugin
+  participant Session as session
 
-- workflows stay coherent
-- plugins stay passive and focused
-- dependency details do not leak into service orchestration
+  User->>Service: start request
+  Service->>Runtime: read shared capabilities
+  Service->>Plugin: trigger fixed points
+  Service->>Session: enter or reuse target session
+  Session-->>Service: return result
+  Service-->>User: return final output
+```
 
-For command execution, the agent also no longer owns shell processes directly. `shellService` manages `shell_id` sessions instead.
+## 7. A Chat Example
+
+In chat flows:
+
+- `chat service` receives Telegram / Feishu / QQ messages
+- it resolves the target `sessionId`
+- it enters that session through `runtime.session`
+- if there is audio input, it triggers the `voice` plugin
+- if access must be checked, it triggers the `auth` plugin
+- `chat service` still decides how to reply to the channel
+
+## 8. The Final Mental Model
+
+One-line version:
+
+- `agent` is the host
+- `execution runtime` is the unified execution surface
+- `session` is the actual execution unit
+- `service` owns the main workflow
+- `plugin` owns passive enhancement

@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { StructuredConfig } from "@/types/ExecutionContext.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
@@ -178,7 +178,7 @@ export interface PluginPort {
 /**
  * Plugin 运行时对象。
  */
-export type PluginRuntime = ServiceRuntime;
+export type PluginRuntime = ExecutionRuntime;
 
 /**
  * Plugin 配置定义。

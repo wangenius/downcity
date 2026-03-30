@@ -29,7 +29,7 @@ title: Downcity Memory Selection
 问题：
 
 1. 链路太重。
-2. 职责会和 SessionAgent 打架。
+2. 职责会和 SessionRuntime 打架。
 3. 很容易把“执行系统”做成“记忆系统驱动的一切”。
 
 ## Downcity 应该选什么
@@ -105,7 +105,7 @@ LLM Context
 ```mermaid
 flowchart TB
   subgraph Online
-    SA[SessionAgent]
+    SA[SessionRuntime]
     CTX[Contextualization]
     LLM[LLM]
     SA --> CTX --> LLM
@@ -139,7 +139,7 @@ flowchart TB
 
 1. 对外 API、CLI、目录、dashboard 全部统一成 `session` 语义。
 2. 把 `context` 保留为“模型输入构造”的概念，不再承担持久化主语义。
-3. Memory service 保持工具化、服务化，不要抢 SessionAgent 的主链路职责。
+3. Memory service 保持工具化、服务化，不要抢 SessionRuntime 的主链路职责。
 4. 新增异步整理机制，让 MemoryAgent 定时处理 working -> daily -> long-term 的提升。
 5. 后续如果继续重构，优先处理内部残留的 `contextId` 类型名与 ALS 命名。
 

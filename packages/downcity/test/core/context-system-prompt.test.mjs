@@ -11,7 +11,7 @@ import test from "node:test";
 import {
   DEFAULT_SHIP_PROMPTS,
   buildContextSystemPrompt,
-} from "../../bin/agent/prompts/System.js";
+} from "../../bin/sessions/prompts/System.js";
 
 test("buildContextSystemPrompt returns empty text for chat mode", () => {
   const prompt = buildContextSystemPrompt({

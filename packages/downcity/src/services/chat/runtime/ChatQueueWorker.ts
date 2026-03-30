@@ -8,123 +8,57 @@
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
-import type { AgentResult } from "@agent/types/Agent.js";
+import type { SessionRunResult } from "@/types/SessionRun.js";
 import type {
   SessionUserMessageV1,
-  SessionMessageV1,
-} from "@agent/types/SessionMessage.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+} from "@/types/SessionMessage.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ChatQueueWorkerConfig } from "@/types/ChatQueueWorker.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
-import { drainDeferredPersistedUserMessages } from "@agent/context/manager/RequestContext.js";
 import {
   onChatQueueEnqueue,
   shiftChatQueueItem,
-  drainChatQueueLane,
   listChatQueueLanes,
   clearChatQueueLane,
+  drainChatQueueLane,
   getChatQueueLaneSize,
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
-import { sendActionByChatKey } from "./ChatkeySend.js";
-import { resolveChatMethod } from "./ChatMethod.js";
-import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
-import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import {
-  hasPersistedAssistantSteps,
   pickLastSuccessfulChatSendText,
 } from "./UserVisibleText.js";
-import { sendChatTextByChatKey } from "../Action.js";
+import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import {
-  emitChatReplyEffect,
-  prepareChatReplyText,
-  resolveChatReplyTarget,
-} from "./ReplyDispatch.js";
+  appendChatIngressMessageIfNeeded,
+  appendChatRunErrorMessage,
+  buildChatIngressExtra,
+  persistChatRunResult,
+  shouldAppendChatIngressMessage,
+  toMergedStepUserMessage,
+} from "./ChatQueueSessionBridge.js";
+import {
+  buildChannelErrorText,
+  collectInitialBurstItems,
+  normalizeChatQueueWorkerConfig,
+} from "./ChatQueueWorkerSupport.js";
+import {
+  dispatchAssistantMessageDirect,
+  dispatchAssistantTextDirect,
+  dispatchTextToChannel,
+} from "./ChatQueueReplyDispatch.js";
 
 const TYPING_ACTION_INTERVAL_MS = 4_000;
-const CHANNEL_ERROR_TEXT_MAX_LENGTH = 480;
-const DEFAULT_MERGE_DEBOUNCE_MS = 600;
-const DEFAULT_MERGE_MAX_WAIT_MS = 2_000;
-const BURST_MERGE_POLL_INTERVAL_MS = 20;
-
-/**
- * 判断是否为上游模型服务临时不可用。
- *
- * 关键点（中文）
- * - 这里不依赖 provider 私有错误类型，统一基于错误文本做稳健匹配。
- * - 主要覆盖 AI SDK 的 RetryError / APICallError 以及 503 场景。
- */
-function isTemporaryModelServiceUnavailable(error: unknown): boolean {
-  const msg = String(error ?? "");
-  return (
-    /Service temporarily unavailable/i.test(msg) ||
-    /AI_RetryError/i.test(msg) ||
-    /AI_APICallError/i.test(msg) ||
-    /maxRetriesExceeded/i.test(msg) ||
-    /\b503\b/.test(msg)
-  );
-}
-
-/**
- * 构造回发到 channel 的失败文本。
- *
- * 关键点（中文）
- * - 文本必须短，避免把大型错误对象原样透出给用户。
- * - 对“临时不可用”给出明确可执行建议（稍后重试）。
- */
-function buildChannelErrorText(error: unknown): string {
-  if (isTemporaryModelServiceUnavailable(error)) {
-    return "⚠️ 模型服务暂时不可用（503），系统已自动重试但仍失败，请稍后再试。";
-  }
-
-  const normalized = String(error ?? "").replace(/\s+/g, " ").trim();
-  if (!normalized) {
-    return "❌ 执行失败，请稍后重试。";
-  }
-
-  const clipped =
-    normalized.length > CHANNEL_ERROR_TEXT_MAX_LENGTH
-      ? `${normalized.slice(0, CHANNEL_ERROR_TEXT_MAX_LENGTH)}…`
-      : normalized;
-  return `❌ 执行失败：${clipped}`;
-}
-
-type WorkerConfig = {
-  maxConcurrency: number;
-  mergeDebounceMs: number;
-  mergeMaxWaitMs: number;
-};
 
 type LaneState = {
   key: string;
   running: boolean;
 };
 
-function normalizeConfig(input?: Partial<WorkerConfig>): WorkerConfig {
-  const maxConcurrency =
-    typeof input?.maxConcurrency === "number" && Number.isFinite(input.maxConcurrency)
-      ? Math.max(1, Math.min(32, Math.floor(input.maxConcurrency)))
-      : 2;
-
-  const mergeDebounceMs =
-    typeof input?.mergeDebounceMs === "number" &&
-    Number.isFinite(input.mergeDebounceMs)
-      ? Math.max(0, Math.min(60_000, Math.floor(input.mergeDebounceMs)))
-      : DEFAULT_MERGE_DEBOUNCE_MS;
-
-  const mergeMaxWaitMs =
-    typeof input?.mergeMaxWaitMs === "number" &&
-    Number.isFinite(input.mergeMaxWaitMs)
-      ? Math.max(0, Math.min(120_000, Math.floor(input.mergeMaxWaitMs)))
-      : DEFAULT_MERGE_MAX_WAIT_MS;
-
-  return { maxConcurrency, mergeDebounceMs, mergeMaxWaitMs };
-}
-
 export class ChatQueueWorker {
   private readonly logger: Logger;
-  private readonly runtime: ServiceRuntime;
-  private readonly config: WorkerConfig;
+  private readonly runtime: ExecutionRuntime;
+  private readonly config: ChatQueueWorkerConfig;
 
   private readonly lanes: Map<string, LaneState> = new Map();
   private readonly runnable: string[] = [];
@@ -135,12 +69,12 @@ export class ChatQueueWorker {
 
   constructor(params: {
     logger: Logger;
-    context: ServiceRuntime;
-    config?: Partial<WorkerConfig>;
+    context: ExecutionRuntime;
+    config?: Partial<ChatQueueWorkerConfig>;
   }) {
     this.logger = params.logger;
     this.runtime = params.context;
-    this.config = normalizeConfig(params.config);
+    this.config = normalizeChatQueueWorkerConfig(params.config);
   }
 
   /**
@@ -227,71 +161,8 @@ export class ChatQueueWorker {
     await this.processOne(lane.key, first);
   }
 
-  /**
-   * 是否启用“启动前消息合并”。
-   *
-   * 关键点（中文）
-   * - 两个阈值都大于 0 才启用；
-   * - 任一阈值被设为 0，表示禁用该能力，保持“首条消息立即执行”。
-   */
-  private isBurstMergeEnabled(): boolean {
-    return this.config.mergeDebounceMs > 0 && this.config.mergeMaxWaitMs > 0;
-  }
-
-  /**
-   * 等待一小段时间，让同 lane 的连续消息尽量在一次 run 前合并。
-   *
-   * 关键点（中文）
-   * - 防抖窗口：`mergeDebounceMs`（期间若有新消息则续期）
-   * - 最长等待：`mergeMaxWaitMs`（防止无限等待）
-   */
-  private async collectInitialBurstItems(
-    laneKey: string,
-    first: ChatQueueItem,
-  ): Promise<ChatQueueItem[]> {
-    if (first.kind !== "exec") return [first];
-    if (!this.isBurstMergeEnabled()) return [first];
-
-    const startedAt = Date.now();
-    let lastInboundAt = startedAt;
-    let knownLaneSize = getChatQueueLaneSize(laneKey);
-
-    while (true) {
-      const now = Date.now();
-      const idleMs = now - lastInboundAt;
-      const elapsedMs = now - startedAt;
-      if (idleMs >= this.config.mergeDebounceMs) break;
-      if (elapsedMs >= this.config.mergeMaxWaitMs) break;
-
-      const remainingDebounceMs = this.config.mergeDebounceMs - idleMs;
-      const remainingMaxWaitMs = this.config.mergeMaxWaitMs - elapsedMs;
-      const sleepMs = Math.max(
-        1,
-        Math.min(
-          BURST_MERGE_POLL_INTERVAL_MS,
-          remainingDebounceMs,
-          remainingMaxWaitMs,
-        ),
-      );
-
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, sleepMs);
-        if (typeof timer.unref === "function") timer.unref();
-      });
-
-      const laneSize = getChatQueueLaneSize(laneKey);
-      if (laneSize > knownLaneSize) {
-        knownLaneSize = laneSize;
-        lastInboundAt = Date.now();
-      }
-    }
-
-    const drained = drainChatQueueLane(laneKey);
-    return drained.length > 0 ? [first, ...drained] : [first];
-  }
-
   private shouldAppendSessionMessage(item: ChatQueueItem): boolean {
-    return item.kind === "exec";
+    return shouldAppendChatIngressMessage(item);
   }
 
   /**
@@ -301,20 +172,14 @@ export class ChatQueueWorker {
    * - 当前 message history 仅写入 `exec`，所以固定写 `ingressKind=exec`。
    */
   private buildIngressExtra(item: ChatQueueItem): JsonObject {
-    const base = item.extra && typeof item.extra === "object" ? item.extra : {};
-    return {
-      ...base,
-      ingressKind: "exec",
-    };
+    return buildChatIngressExtra(item);
   }
 
   private async appendSessionMessageIfNeeded(item: ChatQueueItem): Promise<void> {
     if (!this.shouldAppendSessionMessage(item)) return;
-    if (item.sessionPersisted === true) return;
-    await this.requireContext().appendUserMessage({
-      sessionId: item.sessionId,
-      text: item.text,
-      extra: this.buildIngressExtra(item),
+    await appendChatIngressMessageIfNeeded({
+      session: this.requireContext(),
+      item,
     });
   }
 
@@ -322,7 +187,7 @@ export class ChatQueueWorker {
     const control = item.control;
     if (!control) return false;
     if (control.type === "clear") {
-      this.requireContext().clearAgent(item.sessionId);
+      this.requireContext().clearRuntime(item.sessionId);
       clearChatQueueLane(item.sessionId);
       return true;
     }
@@ -378,213 +243,6 @@ export class ChatQueueWorker {
     };
   }
 
-  /**
-   * 是否启用 direct 回发模式。
-   *
-   * 关键点（中文）
-   * - 默认就是 `direct`；仅当显式配置 `services.chat.method = cmd` 时关闭。
-   */
-  private isDirectModeEnabled(): boolean {
-    return resolveChatMethod(this.runtime.config) === "direct";
-  }
-
-  /**
-   * direct 模式：把 assistant 纯文本直接投递到 chat。
-   *
-   * 关键点（中文）
-   * - 支持 frontmatter metadata 协议：`reply/react`。
-   * - direct metadata 不支持 delay/time；定时或延迟请走 `city chat send`。
-   * - 附件能力保留 `<file>` 标签，并交给渠道出站阶段统一解析。
-   * - 仅消费用户可见文本与控制协议，不转发工具日志/结构化输出。
-   * - 发送失败只记录 warning，不中断主执行流程。
-   */
-  private async dispatchAssistantTextDirect(params: {
-    sessionId: string;
-    assistantText: string;
-    phase?: "step" | "final" | "error";
-  }): Promise<boolean> {
-    if (!this.isDirectModeEnabled()) return false;
-
-    const plan = parseDirectDispatchAssistantText({
-      assistantText: params.assistantText,
-      fallbackChatKey: params.sessionId,
-    });
-    if (!plan) return false;
-    let textDispatchSucceeded = false;
-
-    if (plan.text) {
-      const target = await resolveChatReplyTarget({
-        runtime: this.runtime,
-        chatKey: plan.text.chatKey,
-      });
-      const preparedText = await prepareChatReplyText({
-        runtime: this.runtime,
-        input: {
-          chatKey: plan.text.chatKey,
-          ...(target.channel ? { channel: target.channel } : {}),
-          ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
-          ...(typeof plan.text.messageId === "string"
-            ? { messageId: plan.text.messageId }
-            : typeof target.messageId === "string"
-              ? { messageId: target.messageId }
-              : {}),
-          text: plan.text.text,
-          phase: params.phase || "final",
-          mode: "direct",
-        },
-      });
-      const textResult = await sendChatTextByChatKey({
-        context: this.runtime,
-        chatKey: plan.text.chatKey,
-        text: preparedText,
-        replyToMessage: plan.text.replyToMessage,
-        messageId: plan.text.messageId,
-        ...(typeof plan.text.delayMs === "number"
-          ? { delayMs: plan.text.delayMs }
-          : {}),
-        ...(typeof plan.text.sendAtMs === "number"
-          ? { sendAtMs: plan.text.sendAtMs }
-          : {}),
-      });
-      await emitChatReplyEffect({
-        runtime: this.runtime,
-        input: {
-          chatKey: plan.text.chatKey,
-          ...(target.channel ? { channel: target.channel } : {}),
-          ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
-          ...(typeof plan.text.messageId === "string"
-            ? { messageId: plan.text.messageId }
-            : typeof target.messageId === "string"
-              ? { messageId: target.messageId }
-              : {}),
-          text: preparedText,
-          phase: params.phase || "final",
-          mode: "direct",
-          success: textResult.success,
-          ...(textResult.success ? {} : { error: textResult.error || "chat send failed" }),
-        },
-      });
-      if (!textResult.success) {
-        this.logger.warn("Direct chat text dispatch failed", {
-          sessionId: params.sessionId,
-          targetChatKey: plan.text.chatKey,
-          error: textResult.error || "chat send failed",
-        });
-      } else {
-        textDispatchSucceeded = true;
-      }
-    }
-
-    for (const reaction of plan.reactions) {
-      const reactResult = await sendActionByChatKey({
-        context: this.runtime,
-        chatKey: reaction.chatKey,
-        action: "react",
-        messageId: reaction.messageId,
-        reactionEmoji: reaction.emoji,
-        reactionIsBig: reaction.big,
-      });
-      if (!reactResult.success) {
-        this.logger.warn("Direct chat reaction dispatch failed", {
-          sessionId: params.sessionId,
-          targetChatKey: reaction.chatKey,
-          error: reactResult.error || "chat react failed",
-        });
-      }
-    }
-
-    return textDispatchSucceeded;
-  }
-
-  /**
-   * direct 模式：从 assistant UIMessage 中提取文本并投递。
-   */
-  private async dispatchAssistantMessageDirect(params: {
-    sessionId: string;
-    assistantMessage: SessionMessageV1 | null | undefined;
-  }): Promise<boolean> {
-    return this.dispatchAssistantTextDirect({
-      sessionId: params.sessionId,
-      assistantText: extractTextFromUiMessage(params.assistantMessage),
-      phase: "final",
-    });
-  }
-
-  /**
-   * 无论 chat method（direct/cmd），都强制把文本回发到 channel。
-   *
-   * 关键点（中文）
-   * - 错误兜底不能依赖模型再次调用 `chat_send`。
-   * - 直接按 chatKey 分发，确保失败信息可见。
-   */
-  private async dispatchTextToChannel(params: {
-    sessionId: string;
-    text: string;
-    messageId?: string;
-    phase?: "step" | "final" | "error";
-  }): Promise<boolean> {
-    const text = String(params.text || "").trim();
-    if (!text) return false;
-    const target = await resolveChatReplyTarget({
-      runtime: this.runtime,
-      chatKey: params.sessionId,
-    });
-    const preparedText = await prepareChatReplyText({
-      runtime: this.runtime,
-      input: {
-        chatKey: params.sessionId,
-        ...(target.channel ? { channel: target.channel } : {}),
-        ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
-        ...(typeof params.messageId === "string"
-          ? { messageId: params.messageId }
-          : typeof target.messageId === "string"
-            ? { messageId: target.messageId }
-            : {}),
-        text,
-        phase: params.phase || "final",
-        mode: "fallback",
-      },
-    });
-
-    const result = await sendChatTextByChatKey({
-      context: this.runtime,
-      chatKey: params.sessionId,
-      text: preparedText,
-      // 关键点（中文）：优先以 reply 形式返回到触发消息，增强用户感知。
-      replyToMessage: true,
-      ...(typeof params.messageId === "string" && params.messageId
-        ? { messageId: params.messageId }
-        : {}),
-    });
-    await emitChatReplyEffect({
-      runtime: this.runtime,
-      input: {
-        chatKey: params.sessionId,
-        ...(target.channel ? { channel: target.channel } : {}),
-        ...(typeof target.chatId === "string" ? { chatId: target.chatId } : {}),
-        ...(typeof params.messageId === "string"
-          ? { messageId: params.messageId }
-          : typeof target.messageId === "string"
-            ? { messageId: target.messageId }
-            : {}),
-        text: preparedText,
-        phase: params.phase || "final",
-        mode: "fallback",
-        success: result.success,
-        ...(result.success ? {} : { error: result.error || "chat send failed" }),
-      },
-    });
-
-    if (!result.success) {
-      this.logger.warn("ChatQueueWorker forced channel dispatch failed", {
-        sessionId: params.sessionId,
-        error: result.error || "chat send failed",
-      });
-      return false;
-    }
-    return true;
-  }
-
   private async processOne(laneKey: string, first: ChatQueueItem): Promise<void> {
     if (first.kind === "control") {
       this.handleControl(first);
@@ -600,7 +258,11 @@ export class ChatQueueWorker {
     let runItem = first;
 
     let clearRequested = false;
-    const initialBurstItems = await this.collectInitialBurstItems(laneKey, first);
+    const initialBurstItems = await collectInitialBurstItems({
+      laneKey,
+      first,
+      config: this.config,
+    });
     for (const item of initialBurstItems) {
       if (item.kind === "control") {
         if (item.control?.type === "clear") clearRequested = true;
@@ -624,22 +286,8 @@ export class ChatQueueWorker {
 
         await this.appendSessionMessageIfNeeded(item);
         if (item.kind === "exec") {
-          const text = String(item.text ?? "").trim();
-          if (text) {
-            mergedExecMessages.push({
-              id: `u:${item.sessionId}:${item.id}`,
-              role: "user",
-              metadata: {
-                v: 1,
-                ts: Date.now(),
-                sessionId: item.sessionId,
-                source: "ingress",
-                kind: "normal",
-                extra: this.buildIngressExtra(item),
-              },
-              parts: [{ type: "text", text }],
-            });
-          }
+          const mergedMessage = toMergedStepUserMessage(item);
+          if (mergedMessage) mergedExecMessages.push(mergedMessage);
         }
       }
       return mergedExecMessages;
@@ -651,7 +299,9 @@ export class ChatQueueWorker {
     }): Promise<void> => {
       const stepText = String(params.text || "").trim();
       if (!stepText) return;
-      const dispatched = await this.dispatchAssistantTextDirect({
+      const dispatched = await dispatchAssistantTextDirect({
+        logger: this.logger,
+        runtime: this.runtime,
         sessionId: runItem.sessionId,
         assistantText: stepText,
         phase: "step",
@@ -663,7 +313,7 @@ export class ChatQueueWorker {
     };
 
     const typing = this.startTypingHeartbeat(runItem);
-    let result: AgentResult;
+    let result: SessionRunResult;
     try {
       result = await serviceContext.run({
         sessionId: runItem.sessionId,
@@ -679,18 +329,18 @@ export class ChatQueueWorker {
       });
 
       try {
-        await serviceContext.appendAssistantMessage({
+        await appendChatRunErrorMessage({
+          session: serviceContext,
           sessionId: runItem.sessionId,
-          fallbackText: channelErrorText,
-          extra: {
-            note: "chat_queue_worker_run_failed",
-          },
+          text: channelErrorText,
         });
       } catch {
         // ignore
       }
 
-      await this.dispatchTextToChannel({
+      await dispatchTextToChannel({
+        logger: this.logger,
+        runtime: this.runtime,
         sessionId: runItem.sessionId,
         text: channelErrorText,
         messageId: runItem.messageId,
@@ -702,26 +352,16 @@ export class ChatQueueWorker {
     }
 
     if (clearRequested) {
-      serviceContext.clearAgent(runItem.sessionId);
+      serviceContext.clearRuntime(runItem.sessionId);
       clearChatQueueLane(runItem.sessionId);
     }
 
     try {
-      if (!hasPersistedAssistantSteps(result.assistantMessage)) {
-        await serviceContext.appendAssistantMessage({
-          sessionId: runItem.sessionId,
-          message: result.assistantMessage,
-        });
-      }
-      const deferredInjectedMessages = drainDeferredPersistedUserMessages(
-        runItem.sessionId,
-      );
-      for (const message of deferredInjectedMessages) {
-        await serviceContext.appendUserMessage({
-          sessionId: runItem.sessionId,
-          message,
-        });
-      }
+      await persistChatRunResult({
+        session: serviceContext,
+        sessionId: runItem.sessionId,
+        result,
+      });
     } catch {
       // ignore
     }
@@ -739,13 +379,17 @@ export class ChatQueueWorker {
         finalChannelText === lastDirectDispatchedStepText;
       const dispatchedDirect = duplicatedWithStep
         ? true
-        : await this.dispatchAssistantMessageDirect({
+        : await dispatchAssistantMessageDirect({
+            logger: this.logger,
+            runtime: this.runtime,
             sessionId: runItem.sessionId,
             assistantMessage: result.assistantMessage,
           });
       // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里无论成功/失败都强制兜底回发。
       if (!dispatchedDirect && finalChannelText) {
-        await this.dispatchTextToChannel({
+        await dispatchTextToChannel({
+          logger: this.logger,
+          runtime: this.runtime,
           sessionId: runItem.sessionId,
           text:
             result.success === false

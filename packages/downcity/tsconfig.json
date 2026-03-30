@@ -10,8 +10,9 @@
     "paths": {
       "@/*": ["*"],
       "@agent/*": ["agent/*"],
-      "@console/*": ["console/*"],
+      "@main/*": ["main/*"],
       "@services/*": ["services/*"],
+      "@sessions/*": ["sessions/*"],
       "@types/*": ["types/*"],
       "@utils/*": ["utils/*"]
     },

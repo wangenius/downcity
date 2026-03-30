@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { getCacheDirPath } from "@/console/env/Paths.js";
+import { getCacheDirPath } from "@/main/env/Paths.js";
 import type {
   QqIncomingAttachment,
   QqInboundAttachmentKind,

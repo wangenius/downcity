@@ -5,13 +5,14 @@
  * - 管理 Memory service 的运行时状态（dirty/sync/watcher）。
  * - 统一管理 memory 源文件枚举与路径白名单。
  * - 不承载检索算法，检索在 Search/Indexer 模块。
+ * - 新版本不再使用 module-global state，状态归属 MemoryService 实例。
  */
 
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import type { FSWatcher } from "node:fs";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type {
   MemoryDefaults,
   MemorySourceType,
@@ -21,7 +22,7 @@ import {
   getDowncityMemoryDailyDirPath,
   getDowncityMemoryLongTermPath,
   getDowncitySessionRootDirPath,
-} from "@/console/env/Paths.js";
+} from "@/main/env/Paths.js";
 import {
   MemoryIndexer,
   type MemoryIndexSyncResult,
@@ -92,8 +93,6 @@ export type MemoryRuntimeState = {
    */
   intervalTimer: NodeJS.Timeout | null;
 };
-
-const memoryStates = new Map<string, MemoryRuntimeState>();
 
 function normalizeRelPath(rootPath: string, absPath: string): string {
   return path.relative(rootPath, absPath).replace(/\\/g, "/");
@@ -195,54 +194,56 @@ export async function listMemorySourceFiles(
 /**
  * 判断 Memory 功能是否启用（默认 true）。
  */
-export function isMemoryEnabled(runtime: ServiceRuntime): boolean {
+export function isMemoryEnabled(runtime: ExecutionRuntime): boolean {
   const enabled = runtime.config?.context?.memory?.enabled;
   return enabled !== false;
 }
 
 /**
- * 获取（或创建）运行态。
+ * 创建一个新的 memory runtime state。
+ *
+ * 关键点（中文）
+ * - 每个 MemoryService 实例都持有自己的 state。
+ * - 不再按 rootPath 落到模块级 Map，避免 service 实例之间共享状态。
  */
-export function getOrCreateMemoryState(runtime: ServiceRuntime): MemoryRuntimeState {
-  const rootPath = runtime.rootPath;
-  const existing = memoryStates.get(rootPath);
-  if (existing) {
-    return existing;
-  }
-  const created: MemoryRuntimeState = {
-    rootPath,
+export function createMemoryRuntimeState(
+  runtime: ExecutionRuntime,
+): MemoryRuntimeState {
+  return {
+    rootPath: runtime.rootPath,
     enabled: isMemoryEnabled(runtime),
-    indexer: new MemoryIndexer(rootPath),
+    indexer: new MemoryIndexer(runtime.rootPath),
     dirty: true,
     syncing: null,
     watchers: [],
     watchDebounceTimer: null,
     intervalTimer: null,
   };
-  memoryStates.set(rootPath, created);
-  return created;
 }
 
 /**
  * 标记 dirty 并触发 debounce 同步。
  */
 export function markMemoryDirty(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   reason: string,
 ): void {
-  const state = getOrCreateMemoryState(runtime);
   state.dirty = true;
   if (state.watchDebounceTimer) {
     clearTimeout(state.watchDebounceTimer);
   }
   state.watchDebounceTimer = setTimeout(() => {
     state.watchDebounceTimer = null;
-    void ensureMemoryIndexed(runtime, { reason: `watch:${reason}` });
+    void ensureMemoryIndexed(runtime, state, { reason: `watch:${reason}` });
   }, MEMORY_DEFAULTS.watchDebounceMs);
+  if (typeof state.watchDebounceTimer.unref === "function") {
+    state.watchDebounceTimer.unref();
+  }
 }
 
 function registerWatcher(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
   state: MemoryRuntimeState,
   watchPath: string,
 ): void {
@@ -255,7 +256,7 @@ function registerWatcher(
         if (!name.endsWith(".md")) {
           return;
         }
-        markMemoryDirty(runtime, name || "unknown");
+        markMemoryDirty(runtime, state, name || "unknown");
       },
     );
     state.watchers.push(watcher);
@@ -270,8 +271,10 @@ function registerWatcher(
 /**
  * 启动 memory 运行时（watcher + interval）。
  */
-export async function startMemoryRuntime(runtime: ServiceRuntime): Promise<void> {
-  const state = getOrCreateMemoryState(runtime);
+export async function startMemoryRuntime(
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
+): Promise<void> {
   state.enabled = isMemoryEnabled(runtime);
   if (!state.enabled) {
     runtime.logger.info("[memory] disabled by config");
@@ -283,18 +286,22 @@ export async function startMemoryRuntime(runtime: ServiceRuntime): Promise<void>
   }
   if (!state.intervalTimer) {
     state.intervalTimer = setInterval(() => {
-      void ensureMemoryIndexed(runtime, { reason: "interval" });
+      void ensureMemoryIndexed(runtime, state, { reason: "interval" });
     }, MEMORY_DEFAULTS.intervalMinutes * 60 * 1000);
+    if (typeof state.intervalTimer.unref === "function") {
+      state.intervalTimer.unref();
+    }
   }
 
-  await ensureMemoryIndexed(runtime, { reason: "startup" });
+  await ensureMemoryIndexed(runtime, state, { reason: "startup" });
 }
 
 /**
  * 停止 memory 运行时。
  */
-export async function stopMemoryRuntime(runtime: ServiceRuntime): Promise<void> {
-  const state = getOrCreateMemoryState(runtime);
+export async function stopMemoryRuntime(
+  state: MemoryRuntimeState,
+): Promise<void> {
   if (state.watchDebounceTimer) {
     clearTimeout(state.watchDebounceTimer);
     state.watchDebounceTimer = null;
@@ -320,17 +327,16 @@ export async function stopMemoryRuntime(runtime: ServiceRuntime): Promise<void> 
     }
   }
   state.indexer.close();
-  memoryStates.delete(runtime.rootPath);
 }
 
 /**
  * 确保索引已同步。
  */
 export async function ensureMemoryIndexed(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   params?: { force?: boolean; reason?: string },
 ): Promise<MemoryIndexSyncResult | null> {
-  const state = getOrCreateMemoryState(runtime);
   if (!state.enabled) {
     return null;
   }

@@ -1,53 +1,100 @@
 ---
 title: 架构总览
-description: Downcity 的核心分层：console、agent、service 与 plugin
+description: Downcity 的核心分层：console、agent、execution runtime、session、service 与 plugin
 ---
 
 # 架构总览
 
-Downcity 可以先看成两条主干：
+理解 Downcity，先抓住 5 个概念：
 
-- `console`：全局控制与运维面
-- `agent`：单项目运行与执行面
+- `console`：全局控制面
+- `agent`：单项目宿主进程
+- `execution runtime`：执行时统一注入给 service / plugin 的能力视图
+- `session`：真正执行一轮任务或一段对话的实例
+- `service / plugin`：主流程模块与被动扩展模块
 
-而在 agent runtime 内部，真正承接业务的是两层：
+## 最重要的理解顺序
 
-- `service`：主业务流程
-- `plugin`：被动扩展层
+从上到下看：
+
+1. `console` 管全局
+2. `agent` 管单个项目
+3. `execution runtime` 给执行链路提供统一上下文
+4. `session` 才是真正跑一轮执行的地方
+5. `service` 负责工作流，`plugin` 负责增强
+
+也就是说：
+
+- `agent` 不是每一轮对话本身
+- `session` 才是一条 chat、一轮 task run 这种执行单元
+- `plugin` 不是独立 service，也不是独立 runtime
 
 ## 分层结构
 
 1. **Console 层（全局）**
-- 负责 registry、模型池、全局配置、UI gateway
+- 管 registry、模型池、全局配置、UI gateway
+- 负责找到目标 agent，并把命令或请求路由过去
 
-2. **Agent 层（项目）**
-- 负责加载单个项目、持有单个 runtime、写入 `.downcity/`
+2. **Agent 层（项目宿主）**
+- 一个项目对应一个 agent 进程
+- 负责加载项目配置、创建执行运行时、持有 session registry
+- 持续把本项目运行痕迹写进 `.downcity/`
 
-3. **Service 层（核心工作流）**
-- 例如 `shell`、`chat`、`task`、`memory`
-- 拥有生命周期、工作流和稳定 action
+3. **Execution Runtime（统一执行视图）**
+- 暴露 `session / services / plugins / logger / config / env`
+- 这是 service 和 plugin 在执行期间看到的统一能力面
+- 它不是第二个宿主，只是宿主派生出来的执行上下文
 
-4. **Plugin 层（可选增强）**
+4. **Session 层（执行实例）**
+- 一条 chat 对话就是一个 session
+- 一个 task run 也是一个 session
+- prompt、history、tools、模型执行都围绕 session 发生
+
+5. **Service 层（主流程）**
+- 例如 `chat`、`task`、`memory`、`shell`
+- 拥有工作流和生命周期
+- 决定什么时候创建 / 复用 / 清理 session
+
+6. **Plugin 层（可选增强）**
 - 例如 `skill`、`voice`、`auth`
-- 通过 service 预先定义好的扩展点接入
-- 负责增强、校验、改写、解析，但不拥有独立生命周期
+- 只通过 service 预定义的扩展点接入
+- 不拥有自己的生命周期，也不拥有独立 runtime
+
+## 一张总图
+
+```mermaid
+flowchart TD
+  C["Console"] --> A["Agent"]
+  A --> ER["Execution Runtime"]
+  A --> SR["Session Registry"]
+  SR --> S["Session"]
+  ER --> SV["Services"]
+  ER --> PL["Plugins"]
+  SV --> S
+  SV -. trigger plugin points .-> PL
+```
 
 ## 一条最重要的边界
 
-- `service` 主动参与 agent 执行周期
-- `plugin` 不主动跑，只在 service 需要时被接入
+- `service` 主动参与主流程
+- `plugin` 只在固定点被动参与
+- `session` 承载执行状态
+- `agent` 承载宿主状态
 
 所以：
 
 - 主流程放在 service
+- 执行状态放在 session
+- 宿主状态放在 agent
 - 扩展逻辑放在 plugin
-- plugin 自己内聚依赖细节
+- plugin 依赖由 plugin 自己管理
 
 ## 一个直观例子
 
 在聊天场景里：
 
-- `chat` service 负责消息进入、入队、执行、回复
-- `voice` plugin 在语音相关节点上补充转写
-- `auth` plugin 在鉴权和角色解析节点上接入
-- voice plugin 自己负责组织转写依赖与配置
+- `chat` service 负责消息进入、入队、选择 session、执行、回复
+- `execution runtime` 给它注入统一的 session / plugin 访问能力
+- `voice` plugin 在语音相关节点补充转写
+- `auth` plugin 在鉴权和角色解析节点接入
+- 真正的模型执行仍然发生在目标 `session` 内部

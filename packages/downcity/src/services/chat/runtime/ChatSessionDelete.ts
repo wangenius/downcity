@@ -12,8 +12,8 @@ import fs from "fs-extra";
 import {
   getDowncityChatSessionDirPath,
   getDowncitySessionDirPath,
-} from "@/console/env/Paths.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+} from "@/main/env/Paths.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import { clearChatQueueLane } from "@services/chat/runtime/ChatQueue.js";
 import { removeChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 
@@ -28,7 +28,7 @@ function normalizeSessionId(sessionId: string): string {
  * - 幂等：目标不存在时返回 success + deleted=false，避免上层重试复杂化。
  */
 export async function deleteChatSessionById(params: {
-  context: ServiceRuntime;
+  context: ExecutionRuntime;
   sessionId: string;
 }): Promise<{
   success: boolean;
@@ -54,7 +54,7 @@ export async function deleteChatSessionById(params: {
 
   try {
     // 关键点（中文）：先停执行，再删文件，避免删除过程中仍有任务写入。
-    params.context.session.clearAgent(sessionId);
+    params.context.session.clearRuntime(sessionId);
     clearChatQueueLane(sessionId);
 
     const removedMetaResult = await removeChatMetaBySessionId({

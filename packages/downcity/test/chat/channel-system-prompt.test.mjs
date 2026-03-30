@@ -11,7 +11,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { withRequestContext } from "../../bin/agent/context/manager/RequestContext.js";
+import { withRequestContext } from "../../bin/sessions/RequestContext.js";
 import { chatService } from "../../bin/services/chat/Index.js";
 import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 

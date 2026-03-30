@@ -1,511 +1,77 @@
 /**
- * Shell session 运行时存储。
+ * Shell session 运行时存储入口。
  *
  * 关键点（中文）
- * - 负责 shell 子进程生命周期、输出收集、状态等待、落盘持久化。
- * - 该模块只处理“shell 会话”本身，不直接承担 agent/chat 业务语义。
+ * - 这里只负责编排 shell service 的公开动作：start/status/read/write/wait/close/exec。
+ * - 持久化、输出裁剪、waiter 协调、session 查找等共享细节拆到 `SessionStoreSupport.ts`。
+ * - 新版本所有状态都通过 ShellServiceState 显式传入，不再使用模块级单例。
  */
 
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import path from "node:path";
+import { spawn } from "node:child_process";
 import fs from "fs-extra";
-import { loadGlobalEnvFromStore } from "@/console/env/Config.js";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type {
+  SessionWaiter,
+  ShellServiceState,
+  ShellSessionRuntime,
+} from "@/types/ShellRuntime.js";
 import { generateId } from "@utils/Id.js";
-import { requestContext } from "@agent/context/manager/RequestContext.js";
-import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
-import { appendExecSessionMessage } from "@services/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 import type {
   ShellActionResponse,
   ShellCloseRequest,
   ShellExecRequest,
-  ShellOutputChunk,
   ShellQueryRequest,
   ShellReadRequest,
-  ShellSessionSnapshot,
-  ShellSessionStatus,
   ShellStartRequest,
   ShellWaitRequest,
   ShellWriteRequest,
 } from "@services/shell/types/ShellService.js";
 import { getShellDir, getShellOutputPath, getShellSnapshotPath } from "./Paths.js";
+import {
+  appendSessionOutput,
+  buildActionResponse,
+  buildShellEnv,
+  clampWaitMs,
+  createOutputChunk,
+  createShellServiceState,
+  DEFAULT_EXEC_TIMEOUT_MS,
+  DEFAULT_INLINE_WAIT_MS,
+  DEFAULT_WAIT_TIMEOUT_MS,
+  ensureCapacity,
+  finalizeExit,
+  isInMemorySession,
+  isTerminalStatus,
+  nowMs,
+  persistSnapshot,
+  resolveOwnerContextId,
+  resolveOwnerRequestId,
+  resolveSession,
+  resolveShellCwd,
+  scheduleCleanup,
+  updateSessionSnapshot,
+} from "./SessionStoreSupport.js";
 
-const MAX_ACTIVE_SHELLS = 64;
-const SESSION_CLEANUP_DELAY_MS = 10 * 60 * 1000;
-const MAX_IN_MEMORY_OUTPUT_CHARS = 1_000_000;
-const DEFAULT_INLINE_WAIT_MS = 1_200;
-const DEFAULT_WAIT_TIMEOUT_MS = 10_000;
-const DEFAULT_EXEC_TIMEOUT_MS = 60_000;
-const MIN_WAIT_MS = 50;
-const MAX_WAIT_MS = 30_000;
-const DEFAULT_MAX_OUTPUT_CHARS = 12_000;
-const DEFAULT_MAX_OUTPUT_LINES = 200;
-const APPROX_CHARS_PER_TOKEN = 4;
-const OUTPUT_PREVIEW_CHARS = 280;
+export { createShellServiceState } from "./SessionStoreSupport.js";
 
-type SessionWaiter = {
-  resolve: () => void;
-  timer: NodeJS.Timeout;
-};
-
-type ShellSessionRuntime = {
-  snapshot: ShellSessionSnapshot;
-  child: ChildProcessWithoutNullStreams;
-  outputText: string;
-  outputFilePath: string;
-  snapshotFilePath: string;
-  writeChain: Promise<void>;
-  cleanupTimer: NodeJS.Timeout | null;
-  waiters: Set<SessionWaiter>;
-};
-
-const sessions = new Map<string, ShellSessionRuntime>();
-let boundRuntime: ServiceRuntime | null = null;
-
-function nowMs(): number {
-  return Date.now();
+/**
+ * 绑定当前 shell service 实例的 execution runtime。
+ */
+export function bindShellRuntime(
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
+): void {
+  state.boundRuntime = runtime;
 }
 
-function clampWaitMs(value: number | undefined, fallback: number): number {
-  const raw =
-    typeof value === "number" && Number.isFinite(value)
-      ? Math.floor(value)
-      : fallback;
-  return Math.min(MAX_WAIT_MS, Math.max(MIN_WAIT_MS, raw));
-}
-
-function normalizeOutputChunk(raw: string): string {
-  if (!raw) return "";
-  return raw
-    .replace(/\r\n/g, "\n")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
-}
-
-function resolveOutputLimits(params: {
-  runtime: ServiceRuntime;
-  maxOutputTokens?: number;
-}): {
-  maxChars: number;
-  maxLines: number;
-} {
-  const byTokens =
-    typeof params.maxOutputTokens === "number" &&
-    Number.isFinite(params.maxOutputTokens) &&
-    params.maxOutputTokens > 0
-      ? Math.max(200, Math.floor(params.maxOutputTokens * APPROX_CHARS_PER_TOKEN))
-      : null;
-  return {
-    maxChars:
-      byTokens == null
-        ? DEFAULT_MAX_OUTPUT_CHARS
-        : Math.min(DEFAULT_MAX_OUTPUT_CHARS, byTokens),
-    maxLines: DEFAULT_MAX_OUTPUT_LINES,
-  };
-}
-
-function splitOutputByLimits(
-  text: string,
-  maxChars: number,
-  maxLines: number,
-): { head: string; tail: string } {
-  const limitedByChars = text.slice(0, Math.min(text.length, maxChars));
-  let head = limitedByChars;
-  if (maxLines > 0) {
-    const lines = limitedByChars.split("\n");
-    if (lines.length > maxLines) {
-      head = lines.slice(0, maxLines).join("\n");
-    }
-  }
-  return {
-    head,
-    tail: text.slice(head.length),
-  };
-}
-
-function buildShellEnv(runtime: ServiceRuntime): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-
-  // 关键点（中文）
-  // - shell 子进程需要继承 console 级 global env。
-  // - 这里显式从 store 读取，避免把 ServiceRuntime.env 语义扩大成“全局+agent 混合态”。
-  // - 冲突时仍由后续 agent runtime env 覆盖，保持文档声明的优先级。
-  const globalEnv = loadGlobalEnvFromStore();
-  for (const [key, value] of Object.entries(globalEnv)) {
-    const normalizedKey = String(key || "").trim();
-    const normalizedValue = String(value || "").trim();
-    if (!normalizedKey || !normalizedValue) continue;
-    env[normalizedKey] = normalizedValue;
-  }
-
-  for (const [key, value] of Object.entries(runtime.env || {})) {
-    const normalizedKey = String(key || "").trim();
-    const normalizedValue = String(value || "").trim();
-    if (!normalizedKey || !normalizedValue) continue;
-    env[normalizedKey] = normalizedValue;
-  }
-
-  const request = requestContext.getStore();
-  const sessionId = String(request?.sessionId || "").trim();
-  const requestId = String(request?.requestId || "").trim();
-  if (sessionId) env.DC_SESSION_ID = sessionId;
-  if (requestId) env.DC_CTX_REQUEST_ID = requestId;
-  if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
-  if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;
-  return env;
-}
-
-function resolveShellCwd(runtime: ServiceRuntime, cwd?: string): string {
-  const raw = String(cwd || "").trim();
-  if (!raw) return runtime.rootPath;
-  return path.isAbsolute(raw) ? raw : path.resolve(runtime.rootPath, raw);
-}
-
-function resolveOwnerContextId(explicit?: string): string | undefined {
-  const fromInput = String(explicit || "").trim();
-  if (fromInput) return fromInput;
-  const fromRequest = String(requestContext.getStore()?.sessionId || "").trim();
-  return fromRequest || undefined;
-}
-
-function resolveOwnerRequestId(): string | undefined {
-  const requestId = String(requestContext.getStore()?.requestId || "").trim();
-  return requestId || undefined;
-}
-
-function deriveExitStatus(exitCode: number | undefined): ShellSessionStatus {
-  if (exitCode === -9 || exitCode === 137) return "killed";
-  if (typeof exitCode === "number" && exitCode === 0) return "completed";
-  return "failed";
-}
-
-function isTerminalStatus(status: ShellSessionStatus): boolean {
-  return (
-    status === "completed" ||
-    status === "failed" ||
-    status === "killed" ||
-    status === "expired"
-  );
-}
-
-function extractExternalRefsFromText(
-  text: string,
-  current: ShellSessionSnapshot["externalRefs"],
-): ShellSessionSnapshot["externalRefs"] {
-  const next = [...current];
-  const register = (kind: string, value: string, label?: string): void => {
-    const normalized = String(value || "").trim();
-    if (!normalized) return;
-    if (next.some((item) => item.kind === kind && item.value === normalized)) return;
-    next.push({ kind, value: normalized, ...(label ? { label } : {}) });
-  };
-
-  const threadIdRegex = /thread_id[:=]\s*([a-zA-Z0-9_-]{6,})/g;
-  for (const match of text.matchAll(threadIdRegex)) {
-    register("thread_id", String(match[1] || ""), "external thread id");
-  }
-  return next;
-}
-
-async function persistSnapshot(session: ShellSessionRuntime): Promise<void> {
-  await fs.ensureDir(path.dirname(session.snapshotFilePath));
-  await fs.writeJson(session.snapshotFilePath, session.snapshot, { spaces: 2 });
-}
-
-function enqueuePersistedAppend(
-  session: ShellSessionRuntime,
-  text: string,
+/**
+ * 关闭当前实例持有的所有活动 shell。
+ */
+export async function closeAllShellSessions(
+  state: ShellServiceState,
+  force = false,
 ): Promise<void> {
-  session.writeChain = session.writeChain.then(async () => {
-    await fs.ensureDir(path.dirname(session.outputFilePath));
-    await fs.appendFile(session.outputFilePath, text, "utf-8");
-  });
-  return session.writeChain;
-}
-
-function notifyWaiters(session: ShellSessionRuntime): void {
-  for (const waiter of Array.from(session.waiters)) {
-    clearTimeout(waiter.timer);
-    session.waiters.delete(waiter);
-    waiter.resolve();
-  }
-}
-
-async function emitChatCompletionEvent(
-  runtime: ServiceRuntime,
-  snapshot: ShellSessionSnapshot,
-): Promise<void> {
-  const ownerContextId = String(snapshot.ownerContextId || "").trim();
-  if (!ownerContextId || snapshot.notificationSent !== false) return;
-
-  const meta = await readChatMetaBySessionId({
-    context: runtime,
-    sessionId: ownerContextId,
-  });
-  if (!meta) return;
-
-  const lines = [
-    "[内部 shell 状态通知]",
-    `shell_id: ${snapshot.shellId}`,
-    `status: ${snapshot.status}`,
-    `exit_code: ${typeof snapshot.exitCode === "number" ? snapshot.exitCode : "null"}`,
-    `cmd: ${snapshot.cmd}`,
-  ];
-  if (snapshot.lastOutputPreview) {
-    lines.push(`last_output_preview: ${snapshot.lastOutputPreview}`);
-  }
-  if (snapshot.externalRefs.length > 0) {
-    const refs = snapshot.externalRefs.map((item) => `${item.kind}=${item.value}`);
-    lines.push(`external_refs: ${refs.join(", ")}`);
-  }
-  lines.push("请根据当前 shell 的状态，主动向用户简洁汇报结果或最新进展。");
-  const text = lines.join("\n");
-
-  await appendExecSessionMessage({
-    context: runtime,
-    sessionId: ownerContextId,
-    text,
-    extra: {
-      note: "shell_session_auto_notify",
-      internal: true,
-      shellId: snapshot.shellId,
-      shellStatus: snapshot.status,
-      exitCode:
-        typeof snapshot.exitCode === "number" ? snapshot.exitCode : null,
-    },
-  });
-
-  enqueueChatQueue({
-    kind: "exec",
-    channel: meta.channel,
-    targetId: meta.chatId,
-    sessionId: ownerContextId,
-    text,
-    ...(meta.targetType ? { targetType: meta.targetType } : {}),
-    ...(typeof meta.threadId === "number" ? { threadId: meta.threadId } : {}),
-    ...(meta.messageId ? { messageId: meta.messageId } : {}),
-    ...(meta.actorId ? { actorId: meta.actorId } : {}),
-    ...(meta.actorName ? { actorName: meta.actorName } : {}),
-    sessionPersisted: true,
-    extra: {
-      note: "shell_session_auto_notify",
-      internal: true,
-      shellId: snapshot.shellId,
-      shellStatus: snapshot.status,
-      exitCode:
-        typeof snapshot.exitCode === "number" ? snapshot.exitCode : null,
-    },
-  });
-}
-
-async function updateSessionSnapshot(
-  session: ShellSessionRuntime,
-  updater: (snapshot: ShellSessionSnapshot) => void | ShellSessionSnapshot,
-): Promise<void> {
-  const result = updater(session.snapshot);
-  if (result) {
-    session.snapshot = result;
-  }
-  session.snapshot.updatedAt = nowMs();
-  session.snapshot.version += 1;
-  await persistSnapshot(session);
-  notifyWaiters(session);
-}
-
-async function appendSessionOutput(
-  session: ShellSessionRuntime,
-  raw: string,
-): Promise<void> {
-  const text = normalizeOutputChunk(raw);
-  if (!text) return;
-
-  session.outputText += text;
-  if (session.outputText.length > MAX_IN_MEMORY_OUTPUT_CHARS) {
-    const overflow = session.outputText.length - MAX_IN_MEMORY_OUTPUT_CHARS;
-    session.outputText = session.outputText.slice(overflow);
-    session.snapshot.droppedChars += overflow;
-  }
-
-  session.snapshot.outputChars += text.length;
-  session.snapshot.lastOutputAt = nowMs();
-  session.snapshot.lastOutputPreview = session.outputText
-    .slice(-OUTPUT_PREVIEW_CHARS)
-    .trim();
-  session.snapshot.externalRefs = extractExternalRefsFromText(
-    text,
-    session.snapshot.externalRefs,
-  );
-  await enqueuePersistedAppend(session, text);
-  await updateSessionSnapshot(session, () => undefined);
-}
-
-function scheduleCleanup(shellId: string): void {
-  const session = sessions.get(shellId);
-  if (!session) return;
-  if (session.cleanupTimer) clearTimeout(session.cleanupTimer);
-  session.cleanupTimer = setTimeout(() => {
-    const current = sessions.get(shellId);
-    if (!current) return;
-    sessions.delete(shellId);
-  }, SESSION_CLEANUP_DELAY_MS);
-  if (typeof session.cleanupTimer.unref === "function") {
-    session.cleanupTimer.unref();
-  }
-}
-
-function ensureCapacity(): void {
-  if (sessions.size < MAX_ACTIVE_SHELLS) return;
-  const removable = Array.from(sessions.values())
-    .filter((item) => item.snapshot.status !== "running" && item.snapshot.status !== "starting")
-    .sort((a, b) => a.snapshot.updatedAt - b.snapshot.updatedAt);
-  for (const item of removable) {
-    if (sessions.size < MAX_ACTIVE_SHELLS) break;
-    sessions.delete(item.snapshot.shellId);
-  }
-  if (sessions.size >= MAX_ACTIVE_SHELLS) {
-    throw new Error(
-      `Too many active shell sessions (${sessions.size}). Please close or wait older sessions first.`,
-    );
-  }
-}
-
-async function loadPersistedSnapshot(
-  runtime: ServiceRuntime,
-  shellId: string,
-): Promise<ShellSessionSnapshot | null> {
-  const file = getShellSnapshotPath(runtime.rootPath, shellId);
-  if (!(await fs.pathExists(file))) return null;
-  const raw = await fs.readJson(file).catch(() => null);
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const snapshot = raw as ShellSessionSnapshot;
-  return typeof snapshot.shellId === "string" ? snapshot : null;
-}
-
-async function readPersistedOutput(
-  runtime: ServiceRuntime,
-  shellId: string,
-): Promise<string> {
-  const file = getShellOutputPath(runtime.rootPath, shellId);
-  if (!(await fs.pathExists(file))) return "";
-  return await fs.readFile(file, "utf-8");
-}
-
-async function resolveSession(
-  runtime: ServiceRuntime,
-  query: ShellQueryRequest,
-): Promise<ShellSessionRuntime | { snapshot: ShellSessionSnapshot; outputText: string } | null> {
-  const explicitShellId = String(query.shellId || "").trim();
-  if (explicitShellId) {
-    const inMemory = sessions.get(explicitShellId);
-    if (inMemory) return inMemory;
-    const snapshot = await loadPersistedSnapshot(runtime, explicitShellId);
-    if (!snapshot) return null;
-    return {
-      snapshot,
-      outputText: await readPersistedOutput(runtime, explicitShellId),
-    };
-  }
-
-  const ownerContextId = resolveOwnerContextId(query.ownerContextId);
-  const cmd = String(query.cmd || "").trim().toLowerCase();
-  if (!ownerContextId) return null;
-  const includeCompleted = query.includeCompleted === true;
-  const matched = Array.from(sessions.values())
-    .filter((item) => {
-      if (item.snapshot.ownerContextId !== ownerContextId) return false;
-      if (!includeCompleted) {
-        if (
-          item.snapshot.status !== "running" &&
-          item.snapshot.status !== "starting"
-        ) {
-          return false;
-        }
-      }
-      if (!cmd) return true;
-      return item.snapshot.cmd.toLowerCase().includes(cmd);
-    })
-    .sort((a, b) => b.snapshot.updatedAt - a.snapshot.updatedAt);
-  return matched[0] || null;
-}
-
-function createOutputChunk(params: {
-  shellId: string;
-  outputText: string;
-  fromCursor?: number;
-  runtime: ServiceRuntime;
-  maxOutputTokens?: number;
-}): ShellOutputChunk {
-  const fromCursor =
-    typeof params.fromCursor === "number" && params.fromCursor >= 0
-      ? Math.floor(params.fromCursor)
-      : 0;
-  const available = params.outputText.slice(fromCursor);
-  const originalChars = available.length;
-  const originalLines = available ? available.split("\n").length : 0;
-  const limits = resolveOutputLimits({
-    runtime: params.runtime,
-    maxOutputTokens: params.maxOutputTokens,
-  });
-  const { head, tail } = splitOutputByLimits(
-    available,
-    limits.maxChars,
-    limits.maxLines,
-  );
-  return {
-    shellId: params.shellId,
-    output: head,
-    startCursor: fromCursor,
-    endCursor: fromCursor + head.length,
-    originalChars,
-    originalLines,
-    hasMoreOutput: tail.length > 0,
-  };
-}
-
-function buildActionResponse(params: {
-  shell: ShellSessionSnapshot;
-  chunk?: ShellOutputChunk;
-  note?: string;
-}): ShellActionResponse {
-  return {
-    shell: params.shell,
-    ...(params.chunk ? { chunk: params.chunk } : {}),
-    ...(params.note ? { note: params.note } : {}),
-  };
-}
-
-function isInMemorySession(
-  value: ShellSessionRuntime | { snapshot: ShellSessionSnapshot; outputText: string },
-): value is ShellSessionRuntime {
-  return "child" in value;
-}
-
-async function finalizeExit(session: ShellSessionRuntime, exitCode: number): Promise<void> {
-  await updateSessionSnapshot(session, (snapshot) => {
-    snapshot.status = deriveExitStatus(exitCode);
-    snapshot.exitCode = exitCode;
-    snapshot.endedAt = nowMs();
-    snapshot.pid = session.child.pid ?? snapshot.pid;
-  });
-  scheduleCleanup(session.snapshot.shellId);
-
-  if (
-    session.snapshot.autoNotifyOnExit &&
-    session.snapshot.notificationSent === false &&
-    boundRuntime
-  ) {
-    await emitChatCompletionEvent(boundRuntime, session.snapshot);
-    session.snapshot.notificationSent = true;
-    await persistSnapshot(session);
-  }
-}
-
-export function bindShellRuntime(runtime: ServiceRuntime): void {
-  boundRuntime = runtime;
-}
-
-export async function closeAllShellSessions(force = false): Promise<void> {
-  const closing = Array.from(sessions.values()).map(async (session) => {
+  const closing = Array.from(state.sessions.values()).map(async (session) => {
     if (
       session.snapshot.status !== "running" &&
       session.snapshot.status !== "starting"
@@ -526,14 +92,18 @@ export async function closeAllShellSessions(force = false): Promise<void> {
   await Promise.all(closing);
 }
 
+/**
+ * 启动一个 shell session。
+ */
 export async function startShellSession(
-  runtime: ServiceRuntime,
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
   request: ShellStartRequest,
 ): Promise<ShellActionResponse> {
   const cmd = String(request.cmd || "").trim();
   if (!cmd) throw new Error("shell.start requires a non-empty cmd");
-  ensureCapacity();
-  bindShellRuntime(runtime);
+  ensureCapacity(state);
+  bindShellRuntime(state, runtime);
 
   const shellId = `sh_${generateId()}`;
   const cwd = resolveShellCwd(runtime, request.cwd);
@@ -566,6 +136,10 @@ export async function startShellSession(
   child.stderr.setEncoding("utf8");
 
   const startedAt = nowMs();
+  let resolveCompletion: () => void = () => {};
+  const completionPromise = new Promise<void>((resolve) => {
+    resolveCompletion = resolve;
+  });
   const session: ShellSessionRuntime = {
     snapshot: {
       shellId,
@@ -591,27 +165,37 @@ export async function startShellSession(
     snapshotFilePath,
     writeChain: Promise.resolve(),
     cleanupTimer: null,
-    waiters: new Set(),
+    waiters: new Set<SessionWaiter>(),
+    completionPromise,
+    resolveCompletion,
   };
-  sessions.set(shellId, session);
-  await persistSnapshot(session);
+  state.sessions.set(shellId, session);
 
+  // 关键点（中文）
+  // - 监听器必须在任何 `await` 之前挂上。
+  // - 对于 `printf` 这类瞬时命令，进程可能在持久化 snapshot 期间就已经退出。
+  // - 如果先 `await persistSnapshot()` 再注册 `close`，会错过退出事件，导致 session 永远停在 running。
   child.stdout.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(session, String(chunk ?? ""));
+    void appendSessionOutput(session, String(chunk ?? "")).catch(() => undefined);
   });
   child.stderr.on("data", (chunk: string | Buffer) => {
-    void appendSessionOutput(session, String(chunk ?? ""));
+    void appendSessionOutput(session, String(chunk ?? "")).catch(() => undefined);
   });
   child.on("error", (error: Error) => {
-    void appendSessionOutput(session, `\n[process error] ${String(error)}\n`);
-    void finalizeExit(session, -1);
+    void appendSessionOutput(session, `\n[process error] ${String(error)}\n`).catch(
+      () => undefined,
+    );
+    void finalizeExit(state, session, -1).catch(() => undefined);
   });
   child.on("close", (code: number | null) => {
-    void finalizeExit(session, typeof code === "number" ? code : -1);
+    void finalizeExit(state, session, typeof code === "number" ? code : -1).catch(
+      () => undefined,
+    );
   });
+  await persistSnapshot(session);
 
   const inlineWaitMs = clampWaitMs(request.inlineWaitMs, DEFAULT_INLINE_WAIT_MS);
-  await waitShellSession(runtime, {
+  await waitShellSession(state, runtime, {
     shellId,
     afterVersion: 1,
     fromCursor: 0,
@@ -619,7 +203,7 @@ export async function startShellSession(
     maxOutputTokens: request.maxOutputTokens,
   }).catch(() => undefined);
 
-  const latest = await resolveSession(runtime, { shellId, includeCompleted: true });
+  const latest = await resolveSession(state, runtime, { shellId, includeCompleted: true });
   if (!latest) {
     throw new Error(`shell session disappeared unexpectedly: ${shellId}`);
   }
@@ -650,11 +234,15 @@ export async function startShellSession(
   });
 }
 
+/**
+ * 查询 shell session 状态。
+ */
 export async function getShellSessionStatus(
-  runtime: ServiceRuntime,
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
   request: ShellQueryRequest,
 ): Promise<ShellActionResponse> {
-  const session = await resolveSession(runtime, {
+  const session = await resolveSession(state, runtime, {
     ...request,
     includeCompleted: request.includeCompleted !== false,
   });
@@ -666,11 +254,15 @@ export async function getShellSessionStatus(
   });
 }
 
+/**
+ * 读取 shell session 输出。
+ */
 export async function readShellSession(
-  runtime: ServiceRuntime,
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
   request: ShellReadRequest,
 ): Promise<ShellActionResponse> {
-  const session = await resolveSession(runtime, {
+  const session = await resolveSession(state, runtime, {
     ...request,
     includeCompleted: request.includeCompleted !== false,
   });
@@ -690,14 +282,18 @@ export async function readShellSession(
   });
 }
 
+/**
+ * 向 shell session 写入 stdin。
+ */
 export async function writeShellSession(
-  runtime: ServiceRuntime,
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
   request: ShellWriteRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
   const chars = String(request.chars ?? "");
   if (!shellId) throw new Error("shell.write requires shellId");
-  const session = await resolveSession(runtime, {
+  const session = await resolveSession(state, runtime, {
     shellId,
     includeCompleted: true,
   });
@@ -725,13 +321,17 @@ export async function writeShellSession(
   });
 }
 
+/**
+ * 等待 shell session 状态变化。
+ */
 export async function waitShellSession(
-  runtime: ServiceRuntime,
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
   request: ShellWaitRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
   if (!shellId) throw new Error("shell.wait requires shellId");
-  const session = await resolveSession(runtime, {
+  const session = await resolveSession(state, runtime, {
     shellId,
     includeCompleted: true,
   });
@@ -743,20 +343,40 @@ export async function waitShellSession(
     session.snapshot.version <= request.afterVersion &&
     (session.snapshot.status === "running" || session.snapshot.status === "starting")
   ) {
+    const afterVersion = request.afterVersion;
     await new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
+      let settled = false;
+      let waiter: SessionWaiter;
+      const finish = (): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(waiter.timer);
         session.waiters.delete(waiter);
         resolve();
+      };
+      const timer = setTimeout(() => {
+        finish();
       }, clampWaitMs(request.timeoutMs, DEFAULT_WAIT_TIMEOUT_MS));
-      const waiter: SessionWaiter = {
-        resolve: () => resolve(),
+      waiter = {
+        resolve: finish,
         timer,
       };
       session.waiters.add(waiter);
+
+      // 关键点（中文）
+      // - 这里必须在注册 waiter 之后立刻复查一次状态。
+      // - 否则如果 shell 恰好在“进入 if 判断”与“waiter 真正挂入集合”之间完成，
+      //   notifyWaiters 会被错过，导致当前 wait 一直睡到 timeout。
+      if (
+        session.snapshot.version > afterVersion ||
+        isTerminalStatus(session.snapshot.status)
+      ) {
+        finish();
+      }
     });
   }
 
-  const refreshed = await resolveSession(runtime, {
+  const refreshed = await resolveSession(state, runtime, {
     shellId,
     includeCompleted: true,
   });
@@ -774,13 +394,17 @@ export async function waitShellSession(
   });
 }
 
+/**
+ * 关闭 shell session。
+ */
 export async function closeShellSession(
-  runtime: ServiceRuntime,
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
   request: ShellCloseRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
   if (!shellId) throw new Error("shell.close requires shellId");
-  const session = await resolveSession(runtime, {
+  const session = await resolveSession(state, runtime, {
     shellId,
     includeCompleted: true,
   });
@@ -811,19 +435,23 @@ export async function closeShellSession(
     });
   }
 
-  scheduleCleanup(shellId);
+  scheduleCleanup(state, shellId);
   return buildActionResponse({
     shell: session.snapshot,
     note: "shell close requested",
   });
 }
 
+/**
+ * 以 one-shot 模式执行 shell command。
+ */
 export async function execShellCommand(
-  runtime: ServiceRuntime,
+  state: ShellServiceState,
+  runtime: ExecutionRuntime,
   request: ShellExecRequest,
 ): Promise<ShellActionResponse> {
   const timeoutMs = clampWaitMs(request.timeoutMs, DEFAULT_EXEC_TIMEOUT_MS);
-  const started = await startShellSession(runtime, {
+  const started = await startShellSession(state, runtime, {
     cmd: request.cmd,
     ...(request.cwd ? { cwd: request.cwd } : {}),
     ...(request.shell ? { shell: request.shell } : {}),
@@ -841,10 +469,16 @@ export async function execShellCommand(
   }
 
   const deadline = nowMs() + timeoutMs;
+  const sleep = async (ms: number): Promise<void> => {
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      if (typeof timer.unref === "function") timer.unref();
+    });
+  };
   while (!isTerminalStatus(current.shell.status)) {
     const remaining = deadline - nowMs();
     if (remaining <= 0) {
-      await closeShellSession(runtime, {
+      await closeShellSession(state, runtime, {
         shellId: current.shell.shellId,
         force: true,
       });
@@ -853,27 +487,62 @@ export async function execShellCommand(
       );
     }
 
-    current = await waitShellSession(runtime, {
+    const inMemory = state.sessions.get(current.shell.shellId);
+    if (
+      inMemory &&
+      (inMemory.snapshot.status === "running" ||
+        inMemory.snapshot.status === "starting")
+    ) {
+      await Promise.race([
+        inMemory.completionPromise,
+        sleep(Math.min(remaining, 250)),
+      ]);
+    } else {
+      await sleep(Math.min(remaining, 250));
+    }
+
+    const refreshed = await resolveSession(state, runtime, {
       shellId: current.shell.shellId,
-      afterVersion: current.shell.version,
+      includeCompleted: true,
+    });
+    if (!refreshed) {
+      throw new Error(`shell session disappeared unexpectedly: ${current.shell.shellId}`);
+    }
+    const chunk = createOutputChunk({
+      shellId: current.shell.shellId,
+      outputText: refreshed.outputText,
       fromCursor,
-      timeoutMs: remaining,
+      runtime,
       maxOutputTokens: request.maxOutputTokens,
     });
-    if (current.chunk?.output) {
-      outputParts.push(current.chunk.output);
+    current = buildActionResponse({
+      shell: refreshed.snapshot,
+      chunk,
+    });
+    if (chunk.output) {
+      outputParts.push(chunk.output);
     }
-    if (current.chunk && typeof current.chunk.endCursor === "number") {
-      fromCursor = current.chunk.endCursor;
+    if (typeof chunk.endCursor === "number") {
+      fromCursor = chunk.endCursor;
     }
   }
 
-  await closeShellSession(runtime, {
+  const finalSession = state.sessions.get(current.shell.shellId);
+  if (finalSession) {
+    await finalSession.completionPromise;
+    await finalSession.writeChain.catch(() => undefined);
+  }
+
+  await closeShellSession(state, runtime, {
     shellId: current.shell.shellId,
     force: false,
   }).catch(() => undefined);
 
-  const fullOutput = outputParts.join("");
+  const completed = await resolveSession(state, runtime, {
+    shellId: current.shell.shellId,
+    includeCompleted: true,
+  });
+  const fullOutput = completed?.outputText ?? outputParts.join("");
   const originalLines = fullOutput ? fullOutput.split("\n").length : 0;
   return buildActionResponse({
     shell: current.shell,

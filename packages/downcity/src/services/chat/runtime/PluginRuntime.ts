@@ -6,7 +6,7 @@
  * - 这里封装 chat 领域的 plugin 点调用语义，保持 service 边界稳定。
  */
 
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type { JsonObject } from "@/types/Json.js";
 import type {
   AuthObservePrincipalPayload,
@@ -25,7 +25,7 @@ function toRecord(value: unknown): Record<string, unknown> {
  * 观测入站主体。
  */
 export async function observeIncomingChatPrincipal(params: {
-  runtime: ServiceRuntime;
+  runtime: ExecutionRuntime;
   channel: ChatDispatchChannel;
   chatId: string;
   chatType?: string;
@@ -51,7 +51,7 @@ export async function observeIncomingChatPrincipal(params: {
  * - 这样 chat service 可以像处理中间件一样串联 guard 点。
  */
 export async function guardIncomingChat(params: {
-  runtime: ServiceRuntime;
+  runtime: ExecutionRuntime;
   channel: ChatDispatchChannel;
   input: ChatAuthorizationEvaluateInput;
 }): Promise<void> {
@@ -72,7 +72,7 @@ export async function guardIncomingChat(params: {
  * 解析用户角色。
  */
 export async function resolveIncomingChatUserRole(params: {
-  runtime: ServiceRuntime;
+  runtime: ExecutionRuntime;
   channel: ChatDispatchChannel;
   userId?: string;
 }): Promise<ChatAuthorizationRole | undefined> {

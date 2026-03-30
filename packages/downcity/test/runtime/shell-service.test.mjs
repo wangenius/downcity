@@ -12,12 +12,7 @@ import path from "node:path";
 import test from "node:test";
 import fs from "fs-extra";
 import { ConsoleStore } from "../../bin/utils/store/index.js";
-import {
-  closeShellSession,
-  execShellCommand,
-  startShellSession,
-  waitShellSession,
-} from "../../bin/services/shell/runtime/SessionStore.js";
+import { ShellService } from "../../bin/services/shell/ShellService.js";
 
 function createRuntimeStub(rootPath) {
   return {
@@ -51,9 +46,10 @@ function createRuntimeStub(rootPath) {
 test("shell service can start and wait for a long-running shell session", async () => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-shell-service-"));
   const runtime = createRuntimeStub(rootPath);
+  const service = new ShellService(null);
 
   try {
-    const started = await startShellSession(runtime, {
+    const started = await service.start(runtime, {
       cmd: "printf 'hello\\n'; sleep 0.2; printf 'world\\n'",
       shell: "/bin/bash",
       login: false,
@@ -66,7 +62,7 @@ test("shell service can start and wait for a long-running shell session", async 
     assert.equal(started.chunk.startCursor, 0);
     assert.match(started.chunk.output, /hello/);
 
-    const waited = await waitShellSession(runtime, {
+    const waited = await service.wait(runtime, {
       shellId: started.shell.shellId,
       afterVersion: started.shell.version,
       fromCursor: started.chunk.endCursor,
@@ -78,7 +74,7 @@ test("shell service can start and wait for a long-running shell session", async 
     assert.equal(waited.shell.status, "completed");
     assert.equal(waited.shell.exitCode, 0);
 
-    const closed = await closeShellSession(runtime, {
+    const closed = await service.close(runtime, {
       shellId: started.shell.shellId,
       force: false,
     });
@@ -91,9 +87,10 @@ test("shell service can start and wait for a long-running shell session", async 
 test("shell service can execute a one-shot shell command", async () => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-shell-exec-"));
   const runtime = createRuntimeStub(rootPath);
+  const service = new ShellService(null);
 
   try {
-    const executed = await execShellCommand(runtime, {
+    const executed = await service.exec(runtime, {
       cmd: "printf 'quick-one-shot\\n'",
       shell: "/bin/bash",
       login: false,
@@ -112,10 +109,11 @@ test("shell service can execute a one-shot shell command", async () => {
 test("shell service injects console global env and lets agent env override conflicts", async () => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-shell-global-env-"));
   const consoleHome = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-console-home-"));
-  const previousHome = process.env.HOME;
-  process.env.HOME = consoleHome;
+  const previousConsoleRoot = process.env.DC_CONSOLE_ROOT;
+  process.env.DC_CONSOLE_ROOT = consoleHome;
 
   const runtime = createRuntimeStub(rootPath);
+  const service = new ShellService(null);
   runtime.env = {
     SHARED_KEY: "agent",
     AGENT_ONLY: "agent-only",
@@ -133,7 +131,7 @@ test("shell service injects console global env and lets agent env override confl
       value: "global-only",
     });
 
-    const executed = await execShellCommand(runtime, {
+    const executed = await service.exec(runtime, {
       cmd: "printf '%s|%s|%s' \"$GLOBAL_ONLY\" \"$AGENT_ONLY\" \"$SHARED_KEY\"",
       shell: "/bin/bash",
       login: false,
@@ -146,8 +144,8 @@ test("shell service injects console global env and lets agent env override confl
     assert.equal(executed.chunk.output, "global-only|agent-only|agent");
   } finally {
     store.close();
-    if (previousHome === undefined) delete process.env.HOME;
-    else process.env.HOME = previousHome;
+    if (previousConsoleRoot === undefined) delete process.env.DC_CONSOLE_ROOT;
+    else process.env.DC_CONSOLE_ROOT = previousConsoleRoot;
     await fs.remove(rootPath);
     await fs.remove(consoleHome);
   }

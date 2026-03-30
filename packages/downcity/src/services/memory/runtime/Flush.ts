@@ -8,11 +8,12 @@
 
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 import { isTextUIPart } from "ai";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type {
   MemoryFlushPayload,
   MemoryFlushResponse,
 } from "@services/memory/types/Memory.js";
+import type { MemoryRuntimeState } from "./Store.js";
 import { storeMemory } from "./Writer.js";
 
 type AnyUiMessagePart = UIMessagePart<UIDataTypes, UITools>;
@@ -42,7 +43,8 @@ function extractReadableLine(message: {
  * 把当前会话最近消息刷写到 daily 记忆。
  */
 export async function flushMemory(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   payload: MemoryFlushPayload,
 ): Promise<MemoryFlushResponse> {
   const sessionId = String(payload.sessionId || "").trim();
@@ -69,7 +71,7 @@ export async function flushMemory(
     "",
     summary,
   ].join("\n");
-  const saved = await storeMemory(runtime, {
+  const saved = await storeMemory(runtime, state, {
     content,
     target: "daily",
   });

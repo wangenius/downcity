@@ -8,7 +8,7 @@
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
-import type { DowncityConfig } from "@agent/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/types/DowncityConfig.js";
 import type { JsonValue } from "@/types/Json.js";
 
 /**

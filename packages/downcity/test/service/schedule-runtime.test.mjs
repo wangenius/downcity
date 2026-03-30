@@ -14,12 +14,12 @@ import test from "node:test";
 import {
   controlServiceRuntime,
   runServiceCommand,
-} from "../../bin/console/service/Manager.js";
+} from "../../bin/main/service/Manager.js";
 import {
   startServiceScheduleRuntime,
   stopServiceScheduleRuntime,
-} from "../../bin/console/service/schedule/Runtime.js";
-import { ServiceScheduleStore } from "../../bin/console/service/schedule/Store.js";
+} from "../../bin/main/service/schedule/Runtime.js";
+import { ServiceScheduleStore } from "../../bin/main/service/schedule/Store.js";
 import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,

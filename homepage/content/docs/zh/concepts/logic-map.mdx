@@ -1,35 +1,40 @@
 ---
 title: 架构逻辑图
-description: 解释 console、agent、service、plugin 的职责边界与协作链路
+description: 解释 console、agent、execution runtime、session、service、plugin 的职责边界与协作链路
 ---
 
 # 架构逻辑图
 
 这页回答一个问题：
 
-`console`、`agent`、`service`、`plugin` 各自负责什么，以及一次请求如何穿过它们。
+一次请求是怎么从 `console` / `agent` 进入真正执行，再回到用户侧的。
 
 ## 1. 职责边界
 
-- `console`：全局控制面。管理 daemon、registry、模型池、共享存储。
-- `agent`：项目执行面。加载项目配置与上下文，持有单个 runtime。
-- `service`：核心业务流程，拥有生命周期。
-- `plugin`：可选增强模块，被动接入 service 定义的点。
-- plugin 自己负责封装依赖与配置细节。
+- `console`：全局控制面，管理 daemon、registry、模型池、共享存储
+- `agent`：项目宿主，加载项目配置并持有 session registry
+- `execution runtime`：统一注入给执行链路的能力视图
+- `session`：真正执行 prompt / tools / history 的地方
+- `service`：主业务流程与领域编排
+- `plugin`：在固定点被动加入的扩展模块
 
 ## 2. 系统关系
 
 ```mermaid
 flowchart LR
-  subgraph CP["控制面（Console）"]
+  subgraph CP["控制面"]
     CLI["city CLI"] --> CONSOLE["console"]
-    CONSOLE --> REG["registry / config / UI gateway"]
+    CONSOLE --> REG["registry / model pool / UI"]
   end
 
-  subgraph DP["执行面（Per Project）"]
-    AGENT["agent daemon"] --> SERVICES["services"]
-    SERVICES --> POINTS["service-defined plugin points"]
-    PLUGINS["plugins"] --> POINTS
+  subgraph DP["执行面（单项目）"]
+    AGENT["agent"] --> ER["execution runtime"]
+    AGENT --> SR["session registry"]
+    SR --> SESSION["session"]
+    ER --> SERVICES["services"]
+    ER --> PLUGINS["plugins"]
+    SERVICES --> SESSION
+    SERVICES -. trigger plugin points .-> PLUGINS
     AGENT --> SHIP[".downcity/*"]
   end
 
@@ -42,24 +47,34 @@ flowchart LR
 sequenceDiagram
   participant User as User
   participant Channel as Telegram/Feishu/QQ
-  participant Agent as agent daemon
   participant Service as service(chat/task/memory)
+  participant Runtime as execution runtime
   participant Plugin as plugin(voice/auth)
+  participant Session as session
 
-  User->>Channel: 发送消息
-  Channel->>Agent: 进入 runtime
-  Agent->>Service: 执行业务流程
-  Service->>Plugin: 在扩展点上调用 plugin
-  Plugin-->>Service: 返回增强结果
-  Service-->>Agent: 返回业务结果
+  User->>Channel: 发送消息 / 触发任务
+  Channel->>Service: 进入具体 service
+  Service->>Runtime: 读取统一能力
+  Service->>Plugin: 在固定点调用 plugin
+  Service->>Session: 进入目标 session 执行
+  Session-->>Service: 返回结果
+  Service-->>User: 回复或落盘
 ```
 
 ## 4. 一个贴近真实实现的例子
 
 在 `chat` 里：
 
-- service 先构造入站消息
-- 然后在若干固定节点让 plugin 参与
-- `voice` 可以补充语音转写
-- `auth` 可以做鉴权和角色解析
-- 最终仍由 `chat` 自己决定是否入队、何时回复、如何落盘
+- `chat service` 先接住渠道消息
+- 它维护渠道目标到 `sessionId` 的映射
+- 语音消息可在固定点让 `voice plugin` 补充转写
+- 鉴权和角色解析可让 `auth plugin` 参与
+- 最后还是由 `chat service` 自己决定是否入队、何时回复、如何写入历史
+
+## 5. 用户视角最值得记住的事
+
+- 你平时操作的是 agent
+- 真正执行的是 session
+- service 是主流程
+- plugin 是扩展层
+- execution runtime 只是把这些能力统一接起来

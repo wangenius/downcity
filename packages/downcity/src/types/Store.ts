@@ -5,7 +5,7 @@
  * - 该类型用于 console 全局模型池（provider/model）的统一读写。
  * - agent 项目只通过 `model.primary` 绑定模型 ID，不直接持有 provider 细节。
  */
-import type { LlmProviderType } from "@agent/types/LlmConfig.js";
+import type { LlmProviderType } from "@/types/LlmConfig.js";
 
 /**
  * Channel Account 支持的渠道类型。

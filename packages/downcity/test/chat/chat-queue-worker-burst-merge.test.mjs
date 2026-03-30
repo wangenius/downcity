@@ -46,10 +46,10 @@ function createWorkerHarness(queueConfig) {
           },
         },
       },
-      context: {
+      session: {
         async run(params) {
           runCalls.push({
-            contextId: params.contextId,
+            sessionId: params.sessionId,
             query: params.query,
             ts: Date.now(),
           });
@@ -65,7 +65,7 @@ function createWorkerHarness(queueConfig) {
           });
         },
         async appendAssistantMessage() {},
-        clearAgent() {},
+        clearRuntime() {},
       },
       logger: {
         warn() {},

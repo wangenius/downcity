@@ -708,7 +708,7 @@ export function parseFetchRequestForLog(
 } | null {
   // 关键注释：这里的 maxChars 不用于“整体截断请求日志”，仅作为 payload 兜底 stringify 的保护上限。
   const maxChars = 12000;
-  // 统一开关：只由 downcity.json 的 llm.logMessages 控制（见 console/model/CreateModel.ts）。
+  // 统一开关：只由 downcity.json 的 llm.logMessages 控制（见 main/model/CreateModel.ts）。
   // 这里不支持额外的“更敏感 payload”开关，避免不一致与误配置。
   const includePayload = false;
 

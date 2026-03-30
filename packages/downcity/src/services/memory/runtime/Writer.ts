@@ -8,7 +8,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { ServiceRuntime } from "@/console/service/ServiceRuntime.js";
+import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
 import type {
   MemoryGetPayload,
   MemoryGetResponse,
@@ -21,7 +21,8 @@ import {
   getDowncityMemoryDailyPath,
   getDowncityMemoryLongTermPath,
   getDowncitySessionDirPath,
-} from "@/console/env/Paths.js";
+} from "@/main/env/Paths.js";
+import type { MemoryRuntimeState } from "./Store.js";
 import { markMemoryDirty } from "./Store.js";
 
 function nowIso(): string {
@@ -44,7 +45,7 @@ function isWithin(parentPath: string, childPath: string): boolean {
 }
 
 function resolveStoreTargetPath(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
   target: MemorySourceType,
   sessionId?: string,
 ): { absPath: string; relPath: string } {
@@ -89,7 +90,8 @@ function formatEntry(content: string): string {
  * 显式写入 memory。
  */
 export async function storeMemory(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
+  state: MemoryRuntimeState,
   payload: MemoryStorePayload,
 ): Promise<MemoryStoreResponse> {
   const target: MemorySourceType = payload.target ?? "daily";
@@ -108,7 +110,7 @@ export async function storeMemory(
   }
   const entry = formatEntry(content);
   await fs.appendFile(resolved.absPath, `\n${entry}`, "utf-8");
-  markMemoryDirty(runtime, `store:${resolved.relPath}`);
+  markMemoryDirty(runtime, state, `store:${resolved.relPath}`);
   return {
     path: resolved.relPath,
     target,
@@ -116,7 +118,7 @@ export async function storeMemory(
   };
 }
 
-function resolveAllowedReadPath(runtime: ServiceRuntime, relPath: string): string {
+function resolveAllowedReadPath(runtime: ExecutionRuntime, relPath: string): string {
   const normalized = relPath.replace(/\\/g, "/").replace(/^\/+/, "").trim();
   if (!normalized) {
     throw new Error("path is required");
@@ -140,7 +142,7 @@ function resolveAllowedReadPath(runtime: ServiceRuntime, relPath: string): strin
  * 读取指定记忆文件（支持行区间）。
  */
 export async function getMemory(
-  runtime: ServiceRuntime,
+  runtime: ExecutionRuntime,
   payload: MemoryGetPayload,
 ): Promise<MemoryGetResponse> {
   const requestedPath = String(payload.path || "").trim();

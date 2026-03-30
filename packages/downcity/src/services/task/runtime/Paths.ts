@@ -11,7 +11,7 @@
  */
 
 import path from "node:path";
-import { getDowncityTasksDirPath } from "@/console/env/Paths.js";
+import { getDowncityTasksDirPath } from "@/main/env/Paths.js";
 
 /**
  * taskId 允许字符：

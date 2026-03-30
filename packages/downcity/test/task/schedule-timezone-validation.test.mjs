@@ -1,76 +1,55 @@
 /**
- * Task 调度时间规则测试（node:test）。
+ * Task `when` 规则测试（node:test）。
  *
  * 关键点（中文）
- * - `time` 必须是带显式时区的 ISO8601 日期时间。
- * - `time` 只允许与 `cron=@manual` 组合，避免双调度歧义。
- * - `timezone` 仅允许 IANA 时区。
- * - cron alias 需归一化并拒绝非法表达式。
+ * - 一次性触发统一收敛为 `time:<ISO8601-with-timezone>`
+ * - `@manual` / cron / one-shot 的判定边界要稳定
+ * - cron alias 归一化与非法表达式拒绝要稳定
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  normalizeTaskCron,
-  normalizeTaskTime,
-  normalizeTaskTimezone,
-  validateTaskScheduleCombination,
-} from "../../bin/services/task/runtime/model.js";
+  isTaskWhenManual,
+  isTaskWhenOneShot,
+  normalizeTaskCronExpression,
+  normalizeTaskWhen,
+  resolveTaskWhenCronExpression,
+  resolveTaskWhenOneShotMs,
+} from "../../bin/services/task/runtime/Model.js";
 
-test("normalizeTaskTime rejects ISO datetime without explicit timezone", () => {
-  const result = normalizeTaskTime("2026-03-08T10:30:00");
+test("normalizeTaskWhen rejects ISO datetime without explicit timezone", () => {
+  const result = normalizeTaskWhen("2026-03-08T10:30:00");
   assert.equal(result.ok, false);
   if (result.ok) return;
   assert.match(result.error, /with timezone/i);
 });
 
-test("normalizeTaskTime normalizes timezone-aware datetime to UTC ISO", () => {
-  const result = normalizeTaskTime("2026-03-08T10:30:00+08:00");
+test("normalizeTaskWhen normalizes timezone-aware datetime to one-shot UTC form", () => {
+  const result = normalizeTaskWhen("2026-03-08T10:30:00+08:00");
   assert.equal(result.ok, true);
   if (!result.ok) return;
-  assert.equal(result.value, "2026-03-08T02:30:00.000Z");
+  assert.equal(result.value, "time:2026-03-08T02:30:00.000Z");
+  assert.equal(isTaskWhenOneShot(result.value), true);
+  assert.equal(resolveTaskWhenOneShotMs(result.value), Date.parse("2026-03-08T02:30:00.000Z"));
 });
 
-test("validateTaskScheduleCombination rejects time with non-manual cron", () => {
-  const result = validateTaskScheduleCombination({
-    cron: "0 * * * *",
-    time: "2026-03-08T02:30:00.000Z",
-  });
-  assert.equal(result.ok, false);
-  if (result.ok) return;
-  assert.match(result.error, /requires `cron=@manual`/i);
-});
-
-test("validateTaskScheduleCombination accepts time with manual cron alias", () => {
-  const result = validateTaskScheduleCombination({
-    cron: "@MANUAL",
-    time: "2026-03-08T02:30:00.000Z",
-  });
+test("manual alias stays manual and does not resolve to cron", () => {
+  const result = normalizeTaskWhen("@MANUAL");
   assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value, "@manual");
+  assert.equal(isTaskWhenManual(result.value), true);
+  assert.equal(resolveTaskWhenCronExpression(result.value), null);
 });
 
-test("normalizeTaskTimezone accepts valid IANA timezone and rejects invalid value", () => {
-  const good = normalizeTaskTimezone("Asia/Shanghai");
-  assert.equal(good.ok, true);
-  if (good.ok) {
-    assert.equal(good.value, "Asia/Shanghai");
-  }
+test("cron alias normalizes to expression and rejects invalid expression", () => {
+  assert.equal(normalizeTaskCronExpression("@DAILY"), "0 0 * * *");
+  assert.equal(resolveTaskWhenCronExpression("@DAILY"), "0 0 * * *");
+  assert.equal(normalizeTaskCronExpression("not-a-cron"), null);
 
-  const bad = normalizeTaskTimezone("UTC+8");
-  assert.equal(bad.ok, false);
-  if (bad.ok) return;
-  assert.match(bad.error, /Invalid timezone/i);
-});
-
-test("normalizeTaskCron normalizes alias and rejects invalid expression", () => {
-  const alias = normalizeTaskCron("@DAILY");
-  assert.equal(alias.ok, true);
-  if (alias.ok) {
-    assert.equal(alias.value, "@daily");
-  }
-
-  const invalid = normalizeTaskCron("not-a-cron");
+  const invalid = normalizeTaskWhen("not-a-cron");
   assert.equal(invalid.ok, false);
   if (invalid.ok) return;
-  assert.match(invalid.error, /Invalid cron/i);
+  assert.match(invalid.error, /Invalid when \(cron\)/i);
 });

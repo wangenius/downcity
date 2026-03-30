@@ -8,7 +8,7 @@
  */
 
 import path from "node:path";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { SessionRunResult } from "@/types/SessionRun.js";
 import type { TaskSessionRuntime } from "@/types/TaskRunner.js";
 import { SessionCore } from "@sessions/SessionCore.js";
@@ -49,10 +49,10 @@ export async function appendTaskRoundUserMessage(params: {
 }
 
 /**
- * 构建 task 专用 Session 运行时（独立于 SessionRegistry 的 SessionCore 缓存）。
+ * 构建 task 专用 Session 运行时（独立于 SessionStore 的 SessionCore 缓存）。
  */
 export function createTaskSessionRuntime(params: {
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   runDirAbs: string;
   runSessionId: string;
   userSimulatorSessionId: string;

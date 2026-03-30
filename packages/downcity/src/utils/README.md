@@ -15,20 +15,25 @@
    - 封装 `fetch`，在请求发往 LLM 前写入日志。
    - 通过注入的 `getRequestContext` 回调读取并拼接 `sessionId/requestId`。
 3. `logger/Format.ts`
-   - 解析 provider 请求 payload，提取可读的消息摘要与元信息。
-   - 内置截断策略，避免日志输出失控。
-4. `store/index.ts`
+   - 作为日志格式化 facade，对外保持稳定导出。
+4. `logger/FormatShared.ts`
+   - 负责 JSON/文本抽取、截断、消息块拼装等共享基础能力。
+5. `logger/FormatRequest.ts`
+   - 解析 provider request payload，提取 messages/system/tool 摘要与元信息。
+6. `logger/FormatResponse.ts`
+   - 解析 provider response / SSE payload，提取输出类型与 function call 摘要。
+7. `store/index.ts`
    - 提供 `ConsoleStore` 门面。
    - 对外统一暴露 provider/model、secure settings、env、channel account 存储能力。
-5. `store/StoreSchema.ts`
+8. `store/StoreSchema.ts`
    - 负责 SQLite 建表与轻量迁移。
-6. `store/StoreModelRepository.ts`
+9. `store/StoreModelRepository.ts`
    - 负责 provider/model 相关读写。
-7. `store/StoreSecureSettings.ts`
+10. `store/StoreSecureSettings.ts`
    - 负责加密配置读写。
-8. `store/StoreEnvRepository.ts`
+11. `store/StoreEnvRepository.ts`
    - 负责 global/agent env 单表读写。
-9. `store/StoreChannelAccountRepository.ts`
+12. `store/StoreChannelAccountRepository.ts`
    - 负责渠道账号存储与敏感字段加解密。
 
 ## 关键调用链

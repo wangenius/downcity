@@ -35,7 +35,7 @@ import {
   buildChatInboundText,
 } from "@services/chat/runtime/InboundAugment.js";
 import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import {
@@ -60,7 +60,7 @@ export class TelegramBot extends BaseChatChannel {
   private readonly botToken: string;
   private readonly platform: TelegramPlatformClient;
 
-  constructor(context: ExecutionRuntime, botToken: string) {
+  constructor(context: ExecutionContext, botToken: string) {
     super({ channel: "telegram", context });
     this.botToken = botToken;
     this.platform = new TelegramPlatformClient({
@@ -639,7 +639,7 @@ export class TelegramBot extends BaseChatChannel {
  */
 export function createTelegramBot(
   config: TelegramConfig,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): TelegramBot | null {
   if (!config.enabled || !config.botToken || config.botToken === "${}") {
     return null;

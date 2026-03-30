@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - UI 由 console 进程独立托管，不依赖单个 agent 启动参数。
- * - 提供统一的多 agent 选择能力，并把 `/api/*` 代理到选中 agent runtime。
+ * - 提供统一的多 agent 选择能力，并把 `/api/*` 代理到选中 agent。
  */
 
 import { Hono, type Context } from "hono";
@@ -13,12 +13,7 @@ import http from "node:http";
 import fs from "fs-extra";
 import path from "node:path";
 import { fileURLToPath } from "url";
-import { initializeAgentProject } from "@/main/project/AgentInitializer.js";
-import { registerConsoleUiModelRoutes } from "@/main/ui/ModelApiRoutes.js";
-import { registerConsoleUiChannelAccountRoutes } from "@/main/ui/ChannelAccountApiRoutes.js";
-import { registerConsoleUiEnvRoutes } from "@/main/ui/EnvApiRoutes.js";
-import { registerConsoleUiAgentRuntimeRoutes } from "@/main/ui/AgentRuntimeApiRoutes.js";
-import { registerConsoleUiPluginRoutes } from "@/main/ui/PluginApiRoutes.js";
+import { registerConsoleUiGatewayRoutes } from "@/main/ui/ConsoleUIGatewayRoutes.js";
 import {
   buildConsoleUiAgentsResponse,
   buildConsoleUiConfigStatusResponse,
@@ -32,6 +27,7 @@ import {
 } from "@/main/ui/gateway/AgentCatalog.js";
 import {
   executeConsoleUiShellCommand,
+  initializeConsoleUiAgentProject,
   inspectConsoleUiAgentRestartSafety,
   pickConsoleUiDirectoryPath,
   restartConsoleUiAgentByProjectRoot,
@@ -50,6 +46,7 @@ import type {
   ConsoleUiConfigStatusResponse,
   ConsoleUiAgentDirectoryInspection,
 } from "@/types/ConsoleUI.js";
+import type { AgentProjectInitializationResult } from "@/types/AgentProject.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,353 +111,28 @@ export class ConsoleUIGateway {
    * 注册网关路由。
    */
   private setupRoutes(): void {
-    this.app.get("/health", async (c) => {
-      return c.json({
-        status: "ok",
-        type: "console-ui",
-      });
-    });
-
-    this.app.get("/api/ui/agents", async (c) => {
-      try {
-        const requestedAgentId = this.readRequestedAgentId(c.req.raw);
-        const payload = await this.buildAgentsResponse(requestedAgentId);
-        return c.json(payload);
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.post("/api/ui/agents/start", async (c) => {
-      try {
-        const body = (await c.req.json().catch(() => ({}))) as {
-          agentId?: unknown;
-          projectRoot?: unknown;
-          initializeIfNeeded?: unknown;
-          initialization?: {
-            agentName?: unknown;
-            primaryModelId?: unknown;
-            forceOverwriteShipJson?: unknown;
-          };
-        };
-        const rawProject = String(body.projectRoot || body.agentId || "").trim();
-        if (!rawProject) {
-          return c.json({ success: false, error: "projectRoot is required" }, 400);
-        }
-        const projectRoot = path.resolve(rawProject);
-        const payload = await this.startAgentByProjectRoot(projectRoot, {
-          initializeIfNeeded: body.initializeIfNeeded === true,
-          initialization: body.initialization,
-        });
-        return c.json(payload);
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.post("/api/ui/agents/create", async (c) => {
-      try {
-        const body = (await c.req.json().catch(() => ({}))) as {
-          projectRoot?: unknown;
-          agentName?: unknown;
-          primaryModelId?: unknown;
-          autoStart?: unknown;
-          forceOverwriteShipJson?: unknown;
-        };
-        const rawProject = String(body.projectRoot || "").trim();
-        if (!rawProject) {
-          return c.json({ success: false, error: "projectRoot is required" }, 400);
-        }
-        const projectRoot = path.resolve(rawProject);
-        const initResult = await initializeAgentProject({
-          projectRoot,
-          agentName: String(body.agentName || "").trim() || undefined,
-          primaryModelId: String(body.primaryModelId || "").trim(),
-          forceOverwriteShipJson: body.forceOverwriteShipJson === true,
-        });
-
-        const shouldAutoStart = body.autoStart !== false;
-        if (!shouldAutoStart) {
-          return c.json({
-            success: true,
-            created: true,
-            started: false,
-            projectRoot,
-            agentName: initResult.agentName,
-            message: "created",
-          });
-        }
-
-        const payload = await this.startAgentByProjectRoot(projectRoot);
-        return c.json(payload);
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.post("/api/ui/system/pick-directory", async (c) => {
-      try {
-        const directoryPath = await this.pickDirectoryPath();
-        return c.json({
-          success: true,
-          directoryPath,
-        });
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.post("/api/ui/agents/inspect", async (c) => {
-      try {
-        const body = (await c.req.json().catch(() => ({}))) as {
-          projectRoot?: unknown;
-          agentId?: unknown;
-        };
-        const rawProject = String(body.projectRoot || body.agentId || "").trim();
-        if (!rawProject) {
-          return c.json({ success: false, error: "projectRoot is required" }, 400);
-        }
-        const inspection = await this.inspectAgentDirectory(rawProject);
-        return c.json({
-          success: true,
-          inspection,
-        });
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.post("/api/ui/agents/restart", async (c) => {
-      try {
-        const body = (await c.req.json().catch(() => ({}))) as {
-          agentId?: unknown;
-          projectRoot?: unknown;
-          force?: unknown;
-        };
-        const rawProject = String(body.projectRoot || body.agentId || "").trim();
-        if (!rawProject) {
-          return c.json({ success: false, error: "projectRoot is required" }, 400);
-        }
-        const projectRoot = path.resolve(rawProject);
-        const forceRestart = body.force === true;
-        const checks = await this.inspectAgentRestartSafety(projectRoot);
-        const hasBlocking =
-          checks.activeContexts.length > 0 || checks.activeTasks.length > 0;
-        if (hasBlocking && !forceRestart) {
-          const contextLabel =
-            checks.activeContexts.length > 0
-              ? `contexts: ${checks.activeContexts.join(", ")}`
-              : "";
-          const taskLabel =
-            checks.activeTasks.length > 0
-              ? `tasks: ${checks.activeTasks.join(", ")}`
-              : "";
-          const detail = [contextLabel, taskLabel].filter(Boolean).join(" | ");
-          return c.json(
-            {
-              success: false,
-              error: detail
-                ? `Agent has running workload, restart blocked (${detail})`
-                : "Agent has running workload, restart blocked",
-              activeContexts: checks.activeContexts,
-              activeTasks: checks.activeTasks,
-            },
-            409,
-          );
-        }
-        const payload = await this.restartAgentByProjectRoot(projectRoot);
-        return c.json({
-          ...payload,
-          activeContexts: checks.activeContexts,
-          activeTasks: checks.activeTasks,
-        });
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.post("/api/ui/agents/stop", async (c) => {
-      try {
-        const body = (await c.req.json().catch(() => ({}))) as {
-          agentId?: unknown;
-          projectRoot?: unknown;
-          force?: unknown;
-        };
-        const rawProject = String(body.projectRoot || body.agentId || "").trim();
-        if (!rawProject) {
-          return c.json({ success: false, error: "projectRoot is required" }, 400);
-        }
-        const projectRoot = path.resolve(rawProject);
-        const forceStop = body.force === true;
-        const checks = await this.inspectAgentRestartSafety(projectRoot);
-        const hasBlocking =
-          checks.activeContexts.length > 0 || checks.activeTasks.length > 0;
-        if (hasBlocking && !forceStop) {
-          const contextLabel =
-            checks.activeContexts.length > 0
-              ? `contexts: ${checks.activeContexts.join(", ")}`
-              : "";
-          const taskLabel =
-            checks.activeTasks.length > 0
-              ? `tasks: ${checks.activeTasks.join(", ")}`
-              : "";
-          const detail = [contextLabel, taskLabel].filter(Boolean).join(" | ");
-          return c.json(
-            {
-              success: false,
-              error: detail
-                ? `Agent has running workload, stop blocked (${detail})`
-                : "Agent has running workload, stop blocked",
-              activeContexts: checks.activeContexts,
-              activeTasks: checks.activeTasks,
-            },
-            409,
-          );
-        }
-        const payload = await this.stopAgentByProjectRoot(projectRoot);
-        return c.json({
-          ...payload,
-          activeContexts: checks.activeContexts,
-          activeTasks: checks.activeTasks,
-        });
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.get("/api/ui/config-status", async (c) => {
-      try {
-        const requestedAgentId = this.readRequestedAgentId(c.req.raw);
-        const payload = await this.buildConfigStatusResponse(requestedAgentId);
-        return c.json(payload);
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    this.app.post("/api/ui/command/execute", async (c) => {
-      try {
-        const body = (await c.req.json().catch(() => ({}))) as {
-          agentId?: unknown;
-          command?: unknown;
-          timeoutMs?: unknown;
-        };
-        const requestedAgentId = String(
-          body.agentId || this.readRequestedAgentId(c.req.raw) || "",
-        ).trim();
-        if (!requestedAgentId) {
-          return c.json({ success: false, error: "agentId is required" }, 400);
-        }
-        const command = String(body.command || "").trim();
-        if (!command) {
-          return c.json({ success: false, error: "command is required" }, 400);
-        }
-
-        const selectedAgent = await this.resolveAgentById(requestedAgentId);
-        if (!selectedAgent) {
-          return c.json(
-            {
-              success: false,
-              error: "Agent not found in console registry",
-            },
-            404,
-          );
-        }
-
-        const timeoutRaw = Number.parseInt(String(body.timeoutMs || ""), 10);
-        const timeoutMs = Number.isFinite(timeoutRaw) && timeoutRaw > 0
-          ? Math.min(timeoutRaw, 120_000)
-          : 45_000;
-
-        const result = await this.executeShellCommand({
-          command,
-          cwd: selectedAgent.projectRoot,
-          timeoutMs,
-        });
-        return c.json({
-          success: true,
-          agentId: selectedAgent.id,
-          result,
-        });
-      } catch (error) {
-        return c.json({ success: false, error: String(error) }, 500);
-      }
-    });
-
-    registerConsoleUiModelRoutes({
+    registerConsoleUiGatewayRoutes({
       app: this.app,
-      readRequestedAgentId: (request) => this.readRequestedAgentId(request),
-      resolveSelectedAgent: (requestedAgentId) =>
-        this.resolveSelectedAgent(requestedAgentId),
-      buildModelResponse: (requestedAgentId) =>
-        this.buildModelResponse(requestedAgentId),
-    });
-    registerConsoleUiChannelAccountRoutes({ app: this.app });
-    registerConsoleUiEnvRoutes({ app: this.app });
-    registerConsoleUiAgentRuntimeRoutes({
-      app: this.app,
-      readRequestedAgentId: (request) => this.readRequestedAgentId(request),
-      resolveSelectedAgent: (requestedAgentId) =>
-        this.resolveSelectedAgent(requestedAgentId),
-    });
-    registerConsoleUiPluginRoutes({
-      app: this.app,
-      readRequestedAgentId: (request) => this.readRequestedAgentId(request),
-      resolveSelectedAgent: (requestedAgentId) =>
-        this.resolveSelectedAgent(requestedAgentId),
-    });
-
-    // 关键点（中文）：除 `/api/ui/*` 外，其他 API 一律透传到“当前选中 agent”。
-    this.app.all("/api/*", async (c) => {
-      try {
-        const reqUrl = new URL(c.req.url);
-        if (reqUrl.pathname.startsWith("/api/ui/")) {
-          return c.json({ success: false, error: "Not Found" }, 404);
-        }
-
-        const requestedAgentId = this.readRequestedAgentId(c.req.raw);
-        const selection = await this.resolveSelectedAgent(requestedAgentId);
-        if (!selection) {
-          return c.json(
-            {
-              success: false,
-              error:
-                "No running agent found. Start one via `city agent start` first.",
-            },
-            503,
-          );
-        }
-
-        if (!selection.baseUrl) {
-          return c.json(
-            {
-              success: false,
-              error: "Selected agent runtime endpoint is unavailable.",
-            },
-            503,
-          );
-        }
-        const upstreamUrl = this.buildUpstreamUrl(reqUrl, selection.baseUrl);
-        const response = await this.forwardRequest(c.req.raw, upstreamUrl);
-        return response;
-      } catch (error) {
-        return c.json(
-          {
-            success: false,
-            error: `Proxy request failed: ${String(error)}`,
-          },
-          500,
-        );
-      }
-    });
-
-    // 关键点（中文）：托管 Vite 构建产物（含 `/assets/*`）并支持 SPA fallback。
-    this.app.get("/*", async (c) => {
-      const reqPath = String(c.req.path || "/");
-      if (reqPath.startsWith("/api/")) {
-        return c.json({ success: false, error: "Not Found" }, 404);
-      }
-      return this.serveFrontendPath(c, reqPath);
+      handlers: {
+        readRequestedAgentId: (request) => this.readRequestedAgentId(request),
+        buildAgentsResponse: (requestedAgentId) => this.buildAgentsResponse(requestedAgentId),
+        initializeAgentProject: (projectRoot, initialization) =>
+          this.initializeAgentProject(projectRoot, initialization),
+        startAgentByProjectRoot: (projectRoot, options) => this.startAgentByProjectRoot(projectRoot, options),
+        pickDirectoryPath: () => this.pickDirectoryPath(),
+        inspectAgentDirectory: (projectRoot) => this.inspectAgentDirectory(projectRoot),
+        inspectAgentRestartSafety: (projectRoot) => this.inspectAgentRestartSafety(projectRoot),
+        restartAgentByProjectRoot: (projectRoot) => this.restartAgentByProjectRoot(projectRoot),
+        stopAgentByProjectRoot: (projectRoot) => this.stopAgentByProjectRoot(projectRoot),
+        buildConfigStatusResponse: (requestedAgentId) => this.buildConfigStatusResponse(requestedAgentId),
+        resolveAgentById: (requestedAgentId) => this.resolveAgentById(requestedAgentId),
+        executeShellCommand: (args) => this.executeShellCommand(args),
+        buildModelResponse: (requestedAgentId) => this.buildModelResponse(requestedAgentId),
+        resolveSelectedAgent: (requestedAgentId) => this.resolveSelectedAgent(requestedAgentId),
+        buildUpstreamUrl: (requestUrl, baseUrl) => this.buildUpstreamUrl(requestUrl, baseUrl),
+        forwardRequest: (request, upstreamUrl) => this.forwardRequest(request, upstreamUrl),
+        serveFrontendPath: (c, reqPath) => this.serveFrontendPath(c, reqPath),
+      },
     });
   }
 
@@ -594,6 +266,19 @@ export class ConsoleUIGateway {
     stderr: string;
   }> {
     return executeConsoleUiShellCommand(params);
+  }
+
+  private async initializeAgentProject(projectRoot: string, initialization: {
+    agentName?: unknown;
+    primaryModelId?: unknown;
+    forceOverwriteShipJson?: unknown;
+  }): Promise<AgentProjectInitializationResult> {
+    return initializeConsoleUiAgentProject({
+      projectRoot,
+      agentName: initialization.agentName,
+      primaryModelId: initialization.primaryModelId,
+      forceOverwriteShipJson: initialization.forceOverwriteShipJson,
+    });
   }
 
   private async startAgentByProjectRoot(projectRoot: string, options?: {

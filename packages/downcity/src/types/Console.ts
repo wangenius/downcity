@@ -84,7 +84,7 @@ export interface ConsoleAgentRegistryV1 {
 /**
  * `city console agents/status` 的运行时视图。
  */
-export interface ConsoleAgentRuntimeView {
+export interface ConsoleAgentProcessView {
   /**
    * agent 项目根目录（绝对路径）。
    */

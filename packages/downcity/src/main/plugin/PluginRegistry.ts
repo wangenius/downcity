@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一管理 Plugin 注册、可用性检查与显式 Action 运行。
- * - Plugin 自身不维护 runtime 状态机；可用性由 enabled 配置与 plugin 自定义 availability 决定。
+ * - Plugin 自身不维护独立状态机；可用性由 enabled 配置与 plugin 自定义 availability 决定。
  */
 
 import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";

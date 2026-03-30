@@ -7,10 +7,10 @@
  * - SessionStore 只保留纯运行时流程，不再承载模块级单例状态。
  */
 
-import type { AgentRuntime } from "@agent/RuntimeState.js";
+import type { AgentState } from "@/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
 import type { ServiceActions } from "@/types/Service.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ShellServiceState, ShellSessionRuntime } from "@/types/ShellRuntime.js";
 import type {
   ShellCloseRequest,
@@ -58,7 +58,7 @@ export class ShellService extends BaseService {
    */
   public readonly sessions: Map<string, ShellSessionRuntime>;
 
-  constructor(agent: AgentRuntime | null) {
+  constructor(agent: AgentState | null) {
     super(agent);
     this.state = createShellServiceState();
     this.sessions = this.state.sessions;
@@ -128,7 +128,7 @@ export class ShellService extends BaseService {
    * 启动一个 shell session。
    */
   async start(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     request: ShellStartRequest,
   ) {
     return await startShellSession(this.state, context, request);
@@ -138,7 +138,7 @@ export class ShellService extends BaseService {
    * 查询 shell session 状态。
    */
   async status(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     request: ShellQueryRequest,
   ) {
     return await getShellSessionStatus(this.state, context, request);
@@ -148,7 +148,7 @@ export class ShellService extends BaseService {
    * 读取 shell session 输出。
    */
   async read(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     request: ShellReadRequest,
   ) {
     return await readShellSession(this.state, context, request);
@@ -158,7 +158,7 @@ export class ShellService extends BaseService {
    * 向 shell session 写入 stdin。
    */
   async write(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     request: ShellWriteRequest,
   ) {
     return await writeShellSession(this.state, context, request);
@@ -168,7 +168,7 @@ export class ShellService extends BaseService {
    * 等待 shell session 状态变化。
    */
   async wait(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     request: ShellWaitRequest,
   ) {
     return await waitShellSession(this.state, context, request);
@@ -178,7 +178,7 @@ export class ShellService extends BaseService {
    * 关闭 shell session。
    */
   async close(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     request: ShellCloseRequest,
   ) {
     return await closeShellSession(this.state, context, request);
@@ -188,7 +188,7 @@ export class ShellService extends BaseService {
    * 执行一次 one-shot shell command。
    */
   async exec(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     request: ShellExecRequest,
   ) {
     return await execShellCommand(this.state, context, request);

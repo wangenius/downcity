@@ -9,7 +9,7 @@
 
 import { Hono } from "hono";
 import { drainDeferredPersistedUserMessages } from "@sessions/RequestContext.js";
-import { getAgentRuntime } from "@agent/AgentRuntime.js";
+import { getAgentState } from "@agent/AgentState.js";
 import {
   hasPersistedAssistantSteps,
   pickLastSuccessfulChatSendText,
@@ -75,13 +75,13 @@ executeRouter.post("/api/execute", async (c) => {
 
   try {
     const sessionId = `api:chat:${chatId}`;
-    const runtime = getAgentRuntime();
-    await runtime.sessionRegistry.appendUserMessage({
+    const runtime = getAgentState();
+    await runtime.sessionStore.appendUserMessage({
       sessionId,
       text: String(instructions),
     });
 
-    const result = await runtime.sessionRegistry.run({
+    const result = await runtime.sessionStore.run({
       sessionId,
       query: String(instructions),
     });
@@ -89,7 +89,7 @@ executeRouter.post("/api/execute", async (c) => {
     const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
     try {
       if (!hasPersistedAssistantSteps(result.assistantMessage)) {
-        await runtime.sessionRegistry.appendAssistantMessage({
+        await runtime.sessionStore.appendAssistantMessage({
           sessionId,
           message: result.assistantMessage,
           fallbackText: userVisible,
@@ -104,7 +104,7 @@ executeRouter.post("/api/execute", async (c) => {
         sessionId,
       );
       for (const message of deferredInjectedMessages) {
-        await runtime.sessionRegistry.appendUserMessage({
+        await runtime.sessionStore.appendUserMessage({
           sessionId,
           message,
         });

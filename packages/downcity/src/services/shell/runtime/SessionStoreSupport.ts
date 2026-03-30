@@ -9,14 +9,14 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { loadGlobalEnvFromStore } from "@/main/env/Config.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   SessionWaiter,
   ShellServiceState,
   ShellSessionRuntime,
 } from "@/types/ShellRuntime.js";
 import { requestContext } from "@sessions/RequestContext.js";
-import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
+import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { appendExecSessionMessage } from "@services/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 import type {
@@ -89,7 +89,7 @@ function normalizeOutputChunk(raw: string): string {
 }
 
 function resolveOutputLimits(params: {
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   maxOutputTokens?: number;
 }): {
   maxChars: number;
@@ -132,12 +132,12 @@ function splitOutputByLimits(
 /**
  * 构造 shell 子进程环境变量。
  */
-export function buildShellEnv(runtime: ExecutionRuntime): NodeJS.ProcessEnv {
+export function buildShellEnv(runtime: ExecutionContext): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
 
   // 关键点（中文）
   // - shell 子进程需要继承 console 级 global env。
-  // - 这里显式从 store 读取，避免把 ExecutionRuntime.env 语义扩大成“全局+agent 混合态”。
+  // - 这里显式从 store 读取，避免把 ExecutionContext.env 语义扩大成“全局+agent 混合态”。
   // - 冲突时仍由后续 agent runtime env 覆盖，保持文档声明的优先级。
   const globalEnv = loadGlobalEnvFromStore();
   for (const [key, value] of Object.entries(globalEnv)) {
@@ -167,7 +167,7 @@ export function buildShellEnv(runtime: ExecutionRuntime): NodeJS.ProcessEnv {
 /**
  * 解析 shell 执行目录。
  */
-export function resolveShellCwd(runtime: ExecutionRuntime, cwd?: string): string {
+export function resolveShellCwd(runtime: ExecutionContext, cwd?: string): string {
   const raw = String(cwd || "").trim();
   if (!raw) return runtime.rootPath;
   return path.isAbsolute(raw) ? raw : path.resolve(runtime.rootPath, raw);
@@ -256,7 +256,7 @@ function notifyWaiters(session: ShellSessionRuntime): void {
 }
 
 async function emitChatCompletionEvent(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   snapshot: ShellSessionSnapshot,
 ): Promise<void> {
   const ownerContextId = String(snapshot.ownerContextId || "").trim();
@@ -299,7 +299,7 @@ async function emitChatCompletionEvent(
     },
   });
 
-  enqueueChatQueue({
+  resolveChatQueueStore(runtime).enqueue({
     kind: "exec",
     channel: meta.channel,
     targetId: meta.chatId,
@@ -406,7 +406,7 @@ export function ensureCapacity(state: ShellServiceState): void {
 }
 
 async function loadPersistedSnapshot(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   shellId: string,
 ): Promise<ShellSessionSnapshot | null> {
   const file = getShellSnapshotPath(runtime.rootPath, shellId);
@@ -418,7 +418,7 @@ async function loadPersistedSnapshot(
 }
 
 async function readPersistedOutput(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   shellId: string,
 ): Promise<string> {
   const file = getShellOutputPath(runtime.rootPath, shellId);
@@ -431,7 +431,7 @@ async function readPersistedOutput(
  */
 export async function resolveSession(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   query: ShellQueryRequest,
 ): Promise<ShellSessionRuntime | { snapshot: ShellSessionSnapshot; outputText: string } | null> {
   const explicitShellId = String(query.shellId || "").trim();
@@ -475,7 +475,7 @@ export function createOutputChunk(params: {
   shellId: string;
   outputText: string;
   fromCursor?: number;
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   maxOutputTokens?: number;
 }): ShellOutputChunk {
   const fromCursor =

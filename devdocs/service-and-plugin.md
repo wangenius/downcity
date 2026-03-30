@@ -27,7 +27,7 @@ service 是主流程模块。
 统一调度入口：
 
 - `main/service/Manager.ts`
-- `main/service/RuntimeController.ts`
+- `main/service/ServiceStateController.ts`
 - `main/service/ServiceActionRunner.ts`
 - `main/service/ServiceActionApi.ts`
 
@@ -51,7 +51,7 @@ export const SERVICES = [
 1. service 集合是静态装配的
 2. `Services.ts` 负责声明“有哪些 service”
 3. `ServiceClassRegistry.ts` 负责声明“如何创建 service instance”
-4. CLI、HTTP、runtime lifecycle 都围绕这套静态定义工作
+4. CLI、HTTP、service lifecycle 都围绕这套静态定义工作
 
 另一个重要静态装配点是：
 
@@ -69,10 +69,10 @@ export const SERVICES = [
 
 现在 service 调度被拆成三块：
 
-1. `RuntimeController.ts`
-   - service runtime record
+1. `ServiceStateController.ts`
+   - service state record
    - `start / stop / restart / status`
-   - runtime snapshot
+   - state snapshot
 2. `ServiceActionRunner.ts`
    - `runServiceCommand`
    - action 执行包装
@@ -94,13 +94,13 @@ export const SERVICES = [
 ```mermaid
 sequenceDiagram
   participant Route as HTTP Route / CLI
-  participant Agent as AgentRuntime
+  participant Agent as AgentState
   participant Registry as ServiceClassRegistry
   participant Manager as Service Manager Facade
   participant Runner as ServiceActionRunner
-  participant RuntimeCtl as RuntimeController
+  participant RuntimeCtl as ServiceStateController
   participant Service as BaseService Instance
-  participant Runtime as ExecutionRuntime
+  participant Runtime as ExecutionContext
   participant Session as runtime.session
 
   Agent->>Registry: createRegisteredServiceInstances(agent)
@@ -138,7 +138,7 @@ plugin 是被动扩展模块。
 
 真正实例化 plugin registry 的位置：
 
-- `agent/ExecutionRuntime.ts`
+- `agent/ExecutionContext.ts`
 
 ---
 
@@ -147,7 +147,7 @@ plugin 是被动扩展模块。
 链路是：
 
 1. `main/plugin/Plugins.ts` 提供内建 plugin 清单
-2. `agent/ExecutionRuntime.ts` 创建 `PluginRegistry`
+2. `agent/ExecutionContext.ts` 创建 `PluginRegistry`
 3. `registerBuiltinPlugins()` 把内建 plugin 注册进去
 4. 最后通过 `runtime.plugins` 暴露能力
 
@@ -156,7 +156,7 @@ plugin 是被动扩展模块。
 ```mermaid
 flowchart LR
   PL["Plugins.ts 清单"] --> PR["PluginRegistry"]
-  PR --> ER["ExecutionRuntime.plugins"]
+  PR --> ER["ExecutionContext.plugins"]
   ER --> SV["service"]
 ```
 
@@ -206,7 +206,7 @@ plugin 不会自己接管主流程。
 2. action
 3. hook point 行为
 4. 自己的依赖与内部实现
-5. 必要时读取 `ExecutionRuntime`，但不拥有独立 runtime 宿主
+5. 必要时读取 `ExecutionContext`，但不拥有独立 runtime 宿主
 
 ### plugin 不负责
 
@@ -216,13 +216,13 @@ plugin 不会自己接管主流程。
 
 ---
 
-## 8. service / plugin 与 ExecutionRuntime 的关系
+## 8. service / plugin 与 ExecutionContext 的关系
 
-`ExecutionRuntime` 是两者共享的统一执行接口面。
+`ExecutionContext` 是两者共享的统一执行接口面。
 
 ```mermaid
 flowchart LR
-  Agent["AgentRuntime（宿主态）"] --> Runtime["ExecutionRuntime（执行接口面）"]
+  Agent["AgentState（宿主态）"] --> Runtime["ExecutionContext（执行接口面）"]
   Runtime --> Service["service instance"]
   Runtime --> Plugin["plugin action / hook"]
   Service --> Session["runtime.session"]
@@ -231,7 +231,7 @@ flowchart LR
 
 需要注意：
 
-1. `ExecutionRuntime` 不是 service runtime，也不是 plugin runtime
+1. `ExecutionContext` 不是 service 状态机，也不是 plugin 状态机
 2. 它只是把 agent 宿主能力整理成一套统一接口
 3. service 和 plugin 都从这里拿到：
    - `config`
@@ -248,7 +248,7 @@ flowchart LR
 
 1. service 是主动层
 2. plugin 是被动层
-3. plugin 通过 `ExecutionRuntime.plugins` 接入
+3. plugin 通过 `ExecutionContext.plugins` 接入
 4. plugin 没有独立 runtime
 5. 主流程始终属于 service
 6. service 的长期状态更适合放在 service instance 内，而不是 main

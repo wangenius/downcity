@@ -8,10 +8,10 @@
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
  */
 
-import type { AgentRuntime } from "@agent/RuntimeState.js";
+import type { AgentState } from "@/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
 import type { ServiceActions, Service } from "@/types/Service.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ChatChannelState } from "@/types/ChatRuntime.js";
 import {
   createChatChannelState,
@@ -21,6 +21,7 @@ import {
 import { createChatServiceActions } from "./runtime/ChatServiceActions.js";
 import { ChatQueueWorker } from "./runtime/ChatQueueWorker.js";
 import { buildChatServiceSystem } from "./runtime/ChatServiceSystem.js";
+import { ChatQueueStore } from "./runtime/ChatQueueStore.js";
 
 /**
  * Chat service 类实现。
@@ -46,9 +47,18 @@ export class ChatService extends BaseService {
   public queueWorker: ChatQueueWorker | null = null;
 
   /**
+   * 当前实例持有的 chat queue store。
+   *
+   * 关键点（中文）
+   * - 这是 chat queue 状态的实例归属起点。
+   * - 迁移完成后，入队路径也会统一走这里，而不是模块级全局 queue。
+   */
+  public readonly queueStore = new ChatQueueStore();
+
+  /**
    * 当前 service 的 system 文本构建器。
    */
-  readonly system = async (context: ExecutionRuntime): Promise<string> => {
+  readonly system = async (context: ExecutionContext): Promise<string> => {
     return await buildChatServiceSystem(context);
   };
 
@@ -60,11 +70,12 @@ export class ChatService extends BaseService {
   /**
    * 启动当前实例的 queue worker。
    */
-  private startQueueWorker(context: ExecutionRuntime): void {
+  private startQueueWorker(context: ExecutionContext): void {
     if (this.queueWorker) return;
     const worker = new ChatQueueWorker({
       logger: context.logger,
       context,
+      queueStore: this.queueStore,
       config: context.config.services?.chat?.queue,
     });
     worker.start();
@@ -81,7 +92,7 @@ export class ChatService extends BaseService {
     worker.stop();
   }
 
-  constructor(agent: AgentRuntime | null) {
+  constructor(agent: AgentState | null) {
     super(agent);
     this.actions = createChatServiceActions({
       channelState: this.channelState,

@@ -9,9 +9,9 @@
 
 import { Hono } from "hono";
 import {
-  getAgentRuntime,
-  getExecutionRuntime,
-} from "@agent/AgentRuntime.js";
+  getAgentState,
+  getExecutionContext,
+} from "@agent/AgentState.js";
 import { registerDashboardApiRoutes } from "@main/ui/DashboardApiRoutes.js";
 
 /**
@@ -21,6 +21,6 @@ export const dashboardRouter = new Hono();
 
 registerDashboardApiRoutes({
   app: dashboardRouter,
-  getAgentRuntime,
-  getExecutionRuntime,
+  getAgentState: getAgentState,
+  getExecutionContext: getExecutionContext,
 });

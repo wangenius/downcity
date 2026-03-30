@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import { generateId } from "@utils/Id.js";
 import { getDowncityChannelDirPath, getDowncityChannelMetaPath } from "@/main/env/Paths.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   ChannelContextMetaFileV1,
   ChannelContextRouteV1,
@@ -165,7 +165,7 @@ async function writeMetaFile(params: {
  * 通过 sessionId 读取路由信息。
  */
 export async function readChannelSessionRouteBySessionId(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   sessionId: string;
 }): Promise<ChannelContextRouteV1 | null> {
   const rootPath = String(params.context.rootPath || "").trim();
@@ -183,7 +183,7 @@ export async function readChannelSessionRouteBySessionId(params: {
  * - 默认按 `updatedAt` 倒序返回，便于展示“最近活跃”会话。
  */
 export async function listChannelSessionRoutes(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
 }): Promise<{
   updatedAt: number;
   routes: ChannelContextRouteV1[];
@@ -210,7 +210,7 @@ export async function listChannelSessionRoutes(params: {
  * 根据渠道目标查找已有 sessionId（不自动创建）。
  */
 export async function resolveChannelSessionIdByTarget(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   target: ChannelContextTarget;
 }): Promise<string | null> {
   const rootPath = String(params.context.rootPath || "").trim();
@@ -227,7 +227,7 @@ export async function resolveChannelSessionIdByTarget(params: {
  * 根据渠道目标解析或创建 sessionId。
  */
 export async function resolveOrCreateChannelSessionIdByTarget(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   target: ChannelContextTarget;
 }): Promise<string | null> {
   const rootPath = String(params.context.rootPath || "").trim();
@@ -269,7 +269,7 @@ export async function resolveOrCreateChannelSessionIdByTarget(params: {
  * 更新指定 sessionId 的渠道路由信息。
  */
 export async function upsertChannelSessionRouteBySessionId(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   sessionId: string;
   target: ChannelContextTarget;
   messageId?: string;
@@ -332,7 +332,7 @@ export async function upsertChannelSessionRouteBySessionId(params: {
  * - 仅影响 chat 路由，不触碰 context/chat 历史文件。
  */
 export async function removeChannelSessionRouteBySessionId(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   sessionId: string;
 }): Promise<{
   removed: boolean;

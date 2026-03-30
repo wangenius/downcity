@@ -13,7 +13,7 @@ import path from "node:path";
 import test from "node:test";
 import { Hono } from "hono";
 import {
-  controlServiceRuntime,
+  controlServiceState,
   registerAllServicesForServer,
 } from "../../bin/main/service/Manager.js";
 import {
@@ -67,7 +67,7 @@ test("dedicated action api uses persistent schedule for chat send", { concurrenc
 
   try {
     registerAllServicesForServer(app, runtime);
-    await controlServiceRuntime({
+    await controlServiceState({
       serviceName: "chat",
       action: "start",
       context: runtime,
@@ -122,7 +122,7 @@ test("dedicated action api uses persistent schedule for chat send", { concurrenc
     }
   } finally {
     await stopServiceScheduleRuntime();
-    await controlServiceRuntime({
+    await controlServiceState({
       serviceName: "chat",
       action: "stop",
       context: runtime,

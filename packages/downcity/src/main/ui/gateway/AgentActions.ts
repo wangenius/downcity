@@ -28,6 +28,24 @@ import {
   getDowncityJsonPath,
 } from "@/main/env/Paths.js";
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
+import type { AgentProjectInitializationResult } from "@/types/AgentProject.js";
+
+/**
+ * 初始化 Console UI 选中的 agent 项目。
+ */
+export async function initializeConsoleUiAgentProject(params: {
+  projectRoot: string;
+  agentName?: unknown;
+  primaryModelId?: unknown;
+  forceOverwriteShipJson?: unknown;
+}): Promise<AgentProjectInitializationResult> {
+  return initializeAgentProject({
+    projectRoot: params.projectRoot,
+    agentName: String(params.agentName || "").trim() || undefined,
+    primaryModelId: String(params.primaryModelId || "").trim(),
+    forceOverwriteShipJson: params.forceOverwriteShipJson === true,
+  });
+}
 
 /**
  * 调起系统目录选择器。

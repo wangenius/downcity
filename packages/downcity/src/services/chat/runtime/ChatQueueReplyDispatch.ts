@@ -7,7 +7,7 @@
  */
 
 import type { Logger } from "@utils/logger/Logger.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { SessionMessageV1 } from "@/types/SessionMessage.js";
 import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
@@ -22,7 +22,7 @@ import {
 /**
  * 是否启用 direct 回发模式。
  */
-function isDirectModeEnabled(runtime: ExecutionRuntime): boolean {
+function isDirectModeEnabled(runtime: ExecutionContext): boolean {
   return (runtime.config.services?.chat?.method || "direct") !== "cmd";
 }
 
@@ -31,7 +31,7 @@ function isDirectModeEnabled(runtime: ExecutionRuntime): boolean {
  */
 export async function dispatchAssistantTextDirect(params: {
   logger: Logger;
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   sessionId: string;
   assistantText: string;
   phase?: "step" | "final" | "error";
@@ -134,7 +134,7 @@ export async function dispatchAssistantTextDirect(params: {
  */
 export async function dispatchAssistantMessageDirect(params: {
   logger: Logger;
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   sessionId: string;
   assistantMessage: SessionMessageV1 | null | undefined;
 }): Promise<boolean> {
@@ -152,7 +152,7 @@ export async function dispatchAssistantMessageDirect(params: {
  */
 export async function dispatchTextToChannel(params: {
   logger: Logger;
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   sessionId: string;
   text: string;
   messageId?: string;

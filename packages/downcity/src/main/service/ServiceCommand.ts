@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 负责把 service actions 挂到 commander（`city <service> <action>`）。
- * - 仅处理 CLI 参数映射与远程调用，不承载 service runtime 状态机逻辑。
+ * - 仅处理 CLI 参数映射与远程调用，不承载 service 状态机逻辑。
  */
 
 import path from "node:path";

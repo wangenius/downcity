@@ -9,13 +9,13 @@
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonValue } from "@/types/Json.js";
 
 /**
  * 服务运行状态。
  */
-export type ServiceRuntimeState =
+export type ServiceState =
   | "running"
   | "stopped"
   | "starting"
@@ -128,9 +128,9 @@ export type ServiceAction<
    */
   execute: (params: {
     /**
-     * 当前统一执行运行时。
+     * 当前统一执行上下文。
      */
-    context: ExecutionRuntime;
+    context: ExecutionContext;
     /**
      * 当前 action 的结构化输入。
      */
@@ -162,21 +162,21 @@ export type ServiceActions = {
  */
 export interface ServiceLifecycle {
   /**
-   * service runtime 启动钩子。
+   * service 启动钩子。
    */
-  start?(context: ExecutionRuntime): Promise<void> | void;
+  start?(context: ExecutionContext): Promise<void> | void;
   /**
-   * service runtime 停止钩子。
+   * service 停止钩子。
    */
-  stop?(context: ExecutionRuntime): Promise<void> | void;
+  stop?(context: ExecutionContext): Promise<void> | void;
   /**
    * 非 action 命令分发钩子。
    */
   command?(params: {
     /**
-     * 当前统一执行运行时。
+     * 当前统一执行上下文。
      */
-    context: ExecutionRuntime;
+    context: ExecutionContext;
     /**
      * 当前命令名称。
      */
@@ -207,7 +207,7 @@ export interface Service {
   /**
    * service 级 system 文本构建器。
    */
-  system?: (context: ExecutionRuntime) => string | Promise<string>;
+  system?: (context: ExecutionContext) => string | Promise<string>;
   /**
    * service 生命周期钩子集合。
    */

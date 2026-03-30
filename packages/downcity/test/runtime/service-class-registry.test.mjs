@@ -32,7 +32,7 @@ function createAgentStub(rootPath) {
     },
     env: {},
     systems: [],
-    sessionRegistry: {},
+    sessionStore: {},
   };
 }
 

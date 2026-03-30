@@ -8,7 +8,7 @@
  */
 
 import { ConsoleStore } from "@/utils/store/index.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { StoredChannelAccount } from "@/types/Store.js";
 import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";
 import type { ChatChannelState } from "@/types/ChatRuntime.js";
@@ -54,7 +54,7 @@ export function resolveTargetChannels(channel?: ChatChannelName): ChatChannelNam
  * 读取渠道绑定的 bot account id。
  */
 export function resolveChannelAccountId(
-  context: ExecutionRuntime,
+  context: ExecutionContext,
   channel: ChatChannelName,
 ): string {
   const config = context.config.services?.chat?.channels?.[channel] as
@@ -67,7 +67,7 @@ export function resolveChannelAccountId(
  * 从 ConsoleStore 中解析渠道 account。
  */
 export function resolveChannelAccount(
-  context: ExecutionRuntime,
+  context: ExecutionContext,
   channel: ChatChannelName,
 ): StoredChannelAccount | null {
   const channelAccountId = resolveChannelAccountId(context, channel);

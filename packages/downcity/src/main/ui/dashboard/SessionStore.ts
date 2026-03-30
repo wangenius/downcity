@@ -7,7 +7,7 @@
  */
 
 import fs from "fs-extra";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import {
   getDowncitySessionMessagesPath,
   getDowncitySessionRootDirPath,
@@ -22,7 +22,7 @@ import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageT
  */
 export async function listSessionSummaries(params: {
   projectRoot: string;
-  executionRuntime?: ExecutionRuntime;
+  executionRuntime?: ExecutionContext;
   limit: number;
   executingSessionIds?: Set<string>;
 }): Promise<DashboardSessionSummary[]> {

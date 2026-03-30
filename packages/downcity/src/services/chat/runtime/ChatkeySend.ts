@@ -14,7 +14,7 @@ import type {
   ChatDispatchAction,
   ChatDispatchChannel,
 } from "@services/chat/types/ChatDispatcher.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import { readChatMetaBySessionId } from "./ChatMetaStore.js";
 
 /**
@@ -25,7 +25,7 @@ import { readChatMetaBySessionId } from "./ChatMetaStore.js";
  * - 不再支持 legacy chatKey 字符串解析回退。
  */
 export async function resolveDispatchTargetByChatKey(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   chatKey: string;
 }): Promise<{
   channel: ChatDispatchChannel;
@@ -74,7 +74,7 @@ export async function resolveDispatchTargetByChatKey(params: {
  * 3) 合并参数后调用 dispatcher 发送
  */
 export async function sendTextByChatKey(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   chatKey: string;
   text: string;
   replyToMessage?: boolean;
@@ -140,7 +140,7 @@ export async function sendTextByChatKey(params: {
  * 3) 调用 dispatcher.sendAction
  */
 export async function sendActionByChatKey(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   chatKey: string;
   action: ChatDispatchAction;
   messageId?: string;

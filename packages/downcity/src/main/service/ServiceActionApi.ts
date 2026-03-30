@@ -9,17 +9,17 @@
 
 import type { Context as HonoContext, Hono } from "hono";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ServiceCommandScheduleInput } from "@/types/ServiceSchedule.js";
 import type { BaseService } from "@services/BaseService.js";
 import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
 import { normalizeRunAtMsOrThrow } from "./schedule/Time.js";
 import type { ServiceAction } from "@/types/Service.js";
 import {
-  ensureServiceRuntimeRecord,
-  isServiceRuntimeRunning,
-  listRuntimeServices,
-} from "./RuntimeController.js";
+  ensureServiceStateRecord,
+  isServiceRunning,
+  listServiceInstances,
+} from "./ServiceStateController.js";
 import {
   invokeServiceAction,
   runServiceCommand,
@@ -30,7 +30,7 @@ function wrapServiceRouteHandler(
   handler: (ctx: HonoContext) => Promise<Response> | Response,
 ): (ctx: HonoContext) => Promise<Response> | Response {
   return async (c) => {
-    if (!isServiceRuntimeRunning(serviceName)) {
+    if (!isServiceRunning(serviceName)) {
       return c.json(
         {
           success: false,
@@ -217,7 +217,7 @@ function registerServiceActionApiRoute(params: {
   service: BaseService;
   actionName: string;
   action: ServiceAction<JsonValue, JsonValue>;
-  context: ExecutionRuntime;
+  context: ExecutionContext;
 }): void {
   const api = params.action.api;
   if (!api) return;
@@ -287,10 +287,10 @@ function registerServiceActionApiRoute(params: {
  */
 export function registerAllServicesForServer(
   app: Hono,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): void {
-  for (const service of listRuntimeServices(context)) {
-    ensureServiceRuntimeRecord(service);
+  for (const service of listServiceInstances(context)) {
+    ensureServiceStateRecord(service);
     for (const [actionName, action] of Object.entries(service.actions)) {
       registerServiceActionApiRoute({
         app,

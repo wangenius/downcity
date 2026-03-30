@@ -7,7 +7,7 @@
  * - 本模块不处理 downcity.json 写入，也不负责 action 输入输出包装。
  */
 
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ChatChannelState } from "@/types/ChatRuntime.js";
 import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";
 import { createTelegramBot } from "@services/chat/channels/telegram/Bot.js";
@@ -17,7 +17,7 @@ import { resolveChannelAccount, resolveTargetChannels } from "./ChatChannelCore.
 
 async function startTelegramChannel(
   state: ChatChannelState,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<void> {
   if (!context.config.services?.chat?.channels?.telegram?.enabled) return;
   context.logger.info("Telegram channel enabled");
@@ -38,7 +38,7 @@ async function startTelegramChannel(
 
 async function startFeishuChannel(
   state: ChatChannelState,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<void> {
   if (!context.config.services?.chat?.channels?.feishu?.enabled) return;
   context.logger.info("Feishu channel enabled");
@@ -62,7 +62,7 @@ async function startFeishuChannel(
 
 async function startQQChannel(
   state: ChatChannelState,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<void> {
   if (!context.config.services?.chat?.channels?.qq?.enabled) return;
   context.logger.info("QQ channel enabled");
@@ -89,7 +89,7 @@ async function startQQChannel(
  */
 export async function startSingleChatChannel(
   state: ChatChannelState,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
   channel: ChatChannelName,
 ): Promise<void> {
   if (channel === "telegram") {
@@ -134,7 +134,7 @@ export async function stopSingleChatChannel(
  */
 export async function startChatChannels(
   state: ChatChannelState,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<void> {
   if (state.telegram || state.feishu || state.qq) {
     await stopChatChannels(state);

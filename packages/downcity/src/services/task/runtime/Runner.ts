@@ -1,15 +1,14 @@
 /**
- * Task runner.
+ * Task runner。
  *
  * 职责（中文）
- * - 创建 run 目录（timestamp）
- * - 以“干净历史”调用当前 runtime 的 SessionCore（逻辑与正常 chat 一致）
- * - 把执行过程与结果写入 run 目录（messages.jsonl / output.md / result.md / error.md）
+ * - 创建 run 目录（timestamp）。
+ * - 以“干净历史”调用当前 runtime 的 SessionCore（逻辑与正常 chat 一致）。
+ * - 协调 script / agent 两类执行主链。
+ * - 把最终产物写入 run 目录的具体格式委托给 `TaskRunArtifacts.ts`。
  */
 
-import fs from "fs-extra";
-import path from "node:path";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   DialogueRoundRecord,
   UserSimulatorDecision,
@@ -17,7 +16,6 @@ import type {
 import type {
   ShipTaskKind,
   ShipTaskRunExecutionStatusV1,
-  ShipTaskRunMetaV1,
   ShipTaskRunResultStatusV1,
   ShipTaskRunStatusV1,
   ShipTaskRunTriggerV1,
@@ -28,12 +26,7 @@ import {
   getTaskRunDir,
 } from "./Paths.js";
 import { ensureRunDir, readTask } from "./Store.js";
-import {
-  createRunProgressWriter,
-  serializeDebugSnapshot,
-  summarizeText,
-  toMdLink,
-} from "./TaskRunnerProgress.js";
+import { createRunProgressWriter, serializeDebugSnapshot, summarizeText } from "./TaskRunnerProgress.js";
 import {
   appendTaskAssistantMessage,
   createTaskSessionRuntime,
@@ -46,6 +39,11 @@ import {
   runScriptTask,
   validateTaskResult,
 } from "./TaskRunnerRound.js";
+import {
+  createTaskRunFilePaths,
+  writeTaskRunArtifacts,
+  writeTaskRunInputArtifact,
+} from "./TaskRunArtifacts.js";
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
 const DEFAULT_SINGLE_ROUND = 1;
@@ -54,16 +52,12 @@ const DEFAULT_SINGLE_ROUND = 1;
  * 立即执行任务定义。
  *
  * 算法流程（中文）
- * 1) 解析 task + 创建 run 目录
- * 2) 在 scheduler 上下文里执行 agent
- * 3) 产物落盘（input/output/result/error/run.json）
- *
- * 返回值（中文）
- * - `ok`/`status`：任务执行结果。
- * - `runDir`/`runDirRel`：执行产物目录。
+ * 1) 解析 task + 创建 run 目录。
+ * 2) 在 scheduler 上下文里执行 agent/script。
+ * 3) 产物落盘（messages.jsonl / output.md / result.md / error.md / run.json）。
  */
 export async function runTaskNow(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   taskId: string;
   trigger: ShipTaskRunTriggerV1;
   executionId?: string;
@@ -95,18 +89,13 @@ export async function runTaskNow(params: {
 
   const task = await readTask({ taskId: params.taskId, projectRoot: root });
   const runDirAbs = getTaskRunDir(root, task.taskId, timestamp);
-  const runDirRel = path.relative(root, runDirAbs).split(path.sep).join("/");
+  const { runDirRel } = await ensureRunDir({
+    taskId: task.taskId,
+    timestamp,
+    projectRoot: root,
+  });
+  const filePaths = createTaskRunFilePaths(runDirAbs);
 
-  await ensureRunDir({ taskId: task.taskId, timestamp, projectRoot: root });
-
-  const inputMdPath = path.join(runDirAbs, "input.md");
-  const outputMdPath = path.join(runDirAbs, "output.md");
-  const resultMdPath = path.join(runDirAbs, "result.md");
-  const errorMdPath = path.join(runDirAbs, "error.md");
-  const dialogueMdPath = path.join(runDirAbs, "dialogue.md");
-  const dialogueJsonPath = path.join(runDirAbs, "dialogue.json");
-  const metaJsonPath = path.join(runDirAbs, "run.json");
-  const progressJsonPath = path.join(runDirAbs, "run-progress.json");
   const taskKind: ShipTaskKind = task.frontmatter.kind || "agent";
   const reviewEnabled = taskKind === "agent" && task.frontmatter.review === true;
   const maxDialogueRounds =
@@ -116,7 +105,7 @@ export async function runTaskNow(params: {
         : DEFAULT_SINGLE_ROUND
       : DEFAULT_SINGLE_ROUND;
   const runProgress = createRunProgressWriter({
-    progressJsonPath,
+    progressJsonPath: filePaths.progressJsonPath,
     taskId: task.taskId,
     timestamp,
     trigger: params.trigger,
@@ -124,31 +113,14 @@ export async function runTaskNow(params: {
     startedAt,
   });
 
-  // input.md：把 frontmatter 摘要 + 正文快照写入 run 目录，方便审计。
-  await fs.writeFile(
-    inputMdPath,
-    [
-      `# Task Input`,
-      ``,
-      `- taskId: \`${task.taskId}\``,
-      `- executionId: \`${executionId}\``,
-      `- title: ${task.frontmatter.title}`,
-      `- when: \`${task.frontmatter.when}\``,
-      `- status: \`${task.frontmatter.status}\``,
-      `- sessionId: \`${task.frontmatter.sessionId}\``,
-      `- kind: \`${taskKind}\``,
-      ...(taskKind === "agent" ? [`- review: \`${String(reviewEnabled)}\``] : []),
-      `- maxDialogueRounds: \`${maxDialogueRounds}\``,
-      ``,
-      `## Body`,
-      ``,
-      task.body ? task.body : "_(empty body)_",
-      ``,
-    ]
-      .filter((x) => x !== null)
-      .join("\n"),
-    "utf-8",
-  );
+  await writeTaskRunInputArtifact({
+    task,
+    executionId,
+    taskKind,
+    reviewEnabled,
+    maxDialogueRounds,
+    inputMdPath: filePaths.inputMdPath,
+  });
   await runProgress.update({
     status: "running",
     phase: "preparing",
@@ -179,7 +151,6 @@ export async function runTaskNow(params: {
   let errorText = "";
   const dialogueRecords: DialogueRoundRecord[] = [];
 
-  // phase 1：执行任务（按 kind 分支）
   if (taskKind === "script") {
     dialogueRounds = 1;
     executionStatus = "success";
@@ -204,9 +175,7 @@ export async function runTaskNow(params: {
         round: 1,
         maxRounds: 1,
       });
-      const validation = await validateTaskResult({
-        outputText,
-      });
+      const validation = await validateTaskResult({ outputText });
       if (validation.errors.length === 0) {
         ok = true;
         status = "success";
@@ -220,7 +189,7 @@ export async function runTaskNow(params: {
         resultErrors = [...validation.errors];
         errorText = [
           "Script task result validation failed.",
-          ...resultErrors.map((x) => `- ${x}`),
+          ...resultErrors.map((item) => `- ${item}`),
         ].join("\n");
         await runProgress.update({
           status: "running",
@@ -230,24 +199,21 @@ export async function runTaskNow(params: {
           maxRounds: 1,
         });
       }
-    } catch (e) {
+    } catch (error) {
       executionStatus = "failure";
       status = "failure";
       resultStatus = "not_checked";
       resultErrors = [];
-      errorText = `Script task execution failed: ${String(e)}`;
+      errorText = `Script task execution failed: ${String(error)}`;
       await runProgress.update({
         status: "running",
         phase: "script_running",
-        message: `script 执行失败: ${summarizeText(String(e), 160)}`,
+        message: `script 执行失败: ${summarizeText(String(error), 160)}`,
         round: 1,
         maxRounds: 1,
       });
     }
   } else {
-    // phase 1（agent）：
-    // - 默认单轮执行
-    // - 仅当 `review=true` 时启用“执行器 + 模拟用户”的多轮修订
     let lastRoundRuleErrors: string[] = [];
     let lastRoundDecision: UserSimulatorDecision | null = null;
     let lastFeedback = "";
@@ -293,7 +259,6 @@ export async function runTaskNow(params: {
           executorRound.rawResult.assistantMessage,
         );
 
-        // executor assistant 消息写入 runDir 对应的 context persistor（messages.jsonl）。
         try {
           await appendTaskAssistantMessage({
             taskSessionRuntime,
@@ -304,13 +269,13 @@ export async function runTaskNow(params: {
         } catch {
           // ignore
         }
-      } catch (e) {
+      } catch (error) {
         executionStatus = "failure";
-        errorText = `Executor agent failed at round ${round}: ${String(e)}`;
+        errorText = `Executor agent failed at round ${round}: ${String(error)}`;
         await runProgress.update({
           status: "running",
           phase: "agent_executor_round",
-          message: `执行器在第 ${round} 轮失败: ${summarizeText(String(e), 160)}`,
+          message: `执行器在第 ${round} 轮失败: ${summarizeText(String(error), 160)}`,
           round,
           maxRounds: maxDialogueRounds,
         });
@@ -373,17 +338,16 @@ export async function runTaskNow(params: {
             // ignore
           }
           decision = parseUserSimulatorDecision(simulatorRound.outputText);
-        } catch (e) {
+        } catch (error) {
           decision = {
             satisfied: false,
             reply: "",
-            reason: `user simulator failed: ${String(e)}`,
-            raw: String(e),
+            reason: `user simulator failed: ${String(error)}`,
+            raw: String(error),
           };
         }
       }
 
-      // 关键点（中文）：系统规则校验失败时，强制判定不满意。
       const roundSatisfied = decision.satisfied && validation.errors.length === 0;
       userSimulatorSatisfied = roundSatisfied;
       userSimulatorReply = decision.reply;
@@ -488,13 +452,12 @@ export async function runTaskNow(params: {
         ];
         errorText = [
           "Task result not satisfied after dialogue rounds.",
-          ...resultErrors.map((x) => `- ${x}`),
+          ...resultErrors.map((item) => `- ${item}`),
         ].join("\n");
       }
     }
   }
 
-  // phase 2：写入执行产物与元数据
   await runProgress.update({
     status: "running",
     phase: "writing_artifacts",
@@ -503,232 +466,33 @@ export async function runTaskNow(params: {
     ...(dialogueRounds > 0 ? { round: dialogueRounds } : {}),
   });
   const endedAt = Date.now();
-  const durationMs = endedAt - startedAt;
 
-  await fs.writeFile(
-    outputMdPath,
-    [`# Task Output`, ``, outputText ? outputText : "_(empty output)_", ``].join(
-      "\n",
-    ),
-    "utf-8",
-  );
-
-  if (status === "failure") {
-    await fs.writeFile(
-      errorMdPath,
-      [`# Task Error`, ``, errorText || "Unknown error", ``].join("\n"),
-      "utf-8",
-    );
-  } else {
-    // 清理旧 error.md（如果存在）
-    try {
-      await fs.remove(errorMdPath);
-    } catch {
-      // ignore
-    }
-  }
-
-  await fs.writeJson(
-    dialogueJsonPath,
-    {
-      v: 1,
-      taskId: task.taskId,
-      timestamp,
-      maxDialogueRounds,
-      rounds: dialogueRecords,
-    },
-    { spaces: 2 },
-  );
-
-  const dialogueLines: string[] = [];
-  dialogueLines.push("# Task Dialogue");
-  dialogueLines.push("");
-  dialogueLines.push(`- taskId: \`${task.taskId}\``);
-  dialogueLines.push(`- maxDialogueRounds: \`${maxDialogueRounds}\``);
-  dialogueLines.push(`- dialogueRounds: \`${dialogueRounds}\``);
-  dialogueLines.push(`- userSimulatorSatisfied: \`${String(userSimulatorSatisfied)}\``);
-  dialogueLines.push(`- messages: ${toMdLink(path.posix.join(runDirRel, "messages.jsonl"))}`);
-  if (reviewEnabled) {
-    dialogueLines.push(
-      `- userSimulatorMessages: ${toMdLink(path.posix.join(runDirRel, "user-simulator/messages.jsonl"))}`,
-    );
-  }
-  dialogueLines.push("");
-  for (const round of dialogueRecords) {
-    dialogueLines.push(`## Round ${round.round}`);
-    dialogueLines.push("");
-    dialogueLines.push(`- reviewEnabled: \`${String(round.reviewEnabled)}\``);
-    dialogueLines.push(`- executorDelivered: \`${String(round.executorDelivered)}\``);
-    dialogueLines.push(`- validationResultStatus: \`${round.validationResultStatus}\``);
-    dialogueLines.push("");
-    dialogueLines.push("### Executor query");
-    dialogueLines.push("");
-    dialogueLines.push("```");
-    dialogueLines.push(summarizeText(round.executorQuery, 4000) || "_(empty query)_");
-    dialogueLines.push("```");
-    dialogueLines.push("");
-    dialogueLines.push("### Executor output preview");
-    dialogueLines.push("");
-    dialogueLines.push("```");
-    dialogueLines.push(summarizeText(round.executorOutput, 1200) || "_(empty output)_");
-    dialogueLines.push("```");
-    dialogueLines.push("");
-    if (round.executorAssistantMessageSnapshot) {
-      dialogueLines.push("### Executor raw assistantMessage snapshot");
-      dialogueLines.push("");
-      dialogueLines.push("```json");
-      dialogueLines.push(round.executorAssistantMessageSnapshot);
-      dialogueLines.push("```");
-      dialogueLines.push("");
-    }
-    dialogueLines.push("### Rule checks");
-    dialogueLines.push("");
-    if (round.ruleErrors.length === 0) {
-      dialogueLines.push("- PASS");
-    } else {
-      for (const item of round.ruleErrors) dialogueLines.push(`- FAIL: ${item}`);
-    }
-    dialogueLines.push("");
-    dialogueLines.push("### User simulator");
-    dialogueLines.push("");
-    dialogueLines.push(`- satisfied: \`${String(round.userSimulator.satisfied)}\``);
-    if (typeof round.userSimulator.score === "number") {
-      dialogueLines.push(`- score: \`${round.userSimulator.score}\``);
-    }
-    if (round.userSimulator.reason) {
-      dialogueLines.push(`- reason: ${round.userSimulator.reason}`);
-    }
-    if (round.userSimulatorQuery) {
-      dialogueLines.push("");
-      dialogueLines.push("query:");
-      dialogueLines.push("```");
-      dialogueLines.push(summarizeText(round.userSimulatorQuery, 4000));
-      dialogueLines.push("```");
-    }
-    if (round.userSimulatorOutput) {
-      dialogueLines.push("");
-      dialogueLines.push("output:");
-      dialogueLines.push("```");
-      dialogueLines.push(summarizeText(round.userSimulatorOutput, 2000));
-      dialogueLines.push("```");
-    }
-    if (round.userSimulator.reply) {
-      dialogueLines.push("");
-      dialogueLines.push("reply:");
-      dialogueLines.push("```");
-      dialogueLines.push(summarizeText(round.userSimulator.reply, 1200));
-      dialogueLines.push("```");
-    }
-    if (round.userSimulatorAssistantMessageSnapshot) {
-      dialogueLines.push("");
-      dialogueLines.push("raw assistantMessage snapshot:");
-      dialogueLines.push("```json");
-      dialogueLines.push(round.userSimulatorAssistantMessageSnapshot);
-      dialogueLines.push("```");
-    }
-    if (round.feedbackForNextRound) {
-      dialogueLines.push("");
-      dialogueLines.push("feedbackForNextRound:");
-      dialogueLines.push("```");
-      dialogueLines.push(summarizeText(round.feedbackForNextRound, 2000));
-      dialogueLines.push("```");
-    }
-    dialogueLines.push("");
-  }
-  await fs.writeFile(dialogueMdPath, dialogueLines.join("\n"), "utf-8");
-
-  const meta: ShipTaskRunMetaV1 = {
-    v: 1,
-    taskId: task.taskId,
-    timestamp,
+  await writeTaskRunArtifacts({
+    task,
     executionId,
-    sessionId: task.frontmatter.sessionId,
+    timestamp,
     trigger: params.trigger,
+    runDirRel,
+    filePaths,
+    taskKind,
+    reviewEnabled,
+    maxDialogueRounds,
+    dialogueRounds,
+    dialogueRecords,
+    ok,
     status,
     executionStatus,
     resultStatus,
-    ...(resultErrors.length > 0 ? { resultErrors } : {}),
-    dialogueRounds,
+    resultErrors,
     userSimulatorSatisfied,
-    ...(userSimulatorReply ? { userSimulatorReply: summarizeText(userSimulatorReply, 2000) } : {}),
-    ...(userSimulatorReason ? { userSimulatorReason: summarizeText(userSimulatorReason, 2000) } : {}),
+    userSimulatorReply,
+    userSimulatorReason,
     ...(typeof userSimulatorScore === "number" ? { userSimulatorScore } : {}),
+    outputText,
+    errorText,
     startedAt,
     endedAt,
-    ...(status === "failure" && errorText ? { error: summarizeText(errorText, 800) } : {}),
-  };
-  await fs.writeJson(metaJsonPath, meta, { spaces: 2 });
-
-  // result.md：面向人类的摘要
-  const outputPreview = summarizeText(outputText, 1200);
-  const resultLines: string[] = [];
-  resultLines.push(`# Task Result`);
-  resultLines.push("");
-  resultLines.push(`- taskId: \`${task.taskId}\``);
-  resultLines.push(`- executionId: \`${executionId}\``);
-  resultLines.push(`- title: ${task.frontmatter.title}`);
-  resultLines.push(`- trigger: \`${params.trigger.type}\``);
-  resultLines.push(`- status: **${status.toUpperCase()}**`);
-  resultLines.push(`- executionStatus: \`${executionStatus}\``);
-  resultLines.push(`- resultStatus: \`${resultStatus}\``);
-  resultLines.push(`- dialogueRounds: \`${dialogueRounds}/${maxDialogueRounds}\``);
-  resultLines.push(`- userSimulatorSatisfied: \`${String(userSimulatorSatisfied)}\``);
-  if (typeof userSimulatorScore === "number") {
-    resultLines.push(`- userSimulatorScore: \`${userSimulatorScore}\``);
-  }
-  resultLines.push(`- startedAt: \`${new Date(startedAt).toISOString()}\``);
-  resultLines.push(`- endedAt: \`${new Date(endedAt).toISOString()}\``);
-  resultLines.push(`- durationMs: \`${durationMs}\``);
-  resultLines.push(`- runDir: ${toMdLink(runDirRel)}`);
-  resultLines.push("");
-  resultLines.push(`## Artifacts`);
-  resultLines.push("");
-  resultLines.push(`- messages: ${toMdLink(path.posix.join(runDirRel, "messages.jsonl"))}`);
-  if (taskKind === "agent" && reviewEnabled) {
-    resultLines.push(
-      `- userSimulatorMessages: ${toMdLink(path.posix.join(runDirRel, "user-simulator/messages.jsonl"))}`,
-    );
-  }
-  resultLines.push(`- input: ${toMdLink(path.posix.join(runDirRel, "input.md"))}`);
-  resultLines.push(`- output: ${toMdLink(path.posix.join(runDirRel, "output.md"))}`);
-  resultLines.push(`- result: ${toMdLink(path.posix.join(runDirRel, "result.md"))}`);
-  resultLines.push(`- dialogue: ${toMdLink(path.posix.join(runDirRel, "dialogue.md"))}`);
-  resultLines.push(`- dialogueJson: ${toMdLink(path.posix.join(runDirRel, "dialogue.json"))}`);
-  if (status === "failure") {
-    resultLines.push(`- error: ${toMdLink(path.posix.join(runDirRel, "error.md"))}`);
-  }
-  resultLines.push("");
-
-  resultLines.push(`## Result checks`);
-  resultLines.push("");
-  if (resultErrors.length === 0) {
-    resultLines.push(`- PASS`);
-  } else {
-    for (const item of resultErrors) {
-      resultLines.push(`- FAIL: ${item}`);
-    }
-  }
-  resultLines.push("");
-
-  if (outputPreview) {
-    resultLines.push(`## Output preview`);
-    resultLines.push("");
-    resultLines.push("```");
-    resultLines.push(outputPreview);
-    resultLines.push("```");
-    resultLines.push("");
-  }
-
-  if (status === "failure" && errorText) {
-    resultLines.push(`## Error preview`);
-    resultLines.push("");
-    resultLines.push("```");
-    resultLines.push(summarizeText(errorText, 1200));
-    resultLines.push("```");
-    resultLines.push("");
-  }
-
-  await fs.writeFile(resultMdPath, resultLines.join("\n"), "utf-8");
+  });
   await runProgress.update({
     status: status === "success" ? "success" : "failure",
     phase: "completed",

@@ -7,7 +7,7 @@
  * - `TelegramBot` 只保留入站授权、命令分发、消息入队等业务编排。
  */
 
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import { TelegramApiClient } from "./ApiClient.js";
 import { TelegramStateStore } from "./StateStore.js";
@@ -23,7 +23,7 @@ export interface TelegramPlatformClientOptions {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   /**
    * Telegram bot token。
    */
@@ -48,7 +48,7 @@ export interface TelegramPlatformClientOptions {
  * Telegram 平台运行时。
  */
 export class TelegramPlatformClient {
-  private readonly logger: ExecutionRuntime["logger"];
+  private readonly logger: ExecutionContext["logger"];
   private readonly api: TelegramApiClient;
   private readonly stateStore: TelegramStateStore;
   private readonly onMessage: TelegramPlatformClientOptions["onMessage"];

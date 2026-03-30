@@ -12,7 +12,7 @@ import { transformPromptsIntoSystemMessages } from "@sessions/prompts/common/Pro
 import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
 import { PLUGINS } from "@/main/plugin/Plugins.js";
 import { SERVICE_SYSTEM_PROVIDERS } from "@/main/service/ServiceSystemProviders.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 
 const CORE_PROMPT_FILE_URL = new URL(
   "./assets/core.prompt.txt",
@@ -191,9 +191,9 @@ export function resolveSystemContextProfile(
  */
 export async function loadServiceSystemPrompts(input: {
   /**
-   * 当前 service runtime。
+   * 当前执行上下文。
    */
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
 
   /**
    * 当前轮禁用的 service 名称集合。
@@ -238,7 +238,7 @@ export async function loadPluginSystemPrompts(input: {
   /**
    * 当前统一执行上下文。
    */
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
 }): Promise<string[]> {
   const out: string[] = [];
 
@@ -390,9 +390,9 @@ export async function resolveSessionSystemMessages(input: {
   staticSystemPrompts: string[];
 
   /**
-   * 当前 service runtime。
+   * 当前执行上下文。
    */
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
 
 }): Promise<SystemModelMessage[]> {
   const profile = resolveSystemContextProfile(input.profile);

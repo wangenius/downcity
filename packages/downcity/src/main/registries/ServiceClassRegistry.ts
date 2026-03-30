@@ -7,7 +7,7 @@
  * - agent 启动时据此创建 per-agent service instances。
  */
 
-import type { AgentRuntime } from "@agent/RuntimeState.js";
+import type { AgentState } from "@/types/AgentState.js";
 import { SERVICES } from "@/main/service/Services.js";
 import { BaseService, LegacyServiceAdapter } from "@services/BaseService.js";
 import type { Service } from "@/types/Service.js";
@@ -21,7 +21,7 @@ import { TaskService } from "@services/task/TaskService.js";
  */
 function createLegacyServiceInstance(
   definition: Service,
-  agent: AgentRuntime | null,
+  agent: AgentState | null,
 ): BaseService {
   if (definition.name === "chat") {
     return new ChatService(agent);
@@ -56,7 +56,7 @@ export function listRegisteredServiceNames(): string[] {
  * - 第一阶段允许传入 null，仅用于无需真实 agent 的测试/只读装配场景。
  */
 export function createRegisteredServiceInstances(
-  agent: AgentRuntime | null,
+  agent: AgentState | null,
 ): Map<string, BaseService> {
   const services = new Map<string, BaseService>();
   for (const definition of SERVICES) {

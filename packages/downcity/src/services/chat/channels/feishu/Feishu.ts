@@ -15,7 +15,7 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
@@ -69,7 +69,7 @@ export class FeishuBot extends BaseChatChannel {
   > = new Map();
 
   constructor(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     appId: string,
     appSecret: string,
     domain: string | undefined,
@@ -621,7 +621,7 @@ Available commands:
  */
 export async function createFeishuBot(
   config: FeishuConfig,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<FeishuBot | null> {
   if (!config.enabled || !config.appId || !config.appSecret) {
     return null;

@@ -21,7 +21,7 @@ export function registerDashboardApiRoutes(
 ): void {
   registerDashboardAuthorizationRoutes({
     app: params.app,
-    getExecutionRuntime: params.getExecutionRuntime,
+    getExecutionContext: params.getExecutionContext,
   });
   registerDashboardOverviewRoutes(params);
   registerDashboardSessionRoutes(params);

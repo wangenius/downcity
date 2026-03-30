@@ -16,5 +16,5 @@ export type {
   ServiceActions,
   ServiceCommandResult,
   ServiceLifecycle,
-  ServiceRuntimeState,
+  ServiceState,
 } from "@/types/Service.js";

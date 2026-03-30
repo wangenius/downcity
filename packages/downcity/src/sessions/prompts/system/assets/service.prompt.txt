@@ -1,9 +1,9 @@
-# Service Runtime
+# Service State
 
-你正在一个基于 service 的运行时中工作。
+你正在一个基于 service 的执行环境中工作。
 
 ## 可用命令总览
-- service runtime 管理（统一使用 `city service`）：
+- service 状态管理（统一使用 `city service`）：
   - `city service list`
   - `city service status <serviceName>`
   - `city service start <serviceName>`

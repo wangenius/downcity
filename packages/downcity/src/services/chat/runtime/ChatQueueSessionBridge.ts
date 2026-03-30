@@ -11,7 +11,7 @@ import { drainDeferredPersistedUserMessages } from "@sessions/RequestContext.js"
 import type { JsonObject } from "@/types/Json.js";
 import type { SessionRunResult } from "@/types/SessionRun.js";
 import type { SessionUserMessageV1 } from "@/types/SessionMessage.js";
-import type { SessionPort } from "@/types/ExecutionRuntime.js";
+import type { SessionPort } from "@/types/ExecutionContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import { hasPersistedAssistantSteps } from "./UserVisibleText.js";
 

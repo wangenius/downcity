@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { listServiceRuntimes } from "@/main/service/Manager.js";
+import { listServiceStates } from "@/main/service/Manager.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
 import { listSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
 import type { DashboardRouteRegistrationParams } from "@/types/DashboardRoutes.js";
@@ -42,17 +42,17 @@ export function registerDashboardOverviewRoutes(
 
   app.get("/api/dashboard/overview", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const sessionLimit = toLimit(
         c.req.query("sessionLimit") || c.req.query("contextLimit"),
         20,
       );
       const sessions = await listSessionSummaries({
         projectRoot: runtime.rootPath,
-        executionRuntime: params.getExecutionRuntime(),
+        executionRuntime: params.getExecutionContext(),
         limit: sessionLimit,
       });
-      const services = listServiceRuntimes();
+      const services = listServiceStates();
       const taskResult = await listTaskDefinitions({
         projectRoot: runtime.rootPath,
       });
@@ -95,7 +95,7 @@ export function registerDashboardOverviewRoutes(
   app.get("/api/dashboard/services", (c) => {
     return c.json({
       success: true,
-      services: listServiceRuntimes(),
+      services: listServiceStates(),
     });
   });
 }

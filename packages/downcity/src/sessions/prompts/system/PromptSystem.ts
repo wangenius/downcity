@@ -10,7 +10,7 @@ import {
   PrompterComponent,
 } from "@sessions/components/PrompterComponent.js";
 import { requestContext } from "@sessions/RequestContext.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import {
   resolveSessionSystemMessages,
   type SystemProfile,
@@ -28,9 +28,9 @@ type PromptSystemOptions = {
   getStaticSystemPrompts: () => string[];
 
   /**
-   * 读取 service runtime（用于加载 service system 文本）。
+   * 读取当前执行上下文（用于加载 service system 文本）。
    */
-  getRuntime: () => ExecutionRuntime;
+  getRuntime: () => ExecutionContext;
 
   /**
    * system 档位（默认 chat）。

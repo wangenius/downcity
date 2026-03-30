@@ -1,30 +1,30 @@
 /**
- * RuntimeController：service runtime 控制与状态记录模块。
+ * ServiceStateController：service 状态控制与状态记录模块。
  *
  * 关键点（中文）
- * - 专门负责 runtime record、lifecycle 控制、状态快照。
+ * - 专门负责 service 状态记录、生命周期控制、状态快照。
  * - 不处理 action payload，也不处理 HTTP route 注册。
  * - Manager.ts 只作为门面导出，真正逻辑在这里分层实现。
  */
 
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
-  ServiceRuntimeControlAction,
-  ServiceRuntimeControlResult,
-  ServiceRuntimeSnapshot,
-} from "@/types/ServiceRuntime.js";
-import { getAgentRuntime } from "@agent/RuntimeState.js";
+  ServiceStateControlAction,
+  ServiceStateControlResult,
+  ServiceStateSnapshot,
+} from "@/types/ServiceState.js";
+import { getAgentState } from "@agent/RuntimeState.js";
 import {
   createRegisteredServiceInstances,
   listRegisteredServiceNames,
 } from "@/main/registries/ServiceClassRegistry.js";
 import type { BaseService } from "@services/BaseService.js";
-import type { Service, ServiceRuntimeState } from "@/types/Service.js";
+import type { Service, ServiceState } from "@/types/Service.js";
 import { SERVICES } from "./Services.js";
 
-type ServiceRuntimeRecord = {
+type ServiceStateRecord = {
   service: BaseService;
-  state: ServiceRuntimeState;
+  state: ServiceState;
   updatedAt: number;
   lastError?: string;
   lastCommand?: string;
@@ -32,7 +32,7 @@ type ServiceRuntimeRecord = {
   chain: Promise<void>;
 };
 
-const serviceRuntimeRecords = new Map<string, ServiceRuntimeRecord>();
+const serviceStateRecords = new Map<string, ServiceStateRecord>();
 
 function nowMs(): number {
   return Date.now();
@@ -45,9 +45,9 @@ function nowMs(): number {
  * - 若 agent 已就绪，则返回 per-agent service instances。
  * - 若 agent 尚未初始化，则退回静态装配实例，方便测试与只读场景。
  */
-export function listRuntimeServices(_context?: ExecutionRuntime): BaseService[] {
+export function listServiceInstances(_context?: ExecutionContext): BaseService[] {
   try {
-    const agent = getAgentRuntime();
+    const agent = getAgentState();
     if (agent.services.size > 0) {
       return [...agent.services.values()];
     }
@@ -62,35 +62,35 @@ export function listRuntimeServices(_context?: ExecutionRuntime): BaseService[] 
  */
 export function resolveServiceByName(
   name: string,
-  context?: ExecutionRuntime,
+  context?: ExecutionContext,
 ): BaseService | null {
   const key = String(name || "").trim();
   if (!key) return null;
   return (
-    listRuntimeServices(context).find((service) => service.name === key) || null
+    listServiceInstances(context).find((service) => service.name === key) || null
   );
 }
 
 /**
- * 确保 service 对应的 runtime record 存在。
+ * 确保 service 对应的状态记录存在。
  */
-export function ensureServiceRuntimeRecord(
+export function ensureServiceStateRecord(
   service: BaseService,
-): ServiceRuntimeRecord {
+): ServiceStateRecord {
   const key = String(service.name || "").trim();
-  const existing = serviceRuntimeRecords.get(key);
+  const existing = serviceStateRecords.get(key);
   if (existing) {
     existing.service = service;
     return existing;
   }
 
-  const created: ServiceRuntimeRecord = {
+  const created: ServiceStateRecord = {
     service,
     state: "stopped",
     updatedAt: nowMs(),
     chain: Promise.resolve(),
   };
-  serviceRuntimeRecords.set(key, created);
+  serviceStateRecords.set(key, created);
   return created;
 }
 
@@ -103,9 +103,9 @@ function hasCommandActions(service: BaseService): boolean {
 /**
  * 把内部 record 映射为对外快照。
  */
-export function toRuntimeSnapshot(
-  record: ServiceRuntimeRecord,
-): ServiceRuntimeSnapshot {
+export function toServiceStateSnapshot(
+  record: ServiceStateRecord,
+): ServiceStateSnapshot {
   const lifecycle = record.service.lifecycle;
   return {
     name: record.service.name,
@@ -123,7 +123,7 @@ export function toRuntimeSnapshot(
 }
 
 async function runSerialByService(
-  record: ServiceRuntimeRecord,
+  record: ServiceStateRecord,
   step: () => Promise<void> | void,
 ): Promise<void> {
   const next = record.chain.then(() => Promise.resolve(step()));
@@ -135,11 +135,11 @@ async function runSerialByService(
 }
 
 /**
- * 标记 runtime 当前状态。
+ * 标记 service 当前状态。
  */
-export function markRuntimeState(
-  record: ServiceRuntimeRecord,
-  state: ServiceRuntimeState,
+export function markServiceState(
+  record: ServiceStateRecord,
+  state: ServiceState,
   error?: string,
 ): void {
   record.state = state;
@@ -155,7 +155,7 @@ export function markRuntimeState(
  * 标记最近一次 service command。
  */
 export function markServiceCommand(
-  record: ServiceRuntimeRecord,
+  record: ServiceStateRecord,
   command: string,
 ): void {
   record.lastCommand = command;
@@ -166,7 +166,7 @@ export function markServiceCommand(
 /**
  * 返回静态 service 定义清单。
  */
-export function getSmaServices(): Service[] {
+export function getStaticServices(): Service[] {
   return [...SERVICES];
 }
 
@@ -178,94 +178,94 @@ export function getServiceRootCommandNames(): string[] {
 }
 
 /**
- * 列出全部 service runtime 快照。
+ * 列出全部 service 状态快照。
  */
-export function listServiceRuntimes(): ServiceRuntimeSnapshot[] {
-  for (const service of listRuntimeServices()) {
-    ensureServiceRuntimeRecord(service);
+export function listServiceStates(): ServiceStateSnapshot[] {
+  for (const service of listServiceInstances()) {
+    ensureServiceStateRecord(service);
   }
-  return Array.from(serviceRuntimeRecords.values())
-    .map((item) => toRuntimeSnapshot(item))
+  return Array.from(serviceStateRecords.values())
+    .map((item) => toServiceStateSnapshot(item))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
  * 判断指定 service 是否处于运行中。
  */
-export function isServiceRuntimeRunning(serviceName: string): boolean {
+export function isServiceRunning(serviceName: string): boolean {
   const service = resolveServiceByName(serviceName);
   if (!service) return false;
-  return ensureServiceRuntimeRecord(service).state === "running";
+  return ensureServiceStateRecord(service).state === "running";
 }
 
-async function startServiceRuntimeInternal(
+async function startServiceInternal(
   service: BaseService,
-  context: ExecutionRuntime,
-): Promise<ServiceRuntimeControlResult> {
-  const record = ensureServiceRuntimeRecord(service);
+  context: ExecutionContext,
+): Promise<ServiceStateControlResult> {
+  const record = ensureServiceStateRecord(service);
   try {
     await runSerialByService(record, async () => {
       if (record.state === "running") return;
-      markRuntimeState(record, "starting");
+      markServiceState(record, "starting");
       try {
         await service.lifecycle?.start?.(context);
-        markRuntimeState(record, "running");
+        markServiceState(record, "running");
       } catch (error) {
-        markRuntimeState(record, "error", String(error));
+        markServiceState(record, "error", String(error));
         throw error;
       }
     });
     return {
       success: true,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
     };
   } catch (error) {
     return {
       success: false,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
       error: String(error),
     };
   }
 }
 
-async function stopServiceRuntimeInternal(
+async function stopServiceInternal(
   service: BaseService,
-  context: ExecutionRuntime,
-): Promise<ServiceRuntimeControlResult> {
-  const record = ensureServiceRuntimeRecord(service);
+  context: ExecutionContext,
+): Promise<ServiceStateControlResult> {
+  const record = ensureServiceStateRecord(service);
   try {
     await runSerialByService(record, async () => {
       if (record.state === "stopped") return;
-      markRuntimeState(record, "stopping");
+      markServiceState(record, "stopping");
       try {
         await service.lifecycle?.stop?.(context);
-        markRuntimeState(record, "stopped");
+        markServiceState(record, "stopped");
       } catch (error) {
-        markRuntimeState(record, "error", String(error));
+        markServiceState(record, "error", String(error));
         throw error;
       }
     });
     return {
       success: true,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
     };
   } catch (error) {
     return {
       success: false,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
       error: String(error),
     };
   }
 }
 
 /**
- * 执行单个 service runtime 控制动作。
+ * 执行单个 service 状态控制动作。
  */
-export async function controlServiceRuntime(params: {
+export async function controlServiceState(params: {
   serviceName: string;
-  action: ServiceRuntimeControlAction;
-  context: ExecutionRuntime;
-}): Promise<ServiceRuntimeControlResult> {
+  action: ServiceStateControlAction;
+  context: ExecutionContext;
+}): Promise<ServiceStateControlResult> {
   const service = resolveServiceByName(params.serviceName, params.context);
   if (!service) {
     return {
@@ -275,39 +275,39 @@ export async function controlServiceRuntime(params: {
   }
 
   if (params.action === "status") {
-    const record = ensureServiceRuntimeRecord(service);
+    const record = ensureServiceStateRecord(service);
     return {
       success: true,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
     };
   }
 
   if (params.action === "start") {
-    return startServiceRuntimeInternal(service, params.context);
+    return startServiceInternal(service, params.context);
   }
 
   if (params.action === "stop") {
-    return stopServiceRuntimeInternal(service, params.context);
+    return stopServiceInternal(service, params.context);
   }
 
-  const stopped = await stopServiceRuntimeInternal(service, params.context);
+  const stopped = await stopServiceInternal(service, params.context);
   if (!stopped.success) return stopped;
-  return startServiceRuntimeInternal(service, params.context);
+  return startServiceInternal(service, params.context);
 }
 
 /**
- * 启动全部 service runtime。
+ * 启动全部 service。
  */
-export async function startAllServiceRuntimes(
-  context: ExecutionRuntime,
+export async function startAllServices(
+  context: ExecutionContext,
 ): Promise<{
   success: boolean;
-  results: ServiceRuntimeControlResult[];
+  results: ServiceStateControlResult[];
 }> {
-  const results: ServiceRuntimeControlResult[] = [];
-  for (const service of listRuntimeServices(context)) {
+  const results: ServiceStateControlResult[] = [];
+  for (const service of listServiceInstances(context)) {
     results.push(
-      await controlServiceRuntime({
+      await controlServiceState({
         serviceName: service.name,
         action: "start",
         context,
@@ -321,16 +321,16 @@ export async function startAllServiceRuntimes(
 }
 
 /**
- * 停止全部 service runtime。
+ * 停止全部 service。
  */
-export async function stopAllServiceRuntimes(context: ExecutionRuntime): Promise<{
+export async function stopAllServices(context: ExecutionContext): Promise<{
   success: boolean;
-  results: ServiceRuntimeControlResult[];
+  results: ServiceStateControlResult[];
 }> {
-  const results: ServiceRuntimeControlResult[] = [];
-  for (const service of listRuntimeServices(context)) {
+  const results: ServiceStateControlResult[] = [];
+  for (const service of listServiceInstances(context)) {
     results.push(
-      await controlServiceRuntime({
+      await controlServiceState({
         serviceName: service.name,
         action: "stop",
         context,

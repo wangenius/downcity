@@ -1,9 +1,9 @@
-# Downcity Runtime 与 Session 架构
+# Downcity Agent 与 Session 架构
 
 这份文档专门解释：
 
 1. `agent` 现在是什么
-2. `ExecutionRuntime` 现在是什么
+2. `ExecutionContext` 现在是什么
 3. `session` 现在如何执行
 
 ---
@@ -12,45 +12,45 @@
 
 当前 `agent` 是**进程级宿主层**。
 
-一个 `AgentRuntime` 代表：
+一个 `AgentState` 代表：
 
 ```text
 一个 rootPath
 + 一份 config / env / logger / systems
 + 一份 execution model
-+ 一份 SessionRegistry
++ 一份 SessionStore
 ```
 
 当前关键文件：
 
-- `agent/AgentRuntime.ts`
+- `agent/AgentState.ts`
 - `agent/RuntimeState.ts`
-- `agent/ExecutionRuntime.ts`
+- `agent/ExecutionContext.ts`
 
 其中：
 
 1. `RuntimeState.ts`
-   - 持有 `AgentRuntimeBase`
-   - 持有 `AgentRuntime`
-   - 持有 execution model
-2. `AgentRuntime.ts`
+   - 持有 `AgentStateBase`
+   - 持有 `AgentState`
+   - 持有兼容阶段的 execution model 引用
+2. `AgentState.ts`
    - 初始化宿主状态
-   - 初始化 session registry
+   - 初始化 model / session store / plugin registry / service instances
    - 启动 prompt 热重载
-3. `ExecutionRuntime.ts`
+3. `ExecutionContext.ts`
    - 把宿主态转换成统一执行视图
 
 所以 `agent` 现在不是业务执行中心，而是：
 
 - 宿主状态保存者
-- execution runtime 提供者
+- execution context 提供者
 - session registry 持有者
 
 ---
 
-## 2. `ExecutionRuntime` 是什么
+## 2. `ExecutionContext` 是什么
 
-`ExecutionRuntime` 是从 `AgentRuntime` 派生出来的统一执行视图。
+`ExecutionContext` 是从 `AgentState` 派生出来的统一执行视图。
 
 当前包含：
 
@@ -74,15 +74,15 @@
 
 - 第二套宿主
 - 第二个进程
-- 独立 runtime 状态机
+- 独立状态机
 
 ---
 
-## 3. `ExecutionRuntime` 内部怎么构造
+## 3. `ExecutionContext` 内部怎么构造
 
 当前构造位置：
 
-- `agent/ExecutionRuntime.ts`
+- `agent/ExecutionContext.ts`
 
 内部主要做三件事：
 
@@ -94,7 +94,7 @@
 
 ```mermaid
 flowchart TD
-  AR["AgentRuntime"] --> ER["ExecutionRuntime"]
+  AR["AgentState"] --> ER["ExecutionContext"]
   ER --> SP["session port"]
   ER --> SVP["service invoke port"]
   ER --> PP["plugin port"]
@@ -132,8 +132,8 @@ runtime.session.run({ sessionId, query })
 
 ```mermaid
 flowchart LR
-  A["ExecutionRuntime.session"] --> B["SessionRegistry"]
-  B --> C["SessionRuntimeRegistry"]
+  A["ExecutionContext.session"] --> B["SessionStore"]
+  B --> C["SessionRuntimeStore"]
   C --> D["SessionRuntime"]
   D --> E["SessionCore"]
   D --> F["FilePersistor"]
@@ -144,11 +144,11 @@ flowchart LR
 
 对应职责：
 
-1. `SessionRegistry`
+1. `SessionStore`
    - 统一入口
    - request context 绑定
    - append message
-2. `SessionRuntimeRegistry`
+2. `SessionRuntimeStore`
    - `sessionId -> runtime/persistor` 映射与缓存
 3. `SessionRuntime`
    - 装配 model、persistor、compactor、prompter、tools
@@ -164,19 +164,18 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant CMD as Run.ts
-  participant AGENT as AgentRuntime.ts
+  participant AGENT as AgentState.ts
   participant STATE as RuntimeState.ts
-  participant SESS as SessionRegistry
+  participant SESS as SessionStore
   participant HTTP as main/index.ts
   participant SVC as Service Manager
 
-  CMD->>AGENT: initAgentRuntime(cwd)
-  AGENT->>STATE: setAgentRuntimeBase(...)
-  AGENT->>STATE: setExecutionModel(model)
-  AGENT->>SESS: create SessionRegistry
-  AGENT->>STATE: setAgentRuntime(agentRuntime)
+  CMD->>AGENT: initAgentState(cwd)
+  AGENT->>STATE: setAgentStateBase(...)
+  AGENT->>SESS: create SessionStore
+  AGENT->>STATE: setAgentState(agentState)
   CMD->>HTTP: startServer()
-  CMD->>SVC: startAllServiceRuntimes(getExecutionRuntime())
+  CMD->>SVC: startAllServiceRuntimes(getExecutionContext())
 ```
 
 详细阶段：
@@ -184,17 +183,17 @@ sequenceDiagram
 1. 解析 `rootPath`
 2. 读取 config/env/systems
 3. 创建 execution model
-4. 创建 `SessionRuntimeRegistry`
-5. 创建 `SessionRegistry`
-6. 写入 ready `AgentRuntime`
+4. 创建 `SessionRuntimeStore`
+5. 创建 `SessionStore`
+6. 写入 ready `AgentState`
 7. 启动 HTTP server
-8. 启动 service runtimes
+8. 启动全部 services
 
 ---
 
 ## 7. 当前最重要的结论
 
-1. `AgentRuntime` 是宿主态，不是执行实例
-2. `ExecutionRuntime` 是统一执行视图，不是第二套 runtime 系统
+1. `AgentState` 是宿主态，不是执行实例
+2. `ExecutionContext` 是统一执行视图，不是第二套 runtime 系统
 3. `session` 才是真正执行 prompt / tools / history 的单位
 4. service 通过 `runtime.session` 使用 session，而不是自己实现主执行循环

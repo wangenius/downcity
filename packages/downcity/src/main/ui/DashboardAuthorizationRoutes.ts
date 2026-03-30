@@ -7,7 +7,7 @@
  */
 
 import type { Hono } from "hono";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import {
   readAuthDashboardPayload,
   setAuthDashboardUserRole,
@@ -31,13 +31,13 @@ function normalizeChatChannel(value: unknown): ChatAuthorizationChannel | null {
  */
 export function registerDashboardAuthorizationRoutes(params: {
   app: Hono;
-  getExecutionRuntime: () => ExecutionRuntime;
+  getExecutionContext: () => ExecutionContext;
 }): void {
-  const { app, getExecutionRuntime } = params;
+  const { app, getExecutionContext } = params;
 
   app.get("/api/dashboard/authorization", async (c) => {
     try {
-      const payload = await readAuthDashboardPayload(getExecutionRuntime());
+      const payload = await readAuthDashboardPayload(getExecutionContext());
       return c.json({
         success: true,
         ...payload,
@@ -53,7 +53,7 @@ export function registerDashboardAuthorizationRoutes(params: {
         config?: ChatAuthorizationConfig;
       };
       const payload = await writeAuthDashboardConfig({
-        runtime: getExecutionRuntime(),
+        runtime: getExecutionContext(),
         config: body.config && typeof body.config === "object" ? body.config : {},
       });
       return c.json({
@@ -83,7 +83,7 @@ export function registerDashboardAuthorizationRoutes(params: {
       }
 
       const payload = await setAuthDashboardUserRole({
-        runtime: getExecutionRuntime(),
+        runtime: getExecutionContext(),
         input: {
           channel,
           userId: String(body.userId || "").trim(),

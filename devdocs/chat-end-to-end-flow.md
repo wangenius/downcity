@@ -12,16 +12,16 @@
 sequenceDiagram
   participant Channel as Telegram/Feishu/QQ
   participant Base as BaseChatChannel
-  participant Queue as ChatQueue
+  participant Queue as ChatQueueStore
   participant Worker as ChatQueueWorker
-  participant Runtime as ExecutionRuntime
+  participant Runtime as ExecutionContext
   participant Plugin as runtime.plugins
   participant Session as runtime.session
   participant Sender as Chat Sender
 
   Channel->>Base: 入站消息
   Base->>Plugin: guard / pipeline
-  Base->>Queue: enqueueChatQueue(exec)
+  Base->>Queue: enqueue(exec)
   Worker->>Session: appendUserMessage + run()
   Worker->>Plugin: beforeReply / afterReply
   Worker->>Sender: send reply
@@ -153,9 +153,9 @@ runtime.session.run({ sessionId, query })
 
 链路实际变成：
 
-1. `ExecutionRuntime.session`
-2. `SessionRegistry`
-3. `SessionRuntimeRegistry`
+1. `ExecutionContext.session`
+2. `SessionStore`
+3. `SessionRuntimeStore`
 4. `SessionRuntime`
 5. `SessionCore`
 

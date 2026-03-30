@@ -7,7 +7,7 @@
  */
 
 import type { ServiceActionResult } from "@/types/Service.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonValue } from "@/types/Json.js";
 import type {
   MemoryFlushPayload,
@@ -29,7 +29,7 @@ import { getMemory, storeMemory } from "./runtime/Writer.js";
  * status action。
  */
 export async function statusMemoryAction(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
@@ -63,7 +63,7 @@ export async function statusMemoryAction(
  * index action。
  */
 export async function indexMemoryAction(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryIndexPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
@@ -92,7 +92,7 @@ export async function indexMemoryAction(
  * search action。
  */
 export async function searchMemoryAction(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemorySearchPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
@@ -114,7 +114,7 @@ export async function searchMemoryAction(
  * get action。
  */
 export async function getMemoryAction(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   payload: MemoryGetPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
@@ -132,7 +132,7 @@ export async function getMemoryAction(
  * store action。
  */
 export async function storeMemoryAction(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryStorePayload,
 ): Promise<ServiceActionResult<JsonValue>> {
@@ -151,7 +151,7 @@ export async function storeMemoryAction(
  * flush action。
  */
 export async function flushMemoryAction(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryFlushPayload,
 ): Promise<ServiceActionResult> {

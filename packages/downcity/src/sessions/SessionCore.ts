@@ -43,6 +43,7 @@ import {
   summarizeUiMessageForDebug,
   toInlinePreview,
 } from "@sessions/runtime/SessionLoopSignals.js";
+import { evaluateSessionLoopDecision } from "@sessions/runtime/SessionCoreLoop.js";
 import type {
   SessionExecuteInput,
   SessionRunResult,
@@ -407,25 +408,27 @@ export class SessionCore {
           stepResult: lastStep,
           assistantMessage: stepAssistantUiMessage,
         });
-        const shouldRecoverIncompleteResponse =
-          incompleteResponse !== null &&
-          incompleteResponseRecoveryCount < MAX_INCOMPLETE_RESPONSE_RECOVERIES;
-
         const textOnlyContinuationReason =
           detectTextOnlyContinuationReason(lastStep);
-        const shouldContinueForToolCalls = lastStep.toolCalls.length > 0;
-        const shouldContinueForTextOnly =
-          !shouldContinueForToolCalls &&
-          textOnlyContinuationReason !== null &&
-          Object.keys(tools).length > 0 &&
-          textOnlyContinuationCount < MAX_TEXT_ONLY_CONTINUATIONS;
+        const loopDecision = evaluateSessionLoopDecision({
+          hasIncompleteResponse: incompleteResponse !== null,
+          incompleteRecoveryCount: incompleteResponseRecoveryCount,
+          maxIncompleteRecoveries: MAX_INCOMPLETE_RESPONSE_RECOVERIES,
+          textOnlyContinuationReason,
+          textOnlyContinuationCount,
+          maxTextOnlyContinuations: MAX_TEXT_ONLY_CONTINUATIONS,
+          hasTools: Object.keys(tools).length > 0,
+          toolCallCount: lastStep.toolCalls.length,
+        });
 
         await this.logger.log("info", "[agent] loop.decision", {
           sessionId,
           stepIndex: stepCount,
-          continueForToolCalls: shouldContinueForToolCalls,
-          continueForTextOnly: shouldContinueForTextOnly,
-          continueForIncompleteRecovery: shouldRecoverIncompleteResponse,
+          continueForToolCalls: loopDecision.continueForToolCalls,
+          continueForTextOnly: loopDecision.continueForTextOnly,
+          continueForIncompleteRecovery:
+            loopDecision.continueForIncompleteRecovery,
+          decisionKind: loopDecision.kind,
           textOnlyContinuationReason,
           textOnlyContinuationCount,
           incompleteResponseReason: incompleteResponse?.reason ?? null,
@@ -436,7 +439,7 @@ export class SessionCore {
           textPreview: toInlinePreview(lastStep.text),
         });
 
-        if (shouldRecoverIncompleteResponse && incompleteResponse) {
+        if (loopDecision.continueForIncompleteRecovery && incompleteResponse) {
           incompleteResponseRecoveryCount += 1;
           await this.logger.log("warn", "[agent] incomplete_response.recover", {
             sessionId,
@@ -502,13 +505,13 @@ export class SessionCore {
         // 关键点（中文）：把本 step 的 assistant UI 消息并入运行时上下文，保证后续全量重算不丢历史。
         runtimeSessionMessages = [...runtimeSessionMessages, stepAssistantUiMessage];
 
-        if (shouldContinueForToolCalls) {
+        if (loopDecision.continueForToolCalls) {
           textOnlyContinuationCount = 0;
           incompleteResponseRecoveryCount = 0;
           continue;
         }
 
-        if (shouldContinueForTextOnly) {
+        if (loopDecision.continueForTextOnly) {
           textOnlyContinuationCount += 1;
           incompleteResponseRecoveryCount = 0;
           const continuationMessage = this.persistor.userText({

@@ -6,12 +6,12 @@
  * - 非 chat session 保留原有直接执行语义。
  */
 
-import type { AgentRuntime } from "@agent/AgentRuntime.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { AgentState } from "@agent/AgentState.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { DashboardSessionExecuteAttachmentInput } from "@/types/DashboardSessionExecute.js";
 import { drainDeferredPersistedUserMessages } from "@sessions/RequestContext.js";
-import { enqueueChatQueue } from "@services/chat/runtime/ChatQueue.js";
+import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
 import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
@@ -29,8 +29,8 @@ import { buildExecuteInputText } from "./Helpers.js";
  * - 否则按普通 session 同步执行。
  */
 export async function executeBySessionId(params: {
-  runtime: AgentRuntime;
-  executionRuntime: ExecutionRuntime;
+  runtime: AgentState;
+  executionRuntime: ExecutionContext;
   sessionId: string;
   instructions: string;
   attachments?: DashboardSessionExecuteAttachmentInput[];
@@ -83,7 +83,7 @@ export async function executeBySessionId(params: {
       });
     }
 
-    const enqueueResult = enqueueChatQueue({
+    const enqueueResult = resolveChatQueueStore(params.executionRuntime).enqueue({
       kind: "exec",
       channel: dispatchTarget.channel,
       targetId: dispatchTarget.chatId,
@@ -107,12 +107,12 @@ export async function executeBySessionId(params: {
     };
   }
 
-  await params.runtime.sessionRegistry.appendUserMessage({
+  await params.runtime.sessionStore.appendUserMessage({
     sessionId,
     text: executeInput,
   });
 
-  const result = await params.runtime.sessionRegistry.run({
+  const result = await params.runtime.sessionStore.run({
     sessionId,
     query: executeInput,
   });
@@ -120,7 +120,7 @@ export async function executeBySessionId(params: {
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
   try {
     if (!hasPersistedAssistantSteps(result.assistantMessage)) {
-      await params.runtime.sessionRegistry.appendAssistantMessage({
+      await params.runtime.sessionStore.appendAssistantMessage({
         sessionId,
         message: result.assistantMessage,
         fallbackText: userVisible,
@@ -134,7 +134,7 @@ export async function executeBySessionId(params: {
       sessionId,
     );
     for (const message of deferredInjectedMessages) {
-      await params.runtime.sessionRegistry.appendUserMessage({
+      await params.runtime.sessionStore.appendUserMessage({
         sessionId,
         message,
       });

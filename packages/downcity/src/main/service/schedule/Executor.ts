@@ -6,7 +6,7 @@
  * - 不负责调度入口和轮询生命周期管理。
  */
 
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ServiceScheduleStore } from "./Store.js";
 import { runServiceCommand } from "@/main/service/Manager.js";
 
@@ -14,7 +14,7 @@ import { runServiceCommand } from "@/main/service/Manager.js";
  * 执行当前已到点的 pending 任务。
  */
 export async function runDueScheduledJobs(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   store: ServiceScheduleStore;
 }): Promise<void> {
   const dueJobs = params.store.listDuePendingJobs(Date.now());

@@ -92,14 +92,14 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const limit = toLimit(c.req.query("limit"));
       const executingSessionIds = new Set(
-        runtime.sessionRegistry.listExecutingSessionIds(),
+        runtime.sessionStore.listExecutingSessionIds(),
       );
       const sessions = await listSessionSummaries({
         projectRoot: runtime.rootPath,
-        executionRuntime: params.getExecutionRuntime(),
+        executionRuntime: params.getExecutionContext(),
         limit,
         executingSessionIds,
       });
@@ -131,7 +131,7 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions/:sessionId/messages", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const limit = toLimit(c.req.query("limit"), 200);
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
@@ -157,7 +157,7 @@ export function registerDashboardSessionRoutes(
 
   app.delete("/api/dashboard/sessions/:sessionId/messages", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
@@ -167,7 +167,7 @@ export function registerDashboardSessionRoutes(
       const messagesDirPath = dirname(messagesPath);
       await fs.remove(messagesDirPath);
       // 关键点（中文）：清理消息文件后，同步清掉内存中的 session runtime，避免旧上下文继续运行。
-      runtime.sessionRegistry.clearRuntime(sessionId);
+      runtime.sessionStore.clearRuntime(sessionId);
 
       return c.json({
         success: true,
@@ -181,7 +181,7 @@ export function registerDashboardSessionRoutes(
 
   app.delete("/api/dashboard/sessions/:sessionId/chat-history", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
@@ -202,7 +202,7 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions/:sessionId/archives", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const limit = toLimit(c.req.query("limit"), 100);
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
@@ -285,7 +285,7 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions/:sessionId/archives/:archiveId", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       const archiveId = decodeMaybe(String(c.req.param("archiveId") || "").trim());
       if (!sessionId) {
@@ -341,7 +341,7 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/system-prompt", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const sessionId =
         decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
         CONSOLEUI_SESSION_ID;
@@ -351,7 +351,7 @@ export function registerDashboardSessionRoutes(
         requestId: `ui-system-preview-${Date.now()}`,
         profile: "chat",
         staticSystemPrompts: runtime.systems,
-        runtime: params.getExecutionRuntime(),
+        runtime: params.getExecutionContext(),
       });
       return c.json({
         success: true,
@@ -365,7 +365,7 @@ export function registerDashboardSessionRoutes(
 
   app.post("/api/dashboard/sessions/:sessionId/execute", async (c) => {
     try {
-      const runtime = params.getAgentRuntime();
+      const runtime = params.getAgentState();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       const body = (await c.req.json().catch(() => ({}))) as Partial<DashboardSessionExecuteRequestBody>;
       const instructions = String(body.instructions || "").trim();
@@ -378,7 +378,7 @@ export function registerDashboardSessionRoutes(
 
       const result = await executeBySessionId({
         runtime,
-        executionRuntime: params.getExecutionRuntime(),
+        executionRuntime: params.getExecutionContext(),
         sessionId,
         instructions,
         attachments: Array.isArray(body.attachments) ? body.attachments : undefined,

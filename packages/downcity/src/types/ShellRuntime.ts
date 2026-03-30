@@ -7,7 +7,7 @@
  */
 
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ShellSessionSnapshot } from "@services/shell/types/ShellService.js";
 
 /**
@@ -89,5 +89,5 @@ export type ShellServiceState = {
    * - 仅用于 shell 自动通知 chat 的回调路径。
    * - 这是实例字段，不再是模块级全局变量。
    */
-  boundRuntime: ExecutionRuntime | null;
+  boundRuntime: ExecutionContext | null;
 };

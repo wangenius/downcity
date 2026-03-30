@@ -7,13 +7,13 @@
  * - 后续 chat/task/memory/shell 可以逐步从 legacy adapter 迁移为真正的 class service。
  */
 
-import type { AgentRuntime } from "@agent/RuntimeState.js";
+import type { AgentState } from "@/types/AgentState.js";
 import type {
   Service,
   ServiceActions,
   ServiceLifecycle,
 } from "@/types/Service.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 
 /**
  * BaseService 抽象基类。
@@ -30,9 +30,9 @@ export abstract class BaseService implements Service {
    * - 第一阶段允许为空，仅用于 legacy adapter 的非运行态场景。
    * - 真正 class 化后，service 实例应始终绑定一个 agent。
    */
-  protected readonly agent: AgentRuntime | null;
+  protected readonly agent: AgentState | null;
 
-  constructor(agent: AgentRuntime | null) {
+  constructor(agent: AgentState | null) {
     this.agent = agent;
   }
 
@@ -49,7 +49,7 @@ export abstract class BaseService implements Service {
   /**
    * 可选的 service 级 system 文本提供器。
    */
-  system?(context: ExecutionRuntime): string | Promise<string>;
+  system?(context: ExecutionContext): string | Promise<string>;
 
   /**
    * 可选的 service 生命周期定义。
@@ -63,7 +63,7 @@ export abstract class BaseService implements Service {
    * - 仅供后续真正 class service 在实例方法中读取宿主能力。
    * - 未绑定 agent 时直接 fail-fast，避免静默读取 undefined。
    */
-  protected requireAgent(): AgentRuntime {
+  protected requireAgent(): AgentState {
     if (this.agent) return this.agent;
     throw new Error(
       `Service "${this.name}" is not bound to an agent runtime instance.`,
@@ -103,7 +103,7 @@ export class LegacyServiceAdapter extends BaseService {
     /**
      * 当前 service 所属的 agent 宿主。
      */
-    agent: AgentRuntime | null;
+    agent: AgentState | null;
     /**
      * 现有 legacy service definition。
      */

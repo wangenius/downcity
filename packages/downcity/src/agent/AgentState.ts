@@ -1,7 +1,7 @@
 import path from "path";
 import { logger as defaultLogger } from "@utils/logger/Logger.js";
-import { SessionRegistry } from "@sessions/SessionRegistry.js";
-import { SessionRuntimeRegistry } from "@sessions/SessionRuntimeRegistry.js";
+import { SessionStore } from "@sessions/SessionStore.js";
+import { SessionRuntimeStore } from "@sessions/SessionRuntimeStore.js";
 import { createModel } from "@main/model/CreateModel.js";
 import {
   loadGlobalEnvFromStore,
@@ -23,65 +23,61 @@ import {
   PromptRuntime,
 } from "@sessions/prompts/PromptRuntime.js";
 import {
-  getExecutionRuntime,
+  createAgentPluginRegistry,
+  getExecutionContext,
   getInvokeServicePort,
-} from "@agent/ExecutionRuntime.js";
+} from "@agent/ExecutionContext.js";
 import {
-  getAgentRuntime,
-  getAgentRuntimeBase,
-  requireExecutionModel,
-  setAgentRuntime,
-  setAgentRuntimeBase,
-  setExecutionModel,
-  type AgentRuntime,
+  getAgentState,
+  getAgentStateBase,
+  requireAgentModel,
+  setAgentState,
+  setAgentStateBase,
+  type AgentState,
 } from "@agent/RuntimeState.js";
 import { createAgentServices } from "@agent/AgentFactory.js";
 
 /**
- * AgentRuntime 公共入口。
+ * AgentState 公共入口。
  *
  * 关键点（中文）
- * - 这个模块只负责进程启动、宿主装配、热重载协调。
- * - 宿主状态统一收敛到 `RuntimeState.ts`。
- * - execution runtime / plugin / service 端口统一收敛到 `ExecutionRuntime.ts`。
- * - 外部模块仍然从这里读取公共 API，保持入口简单稳定。
+ * - 这个模块负责 agent 启动装配、热重载协调与公共导出。
+ * - 当前新的主概念是 `AgentState`，不再强调 host/runtime 宿主命名。
+ * - `ExecutionContext` 与 plugin/service 端口也统一从这里桥接出去。
  */
 
-export type { AgentRuntimeBase, AgentRuntime } from "@agent/RuntimeState.js";
+export type { AgentStateBase, AgentState } from "@agent/RuntimeState.js";
 export {
-  getAgentRuntime,
-  getAgentRuntimeBase,
-  setAgentRuntime,
-  setAgentRuntimeBase,
+  getAgentState,
+  getAgentStateBase,
+  setAgentState,
+  setAgentStateBase,
+  requireAgentModel,
 } from "@agent/RuntimeState.js";
-export { getExecutionRuntime, getInvokeServicePort } from "@agent/ExecutionRuntime.js";
+export { getExecutionContext, getInvokeServicePort } from "@agent/ExecutionContext.js";
 
 let promptRuntime: PromptRuntime | null = null;
 
 /**
  * 原子更新 runtime.systems（同时覆盖 base + ready）。
- *
- * 关键点（中文）
- * - 热更新只允许替换 system 文本，不重建 session registry。
- * - 因为 `setAgentRuntimeBase` 会清空 ready，所以需要先缓存当前 ready 再恢复。
  */
 function applyRuntimeSystems(nextSystems: string[]): void {
-  const currentBase = getAgentRuntimeBase();
+  const currentBase = getAgentStateBase();
   const currentReady = (() => {
     try {
-      return getAgentRuntime();
+      return getAgentState();
     } catch {
       return null;
     }
   })();
 
-  setAgentRuntimeBase({
+  setAgentStateBase({
     ...currentBase,
     systems: nextSystems,
   });
 
   if (currentReady) {
-    setAgentRuntime({
+    setAgentState({
       ...currentReady,
       systems: nextSystems,
     });
@@ -102,11 +98,11 @@ export function stopAgentHotReload(): void {
  */
 function startAgentHotReload(): void {
   stopAgentHotReload();
-  const agent = getAgentRuntime();
+  const agent = getAgentState();
   promptRuntime = new PromptRuntime({
     rootPath: agent.rootPath,
     logger: agent.logger,
-    getCurrentSystems: () => getAgentRuntimeBase().systems,
+    getCurrentSystems: () => getAgentStateBase().systems,
     applySystems: (nextSystems) => {
       applyRuntimeSystems(nextSystems);
     },
@@ -116,22 +112,14 @@ function startAgentHotReload(): void {
 
 /**
  * 初始化入口。
- *
- * 阶段说明（中文）
- * 1) 解析 rootPath + 绑定 logger 落盘目录
- * 2) 校验关键文件并确保 `.downcity` 目录结构
- * 3) 加载 env + downcity.json，建立 base runtime state
- * 4) 初始化模型、session registry、chat worker，建立 ready runtime state
  */
-export async function initAgentRuntime(cwd: string): Promise<void> {
+export async function initAgentState(cwd: string): Promise<void> {
   stopAgentHotReload();
 
   const resolvedCwd = String(cwd || "").trim() || ".";
   const rootPath = path.resolve(resolvedCwd);
 
-  // 关键点（中文）：logger 的落盘目录绑定到当前 agent 根目录，避免全局路径单例污染。
   defaultLogger.bindProjectRoot(rootPath);
-
   ensureRuntimeProjectReady(rootPath);
 
   const globalEnv = loadGlobalEnvFromStore();
@@ -141,11 +129,10 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     globalEnv,
   });
 
-  // 关键点（中文）：统一注入当前 agent 标识，供 shell/CLI 子命令默认解析。
   process.env.DC_AGENT_PATH = rootPath;
   process.env.DC_AGENT_NAME = String(config.name || path.basename(rootPath));
 
-  setAgentRuntimeBase({
+  setAgentStateBase({
     cwd: resolvedCwd,
     rootPath,
     logger: defaultLogger,
@@ -155,7 +142,7 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
   });
 
   const systems = loadStaticSystems(rootPath);
-  setAgentRuntimeBase({
+  setAgentStateBase({
     cwd: resolvedCwd,
     rootPath,
     logger: defaultLogger,
@@ -164,14 +151,10 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     systems,
   });
 
-  // 关键点（中文）：执行模型只维护一份，统一挂在 RuntimeState 中供 execution runtime 读取。
-  setExecutionModel(null);
-  setExecutionModel(
-    await createModel({
-      config,
-      getRequestContext,
-    }),
-  );
+  const model = await createModel({
+    config,
+    getRequestContext,
+  });
 
   const compactor = new SummaryCompactor({
     keepLastMessages: config.context?.messages?.keepLastMessages,
@@ -180,16 +163,15 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     compactRatio: config.context?.messages?.compactRatio,
   });
 
-  // 关键点（中文）：system 域逻辑全部收敛到 prompts/system，runtime 这里只做依赖注入。
   const system = new PromptSystem({
     projectRoot: rootPath,
-    getStaticSystemPrompts: () => getAgentRuntimeBase().systems,
-    getRuntime: () => getExecutionRuntime(),
+    getStaticSystemPrompts: () => getAgentStateBase().systems,
+    getRuntime: () => getExecutionContext(),
     profile: "chat",
   });
 
-  const runtimeRegistry = new SessionRuntimeRegistry({
-    model: requireExecutionModel(),
+  const runtimeRegistry = new SessionRuntimeStore({
+    model,
     logger: defaultLogger,
     createPersistor: (sessionId) => {
       const parsedRun = parseTaskRunSessionId(sessionId);
@@ -220,23 +202,26 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     getTools: () => shellTools,
   });
 
-  const sessionRegistry = new SessionRegistry({
+  const sessionStore = new SessionStore({
     runtimeRegistry,
   });
 
-  const agentRuntime: AgentRuntime = {
+  const pluginRegistry = createAgentPluginRegistry();
+  const agentState: AgentState = {
     cwd: resolvedCwd,
     rootPath,
     logger: defaultLogger,
     config,
     env: projectEnv,
     systems,
-    sessionRegistry,
+    model,
+    sessionStore,
     services: new Map(),
+    pluginRegistry,
   };
-  agentRuntime.services = createAgentServices(agentRuntime);
+  agentState.services = createAgentServices(agentState);
 
-  setAgentRuntime(agentRuntime);
+  setAgentState(agentState);
   setShellToolRuntime({
     invokeService: (params) => getInvokeServicePort().invoke(params),
   });

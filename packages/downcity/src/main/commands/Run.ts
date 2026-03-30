@@ -1,5 +1,5 @@
 /**
- * 前台启动 Agent Runtime（当前终端进程内运行）。
+ * 前台启动 Agent 进程（当前终端进程内运行）。
  *
  * 场景
  * - `city agent start --foreground` 走这里（当前终端前台运行）
@@ -13,16 +13,16 @@
 import { startServer } from "@/main/index.js";
 
 import {
-  getExecutionRuntime,
-  getAgentRuntime,
-  initAgentRuntime,
+  getExecutionContext,
+  getAgentState,
+  initAgentState,
   stopAgentHotReload,
-} from "@agent/AgentRuntime.js";
+} from "@agent/AgentState.js";
 import type { StartOptions } from "@/types/Start.js";
 import { logger } from "@utils/logger/Logger.js";
 import {
-  startAllServiceRuntimes,
-  stopAllServiceRuntimes,
+  startAllServices,
+  stopAllServices,
 } from "@/main/service/Manager.js";
 import {
   startServiceScheduleRuntime,
@@ -30,21 +30,21 @@ import {
 } from "@/main/service/schedule/Runtime.js";
 
 /**
- * 运行态启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
+ * 前台启动入口（由 `agent start` 前台模式与内部 daemon 子进程复用）。
  *
  * 职责（中文）
- * - 初始化 runtime 状态（配置、日志、services 依赖）
+ * - 初始化 agent 状态（配置、日志、services 依赖）
  * - 解析并合并启动参数（CLI > downcity.json > 默认值）
  * - 启动主 HTTP 服务
- * - 启动 service runtimes（例如 task cron）
+ * - 启动 services（例如 task cron）
  * - 统一处理进程信号并优雅停机
  */
 export async function runCommand(
   cwd: string = ".",
   options: StartOptions,
 ): Promise<void> {
-  // 初始化加载（进程级单例运行时状态：root/config/utils/logger/chat/agents 等）
-  await initAgentRuntime(cwd);
+  // 初始化加载（进程级单例状态：root/config/utils/logger/chat/agents 等）
+  await initAgentState(cwd);
   // 端口解析（中文）：允许 number/string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,
@@ -100,9 +100,9 @@ export async function runCommand(
       // ignore
     }
 
-    // Stop service runtimes
+    // 停止全部 service
     try {
-      await stopAllServiceRuntimes(getExecutionRuntime());
+      await stopAllServices(getExecutionContext());
     } catch {
       // ignore
     }
@@ -120,22 +120,22 @@ export async function runCommand(
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-  // 启动 service runtimes（含 task cron 等模块内生命周期逻辑）
+  // 启动全部 service（含 task cron 等模块内生命周期逻辑）
   // 调度策略（中文）：单服务失败不阻断主服务启动，仅记录日志。
   try {
-    const lifecycle = await startAllServiceRuntimes(getExecutionRuntime());
+    const lifecycle = await startAllServices(getExecutionContext());
     for (const item of lifecycle.results) {
       if (item.success) continue;
       logger.error(
-        `Service runtime start failed: ${item.service?.name || "unknown"} - ${item.error || "unknown error"}`,
+        `Service start failed: ${item.service?.name || "unknown"} - ${item.error || "unknown error"}`,
       );
     }
   } catch (e) {
-    logger.error(`Service runtime bootstrap failed: ${String(e)}`);
+    logger.error(`Service bootstrap failed: ${String(e)}`);
   }
 
   try {
-    await startServiceScheduleRuntime(getExecutionRuntime());
+    await startServiceScheduleRuntime(getExecutionContext());
   } catch (e) {
     logger.error(`Service schedule runtime bootstrap failed: ${String(e)}`);
   }

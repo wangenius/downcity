@@ -5,7 +5,7 @@
 如果你要快速理解当前实现，建议按下面顺序阅读：
 
 1. [文件结构与模块职责](./file-structure-and-dependencies.md)
-2. [Runtime 与 Session 架构](./runtime-and-session.md)
+2. [Agent 与 Session 架构](./agent-and-session.md)
 3. [Service 与 Plugin 架构](./service-and-plugin.md)
 4. [Chat 端到端流程](./chat-end-to-end-flow.md)
 5. [启动与 HTTP/API 装配流程](./startup-and-api-flow.md)
@@ -18,7 +18,7 @@
 ```text
 main 负责装配
 agent 负责宿主状态
-ExecutionRuntime 负责统一执行视图
+ExecutionContext 负责统一执行视图
 session 负责真正执行
 service 负责主流程
 plugin 负责被动扩展
@@ -32,7 +32,7 @@ plugin 负责被动扩展
 flowchart TD
   USER["外部输入 / CLI / 渠道 / 调度"] --> MAIN["main 控制面"]
   MAIN --> AGENT["agent 宿主"]
-  AGENT --> RUNTIME["ExecutionRuntime"]
+  AGENT --> RUNTIME["ExecutionContext"]
   RUNTIME --> SERVICE["service 主流程"]
   SERVICE --> PLUGIN["plugin 固定点增强"]
   SERVICE --> SESSION["session 执行"]
@@ -46,7 +46,7 @@ flowchart TD
 
 1. `main` 是控制面与装配层
 2. `agent` 是进程级宿主，不是单次执行实例
-3. `ExecutionRuntime` 是统一能力视图，不是第二套宿主系统
+3. `ExecutionContext` 是统一能力视图，不是第二套宿主系统
 4. `session` 才是真正执行 prompt / tools / history 的单位
 5. `service` 是主流程层
 6. `plugin` 是被动扩展层
@@ -63,12 +63,12 @@ flowchart TD
 - 每层放什么文件
 - 模块依赖方向是什么
 
-### [Runtime 与 Session 架构](./runtime-and-session.md)
+### [Agent 与 Session 架构](./agent-and-session.md)
 
 适合回答：
 
 - `agent` 到底是什么
-- `ExecutionRuntime` 和 `session` 的关系是什么
+- `ExecutionContext` 和 `session` 的关系是什么
 - 启动顺序是什么
 
 ### [Service 与 Plugin 架构](./service-and-plugin.md)
@@ -91,7 +91,7 @@ flowchart TD
 适合回答：
 
 - daemon 和 run 的关系是什么
-- agent 为什么要先 init runtime 再起 server
+- agent 为什么要先 init state/context 再起 server
 - service/plugin/execute 三类 API 分别怎么走
 
 ### [Task / Shell / Memory 执行链路](./task-shell-memory-flow.md)
@@ -107,9 +107,9 @@ flowchart TD
 ### 启动与宿主
 
 - `packages/downcity/src/main/commands/Run.ts`
-- `packages/downcity/src/agent/AgentRuntime.ts`
+- `packages/downcity/src/agent/AgentState.ts`
 - `packages/downcity/src/agent/RuntimeState.ts`
-- `packages/downcity/src/agent/ExecutionRuntime.ts`
+- `packages/downcity/src/agent/ExecutionContext.ts`
 
 ### 控制面与注册
 
@@ -121,8 +121,8 @@ flowchart TD
 
 ### Session 主轴
 
-- `packages/downcity/src/sessions/SessionRegistry.ts`
-- `packages/downcity/src/sessions/SessionRuntimeRegistry.ts`
+- `packages/downcity/src/sessions/SessionStore.ts`
+- `packages/downcity/src/sessions/SessionRuntimeStore.ts`
 - `packages/downcity/src/sessions/SessionRuntime.ts`
 - `packages/downcity/src/sessions/SessionCore.ts`
 

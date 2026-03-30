@@ -1,6 +1,6 @@
 {
   "name": "downcity",
-  "version": "1.0.380",
+  "version": "1.0.384",
   "type": "module",
   "description": "每一个文件仓库都是一个Agent，搭建你的Agent City",
   "bin": {
@@ -8,7 +8,7 @@
     "city": "./bin/main/commands/Index.js"
   },
   "scripts": {
-    "build": "node -e \"require('node:fs').rmSync('bin', { recursive: true, force: true })\" && tsc && tsc-alias && node scripts/copy-prompt-assets.mjs",
+    "build": "node -e \"require('node:fs').rmSync('bin', { recursive: true, force: true })\" && tsc && tsc-alias && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",
     "dev": "tsc --watch",
     "start": "node bin/start.js",
     "test": "npm run build && node --test test/**/*.test.mjs",
@@ -16,7 +16,8 @@
     "test:model:smoke": "node test/test-model.mjs",
     "typecheck": "tsc --noEmit",
     "lint:boundaries": "node scripts/lint-import-boundaries.mjs",
-    "lint": "npm run lint:boundaries"
+    "lint": "npm run lint:boundaries",
+    "prepack": "npm run build"
   },
   "keywords": [
     "agent",

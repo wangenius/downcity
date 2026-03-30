@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一管理 PROFILE.md / SOUL.md 的加载与热重载。
- * - 仅依赖“当前 systems 读取 + systems 应用”回调，不耦合 AgentRuntime 具体实现。
+ * - 仅依赖“当前 systems 读取 + systems 应用”回调，不耦合 AgentState 具体实现。
  */
 
 import { DEFAULT_SHIP_PROMPTS } from "@sessions/prompts/system/SystemDomain.js";

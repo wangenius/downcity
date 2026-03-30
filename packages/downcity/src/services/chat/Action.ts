@@ -6,7 +6,7 @@
  * - 通过 RequestContext（ALS）读取当前请求上下文
  */
 
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import { requestContext } from "@sessions/RequestContext.js";
 import {
   sendActionByChatKey,
@@ -57,7 +57,7 @@ function readEnvNumber(name: string): number | undefined {
 export function resolveChatSessionSnapshot(input?: {
   sessionId?: string;
   chatKey?: string;
-  context?: ExecutionRuntime;
+  context?: ExecutionContext;
 }): ChatSessionSnapshot {
   const requestCtx = requestContext.getStore();
 
@@ -132,7 +132,7 @@ export function mapSessionIdToChatKey(sessionId?: string): string | undefined {
 export function resolveSessionId(input?: {
   sessionId?: string;
   chatKey?: string;
-  context?: ExecutionRuntime;
+  context?: ExecutionContext;
 }): string | undefined {
   const snapshot = resolveChatSessionSnapshot({
     sessionId: input?.sessionId,
@@ -149,7 +149,7 @@ export function resolveSessionId(input?: {
 export function resolveChatKey(input?: {
   chatKey?: string;
   sessionId?: string;
-  context?: ExecutionRuntime;
+  context?: ExecutionContext;
 }): string | undefined {
   const snapshot = resolveChatSessionSnapshot({
     chatKey: input?.chatKey,
@@ -170,7 +170,7 @@ export function resolveChatKey(input?: {
  */
 function resolveReplyMessageIdForChatSend(params: {
   chatKey: string;
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   replyToMessage: boolean;
   explicitMessageId?: string;
 }): string | undefined {
@@ -265,7 +265,7 @@ async function waitBeforeSend(params: {
  * - 返回统一结构，便于上层链路做可观测与错误汇总。
  */
 export async function sendChatTextByChatKey(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   chatKey: string;
   text: string;
   delayMs?: number;
@@ -367,7 +367,7 @@ export async function sendChatTextByChatKey(params: {
  * - 动作分发与文本发送复用同一 chatKey 解析与 channel dispatcher。
  */
 export async function sendChatActionByChatKey(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   chatKey: string;
   action: ChatDispatchAction;
   messageId?: string;
@@ -406,7 +406,7 @@ export async function sendChatActionByChatKey(params: {
  * - sessionId -> chatKey 映射关系只在 chat service 内部维护。
  */
 export async function sendChatTextBySessionId(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   sessionId: string;
   text: string;
   delayMs?: number;
@@ -449,7 +449,7 @@ export async function sendChatTextBySessionId(params: {
  * - 删除包含：路由映射 + chat 审计目录 + session 目录 + 运行态清理。
  */
 export async function deleteChatByChatKey(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   chatKey?: string;
   sessionId?: string;
 }): Promise<ChatDeleteResponse> {

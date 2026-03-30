@@ -27,7 +27,7 @@
    - 负责后台拉起 detached 子进程
    - 负责 `.downcity/debug/` 下的 pid/log/meta
 2. `Run.ts`
-   - 负责真正初始化 runtime、启动 HTTP server、启动 services
+   - 负责真正初始化 agent state / execution context、启动 HTTP server、启动 services
 
 ---
 
@@ -77,32 +77,32 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant Run as Run.ts
-  participant Agent as agent/AgentRuntime.ts
+  participant Agent as agent/AgentState.ts
   participant Server as main/index.ts
   participant Services as main/service/Manager.ts
   participant Schedule as main/service/schedule/Runtime.ts
 
-  Run->>Agent: initAgentRuntime(cwd)
+  Run->>Agent: initAgentState(cwd)
   Run->>Run: 解析 host/port
   Run->>Server: startServer({ host, port })
-  Run->>Services: startAllServiceRuntimes(getExecutionRuntime())
-  Run->>Schedule: startServiceScheduleRuntime(getExecutionRuntime())
+  Run->>Services: startAllServiceRuntimes(getExecutionContext())
+  Run->>Schedule: startServiceScheduleRuntime(getExecutionContext())
 ```
 
 这里可以把 `Run.ts` 理解成：
 
-1. 先让 agent runtime ready
+1. 先让 agent state ready
 2. 再让 HTTP server ready
-3. 再让 service runtime ready
+3. 再让 service lifecycle ready
 4. 最后再进入长期驻留状态
 
 ---
 
-## 4. `initAgentRuntime()` 内部阶段
+## 4. `initAgentState()` 内部阶段
 
 真正的宿主初始化发生在：
 
-- `agent/AgentRuntime.ts`
+- `agent/AgentState.ts`
 
 内部主要阶段：
 
@@ -110,37 +110,39 @@ sequenceDiagram
 2. 绑定 logger 到当前项目
 3. 确保 `.downcity/` 目录结构存在
 4. 读取 global env + project env + `downcity.json`
-5. 写入 base `AgentRuntime`
+5. 写入 base `AgentState`
 6. 读取静态 systems
 7. 创建 execution model
 8. 创建 `SummaryCompactor`
 9. 创建 `PromptSystem`
-10. 创建 `SessionRuntimeRegistry`
-11. 创建 `SessionRegistry`
-12. 创建 `ChatQueueWorker`
-13. 写入 ready `AgentRuntime`
-14. 绑定 shell tool 的 invoke port
-15. 启动 prompt 热重载
+10. 创建 `SessionRuntimeStore`
+11. 创建 `SessionStore`
+12. 创建 `PluginRegistry`
+13. 创建 per-agent service instances
+14. 写入 ready `AgentState`
+15. 绑定 shell tool 的 invoke port
+16. 启动 prompt 热重载
 
 时序图：
 
 ```mermaid
 sequenceDiagram
-  participant Init as initAgentRuntime
+  participant Init as initAgentState
   participant State as RuntimeState
-  participant Session as SessionRegistry
-  participant Queue as ChatQueueWorker
+  participant Session as SessionStore
+  participant Plugin as PluginRegistry
+  participant Service as Service instances
 
-  Init->>State: setAgentRuntimeBase(...)
-  Init->>State: setExecutionModel(model)
-  Init->>Session: create SessionRuntimeRegistry + SessionRegistry
-  Init->>Queue: create ChatQueueWorker(createExecutionRuntime(agentRuntime))
-  Init->>State: setAgentRuntime(agentRuntime)
+  Init->>State: setAgentStateBase(...)
+  Init->>Session: create SessionRuntimeStore + SessionStore
+  Init->>Plugin: create plugin registry
+  Init->>Service: create per-agent service instances
+  Init->>State: setAgentState(agentState)
 ```
 
 关键理解：
 
-- `AgentRuntime` ready 之后，`getExecutionRuntime()` 才有完整执行上下文
+- `AgentState` ready 之后，`getExecutionContext()` 才有完整执行上下文
 - HTTP route 与 service lifecycle 都建立在这个前提上
 
 ---
@@ -208,12 +210,12 @@ flowchart TD
 sequenceDiagram
   participant Client as HTTP Client / CLI
   participant Route as servicesRouter
-  participant Runtime as getExecutionRuntime()
+  participant Runtime as getExecutionContext()
   participant Manager as main/service/Manager.ts
   participant Service as target service
 
   Client->>Route: POST /api/services/command
-  Route->>Runtime: getExecutionRuntime()
+  Route->>Runtime: getExecutionContext()
   Route->>Manager: runServiceCommand(..., context)
   Manager->>Service: execute(action)
 ```
@@ -221,7 +223,7 @@ sequenceDiagram
 也就是说：
 
 - route 层不懂具体 service 逻辑
-- route 层只负责取 `ExecutionRuntime` 并转发给 manager
+- route 层只负责取 `ExecutionContext` 并转发给 manager
 - manager 再去调对应 service
 
 ---
@@ -244,12 +246,12 @@ sequenceDiagram
 sequenceDiagram
   participant Client as HTTP Client / CLI
   participant Route as pluginsRouter
-  participant Runtime as getExecutionRuntime()
+  participant Runtime as getExecutionContext()
   participant PluginPort as runtime.plugins
   participant Registry as PluginRegistry
 
   Client->>Route: POST /api/plugins/action
-  Route->>Runtime: getExecutionRuntime()
+  Route->>Runtime: getExecutionContext()
   Route->>PluginPort: runAction(...)
   PluginPort->>Registry: runAction(...)
 ```
@@ -272,11 +274,11 @@ sequenceDiagram
 sequenceDiagram
   participant Client as HTTP Client
   participant Route as executeRouter
-  participant Agent as getAgentRuntime()
-  participant Registry as SessionRegistry
+  participant Agent as getAgentState()
+  participant Registry as SessionStore
 
   Client->>Route: POST /api/execute
-  Route->>Agent: getAgentRuntime()
+  Route->>Agent: getAgentState()
   Route->>Registry: appendUserMessage(sessionId, instructions)
   Route->>Registry: run(sessionId, instructions)
   Route->>Registry: appendAssistantMessage(...)
@@ -316,8 +318,8 @@ sequenceDiagram
 
 1. 后台 daemon 启动和前台运行是两层逻辑
 2. 真正运行入口始终是 `Run.ts`
-3. `initAgentRuntime()` 先让宿主 ready
+3. `initAgentState()` 先让宿主 ready
 4. HTTP route 只做桥接，不做业务执行
 5. `/api/services/*` 走 service manager
 6. `/api/plugins/*` 直接走 `runtime.plugins`
-7. `/api/execute` 直接走 `SessionRegistry`
+7. `/api/execute` 直接走 `SessionStore`

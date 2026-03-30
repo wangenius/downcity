@@ -2,20 +2,20 @@
  * Service 路由模块。
  *
  * 职责说明：
- * 1. 提供 service runtime 列表接口。
+ * 1. 提供 service 状态列表接口。
  * 2. 提供 service lifecycle 控制接口。
  * 3. 提供 service command 桥接，并挂载各 service 自身路由。
  */
 
 import { Hono } from "hono";
 import {
-  controlServiceRuntime,
-  listServiceRuntimes,
+  controlServiceState,
+  listServiceStates,
   registerAllServicesForServer,
   runServiceCommand,
 } from "@/main/service/Manager.js";
-import type { ServiceRuntimeControlAction } from "@/main/service/Manager.js";
-import { getExecutionRuntime } from "@agent/AgentRuntime.js";
+import type { ServiceStateControlAction } from "@/main/service/Manager.js";
+import { getExecutionContext } from "@agent/AgentState.js";
 
 /**
  * Service 路由。
@@ -26,7 +26,7 @@ let serviceActionRoutesRegistered = false;
 servicesRouter.get("/api/services/list", (c) => {
   return c.json({
     success: true,
-    services: listServiceRuntimes(),
+    services: listServiceStates(),
   });
 });
 
@@ -47,10 +47,10 @@ servicesRouter.post("/api/services/control", async (c) => {
     return c.json({ success: false, error: "invalid action" }, 400);
   }
 
-  const result = await controlServiceRuntime({
+  const result = await controlServiceState({
     serviceName,
-    action: action as ServiceRuntimeControlAction,
-    context: getExecutionRuntime(),
+    action: action as ServiceStateControlAction,
+    context: getExecutionContext(),
   });
   return c.json(result, result.success ? 200 : 400);
 });
@@ -76,7 +76,7 @@ servicesRouter.post("/api/services/command", async (c) => {
     command,
     payload: body?.payload,
     schedule,
-    context: getExecutionRuntime(),
+    context: getExecutionContext(),
   });
   return c.json(result, result.success ? 200 : 400);
 });
@@ -85,10 +85,10 @@ servicesRouter.post("/api/services/command", async (c) => {
  * 确保 service action API 路由只注册一次。
  *
  * 关键点（中文）
- * - 延迟到 server 启动阶段再注册，避免 `city agent create` 等无需 runtime 的命令在 import 时触发初始化错误。
+ * - 延迟到 server 启动阶段再注册，避免 `city agent create` 等无需执行上下文的命令在 import 时触发初始化错误。
  */
 export function ensureServiceActionRoutesRegistered(): void {
   if (serviceActionRoutesRegistered) return;
-  registerAllServicesForServer(servicesRouter, getExecutionRuntime());
+  registerAllServicesForServer(servicesRouter, getExecutionContext());
   serviceActionRoutesRegistered = true;
 }

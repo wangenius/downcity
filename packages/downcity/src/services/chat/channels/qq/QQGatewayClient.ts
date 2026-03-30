@@ -2,30 +2,37 @@
  * QQGatewayClient：QQ 网关连接与发送客户端。
  *
  * 关键点（中文）
- * - 这里专门负责 QQ 鉴权、Gateway WebSocket、心跳、自愈重连、消息回发。
+ * - 这里专门负责 QQ Gateway WebSocket、心跳、自愈重连与状态持有。
+ * - 鉴权 / HTTP 探活 / 发送重试已经拆到旁路模块，当前文件只保留运行时编排。
  * - QQBot 不再直接维护底层 ws/token 细节，只保留渠道编排职责。
- * - 这样可以把“平台连接状态”和“业务消息流”从概念上拆开。
  */
 
 import WebSocket, { type RawData } from "ws";
 import type { Logger } from "@utils/logger/Logger.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
+import type { JsonObject } from "@/types/Json.js";
 import type {
-  EventType as QqEventType,
   QQEventCaptureConfig,
   QQGatewayPayload,
-  QQSendMessageBody,
   QqDispatchHandler,
   QqGatewayRuntimeStatus,
 } from "@/types/QqChannel.js";
 import { EventType, OpCode } from "@/types/QqChannel.js";
 import { captureQqWsPayload } from "./QQEventCapture.js";
 import {
-  isRetryableQqSendFailure,
-  resolveQqApiErrorText,
-  waitBeforeQqSendRetry,
-} from "./QQSendSupport.js";
+  fetchQqAccessToken,
+  fetchQqGatewayUrl,
+  testQqGatewayConnection,
+} from "./QQGatewayAuth.js";
+import {
+  buildQqGatewayRuntimeStatus,
+  getQqHeartbeatAckTimeoutMs,
+  hasQqHealthyHeartbeat,
+  hasQqHeartbeatTimeout,
+  parseQqGatewayPayload,
+  resolveQqGatewayApiBase,
+  resolveQqGatewayWsUrl,
+} from "./QQGatewaySupport.js";
+import { sendQqMessageWithRetry } from "./QQGatewaySend.js";
 
 /**
  * QQGatewayClient 构造参数。
@@ -92,8 +99,6 @@ export class QQGatewayClient {
   private accessTokenExpires = 0;
 
   private readonly AUTH_API_BASE = "https://bots.qq.com";
-  private readonly API_BASE = "https://api.sgroup.qq.com";
-  private readonly SANDBOX_API_BASE = "https://sandbox.api.sgroup.qq.com";
 
   constructor(options: QQGatewayClientOptions) {
     this.rootPath = options.rootPath;
@@ -109,157 +114,56 @@ export class QQGatewayClient {
    * 获取当前鉴权字符串。
    */
   async getAuthToken(): Promise<string> {
-    const accessToken = await this.getAccessToken();
-    return `QQBot ${accessToken}`;
+    const result = await fetchQqAccessToken({
+      logger: this.logger,
+      authApiBase: this.AUTH_API_BASE,
+      appId: this.appId,
+      appSecret: this.appSecret,
+      cachedAccessToken: this.accessToken,
+      cachedAccessTokenExpiresAtMs: this.accessTokenExpires,
+    });
+    this.accessToken = result.accessToken;
+    this.accessTokenExpires = result.accessTokenExpiresAtMs;
+    return `QQBot ${result.accessToken}`;
   }
 
   /**
    * 获取网关运行态快照。
    */
   getRuntimeStatus(): QqGatewayRuntimeStatus {
-    const now = Date.now();
     const readyState = typeof this.ws?.readyState === "number" ? this.ws.readyState : null;
-    const isOpen = readyState === WebSocket.OPEN;
-    const hasContext = Boolean(String(this.wsContextId || "").trim());
-    const heartbeatHealthy = this.hasHealthyHeartbeat(now);
-    const heartbeatTimedOut = this.hasHeartbeatTimeout(now);
-    const linkState =
-      !this.isRunning
-        ? "disconnected"
-        : isOpen && hasContext && heartbeatHealthy
-          ? "connected"
-          : "unknown";
-
-    const statusText = !this.isRunning
-      ? "stopped"
-      : !isOpen
-        ? "connecting"
-        : !hasContext
-          ? "ws_open_wait_ready"
-          : heartbeatTimedOut
-            ? "heartbeat_timeout"
-            : heartbeatHealthy
-              ? "ws_online"
-              : "ws_open_wait_heartbeat";
-
-    return {
-      running: this.isRunning,
-      linkState,
-      statusText,
-      detail: {
-        appId: this.appId || null,
-        wsReadyState: readyState,
-        wsContextId: this.wsContextId || null,
-        wsReadyAtMs: this.wsReadyAtMs || null,
-        heartbeatHealthy,
-        heartbeatIntervalMs: this.heartbeatIntervalMs,
-        heartbeatAckTimeoutMs: this.getHeartbeatAckTimeoutMs(),
-        lastHeartbeatSentAtMs: this.lastHeartbeatSentAtMs || null,
-        lastHeartbeatAckAtMs: this.lastHeartbeatAckAtMs || null,
-        pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs || null,
-        reconnectAttempts: this.reconnectAttempts,
-        maxReconnectAttempts: this.maxReconnectAttempts,
-        reconnectScheduled: Boolean(this.reconnectTimer),
-        sandbox: this.useSandbox,
-      },
-    };
+    return buildQqGatewayRuntimeStatus({
+      isRunning: this.isRunning,
+      wsReadyState: readyState,
+      wsContextId: this.wsContextId,
+      wsReadyAtMs: this.wsReadyAtMs,
+      heartbeatIntervalMs: this.heartbeatIntervalMs,
+      lastHeartbeatSentAtMs: this.lastHeartbeatSentAtMs,
+      lastHeartbeatAckAtMs: this.lastHeartbeatAckAtMs,
+      pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs,
+      reconnectAttempts: this.reconnectAttempts,
+      maxReconnectAttempts: this.maxReconnectAttempts,
+      reconnectScheduled: Boolean(this.reconnectTimer),
+      useSandbox: this.useSandbox,
+      appId: this.appId,
+    });
   }
 
   /**
    * 执行 QQ 连通性测试。
    */
-  async testConnection(): Promise<ChatChannelTestResult> {
-    const startedAt = Date.now();
-    if (!this.appId || !this.appSecret) {
-      return {
-        channel: "qq",
-        success: false,
-        testedAtMs: startedAt,
-        message: "App credentials are missing",
-      };
-    }
-
-    try {
-      const authToken = await this.getAuthToken();
-      const apiBase = this.getApiBase();
-      const response = await fetch(`${apiBase}/gateway`, {
-        method: "GET",
-        headers: {
-          Authorization: authToken,
-        },
-      });
-      const raw = await response.text();
-      const now = Date.now();
-      let code: number | undefined;
-      try {
-        const parsed = JSON.parse(raw) as { code?: number };
-        code = typeof parsed.code === "number" ? parsed.code : undefined;
-      } catch {
-        // ignore parse error
-      }
-
-      if (response.ok && (code === 0 || code === undefined)) {
-        const runtime = this.getRuntimeStatus();
-        if (runtime.linkState !== "connected") {
-          if (runtime.statusText === "heartbeat_timeout") {
-            this.requestReconnect("test_detected_heartbeat_timeout", 0);
-          }
-          return {
-            channel: "qq",
-            success: false,
-            testedAtMs: now,
-            latencyMs: now - startedAt,
-            message: `QQ Open API reachable, but WS is not ready (${runtime.statusText})`,
-            detail: {
-              httpStatus: response.status,
-              code: code ?? null,
-              sandbox: this.useSandbox,
-              linkState: runtime.linkState,
-              statusText: runtime.statusText,
-            },
-          };
-        }
-        return {
-          channel: "qq",
-          success: true,
-          testedAtMs: now,
-          latencyMs: now - startedAt,
-          message: "Connected to QQ Open API",
-          detail: {
-            httpStatus: response.status,
-            code: code ?? null,
-            sandbox: this.useSandbox,
-            linkState: runtime.linkState,
-            statusText: runtime.statusText,
-          },
-        };
-      }
-
-      return {
-        channel: "qq",
-        success: false,
-        testedAtMs: now,
-        latencyMs: now - startedAt,
-        message: `QQ API check failed: HTTP ${response.status}`,
-        detail: {
-          httpStatus: response.status,
-          code: code ?? null,
-          sandbox: this.useSandbox,
-        },
-      };
-    } catch (error) {
-      const now = Date.now();
-      return {
-        channel: "qq",
-        success: false,
-        testedAtMs: now,
-        latencyMs: now - startedAt,
-        message: `QQ API check failed: ${String(error)}`,
-        detail: {
-          sandbox: this.useSandbox,
-        },
-      };
-    }
+  async testConnection() {
+    return testQqGatewayConnection({
+      appId: this.appId,
+      appSecret: this.appSecret,
+      useSandbox: this.useSandbox,
+      apiBase: this.getApiBase(),
+      getAuthToken: () => this.getAuthToken(),
+      getRuntimeStatus: () => this.getRuntimeStatus(),
+      requestReconnect: (reason, delayMs) => {
+        this.requestReconnect(reason, delayMs);
+      },
+    });
   }
 
   /**
@@ -312,68 +216,21 @@ export class QQGatewayClient {
     msgSeq: number = 1,
   ): Promise<void> {
     try {
-      const apiBase = this.getApiBase();
-      let url = "";
-      const body: QQSendMessageBody = {
-        content: text,
-        msg_type: 0,
-        msg_id: messageId,
-        msg_seq: msgSeq,
-      };
-
-      switch (chatType) {
-        case "group":
-          url = `${apiBase}/v2/groups/${chatId}/messages`;
-          break;
-        case "c2c":
-          url = `${apiBase}/v2/users/${chatId}/messages`;
-          break;
-        case "channel":
-          url = `${apiBase}/channels/${chatId}/messages`;
-          break;
-        default:
-          throw new Error(`未知的聊天类型: ${chatType}`);
-      }
-
-      this.logger.debug(`发送消息到: ${url}`);
-
-      let lastError: unknown = null;
-      for (let attempt = 1; attempt <= this.sendMaxAttempts; attempt++) {
-        try {
-          const { status, responseText } = await this.postMessageOnce({
-            url,
-            body,
-          });
-          this.logger.debug(
-            `消息发送成功: ${status}${responseText ? ` - ${responseText}` : ""}`,
-          );
-          return;
-        } catch (error) {
-          lastError = error;
-          const errorText = String(error);
-          const shouldRetry =
-            attempt < this.sendMaxAttempts &&
-            isRetryableQqSendFailure(errorText);
-          if (!shouldRetry) {
-            throw error;
-          }
-
-          this.logger.warn("QQ 回发失败，准备自动重试", {
-            attempt,
-            maxAttempts: this.sendMaxAttempts,
-            chatType,
-            chatId,
-            messageId,
-            error: errorText,
-          });
-          this.clearAccessTokenCache();
-          this.closeSocketForRecovery("send_failed_retry");
-          this.scheduleReconnect("send_failed_retry", 0);
-          await waitBeforeQqSendRetry(attempt);
-        }
-      }
-
-      throw lastError instanceof Error ? lastError : new Error(String(lastError));
+      await sendQqMessageWithRetry({
+        logger: this.logger,
+        apiBase: this.getApiBase(),
+        chatId,
+        chatType,
+        messageId,
+        text,
+        msgSeq,
+        maxAttempts: this.sendMaxAttempts,
+        requestTimeoutMs: this.sendRequestTimeoutMs,
+        getAuthToken: () => this.getAuthToken(),
+        clearAccessTokenCache: () => this.clearAccessTokenCache(),
+        closeSocketForRecovery: (reason) => this.closeSocketForRecovery(reason),
+        scheduleReconnect: (reason, delayMs) => this.scheduleReconnect(reason, delayMs),
+      });
     } catch (error) {
       this.logger.error("发送 QQ 消息失败", { error: String(error) });
       throw error;
@@ -384,144 +241,61 @@ export class QQGatewayClient {
    * 获取 API 基础地址。
    */
   private getApiBase(): string {
-    return this.useSandbox ? this.SANDBOX_API_BASE : this.API_BASE;
+    return resolveQqGatewayApiBase(this.useSandbox);
   }
 
   /**
    * 获取默认 WebSocket Gateway。
    */
   private getWsGateway(): string {
-    return this.useSandbox
-      ? "wss://sandbox.api.sgroup.qq.com/websocket"
-      : "wss://api.sgroup.qq.com/websocket";
-  }
-
-  /**
-   * 获取并缓存 Access Token。
-   */
-  private async getAccessToken(): Promise<string> {
-    if (this.accessToken && Date.now() < this.accessTokenExpires - 60000) {
-      return this.accessToken;
-    }
-
-    try {
-      const authApiBase = this.AUTH_API_BASE;
-      this.logger.info(`正在获取 Access Token... (API: ${authApiBase})`);
-
-      const requestBody = {
-        appId: this.appId,
-        clientSecret: this.appSecret,
-      };
-      this.logger.debug(`请求体: ${JSON.stringify(requestBody)}`);
-
-      const response = await fetch(`${authApiBase}/app/getAppAccessToken`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const responseText = await response.text();
-      this.logger.info(`Access Token 响应状态: ${response.status}`);
-      this.logger.debug(`Access Token 响应内容: ${responseText}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${responseText}`);
-      }
-
-      const data = JSON.parse(responseText) as {
-        access_token?: string;
-        expires_in?: number;
-        code?: number;
-        message?: string;
-      };
-      if (data.code && data.code !== 0) {
-        throw new Error(`API 错误 ${data.code}: ${data.message}`);
-      }
-      if (!data.access_token) {
-        throw new Error(`响应中没有 access_token: ${responseText}`);
-      }
-
-      this.accessToken = data.access_token;
-      this.accessTokenExpires = Date.now() + (data.expires_in || 7200) * 1000;
-      this.logger.info(
-        `Access Token 获取成功，有效期: ${data.expires_in || 7200} 秒`,
-      );
-      return this.accessToken;
-    } catch (error) {
-      this.logger.error(`获取 Access Token 失败: ${String(error)}`);
-      throw error;
-    }
+    return resolveQqGatewayWsUrl(this.useSandbox);
   }
 
   /**
    * 获取 Gateway 地址。
    */
   private async getGatewayUrl(): Promise<string> {
-    const apiBase = this.getApiBase();
-    const authToken = await this.getAuthToken();
-
-    try {
-      this.logger.info(`正在获取 Gateway 地址... (API: ${apiBase})`);
-      const response = await fetch(`${apiBase}/gateway`, {
-        method: "GET",
-        headers: {
-          Authorization: authToken,
-        },
-      });
-      const responseText = await response.text();
-      this.logger.info(`Gateway 响应状态: ${response.status}`);
-      this.logger.debug(`Gateway 响应内容: ${responseText}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${responseText}`);
-      }
-
-      const data = JSON.parse(responseText) as {
-        url?: string;
-        code?: number;
-        message?: string;
-      };
-      if (data.code && data.code !== 0) {
-        throw new Error(`API 错误 ${data.code}: ${data.message}`);
-      }
-      if (!data.url) {
-        throw new Error(`响应中没有 gateway url: ${responseText}`);
-      }
-
-      this.logger.info(`Gateway 地址: ${data.url}`);
-      return data.url;
-    } catch (error) {
-      this.logger.error(`获取 Gateway 地址失败: ${String(error)}`);
-      const fallbackUrl = this.getWsGateway();
-      this.logger.warn(`使用默认 Gateway 地址: ${fallbackUrl}`);
-      return fallbackUrl;
-    }
+    return fetchQqGatewayUrl({
+      logger: this.logger,
+      apiBase: this.getApiBase(),
+      authToken: await this.getAuthToken(),
+      fallbackWsGateway: this.getWsGateway(),
+    });
   }
 
   /**
    * 计算心跳 ACK 超时阈值。
    */
   private getHeartbeatAckTimeoutMs(): number {
-    return Math.max(this.heartbeatIntervalMs * 3, 45000);
+    return getQqHeartbeatAckTimeoutMs(this.heartbeatIntervalMs);
   }
 
   /**
    * 是否发生心跳 ACK 超时。
    */
   private hasHeartbeatTimeout(nowMs: number = Date.now()): boolean {
-    if (!this.pendingHeartbeatSinceMs) return false;
-    return nowMs - this.pendingHeartbeatSinceMs > this.getHeartbeatAckTimeoutMs();
+    return hasQqHeartbeatTimeout(
+      {
+        heartbeatIntervalMs: this.heartbeatIntervalMs,
+        pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs,
+        wsReadyAtMs: this.wsReadyAtMs,
+      },
+      nowMs,
+    );
   }
 
   /**
    * 心跳是否健康。
    */
   private hasHealthyHeartbeat(nowMs: number = Date.now()): boolean {
-    if (!this.wsReadyAtMs) return false;
-    if (!this.pendingHeartbeatSinceMs) return true;
-    return !this.hasHeartbeatTimeout(nowMs);
+    return hasQqHealthyHeartbeat(
+      {
+        heartbeatIntervalMs: this.heartbeatIntervalMs,
+        pendingHeartbeatSinceMs: this.pendingHeartbeatSinceMs,
+        wsReadyAtMs: this.wsReadyAtMs,
+      },
+      nowMs,
+    );
   }
 
   /**
@@ -713,30 +487,7 @@ export class QQGatewayClient {
    * 解析原始 Gateway 载荷。
    */
   private parseGatewayPayload(rawData: RawData): QQGatewayPayload | null {
-    try {
-      const text = Buffer.isBuffer(rawData)
-        ? rawData.toString("utf-8")
-        : Array.isArray(rawData)
-          ? Buffer.concat(rawData).toString("utf-8")
-          : typeof rawData === "string"
-            ? rawData
-            : Buffer.from(rawData).toString("utf-8");
-      const parsed = JSON.parse(text) as JsonValue;
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-      const obj = parsed as JsonObject;
-      const op = typeof obj.op === "number" ? obj.op : Number(obj.op);
-      if (!Number.isFinite(op)) return null;
-      return {
-        op,
-        ...(obj.d && typeof obj.d === "object" && !Array.isArray(obj.d)
-          ? { d: obj.d as JsonObject }
-          : {}),
-        ...(typeof obj.s === "number" ? { s: obj.s } : {}),
-        ...(typeof obj.t === "string" ? { t: obj.t } : {}),
-      };
-    } catch {
-      return null;
-    }
+    return parseQqGatewayPayload(rawData);
   }
 
   /**
@@ -886,52 +637,5 @@ export class QQGatewayClient {
     if (!this.heartbeatInterval) return;
     clearInterval(this.heartbeatInterval);
     this.heartbeatInterval = null;
-  }
-
-  /**
-   * 执行一次消息投递请求。
-   */
-  private async postMessageOnce(params: {
-    url: string;
-    body: QQSendMessageBody;
-  }): Promise<{ status: number; responseText: string }> {
-    const authToken = await this.getAuthToken();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, this.sendRequestTimeoutMs);
-
-    let response: Response;
-    try {
-      response = await fetch(params.url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authToken,
-        },
-        body: JSON.stringify(params.body),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      const errorText = String(error);
-      if (errorText.toLowerCase().includes("abort")) {
-        throw new Error(`QQ send failed: timeout after ${this.sendRequestTimeoutMs}ms`);
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    const responseText = await response.text();
-    if (!response.ok) {
-      this.logger.error(`发送消息失败: ${response.status} - ${responseText}`);
-      throw new Error(`QQ send failed: HTTP ${response.status}: ${responseText}`);
-    }
-
-    const apiError = resolveQqApiErrorText(responseText);
-    if (apiError) {
-      throw new Error(`QQ send failed: ${apiError}`);
-    }
-    return { status: response.status, responseText };
   }
 }

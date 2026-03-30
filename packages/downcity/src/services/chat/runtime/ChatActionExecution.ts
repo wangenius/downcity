@@ -9,7 +9,7 @@
 
 import path from "node:path";
 import type { JsonObject } from "@/types/Json.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,
@@ -49,7 +49,7 @@ function toChatHistoryView(events: ChatHistoryEventV1[]): JsonObject[] {
  * 执行 `chat.context` action。
  */
 export async function executeChatContextAction(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   payload: ChatSessionActionPayload;
 }) {
   const snapshot = resolveChatSessionSnapshot({
@@ -69,7 +69,7 @@ export async function executeChatContextAction(params: {
  * 执行 `chat.list` action。
  */
 export async function executeChatListAction(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   payload: ChatListActionPayload;
 }) {
   const rawChannel = String(params.payload.channel || "").trim();
@@ -135,7 +135,7 @@ export async function executeChatListAction(params: {
  * 执行 `chat.info` action。
  */
 export async function executeChatInfoAction(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   payload: ChatInfoActionPayload;
 }) {
   const explicitSessionId = String(params.payload.sessionId || "").trim();
@@ -195,7 +195,7 @@ export async function executeChatInfoAction(params: {
  * 执行 `chat.history` action。
  */
 export async function executeChatHistoryAction(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   payload: ChatHistoryActionPayload;
 }) {
   const payload = params.payload;
@@ -245,7 +245,7 @@ export async function executeChatHistoryAction(params: {
  * 执行 `chat.send` action。
  */
 export async function executeChatSendAction(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   payload: ChatSendActionPayload;
 }) {
   const chatKey = resolveChatKey({
@@ -294,7 +294,7 @@ export async function executeChatSendAction(params: {
  * 执行 `chat.react` action。
  */
 export async function executeChatReactAction(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   payload: ChatReactActionPayload;
 }) {
   const chatKey = resolveChatKey({
@@ -340,7 +340,7 @@ export async function executeChatReactAction(params: {
  * 执行 `chat.delete` action。
  */
 export async function executeChatDeleteAction(params: {
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   payload: ChatDeleteActionPayload;
 }) {
   const result = await deleteChatByChatKey({

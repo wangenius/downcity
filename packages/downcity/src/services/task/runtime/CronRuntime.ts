@@ -6,7 +6,7 @@
  * - 该模块是 task service 内部实现细节，core 只通过 service lifecycle 间接调用。
  */
 
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import { registerTaskCronJobs } from "@services/task/Scheduler.js";
 import { TaskCronTriggerEngine } from "./CronTrigger.js";
 
@@ -25,7 +25,7 @@ let taskCronEngine: TaskCronTriggerEngine | null = null;
  * - 对象：表示本次实际完成注册与启动。
  */
 export async function startTaskCronRuntime(
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<TaskCronRegisterResult | null> {
   if (taskCronEngine) return null;
 
@@ -59,7 +59,7 @@ export async function stopTaskCronRuntime(): Promise<boolean> {
  * 重启 task cron runtime（重新加载任务定义并重新注册）。
  */
 export async function restartTaskCronRuntime(
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<TaskCronRegisterResult> {
   await stopTaskCronRuntime();
   const started = await startTaskCronRuntime(context);

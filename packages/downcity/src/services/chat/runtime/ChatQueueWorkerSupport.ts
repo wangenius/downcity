@@ -8,7 +8,7 @@
 
 import type { ChatQueueWorkerConfig } from "@/types/ChatQueueWorker.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
-import { drainChatQueueLane, getChatQueueLaneSize } from "./ChatQueue.js";
+import type { ChatQueueStorePort } from "./ChatQueueStore.js";
 
 const CHANNEL_ERROR_TEXT_MAX_LENGTH = 480;
 const DEFAULT_MERGE_DEBOUNCE_MS = 600;
@@ -89,13 +89,14 @@ export async function collectInitialBurstItems(params: {
   laneKey: string;
   first: ChatQueueItem;
   config: ChatQueueWorkerConfig;
+  queueStore: ChatQueueStorePort;
 }): Promise<ChatQueueItem[]> {
   if (params.first.kind !== "exec") return [params.first];
   if (!isBurstMergeEnabled(params.config)) return [params.first];
 
   const startedAt = Date.now();
   let lastInboundAt = startedAt;
-  let knownLaneSize = getChatQueueLaneSize(params.laneKey);
+  let knownLaneSize = params.queueStore.getLaneSize(params.laneKey);
 
   while (true) {
     const now = Date.now();
@@ -120,13 +121,13 @@ export async function collectInitialBurstItems(params: {
       if (typeof timer.unref === "function") timer.unref();
     });
 
-    const laneSize = getChatQueueLaneSize(params.laneKey);
+    const laneSize = params.queueStore.getLaneSize(params.laneKey);
     if (laneSize > knownLaneSize) {
       knownLaneSize = laneSize;
       lastInboundAt = Date.now();
     }
   }
 
-  const drained = drainChatQueueLane(params.laneKey);
+  const drained = params.queueStore.drain(params.laneKey);
   return drained.length > 0 ? [params.first, ...drained] : [params.first];
 }

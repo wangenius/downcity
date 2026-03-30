@@ -6,7 +6,7 @@
  * - service 通过这里暴露 queue 生命周期，不直接散落调用细节。
  */
 
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   ChatEnqueueEffectInput,
   ChatEnqueuePipelineInput,
@@ -22,7 +22,7 @@ function normalizeText(value: string): string {
  * 入队前增强。
  */
 export async function prepareChatEnqueue(params: {
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   input: ChatEnqueuePipelineInput;
 }): Promise<ChatEnqueuePipelineInput> {
   const normalized: ChatEnqueuePipelineInput = {
@@ -39,7 +39,7 @@ export async function prepareChatEnqueue(params: {
  * 入队后通知。
  */
 export async function emitChatEnqueueEffect(params: {
-  runtime: ExecutionRuntime;
+  runtime: ExecutionContext;
   input: ChatEnqueueEffectInput;
 }): Promise<void> {
   await params.runtime.plugins.effect(

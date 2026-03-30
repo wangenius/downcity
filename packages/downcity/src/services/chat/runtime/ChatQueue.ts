@@ -1,10 +1,9 @@
 /**
- * ChatQueue（进程内队列）。
+ * ChatQueue 共享门面。
  *
  * 关键点（中文）
- * - 进程内共享队列：services 入队、process 消费
- * - 作为插件级模块，被 process 直接引用
- * - 允许后续替换为 IPC/DB，不影响调用方
+ * - 迁移阶段保留旧函数式 API，内部委托给共享 `ChatQueueStore`。
+ * - 新代码应优先通过 `ChatQueueStore` 实例或 `resolveChatQueueStore(runtime)` 使用队列。
  */
 
 import type {
@@ -12,124 +11,67 @@ import type {
   ChatQueueEnqueueResult,
   ChatQueueItem,
 } from "@services/chat/types/ChatQueue.js";
+import {
+  ChatQueueStore,
+  getSharedChatQueueStore,
+  resolveChatQueueStore,
+  type ChatQueueEnqueueListener,
+  type ChatQueueStorePort,
+} from "./ChatQueueStore.js";
 
-type EnqueueListener = (laneKey: string) => void;
-
-const lanes: Map<string, ChatQueueItem[]> = new Map();
-const listeners: Set<EnqueueListener> = new Set();
-let nextSeq = 1;
-
-function generateItemId(): string {
-  const seq = nextSeq;
-  nextSeq += 1;
-  return `q:${Date.now().toString(36)}:${seq.toString(36)}`;
-}
-
-function getLane(key: string): ChatQueueItem[] {
-  const lane = lanes.get(key);
-  if (lane) return lane;
-  const created: ChatQueueItem[] = [];
-  lanes.set(key, created);
-  return created;
-}
-
-function normalizeLaneKey(raw: string): string {
-  const key = String(raw || "").trim();
-  if (!key) throw new Error("ChatQueue requires a non-empty lane key");
-  return key;
-}
+export { ChatQueueStore, getSharedChatQueueStore, resolveChatQueueStore };
+export type { ChatQueueEnqueueListener, ChatQueueStorePort };
 
 /**
- * 订阅入队事件。
+ * 订阅共享 queue 的入队事件。
  */
-export function onChatQueueEnqueue(listener: EnqueueListener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+export function onChatQueueEnqueue(listener: ChatQueueEnqueueListener): () => void {
+  return getSharedChatQueueStore().onEnqueue(listener);
 }
 
 /**
- * 入队。
+ * 向共享 queue 入队。
  */
 export function enqueueChatQueue(
   params: ChatQueueEnqueueParams,
 ): ChatQueueEnqueueResult {
-  const laneKey = normalizeLaneKey(params.sessionId);
-  const lane = getLane(laneKey);
-  const item: ChatQueueItem = {
-    ...params,
-    id: generateItemId(),
-    enqueuedAt: Date.now(),
-    kind: params.kind ?? "exec",
-  };
-  lane.push(item);
-  for (const listener of listeners) {
-    try {
-      listener(laneKey);
-    } catch {
-      // ignore
-    }
-  }
-  return {
-    lanePosition: lane.length,
-    itemId: item.id,
-  };
+  return getSharedChatQueueStore().enqueue(params);
 }
 
 /**
- * 弹出 lane 的第一条消息。
+ * 从共享 queue 弹出一条消息。
  */
 export function shiftChatQueueItem(laneKey: string): ChatQueueItem | null {
-  const key = normalizeLaneKey(laneKey);
-  const lane = lanes.get(key);
-  if (!lane || lane.length === 0) return null;
-  const item = lane.shift() || null;
-  if (lane.length === 0) lanes.delete(key);
-  return item;
+  return getSharedChatQueueStore().shift(laneKey);
 }
 
 /**
- * 一次性 drain 某个 lane 的全部消息（或前 N 条）。
+ * 从共享 queue drain 某个 lane。
  */
 export function drainChatQueueLane(
   laneKey: string,
   maxItems?: number,
 ): ChatQueueItem[] {
-  const key = normalizeLaneKey(laneKey);
-  const lane = lanes.get(key);
-  if (!lane || lane.length === 0) return [];
-
-  if (typeof maxItems === "number" && maxItems > 0 && maxItems < lane.length) {
-    return lane.splice(0, Math.floor(maxItems));
-  }
-
-  lanes.delete(key);
-  return lane.splice(0, lane.length);
+  return getSharedChatQueueStore().drain(laneKey, maxItems);
 }
 
 /**
- * 获取当前有积压的 lane keys。
+ * 列出共享 queue 当前积压的 lane keys。
  */
 export function listChatQueueLanes(): string[] {
-  return Array.from(lanes.keys());
+  return getSharedChatQueueStore().listLanes();
 }
 
 /**
- * 查询 lane 长度。
+ * 查询共享 queue 某个 lane 的长度。
  */
 export function getChatQueueLaneSize(laneKey: string): number {
-  const key = String(laneKey || "").trim();
-  if (!key) return 0;
-  const lane = lanes.get(key);
-  return lane ? lane.length : 0;
+  return getSharedChatQueueStore().getLaneSize(laneKey);
 }
 
 /**
- * 清空某个 lane。
+ * 清空共享 queue 某个 lane。
  */
 export function clearChatQueueLane(laneKey: string): void {
-  const key = String(laneKey || "").trim();
-  if (!key) return;
-  lanes.delete(key);
+  getSharedChatQueueStore().clear(laneKey);
 }

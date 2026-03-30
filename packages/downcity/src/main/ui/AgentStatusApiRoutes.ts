@@ -1,8 +1,8 @@
 /**
- * Console UI Agent Runtime 探活路由。
+ * Console UI Agent 状态探活路由。
  *
  * 关键点（中文）
- * - 启动窗口期的 runtime 探测放到 UI 网关内部执行，避免浏览器直接看到 500/503 噪音。
+ * - 启动窗口期的 agent 状态探测放到 UI 网关内部执行，避免浏览器直接看到 500/503 噪音。
  * - 该接口始终返回 200 + 结构化状态，前端按状态轮询即可。
  * - ready 判定收敛在这里，保持前端逻辑尽量薄。
  */
@@ -10,7 +10,7 @@
 import type { Hono } from "hono";
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 
-type RuntimeStatusPayload = {
+type AgentStatusPayload = {
   success: boolean;
   running: boolean;
   serverReady: boolean;
@@ -47,7 +47,7 @@ function isReadyState(input: unknown): boolean {
   return ["running", "ok", "active", "enabled", "success", "idle"].includes(state);
 }
 
-async function fetchRuntimeJson<T>(input: string, init?: RequestInit): Promise<T> {
+async function fetchStatusJson<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init);
   const payload = (await response.json().catch(() => ({}))) as {
     success?: boolean;
@@ -66,9 +66,9 @@ async function fetchRuntimeJson<T>(input: string, init?: RequestInit): Promise<T
   return payload as T;
 }
 
-async function probeSelectedAgentRuntime(
+async function probeSelectedAgentStatus(
   selectedAgent: ConsoleUiAgentOption,
-): Promise<RuntimeStatusPayload> {
+): Promise<AgentStatusPayload> {
   const baseUrl = String(selectedAgent.baseUrl || "").trim();
   if (!selectedAgent.running || !baseUrl) {
     return {
@@ -77,12 +77,12 @@ async function probeSelectedAgentRuntime(
       serverReady: false,
       servicesReady: false,
       hasChatService: false,
-      reason: "Selected agent runtime endpoint is unavailable.",
+      reason: "Selected agent endpoint is unavailable.",
     };
   }
 
   try {
-    await fetchRuntimeJson<{ status?: string }>(new URL("/api/status", baseUrl).toString());
+    await fetchStatusJson<{ status?: string }>(new URL("/api/status", baseUrl).toString());
   } catch (error) {
     return {
       success: true,
@@ -96,7 +96,7 @@ async function probeSelectedAgentRuntime(
 
   let servicesPayload: ServicesResponse;
   try {
-    servicesPayload = await fetchRuntimeJson<ServicesResponse>(
+    servicesPayload = await fetchStatusJson<ServicesResponse>(
       new URL("/api/dashboard/services", baseUrl).toString(),
     );
   } catch (error) {
@@ -151,7 +151,7 @@ async function probeSelectedAgentRuntime(
   }
 
   try {
-    await fetchRuntimeJson<ChatStatusResponse>(
+    await fetchStatusJson<ChatStatusResponse>(
       new URL("/api/services/command", baseUrl).toString(),
       {
         method: "POST",
@@ -185,9 +185,9 @@ async function probeSelectedAgentRuntime(
 }
 
 /**
- * 注册 Agent Runtime 探活 API 路由。
+ * 注册 Agent 状态探活 API 路由。
  */
-export function registerConsoleUiAgentRuntimeRoutes(params: {
+export function registerConsoleUiAgentStatusRoutes(params: {
   /**
    * Hono 应用实例。
    */
@@ -203,7 +203,7 @@ export function registerConsoleUiAgentRuntimeRoutes(params: {
 }): void {
   const app = params.app;
 
-  app.get("/api/ui/agents/runtime-status", async (c) => {
+  app.get("/api/ui/agents/status", async (c) => {
     try {
       const requestedAgentId = params.readRequestedAgentId(c.req.raw);
       const selectedAgent = await params.resolveSelectedAgent(requestedAgentId);
@@ -215,9 +215,9 @@ export function registerConsoleUiAgentRuntimeRoutes(params: {
           servicesReady: false,
           hasChatService: false,
           reason: "No running agent selected.",
-        } satisfies RuntimeStatusPayload);
+        } satisfies AgentStatusPayload);
       }
-      return c.json(await probeSelectedAgentRuntime(selectedAgent));
+      return c.json(await probeSelectedAgentStatus(selectedAgent));
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
     }

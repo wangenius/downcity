@@ -27,7 +27,7 @@ packages/downcity/src/
 1. `main`
    - 控制面、启动、静态装配
 2. `agent`
-   - 进程级宿主状态与 execution runtime 构造
+   - 进程级宿主状态与 execution context 构造
 3. `sessions`
    - 执行内核
 4. `services`
@@ -45,20 +45,20 @@ packages/downcity/src/
 
 ```text
 agent/
-  AgentRuntime.ts
-  ExecutionRuntime.ts
+  AgentState.ts
+  ExecutionContext.ts
   RuntimeState.ts
 ```
 
 职责：
 
-1. `AgentRuntime.ts`
+1. `AgentState.ts`
    - 启动装配入口
    - 热重载协调
    - 对外公共导出
 2. `RuntimeState.ts`
    - 保存宿主状态与 execution model
-3. `ExecutionRuntime.ts`
+3. `ExecutionContext.ts`
    - 从宿主状态派生统一执行上下文
    - 装配 session port、service invoke port、plugin port
 
@@ -100,6 +100,10 @@ main/
 关键文件：
 
 - `main/commands/Run.ts`
+- `main/commands/Index.ts`
+- `main/commands/IndexSupport.ts`
+- `main/commands/IndexConsoleCommand.ts`
+- `main/commands/IndexAgentCommand.ts`
 - `main/commands/Model.ts`
 - `main/commands/ModelCreateCommand.ts`
 - `main/commands/ModelReadCommand.ts`
@@ -107,7 +111,7 @@ main/
 - `main/commands/ModelCommandShared.ts`
 - `main/index.ts`
 - `main/service/Manager.ts`
-- `main/service/RuntimeController.ts`
+- `main/service/ServiceStateController.ts`
 - `main/service/ServiceActionRunner.ts`
 - `main/service/ServiceActionApi.ts`
 - `main/service/Services.ts`
@@ -120,7 +124,7 @@ main/
 ```text
 main/service/
   Manager.ts
-  RuntimeController.ts
+  ServiceStateController.ts
   ServiceActionRunner.ts
   ServiceActionApi.ts
   ServiceSystemProviders.ts
@@ -133,10 +137,10 @@ main/service/
 1. `Manager.ts`
    - 门面导出
    - 对外保持稳定入口
-2. `RuntimeController.ts`
-   - service runtime record
+2. `ServiceStateController.ts`
+   - service state record
    - `start / stop / restart / status`
-   - runtime snapshot
+   - state snapshot
 3. `ServiceActionRunner.ts`
    - `runServiceCommand`
    - action 执行
@@ -182,6 +186,68 @@ main/commands/
    - provider discover
    - projectRoot / downcity.json 写入等辅助逻辑
 
+`main/commands/` 的 CLI 入口层现在也拆成了更清晰的结构：
+
+```text
+main/commands/
+  Index.ts
+  IndexSupport.ts
+  IndexConsoleCommand.ts
+  IndexConsoleProcess.ts
+  IndexConsoleStatus.ts
+  IndexAgentCommand.ts
+```
+
+分别负责：
+
+1. `Index.ts`
+   - CLI 真正入口
+   - 只负责 program 初始化与一级命令装配
+2. `IndexSupport.ts`
+   - 版本 banner
+   - 通用参数解析
+   - agent 上下文注入
+3. `IndexConsoleCommand.ts`
+   - top-level `init/start/stop/restart`
+   - `console` 命令组装配
+   - 只保留 CLI 门面
+4. `IndexConsoleProcess.ts`
+   - console 后台进程生命周期
+   - 托管 agent 恢复
+   - 前台 agent runtime 预处理
+5. `IndexConsoleStatus.ts`
+   - console / console UI / managed agents 状态面板
+   - status 输出辅助
+6. `IndexAgentCommand.ts`
+   - `agent create/start/status/doctor/restart`
+   - agent 命令树与前台运行预处理
+
+`main/commands/` 中，`city service` 相关命令现在也拆成了更清晰的控制面结构：
+
+```text
+main/commands/
+  Services.ts
+  ServiceCommandSupport.ts
+  ServiceCommandRemote.ts
+  ServiceScheduleCommand.ts
+```
+
+分别负责：
+
+1. `Services.ts`
+   - `city service` 命令组入口
+   - 只负责命令注册与子模块装配
+2. `ServiceCommandSupport.ts`
+   - service 命令公共参数解析
+   - agent/path 目标解析
+   - 项目目录校验
+3. `ServiceCommandRemote.ts`
+   - `list/status/start/stop/restart/command`
+   - 负责访问 Agent server runtime 并统一输出结果
+4. `ServiceScheduleCommand.ts`
+   - `service schedule list/info/cancel`
+   - 负责本地 schedule SQLite 的读写与输出
+
 ---
 
 ## 4. `sessions/`
@@ -191,9 +257,9 @@ sessions/
   RequestContext.ts
   SessionCore.ts
   SessionId.ts
-  SessionRegistry.ts
+  SessionStore.ts
   SessionRuntime.ts
-  SessionRuntimeRegistry.ts
+  SessionRuntimeStore.ts
   components/
   helpers/
   prompts/
@@ -201,12 +267,31 @@ sessions/
   tools/
 ```
 
+`sessions/runtime/` 中，与 `SessionCore` 相关的循环辅助已经进一步拆分：
+
+```text
+sessions/runtime/
+  SessionLoopSignals.ts
+  SessionCoreLoop.ts
+```
+
+分别负责：
+
+1. `SessionLoopSignals.ts`
+   - 不完整响应检测
+   - text-only 续跑信号
+   - 调试摘要与 nudge 文案
+2. `SessionCoreLoop.ts`
+   - tool-loop 是否继续下一轮的纯决策
+   - 固化“不完整恢复 > tool calls > text-only > stop”的优先级
+
 职责：
 
-1. `SessionRegistry`
+1. `SessionStore`
    - 统一 session 入口
-2. `SessionRuntimeRegistry`
-   - 管理 `sessionId -> runtime/persistor`
+2. `SessionRuntimeStore`
+   - 管理 `sessionId -> runtime`
+   - 委托 `SessionPersistorStore` 管理 `sessionId -> persistor`
 3. `SessionRuntime`
    - 组装一次会话执行所需依赖
 4. `SessionCore`
@@ -217,6 +302,28 @@ sessions/
    - prompt 系统
 7. `tools/*`
    - session 可用工具
+
+其中 `sessions/tools/shell/` 现在已经拆成：
+
+```text
+sessions/tools/shell/
+  ShellHelpers.ts
+  Tool.ts
+  ToolSchemas.ts
+  ToolSupport.ts
+```
+
+这表示：
+
+1. `Tool.ts`
+   - shell tool 公开入口
+   - 只保留 tool 定义与 action 装配
+2. `ToolSchemas.ts`
+   - shell tool 的输入 schema
+3. `ToolSupport.ts`
+   - runtime 注入
+   - bridge 协议
+   - 响应扁平化与错误格式化
 
 ---
 
@@ -280,6 +387,9 @@ services/chat/
     ChatQueueWorker.ts
     ...
   channels/
+    BaseChatChannel.ts
+    BaseChatChannelSupport.ts
+    BaseChatChannelQueue.ts
     telegram/
       Bot.ts
       TelegramPlatformClient.ts
@@ -287,10 +397,16 @@ services/chat/
     feishu/
       Feishu.ts
       FeishuPlatformClient.ts
+      FeishuPlatformLookup.ts
+      FeishuPlatformMessaging.ts
       FeishuInbound.ts
     qq/
       QQ.ts
+      QQSupport.ts
       QQGatewayClient.ts
+      QQGatewaySupport.ts
+      QQGatewayAuth.ts
+      QQGatewaySend.ts
       QQInbound.ts
       QQEventCapture.ts
       QQSendSupport.ts
@@ -333,30 +449,63 @@ services/chat/
 14. `runtime/ChatQueueWorker.ts`
    - chat queue 的实际消费执行器
    - 现在由 `ChatService` 生命周期负责创建与销毁
-15. `channels/qq/QQ.ts`
+15. `channels/BaseChatChannel.ts`
+   - chat 渠道基类门面
+   - 保留授权、工具发送、入站编排
+16. `channels/BaseChatChannelSupport.ts`
+   - session 映射
+   - inbound/outbound history
+   - chat meta 更新
+17. `channels/BaseChatChannelQueue.ts`
+   - audit / exec 入队封装
+   - prepare + emit queue effect 流程
+18. `channels/qq/QQ.ts`
    - QQ 渠道门面
    - 只保留授权、命令处理、入站编排与消息入队
-16. `channels/qq/QQGatewayClient.ts`
-   - QQ 鉴权、WS、心跳、重连与消息回发
-17. `channels/qq/QQInbound.ts`
+19. `channels/qq/QQSupport.ts`
+   - QQ READY 身份解析
+   - 命令映射
+   - 入站增强组装辅助
+20. `channels/qq/QQGatewayClient.ts`
+   - QQ WS、重连与 runtime 编排宿主
+21. `channels/qq/QQGatewaySupport.ts`
+   - QQ Gateway 状态快照
+   - 心跳超时判断
+   - payload 解析
+22. `channels/qq/QQGatewayAuth.ts`
+   - QQ Access Token
+   - Gateway URL
+   - HTTP 连通性测试
+23. `channels/qq/QQGatewaySend.ts`
+   - QQ 回发请求构造
+   - 超时控制
+   - 自动重试与自愈触发
+23. `channels/qq/QQInbound.ts`
    - QQ 文本清洗、作者识别、标题解析、附件归一化
-18. `channels/qq/QQEventCapture.ts`
+24. `channels/qq/QQEventCapture.ts`
    - QQ 原始 Gateway 事件落盘调试
-19. `channels/qq/QQSendSupport.ts`
+25. `channels/qq/QQSendSupport.ts`
    - QQ 回发重试与错误归因辅助
-20. `channels/feishu/Feishu.ts`
+26. `channels/feishu/Feishu.ts`
    - Feishu 渠道门面
    - 只保留授权、命令处理、入站编排与消息入队
-21. `channels/feishu/FeishuPlatformClient.ts`
-   - Feishu SDK、token、Open API 查询、附件上传下载、消息发送
-22. `channels/feishu/FeishuInbound.ts`
+27. `channels/feishu/FeishuPlatformClient.ts`
+   - Feishu runtime 宿主
+   - 持有 SDK client / ws client / token / cache
+28. `channels/feishu/FeishuPlatformLookup.ts`
+   - Feishu 用户/群聊/reply 查询
+   - 入站附件下载
+29. `channels/feishu/FeishuPlatformMessaging.ts`
+   - Feishu 平台消息发送
+   - 本地附件上传与路径解析
+30. `channels/feishu/FeishuInbound.ts`
    - Feishu 发送者身份提取、群聊判定、@mention 清理
-23. `channels/telegram/Bot.ts`
+31. `channels/telegram/Bot.ts`
    - Telegram 渠道门面
    - 只保留授权、命令处理、入站编排与消息入队
-24. `channels/telegram/TelegramPlatformClient.ts`
+32. `channels/telegram/TelegramPlatformClient.ts`
    - Telegram polling、runtime snapshot、webhook 清理、自愈重试、消息发送
-25. `channels/telegram/TelegramInbound.ts`
+33. `channels/telegram/TelegramInbound.ts`
    - Telegram chatKey、audit 文本、messageId 解析、mention 清理、附件保存
 
 `task/` 也已经进入同样的类化结构：
@@ -375,6 +524,7 @@ services/task/
     TaskRunnerProgress.ts
     TaskRunnerSession.ts
     TaskRunnerRound.ts
+    TaskRunArtifacts.ts
     Runner.ts
     CronRuntime.ts
     CronTrigger.ts
@@ -403,10 +553,13 @@ services/task/
    - task 专用 session runtime 与 messages.jsonl 落盘
 8. `runtime/TaskRunnerRound.ts`
    - agent/script 单轮执行、输出提取、模拟用户判定
-9. `runtime/Runner.ts`
+9. `runtime/TaskRunArtifacts.ts`
+   - task run 产物写入
+   - `input/output/result/error/dialogue/run.json` 的 markdown/json 格式
+10. `runtime/Runner.ts`
    - task run 的主编排链
-   - 组装多轮执行状态并写入最终 run 产物
-10. `Scheduler.ts` 与 `runtime/CronRuntime.ts`
+   - 组装多轮执行状态并协调产物写入
+11. `Scheduler.ts` 与 `runtime/CronRuntime.ts`
    - 负责 cron job 注册与重载
 
 ---
@@ -452,7 +605,7 @@ plugins/
 
 代表类型：
 
-- `ExecutionRuntime.ts`
+- `ExecutionContext.ts`
 - `DowncityConfig.ts`
 - `FeishuChannel.ts`
 - `Plugin.ts`
@@ -487,6 +640,32 @@ utils/
 2. store
 3. CLI 基础工具
 4. 时间与存储工具
+
+其中 `utils/logger/` 现在已经拆成：
+
+```text
+utils/logger/
+  Logger.ts
+  Fetch.ts
+  Format.ts
+  FormatShared.ts
+  FormatRequest.ts
+  FormatResponse.ts
+```
+
+这表示：
+
+1. `Format.ts`
+   - 对外 facade
+   - 保持稳定导出
+2. `FormatShared.ts`
+   - JSON / 文本抽取基础能力
+3. `FormatRequest.ts`
+   - request payload 摘要
+   - message/tool/system 日志格式化
+4. `FormatResponse.ts`
+   - response / SSE 摘要
+   - provider 输出类型与 function call 分析
 
 其中 `utils/store/` 现在已经拆成：
 
@@ -552,6 +731,6 @@ flowchart LR
 
 1. 概念上 `main` 在上、`agent` 在下
 2. 代码实现上，`agent` 仍会依赖部分 `main` 装配能力
-3. `services` 不直接依赖 `main/service/Manager.ts`，只依赖 `ExecutionRuntime`
+3. `services` 不直接依赖 `main/service/Manager.ts`，只依赖 `ExecutionContext`
 4. `main/service` 是控制面，不是 service 实例状态归属地
 5. 真正长期状态应放在 `agent` 宿主持有的 service instance 内

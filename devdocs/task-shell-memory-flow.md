@@ -9,7 +9,7 @@
 重点不是命令参数，而是：
 
 - 它们分别属于哪一层
-- 它们怎样使用 `ExecutionRuntime`
+- 它们怎样使用 `ExecutionContext`
 - 它们是否进入 `session`
 
 ---
@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart TD
-  ER["ExecutionRuntime"] --> TASK["task service"]
+  ER["ExecutionContext"] --> TASK["task service"]
   ER --> SHELL["shell service"]
   ER --> MEMORY["memory service"]
 
@@ -82,10 +82,10 @@ flowchart TD
 2. 根据任务定义注册 cron jobs
 3. 统一 start / stop / restart
 
-所以 `task` 的 service runtime 语义是：
+所以 `task` 的 service 状态语义是：
 
-- 一个 agent 进程里有一套 task cron runtime
-- 这套 runtime 负责触发 future task runs
+- 一个 agent 进程里有一套 task cron 状态
+- 这套状态负责触发 future task runs
 - 真正执行 task 时，再进入具体 run
 
 ---
@@ -95,8 +95,9 @@ flowchart TD
 核心文件：
 
 - `services/task/runtime/Runner.ts`
+- `services/task/runtime/TaskRunArtifacts.ts`
 
-它不是直接复用 `SessionRegistry` 的缓存 runtime，而是给 task run 建一套**独立 task session runtime**。
+它不是直接复用 `SessionStore` 的缓存状态，而是给 task run 建一套**独立 task session**。
 
 主链路如下：
 
@@ -124,6 +125,15 @@ sequenceDiagram
 3. task run 会把消息与结果写入 run 目录
 4. task run 确实是 session 语义，但不是简单复用 chat 的 session registry cache
 
+补充说明：
+
+1. `Runner.ts`
+   - 负责 task run 主编排
+   - 协调 script / agent 执行主链
+2. `TaskRunArtifacts.ts`
+   - 负责 `input/output/result/error/dialogue/run.json`
+   - 统一 run 产物的 markdown/json 格式
+
 所以 `task` 的结论是：
 
 - service 负责调度
@@ -141,6 +151,7 @@ sequenceDiagram
 运行态关键文件：
 
 - `services/shell/runtime/SessionStore.ts`
+- `services/shell/runtime/SessionStoreSupport.ts`
 
 ### `shell` 的语义
 
@@ -162,6 +173,24 @@ sequenceDiagram
 6. `wait`
 7. `close`
 
+而 session tool 侧对应的桥接层现在位于：
+
+- `sessions/tools/shell/Tool.ts`
+- `sessions/tools/shell/ToolSchemas.ts`
+- `sessions/tools/shell/ToolSupport.ts`
+
+分工是：
+
+1. `Tool.ts`
+   - tool 公开导出
+   - 把 tool 输入映射到 shell service actions
+2. `ToolSchemas.ts`
+   - shell tool 参数 schema
+3. `ToolSupport.ts`
+   - shell runtime 注入
+   - bridge 协议
+   - shell 响应扁平化
+
 ---
 
 ## 6. `shell` 当前怎么运行
@@ -177,25 +206,30 @@ sequenceDiagram
 真正的运行态都在：
 
 - `services/shell/runtime/SessionStore.ts`
+- `services/shell/runtime/SessionStoreSupport.ts`
 
-这层负责：
+其中：
 
-1. spawn subprocess
-2. 维护 shell session snapshot
-3. 收集 stdout/stderr
-4. persist output 与 snapshot
-5. wait/read/status/close
-6. 必要时回投 chat 内部通知
+1. `SessionStore.ts`
+   - 负责 `start/status/read/write/wait/close/exec` 这些公开 action 编排
+2. `SessionStoreSupport.ts`
+   - 负责 shell env 组装
+   - 负责 snapshot/output 持久化
+   - 负责 waiter 协调、session 查找、终态通知辅助
+3. `sessions/tools/shell/*`
+   - 只负责 session tool 协议适配
+   - 不再持有 shell service 本体状态
 
 图如下：
 
 ```mermaid
 flowchart LR
   A["shell service action"] --> B["SessionStore"]
-  B --> C["spawn subprocess"]
-  B --> D["ShellSessionSnapshot"]
-  B --> E["output file / snapshot file"]
-  B --> F["chat completion event(optional)"]
+  B --> C["SessionStoreSupport"]
+  B --> D["spawn subprocess"]
+  C --> E["ShellSessionSnapshot"]
+  C --> F["output file / snapshot file"]
+  C --> G["chat completion event(optional)"]
 ```
 
 这里的关键理解：
@@ -297,7 +331,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | `task` | 调度 + run | 是 | task run session |
 | `shell` | 子进程生命周期 | 否 | shell session store |
-| `memory` | 长期状态与索引 | 否 | memory runtime state |
+| `memory` | 长期状态与索引 | 否 | memory state |
 
 ---
 

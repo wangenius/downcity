@@ -5,16 +5,12 @@
  * - `QQBot` 只保留渠道层编排职责：入站授权、命令处理、消息入队、回复调度。
  * - Gateway 连接、自愈重连、消息回发已经下沉到 `QQGatewayClient`。
  * - 文本清洗、作者识别、标题解析、附件宽松提取已经下沉到 `QQInbound`。
+ * - READY 身份解析、命令映射、入站增强组装已经下沉到 `QQSupport`。
  */
 
 import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import { parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup.js";
 import { QqInboundDedupeStore } from "./QQInboundDedupe.js";
-import { resolveQqAttachmentLocalPath } from "./VoiceInput.js";
-import {
-  augmentChatInboundInput,
-  buildChatInboundText,
-} from "@services/chat/runtime/InboundAugment.js";
 import {
   buildQqAuditText,
   extractQqAuthorIdentity,
@@ -25,19 +21,21 @@ import {
 } from "./QQInbound.js";
 import { getQqEventCaptureConfig } from "./QQEventCapture.js";
 import { QQGatewayClient } from "./QQGatewayClient.js";
+import {
+  buildQqInboundInstructions,
+  extractQqReadyIdentity,
+  resolveQqC2cChatId,
+  resolveQqCommandAction,
+  resolveQqGroupChatId,
+} from "./QQSupport.js";
 import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
-import type { QqIncomingAttachment } from "@services/chat/types/QqVoice.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
-import type {
-  QQConfig,
-  QQMessageData,
-  QQReadyUser,
-} from "@/types/QqChannel.js";
+import type { QQConfig, QQMessageData } from "@/types/QqChannel.js";
 import { EventType } from "@/types/QqChannel.js";
 
 /**
@@ -54,7 +52,7 @@ export class QQBot extends BaseChatChannel {
   private botDisplayName = "";
 
   constructor(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
     appId: string,
     appSecret: string,
     useSandbox: boolean = false,
@@ -231,33 +229,10 @@ export class QQBot extends BaseChatChannel {
    * 捕获 READY 事件中的机器人身份信息。
    */
   private captureReadyIdentity(data: JsonObject): void {
-    const wsContextId = typeof data.context_id === "string" ? data.context_id : "";
-    this.logger.info(`QQ Bot 已就绪，WS Context ID: ${wsContextId}`);
-    const readyUser =
-      data.user && typeof data.user === "object" && !Array.isArray(data.user)
-        ? (data.user as QQReadyUser)
-        : undefined;
-    this.botDisplayName = [
-      readyUser?.username,
-      readyUser?.nickname,
-      readyUser?.name,
-      readyUser?.bot_name,
-      readyUser?.user?.username,
-      readyUser?.user?.nickname,
-      readyUser?.user?.name,
-    ]
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .find(Boolean) || "";
-    this.botUserId =
-      typeof readyUser?.id === "string"
-        ? readyUser.id.trim()
-        : typeof readyUser?.user_id === "string"
-          ? readyUser.user_id.trim()
-          : typeof readyUser?.user_openid === "string"
-            ? readyUser.user_openid.trim()
-            : typeof readyUser?.openid === "string"
-              ? readyUser.openid.trim()
-              : "";
+    const identity = extractQqReadyIdentity(data);
+    this.botDisplayName = identity.botDisplayName;
+    this.botUserId = identity.botUserId;
+    this.logger.info(`QQ Bot 已就绪，WS Context ID: ${identity.wsContextId}`);
     this.logger.info(`用户: ${this.botDisplayName || "N/A"}`);
   }
 
@@ -273,16 +248,8 @@ export class QQBot extends BaseChatChannel {
     const messageId =
       typeof data.id === "string" ? data.id.trim() : String(data.id || "").trim();
     if (!messageId) return;
-    const groupId = [
-      data.group_openid,
-      data.group_id,
-      data.group_code,
-      data.group_uin,
-      data.channel_id,
-      data.guild_id,
-    ]
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .find(Boolean) || "";
+
+    const groupId = resolveQqGroupChatId(data);
     if (!groupId) {
       this.logger.warn("QQ 群消息缺少 groupId，已忽略", {
         eventType: eventType || EventType.GROUP_MESSAGE_CREATE,
@@ -308,23 +275,10 @@ export class QQBot extends BaseChatChannel {
     if (!messageId) return;
 
     const actor = extractQqAuthorIdentity(data.author, data);
-    const chatId = [
-      actor.userId,
-      data.user_openid,
-      data.openid,
-      data.author_id,
-      data.author?.user_openid,
-      data.author?.member_openid,
-      data.author?.openid,
-      data.author?.id,
-      data.author?.user_id,
-      data.author?.user?.user_openid,
-      data.author?.user?.openid,
-      data.author?.user?.id,
-      data.author?.user?.user_id,
-    ]
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .find(Boolean) || "";
+    const chatId = resolveQqC2cChatId({
+      data,
+      actorUserId: actor.userId,
+    });
     if (!chatId) {
       this.logger.warn("QQ C2C 消息缺少 userId，已忽略", {
         eventType: EventType.C2C_MESSAGE_CREATE,
@@ -473,12 +427,15 @@ export class QQBot extends BaseChatChannel {
       return;
     }
 
-    const instructions = await this.buildInboundInstructions({
+    const instructions = await buildQqInboundInstructions({
+      runtime: this.context,
+      rootPath: this.rootPath,
       chatId,
       chatKey,
       messageId,
       userMessage: cleanedText,
       attachments: incomingAttachments,
+      getAuthToken: () => this.gateway.getAuthToken(),
     });
     if (!instructions) {
       await enqueueAudit({ reason: "empty_after_build" });
@@ -555,12 +512,15 @@ export class QQBot extends BaseChatChannel {
       return;
     }
 
-    const instructions = await this.buildInboundInstructions({
+    const instructions = await buildQqInboundInstructions({
+      runtime: this.context,
+      rootPath: this.rootPath,
       chatId: channelId,
       chatKey: this.getChatKey({ chatId: channelId, chatType }),
       messageId,
       userMessage,
       attachments: incomingAttachments,
+      getAuthToken: () => this.gateway.getAuthToken(),
     });
     if (!instructions) return;
 
@@ -597,65 +557,6 @@ export class QQBot extends BaseChatChannel {
   }
 
   /**
-   * 构造入站执行指令（文本 + QQ 语音转写）。
-   */
-  private async buildInboundInstructions(params: {
-    chatId: string;
-    chatKey: string;
-    messageId: string;
-    userMessage: string;
-    attachments: QqIncomingAttachment[];
-  }): Promise<string> {
-    const text = String(params.userMessage || "").trim();
-    const authToken = await this.gateway.getAuthToken();
-    const resolvedAttachments = await Promise.all(
-      params.attachments.map(async (attachment) => {
-        const base = {
-          channel: "qq" as const,
-          kind: attachment.kind,
-          ...(attachment.fileName ? { fileName: attachment.fileName } : {}),
-          ...(attachment.contentType ? { contentType: attachment.contentType } : {}),
-          ...(attachment.attachmentId ? { attachmentId: attachment.attachmentId } : {}),
-        };
-        if (attachment.kind !== "voice" && attachment.kind !== "audio") {
-          return {
-            ...base,
-            ...(attachment.localPath ? { path: attachment.localPath } : {}),
-          };
-        }
-        try {
-          const localPath = await resolveQqAttachmentLocalPath({
-            rootPath: this.rootPath,
-            attachment,
-            authToken,
-          });
-          return {
-            ...base,
-            ...(localPath ? { path: localPath } : {}),
-          };
-        } catch {
-          return base;
-        }
-      }),
-    );
-
-    return buildChatInboundText(
-      await augmentChatInboundInput({
-        runtime: this.context,
-        input: {
-          channel: "qq",
-          chatId: params.chatId,
-          chatKey: params.chatKey,
-          messageId: params.messageId,
-          rootPath: this.rootPath,
-          bodyText: text || undefined,
-          attachments: resolvedAttachments,
-        },
-      }),
-    );
-  }
-
-  /**
    * 处理命令消息。
    */
   private async handleCommand(
@@ -665,41 +566,14 @@ export class QQBot extends BaseChatChannel {
     command: string,
   ): Promise<void> {
     this.logger.info(`收到命令: ${command}`);
-
-    let responseText = "";
-    switch (command.toLowerCase().split(" ")[0]) {
-      case "/help":
-      case "/帮助":
-        responseText = `🤖 Downcity Bot
-
-可用命令:
-- /help 或 /帮助 - 查看帮助信息
-- /status 或 /状态 - 查看 Agent 状态
-- /tasks 或 /任务 - 查看任务列表
-- /clear 或 /清除 - 彻底删除当前对话
-- <任意消息> - 执行指令`;
-        break;
-      case "/status":
-      case "/状态":
-        responseText = "📊 Agent 状态: 运行中\n任务数: 0\n待审批: 0";
-        break;
-      case "/tasks":
-      case "/任务":
-        responseText = "📋 任务列表\n暂无任务";
-        break;
-      case "/clear":
-      case "/清除":
-        await this.clearChatByTarget({
-          chatId,
-          chatType,
-        });
-        responseText = "✅ 对话已彻底删除";
-        break;
-      default:
-        responseText = `未知命令: ${command}\n输入 /help 查看可用命令`;
+    const action = resolveQqCommandAction(command);
+    if (action.action === "clear_chat") {
+      await this.clearChatByTarget({
+        chatId,
+        chatType,
+      });
     }
-
-    await this.gateway.sendMessage(chatId, chatType, messageId, responseText);
+    await this.gateway.sendMessage(chatId, chatType, messageId, action.responseText);
   }
 
   /**
@@ -740,7 +614,7 @@ export class QQBot extends BaseChatChannel {
  */
 export async function createQQBot(
   config: QQConfig,
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<QQBot | null> {
   if (!config.enabled || !config.appId || !config.appSecret) {
     return null;

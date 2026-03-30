@@ -8,7 +8,7 @@
 
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 import { isTextUIPart } from "ai";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   MemoryFlushPayload,
   MemoryFlushResponse,
@@ -43,7 +43,7 @@ function extractReadableLine(message: {
  * 把当前会话最近消息刷写到 daily 记忆。
  */
 export async function flushMemory(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryFlushPayload,
 ): Promise<MemoryFlushResponse> {

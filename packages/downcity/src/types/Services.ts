@@ -10,7 +10,7 @@ import type { JsonValue } from "@/types/Json.js";
 
 export type ServiceControlAction = "start" | "stop" | "restart" | "status";
 
-export type ServiceRuntimeView = {
+export type ServiceStateView = {
   name: string;
   state: "running" | "stopped" | "starting" | "stopping" | "error";
   updatedAt: number;
@@ -23,19 +23,19 @@ export type ServiceRuntimeView = {
 
 export type ServiceListResponse = {
   success: boolean;
-  services?: ServiceRuntimeView[];
+  services?: ServiceStateView[];
   error?: string;
 };
 
 export type ServiceControlResponse = {
   success: boolean;
-  service?: ServiceRuntimeView;
+  service?: ServiceStateView;
   error?: string;
 };
 
 export type ServiceCommandResponse = {
   success: boolean;
-  service?: ServiceRuntimeView;
+  service?: ServiceStateView;
   message?: string;
   data?: JsonValue;
   error?: string;

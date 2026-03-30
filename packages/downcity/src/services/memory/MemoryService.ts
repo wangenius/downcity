@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ServiceActions } from "@/types/Service.js";
 import { BaseService } from "@services/BaseService.js";
 import {
@@ -98,7 +98,7 @@ export class MemoryService extends BaseService {
   /**
    * 当前 service 的 system 文本提供器。
    */
-  async system(context: ExecutionRuntime): Promise<string> {
+  async system(context: ExecutionContext): Promise<string> {
     return await buildMemoryServiceSystemText(context);
   }
 
@@ -106,7 +106,7 @@ export class MemoryService extends BaseService {
    * 当前 service 生命周期。
    */
   readonly lifecycle = {
-    start: async (context: ExecutionRuntime): Promise<void> => {
+    start: async (context: ExecutionContext): Promise<void> => {
       await ensureMemoryDirectories(context.rootPath);
       const state = this.getOrCreateRuntimeState(context);
       await startMemoryRuntime(context, state);
@@ -318,7 +318,7 @@ export class MemoryService extends BaseService {
   /**
    * 获取或创建当前实例绑定的 runtime state。
    */
-  private getOrCreateRuntimeState(context: ExecutionRuntime): MemoryRuntimeState {
+  private getOrCreateRuntimeState(context: ExecutionContext): MemoryRuntimeState {
     if (!this.runtimeState) {
       this.runtimeState = createMemoryRuntimeState(context);
       return this.runtimeState;

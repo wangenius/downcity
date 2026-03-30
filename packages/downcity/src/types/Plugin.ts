@@ -2,15 +2,17 @@
  * Plugin 类型定义。
  *
  * 关键点（中文）
- * - Plugin 是运行时增强单元，不维护独立 runtime 状态机。
+ * - Plugin 是运行时增强单元，不维护独立状态机。
  * - Plugin 通过 actions / hooks / resolves / system 声明行为。
  * - Plugin 的依赖实现应内聚在插件内部，而不是挂成 runtime 公共能力。
  */
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
-import type { StructuredConfig } from "@/types/ExecutionContext.js";
+import type {
+  ExecutionContext,
+  StructuredConfig,
+} from "@/types/ExecutionContext.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
 /**
@@ -178,7 +180,7 @@ export interface PluginPort {
 /**
  * Plugin 运行时对象。
  */
-export type PluginRuntime = ExecutionRuntime;
+export type PluginRuntime = ExecutionContext;
 
 /**
  * Plugin 配置定义。

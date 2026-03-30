@@ -2,16 +2,13 @@
  * FeishuPlatformClient：飞书平台连接与消息能力封装。
  *
  * 关键点（中文）
- * - 负责 SDK client / WS client、token 缓存、Open API 查询、附件上传下载、消息发送。
+ * - 负责 SDK client / WS client、token 缓存、启动停止与 runtime 状态。
+ * - 查询类能力与发送类能力已经拆到旁路模块，当前文件只保留平台宿主职责。
  * - `FeishuBot` 只调用这里暴露的平台能力，不再直接持有底层 Feishu 连接细节。
  */
 
 import * as Lark from "@larksuiteoapi/node-sdk";
-import fs from "fs-extra";
-import path from "path";
-import { getCacheDirPath } from "@/main/env/Paths.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   FeishuConfig,
   FeishuDownloadedAttachment,
@@ -23,9 +20,15 @@ import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuA
 import type { FeishuIncomingAttachmentDescriptor } from "@services/chat/types/FeishuInboundAttachment.js";
 import type { InboundReplyContext } from "@services/chat/types/ReplyContext.js";
 import {
-  buildFeishuInboundCacheFileName,
-} from "./InboundAttachment.js";
-import { buildFeishuReplyContext } from "./ReplyContext.js";
+  downloadFeishuIncomingAttachments,
+  resolveFeishuChatTitle,
+  resolveFeishuReplyContext,
+  resolveFeishuSenderName,
+} from "./FeishuPlatformLookup.js";
+import {
+  sendFeishuAttachment,
+  sendFeishuPlatformMessage,
+} from "./FeishuPlatformMessaging.js";
 
 const FEISHU_INBOUND_ACK_REACTION_TYPE = "OK";
 
@@ -36,7 +39,7 @@ export interface FeishuPlatformClientOptions {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionRuntime;
+  context: ExecutionContext;
   /**
    * 飞书渠道配置。
    */
@@ -51,9 +54,9 @@ export interface FeishuPlatformClientOptions {
  * 飞书平台 client。
  */
 export class FeishuPlatformClient {
-  private readonly context: ExecutionRuntime;
+  private readonly context: ExecutionContext;
   private readonly rootPath: string;
-  private readonly logger: ExecutionRuntime["logger"];
+  private readonly logger: ExecutionContext["logger"];
   private readonly appId: string;
   private readonly appSecret: string;
   private readonly domain?: string;
@@ -264,179 +267,14 @@ export class FeishuPlatformClient {
     idType?: "open_id" | "user_id" | "union_id";
     chatId?: string;
   }): Promise<string | undefined> {
-    const senderId = String(params.senderId || "").trim();
-    const idType = params.idType;
-    if (!senderId || !idType) return undefined;
-
-    const cacheKey = `${idType}:${senderId}`;
-    const cached = this.senderNameBySenderKey.get(cacheKey);
-    if (cached) return cached;
-
-    const token = await this.getAppAccessToken();
-    if (!token) return undefined;
-
-    const domain = this.getNormalizedDomain();
-    try {
-      const response = await fetch(
-        `${domain}/open-apis/contact/v3/users/${encodeURIComponent(senderId)}?user_id_type=${encodeURIComponent(idType)}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            code?: number;
-            msg?: string;
-            data?: {
-              user?: {
-                name?: string;
-                nickname?: string;
-                en_name?: string;
-                [key: string]: unknown;
-              };
-            };
-          }
-        | null;
-      if (!response.ok) {
-        this.warnLookupOnce(
-          `feishu-user-http:${idType}:${senderId}:${response.status}:${String(payload?.code ?? "")}`,
-          "Feishu 用户信息查询失败",
-          {
-            senderId,
-            idType,
-            httpStatus: response.status,
-            code: payload?.code ?? null,
-            msg: payload?.msg ?? null,
-          },
-        );
-      } else if (payload?.code !== 0) {
-        this.warnLookupOnce(
-          `feishu-user-code:${idType}:${senderId}:${String(payload?.code ?? "")}`,
-          "Feishu 用户信息查询返回错误",
-          {
-            senderId,
-            idType,
-            httpStatus: response.status,
-            code: payload?.code ?? null,
-            msg: payload?.msg ?? null,
-          },
-        );
-      } else {
-        const user = payload?.data?.user;
-        const name = [user?.nickname, user?.name, user?.en_name]
-          .map((value) => String(value || "").trim())
-          .find(Boolean);
-        if (name) {
-          this.senderNameBySenderKey.set(cacheKey, name);
-          return name;
-        }
-
-        this.warnLookupOnce(
-          `feishu-user-empty:${idType}:${senderId}`,
-          "Feishu 用户信息未返回姓名字段",
-          {
-            senderId,
-            idType,
-            returnedFields: user ? Object.keys(user) : [],
-          },
-        );
-      }
-    } catch (error) {
-      this.warnLookupOnce(
-        `feishu-user-exception:${idType}:${senderId}:${error instanceof Error ? error.name : "unknown"}`,
-        "Feishu 用户信息查询异常",
-        {
-          senderId,
-          idType,
-          error: String(error),
-        },
-      );
-    }
-
-    const memberName = await this.resolveSenderNameFromChatMembers({
-      chatId: params.chatId,
-      senderId,
-      idType,
-    });
-    if (memberName) {
-      this.senderNameBySenderKey.set(cacheKey, memberName);
-      return memberName;
-    }
-    return undefined;
+    return resolveFeishuSenderName(this.getLookupDeps(), params);
   }
 
   /**
    * 解析群聊/会话标题。
    */
   async resolveChatTitle(chatId: string): Promise<string | undefined> {
-    const normalizedChatId = String(chatId || "").trim();
-    if (!normalizedChatId) return undefined;
-
-    const cached = this.chatTitleByChatId.get(normalizedChatId);
-    if (cached) return cached;
-
-    const token = await this.getAppAccessToken();
-    if (!token) return undefined;
-
-    const domain = this.getNormalizedDomain();
-    try {
-      const response = await fetch(
-        `${domain}/open-apis/im/v1/chats/${encodeURIComponent(normalizedChatId)}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      if (!response.ok) {
-        this.logger.debug("Feishu 群信息查询失败", {
-          chatId: normalizedChatId,
-          httpStatus: response.status,
-        });
-        return undefined;
-      }
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            code?: number;
-            msg?: string;
-            data?: {
-              name?: string;
-              chat_name?: string;
-              chat?: {
-                name?: string;
-                chat_name?: string;
-              };
-            };
-          }
-        | null;
-      if (typeof payload?.code === "number" && payload.code !== 0) {
-        this.logger.debug("Feishu 群信息查询返回错误", {
-          chatId: normalizedChatId,
-          code: payload.code,
-          msg: payload.msg,
-        });
-        return undefined;
-      }
-      const title = [
-        payload?.data?.name,
-        payload?.data?.chat_name,
-        payload?.data?.chat?.name,
-        payload?.data?.chat?.chat_name,
-      ]
-        .map((value) => String(value || "").trim())
-        .find(Boolean);
-      if (!title) return undefined;
-      this.chatTitleByChatId.set(normalizedChatId, title);
-      return title;
-    } catch {
-      return undefined;
-    }
+    return resolveFeishuChatTitle(this.getLookupDeps(), chatId);
   }
 
   /**
@@ -445,68 +283,7 @@ export class FeishuPlatformClient {
   async resolveReplyContext(params: {
     parentMessageId?: string;
   }): Promise<InboundReplyContext | undefined> {
-    const parentMessageId = String(params.parentMessageId || "").trim();
-    if (!parentMessageId) return undefined;
-
-    const token = await this.getAppAccessToken();
-    if (!token) return undefined;
-
-    const domain = this.getNormalizedDomain();
-    try {
-      const response = await fetch(
-        `${domain}/open-apis/im/v1/messages/${encodeURIComponent(parentMessageId)}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            code?: number;
-            msg?: string;
-            data?: {
-              items?: Array<{
-                message_id?: string;
-                msg_type?: string;
-                sender?: {
-                  id?: string;
-                  sender_type?: string;
-                };
-                body?: {
-                  content?: string;
-                };
-              }>;
-            };
-          }
-        | null;
-      if (!response.ok || payload?.code !== 0) {
-        this.logger.debug("Feishu reply 父消息查询失败", {
-          parentMessageId,
-          httpStatus: response.status,
-          code: payload?.code ?? null,
-          msg: payload?.msg ?? null,
-        });
-        return undefined;
-      }
-
-      const item = Array.isArray(payload?.data?.items) ? payload?.data?.items[0] : undefined;
-      if (!item) return undefined;
-      return buildFeishuReplyContext({
-        messageId:
-          typeof item.message_id === "string" ? item.message_id : parentMessageId,
-        messageType: item.msg_type,
-        content: item.body?.content,
-      });
-    } catch (error) {
-      this.logger.debug("Feishu reply 父消息查询异常", {
-        parentMessageId,
-        error: String(error),
-      });
-      return undefined;
-    }
+    return resolveFeishuReplyContext(this.getLookupDeps(), params);
   }
 
   /**
@@ -516,47 +293,7 @@ export class FeishuPlatformClient {
     messageId: string;
     attachments: FeishuIncomingAttachmentDescriptor[];
   }): Promise<FeishuDownloadedAttachment[]> {
-    if (!this.client || params.attachments.length === 0) return [];
-
-    const dir = path.join(getCacheDirPath(this.rootPath), "feishu");
-    await fs.ensureDir(dir);
-
-    const out: FeishuDownloadedAttachment[] = [];
-    for (const attachment of params.attachments) {
-      try {
-        const resource = await this.client.im.v1.messageResource.get({
-          path: {
-            message_id: params.messageId,
-            file_key: attachment.resourceKey,
-          },
-          params: {
-            type: attachment.resourceType,
-          },
-        });
-
-        const fileName = buildFeishuInboundCacheFileName({
-          attachment,
-          messageId: params.messageId,
-          headers: resource.headers,
-        });
-        const outPath = path.join(dir, fileName);
-        await resource.writeFile(outPath);
-        out.push({
-          type: attachment.type,
-          path: outPath,
-          ...(attachment.description ? { desc: attachment.description } : {}),
-        });
-      } catch (error) {
-        this.logger.warn("Failed to download incoming Feishu attachment", {
-          messageId: params.messageId,
-          resourceKey: attachment.resourceKey,
-          resourceType: attachment.resourceType,
-          error: String(error),
-        });
-      }
-    }
-
-    return out;
+    return downloadFeishuIncomingAttachments(this.getLookupDeps(), params);
   }
 
   /**
@@ -568,25 +305,7 @@ export class FeishuPlatformClient {
     messageId: string | undefined,
     attachment: ParsedFeishuAttachmentCommand,
   ): Promise<void> {
-    const localPath = await this.resolveAttachmentLocalPath(attachment.pathOrUrl);
-    if (attachment.type === "photo") {
-      const imageKey = await this.uploadImageToFeishu(localPath);
-      await this.sendPlatformMessage(chatId, chatType, messageId, "image", {
-        image_key: imageKey,
-      });
-    } else {
-      const fileKey = await this.uploadFileToFeishu(localPath);
-      await this.sendPlatformMessage(chatId, chatType, messageId, "file", {
-        file_key: fileKey,
-      });
-    }
-
-    const caption = String(attachment.caption || "").trim();
-    if (caption) {
-      await this.sendPlatformMessage(chatId, chatType, messageId, "text", {
-        text: caption,
-      });
-    }
+    return sendFeishuAttachment(this.getMessagingDeps(), chatId, chatType, messageId, attachment);
   }
 
   /**
@@ -599,45 +318,14 @@ export class FeishuPlatformClient {
     msgType: FeishuMessagePayloadType,
     content: Record<string, unknown> | string,
   ): Promise<void> {
-    if (!this.client) {
-      throw new Error("Feishu client is not initialized");
-    }
-    const serializedContent =
-      typeof content === "string" ? content : JSON.stringify(content);
-    try {
-      if (chatType !== "p2p" && messageId) {
-        await this.client.im.v1.message.reply({
-          path: {
-            message_id: messageId,
-          },
-          data: {
-            content: serializedContent,
-            msg_type: msgType,
-          },
-        });
-        return;
-      }
-
-      await this.client.im.v1.message.create({
-        params: {
-          receive_id_type: "chat_id",
-        },
-        data: {
-          receive_id: chatId,
-          content: serializedContent,
-          msg_type: msgType,
-        },
-      });
-    } catch (error) {
-      this.logger.error("Failed to send Feishu message", {
-        error: String(error),
-        msgType,
-        chatType,
-      });
-      throw error instanceof Error
-        ? error
-        : new Error(`Failed to send Feishu message: ${String(error)}`);
-    }
+    return sendFeishuPlatformMessage(
+      this.getMessagingDeps(),
+      chatId,
+      chatType,
+      messageId,
+      msgType,
+      content,
+    );
   }
 
   /**
@@ -696,201 +384,32 @@ export class FeishuPlatformClient {
   }
 
   /**
-   * 通过 chat members 列表兜底解析发送者姓名。
+   * 为 lookup helper 构造依赖集合。
    */
-  private async resolveSenderNameFromChatMembers(params: {
-    chatId?: string;
-    senderId: string;
-    idType: "open_id" | "user_id" | "union_id";
-  }): Promise<string | undefined> {
-    const chatId = String(params.chatId || "").trim();
-    if (!chatId) return undefined;
-
-    const token = await this.getAppAccessToken();
-    if (!token) return undefined;
-
-    const domain = this.getNormalizedDomain();
-    try {
-      const response = await fetch(
-        `${domain}/open-apis/im/v1/chats/${encodeURIComponent(chatId)}/members?member_id_type=${encodeURIComponent(params.idType)}&page_size=100`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            code?: number;
-            msg?: string;
-            data?: {
-              items?: Array<{
-                member_id_type?: string;
-                member_id?: string;
-                name?: string;
-                tenant_key?: string;
-              }>;
-            };
-          }
-        | null;
-      if (!response.ok) {
-        this.warnLookupOnce(
-          `feishu-member-http:${chatId}:${params.idType}:${response.status}:${String(payload?.code ?? "")}`,
-          "Feishu 群成员查询失败",
-          {
-            chatId,
-            senderId: params.senderId,
-            idType: params.idType,
-            httpStatus: response.status,
-            code: payload?.code ?? null,
-            msg: payload?.msg ?? null,
-          },
-        );
-        return undefined;
-      }
-      if (payload?.code !== 0) {
-        this.warnLookupOnce(
-          `feishu-member-code:${chatId}:${params.idType}:${String(payload?.code ?? "")}`,
-          "Feishu 群成员查询返回错误",
-          {
-            chatId,
-            senderId: params.senderId,
-            idType: params.idType,
-            httpStatus: response.status,
-            code: payload?.code ?? null,
-            msg: payload?.msg ?? null,
-          },
-        );
-        return undefined;
-      }
-
-      const items = Array.isArray(payload?.data?.items) ? payload.data.items : [];
-      const matched = items.find(
-        (item) => String(item?.member_id || "").trim() === params.senderId,
-      );
-      const name = String(matched?.name || "").trim();
-      return name || undefined;
-    } catch (error) {
-      this.warnLookupOnce(
-        `feishu-member-exception:${chatId}:${params.idType}:${error instanceof Error ? error.name : "unknown"}`,
-        "Feishu 群成员查询异常",
-        {
-          chatId,
-          senderId: params.senderId,
-          idType: params.idType,
-          error: String(error),
-        },
-      );
-      return undefined;
-    }
+  private getLookupDeps() {
+    return {
+      rootPath: this.rootPath,
+      logger: this.logger,
+      client: this.client,
+      getAppAccessToken: () => this.getAppAccessToken(),
+      getNormalizedDomain: () => this.getNormalizedDomain(),
+      senderNameBySenderKey: this.senderNameBySenderKey,
+      chatTitleByChatId: this.chatTitleByChatId,
+      lookupWarnings: this.lookupWarnings,
+    };
   }
 
   /**
-   * 发送查找类告警，并做 once 去重。
+   * 为 messaging helper 构造依赖集合。
    */
-  private warnLookupOnce(
-    warningKey: string,
-    message: string,
-    details: JsonObject,
-  ): void {
-    const normalizedKey = String(warningKey || "").trim();
-    if (normalizedKey) {
-      if (this.lookupWarnings.has(normalizedKey)) return;
-      this.lookupWarnings.add(normalizedKey);
-    }
-    this.logger.warn(message, details);
-  }
-
-  /**
-   * 解析附件本地路径。
-   */
-  private async resolveAttachmentLocalPath(pathOrUrl: string): Promise<string> {
-    const raw = String(pathOrUrl || "").trim();
-    if (!raw) {
-      throw new Error("Attachment path is empty");
-    }
-    if (/^https?:\/\//i.test(raw)) {
-      throw new Error("Feishu attachment currently only supports local file path");
-    }
-
-    const absPath = path.isAbsolute(raw) ? raw : path.resolve(this.rootPath, raw);
-    const exists = await fs.pathExists(absPath);
-    if (!exists) {
-      throw new Error(`Attachment file not found: ${raw}`);
-    }
-    const stat = await fs.stat(absPath);
-    if (!stat.isFile()) {
-      throw new Error(`Attachment path is not a file: ${raw}`);
-    }
-    return absPath;
-  }
-
-  /**
-   * 上传本地文件。
-   */
-  private async uploadFileToFeishu(localPath: string): Promise<string> {
-    const token = await this.getAppAccessToken();
-    if (!token) {
-      throw new Error("Failed to get Feishu tenant_access_token");
-    }
-
-    const domain = this.getNormalizedDomain();
-    const fileName = path.basename(localPath) || "attachment.bin";
-    const fileBuffer = await fs.readFile(localPath);
-    const form = new FormData();
-    form.set("file_type", "stream");
-    form.set("file_name", fileName);
-    form.set("file", new Blob([fileBuffer]), fileName);
-
-    const response = await fetch(`${domain}/open-apis/im/v1/files`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: form,
-    });
-
-    const payload = (await response.json().catch(() => null)) as
-      | {
-          code?: number;
-          msg?: string;
-          data?: {
-            file_key?: string;
-          };
-        }
-      | null;
-    const fileKey = String(payload?.data?.file_key || "").trim();
-    if (!response.ok || payload?.code !== 0 || !fileKey) {
-      throw new Error(
-        `Feishu file upload failed: HTTP ${response.status}, code=${String(payload?.code ?? "")}, msg=${String(payload?.msg ?? "")}`,
-      );
-    }
-
-    return fileKey;
-  }
-
-  /**
-   * 上传本地图片。
-   */
-  private async uploadImageToFeishu(localPath: string): Promise<string> {
-    if (!this.client) {
-      throw new Error("Feishu client is not initialized");
-    }
-
-    const fileBuffer = await fs.readFile(localPath);
-    const payload = await this.client.im.v1.image.create({
-      data: {
-        image_type: "message",
-        image: fileBuffer,
-      },
-    });
-    const imageKey = String(payload?.image_key || "").trim();
-    if (!imageKey) {
-      throw new Error(`Feishu image upload failed: ${localPath}`);
-    }
-    return imageKey;
+  private getMessagingDeps() {
+    return {
+      rootPath: this.rootPath,
+      logger: this.logger,
+      client: this.client,
+      getAppAccessToken: () => this.getAppAccessToken(),
+      getNormalizedDomain: () => this.getNormalizedDomain(),
+    };
   }
 
   /**

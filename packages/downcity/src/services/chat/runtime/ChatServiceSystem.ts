@@ -8,7 +8,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import {
   buildCurrentChatEnvironmentPrompt,
   resolveCurrentChatEnvironmentPromptInput,
@@ -110,7 +110,7 @@ function resolveCurrentChatPromptChannel(
  * - 若当前 context 不是 chat channel（如 consoleui）或尚无路由元信息，则不注入 channel prompt。
  */
 export async function buildCurrentChannelPrompts(
-  context: ExecutionRuntime,
+  context: ExecutionContext,
   method: ChatMethod,
 ): Promise<string[]> {
   const chatEnvironment = await resolveCurrentChatEnvironmentPromptInput(context);
@@ -128,7 +128,7 @@ export async function buildCurrentChannelPrompts(
  * 构建 chat service 注入到 session 的 system 文本。
  */
 export async function buildChatServiceSystem(
-  context: ExecutionRuntime,
+  context: ExecutionContext,
 ): Promise<string> {
   const method = resolveChatMethod(context.config);
   return [

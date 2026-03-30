@@ -6,7 +6,7 @@
 
 1. [整体架构总览](./agent-native-architecture-design.md)
 2. [文件结构与模块职责](./file-structure-and-dependencies.md)
-3. [Runtime 与 Session 架构](./runtime-and-session.md)
+3. [Agent 与 Session 架构](./agent-and-session.md)
 4. [Service 与 Plugin 架构](./service-and-plugin.md)
 5. [Chat 端到端流程](./chat-end-to-end-flow.md)
 6. [启动与 HTTP/API 装配流程](./startup-and-api-flow.md)
@@ -15,5 +15,18 @@
 如果你只想快速建立心智模型，先看：
 
 1. `整体架构总览`
-2. `Runtime 与 Session 架构`
-3. `Chat 端到端流程`
+2. `Agent 与 Session 架构`
+3. `Service 与 Plugin 架构`
+4. `Chat 端到端流程`
+
+当前目录只保留“描述现状”的文档。
+
+已经删除：
+
+1. 迁移设计稿
+2. 阶段性重构计划
+
+原因：
+
+1. 这些文档主要记录迁移过程，和当前实现已经不再一致
+2. 继续放在主索引里会干扰阅读顺序

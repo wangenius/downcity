@@ -11,7 +11,7 @@
    - 维护 service 的静态注册清单。
 2. `main/registries/ServiceClassRegistry.ts`
    - 负责把静态 service 定义实例化为 `BaseService` 子类。
-3. `agent/RuntimeState.ts`
+3. `agent/AgentState.ts`
    - agent 持有当前运行中的 service 实例集合。
 4. `main/service/Manager.ts`
    - 统一做 service lifecycle、action 调度、CLI/API 桥接。
@@ -37,14 +37,23 @@
    - `runtime/ChatQueueWorkerSupport.ts` 负责 worker 辅助能力。
    - `runtime/ChatQueueReplyDispatch.ts` 负责 direct/fallback 回复分发。
    - `runtime/ChatQueueWorker.ts` 负责 queue lane 调度与主执行链。
+   - `channels/BaseChatChannel.ts` 负责渠道基类门面与公共编排。
+   - `channels/BaseChatChannelSupport.ts` 负责 session 映射、history 与 chat meta 辅助。
+   - `channels/BaseChatChannelQueue.ts` 负责 audit/exec 入队编排。
    - `channels/telegram/Bot.ts` 现在只保留 Telegram 渠道门面与编排。
    - `channels/telegram/TelegramPlatformClient.ts` 负责 Telegram polling/API/发送主逻辑。
    - `channels/telegram/TelegramInbound.ts` 负责 Telegram 入站归一化辅助。
    - `channels/feishu/Feishu.ts` 现在只保留 Feishu 渠道门面与编排。
-   - `channels/feishu/FeishuPlatformClient.ts` 负责 Feishu SDK/Open API/发送主逻辑。
+   - `channels/feishu/FeishuPlatformClient.ts` 负责 Feishu runtime 宿主与 token/cache 状态。
+   - `channels/feishu/FeishuPlatformLookup.ts` 负责 Feishu 用户/群聊/reply 查询与入站附件下载。
+   - `channels/feishu/FeishuPlatformMessaging.ts` 负责 Feishu 消息发送与附件上传。
    - `channels/feishu/FeishuInbound.ts` 负责 Feishu 入站归一化辅助。
    - `channels/qq/QQ.ts` 现在只保留 QQ 渠道门面与编排。
-   - `channels/qq/QQGatewayClient.ts` 负责 QQ WS/Auth/发送主逻辑。
+   - `channels/qq/QQSupport.ts` 负责 QQ READY 身份解析、命令映射与入站增强组装。
+  - `channels/qq/QQGatewayClient.ts` 负责 QQ Gateway runtime 宿主、WS 编排与重连调度。
+  - `channels/qq/QQGatewaySupport.ts` 负责 QQ Gateway 状态快照、心跳判断与 payload 解析。
+   - `channels/qq/QQGatewayAuth.ts` 负责 QQ 鉴权、Gateway URL 与 HTTP 连通性测试。
+   - `channels/qq/QQGatewaySend.ts` 负责 QQ 回发请求构造、超时与自动重试。
    - `channels/qq/QQInbound.ts` 负责 QQ 入站归一化辅助。
 2. `task/`
    - 负责任务定义、计划调度、手动执行与 run 落盘。
@@ -56,13 +65,19 @@
    - `runtime/TaskRunnerProgress.ts` 负责 progress 快照与文本辅助。
    - `runtime/TaskRunnerSession.ts` 负责 task 专用 session runtime。
    - `runtime/TaskRunnerRound.ts` 负责单轮执行与模拟用户判定。
-   - `runtime/Runner.ts` 负责主编排与 run 产物写入。
+   - `runtime/TaskRunArtifacts.ts` 负责 run 产物写入与 markdown/json 摘要格式。
+   - `runtime/Runner.ts` 负责主编排并协调 run 产物写入。
 3. `memory/`
    - 负责记忆提取、索引、检索与 flush。
    - `MemoryService.ts` 持有实例级 memory runtime 状态。
 4. `shell/`
    - 负责 shell session 生命周期与命令执行。
    - `ShellService.ts` 持有实例级 shell session 状态。
+   - `runtime/SessionStore.ts` 负责公开 action 编排。
+   - `runtime/SessionStoreSupport.ts` 负责持久化、waiter 与 session 查找等共享运行时细节。
+   - `sessions/tools/shell/Tool.ts` 作为 session tool facade，只做协议适配。
+   - `sessions/tools/shell/ToolSchemas.ts` 负责 shell tool schema。
+   - `sessions/tools/shell/ToolSupport.ts` 负责 runtime bridge 与响应整理。
 
 ## 统一服务模式
 
@@ -79,7 +94,7 @@
 
 ## 边界约束
 
-1. service 通过 `ExecutionRuntime` 读取运行时能力。
+1. service 通过 `ExecutionContext` 读取运行时能力。
 2. service 的实例状态应归属于 service instance，而不是模块级单例。
 3. plugin 只能作为被动扩展，不替代 service 主流程。
-4. service 间协作优先通过 `ExecutionRuntime.invokeService`，而不是隐式全局状态。
+4. service 间协作优先通过 `ExecutionContext.invoke` 或 `ExecutionContext.services.invoke`，而不是隐式全局状态。

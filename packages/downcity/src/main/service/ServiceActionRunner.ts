@@ -3,17 +3,17 @@
  *
  * 关键点（中文）
  * - 这里只关心 action 命令解析、调度落盘、lifecycle.command 调用。
- * - runtime 状态变更交给 RuntimeController。
+ * - service 状态变更交给 ServiceStateController。
  * - HTTP route 层不会直接实现业务分发，只调用这里的统一入口。
  */
 
 import type { JsonValue } from "@/types/Json.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ServiceCommandScheduleInput } from "@/types/ServiceSchedule.js";
 import type {
-  ServiceRuntimeControlAction,
-  ServiceRuntimeSnapshot,
-} from "@/types/ServiceRuntime.js";
+  ServiceStateControlAction,
+  ServiceStateSnapshot,
+} from "@/types/ServiceState.js";
 import type { BaseService } from "@services/BaseService.js";
 import { ServiceScheduleStore } from "./schedule/Store.js";
 import { normalizeRunAtMsOrThrow } from "./schedule/Time.js";
@@ -23,13 +23,13 @@ import type {
   ServiceCommandResult,
 } from "@/types/Service.js";
 import {
-  controlServiceRuntime,
-  ensureServiceRuntimeRecord,
-  markRuntimeState,
+  controlServiceState,
+  ensureServiceStateRecord,
+  markServiceState,
   markServiceCommand,
   resolveServiceByName,
-  toRuntimeSnapshot,
-} from "./RuntimeController.js";
+  toServiceStateSnapshot,
+} from "./ServiceStateController.js";
 
 /**
  * 按名称解析 service action。
@@ -50,7 +50,7 @@ export async function invokeServiceAction(params: {
   service: BaseService;
   actionName: string;
   payload?: JsonValue;
-  context: ExecutionRuntime;
+  context: ExecutionContext;
 }): Promise<ServiceActionResult<JsonValue>> {
   const action = resolveServiceAction(params.service, params.actionName);
   if (!action) {
@@ -77,7 +77,7 @@ export async function invokeServiceAction(params: {
 
 function toControlCommandAction(
   command: string,
-): ServiceRuntimeControlAction | null {
+): ServiceStateControlAction | null {
   if (
     command === "status" ||
     command === "start" ||
@@ -94,9 +94,9 @@ async function scheduleServiceAction(params: {
   command: string;
   payload?: JsonValue;
   schedule: JsonValue | ServiceCommandScheduleInput;
-  recordSnapshot: ServiceRuntimeSnapshot;
-  context: ExecutionRuntime;
-}): Promise<ServiceCommandResult & { service?: ServiceRuntimeSnapshot }> {
+  recordSnapshot: ServiceStateSnapshot;
+  context: ExecutionContext;
+}): Promise<ServiceCommandResult & { service?: ServiceStateSnapshot }> {
   try {
     const scheduleInput = params.schedule as Partial<ServiceCommandScheduleInput>;
     const runAtMs = normalizeRunAtMsOrThrow(
@@ -137,7 +137,7 @@ async function scheduleServiceAction(params: {
  * 统一执行 service command。
  *
  * 关键点（中文）
- * - action 命令、runtime 控制命令、lifecycle.command 都走这里。
+ * - action 命令、状态控制命令、lifecycle.command 都走这里。
  * - 调度能力也是在这里统一处理，而不是散落到 route/CLI 层。
  */
 export async function runServiceCommand(params: {
@@ -145,8 +145,8 @@ export async function runServiceCommand(params: {
   command: string;
   payload?: JsonValue;
   schedule?: JsonValue | ServiceCommandScheduleInput;
-  context: ExecutionRuntime;
-}): Promise<ServiceCommandResult & { service?: ServiceRuntimeSnapshot }> {
+  context: ExecutionContext;
+}): Promise<ServiceCommandResult & { service?: ServiceStateSnapshot }> {
   const service = resolveServiceByName(params.serviceName, params.context);
   if (!service) {
     return {
@@ -155,14 +155,14 @@ export async function runServiceCommand(params: {
     };
   }
 
-  const record = ensureServiceRuntimeRecord(service);
+  const record = ensureServiceStateRecord(service);
   const command = String(params.command || "")
     .trim()
     .toLowerCase();
   if (!command) {
     return {
       success: false,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
       message: "command is required",
     };
   }
@@ -174,7 +174,7 @@ export async function runServiceCommand(params: {
     if (!action) {
       return {
         success: false,
-        service: toRuntimeSnapshot(record),
+        service: toServiceStateSnapshot(record),
         message: `Scheduling only supports service actions. "${service.name}.${command}" is not a schedulable action.`,
       };
     }
@@ -184,7 +184,7 @@ export async function runServiceCommand(params: {
       command,
       payload: params.payload,
       schedule: params.schedule,
-      recordSnapshot: toRuntimeSnapshot(record),
+      recordSnapshot: toServiceStateSnapshot(record),
       context: params.context,
     });
   }
@@ -193,7 +193,7 @@ export async function runServiceCommand(params: {
     if (record.state !== "running") {
       return {
         success: false,
-        service: toRuntimeSnapshot(record),
+        service: toServiceStateSnapshot(record),
         message: `Service "${service.name}" is not running`,
       };
     }
@@ -208,21 +208,21 @@ export async function runServiceCommand(params: {
     if (!result.success) {
       return {
         success: false,
-        service: toRuntimeSnapshot(record),
+        service: toServiceStateSnapshot(record),
         message: result.error || "service action failed",
       };
     }
 
     return {
       success: true,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
       ...(result.data !== undefined ? { data: result.data } : {}),
     };
   }
 
   const controlAction = toControlCommandAction(command);
   if (controlAction) {
-    const result = await controlServiceRuntime({
+    const result = await controlServiceState({
       serviceName: service.name,
       action: controlAction,
       context: params.context,
@@ -237,7 +237,7 @@ export async function runServiceCommand(params: {
   if (record.state !== "running") {
     return {
       success: false,
-      service: toRuntimeSnapshot(record),
+      service: toServiceStateSnapshot(record),
       message: `Service "${service.name}" is not running`,
     };
   }
@@ -252,13 +252,13 @@ export async function runServiceCommand(params: {
       });
       return {
         ...result,
-        service: toRuntimeSnapshot(record),
+        service: toServiceStateSnapshot(record),
       };
     } catch (error) {
-      markRuntimeState(record, "error", String(error));
+      markServiceState(record, "error", String(error));
       return {
         success: false,
-        service: toRuntimeSnapshot(record),
+        service: toServiceStateSnapshot(record),
         message: String(error),
       };
     }
@@ -266,7 +266,7 @@ export async function runServiceCommand(params: {
 
   return {
     success: false,
-    service: toRuntimeSnapshot(record),
+    service: toServiceStateSnapshot(record),
     message: `Service "${service.name}" does not implement action "${command}"`,
   };
 }

@@ -12,17 +12,12 @@ import type { SessionRunResult } from "@/types/SessionRun.js";
 import type {
   SessionUserMessageV1,
 } from "@/types/SessionMessage.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ChatQueueWorkerConfig } from "@/types/ChatQueueWorker.js";
 import type { JsonObject } from "@/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
-  onChatQueueEnqueue,
-  shiftChatQueueItem,
-  listChatQueueLanes,
-  clearChatQueueLane,
-  drainChatQueueLane,
-  getChatQueueLaneSize,
+  getSharedChatQueueStore,
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
 import {
@@ -42,6 +37,7 @@ import {
   collectInitialBurstItems,
   normalizeChatQueueWorkerConfig,
 } from "./ChatQueueWorkerSupport.js";
+import type { ChatQueueStorePort } from "./ChatQueueStore.js";
 import {
   dispatchAssistantMessageDirect,
   dispatchAssistantTextDirect,
@@ -57,8 +53,9 @@ type LaneState = {
 
 export class ChatQueueWorker {
   private readonly logger: Logger;
-  private readonly runtime: ExecutionRuntime;
+  private readonly runtime: ExecutionContext;
   private readonly config: ChatQueueWorkerConfig;
+  private readonly queueStore: ChatQueueStorePort;
 
   private readonly lanes: Map<string, LaneState> = new Map();
   private readonly runnable: string[] = [];
@@ -69,12 +66,14 @@ export class ChatQueueWorker {
 
   constructor(params: {
     logger: Logger;
-    context: ExecutionRuntime;
+    context: ExecutionContext;
+    queueStore?: ChatQueueStorePort;
     config?: Partial<ChatQueueWorkerConfig>;
   }) {
     this.logger = params.logger;
     this.runtime = params.context;
     this.config = normalizeChatQueueWorkerConfig(params.config);
+    this.queueStore = params.queueStore || getSharedChatQueueStore();
   }
 
   /**
@@ -83,13 +82,13 @@ export class ChatQueueWorker {
   start(): void {
     if (this.unsubscribe) return;
     this.stopped = false;
-    this.unsubscribe = onChatQueueEnqueue((laneKey) => {
+    this.unsubscribe = this.queueStore.onEnqueue((laneKey) => {
       this.markRunnable(laneKey);
       void this.kick();
     });
 
     // 初始化已有 lanes
-    for (const laneKey of listChatQueueLanes()) {
+    for (const laneKey of this.queueStore.listLanes()) {
       this.markRunnable(laneKey);
     }
     void this.kick();
@@ -124,7 +123,7 @@ export class ChatQueueWorker {
       this.runnableSet.delete(key);
       const lane = this.getOrCreateLane(key);
       if (lane.running) continue;
-      if (getChatQueueLaneSize(key) === 0) continue;
+      if (this.queueStore.getLaneSize(key) === 0) continue;
       return lane;
     }
     return null;
@@ -146,7 +145,7 @@ export class ChatQueueWorker {
           lane.running = false;
           this.runningTotal -= 1;
           if (!this.stopped) {
-            if (getChatQueueLaneSize(lane.key) > 0) {
+            if (this.queueStore.getLaneSize(lane.key) > 0) {
               this.markRunnable(lane.key);
             }
             void this.kick();
@@ -156,7 +155,7 @@ export class ChatQueueWorker {
   }
 
   private async runLaneOnce(lane: LaneState): Promise<void> {
-    const first = shiftChatQueueItem(lane.key);
+    const first = this.queueStore.shift(lane.key);
     if (!first) return;
     await this.processOne(lane.key, first);
   }
@@ -188,7 +187,7 @@ export class ChatQueueWorker {
     if (!control) return false;
     if (control.type === "clear") {
       this.requireContext().clearRuntime(item.sessionId);
-      clearChatQueueLane(item.sessionId);
+      this.queueStore.clear(item.sessionId);
       return true;
     }
     return false;
@@ -262,6 +261,7 @@ export class ChatQueueWorker {
       laneKey,
       first,
       config: this.config,
+      queueStore: this.queueStore,
     });
     for (const item of initialBurstItems) {
       if (item.kind === "control") {
@@ -275,7 +275,7 @@ export class ChatQueueWorker {
     }
 
     const onStepCallback = async (): Promise<SessionUserMessageV1[]> => {
-      const drainedItems = drainChatQueueLane(laneKey);
+      const drainedItems = this.queueStore.drain(laneKey);
       if (drainedItems.length === 0) return [];
       const mergedExecMessages: SessionUserMessageV1[] = [];
       for (const item of drainedItems) {
@@ -353,7 +353,7 @@ export class ChatQueueWorker {
 
     if (clearRequested) {
       serviceContext.clearRuntime(runItem.sessionId);
-      clearChatQueueLane(runItem.sessionId);
+      this.queueStore.clear(runItem.sessionId);
     }
 
     try {

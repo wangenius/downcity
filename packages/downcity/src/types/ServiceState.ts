@@ -1,17 +1,17 @@
 /**
- * ServiceRuntime：service 运行态相关共享类型。
+ * ServiceState：service 状态相关共享类型。
  *
  * 关键点（中文）
- * - 这里只放运行态快照与控制结果，不放 service 契约本身。
- * - 目的是让 main/service 内部拆分后，仍能共享统一的运行态结构。
+ * - 这里只放状态快照与控制结果，不放 service 契约本身。
+ * - 目的是让 main/service 内部拆分后，仍能共享统一的状态结构。
  */
 
-import type { ServiceRuntimeState } from "@/types/Service.js";
+import type { ServiceState } from "@/types/Service.js";
 
 /**
- * 单个 service runtime 的对外快照。
+ * 单个 service 状态的对外快照。
  */
-export type ServiceRuntimeSnapshot = {
+export type ServiceStateSnapshot = {
   /**
    * service 名称。
    */
@@ -19,7 +19,7 @@ export type ServiceRuntimeSnapshot = {
   /**
    * 当前运行状态。
    */
-  state: ServiceRuntimeState;
+  state: ServiceState;
   /**
    * 最近一次状态更新时间（毫秒时间戳）。
    */
@@ -47,18 +47,18 @@ export type ServiceRuntimeSnapshot = {
 };
 
 /**
- * service runtime 控制动作。
+ * service 状态控制动作。
  */
-export type ServiceRuntimeControlAction =
+export type ServiceStateControlAction =
   | "start"
   | "stop"
   | "restart"
   | "status";
 
 /**
- * service runtime 控制结果。
+ * service 状态控制结果。
  */
-export type ServiceRuntimeControlResult = {
+export type ServiceStateControlResult = {
   /**
    * 控制动作是否成功。
    */
@@ -66,7 +66,7 @@ export type ServiceRuntimeControlResult = {
   /**
    * 成功或失败后返回的最新 service 快照。
    */
-  service?: ServiceRuntimeSnapshot;
+  service?: ServiceStateSnapshot;
   /**
    * 失败时的错误信息。
    */

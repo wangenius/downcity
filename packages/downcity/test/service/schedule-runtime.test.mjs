@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
-  controlServiceRuntime,
+  controlServiceState,
   runServiceCommand,
 } from "../../bin/main/service/Manager.js";
 import {
@@ -64,7 +64,7 @@ test("runServiceCommand creates persistent scheduled job and runtime executes it
   });
 
   try {
-    await controlServiceRuntime({
+    await controlServiceState({
       serviceName: "chat",
       action: "start",
       context: runtime,
@@ -119,7 +119,7 @@ test("runServiceCommand creates persistent scheduled job and runtime executes it
     }
   } finally {
     await stopServiceScheduleRuntime();
-    await controlServiceRuntime({
+    await controlServiceState({
       serviceName: "chat",
       action: "stop",
       context: runtime,
@@ -152,7 +152,7 @@ test("service schedule runtime restores pending job after restart", { concurrenc
   });
 
   try {
-    await controlServiceRuntime({
+    await controlServiceState({
       serviceName: "chat",
       action: "start",
       context: runtime,
@@ -198,7 +198,7 @@ test("service schedule runtime restores pending job after restart", { concurrenc
     }
   } finally {
     await stopServiceScheduleRuntime();
-    await controlServiceRuntime({
+    await controlServiceState({
       serviceName: "chat",
       action: "stop",
       context: runtime,

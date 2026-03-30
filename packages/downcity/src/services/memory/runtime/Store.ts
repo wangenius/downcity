@@ -12,7 +12,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import type { FSWatcher } from "node:fs";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   MemoryDefaults,
   MemorySourceType,
@@ -194,7 +194,7 @@ export async function listMemorySourceFiles(
 /**
  * 判断 Memory 功能是否启用（默认 true）。
  */
-export function isMemoryEnabled(runtime: ExecutionRuntime): boolean {
+export function isMemoryEnabled(runtime: ExecutionContext): boolean {
   const enabled = runtime.config?.context?.memory?.enabled;
   return enabled !== false;
 }
@@ -207,7 +207,7 @@ export function isMemoryEnabled(runtime: ExecutionRuntime): boolean {
  * - 不再按 rootPath 落到模块级 Map，避免 service 实例之间共享状态。
  */
 export function createMemoryRuntimeState(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
 ): MemoryRuntimeState {
   return {
     rootPath: runtime.rootPath,
@@ -225,7 +225,7 @@ export function createMemoryRuntimeState(
  * 标记 dirty 并触发 debounce 同步。
  */
 export function markMemoryDirty(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   reason: string,
 ): void {
@@ -243,7 +243,7 @@ export function markMemoryDirty(
 }
 
 function registerWatcher(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   watchPath: string,
 ): void {
@@ -272,7 +272,7 @@ function registerWatcher(
  * 启动 memory 运行时（watcher + interval）。
  */
 export async function startMemoryRuntime(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
 ): Promise<void> {
   state.enabled = isMemoryEnabled(runtime);
@@ -333,7 +333,7 @@ export async function stopMemoryRuntime(
  * 确保索引已同步。
  */
 export async function ensureMemoryIndexed(
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   state: MemoryRuntimeState,
   params?: { force?: boolean; reason?: string },
 ): Promise<MemoryIndexSyncResult | null> {

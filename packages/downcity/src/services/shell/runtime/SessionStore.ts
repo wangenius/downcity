@@ -9,7 +9,7 @@
 
 import { spawn } from "node:child_process";
 import fs from "fs-extra";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   SessionWaiter,
   ShellServiceState,
@@ -59,7 +59,7 @@ export { createShellServiceState } from "./SessionStoreSupport.js";
  */
 export function bindShellRuntime(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
 ): void {
   state.boundRuntime = runtime;
 }
@@ -92,12 +92,28 @@ export async function closeAllShellSessions(
   await Promise.all(closing);
 }
 
+async function finalizeExitAfterOutputDrain(
+  state: ShellServiceState,
+  session: ShellSessionRuntime,
+  exitCode: number,
+): Promise<void> {
+  // 关键点（中文）
+  // - `close` 事件到达时，stdout/stderr 的异步 append 链可能刚刚开始收尾。
+  // - 这里先让出一个事件循环 tick，再等待当前 writeChain，可显著降低“终态已到但尾部输出尚未可读”的竞态。
+  await new Promise<void>((resolve) => {
+    const timer = setImmediate(resolve);
+    if (typeof timer.unref === "function") timer.unref();
+  });
+  await session.writeChain.catch(() => undefined);
+  await finalizeExit(state, session, exitCode);
+}
+
 /**
  * 启动一个 shell session。
  */
 export async function startShellSession(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   request: ShellStartRequest,
 ): Promise<ShellActionResponse> {
   const cmd = String(request.cmd || "").trim();
@@ -185,12 +201,14 @@ export async function startShellSession(
     void appendSessionOutput(session, `\n[process error] ${String(error)}\n`).catch(
       () => undefined,
     );
-    void finalizeExit(state, session, -1).catch(() => undefined);
+    void finalizeExitAfterOutputDrain(state, session, -1).catch(() => undefined);
   });
   child.on("close", (code: number | null) => {
-    void finalizeExit(state, session, typeof code === "number" ? code : -1).catch(
-      () => undefined,
-    );
+    void finalizeExitAfterOutputDrain(
+      state,
+      session,
+      typeof code === "number" ? code : -1,
+    ).catch(() => undefined);
   });
   await persistSnapshot(session);
 
@@ -239,7 +257,7 @@ export async function startShellSession(
  */
 export async function getShellSessionStatus(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   request: ShellQueryRequest,
 ): Promise<ShellActionResponse> {
   const session = await resolveSession(state, runtime, {
@@ -259,7 +277,7 @@ export async function getShellSessionStatus(
  */
 export async function readShellSession(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   request: ShellReadRequest,
 ): Promise<ShellActionResponse> {
   const session = await resolveSession(state, runtime, {
@@ -287,7 +305,7 @@ export async function readShellSession(
  */
 export async function writeShellSession(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   request: ShellWriteRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
@@ -326,7 +344,7 @@ export async function writeShellSession(
  */
 export async function waitShellSession(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   request: ShellWaitRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
@@ -399,7 +417,7 @@ export async function waitShellSession(
  */
 export async function closeShellSession(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   request: ShellCloseRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
@@ -447,7 +465,7 @@ export async function closeShellSession(
  */
 export async function execShellCommand(
   state: ShellServiceState,
-  runtime: ExecutionRuntime,
+  runtime: ExecutionContext,
   request: ShellExecRequest,
 ): Promise<ShellActionResponse> {
   const timeoutMs = clampWaitMs(request.timeoutMs, DEFAULT_EXEC_TIMEOUT_MS);

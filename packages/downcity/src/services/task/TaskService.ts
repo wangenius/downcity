@@ -7,10 +7,10 @@
  * - 当前文件只保留实例骨架与 lifecycle，不再依赖 legacy `taskService`。
  */
 
-import type { AgentRuntime } from "@agent/RuntimeState.js";
+import type { AgentState } from "@/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
 import type { ServiceActions, Service } from "@/types/Service.js";
-import type { ExecutionRuntime } from "@/types/ExecutionRuntime.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,
@@ -59,7 +59,7 @@ export class TaskService extends BaseService {
    */
   public cronEngine: TaskCronTriggerEngine | null = null;
 
-  constructor(agent: AgentRuntime | null) {
+  constructor(agent: AgentState | null) {
     super(agent);
 
     this.actions = createTaskServiceActions({
@@ -108,7 +108,7 @@ export class TaskService extends BaseService {
    * 启动当前实例的 cron runtime。
    */
   async startCronRuntime(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
   ): Promise<TaskCronRegisterResult | null> {
     if (this.cronEngine) return null;
 
@@ -137,7 +137,7 @@ export class TaskService extends BaseService {
    * 重启当前实例的 cron runtime。
    */
   async restartCronRuntime(
-    context: ExecutionRuntime,
+    context: ExecutionContext,
   ): Promise<TaskCronRegisterResult> {
     await this.stopCronRuntime();
     const started = await this.startCronRuntime(context);
@@ -153,7 +153,7 @@ export class TaskService extends BaseService {
    * 任务定义变更后重载 scheduler。
    */
   private async reloadSchedulerAfterMutation(params: {
-    context: ExecutionRuntime;
+    context: ExecutionContext;
     action: "create" | "update" | "delete" | "status";
     title: string;
   }): Promise<TaskSchedulerReloadResult> {

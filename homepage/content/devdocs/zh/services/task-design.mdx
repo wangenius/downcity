@@ -129,10 +129,10 @@ task 在执行时会创建：
 
 `task` 依然依赖宿主 runtime，但方式和 `chat` 不完全一样。
 
-`chat` 更多是通过现成的 `ServiceRuntime.session.run()` 进入宿主执行链。  
+`chat` 更多是通过现成的 `ExecutionContext.session.run()` 进入宿主执行链。  
 `task` 在 run 阶段则会额外创建一个 task 专用 agent runtime：
 
-- 单独的 `Agent`
+- 单独的 task session runtime
 - 单独的 `Persistor`
 - 单独的 run 目录
 - 独立的 task profile system

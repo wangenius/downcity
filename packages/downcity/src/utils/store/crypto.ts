@@ -7,17 +7,28 @@
  */
 import crypto from "node:crypto";
 import fs from "fs-extra";
-import { getConsoleRuntimeDirPath } from "@/main/runtime/ConsolePaths.js";
+import path from "node:path";
+import { getConsoleModelDbKeyPath } from "@/main/runtime/ConsolePaths.js";
 
 const MODEL_DB_KEY_PATH = "model-db.key";
 const ENCRYPTION_ALGO = "aes-256-gcm";
 
 let cachedKey: Buffer | null = null;
 
+/**
+ * 重置缓存密钥。
+ *
+ * 关键点（中文）
+ * - 仅在迁移阶段替换 key 文件后调用，确保后续解密重新从磁盘加载最新 key。
+ */
+export function resetModelDbKeyCache(): void {
+  cachedKey = null;
+}
+
 function resolveKeyFilePathSync(): string {
-  const runtimeDir = getConsoleRuntimeDirPath();
-  fs.ensureDirSync(runtimeDir);
-  return `${runtimeDir}/${MODEL_DB_KEY_PATH}`;
+  const keyPath = getConsoleModelDbKeyPath();
+  fs.ensureDirSync(path.dirname(keyPath));
+  return keyPath;
 }
 
 async function resolveKeyFilePath(): Promise<string> {

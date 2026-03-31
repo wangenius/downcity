@@ -1,6 +1,6 @@
 ---
 title: System Architecture Logic
-description: The current runtime logic across console, agent runtime, services, plugins, and assets
+description: Explains the current logic across console, agent runtime, session execution, services, and plugins
 ---
 
 # System Architecture Logic
@@ -9,12 +9,12 @@ This page explains how the system actually runs, not just where files live.
 
 ## Overall Layers
 
-Downcity can be read as four layers:
+Downcity is easiest to read as four layers:
 
 1. Entry surfaces: CLI, Console UI, Chrome Extension, HTTP API
 2. Control plane: console
 3. Execution plane: agent runtime
-4. Business layer: services, plugins, and plugin dependency assets
+4. Business layer: session, services, plugins
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
   end
 
   subgraph Control["Control Plane"]
-    CONSOLE["Console<br/>registry / config / gateway / model pool"]
+    CONSOLE["Console<br/>registry / config / gateway / model store"]
   end
 
   subgraph Runtime["Execution Plane"]
@@ -34,9 +34,9 @@ flowchart LR
   end
 
   subgraph Business["Business Layer"]
+    SESSION["Session"]
     SERVICES["Services"]
     PLUGINS["Plugins"]
-    ASSETS["Plugin Dependency Assets"]
   end
 
   CLI --> CONSOLE
@@ -44,9 +44,10 @@ flowchart LR
   EXT --> CONSOLE
   API --> AGENT
   CONSOLE --> AGENT
+  AGENT --> SESSION
   AGENT --> SERVICES
   SERVICES --> PLUGINS
-  PLUGINS --> ASSETS
+  SERVICES --> SESSION
 ```
 
 ## Why split console and agent
@@ -57,7 +58,7 @@ Console is the global control plane. It:
 
 - manages multiple agent projects
 - maintains registry
-- owns global model pool, shared env, and config state
+- owns global model configuration, shared env, and control state
 - provides the common entry for Console UI and extension surfaces
 
 ### Agent
@@ -66,92 +67,151 @@ Agent is the single-project execution plane. It:
 
 - loads the current project config
 - exposes the project HTTP runtime
-- drives context, chat, tasks, logs, and services
+- owns `AgentState`
+- drives session, services, and plugins
 
-## Why split service, plugin, and asset
+## The Runtime Center
+
+The runtime center is:
+
+- `AgentState`
+
+It owns:
+
+- `config`
+- `env`
+- `systems`
+- `model`
+- `sessionStore`
+- `services`
+- `pluginRegistry`
+
+So the most accurate high-level sentence is:
+
+```text
+console manages many agents
+each agent runtime is centered on AgentState
+AgentState then owns session, services, and plugins
+```
+
+## Why split session, service, and plugin
+
+These layers answer different questions.
+
+### Session
+
+Session answers:
+
+- which `sessionId` an input belongs to
+- how messages are persisted
+- when execution enters the model loop
+- how results are written back
+
+The real objects here are:
+
+- `SessionStore`
+- `SessionRuntimeStore`
+- `SessionRuntime`
+- `SessionCore`
+- `FilePersistor`
 
 ### Service
 
-The question a service answers is:
+Service answers:
 
-“Who owns the main workflow and actively participates in the agent lifecycle?”
+- which kind of input it owns
+- how the business workflow moves
+- when to enter session execution
+- which extension points it exposes
 
-A service:
+The current services are:
 
-1. has lifecycle
-2. is tightly coupled to current agent state
-3. actively participates in execution
-4. owns a business workflow
+- `chat`
+- `task`
+- `memory`
+- `shell`
 
 ### Plugin
 
-The question a plugin answers is:
+Plugin answers:
 
-“Who extends the workflow without owning it?”
+- how to extend a workflow without owning it
 
-A plugin:
+Plugin capabilities include:
 
-1. has no standalone lifecycle
-2. does not actively participate by itself
-3. does not own a runtime state machine
-4. attaches through service-defined points
+- actions
+- system injection
+- hooks
 
-In the current implementation, plugin points converge on four semantics:
+Hook semantics are unified as:
 
-- `pipeline`: serial transformation
-- `guard`: serial validation with interruption on error
-- `effect`: side effects only
-- `resolve`: exactly one implementation returns a value
+- `pipeline`
+- `guard`
+- `effect`
+- `resolve`
 
-So the system is no longer centered on capabilities. Instead:
-
-- services define point names
-- runtime defines execution semantics
-- plugins implement the points
-
-### Asset
-
-The question an asset answers is:
-
-“How do low-level dependencies get installed, checked, and used?”
-
-In other words, assets are best understood as plugin dependencies, not as a third workflow owner beside services and plugins.
-
-## Real chat plugin points
-
-The `chat` service currently defines and uses:
-
-- `chat.augmentInbound` as `pipeline`
-- `chat.observePrincipal` as `effect`
-- `chat.authorizeIncoming` as `guard`
-- `chat.resolveUserRole` as `resolve`
-- `chat.beforeEnqueue` as `pipeline`
-- `chat.afterEnqueue` as `effect`
-- `chat.beforeReply` as `pipeline`
-- `chat.afterReply` as `effect`
-
-## Real chat flow
+## Startup Path
 
 ```mermaid
 flowchart TD
-  IN["Incoming channel message"] --> BASE["chat builds base inbound payload"]
-  BASE --> AUG["plugins.pipeline(chat.augmentInbound)"]
-  AUG --> OBS["plugins.effect(chat.observePrincipal)"]
-  OBS --> AUTH["plugins.guard(chat.authorizeIncoming)"]
-  AUTH --> ROLE["plugins.resolve(chat.resolveUserRole)"]
-  ROLE --> ENQ1["plugins.pipeline(chat.beforeEnqueue)"]
-  AUG --> ENQ1
-  ENQ1 --> QUEUE["enqueue chat job"]
-  QUEUE --> ENQ2["plugins.effect(chat.afterEnqueue)"]
-  ENQ2 --> RUN["agent run / model / tools"]
-  RUN --> REP1["plugins.pipeline(chat.beforeReply)"]
-  REP1 --> SEND["send reply"]
-  SEND --> REP2["plugins.effect(chat.afterReply)"]
+  A["city console start"] --> B["start console control plane"]
+  B --> C["maintain registry / model store / gateway"]
+
+  D["city agent start"] --> E["validate console and project state"]
+  E --> F["initialize AgentState"]
+  F --> G["load downcity.json / .env / global env"]
+  G --> H["create LanguageModel"]
+  H --> I["create SessionRuntimeStore"]
+  I --> J["create SessionStore"]
+  J --> K["create PluginRegistry"]
+  K --> L["register auth / skill / voice"]
+  L --> M["create chat / task / memory / shell services"]
+  M --> N["start HTTP server and dashboard routes"]
 ```
 
-## Core objects in code
+## Execution Path
 
-- `HookRegistry`: registers and executes the four plugin semantics
-- `PluginRegistry`: registers plugins, runs actions, checks availability
-- `PluginPoints.ts`: service-owned stable point names
-- `PluginRuntime`: service-side runtime helpers that trigger plugin points
+```mermaid
+flowchart TD
+  IN["External input"] --> ROUTE["CLI / HTTP / Chat / Task entry"]
+  ROUTE --> SERVICE["matching service"]
+  SERVICE --> HOOK["plugin hooks as needed"]
+  SERVICE --> SID["choose sessionId"]
+  SID --> APPEND["append message"]
+  APPEND --> RUN["session.run"]
+  RUN --> CORE["SessionCore"]
+  CORE --> MODEL["model / tools / prompt / persistor / compaction"]
+  MODEL --> RES["assistant result"]
+  RES --> SERVICE
+  SERVICE --> OUT["reply / artifacts / side effects"]
+```
+
+## Real Chat Plugin Points
+
+The `chat` service defines and uses:
+
+- `chat.augmentInbound`
+- `chat.observePrincipal`
+- `chat.authorizeIncoming`
+- `chat.resolveUserRole`
+- `chat.beforeEnqueue`
+- `chat.afterEnqueue`
+- `chat.beforeReply`
+- `chat.afterReply`
+
+These point names belong to the service. Plugins only implement some of them.
+
+## Core Objects in Code
+
+- `AgentState`: single-project runtime center
+- `ExecutionContext`: unified runtime surface
+- `SessionStore`: session facade
+- `SessionCore`: execution kernel
+- `PluginRegistry`: plugin registration and dispatch
+- `BaseService`: service instance base class
+
+## In One Sentence
+
+```text
+The current system logic is: console manages many agents, each agent runtime is centered on AgentState, and session, services, and plugins all hang off that runtime in clearly separated roles.
+```

@@ -85,11 +85,11 @@ sequenceDiagram
 - 重算可用 context
 - 再刷新 context 级数据
 
-这也是为什么 `useDashboardRefresh.ts` 里会先拿 `agents`、再拿 `contexts`、再决定下一个 `contextId`。
+这也是为什么 `useDashboardRefresh.ts` 里会先拿 `agents`、再拿 `sessions` 摘要、再决定下一个激活会话。
 
-### 切 Context
+### 切 Session
 
-切换 context 时，不需要重拉整个世界，只需要重拉：
+切换 session 时，不需要重拉整个世界，只需要重拉：
 
 - channel history
 - context messages

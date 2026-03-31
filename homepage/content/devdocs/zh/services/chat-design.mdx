@@ -48,9 +48,7 @@ chat service 再把结果发回聊天渠道
 
 ## Chat 和 Agent Runtime 的关系
 
-当前 chat 不是通过旧文档里的 `ServiceRuntime.session.run()` 调用旧的 `SessionManager`。
-
-现在更准确的关系是：
+当前更准确的关系是：
 
 - agent 持有 `AgentState`
 - `AgentState` 持有 `SessionStore`

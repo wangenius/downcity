@@ -85,11 +85,11 @@ When the selected agent changes, the system needs to:
 - recompute available contexts
 - then refresh context-level data
 
-That is why `useDashboardRefresh.ts` first loads `agents`, then `contexts`, then chooses the next `contextId`.
+That is why `useDashboardRefresh.ts` first loads `agents`, then session summaries, then chooses the next active session.
 
-### Switching context
+### Switching session
 
-When only the context changes, the UI does not need to reload the whole world. It only needs to refresh:
+When only the session changes, the UI does not need to reload the whole world. It only needs to refresh:
 
 - channel history
 - context messages

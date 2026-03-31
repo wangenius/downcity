@@ -25,8 +25,8 @@ function normalizeCommand(command: string): string {
   return String(command || "").replace(/\s+/g, " ").trim();
 }
 
-function isDowncityCliCommand(command: string): boolean {
-  return /\/bin\/main\/commands\/Index\.js(?:\s|$)/.test(command);
+export function isDowncityCliCommand(command: string): boolean {
+  return /\/bin\/(?:main|console)\/commands\/Index\.js(?:\s|$)/.test(command);
 }
 
 function shouldSweepCommand(
@@ -83,6 +83,28 @@ async function listDetachedCityProcesses(params: {
   } catch {
     return [];
   }
+}
+
+/**
+ * 只探测失联的 Downcity detached 进程，不执行停止动作。
+ */
+export async function findDetachedCityProcesses(params?: {
+  includeConsole?: boolean;
+  includeUi?: boolean;
+  includeAgent?: boolean;
+  excludePids?: number[];
+}): Promise<Array<{ pid: number; command: string }>> {
+  const excludePids = new Set<number>([
+    process.pid,
+    ...(Array.isArray(params?.excludePids) ? params.excludePids : []),
+  ]);
+
+  return listDetachedCityProcesses({
+    includeConsole: params?.includeConsole,
+    includeUi: params?.includeUi,
+    includeAgent: params?.includeAgent,
+    excludePids,
+  });
 }
 
 async function stopPid(pid: number, timeoutMs: number): Promise<boolean> {

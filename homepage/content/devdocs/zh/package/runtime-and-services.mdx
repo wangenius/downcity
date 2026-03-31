@@ -87,13 +87,7 @@ flowchart LR
 - `services`
 - `pluginRegistry`
 
-也就是说，当前代码里不应该再把 runtime 的主概念写成旧的：
-
-- `RuntimeState`
-- `SessionManager`
-- `ServiceRuntime`
-
-这些名字已经不是现在的主中心。
+也就是说，当前 runtime 的主概念已经稳定收敛到 `AgentState`。
 
 ## agent 启动顺序
 
@@ -162,9 +156,7 @@ flowchart TD
 
 ## service 现在如何拿能力
 
-当前 service 不再依赖旧文档里的 `ServiceRuntime` 对象。
-
-它们真正拿到的是：
+当前 service 真正拿到的是：
 
 - `ExecutionContext`
 

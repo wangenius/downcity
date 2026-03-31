@@ -67,7 +67,7 @@ flowchart TD
 - service 生命周期控制
 - service action 执行与 API 注册
 
-当前关键不是旧概念 `ServiceRuntime`，而是：
+当前关键对象是：
 
 - `ServiceStateController`
 - `ServiceActionRunner`
@@ -142,7 +142,7 @@ flowchart TD
 - 从 `AgentState` 派生统一执行上下文
 - 为 service 和 plugin 提供统一能力面
 
-当前 service / plugin 拿到的，不是旧的 `ServiceRuntime` 门面，而是统一的：
+当前 service / plugin 拿到的是统一的：
 
 - `ExecutionContext`
 

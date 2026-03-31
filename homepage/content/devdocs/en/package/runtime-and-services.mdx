@@ -1,124 +1,206 @@
 ---
-title: Package Runtime and Services
-description: Relationship between CLI, console, agent runtime, services, plugins, and the UI gateway
+title: Runtime, Services, and Plugins
+description: Reframes the current package around AgentState, session execution, services, and plugins
 ---
 
-# Package Runtime and Services
+# Runtime, Services, and Plugins
 
-`packages/downcity/` is the core runtime package for the whole system. It is not just an SDK. It is the executable runtime body.
+This page has one goal:
 
-## Main Runtime Areas
+- explain the current runtime, service, and plugin layers using the objects that actually exist in the codebase today
 
-- `src/console/`: CLI commands, console daemon lifecycle, model/config management, service control, UI gateway routes
-- `src/agent/`: agent assembly, prompt building, persistence, orchestration, runtime types
-- `src/services/`: shell, chat, task, memory, and other workflow owners
-- `src/plugins/`: plugin implementations such as auth, skill, and voice
-- `src/types/`: shared contracts across runtime surfaces
-- `src/utils/`: storage, logging, ids, templates, and common helpers
+## Short Version
 
-## Runtime Relationship
+- `AgentState` is the single-project runtime center
+- services own business workflows
+- plugins extend those workflows without owning them
 
-```text
-CLI command
-  -> console command layer
-    -> console runtime / registry / daemon management
-      -> selected agent runtime
-        -> services / plugins / context execution
+## Current Layering
+
+Downcity is easiest to read as four layers:
+
+1. Entry surfaces: CLI, Console UI, Chrome Extension, HTTP API
+2. Control plane: console
+3. Execution plane: agent runtime
+4. Business layer: sessions, services, plugins
+
+```mermaid
+flowchart LR
+  subgraph Entry["Entry"]
+    CLI["CLI"]
+    UI["Console UI"]
+    EXT["Chrome Extension"]
+    API["HTTP API"]
+  end
+
+  subgraph Control["Control Plane"]
+    CONSOLE["Console<br/>registry / config / daemon / gateway"]
+  end
+
+  subgraph Runtime["Execution Plane"]
+    AGENT["Agent Runtime<br/>single project"]
+  end
+
+  subgraph Business["Business Layer"]
+    SESSION["Session"]
+    SERVICES["Services"]
+    PLUGINS["Plugins"]
+  end
+
+  CLI --> CONSOLE
+  UI --> CONSOLE
+  EXT --> CONSOLE
+  API --> AGENT
+  CONSOLE --> AGENT
+  AGENT --> SESSION
+  AGENT --> SERVICES
+  SERVICES --> PLUGINS
+  SERVICES --> SESSION
 ```
 
-## ServiceRuntime Design
+## The Runtime Center
 
-The service layer intentionally uses a thin injected runtime:
+The runtime center is now:
 
-- parsed config
-- agent-level env snapshot
-- context access
-- cross-service invoke
-- plugin port
+- `AgentState`
 
-This keeps services focused on business flow rather than process orchestration.
+It owns:
 
-Plugins now receive the same runtime surface as services.
-Services call plugins, and each plugin owns its own dependency handling internally.
+- `config`
+- `env`
+- `systems`
+- `model`
+- `sessionStore`
+- `services`
+- `pluginRegistry`
 
-The plugin runtime port exposed to services has now converged on four semantics:
+So the real mental model is:
 
-- `plugins.pipeline(...)`
-- `plugins.guard(...)`
-- `plugins.effect(...)`
-- `plugins.resolve(...)`
+```text
+console manages many agents
+each agent runtime is centered on AgentState
+AgentState then holds session, services, and plugins
+```
 
-## Console UI Gateway
+## Startup Order
 
-`src/console/ui/ConsoleUIGateway.ts` is the bridge between product surfaces and runtime:
+```mermaid
+flowchart TD
+  A["city console start"] --> B["start console control plane"]
+  B --> C["maintain registry / model store / gateway"]
 
-- serves Console UI build artifacts from `packages/downcity/public`
-- provides console-level helper APIs such as `/api/ui/*`
-- proxies `/api/*` to the selected agent runtime
-- keeps console-level behavior independent from any one page
+  D["city agent start"] --> E["validate console and project state"]
+  E --> F["initialize AgentState"]
+  F --> G["load downcity.json / .env / global env"]
+  G --> H["create LanguageModel"]
+  H --> I["create SessionRuntimeStore"]
+  I --> J["create SessionStore"]
+  J --> K["create PluginRegistry"]
+  K --> L["register auth / skill / voice"]
+  L --> M["create chat / task / memory / shell services"]
+  M --> N["bind shell tool runtime"]
+  N --> O["start HTTP server"]
+```
 
-## The Real Boundary Between Service and Plugin
+## How Services Get Runtime Access
 
-### Service
+Services do not own process orchestration.
 
-A service is a runtime service with lifecycle.
+They receive:
 
-Typical traits:
+- `ExecutionContext`
 
-- starts, stops, or otherwise participates with the agent runtime
-- is tightly coupled to current agent state
-- may actively receive input, schedule work, or perform workflow steps
-- owns a workflow rather than a single ability
+That context exposes the main runtime surface:
 
-### Plugin
+- `config`
+- `env`
+- `logger`
+- `session`
+- `invoke`
+- `plugins`
 
-A plugin is not a service. It is an extension mechanism.
+So a better description is:
 
-Typical traits:
+- the runtime injects a unified execution surface through `ExecutionContext`
 
-- no standalone lifecycle
-- does not actively participate on its own
-- does not own a separate runtime state machine
-- attaches through predefined extension points
+## Service Boundary
 
-## Structure in the Current Code
+Services answer:
 
-In the current source tree:
+- what kind of input they own
+- how their workflow moves
+- when they enter `session.run`
+- which plugin points they expose
 
-- `src/types/Plugin.ts` defines plugin types, runtime view, and the four hook semantics
-- `src/console/plugin/HookRegistry.ts` executes those four semantics
-- `src/console/plugin/PluginRegistry.ts` owns plugin registration, availability, and action dispatch
-- `src/services/chat/runtime/PluginPoints.ts` defines stable point names owned by chat
+The current built-in services are:
 
-So execution semantics are defined by the runtime, point names are defined by each service, and plugins only implement them.
+- `chat`
+- `task`
+- `memory`
+- `shell`
 
-## Real Chat Flow
+These are per-agent instances, not global workflow singletons.
 
-### Inbound
+## Plugin Boundary
 
-- channel receives a message
-- chat builds the base inbound payload
-- `plugins.pipeline(chat.augmentInbound)` lets plugins augment content
-- `plugins.effect(chat.observePrincipal)` records subject metadata
-- `plugins.guard(chat.authorizeIncoming)` enforces authorization
-- `plugins.resolve(chat.resolveUserRole)` resolves role information
-- if there is a voice attachment, the plugin attached to `chat.augmentInbound` handles content enrichment directly
+Plugins answer:
 
-### Enqueue
+- how to extend a workflow without taking ownership of it
 
-- `plugins.pipeline(chat.beforeEnqueue)` can rewrite data before enqueue
-- chat enqueues the job
-- `plugins.effect(chat.afterEnqueue)` runs side effects such as audit or metrics
+Plugins currently provide:
 
-### Reply
+- explicit actions
+- system injection
+- hooks
 
-- agent run finishes
-- `plugins.pipeline(chat.beforeReply)` can rewrite reply text
-- chat sends the reply
-- `plugins.effect(chat.afterReply)` handles side effects after send
+Hook semantics are unified as:
 
-### voice plugin
+- `pipeline`
+- `guard`
+- `effect`
+- `resolve`
 
-- mainly participates in `chat.augmentInbound`
-- reads its own transcription config from `plugins.voice`
-- resolves transcription dependencies inside the plugin and merges transcript text back into inbound content
+The key rule is:
+
+- services define stable point names
+- plugins implement some of those points
+
+## Real Chat Plugin Points
+
+The `chat` service currently defines and uses:
+
+- `chat.augmentInbound`
+- `chat.observePrincipal`
+- `chat.authorizeIncoming`
+- `chat.resolveUserRole`
+- `chat.beforeEnqueue`
+- `chat.afterEnqueue`
+- `chat.beforeReply`
+- `chat.afterReply`
+
+## Real Execution Path
+
+```mermaid
+sequenceDiagram
+  participant In as External Input
+  participant Agent as AgentState
+  participant Service as Service
+  participant Session as SessionStore
+  participant Core as SessionCore
+  participant Plugin as PluginRegistry
+
+  In->>Agent: CLI / HTTP / Chat / Task
+  Agent->>Service: route to matching service
+  Service->>Plugin: run hooks / actions as needed
+  Service->>Session: append message / run
+  Session->>Core: execute current session
+  Core-->>Session: assistant result
+  Session-->>Service: run result
+  Service-->>In: reply / side effects / artifacts
+```
+
+## In One Sentence
+
+```text
+The current package is centered on AgentState, uses SessionStore as the execution axis, lets services own workflows, and uses plugins only as extensions.
+```

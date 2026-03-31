@@ -51,6 +51,13 @@ export function getConsoleRuntimeDirPath(): string {
 }
 
 /**
+ * console 模型存储密钥文件路径。
+ */
+export function getConsoleModelDbKeyPath(): string {
+  return path.join(getConsoleRuntimeDirPath(), "model-db.key");
+}
+
+/**
  * console pid 文件路径。
  */
 export function getConsolePidPath(): string {

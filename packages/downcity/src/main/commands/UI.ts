@@ -18,7 +18,10 @@ import {
   isConsoleProcessAlive,
   isConsoleRunning,
 } from "@/main/runtime/ConsoleRuntime.js";
-import { sweepDetachedCityProcesses } from "@/main/runtime/ProcessSweep.js";
+import {
+  findDetachedCityProcesses,
+  sweepDetachedCityProcesses,
+} from "@/main/runtime/ProcessSweep.js";
 import { createConsoleUIGateway } from "@main/ui/ConsoleUIGateway.js";
 import type {
   ConsoleUiRuntimeMeta,
@@ -96,13 +99,113 @@ function normalizeHost(host: string): string {
 }
 
 /**
+ * 解析 detached Console UI 命令行中的 host/port。
+ */
+export function parseConsoleUiProcessCommand(command: string): {
+  host: string;
+  port: number;
+} | null {
+  const normalized = String(command || "").replace(/\s+/g, " ").trim();
+  if (!/\bconsole ui run\b/.test(normalized)) return null;
+
+  const hostMatch = normalized.match(/(?:^|\s)--host\s+(\S+)/);
+  const portMatch = normalized.match(/(?:^|\s)--port\s+(\d+)/);
+  const host = normalizeHost(hostMatch?.[1] || DEFAULT_UI_HOST);
+  const port = Number.parseInt(portMatch?.[1] || String(DEFAULT_UI_PORT), 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
+
+  return {
+    host,
+    port,
+  };
+}
+
+/**
+ * 从 detached 进程列表中挑选可复用的 Console UI 进程。
+ */
+export function findReusableConsoleUiProcess(
+  processes: Array<{ pid: number; command: string }>,
+  expected: {
+    host: string;
+    port: number;
+  },
+): {
+  pid: number;
+  host: string;
+  port: number;
+} | null {
+  const expectedHost = normalizeHost(expected.host);
+  const expectedPort = expected.port;
+
+  for (const item of processes) {
+    const parsed = parseConsoleUiProcessCommand(item.command);
+    if (!parsed) continue;
+    if (parsed.host !== expectedHost || parsed.port !== expectedPort) continue;
+    return {
+      pid: item.pid,
+      host: parsed.host,
+      port: parsed.port,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * 尝试从 detached UI 进程恢复 pid/meta 状态文件。
+ */
+async function recoverDetachedConsoleUiStatus(
+  expected?: {
+    host?: string;
+    port?: number;
+  },
+): Promise<ConsoleUiRuntimeStatus | null> {
+  const host = normalizeHost(expected?.host || DEFAULT_UI_HOST);
+  const port =
+    typeof expected?.port === "number" && Number.isInteger(expected.port)
+      ? expected.port
+      : DEFAULT_UI_PORT;
+
+  const processes = await findDetachedCityProcesses({
+    includeUi: true,
+  });
+  const reusable = findReusableConsoleUiProcess(processes, { host, port });
+  if (!reusable) return null;
+
+  const meta: ConsoleUiRuntimeMeta = {
+    pid: reusable.pid,
+    host: reusable.host,
+    port: reusable.port,
+    startedAt: new Date().toISOString(),
+  };
+  await fs.writeFile(getConsoleUiPidPath(), String(reusable.pid), "utf-8");
+  await fs.writeJson(getConsoleUiMetaPath(), meta, { spaces: 2 });
+
+  return {
+    running: true,
+    pid: reusable.pid,
+    host: reusable.host,
+    port: reusable.port,
+    url: `http://${reusable.host}:${reusable.port}`,
+    logPath: getConsoleUiLogPath(),
+    pidPath: getConsoleUiPidPath(),
+  };
+}
+
+/**
  * 获取 UI 当前运行状态。
  */
 export async function getConsoleUiRuntimeStatus(): Promise<ConsoleUiRuntimeStatus> {
   const pidPath = getConsoleUiPidPath();
   const logPath = getConsoleUiLogPath();
+  const meta = await readConsoleUiMeta();
   const pid = await readConsoleUiPid();
   if (!pid) {
+    const recovered = await recoverDetachedConsoleUiStatus({
+      host: meta?.host,
+      port: meta?.port,
+    });
+    if (recovered) return recovered;
     return {
       running: false,
       logPath,
@@ -112,6 +215,11 @@ export async function getConsoleUiRuntimeStatus(): Promise<ConsoleUiRuntimeStatu
 
   if (!isConsoleProcessAlive(pid)) {
     await cleanupConsoleUiStateFiles();
+    const recovered = await recoverDetachedConsoleUiStatus({
+      host: meta?.host,
+      port: meta?.port,
+    });
+    if (recovered) return recovered;
     return {
       running: false,
       logPath,
@@ -119,7 +227,6 @@ export async function getConsoleUiRuntimeStatus(): Promise<ConsoleUiRuntimeStatu
     };
   }
 
-  const meta = await readConsoleUiMeta();
   const host = normalizeHost(meta?.host || DEFAULT_UI_HOST);
   const port =
     meta && Number.isInteger(meta.port) ? meta.port : DEFAULT_UI_PORT;

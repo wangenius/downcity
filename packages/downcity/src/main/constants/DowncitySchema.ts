@@ -51,7 +51,6 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
           type: "object",
           additionalProperties: true,
           properties: {
-            method: { type: "string", enum: ["cmd", "direct"], default: "direct" },
             queue: {
               type: "object",
               additionalProperties: true,

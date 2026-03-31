@@ -16,7 +16,7 @@ import type { SessionStore } from "@sessions/SessionStore.js";
 import type {
   PluginActionResult,
   PluginAvailability,
-  PluginRuntimeView,
+  PluginView,
 } from "@/types/Plugin.js";
 
 /**
@@ -24,9 +24,9 @@ import type {
  */
 export interface AgentPluginRegistry {
   /**
-   * 列出当前已注册的插件运行时视图。
+   * 列出当前已注册的插件概览视图。
    */
-  list(): PluginRuntimeView[];
+  list(): PluginView[];
   /**
    * 查询指定插件可用性。
    */

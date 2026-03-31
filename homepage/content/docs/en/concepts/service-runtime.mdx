@@ -1,19 +1,19 @@
 ---
-title: Execution Runtime & Session
-description: What the unified execution runtime is, what a session is, and how services and plugins connect to them
+title: Execution Context & Session
+description: What the execution context is, what a session is, and how services and plugins connect to them
 ---
 
-# Execution Runtime & Session
+# Execution Context & Session
 
 This page answers 3 questions:
 
-1. what `execution runtime` is
+1. what `execution context` is
 2. what a `session` is
 3. how `service` and `plugin` connect to them
 
-## 1. What Execution Runtime Means
+## 1. What Execution Context Means
 
-`execution runtime` is not a new process and not a separate subsystem.
+`execution context` is not a new process and not a separate subsystem.
 
 It is more precisely:
 
@@ -25,7 +25,7 @@ It usually includes:
 - `env`
 - `logger`
 - `session`
-- `services`
+- `invoke`
 - `plugins`
 
 So it solves the question "how do execution modules access the same capabilities?" rather than "who is the host?"
@@ -40,28 +40,28 @@ You can read it as:
 - one task run = one session
 - history, prompt building, tool use, and assistant output all happen around that session
 
-This is why many user-facing concepts now converge on `sessionId`:
+This is why many user-facing concepts converge on `sessionId`:
 
 - the meaning stays stable
 - chat and task can share the same execution axis
 - the system does not need many parallel execution identities
 
-## 3. Relationship Between Execution Runtime and Session
+## 3. Relationship Between Execution Context and Session
 
 ```mermaid
 flowchart LR
-  A["Agent"] --> ER["Execution Runtime"]
-  A --> SR["Session Registry"]
+  A["Agent"] --> EC["Execution Context"]
+  A --> SR["Session Store"]
   SR --> S["Session"]
-  ER --> SP["runtime.session"]
+  EC --> SP["context.session"]
   SP --> S
 ```
 
 The key points are:
 
-- the `agent` owns the session registry
-- `execution runtime` exposes `runtime.session`
-- services and plugins do not own sessions directly; they use session capabilities through `runtime.session`
+- the `agent` owns the session store
+- `execution context` exposes `context.session`
+- services and plugins do not own sessions directly; they use session capabilities through `context.session`
 
 ## 4. What a Service Should Own
 
@@ -76,7 +76,7 @@ Typical built-in services:
 
 A service should own:
 
-- user-facing workflows
+- the main path
 - orchestration
 - domain state
 - stable actions
@@ -86,7 +86,7 @@ A service should not own:
 
 - plugin-private implementation details
 - plugin dependency installation and internal switching logic
-- fragmented workflow logic that really belongs in the main path
+- fragmented logic that really belongs in the main path
 
 ## 5. What a Plugin Should Own
 
@@ -94,8 +94,8 @@ A plugin is the passive extension layer.
 
 Its job is to:
 
-- enhance workflow at fixed extension points
-- implement guard / pipeline / effect / resolve behaviors
+- enhance the main path at fixed extension points
+- implement guard, pipeline, effect, and resolve behavior
 - manage its own dependencies, config, and internal implementation
 
 A plugin should not:
@@ -110,12 +110,12 @@ A plugin should not:
 sequenceDiagram
   participant User as User
   participant Service as service
-  participant Runtime as execution runtime
+  participant Context as execution context
   participant Plugin as plugin
   participant Session as session
 
   User->>Service: start request
-  Service->>Runtime: read shared capabilities
+  Service->>Context: read shared capabilities
   Service->>Plugin: trigger fixed points
   Service->>Session: enter or reuse target session
   Session-->>Service: return result
@@ -126,9 +126,9 @@ sequenceDiagram
 
 In chat flows:
 
-- `chat service` receives Telegram / Feishu / QQ messages
+- `chat service` receives Telegram, Feishu, or QQ messages
 - it resolves the target `sessionId`
-- it enters that session through `runtime.session`
+- it enters that session through `context.session`
 - if there is audio input, it triggers the `voice` plugin
 - if access must be checked, it triggers the `auth` plugin
 - `chat service` still decides how to reply to the channel
@@ -138,7 +138,7 @@ In chat flows:
 One-line version:
 
 - `agent` is the host
-- `execution runtime` is the unified execution surface
+- `execution context` is the unified execution surface
 - `session` is the actual execution unit
-- `service` owns the main workflow
+- `service` owns the main path
 - `plugin` owns passive enhancement

@@ -25,7 +25,7 @@ function toRecord(value: unknown): Record<string, unknown> {
  * 观测入站主体。
  */
 export async function observeIncomingChatPrincipal(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   channel: ChatDispatchChannel;
   chatId: string;
   chatType?: string;
@@ -33,7 +33,7 @@ export async function observeIncomingChatPrincipal(params: {
   userId?: string;
   username?: string;
 }): Promise<void> {
-  await params.runtime.plugins.effect(CHAT_PLUGIN_POINTS.observePrincipal, {
+  await params.context.plugins.effect(CHAT_PLUGIN_POINTS.observePrincipal, {
     channel: params.channel,
     chatId: params.chatId,
     ...(params.chatType ? { chatType: params.chatType } : {}),
@@ -51,11 +51,11 @@ export async function observeIncomingChatPrincipal(params: {
  * - 这样 chat service 可以像处理中间件一样串联 guard 点。
  */
 export async function guardIncomingChat(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   channel: ChatDispatchChannel;
   input: ChatAuthorizationEvaluateInput;
 }): Promise<void> {
-  await params.runtime.plugins.guard(
+  await params.context.plugins.guard(
     CHAT_PLUGIN_POINTS.authorizeIncoming,
     {
       channel: params.channel,
@@ -72,11 +72,11 @@ export async function guardIncomingChat(params: {
  * 解析用户角色。
  */
 export async function resolveIncomingChatUserRole(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   channel: ChatDispatchChannel;
   userId?: string;
 }): Promise<ChatAuthorizationRole | undefined> {
-  const result = await params.runtime.plugins.resolve<JsonObject, unknown>(
+  const result = await params.context.plugins.resolve<JsonObject, unknown>(
     CHAT_PLUGIN_POINTS.resolveUserRole,
     {
       channel: params.channel,

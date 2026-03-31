@@ -2,7 +2,7 @@
  * Direct dispatch 协议类型。
  *
  * 关键点（中文）
- * - 仅用于 `services.chat.method = direct` 的 assistant 出站解析。
+ * - 仅用于当前 chat assistant 出站解析。
  * - frontmatter metadata 语义与 `city chat send` 保持一致，再额外支持 `react`。
  */
 

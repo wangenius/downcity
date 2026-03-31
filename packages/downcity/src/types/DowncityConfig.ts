@@ -35,14 +35,6 @@ export interface DowncityConfig {
      */
     chat?: {
       /**
-       * Chat 回复投递方式。
-       *
-       * 可选值（中文）
-       * - `direct`（默认）：将本轮 LLM 生成的 assistant 文本直接投递到当前会话 channel。
-       * - `cmd`：通过 shell 执行 `city chat send` 投递用户可见消息。
-       */
-      method?: "cmd" | "direct";
-      /**
        * Chat 调度队列（按 chatKey 分 lane）。
        */
       queue?: {

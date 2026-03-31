@@ -2,9 +2,9 @@
  * Plugin 类型定义。
  *
  * 关键点（中文）
- * - Plugin 是运行时增强单元，不维护独立状态机。
+ * - Plugin 是执行期增强单元，不维护独立状态机。
  * - Plugin 通过 actions / hooks / resolves / system 声明行为。
- * - Plugin 的依赖实现应内聚在插件内部，而不是挂成 runtime 公共能力。
+ * - Plugin 的依赖实现应内聚在插件内部，而不是挂成公共执行上下文能力。
  */
 
 import type { Command } from "commander";
@@ -64,9 +64,9 @@ export interface PluginServiceInvokePort {
 }
 
 /**
- * Plugin 运行时概览。
+ * Plugin 概览视图。
  */
-export interface PluginRuntimeView {
+export interface PluginView {
   /**
    * Plugin 稳定名称。
    */
@@ -134,7 +134,7 @@ export interface PluginPort {
   /**
    * 列出全部已注册 Plugin。
    */
-  list(): PluginRuntimeView[];
+  list(): PluginView[];
   /**
    * 检查指定 Plugin 可用性。
    */
@@ -178,11 +178,6 @@ export interface PluginPort {
 }
 
 /**
- * Plugin 运行时对象。
- */
-export type PluginRuntime = ExecutionContext;
-
-/**
  * Plugin 配置定义。
  */
 export interface PluginConfigDefinition<T extends StructuredConfig = StructuredConfig> {
@@ -207,9 +202,9 @@ export type PluginPipelineHook<
   TValue extends JsonValue = JsonValue,
 > = (params: {
   /**
-   * 当前插件运行时。
+   * 当前执行上下文。
    */
-  runtime: PluginRuntime;
+  context: ExecutionContext;
   /**
    * 当前值。
    */
@@ -227,7 +222,7 @@ export type PluginPipelineHook<
  * - 不返回结果；若需阻断流程，直接抛错。
  */
 export type PluginGuardHook<TValue extends JsonValue = JsonValue> = (params: {
-  runtime: PluginRuntime;
+  context: ExecutionContext;
   value: TValue;
   plugin: string;
 }) => Promise<void> | void;
@@ -236,7 +231,7 @@ export type PluginGuardHook<TValue extends JsonValue = JsonValue> = (params: {
  * Plugin effect 处理器。
  */
 export type PluginEffectHook<TValue extends JsonValue = JsonValue> = (params: {
-  runtime: PluginRuntime;
+  context: ExecutionContext;
   value: TValue;
   plugin: string;
 }) => Promise<void> | void;
@@ -248,7 +243,7 @@ export type PluginResolveHook<
   TInput extends JsonValue = JsonValue,
   TOutput extends JsonValue = JsonValue,
 > = (params: {
-  runtime: PluginRuntime;
+  context: ExecutionContext;
   value: TInput;
   plugin: string;
 }) => Promise<TOutput> | TOutput;
@@ -370,9 +365,9 @@ export interface PluginAction<
    */
   execute: (params: {
     /**
-     * 当前插件运行时。
+     * 当前执行上下文。
      */
-    runtime: PluginRuntime;
+    context: ExecutionContext;
     /**
      * 输入 payload。
      */
@@ -430,11 +425,11 @@ export interface Plugin {
   /**
    * Plugin system 文本构建器（可选）。
    */
-  system?: (runtime: PluginRuntime) => string | Promise<string>;
+  system?: (context: ExecutionContext) => string | Promise<string>;
   /**
    * Plugin 可用性检查器（可选）。
    */
   availability?: (
-    runtime: PluginRuntime,
+    context: ExecutionContext,
   ) => Promise<PluginAvailability> | PluginAvailability;
 }

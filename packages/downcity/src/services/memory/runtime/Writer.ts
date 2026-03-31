@@ -45,29 +45,29 @@ function isWithin(parentPath: string, childPath: string): boolean {
 }
 
 function resolveStoreTargetPath(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   target: MemorySourceType,
   sessionId?: string,
 ): { absPath: string; relPath: string } {
   if (target === "longterm") {
-    const absPath = getDowncityMemoryLongTermPath(runtime.rootPath);
-    return { absPath, relPath: toRelPath(runtime.rootPath, absPath) };
+    const absPath = getDowncityMemoryLongTermPath(context.rootPath);
+    return { absPath, relPath: toRelPath(context.rootPath, absPath) };
   }
   if (target === "daily") {
     const date = resolveDateStamp();
-    const absPath = getDowncityMemoryDailyPath(runtime.rootPath, date);
-    return { absPath, relPath: toRelPath(runtime.rootPath, absPath) };
+    const absPath = getDowncityMemoryDailyPath(context.rootPath, date);
+    return { absPath, relPath: toRelPath(context.rootPath, absPath) };
   }
   const key = String(sessionId || "").trim();
   if (!key) {
     throw new Error("sessionId is required for working memory");
   }
   const absPath = path.join(
-    getDowncitySessionDirPath(runtime.rootPath, key),
+    getDowncitySessionDirPath(context.rootPath, key),
     "memory",
     "working.md",
   );
-  return { absPath, relPath: toRelPath(runtime.rootPath, absPath) };
+  return { absPath, relPath: toRelPath(context.rootPath, absPath) };
 }
 
 function ensureHeading(target: MemorySourceType): string {
@@ -90,7 +90,7 @@ function formatEntry(content: string): string {
  * 显式写入 memory。
  */
 export async function storeMemory(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryStorePayload,
 ): Promise<MemoryStoreResponse> {
@@ -99,7 +99,7 @@ export async function storeMemory(
   if (!content) {
     throw new Error("content is required");
   }
-  const resolved = resolveStoreTargetPath(runtime, target, payload.sessionId);
+  const resolved = resolveStoreTargetPath(context, target, payload.sessionId);
   await fs.mkdir(path.dirname(resolved.absPath), { recursive: true });
   const exists = await fs
     .access(resolved.absPath)
@@ -110,7 +110,7 @@ export async function storeMemory(
   }
   const entry = formatEntry(content);
   await fs.appendFile(resolved.absPath, `\n${entry}`, "utf-8");
-  markMemoryDirty(runtime, state, `store:${resolved.relPath}`);
+  markMemoryDirty(context, state, `store:${resolved.relPath}`);
   return {
     path: resolved.relPath,
     target,
@@ -118,14 +118,14 @@ export async function storeMemory(
   };
 }
 
-function resolveAllowedReadPath(runtime: ExecutionContext, relPath: string): string {
+function resolveAllowedReadPath(context: ExecutionContext, relPath: string): string {
   const normalized = relPath.replace(/\\/g, "/").replace(/^\/+/, "").trim();
   if (!normalized) {
     throw new Error("path is required");
   }
-  const absPath = path.resolve(runtime.rootPath, normalized);
-  const memoryRoot = path.resolve(path.join(runtime.rootPath, ".downcity", "memory"));
-  const sessionRoot = path.resolve(path.join(runtime.rootPath, ".downcity", "session"));
+  const absPath = path.resolve(context.rootPath, normalized);
+  const memoryRoot = path.resolve(path.join(context.rootPath, ".downcity", "memory"));
+  const sessionRoot = path.resolve(path.join(context.rootPath, ".downcity", "session"));
   const isMemoryPath = isWithin(memoryRoot, absPath);
   const isWorkingPath =
     isWithin(sessionRoot, absPath) && normalized.endsWith("/memory/working.md");
@@ -142,15 +142,15 @@ function resolveAllowedReadPath(runtime: ExecutionContext, relPath: string): str
  * 读取指定记忆文件（支持行区间）。
  */
 export async function getMemory(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   payload: MemoryGetPayload,
 ): Promise<MemoryGetResponse> {
   const requestedPath = String(payload.path || "").trim();
   if (!requestedPath) {
     throw new Error("path is required");
   }
-  const absPath = resolveAllowedReadPath(runtime, requestedPath);
-  const relPath = toRelPath(runtime.rootPath, absPath);
+  const absPath = resolveAllowedReadPath(context, requestedPath);
+  const relPath = toRelPath(context.rootPath, absPath);
   const exists = await fs
     .access(absPath)
     .then(() => true)

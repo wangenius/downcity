@@ -117,7 +117,7 @@ export const skillPlugin: Plugin = {
   name: "skill",
   title: "Skill Catalog And Loader",
   description:
-    "Finds, installs, lists, and reads local skills, and injects the current skill overview into runtime system prompts so the agent knows what capabilities are available.",
+    "Finds, installs, lists, and reads local skills, and injects the current skill overview into system prompts so the agent knows what capabilities are available.",
   config: {
     plugin: "skill",
     scope: "project",
@@ -125,8 +125,8 @@ export const skillPlugin: Plugin = {
       ...DEFAULT_SKILL_PLUGIN_CONFIG,
     },
   },
-  availability(runtime) {
-    const config = readSkillPluginConfig(runtime.config);
+  availability(context) {
+    const config = readSkillPluginConfig(context.config);
     if (!config.enabled) {
       return {
         enabled: false,
@@ -140,8 +140,8 @@ export const skillPlugin: Plugin = {
       reasons: [],
     };
   },
-  async system(runtime) {
-    const dynamicText = String(await buildSkillsSystemText(runtime)).trim();
+  async system(context) {
+    const dynamicText = String(await buildSkillsSystemText(context)).trim();
     return [SKILL_PLUGIN_PROMPT, dynamicText].filter(Boolean).join("\n\n");
   },
   actions: {
@@ -159,7 +159,7 @@ export const skillPlugin: Plugin = {
       },
       async execute(params) {
         const payload = params.payload as SkillPluginFindPayload;
-        const rootPath = params.runtime.rootPath;
+        const rootPath = params.context.rootPath;
         const exactLearned = findLearnedSkillExact(rootPath, payload.query);
         if (exactLearned) {
           return {
@@ -213,7 +213,7 @@ export const skillPlugin: Plugin = {
       },
       async execute(params) {
         const payload = params.payload as SkillPluginInstallPayload;
-        const rootPath = params.runtime.rootPath;
+        const rootPath = params.context.rootPath;
         const queryFromSpec = inferSkillQueryFromSpec(payload.spec);
         const beforeList = listSkills(rootPath).skills;
         const beforeIds = new Set(beforeList.map((item) => item.id));
@@ -277,7 +277,7 @@ export const skillPlugin: Plugin = {
       execute(params) {
         return {
           success: true,
-          data: listSkills(params.runtime.rootPath),
+          data: listSkills(params.context.rootPath),
         };
       },
     },
@@ -305,7 +305,7 @@ export const skillPlugin: Plugin = {
       async execute(params) {
         const payload = params.payload as SkillPluginLookupPayload;
         const result = await lookupSkill({
-          projectRoot: params.runtime.rootPath,
+          projectRoot: params.context.rootPath,
           request: {
             name: payload.name,
           },

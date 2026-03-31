@@ -22,14 +22,14 @@ function normalizeText(value: string): string {
  * 入队前增强。
  */
 export async function prepareChatEnqueue(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   input: ChatEnqueuePipelineInput;
 }): Promise<ChatEnqueuePipelineInput> {
   const normalized: ChatEnqueuePipelineInput = {
     ...params.input,
     text: normalizeText(params.input.text),
   };
-  return (params.runtime.plugins.pipeline<JsonValue>(
+  return (params.context.plugins.pipeline<JsonValue>(
     CHAT_PLUGIN_POINTS.beforeEnqueue,
     normalized as unknown as JsonValue,
   ) as unknown) as Promise<ChatEnqueuePipelineInput>;
@@ -39,10 +39,10 @@ export async function prepareChatEnqueue(params: {
  * 入队后通知。
  */
 export async function emitChatEnqueueEffect(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   input: ChatEnqueueEffectInput;
 }): Promise<void> {
-  await params.runtime.plugins.effect(
+  await params.context.plugins.effect(
     CHAT_PLUGIN_POINTS.afterEnqueue,
     params.input as unknown as JsonValue,
   );

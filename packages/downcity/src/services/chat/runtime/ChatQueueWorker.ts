@@ -21,9 +21,6 @@ import {
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
 import {
-  resolveFinalChannelDispatchPlan,
-} from "./UserVisibleText.js";
-import {
   appendChatIngressMessageIfNeeded,
   appendChatRunErrorMessage,
   buildChatIngressExtra,
@@ -38,7 +35,6 @@ import {
 } from "./ChatQueueWorkerSupport.js";
 import type { ChatQueueStorePort } from "./ChatQueueStore.js";
 import {
-  dispatchAssistantMessageDirect,
   dispatchAssistantTextDirect,
   dispatchTextToChannel,
 } from "./ChatQueueReplyDispatch.js";
@@ -52,7 +48,7 @@ type LaneState = {
 
 export class ChatQueueWorker {
   private readonly logger: Logger;
-  private readonly runtime: ExecutionContext;
+  private readonly context: ExecutionContext;
   private readonly config: ChatQueueWorkerConfig;
   private readonly queueStore: ChatQueueStorePort;
 
@@ -70,7 +66,7 @@ export class ChatQueueWorker {
     config?: Partial<ChatQueueWorkerConfig>;
   }) {
     this.logger = params.logger;
-    this.runtime = params.context;
+    this.context = params.context;
     this.config = normalizeChatQueueWorkerConfig(params.config);
     this.queueStore = params.queueStore || getSharedChatQueueStore();
   }
@@ -291,24 +287,19 @@ export class ChatQueueWorker {
       }
       return mergedExecMessages;
     };
-    const directDispatchedStepTexts: string[] = [];
     const onAssistantStepCallback = async (params: {
       text: string;
       stepIndex: number;
     }): Promise<void> => {
       const stepText = String(params.text || "").trim();
       if (!stepText) return;
-      const dispatched = await dispatchAssistantTextDirect({
+      await dispatchAssistantTextDirect({
         logger: this.logger,
-        runtime: this.runtime,
+        context: this.context,
         sessionId: runItem.sessionId,
         assistantText: stepText,
         phase: "step",
       });
-      // 关键点（中文）：记录最近一次已发送的 step 文本，避免最终消息重复回发。
-      if (dispatched) {
-        directDispatchedStepTexts.push(stepText);
-      }
     };
 
     const typing = this.startTypingHeartbeat(runItem);
@@ -339,7 +330,7 @@ export class ChatQueueWorker {
 
       await dispatchTextToChannel({
         logger: this.logger,
-        runtime: this.runtime,
+        context: this.context,
         sessionId: runItem.sessionId,
         text: channelErrorText,
         messageId: runItem.messageId,
@@ -365,41 +356,9 @@ export class ChatQueueWorker {
       // ignore
     }
 
-    try {
-      // 关键点（中文）
-      // - step 文本用于中途反馈；最终消息用于收口。
-      // - 若最终文本本质上只是“step 已发文本的整合回放”，则跳过最终回发。
-      // - 若最终用户可见文本已由 `chat_send` 送达，也跳过补发。
-      // - 无论成功/失败，只要最终文本仍未送达，都要强制兜底回发。
-      const finalDispatchPlan = resolveFinalChannelDispatchPlan({
-        assistantMessage: result.assistantMessage,
-        directDispatchedStepTexts,
-      });
-      const dispatchedDirect = finalDispatchPlan.alreadyDelivered
-        ? true
-        : await dispatchAssistantMessageDirect({
-            logger: this.logger,
-            runtime: this.runtime,
-            sessionId: runItem.sessionId,
-            assistantMessage: result.assistantMessage,
-          });
-      // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里无论成功/失败都强制兜底回发。
-      if (!dispatchedDirect && finalDispatchPlan.text) {
-        await dispatchTextToChannel({
-          logger: this.logger,
-          runtime: this.runtime,
-          sessionId: runItem.sessionId,
-          text:
-            result.success === false
-              ? finalDispatchPlan.text || "❌ 执行失败，请稍后重试。"
-              : finalDispatchPlan.text,
-          messageId: runItem.messageId,
-          phase: result.success === false ? "error" : "final",
-        });
-      }
-    } catch {
-      // ignore
-    }
+    // 关键点（中文）：run 结束后不再发送最终 assistant 收口消息。
+    // 当前策略只在每个 step 结束时发送中途文本；异常路径仍单独发送 error 文本。
+
   }
 
   /**
@@ -409,6 +368,6 @@ export class ChatQueueWorker {
    * - 在使用点显式校验，避免隐藏依赖来源。
    */
   private requireContext() {
-    return this.runtime.session;
+    return this.context.session;
   }
 }

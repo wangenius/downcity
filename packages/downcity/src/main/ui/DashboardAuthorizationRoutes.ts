@@ -53,7 +53,7 @@ export function registerDashboardAuthorizationRoutes(params: {
         config?: ChatAuthorizationConfig;
       };
       const payload = await writeAuthDashboardConfig({
-        runtime: getExecutionContext(),
+        context: getExecutionContext(),
         config: body.config && typeof body.config === "object" ? body.config : {},
       });
       return c.json({
@@ -83,7 +83,7 @@ export function registerDashboardAuthorizationRoutes(params: {
       }
 
       const payload = await setAuthDashboardUserRole({
-        runtime: getExecutionContext(),
+        context: getExecutionContext(),
         input: {
           channel,
           userId: String(body.userId || "").trim(),

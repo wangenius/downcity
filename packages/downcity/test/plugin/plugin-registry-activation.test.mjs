@@ -85,18 +85,18 @@ function createRegistry(runtime) {
     },
   };
   const hookRegistry = new HookRegistry({
-    runtimeResolver: () => currentRuntime,
-    pluginEnabledChecker: (pluginName, pluginRuntime) => {
+    contextResolver: () => currentRuntime,
+    pluginEnabledChecker: (pluginName, context) => {
       const plugin = pluginRegistry.get(pluginName);
       if (!plugin) return false;
       return isPluginEnabledInConfig({
         plugin,
-        config: pluginRuntime.config,
+        config: context.config,
       });
     },
   });
   const pluginRegistry = new PluginRegistry({
-    runtimeResolver: () => currentRuntime,
+    contextResolver: () => currentRuntime,
     hookRegistry,
     assetRegistry,
   });
@@ -190,7 +190,7 @@ test("plugin registry still allows actions for enabled plugins", async () => {
   assert.deepEqual(result.data, { ok: true });
 });
 
-test("plugin runtime view no longer exposes requiredAssets metadata", async () => {
+test("plugin view no longer exposes requiredAssets metadata", async () => {
   const runtime = createRuntime();
   const { pluginRegistry } = createRegistry(runtime);
 

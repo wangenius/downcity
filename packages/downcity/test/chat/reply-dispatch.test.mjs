@@ -15,7 +15,7 @@ import {
 
 test("prepareChatReplyText returns pipeline-transformed text", async () => {
   const text = await prepareChatReplyText({
-    runtime: {
+    context: {
       plugins: {
         async pipeline(pointName, value) {
           assert.equal(pointName, "chat.beforeReply");
@@ -40,7 +40,7 @@ test("prepareChatReplyText returns pipeline-transformed text", async () => {
 test("emitChatReplyEffect forwards dispatch result to plugin effect", async () => {
   let received = null;
   await emitChatReplyEffect({
-    runtime: {
+    context: {
       plugins: {
         async effect(pointName, value) {
           assert.equal(pointName, "chat.afterReply");

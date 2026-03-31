@@ -428,7 +428,7 @@ export class QQBot extends BaseChatChannel {
     }
 
     const instructions = await buildQqInboundInstructions({
-      runtime: this.context,
+      context: this.context,
       rootPath: this.rootPath,
       chatId,
       chatKey,
@@ -513,7 +513,7 @@ export class QQBot extends BaseChatChannel {
     }
 
     const instructions = await buildQqInboundInstructions({
-      runtime: this.context,
+      context: this.context,
       rootPath: this.rootPath,
       chatId: channelId,
       chatKey: this.getChatKey({ chatId: channelId, chatType }),

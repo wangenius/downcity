@@ -99,7 +99,7 @@ test("voice plugin pipeline augments inbound sections for qq attachments", async
   fs.writeFileSync(path.join(rootPath, "cache/b.mp3"), "");
   const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
   const next = await handler({
-    runtime: {
+    context: {
       rootPath,
       config: {
         plugins: {
@@ -148,7 +148,7 @@ test("voice plugin pipeline augments inbound sections for qq attachments", async
 test("voice plugin pipeline ignores resolve failures for qq attachments", async () => {
   const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
   const next = await handler({
-    runtime: {
+    context: {
       rootPath: "/tmp/demo-root",
       config: {
         plugins: {

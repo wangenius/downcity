@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一收敛“某个 plugin 在当前项目配置下是否启用”的规则。
- * - 控制面静态 catalog、runtime availability 与 hook 执行都复用这套逻辑。
+ * - 控制面静态 catalog、执行链路 availability 与 hook 执行都复用这套逻辑。
  */
 
 import type { DowncityConfig } from "@/types/DowncityConfig.js";

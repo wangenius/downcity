@@ -1,10 +1,12 @@
 # Downcity Service 与 Plugin 架构
 
-这份文档专门说明三件事：
+这份文档专门说明 5 件事：
 
-1. service 现在怎么注册、怎么实例化、怎么调度
-2. plugin 现在怎么注册、怎么被调用
-3. 它们和 `agent / session / ExecutionContext` 的边界到底是什么
+1. service 现在怎么注册、实例化、调度
+2. plugin 现在怎么注册、暴露、调用
+3. 它们和 `ExecutionContext` 的边界是什么
+4. 它们各自的状态应该放在哪里
+5. 为什么现在不再需要额外的 plugin 宿主概念
 
 ---
 
@@ -16,13 +18,13 @@
 2. `plugin` 是被动扩展模块
 3. service 已经是 class-based 实例架构
 4. plugin 没有独立 runtime，也没有独立主流程
-5. 需要模型执行时，service 会把任务送进 `runtime.session`
+5. service 与 plugin 共享同一个 `ExecutionContext`
 
 一句话总结：
 
 ```text
-service 负责“做什么”和“流程怎么走”；
-plugin 负责“在固定点上增强什么”。
+service 决定主路径怎么走；
+plugin 只在固定点上增强这条路径。
 ```
 
 ---
@@ -38,10 +40,10 @@ plugin 负责“在固定点上增强什么”。
 
 统一静态注册入口：
 
-- `main/service/Services.ts`
-- `main/registries/ServiceClassRegistry.ts`
+1. `main/service/Services.ts`
+2. `main/registries/ServiceClassRegistry.ts`
 
-现在的注册事实源已经是 class 列表：
+现在的事实源是：
 
 ```ts
 export const SERVICE_CLASSES = [
@@ -52,26 +54,17 @@ export const SERVICE_CLASSES = [
 ];
 ```
 
-这里非常关键：
+这意味着：
 
-1. 不再有 `SERVICES = [chatService, taskService, ...]` 这种模块级单例表
-2. `Services.ts` 负责声明有哪些 service class
-3. `ServiceClassRegistry.ts` 负责按需创建实例
+1. 不再有 service 模块级单例表
+2. 每个 agent 都会创建自己的一组 service instances
+3. service 的长期状态应该跟着实例走
 
 ---
 
 ## 3. Service 怎么实例化
 
-实例化发生在 agent 启动阶段。
-
-链路是：
-
-1. `initAgentState()` 启动 agent
-2. `createAgentServices()` 调用 `createRegisteredServiceInstances(agent)`
-3. 根据 `SERVICE_CLASSES` 为当前 agent 创建一组实例
-4. 最终存入 `agent.services`
-
-图如下：
+实例化发生在 agent 启动时。
 
 ```mermaid
 sequenceDiagram
@@ -87,57 +80,55 @@ sequenceDiagram
   REGISTRY->>SERVICE: new TaskService(agent)
   REGISTRY->>SERVICE: new MemoryService(agent)
   REGISTRY->>SERVICE: new ShellService(agent)
-  REGISTRY-->>AGENT: Map<string, BaseService>
+  REGISTRY-->>AGENT: Map string to BaseService
 ```
 
-所以现在每个 agent 都有自己的一组 service instances。
+关键结论：
+
+1. service instance 生命周期跟 agent 进程一致
+2. service 的生命周期状态也跟着实例走
+3. `main` 只是创建和调度，不拥有 service 领域状态
 
 ---
 
 ## 4. Service 状态属于谁
 
-当前原则已经比较清晰：
+当前状态归属应这样看：
 
-1. 通用生命周期状态
-   - 归属于 `service.serviceStateRecord`
-2. 领域长期状态
-   - 归属于各自 service 实例字段
+```mermaid
+flowchart TD
+  SERVICE["service instance"] --> S1["serviceStateRecord 通用生命周期状态"]
+  SERVICE --> S2["领域长期状态"]
 
-例如：
+  CHAT["ChatService"] --> C1["channels"]
+  CHAT --> C2["queue worker"]
 
-1. `ChatService`
-   - channel bots
-   - queue worker
-   - route/channel 相关状态
-2. `TaskService`
-   - cron engine
-3. `MemoryService`
-   - memory state / indexer
-4. `ShellService`
-   - shell sessions
+  TASK["TaskService"] --> T1["cron engine"]
 
-也就是说：
+  MEMORY["MemoryService"] --> M1["memory runtime state"]
 
-1. 这些状态不属于 `main`
-2. 不属于全局模块单例
-3. 也不属于 plugin
+  SHELL["ShellService"] --> H1["shell sessions"]
+```
+
+因此：
+
+1. 通用 lifecycle 状态属于 `serviceStateRecord`
+2. 领域状态属于各自 service instance 字段
+3. 这些状态不属于 `main`
+4. 这些状态也不属于 `plugin`
 
 ---
 
 ## 5. Service 怎么调度
 
-当前 service 调度已经拆成几块：
+当前 service 调度已经分成四层：
 
 1. `main/service/Manager.ts`
-   - 门面导出
 2. `main/service/ServiceStateController.ts`
-   - 管理 service 生命周期调用与状态快照
 3. `main/service/ServiceActionRunner.ts`
-   - 负责执行 service action
 4. `main/service/ServiceActionApi.ts`
-   - 负责 HTTP action route 注册
 
-可以理解为：
+可以把它理解成：
 
 ```text
 Manager = 门面
@@ -150,55 +141,31 @@ ActionApi = HTTP 接入
 
 ```mermaid
 sequenceDiagram
-  participant CLI as CLI / HTTP Route
-  participant MANAGER as main/service/Manager.ts
+  participant ENTRY as CLI or HTTP Route
+  participant MANAGER as Manager
   participant RUNNER as ServiceActionRunner
   participant STATE as ServiceStateController
   participant SERVICE as BaseService instance
   participant CTX as ExecutionContext
-  participant SESSION as runtime.session
+  participant SESSION as context.session
 
-  CLI->>MANAGER: runServiceCommand(...)
+  ENTRY->>MANAGER: runServiceCommand(...)
   MANAGER->>RUNNER: forward
-  RUNNER->>STATE: resolve service instance + lifecycle state
+  RUNNER->>STATE: resolve service instance and lifecycle
   RUNNER->>SERVICE: execute(action)
-  SERVICE->>CTX: read config/logger/plugins/session
+  SERVICE->>CTX: read config logger invoke plugins session
   SERVICE->>SESSION: run(...) when needed
 ```
 
-这里最重要的是：
+最关键的点：
 
-1. 调度中心仍在 `main/service/*`
-2. 真正的长期状态已经下沉到 service 实例
-3. 真正的模型执行并不发生在 `main/service/*`
-
----
-
-## 6. 哪些 service 会进 session
-
-不是所有 service 都会走 `runtime.session.run()`。
-
-当前更准确的理解是：
-
-1. `chat`
-   - 会进入 session
-2. `task`
-   - agent 模式任务会进入 session
-3. `shell`
-   - 不走 session 主循环
-4. `memory`
-   - 不走 session 主循环
-
-所以 `service` 既包含：
-
-1. 主流程型 service
-2. 状态型 / 工具型 service
-
-但它们共享同一套 service 注册与 action 调度体系。
+1. `main/service/*` 负责调度，不负责领域状态
+2. 真正执行领域逻辑的是 service instance
+3. 真正的模型执行还是发生在 `session`
 
 ---
 
-## 7. Plugin 是什么
+## 6. Plugin 是什么
 
 当前内建 plugin：
 
@@ -218,36 +185,74 @@ sequenceDiagram
 
 1. 创建 `HookRegistry`
 2. 创建 `PluginRegistry`
-3. `registerBuiltinPlugins()` 注册内建插件
-4. 通过 `ExecutionContext.plugins` 暴露出来
+3. `registerBuiltinPlugins()` 注册内建 plugin
+4. 通过 `context.plugins` 暴露给执行链路
 
 图如下：
 
 ```mermaid
 flowchart LR
-  LIST["Plugins.ts<br/>内建插件清单"] --> REG["PluginRegistry"]
+  LIST["Plugins.ts 内建清单"] --> REG["PluginRegistry"]
   REG --> PORT["ExecutionContext.plugins"]
   PORT --> SERVICE["service"]
 ```
 
 ---
 
+## 7. Plugin 现在有哪些边界
+
+plugin 当前有两类对外边界：
+
+1. `PluginView`
+   - 控制面静态概览
+   - 用于 CLI / UI 列表展示
+2. `ExecutionContext.plugins`
+   - 执行期端口
+   - 用于 action / pipeline / guard / effect / resolve
+
+所以现在应该这样理解：
+
+```mermaid
+flowchart TD
+  P["Plugin definition"] --> V["PluginView 控制面视图"]
+  P --> REG["PluginRegistry 执行期注册表"]
+  REG --> PORT["context.plugins"]
+```
+
+这也是为什么现在不需要额外的 plugin 宿主层：
+
+1. plugin 没有独立宿主态
+2. plugin 直接消费 `ExecutionContext`
+3. 控制面展示则直接消费 `PluginView`
+
+---
+
 ## 8. Plugin 怎么参与执行
 
-当前 plugin 参与方式主要有两类：
+当前 plugin 参与方式有两类。
 
-### 8.1 显式 action
+### 8.1 显式 plugin action
 
 例如：
 
 1. `city plugin action voice status`
-2. `city skill list`
+2. `city plugin action auth snapshot`
 
-这类调用会直接走：
+调用链：
 
-1. `/api/plugins/action`
-2. `runtime.plugins.runAction()`
-3. `PluginRegistry.runAction()`
+```mermaid
+sequenceDiagram
+  participant CLI as CLI or API
+  participant ROUTE as plugins route
+  participant CTX as ExecutionContext
+  participant PORT as context.plugins
+  participant REG as PluginRegistry
+
+  CLI->>ROUTE: plugin action request
+  ROUTE->>CTX: getExecutionContext()
+  ROUTE->>PORT: runAction(...)
+  PORT->>REG: runAction(...)
+```
 
 ### 8.2 固定扩展点
 
@@ -258,137 +263,63 @@ flowchart LR
 3. `effect()`
 4. `resolve()`
 
-以 chat 为例：
-
-1. 入队前
-   - pipeline / effect
-2. 回复前后
-   - pipeline / effect
-
-所以 plugin 不是自由接管流程，而是：
-
-**service 预先定义点位，plugin 再在这些点位上参与。**
+这是 plugin 的主要参与方式。
 
 ---
 
-## 9. Plugin 不是什么
+## 9. Service 和 Plugin 的关系
 
-为了避免概念继续发散，plugin 现在明确不应该被理解为：
-
-1. 独立 service
-2. 独立 session
-3. 独立 runtime
-4. 独立生命周期主轴
-
-它可以有：
-
-1. 自己的 action
-2. 自己的 hook 逻辑
-3. 自己的内部依赖
-4. 自己的项目配置块 `plugins.<name>`
-
-但它不应该拥有：
-
-1. 另一套宿主
-2. 另一套 service manager
-3. 另一套状态机入口
-
----
-
-## 10. Service / Plugin 与 ExecutionContext 的关系
-
-`ExecutionContext` 是它们共享的能力面。
+它们现在的关系可以画成：
 
 ```mermaid
 flowchart TD
   AGENT["AgentState"] --> CTX["ExecutionContext"]
-  CTX --> SESSION["runtime.session"]
-  CTX --> INVOKE["runtime.invoke"]
-  CTX --> PLUGINS["runtime.plugins"]
-  CTX --> SERVICE["service instance"]
+  CTX --> INVOKE["context.invoke"]
+  CTX --> SESSION["context.session"]
+  CTX --> PLUGINS["context.plugins"]
+
+  SERVICE["service"] --> CTX
+  SERVICE --> MAINPATH["主路径和领域状态"]
   SERVICE --> PLUGINS
-  SERVICE --> SESSION
+
+  PLUGIN["plugin"] --> CTX
+  PLUGIN --> EXTEND["固定点增强"]
 ```
 
-所以：
+结论：
 
-1. service 从 `ExecutionContext` 拿到 session/plugins/config/logger
-2. plugin 也从 `ExecutionContext` 拿到自己可见的统一能力
-3. 两边都不必直接依赖 `AgentState` 内部结构
+1. service 和 plugin 都共享同一个 `ExecutionContext`
+2. service 拥有主路径
+3. plugin 只能通过 service 预留点参与
+4. plugin 不能接管 service 的生命周期和主流程
 
 ---
 
-## 11. 边界图
+## 10. plugin 的状态应该放哪里
 
-把边界再画清楚一次：
+当前原则是：
 
-```mermaid
-flowchart LR
-  MAIN["main"] --> AGENT["agent"]
-  AGENT --> SERVICE["service"]
-  AGENT --> SESSION["session"]
-  AGENT --> PLUGIN["plugin registry"]
-  SERVICE --> SESSION
-  SERVICE --> PLUGIN
-```
+1. plugin 静态定义
+   - 放在 plugin definition 自己
+2. plugin 配置
+   - 放在项目配置或 plugin 自己的持久化存储
+3. plugin 私有依赖和辅助能力
+   - 放在 plugin 内部 helper / runtime 目录
+4. 不需要一份“全局 plugin 宿主状态”
 
-边界可以总结成：
+也就是说：
 
-### `main`
-
-负责：
-
-1. 启动
-2. CLI
-3. HTTP route
-4. service/plugin 调度门面
-
-### `agent`
-
-负责：
-
-1. 宿主状态
-2. service instances
-3. plugin registry
-4. session store
-
-### `service`
-
-负责：
-
-1. 主流程
-2. 长期实例状态
-3. action 定义
-4. 定义 plugin 扩展点
-
-### `plugin`
-
-负责：
-
-1. 被动增强
-2. action
-3. hook 点行为
-
-### `session`
-
-负责：
-
-1. prompt
-2. tools
-3. history
-4. 模型调用循环
+1. asset 不需要挂到 `AgentState`
+2. asset 也不需要暴露到 `ExecutionContext`
+3. plugin 在执行时直接拿 `ExecutionContext`
+4. plugin 自己内部需要什么依赖，就在自己实现里解决
 
 ---
 
-## 12. 当前最关键的结论
+## 11. 当前最重要的设计约束
 
-最后把当前实现收敛成 8 条：
-
-1. service 已经统一成 class-based 架构
-2. service 注册事实源是 `SERVICE_CLASSES`
-3. agent 启动时创建 per-agent service instances
-4. service 的长期状态属于实例自己
-5. plugin 没有独立 runtime
-6. plugin 只通过 action 和固定扩展点参与
-7. `ExecutionContext` 是共享能力面
-8. 真正执行 prompt / tools / history 的永远是 session
+1. service 持有主路径与领域状态
+2. plugin 持有被动增强逻辑
+3. service 间协作优先走 `context.invoke`
+4. plugin 直接消费 `ExecutionContext`
+5. 不再引入额外的 plugin 宿主层或 service 宿主层这类重复概念

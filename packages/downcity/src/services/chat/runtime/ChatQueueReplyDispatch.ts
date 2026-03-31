@@ -8,8 +8,6 @@
 
 import type { Logger } from "@utils/logger/Logger.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { SessionMessageV1 } from "@/types/SessionMessage.js";
-import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import { sendActionByChatKey } from "./ChatkeySend.js";
 import { sendChatTextByChatKey } from "../Action.js";
@@ -20,24 +18,15 @@ import {
 } from "./ReplyDispatch.js";
 
 /**
- * 是否启用 direct 回发模式。
- */
-function isDirectModeEnabled(runtime: ExecutionContext): boolean {
-  return (runtime.config.services?.chat?.method || "direct") !== "cmd";
-}
-
-/**
- * direct 模式：把 assistant 纯文本直接投递到 chat。
+ * 把 assistant 纯文本直接投递到 chat。
  */
 export async function dispatchAssistantTextDirect(params: {
   logger: Logger;
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   sessionId: string;
   assistantText: string;
   phase?: "step" | "final" | "error";
 }): Promise<boolean> {
-  if (!isDirectModeEnabled(params.runtime)) return false;
-
   const plan = parseDirectDispatchAssistantText({
     assistantText: params.assistantText,
     fallbackChatKey: params.sessionId,
@@ -47,11 +36,11 @@ export async function dispatchAssistantTextDirect(params: {
 
   if (plan.text) {
     const target = await resolveChatReplyTarget({
-      runtime: params.runtime,
+      context: params.context,
       chatKey: plan.text.chatKey,
     });
     const preparedText = await prepareChatReplyText({
-      runtime: params.runtime,
+      context: params.context,
       input: {
         chatKey: plan.text.chatKey,
         ...(target.channel ? { channel: target.channel } : {}),
@@ -67,7 +56,7 @@ export async function dispatchAssistantTextDirect(params: {
       },
     });
     const textResult = await sendChatTextByChatKey({
-      context: params.runtime,
+      context: params.context,
       chatKey: plan.text.chatKey,
       text: preparedText,
       replyToMessage: plan.text.replyToMessage,
@@ -80,7 +69,7 @@ export async function dispatchAssistantTextDirect(params: {
         : {}),
     });
     await emitChatReplyEffect({
-      runtime: params.runtime,
+      context: params.context,
       input: {
         chatKey: plan.text.chatKey,
         ...(target.channel ? { channel: target.channel } : {}),
@@ -110,7 +99,7 @@ export async function dispatchAssistantTextDirect(params: {
 
   for (const reaction of plan.reactions) {
     const reactResult = await sendActionByChatKey({
-      context: params.runtime,
+      context: params.context,
       chatKey: reaction.chatKey,
       action: "react",
       messageId: reaction.messageId,
@@ -130,29 +119,11 @@ export async function dispatchAssistantTextDirect(params: {
 }
 
 /**
- * direct 模式：从 assistant UIMessage 中提取文本并投递。
- */
-export async function dispatchAssistantMessageDirect(params: {
-  logger: Logger;
-  runtime: ExecutionContext;
-  sessionId: string;
-  assistantMessage: SessionMessageV1 | null | undefined;
-}): Promise<boolean> {
-  return dispatchAssistantTextDirect({
-    logger: params.logger,
-    runtime: params.runtime,
-    sessionId: params.sessionId,
-    assistantText: extractTextFromUiMessage(params.assistantMessage),
-    phase: "final",
-  });
-}
-
-/**
- * 无论 chat method（direct/cmd），都强制把文本回发到 channel。
+ * 强制把文本回发到 channel。
  */
 export async function dispatchTextToChannel(params: {
   logger: Logger;
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   sessionId: string;
   text: string;
   messageId?: string;
@@ -161,11 +132,11 @@ export async function dispatchTextToChannel(params: {
   const text = String(params.text || "").trim();
   if (!text) return false;
   const target = await resolveChatReplyTarget({
-    runtime: params.runtime,
+    context: params.context,
     chatKey: params.sessionId,
   });
   const preparedText = await prepareChatReplyText({
-    runtime: params.runtime,
+    context: params.context,
     input: {
       chatKey: params.sessionId,
       ...(target.channel ? { channel: target.channel } : {}),
@@ -182,7 +153,7 @@ export async function dispatchTextToChannel(params: {
   });
 
   const result = await sendChatTextByChatKey({
-    context: params.runtime,
+    context: params.context,
     chatKey: params.sessionId,
     text: preparedText,
     replyToMessage: true,
@@ -191,7 +162,7 @@ export async function dispatchTextToChannel(params: {
       : {}),
   });
   await emitChatReplyEffect({
-    runtime: params.runtime,
+    context: params.context,
     input: {
       chatKey: params.sessionId,
       ...(target.channel ? { channel: target.channel } : {}),

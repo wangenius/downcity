@@ -9,7 +9,7 @@
 import type { JsonValue } from "@/types/Json.js";
 
 /**
- * Plugin 运行时视图。
+ * Plugin 概览视图。
  */
 export interface PluginView {
   /**

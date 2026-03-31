@@ -351,7 +351,7 @@ export function registerDashboardSessionRoutes(
         requestId: `ui-system-preview-${Date.now()}`,
         profile: "chat",
         staticSystemPrompts: runtime.systems,
-        runtime: params.getExecutionContext(),
+        context: params.getExecutionContext(),
       });
       return c.json({
         success: true,

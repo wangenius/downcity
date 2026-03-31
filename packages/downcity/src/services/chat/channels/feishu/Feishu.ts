@@ -358,7 +358,7 @@ export class FeishuBot extends BaseChatChannel {
             text:
               buildChatInboundText(
                 await augmentChatInboundInput({
-                  runtime: this.context,
+                  context: this.context,
                   input: {
                     channel: "feishu",
                     chatId: chat_id,

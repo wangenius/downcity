@@ -1,33 +1,34 @@
 ---
-title: Console Registration, Runtime Execution, and Shell Flow
-description: Explains console registry writes, runtime execution, and shell environment injection
+title: Console Registration, Execution Context, and Shell Flow
+description: Explains console registry writes, how execution context connects services and plugins, and how shell injects environment
 ---
 
-# Console Registration, Runtime Execution, and Shell Flow
+# Console Registration, Execution Context, and Shell Flow
 
 ## 1. Console Registration
 
 - registry file: `~/.downcity/console/agents.json`
-- stores known agents and latest daemon metadata
-- daemon startup must write registry successfully or roll back
+- stores known agents and their latest daemon metadata
+- daemon startup must complete the registry write or roll back
 
-## 2. Runtime Execution
+## 2. Execution Context Flow
 
 - one agent process binds to one `rootPath`
-- runtime assembles the shared execution context and registers service/plugin infrastructure
-- plugins register `pipeline / guard / effect / resolve` handlers on service-defined points
-- services trigger those points during their workflow
+- the agent assembles an `ExecutionContext`
+- the execution context exposes `session`, `invoke`, and `plugins`
+- plugins register `pipeline`, `guard`, `effect`, and `resolve` handlers
+- services trigger those points during their main path
 
 ## 3. Shell Flow
 
-- shell state is now owned by `shellService`, not by the agent tool directly
-- starting a command returns a `shell_id`; it is not the same as a chat `contextId`
-- for long-running jobs, prefer `shell_status` or `shell_wait` over tight polling
-- default working directory is the current project root
+- shell state is owned by `shellService`, not by an ad-hoc tool-local process table
+- `shell_start` returns a `shell_id`; it is not the same thing as a chat `contextId`
+- for long-running commands, prefer `shell_status` and `shell_wait` instead of empty polling loops
+- the default working directory is the current project root
 - subprocesses receive injected `DC_CTX_*` environment variables
-- when shell exits for a real chat context, the service can enqueue an internal chat message and let the main agent reply
+- when a shell task ends and belongs to a real chat context, the service can enqueue an internal chat message back to the main reply path
 
-## Diagram
+## Relationship Diagram
 
 ```mermaid
 flowchart TD
@@ -36,17 +37,17 @@ flowchart TD
   B --> D["upsert console registry"]
   D --> E["console registry"]
 
-  F["city service / city plugin"] --> G["runtime APIs"]
-  G --> H["runtime dispatcher"]
-  H --> I["service workflow"]
+  F["city service or city plugin"] --> G["agent API"]
+  G --> H["ExecutionContext"]
+  H --> I["service main path"]
   I --> J["plugin point dispatch"]
 
   L["agent shell_start"] --> M["shellService"]
-  M --> N["shell_id session"]
-  N --> O["inject DC_CTX_* env"]
+  M --> N["shell session"]
+  N --> O["inject DC_CTX env"]
   O --> P["shell subprocess"]
-  P --> Q["shell_status / shell_wait / shell_read"]
+  P --> Q["shell_status and shell_wait and shell_read"]
   P --> R["shell exit event"]
   R --> S["enqueue internal chat message"]
-  S --> T["main agent replies user"]
+  S --> T["main agent reply path"]
 ```

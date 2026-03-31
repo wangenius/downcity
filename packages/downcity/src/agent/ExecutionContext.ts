@@ -7,7 +7,7 @@ import type { JsonValue } from "@/types/Json.js";
 import type {
   PluginAvailability,
   PluginPort,
-  PluginRuntimeView,
+  PluginView,
 } from "@/types/Plugin.js";
 import type { AgentState } from "@/types/AgentState.js";
 import { runServiceCommand } from "@/main/service/Manager.js";
@@ -36,19 +36,19 @@ export function createAgentPluginRegistry(): PluginRegistry {
   let pluginRegistryRef: PluginRegistry | null = null;
 
   const hookRegistry = new HookRegistry({
-    runtimeResolver: () => getExecutionContext(),
-    pluginEnabledChecker: (pluginName, runtime) => {
+    contextResolver: () => getExecutionContext(),
+    pluginEnabledChecker: (pluginName, context) => {
       const plugin = pluginRegistryRef?.get(pluginName);
       if (!plugin) return false;
       return isPluginEnabledInConfig({
         plugin,
-        config: runtime.config,
+        config: context.config,
       });
     },
   });
 
   const pluginRegistry = new PluginRegistry({
-    runtimeResolver: () => getExecutionContext(),
+    contextResolver: () => getExecutionContext(),
     hookRegistry,
   });
   pluginRegistryRef = pluginRegistry;
@@ -156,7 +156,7 @@ function buildSessionPort(input: AgentState): SessionPort {
  */
 function buildPluginPort(input: AgentState): PluginPort {
   return {
-    list(): PluginRuntimeView[] {
+    list(): PluginView[] {
       return input.pluginRegistry.list();
     },
     async availability(pluginName: string): Promise<PluginAvailability> {

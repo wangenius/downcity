@@ -59,9 +59,9 @@ export { createShellServiceState } from "./SessionStoreSupport.js";
  */
 export function bindShellRuntime(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): void {
-  state.boundRuntime = runtime;
+  state.boundRuntime = context;
 }
 
 /**
@@ -113,16 +113,16 @@ async function finalizeExitAfterOutputDrain(
  */
 export async function startShellSession(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   request: ShellStartRequest,
 ): Promise<ShellActionResponse> {
   const cmd = String(request.cmd || "").trim();
   if (!cmd) throw new Error("shell.start requires a non-empty cmd");
   ensureCapacity(state);
-  bindShellRuntime(state, runtime);
+  bindShellRuntime(state, context);
 
   const shellId = `sh_${generateId()}`;
-  const cwd = resolveShellCwd(runtime, request.cwd);
+  const cwd = resolveShellCwd(context, request.cwd);
   const shellPath =
     String(request.shell || process.env.SHELL || "/bin/zsh").trim() || "/bin/zsh";
   const login = request.login !== false;
@@ -130,15 +130,15 @@ export async function startShellSession(
   const ownerRequestId = resolveOwnerRequestId();
   const canAutoNotifyByContext = ownerContextId
     ? Boolean(
-        await readChatMetaBySessionId({
-          context: runtime,
+      await readChatMetaBySessionId({
+          context,
           sessionId: ownerContextId,
         }),
       )
     : false;
-  const shellDir = getShellDir(runtime.rootPath, shellId);
-  const snapshotFilePath = getShellSnapshotPath(runtime.rootPath, shellId);
-  const outputFilePath = getShellOutputPath(runtime.rootPath, shellId);
+  const shellDir = getShellDir(context.rootPath, shellId);
+  const snapshotFilePath = getShellSnapshotPath(context.rootPath, shellId);
+  const outputFilePath = getShellOutputPath(context.rootPath, shellId);
 
   await fs.ensureDir(shellDir);
   await fs.writeFile(outputFilePath, "", "utf-8");
@@ -146,7 +146,7 @@ export async function startShellSession(
   const child = spawn(shellPath, [login ? "-lc" : "-c", cmd], {
     cwd,
     stdio: "pipe",
-    env: buildShellEnv(runtime),
+    env: buildShellEnv(context),
   });
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
@@ -213,7 +213,7 @@ export async function startShellSession(
   await persistSnapshot(session);
 
   const inlineWaitMs = clampWaitMs(request.inlineWaitMs, DEFAULT_INLINE_WAIT_MS);
-  await waitShellSession(state, runtime, {
+  await waitShellSession(state, context, {
     shellId,
     afterVersion: 1,
     fromCursor: 0,
@@ -221,7 +221,7 @@ export async function startShellSession(
     maxOutputTokens: request.maxOutputTokens,
   }).catch(() => undefined);
 
-  const latest = await resolveSession(state, runtime, { shellId, includeCompleted: true });
+  const latest = await resolveSession(state, context, { shellId, includeCompleted: true });
   if (!latest) {
     throw new Error(`shell session disappeared unexpectedly: ${shellId}`);
   }
@@ -239,7 +239,7 @@ export async function startShellSession(
     shellId,
     outputText: latest.outputText,
     fromCursor: 0,
-    runtime,
+    context,
     maxOutputTokens: request.maxOutputTokens,
   });
   return buildActionResponse({
@@ -257,10 +257,10 @@ export async function startShellSession(
  */
 export async function getShellSessionStatus(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   request: ShellQueryRequest,
 ): Promise<ShellActionResponse> {
-  const session = await resolveSession(state, runtime, {
+  const session = await resolveSession(state, context, {
     ...request,
     includeCompleted: request.includeCompleted !== false,
   });
@@ -277,10 +277,10 @@ export async function getShellSessionStatus(
  */
 export async function readShellSession(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   request: ShellReadRequest,
 ): Promise<ShellActionResponse> {
-  const session = await resolveSession(state, runtime, {
+  const session = await resolveSession(state, context, {
     ...request,
     includeCompleted: request.includeCompleted !== false,
   });
@@ -291,7 +291,7 @@ export async function readShellSession(
     shellId: session.snapshot.shellId,
     outputText: session.outputText,
     fromCursor: request.fromCursor,
-    runtime,
+    context,
     maxOutputTokens: request.maxOutputTokens,
   });
   return buildActionResponse({
@@ -305,13 +305,13 @@ export async function readShellSession(
  */
 export async function writeShellSession(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   request: ShellWriteRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
   const chars = String(request.chars ?? "");
   if (!shellId) throw new Error("shell.write requires shellId");
-  const session = await resolveSession(state, runtime, {
+  const session = await resolveSession(state, context, {
     shellId,
     includeCompleted: true,
   });
@@ -344,12 +344,12 @@ export async function writeShellSession(
  */
 export async function waitShellSession(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   request: ShellWaitRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
   if (!shellId) throw new Error("shell.wait requires shellId");
-  const session = await resolveSession(state, runtime, {
+  const session = await resolveSession(state, context, {
     shellId,
     includeCompleted: true,
   });
@@ -394,7 +394,7 @@ export async function waitShellSession(
     });
   }
 
-  const refreshed = await resolveSession(state, runtime, {
+  const refreshed = await resolveSession(state, context, {
     shellId,
     includeCompleted: true,
   });
@@ -403,7 +403,7 @@ export async function waitShellSession(
     shellId,
     outputText: refreshed.outputText,
     fromCursor: request.fromCursor,
-    runtime,
+    context,
     maxOutputTokens: request.maxOutputTokens,
   });
   return buildActionResponse({
@@ -417,12 +417,12 @@ export async function waitShellSession(
  */
 export async function closeShellSession(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   request: ShellCloseRequest,
 ): Promise<ShellActionResponse> {
   const shellId = String(request.shellId || "").trim();
   if (!shellId) throw new Error("shell.close requires shellId");
-  const session = await resolveSession(state, runtime, {
+  const session = await resolveSession(state, context, {
     shellId,
     includeCompleted: true,
   });
@@ -465,11 +465,11 @@ export async function closeShellSession(
  */
 export async function execShellCommand(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   request: ShellExecRequest,
 ): Promise<ShellActionResponse> {
   const timeoutMs = clampWaitMs(request.timeoutMs, DEFAULT_EXEC_TIMEOUT_MS);
-  const started = await startShellSession(state, runtime, {
+  const started = await startShellSession(state, context, {
     cmd: request.cmd,
     ...(request.cwd ? { cwd: request.cwd } : {}),
     ...(request.shell ? { shell: request.shell } : {}),
@@ -496,7 +496,7 @@ export async function execShellCommand(
   while (!isTerminalStatus(current.shell.status)) {
     const remaining = deadline - nowMs();
     if (remaining <= 0) {
-      await closeShellSession(state, runtime, {
+      await closeShellSession(state, context, {
         shellId: current.shell.shellId,
         force: true,
       });
@@ -519,7 +519,7 @@ export async function execShellCommand(
       await sleep(Math.min(remaining, 250));
     }
 
-    const refreshed = await resolveSession(state, runtime, {
+    const refreshed = await resolveSession(state, context, {
       shellId: current.shell.shellId,
       includeCompleted: true,
     });
@@ -530,7 +530,7 @@ export async function execShellCommand(
       shellId: current.shell.shellId,
       outputText: refreshed.outputText,
       fromCursor,
-      runtime,
+      context,
       maxOutputTokens: request.maxOutputTokens,
     });
     current = buildActionResponse({
@@ -551,12 +551,12 @@ export async function execShellCommand(
     await finalSession.writeChain.catch(() => undefined);
   }
 
-  await closeShellSession(state, runtime, {
+  await closeShellSession(state, context, {
     shellId: current.shell.shellId,
     force: false,
   }).catch(() => undefined);
 
-  const completed = await resolveSession(state, runtime, {
+  const completed = await resolveSession(state, context, {
     shellId: current.shell.shellId,
     includeCompleted: true,
   });

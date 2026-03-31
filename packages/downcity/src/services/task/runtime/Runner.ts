@@ -131,7 +131,7 @@ export async function runTaskNow(params: {
   const runSessionId = createTaskRunSessionId(task.taskId, timestamp);
   const userSimulatorSessionId = `task-user-sim:${task.taskId}:${timestamp}`;
   const taskSessionRuntime = createTaskSessionRuntime({
-    runtime: context,
+    context,
     runDirAbs,
     runSessionId,
     userSimulatorSessionId,

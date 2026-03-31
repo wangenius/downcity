@@ -65,6 +65,45 @@ import {
   executeChatTestAction,
 } from "./ChatChannelFacade.js";
 
+const CHAT_SEND_HELP_TEXT = [
+  "",
+  "消息协议：",
+  "  frontmatter metadata 字段语义与 `city chat send` 参数一致。",
+  "  附件使用 `<file type=\"...\">path</file>`，支持 `document/photo/voice/audio/video`。",
+  "  正文与 `<file>` 可以交错出现，运行时会按原顺序发送。",
+  "",
+  "常用示例：",
+  "  city chat send --text 'done'",
+  "  city chat send --chat-key <chatKey> --text 'done'",
+  "  cat <<'EOF' | city chat send --stdin --chat-key <chatKey>",
+  "  第一行",
+  "  第二行",
+  "  EOF",
+  "  city chat send --text-file ./result.md --chat-key <chatKey>",
+  "",
+  "说明：",
+  "  当前会话可省略 `--chat-key`；跨 chat 发送时必须显式传 `--chat-key`。",
+  "  `--delay` 与 `--time` 互斥；ISO 时间必须带时区。",
+].join("\n");
+
+const CHAT_REACT_HELP_TEXT = [
+  "",
+  "常用示例：",
+  "  city chat react --emoji '👍'",
+  "  city chat react --emoji '✅' --message-id <messageId>",
+  "  city chat react --chat-key <chatKey> --message-id <messageId> --emoji '🔥'",
+  "",
+  "说明：",
+  "  当前会话可省略 `--chat-key`；跨 chat 操作时显式传 `--chat-key`。",
+  "  `react` 需要目标消息，优先使用显式 `--message-id`。",
+].join("\n");
+
+function attachCommandHelpText(command: Command, text: string): void {
+  command.on("--help", () => {
+    console.log(text);
+  });
+}
+
 /**
  * 创建 chat service 的 action 定义表。
  */
@@ -303,6 +342,7 @@ export function createChatServiceActions(params: {
               "--chat-key <chatKey>",
               "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）",
             );
+          attachCommandHelpText(command, CHAT_SEND_HELP_TEXT);
         },
         mapInput: mapChatSendCommandInput,
       },
@@ -331,6 +371,7 @@ export function createChatServiceActions(params: {
               "--chat-key <chatKey>",
               "目标 chatKey（不传则尝试读取 DC_CTX_CHAT_KEY）",
             );
+          attachCommandHelpText(command, CHAT_REACT_HELP_TEXT);
         },
         mapInput: mapChatReactCommandInput,
       },

@@ -132,7 +132,7 @@ export async function enqueueAuditChannelMessage(
   });
 
   const preparedAudit = await prepareChatEnqueue({
-    runtime: params.context,
+    context: params.context,
     input: {
       kind: "audit",
       channel: params.channel,
@@ -174,7 +174,7 @@ export async function enqueueAuditChannelMessage(
         : extra,
   });
   await emitChatEnqueueEffect({
-    runtime: params.context,
+    context: params.context,
     input: {
       ...preparedAudit,
       itemId: auditEnqueued.itemId,
@@ -191,7 +191,7 @@ export async function enqueueExecChannelMessage(
 ): Promise<{ chatKey: string; position: number }> {
   const msg = params.message;
   const userRole = await resolveIncomingChatUserRole({
-    runtime: params.context,
+    context: params.context,
     channel: params.channel,
     userId: msg.userId,
   });
@@ -224,7 +224,7 @@ export async function enqueueExecChannelMessage(
     text: msg.text,
   });
   const preparedExec = await prepareChatEnqueue({
-    runtime: params.context,
+    context: params.context,
     input: {
       kind: "exec",
       channel: params.channel,
@@ -309,7 +309,7 @@ export async function enqueueExecChannelMessage(
     extra: queuedExtra,
   });
   await emitChatEnqueueEffect({
-    runtime: params.context,
+    context: params.context,
     input: {
       ...preparedExec,
       itemId: execEnqueued.itemId,

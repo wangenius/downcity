@@ -50,9 +50,9 @@ export interface QqCommandAction {
  */
 export interface BuildQqInboundInstructionsParams {
   /**
-   * 当前 execution runtime。
+   * 当前执行上下文。
    */
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   /**
    * 项目根目录。
    */
@@ -248,7 +248,7 @@ export async function buildQqInboundInstructions(
 
   return buildChatInboundText(
     await augmentChatInboundInput({
-      runtime: params.runtime,
+      context: params.context,
       input: {
         channel: "qq",
         chatId: params.chatId,

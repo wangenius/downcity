@@ -1,9 +1,9 @@
 ---
-title: Console 注册、Runtime 执行与 Shell 流程
-description: 说明 console registry 何时写入、runtime 如何执行 services/plugins，以及 shell 的环境注入
+title: Console 注册、Execution Context 与 Shell 流程
+description: 说明 console registry 何时写入、ExecutionContext 如何连接 service 和 plugin，以及 shell 的环境注入
 ---
 
-# Console 注册、Runtime 执行与 Shell 流程
+# Console 注册、Execution Context 与 Shell 流程
 
 ## 1. Console 注册
 
@@ -11,21 +11,22 @@ description: 说明 console registry 何时写入、runtime 如何执行 service
 - 保存已知 agent 与最近一次 daemon 元数据
 - daemon 启动后必须成功写 registry，否则回滚
 
-## 2. Runtime 执行
+## 2. Execution Context 流程
 
 - 一个 agent 进程绑定一个 `rootPath`
-- runtime 组装统一执行上下文，并注册 service / plugin 基础设施
-- plugin 向 service 已定义的扩展点注册 `pipeline / guard / effect / resolve`
-- service 在自己的工作流节点触发这些扩展点
+- agent 组装一个 `ExecutionContext`
+- `ExecutionContext` 暴露 `session`、`invoke`、`plugins`
+- plugin 向固定扩展点注册 `pipeline`、`guard`、`effect`、`resolve`
+- service 在自己的主路径节点触发这些扩展点
 
 ## 3. Shell 流程
 
-- shell 现在由独立的 `shellService` 维护状态，而不是由 agent tool 自己直接持有进程表
-- 启动命令会返回 `shell_id`；它和 chat `contextId` 不是同一个东西
-- 长任务期间，agent 应优先使用 `shell_status` / `shell_wait` 查询状态，而不是高频空轮询
+- shell 现在由 `shellService` 持有状态，而不是 tool 本地临时维护进程表
+- `shell_start` 会返回 `shell_id`，它和 chat `contextId` 不是同一个东西
+- 长任务期间应优先使用 `shell_status` 和 `shell_wait`，而不是高频空轮询
 - 默认工作目录是当前项目根目录
 - 子进程会注入 `DC_CTX_*` 环境变量
-- shell 结束后，如果该会话属于真实 chat context，service 会回投一条内部消息到原 chat，再由主 agent 自己回复用户
+- shell 结束后，如果该会话属于真实 chat context，service 可以回投一条内部消息，再进入主回复链
 
 ## 关系图
 
@@ -36,17 +37,17 @@ flowchart TD
   B --> D["upsert console registry"]
   D --> E["console registry"]
 
-  F["city service / city plugin"] --> G["runtime APIs"]
-  G --> H["runtime dispatcher"]
-  H --> I["service workflow"]
-  I --> J["plugin point dispatch"]
+  F["city service 或 city plugin"] --> G["agent API"]
+  G --> H["ExecutionContext"]
+  H --> I["service 主路径"]
+  I --> J["plugin 点分发"]
 
   L["agent shell_start"] --> M["shellService"]
-  M --> N["shell_id session"]
-  N --> O["inject DC_CTX_* env"]
+  M --> N["shell session"]
+  N --> O["inject DC_CTX env"]
   O --> P["shell subprocess"]
-  P --> Q["shell_status / shell_wait / shell_read"]
+  P --> Q["shell_status 和 shell_wait 和 shell_read"]
   P --> R["shell exit event"]
   R --> S["enqueue internal chat message"]
-  S --> T["main agent replies user"]
+  S --> T["main agent reply path"]
 ```

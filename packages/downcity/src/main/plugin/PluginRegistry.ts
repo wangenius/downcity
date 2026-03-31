@@ -12,28 +12,28 @@ import type {
   Plugin,
   PluginActionResult,
   PluginAvailability,
-  PluginRuntime,
-  PluginRuntimeView,
+  PluginView,
 } from "@/types/Plugin.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonValue } from "@/types/Json.js";
 
-type RuntimeResolver = () => PluginRuntime;
+type ContextResolver = () => ExecutionContext;
 
 /**
  * PluginRegistry：Plugin 注册与调度实现。
  */
 export class PluginRegistry {
-  private readonly runtimeResolver: RuntimeResolver;
+  private readonly contextResolver: ContextResolver;
 
   private readonly hookRegistry: HookRegistry;
 
   private readonly plugins = new Map<string, Plugin>();
 
   constructor(params: {
-    runtimeResolver: RuntimeResolver;
+    contextResolver: ContextResolver;
     hookRegistry: HookRegistry;
   }) {
-    this.runtimeResolver = params.runtimeResolver;
+    this.contextResolver = params.contextResolver;
     this.hookRegistry = params.hookRegistry;
   }
 
@@ -118,9 +118,9 @@ export class PluginRegistry {
   }
 
   /**
-   * 列出全部 Plugin 运行时视图。
+   * 列出全部 Plugin 概览视图。
    */
-  list(): PluginRuntimeView[] {
+  list(): PluginView[] {
     return Array.from(this.plugins.values())
       .map((plugin) => ({
         name: plugin.name,
@@ -161,13 +161,13 @@ export class PluginRegistry {
     }
 
     if (plugin.availability) {
-      return await plugin.availability(this.runtimeResolver());
+      return await plugin.availability(this.contextResolver());
     }
 
-    const runtime = this.runtimeResolver();
+    const context = this.contextResolver();
     const enabled = isPluginEnabledInConfig({
       plugin,
-      config: runtime.config,
+      config: context.config,
     });
 
     if (!enabled) {
@@ -210,10 +210,10 @@ export class PluginRegistry {
       };
     }
 
-    const runtime = this.runtimeResolver();
+    const context = this.contextResolver();
     const enabled = isPluginEnabledInConfig({
       plugin,
-      config: runtime.config,
+      config: context.config,
     });
     if (!enabled) {
       return {
@@ -234,7 +234,7 @@ export class PluginRegistry {
 
     try {
       return await action.execute({
-        runtime,
+        context,
         payload: (params.payload ?? {}) as JsonValue,
         pluginName: plugin.name,
         actionName,

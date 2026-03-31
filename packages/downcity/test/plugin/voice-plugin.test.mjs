@@ -94,7 +94,7 @@ test("voice plugin configure action writes plugin config", async () => {
   const { runtime } = createRuntime();
 
   const result = await voicePlugin.actions.configure.execute({
-    runtime,
+    context: runtime,
     payload: {
       enabled: true,
       injectPrompt: false,
@@ -112,7 +112,7 @@ test("voice plugin install action no longer depends on runtime.assets", async ()
   const { runtime } = createRuntime();
 
   const result = await voicePlugin.actions.install.execute({
-    runtime,
+    context: runtime,
     payload: {
       force: true,
     },
@@ -127,7 +127,7 @@ test("voice plugin status action returns plugin and transcriber snapshots", asyn
   const { runtime } = createRuntime();
 
   await voicePlugin.actions.configure.execute({
-    runtime,
+    context: runtime,
     payload: {
       enabled: true,
     },
@@ -136,7 +136,7 @@ test("voice plugin status action returns plugin and transcriber snapshots", asyn
   });
 
   const result = await voicePlugin.actions.status.execute({
-    runtime,
+    context: runtime,
     payload: {},
     pluginName: "voice",
     actionName: "status",

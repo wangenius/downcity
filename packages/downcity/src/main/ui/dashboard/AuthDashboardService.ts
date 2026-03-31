@@ -40,9 +40,9 @@ function readSnapshot(value: unknown): ChatAuthorizationSnapshot {
  * 读取 auth plugin 快照。
  */
 async function readAuthorizationSnapshotViaPlugin(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): Promise<ChatAuthorizationSnapshot> {
-  const result = await runtime.plugins.runAction({
+  const result = await context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.snapshot,
   });
@@ -56,9 +56,9 @@ async function readAuthorizationSnapshotViaPlugin(
  * 读取 auth plugin 配置。
  */
 async function readAuthorizationConfigViaPlugin(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): Promise<ChatAuthorizationConfig> {
-  const result = await runtime.plugins.runAction({
+  const result = await context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.readConfig,
   });
@@ -72,10 +72,10 @@ async function readAuthorizationConfigViaPlugin(
  * 通过 auth plugin 覆盖写入授权配置。
  */
 async function writeAuthorizationConfigViaPlugin(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   config: ChatAuthorizationConfig;
 }): Promise<ChatAuthorizationConfig> {
-  const result = await params.runtime.plugins.runAction({
+  const result = await params.context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.writeConfig,
     payload: {
@@ -92,12 +92,12 @@ async function writeAuthorizationConfigViaPlugin(params: {
  * 通过 auth plugin 设置用户角色。
  */
 async function setAuthorizationUserRoleViaPlugin(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   channel: string;
   userId: string;
   roleId: string;
 }): Promise<ChatAuthorizationConfig> {
-  const result = await params.runtime.plugins.runAction({
+  const result = await params.context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
     action: AUTH_ACTIONS.setUserRole,
     payload: {
@@ -116,11 +116,11 @@ async function setAuthorizationUserRoleViaPlugin(params: {
  * 读取 authorization 页面所需的完整数据。
  */
 export async function readAuthDashboardPayload(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): Promise<AuthDashboardPayload> {
   const [config, snapshot] = await Promise.all([
-    readAuthorizationConfigViaPlugin(runtime),
-    readAuthorizationSnapshotViaPlugin(runtime),
+    readAuthorizationConfigViaPlugin(context),
+    readAuthorizationSnapshotViaPlugin(context),
   ]);
   return {
     catalog: CHAT_AUTHORIZATION_CATALOG,
@@ -134,28 +134,28 @@ export async function readAuthDashboardPayload(
  * 覆盖写入授权配置，并返回最新 dashboard payload。
  */
 export async function writeAuthDashboardConfig(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   config: ChatAuthorizationConfig;
 }): Promise<AuthDashboardPayload> {
   await writeAuthorizationConfigViaPlugin({
-    runtime: params.runtime,
+    context: params.context,
     config: params.config,
   });
-  return readAuthDashboardPayload(params.runtime);
+  return readAuthDashboardPayload(params.context);
 }
 
 /**
  * 设置用户角色，并返回最新 dashboard payload。
  */
 export async function setAuthDashboardUserRole(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   input: AuthSetUserRolePayload;
 }): Promise<AuthDashboardPayload> {
   await setAuthorizationUserRoleViaPlugin({
-    runtime: params.runtime,
+    context: params.context,
     channel: params.input.channel,
     userId: params.input.userId,
     roleId: params.input.roleId,
   });
-  return readAuthDashboardPayload(params.runtime);
+  return readAuthDashboardPayload(params.context);
 }

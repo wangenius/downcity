@@ -234,7 +234,7 @@ flowchart LR
 
 这里的关键理解：
 
-- `shell` 不走 `runtime.session.run()`
+- `shell` 不走 `context.session.run()`
 - `shell` 自己管理 shell session
 - 它的“session”是 shell subprocess session，而不是 LLM session
 

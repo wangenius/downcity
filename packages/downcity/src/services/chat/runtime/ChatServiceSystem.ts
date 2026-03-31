@@ -13,21 +13,16 @@ import {
   buildCurrentChatEnvironmentPrompt,
   resolveCurrentChatEnvironmentPromptInput,
 } from "@services/chat/runtime/SystemPrompt.js";
-import { resolveChatMethod, type ChatMethod } from "@services/chat/runtime/ChatMethod.js";
 
-const CHAT_PROMPT_FILE_URL = new URL("../PROMPT.txt", import.meta.url);
 const CHAT_DIRECT_PROMPT_FILE_URL = new URL("../PROMPT.direct.txt", import.meta.url);
-const TELEGRAM_PROMPT_FILE_URL = new URL("../channels/telegram/PROMPT.txt", import.meta.url);
 const TELEGRAM_DIRECT_PROMPT_FILE_URL = new URL(
   "../channels/telegram/PROMPT.direct.txt",
   import.meta.url,
 );
-const FEISHU_PROMPT_FILE_URL = new URL("../channels/feishu/PROMPT.txt", import.meta.url);
 const FEISHU_DIRECT_PROMPT_FILE_URL = new URL(
   "../channels/feishu/PROMPT.direct.txt",
   import.meta.url,
 );
-const QQ_PROMPT_FILE_URL = new URL("../channels/qq/PROMPT.txt", import.meta.url);
 const QQ_DIRECT_PROMPT_FILE_URL = new URL(
   "../channels/qq/PROMPT.direct.txt",
   import.meta.url,
@@ -50,10 +45,7 @@ function loadChatServicePrompt(fileUrl: URL): string {
   }
 }
 
-const CHAT_SERVICE_PROMPTS: Record<ChatMethod, string> = {
-  cmd: loadChatServicePrompt(CHAT_PROMPT_FILE_URL),
-  direct: loadChatServicePrompt(CHAT_DIRECT_PROMPT_FILE_URL),
-};
+const CHAT_SERVICE_PROMPT = loadChatServicePrompt(CHAT_DIRECT_PROMPT_FILE_URL);
 
 /**
  * 加载单个 channel 提示词。
@@ -72,25 +64,13 @@ function loadChatChannelPrompt(fileUrl: URL, channelName: string): string {
   }
 }
 
-const CHAT_CHANNEL_PROMPTS: Record<
-  "telegram" | "feishu" | "qq",
-  Record<ChatMethod, string>
-> = {
-  telegram: {
-    cmd: loadChatChannelPrompt(TELEGRAM_PROMPT_FILE_URL, "telegram"),
-    direct: loadChatChannelPrompt(
-      TELEGRAM_DIRECT_PROMPT_FILE_URL,
-      "telegram-direct",
-    ),
-  },
-  feishu: {
-    cmd: loadChatChannelPrompt(FEISHU_PROMPT_FILE_URL, "feishu"),
-    direct: loadChatChannelPrompt(FEISHU_DIRECT_PROMPT_FILE_URL, "feishu-direct"),
-  },
-  qq: {
-    cmd: loadChatChannelPrompt(QQ_PROMPT_FILE_URL, "qq"),
-    direct: loadChatChannelPrompt(QQ_DIRECT_PROMPT_FILE_URL, "qq-direct"),
-  },
+const CHAT_CHANNEL_PROMPTS: Record<"telegram" | "feishu" | "qq", string> = {
+  telegram: loadChatChannelPrompt(
+    TELEGRAM_DIRECT_PROMPT_FILE_URL,
+    "telegram-direct",
+  ),
+  feishu: loadChatChannelPrompt(FEISHU_DIRECT_PROMPT_FILE_URL, "feishu-direct"),
+  qq: loadChatChannelPrompt(QQ_DIRECT_PROMPT_FILE_URL, "qq-direct"),
 };
 
 function resolveCurrentChatPromptChannel(
@@ -111,7 +91,6 @@ function resolveCurrentChatPromptChannel(
  */
 export async function buildCurrentChannelPrompts(
   context: ExecutionContext,
-  method: ChatMethod,
 ): Promise<string[]> {
   const chatEnvironment = await resolveCurrentChatEnvironmentPromptInput(context);
   if (!chatEnvironment) return [];
@@ -121,7 +100,7 @@ export async function buildCurrentChannelPrompts(
       .toLowerCase(),
   );
   if (!channel) return [];
-  return [CHAT_CHANNEL_PROMPTS[channel][method]].filter(Boolean);
+  return [CHAT_CHANNEL_PROMPTS[channel]].filter(Boolean);
 }
 
 /**
@@ -130,11 +109,10 @@ export async function buildCurrentChannelPrompts(
 export async function buildChatServiceSystem(
   context: ExecutionContext,
 ): Promise<string> {
-  const method = resolveChatMethod(context.config);
   return [
-    CHAT_SERVICE_PROMPTS[method],
+    CHAT_SERVICE_PROMPT,
     await buildCurrentChatEnvironmentPrompt(context),
-    ...(await buildCurrentChannelPrompts(context, method)),
+    ...(await buildCurrentChannelPrompts(context)),
   ]
     .filter(Boolean)
     .join("\n\n");

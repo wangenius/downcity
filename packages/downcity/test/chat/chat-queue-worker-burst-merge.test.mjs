@@ -42,7 +42,6 @@ function createWorkerHarness(queueConfig) {
       config: {
         services: {
           chat: {
-            method: "cmd",
           },
         },
       },

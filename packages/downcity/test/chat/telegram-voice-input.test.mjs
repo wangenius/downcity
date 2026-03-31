@@ -35,7 +35,7 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
   const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
 
   const next = await handler({
-    runtime,
+    context: runtime,
     plugin: "voice",
     value: {
       channel: "telegram",
@@ -65,7 +65,7 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
 test("voice plugin pipeline ignores resolve failures and keeps base text", async () => {
   const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
   const next = await handler({
-    runtime: {
+    context: {
       rootPath: "/tmp/demo-root",
       config: {
         plugins: {

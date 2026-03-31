@@ -18,6 +18,23 @@ import { printResult } from "@utils/cli/CliOutput.js";
 import { parsePortOption } from "@utils/cli/Checker.js";
 import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
 
+const CHAT_SERVICE_HELP_TEXT = [
+  "",
+  "Chat quick guide:",
+  "  直接输出 assistant 文本会发送到当前 chat channel。",
+  "  跨 chat 发送请使用 `city chat send --chat-key <chatKey>`。",
+  "  如果要发正文/附件/定时消息，先看 `city chat send --help` 与 `city chat react --help`。",
+  "",
+  "Common examples:",
+  "  city chat send --text 'done'",
+  "  city chat send --chat-key <chatKey> --text 'done'",
+  "  city chat react --message-id <messageId> --emoji '✅'",
+  "  city chat context",
+  "  city chat history --limit 30",
+].join("\n");
+
+const CHAT_HELP_HOOK_ATTACHED = Symbol("chat-help-hook-attached");
+
 type ServiceCliBridgeOptions = {
   path?: string;
   host?: string;
@@ -160,6 +177,21 @@ function registerServiceActionCommand(params: {
       .command(params.service.name)
       .description(`${params.service.name} service actions`)
       .helpOption("--help", "display help for command");
+
+  if (
+    params.service.name === "chat" &&
+    !(serviceCommand as Command & { [CHAT_HELP_HOOK_ATTACHED]?: boolean })[
+      CHAT_HELP_HOOK_ATTACHED
+    ]
+  ) {
+    const chatCommand = serviceCommand as Command & {
+      [CHAT_HELP_HOOK_ATTACHED]?: boolean;
+    };
+    chatCommand.on("--help", () => {
+      console.log(CHAT_SERVICE_HELP_TEXT);
+    });
+    chatCommand[CHAT_HELP_HOOK_ATTACHED] = true;
+  }
 
   const actionCommand = serviceCommand
     .command(params.actionName)

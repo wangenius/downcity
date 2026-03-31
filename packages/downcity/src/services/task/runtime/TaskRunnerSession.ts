@@ -52,22 +52,22 @@ export async function appendTaskRoundUserMessage(params: {
  * 构建 task 专用 Session 运行时（独立于 SessionStore 的 SessionCore 缓存）。
  */
 export function createTaskSessionRuntime(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   runDirAbs: string;
   runSessionId: string;
   userSimulatorSessionId: string;
 }): TaskSessionRuntime {
-  const { runtime, runDirAbs, runSessionId, userSimulatorSessionId } = params;
+  const { context, runDirAbs, runSessionId, userSimulatorSessionId } = params;
   const compactor = new SummaryCompactor({
-    keepLastMessages: runtime.config.context?.messages?.keepLastMessages,
-    maxInputTokensApprox: runtime.config.context?.messages?.maxInputTokensApprox,
-    archiveOnCompact: runtime.config.context?.messages?.archiveOnCompact,
-    compactRatio: runtime.config.context?.messages?.compactRatio,
+    keepLastMessages: context.config.context?.messages?.keepLastMessages,
+    maxInputTokensApprox: context.config.context?.messages?.maxInputTokensApprox,
+    archiveOnCompact: context.config.context?.messages?.archiveOnCompact,
+    compactRatio: context.config.context?.messages?.compactRatio,
   });
   const system = new PromptSystem({
-    projectRoot: runtime.rootPath,
-    getStaticSystemPrompts: () => runtime.systems,
-    getRuntime: () => runtime,
+    projectRoot: context.rootPath,
+    getStaticSystemPrompts: () => context.systems,
+    getRuntime: () => context,
     profile: "task",
   });
   const persistorsBySessionId = new Map<string, FilePersistor>();
@@ -89,7 +89,7 @@ export function createTaskSessionRuntime(params: {
           : undefined;
 
     const created = new FilePersistor({
-      rootPath: runtime.rootPath,
+      rootPath: context.rootPath,
       sessionId: key,
       ...(runMessagesDirPath
         ? {
@@ -125,8 +125,8 @@ export function createTaskSessionRuntime(params: {
         getTools: () => shellTools,
       });
       const created = new SessionCore({
-        model: runtime.session.model,
-        logger: runtime.logger,
+        model: context.session.model,
+        logger: context.logger,
         persistor,
         compactor,
         orchestrator,

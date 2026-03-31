@@ -89,7 +89,7 @@ function normalizeOutputChunk(raw: string): string {
 }
 
 function resolveOutputLimits(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   maxOutputTokens?: number;
 }): {
   maxChars: number;
@@ -132,7 +132,7 @@ function splitOutputByLimits(
 /**
  * 构造 shell 子进程环境变量。
  */
-export function buildShellEnv(runtime: ExecutionContext): NodeJS.ProcessEnv {
+export function buildShellEnv(context: ExecutionContext): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
 
   // 关键点（中文）
@@ -147,7 +147,7 @@ export function buildShellEnv(runtime: ExecutionContext): NodeJS.ProcessEnv {
     env[normalizedKey] = normalizedValue;
   }
 
-  for (const [key, value] of Object.entries(runtime.env || {})) {
+  for (const [key, value] of Object.entries(context.env || {})) {
     const normalizedKey = String(key || "").trim();
     const normalizedValue = String(value || "").trim();
     if (!normalizedKey || !normalizedValue) continue;
@@ -167,10 +167,10 @@ export function buildShellEnv(runtime: ExecutionContext): NodeJS.ProcessEnv {
 /**
  * 解析 shell 执行目录。
  */
-export function resolveShellCwd(runtime: ExecutionContext, cwd?: string): string {
+export function resolveShellCwd(context: ExecutionContext, cwd?: string): string {
   const raw = String(cwd || "").trim();
-  if (!raw) return runtime.rootPath;
-  return path.isAbsolute(raw) ? raw : path.resolve(runtime.rootPath, raw);
+  if (!raw) return context.rootPath;
+  return path.isAbsolute(raw) ? raw : path.resolve(context.rootPath, raw);
 }
 
 /**
@@ -256,14 +256,14 @@ function notifyWaiters(session: ShellSessionRuntime): void {
 }
 
 async function emitChatCompletionEvent(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   snapshot: ShellSessionSnapshot,
 ): Promise<void> {
   const ownerContextId = String(snapshot.ownerContextId || "").trim();
   if (!ownerContextId || snapshot.notificationSent !== false) return;
 
   const meta = await readChatMetaBySessionId({
-    context: runtime,
+    context,
     sessionId: ownerContextId,
   });
   if (!meta) return;
@@ -286,7 +286,7 @@ async function emitChatCompletionEvent(
   const text = lines.join("\n");
 
   await appendExecSessionMessage({
-    context: runtime,
+    context,
     sessionId: ownerContextId,
     text,
     extra: {
@@ -299,7 +299,7 @@ async function emitChatCompletionEvent(
     },
   });
 
-  resolveChatQueueStore(runtime).enqueue({
+  resolveChatQueueStore(context).enqueue({
     kind: "exec",
     channel: meta.channel,
     targetId: meta.chatId,
@@ -406,10 +406,10 @@ export function ensureCapacity(state: ShellServiceState): void {
 }
 
 async function loadPersistedSnapshot(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   shellId: string,
 ): Promise<ShellSessionSnapshot | null> {
-  const file = getShellSnapshotPath(runtime.rootPath, shellId);
+  const file = getShellSnapshotPath(context.rootPath, shellId);
   if (!(await fs.pathExists(file))) return null;
   const raw = await fs.readJson(file).catch(() => null);
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -418,10 +418,10 @@ async function loadPersistedSnapshot(
 }
 
 async function readPersistedOutput(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   shellId: string,
 ): Promise<string> {
-  const file = getShellOutputPath(runtime.rootPath, shellId);
+  const file = getShellOutputPath(context.rootPath, shellId);
   if (!(await fs.pathExists(file))) return "";
   return await fs.readFile(file, "utf-8");
 }
@@ -431,18 +431,18 @@ async function readPersistedOutput(
  */
 export async function resolveSession(
   state: ShellServiceState,
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   query: ShellQueryRequest,
 ): Promise<ShellSessionRuntime | { snapshot: ShellSessionSnapshot; outputText: string } | null> {
   const explicitShellId = String(query.shellId || "").trim();
   if (explicitShellId) {
     const inMemory = state.sessions.get(explicitShellId);
     if (inMemory) return inMemory;
-    const snapshot = await loadPersistedSnapshot(runtime, explicitShellId);
+    const snapshot = await loadPersistedSnapshot(context, explicitShellId);
     if (!snapshot) return null;
     return {
       snapshot,
-      outputText: await readPersistedOutput(runtime, explicitShellId),
+      outputText: await readPersistedOutput(context, explicitShellId),
     };
   }
 
@@ -475,7 +475,7 @@ export function createOutputChunk(params: {
   shellId: string;
   outputText: string;
   fromCursor?: number;
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   maxOutputTokens?: number;
 }): ShellOutputChunk {
   const fromCursor =
@@ -486,7 +486,7 @@ export function createOutputChunk(params: {
   const originalChars = available.length;
   const originalLines = available ? available.split("\n").length : 0;
   const limits = resolveOutputLimits({
-    runtime: params.runtime,
+    context: params.context,
     maxOutputTokens: params.maxOutputTokens,
   });
   const { head, tail } = splitOutputByLimits(

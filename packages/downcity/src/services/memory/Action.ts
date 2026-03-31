@@ -29,7 +29,7 @@ import { getMemory, storeMemory } from "./runtime/Writer.js";
  * status action。
  */
 export async function statusMemoryAction(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
@@ -63,12 +63,12 @@ export async function statusMemoryAction(
  * index action。
  */
 export async function indexMemoryAction(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryIndexPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const result = await ensureMemoryIndexed(runtime, state, {
+    const result = await ensureMemoryIndexed(context, state, {
       force: payload.force === true,
       reason: payload.force ? "manual-force" : "manual",
     });
@@ -92,12 +92,12 @@ export async function indexMemoryAction(
  * search action。
  */
 export async function searchMemoryAction(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemorySearchPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const response = await searchMemory(runtime, state, payload);
+    const response = await searchMemory(context, state, payload);
     return {
       success: true,
       data: response as unknown as JsonValue,
@@ -114,11 +114,11 @@ export async function searchMemoryAction(
  * get action。
  */
 export async function getMemoryAction(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   payload: MemoryGetPayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const data = await getMemory(runtime, payload);
+    const data = await getMemory(context, payload);
     return { success: true, data: data as unknown as JsonValue };
   } catch (error) {
     return {
@@ -132,12 +132,12 @@ export async function getMemoryAction(
  * store action。
  */
 export async function storeMemoryAction(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryStorePayload,
 ): Promise<ServiceActionResult<JsonValue>> {
   try {
-    const data = await storeMemory(runtime, state, payload);
+    const data = await storeMemory(context, state, payload);
     return { success: true, data: data as unknown as JsonValue };
   } catch (error) {
     return {
@@ -151,12 +151,12 @@ export async function storeMemoryAction(
  * flush action。
  */
 export async function flushMemoryAction(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryFlushPayload,
 ): Promise<ServiceActionResult> {
   try {
-    const data = await flushMemory(runtime, state, payload);
+    const data = await flushMemory(context, state, payload);
     return { success: true, data: data as unknown as JsonValue };
   } catch (error) {
     return {

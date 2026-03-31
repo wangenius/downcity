@@ -23,7 +23,7 @@ export type ServiceSystemProvider = {
   /**
    * 生成该 service system 文本的函数。
    */
-  system: (runtime: ExecutionContext) => Promise<string> | string;
+  system: (context: ExecutionContext) => Promise<string> | string;
 };
 
 /**

@@ -13,14 +13,14 @@ import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
 import type {
   Plugin,
   PluginAvailability,
-  PluginRuntimeView,
+  PluginView,
 } from "@/types/Plugin.js";
 import type { DowncityConfig } from "@/types/DowncityConfig.js";
 
 /**
- * 将 Plugin 定义转换成静态运行时视图。
+ * 将 Plugin 定义转换成静态概览视图。
  */
-export function toStaticPluginRuntimeView(plugin: Plugin): PluginRuntimeView {
+export function toStaticPluginView(plugin: Plugin): PluginView {
   return {
     name: plugin.name,
     title: String(plugin.title || plugin.name || "").trim(),
@@ -51,11 +51,11 @@ export function listBuiltinPlugins(): Plugin[] {
 }
 
 /**
- * 列出全部内建 plugin 的静态运行时视图。
+ * 列出全部内建 plugin 的静态概览视图。
  */
-export function listStaticPluginRuntimeViews(): PluginRuntimeView[] {
+export function listStaticPluginViews(): PluginView[] {
   return listBuiltinPlugins()
-    .map((plugin) => toStaticPluginRuntimeView(plugin))
+    .map((plugin) => toStaticPluginView(plugin))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -69,13 +69,13 @@ export function findBuiltinPlugin(pluginName: string): Plugin | null {
 }
 
 /**
- * 按名称查找内建 plugin 的静态运行时视图。
+ * 按名称查找内建 plugin 的静态概览视图。
  */
-export function findStaticPluginRuntimeView(
+export function findStaticPluginView(
   pluginName: string,
-): PluginRuntimeView | null {
+): PluginView | null {
   const plugin = findBuiltinPlugin(pluginName);
-  return plugin ? toStaticPluginRuntimeView(plugin) : null;
+  return plugin ? toStaticPluginView(plugin) : null;
 }
 
 function getProjectPluginConfig(projectRoot?: string): DowncityConfig["plugins"] | null {
@@ -92,9 +92,9 @@ function getProjectPluginConfig(projectRoot?: string): DowncityConfig["plugins"]
  * 构建静态 plugin 可用性视图。
  *
  * 关键点（中文）
- * - 这里表达的是“控制面视角下可见的配置事实”，不是 runtime 内的最终可用性。
+ * - 这里表达的是“控制面视角下可见的配置事实”，不是执行链路中的最终可用性。
  * - `enabled` 尽量对齐项目 `downcity.json.plugins.*`。
- * - `available` 仅在无需 runtime 即可明确判断为 false 时返回 false；否则静态层视为可用。
+ * - `available` 仅在无需执行上下文即可明确判断为 false 时返回 false；否则静态层视为可用。
  */
 export function buildStaticPluginAvailability(params: {
   pluginName: string;

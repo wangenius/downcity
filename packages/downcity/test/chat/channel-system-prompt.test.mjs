@@ -21,7 +21,6 @@ function createRuntime(rootPath) {
     config: {
       services: {
         chat: {
-          method: "direct",
           channels: {
             telegram: { enabled: true },
             feishu: { enabled: true },
@@ -58,6 +57,7 @@ test("chat service system injects only the current channel prompt", async () => 
     );
 
     assert.equal(prompt.includes("当前模式下，直接输出，即会发送消息给到用户对应的channel"), true);
+    assert.equal(prompt.includes("如果需要跨 chat 发送，或者不清楚怎么发送，直接先调用 `city chat --help` 查看方法。"), true);
     assert.equal(prompt.includes("# Current Chat Environment"), true);
     assert.equal(prompt.includes("- channel: feishu"), true);
     assert.equal(prompt.includes("- session_id: ctx_feishu_only"), true);
@@ -88,6 +88,7 @@ test("chat service system skips channel prompts when current context is not a ch
     );
 
     assert.equal(prompt.includes("当前模式下，直接输出，即会发送消息给到用户对应的channel"), true);
+    assert.equal(prompt.includes("如果需要跨 chat 发送，或者不清楚怎么发送，直接先调用 `city chat --help` 查看方法。"), true);
     assert.equal(prompt.includes("# Current Chat Environment"), false);
     assert.equal(prompt.includes("# Feishu Channel"), false);
     assert.equal(prompt.includes("# QQ Adapter 使用说明（direct 模式）"), false);

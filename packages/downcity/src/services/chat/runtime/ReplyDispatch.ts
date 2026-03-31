@@ -21,7 +21,7 @@ function normalizeText(value: string | undefined): string {
  * 回复前文本增强。
  */
 export async function prepareChatReplyText(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   input: ChatReplyDispatchInput;
 }): Promise<string> {
   const input = {
@@ -30,7 +30,7 @@ export async function prepareChatReplyText(params: {
   };
   if (!input.text) return "";
 
-  const next = await params.runtime.plugins.pipeline<JsonValue>(
+  const next = await params.context.plugins.pipeline<JsonValue>(
     CHAT_PLUGIN_POINTS.beforeReply,
     input as unknown as JsonValue,
   );
@@ -45,10 +45,10 @@ export async function prepareChatReplyText(params: {
  * 回复后事件分发。
  */
 export async function emitChatReplyEffect(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   input: ChatReplyEffectInput;
 }): Promise<void> {
-  await params.runtime.plugins.effect(
+  await params.context.plugins.effect(
     CHAT_PLUGIN_POINTS.afterReply,
     params.input as unknown as JsonValue,
   );
@@ -58,7 +58,7 @@ export async function emitChatReplyEffect(params: {
  * 基于 chatKey 补齐回复目标上下文。
  */
 export async function resolveChatReplyTarget(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   chatKey: string;
 }): Promise<{
   channel?: ChatDispatchChannel;
@@ -66,7 +66,7 @@ export async function resolveChatReplyTarget(params: {
   messageId?: string;
 }> {
   const target = await resolveDispatchTargetByChatKey({
-    context: params.runtime,
+    context: params.context,
     chatKey: params.chatKey,
   });
   if (!target) return {};

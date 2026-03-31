@@ -77,7 +77,7 @@ export class PromptSystem extends PrompterComponent {
       requestId,
       profile: this.profile,
       staticSystemPrompts: this.getStaticSystemPrompts(),
-      runtime: this.getRuntime(),
+      context: this.getRuntime(),
     });
   }
 }

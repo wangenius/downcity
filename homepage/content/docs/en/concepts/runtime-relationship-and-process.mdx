@@ -1,6 +1,6 @@
 ---
 title: Runtime Relationship & Process
-description: Collaboration model and startup/process order across console, agent, execution runtime, session, service, and plugin
+description: Collaboration model and startup/process order across console, agent, execution context, session, service, and plugin
 ---
 
 # Runtime Relationship & Process
@@ -9,14 +9,14 @@ description: Collaboration model and startup/process order across console, agent
 
 - `console`: manages registry, model pool, shared storage, and UI
 - `agent`: the host process for one project
-- `execution runtime`: the unified capability surface injected during execution
+- `execution context`: the unified capability surface used during execution
 - `session`: a concrete execution instance
-- `service`: the main workflow module
+- `service`: the main path module
 - `plugin`: an extension module that joins only at fixed points
 
 In one sentence:
 
-`console` governs, `agent` hosts, `execution runtime` injects, `session` executes, `service` orchestrates, and `plugin` augments.
+`console` governs, `agent` hosts, `execution context` injects, `session` executes, `service` orchestrates, and `plugin` augments.
 
 ## 2. What Happens at Startup
 
@@ -29,12 +29,11 @@ city agent start
 The usual order is:
 
 1. the agent reads project config and env
-2. the agent initializes logger, model, and session registry
-3. the agent assembles the shared `execution runtime`
-4. the agent registers service and plugin infrastructure
-5. services become available
-6. plugins register hook / resolve / effect behavior
-7. runtime traces continue to be written into `.downcity/*`
+2. the agent initializes logger, model, session store, plugin registry, and service instances
+3. the agent exposes the shared `execution context`
+4. services become available
+5. plugin extension points become available
+6. project-local traces continue to be written into `.downcity/*`
 
 The key point:
 
@@ -55,7 +54,7 @@ Then the order is usually:
 2. the service resolves the target `sessionId`
 3. the service creates or reuses a session
 4. the service triggers plugins at fixed points
-5. the service enters execution through `runtime.session`
+5. the service enters execution through `context.session`
 6. the session returns a result
 7. the service decides how to reply or persist state
 
@@ -65,18 +64,18 @@ Then the order is usually:
 sequenceDiagram
   participant Console as console
   participant Agent as agent
-  participant Runtime as execution runtime
+  participant Context as execution context
   participant Service as service
   participant Plugin as plugin
   participant Session as session
 
   Console->>Agent: city agent start
-  Agent->>Runtime: assemble runtime
-  Agent->>Service: register services
+  Agent->>Context: expose execution context
+  Agent->>Service: create service instances
   Agent->>Plugin: register plugins
 
   Service->>Plugin: trigger fixed points on request
-  Service->>Session: run through runtime.session
+  Service->>Session: run through context.session
   Session-->>Service: result
 ```
 

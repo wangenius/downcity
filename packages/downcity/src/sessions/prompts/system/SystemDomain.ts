@@ -193,7 +193,7 @@ export async function loadServiceSystemPrompts(input: {
   /**
    * 当前执行上下文。
    */
-  runtime: ExecutionContext;
+  context: ExecutionContext;
 
   /**
    * 当前轮禁用的 service 名称集合。
@@ -215,7 +215,7 @@ export async function loadServiceSystemPrompts(input: {
   for (const service of SERVICE_SYSTEM_PROVIDERS) {
     if (disabledServiceNames.has(service.name)) continue;
     try {
-      const text = normalizeSystemText(await service.system(input.runtime));
+      const text = normalizeSystemText(await service.system(input.context));
       if (!text) continue;
       out.push(text);
     } catch {
@@ -238,7 +238,7 @@ export async function loadPluginSystemPrompts(input: {
   /**
    * 当前统一执行上下文。
    */
-  runtime: ExecutionContext;
+  context: ExecutionContext;
 }): Promise<string[]> {
   const out: string[] = [];
 
@@ -248,16 +248,16 @@ export async function loadPluginSystemPrompts(input: {
       if (
         !isPluginEnabledInConfig({
           plugin,
-          config: input.runtime.config,
+          config: input.context.config,
         })
       ) {
         continue;
       }
       if (typeof plugin.availability === "function") {
-        const availability = await plugin.availability(input.runtime);
+        const availability = await plugin.availability(input.context);
         if (!availability.available) continue;
       }
-      const text = normalizeSystemText(await plugin.system(input.runtime));
+      const text = normalizeSystemText(await plugin.system(input.context));
       if (!text) continue;
       out.push(text);
     } catch {
@@ -272,7 +272,7 @@ export async function loadPluginSystemPrompts(input: {
  * 统一构建一次 Session 运行所需的 system messages。
  *
  * 关键点（中文）
- * - runtime/static/service 的组装逻辑统一收敛在 system 域。
+ * - context/static/service 的组装逻辑统一收敛在 system 域。
  */
 export async function buildSessionSystemMessages(input: {
   /**
@@ -392,7 +392,7 @@ export async function resolveSessionSystemMessages(input: {
   /**
    * 当前执行上下文。
    */
-  runtime: ExecutionContext;
+  context: ExecutionContext;
 
 }): Promise<SystemModelMessage[]> {
   const profile = resolveSystemContextProfile(input.profile);
@@ -404,11 +404,11 @@ export async function resolveSessionSystemMessages(input: {
     replaceDefaultCorePrompt: profile.replaceDefaultCorePrompt,
     staticSystemPrompts: input.staticSystemPrompts,
     serviceSystemPrompts: await loadServiceSystemPrompts({
-      runtime: input.runtime,
+      context: input.context,
       disabledServiceNames: profile.disableServiceSystems,
     }),
     pluginSystemPrompts: await loadPluginSystemPrompts({
-      runtime: input.runtime,
+      context: input.context,
     }),
   });
 }

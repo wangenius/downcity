@@ -163,8 +163,8 @@ export const voicePlugin: Plugin = {
       modelId: "SenseVoiceSmall",
     },
   },
-  async availability(runtime) {
-    const config = readVoicePluginConfig(runtime);
+  async availability(context) {
+    const config = readVoicePluginConfig(context);
     if (config.enabled !== true) {
       return {
         enabled: false,
@@ -172,7 +172,7 @@ export const voicePlugin: Plugin = {
         reasons: ["voice plugin disabled"],
       };
     }
-    const dependencyStatus = await checkVoiceTranscriber(runtime);
+    const dependencyStatus = await checkVoiceTranscriber(context);
     return {
       enabled: true,
       available: dependencyStatus.available,
@@ -182,7 +182,7 @@ export const voicePlugin: Plugin = {
   hooks: {
     pipeline: {
       [CHAT_PLUGIN_POINTS.augmentInbound]: [
-        async ({ runtime, value }) => {
+        async ({ context, value }) => {
           const input = value as unknown as ChatInboundAugmentInput;
           const voiceAttachments = (Array.isArray(input.attachments) ? input.attachments : []).filter(
             (item) =>
@@ -201,15 +201,15 @@ export const voicePlugin: Plugin = {
           for (const attachment of voiceAttachments) {
             try {
               const result = await transcribeWithVoiceDependency({
-                runtime,
+                context,
                 audioPath: String(attachment.path || "").trim(),
               });
               const text = typeof result.text === "string" ? result.text.trim() : "";
               if (!text) continue;
 
               const absPath = String(attachment.path || "").trim();
-              const rel = absPath.startsWith(`${runtime.rootPath}/`)
-                ? absPath.slice(runtime.rootPath.length + 1)
+              const rel = absPath.startsWith(`${context.rootPath}/`)
+                ? absPath.slice(context.rootPath.length + 1)
                 : absPath;
               pluginSections.push(`【语音转写 ${attachment.kind}: ${rel}】\n${text}`);
             } catch {
@@ -233,10 +233,10 @@ export const voicePlugin: Plugin = {
           return {};
         },
       },
-      execute: async ({ runtime }) => {
-        const config = readVoicePluginConfig(runtime);
-        const availability = await voicePlugin.availability!(runtime);
-        const transcriberConfig = readVoiceTranscriberConfig(runtime);
+      execute: async ({ context }) => {
+        const config = readVoicePluginConfig(context);
+        const availability = await voicePlugin.availability!(context);
+        const transcriberConfig = readVoiceTranscriberConfig(context);
         return {
           success: true,
           data: {
@@ -285,9 +285,9 @@ export const voicePlugin: Plugin = {
           };
         },
       },
-      execute: async ({ runtime, payload }) => {
+      execute: async ({ context, payload }) => {
         const result = await installVoiceTranscriber({
-          runtime,
+          context,
           input:
             payload && typeof payload === "object" && !Array.isArray(payload)
               ? payload
@@ -302,8 +302,8 @@ export const voicePlugin: Plugin = {
       },
     },
     configure: {
-      execute: async ({ runtime, payload }) => {
-        const current = readVoicePluginConfig(runtime);
+      execute: async ({ context, payload }) => {
+        const current = readVoicePluginConfig(context);
         const next = {
           ...current,
           ...(payload && typeof payload === "object" && !Array.isArray(payload)
@@ -311,7 +311,7 @@ export const voicePlugin: Plugin = {
             : {}),
         };
         await writeVoicePluginConfig({
-          runtime,
+          runtime: context,
           value: next,
         });
         return {
@@ -361,9 +361,9 @@ export const voicePlugin: Plugin = {
           };
         },
       },
-      execute: async ({ runtime, payload }) => {
+      execute: async ({ context, payload }) => {
         const nextConfig = {
-          ...readVoicePluginConfig(runtime),
+          ...readVoicePluginConfig(context),
           enabled: true,
           injectPrompt:
             typeof (payload as { injectPrompt?: unknown }).injectPrompt === "boolean"
@@ -375,12 +375,12 @@ export const voicePlugin: Plugin = {
               : true,
         };
         await writeVoicePluginConfig({
-          runtime,
+          runtime: context,
           value: nextConfig,
         });
         if ((payload as { install?: unknown }).install !== false) {
           const installResult = await installVoiceTranscriber({
-            runtime,
+            context,
             input:
               payload && typeof payload === "object" && !Array.isArray(payload)
                 ? payload
@@ -398,7 +398,7 @@ export const voicePlugin: Plugin = {
           success: true,
           data: {
             plugin: toJsonObject(nextConfig) || {},
-            transcriber: toJsonObject(readVoiceTranscriberConfig(runtime)) || {},
+            transcriber: toJsonObject(readVoiceTranscriberConfig(context)) || {},
           },
         };
       },
@@ -410,13 +410,13 @@ export const voicePlugin: Plugin = {
           return {};
         },
       },
-      execute: async ({ runtime }) => {
+      execute: async ({ context }) => {
         const nextConfig = {
-          ...readVoicePluginConfig(runtime),
+          ...readVoicePluginConfig(context),
           enabled: false,
         };
         await writeVoicePluginConfig({
-          runtime,
+          runtime: context,
           value: nextConfig,
         });
         return {
@@ -443,7 +443,7 @@ export const voicePlugin: Plugin = {
           };
         },
       },
-      execute: async ({ runtime, payload }) => {
+      execute: async ({ context, payload }) => {
         const modelId = String((payload as { modelId?: unknown }).modelId || "").trim();
         const resolvedModelId = resolveVoicePluginModelId(modelId);
         if (!resolvedModelId) {
@@ -454,9 +454,9 @@ export const voicePlugin: Plugin = {
           };
         }
         const transcriberConfig = await writeVoiceTranscriberConfig({
-          runtime,
+          context,
           value: {
-            ...readVoiceTranscriberConfig(runtime),
+            ...readVoiceTranscriberConfig(context),
             modelId: resolvedModelId,
           },
         });
@@ -489,8 +489,8 @@ export const voicePlugin: Plugin = {
           };
         },
       },
-      execute: async ({ runtime, payload }) => {
-        const pluginStatus = await voicePlugin.availability!(runtime);
+      execute: async ({ context, payload }) => {
+        const pluginStatus = await voicePlugin.availability!(context);
         if (!pluginStatus.enabled || !pluginStatus.available) {
           return {
             success: false,
@@ -499,7 +499,7 @@ export const voicePlugin: Plugin = {
           };
         }
         const result = await transcribeWithVoiceDependency({
-          runtime,
+          context,
           audioPath: String((payload as { audioPath?: unknown }).audioPath || ""),
           language:
             typeof (payload as { language?: unknown }).language === "string"
@@ -537,9 +537,9 @@ export const voicePlugin: Plugin = {
           return {};
         },
       },
-      execute: async ({ runtime }) => {
-        const availability = await voicePlugin.availability!(runtime);
-        const dependencyStatus = await checkVoiceTranscriber(runtime);
+      execute: async ({ context }) => {
+        const availability = await voicePlugin.availability!(context);
+        const dependencyStatus = await checkVoiceTranscriber(context);
         return {
           success: availability.available,
           data: {
@@ -566,8 +566,8 @@ export const voicePlugin: Plugin = {
       },
     },
   },
-  system(runtime) {
-    const config = readVoicePluginConfig(runtime);
+  system(context) {
+    const config = readVoicePluginConfig(context);
     if (config.enabled !== true || config.injectPrompt !== true) {
       return "";
     }

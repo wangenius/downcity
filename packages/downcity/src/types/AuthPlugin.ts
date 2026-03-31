@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 统一维护 auth plugin 的领域类型、plugin point/action 名称、payload 契约。
  * - 业务层不应散落硬编码字符串，如 `chat.authorizeIncoming`、`set-user-role`。
- * - chat / console / plugin runtime 都从这里共享同一份边界定义。
+ * - chat / console / plugin 执行链路都从这里共享同一份边界定义。
  */
 
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";

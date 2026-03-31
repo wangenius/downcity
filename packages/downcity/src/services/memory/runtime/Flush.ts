@@ -43,7 +43,7 @@ function extractReadableLine(message: {
  * 把当前会话最近消息刷写到 daily 记忆。
  */
 export async function flushMemory(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemoryFlushPayload,
 ): Promise<MemoryFlushResponse> {
@@ -54,7 +54,7 @@ export async function flushMemory(
   const maxMessages = Number.isFinite(payload.maxMessages)
     ? Math.max(1, Math.floor(payload.maxMessages as number))
     : 30;
-  const persistor = runtime.session.getPersistor(sessionId);
+  const persistor = context.session.getPersistor(sessionId);
   const total = await persistor.size();
   const start = Math.max(0, total - maxMessages);
   const messages = await persistor.slice(start, total);
@@ -71,7 +71,7 @@ export async function flushMemory(
     "",
     summary,
   ].join("\n");
-  const saved = await storeMemory(runtime, state, {
+  const saved = await storeMemory(context, state, {
     content,
     target: "daily",
   });

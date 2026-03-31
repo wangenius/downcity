@@ -12,11 +12,11 @@ import type {
   PluginGuardHook,
   PluginPipelineHook,
   PluginResolveHook,
-  PluginRuntime,
 } from "@/types/Plugin.js";
+import type { ExecutionContext } from "@/types/ExecutionContext.js";
 
-type RuntimeResolver = () => PluginRuntime;
-type PluginEnabledChecker = (pluginName: string, runtime: PluginRuntime) => boolean;
+type ContextResolver = () => ExecutionContext;
+type PluginEnabledChecker = (pluginName: string, context: ExecutionContext) => boolean;
 
 type PipelineRecord = {
   pluginName: string;
@@ -42,7 +42,7 @@ type ResolveRecord = {
  * HookRegistry：Plugin 点注册与执行实现。
  */
 export class HookRegistry {
-  private readonly runtimeResolver: RuntimeResolver;
+  private readonly contextResolver: ContextResolver;
   private readonly pluginEnabledChecker: PluginEnabledChecker;
 
   private readonly pipelineHooks = new Map<string, PipelineRecord[]>();
@@ -54,10 +54,10 @@ export class HookRegistry {
   private readonly resolveHooks = new Map<string, ResolveRecord>();
 
   constructor(params: {
-    runtimeResolver: RuntimeResolver;
+    contextResolver: ContextResolver;
     pluginEnabledChecker: PluginEnabledChecker;
   }) {
-    this.runtimeResolver = params.runtimeResolver;
+    this.contextResolver = params.contextResolver;
     this.pluginEnabledChecker = params.pluginEnabledChecker;
   }
 
@@ -167,12 +167,12 @@ export class HookRegistry {
     const bucket = this.pipelineHooks.get(key) || [];
     if (bucket.length === 0) return value;
 
-    const runtime = this.runtimeResolver();
+    const context = this.contextResolver();
     let current = value as JsonValue;
     for (const item of bucket) {
-      if (!this.pluginEnabledChecker(item.pluginName, runtime)) continue;
+      if (!this.pluginEnabledChecker(item.pluginName, context)) continue;
       current = await item.handler({
-        runtime,
+        context,
         value: current,
         plugin: item.pluginName,
       });
@@ -189,11 +189,11 @@ export class HookRegistry {
     const bucket = this.guardHooks.get(key) || [];
     if (bucket.length === 0) return;
 
-    const runtime = this.runtimeResolver();
+    const context = this.contextResolver();
     for (const item of bucket) {
-      if (!this.pluginEnabledChecker(item.pluginName, runtime)) continue;
+      if (!this.pluginEnabledChecker(item.pluginName, context)) continue;
       await item.handler({
-        runtime,
+        context,
         value: value as JsonValue,
         plugin: item.pluginName,
       });
@@ -209,11 +209,11 @@ export class HookRegistry {
     const bucket = this.effectHooks.get(key) || [];
     if (bucket.length === 0) return;
 
-    const runtime = this.runtimeResolver();
+    const context = this.contextResolver();
     for (const item of bucket) {
-      if (!this.pluginEnabledChecker(item.pluginName, runtime)) continue;
+      if (!this.pluginEnabledChecker(item.pluginName, context)) continue;
       await item.handler({
-        runtime,
+        context,
         value: value as JsonValue,
         plugin: item.pluginName,
       });
@@ -235,13 +235,13 @@ export class HookRegistry {
     if (!record) {
       throw new Error(`No plugin resolver registered for point: ${key}`);
     }
-    const runtime = this.runtimeResolver();
-    if (!this.pluginEnabledChecker(record.pluginName, runtime)) {
+    const context = this.contextResolver();
+    if (!this.pluginEnabledChecker(record.pluginName, context)) {
       throw new Error(`No active plugin resolver registered for point: ${key}`);
     }
 
     return await record.handler({
-      runtime,
+      context,
       value: value as JsonValue,
       plugin: record.pluginName,
     }) as TOutput;

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - skill 最小单元目录为 `<root>/<skill-id>/SKILL.md`。
  * - 发现逻辑只读取 `SKILL.md` front matter 作为元数据。
- * - 该类型为 skill plugin、CLI 与 runtime helper 的共享事实源。
+ * - 该类型为 skill plugin、CLI 与内部辅助模块的共享事实源。
  */
 
 import type { SkillRootSource } from "@/types/SkillRoot.js";

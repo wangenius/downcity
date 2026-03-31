@@ -20,7 +20,7 @@ function normalizeText(value: string | undefined): string | undefined {
  * 执行 chat 入站增强 pipeline。
  */
 export async function augmentChatInboundInput(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   input: ChatInboundAugmentInput;
 }): Promise<ChatInboundAugmentInput> {
   const normalized: ChatInboundAugmentInput = {
@@ -40,7 +40,7 @@ export async function augmentChatInboundInput(params: {
     attachments: Array.isArray(params.input.attachments) ? params.input.attachments : [],
   };
 
-  return (params.runtime.plugins.pipeline<JsonValue>(
+  return (params.context.plugins.pipeline<JsonValue>(
     CHAT_PLUGIN_POINTS.augmentInbound,
     normalized as unknown as JsonValue,
   ) as unknown) as Promise<ChatInboundAugmentInput>;

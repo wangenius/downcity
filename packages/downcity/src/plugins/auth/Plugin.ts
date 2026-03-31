@@ -86,15 +86,15 @@ export const authPlugin: Plugin = {
   hooks: {
     guard: {
       [CHAT_PLUGIN_POINTS.authorizeIncoming]: [
-        async ({ runtime, value }) => {
+        async ({ context, value }) => {
           const input =
             value && typeof value === "object" && !Array.isArray(value)
               ? (value as Record<string, unknown>)
               : {};
           const evaluateInput = toEvaluateInput(input);
-          const authorizationConfig = readChatAuthorizationConfig(runtime);
+          const authorizationConfig = readChatAuthorizationConfig(context);
           const result = evaluateIncomingChatAuthorization({
-            config: runtime.config,
+            config: context.config,
             channel: evaluateInput.channel,
             input: evaluateInput,
             authorizationConfig,
@@ -107,14 +107,14 @@ export const authPlugin: Plugin = {
     },
     effect: {
       [CHAT_PLUGIN_POINTS.observePrincipal]: [
-        async ({ runtime, value }) => {
+        async ({ context, value }) => {
           const input = toRecord(value) as unknown as AuthObservePrincipalPayload;
           const channel = toChannel(input.channel);
           if (!channel) {
             throw new Error("chat.observePrincipal requires a valid channel");
           }
           await recordObservedAuthorizationPrincipal({
-            context: runtime,
+            context,
             channel,
             chatId: String(input.chatId || "").trim(),
             ...(typeof input.chatType === "string" ? { chatType: input.chatType.trim() } : {}),
@@ -127,7 +127,7 @@ export const authPlugin: Plugin = {
     },
   },
   resolves: {
-    [CHAT_PLUGIN_POINTS.resolveUserRole]: async ({ runtime, value }) => {
+    [CHAT_PLUGIN_POINTS.resolveUserRole]: async ({ context, value }) => {
       const input =
         value && typeof value === "object" && !Array.isArray(value)
           ? (value as Record<string, unknown>)
@@ -139,16 +139,16 @@ export const authPlugin: Plugin = {
       const role = resolveAuthorizedUserRole({
         channel,
         userId: String(input.userId || "").trim(),
-        rootPath: runtime.rootPath,
+        rootPath: context.rootPath,
       });
       return ((role || null) as unknown) as JsonValue;
     },
   },
   actions: {
     [AUTH_ACTIONS.snapshot]: {
-      execute: async ({ runtime }) => {
+      execute: async ({ context }) => {
         const snapshot = await readAuthorizationSnapshot({
-          context: runtime,
+          context,
         });
         return {
           success: true,
@@ -157,32 +157,32 @@ export const authPlugin: Plugin = {
       },
     },
     [AUTH_ACTIONS.readConfig]: {
-      execute: async ({ runtime }) => {
+      execute: async ({ context }) => {
         return {
           success: true,
-          data: readChatAuthorizationConfig(runtime) as unknown as JsonValue,
+          data: readChatAuthorizationConfig(context) as unknown as JsonValue,
         };
       },
     },
     [AUTH_ACTIONS.writeConfig]: {
-      execute: async ({ runtime, payload }) => {
+      execute: async ({ context, payload }) => {
         const body = toRecord(payload) as unknown as AuthWriteConfigPayload;
         const nextConfig =
           body.config && typeof body.config === "object" && !Array.isArray(body.config)
             ? (body.config as ChatAuthorizationConfig)
             : {};
         await writeChatAuthorizationConfig({
-          context: runtime,
+          context,
           nextConfig,
         });
         return {
           success: true,
-          data: readChatAuthorizationConfig(runtime) as unknown as JsonValue,
+          data: readChatAuthorizationConfig(context) as unknown as JsonValue,
         };
       },
     },
     [AUTH_ACTIONS.setUserRole]: {
-      execute: async ({ runtime, payload }) => {
+      execute: async ({ context, payload }) => {
         const body = toRecord(payload) as unknown as AuthSetUserRolePayload;
         const channel = toChannel(body.channel);
         if (!channel) {
@@ -193,14 +193,14 @@ export const authPlugin: Plugin = {
           };
         }
         await setChatAuthorizationUserRole({
-          context: runtime,
+          context,
           channel,
           userId: String(body.userId || "").trim(),
           roleId: String(body.roleId || "").trim(),
         });
         return {
           success: true,
-          data: readChatAuthorizationConfig(runtime) as unknown as JsonValue,
+          data: readChatAuthorizationConfig(context) as unknown as JsonValue,
         };
       },
     },

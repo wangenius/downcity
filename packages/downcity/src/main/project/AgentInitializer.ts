@@ -310,7 +310,6 @@ export async function initializeAgentProject(
       ? {
           services: {
             chat: {
-              method: "direct",
               channels: channelsConfig,
             },
           },

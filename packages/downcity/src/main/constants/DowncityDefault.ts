@@ -21,7 +21,6 @@ export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
   },
   services: {
     chat: {
-      method: "direct",
       queue: {
         maxConcurrency: 2,
         mergeDebounceMs: 600,

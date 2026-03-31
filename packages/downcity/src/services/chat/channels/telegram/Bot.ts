@@ -477,7 +477,7 @@ export class TelegramBot extends BaseChatChannel {
         text:
           buildChatInboundText(
             await augmentChatInboundInput({
-              runtime: this.context,
+              context: this.context,
               input: {
                 channel: "telegram",
                 chatId,

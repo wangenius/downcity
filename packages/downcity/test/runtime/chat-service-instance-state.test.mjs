@@ -59,7 +59,6 @@ function createRuntimeStub(rootPath) {
       },
       services: {
         chat: {
-          method: "cmd",
           channels: {},
           queue: {
             maxConcurrency: 1,

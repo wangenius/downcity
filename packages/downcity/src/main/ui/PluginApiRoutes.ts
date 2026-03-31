@@ -11,12 +11,12 @@ import type { Hono } from "hono";
 import {
   buildStaticPluginAvailability,
   findBuiltinPlugin,
-  listStaticPluginRuntimeViews,
+  listStaticPluginViews,
 } from "@/main/plugin/Catalog.js";
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 import type {
   PluginAvailability,
-  PluginRuntimeView,
+  PluginView,
 } from "@/types/Plugin.js";
 
 type PluginActionConfigItem = {
@@ -28,7 +28,7 @@ type PluginActionConfigItem = {
   apiPath: string;
 };
 
-type PluginUiItem = PluginRuntimeView & {
+type PluginUiItem = PluginView & {
   availability: PluginAvailability;
   config: {
     actions: PluginActionConfigItem[];
@@ -44,7 +44,7 @@ type PluginUiResponse = {
 
 type PluginListResponse = {
   success?: boolean;
-  plugins?: PluginRuntimeView[];
+  plugins?: PluginView[];
   error?: string;
   message?: string;
 };
@@ -81,7 +81,7 @@ function buildPluginActionConfig(
 
 function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[] }> {
   return new Map(
-    listStaticPluginRuntimeViews().map((view) => [
+    listStaticPluginViews().map((view) => [
       view.name,
       {
         actions: buildPluginActionConfig(findBuiltinPlugin(view.name)),
@@ -101,7 +101,7 @@ function buildStaticPluginPayload(params?: {
     success: true,
     runtimeConnected: params?.runtimeConnected === true,
     ...(reason ? { runtimeError: reason } : {}),
-    plugins: listStaticPluginRuntimeViews().map((view) => ({
+    plugins: listStaticPluginViews().map((view) => ({
       ...view,
       availability: buildStaticPluginAvailability({
         pluginName: view.name,
@@ -134,7 +134,7 @@ async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
-async function loadRuntimePluginViews(baseUrl: string): Promise<PluginRuntimeView[]> {
+async function loadPluginViews(baseUrl: string): Promise<PluginView[]> {
   const listUrl = new URL("/api/plugins/list", baseUrl).toString();
   const payload = await fetchJson<PluginListResponse>(listUrl);
   const plugins = Array.isArray(payload.plugins) ? payload.plugins : [];
@@ -166,9 +166,9 @@ async function buildRuntimePluginPayload(
 ): Promise<PluginUiResponse> {
   const baseUrl = String(selectedAgent.baseUrl || "").trim();
   const configMap = buildPluginConfigMap();
-  const runtimeViews = await loadRuntimePluginViews(baseUrl);
+  const pluginViews = await loadPluginViews(baseUrl);
   const plugins = await Promise.all(
-    runtimeViews.map(async (view) => {
+    pluginViews.map(async (view) => {
       return {
         ...view,
         availability: await loadRuntimePluginAvailability(baseUrl, view.name),

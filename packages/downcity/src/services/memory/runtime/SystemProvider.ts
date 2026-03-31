@@ -13,9 +13,9 @@ import { isMemoryEnabled } from "./Store.js";
  * 构建 memory service 的 system 文本。
  */
 export async function buildMemoryServiceSystemText(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): Promise<string> {
-  const enabled = isMemoryEnabled(runtime);
+  const enabled = isMemoryEnabled(context);
   if (!enabled) {
     return [
       "# Memory Service",
@@ -40,4 +40,3 @@ export async function buildMemoryServiceSystemText(
     "- Keep injected memory snippets small and relevant.",
   ].join("\n");
 }
-

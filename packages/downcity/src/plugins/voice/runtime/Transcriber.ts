@@ -22,7 +22,7 @@ export interface VoiceTranscribeInput {
   /**
    * 运行时上下文（用于读取配置/根目录/日志）。
    */
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   /**
    * 待转写音频路径（相对项目根目录或绝对路径）。
    */
@@ -101,13 +101,13 @@ function normalizeStrategy(strategy?: VoiceTranscribeStrategy): VoiceTranscribeS
   return "auto";
 }
 
-function toAbsoluteAudioPath(runtime: ExecutionContext, input: string): string {
+function toAbsoluteAudioPath(context: ExecutionContext, input: string): string {
   const raw = String(input || "").trim();
   if (!raw) {
     throw new Error("voice transcribe requires audioPath");
   }
   if (path.isAbsolute(raw)) return path.resolve(raw);
-  return path.resolve(runtime.rootPath, raw);
+  return path.resolve(context.rootPath, raw);
 }
 
 function pickLastNonEmptyLine(value: string): string {
@@ -283,10 +283,10 @@ async function runTransformersWhisperRunner(params: {
 
 async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceConfigResolved> {
   const pluginConfig =
-    input.runtime.config.plugins?.voice &&
-    typeof input.runtime.config.plugins.voice === "object" &&
-    !Array.isArray(input.runtime.config.plugins.voice)
-      ? input.runtime.config.plugins.voice
+    input.context.config.plugins?.voice &&
+    typeof input.context.config.plugins.voice === "object" &&
+    !Array.isArray(input.context.config.plugins.voice)
+      ? input.context.config.plugins.voice
       : null;
 
   const enabled =
@@ -311,7 +311,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
   }
 
   const modelsRootDir = resolveVoiceModelsRootDir({
-    projectRoot: input.runtime.rootPath,
+    projectRoot: input.context.rootPath,
     modelsDir: String(
       (pluginConfig as { modelsDir?: unknown } | null)?.modelsDir || "",
     ).trim(),
@@ -324,7 +324,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
     }
   }
 
-  const audioPath = toAbsoluteAudioPath(input.runtime, input.audioPath);
+  const audioPath = toAbsoluteAudioPath(input.context, input.audioPath);
   const audioExists = await fs.pathExists(audioPath);
   if (!audioExists) {
     throw new Error(`Audio file does not exist: ${audioPath}`);

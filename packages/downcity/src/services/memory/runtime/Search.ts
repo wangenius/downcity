@@ -26,7 +26,7 @@ function clampNumber(value: number, min: number, max: number): number {
  * 执行检索。
  */
 export async function searchMemory(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   payload: MemorySearchPayload,
 ): Promise<MemorySearchResponse> {
@@ -64,7 +64,7 @@ export async function searchMemory(
   );
 
   try {
-    await ensureMemoryIndexed(runtime, state, { reason: "search" });
+    await ensureMemoryIndexed(context, state, { reason: "search" });
     const results = state.indexer.search({
       query,
       maxResults,

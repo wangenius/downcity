@@ -194,8 +194,8 @@ export async function listMemorySourceFiles(
 /**
  * 判断 Memory 功能是否启用（默认 true）。
  */
-export function isMemoryEnabled(runtime: ExecutionContext): boolean {
-  const enabled = runtime.config?.context?.memory?.enabled;
+export function isMemoryEnabled(context: ExecutionContext): boolean {
+  const enabled = context.config?.context?.memory?.enabled;
   return enabled !== false;
 }
 
@@ -207,12 +207,12 @@ export function isMemoryEnabled(runtime: ExecutionContext): boolean {
  * - 不再按 rootPath 落到模块级 Map，避免 service 实例之间共享状态。
  */
 export function createMemoryRuntimeState(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): MemoryRuntimeState {
   return {
-    rootPath: runtime.rootPath,
-    enabled: isMemoryEnabled(runtime),
-    indexer: new MemoryIndexer(runtime.rootPath),
+    rootPath: context.rootPath,
+    enabled: isMemoryEnabled(context),
+    indexer: new MemoryIndexer(context.rootPath),
     dirty: true,
     syncing: null,
     watchers: [],
@@ -225,7 +225,7 @@ export function createMemoryRuntimeState(
  * 标记 dirty 并触发 debounce 同步。
  */
 export function markMemoryDirty(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   reason: string,
 ): void {
@@ -235,7 +235,7 @@ export function markMemoryDirty(
   }
   state.watchDebounceTimer = setTimeout(() => {
     state.watchDebounceTimer = null;
-    void ensureMemoryIndexed(runtime, state, { reason: `watch:${reason}` });
+    void ensureMemoryIndexed(context, state, { reason: `watch:${reason}` });
   }, MEMORY_DEFAULTS.watchDebounceMs);
   if (typeof state.watchDebounceTimer.unref === "function") {
     state.watchDebounceTimer.unref();
@@ -243,7 +243,7 @@ export function markMemoryDirty(
 }
 
 function registerWatcher(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   watchPath: string,
 ): void {
@@ -256,12 +256,12 @@ function registerWatcher(
         if (!name.endsWith(".md")) {
           return;
         }
-        markMemoryDirty(runtime, state, name || "unknown");
+        markMemoryDirty(context, state, name || "unknown");
       },
     );
     state.watchers.push(watcher);
   } catch (error) {
-    runtime.logger.warn("[memory] watcher init skipped", {
+    context.logger.warn("[memory] watcher init skipped", {
       watchPath,
       error: String(error),
     });
@@ -272,28 +272,28 @@ function registerWatcher(
  * 启动 memory 运行时（watcher + interval）。
  */
 export async function startMemoryRuntime(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
 ): Promise<void> {
-  state.enabled = isMemoryEnabled(runtime);
+  state.enabled = isMemoryEnabled(context);
   if (!state.enabled) {
-    runtime.logger.info("[memory] disabled by config");
+    context.logger.info("[memory] disabled by config");
     return;
   }
 
   if (state.watchers.length === 0) {
-    registerWatcher(runtime, state, getDowncityDirPath(runtime.rootPath));
+    registerWatcher(context, state, getDowncityDirPath(context.rootPath));
   }
   if (!state.intervalTimer) {
     state.intervalTimer = setInterval(() => {
-      void ensureMemoryIndexed(runtime, state, { reason: "interval" });
+      void ensureMemoryIndexed(context, state, { reason: "interval" });
     }, MEMORY_DEFAULTS.intervalMinutes * 60 * 1000);
     if (typeof state.intervalTimer.unref === "function") {
       state.intervalTimer.unref();
     }
   }
 
-  await ensureMemoryIndexed(runtime, state, { reason: "startup" });
+  await ensureMemoryIndexed(context, state, { reason: "startup" });
 }
 
 /**
@@ -333,7 +333,7 @@ export async function stopMemoryRuntime(
  * 确保索引已同步。
  */
 export async function ensureMemoryIndexed(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   state: MemoryRuntimeState,
   params?: { force?: boolean; reason?: string },
 ): Promise<MemoryIndexSyncResult | null> {
@@ -351,18 +351,18 @@ export async function ensureMemoryIndexed(
   let syncResult: MemoryIndexSyncResult | null = null;
   state.syncing = (async () => {
     try {
-      const files = await listMemorySourceFiles(runtime.rootPath);
+      const files = await listMemorySourceFiles(context.rootPath);
       syncResult = await state.indexer.sync(files, { force });
       state.dirty = false;
       state.lastError = undefined;
       state.lastSyncAt = Date.now();
-      runtime.logger.info("[memory] index synced", {
+      context.logger.info("[memory] index synced", {
         reason: params?.reason || "manual",
         files: files.length,
       });
     } catch (error) {
       state.lastError = String(error);
-      runtime.logger.error("[memory] index sync failed", {
+      context.logger.error("[memory] index sync failed", {
         reason: params?.reason || "manual",
         error: state.lastError,
       });

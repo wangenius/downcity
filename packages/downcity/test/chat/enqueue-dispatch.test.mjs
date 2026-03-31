@@ -15,7 +15,7 @@ import {
 
 test("prepareChatEnqueue returns pipeline-transformed payload", async () => {
   const next = await prepareChatEnqueue({
-    runtime: {
+    context: {
       plugins: {
         async pipeline(pointName, value) {
           assert.equal(pointName, "chat.beforeEnqueue");
@@ -52,7 +52,7 @@ test("prepareChatEnqueue returns pipeline-transformed payload", async () => {
 test("emitChatEnqueueEffect forwards enqueue result to plugin effect", async () => {
   let received = null;
   await emitChatEnqueueEffect({
-    runtime: {
+    context: {
       plugins: {
         async effect(pointName, value) {
           assert.equal(pointName, "chat.afterEnqueue");

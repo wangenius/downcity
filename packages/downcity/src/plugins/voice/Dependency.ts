@@ -66,8 +66,8 @@ export interface VoiceDependencyInstallResult {
   details?: JsonValue;
 }
 
-function readVoicePluginRecord(runtime: ExecutionContext): Record<string, unknown> {
-  const current = runtime.config.plugins?.voice;
+function readVoicePluginRecord(context: ExecutionContext): Record<string, unknown> {
+  const current = context.config.plugins?.voice;
   if (!current || typeof current !== "object" || Array.isArray(current)) {
     return {};
   }
@@ -105,9 +105,9 @@ function toJsonObject(input: Record<string, unknown> | null | undefined): JsonOb
  * 读取 voice 转写依赖配置。
  */
 export function readVoiceTranscriberConfig(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): VoiceTranscriberConfig {
-  const current = readVoicePluginRecord(runtime);
+  const current = readVoicePluginRecord(context);
   return {
     provider: "local",
     ...(current as VoiceTranscriberConfig),
@@ -118,29 +118,29 @@ export function readVoiceTranscriberConfig(
  * 写入 voice 转写依赖配置。
  */
 export async function writeVoiceTranscriberConfig(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   value: Partial<VoiceTranscriberConfig>;
 }): Promise<VoicePluginConfig> {
-  if (!params.runtime.config.plugins) {
-    params.runtime.config.plugins = {};
+  if (!params.context.config.plugins) {
+    params.context.config.plugins = {};
   }
-  const current = readVoicePluginRecord(params.runtime);
+  const current = readVoicePluginRecord(params.context);
   const next = {
     ...current,
     ...params.value,
   };
-  params.runtime.config.plugins.voice = toJsonObject(next);
+  params.context.config.plugins.voice = toJsonObject(next);
   await persistProjectPluginConfig({
-    projectRoot: params.runtime.rootPath,
+    projectRoot: params.context.rootPath,
     sections: {
-      plugins: params.runtime.config.plugins,
+      plugins: params.context.config.plugins,
     },
   });
-  return params.runtime.config.plugins.voice as VoicePluginConfig;
+  return params.context.config.plugins.voice as VoicePluginConfig;
 }
 
 async function checkLocalProviderAvailability(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
   config: VoiceTranscriberConfig,
 ): Promise<VoiceDependencyCheckResult> {
   const reasons: string[] = [];
@@ -154,7 +154,7 @@ async function checkLocalProviderAvailability(
   }
 
   const modelsRootDir = resolveVoiceModelsRootDir({
-    projectRoot: runtime.rootPath,
+    projectRoot: context.rootPath,
     modelsDir: config.modelsDir,
   });
   const installState = await detectLocalVoiceModelInstallState({
@@ -185,9 +185,9 @@ async function checkLocalProviderAvailability(
  * 检查 voice 转写依赖可用性。
  */
 export async function checkVoiceTranscriber(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): Promise<VoiceDependencyCheckResult> {
-  const config = readVoiceTranscriberConfig(runtime);
+  const config = readVoiceTranscriberConfig(context);
   if (config.provider === "command") {
     const command = String(config.command || "").trim();
     return {
@@ -195,19 +195,19 @@ export async function checkVoiceTranscriber(
       reasons: command ? [] : ["voice transcriber command is missing"],
     };
   }
-  return checkLocalProviderAvailability(runtime, config);
+  return checkLocalProviderAvailability(context, config);
 }
 
 /**
  * 安装或修复 voice 转写依赖。
  */
 export async function installVoiceTranscriber(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   input?: VoiceTranscriberInstallInput;
 }): Promise<VoiceDependencyInstallResult> {
-  const runtime = params.runtime;
+  const context = params.context;
   const input = params.input;
-  const config = readVoiceTranscriberConfig(runtime);
+  const config = readVoiceTranscriberConfig(context);
   if (config.provider === "command") {
     return {
       success: true,
@@ -225,7 +225,7 @@ export async function installVoiceTranscriber(params: {
       : [resolveVoiceModelId(String(config.modelId || "SenseVoiceSmall")) || "SenseVoiceSmall"];
 
   const modelsRootDir = resolveVoiceModelsRootDir({
-    projectRoot: runtime.rootPath,
+    projectRoot: context.rootPath,
     modelsDir: input?.modelsDir || config.modelsDir,
   });
 
@@ -270,7 +270,7 @@ export async function installVoiceTranscriber(params: {
     installedModels: selectedModelIds,
   };
   await writeVoiceTranscriberConfig({
-    runtime,
+    context,
     value: nextConfig,
   });
 
@@ -289,13 +289,13 @@ export async function installVoiceTranscriber(params: {
  * 解析 voice 转写句柄。
  */
 export async function resolveVoiceTranscriber(
-  runtime: ExecutionContext,
+  context: ExecutionContext,
 ): Promise<VoiceTranscriberHandle> {
   return {
     async transcribe(input) {
       try {
         const result = await transcribeVoiceAudio({
-          runtime,
+          context,
           audioPath: input.audioPath,
           language: input.language,
         });
@@ -317,11 +317,11 @@ export async function resolveVoiceTranscriber(
  * 执行一次 voice 转写。
  */
 export async function transcribeWithVoiceDependency(params: {
-  runtime: ExecutionContext;
+  context: ExecutionContext;
   audioPath: string;
   language?: string;
 }): Promise<{ success: boolean; text?: string; error?: string }> {
-  const transcriber = await resolveVoiceTranscriber(params.runtime);
+  const transcriber = await resolveVoiceTranscriber(params.context);
   return transcriber.transcribe({
     audioPath: params.audioPath,
     ...(params.language ? { language: params.language } : {}),

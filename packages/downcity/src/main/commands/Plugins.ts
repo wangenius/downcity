@@ -12,8 +12,8 @@ import type { Command } from "commander";
 import { callServer } from "@/main/daemon/Client.js";
 import {
   buildStaticPluginAvailability,
-  findStaticPluginRuntimeView,
-  listStaticPluginRuntimeViews,
+  findStaticPluginView,
+  listStaticPluginViews,
 } from "@/main/plugin/Catalog.js";
 import { printResult } from "@utils/cli/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
@@ -174,7 +174,7 @@ function printStaticPluginListFallback(params: {
     success: true,
     title: params.title,
     payload: {
-      plugins: listStaticPluginRuntimeViews().map((plugin) => ({
+      plugins: listStaticPluginViews().map((plugin) => ({
         ...plugin,
         availability: buildStaticPluginAvailability({
           pluginName: plugin.name,
@@ -195,7 +195,7 @@ function printStaticPluginStatusFallback(params: {
   title: string;
   reason: string;
 }): void {
-  const plugin = findStaticPluginRuntimeView(params.pluginName);
+  const plugin = findStaticPluginView(params.pluginName);
   if (!plugin) {
     printResult({
       asJson: params.asJson,

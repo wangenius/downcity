@@ -1,22 +1,22 @@
 ---
-title: Architecture Logic Map
-description: Explains how console, agent, execution runtime, session, service, and plugin collaborate
+title: Logic Map
+description: Explains how console, agent, execution context, session, service, and plugin collaborate
 ---
 
-# Architecture Logic Map
+# Logic Map
 
 This page answers one question:
 
-how one request moves from `console` / `agent` into real execution and back to the user.
+How does a request move from `console` or `agent` into real execution and back to the user?
 
 ## 1. Responsibility Boundaries
 
-- `console`: global control plane for daemon, registry, model pool, and shared storage
-- `agent`: project host that loads config and owns the session registry
-- `execution runtime`: the shared capability surface injected into the execution chain
+- `console`: global control plane for daemon, registry, model pool, and shared UI state
+- `agent`: project host that loads config and owns the session store
+- `execution context`: the shared capability surface exposed to the execution chain
 - `session`: where prompt, tools, history, and model execution actually happen
-- `service`: main business workflow and domain orchestration
-- `plugin`: passive extension module that joins only at fixed points
+- `service`: main business path and domain orchestration
+- `plugin`: passive extension module at fixed points
 
 ## 2. System Relationship
 
@@ -24,18 +24,18 @@ how one request moves from `console` / `agent` into real execution and back to t
 flowchart LR
   subgraph CP["Control Plane"]
     CLI["city CLI"] --> CONSOLE["console"]
-    CONSOLE --> REG["registry / model pool / UI"]
+    CONSOLE --> REG["registry and model pool and UI"]
   end
 
-  subgraph DP["Execution Plane (Per Project)"]
-    AGENT["agent"] --> ER["execution runtime"]
-    AGENT --> SR["session registry"]
+  subgraph DP["Execution Plane Per Project"]
+    AGENT["agent"] --> EC["execution context"]
+    AGENT --> SR["session store"]
     SR --> SESSION["session"]
-    ER --> SERVICES["services"]
-    ER --> PLUGINS["plugins"]
+    EC --> SERVICES["services"]
+    EC --> PLUGINS["plugins"]
     SERVICES --> SESSION
     SERVICES -. trigger plugin points .-> PLUGINS
-    AGENT --> SHIP[".downcity/*"]
+    AGENT --> DATA[".downcity/*"]
   end
 
   REG --> AGENT
@@ -46,35 +46,36 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant User as User
-  participant Channel as Telegram/Feishu/QQ
-  participant Service as service(chat/task/memory)
-  participant Runtime as execution runtime
-  participant Plugin as plugin(voice/auth)
+  participant Channel as Telegram or Feishu or QQ
+  participant Service as service
+  participant Context as execution context
+  participant Plugin as plugin
   participant Session as session
 
-  User->>Channel: send message / trigger task
-  Channel->>Service: enter service workflow
-  Service->>Runtime: read shared capabilities
-  Service->>Plugin: trigger fixed plugin points
+  User->>Channel: send message or trigger task
+  Channel->>Service: enter target service
+  Service->>Context: read shared capabilities
+  Service->>Plugin: trigger fixed-point extensions
   Service->>Session: enter target session
   Session-->>Service: return result
-  Service-->>User: reply or persist outcome
+  Service-->>User: reply or persist output
 ```
 
-## 4. A Real-World Reading
+## 4. A Realistic Example
 
 In `chat`:
 
-- `chat service` receives the channel message
-- it maintains the mapping from channel target to `sessionId`
-- `voice plugin` may add transcription at fixed points
-- `auth plugin` may validate access and resolve roles
-- `chat service` still decides whether to enqueue, when to reply, and what to persist
+- `chat service` receives the inbound channel message
+- it resolves the target `sessionId`
+- voice input may trigger the `voice` plugin
+- access checks may trigger the `auth` plugin
+- the final execution still happens inside the selected `session`
+- `chat service` decides when and how to reply
 
-## 5. What Most Users Should Remember
+## 5. What Users Should Remember
 
 - you usually operate an agent
 - the real execution unit is the session
-- services own the main path
-- plugins are the extension layer
-- execution runtime is the glue that keeps those capabilities aligned
+- service owns the main path
+- plugin is the extension layer
+- execution context is the glue that keeps those capabilities aligned

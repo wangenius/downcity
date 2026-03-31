@@ -184,7 +184,7 @@ export abstract class BaseChatChannel {
     params: IncomingAuthorizationParams,
   ): Promise<void> {
     await observeIncomingChatPrincipal({
-      runtime: this.context,
+      context: this.context,
       channel: this.channel,
       chatId: params.chatId,
       chatType: params.chatType,
@@ -202,7 +202,7 @@ export abstract class BaseChatChannel {
   ): Promise<IncomingAuthorizationResult> {
     try {
       await guardIncomingChat({
-        runtime: this.context,
+        context: this.context,
         channel: this.channel,
         input: {
           channel: this.channel,

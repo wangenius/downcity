@@ -4,12 +4,12 @@
  * 关键点（中文）
  * - task 的长期运行态（cron engine）归属于 TaskService 实例。
  * - task 的 prompt、action input、action execution 都已拆到独立模块。
- * - 当前文件只保留实例骨架与 lifecycle，不再依赖 legacy `taskService`。
+ * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级 `taskService` 单例。
  */
 
 import type { AgentState } from "@/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
-import type { ServiceActions, Service } from "@/types/Service.js";
+import type { ServiceActions } from "@/types/Service.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   TaskCronRegisterResult,
@@ -165,5 +165,3 @@ export class TaskService extends BaseService {
     });
   }
 }
-
-export const taskService: Service = new TaskService(null);

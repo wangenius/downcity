@@ -9,10 +9,13 @@ description: Correct startup sequence for Console + Agent in about 10 minutes
 
 ```bash
 npm install -g downcity
+city --version
 downcity --version
 ```
 
 > `downcity` and `city` are the same CLI binary.
+>
+> If `city` is not found after install, see [Common Issues](/en/docs/operations/troubleshooting/common-issues).
 
 ## 2. Initialize Console (first time only)
 
@@ -64,9 +67,9 @@ Minimal `downcity.json` example:
 }
 ```
 
-## 6. Start Agent runtime
+## 6. Start Agent
 
-Start runtime (default: background daemon):
+Start the agent (default: background daemon):
 
 ```bash
 city agent start
@@ -78,7 +81,7 @@ Use foreground mode when you want logs in the current terminal:
 city agent start --foreground
 ```
 
-## 7. Verify runtime state
+## 7. Verify agent state
 
 ```bash
 city agent status
@@ -88,7 +91,7 @@ city console agents
 Notes:
 
 - Agent ports are auto-allocated by console, so Quickstart should not assume a fixed port.
-- In multi-agent setups, each agent can have a different runtime port.
+- In multi-agent setups, each agent can have a different port.
 
 ## 8. Optional: start Console UI
 

@@ -48,13 +48,13 @@ export function loadAgentEnvFromStore(agentId: string): Record<string, string> {
 }
 
 /**
- * 读取 agent runtime 最终环境变量快照。
+ * 读取 agent 最终环境变量快照。
  *
  * 关键点（中文）
  * - 来源：agent scope env（DB） + `<agent>/.env`（用户文件）。
  * - 冲突时 `.env` 优先，满足用户可在本地即时覆盖。
  */
-export function loadAgentRuntimeEnv(projectRoot: string): Record<string, string> {
+export function loadAgentEnvSnapshot(projectRoot: string): Record<string, string> {
   const agentFromDb = loadAgentEnvFromStore(projectRoot);
   const projectDotenv = loadProjectDotenv(projectRoot);
   return {

@@ -4,13 +4,13 @@
  * 关键点（中文）
  * - 统一管理 service 状态：list/status/start/stop/restart。
  * - 所有 service 默认支持 command 桥接（含内建 lifecycle 命令）。
- * - 远程 runtime 调用与 schedule 管理细节已经拆到独立子模块。
+ * - 远程 agent 调用与 schedule 管理细节已经拆到独立子模块。
  */
 
 import type { Command } from "commander";
 import type { ServiceCliBaseOptions, ServiceControlAction } from "@/types/Services.js";
 import {
-  addServiceRuntimeOptions,
+  addServiceTargetOptions,
 } from "./ServiceCommandSupport.js";
 import {
   runServiceCommandBridge,
@@ -24,7 +24,7 @@ function registerLifecycleCommand(
   action: Exclude<ServiceControlAction, "status"> | "status",
   description: string,
 ): void {
-  addServiceRuntimeOptions(
+  addServiceTargetOptions(
     service
       .command(`${action} <serviceName>`)
       .description(description),
@@ -43,10 +43,10 @@ function registerLifecycleCommand(
 export function registerServicesCommand(program: Command): void {
   const service = program
     .command("service")
-    .description("Service runtime 管理命令")
+    .description("Service 状态管理命令")
     .helpOption("--help", "display help for command");
 
-  addServiceRuntimeOptions(
+  addServiceTargetOptions(
     service
       .command("list")
       .description("列出全部 service 运行状态"),
@@ -59,7 +59,7 @@ export function registerServicesCommand(program: Command): void {
   registerLifecycleCommand(service, "stop", "停止 service");
   registerLifecycleCommand(service, "restart", "重启 service");
 
-  addServiceRuntimeOptions(
+  addServiceTargetOptions(
     service
       .command("command <serviceName> <command>")
       .description("转发 service command")

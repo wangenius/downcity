@@ -5,11 +5,14 @@ description: 安装、启动与配置中的常见错误
 
 # 常见问题
 
-## 命令找不到（`downcity: command not found`）
+## 命令找不到（`city: command not found` / `downcity: command not found`）
 
 ```bash
 npm config get prefix
+echo $PATH
 export PATH=$(npm config get prefix)/bin:$PATH
+rehash
+city --version
 ```
 
 或直接用：
@@ -17,6 +20,12 @@ export PATH=$(npm config get prefix)/bin:$PATH
 ```bash
 npx downcity --version
 ```
+
+说明：
+
+- `city` 与 `downcity` 是同一个可执行命令。
+- 新版本安装后不应该再需要手动 `chmod +x`。
+- 如果 `sudo city ...` 失败，但普通 `city ...` 正常，通常是 `sudo` 的 PATH 问题，不是安装失败。
 
 ## 端口冲突（5314 被占用）
 

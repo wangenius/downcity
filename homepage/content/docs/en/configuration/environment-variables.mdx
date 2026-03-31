@@ -1,6 +1,6 @@
 ---
 title: Environment Variable Strategy (Console Shared vs Agent Private)
-description: Clear scope and runtime merge logic for env_entries, channel_accounts, and <agent>/.env
+description: Clear scope and agent-env merge logic for env_entries, channel_accounts, and <agent>/.env
 ---
 
 > Canonical schema doc: [Env and downcity.db Database Design](/en/docs/configuration/env-downcitydb-design)
@@ -39,12 +39,12 @@ sequenceDiagram
   participant DB as ~/.downcity/downcity.db
   participant ENV as <agent>/.env
   participant JSON as downcity.json(project layers)
-  participant RT as Agent Runtime
+  participant RT as Agent Process
 
   CLI->>DB: Read env_entries where scope=global
   CLI->>DB: Read env_entries where scope=agent and agent_id matches
   CLI->>ENV: Parse project .env
-  CLI->>CLI: Build runtime env = agent-scope DB env + .env (.env wins)
+  CLI->>CLI: Build agent env = agent-scope DB env + .env (.env wins)
   CLI->>JSON: Read and merge downcity.json layers
   CLI->>CLI: Resolve placeholders using scoped env maps
   CLI->>DB: Resolve channel channel account by channelAccountId
@@ -53,7 +53,7 @@ sequenceDiagram
 
 ## 3. Load Priority (who wins)
 
-### 3.1 Runtime env merge
+### 3.1 Agent env merge
 
 1. Agent-scope DB env loads first.
 2. `<agent>/.env` overlays it.
@@ -63,10 +63,10 @@ sequenceDiagram
 
 1. A shell subprocess starts from the host process `process.env`.
 2. Console shared env (`scope=global`) overlays that base.
-3. Current agent runtime env (`agent-scope DB env + <agent>/.env`) overlays shared env.
+3. Current agent env (`agent-scope DB env + <agent>/.env`) overlays shared env.
 4. Request-scoped context vars such as `DC_CTX_*` are injected last.
 
-So key precedence inside `shell` sessions is: `DC_CTX_*` > agent runtime env > global env > host process env.
+So key precedence inside `shell` sessions is: `DC_CTX_*` > agent env > global env > host process env.
 
 ### 3.3 Channel credential resolution
 
@@ -79,8 +79,8 @@ So key precedence inside `shell` sessions is: `DC_CTX_*` > agent runtime env > g
 ### 4.1 Reads project `.env`
 
 1. Project-layer `${ENV_KEY}` resolution.
-2. Agent runtime process env injection (`agent env in env_entries + .env`).
-3. `shell` subprocess injection (global env + current agent runtime env + `DC_CTX_*`).
+2. Agent process env injection (`agent env in env_entries + .env`).
+3. `shell` subprocess injection (global env + current agent env + `DC_CTX_*`).
 4. Optional fallback paths in some service auth helpers.
 
 ### 4.2 Does not read project `.env`
@@ -97,7 +97,7 @@ So key precedence inside `shell` sessions is: `DC_CTX_*` > agent runtime env > g
 3. Model CRUD (CLI/UI): writes `model_providers`, `models`.
 4. Plugin config (`city plugin action ...` or `city voice ...`): writes project `downcity.json`.
 5. Channel configure action: writes `downcity.json` (`enabled`, `channelAccountId`).
-6. User manual `.env` edit: affects runtime only for that agent.
+6. User manual `.env` edit: affects that agent only.
 
 ## 6. FAQ and Troubleshooting
 
@@ -114,7 +114,7 @@ flowchart TD
   B -->|bound| C["Find account in channel_accounts table"]
   B -->|empty| D["Check fallback keys in <agent>/.env"]
   C --> E["Credential source is channel account"]
-  D --> F["Credential source is project runtime env"]
+  D --> F["Credential source is project agent env"]
 ```
 
 ## 7. Recommended Setup
@@ -144,7 +144,7 @@ city plugin action voice configure --payload '{"enabled": true}'
 
 The homepage community marketplace now uses PostgreSQL-compatible storage and works well with Supabase.
 
-Required runtime variables:
+Required environment variables:
 
 1. `DATABASE_URL`: point this to your Supabase Postgres connection string so repository submissions and review states can be stored centrally.
 

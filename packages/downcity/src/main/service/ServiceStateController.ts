@@ -11,28 +11,17 @@ import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   ServiceStateControlAction,
   ServiceStateControlResult,
+  ServiceStateRecord,
   ServiceStateSnapshot,
 } from "@/types/ServiceState.js";
 import { getAgentState } from "@agent/RuntimeState.js";
 import {
-  createRegisteredServiceInstances,
+  getRegisteredStaticServiceInstances,
+  listRegisteredServices,
   listRegisteredServiceNames,
 } from "@/main/registries/ServiceClassRegistry.js";
 import type { BaseService } from "@services/BaseService.js";
 import type { Service, ServiceState } from "@/types/Service.js";
-import { SERVICES } from "./Services.js";
-
-type ServiceStateRecord = {
-  service: BaseService;
-  state: ServiceState;
-  updatedAt: number;
-  lastError?: string;
-  lastCommand?: string;
-  lastCommandAt?: number;
-  chain: Promise<void>;
-};
-
-const serviceStateRecords = new Map<string, ServiceStateRecord>();
 
 function nowMs(): number {
   return Date.now();
@@ -45,7 +34,7 @@ function nowMs(): number {
  * - 若 agent 已就绪，则返回 per-agent service instances。
  * - 若 agent 尚未初始化，则退回静态装配实例，方便测试与只读场景。
  */
-export function listServiceInstances(_context?: ExecutionContext): BaseService[] {
+export function listServiceInstances(): BaseService[] {
   try {
     const agent = getAgentState();
     if (agent.services.size > 0) {
@@ -54,7 +43,7 @@ export function listServiceInstances(_context?: ExecutionContext): BaseService[]
   } catch {
     // ignore and fallback
   }
-  return [...createRegisteredServiceInstances(null).values()];
+  return [...getRegisteredStaticServiceInstances().values()];
 }
 
 /**
@@ -62,13 +51,10 @@ export function listServiceInstances(_context?: ExecutionContext): BaseService[]
  */
 export function resolveServiceByName(
   name: string,
-  context?: ExecutionContext,
 ): BaseService | null {
   const key = String(name || "").trim();
   if (!key) return null;
-  return (
-    listServiceInstances(context).find((service) => service.name === key) || null
-  );
+  return listServiceInstances().find((service) => service.name === key) || null;
 }
 
 /**
@@ -77,21 +63,7 @@ export function resolveServiceByName(
 export function ensureServiceStateRecord(
   service: BaseService,
 ): ServiceStateRecord {
-  const key = String(service.name || "").trim();
-  const existing = serviceStateRecords.get(key);
-  if (existing) {
-    existing.service = service;
-    return existing;
-  }
-
-  const created: ServiceStateRecord = {
-    service,
-    state: "stopped",
-    updatedAt: nowMs(),
-    chain: Promise.resolve(),
-  };
-  serviceStateRecords.set(key, created);
-  return created;
+  return service.serviceStateRecord;
 }
 
 function hasCommandActions(service: BaseService): boolean {
@@ -105,10 +77,11 @@ function hasCommandActions(service: BaseService): boolean {
  */
 export function toServiceStateSnapshot(
   record: ServiceStateRecord,
+  service: BaseService,
 ): ServiceStateSnapshot {
-  const lifecycle = record.service.lifecycle;
+  const lifecycle = service.lifecycle;
   return {
-    name: record.service.name,
+    name: service.name,
     state: record.state,
     updatedAt: record.updatedAt,
     ...(record.lastError ? { lastError: record.lastError } : {}),
@@ -118,7 +91,7 @@ export function toServiceStateSnapshot(
       : {}),
     supportsLifecycle: Boolean(lifecycle?.start || lifecycle?.stop),
     supportsCommand:
-      Boolean(lifecycle?.command) || hasCommandActions(record.service),
+      Boolean(lifecycle?.command) || hasCommandActions(service),
   };
 }
 
@@ -167,7 +140,7 @@ export function markServiceCommand(
  * 返回静态 service 定义清单。
  */
 export function getStaticServices(): Service[] {
-  return [...SERVICES];
+  return listRegisteredServices();
 }
 
 /**
@@ -181,11 +154,10 @@ export function getServiceRootCommandNames(): string[] {
  * 列出全部 service 状态快照。
  */
 export function listServiceStates(): ServiceStateSnapshot[] {
-  for (const service of listServiceInstances()) {
-    ensureServiceStateRecord(service);
-  }
-  return Array.from(serviceStateRecords.values())
-    .map((item) => toServiceStateSnapshot(item))
+  return listServiceInstances()
+    .map((service) =>
+      toServiceStateSnapshot(ensureServiceStateRecord(service), service),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -217,12 +189,12 @@ async function startServiceInternal(
     });
     return {
       success: true,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
     };
   } catch (error) {
     return {
       success: false,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
       error: String(error),
     };
   }
@@ -247,12 +219,12 @@ async function stopServiceInternal(
     });
     return {
       success: true,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
     };
   } catch (error) {
     return {
       success: false,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
       error: String(error),
     };
   }
@@ -266,7 +238,7 @@ export async function controlServiceState(params: {
   action: ServiceStateControlAction;
   context: ExecutionContext;
 }): Promise<ServiceStateControlResult> {
-  const service = resolveServiceByName(params.serviceName, params.context);
+  const service = resolveServiceByName(params.serviceName);
   if (!service) {
     return {
       success: false,
@@ -278,7 +250,7 @@ export async function controlServiceState(params: {
     const record = ensureServiceStateRecord(service);
     return {
       success: true,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
     };
   }
 
@@ -305,7 +277,7 @@ export async function startAllServices(
   results: ServiceStateControlResult[];
 }> {
   const results: ServiceStateControlResult[] = [];
-  for (const service of listServiceInstances(context)) {
+  for (const service of listServiceInstances()) {
     results.push(
       await controlServiceState({
         serviceName: service.name,
@@ -328,7 +300,7 @@ export async function stopAllServices(context: ExecutionContext): Promise<{
   results: ServiceStateControlResult[];
 }> {
   const results: ServiceStateControlResult[] = [];
-  for (const service of listServiceInstances(context)) {
+  for (const service of listServiceInstances()) {
     results.push(
       await controlServiceState({
         serviceName: service.name,

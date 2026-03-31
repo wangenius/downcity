@@ -446,7 +446,7 @@ export async function sendChatTextBySessionId(params: {
  *
  * 关键点（中文）
  * - chatKey 与 sessionId 在 chat service 内部等价使用。
- * - 删除包含：路由映射 + chat 审计目录 + session 目录 + 运行态清理。
+ * - 删除包含：路由映射 + chat 审计目录 + session 目录 + 渠道状态清理。
  */
 export async function deleteChatByChatKey(params: {
   context: ExecutionContext;

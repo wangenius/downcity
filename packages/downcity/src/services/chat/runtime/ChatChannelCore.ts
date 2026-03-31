@@ -1,5 +1,5 @@
 /**
- * ChatChannelCore：chat 渠道运行态的核心共享辅助模块。
+ * ChatChannelCore：chat 渠道状态的核心共享辅助模块。
  *
  * 关键点（中文）
  * - 这里只放最基础的渠道状态/名称/account 解析能力。
@@ -16,7 +16,7 @@ import type { ChatChannelState } from "@/types/ChatRuntime.js";
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 
 /**
- * 创建 chat 渠道运行态对象。
+ * 创建 chat 渠道状态对象。
  */
 export function createChatChannelState(): ChatChannelState {
   return {

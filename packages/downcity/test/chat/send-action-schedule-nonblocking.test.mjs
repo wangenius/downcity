@@ -11,7 +11,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { chatService } from "../../bin/services/chat/Index.js";
+import { ChatService } from "../../bin/services/chat/ChatService.js";
 import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
@@ -40,6 +40,7 @@ test("chat send service action schedules sendAtMs without blocking", { concurren
     path.join(os.tmpdir(), "downcity-chat-send-action-"),
   );
   const runtime = buildRuntime(rootPath);
+  const chatService = new ChatService(null);
   const previous = getChatSender(TELEGRAM_CHANNEL);
   const calls = [];
   registerChatSender(TELEGRAM_CHANNEL, {

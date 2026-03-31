@@ -1,14 +1,9 @@
 /**
- * Memory Service（V2）。
+ * Memory Service 导出入口。
  *
  * 关键点（中文）
- * - 默认导出一个 memory service definition，供静态装配使用。
+ * - Index 只负责导出类实现。
  * - 真正运行时的 per-agent 实例由 ServiceClassRegistry 创建。
  */
 
-import type { Service } from "@/types/Service.js";
-import { MemoryService } from "./MemoryService.js";
-
 export { MemoryService } from "./MemoryService.js";
-
-export const memoryService: Service = new MemoryService(null);

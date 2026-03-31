@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里承载 console 侧的静态 plugin 元数据视图。
- * - 目标是把“控制面可见的 plugin 定义”从 agent runtime 执行态里拆出来复用。
+ * - 目标是把“控制面可见的 plugin 定义”从 agent 执行态里拆出来复用。
  * - 当前先服务 Console UI 与 `city plugin` CLI 的静态回退场景。
  */
 

@@ -69,7 +69,7 @@ export function hasQqHealthyHeartbeat(
 }
 
 /**
- * 构建 QQ 网关运行态快照。
+ * 构建 QQ 网关状态快照。
  */
 export function buildQqGatewayRuntimeStatus(
   input: QqGatewayRuntimeStatusInput,

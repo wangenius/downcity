@@ -14,7 +14,7 @@ import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { StoredChannelAccount } from "@/types/Store.js";
 import type {
   ChatChannelName,
-  ChatChannelRuntimeSnapshot,
+  ChatChannelStateSnapshot,
 } from "@services/chat/types/ChannelStatus.js";
 import type { ChatChannelConfigurationField } from "@services/chat/types/ChannelConfiguration.js";
 import type { ChatChannelState } from "@/types/ChatRuntime.js";
@@ -74,13 +74,13 @@ export function buildChatChannelConfigSummary(
 }
 
 /**
- * 读取单个渠道运行态快照。
+ * 读取单个渠道状态快照。
  */
 export function getChatChannelStatus(
   state: ChatChannelState,
   context: ExecutionContext,
   channel: ChatChannelName,
-): ChatChannelRuntimeSnapshot {
+): ChatChannelStateSnapshot {
   const channels = context.config.services?.chat?.channels || {};
   const enabled = channels[channel]?.enabled === true;
   const channelAccount = resolveChannelAccount(context, channel);

@@ -30,7 +30,7 @@ import { buildExecuteInputText } from "./Helpers.js";
  */
 export async function executeBySessionId(params: {
   runtime: AgentState;
-  executionRuntime: ExecutionContext;
+  executionContext: ExecutionContext;
   sessionId: string;
   instructions: string;
   attachments?: DashboardSessionExecuteAttachmentInput[];
@@ -48,7 +48,7 @@ export async function executeBySessionId(params: {
   });
 
   const dispatchTarget = await resolveDispatchTargetByChatKey({
-    context: params.executionRuntime,
+    context: params.executionContext,
     chatKey: sessionId,
   });
   if (dispatchTarget) {
@@ -64,7 +64,7 @@ export async function executeBySessionId(params: {
 
     try {
       await appendExecIngress({
-        context: params.executionRuntime,
+        context: params.executionContext,
         sessionId,
         channel: dispatchTarget.channel,
         chatId: dispatchTarget.chatId,
@@ -83,7 +83,7 @@ export async function executeBySessionId(params: {
       });
     }
 
-    const enqueueResult = resolveChatQueueStore(params.executionRuntime).enqueue({
+    const enqueueResult = resolveChatQueueStore(params.executionContext).enqueue({
       kind: "exec",
       channel: dispatchTarget.channel,
       targetId: dispatchTarget.chatId,

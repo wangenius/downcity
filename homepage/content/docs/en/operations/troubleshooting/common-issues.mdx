@@ -5,11 +5,14 @@ description: Typical installation, startup, and config failures
 
 # Common Issues
 
-## Command not found (`downcity: command not found`)
+## Command not found (`city: command not found` / `downcity: command not found`)
 
 ```bash
 npm config get prefix
+echo $PATH
 export PATH=$(npm config get prefix)/bin:$PATH
+rehash
+city --version
 ```
 
 Or run directly with:
@@ -17,6 +20,12 @@ Or run directly with:
 ```bash
 npx downcity --version
 ```
+
+Notes:
+
+- `city` and `downcity` are the same binary.
+- New installs should not require manual `chmod +x`.
+- If `sudo city ...` fails but `city ...` works, it is usually a `sudo` PATH issue rather than an install failure.
 
 ## Port conflict (5314 already in use)
 

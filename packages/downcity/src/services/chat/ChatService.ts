@@ -2,7 +2,7 @@
  * ChatService：chat service 的类实现。
  *
  * 关键点（中文）
- * - chat 的渠道 bot 运行态归属于 ChatService 实例。
+ * - chat 的渠道 bot 状态归属于 ChatService 实例。
  * - chat 的 queue worker 也归属于 ChatService 实例，而不是 agent 入口。
  * - Index 只保留静态导出入口，这里承接真正的 service class 实现。
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
@@ -10,14 +10,14 @@
 
 import type { AgentState } from "@/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
-import type { ServiceActions, Service } from "@/types/Service.js";
+import type { ServiceActions } from "@/types/Service.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { ChatChannelState } from "@/types/ChatRuntime.js";
 import {
   createChatChannelState,
   startChatChannels,
   stopChatChannels,
-} from "./runtime/ChatChannelRuntime.js";
+} from "./runtime/ChatChannelFacade.js";
 import { createChatServiceActions } from "./runtime/ChatServiceActions.js";
 import { ChatQueueWorker } from "./runtime/ChatQueueWorker.js";
 import { buildChatServiceSystem } from "./runtime/ChatServiceSystem.js";
@@ -33,7 +33,7 @@ export class ChatService extends BaseService {
   readonly name = "chat";
 
   /**
-   * 当前实例持有的渠道运行态。
+   * 当前实例持有的渠道状态。
    */
   public readonly channelState: ChatChannelState = createChatChannelState();
 
@@ -109,5 +109,3 @@ export class ChatService extends BaseService {
     };
   }
 }
-
-export const chatService: Service = new ChatService(null);

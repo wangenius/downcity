@@ -292,14 +292,6 @@ export interface ExecutionContext {
    */
   invoke: InvokeServicePort;
   /**
-   * 跨 service 调用别名入口。
-   *
-   * 关键点（中文）
-   * - 统一支持 `context.services.invoke(...)` 写法。
-   * - 与 `invoke` 指向同一实现。
-   */
-  services: InvokeServicePort;
-  /**
    * Plugin 调用入口。
    */
   plugins: PluginPort;

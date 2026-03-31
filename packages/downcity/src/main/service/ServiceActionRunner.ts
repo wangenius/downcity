@@ -147,7 +147,7 @@ export async function runServiceCommand(params: {
   schedule?: JsonValue | ServiceCommandScheduleInput;
   context: ExecutionContext;
 }): Promise<ServiceCommandResult & { service?: ServiceStateSnapshot }> {
-  const service = resolveServiceByName(params.serviceName, params.context);
+  const service = resolveServiceByName(params.serviceName);
   if (!service) {
     return {
       success: false,
@@ -162,7 +162,7 @@ export async function runServiceCommand(params: {
   if (!command) {
     return {
       success: false,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
       message: "command is required",
     };
   }
@@ -174,7 +174,7 @@ export async function runServiceCommand(params: {
     if (!action) {
       return {
         success: false,
-        service: toServiceStateSnapshot(record),
+        service: toServiceStateSnapshot(record, service),
         message: `Scheduling only supports service actions. "${service.name}.${command}" is not a schedulable action.`,
       };
     }
@@ -184,7 +184,7 @@ export async function runServiceCommand(params: {
       command,
       payload: params.payload,
       schedule: params.schedule,
-      recordSnapshot: toServiceStateSnapshot(record),
+      recordSnapshot: toServiceStateSnapshot(record, service),
       context: params.context,
     });
   }
@@ -193,7 +193,7 @@ export async function runServiceCommand(params: {
     if (record.state !== "running") {
       return {
         success: false,
-        service: toServiceStateSnapshot(record),
+        service: toServiceStateSnapshot(record, service),
         message: `Service "${service.name}" is not running`,
       };
     }
@@ -208,14 +208,14 @@ export async function runServiceCommand(params: {
     if (!result.success) {
       return {
         success: false,
-        service: toServiceStateSnapshot(record),
+        service: toServiceStateSnapshot(record, service),
         message: result.error || "service action failed",
       };
     }
 
     return {
       success: true,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
       ...(result.data !== undefined ? { data: result.data } : {}),
     };
   }
@@ -237,7 +237,7 @@ export async function runServiceCommand(params: {
   if (record.state !== "running") {
     return {
       success: false,
-      service: toServiceStateSnapshot(record),
+      service: toServiceStateSnapshot(record, service),
       message: `Service "${service.name}" is not running`,
     };
   }
@@ -252,13 +252,13 @@ export async function runServiceCommand(params: {
       });
       return {
         ...result,
-        service: toServiceStateSnapshot(record),
+        service: toServiceStateSnapshot(record, service),
       };
     } catch (error) {
       markServiceState(record, "error", String(error));
       return {
         success: false,
-        service: toServiceStateSnapshot(record),
+        service: toServiceStateSnapshot(record, service),
         message: String(error),
       };
     }
@@ -266,7 +266,7 @@ export async function runServiceCommand(params: {
 
   return {
     success: false,
-    service: toServiceStateSnapshot(record),
+    service: toServiceStateSnapshot(record, service),
     message: `Service "${service.name}" does not implement action "${command}"`,
   };
 }

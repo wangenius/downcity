@@ -45,7 +45,7 @@ export function registerAgentCommands(
 ): void {
   const agent = program
     .command("agent")
-    .description("管理 Agent Runtime：创建/启停/重启")
+    .description("管理 Agent：创建/启停/重启")
     .helpOption("--help", "display help for command");
 
   agent
@@ -59,7 +59,7 @@ export function registerAgentCommands(
 
   agent
     .command("start [path]")
-    .description("启动 Agent Runtime（后台/前台）")
+    .description("启动 Agent 进程（后台/前台）")
     .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
     .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
     .option("--foreground [enabled]", "前台启动（仅当前终端）", parseBoolean)
@@ -80,7 +80,7 @@ export function registerAgentCommands(
 
   agent
     .command("status [path]")
-    .description("查看后台 Agent Runtime（daemon）状态")
+    .description("查看后台 Agent 进程（daemon）状态")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async (cwd: string = ".") => {
       const projectRoot = await ensureRegisteredAgentProjectRoot(cwd);
@@ -134,7 +134,7 @@ export function registerAgentCommands(
 
   agent
     .command("restart [path]")
-    .description("重启后台 Agent Runtime（daemon）")
+    .description("重启后台 Agent 进程（daemon）")
     .option("-h, --host <host>", "服务主机（默认 0.0.0.0）")
     .helpOption("--help", "display help for command")
     .action(createVersionBanner(context.version, async (cwd: string = ".", options: StartOptions) => {

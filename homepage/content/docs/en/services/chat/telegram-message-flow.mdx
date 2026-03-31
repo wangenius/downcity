@@ -7,9 +7,9 @@ description: End-to-end flow from a Telegram message to agent execution and repl
 
 > ⚠️ **Simplified mode (2026-02-03)**: the current `downcity` package disables approvals (full-permission execution). Approval-related parts of this flow are outdated.
 
-This page explains how a Telegram message is translated into Downcity instructions, how `AgentRuntime` executes them, and how replies are delivered via the `chat_send` tool.
+This page explains how a Telegram message is translated into Downcity instructions, how the agent executes them, and how replies are delivered via the `chat_send` tool.
 
-> Code references: `packages/downcity/src/adapters/telegram/bot.ts`, `packages/downcity/src/adapters/base-chat-adapter.ts`, `packages/downcity/src/runtime/agent/runtime.ts`, `packages/downcity/src/runtime/chat/*`
+> Code references: `packages/downcity/src/services/chat/channels/telegram/Bot.ts`, `packages/downcity/src/services/chat/channels/BaseChatChannel.ts`, `packages/downcity/src/services/chat/runtime/*`, `packages/downcity/src/sessions/SessionCore.ts`
 
 ## Overview
 
@@ -19,7 +19,7 @@ sequenceDiagram
   participant TG as Telegram API
   participant BOT as Downcity TelegramBot
   participant CS as ChatStore (.downcity/chat/*/conversations/*.jsonl)
-  participant RT as AgentRuntime
+  participant RT as Agent
   participant T as chat_send tool
 
   U->>TG: Send message / attachment / command
@@ -112,7 +112,7 @@ Downcity services use a tool-strict pattern:
 
 ### Run + delivery
 
-Telegram executes `agentRuntime.run(...)` for the current `chatKey`.
+Telegram dispatches execution for the current `chatKey`.
 
 - Primary delivery path: the model calls `chat_send` to send replies (tool-strict).
 - Fallback: if the model forgets to call `chat_send`, the adapter sends the final plain-text output.
@@ -124,7 +124,7 @@ Telegram executes `agentRuntime.run(...)` for the current `chatKey`.
 #### Outbound reply targeting (`reply_to_message_id`)
 
 For `chat send`, default behavior is non-reply delivery.
-Runtime only tries `reply_to_message_id` when reply mode is explicitly enabled (for example `city chat send --reply`).
+The agent only tries `reply_to_message_id` when reply mode is explicitly enabled (for example `city chat send --reply`).
 
 Priority:
 1. explicit `messageId` provided by the caller

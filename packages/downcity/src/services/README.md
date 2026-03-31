@@ -30,7 +30,7 @@
    - `runtime/ChatChannelLifecycle.ts` 负责渠道 bot 生命周期。
    - `runtime/ChatChannelConfig.ts` 负责状态快照与配置落盘。
    - `runtime/ChatChannelActions.ts` 负责渠道类 action 执行。
-   - `runtime/ChatChannelRuntime.ts` 只保留门面导出。
+   - `runtime/ChatChannelFacade.ts` 只保留门面导出。
    - `runtime/ChatActionInput.ts` 负责 CLI/API 输入映射。
    - `runtime/ChatActionExecution.ts` 负责消息类 action 执行。
    - `runtime/ChatQueueSessionBridge.ts` 负责 queue 与 session 的桥接写入协议。
@@ -97,4 +97,4 @@
 1. service 通过 `ExecutionContext` 读取运行时能力。
 2. service 的实例状态应归属于 service instance，而不是模块级单例。
 3. plugin 只能作为被动扩展，不替代 service 主流程。
-4. service 间协作优先通过 `ExecutionContext.invoke` 或 `ExecutionContext.services.invoke`，而不是隐式全局状态。
+4. service 间协作优先通过 `ExecutionContext.invoke`，而不是隐式全局状态。

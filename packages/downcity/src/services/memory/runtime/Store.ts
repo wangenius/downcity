@@ -200,7 +200,7 @@ export function isMemoryEnabled(runtime: ExecutionContext): boolean {
 }
 
 /**
- * 创建一个新的 memory runtime state。
+ * 创建一个新的 memory service state。
  *
  * 关键点（中文）
  * - 每个 MemoryService 实例都持有自己的 state。

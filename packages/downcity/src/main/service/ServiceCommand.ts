@@ -10,8 +10,8 @@ import path from "node:path";
 import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { ServiceCommandScheduleInput } from "@/types/ServiceSchedule.js";
-import { SERVICES } from "@/main/service/Services.js";
 import type { Service, ServiceAction } from "@/types/Service.js";
+import { listRegisteredServices } from "@/main/registries/ServiceClassRegistry.js";
 import type { ServiceCommandResponse } from "@/types/Services.js";
 import { callServer } from "@/main/daemon/Client.js";
 import { printResult } from "@utils/cli/CliOutput.js";
@@ -286,7 +286,7 @@ function registerServiceActionCommand(params: {
  * 注册所有 service actions 的 CLI 命令。
  */
 export function registerAllServicesForCli(program: Command): void {
-  for (const service of SERVICES) {
+  for (const service of listRegisteredServices()) {
     for (const [actionName, action] of Object.entries(service.actions)) {
       registerServiceActionCommand({
         program,

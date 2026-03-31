@@ -1,5 +1,5 @@
 /**
- * 查询后台 Agent Runtime（daemon）状态。
+ * 查询后台 Agent 进程（daemon）状态。
  *
  * 对应命令：
  * - `city agent status [path]`

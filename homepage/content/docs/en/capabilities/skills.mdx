@@ -36,9 +36,9 @@ city skill lookup playwright
 - Always `lookup` before using a skill.
 - Skills returned by `list` are already installed and ready to use.
 - Prefer matching learned skills by default when the task fits.
-- In Agent runtime, `lookup` returns status-only tool output; `SKILL.md` content is injected as a `<skill>...</skill>` user message.
+- In the running agent, `lookup` returns status-only tool output; `SKILL.md` content is injected as a `<skill>...</skill>` user message.
 - Follow `allowed-tools` in `SKILL.md` strictly.
-- Runtime discovers changed skill files automatically.
+- The agent discovers changed skill files automatically.
 
 ## Related config
 

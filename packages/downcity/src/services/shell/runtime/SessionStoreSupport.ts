@@ -138,7 +138,7 @@ export function buildShellEnv(runtime: ExecutionContext): NodeJS.ProcessEnv {
   // 关键点（中文）
   // - shell 子进程需要继承 console 级 global env。
   // - 这里显式从 store 读取，避免把 ExecutionContext.env 语义扩大成“全局+agent 混合态”。
-  // - 冲突时仍由后续 agent runtime env 覆盖，保持文档声明的优先级。
+  // - 冲突时仍由后续 agent 私有 env 覆盖，保持文档声明的优先级。
   const globalEnv = loadGlobalEnvFromStore();
   for (const [key, value] of Object.entries(globalEnv)) {
     const normalizedKey = String(key || "").trim();

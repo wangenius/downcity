@@ -62,8 +62,7 @@
 6. `systems`
 7. `session`
 8. `invoke`
-9. `services`
-10. `plugins`
+9. `plugins`
 
 它的作用是：
 
@@ -175,7 +174,7 @@ sequenceDiagram
   AGENT->>SESS: create SessionStore
   AGENT->>STATE: setAgentState(agentState)
   CMD->>HTTP: startServer()
-  CMD->>SVC: startAllServiceRuntimes(getExecutionContext())
+  CMD->>SVC: startAllServices(getExecutionContext())
 ```
 
 详细阶段：

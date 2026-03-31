@@ -289,7 +289,7 @@ export function registerAllServicesForServer(
   app: Hono,
   context: ExecutionContext,
 ): void {
-  for (const service of listServiceInstances(context)) {
+  for (const service of listServiceInstances()) {
     ensureServiceStateRecord(service);
     for (const [actionName, action] of Object.entries(service.actions)) {
       registerServiceActionApiRoute({

@@ -5,7 +5,7 @@ import { SessionRuntimeStore } from "@sessions/SessionRuntimeStore.js";
 import { createModel } from "@main/model/CreateModel.js";
 import {
   loadGlobalEnvFromStore,
-  loadAgentRuntimeEnv,
+  loadAgentEnvSnapshot,
   loadDowncityConfig,
 } from "@/main/env/Config.js";
 import {
@@ -25,7 +25,6 @@ import {
 import {
   createAgentPluginRegistry,
   getExecutionContext,
-  getInvokeServicePort,
 } from "@agent/ExecutionContext.js";
 import {
   getAgentState,
@@ -54,7 +53,7 @@ export {
   setAgentStateBase,
   requireAgentModel,
 } from "@agent/RuntimeState.js";
-export { getExecutionContext, getInvokeServicePort } from "@agent/ExecutionContext.js";
+export { getExecutionContext } from "@agent/ExecutionContext.js";
 
 let promptRuntime: PromptRuntime | null = null;
 
@@ -123,7 +122,7 @@ export async function initAgentState(cwd: string): Promise<void> {
   ensureRuntimeProjectReady(rootPath);
 
   const globalEnv = loadGlobalEnvFromStore();
-  const projectEnv = loadAgentRuntimeEnv(rootPath);
+  const projectEnv = loadAgentEnvSnapshot(rootPath);
   const config = loadDowncityConfig(rootPath, {
     projectEnv,
     globalEnv,
@@ -222,8 +221,6 @@ export async function initAgentState(cwd: string): Promise<void> {
   agentState.services = createAgentServices(agentState);
 
   setAgentState(agentState);
-  setShellToolRuntime({
-    invokeService: (params) => getInvokeServicePort().invoke(params),
-  });
+  setShellToolRuntime(getExecutionContext().invoke);
   startAgentHotReload();
 }

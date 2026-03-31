@@ -161,7 +161,7 @@ export class ConsoleUIGateway {
    * 构建 Global Model 面板响应。
    *
    * 关键点（中文）
-   * - 模型池来自 console 全局 SQLite，而不是某个 agent runtime。
+   * - 模型池来自 console 全局 SQLite，而不是某个 agent。
    * - `agentPrimaryModelId` 仅用于展示当前选中 agent 的项目绑定。
    */
   private async buildModelResponse(requestedAgentId: string): Promise<{

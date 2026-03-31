@@ -201,7 +201,6 @@ export function createExecutionContext(input: AgentState): ExecutionContext {
     systems: input.systems,
     session: buildSessionPort(input),
     invoke: serviceInvokePort,
-    services: serviceInvokePort,
     plugins: buildPluginPort(input),
   };
 }
@@ -214,8 +213,6 @@ export function getExecutionContext(): ExecutionContext {
 }
 
 /**
- * 暴露给 shell tool 的最小 service invoke 端口。
+ * 关键点（中文）
+ * - 当前文件内的 service invoke port 既服务于 ExecutionContext，也可直接注入 shell tool。
  */
-export function getInvokeServicePort(): InvokeServicePort {
-  return serviceInvokePort;
-}

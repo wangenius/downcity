@@ -21,7 +21,7 @@ import { deleteChatSessionById } from "@services/chat/runtime/ChatSessionDelete.
 import {
   guardIncomingChat,
   observeIncomingChatPrincipal,
-} from "@services/chat/runtime/PluginRuntime.js";
+} from "@services/chat/runtime/PluginDispatch.js";
 import {
   appendToolOutboundChannelHistory,
   resolveChannelSessionId,

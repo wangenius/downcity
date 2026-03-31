@@ -2,7 +2,7 @@
  * MemoryService：memory service 的类实现。
  *
  * 关键点（中文）
- * - memory runtime state 现在归属于 service 实例。
+ * - memory service state 现在归属于 service 实例。
  * - agent 持有 MemoryService 实例，从而天然形成 per-agent 状态边界。
  * - 运行态只在实例内部缓存，不再放到模块级 Map。
  */
@@ -91,7 +91,7 @@ export class MemoryService extends BaseService {
   readonly name = "memory";
 
   /**
-   * 当前实例持有的 memory runtime state。
+   * 当前实例持有的 memory service state。
    */
   public runtimeState: MemoryRuntimeState | null = null;
 
@@ -316,7 +316,7 @@ export class MemoryService extends BaseService {
   };
 
   /**
-   * 获取或创建当前实例绑定的 runtime state。
+   * 获取或创建当前实例绑定的 memory service state。
    */
   private getOrCreateRuntimeState(context: ExecutionContext): MemoryRuntimeState {
     if (!this.runtimeState) {

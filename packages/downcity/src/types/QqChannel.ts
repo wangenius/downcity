@@ -2,7 +2,7 @@
  * QQ 渠道共享类型。
  *
  * 关键点（中文）
- * - 这里集中放 QQ 渠道的网关载荷、消息结构、运行态快照等共享契约。
+ * - 这里集中放 QQ 渠道的网关载荷、消息结构、状态快照等共享契约。
  * - `services/chat/channels/qq/*` 只消费这些类型，不再在实现文件里内联大段局部类型。
  * - 字段命名尽量保持与 QQ 官方事件/接口原始字段一致，降低映射心智负担。
  */
@@ -408,7 +408,7 @@ export interface QqActorIdentity {
 }
 
 /**
- * QQ 网关运行态快照。
+ * QQ 网关状态快照。
  */
 export interface QqGatewayRuntimeStatus {
   /**

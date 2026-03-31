@@ -23,7 +23,7 @@ import type {
 import { buildChatMessageText, parseChatMessageMarkup } from "@services/chat/runtime/ChatMessageMarkup.js";
 import { parseChatSendOptionsFromMetadata } from "@services/chat/runtime/ChatSendMetadata.js";
 import { normalizeChatSendText, resolveChatKey } from "@services/chat/Action.js";
-import { resolveChatChannelNameOrThrow } from "@services/chat/runtime/ChatChannelRuntime.js";
+import { resolveChatChannelNameOrThrow } from "@services/chat/runtime/ChatChannelFacade.js";
 
 function isJsonObject(value: JsonValue): value is JsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);

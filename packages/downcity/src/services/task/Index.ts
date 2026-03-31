@@ -6,4 +6,4 @@
  * - 真正的类实现收敛到 `TaskService.ts`。
  */
 
-export { TaskService, taskService } from "./TaskService.js";
+export { TaskService } from "./TaskService.js";

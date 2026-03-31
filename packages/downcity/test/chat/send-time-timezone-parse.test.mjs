@@ -8,7 +8,9 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chatService } from "../../bin/services/chat/Index.js";
+import { ChatService } from "../../bin/services/chat/ChatService.js";
+
+const chatService = new ChatService(null);
 
 async function mapSendApiInput(payload) {
   return chatService.actions.send.api.mapInput({

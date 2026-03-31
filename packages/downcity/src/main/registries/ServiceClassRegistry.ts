@@ -3,49 +3,53 @@
  *
  * 关键点（中文）
  * - main 侧维护“service class 如何创建”的静态事实源。
- * - 第一阶段先用 LegacyServiceAdapter 包装现有 service object。
  * - agent 启动时据此创建 per-agent service instances。
+ * - CLI / 只读场景也复用这里构造无宿主实例，避免维护第二套静态 definition。
  */
 
 import type { AgentState } from "@/types/AgentState.js";
-import { SERVICES } from "@/main/service/Services.js";
-import { BaseService, LegacyServiceAdapter } from "@services/BaseService.js";
+import { SERVICE_CLASSES } from "@/main/service/Services.js";
+import { BaseService } from "@services/BaseService.js";
 import type { Service } from "@/types/Service.js";
-import { ChatService } from "@services/chat/ChatService.js";
-import { MemoryService } from "@services/memory/MemoryService.js";
-import { ShellService } from "@services/shell/ShellService.js";
-import { TaskService } from "@services/task/TaskService.js";
 
-/**
- * 根据 legacy service definition 创建 class instance。
- */
-function createLegacyServiceInstance(
-  definition: Service,
+let staticServiceInstances: Map<string, BaseService> | null = null;
+
+function createServiceInstance(
+  ServiceClass: new (agent: AgentState | null) => BaseService,
   agent: AgentState | null,
 ): BaseService {
-  if (definition.name === "chat") {
-    return new ChatService(agent);
-  }
-  if (definition.name === "task") {
-    return new TaskService(agent);
-  }
-  if (definition.name === "memory") {
-    return new MemoryService(agent);
-  }
-  if (definition.name === "shell") {
-    return new ShellService(agent);
-  }
-  return new LegacyServiceAdapter({
-    agent,
-    definition,
-  });
+  return new ServiceClass(agent);
 }
 
 /**
  * 返回全部已注册 service 名称。
  */
 export function listRegisteredServiceNames(): string[] {
-  return SERVICES.map((service) => service.name);
+  return SERVICE_CLASSES.map((ServiceClass) => new ServiceClass(null).name);
+}
+
+/**
+ * 返回全部已注册 service 定义视图。
+ *
+ * 关键点（中文）
+ * - 这里返回的是无宿主实例，适用于 CLI 注册、静态说明等只读场景。
+ * - 不应承载长期运行状态。
+ */
+export function listRegisteredServices(): Service[] {
+  return SERVICE_CLASSES.map((ServiceClass) => new ServiceClass(null));
+}
+
+/**
+ * 返回无宿主静态 service 实例集合。
+ *
+ * 关键点（中文）
+ * - 主要用于未初始化 AgentState 的测试/只读场景。
+ * - 需要保持实例稳定，避免 start/status/command 分别拿到不同 null-agent 实例。
+ */
+export function getRegisteredStaticServiceInstances(): Map<string, BaseService> {
+  if (staticServiceInstances) return staticServiceInstances;
+  staticServiceInstances = createRegisteredServiceInstances(null);
+  return staticServiceInstances;
 }
 
 /**
@@ -53,17 +57,21 @@ export function listRegisteredServiceNames(): string[] {
  *
  * 关键点（中文）
  * - 返回 Map，便于 agent 以名称直接索引。
- * - 第一阶段允许传入 null，仅用于无需真实 agent 的测试/只读装配场景。
+ * - 允许传入 null，仅用于无需真实 agent 的测试/只读装配场景。
  */
 export function createRegisteredServiceInstances(
   agent: AgentState | null,
 ): Map<string, BaseService> {
+  if (agent === null && staticServiceInstances) {
+    return staticServiceInstances;
+  }
   const services = new Map<string, BaseService>();
-  for (const definition of SERVICES) {
-    services.set(
-      definition.name,
-      createLegacyServiceInstance(definition, agent),
-    );
+  for (const ServiceClass of SERVICE_CLASSES) {
+    const service = createServiceInstance(ServiceClass, agent);
+    services.set(service.name, service);
+  }
+  if (agent === null) {
+    staticServiceInstances = services;
   }
   return services;
 }

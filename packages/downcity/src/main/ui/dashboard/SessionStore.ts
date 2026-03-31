@@ -22,7 +22,7 @@ import { loadSessionMessagesFromFile, resolveUiMessagePreview } from "./MessageT
  */
 export async function listSessionSummaries(params: {
   projectRoot: string;
-  executionRuntime?: ExecutionContext;
+  executionContext?: ExecutionContext;
   limit: number;
   executingSessionIds?: Set<string>;
 }): Promise<DashboardSessionSummary[]> {
@@ -47,9 +47,9 @@ export async function listSessionSummaries(params: {
       .then((s) => s)
       .catch(() => null);
     const updatedAt = lastTs || (stat ? stat.mtimeMs : undefined);
-    const chatMeta = params.executionRuntime
+    const chatMeta = params.executionContext
       ? await readChatMetaBySessionId({
-          context: params.executionRuntime,
+          context: params.executionContext,
           sessionId,
         })
       : null;

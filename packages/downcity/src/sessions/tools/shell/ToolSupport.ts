@@ -8,36 +8,16 @@
 
 import { generateId } from "@utils/Id.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { InvokeServiceResult } from "@/types/ExecutionContext.js";
+import type {
+  InvokeServicePort,
+  InvokeServiceResult,
+} from "@/types/ExecutionContext.js";
 import type { ShellActionResponse } from "@services/shell/types/ShellService.js";
 import {
   enqueueDeferredPersistedUserMessage,
   enqueueInjectedUserMessage,
   requestContext,
 } from "@sessions/RequestContext.js";
-
-/**
- * Shell tool 所需的最小 runtime 能力。
- */
-export interface ShellToolRuntime {
-  /**
-   * 调用 service action 的统一入口。
-   */
-  invokeService: (params: {
-    /**
-     * service 名称。
-     */
-    service: string;
-    /**
-     * action 名称。
-     */
-    action: string;
-    /**
-     * 可选的 JSON 载荷。
-     */
-    payload?: JsonValue;
-  }) => Promise<InvokeServiceResult>;
-}
 
 /**
  * 单个 shell 命令桥接状态。
@@ -49,21 +29,18 @@ interface CommandBridgeState {
   bufferedOutput: string;
 }
 
-let shellToolRuntime: ShellToolRuntime | null = null;
+let shellToolRuntime: InvokeServicePort | null = null;
 
 /**
  * 通用命令桥接状态表（按 shell_id）。
  */
 const commandBridgeStates = new Map<string, CommandBridgeState>();
 
-/**
- * 注入 shell tools 所需的最小 runtime 能力。
- */
-export function setShellToolRuntime(next: ShellToolRuntime): void {
+export function setShellToolRuntime(next: InvokeServicePort): void {
   shellToolRuntime = next;
 }
 
-function requireShellToolRuntime(): ShellToolRuntime {
+function requireShellToolRuntime(): InvokeServicePort {
   if (shellToolRuntime) return shellToolRuntime;
   throw new Error(
     "Shell tool runtime is not initialized. Ensure runtime startup has completed before using shell tools.",
@@ -369,7 +346,7 @@ export async function invokeShellAction<TPayload extends JsonValue = JsonValue>(
   payload: TPayload;
 }): Promise<ShellActionResponse> {
   const runtime = requireShellToolRuntime();
-  const result = await runtime.invokeService({
+  const result = await runtime.invoke({
     service: "shell",
     action: params.action,
     payload: params.payload,

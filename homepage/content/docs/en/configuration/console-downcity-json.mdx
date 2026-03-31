@@ -43,12 +43,12 @@ Current versions use explicit layers:
 
 1. Console-global shared env: `global_env`
 2. Agent-private env in DB: `agent_env`
-3. Agent-local runtime overlay: `<agent>/.env` (user-managed)
+3. Agent-local env overlay: `<agent>/.env` (user-managed)
 4. Chat channel credentials: `channel_accounts` (bound by `downcity.json` `channelAccountId`)
 
 Key behavior:
 
-1. Runtime env map is `agent_env + <agent>/.env` (`.env` wins).
+1. Agent env map is `agent_env + <agent>/.env` (`.env` wins).
 2. `.env` remains agent-local and does not mutate global `process.env`.
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
@@ -81,9 +81,9 @@ city console model create
 - [Env and downcity.db Database Design](/en/docs/configuration/env-downcitydb-design)
 - [Environment Variable Strategy (Console Shared vs Agent Private)](/en/docs/configuration/environment-variables)
 
-## Runtime files
+## Process files
 
-These runtime files stay in filesystem (not config):
+These process-state files stay in filesystem (not config):
 
 1. `~/.downcity/console/console.pid`
 2. `~/.downcity/console/ui.pid`

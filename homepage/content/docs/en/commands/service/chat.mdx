@@ -142,7 +142,7 @@ city chat configure --channel qq --config-json '{"channelAccountId":"qq-main","e
 
 ## Notes
 
-This command group usually requires an active agent runtime:
+This command group usually requires an active agent:
 
 ```bash
 city agent start
@@ -152,7 +152,7 @@ Attachment protocol notes:
 
 - `send` now uses one unified protocol only: frontmatter metadata + `<file ...>...</file>`
 - `@attach` is no longer used
-- when the target channel supports attachments, runtime sends text and attachments in their actual interleaved order
+- when the target channel supports attachments, the agent sends text and attachments in their actual interleaved order
 
 ## Example Output (Based on Current Implementation)
 

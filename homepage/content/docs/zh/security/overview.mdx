@@ -7,7 +7,7 @@ description: 运行隔离、聊天授权、密钥保护的用户视角说明
 
 Downcity 的安全模型分为 3 层：
 
-1. 运行隔离：一个 agent runtime 绑定一个 `projectRoot`，默认不会跨项目串上下文。
+1. Agent 隔离：一个运行中的 agent 绑定一个 `projectRoot`，默认不会跨项目串上下文。
 2. 聊天授权：通过用户角色与权限组决定谁可以把消息送进 Agent。
 3. 数据保护：模型 provider 的 `apiKey` 以加密形式存储在 `~/.downcity/downcity.db`。
 

@@ -32,11 +32,11 @@ Request body:
 }
 ```
 
-## Service runtime API
+## Service state API
 
 ### `GET /api/services/list`
 
-List service runtime states.
+List service states.
 
 ### `POST /api/services/control`
 
@@ -56,7 +56,7 @@ Supported `action`: `start | stop | restart | status`.
 }
 ```
 
-## Plugin runtime API
+## Plugin API
 
 ### `GET /api/plugins/list`
 
@@ -142,8 +142,8 @@ Request body example with attachment:
 
 Notes:
 
-- `sessionId` should be the exact target session returned by runtime. For chat sessions, this is an opaque ID managed by chat service (not a parseable platform key).
-- Attachments are materialized by runtime and injected as `<file ...>` tags before the user instruction.
+- `sessionId` should be the exact target session returned by agent. For chat sessions, this is an opaque ID managed by chat service (not a parseable platform key).
+- Attachments are materialized by agent and injected as `<file ...>` tags before the user instruction.
 - If `sessionId` maps to a chat conversation, execution is enqueued into the same chat service queue (same behavior as platform inbound messages), and chat history is appended before execution.
 - Chat-context calls return immediately with queue metadata (`queued=true`, `queueItemId`, `queuePosition`).
 
@@ -161,7 +161,7 @@ Examples:
 
 ## Debug baseline
 
-Make sure runtime is up before calling APIs:
+Make sure the agent is running before calling APIs:
 
 ```bash
 city agent start

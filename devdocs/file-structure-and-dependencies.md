@@ -214,7 +214,7 @@ main/commands/
 4. `IndexConsoleProcess.ts`
    - console 后台进程生命周期
    - 托管 agent 恢复
-   - 前台 agent runtime 预处理
+   - 前台 agent 启动预处理
 5. `IndexConsoleStatus.ts`
    - console / console UI / managed agents 状态面板
    - status 输出辅助
@@ -243,7 +243,7 @@ main/commands/
    - 项目目录校验
 3. `ServiceCommandRemote.ts`
    - `list/status/start/stop/restart/command`
-   - 负责访问 Agent server runtime 并统一输出结果
+   - 负责访问 Agent API 并统一输出结果
 4. `ServiceScheduleCommand.ts`
    - `service schedule list/info/cancel`
    - 负责本地 schedule SQLite 的读写与输出
@@ -290,7 +290,7 @@ sessions/runtime/
 1. `SessionStore`
    - 统一 session 入口
 2. `SessionRuntimeStore`
-   - 管理 `sessionId -> runtime`
+   - 管理 `sessionId -> SessionRuntime`
    - 委托 `SessionPersistorStore` 管理 `sessionId -> persistor`
 3. `SessionRuntime`
    - 组装一次会话执行所需依赖
@@ -321,7 +321,7 @@ sessions/tools/shell/
 2. `ToolSchemas.ts`
    - shell tool 的输入 schema
 3. `ToolSupport.ts`
-   - runtime 注入
+   - shell tool 上下文注入
    - bridge 协议
    - 响应扁平化与错误格式化
 
@@ -339,7 +339,7 @@ services/
   task/
 ```
 
-由 `main/service/Services.ts` 静态聚合。
+由 `main/service/Services.ts` 与 `main/registries/ServiceClassRegistry.ts` 静态聚合。
 
 当前 service 目录推荐结构：
 
@@ -378,7 +378,7 @@ services/chat/
     ChatChannelLifecycle.ts
     ChatChannelConfig.ts
     ChatChannelActions.ts
-    ChatChannelRuntime.ts
+    ChatChannelFacade.ts
     ChatActionInput.ts
     ChatActionExecution.ts
     ChatQueueSessionBridge.ts
@@ -422,7 +422,7 @@ services/chat/
    - 管理 lifecycle
 2. `runtime/ChatServiceActions.ts`
    - 装配 chat 的 action 注册表
-   - 把 CLI/API/execute 绑定到各个 runtime 模块
+   - 把 CLI/API/execute 绑定到各个 chat 子模块
 3. `runtime/ChatServiceSystem.ts`
    - 组装 chat system prompt
 4. `runtime/ChatChannelCore.ts`
@@ -433,7 +433,7 @@ services/chat/
    - 状态快照、配置摘要、config patch、downcity.json 落盘
 7. `runtime/ChatChannelActions.ts`
    - status/test/reconnect/open/close/configuration/configure 等 action 执行
-8. `runtime/ChatChannelRuntime.ts`
+8. `runtime/ChatChannelFacade.ts`
    - chat channel 子模块门面导出
 9. `runtime/ChatActionInput.ts`
    - 处理 CLI/API 输入映射与参数校验
@@ -467,7 +467,7 @@ services/chat/
    - 命令映射
    - 入站增强组装辅助
 20. `channels/qq/QQGatewayClient.ts`
-   - QQ WS、重连与 runtime 编排宿主
+   - QQ WS、重连与连接状态编排
 21. `channels/qq/QQGatewaySupport.ts`
    - QQ Gateway 状态快照
    - 心跳超时判断
@@ -490,7 +490,7 @@ services/chat/
    - Feishu 渠道门面
    - 只保留授权、命令处理、入站编排与消息入队
 27. `channels/feishu/FeishuPlatformClient.ts`
-   - Feishu runtime 宿主
+   - Feishu 平台连接宿主
    - 持有 SDK client / ws client / token / cache
 28. `channels/feishu/FeishuPlatformLookup.ts`
    - Feishu 用户/群聊/reply 查询
@@ -504,7 +504,7 @@ services/chat/
    - Telegram 渠道门面
    - 只保留授权、命令处理、入站编排与消息入队
 32. `channels/telegram/TelegramPlatformClient.ts`
-   - Telegram polling、runtime snapshot、webhook 清理、自愈重试、消息发送
+   - Telegram polling、状态快照、webhook 清理、自愈重试、消息发送
 33. `channels/telegram/TelegramInbound.ts`
    - Telegram chatKey、audit 文本、messageId 解析、mention 清理、附件保存
 
@@ -550,7 +550,7 @@ services/task/
 6. `runtime/TaskRunnerProgress.ts`
    - progress 快照写入与文本摘要辅助
 7. `runtime/TaskRunnerSession.ts`
-   - task 专用 session runtime 与 messages.jsonl 落盘
+   - task 专用 session 执行桥接与 messages.jsonl 落盘
 8. `runtime/TaskRunnerRound.ts`
    - agent/script 单轮执行、输出提取、模拟用户判定
 9. `runtime/TaskRunArtifacts.ts`
@@ -560,7 +560,7 @@ services/task/
    - task run 的主编排链
    - 组装多轮执行状态并协调产物写入
 11. `Scheduler.ts` 与 `runtime/CronRuntime.ts`
-   - 负责 cron job 注册与重载
+   - 负责 cron job 注册、快照读取与重载
 
 ---
 
@@ -593,7 +593,7 @@ plugins/
 1. `auth`
    - 授权与角色策略
 2. `skill`
-   - skill 发现、读取、提示拼装
+   - skill 发现、安装、读取、提示拼装
 3. `voice`
    - 语音依赖与转写
 

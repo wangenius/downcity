@@ -1,5 +1,5 @@
 /**
- * Chat service plugin runtime helper。
+ * PluginDispatch：chat 领域的 plugin 调用辅助。
  *
  * 关键点（中文）
  * - chat service 只依赖这里，不直接依赖某个具体 plugin 模块路径。

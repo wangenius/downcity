@@ -48,8 +48,8 @@ Console 全局配置统一存储在：
 
 关键行为：
 
-1. runtime env 最终是 `agent_env + <agent>/.env`（`.env` 优先）。
-2. Agent 的 `.env` 只在当前 agent runtime 内生效，不污染全局 `process.env`。
+1. agent env 最终是 `agent_env + <agent>/.env`（`.env` 优先）。
+2. Agent 的 `.env` 只在当前 agent 内生效，不污染全局 `process.env`。
 3. `downcity.json` 只保存渠道绑定（`channelAccountId`），不保存明文密钥。
 4. 渠道真实凭据来自 `channel_accounts`。
 5. plugin 配置来自项目 `downcity.json`。

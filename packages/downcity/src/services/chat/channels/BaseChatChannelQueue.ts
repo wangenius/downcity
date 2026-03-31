@@ -9,7 +9,7 @@
 import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
 import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
-import { resolveIncomingChatUserRole } from "@services/chat/runtime/PluginRuntime.js";
+import { resolveIncomingChatUserRole } from "@services/chat/runtime/PluginDispatch.js";
 import {
   emitChatEnqueueEffect,
   prepareChatEnqueue,

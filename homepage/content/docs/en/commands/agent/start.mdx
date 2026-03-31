@@ -1,11 +1,11 @@
 ---
 title: city agent start
-description: Start agent runtime (background or foreground)
+description: Start agent process (background or foreground)
 ---
 
 # `city agent start`
 
-Start runtime for a target agent.
+Start the process for a target agent.
 
 ## Usage
 
@@ -20,7 +20,7 @@ city agent start [path] [options]
 
 ## Behavior
 
-- Checks console runtime before start.
+- Checks console process before start.
 - `path` defaults to current directory `.`
 - Agent port is always auto-assigned by console.
 - Project `downcity.json.start.host/port` is not required for daemon startup.

@@ -1,11 +1,11 @@
 ---
 title: city agent status
-description: Show target agent runtime status
+description: Show target agent status
 ---
 
 # `city agent status`
 
-Show runtime status for a target agent.
+Show process status for a target agent.
 
 ## Usage
 
@@ -17,7 +17,7 @@ city agent status [path]
 
 - `path` defaults to current directory `.`
 - Target agent must be registered in console registry
-- Output includes runtime state, process info, and key paths
+- Output includes agent state, process info, and key paths
 - When state is `stale`, output includes `stale_reason` for direct diagnosis
 
 ## Related commands

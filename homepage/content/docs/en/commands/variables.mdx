@@ -1,6 +1,6 @@
 ---
 title: Command Environment Requirements
-description: Explain required runtime environment, files, and env-variable priority for all city command groups
+description: Explain required command environment, files, and env-variable priority for all city command groups
 ---
 
 # Command Environment Requirements
@@ -28,12 +28,12 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city v
 | `city agent create` | Writable target directory | None | Generates `downcity.json`, `PROFILE.md`, `.downcity/` |
 | `city agent start` | Console is running; project has `downcity.json` + `PROFILE.md` | `--host` | Agent port is always allocated by console and then registered into console registry |
 | `city agent restart/status/doctor` | Target agent is registered in console registry | None | Operates through registry resolution, not arbitrary path only |
-| `city console config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call runtime API |
+| `city console config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call agent API |
 | `city console config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
-| `city service ...` | Target runtime is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
-| `city plugin ...` | Target runtime is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
-| `city <service> <action>` (e.g. `city chat ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
-| `city <plugin> <action>` (e.g. `city voice ...`) | Target runtime is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
+| `city service ...` | Target agent API is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
+| `city plugin ...` | Target agent API is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
+| `city <service> <action>` (e.g. `city chat ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
+| `city <plugin> <action>` (e.g. `city voice ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
 
 ## 2) Context env requirements for common commands
 
@@ -69,9 +69,9 @@ Still must satisfy:
 - resolved path is registered in console registry
 - resolved path contains `downcity.json` and `PROFILE.md`
 
-## 4) Runtime API endpoint resolution order (`host/port`)
+## 4) Agent API endpoint resolution order (`host/port`)
 
-For runtime API calls (service/plugin/action commands):
+For agent API calls (service/plugin/action commands):
 
 1. explicit CLI args: `--host` / `--port`
 2. env vars: `DC_SERVER_HOST/PORT`
@@ -85,7 +85,7 @@ Normalization rule:
 
 ## 5) Variable injection sources
 
-### Injected after runtime startup
+### Injected after agent startup
 
 - `DC_AGENT_PATH`
 - `DC_AGENT_NAME`

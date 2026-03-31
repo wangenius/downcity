@@ -21,9 +21,8 @@ import {
 } from "./ChatQueue.js";
 import { getChatSender } from "./ChatSendRegistry.js";
 import {
-  pickLastSuccessfulChatSendText,
+  resolveFinalChannelDispatchPlan,
 } from "./UserVisibleText.js";
-import { extractTextFromUiMessage } from "./UIMessageTransformer.js";
 import {
   appendChatIngressMessageIfNeeded,
   appendChatRunErrorMessage,
@@ -292,7 +291,7 @@ export class ChatQueueWorker {
       }
       return mergedExecMessages;
     };
-    let lastDirectDispatchedStepText = "";
+    const directDispatchedStepTexts: string[] = [];
     const onAssistantStepCallback = async (params: {
       text: string;
       stepIndex: number;
@@ -308,7 +307,7 @@ export class ChatQueueWorker {
       });
       // 关键点（中文）：记录最近一次已发送的 step 文本，避免最终消息重复回发。
       if (dispatched) {
-        lastDirectDispatchedStepText = stepText;
+        directDispatchedStepTexts.push(stepText);
       }
     };
 
@@ -369,15 +368,14 @@ export class ChatQueueWorker {
     try {
       // 关键点（中文）
       // - step 文本用于中途反馈；最终消息用于收口。
-      // - 若最终文本与最近一次 step 已发送文本完全一致，则跳过最终 direct 回发，避免重复。
-      // - 无论成功/失败，只要 direct/cmd 没有把最终可见文本送到 channel，都要强制兜底回发。
-      const assistantText = extractTextFromUiMessage(result.assistantMessage).trim();
-      const userVisibleText = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
-      const finalChannelText = assistantText || userVisibleText;
-      const duplicatedWithStep =
-        finalChannelText.length > 0 &&
-        finalChannelText === lastDirectDispatchedStepText;
-      const dispatchedDirect = duplicatedWithStep
+      // - 若最终文本本质上只是“step 已发文本的整合回放”，则跳过最终回发。
+      // - 若最终用户可见文本已由 `chat_send` 送达，也跳过补发。
+      // - 无论成功/失败，只要最终文本仍未送达，都要强制兜底回发。
+      const finalDispatchPlan = resolveFinalChannelDispatchPlan({
+        assistantMessage: result.assistantMessage,
+        directDispatchedStepTexts,
+      });
+      const dispatchedDirect = finalDispatchPlan.alreadyDelivered
         ? true
         : await dispatchAssistantMessageDirect({
             logger: this.logger,
@@ -386,15 +384,15 @@ export class ChatQueueWorker {
             assistantMessage: result.assistantMessage,
           });
       // 关键点（中文）：在 cmd 模式下 direct 分发会返回 false，这里无论成功/失败都强制兜底回发。
-      if (!dispatchedDirect && finalChannelText) {
+      if (!dispatchedDirect && finalDispatchPlan.text) {
         await dispatchTextToChannel({
           logger: this.logger,
           runtime: this.runtime,
           sessionId: runItem.sessionId,
           text:
             result.success === false
-              ? finalChannelText || "❌ 执行失败，请稍后重试。"
-              : finalChannelText,
+              ? finalDispatchPlan.text || "❌ 执行失败，请稍后重试。"
+              : finalDispatchPlan.text,
           messageId: runItem.messageId,
           phase: result.success === false ? "error" : "final",
         });

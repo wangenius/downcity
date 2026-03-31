@@ -99,7 +99,7 @@ export function registerDashboardSessionRoutes(
       );
       const sessions = await listSessionSummaries({
         projectRoot: runtime.rootPath,
-        executionRuntime: params.getExecutionContext(),
+        executionContext: params.getExecutionContext(),
         limit,
         executingSessionIds,
       });
@@ -378,7 +378,7 @@ export function registerDashboardSessionRoutes(
 
       const result = await executeBySessionId({
         runtime,
-        executionRuntime: params.getExecutionContext(),
+        executionContext: params.getExecutionContext(),
         sessionId,
         instructions,
         attachments: Array.isArray(body.attachments) ? body.attachments : undefined,

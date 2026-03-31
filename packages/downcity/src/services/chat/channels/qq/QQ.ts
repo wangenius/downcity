@@ -114,7 +114,7 @@ export class QQBot extends BaseChatChannel {
   }
 
   /**
-   * 读取 QQ 运行态快照。
+   * 读取 QQ 状态快照。
    */
   getRuntimeStatus(): {
     running: boolean;

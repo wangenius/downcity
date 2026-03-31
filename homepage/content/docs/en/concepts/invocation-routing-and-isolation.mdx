@@ -7,8 +7,8 @@ description: Explain why service and plugin calls do not cross agent environment
 
 ## Short Answer
 
-- one agent runtime binds to one project root
-- `service` and `plugin` calls stay inside that runtime by default
+- one running agent binds to one project root
+- `service` and `plugin` calls stay inside that agent by default
 - cross-agent routing only happens when you explicitly change host/port or target project
 
 ## Main Call Path
@@ -18,14 +18,14 @@ description: Explain why service and plugin calls do not cross agent environment
 1. resolve the target project
 2. resolve the daemon endpoint
 3. call `/api/services/*` or `/api/plugins/*`
-4. dispatch inside the current runtime
+4. dispatch inside the current agent
 
 ### 2) service -> plugin points
 
 Services should not depend on plugin-private implementation. They only trigger the extension points they define.
 
 - plugin-point dispatch is in-process
-- the same runtime state is reused
+- the same agent execution context is reused
 - shell is not involved by default
 
 ## Endpoint Resolution Priority
@@ -33,5 +33,5 @@ Services should not depend on plugin-private implementation. They only trigger t
 1. explicit CLI `--host/--port`
 2. `DC_SERVER_HOST/DC_SERVER_PORT`
 3. `DC_CTX_SERVER_HOST/DC_CTX_SERVER_PORT`
-4. current project runtime metadata
+4. current project daemon metadata
 5. default `127.0.0.1:5314`

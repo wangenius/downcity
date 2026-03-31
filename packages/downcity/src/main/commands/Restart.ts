@@ -1,5 +1,5 @@
 /**
- * `city agent restart`：重启后台常驻的 Agent Runtime（daemon）。
+ * `city agent restart`：重启后台常驻的 Agent 进程（daemon）。
  */
 
 import path from "path";

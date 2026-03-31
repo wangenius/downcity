@@ -49,7 +49,7 @@ export function registerDashboardOverviewRoutes(
       );
       const sessions = await listSessionSummaries({
         projectRoot: runtime.rootPath,
-        executionRuntime: params.getExecutionContext(),
+        executionContext: params.getExecutionContext(),
         limit: sessionLimit,
       });
       const services = listServiceStates();

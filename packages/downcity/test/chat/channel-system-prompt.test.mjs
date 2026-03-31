@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { withRequestContext } from "../../bin/sessions/RequestContext.js";
-import { chatService } from "../../bin/services/chat/Index.js";
+import { ChatService } from "../../bin/services/chat/ChatService.js";
 import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 
 function createRuntime(rootPath) {
@@ -36,6 +36,7 @@ function createRuntime(rootPath) {
 test("chat service system injects only the current channel prompt", async () => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "chat-system-prompt-"));
   const runtime = createRuntime(rootPath);
+  const chatService = new ChatService(null);
 
   try {
     await upsertChatMetaBySessionId({
@@ -75,6 +76,7 @@ test("chat service system injects only the current channel prompt", async () => 
 test("chat service system skips channel prompts when current context is not a chat channel", async () => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "chat-system-prompt-"));
   const runtime = createRuntime(rootPath);
+  const chatService = new ChatService(null);
 
   try {
     const prompt = await withRequestContext(

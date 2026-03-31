@@ -11,7 +11,7 @@ import type { QQBot } from "@services/chat/channels/qq/QQ.js";
 import type { TelegramBot } from "@services/chat/channels/telegram/Bot.js";
 
 /**
- * ChatService 实例持有的渠道运行态。
+ * ChatService 实例持有的渠道状态。
  */
 export type ChatChannelState = {
   /**

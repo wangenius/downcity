@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 这里仅负责收集各 service 的 system 文本提供器。
  * - 不依赖完整 service instance，避免把 system 域与 service 运行态耦合在一起。
- * - 这样也能避开 `task -> runner -> prompt system -> SERVICES` 的循环依赖。
+ * - 这样也能避开 `task -> runner -> prompt system -> service class registry` 的循环依赖。
  */
 
 import type { ExecutionContext } from "@/types/ExecutionContext.js";

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里只放与会话/消息相关的执行逻辑。
- * - 渠道生命周期与配置控制已拆到 `ChatChannelRuntime`，避免单文件混合过多职责。
+ * - 渠道生命周期与配置控制已拆到 `ChatChannelFacade`，避免单文件混合过多职责。
  * - 输出结构保持原有格式，确保 CLI/API 行为不变。
  */
 
@@ -36,7 +36,7 @@ import {
   getDowncityChatHistoryPath,
   getDowncityChatSessionDirPath,
 } from "@/main/env/Paths.js";
-import { resolveChatChannelNameOrThrow } from "@services/chat/runtime/ChatChannelRuntime.js";
+import { resolveChatChannelNameOrThrow } from "@services/chat/runtime/ChatChannelFacade.js";
 
 function toChatHistoryView(events: ChatHistoryEventV1[]): JsonObject[] {
   return events.map((event) => ({

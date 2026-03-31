@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - agent 应该持有一组 per-agent service 实例，而不是共享全局 singleton。
- * - 第一阶段允许继续复用 legacy service definition，但实例层必须已经 class 化。
+ * - 注册表应该直接以 service class 为单一事实源。
  */
 
 import assert from "node:assert/strict";

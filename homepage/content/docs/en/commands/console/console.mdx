@@ -7,7 +7,7 @@ description: Global console command group for process orchestration and multi-ag
 
 `console` is the global control plane.
 
-Use it to manage console runtime and inspect managed agent runtimes.
+Use it to manage the console process and inspect managed agents.
 
 ## Command hierarchy
 
@@ -40,7 +40,7 @@ city console ui [start|stop|restart|status] [--port 5315]
 - `model`: dedicated management for console-global language model pool (provider/model/test/pause).
 - `config`: manage project `downcity.json` and alias.
 - `start`: start console in background.
-- `stop`: stop console and managed child agent runtimes.
+- `stop`: stop console and managed child agent daemons.
 - `restart`: restart console and automatically restore managed agents that were running before restart.
 - `status`: print console process state and active managed agents.
 - `agents`: print active managed agents list.
@@ -52,7 +52,7 @@ city console ui [start|stop|restart|status] [--port 5315]
 # 1) start global console
 city console start
 
-# 2) start project runtime
+# 2) start project agent
 cd /path/to/agent-project
 city agent create .
 city agent start

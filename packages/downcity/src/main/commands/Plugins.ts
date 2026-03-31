@@ -279,7 +279,7 @@ async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void
     title: "plugins listed (static catalog)",
     reason:
       remote.error ||
-      "Agent runtime is unavailable. Showing console-side plugin catalog only.",
+      "Agent is unavailable. Showing console-side plugin catalog only.",
   });
 }
 
@@ -347,7 +347,7 @@ async function runPluginAvailabilityCommand(params: {
     title: "plugin status (static catalog)",
     reason:
       remote.error ||
-      "Agent runtime is unavailable. Showing console-side plugin metadata only.",
+      "Agent is unavailable. Showing console-side plugin metadata only.",
   });
 }
 

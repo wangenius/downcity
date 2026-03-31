@@ -7,7 +7,7 @@ description: 全局 console 命令组，用于进程编排与多 agent 治理
 
 `console` 是全局控制面。
 
-你可以通过它管理 console 运行状态，并查看当前托管的 agent runtime。
+你可以通过它管理 console 进程，并查看当前托管的 agent。
 
 ## 命令层级
 
@@ -40,7 +40,7 @@ city console ui [start|stop|restart|status] [--port 5315]
 - `model`：独立管理 console 全局语言模型池（provider/model/test/pause）。
 - `config`：管理项目级 `downcity.json` 与 alias。
 - `start`：后台启动 console。
-- `stop`：停止 console，并停止其托管的子 agent runtime。
+- `stop`：停止 console，并停止其托管的子 agent 进程。
 - `restart`：重启 console，并自动恢复重启前正在运行的托管 agent。
 - `status`：查看 console 进程状态与活跃 agent 清单。
 - `agents`：打印当前活跃托管 agent 列表。

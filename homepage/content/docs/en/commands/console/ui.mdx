@@ -33,18 +33,18 @@ city console ui [action] [options]
 - Requires console first: `city console start`.
 - `start` / `restart` first try to clean up old `console ui run` processes that are still holding the UI port without a tracked pid file.
 - On startup, UI loads agents from console registry (running + history).
-- Global Agents panel shows runtime state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
+- Global Agents panel shows agent state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.
 - The primary action in Global Agents is now "Open Folder": first choose a project directory with the system folder picker.
 - If that directory already has `downcity.json` and meets the minimum initialization requirements, UI starts the agent directly.
-- Only directories that are not initialized yet enter the initialize-on-start flow, which creates `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/` before starting the runtime.
+- Only directories that are not initialized yet enter the initialize-on-start flow, which creates `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/` before starting the agent.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
 - Global / Overview only shows global health signals (console, fleet, channels, plugins, config risk).
 - Global / Overview now shows the current DC version in the top summary area.
 - Global / Env provides manual env management for both Console-shared and agent-private entries, all stored in `~/.downcity/downcity.db` `env_entries`.
 - Global / Env now checks the clipboard when you click `+`; if the clipboard looks like `.env` content, it imports all detected entries in one batch, otherwise it falls back to the manual create dialog.
-- Global / Console Runtime shows console runtime details and console-scope config file status.
+- Global / Console Runtime shows console process details and console-scope config file status.
 - Global / Model now supports full provider/model operations (create, update, test, discover, pause, remove).
-- Agent / Overview is focused on selected agent runtime details (bootstrap files, chat identities, model binding).
+- Agent / Overview is focused on selected agent details (bootstrap files, chat identities, model binding).
 - Agent / Overview now also shows whether the current agent has any executing contexts, plus the executing context count.
 - Agent / Authorization is now role-based: manage `role -> permission`, then bind users to roles.
 - Agent / Authorization is stored in console `~/.downcity/downcity.db`, not written back to project `downcity.json` in plaintext.
@@ -63,7 +63,7 @@ city console ui [action] [options]
 - Dashboard shows `Chat Channels` link status (Telegram/Feishu/QQ) with `open` / `close` / `test` / `reconnect` actions.
 - Context Overview can edit channel parameters directly (for example QQ `appId/appSecret/sandbox`) and auto-reload that channel after save.
 - Chat input is fixed to the built-in `consoleui` channel; UI cannot publish instructions to arbitrary contexts.
-- UI shows grouped `system prompt` composition (static/service/runtime).
+- UI shows grouped `system prompt` composition (static/service/context).
 - For chat contexts, the resolved `system prompt` now includes only the current context's channel prompt instead of appending prompts for every enabled channel.
 - Context Overview and Context Workspace now show whether a context is currently executing (`executing` / `idle`).
 - Context Workspace now supports message management for all chat contexts: clear `context messages` and `chat history` independently.

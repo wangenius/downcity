@@ -7,13 +7,13 @@ description: User-facing security model for isolation, chat authorization, and s
 
 Downcity security has three layers:
 
-1. Runtime isolation: one agent runtime is bound to one `projectRoot`.
+1. Agent isolation: one running agent is bound to one `projectRoot`.
 2. Chat authorization: user roles decide who can send messages into the agent.
 3. Data protection: model provider `apiKey` is encrypted in `~/.downcity/downcity.db`.
 
 ## What to watch first
 
-1. Avoid stale `DC_SERVER_HOST/DC_SERVER_PORT` in your shell, or requests may hit the wrong runtime.
+1. Avoid stale `DC_SERVER_HOST/DC_SERVER_PORT` in your shell, or requests may hit the wrong agent.
 2. New users fall into the lowest authorization group by default, so review chat roles before rollout.
 3. In production, prefer `DC_MODEL_DB_KEY` from secret management.
 

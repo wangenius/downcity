@@ -1,11 +1,11 @@
 ---
 title: city service
-description: Manage service runtime and forward service commands
+description: Manage service state and forward service commands
 ---
 
 # `city service`
 
-Manage service runtime state and forward service commands.
+Manage service state and forward service commands.
 
 ## Command hierarchy
 
@@ -52,7 +52,7 @@ All service action commands now support common scheduling options:
 Notes:
 
 - scheduled jobs are persisted in the current agent project at `.downcity/schedule.sqlite`
-- unfinished jobs are restored after runtime restart
+- unfinished jobs are restored after agent restart
 - `--delay` and `--time` cannot be used together
 - this is for one-shot delayed/scheduled execution; use `task` service for cron and longer workflows
 
@@ -74,7 +74,7 @@ Inside agent shell, when `--agent` is omitted and `--path` uses default, it firs
 
 When both are passed, `--agent` takes precedence.
 
-Start agent runtime first:
+Start the agent first:
 
 ```bash
 city agent start

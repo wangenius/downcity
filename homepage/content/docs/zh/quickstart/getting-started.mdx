@@ -9,10 +9,13 @@ description: 用正确启动顺序在 10 分钟内跑通 Console + Agent
 
 ```bash
 npm install -g downcity
+city --version
 downcity --version
 ```
 
 > `downcity` 与 `city` 都是同一个 CLI 可执行命令。
+>
+> 如果安装后仍然找不到 `city`，请先看[常见问题](/zh/docs/operations/troubleshooting/common-issues)。
 
 ## 2. 初始化 Console（仅首次）
 
@@ -64,7 +67,7 @@ LLM_API_KEY=your_key
 }
 ```
 
-## 6. 启动 Agent 运行时
+## 6. 启动 Agent
 
 启动（默认后台 daemon，适合长期运行）：
 
@@ -78,7 +81,7 @@ city agent start
 city agent start --foreground
 ```
 
-## 7. 验证运行状态
+## 7. 验证 Agent 状态
 
 ```bash
 city agent status

@@ -34,9 +34,9 @@ export type ChatChannelDetailValue =
     };
 
 /**
- * 单个渠道的运行时快照。
+ * 单个渠道的状态快照。
  */
-export type ChatChannelRuntimeSnapshot = {
+export type ChatChannelStateSnapshot = {
   /**
    * 渠道名称（telegram/feishu/qq）。
    */
@@ -50,7 +50,7 @@ export type ChatChannelRuntimeSnapshot = {
    */
   configured: boolean;
   /**
-   * 当前进程内该渠道实例是否处于运行态。
+   * 当前进程内该渠道实例是否处于活动状态。
    */
   running: boolean;
   /**

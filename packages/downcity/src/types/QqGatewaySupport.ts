@@ -7,7 +7,7 @@
  */
 
 /**
- * 构建 QQ 网关运行态快照所需的输入。
+ * 构建 QQ 网关状态快照所需的输入。
  */
 export interface QqGatewayRuntimeStatusInput {
   /**

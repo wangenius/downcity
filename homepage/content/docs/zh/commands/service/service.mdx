@@ -1,6 +1,6 @@
 ---
 title: city service
-description: 管理 service runtime 与 command 转发
+description: 管理 service 状态与 command 转发
 ---
 
 # `city service`
@@ -52,7 +52,7 @@ city service <subcommand>
 说明：
 
 - 调度任务会持久化到当前 agent 项目的 `.downcity/schedule.sqlite`
-- runtime 重启后，会继续恢复尚未完成的任务
+- agent 重启后，会继续恢复尚未完成的任务
 - `--delay` 与 `--time` 不能同时使用
 - 该能力面向 one-shot 延迟/定时执行；cron 与长期工作流仍建议使用 `task` service
 
@@ -74,7 +74,7 @@ city service <subcommand>
 
 若同时传入，`--agent` 优先。
 
-需要先启动 agent runtime：
+需要先启动 agent：
 
 ```bash
 city agent start

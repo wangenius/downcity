@@ -128,7 +128,7 @@ export class QQGatewayClient {
   }
 
   /**
-   * 获取网关运行态快照。
+   * 获取网关状态快照。
    */
   getRuntimeStatus(): QqGatewayRuntimeStatus {
     const readyState = typeof this.ws?.readyState === "number" ? this.ws.readyState : null;

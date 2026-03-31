@@ -85,7 +85,7 @@ sequenceDiagram
   Run->>Agent: initAgentState(cwd)
   Run->>Run: 解析 host/port
   Run->>Server: startServer({ host, port })
-  Run->>Services: startAllServiceRuntimes(getExecutionContext())
+  Run->>Services: startAllServices(getExecutionContext())
   Run->>Schedule: startServiceScheduleRuntime(getExecutionContext())
 ```
 

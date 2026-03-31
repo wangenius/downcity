@@ -2,7 +2,7 @@
  * Dashboard 模型路由。
  *
  * 关键点（中文）
- * - 仅承接 agent runtime 视角下的当前模型展示与切换。
+ * - 仅承接当前 agent 视角下的模型展示与切换。
  * - Console 全局模型池管理仍由 `/api/ui/model*` 处理。
  */
 

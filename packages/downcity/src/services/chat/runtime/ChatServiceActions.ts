@@ -63,7 +63,7 @@ import {
   executeChatReconnectAction,
   executeChatStatusAction,
   executeChatTestAction,
-} from "./ChatChannelRuntime.js";
+} from "./ChatChannelFacade.js";
 
 /**
  * 创建 chat service 的 action 定义表。

@@ -9,6 +9,44 @@
 import type { ServiceState } from "@/types/Service.js";
 
 /**
+ * 单个 service 实例内部持有的状态记录。
+ *
+ * 关键点（中文）
+ * - 这是 service 实例级的内部状态，不直接暴露给外部 API。
+ * - `ServiceStateController` 负责更新它，service 实例负责持有它。
+ */
+export type ServiceStateRecord = {
+  /**
+   * 当前运行状态。
+   */
+  state: ServiceState;
+  /**
+   * 最近一次状态更新时间（毫秒时间戳）。
+   */
+  updatedAt: number;
+  /**
+   * 最近一次错误信息。
+   */
+  lastError?: string;
+  /**
+   * 最近一次执行的命令名。
+   */
+  lastCommand?: string;
+  /**
+   * 最近一次执行命令的时间（毫秒时间戳）。
+   */
+  lastCommandAt?: number;
+  /**
+   * 当前串行控制链。
+   *
+   * 关键点（中文）
+   * - 用于把同一 service 的 start/stop/restart 串行化。
+   * - 避免并发控制命令把状态机打乱。
+   */
+  chain: Promise<void>;
+};
+
+/**
  * 单个 service 状态的对外快照。
  */
 export type ServiceStateSnapshot = {

@@ -224,9 +224,9 @@ export function parseCommandPayload(raw?: string): JsonValue | undefined {
 }
 
 /**
- * 注入 service 状态命令通用选项。
+ * 注入 service 目标解析通用选项。
  */
-export function addServiceRuntimeOptions(command: Command): Command {
+export function addServiceTargetOptions(command: Command): Command {
   return command
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")

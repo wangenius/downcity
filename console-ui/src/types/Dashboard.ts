@@ -841,6 +841,84 @@ export interface UiPluginActionItem {
 }
 
 /**
+ * Plugin setup 字段选项。
+ */
+export interface UiPluginSetupFieldOption {
+  /**
+   * 选项展示标签。
+   */
+  label: string;
+  /**
+   * 选项实际值。
+   */
+  value: string;
+  /**
+   * 选项补充说明（可选）。
+   */
+  hint?: string;
+}
+
+/**
+ * Plugin setup 字段定义。
+ */
+export interface UiPluginSetupField {
+  /**
+   * 字段稳定键。
+   */
+  key: string;
+  /**
+   * 字段展示标签。
+   */
+  label: string;
+  /**
+   * 字段类型。
+   */
+  type: "select" | "checkbox";
+  /**
+   * 是否必填。
+   */
+  required?: boolean;
+  /**
+   * 静态选项（可选）。
+   */
+  options?: UiPluginSetupFieldOption[];
+  /**
+   * 动态选项来源 action（可选）。
+   */
+  sourceAction?: string;
+}
+
+/**
+ * Plugin setup 定义。
+ */
+export interface UiPluginSetupDefinition {
+  /**
+   * setup 模式。
+   */
+  mode: "install" | "configure" | "install-configure";
+  /**
+   * setup 标题。
+   */
+  title: string;
+  /**
+   * setup 说明（可选）。
+   */
+  description?: string;
+  /**
+   * 字段列表。
+   */
+  fields: UiPluginSetupField[];
+  /**
+   * 主动作 action 名称。
+   */
+  primaryAction: string;
+  /**
+   * 状态同步 action 名称（可选）。
+   */
+  statusAction?: string;
+}
+
+/**
  * Plugin 可用性摘要。
  */
 export interface UiPluginAvailability {
@@ -926,6 +1004,10 @@ export interface UiPluginRuntimeItem {
      * action 能力清单。
      */
     actions?: UiPluginActionItem[];
+    /**
+     * setup 协议（可选）。
+     */
+    setup?: UiPluginSetupDefinition;
   };
 }
 
@@ -941,6 +1023,10 @@ export interface UiPluginActionExecutionResult {
    * 返回给 UI 的结果文案。
    */
   message: string
+  /**
+   * action 返回的数据载荷。
+   */
+  data?: unknown
 }
 
 /**

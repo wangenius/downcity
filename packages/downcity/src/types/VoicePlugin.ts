@@ -2,7 +2,7 @@
  * Voice Plugin 类型定义。
  *
  * 关键点（中文）
- * - Voice 的行为配置与转写依赖配置统一收敛到 `plugins.voice`。
+ * - Voice 的行为配置与转写依赖配置统一收敛到 `plugins.asr`。
  * - 这里的类型名直接反映 plugin 自身能力，不再保留 asset 心智。
  */
 
@@ -17,7 +17,7 @@ export interface VoicePluginConfig {
    */
   [key: string]: JsonValue | undefined;
   /**
-   * 是否启用 Voice Plugin。
+   * 是否启用 ASR Plugin。
    */
   enabled?: boolean;
   /**
@@ -86,7 +86,7 @@ export interface VoiceTranscriberConfig {
    * 本地模型 ID（可选）。
    *
    * 说明（中文）
-   * - 这是 voice plugin 内部依赖字段，不要求其他 service 直接感知。
+   * - 这是 asr plugin 内部依赖字段，不要求其他 service 直接感知。
    */
   modelId?: string;
   /**

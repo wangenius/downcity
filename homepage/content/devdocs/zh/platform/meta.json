@@ -1,6 +1,7 @@
 {
   "title": "平台",
   "pages": [
-    "authorization-and-plugin-drafts"
+    "authorization-and-plugin-drafts",
+    "unified-auth-architecture"
   ]
 }

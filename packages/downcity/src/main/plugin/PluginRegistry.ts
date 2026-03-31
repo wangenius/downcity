@@ -210,25 +210,25 @@ export class PluginRegistry {
       };
     }
 
-    const context = this.contextResolver();
-    const enabled = isPluginEnabledInConfig({
-      plugin,
-      config: context.config,
-    });
-    if (!enabled) {
-      return {
-        success: false,
-        error: `Plugin "${plugin.name}" is disabled`,
-        message: `Plugin "${plugin.name}" is disabled`,
-      };
-    }
-
     const action = plugin.actions?.[actionName];
     if (!action) {
       return {
         success: false,
         error: `Plugin "${plugin.name}" does not implement action "${actionName}"`,
         message: `Plugin "${plugin.name}" does not implement action "${actionName}"`,
+      };
+    }
+
+    const context = this.contextResolver();
+    const enabled = isPluginEnabledInConfig({
+      plugin,
+      config: context.config,
+    });
+    if (!enabled && action.allowWhenDisabled !== true) {
+      return {
+        success: false,
+        error: `Plugin "${plugin.name}" is disabled`,
+        message: `Plugin "${plugin.name}" is disabled`,
       };
     }
 

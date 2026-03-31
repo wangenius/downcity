@@ -129,7 +129,7 @@ sequenceDiagram
 - `chat service` 接收 Telegram、Feishu 或 QQ 消息
 - 它通过映射找到目标 `sessionId`
 - 然后通过 `context.session` 进入该 session 执行
-- 如果有语音附件，就触发 `voice plugin`
+- 如果有语音附件，就触发 `asr plugin`
 - 如果需要鉴权，就触发 `auth plugin`
 - 最后由 `chat service` 决定如何回复渠道
 

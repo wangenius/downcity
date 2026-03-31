@@ -283,23 +283,23 @@ async function runTransformersWhisperRunner(params: {
 
 async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceConfigResolved> {
   const pluginConfig =
-    input.context.config.plugins?.voice &&
-    typeof input.context.config.plugins.voice === "object" &&
-    !Array.isArray(input.context.config.plugins.voice)
-      ? input.context.config.plugins.voice
+    input.context.config.plugins?.asr &&
+    typeof input.context.config.plugins.asr === "object" &&
+    !Array.isArray(input.context.config.plugins.asr)
+      ? input.context.config.plugins.asr
       : null;
 
   const enabled =
     pluginConfig && (pluginConfig as { enabled?: unknown }).enabled === true;
   if (!enabled) {
-    throw new Error("Voice plugin is disabled. Run `city voice on` first.");
+    throw new Error("ASR plugin is disabled. Run `city asr on` first.");
   }
 
   const provider = String(
     (pluginConfig as { provider?: unknown } | null)?.provider || "local",
   ) as VoiceProvider;
   if (!["local", "command"].includes(provider)) {
-    throw new Error(`Unsupported voice provider: ${provider}`);
+    throw new Error(`Unsupported asr provider: ${provider}`);
   }
 
   const modelId =
@@ -307,7 +307,7 @@ async function resolveVoiceConfig(input: VoiceTranscribeInput): Promise<VoiceCon
       (pluginConfig as { modelId?: unknown } | null)?.modelId || "SenseVoiceSmall",
     ).trim() || "SenseVoiceSmall";
   if (!modelId && provider === "local") {
-    throw new Error("Voice active model is not configured. Run `city voice use <modelId>`.");
+    throw new Error("ASR active model is not configured. Run `city asr use <modelId>`.");
   }
 
   const modelsRootDir = resolveVoiceModelsRootDir({
@@ -373,10 +373,10 @@ function resolveAutoRunnerOrder(modelId: VoiceModelId): Array<"funasr" | "transf
 }
 
 /**
- * 执行 voice 音频转写。
+ * 执行 ASR 音频转写。
  *
  * 关键点（中文）
- * - 该函数是 voice plugin 对 chat 等 service 暴露的核心能力。
+ * - 该函数是 ASR plugin 对 chat 等 service 暴露的核心能力。
  * - 内置 runner 失败时会返回清晰报错，调用方可降级为附件流程。
  */
 export async function transcribeVoiceAudio(
@@ -396,7 +396,7 @@ export async function transcribeVoiceAudio(
         const template = String(resolved.commandTemplate || "").trim();
         if (!template) {
           throw new Error(
-            "Voice transcribe strategy=command requires plugins.voice.command",
+            "ASR transcribe strategy=command requires plugins.asr.command",
           );
         }
         text = await runCustomCommand({

@@ -663,7 +663,7 @@ export function App() {
               selectedAgentName={String(selectedAgent?.name || "").trim()}
               formatTime={uiHelpers.formatTime}
               statusBadgeVariant={uiHelpers.statusBadgeVariant}
-              onRunAction={(name, action) => runPluginAction(name, action)}
+              onRunAction={(name, action, payload) => runPluginAction(name, action, payload)}
             />
           </section>
         )

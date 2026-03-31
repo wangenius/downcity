@@ -67,6 +67,7 @@ export async function runPluginActionMutation(params: {
   requestJson: RequestJson;
   pluginName: string;
   actionName: string;
+  payload?: Record<string, unknown>;
   selectedAgentId: string;
   refreshPlugins: (agentId: string) => Promise<UiPluginRuntimeItem[] | void>;
   showToast: ShowToast;
@@ -76,15 +77,24 @@ export async function runPluginActionMutation(params: {
       success?: boolean;
       message?: string;
       error?: string;
+      data?: unknown;
     }>(dashboardApiRoutes.pluginsAction(), {
       method: "POST",
-      body: JSON.stringify({ pluginName: params.pluginName, actionName: params.actionName }),
+      body: JSON.stringify({
+        pluginName: params.pluginName,
+        actionName: params.actionName,
+        payload: params.payload,
+      }),
     });
     const message = String(
       result?.message || result?.error || `${params.pluginName} ${params.actionName}`,
     ).trim();
     const shouldRefreshPlugins =
-      params.actionName === "on" || params.actionName === "off";
+      params.actionName === "on" ||
+      params.actionName === "off" ||
+      params.actionName === "install" ||
+      params.actionName === "configure" ||
+      params.actionName === "use";
     if (shouldRefreshPlugins && params.selectedAgentId) {
       void params.refreshPlugins(params.selectedAgentId).catch(() => undefined);
     }
@@ -95,6 +105,7 @@ export async function runPluginActionMutation(params: {
     return {
       success: result?.success === true,
       message,
+      data: result?.data,
     };
   } catch (error) {
     const message = getErrorMessage(error);

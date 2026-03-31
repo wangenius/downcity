@@ -17,7 +17,7 @@ import {
 } from "../../bin/services/chat/channels/qq/VoiceInput.js";
 import { buildChatInboundText } from "../../bin/services/chat/runtime/InboundAugment.js";
 import { CHAT_PLUGIN_POINTS } from "../../bin/services/chat/runtime/PluginPoints.js";
-import { voicePlugin } from "../../bin/plugins/voice/Plugin.js";
+import { asrPlugin } from "../../bin/plugins/asr/Plugin.js";
 
 test("extractQqIncomingAttachments supports mixed QQ payload fields", () => {
   const attachments = extractQqIncomingAttachments({
@@ -92,18 +92,18 @@ test("resolveQqAttachmentLocalPath reuses local path", async () => {
   assert.equal(localPath, path.join(rootPath, "cache/a.ogg"));
 });
 
-test("voice plugin pipeline augments inbound sections for qq attachments", async () => {
+test("asr plugin pipeline augments inbound sections for qq attachments", async () => {
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-voice-qq-"));
   fs.mkdirSync(path.join(rootPath, "cache"), { recursive: true });
   fs.writeFileSync(path.join(rootPath, "cache/a.ogg"), "");
   fs.writeFileSync(path.join(rootPath, "cache/b.mp3"), "");
-  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
+  const handler = asrPlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
   const next = await handler({
     context: {
       rootPath,
       config: {
         plugins: {
-          voice: {
+          asr: {
             enabled: true,
             provider: "command",
             command: "printf '统一QQ转写文本\\n'",
@@ -111,7 +111,7 @@ test("voice plugin pipeline augments inbound sections for qq attachments", async
         },
       },
     },
-    plugin: "voice",
+    plugin: "asr",
     value: {
       channel: "qq",
       chatId: "20001",
@@ -145,20 +145,20 @@ test("voice plugin pipeline augments inbound sections for qq attachments", async
   assert.match(text, /语音转写/);
 });
 
-test("voice plugin pipeline ignores resolve failures for qq attachments", async () => {
-  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
+test("asr plugin pipeline ignores resolve failures for qq attachments", async () => {
+  const handler = asrPlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
   const next = await handler({
     context: {
       rootPath: "/tmp/demo-root",
       config: {
         plugins: {
-          voice: {
+          asr: {
             enabled: false,
           },
         },
       },
     },
-    plugin: "voice",
+    plugin: "asr",
     value: {
       channel: "qq",
       chatId: "20001",

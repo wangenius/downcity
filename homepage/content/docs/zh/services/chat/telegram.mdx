@@ -76,17 +76,17 @@ city agent start
 
 ### 本地 STT 模型管理
 
-如果你要统一管理本地语音转写模型，请使用独立的 `voice` plugin 命令组：
+如果你要统一管理本地语音转写模型，请使用独立的 `asr` plugin 命令组：
 
 ```bash
 # 启用并安装模型
-city voice on SenseVoiceSmall
+city asr on SenseVoiceSmall
 
-# 查看当前 voice 配置
-city voice status
+# 查看当前 asr 配置
+city asr status
 ```
 
-当 `voice` plugin 已启用，且 `plugins.voice` 中的转写配置可用时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
+当 `asr` plugin 已启用，且 `plugins.asr` 中的转写配置可用时，Telegram 入站 `voice/audio` 附件会以 best-effort 模式触发转写，并把识别文本追加到用户指令中。
 
 ### 群聊 / 超级群
 

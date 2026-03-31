@@ -16,7 +16,7 @@ Top-level command groups are:
 - `city service`
 - `city plugin`
 
-Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city voice` are action commands under service/plugin systems, not top-level commands.
+Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`, and `city tts` are action commands under service/plugin systems, not top-level commands.
 
 ## 1) Environment by command group
 
@@ -33,7 +33,7 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, and `city v
 | `city service ...` | Target agent API is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
 | `city plugin ...` | Target agent API is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
 | `city <service> <action>` (e.g. `city chat ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
-| `city <plugin> <action>` (e.g. `city voice ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
+| `city <plugin> <action>` (e.g. `city asr ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
 
 ## 2) Context env requirements for common commands
 

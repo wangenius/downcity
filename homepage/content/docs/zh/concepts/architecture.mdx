@@ -59,7 +59,7 @@ description: Downcity 的核心分层：console、agent、execution context、se
 - 决定什么时候创建、复用或清理 session
 
 6. **Plugin 层**
-- 例如 `skill`、`voice`、`auth`
+- 例如 `skill`、`asr`、`tts`、`auth`
 - 只通过 service 预定义的扩展点接入
 - 不拥有自己的生命周期，也不拥有独立 runtime
 
@@ -98,6 +98,6 @@ flowchart TD
 
 - `chat service` 负责消息进入、入队、选择 session、执行、回复
 - `execution context` 给它注入统一的 session / plugin 访问能力
-- `voice` plugin 在语音相关节点补充转写
+- `asr` plugin 在语音相关节点补充转写
 - `auth` plugin 在鉴权和角色解析节点接入
 - 真正的模型执行仍然发生在目标 `session` 内部

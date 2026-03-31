@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 语音附件增强应走 chat augmentInbound pipeline。
- * - voice plugin 只追加 pluginSections，不直接改 service 文本拼装逻辑。
+ * - asr plugin 只追加 pluginSections，不直接改 service 文本拼装逻辑。
  */
 
 import assert from "node:assert/strict";
@@ -13,9 +13,9 @@ import path from "node:path";
 import test from "node:test";
 import { buildChatInboundText } from "../../bin/services/chat/runtime/InboundAugment.js";
 import { CHAT_PLUGIN_POINTS } from "../../bin/services/chat/runtime/PluginPoints.js";
-import { voicePlugin } from "../../bin/plugins/voice/Plugin.js";
+import { asrPlugin } from "../../bin/plugins/asr/Plugin.js";
 
-test("voice plugin pipeline augments inbound sections for telegram attachments", async () => {
+test("asr plugin pipeline augments inbound sections for telegram attachments", async () => {
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-voice-telegram-"));
   fs.mkdirSync(path.join(rootPath, "cache"), { recursive: true });
   fs.writeFileSync(path.join(rootPath, "cache/a.ogg"), "");
@@ -24,7 +24,7 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
     rootPath,
     config: {
       plugins: {
-        voice: {
+        asr: {
           enabled: true,
           provider: "command",
           command: "printf '统一转写文本\\n'",
@@ -32,11 +32,11 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
       },
     },
   };
-  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
+  const handler = asrPlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
 
   const next = await handler({
     context: runtime,
-    plugin: "voice",
+    plugin: "asr",
     value: {
       channel: "telegram",
       chatId: "10001",
@@ -62,20 +62,20 @@ test("voice plugin pipeline augments inbound sections for telegram attachments",
   assert.match(text, /hello/);
 });
 
-test("voice plugin pipeline ignores resolve failures and keeps base text", async () => {
-  const handler = voicePlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
+test("asr plugin pipeline ignores resolve failures and keeps base text", async () => {
+  const handler = asrPlugin.hooks.pipeline[CHAT_PLUGIN_POINTS.augmentInbound][0];
   const next = await handler({
     context: {
       rootPath: "/tmp/demo-root",
       config: {
         plugins: {
-          voice: {
+          asr: {
             enabled: false,
           },
         },
       },
     },
-    plugin: "voice",
+    plugin: "asr",
     value: {
       channel: "telegram",
       chatId: "10001",

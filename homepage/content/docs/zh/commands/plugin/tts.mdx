@@ -1,0 +1,33 @@
+---
+title: city tts
+description: 管理内置 tts plugin，并把文本生成语音文件
+---
+
+# `city tts`
+
+`city tts` 用于管理内置 tts plugin。
+
+## 它负责什么
+
+- 启用或关闭 tts plugin
+- 配置默认语音模型 / 音色 / 输出格式
+- 执行一次文本转语音生成
+
+## 常用示例
+
+```bash
+# 查看当前 tts 配置
+city tts status
+
+# 启用插件
+city tts on
+
+# 生成一个本地语音文件
+city tts synthesize "hello from city"
+```
+
+## 说明
+
+- TTS 默认不接入 chat hooks。
+- 它会生成一个本地音频文件，并返回可复用的 `<file type="audio">...</file>` 标签，后续发送阶段可直接复用。
+- 配置会持久化到项目 `downcity.json` 的 `plugins.tts`。

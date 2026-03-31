@@ -1,5 +1,5 @@
 /**
- * Voice Plugin Action 测试（node:test）。
+ * ASR Plugin Action 测试（node:test）。
  *
  * 关键点（中文）
  * - 验证新的 plugin action 管理面已经可直接使用。
@@ -11,7 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { voicePlugin } from "../../bin/plugins/voice/Plugin.js";
+import { asrPlugin } from "../../bin/plugins/asr/Plugin.js";
 
 function createLogger() {
   return {
@@ -24,7 +24,7 @@ function createLogger() {
 }
 
 function createRuntime() {
-  const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-voice-plugin-"));
+  const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-asr-plugin-"));
   fs.writeFileSync(
     path.join(rootPath, "downcity.json"),
     `${JSON.stringify({
@@ -48,7 +48,7 @@ function createRuntime() {
           primary: "demo-model",
         },
         plugins: {
-          voice: {
+          asr: {
             provider: "command",
             command: "printf 'ok\\n'",
           },
@@ -90,55 +90,55 @@ function createRuntime() {
   };
 }
 
-test("voice plugin configure action writes plugin config", async () => {
+test("asr plugin configure action writes plugin config", async () => {
   const { runtime } = createRuntime();
 
-  const result = await voicePlugin.actions.configure.execute({
+  const result = await asrPlugin.actions.configure.execute({
     context: runtime,
     payload: {
       enabled: true,
       injectPrompt: false,
     },
-    pluginName: "voice",
+    pluginName: "asr",
     actionName: "configure",
   });
 
   assert.equal(result.success, true);
-  assert.equal(runtime.config.plugins.voice.enabled, true);
-  assert.equal(runtime.config.plugins.voice.injectPrompt, false);
+  assert.equal(runtime.config.plugins.asr.enabled, true);
+  assert.equal(runtime.config.plugins.asr.injectPrompt, false);
 });
 
-test("voice plugin install action no longer depends on runtime.assets", async () => {
+test("asr plugin install action no longer depends on runtime.assets", async () => {
   const { runtime } = createRuntime();
 
-  const result = await voicePlugin.actions.install.execute({
+  const result = await asrPlugin.actions.install.execute({
     context: runtime,
     payload: {
       force: true,
     },
-    pluginName: "voice",
+    pluginName: "asr",
     actionName: "install",
   });
 
   assert.equal(result.success, true);
 });
 
-test("voice plugin status action returns plugin and transcriber snapshots", async () => {
+test("asr plugin status action returns plugin and transcriber snapshots", async () => {
   const { runtime } = createRuntime();
 
-  await voicePlugin.actions.configure.execute({
+  await asrPlugin.actions.configure.execute({
     context: runtime,
     payload: {
       enabled: true,
     },
-    pluginName: "voice",
+    pluginName: "asr",
     actionName: "configure",
   });
 
-  const result = await voicePlugin.actions.status.execute({
+  const result = await asrPlugin.actions.status.execute({
     context: runtime,
     payload: {},
-    pluginName: "voice",
+    pluginName: "asr",
     actionName: "status",
   });
 

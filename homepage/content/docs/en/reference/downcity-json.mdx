@@ -57,12 +57,12 @@ If any link is missing, startup fails fast.
 Plugin behavior is configured in project `downcity.json` under `plugins.*`.
 If a plugin needs extra models, command templates, or local paths, keep them under that plugin's own config block.
 
-Example for voice:
+Example for asr:
 
 ```json
 {
   "plugins": {
-    "voice": {
+    "asr": {
       "enabled": true,
       "provider": "local",
       "modelId": "SenseVoiceSmall"

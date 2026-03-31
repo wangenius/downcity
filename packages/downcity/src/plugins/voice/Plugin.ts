@@ -163,6 +163,27 @@ export const voicePlugin: Plugin = {
       modelId: "SenseVoiceSmall",
     },
   },
+  setup: {
+    mode: "install-configure",
+    title: "安装语音转写",
+    description: "选择模型后即可完成依赖安装与当前配置写入。",
+    fields: [
+      {
+        key: "modelId",
+        label: "模型",
+        type: "select",
+        required: true,
+        sourceAction: "models",
+      },
+      {
+        key: "installDeps",
+        label: "安装 Python 依赖",
+        type: "checkbox",
+      },
+    ],
+    primaryAction: "install",
+    statusAction: "status",
+  },
   async availability(context) {
     const config = readVoicePluginConfig(context);
     if (config.enabled !== true) {
@@ -227,6 +248,7 @@ export const voicePlugin: Plugin = {
   },
   actions: {
     status: {
+      allowWhenDisabled: true,
       command: {
         description: "查看 voice plugin 当前状态",
         mapInput() {
@@ -253,6 +275,7 @@ export const voicePlugin: Plugin = {
       },
     },
     install: {
+      allowWhenDisabled: true,
       command: {
         description: "安装 voice 转写依赖",
         configure(command) {
@@ -302,6 +325,7 @@ export const voicePlugin: Plugin = {
       },
     },
     configure: {
+      allowWhenDisabled: true,
       execute: async ({ context, payload }) => {
         const current = readVoicePluginConfig(context);
         const next = {
@@ -323,6 +347,7 @@ export const voicePlugin: Plugin = {
       },
     },
     on: {
+      allowWhenDisabled: true,
       command: {
         description: "启用 voice plugin，并可选安装转写依赖",
         configure(command) {
@@ -515,6 +540,7 @@ export const voicePlugin: Plugin = {
       },
     },
     models: {
+      allowWhenDisabled: true,
       command: {
         description: "列出内置 voice 支持的模型目录",
         mapInput() {

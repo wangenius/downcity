@@ -385,6 +385,7 @@ export interface UseConsoleDashboardResult {
   runPluginAction: (
     pluginName: string,
     actionName: string,
+    payload?: Record<string, unknown>,
   ) => Promise<UiPluginActionExecutionResult>;
 
   /**

@@ -95,7 +95,7 @@ So key precedence inside `shell` sessions is: `DC_CTX_*` > agent env > global en
 1. Console UI `Global / Env` writes `env_entries` with `scope=global` or `scope=agent`.
 2. Bot account CRUD (UI): writes `channel_accounts`.
 3. Model CRUD (CLI/UI): writes `model_providers`, `models`.
-4. Plugin config (`city plugin action ...` or `city voice ...`): writes project `downcity.json`.
+4. Plugin config (`city plugin action ...`, `city asr ...`, or `city tts ...`): writes project `downcity.json`.
 5. Channel configure action: writes `downcity.json` (`enabled`, `channelAccountId`).
 6. User manual `.env` edit: affects that agent only.
 
@@ -124,7 +124,7 @@ flowchart TD
 ```bash
 city console init
 city console model create
-city plugin action voice configure --payload '{"enabled": true}'
+city plugin action asr configure --payload '{"enabled": true}'
 ```
 
 2. Manage shared env in Console UI `Global / Env` (writes `env_entries`).

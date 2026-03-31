@@ -114,7 +114,8 @@ const DC_COMMAND_ROOTS = new Set([
   "skill",
   "task",
   "memory",
-  "voice",
+  "asr",
+  "tts",
 ])
 
 const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> = [
@@ -191,17 +192,20 @@ const QUICK_COMMAND_GROUPS: Array<{ label: string; items: QuickCommandItem[] }> 
     ],
   },
   {
-    label: "Skill & Voice",
+    label: "Skill / ASR / TTS",
     items: [
       { label: "Skill List", command: "skill list", description: "列出当前已学会 skills" },
       { label: "Skill Find", command: "skill find \"<query>\"", description: "查找缺失技能" },
       { label: "Skill Lookup", command: "skill lookup \"<skillName>\"", description: "读取技能 SKILL.md 内容" },
-      { label: "Voice Models", command: "voice models", description: "列出内置语音模型目录" },
+      { label: "ASR Models", command: "asr models", description: "列出内置语音识别模型目录" },
       { label: "Plugin List", command: "plugin list", description: "列出当前 agent 的 plugins" },
-      { label: "Voice Status", command: "voice status", description: "查看 voice plugin 配置" },
-      { label: "Voice On", command: "voice on SenseVoiceSmall", description: "启用 voice 并安装默认模型" },
-      { label: "Voice Use", command: "voice use SenseVoiceSmall", description: "切换 active 语音模型" },
-      { label: "Voice Off", command: "voice off", description: "关闭 voice plugin" },
+      { label: "ASR Status", command: "asr status", description: "查看 asr plugin 配置" },
+      { label: "ASR On", command: "asr on SenseVoiceSmall", description: "启用 asr 并安装默认模型" },
+      { label: "ASR Use", command: "asr use SenseVoiceSmall", description: "切换 active 语音识别模型" },
+      { label: "ASR Off", command: "asr off", description: "关闭 asr plugin" },
+      { label: "TTS Status", command: "tts status", description: "查看 tts plugin 配置" },
+      { label: "TTS On", command: "tts on", description: "启用 tts plugin" },
+      { label: "TTS Synthesize", command: "tts synthesize \"hello from city\"", description: "生成可发送的语音文件" },
     ],
   },
 ]

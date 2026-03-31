@@ -108,7 +108,7 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
       type: "object",
       additionalProperties: true,
       properties: {
-        voice: {
+        asr: {
           type: "object",
           additionalProperties: true,
           properties: {
@@ -144,6 +144,21 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
                 ],
               },
             },
+          },
+        },
+        tts: {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            enabled: { type: "boolean" },
+            modelId: { type: "string" },
+            voice: { type: "string" },
+            format: {
+              type: "string",
+              enum: ["mp3", "wav", "opus", "aac", "flac"],
+            },
+            speed: { type: "number", minimum: 0.25, maximum: 4 },
+            outputDir: { type: "string" },
           },
         },
       },

@@ -65,14 +65,14 @@ description: Agent 对外 HTTP 接口与请求示例
 ### `POST /api/plugins/availability`
 
 ```json
-{ "pluginName": "voice" }
+{ "pluginName": "asr" }
 ```
 
 ### `POST /api/plugins/action`
 
 ```json
 {
-  "pluginName": "voice",
+  "pluginName": "asr",
   "actionName": "status",
   "payload": {}
 }
@@ -91,7 +91,7 @@ description: Agent 对外 HTTP 接口与请求示例
   "success": true,
   "plugins": [
     {
-      "name": "voice",
+      "name": "asr",
       "actions": ["status", "on", "off"],
       "pipelines": ["chat.augmentInbound"],
       "guards": [],

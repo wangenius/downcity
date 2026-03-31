@@ -67,7 +67,7 @@ sequenceDiagram
 
 - `chat service` 先接住渠道消息
 - 它解析目标 `sessionId`
-- 语音输入可触发 `voice` plugin
+- 语音输入可触发 `asr` plugin
 - 鉴权和角色解析可触发 `auth` plugin
 - 最终执行仍然发生在目标 `session` 内部
 - 由 `chat service` 决定何时以及如何回复

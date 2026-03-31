@@ -21,7 +21,10 @@
   - 用于新的声明式插件体系，统一表达插件行为、可用性与显式调用协议。
 - `VoicePlugin.ts`
   - 定义 `VoicePluginConfig`、`VoiceTranscriberConfig`、`VoiceTranscriberHandle`。
-  - 用于 voice plugin 的行为配置与转写依赖配置。
+  - 用于 asr plugin 的行为配置与转写依赖配置。
+- `TtsPlugin.ts`
+  - 定义 `TtsPluginConfig`、`TtsSynthesizeInput`、`TtsAudioFormat`。
+  - 用于 tts plugin 的行为配置与语音合成输入定义。
 - `PluginApi.ts`
   - 定义 `PluginListResponse`、`PluginAvailabilityResponse`、`PluginActionResponse`。
   - 用于 plugin CLI / HTTP 桥接层，统一描述管理面协议。

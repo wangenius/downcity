@@ -1,0 +1,45 @@
+---
+title: city asr
+description: Manage the built-in ASR plugin and its transcription config
+---
+
+# `city asr`
+
+`city asr` is the short command group for the built-in ASR plugin.
+
+## What it manages
+
+- plugin behavior such as enable/disable
+- ASR transcription config
+- active transcription model
+- local audio transcription
+
+## Common examples
+
+```bash
+# enable asr and install a model
+city asr on SenseVoiceSmall
+
+# inspect plugin + transcriber status
+city asr status
+
+# switch active model
+city asr use whisper-large-v3-turbo
+
+# transcribe one local file
+city asr transcribe ./demo.ogg
+```
+
+## Notes
+
+- `city asr on` enables the plugin and optionally prepares its transcription dependency in one step.
+- The Console UI `Plugins -> asr` card also includes a repair workbench, so you can inspect status, download/install dependencies, switch the active model, and fill in Python or model-path settings without leaving the UI.
+- The asr plugin attaches to chat-defined voice extension points, so Telegram and QQ voice messages can be transcribed and merged into inbound content.
+- Configuration is persisted to project `downcity.json` under `plugins.asr`.
+
+## Related
+
+- [`city plugin`](/en/docs/commands/plugin/plugin)
+- [`city tts`](/en/docs/commands/plugin/tts)
+- [`Telegram`](/en/docs/services/chat/telegram)
+- [`QQ`](/en/docs/services/chat/qq)

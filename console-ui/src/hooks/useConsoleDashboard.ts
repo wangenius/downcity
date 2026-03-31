@@ -494,11 +494,16 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   );
 
   const runPluginAction = useCallback(
-    async (pluginName: string, actionName: string) => {
+    async (
+      pluginName: string,
+      actionName: string,
+      payload?: Record<string, unknown>,
+    ) => {
       return runPluginActionMutation({
         requestJson,
         pluginName,
         actionName,
+        payload,
         selectedAgentId,
         refreshPlugins,
         showToast,

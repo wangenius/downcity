@@ -65,14 +65,14 @@ List registered plugins.
 ### `POST /api/plugins/availability`
 
 ```json
-{ "pluginName": "voice" }
+{ "pluginName": "asr" }
 ```
 
 ### `POST /api/plugins/action`
 
 ```json
 {
-  "pluginName": "voice",
+  "pluginName": "asr",
   "actionName": "status",
   "payload": {}
 }
@@ -91,7 +91,7 @@ Example:
   "success": true,
   "plugins": [
     {
-      "name": "voice",
+      "name": "asr",
       "actions": ["status", "on", "off"],
       "pipelines": ["chat.augmentInbound"],
       "guards": [],

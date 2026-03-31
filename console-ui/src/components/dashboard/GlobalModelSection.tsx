@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import {
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -36,6 +37,7 @@ import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
+import { cn } from "@/lib/utils"
 import type {
   UiModelPoolItem,
   UiModelProviderDiscoverResult,
@@ -120,6 +122,14 @@ function formatTime(raw?: string): string {
   const t = Date.parse(text)
   if (!Number.isFinite(t) || Number.isNaN(t)) return "-"
   return new Date(t).toLocaleString("zh-CN", { hour12: false })
+}
+
+function normalizeDiscoverName(raw?: string): string {
+  return String(raw || "").trim()
+}
+
+function buildDiscoverTargetModelId(remoteName: string, prefix: string): string {
+  return prefix ? `${prefix}${remoteName}` : remoteName
 }
 
 function HeaderAction(props: {
@@ -214,6 +224,7 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
   const [modelTestTargetId, setModelTestTargetId] = React.useState("")
 
   const [discoverDialogOpen, setDiscoverDialogOpen] = React.useState(false)
+  const [discoverQuery, setDiscoverQuery] = React.useState("")
   const [discoverResultProviderId, setDiscoverResultProviderId] = React.useState("")
   const [discoverResultPrefix, setDiscoverResultPrefix] = React.useState("")
   const [discoveredModelNames, setDiscoveredModelNames] = React.useState<string[]>([])
@@ -261,6 +272,49 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
       return id.includes(query) || providerId.includes(query) || name.includes(query)
     })
   }, [modelQuery, poolItems])
+
+  const discoverRows = React.useMemo(() => {
+    return discoveredModelNames
+      .map((remoteNameRaw) => {
+        const remoteName = normalizeDiscoverName(remoteNameRaw)
+        if (!remoteName) return null
+        const targetModelId = buildDiscoverTargetModelId(remoteName, discoverResultPrefix)
+        const exists = existingModelIds.has(targetModelId)
+        const checked = selectedDiscoveredModelNames.includes(remoteName)
+        return {
+          remoteName,
+          targetModelId,
+          exists,
+          checked,
+        }
+      })
+      .filter((item): item is { remoteName: string; targetModelId: string; exists: boolean; checked: boolean } => Boolean(item))
+  }, [discoverResultPrefix, discoveredModelNames, existingModelIds, selectedDiscoveredModelNames])
+
+  const filteredDiscoverRows = React.useMemo(() => {
+    const query = discoverQuery.trim().toLowerCase()
+    if (!query) return discoverRows
+    return discoverRows.filter((item) => {
+      return (
+        item.remoteName.toLowerCase().includes(query) ||
+        item.targetModelId.toLowerCase().includes(query)
+      )
+    })
+  }, [discoverQuery, discoverRows])
+
+  const selectableDiscoverRows = React.useMemo(
+    () => filteredDiscoverRows.filter((item) => !item.exists),
+    [filteredDiscoverRows],
+  )
+
+  const selectableDiscoverNames = React.useMemo(
+    () => selectableDiscoverRows.map((item) => item.remoteName),
+    [selectableDiscoverRows],
+  )
+
+  const allFilteredSelectableChecked =
+    selectableDiscoverNames.length > 0 &&
+    selectableDiscoverNames.every((remoteName) => selectedDiscoveredModelNames.includes(remoteName))
 
   const canSaveProvider = providerForm.id.trim().length > 0 && providerForm.type.trim().length > 0
   const canSaveModel =
@@ -387,13 +441,8 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
                                 setDiscoverResultProviderId(providerId)
                                 setDiscoverResultPrefix(prefix)
                                 setDiscoveredModelNames(discovered)
-                                const selectable = discovered.filter((remoteName) => {
-                                  const normalized = String(remoteName || "").trim()
-                                  if (!normalized) return false
-                                  const modelId = prefix ? `${prefix}${normalized}` : normalized
-                                  return !existingModelIds.has(modelId)
-                                })
-                                setSelectedDiscoveredModelNames(selectable)
+                                setDiscoverQuery("")
+                                setSelectedDiscoveredModelNames([])
                                 setDiscoverDialogOpen(true)
                               })
                             }}
@@ -544,48 +593,120 @@ export function GlobalModelSection(props: GlobalModelSectionProps) {
       <Dialog open={discoverDialogOpen} onOpenChange={setDiscoverDialogOpen}>
         <DialogContent className="w-[min(92vw,720px)]">
           <DialogHeader>
-            <DialogTitle>Discover Models</DialogTitle>
-            <DialogDescription className="sr-only">
-              Discover models dialog
+            <DialogTitle>发现模型</DialogTitle>
+            <DialogDescription>
+              从 provider 拉取可用模型，并按需添加到本地模型池。
             </DialogDescription>
           </DialogHeader>
           {discoveredModelNames.length === 0 ? (
             <div className="px-4 pb-2 text-sm text-muted-foreground">未发现可用模型</div>
           ) : (
             <div className="max-h-[58vh] space-y-3 overflow-auto px-4 pb-2">
-              <div className="rounded-[18px] bg-secondary px-3 py-2 text-xs text-muted-foreground">
-                {`provider ${discoverResultProviderId || "-"} · prefix ${discoverResultPrefix || "(none)"}`}
-              </div>
-              <div className="space-y-1.5 rounded-[18px] bg-secondary/85 p-2">
-                {discoveredModelNames.map((remoteNameRaw) => {
-                  const remoteName = String(remoteNameRaw || "").trim()
-                  const targetModelId = discoverResultPrefix ? `${discoverResultPrefix}${remoteName}` : remoteName
-                  const exists = existingModelIds.has(targetModelId)
-                  const checked = selectedDiscoveredModelNames.includes(remoteName)
-                  return (
-                    <label key={`discover:${remoteName}`} className="flex items-center justify-between gap-3 rounded-[14px] bg-transparent px-3 py-2.5 text-sm transition-colors hover:bg-background">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={exists}
-                          onChange={(event) => {
-                            setSelectedDiscoveredModelNames((prev) => {
-                              if (!event.target.checked) return prev.filter((item) => item !== remoteName)
-                              if (prev.includes(remoteName)) return prev
-                              return [...prev, remoteName]
-                            })
-                          }}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-[18px] bg-secondary/85 px-3 py-2.5 text-xs text-muted-foreground">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span>{`provider ${discoverResultProviderId || "-"}`}</span>
+                    <span>·</span>
+                    <span>{`prefix ${discoverResultPrefix || "(none)"}`}</span>
+                    <span>·</span>
+                    <span>{`发现 ${discoverRows.length}`}</span>
+                    <span>·</span>
+                    <span>{`可添加 ${discoverRows.filter((item) => !item.exists).length}`}</span>
+                    <span>·</span>
+                    <span>{`已选 ${selectedDiscoveredModelNames.length}`}</span>
+                  </div>
+                  <div className="text-[11px]">{`当前结果 ${filteredDiscoverRows.length} 项`}</div>
+                </div>
+
+                <div className="rounded-[18px] bg-secondary/85 p-2">
+                  <div className="flex flex-col gap-2 rounded-[14px] bg-transparent px-2 py-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="relative min-w-0 flex-1">
+                        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={discoverQuery}
+                          onChange={(event) => setDiscoverQuery(event.target.value)}
+                          placeholder="搜索模型名或目标 ID"
+                          className="h-10 border-0 bg-background pl-9 shadow-none"
                         />
-                        <div className="min-w-0">
-                          <div className="truncate text-foreground">{remoteName}</div>
-                          <div className="truncate text-[11px] text-muted-foreground">{targetModelId}</div>
-                        </div>
                       </div>
-                      <div className="shrink-0 text-[11px] text-muted-foreground">{exists ? "exists" : "new"}</div>
-                    </label>
-                  )
-                })}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-[11px] px-3"
+                        disabled={selectableDiscoverNames.length === 0}
+                        onClick={() =>
+                          setSelectedDiscoveredModelNames((prev) => {
+                            // 关键交互（中文）：只对当前过滤结果做全选/取消全选，避免误伤其他已选项。
+                            if (allFilteredSelectableChecked) {
+                              return prev.filter((name) => !selectableDiscoverNames.includes(name))
+                            }
+                            const next = new Set(prev)
+                            selectableDiscoverNames.forEach((name) => next.add(name))
+                            return Array.from(next)
+                          })
+                        }
+                      >
+                        {allFilteredSelectableChecked ? "取消全选" : "全选结果"}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 rounded-[11px] px-3"
+                        disabled={selectedDiscoveredModelNames.length === 0}
+                        onClick={() => setSelectedDiscoveredModelNames([])}
+                      >
+                        清空
+                      </Button>
+                    </div>
+
+                    {filteredDiscoverRows.length === 0 ? (
+                      <div className="rounded-[14px] bg-transparent px-3 py-6 text-center text-sm text-muted-foreground">
+                        没有匹配的模型
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {filteredDiscoverRows.map((item) => {
+                          return (
+                            <label
+                              key={`discover:${item.remoteName}`}
+                              className={cn(
+                                "flex items-center justify-between gap-3 rounded-[14px] px-3 py-2.5 text-sm transition-colors",
+                                item.exists
+                                  ? "bg-transparent opacity-65"
+                                  : "cursor-pointer bg-transparent hover:bg-background",
+                              )}
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <Checkbox
+                                  checked={item.checked}
+                                  disabled={item.exists}
+                                  className="size-4 rounded-[5px]"
+                                  onCheckedChange={(checked) => {
+                                    setSelectedDiscoveredModelNames((prev) => {
+                                      if (!checked) return prev.filter((name) => name !== item.remoteName)
+                                      if (prev.includes(item.remoteName)) return prev
+                                      return [...prev, item.remoteName]
+                                    })
+                                  }}
+                                />
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-medium text-foreground">{item.remoteName}</div>
+                                  <div className="truncate text-[11px] text-muted-foreground">{item.targetModelId}</div>
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-[11px] text-muted-foreground">
+                                {item.exists ? "已存在" : item.checked ? "已选中" : "可添加"}
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

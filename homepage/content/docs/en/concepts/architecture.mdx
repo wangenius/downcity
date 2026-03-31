@@ -59,7 +59,7 @@ That means:
 - decide when to create, reuse, or clear sessions
 
 6. **Plugin Layer**
-- modules such as `skill`, `voice`, and `auth`
+- modules such as `skill`, `asr`, `tts`, and `auth`
 - attach only through service-defined extension points
 - do not own lifecycle and do not own a separate runtime
 
@@ -98,6 +98,6 @@ In chat flows:
 
 - the `chat` service owns ingress, queueing, session selection, execution, and replies
 - the `execution context` injects unified access to session and plugin capabilities
-- the `voice` plugin adds transcription at voice-related points
+- the `asr` plugin adds transcription at voice-related points
 - the `auth` plugin joins authorization-related points
 - the real model run still happens inside the target `session`

@@ -48,13 +48,13 @@ city service status chat
 
 ## Voice messages (voice/audio)
 
-When the `voice` plugin is enabled and its transcription config under `plugins.voice` is ready, QQ inbound `voice/audio` attachments are transcribed in best-effort mode and the transcript is appended to the user instruction.
+When the `asr` plugin is enabled and its transcription config under `plugins.asr` is ready, QQ inbound `voice/audio` attachments are transcribed in best-effort mode and the transcript is appended to the user instruction.
 
 Recommended setup:
 
 ```bash
-city voice on SenseVoiceSmall
-city voice status
+city asr on SenseVoiceSmall
+city asr status
 ```
 
 Notes:

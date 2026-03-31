@@ -51,7 +51,7 @@ registerPluginsCommand(program);
 
 // 服务命令统一注册（chat / task / memory / shell / future services）
 registerAllServicesForCli(program);
-// 插件命令统一注册（skill / voice / future plugins）
+// 插件命令统一注册（skill / asr / tts / future plugins）
 registerAllPluginsForCli(program);
 
 program.showHelpAfterError();

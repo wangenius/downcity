@@ -16,6 +16,7 @@ import {
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 import type {
   PluginAvailability,
+  PluginSetupDefinition,
   PluginView,
 } from "@/types/Plugin.js";
 
@@ -32,6 +33,7 @@ type PluginUiItem = PluginView & {
   availability: PluginAvailability;
   config: {
     actions: PluginActionConfigItem[];
+    setup?: PluginSetupDefinition;
   };
 };
 
@@ -79,12 +81,15 @@ function buildPluginActionConfig(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[] }> {
+function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[]; setup?: PluginSetupDefinition }> {
   return new Map(
     listStaticPluginViews().map((view) => [
       view.name,
       {
         actions: buildPluginActionConfig(findBuiltinPlugin(view.name)),
+        ...(findBuiltinPlugin(view.name)?.setup
+          ? { setup: findBuiltinPlugin(view.name)?.setup }
+          : {}),
       },
     ] as const),
   );

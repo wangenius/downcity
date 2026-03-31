@@ -1,0 +1,33 @@
+---
+title: city tts
+description: Manage the built-in TTS plugin and generate audio files from text
+---
+
+# `city tts`
+
+`city tts` manages the built-in TTS plugin.
+
+## What it manages
+
+- plugin behavior such as enable/disable
+- default speech model / voice / output format
+- one-off text-to-speech generation
+
+## Common examples
+
+```bash
+# inspect current tts config
+city tts status
+
+# enable the plugin
+city tts on
+
+# synthesize one local audio file
+city tts synthesize "hello from city"
+```
+
+## Notes
+
+- TTS is not attached to chat hooks by default.
+- It generates a local audio file and returns a reusable `<file type="audio">...</file>` tag for downstream sending.
+- Configuration is persisted to project `downcity.json` under `plugins.tts`.

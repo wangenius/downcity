@@ -1,4 +1,4 @@
 {
   "title": "Plugin",
-  "pages": ["plugin", "skill", "voice"]
+  "pages": ["plugin", "skill", "asr", "tts"]
 }

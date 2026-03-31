@@ -15,12 +15,14 @@
   - `city plugin status <pluginName>`
   - `city plugin action <pluginName> <action> [--payload '<json>']`
 - 当前内建 serviceName：`shell` / `chat` / `task` / `memory`。
-- 当前内建 pluginName：`auth` / `skill` / `voice`。
+- 当前内建 pluginName：`auth` / `skill` / `asr` / `tts`。
 - 模块级 action 命令：
   - `city shell <action> ...`
   - `city chat <action> ...`
   - `city plugin action <plugin> <action> ...`
   - `city skill <action> ...`
+  - `city asr <action> ...`
+  - `city tts <action> ...`
   - `city task <action> ...`
   - `city memory <action> ...`
 

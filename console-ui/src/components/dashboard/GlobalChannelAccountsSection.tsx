@@ -22,10 +22,12 @@ import {
   Label,
 } from "@downcity/ui"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
+import { ConfigFieldEditor } from "@/components/dashboard/ConfigFieldEditor"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { getChannelDisplayName } from "@/lib/channel-label"
+import type { UiConfigEditorField } from "@/types/ConfigEditor"
 import type { UiChannelAccountItem, UiChannelAccountProbeResult } from "@/types/Dashboard"
 
 const CHANNEL_OPTIONS = [
@@ -134,6 +136,74 @@ function credentialSummary(item: UiChannelAccountItem): string {
   return "credentials missing"
 }
 
+function getChannelCredentialFields(channel: string): UiConfigEditorField[] {
+  if (channel === "telegram") {
+    return [
+      {
+        key: "botToken",
+        label: "botToken",
+        type: "secret",
+        placeholder: "botToken",
+        required: true,
+      },
+    ]
+  }
+
+  if (channel === "feishu") {
+    return [
+      {
+        key: "appId",
+        label: "appId",
+        type: "string",
+        placeholder: "appId",
+        required: true,
+      },
+      {
+        key: "appSecret",
+        label: "appSecret",
+        type: "secret",
+        placeholder: "appSecret",
+        required: true,
+      },
+      {
+        key: "domain",
+        label: "domain",
+        type: "string",
+        placeholder: "domain（可选）",
+      },
+    ]
+  }
+
+  if (channel === "qq") {
+    return [
+      {
+        key: "appId",
+        label: "appId",
+        type: "string",
+        placeholder: "appId",
+        required: true,
+      },
+      {
+        key: "appSecret",
+        label: "appSecret",
+        type: "secret",
+        placeholder: "appSecret",
+        required: true,
+      },
+      {
+        key: "sandbox",
+        label: "运行环境",
+        type: "boolean",
+        trueLabel: "测试环境",
+        falseLabel: "生产环境",
+        description: "QQ channel 当前为 dev 版本，建议优先在测试环境验证。",
+      },
+    ]
+  }
+
+  return []
+}
+
 function buildMetaText(item: UiChannelAccountItem): string {
   const parts: string[] = []
   const identity = String(item.identity || "").trim()
@@ -211,6 +281,7 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
   }, [])
 
   const readyCount = items.filter((item) => isAccountCredentialReady(item)).length
+  const credentialFields = React.useMemo(() => getChannelCredentialFields(form.channel), [form.channel])
   const filteredItems = React.useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return items
@@ -478,114 +549,31 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
 
             <div className="space-y-2.5 rounded-[18px] bg-secondary p-3">
               <Label className="text-xs text-muted-foreground">Credentials</Label>
-              {form.channel === "telegram" ? (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    botToken <span className="text-destructive">*</span>
-                  </Label>
-                    <Input
-                      type="password"
-                      placeholder="botToken"
-                      className="h-10 rounded-[12px]"
-                    value={form.botToken}
-                    onChange={(event) => {
-                      const value = event.target.value
-                      setForm((prev) => ({ ...prev, botToken: value }))
-                      setProbeStatus("idle")
-                      setProbeMessage("")
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      appId <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      placeholder="appId"
-                      className="h-10 rounded-[12px]"
-                      value={form.appId}
-                      onChange={(event) => {
-                        const value = event.target.value
-                        setForm((prev) => ({ ...prev, appId: value }))
-                        setProbeStatus("idle")
-                        setProbeMessage("")
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      appSecret <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="password"
-                      placeholder="appSecret"
-                      className="h-10 rounded-[12px]"
-                      value={form.appSecret}
-                      onChange={(event) => {
-                        const value = event.target.value
-                        setForm((prev) => ({ ...prev, appSecret: value }))
-                        setProbeStatus("idle")
-                        setProbeMessage("")
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {form.channel === "feishu" ? (
-                <Input
-                  placeholder="domain（可选）"
-                  className="h-10 rounded-[12px]"
-                  value={form.domain}
-                  onChange={(event) => setForm((prev) => ({ ...prev, domain: event.target.value }))}
-                />
-              ) : null}
-
-              {form.channel === "qq" ? (
-                <div className="space-y-2">
-                  <div className="rounded-[12px] border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-6 text-amber-950">
-                    QQ channel 当前为 dev 版本，建议仅用于测试与验证。
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-10 w-full justify-between rounded-[12px] px-3"
-                        />
-                      }
-                    >
-                      <span>{form.sandbox ? "测试环境" : "生产环境"}</span>
-                      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="min-w-[10rem]">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setForm((prev) => ({ ...prev, sandbox: false }))
+              <div className={`grid gap-2 ${form.channel === "telegram" ? "" : "md:grid-cols-2"}`}>
+                {credentialFields.map((field) => {
+                  const fieldValue =
+                    field.key === "sandbox"
+                      ? form.sandbox
+                      : String(form[field.key as keyof ChannelAccountFormState] || "")
+                  const isWide = field.key === "sandbox" || field.key === "domain"
+                  return (
+                    <div key={`${form.channel}:${field.key}`} className={isWide ? "md:col-span-2" : ""}>
+                      <ConfigFieldEditor
+                        field={field}
+                        value={fieldValue}
+                        onChange={(value) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            [field.key]: value,
+                          }))
                           setProbeStatus("idle")
                           setProbeMessage("")
                         }}
-                      >
-                        {form.sandbox ? <span className="inline-block w-4" /> : <CheckIcon className="size-4" />}
-                        <span>生产环境</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setForm((prev) => ({ ...prev, sandbox: true }))
-                          setProbeStatus("idle")
-                          setProbeMessage("")
-                        }}
-                      >
-                        {form.sandbox ? <CheckIcon className="size-4" /> : <span className="inline-block w-4" />}
-                        <span>测试环境</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ) : null}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
           </div>

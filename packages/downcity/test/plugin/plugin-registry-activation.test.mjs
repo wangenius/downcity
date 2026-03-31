@@ -190,6 +190,45 @@ test("plugin registry still allows actions for enabled plugins", async () => {
   assert.deepEqual(result.data, { ok: true });
 });
 
+test("plugin registry allows opted-in setup actions for disabled plugins", async () => {
+  const runtime = createRuntime();
+  const { pluginRegistry } = createRegistry(runtime);
+
+  pluginRegistry.register({
+    name: "demo",
+    title: "Demo",
+    description: "demo plugin",
+    config: {
+      plugin: "demo",
+      scope: "project",
+      defaultValue: {
+        enabled: false,
+      },
+    },
+    actions: {
+      on: {
+        allowWhenDisabled: true,
+        async execute() {
+          return {
+            success: true,
+            data: {
+              ok: true,
+            },
+          };
+        },
+      },
+    },
+  });
+
+  const result = await pluginRegistry.runAction({
+    plugin: "demo",
+    action: "on",
+  });
+
+  assert.equal(result.success, true);
+  assert.deepEqual(result.data, { ok: true });
+});
+
 test("plugin view no longer exposes requiredAssets metadata", async () => {
   const runtime = createRuntime();
   const { pluginRegistry } = createRegistry(runtime);

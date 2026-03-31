@@ -151,14 +151,32 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
           additionalProperties: true,
           properties: {
             enabled: { type: "boolean" },
-            modelId: { type: "string" },
+            provider: {
+              type: "string",
+              enum: ["local"],
+            },
+            modelId: {
+              type: "string",
+              enum: ["qwen3-tts-0.6b", "kokoro-82m"],
+            },
+            modelsDir: { type: "string" },
+            pythonBin: { type: "string" },
+            language: { type: "string" },
             voice: { type: "string" },
             format: {
               type: "string",
-              enum: ["mp3", "wav", "opus", "aac", "flac"],
+              enum: ["wav", "flac"],
             },
-            speed: { type: "number", minimum: 0.25, maximum: 4 },
+            speed: { type: "number", minimum: 0.5, maximum: 2 },
             outputDir: { type: "string" },
+            timeoutMs: { type: "integer", minimum: 5000, maximum: 900000 },
+            installedModels: {
+              type: "array",
+              items: {
+                type: "string",
+                enum: ["qwen3-tts-0.6b", "kokoro-82m"],
+              },
+            },
           },
         },
       },

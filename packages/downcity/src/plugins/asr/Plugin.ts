@@ -567,7 +567,7 @@ export const asrPlugin: Plugin = {
         const availability = await asrPlugin.availability!(context);
         const dependencyStatus = await checkVoiceTranscriber(context);
         return {
-          success: availability.available,
+          success: true,
           data: {
             availability: {
               enabled: availability.enabled,
@@ -582,12 +582,9 @@ export const asrPlugin: Plugin = {
                 : {}),
             },
           },
-          ...(availability.available
-            ? { message: "asr plugin is available" }
-            : { message: availability.reasons.join("; ") }),
-          ...(availability.available
-            ? {}
-            : { error: availability.reasons.join("; ") }),
+          message: availability.available
+            ? "asr plugin is available"
+            : availability.reasons.join("; ") || "asr plugin is not available",
         };
       },
     },

@@ -2,17 +2,22 @@
  * TTS Plugin。
  *
  * 关键点（中文）
- * - 独立负责把文本转换为音频文件。
- * - 当前不接入 chat hooks，只保留显式 action 调用。
- * - 生成出的本地文件可直接通过 `<file type="audio">` 协议发送。
+ * - TTS Plugin 现在自己内聚本地模型与 Python 依赖，不再依赖 console 模型池。
+ * - Console UI 只通过 setup / action 与插件交互，保持极简统一。
  */
 
 import type { Plugin } from "@/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { TtsPluginConfig, TtsSynthesizeInput } from "@/types/TtsPlugin.js";
-import { persistProjectPluginConfig } from "@/main/plugin/ProjectConfigStore.js";
+import type { TtsInstallInput, TtsSynthesizeInput } from "@/types/TtsPlugin.js";
+import {
+  checkTtsSynthesizer,
+  installTtsSynthesizer,
+  listTtsModelOptions,
+  readTtsPluginConfig,
+  writeTtsPluginConfig,
+} from "@/plugins/tts/Dependency.js";
+import { resolveTtsModelId } from "@/plugins/tts/runtime/Catalog.js";
 import { synthesizeSpeechFile } from "@/plugins/tts/runtime/Synthesizer.js";
-import { ConsoleStore } from "@utils/store/index.js";
 
 function toJsonObject(input: Record<string, unknown> | null | undefined): JsonObject | null {
   if (!input) return null;
@@ -77,74 +82,28 @@ function getNumberOpt(
 }
 
 /**
- * 读取 TTS Plugin 配置。
- */
-function readTtsPluginConfig(runtime: {
-  config: {
-    plugins?: Record<string, unknown>;
-  };
-}): TtsPluginConfig {
-  const current = runtime.config.plugins?.tts;
-  const normalized =
-    current && typeof current === "object" && !Array.isArray(current)
-      ? (current as TtsPluginConfig)
-      : {};
-  return {
-    enabled:
-      typeof normalized.enabled === "boolean" ? normalized.enabled : true,
-    ...(typeof normalized.modelId === "string" ? { modelId: normalized.modelId } : {}),
-    ...(typeof normalized.voice === "string" ? { voice: normalized.voice } : {}),
-    ...(typeof normalized.format === "string" ? { format: normalized.format } : {}),
-    ...(typeof normalized.speed === "number" ? { speed: normalized.speed } : {}),
-    ...(typeof normalized.outputDir === "string" ? { outputDir: normalized.outputDir } : {}),
-  };
-}
-
-/**
- * 写入完整 TTS Plugin 配置。
- */
-async function writeTtsPluginConfig(params: {
-  agentState: {
-    rootPath: string;
-    config: {
-      plugins?: Record<string, unknown>;
-    };
-  };
-  value: TtsPluginConfig;
-}): Promise<void> {
-  if (!params.agentState.config.plugins) {
-    params.agentState.config.plugins = {};
-  }
-  params.agentState.config.plugins.tts = (toJsonObject(params.value) || {}) as JsonObject;
-  await persistProjectPluginConfig({
-    projectRoot: params.agentState.rootPath,
-    sections: {
-      plugins: params.agentState.config.plugins as Record<string, JsonObject>,
-    },
-  });
-}
-
-/**
  * ttsPlugin：文本转语音插件定义。
  */
 export const ttsPlugin: Plugin = {
   name: "tts",
   title: "Text To Speech",
   description:
-    "Generates speech audio files from plain text through a configured model, then returns a reusable audio file tag for downstream sending.",
+    "Generates local speech audio files from plain text through an installed TTS model, then returns a reusable audio file tag for downstream sending.",
   config: {
     plugin: "tts",
     scope: "project",
     defaultValue: {
-      enabled: true,
-      voice: "alloy",
-      format: "mp3",
+      enabled: false,
+      provider: "local",
+      modelId: "qwen3-tts-0.6b",
+      format: "wav",
+      speed: 1,
     },
   },
   setup: {
-    mode: "configure",
-    title: "配置语音合成",
-    description: "尽量使用下拉选项完成模型、音色与输出格式配置。",
+    mode: "install-configure",
+    title: "安装语音合成",
+    description: "选择模型即可完成下载、依赖安装与当前配置写入。",
     fields: [
       {
         key: "modelId",
@@ -154,53 +113,38 @@ export const ttsPlugin: Plugin = {
         sourceAction: "models",
       },
       {
-        key: "voice",
-        label: "音色",
-        type: "select",
-        required: true,
-        options: [
-          { label: "Alloy", value: "alloy" },
-          { label: "Ash", value: "ash" },
-          { label: "Ballad", value: "ballad" },
-          { label: "Coral", value: "coral" },
-          { label: "Echo", value: "echo" },
-          { label: "Fable", value: "fable" },
-          { label: "Nova", value: "nova" },
-          { label: "Onyx", value: "onyx" },
-          { label: "Sage", value: "sage" },
-          { label: "Shimmer", value: "shimmer" },
-        ],
-      },
-      {
         key: "format",
         label: "输出格式",
         type: "select",
         required: true,
         options: [
-          { label: "MP3", value: "mp3" },
           { label: "WAV", value: "wav" },
-          { label: "Opus", value: "opus" },
-          { label: "AAC", value: "aac" },
           { label: "FLAC", value: "flac" },
         ],
       },
+      {
+        key: "installDeps",
+        label: "安装 Python 依赖",
+        type: "checkbox",
+      },
     ],
-    primaryAction: "configure",
+    primaryAction: "install",
     statusAction: "status",
   },
   async availability(context) {
     const config = readTtsPluginConfig(context);
-    const reasons: string[] = [];
     if (config.enabled !== true) {
-      reasons.push("tts plugin disabled");
+      return {
+        enabled: false,
+        available: false,
+        reasons: ["tts plugin disabled"],
+      };
     }
-    if (!String(config.modelId || "").trim()) {
-      reasons.push("tts modelId is missing");
-    }
+    const dependencyStatus = await checkTtsSynthesizer(context);
     return {
-      enabled: config.enabled === true,
-      available: reasons.length === 0,
-      reasons,
+      enabled: true,
+      available: dependencyStatus.available,
+      reasons: dependencyStatus.reasons,
     };
   },
   actions: {
@@ -215,6 +159,7 @@ export const ttsPlugin: Plugin = {
       execute: async ({ context }) => {
         const config = readTtsPluginConfig(context);
         const availability = await ttsPlugin.availability!(context);
+        const synthesizer = await checkTtsSynthesizer(context);
         return {
           success: true,
           data: {
@@ -224,6 +169,31 @@ export const ttsPlugin: Plugin = {
               available: availability.available,
               reasons: availability.reasons,
             },
+            synthesizer: {
+              available: synthesizer.available,
+              reasons: synthesizer.reasons,
+              details: synthesizer.details || null,
+            },
+          },
+        };
+      },
+    },
+    doctor: {
+      allowWhenDisabled: true,
+      command: {
+        description: "检查 tts plugin 依赖状态",
+        mapInput() {
+          return {};
+        },
+      },
+      execute: async ({ context }) => {
+        const result = await checkTtsSynthesizer(context);
+        return {
+          success: true,
+          data: {
+            available: result.available,
+            reasons: result.reasons,
+            details: result.details || null,
           },
         };
       },
@@ -231,31 +201,72 @@ export const ttsPlugin: Plugin = {
     models: {
       allowWhenDisabled: true,
       command: {
-        description: "列出可用于 tts 的模型",
+        description: "列出可用于 tts 的本地模型",
         mapInput() {
           return {};
         },
       },
       execute: async () => {
-        const store = new ConsoleStore();
-        try {
-          const options = store
-            .listModels()
-            .filter((model) => model.isPaused !== true)
-            .map((model) => ({
-              label: model.id,
-              value: model.id,
-              hint: model.name,
-            }));
+        return {
+          success: true,
+          data: {
+            options: listTtsModelOptions(),
+          },
+        };
+      },
+    },
+    install: {
+      allowWhenDisabled: true,
+      command: {
+        description: "安装 tts 语音合成依赖",
+        configure(command) {
+          command
+            .argument("[models...]")
+            .option("--active-model <modelId>", "安装完成后设为当前模型")
+            .option("--models-dir <path>", "模型目录（可选）")
+            .option("--python <bin>", "Python 可执行文件（默认 python3）")
+            .option("--no-install-deps", "跳过依赖安装")
+            .option("--force", "强制覆盖已存在资源")
+            .option("--hf-token <token>", "HuggingFace token（可选）")
+            .option("--format <format>", "默认输出格式（wav/flac）");
+        },
+        mapInput({ args, opts }) {
           return {
-            success: true,
-            data: {
-              options,
-            },
+            modelIds: args,
+            ...(getStringOpt(opts, "activeModel")
+              ? { activeModel: getStringOpt(opts, "activeModel") }
+              : {}),
+            ...(getStringOpt(opts, "modelsDir")
+              ? { modelsDir: getStringOpt(opts, "modelsDir") }
+              : {}),
+            ...(getStringOpt(opts, "python")
+              ? { pythonBin: getStringOpt(opts, "python") }
+              : {}),
+            installDeps: getBooleanOpt(opts, "installDeps", true),
+            force: getBooleanOpt(opts, "force", false),
+            ...(getStringOpt(opts, "hfToken")
+              ? { hfToken: getStringOpt(opts, "hfToken") }
+              : {}),
+            ...(getStringOpt(opts, "format")
+              ? { format: getStringOpt(opts, "format") }
+              : {}),
           };
-        } finally {
-          store.close();
-        }
+        },
+      },
+      execute: async ({ context, payload }) => {
+        const result = await installTtsSynthesizer({
+          context,
+          input:
+            payload && typeof payload === "object" && !Array.isArray(payload)
+              ? (payload as TtsInstallInput)
+              : undefined,
+        });
+        return {
+          success: result.success,
+          ...(result.message ? { message: result.message } : {}),
+          ...(result.details !== undefined ? { data: result.details } : {}),
+          ...(result.success ? {} : { error: result.message || "install failed" }),
+        };
       },
     },
     configure: {
@@ -269,7 +280,7 @@ export const ttsPlugin: Plugin = {
             : {}),
         };
         await writeTtsPluginConfig({
-          agentState: context,
+          context,
           value: next,
         });
         return {
@@ -283,24 +294,72 @@ export const ttsPlugin: Plugin = {
     on: {
       allowWhenDisabled: true,
       command: {
-        description: "启用 tts plugin",
-        mapInput() {
-          return {};
+        description: "启用 tts plugin，并可选安装本地依赖",
+        configure(command) {
+          command
+            .argument("[models...]")
+            .option("--active-model <modelId>", "安装完成后设为当前模型")
+            .option("--models-dir <path>", "模型目录（可选）")
+            .option("--python <bin>", "Python 可执行文件（默认 python3）")
+            .option("--no-install", "仅启用 plugin，不安装依赖")
+            .option("--no-install-deps", "跳过依赖安装")
+            .option("--force", "强制覆盖已存在资源")
+            .option("--hf-token <token>", "HuggingFace token（可选）")
+            .option("--format <format>", "默认输出格式（wav/flac）");
+        },
+        mapInput({ args, opts }) {
+          return {
+            modelIds: args,
+            ...(getStringOpt(opts, "activeModel")
+              ? { activeModel: getStringOpt(opts, "activeModel") }
+              : {}),
+            ...(getStringOpt(opts, "modelsDir")
+              ? { modelsDir: getStringOpt(opts, "modelsDir") }
+              : {}),
+            ...(getStringOpt(opts, "python")
+              ? { pythonBin: getStringOpt(opts, "python") }
+              : {}),
+            install: getBooleanOpt(opts, "install", true),
+            installDeps: getBooleanOpt(opts, "installDeps", true),
+            force: getBooleanOpt(opts, "force", false),
+            ...(getStringOpt(opts, "hfToken")
+              ? { hfToken: getStringOpt(opts, "hfToken") }
+              : {}),
+            ...(getStringOpt(opts, "format")
+              ? { format: getStringOpt(opts, "format") }
+              : {}),
+          };
         },
       },
-      execute: async ({ context }) => {
-        const next = {
+      execute: async ({ context, payload }) => {
+        const nextConfig = {
           ...readTtsPluginConfig(context),
           enabled: true,
         };
         await writeTtsPluginConfig({
-          agentState: context,
-          value: next,
+          context,
+          value: nextConfig,
         });
+        if ((payload as { install?: unknown }).install !== false) {
+          const installResult = await installTtsSynthesizer({
+            context,
+            input:
+              payload && typeof payload === "object" && !Array.isArray(payload)
+                ? (payload as TtsInstallInput)
+                : undefined,
+          });
+          if (!installResult.success) {
+            return {
+              success: false,
+              error: installResult.message || "tts dependency install failed",
+              message: installResult.message || "tts dependency install failed",
+            };
+          }
+        }
         return {
           success: true,
           data: {
-            plugin: toJsonObject(next) || {},
+            plugin: toJsonObject(readTtsPluginConfig(context)) || {},
           },
         };
       },
@@ -313,18 +372,60 @@ export const ttsPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        const next = {
+        const nextConfig = {
           ...readTtsPluginConfig(context),
           enabled: false,
         };
         await writeTtsPluginConfig({
-          agentState: context,
-          value: next,
+          context,
+          value: nextConfig,
         });
         return {
           success: true,
           data: {
-            plugin: toJsonObject(next) || {},
+            plugin: toJsonObject(nextConfig) || {},
+          },
+        };
+      },
+    },
+    use: {
+      allowWhenDisabled: true,
+      command: {
+        description: "切换 tts 当前模型",
+        configure(command) {
+          command.argument("<modelId>");
+        },
+        mapInput({ args }) {
+          const modelId = String(args[0] || "").trim();
+          if (!modelId) {
+            throw new Error("modelId is required");
+          }
+          return {
+            modelId,
+          };
+        },
+      },
+      execute: async ({ context, payload }) => {
+        const modelId = String((payload as { modelId?: unknown }).modelId || "").trim();
+        const resolvedModelId = resolveTtsModelId(modelId);
+        if (!resolvedModelId) {
+          return {
+            success: false,
+            error: `Unsupported tts model: ${modelId}`,
+            message: `Unsupported tts model: ${modelId}`,
+          };
+        }
+        const nextConfig = await writeTtsPluginConfig({
+          context,
+          value: {
+            ...readTtsPluginConfig(context),
+            modelId: resolvedModelId,
+          },
+        });
+        return {
+          success: true,
+          data: {
+            plugin: toJsonObject(nextConfig as Record<string, unknown>) || {},
           },
         };
       },
@@ -335,9 +436,10 @@ export const ttsPlugin: Plugin = {
         configure(command) {
           command
             .argument("<text>")
-            .option("--model <modelId>", "语音模型 ID（来自 console 模型池）")
-            .option("--voice <voice>", "音色 ID")
-            .option("--format <format>", "输出格式（mp3/wav/opus/aac/flac）")
+            .option("--model <modelId>", "语音模型 ID")
+            .option("--language <language>", "语言提示（可选，例如 zh / en）")
+            .option("--voice <voice>", "音色 ID（可选）")
+            .option("--format <format>", "输出格式（wav/flac）")
             .option("--speed <speed>", "语速倍率", Number)
             .option("--output <path>", "输出文件路径或目录（可选）");
         },
@@ -350,6 +452,9 @@ export const ttsPlugin: Plugin = {
             text,
             ...(getStringOpt(opts, "model")
               ? { modelId: getStringOpt(opts, "model") }
+              : {}),
+            ...(getStringOpt(opts, "language")
+              ? { language: getStringOpt(opts, "language") }
               : {}),
             ...(getStringOpt(opts, "voice")
               ? { voice: getStringOpt(opts, "voice") }
@@ -367,12 +472,12 @@ export const ttsPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
-        const config = readTtsPluginConfig(context);
-        if (config.enabled !== true) {
+        const pluginStatus = await ttsPlugin.availability!(context);
+        if (!pluginStatus.enabled || !pluginStatus.available) {
           return {
             success: false,
-            error: "tts plugin disabled",
-            message: "tts plugin disabled",
+            error: pluginStatus.reasons[0] || "tts plugin unavailable",
+            message: pluginStatus.reasons[0] || "tts plugin unavailable",
           };
         }
 
@@ -382,7 +487,7 @@ export const ttsPlugin: Plugin = {
             : {};
         const result = await synthesizeSpeechFile({
           context,
-          config,
+          config: readTtsPluginConfig(context),
           input,
         });
         return {

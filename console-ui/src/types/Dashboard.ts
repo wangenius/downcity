@@ -622,7 +622,7 @@ export interface UiServicesResponse {
 }
 
 /**
- * Skill 列表项（来自 `service=skill` 的 `list` 命令）。
+ * Skill 列表项（来自 `plugin=skill` 的 `list` action）。
  */
 export interface UiSkillSummaryItem {
   /**
@@ -652,7 +652,7 @@ export interface UiSkillSummaryItem {
 }
 
 /**
- * skills list 响应（`/api/services/command`）。
+ * skills list 响应（`/api/plugins/action`）。
  */
 export interface UiSkillListResponse {
   /**
@@ -789,7 +789,7 @@ export interface UiSkillLookupResult {
 }
 
 /**
- * skill 指令统一响应体。
+ * skill plugin action 统一响应体。
  */
 export interface UiSkillCommandResponse<TData> {
   /**

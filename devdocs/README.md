@@ -11,7 +11,8 @@
 5. [Chat 端到端流程](./chat-end-to-end-flow.md)
 6. [启动与 HTTP/API 装配流程](./startup-and-api-flow.md)
 7. [Task / Shell / Memory 执行链路](./task-shell-memory-flow.md)
-8. [认证与授权架构设计稿](./auth-and-authorization-architecture-design.md)
+8. [认证与授权架构设计稿](./platform/auth-and-authorization-architecture-design.md)
+9. [认证与授权 V1 实施稿](./platform/auth-and-authorization-v1-implementation-plan.md)
 
 如果你只想快速建立心智模型，先看：
 
@@ -24,8 +25,9 @@
 
 补充：
 
-1. `认证与授权架构设计稿` 是面向后续服务器部署目标的正式设计文档。
-2. 该文档用于指导后续实现，不代表当前代码已经全部具备这些能力。
+1. `platform/认证与授权架构设计稿` 是面向后续服务器部署目标的正式设计文档。
+2. `platform/认证与授权 V1 实施稿` 是第一阶段落地清单，包含 schema、API、模块和实施顺序。
+3. 这些文档用于指导后续实现，不代表当前代码已经全部具备这些能力。
 
 已经删除：
 

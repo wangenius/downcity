@@ -234,12 +234,18 @@ export async function installVoiceTranscriber(params: {
     if (!model) {
       throw new Error(`Unsupported asr model: ${modelId}`);
     }
-    await installVoiceModelFromHuggingFace({
-      model,
+    const installState = await detectLocalVoiceModelInstallState({
+      modelId,
       modelsRootDir,
-      force: input?.force === true,
-      hfToken: input?.hfToken,
     });
+    if (!installState.installed || input?.force === true) {
+      await installVoiceModelFromHuggingFace({
+        model,
+        modelsRootDir,
+        force: input?.force === true,
+        hfToken: input?.hfToken,
+      });
+    }
   }
 
   if (input?.installDeps !== false) {

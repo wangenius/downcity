@@ -2,6 +2,7 @@
   "title": "平台",
   "pages": [
     "authorization-and-plugin-drafts",
-    "unified-auth-architecture"
+    "unified-auth-architecture",
+    "unified-auth-v1-implementation"
   ]
 }

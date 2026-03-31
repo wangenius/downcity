@@ -14,7 +14,6 @@ import {
   isChatServiceNotReadyError,
   isNoRunningAgentError,
   isNotFoundError,
-  isServiceNotRunningError,
   normalizePluginRuntimeItems,
   toHistoryEventsFromTimeline,
   wait,
@@ -131,12 +130,12 @@ export async function querySkills(
   if (!agentId) return [];
   try {
     const data = await requestJson<UiSkillListResponse>(
-      dashboardApiRoutes.servicesCommand(),
+      dashboardApiRoutes.pluginsAction(),
       {
         method: "POST",
         body: JSON.stringify({
-          serviceName: "skill",
-          command: "list",
+          pluginName: "skill",
+          actionName: "list",
           payload: {},
         }),
       },
@@ -146,9 +145,8 @@ export async function querySkills(
   } catch (error) {
     const message = getErrorMessage(error);
     if (
-      /404|not found|unknown action|unknown service/i.test(message) ||
-      isAgentUnavailableError(message) ||
-      isServiceNotRunningError(message, "skill")
+      /404|not found|unknown action|unknown plugin/i.test(message) ||
+      isAgentUnavailableError(message)
     ) {
       return [];
     }
@@ -168,40 +166,18 @@ export async function runSkillDashboardCommand<TData>(params: {
   if (!command) throw new Error("skill command 不能为空");
   const payload = params.payload ?? {};
 
-  const execute = async () =>
-    params.requestJson<UiSkillCommandResponse<TData>>(
-      dashboardApiRoutes.servicesCommand(),
-      {
-        method: "POST",
-        body: JSON.stringify({
-          serviceName: "skill",
-          command,
-          payload,
-        }),
-      },
-      targetAgentId,
-    );
-
-  try {
-    return await execute();
-  } catch (error) {
-    const message = getErrorMessage(error);
-    if (!isServiceNotRunningError(message, "skill")) {
-      throw error;
-    }
-    await params.requestJson(
-      dashboardApiRoutes.servicesControl(),
-      {
-        method: "POST",
-        body: JSON.stringify({
-          serviceName: "skill",
-          action: "start",
-        }),
-      },
-      targetAgentId,
-    );
-    return execute();
-  }
+  return params.requestJson<UiSkillCommandResponse<TData>>(
+    dashboardApiRoutes.pluginsAction(),
+    {
+      method: "POST",
+      body: JSON.stringify({
+        pluginName: "skill",
+        actionName: command,
+        payload,
+      }),
+    },
+    targetAgentId,
+  );
 }
 
 export async function waitConsoleAgentReady(params: {

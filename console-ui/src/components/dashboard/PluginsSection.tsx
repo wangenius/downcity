@@ -429,10 +429,16 @@ export function PluginsSection(props: PluginsSectionProps) {
       !enabled && setup.mode === "install-configure" && hasAction(actionItems, "on")
         ? "on"
         : setup.primaryAction
-    await executeAction(pluginName, "setup", setupActionName, {
+    const result = await executeAction(pluginName, "setup", setupActionName, {
       ...payload,
       ...(setupActionName === "on" ? { install: true } : {}),
     })
+    if (result?.success && setupActionName === "on") {
+      setEnabledOverrides((current) => ({
+        ...current,
+        [pluginName]: true,
+      }))
+    }
     if (setup.statusAction) {
       await syncSetupState(installerPlugin)
     }

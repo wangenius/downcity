@@ -2,63 +2,48 @@
  * TTS 语音合成 runtime。
  *
  * 关键点（中文）
- * - 读取 console 模型池中的 OpenAI 兼容模型配置。
- * - 调用 `/audio/speech` 生成二进制音频。
- * - 把输出落到本地文件，并返回 `<file type="audio">` 可发送标记。
+ * - 读取本地模型目录，不再依赖 console 模型池。
+ * - 根据模型族选择对应 Python runner，并把输出落到本地文件。
  */
 
-import fs from "fs-extra";
+import { execFile as execFileCb } from "node:child_process";
 import path from "node:path";
+import { promisify } from "node:util";
+import fs from "fs-extra";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type {
-  TtsAudioFormat,
-  TtsPluginConfig,
-  TtsSynthesizeInput,
-} from "@/types/TtsPlugin.js";
-import { ConsoleStore } from "@/utils/store/index.js";
+import type { TtsPluginConfig, TtsSynthesizeInput } from "@/types/TtsPlugin.js";
+import type { TtsAudioFormat, TtsModelId } from "@/types/Tts.js";
 import { getCacheDirPath } from "@/main/env/Paths.js";
-import {
-  normalizeBaseUrl,
-  resolveEnvPlaceholder,
-  resolveProviderDefaultBaseUrl,
-} from "@/main/commands/ModelSupport.js";
 import { renderChatMessageFileTag } from "@/services/chat/runtime/ChatMessageMarkup.js";
+import { getTtsModelCatalogItem, resolveTtsModelId } from "@/plugins/tts/runtime/Catalog.js";
+import { resolveTtsModelsRootDir } from "@/plugins/tts/runtime/Paths.js";
 
-const OPENAI_COMPAT_PROVIDER_TYPES = new Set([
-  "openai",
-  "deepseek",
-  "moonshot",
-  "xai",
-  "huggingface",
-  "openrouter",
-  "open-compatible",
-  "open-responses",
-]);
+const execFileAsync = promisify(execFileCb);
+const DEFAULT_TTS_TIMEOUT_MS = 300_000;
 
 function normalizeText(value: unknown): string {
   return String(value || "").trim();
 }
 
 function normalizeFormat(value: unknown): TtsAudioFormat {
-  const format = normalizeText(value).toLowerCase();
-  if (
-    format === "mp3" ||
-    format === "wav" ||
-    format === "opus" ||
-    format === "aac" ||
-    format === "flac"
-  ) {
-    return format;
-  }
-  return "mp3";
+  return normalizeText(value).toLowerCase() === "flac" ? "flac" : "wav";
 }
 
-function normalizeSpeed(value: unknown): number | undefined {
+function normalizeSpeed(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value) || Number.isNaN(value)) {
-    return undefined;
+    return 1;
   }
-  const next = Math.max(0.25, Math.min(4, value));
+  const next = Math.max(0.5, Math.min(2, value));
   return Number(next.toFixed(2));
+}
+
+function normalizeTimeoutMs(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || Number.isNaN(value)) {
+    return DEFAULT_TTS_TIMEOUT_MS;
+  }
+  if (value < 5_000) return 5_000;
+  if (value > 900_000) return 900_000;
+  return Math.floor(value);
 }
 
 function sanitizeFileStem(value: string): string {
@@ -81,7 +66,7 @@ function resolveOutputTarget(params: {
   context: ExecutionContext;
   format: TtsAudioFormat;
   output?: string;
-  voice: string;
+  modelId: string;
 }): { absPath: string; relativePath: string } {
   const output = normalizeText(params.output);
   const defaultDir = path.join(getCacheDirPath(params.context.rootPath), "tts");
@@ -97,7 +82,7 @@ function resolveOutputTarget(params: {
     ? target
     : path.join(
         target,
-        `${Date.now()}-${sanitizeFileStem(params.voice)}${ext}`,
+        `${Date.now()}-${sanitizeFileStem(params.modelId)}${ext}`,
       );
   const relativePath = toProjectRelativePath(params.context.rootPath, filePath);
   if (!relativePath) {
@@ -109,61 +94,248 @@ function resolveOutputTarget(params: {
   };
 }
 
-async function resolveSpeechModel(params: {
-  modelId: string;
-}): Promise<{
-  modelName: string;
-  baseUrl: string;
-  apiKey: string;
-}> {
-  const store = new ConsoleStore();
-  try {
-    const resolved = await store.getResolvedModel(params.modelId);
-    if (!resolved) {
-      throw new Error(`TTS model not found in console store: ${params.modelId}`);
-    }
-    if (!OPENAI_COMPAT_PROVIDER_TYPES.has(resolved.provider.type)) {
-      throw new Error(
-        `TTS provider must be OpenAI compatible: ${resolved.provider.type}`,
-      );
-    }
+function pickLastNonEmptyLine(value: string): string {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length > 0 ? lines[lines.length - 1] : "";
+}
 
-    const modelName = normalizeText(resolveEnvPlaceholder(resolved.model.name));
-    if (!modelName) {
-      throw new Error(`TTS model name is empty: ${params.modelId}`);
+function detectLanguageHint(input: string): "zh" | "en" {
+  return /[\u3400-\u9fff]/u.test(input) ? "zh" : "en";
+}
+
+function resolveKokoroVoicePath(params: {
+  modelDir: string;
+  voice?: string;
+  language: string;
+}): string {
+  const voicesDir = path.join(params.modelDir, "voices");
+  const requested = normalizeText(params.voice);
+  if (requested) {
+    const requestedPath = requested.endsWith(".pt")
+      ? path.resolve(voicesDir, requested)
+      : path.resolve(voicesDir, `${requested}.pt`);
+    if (fs.existsSync(requestedPath)) {
+      return requestedPath;
     }
-
-    const apiKey = normalizeText(resolveEnvPlaceholder(resolved.provider.apiKey));
-    if (!apiKey) {
-      throw new Error(`TTS provider apiKey is missing: ${resolved.provider.id}`);
-    }
-
-    const baseUrl =
-      normalizeBaseUrl(
-        resolveEnvPlaceholder(resolved.provider.baseUrl) ||
-          resolveProviderDefaultBaseUrl(resolved.provider.type),
-      ) || "https://api.openai.com/v1";
-
-    return {
-      modelName,
-      baseUrl,
-      apiKey,
-    };
-  } finally {
-    store.close();
   }
+
+  const preferred =
+    params.language === "zh"
+      ? ["zf_xiaoni.pt", "af_heart.pt"]
+      : ["af_heart.pt", "zf_xiaoni.pt"];
+  for (const fileName of preferred) {
+    const candidate = path.join(voicesDir, fileName);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  const entries = fs.readdirSync(voicesDir).filter((item) => item.endsWith(".pt"));
+  if (entries.length === 0) {
+    throw new Error(`kokoro voice assets are missing: ${voicesDir}`);
+  }
+  return path.join(voicesDir, entries[0]);
+}
+
+function buildPythonExecEnv(pythonBin: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  const raw = String(pythonBin || "").trim();
+  if (!raw || (!raw.includes("/") && !raw.includes("\\"))) {
+    return env;
+  }
+  const pythonDir = path.dirname(path.resolve(raw));
+  const currentPath = String(env.PATH || "");
+  const segments = currentPath
+    .split(path.delimiter)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (!segments.includes(pythonDir)) {
+    env.PATH = [pythonDir, ...segments].join(path.delimiter);
+  }
+  return env;
+}
+
+async function runPythonInline(params: {
+  pythonBin: string;
+  script: string;
+  args: string[];
+  timeoutMs: number;
+}): Promise<void> {
+  let stdout = "";
+  let stderr = "";
+  try {
+    const output = await execFileAsync(
+      params.pythonBin,
+      ["-c", params.script, ...params.args],
+      {
+        timeout: params.timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+        env: buildPythonExecEnv(params.pythonBin),
+      },
+    );
+    stdout = String(output.stdout || "");
+    stderr = String(output.stderr || "");
+  } catch (error) {
+    const errorLike = error as {
+      stdout?: string;
+      stderr?: string;
+      message?: string;
+    };
+    stdout = String(errorLike.stdout || "");
+    stderr = String(errorLike.stderr || "");
+    const err = pickLastNonEmptyLine(stderr) || pickLastNonEmptyLine(stdout);
+    if (err) {
+      throw new Error(`python runner failed: ${err}`);
+    }
+    throw new Error(`python runner failed: ${String(errorLike.message || error)}`);
+  }
+  const err = pickLastNonEmptyLine(stderr);
+  if (err) {
+    throw new Error(`python runner stderr: ${err}`);
+  }
+}
+
+const KOKORO_INLINE_SCRIPT = [
+  "import numpy as np",
+  "import soundfile as sf",
+  "import torch",
+  "from kokoro import KModel, KPipeline",
+  "config_path = __import__('sys').argv[1]",
+  "model_path = __import__('sys').argv[2]",
+  "voice_path = __import__('sys').argv[3]",
+  "lang_code = __import__('sys').argv[4]",
+  "text = __import__('sys').argv[5]",
+  "output_path = __import__('sys').argv[6]",
+  "speed = float(__import__('sys').argv[7])",
+  "device = 'cuda' if torch.cuda.is_available() else 'cpu'",
+  "model = KModel(config=config_path, model=model_path).to(device).eval()",
+  "pipeline = KPipeline(lang_code=lang_code, model=model, device=device)",
+  "chunks = []",
+  "for _, _, audio in pipeline(text, voice=voice_path, speed=speed):",
+  "    if audio is None:",
+  "        continue",
+  "    chunks.append(audio.cpu().numpy() if hasattr(audio, 'cpu') else np.asarray(audio))",
+  "if not chunks:",
+  "    raise RuntimeError('kokoro returned empty audio')",
+  "wave = np.concatenate(chunks)",
+  "sf.write(output_path, wave, 24000)",
+  "print(output_path)",
+].join("\n");
+
+const QWEN3_INLINE_SCRIPT = [
+  "import soundfile as sf",
+  "import torch",
+  "from qwen_tts import Qwen3TTSModel",
+  "model_path = __import__('sys').argv[1]",
+  "text = __import__('sys').argv[2]",
+  "voice = __import__('sys').argv[3]",
+  "language = __import__('sys').argv[4]",
+  "output_path = __import__('sys').argv[5]",
+  "speed = float(__import__('sys').argv[6])",
+  "device = 'cuda' if torch.cuda.is_available() else 'cpu'",
+  "dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32",
+  "model = Qwen3TTSModel.from_pretrained(model_path, device_map=device, dtype=dtype)",
+  "speakers = model.get_supported_speakers() or []",
+  "speaker = voice if voice and voice in speakers else (speakers[0] if speakers else voice)",
+  "if not speaker:",
+  "    raise RuntimeError('qwen3 supported speaker list is empty')",
+  "languages = model.get_supported_languages() or []",
+  "resolved_language = language if language and language in languages else ('Auto' if 'Auto' in languages else (languages[0] if languages else 'Auto'))",
+  "wavs, sample_rate = model.generate_custom_voice(text=text, speaker=speaker, language=resolved_language, non_streaming_mode=True, do_sample=True, top_p=0.9, temperature=0.7, repetition_penalty=1.05)",
+  "wave = wavs[0] if isinstance(wavs, list) else wavs",
+  "sf.write(output_path, wave, sample_rate)",
+  "print(output_path)",
+].join("\n");
+
+async function runKokoroSynthesizer(params: {
+  pythonBin: string;
+  modelDir: string;
+  text: string;
+  voice?: string;
+  language: string;
+  outputPath: string;
+  speed: number;
+  timeoutMs: number;
+}): Promise<void> {
+  const voicePath = resolveKokoroVoicePath({
+    modelDir: params.modelDir,
+    voice: params.voice,
+    language: params.language,
+  });
+  const configPath = path.join(params.modelDir, "config.json");
+  const modelPath = path.join(params.modelDir, "kokoro-v1_0.pth");
+  await runPythonInline({
+    pythonBin: params.pythonBin,
+    script: KOKORO_INLINE_SCRIPT,
+    args: [
+      configPath,
+      modelPath,
+      voicePath,
+      params.language === "zh" ? "z" : "a",
+      params.text,
+      params.outputPath,
+      String(params.speed),
+    ],
+    timeoutMs: params.timeoutMs,
+  });
+}
+
+async function runQwen3Synthesizer(params: {
+  pythonBin: string;
+  modelDir: string;
+  text: string;
+  voice?: string;
+  language: string;
+  outputPath: string;
+  speed: number;
+  timeoutMs: number;
+}): Promise<void> {
+  await runPythonInline({
+    pythonBin: params.pythonBin,
+    script: QWEN3_INLINE_SCRIPT,
+    args: [
+      params.modelDir,
+      params.text,
+      normalizeText(params.voice),
+      params.language === "zh" ? "Chinese" : params.language === "en" ? "English" : "Auto",
+      params.outputPath,
+      String(params.speed),
+    ],
+    timeoutMs: params.timeoutMs,
+  });
 }
 
 /**
  * 执行一次 TTS 合成，并写出音频文件。
  */
 export async function synthesizeSpeechFile(params: {
+  /**
+   * 当前执行上下文。
+   */
   context: ExecutionContext;
+  /**
+   * 当前 plugin 配置。
+   */
   config: TtsPluginConfig;
+  /**
+   * 本次合成输入。
+   */
   input: TtsSynthesizeInput;
 }): Promise<{
+  /**
+   * 输出相对路径。
+   */
   outputPath: string;
+  /**
+   * 可发送文件标签。
+   */
   fileTag: string;
+  /**
+   * 文件字节数。
+   */
   bytes: number;
 }> {
   const text = normalizeText(params.input.text);
@@ -171,55 +343,71 @@ export async function synthesizeSpeechFile(params: {
     throw new Error("tts synthesize requires text");
   }
 
-  const modelId = normalizeText(params.input.modelId || params.config.modelId);
+  const modelId = resolveTtsModelId(
+    normalizeText(params.input.modelId || params.config.modelId),
+  );
   if (!modelId) {
     throw new Error("tts modelId is missing");
   }
 
-  const voice = normalizeText(params.input.voice || params.config.voice) || "alloy";
+  const model = getTtsModelCatalogItem(modelId);
+  if (!model) {
+    throw new Error(`Unsupported tts model: ${modelId}`);
+  }
+
   const format = normalizeFormat(params.input.format || params.config.format);
   const speed = normalizeSpeed(
     typeof params.input.speed === "number" ? params.input.speed : params.config.speed,
   );
-  const model = await resolveSpeechModel({ modelId });
+  const language =
+    normalizeText(params.input.language || params.config.language) ||
+    detectLanguageHint(text);
+  const pythonBin = normalizeText(params.config.pythonBin) || "python3";
+  const timeoutMs = normalizeTimeoutMs(params.config.timeoutMs);
+  const modelsRootDir = resolveTtsModelsRootDir({
+    projectRoot: params.context.rootPath,
+    modelsDir: params.config.modelsDir,
+  });
+  const modelDir = path.join(modelsRootDir, modelId);
   const output = resolveOutputTarget({
     context: params.context,
     format,
     output: normalizeText(params.input.output || params.config.outputDir),
-    voice,
+    modelId,
   });
 
-  const response = await fetch(`${model.baseUrl}/audio/speech`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${model.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: model.modelName,
-      input: text,
-      voice,
-      response_format: format,
-      ...(typeof speed === "number" ? { speed } : {}),
-    }),
-  });
-  if (!response.ok) {
-    const bodyText = await response.text().catch(() => "");
-    throw new Error(
-      `tts synthesize request failed: ${response.status} ${response.statusText}${bodyText ? ` ${bodyText}` : ""}`,
-    );
+  await fs.ensureDir(path.dirname(output.absPath));
+  if (model.family === "kokoro") {
+    await runKokoroSynthesizer({
+      pythonBin,
+      modelDir,
+      text,
+      voice: params.input.voice || params.config.voice,
+      language,
+      outputPath: output.absPath,
+      speed,
+      timeoutMs,
+    });
+  } else {
+    await runQwen3Synthesizer({
+      pythonBin,
+      modelDir,
+      text,
+      voice: params.input.voice || params.config.voice,
+      language,
+      outputPath: output.absPath,
+      speed,
+      timeoutMs,
+    });
   }
 
-  const audioBuffer = Buffer.from(await response.arrayBuffer());
-  await fs.ensureDir(path.dirname(output.absPath));
-  await fs.writeFile(output.absPath, audioBuffer);
-
+  const stats = await fs.stat(output.absPath);
   return {
     outputPath: output.relativePath,
     fileTag: renderChatMessageFileTag({
       type: "audio",
       path: output.relativePath,
     }),
-    bytes: audioBuffer.length,
+    bytes: stats.size,
   };
 }

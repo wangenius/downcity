@@ -1,0 +1,7 @@
+{
+  "title": "Platform",
+  "pages": [
+    "auth-and-authorization-architecture-design",
+    "auth-and-authorization-v1-implementation-plan"
+  ]
+}

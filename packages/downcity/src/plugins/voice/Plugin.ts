@@ -567,7 +567,7 @@ export const voicePlugin: Plugin = {
         const availability = await voicePlugin.availability!(context);
         const dependencyStatus = await checkVoiceTranscriber(context);
         return {
-          success: availability.available,
+          success: true,
           data: {
             availability: {
               enabled: availability.enabled,
@@ -582,12 +582,9 @@ export const voicePlugin: Plugin = {
                 : {}),
             },
           },
-          ...(availability.available
-            ? { message: "voice plugin is available" }
-            : { message: availability.reasons.join("; ") }),
-          ...(availability.available
-            ? {}
-            : { error: availability.reasons.join("; ") }),
+          message: availability.available
+            ? "voice plugin is available"
+            : availability.reasons.join("; ") || "voice plugin is not available",
         };
       },
     },

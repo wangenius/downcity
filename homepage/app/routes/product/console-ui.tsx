@@ -16,7 +16,7 @@ const PAGE = {
       },
       {
         title: "模型与配置可统一管理",
-        description: "在 Console UI 里统一管理模型与常用配置，减少团队协作时的配置偏差。",
+        description: "在 Console UI 里统一管理模型与常用配置，还能直接完成本地 ASR / TTS 插件的安装与启用。",
       },
     ],
     scenesTitle: "典型场景",
@@ -47,7 +47,7 @@ const PAGE = {
       },
       {
         title: "Centralized model and config control",
-        description: "Manage model settings from Console UI to reduce drift across team workflows.",
+        description: "Manage model settings from Console UI and install local ASR / TTS plugins without leaving the dashboard.",
       },
     ],
     scenesTitle: "Typical Scenarios",

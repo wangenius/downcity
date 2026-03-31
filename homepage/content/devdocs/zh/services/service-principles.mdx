@@ -1,32 +1,32 @@
 ---
 title: Service 原理
-description: 解释 Downcity 里 service 的角色、边界、生命周期与它和宿主运行时、plugin、session 的关系
+description: 解释当前 Downcity 里 service 的角色、边界、生命周期，以及它和 AgentState、session、plugin 的关系
 ---
 
 # Service 原理
 
 这页只回答一个问题：
 
-`service` 在 Downcity 里到底是什么。
+- `service` 在当前 Downcity 里到底是什么
 
 先给结论：
 
-- service 不是宿主运行时
+- service 不是 runtime
 - service 不是 session 宿主
 - service 不是 plugin
 - service 是主业务流程拥有者
 
-也就是说，service 最重要的职责，不是“提供几个函数”，而是：
+也就是说，service 最重要的职责不是“提供几个函数”，而是：
 
 - 接住一类业务输入
 - 决定这类输入的主流程怎么走
-- 在合适的节点调用宿主能力与 plugin 能力
+- 在合适节点调用 session 和 plugin 能力
 
 ## 一句话模型
 
 ```text
-host runtime 负责维护系统怎么跑
-service 负责决定某类业务流程怎么走
+AgentState 负责这个项目怎么跑
+service 负责某类业务流程怎么走
 plugin 负责在流程节点做增强
 ```
 
@@ -56,30 +56,32 @@ plugin 负责在流程节点做增强
 
 那它就不应该被理解成 `service`。
 
-## service 和宿主运行时的关系
+## service 和 Agent Runtime 的关系
 
-service 不是自己维护整套运行时。
+service 自己不维护整套运行时。
 
-真正持有全局运行态的是宿主侧 `RuntimeState`。  
+真正持有当前项目长期运行状态的是：
+
+- `AgentState`
+
 它负责维护：
 
 - `config`
 - `logger`
 - `env`
-- `SessionManager`
-- `SessionAgentDispatcher`
-- model
-- persistor
+- `model`
+- `SessionStore`
+- `PluginRegistry`
+- `services`
 
-service 看到的只是一个统一注入对象：`ServiceRuntime`。
+service 拿到的是统一注入的：
 
-`ServiceRuntime` 更像一个门面，而不是独立 runtime。
+- `ExecutionContext`
 
 它主要暴露：
 
 - `session`
 - `invoke`
-- `services`
 - `plugins`
 - `config`
 - `logger`
@@ -89,39 +91,36 @@ service 看到的只是一个统一注入对象：`ServiceRuntime`。
 
 ```mermaid
 flowchart LR
-  subgraph Host["Host Runtime"]
-    H1["RuntimeState"]
-    H2["SessionManager"]
-    H3["SessionAgentDispatcher"]
-    H4["Model / Persistor / Tools"]
-    H5["buildServiceRuntime()"]
+  subgraph Agent["Agent Runtime"]
+    A1["AgentState"]
+    A2["ExecutionContext"]
+    A3["SessionStore"]
+    A4["PluginRegistry"]
   end
 
   subgraph Service["Service"]
     S1["业务流程"]
-    S2["ServiceRuntime 门面"]
   end
 
-  H1 --> H2
-  H1 --> H3
-  H1 --> H5
-  H3 --> H4
-  H5 --> S2
-  S2 --> S1
-  S1 --> H2
+  A1 --> A2
+  A1 --> A3
+  A1 --> A4
+  A2 --> S1
+  S1 --> A3
+  S1 --> A4
 ```
 
 ## service 和 session 的关系
 
-service 也不是 session 宿主。
+service 不是 session 宿主。
 
-session 真正由宿主运行时维护。  
+session 真正由 agent runtime 维护。  
 service 只是围绕 session 工作：
 
 - 把外部输入归到某个 `sessionId`
 - 给 session 注入 user message
 - 决定何时调用 `session.run`
-- 把执行结果再投递回业务出口
+- 把执行结果再送回业务出口
 
 所以正确口径不是：
 
@@ -138,7 +137,7 @@ service 是流程拥有者，plugin 是节点增强器。
 当前口径是：
 
 - plugin 点由 service 定义
-- 执行语义由 runtime 统一提供
+- 执行语义由 plugin registry 统一提供
 - plugin 只负责实现某些点
 
 以 `chat` 为例，service 会定义：
@@ -171,11 +170,11 @@ service 通过 `lifecycle` 和 `actions` 暴露能力。
 
 - service command
 - HTTP action API
-- Console 调用入口
+- dashboard / CLI 的显式调用
 
-也就是说，service 不是简单的函数集合，而是：
+所以 service 不是简单函数集合，而是：
 
-- 一个被宿主 runtime 托管的业务单元
+- 一个被 agent runtime 托管的业务单元
 
 ## 最简关系图
 
@@ -183,7 +182,7 @@ service 通过 `lifecycle` 和 `actions` 暴露能力。
 flowchart TD
   IN["输入"] --> SERVICE["Service 主流程"]
   SERVICE --> PLUGIN["Plugin 点增强"]
-  SERVICE --> SESSION["session.run / session.append"]
+  SERVICE --> SESSION["session.run / append message"]
   SESSION --> OUT["结果回到 Service"]
   OUT --> EXIT["业务出口"]
 ```

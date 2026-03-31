@@ -226,7 +226,7 @@ function registerPluginActionCommand(params: {
       payload: {
         error:
           remote.error ||
-          "Plugin action requires an active Agent server runtime. Start via `city agent start` first.",
+          "Plugin action requires an active Agent server. Start via `city agent start` first.",
       },
     });
   });

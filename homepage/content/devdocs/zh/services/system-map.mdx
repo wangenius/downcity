@@ -1,22 +1,15 @@
 ---
 title: Service 总关系图
-description: 用一张总图解释 host runtime、service、session、plugin 之间的职责边界和调用方向
+description: 用当前代码中的真实对象，解释 AgentState、Session、Service、Plugin 之间的职责边界和调用方向
 ---
 
 # Service 总关系图
 
-前面几篇文档分别讲了：
-
-- service 是什么
-- service 应该怎么设计
-- `chat` 怎么做
-- `task` 怎么做
-
-这页的目标是把它们收成一张总图。
+这页的目标是把当前 package 里的主关系收成一张图。
 
 先给结论：
 
-- `host runtime` 是宿主和执行底座
+- `AgentState` 是能力底座
 - `session` 是执行主轴
 - `service` 是业务流程编排层
 - `plugin` 是流程节点增强层
@@ -24,8 +17,8 @@ description: 用一张总图解释 host runtime、service、session、plugin 之
 一句话：
 
 ```text
-host runtime 提供能力底座
-session 承载持续执行
+AgentState 提供能力底座
+session 承载执行主轴
 service 组织业务主流程
 plugin 在特定节点增强流程
 ```
@@ -34,56 +27,55 @@ plugin 在特定节点增强流程
 
 ```mermaid
 flowchart LR
-  subgraph HOST["Host Runtime / 宿主运行时"]
-    H1["RuntimeState"]
-    H2["SessionManager"]
-    H3["SessionAgentDispatcher"]
-    H4["Model / Tools / Persistor"]
-    H5["ServiceRuntime / PluginRuntime Facade"]
+  subgraph AGENT["Agent Runtime"]
+    A1["AgentState"]
+    A2["ExecutionContext"]
+    A3["SessionStore"]
+    A4["PluginRegistry"]
+    A5["Service Instances"]
   end
 
-  subgraph SESSION["Session Axis / 执行主轴"]
+  subgraph SESSION["Session Axis"]
     S1["sessionId"]
     S2["append message"]
     S3["session.run"]
-    S4["assistant result"]
-    S5["持续推进同一个 Session"]
+    S4["SessionCore"]
+    S5["assistant result"]
   end
 
-  subgraph SERVICES["Services / 业务流程编排层"]
-    SV1["Chat"]
-    SV2["Task"]
-    SV3["Memory"]
-    SV4["Shell"]
+  subgraph SERVICES["Services"]
+    SV1["ChatService"]
+    SV2["TaskService"]
+    SV3["MemoryService"]
+    SV4["ShellService"]
   end
 
-  subgraph PLUGINS["Plugins / 节点增强层"]
+  subgraph PLUGINS["Plugins"]
     P1["pipeline"]
     P2["guard"]
     P3["effect"]
     P4["resolve"]
   end
 
-  H1 --> H2
-  H1 --> H3
-  H1 --> H5
-  H3 --> H4
+  A1 --> A2
+  A1 --> A3
+  A1 --> A4
+  A1 --> A5
 
-  H2 --> S2
-  S1 --> S2
-  S2 --> S3
-  S3 --> S4
-  S4 --> S5
-
-  H5 --> SV1
-  H5 --> SV2
-  H5 --> SV3
-  H5 --> SV4
+  A5 --> SV1
+  A5 --> SV2
+  A5 --> SV3
+  A5 --> SV4
 
   SV1 --> S1
   SV2 --> S1
   SV3 --> S1
   SV4 --> S1
+
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
 
   SV1 --> P1
   SV1 --> P2
@@ -95,35 +87,31 @@ flowchart LR
   SV2 --> P4
 ```
 
-这张图表达了四个核心事实：
+这张图表达了四个事实：
 
-1. `host runtime` 才是能力底座
-2. `sessionId` 才是执行主轴
-3. `service` 不是 session 宿主，而是 session 的流程组织者
-4. `plugin` 不拥有主流程，只在 service 定义的节点增强流程
+1. 当前能力底座是 `AgentState`
+2. 执行主轴是 `sessionId -> session.run`
+3. service 组织业务主流程
+4. plugin 只增强，不拥有主流程
 
 ## 四层分别回答什么问题
 
-### 1. Host Runtime
+### 1. Agent Runtime
 
 它回答的是：
 
-- 系统怎么启动
-- runtime 能力从哪里来
-- model、persistor、session manager 谁来维护
-- service 和 plugin 用什么受控端口拿能力
+- 当前项目怎么初始化
+- model 从哪里来
+- session 从哪里来
+- service 和 plugin 怎么装配
 
 这一层真正持有：
 
-- `RuntimeState`
-- `SessionManager`
-- `SessionAgentDispatcher`
-- model
-- persistor
-
-所以：
-
-- host runtime 是底座
+- `AgentState`
+- `ExecutionContext`
+- `SessionStore`
+- `PluginRegistry`
+- per-agent `services`
 
 ### 2. Session Axis
 
@@ -143,10 +131,9 @@ flowchart LR
 它回答的是：
 
 - 某类输入的主流程怎么走
-- 什么时候做权限校验
-- 什么时候写本 service 的审计或业务存储
-- 什么时候进入 `session.run`
-- 结果从哪个业务出口出去
+- 哪一步进入 session
+- 哪些节点开放给 plugin
+- 结果从哪里出去
 
 所以：
 
@@ -158,15 +145,13 @@ flowchart LR
 
 - 某个流程节点如何增强
 - 某个节点怎么校验
-- 某个节点需要什么附加副作用
+- 某个节点需要什么副作用
 
 所以：
 
-- plugin 是增强层，不是主流程拥有者
+- plugin 是增强层
 
-## 一条真实执行链是怎么穿过这四层的
-
-下面这张图把“输入如何穿过 host runtime、service、session、plugin”压成一条线：
+## 一条真实执行链怎么穿过四层
 
 ```mermaid
 flowchart TD
@@ -175,51 +160,33 @@ flowchart TD
   SERVICE --> SID["归到 sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> MODEL["model and tools"]
-  MODEL --> RES["assistant result"]
+  RUN --> CORE["SessionCore"]
+  CORE --> RES["assistant result"]
   RES --> SERVICE
   SERVICE --> OUT["业务出口"]
 ```
 
-这条链的关键点是：
+关键点：
 
-- 输入先进入 service，不是先进入 plugin
-- 进入 session 之前，service 可以做归一化和前置判断
-- 真正执行在 session 主轴里
-- 结果出来以后，再回到 service 收口
+- 输入先进入 service
+- service 决定 sessionId
+- 真正执行发生在 session 层
+- plugin 只在 service 定义的节点插入
 
 ## 为什么 service 不能直接等于 session
 
-这是最容易误解的一点。
-
 如果把 service 直接等于 session，会出现几个问题：
 
-- 一个 session 无法被多个 service 复用
-- service 会同时承担“流程编排”和“执行宿主”两种职责
-- 控制路径和执行路径会混在一起
-- 会更难抽出稳定的 `ServiceRuntime` 门面
+- 一个 session 难以被多类 service 复用
+- service 会同时承担流程编排和执行宿主两种职责
+- 启动装配和业务主链会混在一起
 
-正确关系应该是：
+更稳定的关系是：
 
 - session 是长期执行状态
-- service 是围绕 session 编排业务流程
+- service 是围绕 session 组织业务流程
 
-## 为什么 plugin 不应该主导 service
-
-如果 plugin 反过来主导 service，就会破坏主流程边界。
-
-比较稳定的关系是：
-
-- service 定义骨架
-- plugin 在骨架节点增强
-
-这样才能保证：
-
-- 主流程可读
-- 插件可选
-- 系统可调试
-
-## Chat 和 Task 放进总图里分别是什么角色
+## Chat 和 Task 在总图里的角色
 
 ### Chat
 
@@ -228,6 +195,7 @@ flowchart TD
 它最关注：
 
 - 渠道输入
+- 入队
 - 路由到 `sessionId`
 - 实时回复
 
@@ -237,38 +205,24 @@ flowchart TD
 
 它最关注：
 
-- 任务定义
-- 触发调度
+- task 定义
+- scheduler
 - run 目录
+- script / agent 执行
 - 结果产物
 
-所以它们虽然都围绕 session 工作，但进入 session 的方式不同：
+虽然两者都复用 session 内核，但进入 session 的方式不同：
 
-- `chat` 更像把实时消息送进会话
-- `task` 更像围绕任务定义创建一次 run 执行
+- `chat` 更像实时消息驱动
+- `task` 更像受控 run 驱动
 
 ## 设计时最稳定的判断顺序
 
-以后如果要新增一个 service，推荐按这个顺序想：
+以后新增 service，建议按这个顺序思考：
 
 1. 输入是什么
-2. 主流程怎么走
+2. 主流程由谁拥有
 3. 哪一步需要 `sessionId`
 4. 哪一步进入 `session.run`
-5. 哪些节点开放给 plugin
-6. 结果从哪里出去
-
-这个顺序的好处是：
-
-- 先把主流程和执行主轴想清楚
-- 再决定扩展点
-
-## 最后的统一口径
-
-以后如果要统一描述这套系统，建议用这段话：
-
-```text
-Downcity 的执行底座在 host runtime 中，真正被持续推进的是 Session。
-service 负责把某类输入组织成稳定业务流程，并围绕 sessionId 调用 session 能力。
-plugin 不拥有主流程，只在 service 定义的节点增强流程。
-```
+5. 哪些节点需要 plugin
+6. 结果从哪里收口

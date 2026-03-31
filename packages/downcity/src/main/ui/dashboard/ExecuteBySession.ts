@@ -29,7 +29,7 @@ import { buildExecuteInputText } from "./Helpers.js";
  * - 否则按普通 session 同步执行。
  */
 export async function executeBySessionId(params: {
-  runtime: AgentState;
+  agentState: AgentState;
   executionContext: ExecutionContext;
   sessionId: string;
   instructions: string;
@@ -41,7 +41,7 @@ export async function executeBySessionId(params: {
   if (!instructions) throw new Error("Missing instructions");
 
   const executeInput = await buildExecuteInputText({
-    projectRoot: params.runtime.rootPath,
+    projectRoot: params.agentState.rootPath,
     sessionId,
     instructions,
     attachments: params.attachments,
@@ -77,7 +77,7 @@ export async function executeBySessionId(params: {
         extra: ingressExtra,
       });
     } catch (error) {
-      params.runtime.logger.warn("Dashboard execute ingress append failed", {
+      params.agentState.logger.warn("Dashboard execute ingress append failed", {
         sessionId,
         error: String(error),
       });
@@ -107,12 +107,12 @@ export async function executeBySessionId(params: {
     };
   }
 
-  await params.runtime.sessionStore.appendUserMessage({
+  await params.agentState.sessionStore.appendUserMessage({
     sessionId,
     text: executeInput,
   });
 
-  const result = await params.runtime.sessionStore.run({
+  const result = await params.agentState.sessionStore.run({
     sessionId,
     query: executeInput,
   });
@@ -120,7 +120,7 @@ export async function executeBySessionId(params: {
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
   try {
     if (!hasPersistedAssistantSteps(result.assistantMessage)) {
-      await params.runtime.sessionStore.appendAssistantMessage({
+      await params.agentState.sessionStore.appendAssistantMessage({
         sessionId,
         message: result.assistantMessage,
         fallbackText: userVisible,
@@ -134,7 +134,7 @@ export async function executeBySessionId(params: {
       sessionId,
     );
     for (const message of deferredInjectedMessages) {
-      await params.runtime.sessionStore.appendUserMessage({
+      await params.agentState.sessionStore.appendUserMessage({
         sessionId,
         message,
       });

@@ -179,7 +179,7 @@ function printStaticPluginListFallback(params: {
         availability: buildStaticPluginAvailability({
           pluginName: plugin.name,
           projectRoot: params.projectRoot,
-          runtimeError: params.reason,
+          agentError: params.reason,
         }),
       })),
       runtimeConnected: false,
@@ -217,7 +217,7 @@ function printStaticPluginStatusFallback(params: {
       availability: buildStaticPluginAvailability({
         pluginName: plugin.name,
         projectRoot: params.projectRoot,
-        runtimeError: params.reason,
+        agentError: params.reason,
       }),
       runtimeConnected: false,
       message: params.reason,
@@ -421,7 +421,7 @@ async function runPluginActionCommand(params: {
     payload: {
       error:
         remote.error ||
-        "Plugin action requires an active Agent server runtime. Start via `city agent start` first.",
+        "Plugin action requires an active Agent server. Start via `city agent start` first.",
     },
   });
 }

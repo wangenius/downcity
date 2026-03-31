@@ -124,7 +124,7 @@ function readVoicePluginConfig(runtime: {
  * 写入完整 voice plugin 配置。
  */
 async function writeVoicePluginConfig(params: {
-  runtime: {
+  agentState: {
     rootPath: string;
     config: {
       plugins?: Record<string, unknown>;
@@ -132,14 +132,14 @@ async function writeVoicePluginConfig(params: {
   };
   value: VoicePluginConfig;
 }): Promise<void> {
-  if (!params.runtime.config.plugins) {
-    params.runtime.config.plugins = {};
+  if (!params.agentState.config.plugins) {
+    params.agentState.config.plugins = {};
   }
-  params.runtime.config.plugins.voice = (toJsonObject(params.value) || {}) as JsonObject;
+  params.agentState.config.plugins.voice = (toJsonObject(params.value) || {}) as JsonObject;
   await persistProjectPluginConfig({
-    projectRoot: params.runtime.rootPath,
+    projectRoot: params.agentState.rootPath,
     sections: {
-      plugins: params.runtime.config.plugins as Record<string, JsonObject>,
+      plugins: params.agentState.config.plugins as Record<string, JsonObject>,
     },
   });
 }
@@ -311,7 +311,7 @@ export const voicePlugin: Plugin = {
             : {}),
         };
         await writeVoicePluginConfig({
-          runtime: context,
+          agentState: context,
           value: next,
         });
         return {
@@ -375,7 +375,7 @@ export const voicePlugin: Plugin = {
               : true,
         };
         await writeVoicePluginConfig({
-          runtime: context,
+          agentState: context,
           value: nextConfig,
         });
         if ((payload as { install?: unknown }).install !== false) {
@@ -416,7 +416,7 @@ export const voicePlugin: Plugin = {
           enabled: false,
         };
         await writeVoicePluginConfig({
-          runtime: context,
+          agentState: context,
           value: nextConfig,
         });
         return {

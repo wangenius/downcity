@@ -75,13 +75,13 @@ executeRouter.post("/api/execute", async (c) => {
 
   try {
     const sessionId = `api:chat:${chatId}`;
-    const runtime = getAgentState();
-    await runtime.sessionStore.appendUserMessage({
+    const agentState = getAgentState();
+    await agentState.sessionStore.appendUserMessage({
       sessionId,
       text: String(instructions),
     });
 
-    const result = await runtime.sessionStore.run({
+    const result = await agentState.sessionStore.run({
       sessionId,
       query: String(instructions),
     });
@@ -89,7 +89,7 @@ executeRouter.post("/api/execute", async (c) => {
     const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
     try {
       if (!hasPersistedAssistantSteps(result.assistantMessage)) {
-        await runtime.sessionStore.appendAssistantMessage({
+        await agentState.sessionStore.appendAssistantMessage({
           sessionId,
           message: result.assistantMessage,
           fallbackText: userVisible,
@@ -104,7 +104,7 @@ executeRouter.post("/api/execute", async (c) => {
         sessionId,
       );
       for (const message of deferredInjectedMessages) {
-        await runtime.sessionStore.appendUserMessage({
+        await agentState.sessionStore.appendUserMessage({
           sessionId,
           message,
         });

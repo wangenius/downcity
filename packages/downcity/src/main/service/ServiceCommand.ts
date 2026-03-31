@@ -308,7 +308,7 @@ function registerServiceActionCommand(params: {
       payload: {
         error:
           remote.error ||
-          "Service action requires an active Agent server runtime. Start via `city agent start` first.",
+          "Service action requires an active Agent server. Start via `city agent start` first.",
       },
     });
   });

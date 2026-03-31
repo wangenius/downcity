@@ -90,12 +90,12 @@ export interface ConsoleUiShipServicesConfig {
  */
 export interface ConsoleUiShipStartConfig {
   /**
-   * runtime host。
+   * agent server host。
    */
   host?: unknown;
 
   /**
-   * runtime port。
+   * agent server port。
    */
   port?: unknown;
 }
@@ -145,7 +145,7 @@ export interface ConsoleUiChatChannelStatus {
   configured?: unknown;
 
   /**
-   * runtime 是否处于运行态。
+   * agent server 中该渠道是否处于运行态。
    */
   running?: unknown;
 

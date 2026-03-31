@@ -186,7 +186,7 @@ flowchart TD
   SESSIONRT["SessionRuntime"] --> S1["history cache"]
   SESSIONRT --> S2["persistor"]
   SESSIONRT --> S3["summary compactor"]
-  SESSIONRT --> S4["tool binding"]
+  SESSIONRT --> S4["tool bridges / tool wiring"]
 
   CTX["ExecutionContext"] --> C1["无长期状态 只暴露能力"]
 ```

@@ -27,7 +27,7 @@ packages/downcity/src/
 1. `main`
    - 控制面、启动、静态装配
 2. `agent`
-   - 进程级宿主状态与 execution context 构造
+   - 进程级宿主状态与 `ExecutionContext` 构造
 3. `sessions`
    - 执行内核
 4. `services`
@@ -57,7 +57,7 @@ agent/
    - 热重载协调
    - 对外公共导出
 2. `RuntimeState.ts`
-   - 保存宿主状态与 execution model
+   - 保存 base / ready 两阶段宿主状态
 3. `ExecutionContext.ts`
    - 从宿主状态派生统一执行上下文
    - 装配 session port、service invoke port、plugin port

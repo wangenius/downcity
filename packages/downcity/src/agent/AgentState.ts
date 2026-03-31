@@ -58,9 +58,9 @@ export { getExecutionContext } from "@agent/ExecutionContext.js";
 let promptRuntime: PromptRuntime | null = null;
 
 /**
- * 原子更新 runtime.systems（同时覆盖 base + ready）。
+ * 原子更新 AgentState.systems（同时覆盖 base + ready）。
  */
-function applyRuntimeSystems(nextSystems: string[]): void {
+function applyAgentSystems(nextSystems: string[]): void {
   const currentBase = getAgentStateBase();
   const currentReady = (() => {
     try {
@@ -84,7 +84,7 @@ function applyRuntimeSystems(nextSystems: string[]): void {
 }
 
 /**
- * 停止 runtime 文件热重载监听。
+ * 停止 agent 提示词文件热重载监听。
  */
 export function stopAgentHotReload(): void {
   if (!promptRuntime) return;
@@ -93,7 +93,7 @@ export function stopAgentHotReload(): void {
 }
 
 /**
- * 启动 runtime 文件热重载监听（PROFILE.md / SOUL.md）。
+ * 启动 agent 提示词文件热重载监听（PROFILE.md / SOUL.md）。
  */
 function startAgentHotReload(): void {
   stopAgentHotReload();
@@ -103,7 +103,7 @@ function startAgentHotReload(): void {
     logger: agent.logger,
     getCurrentSystems: () => getAgentStateBase().systems,
     applySystems: (nextSystems) => {
-      applyRuntimeSystems(nextSystems);
+      applyAgentSystems(nextSystems);
     },
   });
   promptRuntime.start();

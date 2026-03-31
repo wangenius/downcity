@@ -1,49 +1,45 @@
 ---
 title: Memory 总览
-description: 用最直白的方式说明 Downcity 为什么需要 Memory、Memory 在系统里解决什么问题，以及最终应该长什么样
+description: 用最直白的方式说明 Downcity 为什么需要 Memory、Memory 在系统里解决什么问题，以及它与 Session、Context 的关系
 ---
 
 # Memory 总览
 
-如果只想先抓住 Downcity Memory 的感觉，这一页就够了。
-
 这篇文档只回答 4 个问题：
 
 1. 为什么一定要有 Memory
-2. Memory 到底在系统里管什么
-3. 它和 `SessionAgent`、`memory service`、`memoryAgent`、`LLM` 分别是什么关系
+2. Memory 在系统里到底管什么
+3. 它和 `Session`、`memory service`、`memoryAgent`、`LLM` 分别是什么关系
 4. 理想状态下，Memory 最终应该长什么样
 
 说明：
 
-- 本文里的 `History` 指“历史层/原始记录层”
-- 不专指某一个具体文件
-- 本文里的 `Session` 指“以 `contextId` 为中心的持久执行会话”
-- 本文里的 `Context` 只指“本次真正发给模型的输入”
-- 如果你想先看清楚 `history.jsonl`、`messages.jsonl`、Session 和 Memory 的边界，先看 [History 总览](/zh/devdocs/history/overview)、[Session 总览](/zh/devdocs/session/overview) 和 [Context 总览](/zh/devdocs/context/overview)
+- 本文里的 `History` 指原始记录层
+- 本文里的 `Session` 指以 `sessionId` 为中心的持久执行会话
+- 本文里的 `Context` 只指本次真正发给模型的输入
 
 ## 先用三句话建立感觉
 
 ### 第一句：History 不是 Memory
 
-- `History` 是原始记录层里“发生过的东西”
-- `Memory` 是系统决定要留下来的东西
+- `History` 是发生过的原始内容
+- `Memory` 是系统决定要留下来的长期状态
 
 ### 第二句：Memory 不是 Session
 
-- `Session` 是以 `contextId` 为中心的执行会话
+- `Session` 是以 `sessionId` 为中心的执行会话
 - `Memory` 是这个会话之外、跨时间存在的长期状态层
 
-### 第三句：Memory 不是另一个主 Agent
+### 第三句：Memory 不是另一个主执行体
 
-- Downcity 当前真正的主执行体就是 `SessionAgent`
+- Downcity 当前真正的执行主轴是 `SessionStore -> SessionCore`
 - Memory 的正确位置是一个长期状态系统，由 `memory service` 承载
 
 ## 为什么一定要有 Memory
 
 没有 Memory，系统会反复遇到四类问题：
 
-### 1. 会话一断就失忆
+### 1. 会话一断就失去长期偏好
 
 比如：
 
@@ -68,7 +64,7 @@ description: 用最直白的方式说明 Downcity 为什么需要 Memory、Memor
 
 比如：
 
-- 曾经临时成立的判断后来失效了
+- 临时成立的判断后来失效了
 - 系统却还在继续依赖它
 
 所以 Memory 的目标不是“记得更多”，而是：
@@ -78,8 +74,6 @@ description: 用最直白的方式说明 Downcity 为什么需要 Memory、Memor
 - 让过时的东西自己退下去
 
 ## 一张图看全景
-
-先记住这张图。
 
 ```mermaid
 flowchart LR
@@ -109,9 +103,9 @@ flowchart LR
 
 | 角色 | 真正职责 | 不负责什么 |
 | --- | --- | --- |
-| `SessionAgent` | 执行当前这一步，回答问题，调用工具，推进任务 | 不负责长期整理所有记忆 |
-| `memory service` | 承载 Memory 的读写、检索、整理、投影 | 不是主对话 Agent |
-| `memoryAgent` | `memory service` 内部的后台整理角色 | 不是和 `SessionAgent` 平级的第二主 Agent |
+| `Session` | 承接当前执行、推进会话、调用工具、沉淀消息 | 不负责长期整理所有记忆 |
+| `memory service` | 承载 Memory 的读写、检索、整理、投影 | 不是主对话执行体 |
+| `memoryAgent` | `memory service` 内部的后台整理角色 | 不是和 Session 平级的第二主执行体 |
 | `LLM` | 在需要时参与推理、归纳、改写 | 不是 Memory 本身 |
 
 ## 最重要的边界
@@ -133,20 +127,13 @@ Memory 是从历史里筛出来、以后还要继续用的部分。
 
 主循环仍然是：
 
-- `SessionAgent` 收到输入
-- `SessionAgent` 推进当前执行
+- `SessionStore` 收到输入
+- `SessionCore` 推进当前执行
 
 Memory 主要改变：
 
 - Session 未来会沉淀出什么长期状态
 - 后续 contextualization 时模型会看见什么
-- 系统留下了什么
-
-### Memory 也不是“另起一个模型”
-
-在当前 package 逻辑里，模型实例是在 runtime 启动时创建并注入系统的。
-
-Memory 不应该再偷偷长出一套独立模型生命周期。
 
 ## 我理想中的 Memory，不是一个仓库，而是三层状态
 
@@ -187,21 +174,7 @@ flowchart TD
 - 当前有效决策
 - 稳定事实
 
-## 这三层为什么有用
-
-因为它们刚好把三种完全不同的问题分开了：
-
-| 状态层 | 回答的问题 |
-| --- | --- |
-| `Scratchpad` | 我现在正在处理什么？ |
-| `Journal` | 之前到底发生过什么？ |
-| `Canon` | 以后默认按什么来？ |
-
-这件事看起来简单，但它会直接决定 Memory 是否会越用越乱。
-
-## 一轮执行里，Memory 到底怎么流
-
-可以把它理解成两条路：
+## 一轮执行里，Memory 怎么流
 
 ### 热路径
 
@@ -209,10 +182,10 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  Q["当前请求"] --> CA["SessionAgent"]
-  CA --> R["Recall 少量 Memory"]
-  R --> CA
-  CA --> OUT["当前回答 / 当前动作"]
+  Q["当前请求"] --> S["Session"]
+  S --> R["Recall 少量 Memory"]
+  R --> S
+  S --> OUT["当前回答 / 当前动作"]
 ```
 
 ### 冷路径
@@ -228,11 +201,6 @@ flowchart LR
   C --> P["重建文件视图"]
 ```
 
-一句话就是：
-
-- 在线时先把事做完
-- 离线时再慢慢把经验整理出来
-
 ## 当前 package 里的一个关键事实
 
 当前仓库里已经有一个 `memory service`。
@@ -243,40 +211,13 @@ flowchart LR
 - 建立本地 SQLite FTS 索引
 - 提供 `search / get / store / flush / index / status`
 
-所以这份设计不是“从零发明一个全新的 Memory 世界”，而是：
+所以这份设计不是从零发明新系统，而是：
 
 - 先尊重现在 package 的宿主结构
 - 再把它演进成更清晰的三层状态系统
 
-也就是：
-
-- 当前文件层：`working / daily / longterm`
-- 目标状态层：`Scratchpad / Journal / Canon`
-
-文件继续保留，但更像视图；真正的中心应逐渐变成状态系统。
-
-## 我理想中的最终形态
-
-我理想中的 Downcity Memory，有这 6 个特征：
-
-1. `SessionAgent` 仍然是唯一主执行体
-2. `memory service` 是 Memory 的唯一宿主
-3. `memoryAgent` 只是 service 内部的后台整理角色
-4. 热路径轻，冷路径重
-5. 文件可读可改，但不再承担全部事实语义
-6. 每条重要记忆都能解释：从哪来、为什么还有效、为什么这次被召回
-
-## 一句话记住
+## 一句话总结
 
 ```text
-Downcity 的 Memory，不是“保存历史”，而是“把历史慢慢变成以后还能继续用的状态”。
+Memory 在 Downcity 里是长期状态层：它不替代 Session，而是帮助 Session 在跨时间的尺度上保留真正值得继续依赖的信息。
 ```
-
-## 建议阅读顺序
-
-建议按这个顺序继续往下看：
-
-1. `Memory 设计哲学`
-2. `Memory Service 框架文档`
-3. `memoryAgent 工作逻辑`
-4. `Memory V3 技术设计稿`

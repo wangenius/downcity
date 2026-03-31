@@ -116,7 +116,7 @@ export function registerConsoleUiModelRoutes(params: {
         success: true,
         primaryModelId: nextPrimaryModelId,
         restartRequired: true,
-        message: "Agent primary model updated. Restart agent to fully apply runtime model instance.",
+        message: "Agent primary model updated. Restart agent to fully apply the new model instance.",
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
@@ -322,4 +322,3 @@ export function registerConsoleUiModelRoutes(params: {
     }
   });
 }
-

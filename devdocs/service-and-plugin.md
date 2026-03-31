@@ -177,16 +177,21 @@ sequenceDiagram
 
 - `main/plugin/Plugins.ts`
 
-真正的注册表创建位置：
+注册表构造逻辑位置：
 
 - `agent/ExecutionContext.ts`
 
+实例创建与挂载位置：
+
+- `agent/AgentState.ts`
+
 链路是：
 
-1. 创建 `HookRegistry`
-2. 创建 `PluginRegistry`
+1. `agent/AgentState.ts` 在初始化时调用 `createAgentPluginRegistry()`
+2. `agent/ExecutionContext.ts` 内部构造 `HookRegistry` 与 `PluginRegistry`
 3. `registerBuiltinPlugins()` 注册内建 plugin
-4. 通过 `context.plugins` 暴露给执行链路
+4. registry 挂到 `AgentState`
+5. 通过 `context.plugins` 暴露给执行链路
 
 图如下：
 

@@ -1,20 +1,24 @@
 ---
 title: 系统架构逻辑
-description: 从控制面、执行面、服务层到插件层，解释 Downcity 当前真实的系统逻辑
+description: 从控制面、执行面、session 主轴、service 与 plugin 层，解释 Downcity 当前真实的系统逻辑
 ---
 
 # 系统架构逻辑
 
-这一页回答的是“系统怎么运转”，而不是“目录里有哪些文件”。
+这一页回答的是：
+
+- 当前系统到底怎么运转
+
+不是旧概念图里的抽象推演，而是和现在 package 对齐的真实主链。
 
 ## 总体分层
 
-Downcity 可以先粗分成四层：
+Downcity 当前可以先粗分成四层：
 
 1. 入口层：CLI、Console UI、Chrome Extension、HTTP API
 2. 控制层：console
 3. 执行层：agent runtime
-4. 业务层：services / plugins / plugin dependency assets
+4. 业务层：session / services / plugins
 
 ```mermaid
 flowchart LR
@@ -26,7 +30,7 @@ flowchart LR
   end
 
   subgraph Control["控制层"]
-    CONSOLE["Console<br/>registry / config / gateway / model pool"]
+    CONSOLE["Console<br/>registry / config / gateway / model store"]
   end
 
   subgraph Runtime["执行层"]
@@ -34,9 +38,9 @@ flowchart LR
   end
 
   subgraph Business["业务层"]
+    SESSION["Session"]
     SERVICES["Services"]
     PLUGINS["Plugins"]
-    ASSETS["Plugin Dependency Assets"]
   end
 
   CLI --> CONSOLE
@@ -44,9 +48,10 @@ flowchart LR
   EXT --> CONSOLE
   API --> AGENT
   CONSOLE --> AGENT
+  AGENT --> SESSION
   AGENT --> SERVICES
   SERVICES --> PLUGINS
-  PLUGINS --> ASSETS
+  SERVICES --> SESSION
 ```
 
 ## 为什么要分 console 和 agent
@@ -57,7 +62,7 @@ Console 是全局控制面，负责：
 
 - 管理多个 agent 项目
 - 维护 registry
-- 管理全局模型池、共享 env、配置状态
+- 管理全局模型配置、共享 env、控制状态
 - 给 Console UI 和扩展提供统一入口
 
 ### Agent
@@ -66,24 +71,66 @@ Agent 是单项目执行面，负责：
 
 - 加载当前项目配置
 - 提供当前项目的 HTTP runtime
-- 驱动上下文、对话、任务、日志与服务
+- 持有 `AgentState`
+- 驱动 session、services、plugins
 
-## 业务层为什么再分 service / plugin / asset
+## 当前真正的运行时中心
 
-这不是为了抽象而抽象，而是为了回答三个不同问题。
+当前代码里，最重要的中心对象是：
+
+- `AgentState`
+
+它不是旧文档里那种泛化的 “host runtime” 概念，而是实际存在的运行时对象。
+
+它持有：
+
+- `config`
+- `env`
+- `systems`
+- `model`
+- `sessionStore`
+- `services`
+- `pluginRegistry`
+
+所以从代码视角看，当前最真实的主链是：
+
+```text
+console 管多个 agent
+agent 用 AgentState 持有当前项目运行时
+AgentState 再挂 session / services / plugins
+```
+
+## 业务层为什么要分 session / service / plugin
+
+这不是为了抽象漂亮，而是因为它们回答的是不同问题。
+
+### Session
+
+Session 回答：
+
+- 输入最终归到哪个 `sessionId`
+- 消息如何持久化
+- 什么时候进入模型执行
+- 执行结果如何写回
+
+Session 的真实对象包括：
+
+- `SessionStore`
+- `SessionRuntimeStore`
+- `SessionRuntime`
+- `SessionCore`
+- `FilePersistor`
 
 ### Service
 
-“谁拥有主业务流程，并且会主动参与 agent 运行周期？”
+Service 回答：
 
-典型特征：
+- 哪类输入由谁承接
+- 主业务流程怎么走
+- 哪一步进入 session
+- 哪些节点开放给 plugin
 
-1. 有生命周期
-2. 与当前 agent 状态强相关
-3. 会主动进入 agent 执行周期
-4. 承接一整段业务流程
-
-例子：
+当前 service 包括：
 
 - `chat`
 - `task`
@@ -92,77 +139,90 @@ Agent 是单项目执行面，负责：
 
 ### Plugin
 
-“谁以扩展方式接入主流程？”
+Plugin 回答：
 
-典型特征：
+- 在不改主流程所有权的前提下，如何增强系统
 
-1. 没有独立生命周期
-2. 不主动参与 agent 周期
-3. 不维护自己的 runtime 状态机
-4. 通过 service 预先定义好的点接入
+它的典型能力包括：
 
-在当前实现里，plugin 点统一收敛为四种语义：
+- action
+- system 注入
+- hooks
 
-- `pipeline`：串行改写值
-- `guard`：串行校验，抛错即中断
-- `effect`：只做副作用，不返回值
-- `resolve`：单点单实现，返回确定结果
+当前 hooks 的统一语义是：
 
-所以当前系统不再以 `capability` 作为插件系统中心，而是：
+- `pipeline`
+- `guard`
+- `effect`
+- `resolve`
 
-- service 定义点名
-- runtime 统一定义执行语义
-- plugin 负责实现
-
-### Asset
-
-“底层依赖的资源如何安装、检查、使用？”
-
-例如：
-
-- 模型
-- CLI 工具
-- 第三方依赖
-
-也就是说，asset 最好理解成 plugin dependency，而不是和 service / plugin 并列的第三个 workflow owner。
-
-## 当前真实落地的 chat plugin 点
-
-当前 `chat` service 已经定义并实际使用以下 plugin 点：
-
-- `chat.augmentInbound`：`pipeline`
-- `chat.observePrincipal`：`effect`
-- `chat.authorizeIncoming`：`guard`
-- `chat.resolveUserRole`：`resolve`
-- `chat.beforeEnqueue`：`pipeline`
-- `chat.afterEnqueue`：`effect`
-- `chat.beforeReply`：`pipeline`
-- `chat.afterReply`：`effect`
-
-## chat 真实流程图
+## 启动主链
 
 ```mermaid
 flowchart TD
-  IN["Incoming channel message"] --> BASE["chat service builds base inbound payload"]
-  BASE --> AUG["plugins.pipeline(chat.augmentInbound)"]
-  AUG --> OBS["plugins.effect(chat.observePrincipal)"]
-  OBS --> AUTH["plugins.guard(chat.authorizeIncoming)"]
-  AUTH --> ROLE["plugins.resolve(chat.resolveUserRole)"]
-  ROLE --> ENQ1["plugins.pipeline(chat.beforeEnqueue)"]
-  AUG --> ENQ1
-  ENQ1 --> QUEUE["enqueue chat job"]
-  QUEUE --> ENQ2["plugins.effect(chat.afterEnqueue)"]
-  ENQ2 --> RUN["agent run / model / tools"]
-  RUN --> REP1["plugins.pipeline(chat.beforeReply)"]
-  REP1 --> SEND["send reply to channel"]
-  SEND --> REP2["plugins.effect(chat.afterReply)"]
+  A["city console start"] --> B["启动 console 控制面"]
+  B --> C["维护 registry / model store / gateway"]
+
+  D["city agent start"] --> E["校验 console 与项目状态"]
+  E --> F["初始化 AgentState"]
+  F --> G["读取 downcity.json / .env / global env"]
+  G --> H["创建 LanguageModel"]
+  H --> I["创建 SessionRuntimeStore"]
+  I --> J["创建 SessionStore"]
+  J --> K["创建 PluginRegistry"]
+  K --> L["注册 auth / skill / voice"]
+  L --> M["创建 chat / task / memory / shell services"]
+  M --> N["启动 HTTP Server 与 dashboard routes"]
 ```
+
+## 执行主链
+
+```mermaid
+flowchart TD
+  IN["外部输入"] --> ROUTE["CLI / HTTP / Chat / Task 入口"]
+  ROUTE --> SERVICE["对应 service"]
+  SERVICE --> HOOK["plugin hooks（按需）"]
+  SERVICE --> SID["确定 sessionId"]
+  SID --> APPEND["append message"]
+  APPEND --> RUN["session.run"]
+  RUN --> CORE["SessionCore"]
+  CORE --> MODEL["model / tools / prompt / persistor / compact"]
+  MODEL --> RES["assistant result"]
+  RES --> SERVICE
+  SERVICE --> OUT["回复 / run artifact / side effects"]
+```
+
+## 当前 chat plugin 点
+
+当前 `chat` service 已定义并实际使用这些 plugin 点：
+
+- `chat.augmentInbound`
+- `chat.observePrincipal`
+- `chat.authorizeIncoming`
+- `chat.resolveUserRole`
+- `chat.beforeEnqueue`
+- `chat.afterEnqueue`
+- `chat.beforeReply`
+- `chat.afterReply`
+
+这些点由 chat service 定义，plugin 负责实现部分逻辑。
+
+关键点：
+
+- plugin 点不是 plugin 自己命名自己的私有协议
+- 而是 service 对外暴露的稳定扩展点
 
 ## 当前代码中的核心对象
 
-- `HookRegistry`：注册并执行四种 plugin 点
-- `PluginRegistry`：注册 plugin、运行 action、检查 availability
-- `PluginPoints.ts`：由具体 service 定义稳定点名
-- `PluginRuntime`：由 service 在业务流程里调用 plugin 点
+- `AgentState`：单项目 runtime 中心
+- `ExecutionContext`：统一能力面
+- `SessionStore`：统一会话门面
+- `SessionCore`：模型执行内核
+- `PluginRegistry`：plugin 注册与调度
+- `BaseService`：service 实例基类
 
-这四层组合起来，才是现在真实的 plugin 架构。
+## 一句话总结
+
+```text
+Downcity 当前的真实系统逻辑，是 console 管多个 agent，agent 用 AgentState 持有 session、services、plugins，再通过统一 session 内核承接 chat、task、api 等多入口执行。
+```

@@ -106,7 +106,7 @@ function buildStaticPluginPayload(params?: {
       availability: buildStaticPluginAvailability({
         pluginName: view.name,
         projectRoot: params?.projectRoot,
-        runtimeError: reason,
+        agentError: reason,
       }),
       config: configMap.get(view.name) || {
         actions: [],

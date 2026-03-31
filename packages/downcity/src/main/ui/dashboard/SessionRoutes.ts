@@ -377,7 +377,7 @@ export function registerDashboardSessionRoutes(
       }
 
       const result = await executeBySessionId({
-        runtime,
+        agentState: runtime,
         executionContext: params.getExecutionContext(),
         sessionId,
         instructions,

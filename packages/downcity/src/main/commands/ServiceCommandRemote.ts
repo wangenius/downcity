@@ -1,8 +1,8 @@
 /**
- * `city service` 远程 runtime 调用辅助。
+ * `city service` 远程 Agent server 调用辅助。
  *
  * 关键点（中文）
- * - 统一处理 list/control/command 三类需要访问 Agent server runtime 的命令。
+ * - 统一处理 list/control/command 三类需要访问 Agent server 的命令。
  * - 这里不负责命令注册，只负责远程调用与结果输出。
  */
 
@@ -78,7 +78,7 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
     payload: {
       error:
         remote.error ||
-        "Service list requires an active Agent server runtime. Start via `city agent start` first.",
+        "Service list requires an active Agent server. Start via `city agent start` first.",
     },
   });
 }
@@ -148,7 +148,7 @@ export async function runServiceControlCommand(params: {
     payload: {
       error:
         remote.error ||
-        `Service ${params.action} requires an active Agent server runtime. Start via \`city agent start\` first.`,
+        `Service ${params.action} requires an active Agent server. Start via \`city agent start\` first.`,
     },
   });
 }
@@ -224,7 +224,7 @@ export async function runServiceCommandBridge(params: {
     payload: {
       error:
         remote.error ||
-        "Service command requires an active Agent server runtime. Start via `city agent start` first.",
+        "Service command requires an active Agent server. Start via `city agent start` first.",
     },
   });
 }

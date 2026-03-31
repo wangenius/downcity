@@ -99,7 +99,7 @@ function getProjectPluginConfig(projectRoot?: string): DowncityConfig["plugins"]
 export function buildStaticPluginAvailability(params: {
   pluginName: string;
   projectRoot?: string;
-  runtimeError?: string;
+  agentError?: string;
 }): PluginAvailability {
   const plugin = findBuiltinPlugin(params.pluginName);
   if (!plugin) {
@@ -124,12 +124,12 @@ export function buildStaticPluginAvailability(params: {
     };
   }
 
-  const runtimeReason = String(params.runtimeError || "").trim();
+  const agentReason = String(params.agentError || "").trim();
   return {
     enabled: true,
     available: false,
-    reasons: runtimeReason
-      ? [`Runtime unavailable: ${runtimeReason}`]
-      : ["Static catalog view only. Runtime availability is not loaded."],
+    reasons: agentReason
+      ? [`Agent server unavailable: ${agentReason}`]
+      : ["Static catalog view only. Agent-side availability is not loaded."],
   };
 }

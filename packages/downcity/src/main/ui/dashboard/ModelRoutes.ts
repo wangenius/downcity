@@ -21,8 +21,8 @@ export function registerDashboardModelRoutes(
 
   app.get("/api/dashboard/model", async (c) => {
     try {
-      const runtime = params.getAgentState();
-      const agentPrimaryModelId = String(runtime.config.model?.primary || "").trim();
+      const agentState = params.getAgentState();
+      const agentPrimaryModelId = String(agentState.config.model?.primary || "").trim();
       const store = new ConsoleStore();
       const models = store.listModels();
       const providers = await store.listProviders();
@@ -62,7 +62,7 @@ export function registerDashboardModelRoutes(
 
   app.post("/api/dashboard/model/switch", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const agentState = params.getAgentState();
       const body = (await c.req.json().catch(() => ({}))) as {
         primaryModelId?: string;
       };
@@ -80,7 +80,7 @@ export function registerDashboardModelRoutes(
         );
       }
 
-      const shipJsonPath = getDowncityJsonPath(runtime.rootPath);
+      const shipJsonPath = getDowncityJsonPath(agentState.rootPath);
       const agentShip = (await fs.readJson(shipJsonPath)) as {
         model?: { primary?: string };
       };
@@ -91,17 +91,17 @@ export function registerDashboardModelRoutes(
       }
       await fs.writeJson(shipJsonPath, agentShip, { spaces: 2 });
 
-      if (!runtime.config.model || typeof runtime.config.model !== "object") {
-        runtime.config.model = { primary: nextPrimaryModelId };
+      if (!agentState.config.model || typeof agentState.config.model !== "object") {
+        agentState.config.model = { primary: nextPrimaryModelId };
       } else {
-        runtime.config.model.primary = nextPrimaryModelId;
+        agentState.config.model.primary = nextPrimaryModelId;
       }
 
       return c.json({
         success: true,
         primaryModelId: nextPrimaryModelId,
         restartRequired: true,
-        message: "Agent primary model updated. Restart agent to fully apply runtime model instance.",
+        message: "Agent primary model updated. Restart agent to fully apply the new model instance.",
       });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);

@@ -1,218 +1,338 @@
 ---
 title: Package 模块拆解
-description: 逐层解释 packages/downcity 内部的 console、agent、routes、services、plugins 和 types
+description: 按当前 packages/downcity 的真实目录和运行时对象，解释 main、agent、sessions、services、plugins 与 types 的职责
 ---
 
 # Package 模块拆解
 
-`packages/downcity/` 是系统内核。理解它最有效的方式不是按文件树死记，而是按职责拆。
+`packages/downcity/` 是当前 runtime 内核。理解它最有效的方式，不是记旧目录名，而是先抓住几个真实中心对象：
 
-## 目录级职责图
+- `AgentState`
+- `ExecutionContext`
+- `SessionStore`
+- `PluginRegistry`
+- `Service` instances
+
+一句话：
+
+```text
+main 负责入口和装配
+agent 负责单项目运行时中心
+sessions 负责执行主轴
+services 负责主业务流程
+plugins 负责增强
+```
+
+## 当前目录级关系
 
 ```mermaid
 flowchart TD
-  ROOT["packages/downcity/src"] --> CONSOLE["console/"]
+  ROOT["packages/downcity/src"] --> MAIN["main/"]
   ROOT --> AGENT["agent/"]
+  ROOT --> SESSIONS["sessions/"]
   ROOT --> SERVICES["services/"]
   ROOT --> PLUGINS["plugins/"]
   ROOT --> TYPES["types/"]
   ROOT --> UTILS["utils/"]
-
-  CONSOLE --> CMD["commands/"]
-  CONSOLE --> ROUTES["routes/"]
-  CONSOLE --> UI["ui/"]
-  CONSOLE --> SERVICE["service/"]
-  CONSOLE --> RUNTIME["runtime/"]
-  CONSOLE --> DAEMON["daemon/"]
 ```
 
-## 1. `console/`
+## 1. `main/`
 
-这是全局控制面代码。
+这是当前 package 的入口装配层，不是旧文档里的 `console/`。
 
-### `commands/`
+它主要负责：
 
-职责：
+- HTTP server 启动与路由挂载
+- service / plugin / dashboard 的主入口装配
+- daemon、runtime、UI gateway、service manager 等控制逻辑
+- model、env、config、project setup 等启动期装配
 
-- 解析 CLI 参数
-- 调用 console / agent / service / plugin 对应能力
-- 不承载真正的业务执行
+### 重点子目录
 
-关键理解：
+#### `main/index.ts`
 
-- command 层是“命令映射层”
-- 真正运行仍然要么进入 console 管理逻辑，要么进入 agent runtime
+当前 agent HTTP server 的入口。
 
-### `routes/`
+负责：
 
-职责：
+- 创建 Hono app
+- 挂载 `static / health / services / plugins / execute / dashboard` 路由
+- 启停 Node HTTP Server
 
-- 提供 agent HTTP server 的协议入口
-- 挂载 health、execute、services、plugins、dashboard 等路由
+#### `main/service/`
 
-关键理解：
+负责：
 
-- `src/console/index.ts` 只负责装配 Hono app
-- 具体路由逻辑按域拆分
+- service 类注册表的控制入口
+- service 生命周期控制
+- service action 执行与 API 注册
 
-### `service/`
+当前关键不是旧概念 `ServiceRuntime`，而是：
 
-职责：
+- `ServiceStateController`
+- `ServiceActionRunner`
+- `ServiceActionApi`
 
-- 管理 service registry
-- 管理 service runtime state
-- 处理 start/stop/restart/status
-- 提供统一 `ServiceRuntime` 注入契约
+#### `main/plugin/`
 
-这是整个业务层能够保持清晰边界的关键。
+负责：
 
-### `ui/`
+- plugin 注册
+- hook 注册与执行
+- availability 检查
+- builtin plugin 装配
 
-职责：
+这里真正的核心对象是：
 
-- 为 Console UI 提供 gateway、dashboard routes、model routes、env routes 等
-- 让浏览器控制面通过统一接口接入 runtime
+- `HookRegistry`
+- `PluginRegistry`
 
-### `runtime/` 与 `daemon/`
+#### `main/runtime/` 与 `main/daemon/`
 
-职责：
+负责：
 
-- 管理 console 自己的 pid、registry、路径与 daemon 元数据
-- 负责 agent 项目注册与进程发现
+- console / agent 进程状态
+- pid、registry、路径与 daemon 元数据
+- agent 项目注册与前后台进程管理
+
+#### `main/ui/`
+
+负责：
+
+- dashboard / web UI API
+- gateway
+- model / env / channel account 等控制面接口
 
 ## 2. `agent/`
 
-这是单项目执行面。
+这是单项目 agent runtime 的中心层。
 
-职责包括：
+当前最重要的对象不是旧命名 `host runtime`，而是：
 
-- prompt 组装
-- context manager 协作
-- 持久化与上下文切片
-- orchestrator / prompter / persistor 等组件拆分
+- `AgentState`
 
-你可以把它理解成：
+`AgentState` 持有当前 agent 的长期运行状态：
 
-- `console` 决定“去哪一个 agent”
-- `agent` 决定“这个项目怎么实际执行”
+- `cwd`
+- `rootPath`
+- `config`
+- `env`
+- `systems`
+- `model`
+- `sessionStore`
+- `services`
+- `pluginRegistry`
 
-## 3. `services/`
+### `AgentState.ts`
 
-这是主业务层。现在的核心包括：
+负责：
 
-- `shell`
+- 初始化项目级运行时
+- 读取 config / env / systems
+- 创建 model
+- 创建 `SessionRuntimeStore` 与 `SessionStore`
+- 创建 plugin registry
+- 创建 per-agent service instances
+- 启动 prompt 热更新
+
+### `ExecutionContext.ts`
+
+负责：
+
+- 从 `AgentState` 派生统一执行上下文
+- 为 service 和 plugin 提供统一能力面
+
+当前 service / plugin 拿到的，不是旧的 `ServiceRuntime` 门面，而是统一的：
+
+- `ExecutionContext`
+
+它里面主要有：
+
+- `config`
+- `env`
+- `logger`
+- `session`
+- `invoke`
+- `plugins`
+
+## 3. `sessions/`
+
+这是当前执行主轴层。
+
+一句话：
+
+```text
+session 是真正承接模型执行、消息持久化、compact、tools 和 run 协调的主轴。
+```
+
+### 关键对象
+
+#### `SessionStore`
+
+这是 agent 持有的统一会话门面。
+
+负责：
+
+- `getRuntime`
+- `getPersistor`
+- `run`
+- `appendUserMessage`
+- `appendAssistantMessage`
+- 会话执行状态管理
+
+#### `SessionRuntimeStore`
+
+负责：
+
+- 按 `sessionId` 缓存 `SessionRuntime`
+- 管理 runtime 与 persistor 的创建关系
+
+#### `SessionRuntime`
+
+负责：
+
+- 把 `model / persistor / compactor / prompter / tools` 装配成一个可运行 session
+
+#### `SessionCore`
+
+这是执行内核。
+
+负责：
+
+- 组装当前轮模型输入
+- 处理 compact 重试
+- 驱动 tool loop
+- 收敛最终 assistant message
+
+## 4. `services/`
+
+这里是主业务层。当前注册的核心 service 包括：
+
 - `chat`
 - `task`
 - `memory`
+- `shell`
+
+这些 service 都继承自 `BaseService`，由 agent 在启动时创建 per-agent 实例。
 
 ### `chat`
 
 负责：
 
-- 平台消息接入
-- chatKey/context 对齐
-- history / queue / visible text
-- 渠道适配
+- 渠道接入
+- chat queue
+- session bridge
+- 回复分发
+- chat plugin points
 
-它之所以是 service，不是因为“聊天很重要”，而是因为它会主动参与 agent 周期：
-
-- 有 incoming message 进入
-- 有出站响应发出
-- 与当前 runtime 上下文强耦合
-- 有明确的运行态与链路责任
+这是最典型的“实时输入 -> session run -> 回复出站”的 service。
 
 ### `task`
 
 负责：
 
-- 任务定义
-- 手动 / 调度执行
-- cron runtime
-- run artifacts
+- task 定义
+- cron 调度
+- script / agent 两类任务执行
+- run artifacts 落盘
 
-它也是典型 service，因为它本身就可能主动触发执行。
+它不是单独一套模型执行引擎，而是围绕 task 定义创建受控 session run。
 
 ### `memory`
 
 负责：
 
-- 记忆读写与检索主路径
+- memory 文件写入
+- indexing
+- search
+- flush / status
 
-它与 agent 当前上下文状态强相关，不是一个孤立工具点。
+### `shell`
 
-## 4. `plugins/`
+负责：
 
-这里是增强层，而不是第二主业务层。
+- one-shot shell exec
+- 长生命周期 shell session
+- read / write / wait / close
 
-当前内建方向包括：
+## 5. `plugins/`
 
-- auth
-- skill
-- voice
+这是增强层。
 
-使用它们时要记住：
+当前内建 plugin 包括：
 
-- plugin 不是顶层 workflow owner
-- plugin 是增强层
-- plugin 没有独立生命周期
-- plugin 不主动参与 agent 周期
-- plugin 只有在 runtime 或 service 调用时才工作
+- `auth`
+- `skill`
+- `voice`
 
-例如 `voice` 更准确地说是：
+这些 plugin 的职责是：
 
-- 实现 `chat` 定义的语音相关 plugin 点
-- 在入站消息增强和语音转写时被动参与
-- 而不是自己长期运行一套服务状态机
+- 提供显式 actions
+- 提供 system 注入
+- 实现 hook 点
 
-### 更好的理解方式
+当前 plugin 体系的执行语义统一是：
 
-不要把 plugin 理解成“功能市场”。
+- `pipeline`
+- `guard`
+- `effect`
+- `resolve`
 
-更合适的理解是：
+关键点：
 
-- service 定义流程和扩展点
-- runtime 提供 `pipeline / guard / effect / resolve` 四种执行语义
-- plugin 负责实现这些点
-- asset 负责底层依赖
+- plugin 点由 service 定义
+- plugin 负责实现其中某些点
+- plugin 不拥有主业务流程
 
-这更符合 Downcity 的整体方法论。
-
-## 5. `types/`
+## 6. `types/`
 
 这里是跨层契约中心。
 
-重要性很高，因为：
+当前非常关键，因为：
 
-- Console UI 依赖它
-- gateway 依赖它
-- runtime 依赖它
-- 插件与 service 也依赖它
+- `AgentState`
+- `ExecutionContext`
+- `Service`
+- `Plugin`
+- `SessionRun`
+- Dashboard / API 返回值
 
-在这个仓库里，类型不是“补充说明”，而是架构边界的一部分。
+都在这里汇总契约。
 
-## 6. `utils/`
+## 7. `utils/`
 
-这里放的是横切能力：
+这里放横切基础设施：
 
 - logger
-- store
+- sqlite store
 - template
 - storage
 - id
+- time
 
-判断标准是：如果一个能力不是业务语义，而是多个层都会复用的基础设施，就更适合放这里。
+判断标准很简单：
 
-## 最后给一个阅读顺序
+- 多个层都会复用
+- 但它本身不属于某一个具体业务语义
 
-第一次读 package，建议这样看：
+## 推荐阅读顺序
 
-1. `src/console/index.ts`
-2. `src/console/commands/Run.ts`
-3. `src/console/service/ServiceRuntime.ts`
-4. `src/console/service/Manager.ts`
-5. `src/services/chat/Index.ts`
-6. `src/services/task/Index.ts`
-7. `src/console/ui/ConsoleUIGateway.ts`
-8. `src/types/*`
+第一次读 package，建议按这条线：
 
-这个顺序能先建立“系统为什么这样分层”，再进入具体业务模块。
+1. `src/main/index.ts`
+2. `src/agent/AgentState.ts`
+3. `src/agent/ExecutionContext.ts`
+4. `src/sessions/SessionStore.ts`
+5. `src/sessions/SessionRuntimeStore.ts`
+6. `src/sessions/SessionCore.ts`
+7. `src/main/service/Services.ts`
+8. `src/main/registries/ServiceClassRegistry.ts`
+9. `src/services/chat/ChatService.ts`
+10. `src/services/task/TaskService.ts`
+11. `src/services/memory/MemoryService.ts`
+12. `src/services/shell/ShellService.ts`
+13. `src/main/plugin/Plugins.ts`
+14. `src/main/plugin/PluginRegistry.ts`
+15. `src/types/*`
+
+这个顺序最容易先建立真实主链，再进入具体业务模块。

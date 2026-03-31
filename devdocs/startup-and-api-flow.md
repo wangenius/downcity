@@ -44,7 +44,7 @@ sequenceDiagram
   participant RUN as Run.ts
 
   CLI->>START: startCommand(cwd, options)
-  START->>START: 校验 console、项目初始化、model binding
+  START->>START: 校验 console、项目初始化、model 配置与项目绑定
   START->>DAEMON: startDaemonProcess(...)
   DAEMON->>CHILD: spawn node cli run
   CHILD->>RUN: runCommand(cwd, options)

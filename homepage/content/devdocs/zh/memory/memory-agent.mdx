@@ -1,6 +1,6 @@
 ---
 title: memoryAgent 工作逻辑
-description: 解释 memoryAgent 在 Downcity 里的真实定位、职责、触发方式、工作节奏和与 SessionAgent 的关系
+description: 解释 memoryAgent 在 Downcity 里的真实定位、职责、触发方式、工作节奏和与 Session 的关系
 ---
 
 # memoryAgent 工作逻辑
@@ -13,7 +13,7 @@ memoryAgent 到底是什么，它到底怎么工作？
 
 ## 先给最短定义
 
-在 Downcity 的正确设计里，`memoryAgent` 不是第二个主执行 Agent。
+在 Downcity 的正确设计里，`memoryAgent` 不是第二个主执行体。
 
 它更准确的定义是：
 
@@ -25,13 +25,11 @@ memoryAgent 到底是什么，它到底怎么工作？
 
 ## memoryAgent 不是谁
 
-先把几个常见误解排除掉。
+### 它不是和 Session 平级的主执行体
 
-### 它不是和 `SessionAgent` 平级的主 Agent
+主执行主轴仍然是：
 
-主执行体仍然是：
-
-- `SessionAgent`
+- `SessionStore -> SessionCore`
 
 ### 它不是一个必须长期常驻对话的角色
 
@@ -53,26 +51,26 @@ Memory 是状态系统。
 
 | 角色 | 主要目标 | 时间尺度 |
 | --- | --- | --- |
-| `SessionAgent` | 把当前这一步做好 | 秒级 |
+| `Session` | 把当前这一步做好 | 秒级 |
 | `memoryAgent` | 把过去整理成长期状态 | 分钟、小时、天 |
 
 一句话：
 
 ```text
-SessionAgent 负责现在，memoryAgent 负责时间。
+Session 负责现在，memoryAgent 负责时间。
 ```
 
 ## memoryAgent 在系统里的位置
 
 ```mermaid
 flowchart LR
-  CA["SessionAgent"]
+  S["Session"]
   MS["memory service"]
   MA["memoryAgent"]
   CORE["Scratchpad / Journal / Canon"]
-  MODEL["runtime.session.model"]
+  MODEL["AgentState.model"]
 
-  CA --> MS
+  S --> MS
   MS --> CORE
   MS --> MA
   MA --> CORE
@@ -86,20 +84,16 @@ flowchart LR
 
 ## memoryAgent 更像“角色”，不一定先是“类”
 
-这一点非常重要。
-
 在设计层面，我们可以说 `memoryAgent`。
 
-但落实到 package 时，它完全可以实现成下面任意一种形态：
+但落实到 package 时，它完全可以实现成：
 
 - 一个定时维护函数
 - 一个 maintenance runner
 - 一个内部 worker
 - 一次带模型参与的后台整理 job
 
-所以不要被名字骗了。
-
-`memoryAgent` 的重点不是“先创造一个新顶层对象”，而是：
+所以重点不是“先创造一个新顶层对象”，而是：
 
 - 让长期整理这件事有独立职责
 
@@ -157,8 +151,6 @@ flowchart LR
 
 ### 1. 定时触发
 
-这是最关键的。
-
 例如：
 
 - 每天夜里做一次重整理
@@ -169,7 +161,7 @@ flowchart LR
 例如：
 
 - `Journal` 新增很多条
-- 某个 `Session` 长时间活跃
+- 某个 Session 长时间活跃
 - 某一类候选记忆积累到一定量
 
 ### 3. 手动触发
@@ -183,11 +175,9 @@ flowchart LR
 
 ## 我理想中的 daily rhythm
 
-如果把它想成一个白天和夜晚的节奏，会很好理解。
-
 ```mermaid
 flowchart LR
-  DAY["白天<br/>SessionAgent 持续执行"] --> CAP["memory service 轻量 capture"]
+  DAY["白天<br/>Session 持续执行"] --> CAP["memory service 轻量 capture"]
   CAP --> NIGHT["夜里 / 空闲时"]
   NIGHT --> MA["memoryAgent 整理 Journal / Canon"]
   MA --> VIEW["更新 Projection 与索引"]
@@ -199,7 +189,7 @@ flowchart LR
 - 白天别打扰主流程
 - 晚上慢慢把账理清
 
-## 一次 `memoryAgent` run 的工作流
+## 一次 memoryAgent run 的工作流
 
 ```mermaid
 flowchart TD
@@ -213,127 +203,8 @@ flowchart TD
   PROJECT --> END["Run End"]
 ```
 
-## 拆开看这 7 步
-
-### 第一步：读取状态
-
-读取：
-
-- 当前活跃 scratchpad
-- 最近 journal 窗口
-- 当前 canon
-
-### 第二步：挑候选
-
-挑出真正值得处理的内容，比如：
-
-- 明显稳定的偏好
-- 重复出现的失败模式
-- 已经形成的决策
-
-### 第三步：聚合同主题
-
-把零散事件聚成“同一个东西”，例如：
-
-- 关于同一用户偏好的多次表达
-- 关于同一路失败路径的多个事件
-
-### 第四步：决定去向
-
-判断它应该：
-
-- 留在 `Scratchpad`
-- 留在 `Journal`
-- 升级进入 `Canon`
-
-### 第五步：合并旧版本
-
-如果 `Canon` 里已经有旧版本，需要处理：
-
-- 更新
-- 覆盖
-- 标记 `superseded`
-
-### 第六步：遗忘与退场
-
-清退：
-
-- 过期项
-- 重复项
-- 噪音项
-- 已被覆盖项
-
-### 第七步：投影
-
-把最终状态重新映射回人能读、系统能检索的文件和索引。
-
-## 它什么时候需要 LLM
-
-`memoryAgent` 可以用 LLM，但不应该把所有事情都交给 LLM。
-
-### 适合用 LLM 的地方
-
-- 多条 Journal 的归并与抽象
-- Canon 的表述重写
-- 冲突记忆的统一表达
-- 复杂候选项的分类判断
-
-### 不适合用 LLM 的地方
-
-- 每一条消息都即时总结
-- 每一次 context 更新都跑长链分析
-- recall 时做基础检索和排序
-
-最稳妥的策略是：
-
-- 规则先过一遍
-- 模型只处理真正复杂的部分
-
-## 它和 `SessionAgent` 到底怎么协作
-
-最简单的理解方式是：
-
-- `SessionAgent` 产生日志
-- `memoryAgent` 整理日志
-
-```mermaid
-sequenceDiagram
-  participant C as SessionAgent
-  participant M as memory service
-  participant A as memoryAgent
-  participant Core as Memory Core
-
-  C->>M: 写入 context 更新 / 任务结果 / 决策
-  M->>Core: 更新 Scratchpad / Journal
-  A->>Core: 定时读取
-  A->>Core: consolidate + forget
-  Core-->>C: 后续 recall 变得更准
-```
-
-它们不是竞争关系，而是前后工序关系。
-
-## 失败时应该怎么处理
-
-`memoryAgent` 的失败不应该拖垮主流程。
-
-所以设计上应当坚持：
-
-### 失败隔离
-
-- 后台整理失败，不影响当前回答
-
-### 幂等重跑
-
-- 下次维护可以继续补跑
-
-### 可观测
-
-- 记录最后一次整理时间
-- 记录失败原因
-- 记录本轮处理数量
-
-## 一句话结尾
+## 一句话总结
 
 ```text
-memoryAgent 不是另一个会聊天的主角，而是 memory service 里那个安静、持续、专门负责“把过去整理成未来资源”的后台编辑器。
+memoryAgent 不是第二个主执行体，而是 memory service 内部负责把长期状态慢慢整理好的后台角色。
 ```

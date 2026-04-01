@@ -6,6 +6,111 @@
  * - 所有非 `/api/ui/*` 请求会自动注入当前选中 agent 参数。
  */
 
+const CONSOLE_AUTH_STORAGE_KEY = "city.console-ui.auth.v1"
+
+/**
+ * Console API 错误对象。
+ */
+export class ConsoleApiError extends Error {
+  /**
+   * HTTP 状态码。
+   */
+  status: number
+
+  /**
+   * HTTP 状态文本。
+   */
+  statusText: string
+
+  constructor(message: string, status: number, statusText: string) {
+    super(message)
+    this.name = "ConsoleApiError"
+    this.status = status
+    this.statusText = statusText
+  }
+}
+
+/**
+ * 本地认证状态。
+ */
+export interface ConsoleAuthState {
+  /**
+   * Bearer Token 明文。
+   */
+  token: string
+
+  /**
+   * 当前用户名。
+   */
+  username?: string
+}
+
+/**
+ * Console UI 鉴权状态探测响应。
+ */
+export interface ConsoleAuthStatusResponse {
+  /**
+   * 接口是否成功返回。
+   */
+  success: boolean
+
+  /**
+   * 服务端是否已经完成统一账户初始化。
+   */
+  initialized: boolean
+
+  /**
+   * 当前 console-ui 是否应强制进入登录流程。
+   */
+  requireLogin: boolean
+}
+
+/**
+ * 读取本地 Bearer Token。
+ */
+export function readConsoleAuthState(): ConsoleAuthState | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(CONSOLE_AUTH_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<ConsoleAuthState> | null
+    const token = String(parsed?.token || "").trim()
+    if (!token) return null
+    const username = String(parsed?.username || "").trim()
+    return {
+      token,
+      ...(username ? { username } : {}),
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 写入本地 Bearer Token。
+ */
+export function writeConsoleAuthState(input: ConsoleAuthState): void {
+  if (typeof window === "undefined") return
+  const token = String(input.token || "").trim()
+  if (!token) return
+  const username = String(input.username || "").trim()
+  window.localStorage.setItem(
+    CONSOLE_AUTH_STORAGE_KEY,
+    JSON.stringify({
+      token,
+      ...(username ? { username } : {}),
+    }),
+  )
+}
+
+/**
+ * 清理本地 Bearer Token。
+ */
+export function clearConsoleAuthState(): void {
+  if (typeof window === "undefined") return
+  window.localStorage.removeItem(CONSOLE_AUTH_STORAGE_KEY)
+}
+
 export function withConsoleAgent(
   path: string,
   selectedAgentId: string,
@@ -27,11 +132,13 @@ export async function requestConsoleApiJson<T>(params: {
   preferredAgentId?: string;
   options?: RequestInit;
 }): Promise<T> {
+  const authState = readConsoleAuthState()
   const response = await fetch(
     withConsoleAgent(params.path, params.selectedAgentId, params.preferredAgentId),
     {
       headers: {
         "Content-Type": "application/json",
+        ...(authState?.token ? { Authorization: `Bearer ${authState.token}` } : {}),
         ...(params.options?.headers || {}),
       },
       ...(params.options || {}),
@@ -53,7 +160,7 @@ export async function requestConsoleApiJson<T>(params: {
         : typeof body?.message === "string"
           ? body.message
           : `${response.status} ${response.statusText}`;
-    throw new Error(errorMessage);
+    throw new ConsoleApiError(errorMessage, response.status, response.statusText);
   }
 
   if (body && body.success === false) {
@@ -63,17 +170,22 @@ export async function requestConsoleApiJson<T>(params: {
         : typeof body.message === "string"
           ? body.message
           : "request failed";
-    throw new Error(failMessage);
+    throw new ConsoleApiError(failMessage, response.status, response.statusText);
   }
 
   if (body === null) {
-    throw new Error(`Invalid JSON response from ${params.path}`);
+    throw new ConsoleApiError(
+      `Invalid JSON response from ${params.path}`,
+      response.status,
+      response.statusText,
+    );
   }
 
   return body as T;
 }
 
 export const dashboardApiRoutes = {
+  authStatus: () => "/api/auth/status",
   uiAgents: (agentId?: string) =>
     agentId
       ? `/api/ui/agents?agent=${encodeURIComponent(agentId)}`

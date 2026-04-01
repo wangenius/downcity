@@ -44,7 +44,7 @@ export function resolveProviderDefaultBaseUrl(
   providerType: LlmProviderType,
 ): string | undefined {
   if (providerType === "deepseek") return "https://api.deepseek.com/v1";
-  if (providerType === "moonshot") return "https://api.moonshot.cn/v1";
+  if (providerType === "moonshot") return "https://api.moonshot.ai/v1";
   if (providerType === "xai") return "https://api.x.ai/v1";
   if (providerType === "openrouter") return "https://openrouter.ai/api/v1";
   if (providerType === "open-compatible") return "https://api.openai.com/v1";
@@ -218,4 +218,3 @@ export function setProjectPrimaryModel(projectRoot: string, modelId: string): {
     nextPrimary,
   };
 }
-

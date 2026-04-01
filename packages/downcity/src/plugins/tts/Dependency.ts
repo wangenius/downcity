@@ -26,12 +26,21 @@ import {
   installTtsModelFromHuggingFace,
 } from "@/plugins/tts/runtime/Installer.js";
 import {
+  ensureTtsVirtualEnv,
   installTtsDependencies,
+  resolveDefaultTtsVenvPythonBin,
   resolveTtsRunnersByModels,
 } from "@/plugins/tts/runtime/DependencyInstaller.js";
 import { resolveTtsModelsRootDir } from "@/plugins/tts/runtime/Paths.js";
 
 const execFileAsync = promisify(execFileCb);
+
+type PythonVersionInfo = {
+  major: number;
+  minor: number;
+  patch: number;
+  raw: string;
+};
 
 export interface TtsDependencyCheckResult {
   /**
@@ -102,6 +111,47 @@ function normalizeFormat(value: unknown): "wav" | "flac" {
   return String(value || "").trim().toLowerCase() === "flac" ? "flac" : "wav";
 }
 
+function normalizeTtsPythonBin(value: unknown): string {
+  const text = String(value || "").trim();
+  if (!text || text === "python3") {
+    return resolveDefaultTtsVenvPythonBin();
+  }
+  return text;
+}
+
+async function readPythonVersionInfo(pythonBin: string): Promise<PythonVersionInfo | null> {
+  try {
+    const { stdout, stderr } = await execFileAsync(pythonBin, ["--version"], {
+      timeout: 15_000,
+      maxBuffer: 1024 * 1024,
+    });
+    const text = String(stdout || stderr || "").trim();
+    const match = text.match(/Python\s+(\d+)\.(\d+)\.(\d+)/i);
+    if (!match) return null;
+    return {
+      major: Number(match[1]),
+      minor: Number(match[2]),
+      patch: Number(match[3]),
+      raw: text,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getTtsPythonCompatibilityReason(params: {
+  modelId: TtsModelId;
+  version: PythonVersionInfo | null;
+}): string | null {
+  if (!params.version) return null;
+  if (params.modelId === "kokoro-82m") {
+    if (params.version.major > 3 || (params.version.major === 3 && params.version.minor >= 13)) {
+      return `kokoro-82m currently requires Python < 3.13, current is ${params.version.major}.${params.version.minor}.${params.version.patch}`;
+    }
+  }
+  return null;
+}
+
 /**
  * 读取 TTS Plugin 配置。
  */
@@ -112,7 +162,7 @@ export function readTtsPluginConfig(context: ExecutionContext): TtsPluginConfig 
     provider: "local",
     ...(typeof current.modelId === "string" ? { modelId: current.modelId } : {}),
     ...(typeof current.modelsDir === "string" ? { modelsDir: current.modelsDir } : {}),
-    ...(typeof current.pythonBin === "string" ? { pythonBin: current.pythonBin } : {}),
+    pythonBin: normalizeTtsPythonBin(current.pythonBin),
     ...(typeof current.language === "string" ? { language: current.language } : {}),
     ...(typeof current.voice === "string" ? { voice: current.voice } : {}),
     ...(typeof current.outputDir === "string" ? { outputDir: current.outputDir } : {}),
@@ -199,17 +249,30 @@ export async function checkTtsSynthesizer(
     reasons.push(`tts model is not installed: ${modelId}`);
   }
 
-  const pythonBin = String(config.pythonBin || "").trim() || "python3";
-  try {
-    await execFileAsync(pythonBin, ["--version"], {
-      timeout: 15_000,
-      maxBuffer: 1024 * 1024,
-    });
-  } catch (error) {
-    reasons.push(`python runtime missing: ${String(error)}`);
+  const pythonBin = normalizeTtsPythonBin(config.pythonBin);
+  const pythonVersion = await readPythonVersionInfo(pythonBin);
+  if (!pythonVersion) {
+    reasons.push(`python runtime missing: ${pythonBin}`);
     return {
       available: false,
       reasons,
+    };
+  }
+
+  const compatibilityReason = getTtsPythonCompatibilityReason({
+    modelId,
+    version: pythonVersion,
+  });
+  if (compatibilityReason) {
+    reasons.push(compatibilityReason);
+    return {
+      available: false,
+      reasons,
+      details: {
+        modelDir: installState.modelDir,
+        source: installState.source || null,
+        pythonVersion: pythonVersion.raw,
+      },
     };
   }
 
@@ -247,6 +310,7 @@ export async function installTtsSynthesizer(params: {
   const context = params.context;
   const input = params.input;
   const config = readTtsPluginConfig(context);
+  const logs: string[] = [];
 
   const requestedModelIds =
     (Array.isArray(input?.modelIds) ? input.modelIds : [])
@@ -261,9 +325,11 @@ export async function installTtsSynthesizer(params: {
     projectRoot: context.rootPath,
     modelsDir: input?.modelsDir || config.modelsDir,
   });
+  logs.push(`models dir: ${modelsRootDir}`);
 
   const installResults: JsonObject[] = [];
   for (const modelId of selectedModelIds) {
+    logs.push(`prepare model: ${modelId}`);
     const model = getTtsModelCatalogItem(modelId);
     if (!model) {
       throw new Error(`Unsupported tts model: ${modelId}`);
@@ -273,12 +339,20 @@ export async function installTtsSynthesizer(params: {
       modelsRootDir,
     });
     if (!installState.installed || input?.force === true) {
+      logs.push(
+        installState.installed && input?.force === true
+          ? `redownload model: ${modelId}`
+          : `download model: ${modelId}`,
+      );
       const result = await installTtsModelFromHuggingFace({
         model,
         modelsRootDir,
         force: input?.force === true,
         hfToken: input?.hfToken,
       });
+      logs.push(
+        `model ready: ${modelId} (downloaded ${result.downloadedFiles}, skipped ${result.skippedFiles})`,
+      );
       installResults.push(toJsonObject({
         modelId,
         downloadedFiles: result.downloadedFiles,
@@ -286,6 +360,7 @@ export async function installTtsSynthesizer(params: {
       }));
       continue;
     }
+    logs.push(`reuse installed model: ${modelId}`);
     installResults.push(toJsonObject({
       modelId,
       downloadedFiles: 0,
@@ -294,20 +369,54 @@ export async function installTtsSynthesizer(params: {
     }));
   }
 
-  let resolvedPythonBin = String(input?.pythonBin || config.pythonBin || "").trim() || "python3";
+  const basePythonBin = String(input?.pythonBin || "").trim() || "python3";
+  const basePythonVersion = await readPythonVersionInfo(basePythonBin);
+  let resolvedPythonBin = normalizeTtsPythonBin(config.pythonBin);
   let dependencyDetails: JsonValue | undefined;
+  const compatibilityFailures = selectedModelIds
+    .map((modelId) => getTtsPythonCompatibilityReason({
+      modelId,
+      version: basePythonVersion,
+    }))
+    .filter((item): item is string => Boolean(item));
+  if (compatibilityFailures.length > 0) {
+    logs.push(...compatibilityFailures);
+    return {
+      success: false,
+      message: compatibilityFailures.join(" · "),
+      details: {
+        pythonVersion: basePythonVersion?.raw || basePythonBin,
+        logs,
+      },
+    };
+  }
   if (input?.installDeps !== false) {
+    logs.push(`prepare python env from: ${basePythonBin}`);
     const dependencyResult = await installTtsDependencies({
-      pythonBin: resolvedPythonBin,
+      pythonBin: basePythonBin,
       runners: resolveTtsRunnersByModels(selectedModelIds),
     });
     resolvedPythonBin = dependencyResult.pythonBin;
+    logs.push(`python env ready: ${dependencyResult.pythonBin}`);
+    for (const item of dependencyResult.items) {
+      logs.push(
+        item.skipped
+          ? `dependency ${item.runner}: already installed`
+          : `dependency ${item.runner}: installed`,
+      );
+    }
     dependencyDetails = toJsonObject({
       pythonBin: dependencyResult.pythonBin,
       runners: dependencyResult.runners,
       usedVirtualEnv: dependencyResult.usedVirtualEnv,
       venvDir: dependencyResult.venvDir,
     });
+  } else {
+    logs.push(`prepare python env only: ${basePythonBin}`);
+    resolvedPythonBin = await ensureTtsVirtualEnv({
+      basePythonBin,
+    });
+    logs.push(`python env ready: ${resolvedPythonBin}`);
   }
 
   const activeModelId =
@@ -333,6 +442,7 @@ export async function installTtsSynthesizer(params: {
       plugin: toJsonObject(nextConfig as Record<string, unknown>),
       models: installResults,
       dependency: dependencyDetails || null,
+      logs,
     },
   };
 }

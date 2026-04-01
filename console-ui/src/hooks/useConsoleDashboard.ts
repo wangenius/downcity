@@ -3,7 +3,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { requestConsoleApiJson } from "../lib/dashboard-api";
+import {
+  clearConsoleAuthState,
+  dashboardApiRoutes,
+  type ConsoleAuthStatusResponse,
+  readConsoleAuthState,
+  requestConsoleApiJson,
+  writeConsoleAuthState,
+} from "../lib/dashboard-api";
 import {
   queryAgentEnv,
   queryAgents,
@@ -51,6 +58,7 @@ import {
   formatTime,
   getErrorMessage,
   isNotFoundError,
+  isUnauthorizedError,
   statusBadgeVariant,
 } from "./dashboard/shared";
 import { useDashboardRefresh } from "./dashboard/useDashboardRefresh";
@@ -93,6 +101,14 @@ import type {
 } from "../types/DashboardHook";
 
 export function useConsoleDashboard(): UseConsoleDashboardResult {
+  const initialAuthState = readConsoleAuthState()
+  const [authInitializing, setAuthInitializing] = useState(!Boolean(initialAuthState?.token))
+  const [authBootstrapRequired, setAuthBootstrapRequired] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialAuthState?.token))
+  const [authUsername, setAuthUsername] = useState(String(initialAuthState?.username || "").trim())
+  const [authRequired, setAuthRequired] = useState(false)
+  const [authSubmitting, setAuthSubmitting] = useState(false)
+  const [authErrorMessage, setAuthErrorMessage] = useState("")
   const [agents, setAgents] = useState<UiAgentOption[]>([]);
   const [cityVersion, setCityVersion] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState("");
@@ -161,17 +177,126 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     }, 2200);
   }, []);
 
+  const enterAuthRequiredState = useCallback(() => {
+    clearConsoleAuthState()
+    setAuthInitializing(false)
+    setAuthBootstrapRequired(false)
+    setIsAuthenticated(false)
+    setAuthUsername("")
+    setAuthRequired(true)
+    setAuthErrorMessage("")
+    setTopbarStatus("需要登录")
+    setTopbarError(false)
+  }, [])
+
   const requestJson = useCallback(
     async <T,>(path: string, options: RequestInit = {}, preferredAgentId?: string): Promise<T> => {
-      return requestConsoleApiJson<T>({
-        path,
-        options,
-        selectedAgentId,
-        preferredAgentId,
-      });
+      try {
+        return await requestConsoleApiJson<T>({
+          path,
+          options,
+          selectedAgentId,
+          preferredAgentId,
+        });
+      } catch (error) {
+        if (isUnauthorizedError(error)) {
+          enterAuthRequiredState()
+        }
+        throw error
+      }
     },
-    [selectedAgentId],
+    [enterAuthRequiredState, selectedAgentId],
   );
+
+  const login = useCallback(
+    async (input: { username: string; password: string; displayName?: string }) => {
+      setAuthSubmitting(true)
+      setAuthErrorMessage("")
+      try {
+        const response = await requestConsoleApiJson<{
+          user?: { username?: string }
+          token?: { token?: string }
+        }>({
+          path: "/api/auth/login",
+          selectedAgentId: "",
+          options: {
+            method: "POST",
+            body: JSON.stringify({
+              ...input,
+              tokenName: "console-ui",
+            }),
+          },
+        })
+        const token = String(response?.token?.token || "").trim()
+        const username = String(response?.user?.username || input.username || "").trim()
+        if (!token) throw new Error("登录成功但未返回 token")
+        writeConsoleAuthState({
+          token,
+          ...(username ? { username } : {}),
+        })
+        setAuthInitializing(false)
+        setAuthBootstrapRequired(false)
+        setIsAuthenticated(true)
+        setAuthUsername(username)
+        setAuthRequired(false)
+        await refreshDashboardRef.current?.()
+      } catch (error) {
+        setAuthErrorMessage(getErrorMessage(error))
+        throw error
+      } finally {
+        setAuthSubmitting(false)
+      }
+    },
+    [],
+  )
+
+  const bootstrapAdmin = useCallback(
+    async (input: { username: string; password: string; displayName?: string }) => {
+      setAuthSubmitting(true)
+      setAuthErrorMessage("")
+      try {
+        const response = await requestConsoleApiJson<{
+          user?: { username?: string }
+          token?: { token?: string }
+        }>({
+          path: "/api/auth/bootstrap-admin",
+          selectedAgentId: "",
+          options: {
+            method: "POST",
+            body: JSON.stringify({
+              username: input.username,
+              password: input.password,
+              displayName: input.displayName,
+              tokenName: "console-ui",
+            }),
+          },
+        })
+        const token = String(response?.token?.token || "").trim()
+        const username = String(response?.user?.username || input.username || "").trim()
+        if (!token) throw new Error("初始化成功但未返回 token")
+        writeConsoleAuthState({
+          token,
+          ...(username ? { username } : {}),
+        })
+        setAuthInitializing(false)
+        setAuthBootstrapRequired(false)
+        setIsAuthenticated(true)
+        setAuthUsername(username)
+        setAuthRequired(false)
+        await refreshDashboardRef.current?.()
+      } catch (error) {
+        setAuthErrorMessage(getErrorMessage(error))
+        throw error
+      } finally {
+        setAuthSubmitting(false)
+      }
+    },
+    [],
+  )
+
+  const logout = useCallback(() => {
+    enterAuthRequiredState()
+  }, [enterAuthRequiredState])
 
   const clearPanelDataForNoAgent = useCallback(() => {
     setOverview(null);
@@ -476,6 +601,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshSessionArchives,
     refreshPrompt,
     showToast,
+    setAuthRequired,
   });
 
   const controlService = useCallback(
@@ -799,8 +925,73 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   }, [refreshDashboard]);
 
   useEffect(() => {
+    let disposed = false
+
+    const bootstrapDashboard = async () => {
+      const authState = readConsoleAuthState()
+      const hasToken = Boolean(authState?.token)
+
+      setIsAuthenticated(hasToken)
+      setAuthUsername(String(authState?.username || "").trim())
+
+      if (hasToken) {
+        if (disposed) return
+        setAuthBootstrapRequired(false)
+        setAuthRequired(false)
+        setAuthInitializing(false)
+        return
+      }
+
+      try {
+        const authStatus = await requestConsoleApiJson<ConsoleAuthStatusResponse>({
+          path: dashboardApiRoutes.authStatus(),
+          selectedAgentId: "",
+        })
+
+        if (!authStatus.initialized) {
+          if (disposed) return
+          setAuthBootstrapRequired(true)
+          setAuthRequired(true)
+          setAuthInitializing(false)
+          setTopbarStatus("需要初始化管理员")
+          setTopbarError(false)
+          return
+        }
+
+        if (authStatus.requireLogin && !hasToken) {
+          if (disposed) return
+          setAuthBootstrapRequired(false)
+          setAuthRequired(true)
+          setAuthInitializing(false)
+          setTopbarStatus("需要登录")
+          setTopbarError(false)
+          return
+        }
+      } catch {
+        // 关键点（中文）：状态探测失败时也不允许直接进入 dashboard，改为停在登录入口页。
+      }
+
+      if (disposed) return
+      setAuthBootstrapRequired(false)
+      setAuthRequired(true)
+      setTopbarStatus("需要登录")
+      setTopbarError(false)
+      setAuthInitializing(false)
+    }
+
+    void bootstrapDashboard()
+
+    return () => {
+      disposed = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (authInitializing) return
+    if (authRequired && !isAuthenticated) return
     void refreshDashboardRef.current?.();
     const timer = window.setInterval(() => {
+      if (authRequired && !isAuthenticated) return
       void refreshDashboardRef.current?.();
     }, 12000);
     return () => {
@@ -809,9 +1000,16 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         window.clearTimeout(toastTimerRef.current);
       }
     };
-  }, []);
+  }, [authInitializing, authRequired, isAuthenticated]);
 
   return {
+    authInitializing,
+    authBootstrapRequired,
+    isAuthenticated,
+    authUsername,
+    authRequired,
+    authSubmitting,
+    authErrorMessage,
     agents,
     cityVersion,
     selectedAgentId,
@@ -922,5 +1120,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       formatTime,
       statusBadgeVariant,
     },
+    login,
+    bootstrapAdmin,
+    logout,
   };
 }

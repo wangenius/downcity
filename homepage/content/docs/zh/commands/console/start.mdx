@@ -8,6 +8,7 @@ description: 后台启动 console
 后台启动 console。
 
 启动时会自动初始化空的 `~/.downcity/console/agents.json`，因此即使此时还没有任何 agent，Console UI 也会显示为正常的“空列表”状态，而不是配置缺失。
+如果当前还没有任何统一账户用户，启动过程会提示设置首个管理员密码；留空时默认使用 `downcity`，用户名固定为 `admin`。
 
 ## 用法
 
@@ -31,10 +32,11 @@ city version: 1.0.0
 ✅ DC console started
    pid: <pid>
    log: <consoleLogPath>
-✅ Console UI started
-   pid: <uiPid>
-   url: http://127.0.0.1:5315
-   log: <uiLogPath>
+? 设置 Console 管理员密码（留空默认 downcity）: ********
+✅ Unified auth admin initialized
+   username: admin
+   password: 使用你刚刚输入的密码
+   login: 使用该密码登录 Console UI
 ```
 
 ```text

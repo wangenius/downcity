@@ -12,6 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { ttsPlugin } from "../../bin/plugins/tts/Plugin.js";
+import { resolveDefaultTtsVenvPythonBin } from "../../bin/plugins/tts/runtime/DependencyInstaller.js";
 
 function createLogger() {
   return {
@@ -111,6 +112,7 @@ test("tts plugin models action exposes default local model catalog", async () =>
     [
       "qwen3-tts-0.6b",
       "kokoro-82m",
+      "qwen3-tts-1.7b",
     ],
   );
 });
@@ -118,13 +120,13 @@ test("tts plugin models action exposes default local model catalog", async () =>
 test("tts plugin install action writes local model config when model already exists", async () => {
   const { runtime, rootPath } = createRuntime();
   const modelsDir = path.join(rootPath, ".models", "tts");
-  const modelDir = path.join(modelsDir, "kokoro-82m");
+  const modelDir = path.join(modelsDir, "qwen3-tts-0.6b");
   fs.mkdirSync(modelDir, { recursive: true });
   fs.writeFileSync(
     path.join(modelDir, "downcity.tts.install.json"),
     JSON.stringify({
-      modelId: "kokoro-82m",
-      repoId: "hexgrad/Kokoro-82M",
+      modelId: "qwen3-tts-0.6b",
+      repoId: "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
     }, null, 2),
     "utf-8",
   );
@@ -132,8 +134,8 @@ test("tts plugin install action writes local model config when model already exi
   const result = await ttsPlugin.actions.install.execute({
     context: runtime,
     payload: {
-      modelIds: ["kokoro-82m"],
-      activeModel: "kokoro-82m",
+      modelIds: ["qwen3-tts-0.6b"],
+      activeModel: "qwen3-tts-0.6b",
       modelsDir,
       installDeps: false,
     },
@@ -143,7 +145,10 @@ test("tts plugin install action writes local model config when model already exi
 
   assert.equal(result.success, true);
   assert.equal(runtime.config.plugins.tts.enabled, true);
-  assert.equal(runtime.config.plugins.tts.modelId, "kokoro-82m");
+  assert.equal(runtime.config.plugins.tts.modelId, "qwen3-tts-0.6b");
   assert.equal(runtime.config.plugins.tts.modelsDir, modelsDir);
-  assert.deepEqual(runtime.config.plugins.tts.installedModels, ["kokoro-82m"]);
+  assert.equal(runtime.config.plugins.tts.pythonBin, resolveDefaultTtsVenvPythonBin());
+  assert.deepEqual(runtime.config.plugins.tts.installedModels, ["qwen3-tts-0.6b"]);
+  assert.equal(Array.isArray(result.data.logs), true);
+  assert.equal(result.data.logs.length > 0, true);
 });

@@ -129,8 +129,8 @@ const MODEL_PRESETS: ModelPreset[] = [
   },
   // Moonshot(Kimi)
   {
-    id: "moonshot-v1-8k",
-    title: "Moonshot v1 8k",
+    id: "kimi-k2.5",
+    title: "Kimi K2.5",
     providerType: "moonshot",
     useCustomModelName: false,
   },

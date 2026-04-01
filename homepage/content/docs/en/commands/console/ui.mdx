@@ -31,6 +31,10 @@ city console ui [action] [options]
 ## Behavior
 
 - Requires console first: `city console start`.
+- Console UI no longer has a guest mode. If you are not authenticated, you do not enter the dashboard.
+- If unified auth has already been bootstrapped for this console, the first UI visit lands on a dedicated login page; the dashboard loads only after login, and later requests reuse the same Bearer token.
+- If the console has no unified-auth users yet, the entry page first guides you through bootstrapping the first admin and then enters the dashboard.
+- The Console UI login page asks only for `username` and `password`; the token name is handled internally and is not user input.
 - `start` / `restart` first try to clean up old `console ui run` processes that are still holding the UI port without a tracked pid file.
 - On startup, UI loads agents from console registry (running + history).
 - Global Agents panel shows agent state, endpoint, model binding, and chat identity snapshots (e.g. Telegram bot username); historical entries can be started directly from the table.

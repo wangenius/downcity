@@ -20,7 +20,7 @@ export const TTS_MODEL_CATALOG: readonly TtsModelCatalogItem[] = [
     recommended: true,
     assets: [
       {
-        repoId: "Qwen/Qwen3-TTS-0.6B",
+        repoId: "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
         revision: "main",
       },
     ],
@@ -44,6 +44,19 @@ export const TTS_MODEL_CATALOG: readonly TtsModelCatalogItem[] = [
       },
     ],
   },
+  {
+    id: "qwen3-tts-1.7b",
+    label: "Qwen3-TTS 1.7B",
+    description: "效果更强，但体积更大，适合更看重质量的本地合成。",
+    family: "qwen3",
+    recommended: false,
+    assets: [
+      {
+        repoId: "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        revision: "main",
+      },
+    ],
+  },
 ] as const;
 
 const TTS_MODEL_ALIAS_MAP: Record<string, TtsModelId> = {
@@ -52,6 +65,9 @@ const TTS_MODEL_ALIAS_MAP: Record<string, TtsModelId> = {
   qwen_06b: "qwen3-tts-0.6b",
   "kokoro-82m": "kokoro-82m",
   kokoro82m: "kokoro-82m",
+  "qwen3-tts-1.7b": "qwen3-tts-1.7b",
+  qwen3tts17b: "qwen3-tts-1.7b",
+  qwen_17b: "qwen3-tts-1.7b",
 };
 
 const CATALOG_BY_ID: Record<TtsModelId, TtsModelCatalogItem> = TTS_MODEL_CATALOG.reduce(

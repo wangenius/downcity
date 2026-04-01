@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
 import { AuthorizationSection } from "@/components/dashboard/AuthorizationSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
+import { AuthGatePage } from "@/components/dashboard/AuthGatePage"
 import { GlobalChannelAccountsSection } from "@/components/dashboard/GlobalChannelAccountsSection"
 import { EnvSection } from "@/components/dashboard/EnvSection"
 import { GlobalModelSection } from "@/components/dashboard/GlobalModelSection"
@@ -59,6 +60,13 @@ export function App() {
 
   const {
     agents,
+    authInitializing,
+    authBootstrapRequired,
+    isAuthenticated,
+    authUsername,
+    authRequired,
+    authSubmitting,
+    authErrorMessage,
     cityVersion,
     selectedAgentId,
     selectedAgent,
@@ -148,6 +156,9 @@ export function App() {
     executeAgentCommand,
     constants,
     uiHelpers,
+    login,
+    bootstrapAdmin,
+    logout,
   } = useConsoleDashboard()
 
   const resolveAgentRouteSegment = React.useCallback(
@@ -797,110 +808,133 @@ export function App() {
     }
   }
 
-  const headerRightActions = activeView === "contextWorkspace" ? (
-    <Button
-      type="button"
-      size="icon"
-      variant="ghost"
-      className="size-8 rounded-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
-      onClick={() => {
-        // 关键点（中文）：在顶部 header 提供统一入口，不打断聊天区和右侧面板内部结构。
-        setDebugPanelsCollapsed((prev) => !prev)
-      }}
-      aria-label={debugPanelsCollapsed ? "展开 Debug Panels" : "折叠 Debug Panels"}
-      title={debugPanelsCollapsed ? "展开 Debug Panels" : "折叠 Debug Panels"}
-    >
-      {debugPanelsCollapsed ? <ChevronLeftIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
-    </Button>
-  ) : null
+  const headerRightActions = (
+    <div className="flex items-center gap-2">
+      {isAuthenticated ? (
+        <>
+          <span className="text-xs text-muted-foreground">{authUsername || "已登录"}</span>
+          <Button type="button" size="sm" variant="outline" onClick={logout}>
+            退出
+          </Button>
+        </>
+      ) : null}
+      {activeView === "contextWorkspace" ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="size-8 rounded-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+          onClick={() => {
+            // 关键点（中文）：在顶部 header 提供统一入口，不打断聊天区和右侧面板内部结构。
+            setDebugPanelsCollapsed((prev) => !prev)
+          }}
+          aria-label={debugPanelsCollapsed ? "展开 Debug Panels" : "折叠 Debug Panels"}
+          title={debugPanelsCollapsed ? "展开 Debug Panels" : "折叠 Debug Panels"}
+        >
+          {debugPanelsCollapsed ? <ChevronLeftIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
+        </Button>
+      ) : null}
+    </div>
+  )
+
+  const showAuthGate = authInitializing || !isAuthenticated
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "18.5rem",
-          "--header-height": "3.5rem",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar
-        activeView={activeView}
-        agents={agents}
-        selectedAgentId={selectedAgentId}
-        routePathname={routePathname}
-        routeAgentId={routeAgentId}
-        sessions={sessions}
-        chatChannels={chatChannels}
-        selectedSessionId={selectedSessionId}
-        tasks={tasks}
-        selectedTaskTitle={selectedTaskTitle}
-        selectedChatChannel={effectiveFocusedChatChannel}
-        onViewChange={(view) => {
-          if (view === "contextWorkspace") {
-            const nextSessionId = selectedSessionId || constants.CONSOLEUI_SESSION_ID
-            setFocusedChatChannel(resolveChannelFromSessionId(nextSessionId))
-            navigateToView("contextWorkspace", {
-              sessionId: nextSessionId,
-              channel: resolveChannelFromSessionId(nextSessionId),
-            })
-            void handleSessionChange(nextSessionId)
-            return
-          }
-          if (view !== "contextOverview") {
-            setFocusedChatChannel("")
-          }
-          navigateToView(view)
-        }}
-        onAgentChange={(agentId) => {
-          handleAgentChange(agentId)
-          setFocusedChatChannel("")
-          navigateToView("globalOverview", { agentId })
-        }}
-        onAgentEnter={(agentId) => {
-          handleAgentChange(agentId)
-          setFocusedChatChannel("")
-          navigateToView("agentOverview", { agentId })
-        }}
-        onTaskOpen={(taskTitle) => {
-          setFocusedChatChannel("")
-          setSelectedTaskTitle(taskTitle)
-          navigateToView("agentTasks", { taskTitle })
-        }}
-        onChannelOpen={(channel) => {
-          const normalizedChannel = String(channel || "").trim().toLowerCase()
-          setFocusedChatChannel(normalizedChannel)
-          navigateToView("contextOverview", { channel: normalizedChannel })
-        }}
-        onSessionOpen={(sessionId) => {
-          setFocusedChatChannel(resolveChannelFromSessionId(sessionId))
-          navigateToView("contextWorkspace", {
-            sessionId: sessionId,
-            channel: resolveChannelFromSessionId(sessionId),
-          })
-          void handleSessionChange(sessionId)
-        }}
-        topbarStatus={topbarStatus}
-        topbarError={topbarError}
-        loading={loading}
-        onRefresh={() => void refreshDashboard()}
-        variant="sidebar"
+    showAuthGate ? (
+      <AuthGatePage
+        checking={authInitializing}
+        bootstrapRequired={authBootstrapRequired}
+        submitting={authSubmitting}
+        errorMessage={authErrorMessage}
+        onSubmit={authBootstrapRequired ? bootstrapAdmin : login}
       />
-      <SidebarInset>
-        <SiteHeader viewLabel={getDashboardViewLabel(activeView)} rightActions={headerRightActions} />
+    ) : (
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "18.5rem",
+            "--header-height": "3.5rem",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar
+          activeView={activeView}
+          agents={agents}
+          selectedAgentId={selectedAgentId}
+          routePathname={routePathname}
+          routeAgentId={routeAgentId}
+          sessions={sessions}
+          chatChannels={chatChannels}
+          selectedSessionId={selectedSessionId}
+          tasks={tasks}
+          selectedTaskTitle={selectedTaskTitle}
+          selectedChatChannel={effectiveFocusedChatChannel}
+          onViewChange={(view) => {
+            if (view === "contextWorkspace") {
+              const nextSessionId = selectedSessionId || constants.CONSOLEUI_SESSION_ID
+              setFocusedChatChannel(resolveChannelFromSessionId(nextSessionId))
+              navigateToView("contextWorkspace", {
+                sessionId: nextSessionId,
+                channel: resolveChannelFromSessionId(nextSessionId),
+              })
+              void handleSessionChange(nextSessionId)
+              return
+            }
+            if (view !== "contextOverview") {
+              setFocusedChatChannel("")
+            }
+            navigateToView(view)
+          }}
+          onAgentChange={(agentId) => {
+            handleAgentChange(agentId)
+            setFocusedChatChannel("")
+            navigateToView("globalOverview", { agentId })
+          }}
+          onAgentEnter={(agentId) => {
+            handleAgentChange(agentId)
+            setFocusedChatChannel("")
+            navigateToView("agentOverview", { agentId })
+          }}
+          onTaskOpen={(taskTitle) => {
+            setFocusedChatChannel("")
+            setSelectedTaskTitle(taskTitle)
+            navigateToView("agentTasks", { taskTitle })
+          }}
+          onChannelOpen={(channel) => {
+            const normalizedChannel = String(channel || "").trim().toLowerCase()
+            setFocusedChatChannel(normalizedChannel)
+            navigateToView("contextOverview", { channel: normalizedChannel })
+          }}
+          onSessionOpen={(sessionId) => {
+            setFocusedChatChannel(resolveChannelFromSessionId(sessionId))
+            navigateToView("contextWorkspace", {
+              sessionId: sessionId,
+              channel: resolveChannelFromSessionId(sessionId),
+            })
+            void handleSessionChange(sessionId)
+          }}
+          topbarStatus={topbarStatus}
+          topbarError={topbarError}
+          loading={loading}
+          onRefresh={() => void refreshDashboard()}
+          variant="sidebar"
+        />
+        <SidebarInset>
+          <SiteHeader viewLabel={getDashboardViewLabel(activeView)} rightActions={headerRightActions} />
 
-        <main
-          className={cn(
-            "mainview-shell flex flex-1 min-h-0 flex-col bg-transparent",
-            activeView === "contextWorkspace"
-              ? "gap-0 overflow-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1"
-              : "gap-4 overflow-y-auto overflow-x-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1",
-          )}
-        >
-          {renderActiveView()}
-        </main>
-      </SidebarInset>
-
-      {toast ? <ToastMessage message={toast.message} type={toast.type} /> : null}
-    </SidebarProvider>
+          <main
+            className={cn(
+              "mainview-shell flex flex-1 min-h-0 flex-col bg-transparent",
+              activeView === "contextWorkspace"
+                ? "gap-0 overflow-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1"
+                : "gap-4 overflow-y-auto overflow-x-hidden px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-1",
+            )}
+          >
+            {renderActiveView()}
+          </main>
+        </SidebarInset>
+        {toast ? <ToastMessage message={toast.message} type={toast.type} /> : null}
+      </SidebarProvider>
+    )
   )
 }

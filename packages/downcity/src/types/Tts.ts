@@ -20,7 +20,10 @@ export type TtsProvider = "local";
  * 说明（中文）
  * - 保持稳定字符串，避免后续改名破坏用户配置。
  */
-export type TtsModelId = "qwen3-tts-0.6b" | "kokoro-82m";
+export type TtsModelId =
+  | "qwen3-tts-0.6b"
+  | "kokoro-82m"
+  | "qwen3-tts-1.7b";
 
 /**
  * TTS 本地推理实现族。

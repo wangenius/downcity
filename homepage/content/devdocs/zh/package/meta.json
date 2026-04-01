@@ -3,6 +3,7 @@
   "pages": [
     "runtime-and-services",
     "runtime-evolution",
+    "session-sandbox-execution",
     "module-breakdown",
     "plugin-migration"
   ]

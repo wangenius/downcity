@@ -227,7 +227,7 @@ test("createModel: moonshot provider uses chat completions endpoint with default
         id: "chatcmpl_1",
         object: "chat.completion",
         created: Math.floor(Date.now() / 1000),
-        model: "moonshot-v1-8k",
+        model: "kimi-k2.5",
         choices: [
           {
             index: 0,
@@ -260,7 +260,91 @@ test("createModel: moonshot provider uses chat completions endpoint with default
         model: {
           id: "default",
           providerId: "moonshot",
-          name: "moonshot-v1-8k",
+          name: "kimi-k2.5",
+        },
+      },
+      async (store) => {
+        const model = await createModel({
+          config: createAgentConfig("default"),
+          store,
+        });
+        const result = await generateText({
+          model,
+          prompt: "reply OK",
+          maxOutputTokens: 16,
+        });
+
+        assert.equal(result.text.trim(), "OK");
+        assert.equal(mockFetchCalls.length, 1);
+        assert.equal(
+          mockFetchCalls[0].url,
+          "https://api.moonshot.ai/v1/chat/completions",
+        );
+        const requestHeaders = mockFetchCalls[0].headers || {};
+        const normalizedHeaders =
+          requestHeaders instanceof Headers
+            ? Object.fromEntries(requestHeaders.entries())
+            : requestHeaders;
+        assert.equal(normalizedHeaders.authorization, "Bearer test-moonshot-key");
+      },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createModel: moonshot provider respects explicit cn base url", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const mockFetchCalls = [];
+
+  globalThis.fetch = async (input, init) => {
+    mockFetchCalls.push({
+      url: resolveRequestUrl(input),
+      method: init?.method || "POST",
+      headers: init?.headers,
+      body: typeof init?.body === "string" ? init.body : "",
+    });
+
+    return new Response(
+      JSON.stringify({
+        id: "chatcmpl_1",
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: "kimi-k2.5",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "OK" },
+            finish_reason: "stop",
+          },
+        ],
+        usage: {
+          prompt_tokens: 1,
+          completion_tokens: 1,
+          total_tokens: 2,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    await withSeededConsoleStore(
+      t,
+      {
+        provider: {
+          id: "moonshot",
+          type: "moonshot",
+          baseUrl: "https://api.moonshot.cn/v1",
+          apiKey: "test-moonshot-key",
+        },
+        model: {
+          id: "default",
+          providerId: "moonshot",
+          name: "kimi-k2.5",
         },
       },
       async (store) => {
@@ -280,12 +364,6 @@ test("createModel: moonshot provider uses chat completions endpoint with default
           mockFetchCalls[0].url,
           "https://api.moonshot.cn/v1/chat/completions",
         );
-        const requestHeaders = mockFetchCalls[0].headers || {};
-        const normalizedHeaders =
-          requestHeaders instanceof Headers
-            ? Object.fromEntries(requestHeaders.entries())
-            : requestHeaders;
-        assert.equal(normalizedHeaders.authorization, "Bearer test-moonshot-key");
       },
     );
   } finally {

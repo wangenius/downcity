@@ -69,6 +69,41 @@ export interface DashboardToastState {
  */
 export interface UseConsoleDashboardResult {
   /**
+   * 当前是否仍在执行首屏鉴权探测。
+   */
+  authInitializing: boolean;
+
+  /**
+   * 当前是否需要先初始化首个管理员。
+   */
+  authBootstrapRequired: boolean;
+
+  /**
+   * 当前是否已持有有效 Bearer Token。
+   */
+  isAuthenticated: boolean;
+
+  /**
+   * 当前登录用户名。
+   */
+  authUsername: string;
+
+  /**
+   * 当前是否需要登录。
+   */
+  authRequired: boolean;
+
+  /**
+   * 当前是否正在登录。
+   */
+  authSubmitting: boolean;
+
+  /**
+   * 当前登录错误文案。
+   */
+  authErrorMessage: string;
+
+  /**
    * 当前 agent 列表。
    */
   agents: UiAgentOption[];
@@ -673,4 +708,23 @@ export interface UseConsoleDashboardResult {
     formatTime: (ts?: number | string) => string;
     statusBadgeVariant: (status?: string) => "ok" | "warn" | "bad";
   };
+
+  /**
+   * 登录 Console UI。
+   */
+  login: (input: { username: string; password: string; displayName?: string }) => Promise<void>;
+
+  /**
+   * 初始化首个管理员并直接进入 Console UI。
+   */
+  bootstrapAdmin: (input: {
+    username: string;
+    password: string;
+    displayName?: string;
+  }) => Promise<void>;
+
+  /**
+   * 退出当前登录态。
+   */
+  logout: () => void;
 }

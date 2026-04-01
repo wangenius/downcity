@@ -31,6 +31,10 @@ city console ui [action] [options]
 ## 行为说明
 
 - 需要先启动 console：`city console start`。
+- Console UI 不再提供访客模式。未登录时不会进入 dashboard。
+- 如果当前控制面已经完成统一账户初始化，首次打开 UI 会先进入独立登录页；登录成功后才会加载 dashboard，后续请求统一携带 Bearer Token。
+- 如果当前控制面还没有任何统一账户用户，入口页会先引导你初始化第一个管理员，再进入 dashboard。
+- Console UI 登录页只要求输入 `username` 和 `password`；token 名称由系统内部固定处理，不需要手填。
 - `start` / `restart` 前会先尝试清理没有 pid 文件但仍占着 UI 端口的旧 `console ui run` 进程。
 - UI 启动后会读取 console registry 中的 agent 列表（运行中 + 历史）。
 - `Global Agents` 面板会展示每个 agent 的运行状态、runtime 地址、当前绑定模型与 chat 身份快照（例如 Telegram bot 用户名）；对历史记录可直接点击“启动”重新拉起。

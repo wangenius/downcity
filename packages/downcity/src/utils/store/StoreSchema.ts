@@ -93,6 +93,157 @@ export function ensureConsoleStoreSchema(context: ConsoleStoreContext): void {
     ON channel_accounts(channel);
   `);
   ensureChannelAccountsTableColumns(context);
+  ensureAuthSchema(context);
+}
+
+/**
+ * 初始化 Console 认证与授权表结构。
+ *
+ * 关键点（中文）
+ * - 该 schema 属于 console 级全局能力，不依赖任何单个 agent 项目。
+ * - V1 只建表与索引，不在这里写入默认数据，默认数据由 auth bootstrap 负责。
+ */
+function ensureAuthSchema(context: ConsoleStoreContext): void {
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS auth_users (
+      id TEXT PRIMARY KEY NOT NULL,
+      username TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      display_name TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS auth_users_username_uq
+    ON auth_users(username);
+  `);
+
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS auth_roles (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS auth_roles_name_uq
+    ON auth_roles(name);
+  `);
+
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS auth_permissions (
+      id TEXT PRIMARY KEY NOT NULL,
+      key TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS auth_permissions_key_uq
+    ON auth_permissions(key);
+  `);
+
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS auth_user_roles (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      role_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS auth_user_roles_user_role_uq
+    ON auth_user_roles(user_id, role_id);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_user_roles_user_id_idx
+    ON auth_user_roles(user_id);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_user_roles_role_id_idx
+    ON auth_user_roles(role_id);
+  `);
+
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS auth_role_permissions (
+      id TEXT PRIMARY KEY NOT NULL,
+      role_id TEXT NOT NULL,
+      permission_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS auth_role_permissions_role_permission_uq
+    ON auth_role_permissions(role_id, permission_id);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_role_permissions_role_id_idx
+    ON auth_role_permissions(role_id);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_role_permissions_permission_id_idx
+    ON auth_role_permissions(permission_id);
+  `);
+
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      token_hash TEXT NOT NULL,
+      expires_at TEXT,
+      revoked_at TEXT,
+      last_used_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS auth_tokens_token_hash_uq
+    ON auth_tokens(token_hash);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_tokens_user_id_idx
+    ON auth_tokens(user_id);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_tokens_expires_at_idx
+    ON auth_tokens(expires_at);
+  `);
+
+  context.sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS auth_audit_logs (
+      id TEXT PRIMARY KEY NOT NULL,
+      actor_user_id TEXT,
+      actor_token_id TEXT,
+      resource_type TEXT NOT NULL,
+      resource_id TEXT,
+      action TEXT NOT NULL,
+      result TEXT NOT NULL,
+      request_id TEXT,
+      ip TEXT,
+      user_agent TEXT,
+      meta_json TEXT,
+      created_at TEXT NOT NULL
+    );
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_audit_logs_actor_created_idx
+    ON auth_audit_logs(actor_user_id, created_at);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_audit_logs_action_created_idx
+    ON auth_audit_logs(action, created_at);
+  `);
+  context.sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS auth_audit_logs_resource_idx
+    ON auth_audit_logs(resource_type, resource_id);
+  `);
 }
 
 /**

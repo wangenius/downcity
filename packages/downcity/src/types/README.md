@@ -31,6 +31,9 @@
 - `AuthDashboard.ts`
   - 定义 `AuthDashboardPayload`。
   - 用于 dashboard authorization 页面，统一描述 auth 管理面的返回结构。
+- `types/auth/*`
+  - 定义统一账户 V1 的用户、角色、权限、token、路由策略等基础类型。
+  - 用于 `main/auth/*` 的 Bearer Token 认证链路，避免把 auth 协议散落到路由与存储层。
 
 ## 设计原则
 

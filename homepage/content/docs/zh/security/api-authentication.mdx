@@ -1,0 +1,107 @@
+---
+title: API 认证
+description: 如何初始化管理员、登录并使用 Bearer Token 调用 Downcity API
+---
+
+# API 认证
+
+从统一账户 V1 开始，Downcity 提供一组基础认证接口，用来初始化首个管理员、登录，以及管理访问 token。
+
+当前已经落地的接口是：
+
+- `POST /api/auth/bootstrap-admin`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `GET /api/auth/token/list`
+- `POST /api/auth/token/create`
+- `POST /api/auth/token/revoke`
+
+## 第一次使用
+
+如果当前 console 数据库里还没有任何用户，可以先初始化第一个管理员：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/bootstrap-admin \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username": "admin",
+    "password": "pass-123456",
+    "displayName": "Admin",
+    "tokenName": "bootstrap"
+  }'
+```
+
+成功后会返回：
+
+- 用户信息
+- 一次性明文 Bearer Token
+
+注意：明文 token 只会在签发时返回一次，后续列表接口不会再返回。
+如果你是通过 CLI 首次执行 `city start` / `city console start` 完成初始化，CLI 会提示你设置管理员密码；留空时默认使用 `downcity`。如果你是直接调用 `bootstrap-admin` API，则密码完全以你提交的 `password` 为准。
+
+## 登录
+
+管理员初始化完成后，后续通过登录获取新的 Bearer Token：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username": "admin",
+    "password": "你在 bootstrap-admin 时设置的密码"
+  }'
+```
+
+`tokenName` 对 API 调用方是可选字段；Console UI 会在内部固定成自己的默认值，不要求用户填写。
+
+## 带 Token 调用接口
+
+拿到 token 后，统一放进 `Authorization` 头：
+
+```bash
+curl http://127.0.0.1:3000/api/auth/me \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+如果 token 有效，接口会返回当前用户、角色和权限。
+
+## 管理 Token
+
+查看当前用户的 token 列表：
+
+```bash
+curl http://127.0.0.1:3000/api/auth/token/list \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+创建一个新的 token：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/token/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "name": "chrome-extension"
+  }'
+```
+
+吊销 token：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "tokenId": "token_record_id"
+  }'
+```
+
+## 当前边界
+
+这次落地的是统一账户 V1 的认证主干：
+
+- 已有统一用户表、角色表、权限表、token 表、审计日志表
+- 已有 Bearer Token 签发与校验
+- 已有基础 token 管理接口
+
+后续版本会继续把更多控制面接口切到统一 Bearer 鉴权。

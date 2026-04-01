@@ -47,6 +47,12 @@ import type {
   ConsoleUiAgentDirectoryInspection,
 } from "@/types/ConsoleUI.js";
 import type { AgentProjectInitializationResult } from "@/types/AgentProject.js";
+import { AuthService } from "@/main/auth/AuthService.js";
+import { registerAuthRoutes } from "@/main/auth/AuthRoutes.js";
+import {
+  CONSOLE_UI_AUTH_ROUTE_POLICIES,
+  createRouteAuthGuardMiddleware,
+} from "@/main/auth/RoutePolicy.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,11 +94,13 @@ export class ConsoleUIGateway {
   private app: Hono;
   private server: ReturnType<typeof http.createServer> | null = null;
   private readonly publicDir: string;
+  private readonly authService: AuthService;
 
   constructor() {
     // 关键点（中文）：src/main/ui 与 bin/main/ui 都回退到 packages/downcity/public。
     this.publicDir = path.join(__dirname, "../../../public");
     this.app = new Hono();
+    this.authService = new AuthService();
 
     this.app.use("*", logger());
     this.app.use(
@@ -103,6 +111,13 @@ export class ConsoleUIGateway {
         allowHeaders: ["Content-Type", "Authorization", "X-DC-Agent"],
       }),
     );
+    this.app.use(
+      "*",
+      createRouteAuthGuardMiddleware(
+        this.authService,
+        CONSOLE_UI_AUTH_ROUTE_POLICIES,
+      ),
+    );
 
     this.setupRoutes();
   }
@@ -111,6 +126,10 @@ export class ConsoleUIGateway {
    * 注册网关路由。
    */
   private setupRoutes(): void {
+    registerAuthRoutes({
+      app: this.app,
+      authService: this.authService,
+    });
     registerConsoleUiGatewayRoutes({
       app: this.app,
       handlers: {

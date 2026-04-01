@@ -157,7 +157,7 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
             },
             modelId: {
               type: "string",
-              enum: ["qwen3-tts-0.6b", "kokoro-82m"],
+              enum: ["qwen3-tts-0.6b", "kokoro-82m", "qwen3-tts-1.7b"],
             },
             modelsDir: { type: "string" },
             pythonBin: { type: "string" },
@@ -174,7 +174,7 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
               type: "array",
               items: {
                 type: "string",
-                enum: ["qwen3-tts-0.6b", "kokoro-82m"],
+                enum: ["qwen3-tts-0.6b", "kokoro-82m", "qwen3-tts-1.7b"],
               },
             },
           },

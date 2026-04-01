@@ -19,7 +19,7 @@ description: task.md schema, when trigger semantics, and action contracts
 | --- | --- | --- |
 | `title` | Yes | Unique task name |
 | `description` | Yes | Goal description |
-| `contextId` | Yes | Execution context id |
+| `sessionId` | Yes | Session id that receives the final task result |
 | `when` | Yes | Trigger: `@manual` / cron / `time:ISO8601` |
 | `status` | Yes | `enabled` / `paused` / `disabled` |
 | `kind` | No | `agent` (default) or `script` |
@@ -70,6 +70,11 @@ The `message` explicitly tells the caller:
 - the agent can continue the next steps immediately
 - there is no need to wait for the task to finish
 
+Automatic delivery after completion:
+- Downcity uses chat service `send` to deliver the task's **final result body** back to the chat bound to `sessionId`.
+- Because of that, task bodies usually should not ask the executor to call `city chat send` again.
+- Only add explicit send steps for cross-session delivery, extra notifications, or multi-target fanout.
+
 Caller behavior rules:
 - do not manually forward the task output again after `accepted=true`
 - do not proactively read the run directory, `run-progress.json`, or `output.md` to poll
@@ -79,6 +84,68 @@ Current `agent` rules:
 - single-round by default
 - multi-round review only when `review=true`
 - valid output text is enough by default; successful `chat_send` delivery is no longer required
+
+## How to write task bodies
+
+Treat `body` as an execution spec, not a vague reminder.
+
+### Recommended agent task structure
+
+```md
+# Goal
+
+- State the final deliverable clearly.
+
+# Context and Inputs
+
+- Add sources, scope, constraints, assumptions, and references.
+
+# Steps
+
+1. Understand the completion criteria.
+2. Gather information or execute the work.
+3. Save key intermediate artifacts into the run directory.
+4. Produce the final result body.
+
+# Output Requirements
+
+- Return the final result directly.
+- Specify whether it should be Markdown, JSON, a table, etc.
+- Avoid long raw logs.
+- Do not call `city chat send` again unless extra delivery is required.
+
+# Trigger and Status Guidance
+
+- draft/manual flow: `@manual` + `paused`
+- stable recurring flow: cron + `enabled`
+- one-shot execution: `time:<timezone-aware ISO datetime>`
+
+# Notes
+
+- Only send extra messages when cross-session or additional notification is truly required.
+```
+
+### Recommended script task structure
+
+```bash
+# Goal: one-line summary
+# Inputs: env vars, files, command dependencies
+# Failure conditions: when the script should exit 1
+
+set -euo pipefail
+
+# 1. Prepare inputs
+
+# 2. Run main logic
+
+# 3. Print final result (this output is what gets sent back to the user)
+```
+
+## Default guidance
+
+- If the user did not explicitly ask for automatic triggering, prefer `@manual` + `paused`.
+- Task bodies should describe what the final result should look like, not just say "go do it".
+- Write key intermediate artifacts into the run directory when possible.
 
 ## CLI and API
 

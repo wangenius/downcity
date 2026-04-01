@@ -65,6 +65,24 @@ export function isNotFoundError(messageInput: string): boolean {
   return message.includes("404") || message.includes("not found");
 }
 
+export function isUnauthorizedError(error: unknown): boolean {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error
+  ) {
+    return Number((error as { status?: unknown }).status) === 401
+  }
+  const message = getErrorMessage(error).toLowerCase()
+  return (
+    message.includes("missing bearer token") ||
+    message.includes("invalid bearer token") ||
+    message.includes("token is revoked") ||
+    message.includes("token is expired") ||
+    message.includes("user not found for token")
+  )
+}
+
 export function statusBadgeVariant(raw?: string): "ok" | "warn" | "bad" {
   const value = String(raw || "").toLowerCase();
   if (["running", "ok", "active", "enabled", "success"].includes(value)) return "ok";

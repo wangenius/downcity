@@ -15,7 +15,6 @@ import type { TtsModelId, TtsRuntimeFamily } from "@/types/Tts.js";
 
 const execFileAsync = promisify(execFileCb);
 
-const DEFAULT_PYTHON_BIN = "python3";
 const DEFAULT_PIP_TIMEOUT_MS = 300_000;
 const OUTPUT_TAIL_LIMIT = 1200;
 const DEFAULT_VENV_DIR = path.join(os.homedir(), ".downcity", "venvs", "tts");
@@ -129,7 +128,7 @@ export interface TtsDependencyInstallInput {
 
 function normalizePythonBin(input?: string): string {
   const text = String(input || "").trim();
-  return text || DEFAULT_PYTHON_BIN;
+  return text || "python3";
 }
 
 function normalizeTimeoutMs(value?: number): number {
@@ -153,8 +152,22 @@ function tailText(value: string): string | undefined {
   return text.slice(text.length - OUTPUT_TAIL_LIMIT);
 }
 
-function resolveVenvPythonBin(venvDir: string): string {
+export function resolveTtsVenvPythonBin(venvDir: string): string {
   return path.join(venvDir, "bin", "python");
+}
+
+/**
+ * 返回 TTS 默认虚拟环境目录。
+ */
+export function resolveDefaultTtsVenvDir(): string {
+  return DEFAULT_VENV_DIR;
+}
+
+/**
+ * 返回 TTS 默认虚拟环境 Python 路径。
+ */
+export function resolveDefaultTtsVenvPythonBin(): string {
+  return resolveTtsVenvPythonBin(DEFAULT_VENV_DIR);
 }
 
 /**
@@ -312,8 +325,19 @@ async function installRunnerWithPython(params: {
   }
 }
 
-async function ensureVirtualEnv(venvDir: string, basePythonBin: string): Promise<string> {
-  const pythonBin = resolveVenvPythonBin(venvDir);
+export async function ensureTtsVirtualEnv(params: {
+  /**
+   * 虚拟环境目录。
+   */
+  venvDir?: string;
+  /**
+   * 用于创建 venv 的基础 Python。
+   */
+  basePythonBin?: string;
+}): Promise<string> {
+  const venvDir = normalizeVenvDir(params.venvDir);
+  const basePythonBin = normalizePythonBin(params.basePythonBin);
+  const pythonBin = resolveTtsVenvPythonBin(venvDir);
   if (await fs.pathExists(pythonBin)) {
     return pythonBin;
   }
@@ -367,33 +391,11 @@ export async function installTtsDependencies(
   const basePythonBin = normalizePythonBin(input.pythonBin);
   const timeoutMs = normalizeTimeoutMs(input.timeoutMs);
   const upgrade = input.upgrade === true;
-
-  const baseAttempt = await installAllRunners({
-    pythonBin: basePythonBin,
-    runners,
-    upgrade,
-    timeoutMs,
-  });
-  if (baseAttempt.success) {
-    return {
-      pythonBin: basePythonBin,
-      runners,
-      items: baseAttempt.items,
-      usedVirtualEnv: false,
-    };
-  }
-
-  const pep668Only = baseAttempt.failures.every((item) => isPep668InstallError(item.reason));
-  if (!pep668Only) {
-    throw new Error(
-      baseAttempt.failures
-        .map((item) => `${item.runner}: ${item.reason}`)
-        .join("\n"),
-    );
-  }
-
   const venvDir = normalizeVenvDir(input.venvDir);
-  const venvPythonBin = await ensureVirtualEnv(venvDir, basePythonBin);
+  const venvPythonBin = await ensureTtsVirtualEnv({
+    venvDir,
+    basePythonBin,
+  });
   const venvAttempt = await installAllRunners({
     pythonBin: venvPythonBin,
     runners,

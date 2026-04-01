@@ -1,0 +1,103 @@
+---
+title: 统一账户系统 V1 详细设计稿
+description: 第一阶段 schema 字段、接口契约、中间件顺序、路由权限矩阵与实施阶段
+---
+
+# 统一账户系统 V1 详细设计稿
+
+这一页继续承接 V1 实施稿，再往下细化一层。
+
+## 这一页补充什么
+
+- 表结构字段级设计
+- API 请求响应契约
+- 中间件顺序
+- 模块职责
+- 路由权限矩阵
+- 实施阶段
+- 测试矩阵
+
+## Schema 重点
+
+建议表：
+
+- `auth_users`
+- `auth_roles`
+- `auth_permissions`
+- `auth_user_roles`
+- `auth_role_permissions`
+- `auth_tokens`
+- `auth_audit_logs`
+
+V1 关键规则：
+
+- 只存 token hash，不存明文 token
+
+## API 重点
+
+建议 V1 认证接口：
+
+- `POST /api/auth/bootstrap-admin`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/token/create`
+- `GET /api/auth/token/list`
+- `POST /api/auth/token/revoke`
+
+## 中间件重点
+
+建议顺序：
+
+1. request id
+2. logger
+3. origin guard
+4. auth middleware
+5. permission middleware
+6. handler
+
+## 模块重点
+
+建议 auth 根目录：
+
+- `packages/downcity/src/main/auth/`
+
+建议第一批模块：
+
+- `AuthSchema`
+- `AuthStore`
+- `AuthService`
+- `TokenService`
+- `AuthMiddleware`
+- `RoutePolicy`
+- `PermissionPolicy`
+- `AuthRoutes`
+- `TokenRoutes`
+
+## 第一批路由权限矩阵
+
+- `/api/execute` -> `agent.execute`
+- `/api/services/list` -> `service.read`
+- `/api/services/control` -> `service.write`
+- `/api/plugins/list` -> `plugin.read`
+- `/api/dashboard/sessions` -> `session.read`
+- `/api/dashboard/tasks/run` -> `task.run`
+- `/api/ui/env` -> `env.read`
+- `/api/ui/command/execute` -> `shell.execute`
+
+## 实施阶段
+
+1. schema 和 store
+2. 登录和 token
+3. 鉴权中间件
+4. 收口现有路由
+5. 更新 Console UI、CLI 和 Extension
+
+## 测试重点
+
+至少包括：
+
+- 未登录返回 `401`
+- 吊销 token 返回 `401`
+- 权限不足返回 `403`
+- bootstrap-admin 只能执行一次
+- token 明文只返回一次

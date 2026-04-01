@@ -44,6 +44,7 @@ import {
   writeTaskRunArtifacts,
   writeTaskRunInputArtifact,
 } from "./TaskRunArtifacts.js";
+import { dispatchTaskRunCompletionToChat } from "./TaskRunChatDispatch.js";
 
 const DEFAULT_MAX_DIALOGUE_ROUNDS = 3;
 const DEFAULT_SINGLE_ROUND = 1;
@@ -506,6 +507,14 @@ export async function runTaskNow(params: {
     runStatus: status,
     executionStatus,
     resultStatus,
+  });
+  await dispatchTaskRunCompletionToChat({
+    context,
+    task,
+    executionId,
+    outputText,
+    errorText,
+    resultErrors,
   });
 
   return {

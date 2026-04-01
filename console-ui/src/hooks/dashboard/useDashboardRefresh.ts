@@ -9,7 +9,12 @@
 import { useCallback } from "react";
 import type { MutableRefObject } from "react";
 import { dashboardApiRoutes } from "../../lib/dashboard-api";
-import { CONSOLEUI_SESSION_ID, getErrorMessage, isAgentUnavailableError } from "./shared";
+import {
+  CONSOLEUI_SESSION_ID,
+  getErrorMessage,
+  isAgentUnavailableError,
+  isUnauthorizedError,
+} from "./shared";
 import type {
   UiAgentOption,
   UiAgentsResponse,
@@ -97,6 +102,7 @@ export function useDashboardRefresh(params: {
   refreshSessionArchives: (agentId: string, sessionId: string) => Promise<UiSessionArchiveSummary[]>;
   refreshPrompt: (agentId: string, sessionId?: string) => Promise<void>;
   showToast: (message: string, type?: DashboardToastType) => void;
+  setAuthRequired: (value: boolean) => void;
 }): {
   refreshDashboard: (preferredAgentId?: string) => Promise<void>;
   handleSessionChange: (sessionId: string) => Promise<void>;
@@ -187,6 +193,7 @@ export function useDashboardRefresh(params: {
           });
         }
 
+        params.setAuthRequired(false);
         params.setTopbarError(false);
         params.setTopbarStatus("Console 在线");
       } catch (error) {
@@ -223,6 +230,13 @@ export function useDashboardRefresh(params: {
           params.setAgentEnvItems([]);
           params.setTopbarError(false);
           params.setTopbarStatus("Console 在线");
+          return;
+        }
+
+        if (isUnauthorizedError(error)) {
+          params.setAuthRequired(true);
+          params.setTopbarError(true);
+          params.setTopbarStatus("需要登录");
           return;
         }
 

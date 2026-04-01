@@ -1,4 +1,4 @@
 {
   "title": "Security & Permissions",
-  "pages": ["overview", "permissions", "data-security"]
+  "pages": ["overview", "api-authentication", "permissions", "data-security"]
 }

@@ -28,7 +28,7 @@ CLI docs are organized per command page.
 
 ## Runtime model (short)
 
-- `city start`: one-click bootstrap (runs `city console start` then `city console ui start`)
+- `city start`: one-click bootstrap (runs `city console start` then `city console ui start`; on first run it prompts for the admin password and falls back to `downcity` if left blank)
 - `city stop`: one-click shutdown (same as `city console stop`)
 - `city restart`: one-click restart (restarts console, restores agents that were running before, then starts `console ui`)
 - `city console start`: start global control plane

@@ -8,6 +8,7 @@ description: Start console in background mode
 Start console in background mode.
 
 Startup now also initializes an empty `~/.downcity/console/agents.json`, so Console UI can show a clean empty state even before any agent has been started.
+If unified auth has no users yet, startup prompts you to set the first admin password. Leaving it empty falls back to `downcity`, and the username is fixed as `admin`.
 
 ## Usage
 
@@ -31,10 +32,11 @@ city version: 1.0.0
 ✅ DC console started
    pid: <pid>
    log: <consoleLogPath>
-✅ Console UI started
-   pid: <uiPid>
-   url: http://127.0.0.1:5315
-   log: <uiLogPath>
+? Set Console admin password (leave blank for downcity): ********
+✅ Unified auth admin initialized
+   username: admin
+   password: use the password you just entered
+   login: use this password to sign in to Console UI
 ```
 
 ```text

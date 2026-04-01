@@ -83,18 +83,18 @@ function hasAction(actionItems: UiPluginActionItem[], actionName: string): boole
   return actionItems.some((item) => String(item.name || "").trim() === actionName)
 }
 
-function getSnapshotMode(item: UiPluginRuntimeItem): "enabled" | "disabled" | "unavailable" {
+function getSnapshotMode(item: UiPluginRuntimeItem): "enabled" | "disabled" | "attention" {
   const raw = String(item.state || "").trim().toLowerCase()
   if (raw === "disabled") return "disabled"
   if (raw === "available") return "enabled"
-  return "unavailable"
+  return "attention"
 }
 
 function getSnapshotEnabled(item: UiPluginRuntimeItem): boolean {
   return getSnapshotMode(item) !== "disabled"
 }
 
-function getCardTone(mode: "enabled" | "disabled" | "unavailable"): {
+function getCardTone(mode: "enabled" | "disabled" | "attention"): {
   cardClass: string
   badgeLabel: string
   badgeClass: string
@@ -118,7 +118,7 @@ function getCardTone(mode: "enabled" | "disabled" | "unavailable"): {
   }
   return {
     cardClass: "border-amber-200/80 bg-[color-mix(in_oklab,var(--background)_95%,oklch(0.95_0.02_85)_5%)]",
-    badgeLabel: "Setup needed",
+    badgeLabel: "Needs attention",
     badgeClass: "bg-amber-500/10 text-amber-700",
     dotClass: "bg-amber-500",
   }
@@ -230,10 +230,10 @@ function buildSetupPayload(setup: UiPluginSetupDefinition | undefined, draft: Se
   return payload
 }
 
-function getPrimaryActionLabel(mode: UiPluginSetupDefinition["mode"], unavailable: boolean): string {
-  if (mode === "install") return unavailable ? "安装" : "重新安装"
+function getPrimaryActionLabel(mode: UiPluginSetupDefinition["mode"], needsAttention: boolean): string {
+  if (mode === "install") return needsAttention ? "修复安装" : "重新安装"
   if (mode === "configure") return "保存配置"
-  return unavailable ? "安装并写入配置" : "更新安装配置"
+  return needsAttention ? "修复并更新配置" : "更新安装配置"
 }
 
 export function PluginsSection(props: PluginsSectionProps) {
@@ -245,6 +245,7 @@ export function PluginsSection(props: PluginsSectionProps) {
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({})
   const [setupDrafts, setSetupDrafts] = React.useState<Record<string, SetupDraftState>>({})
   const [setupOptions, setSetupOptions] = React.useState<Record<string, SetupOptionsState>>({})
+  const [setupLogs, setSetupLogs] = React.useState<Record<string, string[]>>({})
   const [installerPluginName, setInstallerPluginName] = React.useState("")
 
   React.useEffect(() => {
@@ -280,15 +281,15 @@ export function PluginsSection(props: PluginsSectionProps) {
   const summary = React.useMemo(() => {
     let enabled = 0
     let disabled = 0
-    let unavailable = 0
-    for (const item of filtered) {
-      const mode = getSnapshotMode(item)
-      if (mode === "enabled") enabled += 1
-      else if (mode === "disabled") disabled += 1
-      else unavailable += 1
-    }
-    return { enabled, disabled, unavailable }
-  }, [filtered])
+      let attention = 0
+      for (const item of filtered) {
+        const mode = getSnapshotMode(item)
+        if (mode === "enabled") enabled += 1
+        else if (mode === "disabled") disabled += 1
+        else attention += 1
+      }
+      return { enabled, disabled, attention }
+    }, [filtered])
 
   const installerPlugin = React.useMemo(
     () => plugins.find((item) => String(item.name || "").trim() === installerPluginName) || null,
@@ -310,6 +311,12 @@ export function PluginsSection(props: PluginsSectionProps) {
 
       try {
         const result = await onRunAction(pluginName, actionName, payload)
+        if (Array.isArray(result?.logs)) {
+          setSetupLogs((current) => ({
+            ...current,
+            [pluginName]: result.logs || [],
+          }))
+        }
         if (pendingKind === "toggle") {
           const targetEnabled = actionName === "on"
           if (result.success) {
@@ -393,6 +400,10 @@ export function PluginsSection(props: PluginsSectionProps) {
       const pluginName = String(plugin.name || "").trim()
       if (!pluginName || !plugin.config?.setup) return
       setInstallerPluginName(pluginName)
+      setSetupLogs((current) => ({
+        ...current,
+        [pluginName]: [],
+      }))
       void syncSetupState(plugin)
     },
     [syncSetupState],
@@ -433,6 +444,12 @@ export function PluginsSection(props: PluginsSectionProps) {
       ...payload,
       ...(setupActionName === "on" ? { install: true } : {}),
     })
+    if (!result?.logs?.length) {
+      setSetupLogs((current) => ({
+        ...current,
+        [pluginName]: [result?.success ? "操作完成" : result?.message || "操作失败"],
+      }))
+    }
     if (result?.success && setupActionName === "on") {
       setEnabledOverrides((current) => ({
         ...current,
@@ -449,7 +466,7 @@ export function PluginsSection(props: PluginsSectionProps) {
     <>
       <DashboardModule
         title="Plugins"
-        description={`enabled ${summary.enabled} · disabled ${summary.disabled}${summary.unavailable > 0 ? ` · setup ${summary.unavailable}` : ""}`}
+        description={`enabled ${summary.enabled} · disabled ${summary.disabled}${summary.attention > 0 ? ` · attention ${summary.attention}` : ""}`}
         bodyClassName="min-h-0 overflow-y-auto"
         actions={
           <div className="relative w-[220px]">
@@ -496,8 +513,8 @@ export function PluginsSection(props: PluginsSectionProps) {
               const canToggle = canRunOn || canRunOff
               const tone = getCardTone(
                 effectiveEnabled
-                  ? snapshotMode === "unavailable"
-                    ? "unavailable"
+                  ? snapshotMode === "attention"
+                    ? "attention"
                     : "enabled"
                   : "disabled",
               )
@@ -553,7 +570,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                       {setup ? (
                         <ToolAction
                           icon={<Settings2Icon className="size-3.5" />}
-                          label={snapshotMode === "unavailable" ? "设置" : "配置"}
+                          label={snapshotMode === "attention" ? "修复" : "配置"}
                           loading={setupLoading || optionsLoading}
                           disabled={toggleLoading || statusLoading || doctorLoading}
                           onClick={() => openInstaller(item)}
@@ -728,6 +745,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                     : []
                   const draft = setupDrafts[pluginName] || {}
                   const optionMap = setupOptions[pluginName] || {}
+                  const logs = setupLogs[pluginName] || []
 
                   return (
                     <>
@@ -736,8 +754,8 @@ export function PluginsSection(props: PluginsSectionProps) {
                           {String(installerPlugin.title || pluginName)}
                         </div>
                         <div className="mt-1 text-[12px] leading-5 text-muted-foreground">
-                          {mode === "unavailable"
-                            ? reasons.join(" · ") || "当前插件还未完成 setup。"
+                          {mode === "attention"
+                            ? reasons.join(" · ") || "当前插件需要修复或补全运行环境。"
                             : "当前插件已可用，可在这里更新配置。"}
                         </div>
                       </div>
@@ -795,6 +813,22 @@ export function PluginsSection(props: PluginsSectionProps) {
                         })}
                       </div>
 
+                      <div className="space-y-2">
+                        <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                          安装日志
+                        </div>
+                        <div className="max-h-48 overflow-y-auto rounded-[14px] border border-border/70 bg-secondary/35 px-3 py-2 font-mono text-[11px] leading-5 text-foreground/82">
+                          {busy ? <div>正在执行，请稍候...</div> : null}
+                          {logs.length > 0 ? (
+                            logs.map((line, index) => (
+                              <div key={`${pluginName}:log:${index}`}>{line}</div>
+                            ))
+                          ) : !busy ? (
+                            <div className="text-muted-foreground">执行完成后会在这里显示安装过程与错误信息。</div>
+                          ) : null}
+                        </div>
+                      </div>
+
                       <DialogFooter className="border-t border-border/60 px-0 pt-4 sm:justify-end">
                         <Button type="button" variant="outline" onClick={closeInstaller} disabled={busy}>
                           取消
@@ -812,7 +846,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                           onClick={() => void runSetupAction()}
                         >
                           {busy ? <Loader2Icon className="size-4 animate-spin" /> : null}
-                          <span>{getPrimaryActionLabel(setup.mode, mode === "unavailable")}</span>
+                          <span>{getPrimaryActionLabel(setup.mode, mode === "attention")}</span>
                         </Button>
                       </DialogFooter>
                     </>

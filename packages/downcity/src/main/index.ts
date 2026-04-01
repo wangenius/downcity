@@ -21,6 +21,9 @@ import {
 import { pluginsRouter } from "./routes/plugins.js";
 import { staticRouter } from "./routes/static.js";
 import { dashboardRouter } from "@main/ui/dashboard/Router.js";
+import { registerAuthRoutes } from "@main/auth/AuthRoutes.js";
+import { AuthService } from "@main/auth/AuthService.js";
+import { createRouteAuthGuardMiddleware } from "@main/auth/RoutePolicy.js";
 
 /**
  * Server 启动参数。
@@ -49,6 +52,7 @@ export interface ServerInstance {
  */
 export function createServerApp(): Hono {
   const app = new Hono();
+  const authService = new AuthService();
 
   app.use("*", logger());
   app.use(
@@ -59,6 +63,7 @@ export function createServerApp(): Hono {
       allowHeaders: ["Content-Type", "Authorization"],
     }),
   );
+  app.use("*", createRouteAuthGuardMiddleware(authService));
 
   // 关键点（中文）：service action 路由在 runtime ready 后再注册，避免命令级 import 副作用。
   ensureServiceActionRoutesRegistered();
@@ -70,6 +75,7 @@ export function createServerApp(): Hono {
   app.route("/", pluginsRouter);
   app.route("/", executeRouter);
   app.route("/", dashboardRouter);
+  registerAuthRoutes({ app, authService });
 
   return app;
 }

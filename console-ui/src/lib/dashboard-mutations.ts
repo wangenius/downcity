@@ -6,7 +6,7 @@
  * - 不依赖 React，仅通过回调与 hook 交互。
  */
 
-import { dashboardApiRoutes } from "./dashboard-api";
+import { dashboardApiRoutes, readConsoleAuthState, withConsoleAgent } from "./dashboard-api";
 import { getErrorMessage } from "../hooks/dashboard/shared";
 import type {
   UiAgentCreatePayload,
@@ -73,22 +73,36 @@ export async function runPluginActionMutation(params: {
   showToast: ShowToast;
 }): Promise<UiPluginActionExecutionResult> {
   try {
-    const result = await params.requestJson<{
+    const authState = readConsoleAuthState();
+    const response = await fetch(
+      withConsoleAgent(
+        dashboardApiRoutes.pluginsAction(),
+        params.selectedAgentId,
+      ),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authState?.token ? { Authorization: `Bearer ${authState.token}` } : {}),
+        },
+        body: JSON.stringify({
+          pluginName: params.pluginName,
+          actionName: params.actionName,
+          payload: params.payload,
+        }),
+      },
+    );
+    const raw = await response.text();
+    const result = (raw ? JSON.parse(raw) : {}) as {
       success?: boolean;
       message?: string;
       error?: string;
       data?: unknown;
-    }>(dashboardApiRoutes.pluginsAction(), {
-      method: "POST",
-      body: JSON.stringify({
-        pluginName: params.pluginName,
-        actionName: params.actionName,
-        payload: params.payload,
-      }),
-    });
+    };
     const message = String(
       result?.message || result?.error || `${params.pluginName} ${params.actionName}`,
     ).trim();
+    const logs = extractPluginActionLogs(result?.data, message);
     const shouldRefreshPlugins =
       params.actionName === "on" ||
       params.actionName === "off" ||
@@ -100,12 +114,13 @@ export async function runPluginActionMutation(params: {
     }
     params.showToast(
       `plugin ${params.pluginName} ${params.actionName}: ${message}`,
-      result?.success ? "success" : "error",
+      response.ok && result?.success ? "success" : "error",
     );
     return {
-      success: result?.success === true,
+      success: response.ok && result?.success === true,
       message,
       data: result?.data,
+      logs,
     };
   } catch (error) {
     const message = getErrorMessage(error);
@@ -115,6 +130,20 @@ export async function runPluginActionMutation(params: {
       message,
     };
   }
+}
+
+function extractPluginActionLogs(data: unknown, message: string): string[] {
+  const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+  const rawLogs = Array.isArray(payload?.logs)
+    ? payload.logs
+    : payload?.details && typeof payload.details === "object" && Array.isArray((payload.details as Record<string, unknown>).logs)
+      ? ((payload.details as Record<string, unknown>).logs as unknown[])
+      : [];
+  const logs = rawLogs
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
+  if (logs.length > 0) return logs;
+  return message ? [message] : [];
 }
 
 export async function runChatChannelActionMutation(params: {

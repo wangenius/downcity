@@ -44,7 +44,7 @@ const INIT_DEFAULT_MODEL_BY_PROVIDER: Record<LlmProviderType, string> = {
   gemini: "gemini-2.0-flash",
   "open-compatible": "gpt-4o-mini",
   "open-responses": "gpt-4.1-mini",
-  moonshot: "moonshot-v1-8k",
+  moonshot: "kimi-k2.5",
   xai: "grok-3-mini",
   huggingface: "meta-llama/Meta-Llama-3.1-8B-Instruct",
   openrouter: "openai/gpt-4o-mini",

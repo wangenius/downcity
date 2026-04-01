@@ -13,6 +13,7 @@
 7. [Task / Shell / Memory 执行链路](./task-shell-memory-flow.md)
 8. [认证与授权架构设计稿](./platform/auth-and-authorization-architecture-design.md)
 9. [认证与授权 V1 实施稿](./platform/auth-and-authorization-v1-implementation-plan.md)
+10. [认证与授权 V1 详细设计稿](./platform/auth-and-authorization-v1-detailed-design.md)
 
 如果你只想快速建立心智模型，先看：
 
@@ -27,7 +28,8 @@
 
 1. `platform/认证与授权架构设计稿` 是面向后续服务器部署目标的正式设计文档。
 2. `platform/认证与授权 V1 实施稿` 是第一阶段落地清单，包含 schema、API、模块和实施顺序。
-3. 这些文档用于指导后续实现，不代表当前代码已经全部具备这些能力。
+3. `platform/认证与授权 V1 详细设计稿` 继续下钻到接口契约、字段、模块关系、测试矩阵与实施阶段。
+4. 这些文档用于指导后续实现，不代表当前代码已经全部具备这些能力。
 
 已经删除：
 

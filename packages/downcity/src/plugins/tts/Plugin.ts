@@ -103,7 +103,7 @@ export const ttsPlugin: Plugin = {
   setup: {
     mode: "install-configure",
     title: "安装语音合成",
-    description: "选择模型即可完成下载、依赖安装与当前配置写入。",
+    description: "选择模型后直接完成模型下载、独立运行环境准备与配置写入。",
     fields: [
       {
         key: "modelId",
@@ -121,11 +121,6 @@ export const ttsPlugin: Plugin = {
           { label: "WAV", value: "wav" },
           { label: "FLAC", value: "flac" },
         ],
-      },
-      {
-        key: "installDeps",
-        label: "安装 Python 依赖",
-        type: "checkbox",
       },
     ],
     primaryAction: "install",

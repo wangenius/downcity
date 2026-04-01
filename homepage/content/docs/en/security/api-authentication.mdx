@@ -1,0 +1,105 @@
+---
+title: API Authentication
+description: Bootstrap the first admin, sign in, and use Bearer tokens against Downcity APIs
+---
+
+# API Authentication
+
+Unified Auth V1 adds the first set of authentication endpoints for Downcity:
+
+- `POST /api/auth/bootstrap-admin`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `GET /api/auth/token/list`
+- `POST /api/auth/token/create`
+- `POST /api/auth/token/revoke`
+
+## First admin bootstrap
+
+If the console database does not have any user yet, bootstrap the first admin:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/bootstrap-admin \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username": "admin",
+    "password": "pass-123456",
+    "displayName": "Admin",
+    "tokenName": "bootstrap"
+  }'
+```
+
+The response returns:
+
+- the user summary
+- a one-time plaintext Bearer token
+
+The plaintext token is only returned at issuance time.
+If you initialize auth through `city start` or `city console start`, the CLI prompts for the first admin password and falls back to `downcity` when left blank. If you call `bootstrap-admin` directly, the password is exactly the `password` you submit.
+
+## Sign in
+
+After bootstrap, create more tokens through login:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "username": "admin",
+    "password": "the password you set during bootstrap-admin"
+  }'
+```
+
+`tokenName` is optional for raw API callers. Console UI sets its own internal default and does not ask the user to provide one.
+
+## Use the Bearer token
+
+Send the token through the `Authorization` header:
+
+```bash
+curl http://127.0.0.1:3000/api/auth/me \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+If the token is valid, the endpoint returns the current user, roles, and permissions.
+
+## Manage tokens
+
+List tokens:
+
+```bash
+curl http://127.0.0.1:3000/api/auth/token/list \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+Create a token:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/token/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "name": "chrome-extension"
+  }'
+```
+
+Revoke a token:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "tokenId": "token_record_id"
+  }'
+```
+
+## Current scope
+
+This rollout covers the V1 auth backbone:
+
+- unified user / role / permission / token / audit tables
+- Bearer token issuance and validation
+- basic token management endpoints
+
+Later iterations will move more control-plane APIs behind the same Bearer auth layer.

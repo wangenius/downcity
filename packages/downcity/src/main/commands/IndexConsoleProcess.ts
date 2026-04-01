@@ -42,6 +42,7 @@ import {
   sleep,
 } from "./IndexSupport.js";
 import { stopConsoleUiCommand } from "./UI.js";
+import { ensureConsoleAuthBootstrap } from "./ConsoleAuthBootstrap.js";
 
 /**
  * 启动 console 后台进程。
@@ -57,6 +58,7 @@ export async function startConsoleCommand(cliPath: string): Promise<void> {
   if (existingPid && isConsoleProcessAlive(existingPid)) {
     console.log("ℹ️  DC console is already running");
     console.log(`   pid: ${existingPid}`);
+    await ensureConsoleAuthBootstrap();
     return;
   }
   if (existingPid) {
@@ -95,6 +97,8 @@ export async function startConsoleCommand(cliPath: string): Promise<void> {
   console.log("✅ DC console started");
   console.log(`   pid: ${child.pid}`);
   console.log(`   log: ${logPath}`);
+
+  await ensureConsoleAuthBootstrap();
 }
 
 /**

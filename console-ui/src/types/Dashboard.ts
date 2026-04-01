@@ -1027,6 +1027,10 @@ export interface UiPluginActionExecutionResult {
    * action 返回的数据载荷。
    */
   data?: unknown
+  /**
+   * action 附带的日志行（可选）。
+   */
+  logs?: string[]
 }
 
 /**

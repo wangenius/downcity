@@ -198,6 +198,14 @@ export interface StoredEnvEntry {
    */
   key: string;
   /**
+   * 环境变量描述。
+   *
+   * 关键点（中文）
+   * - 面向用户说明该变量的用途。
+   * - 可为空，用于兼容历史只存 key/value 的数据。
+   */
+  description?: string;
+  /**
    * 环境变量 value（解密后的明文，仅运行时内存可见）。
    */
   value: string;
@@ -231,6 +239,13 @@ export interface UpsertEnvEntryInput {
    * 环境变量 key。
    */
   key: string;
+  /**
+   * 环境变量描述。
+   *
+   * 关键点（中文）
+   * - 允许为空，表示暂未填写用途说明。
+   */
+  description?: string;
   /**
    * 环境变量值；空字符串也允许（用于显式置空）。
    */

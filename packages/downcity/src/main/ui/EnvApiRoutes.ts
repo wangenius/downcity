@@ -91,6 +91,7 @@ export function registerConsoleUiEnvRoutes(params: {
             scope: "agent" as const,
             agentId: item.agentId,
             key: item.key,
+            description: item.description,
             value: item.value,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
@@ -105,6 +106,7 @@ export function registerConsoleUiEnvRoutes(params: {
         items: rows.map((item) => ({
           scope: "global" as const,
           key: item.key,
+          description: item.description,
           value: item.value,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
@@ -123,10 +125,12 @@ export function registerConsoleUiEnvRoutes(params: {
         scope?: string;
         agentId?: string;
         key?: string;
+        description?: string;
         value?: string;
       };
       const scope = normalizeScope(body.scope);
       const key = normalizeNonEmptyText(body.key, "env key");
+      const description = String(body.description || "").trim();
       const value = String(body.value ?? "");
       const store = new ConsoleStore();
       try {
@@ -135,6 +139,7 @@ export function registerConsoleUiEnvRoutes(params: {
           await store.upsertAgentEnvEntry({
             agentId,
             key,
+            description,
             value,
           });
           return c.json({
@@ -147,6 +152,7 @@ export function registerConsoleUiEnvRoutes(params: {
 
         await store.upsertGlobalEnvEntry({
           key,
+          description,
           value,
         });
         return c.json({
@@ -215,6 +221,7 @@ export function registerConsoleUiEnvRoutes(params: {
             await store.upsertAgentEnvEntry({
               agentId,
               key: entry.key,
+              description: "",
               value: entry.value,
             });
           }
@@ -230,6 +237,7 @@ export function registerConsoleUiEnvRoutes(params: {
         for (const entry of entries) {
           await store.upsertGlobalEnvEntry({
             key: entry.key,
+            description: "",
             value: entry.value,
           });
         }

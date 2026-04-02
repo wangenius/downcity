@@ -199,6 +199,8 @@ export function toUiMessageTimeline(
   for (const part of parts) {
     if (!part || typeof part !== "object") continue;
     const partObject = part as ToolPartCompatShape;
+    const legacyType =
+      typeof partObject.type === "string" ? partObject.type.trim() : "";
 
     if (isTextUIPart(part)) {
       const text = String(part.text || "").trim();
@@ -209,6 +211,39 @@ export function toUiMessageTimeline(
           role: "assistant",
           text,
           sequence,
+        }),
+      );
+      sequence += 1;
+      continue;
+    }
+
+    // 关键点（中文）：已持久化的 legacy `tool-call` / `tool-result` 必须优先处理。
+    // 否则 `isToolUIPart(part)` 会把 `tool-result` 误当成“既有 call 又有 result”的复合事件，
+    // 从而在 UI 中额外生成一条空的 `tool-call`。
+    if (legacyType === "tool-call") {
+      const toolName = resolveToolName(partObject);
+      events.push(
+        toUiMessageEvent({
+          message,
+          role: "tool-call",
+          text: stringifyForDisplay(extractToolCallInput(partObject)) || "(empty)",
+          sequence,
+          toolName,
+        }),
+      );
+      sequence += 1;
+      continue;
+    }
+
+    if (legacyType === "tool-result" || legacyType === "tool-error") {
+      const toolName = resolveToolName(partObject);
+      events.push(
+        toUiMessageEvent({
+          message,
+          role: "tool-result",
+          text: stringifyForDisplay(extractToolResultOutput(partObject)) || "(empty)",
+          sequence,
+          toolName,
         }),
       );
       sequence += 1;
@@ -243,37 +278,6 @@ export function toUiMessageTimeline(
         sequence += 1;
       }
       continue;
-    }
-
-    const legacyType =
-      typeof partObject.type === "string" ? partObject.type.trim() : "";
-    if (legacyType === "tool-call") {
-      const toolName = resolveToolName(partObject);
-      events.push(
-        toUiMessageEvent({
-          message,
-          role: "tool-call",
-          text: stringifyForDisplay(extractToolCallInput(partObject)) || "(empty)",
-          sequence,
-          toolName,
-        }),
-      );
-      sequence += 1;
-      continue;
-    }
-
-    if (legacyType === "tool-result" || legacyType === "tool-error") {
-      const toolName = resolveToolName(partObject);
-      events.push(
-        toUiMessageEvent({
-          message,
-          role: "tool-result",
-          text: stringifyForDisplay(extractToolResultOutput(partObject)) || "(empty)",
-          sequence,
-          toolName,
-        }),
-      );
-      sequence += 1;
     }
   }
 

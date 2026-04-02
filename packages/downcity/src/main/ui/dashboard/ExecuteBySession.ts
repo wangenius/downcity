@@ -16,8 +16,8 @@ import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySe
 import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
 import { buildQueuedUserMessageWithInfo } from "@services/chat/runtime/QueuedUserMessage.js";
 import {
-  hasPersistedAssistantSteps,
   pickLastSuccessfulChatSendText,
+  resolveAssistantMessageForPersistence,
 } from "@services/chat/runtime/UserVisibleText.js";
 import { buildExecuteInputText } from "./Helpers.js";
 
@@ -119,10 +119,13 @@ export async function executeBySessionId(params: {
 
   const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage).trim();
   try {
-    if (!hasPersistedAssistantSteps(result.assistantMessage)) {
+    const messageForPersistence = resolveAssistantMessageForPersistence(
+      result.assistantMessage,
+    );
+    if (messageForPersistence) {
       await params.agentState.sessionStore.appendAssistantMessage({
         sessionId,
-        message: result.assistantMessage,
+        message: messageForPersistence,
         fallbackText: userVisible,
         extra: {
           via: "tui_session_execute",

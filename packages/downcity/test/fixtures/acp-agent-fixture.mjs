@@ -25,6 +25,34 @@ function sendTextUpdate(sessionId, text) {
   });
 }
 
+function sendToolCallUpdate(sessionId, toolCall) {
+  send({
+    jsonrpc: "2.0",
+    method: "session/update",
+    params: {
+      sessionId,
+      update: {
+        sessionUpdate: "tool_call",
+        ...toolCall,
+      },
+    },
+  });
+}
+
+function sendToolResultUpdate(sessionId, toolResult) {
+  send({
+    jsonrpc: "2.0",
+    method: "session/update",
+    params: {
+      sessionId,
+      update: {
+        sessionUpdate: "tool_call_update",
+        ...toolResult,
+      },
+    },
+  });
+}
+
 const rl = readline.createInterface({
   input: process.stdin,
   crlfDelay: Infinity,
@@ -104,8 +132,45 @@ rl.on("line", (line) => {
 
       if (promptText.includes("stream progress test")) {
         sendTextUpdate(sessionId, "第一段输出，");
-        sendTextUpdate(sessionId, "第二段输出。\n");
+        sendTextUpdate(sessionId, "第二段输出。");
         sendTextUpdate(sessionId, "第三段收尾");
+        send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            stopReason: "end_turn",
+          },
+        });
+        return;
+      }
+
+      if (promptText.includes("tool call stream test")) {
+        sendTextUpdate(sessionId, "正在分析项目结构...");
+        sendToolCallUpdate(sessionId, {
+          toolCallId: "call_001",
+          _meta: {
+            claudeCode: {
+              toolName: "list_files",
+            },
+          },
+          status: "pending",
+          rawInput: {
+            path: ".",
+          },
+        });
+        sendToolResultUpdate(sessionId, {
+          toolCallId: "call_001",
+          _meta: {
+            claudeCode: {
+              toolName: "list_files",
+            },
+          },
+          status: "completed",
+          rawOutput: {
+            files: ["package.json", "src/index.ts"],
+          },
+        });
+        sendTextUpdate(sessionId, "分析完成，这是最终结果。");
         send({
           jsonrpc: "2.0",
           id: msg.id,

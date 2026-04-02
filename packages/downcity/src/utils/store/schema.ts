@@ -58,6 +58,7 @@ export const envEntriesTable = sqliteTable(
     scope: text("scope").notNull(),
     agentId: text("agent_id").notNull().default(""),
     key: text("key").notNull(),
+    description: text("description"),
     valueEncrypted: text("value_encrypted").notNull(),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),

@@ -13,7 +13,7 @@ import type { SessionRunResult } from "@/types/SessionRun.js";
 import type { SessionUserMessageV1 } from "@/types/SessionMessage.js";
 import type { SessionPort } from "@/types/ExecutionContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
-import { hasPersistedAssistantSteps } from "./UserVisibleText.js";
+import { resolveAssistantMessageForPersistence } from "./UserVisibleText.js";
 
 /**
  * 判断 queue item 是否需要补写到 session。
@@ -105,10 +105,13 @@ export async function persistChatRunResult(params: {
   sessionId: string;
   result: SessionRunResult;
 }): Promise<void> {
-  if (!hasPersistedAssistantSteps(params.result.assistantMessage)) {
+  const messageForPersistence = resolveAssistantMessageForPersistence(
+    params.result.assistantMessage,
+  );
+  if (messageForPersistence) {
     await params.session.appendAssistantMessage({
       sessionId: params.sessionId,
-      message: params.result.assistantMessage,
+      message: messageForPersistence,
     });
   }
 

@@ -35,6 +35,12 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 | `city <service> <action>` (e.g. `city chat ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
 | `city <plugin> <action>` (e.g. `city asr ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
 
+Additional notes:
+
+- Once unified auth is initialized, the commands above automatically send a Bearer Token when they call the agent API.
+- Token resolution order is: `--token` > `DC_AUTH_TOKEN` > local CLI auth state stored in console secure storage.
+- `sessionId` and `chatKey` are execution context, not authentication tokens.
+
 ## 2) Context env requirements for common commands
 
 ### `city chat ...`
@@ -48,6 +54,7 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 - Task creation/run needs `sessionId`
 - You can pass `--session-id` explicitly
 - Or first fallback to `DC_SESSION_ID`
+- If unified auth is enabled, `city task ...` automatically reuses the current CLI Bearer Token; you do not need one token per task/session
 
 ### Chat channel credentials
 

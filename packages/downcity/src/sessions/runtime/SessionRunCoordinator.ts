@@ -13,6 +13,7 @@ import type { SessionRunResult } from "@/types/SessionRun.js";
 import { SessionRuntimeStore } from "@sessions/SessionRuntimeStore.js";
 import { SessionExecutionState } from "@sessions/runtime/SessionExecutionState.js";
 import { SessionMessageStore } from "@sessions/runtime/SessionMessageStore.js";
+import { buildAssistantStepTimelineMessages } from "@sessions/runtime/AssistantStepTimeline.js";
 
 /**
  * SessionRunCoordinator：统一执行协调器。
@@ -71,20 +72,27 @@ export class SessionRunCoordinator {
     const wrappedOnAssistantStepCallback = async (step: {
       text: string;
       stepIndex: number;
+      stepResult?: unknown;
     }): Promise<void> => {
-      const stepText = String(step.text || "").trim();
-      if (!stepText) return;
-
-      await this.messageStore.appendAssistantMessage({
+      const stepMessages = buildAssistantStepTimelineMessages({
         sessionId,
-        fallbackText: stepText,
-        extra: {
-          internal: "assistant_step",
-          stepIndex: step.stepIndex,
-          persistedBy: "session_store_run",
-        },
+        requestId:
+          typeof requestContext.requestId === "string"
+            ? requestContext.requestId
+            : undefined,
+        stepIndex: step.stepIndex,
+        stepResult: step.stepResult,
+        text: step.text,
       });
-      persistedAssistantStepCount += 1;
+      if (stepMessages.length === 0) return;
+
+      for (const stepMessage of stepMessages) {
+        await this.messageStore.appendAssistantMessage({
+          sessionId,
+          message: stepMessage,
+        });
+        persistedAssistantStepCount += 1;
+      }
 
       if (typeof providedOnAssistantStepCallback === "function") {
         await providedOnAssistantStepCallback(step);

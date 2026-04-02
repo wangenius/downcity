@@ -14,6 +14,20 @@ import {
 } from "./UIMessageTransformer.js";
 
 /**
+ * 生成真正应该落盘到 session 的 assistant message。
+ *
+ * 关键点（中文）
+ * - 没有 step 持久化时，直接保留完整 assistant message。
+ * - 一旦 step 已单独落盘，最终 merged assistant 不再重复写入。
+ */
+export function resolveAssistantMessageForPersistence(
+  message: SessionMessageV1 | null | undefined,
+): SessionMessageV1 | null {
+  if (!message || typeof message !== "object") return null;
+  return hasPersistedAssistantSteps(message) ? null : message;
+}
+
+/**
  * 判断 assistant message 是否声明“本轮 step 消息已单独持久化”。
  *
  * 关键点（中文）

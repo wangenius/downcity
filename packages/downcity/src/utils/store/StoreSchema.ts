@@ -56,6 +56,7 @@ export function ensureConsoleStoreSchema(context: ConsoleStoreContext): void {
       scope TEXT NOT NULL,
       agent_id TEXT NOT NULL DEFAULT '',
       key TEXT NOT NULL,
+      description TEXT,
       value_encrypted TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
@@ -285,6 +286,16 @@ function ensureChannelAccountsTableColumns(context: ConsoleStoreContext): void {
  * 迁移历史 env 双表到统一单表。
  */
 function ensureEnvEntriesMigration(context: ConsoleStoreContext): void {
+  const envEntryColumns = context.sqlite
+    .prepare("PRAGMA table_info(env_entries)")
+    .all() as Array<{ name?: unknown }>;
+  const envEntryColumnNames = new Set(
+    envEntryColumns.map((row) => String(row.name || "").trim()).filter(Boolean),
+  );
+  if (!envEntryColumnNames.has("description")) {
+    context.sqlite.exec("ALTER TABLE env_entries ADD COLUMN description TEXT;");
+  }
+
   const tableRows = context.sqlite
     .prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('global_env', 'agent_env');",
@@ -296,12 +307,13 @@ function ensureEnvEntriesMigration(context: ConsoleStoreContext): void {
   if (tableNames.has("global_env")) {
     context.sqlite.exec(`
       INSERT OR IGNORE INTO env_entries (
-        scope, agent_id, key, value_encrypted, created_at, updated_at
+        scope, agent_id, key, description, value_encrypted, created_at, updated_at
       )
       SELECT
         'global',
         '',
         key,
+        NULL,
         value_encrypted,
         created_at,
         updated_at
@@ -311,12 +323,13 @@ function ensureEnvEntriesMigration(context: ConsoleStoreContext): void {
   if (tableNames.has("agent_env")) {
     context.sqlite.exec(`
       INSERT OR IGNORE INTO env_entries (
-        scope, agent_id, key, value_encrypted, created_at, updated_at
+        scope, agent_id, key, description, value_encrypted, created_at, updated_at
       )
       SELECT
         'agent',
         agent_id,
         key,
+        NULL,
         value_encrypted,
         created_at,
         updated_at

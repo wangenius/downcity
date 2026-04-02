@@ -36,6 +36,7 @@ export type DaemonJsonApiCallParams = {
   body?: JsonValue;
   host?: string;
   port?: number;
+  authToken?: string;
 };
 
 /**

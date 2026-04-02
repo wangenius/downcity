@@ -12,6 +12,10 @@ import type { AuthPermissionKey } from "@/types/auth/AuthPermission.js";
 import { isAuthError as isAuthDomainError } from "./AuthError.js";
 import type { AuthService } from "./AuthService.js";
 import { AUTH_PRINCIPAL_CONTEXT_KEY, type AuthMiddlewareVariables } from "./AuthMiddleware.js";
+import {
+  createInternalRuntimeAuthPrincipal,
+  isInternalRuntimeBearerHeader,
+} from "./InternalRuntimeAuth.js";
 
 /**
  * Server 侧路由权限矩阵。
@@ -181,6 +185,11 @@ export function createRouteAuthGuardMiddleware(
   return async (c, next) => {
     const policy = resolveAuthRoutePolicy(c.req.path, c.req.method, policies);
     if (!policy || policy.requireAuth !== true) {
+      await next();
+      return;
+    }
+    if (isInternalRuntimeBearerHeader(c.req.header("authorization"))) {
+      c.set(AUTH_PRINCIPAL_CONTEXT_KEY, createInternalRuntimeAuthPrincipal());
       await next();
       return;
     }

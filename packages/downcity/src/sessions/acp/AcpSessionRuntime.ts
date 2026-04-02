@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 通过 JSON-RPC over stdio 连接外部 coding agent。
- * - 当前仅消费 `session/update -> agent_message_chunk(text)`。
+ * - 当前消费 `session/update -> agent_message_chunk/tool_call/tool_call_update/tool_result`。
  * - 首次进入 session 时，会把 system 与已持久化历史一起 bootstrap 给 ACP agent。
  */
 
@@ -20,6 +20,10 @@ import type {
   SessionRunResult,
 } from "@/types/SessionRun.js";
 import type { SessionRuntimeLike } from "@/types/SessionRuntime.js";
+import {
+  loadAgentEnvSnapshot,
+  loadGlobalEnvFromStore,
+} from "@/main/env/Config.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpSessionSupport.js";
 import { generateId } from "@utils/Id.js";
 
@@ -38,6 +42,23 @@ type AssistantProgressState = {
   callback: SessionAssistantStepCallback | null;
   buffer: string;
   stepIndex: number;
+  pendingToolCalls: Map<string, Record<string, unknown>>;
+};
+
+type AcpSessionUpdatePayload = {
+  sessionUpdate?: unknown;
+  content?: {
+    type?: unknown;
+    text?: unknown;
+  };
+  _meta?: unknown;
+  toolCallId?: unknown;
+  rawInput?: unknown;
+  rawOutput?: unknown;
+  status?: unknown;
+  toolCall?: unknown;
+  toolResult?: unknown;
+  result?: unknown;
 };
 
 type AcpJsonRpcEnvelope = {
@@ -131,6 +152,7 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
               : null,
           buffer: "",
           stepIndex: 0,
+          pendingToolCalls: new Map(),
         };
 
         const response = (await this.waitForRequest(requestId)) as {
@@ -216,10 +238,14 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
       args: this.launch.args,
     });
 
+    const globalEnv = loadGlobalEnvFromStore();
+    const agentEnv = loadAgentEnvSnapshot(this.rootPath);
     const child = spawn(this.launch.command, this.launch.args, {
       cwd: this.rootPath,
       env: {
         ...process.env,
+        ...globalEnv,
+        ...agentEnv,
         ...this.launch.env,
       },
       stdio: "pipe",
@@ -378,20 +404,80 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
     if (envelope.method !== "session/update") return;
     const params = envelope.params as {
       sessionId?: unknown;
-      update?: {
-        sessionUpdate?: unknown;
-        content?: {
-          type?: unknown;
-          text?: unknown;
-        };
-      };
+      update?: AcpSessionUpdatePayload;
     } | null;
     if (!params || String(params.sessionId || "").trim() !== this.remoteSessionId) {
       return;
     }
 
     const update = params.update;
-    if (!update || update.sessionUpdate !== "agent_message_chunk") return;
+    if (!update) return;
+    const sessionUpdate = String(update.sessionUpdate || "");
+
+    if (sessionUpdate === "tool_call" || sessionUpdate === "toolCall") {
+      const normalizedToolCall = normalizeAcpToolCallUpdate(update);
+      const toolCallId = String(normalizedToolCall.toolCallId || "").trim();
+      const progress = this.activeAssistantProgress;
+      if (toolCallId && progress) {
+        const previous = progress.pendingToolCalls.get(toolCallId);
+        const merged = mergeToolCallSnapshots(previous, normalizedToolCall);
+        progress.pendingToolCalls.set(toolCallId, merged);
+        if (!shouldEmitToolCallImmediately(merged, previous)) {
+          return;
+        }
+        progress.pendingToolCalls.delete(toolCallId);
+        await this.flushAssistantProgress(true);
+        await this.emitAssistantProgressEvent({
+          stepResult: {
+            toolCalls: [merged],
+          },
+        });
+        return;
+      }
+      await this.flushAssistantProgress(true);
+      await this.emitAssistantProgressEvent({
+        stepResult: {
+          toolCalls: [normalizedToolCall],
+        },
+      });
+      return;
+    }
+
+    if (
+      sessionUpdate === "tool_call_update" ||
+      sessionUpdate === "toolCallUpdate" ||
+      sessionUpdate === "tool_result" ||
+      sessionUpdate === "toolResult"
+    ) {
+      const updateRecord = resolveAcpToolRecord(update);
+      const toolCallId = resolveAcpToolCallId(updateRecord);
+      const progress = this.activeAssistantProgress;
+      if (toolCallId && progress) {
+        const pendingToolCall = progress.pendingToolCalls.get(toolCallId);
+        if (pendingToolCall) {
+          progress.pendingToolCalls.delete(toolCallId);
+          await this.flushAssistantProgress(true);
+          await this.emitAssistantProgressEvent({
+            stepResult: {
+              toolCalls: [pendingToolCall],
+            },
+          });
+        }
+      }
+      const normalizedToolResult = normalizeAcpToolResultUpdate(update);
+      if (!normalizedToolResult) return;
+      await this.flushAssistantProgress(true);
+      await this.emitAssistantProgressEvent({
+        stepResult: {
+          toolResults: [normalizedToolResult],
+        },
+      });
+      return;
+    }
+
+    if (sessionUpdate !== "agent_message_chunk" && sessionUpdate !== "agentMessageChunk") {
+      return;
+    }
     const content = update.content;
     if (!content || content.type !== "text") return;
     const text = String(content.text || "");
@@ -415,13 +501,27 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
       return;
     }
 
-    progress.stepIndex += 1;
     const text = normalized.trim();
     progress.buffer = "";
+    await this.emitAssistantProgressEvent({ text });
+  }
+
+  private async emitAssistantProgressEvent(params: {
+    text?: string;
+    stepResult?: unknown;
+  }): Promise<void> {
+    const progress = this.activeAssistantProgress;
+    if (!progress || typeof progress.callback !== "function") return;
+    const text = String(params.text || "").trim();
+    const hasStepResult = params.stepResult !== undefined;
+    if (!text && !hasStepResult) return;
+
+    progress.stepIndex += 1;
     try {
       await progress.callback({
         text,
         stepIndex: progress.stepIndex,
+        ...(hasStepResult ? { stepResult: params.stepResult } : {}),
       });
     } catch {
       // ignore assistant progress callback failures
@@ -530,6 +630,146 @@ function pickPermissionOptionId(params: unknown): string | null {
   return optionId || null;
 }
 
+function normalizeAcpToolCallUpdate(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { toolName: "unknown_tool" };
+  }
+  const record = resolveAcpToolRecord(value);
+  return {
+    ...(resolveAcpToolCallId(record) ? { toolCallId: resolveAcpToolCallId(record) } : {}),
+    toolName: resolveAcpToolName(record),
+    ...(record.rawInput !== undefined
+      ? { input: record.rawInput }
+      : record.input !== undefined
+        ? { input: record.input }
+        : {}),
+    ...(record.arguments !== undefined ? { arguments: record.arguments } : {}),
+    ...(typeof record.status === "string" ? { status: record.status } : {}),
+  };
+}
+
+/**
+ * 同一个 toolCallId 可能先收到空输入，再收到完整输入；这里做增量合并。
+ */
+function mergeToolCallSnapshots(
+  previous: Record<string, unknown> | undefined,
+  next: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!previous) return next;
+  return {
+    ...previous,
+    ...next,
+    ...(hasMeaningfulToolInput(previous.input) && !hasMeaningfulToolInput(next.input)
+      ? { input: previous.input }
+      : {}),
+  };
+}
+
+/**
+ * 只有拿到有意义输入后才立即显示；否则先缓存，避免 UI 出现一排 `{}`。
+ */
+function shouldEmitToolCallImmediately(
+  next: Record<string, unknown>,
+  previous?: Record<string, unknown>,
+): boolean {
+  if (hasMeaningfulToolInput(next.input)) return true;
+  return Boolean(previous && hasMeaningfulToolInput(previous.input));
+}
+
+function normalizeAcpToolResultUpdate(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value === undefined ? null : { toolName: "unknown_tool", result: value };
+  }
+  const record = resolveAcpToolRecord(value);
+  const status = typeof record.status === "string" ? record.status : "";
+  const resultValue = record.rawOutput ?? record.result ?? record.output;
+  if (!status && resultValue === undefined && record.toolResult === undefined && record.result === undefined) {
+    return null;
+  }
+  return {
+    ...(resolveAcpToolCallId(record) ? { toolCallId: resolveAcpToolCallId(record) } : {}),
+    toolName: resolveAcpToolName(record),
+    ...(resultValue !== undefined ? { result: resultValue } : {}),
+    ...(status ? { status } : {}),
+  };
+}
+
+/**
+ * 统一把 ACP 不同来源的 tool payload 展平成单层记录，避免不同 agent 方言互相污染。
+ */
+function resolveAcpToolRecord(value: unknown): Record<string, unknown> {
+  const record = value as Record<string, unknown>;
+  const nestedToolCall =
+    record.toolCall && typeof record.toolCall === "object" && !Array.isArray(record.toolCall)
+      ? (record.toolCall as Record<string, unknown>)
+      : null;
+  const nestedToolResult =
+    record.toolResult && typeof record.toolResult === "object" && !Array.isArray(record.toolResult)
+      ? (record.toolResult as Record<string, unknown>)
+      : null;
+  const nestedResult =
+    record.result && typeof record.result === "object" && !Array.isArray(record.result)
+      ? (record.result as Record<string, unknown>)
+      : null;
+  return {
+    ...(nestedToolCall || {}),
+    ...(nestedToolResult || {}),
+    ...(nestedResult || {}),
+    ...record,
+  };
+}
+
+/**
+ * 优先读取 Claude ACP 当前版本的 toolCallId；旧字段 id 作为兼容兜底。
+ */
+function resolveAcpToolCallId(record: Record<string, unknown>): string {
+  if (typeof record.toolCallId === "string" && record.toolCallId.trim()) {
+    return record.toolCallId.trim();
+  }
+  if (typeof record.id === "string" && record.id.trim()) {
+    return record.id.trim();
+  }
+  return "";
+}
+
+/**
+ * Claude ACP 会把工具名放在 `_meta.claudeCode.toolName`，这里统一提取。
+ */
+function resolveAcpToolName(record: Record<string, unknown>): string {
+  const meta =
+    record._meta && typeof record._meta === "object" && !Array.isArray(record._meta)
+      ? (record._meta as Record<string, unknown>)
+      : null;
+  const claudeCode =
+    meta?.claudeCode && typeof meta.claudeCode === "object" && !Array.isArray(meta.claudeCode)
+      ? (meta.claudeCode as Record<string, unknown>)
+      : null;
+  if (typeof claudeCode?.toolName === "string" && claudeCode.toolName.trim()) {
+    return claudeCode.toolName.trim();
+  }
+  if (typeof record.toolName === "string" && record.toolName.trim()) {
+    return record.toolName.trim();
+  }
+  if (typeof record.title === "string" && record.title.trim()) {
+    return record.title.trim();
+  }
+  if (typeof record.name === "string" && record.name.trim()) {
+    return record.name.trim();
+  }
+  return "unknown_tool";
+}
+
+/**
+ * ACP 某些工具会先发送空对象输入；这种更新不值得单独落盘。
+ */
+function hasMeaningfulToolInput(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value as Record<string, unknown>).length > 0;
+  return true;
+}
+
 function formatJsonRpcError(error: unknown): string {
   if (!error || typeof error !== "object") return String(error || "Unknown ACP error");
   const message = String((error as { message?: unknown }).message || "").trim();
@@ -540,11 +780,6 @@ function formatJsonRpcError(error: unknown): string {
   return message || JSON.stringify(error);
 }
 
-function shouldFlushAssistantProgress(text: string): boolean {
-  const normalized = String(text || "");
-  if (!normalized.trim()) return false;
-  if (normalized.includes("\n\n")) return true;
-  if (normalized.includes("\n")) return true;
-  if (/[。！？.!?]\s*$/.test(normalized)) return true;
-  return normalized.trim().length >= 120;
+function shouldFlushAssistantProgress(_text: string): boolean {
+  return false;
 }

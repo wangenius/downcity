@@ -256,6 +256,7 @@ async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void
     method: "GET",
     host: options.host,
     port: options.port,
+    authToken: options.token,
   });
 
   if (remote.success && remote.data) {
@@ -319,6 +320,7 @@ async function runPluginAvailabilityCommand(params: {
     method: "POST",
     host: params.options.host,
     port: params.options.port,
+    authToken: params.options.token,
     body: {
       pluginName: params.pluginName,
     },
@@ -389,6 +391,7 @@ async function runPluginActionCommand(params: {
     method: "POST",
     host: params.options.host,
     port: params.options.port,
+    authToken: params.options.token,
     body: {
       pluginName: params.pluginName,
       actionName: params.actionName,
@@ -442,6 +445,7 @@ export function registerPluginsCommand(program: Command): void {
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--token <token>", "覆盖 Bearer Token（默认自动读取 DC_AUTH_TOKEN 或本地登录态）")
     .option("--json [enabled]", "以 JSON 输出", true)
     .action(async (opts: PluginCliBaseOptions) => {
       await runPluginListCommand(opts);
@@ -454,6 +458,7 @@ export function registerPluginsCommand(program: Command): void {
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--token <token>", "覆盖 Bearer Token（默认自动读取 DC_AUTH_TOKEN 或本地登录态）")
     .option("--json [enabled]", "以 JSON 输出", true)
     .action(async (pluginName: string, opts: PluginCliBaseOptions) => {
       await runPluginAvailabilityCommand({
@@ -470,6 +475,7 @@ export function registerPluginsCommand(program: Command): void {
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--token <token>", "覆盖 Bearer Token（默认自动读取 DC_AUTH_TOKEN 或本地登录态）")
     .option("--json [enabled]", "以 JSON 输出", true)
     .action(
       async (

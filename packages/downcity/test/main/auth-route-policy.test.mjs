@@ -14,6 +14,7 @@ import test from "node:test";
 import { Hono } from "hono";
 import { AuthService } from "../../bin/main/auth/AuthService.js";
 import { AuthStore } from "../../bin/main/auth/AuthStore.js";
+import { INTERNAL_RUNTIME_AUTH_ENV_KEY } from "../../bin/main/auth/InternalRuntimeAuth.js";
 import { createRouteAuthGuardMiddleware } from "../../bin/main/auth/RoutePolicy.js";
 import { hashPassword } from "../../bin/main/auth/PasswordHasher.js";
 
@@ -117,6 +118,34 @@ test("route policy allows read permission and blocks missing write permission", 
     assert.equal(writeResponse.status, 403);
     assert.equal(writeBody.success, false);
   } finally {
+    cleanup();
+  }
+});
+
+test("route policy allows runtime internal bearer token after bootstrap", async () => {
+  const { app, authService, cleanup } = createTestHarness();
+  const previousInternalToken = process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY];
+  process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY] = "dci_test_internal";
+  try {
+    authService.bootstrapAdmin({
+      username: "admin",
+      password: "pass-123456",
+      tokenName: "bootstrap",
+    });
+
+    const response = await app.request("/api/services/control", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer dci_test_internal",
+      },
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.success, true);
+  } finally {
+    if (previousInternalToken === undefined) delete process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY];
+    else process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY] = previousInternalToken;
     cleanup();
   }
 });

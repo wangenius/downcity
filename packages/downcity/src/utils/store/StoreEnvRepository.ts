@@ -46,6 +46,7 @@ function buildEnvEntryFromRowSync(row: {
   scope?: unknown;
   agent_id?: unknown;
   key?: unknown;
+  description?: unknown;
   value_encrypted?: unknown;
   created_at?: unknown;
   updated_at?: unknown;
@@ -59,6 +60,7 @@ function buildEnvEntryFromRowSync(row: {
     scope,
     agentId: scope === "agent" ? agentId : undefined,
     key,
+    description: String(row.description || "").trim() || undefined,
     value: decryptTextSync(encrypted),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -72,6 +74,7 @@ async function buildEnvEntryFromRow(row: {
   scope?: unknown;
   agent_id?: unknown;
   key?: unknown;
+  description?: unknown;
   value_encrypted?: unknown;
   created_at?: unknown;
   updated_at?: unknown;
@@ -85,6 +88,7 @@ async function buildEnvEntryFromRow(row: {
     scope,
     agentId: scope === "agent" ? agentId : undefined,
     key,
+    description: String(row.description || "").trim() || undefined,
     value: await decryptText(encrypted),
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
@@ -108,7 +112,7 @@ export function listEnvEntriesSync(
   const rows = hasAgentFilter
     ? context.sqlite.prepare(
         `
-        SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+        SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
         FROM env_entries
         WHERE scope = 'agent' AND agent_id = ?
         ORDER BY key ASC;
@@ -117,7 +121,7 @@ export function listEnvEntriesSync(
     : scope === "agent"
       ? context.sqlite.prepare(
           `
-          SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+          SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
           FROM env_entries
           WHERE scope = 'agent'
           ORDER BY agent_id ASC, key ASC;
@@ -126,7 +130,7 @@ export function listEnvEntriesSync(
       : scope === "global"
         ? context.sqlite.prepare(
             `
-            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
             FROM env_entries
             WHERE scope = 'global'
             ORDER BY key ASC;
@@ -134,7 +138,7 @@ export function listEnvEntriesSync(
           ).all()
         : context.sqlite.prepare(
             `
-            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
             FROM env_entries
             ORDER BY scope ASC, agent_id ASC, key ASC;
             `,
@@ -164,7 +168,7 @@ export async function listEnvEntries(
   const rows = hasAgentFilter
     ? context.sqlite.prepare(
         `
-        SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+        SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
         FROM env_entries
         WHERE scope = 'agent' AND agent_id = ?
         ORDER BY key ASC;
@@ -173,7 +177,7 @@ export async function listEnvEntries(
     : scope === "agent"
       ? context.sqlite.prepare(
           `
-          SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+          SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
           FROM env_entries
           WHERE scope = 'agent'
           ORDER BY agent_id ASC, key ASC;
@@ -182,7 +186,7 @@ export async function listEnvEntries(
       : scope === "global"
         ? context.sqlite.prepare(
             `
-            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
             FROM env_entries
             WHERE scope = 'global'
             ORDER BY key ASC;
@@ -190,7 +194,7 @@ export async function listEnvEntries(
           ).all()
         : context.sqlite.prepare(
             `
-            SELECT scope, agent_id, key, value_encrypted, created_at, updated_at
+            SELECT scope, agent_id, key, description, value_encrypted, created_at, updated_at
             FROM env_entries
             ORDER BY scope ASC, agent_id ASC, key ASC;
             `,
@@ -213,6 +217,7 @@ export async function upsertEnvEntry(
   const scope = normalizeEnvScope(input.scope);
   const agentId = normalizeEnvAgentTarget(scope, input.agentId);
   const key = normalizeNonEmptyText(input.key, `${scope} env key`);
+  const description = String(input.description || "").trim();
   const value = String(input.value ?? "");
   const existing = context.sqlite
     .prepare(
@@ -230,14 +235,23 @@ export async function upsertEnvEntry(
   context.sqlite
     .prepare(
       `
-      INSERT INTO env_entries (scope, agent_id, key, value_encrypted, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO env_entries (
+        scope,
+        agent_id,
+        key,
+        description,
+        value_encrypted,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(scope, agent_id, key) DO UPDATE SET
+        description = excluded.description,
         value_encrypted = excluded.value_encrypted,
         updated_at = excluded.updated_at;
       `,
     )
-    .run(scope, agentId, key, encrypted, createdAt, updatedAt);
+    .run(scope, agentId, key, description || null, encrypted, createdAt, updatedAt);
 }
 
 /**

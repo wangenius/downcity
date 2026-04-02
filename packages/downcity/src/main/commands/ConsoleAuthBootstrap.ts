@@ -9,6 +9,7 @@
 
 import prompts from "prompts";
 import { AuthService } from "@/main/auth/AuthService.js";
+import { writeCliAuthState } from "@/main/auth/CliAuthStateStore.js";
 
 const DEFAULT_CONSOLE_ADMIN_USERNAME = "admin";
 const DEFAULT_CONSOLE_ADMIN_DISPLAY_NAME = "Admin";
@@ -44,12 +45,21 @@ export async function ensureConsoleAuthBootstrap(
 
     const rawPassword = await (options.readPassword || promptConsoleAdminPassword)();
     const password = String(rawPassword || "").trim() || DEFAULT_CONSOLE_ADMIN_PASSWORD;
-    authService.bootstrapAdmin({
+    const payload = authService.bootstrapAdmin({
       username: DEFAULT_CONSOLE_ADMIN_USERNAME,
       password,
       displayName: DEFAULT_CONSOLE_ADMIN_DISPLAY_NAME,
       tokenName: "console-bootstrap",
     });
+    try {
+      writeCliAuthState({
+        token: payload.token.token,
+        username: payload.user.username,
+        source: "bootstrap",
+      });
+    } catch {
+      // 关键点（中文）：CLI 登录态写入失败不应阻塞统一账户初始化。
+    }
 
     console.log("✅ Unified auth admin initialized");
     console.log(`   username: ${DEFAULT_CONSOLE_ADMIN_USERNAME}`);

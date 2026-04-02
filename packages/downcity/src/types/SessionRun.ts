@@ -24,6 +24,15 @@ export interface SessionAssistantStepCallbackInput {
    * 当前 step 序号（从 1 开始）。
    */
   stepIndex: number;
+
+  /**
+   * 当前 step 的原始结果对象。
+   *
+   * 关键点（中文）
+   * - 由运行时直接透传，供持久化层提取 tool call / tool result 顺序事件。
+   * - 外部调用方不应依赖其稳定结构，只能做 best-effort 读取。
+   */
+  stepResult?: unknown;
 }
 
 /**

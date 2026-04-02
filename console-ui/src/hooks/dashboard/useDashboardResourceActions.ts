@@ -126,10 +126,10 @@ export function useDashboardResourceActions(params: {
     sandbox?: boolean;
   }) => Promise<UiChannelAccountProbeResult | null>;
   removeChannelAccount: (id: string) => Promise<void>;
-  upsertGlobalEnv: (input: { key: string; value: string }) => Promise<void>;
+  upsertGlobalEnv: (input: { key: string; description?: string; value: string }) => Promise<void>;
   importGlobalEnv: (raw: string) => Promise<void>;
   removeGlobalEnv: (key: string) => Promise<void>;
-  upsertAgentEnv: (input: { agentId: string; key: string; value: string }) => Promise<void>;
+  upsertAgentEnv: (input: { agentId: string; key: string; description?: string; value: string }) => Promise<void>;
   removeAgentEnv: (agentIdInput: string, key: string) => Promise<void>;
   importAgentEnv: (agentIdInput: string, raw: string) => Promise<void>;
   executeAgentCommand: (input: {
@@ -495,13 +495,14 @@ export function useDashboardResourceActions(params: {
   );
 
   const upsertGlobalEnv = useCallback(
-    async (input: { key: string; value: string }) => {
+    async (input: { key: string; description?: string; value: string }) => {
       await simplePostRefreshMutation({
         requestJson: params.requestJson,
         path: dashboardApiRoutes.uiEnvUpsert(),
         body: {
           scope: "global",
           key: String(input.key || "").trim(),
+          description: String(input.description || "").trim(),
           value: String(input.value ?? ""),
         },
         successMessage: `env ${String(input.key || "").trim()} 已保存`,
@@ -549,7 +550,7 @@ export function useDashboardResourceActions(params: {
   );
 
   const upsertAgentEnv = useCallback(
-    async (input: { agentId: string; key: string; value: string }) => {
+    async (input: { agentId: string; key: string; description?: string; value: string }) => {
       const agentId = String(input.agentId || "").trim();
       if (!agentId) {
         params.showToast("当前没有可写入的 agent", "error");
@@ -562,6 +563,7 @@ export function useDashboardResourceActions(params: {
           scope: "agent",
           agentId,
           key: String(input.key || "").trim(),
+          description: String(input.description || "").trim(),
           value: String(input.value ?? ""),
         },
         successMessage: `agent env ${String(input.key || "").trim()} 已保存`,

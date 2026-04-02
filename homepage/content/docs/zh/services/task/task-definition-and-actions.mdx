@@ -160,6 +160,11 @@ API：
 city service command task run --payload '{"title":"daily-check","reason":"manual"}'
 ```
 
+如果 console 已启用统一鉴权，`city task ...` 会自动携带当前 CLI Bearer Token。认证身份与 `sessionId` 分离：
+
+- Bearer Token 负责“谁在调用”
+- `sessionId` 负责“在哪个上下文里执行”
+
 ## 相关文档
 
 - [Agent 模式任务](/zh/docs/services/task/agent-task-mode)

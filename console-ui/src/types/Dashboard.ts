@@ -1133,6 +1133,10 @@ export interface UiEnvItem {
    */
   key: string;
   /**
+   * 环境变量描述。
+   */
+  description?: string;
+  /**
    * 环境变量值（明文，仅在当前 UI 会话内展示）。
    */
   value: string;
@@ -1994,24 +1998,6 @@ export interface UiPromptResponse {
 }
 
 /**
- * local_ui 消息项。
- */
-export interface UiLocalMessage {
-  /**
-   * 角色。
-   */
-  role?: string;
-  /**
-   * 文本内容。
-   */
-  text?: string;
-  /**
-   * 时间戳。
-   */
-  ts?: number | string;
-}
-
-/**
  * session 时间线消息项（来自 `/api/dashboard/sessions/:id/messages`）。
  */
 export interface UiSessionTimelineMessage {
@@ -2044,6 +2030,15 @@ export interface UiSessionTimelineMessage {
    */
   toolName?: string;
 }
+
+/**
+ * local_ui 消息项。
+ *
+ * 关键点（中文）
+ * - local_ui 实际复用 session timeline 接口。
+ * - 直接复用完整时间线结构，避免 toolName 等字段在前端被截断。
+ */
+export type UiLocalMessage = UiSessionTimelineMessage;
 
 /**
  * `/api/dashboard/sessions/:id/messages` 响应。

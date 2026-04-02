@@ -14,6 +14,7 @@
 8. [认证与授权架构设计稿](./platform/auth-and-authorization-architecture-design.md)
 9. [认证与授权 V1 实施稿](./platform/auth-and-authorization-v1-implementation-plan.md)
 10. [认证与授权 V1 详细设计稿](./platform/auth-and-authorization-v1-detailed-design.md)
+11. [AUTH 文档集合](./AUTH/README.md)
 
 如果你只想快速建立心智模型，先看：
 

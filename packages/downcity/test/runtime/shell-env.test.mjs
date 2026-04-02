@@ -18,11 +18,13 @@ test("buildShellContextEnv applies injected env and preserves request context va
   const previousHostOnly = process.env.HOST_ONLY;
   const previousServerHost = process.env.DC_SERVER_HOST;
   const previousServerPort = process.env.DC_SERVER_PORT;
+  const previousInternalToken = process.env.DC_INTERNAL_AUTH_TOKEN;
 
   process.env.SHARED_KEY = "host";
   process.env.HOST_ONLY = "host-only";
   process.env.DC_SERVER_HOST = "127.0.0.1";
   process.env.DC_SERVER_PORT = "5314";
+  process.env.DC_INTERNAL_AUTH_TOKEN = "dci_test_internal";
 
   try {
     const env = withRequestContext(
@@ -46,6 +48,7 @@ test("buildShellContextEnv applies injected env and preserves request context va
     assert.equal(env.DC_CTX_REQUEST_ID, "req-1");
     assert.equal(env.DC_CTX_SERVER_HOST, "127.0.0.1");
     assert.equal(env.DC_CTX_SERVER_PORT, "5314");
+    assert.equal(env.DC_AUTH_TOKEN, "dci_test_internal");
   } finally {
     if (previousSharedKey === undefined) delete process.env.SHARED_KEY;
     else process.env.SHARED_KEY = previousSharedKey;
@@ -58,5 +61,8 @@ test("buildShellContextEnv applies injected env and preserves request context va
 
     if (previousServerPort === undefined) delete process.env.DC_SERVER_PORT;
     else process.env.DC_SERVER_PORT = previousServerPort;
+
+    if (previousInternalToken === undefined) delete process.env.DC_INTERNAL_AUTH_TOKEN;
+    else process.env.DC_INTERNAL_AUTH_TOKEN = previousInternalToken;
   }
 });

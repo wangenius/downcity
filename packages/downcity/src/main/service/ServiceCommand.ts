@@ -39,6 +39,7 @@ type ServiceCliBridgeOptions = {
   path?: string;
   host?: string;
   port?: number;
+  token?: string;
   json?: boolean;
 };
 
@@ -82,7 +83,7 @@ function toJsonValue(input: unknown): JsonValue | undefined {
 function toServiceActionCommandOpts(
   options: Record<string, unknown>,
 ): Record<string, JsonValue> {
-  const reservedKeys = new Set(["path", "host", "port", "json", "delay", "time"]);
+  const reservedKeys = new Set(["path", "host", "port", "token", "json", "delay", "time"]);
   const normalized: Record<string, JsonValue> = {};
   for (const [key, value] of Object.entries(options)) {
     if (reservedKeys.has(key)) continue;
@@ -100,6 +101,7 @@ function toServiceCliBridgeOptions(
     path: typeof options.path === "string" ? options.path : ".",
     host: typeof options.host === "string" ? options.host : undefined,
     port: typeof options.port === "number" ? options.port : undefined,
+    token: typeof options.token === "string" ? options.token : undefined,
     json: options.json !== false,
   };
 }
@@ -200,6 +202,7 @@ function registerServiceActionCommand(params: {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--token <token>", "覆盖 Bearer Token（默认自动读取 DC_AUTH_TOKEN 或本地登录态）")
     .option("--json [enabled]", "以 JSON 输出", true);
 
   commandSpec.configure?.(actionCommand);
@@ -276,6 +279,7 @@ function registerServiceActionCommand(params: {
       method: "POST",
       host: bridgeOptions.host,
       port: bridgeOptions.port,
+      authToken: bridgeOptions.token,
       body: {
         serviceName: params.service.name,
         command: params.actionName,

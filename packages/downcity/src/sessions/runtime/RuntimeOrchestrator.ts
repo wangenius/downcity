@@ -129,13 +129,14 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
     return async (stepResult: unknown): Promise<void> => {
       const step = stepResult as { text?: unknown };
       const stepText = String(step.text || "").trim();
-      if (typeof onAssistantStepCallback !== "function" || !stepText) return;
+      if (typeof onAssistantStepCallback !== "function") return;
       try {
         assistantStepIndex += 1;
         await onAssistantStepCallback({
           text: stepText,
           // 关键点（中文）：1-based step 序号，按回调触发次数递增。
           stepIndex: assistantStepIndex,
+          stepResult,
         });
       } catch {
         // ignore assistant step callback failures

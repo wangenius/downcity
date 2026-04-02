@@ -1,0 +1,69 @@
+title: city keys
+description: 列出 Console UI Env 中已配置的环境变量名与描述，不输出任何值
+---
+
+# `city keys`
+
+`city keys` 用来查看 Console UI `Env` 里当前已经配置了哪些环境变量。
+
+它读取的是和 Console UI 相同的 `env_entries` 数据源，只列出：
+
+- 变量名
+- 描述
+- 作用域
+- agentId（如果是 agent 私有 env）
+
+它不会输出任何变量值，所以可以安全用于排查“应该配哪个 key”这类问题。
+
+同时要注意：
+
+- 这些 key 的 value 存在 console store 中，并按加密方式保存。
+- `city keys` 只负责列出“有哪些 key 已配置”，不会返回任何明文值。
+- 如果某个 key 已经在列表里，Agent 不应该继续尝试通过 `city keys` 获取它的 value。
+- 如果某个 key 不在列表里，说明当前 console env 中没有配置，Agent 也不应该假设可以从 `city keys` 找到隐藏值。
+
+## 用法
+
+```bash
+city keys
+city keys --scope all
+city keys --scope agent
+city keys --agent /abs/path/to/agent
+city keys --json false
+```
+
+## 行为说明
+
+- 默认输出 JSON，便于脚本消费。
+- 传 `--json false` 时输出可读文本。
+- 默认只列 `global` env。
+- 传 `--scope all` 时会同时列出 global 和 agent env。
+- 传 `--agent <agentId>` 时只列该 agent 的私有 env。
+- 该命令会读取 `~/.downcity/downcity.db`，但不会输出任何 value。
+- 如果某条 env 还没有填写描述，`description` 会是空字符串。
+- 返回结果中的 `note` 会明确提示：这些 key 是加密存储的，命令不会返回明文。
+
+## 示例输出
+
+```text
+$ city keys
+{
+  "success": true,
+  "scope": "global",
+  "count": 1,
+  "note": "These keys are stored encrypted in the console store. `city keys` only lists configured key names and descriptions, and will never return secret values. Agents should not try to fetch missing plaintext values from this command.",
+  "keys": [
+    {
+      "key": "MINERU_API_KEY",
+      "description": "MinerU 服务 API Key",
+      "scope": "global"
+    }
+  ]
+}
+```
+
+## 相关文档
+
+- [命令环境要求总览](/zh/docs/commands/variables)
+- [环境变量配置逻辑（Console 共享 vs Agent 私有）](/zh/docs/configuration/environment-variables)
+- [city console](/zh/docs/commands/console/console)

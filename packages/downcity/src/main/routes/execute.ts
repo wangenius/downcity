@@ -11,8 +11,8 @@ import { Hono } from "hono";
 import { drainDeferredPersistedUserMessages } from "@sessions/RequestContext.js";
 import { getAgentState } from "@agent/AgentState.js";
 import {
-  hasPersistedAssistantSteps,
   pickLastSuccessfulChatSendText,
+  resolveAssistantMessageForPersistence,
 } from "@services/chat/runtime/UserVisibleText.js";
 
 /**
@@ -88,10 +88,13 @@ executeRouter.post("/api/execute", async (c) => {
 
     const userVisible = pickLastSuccessfulChatSendText(result.assistantMessage);
     try {
-      if (!hasPersistedAssistantSteps(result.assistantMessage)) {
+      const messageForPersistence = resolveAssistantMessageForPersistence(
+        result.assistantMessage,
+      );
+      if (messageForPersistence) {
         await agentState.sessionStore.appendAssistantMessage({
           sessionId,
-          message: result.assistantMessage,
+          message: messageForPersistence,
           fallbackText: userVisible,
           extra: {
             via: "api_execute",

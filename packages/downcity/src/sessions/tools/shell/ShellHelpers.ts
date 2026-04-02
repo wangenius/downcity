@@ -7,6 +7,7 @@
  */
 
 import { requestContext } from "@sessions/RequestContext.js";
+import { INTERNAL_RUNTIME_AUTH_ENV_KEY } from "@/main/auth/InternalRuntimeAuth.js";
 
 function setEnvString(
   env: NodeJS.ProcessEnv,
@@ -76,6 +77,9 @@ export function buildShellContextEnv(
   setEnvString(env, "DC_CTX_REQUEST_ID", contextCtx?.requestId);
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
   setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
+  if (!env.DC_AUTH_TOKEN) {
+    setEnvString(env, "DC_AUTH_TOKEN", process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY]);
+  }
 
   return env;
 }

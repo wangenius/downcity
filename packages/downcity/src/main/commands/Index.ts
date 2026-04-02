@@ -18,6 +18,7 @@ import { registerAllServicesForCli } from "@/main/service/ServiceCommand.js";
 import { registerAllPluginsForCli } from "@/main/plugin/PluginCommand.js";
 import { registerConsoleCommands } from "./IndexConsoleCommand.js";
 import { registerAgentCommands } from "./IndexAgentCommand.js";
+import { registerKeysCommand } from "./Keys.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -45,6 +46,7 @@ registerAgentCommands(program, {
   version: packageJson.version,
   hiddenPortOption: Option,
 });
+registerKeysCommand(program);
 
 registerServicesCommand(program);
 registerPluginsCommand(program);

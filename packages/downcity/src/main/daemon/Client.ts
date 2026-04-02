@@ -12,6 +12,10 @@ import {
   type DaemonJsonApiCallParams,
   type DaemonJsonApiCallResult,
 } from "./Api.js";
+import {
+  formatCliBearerHeaderValue,
+  resolveCliAuthToken,
+} from "@/main/auth/CliAuthStateStore.js";
 import { getDaemonMetaPath } from "@/main/daemon/Manager.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 
@@ -128,8 +132,16 @@ export async function callServer<T>(
   const method = params.method || "GET";
   const hasBody = params.body !== undefined && method !== "GET";
   const headers: Record<string, string> = {};
+  const authHeaderValue = formatCliBearerHeaderValue(
+    resolveCliAuthToken({
+      explicitToken: params.authToken,
+    }),
+  );
   if (hasBody) {
     headers["Content-Type"] = "application/json";
+  }
+  if (authHeaderValue) {
+    headers.Authorization = authHeaderValue;
   }
 
   try {

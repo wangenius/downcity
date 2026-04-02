@@ -159,6 +159,10 @@ export interface PluginCliBaseOptions {
    */
   port?: number;
   /**
+   * 显式覆盖 Bearer Token。
+   */
+  token?: string;
+  /**
    * 是否输出 JSON。
    */
   json?: boolean;

@@ -130,6 +130,7 @@ export interface EnvSectionProps {
     scope: UiEnvScope
     agentId?: string
     key: string
+    description?: string
     value: string
   }) => Promise<void> | void
   /**
@@ -166,6 +167,7 @@ export function EnvSection(props: EnvSectionProps) {
   const confirm = useConfirmDialog()
   const [draftKey, setDraftKey] = React.useState("")
   const [draftValue, setDraftValue] = React.useState("")
+  const [draftDescription, setDraftDescription] = React.useState("")
   const [draftScope, setDraftScope] = React.useState<UiEnvScope>("global")
   const [draftAgentId, setDraftAgentId] = React.useState("")
   const [editingKey, setEditingKey] = React.useState("")
@@ -205,6 +207,7 @@ export function EnvSection(props: EnvSectionProps) {
   const resetForm = React.useCallback(() => {
     setDraftKey("")
     setDraftValue("")
+    setDraftDescription("")
     setDraftScope("global")
     setDraftAgentId("")
     setEditingKey("")
@@ -255,6 +258,7 @@ export function EnvSection(props: EnvSectionProps) {
     setEditingScope(item.scope || "global")
     setDraftKey(String(item.key || "").trim())
     setDraftValue(String(item.value ?? ""))
+    setDraftDescription(String(item.description ?? ""))
     setDraftScope(item.scope || "global")
     setDraftAgentId(String(item.agentId || "").trim())
     setEditorOpen(true)
@@ -270,6 +274,7 @@ export function EnvSection(props: EnvSectionProps) {
           scope: draftScope,
           agentId: draftAgentId || undefined,
           key,
+          description: String(draftDescription || "").trim(),
           value: String(draftValue ?? ""),
         }),
       )
@@ -278,7 +283,7 @@ export function EnvSection(props: EnvSectionProps) {
     } finally {
       setPendingKey("")
     }
-  }, [canSubmit, draftAgentId, draftKey, draftScope, draftValue, onUpsert, resetForm])
+  }, [canSubmit, draftAgentId, draftDescription, draftKey, draftScope, draftValue, onUpsert, resetForm])
 
   const importFromClipboard = React.useCallback(async () => {
     if (!canImportClipboard || !onImport) return
@@ -366,6 +371,7 @@ export function EnvSection(props: EnvSectionProps) {
           {items.map((item) => {
             const key = normalizeKey(item.key)
             const value = String(item.value ?? "")
+            const description = String(item.description || "").trim()
             const valueSummary = value ? `${"*".repeat(Math.min(value.length, 12))} (${value.length})` : "(empty)"
             const scope = item.scope || "global"
             const agentId = String(item.agentId || "").trim()
@@ -392,6 +398,11 @@ export function EnvSection(props: EnvSectionProps) {
                         </span>
                       ) : null}
                     </div>
+                    {description ? (
+                      <div className="mt-1 truncate text-xs text-muted-foreground">
+                        {description}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -599,6 +610,30 @@ export function EnvSection(props: EnvSectionProps) {
                   {!canSubmit && normalizedDraftKey ? (
                     <div className="text-[11px] text-destructive">Key 格式不合法</div>
                   ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs text-muted-foreground">Description</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <button type="button" className="inline-flex h-4 w-4 items-center justify-center text-muted-foreground" aria-label="description help" />
+                          }
+                        >
+                          <InfoIcon className="size-3.5" />
+                        </TooltipTrigger>
+                        <TooltipContent>描述这个环境变量的用途，`city keys` 会读取这里</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Input
+                    placeholder="例如：MinerU 服务 API Key"
+                    className="h-10 rounded-[12px]"
+                    value={draftDescription}
+                    onChange={(event) => setDraftDescription(event.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">

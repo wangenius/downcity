@@ -188,15 +188,81 @@ test("AcpSessionRuntime: emits assistant progress callbacks while prompt is stre
       });
     });
     assert.equal(result.success, true);
-    assert.equal(result.assistantMessage.parts[0].text, "第一段输出，第二段输出。\n第三段收尾");
+    assert.equal(result.assistantMessage.parts[0].text, "第一段输出，第二段输出。第三段收尾");
     assert.deepEqual(steps, [
       {
-        text: "第一段输出，第二段输出。",
+        text: "第一段输出，第二段输出。第三段收尾",
         stepIndex: 1,
       },
+    ]);
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionRuntime: maps Claude ACP tool_call_update into tool results", async () => {
+  const runtime = createRuntime();
+  const steps = [];
+  try {
+    const result = await withRequestContext({
+      sessionId: "test-session",
+      requestId: "req_toolcall",
+      onAssistantStepCallback: async (input) => {
+        steps.push({
+          text: String(input.text || ""),
+          stepIndex: input.stepIndex,
+          stepResult: input.stepResult,
+        });
+      },
+    }, async () => {
+      return await runtime.run({
+        query: "tool call stream test",
+      });
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "正在分析项目结构...分析完成，这是最终结果。");
+    assert.deepEqual(steps, [
       {
-        text: "第三段收尾",
+        text: "正在分析项目结构...",
+        stepIndex: 1,
+        stepResult: undefined,
+      },
+      {
+        text: "",
         stepIndex: 2,
+        stepResult: {
+          toolCalls: [
+            {
+              toolCallId: "call_001",
+              toolName: "list_files",
+              input: {
+                path: ".",
+              },
+              status: "pending",
+            },
+          ],
+        },
+      },
+      {
+        text: "",
+        stepIndex: 3,
+        stepResult: {
+          toolResults: [
+            {
+              toolCallId: "call_001",
+              toolName: "list_files",
+              result: {
+                files: ["package.json", "src/index.ts"],
+              },
+              status: "completed",
+            },
+          ],
+        },
+      },
+      {
+        text: "分析完成，这是最终结果。",
+        stepIndex: 4,
+        stepResult: undefined,
       },
     ]);
   } finally {

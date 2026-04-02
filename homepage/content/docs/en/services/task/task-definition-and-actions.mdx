@@ -161,6 +161,11 @@ API:
 city service command task run --payload '{"title":"daily-check","reason":"manual"}'
 ```
 
+If unified auth is enabled, `city task ...` automatically sends the current CLI Bearer Token. Authentication identity stays separate from `sessionId`:
+
+- the Bearer Token answers "who is calling"
+- `sessionId` answers "which execution context this task belongs to"
+
 ## Related docs
 
 - [Agent Task Mode](/en/docs/services/task/agent-task-mode)

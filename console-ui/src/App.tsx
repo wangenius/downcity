@@ -592,11 +592,13 @@ export function App() {
                   return upsertAgentEnv({
                     agentId: String(input.agentId || "").trim(),
                     key: input.key,
+                    description: input.description,
                     value: input.value,
                   })
                 }
                 return upsertGlobalEnv({
                   key: input.key,
+                  description: input.description,
                   value: input.value,
                 })
               }}

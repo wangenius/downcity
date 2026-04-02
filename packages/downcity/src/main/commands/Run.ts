@@ -11,6 +11,7 @@
  */
 
 import { startServer } from "@/main/index.js";
+import { ensureInternalRuntimeAuthToken } from "@/main/auth/InternalRuntimeAuth.js";
 
 import {
   getExecutionContext,
@@ -74,6 +75,7 @@ export async function runCommand(
 
   process.env.DC_SERVER_PORT = String(port);
   process.env.DC_SERVER_HOST = host;
+  ensureInternalRuntimeAuthToken();
 
   // Create and start server
   const server = await startServer({

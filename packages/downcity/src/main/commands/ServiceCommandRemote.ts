@@ -56,6 +56,7 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
     method: "GET",
     host: options.host,
     port: options.port,
+    authToken: options.token,
   });
 
   if (remote.success && remote.data) {
@@ -122,6 +123,7 @@ export async function runServiceControlCommand(params: {
     method: "POST",
     host: params.options.host,
     port: params.options.port,
+    authToken: params.options.token,
     body: {
       serviceName: params.serviceName,
       action: params.action,
@@ -193,6 +195,7 @@ export async function runServiceCommandBridge(params: {
     method: "POST",
     host: params.options.host,
     port: params.options.port,
+    authToken: params.options.token,
     body: {
       serviceName: params.serviceName,
       command: params.command,

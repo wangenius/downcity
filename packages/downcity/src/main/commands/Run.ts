@@ -12,7 +12,13 @@
 
 import path from "node:path";
 import { startServer } from "@/main/index.js";
-import { ensureAgentToken } from "@/main/auth/AgentTokenService.js";
+import { ensureAgentToken, rotateAgentTokenIfNeeded } from "@/main/auth/AgentTokenService.js";
+
+/**
+ * Token 轮换检查间隔（毫秒）
+ * 每 6 小时检查一次
+ */
+const TOKEN_ROTATION_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 import {
   getExecutionContext,
@@ -148,4 +154,41 @@ export async function runCommand(
   }
 
   logger.info("=== Downcity Started ===");
+
+  // 启动 Token 自动轮换定时器
+  startTokenRotationTimer(agentRoot);
+}
+
+/**
+ * 启动 Token 自动轮换定时器。
+ *
+ * 关键点（中文）
+ * - 每 6 小时检查一次 token 是否需要轮换
+ * - 如果 token 即将过期（< 1 天），自动创建新 token
+ * - 轮换后更新进程环境变量 DC_AGENT_TOKEN
+ */
+function startTokenRotationTimer(agentRoot: string): void {
+  const checkAndRotate = (): void => {
+    try {
+      const result = rotateAgentTokenIfNeeded(agentRoot);
+      if (result?.rotated) {
+        // 更新进程环境变量，后续 shell 子进程会使用新 token
+        process.env.DC_AGENT_TOKEN = result.token;
+        logger.info(`Agent token rotated, new token expires at ${result.expiresAt}`);
+      }
+    } catch (error) {
+      logger.error(`Token rotation check failed: ${String(error)}`);
+    }
+  };
+
+  // 立即执行一次检查
+  checkAndRotate();
+
+  // 设置定时器
+  const timer = setInterval(checkAndRotate, TOKEN_ROTATION_CHECK_INTERVAL_MS);
+
+  // 确保 timer 不会阻止进程退出
+  if (typeof timer.unref === "function") {
+    timer.unref();
+  }
 }

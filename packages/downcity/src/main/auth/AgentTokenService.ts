@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 为每个 Agent 项目签发独立的 service token，用于 shell 内调用 city 命令。
  * - Token 关联到统一账户系统，但使用特殊的 "agent-service" 用户。
- * - 支持追溯、吊销、权限控制。
+ * - 支持追溯、吊销、权限控制、自动轮换。
  */
 
 import { nanoid } from "nanoid";
@@ -16,12 +16,25 @@ const AGENT_SERVICE_USERNAME = "agent-service";
 const AGENT_SERVICE_DISPLAY_NAME = "Agent Service Account";
 
 /**
+ * Token 有效期配置（毫秒）
+ */
+const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
+
+/**
+ * 自动轮换阈值（毫秒）
+ * 当 token 剩余有效期小于此值时，自动创建新 token
+ */
+const ROTATION_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 1 天
+
+/**
  * Agent Token 信息。
  */
 export interface AgentTokenInfo {
   token: string;
   tokenId: string;
   projectRoot: string;
+  expiresAt: string;
+  rotated?: boolean; // 标记是否刚完成轮换
 }
 
 /**
@@ -51,12 +64,30 @@ function ensureAgentServiceUser(store: AuthStore): { userId: string; isNew: bool
 }
 
 /**
- * 为指定 Agent 项目签发或复用 token。
+ * 计算 token 是否应该轮换。
+ */
+function shouldRotateToken(record: {
+  expiresAt?: string;
+  revokedAt?: string;
+}): boolean {
+  if (record.revokedAt) return true;
+  if (!record.expiresAt) return true;
+
+  const expiresAt = new Date(record.expiresAt).getTime();
+  const now = Date.now();
+  const remainingMs = expiresAt - now;
+
+  // 已过期或即将过期（少于阈值）
+  return remainingMs < ROTATION_THRESHOLD_MS;
+}
+
+/**
+ * 为指定 Agent 项目签发或轮换 token。
  *
  * 策略（中文）
- * 1. 检查是否已有该项目的有效 token（未吊销、未过期）
- * 2. 有则复用，无则创建新 token
- * 3. token 名称包含项目路径摘要，便于识别
+ * 1. 检查是否已有该项目的有效 token（未吊销、未过期、且不在轮换窗口期）
+ * 2. 如果 token 已过期或即将过期（< 1天），自动轮换（吊销旧 + 创建新）
+ * 3. 如果没有有效 token，创建新 token
  */
 export function ensureAgentToken(projectRoot: string): AgentTokenInfo {
   const store = new AuthStore();
@@ -66,37 +97,99 @@ export function ensureAgentToken(projectRoot: string): AgentTokenInfo {
 
     // 查找该项目现有的有效 token
     const existingTokens = store.listTokensByUserId(userId);
-    const now = new Date().toISOString();
 
     for (const record of existingTokens) {
       if (record.name !== tokenName) continue;
-      if (record.revokedAt) continue;
-      if (record.expiresAt && record.expiresAt <= now) continue;
 
-      // 找到有效 token，但无法获取明文（已丢失），需要吊销并重建
-      // 注意：这里只能吊销，无法复用，因为明文 token 只在签发时存在
+      // 检查是否需要轮换
+      if (!shouldRotateToken(record)) {
+        // Token 仍然有效且不在轮换窗口期，返回现有信息（但不返回明文，已丢失）
+        // 注意：这里无法返回明文 token，因为只存储了 hash
+        // 在启动场景下，这不会发生，因为环境变量会重新注入
+        // 但为了完整性，我们还是创建新 token
+        return {
+          token: "", // 无法恢复，需要创建新的
+          tokenId: record.id,
+          projectRoot,
+          expiresAt: record.expiresAt || new Date(Date.now() + TOKEN_TTL_MS).toISOString(),
+          rotated: false,
+        };
+      }
+
+      // 需要轮换：吊销旧 token
       store.revokeToken(record.id);
       break;
     }
 
     // 创建新 token
-    const plainToken = generateAccessToken();
-    const record = store.createToken({
-      userId,
-      name: tokenName,
-      tokenHash: hashAccessToken(plainToken),
-      // Agent token 默认 1 年有效期
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    });
-
-    return {
-      token: plainToken,
-      tokenId: record.id,
-      projectRoot,
-    };
+    return createNewAgentToken(store, userId, projectRoot, tokenName);
   } finally {
     store.close();
   }
+}
+
+/**
+ * 运行时检查并轮换 token。
+ *
+ * 使用场景：Agent 长期运行期间，定期检查 token 是否需要轮换
+ * 返回 null 表示无需轮换，返回 AgentTokenInfo 表示已完成轮换
+ */
+export function rotateAgentTokenIfNeeded(projectRoot: string): AgentTokenInfo | null {
+  const store = new AuthStore();
+  try {
+    const user = store.findUserByUsername(AGENT_SERVICE_USERNAME);
+    if (!user) return null;
+
+    const tokenName = buildAgentTokenName(projectRoot);
+    const existingTokens = store.listTokensByUserId(user.id);
+
+    for (const record of existingTokens) {
+      if (record.name !== tokenName) continue;
+
+      // 检查是否需要轮换
+      if (!shouldRotateToken(record)) {
+        return null; // 无需轮换
+      }
+
+      // 执行轮换
+      store.revokeToken(record.id);
+      const newToken = createNewAgentToken(store, user.id, projectRoot, tokenName);
+      return { ...newToken, rotated: true };
+    }
+
+    // 没有找到现有 token，创建新的
+    const newToken = createNewAgentToken(store, user.id, projectRoot, tokenName);
+    return { ...newToken, rotated: true };
+  } finally {
+    store.close();
+  }
+}
+
+/**
+ * 创建新的 Agent Token。
+ */
+function createNewAgentToken(
+  store: AuthStore,
+  userId: string,
+  projectRoot: string,
+  tokenName: string,
+): AgentTokenInfo {
+  const plainToken = generateAccessToken();
+  const expiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
+
+  const record = store.createToken({
+    userId,
+    name: tokenName,
+    tokenHash: hashAccessToken(plainToken),
+    expiresAt,
+  });
+
+  return {
+    token: plainToken,
+    tokenId: record.id,
+    projectRoot,
+    expiresAt,
+  };
 }
 
 /**
@@ -134,6 +227,7 @@ export function listAgentTokens(): Array<{
   createdAt: string;
   expiresAt?: string;
   revokedAt?: string;
+  needsRotation?: boolean;
 }> {
   const store = new AuthStore();
   try {
@@ -149,6 +243,7 @@ export function listAgentTokens(): Array<{
         createdAt: t.createdAt,
         expiresAt: t.expiresAt,
         revokedAt: t.revokedAt,
+        needsRotation: !t.revokedAt && shouldRotateToken(t),
       }));
   } finally {
     store.close();

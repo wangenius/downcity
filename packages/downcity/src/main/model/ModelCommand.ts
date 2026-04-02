@@ -81,7 +81,7 @@ export function resolveInitModel(input?: string): ResolvedInitModel {
   const resolved = manager.resolveInitPreset(input);
   return {
     modelId: resolved.preset.id,
-    providerType: resolved.preset.providerType,
+    providerType: resolved.preset.providerTypes[0],
     useCustomModelName: resolved.preset.useCustomModelName,
     title: resolved.preset.title,
   };

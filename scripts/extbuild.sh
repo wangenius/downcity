@@ -53,3 +53,25 @@ NODE
 cd "$ROOT_DIR/chrome-extension"
 npx tsc --noEmit
 npx vite build
+
+node --input-type=module - "$ROOT_DIR/chrome-extension/dist/content-script.js" <<'NODE'
+import fs from 'node:fs';
+
+const bundleFile = process.argv[2];
+if (!bundleFile) {
+  console.error('Missing content script bundle path');
+  process.exit(1);
+}
+
+const bundle = fs.readFileSync(bundleFile, 'utf8');
+
+// 关键点（中文）：
+// Chrome MV3 的 content_scripts 这里仍按 classic script 加载。
+// 一旦产物顶层出现 static import，注入会直接失败，`Cmd/Ctrl + U` 等快捷键也会全部失效。
+if (/^\s*import\s/m.test(bundle)) {
+  console.error(
+    'Invalid content-script bundle: static import detected. Content script must stay single-file classic script.',
+  );
+  process.exit(1);
+}
+NODE

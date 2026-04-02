@@ -13,7 +13,9 @@
  * 说明（中文）
  * - `open-compatible` 表示 OpenAI 兼容（Chat Completions）网关。
  * - `open-responses` 表示 OpenAI Responses 兼容网关。
- * - `moonshot` 表示 Moonshot(Kimi) 官方 OpenAI 兼容网关。
+ * - `moonshot-cn` 表示 Moonshot(Kimi) 中国站 OpenAI 兼容网关。
+ * - `moonshot-ai` 表示 Moonshot(Kimi) 国际站 OpenAI 兼容网关。
+ * - `kimi-code` 表示 Kimi Code 的 OpenAI 兼容 coding 网关。
  */
 export type LlmProviderType =
   | "anthropic"
@@ -22,7 +24,9 @@ export type LlmProviderType =
   | "gemini"
   | "open-compatible"
   | "open-responses"
-  | "moonshot"
+  | "moonshot-cn"
+  | "moonshot-ai"
+  | "kimi-code"
   | "xai"
   | "huggingface"
   | "openrouter";

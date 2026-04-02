@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 测试对象是 `bin` 编译产物，确保运行时代码可执行。
- * - 当前模型解析基于 `agent.model.primary + ConsoleStore(SQLite)`。
+ * - 当前模型解析基于 `execution.modelId + ConsoleStore(SQLite)`。
  * - 使用 mock fetch 避免网络依赖，稳定验证模型调用链路。
  */
 
@@ -20,8 +20,9 @@ function createAgentConfig(primaryModelId) {
   return {
     name: "test-agent",
     version: "1.0.0",
-    model: {
-      primary: primaryModelId,
+    execution: {
+      type: "model",
+      modelId: primaryModelId,
     },
     llm: {
       logMessages: false,
@@ -210,7 +211,7 @@ test("createModel: open-compatible provider uses chat completions endpoint", asy
   }
 });
 
-test("createModel: moonshot provider uses chat completions endpoint with default base url", async (t) => {
+test("createModel: moonshot-ai provider uses chat completions endpoint with default base url", async (t) => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -253,13 +254,13 @@ test("createModel: moonshot provider uses chat completions endpoint with default
       t,
       {
         provider: {
-          id: "moonshot",
-          type: "moonshot",
+          id: "moonshot-ai",
+          type: "moonshot-ai",
           apiKey: "test-moonshot-key",
         },
         model: {
           id: "default",
-          providerId: "moonshot",
+          providerId: "moonshot-ai",
           name: "kimi-k2.5",
         },
       },
@@ -293,7 +294,7 @@ test("createModel: moonshot provider uses chat completions endpoint with default
   }
 });
 
-test("createModel: moonshot provider respects explicit cn base url", async (t) => {
+test("createModel: moonshot-cn provider uses chat completions endpoint with default base url", async (t) => {
   const originalFetch = globalThis.fetch;
   const mockFetchCalls = [];
 
@@ -336,14 +337,13 @@ test("createModel: moonshot provider respects explicit cn base url", async (t) =
       t,
       {
         provider: {
-          id: "moonshot",
-          type: "moonshot",
-          baseUrl: "https://api.moonshot.cn/v1",
+          id: "moonshot-cn",
+          type: "moonshot-cn",
           apiKey: "test-moonshot-key",
         },
         model: {
           id: "default",
-          providerId: "moonshot",
+          providerId: "moonshot-cn",
           name: "kimi-k2.5",
         },
       },
@@ -363,6 +363,83 @@ test("createModel: moonshot provider respects explicit cn base url", async (t) =
         assert.equal(
           mockFetchCalls[0].url,
           "https://api.moonshot.cn/v1/chat/completions",
+        );
+      },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createModel: kimi-code provider uses chat completions endpoint with default base url", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const mockFetchCalls = [];
+
+  globalThis.fetch = async (input, init) => {
+    mockFetchCalls.push({
+      url: resolveRequestUrl(input),
+      method: init?.method || "POST",
+      headers: init?.headers,
+      body: typeof init?.body === "string" ? init.body : "",
+    });
+
+    return new Response(
+      JSON.stringify({
+        id: "chatcmpl_1",
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: "kimi-for-coding",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "OK" },
+            finish_reason: "stop",
+          },
+        ],
+        usage: {
+          prompt_tokens: 1,
+          completion_tokens: 1,
+          total_tokens: 2,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    await withSeededConsoleStore(
+      t,
+      {
+        provider: {
+          id: "kimi-code",
+          type: "kimi-code",
+          apiKey: "test-kimi-code-key",
+        },
+        model: {
+          id: "default",
+          providerId: "kimi-code",
+          name: "kimi-for-coding",
+        },
+      },
+      async (store) => {
+        const model = await createModel({
+          config: createAgentConfig("default"),
+          store,
+        });
+        const result = await generateText({
+          model,
+          prompt: "reply OK",
+          maxOutputTokens: 16,
+        });
+
+        assert.equal(result.text.trim(), "OK");
+        assert.equal(mockFetchCalls.length, 1);
+        assert.equal(
+          mockFetchCalls[0].url,
+          "https://api.kimi.com/coding/v1/chat/completions",
         );
       },
     );

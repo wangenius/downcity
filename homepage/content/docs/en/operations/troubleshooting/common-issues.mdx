@@ -57,6 +57,7 @@ Ensure:
 
 1. `model.primary` points to an existing model id in `~/.downcity/downcity.db`
 2. console-global SQLite providers/models entries are valid
-3. For Kimi (Moonshot), `provider.type` must be `moonshot`
-4. For Kimi (Moonshot), leaving `baseUrl` empty defaults to `https://api.moonshot.ai/v1`
-5. For Kimi (Moonshot), prefer current official model names such as `kimi-k2.5`
+3. For Kimi (Moonshot), use `provider.type` as `moonshot-cn` or `moonshot-ai`
+4. `moonshot-cn` defaults to `https://api.moonshot.cn/v1`
+5. `moonshot-ai` defaults to `https://api.moonshot.ai/v1`
+6. Use a model name that matches the target endpoint, such as `kimi-k2-0905-preview` or `kimi-k2.5`

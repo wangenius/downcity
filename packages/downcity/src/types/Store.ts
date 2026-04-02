@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 该类型用于 console 全局模型池（provider/model）的统一读写。
- * - agent 项目只通过 `model.primary` 绑定模型 ID，不直接持有 provider 细节。
+ * - agent 项目只通过 `execution.modelId` 绑定模型 ID，不直接持有 provider 细节。
  */
 import type { LlmProviderType } from "@/types/LlmConfig.js";
 
@@ -86,7 +86,7 @@ export interface StoredModel {
    * 是否暂停该模型。
    *
    * 关键点（中文）
-   * - 暂停后禁止作为 `model.primary` 被运行时加载。
+   * - 暂停后禁止作为 `execution.modelId` 被运行时加载。
    * - 用于模型维护窗口、成本管控或临时故障隔离。
    */
   isPaused: boolean;

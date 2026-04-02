@@ -16,7 +16,7 @@ import {
   readDaemonPid,
   stopDaemonProcess,
 } from "@/main/daemon/Manager.js";
-import { ensureRuntimeModelBindingReady } from "@/main/daemon/ProjectSetup.js";
+import { ensureRuntimeExecutionBindingReady } from "@/main/daemon/ProjectSetup.js";
 import { allocateAvailablePort } from "@/main/daemon/PortAllocator.js";
 import {
   ensureConsoleAgentRegistry,
@@ -371,7 +371,7 @@ export async function prepareForegroundAgent(
 
   injectAgentContext(cwd);
   const projectRoot = resolve(String(cwd || "."));
-  ensureRuntimeModelBindingReady(projectRoot);
+    ensureRuntimeExecutionBindingReady(projectRoot);
 
   const shouldForeground = options.foreground === true;
   if (!shouldForeground) {

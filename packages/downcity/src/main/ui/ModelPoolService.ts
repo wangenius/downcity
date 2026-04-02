@@ -20,7 +20,9 @@ const SUPPORTED_PROVIDER_TYPES: readonly LlmProviderType[] = [
   "gemini",
   "open-compatible",
   "open-responses",
-  "moonshot",
+  "moonshot-cn",
+  "moonshot-ai",
+  "kimi-code",
   "xai",
   "huggingface",
   "openrouter",
@@ -377,7 +379,7 @@ export class ModelPoolService {
       config: {
         name: "console-model-test",
         version: "1.0.0",
-        model: { primary: id },
+        execution: { type: "model", modelId: id },
       },
     });
     const result = await generateText({
@@ -391,4 +393,3 @@ export class ModelPoolService {
     };
   }
 }
-

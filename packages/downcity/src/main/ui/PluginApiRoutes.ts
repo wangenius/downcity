@@ -58,6 +58,10 @@ type PluginAvailabilityResponse = {
   message?: string;
 };
 
+type RuntimeForwardAuthHeaders = {
+  authorization?: string;
+};
+
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message || String(error);
@@ -139,9 +143,31 @@ async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
-async function loadPluginViews(baseUrl: string): Promise<PluginView[]> {
+function readRuntimeForwardAuthHeaders(request: Request): RuntimeForwardAuthHeaders {
+  const authorization = String(request.headers.get("authorization") || "").trim();
+  return authorization ? { authorization } : {};
+}
+
+function buildRuntimeRequestHeaders(params?: {
+  authHeaders?: RuntimeForwardAuthHeaders;
+  headers?: Headers | Record<string, string>;
+}): Headers {
+  const headers = new Headers(params?.headers || {});
+  const authorization = String(params?.authHeaders?.authorization || "").trim();
+  if (authorization) {
+    headers.set("authorization", authorization);
+  }
+  return headers;
+}
+
+async function loadPluginViews(
+  baseUrl: string,
+  authHeaders?: RuntimeForwardAuthHeaders,
+): Promise<PluginView[]> {
   const listUrl = new URL("/api/plugins/list", baseUrl).toString();
-  const payload = await fetchJson<PluginListResponse>(listUrl);
+  const payload = await fetchJson<PluginListResponse>(listUrl, {
+    headers: buildRuntimeRequestHeaders({ authHeaders }),
+  });
   const plugins = Array.isArray(payload.plugins) ? payload.plugins : [];
   return plugins.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -149,13 +175,17 @@ async function loadPluginViews(baseUrl: string): Promise<PluginView[]> {
 async function loadRuntimePluginAvailability(
   baseUrl: string,
   pluginName: string,
+  authHeaders?: RuntimeForwardAuthHeaders,
 ): Promise<PluginAvailability> {
   const availabilityUrl = new URL("/api/plugins/availability", baseUrl).toString();
   const payload = await fetchJson<PluginAvailabilityResponse>(availabilityUrl, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
+    headers: buildRuntimeRequestHeaders({
+      authHeaders,
+      headers: {
+        "content-type": "application/json",
+      },
+    }),
     body: JSON.stringify({
       pluginName,
     }),
@@ -168,15 +198,20 @@ async function loadRuntimePluginAvailability(
 
 async function buildRuntimePluginPayload(
   selectedAgent: ConsoleUiAgentOption,
+  authHeaders?: RuntimeForwardAuthHeaders,
 ): Promise<PluginUiResponse> {
   const baseUrl = String(selectedAgent.baseUrl || "").trim();
   const configMap = buildPluginConfigMap();
-  const pluginViews = await loadPluginViews(baseUrl);
+  const pluginViews = await loadPluginViews(baseUrl, authHeaders);
   const plugins = await Promise.all(
     pluginViews.map(async (view) => {
       return {
         ...view,
-        availability: await loadRuntimePluginAvailability(baseUrl, view.name),
+        availability: await loadRuntimePluginAvailability(
+          baseUrl,
+          view.name,
+          authHeaders,
+        ),
         config: configMap.get(view.name) || {
           actions: [],
         },
@@ -226,7 +261,12 @@ export function registerConsoleUiPluginRoutes(params: {
       }
 
       try {
-        return c.json(await buildRuntimePluginPayload(selectedAgent));
+        return c.json(
+          await buildRuntimePluginPayload(
+            selectedAgent,
+            readRuntimeForwardAuthHeaders(c.req.raw),
+          ),
+        );
       } catch (runtimeError) {
         return c.json(
           buildStaticPluginPayload({

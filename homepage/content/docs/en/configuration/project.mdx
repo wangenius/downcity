@@ -10,8 +10,11 @@ description: Most-used project-level fields and practical cautions
 ```json
 {
   "name": "my-agent",
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "kimi"
+    }
   },
   "start": {
     "host": "127.0.0.1",
@@ -23,15 +26,68 @@ description: Most-used project-level fields and practical cautions
 
 ## Cautions
 
-1. `model.primary` must resolve in the global model pool.
-2. `start.host/start.port` affects default CLI routing.
-3. Keep project-level config in `downcity.json`, including `services` and `plugins`.
+1. A project now must declare `execution`, and the mode is either `model` or `acp`.
+2. `execution.type="acp"` switches session execution to an ACP coding agent. Current supported values are `codex`, `claude`, and `kimi`.
+3. `start.host/start.port` affects default CLI routing.
+4. Keep project-level config in `downcity.json`, including `services` and `plugins`.
+
+## Execution Modes
+
+If you want to use the console-global model pool:
+
+```json
+{
+  "execution": {
+    "type": "model",
+    "modelId": "default"
+  }
+}
+```
+
+If you want chat/task sessions to run through an external coding agent instead of the model execution path:
+
+```json
+{
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "kimi"
+    }
+  }
+}
+```
+
+Currently supported:
+
+- `kimi`: defaults to `kimi acp`
+- `claude`: defaults to `npx -y @zed-industries/claude-code-acp`
+- `codex`: defaults to `npx -y @zed-industries/codex-acp`
+
+Override the launch command when your local installation differs:
+
+```json
+{
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "codex",
+      "command": "codex-acp",
+      "args": []
+    }
+  }
+}
+```
+
+Current scope:
+
+- `execution.type="acp"` only changes the session/chat/task execution path.
+- `execution.type="model"` requires `execution.modelId` to exist in the console model pool.
 
 ## Common commands
 
 ```bash
 city console config get
-city console config get model.primary
+city console config get execution
 city console config set start.port 3100
 ```
 

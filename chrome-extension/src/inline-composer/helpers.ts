@@ -3,8 +3,28 @@
  *
  * 关键点（中文）：
  * - 统一提供文本归一化、错误读取、文件名裁剪等基础能力。
- * - 让 UI、路由、页面解析共享一套最小工具层。
+ * - content script 必须保持自包含，不能再依赖会触发共享 chunk 的通用 services。
  */
+
+function isAuthErrorMessage(input: unknown): boolean {
+  const normalized = String(input || "").trim().toLowerCase();
+  if (!normalized) return false;
+  return (
+    normalized.includes("missing bearer token") ||
+    normalized.includes("invalid bearer token") ||
+    normalized.includes("permission denied") ||
+    normalized.includes("401")
+  );
+}
+
+function decorateAuthErrorText(input: unknown): string {
+  const message = String(input || "").trim();
+  if (!message) return "未知错误";
+  if (isAuthErrorMessage(message)) {
+    return `${message}。请在扩展设置页登录 Console 账户。`;
+  }
+  return message;
+}
 
 /**
  * 归一化文本。
@@ -33,8 +53,8 @@ export function clipText(input: unknown, maxChars?: number): string {
  * 读取错误文本。
  */
 export function readErrorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error || "未知错误");
+  if (error instanceof Error) return decorateAuthErrorText(error.message);
+  return decorateAuthErrorText(error || "未知错误");
 }
 
 /**

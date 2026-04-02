@@ -13,11 +13,12 @@ import type {
   TuiContextSummary,
   TuiContextsResponse,
 } from "../types/api";
+import { buildAuthHeaders, shouldUseBeaconTransport, type ExtensionAuthOptions } from "./auth";
 import { resolveChatKey as resolveDefaultChatKey, toChatKeyOption } from "./chatRouting";
 import { resolveConsoleBaseUrl } from "./consoleBase";
 import { requestJson } from "./http";
 
-type ApiRequestOptions = {
+type ApiRequestOptions = ExtensionAuthOptions & {
   consoleBaseUrl?: string;
 };
 
@@ -30,6 +31,8 @@ export async function fetchAgents(
   const url = `${resolveConsoleBaseUrl(options?.consoleBaseUrl)}/api/ui/agents`;
   const payload = await requestJson<ConsoleUiAgentsResponse>(url, {
     method: "GET",
+  }, {
+    authToken: options?.authToken,
   });
   if (payload.success !== true) {
     throw new Error(payload.error || "加载 Agent 列表失败");
@@ -50,6 +53,8 @@ export async function fetchChatKeyOptions(
   const url = `${resolveConsoleBaseUrl(options?.consoleBaseUrl)}/api/dashboard/sessions?agent=${encodeURIComponent(normalizedAgentId)}&limit=500`;
   const payload = await requestJson<TuiContextsResponse>(url, {
     method: "GET",
+  }, {
+    authToken: options?.authToken,
   });
 
   if (payload.success !== true) {
@@ -88,6 +93,7 @@ export function dispatchAgentTask(params: {
   consoleBaseUrl?: string;
   agentId: string;
   sessionId: string;
+  authToken?: string;
   body: TuiContextExecuteRequestBody;
 }): boolean {
   const agentId = String(params.agentId || "").trim();
@@ -99,7 +105,11 @@ export function dispatchAgentTask(params: {
   const bodyText = JSON.stringify(params.body);
 
   try {
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    if (
+      shouldUseBeaconTransport(params.authToken) &&
+      typeof navigator !== "undefined" &&
+      typeof navigator.sendBeacon === "function"
+    ) {
       const queued = navigator.sendBeacon(
         url,
         new Blob([bodyText], { type: "text/plain;charset=UTF-8" }),
@@ -109,9 +119,12 @@ export function dispatchAgentTask(params: {
 
     void fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: buildAuthHeaders({
+        authToken: params.authToken,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
       body: bodyText,
       keepalive: true,
     }).catch(() => {});

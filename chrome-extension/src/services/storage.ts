@@ -7,16 +7,26 @@
  */
 
 import type {
+  ExtensionAuthState,
   ExtensionPageSendRecord,
   ExtensionQuickPromptItem,
   ExtensionSettings,
 } from "../types/extension";
+import { normalizeAuthToken } from "./auth";
 
 const STORAGE_KEY = "downcity.extension.settings.v1";
+const AUTH_STORAGE_KEY = "downcity.extension.auth.v1";
 const SEND_HISTORY_STORAGE_KEY = "downcity.extension.send.history.v1";
 const SEND_HISTORY_MAX_COUNT = 120;
 const DEFAULT_CONSOLE_HOST = "127.0.0.1";
 const DEFAULT_CONSOLE_PORT = 5315;
+
+/**
+ * 默认登录态。
+ */
+export const DEFAULT_AUTH_STATE: ExtensionAuthState = {
+  token: "",
+};
 
 /**
  * 默认常用问题模板。
@@ -59,6 +69,10 @@ function normalizePort(input: unknown): number {
   }
   if (value < 1 || value > 65535) return DEFAULT_CONSOLE_PORT;
   return Math.trunc(value);
+}
+
+function normalizeStoredAuthToken(input: unknown): string {
+  return normalizeAuthToken(input).slice(0, 4096);
 }
 
 function normalizeQuickPromptId(input: unknown): string {
@@ -210,6 +224,94 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
   };
   await new Promise<void>((resolve, reject) => {
     chrome.storage.sync.set({ [STORAGE_KEY]: normalizedSettings }, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function normalizeAuthState(
+  input: Partial<ExtensionAuthState> | null | undefined,
+): ExtensionAuthState {
+  const token = normalizeStoredAuthToken(input?.token);
+  const username = String(input?.username || "").trim();
+  return {
+    token,
+    ...(username ? { username } : {}),
+  };
+}
+
+/**
+ * 加载扩展登录态。
+ *
+ * 关键点（中文）：
+ * - 登录态单独放在 `chrome.storage.local`，避免 sync 同步敏感 token。
+ * - 兼容旧版本误存到 settings 里的 `authToken` 字段。
+ */
+export async function loadAuthState(): Promise<ExtensionAuthState> {
+  const [localStored, syncStored] = await Promise.all([
+    new Promise<Record<string, unknown>>((resolve, reject) => {
+      chrome.storage.local.get([AUTH_STORAGE_KEY], (result) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+        resolve(result as Record<string, unknown>);
+      });
+    }),
+    new Promise<Record<string, unknown>>((resolve, reject) => {
+      chrome.storage.sync.get([STORAGE_KEY], (result) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+        resolve(result as Record<string, unknown>);
+      });
+    }),
+  ]);
+  const raw = localStored[AUTH_STORAGE_KEY];
+  if (raw && typeof raw === "object") {
+    return normalizeAuthState(raw as Partial<ExtensionAuthState>);
+  }
+  const legacySettings = syncStored[STORAGE_KEY];
+  if (legacySettings && typeof legacySettings === "object") {
+    const value = legacySettings as Record<string, unknown>;
+    return normalizeAuthState({
+      token: typeof value.authToken === "string" ? value.authToken : "",
+    });
+  }
+  return { ...DEFAULT_AUTH_STATE };
+}
+
+/**
+ * 保存扩展登录态。
+ */
+export async function saveAuthState(authState: ExtensionAuthState): Promise<void> {
+  const normalized = normalizeAuthState(authState);
+  await new Promise<void>((resolve, reject) => {
+    chrome.storage.local.set({ [AUTH_STORAGE_KEY]: normalized }, () => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+/**
+ * 清理扩展登录态。
+ */
+export async function clearAuthState(): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    chrome.storage.local.remove([AUTH_STORAGE_KEY], () => {
       const error = chrome.runtime.lastError;
       if (error) {
         reject(new Error(error.message));

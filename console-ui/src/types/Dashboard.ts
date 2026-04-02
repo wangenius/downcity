@@ -51,9 +51,17 @@ export interface UiAgentOption {
    */
   updatedAt?: string;
   /**
-   * 当前 agent 的 `downcity.json.model.primary`。
+   * 当前 agent 的执行模式。
    */
-  primaryModelId?: string;
+  executionMode?: "model" | "acp";
+  /**
+   * 当前 agent 的 `downcity.json.execution.modelId`。
+   */
+  modelId?: string;
+  /**
+   * 当前 agent 的 `downcity.json.execution.agent.type`。
+   */
+  agentType?: string;
   /**
    * 当前 agent 的 chat 渠道运行快照。
    */
@@ -86,9 +94,17 @@ export interface UiAgentInitializationInput {
    */
   agentName?: string;
   /**
-   * 主模型 ID。
+   * 执行模式。
    */
-  primaryModelId: string;
+  executionMode: "model" | "acp";
+  /**
+   * 模型执行模式下的模型 ID。
+   */
+  modelId?: string;
+  /**
+   * ACP 执行模式下的 agent 类型。
+   */
+  agentType?: string;
 }
 
 /**
@@ -134,9 +150,17 @@ export interface UiAgentDirectoryInspection {
    */
   displayName: string;
   /**
+   * 当前读取到的执行模式。
+   */
+  executionMode?: "model" | "acp";
+  /**
    * 当前读取到的主模型 ID。
    */
-  primaryModelId?: string;
+  modelId?: string;
+  /**
+   * 当前读取到的 ACP agent 类型。
+   */
+  agentType?: string;
 }
 
 /**
@@ -2282,11 +2306,11 @@ export interface UiModelOption {
  */
 export interface UiModelSummary {
   /**
-   * 当前 agent 绑定模型 id（model.primary）。
+   * 当前 agent 绑定模型 id（execution.modelId）。
    */
   primaryModelId?: string;
   /**
-   * 当前 agent 的 model.primary 绑定。
+   * 当前 agent 的 execution.modelId 绑定。
    */
   agentPrimaryModelId?: string;
   /**

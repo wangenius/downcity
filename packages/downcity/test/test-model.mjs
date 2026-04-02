@@ -146,7 +146,9 @@ function defaultBaseUrlByProvider(provider) {
   if (provider === "gemini") return "https://generativelanguage.googleapis.com/v1beta";
   if (provider === "open-compatible") return "https://api.openai.com/v1";
   if (provider === "open-responses") return "https://api.openai.com/v1";
-  if (provider === "moonshot") return "https://api.moonshot.ai/v1";
+  if (provider === "moonshot-ai") return "https://api.moonshot.ai/v1";
+  if (provider === "moonshot-cn") return "https://api.moonshot.cn/v1";
+  if (provider === "kimi-code") return "https://api.kimi.com/coding/v1";
   if (provider === "xai") return "https://api.x.ai/v1";
   if (provider === "huggingface") return "https://router.huggingface.co/v1";
   if (provider === "openrouter") return "https://openrouter.ai/api/v1";
@@ -450,7 +452,9 @@ async function run() {
               })
             : provider === "open-compatible" ||
                 provider === "openrouter" ||
-                provider === "moonshot"
+                provider === "moonshot-ai" ||
+                provider === "moonshot-cn" ||
+                provider === "kimi-code"
               ? await requestOpenAIChatCompletions({
                   baseUrl,
                   apiKey,

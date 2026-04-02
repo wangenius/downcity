@@ -10,8 +10,11 @@ description: downcity.json 中用户最常用字段与注意事项
 ```json
 {
   "name": "my-agent",
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "kimi"
+    }
   },
   "start": {
     "host": "127.0.0.1",
@@ -23,15 +26,68 @@ description: downcity.json 中用户最常用字段与注意事项
 
 ## 注意事项
 
-1. `model.primary` 必须能在全局模型池中解析到。
-2. `start.host/start.port` 会影响 CLI 的默认路由目标。
-3. 项目层统一在 `downcity.json` 中维护 `services` 与 `plugins`。
+1. 项目现在必须声明 `execution`，执行模式只有两种：`model` 或 `acp`。
+2. `execution.type="acp"` 可把 session 执行切到 ACP coding agent，目前只支持 `codex`、`claude`、`kimi`。
+3. `start.host/start.port` 会影响 CLI 的默认路由目标。
+4. 项目层统一在 `downcity.json` 中维护 `services` 与 `plugins`。
+
+## 执行模式
+
+如果你希望项目走 console 全局模型池：
+
+```json
+{
+  "execution": {
+    "type": "model",
+    "modelId": "default"
+  }
+}
+```
+
+如果你希望聊天 session 走外部 coding agent，而不是模型执行链：
+
+```json
+{
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "kimi"
+    }
+  }
+}
+```
+
+当前支持：
+
+- `kimi`：默认启动 `kimi acp`
+- `claude`：默认启动 `npx -y @zed-industries/claude-code-acp`
+- `codex`：默认启动 `npx -y @zed-industries/codex-acp`
+
+如果你本机命令不同，可以覆盖：
+
+```json
+{
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "codex",
+      "command": "codex-acp",
+      "args": []
+    }
+  }
+}
+```
+
+当前边界：
+
+- `execution.type="acp"` 只影响 session/chat/task 这条执行链。
+- `execution.type="model"` 时，`execution.modelId` 必须能在 console 模型池中找到。
 
 ## 常用命令
 
 ```bash
 city console config get
-city console config get model.primary
+city console config get execution
 city console config set start.port 3100
 ```
 

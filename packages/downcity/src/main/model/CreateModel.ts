@@ -3,7 +3,7 @@
  *
  * 设计目标（中文，关键点）
  * - 这是“核心能力”，不应该依赖 server/RuntimeContext（避免隐式初始化时序）。
- * - 运行时按 `model.primary`（agent 绑定）从 console 全局 `llm.models` / `llm.providers` 解析最终模型。
+ * - 运行时按 `execution.type=model` 绑定的模型 ID，从 console 全局 `llm.models` / `llm.providers` 解析最终模型。
  * - Agent、Memory extractor 等都可以复用同一套模型构造逻辑。
  */
 
@@ -22,6 +22,7 @@ import { getLogger } from "@utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/DowncityConfig.js";
 import type { LlmProviderType } from "@/types/LlmConfig.js";
 import { ConsoleStore } from "@utils/store/index.js";
+import { readProjectPrimaryModelId } from "@/main/project/ProjectExecutionBinding.js";
 
 type ModelLogContext = {
   sessionId?: string;
@@ -55,7 +56,9 @@ function resolveProviderDefaultBaseUrl(
   providerType: LlmProviderType,
 ): string | undefined {
   if (providerType === "deepseek") return "https://api.deepseek.com/v1";
-  if (providerType === "moonshot") return "https://api.moonshot.ai/v1";
+  if (providerType === "moonshot-cn") return "https://api.moonshot.cn/v1";
+  if (providerType === "moonshot-ai") return "https://api.moonshot.ai/v1";
+  if (providerType === "kimi-code") return "https://api.kimi.com/coding/v1";
   if (providerType === "xai") return "https://api.x.ai/v1";
   if (providerType === "openrouter") return "https://openrouter.ai/api/v1";
   return undefined;
@@ -102,10 +105,18 @@ function resolveApiKeyFallback(providerType: LlmProviderType): string | undefine
   if (providerType === "openrouter") {
     return process.env.OPENROUTER_API_KEY || process.env.API_KEY;
   }
-  if (providerType === "moonshot") {
+  if (providerType === "moonshot-cn" || providerType === "moonshot-ai") {
     return (
       process.env.MOONSHOT_API_KEY ||
       process.env.KIMI_API_KEY ||
+      process.env.API_KEY
+    );
+  }
+  if (providerType === "kimi-code") {
+    return (
+      process.env.KIMI_CODE_API_KEY ||
+      process.env.KIMI_API_KEY ||
+      process.env.MOONSHOT_API_KEY ||
       process.env.API_KEY
     );
   }
@@ -119,7 +130,9 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
   if (value === "gemini") return value;
   if (value === "open-compatible") return value;
   if (value === "open-responses") return value;
-  if (value === "moonshot") return value;
+  if (value === "moonshot-cn") return value;
+  if (value === "moonshot-ai") return value;
+  if (value === "kimi-code") return value;
   if (value === "xai") return value;
   if (value === "huggingface") return value;
   if (value === "openrouter") return value;
@@ -130,7 +143,7 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
  * 创建 LanguageModel 实例。
  *
  * 解析策略（中文）
- * 1) 读取 `model.primary`，定位 console 全局 `llm.models[primary]`。
+ * 1) 读取 `execution.modelId`，定位 console 全局 `llm.models[modelId]`。
  * 2) 由模型配置中的 `provider` 字段定位 `llm.providers[providerKey]`。
  * 3) 解析 model/baseUrl/apiKey（支持 `${ENV}` 占位符）。
  * 4) 创建带日志拦截的 fetch，并按 provider type 分发到 SDK 工厂。
@@ -142,10 +155,10 @@ export async function createModel(input: {
 }): Promise<LanguageModel> {
   const logger = getLogger();
 
-  const primaryModelId = String(input.config.model?.primary || "").trim();
+  const primaryModelId = readProjectPrimaryModelId(input.config);
   if (!primaryModelId) {
-    await logger.log("warn", "No agent model.primary configured");
-    throw Error("No agent model.primary configured");
+    await logger.log("warn", "No agent execution.modelId configured");
+    throw Error("No agent execution.modelId configured");
   }
 
   const store = input.store || new ConsoleStore();
@@ -258,7 +271,18 @@ export async function createModel(input: {
     return compatibleProvider(resolvedModel);
   }
 
-  if (providerType === "moonshot") {
+  if (providerType === "kimi-code") {
+    const compatibleBaseUrl = resolvedBaseUrl || "https://api.kimi.com/coding/v1";
+    const compatibleProvider = createOpenAICompatible({
+      name: providerKey,
+      baseURL: compatibleBaseUrl,
+      apiKey: resolvedApiKey,
+      fetch: loggingFetch as typeof fetch,
+    });
+    return compatibleProvider(resolvedModel);
+  }
+
+  if (providerType === "moonshot-cn" || providerType === "moonshot-ai") {
     const moonshotProvider = createMoonshotAI({
       baseURL: resolvedBaseUrl,
       apiKey: resolvedApiKey,

@@ -14,6 +14,7 @@ import { CompactorComponent } from "@sessions/components/CompactorComponent.js";
 import { PrompterComponent } from "@sessions/components/PrompterComponent.js";
 import { SessionRuntime } from "@sessions/SessionRuntime.js";
 import { SessionPersistorStore } from "@sessions/runtime/SessionPersistorStore.js";
+import type { SessionRuntimeLike } from "@/types/SessionRuntime.js";
 
 /**
  * SessionRuntimeStore 构造参数。
@@ -32,7 +33,7 @@ type SessionRuntimeStoreOptions =
       createRuntime: (params: {
         sessionId: string;
         persistor: PersistorComponent;
-      }) => SessionRuntime;
+      }) => SessionRuntimeLike;
     }
   | {
       /**
@@ -77,8 +78,8 @@ export class SessionRuntimeStore {
   private readonly createRuntime: (params: {
     sessionId: string;
     persistor: PersistorComponent;
-  }) => SessionRuntime;
-  private readonly runtimesBySessionId: Map<string, SessionRuntime> = new Map();
+  }) => SessionRuntimeLike;
+  private readonly runtimesBySessionId: Map<string, SessionRuntimeLike> = new Map();
 
   constructor(options: SessionRuntimeStoreOptions) {
     if (hasRuntimeFactory(options)) {
@@ -112,7 +113,7 @@ export class SessionRuntimeStore {
   /**
    * 获取（或创建）SessionRuntime。
    */
-  getRuntime(sessionId: string): SessionRuntime {
+  getRuntime(sessionId: string): SessionRuntimeLike {
     const key = String(sessionId || "").trim();
     if (!key) {
       throw new Error(
@@ -140,8 +141,14 @@ export class SessionRuntimeStore {
    */
   clearRuntime(sessionId?: string): void {
     if (typeof sessionId === "string" && sessionId.trim()) {
-      this.runtimesBySessionId.delete(sessionId.trim());
+      const key = sessionId.trim();
+      const runtime = this.runtimesBySessionId.get(key);
+      this.runtimesBySessionId.delete(key);
+      void runtime?.dispose?.();
       return;
+    }
+    for (const runtime of this.runtimesBySessionId.values()) {
+      void runtime.dispose?.();
     }
     this.runtimesBySessionId.clear();
   }

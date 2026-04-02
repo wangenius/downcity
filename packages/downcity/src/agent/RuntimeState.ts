@@ -55,9 +55,6 @@ function normalizeReadyState(input: AgentState): AgentState {
   if (!input.sessionStore) {
     throw new Error("AgentState requires sessionStore");
   }
-  if (!input.model) {
-    throw new Error("AgentState requires model");
-  }
 
   return {
     cwd: input.cwd,

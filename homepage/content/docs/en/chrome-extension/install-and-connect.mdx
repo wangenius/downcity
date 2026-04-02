@@ -42,6 +42,10 @@ If your Console UI is elsewhere, open the extension settings page and update:
 - default Agent
 - default Channel Chat
 
+If Console has already been initialized for unified auth, the extension settings page will ask you to log in with your Console account first.
+
+After login succeeds, the extension will store the local auth state and attach `Authorization: Bearer ...` to later requests automatically.
+
 ## How Agent and Chat Selection Works
 
 The extension first asks Console for the Agent list, then reads the available chat contexts for that Agent.

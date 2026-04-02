@@ -244,7 +244,7 @@ export interface SessionPort {
   /**
    * 当前统一模型实例。
    */
-  model: LanguageModel;
+  model?: LanguageModel;
 }
 
 /**

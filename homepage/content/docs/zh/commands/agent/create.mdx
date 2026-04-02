@@ -17,6 +17,8 @@ city agent create [path]
 
 - `path`（可选）：项目路径，默认当前目录。
 - 交互默认的 `Agent name` 会基于目录名自动推导，并将 `_`/`-` 转为空格（仅作为默认值，可手动修改）。
+- 交互过程中现在可以直接选择执行模式：`Global Model Pool`、`Kimi ACP`、`Claude ACP`、`Codex ACP`。
+- 创建出的项目会直接写入统一的 `downcity.json.execution`，不再拆成 `model.primary + session.agent`。
 
 ## 选项
 
@@ -47,11 +49,4 @@ city version: 1.0.0
 ✅ Created downcity.schema.json
 ```
 
-```text
-$ city agent create .
-city version: 1.0.0
-❌ Console model pool is empty.
-   Please configure at least one model before `city agent create`:
-   1) city console model create
-   2) or use city console model update/test for scripting
-```
+如果你选择 ACP 模式，即使 console 模型池为空也可以初始化。

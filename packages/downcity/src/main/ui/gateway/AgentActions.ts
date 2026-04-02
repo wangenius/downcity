@@ -17,7 +17,7 @@ import {
   readDaemonPid,
 } from "@/main/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/main/daemon/CliArgs.js";
-import { ensureRuntimeModelBindingReady } from "@/main/daemon/ProjectSetup.js";
+import { ensureRuntimeExecutionBindingReady } from "@/main/daemon/ProjectSetup.js";
 import {
   initializeAgentProject,
   isAgentProjectInitialized,
@@ -29,6 +29,38 @@ import {
 } from "@/main/env/Paths.js";
 import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 import type { AgentProjectInitializationResult } from "@/types/AgentProject.js";
+import type {
+  ExecutionBindingConfig,
+} from "@/types/ExecutionBinding.js";
+import type { SessionAgentType } from "@/types/SessionAgent.js";
+
+function resolveExecutionInput(params: {
+  executionMode?: unknown;
+  modelId?: unknown;
+  agentType?: unknown;
+}): ExecutionBindingConfig {
+  const executionMode = String(params.executionMode || "").trim();
+  if (executionMode === "acp") {
+    const agentType = String(params.agentType || "").trim() as SessionAgentType;
+    if (agentType !== "codex" && agentType !== "claude" && agentType !== "kimi") {
+      throw new Error("ACP execution requires agentType: codex | claude | kimi");
+    }
+    return {
+      type: "acp",
+      agent: {
+        type: agentType,
+      },
+    };
+  }
+  const modelId = String(params.modelId || "").trim();
+  if (!modelId) {
+    throw new Error("Model execution requires modelId");
+  }
+  return {
+    type: "model",
+    modelId,
+  };
+}
 
 /**
  * 初始化 Console UI 选中的 agent 项目。
@@ -36,15 +68,56 @@ import type { AgentProjectInitializationResult } from "@/types/AgentProject.js";
 export async function initializeConsoleUiAgentProject(params: {
   projectRoot: string;
   agentName?: unknown;
-  primaryModelId?: unknown;
+  executionMode?: unknown;
+  modelId?: unknown;
+  agentType?: unknown;
   forceOverwriteShipJson?: unknown;
 }): Promise<AgentProjectInitializationResult> {
   return initializeAgentProject({
     projectRoot: params.projectRoot,
     agentName: String(params.agentName || "").trim() || undefined,
-    primaryModelId: String(params.primaryModelId || "").trim(),
+    execution: resolveExecutionInput({
+      executionMode: params.executionMode,
+      modelId: params.modelId,
+      agentType: params.agentType,
+    }),
     forceOverwriteShipJson: params.forceOverwriteShipJson === true,
   });
+}
+
+/**
+ * 更新现有 agent 的执行绑定配置。
+ */
+export async function updateConsoleUiAgentExecution(params: {
+  projectRoot: string;
+  executionMode?: unknown;
+  modelId?: unknown;
+  agentType?: unknown;
+}): Promise<{
+  projectRoot: string;
+  executionMode: "model" | "acp";
+  modelId?: string;
+  agentType?: SessionAgentType;
+}> {
+  const projectRoot = path.resolve(String(params.projectRoot || "").trim() || ".");
+  const shipJsonPath = getDowncityJsonPath(projectRoot);
+  if (!(await fs.pathExists(shipJsonPath))) {
+    throw new Error(`downcity.json not found: ${shipJsonPath}`);
+  }
+  const ship = (await fs.readJson(shipJsonPath)) as Record<string, unknown>;
+  const execution = resolveExecutionInput({
+    executionMode: params.executionMode,
+    modelId: params.modelId,
+    agentType: params.agentType,
+  });
+  ship.execution = execution;
+  await fs.writeJson(shipJsonPath, ship, { spaces: 2 });
+  return {
+    projectRoot,
+    executionMode: execution.type,
+    ...(execution.type === "model" ? { modelId: execution.modelId } : {}),
+    ...(execution.type === "acp" ? { agentType: execution.agent.type } : {}),
+  };
 }
 
 /**
@@ -167,7 +240,9 @@ export async function startConsoleUiAgentByProjectRoot(params: {
   initializeIfNeeded?: boolean;
   initialization?: {
     agentName?: unknown;
-    primaryModelId?: unknown;
+    executionMode?: unknown;
+    modelId?: unknown;
+    agentType?: unknown;
     forceOverwriteShipJson?: unknown;
   };
 }): Promise<{
@@ -201,7 +276,11 @@ export async function startConsoleUiAgentByProjectRoot(params: {
     await initializeAgentProject({
       projectRoot: normalizedRoot,
       agentName: String(params.initialization?.agentName || "").trim() || undefined,
-      primaryModelId: String(params.initialization?.primaryModelId || "").trim(),
+      execution: resolveExecutionInput({
+        executionMode: params.initialization?.executionMode,
+        modelId: params.initialization?.modelId,
+        agentType: params.initialization?.agentType,
+      }),
       forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
     });
   } else {
@@ -214,7 +293,7 @@ export async function startConsoleUiAgentByProjectRoot(params: {
     }
   }
 
-  ensureRuntimeModelBindingReady(normalizedRoot);
+  ensureRuntimeExecutionBindingReady(normalizedRoot);
   const args = await buildRunArgsFromOptions(normalizedRoot, {});
   const started = await startDaemonProcess({
     projectRoot: normalizedRoot,

@@ -13,7 +13,7 @@ description: 按层理解 Console 全局配置与 Agent 项目配置
 ## 关键原则
 
 1. 模型定义在 Console，全局复用。
-2. Agent 只声明 `model.primary`，不重复保存 provider 细节。
+2. Agent 只声明统一的 `execution`，不重复保存 provider 细节。
 3. 任何配置变更后，建议重启对应 agent 验证生效。
 
 ## 你会常改的两类文件

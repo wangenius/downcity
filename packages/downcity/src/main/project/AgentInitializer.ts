@@ -41,6 +41,8 @@ import type {
   AgentProjectInitializationInput,
   AgentProjectInitializationResult,
 } from "@/types/AgentProject.js";
+import { assertProjectExecutionTarget } from "@/main/project/ProjectExecutionBinding.js";
+import type { ExecutionBindingConfig } from "@/types/ExecutionBinding.js";
 
 /**
  * Console 模型选项。
@@ -183,7 +185,7 @@ async function appendMissingEnvEntries(params: {
 function assertPrimaryModelReady(primaryModelId: string): void {
   const normalizedModelId = String(primaryModelId || "").trim();
   if (!normalizedModelId) {
-    throw new Error("model.primary is required");
+    throw new Error("execution.modelId is required");
   }
 
   const store = new ConsoleStore();
@@ -231,18 +233,34 @@ export async function initializeAgentProject(
   const projectBaseName = path.basename(projectRoot);
   const fallbackAgentName = normalizeDefaultAgentName(projectBaseName) || projectBaseName;
   const agentName = String(input.agentName || "").trim() || fallbackAgentName;
-  const primaryModelId = String(input.primaryModelId || "").trim();
+  const execution = input.execution as ExecutionBindingConfig;
+  const executionMode = String(execution?.type || "").trim();
+  const primaryModelId =
+    executionMode === "model"
+      ? String((execution as ExecutionBindingConfig & { modelId?: string }).modelId || "").trim()
+      : "";
+  const sessionAgentType =
+    executionMode === "acp"
+      ? String((execution as ExecutionBindingConfig & { agent?: { type?: string } }).agent?.type || "").trim()
+      : "";
   const channels = normalizeChannels(input.channels);
   const dotEnvPath = path.join(projectRoot, ".env");
   const dotEnvExamplePath = path.join(projectRoot, ".env.example");
   const createdFiles: string[] = [];
   const skippedFiles: string[] = [];
 
-  const consoleModelChoices = await listConsoleModelChoices();
-  if (consoleModelChoices.length === 0) {
-    throw new Error("Console model pool is empty. Please configure at least one model first.");
+  assertProjectExecutionTarget({
+    name: agentName,
+    version: "1.0.0",
+    execution,
+  });
+  if (primaryModelId) {
+    const consoleModelChoices = await listConsoleModelChoices();
+    if (consoleModelChoices.length === 0) {
+      throw new Error("Console model pool is empty. Please configure at least one model first.");
+    }
+    assertPrimaryModelReady(primaryModelId);
   }
-  assertPrimaryModelReady(primaryModelId);
 
   await ensureDir(projectRoot);
 
@@ -296,9 +314,7 @@ export async function initializeAgentProject(
     $schema: DEFAULT_DOWNCITY_JSON.$schema,
     name: agentName,
     version: "1.0.0",
-    model: {
-      primary: primaryModelId,
-    },
+    execution,
     plugins: {
       skill: {
         enabled: true,
@@ -364,7 +380,9 @@ export async function initializeAgentProject(
   return {
     projectRoot,
     agentName,
-    primaryModelId,
+    executionMode: execution.type,
+    ...(primaryModelId ? { modelId: primaryModelId } : {}),
+    ...(sessionAgentType ? { agentType: sessionAgentType as "codex" | "claude" | "kimi" } : {}),
     channels,
     createdFiles,
     skippedFiles,

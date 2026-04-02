@@ -233,5 +233,105 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(removeProvider.success, true);
 
   const saved = await fs.readJson(path.join(tempRoot, "downcity.json"));
-  assert.equal(saved.model.primary, "fast");
+  assert.equal(saved.execution.type, "model");
+  assert.equal(saved.execution.modelId, "fast");
+});
+
+test("console model add model preset supports both moonshot-cn and moonshot-ai providers", async (t) => {
+  const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-kimi-home-"));
+  const cliEnv = { HOME: tempHome };
+
+  t.after(async () => {
+    await fs.remove(tempHome);
+  });
+
+  const addCnProvider = await runCliJson([
+    "console",
+    "model",
+    "add",
+    "provider",
+    "kimi_cn",
+    "--type",
+    "moonshot-cn",
+    "--api-key",
+    "test-kimi-key",
+  ], { env: cliEnv });
+  assert.equal(addCnProvider.success, true);
+
+  const addAiProvider = await runCliJson([
+    "console",
+    "model",
+    "add",
+    "provider",
+    "kimi_ai",
+    "--type",
+    "moonshot-ai",
+    "--api-key",
+    "test-kimi-key",
+  ], { env: cliEnv });
+  assert.equal(addAiProvider.success, true);
+
+  const addCnModel = await runCliJson([
+    "console",
+    "model",
+    "add",
+    "model",
+    "kimi_cn_model",
+    "--provider",
+    "kimi_cn",
+    "--preset",
+    "kimi-k2.5",
+  ], { env: cliEnv });
+  assert.equal(addCnModel.success, true);
+  assert.equal(addCnModel.model.name, "kimi-k2.5");
+
+  const addAiModel = await runCliJson([
+    "console",
+    "model",
+    "add",
+    "model",
+    "kimi_ai_model",
+    "--provider",
+    "kimi_ai",
+    "--preset",
+    "kimi-k2.5",
+  ], { env: cliEnv });
+  assert.equal(addAiModel.success, true);
+  assert.equal(addAiModel.model.name, "kimi-k2.5");
+});
+
+test("console model add model preset supports kimi-code provider", async (t) => {
+  const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-kimi-code-home-"));
+  const cliEnv = { HOME: tempHome };
+
+  t.after(async () => {
+    await fs.remove(tempHome);
+  });
+
+  const addProvider = await runCliJson([
+    "console",
+    "model",
+    "add",
+    "provider",
+    "kimi_code",
+    "--type",
+    "kimi-code",
+    "--api-key",
+    "test-kimi-code-key",
+  ], { env: cliEnv });
+  assert.equal(addProvider.success, true);
+
+  const addModel = await runCliJson([
+    "console",
+    "model",
+    "add",
+    "model",
+    "kimi_code_model",
+    "--provider",
+    "kimi_code",
+    "--preset",
+    "kimi-for-coding",
+  ], { env: cliEnv });
+  assert.equal(addModel.success, true);
+  assert.equal(addModel.model.name, "kimi-for-coding");
 });

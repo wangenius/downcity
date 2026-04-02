@@ -467,6 +467,39 @@ export async function switchModelForAgentMutation(params: {
   }
 }
 
+export async function updateAgentExecutionMutation(params: {
+  requestJson: RequestJson;
+  agentId: string;
+  executionMode: "model" | "acp";
+  modelId?: string;
+  agentType?: string;
+  selectedAgentId: string;
+  refreshDashboard: (preferredAgentId?: string) => Promise<void>;
+  showToast: ShowToast;
+}): Promise<void> {
+  const targetAgentId = String(params.agentId || "").trim();
+  if (!targetAgentId) return;
+  try {
+    await params.requestJson(
+      dashboardApiRoutes.uiAgentExecution(),
+      {
+        method: "POST",
+        body: JSON.stringify({
+          projectRoot: targetAgentId,
+          executionMode: params.executionMode,
+          modelId: params.modelId,
+          agentType: params.agentType,
+        }),
+      },
+      targetAgentId,
+    );
+    await params.refreshDashboard(params.selectedAgentId || targetAgentId);
+    params.showToast(`已更新 ${targetAgentId} 的 execution（需重启 agent 生效）`, "success");
+  } catch (error) {
+    params.showToast(`agent execution 更新失败: ${getErrorMessage(error)}`, "error");
+  }
+}
+
 export async function startAgentFromHistoryMutation(params: {
   requestJson: RequestJson;
   agentId: string;
@@ -490,7 +523,9 @@ export async function startAgentFromHistoryMutation(params: {
           initialization: params.options?.initialization
             ? {
                 agentName: params.options.initialization.agentName,
-                primaryModelId: params.options.initialization.primaryModelId,
+                executionMode: params.options.initialization.executionMode,
+                modelId: params.options.initialization.modelId,
+                agentType: params.options.initialization.agentType,
               }
             : undefined,
         }),
@@ -539,7 +574,9 @@ export async function createAgentMutation(params: {
       body: JSON.stringify({
         projectRoot,
         agentName: params.input.agentName,
-        primaryModelId: params.input.primaryModelId,
+        executionMode: params.input.executionMode,
+        modelId: params.input.modelId,
+        agentType: params.input.agentType,
         autoStart: params.input.autoStart !== false,
       }),
     });

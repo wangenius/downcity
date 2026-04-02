@@ -21,13 +21,43 @@ export interface ConsoleUiDaemonMeta {
 }
 
 /**
- * downcity.json 中的模型配置。
+ * downcity.json 中的 ACP agent 配置。
  */
-export interface ConsoleUiShipModelConfig {
+export interface ConsoleUiShipExecutionAgentConfig {
   /**
-   * 当前 agent 绑定的主模型 id。
+   * ACP agent 类型。
    */
-  primary?: unknown;
+  type?: unknown;
+  /**
+   * 自定义启动命令。
+   */
+  command?: unknown;
+  /**
+   * 自定义启动参数。
+   */
+  args?: unknown;
+  /**
+   * 自定义环境变量。
+   */
+  env?: unknown;
+}
+
+/**
+ * downcity.json 中的 execution 配置。
+ */
+export interface ConsoleUiShipExecutionConfig {
+  /**
+   * 执行模式。
+   */
+  type?: unknown;
+  /**
+   * 模型执行模式下的模型 ID。
+   */
+  modelId?: unknown;
+  /**
+   * ACP 执行模式下的 agent 配置。
+   */
+  agent?: ConsoleUiShipExecutionAgentConfig;
 }
 
 /**
@@ -110,9 +140,9 @@ export interface ConsoleUiShipJson {
   name?: unknown;
 
   /**
-   * 模型配置。
+   * 执行配置。
    */
-  model?: ConsoleUiShipModelConfig;
+  execution?: ConsoleUiShipExecutionConfig;
 
   /**
    * 服务配置。

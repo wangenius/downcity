@@ -13,11 +13,17 @@ import type { SessionRunResult } from "@/types/SessionRun.js";
 import type { TaskSessionRuntime } from "@/types/TaskRunner.js";
 import { SessionCore } from "@sessions/SessionCore.js";
 import { drainDeferredPersistedUserMessages } from "@sessions/RequestContext.js";
+import { AcpSessionRuntime } from "@sessions/acp/AcpSessionRuntime.js";
+import {
+  readEnabledSessionAgentConfig,
+  resolveAcpLaunchConfig,
+} from "@sessions/acp/AcpSessionSupport.js";
 import { FilePersistor } from "@sessions/runtime/FilePersistor.js";
 import { SummaryCompactor } from "@sessions/runtime/SummaryCompactor.js";
 import { RuntimeOrchestrator } from "@sessions/runtime/RuntimeOrchestrator.js";
 import { PromptSystem } from "@sessions/prompts/system/PromptSystem.js";
 import { shellTools } from "@sessions/tools/shell/Tool.js";
+import type { SessionRuntimeLike } from "@/types/SessionRuntime.js";
 
 /**
  * 把 task round 的 user query 落盘到对应 run context。
@@ -71,7 +77,9 @@ export function createTaskSessionRuntime(params: {
     profile: "task",
   });
   const persistorsBySessionId = new Map<string, FilePersistor>();
-  const agentsBySessionId = new Map<string, SessionCore>();
+  const runtimesBySessionId = new Map<string, SessionRuntimeLike>();
+  const sessionAgent = readEnabledSessionAgentConfig(context.config);
+  const launch = sessionAgent ? resolveAcpLaunchConfig(sessionAgent) : null;
 
   const resolveTaskPersistor = (sessionId: string): FilePersistor => {
     const existing = persistorsBySessionId.get(sessionId);
@@ -111,28 +119,42 @@ export function createTaskSessionRuntime(params: {
     getPersistor(sessionId: string): FilePersistor {
       return resolveTaskPersistor(sessionId);
     },
-    getRuntime(sessionId: string): SessionCore {
+    getRuntime(sessionId: string): SessionRuntimeLike {
       const key = String(sessionId || "").trim();
       if (!key) {
         throw new Error("TaskSessionRuntime.getRuntime requires a non-empty sessionId");
       }
-      const existing = agentsBySessionId.get(key);
+      const existing = runtimesBySessionId.get(key);
       if (existing) return existing;
 
       const persistor = resolveTaskPersistor(key);
-      const orchestrator = new RuntimeOrchestrator({
-        sessionId: key,
-        getTools: () => shellTools,
-      });
-      const created = new SessionCore({
-        model: context.session.model,
-        logger: context.logger,
-        persistor,
-        compactor,
-        orchestrator,
-        prompter: system,
-      });
-      agentsBySessionId.set(key, created);
+      const created = launch
+        ? new AcpSessionRuntime({
+            rootPath: context.rootPath,
+            sessionId: key,
+            logger: context.logger,
+            persistor,
+            prompter: system,
+            launch,
+          })
+        : (() => {
+            if (!context.session.model) {
+              throw new Error("TaskSessionRuntime requires session.model when execution.type is not acp");
+            }
+            const orchestrator = new RuntimeOrchestrator({
+              sessionId: key,
+              getTools: () => shellTools,
+            });
+            return new SessionCore({
+              model: context.session.model,
+              logger: context.logger,
+              persistor,
+              compactor,
+              orchestrator,
+              prompter: system,
+            });
+          })();
+      runtimesBySessionId.set(key, created);
       return created;
     },
   };

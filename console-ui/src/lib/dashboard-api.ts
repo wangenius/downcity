@@ -251,6 +251,7 @@ export const dashboardApiRoutes = {
   uiAgentStart: () => "/api/ui/agents/start",
   uiAgentCreate: () => "/api/ui/agents/create",
   uiAgentInspect: () => "/api/ui/agents/inspect",
+  uiAgentExecution: () => "/api/ui/agents/execution",
   uiPickDirectory: () => "/api/ui/system/pick-directory",
   uiAgentRestart: () => "/api/ui/agents/restart",
   uiAgentStop: () => "/api/ui/agents/stop",

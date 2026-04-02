@@ -209,7 +209,9 @@ async function buildAgentOption(
     daemonPid: running ? daemonPid || undefined : undefined,
     logPath: running ? getDaemonLogPath(projectRoot) : undefined,
     chatProfiles,
-    primaryModelId: String(ship?.model?.primary || "").trim() || undefined,
+    executionMode: String(ship?.execution?.type || "").trim() === "acp" ? "acp" : String(ship?.execution?.type || "").trim() === "model" ? "model" : undefined,
+    modelId: String(ship?.execution?.modelId || "").trim() || undefined,
+    agentType: String(ship?.execution?.agent?.type || "").trim() || undefined,
   };
 }
 
@@ -318,12 +320,16 @@ export async function inspectConsoleUiAgentDirectory(
   const matched = knownAgents.find((item) => item.projectRoot === normalizedRoot) || null;
 
   let displayName = basename(normalizedRoot);
-  let primaryModelId = "";
+  let executionMode = "";
+  let modelId = "";
+  let agentType = "";
   if (hasShipJson) {
     try {
       const ship = (await fs.readJson(shipPath)) as ConsoleUiShipJson;
       displayName = String(ship?.name || "").trim() || displayName;
-      primaryModelId = String(ship?.model?.primary || "").trim();
+      executionMode = String(ship?.execution?.type || "").trim();
+      modelId = String(ship?.execution?.modelId || "").trim();
+      agentType = String(ship?.execution?.agent?.type || "").trim();
     } catch {
       // ignore parse failures
     }
@@ -339,7 +345,12 @@ export async function inspectConsoleUiAgentDirectory(
     knownAgent: matched !== null,
     running: matched?.running === true,
     displayName,
-    primaryModelId: primaryModelId || matched?.primaryModelId || undefined,
+    executionMode:
+      (executionMode === "model" || executionMode === "acp"
+        ? executionMode
+        : matched?.executionMode) || undefined,
+    modelId: modelId || matched?.modelId || undefined,
+    agentType: agentType || matched?.agentType || undefined,
   };
 }
 
@@ -377,7 +388,7 @@ export async function buildConsoleUiModelResponse(params: {
       const shipPath = getDowncityJsonPath(selectedAgent.projectRoot);
       if (await fs.pathExists(shipPath)) {
         const ship = (await fs.readJson(shipPath)) as ConsoleUiShipJson;
-        agentPrimaryModelId = String(ship?.model?.primary || "").trim();
+        agentPrimaryModelId = String(ship?.execution?.modelId || "").trim();
       }
     } catch {
       // ignore parse errors

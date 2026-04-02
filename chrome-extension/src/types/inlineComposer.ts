@@ -76,7 +76,12 @@ export interface InlineComposerRouteSettings
   extends Pick<
     ExtensionSettings,
     "consoleHost" | "consolePort" | "agentId" | "chatKey"
-  > {}
+  > {
+  /**
+   * 当前本地登录态里的 Bearer Token。
+   */
+  authToken: string;
+}
 
 /**
  * slash 历史命令项。

@@ -131,6 +131,7 @@ export function App() {
     loadSessionArchiveMessages,
     switchModel,
     switchModelForAgent,
+    updateAgentExecution,
     startAgentFromHistory,
     pickAgentDirectory,
     inspectAgentDirectory,
@@ -509,9 +510,12 @@ export function App() {
                   initialization: {
                     projectRoot: agentId,
                     agentName: options.agentName,
-                    primaryModelId: options.primaryModelId,
+                    executionMode: options.executionMode,
+                    modelId: options.modelId,
+                    agentType: options.agentType,
                   },
                 })}
+              onUpdateAgentExecution={(input) => updateAgentExecution(input)}
               onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
               onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
             />
@@ -614,9 +618,12 @@ export function App() {
                   initialization: {
                     projectRoot: agentId,
                     agentName: options.agentName,
-                    primaryModelId: options.primaryModelId,
+                    executionMode: options.executionMode,
+                    modelId: options.modelId,
+                    agentType: options.agentType,
                   },
                 })}
+              onUpdateAgentExecution={(input) => updateAgentExecution(input)}
               onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
               onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
             />

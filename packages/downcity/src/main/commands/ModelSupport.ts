@@ -15,7 +15,9 @@ import type { DowncityConfig } from "@/types/DowncityConfig.js";
 const OPENAI_COMPAT_PROVIDER_TYPES = new Set<LlmProviderType>([
   "openai",
   "deepseek",
-  "moonshot",
+  "moonshot-cn",
+  "moonshot-ai",
+  "kimi-code",
   "xai",
   "huggingface",
   "openrouter",
@@ -44,7 +46,9 @@ export function resolveProviderDefaultBaseUrl(
   providerType: LlmProviderType,
 ): string | undefined {
   if (providerType === "deepseek") return "https://api.deepseek.com/v1";
-  if (providerType === "moonshot") return "https://api.moonshot.ai/v1";
+  if (providerType === "moonshot-cn") return "https://api.moonshot.cn/v1";
+  if (providerType === "moonshot-ai") return "https://api.moonshot.ai/v1";
+  if (providerType === "kimi-code") return "https://api.kimi.com/coding/v1";
   if (providerType === "xai") return "https://api.x.ai/v1";
   if (providerType === "openrouter") return "https://openrouter.ai/api/v1";
   if (providerType === "open-compatible") return "https://api.openai.com/v1";
@@ -182,7 +186,7 @@ export function resolveProjectRoot(pathInput?: string): string {
 }
 
 /**
- * 设置项目 `downcity.json.model.primary`。
+ * 设置项目 `downcity.json.execution.modelId`。
  *
  * 关键点（中文）
  * - 仅更新绑定字段，不触碰其他运行配置。
@@ -201,14 +205,15 @@ export function setProjectPrimaryModel(projectRoot: string, modelId: string): {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`Invalid downcity.json: expected object (${shipJsonPath})`);
   }
-  const previousPrimary = String(raw.model?.primary || "").trim();
+  const previousPrimary =
+    String(raw.execution?.type === "model" ? raw.execution.modelId || "" : "").trim();
   const nextPrimary = String(modelId || "").trim();
   if (!nextPrimary) throw new Error("modelId cannot be empty");
   const nextConfig: DowncityConfig = {
     ...(raw as DowncityConfig),
-    model: {
-      ...(raw.model || {}),
-      primary: nextPrimary,
+    execution: {
+      type: "model",
+      modelId: nextPrimary,
     },
   };
   fs.writeJsonSync(shipJsonPath, nextConfig, { spaces: 2 });

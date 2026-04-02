@@ -23,10 +23,18 @@ function buildHandlers(overrides = {}) {
       return {
         projectRoot,
         agentName: String(initialization?.agentName || "Test Agent"),
-        primaryModelId: String(initialization?.primaryModelId || "model.test"),
+        executionMode: String(initialization?.executionMode || "model"),
+        modelId: String(initialization?.modelId || "model.test"),
         channels: [],
         createdFiles: ["PROFILE.md", "downcity.json"],
         skippedFiles: [],
+      };
+    },
+    async updateAgentExecution(projectRoot, input) {
+      return {
+        projectRoot,
+        executionMode: String(input?.executionMode || "model"),
+        modelId: String(input?.modelId || "model.test"),
       };
     },
     async startAgentByProjectRoot(projectRoot) {
@@ -111,7 +119,8 @@ test("create route initializes without starting when autoStart is false", async 
         return {
           projectRoot,
           agentName: "Alpha",
-          primaryModelId: "model.alpha",
+          executionMode: "model",
+          modelId: "model.alpha",
           channels: [],
           createdFiles: ["PROFILE.md", "downcity.json"],
           skippedFiles: [],
@@ -137,7 +146,8 @@ test("create route initializes without starting when autoStart is false", async 
     body: JSON.stringify({
       projectRoot: "/tmp/agent-alpha",
       agentName: "Alpha",
-      primaryModelId: "model.alpha",
+      executionMode: "model",
+      modelId: "model.alpha",
       autoStart: false,
     }),
   });
@@ -154,7 +164,9 @@ test("create route initializes without starting when autoStart is false", async 
       projectRoot: "/tmp/agent-alpha",
       initialization: {
         agentName: "Alpha",
-        primaryModelId: "model.alpha",
+        executionMode: "model",
+        modelId: "model.alpha",
+        agentType: undefined,
         forceOverwriteShipJson: undefined,
       },
     },
@@ -172,7 +184,8 @@ test("create route starts agent after initialization when autoStart is enabled",
         return {
           projectRoot,
           agentName: "Beta",
-          primaryModelId: "model.beta",
+          executionMode: "model",
+          modelId: "model.beta",
           channels: [],
           createdFiles: ["PROFILE.md", "downcity.json"],
           skippedFiles: [],
@@ -199,7 +212,8 @@ test("create route starts agent after initialization when autoStart is enabled",
     body: JSON.stringify({
       projectRoot: "/tmp/agent-beta",
       agentName: "Beta",
-      primaryModelId: "model.beta",
+      executionMode: "model",
+      modelId: "model.beta",
     }),
   });
 
@@ -210,5 +224,106 @@ test("create route starts agent after initialization when autoStart is enabled",
   assert.deepEqual(calls, [
     { type: "initialize", projectRoot: "/tmp/agent-beta" },
     { type: "start", projectRoot: "/tmp/agent-beta" },
+  ]);
+});
+
+test("create route forwards ACP agentType during initialization", async () => {
+  const app = new Hono();
+  const calls = [];
+  registerConsoleUiGatewayRoutes({
+    app,
+    handlers: buildHandlers({
+      async initializeAgentProject(projectRoot, initialization) {
+        calls.push({ type: "initialize", projectRoot, initialization });
+        return {
+          projectRoot,
+          agentName: "Kimi Agent",
+          executionMode: "acp",
+          agentType: "kimi",
+          channels: [],
+          createdFiles: ["PROFILE.md", "downcity.json"],
+          skippedFiles: [],
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/ui/agents/create", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      projectRoot: "/tmp/agent-kimi",
+      agentName: "Kimi Agent",
+      executionMode: "acp",
+      agentType: "kimi",
+      autoStart: false,
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.started, false);
+  assert.deepEqual(calls, [
+    {
+      type: "initialize",
+      projectRoot: "/tmp/agent-kimi",
+      initialization: {
+        agentName: "Kimi Agent",
+        executionMode: "acp",
+        modelId: undefined,
+        agentType: "kimi",
+        forceOverwriteShipJson: undefined,
+      },
+    },
+  ]);
+});
+
+test("execution route forwards unified execution payload", async () => {
+  const app = new Hono();
+  const calls = [];
+  registerConsoleUiGatewayRoutes({
+    app,
+    handlers: buildHandlers({
+      async updateAgentExecution(projectRoot, input) {
+        calls.push({ projectRoot, input });
+        return {
+          projectRoot,
+          executionMode: "acp",
+          agentType: "codex",
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/ui/agents/execution", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      projectRoot: "/tmp/agent-gamma",
+      executionMode: "acp",
+      agentType: "codex",
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.executionMode, "acp");
+  assert.equal(body.agentType, "codex");
+  assert.equal(body.restartRequired, true);
+  assert.deepEqual(calls, [
+    {
+      projectRoot: "/tmp/agent-gamma",
+      input: {
+        executionMode: "acp",
+        modelId: undefined,
+        agentType: "codex",
+      },
+    },
   ]);
 });

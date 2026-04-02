@@ -25,7 +25,7 @@ export type ModelPreset = {
   /**
    * 对应 provider 类型（用于生成 `llm.providers.<id>.type`）。
    */
-  providerType: LlmProviderType;
+  providerTypes: readonly LlmProviderType[];
 
   /**
    * 是否属于“模型名由环境变量注入”的自定义模型类型。
@@ -40,112 +40,118 @@ const MODEL_PRESETS: ModelPreset[] = [
   {
     id: "claude-sonnet-4-5",
     title: "Claude Sonnet 4",
-    providerType: "anthropic",
+    providerTypes: ["anthropic"],
     useCustomModelName: false,
   },
   {
     id: "claude-haiku",
     title: "Claude Haiku",
-    providerType: "anthropic",
+    providerTypes: ["anthropic"],
     useCustomModelName: false,
   },
   {
     id: "claude-3-5-sonnet-20241022",
     title: "Claude 3.5 Sonnet",
-    providerType: "anthropic",
+    providerTypes: ["anthropic"],
     useCustomModelName: false,
   },
   {
     id: "claude-3-opus-20240229",
     title: "Claude 3 Opus",
-    providerType: "anthropic",
+    providerTypes: ["anthropic"],
     useCustomModelName: false,
   },
   // OpenAI GPT 系列
   {
     id: "gpt-4",
     title: "GPT-4",
-    providerType: "openai",
+    providerTypes: ["openai"],
     useCustomModelName: false,
   },
   {
     id: "gpt-4-turbo",
     title: "GPT-4 Turbo",
-    providerType: "openai",
+    providerTypes: ["openai"],
     useCustomModelName: false,
   },
   {
     id: "gpt-4o",
     title: "GPT-4o",
-    providerType: "openai",
+    providerTypes: ["openai"],
     useCustomModelName: false,
   },
   {
     id: "gpt-3.5-turbo",
     title: "GPT-3.5 Turbo",
-    providerType: "openai",
+    providerTypes: ["openai"],
     useCustomModelName: false,
   },
   // DeepSeek
   {
     id: "deepseek-chat",
     title: "DeepSeek Chat",
-    providerType: "deepseek",
+    providerTypes: ["deepseek"],
     useCustomModelName: false,
   },
   // Gemini
   {
     id: "gemini-2.5-pro",
     title: "Gemini 2.5 Pro",
-    providerType: "gemini",
+    providerTypes: ["gemini"],
     useCustomModelName: false,
   },
   {
     id: "gemini-2.5-flash",
     title: "Gemini 2.5 Flash",
-    providerType: "gemini",
+    providerTypes: ["gemini"],
     useCustomModelName: false,
   },
   // xAI
   {
     id: "grok-3",
     title: "xAI Grok 3",
-    providerType: "xai",
+    providerTypes: ["xai"],
     useCustomModelName: false,
   },
   // HuggingFace Router
   {
     id: "meta-llama/Llama-3.1-8B-Instruct",
     title: "HF Llama 3.1 8B",
-    providerType: "huggingface",
+    providerTypes: ["huggingface"],
     useCustomModelName: false,
   },
   // OpenRouter
   {
     id: "openrouter/auto",
     title: "OpenRouter Auto",
-    providerType: "openrouter",
+    providerTypes: ["openrouter"],
     useCustomModelName: false,
   },
   // Moonshot(Kimi)
   {
     id: "kimi-k2.5",
     title: "Kimi K2.5",
-    providerType: "moonshot",
+    providerTypes: ["moonshot-cn", "moonshot-ai"],
+    useCustomModelName: false,
+  },
+  {
+    id: "kimi-for-coding",
+    title: "Kimi For Coding",
+    providerTypes: ["kimi-code"],
     useCustomModelName: false,
   },
   // OpenAI-compatible（Chat Completions）
   {
     id: "open-compatible",
     title: "Open-compatible model",
-    providerType: "open-compatible",
+    providerTypes: ["open-compatible"],
     useCustomModelName: true,
   },
   // OpenAI-compatible（Responses）
   {
     id: "open-responses",
     title: "Open-responses model",
-    providerType: "open-responses",
+    providerTypes: ["open-responses"],
     useCustomModelName: true,
   },
 ];
@@ -196,6 +202,13 @@ export class ModelManager {
     const key = String(id || "").trim();
     if (!key) return undefined;
     return this.presetsById.get(key);
+  }
+
+  /**
+   * 判断预设是否支持指定 provider 类型。
+   */
+  supportsProviderType(preset: ModelPreset, providerType: LlmProviderType): boolean {
+    return preset.providerTypes.includes(providerType);
   }
 
   /**

@@ -8,7 +8,7 @@ description: Current downcity.json layering, loading behavior, and key fields
 Model config is now split into two layers:
 
 1. `~/.downcity/downcity.db` (console-global SQLite) manages the full model pool
-2. Project `downcity.json` (agent-local) only sets `model.primary`
+2. Project `downcity.json` (agent-local) declares only `execution`
 
 ## Agent project minimal shape
 
@@ -17,13 +17,18 @@ Model config is now split into two layers:
   "$schema": "./.downcity/schema/downcity.schema.json",
   "name": "my-agent",
   "version": "1.0.0",
-  "model": {
-    "primary": "default"
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "kimi"
+    }
   }
 }
 ```
 
-`model.primary` must match an existing model id in `~/.downcity/downcity.db`.
+If you use the console-global model pool, set `execution.type = "model"` and make sure `execution.modelId` exists in `~/.downcity/downcity.db`.
+
+If you use an ACP coding agent, set `execution.type = "acp"` and declare `execution.agent.type` as `kimi`, `claude`, or `codex`.
 
 Project `downcity.json` should keep plugin configuration under `plugins.*`.
 
@@ -46,11 +51,12 @@ city console model get provider openai_main
 
 When an agent starts:
 
-1. Read project `model.primary`
-2. Resolve model in SQLite models table by id
-3. Resolve provider in SQLite providers table by providerId
+1. Check whether the project declares `execution`
+2. If `execution.type = "model"`, resolve the model in the SQLite models table by id
+3. Resolve provider in the SQLite providers table by providerId
+4. If `execution.type = "acp"`, launch the corresponding ACP agent
 
-If any link is missing, startup fails fast.
+`execution` must be valid, otherwise startup fails fast.
 
 ## Plugin scope
 
@@ -91,6 +97,47 @@ Chat channels in `downcity.json` should bind to a global channel account id:
 ```
 
 `channelAccountId` resolves to `channel_accounts.id` in `~/.downcity/downcity.db`.
+
+## ACP Execution Mode
+
+Currently supported ACP coding agents:
+
+- `kimi`: default command `kimi acp`
+- `claude`: default command `npx -y @zed-industries/claude-code-acp`
+- `codex`: default command `npx -y @zed-industries/codex-acp`
+
+Example:
+
+```json
+{
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "kimi"
+    }
+  }
+}
+```
+
+You can override the launcher:
+
+```json
+{
+  "execution": {
+    "type": "acp",
+    "agent": {
+      "type": "claude",
+      "command": "claude-acp",
+      "args": []
+    }
+  }
+}
+```
+
+Current limitations:
+
+- `execution.type="acp"` only changes the session/chat/task execution path.
+- In model mode, `execution.modelId` is required.
 
 ## Related docs
 

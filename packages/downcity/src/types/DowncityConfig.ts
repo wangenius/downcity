@@ -6,7 +6,7 @@
  * - 供 agent、services、console 宿主层多处复用，避免反向类型依赖。
  */
 import type { LlmConfig } from "@/types/LlmConfig.js";
-import type { AgentModelBindingConfig } from "@/types/ModelBinding.js";
+import type { ExecutionBindingConfig } from "@/types/ExecutionBinding.js";
 import type { JsonObject } from "@/types/Json.js";
 
 export interface DowncityConfig {
@@ -123,13 +123,14 @@ export interface DowncityConfig {
     [pluginName: string]: JsonObject;
   };
   /**
-   * Agent 模型绑定配置。
+   * 项目执行绑定配置。
    *
    * 关键点（中文）
-   * - agent 只声明绑定关系（`model.primary`）。
-   * - provider/models 的完整配置统一由 console 全局 `~/.downcity/downcity.db` 管理。
+   * - 项目只声明一条执行路径：`model` 或 `acp`。
+   * - `model` 模式绑定 console 全局模型池中的模型 ID。
+   * - `acp` 模式直接启动本地 ACP coding agent。
    */
-  model?: AgentModelBindingConfig;
+  execution?: ExecutionBindingConfig;
   /**
    * LLM 全量配置（通常来自 console 全局层合并结果）。
    *

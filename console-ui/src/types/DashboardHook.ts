@@ -514,6 +514,16 @@ export interface UseConsoleDashboardResult {
   switchModelForAgent: (agentId: string, primaryModelId: string) => Promise<void>;
 
   /**
+   * 更新指定 agent 的执行模式。
+   */
+  updateAgentExecution: (input: {
+    agentId: string;
+    executionMode: "model" | "acp";
+    modelId?: string;
+    agentType?: string;
+  }) => Promise<void>;
+
+  /**
    * 启动历史 agent。
    */
   startAgentFromHistory: (

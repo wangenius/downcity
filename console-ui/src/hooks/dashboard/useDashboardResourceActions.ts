@@ -20,6 +20,7 @@ import {
   simplePostRefreshMutation,
   startAgentFromHistoryMutation,
   stopAgentFromHistoryMutation,
+  updateAgentExecutionMutation,
   switchModelForAgentMutation,
   switchModelMutation,
 } from "../../lib/dashboard-mutations";
@@ -52,6 +53,12 @@ export function useDashboardResourceActions(params: {
 }): {
   switchModel: (primaryModelId: string) => Promise<void>;
   switchModelForAgent: (agentId: string, primaryModelId: string) => Promise<void>;
+  updateAgentExecution: (input: {
+    agentId: string;
+    executionMode: "model" | "acp";
+    modelId?: string;
+    agentType?: string;
+  }) => Promise<void>;
   startAgentFromHistory: (
     agentId: string,
     options?: {
@@ -217,6 +224,27 @@ export function useDashboardResourceActions(params: {
       await stopAgentFromHistoryMutation({
         requestJson: params.requestJson,
         agentId,
+        selectedAgentId: params.selectedAgentId,
+        refreshDashboard: params.refreshDashboard,
+        showToast: params.showToast,
+      });
+    },
+    [params],
+  );
+
+  const updateAgentExecution = useCallback(
+    async (input: {
+      agentId: string;
+      executionMode: "model" | "acp";
+      modelId?: string;
+      agentType?: string;
+    }) => {
+      await updateAgentExecutionMutation({
+        requestJson: params.requestJson,
+        agentId: input.agentId,
+        executionMode: input.executionMode,
+        modelId: input.modelId,
+        agentType: input.agentType,
         selectedAgentId: params.selectedAgentId,
         refreshDashboard: params.refreshDashboard,
         showToast: params.showToast,
@@ -610,6 +638,7 @@ export function useDashboardResourceActions(params: {
   return {
     switchModel,
     switchModelForAgent,
+    updateAgentExecution,
     startAgentFromHistory,
     createAgent,
     pickAgentDirectory,

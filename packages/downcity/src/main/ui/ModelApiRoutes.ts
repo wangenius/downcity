@@ -14,8 +14,9 @@ import type { ConsoleUiAgentOption } from "@/types/ConsoleUI.js";
 import { ModelPoolService } from "@/main/ui/ModelPoolService.js";
 
 type ShipJsonLike = {
-  model?: {
-    primary?: unknown;
+  execution?: {
+    type?: unknown;
+    modelId?: unknown;
   };
 };
 
@@ -105,11 +106,10 @@ export function registerConsoleUiModelRoutes(params: {
       }
 
       const agentShip = (await fs.readJson(shipJsonPath)) as ShipJsonLike;
-      if (!agentShip.model || typeof agentShip.model !== "object") {
-        agentShip.model = { primary: nextPrimaryModelId };
-      } else {
-        agentShip.model.primary = nextPrimaryModelId;
-      }
+      agentShip.execution = {
+        type: "model",
+        modelId: nextPrimaryModelId,
+      };
       await fs.writeJson(shipJsonPath, agentShip, { spaces: 2 });
 
       return c.json({

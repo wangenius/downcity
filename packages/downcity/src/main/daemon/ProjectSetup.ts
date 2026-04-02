@@ -11,6 +11,11 @@ import path from "node:path";
 import { loadDowncityConfig } from "@/main/env/Config.js";
 import { ConsoleStore } from "@/utils/store/index.js";
 import {
+  readProjectExecutionMode,
+  readProjectPrimaryModelId,
+  readProjectSessionAgentType,
+} from "@/main/project/ProjectExecutionBinding.js";
+import {
   getCacheDirPath,
   getLogsDirPath,
   getProfileMdPath,
@@ -72,28 +77,37 @@ export function ensureRuntimeProjectReady(projectRoot: string): void {
 }
 
 /**
- * 校验项目模型绑定是否可用于启动。
+ * 校验项目执行绑定是否可用于启动。
  *
  * 关键点（中文）
- * - `downcity.json.model.primary` 必须存在且在 console 模型池中可解析。
+ * - `downcity.json.execution` 必须存在且合法。
+ * - 若走模型模式，则 `execution.modelId` 必须在 console 模型池中可解析。
  * - 若模型被 pause，也要在启动前直接拒绝，避免进程拉起后秒退。
  */
-export function ensureRuntimeModelBindingReady(projectRoot: string): void {
+export function ensureRuntimeExecutionBindingReady(projectRoot: string): void {
   let primaryModelId = "";
+  let sessionAgentType = "";
+  let executionMode = "";
   try {
     const config = loadDowncityConfig(projectRoot);
-    primaryModelId = String(config.model?.primary || "").trim();
+    executionMode = String(readProjectExecutionMode(config) || "").trim();
+    primaryModelId = readProjectPrimaryModelId(config);
+    sessionAgentType = String(readProjectSessionAgentType(config) || "").trim();
   } catch (error) {
-    console.error("❌ Invalid downcity.json model binding");
+    console.error("❌ Invalid downcity.json execution binding");
     console.error(`   project: ${projectRoot}`);
     console.error(`   error: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 
-  if (!primaryModelId) {
-    console.error("❌ Invalid downcity.json model binding");
+  if (sessionAgentType) {
+    return;
+  }
+
+  if (!executionMode || !primaryModelId) {
+    console.error("❌ Invalid downcity.json execution binding");
     console.error(`   project: ${projectRoot}`);
-    console.error("   error: model.primary is required");
+    console.error('   error: "execution" must be either model or acp');
     process.exit(1);
   }
 
@@ -103,14 +117,14 @@ export function ensureRuntimeModelBindingReady(projectRoot: string): void {
     if (!model) {
       console.error("❌ Model not found in console model pool");
       console.error(`   project: ${projectRoot}`);
-      console.error(`   model.primary: ${primaryModelId}`);
+      console.error(`   execution.modelId: ${primaryModelId}`);
       console.error("   fix: run `city console model create` or `city console model list`");
       process.exit(1);
     }
     if (model.isPaused === true) {
       console.error("❌ Model is paused");
       console.error(`   project: ${projectRoot}`);
-      console.error(`   model.primary: ${primaryModelId}`);
+      console.error(`   execution.modelId: ${primaryModelId}`);
       console.error(`   fix: run \`city console model pause ${primaryModelId} --enabled false\``);
       process.exit(1);
     }

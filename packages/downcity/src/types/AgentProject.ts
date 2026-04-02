@@ -6,6 +6,12 @@
  * - 所有字段都面向“项目骨架创建”语义，不掺杂 runtime 状态。
  */
 
+import type {
+  ExecutionBindingConfig,
+  ExecutionBindingMode,
+} from "@/types/ExecutionBinding.js";
+import type { SessionAgentType } from "@/types/SessionAgent.js";
+
 /**
  * 可选的 chat channel 标识。
  */
@@ -29,9 +35,13 @@ export interface AgentProjectInitializationInput {
   agentName?: string;
 
   /**
-   * 绑定到 `downcity.json.model.primary` 的模型 ID。
+   * 项目执行绑定配置。
+   *
+   * 说明（中文）
+   * - `model`：绑定 console 全局模型池中的模型 ID。
+   * - `acp`：绑定 ACP coding agent。
    */
-  primaryModelId: string;
+  execution: ExecutionBindingConfig;
 
   /**
    * 需要启用的 chat channels。
@@ -62,9 +72,19 @@ export interface AgentProjectInitializationResult {
   agentName: string;
 
   /**
+   * 最终写入的执行模式。
+   */
+  executionMode: ExecutionBindingMode;
+
+  /**
    * 最终写入的主模型 ID。
    */
-  primaryModelId: string;
+  modelId?: string;
+
+  /**
+   * 最终写入的 ACP agent 类型。
+   */
+  agentType?: SessionAgentType;
 
   /**
    * 最终启用的 chat channels。

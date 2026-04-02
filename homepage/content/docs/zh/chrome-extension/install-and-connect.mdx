@@ -42,6 +42,10 @@ npm run build:extension
 - 默认 Agent
 - 默认 Channel Chat
 
+如果 Console 已经完成统一账户初始化，扩展设置页会先要求你登录 Console 账户。
+
+登录成功后，扩展会自动保存本地登录态，并在后续请求里附加 `Authorization: Bearer ...`。
+
 ## Agent 和 Chat 怎么选
 
 扩展会先从 Console 拉取 Agent 列表，再读取该 Agent 的可用 chat context。

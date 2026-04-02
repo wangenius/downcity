@@ -12,6 +12,8 @@ Dedicated model management command group for language models only.
 - `create` is the only interactive command.
 - All others (`list/pause/update/test`) are non-interactive for automation.
 - Provider `apiKey` is stored in `~/.downcity/downcity.db` and encrypted on write.
+- Kimi now has two explicit provider types: `moonshot-cn` and `moonshot-ai`.
+- Kimi Code can use a dedicated provider type: `kimi-code`.
 
 ## Usage
 
@@ -36,6 +38,8 @@ city console model discover <providerId> --auto-add true --prefix openai_
 
 # Update provider
 city console model update provider <providerId> --api-key '${OPENAI_API_KEY}'
+city console model update provider kimi_cn --type moonshot-cn
+city console model update provider kimi_ai --type moonshot-ai
 
 # Update model
 city console model update model <modelId> --name gpt-4o-mini --provider openai_main
@@ -44,7 +48,7 @@ city console model update model <modelId> --name gpt-4o-mini --provider openai_m
 city console model remove provider <providerId>
 city console model remove model <modelId>
 
-# Bind model to project (set downcity.json.model.primary)
+# Bind model to project (set downcity.json.execution.modelId)
 city console model use <modelId> --path /path/to/agent
 
 # Test provider
@@ -65,12 +69,12 @@ city console model test model <modelId>
 - `get`: read a single provider/model detail.
 - `discover`: fetch provider model list and optionally `--auto-add` to local pool.
 - `remove`: remove provider/model (provider removal fails if referenced).
-- `use`: bind project `downcity.json.model.primary` to a model ID.
+- `use`: bind project `downcity.json.execution.modelId` to a model ID and switch execution mode to `model`.
 
 ## pause Behavior
 
 - `pause` marks a model as paused.
-- Paused models cannot be loaded as runtime `model.primary`.
+- Paused models cannot be loaded as runtime `execution.modelId`.
 - Useful for incident isolation, cost control, or maintenance windows.
 
 ## test Behavior

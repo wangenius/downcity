@@ -6,8 +6,8 @@
  * - 这些类型仍然服务于 task 运行链路，但统一提升到 `src/types/`，避免继续散落在实现文件中。
  */
 
-import type { SessionCore } from "@sessions/SessionCore.js";
 import type { FilePersistor } from "@sessions/runtime/FilePersistor.js";
+import type { SessionRuntimeLike } from "@/types/SessionRuntime.js";
 import type {
   ShipTaskRunExecutionStatusV1,
   ShipTaskRunProgressPhaseV1,
@@ -171,9 +171,9 @@ export type ScriptExecutionResult = {
  */
 export type TaskSessionRuntime = {
   /**
-   * 获取指定 sessionId 对应的 SessionCore。
+   * 获取指定 sessionId 对应的 Session runtime。
    */
-  getRuntime(sessionId: string): SessionCore;
+  getRuntime(sessionId: string): SessionRuntimeLike;
   /**
    * 获取指定 sessionId 对应的 FilePersistor。
    */

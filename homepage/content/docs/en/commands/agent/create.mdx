@@ -17,6 +17,8 @@ city agent create [path]
 
 - `path` (optional): project path. Defaults to current directory.
 - The interactive default `Agent name` is derived from the directory name and replaces `_`/`-` with spaces (default only; you can edit it).
+- The interactive flow now lets you choose an execution mode directly: `Global Model Pool`, `Kimi ACP`, `Claude ACP`, or `Codex ACP`.
+- Created projects now write unified `downcity.json.execution` instead of splitting config across `model.primary` and `session.agent`.
 
 ## Options
 
@@ -47,11 +49,4 @@ city version: 1.0.0
 ✅ Created downcity.schema.json
 ```
 
-```text
-$ city agent create .
-city version: 1.0.0
-❌ Console model pool is empty.
-   Please configure at least one model before `city agent create`:
-   1) city console model create
-   2) or use city console model update/test for scripting
-```
+If you choose ACP mode, initialization can proceed even when the console model pool is empty.

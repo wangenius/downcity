@@ -50,6 +50,20 @@ This usually means:
 - the Console address is wrong
 - the current Agent is offline
 
+If you see:
+
+- `Missing bearer token`
+- `Invalid bearer token`
+- `Permission denied`
+
+that usually means unified auth is enabled in Console, but the extension is not logged in yet, or the local login state has expired.
+
+Fix it by:
+
+1. opening the extension settings page
+2. logging in again with your Console username and password
+3. clicking `Refresh Agent`
+
 ## 5. No Available Chat
 
 The extension does not invent a chat context.

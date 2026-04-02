@@ -30,8 +30,11 @@ import {
 } from "./constants";
 import { normalizeText, toSafeFileNamePart } from "./helpers";
 
-const STORAGE_KEY = "downcity.extension.settings.v1";
 const SEND_HISTORY_STORAGE_KEY = "downcity.extension.send.history.v1";
+const SETTINGS_STORAGE_KEY = "downcity.extension.settings.v1";
+const AUTH_STORAGE_KEY = "downcity.extension.auth.v1";
+const DEFAULT_CONSOLE_HOST = "127.0.0.1";
+const DEFAULT_CONSOLE_PORT = 5315;
 
 function storageGet(
   area: "sync" | "local",
@@ -65,32 +68,39 @@ function storageSet(
   });
 }
 
-function buildConsoleBaseUrl(params: {
-  host: string;
-  port: number;
-}): string {
-  const host = String(params.host || "").trim() || "127.0.0.1";
-  const rawPort =
-    typeof params.port === "number"
-      ? params.port
-      : Number.parseInt(String(params.port || "").trim(), 10);
-  if (!Number.isFinite(rawPort) || Number.isNaN(rawPort)) {
-    throw new Error("Console 端口无效");
-  }
-  const port = Math.trunc(rawPort);
-  if (port < 1 || port > 65535) {
-    throw new Error("Console 端口范围应为 1-65535");
-  }
-  return `http://${host}:${port}`;
+function normalizeAuthToken(input: unknown): string {
+  const raw = String(input || "").trim();
+  if (!raw) return "";
+  const matched = raw.match(/^Bearer\s+(.+)$/i);
+  return String(matched?.[1] || raw).trim();
 }
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+function buildAuthHeaders(params?: {
+  authToken?: unknown;
+  headers?: HeadersInit;
+}): Headers {
+  const headers = new Headers(params?.headers || {});
+  const token = normalizeAuthToken(params?.authToken);
+  if (token && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+  return headers;
+}
+
+async function requestJson<T>(
+  url: string,
+  init?: RequestInit,
+  authOptions?: { authToken?: unknown },
+): Promise<T> {
   const response = await fetch(url, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
+    headers: buildAuthHeaders({
+      authToken: authOptions?.authToken,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers || {}),
+      },
+    }),
   });
 
   const rawText = await response.text();
@@ -112,13 +122,120 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
               "",
           )
         : "";
-    throw new Error(errorHint || `请求失败：HTTP ${response.status}`);
+    throw new Error(
+      errorHint || `请求失败：HTTP ${response.status} ${response.statusText}`,
+    );
   }
 
   if (!json || typeof json !== "object") {
     throw new Error("服务返回的不是合法 JSON");
   }
   return json as T;
+}
+
+function buildConsoleBaseUrl(params: {
+  host: string;
+  port: number;
+}): string {
+  const host = String(params.host || "").trim() || "127.0.0.1";
+  const rawPort =
+    typeof params.port === "number"
+      ? params.port
+      : Number.parseInt(String(params.port || "").trim(), 10);
+  if (!Number.isFinite(rawPort) || Number.isNaN(rawPort)) {
+    throw new Error("Console 端口无效");
+  }
+  const port = Math.trunc(rawPort);
+  if (port < 1 || port > 65535) {
+    throw new Error("Console 端口范围应为 1-65535");
+  }
+  return `http://${host}:${port}`;
+}
+
+function normalizeHost(input: unknown): string {
+  const value = String(input || "").trim();
+  return value || DEFAULT_CONSOLE_HOST;
+}
+
+function normalizePort(input: unknown): number {
+  const value =
+    typeof input === "number"
+      ? input
+      : Number.parseInt(String(input || "").trim(), 10);
+  if (!Number.isFinite(value) || Number.isNaN(value)) {
+    return DEFAULT_CONSOLE_PORT;
+  }
+  if (value < 1 || value > 65535) {
+    return DEFAULT_CONSOLE_PORT;
+  }
+  return Math.trunc(value);
+}
+
+function parseLegacyBaseUrl(input: unknown): {
+  consoleHost: string;
+  consolePort: number;
+} | null {
+  const raw = String(input || "").trim();
+  if (!raw) return null;
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
+  try {
+    const parsed = new URL(withProtocol);
+    return {
+      consoleHost: normalizeHost(parsed.hostname),
+      consolePort: normalizePort(parsed.port || DEFAULT_CONSOLE_PORT),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function loadStoredRouteSnapshot(): Promise<{
+  consoleHost: string;
+  consolePort: number;
+  agentId: string;
+  chatKey: string;
+  legacyAuthToken: string;
+}> {
+  const stored = await storageGet("sync", [SETTINGS_STORAGE_KEY]);
+  const raw = stored[SETTINGS_STORAGE_KEY];
+  const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const legacy = parseLegacyBaseUrl(value.consoleBaseUrl);
+
+  return {
+    consoleHost: legacy?.consoleHost || normalizeHost(value.consoleHost),
+    consolePort: legacy?.consolePort || normalizePort(value.consolePort),
+    agentId: normalizeText(value.agentId, 240),
+    chatKey: normalizeText(value.chatKey, 300),
+    legacyAuthToken: normalizeAuthToken(value.authToken).slice(0, 4096),
+  };
+}
+
+async function saveStoredRouteSnapshot(settings: InlineComposerRouteSettings): Promise<void> {
+  const stored = await storageGet("sync", [SETTINGS_STORAGE_KEY]);
+  const raw = stored[SETTINGS_STORAGE_KEY];
+  const current = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+
+  await storageSet("sync", {
+    [SETTINGS_STORAGE_KEY]: {
+      ...current,
+      consoleHost: normalizeHost(settings.consoleHost),
+      consolePort: normalizePort(settings.consolePort),
+      agentId: normalizeText(settings.agentId, 240),
+      chatKey: normalizeText(settings.chatKey, 300),
+    },
+  });
+}
+
+async function loadStoredAuthToken(): Promise<string> {
+  const [localStored, routeSettings] = await Promise.all([
+    storageGet("local", [AUTH_STORAGE_KEY]),
+    loadStoredRouteSnapshot(),
+  ]);
+  const raw = localStored[AUTH_STORAGE_KEY];
+  if (raw && typeof raw === "object") {
+    return normalizeAuthToken((raw as Record<string, unknown>).token).slice(0, 4096);
+  }
+  return routeSettings.legacyAuthToken;
 }
 
 function normalizePageUrl(value: string): string {
@@ -252,20 +369,20 @@ export async function loadAskHistoryCommands(): Promise<AskHistoryCommand[]> {
  * 读取 Inline Composer 使用的设置快照。
  */
 export async function loadRouteSettings(): Promise<InlineComposerRouteSettings> {
-  const stored = await storageGet("sync", [STORAGE_KEY]);
-  const raw = stored[STORAGE_KEY];
-  const value =
-    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const [loaded, authToken] = await Promise.all([
+    loadStoredRouteSnapshot(),
+    loadStoredAuthToken(),
+  ]);
   return {
     consoleHost:
-      normalizeText(value.consoleHost, 100) || DEFAULT_ROUTE_SETTINGS.consoleHost,
+      normalizeText(loaded.consoleHost, 100) || DEFAULT_ROUTE_SETTINGS.consoleHost,
     consolePort:
-      typeof value.consolePort === "number" && Number.isFinite(value.consolePort)
-        ? Math.trunc(value.consolePort)
-        : Number.parseInt(String(value.consolePort || DEFAULT_ROUTE_SETTINGS.consolePort), 10) ||
-          DEFAULT_ROUTE_SETTINGS.consolePort,
-    agentId: normalizeText(value.agentId, 240),
-    chatKey: normalizeText(value.chatKey, 300),
+      typeof loaded.consolePort === "number" && Number.isFinite(loaded.consolePort)
+        ? Math.trunc(loaded.consolePort)
+        : DEFAULT_ROUTE_SETTINGS.consolePort,
+    authToken: normalizeText(authToken, 4096),
+    agentId: normalizeText(loaded.agentId, 240),
+    chatKey: normalizeText(loaded.chatKey, 300),
   };
 }
 
@@ -275,19 +392,7 @@ export async function loadRouteSettings(): Promise<InlineComposerRouteSettings> 
 export async function saveRouteSettings(
   settings: InlineComposerRouteSettings,
 ): Promise<void> {
-  const stored = await storageGet("sync", [STORAGE_KEY]);
-  const raw = stored[STORAGE_KEY];
-  const current =
-    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  await storageSet("sync", {
-    [STORAGE_KEY]: {
-      ...current,
-      consoleHost: settings.consoleHost,
-      consolePort: settings.consolePort,
-      agentId: settings.agentId,
-      chatKey: settings.chatKey,
-    },
-  });
+  await saveStoredRouteSnapshot(settings);
 }
 
 /**
@@ -302,10 +407,14 @@ export function summarizeRouteErrorText(errorText: string): string {
   return "不可发送";
 }
 
-async function fetchAgents(baseUrl: string): Promise<ConsoleUiAgentOption[]> {
+async function fetchAgents(
+  baseUrl: string,
+  authToken: string,
+): Promise<ConsoleUiAgentOption[]> {
   const payload = await requestJson<ConsoleUiAgentsResponse>(
     `${baseUrl}/api/ui/agents`,
     { method: "GET" },
+    { authToken },
   );
   if (payload.success !== true) {
     throw new Error(payload.error || "加载 Agent 列表失败");
@@ -316,10 +425,12 @@ async function fetchAgents(baseUrl: string): Promise<ConsoleUiAgentOption[]> {
 async function fetchContexts(
   baseUrl: string,
   agentId: string,
+  authToken: string,
 ): Promise<TuiContextSummary[]> {
   const payload = await requestJson<TuiContextsResponse>(
     `${baseUrl}/api/dashboard/sessions?agent=${encodeURIComponent(agentId)}&limit=500`,
     { method: "GET" },
+    { authToken },
   );
   if (payload.success !== true) {
     throw new Error(payload.error || "加载会话列表失败");
@@ -513,7 +624,7 @@ export async function resolveRouteInfo(
     port: settings.consolePort,
   });
 
-  const agents = await fetchAgents(baseUrl);
+  const agents = await fetchAgents(baseUrl, settings.authToken);
   if (agents.length < 1) {
     throw new Error("未发现可用 Agent，请先执行 `city agent start`");
   }
@@ -526,7 +637,7 @@ export async function resolveRouteInfo(
     throw new Error("目标 Agent 未运行，请先启动后再试");
   }
 
-  const contexts = await fetchContexts(baseUrl, targetAgent.id);
+  const contexts = await fetchContexts(baseUrl, targetAgent.id, settings.authToken);
   const linkedChannels = resolveLinkedChannels(targetAgent);
 
   const options: InlineComposerChatOption[] = [];
@@ -610,9 +721,12 @@ export async function sendPageContextToAgent(
 
   const response = await fetch(executeUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: buildAuthHeaders({
+      authToken: routeSettings.authToken,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }),
     body: JSON.stringify(body),
   });
 

@@ -6,6 +6,8 @@
  * - 让设置页组件更聚焦在数据流与交互。
  */
 
+import { decorateAuthErrorText } from "../services/auth";
+
 /**
  * Options 状态。
  */
@@ -24,8 +26,8 @@ export interface OptionsStatus {
  * 读取错误文本。
  */
 export function readErrorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error || "未知错误");
+  if (error instanceof Error) return decorateAuthErrorText(error.message);
+  return decorateAuthErrorText(error || "未知错误");
 }
 
 /**

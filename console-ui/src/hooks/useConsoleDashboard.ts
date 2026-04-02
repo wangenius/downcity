@@ -875,6 +875,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const {
     switchModel,
     switchModelForAgent,
+    updateAgentExecution,
     startAgentFromHistory,
     createAgent,
     pickAgentDirectory,
@@ -1089,6 +1090,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     deleteChatSession,
     switchModel,
     switchModelForAgent,
+    updateAgentExecution,
     startAgentFromHistory,
     createAgent,
     pickAgentDirectory,

@@ -2,9 +2,9 @@
  * Global 作用域的 agent 管理页。
  *
  * 关键点（中文）
- * - 主路径是“打开文件夹”，而不是先创建一个抽象的 agent 条目。
- * - 只有目录缺少 `downcity.json` / `PROFILE.md` 时，才进入初始化并启动流程。
- * - 已初始化目录直接启动，降低首次使用理解成本。
+ * - 主路径是“打开文件夹”，而不是先创建抽象 agent 条目。
+ * - 初始化与编辑统一收敛到同一份 execution 表单。
+ * - 项目执行模式只分两类：`model` 或 `acp`。
  */
 
 import * as React from "react"
@@ -12,6 +12,7 @@ import {
   BotIcon,
   FolderOpenIcon,
   Loader2Icon,
+  PencilLineIcon,
   PlayIcon,
   RotateCwIcon,
   SquareIcon,
@@ -32,17 +33,22 @@ import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/comp
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { UiAgentDirectoryInspection, UiAgentOption, UiModelPoolItem } from "@/types/Dashboard"
 
+type AgentExecutionChoice = "model" | "kimi" | "claude" | "codex"
+type AgentDialogMode = "initialize" | "edit"
+
 type AgentFormState = {
   projectRoot: string
   agentName: string
-  primaryModelId: string
+  executionChoice: AgentExecutionChoice
+  modelId: string
 }
 
 function createEmptyForm(defaultModelId: string): AgentFormState {
   return {
     projectRoot: "",
     agentName: "",
-    primaryModelId: defaultModelId,
+    executionChoice: defaultModelId ? "model" : "kimi",
+    modelId: defaultModelId,
   }
 }
 
@@ -53,41 +59,47 @@ function deriveFolderName(projectRoot: string): string {
   return segments[segments.length - 1] || normalized
 }
 
+function deriveExecutionChoice(input: {
+  executionMode?: "model" | "acp"
+  agentType?: string
+  defaultChoice: AgentExecutionChoice
+}): AgentExecutionChoice {
+  if (input.executionMode === "model") return "model"
+  const agentType = String(input.agentType || "").trim()
+  if (agentType === "kimi" || agentType === "claude" || agentType === "codex") {
+    return agentType
+  }
+  return input.defaultChoice
+}
+
+function readRuntimeLabel(input: {
+  executionChoice: AgentExecutionChoice
+  selectedModelLabel: string
+}): string {
+  return input.executionChoice === "model"
+    ? (input.selectedModelLabel || "-")
+    : `ACP · ${input.executionChoice}`
+}
+
 export interface GlobalAgentsSectionProps {
-  /**
-   * 当前可用 agent 列表。
-   */
   agents: UiAgentOption[]
-  /**
-   * 当前可用模型池。
-   */
   modelPoolItems: UiModelPoolItem[]
-  /**
-   * 打开系统目录选择器。
-   */
   onPickAgentDirectory: () => Promise<string>
-  /**
-   * 探测目录是否已初始化。
-   */
   onInspectAgentDirectory: (projectRoot: string) => Promise<UiAgentDirectoryInspection | null>
-  /**
-   * 重启运行中的 agent。
-   */
   onRestartAgent: (agentId: string) => void
-  /**
-   * 停止运行中的 agent。
-   */
   onStopAgent: (agentId: string) => void
-  /**
-   * 启动历史 agent。
-   */
   onStartAgent: (agentId: string) => void
-  /**
-   * 初始化并启动 agent。
-   */
   onStartAgentWithInitialization: (agentId: string, input: {
     agentName?: string
-    primaryModelId: string
+    executionMode: "model" | "acp"
+    modelId?: string
+    agentType?: string
+  }) => void
+  onUpdateAgentExecution: (input: {
+    agentId: string
+    executionMode: "model" | "acp"
+    modelId?: string
+    agentType?: string
   }) => void
 }
 
@@ -101,6 +113,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
     onStopAgent,
     onStartAgent,
     onStartAgentWithInitialization,
+    onUpdateAgentExecution,
   } = props
   const confirm = useConfirmDialog()
   const [startingAgentId, setStartingAgentId] = React.useState("")
@@ -108,7 +121,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   const [stoppingAgentId, setStoppingAgentId] = React.useState("")
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [dialogTargetAgentId, setDialogTargetAgentId] = React.useState("")
+  const [dialogMode, setDialogMode] = React.useState<AgentDialogMode>("initialize")
   const [pickingDirectory, setPickingDirectory] = React.useState(false)
+  const [submittingDialog, setSubmittingDialog] = React.useState(false)
   const activeModelOptions = React.useMemo(
     () => modelPoolItems.filter((item) => item.isPaused !== true),
     [modelPoolItems],
@@ -118,15 +133,14 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
     [activeModelOptions, modelPoolItems],
   )
   const [form, setForm] = React.useState<AgentFormState>(() => createEmptyForm(defaultModelId))
-  const [submittingDialog, setSubmittingDialog] = React.useState(false)
 
   React.useEffect(() => {
     setForm((current) => {
-      if (current.primaryModelId) return current
+      if (current.modelId) return current
       if (!defaultModelId) return current
       return {
         ...current,
-        primaryModelId: defaultModelId,
+        modelId: defaultModelId,
       }
     })
   }, [defaultModelId])
@@ -134,21 +148,31 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   const resetDialog = React.useCallback(() => {
     setDialogOpen(false)
     setDialogTargetAgentId("")
+    setDialogMode("initialize")
     setSubmittingDialog(false)
     setForm(createEmptyForm(defaultModelId))
   }, [defaultModelId])
 
-  const openInitializeDialog = React.useCallback((input: {
+  const openExecutionDialog = React.useCallback((input: {
     agentId?: string
     projectRoot: string
     agentName?: string
-    primaryModelId?: string
+    executionMode?: "model" | "acp"
+    modelId?: string
+    agentType?: string
+    mode: AgentDialogMode
   }) => {
     setDialogTargetAgentId(String(input.agentId || input.projectRoot || "").trim())
+    setDialogMode(input.mode)
     setForm({
       projectRoot: String(input.projectRoot || "").trim(),
       agentName: String(input.agentName || "").trim(),
-      primaryModelId: String(input.primaryModelId || defaultModelId || "").trim(),
+      executionChoice: deriveExecutionChoice({
+        executionMode: input.executionMode,
+        agentType: input.agentType,
+        defaultChoice: defaultModelId ? "model" : "kimi",
+      }),
+      modelId: String(input.modelId || defaultModelId || "").trim(),
     })
     setDialogOpen(true)
   }, [defaultModelId])
@@ -169,16 +193,19 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
         }
         return
       }
-      openInitializeDialog({
+      openExecutionDialog({
         agentId: inspection.knownAgent ? inspection.projectRoot : "",
         projectRoot: inspection.projectRoot,
         agentName: inspection.displayName,
-        primaryModelId: inspection.primaryModelId,
+        executionMode: inspection.executionMode,
+        modelId: inspection.modelId,
+        agentType: inspection.agentType,
+        mode: "initialize",
       })
     } finally {
       setPickingDirectory(false)
     }
-  }, [onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, openInitializeDialog])
+  }, [onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, openExecutionDialog])
 
   const pickDirectoryForDialog = React.useCallback(async () => {
     try {
@@ -187,7 +214,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
       if (!projectRoot) return
       const inspection = await onInspectAgentDirectory(projectRoot)
       if (!inspection) return
-      if (inspection.initialized) {
+      if (inspection.initialized && dialogMode === "initialize") {
         resetDialog()
         try {
           setStartingAgentId(inspection.projectRoot)
@@ -201,22 +228,35 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
         ...current,
         projectRoot: inspection.projectRoot,
         agentName: inspection.displayName || current.agentName,
-        primaryModelId: inspection.primaryModelId || current.primaryModelId,
+        executionChoice: deriveExecutionChoice({
+          executionMode: inspection.executionMode,
+          agentType: inspection.agentType,
+          defaultChoice: current.executionChoice,
+        }),
+        modelId: String(inspection.modelId || current.modelId || "").trim(),
       }))
     } finally {
       setPickingDirectory(false)
     }
-  }, [onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, resetDialog])
+  }, [dialogMode, onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, resetDialog])
 
   const canSubmitDialog =
     Boolean(String(form.projectRoot || "").trim()) &&
-    Boolean(String(form.primaryModelId || "").trim()) &&
-    activeModelOptions.length > 0
+    (form.executionChoice !== "model" || (
+      Boolean(String(form.modelId || "").trim()) &&
+      activeModelOptions.length > 0
+    ))
   const resolvedAgentName = String(form.agentName || "").trim() || deriveFolderName(form.projectRoot)
   const selectedModelLabel = React.useMemo(() => {
-    const matched = activeModelOptions.find((item) => String(item.id || "").trim() === String(form.primaryModelId || "").trim())
-    return String(matched?.name || matched?.id || form.primaryModelId || "").trim()
-  }, [activeModelOptions, form.primaryModelId])
+    const matched = activeModelOptions.find(
+      (item) => String(item.id || "").trim() === String(form.modelId || "").trim(),
+    )
+    return String(matched?.name || matched?.id || form.modelId || "").trim()
+  }, [activeModelOptions, form.modelId])
+  const runtimeLabel = readRuntimeLabel({
+    executionChoice: form.executionChoice,
+    selectedModelLabel,
+  })
 
   return (
     <section className="min-h-0 overflow-y-auto">
@@ -242,7 +282,10 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
         <div className="space-y-2">
           {agents.map((agent) => {
             const isRunning = agent.running === true
-            const primaryModelId = String(agent.primaryModelId || "")
+            const executionChip =
+              agent.executionMode === "model"
+                ? String(agent.modelId || "").trim() || "-"
+                : `acp ${String(agent.agentType || "-").trim() || "-"}`
             const isStarting = startingAgentId === agent.id
             const isRestarting = restartingAgentId === agent.id
             const isStopping = stoppingAgentId === agent.id
@@ -270,7 +313,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
 
                   <div className="flex flex-1 flex-wrap items-center gap-2 lg:justify-end">
                     <span className={isRunning ? "inline-flex h-7 max-w-full items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-foreground/86" : "inline-flex h-7 max-w-full items-center rounded-full bg-secondary/75 px-2.5 font-mono text-[11px] text-foreground/62"}>
-                      {primaryModelId || "-"}
+                      {executionChip}
                     </span>
                     <span className={isRunning ? "inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground" : "inline-flex h-7 items-center rounded-full bg-secondary/75 px-2.5 font-mono text-[11px] text-muted-foreground"}>
                       {`pid ${isRunning ? String(agent.daemonPid || "-") : "-"}`}
@@ -278,72 +321,75 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                     <span className={isRunning ? "inline-flex h-7 items-center rounded-full bg-secondary px-2.5 font-mono text-[11px] text-muted-foreground" : "inline-flex h-7 items-center rounded-full bg-secondary/75 px-2.5 font-mono text-[11px] text-muted-foreground"}>
                       {`port ${isRunning ? String(agent.port || "-") : "-"}`}
                     </span>
-                    {isRunning ? (
-                      <div className="ml-auto flex items-center gap-1.5">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className={dashboardIconButtonClass}
-                          onClick={async () => {
-                            try {
-                              setRestartingAgentId(agent.id)
-                              await Promise.resolve(onRestartAgent(agent.id))
-                            } finally {
-                              setRestartingAgentId("")
-                            }
-                          }}
-                          disabled={isRestarting || isStopping}
-                          aria-label="重启"
-                          title="重启"
-                        >
-                          {isRestarting ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className={dashboardDangerIconButtonClass}
-                          onClick={() => {
-                            void (async () => {
-                              const confirmed = await confirm({
-                                title: "停止 Agent",
-                                description: `确认停止 "${agent.name || "unknown-agent"}"？停止前会检查当前是否有正在执行的 context 和 task。`,
-                                confirmText: "停止",
-                                confirmVariant: "destructive",
-                              })
-                              if (!confirmed) return
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className={dashboardIconButtonClass}
+                        disabled={isStarting || isRestarting || isStopping}
+                        aria-label="编辑 execution"
+                        title="编辑 execution"
+                        onClick={() => openExecutionDialog({
+                          agentId: agent.id,
+                          projectRoot: String(agent.projectRoot || agent.id || "").trim(),
+                          agentName: String(agent.name || "").trim(),
+                          executionMode: agent.executionMode,
+                          modelId: String(agent.modelId || "").trim(),
+                          agentType: String(agent.agentType || "").trim(),
+                          mode: "edit",
+                        })}
+                      >
+                        {isRunning ? <PencilLineIcon className="size-4" /> : <WandSparklesIcon className="size-4" />}
+                      </Button>
+                      {isRunning ? (
+                        <>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className={dashboardIconButtonClass}
+                            onClick={async () => {
                               try {
-                                setStoppingAgentId(agent.id)
-                                await Promise.resolve(onStopAgent(agent.id))
+                                setRestartingAgentId(agent.id)
+                                await Promise.resolve(onRestartAgent(agent.id))
                               } finally {
-                                setStoppingAgentId("")
+                                setRestartingAgentId("")
                               }
-                            })()
-                          }}
-                          disabled={isRestarting || isStopping}
-                          aria-label="停止"
-                          title="停止"
-                        >
-                          {isStopping ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="ml-auto flex items-center gap-1.5">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className={dashboardIconButtonClass}
-                          disabled={isStarting || isRestarting || isStopping}
-                          aria-label="初始化并启动"
-                          title="初始化并启动"
-                          onClick={() => openInitializeDialog({
-                            agentId: agent.id,
-                            projectRoot: String(agent.projectRoot || agent.id || "").trim(),
-                            agentName: String(agent.name || "").trim(),
-                            primaryModelId: String(agent.primaryModelId || "").trim(),
-                          })}
-                        >
-                          <WandSparklesIcon className="size-4" />
-                        </Button>
+                            }}
+                            disabled={isRestarting || isStopping}
+                            aria-label="重启"
+                            title="重启"
+                          >
+                            {isRestarting ? <Loader2Icon className="size-4 animate-spin" /> : <RotateCwIcon className="size-4" />}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className={dashboardDangerIconButtonClass}
+                            onClick={() => {
+                              void (async () => {
+                                const confirmed = await confirm({
+                                  title: "停止 Agent",
+                                  description: `确认停止 "${agent.name || "unknown-agent"}"？停止前会检查当前是否有正在执行的 context 和 task。`,
+                                  confirmText: "停止",
+                                  confirmVariant: "destructive",
+                                })
+                                if (!confirmed) return
+                                try {
+                                  setStoppingAgentId(agent.id)
+                                  await Promise.resolve(onStopAgent(agent.id))
+                                } finally {
+                                  setStoppingAgentId("")
+                                }
+                              })()
+                            }}
+                            disabled={isRestarting || isStopping}
+                            aria-label="停止"
+                            title="停止"
+                          >
+                            {isStopping ? <Loader2Icon className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
+                          </Button>
+                        </>
+                      ) : (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -362,8 +408,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                         >
                           {isStarting ? <Loader2Icon className="size-4 animate-spin" /> : <PlayIcon className="size-4" />}
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </article>
@@ -380,9 +426,13 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                 <WandSparklesIcon className="size-4" />
               </div>
               <div className="min-w-0 space-y-1">
-                <DialogTitle className="text-[1.05rem] font-semibold tracking-[0.01em]">初始化并启动 Agent</DialogTitle>
+                <DialogTitle className="text-[1.05rem] font-semibold tracking-[0.01em]">
+                  {dialogMode === "edit" ? "编辑 Agent Execution" : "初始化并启动 Agent"}
+                </DialogTitle>
                 <DialogDescription className="max-w-[46ch] text-[12px] leading-5 text-muted-foreground">
-                  当前文件夹还没有完成 Downcity 初始化。确认后会补齐运行骨架，再把它接入 Console。
+                  {dialogMode === "edit"
+                    ? "直接更新 downcity.json.execution。保存后需重启 agent 才会完整生效。"
+                    : "当前文件夹还没有完成 Downcity 初始化。确认后会补齐运行骨架，再把它接入 Console。"}
                 </DialogDescription>
               </div>
             </div>
@@ -400,9 +450,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                 </div>
               </div>
               <div className="rounded-[18px] border border-border/75 bg-background/78 px-3 py-3">
-                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Primary Model</div>
-                <div className="mt-1 truncate text-sm font-medium text-foreground" title={selectedModelLabel || "-"}>
-                  {selectedModelLabel || "-"}
+                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Execution</div>
+                <div className="mt-1 truncate text-sm font-medium text-foreground" title={runtimeLabel || "-"}>
+                  {runtimeLabel || "-"}
                 </div>
               </div>
             </div>
@@ -413,7 +463,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Source Folder</div>
-                  <div className="mt-1 text-sm font-medium text-foreground">选择要接入的项目目录</div>
+                  <div className="mt-1 text-sm font-medium text-foreground">选择要接入或编辑的项目目录</div>
                 </div>
                 <span className="inline-flex items-center rounded-full border border-border/70 bg-secondary/75 px-2.5 py-1 text-[11px] text-muted-foreground">
                   step 1
@@ -441,7 +491,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                 </Button>
               </div>
               <p className="mt-3 text-[12px] leading-5 text-muted-foreground">
-                已初始化目录会直接启动；只有缺少 `downcity.json` 或 `PROFILE.md` 时才会进入当前流程。
+                已初始化目录可以直接启动，也可以编辑 execution；未初始化目录会自动补齐 `PROFILE.md`、`SOUL.md` 和 `downcity.json`。
               </p>
             </div>
 
@@ -471,42 +521,66 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
               <div className="rounded-[22px] border border-border/75 bg-background/82 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Runtime</div>
-                    <div className="mt-1 text-sm font-medium text-foreground">选择首次启动使用的主模型</div>
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Execution</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">统一选择 model 或 acp</div>
                   </div>
                   <span className="inline-flex items-center rounded-full border border-border/70 bg-secondary/75 px-2.5 py-1 text-[11px] text-muted-foreground">
                     step 3
                   </span>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="agent-model" className="text-[12px] font-medium text-foreground/82">主模型</Label>
+                  <Label htmlFor="agent-runtime" className="text-[12px] font-medium text-foreground/82">执行模式</Label>
                   <select
-                    id="agent-model"
-                    className="flex h-11 w-full rounded-[14px] border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.primaryModelId}
-                    onChange={(event) => setForm((current) => ({ ...current, primaryModelId: event.target.value }))}
-                    disabled={activeModelOptions.length === 0}
+                    id="agent-runtime"
+                    className="flex h-11 w-full rounded-[14px] border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    value={form.executionChoice}
+                    onChange={(event) => setForm((current) => ({ ...current, executionChoice: event.target.value as AgentExecutionChoice }))}
                   >
-                    {activeModelOptions.length === 0 ? (
-                      <option value="">请先在 Global / Model 创建可用模型</option>
-                    ) : null}
-                    {activeModelOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {String(item.id || "").trim()}
-                      </option>
-                    ))}
+                    <option value="model">Model</option>
+                    <option value="kimi">ACP · Kimi</option>
+                    <option value="claude">ACP · Claude</option>
+                    <option value="codex">ACP · Codex</option>
                   </select>
                 </div>
+                {form.executionChoice === "model" ? (
+                  <div className="mt-3 space-y-2">
+                    <Label htmlFor="agent-model" className="text-[12px] font-medium text-foreground/82">模型 ID</Label>
+                    <select
+                      id="agent-model"
+                      className="flex h-11 w-full rounded-[14px] border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={form.modelId}
+                      onChange={(event) => setForm((current) => ({ ...current, modelId: event.target.value }))}
+                      disabled={activeModelOptions.length === 0}
+                    >
+                      {activeModelOptions.length === 0 ? (
+                        <option value="">请先在 Global / Model 创建可用模型</option>
+                      ) : null}
+                      {activeModelOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {String(item.id || "").trim()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-[12px] leading-5 text-muted-foreground">
+                    将通过本机 ACP 命令启动 `{form.executionChoice}` coding agent。首次运行前请确认对应命令已安装。
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="rounded-[20px] border border-dashed border-border/85 bg-secondary/45 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">What Will Be Created</div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">What Will Be Written</div>
               <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-foreground/78">
-                <span className="rounded-full bg-background/85 px-2.5 py-1">`PROFILE.md`</span>
-                <span className="rounded-full bg-background/85 px-2.5 py-1">`SOUL.md`</span>
-                <span className="rounded-full bg-background/85 px-2.5 py-1">`downcity.json`</span>
-                <span className="rounded-full bg-background/85 px-2.5 py-1">`.downcity/*`</span>
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`downcity.json.execution`</span>
+                {dialogMode === "initialize" ? (
+                  <>
+                    <span className="rounded-full bg-background/85 px-2.5 py-1">`PROFILE.md`</span>
+                    <span className="rounded-full bg-background/85 px-2.5 py-1">`SOUL.md`</span>
+                    <span className="rounded-full bg-background/85 px-2.5 py-1">`.downcity/*`</span>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
@@ -522,20 +596,31 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
               onClick={async () => {
                 try {
                   setSubmittingDialog(true)
-                  await Promise.resolve(onStartAgentWithInitialization(
-                    dialogTargetAgentId || form.projectRoot.trim(),
-                    {
-                      agentName: form.agentName.trim() || undefined,
-                      primaryModelId: form.primaryModelId.trim(),
-                    },
-                  ))
+                  const executionPayload =
+                    form.executionChoice === "model"
+                      ? { executionMode: "model" as const, modelId: form.modelId.trim() }
+                      : { executionMode: "acp" as const, agentType: form.executionChoice }
+                  if (dialogMode === "edit") {
+                    await Promise.resolve(onUpdateAgentExecution({
+                      agentId: dialogTargetAgentId || form.projectRoot.trim(),
+                      ...executionPayload,
+                    }))
+                  } else {
+                    await Promise.resolve(onStartAgentWithInitialization(
+                      dialogTargetAgentId || form.projectRoot.trim(),
+                      {
+                        agentName: form.agentName.trim() || undefined,
+                        ...executionPayload,
+                      },
+                    ))
+                  }
                   resetDialog()
                 } finally {
                   setSubmittingDialog(false)
                 }
               }}
             >
-              {submittingDialog ? <Loader2Icon className="size-4 animate-spin" /> : "初始化并启动"}
+              {submittingDialog ? <Loader2Icon className="size-4 animate-spin" /> : dialogMode === "edit" ? "保存 Execution" : "初始化并启动"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -41,7 +41,10 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
     return <div className="py-6 text-sm text-muted-foreground">未选择 Agent</div>
   }
 
-  const model = String(agent.primaryModelId || "").trim() || "-"
+  const model =
+    agent.executionMode === "model"
+      ? String(agent.modelId || "").trim() || "-"
+      : `acp ${String(agent.agentType || "-").trim() || "-"}`
   const path = String(agent.projectRoot || agent.id || "").trim() || "-"
   const lastStoppedAt = agent.stoppedAt
     ? new Date(agent.stoppedAt).toLocaleString("zh-CN", { hour12: false })

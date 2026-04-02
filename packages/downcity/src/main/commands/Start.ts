@@ -19,7 +19,7 @@ import { startDaemonProcess } from "@/main/daemon/Manager.js";
 import { buildRunArgsFromOptions } from "@/main/daemon/CliArgs.js";
 import type { StartOptions } from "@/types/Start.js";
 import { isConsoleRunning } from "@/main/runtime/ConsoleRuntime.js";
-import { ensureRuntimeModelBindingReady } from "@/main/daemon/ProjectSetup.js";
+import { ensureRuntimeExecutionBindingReady } from "@/main/daemon/ProjectSetup.js";
 
 /**
  * daemon 启动入口。
@@ -54,8 +54,8 @@ export async function startCommand(
     );
     process.exit(1);
   }
-  // 关键点（中文）：后台拉起前先校验 model.primary 是否在模型池中存在且可用，避免“启动成功后秒退”。
-  ensureRuntimeModelBindingReady(projectRoot);
+  // 关键点（中文）：后台拉起前先校验 execution binding 是否可用，避免“启动成功后秒退”。
+  ensureRuntimeExecutionBindingReady(projectRoot);
 
   // 计算当前 CLI 的入口路径（编译后是 `bin/main/commands/Index.js`）。
   const __filename = fileURLToPath(import.meta.url);

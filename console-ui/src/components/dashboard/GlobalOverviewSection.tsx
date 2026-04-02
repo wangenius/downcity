@@ -55,7 +55,18 @@ export interface GlobalOverviewSectionProps {
    */
   onStartAgentWithInitialization: (agentId: string, input: {
     agentName?: string
-    primaryModelId: string
+    executionMode: "model" | "acp"
+    modelId?: string
+    agentType?: string
+  }) => void
+  /**
+   * 更新已有 agent 的 execution。
+   */
+  onUpdateAgentExecution: (input: {
+    agentId: string
+    executionMode: "model" | "acp"
+    modelId?: string
+    agentType?: string
   }) => void
   /**
    * 重启 agent。
@@ -78,6 +89,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
     onInspectAgentDirectory,
     onStartAgent,
     onStartAgentWithInitialization,
+    onUpdateAgentExecution,
     onRestartAgent,
     onStopAgent,
   } = props
@@ -166,11 +178,12 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
           modelPoolItems={modelPoolItems}
           onPickAgentDirectory={onPickAgentDirectory}
           onInspectAgentDirectory={onInspectAgentDirectory}
-          onStartAgent={onStartAgent}
-          onStartAgentWithInitialization={onStartAgentWithInitialization}
-          onRestartAgent={onRestartAgent}
-          onStopAgent={onStopAgent}
-        />
+        onStartAgent={onStartAgent}
+        onStartAgentWithInitialization={onStartAgentWithInitialization}
+        onUpdateAgentExecution={onUpdateAgentExecution}
+        onRestartAgent={onRestartAgent}
+        onStopAgent={onStopAgent}
+      />
       </DashboardModule>
 
       <DashboardModule

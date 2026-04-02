@@ -57,6 +57,7 @@ city console config get model.primary
 
 1. `model.primary` 指向 `~/.downcity/downcity.db` 中存在的 model id
 2. console 全局 SQLite 的 providers/models 记录完整可用
-3. 如果是 Kimi（Moonshot），`provider.type` 必须是 `moonshot`
-4. 如果是 Kimi（Moonshot），`baseUrl` 留空时默认走 `https://api.moonshot.ai/v1`
-5. 如果是 Kimi（Moonshot），建议优先使用当前官方模型名，例如 `kimi-k2.5`
+3. 如果是 Kimi（Moonshot），`provider.type` 请使用 `moonshot-cn` 或 `moonshot-ai`
+4. `moonshot-cn` 默认走 `https://api.moonshot.cn/v1`
+5. `moonshot-ai` 默认走 `https://api.moonshot.ai/v1`
+6. Kimi 模型名请按对应站点填写，例如 `kimi-k2-0905-preview` 或 `kimi-k2.5`

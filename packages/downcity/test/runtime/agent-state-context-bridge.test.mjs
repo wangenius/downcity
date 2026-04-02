@@ -31,8 +31,9 @@ test("AgentState public entry exposes shared execution context with model", () =
     config: {
       name: "demo",
       version: "1.0.0",
-      model: {
-        primary: "default",
+      execution: {
+        type: "model",
+        modelId: "default",
       },
     },
     env: {},
@@ -91,4 +92,75 @@ test("AgentState public entry exposes shared execution context with model", () =
   assert.equal(context.session.model, model);
   assert.equal(context.agent.model, model);
   assert.deepEqual(context.systems, ["system-a"]);
+});
+
+test("AgentState public entry exposes session context without model in ACP mode", () => {
+  setAgentState({
+    cwd: ".",
+    rootPath: "/tmp/downcity-agent-state-acp",
+    logger: createLoggerStub(),
+    config: {
+      name: "demo-acp",
+      version: "1.0.0",
+      execution: {
+        type: "acp",
+        agent: {
+          type: "kimi",
+        },
+      },
+    },
+    env: {},
+    systems: ["system-a"],
+    pluginRegistry: {
+      list() {
+        return [];
+      },
+      availability() {
+        return Promise.resolve({ enabled: true, available: true, reasons: [] });
+      },
+      runAction() {
+        return Promise.resolve({ success: true });
+      },
+      pipeline(_name, value) {
+        return Promise.resolve(value);
+      },
+      guard() {
+        return Promise.resolve();
+      },
+      effect() {
+        return Promise.resolve();
+      },
+      resolve(_name, value) {
+        return Promise.resolve(value);
+      },
+    },
+    sessionStore: {
+      getRuntime() {
+        return null;
+      },
+      getPersistor() {
+        return null;
+      },
+      run() {
+        throw new Error("unused");
+      },
+      clearRuntime() {},
+      afterSessionUpdatedAsync() {
+        return Promise.resolve();
+      },
+      appendUserMessage() {
+        return Promise.resolve(null);
+      },
+      appendAssistantMessage() {
+        return Promise.resolve(null);
+      },
+    },
+    services: new Map(),
+  });
+
+  const context = getExecutionContext();
+
+  assert.equal(context.rootPath, "/tmp/downcity-agent-state-acp");
+  assert.equal(context.session.model, undefined);
+  assert.equal(context.agent.model, undefined);
 });

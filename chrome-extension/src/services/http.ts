@@ -6,16 +6,25 @@
  * - 让 API 访问层更聚焦在路径与业务数据转换。
  */
 
+import { buildAuthHeaders, type ExtensionAuthOptions } from "./auth";
+
 /**
  * 发起 JSON 请求。
  */
-export async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+export async function requestJson<T>(
+  url: string,
+  init?: RequestInit,
+  authOptions?: ExtensionAuthOptions,
+): Promise<T> {
   const response = await fetch(url, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
+    headers: buildAuthHeaders({
+      authToken: authOptions?.authToken,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers || {}),
+      },
+    }),
   });
 
   const rawText = await response.text();

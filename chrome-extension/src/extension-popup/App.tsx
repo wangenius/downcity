@@ -24,6 +24,7 @@ import type {
   ExtensionSettings,
   StatusMessage,
 } from "../types/extension";
+import { fetchConsoleAuthStatus, isAuthErrorMessage } from "../services/auth";
 import {
   dispatchAgentTask,
   fetchAgents,
@@ -33,7 +34,9 @@ import { resolveAgentId, resolveChatKey, resolveLinkedChannels } from "../servic
 import { buildPageMarkdownSnapshot } from "../services/pageMarkdown";
 import {
   appendPageSendRecord,
+  clearAuthState,
   DEFAULT_SETTINGS,
+  loadAuthState,
   loadSettings,
   loadPageSendRecords,
   saveSettings,
@@ -68,6 +71,9 @@ export function ExtensionPopupApp() {
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChatKeys, setIsLoadingChatKeys] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authInitializing, setAuthInitializing] = useState(true);
+  const [authRequired, setAuthRequired] = useState(false);
+  const [authToken, setAuthToken] = useState("");
   const [toast, setToast] = useState<ExtensionPopupToastMessage | null>(null);
   const [status, setStatus] = useState<StatusMessage>({
     type: "idle",
@@ -113,6 +119,7 @@ export function ExtensionPopupApp() {
   const refreshAgents = useCallback(async (params: {
     preferredAgentId: string;
     consoleBaseUrl: string;
+    authToken: string;
   }) => {
     if (!params.consoleBaseUrl) {
       setStatus({
@@ -126,6 +133,7 @@ export function ExtensionPopupApp() {
     try {
       const payload = await fetchAgents({
         consoleBaseUrl: params.consoleBaseUrl,
+        authToken: params.authToken,
       });
       const list = payload.agents || [];
       setAgents(list);
@@ -147,9 +155,20 @@ export function ExtensionPopupApp() {
         setStatus({ type: "idle", text: "准备就绪" });
       }
     } catch (error) {
+      const errorText = readErrorText(error);
+      if (isAuthErrorMessage(errorText)) {
+        await clearAuthState().catch(() => undefined);
+        setAuthToken("");
+        setAuthRequired(true);
+        setStatus({
+          type: "error",
+          text: "需要登录 Console，请打开设置页完成登录。",
+        });
+        return;
+      }
       setStatus({
         type: "error",
-        text: `加载 Agent 失败：${readErrorText(error)}`,
+        text: `加载 Agent 失败：${errorText}`,
       });
     } finally {
       setIsLoadingAgents(false);
@@ -162,6 +181,7 @@ export function ExtensionPopupApp() {
       preferredChatKey: string,
       allowedChannels: Set<"telegram" | "feishu" | "qq">,
       baseUrl: string,
+      authToken: string,
     ) => {
       if (!baseUrl) {
         setChatKeyOptions([]);
@@ -182,6 +202,7 @@ export function ExtensionPopupApp() {
       try {
         const options = await fetchChatKeyOptions(normalizedAgentId, {
           consoleBaseUrl: baseUrl,
+          authToken,
         });
         const filtered =
           allowedChannels.size > 0
@@ -214,6 +235,16 @@ export function ExtensionPopupApp() {
         setChatKeyOptions([]);
         setSettings((prev) => ({ ...prev, chatKey: "" }));
         const errorText = readErrorText(error);
+        if (isAuthErrorMessage(errorText)) {
+          await clearAuthState().catch(() => undefined);
+          setAuthToken("");
+          setAuthRequired(true);
+          setStatus({
+            type: "error",
+            text: "需要登录 Console，请打开设置页完成登录。",
+          });
+          return;
+        }
         if (/failed to fetch/i.test(errorText)) {
           setStatus((prev) =>
             prev.type === "loading" ? { type: "idle", text: "准备就绪" } : prev,
@@ -236,8 +267,9 @@ export function ExtensionPopupApp() {
 
     void (async () => {
       try {
-        const [saved, activeTab] = await Promise.all([
+        const [saved, authState, activeTab] = await Promise.all([
           loadSettings(),
+          loadAuthState(),
           getActiveTabContext(),
         ]);
 
@@ -247,6 +279,8 @@ export function ExtensionPopupApp() {
           ...saved,
           taskPrompt: normalizeInitialTaskPrompt(saved.taskPrompt),
         });
+        const nextAuthToken = String(authState.token || "").trim();
+        setAuthToken(nextAuthToken);
         setTab(activeTab);
         if (activeTab.url) {
           const records = await loadPageSendRecords({
@@ -265,18 +299,34 @@ export function ExtensionPopupApp() {
             text: endpoint.errorText || "Console 地址无效，请检查 Console 是否已启动",
           });
         } else {
-          await refreshAgents({
-            preferredAgentId: saved.agentId,
+          const authStatus = await fetchConsoleAuthStatus({
             consoleBaseUrl: endpoint.baseUrl,
           });
+          const needsLogin = authStatus.requireLogin === true;
+          setAuthRequired(needsLogin && !nextAuthToken);
+          if (needsLogin && !nextAuthToken) {
+            setStatus({
+              type: "error",
+              text: "需要登录 Console，请打开设置页完成登录。",
+            });
+          } else {
+            await refreshAgents({
+              preferredAgentId: saved.agentId,
+              consoleBaseUrl: endpoint.baseUrl,
+              authToken: nextAuthToken,
+            });
+          }
         }
-
       } catch (error) {
         if (!isMounted) return;
         setStatus({
           type: "error",
           text: `初始化失败：${readErrorText(error)}`,
         });
+      } finally {
+        if (isMounted) {
+          setAuthInitializing(false);
+        }
       }
     })();
 
@@ -308,13 +358,17 @@ export function ExtensionPopupApp() {
       settings.chatKey,
       linkedChannels,
       consoleBaseUrl,
+      authToken,
     );
   }, [
+    authToken,
     settings.agentId,
     refreshChatKeys,
     consoleBaseUrl,
     linkedChannelKey,
   ]);
+
+  const composerDisabled = authInitializing || authRequired;
 
   const submitTask = useCallback(
     async () => {
@@ -377,6 +431,7 @@ export function ExtensionPopupApp() {
           consoleBaseUrl: activeConsoleBaseUrl,
           agentId,
           sessionId: chatKey,
+          authToken,
           body: {
             instructions: buildExtensionPopupInstructions({
               tab,
@@ -426,7 +481,7 @@ export function ExtensionPopupApp() {
         setIsSubmitting(false);
       }
     },
-    [refreshPageHistory, selectedAgent?.running, settings, showToast, tab],
+    [authToken, refreshPageHistory, selectedAgent?.running, settings, showToast, tab],
   );
 
   const onSubmit = useCallback(
@@ -528,6 +583,30 @@ export function ExtensionPopupApp() {
           </button>
         </header>
 
+        {authInitializing ? (
+          <div className="mb-3 rounded-[10px] border border-border bg-muted px-3 py-3 text-[12px] text-muted-foreground">
+            正在检查 Console 登录状态...
+          </div>
+        ) : authRequired ? (
+          <div className="mb-3 rounded-[10px] border border-border bg-muted px-3 py-3">
+            <div className="text-[12px] font-medium text-foreground">
+              需要先登录 Console
+            </div>
+            <div className="mt-1 text-[11px] leading-[1.5] text-muted-foreground">
+              当前 Console 已开启统一鉴权。请先在设置页登录，再回来发送页面内容。
+            </div>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="inline-flex min-h-10 items-center justify-center rounded-[10px] border border-border bg-background px-4 text-[12px] font-medium text-foreground transition hover:bg-surface"
+                onClick={openSettingsPage}
+              >
+                打开设置页登录
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <form className="flex flex-col gap-3" onSubmit={onSubmit}>
           <textarea
             className="min-h-[164px] w-full resize-none rounded-[10px] border border-border bg-muted px-3 py-3 text-[13px] leading-[1.55] text-foreground outline-none transition focus:border-border-strong focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
@@ -538,6 +617,7 @@ export function ExtensionPopupApp() {
             }
             onKeyDown={onTaskPromptKeyDown}
             placeholder="输入要发送给 Agent 的内容"
+            disabled={composerDisabled}
           />
 
           <ExtensionPopupSelect
@@ -559,7 +639,12 @@ export function ExtensionPopupApp() {
                 chatKey: value,
               }))
             }
-            disabled={!settings.agentId || isLoadingChatKeys || chatOptions.length === 0}
+            disabled={
+              composerDisabled ||
+              !settings.agentId ||
+              isLoadingChatKeys ||
+              chatOptions.length === 0
+            }
           />
 
           <div className="rounded-[10px] border border-border bg-muted px-3 py-2 text-[10px] leading-[1.45] text-muted-foreground">
@@ -590,7 +675,7 @@ export function ExtensionPopupApp() {
             <button
               className="inline-flex h-10 shrink-0 items-center justify-center rounded-[10px] border border-primary bg-primary px-4 text-[12px] font-medium text-primary-foreground transition disabled:cursor-not-allowed disabled:opacity-60"
               type="submit"
-              disabled={isSubmitting}
+              disabled={composerDisabled || isSubmitting}
             >
               {isSubmitting ? "发送中..." : "发送"}
             </button>

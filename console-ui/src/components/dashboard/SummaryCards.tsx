@@ -228,7 +228,7 @@ export function SummaryCards(props: SummaryCardsProps) {
 
   const availableModels = Array.isArray(model?.availableModels) ? model.availableModels : []
   const currentModelId = String(
-    model?.agentPrimaryModelId || model?.primaryModelId || selectedAgent?.primaryModelId || "",
+    model?.agentPrimaryModelId || model?.primaryModelId || selectedAgent?.modelId || "",
   ).trim()
   const [targetModelId, setTargetModelId] = React.useState(currentModelId)
   const [pendingAgentAction, setPendingAgentAction] = React.useState<"" | "start" | "restart" | "stop">("")

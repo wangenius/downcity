@@ -47,6 +47,21 @@ export interface ExtensionSettings {
 }
 
 /**
+ * 扩展本地登录态。
+ */
+export interface ExtensionAuthState {
+  /**
+   * Bearer Token 明文。
+   */
+  token: string;
+
+  /**
+   * 当前登录用户名。
+   */
+  username?: string;
+}
+
+/**
  * 常用问题模板项。
  */
 export interface ExtensionQuickPromptItem {

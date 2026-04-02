@@ -127,9 +127,9 @@ function registerAddCommands(model: Command): void {
         let modelName = String(options.name || "").trim();
         if (preset) {
           modelName = preset.id;
-          if (provider.type !== preset.providerType) {
+          if (!preset.providerTypes.includes(provider.type)) {
             throw new Error(
-              `Preset "${preset.id}" expects provider type "${preset.providerType}", but provider "${providerId}" is "${provider.type}".`,
+              `Preset "${preset.id}" expects provider type in "${preset.providerTypes.join(", ")}", but provider "${providerId}" is "${provider.type}".`,
             );
           }
         }
@@ -405,9 +405,9 @@ function registerUpdateCommands(model: Command): void {
           if (options.provider) {
             const provider = await store.getProvider(providerId);
             if (!provider) throw new Error(`Provider not found: ${providerId}`);
-            if (provider.type !== preset.providerType) {
+            if (!preset.providerTypes.includes(provider.type)) {
               throw new Error(
-                `Preset "${preset.id}" expects provider type "${preset.providerType}", but provider "${providerId}" is "${provider.type}".`,
+                `Preset "${preset.id}" expects provider type in "${preset.providerTypes.join(", ")}", but provider "${providerId}" is "${provider.type}".`,
               );
             }
           }
@@ -495,7 +495,7 @@ function registerTestCommands(model: Command): void {
           config: {
             name: "console-model-test",
             version: "1.0.0",
-            model: { primary: id },
+            execution: { type: "model", modelId: id },
           },
         });
         const prompt = String(options.prompt || "").trim() || "Reply with exactly: OK";

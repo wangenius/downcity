@@ -23,17 +23,63 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
         host: { type: "string" },
       },
     },
-    model: {
+    execution: {
       type: "object",
       additionalProperties: true,
       properties: {
-        primary: {
+        type: {
+          type: "string",
+          enum: ["model", "acp"],
+        },
+        modelId: {
           type: "string",
           description:
-            "Agent 主模型绑定 ID（映射到 console 全局 `llm.models.<id>`）。",
+            "模型执行模式下绑定的 console 全局模型 ID。",
+        },
+        agent: {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            type: {
+              type: "string",
+              enum: ["codex", "claude", "kimi"],
+            },
+            command: { type: "string" },
+            args: {
+              type: "array",
+              items: { type: "string" },
+            },
+            env: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+          },
+          required: ["type"],
         },
       },
-      required: ["primary"],
+      required: ["type"],
+      allOf: [
+        {
+          if: {
+            properties: {
+              type: { const: "model" },
+            },
+          },
+          then: {
+            required: ["modelId"],
+          },
+        },
+        {
+          if: {
+            properties: {
+              type: { const: "acp" },
+            },
+          },
+          then: {
+            required: ["agent"],
+          },
+        },
+      ],
     },
     services: {
       type: "object",
@@ -200,7 +246,9 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
                   "gemini",
                   "open-compatible",
                   "open-responses",
-                  "moonshot",
+                  "moonshot-cn",
+                  "moonshot-ai",
+                  "kimi-code",
                   "xai",
                   "huggingface",
                   "openrouter",

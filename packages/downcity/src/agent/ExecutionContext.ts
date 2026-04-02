@@ -15,10 +15,7 @@ import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
 import { HookRegistry } from "@/main/plugin/HookRegistry.js";
 import { PluginRegistry } from "@/main/plugin/PluginRegistry.js";
 import { registerBuiltinPlugins } from "@/main/plugin/Plugins.js";
-import {
-  getAgentState,
-  requireAgentModel,
-} from "@agent/RuntimeState.js";
+import { getAgentState } from "@agent/RuntimeState.js";
 
 /**
  * ExecutionContext 构造模块。
@@ -147,7 +144,7 @@ function buildSessionPort(input: AgentState): SessionPort {
         requestId: params.requestId,
         extra: params.extra,
       }),
-    model: input.model || requireAgentModel(),
+    ...(input.model ? { model: input.model } : {}),
   };
 }
 

@@ -9,7 +9,7 @@ import { getProfileMdPath, getDowncityJsonPath } from "@/main/env/Paths.js";
 import { buildRunArgsFromOptions } from "@/main/daemon/CliArgs.js";
 import { startDaemonProcess, stopDaemonProcess } from "@/main/daemon/Manager.js";
 import type { StartOptions } from "@/types/Start.js";
-import { ensureRuntimeModelBindingReady } from "@/main/daemon/ProjectSetup.js";
+import { ensureRuntimeExecutionBindingReady } from "@/main/daemon/ProjectSetup.js";
 
 /**
  * restart 命令执行流程。
@@ -37,8 +37,8 @@ export async function restartCommand(
     );
     process.exit(1);
   }
-  // 关键点（中文）：重启前同样校验模型绑定，避免停掉旧进程后无法拉起新进程。
-  ensureRuntimeModelBindingReady(projectRoot);
+  // 关键点（中文）：重启前同样校验 execution binding，避免停掉旧进程后无法拉起新进程。
+  ensureRuntimeExecutionBindingReady(projectRoot);
 
   // 计算当前 CLI 的入口路径（编译后是 `bin/main/commands/Index.js`）。
   const __filename = fileURLToPath(import.meta.url);

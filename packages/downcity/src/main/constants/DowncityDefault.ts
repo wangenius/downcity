@@ -8,8 +8,9 @@ export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
     port: 5314,
     host: "0.0.0.0",
   },
-  model: {
-    primary: "default",
+  execution: {
+    type: "model",
+    modelId: "default",
   },
   context: {
     messages: {

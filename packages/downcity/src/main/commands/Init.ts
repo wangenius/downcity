@@ -20,9 +20,12 @@ import {
   normalizeDefaultAgentName,
 } from "@/main/project/AgentInitializer.js";
 import type { AgentProjectChannel } from "@/types/AgentProject.js";
+import type { ExecutionBindingConfig } from "@/types/ExecutionBinding.js";
+import type { SessionAgentType } from "@/types/SessionAgent.js";
 
 type InitPromptResponse = {
   name?: string;
+  executionTarget?: string;
   primaryModelId?: string;
   channels?: string[];
 };
@@ -54,14 +57,6 @@ export async function initCommand(
   const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
   const consoleModelChoices = await listConsoleModelChoices();
   const consoleModelIds = consoleModelChoices.map((item) => item.value);
-  // 关键点（中文）：模型池为空时，继续 create 只会生成“必然启动失败”的配置，这里直接中止并给出明确修复路径。
-  if (consoleModelIds.length === 0) {
-    console.error("❌ Console model pool is empty.");
-    console.error("   Please configure at least one model before `city agent create`:");
-    console.error("   1) city console model create");
-    console.error("   2) or use city console model update/test for scripting");
-    process.exit(1);
-  }
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
   if (existingShipJson) {
@@ -93,6 +88,18 @@ export async function initCommand(
     },
     {
       type: "select",
+      name: "executionTarget",
+      message: "Select execution mode",
+      choices: [
+        { title: "Global Model Pool", value: "model" },
+        { title: "Kimi ACP", value: "kimi" },
+        { title: "Claude ACP", value: "claude" },
+        { title: "Codex ACP", value: "codex" },
+      ],
+      initial: consoleModelIds.length > 0 ? 0 : 1,
+    },
+    {
+      type: (prev: string) => prev === "model" ? "select" : null,
       name: "primaryModelId",
       message: "Select primary model (from console model pool)",
       choices: consoleModelChoices,
@@ -114,14 +121,41 @@ export async function initCommand(
   // 关键点（中文）：agent_name 同时用于 `downcity.json.name` 与 init 模板变量渲染，避免两处来源不一致。
   const agentName =
     String(response.name || "").trim() || defaultAgentName;
-  const primaryModelId = String(response.primaryModelId || "").trim() || "default";
+  const executionTarget = String(response.executionTarget || "").trim();
+  if (executionTarget === "model" && consoleModelIds.length === 0) {
+    console.error("❌ Console model pool is empty.");
+    console.error("   Please configure at least one model before using model mode:");
+    console.error("   1) city console model create");
+    console.error("   2) or choose an ACP session agent during init");
+    process.exit(1);
+  }
+  const primaryModelId =
+    executionTarget === "model"
+      ? String(response.primaryModelId || "").trim() || "default"
+      : "";
+  const sessionAgentType =
+    executionTarget && executionTarget !== "model"
+      ? executionTarget as SessionAgentType
+      : undefined;
+  const execution: ExecutionBindingConfig =
+    primaryModelId
+      ? {
+          type: "model",
+          modelId: primaryModelId,
+        }
+      : {
+          type: "acp",
+          agent: {
+            type: sessionAgentType || "kimi",
+          },
+        };
   const selectedChannels = Array.isArray(response.channels)
     ? (response.channels as AgentProjectChannel[])
     : [];
   const initResult = await initializeAgentProject({
     projectRoot,
     agentName,
-    primaryModelId,
+    execution,
     channels: selectedChannels,
     forceOverwriteShipJson: allowOverwrite,
   });
@@ -144,8 +178,14 @@ export async function initCommand(
   console.log("✅ Created downcity.schema.json");
 
   console.log("\n🎉 Initialization complete!\n");
-  console.log(`📦 Agent model.primary: ${primaryModelId}`);
-  console.log("🌐 Model pool source: ~/.downcity/downcity.db (console global)\n");
+  if (primaryModelId) {
+    console.log(`📦 Agent execution.modelId: ${primaryModelId}`);
+    console.log("🌐 Model pool source: ~/.downcity/downcity.db (console global)\n");
+  }
+  if (sessionAgentType) {
+    console.log(`🤖 ACP agent: ${sessionAgentType}`);
+    console.log("🔌 Runtime path: ACP coding agent session\n");
+  }
 
   if (selectedChannels.includes("feishu")) {
     console.log("📱 Feishu chat channel enabled");
@@ -172,9 +212,15 @@ export async function initCommand(
   const nextSteps: string[] = [
     "Edit PROFILE.md to customize agent behavior",
     "Edit SOUL.md to customize your core operating principles",
-    "Edit downcity.json to modify model.primary (bind to console model id)",
-    'Use "city console model ..." to manage global model pool',
+    "Edit downcity.json.execution to adjust execution target",
   ];
+  if (primaryModelId) {
+    nextSteps.push("Edit downcity.json.execution.modelId (bind to console model id)");
+    nextSteps.push('Use "city console model ..." to manage global model pool');
+  }
+  if (sessionAgentType) {
+    nextSteps.push(`Ensure the local ACP command for "${sessionAgentType}" is installed and runnable`);
+  }
 
   if (selectedChannels.includes("telegram")) {
     nextSteps.push(
@@ -199,6 +245,6 @@ export async function initCommand(
   }
   console.log("");
   console.log(
-    "💡 Tip: 模型管理在 console 全局层完成，agent 仅绑定 model.primary。\n",
+    "💡 Tip: agent 现在可以绑定 console 模型池，也可以把 session 切到 ACP coding agent。\n",
   );
 }

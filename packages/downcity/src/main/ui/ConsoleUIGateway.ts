@@ -33,6 +33,7 @@ import {
   restartConsoleUiAgentByProjectRoot,
   startConsoleUiAgentByProjectRoot,
   stopConsoleUiAgentByProjectRoot,
+  updateConsoleUiAgentExecution,
 } from "@/main/ui/gateway/AgentActions.js";
 import { serveConsoleUiFrontendPath } from "@/main/ui/gateway/FrontendAssets.js";
 import {
@@ -138,6 +139,7 @@ export class ConsoleUIGateway {
         initializeAgentProject: (projectRoot, initialization) =>
           this.initializeAgentProject(projectRoot, initialization),
         startAgentByProjectRoot: (projectRoot, options) => this.startAgentByProjectRoot(projectRoot, options),
+        updateAgentExecution: (projectRoot, input) => this.updateAgentExecution(projectRoot, input),
         pickDirectoryPath: () => this.pickDirectoryPath(),
         inspectAgentDirectory: (projectRoot) => this.inspectAgentDirectory(projectRoot),
         inspectAgentRestartSafety: (projectRoot) => this.inspectAgentRestartSafety(projectRoot),
@@ -289,13 +291,17 @@ export class ConsoleUIGateway {
 
   private async initializeAgentProject(projectRoot: string, initialization: {
     agentName?: unknown;
-    primaryModelId?: unknown;
+    executionMode?: unknown;
+    modelId?: unknown;
+    agentType?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult> {
     return initializeConsoleUiAgentProject({
       projectRoot,
       agentName: initialization.agentName,
-      primaryModelId: initialization.primaryModelId,
+      executionMode: initialization.executionMode,
+      modelId: initialization.modelId,
+      agentType: initialization.agentType,
       forceOverwriteShipJson: initialization.forceOverwriteShipJson,
     });
   }
@@ -304,7 +310,9 @@ export class ConsoleUIGateway {
     initializeIfNeeded?: boolean;
     initialization?: {
       agentName?: unknown;
-      primaryModelId?: unknown;
+      executionMode?: unknown;
+      modelId?: unknown;
+      agentType?: unknown;
       forceOverwriteShipJson?: unknown;
     };
   }): Promise<{
@@ -320,6 +328,24 @@ export class ConsoleUIGateway {
       cliPath: path.resolve(__dirname, "../commands/Index.js"),
       initializeIfNeeded: options?.initializeIfNeeded,
       initialization: options?.initialization,
+    });
+  }
+
+  private async updateAgentExecution(projectRoot: string, input: {
+    executionMode?: unknown;
+    modelId?: unknown;
+    agentType?: unknown;
+  }): Promise<{
+    projectRoot: string;
+    executionMode: "model" | "acp";
+    modelId?: string;
+    agentType?: "codex" | "claude" | "kimi";
+  }> {
+    return updateConsoleUiAgentExecution({
+      projectRoot,
+      executionMode: input.executionMode,
+      modelId: input.modelId,
+      agentType: input.agentType,
     });
   }
 

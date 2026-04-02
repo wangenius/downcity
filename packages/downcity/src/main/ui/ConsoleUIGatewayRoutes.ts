@@ -33,7 +33,9 @@ export interface ConsoleUiGatewayRouteHandlers {
   /** 初始化 agent 项目骨架。 */
   initializeAgentProject(projectRoot: string, initialization: {
     agentName?: unknown;
-    primaryModelId?: unknown;
+    executionMode?: unknown;
+    modelId?: unknown;
+    agentType?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult>;
   /** 通过目录启动 agent。 */
@@ -41,7 +43,9 @@ export interface ConsoleUiGatewayRouteHandlers {
     initializeIfNeeded?: boolean;
     initialization?: {
       agentName?: unknown;
-      primaryModelId?: unknown;
+      executionMode?: unknown;
+      modelId?: unknown;
+      agentType?: unknown;
       forceOverwriteShipJson?: unknown;
     };
   }): Promise<{
@@ -51,6 +55,17 @@ export interface ConsoleUiGatewayRouteHandlers {
     pid?: number;
     logPath?: string;
     message?: string;
+  }>;
+  /** 更新 agent 执行绑定。 */
+  updateAgentExecution(projectRoot: string, input: {
+    executionMode?: unknown;
+    modelId?: unknown;
+    agentType?: unknown;
+  }): Promise<{
+    projectRoot: string;
+    executionMode: "model" | "acp";
+    modelId?: string;
+    agentType?: "codex" | "claude" | "kimi";
   }>;
   /** 选择系统目录。 */
   pickDirectoryPath(): Promise<string>;
@@ -160,7 +175,9 @@ export function registerConsoleUiGatewayRoutes(params: {
         initializeIfNeeded?: unknown;
         initialization?: {
           agentName?: unknown;
-          primaryModelId?: unknown;
+          executionMode?: unknown;
+          modelId?: unknown;
+          agentType?: unknown;
           forceOverwriteShipJson?: unknown;
         };
       };
@@ -183,7 +200,9 @@ export function registerConsoleUiGatewayRoutes(params: {
       const body = (await c.req.json().catch(() => ({}))) as {
         projectRoot?: unknown;
         agentName?: unknown;
-        primaryModelId?: unknown;
+        executionMode?: unknown;
+        modelId?: unknown;
+        agentType?: unknown;
         autoStart?: unknown;
         forceOverwriteShipJson?: unknown;
       };
@@ -193,7 +212,9 @@ export function registerConsoleUiGatewayRoutes(params: {
       }
       const initResult = await handlers.initializeAgentProject(rawProject, {
         agentName: body.agentName,
-        primaryModelId: body.primaryModelId,
+        executionMode: body.executionMode,
+        modelId: body.modelId,
+        agentType: body.agentType,
         forceOverwriteShipJson: body.forceOverwriteShipJson,
       });
       if (body.autoStart === false) {
@@ -234,6 +255,34 @@ export function registerConsoleUiGatewayRoutes(params: {
       }
       const inspection = await handlers.inspectAgentDirectory(rawProject);
       return c.json({ success: true, inspection });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.post("/api/ui/agents/execution", async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as {
+        agentId?: unknown;
+        projectRoot?: unknown;
+        executionMode?: unknown;
+        modelId?: unknown;
+        agentType?: unknown;
+      };
+      const rawProject = String(body.projectRoot || body.agentId || "").trim();
+      if (!rawProject) {
+        return c.json({ success: false, error: "projectRoot is required" }, 400);
+      }
+      const payload = await handlers.updateAgentExecution(rawProject, {
+        executionMode: body.executionMode,
+        modelId: body.modelId,
+        agentType: body.agentType,
+      });
+      return c.json({
+        success: true,
+        ...payload,
+        restartRequired: true,
+      });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
     }

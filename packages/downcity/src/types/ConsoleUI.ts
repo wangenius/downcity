@@ -89,9 +89,19 @@ export interface ConsoleUiAgentOption {
   }>;
 
   /**
-   * 当前 agent 的 `downcity.json.model.primary`。
+   * 当前 agent 的执行模式。
    */
-  primaryModelId?: string;
+  executionMode?: "model" | "acp";
+
+  /**
+   * 当前 agent 的 `downcity.json.execution.modelId`。
+   */
+  modelId?: string;
+
+  /**
+   * 当前 agent 的 `downcity.json.execution.agent.type`。
+   */
+  agentType?: string;
 }
 
 /**
@@ -159,9 +169,19 @@ export interface ConsoleUiAgentDirectoryInspection {
   displayName: string;
 
   /**
+   * 当前读取到的执行模式（若存在）。
+   */
+  executionMode?: "model" | "acp";
+
+  /**
    * 当前读取到的主模型 ID（若存在）。
    */
-  primaryModelId?: string;
+  modelId?: string;
+
+  /**
+   * 当前读取到的 ACP agent 类型（若存在）。
+   */
+  agentType?: string;
 }
 
 /**

@@ -69,6 +69,7 @@ export const CONTENT_STYLE_URL = chrome.runtime.getURL("content-script.css");
 export const DEFAULT_ROUTE_SETTINGS: InlineComposerRouteSettings = {
   consoleHost: "127.0.0.1",
   consolePort: 5315,
+  authToken: "",
   agentId: "",
   chatKey: "",
 };

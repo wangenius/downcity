@@ -106,7 +106,7 @@ export interface AgentState extends AgentStateBase {
   /**
    * 当前统一执行模型实例。
    */
-  model: LanguageModel;
+  model?: LanguageModel;
   /**
    * 当前 agent 持有的 session store。
    */

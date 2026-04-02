@@ -163,7 +163,7 @@ function registerDiscoverCommand(model: Command): void {
 function registerUseCommand(model: Command): void {
   model
     .command("use <modelId>")
-    .description("把项目 model.primary 绑定到指定模型（非交互）")
+    .description("把项目 execution.modelId 绑定到指定模型（非交互）")
     .option("--path <path>", "目标项目根目录（默认当前目录）", ".")
     .option("--json [enabled]", "以 JSON 输出", parseBooleanOption, true)
     .helpOption("--help", "display help for command")
@@ -184,7 +184,7 @@ function registerUseCommand(model: Command): void {
         printResult({
           asJson,
           success: true,
-          title: "project model.primary updated",
+          title: "project execution.modelId updated",
           payload: {
             projectRoot,
             shipJsonPath: changed.shipJsonPath,

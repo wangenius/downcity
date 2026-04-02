@@ -14,6 +14,7 @@ import path from "path";
 import type { DowncityConfig } from "@/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { ConsoleStore } from "@/utils/store/index.js";
+import { assertProjectExecutionTarget } from "@/main/project/ProjectExecutionBinding.js";
 
 export type { DowncityConfig };
 
@@ -246,14 +247,7 @@ export function loadDowncityConfig(
   if (typeof candidate.name !== "string" || typeof candidate.version !== "string") {
     throw new Error("Invalid downcity.json: missing required fields name/version");
   }
-  if (!candidate.model || typeof candidate.model !== "object") {
-    throw new Error(
-      'Invalid downcity.json: missing required field model.primary in project downcity.json (run "city agent create" to regenerate)',
-    );
-  }
-  const primary = String((candidate.model as { primary?: unknown }).primary || "").trim();
-  if (!primary) {
-    throw new Error("Invalid downcity.json: model.primary cannot be empty");
-  }
-  return candidate as DowncityConfig;
+  const config = candidate as DowncityConfig;
+  assertProjectExecutionTarget(config);
+  return config;
 }

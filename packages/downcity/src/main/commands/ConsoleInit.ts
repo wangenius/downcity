@@ -31,7 +31,9 @@ const INIT_PROVIDER_CHOICES: InitProviderChoice[] = [
   { title: "Gemini", value: "gemini" },
   { title: "Open Compatible", value: "open-compatible" },
   { title: "Open Responses", value: "open-responses" },
-  { title: "Moonshot (Kimi)", value: "moonshot" },
+  { title: "Moonshot CN (Kimi)", value: "moonshot-cn" },
+  { title: "Moonshot AI (Kimi)", value: "moonshot-ai" },
+  { title: "Kimi Code", value: "kimi-code" },
   { title: "xAI", value: "xai" },
   { title: "HuggingFace", value: "huggingface" },
   { title: "OpenRouter", value: "openrouter" },
@@ -44,7 +46,9 @@ const INIT_DEFAULT_MODEL_BY_PROVIDER: Record<LlmProviderType, string> = {
   gemini: "gemini-2.0-flash",
   "open-compatible": "gpt-4o-mini",
   "open-responses": "gpt-4.1-mini",
-  moonshot: "kimi-k2.5",
+  "moonshot-cn": "kimi-k2-0905-preview",
+  "moonshot-ai": "kimi-k2.5",
+  "kimi-code": "kimi-for-coding",
   xai: "grok-3-mini",
   huggingface: "meta-llama/Meta-Llama-3.1-8B-Instruct",
   openrouter: "openai/gpt-4o-mini",
@@ -55,6 +59,9 @@ const INIT_DEFAULT_BASE_URL_BY_PROVIDER: Partial<Record<LlmProviderType, string>
   openai: "https://api.openai.com/v1",
   deepseek: "https://api.deepseek.com",
   gemini: "https://generativelanguage.googleapis.com/v1beta",
+  "moonshot-cn": "https://api.moonshot.cn/v1",
+  "moonshot-ai": "https://api.moonshot.ai/v1",
+  "kimi-code": "https://api.kimi.com/coding/v1",
 };
 
 /**

@@ -7,7 +7,6 @@
  */
 
 import { requestContext } from "@sessions/RequestContext.js";
-import { INTERNAL_RUNTIME_AUTH_ENV_KEY } from "@/main/auth/InternalRuntimeAuth.js";
 
 function setEnvString(
   env: NodeJS.ProcessEnv,
@@ -77,8 +76,14 @@ export function buildShellContextEnv(
   setEnvString(env, "DC_CTX_REQUEST_ID", contextCtx?.requestId);
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
   setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
+
+  // 注入 DC_AUTH_TOKEN（Agent 专用 token）
+  // 优先级：显式传入 > DC_AGENT_TOKEN（Agent 进程环境变量）
   if (!env.DC_AUTH_TOKEN) {
-    setEnvString(env, "DC_AUTH_TOKEN", process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY]);
+    const agentToken = process.env.DC_AGENT_TOKEN;
+    if (agentToken) {
+      env.DC_AUTH_TOKEN = agentToken;
+    }
   }
 
   return env;

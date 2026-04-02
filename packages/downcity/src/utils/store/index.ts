@@ -10,6 +10,9 @@
 import fs from "fs-extra";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import { getConsoleShipDbPath } from "@/main/runtime/ConsolePaths.js";
+import { ensureConsoleStoreSchema } from "./StoreSchema.js";
+import type { ConsoleStoreContext } from "./StoreShared.js";
 import type {
   StoredAgentEnvEntry,
   StoredChannelAccount,
@@ -27,9 +30,7 @@ import type {
 } from "@/types/Store.js";
 import {
   getConsoleRootDirPath,
-  getConsoleShipDbPath,
 } from "@/main/runtime/ConsolePaths.js";
-import { ensureConsoleStoreSchema } from "./StoreSchema.js";
 import {
   clearStoredModelsAndProviders,
   getResolvedStoredModel,
@@ -80,7 +81,6 @@ import {
   removeChannelAccount,
   upsertChannelAccount,
 } from "./StoreChannelAccountRepository.js";
-import type { ConsoleStoreContext } from "./StoreShared.js";
 
 /**
  * Console 模型存储。
@@ -459,5 +459,29 @@ export class ConsoleStore {
    */
   removeChannelAccount(accountIdInput: string): void {
     removeChannelAccount(this.context, accountIdInput);
+  }
+}
+
+/**
+ * 在 ConsoleStore 上下文中执行操作。
+ *
+ * 关键点（中文）
+ * - 用于一次性数据库操作，无需手动管理 ConsoleStore 实例生命周期。
+ * - 自动处理数据库连接和关闭。
+ */
+export function withConsoleStore<T>(callback: (context: ConsoleStoreContext) => T): T {
+  const dbPath = getConsoleShipDbPath();
+  fs.ensureDirSync(dbPath.replace(/\/[^/]+$/, ""));
+  const sqlite = new Database(dbPath);
+  sqlite.pragma("journal_mode = WAL");
+  const context: ConsoleStoreContext = {
+    sqlite,
+    db: drizzle(sqlite),
+  };
+  ensureConsoleStoreSchema(context);
+  try {
+    return callback(context);
+  } finally {
+    sqlite.close();
   }
 }

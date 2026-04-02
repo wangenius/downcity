@@ -118,7 +118,7 @@ function getCardTone(mode: "enabled" | "disabled" | "attention"): {
   }
   return {
     cardClass: "border-amber-200/80 bg-[color-mix(in_oklab,var(--background)_95%,oklch(0.95_0.02_85)_5%)]",
-    badgeLabel: "Needs attention",
+    badgeLabel: "Setup required",
     badgeClass: "bg-amber-500/10 text-amber-700",
     dotClass: "bg-amber-500",
   }

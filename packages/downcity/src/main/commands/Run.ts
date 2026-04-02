@@ -10,8 +10,9 @@
  *   `downcity agent restart` 管理。
  */
 
+import path from "node:path";
 import { startServer } from "@/main/index.js";
-import { ensureInternalRuntimeAuthToken } from "@/main/auth/InternalRuntimeAuth.js";
+import { ensureAgentToken } from "@/main/auth/AgentTokenService.js";
 
 import {
   getExecutionContext,
@@ -75,7 +76,11 @@ export async function runCommand(
 
   process.env.DC_SERVER_PORT = String(port);
   process.env.DC_SERVER_HOST = host;
-  ensureInternalRuntimeAuthToken();
+
+  // 为当前 Agent 签发专用 token（前台模式）
+  const agentRoot = path.resolve(cwd);
+  const agentToken = ensureAgentToken(agentRoot);
+  process.env.DC_AGENT_TOKEN = agentToken.token;
 
   // Create and start server
   const server = await startServer({

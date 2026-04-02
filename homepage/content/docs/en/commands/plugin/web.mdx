@@ -1,0 +1,55 @@
+---
+title: city web
+description: Choose web-access or agent-browser for the agent and verify that the current web provider is ready
+---
+
+# `city web`
+
+`city web` is the short command group for the built-in web plugin.
+
+## What it manages
+
+- select the active web provider
+- check whether the provider is ready
+- inject provider-specific guidance into agent prompts
+- store a small amount of provider configuration
+
+## Common examples
+
+```bash
+# list supported providers
+city web providers
+
+# install web-access into the shared skill root (user scope by default)
+city web install --provider web-access
+
+# install into the project skill root
+city web install --provider web-access --scope project
+
+# switch to web-access
+city web use web-access
+
+# switch to agent-browser
+city web use agent-browser --browser-command agent-browser
+
+# inspect the current provider
+city web doctor
+
+# inspect status
+city web status
+```
+
+## Notes
+
+- `city web install` puts the provider skill into the shared skill roots:
+  - user scope: `~/.agents/skills`
+  - project scope: `PROJECT/.agents/skills`
+- With `provider=web-access`, the plugin checks whether the `web-access` skill is installed locally and injects its guidance into the agent.
+- With `provider=agent-browser`, the plugin checks whether the `agent-browser` CLI is runnable and injects browser-workflow guidance into the agent.
+- The default provider is `web-access`.
+- The external projects behind this plugin are [eze-is/web-access](https://github.com/eze-is/web-access) and `agent-browser`.
+
+## Related
+
+- [`city plugin`](/en/docs/commands/plugin/plugin)
+- [`CLI Commands`](/en/docs/reference/cli)

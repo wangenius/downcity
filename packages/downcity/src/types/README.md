@@ -25,6 +25,9 @@
 - `TtsPlugin.ts`
   - 定义 `TtsPluginConfig`、`TtsSynthesizeInput`、`TtsAudioFormat`。
   - 用于 tts plugin 的行为配置与语音合成输入定义。
+- `WebPlugin.ts`
+  - 定义 `WebPluginConfig`、`WebPluginInstallInput`、`WebPluginDependencyCheckResult`。
+  - 用于 web plugin 的联网依赖配置、安装输入与检测结果。
 - `PluginApi.ts`
   - 定义 `PluginListResponse`、`PluginAvailabilityResponse`、`PluginActionResponse`。
   - 用于 plugin CLI / HTTP 桥接层，统一描述管理面协议。

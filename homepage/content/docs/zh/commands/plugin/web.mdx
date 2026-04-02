@@ -1,0 +1,55 @@
+---
+title: city web
+description: 为 agent 选择 web-access 或 agent-browser，并检查当前联网能力是否就绪
+---
+
+# `city web`
+
+`city web` 是内置 web plugin 的短命令组。
+
+## 它负责什么
+
+- 选择当前使用的联网 provider
+- 检查 provider 是否已就绪
+- 向 agent 注入 provider 对应的提示词
+- 记录少量 provider 配置
+
+## 常用示例
+
+```bash
+# 查看支持的 provider
+city web providers
+
+# 安装 web-access 到统一 skill 目录（默认用户目录）
+city web install --provider web-access
+
+# 安装到项目 skill 目录
+city web install --provider web-access --scope project
+
+# 切换到 web-access
+city web use web-access
+
+# 切换到 agent-browser
+city web use agent-browser --browser-command agent-browser
+
+# 检查当前 provider
+city web doctor
+
+# 查看状态
+city web status
+```
+
+## 说明
+
+- `city web install` 会把 skill 安装到统一 skill 目录：
+  - 用户目录：`~/.agents/skills`
+  - 项目目录：`PROJECT/.agents/skills`
+- `provider=web-access` 时，会检查本地是否已安装 `web-access` skill，并把对应方法论注入 agent。
+- `provider=agent-browser` 时，会检查 `agent-browser` CLI 是否可执行，并把浏览器工作流提示注入 agent。
+- 默认 provider 是 `web-access`。
+- 这个 plugin 对接的外部项目是 [eze-is/web-access](https://github.com/eze-is/web-access) 和 `agent-browser`。
+
+## 相关页面
+
+- [`city plugin`](/zh/docs/commands/plugin/plugin)
+- [`CLI 命令`](/zh/docs/reference/cli)

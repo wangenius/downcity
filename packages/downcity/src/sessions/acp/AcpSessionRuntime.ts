@@ -34,6 +34,10 @@ type PendingRequest = {
   reject: (error: Error) => void;
 };
 
+type PendingPermissionRequest = {
+  requestId: JsonRpcId;
+};
+
 type PromptCollector = {
   chunks: string[];
 };
@@ -94,6 +98,8 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
   private activePromptRequestId: JsonRpcId | null = null;
   private activePromptCollector: PromptCollector | null = null;
   private activeAssistantProgress: AssistantProgressState | null = null;
+  private cancellationRequested = false;
+  private readonly pendingPermissionRequests: PendingPermissionRequest[] = [];
   private stdoutProcessing: Promise<void> = Promise.resolve();
 
   constructor(options: {
@@ -154,6 +160,7 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
           stepIndex: 0,
           pendingToolCalls: new Map(),
         };
+        this.cancellationRequested = false;
 
         const response = (await this.waitForRequest(requestId)) as {
           stopReason?: unknown;
@@ -165,6 +172,7 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
         this.activePromptCollector = null;
         this.activePromptRequestId = null;
         this.activeAssistantProgress = null;
+        this.cancellationRequested = false;
 
         if (!text) {
           throw new Error(`ACP agent returned no text output (stopReason=${stopReason})`);
@@ -189,8 +197,43 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
         this.activePromptCollector = null;
         this.activePromptRequestId = null;
         this.activeAssistantProgress = null;
+        this.cancellationRequested = false;
       }
     });
+  }
+
+  /**
+   * 请求取消当前 turn。
+   *
+   * 关键点（中文）
+   * - 通过 ACP `session/cancel` notification 打断当前 prompt。
+   * - 同时把所有挂起的 permission request 回成 `cancelled`，避免远端卡住。
+   */
+  async requestCancelCurrentTurn(): Promise<boolean> {
+    if (this.cancellationRequested) return false;
+    if (!this.running) return false;
+    const remoteSessionId = String(this.remoteSessionId || "").trim();
+    const promptRequestId = this.activePromptRequestId;
+    if (!remoteSessionId || typeof promptRequestId !== "number") {
+      return false;
+    }
+
+    this.cancellationRequested = true;
+    for (const pending of this.pendingPermissionRequests.splice(0)) {
+      this.sendResponse(pending.requestId, {
+        outcome: {
+          outcome: "cancelled",
+        },
+      });
+    }
+    this.writeJson({
+      jsonrpc: "2.0",
+      method: "session/cancel",
+      params: {
+        sessionId: remoteSessionId,
+      },
+    });
+    return true;
   }
 
   async dispose(): Promise<void> {
@@ -205,6 +248,7 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
       pending.reject(new Error("ACP runtime disposed"));
     }
     this.pendingById.clear();
+    this.pendingPermissionRequests.length = 0;
     if (!child) return;
     child.kill();
   }
@@ -279,6 +323,7 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
         pending.reject(error);
       }
       this.pendingById.clear();
+      this.pendingPermissionRequests.length = 0;
       this.child = null;
       this.initialized = false;
       this.remoteSessionId = null;
@@ -379,6 +424,14 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
     if (typeof requestId !== "number" || typeof envelope.method !== "string") return;
 
     if (envelope.method === "session/request_permission") {
+      if (this.cancellationRequested) {
+        this.sendResponse(requestId, {
+          outcome: {
+            outcome: "cancelled",
+          },
+        });
+        return;
+      }
       const optionId = pickPermissionOptionId(envelope.params);
       if (!optionId) {
         this.sendResponse(requestId, {
@@ -388,12 +441,19 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
         });
         return;
       }
+      this.pendingPermissionRequests.push({ requestId });
       this.sendResponse(requestId, {
         outcome: {
           outcome: "selected",
           optionId,
         },
       });
+      const pendingIndex = this.pendingPermissionRequests.findIndex(
+        (item) => item.requestId === requestId,
+      );
+      if (pendingIndex >= 0) {
+        this.pendingPermissionRequests.splice(pendingIndex, 1);
+      }
       return;
     }
 

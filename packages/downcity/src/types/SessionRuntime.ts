@@ -18,6 +18,15 @@ export interface SessionRuntimeLike {
   run(input: SessionRunInput): Promise<SessionRunResult>;
 
   /**
+   * 请求取消当前正在执行的 turn。
+   *
+   * 关键点（中文）
+   * - 主要给 ACP runtime 使用，对应协议侧 `session/cancel`。
+   * - 返回 `true` 表示本次请求已发出；`false` 表示当前没有可取消的 turn。
+   */
+  requestCancelCurrentTurn?(): Promise<boolean> | boolean;
+
+  /**
    * 释放 runtime 持有的资源。
    *
    * 说明（中文）

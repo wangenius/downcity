@@ -9,6 +9,7 @@
 import type {
   SessionLoopDecision,
   SessionLoopDecisionInput,
+  SessionTailMergeContinuationInput,
 } from "@/types/SessionCoreLoop.js";
 
 /**
@@ -63,4 +64,17 @@ export function evaluateSessionLoopDecision(
     continueForTextOnly: false,
     continueForIncompleteRecovery: false,
   };
+}
+
+/**
+ * 评估 stop 前的尾部合并是否应该继续下一轮。
+ *
+ * 关键点（中文）
+ * - 只要最后一次 tail merge 真正并入了新的 user 消息，就必须续跑。
+ * - 这样可以覆盖“最后一个 step 结束后，新消息才到达”的收尾窗口。
+ */
+export function shouldContinueForTailMergedUserMessages(
+  input: SessionTailMergeContinuationInput,
+): boolean {
+  return input.mergedUserMessageCount > 0;
 }

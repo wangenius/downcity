@@ -83,6 +83,7 @@ export class ChatQueueWorker {
     this.stopped = false;
     this.unsubscribe = this.queueStore.onEnqueue((laneKey) => {
       this.markRunnable(laneKey);
+      void this.requestTurnCancelIfSupported(laneKey);
       void this.kick();
     });
 
@@ -157,6 +158,25 @@ export class ChatQueueWorker {
     const first = this.queueStore.shift(lane.key);
     if (!first) return;
     await this.processOne(lane.key, first);
+  }
+
+  /**
+   * 若底层 runtime 支持取消当前 turn，则在新消息入队时立刻触发。
+   *
+   * 关键点（中文）
+   * - 只对支持显式取消的 runtime 生效（主要是 ACP）。
+   * - 失败不影响正常排队；worker 仍会走串行兜底。
+   */
+  private async requestTurnCancelIfSupported(sessionId: string): Promise<void> {
+    const sessionKey = String(sessionId || "").trim();
+    if (!sessionKey) return;
+    try {
+      const runtime = this.context.session.getRuntime(sessionKey);
+      if (typeof runtime.requestCancelCurrentTurn !== "function") return;
+      await runtime.requestCancelCurrentTurn();
+    } catch {
+      // ignore
+    }
   }
 
   private shouldAppendSessionMessage(item: ChatQueueItem): boolean {
@@ -350,6 +370,13 @@ export class ChatQueueWorker {
     if (clearRequested) {
       serviceContext.clearRuntime(runItem.sessionId);
       this.queueStore.clear(runItem.sessionId);
+    }
+
+    const stopReason = String(
+      result.assistantMessage?.metadata?.extra?.stopReason || "",
+    ).trim();
+    if (stopReason === "cancelled") {
+      return;
     }
 
     try {

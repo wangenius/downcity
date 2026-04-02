@@ -148,6 +148,15 @@ export interface SessionRuntimePort {
    * 执行一次 session run。
    */
   run(params: SessionRunInput): Promise<SessionRunResult>;
+
+  /**
+   * 请求取消当前正在执行的 turn。
+   *
+   * 关键点（中文）
+   * - 对普通本地 runtime 可不实现。
+   * - ACP runtime 可借此向远端发送 `session/cancel`。
+   */
+  requestCancelCurrentTurn?(): Promise<boolean> | boolean;
 }
 
 /**

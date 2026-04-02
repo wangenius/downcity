@@ -7,6 +7,8 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -16,6 +18,8 @@ import { getRequestContext, withRequestContext } from "../../bin/sessions/Reques
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const fixturePath = path.resolve(__dirname, "../fixtures/acp-agent-fixture.mjs");
+const consoleRoot = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-acp-console-"));
+process.env.DC_CONSOLE_ROOT = consoleRoot;
 
 function createLogger() {
   return {
@@ -265,6 +269,25 @@ test("AcpSessionRuntime: maps Claude ACP tool_call_update into tool results", as
         stepResult: undefined,
       },
     ]);
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionRuntime: cancels the current prompt turn when requested", async () => {
+  const runtime = createRuntime();
+  try {
+    const runPromise = runtime.run({
+      query: "cancel runtime test",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    assert.equal(await runtime.requestCancelCurrentTurn?.(), true);
+
+    const result = await runPromise;
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "等待取消前的部分输出");
+    assert.equal(result.assistantMessage.metadata.extra.stopReason, "cancelled");
   } finally {
     await runtime.dispose();
   }

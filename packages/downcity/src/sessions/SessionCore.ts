@@ -43,7 +43,10 @@ import {
   summarizeUiMessageForDebug,
   toInlinePreview,
 } from "@sessions/runtime/SessionLoopSignals.js";
-import { evaluateSessionLoopDecision } from "@sessions/runtime/SessionCoreLoop.js";
+import {
+  evaluateSessionLoopDecision,
+  shouldContinueForTailMergedUserMessages,
+} from "@sessions/runtime/SessionCoreLoop.js";
 import type {
   SessionExecuteInput,
   SessionRunResult,
@@ -541,6 +544,29 @@ export class SessionCore {
               tools,
             );
           }
+          continue;
+        }
+
+        // 关键点（中文）：
+        // - 正常 stop 前，再执行一次 tail merge 检查。
+        // - 这样可覆盖“最后一个 step 结束后，新的 user 消息才入队”的窗口。
+        // - 若这时真的并入了新消息，则继续当前 run，而不是等整个 run 结束后再开下一轮。
+        const tailPrepared = await prepareStep({ messages: [] });
+        const tailMergedMessageCount = Array.isArray(tailPrepared.messages)
+          ? tailPrepared.messages.length
+          : 0;
+        if (
+          shouldContinueForTailMergedUserMessages({
+            mergedUserMessageCount: tailMergedMessageCount,
+          })
+        ) {
+          textOnlyContinuationCount = 0;
+          incompleteResponseRecoveryCount = 0;
+          await this.logger.log("info", "[agent] loop.tail_merge_continue", {
+            sessionId,
+            stepIndex: stepCount,
+            mergedUserMessageCount: tailMergedMessageCount,
+          });
           continue;
         }
 

@@ -8,7 +8,10 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateSessionLoopDecision } from "../../bin/sessions/runtime/SessionCoreLoop.js";
+import {
+  evaluateSessionLoopDecision,
+  shouldContinueForTailMergedUserMessages,
+} from "../../bin/sessions/runtime/SessionCoreLoop.js";
 
 test("evaluateSessionLoopDecision prefers incomplete recovery over other branches", () => {
   const decision = evaluateSessionLoopDecision({
@@ -58,4 +61,22 @@ test("evaluateSessionLoopDecision falls back to stop when no continuation condit
   assert.equal(decision.continueForToolCalls, false);
   assert.equal(decision.continueForTextOnly, false);
   assert.equal(decision.continueForIncompleteRecovery, false);
+});
+
+test("shouldContinueForTailMergedUserMessages continues when tail merge picked up late inbound messages", () => {
+  assert.equal(
+    shouldContinueForTailMergedUserMessages({
+      mergedUserMessageCount: 1,
+    }),
+    true,
+  );
+});
+
+test("shouldContinueForTailMergedUserMessages stops when no late inbound message was merged", () => {
+  assert.equal(
+    shouldContinueForTailMergedUserMessages({
+      mergedUserMessageCount: 0,
+    }),
+    false,
+  );
 });

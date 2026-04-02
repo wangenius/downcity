@@ -79,3 +79,17 @@ export interface SessionLoopDecision {
    */
   continueForIncompleteRecovery: boolean;
 }
+
+/**
+ * stop 分支上的尾部消息续跑判定输入。
+ *
+ * 关键点（中文）
+ * - 用于处理“最后一个 step 结束后，恰好又有新的 user 消息写入”的窗口。
+ * - 这里只关心是否真的合并到了新增 user message，不关心消息内容细节。
+ */
+export interface SessionTailMergeContinuationInput {
+  /**
+   * stop 前最后一次 tail merge 实际合并到的 user message 数量。
+   */
+  mergedUserMessageCount: number;
+}

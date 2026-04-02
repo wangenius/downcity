@@ -3,6 +3,7 @@ import readline from "node:readline";
 let nextSessionId = 1;
 let nextPermissionId = 1000;
 const pendingPermissionByPromptId = new Map();
+const pendingPromptBySessionId = new Map();
 
 function send(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
@@ -62,6 +63,23 @@ rl.on("line", (line) => {
   const raw = String(line || "").trim();
   if (!raw) return;
   const msg = JSON.parse(raw);
+
+  if (typeof msg.method === "string" && msg.id === undefined) {
+    if (msg.method === "session/cancel") {
+      const sessionId = String(msg.params?.sessionId || "");
+      const pendingPrompt = pendingPromptBySessionId.get(sessionId);
+      if (!pendingPrompt) return;
+      pendingPromptBySessionId.delete(sessionId);
+      send({
+        jsonrpc: "2.0",
+        id: pendingPrompt.promptId,
+        result: {
+          stopReason: "cancelled",
+        },
+      });
+    }
+    return;
+  }
 
   if (typeof msg.method === "string" && msg.id !== undefined) {
     if (msg.method === "initialize") {
@@ -177,6 +195,14 @@ rl.on("line", (line) => {
           result: {
             stopReason: "end_turn",
           },
+        });
+        return;
+      }
+
+      if (promptText.includes("cancel runtime test")) {
+        sendTextUpdate(sessionId, "等待取消前的部分输出");
+        pendingPromptBySessionId.set(sessionId, {
+          promptId: msg.id,
         });
         return;
       }

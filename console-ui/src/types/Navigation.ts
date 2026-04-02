@@ -16,6 +16,7 @@ export type DashboardScope = "global" | "agent" | "context";
  */
 export type DashboardView =
   | "globalOverview"
+  | "globalAccess"
   | "globalEnv"
   | "globalModel"
   | "globalChannelAccounts"

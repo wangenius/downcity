@@ -11,6 +11,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { AcpSessionRuntime } from "../../bin/sessions/acp/AcpSessionRuntime.js";
+import { getRequestContext } from "../../bin/sessions/RequestContext.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -126,6 +127,43 @@ test("AcpSessionRuntime: auto-selects allow_once for permission requests", async
     });
     assert.equal(result.success, true);
     assert.equal(result.assistantMessage.parts[0].text, "PERMISSION_OK");
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionRuntime: injects requestId for prompter when request context is missing", async () => {
+  const runtime = new AcpSessionRuntime({
+    rootPath: process.cwd(),
+    sessionId: "test-session",
+    logger: createLogger(),
+    persistor: createPersistor(),
+    prompter: {
+      async resolve() {
+        const ctx = getRequestContext();
+        assert.equal(String(ctx?.sessionId || "").trim(), "test-session");
+        assert.ok(String(ctx?.requestId || "").trim().length > 0);
+        return [
+          {
+            role: "system",
+            content: "System prompt",
+          },
+        ];
+      },
+    },
+    launch: {
+      type: "kimi",
+      command: process.execPath,
+      args: [fixturePath],
+      env: {},
+    },
+  });
+  try {
+    const result = await runtime.run({
+      query: "hello",
+    });
+    assert.equal(result.success, true);
+    assert.match(String(result.assistantMessage.parts[0].text || ""), /System prompt/);
   } finally {
     await runtime.dispose();
   }

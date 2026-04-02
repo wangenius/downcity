@@ -207,6 +207,38 @@ export class AuthStore {
   }
 
   /**
+   * 读取全部用户列表。
+   */
+  listUsers(): AuthUser[] {
+    const rows = this.sqlite
+      .prepare("SELECT * FROM auth_users ORDER BY username ASC")
+      .all() as SqliteRow[];
+    return rows.map((row) => this.toAuthUser(row));
+  }
+
+  /**
+   * 更新用户基础资料。
+   */
+  updateUser(params: {
+    userId: string;
+    displayName?: string;
+    status?: "active" | "disabled";
+  }): AuthUser | null {
+    const userId = normalizeNonEmptyText(params.userId, "userId");
+    const current = this.getUserById(userId);
+    if (!current) return null;
+    const nextDisplayName = optionalTrimmedText(params.displayName);
+    const nextStatus = params.status === "disabled" ? "disabled" : "active";
+    const updatedAt = nowIso();
+    this.sqlite
+      .prepare(
+        "UPDATE auth_users SET display_name = ?, status = ?, updated_at = ? WHERE id = ?",
+      )
+      .run(nextDisplayName || null, nextStatus, updatedAt, userId);
+    return this.getUserById(userId);
+  }
+
+  /**
    * 给用户绑定角色。
    */
   assignRoleToUser(params: { userId: string; roleName: AuthDefaultRoleName | string }): void {
@@ -239,6 +271,57 @@ export class AuthStore {
       )
       .all(userId) as Array<{ name?: unknown }>;
     return rows.map((row) => String(row.name || "").trim()).filter(Boolean);
+  }
+
+  /**
+   * 清空用户当前绑定的全部角色。
+   */
+  clearRolesByUserId(userIdInput: string): void {
+    const userId = normalizeNonEmptyText(userIdInput, "userId");
+    this.sqlite
+      .prepare("DELETE FROM auth_user_roles WHERE user_id = ?")
+      .run(userId);
+  }
+
+  /**
+   * 用新的角色集合覆盖用户角色绑定。
+   */
+  replaceRolesByUserId(params: {
+    userId: string;
+    roleNames: string[];
+  }): string[] {
+    const userId = normalizeNonEmptyText(params.userId, "userId");
+    const roleNames = [...new Set(params.roleNames.map((item) => String(item || "").trim()).filter(Boolean))];
+    const tx = this.sqlite.transaction(() => {
+      this.clearRolesByUserId(userId);
+      for (const roleName of roleNames) {
+        this.assignRoleToUser({
+          userId,
+          roleName,
+        });
+      }
+    });
+    tx();
+    return this.listRoleNamesByUserId(userId);
+  }
+
+  /**
+   * 统计拥有指定角色且处于 active 状态的用户数量。
+   */
+  countActiveUsersByRole(roleNameInput: string): number {
+    const roleName = normalizeNonEmptyText(roleNameInput, "roleName");
+    const row = this.sqlite
+      .prepare(
+        `
+          SELECT COUNT(DISTINCT users.id) as count
+          FROM auth_users users
+          INNER JOIN auth_user_roles user_roles ON user_roles.user_id = users.id
+          INNER JOIN auth_roles roles ON roles.id = user_roles.role_id
+          WHERE users.status = 'active' AND roles.name = ?
+        `,
+      )
+      .get(roleName) as { count?: unknown } | undefined;
+    return Number(row?.count || 0);
   }
 
   /**
@@ -457,4 +540,3 @@ export class AuthStore {
     throw new Error("unused");
   }
 }
-

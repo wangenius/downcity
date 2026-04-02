@@ -135,6 +135,7 @@ type SidebarMode = "agent-list" | "agent-detail"
 
 const viewIconMap: Record<Exclude<DashboardView, "contextWorkspace">, React.ReactNode> = {
   globalOverview: <Layers3Icon />,
+  globalAccess: <ShieldCheckIcon />,
   globalEnv: <KeyRoundIcon />,
   globalModel: <ServerCogIcon />,
   globalChannelAccounts: <BotIcon />,

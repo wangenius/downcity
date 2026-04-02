@@ -7,9 +7,10 @@
  */
 
 import { Hono, type Context } from "hono";
+import type { AuthPermissionKey } from "@/types/auth/AuthPermission.js";
 import type { AuthService } from "./AuthService.js";
 import { AuthService as DefaultAuthService } from "./AuthService.js";
-import { isAuthError } from "./AuthError.js";
+import { AuthError, isAuthError } from "./AuthError.js";
 import {
   createRequireAuthMiddleware,
   getAuthPrincipal,
@@ -27,6 +28,8 @@ export function registerAuthRoutes(params: {
   const router = new Hono();
   const protectedRouter = new Hono<{ Variables: AuthMiddlewareVariables }>();
   const requireAuth = createRequireAuthMiddleware(authService);
+  const requireAuthRead = createRequirePermissionsMiddleware(["auth.read"]);
+  const requireAuthWrite = createRequirePermissionsMiddleware(["auth.write"]);
 
   router.get("/status", (c) => {
     const initialized = authService.hasUsers();
@@ -125,8 +128,160 @@ export function registerAuthRoutes(params: {
     }
   });
 
+  protectedRouter.get("/admin/users", requireAuth, requireAuthRead, (c) => {
+    return c.json({
+      success: true,
+      ...authService.listAdminUsers(),
+    });
+  });
+
+  protectedRouter.post("/admin/users/create", requireAuth, requireAuthWrite, async (c) => {
+    try {
+      const principal = getAuthPrincipal(c);
+      const body = (await c.req.json().catch(() => ({}))) as {
+        username?: string;
+        password?: string;
+        displayName?: string;
+        roleNames?: string[];
+      };
+      return c.json({
+        success: true,
+        user: authService.createAdminUser(principal, {
+          username: String(body.username || ""),
+          password: String(body.password || ""),
+          displayName: typeof body.displayName === "string" ? body.displayName : undefined,
+          roleNames: Array.isArray(body.roleNames) ? body.roleNames : undefined,
+        }),
+      });
+    } catch (error) {
+      return toErrorResponse(c, error);
+    }
+  });
+
+  protectedRouter.post(
+    "/admin/users/:userId/update",
+    requireAuth,
+    requireAuthWrite,
+    async (c) => {
+      try {
+        const principal = getAuthPrincipal(c);
+        const body = (await c.req.json().catch(() => ({}))) as {
+          displayName?: string;
+          status?: string;
+        };
+        return c.json({
+          success: true,
+          user: authService.updateAdminUser(principal, {
+            userId: c.req.param("userId"),
+            displayName: typeof body.displayName === "string" ? body.displayName : undefined,
+            status: body.status === "disabled" ? "disabled" : "active",
+          }),
+        });
+      } catch (error) {
+        return toErrorResponse(c, error);
+      }
+    },
+  );
+
+  protectedRouter.post(
+    "/admin/users/:userId/roles",
+    requireAuth,
+    requireAuthWrite,
+    async (c) => {
+      try {
+        const principal = getAuthPrincipal(c);
+        const body = (await c.req.json().catch(() => ({}))) as {
+          roleNames?: string[];
+        };
+        return c.json({
+          success: true,
+          user: authService.setAdminUserRoles(principal, {
+            userId: c.req.param("userId"),
+            roleNames: Array.isArray(body.roleNames) ? body.roleNames : undefined,
+          }),
+        });
+      } catch (error) {
+        return toErrorResponse(c, error);
+      }
+    },
+  );
+
+  protectedRouter.get(
+    "/admin/users/:userId/tokens",
+    requireAuth,
+    requireAuthRead,
+    (c) => {
+      return c.json({
+        success: true,
+        ...authService.listAdminUserTokens(c.req.param("userId")),
+      });
+    },
+  );
+
+  protectedRouter.post(
+    "/admin/users/:userId/tokens/create",
+    requireAuth,
+    requireAuthWrite,
+    async (c) => {
+      try {
+        const principal = getAuthPrincipal(c);
+        const body = (await c.req.json().catch(() => ({}))) as {
+          name?: string;
+          expiresAt?: string;
+        };
+        return c.json({
+          success: true,
+          ...authService.createAdminUserToken(principal, {
+            userId: c.req.param("userId"),
+            name: String(body.name || ""),
+            expiresAt: typeof body.expiresAt === "string" ? body.expiresAt : undefined,
+          }),
+        });
+      } catch (error) {
+        return toErrorResponse(c, error);
+      }
+    },
+  );
+
+  protectedRouter.post(
+    "/admin/users/:userId/tokens/revoke",
+    requireAuth,
+    requireAuthWrite,
+    async (c) => {
+      try {
+        const principal = getAuthPrincipal(c);
+        const body = (await c.req.json().catch(() => ({}))) as {
+          tokenId?: string;
+        };
+        return c.json({
+          success: true,
+          token: authService.revokeAdminUserToken(principal, {
+            userId: c.req.param("userId"),
+            tokenId: String(body.tokenId || ""),
+          }),
+        });
+      } catch (error) {
+        return toErrorResponse(c, error);
+      }
+    },
+  );
+
   router.route("/", protectedRouter);
   params.app.route("/api/auth", router);
+}
+
+function createRequirePermissionsMiddleware(requiredPermissions: AuthPermissionKey[]) {
+  return async (c: Context<{ Variables: AuthMiddlewareVariables }>, next: () => Promise<void>) => {
+    const principal = getAuthPrincipal(c);
+    if (requiredPermissions.some((permission) => principal.permissions.includes(permission))) {
+      await next();
+      return;
+    }
+    return c.json(
+      { success: false, error: "Permission denied" },
+      403,
+    );
+  };
 }
 
 function toErrorResponse(c: Context, error: unknown) {

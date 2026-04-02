@@ -12,10 +12,12 @@ import { createInterface, type Interface as ReadlineInterface } from "node:readl
 import type { Logger } from "@utils/logger/Logger.js";
 import type { PersistorComponent } from "@sessions/components/PersistorComponent.js";
 import type { PrompterComponent } from "@sessions/components/PrompterComponent.js";
+import { requestContext, withRequestContext } from "@sessions/RequestContext.js";
 import type { SessionMessageV1 } from "@/types/SessionMessage.js";
 import type { SessionRunInput, SessionRunResult } from "@/types/SessionRun.js";
 import type { SessionRuntimeLike } from "@/types/SessionRuntime.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpSessionSupport.js";
+import { generateId } from "@utils/Id.js";
 
 type JsonRpcId = number;
 
@@ -83,59 +85,67 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
     if (this.running) {
       throw new Error("AcpSessionRuntime.run does not support concurrent execution");
     }
-    this.running = true;
-    try {
-      await this.ensureReady();
-      const remoteSessionId = this.remoteSessionId;
-      if (!remoteSessionId) {
-        throw new Error("ACP session is not initialized");
-      }
+    const currentCtx = requestContext.getStore();
+    const nextContext = {
+      ...(currentCtx || {}),
+      sessionId: String(currentCtx?.sessionId || this.sessionId || "").trim() || this.sessionId,
+      requestId: String(currentCtx?.requestId || "").trim() || generateId(),
+    };
+    return await withRequestContext(nextContext, async () => {
+      this.running = true;
+      try {
+        await this.ensureReady();
+        const remoteSessionId = this.remoteSessionId;
+        if (!remoteSessionId) {
+          throw new Error("ACP session is not initialized");
+        }
 
-      const promptText = await this.buildPromptText(String(input.query || "").trim());
-      const requestId = this.sendRequest("session/prompt", {
-        sessionId: remoteSessionId,
-        prompt: [
-          {
-            type: "text",
-            text: promptText,
-          },
-        ],
-      });
-      this.activePromptRequestId = requestId;
-      this.activePromptCollector = { chunks: [] };
-
-      const response = (await this.waitForRequest(requestId)) as {
-        stopReason?: unknown;
-      } | null;
-      const stopReason = String(response?.stopReason || "").trim() || "unknown";
-      const text = this.activePromptCollector.chunks.join("").trim();
-      this.bootstrapped = true;
-      this.activePromptCollector = null;
-      this.activePromptRequestId = null;
-
-      if (!text) {
-        throw new Error(`ACP agent returned no text output (stopReason=${stopReason})`);
-      }
-
-      return {
-        success: true,
-        assistantMessage: this.persistor.assistantText({
-          text,
-          metadata: {
-            sessionId: this.sessionId,
-            extra: {
-              runtime: "acp",
-              agentType: this.launch.type,
-              stopReason,
+        const promptText = await this.buildPromptText(String(input.query || "").trim());
+        const requestId = this.sendRequest("session/prompt", {
+          sessionId: remoteSessionId,
+          prompt: [
+            {
+              type: "text",
+              text: promptText,
             },
-          },
-        }),
-      };
-    } finally {
-      this.running = false;
-      this.activePromptCollector = null;
-      this.activePromptRequestId = null;
-    }
+          ],
+        });
+        this.activePromptRequestId = requestId;
+        this.activePromptCollector = { chunks: [] };
+
+        const response = (await this.waitForRequest(requestId)) as {
+          stopReason?: unknown;
+        } | null;
+        const stopReason = String(response?.stopReason || "").trim() || "unknown";
+        const text = this.activePromptCollector.chunks.join("").trim();
+        this.bootstrapped = true;
+        this.activePromptCollector = null;
+        this.activePromptRequestId = null;
+
+        if (!text) {
+          throw new Error(`ACP agent returned no text output (stopReason=${stopReason})`);
+        }
+
+        return {
+          success: true,
+          assistantMessage: this.persistor.assistantText({
+            text,
+            metadata: {
+              sessionId: this.sessionId,
+              extra: {
+                runtime: "acp",
+                agentType: this.launch.type,
+                stopReason,
+              },
+            },
+          }),
+        };
+      } finally {
+        this.running = false;
+        this.activePromptCollector = null;
+        this.activePromptRequestId = null;
+      }
+    });
   }
 
   async dispose(): Promise<void> {

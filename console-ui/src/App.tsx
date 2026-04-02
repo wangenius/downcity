@@ -5,6 +5,7 @@
 import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { AccessSection } from "@/components/dashboard/AccessSection"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
 import { AuthorizationSection } from "@/components/dashboard/AuthorizationSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
@@ -72,6 +73,13 @@ export function App() {
     selectedAgent,
     overview,
     authorization,
+    accessRoles,
+    accessUsers,
+    selectedAccessUser,
+    accessTokens,
+    accessLoading,
+    accessTokensLoading,
+    latestIssuedAccessToken,
     services,
     skills,
     plugins,
@@ -113,8 +121,16 @@ export function App() {
     runChatChannelAction,
     configureChatChannel,
     refreshAuthorization,
+    refreshAccessUsers,
     saveAuthorizationConfig,
     runAuthorizationAction,
+    clearLatestIssuedAccessToken,
+    selectAccessUser,
+    createAccessUser,
+    updateAccessUser,
+    setAccessUserRole,
+    createAccessUserToken,
+    revokeAccessUserToken,
     runSkillFind,
     runSkillInstall,
     runTask,
@@ -435,7 +451,17 @@ export function App() {
       <section>
         <AgentOverviewStoppedSection
           agent={selectedAgent}
+          model={model}
           onStart={(agentId) => startAgentFromHistory(agentId)}
+          onUpdateExecution={(input) => {
+            if (!selectedAgentId) return
+            void updateAgentExecution({
+              agentId: selectedAgentId,
+              executionMode: input.executionMode,
+              modelId: input.modelId,
+              agentType: input.agentType,
+            })
+          }}
         />
       </section>
     ) : (
@@ -451,7 +477,15 @@ export function App() {
           consoleUiSessionId={constants.CONSOLEUI_SESSION_ID}
           configStatus={configStatus}
           model={model}
-          onSwitchModel={(primaryModelId) => void switchModel(primaryModelId)}
+          onUpdateExecution={(input) => {
+            if (!selectedAgentId) return
+            void updateAgentExecution({
+              agentId: selectedAgentId,
+              executionMode: input.executionMode,
+              modelId: input.modelId,
+              agentType: input.agentType,
+            })
+          }}
           onStartAgent={async () => {
             if (!selectedAgentId) return
             await startAgentFromHistory(selectedAgentId)
@@ -515,9 +549,31 @@ export function App() {
                     agentType: options.agentType,
                   },
                 })}
-              onUpdateAgentExecution={(input) => updateAgentExecution(input)}
               onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
               onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
+            />
+          </section>
+        )
+      case "globalAccess":
+        return (
+          <section>
+            <AccessSection
+              roles={accessRoles}
+              users={accessUsers}
+              selectedUser={selectedAccessUser}
+              tokens={accessTokens}
+              loading={accessLoading}
+              tokensLoading={accessTokensLoading}
+              latestIssuedToken={latestIssuedAccessToken}
+              formatTime={(value) => uiHelpers.formatTime(value ?? undefined)}
+              onSelectUser={(userId) => selectAccessUser(userId)}
+              onRefreshUsers={() => refreshAccessUsers()}
+              onCreateUser={(input) => createAccessUser(input)}
+              onUpdateUser={(input) => updateAccessUser(input)}
+              onSetUserRole={(input) => setAccessUserRole(input)}
+              onCreateToken={(input) => createAccessUserToken(input)}
+              onRevokeToken={(input) => revokeAccessUserToken(input)}
+              onClearLatestIssuedToken={clearLatestIssuedAccessToken}
             />
           </section>
         )
@@ -623,7 +679,6 @@ export function App() {
                     agentType: options.agentType,
                   },
                 })}
-              onUpdateAgentExecution={(input) => updateAgentExecution(input)}
               onRestartAgent={(agentId) => restartAgentFromHistory(agentId)}
               onStopAgent={(agentId) => stopAgentFromHistory(agentId)}
             />

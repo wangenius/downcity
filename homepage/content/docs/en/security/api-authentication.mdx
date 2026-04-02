@@ -5,7 +5,11 @@ description: Bootstrap the first admin, sign in, and use Bearer tokens against D
 
 # API Authentication
 
-Unified Auth V1 adds the first set of authentication endpoints for Downcity:
+Unified Auth V1 adds the first set of authentication endpoints for Downcity.
+The current rollout now covers two layers:
+
+- self-service token management for the signed-in user
+- admin-level user and token management for accounts with `auth.read` / `auth.write`
 
 - `POST /api/auth/bootstrap-admin`
 - `POST /api/auth/login`
@@ -13,6 +17,13 @@ Unified Auth V1 adds the first set of authentication endpoints for Downcity:
 - `GET /api/auth/token/list`
 - `POST /api/auth/token/create`
 - `POST /api/auth/token/revoke`
+- `GET /api/auth/admin/users`
+- `POST /api/auth/admin/users/create`
+- `POST /api/auth/admin/users/:userId/update`
+- `POST /api/auth/admin/users/:userId/roles`
+- `GET /api/auth/admin/users/:userId/tokens`
+- `POST /api/auth/admin/users/:userId/tokens/create`
+- `POST /api/auth/admin/users/:userId/tokens/revoke`
 
 ## First admin bootstrap
 
@@ -94,12 +105,101 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
   }'
 ```
 
+## Manage Console users
+
+If the current account has `auth.read` or `auth.write`, it can manage Console users.
+
+List users:
+
+```bash
+curl http://127.0.0.1:3000/api/auth/admin/users \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+Create a user:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "username": "operator-a",
+    "password": "pass-123456",
+    "displayName": "Operator A",
+    "roleNames": ["operator"]
+  }'
+```
+
+Update display name or status:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/update \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "displayName": "Operator A",
+    "status": "active"
+  }'
+```
+
+Replace roles:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/roles \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "roleNames": ["viewer"]
+  }'
+```
+
+Notes:
+
+- The default role catalog is `admin` / `operator` / `viewer`
+- The system rejects changes that would disable the last active admin or remove the final admin role assignment
+
+## Manage tokens for another user
+
+Admins can inspect, issue, and revoke tokens for any user.
+
+List a user's tokens:
+
+```bash
+curl http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+Issue a token for a user:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "name": "chrome-extension"
+  }'
+```
+
+Revoke a user's token:
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens/revoke \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "tokenId": "token_record_id"
+  }'
+```
+
+Plaintext tokens are still returned only once, at issuance time.
+
 ## Current scope
 
 This rollout covers the V1 auth backbone:
 
 - unified user / role / permission / token / audit tables
 - Bearer token issuance and validation
-- basic token management endpoints
+- self-service token management endpoints
+- admin user directory and cross-user token management endpoints
 
 Later iterations will move more control-plane APIs behind the same Bearer auth layer.

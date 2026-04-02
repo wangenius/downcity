@@ -64,6 +64,7 @@ import {
 import { useDashboardRefresh } from "./dashboard/useDashboardRefresh";
 import { useDashboardSessionActions } from "./dashboard/useDashboardSessionActions";
 import { useDashboardResourceActions } from "./dashboard/useDashboardResourceActions";
+import { useDashboardAccess } from "./dashboard/useDashboardAccess";
 import type {
   UiAgentOption,
   UiChatChannelStatus,
@@ -207,6 +208,29 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     },
     [enterAuthRequiredState, selectedAgentId],
   );
+
+  const {
+    accessRoles,
+    accessUsers,
+    selectedAccessUserId,
+    selectedAccessUser,
+    accessTokens,
+    accessLoading,
+    accessTokensLoading,
+    latestIssuedAccessToken,
+    clearLatestIssuedAccessToken,
+    selectAccessUser,
+    refreshAccessUsers,
+    createAccessUser,
+    updateAccessUser,
+    setAccessUserRole,
+    createAccessUserToken,
+    revokeAccessUserToken,
+  } = useDashboardAccess({
+    enabled: isAuthenticated && !authInitializing && !authRequired,
+    requestJson,
+    showToast,
+  })
 
   const login = useCallback(
     async (input: { username: string; password: string; displayName?: string }) => {
@@ -1017,6 +1041,14 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     selectedAgent,
     overview,
     authorization,
+    accessRoles,
+    accessUsers,
+    selectedAccessUserId,
+    selectedAccessUser,
+    accessTokens,
+    accessLoading,
+    accessTokensLoading,
+    latestIssuedAccessToken,
     services,
     skills,
     plugins,
@@ -1053,6 +1085,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     handleSessionChange,
     refreshDashboard,
     refreshAuthorization,
+    refreshAccessUsers,
     refreshChatChannels,
     refreshPlugins,
     refreshSkills,
@@ -1074,6 +1107,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     configureChatChannel,
     saveAuthorizationConfig,
     runAuthorizationAction,
+    clearLatestIssuedAccessToken,
+    selectAccessUser,
+    createAccessUser,
+    updateAccessUser,
+    setAccessUserRole,
+    createAccessUserToken,
+    revokeAccessUserToken,
     runSkillFind,
     runSkillInstall,
     runSkillLookup,

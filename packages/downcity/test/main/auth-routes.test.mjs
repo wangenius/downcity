@@ -256,3 +256,258 @@ test("token create list and revoke follow authenticated lifecycle", async () => 
     cleanup();
   }
 });
+
+test("auth admin routes can manage users and issue or revoke user tokens", async () => {
+  const { app, cleanup } = createIsolatedApp();
+  try {
+    const bootstrap = await bootstrapAdmin(app);
+    const adminToken = bootstrap.body.token.token;
+
+    const initialUsers = await app.request("/api/auth/admin/users", {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    });
+    const initialUsersBody = await initialUsers.json();
+
+    assert.equal(initialUsers.status, 200);
+    assert.equal(initialUsersBody.success, true);
+    assert.equal(Array.isArray(initialUsersBody.users), true);
+    assert.equal(Array.isArray(initialUsersBody.roles), true);
+    assert.equal(initialUsersBody.users.length, 1);
+
+    const createUser = await app.request("/api/auth/admin/users/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({
+        username: "viewer-user",
+        password: "viewer-pass",
+        displayName: "Viewer User",
+        roleNames: ["viewer"],
+      }),
+    });
+    const createUserBody = await createUser.json();
+
+    assert.equal(createUser.status, 200);
+    assert.equal(createUserBody.success, true);
+    assert.equal(createUserBody.user.username, "viewer-user");
+    assert.deepEqual(createUserBody.user.roles, ["viewer"]);
+
+    const loginViewer = await app.request("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        username: "viewer-user",
+        password: "viewer-pass",
+        tokenName: "viewer-login",
+      }),
+    });
+    const loginViewerBody = await loginViewer.json();
+
+    assert.equal(loginViewer.status, 200);
+    assert.equal(loginViewerBody.success, true);
+    assert.equal(loginViewerBody.token.name, "viewer-login");
+
+    const managedUserId = String(createUserBody.user.id || "");
+    assert.equal(Boolean(managedUserId), true);
+
+    const createManagedToken = await app.request(
+      `/api/auth/admin/users/${encodeURIComponent(managedUserId)}/tokens/create`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          name: "chrome-extension",
+        }),
+      },
+    );
+    const createManagedTokenBody = await createManagedToken.json();
+
+    assert.equal(createManagedToken.status, 200);
+    assert.equal(createManagedTokenBody.success, true);
+    assert.equal(createManagedTokenBody.token.name, "chrome-extension");
+    assert.equal(createManagedTokenBody.token.token.startsWith("dc_"), true);
+
+    const listManagedTokens = await app.request(
+      `/api/auth/admin/users/${encodeURIComponent(managedUserId)}/tokens`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      },
+    );
+    const listManagedTokensBody = await listManagedTokens.json();
+
+    assert.equal(listManagedTokens.status, 200);
+    assert.equal(listManagedTokensBody.success, true);
+    assert.equal(Array.isArray(listManagedTokensBody.tokens), true);
+    assert.equal(listManagedTokensBody.tokens.length, 2);
+
+    const revokeManagedTokenTarget = listManagedTokensBody.tokens.find(
+      (item) => item.name === "viewer-login",
+    );
+    assert.equal(Boolean(revokeManagedTokenTarget?.id), true);
+
+    const revokeManagedToken = await app.request(
+      `/api/auth/admin/users/${encodeURIComponent(managedUserId)}/tokens/revoke`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          tokenId: revokeManagedTokenTarget.id,
+        }),
+      },
+    );
+    const revokeManagedTokenBody = await revokeManagedToken.json();
+
+    assert.equal(revokeManagedToken.status, 200);
+    assert.equal(revokeManagedTokenBody.success, true);
+    assert.equal(revokeManagedTokenBody.token.id, revokeManagedTokenTarget.id);
+    assert.equal(typeof revokeManagedTokenBody.token.revokedAt, "string");
+
+    const revokedViewerMe = await app.request("/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${loginViewerBody.token.token}`,
+      },
+    });
+    const revokedViewerMeBody = await revokedViewerMe.json();
+
+    assert.equal(revokedViewerMe.status, 401);
+    assert.equal(revokedViewerMeBody.success, false);
+
+    const updateRoles = await app.request(
+      `/api/auth/admin/users/${encodeURIComponent(managedUserId)}/roles`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          roleNames: ["operator"],
+        }),
+      },
+    );
+    const updateRolesBody = await updateRoles.json();
+
+    assert.equal(updateRoles.status, 200);
+    assert.equal(updateRolesBody.success, true);
+    assert.deepEqual(updateRolesBody.user.roles, ["operator"]);
+
+    const disableUser = await app.request(
+      `/api/auth/admin/users/${encodeURIComponent(managedUserId)}/update`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          status: "disabled",
+        }),
+      },
+    );
+    const disableUserBody = await disableUser.json();
+
+    assert.equal(disableUser.status, 200);
+    assert.equal(disableUserBody.success, true);
+    assert.equal(disableUserBody.user.status, "disabled");
+
+    const disabledLogin = await app.request("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        username: "viewer-user",
+        password: "viewer-pass",
+      }),
+    });
+    const disabledLoginBody = await disabledLogin.json();
+
+    assert.equal(disabledLogin.status, 403);
+    assert.equal(disabledLoginBody.success, false);
+  } finally {
+    cleanup();
+  }
+});
+
+test("auth admin write routes reject users without auth.write permission", async () => {
+  const { app, cleanup } = createIsolatedApp();
+  try {
+    await bootstrapAdmin(app);
+
+    const adminLogin = await app.request("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        username: "admin",
+        password: "pass-123456",
+        tokenName: "admin-login",
+      }),
+    });
+    const adminLoginBody = await adminLogin.json();
+    const adminToken = adminLoginBody.token.token;
+
+    const createViewer = await app.request("/api/auth/admin/users/create", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({
+        username: "viewer-only",
+        password: "viewer-pass",
+        roleNames: ["viewer"],
+      }),
+    });
+    const createViewerBody = await createViewer.json();
+    const viewerUserId = String(createViewerBody.user.id || "");
+
+    const viewerLogin = await app.request("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        username: "viewer-only",
+        password: "viewer-pass",
+        tokenName: "viewer-login",
+      }),
+    });
+    const viewerLoginBody = await viewerLogin.json();
+
+    const writeAttempt = await app.request(
+      `/api/auth/admin/users/${encodeURIComponent(viewerUserId)}/roles`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${viewerLoginBody.token.token}`,
+        },
+        body: JSON.stringify({
+          roleNames: ["operator"],
+        }),
+      },
+    );
+    const writeAttemptBody = await writeAttempt.json();
+
+    assert.equal(writeAttempt.status, 403);
+    assert.equal(writeAttemptBody.success, false);
+  } finally {
+    cleanup();
+  }
+});

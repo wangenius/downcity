@@ -6,6 +6,10 @@ description: 如何初始化管理员、登录并使用 Bearer Token 调用 Down
 # API 认证
 
 从统一账户 V1 开始，Downcity 提供一组基础认证接口，用来初始化首个管理员、登录，以及管理访问 token。
+当前这套接口已经覆盖两层能力：
+
+- 当前登录用户管理自己的 token
+- 具备 `auth.read` / `auth.write` 权限的管理员管理 Console 级用户与用户 token
 
 当前已经落地的接口是：
 
@@ -15,6 +19,13 @@ description: 如何初始化管理员、登录并使用 Bearer Token 调用 Down
 - `GET /api/auth/token/list`
 - `POST /api/auth/token/create`
 - `POST /api/auth/token/revoke`
+- `GET /api/auth/admin/users`
+- `POST /api/auth/admin/users/create`
+- `POST /api/auth/admin/users/:userId/update`
+- `POST /api/auth/admin/users/:userId/roles`
+- `GET /api/auth/admin/users/:userId/tokens`
+- `POST /api/auth/admin/users/:userId/tokens/create`
+- `POST /api/auth/admin/users/:userId/tokens/revoke`
 
 ## 第一次使用
 
@@ -96,12 +107,101 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
   }'
 ```
 
+## 管理 Console 用户
+
+当当前账号拥有 `auth.read` 或 `auth.write` 权限时，可以继续管理 Console 级用户。
+
+查看用户目录：
+
+```bash
+curl http://127.0.0.1:3000/api/auth/admin/users \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+创建新用户：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "username": "operator-a",
+    "password": "pass-123456",
+    "displayName": "Operator A",
+    "roleNames": ["operator"]
+  }'
+```
+
+更新用户展示名或启用状态：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/update \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "displayName": "Operator A",
+    "status": "active"
+  }'
+```
+
+更新用户角色：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/roles \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "roleNames": ["viewer"]
+  }'
+```
+
+说明：
+
+- 当前默认角色目录是 `admin` / `operator` / `viewer`
+- 系统会阻止“禁用最后一个激活中的 admin”或“移除最后一个 admin 角色”这类操作
+
+## 管理指定用户的 Token
+
+管理员可以查看、签发和吊销任意用户的 token。
+
+查看某个用户的 token：
+
+```bash
+curl http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+为某个用户签发 token：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "name": "chrome-extension"
+  }'
+```
+
+吊销某个用户的 token：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens/revoke \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "tokenId": "token_record_id"
+  }'
+```
+
+明文 token 依旧只会在签发当次返回一次，后续列表里只能看到摘要信息。
+
 ## 当前边界
 
 这次落地的是统一账户 V1 的认证主干：
 
 - 已有统一用户表、角色表、权限表、token 表、审计日志表
 - 已有 Bearer Token 签发与校验
-- 已有基础 token 管理接口
+- 已有当前用户 token 管理接口
+- 已有管理员用户目录与跨用户 token 管理接口
 
 后续版本会继续把更多控制面接口切到统一 Bearer 鉴权。

@@ -193,19 +193,20 @@ function extractSetupOptions(field: UiPluginSetupField, data: unknown): UiPlugin
     : Array.isArray(payload?.models)
       ? payload.models
       : []
+  const options: UiPluginSetupFieldOption[] = []
 
-  return optionRows
-    .map((item) => {
-      const row = item && typeof item === "object" ? (item as Record<string, unknown>) : null
-      const value = String(row?.value || row?.id || "").trim()
-      if (!value) return null
-      return {
-        label: String(row?.label || value).trim() || value,
-        value,
-        hint: String(row?.hint || row?.description || "").trim() || undefined,
-      }
+  for (const item of optionRows) {
+    const row = item && typeof item === "object" ? (item as Record<string, unknown>) : null
+    const value = String(row?.value || row?.id || "").trim()
+    if (!value) continue
+    options.push({
+      label: String(row?.label || value).trim() || value,
+      value,
+      hint: String(row?.hint || row?.description || "").trim() || undefined,
     })
-    .filter((item): item is UiPluginSetupFieldOption => Boolean(item))
+  }
+
+  return options
 }
 
 function buildSetupPayload(setup: UiPluginSetupDefinition | undefined, draft: SetupDraftState): Record<string, unknown> {

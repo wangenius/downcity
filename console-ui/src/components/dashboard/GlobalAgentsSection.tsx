@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 主路径是“打开文件夹”，而不是先创建抽象 agent 条目。
- * - 初始化与编辑统一收敛到同一份 execution 表单。
+ * - execution 只在 agent overview main 中编辑，这里只负责接入与运行控制。
  * - 项目执行模式只分两类：`model` 或 `acp`。
  */
 
@@ -12,7 +12,6 @@ import {
   BotIcon,
   FolderOpenIcon,
   Loader2Icon,
-  PencilLineIcon,
   PlayIcon,
   RotateCwIcon,
   SquareIcon,
@@ -34,7 +33,6 @@ import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { UiAgentDirectoryInspection, UiAgentOption, UiModelPoolItem } from "@/types/Dashboard"
 
 type AgentExecutionChoice = "model" | "kimi" | "claude" | "codex"
-type AgentDialogMode = "initialize" | "edit"
 
 type AgentFormState = {
   projectRoot: string
@@ -95,12 +93,6 @@ export interface GlobalAgentsSectionProps {
     modelId?: string
     agentType?: string
   }) => void
-  onUpdateAgentExecution: (input: {
-    agentId: string
-    executionMode: "model" | "acp"
-    modelId?: string
-    agentType?: string
-  }) => void
 }
 
 export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
@@ -113,7 +105,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
     onStopAgent,
     onStartAgent,
     onStartAgentWithInitialization,
-    onUpdateAgentExecution,
   } = props
   const confirm = useConfirmDialog()
   const [startingAgentId, setStartingAgentId] = React.useState("")
@@ -121,7 +112,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   const [stoppingAgentId, setStoppingAgentId] = React.useState("")
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [dialogTargetAgentId, setDialogTargetAgentId] = React.useState("")
-  const [dialogMode, setDialogMode] = React.useState<AgentDialogMode>("initialize")
   const [pickingDirectory, setPickingDirectory] = React.useState(false)
   const [submittingDialog, setSubmittingDialog] = React.useState(false)
   const activeModelOptions = React.useMemo(
@@ -148,7 +138,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
   const resetDialog = React.useCallback(() => {
     setDialogOpen(false)
     setDialogTargetAgentId("")
-    setDialogMode("initialize")
     setSubmittingDialog(false)
     setForm(createEmptyForm(defaultModelId))
   }, [defaultModelId])
@@ -160,10 +149,8 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
     executionMode?: "model" | "acp"
     modelId?: string
     agentType?: string
-    mode: AgentDialogMode
   }) => {
     setDialogTargetAgentId(String(input.agentId || input.projectRoot || "").trim())
-    setDialogMode(input.mode)
     setForm({
       projectRoot: String(input.projectRoot || "").trim(),
       agentName: String(input.agentName || "").trim(),
@@ -200,7 +187,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
         executionMode: inspection.executionMode,
         modelId: inspection.modelId,
         agentType: inspection.agentType,
-        mode: "initialize",
       })
     } finally {
       setPickingDirectory(false)
@@ -214,7 +200,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
       if (!projectRoot) return
       const inspection = await onInspectAgentDirectory(projectRoot)
       if (!inspection) return
-      if (inspection.initialized && dialogMode === "initialize") {
+      if (inspection.initialized) {
         resetDialog()
         try {
           setStartingAgentId(inspection.projectRoot)
@@ -238,7 +224,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
     } finally {
       setPickingDirectory(false)
     }
-  }, [dialogMode, onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, resetDialog])
+  }, [onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, resetDialog])
 
   const canSubmitDialog =
     Boolean(String(form.projectRoot || "").trim()) &&
@@ -322,25 +308,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                       {`port ${isRunning ? String(agent.port || "-") : "-"}`}
                     </span>
                     <div className="ml-auto flex items-center gap-1.5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className={dashboardIconButtonClass}
-                        disabled={isStarting || isRestarting || isStopping}
-                        aria-label="编辑 execution"
-                        title="编辑 execution"
-                        onClick={() => openExecutionDialog({
-                          agentId: agent.id,
-                          projectRoot: String(agent.projectRoot || agent.id || "").trim(),
-                          agentName: String(agent.name || "").trim(),
-                          executionMode: agent.executionMode,
-                          modelId: String(agent.modelId || "").trim(),
-                          agentType: String(agent.agentType || "").trim(),
-                          mode: "edit",
-                        })}
-                      >
-                        {isRunning ? <PencilLineIcon className="size-4" /> : <WandSparklesIcon className="size-4" />}
-                      </Button>
                       {isRunning ? (
                         <>
                           <Button
@@ -427,12 +394,10 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
               </div>
               <div className="min-w-0 space-y-1">
                 <DialogTitle className="text-[1.05rem] font-semibold tracking-[0.01em]">
-                  {dialogMode === "edit" ? "编辑 Agent Execution" : "初始化并启动 Agent"}
+                  初始化并启动 Agent
                 </DialogTitle>
                 <DialogDescription className="max-w-[46ch] text-[12px] leading-5 text-muted-foreground">
-                  {dialogMode === "edit"
-                    ? "直接更新 downcity.json.execution。保存后需重启 agent 才会完整生效。"
-                    : "当前文件夹还没有完成 Downcity 初始化。确认后会补齐运行骨架，再把它接入 Console。"}
+                  当前文件夹还没有完成 Downcity 初始化。确认后会补齐运行骨架，再把它接入 Console。
                 </DialogDescription>
               </div>
             </div>
@@ -491,7 +456,7 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                 </Button>
               </div>
               <p className="mt-3 text-[12px] leading-5 text-muted-foreground">
-                已初始化目录可以直接启动，也可以编辑 execution；未初始化目录会自动补齐 `PROFILE.md`、`SOUL.md` 和 `downcity.json`。
+                已初始化目录会直接启动；未初始化目录会自动补齐 `PROFILE.md`、`SOUL.md` 和 `downcity.json`。
               </p>
             </div>
 
@@ -574,13 +539,9 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
               <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">What Will Be Written</div>
               <div className="mt-2 flex flex-wrap gap-2 text-[12px] text-foreground/78">
                 <span className="rounded-full bg-background/85 px-2.5 py-1">`downcity.json.execution`</span>
-                {dialogMode === "initialize" ? (
-                  <>
-                    <span className="rounded-full bg-background/85 px-2.5 py-1">`PROFILE.md`</span>
-                    <span className="rounded-full bg-background/85 px-2.5 py-1">`SOUL.md`</span>
-                    <span className="rounded-full bg-background/85 px-2.5 py-1">`.downcity/*`</span>
-                  </>
-                ) : null}
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`PROFILE.md`</span>
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`SOUL.md`</span>
+                <span className="rounded-full bg-background/85 px-2.5 py-1">`.downcity/*`</span>
               </div>
             </div>
           </div>
@@ -600,27 +561,20 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
                     form.executionChoice === "model"
                       ? { executionMode: "model" as const, modelId: form.modelId.trim() }
                       : { executionMode: "acp" as const, agentType: form.executionChoice }
-                  if (dialogMode === "edit") {
-                    await Promise.resolve(onUpdateAgentExecution({
-                      agentId: dialogTargetAgentId || form.projectRoot.trim(),
+                  await Promise.resolve(onStartAgentWithInitialization(
+                    dialogTargetAgentId || form.projectRoot.trim(),
+                    {
+                      agentName: form.agentName.trim() || undefined,
                       ...executionPayload,
-                    }))
-                  } else {
-                    await Promise.resolve(onStartAgentWithInitialization(
-                      dialogTargetAgentId || form.projectRoot.trim(),
-                      {
-                        agentName: form.agentName.trim() || undefined,
-                        ...executionPayload,
-                      },
-                    ))
-                  }
+                    },
+                  ))
                   resetDialog()
                 } finally {
                   setSubmittingDialog(false)
                 }
               }}
             >
-              {submittingDialog ? <Loader2Icon className="size-4 animate-spin" /> : dialogMode === "edit" ? "保存 Execution" : "初始化并启动"}
+              {submittingDialog ? <Loader2Icon className="size-4 animate-spin" /> : "初始化并启动"}
             </Button>
           </DialogFooter>
         </DialogContent>

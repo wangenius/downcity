@@ -81,9 +81,13 @@ export interface SummaryCardsProps {
    */
   model: UiModelSummary | null
   /**
-   * 切换 model.primary。
+   * 更新当前 agent 的 execution。
    */
-  onSwitchModel: (primaryModelId: string) => void
+  onUpdateExecution: (input: {
+    executionMode: "model" | "acp"
+    modelId?: string
+    agentType?: string
+  }) => void
   /**
    * 启动当前 agent。
    */
@@ -183,6 +187,27 @@ function ServiceActionIcon(props: { action: string }) {
   return <SquareIcon className="size-3.5" />
 }
 
+type SummaryExecutionChoice = "model" | "kimi" | "claude" | "codex"
+
+/**
+ * 关键点（中文）：overview 主区直接使用统一 execution 选项，避免把 ACP 编辑分散到别处。
+ */
+function deriveExecutionChoice(input: {
+  executionMode?: "model" | "acp"
+  agentType?: string
+}): SummaryExecutionChoice {
+  if (input.executionMode === "model" || !input.executionMode) return "model"
+  const agentType = String(input.agentType || "").trim()
+  if (agentType === "kimi" || agentType === "claude" || agentType === "codex") {
+    return agentType
+  }
+  return "kimi"
+}
+
+function readExecutionBadge(choice: SummaryExecutionChoice): string {
+  return choice === "model" ? "model" : `acp ${choice}`
+}
+
 export function SummaryCards(props: SummaryCardsProps) {
   const {
     selectedAgent,
@@ -195,7 +220,7 @@ export function SummaryCards(props: SummaryCardsProps) {
     consoleUiSessionId,
     configStatus,
     model,
-    onSwitchModel,
+    onUpdateExecution,
     onStartAgent,
     onRestartAgent,
     onStopAgent,
@@ -230,13 +255,24 @@ export function SummaryCards(props: SummaryCardsProps) {
   const currentModelId = String(
     model?.agentPrimaryModelId || model?.primaryModelId || selectedAgent?.modelId || "",
   ).trim()
-  const [targetModelId, setTargetModelId] = React.useState(currentModelId)
+  const fallbackModelId = String(availableModels[0]?.id || "").trim()
+  const resolvedModelId = currentModelId || fallbackModelId
+  const currentExecutionChoice = deriveExecutionChoice({
+    executionMode: selectedAgent?.executionMode,
+    agentType: selectedAgent?.agentType,
+  })
+  const [targetModelId, setTargetModelId] = React.useState(resolvedModelId)
+  const [targetExecutionChoice, setTargetExecutionChoice] = React.useState<SummaryExecutionChoice>(currentExecutionChoice)
   const [pendingAgentAction, setPendingAgentAction] = React.useState<"" | "start" | "restart" | "stop">("")
   const [pendingServiceActions, setPendingServiceActions] = React.useState<Record<string, boolean>>({})
 
   React.useEffect(() => {
-    setTargetModelId(currentModelId)
-  }, [currentModelId])
+    setTargetModelId(resolvedModelId)
+  }, [resolvedModelId])
+
+  React.useEffect(() => {
+    setTargetExecutionChoice(currentExecutionChoice)
+  }, [currentExecutionChoice])
 
   const isServiceActionPending = React.useCallback(
     (key: string) => Boolean(pendingServiceActions[key]),
@@ -458,10 +494,10 @@ export function SummaryCards(props: SummaryCardsProps) {
       </DashboardModule>
 
       <DashboardModule
-        title="Model"
+        title="Execution"
         actions={
           <>
-            <SurfaceTag>{model?.providerType || "provider -"}</SurfaceTag>
+            <SurfaceTag>{readExecutionBadge(currentExecutionChoice)}</SurfaceTag>
             <SurfaceTag>{`available ${availableModels.length}`}</SurfaceTag>
           </>
         }
@@ -469,7 +505,7 @@ export function SummaryCards(props: SummaryCardsProps) {
         <div className="rounded-[18px] bg-secondary/85 p-2">
           <div className="rounded-[14px] bg-transparent px-3 py-3">
             <div className="grid gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:items-center">
-              <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Primary</div>
+              <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Runtime</div>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -481,34 +517,112 @@ export function SummaryCards(props: SummaryCardsProps) {
                   }
                 >
                   <span className="truncate">
-                    {targetModelId || "选择 model.primary"}
+                    {targetExecutionChoice === "model" ? "Model" : `ACP · ${targetExecutionChoice}`}
                   </span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="max-h-72 min-w-[20rem]">
-                  {availableModels.length === 0 ? (
-                    <DropdownMenuItem disabled>无可选模型</DropdownMenuItem>
-                  ) : (
-                    availableModels.map((item) => {
-                      const modelId = String(item.id || "").trim()
-                      if (!modelId) return null
-                      return (
-                        <DropdownMenuItem
-                          key={modelId}
-                          onClick={() => {
-                            const nextModelId = String(modelId || "").trim()
-                            setTargetModelId(nextModelId)
-                            if (!nextModelId || nextModelId === currentModelId) return
-                            onSwitchModel(nextModelId)
-                          }}
-                        >
-                          {`${modelId} · ${item.providerType || "-"}${item.isPaused ? " · paused" : ""}`}
-                        </DropdownMenuItem>
-                      )
-                    })
-                  )}
+                  <DropdownMenuItem
+                    disabled={!resolvedModelId}
+                    onClick={() => {
+                      if (!resolvedModelId) return
+                      setTargetExecutionChoice("model")
+                      setTargetModelId(resolvedModelId)
+                      if (currentExecutionChoice === "model" && resolvedModelId === currentModelId) return
+                      onUpdateExecution({
+                        executionMode: "model",
+                        modelId: resolvedModelId,
+                      })
+                    }}
+                  >
+                    {resolvedModelId ? `Model · ${resolvedModelId}` : "Model · 无可用模型"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setTargetExecutionChoice("kimi")
+                      if (currentExecutionChoice === "kimi") return
+                      onUpdateExecution({
+                        executionMode: "acp",
+                        agentType: "kimi",
+                      })
+                    }}
+                  >
+                    ACP · Kimi
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setTargetExecutionChoice("claude")
+                      if (currentExecutionChoice === "claude") return
+                      onUpdateExecution({
+                        executionMode: "acp",
+                        agentType: "claude",
+                      })
+                    }}
+                  >
+                    ACP · Claude
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setTargetExecutionChoice("codex")
+                      if (currentExecutionChoice === "codex") return
+                      onUpdateExecution({
+                        executionMode: "acp",
+                        agentType: "codex",
+                      })
+                    }}
+                  >
+                    ACP · Codex
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            {targetExecutionChoice === "model" ? (
+              <div className="mt-3 grid gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:items-center">
+                <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Model</div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 justify-start rounded-[12px] bg-background px-3 text-left text-sm font-medium"
+                      />
+                    }
+                  >
+                    <span className="truncate">
+                      {targetModelId || "选择 execution.modelId"}
+                    </span>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="max-h-72 min-w-[20rem]">
+                    {availableModels.length === 0 ? (
+                      <DropdownMenuItem disabled>无可选模型</DropdownMenuItem>
+                    ) : (
+                      availableModels.map((item) => {
+                        const modelId = String(item.id || "").trim()
+                        if (!modelId) return null
+                        return (
+                          <DropdownMenuItem
+                            key={modelId}
+                            onClick={() => {
+                              const nextModelId = String(modelId || "").trim()
+                              setTargetModelId(nextModelId)
+                              if (!nextModelId || (currentExecutionChoice === "model" && nextModelId === currentModelId)) {
+                                return
+                              }
+                              onUpdateExecution({
+                                executionMode: "model",
+                                modelId: nextModelId,
+                              })
+                            }}
+                          >
+                            {`${modelId} · ${item.providerType || "-"}${item.isPaused ? " · paused" : ""}`}
+                          </DropdownMenuItem>
+                        )
+                      })
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
           </div>
         </div>
       </DashboardModule>

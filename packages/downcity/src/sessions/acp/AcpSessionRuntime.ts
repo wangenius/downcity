@@ -14,7 +14,11 @@ import type { PersistorComponent } from "@sessions/components/PersistorComponent
 import type { PrompterComponent } from "@sessions/components/PrompterComponent.js";
 import { requestContext, withRequestContext } from "@sessions/RequestContext.js";
 import type { SessionMessageV1 } from "@/types/SessionMessage.js";
-import type { SessionRunInput, SessionRunResult } from "@/types/SessionRun.js";
+import type {
+  SessionAssistantStepCallback,
+  SessionRunInput,
+  SessionRunResult,
+} from "@/types/SessionRun.js";
 import type { SessionRuntimeLike } from "@/types/SessionRuntime.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpSessionSupport.js";
 import { generateId } from "@utils/Id.js";
@@ -28,6 +32,12 @@ type PendingRequest = {
 
 type PromptCollector = {
   chunks: string[];
+};
+
+type AssistantProgressState = {
+  callback: SessionAssistantStepCallback | null;
+  buffer: string;
+  stepIndex: number;
 };
 
 type AcpJsonRpcEnvelope = {
@@ -62,6 +72,8 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
   private readonly pendingById = new Map<JsonRpcId, PendingRequest>();
   private activePromptRequestId: JsonRpcId | null = null;
   private activePromptCollector: PromptCollector | null = null;
+  private activeAssistantProgress: AssistantProgressState | null = null;
+  private stdoutProcessing: Promise<void> = Promise.resolve();
 
   constructor(options: {
     rootPath: string;
@@ -112,15 +124,25 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
         });
         this.activePromptRequestId = requestId;
         this.activePromptCollector = { chunks: [] };
+        this.activeAssistantProgress = {
+          callback:
+            typeof nextContext.onAssistantStepCallback === "function"
+              ? nextContext.onAssistantStepCallback
+              : null,
+          buffer: "",
+          stepIndex: 0,
+        };
 
         const response = (await this.waitForRequest(requestId)) as {
           stopReason?: unknown;
         } | null;
         const stopReason = String(response?.stopReason || "").trim() || "unknown";
+        await this.flushAssistantProgress(true);
         const text = this.activePromptCollector.chunks.join("").trim();
         this.bootstrapped = true;
         this.activePromptCollector = null;
         this.activePromptRequestId = null;
+        this.activeAssistantProgress = null;
 
         if (!text) {
           throw new Error(`ACP agent returned no text output (stopReason=${stopReason})`);
@@ -144,6 +166,7 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
         this.running = false;
         this.activePromptCollector = null;
         this.activePromptRequestId = null;
+        this.activeAssistantProgress = null;
       }
     });
   }
@@ -204,7 +227,14 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
     this.child = child;
     this.stdoutReader = createInterface({ input: child.stdout });
     this.stdoutReader.on("line", (line) => {
-      void this.onStdoutLine(line);
+      this.stdoutProcessing = this.stdoutProcessing
+        .then(() => this.onStdoutLine(line))
+        .catch(async (error) => {
+          await this.logger.log("warn", "[acp] stdout_processing_failed", {
+            sessionId: this.sessionId,
+            error: String(error),
+          });
+        });
     });
     child.stderr.on("data", (chunk) => {
       const text = String(chunk || "").trim();
@@ -367,6 +397,35 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
     const text = String(content.text || "");
     if (!text) return;
     this.activePromptCollector?.chunks.push(text);
+    const progress = this.activeAssistantProgress;
+    if (!progress || typeof progress.callback !== "function") return;
+    progress.buffer += text;
+    await this.flushAssistantProgress(false);
+  }
+
+  private async flushAssistantProgress(force: boolean): Promise<void> {
+    const progress = this.activeAssistantProgress;
+    if (!progress || typeof progress.callback !== "function") return;
+    const normalized = String(progress.buffer || "");
+    if (!normalized.trim()) {
+      progress.buffer = normalized;
+      return;
+    }
+    if (!force && !shouldFlushAssistantProgress(normalized)) {
+      return;
+    }
+
+    progress.stepIndex += 1;
+    const text = normalized.trim();
+    progress.buffer = "";
+    try {
+      await progress.callback({
+        text,
+        stepIndex: progress.stepIndex,
+      });
+    } catch {
+      // ignore assistant progress callback failures
+    }
   }
 
   private handleResponse(id: number, envelope: AcpJsonRpcEnvelope): void {
@@ -479,4 +538,13 @@ function formatJsonRpcError(error: unknown): string {
     return `${message} (code=${String(code)})`;
   }
   return message || JSON.stringify(error);
+}
+
+function shouldFlushAssistantProgress(text: string): boolean {
+  const normalized = String(text || "");
+  if (!normalized.trim()) return false;
+  if (normalized.includes("\n\n")) return true;
+  if (normalized.includes("\n")) return true;
+  if (/[。！？.!?]\s*$/.test(normalized)) return true;
+  return normalized.trim().length >= 120;
 }

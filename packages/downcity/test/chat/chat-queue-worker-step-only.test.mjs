@@ -3,7 +3,7 @@
  *
  * 覆盖点（中文）
  * - direct 模式下只发送 step 结束文本。
- * - run 结束后的最终 assistant 文本不再额外回发。
+ * - run 结束后的最终 assistant 文本仅在“已有 step 回发”时跳过。
  */
 
 import assert from "node:assert/strict";
@@ -38,7 +38,7 @@ async function waitFor(check, timeoutMs = 2_000, intervalMs = 10) {
   throw new Error(`waitFor timeout after ${timeoutMs}ms`);
 }
 
-test("ChatQueueWorker only dispatches step text and never sends final assistant text", { concurrency: false }, async (t) => {
+test("ChatQueueWorker only dispatches step text when assistant steps already exist", { concurrency: false }, async (t) => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-chat-step-only-"));
   const laneKey = `telegram-chat-step-only-${Date.now()}`;
   const previous = getChatSender(TELEGRAM_CHANNEL);
@@ -143,4 +143,109 @@ test("ChatQueueWorker only dispatches step text and never sends final assistant 
   await sleep(120);
 
   assert.deepEqual(sentTexts, ["step-visible-text"]);
+});
+
+test("ChatQueueWorker dispatches final assistant text when no assistant step was emitted", { concurrency: false }, async (t) => {
+  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-chat-final-send-"));
+  const laneKey = `telegram-chat-final-send-${Date.now()}`;
+  const previous = getChatSender(TELEGRAM_CHANNEL);
+  const sentTexts = [];
+  const appendedAssistantTexts = [];
+  const context = {
+    rootPath,
+    env: {},
+    config: {
+      services: {
+        chat: {},
+      },
+    },
+    plugins: {
+      async pipeline(_pointName, value) {
+        return value;
+      },
+      async effect() {},
+    },
+    session: {
+      async run(params) {
+        return {
+          success: true,
+          assistantMessage: {
+            id: "a:test:final-only",
+            role: "assistant",
+            metadata: {
+              v: 1,
+              ts: Date.now(),
+              sessionId: params.sessionId,
+            },
+            parts: [{ type: "text", text: "final-visible-text" }],
+          },
+        };
+      },
+      async appendUserMessage() {},
+      async appendAssistantMessage(params) {
+        appendedAssistantTexts.push(String(params?.message?.parts?.[0]?.text || params?.fallbackText || ""));
+      },
+      clearRuntime() {},
+    },
+    logger: {
+      warn() {},
+    },
+  };
+
+  clearChatQueueLane(laneKey);
+  registerChatSender(TELEGRAM_CHANNEL, {
+    async sendText(payload) {
+      sentTexts.push(String(payload.text || ""));
+      return { success: true };
+    },
+  });
+
+  const worker = new ChatQueueWorker({
+    logger: {
+      info() {},
+      warn() {},
+      error() {},
+      debug() {},
+    },
+    context,
+    config: {
+      maxConcurrency: 1,
+      mergeDebounceMs: 0,
+      mergeMaxWaitMs: 0,
+    },
+  });
+
+  t.after(async () => {
+    worker.stop();
+    clearChatQueueLane(laneKey);
+    if (previous) {
+      registerChatSender(TELEGRAM_CHANNEL, previous);
+    } else {
+      unregisterChatSender(TELEGRAM_CHANNEL);
+    }
+    await fs.rm(rootPath, { recursive: true, force: true });
+  });
+
+  await upsertChatMetaBySessionId({
+    context,
+    sessionId: laneKey,
+    channel: TELEGRAM_CHANNEL,
+    chatId: "final-only-chat",
+  });
+
+  worker.start();
+  enqueueChatQueue({
+    kind: "exec",
+    channel: TELEGRAM_CHANNEL,
+    targetId: "final-only-chat",
+    sessionId: laneKey,
+    text: "run final only",
+    messageId: "4001",
+  });
+
+  await waitFor(() => sentTexts.length >= 1);
+  await sleep(120);
+
+  assert.deepEqual(sentTexts, ["final-visible-text"]);
+  assert.deepEqual(appendedAssistantTexts, ["final-visible-text"]);
 });

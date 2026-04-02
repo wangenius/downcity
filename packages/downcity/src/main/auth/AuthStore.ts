@@ -239,6 +239,26 @@ export class AuthStore {
   }
 
   /**
+   * 更新用户密码哈希。
+   */
+  updateUserPasswordHash(params: {
+    userId: string;
+    passwordHash: string;
+  }): AuthUser | null {
+    const userId = normalizeNonEmptyText(params.userId, "userId");
+    const passwordHash = normalizeNonEmptyText(params.passwordHash, "passwordHash");
+    const current = this.getUserById(userId);
+    if (!current) return null;
+    const updatedAt = nowIso();
+    this.sqlite
+      .prepare(
+        "UPDATE auth_users SET password_hash = ?, updated_at = ? WHERE id = ?",
+      )
+      .run(passwordHash, updatedAt, userId);
+    return this.getUserById(userId);
+  }
+
+  /**
    * 给用户绑定角色。
    */
   assignRoleToUser(params: { userId: string; roleName: AuthDefaultRoleName | string }): void {

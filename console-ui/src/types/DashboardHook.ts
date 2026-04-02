@@ -44,11 +44,10 @@ import type {
   UiCommandExecuteResult,
 } from "./Dashboard";
 import type {
-  UiAuthAdminIssuedToken,
-  UiAuthAdminRoleCatalogItem,
-  UiAuthAdminTokenSummary,
-  UiAuthAdminUserSummary,
-} from "./AuthAdmin";
+  UiAuthAccessIssuedToken,
+  UiAuthAccessTokenSummary,
+  UiAuthAccessUser,
+} from "./AuthAccess";
 
 /**
  * toast 类型。
@@ -140,29 +139,14 @@ export interface UseConsoleDashboardResult {
   authorization: UiChatAuthorizationResponse | null;
 
   /**
-   * 统一账户角色目录。
+   * 当前管理员摘要。
    */
-  accessRoles: UiAuthAdminRoleCatalogItem[];
+  accessUser: UiAuthAccessUser | null;
 
   /**
-   * 统一账户用户列表。
+   * 当前管理员 token 列表。
    */
-  accessUsers: UiAuthAdminUserSummary[];
-
-  /**
-   * 当前选中的统一账户用户 ID。
-   */
-  selectedAccessUserId: string;
-
-  /**
-   * 当前选中的统一账户用户。
-   */
-  selectedAccessUser: UiAuthAdminUserSummary | null;
-
-  /**
-   * 当前选中用户的 token 列表。
-   */
-  accessTokens: UiAuthAdminTokenSummary[];
+  accessTokens: UiAuthAccessTokenSummary[];
 
   /**
    * 当前是否正在加载统一账户用户目录。
@@ -170,14 +154,9 @@ export interface UseConsoleDashboardResult {
   accessLoading: boolean;
 
   /**
-   * 当前是否正在加载选中用户的 token 列表。
-   */
-  accessTokensLoading: boolean;
-
-  /**
    * 最近一次新签发的明文 token。
    */
-  latestIssuedAccessToken: UiAuthAdminIssuedToken | null;
+  latestIssuedAccessToken: UiAuthAccessIssuedToken | null;
 
   /**
    * service 状态列表。
@@ -360,9 +339,9 @@ export interface UseConsoleDashboardResult {
   refreshAuthorization: (agentId: string) => Promise<void>;
 
   /**
-   * 刷新统一账户用户目录。
+   * 刷新当前管理员 Access 状态。
    */
-  refreshAccessUsers: (preferredUserId?: string) => Promise<void>;
+  refreshAccess: () => Promise<void>;
 
   /**
    * 刷新 chat 渠道状态。
@@ -466,51 +445,25 @@ export interface UseConsoleDashboardResult {
   clearLatestIssuedAccessToken: () => void;
 
   /**
-   * 切换当前选中的统一账户用户。
+   * 更新当前管理员密码。
    */
-  selectAccessUser: (userId: string) => Promise<void>;
-
-  /**
-   * 创建统一账户用户。
-   */
-  createAccessUser: (input: {
-    username: string;
-    password: string;
-    displayName?: string;
-    roleName: string;
+  updateAccessPassword: (input: {
+    currentPassword: string;
+    nextPassword: string;
   }) => Promise<void>;
 
   /**
-   * 更新统一账户用户状态或展示名。
+   * 为当前管理员签发 token。
    */
-  updateAccessUser: (input: {
-    userId: string;
-    displayName?: string;
-    status: "active" | "disabled";
-  }) => Promise<void>;
-
-  /**
-   * 更新统一账户用户角色。
-   */
-  setAccessUserRole: (input: {
-    userId: string;
-    roleName: string;
-  }) => Promise<void>;
-
-  /**
-   * 为统一账户用户签发 token。
-   */
-  createAccessUserToken: (input: {
-    userId: string;
+  createAccessToken: (input: {
     name: string;
     expiresAt?: string;
   }) => Promise<void>;
 
   /**
-   * 吊销统一账户用户 token。
+   * 吊销当前管理员 token。
    */
-  revokeAccessUserToken: (input: {
-    userId: string;
+  revokeAccessToken: (input: {
     tokenId: string;
   }) => Promise<void>;
 

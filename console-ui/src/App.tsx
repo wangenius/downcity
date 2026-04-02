@@ -73,12 +73,9 @@ export function App() {
     selectedAgent,
     overview,
     authorization,
-    accessRoles,
-    accessUsers,
-    selectedAccessUser,
+    accessUser,
     accessTokens,
     accessLoading,
-    accessTokensLoading,
     latestIssuedAccessToken,
     services,
     skills,
@@ -121,16 +118,13 @@ export function App() {
     runChatChannelAction,
     configureChatChannel,
     refreshAuthorization,
-    refreshAccessUsers,
+    refreshAccess,
     saveAuthorizationConfig,
     runAuthorizationAction,
     clearLatestIssuedAccessToken,
-    selectAccessUser,
-    createAccessUser,
-    updateAccessUser,
-    setAccessUserRole,
-    createAccessUserToken,
-    revokeAccessUserToken,
+    updateAccessPassword,
+    createAccessToken,
+    revokeAccessToken,
     runSkillFind,
     runSkillInstall,
     runTask,
@@ -558,21 +552,15 @@ export function App() {
         return (
           <section>
             <AccessSection
-              roles={accessRoles}
-              users={accessUsers}
-              selectedUser={selectedAccessUser}
+              user={accessUser}
               tokens={accessTokens}
               loading={accessLoading}
-              tokensLoading={accessTokensLoading}
               latestIssuedToken={latestIssuedAccessToken}
               formatTime={(value) => uiHelpers.formatTime(value ?? undefined)}
-              onSelectUser={(userId) => selectAccessUser(userId)}
-              onRefreshUsers={() => refreshAccessUsers()}
-              onCreateUser={(input) => createAccessUser(input)}
-              onUpdateUser={(input) => updateAccessUser(input)}
-              onSetUserRole={(input) => setAccessUserRole(input)}
-              onCreateToken={(input) => createAccessUserToken(input)}
-              onRevokeToken={(input) => revokeAccessUserToken(input)}
+              onRefresh={() => refreshAccess()}
+              onUpdatePassword={(input) => updateAccessPassword(input)}
+              onCreateToken={(input) => createAccessToken(input)}
+              onRevokeToken={(input) => revokeAccessToken(input)}
               onClearLatestIssuedToken={clearLatestIssuedAccessToken}
             />
           </section>

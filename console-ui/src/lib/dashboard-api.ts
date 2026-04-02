@@ -186,18 +186,11 @@ export async function requestConsoleApiJson<T>(params: {
 
 export const dashboardApiRoutes = {
   authStatus: () => "/api/auth/status",
-  authAdminUsers: () => "/api/auth/admin/users",
-  authAdminCreateUser: () => "/api/auth/admin/users/create",
-  authAdminUpdateUser: (userId: string) =>
-    `/api/auth/admin/users/${encodeURIComponent(userId)}/update`,
-  authAdminSetUserRoles: (userId: string) =>
-    `/api/auth/admin/users/${encodeURIComponent(userId)}/roles`,
-  authAdminUserTokens: (userId: string) =>
-    `/api/auth/admin/users/${encodeURIComponent(userId)}/tokens`,
-  authAdminCreateUserToken: (userId: string) =>
-    `/api/auth/admin/users/${encodeURIComponent(userId)}/tokens/create`,
-  authAdminRevokeUserToken: (userId: string) =>
-    `/api/auth/admin/users/${encodeURIComponent(userId)}/tokens/revoke`,
+  authMe: () => "/api/auth/me",
+  authTokenList: () => "/api/auth/token/list",
+  authTokenCreate: () => "/api/auth/token/create",
+  authTokenRevoke: () => "/api/auth/token/revoke",
+  authPasswordUpdate: () => "/api/auth/password/update",
   uiAgents: (agentId?: string) =>
     agentId
       ? `/api/ui/agents?agent=${encodeURIComponent(agentId)}`

@@ -29,6 +29,10 @@ import {
   toMergedStepUserMessage,
 } from "./ChatQueueSessionBridge.js";
 import {
+  hasPersistedAssistantSteps,
+  pickLastSuccessfulChatSendText,
+} from "./UserVisibleText.js";
+import {
   buildChannelErrorText,
   collectInitialBurstItems,
   normalizeChatQueueWorkerConfig,
@@ -287,12 +291,14 @@ export class ChatQueueWorker {
       }
       return mergedExecMessages;
     };
+    let assistantStepDispatched = false;
     const onAssistantStepCallback = async (params: {
       text: string;
       stepIndex: number;
     }): Promise<void> => {
       const stepText = String(params.text || "").trim();
       if (!stepText) return;
+      assistantStepDispatched = true;
       await dispatchAssistantTextDirect({
         logger: this.logger,
         context: this.context,
@@ -356,9 +362,38 @@ export class ChatQueueWorker {
       // ignore
     }
 
-    // 关键点（中文）：run 结束后不再发送最终 assistant 收口消息。
-    // 当前策略只在每个 step 结束时发送中途文本；异常路径仍单独发送 error 文本。
+    // 关键点（中文）：
+    // - 若 step 文本已经单独回发，则保持当前行为，不再重复发送最终 merged assistant。
+    // - 若本轮没有任何 step 回发，则必须把最终 assistant 文本补发到 chat channel，
+    //   否则会出现“context message 已写入，但 chat history/实际渠道没有回复”的断链。
+    if (assistantStepDispatched || hasPersistedAssistantSteps(result.assistantMessage)) {
+      return;
+    }
 
+    const finalAssistantText = pickLastSuccessfulChatSendText(result.assistantMessage);
+    if (!finalAssistantText) {
+      return;
+    }
+
+    const dispatchedDirectly = await dispatchAssistantTextDirect({
+      logger: this.logger,
+      context: this.context,
+      sessionId: runItem.sessionId,
+      assistantText: finalAssistantText,
+      phase: "final",
+    });
+    if (dispatchedDirectly) {
+      return;
+    }
+
+    await dispatchTextToChannel({
+      logger: this.logger,
+      context: this.context,
+      sessionId: runItem.sessionId,
+      text: finalAssistantText,
+      messageId: runItem.messageId,
+      phase: "final",
+    });
   }
 
   /**

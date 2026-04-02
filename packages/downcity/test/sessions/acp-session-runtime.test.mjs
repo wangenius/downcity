@@ -11,7 +11,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { AcpSessionRuntime } from "../../bin/sessions/acp/AcpSessionRuntime.js";
-import { getRequestContext } from "../../bin/sessions/RequestContext.js";
+import { getRequestContext, withRequestContext } from "../../bin/sessions/RequestContext.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -164,6 +164,41 @@ test("AcpSessionRuntime: injects requestId for prompter when request context is 
     });
     assert.equal(result.success, true);
     assert.match(String(result.assistantMessage.parts[0].text || ""), /System prompt/);
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionRuntime: emits assistant progress callbacks while prompt is streaming", async () => {
+  const runtime = createRuntime();
+  const steps = [];
+  try {
+    const result = await withRequestContext({
+      sessionId: "test-session",
+      requestId: "req_progress",
+      onAssistantStepCallback: async (input) => {
+        steps.push({
+          text: String(input.text || ""),
+          stepIndex: input.stepIndex,
+        });
+      },
+    }, async () => {
+      return await runtime.run({
+        query: "stream progress test",
+      });
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "第一段输出，第二段输出。\n第三段收尾");
+    assert.deepEqual(steps, [
+      {
+        text: "第一段输出，第二段输出。",
+        stepIndex: 1,
+      },
+      {
+        text: "第三段收尾",
+        stepIndex: 2,
+      },
+    ]);
   } finally {
     await runtime.dispose();
   }

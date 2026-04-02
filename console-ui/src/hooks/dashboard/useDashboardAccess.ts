@@ -1,28 +1,25 @@
 /**
- * Console UI 统一账户管理 Hook。
+ * Console UI Access 工作台 Hook。
  *
  * 关键点（中文）
- * - 独立管理多用户与 token 管理页状态，避免继续挤压 `useConsoleDashboard`。
- * - 只依赖外部注入的 `requestJson` 与 toast 能力，不直接耦合 dashboard 其他状态。
+ * - 当前模型只服务单管理员账户，不再维护多用户目录。
+ * - Access 页只负责两件事：修改当前管理员密码、管理当前管理员 token。
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
-  createAuthAdminUser,
-  createAuthAdminUserToken,
-  queryAuthAdminUsers,
-  queryAuthAdminUserTokens,
-  revokeAuthAdminUserToken,
-  setAuthAdminUserRoles,
-  updateAuthAdminUser,
-} from "@/lib/auth-admin-api"
+  createAuthAccessToken,
+  queryAuthAccessMe,
+  queryAuthAccessTokens,
+  revokeAuthAccessToken,
+  updateAuthAccessPassword,
+} from "@/lib/auth-access-api"
 import { getErrorMessage } from "./shared"
 import type {
-  UiAuthAdminIssuedToken,
-  UiAuthAdminRoleCatalogItem,
-  UiAuthAdminTokenSummary,
-  UiAuthAdminUserSummary,
-} from "@/types/AuthAdmin"
+  UiAuthAccessIssuedToken,
+  UiAuthAccessTokenSummary,
+  UiAuthAccessUser,
+} from "@/types/AuthAccess"
 import type { DashboardToastType } from "@/types/DashboardHook"
 
 type RequestJson = <T>(
@@ -33,44 +30,24 @@ type RequestJson = <T>(
 
 export interface UseDashboardAccessResult {
   /**
-   * 当前角色目录。
+   * 当前管理员摘要。
    */
-  accessRoles: UiAuthAdminRoleCatalogItem[]
+  accessUser: UiAuthAccessUser | null
 
   /**
-   * 当前用户列表。
+   * 当前管理员 token 列表。
    */
-  accessUsers: UiAuthAdminUserSummary[]
+  accessTokens: UiAuthAccessTokenSummary[]
 
   /**
-   * 当前选中的用户 ID。
-   */
-  selectedAccessUserId: string
-
-  /**
-   * 当前选中的用户摘要。
-   */
-  selectedAccessUser: UiAuthAdminUserSummary | null
-
-  /**
-   * 当前选中用户的 token 列表。
-   */
-  accessTokens: UiAuthAdminTokenSummary[]
-
-  /**
-   * 当前是否正在读取用户目录。
+   * 当前是否正在刷新 Access 数据。
    */
   accessLoading: boolean
 
   /**
-   * 当前是否正在读取 token 列表。
-   */
-  accessTokensLoading: boolean
-
-  /**
    * 最近一次新签发的明文 token。
    */
-  latestIssuedAccessToken: UiAuthAdminIssuedToken | null
+  latestIssuedAccessToken: UiAuthAccessIssuedToken | null
 
   /**
    * 清空最近一次新签发的明文 token。
@@ -78,56 +55,30 @@ export interface UseDashboardAccessResult {
   clearLatestIssuedAccessToken: () => void
 
   /**
-   * 手动切换当前选中的用户。
+   * 刷新当前管理员与 token 状态。
    */
-  selectAccessUser: (userId: string) => Promise<void>
+  refreshAccess: () => Promise<void>
 
   /**
-   * 刷新用户目录。
+   * 修改当前管理员密码。
    */
-  refreshAccessUsers: (preferredUserId?: string) => Promise<void>
-
-  /**
-   * 创建新用户。
-   */
-  createAccessUser: (input: {
-    username: string
-    password: string
-    displayName?: string
-    roleName: string
+  updateAccessPassword: (input: {
+    currentPassword: string
+    nextPassword: string
   }) => Promise<void>
 
   /**
-   * 更新用户状态或展示名。
+   * 签发新 token。
    */
-  updateAccessUser: (input: {
-    userId: string
-    displayName?: string
-    status: "active" | "disabled"
-  }) => Promise<void>
-
-  /**
-   * 更新用户角色。
-   */
-  setAccessUserRole: (input: {
-    userId: string
-    roleName: string
-  }) => Promise<void>
-
-  /**
-   * 为目标用户签发新 token。
-   */
-  createAccessUserToken: (input: {
-    userId: string
+  createAccessToken: (input: {
     name: string
     expiresAt?: string
   }) => Promise<void>
 
   /**
-   * 吊销目标用户 token。
+   * 吊销 token。
    */
-  revokeAccessUserToken: (input: {
-    userId: string
+  revokeAccessToken: (input: {
     tokenId: string
   }) => Promise<void>
 }
@@ -138,149 +89,65 @@ export function useDashboardAccess(params: {
   showToast: (message: string, type?: DashboardToastType) => void
 }): UseDashboardAccessResult {
   const { enabled, requestJson, showToast } = params
-  const [accessRoles, setAccessRoles] = useState<UiAuthAdminRoleCatalogItem[]>([])
-  const [accessUsers, setAccessUsers] = useState<UiAuthAdminUserSummary[]>([])
-  const [selectedAccessUserId, setSelectedAccessUserId] = useState("")
-  const [accessTokens, setAccessTokens] = useState<UiAuthAdminTokenSummary[]>([])
+  const [accessUser, setAccessUser] = useState<UiAuthAccessUser | null>(null)
+  const [accessTokens, setAccessTokens] = useState<UiAuthAccessTokenSummary[]>([])
   const [accessLoading, setAccessLoading] = useState(false)
-  const [accessTokensLoading, setAccessTokensLoading] = useState(false)
-  const [latestIssuedAccessToken, setLatestIssuedAccessToken] = useState<UiAuthAdminIssuedToken | null>(null)
+  const [latestIssuedAccessToken, setLatestIssuedAccessToken] = useState<UiAuthAccessIssuedToken | null>(null)
 
-  const selectedAccessUser = useMemo(
-    () => accessUsers.find((item) => item.id === selectedAccessUserId) || null,
-    [accessUsers, selectedAccessUserId],
-  )
-
-  const refreshAccessTokens = useCallback(async (userId: string) => {
-    const normalizedUserId = String(userId || "").trim()
-    if (!enabled || !normalizedUserId) {
-      setAccessTokens([])
-      return
-    }
-    setAccessTokensLoading(true)
-    try {
-      const payload = await queryAuthAdminUserTokens(requestJson, normalizedUserId)
-      setAccessTokens(Array.isArray(payload.tokens) ? payload.tokens : [])
-    } finally {
-      setAccessTokensLoading(false)
-    }
-  }, [enabled, requestJson])
-
-  const refreshAccessUsers = useCallback(async (preferredUserId?: string) => {
+  const refreshAccess = useCallback(async () => {
     if (!enabled) {
-      setAccessRoles([])
-      setAccessUsers([])
-      setSelectedAccessUserId("")
+      setAccessUser(null)
       setAccessTokens([])
       return
     }
     setAccessLoading(true)
     try {
-      const payload = await queryAuthAdminUsers(requestJson)
-      const roles = Array.isArray(payload.roles) ? payload.roles : []
-      const users = Array.isArray(payload.users) ? payload.users : []
-      const normalizedPreferredUserId = String(preferredUserId || "").trim()
-      const nextSelectedUserId =
-        users.find((item) => item.id === normalizedPreferredUserId)?.id ||
-        users.find((item) => item.id === selectedAccessUserId)?.id ||
-        users[0]?.id ||
-        ""
-
-      setAccessRoles(roles)
-      setAccessUsers(users)
-      setSelectedAccessUserId(nextSelectedUserId)
-      await refreshAccessTokens(nextSelectedUserId)
+      const [mePayload, tokenPayload] = await Promise.all([
+        queryAuthAccessMe(requestJson),
+        queryAuthAccessTokens(requestJson),
+      ])
+      setAccessUser(mePayload.user || null)
+      setAccessTokens(Array.isArray(tokenPayload.tokens) ? tokenPayload.tokens : [])
     } finally {
       setAccessLoading(false)
     }
-  }, [enabled, refreshAccessTokens, requestJson, selectedAccessUserId])
+  }, [enabled, requestJson])
 
-  const selectAccessUser = useCallback(async (userId: string) => {
-    const normalizedUserId = String(userId || "").trim()
-    setSelectedAccessUserId(normalizedUserId)
-    await refreshAccessTokens(normalizedUserId)
-  }, [refreshAccessTokens])
-
-  const createAccessUser = useCallback(async (input: {
-    username: string
-    password: string
-    displayName?: string
-    roleName: string
+  const updateAccessPassword = useCallback(async (input: {
+    currentPassword: string
+    nextPassword: string
   }) => {
-    const user = await createAuthAdminUser({
+    const user = await updateAuthAccessPassword({
       requestJson,
-      input: {
-        username: input.username,
-        password: input.password,
-        displayName: input.displayName,
-        roleNames: [input.roleName],
-      },
+      input,
     })
-    showToast(`已创建用户 ${user.username}`, "success")
-    setLatestIssuedAccessToken(null)
-    await refreshAccessUsers(user.id)
-  }, [refreshAccessUsers, requestJson, showToast])
+    setAccessUser(user)
+    showToast("管理员密码已更新", "success")
+  }, [requestJson, showToast])
 
-  const updateAccessUser = useCallback(async (input: {
-    userId: string
-    displayName?: string
-    status: "active" | "disabled"
-  }) => {
-    const user = await updateAuthAdminUser({
-      requestJson,
-      userId: input.userId,
-      input: {
-        displayName: input.displayName,
-        status: input.status,
-      },
-    })
-    showToast(`已更新用户 ${user.username}`, "success")
-    await refreshAccessUsers(user.id)
-  }, [refreshAccessUsers, requestJson, showToast])
-
-  const setAccessUserRole = useCallback(async (input: {
-    userId: string
-    roleName: string
-  }) => {
-    const user = await setAuthAdminUserRoles({
-      requestJson,
-      userId: input.userId,
-      roleNames: [input.roleName],
-    })
-    showToast(`已更新 ${user.username} 的角色`, "success")
-    await refreshAccessUsers(user.id)
-  }, [refreshAccessUsers, requestJson, showToast])
-
-  const createAccessUserToken = useCallback(async (input: {
-    userId: string
+  const createAccessToken = useCallback(async (input: {
     name: string
     expiresAt?: string
   }) => {
-    const payload = await createAuthAdminUserToken({
+    const token = await createAuthAccessToken({
       requestJson,
-      userId: input.userId,
-      input: {
-        name: input.name,
-        expiresAt: input.expiresAt,
-      },
+      input,
     })
-    setLatestIssuedAccessToken(payload.token)
-    showToast(`已为 ${payload.user.username} 签发 token`, "success")
-    await refreshAccessTokens(payload.user.id)
-  }, [refreshAccessTokens, requestJson, showToast])
+    setLatestIssuedAccessToken(token)
+    showToast(`已签发 token ${token.name}`, "success")
+    await refreshAccess()
+  }, [refreshAccess, requestJson, showToast])
 
-  const revokeAccessUserToken = useCallback(async (input: {
-    userId: string
+  const revokeAccessToken = useCallback(async (input: {
     tokenId: string
   }) => {
-    await revokeAuthAdminUserToken({
+    await revokeAuthAccessToken({
       requestJson,
-      userId: input.userId,
       tokenId: input.tokenId,
     })
     showToast("已吊销 token", "success")
-    await refreshAccessTokens(input.userId)
-  }, [refreshAccessTokens, requestJson, showToast])
+    await refreshAccess()
+  }, [refreshAccess, requestJson, showToast])
 
   const clearLatestIssuedAccessToken = useCallback(() => {
     setLatestIssuedAccessToken(null)
@@ -288,34 +155,25 @@ export function useDashboardAccess(params: {
 
   useEffect(() => {
     if (!enabled) {
-      setAccessRoles([])
-      setAccessUsers([])
-      setSelectedAccessUserId("")
+      setAccessUser(null)
       setAccessTokens([])
       setLatestIssuedAccessToken(null)
       return
     }
-    void refreshAccessUsers().catch((error) => {
+    void refreshAccess().catch((error) => {
       showToast(getErrorMessage(error), "error")
     })
-  }, [enabled, refreshAccessUsers, showToast])
+  }, [enabled, refreshAccess, showToast])
 
   return {
-    accessRoles,
-    accessUsers,
-    selectedAccessUserId,
-    selectedAccessUser,
+    accessUser,
     accessTokens,
     accessLoading,
-    accessTokensLoading,
     latestIssuedAccessToken,
     clearLatestIssuedAccessToken,
-    selectAccessUser,
-    refreshAccessUsers,
-    createAccessUser,
-    updateAccessUser,
-    setAccessUserRole,
-    createAccessUserToken,
-    revokeAccessUserToken,
+    refreshAccess,
+    updateAccessPassword,
+    createAccessToken,
+    revokeAccessToken,
   }
 }

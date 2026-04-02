@@ -6,17 +6,6 @@
  * - 路由层只调用这里，不直接碰数据库与密码哈希细节。
  */
 
-import {
-  AUTH_DEFAULT_ROLES,
-  type AuthDefaultRoleName,
-} from "@/types/auth/AuthPermission.js";
-import type {
-  AuthAdminIssuedUserTokenPayload,
-  AuthAdminRoleCatalogItem,
-  AuthAdminUserSummary,
-  AuthAdminUserTokensPayload,
-  AuthAdminUsersPayload,
-} from "@/types/auth/AuthAdmin.js";
 import type { AuthIssuedToken, AuthTokenSummary } from "@/types/auth/AuthToken.js";
 import type { AuthPrincipal, AuthUser } from "@/types/auth/AuthTypes.js";
 import { optionalTrimmedText } from "@/utils/store/StoreShared.js";
@@ -218,6 +207,43 @@ export class AuthService {
   }
 
   /**
+   * 修改当前管理员密码。
+   */
+  updatePassword(principal: AuthPrincipal, input: {
+    currentPassword: string;
+    nextPassword: string;
+  }): AuthCurrentUserPayload {
+    const user = this.requireUser(principal.userId);
+    const currentPassword = this.requirePassword(input.currentPassword);
+    const nextPassword = this.requirePassword(input.nextPassword);
+    if (!verifyPassword(currentPassword, user.passwordHash)) {
+      this.store.insertAuditLog({
+        actorUserId: principal.userId,
+        actorTokenId: principal.tokenId,
+        resourceType: "auth_user",
+        resourceId: principal.userId,
+        action: "password_update",
+        result: "invalid_credentials",
+      });
+      throw new AuthError("Invalid current password", 401);
+    }
+    const updated = this.store.updateUserPasswordHash({
+      userId: principal.userId,
+      passwordHash: hashPassword(nextPassword),
+    });
+    if (!updated) throw new AuthError("User not found", 404);
+    this.store.insertAuditLog({
+      actorUserId: principal.userId,
+      actorTokenId: principal.tokenId,
+      resourceType: "auth_user",
+      resourceId: principal.userId,
+      action: "password_update",
+      result: "success",
+    });
+    return this.toUserPayload(updated);
+  }
+
+  /**
    * 为当前用户创建新的 token。
    */
   createToken(principal: AuthPrincipal, input: {
@@ -272,203 +298,6 @@ export class AuthService {
       action: "token_revoke",
       result: "success",
       metaJson: JSON.stringify({ name: revoked.name }),
-    });
-    return this.store.toTokenSummary(revoked);
-  }
-
-  /**
-   * 读取统一账户管理页所需的用户与角色目录。
-   */
-  listAdminUsers(): AuthAdminUsersPayload {
-    return {
-      roles: this.listRoleCatalog(),
-      users: this.store.listUsers().map((user) => this.toAdminUserSummary(user)),
-    };
-  }
-
-  /**
-   * 创建新的统一账户用户。
-   */
-  createAdminUser(principal: AuthPrincipal, input: {
-    username: string;
-    password: string;
-    displayName?: string;
-    roleNames?: string[];
-  }): AuthAdminUserSummary {
-    const username = this.requireUsername(input.username);
-    const password = this.requirePassword(input.password);
-    if (this.store.findUserByUsername(username)) {
-      throw new AuthError("Username already exists", 409);
-    }
-    this.store.ensureDefaultCatalog();
-    const roleNames = this.normalizeRoleNames(input.roleNames);
-    const user = this.store.createUser({
-      username,
-      passwordHash: hashPassword(password),
-      displayName: input.displayName,
-      status: "active",
-    });
-    this.store.replaceRolesByUserId({
-      userId: user.id,
-      roleNames,
-    });
-    this.store.insertAuditLog({
-      actorUserId: principal.userId,
-      actorTokenId: principal.tokenId,
-      resourceType: "auth_user",
-      resourceId: user.id,
-      action: "admin_user_create",
-      result: "success",
-      metaJson: JSON.stringify({
-        username,
-        roleNames,
-      }),
-    });
-    return this.requireAdminUser(user.id);
-  }
-
-  /**
-   * 更新用户展示信息或启停状态。
-   */
-  updateAdminUser(principal: AuthPrincipal, input: {
-    userId: string;
-    displayName?: string;
-    status?: "active" | "disabled";
-  }): AuthAdminUserSummary {
-    const userId = this.requireUserId(input.userId);
-    const current = this.requireUser(userId);
-    const nextStatus = input.status === "disabled" ? "disabled" : "active";
-    this.ensureAdminCoverage({
-      currentUser: current,
-      nextStatus,
-      nextRoleNames: this.store.listRoleNamesByUserId(userId),
-    });
-    const updated = this.store.updateUser({
-      userId,
-      displayName: input.displayName,
-      status: nextStatus,
-    });
-    if (!updated) throw new AuthError("User not found", 404);
-    this.store.insertAuditLog({
-      actorUserId: principal.userId,
-      actorTokenId: principal.tokenId,
-      resourceType: "auth_user",
-      resourceId: userId,
-      action: "admin_user_update",
-      result: "success",
-      metaJson: JSON.stringify({
-        status: nextStatus,
-        displayName: optionalTrimmedText(input.displayName),
-      }),
-    });
-    return this.requireAdminUser(userId);
-  }
-
-  /**
-   * 覆盖用户角色集合。
-   */
-  setAdminUserRoles(principal: AuthPrincipal, input: {
-    userId: string;
-    roleNames?: string[];
-  }): AuthAdminUserSummary {
-    const userId = this.requireUserId(input.userId);
-    const current = this.requireUser(userId);
-    const roleNames = this.normalizeRoleNames(input.roleNames);
-    this.ensureAdminCoverage({
-      currentUser: current,
-      nextStatus: current.status,
-      nextRoleNames: roleNames,
-    });
-    this.store.replaceRolesByUserId({
-      userId,
-      roleNames,
-    });
-    this.store.insertAuditLog({
-      actorUserId: principal.userId,
-      actorTokenId: principal.tokenId,
-      resourceType: "auth_user",
-      resourceId: userId,
-      action: "admin_user_set_roles",
-      result: "success",
-      metaJson: JSON.stringify({ roleNames }),
-    });
-    return this.requireAdminUser(userId);
-  }
-
-  /**
-   * 读取目标用户 token 列表。
-   */
-  listAdminUserTokens(userIdInput: string): AuthAdminUserTokensPayload {
-    const user = this.requireAdminUser(userIdInput);
-    return {
-      user,
-      tokens: this.store
-        .listTokensByUserId(user.id)
-        .map((item) => this.store.toTokenSummary(item)),
-    };
-  }
-
-  /**
-   * 代目标用户签发新 token。
-   */
-  createAdminUserToken(principal: AuthPrincipal, input: {
-    userId: string;
-    name: string;
-    expiresAt?: string;
-  }): AuthAdminIssuedUserTokenPayload {
-    const user = this.requireUser(input.userId);
-    this.ensureUserActive(user);
-    const issued = this.issueTokenForUser({
-      user,
-      tokenName: input.name,
-      expiresAt: input.expiresAt,
-    });
-    this.store.insertAuditLog({
-      actorUserId: principal.userId,
-      actorTokenId: principal.tokenId,
-      resourceType: "auth_token",
-      resourceId: issued.record.id,
-      action: "admin_token_create",
-      result: "success",
-      metaJson: JSON.stringify({
-        userId: user.id,
-        name: issued.record.name,
-      }),
-    });
-    return {
-      user: this.toAdminUserSummary(user),
-      token: issued.token,
-    };
-  }
-
-  /**
-   * 代目标用户吊销 token。
-   */
-  revokeAdminUserToken(principal: AuthPrincipal, input: {
-    userId: string;
-    tokenId: string;
-  }): AuthTokenSummary {
-    const userId = this.requireUserId(input.userId);
-    const tokenId = String(input.tokenId || "").trim();
-    if (!tokenId) throw new AuthError("tokenId is required", 400);
-    this.requireUser(userId);
-    const record = this.store.getTokenById(tokenId);
-    if (!record || record.userId !== userId) {
-      throw new AuthError("Token not found", 404);
-    }
-    const revoked = this.store.revokeToken(record.id);
-    if (!revoked) throw new AuthError("Token not found", 404);
-    this.store.insertAuditLog({
-      actorUserId: principal.userId,
-      actorTokenId: principal.tokenId,
-      resourceType: "auth_token",
-      resourceId: revoked.id,
-      action: "admin_token_revoke",
-      result: "success",
-      metaJson: JSON.stringify({
-        userId,
-        name: revoked.name,
-      }),
     });
     return this.store.toTokenSummary(revoked);
   }
@@ -528,53 +357,6 @@ export class AuthService {
     return user;
   }
 
-  private requireAdminUser(userIdInput: string): AuthAdminUserSummary {
-    const user = this.requireUser(userIdInput);
-    return this.toAdminUserSummary(user);
-  }
-
-  private listRoleCatalog(): AuthAdminRoleCatalogItem[] {
-    return AUTH_DEFAULT_ROLES.map((role) => ({
-      name: role.name,
-      description: role.description,
-      permissions: [...role.permissions],
-    }));
-  }
-
-  private normalizeRoleNames(values?: string[]): string[] {
-    const requested = Array.isArray(values)
-      ? [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))]
-      : [];
-    const allowed = new Set<AuthDefaultRoleName>(
-      AUTH_DEFAULT_ROLES.map((item) => item.name),
-    );
-    const roleNames = requested.filter(
-      (item): item is AuthDefaultRoleName => allowed.has(item as AuthDefaultRoleName),
-    );
-    if (roleNames.length < 1) {
-      throw new AuthError("At least one valid role is required", 400);
-    }
-    return roleNames;
-  }
-
-  private ensureAdminCoverage(params: {
-    currentUser: AuthUser;
-    nextStatus: "active" | "disabled";
-    nextRoleNames: string[];
-  }): void {
-    const currentRoleNames = this.store.listRoleNamesByUserId(params.currentUser.id);
-    const currentlyActiveAdmin =
-      params.currentUser.status === "active" &&
-      currentRoleNames.includes("admin");
-    const nextActiveAdmin =
-      params.nextStatus === "active" &&
-      params.nextRoleNames.includes("admin");
-    if (!currentlyActiveAdmin || nextActiveAdmin) return;
-    if (this.store.countActiveUsersByRole("admin") <= 1) {
-      throw new AuthError("At least one active admin must remain", 409);
-    }
-  }
-
   private toUserPayload(user: AuthUser): AuthCurrentUserPayload {
     return {
       id: user.id,
@@ -582,19 +364,6 @@ export class AuthService {
       displayName: user.displayName,
       roles: this.store.listRoleNamesByUserId(user.id),
       permissions: this.store.listPermissionKeysByUserId(user.id),
-    };
-  }
-
-  private toAdminUserSummary(user: AuthUser): AuthAdminUserSummary {
-    return {
-      id: user.id,
-      username: user.username,
-      displayName: user.displayName,
-      status: user.status,
-      roles: this.store.listRoleNamesByUserId(user.id),
-      permissions: this.store.listPermissionKeysByUserId(user.id),
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
     };
   }
 }

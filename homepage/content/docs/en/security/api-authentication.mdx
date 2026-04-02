@@ -5,25 +5,16 @@ description: Bootstrap the first admin, sign in, and use Bearer tokens against D
 
 # API Authentication
 
-Unified Auth V1 adds the first set of authentication endpoints for Downcity.
-The current rollout now covers two layers:
-
-- self-service token management for the signed-in user
-- admin-level user and token management for accounts with `auth.read` / `auth.write`
+Unified Auth V1 adds the core auth endpoints for Downcity.
+The current model is intentionally simple: one admin account, admin password rotation, and multiple Bearer tokens.
 
 - `POST /api/auth/bootstrap-admin`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
+- `POST /api/auth/password/update`
 - `GET /api/auth/token/list`
 - `POST /api/auth/token/create`
 - `POST /api/auth/token/revoke`
-- `GET /api/auth/admin/users`
-- `POST /api/auth/admin/users/create`
-- `POST /api/auth/admin/users/:userId/update`
-- `POST /api/auth/admin/users/:userId/roles`
-- `GET /api/auth/admin/users/:userId/tokens`
-- `POST /api/auth/admin/users/:userId/tokens/create`
-- `POST /api/auth/admin/users/:userId/tokens/revoke`
 
 ## First admin bootstrap
 
@@ -105,93 +96,25 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
   }'
 ```
 
-## Manage Console users
+## Rotate the admin password
 
-If the current account has `auth.read` or `auth.write`, it can manage Console users.
-
-List users:
+The control plane now keeps only one username/password account: the admin.
 
 ```bash
-curl http://127.0.0.1:3000/api/auth/admin/users \
-  -H 'Authorization: Bearer dc_xxx'
-```
-
-Create a user:
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/admin/users/create \
+curl -X POST http://127.0.0.1:3000/api/auth/password/update \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer dc_xxx' \
   -d '{
-    "username": "operator-a",
-    "password": "pass-123456",
-    "displayName": "Operator A",
-    "roleNames": ["operator"]
-  }'
-```
-
-Update display name or status:
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/update \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "displayName": "Operator A",
-    "status": "active"
-  }'
-```
-
-Replace roles:
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/roles \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "roleNames": ["viewer"]
+    "currentPassword": "old-pass",
+    "nextPassword": "new-pass"
   }'
 ```
 
 Notes:
 
-- The default role catalog is `admin` / `operator` / `viewer`
-- The system rejects changes that would disable the last active admin or remove the final admin role assignment
-
-## Manage tokens for another user
-
-Admins can inspect, issue, and revoke tokens for any user.
-
-List a user's tokens:
-
-```bash
-curl http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens \
-  -H 'Authorization: Bearer dc_xxx'
-```
-
-Issue a token for a user:
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens/create \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "name": "chrome-extension"
-  }'
-```
-
-Revoke a user's token:
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/admin/users/USER_ID/tokens/revoke \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "tokenId": "token_record_id"
-  }'
-```
-
-Plaintext tokens are still returned only once, at issuance time.
+- Rotating the password does not automatically revoke existing tokens
+- Other integrations continue to authenticate with Bearer tokens directly
+- Plaintext tokens are still returned only once, at issuance time
 
 ## Current scope
 
@@ -199,7 +122,7 @@ This rollout covers the V1 auth backbone:
 
 - unified user / role / permission / token / audit tables
 - Bearer token issuance and validation
-- self-service token management endpoints
-- admin user directory and cross-user token management endpoints
+- admin password rotation
+- current-admin token management endpoints
 
 Later iterations will move more control-plane APIs behind the same Bearer auth layer.

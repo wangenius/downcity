@@ -42,9 +42,9 @@ city console ui [action] [options]
 - If that directory already has `downcity.json` and meets the minimum initialization requirements, UI starts the agent directly.
 - Only directories that are not initialized yet enter the initialize-on-start flow, which creates `PROFILE.md`, `SOUL.md`, `downcity.json`, and `.downcity/` before starting the agent.
 - Sidebar is now strictly scoped: `Global` / `Agent` / `Context`.
-- Global / Access is now the Console-wide access workspace for creating users, changing user status, updating roles, and viewing or issuing tokens for a selected user.
+- Global / Access is now a single-admin workspace: rotate the admin password and manage Bearer tokens.
 - Global / Access still shows a plaintext token only once, at creation time. If you close it, issue a new token instead of expecting it from the list view.
-- The default role catalog in Global / Access is `admin` / `operator` / `viewer`.
+- Username/password sign-in is now reserved for the current admin account; other integrations authenticate with Bearer tokens.
 - Global / Overview only shows global health signals (console, fleet, channels, plugins, config risk).
 - Global / Overview now shows the current DC version in the top summary area.
 - Global / Env provides manual env management for both Console-shared and agent-private entries, all stored in `~/.downcity/downcity.db` `env_entries`.

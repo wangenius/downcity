@@ -9,6 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { execa } from "execa";
+import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
 import type { SessionRunResult } from "@/types/SessionRun.js";
 import type { JsonObject } from "@/types/Json.js";
 import type {
@@ -331,15 +332,21 @@ export async function runScriptTask(params: {
 
   const execResult = await withRequestContext(
     { sessionId: params.sessionId },
-    () =>
-      execa("sh", [scriptAbs], {
+    () => {
+      const childEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        DC_SESSION_ID: params.sessionId,
+      };
+      injectAgentTokenIntoEnv({
+        targetEnv: childEnv,
+        sourceEnv: process.env,
+      });
+      return execa("sh", [scriptAbs], {
         cwd: params.runDirAbs,
         reject: true,
-        env: {
-          ...process.env,
-          DC_SESSION_ID: params.sessionId,
-        },
-      }),
+        env: childEnv,
+      });
+    },
   );
 
   const stdout = String(execResult.stdout || "").trim();

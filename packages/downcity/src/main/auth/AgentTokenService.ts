@@ -102,23 +102,13 @@ export function ensureAgentToken(projectRoot: string): AgentTokenInfo {
       if (record.name !== tokenName) continue;
 
       // 检查是否需要轮换
-      if (!shouldRotateToken(record)) {
-        // Token 仍然有效且不在轮换窗口期，返回现有信息（但不返回明文，已丢失）
-        // 注意：这里无法返回明文 token，因为只存储了 hash
-        // 在启动场景下，这不会发生，因为环境变量会重新注入
-        // 但为了完整性，我们还是创建新 token
-        return {
-          token: "", // 无法恢复，需要创建新的
-          tokenId: record.id,
-          projectRoot,
-          expiresAt: record.expiresAt || new Date(Date.now() + TOKEN_TTL_MS).toISOString(),
-          rotated: false,
-        };
-      }
-
-      // 需要轮换：吊销旧 token
+      // 关键点（中文）
+      // - store 内只保存 token hash，无法恢复历史明文。
+      // - 启动链路必须把明文 token 注入进程环境，否则 agent 内部再调 `city ...`
+      //   会因为拿不到 Bearer Token 而失败。
+      // - 因此即使旧 token 仍然有效，只要这次需要“拿到明文”，也必须吊销旧 token 并重签。
       store.revokeToken(record.id);
-      break;
+      return createNewAgentToken(store, userId, projectRoot, tokenName);
     }
 
     // 创建新 token

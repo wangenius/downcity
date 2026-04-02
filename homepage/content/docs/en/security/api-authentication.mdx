@@ -65,6 +65,43 @@ curl http://127.0.0.1:3000/api/auth/me \
 
 If the token is valid, the endpoint returns the current user, roles, and permissions.
 
+## `DC_AUTH_TOKEN` and `DC_AGENT_TOKEN`
+
+For direct API users, the key idea is simple:
+
+- external calls always authenticate through `Authorization: Bearer <token>`
+
+Inside the CLI/runtime, you may still see two env vars:
+
+| Variable | Intended For | Purpose |
+| --- | --- | --- |
+| `DC_AUTH_TOKEN` | users, scripts, CI | explicitly choose which token this CLI/API invocation should use |
+| `DC_AGENT_TOKEN` | Downcity agent runtime | automatically propagate auth when an agent internally calls `city ...` again |
+
+Recommended mental model:
+
+- if you are a human user or an external script, prefer `--token` or `DC_AUTH_TOKEN`
+- if an agent internally calls `city task`, `city chat`, or similar commands, runtime usually injects `DC_AGENT_TOKEN` automatically
+
+The final CLI resolution order is:
+
+1. `--token`
+2. `DC_AUTH_TOKEN`
+3. `DC_AGENT_TOKEN`
+4. local CLI auth state
+
+So:
+
+- `DC_AUTH_TOKEN` is explicit override
+- `DC_AGENT_TOKEN` is internal propagation
+- both eventually become the same Bearer header on the actual HTTP request
+
+If you see `Missing bearer token`:
+
+- do not start by suspecting `sessionId`
+- first check whether the current process has any valid token source
+- if the error happens inside an agent/Bash/ACP subprocess, inspect the `DC_AGENT_TOKEN` inheritance path first
+
 ## Manage tokens
 
 List tokens:

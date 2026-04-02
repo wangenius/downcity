@@ -6,6 +6,7 @@
  * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
  */
 
+import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
 import { requestContext } from "@sessions/RequestContext.js";
 
 function setEnvString(
@@ -77,14 +78,10 @@ export function buildShellContextEnv(
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
   setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
 
-  // 注入 DC_AUTH_TOKEN（Agent 专用 token）
-  // 优先级：显式传入 > DC_AGENT_TOKEN（Agent 进程环境变量）
-  if (!env.DC_AUTH_TOKEN) {
-    const agentToken = process.env.DC_AGENT_TOKEN;
-    if (agentToken) {
-      env.DC_AUTH_TOKEN = agentToken;
-    }
-  }
+  injectAgentTokenIntoEnv({
+    targetEnv: env,
+    sourceEnv: process.env,
+  });
 
   return env;
 }

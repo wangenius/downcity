@@ -66,6 +66,43 @@ curl http://127.0.0.1:3000/api/auth/me \
 
 如果 token 有效，接口会返回当前用户、角色和权限。
 
+## `DC_AUTH_TOKEN` 与 `DC_AGENT_TOKEN`
+
+对于直接调用 API 的用户，只需要记住一条：
+
+- 对外调用统一使用 Bearer Token，本质都落到 `Authorization: Bearer <token>`
+
+但在 CLI/runtime 里，会看到两个环境变量：
+
+| 变量 | 面向谁 | 作用 |
+| --- | --- | --- |
+| `DC_AUTH_TOKEN` | 用户、脚本、CI | 显式指定“这次 CLI/API 调用用哪个 token” |
+| `DC_AGENT_TOKEN` | Downcity agent runtime | agent 内部再次调用 `city ...` 时自动传播身份 |
+
+推荐理解方式：
+
+- 如果你是人或外部脚本，优先用 `--token` 或 `DC_AUTH_TOKEN`
+- 如果是 agent 内部二次调用 `city task`、`city chat`，通常由 runtime 自动注入 `DC_AGENT_TOKEN`
+
+最终 CLI 解析顺序是：
+
+1. `--token`
+2. `DC_AUTH_TOKEN`
+3. `DC_AGENT_TOKEN`
+4. 本地 CLI 登录态
+
+所以：
+
+- `DC_AUTH_TOKEN` 是显式覆盖
+- `DC_AGENT_TOKEN` 是内部传播
+- 两者最终都会归一化为 Bearer Token 请求头
+
+如果你看到 `Missing bearer token`：
+
+- 不要先怀疑 `sessionId`
+- 先检查当前进程有没有可用 token 来源
+- 如果是在 agent/Bash/ACP 子进程里，再重点检查 `DC_AGENT_TOKEN` 是否被正确继承
+
 ## 管理 Token
 
 查看当前用户的 token 列表：

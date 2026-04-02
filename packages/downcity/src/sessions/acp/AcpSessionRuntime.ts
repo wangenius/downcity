@@ -24,6 +24,7 @@ import {
   loadAgentEnvSnapshot,
   loadGlobalEnvFromStore,
 } from "@/main/env/Config.js";
+import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpSessionSupport.js";
 import { generateId } from "@utils/Id.js";
 
@@ -284,14 +285,19 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
 
     const globalEnv = loadGlobalEnvFromStore();
     const agentEnv = loadAgentEnvSnapshot(this.rootPath);
+    const childEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      ...globalEnv,
+      ...agentEnv,
+      ...this.launch.env,
+    };
+    injectAgentTokenIntoEnv({
+      targetEnv: childEnv,
+      sourceEnv: process.env,
+    });
     const child = spawn(this.launch.command, this.launch.args, {
       cwd: this.rootPath,
-      env: {
-        ...process.env,
-        ...globalEnv,
-        ...agentEnv,
-        ...this.launch.env,
-      },
+      env: childEnv,
       stdio: "pipe",
     });
     this.child = child;

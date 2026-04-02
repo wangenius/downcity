@@ -38,8 +38,81 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 Additional notes:
 
 - Once unified auth is initialized, the commands above automatically send a Bearer Token when they call the agent API.
-- Token resolution order is: `--token` > `DC_AUTH_TOKEN` > local CLI auth state stored in console secure storage.
+- Token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN` > local CLI auth state stored in console secure storage.
 - `sessionId` and `chatKey` are execution context, not authentication tokens.
+
+## 1.1) `DC_AUTH_TOKEN` vs `DC_AGENT_TOKEN`
+
+Both variables are related to Bearer auth, but they serve different roles.
+
+| Variable | Primary Purpose | Who Sets It | Typical Use |
+| --- | --- | --- | --- |
+| `DC_AUTH_TOKEN` | explicit user override for a CLI/API call | user, script, CI | you want this specific `city ...` invocation to authenticate as a specific token |
+| `DC_AGENT_TOKEN` | internal agent runtime propagation | Downcity runtime | an agent, Bash tool, or ACP subprocess calls `city task`, `city chat`, or other `city ...` commands again |
+
+Think of them as two layers:
+
+- `DC_AUTH_TOKEN` is the user override layer
+- `DC_AGENT_TOKEN` is the internal agent propagation layer
+
+Recommended rule:
+
+- When you manually call `city ...` from your terminal, CI, or a script, prefer `--token` or `DC_AUTH_TOKEN`
+- When an agent internally calls `city ...` again, you usually should not set anything manually; runtime injects `DC_AGENT_TOKEN`
+- Do not treat `sessionId` or `chatKey` as auth tokens; they only define execution context
+
+### Why internal propagation does not use `DC_AUTH_TOKEN`
+
+Because `DC_AUTH_TOKEN` should clearly mean explicit user override:
+
+- if a user passes `--token` or sets `DC_AUTH_TOKEN`, that choice should always win
+- internal agent propagation should stay separate from that explicit override channel
+
+So the current model is:
+
+- `DC_AGENT_TOKEN` is the canonical internal propagation variable
+- `DC_AUTH_TOKEN` is reserved for explicit user override
+- the CLI resolves the final Bearer token using one shared priority order before it makes the HTTP request
+
+### Unified priority order
+
+When `city task`, `city chat`, `city service`, `city plugin`, and similar commands resolve auth, the final order is:
+
+1. explicit `--token`
+2. `DC_AUTH_TOKEN`
+3. `DC_AGENT_TOKEN`
+4. local CLI auth state
+
+That means:
+
+- `--token` always overrides everything else
+- `DC_AUTH_TOKEN` overrides auto-injected `DC_AGENT_TOKEN`
+- agent-internal invocations fall back to `DC_AGENT_TOKEN`
+- non-agent invocations can still fall back to local CLI auth state
+
+### Common mistakes
+
+- Mistake 1: using `sessionId` as a token
+  Not valid. `sessionId` only decides where execution belongs.
+- Mistake 2: exporting `DC_AUTH_TOKEN` manually inside every agent tool call
+  Usually unnecessary. Runtime should already inject `DC_AGENT_TOKEN`.
+- Mistake 3: treating `DC_AGENT_TOKEN` as a long-lived integration token for external scripts
+  Not recommended. External integrations should use explicit Bearer tokens through `DC_AUTH_TOKEN` or `--token`.
+
+### How to read `Missing bearer token`
+
+If `city task ...`, `city chat ...`, or `city service ...` returns:
+
+- `Missing bearer token`
+
+check in this order:
+
+1. did you pass `--token`
+2. is `DC_AUTH_TOKEN` set in the current shell
+3. if this is inside an agent/Bash tool/ACP subprocess, did the process inherit `DC_AGENT_TOKEN`
+4. if none of the above apply, is local CLI auth state available on this machine
+
+For agent-internal `city ...` calls, the first suspect is usually the `DC_AGENT_TOKEN` injection chain, not the task/session parameters.
 
 ## 2) Context env requirements for common commands
 
@@ -54,7 +127,7 @@ Additional notes:
 - Task creation/run needs `sessionId`
 - You can pass `--session-id` explicitly
 - Or first fallback to `DC_SESSION_ID`
-- If unified auth is enabled, `city task ...` automatically reuses the current CLI Bearer Token; you do not need one token per task/session
+- If unified auth is enabled, `city task ...` automatically reuses the current Bearer Token; manual invocations prefer `--token` / `DC_AUTH_TOKEN`, while agent-internal invocations fall back to `DC_AGENT_TOKEN`
 
 ### Chat channel credentials
 

@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 使用 console 级加密配置表保存 CLI 当前 Bearer Token。
  * - 认证状态只代表“调用身份”，不承载 session/chat 执行上下文。
- * - 统一提供 `--token > DC_AUTH_TOKEN > 本地存储` 的解析顺序。
+ * - 统一提供 `--token > DC_AUTH_TOKEN > DC_AGENT_TOKEN > 本地存储` 的解析顺序。
  */
 
 import fs from "fs-extra";
@@ -13,6 +13,11 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { getConsoleShipDbPath } from "@/main/runtime/ConsolePaths.js";
 import type { CliAuthState } from "@/types/auth/CliAuthState.js";
+import {
+  formatBearerHeaderValue,
+  normalizeBearerToken,
+  resolveInvocationToken,
+} from "./AuthEnv.js";
 import { ensureConsoleStoreSchema } from "@/utils/store/StoreSchema.js";
 import {
   getSecureSettingJsonSync,
@@ -32,15 +37,6 @@ export interface CliAuthStateStoreOptions {
    */
   dbPath?: string;
 }
-
-function normalizeCliToken(value: unknown): string | null {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-  const bearerMatch = /^Bearer\s+(.+)$/i.exec(raw);
-  const token = bearerMatch?.[1]?.trim() || raw;
-  return token || null;
-}
-
 function withConsoleStore<T>(
   options: CliAuthStateStoreOptions,
   callback: (context: ConsoleStoreContext) => T,
@@ -91,7 +87,7 @@ export function readCliAuthState(
   try {
     return withConsoleStoreReadonly(options, (context) => {
       const stored = getSecureSettingJsonSync<Partial<CliAuthState>>(context, CLI_AUTH_STATE_KEY);
-      const token = normalizeCliToken(stored?.token);
+      const token = normalizeBearerToken(stored?.token);
       if (!token) return null;
       const username = String(stored?.username || "").trim();
       const source = String(stored?.source || "").trim();
@@ -121,7 +117,7 @@ export function writeCliAuthState(
   },
   options: CliAuthStateStoreOptions = {},
 ): CliAuthState {
-  const token = normalizeCliToken(input.token);
+  const token = normalizeBearerToken(input.token);
   if (!token) {
     throw new Error("CLI auth token cannot be empty");
   }
@@ -156,28 +152,26 @@ export function clearCliAuthState(
  * 优先级（中文）
  * 1. 显式传入 token
  * 2. 环境变量 `DC_AUTH_TOKEN`
- * 3. 本地加密存储中的 CLI 登录态
+ * 3. 环境变量 `DC_AGENT_TOKEN`（Agent 专用 token）
+ * 4. 本地加密存储中的 CLI 登录态
  */
 export function resolveCliAuthToken(params: {
   explicitToken?: string;
   env?: NodeJS.ProcessEnv;
   dbPath?: string;
 } = {}): string | undefined {
-  const explicitToken = normalizeCliToken(params.explicitToken);
-  if (explicitToken) return explicitToken;
-
-  const envToken = normalizeCliToken((params.env || process.env).DC_AUTH_TOKEN);
-  if (envToken) return envToken;
-
-  return readCliAuthState({
-    dbPath: params.dbPath,
-  })?.token;
+  return resolveInvocationToken({
+    explicitToken: params.explicitToken,
+    env: params.env,
+    storedToken: readCliAuthState({
+      dbPath: params.dbPath,
+    })?.token,
+  });
 }
 
 /**
  * 生成标准 Authorization 头值。
  */
 export function formatCliBearerHeaderValue(tokenInput: string | undefined): string | undefined {
-  const token = normalizeCliToken(tokenInput);
-  return token ? `Bearer ${token}` : undefined;
+  return formatBearerHeaderValue(tokenInput);
 }

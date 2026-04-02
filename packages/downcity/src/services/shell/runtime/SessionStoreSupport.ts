@@ -9,6 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { loadGlobalEnvFromStore } from "@/main/env/Config.js";
+import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   SessionWaiter,
@@ -162,14 +163,10 @@ export function buildShellEnv(context: ExecutionContext): NodeJS.ProcessEnv {
   if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
   if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;
 
-  // 注入 DC_AUTH_TOKEN（Agent 专用 token）
-  // 优先级：显式传入 > DC_AGENT_TOKEN（Agent 进程环境变量）
-  if (!env.DC_AUTH_TOKEN) {
-    const agentToken = process.env.DC_AGENT_TOKEN;
-    if (agentToken) {
-      env.DC_AUTH_TOKEN = agentToken;
-    }
-  }
+  injectAgentTokenIntoEnv({
+    targetEnv: env,
+    sourceEnv: process.env,
+  });
 
   return env;
 }

@@ -9,7 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { loadGlobalEnvFromStore } from "@/main/env/Config.js";
-import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
+import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   SessionWaiter,
@@ -163,7 +163,7 @@ export function buildShellEnv(context: ExecutionContext): NodeJS.ProcessEnv {
   if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
   if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;
 
-  injectAgentTokenIntoEnv({
+  applyInternalAgentAuthEnv({
     targetEnv: env,
     sourceEnv: process.env,
   });

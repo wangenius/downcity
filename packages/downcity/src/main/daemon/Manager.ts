@@ -27,7 +27,7 @@ import {
   markConsoleAgentStopped,
   upsertConsoleAgentEntry,
 } from "@/main/runtime/ConsoleRegistry.js";
-import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
+import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
 import { ensureAgentToken } from "@/main/auth/AgentTokenService.js";
 
 /**
@@ -245,8 +245,9 @@ export const startDaemonProcess = async (params: {
     ...process.env,
     DOWNCITY_DAEMON: "1",
   };
-  injectAgentTokenIntoEnv({
+  applyInternalAgentAuthEnv({
     targetEnv: childEnv,
+    sourceEnv: process.env,
     token: agentToken.token,
   });
 

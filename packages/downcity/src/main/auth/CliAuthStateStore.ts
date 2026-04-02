@@ -160,9 +160,13 @@ export function resolveCliAuthToken(params: {
   env?: NodeJS.ProcessEnv;
   dbPath?: string;
 } = {}): string | undefined {
-  return resolveInvocationToken({
+  const directToken = resolveInvocationToken({
     explicitToken: params.explicitToken,
     env: params.env,
+  });
+  if (directToken) return directToken;
+
+  return resolveInvocationToken({
     storedToken: readCliAuthState({
       dbPath: params.dbPath,
     })?.token,

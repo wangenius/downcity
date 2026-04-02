@@ -9,7 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { execa } from "execa";
-import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
+import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
 import type { SessionRunResult } from "@/types/SessionRun.js";
 import type { JsonObject } from "@/types/Json.js";
 import type {
@@ -337,7 +337,7 @@ export async function runScriptTask(params: {
         ...process.env,
         DC_SESSION_ID: params.sessionId,
       };
-      injectAgentTokenIntoEnv({
+      applyInternalAgentAuthEnv({
         targetEnv: childEnv,
         sourceEnv: process.env,
       });

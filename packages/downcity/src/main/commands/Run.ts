@@ -13,7 +13,7 @@
 import path from "node:path";
 import { startServer } from "@/main/index.js";
 import { ensureAgentToken, rotateAgentTokenIfNeeded } from "@/main/auth/AgentTokenService.js";
-import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
+import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
 
 /**
  * Token 轮换检查间隔（毫秒）
@@ -87,8 +87,9 @@ export async function runCommand(
   // 为当前 Agent 签发专用 token（前台模式）
   const agentRoot = path.resolve(cwd);
   const agentToken = ensureAgentToken(agentRoot);
-  injectAgentTokenIntoEnv({
+  applyInternalAgentAuthEnv({
     targetEnv: process.env,
+    sourceEnv: process.env,
     token: agentToken.token,
   });
 
@@ -177,8 +178,9 @@ function startTokenRotationTimer(agentRoot: string): void {
       const result = rotateAgentTokenIfNeeded(agentRoot);
       if (result?.rotated) {
         // 更新进程环境变量，后续 shell 子进程会使用新 token
-        injectAgentTokenIntoEnv({
+        applyInternalAgentAuthEnv({
           targetEnv: process.env,
+          sourceEnv: process.env,
           token: result.token,
         });
         logger.info(`Agent token rotated, new token expires at ${result.expiresAt}`);

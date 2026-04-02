@@ -16,6 +16,7 @@ import {
   writeCliAuthState,
 } from "../../bin/main/auth/CliAuthStateStore.js";
 import { buildShellContextEnv } from "../../bin/sessions/tools/shell/ShellHelpers.js";
+import { applyInternalAgentAuthEnv } from "../../bin/main/auth/AuthEnv.js";
 
 function createConsoleRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-auth-env-"));
@@ -91,7 +92,7 @@ test("buildShellContextEnv keeps DC_AGENT_TOKEN and does not synthesize DC_AUTH_
   const previousAuthToken = process.env.DC_AUTH_TOKEN;
   try {
     process.env.DC_AGENT_TOKEN = "dc_agent";
-    delete process.env.DC_AUTH_TOKEN;
+    process.env.DC_AUTH_TOKEN = "dc_user_override";
 
     const env = buildShellContextEnv();
     assert.equal(env.DC_AGENT_TOKEN, "dc_agent");
@@ -103,4 +104,21 @@ test("buildShellContextEnv keeps DC_AGENT_TOKEN and does not synthesize DC_AUTH_
     if (previousAuthToken === undefined) delete process.env.DC_AUTH_TOKEN;
     else process.env.DC_AUTH_TOKEN = previousAuthToken;
   }
+});
+
+test("applyInternalAgentAuthEnv strips inherited DC_AUTH_TOKEN and preserves agent identity", () => {
+  const targetEnv = {
+    DC_AUTH_TOKEN: "dc_user_override",
+  };
+
+  applyInternalAgentAuthEnv({
+    targetEnv,
+    sourceEnv: {
+      DC_AUTH_TOKEN: "dc_user_override",
+      DC_AGENT_TOKEN: "dc_agent",
+    },
+  });
+
+  assert.equal(targetEnv.DC_AUTH_TOKEN, undefined);
+  assert.equal(targetEnv.DC_AGENT_TOKEN, "dc_agent");
 });

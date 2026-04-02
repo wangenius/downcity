@@ -6,7 +6,7 @@
  * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
  */
 
-import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
+import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
 import { requestContext } from "@sessions/RequestContext.js";
 
 function setEnvString(
@@ -78,7 +78,7 @@ export function buildShellContextEnv(
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
   setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
 
-  injectAgentTokenIntoEnv({
+  applyInternalAgentAuthEnv({
     targetEnv: env,
     sourceEnv: process.env,
   });

@@ -24,7 +24,7 @@ import {
   loadAgentEnvSnapshot,
   loadGlobalEnvFromStore,
 } from "@/main/env/Config.js";
-import { injectAgentTokenIntoEnv } from "@/main/auth/AuthEnv.js";
+import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpSessionSupport.js";
 import { generateId } from "@utils/Id.js";
 
@@ -291,7 +291,7 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
       ...agentEnv,
       ...this.launch.env,
     };
-    injectAgentTokenIntoEnv({
+    applyInternalAgentAuthEnv({
       targetEnv: childEnv,
       sourceEnv: process.env,
     });

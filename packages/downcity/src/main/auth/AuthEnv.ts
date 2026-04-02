@@ -80,6 +80,22 @@ export function injectAgentTokenIntoEnv(params: {
 }
 
 /**
+ * 为 agent 内部子进程应用统一认证环境。
+ *
+ * 关键点（中文）
+ * - 内部链路应始终使用 `DC_AGENT_TOKEN`，不允许继承宿主 shell 的 `DC_AUTH_TOKEN`。
+ * - 否则用户外部显式覆盖会渗透到 agent 内部自动化路径，导致“内部身份”漂移。
+ */
+export function applyInternalAgentAuthEnv(params: {
+  targetEnv: NodeJS.ProcessEnv;
+  sourceEnv?: NodeJS.ProcessEnv;
+  token?: string;
+}): void {
+  delete params.targetEnv[CLI_AUTH_TOKEN_ENV_KEY];
+  injectAgentTokenIntoEnv(params);
+}
+
+/**
  * 生成标准 Authorization 头值。
  */
 export function formatBearerHeaderValue(tokenInput: string | undefined): string | undefined {

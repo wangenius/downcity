@@ -122,8 +122,8 @@ frontmatter 核心字段：
 
 ### `when` / `status` 怎么选
 
-- 还在试任务、容易失败、需要人工确认：优先 `when=@manual` + `status=paused`。
-- 已经验证稳定、需要自动运行：再使用 cron + `status=enabled`。
+- task 创建默认就是 `status=enabled`；如果还在试任务、容易失败、需要人工确认，再显式切到 `paused`。
+- 已经验证稳定、需要自动运行：直接使用 cron + `status=enabled`。
 - 明确只执行一次：使用 `time:<带时区 ISO 时间>`；执行后系统会自动回退到 `@manual` + `paused`。
 - 如果用户只是“先存起来以后再跑”，不要直接启用调度。
 
@@ -154,7 +154,7 @@ frontmatter 核心字段：
 
 # 触发与状态建议
 
-- 默认使用 `@manual` + `paused`，确认稳定后再切换。
+- 默认创建后立即启用；如果只是先保存草稿或等待人工确认，再改成 `paused`。
 
 # 注意事项
 
@@ -182,5 +182,5 @@ set -euo pipefail
 - 先 `list`，再 `create`/`update`。
 - 简单内容生成任务优先保持默认单轮；只有确实需要“先生成、再复核、再修订”时再设置 `review: true`。
 - script 任务正文保持纯脚本，不要混入冗余自然语言。
-- 如果用户没有明确要求自动触发，优先创建成 `@manual` + `paused`。
+- 如果用户只是先存起来以后再跑，创建后显式设成 `paused`；否则保持默认启用。
 - task 正文要写“最终结果长什么样”，不要只写“去做一下看看”。

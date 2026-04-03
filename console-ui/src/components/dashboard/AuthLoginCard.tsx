@@ -8,6 +8,7 @@
 
 import * as React from "react"
 import { Button } from "@downcity/ui"
+import { Loader2Icon } from "lucide-react"
 
 export interface AuthLoginCardProps {
   /**
@@ -30,63 +31,76 @@ export function AuthLoginCard(props: AuthLoginCardProps) {
   const { submitting, errorMessage, onSubmit } = props
   const [username, setUsername] = React.useState("admin")
   const [password, setPassword] = React.useState("")
+
   const handleSubmit = React.useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    await onSubmit({
-      username,
-      password,
-    })
+    await onSubmit({ username, password })
   }, [onSubmit, password, username])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-[28px] border border-white/10 bg-zinc-950/95 p-6 text-white shadow-2xl"
-      >
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.24em] text-zinc-400">Unified Auth</p>
-          <h2 className="text-2xl font-semibold tracking-[-0.04em]">登录 Console UI</h2>
-          <p className="text-sm leading-6 text-zinc-400">
-            当前控制面已启用统一账户。继续使用前，需要先完成登录。
-          </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm">
+      <section className="w-full max-w-sm rounded-[22px] bg-background px-6 py-6 shadow-xl ring-1 ring-border/70">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-base font-medium text-foreground">登录</h1>
+          <p className="mt-1 text-xs text-muted-foreground">Console UI</p>
         </div>
 
-        <div className="mt-6 space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-sm text-zinc-300">用户名</span>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Username */}
+          <div className="space-y-1.5">
+            <label htmlFor="username" className="text-xs text-muted-foreground">
+              用户名
+            </label>
             <input
+              id="username"
+              type="text"
               value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-white/30"
-              autoFocus
+              onChange={(e) => setUsername(e.target.value)}
+              className="h-9 w-full rounded-[11px] border border-input bg-transparent px-3 text-sm outline-none transition-colors focus:border-ring"
+              disabled={submitting}
             />
-          </label>
+          </div>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm text-zinc-300">密码</span>
+          {/* Password */}
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="text-xs text-muted-foreground">
+              密码
+            </label>
             <input
+              id="password"
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-white/30"
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-9 w-full rounded-[11px] border border-input bg-transparent px-3 text-sm outline-none transition-colors focus:border-ring"
+              disabled={submitting}
             />
-          </label>
-
-        </div>
-
-        {errorMessage ? (
-          <div className="mt-4 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            {errorMessage}
           </div>
-        ) : null}
 
-        <div className="mt-6 flex justify-end">
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "登录中..." : "登录"}
+          {/* Error */}
+          {errorMessage && (
+            <div className="rounded-[11px] bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {errorMessage}
+            </div>
+          )}
+
+          {/* Submit */}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitting || !username.trim() || !password.trim()}
+          >
+            {submitting ? (
+              <>
+                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                登录中...
+              </>
+            ) : (
+              "登录"
+            )}
           </Button>
-        </div>
-      </form>
+        </form>
+      </section>
     </div>
   )
 }

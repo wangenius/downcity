@@ -117,6 +117,7 @@ Telegram dispatches execution for the current `chatKey`.
 - Primary delivery path: the model calls `chat_send` to send replies (tool-strict).
 - Fallback: if the model forgets to call `chat_send`, the adapter sends the final plain-text output.
 - Messages are chunked for Telegram size limits; Markdown is attempted first, then it falls back to plain text.
+- Long replies are not pre-truncated before delivery; they are sent in full across multiple chunks.
 - Mixed text + attachment replies are first parsed into ordered segments, then sent in the actual order they appeared in the source message.
 
 ### Reply targeting and reactions (`reply_to_message` + `chat react`)

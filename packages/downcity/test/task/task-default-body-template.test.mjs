@@ -38,6 +38,7 @@ test("createTaskDefinition uses structured default body template for agent tasks
     });
     assert.equal(listed.success, true);
     assert.equal(listed.tasks.length, 1);
+    assert.equal(listed.tasks[0].status, "enabled");
 
     const body = String(listed.tasks[0].body || "");
     assert.match(body, /# 任务目标/);
@@ -46,7 +47,7 @@ test("createTaskDefinition uses structured default body template for agent tasks
     assert.match(body, /# 触发与状态建议/);
     assert.match(body, /# 注意事项/);
     assert.match(body, /最终回复会由系统自动发送到任务绑定的 chat/);
-    assert.match(body, /默认使用 `@manual` \+ `paused`/);
+    assert.match(body, /默认创建后会立即启用/);
     assert.match(body, /不要在正文里重复调用 `city chat send`/);
   } finally {
     await fs.rm(rootPath, { recursive: true, force: true });

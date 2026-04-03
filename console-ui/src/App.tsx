@@ -64,7 +64,6 @@ export function App() {
     authInitializing,
     authBootstrapRequired,
     isAuthenticated,
-    authUsername,
     authRequired,
     authSubmitting,
     authErrorMessage,
@@ -124,7 +123,7 @@ export function App() {
     clearLatestIssuedAccessToken,
     updateAccessPassword,
     createAccessToken,
-    revokeAccessToken,
+    deleteAccessToken,
     runSkillFind,
     runSkillInstall,
     runTask,
@@ -552,15 +551,13 @@ export function App() {
         return (
           <section>
             <AccessSection
-              user={accessUser}
               tokens={accessTokens}
               loading={accessLoading}
               latestIssuedToken={latestIssuedAccessToken}
               formatTime={(value) => uiHelpers.formatTime(value ?? undefined)}
               onRefresh={() => refreshAccess()}
-              onUpdatePassword={(input) => updateAccessPassword(input)}
               onCreateToken={(input) => createAccessToken(input)}
-              onRevokeToken={(input) => revokeAccessToken(input)}
+              onDeleteToken={(input) => deleteAccessToken(input)}
               onClearLatestIssuedToken={clearLatestIssuedAccessToken}
             />
           </section>
@@ -862,14 +859,6 @@ export function App() {
 
   const headerRightActions = (
     <div className="flex items-center gap-2">
-      {isAuthenticated ? (
-        <>
-          <span className="text-xs text-muted-foreground">{authUsername || "已登录"}</span>
-          <Button type="button" size="sm" variant="outline" onClick={logout}>
-            退出
-          </Button>
-        </>
-      ) : null}
       {activeView === "contextWorkspace" ? (
         <Button
           type="button"
@@ -969,6 +958,10 @@ export function App() {
           topbarError={topbarError}
           loading={loading}
           onRefresh={() => void refreshDashboard()}
+          user={accessUser}
+          tokens={accessTokens}
+          onLogout={logout}
+          onUpdatePassword={(input) => updateAccessPassword(input)}
           variant="sidebar"
         />
         <SidebarInset>

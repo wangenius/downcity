@@ -302,6 +302,29 @@ export class AuthService {
     return this.store.toTokenSummary(revoked);
   }
 
+  /**
+   * 删除当前用户的 token。
+   */
+  deleteToken(principal: AuthPrincipal, tokenIdInput: string): void {
+    const tokenId = String(tokenIdInput || "").trim();
+    if (!tokenId) throw new AuthError("tokenId is required", 400);
+    const record = this.store.getTokenById(tokenId);
+    if (!record || record.userId !== principal.userId) {
+      throw new AuthError("Token not found", 404);
+    }
+    const deleted = this.store.deleteToken(record.id);
+    if (!deleted) throw new AuthError("Token not found", 404);
+    this.store.insertAuditLog({
+      actorUserId: principal.userId,
+      actorTokenId: principal.tokenId,
+      resourceType: "auth_token",
+      resourceId: tokenId,
+      action: "token_delete",
+      result: "success",
+      metaJson: JSON.stringify({ name: record.name }),
+    });
+  }
+
   private issueTokenForUser(params: {
     user: AuthUser;
     tokenName: string;

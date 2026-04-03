@@ -218,7 +218,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshAccess,
     updateAccessPassword,
     createAccessToken,
-    revokeAccessToken,
+    deleteAccessToken,
   } = useDashboardAccess({
     enabled: isAuthenticated && !authInitializing && !authRequired,
     requestJson,
@@ -1099,7 +1099,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     clearLatestIssuedAccessToken,
     updateAccessPassword,
     createAccessToken,
-    revokeAccessToken,
+    deleteAccessToken,
     runSkillFind,
     runSkillInstall,
     runSkillLookup,

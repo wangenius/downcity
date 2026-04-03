@@ -190,6 +190,7 @@ export const dashboardApiRoutes = {
   authTokenList: () => "/api/auth/token/list",
   authTokenCreate: () => "/api/auth/token/create",
   authTokenRevoke: () => "/api/auth/token/revoke",
+  authTokenDelete: () => "/api/auth/token/delete",
   authPasswordUpdate: () => "/api/auth/password/update",
   uiAgents: (agentId?: string) =>
     agentId

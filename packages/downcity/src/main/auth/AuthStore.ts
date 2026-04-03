@@ -454,6 +454,17 @@ export class AuthStore {
   }
 
   /**
+   * 删除 token。
+   */
+  deleteToken(tokenIdInput: string): boolean {
+    const tokenId = normalizeNonEmptyText(tokenIdInput, "tokenId");
+    const result = this.sqlite
+      .prepare("DELETE FROM auth_tokens WHERE id = ?")
+      .run(tokenId);
+    return result.changes > 0;
+  }
+
+  /**
    * 写入审计日志。
    */
   insertAuditLog(input: {

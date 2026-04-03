@@ -186,12 +186,6 @@ export function sanitizeChatText(text: string): string {
     "\n[工具输出已省略：我已在后台读取并提炼关键信息]\n",
   );
 
-  // Collapse very long JSON-ish blocks
-  if (out.length > 6000) {
-    out =
-      out.slice(0, 5800) + "\n\n…[truncated]（如需完整输出请回复“发完整输出”）";
-  }
-
   return out;
 }
 

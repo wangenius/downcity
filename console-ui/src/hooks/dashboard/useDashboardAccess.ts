@@ -11,7 +11,7 @@ import {
   createAuthAccessToken,
   queryAuthAccessMe,
   queryAuthAccessTokens,
-  revokeAuthAccessToken,
+  deleteAuthAccessToken,
   updateAuthAccessPassword,
 } from "@/lib/auth-access-api"
 import { getErrorMessage } from "./shared"
@@ -76,9 +76,9 @@ export interface UseDashboardAccessResult {
   }) => Promise<void>
 
   /**
-   * 吊销 token。
+   * 删除 token。
    */
-  revokeAccessToken: (input: {
+  deleteAccessToken: (input: {
     tokenId: string
   }) => Promise<void>
 }
@@ -138,14 +138,14 @@ export function useDashboardAccess(params: {
     await refreshAccess()
   }, [refreshAccess, requestJson, showToast])
 
-  const revokeAccessToken = useCallback(async (input: {
+  const deleteAccessToken = useCallback(async (input: {
     tokenId: string
   }) => {
-    await revokeAuthAccessToken({
+    await deleteAuthAccessToken({
       requestJson,
       tokenId: input.tokenId,
     })
-    showToast("已吊销 token", "success")
+    showToast("已删除 token", "success")
     await refreshAccess()
   }, [refreshAccess, requestJson, showToast])
 
@@ -174,6 +174,6 @@ export function useDashboardAccess(params: {
     refreshAccess,
     updateAccessPassword,
     createAccessToken,
-    revokeAccessToken,
+    deleteAccessToken,
   }
 }

@@ -461,9 +461,9 @@ export interface UseConsoleDashboardResult {
   }) => Promise<void>;
 
   /**
-   * 吊销当前管理员 token。
+   * 删除当前管理员 token。
    */
-  revokeAccessToken: (input: {
+  deleteAccessToken: (input: {
     tokenId: string;
   }) => Promise<void>;
 

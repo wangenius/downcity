@@ -79,8 +79,8 @@ function buildDefaultTaskBody(): string {
     "",
     "# 触发与状态建议",
     "",
-    "- 草稿、试运行、需要人工确认的任务：默认使用 `@manual` + `paused`。",
-    "- 已经稳定、需要周期执行的任务：再改成 cron + `enabled`。",
+    "- 默认创建后会立即启用；如果还在试运行或需要人工确认，再改成 `paused`。",
+    "- 已经稳定、需要周期执行的任务：优先保持 `enabled`，再改成 cron。",
     "- 一次性定时任务：使用 `time:<带时区的 ISO 时间>`；执行后会自动回退为 `@manual` + `paused`。",
     "",
     "# 注意事项",
@@ -153,7 +153,7 @@ export async function createTaskDefinition(params: {
   if (!sessionId) return { success: false, error: "Missing sessionId" };
   if (!whenNormalized.ok) return { success: false, error: whenNormalized.error };
 
-  const status = resolveTaskStatus(req.status, "paused");
+  const status = resolveTaskStatus(req.status, "enabled");
   const body =
     typeof req.body === "string" && req.body.trim()
       ? req.body.trim()

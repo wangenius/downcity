@@ -125,6 +125,19 @@ export function registerAuthRoutes(params: {
     }
   });
 
+  protectedRouter.post("/token/delete", requireAuth, async (c) => {
+    try {
+      const principal = getAuthPrincipal(c);
+      const body = (await c.req.json().catch(() => ({}))) as {
+        tokenId?: string;
+      };
+      authService.deleteToken(principal, String(body.tokenId || ""));
+      return c.json({ success: true });
+    } catch (error) {
+      return toErrorResponse(c, error);
+    }
+  });
+
   protectedRouter.post("/password/update", requireAuth, async (c) => {
     try {
       const principal = getAuthPrincipal(c);

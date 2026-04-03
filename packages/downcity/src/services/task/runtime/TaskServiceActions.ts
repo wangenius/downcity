@@ -91,7 +91,7 @@ export function createTaskServiceActions(params: {
             )
             .option(
               "--status <status>",
-              "状态（enabled|paused|disabled，默认 paused）",
+              "状态（enabled|paused|disabled，默认 enabled）",
             )
             .option(
               "--activate",

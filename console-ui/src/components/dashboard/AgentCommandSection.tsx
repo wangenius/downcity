@@ -9,6 +9,7 @@
 import * as React from "react"
 import { CheckIcon, ChevronsUpDownIcon, TerminalIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@downcity/ui"
+import { cn } from "@/lib/utils"
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -522,8 +523,6 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
     })
   }, [records.length, running])
 
-  const activeAgentBadge = activeAgentId ? activeAgentName : "未选择 agent"
-
   return (
     <DashboardModule
       title="Command"
@@ -534,23 +533,27 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
         <>
           {agents.length > 0 ? (
             <DropdownMenu>
-              <DropdownMenuTrigger
-                className="inline-flex min-w-[11rem] max-w-[16rem] items-center gap-2 rounded-[11px] bg-secondary/85 px-2.5 text-left outline-none transition-colors hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/30"
-                aria-label="选择 agent"
-              >
-                <div className="min-w-0 flex-1 leading-none">
-                  <div className="mb-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
-                    Agent
-                  </div>
-                  <div className="max-w-[12rem] truncate text-left text-[12px] text-foreground">
-                    {activeAgentBadge}
-                  </div>
-                </div>
-                <ChevronsUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-2 rounded-[11px] px-2.5 text-[12px] font-normal"
+                >
+                  <span
+                    className={cn(
+                      "inline-flex size-1.5 rounded-full",
+                      activeAgent?.running ? "bg-emerald-500" : "bg-muted-foreground/40",
+                    )}
+                  />
+                  <span className="max-w-[12rem] truncate">{activeAgentName}</span>
+                  <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
+                </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[24rem] max-w-[calc(100vw-2rem)]">
+              <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>选择 agent</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+                    选择 agent
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {agents.map((agent) => {
                     const id = String(agent.id || "").trim()
@@ -563,10 +566,18 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
                           setActiveAgentId(id)
                           onSelectAgent?.(id)
                         }}
-                        className="justify-between gap-2"
+                        className="justify-between gap-2 text-[12px]"
                       >
-                        <span className="truncate">{agent.name || id}</span>
-                        {isActive ? <CheckIcon className="size-3.5 text-primary" /> : null}
+                        <span className="flex min-w-0 items-center gap-2 truncate">
+                          <span
+                            className={cn(
+                              "inline-flex size-1.5 rounded-full",
+                              agent.running ? "bg-emerald-500" : "bg-muted-foreground/40",
+                            )}
+                          />
+                          <span className="truncate">{agent.name || id}</span>
+                        </span>
+                        {isActive ? <CheckIcon className="size-3.5 shrink-0 text-primary" /> : null}
                       </DropdownMenuItem>
                     )
                   })}
@@ -574,13 +585,9 @@ export function AgentCommandSection(props: AgentCommandSectionProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="inline-flex items-center rounded-[11px] bg-secondary/85 px-2.5">
-              <div className="leading-none">
-                <div className="mb-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
-                  Agent
-                </div>
-                <div className="text-[12px] text-foreground">{activeAgentBadge}</div>
-              </div>
+            <div className="inline-flex h-8 items-center gap-2 rounded-[11px] border border-border bg-transparent px-2.5 text-[12px] text-muted-foreground">
+              <span className="inline-flex size-1.5 rounded-full bg-muted-foreground/40" />
+              未选择 agent
             </div>
           )}
           <Button

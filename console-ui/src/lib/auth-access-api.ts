@@ -79,6 +79,24 @@ export async function revokeAuthAccessToken(params: {
 }
 
 /**
+ * 删除当前管理员 token。
+ */
+export async function deleteAuthAccessToken(params: {
+  requestJson: RequestJson
+  tokenId: string
+}): Promise<void> {
+  await params.requestJson<{ success: boolean }>(
+    dashboardApiRoutes.authTokenDelete(),
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tokenId: params.tokenId,
+      }),
+    },
+  )
+}
+
+/**
  * 修改当前管理员密码。
  */
 export async function updateAuthAccessPassword(params: {

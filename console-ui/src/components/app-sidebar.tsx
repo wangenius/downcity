@@ -21,8 +21,12 @@ import {
   RadarIcon,
   TerminalIcon,
   ShieldCheckIcon,
+  LogOutIcon,
+  UserIcon,
+  LockIcon,
 } from "lucide-react"
 import type { UiAgentOption, UiChatChannelStatus, UiSessionSummary, UiTaskItem } from "@/types/Dashboard"
+import type { UiAuthAccessUser, UiAuthAccessTokenSummary } from "@/types/AuthAccess"
 import type { DashboardView } from "@/types/Navigation"
 import {
   Sidebar,
@@ -41,6 +45,9 @@ import { buildSessionGroups, resolveSessionChannel } from "@/lib/context-groups"
 import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@downcity/ui"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@downcity/ui"
+import { Input, Label } from "@downcity/ui"
 
 export type { DashboardView }
 
@@ -129,6 +136,22 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    * 刷新回调。
    */
   onRefresh: () => void
+  /**
+   * 当前管理员用户。
+   */
+  user?: UiAuthAccessUser | null
+  /**
+   * token 列表。
+   */
+  tokens?: UiAuthAccessTokenSummary[]
+  /**
+   * 退出登录回调。
+   */
+  onLogout?: () => void
+  /**
+   * 修改密码回调。
+   */
+  onUpdatePassword?: (input: { currentPassword: string; nextPassword: string }) => Promise<void>
 }
 
 type SidebarMode = "agent-list" | "agent-detail"
@@ -263,12 +286,31 @@ export function AppSidebar({
     [globalItems],
   )
   const agentItems = React.useMemo(() => listPrimaryPagesByScope("agent"), [])
-  const globalViews: DashboardView[] = ["globalOverview", "globalCommand", "globalEnv", "globalModel", "globalChannelAccounts", "globalAgents", "globalPlugins"]
+  const globalViews: DashboardView[] = ["globalOverview", "globalAccess", "globalCommand", "globalEnv", "globalModel", "globalChannelAccounts", "globalAgents", "globalPlugins"]
   const sidebarMode: SidebarMode = globalViews.includes(activeView) ? "agent-list" : "agent-detail"
   const [navDirection, setNavDirection] = React.useState<"forward" | "back">("forward")
   const [hoveredAgentId, setHoveredAgentId] = React.useState("")
   const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
   const previousSidebarModeRef = React.useRef<SidebarMode>(sidebarMode)
+
+  // Password change dialog state
+  const [passwordDialogOpen, setPasswordDialogOpen] = React.useState(false)
+  const [currentPassword, setCurrentPassword] = React.useState("")
+  const [nextPassword, setNextPassword] = React.useState("")
+  const [savingPassword, setSavingPassword] = React.useState(false)
+
+  const handleUpdatePassword = React.useCallback(async () => {
+    if (!props.onUpdatePassword) return
+    try {
+      setSavingPassword(true)
+      await props.onUpdatePassword({ currentPassword, nextPassword })
+      setCurrentPassword("")
+      setNextPassword("")
+      setPasswordDialogOpen(false)
+    } finally {
+      setSavingPassword(false)
+    }
+  }, [currentPassword, nextPassword, props.onUpdatePassword])
   const isGlobalAgentOverviewRoute = React.useMemo(() => {
     if (activeView !== "globalOverview") return false
     const parts = routePathname.split("/").filter(Boolean)
@@ -366,6 +408,27 @@ export function AppSidebar({
             >
               <span>{sidebarMode === "agent-detail" ? (selectedAgent?.name || "Agent") : "DOWNCITY"}</span>
             </span>
+
+            {/* Status icon button - moved from footer */}
+            <div className="ml-auto">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "size-8 rounded-[11px]",
+                  topbarError
+                    ? "text-destructive hover:bg-destructive/10"
+                    : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                )}
+                onClick={onRefresh}
+                disabled={loading}
+                aria-label={loading ? "刷新中" : "刷新"}
+                title={topbarStatus}
+              >
+                <RefreshCcwIcon className={cn("size-4", loading && "animate-spin")} />
+              </Button>
+            </div>
           </div>
         </div>
       </SidebarHeader>
@@ -708,25 +771,96 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="px-3 pb-3 pt-1">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(
-            "h-9 w-full justify-start gap-1.5 rounded-[12px] px-3 text-xs font-medium",
-            topbarError
-              ? "bg-destructive/12 text-destructive hover:bg-destructive/18"
-              : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-          onClick={onRefresh}
-          disabled={loading}
-          aria-label={loading ? "刷新中" : "刷新"}
-          title={loading ? "刷新中" : "刷新"}
-        >
-          <RefreshCcwIcon className={cn("size-3.5 shrink-0", loading && "animate-spin")} />
-          <span className="truncate">{topbarStatus}</span>
-        </Button>
+        {/* Admin popover - styled like SidebarMenuButton */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                menuItemButtonClass,
+                "flex w-full items-center justify-start gap-2 text-sidebar-foreground/82"
+              )}
+            >
+              <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
+                <UserIcon className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1 truncate text-left">{props.user?.username || "admin"}</span>
+              <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="start" className="w-48 p-1.5">
+            <div className="space-y-0.5">
+              {props.onUpdatePassword ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordDialogOpen(true)
+                  }}
+                  className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-[13px] text-sidebar-foreground/82 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+                >
+                  <LockIcon className="size-4" />
+                  <span>修改密码</span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={props.onLogout}
+                className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-[13px] text-sidebar-foreground/82 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              >
+                <LogOutIcon className="size-4" />
+                <span>退出登录</span>
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </SidebarFooter>
 
+      {/* Password Change Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="w-[min(92vw,400px)]">
+          <DialogHeader>
+            <DialogTitle>修改密码</DialogTitle>
+            <DialogDescription>修改管理员登录密码</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 px-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-xs">当前密码</Label>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="输入当前密码"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">新密码</Label>
+              <Input
+                type="password"
+                value={nextPassword}
+                onChange={(e) => setNextPassword(e.target.value)}
+                placeholder="输入新密码"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPasswordDialogOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              disabled={!currentPassword.trim() || !nextPassword.trim() || savingPassword}
+              onClick={() => void handleUpdatePassword()}
+            >
+              {savingPassword && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+              更新
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sidebar>
   )
 }

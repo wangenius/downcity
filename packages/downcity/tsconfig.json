@@ -6,16 +6,14 @@
     "lib": ["ES2022"],
     "outDir": "./bin",
     "rootDir": "src",
-    // ignore
-    "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"],
-      "@agent/*": ["agent/*"],
-      "@main/*": ["main/*"],
-      "@services/*": ["services/*"],
-      "@sessions/*": ["sessions/*"],
-      "@types/*": ["types/*"],
-      "@utils/*": ["utils/*"]
+      "@/*": ["./src/*"],
+      "@agent/*": ["./src/agent/*"],
+      "@main/*": ["./src/main/*"],
+      "@services/*": ["./src/services/*"],
+      "@sessions/*": ["./src/sessions/*"],
+      "@types/*": ["./src/types/*"],
+      "@utils/*": ["./src/utils/*"]
     },
     "strict": true,
     "esModuleInterop": true,

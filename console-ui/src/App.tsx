@@ -5,7 +5,7 @@
 import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { UserTokenSection } from "@/components/dashboard/UserTokenSection"
+import { ApiKeysSection } from "@/components/dashboard/ApiKeysSection"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
 import { AuthorizationSection } from "@/components/dashboard/AuthorizationSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
@@ -547,10 +547,10 @@ export function App() {
             />
           </section>
         )
-      case "globalUserToken":
+      case "globalApiKeys":
         return (
           <section>
-            <UserTokenSection
+            <ApiKeysSection
               tokens={accessTokens}
               loading={accessLoading}
               latestIssuedToken={latestIssuedAccessToken}

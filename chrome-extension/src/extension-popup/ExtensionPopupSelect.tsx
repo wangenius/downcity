@@ -90,7 +90,7 @@ export function ExtensionPopupSelect(props: ExtensionPopupSelectProps) {
         <button
           id={fieldId}
           type="button"
-          className="flex min-h-[40px] w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-[10px] border border-border bg-muted px-2.5 py-2 text-left text-[12px] normal-case tracking-normal text-foreground outline-none transition focus:border-border-strong focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-[38px] w-full min-w-0 items-center justify-between gap-2 overflow-hidden rounded-lg border border-border bg-muted px-3 py-2 text-left text-[12px] normal-case tracking-normal text-foreground outline-none transition focus:border-border-strong focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => {
             if (props.disabled) return;
             setOpen((prev) => !prev);
@@ -123,14 +123,14 @@ export function ExtensionPopupSelect(props: ExtensionPopupSelectProps) {
         </button>
 
         {open ? (
-          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-20 max-w-full overflow-hidden rounded-[10px] border border-border bg-surface">
-            <div role="listbox" className="max-h-56 overflow-auto py-0.5">
+          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-20 max-w-full overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+            <div role="listbox" className="max-h-56 overflow-auto py-1">
               {props.options.length > 0 ? (
                 props.options.map((item) => (
                   <button
                     key={item.value}
                     type="button"
-                    className="flex w-full min-w-0 items-start justify-between gap-2 border-b border-border/60 px-2.5 py-2 text-left last:border-b-0 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full min-w-0 items-start justify-between gap-2 px-3 py-2 text-left hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={item.disabled}
                     onClick={() => {
                       if (item.disabled) return;

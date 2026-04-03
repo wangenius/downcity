@@ -67,6 +67,11 @@ If the token is valid, the endpoint returns the current user, roles, and permiss
 
 ## `DC_AUTH_TOKEN` and `DC_AGENT_TOKEN`
 
+Start with the main rule:
+
+- Only external HTTP calls need a Bearer token
+- Local `city service`, `city plugin`, `city task`, `city chat`, and similar commands now use IPC by default, so they do not need a token first
+
 For direct API users, the key idea is simple:
 
 - external calls always authenticate through `Authorization: Bearer <token>`
@@ -76,14 +81,14 @@ Inside the CLI/runtime, you may still see two env vars:
 | Variable | Intended For | Purpose |
 | --- | --- | --- |
 | `DC_AUTH_TOKEN` | users, scripts, CI | explicitly choose which token this CLI/API invocation should use |
-| `DC_AGENT_TOKEN` | Downcity agent runtime | automatically propagate auth when an agent internally calls `city ...` again |
+| `DC_AGENT_TOKEN` | Downcity agent runtime | automatically propagate auth when an agent explicitly makes a remote HTTP call |
 
 Recommended mental model:
 
 - if you are a human user or an external script, prefer `--token` or `DC_AUTH_TOKEN`
-- if an agent internally calls `city task`, `city chat`, or similar commands, runtime usually injects `DC_AGENT_TOKEN` automatically
+- if an agent explicitly makes a remote HTTP call internally, runtime can inject `DC_AGENT_TOKEN`
 
-The final CLI resolution order is:
+The CLI only uses the following token resolution order for explicit remote HTTP calls:
 
 1. `--token`
 2. `DC_AUTH_TOKEN`
@@ -99,8 +104,9 @@ So:
 If you see `Missing bearer token`:
 
 - do not start by suspecting `sessionId`
-- first check whether the current process has any valid token source
-- if the error happens inside an agent/Bash/ACP subprocess, inspect the `DC_AGENT_TOKEN` inheritance path first
+- first confirm that this invocation is actually using remote HTTP
+- then check whether the current process has any valid token source
+- if the error happens inside an agent/Bash/ACP subprocess making a remote HTTP call, inspect the `DC_AGENT_TOKEN` inheritance path first
 
 ## Manage tokens
 

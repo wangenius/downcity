@@ -7,6 +7,8 @@
  */
 
 import { Badge, Button } from "@downcity/ui"
+import { RefreshCcwIcon, PlayIcon, SquareIcon, ActivityIcon, LinkIcon } from "lucide-react"
+import { dashboardIconButtonClass, dashboardDangerIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type { UiAgentOption, UiChatChannelStatus } from "@/types/Dashboard"
 
@@ -69,8 +71,17 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
       title="Agent Channels"
       description={`当前 agent：${selectedAgent.name || "-"}`}
       actions={
-        <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
-          {loading ? "刷新中..." : "刷新"}
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className={dashboardIconButtonClass}
+          onClick={onRefresh}
+          disabled={loading}
+          aria-label="刷新"
+          title="刷新"
+        >
+          {loading ? <RefreshCcwIcon className="size-4 animate-spin" /> : <RefreshCcwIcon className="size-4" />}
         </Button>
       }
     >
@@ -102,38 +113,54 @@ export function AgentChannelsSection(props: AgentChannelsSectionProps) {
                       </div>
                       <div className="text-xs text-muted-foreground">{statusText}</div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <div className="flex flex-wrap items-center gap-1 lg:justify-end">
                       <Button
-                        size="sm"
-                        variant="outline"
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className={dashboardIconButtonClass}
                         disabled={openDisabled}
                         onClick={() => onChannelAction("open", channel)}
+                        aria-label="open"
+                        title="open"
                       >
-                        open
+                        <PlayIcon className="size-4" />
                       </Button>
                       <Button
-                        size="sm"
-                        variant="outline"
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className={dashboardDangerIconButtonClass}
                         disabled={closeDisabled}
                         onClick={() => onChannelAction("close", channel)}
+                        aria-label="close"
+                        title="close"
                       >
-                        close
+                        <SquareIcon className="size-4" />
                       </Button>
                       <Button
-                        size="sm"
-                        variant="outline"
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className={dashboardIconButtonClass}
                         disabled={runtimeActionDisabled}
                         onClick={() => onChannelAction("test", channel)}
+                        aria-label="test"
+                        title="test"
                       >
-                        test
+                        <ActivityIcon className="size-4" />
                       </Button>
                       <Button
-                        size="sm"
-                        variant="outline"
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className={dashboardIconButtonClass}
                         disabled={runtimeActionDisabled}
                         onClick={() => onChannelAction("reconnect", channel)}
+                        aria-label="reconnect"
+                        title="reconnect"
                       >
-                        reconnect
+                        <LinkIcon className="size-4" />
                       </Button>
                     </div>
                   </div>

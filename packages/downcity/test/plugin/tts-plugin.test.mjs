@@ -152,3 +152,15 @@ test("tts plugin install action writes local model config when model already exi
   assert.equal(Array.isArray(result.data.logs), true);
   assert.equal(result.data.logs.length > 0, true);
 });
+
+test("tts plugin system prompt is injected only when plugin is enabled", async () => {
+  const { runtime } = createRuntime();
+
+  assert.equal(await ttsPlugin.system(runtime), "");
+
+  runtime.config.plugins.tts.enabled = true;
+  const prompt = await ttsPlugin.system(runtime);
+  assert.match(prompt, /# TTS Plugin/);
+  assert.match(prompt, /tts\.synthesize/);
+  assert.match(prompt, /<file type="audio">/);
+});

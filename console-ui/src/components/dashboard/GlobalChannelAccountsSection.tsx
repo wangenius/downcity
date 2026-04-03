@@ -391,14 +391,15 @@ export function GlobalChannelAccountsSection(props: GlobalChannelAccountsSection
             />
             <Button
               type="button"
-              size="sm"
-              variant="default"
-              className="gap-1.5 px-3"
+              size="icon"
+              variant="ghost"
+              className={dashboardIconButtonClass}
               onClick={openCreateDialog}
               disabled={loading}
+              aria-label="新建账号"
+              title="新建账号"
             >
               <PlusIcon className="size-4" />
-              新建账号
             </Button>
           </>
         }

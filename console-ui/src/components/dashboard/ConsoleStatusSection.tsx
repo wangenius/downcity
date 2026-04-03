@@ -7,8 +7,10 @@
  */
 
 import * as React from "react"
+import { RefreshCcwIcon } from "lucide-react"
 import { Badge, Button } from "@downcity/ui"
 import { DashboardModule } from "./DashboardModule"
+import { dashboardIconButtonClass } from "./dashboard-action-button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,8 +94,16 @@ export function ConsoleStatusSection(props: ConsoleStatusSectionProps) {
           title="Runtime Board"
           description="Console、prompt 与 plugin 的即时运行状态。"
           actions={
-            <Button size="sm" variant="outline" onClick={onRefresh}>
-              refresh
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={dashboardIconButtonClass}
+              onClick={onRefresh}
+              aria-label="刷新"
+              title="刷新"
+            >
+              <RefreshCcwIcon className="size-4" />
             </Button>
           }
         >

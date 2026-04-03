@@ -207,7 +207,7 @@ export function ExtensionPopupApp() {
         const filtered =
           allowedChannels.size > 0
             ? options.filter((item) => allowedChannels.has(item.channel))
-            : [];
+            : options;
 
         setChatKeyOptions(filtered);
 
@@ -218,8 +218,8 @@ export function ExtensionPopupApp() {
         }));
 
         if (allowedChannels.size === 0) {
-          setStatus((prev) => (prev.type === "error" ? prev : { type: "idle", text: "准备就绪" }));
-          return;
+          // 没有配置已连接渠道时，显示所有可用会话（与 inline composer 行为一致）
+          setStatus((prev) => (prev.type === "loading" ? prev : { type: "idle", text: "准备就绪" }));
         }
 
         if (filtered.length === 0) {
@@ -527,90 +527,89 @@ export function ExtensionPopupApp() {
   );
 
   return (
-    <main className="min-h-[520px] w-[380px] bg-background p-3 text-foreground">
-      <section className="rounded-[12px] border border-border bg-surface p-3">
-        <header className="mb-3 flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-medium">
-              {isLoadingAgents ? "加载 Agent 中..." : selectedAgent?.name || "未选择 Agent"}
-            </div>
-            <div className="truncate text-[10px] text-muted-foreground">
-              {selectedAgent
-                ? selectedAgent.running
-                  ? isLoadingChatKeys
-                    ? "会话加载中..."
-                    : settings.chatKey
-                      ? "目标会话已设置"
-                      : chatKeyOptions.length === 1
-                        ? "已自动选择唯一会话"
-                        : chatKeyOptions.length > 1
-                          ? "请在下方选择会话"
-                          : "暂无可用会话"
-                  : "Agent 未运行"
-                : "请在设置中检查连接"}
-            </div>
+    <main className="min-h-[520px] w-[380px] bg-background p-4 text-foreground">
+      <header className="mb-4 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-medium">
+            {isLoadingAgents ? "加载 Agent 中..." : selectedAgent?.name || "未选择 Agent"}
           </div>
-
-          <div className="flex items-center rounded-[10px] border border-border bg-muted p-0.5">
-            <button
-              type="button"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[15px] text-muted-foreground transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={() => cycleAgent(-1)}
-              disabled={agents.length < 2 || isLoadingAgents}
-              aria-label="上一个 Agent"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[15px] text-muted-foreground transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              onClick={() => cycleAgent(1)}
-              disabled={agents.length < 2 || isLoadingAgents}
-              aria-label="下一个 Agent"
-            >
-              ›
-            </button>
+          <div className="truncate text-[11px] text-muted-foreground">
+            {selectedAgent
+              ? selectedAgent.running
+                ? isLoadingChatKeys
+                  ? "会话加载中..."
+                  : settings.chatKey
+                    ? "目标会话已设置"
+                    : chatKeyOptions.length === 1
+                      ? "已自动选择唯一会话"
+                      : chatKeyOptions.length > 1
+                        ? "请在下方选择会话"
+                        : "暂无可用会话"
+                : "Agent 未运行"
+              : "请在设置中检查连接"}
           </div>
+        </div>
 
+        <div className="flex items-center gap-1">
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-surface text-[14px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            onClick={openSettingsPage}
-            aria-label="打开设置"
-            title="设置"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[18px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => cycleAgent(-1)}
+            disabled={agents.length < 2 || isLoadingAgents}
+            aria-label="上一个 Agent"
           >
-            ⚙
+            ‹
           </button>
-        </header>
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[18px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => cycleAgent(1)}
+            disabled={agents.length < 2 || isLoadingAgents}
+            aria-label="下一个 Agent"
+          >
+            ›
+          </button>
+        </div>
 
-        {authInitializing ? (
-          <div className="mb-3 rounded-[10px] border border-border bg-muted px-3 py-3 text-[12px] text-muted-foreground">
-            正在检查 Console 登录状态...
-          </div>
-        ) : authRequired ? (
-          <div className="mb-3 rounded-[10px] border border-border bg-muted px-3 py-3">
-            <div className="text-[12px] font-medium text-foreground">
-              需要先登录 Console
-            </div>
-            <div className="mt-1 text-[11px] leading-[1.5] text-muted-foreground">
-              当前 Console 已开启统一鉴权。请先在设置页登录，再回来发送页面内容。
-            </div>
-            <div className="mt-3">
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center justify-center rounded-[10px] border border-border bg-background px-4 text-[12px] font-medium text-foreground transition hover:bg-surface"
-                onClick={openSettingsPage}
-              >
-                打开设置页登录
-              </button>
-            </div>
-          </div>
-        ) : null}
+        <button
+          type="button"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[16px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          onClick={openSettingsPage}
+          aria-label="打开设置"
+          title="设置"
+        >
+          ⚙
+        </button>
+      </header>
 
-        <form className="flex flex-col gap-3" onSubmit={onSubmit}>
+      {authInitializing ? (
+        <div className="mb-4 rounded-lg border border-border bg-muted px-3 py-3 text-[12px] text-muted-foreground">
+          正在检查 Console 登录状态...
+        </div>
+      ) : authRequired ? (
+        <div className="mb-4 rounded-lg border border-border bg-muted px-3 py-3">
+          <div className="text-[12px] font-medium text-foreground">
+            需要先登录 Console
+          </div>
+          <div className="mt-1 text-[11px] leading-[1.5] text-muted-foreground">
+            当前 Console 已开启统一鉴权。请先在设置页登录，再回来发送页面内容。
+          </div>
+          <div className="mt-3">
+            <button
+              type="button"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-foreground px-4 text-[12px] font-medium text-background transition hover:bg-foreground/90"
+              onClick={openSettingsPage}
+            >
+              打开设置页登录
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <form className="flex flex-col gap-3" onSubmit={onSubmit}>
           <textarea
-            className="min-h-[164px] w-full resize-none rounded-[10px] border border-border bg-muted px-3 py-3 text-[13px] leading-[1.55] text-foreground outline-none transition focus:border-border-strong focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
-            rows={7}
+            className="min-h-[140px] w-full resize-none rounded-lg border border-border bg-muted px-3 py-2.5 text-[13px] leading-[1.55] text-foreground outline-none transition focus:border-border-strong focus:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+            rows={6}
             value={settings.taskPrompt}
             onChange={(event) =>
               setSettings((prev) => ({ ...prev, taskPrompt: event.target.value }))
@@ -647,7 +646,7 @@ export function ExtensionPopupApp() {
             }
           />
 
-          <div className="rounded-[10px] border border-border bg-muted px-3 py-2 text-[10px] leading-[1.45] text-muted-foreground">
+          <div className="rounded-lg border border-border bg-muted px-3 py-2 text-[10px] leading-[1.45] text-muted-foreground">
             <div className="truncate text-[11px] text-foreground" title={tab.title}>
               {tab.title || "（未获取到页面标题）"}
             </div>
@@ -656,10 +655,10 @@ export function ExtensionPopupApp() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 pt-1">
             <div
               className={[
-                "min-w-0 flex-1 truncate text-[10px]",
+                "min-w-0 flex-1 truncate text-[11px]",
                 status.type === "error"
                   ? "text-error"
                   : status.type === "success"
@@ -673,7 +672,7 @@ export function ExtensionPopupApp() {
               {status.text}
             </div>
             <button
-              className="inline-flex h-10 shrink-0 items-center justify-center rounded-[10px] border border-primary bg-primary px-4 text-[12px] font-medium text-primary-foreground transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-foreground px-5 text-[12px] font-medium text-background transition hover:bg-foreground/85 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               type="submit"
               disabled={composerDisabled || isSubmitting}
             >
@@ -681,10 +680,9 @@ export function ExtensionPopupApp() {
             </button>
           </div>
         </form>
-      </section>
 
       {pageHistory.length > 0 ? (
-        <section className="mt-3 rounded-[12px] border border-border bg-surface p-3">
+        <section className="mt-4 border-t border-border pt-4">
           <header className="mb-2 flex items-center justify-between">
             <h2 className="text-[11px] font-medium text-foreground">本页发送历史</h2>
             <span className="text-[10px] text-muted-foreground">{pageHistory.length} 条</span>
@@ -695,7 +693,7 @@ export function ExtensionPopupApp() {
               <button
                 key={item.id}
                 type="button"
-                className="flex w-full flex-col gap-1 rounded-[10px] border border-border bg-muted px-3 py-2 text-left transition hover:bg-background"
+                className="flex w-full flex-col gap-1 rounded-lg border border-border bg-muted px-3 py-2 text-left transition hover:bg-background"
                 onClick={() =>
                   setSettings((prev) => ({
                     ...prev,

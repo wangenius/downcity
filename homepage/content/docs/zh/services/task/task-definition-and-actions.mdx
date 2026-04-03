@@ -160,7 +160,7 @@ API：
 city service command task run --payload '{"title":"daily-check","reason":"manual"}'
 ```
 
-如果 console 已启用统一鉴权，`city task ...` 会自动携带当前 CLI Bearer Token。认证身份与 `sessionId` 分离：
+`city task ...` 本地默认走 IPC，不需要 Bearer Token。只有你显式传了 `--host` 或 `--port`，才会改成远程 HTTP 调用；这时认证身份与 `sessionId` 分离：
 
 - Bearer Token 负责“谁在调用”
 - `sessionId` 负责“在哪个上下文里执行”

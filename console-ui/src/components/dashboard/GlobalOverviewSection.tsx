@@ -7,8 +7,11 @@
  */
 
 import * as React from "react"
+import { PlusIcon, Loader2Icon } from "lucide-react"
+import { Button } from "@downcity/ui"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
-import { GlobalAgentsSection } from "@/components/dashboard/GlobalAgentsSection"
+import { GlobalAgentsSection, type GlobalAgentsSectionRef } from "@/components/dashboard/GlobalAgentsSection"
+import { dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import type {
   UiAgentDirectoryInspection,
   UiAgentOption,
@@ -83,6 +86,19 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
     onRestartAgent,
     onStopAgent,
   } = props
+
+  const agentsSectionRef = React.useRef<GlobalAgentsSectionRef>(null)
+  const [pickingDirectory, setPickingDirectory] = React.useState(false)
+
+  const handleOpenFolder = React.useCallback(async () => {
+    if (!agentsSectionRef.current) return
+    setPickingDirectory(true)
+    try {
+      await agentsSectionRef.current.openFolder()
+    } finally {
+      setPickingDirectory(false)
+    }
+  }, [])
 
   const requiredConsoleKeys = new Set(["ship_db", "console_pid", "agents_registry"])
   const consoleItems = configStatus.filter((item) => item.scope === "console")
@@ -162,8 +178,23 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
       <DashboardModule
         title="Agent Runtime"
         description={`共 ${agents.length} 个 agent，可直接在此启动、重启或停止。`}
+        actions={
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className={dashboardIconButtonClass}
+            onClick={() => void handleOpenFolder()}
+            disabled={pickingDirectory}
+            aria-label="打开文件夹"
+            title="打开文件夹"
+          >
+            {pickingDirectory ? <Loader2Icon className="size-4 animate-spin" /> : <PlusIcon className="size-4" />}
+          </Button>
+        }
       >
         <GlobalAgentsSection
+          ref={agentsSectionRef}
           agents={agents}
           modelPoolItems={modelPoolItems}
           onPickAgentDirectory={onPickAgentDirectory}

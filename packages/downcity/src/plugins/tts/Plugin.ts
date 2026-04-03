@@ -496,4 +496,21 @@ export const ttsPlugin: Plugin = {
       },
     },
   },
+  system(context) {
+    const config = readTtsPluginConfig(context);
+    if (config.enabled !== true) {
+      return "";
+    }
+    return [
+      "# TTS Plugin",
+      "The agent can call the tts plugin to synthesize speech audio from plain text.",
+      "Typical usage flow:",
+      "1. Check availability with `city tts status` when you need to confirm whether the plugin and model are ready.",
+      "2. Generate audio with `city tts synthesize <text>`.",
+      "3. Optionally override synthesis parameters with `--voice`, `--language`, `--format`, `--speed`, and `--output`.",
+      "Use the `tts.synthesize` action when the user asks to generate spoken audio or a reusable audio file tag.",
+      "A successful synthesis returns a local output path and a reusable `<file type=\"audio\">...</file>` tag for downstream sending.",
+      "Example: `city tts synthesize \"你好，欢迎来到 Downcity\" --format wav`",
+    ].join("\n");
+  },
 };

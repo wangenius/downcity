@@ -12,7 +12,7 @@ import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { PLUGINS } from "@/main/plugin/Plugins.js";
 import type { Plugin, PluginAction } from "@/types/Plugin.js";
 import type { PluginActionResponse } from "@/types/PluginApi.js";
-import { callServer } from "@/main/daemon/Client.js";
+import { callAgentTransport } from "@/main/localrpc/Transport.js";
 import { printResult } from "@utils/cli/CliOutput.js";
 import { parsePortOption } from "@utils/cli/Checker.js";
 
@@ -144,7 +144,7 @@ function registerPluginActionCommand(params: {
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
     .option("--host <host>", "Server host（覆盖自动解析）")
     .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
-    .option("--token <token>", "覆盖 Bearer Token（默认自动读取 DC_AUTH_TOKEN 或本地登录态）")
+    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true);
 
   commandSpec.configure?.(actionCommand);
@@ -192,7 +192,7 @@ function registerPluginActionCommand(params: {
       return;
     }
 
-    const remote = await callServer<PluginActionResponse>({
+    const remote = await callAgentTransport<PluginActionResponse>({
       projectRoot: resolveProjectRoot(bridgeOptions.path),
       path: "/api/plugins/action",
       method: "POST",

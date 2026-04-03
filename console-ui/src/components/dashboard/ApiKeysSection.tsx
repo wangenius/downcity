@@ -1,9 +1,9 @@
 /**
- * User Token 管理页
+ * API Keys 管理页
  */
 
 import * as React from "react"
-import { PlusIcon, Loader2Icon, Trash2Icon, CopyIcon, CheckIcon } from "lucide-react"
+import { PlusIcon, Loader2Icon, Trash2Icon, CopyIcon, CheckIcon, KeyRoundIcon } from "lucide-react"
 import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Label } from "@downcity/ui"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type {
@@ -11,7 +11,7 @@ import type {
   UiAuthAccessTokenSummary,
 } from "@/types/AuthAccess"
 
-export interface UserTokenSectionProps {
+export interface ApiKeysSectionProps {
   tokens: UiAuthAccessTokenSummary[]
   loading: boolean
   latestIssuedToken: UiAuthAccessIssuedToken | null
@@ -21,7 +21,7 @@ export interface UserTokenSectionProps {
   onClearLatestIssuedToken: () => void
 }
 
-export function UserTokenSection(props: UserTokenSectionProps) {
+export function ApiKeysSection(props: ApiKeysSectionProps) {
   const { tokens, loading, onCreateToken, onDeleteToken, onClearLatestIssuedToken, latestIssuedToken, formatTime } = props
 
   const [dialogOpen, setDialogOpen] = React.useState(false)
@@ -38,7 +38,6 @@ export function UserTokenSection(props: UserTokenSectionProps) {
       setCreating(true)
       await onCreateToken({ name: tokenName.trim() })
       setTokenName("")
-      // 不关闭 dialog，useEffect 会在 latestIssuedToken 更新后显示 token
     } finally {
       setCreating(false)
     }
@@ -74,7 +73,7 @@ export function UserTokenSection(props: UserTokenSectionProps) {
   return (
     <>
       <DashboardModule
-        title="Tokens"
+        title="API Keys"
         description={`${tokens.length} total · ${activeCount} active`}
         actions={
           <Button
@@ -91,7 +90,7 @@ export function UserTokenSection(props: UserTokenSectionProps) {
       >
         {tokens.length === 0 ? (
           <div className="rounded-[18px] bg-secondary py-6 text-center text-sm text-muted-foreground">
-            暂无 token
+            暂无 API Key
           </div>
         ) : (
           <div className="space-y-1">
@@ -100,6 +99,9 @@ export function UserTokenSection(props: UserTokenSectionProps) {
                 key={token.id}
                 className="group flex items-center gap-3 rounded-[12px] px-3 py-2.5 hover:bg-secondary"
               >
+                <span className="inline-flex size-4 items-center justify-center text-muted-foreground">
+                  <KeyRoundIcon className="size-3.5" />
+                </span>
                 <span className="truncate text-sm">{token.name}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {formatTime(token.createdAt)}
@@ -124,17 +126,17 @@ export function UserTokenSection(props: UserTokenSectionProps) {
         )}
       </DashboardModule>
 
-      {/* New Token Dialog */}
+      {/* New API Key Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="w-[min(92vw,400px)]">
           <DialogHeader>
-            <DialogTitle>{latestIssuedToken ? "Token 已创建" : "新建 Token"}</DialogTitle>
+            <DialogTitle>{latestIssuedToken ? "API Key 已创建" : "新建 API Key"}</DialogTitle>
           </DialogHeader>
 
           {latestIssuedToken ? (
             <div className="space-y-4 px-4 py-2">
               <p className="text-sm text-muted-foreground">
-                请保存此 token，它只会显示一次
+                请保存此 API Key，它只会显示一次
               </p>
               <div className="relative">
                 <code className="block break-all rounded-[12px] bg-secondary px-3 py-3 pr-10 text-xs">
@@ -162,7 +164,7 @@ export function UserTokenSection(props: UserTokenSectionProps) {
                 <Input
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
-                  placeholder="Token 名称"
+                  placeholder="API Key 名称"
                   onKeyDown={(e) => e.key === "Enter" && handleCreate()}
                   autoFocus
                 />

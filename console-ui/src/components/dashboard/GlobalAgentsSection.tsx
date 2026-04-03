@@ -31,6 +31,7 @@ import {
 import { dashboardDangerIconButtonClass, dashboardIconButtonClass } from "@/components/dashboard/dashboard-action-button"
 import { useConfirmDialog } from "@/components/ui/confirm-dialog"
 import type { UiAgentDirectoryInspection, UiAgentOption, UiModelPoolItem } from "@/types/Dashboard"
+import { forwardRef, useImperativeHandle } from "react"
 
 type AgentExecutionChoice = "model" | "kimi" | "claude" | "codex"
 
@@ -95,7 +96,12 @@ export interface GlobalAgentsSectionProps {
   }) => void
 }
 
-export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
+export interface GlobalAgentsSectionRef {
+  openFolder: () => Promise<void>
+}
+
+export const GlobalAgentsSection = forwardRef<GlobalAgentsSectionRef, GlobalAgentsSectionProps>(
+  function GlobalAgentsSection(props, ref) {
   const {
     agents,
     modelPoolItems,
@@ -123,17 +129,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
     [activeModelOptions, modelPoolItems],
   )
   const [form, setForm] = React.useState<AgentFormState>(() => createEmptyForm(defaultModelId))
-
-  React.useEffect(() => {
-    setForm((current) => {
-      if (current.modelId) return current
-      if (!defaultModelId) return current
-      return {
-        ...current,
-        modelId: defaultModelId,
-      }
-    })
-  }, [defaultModelId])
 
   const resetDialog = React.useCallback(() => {
     setDialogOpen(false)
@@ -193,6 +188,21 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
     }
   }, [onInspectAgentDirectory, onPickAgentDirectory, onStartAgent, openExecutionDialog])
 
+  useImperativeHandle(ref, () => ({
+    openFolder: handleOpenFolder,
+  }), [handleOpenFolder])
+
+  React.useEffect(() => {
+    setForm((current) => {
+      if (current.modelId) return current
+      if (!defaultModelId) return current
+      return {
+        ...current,
+        modelId: defaultModelId,
+      }
+    })
+  }, [defaultModelId])
+
   const pickDirectoryForDialog = React.useCallback(async () => {
     try {
       setPickingDirectory(true)
@@ -246,22 +256,6 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
 
   return (
     <section className="min-h-0 overflow-y-auto">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="text-xs text-muted-foreground">{`agent ${agents.length}`}</div>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className={dashboardIconButtonClass}
-          onClick={() => void handleOpenFolder()}
-          disabled={pickingDirectory}
-          aria-label="打开文件夹"
-          title="打开文件夹"
-        >
-          {pickingDirectory ? <Loader2Icon className="size-4 animate-spin" /> : <FolderOpenIcon className="size-4" />}
-        </Button>
-      </div>
-
       {agents.length === 0 ? (
         <div className="rounded-[20px] bg-secondary px-4 py-5 text-sm text-muted-foreground">暂无 agent，点击右上角打开文件夹</div>
       ) : (
@@ -581,4 +575,5 @@ export function GlobalAgentsSection(props: GlobalAgentsSectionProps) {
       </Dialog>
     </section>
   )
-}
+  }
+)

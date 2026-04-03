@@ -24,10 +24,48 @@ city tts on
 
 # 生成一个本地语音文件
 city tts synthesize "hello from city"
+
+# 指定格式 / 语言 / 音色 / 输出路径
+city tts synthesize "你好，欢迎来到 Downcity" --format wav --language zh --voice default --output .downcity/out/welcome.wav
 ```
+
+## 怎么使用
+
+1. 先启用 plugin：
+
+```bash
+city tts on
+```
+
+2. 再检查当前模型和依赖是否可用：
+
+```bash
+city tts status
+city tts doctor
+```
+
+3. 生成语音文件：
+
+```bash
+city tts synthesize "这是一段测试语音"
+```
+
+4. 如需覆盖本次参数，可追加这些选项：
+
+- `--language <language>`：覆盖语言提示，例如 `zh`、`en`
+- `--voice <voice>`：覆盖音色
+- `--format <format>`：输出格式，当前支持 `wav` / `flac`
+- `--speed <speed>`：语速倍率
+- `--output <path>`：输出文件路径或输出目录
+
+## 返回结果
+
+- 成功后会返回本地输出文件路径
+- 同时返回一个可复用的 `<file type="audio">...</file>` 标签，后续发送消息时可以直接复用
 
 ## 说明
 
 - TTS 默认不接入 chat hooks。
+- 当 plugin 已启用且依赖可用时，agent 会在 system prompt 中感知这项能力，因此可以直接调用 `city tts synthesize ...` 来生成语音文件。
 - 它会生成一个本地音频文件，并返回可复用的 `<file type="audio">...</file>` 标签，后续发送阶段可直接复用。
 - 配置会持久化到项目 `downcity.json` 的 `plugins.tts`。

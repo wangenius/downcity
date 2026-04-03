@@ -3,10 +3,10 @@
  *
  * 关键点（中文）
  * - 统一处理 list/control/command 三类需要访问 Agent server 的命令。
- * - 这里不负责命令注册，只负责远程调用与结果输出。
+ * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
-import { callServer } from "@/main/daemon/Client.js";
+import { callAgentTransport } from "@/main/localrpc/Transport.js";
 import { printResult } from "@utils/cli/CliOutput.js";
 import type {
   ServiceCliBaseOptions,
@@ -50,7 +50,7 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
     });
     return;
   }
-  const remote = await callServer<ServiceListResponse>({
+  const remote = await callAgentTransport<ServiceListResponse>({
     projectRoot,
     path: "/api/services/list",
     method: "GET",
@@ -117,7 +117,7 @@ export async function runServiceControlCommand(params: {
     });
     return;
   }
-  const remote = await callServer<ServiceControlResponse>({
+  const remote = await callAgentTransport<ServiceControlResponse>({
     projectRoot,
     path: "/api/services/control",
     method: "POST",
@@ -189,7 +189,7 @@ export async function runServiceCommandBridge(params: {
     });
     return;
   }
-  const remote = await callServer<ServiceCommandResponse>({
+  const remote = await callAgentTransport<ServiceCommandResponse>({
     projectRoot,
     path: "/api/services/command",
     method: "POST",

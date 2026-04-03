@@ -2,8 +2,10 @@
  * Prompt 构成区。
  */
 
+import { RefreshCcwIcon } from "lucide-react";
 import { Button } from "@downcity/ui";
 import { DashboardModule } from "./DashboardModule";
+import { dashboardIconButtonClass } from "./dashboard-action-button";
 import type { UiPromptResponse } from "../../types/Dashboard";
 
 export interface PromptSectionProps {
@@ -34,8 +36,16 @@ export function PromptSection(props: PromptSectionProps) {
           : "暂无 prompt 数据"
       }
       actions={
-        <Button size="sm" variant="outline" onClick={onRefresh}>
-          刷新
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className={dashboardIconButtonClass}
+          onClick={onRefresh}
+          aria-label="刷新"
+          title="刷新"
+        >
+          <RefreshCcwIcon className="size-4" />
         </Button>
       }
       bodyClassName="min-w-0"

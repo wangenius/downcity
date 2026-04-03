@@ -68,6 +68,11 @@ curl http://127.0.0.1:3000/api/auth/me \
 
 ## `DC_AUTH_TOKEN` 与 `DC_AGENT_TOKEN`
 
+先说结论：
+
+- 只有对外 HTTP 调用才需要 Bearer Token
+- 本地 `city service`、`city plugin`、`city task`、`city chat` 默认已经改成 IPC，不需要先拿 token
+
 对于直接调用 API 的用户，只需要记住一条：
 
 - 对外调用统一使用 Bearer Token，本质都落到 `Authorization: Bearer <token>`
@@ -77,14 +82,14 @@ curl http://127.0.0.1:3000/api/auth/me \
 | 变量 | 面向谁 | 作用 |
 | --- | --- | --- |
 | `DC_AUTH_TOKEN` | 用户、脚本、CI | 显式指定“这次 CLI/API 调用用哪个 token” |
-| `DC_AGENT_TOKEN` | Downcity agent runtime | agent 内部再次调用 `city ...` 时自动传播身份 |
+| `DC_AGENT_TOKEN` | Downcity agent runtime | agent 内部显式发起远程 HTTP 调用时自动传播身份 |
 
 推荐理解方式：
 
 - 如果你是人或外部脚本，优先用 `--token` 或 `DC_AUTH_TOKEN`
-- 如果是 agent 内部二次调用 `city task`、`city chat`，通常由 runtime 自动注入 `DC_AGENT_TOKEN`
+- 如果是 agent 内部显式发起 HTTP 调用，通常由 runtime 自动注入 `DC_AGENT_TOKEN`
 
-最终 CLI 解析顺序是：
+只有显式远程 HTTP 调用时，CLI 才会进入下面的 token 解析顺序：
 
 1. `--token`
 2. `DC_AUTH_TOKEN`
@@ -100,8 +105,9 @@ curl http://127.0.0.1:3000/api/auth/me \
 如果你看到 `Missing bearer token`：
 
 - 不要先怀疑 `sessionId`
-- 先检查当前进程有没有可用 token 来源
-- 如果是在 agent/Bash/ACP 子进程里，再重点检查 `DC_AGENT_TOKEN` 是否被正确继承
+- 先确认这次是不是显式远程 HTTP 调用
+- 再检查当前进程有没有可用 token 来源
+- 如果是在 agent/Bash/ACP 子进程里发起的远程 HTTP 调用，再重点检查 `DC_AGENT_TOKEN` 是否被正确继承
 
 ## 管理 Token
 

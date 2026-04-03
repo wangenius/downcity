@@ -3,7 +3,9 @@
  */
 
 import type { KeyboardEvent } from "react";
+import { RefreshCcwIcon } from "lucide-react";
 import { Button } from "@downcity/ui";
+import { dashboardIconButtonClass } from "./dashboard-action-button";
 import { cn } from "@/lib/utils";
 import { DashboardModule } from "./DashboardModule";
 import { Textarea } from "@downcity/ui";
@@ -123,8 +125,16 @@ export function LocalChatSection(props: LocalChatSectionProps) {
       className="h-full"
       bodyClassName="flex h-full flex-col gap-3"
       actions={
-        <Button size="sm" variant="outline" onClick={onRefresh}>
-          刷新
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className={dashboardIconButtonClass}
+          onClick={onRefresh}
+          aria-label="刷新"
+          title="刷新"
+        >
+          <RefreshCcwIcon className="size-4" />
         </Button>
       }
     >

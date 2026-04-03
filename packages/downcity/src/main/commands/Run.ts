@@ -14,6 +14,7 @@ import path from "node:path";
 import { startServer } from "@/main/index.js";
 import { ensureAgentToken, rotateAgentTokenIfNeeded } from "@/main/auth/AgentTokenService.js";
 import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
+import { startLocalRpcServer } from "@/main/localrpc/Server.js";
 
 /**
  * Token 轮换检查间隔（毫秒）
@@ -98,6 +99,9 @@ export async function runCommand(
     port,
     host,
   });
+  const localRpc = await startLocalRpcServer({
+    context: getExecutionContext(),
+  });
 
   // 处理进程信号
   // 停机顺序（中文）：services -> API server -> flush logs。
@@ -126,6 +130,7 @@ export async function runCommand(
     }
 
     // 停止服务器
+    await localRpc.stop();
     await server.stop();
 
     // Save logs

@@ -30,25 +30,32 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 | `city agent restart/status/doctor` | Target agent is registered in console registry | None | Operates through registry resolution, not arbitrary path only |
 | `city console config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call agent API |
 | `city console config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
-| `city service ...` | Target agent API is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
-| `city plugin ...` | Target agent API is reachable; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | `--agent` overrides `--path` |
-| `city <service> <action>` (e.g. `city chat ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/services/command` |
-| `city <plugin> <action>` (e.g. `city asr ...`) | Target agent API is reachable | `--path`, `--host`, `--port` | Forwarded through `/api/plugins/action` |
+| `city service ...` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Uses local IPC by default; `--agent` overrides `--path` |
+| `city plugin ...` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Uses local IPC by default; `--agent` overrides `--path` |
+| `city <service> <action>` (e.g. `city chat ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/services/command` |
+| `city <plugin> <action>` (e.g. `city asr ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/plugins/action` |
 
 Additional notes:
 
-- Once unified auth is initialized, the commands above automatically send a Bearer Token when they call the agent API.
-- Token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN` > local CLI auth state stored in console secure storage.
+- Local `city service`, `city plugin`, `city task`, `city chat`, and similar commands now use local IPC by default instead of HTTP.
+- A call only enters remote HTTP mode when you explicitly pass `--host` or `--port`.
+- In remote HTTP mode, token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN` > local CLI auth state stored in console secure storage.
 - `sessionId` and `chatKey` are execution context, not authentication tokens.
 
 ## 1.1) `DC_AUTH_TOKEN` vs `DC_AGENT_TOKEN`
+
+The most important rule first:
+
+- For most users, you do not need to care about either variable for normal local `city ...` usage.
+
+That is because local calls now use IPC by default. These variables only matter when a call is explicitly made through remote HTTP.
 
 Both variables are related to Bearer auth, but they serve different roles.
 
 | Variable | Primary Purpose | Who Sets It | Typical Use |
 | --- | --- | --- | --- |
 | `DC_AUTH_TOKEN` | explicit user override for a CLI/API call | user, script, CI | you want this specific `city ...` invocation to authenticate as a specific token |
-| `DC_AGENT_TOKEN` | internal agent runtime propagation | Downcity runtime | an agent, Bash tool, or ACP subprocess calls `city task`, `city chat`, or other `city ...` commands again |
+| `DC_AGENT_TOKEN` | internal agent runtime propagation | Downcity runtime | an agent, Bash tool, or ACP subprocess explicitly makes a remote HTTP call |
 
 Think of them as two layers:
 
@@ -57,8 +64,8 @@ Think of them as two layers:
 
 Recommended rule:
 
-- When you manually call `city ...` from your terminal, CI, or a script, prefer `--token` or `DC_AUTH_TOKEN`
-- When an agent internally calls `city ...` again, you usually should not set anything manually; runtime injects `DC_AGENT_TOKEN`
+- When you explicitly make a remote HTTP call from your terminal, CI, or a script, prefer `--token` or `DC_AUTH_TOKEN`
+- When an agent explicitly makes a remote HTTP call internally, runtime can inject `DC_AGENT_TOKEN`
 - Do not treat `sessionId` or `chatKey` as auth tokens; they only define execution context
 
 ### Why internal propagation does not use `DC_AUTH_TOKEN`
@@ -76,7 +83,7 @@ So the current model is:
 
 ### Unified priority order
 
-When `city task`, `city chat`, `city service`, `city plugin`, and similar commands resolve auth, the final order is:
+When a `city ...` invocation is explicitly using remote HTTP, the final auth resolution order is:
 
 1. explicit `--token`
 2. `DC_AUTH_TOKEN`
@@ -87,21 +94,28 @@ That means:
 
 - `--token` always overrides everything else
 - `DC_AUTH_TOKEN` overrides auto-injected `DC_AGENT_TOKEN`
-- agent-internal invocations fall back to `DC_AGENT_TOKEN`
-- non-agent invocations can still fall back to local CLI auth state
+- agent-internal remote HTTP invocations fall back to `DC_AGENT_TOKEN`
+- non-agent remote invocations can still fall back to local CLI auth state
 
 ### Common mistakes
 
 - Mistake 1: using `sessionId` as a token
   Not valid. `sessionId` only decides where execution belongs.
-- Mistake 2: exporting `DC_AUTH_TOKEN` manually inside every agent tool call
-  Usually unnecessary. Runtime should already inject `DC_AGENT_TOKEN`.
-- Mistake 3: treating `DC_AGENT_TOKEN` as a long-lived integration token for external scripts
+- Mistake 2: assuming local `city task` or `city chat` always needs a token first
+  Not true anymore. Normal local calls now use IPC and do not need a Bearer token.
+- Mistake 3: exporting `DC_AUTH_TOKEN` manually inside every agent tool call
+  Usually unnecessary. Only explicit remote HTTP paths need a token; runtime can inject `DC_AGENT_TOKEN` when needed.
+- Mistake 4: treating `DC_AGENT_TOKEN` as a long-lived integration token for external scripts
   Not recommended. External integrations should use explicit Bearer tokens through `DC_AUTH_TOKEN` or `--token`.
 
 ### How to read `Missing bearer token`
 
-If `city task ...`, `city chat ...`, or `city service ...` returns:
+If an explicit remote HTTP call such as:
+
+- `city service list --host 127.0.0.1 --port 5314`
+- `city task create --host 127.0.0.1 --port 5314 ...`
+
+returns:
 
 - `Missing bearer token`
 
@@ -112,7 +126,7 @@ check in this order:
 3. if this is inside an agent/Bash tool/ACP subprocess, did the process inherit `DC_AGENT_TOKEN`
 4. if none of the above apply, is local CLI auth state available on this machine
 
-For agent-internal `city ...` calls, the first suspect is usually the `DC_AGENT_TOKEN` injection chain, not the task/session parameters.
+For agent-internal remote HTTP calls, the first suspect is usually the `DC_AGENT_TOKEN` injection chain, not the task/session parameters.
 
 ## 2) Context env requirements for common commands
 
@@ -127,7 +141,8 @@ For agent-internal `city ...` calls, the first suspect is usually the `DC_AGENT_
 - Task creation/run needs `sessionId`
 - You can pass `--session-id` explicitly
 - Or first fallback to `DC_SESSION_ID`
-- If unified auth is enabled, `city task ...` automatically reuses the current Bearer Token; manual invocations prefer `--token` / `DC_AUTH_TOKEN`, while agent-internal invocations fall back to `DC_AGENT_TOKEN`
+- Local calls use IPC by default and do not need a Bearer token
+- Only explicit remote HTTP calls resolve auth through `--token` / `DC_AUTH_TOKEN` / `DC_AGENT_TOKEN` / local CLI auth state
 
 ### Chat channel credentials
 
@@ -149,7 +164,14 @@ Still must satisfy:
 - resolved path is registered in console registry
 - resolved path contains `downcity.json` and `PROFILE.md`
 
-## 4) Agent API endpoint resolution order (`host/port`)
+## 4) Runtime transport and endpoint resolution (`host/port`)
+
+Default rule:
+
+1. no `--host` / `--port`: use local IPC
+2. `--host` or `--port` provided: use remote HTTP
+
+Only after a command enters remote HTTP mode does the endpoint resolution below apply.
 
 For agent API calls (service/plugin/action commands):
 

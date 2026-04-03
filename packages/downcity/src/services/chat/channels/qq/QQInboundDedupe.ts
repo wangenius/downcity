@@ -10,7 +10,6 @@
 import fs from "fs-extra";
 import path from "node:path";
 import type { Logger } from "@utils/logger/Logger.js";
-import { getCacheDirPath } from "@/main/env/Paths.js";
 import type { QqInboundDedupeSnapshotV1 } from "@services/chat/types/QqInboundDedupe.js";
 
 /**
@@ -36,7 +35,9 @@ export class QqInboundDedupeStore {
         ? Math.floor(params.maxEntries)
         : 2000;
     this.filePath = path.join(
-      getCacheDirPath(params.rootPath),
+      params.rootPath,
+      ".downcity",
+      ".cache",
       "qq",
       "inbound-dedupe.json",
     );

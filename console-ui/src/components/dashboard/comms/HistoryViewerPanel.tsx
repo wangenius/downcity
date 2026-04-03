@@ -90,7 +90,6 @@ export function HistoryViewerPanel(props: HistoryViewerPanelProps) {
     <section className="min-w-0 space-y-3">
       <div className="grid min-w-0 gap-4 xl:grid-cols-2">
         <div className="min-w-0 space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Channel History</div>
           <div className="max-h-[56vh] min-w-0 space-y-2 overflow-auto rounded-[20px] bg-secondary/85 p-2">
             {channelHistory.length === 0 ? (
               <div className="text-xs text-muted-foreground">暂无 channel history</div>
@@ -112,7 +111,6 @@ export function HistoryViewerPanel(props: HistoryViewerPanelProps) {
         </div>
 
         <div className="min-w-0 space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Session Messages</div>
           <div className="max-h-[56vh] min-w-0 space-y-2 overflow-auto rounded-[20px] bg-secondary/85 p-2">
             {sessionMessages.length === 0 ? (
               <div className="text-xs text-muted-foreground">暂无 session message history</div>

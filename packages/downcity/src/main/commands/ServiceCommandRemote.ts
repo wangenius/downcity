@@ -6,7 +6,7 @@
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
-import { callAgentTransport } from "@/main/localrpc/Transport.js";
+import { callAgentTransport, resolveAgentTransportErrorMessage } from "@/main/localrpc/Transport.js";
 import { printResult } from "@utils/cli/CliOutput.js";
 import type {
   ServiceCliBaseOptions,
@@ -76,11 +76,12 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
     asJson: options.json,
     success: false,
     title: "service list failed",
-    payload: {
-      error:
-        remote.error ||
-        "Service list requires an active Agent server. Start via `city agent start` first.",
-    },
+      payload: {
+        error: resolveAgentTransportErrorMessage({
+          error: remote.error,
+          fallback: "Service list requires an active Agent server. Start via `city agent start` first.",
+        }),
+      },
   });
 }
 
@@ -147,11 +148,12 @@ export async function runServiceControlCommand(params: {
     asJson: params.options.json,
     success: false,
     title: `service ${params.action} failed`,
-    payload: {
-      error:
-        remote.error ||
-        `Service ${params.action} requires an active Agent server. Start via \`city agent start\` first.`,
-    },
+      payload: {
+        error: resolveAgentTransportErrorMessage({
+          error: remote.error,
+          fallback: `Service ${params.action} requires an active Agent server. Start via \`city agent start\` first.`,
+        }),
+      },
   });
 }
 
@@ -224,10 +226,11 @@ export async function runServiceCommandBridge(params: {
     asJson: params.options.json,
     success: false,
     title: "service command failed",
-    payload: {
-      error:
-        remote.error ||
-        "Service command requires an active Agent server. Start via `city agent start` first.",
-    },
+      payload: {
+        error: resolveAgentTransportErrorMessage({
+          error: remote.error,
+          fallback: "Service command requires an active Agent server. Start via `city agent start` first.",
+        }),
+      },
   });
 }

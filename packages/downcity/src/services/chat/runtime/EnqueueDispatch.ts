@@ -2,7 +2,7 @@
  * Chat enqueue dispatch helper。
  *
  * 关键点（中文）
- * - 统一封装入队前/后的 plugin 点调用。
+ * - 统一封装入队前/后的扩展点调用。
  * - service 通过这里暴露 queue 生命周期，不直接散落调用细节。
  */
 

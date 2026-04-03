@@ -29,7 +29,6 @@ import {
   PromptRuntime,
 } from "@sessions/prompts/PromptRuntime.js";
 import {
-  createAgentPluginRegistry,
   getExecutionContext,
 } from "@agent/ExecutionContext.js";
 import {
@@ -42,6 +41,12 @@ import {
 } from "@agent/RuntimeState.js";
 import { createAgentServices } from "@agent/AgentFactory.js";
 import { readProjectPrimaryModelId } from "@/main/project/ProjectExecutionBinding.js";
+import { initializePluginRuntime, resetPluginRuntime } from "@/main/plugin/Runtime.js";
+import {
+  createAgentAuthRuntime,
+  createAgentPathRuntime,
+  createAgentPluginConfigRuntime,
+} from "@/main/runtime/AgentHostRuntime.js";
 
 /**
  * AgentState 公共入口。
@@ -121,6 +126,7 @@ function startAgentHotReload(): void {
  */
 export async function initAgentState(cwd: string): Promise<void> {
   stopAgentHotReload();
+  resetPluginRuntime();
 
   const resolvedCwd = String(cwd || "").trim() || ".";
   const rootPath = path.resolve(resolvedCwd);
@@ -144,7 +150,11 @@ export async function initAgentState(cwd: string): Promise<void> {
     logger: defaultLogger,
     config,
     env: projectEnv,
+    globalEnv,
     systems: [],
+    paths: createAgentPathRuntime(rootPath),
+    auth: createAgentAuthRuntime(),
+    pluginConfig: createAgentPluginConfigRuntime(rootPath),
   });
 
   const systems = loadStaticSystems(rootPath);
@@ -154,7 +164,11 @@ export async function initAgentState(cwd: string): Promise<void> {
     logger: defaultLogger,
     config,
     env: projectEnv,
+    globalEnv,
     systems,
+    paths: createAgentPathRuntime(rootPath),
+    auth: createAgentAuthRuntime(),
+    pluginConfig: createAgentPluginConfigRuntime(rootPath),
   });
 
   const sessionAgent = readEnabledSessionAgentConfig(config);
@@ -218,22 +232,25 @@ export async function initAgentState(cwd: string): Promise<void> {
     runtimeRegistry,
   });
 
-  const pluginRegistry = createAgentPluginRegistry();
   const agentState: AgentState = {
     cwd: resolvedCwd,
     rootPath,
     logger: defaultLogger,
     config,
     env: projectEnv,
+    globalEnv,
     systems,
+    paths: createAgentPathRuntime(rootPath),
+    auth: createAgentAuthRuntime(),
+    pluginConfig: createAgentPluginConfigRuntime(rootPath),
     model,
     sessionStore,
     services: new Map(),
-    pluginRegistry,
   };
   agentState.services = createAgentServices(agentState);
 
   setAgentState(agentState);
+  initializePluginRuntime();
   setShellToolRuntime(getExecutionContext().invoke);
   startAgentHotReload();
 }

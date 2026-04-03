@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { getCacheDirPath } from "@/main/env/Paths.js";
 import type {
   QqIncomingAttachment,
   QqInboundAttachmentKind,
@@ -347,7 +346,7 @@ async function downloadRemoteAttachment(params: {
     extFromContentType(responseType) ||
     defaultExtByKind(params.attachment.kind);
 
-  const dir = path.join(getCacheDirPath(params.rootPath), "qq");
+  const dir = path.join(params.rootPath, ".downcity", ".cache", "qq");
   await mkdir(dir, { recursive: true });
 
   const stem = safeBase.replace(/\.[^.]+$/, "");

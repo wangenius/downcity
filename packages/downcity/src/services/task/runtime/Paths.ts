@@ -11,7 +11,6 @@
  */
 
 import path from "node:path";
-import { getDowncityTasksDirPath } from "@/main/env/Paths.js";
 
 /**
  * taskId 允许字符：
@@ -61,7 +60,7 @@ export function normalizeTaskId(input: string): string {
 }
 
 export function getTaskRootDir(projectRoot: string): string {
-  return getDowncityTasksDirPath(projectRoot);
+  return path.join(String(projectRoot || "").trim(), ".downcity", "task");
 }
 
 export function getTaskDir(projectRoot: string, taskId: string): string {

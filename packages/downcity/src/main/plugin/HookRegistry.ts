@@ -39,7 +39,7 @@ type ResolveRecord = {
 };
 
 /**
- * HookRegistry：Plugin 点注册与执行实现。
+ * HookRegistry：plugin 点注册与执行实现。
  */
 export class HookRegistry {
   private readonly contextResolver: ContextResolver;
@@ -62,7 +62,7 @@ export class HookRegistry {
   }
 
   /**
-   * 注册 pipeline 点。
+   * 注册 pipeline 扩展点。
    */
   pipeline(
     pointName: string,
@@ -82,7 +82,7 @@ export class HookRegistry {
   }
 
   /**
-   * 注册 guard 点。
+   * 注册 guard 扩展点。
    */
   guard(
     pointName: string,
@@ -102,7 +102,7 @@ export class HookRegistry {
   }
 
   /**
-   * 注册 effect 点。
+   * 注册 effect 扩展点。
    */
   effect(
     pointName: string,
@@ -122,7 +122,7 @@ export class HookRegistry {
   }
 
   /**
-   * 注册 resolve 点。
+   * 注册 resolve 扩展点。
    *
    * 关键点（中文）
    * - resolve 语义要求单点单处理器，避免 service 侧再做二次仲裁。
@@ -146,7 +146,7 @@ export class HookRegistry {
   }
 
   /**
-   * 列出所有已注册 plugin 点。
+   * 列出所有已注册扩展点。
    */
   list(): string[] {
     const keys = new Set<string>([
@@ -159,7 +159,7 @@ export class HookRegistry {
   }
 
   /**
-   * 运行 pipeline 点。
+   * 运行 pipeline 扩展点。
    */
   async pipelineValue<T = JsonValue>(pointName: string, value: T): Promise<T> {
     const key = String(pointName || "").trim();
@@ -181,7 +181,7 @@ export class HookRegistry {
   }
 
   /**
-   * 运行 guard 点。
+   * 运行 guard 扩展点。
    */
   async guardValue<T = JsonValue>(pointName: string, value: T): Promise<void> {
     const key = String(pointName || "").trim();
@@ -201,7 +201,7 @@ export class HookRegistry {
   }
 
   /**
-   * 运行 effect 点。
+   * 运行 effect 扩展点。
    */
   async effectValue<T = JsonValue>(pointName: string, value: T): Promise<void> {
     const key = String(pointName || "").trim();

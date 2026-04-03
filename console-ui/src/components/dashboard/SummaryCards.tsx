@@ -152,13 +152,10 @@ function formatLastRun(rawInput?: string): string {
   return `${absolute} · ${Math.floor(deltaMs / 86_400_000)} 天前`
 }
 
-function KvRow(props: { label: string; value: string }) {
+function KvRow(props: { value: string }) {
   return (
-    <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-3 py-2 text-sm">
-      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{props.label}</div>
-      <div className="truncate text-foreground" title={props.value}>
-        {props.value}
-      </div>
+    <div className="truncate text-sm text-foreground" title={props.value}>
+      {props.value}
     </div>
   )
 }
@@ -475,18 +472,17 @@ export function SummaryCards(props: SummaryCardsProps) {
             </div>
 
             <div className="mt-4 grid gap-x-8 md:grid-cols-2">
-              <div>
-                <KvRow label="DC" value={String(overview?.cityVersion || "-")} />
-                <KvRow label="PID" value={String(selectedAgent.daemonPid || "-")} />
-                <KvRow label="Host" value={String(selectedAgent.host || "-")} />
+              <div className="space-y-1">
+                <KvRow value={String(overview?.cityVersion || "-")} />
+                <KvRow value={String(selectedAgent.daemonPid || "-")} />
+                <KvRow value={String(selectedAgent.host || "-")} />
               </div>
-              <div>
+              <div className="space-y-1">
                 <KvRow
-                  label="Port"
                   value={selectedAgent.port ? String(selectedAgent.port) : "-"}
                 />
-                <KvRow label="Path" value={String(selectedAgent.projectRoot || "-")} />
-                <KvRow label="ID" value={String(selectedAgent.id || "-")} />
+                <KvRow value={String(selectedAgent.projectRoot || "-")} />
+                <KvRow value={String(selectedAgent.id || "-")} />
               </div>
             </div>
           </div>
@@ -504,8 +500,7 @@ export function SummaryCards(props: SummaryCardsProps) {
       >
         <div className="rounded-[18px] bg-secondary/85 p-2">
           <div className="rounded-[14px] bg-transparent px-3 py-3">
-            <div className="grid gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:items-center">
-              <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Runtime</div>
+            <div className="grid gap-3 md:grid-cols-1">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -576,8 +571,7 @@ export function SummaryCards(props: SummaryCardsProps) {
               </DropdownMenu>
             </div>
             {targetExecutionChoice === "model" ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:items-center">
-                <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Model</div>
+              <div className="mt-3 grid gap-3 md:grid-cols-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={

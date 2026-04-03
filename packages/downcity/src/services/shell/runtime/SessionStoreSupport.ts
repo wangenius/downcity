@@ -8,8 +8,6 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import { loadGlobalEnvFromStore } from "@/main/env/Config.js";
-import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   SessionWaiter,
@@ -17,9 +15,6 @@ import type {
   ShellSessionRuntime,
 } from "@/types/ShellRuntime.js";
 import { requestContext } from "@sessions/RequestContext.js";
-import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
-import { appendExecSessionMessage } from "@services/chat/runtime/ChatIngressStore.js";
-import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 import type {
   ShellActionResponse,
   ShellOutputChunk,
@@ -140,8 +135,7 @@ export function buildShellEnv(context: ExecutionContext): NodeJS.ProcessEnv {
   // - shell 子进程需要继承 console 级 global env。
   // - 这里显式从 store 读取，避免把 ExecutionContext.env 语义扩大成“全局+agent 混合态”。
   // - 冲突时仍由后续 agent 私有 env 覆盖，保持文档声明的优先级。
-  const globalEnv = loadGlobalEnvFromStore();
-  for (const [key, value] of Object.entries(globalEnv)) {
+  for (const [key, value] of Object.entries(context.globalEnv || {})) {
     const normalizedKey = String(key || "").trim();
     const normalizedValue = String(value || "").trim();
     if (!normalizedKey || !normalizedValue) continue;
@@ -163,7 +157,7 @@ export function buildShellEnv(context: ExecutionContext): NodeJS.ProcessEnv {
   if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
   if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;
 
-  applyInternalAgentAuthEnv({
+  context.auth.applyInternalAgentAuthEnv({
     targetEnv: env,
     sourceEnv: process.env,
   });
@@ -269,10 +263,7 @@ async function emitChatCompletionEvent(
   const ownerContextId = String(snapshot.ownerContextId || "").trim();
   if (!ownerContextId || snapshot.notificationSent !== false) return;
 
-  const meta = await readChatMetaBySessionId({
-    context,
-    sessionId: ownerContextId,
-  });
+  const meta = await context.chat.readMetaBySessionId(ownerContextId);
   if (!meta) return;
 
   const lines = [
@@ -292,8 +283,7 @@ async function emitChatCompletionEvent(
   lines.push("请根据当前 shell 的状态，主动向用户简洁汇报结果或最新进展。");
   const text = lines.join("\n");
 
-  await appendExecSessionMessage({
-    context,
+  await context.chat.appendExecSessionMessage({
     sessionId: ownerContextId,
     text,
     extra: {
@@ -306,7 +296,7 @@ async function emitChatCompletionEvent(
     },
   });
 
-  resolveChatQueueStore(context).enqueue({
+  context.chat.enqueue({
     kind: "exec",
     channel: meta.channel,
     targetId: meta.chatId,

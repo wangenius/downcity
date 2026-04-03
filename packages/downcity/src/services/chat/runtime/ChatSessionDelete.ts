@@ -9,10 +9,7 @@
  */
 
 import fs from "fs-extra";
-import {
-  getDowncityChatSessionDirPath,
-  getDowncitySessionDirPath,
-} from "@/main/env/Paths.js";
+import path from "node:path";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { removeChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
@@ -62,8 +59,8 @@ export async function deleteChatSessionById(params: {
       sessionId,
     });
 
-    const chatDir = getDowncityChatSessionDirPath(params.context.rootPath, sessionId);
-    const sessionDir = getDowncitySessionDirPath(params.context.rootPath, sessionId);
+    const chatDir = path.join(params.context.rootPath, ".downcity", "chat", sessionId);
+    const sessionDir = params.context.paths.getDowncitySessionDirPath(sessionId);
     const hadChatDir = await fs.pathExists(chatDir);
     const hadSessionDir = await fs.pathExists(sessionDir);
     if (hadChatDir) {

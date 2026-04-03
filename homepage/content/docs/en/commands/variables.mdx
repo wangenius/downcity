@@ -31,13 +31,14 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 | `city console config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call agent API |
 | `city console config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
 | `city service ...` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Uses local IPC by default; `--agent` overrides `--path` |
-| `city plugin ...` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Uses local IPC by default; `--agent` overrides `--path` |
+| `city plugin ...` | Project has `downcity.json` | `--agent`, `--path` | Executes locally against the selected project; `--agent` overrides `--path` |
 | `city <service> <action>` (e.g. `city chat ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/services/command` |
-| `city <plugin> <action>` (e.g. `city asr ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/plugins/action` |
+| `city <plugin> <action>` (e.g. `city asr ...`) | Project has `downcity.json` | `--path` | Executes locally against the selected project |
 
 Additional notes:
 
-- Local `city service`, `city plugin`, `city task`, `city chat`, and similar commands now use local IPC by default instead of HTTP.
+- Local `city service`, `city task`, `city chat`, and similar runtime commands use local IPC by default instead of HTTP.
+- Local `city plugin` and `city <plugin> <action>` commands read the selected project and execute directly in the CLI process.
 - A call only enters remote HTTP mode when you explicitly pass `--host` or `--port`.
 - In remote HTTP mode, token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN` > local CLI auth state stored in console secure storage.
 - `sessionId` and `chatKey` are execution context, not authentication tokens.

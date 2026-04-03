@@ -16,12 +16,6 @@ import type {
   MemoryStorePayload,
   MemoryStoreResponse,
 } from "@services/memory/types/Memory.js";
-import {
-  getDowncityMemoryDailyDirPath,
-  getDowncityMemoryDailyPath,
-  getDowncityMemoryLongTermPath,
-  getDowncitySessionDirPath,
-} from "@/main/env/Paths.js";
 import type { MemoryRuntimeState } from "./Store.js";
 import { markMemoryDirty } from "./Store.js";
 
@@ -50,12 +44,12 @@ function resolveStoreTargetPath(
   sessionId?: string,
 ): { absPath: string; relPath: string } {
   if (target === "longterm") {
-    const absPath = getDowncityMemoryLongTermPath(context.rootPath);
+    const absPath = path.join(context.rootPath, ".downcity", "memory", "MEMORY.md");
     return { absPath, relPath: toRelPath(context.rootPath, absPath) };
   }
   if (target === "daily") {
     const date = resolveDateStamp();
-    const absPath = getDowncityMemoryDailyPath(context.rootPath, date);
+    const absPath = path.join(context.rootPath, ".downcity", "memory", "daily", `${date}.md`);
     return { absPath, relPath: toRelPath(context.rootPath, absPath) };
   }
   const key = String(sessionId || "").trim();
@@ -63,7 +57,7 @@ function resolveStoreTargetPath(
     throw new Error("sessionId is required for working memory");
   }
   const absPath = path.join(
-    getDowncitySessionDirPath(context.rootPath, key),
+    context.paths.getDowncitySessionDirPath(key),
     "memory",
     "working.md",
   );
@@ -175,6 +169,6 @@ export async function getMemory(
  * 初始化 memory 目录结构（幂等）。
  */
 export async function ensureMemoryDirectories(rootPath: string): Promise<void> {
-  const memoryDailyDir = getDowncityMemoryDailyDirPath(rootPath);
+  const memoryDailyDir = path.join(rootPath, ".downcity", "memory", "daily");
   await fs.mkdir(memoryDailyDir, { recursive: true });
 }

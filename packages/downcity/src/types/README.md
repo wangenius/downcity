@@ -14,11 +14,11 @@
   - 作为跨模块传输结构化数据时的统一约束（配置、日志 details、服务 payload 等）。
 - `ExecutionContext.ts`
   - 定义 `ExecutionContext`、`StructuredConfig`。
-  - `ExecutionContext` 是 service / plugin 共用的最小执行上下文。
+  - `ExecutionContext` 是 service / runtime plugin 共用的最小执行上下文。
   - 用于承载路径、配置、环境与日志这些稳定底座能力。
 - `Plugin.ts`
   - 定义 `Plugin`、`PluginAction`、`PluginPort` 等。
-  - 用于新的声明式插件体系，统一表达插件行为、可用性与显式调用协议。
+  - 用于统一表达 CLI plugin 命令、runtime 扩展行为、可用性与显式调用协议。
 - `VoicePlugin.ts`
   - 定义 `VoicePluginConfig`、`VoiceTranscriberConfig`、`VoiceTranscriberHandle`。
   - 用于 asr plugin 的行为配置与转写依赖配置。

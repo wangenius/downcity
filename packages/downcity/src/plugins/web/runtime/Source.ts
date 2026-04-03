@@ -11,8 +11,8 @@ import os from "node:os";
 import fsp from "node:fs/promises";
 import { execa } from "execa";
 import fse from "fs-extra";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonObject } from "@/types/Json.js";
+import type { PluginCommandContext } from "@/types/Plugin.js";
 import type {
   WebPluginDependencyCheckResult,
   WebPluginInstallInput,
@@ -136,7 +136,7 @@ async function checkAgentBrowserCommand(command: string): Promise<boolean> {
  * 返回当前来源快照。
  */
 export async function inspectWebPluginDependency(
-  context: ExecutionContext,
+  context: PluginCommandContext,
 ): Promise<WebPluginDependencyCheckResult> {
   const config = readWebPluginConfig(context);
   if (config.provider === "agent-browser") {
@@ -186,7 +186,7 @@ export async function inspectWebPluginDependency(
  * 兼容 install 动作。
  */
 export async function installWebPluginDependency(params: {
-  context: ExecutionContext;
+  context: PluginCommandContext;
   input?: WebPluginInstallInput;
 }): Promise<{
   success: boolean;
@@ -260,7 +260,7 @@ export async function installWebPluginDependency(params: {
  * doctor 结果与 inspect 一致。
  */
 export async function doctorWebPluginDependency(
-  context: ExecutionContext,
+  context: PluginCommandContext,
 ): Promise<WebPluginDependencyCheckResult> {
   return inspectWebPluginDependency(context);
 }

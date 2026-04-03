@@ -1,7 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
 import { Logger } from "@utils/logger/Logger.js";
-import { getCacheDirPath } from "@/main/env/Paths.js";
 import {
   guessMimeType,
   parseTelegramAttachments,
@@ -140,7 +139,7 @@ export class TelegramApiClient {
       base.replace(/[^\w.\-()@\u4e00-\u9fff]+/g, "_").slice(0, 160) ||
       `tg-${fileId}`;
 
-    const dir = path.join(getCacheDirPath(this.rootPath), "telegram");
+    const dir = path.join(this.rootPath, ".downcity", ".cache", "telegram");
     await fs.ensureDir(dir);
     const uniq = `${Date.now()}-${fileId.slice(0, 8)}`;
     const outPath = path.join(dir, `${uniq}-${safeBase}`);

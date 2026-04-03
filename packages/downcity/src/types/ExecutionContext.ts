@@ -10,9 +10,19 @@
 import type { LanguageModel } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { AgentState } from "@/types/AgentState.js";
+import type {
+  AgentAuthRuntime,
+  AgentPathRuntime,
+  AgentPluginConfigRuntime,
+} from "@/types/AgentHost.js";
 import type { DowncityConfig } from "@/types/DowncityConfig.js";
-import type { JsonValue } from "@/types/Json.js";
+import type { JsonObject, JsonValue } from "@/types/Json.js";
 import type { PluginPort } from "@/types/Plugin.js";
+import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
+import type {
+  ChatQueueEnqueueParams,
+  ChatQueueEnqueueResult,
+} from "@services/chat/types/ChatQueue.js";
 import type {
   SessionMetadataV1,
   SessionMessageV1,
@@ -257,6 +267,41 @@ export interface SessionPort {
 }
 
 /**
+ * Chat 运行时能力入口。
+ *
+ * 关键点（中文）
+ * - 这是当前 agent 已装配好的 chat 运行时视图。
+ * - 其他 service 只能通过这里消费 chat 能力，不能直接 import chat runtime 模块。
+ */
+export interface ChatRuntimePort {
+  /**
+   * 按 sessionId 读取 chat 路由元信息。
+   */
+  readMetaBySessionId(sessionId: string): Promise<ChatMetaV1 | null>;
+  /**
+   * 向指定 session 追加一条 exec 入站消息。
+   */
+  appendExecSessionMessage(params: {
+    /**
+     * 目标 session 标识。
+     */
+    sessionId: string;
+    /**
+     * 要写入的文本。
+     */
+    text: string;
+    /**
+     * 附加结构化元数据。
+     */
+    extra?: JsonObject;
+  }): Promise<void>;
+  /**
+   * 向 chat queue 入队一条消息。
+   */
+  enqueue(params: ChatQueueEnqueueParams): ChatQueueEnqueueResult;
+}
+
+/**
  * 统一执行上下文。
  */
 export interface ExecutionContext {
@@ -285,9 +330,25 @@ export interface ExecutionContext {
    */
   env: Record<string, string>;
   /**
+   * 当前 console 级全局环境变量快照。
+   */
+  globalEnv: Record<string, string>;
+  /**
    * 当前生效的 system 文本集合。
    */
   systems: string[];
+  /**
+   * 当前可见的路径能力集合。
+   */
+  paths: AgentPathRuntime;
+  /**
+   * 当前可见的认证能力集合。
+   */
+  auth: AgentAuthRuntime;
+  /**
+   * 当前可见的 plugin 配置持久化能力集合。
+   */
+  pluginConfig: AgentPluginConfigRuntime;
   /**
    * Session 能力入口。
    *
@@ -300,6 +361,10 @@ export interface ExecutionContext {
    * 跨 service 调用主入口。
    */
   invoke: InvokeServicePort;
+  /**
+   * Chat 运行时能力入口。
+   */
+  chat: ChatRuntimePort;
   /**
    * Plugin 调用入口。
    */

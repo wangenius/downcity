@@ -16,7 +16,6 @@ import type {
   ShellSessionRuntime,
 } from "@/types/ShellRuntime.js";
 import { generateId } from "@utils/Id.js";
-import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 import type {
   ShellActionResponse,
   ShellCloseRequest,
@@ -130,10 +129,7 @@ export async function startShellSession(
   const ownerRequestId = resolveOwnerRequestId();
   const canAutoNotifyByContext = ownerContextId
     ? Boolean(
-      await readChatMetaBySessionId({
-          context,
-          sessionId: ownerContextId,
-        }),
+        await context.chat.readMetaBySessionId(ownerContextId),
       )
     : false;
   const shellDir = getShellDir(context.rootPath, shellId);

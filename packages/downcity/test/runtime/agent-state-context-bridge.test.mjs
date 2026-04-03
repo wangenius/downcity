@@ -39,29 +39,6 @@ test("AgentState public entry exposes shared execution context with model", () =
     env: {},
     systems: ["system-a"],
     model,
-    pluginRegistry: {
-      list() {
-        return [];
-      },
-      availability() {
-        return Promise.resolve({ enabled: true, available: true, reasons: [] });
-      },
-      runAction() {
-        return Promise.resolve({ success: true });
-      },
-      pipeline(_name, value) {
-        return Promise.resolve(value);
-      },
-      guard() {
-        return Promise.resolve();
-      },
-      effect() {
-        return Promise.resolve();
-      },
-      resolve(_name, value) {
-        return Promise.resolve(value);
-      },
-    },
     sessionStore: {
       getRuntime() {
         return null;
@@ -111,29 +88,6 @@ test("AgentState public entry exposes session context without model in ACP mode"
     },
     env: {},
     systems: ["system-a"],
-    pluginRegistry: {
-      list() {
-        return [];
-      },
-      availability() {
-        return Promise.resolve({ enabled: true, available: true, reasons: [] });
-      },
-      runAction() {
-        return Promise.resolve({ success: true });
-      },
-      pipeline(_name, value) {
-        return Promise.resolve(value);
-      },
-      guard() {
-        return Promise.resolve();
-      },
-      effect() {
-        return Promise.resolve();
-      },
-      resolve(_name, value) {
-        return Promise.resolve(value);
-      },
-    },
     sessionStore: {
       getRuntime() {
         return null;

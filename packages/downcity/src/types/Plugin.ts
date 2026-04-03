@@ -2,18 +2,72 @@
  * Plugin 类型定义。
  *
  * 关键点（中文）
- * - Plugin 是执行期增强单元，不维护独立状态机。
- * - Plugin 通过 actions / hooks / resolves / system 声明行为。
+ * - Plugin 现在同时承载两类定义：CLI actions 与 runtime hooks。
+ * - CLI action 面向显式命令调用；hooks / resolves / system 面向 agent 运行时 plugin。
  * - Plugin 的依赖实现应内聚在插件内部，而不是挂成公共执行上下文能力。
  */
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
 import type {
+  AgentAuthRuntime,
+  AgentPathRuntime,
+  AgentPluginConfigRuntime,
+} from "@/types/AgentHost.js";
+import type {
   ExecutionContext,
   StructuredConfig,
 } from "@/types/ExecutionContext.js";
+import type { Logger } from "@utils/logger/Logger.js";
+import type { DowncityConfig } from "@/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
+
+/**
+ * Plugin 命令执行上下文。
+ *
+ * 关键点（中文）
+ * - 这里表达的是“CLI 命令执行 plugin 时真正需要的最小上下文”。
+ * - plugin 命令不应依赖 session、service invoke、agent runtime 等长期宿主对象。
+ * - agent runtime 在需要复用 action 时，直接传入自身更完整的 ExecutionContext 即可。
+ */
+export interface PluginCommandContext {
+  /**
+   * 当前命令工作目录。
+   */
+  cwd: string;
+  /**
+   * 当前项目根目录。
+   */
+  rootPath: string;
+  /**
+   * 当前统一日志器。
+   */
+  logger: Logger;
+  /**
+   * 当前解析后的项目配置。
+   */
+  config: DowncityConfig;
+  /**
+   * 当前项目环境变量快照。
+   */
+  env: Record<string, string>;
+  /**
+   * 当前 console 级全局环境变量快照。
+   */
+  globalEnv: Record<string, string>;
+  /**
+   * 当前可见的路径能力集合。
+   */
+  paths: AgentPathRuntime;
+  /**
+   * 当前可见的认证能力集合。
+   */
+  auth: AgentAuthRuntime;
+  /**
+   * 当前可见的 plugin 配置持久化能力集合。
+   */
+  pluginConfig: AgentPluginConfigRuntime;
+}
 
 /**
  * Service 调用参数。
@@ -132,15 +186,15 @@ export interface PluginAvailability {
  */
 export interface PluginPort {
   /**
-   * 列出全部已注册 Plugin。
+   * 列出全部已注册 plugin。
    */
   list(): PluginView[];
   /**
-   * 检查指定 Plugin 可用性。
+   * 检查指定 plugin 可用性。
    */
   availability(pluginName: string): Promise<PluginAvailability>;
   /**
-   * 运行指定 Plugin Action。
+   * 运行指定 plugin action。
    */
   runAction(params: {
     /**
@@ -375,7 +429,7 @@ export interface PluginAction<
     /**
      * 当前执行上下文。
      */
-    context: ExecutionContext;
+    context: PluginCommandContext;
     /**
      * 输入 payload。
      */
@@ -535,6 +589,6 @@ export interface Plugin {
    * Plugin 可用性检查器（可选）。
    */
   availability?: (
-    context: ExecutionContext,
+    context: PluginCommandContext,
   ) => Promise<PluginAvailability> | PluginAvailability;
 }

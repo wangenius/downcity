@@ -10,10 +10,9 @@ import { execFile as execFileCb } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
 import fs from "fs-extra";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { TtsPluginConfig, TtsSynthesizeInput } from "@/types/TtsPlugin.js";
 import type { TtsAudioFormat, TtsModelId } from "@/types/Tts.js";
-import { getCacheDirPath } from "@/main/env/Paths.js";
+import type { PluginCommandContext } from "@/types/Plugin.js";
 import { renderChatMessageFileTag } from "@/services/chat/runtime/ChatMessageMarkup.js";
 import { getTtsModelCatalogItem, resolveTtsModelId } from "@/plugins/tts/runtime/Catalog.js";
 import { resolveTtsModelsRootDir } from "@/plugins/tts/runtime/Paths.js";
@@ -63,13 +62,13 @@ function toProjectRelativePath(projectRoot: string, targetPath: string): string 
 }
 
 function resolveOutputTarget(params: {
-  context: ExecutionContext;
+  context: PluginCommandContext;
   format: TtsAudioFormat;
   output?: string;
   modelId: string;
 }): { absPath: string; relativePath: string } {
   const output = normalizeText(params.output);
-  const defaultDir = path.join(getCacheDirPath(params.context.rootPath), "tts");
+  const defaultDir = path.join(params.context.paths.getCacheDirPath(), "tts");
   const target = output
     ? (path.isAbsolute(output)
         ? path.normalize(output)
@@ -315,7 +314,7 @@ export async function synthesizeSpeechFile(params: {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionContext;
+  context: PluginCommandContext;
   /**
    * 当前 plugin 配置。
    */

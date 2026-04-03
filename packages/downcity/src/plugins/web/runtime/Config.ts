@@ -6,11 +6,10 @@
  * - 只有当用户显式改动时，才把 `plugins.web` 持久化到项目配置。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonObject } from "@/types/Json.js";
+import type { PluginCommandContext } from "@/types/Plugin.js";
 import type { ResolvedWebPluginConfig, WebPluginConfig } from "@/types/WebPlugin.js";
 import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/types/WebPlugin.js";
-import { persistProjectPluginConfig } from "@/main/plugin/ProjectConfigStore.js";
 
 function toJsonObject(input: Record<string, unknown> | null | undefined): JsonObject {
   const out: JsonObject = {};
@@ -36,7 +35,7 @@ function toJsonObject(input: Record<string, unknown> | null | undefined): JsonOb
   return out;
 }
 
-function readWebPluginRecord(context: ExecutionContext): Record<string, unknown> {
+function readWebPluginRecord(context: PluginCommandContext): Record<string, unknown> {
   const current = context.config.plugins?.web;
   if (!current || typeof current !== "object" || Array.isArray(current)) {
     return {};
@@ -48,7 +47,7 @@ function readWebPluginRecord(context: ExecutionContext): Record<string, unknown>
  * 读取并归一化 web plugin 配置。
  */
 export function readWebPluginConfig(
-  context: ExecutionContext,
+  context: PluginCommandContext,
 ): ResolvedWebPluginConfig {
   const current = readWebPluginRecord(context) as WebPluginConfig;
   return {
@@ -81,7 +80,7 @@ export function readWebPluginConfig(
  * 写入 web plugin 配置。
  */
 export async function writeWebPluginConfig(params: {
-  context: ExecutionContext;
+  context: PluginCommandContext;
   value: Partial<WebPluginConfig>;
 }): Promise<ResolvedWebPluginConfig> {
   if (!params.context.config.plugins) {
@@ -95,11 +94,6 @@ export async function writeWebPluginConfig(params: {
   params.context.config.plugins.web = toJsonObject(
     next as unknown as Record<string, unknown>,
   );
-  await persistProjectPluginConfig({
-    projectRoot: params.context.rootPath,
-    sections: {
-      plugins: params.context.config.plugins,
-    },
-  });
+  await params.context.pluginConfig.persistProjectPlugins(params.context.config.plugins);
   return readWebPluginConfig(params.context);
 }

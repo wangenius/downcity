@@ -11,7 +11,7 @@ import type { Plugin } from "@/types/Plugin.js";
 import type { ChatInboundAugmentInput } from "@/types/ChatPlugin.js";
 import type { VoicePluginConfig } from "@/types/VoicePlugin.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
-import { persistProjectPluginConfig } from "@/main/plugin/ProjectConfigStore.js";
+import type { AgentPluginConfigRuntime } from "@/types/AgentHost.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import {
   listVoiceModels,
@@ -125,10 +125,10 @@ function readVoicePluginConfig(runtime: {
  */
 async function writeVoicePluginConfig(params: {
   agentState: {
-    rootPath: string;
     config: {
       plugins?: Record<string, unknown>;
     };
+    pluginConfig: AgentPluginConfigRuntime;
   };
   value: VoicePluginConfig;
 }): Promise<void> {
@@ -136,12 +136,9 @@ async function writeVoicePluginConfig(params: {
     params.agentState.config.plugins = {};
   }
   params.agentState.config.plugins.voice = (toJsonObject(params.value) || {}) as JsonObject;
-  await persistProjectPluginConfig({
-    projectRoot: params.agentState.rootPath,
-    sections: {
-      plugins: params.agentState.config.plugins as Record<string, JsonObject>,
-    },
-  });
+  await params.agentState.pluginConfig.persistProjectPlugins(
+    params.agentState.config.plugins as Record<string, JsonObject>,
+  );
 }
 
 /**

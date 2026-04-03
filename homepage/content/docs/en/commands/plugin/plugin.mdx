@@ -23,8 +23,9 @@ city plugin action asr status
 
 ## Notes
 
-- `city plugin list` and `city plugin status` fall back to the console-side static plugin catalog when the agent is unavailable, and they try to reflect plugin enabled state from project `downcity.json`.
-- `city plugin action ...` still talks to the target agent API, so start the agent first with `city agent start`.
+- `city plugin list`, `city plugin status`, and `city plugin action ...` read the current project and execute locally in the CLI process.
+- These commands do not require `city agent start`.
+- `--path` selects the target project directly. `--agent` resolves the project path from the console registry when you prefer using the agent name.
 - Plugin config is stored in project `downcity.json` under `plugins.*`.
 - `plugins.<name>.enabled` controls whether a plugin enters the real execution path. When disabled, its hooks and `plugin.system` injection are skipped.
 - Disabled plugins also have their explicit `plugin action` calls rejected by the registry instead of executing the action body.

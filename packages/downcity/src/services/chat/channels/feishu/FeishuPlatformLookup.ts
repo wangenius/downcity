@@ -9,7 +9,6 @@
 import * as Lark from "@larksuiteoapi/node-sdk";
 import fs from "fs-extra";
 import path from "path";
-import { getCacheDirPath } from "@/main/env/Paths.js";
 import type { JsonObject } from "@/types/Json.js";
 import type {
   FeishuDownloadedAttachment,
@@ -482,7 +481,7 @@ export async function downloadFeishuIncomingAttachments(
 ): Promise<FeishuDownloadedAttachment[]> {
   if (!deps.client || params.attachments.length === 0) return [];
 
-  const dir = path.join(getCacheDirPath(deps.rootPath), "feishu");
+  const dir = path.join(deps.rootPath, ".downcity", ".cache", "feishu");
   await fs.ensureDir(dir);
 
   const out: FeishuDownloadedAttachment[] = [];

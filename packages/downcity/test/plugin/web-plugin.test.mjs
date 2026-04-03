@@ -26,6 +26,37 @@ function createLogger() {
   };
 }
 
+function createHost(rootPath) {
+  return {
+    globalEnv: {},
+    paths: {
+      projectRoot: rootPath,
+      getDowncityDirPath: () => path.join(rootPath, ".downcity"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity", ".cache"),
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity", "channel"),
+      getDowncityChannelMetaPath: () => path.join(rootPath, ".downcity", "channel", "meta.json"),
+      getDowncityChatHistoryPath: (sessionId) =>
+        path.join(rootPath, ".downcity", "chat", sessionId, "history.jsonl"),
+      getDowncityMemoryIndexPath: () => path.join(rootPath, ".downcity", "memory", "index.sqlite"),
+      getDowncityMemoryLongTermPath: () => path.join(rootPath, ".downcity", "memory", "MEMORY.md"),
+      getDowncityMemoryDailyDirPath: () => path.join(rootPath, ".downcity", "memory", "daily"),
+      getDowncityMemoryDailyPath: (date) =>
+        path.join(rootPath, ".downcity", "memory", "daily", `${date}.md`),
+      getDowncitySessionRootDirPath: () => path.join(rootPath, ".downcity", "session"),
+      getDowncitySessionDirPath: (sessionId) =>
+        path.join(rootPath, ".downcity", "session", sessionId),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
+    pluginConfig: {
+      async persistProjectPlugins() {
+        return path.join(rootPath, "downcity.json");
+      },
+    },
+  };
+}
+
 function createRuntime() {
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-web-plugin-"));
   fs.writeFileSync(
@@ -59,6 +90,7 @@ function createRuntime() {
         plugins: {},
       },
       env: {},
+      ...createHost(rootPath),
       systems: [],
       context: {},
       services: {
@@ -136,18 +168,27 @@ test("web plugin providers action exposes both provider options", async () => {
 
 test("web plugin status reports missing web-access dependency by default", async () => {
   const { runtime } = createRuntime();
-  const result = await webPlugin.actions.status.execute({
-    context: runtime,
-    payload: {},
-    pluginName: "web",
-    actionName: "status",
-  });
+  const originalHome = process.env.HOME;
+  const isolatedHome = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-web-missing-home-"));
+  process.env.HOME = isolatedHome;
 
-  assert.equal(result.success, true);
-  assert.equal(result.data.plugin.provider, "web-access");
-  assert.equal(result.data.availability.enabled, true);
-  assert.equal(result.data.availability.available, false);
-  assert.match(String(result.data.availability.reasons[0] || ""), /web-access skill is not found/i);
+  try {
+    const result = await webPlugin.actions.status.execute({
+      context: runtime,
+      payload: {},
+      pluginName: "web",
+      actionName: "status",
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data.plugin.provider, "web-access");
+    assert.equal(result.data.availability.enabled, true);
+    assert.equal(result.data.availability.available, false);
+    assert.match(String(result.data.availability.reasons[0] || ""), /web-access skill is not found/i);
+  } finally {
+    process.env.HOME = originalHome;
+    fs.rmSync(isolatedHome, { recursive: true, force: true });
+  }
 });
 
 test("web plugin doctor passes for agent-browser when command exists", async () => {

@@ -1,6 +1,5 @@
 import path from "path";
 import fs from "fs-extra";
-import { getCacheDirPath } from "@/main/env/Paths.js";
 import type { JsonObject } from "@/types/Json.js";
 
 /**
@@ -21,7 +20,7 @@ export class TelegramStateStore {
   private readonly lastUpdateIdFile: string;
 
   constructor(projectRoot: string) {
-    const dir = path.join(getCacheDirPath(projectRoot), "telegram");
+    const dir = path.join(projectRoot, ".downcity", ".cache", "telegram");
     this.lastUpdateIdFile = path.join(dir, "lastUpdateId.json");
   }
 

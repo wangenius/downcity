@@ -2,7 +2,7 @@
  * Plugin 注册表。
  *
  * 关键点（中文）
- * - 统一管理 Plugin 注册、可用性检查与显式 Action 运行。
+ * - 统一管理 runtime plugin 注册、可用性检查与显式 action 运行。
  * - Plugin 自身不维护独立状态机；可用性由 enabled 配置与 plugin 自定义 availability 决定。
  */
 
@@ -20,7 +20,7 @@ import type { JsonValue } from "@/types/Json.js";
 type ContextResolver = () => ExecutionContext;
 
 /**
- * PluginRegistry：Plugin 注册与调度实现。
+ * PluginRegistry：plugin 注册与调度实现。
  */
 export class PluginRegistry {
   private readonly contextResolver: ContextResolver;
@@ -111,14 +111,14 @@ export class PluginRegistry {
   }
 
   /**
-   * 获取单个 Plugin 定义。
+   * 获取单个 plugin 定义。
    */
   get(pluginName: string): Plugin | null {
     return this.plugins.get(String(pluginName || "").trim()) || null;
   }
 
   /**
-   * 列出全部 Plugin 概览视图。
+   * 列出全部 plugin 概览视图。
    */
   list(): PluginView[] {
     return Array.from(this.plugins.values())
@@ -148,7 +148,7 @@ export class PluginRegistry {
   }
 
   /**
-   * 检查 Plugin 可用性。
+   * 检查 plugin 可用性。
    */
   async availability(pluginName: string): Promise<PluginAvailability> {
     const plugin = this.get(pluginName);
@@ -185,7 +185,7 @@ export class PluginRegistry {
   }
 
   /**
-   * 运行 Plugin Action。
+   * 运行 plugin action。
    */
   async runAction(params: {
     plugin: string;

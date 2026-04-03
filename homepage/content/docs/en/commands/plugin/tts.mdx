@@ -66,6 +66,7 @@ city tts synthesize "This is a TTS test"
 ## Notes
 
 - TTS is not attached to chat hooks by default.
+- `city tts ...` runs locally against the current project by default, so you do not need to start `city agent` first.
 - When the plugin is enabled and its dependency is available, the agent sees this capability through the system prompt and can call `city tts synthesize ...` directly.
 - It generates a local audio file and returns a reusable `<file type="audio">...</file>` tag for downstream sending.
 - Configuration is persisted to project `downcity.json` under `plugins.tts`.

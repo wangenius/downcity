@@ -2,7 +2,7 @@
  * Auth Plugin 类型与契约定义。
  *
  * 关键点（中文）
- * - 统一维护 auth plugin 的领域类型、plugin point/action 名称、payload 契约。
+ * - 统一维护 auth plugin 的领域类型、扩展点/action 名称、payload 契约。
  * - 业务层不应散落硬编码字符串，如 `chat.authorizeIncoming`、`set-user-role`。
  * - chat / console / plugin 执行链路都从这里共享同一份边界定义。
  */
@@ -26,7 +26,7 @@ export const CHAT_AUTHORIZATION_CHANNELS = ["telegram", "feishu", "qq"] as const
 export type ChatAuthorizationChannel = (typeof CHAT_AUTHORIZATION_CHANNELS)[number];
 
 /**
- * auth plugin 点名称集合。
+ * auth 扩展点名称集合。
  */
 export const AUTH_PLUGIN_POINTS = {
   observePrincipal: CHAT_PLUGIN_POINTS.observePrincipal,

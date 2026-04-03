@@ -40,13 +40,10 @@ export interface AgentOverviewStoppedSectionProps {
   }) => void
 }
 
-function BasicRow(props: { label: string; value: string }) {
+function BasicRow(props: { value: string }) {
   return (
-    <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
-      <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{props.label}</div>
-      <div className="min-w-0 truncate text-foreground" title={props.value}>
-        {props.value || "-"}
-      </div>
+    <div className="min-w-0 truncate text-sm text-foreground" title={props.value}>
+      {props.value || "-"}
     </div>
   )
 }
@@ -126,128 +123,124 @@ export function AgentOverviewStoppedSection(props: AgentOverviewStoppedSectionPr
         </Button>
       </div>
 
-      <section className="rounded-[18px] bg-secondary/72 px-3.5 py-3">
-        <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
-          <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Execution</div>
-          <div className="min-w-0 space-y-2">
+      <section className="rounded-[18px] bg-secondary/72 px-3.5 py-3 space-y-3">
+        <div className="space-y-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 justify-start rounded-[12px] bg-background px-3 text-left text-sm font-medium w-full"
+                />
+              }
+            >
+              <span className="truncate">
+                {currentExecutionChoice === "model" ? "Model" : `ACP · ${currentExecutionChoice}`}
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="max-h-72 min-w-[18rem]">
+              <DropdownMenuItem
+                disabled={!resolvedModelId}
+                onClick={() => {
+                  if (!resolvedModelId) return
+                  if (currentExecutionChoice === "model" && resolvedModelId === currentModelId) return
+                  onUpdateExecution({
+                    executionMode: "model",
+                    modelId: resolvedModelId,
+                  })
+                }}
+              >
+                {resolvedModelId ? `Model · ${resolvedModelId}` : "Model · 无可用模型"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (currentExecutionChoice === "kimi") return
+                  onUpdateExecution({
+                    executionMode: "acp",
+                    agentType: "kimi",
+                  })
+                }}
+              >
+                ACP · Kimi
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (currentExecutionChoice === "claude") return
+                  onUpdateExecution({
+                    executionMode: "acp",
+                    agentType: "claude",
+                  })
+                }}
+              >
+                ACP · Claude
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (currentExecutionChoice === "codex") return
+                  onUpdateExecution({
+                    executionMode: "acp",
+                    agentType: "codex",
+                  })
+                }}
+              >
+                ACP · Codex
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {currentExecutionChoice === "model" ? (
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-9 justify-start rounded-[12px] bg-background px-3 text-left text-sm font-medium"
+                    className="h-9 justify-start rounded-[12px] bg-background px-3 text-left text-sm font-medium w-full"
                   />
                 }
               >
                 <span className="truncate">
-                  {currentExecutionChoice === "model" ? "Model" : `ACP · ${currentExecutionChoice}`}
+                  {resolvedModelId || "选择 execution.modelId"}
                 </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-72 min-w-[18rem]">
-                <DropdownMenuItem
-                  disabled={!resolvedModelId}
-                  onClick={() => {
-                    if (!resolvedModelId) return
-                    if (currentExecutionChoice === "model" && resolvedModelId === currentModelId) return
-                    onUpdateExecution({
-                      executionMode: "model",
-                      modelId: resolvedModelId,
-                    })
-                  }}
-                >
-                  {resolvedModelId ? `Model · ${resolvedModelId}` : "Model · 无可用模型"}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (currentExecutionChoice === "kimi") return
-                    onUpdateExecution({
-                      executionMode: "acp",
-                      agentType: "kimi",
-                    })
-                  }}
-                >
-                  ACP · Kimi
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (currentExecutionChoice === "claude") return
-                    onUpdateExecution({
-                      executionMode: "acp",
-                      agentType: "claude",
-                    })
-                  }}
-                >
-                  ACP · Claude
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (currentExecutionChoice === "codex") return
-                    onUpdateExecution({
-                      executionMode: "acp",
-                      agentType: "codex",
-                    })
-                  }}
-                >
-                  ACP · Codex
-                </DropdownMenuItem>
+                {availableModels.length === 0 ? (
+                  <DropdownMenuItem disabled>无可选模型</DropdownMenuItem>
+                ) : (
+                  availableModels.map((item) => {
+                    const modelId = String(item.id || "").trim()
+                    if (!modelId) return null
+                    return (
+                      <DropdownMenuItem
+                        key={modelId}
+                        onClick={() => {
+                          if (modelId === currentModelId) return
+                          onUpdateExecution({
+                            executionMode: "model",
+                            modelId,
+                          })
+                        }}
+                      >
+                        {`${modelId} · ${item.providerType || "-"}${item.isPaused ? " · paused" : ""}`}
+                      </DropdownMenuItem>
+                    )
+                  })
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-            {currentExecutionChoice === "model" ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 justify-start rounded-[12px] bg-background px-3 text-left text-sm font-medium"
-                    />
-                  }
-                >
-                  <span className="truncate">
-                    {resolvedModelId || "选择 execution.modelId"}
-                  </span>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="max-h-72 min-w-[18rem]">
-                  {availableModels.length === 0 ? (
-                    <DropdownMenuItem disabled>无可选模型</DropdownMenuItem>
-                  ) : (
-                    availableModels.map((item) => {
-                      const modelId = String(item.id || "").trim()
-                      if (!modelId) return null
-                      return (
-                        <DropdownMenuItem
-                          key={modelId}
-                          onClick={() => {
-                            if (modelId === currentModelId) return
-                            onUpdateExecution({
-                              executionMode: "model",
-                              modelId,
-                            })
-                          }}
-                        >
-                          {`${modelId} · ${item.providerType || "-"}${item.isPaused ? " · paused" : ""}`}
-                        </DropdownMenuItem>
-                      )
-                    })
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="text-xs text-muted-foreground">{executionLabel}</div>
-            )}
-          </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">{executionLabel}</div>
+          )}
         </div>
-        <BasicRow label="Path" value={path} />
-        <BasicRow label="Host" value={String(agent.host || "-")} />
-        <BasicRow label="Port" value={agent.port ? String(agent.port) : "-"} />
-        <BasicRow label="Last Stop" value={lastStoppedAt} />
-        <div className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-2 py-1.5 text-sm">
-          <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Status</div>
-          <div className="inline-flex items-center gap-1 text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-muted-foreground/45" />
-            <span>stopped</span>
-          </div>
+        <div className="space-y-1 text-sm">
+          <BasicRow value={path} />
+          <BasicRow value={String(agent.host || "-")} />
+          <BasicRow value={agent.port ? String(agent.port) : "-"} />
+          <BasicRow value={lastStoppedAt} />
+        </div>
+        <div className="inline-flex items-center gap-1 text-muted-foreground">
+          <span className="size-1.5 rounded-full bg-muted-foreground/45" />
+          <span>stopped</span>
         </div>
       </section>
     </section>

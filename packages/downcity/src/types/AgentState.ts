@@ -10,64 +10,13 @@
 import type { LanguageModel } from "ai";
 import type { Logger } from "@utils/logger/Logger.js";
 import type { DowncityConfig } from "@/types/DowncityConfig.js";
-import type { JsonValue } from "@/types/Json.js";
+import type {
+  AgentAuthRuntime,
+  AgentPathRuntime,
+  AgentPluginConfigRuntime,
+} from "@/types/AgentHost.js";
 import type { BaseService } from "@services/BaseService.js";
 import type { SessionStore } from "@sessions/SessionStore.js";
-import type {
-  PluginActionResult,
-  PluginAvailability,
-  PluginView,
-} from "@/types/Plugin.js";
-
-/**
- * AgentState 持有的插件注册表能力。
- */
-export interface AgentPluginRegistry {
-  /**
-   * 列出当前已注册的插件概览视图。
-   */
-  list(): PluginView[];
-  /**
-   * 查询指定插件可用性。
-   */
-  availability(pluginName: string): Promise<PluginAvailability>;
-  /**
-   * 执行显式插件 action。
-   */
-  runAction(params: {
-    /**
-     * 插件名称。
-     */
-    plugin: string;
-    /**
-     * action 名称。
-     */
-    action: string;
-    /**
-     * 可选 payload。
-     */
-    payload?: JsonValue;
-  }): Promise<PluginActionResult<JsonValue>>;
-  /**
-   * 运行 pipeline hook。
-   */
-  pipeline<T = JsonValue>(pointName: string, value: T): Promise<T>;
-  /**
-   * 运行 guard hook。
-   */
-  guard<T = JsonValue>(pointName: string, value: T): Promise<void>;
-  /**
-   * 运行 effect hook。
-   */
-  effect<T = JsonValue>(pointName: string, value: T): Promise<void>;
-  /**
-   * 运行 resolve hook。
-   */
-  resolve<TInput = JsonValue, TOutput = JsonValue>(
-    pointName: string,
-    value: TInput,
-  ): Promise<TOutput>;
-}
 
 /**
  * AgentState 启动早期的基础状态。
@@ -94,9 +43,25 @@ export interface AgentStateBase {
    */
   env: Record<string, string>;
   /**
+   * 当前 console 级全局环境变量快照。
+   */
+  globalEnv: Record<string, string>;
+  /**
    * 当前生效的静态 system 文本集合。
    */
   systems: string[];
+  /**
+   * 当前 agent 可见的路径能力集合。
+   */
+  paths: AgentPathRuntime;
+  /**
+   * 当前 agent 可见的认证能力集合。
+   */
+  auth: AgentAuthRuntime;
+  /**
+   * 当前 agent 可见的 plugin 配置持久化能力集合。
+   */
+  pluginConfig: AgentPluginConfigRuntime;
 }
 
 /**
@@ -115,8 +80,4 @@ export interface AgentState extends AgentStateBase {
    * 当前 agent 持有的 service instances。
    */
   services: Map<string, BaseService>;
-  /**
-   * 当前 agent 持有的 plugin registry。
-   */
-  pluginRegistry: AgentPluginRegistry;
 }

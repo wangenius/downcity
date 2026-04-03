@@ -2,7 +2,7 @@
  * Chat reply dispatch helper。
  *
  * 关键点（中文）
- * - 把 chat 回复前/回复后的 plugin 点统一收敛到这里。
+ * - 把 chat 回复前/回复后的扩展点统一收敛到这里。
  * - 仅服务 agent 执行生命周期，不覆盖手动 `chat send`。
  */
 

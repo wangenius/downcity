@@ -25,6 +25,36 @@ export function shouldUseHttpTransport(params: {
 }
 
 /**
+ * 判断 transport 错误是否等价于“本地 agent 未运行”。
+ *
+ * 关键点（中文）
+ * - IPC 端点不存在、拒绝连接、超时、无响应，都归类为 runtime 不可用。
+ * - 命令层应把这类底层错误收敛成“请先启动 agent”的业务提示。
+ */
+export function isAgentTransportUnavailableError(error: string | undefined): boolean {
+  const text = String(error || "").trim();
+  if (!text) return false;
+  return (
+    text.startsWith("Local RPC unavailable at ") ||
+    text.startsWith("Local RPC timed out after ") ||
+    text.startsWith("Local RPC closed without response ")
+  );
+}
+
+/**
+ * 优先返回用户可读的 transport 错误。
+ */
+export function resolveAgentTransportErrorMessage(params: {
+  error: string | undefined;
+  fallback: string;
+}): string {
+  if (isAgentTransportUnavailableError(params.error)) {
+    return params.fallback;
+  }
+  return params.error || params.fallback;
+}
+
+/**
  * 统一调用 agent transport。
  */
 export async function callAgentTransport<T>(

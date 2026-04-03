@@ -22,8 +22,9 @@ test("skill plugin action helper lists skills from plugin config roots", () => {
     `${JSON.stringify({
       name: "demo-agent",
       version: "1.0.0",
-      model: {
-        primary: "default",
+      execution: {
+        type: "model",
+        modelId: "default",
       },
       plugins: {
         skill: {

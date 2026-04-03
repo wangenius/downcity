@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 当前只负责组装 per-agent service instances。
- * - 未来可继续承接 plugin registry / execution ports / bootstrap 细化逻辑。
+ * - 未来可继续承接 execution ports / bootstrap 等 agent 装配细化逻辑。
  */
 
 import type { AgentState } from "@/types/AgentState.js";

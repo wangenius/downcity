@@ -66,6 +66,7 @@ city tts synthesize "这是一段测试语音"
 ## 说明
 
 - TTS 默认不接入 chat hooks。
+- `city tts ...` 默认直接在当前项目里本地执行，不需要先运行 `city agent start`。
 - 当 plugin 已启用且依赖可用时，agent 会在 system prompt 中感知这项能力，因此可以直接调用 `city tts synthesize ...` 来生成语音文件。
 - 它会生成一个本地音频文件，并返回可复用的 `<file type="audio">...</file>` 标签，后续发送阶段可直接复用。
 - 配置会持久化到项目 `downcity.json` 的 `plugins.tts`。

@@ -9,7 +9,6 @@
 
 import fs from "fs-extra";
 import path from "path";
-import { getCacheDirPath } from "@/main/env/Paths.js";
 import { BaseChatChannel } from "@services/chat/channels/BaseChatChannel.js";
 import type {
   ChannelChatKeyParams,
@@ -78,7 +77,7 @@ export class FeishuBot extends BaseChatChannel {
     this.appId = appId;
     this.appSecret = appSecret;
     this.domain = domain;
-    this.dedupeDir = path.join(getCacheDirPath(this.rootPath), "feishu", "dedupe");
+    this.dedupeDir = path.join(context.paths.getCacheDirPath(), "feishu", "dedupe");
     this.platform = new FeishuPlatformClient({
       context,
       config: {

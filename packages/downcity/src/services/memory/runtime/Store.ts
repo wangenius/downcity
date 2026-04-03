@@ -18,12 +18,6 @@ import type {
   MemorySourceType,
 } from "@services/memory/types/Memory.js";
 import {
-  getDowncityDirPath,
-  getDowncityMemoryDailyDirPath,
-  getDowncityMemoryLongTermPath,
-  getDowncitySessionRootDirPath,
-} from "@/main/env/Paths.js";
-import {
   MemoryIndexer,
   type MemoryIndexSyncResult,
 } from "./Indexer.js";
@@ -143,7 +137,7 @@ export async function listMemorySourceFiles(
   rootPath: string,
 ): Promise<MemorySourceFile[]> {
   const out: MemorySourceFile[] = [];
-  const longterm = getDowncityMemoryLongTermPath(rootPath);
+  const longterm = path.join(rootPath, ".downcity", "memory", "MEMORY.md");
   if (await pathExists(longterm)) {
     out.push({
       source: "longterm",
@@ -152,7 +146,7 @@ export async function listMemorySourceFiles(
     });
   }
 
-  const dailyDir = getDowncityMemoryDailyDirPath(rootPath);
+  const dailyDir = path.join(rootPath, ".downcity", "memory", "daily");
   for (const abs of await listMarkdownFilesRecursively(dailyDir)) {
     out.push({
       source: "daily",
@@ -161,7 +155,7 @@ export async function listMemorySourceFiles(
     });
   }
 
-  const sessionRootDir = getDowncitySessionRootDirPath(rootPath);
+  const sessionRootDir = path.join(rootPath, ".downcity", "session");
   let sessions: fs.Dirent[] = [];
   try {
     sessions = await fsp.readdir(sessionRootDir, { withFileTypes: true });
@@ -282,7 +276,7 @@ export async function startMemoryRuntime(
   }
 
   if (state.watchers.length === 0) {
-    registerWatcher(context, state, getDowncityDirPath(context.rootPath));
+    registerWatcher(context, state, path.join(context.rootPath, ".downcity"));
   }
   if (!state.intervalTimer) {
     state.intervalTimer = setInterval(() => {

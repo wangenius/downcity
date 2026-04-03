@@ -30,6 +30,34 @@ function isRelativeSpecifier(specifier) {
   return specifier.startsWith("./") || specifier.startsWith("../");
 }
 
+function resolveAliasToSrcRelative(specifier) {
+  if (specifier.startsWith("@/")) {
+    return specifier.slice(2);
+  }
+  if (specifier.startsWith("@main/")) {
+    return `main/${specifier.slice("@main/".length)}`;
+  }
+  if (specifier.startsWith("@agent/")) {
+    return `agent/${specifier.slice("@agent/".length)}`;
+  }
+  if (specifier.startsWith("@services/")) {
+    return `services/${specifier.slice("@services/".length)}`;
+  }
+  if (specifier.startsWith("@sessions/")) {
+    return `sessions/${specifier.slice("@sessions/".length)}`;
+  }
+  if (specifier.startsWith("@plugins/")) {
+    return `plugins/${specifier.slice("@plugins/".length)}`;
+  }
+  if (specifier.startsWith("@types/")) {
+    return `types/${specifier.slice("@types/".length)}`;
+  }
+  if (specifier.startsWith("@utils/")) {
+    return `utils/${specifier.slice("@utils/".length)}`;
+  }
+  return null;
+}
+
 function resolveToSrcRelative(filePath, specifier) {
   const absolute = path.resolve(path.dirname(filePath), specifier);
   const relative = path.relative(srcRoot, absolute);
@@ -75,11 +103,15 @@ async function run() {
 
     for (const match of source.matchAll(IMPORT_RE)) {
       const specifier = String(match[1] || "").trim();
-      if (!specifier || !isRelativeSpecifier(specifier)) continue;
+      if (!specifier) continue;
 
-      const target = resolveToSrcRelative(filePath, specifier);
+      const target = isRelativeSpecifier(specifier)
+        ? resolveToSrcRelative(filePath, specifier)
+        : resolveAliasToSrcRelative(specifier);
+      if (!target) continue;
 
       const allowMainServerClient = target.startsWith("main/daemon/Client");
+      const allowSharedServiceInfra = target === "services/BaseService.js";
 
       // 规则 1（中文）：service 全量禁止反向依赖 main（daemon client 例外）。
       if (target.startsWith("main/") && !allowMainServerClient) {
@@ -107,7 +139,7 @@ async function run() {
       if (target.startsWith("services/")) {
         const targetServiceName = getServiceName(target);
         const isSameService = currentServiceName && targetServiceName === currentServiceName;
-        if (!isSameService) {
+        if (!isSameService && !allowSharedServiceInfra) {
           violations.push({
             file: srcRelativeFilePath,
             specifier,

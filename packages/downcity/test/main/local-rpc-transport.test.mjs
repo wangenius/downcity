@@ -13,7 +13,11 @@ import test from "node:test";
 import fs from "fs-extra";
 import { startLocalRpcServer } from "../../bin/main/localrpc/Server.js";
 import { callLocalServer } from "../../bin/main/localrpc/Client.js";
-import { callAgentTransport } from "../../bin/main/localrpc/Transport.js";
+import {
+  callAgentTransport,
+  isAgentTransportUnavailableError,
+  resolveAgentTransportErrorMessage,
+} from "../../bin/main/localrpc/Transport.js";
 
 function createExecutionContext(rootPath) {
   return {
@@ -128,6 +132,19 @@ test("callAgentTransport should use HTTP only when host or port is explicitly pr
     globalThis.fetch = originalFetch;
     await fs.remove(projectRoot);
   }
+});
+
+test("transport unavailable helper should fold local IPC ENOENT into agent-unavailable state", () => {
+  const error =
+    "Local RPC unavailable at /tmp/downcity.sock: Error: connect ENOENT /tmp/downcity.sock";
+  assert.equal(isAgentTransportUnavailableError(error), true);
+  assert.equal(
+    resolveAgentTransportErrorMessage({
+      error,
+      fallback: "Service action requires an active Agent server. Start via `city agent start` first.",
+    }),
+    "Service action requires an active Agent server. Start via `city agent start` first.",
+  );
 });
 
 test("local rpc server should answer plugin list over IPC", async () => {

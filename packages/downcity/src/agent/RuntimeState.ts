@@ -1,9 +1,13 @@
 import type { LanguageModel } from "ai";
 import type {
-  AgentPluginRegistry,
   AgentState,
   AgentStateBase,
 } from "@/types/AgentState.js";
+import type {
+  AgentAuthRuntime,
+  AgentPathRuntime,
+  AgentPluginConfigRuntime,
+} from "@/types/AgentHost.js";
 export type { AgentState, AgentStateBase } from "@/types/AgentState.js";
 
 /**
@@ -14,42 +18,33 @@ export type { AgentState, AgentStateBase } from "@/types/AgentState.js";
  * - `AgentState` 才是完整运行态；`AgentStateBase` 只用于启动早期。
  */
 
-function createNoopPluginRegistry(): AgentPluginRegistry {
-  return {
-    list() {
-      return [];
-    },
-    async availability() {
-      return {
-        enabled: false,
-        available: false,
-        reasons: ["Plugin registry is not initialized"],
-      };
-    },
-    async runAction(params: { plugin: string; action: string }) {
-      return {
-        success: false,
-        error: `Plugin registry is not initialized: ${params.plugin}.${params.action}`,
-        message: `Plugin registry is not initialized: ${params.plugin}.${params.action}`,
-      };
-    },
-    async pipeline<T>(_: string, value: T): Promise<T> {
-      return value;
-    },
-    async guard<T>(_: string, _value: T): Promise<void> {
-      return;
-    },
-    async effect<T>(_: string, _value: T): Promise<void> {
-      return;
-    },
-    async resolve<TInput, TOutput>(_: string, value: TInput): Promise<TOutput> {
-      return value as unknown as TOutput;
-    },
-  };
-}
-
 let baseState: AgentStateBase | null = null;
 let readyState: AgentState | null = null;
+
+const EMPTY_PATHS: AgentPathRuntime = {
+  projectRoot: ".",
+  getDowncityDirPath: () => ".downcity",
+  getCacheDirPath: () => ".downcity/.cache",
+  getDowncityChannelDirPath: () => ".downcity/channel",
+  getDowncityChannelMetaPath: () => ".downcity/channel/meta.json",
+  getDowncityChatHistoryPath: (sessionId) => `.downcity/chat/${sessionId}/history.jsonl`,
+  getDowncityMemoryIndexPath: () => ".downcity/memory/index.sqlite",
+  getDowncityMemoryLongTermPath: () => ".downcity/memory/MEMORY.md",
+  getDowncityMemoryDailyDirPath: () => ".downcity/memory/daily",
+  getDowncityMemoryDailyPath: (date) => `.downcity/memory/daily/${date}.md`,
+  getDowncitySessionRootDirPath: () => ".downcity/session",
+  getDowncitySessionDirPath: (sessionId) => `.downcity/session/${sessionId}`,
+};
+
+const EMPTY_AUTH: AgentAuthRuntime = {
+  applyInternalAgentAuthEnv() {},
+};
+
+const EMPTY_PLUGIN_CONFIG: AgentPluginConfigRuntime = {
+  async persistProjectPlugins() {
+    return "";
+  },
+};
 
 function normalizeReadyState(input: AgentState): AgentState {
   if (!input.sessionStore) {
@@ -62,11 +57,14 @@ function normalizeReadyState(input: AgentState): AgentState {
     logger: input.logger,
     config: input.config,
     env: input.env,
+    globalEnv: input.globalEnv,
     systems: input.systems,
+    paths: input.paths || EMPTY_PATHS,
+    auth: input.auth || EMPTY_AUTH,
+    pluginConfig: input.pluginConfig || EMPTY_PLUGIN_CONFIG,
     model: input.model,
     sessionStore: input.sessionStore,
     services: input.services || new Map(),
-    pluginRegistry: input.pluginRegistry || createNoopPluginRegistry(),
   };
 }
 

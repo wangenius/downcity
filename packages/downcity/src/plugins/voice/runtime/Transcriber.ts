@@ -7,9 +7,9 @@ import type {
   VoiceProvider,
   VoiceTranscribeStrategy,
 } from "@/types/Voice.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import { resolveVoiceModelsRootDir } from "./Paths.js";
 import type { VoicePluginConfig } from "@/types/VoicePlugin.js";
+import type { PluginCommandContext } from "@/types/Plugin.js";
 
 const execShellAsync = promisify(execWithShell);
 const execFileAsync = promisify(execFileCb);
@@ -22,7 +22,7 @@ export interface VoiceTranscribeInput {
   /**
    * 运行时上下文（用于读取配置/根目录/日志）。
    */
-  context: ExecutionContext;
+  context: PluginCommandContext;
   /**
    * 待转写音频路径（相对项目根目录或绝对路径）。
    */
@@ -101,7 +101,7 @@ function normalizeStrategy(strategy?: VoiceTranscribeStrategy): VoiceTranscribeS
   return "auto";
 }
 
-function toAbsoluteAudioPath(context: ExecutionContext, input: string): string {
+function toAbsoluteAudioPath(context: PluginCommandContext, input: string): string {
   const raw = String(input || "").trim();
   if (!raw) {
     throw new Error("voice transcribe requires audioPath");

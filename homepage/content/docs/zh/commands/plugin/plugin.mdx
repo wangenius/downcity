@@ -23,8 +23,9 @@ city plugin action asr status
 
 ## 说明
 
-- `city plugin list` / `city plugin status` 在没有可用 runtime 时，会回退显示 console 侧静态 plugin catalog，并尽量结合项目 `downcity.json` 反映 plugin 启用态。
-- `city plugin action ...` 仍然需要连接目标 agent API，所以执行前请先运行 `city agent start`。
+- `city plugin list` / `city plugin status` / `city plugin action ...` 会直接读取当前项目并在本地 CLI 进程内执行。
+- 这些命令不需要先运行 `city agent start`。
+- `--path` 直接指定目标项目；如果你更习惯按 agent 名称操作，可以用 `--agent` 从 console registry 解析项目路径。
 - plugin 配置统一写入项目 `downcity.json` 的 `plugins.*`。
 - `plugins.<name>.enabled` 控制 plugin 是否进入真实执行链路。关闭后，该 plugin 的 hook 与 `plugin.system` 注入都会被跳过。
 - disabled plugin 的显式 `plugin action` 也会被 registry 拒绝，不再继续执行 action 本体。

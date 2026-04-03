@@ -9,7 +9,6 @@
 
 import fs from "fs-extra";
 import { generateId } from "@utils/Id.js";
-import { getDowncityChannelDirPath, getDowncityChannelMetaPath } from "@/main/env/Paths.js";
 import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type {
   ChannelContextMetaFileV1,
@@ -142,23 +141,21 @@ export function buildChannelTargetKey(target: ChannelContextTarget): string {
 }
 
 async function readMetaFile(params: {
-  rootPath: string;
+  filePath: string;
 }): Promise<ChannelContextMetaFileV1> {
-  const filePath = getDowncityChannelMetaPath(params.rootPath);
-  const raw = (await fs.readJson(filePath).catch(() => null)) as
+  const raw = (await fs.readJson(params.filePath).catch(() => null)) as
     | Partial<ChannelContextMetaFileV1>
     | null;
   return normalizeMetaFile(raw);
 }
 
 async function writeMetaFile(params: {
-  rootPath: string;
+  dirPath: string;
+  filePath: string;
   file: ChannelContextMetaFileV1;
 }): Promise<void> {
-  const dirPath = getDowncityChannelDirPath(params.rootPath);
-  const filePath = getDowncityChannelMetaPath(params.rootPath);
-  await fs.ensureDir(dirPath);
-  await fs.writeJson(filePath, params.file, { spaces: 2 });
+  await fs.ensureDir(params.dirPath);
+  await fs.writeJson(params.filePath, params.file, { spaces: 2 });
 }
 
 /**
@@ -171,7 +168,9 @@ export async function readChannelSessionRouteBySessionId(params: {
   const rootPath = String(params.context.rootPath || "").trim();
   const sessionId = toOptionalTrimmedString(params.sessionId);
   if (!rootPath || !sessionId) return null;
-  const file = await readMetaFile({ rootPath });
+  const file = await readMetaFile({
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+  });
   return normalizeRoute(file.routesBySessionId[sessionId]);
 }
 
@@ -195,7 +194,9 @@ export async function listChannelSessionRoutes(params: {
       routes: [],
     };
   }
-  const file = await readMetaFile({ rootPath });
+  const file = await readMetaFile({
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+  });
   const routes = Object.values(file.routesBySessionId)
     .map((route) => normalizeRoute(route))
     .filter((route): route is ChannelContextRouteV1 => Boolean(route))
@@ -217,7 +218,9 @@ export async function resolveChannelSessionIdByTarget(params: {
   if (!rootPath) return null;
   const targetKey = buildChannelTargetKey(params.target);
   if (!targetKey) return null;
-  const file = await readMetaFile({ rootPath });
+  const file = await readMetaFile({
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+  });
   const sessionId = toOptionalTrimmedString(file.sessionIdByTargetKey[targetKey]);
   if (!sessionId) return null;
   return file.routesBySessionId[sessionId] ? sessionId : null;
@@ -237,7 +240,9 @@ export async function resolveOrCreateChannelSessionIdByTarget(params: {
   const targetKey = buildChannelTargetKey(normalizedTarget);
   if (!targetKey) return null;
 
-  const file = await readMetaFile({ rootPath });
+  const file = await readMetaFile({
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+  });
   const existingSessionId = toOptionalTrimmedString(file.sessionIdByTargetKey[targetKey]);
   if (
     existingSessionId &&
@@ -261,7 +266,11 @@ export async function resolveOrCreateChannelSessionIdByTarget(params: {
     updatedAt: Date.now(),
   };
   file.updatedAt = Date.now();
-  await writeMetaFile({ rootPath, file });
+  await writeMetaFile({
+    dirPath: params.context.paths.getDowncityChannelDirPath(),
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+    file,
+  });
   return nextSessionId;
 }
 
@@ -284,7 +293,9 @@ export async function upsertChannelSessionRouteBySessionId(params: {
   const targetKey = buildChannelTargetKey(normalizedTarget);
   if (!targetKey) return;
 
-  const file = await readMetaFile({ rootPath });
+  const file = await readMetaFile({
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+  });
   const prev = normalizeRoute(file.routesBySessionId[sessionId]);
   const nextRoute: ChannelContextRouteV1 = {
     v: 1,
@@ -321,7 +332,11 @@ export async function upsertChannelSessionRouteBySessionId(params: {
   file.routesBySessionId[sessionId] = nextRoute;
   file.sessionIdByTargetKey[targetKey] = sessionId;
   file.updatedAt = Date.now();
-  await writeMetaFile({ rootPath, file });
+  await writeMetaFile({
+    dirPath: params.context.paths.getDowncityChannelDirPath(),
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+    file,
+  });
 }
 
 /**
@@ -347,7 +362,9 @@ export async function removeChannelSessionRouteBySessionId(params: {
     };
   }
 
-  const file = await readMetaFile({ rootPath });
+  const file = await readMetaFile({
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+  });
   const route = normalizeRoute(file.routesBySessionId[sessionId]);
   if (!route) {
     return {
@@ -366,7 +383,11 @@ export async function removeChannelSessionRouteBySessionId(params: {
   }
 
   file.updatedAt = Date.now();
-  await writeMetaFile({ rootPath, file });
+  await writeMetaFile({
+    dirPath: params.context.paths.getDowncityChannelDirPath(),
+    filePath: params.context.paths.getDowncityChannelMetaPath(),
+    file,
+  });
   return {
     removed: true,
     route,

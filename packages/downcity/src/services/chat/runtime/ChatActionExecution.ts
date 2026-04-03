@@ -31,11 +31,6 @@ import {
 import { listChannelSessionRoutes } from "@services/chat/runtime/ChannelContextStore.js";
 import { readChatHistory } from "@services/chat/runtime/ChatHistoryStore.js";
 import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
-import {
-  getDowncityChannelMetaPath,
-  getDowncityChatHistoryPath,
-  getDowncityChatSessionDirPath,
-} from "@/main/env/Paths.js";
 import { resolveChatChannelNameOrThrow } from "@services/chat/runtime/ChatChannelFacade.js";
 
 function toChatHistoryView(events: ChatHistoryEventV1[]): JsonObject[] {
@@ -165,13 +160,13 @@ export async function executeChatInfoAction(params: {
     path.relative(params.context.rootPath, absPath).split(path.sep).join("/");
 
   const channelMetaPath = toPosixRelativePath(
-    getDowncityChannelMetaPath(params.context.rootPath),
+    params.context.paths.getDowncityChannelMetaPath(),
   );
   const chatDirPath = toPosixRelativePath(
-    getDowncityChatSessionDirPath(params.context.rootPath, sessionId),
+    path.join(params.context.rootPath, ".downcity", "chat", sessionId),
   );
   const historyPath = toPosixRelativePath(
-    getDowncityChatHistoryPath(params.context.rootPath, sessionId),
+    params.context.paths.getDowncityChatHistoryPath(sessionId),
   );
 
   return {

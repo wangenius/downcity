@@ -3,47 +3,30 @@
  *
  * 关键点（中文）
  * - 为新的插件体系提供通用管理入口。
- * - 当前阶段支持 list / status / action 三类桥接。
+ * - 当前阶段支持 list / status / action 三类本地命令。
  */
 
 import path from "node:path";
 import fs from "node:fs";
 import type { Command } from "commander";
-import { callAgentTransport } from "@/main/localrpc/Transport.js";
 import {
-  buildStaticPluginAvailability,
   findStaticPluginView,
-  listStaticPluginViews,
 } from "@/main/plugin/Catalog.js";
+import {
+  getLocalPluginAvailability,
+  listLocalPlugins,
+  runLocalPluginAction,
+} from "@/main/plugin/LocalExecution.js";
 import { printResult } from "@utils/cli/CliOutput.js";
 import type { JsonValue } from "@/types/Json.js";
-import { getProfileMdPath, getDowncityJsonPath } from "@/main/env/Paths.js";
+import { getDowncityJsonPath } from "@/main/env/Paths.js";
 import { listConsoleAgents } from "@/main/runtime/ConsoleRegistry.js";
-import type {
-  PluginActionResponse,
-  PluginAvailabilityResponse,
-  PluginCliBaseOptions,
-  PluginListResponse,
-} from "@/types/PluginApi.js";
+import type { PluginCliBaseOptions } from "@/types/PluginApi.js";
 
 function isRegistryEntryRunning(
   entry: { status?: "running" | "stopped" },
 ): boolean {
   return entry.status !== "stopped";
-}
-
-function parsePortOption(value: string): number {
-  const port = Number.parseInt(value, 10);
-  if (
-    !Number.isFinite(port) ||
-    Number.isNaN(port) ||
-    !Number.isInteger(port) ||
-    port <= 0 ||
-    port > 65535
-  ) {
-    throw new Error(`Invalid port: ${value}`);
-  }
-  return port;
 }
 
 function resolveProjectRoot(pathInput?: string): string {
@@ -114,42 +97,14 @@ async function resolvePluginProjectRoot(options: PluginCliBaseOptions): Promise<
     return resolveProjectRootByAgentName(explicitAgent);
   }
 
-  const rawPath = String(options.path || ".").trim() || ".";
-  if (rawPath === ".") {
-    const envAgentName = String(process.env.DC_AGENT_NAME || "").trim();
-    if (envAgentName) {
-      const byName = await resolveProjectRootByAgentName(envAgentName);
-      if (byName.projectRoot) return byName;
-    }
-  }
-
-  const projectRoot = resolveProjectRoot(options.path);
-  const entries = await listConsoleAgents();
-  const registered = entries.some(
-    (entry) =>
-      isRegistryEntryRunning(entry) &&
-      path.resolve(String(entry.projectRoot || "").trim() || ".") === projectRoot,
-  );
-  if (!registered) {
-    return {
-      error:
-        `Agent is not registered in console registry: ${projectRoot}. ` +
-        `Run "city console agents" to inspect registered agents.`,
-    };
-  }
-  return { projectRoot };
+  return { projectRoot: resolveProjectRoot(options.path) };
 }
 
-function validateAgentProjectRoot(projectRoot: string): string | null {
-  const missing: string[] = [];
+function validatePluginProjectRoot(projectRoot: string): string | null {
   if (!fs.existsSync(getDowncityJsonPath(projectRoot))) {
-    missing.push("downcity.json");
+    return `Invalid project path: ${projectRoot}. Missing: downcity.json`;
   }
-  if (!fs.existsSync(getProfileMdPath(projectRoot))) {
-    missing.push("PROFILE.md");
-  }
-  if (missing.length === 0) return null;
-  return `Invalid agent path: ${projectRoot}. Missing: ${missing.join(", ")}`;
+  return null;
 }
 
 function parseCommandPayload(raw?: string): JsonValue | undefined {
@@ -174,15 +129,7 @@ function printStaticPluginListFallback(params: {
     success: true,
     title: params.title,
     payload: {
-      plugins: listStaticPluginViews().map((plugin) => ({
-        ...plugin,
-        availability: buildStaticPluginAvailability({
-          pluginName: plugin.name,
-          projectRoot: params.projectRoot,
-          agentError: params.reason,
-        }),
-      })),
-      runtimeConnected: false,
+      plugins: [],
       message: params.reason,
     },
   });
@@ -212,17 +159,16 @@ function printStaticPluginStatusFallback(params: {
     asJson: params.asJson,
     success: true,
     title: params.title,
-    payload: {
-      plugin,
-      availability: buildStaticPluginAvailability({
-        pluginName: plugin.name,
-        projectRoot: params.projectRoot,
-        agentError: params.reason,
-      }),
-      runtimeConnected: false,
-      message: params.reason,
-    },
-  });
+      payload: {
+        plugin,
+        availability: {
+          enabled: false,
+          available: false,
+          reasons: [params.reason],
+        },
+        message: params.reason,
+      },
+    });
 }
 
 async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void> {
@@ -239,7 +185,7 @@ async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void
     return;
   }
 
-  const pathError = validateAgentProjectRoot(resolved.projectRoot);
+  const pathError = validatePluginProjectRoot(resolved.projectRoot);
   if (pathError) {
     printStaticPluginListFallback({
       projectRoot: resolved.projectRoot,
@@ -250,37 +196,22 @@ async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void
     return;
   }
 
-  const remote = await callAgentTransport<PluginListResponse>({
-    projectRoot: resolved.projectRoot,
-    path: "/api/plugins/list",
-    method: "GET",
-    host: options.host,
-    port: options.port,
-    authToken: options.token,
-  });
-
-  if (remote.success && remote.data) {
-    printResult({
-      asJson: options.json,
-      success: Boolean(remote.data.success),
-      title: remote.data.success ? "plugins listed" : "plugin list failed",
-      payload: {
-        ...(Array.isArray(remote.data.plugins)
-          ? { plugins: remote.data.plugins }
-          : {}),
-        ...(remote.data.error ? { error: remote.data.error } : {}),
-      },
-    });
-    return;
-  }
-
-  printStaticPluginListFallback({
-    projectRoot: resolved.projectRoot,
+  const plugins = await Promise.all(
+    listLocalPlugins().map(async (plugin) => ({
+      ...plugin,
+      availability: await getLocalPluginAvailability(
+        resolved.projectRoot as string,
+        plugin.name,
+      ),
+    })),
+  );
+  printResult({
     asJson: options.json,
-    title: "plugins listed (static catalog)",
-    reason:
-      remote.error ||
-      "Agent is unavailable. Showing console-side plugin catalog only.",
+    success: true,
+    title: "plugins listed",
+    payload: {
+      plugins,
+    },
   });
 }
 
@@ -302,7 +233,7 @@ async function runPluginAvailabilityCommand(params: {
     return;
   }
 
-  const pathError = validateAgentProjectRoot(resolved.projectRoot);
+  const pathError = validatePluginProjectRoot(resolved.projectRoot);
   if (pathError) {
     printStaticPluginStatusFallback({
       pluginName: params.pluginName,
@@ -314,42 +245,32 @@ async function runPluginAvailabilityCommand(params: {
     return;
   }
 
-  const remote = await callAgentTransport<PluginAvailabilityResponse>({
-    projectRoot: resolved.projectRoot,
-    path: "/api/plugins/availability",
-    method: "POST",
-    host: params.options.host,
-    port: params.options.port,
-    authToken: params.options.token,
-    body: {
-      pluginName: params.pluginName,
-    },
-  });
-
-  if (remote.success && remote.data) {
+  const plugin = findStaticPluginView(params.pluginName);
+  if (!plugin) {
     printResult({
       asJson: params.options.json,
-      success: Boolean(remote.data.success),
-      title: remote.data.success ? "plugin status ok" : "plugin status failed",
+      success: false,
+      title: "plugin status failed",
       payload: {
-        ...(remote.data.pluginName ? { pluginName: remote.data.pluginName } : {}),
-        ...(remote.data.availability
-          ? { availability: remote.data.availability }
-          : {}),
-        ...(remote.data.error ? { error: remote.data.error } : {}),
+        error: `Unknown plugin: ${params.pluginName}`,
       },
     });
     return;
   }
 
-  printStaticPluginStatusFallback({
-    pluginName: params.pluginName,
-    projectRoot: resolved.projectRoot,
+  const availability = await getLocalPluginAvailability(
+    resolved.projectRoot,
+    params.pluginName,
+  );
+  printResult({
     asJson: params.options.json,
-    title: "plugin status (static catalog)",
-    reason:
-      remote.error ||
-      "Agent is unavailable. Showing console-side plugin metadata only.",
+    success: true,
+    title: "plugin status ok",
+    payload: {
+      pluginName: params.pluginName,
+      plugin,
+      availability,
+    },
   });
 }
 
@@ -372,7 +293,7 @@ async function runPluginActionCommand(params: {
     return;
   }
 
-  const pathError = validateAgentProjectRoot(resolved.projectRoot);
+  const pathError = validatePluginProjectRoot(resolved.projectRoot);
   if (pathError) {
     printResult({
       asJson: params.options.json,
@@ -385,46 +306,23 @@ async function runPluginActionCommand(params: {
     return;
   }
 
-  const remote = await callAgentTransport<PluginActionResponse>({
+  const payload = parseCommandPayload(params.payload);
+  const local = await runLocalPluginAction({
     projectRoot: resolved.projectRoot,
-    path: "/api/plugins/action",
-    method: "POST",
-    host: params.options.host,
-    port: params.options.port,
-    authToken: params.options.token,
-    body: {
-      pluginName: params.pluginName,
-      actionName: params.actionName,
-      ...(parseCommandPayload(params.payload) !== undefined
-        ? { payload: parseCommandPayload(params.payload) }
-        : {}),
-    },
+    pluginName: params.pluginName,
+    actionName: params.actionName,
+    ...(payload !== undefined ? { payload } : {}),
   });
-
-  if (remote.success && remote.data) {
-    printResult({
-      asJson: params.options.json,
-      success: Boolean(remote.data.success),
-      title: remote.data.success ? "plugin action ok" : "plugin action failed",
-      payload: {
-        ...(remote.data.pluginName ? { pluginName: remote.data.pluginName } : {}),
-        ...(remote.data.actionName ? { actionName: remote.data.actionName } : {}),
-        ...(remote.data.data !== undefined ? { data: remote.data.data } : {}),
-        ...(remote.data.message ? { message: remote.data.message } : {}),
-        ...(remote.data.error ? { error: remote.data.error } : {}),
-      },
-    });
-    return;
-  }
-
   printResult({
     asJson: params.options.json,
-    success: false,
-    title: "plugin action failed",
+    success: Boolean(local.success),
+    title: local.success ? "plugin action ok" : "plugin action failed",
     payload: {
-      error:
-        remote.error ||
-        "Plugin action requires an active Agent server. Start via `city agent start` first.",
+      pluginName: params.pluginName,
+      actionName: params.actionName,
+      ...(local.data !== undefined ? { data: local.data } : {}),
+      ...(local.message ? { message: local.message } : {}),
+      ...(local.error ? { error: local.error } : {}),
     },
   });
 }
@@ -443,9 +341,6 @@ export function registerPluginsCommand(program: Command): void {
     .description("列出全部已注册 plugin")
     .option("--path <path>", "agent 项目路径（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
-    .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true)
     .action(async (opts: PluginCliBaseOptions) => {
       await runPluginListCommand(opts);
@@ -456,9 +351,6 @@ export function registerPluginsCommand(program: Command): void {
     .description("查看单个 plugin 可用性")
     .option("--path <path>", "agent 项目路径（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
-    .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true)
     .action(async (pluginName: string, opts: PluginCliBaseOptions) => {
       await runPluginAvailabilityCommand({
@@ -473,9 +365,6 @@ export function registerPluginsCommand(program: Command): void {
     .option("--payload <json>", "Action payload（JSON 或普通字符串）")
     .option("--path <path>", "agent 项目路径（默认当前目录）", ".")
     .option("--agent <name>", "agent 名称（从 console registry 解析）")
-    .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true)
     .action(
       async (

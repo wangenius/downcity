@@ -13,7 +13,7 @@ import type { ServiceCommandScheduleInput } from "@/types/ServiceSchedule.js";
 import type { Service, ServiceAction } from "@/types/Service.js";
 import { listRegisteredServices } from "@/main/registries/ServiceClassRegistry.js";
 import type { ServiceCommandResponse } from "@/types/Services.js";
-import { callAgentTransport } from "@/main/localrpc/Transport.js";
+import { callAgentTransport, resolveAgentTransportErrorMessage } from "@/main/localrpc/Transport.js";
 import { printResult } from "@utils/cli/CliOutput.js";
 import { parsePortOption } from "@utils/cli/Checker.js";
 import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
@@ -309,12 +309,13 @@ function registerServiceActionCommand(params: {
       asJson: bridgeOptions.json,
       success: false,
       title: `${params.service.name}.${params.actionName} failed`,
-      payload: {
-        error:
-          remote.error ||
-          "Service action requires an active Agent server. Start via `city agent start` first.",
-      },
-    });
+        payload: {
+          error: resolveAgentTransportErrorMessage({
+            error: remote.error,
+            fallback: "Service action requires an active Agent server. Start via `city agent start` first.",
+          }),
+        },
+      });
   });
 }
 

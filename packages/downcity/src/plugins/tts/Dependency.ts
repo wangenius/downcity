@@ -8,14 +8,13 @@
 
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
+import type { PluginCommandContext } from "@/types/Plugin.js";
 import type {
   TtsInstallInput,
   TtsPluginConfig,
 } from "@/types/TtsPlugin.js";
 import type { TtsModelId } from "@/types/Tts.js";
-import { persistProjectPluginConfig } from "@/main/plugin/ProjectConfigStore.js";
 import {
   getTtsModelCatalogItem,
   resolveTtsModelId,
@@ -72,7 +71,7 @@ export interface TtsDependencyInstallResult {
   details?: JsonValue;
 }
 
-function readTtsPluginRecord(context: ExecutionContext): Record<string, unknown> {
+function readTtsPluginRecord(context: PluginCommandContext): Record<string, unknown> {
   const current = context.config.plugins?.tts;
   if (!current || typeof current !== "object" || Array.isArray(current)) {
     return {};
@@ -155,7 +154,7 @@ function getTtsPythonCompatibilityReason(params: {
 /**
  * 读取 TTS Plugin 配置。
  */
-export function readTtsPluginConfig(context: ExecutionContext): TtsPluginConfig {
+export function readTtsPluginConfig(context: PluginCommandContext): TtsPluginConfig {
   const current = readTtsPluginRecord(context);
   return {
     enabled: current.enabled === true,
@@ -182,7 +181,7 @@ export async function writeTtsPluginConfig(params: {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionContext;
+  context: PluginCommandContext;
   /**
    * 目标配置值。
    */
@@ -192,12 +191,7 @@ export async function writeTtsPluginConfig(params: {
     params.context.config.plugins = {};
   }
   params.context.config.plugins.tts = toJsonObject(params.value);
-  await persistProjectPluginConfig({
-    projectRoot: params.context.rootPath,
-    sections: {
-      plugins: params.context.config.plugins,
-    },
-  });
+  await params.context.pluginConfig.persistProjectPlugins(params.context.config.plugins);
   return params.context.config.plugins.tts as TtsPluginConfig;
 }
 
@@ -224,7 +218,7 @@ async function checkPythonPackageImports(params: {
  * 检查 TTS 依赖可用性。
  */
 export async function checkTtsSynthesizer(
-  context: ExecutionContext,
+  context: PluginCommandContext,
 ): Promise<TtsDependencyCheckResult> {
   const config = readTtsPluginConfig(context);
   const reasons: string[] = [];
@@ -301,7 +295,7 @@ export async function installTtsSynthesizer(params: {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionContext;
+  context: PluginCommandContext;
   /**
    * 安装输入（可选）。
    */

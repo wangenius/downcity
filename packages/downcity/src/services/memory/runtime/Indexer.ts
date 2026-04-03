@@ -17,7 +17,6 @@ import type {
   MemorySourceStat,
 } from "@services/memory/types/Memory.js";
 import type { MemorySourceFile } from "./Store.js";
-import { getDowncityMemoryIndexPath } from "@/main/env/Paths.js";
 
 const INDEX_SCHEMA_VERSION = 1;
 const SNIPPET_MAX_CHARS = 700;
@@ -179,7 +178,7 @@ export class MemoryIndexer {
   private readonly db: Database.Database;
 
   constructor(private readonly rootPath: string) {
-    this.dbPath = getDowncityMemoryIndexPath(rootPath);
+    this.dbPath = path.join(rootPath, ".downcity", "memory", "index.sqlite");
     const dir = path.dirname(this.dbPath);
     // 同步创建目录，保证 sqlite 可打开。
     // 关键点（中文）：这里是启动路径，避免引入异步竞态。

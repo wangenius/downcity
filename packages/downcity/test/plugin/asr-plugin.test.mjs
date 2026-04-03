@@ -27,6 +27,37 @@ function createLogger() {
   };
 }
 
+function createHost(rootPath) {
+  return {
+    globalEnv: {},
+    paths: {
+      projectRoot: rootPath,
+      getDowncityDirPath: () => path.join(rootPath, ".downcity"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity", ".cache"),
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity", "channel"),
+      getDowncityChannelMetaPath: () => path.join(rootPath, ".downcity", "channel", "meta.json"),
+      getDowncityChatHistoryPath: (sessionId) =>
+        path.join(rootPath, ".downcity", "chat", sessionId, "history.jsonl"),
+      getDowncityMemoryIndexPath: () => path.join(rootPath, ".downcity", "memory", "index.sqlite"),
+      getDowncityMemoryLongTermPath: () => path.join(rootPath, ".downcity", "memory", "MEMORY.md"),
+      getDowncityMemoryDailyDirPath: () => path.join(rootPath, ".downcity", "memory", "daily"),
+      getDowncityMemoryDailyPath: (date) =>
+        path.join(rootPath, ".downcity", "memory", "daily", `${date}.md`),
+      getDowncitySessionRootDirPath: () => path.join(rootPath, ".downcity", "session"),
+      getDowncitySessionDirPath: (sessionId) =>
+        path.join(rootPath, ".downcity", "session", sessionId),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
+    pluginConfig: {
+      async persistProjectPlugins() {
+        return path.join(rootPath, "downcity.json");
+      },
+    },
+  };
+}
+
 function createRuntime() {
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-asr-plugin-"));
   fs.writeFileSync(
@@ -59,6 +90,7 @@ function createRuntime() {
         },
       },
       env: {},
+      ...createHost(rootPath),
       systems: [],
       context: {},
       services: {

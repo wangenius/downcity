@@ -9,7 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { execa } from "execa";
-import { applyInternalAgentAuthEnv } from "@/main/auth/AuthEnv.js";
+import type { AgentAuthRuntime } from "@/types/AgentHost.js";
 import type { SessionRunResult } from "@/types/SessionRun.js";
 import type { JsonObject } from "@/types/Json.js";
 import type {
@@ -59,14 +59,6 @@ export function tryExtractJsonObject(text: string): JsonObject | null {
   return null;
 }
 
-function parsePossibleJsonObject(value: unknown): JsonObject | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as JsonObject;
-  }
-  if (typeof value !== "string") return null;
-  return tryExtractJsonObject(value);
-}
-
 function extractTextFromAssistantMessageParts(parts: unknown): string {
   if (!Array.isArray(parts)) return "";
   const texts: string[] = [];
@@ -82,60 +74,17 @@ function extractTextFromAssistantMessageParts(parts: unknown): string {
   return texts.join("\n").trim();
 }
 
-function pickLastChatSendDeliveredText(parts: unknown): ChatSendOutputPick {
-  if (!Array.isArray(parts)) return { text: "", delivered: false };
-  for (let i = parts.length - 1; i >= 0; i -= 1) {
-    const part = parts[i];
-    if (!part || typeof part !== "object") continue;
-    const p = part as {
-      type?: unknown;
-      toolName?: unknown;
-      tool?: unknown;
-      input?: unknown;
-      rawInput?: unknown;
-      arguments?: unknown;
-      output?: unknown;
-      result?: unknown;
-      state?: unknown;
-    };
-    if (p.type !== "tool-call") continue;
-    const toolName = String(p.toolName ?? p.tool ?? "").trim();
-    if (toolName !== "chat_send") continue;
-    const inputObject = parsePossibleJsonObject(
-      p.input ?? p.rawInput ?? p.arguments,
-    );
-    if (!inputObject) continue;
-    const text = String(inputObject.text ?? "").trim();
-    if (!text) continue;
-
-    const state = String(p.state ?? "").trim();
-    if (state === "output-error" || state === "output-denied") {
-      return { text, delivered: false };
-    }
-
-    const outputObject = parsePossibleJsonObject(p.output ?? p.result);
-    if (outputObject) {
-      const success = outputObject.success;
-      if (success === true) return { text, delivered: true };
-      if (success === false) return { text, delivered: false };
-    }
-
-    if (state === "output-available") return { text, delivered: true };
-    return { text, delivered: false };
-  }
-  return { text: "", delivered: false };
-}
-
 /**
- * 从 assistant 输出中提取最终用户可见文本。
+ * 从 assistant 输出中提取 task 的最终结果文本。
+ *
+ * 关键点（中文）
+ * - 这里故意保持最简：只取最后 assistant 返回中的文本内容。
+ * - 不再额外解析 `chat_send` tool call，也不再区分“过程发送文本”与“最终结果文本”。
+ * - task 的过程内容保留在 `messages.jsonl / dialogue.md`；`output.md` 只记录最后 assistant 文本。
  */
 export function pickAgentOutput(
   assistantMessage: SessionRunResult["assistantMessage"],
 ): ChatSendOutputPick {
-  const picked = pickLastChatSendDeliveredText(
-    (assistantMessage as { parts?: unknown } | null)?.parts,
-  );
-  if (picked.text) return picked;
   return {
     text: extractTextFromAssistantMessageParts(
       (assistantMessage as { parts?: unknown } | null)?.parts,
@@ -323,6 +272,7 @@ export async function runScriptTask(params: {
   runDirAbs: string;
   sessionId: string;
   scriptBody: string;
+  auth: AgentAuthRuntime;
 }): Promise<ScriptExecutionResult> {
   const body = String(params.scriptBody || "");
   if (!body.trim()) throw new Error("script task body cannot be empty");
@@ -337,7 +287,7 @@ export async function runScriptTask(params: {
         ...process.env,
         DC_SESSION_ID: params.sessionId,
       };
-      applyInternalAgentAuthEnv({
+      params.auth.applyInternalAgentAuthEnv({
         targetEnv: childEnv,
         sourceEnv: process.env,
       });

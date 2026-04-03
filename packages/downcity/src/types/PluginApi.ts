@@ -146,22 +146,10 @@ export interface PluginActionResponse {
  * plugin CLI 通用选项。
  */
 export interface PluginCliBaseOptions {
-  /**
-   * agent 项目路径（默认当前目录）。
-   */
+ /**
+  * agent 项目路径（默认当前目录）。
+  */
   path?: string;
-  /**
-   * 覆盖服务主机地址。
-   */
-  host?: string;
-  /**
-   * 覆盖服务端口。
-   */
-  port?: number;
-  /**
-   * 显式覆盖 Bearer Token。
-   */
-  token?: string;
   /**
    * 是否输出 JSON。
    */

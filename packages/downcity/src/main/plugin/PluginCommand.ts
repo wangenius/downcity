@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 负责把 plugin actions 挂到 commander（`city <plugin> <action>`）。
- * - 仅处理 CLI 参数映射与远程调用，不承载 plugin 执行上下文或依赖状态逻辑。
+ * - plugin 命令默认直接在当前 CLI 进程内执行，不再桥接到 agent transport。
  */
 
 import path from "node:path";
@@ -11,16 +11,11 @@ import type { Command } from "commander";
 import type { JsonObject, JsonValue } from "@/types/Json.js";
 import { PLUGINS } from "@/main/plugin/Plugins.js";
 import type { Plugin, PluginAction } from "@/types/Plugin.js";
-import type { PluginActionResponse } from "@/types/PluginApi.js";
-import { callAgentTransport } from "@/main/localrpc/Transport.js";
+import { runLocalPluginAction } from "@/main/plugin/LocalExecution.js";
 import { printResult } from "@utils/cli/CliOutput.js";
-import { parsePortOption } from "@utils/cli/Checker.js";
 
 type PluginCliBridgeOptions = {
   path?: string;
-  host?: string;
-  port?: number;
-  token?: string;
   json?: boolean;
 };
 
@@ -77,9 +72,6 @@ function toPluginCliBridgeOptions(
 ): PluginCliBridgeOptions {
   return {
     path: typeof options.path === "string" ? options.path : ".",
-    host: typeof options.host === "string" ? options.host : undefined,
-    port: typeof options.port === "number" ? options.port : undefined,
-    token: typeof options.token === "string" ? options.token : undefined,
     json: options.json !== false,
   };
 }
@@ -142,9 +134,6 @@ function registerPluginActionCommand(params: {
     .description(commandSpec.description)
     .helpOption("--help", "display help for command")
     .option("--path <path>", "项目根目录（默认当前目录）", ".")
-    .option("--host <host>", "Server host（覆盖自动解析）")
-    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
     .option("--json [enabled]", "以 JSON 输出", true);
 
   commandSpec.configure?.(actionCommand);
@@ -192,45 +181,22 @@ function registerPluginActionCommand(params: {
       return;
     }
 
-    const remote = await callAgentTransport<PluginActionResponse>({
+    const local = await runLocalPluginAction({
       projectRoot: resolveProjectRoot(bridgeOptions.path),
-      path: "/api/plugins/action",
-      method: "POST",
-      host: bridgeOptions.host,
-      port: bridgeOptions.port,
-      authToken: bridgeOptions.token,
-      body: {
-        pluginName: params.plugin.name,
-        actionName: params.actionName,
-        payload,
-      },
+      pluginName: params.plugin.name,
+      actionName: params.actionName,
+      payload,
     });
-
-    if (remote.success && remote.data) {
-      const data = remote.data;
-      printResult({
-        asJson: bridgeOptions.json,
-        success: Boolean(data.success),
-        title: data.success
-          ? `${params.plugin.name}.${params.actionName} ok`
-          : `${params.plugin.name}.${params.actionName} failed`,
-        payload: {
-          ...(data.data !== undefined ? { data: data.data } : {}),
-          ...(data.message ? { message: data.message } : {}),
-          ...(data.error ? { error: data.error } : {}),
-        },
-      });
-      return;
-    }
-
     printResult({
       asJson: bridgeOptions.json,
-      success: false,
-      title: `${params.plugin.name}.${params.actionName} failed`,
+      success: Boolean(local.success),
+      title: local.success
+        ? `${params.plugin.name}.${params.actionName} ok`
+        : `${params.plugin.name}.${params.actionName} failed`,
       payload: {
-        error:
-          remote.error ||
-          "Plugin action requires an active Agent server. Start via `city agent start` first.",
+        ...(local.data !== undefined ? { data: local.data } : {}),
+        ...(local.message ? { message: local.message } : {}),
+        ...(local.error ? { error: local.error } : {}),
       },
     });
   });

@@ -1,4 +1,5 @@
 import type {
+  ChatRuntimePort,
   ExecutionContext,
   InvokeServicePort,
   SessionPort,
@@ -11,11 +12,11 @@ import type {
 } from "@/types/Plugin.js";
 import type { AgentState } from "@/types/AgentState.js";
 import { runServiceCommand } from "@/main/service/Manager.js";
-import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
-import { HookRegistry } from "@/main/plugin/HookRegistry.js";
-import { PluginRegistry } from "@/main/plugin/PluginRegistry.js";
-import { registerBuiltinPlugins } from "@/main/plugin/Plugins.js";
+import { getPluginRuntime } from "@/main/plugin/Runtime.js";
 import { getAgentState } from "@agent/RuntimeState.js";
+import { appendExecSessionMessage } from "@services/chat/runtime/ChatIngressStore.js";
+import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
+import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 
 /**
  * ExecutionContext 构造模块。
@@ -23,39 +24,8 @@ import { getAgentState } from "@agent/RuntimeState.js";
  * 关键点（中文）
  * - 这里负责从 `AgentState` 派生统一执行上下文。
  * - `ExecutionContext` 表达的是执行时能力面，而不是宿主本体。
- * - plugin registry 已开始收敛到 `AgentState`，不再由上下文模块私有持有。
+ * - plugin 注册表当前仍由统一 runtime 管理，不再由上下文模块私有持有。
  */
-
-/**
- * 创建一套 agent 级插件注册表。
- */
-export function createAgentPluginRegistry(): PluginRegistry {
-  let pluginRegistryRef: PluginRegistry | null = null;
-
-  const hookRegistry = new HookRegistry({
-    contextResolver: () => getExecutionContext(),
-    pluginEnabledChecker: (pluginName, context) => {
-      const plugin = pluginRegistryRef?.get(pluginName);
-      if (!plugin) return false;
-      return isPluginEnabledInConfig({
-        plugin,
-        config: context.config,
-      });
-    },
-  });
-
-  const pluginRegistry = new PluginRegistry({
-    contextResolver: () => getExecutionContext(),
-    hookRegistry,
-  });
-  pluginRegistryRef = pluginRegistry;
-
-  registerBuiltinPlugins({
-    pluginRegistry,
-  });
-
-  return pluginRegistry;
-}
 
 /**
  * service 调用端口实现。
@@ -154,32 +124,57 @@ function buildSessionPort(input: AgentState): SessionPort {
 function buildPluginPort(input: AgentState): PluginPort {
   return {
     list(): PluginView[] {
-      return input.pluginRegistry.list();
+      return getPluginRuntime().list();
     },
     async availability(pluginName: string): Promise<PluginAvailability> {
-      return input.pluginRegistry.availability(pluginName);
+      return getPluginRuntime().availability(pluginName);
     },
     async runAction(params: {
       plugin: string;
       action: string;
       payload?: JsonValue;
     }) {
-      return input.pluginRegistry.runAction(params);
+      return getPluginRuntime().runAction(params);
     },
     async pipeline<T = JsonValue>(pointName: string, value: T): Promise<T> {
-      return input.pluginRegistry.pipeline(pointName, value);
+      return getPluginRuntime().pipeline(pointName, value);
     },
     async guard<T = JsonValue>(pointName: string, value: T): Promise<void> {
-      return input.pluginRegistry.guard(pointName, value);
+      return getPluginRuntime().guard(pointName, value);
     },
     async effect<T = JsonValue>(pointName: string, value: T): Promise<void> {
-      return input.pluginRegistry.effect(pointName, value);
+      return getPluginRuntime().effect(pointName, value);
     },
     async resolve<TInput = JsonValue, TOutput = JsonValue>(
       pointName: string,
       value: TInput,
     ): Promise<TOutput> {
-      return input.pluginRegistry.resolve<TInput, TOutput>(pointName, value);
+      return getPluginRuntime().resolve<TInput, TOutput>(pointName, value);
+    },
+  };
+}
+
+/**
+ * 构建 chat 运行时端口。
+ */
+function buildChatPort(getContext: () => ExecutionContext): ChatRuntimePort {
+  return {
+    async readMetaBySessionId(sessionId: string) {
+      return readChatMetaBySessionId({
+        context: getContext(),
+        sessionId,
+      });
+    },
+    async appendExecSessionMessage(params) {
+      await appendExecSessionMessage({
+        context: getContext(),
+        sessionId: params.sessionId,
+        text: params.text,
+        extra: params.extra,
+      });
+    },
+    enqueue(params) {
+      return resolveChatQueueStore(getContext()).enqueue(params);
     },
   };
 }
@@ -188,18 +183,25 @@ function buildPluginPort(input: AgentState): PluginPort {
  * 从 agent 状态派生统一执行上下文。
  */
 export function createExecutionContext(input: AgentState): ExecutionContext {
-  return {
+  let context!: ExecutionContext;
+  context = {
     agent: input,
     cwd: input.cwd,
     rootPath: input.rootPath,
     logger: input.logger,
     config: input.config,
     env: input.env,
+    globalEnv: input.globalEnv,
     systems: input.systems,
+    paths: input.paths,
+    auth: input.auth,
+    pluginConfig: input.pluginConfig,
     session: buildSessionPort(input),
     invoke: serviceInvokePort,
+    chat: buildChatPort(() => context),
     plugins: buildPluginPort(input),
   };
+  return context;
 }
 
 /**

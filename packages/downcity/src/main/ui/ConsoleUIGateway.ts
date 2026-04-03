@@ -276,6 +276,7 @@ export class ConsoleUIGateway {
     command: string;
     cwd: string;
     timeoutMs: number;
+    authToken?: string;
   }): Promise<{
     command: string;
     cwd: string;

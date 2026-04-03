@@ -78,7 +78,7 @@ export function toDashboardPath(
     if (hasAgentSegment) return `/global/agent/${encodeURIComponent(agentSegment)}`
     return "/global/overview"
   }
-  if (view === "globalAccess") return "/global/access"
+  if (view === "globalUserToken") return "/global/user-token"
   if (view === "globalEnv") return "/global/env"
   if (view === "globalModel") return "/global/model"
   if (view === "globalChannelAccounts") return "/global/channel-accounts"

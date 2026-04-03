@@ -102,6 +102,7 @@ export interface ConsoleUiGatewayRouteHandlers {
     command: string;
     cwd: string;
     timeoutMs: number;
+    authToken?: string;
   }): Promise<{
     command: string;
     cwd: string;
@@ -396,10 +397,13 @@ export function registerConsoleUiGatewayRoutes(params: {
         ? Math.min(timeoutRaw, 120_000)
         : 45_000;
 
+      const authHeader = c.req.header("authorization");
+      const authToken = authHeader?.replace(/^Bearer\s+/i, "").trim();
       const result = await handlers.executeShellCommand({
         command,
         cwd: selectedAgent.projectRoot,
         timeoutMs,
+        authToken,
       });
       return c.json({
         success: true,

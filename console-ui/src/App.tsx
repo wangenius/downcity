@@ -5,7 +5,7 @@
 import * as React from "react"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { AccessSection } from "@/components/dashboard/AccessSection"
+import { UserTokenSection } from "@/components/dashboard/UserTokenSection"
 import { AgentOverviewStoppedSection } from "@/components/dashboard/AgentOverviewStoppedSection"
 import { AuthorizationSection } from "@/components/dashboard/AuthorizationSection"
 import { AgentCommandSection } from "@/components/dashboard/AgentCommandSection"
@@ -547,15 +547,14 @@ export function App() {
             />
           </section>
         )
-      case "globalAccess":
+      case "globalUserToken":
         return (
           <section>
-            <AccessSection
+            <UserTokenSection
               tokens={accessTokens}
               loading={accessLoading}
               latestIssuedToken={latestIssuedAccessToken}
               formatTime={(value) => uiHelpers.formatTime(value ?? undefined)}
-              onRefresh={() => refreshAccess()}
               onCreateToken={(input) => createAccessToken(input)}
               onDeleteToken={(input) => deleteAccessToken(input)}
               onClearLatestIssuedToken={clearLatestIssuedAccessToken}

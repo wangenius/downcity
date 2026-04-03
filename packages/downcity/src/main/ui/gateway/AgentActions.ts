@@ -151,6 +151,7 @@ export async function executeConsoleUiShellCommand(params: {
   command: string;
   cwd: string;
   timeoutMs: number;
+  authToken?: string;
 }): Promise<{
   command: string;
   cwd: string;
@@ -172,6 +173,7 @@ export async function executeConsoleUiShellCommand(params: {
       env: {
         ...process.env,
         FORCE_COLOR: "0",
+        ...(params.authToken ? { DC_AGENT_TOKEN: params.authToken } : {}),
       },
       stdio: ["ignore", "pipe", "pipe"],
     });

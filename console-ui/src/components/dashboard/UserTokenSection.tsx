@@ -1,9 +1,9 @@
 /**
- * API Key 管理页
+ * User Token 管理页
  */
 
 import * as React from "react"
-import { PlusIcon, Loader2Icon, Trash2Icon } from "lucide-react"
+import { PlusIcon, Loader2Icon, Trash2Icon, CopyIcon, CheckIcon } from "lucide-react"
 import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Label } from "@downcity/ui"
 import { DashboardModule } from "@/components/dashboard/DashboardModule"
 import type {
@@ -11,7 +11,7 @@ import type {
   UiAuthAccessTokenSummary,
 } from "@/types/AuthAccess"
 
-export interface AccessSectionProps {
+export interface UserTokenSectionProps {
   tokens: UiAuthAccessTokenSummary[]
   loading: boolean
   latestIssuedToken: UiAuthAccessIssuedToken | null
@@ -21,13 +21,14 @@ export interface AccessSectionProps {
   onClearLatestIssuedToken: () => void
 }
 
-export function AccessSection(props: AccessSectionProps) {
+export function UserTokenSection(props: UserTokenSectionProps) {
   const { tokens, loading, onCreateToken, onDeleteToken, onClearLatestIssuedToken, latestIssuedToken, formatTime } = props
 
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [tokenName, setTokenName] = React.useState("")
   const [creating, setCreating] = React.useState(false)
   const [deletingId, setDeletingId] = React.useState<string>("")
+  const [copied, setCopied] = React.useState(false)
 
   const activeCount = React.useMemo(() => tokens.length, [tokens])
 
@@ -55,6 +56,18 @@ export function AccessSection(props: AccessSectionProps) {
   React.useEffect(() => {
     if (latestIssuedToken) {
       setDialogOpen(true)
+      setCopied(false)
+    }
+  }, [latestIssuedToken])
+
+  const handleCopyToken = React.useCallback(async () => {
+    if (!latestIssuedToken?.token) return
+    try {
+      await navigator.clipboard.writeText(latestIssuedToken.token)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // ignore
     }
   }, [latestIssuedToken])
 
@@ -123,9 +136,24 @@ export function AccessSection(props: AccessSectionProps) {
               <p className="text-sm text-muted-foreground">
                 请保存此 token，它只会显示一次
               </p>
-              <code className="block break-all rounded-[12px] bg-secondary px-3 py-3 text-xs">
-                {latestIssuedToken.token}
-              </code>
+              <div className="relative">
+                <code className="block break-all rounded-[12px] bg-secondary px-3 py-3 pr-10 text-xs">
+                  {latestIssuedToken.token}
+                </code>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="absolute right-1 top-1/2 size-7 -translate-y-1/2 rounded-[8px]"
+                  onClick={handleCopyToken}
+                >
+                  {copied ? (
+                    <CheckIcon className="size-4 text-emerald-500" />
+                  ) : (
+                    <CopyIcon className="size-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4 px-4 py-2">

@@ -20,11 +20,11 @@ const PAGES: Record<DashboardPrimaryView, DashboardPageMeta> = {
     title: "Overview",
     path: "/global/overview",
   },
-  globalAccess: {
-    view: "globalAccess",
+  globalUserToken: {
+    view: "globalUserToken",
     scope: "global",
-    title: "Access",
-    path: "/global/access",
+    title: "User Token",
+    path: "/global/user-token",
   },
   globalEnv: {
     view: "globalEnv",
@@ -120,7 +120,7 @@ const SCOPE_TITLES: Record<DashboardScope, string> = {
 
 const PRIMARY_PAGE_ORDER: DashboardPrimaryView[] = [
   "globalOverview",
-  "globalAccess",
+  "globalUserToken",
   "globalCommand",
   "globalEnv",
   "globalModel",

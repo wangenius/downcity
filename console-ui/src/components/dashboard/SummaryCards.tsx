@@ -732,11 +732,6 @@ export function SummaryCards(props: SummaryCardsProps) {
               >
                 <div className="rounded-[18px] bg-secondary/85 p-2">
                   <div className="space-y-3 rounded-[14px] bg-transparent px-3 py-3">
-                    <div className="min-w-0 space-y-1">
-                      <div className="text-xs text-muted-foreground">
-                        {service.description || service.name || service.service || "-"}
-                      </div>
-                    </div>
 
                   {isChatOverview && chatItems.length > 0 ? (
                     <div className="space-y-1.5">

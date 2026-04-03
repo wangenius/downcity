@@ -33,13 +33,11 @@ import {
 } from "@agent/ExecutionContext.js";
 import {
   getAgentState,
-  getAgentStateBase,
-  requireAgentModel,
-  setAgentState,
+  getAgentStateBase, setAgentState,
   setAgentStateBase,
-  type AgentState,
+  type AgentState
 } from "@agent/RuntimeState.js";
-import { createAgentServices } from "@agent/AgentFactory.js";
+import { createRegisteredServiceInstances } from "@/main/registries/ServiceClassRegistry.js";
 import { readProjectPrimaryModelId } from "@/main/project/ProjectExecutionBinding.js";
 import { initializePluginManager, resetPluginManager } from "@/main/plugin/PluginManager.js";
 import {
@@ -177,9 +175,9 @@ export async function initAgentState(cwd: string): Promise<void> {
     sessionAgent || !primaryModelId
       ? undefined
       : await createModel({
-          config,
-          getRequestContext,
-        });
+        config,
+        getRequestContext,
+      });
 
   const compactor = new SummaryCompactor({
     keepLastMessages: config.context?.messages?.keepLastMessages,
@@ -197,36 +195,36 @@ export async function initAgentState(cwd: string): Promise<void> {
 
   const runtimeRegistry = sessionAgent
     ? new SessionRuntimeStore({
-        persistorStore: {
-          getPersistor(sessionId: string) {
-            return createSessionPersistor(rootPath, sessionId);
-          },
+      persistorStore: {
+        getPersistor(sessionId: string) {
+          return createSessionPersistor(rootPath, sessionId);
         },
-        createRuntime: ({
+      },
+      createRuntime: ({
+        sessionId,
+        persistor,
+      }: {
+        sessionId: string;
+        persistor: PersistorComponent;
+      }) =>
+        new AcpSessionRuntime({
+          rootPath,
           sessionId,
+          logger: defaultLogger,
           persistor,
-        }: {
-          sessionId: string;
-          persistor: PersistorComponent;
-        }) =>
-          new AcpSessionRuntime({
-            rootPath,
-            sessionId,
-            logger: defaultLogger,
-            persistor,
-            prompter: system,
-            launch: resolveAcpLaunchConfig(sessionAgent),
-          }),
-      })
+          prompter: system,
+          launch: resolveAcpLaunchConfig(sessionAgent),
+        }),
+    })
     : new SessionRuntimeStore({
-        model: model as NonNullable<typeof model>,
-        logger: defaultLogger,
-        createPersistor: (sessionId: string) =>
-          createSessionPersistor(rootPath, sessionId),
-        compactor,
-        system,
-        getTools: () => shellTools,
-      });
+      model: model as NonNullable<typeof model>,
+      logger: defaultLogger,
+      createPersistor: (sessionId: string) =>
+        createSessionPersistor(rootPath, sessionId),
+      compactor,
+      system,
+      getTools: () => shellTools,
+    });
 
   const sessionStore = new SessionStore({
     runtimeRegistry,
@@ -247,7 +245,7 @@ export async function initAgentState(cwd: string): Promise<void> {
     sessionStore,
     services: new Map(),
   };
-  agentState.services = createAgentServices(agentState);
+  agentState.services = createRegisteredServiceInstances(agentState);
 
   setAgentState(agentState);
   initializePluginManager();
@@ -259,19 +257,19 @@ function createSessionPersistor(rootPath: string, sessionId: string): FilePersis
   const parsedRun = parseTaskRunSessionId(sessionId);
   const paths = parsedRun
     ? (() => {
-        const runDir = getTaskRunDir(
-          rootPath,
-          parsedRun.taskId,
-          parsedRun.timestamp,
-        );
-        return {
-          sessionDirPath: runDir,
-          messagesDirPath: runDir,
-          messagesFilePath: path.join(runDir, "messages.jsonl"),
-          metaFilePath: path.join(runDir, "meta.json"),
-          archiveDirPath: path.join(runDir, "archive"),
-        };
-      })()
+      const runDir = getTaskRunDir(
+        rootPath,
+        parsedRun.taskId,
+        parsedRun.timestamp,
+      );
+      return {
+        sessionDirPath: runDir,
+        messagesDirPath: runDir,
+        messagesFilePath: path.join(runDir, "messages.jsonl"),
+        metaFilePath: path.join(runDir, "meta.json"),
+        archiveDirPath: path.join(runDir, "archive"),
+      };
+    })()
     : undefined;
   return new FilePersistor({
     rootPath,

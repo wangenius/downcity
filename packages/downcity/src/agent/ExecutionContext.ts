@@ -12,7 +12,7 @@ import type {
 } from "@/types/Plugin.js";
 import type { AgentState } from "@/types/AgentState.js";
 import { runServiceCommand } from "@/main/service/Manager.js";
-import { getPluginRuntime } from "@/main/plugin/Runtime.js";
+import { getPluginManager } from "@/main/plugin/PluginManager.js";
 import { getAgentState } from "@agent/RuntimeState.js";
 import { appendExecSessionMessage } from "@services/chat/runtime/ChatIngressStore.js";
 import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
@@ -24,7 +24,7 @@ import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
  * 关键点（中文）
  * - 这里负责从 `AgentState` 派生统一执行上下文。
  * - `ExecutionContext` 表达的是执行时能力面，而不是宿主本体。
- * - plugin 注册表当前仍由统一 runtime 管理，不再由上下文模块私有持有。
+ * - plugin 注册表当前仍由统一 plugin manager 管理，不再由上下文模块私有持有。
  */
 
 /**
@@ -124,32 +124,32 @@ function buildSessionPort(input: AgentState): SessionPort {
 function buildPluginPort(input: AgentState): PluginPort {
   return {
     list(): PluginView[] {
-      return getPluginRuntime().list();
+      return getPluginManager().list();
     },
     async availability(pluginName: string): Promise<PluginAvailability> {
-      return getPluginRuntime().availability(pluginName);
+      return getPluginManager().availability(pluginName);
     },
     async runAction(params: {
       plugin: string;
       action: string;
       payload?: JsonValue;
     }) {
-      return getPluginRuntime().runAction(params);
+      return getPluginManager().runAction(params);
     },
     async pipeline<T = JsonValue>(pointName: string, value: T): Promise<T> {
-      return getPluginRuntime().pipeline(pointName, value);
+      return getPluginManager().pipeline(pointName, value);
     },
     async guard<T = JsonValue>(pointName: string, value: T): Promise<void> {
-      return getPluginRuntime().guard(pointName, value);
+      return getPluginManager().guard(pointName, value);
     },
     async effect<T = JsonValue>(pointName: string, value: T): Promise<void> {
-      return getPluginRuntime().effect(pointName, value);
+      return getPluginManager().effect(pointName, value);
     },
     async resolve<TInput = JsonValue, TOutput = JsonValue>(
       pointName: string,
       value: TInput,
     ): Promise<TOutput> {
-      return getPluginRuntime().resolve<TInput, TOutput>(pointName, value);
+      return getPluginManager().resolve<TInput, TOutput>(pointName, value);
     },
   };
 }

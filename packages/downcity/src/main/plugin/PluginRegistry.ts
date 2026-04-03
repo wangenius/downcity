@@ -2,7 +2,7 @@
  * Plugin 注册表。
  *
  * 关键点（中文）
- * - 统一管理 runtime plugin 注册、可用性检查与显式 action 运行。
+ * - 统一管理 plugin 注册、可用性检查与显式 action 运行。
  * - Plugin 自身不维护独立状态机；可用性由 enabled 配置与 plugin 自定义 availability 决定。
  */
 

@@ -101,6 +101,37 @@ function pickLastNonEmptyLine(value: string): string {
   return lines.length > 0 ? lines[lines.length - 1] : "";
 }
 
+/**
+ * 判断一条 stderr 是否属于可忽略的 Python 推理提示。
+ *
+ * 关键点（中文）
+ * - 某些第三方库会把 warning / info 打到 stderr，但并不影响音频文件生成。
+ * - 这里只过滤已知的非致命提示，避免把真实错误静默吞掉。
+ */
+function isIgnorablePythonStderrLine(value: string): boolean {
+  const line = normalizeText(value);
+  if (!line) return true;
+  if (/^Setting `pad_token_id` to `eos_token_id`/u.test(line)) return true;
+  if (/^`torch_dtype` is deprecated!/u.test(line)) return true;
+  if (/^Warning: flash-attn is not installed\./u.test(line)) return true;
+  return false;
+}
+
+/**
+ * 提取 stderr 中真正需要上抛的错误文本。
+ *
+ * 关键点（中文）
+ * - 去掉空行与已知 warning 后，只要还有剩余内容，就按真实错误处理。
+ * - 返回最后一条非 warning 行，方便 CLI 给出更稳定的错误摘要。
+ */
+function pickUnexpectedPythonStderr(value: string): string {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => Boolean(line) && !isIgnorablePythonStderrLine(line));
+  return lines.length > 0 ? lines[lines.length - 1] : "";
+}
+
 function detectLanguageHint(input: string): "zh" | "en" {
   return /[\u3400-\u9fff]/u.test(input) ? "zh" : "en";
 }
@@ -191,7 +222,7 @@ async function runPythonInline(params: {
     }
     throw new Error(`python runner failed: ${String(errorLike.message || error)}`);
   }
-  const err = pickLastNonEmptyLine(stderr);
+  const err = pickUnexpectedPythonStderr(stderr);
   if (err) {
     throw new Error(`python runner stderr: ${err}`);
   }

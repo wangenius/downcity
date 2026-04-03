@@ -41,7 +41,7 @@ import {
 } from "@agent/RuntimeState.js";
 import { createAgentServices } from "@agent/AgentFactory.js";
 import { readProjectPrimaryModelId } from "@/main/project/ProjectExecutionBinding.js";
-import { initializePluginRuntime, resetPluginRuntime } from "@/main/plugin/Runtime.js";
+import { initializePluginManager, resetPluginManager } from "@/main/plugin/PluginManager.js";
 import {
   createAgentAuthRuntime,
   createAgentPathRuntime,
@@ -126,7 +126,7 @@ function startAgentHotReload(): void {
  */
 export async function initAgentState(cwd: string): Promise<void> {
   stopAgentHotReload();
-  resetPluginRuntime();
+  resetPluginManager();
 
   const resolvedCwd = String(cwd || "").trim() || ".";
   const rootPath = path.resolve(resolvedCwd);
@@ -250,7 +250,7 @@ export async function initAgentState(cwd: string): Promise<void> {
   agentState.services = createAgentServices(agentState);
 
   setAgentState(agentState);
-  initializePluginRuntime();
+  initializePluginManager();
   setShellToolRuntime(getExecutionContext().invoke);
   startAgentHotReload();
 }

@@ -13,6 +13,7 @@ import path from "node:path";
 import test from "node:test";
 import { ttsPlugin } from "../../bin/plugins/tts/Plugin.js";
 import { resolveDefaultTtsVenvPythonBin } from "../../bin/plugins/tts/runtime/DependencyInstaller.js";
+import { synthesizeSpeechFile } from "../../bin/plugins/tts/runtime/Synthesizer.js";
 
 function createLogger() {
   return {
@@ -195,4 +196,44 @@ test("tts plugin system prompt is injected only when plugin is enabled", async (
   assert.match(prompt, /# TTS Plugin/);
   assert.match(prompt, /tts\.synthesize/);
   assert.match(prompt, /<file type="audio">/);
+});
+
+test("tts synthesize ignores known qwen warnings from stderr when output file exists", async () => {
+  const { runtime, rootPath } = createRuntime();
+  const fakePythonBin = path.join(rootPath, "fake-python.mjs");
+  const modelsDir = path.join(rootPath, ".models", "tts");
+  const modelDir = path.join(modelsDir, "qwen3-tts-0.6b");
+  fs.mkdirSync(modelDir, { recursive: true });
+  fs.writeFileSync(
+    fakePythonBin,
+    [
+      "#!/usr/bin/env node",
+      "import fs from 'node:fs';",
+      "const outputPath = process.argv[8];",
+      "process.stderr.write('Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.\\n');",
+      "fs.writeFileSync(outputPath, 'RIFFfakewav');",
+      "process.stdout.write(`${outputPath}\\n`);",
+    ].join("\n"),
+    "utf-8",
+  );
+  fs.chmodSync(fakePythonBin, 0o755);
+
+  const result = await synthesizeSpeechFile({
+    context: runtime,
+    config: {
+      enabled: true,
+      format: "wav",
+      modelId: "qwen3-tts-0.6b",
+      modelsDir,
+      pythonBin: fakePythonBin,
+    },
+    input: {
+      text: "你好，欢迎来到 Downcity",
+      output: ".downcity/out/warning-ok.wav",
+    },
+  });
+
+  assert.equal(result.outputPath, ".downcity/out/warning-ok.wav");
+  assert.equal(fs.existsSync(path.join(rootPath, result.outputPath)), true);
+  assert.equal(result.bytes > 0, true);
 });

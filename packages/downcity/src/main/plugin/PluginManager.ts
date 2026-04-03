@@ -1,10 +1,10 @@
 /**
- * Plugin Runtime 单例。
+ * PluginManager 单例。
  *
  * 关键点（中文）
- * - runtime hook / resolve / system 注入所依赖的 plugin 注册表统一收口到 main 层。
- * - agent 不再持有 plugin 注册表；agent 只是通过 ExecutionContext 调用 main 的 plugin runtime。
- * - CLI plugin 命令则直接走本地命令执行器，不依赖这里的 runtime 单例。
+ * - plugin hook / resolve / system 注入所依赖的注册与调度统一收口到 main 层。
+ * - agent 不直接持有 plugin 注册表；agent 只是通过 ExecutionContext 调用 main 的 plugin manager。
+ * - CLI plugin 命令则直接走本地命令执行器，不依赖这里的 manager 单例。
  */
 
 import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
@@ -13,13 +13,13 @@ import { PluginRegistry } from "@/main/plugin/PluginRegistry.js";
 import { registerBuiltinPlugins } from "@/main/plugin/Plugins.js";
 import { getExecutionContext } from "@agent/ExecutionContext.js";
 
-let pluginRuntime: PluginRegistry | null = null;
+let pluginManager: PluginRegistry | null = null;
 
 /**
- * 初始化全局 plugin runtime。
+ * 初始化全局 plugin manager。
  */
-export function initializePluginRuntime(): PluginRegistry {
-  if (pluginRuntime) return pluginRuntime;
+export function initializePluginManager(): PluginRegistry {
+  if (pluginManager) return pluginManager;
 
   let pluginRegistryRef: PluginRegistry | null = null;
   const hookRegistry = new HookRegistry({
@@ -42,23 +42,23 @@ export function initializePluginRuntime(): PluginRegistry {
   registerBuiltinPlugins({
     pluginRegistry: registry,
   });
-  pluginRuntime = registry;
+  pluginManager = registry;
   return registry;
 }
 
 /**
- * 读取全局 plugin runtime。
+ * 读取全局 plugin manager。
  */
-export function getPluginRuntime(): PluginRegistry {
-  if (!pluginRuntime) {
-    return initializePluginRuntime();
+export function getPluginManager(): PluginRegistry {
+  if (!pluginManager) {
+    return initializePluginManager();
   }
-  return pluginRuntime;
+  return pluginManager;
 }
 
 /**
- * 重置全局 plugin runtime（测试/重启场景）。
+ * 重置全局 plugin manager（测试/重启场景）。
  */
-export function resetPluginRuntime(): void {
-  pluginRuntime = null;
+export function resetPluginManager(): void {
+  pluginManager = null;
 }

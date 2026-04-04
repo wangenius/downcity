@@ -1,4 +1,4 @@
 {
   "title": "Console",
-  "pages": ["console", "init", "model", "config", "start", "stop", "status", "agents", "ui"]
+  "pages": ["console"]
 }

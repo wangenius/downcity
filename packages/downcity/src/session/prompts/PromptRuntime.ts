@@ -13,7 +13,7 @@ import {
   getProfileMdPath,
   getSoulMdCandidatePaths,
   getSoulMdPath,
-} from "@/city/runtime/env/Paths.js";
+} from "@/main/city/env/Paths.js";
 import fs from "fs-extra";
 import path from "node:path";
 import { watch, type FSWatcher } from "node:fs";

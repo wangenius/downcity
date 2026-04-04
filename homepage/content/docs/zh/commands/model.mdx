@@ -1,0 +1,127 @@
+---
+title: city model
+description: 独立管理 console 全局语言模型（provider/model）
+---
+
+# `city model`
+
+独立的模型管理命令域，只管理语言模型。
+
+## 设计约束
+
+- `create` 是唯一交互式命令。
+- 其他命令（`list/pause/update/test`）都是非交互，适合脚本化。
+- provider 的 `apiKey` 存储在 `~/.downcity/downcity.db`，写入时自动加密。
+- Kimi 现已拆分为两个 provider type：`moonshot-cn` 与 `moonshot-ai`。
+- Kimi Code 可使用独立 provider type：`kimi-code`。
+
+## 用法
+
+```bash
+# 交互式创建（选择创建 provider 或 model）
+city model create
+
+# 列表
+city model list
+
+# 读取详情
+city model get provider <providerId>
+city model get model <modelId>
+
+# 暂停模型（默认 enabled=true）
+city model pause <modelId>
+city model pause <modelId> --enabled false
+
+# 发现 provider 模型（可选自动写入）
+city model discover <providerId>
+city model discover <providerId> --auto-add true --prefix openai_
+
+# 更新 provider
+city model update provider <providerId> --api-key '${OPENAI_API_KEY}'
+city model update provider kimi_cn --type moonshot-cn
+city model update provider kimi_ai --type moonshot-ai
+
+# 更新 model
+city model update model <modelId> --name gpt-4o-mini --provider openai_main
+
+# 删除 provider/model
+city model remove provider <providerId>
+city model remove model <modelId>
+
+# 绑定到项目（设置 downcity.json.execution.modelId）
+city model use <modelId> --path /path/to/agent
+
+# 测试 provider
+city model test provider <providerId>
+
+# 测试 model（真实调用）
+city model test model <modelId>
+```
+
+## create 行为
+
+- 可选创建 `provider` 或 `model`。
+- 创建 provider 后可立即测试连通性。
+- 对支持模型发现的 provider，会尝试拉取远端模型列表并支持多选自动添加。
+
+## 自动化命令
+
+- `get`：查询单个 provider/model 详情。
+- `discover`：发现 provider 模型列表，可选 `--auto-add` 批量写入。
+- `remove`：删除 provider/model（provider 若被引用会拒绝）。
+- `use`：把项目 `downcity.json.execution.modelId` 绑定到指定模型 ID，并把执行模式切到 `model`。
+
+## pause 行为
+
+- `pause` 会设置模型状态为暂停。
+- 暂停模型不能作为 `execution.modelId` 被 runtime 加载。
+- 用于故障隔离、成本控制或临时维护窗口。
+
+## test 行为
+
+- `test provider`：测试 provider 连通性并尝试发现模型。
+- `test model`：按当前配置真实调用一次模型，验证端到端可用。
+
+## 相关命令
+
+- [`city config`](/zh/docs/commands/config)
+- [`city agent create`](/zh/docs/commands/agent/create)
+- [`city agent start`](/zh/docs/commands/agent/start)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ city model list
+{
+  "success": true,
+  "providers": [
+    {
+      "id": "<providerId>",
+      "type": "openai",
+      "apiKey": "***masked***",
+      "apiKeyMasked": "sk-xx***xxxx"
+    }
+  ],
+  "models": [
+    {
+      "id": "<modelId>",
+      "providerId": "<providerId>",
+      "name": "<upstreamModelName>",
+      "isPaused": false
+    }
+  ],
+  "providerIds": ["<providerId>"],
+  "modelIds": ["<modelId>"]
+}
+```
+
+```text
+$ city model pause <modelId>
+{
+  "success": true,
+  "modelId": "<modelId>",
+  "isPaused": true
+}
+```

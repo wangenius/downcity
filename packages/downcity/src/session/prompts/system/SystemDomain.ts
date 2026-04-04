@@ -9,9 +9,9 @@
 import fs from "fs-extra";
 import type { SystemModelMessage } from "ai";
 import { transformPromptsIntoSystemMessages } from "@session/prompts/common/PromptRenderer.js";
-import { isPluginEnabledInConfig } from "@/city/plugin/Activation.js";
-import { PLUGINS } from "@/city/plugin/Plugins.js";
-import { SERVICE_SYSTEM_PROVIDERS } from "@/city/service/ServiceSystemProviders.js";
+import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
+import { PLUGINS } from "@/main/plugin/Plugins.js";
+import { SERVICE_SYSTEM_PROVIDERS } from "@/main/service/ServiceSystemProviders.js";
 import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 
 const CORE_PROMPT_FILE_URL = new URL(

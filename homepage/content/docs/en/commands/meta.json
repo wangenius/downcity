@@ -1,4 +1,4 @@
 {
   "title": "Commands",
-  "pages": ["console", "agent", "service", "plugin", "variables"]
+  "pages": ["init", "start", "stop", "restart", "status", "agents", "config", "model", "console", "agent", "service", "plugin", "variables"]
 }

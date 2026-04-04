@@ -9,7 +9,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { DowncityConfig } from "@/city/runtime/env/Config.js";
+import type { DowncityConfig } from "@/main/city/env/Config.js";
 import { readSkillPluginConfig } from "../Config.js";
 import type { SkillRoot } from "@/shared/types/SkillRoot.js";
 import { expandHome, uniqStrings } from "./Utils.js";

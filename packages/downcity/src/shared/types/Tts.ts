@@ -3,7 +3,7 @@
  *
  * 设计目标（中文）
  * - 统一描述 TTS 领域里的稳定模型 ID、模型族与下载清单。
- * - 让 plugin / runtime / console ui 共用同一套目录元数据。
+ * - 让 plugin / runtime / console 共用同一套目录元数据。
  */
 
 /**

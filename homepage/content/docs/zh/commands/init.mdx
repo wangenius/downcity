@@ -1,0 +1,45 @@
+---
+title: city init
+description: 初始化全局 console 配置（统一写入 ~/.downcity/downcity.db）
+---
+
+# `city init`
+
+初始化全局 console 配置。
+
+## 用法
+
+```bash
+city init [--force]
+```
+
+## 行为
+
+- 写入/更新 `~/.downcity/downcity.db`（全局配置 + 模型池）
+- 生成 `~/.downcity/schema/downcity.schema.json`（编辑器 schema）
+
+## 常用参数
+
+- `--force`：覆盖已有全局配置（危险操作）
+
+## 说明
+
+- 这是 console 级命令，不依赖 agent 项目路径。
+- 后续项目级配置请使用 [`city config`](/zh/docs/commands/config)。
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ city init
+city version: 1.0.0
+✅ Saved console global settings into ~/.downcity/downcity.db (encrypted)
+✅ Initialized ~/.downcity/downcity.db model store
+```
+
+```text
+$ city init
+city version: 1.0.0
+❌ API Key is required
+```

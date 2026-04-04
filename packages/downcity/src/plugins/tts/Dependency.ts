@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - TTS 的模型安装、配置读写与可用性检查都内聚在 plugin 内部。
- * - Console UI 只调用 plugin action，不直接理解底层资源结构。
+ * - Console 只调用 plugin action，不直接理解底层资源结构。
  */
 
 import { execFile as execFileCb } from "node:child_process";

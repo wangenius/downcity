@@ -162,6 +162,21 @@ rl.on("line", (line) => {
         return;
       }
 
+      if (promptText.includes("exit after response test")) {
+        sendTextUpdate(sessionId, "KIMI_EXIT_OK");
+        send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            stopReason: "end_turn",
+          },
+        });
+        setImmediate(() => {
+          process.exit(0);
+        });
+        return;
+      }
+
       if (promptText.includes("tool call stream test")) {
         sendTextUpdate(sessionId, "正在分析项目结构...");
         sendToolCallUpdate(sessionId, {

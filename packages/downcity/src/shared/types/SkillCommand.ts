@@ -24,6 +24,10 @@ export type SkillSummary = {
   description: string;
   /**
    * skill 根目录来源类型。
+   *
+   * 说明（中文）
+   * - 例如 user/project/builtin 等来源标识。
+   * - 这里只保留稳定字符串，不在类型层强绑定目录实现细节。
    */
   source: string;
   /**
@@ -74,6 +78,9 @@ export type SkillLookupResponse = {
   skill?: SkillSummary;
   /**
    * `SKILL.md` 正文内容。
+   *
+   * 说明（中文）
+   * - 仅在命中 skill 且成功读取文件时返回。
    */
   content?: string;
   /**

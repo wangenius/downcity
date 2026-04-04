@@ -9,7 +9,7 @@
  * 职责分组（中文）
  * 1) 消息筛选：pickMergedUserMessages
  * 2) 消息转换：toModelMessages（含多模态附件注入）
- * 3) 日志输出：extractAssistantTextForLog /utils/ logAssistantMessageNow
+ * 3) 日志输出：extractAssistantTextForLog / logAssistantMessageNow
  * 4) 平台参数：buildOpenAIResponsesProviderOptions
  */
 

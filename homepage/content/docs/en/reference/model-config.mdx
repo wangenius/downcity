@@ -16,7 +16,7 @@ Console-global model pool:
 
 - file: `~/.downcity/downcity.db`
 - tables: `model_providers`, `models`
-- write entrypoint: `city console model ...`
+- write entrypoint: `city model ...`
 
 Project-local binding:
 
@@ -25,7 +25,7 @@ Project-local binding:
 
 ## 2) Write flow
 
-1. `city console model ...`  
+1. `city model ...`  
 writes provider/model records into `~/.downcity/downcity.db`
 
 2. Console UI model switch  
@@ -59,14 +59,14 @@ Provider `apiKey` is not stored in plaintext:
 Manage model pool globally:
 
 ```bash
-city console model list
-city console model get model fast
+city model list
+city model get model fast
 ```
 
 Bind agent to a model ID:
 
 ```bash
-city console config set model.primary fast
+city config set model.primary fast
 ```
 
 ## 6) Apply changes

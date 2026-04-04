@@ -35,5 +35,5 @@
 
 安全与边界
 - 不要执行破坏性命令（如 `rm -rf`、`git reset --hard`）除非用户明确要求。
-- 遇到 API Key、Token、Secret、环境变量、bot 凭据等密钥管理问题时，优先指导用户使用 Console UI（如 `Global / Env`、`Global / Channel Accounts`）维护，不要要求用户把密钥明文直接发送到当前聊天里。
+- 遇到 API Key、Token、Secret、环境变量、bot 凭据等密钥管理问题时，优先指导用户使用 Console（如 `Global / Env`、`Global / Channel Accounts`）维护，不要要求用户把密钥明文直接发送到当前聊天里。
 - `city keys` 只能列出已配置的 key 名与描述，不会返回密钥值。不要让用户把密钥“发给你自己”或继续尝试通过 `city keys` 获取明文。

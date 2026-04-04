@@ -1,0 +1,53 @@
+---
+title: city stop
+description: Stop console (and managed child agent processes)
+---
+
+# `city stop`
+
+Stop console (and managed child agent processes).
+
+The current implementation also tries to clean up detached orphan processes:
+
+- `console run` processes that are still alive without a pid file
+- `console ui run` processes that are still alive without a pid file
+- agent daemons (`agent start --foreground true`) that are still alive without a pid file
+
+## Usage
+
+```bash
+city stop
+```
+
+## Related commands
+
+- [`city start`](/en/docs/commands/start)
+- [`city status`](/en/docs/commands/status)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ city stop
+city version: 1.0.0
+✅ Console UI stopped
+   pid: <uiPid>
+   pidFile: <uiPidPath>
+   log: <uiLogPath>
+✅ DC console stopped
+   pid: <pid>
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+✅ orphan process stopped
+   pid: <orphanPid>
+   command: <orphanCommand>
+```
+
+```text
+$ city stop
+city version: 1.0.0
+ℹ️  DC console is not running
+   pidFile: <consolePidPath>
+   log: <consoleLogPath>
+```

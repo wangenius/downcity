@@ -501,7 +501,7 @@ export interface PluginSetupField {
    * 动态选项来源 action（可选）。
    *
    * 说明（中文）
-   * - 若存在，则 Console UI 打开 setup 弹窗时会先调用该 action 拉取下拉选项。
+   * - 若存在，则 Console 打开 setup 弹窗时会先调用该 action 拉取下拉选项。
    */
   sourceAction?: string;
 }
@@ -569,7 +569,7 @@ export interface Plugin {
    * Plugin setup 定义（可选）。
    *
    * 说明（中文）
-   * - 这是 Console UI 面向用户的安装/配置协议。
+   * - 这是 Console 面向用户的安装/配置协议。
    * - plugin 内部仍可复用 asset/helper，但 UI 只读取这层抽象。
    */
   setup?: PluginSetupDefinition;

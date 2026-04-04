@@ -8,20 +8,10 @@
     "rootDir": "src",
     "paths": {
       "@/*": ["./src/*"],
-      "@city/*": ["./src/city/*"],
       "@main/*": ["./src/main/*"],
       "@session/*": ["./src/session/*"],
       "@shared/*": ["./src/shared/*"],
-      "@services/*": ["./src/services/*"],
-      "@sessions/*": ["./src/session/*"],
-      "@types/*": ["./src/shared/types/*"],
-      "@utils/*": ["./src/shared/utils/*"],
-      "@/types/*": ["./src/shared/types/*"],
-      "@/utils/*": ["./src/shared/utils/*"],
-      "@/main/auth/*": ["./src/city/runtime/auth/*"],
-      "@main/auth/*": ["./src/city/runtime/auth/*"],
-      "@/main/constants/*": ["./src/shared/constants/*"],
-      "@main/constants/*": ["./src/shared/constants/*"]
+      "@services/*": ["./src/services/*"]
     },
     "strict": true,
     "esModuleInterop": true,

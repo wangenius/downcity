@@ -1,0 +1,127 @@
+---
+title: city model
+description: Dedicated management for console-global language models (provider/model)
+---
+
+# `city model`
+
+Dedicated model management command group for language models only.
+
+## Design Rules
+
+- `create` is the only interactive command.
+- All others (`list/pause/update/test`) are non-interactive for automation.
+- Provider `apiKey` is stored in `~/.downcity/downcity.db` and encrypted on write.
+- Kimi now has two explicit provider types: `moonshot-cn` and `moonshot-ai`.
+- Kimi Code can use a dedicated provider type: `kimi-code`.
+
+## Usage
+
+```bash
+# Interactive create (choose provider or model)
+city model create
+
+# List
+city model list
+
+# Read details
+city model get provider <providerId>
+city model get model <modelId>
+
+# Pause model (enabled defaults to true)
+city model pause <modelId>
+city model pause <modelId> --enabled false
+
+# Discover provider models (optionally auto-add)
+city model discover <providerId>
+city model discover <providerId> --auto-add true --prefix openai_
+
+# Update provider
+city model update provider <providerId> --api-key '${OPENAI_API_KEY}'
+city model update provider kimi_cn --type moonshot-cn
+city model update provider kimi_ai --type moonshot-ai
+
+# Update model
+city model update model <modelId> --name gpt-4o-mini --provider openai_main
+
+# Remove provider/model
+city model remove provider <providerId>
+city model remove model <modelId>
+
+# Bind model to project (set downcity.json.execution.modelId)
+city model use <modelId> --path /path/to/agent
+
+# Test provider
+city model test provider <providerId>
+
+# Test model (real call)
+city model test model <modelId>
+```
+
+## create Behavior
+
+- Supports creating either `provider` or `model`.
+- After provider creation, you can immediately run connectivity test.
+- For providers with model discovery support, remote model list can be fetched and auto-added in batch.
+
+## Automation Commands
+
+- `get`: read a single provider/model detail.
+- `discover`: fetch provider model list and optionally `--auto-add` to local pool.
+- `remove`: remove provider/model (provider removal fails if referenced).
+- `use`: bind project `downcity.json.execution.modelId` to a model ID and switch execution mode to `model`.
+
+## pause Behavior
+
+- `pause` marks a model as paused.
+- Paused models cannot be loaded as runtime `execution.modelId`.
+- Useful for incident isolation, cost control, or maintenance windows.
+
+## test Behavior
+
+- `test provider`: checks provider connectivity and tries model discovery.
+- `test model`: performs a real model invocation using current config.
+
+## Related Commands
+
+- [`city config`](/en/docs/commands/config)
+- [`city agent create`](/en/docs/commands/agent/create)
+- [`city agent start`](/en/docs/commands/agent/start)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ city model list
+{
+  "success": true,
+  "providers": [
+    {
+      "id": "<providerId>",
+      "type": "openai",
+      "apiKey": "***masked***",
+      "apiKeyMasked": "sk-xx***xxxx"
+    }
+  ],
+  "models": [
+    {
+      "id": "<modelId>",
+      "providerId": "<providerId>",
+      "name": "<upstreamModelName>",
+      "isPaused": false
+    }
+  ],
+  "providerIds": ["<providerId>"],
+  "modelIds": ["<modelId>"]
+}
+```
+
+```text
+$ city model pause <modelId>
+{
+  "success": true,
+  "modelId": "<modelId>",
+  "isPaused": true
+}
+```

@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import path from "path";
-import { getLogsDirPath } from "@/city/runtime/env/Paths.js";
+import { getLogsDirPath } from "@/main/city/env/Paths.js";
 import { getTimestamp } from "@shared/utils/Time.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 
@@ -169,7 +169,7 @@ function normalizeToAllowedMessageLabels(message: string): string {
  *
  * Notes:
  * - `log(level, ...)` is async because it may write to disk.
- * - Convenience methods (`info/warn/utils/...`) are sync and fire-and-forget.
+ * - Convenience methods (`info/warn/...`) are sync and fire-and-forget.
  * - A small in-memory ring buffer is kept for debugging, but persistence is append-only.
  */
 export interface LogEntry {
@@ -188,7 +188,7 @@ export interface LogEntry {
  *
  * 关键职责（中文）
  * - 控制台可读输出（开发期）
- * - JSONL 持久化输出（排障/utils/审计）
+ * - JSONL 持久化输出（排障 / 审计）
  */
 export class Logger {
   private logs: LogEntry[] = [];
@@ -215,7 +215,7 @@ export class Logger {
   }
 
   /**
-   * Generic async logger used by agent/utils/LLM logging.
+   * Generic async logger used by agent / LLM logging.
    * Accepts `info|warn|error|debug|action` (case-insensitive).
    */
   async log(
@@ -319,7 +319,7 @@ export class Logger {
   /**
    * 落盘算法（中文）
    * - 日志按自然日分片：`.downcity/logs/YYYY-MM-DD.jsonl`。
-   * - 每条日志一行 JSON，便于 grep/utils/流式消费。
+   * - 每条日志一行 JSON，便于 grep / 流式消费。
    */
   private async saveToFile(entry: LogEntry): Promise<void> {
     if (!this.projectRoot) return;
@@ -364,7 +364,7 @@ export const logger = new Logger();
  *
  * 说明（中文）
  * - 当前实现是“进程级单例 logger”（落盘路径依赖 runtime root）。
- * - 参数保留是为了兼容上层调用习惯：有些代码会传入 projectRoot/utils/logLevel。
+ * - 参数保留是为了兼容上层调用习惯：有些代码会传入 projectRoot / logLevel。
  * - 若未来需要“多实例 logger”，可以在这里集中改，不影响调用方。
  */
 export function getLogger(_projectRoot?: string, _logLevel?: string): Logger {

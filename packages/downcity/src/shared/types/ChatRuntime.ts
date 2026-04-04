@@ -12,6 +12,10 @@ import type { TelegramBot } from "@services/chat/channels/telegram/Bot.js";
 
 /**
  * ChatService 实例持有的渠道状态。
+ *
+ * 关键点（中文）
+ * - 这里显式把 3 个内建渠道拆成独立槽位，避免继续使用弱类型 map。
+ * - 未初始化的渠道统一为 `null`，不使用 `undefined`。
  */
 export type ChatChannelState = {
   /**

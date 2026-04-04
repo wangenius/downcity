@@ -1,92 +1,81 @@
 ---
 title: city console
-description: 全局 console 命令组，用于进程编排与多 agent 治理
+description: 管理 Console 模块（单实例、多 agent 视图）
 ---
 
 # `city console`
 
-`console` 是全局控制面。
+`city console` 只负责管理 Console 模块本身。
 
-你可以通过它管理 console 进程，并查看当前托管的 agent。
+Console 是 Downcity 的 Web 控制台：
 
-## 命令层级
-
-一级命令组为：
-
-- `city keys`
-- `city console`
-- `city agent`
-- `city service`
-- `city plugin`
-
-`console` 下面再细分 `init/model/config/start/stop/status/agents/ui`。
+- 单实例 Console
+- 多 agent 切换查看
+- 全局 model / env / auth / plugin 管理
+- 选中 agent 后代理到对应运行时
 
 ## 用法
 
 ```bash
-city console init
-city console model <subcommand>
-city console config <subcommand>
-city console start
-city console stop
-city console restart
-city console status
-city console agents [--json]
-city console ui [start|stop|restart|status] [--port 5315]
+city console [action] [options]
 ```
 
-## 行为说明
+## action
 
-- `init`：初始化全局 console 配置（`~/.downcity/*`）。
-- `model`：独立管理 console 全局语言模型池（provider/model/test/pause）。
-- `config`：管理项目级 `downcity.json` 与 alias。
-- `start`：后台启动 console。
-- `stop`：停止 console，并停止其托管的子 agent 进程。
-- `restart`：重启 console，并自动恢复重启前正在运行的托管 agent。
-- `status`：查看 console 进程状态与活跃 agent 清单。
-- `agents`：打印当前活跃托管 agent 列表。
-- `ui`：管理单实例 UI（start/stop/restart/status），并可在页面内切换查看不同 agent。
+- `start`：后台启动 Console
+- `stop`：停止 Console
+- `restart`：重启 Console
+- `status`：查看 Console 状态
+
+如果省略 `action`，默认执行 `start`。
+
+## 常用参数
+
+- `-p, --port <port>`：Console 端口，默认 `5315`
+- `-h, --host <host>`：Console 主机，默认 `127.0.0.1`
+
+## 关键行为
+
+- Console 依赖 city runtime，先执行 [`city start`](/zh/docs/commands/start)。
+- Console 不是 city runtime 本身，而是运行在其上的独立模块。
+- 一个 Console 实例可以切换查看多个运行中的 agent。
+- `city status` 会同时显示 city runtime 与 Console 状态。
 
 ## 典型流程
 
 ```bash
-# 1) 启动全局 console
-city console start
+# 1) 一起启动 runtime + Console
+city start --console
 
-# 2) 启动项目 runtime
-cd /path/to/agent-project
-city agent create .
-city agent start
+# 2) 启动多个 agent
+city agent start /path/to/agent-a
+city agent start /path/to/agent-b
 
-# 3) 查看状态
+# 3) 查看 Console 状态
 city console status
-city agent status .
+
+# 4) 只重启 Console
+city console restart
 ```
 
 ## 相关命令
 
-- [`city console init`](/zh/docs/commands/console/init)
-- [`city agent`](/zh/docs/commands/agent/agent)
-- [`city console model`](/zh/docs/commands/console/model)
-- [`city console config`](/zh/docs/commands/console/config)
-- [`city service`](/zh/docs/commands/service/service)
-- [`city plugin`](/zh/docs/commands/plugin/plugin)
-- [命令环境要求总览](/zh/docs/commands/variables)
+- [`city start`](/zh/docs/commands/start)
+- [`city status`](/zh/docs/commands/status)
+- [`city agents`](/zh/docs/commands/agents)
+- [`city agent start`](/zh/docs/commands/agent/start)
 
-## 示例输出（基于当前实现）
-
-以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+## 示例输出
 
 ```text
-$ city console
+$ city console status
 city version: 1.0.0
-Usage: city console [options] [command]
-Commands:
-  run
-  ui [action]
-  start
-  stop
-  restart
-  status
-  agents
+┌────────────────────────────────────────────────────┐
+│ OK console status                                  │
+│   state    : running                               │
+│   pid      : <pid>                                 │
+│   url      : http://127.0.0.1:5315                 │
+│   pid_file : <consolePidPath>                      │
+│   log      : <consoleLogPath>                      │
+└────────────────────────────────────────────────────┘
 ```

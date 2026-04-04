@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 将“凭据 -> bot 基础信息”的探测输入输出结构标准化。
- * - Console UI、Channel Account 存储、后续自动化流程都复用该结构。
+ * - Console、Channel Account 存储、后续自动化流程都复用该结构。
  */
 
 import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";

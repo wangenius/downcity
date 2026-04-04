@@ -9,7 +9,7 @@
  * 主流程（中文）
  * 1) `run`：入口，做并发保护与状态初始化。
  * 2) `runWithRetry`：做“可压缩错误”的重试。
- * 3) `prepareExecuteInput`：从各组件装配 system/tools/utils/messages。
+ * 3) `prepareExecuteInput`：从各组件装配 system / tools / messages。
  * 4) `executePreparedRun`：执行 streamText tool-loop。
  * 5) `collectFinalAssistantMessage`：收敛最终 assistant 消息。
  */
@@ -176,7 +176,7 @@ export class SessionCore {
    */
   private async runWithRetry(input: SessionRunInput): Promise<SessionRunResult> {
     try {
-      // 清理并规整 query，避免把 undefined/utils/null 传入后续组件。
+      // 清理并规整 query，避免把 undefined / null 传入后续组件。
       const query = String(input.query || "").trim();
 
       // 组装本轮运行所需输入（system/messages/tools）。
@@ -289,7 +289,7 @@ export class SessionCore {
    * 执行一次已装配完成的运行材料。
    *
    * 关键点（中文）
-   * - 这里只关心执行，不关心 request/utils/context 参数怎么来的。
+   * - 这里只关心执行，不关心 request / context 参数怎么来的。
    * - 增量并入逻辑用来支持 step 间新增 user 消息。
    */
   private async executePreparedRun(

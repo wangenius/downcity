@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 每个 channel 通过统一结构声明“需要哪些参数、类型、描述、来源”。
- * - 该结构用于 Console UI / DB / CLI 直接消费，不依赖硬编码字段。
+ * - 该结构用于 Console / DB / CLI 直接消费，不依赖硬编码字段。
  */
 
 import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";

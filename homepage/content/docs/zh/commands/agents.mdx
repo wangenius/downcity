@@ -1,0 +1,60 @@
+---
+title: city agents
+description: 列出 console 托管的 agent（运行中 + 历史）
+---
+
+# `city agents`
+
+列出 console 托管的 agent（包含运行中与历史记录）。
+
+## 用法
+
+```bash
+city agents [--json]
+```
+
+## 行为说明
+
+- 列出当前运行中的 agent。
+- 历史记录会保留在 registry 中（`status=stopped`）。
+- `--json` 输出结构化结果。
+
+> Console UI 的 `Global Agents` 面板可直接从历史记录里点击“启动”重新拉起 agent。
+
+## 相关命令
+
+- [`city console`](/zh/docs/commands/console/console)
+- [`city status`](/zh/docs/commands/status)
+- [`city agent`](/zh/docs/commands/agent/agent)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ city agents --json
+{
+  "success": true,
+  "count": 2,
+  "agents": [
+    {
+      "projectRoot": "<projectRootA>",
+      "daemonPid": 12345,
+      "running": true,
+      "startedAt": "<iso>",
+      "updatedAt": "<iso>",
+      "logPath": "<logPathA>"
+    }
+  ]
+}
+```
+
+```text
+$ city agents
+city version: 1.0.0
+┌──────────────────────────────────────┐
+│ INFO managed agents                  │
+│   agents   : 0                       │
+│   detail   : no running agent daemon │
+└──────────────────────────────────────┘
+```

@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - TTS 的行为配置与本地模型依赖统一收敛到 `plugins.tts`。
- * - Console UI 只需要理解 plugin setup，不需要理解底层 asset 细节。
+ * - Console 只需要理解 plugin setup，不需要理解底层 asset 细节。
  */
 
 import type { JsonValue } from "@/shared/types/Json.js";
@@ -51,7 +51,7 @@ export interface TtsPluginConfig {
    * 默认音色 ID（可选）。
    *
    * 说明（中文）
-   * - 主要给运行时做覆盖；Console UI 默认不要求手动填写。
+   * - 主要给运行时做覆盖；Console 默认不要求手动填写。
    */
   voice?: string;
   /**

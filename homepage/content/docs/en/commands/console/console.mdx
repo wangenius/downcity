@@ -1,91 +1,81 @@
 ---
 title: city console
-description: Global console command group for process orchestration and multi-agent governance
+description: Manage the Console module (single instance, multi-agent view)
 ---
 
 # `city console`
 
-`console` is the global control plane.
+`city console` manages the Console module itself.
 
-Use it to manage the console process and inspect managed agents.
+Console is the web control surface for Downcity:
 
-## Command hierarchy
-
-Top-level command groups are:
-
-- `city console`
-- `city agent`
-- `city service`
-- `city plugin`
-
-Under `console`, use `init/model/config/start/stop/status/agents/ui`.
+- one Console instance
+- multiple agent views
+- global model / env / auth / plugin management
+- agent switching and proxying
 
 ## Usage
 
 ```bash
-city console init
-city console model <subcommand>
-city console config <subcommand>
-city console start
-city console stop
-city console restart
-city console status
-city console agents [--json]
-city console ui [start|stop|restart|status] [--port 5315]
+city console [action] [options]
 ```
 
-## Behavior
+## Actions
 
-- `init`: initialize global console config (`~/.downcity/*`).
-- `model`: dedicated management for console-global language model pool (provider/model/test/pause).
-- `config`: manage project `downcity.json` and alias.
-- `start`: start console in background.
-- `stop`: stop console and managed child agent daemons.
-- `restart`: restart console and automatically restore managed agents that were running before restart.
-- `status`: print console process state and active managed agents.
-- `agents`: print active managed agents list.
-- `ui`: manage single UI instance (start/stop/restart/status) and switch across agents in one page.
+- `start`: start Console in background
+- `stop`: stop Console
+- `restart`: restart Console
+- `status`: show Console status
 
-## Typical Flow
+If `action` is omitted, `start` is used.
+
+## Options
+
+- `-p, --port <port>`: Console port, default `5315`
+- `-h, --host <host>`: Console host, default `127.0.0.1`
+
+## Important behavior
+
+- Console depends on city runtime. Start runtime first with [`city start`](/en/docs/commands/start).
+- Console is not the city runtime process. It is a separate module on top of the runtime.
+- One Console instance can switch across multiple running agents.
+- `city status` shows both city runtime state and Console state.
+
+## Typical flow
 
 ```bash
-# 1) start global console
-city console start
+# 1) start runtime + Console together
+city start --console
 
-# 2) start project agent
-cd /path/to/agent-project
-city agent create .
-city agent start
+# 2) start agents
+city agent start /path/to/agent-a
+city agent start /path/to/agent-b
 
-# 3) check status
+# 3) inspect Console state
 city console status
-city agent status .
+
+# 4) restart Console only
+city console restart
 ```
 
-## Related Commands
+## Related commands
 
-- [`city console init`](/en/docs/commands/console/init)
-- [`city agent`](/en/docs/commands/agent/agent)
-- [`city console model`](/en/docs/commands/console/model)
-- [`city console config`](/en/docs/commands/console/config)
-- [`city service`](/en/docs/commands/service/service)
-- [`city plugin`](/en/docs/commands/plugin/plugin)
-- [Command Environment Requirements](/en/docs/commands/variables)
+- [`city start`](/en/docs/commands/start)
+- [`city status`](/en/docs/commands/status)
+- [`city agents`](/en/docs/commands/agents)
+- [`city agent start`](/en/docs/commands/agent/start)
 
-## Example Output (Based on Current Implementation)
-
-The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+## Example output
 
 ```text
-$ city console
+$ city console status
 city version: 1.0.0
-Usage: city console [options] [command]
-Commands:
-  run
-  ui [action]
-  start
-  stop
-  restart
-  status
-  agents
+┌────────────────────────────────────────────────────┐
+│ OK console status                                  │
+│   state    : running                               │
+│   pid      : <pid>                                 │
+│   url      : http://127.0.0.1:5315                 │
+│   pid_file : <consolePidPath>                      │
+│   log      : <consoleLogPath>                      │
+└────────────────────────────────────────────────────┘
 ```

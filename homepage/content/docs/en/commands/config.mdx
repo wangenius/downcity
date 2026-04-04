@@ -1,0 +1,78 @@
+---
+title: city config
+description: Manage project downcity.json and alias (model pool is separate)
+---
+
+# `city config`
+
+Manage project `downcity.json` and alias.
+
+> Naming note: configuration command is `city config`, not `city console config`.
+
+## Usage
+
+```bash
+city config <subcommand>
+```
+
+## Subcommands
+
+- `get [keyPath]`
+- `set <keyPath> <value>`
+- `unset <keyPath>`
+- `alias`
+
+> Model pool management has moved to [`city model`](/en/docs/commands/model).
+
+## Plugin config
+
+`city config` now reads and writes project `downcity.json` only.
+
+For plugin configuration, edit:
+
+- `plugins.*` for plugin behavior and plugin-owned dependency config
+
+Examples:
+
+```bash
+city config get plugins.asr
+city config set plugins.asr.enabled true
+city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+```
+
+## Examples
+
+```bash
+city config get model.primary
+city config set model.primary fast
+city config unset services.chat.channels.telegram
+city config alias --dry-run
+```
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ city config get model.primary
+{
+  "success": true,
+  "projectRoot": "<projectRoot>",
+  "shipJsonPath": "<projectRoot>/downcity.json",
+  "keyPath": "model.primary",
+  "value": "<modelId>"
+}
+```
+
+```text
+$ city config set model.primary gpt-5.4
+{
+  "success": true,
+  "projectRoot": "<projectRoot>",
+  "shipJsonPath": "<projectRoot>/downcity.json",
+  "keyPath": "model.primary",
+  "value": "gpt-5.4",
+  "existed": true,
+  "previous": "<oldModelId>"
+}
+```

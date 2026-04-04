@@ -1,0 +1,46 @@
+---
+title: city restart
+description: 重启 city runtime，恢复托管 agent，并重新拉起 Console
+---
+
+# `city restart`
+
+重启完整的 city 运行栈。
+
+当前行为顺序：
+
+1. 停止 Console
+2. 停止 city runtime
+3. 重启 city runtime
+4. 恢复重启前处于运行状态的托管 agent
+5. 重新拉起 Console
+
+## 用法
+
+```bash
+city restart
+```
+
+## 相关命令
+
+- [`city start`](/zh/docs/commands/start)
+- [`city stop`](/zh/docs/commands/stop)
+- [`city status`](/zh/docs/commands/status)
+- [`city console`](/zh/docs/commands/console/console)
+
+## 示例输出
+
+```text
+$ city restart
+city version: 1.0.0
+✅ Console stopped
+   pid: <consolePid>
+✅ DC console stopped
+   pid: <cityPid>
+✅ DC console started
+   pid: <newCityPid>
+Restarting 2 managed agents...
+✅ Console started
+   pid: <newConsolePid>
+   url: http://127.0.0.1:5315
+```

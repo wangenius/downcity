@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 统一管理各 channel 的 Configuration 实例，避免业务侧散落 import。
- * - 提供按渠道查询与全量枚举能力，便于 Console UI / DB 复用。
+ * - 提供按渠道查询与全量枚举能力，便于 Console / DB 复用。
  */
 
 import { TelegramChannelConfiguration } from "@services/chat/channels/telegram/Configuration.js";

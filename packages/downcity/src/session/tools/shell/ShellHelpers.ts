@@ -6,7 +6,7 @@
  * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
  */
 
-import { applyInternalAgentAuthEnv } from "@/city/runtime/auth/AuthEnv.js";
+import { applyInternalAgentAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import { requestContext } from "@session/RequestContext.js";
 
 function setEnvString(

@@ -62,7 +62,7 @@ export type ChannelSendActionParams = ChannelChatKeyParams & {
  *
  * 说明（中文）
  * - chatId 是平台原始会话标识（非 sessionId）。
- * - messageThreadId 用于支持 topic/utils/thread 细粒度并发。
+ * - messageThreadId 用于支持 topic / thread 细粒度并发。
  * - 该结构只描述“接收侧”，不包含平台发送参数。
  */
 export type IncomingChatMessage = {
@@ -94,7 +94,7 @@ export type IncomingChatMessage = {
    *
    * 说明（中文）
    * - 用于透传 reply 上下文等平台特有信息。
-   * - 会进入 history /utils/ context metadata，但不改变基础路由语义。
+   * - 会进入 history / context metadata，但不改变基础路由语义。
    */
   extra?: ChannelUserMessageMeta;
 };
@@ -229,14 +229,14 @@ export abstract class BaseChatChannel {
    * 生成未授权提示文案。
    */
   protected buildUnauthorizedBlockedText(): string {
-    return "当前会话权限不足，已拒绝处理。请在 Console UI 的 Agent /utils/ Authorization 页面调整角色后再重试。";
+    return "当前会话权限不足，已拒绝处理。请在 Console 的 Agent / Authorization 页面调整角色后再重试。";
   }
 
   /**
    * 是否在 `sendToolText` 成功后自动写入 outbound chat history。
    *
    * 关键点（中文）
-   * - 默认开启，覆盖 QQ/utils/Feishu 等未自行写 outbound history 的渠道。
+   * - 默认开启，覆盖 QQ / Feishu 等未自行写 outbound history 的渠道。
    * - 已有独立 outbound 落盘逻辑的渠道（如 Telegram）应覆写为 false，避免重复记录。
    */
   protected shouldAppendOutboundHistoryOnSend(): boolean {
@@ -323,7 +323,7 @@ export abstract class BaseChatChannel {
    * 清理某个 sessionId 对应的 agent 会话状态。
    *
    * 说明（中文）
-   * - 只清理 runtime/utils/context 层状态，不直接删历史文件。
+   * - 只清理 runtime / context 层状态，不直接删历史文件。
    * - 常用于用户触发“重置对话”类命令。
    */
   clearChat(sessionId: string): void {

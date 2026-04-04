@@ -5,42 +5,56 @@ description: Command-line reference entry for Downcity
 
 # CLI Commands
 
-CLI docs are organized per command page.
+CLI docs are organized by command pages and command groups.
 
 ## Command docs directory
 
-- Open the `Commands` section and pick a group directly: `console` / `agent` / `service` / `plugin`
+- Open the `Commands` section and pick a command or group directly.
+- Both fixed commands and dynamically registered commands are listed there.
 
 ## Primary command groups
 
-- [`city agent create`](/en/docs/commands/agent/create)
-- [`city console`](/en/docs/commands/console/console)
-- [`city agent`](/en/docs/commands/agent/agent)
-- [`city console config`](/en/docs/commands/console/config)
-- [`city service`](/en/docs/commands/service/service)
-- [`city plugin`](/en/docs/commands/plugin/plugin)
-- [`city chat`](/en/docs/commands/service/chat)
-- [`city web`](/en/docs/commands/plugin/web)
-- [`city asr`](/en/docs/commands/plugin/asr)
-- [`city tts`](/en/docs/commands/plugin/tts)
-- [`city skill`](/en/docs/commands/plugin/skill)
-- [`city task`](/en/docs/commands/service/task)
-- [`city memory`](/en/docs/commands/service/memory)
+- Fixed root commands:
+  - [`city init`](/en/docs/commands/init)
+  - [`city start`](/en/docs/commands/start)
+  - [`city stop`](/en/docs/commands/stop)
+  - [`city restart`](/en/docs/commands/restart)
+  - [`city status`](/en/docs/commands/status)
+  - [`city agents`](/en/docs/commands/agents)
+- Fixed module commands:
+  - [`city console`](/en/docs/commands/console/console)
+  - [`city agent`](/en/docs/commands/agent/agent)
+  - [`city agent create`](/en/docs/commands/agent/create)
+  - [`city config`](/en/docs/commands/config)
+  - [`city model`](/en/docs/commands/model)
+  - [`city keys`](/en/docs/commands/keys)
+  - [`city service`](/en/docs/commands/service/service)
+  - [`city plugin`](/en/docs/commands/plugin/plugin)
+- Dynamic action commands:
+  - [`city chat`](/en/docs/commands/service/chat)
+  - [`city task`](/en/docs/commands/service/task)
+  - [`city memory`](/en/docs/commands/service/memory)
+  - [`city skill`](/en/docs/commands/plugin/skill)
+  - [`city web`](/en/docs/commands/plugin/web)
+  - [`city asr`](/en/docs/commands/plugin/asr)
+  - [`city tts`](/en/docs/commands/plugin/tts)
 
 ## Runtime model (short)
 
-- `city start`: one-click bootstrap (runs `city console start` then `city console ui start`; on first run it prompts for the admin password and falls back to `downcity` if left blank)
-- `city stop`: one-click shutdown (same as `city console stop`)
-- `city restart`: one-click restart (restarts console, restores agents that were running before, then starts `console ui`)
-- `city console start`: start global control plane
+- `city start`: start city runtime only
+- `city start --console` / `city start -a`: start city runtime and Console together
+- `city console start`: start Console only, after city runtime is already running
+- `city stop`: stop Console, then stop city runtime and managed agents
+- `city restart`: restart city runtime, restore managed agents, then restart Console
 - `city agent create`: initialize project runtime files
 - `city agent start`: start project agent daemon
+- `city console`: manage the Console module itself
 - `city service ...`: operate service domains and workflows
 - `city plugin ...`: operate plugin actions and status
 - `city web ...`: operate the built-in web plugin
 - `city asr ...`: operate the built-in ASR plugin
 - `city tts ...`: operate the built-in TTS plugin
-- `city console model ...`: manage model config for runtime
+- `city model ...`: manage model config for runtime
 
 ## Always up to date
 

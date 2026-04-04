@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里集中声明 task service 在类化拆分后共享的 action payload 与调度结果类型。
- * - 跨模块复用的 task service 类型统一提升到 `src/types/`，避免散落在具体实现文件中。
+ * - 跨模块复用的 task service 类型统一提升到 `shared/types/`，避免散落在具体实现文件中。
  */
 
 import type { ShipTaskStatus } from "@services/task/types/Task.js";

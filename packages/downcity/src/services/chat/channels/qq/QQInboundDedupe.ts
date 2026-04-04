@@ -2,7 +2,7 @@
  * QQ 入站消息去重存储。
  *
  * 关键点（中文）
- * - 解决 QQ 网关在重连/utils/重启后可能重复投递历史消息的问题。
+ * - 解决 QQ 网关在重连 / 重启后可能重复投递历史消息的问题。
  * - 去重 key 采用 `eventType:messageId`，避免跨事件类型冲突。
  * - 使用本地文件持久化，保证“重启后”仍可去重（best-effort）。
  */
@@ -95,7 +95,7 @@ export class QqInboundDedupeStore {
   }
 
   /**
-   * 修剪集合，限制内存/utils/文件大小。
+   * 修剪集合，限制内存 / 文件大小。
    */
   private trimToMaxEntries(): void {
     while (this.ids.size > this.maxEntries) {

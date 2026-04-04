@@ -81,7 +81,7 @@ export async function compactSessionMessagesIfNeeded(
   const systemText = (params.system || [])
     .map((m) => String(m.content ?? ""))
     .join("\n\n");
-  // 关键点（中文）：session messages 现在可能包含 tool parts/utils/output，必须把它们计入预算估算，否则会低估 token。
+  // 关键点（中文）：session messages 现在可能包含 tool parts / output，必须把它们计入预算估算，否则会低估 token。
   let messagesJson = "";
   try {
     messagesJson = JSON.stringify(snapshot);
@@ -149,7 +149,7 @@ export async function compactSessionMessagesIfNeeded(
   const archiveId = `compact-${Date.now()}-${generateId()}`;
 
   // phase 2：写入（短锁，且避免覆盖新追加）
-  // - 以“当前最新 session messages”为准重算 currentOlder/utils/currentKept，避免覆盖并发新消息。
+  // - 以“当前最新 session messages”为准重算 currentOlder / currentKept，避免覆盖并发新消息。
   await deps.withWriteLock(async () => {
     const current = await deps.loadAll();
     if (!current.length) return;
@@ -243,7 +243,7 @@ function estimateTokensApproxFromText(text: string): number {
  * 从 UIMessage 提取可摘要的纯文本。
  *
  * 关键点（中文）
- * - 统一把 user/utils/assistant 内容线性化，作为 compact 摘要输入。
+ * - 统一把 user / assistant 内容线性化，作为 compact 摘要输入。
  * - tool 原始结构不会原样输出，避免把噪声日志喂给摘要模型。
  */
 function extractPlainTextFromMessages(messages: SessionMessageV1[]): string {

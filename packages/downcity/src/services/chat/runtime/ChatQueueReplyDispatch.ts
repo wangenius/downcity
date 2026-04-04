@@ -2,7 +2,7 @@
  * ChatQueueReplyDispatch：chat queue worker 的回复分发模块。
  *
  * 关键点（中文）
- * - 收敛 direct/utils/fallback 两类 channel 回发逻辑。
+ * - 收敛 direct / fallback 两类 channel 回发逻辑。
  * - ChatQueueWorker 主类只保留“何时分发”的决策，不再承载具体发消息细节。
  */
 

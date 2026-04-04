@@ -1,0 +1,46 @@
+---
+title: city restart
+description: Restart city runtime, restore managed agents, then restart Console
+---
+
+# `city restart`
+
+Restart the full city runtime stack.
+
+Current behavior:
+
+1. stop Console
+2. stop city runtime
+3. restart city runtime
+4. restore managed agents that were running before restart
+5. restart Console
+
+## Usage
+
+```bash
+city restart
+```
+
+## Related commands
+
+- [`city start`](/en/docs/commands/start)
+- [`city stop`](/en/docs/commands/stop)
+- [`city status`](/en/docs/commands/status)
+- [`city console`](/en/docs/commands/console/console)
+
+## Example output
+
+```text
+$ city restart
+city version: 1.0.0
+✅ Console stopped
+   pid: <consolePid>
+✅ DC console stopped
+   pid: <cityPid>
+✅ DC console started
+   pid: <newCityPid>
+Restarting 2 managed agents...
+✅ Console started
+   pid: <newConsolePid>
+   url: http://127.0.0.1:5315
+```

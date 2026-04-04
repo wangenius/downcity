@@ -4,7 +4,7 @@
  * 关键点（中文）
  * - 映射文件位于 `.downcity/channel/meta.json`。
  * - sessionId 由服务端随机生成并持久化，不依赖字符串拼接规则。
- * - 统一提供“按目标找 sessionId /utils/ 按 sessionId 找目标”能力。
+ * - 统一提供“按目标找 sessionId / 按 sessionId 找目标”能力。
  */
 
 import fs from "fs-extra";
@@ -344,7 +344,7 @@ export async function upsertChannelSessionRouteBySessionId(params: {
  *
  * 关键点（中文）
  * - 会同步清理 `routesBySessionId` 与 `sessionIdByTargetKey` 双索引。
- * - 仅影响 chat 路由，不触碰 context/utils/chat 历史文件。
+ * - 仅影响 chat 路由，不触碰 context / chat 历史文件。
  */
 export async function removeChannelSessionRouteBySessionId(params: {
   context: ExecutionContext;

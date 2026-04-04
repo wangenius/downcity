@@ -204,6 +204,20 @@ test("AcpSessionRuntime: emits assistant progress callbacks while prompt is stre
   }
 });
 
+test("AcpSessionRuntime: accepts final response before ACP process exits normally", async () => {
+  const runtime = createRuntime();
+  try {
+    const result = await runtime.run({
+      query: "exit after response test",
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "KIMI_EXIT_OK");
+    assert.equal(result.assistantMessage.metadata.extra.stopReason, "end_turn");
+  } finally {
+    await runtime.dispose();
+  }
+});
+
 test("AcpSessionRuntime: maps Claude ACP tool_call_update into tool results", async () => {
   const runtime = createRuntime();
   const steps = [];

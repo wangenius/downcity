@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里集中声明 service 体系的共享契约。
- * - 这些类型会被 main/service、services/*、tests 等多层复用，因此提升到 `src/types/`。
+ * - 这些类型会被 `main/service/*`、`services/*`、tests 等多层复用，因此提升到 `shared/types/`。
  * - `main/service/ServiceManager.ts` 之后只保留门面 re-export，不再承担类型源文件职责。
  */
 
@@ -14,6 +14,10 @@ import type { JsonValue } from "@/shared/types/Json.js";
 
 /**
  * 服务运行状态。
+ *
+ * 说明（中文）
+ * - `starting` / `stopping` 仅用于生命周期控制中的过渡态。
+ * - `error` 表示最近一次控制或命令执行失败后留下的状态标记。
  */
 export type ServiceState =
   | "running"
@@ -190,6 +194,10 @@ export interface ServiceLifecycle {
 
 /**
  * Service：服务统一契约。
+ *
+ * 关键点（中文）
+ * - 一个 service 至少要提供稳定名称与 action 集合。
+ * - 生命周期钩子与 system 构建器都是可选能力，不强制所有 service 实现。
  */
 export interface Service {
   /**

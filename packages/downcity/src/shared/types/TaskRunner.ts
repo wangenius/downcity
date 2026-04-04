@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 这里集中声明 task runner 在拆分后跨模块共享的内部类型。
- * - 这些类型仍然服务于 task 运行链路，但统一提升到 `src/types/`，避免继续散落在实现文件中。
+ * - 这些类型仍然服务于 task 运行链路，但统一提升到 `shared/types/`，避免继续散落在实现文件中。
  */
 
 import type { FilePersistor } from "@session/runtime/FilePersistor.js";
@@ -168,6 +168,10 @@ export type ScriptExecutionResult = {
 
 /**
  * task 运行专用的 session runtime 抽象。
+ *
+ * 关键点（中文）
+ * - task runner 不直接依赖具体 SessionRuntime 实现，只依赖这组最小端口。
+ * - 这样可以在任务执行、测试和替代 runtime 实现之间共享同一套契约。
  */
 export type TaskSessionRuntime = {
   /**

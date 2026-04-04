@@ -164,7 +164,7 @@ export interface SessionRuntimePort {
    *
    * 关键点（中文）
    * - 对普通本地 runtime 可不实现。
-   * - ACP runtime 可借此向远端发送 `session/utils/cancel`。
+   * - ACP runtime 可借此向远端发送 `session/cancel`。
    */
   requestCancelCurrentTurn?(): Promise<boolean> | boolean;
 }

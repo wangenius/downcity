@@ -9,13 +9,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  findReusableConsoleUiProcess,
-  parseConsoleUiProcessCommand,
+  findReusableConsoleProcess,
+  parseConsoleProcessCommand,
 } from "../../bin/city/modules/cli/UI.js";
 import { isDowncityCliCommand } from "../../bin/city/runtime/console/ProcessSweep.js";
 
-test("parseConsoleUiProcessCommand extracts host and port from console ui run command", () => {
-  const result = parseConsoleUiProcessCommand(
+test("parseConsoleProcessCommand extracts host and port from console ui run command", () => {
+  const result = parseConsoleProcessCommand(
     "/opt/homebrew/bin/node /tmp/Index.js console ui run --host 127.0.0.1 --port 5315",
   );
 
@@ -25,8 +25,8 @@ test("parseConsoleUiProcessCommand extracts host and port from console ui run co
   });
 });
 
-test("findReusableConsoleUiProcess reuses detached ui process with matching normalized host and port", () => {
-  const result = findReusableConsoleUiProcess(
+test("findReusableConsoleProcess reuses detached ui process with matching normalized host and port", () => {
+  const result = findReusableConsoleProcess(
     [
       {
         pid: 20001,

@@ -23,8 +23,8 @@ import type { SessionRuntimeLike } from "@/shared/types/SessionRuntime.js";
 import {
   loadAgentEnvSnapshot,
   loadGlobalEnvFromStore,
-} from "@/city/runtime/env/Config.js";
-import { applyInternalAgentAuthEnv } from "@/city/runtime/auth/AuthEnv.js";
+} from "@/main/city/env/Config.js";
+import { applyInternalAgentAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpSessionSupport.js";
 import { generateId } from "@shared/utils/Id.js";
 
@@ -321,7 +321,29 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
         text,
       });
     });
-    child.on("exit", (code, signal) => {
+    child.on("close", (code, signal) => {
+      void this.handleChildClose(child, code, signal);
+    });
+  }
+
+  /**
+   * 处理 ACP 子进程关闭。
+   *
+   * 关键点（中文）
+   * - 先等待 stdout 中已经排队的 JSON-RPC 消息全部消费完成，避免正常退出和结果读取竞争。
+   * - 只有在 close 后仍存在挂起请求时，才把它视为异常退出并回失败。
+   * - 无论是否异常，都要清空本地 session 句柄，确保下一轮按新子进程重建。
+   */
+  private async handleChildClose(
+    child: ChildProcessWithoutNullStreams,
+    code: number | null,
+    signal: NodeJS.Signals | null,
+  ): Promise<void> {
+    await this.stdoutProcessing.catch(() => undefined);
+    if (this.child !== child) return;
+
+    const hasPendingRequests = this.pendingById.size > 0;
+    if (hasPendingRequests) {
       const error = new Error(
         `ACP agent exited unexpectedly (code=${String(code)} signal=${String(signal)})`,
       );
@@ -330,11 +352,12 @@ export class AcpSessionRuntime implements SessionRuntimeLike {
       }
       this.pendingById.clear();
       this.pendingPermissionRequests.length = 0;
-      this.child = null;
-      this.initialized = false;
-      this.remoteSessionId = null;
-      this.bootstrapped = false;
-    });
+    }
+
+    this.child = null;
+    this.initialized = false;
+    this.remoteSessionId = null;
+    this.bootstrapped = false;
   }
 
   private async initializeClient(): Promise<void> {

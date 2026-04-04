@@ -50,7 +50,7 @@ export type ShipTaskRunResultStatusV1 = "valid" | "invalid" | "not_checked";
 export type ShipTaskRunProgressStatusV1 = "running" | "success" | "failure";
 
 /**
- * 执行进度阶段（用于 Console UI 实时展示）。
+ * 执行进度阶段（用于 Console 实时展示）。
  */
 export type ShipTaskRunProgressPhaseV1 =
   | "preparing"

@@ -7,7 +7,7 @@
  */
 
 import type { JsonValue } from "@/shared/types/Json.js";
-import type { DaemonHttpMethod } from "@/city/runtime/daemon/Api.js";
+import type { DaemonHttpMethod } from "@/main/city/daemon/Api.js";
 
 /**
  * 单次本地 RPC 请求。

@@ -97,7 +97,7 @@ async function finalizeExitAfterOutputDrain(
   exitCode: number,
 ): Promise<void> {
   // 关键点（中文）
-  // - `close` 事件到达时，stdout/utils/stderr 的异步 append 链可能刚刚开始收尾。
+  // - `close` 事件到达时，stdout / stderr 的异步 append 链可能刚刚开始收尾。
   // - 这里先让出一个事件循环 tick，再等待当前 writeChain，可显著降低“终态已到但尾部输出尚未可读”的竞态。
   await new Promise<void>((resolve) => {
     const timer = setImmediate(resolve);

@@ -1,0 +1,58 @@
+---
+title: city start
+description: 后台启动 city runtime
+---
+
+# `city start`
+
+后台启动 city runtime。
+
+启动时会初始化 city runtime 的 registry 和进程状态。
+如果当前还没有任何统一账户用户，启动过程会提示设置首个管理员密码；留空时默认使用 `downcity`，用户名固定为 `admin`。
+
+如果你希望一并启动 Console，请使用 `city start --console` 或 `city start -a`。
+
+## 用法
+
+```bash
+city start
+```
+
+```bash
+city start --console
+```
+
+## 相关命令
+
+- [`city stop`](/zh/docs/commands/stop)
+- [`city status`](/zh/docs/commands/status)
+- [`city agents`](/zh/docs/commands/agents)
+
+## 示例输出（基于当前实现）
+
+以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
+
+```text
+$ city start --console
+city version: 1.0.0
+✅ city runtime started
+   pid: <runtimePid>
+   log: <cityRuntimeLogPath>
+✅ Console started
+   pid: <consolePid>
+   url: http://127.0.0.1:5315
+   log: <consoleLogPath>
+? 设置 Console 管理员密码（留空默认 downcity）: ********
+✅ Unified auth admin initialized
+   username: admin
+   password: 使用你刚刚输入的密码
+   login: 使用该密码登录 Console UI
+```
+
+```text
+$ city start
+city version: 1.0.0
+✅ city runtime started
+   pid: <runtimePid>
+   log: <cityRuntimeLogPath>
+```

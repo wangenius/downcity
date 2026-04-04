@@ -51,7 +51,7 @@ export interface ChannelSessionTargetParams {
    */
   chatType?: string;
   /**
-   * 可选 thread/utils/topic id。
+   * 可选 thread / topic id。
    */
   messageThreadId?: number;
 }

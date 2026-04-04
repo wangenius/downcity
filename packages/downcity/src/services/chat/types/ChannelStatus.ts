@@ -2,7 +2,7 @@
  * Chat 渠道运行状态与连通性测试类型。
  *
  * 关键点（中文）
- * - 统一 `status/test/reconnect` 的返回结构，供 CLI 与 Console UI 复用。
+ * - 统一 `status/test/reconnect` 的返回结构，供 CLI 与 Console 复用。
  * - 字段保持稳定，避免前端按渠道分支解析。
  */
 

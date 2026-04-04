@@ -9,11 +9,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  buildConsoleUiWorkloadBlockPayload,
+  buildConsoleWorkloadBlockPayload,
 } from "../../bin/main/ui/gateway/GatewaySupport.js";
 
-test("buildConsoleUiWorkloadBlockPayload includes contexts and tasks in detail", () => {
-  const payload = buildConsoleUiWorkloadBlockPayload("restart", {
+test("buildConsoleWorkloadBlockPayload includes contexts and tasks in detail", () => {
+  const payload = buildConsoleWorkloadBlockPayload("restart", {
     activeContexts: ["ctx_chat_1", "ctx_chat_2"],
     activeTasks: ["task_alpha"],
   });
@@ -24,8 +24,8 @@ test("buildConsoleUiWorkloadBlockPayload includes contexts and tasks in detail",
   assert.match(payload.error, /tasks: task_alpha/);
 });
 
-test("buildConsoleUiWorkloadBlockPayload falls back to generic message when detail is empty", () => {
-  const payload = buildConsoleUiWorkloadBlockPayload("stop", {
+test("buildConsoleWorkloadBlockPayload falls back to generic message when detail is empty", () => {
+  const payload = buildConsoleWorkloadBlockPayload("stop", {
     activeContexts: [],
     activeTasks: [],
   });

@@ -1,0 +1,58 @@
+---
+title: city start
+description: Start city runtime in background mode
+---
+
+# `city start`
+
+Start city runtime in background mode.
+
+Startup initializes the city runtime registry and process state.
+If unified auth has no users yet, startup prompts you to set the first admin password. Leaving it empty falls back to `downcity`, and the username is fixed as `admin`.
+
+If you also want to start Console in one step, use `city start --console` or `city start -a`.
+
+## Usage
+
+```bash
+city start
+```
+
+```bash
+city start --console
+```
+
+## Related commands
+
+- [`city stop`](/en/docs/commands/stop)
+- [`city status`](/en/docs/commands/status)
+- [`city agents`](/en/docs/commands/agents)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ city start --console
+city version: 1.0.0
+✅ city runtime started
+   pid: <runtimePid>
+   log: <cityRuntimeLogPath>
+✅ Console started
+   pid: <consolePid>
+   url: http://127.0.0.1:5315
+   log: <consoleLogPath>
+? Set Console admin password (leave blank for downcity): ********
+✅ Unified auth admin initialized
+   username: admin
+   password: use the password you just entered
+   login: use this password to sign in to Console UI
+```
+
+```text
+$ city start
+city version: 1.0.0
+✅ city runtime started
+   pid: <runtimePid>
+   log: <cityRuntimeLogPath>
+```

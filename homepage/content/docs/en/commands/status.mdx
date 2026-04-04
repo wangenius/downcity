@@ -1,0 +1,44 @@
+---
+title: city status
+description: Show city runtime, Console, and managed agent status
+---
+
+# `city status`
+
+Show city runtime, Console, and managed active agents.
+
+## Usage
+
+```bash
+city status
+```
+
+## Related commands
+
+- [`city agents`](/en/docs/commands/agents)
+- [`city console`](/en/docs/commands/console/console)
+
+## Example Output (Based on Current Implementation)
+
+The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+
+```text
+$ city status
+city version: 1.0.0
+┌─────────────────────────────────────────────────────────┐
+│ OK city status                                   │
+│   state    : running                                    │
+│   pid      : <pid>                                      │
+│   pid_file : <cityPidPath>                              │
+│   log      : <cityLogPath>                              │
+│   registry : <consoleRegistryPath>                      │
+└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│ OK console status                                │
+│   state    : running                               │
+│   pid      : <consolePid>                          │
+│   url      : http://127.0.0.1:5315                 │
+│   pid_file : <consolePidPath>                      │
+│   log      : <consoleLogPath>                      │
+└────────────────────────────────────────────────────┘
+```

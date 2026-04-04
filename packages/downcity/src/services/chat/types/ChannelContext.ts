@@ -75,7 +75,7 @@ export type ChannelContextRouteV1 = {
    *
    * 说明（中文）
    * - 由各渠道在入站时 best-effort 提供。
-   * - 用于 Console UI 展示，不参与路由键计算。
+   * - 用于 Console 展示，不参与路由键计算。
    */
   chatTitle?: string;
   /**

@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
-import { registerConsoleUiPluginRoutes } from "../../bin/main/ui/PluginApiRoutes.js";
+import { registerConsolePluginRoutes } from "../../bin/main/ui/PluginApiRoutes.js";
 
 test("ui plugins route forwards bearer token to runtime list and availability requests", async () => {
   const app = new Hono();
@@ -56,7 +56,7 @@ test("ui plugins route forwards bearer token to runtime list and availability re
     throw new Error(`Unexpected fetch: ${url}`);
   };
 
-  registerConsoleUiPluginRoutes({
+  registerConsolePluginRoutes({
     app,
     readRequestedAgentId() {
       return "agent-1";

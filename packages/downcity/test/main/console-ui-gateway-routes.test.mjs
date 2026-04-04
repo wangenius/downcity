@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
-import { registerConsoleUiGatewayRoutes } from "../../bin/main/ui/ConsoleUIGatewayRoutes.js";
+import { registerConsoleGatewayRoutes } from "../../bin/main/ui/ConsoleGatewayRoutes.js";
 
 function buildHandlers(overrides = {}) {
   return {
@@ -111,7 +111,7 @@ function buildHandlers(overrides = {}) {
 test("create route initializes without starting when autoStart is false", async () => {
   const app = new Hono();
   const calls = [];
-  registerConsoleUiGatewayRoutes({
+  registerConsoleGatewayRoutes({
     app,
     handlers: buildHandlers({
       async initializeAgentProject(projectRoot, initialization) {
@@ -176,7 +176,7 @@ test("create route initializes without starting when autoStart is false", async 
 test("create route starts agent after initialization when autoStart is enabled", async () => {
   const app = new Hono();
   const calls = [];
-  registerConsoleUiGatewayRoutes({
+  registerConsoleGatewayRoutes({
     app,
     handlers: buildHandlers({
       async initializeAgentProject(projectRoot) {
@@ -230,7 +230,7 @@ test("create route starts agent after initialization when autoStart is enabled",
 test("create route forwards ACP agentType during initialization", async () => {
   const app = new Hono();
   const calls = [];
-  registerConsoleUiGatewayRoutes({
+  registerConsoleGatewayRoutes({
     app,
     handlers: buildHandlers({
       async initializeAgentProject(projectRoot, initialization) {
@@ -284,7 +284,7 @@ test("create route forwards ACP agentType during initialization", async () => {
 test("execution route forwards unified execution payload", async () => {
   const app = new Hono();
   const calls = [];
-  registerConsoleUiGatewayRoutes({
+  registerConsoleGatewayRoutes({
     app,
     handlers: buildHandlers({
       async updateAgentExecution(projectRoot, input) {

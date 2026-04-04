@@ -1,3 +1,12 @@
+/**
+ * SessionMessage 类型定义。
+ *
+ * 关键点（中文）
+ * - 这里统一描述 session 消息落盘格式与元信息结构。
+ * - session 的唯一事实源是 `UIMessage[]`，不会再维护第二套平行消息结构。
+ * - 这些类型会被 persistor、compact、dashboard、task runtime 共同复用。
+ */
+
 import type { UIMessage } from "ai";
 import type { JsonObject } from "@/shared/types/Json.js";
 
@@ -10,7 +19,23 @@ import type { JsonObject } from "@/shared/types/Json.js";
  * - compact 会把更早消息压缩为一条 `assistant` 摘要消息
  */
 export type SessionMessageKind = "normal" | "summary";
+
+/**
+ * Session 消息来源类型。
+ *
+ * 说明（中文）
+ * - `ingress`：外部输入写入的 user 消息。
+ * - `egress`：模型或 agent 输出写入的 assistant 消息。
+ * - `compact`：由 compact 过程生成的摘要消息。
+ */
 export type SessionMessageSource = "ingress" | "egress" | "compact";
+
+/**
+ * 入站消息细分类型。
+ *
+ * 说明（中文）
+ * - 当前仅保留 `exec`，表示这条入站消息可触发一次 session 执行。
+ */
 export type SessionIngressKind = "exec";
 
 /**
@@ -29,19 +54,19 @@ export type SessionMessageSourceRangeV1 = {
  * Session 消息元信息。
  */
 export type SessionMetadataV1 = {
-  /** schema 版本 */
+  /** 元信息 schema 版本号。 */
   v: 1;
-  /** 记录时间戳（ms） */
+  /** 当前消息写入时的毫秒时间戳。 */
   ts: number;
-  /** 会话 ID */
+  /** 当前消息所属的 session ID。 */
   sessionId: string;
-  /** 请求链路 ID */
+  /** 本次执行链路对应的 request ID。 */
   requestId?: string;
-  /** normal/summary */
+  /** 当前消息是普通消息还是摘要消息。 */
   kind?: SessionMessageKind;
-  /** ingress/egress/compact */
+  /** 当前消息来自入站、出站还是 compact。 */
   source?: SessionMessageSource;
-  /** compact 来源范围 */
+  /** compact 摘要所覆盖的原始消息范围。 */
   sourceRange?: SessionMessageSourceRangeV1;
   /**
    * 扩展元信息。
@@ -62,6 +87,6 @@ export type SessionMessageV1 = UIMessage<SessionMetadataV1>;
  * user 角色的 Session 消息结构。
  */
 export type SessionUserMessageV1 = SessionMessageV1 & {
-  /** 消息角色固定为 user。 */
+  /** 消息角色固定为 `user`。 */
   role: "user";
 };

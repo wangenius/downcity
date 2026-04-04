@@ -2,7 +2,7 @@
  * RuntimeOrchestrator：运行时编排组件实现。
  *
  * 关键点（中文）
- * - 统一组装 requestId/utils/tools。
+ * - 统一组装 requestId / tools。
  * - step 边界回调从 RequestContext 读取，SessionCore 不直接管理来源。
  */
 
@@ -56,7 +56,7 @@ export class RuntimeOrchestrator extends OrchestratorComponent {
         "RuntimeOrchestrator.compose requires a sessionId from requestContext or options.sessionId",
       );
     }
-    // 关键点（中文）：requestId/utils/sessionId 统一回填到请求上下文，后续组件直接读取。
+    // 关键点（中文）：requestId / sessionId 统一回填到请求上下文，后续组件直接读取。
     if (ctx && typeof ctx === "object") {
       ctx.requestId = requestId;
       if (!ctx.sessionId) ctx.sessionId = sessionId;

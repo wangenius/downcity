@@ -22,7 +22,7 @@ import {
  * Telegram API client utilities for the Telegram adapter.
  *
  * This module centralizes:
- * - JSON & multipart/utils/form-data requests to Telegram Bot API
+ * - JSON & multipart/form-data requests to Telegram Bot API
  * - file downloads (attachments coming from Telegram)
  * - outbound message + attachment sending
  *
@@ -251,7 +251,7 @@ export class TelegramApiClient {
    *
    * 关键点（中文）
    * - Telegram 的 typing 指示器会在数秒后自动消失，因此需要周期性发送
-   * - 这里仅做一次发送；“心跳/utils/周期”由上层（scheduler）控制
+   * - 这里仅做一次发送；“心跳 / 周期”由上层（scheduler）控制
    */
   async sendChatAction(
     chatId: string,

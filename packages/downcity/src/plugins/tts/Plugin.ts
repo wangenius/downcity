@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - TTS Plugin 现在自己内聚本地模型与 Python 依赖，不再依赖 console 模型池。
- * - Console UI 只通过 setup / action 与插件交互，保持极简统一。
+ * - Console 只通过 setup / action 与插件交互，保持极简统一。
  */
 
 import type { Plugin } from "@/shared/types/Plugin.js";

@@ -10,7 +10,7 @@ import fs from "fs-extra";
 import yaml from "js-yaml";
 import path from "path";
 import type { Dirent, Stats } from "node:fs";
-import type { DowncityConfig } from "@/city/runtime/env/Config.js";
+import type { DowncityConfig } from "@/main/city/env/Config.js";
 import { readSkillPluginConfig } from "../Config.js";
 import { parseFrontMatter } from "./Frontmatter.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";

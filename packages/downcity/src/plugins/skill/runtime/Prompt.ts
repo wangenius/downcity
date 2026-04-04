@@ -7,7 +7,7 @@
  * - 仅做字符串渲染，不做文件 IO。
  */
 
-import type { DowncityConfig } from "@/city/runtime/env/Config.js";
+import type { DowncityConfig } from "@/main/city/env/Config.js";
 import { readSkillPluginConfig } from "../Config.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";
 import type { ClaudeSkill } from "@/shared/types/ClaudeSkill.js";

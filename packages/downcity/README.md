@@ -15,8 +15,8 @@ downcity -v
 ### 1. initialize console
 
 ```bash
-city console init
-city console start
+city init
+city start
 ```
 
 ### 2. initialize agent project
@@ -62,7 +62,7 @@ city agent start --foreground
 
 ```bash
 city agent status
-city console agents
+city agents
 city service list
 ```
 
@@ -131,7 +131,7 @@ Content-Type: application/json
 {"instructions":"Say hi"}
 ```
 
-Use `city agent status` or `city console agents` to inspect the actual agent port.
+Use `city agent status` or `city agents` to inspect the actual agent port.
 
 ## debug
 

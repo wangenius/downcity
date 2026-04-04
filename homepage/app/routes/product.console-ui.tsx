@@ -27,7 +27,7 @@ const PAGE = {
     ],
     factsTitle: "事实对齐",
     facts: [
-      "源码目录：products/console-ui/",
+      "源码目录：products/console/",
       "包名：@downcity/console-ui",
       "启动入口：city start",
     ],
@@ -58,7 +58,7 @@ const PAGE = {
     ],
     factsTitle: "Facts",
     facts: [
-      "Source directory: products/console-ui/",
+      "Source directory: products/console/",
       "Package name: @downcity/console-ui",
       "Start command: city start",
     ],

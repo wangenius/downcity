@@ -27,7 +27,7 @@ const HELP_ITEMS = [
     name: "build",
     summary: "完整构建整个仓库。",
     detail:
-      "等价于 `build:all`，会构建 downcity-ui、homepage、console-ui、packages/downcity，并刷新全局 CLI。",
+      "等价于 `build:all`，会构建 downcity-ui、homepage、console、packages/downcity，并刷新全局 CLI。",
   },
   {
     name: "build:all",
@@ -39,7 +39,7 @@ const HELP_ITEMS = [
     name: "build:downcity",
     summary: "只构建 downcity 交付链路。",
     detail:
-      "先构建 console-ui 并输出到 packages/downcity/public，再构建 packages/downcity。",
+      "先构建 console 并输出到 packages/downcity/public，再构建 packages/downcity。",
   },
   {
     name: "build:homepage",
@@ -59,7 +59,7 @@ const HELP_ITEMS = [
   {
     name: "dev:ui-sdk",
     summary: "启动 packages/downcity-ui 的开发模式。",
-    detail: "用于单独开发 UI SDK，不会自动启动 homepage 或 console-ui。",
+    detail: "用于单独开发 UI SDK，不会自动启动 homepage 或 console。",
   },
   {
     name: "dev:homepage",
@@ -72,9 +72,9 @@ const HELP_ITEMS = [
     detail: "保留一个更短的命令入口，便于日常使用。",
   },
   {
-    name: "ui",
-    summary: "启动 console-ui 开发模式。",
-    detail: "执行 console-ui 的 Vite dev server，用于调试控制台前端。",
+    name: "console",
+    summary: "启动 console 开发模式。",
+    detail: "执行 console 的 Vite dev server，用于调试控制台前端。",
   },
   {
     name: "publish",
@@ -97,4 +97,3 @@ for (const item of HELP_ITEMS) {
   console.log(`- ${paddedName}  ${item.summary}`);
   console.log(`  ${item.detail}`);
 }
-

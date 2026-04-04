@@ -733,7 +733,7 @@ packages/downcity/src/main/auth/
 
 1. `executeConsoleUiShellCommand` 需要 `shell.execute`
 
-## 8.7 `products/console-ui/src/lib/dashboard-api.ts`
+## 8.7 `products/console/src/lib/dashboard-api.ts`
 
 改造：
 

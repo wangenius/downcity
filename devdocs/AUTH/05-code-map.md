@@ -94,7 +94,7 @@
 
 ## 4. Console UI 登录态
 
-- `products/console-ui/src/lib/dashboard-api.ts`
+- `products/console/src/lib/dashboard-api.ts`
 
 职责：
 

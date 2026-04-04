@@ -1,5 +1,5 @@
 packages:
-  - products/console-ui
+  - products/console
   - homepage
   - packages/downcity
   - packages/downcity-ui

@@ -19,7 +19,7 @@ Console UI 的链路已经很完整：
 
 关键文件：
 
-1. `products/console-ui/src/lib/dashboard-api.ts`
+1. `products/console/src/lib/dashboard-api.ts`
 2. `packages/downcity/src/main/auth/RoutePolicy.ts`
 3. `packages/downcity/src/main/auth/AuthService.ts`
 

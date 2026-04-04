@@ -5,7 +5,7 @@ description: React app structure, data flow, and the current information archite
 
 # Console UI Architecture
 
-`products/console-ui/` is the dedicated browser control room for Downcity. It is a frontend workspace, not a copy of backend runtime logic.
+`products/console/` is the dedicated browser control room for Downcity. It is a frontend workspace, not a copy of backend runtime logic.
 
 ## Current Stack
 
@@ -44,5 +44,5 @@ This avoids mixing global controls, agent runtime state, and context-level debug
 Console UI should remain an API client:
 
 - runtime ownership stays in `packages/downcity/`
-- view composition stays in `products/console-ui/`
+- view composition stays in `products/console/`
 - design conventions and IA rules should be documented here, not buried inside one component file

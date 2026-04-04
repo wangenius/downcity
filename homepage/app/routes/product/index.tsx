@@ -12,7 +12,7 @@ const PAGE = {
         id: "console-ui",
         title: "Console UI",
         desc: "在浏览器里统一管理 Agent、上下文、任务、模型和渠道状态。",
-        source: "products/console-ui/",
+        source: "products/console/",
       },
       {
         id: "chrome-extension",
@@ -35,7 +35,7 @@ const PAGE = {
     ],
     factsTitle: "产品事实",
     facts: [
-      "Console UI：独立前端包，目录为 products/console-ui/。",
+      "Console UI：独立前端包，目录为 products/console/。",
       "Chrome Extension：Manifest V3 插件，目录为 products/chrome-extension/。",
       "Downcity SDK：核心 runtime 与命令入口位于 packages/downcity/。",
       "Downcity UI SDK：React + Tailwind 组件包目录为 packages/downcity-ui/。",
@@ -51,7 +51,7 @@ const PAGE = {
         id: "console-ui",
         title: "Console UI",
         desc: "Manage agents, contexts, tasks, models, and channels from one browser workspace.",
-        source: "products/console-ui/",
+        source: "products/console/",
       },
       {
         id: "chrome-extension",
@@ -74,7 +74,7 @@ const PAGE = {
     ],
     factsTitle: "Product Facts",
     facts: [
-      "Console UI is a dedicated frontend package under products/console-ui/.",
+      "Console UI is a dedicated frontend package under products/console/.",
       "Chrome Extension is a Manifest V3 extension under products/chrome-extension/.",
       "Downcity SDK core runtime and command entry are in packages/downcity/.",
       "Downcity UI SDK is the React + Tailwind component package under packages/downcity-ui/.",

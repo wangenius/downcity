@@ -167,7 +167,7 @@ zsh: command not found: city
 
 ```bash
 # 终端 1：启动 console-ui 开发服务
-pnpm -C products/console-ui dev
+pnpm -C products/console dev
 
 # 终端 2：维护 downcity TypeScript 编译
 pnpm -C packages/downcity dev

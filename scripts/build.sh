@@ -11,7 +11,7 @@ BUILD_SCOPE="${1:-all}"
 #
 # 关键点（中文）
 # - `all`：执行完整仓库构建，包含版本号自增、所有前端产物、CLI 包构建与全局安装。
-# - `downcity`：只执行 downcity 交付链路，即 `products/console-ui -> packages/downcity`。
+# - `downcity`：只执行 downcity 交付链路，即 `products/console -> packages/downcity`。
 ##
 case "$BUILD_SCOPE" in
   all|downcity)
@@ -60,18 +60,18 @@ if [[ "$BUILD_SCOPE" == "all" ]]; then
   # 关键点（中文）：完整构建顺序固定为：
   # 1) 先构建 @downcity/ui，保证 workspace 消费方拿到最新 dist
   # 2) 再构建 homepage
-  # 3) 再构建 products/console-ui（输出到 packages/downcity/public）
+  # 3) 再构建 products/console（输出到 packages/downcity/public）
   # 4) 最后构建 downcity package（tsc + copy assets）
   run_build "$ROOT_DIR/packages/downcity-ui"
   run_build "$ROOT_DIR/homepage"
-  run_build "$ROOT_DIR/products/console-ui"
+  run_build "$ROOT_DIR/products/console"
   run_build "$ROOT_DIR/packages/downcity"
   install_downcity_globally
   exit 0
 fi
 
 # 关键点（中文）：`build:downcity` 只覆盖 downcity 的交付链路：
-# 1) 先构建 products/console-ui，产物直接写入 packages/downcity/public
+# 1) 先构建 products/console，产物直接写入 packages/downcity/public
 # 2) 再构建 packages/downcity，生成 CLI/runtime 的 bin 目录
-run_build "$ROOT_DIR/products/console-ui"
+run_build "$ROOT_DIR/products/console"
 run_build "$ROOT_DIR/packages/downcity"

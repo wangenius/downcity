@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ChatQueueStore } from "../../bin/services/chat/runtime/ChatQueueStore.js";
+import { ChatQueueStore } from "../../bin/services/chat@/city/runtime/console/ChatQueueStore.js";
 
 test("ChatQueueStore keeps queue state isolated per instance", () => {
   const storeA = new ChatQueueStore();

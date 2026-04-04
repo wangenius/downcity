@@ -14,7 +14,7 @@ import type {
   ChatDispatchAction,
   ChatDispatchChannel,
 } from "@services/chat/types/ChatDispatcher.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import { readChatMetaBySessionId } from "./ChatMetaStore.js";
 
 /**

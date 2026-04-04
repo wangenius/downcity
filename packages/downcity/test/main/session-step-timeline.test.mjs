@@ -8,8 +8,8 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildAssistantStepTimelineMessages } from "../../bin/sessions/runtime/AssistantStepTimeline.js";
-import { resolveAssistantMessageForPersistence } from "../../bin/services/chat/runtime/UserVisibleText.js";
+import { buildAssistantStepTimelineMessages } from "../../bin/sessions@/city/runtime/console/AssistantStepTimeline.js";
+import { resolveAssistantMessageForPersistence } from "../../bin/services/chat@/city/runtime/console/UserVisibleText.js";
 
 test("buildAssistantStepTimelineMessages persists text, tool call, and tool result in order", () => {
   const messages = buildAssistantStepTimelineMessages({

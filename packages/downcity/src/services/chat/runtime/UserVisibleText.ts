@@ -7,7 +7,7 @@
  * - 因此需要一个稳定的、与 Agent 解耦的提取逻辑（属于 chat/egress 语义）
  */
 
-import type { SessionMessageV1 } from "@/types/SessionMessage.js";
+import type { SessionMessageV1 } from "@/shared/types/SessionMessage.js";
 import {
   extractTextFromUiMessage,
   extractToolCallsFromUiMessage,

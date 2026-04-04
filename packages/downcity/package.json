@@ -1,11 +1,11 @@
 {
   "name": "downcity",
-  "version": "1.0.414",
+  "version": "1.0.417",
   "type": "module",
   "description": "每一个文件仓库都是一个Agent，搭建你的Agent City",
   "bin": {
-    "downcity": "./bin/main/commands/Index.js",
-    "city": "./bin/main/commands/Index.js"
+    "downcity": "./bin/city/modules/cli/Index.js",
+    "city": "./bin/city/modules/cli/Index.js"
   },
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('bin', { recursive: true, force: true })\" && tsc && tsc-alias -f && node scripts/copy-prompt-assets.mjs && node scripts/ensure-cli-executable.mjs",

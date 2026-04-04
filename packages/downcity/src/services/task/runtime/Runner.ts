@@ -8,11 +8,11 @@
  * - 把最终产物写入 run 目录的具体格式委托给 `TaskRunArtifacts.ts`。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   DialogueRoundRecord,
   UserSimulatorDecision,
-} from "@/types/TaskRunner.js";
+} from "@/shared/types/TaskRunner.js";
 import type {
   ShipTaskKind,
   ShipTaskRunExecutionStatusV1,

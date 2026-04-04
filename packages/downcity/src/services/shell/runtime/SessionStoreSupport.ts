@@ -8,13 +8,13 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   SessionWaiter,
   ShellServiceState,
   ShellSessionRuntime,
-} from "@/types/ShellRuntime.js";
-import { requestContext } from "@sessions/RequestContext.js";
+} from "@/shared/types/ShellRuntime.js";
+import { requestContext } from "@session/RequestContext.js";
 import type {
   ShellActionResponse,
   ShellOutputChunk,

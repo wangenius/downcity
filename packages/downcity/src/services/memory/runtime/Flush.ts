@@ -8,7 +8,7 @@
 
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 import { isTextUIPart } from "ai";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   MemoryFlushPayload,
   MemoryFlushResponse,

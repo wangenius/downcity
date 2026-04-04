@@ -6,13 +6,13 @@
  * - 这里封装 chat 领域的 plugin 点调用语义，保持 service 边界稳定。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type {
   AuthObservePrincipalPayload,
   ChatAuthorizationEvaluateInput,
   ChatAuthorizationRole,
-} from "@/types/AuthPlugin.js";
+} from "@/shared/types/AuthPlugin.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 

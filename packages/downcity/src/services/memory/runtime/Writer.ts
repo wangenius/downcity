@@ -8,7 +8,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   MemoryGetPayload,
   MemoryGetResponse,

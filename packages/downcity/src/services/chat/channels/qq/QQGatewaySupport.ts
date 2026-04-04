@@ -7,12 +7,12 @@
  */
 
 import type { RawData } from "ws";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { QQGatewayPayload, QqGatewayRuntimeStatus } from "@/types/QqChannel.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { QQGatewayPayload, QqGatewayRuntimeStatus } from "@/shared/types/QqChannel.js";
 import type {
   QqGatewayHeartbeatState,
   QqGatewayRuntimeStatusInput,
-} from "@/types/QqGatewaySupport.js";
+} from "@/shared/types/QqGatewaySupport.js";
 
 /**
  * WebSocket OPEN 对应的 readyState 数值。

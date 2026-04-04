@@ -6,9 +6,9 @@
  * - 所有动作统一返回结构化结果，失败不抛给上层。
  */
 
-import type { ServiceActionResult } from "@/types/Service.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonValue } from "@/types/Json.js";
+import type { ServiceActionResult } from "@/shared/types/Service.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonValue } from "@/shared/types/Json.js";
 import type {
   MemoryFlushPayload,
   MemoryGetPayload,

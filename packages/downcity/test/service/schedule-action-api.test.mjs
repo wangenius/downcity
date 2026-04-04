@@ -21,12 +21,12 @@ import {
   stopServiceScheduleRuntime,
 } from "../../bin/main/service/schedule/Runtime.js";
 import { ServiceScheduleStore } from "../../bin/main/service/schedule/Store.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
+} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 const CHAT_KEY = "ctx_schedule_api_test";

@@ -7,9 +7,9 @@
  */
 
 import { buildChatInboundText, augmentChatInboundInput } from "@services/chat/runtime/InboundAugment.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonObject } from "@/types/Json.js";
-import type { QQMessageData, QQReadyUser } from "@/types/QqChannel.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonObject } from "@/shared/types/Json.js";
+import type { QQMessageData, QQReadyUser } from "@/shared/types/QqChannel.js";
 import type { QqIncomingAttachment } from "@services/chat/types/QqVoice.js";
 import { resolveQqAttachmentLocalPath } from "./VoiceInput.js";
 

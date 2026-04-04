@@ -6,8 +6,8 @@
  * - `QQGatewayClient` 只保留发送入口与状态持有，不再直接展开长流程。
  */
 
-import type { Logger } from "@utils/logger/Logger.js";
-import type { QQSendMessageBody } from "@/types/QqChannel.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { QQSendMessageBody } from "@/shared/types/QqChannel.js";
 import {
   isRetryableQqSendFailure,
   resolveQqApiErrorText,

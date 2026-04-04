@@ -6,9 +6,9 @@
  * - Console UI 只通过 setup / action 与插件交互，保持极简统一。
  */
 
-import type { Plugin } from "@/types/Plugin.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { TtsInstallInput, TtsSynthesizeInput } from "@/types/TtsPlugin.js";
+import type { Plugin } from "@/shared/types/Plugin.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { TtsInstallInput, TtsSynthesizeInput } from "@/shared/types/TtsPlugin.js";
 import {
   checkTtsSynthesizer,
   installTtsSynthesizer,

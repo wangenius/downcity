@@ -6,20 +6,20 @@
  * - 授权核心模型为 role / permission / binding。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,
   ChatAuthorizationPermission,
   ChatAuthorizationRole,
   ChatChannelAuthorizationConfig,
-} from "@/types/AuthPlugin.js";
+} from "@/shared/types/AuthPlugin.js";
 import {
   CHAT_AUTHORIZATION_CHANNELS,
   CHAT_AUTHORIZATION_PERMISSIONS,
   createDefaultChatAuthorizationRoles,
-} from "@/types/AuthPlugin.js";
-import { ConsoleStore } from "@/utils/store/index.js";
+} from "@/shared/types/AuthPlugin.js";
+import { ConsoleStore } from "@/shared/utils/store/index.js";
 
 const CHAT_AUTHORIZATION_STORE_KEY = "chat_authorization";
 const CHANNELS: ChatAuthorizationChannel[] = [...CHAT_AUTHORIZATION_CHANNELS];

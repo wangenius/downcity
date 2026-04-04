@@ -9,7 +9,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SessionPersistorStore } from "../../bin/sessions/runtime/SessionPersistorStore.js";
+import { SessionPersistorStore } from "../../bin/sessions@/city/runtime/console/SessionPersistorStore.js";
 import { SessionRuntimeStore } from "../../bin/sessions/SessionRuntimeStore.js";
 
 test("SessionRuntimeStore recreates runtime without recreating persistor after clearRuntime", () => {

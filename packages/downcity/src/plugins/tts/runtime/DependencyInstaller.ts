@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import fs from "fs-extra";
-import type { TtsModelId, TtsRuntimeFamily } from "@/types/Tts.js";
+import type { TtsModelId, TtsRuntimeFamily } from "@/shared/types/Tts.js";
 
 const execFileAsync = promisify(execFileCb);
 

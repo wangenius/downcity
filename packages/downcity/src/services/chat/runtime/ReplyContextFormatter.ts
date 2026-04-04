@@ -6,7 +6,7 @@
  * - 同时提供额外 metadata，便于 history / 调试链路查看。
  */
 
-import type { JsonObject } from "@/types/Json.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type { InboundReplyContext } from "@services/chat/types/ReplyContext.js";
 
 function normalizeReplyValue(value: string | undefined): string | undefined {

@@ -6,7 +6,7 @@
  * - 检索前确保索引同步（dirty 时自动补齐）。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   MemorySearchPayload,
   MemorySearchResponse,

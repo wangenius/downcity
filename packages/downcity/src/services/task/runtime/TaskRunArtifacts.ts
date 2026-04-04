@@ -8,7 +8,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { DialogueRoundRecord } from "@/types/TaskRunner.js";
+import type { DialogueRoundRecord } from "@/shared/types/TaskRunner.js";
 import type {
   ShipTaskDefinitionV1,
   ShipTaskKind,

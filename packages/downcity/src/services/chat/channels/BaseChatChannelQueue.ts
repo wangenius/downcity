@@ -15,8 +15,8 @@ import {
   prepareChatEnqueue,
 } from "@services/chat/runtime/EnqueueDispatch.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type { IncomingChatMessage } from "./BaseChatChannel.js";
 import {
   appendInboundChannelHistory,

@@ -6,7 +6,7 @@
  * - 仅注入“如何使用 memory service action”的规则。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import { isMemoryEnabled } from "./Store.js";
 
 /**

@@ -6,14 +6,14 @@
  * - 各 service 的长期状态应归属于实例本身，而不是模块级单例。
  */
 
-import type { AgentState } from "@/types/AgentState.js";
+import type { AgentState } from "@/shared/types/AgentState.js";
 import type {
   Service,
   ServiceActions,
   ServiceLifecycle,
-} from "@/types/Service.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ServiceStateRecord } from "@/types/ServiceState.js";
+} from "@/shared/types/Service.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ServiceStateRecord } from "@/shared/types/ServiceState.js";
 
 /**
  * BaseService 抽象基类。

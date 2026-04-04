@@ -12,7 +12,7 @@ import test from "node:test";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
-const CLI_ENTRY = resolve(process.cwd(), "bin/main/commands/Index.js");
+const CLI_ENTRY = resolve(process.cwd(), "bin/city/modules/cli/Index.js");
 
 test("built cli entry keeps shebang and executable mode", () => {
   const content = readFileSync(CLI_ENTRY, "utf8");

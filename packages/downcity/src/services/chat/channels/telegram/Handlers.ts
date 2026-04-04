@@ -1,4 +1,4 @@
-import type { Logger } from "@utils/logger/Logger.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
 import type { TelegramUpdate, TelegramUser } from "./Shared.js";
 
 /**
@@ -13,7 +13,7 @@ import type { TelegramUpdate, TelegramUser } from "./Shared.js";
  * Telegram 指令处理上下文。
  *
  * 说明（中文）
- * - 采用显式注入，避免 handler 反向依赖 server/core 单例
+ * - 采用显式注入，避免 handler 反向依赖 server/utils/core 单例
  */
 export type TelegramHandlerContext = {
   logger: Logger;

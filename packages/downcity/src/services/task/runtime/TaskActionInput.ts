@@ -6,9 +6,9 @@
  * - 参数校验尽量前置到输入层，避免进入执行层后才发现字段非法。
  */
 
-import { resolveSessionId } from "@sessions/SessionId.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ServiceActionCommandInput } from "@/types/Service.js";
+import { resolveSessionId } from "@session/SessionId.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { ServiceActionCommandInput } from "@/shared/types/Service.js";
 import type { ShipTaskKind, ShipTaskStatus } from "@services/task/types/Task.js";
 import type {
   TaskCreateRequest,
@@ -17,7 +17,7 @@ import type {
   TaskSetStatusRequest,
   TaskUpdateRequest,
 } from "@services/task/types/TaskCommand.js";
-import type { TaskListActionPayload } from "@/types/TaskService.js";
+import type { TaskListActionPayload } from "@/shared/types/TaskService.js";
 
 function parseJsonBodyObject(rawBody: JsonValue): JsonObject {
   if (rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)) {

@@ -7,9 +7,9 @@
  * - 对外只暴露 action 级入口，供 ChatServiceActions 装配使用。
  */
 
-import { ConsoleStore } from "@/utils/store/index.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ChatChannelState } from "@/types/ChatRuntime.js";
+import { ConsoleStore } from "@/shared/utils/store/index.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import type {
   ChatCloseActionPayload,
   ChatConfigurationActionPayload,
@@ -18,7 +18,7 @@ import type {
   ChatReconnectActionPayload,
   ChatStatusActionPayload,
   ChatTestActionPayload,
-} from "@/types/ChatService.js";
+} from "@/shared/types/ChatService.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import {
   describeChatChannelConfiguration,

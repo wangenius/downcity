@@ -11,7 +11,7 @@ import test from "node:test";
 import {
   emitChatEnqueueEffect,
   prepareChatEnqueue,
-} from "../../bin/services/chat/runtime/EnqueueDispatch.js";
+} from "../../bin/services/chat@/city/runtime/console/EnqueueDispatch.js";
 
 test("prepareChatEnqueue returns pipeline-transformed payload", async () => {
   const next = await prepareChatEnqueue({

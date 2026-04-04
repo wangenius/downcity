@@ -7,8 +7,8 @@
  * - 后续 extension / dashboard / 其他外部入口都应复用这里
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import { appendInboundChatHistory } from "./ChatHistoryStore.js";
 

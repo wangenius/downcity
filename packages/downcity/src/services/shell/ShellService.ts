@@ -7,11 +7,11 @@
  * - SessionStore 只保留纯运行时流程，不再承载模块级单例状态。
  */
 
-import type { AgentState } from "@/types/AgentState.js";
+import type { AgentState } from "@/shared/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
-import type { ServiceActions } from "@/types/Service.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ShellServiceState, ShellSessionRuntime } from "@/types/ShellRuntime.js";
+import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ShellServiceState, ShellSessionRuntime } from "@/shared/types/ShellRuntime.js";
 import type {
   ShellCloseRequest,
   ShellExecRequest,

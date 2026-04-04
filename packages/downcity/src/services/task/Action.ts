@@ -8,8 +8,8 @@
 
 import path from "node:path";
 import type { ShipTaskStatus } from "./types/Task.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonValue } from "@/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonValue } from "@/shared/types/Json.js";
 import {
   deriveTaskIdFromTitle,
   normalizeTaskId,

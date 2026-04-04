@@ -9,9 +9,9 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import { generateId } from "@utils/Id.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonObject } from "@/types/Json.js";
+import { generateId } from "@shared/utils/Id.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import type {
   ChatHistoryDirection,

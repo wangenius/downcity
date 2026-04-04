@@ -10,7 +10,7 @@ import test from "node:test";
 import {
   evaluateIncomingChatAuthorization,
   resolveAuthorizedUserRole,
-} from "../../bin/plugins/auth/runtime/AuthorizationPolicy.js";
+} from "../../bin/plugins/auth@/city/runtime/console/AuthorizationPolicy.js";
 
 test("resolveAuthorizedUserRole returns the bound permission group and falls back to default", () => {
   const config = {

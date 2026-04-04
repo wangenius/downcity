@@ -8,8 +8,8 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Logger } from "@utils/logger/Logger.js";
-import type { QQEventCaptureConfig, QQEventCaptureMode, QQGatewayPayload } from "@/types/QqChannel.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { QQEventCaptureConfig, QQEventCaptureMode, QQGatewayPayload } from "@/shared/types/QqChannel.js";
 
 /**
  * 读取 QQ 原始事件捕获配置。

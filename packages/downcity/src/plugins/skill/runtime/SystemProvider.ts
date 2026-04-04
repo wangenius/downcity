@@ -7,8 +7,8 @@
  * - `lookup` 行为为无状态：由 action 读取 SKILL.md 后通过协议注入 user message
  */
 
-import { requestContext } from "@sessions/RequestContext.js";
-import type { DowncityConfig } from "@/types/DowncityConfig.js";
+import { requestContext } from "@session/RequestContext.js";
+import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import { discoverClaudeSkillsSync } from "./Discovery.js";
 import { renderClaudeSkillsPromptSection } from "./Prompt.js";
 import { setSessionAvailableSkills } from "./Store.js";

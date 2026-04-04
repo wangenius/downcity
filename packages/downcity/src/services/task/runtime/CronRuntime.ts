@@ -6,7 +6,7 @@
  * - 该模块是 task service 内部实现细节，core 只通过 service lifecycle 间接调用。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import { registerTaskCronJobs } from "@services/task/Scheduler.js";
 import { TaskCronTriggerEngine } from "./CronTrigger.js";
 

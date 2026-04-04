@@ -6,7 +6,7 @@
  * - 不依赖 Feishu SDK client，也不承担授权/入队/回复职责。
  */
 
-import type { FeishuMessageEvent, FeishuSenderIdentity } from "@/types/FeishuChannel.js";
+import type { FeishuMessageEvent, FeishuSenderIdentity } from "@/shared/types/FeishuChannel.js";
 
 /**
  * 抽取发送者主身份。

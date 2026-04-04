@@ -7,11 +7,11 @@
  * - 当前作为 chat 入站消息增强中间件接入语音转写。
  */
 
-import type { Plugin } from "@/types/Plugin.js";
-import type { ChatInboundAugmentInput } from "@/types/ChatPlugin.js";
-import type { VoicePluginConfig } from "@/types/VoicePlugin.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { AgentPluginConfigRuntime } from "@/types/AgentHost.js";
+import type { Plugin } from "@/shared/types/Plugin.js";
+import type { ChatInboundAugmentInput } from "@/shared/types/ChatPlugin.js";
+import type { VoicePluginConfig } from "@/shared/types/VoicePlugin.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { AgentPluginConfigRuntime } from "@/shared/types/AgentHost.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import {
   listVoiceModels,

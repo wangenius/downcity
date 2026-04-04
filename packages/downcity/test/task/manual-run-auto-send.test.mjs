@@ -16,12 +16,12 @@ import {
   runTaskDefinition,
 } from "../../bin/services/task/Action.js";
 import { ChatService } from "../../bin/services/chat/ChatService.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
+} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 const SESSION_ID = "ctx_task_manual_auto_send";

@@ -12,8 +12,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { ttsPlugin } from "../../bin/plugins/tts/Plugin.js";
-import { resolveDefaultTtsVenvPythonBin } from "../../bin/plugins/tts/runtime/DependencyInstaller.js";
-import { synthesizeSpeechFile } from "../../bin/plugins/tts/runtime/Synthesizer.js";
+import { resolveDefaultTtsVenvPythonBin } from "../../bin/plugins/tts@/city/runtime/console/DependencyInstaller.js";
+import { synthesizeSpeechFile } from "../../bin/plugins/tts@/city/runtime/console/Synthesizer.js";
 
 function createLogger() {
   return {

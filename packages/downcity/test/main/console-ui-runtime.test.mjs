@@ -11,8 +11,8 @@ import test from "node:test";
 import {
   findReusableConsoleUiProcess,
   parseConsoleUiProcessCommand,
-} from "../../bin/main/commands/UI.js";
-import { isDowncityCliCommand } from "../../bin/main/runtime/ProcessSweep.js";
+} from "../../bin/city/modules/cli/UI.js";
+import { isDowncityCliCommand } from "../../bin/city/runtime/console/ProcessSweep.js";
 
 test("parseConsoleUiProcessCommand extracts host and port from console ui run command", () => {
   const result = parseConsoleUiProcessCommand(

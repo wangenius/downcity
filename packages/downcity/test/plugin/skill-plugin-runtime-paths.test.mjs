@@ -2,13 +2,13 @@
  * Skill plugin 辅助路径测试（node:test）。
  *
  * 关键点（中文）
- * - skill 已迁到 plugin 体系后，内部辅助实现仍应从 `plugins/skill/runtime/*` 暴露。
+ * - skill 已迁到 plugin 体系后，内部辅助实现仍应从 `plugins/skill@/city/runtime/console/*` 暴露。
  * - 同时验证 `plugins.skill.paths` 会参与 skill roots 解析。
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getClaudeSkillSearchRoots } from "../../bin/plugins/skill/runtime/Paths.js";
+import { getClaudeSkillSearchRoots } from "../../bin/plugins/skill@/city/runtime/console/Paths.js";
 
 test("skill plugin paths include configured plugin roots", () => {
   const roots = getClaudeSkillSearchRoots("/tmp/demo-agent", {

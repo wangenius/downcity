@@ -6,8 +6,8 @@
  * - 通过 RequestContext（ALS）读取当前请求上下文
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import { requestContext } from "@sessions/RequestContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import { requestContext } from "@session/RequestContext.js";
 import {
   sendActionByChatKey,
   sendTextByChatKey,

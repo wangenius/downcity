@@ -14,12 +14,12 @@ import fs from "fs-extra";
 import {
   getDowncityChatSessionDirPath,
   getDowncitySessionDirPath,
-} from "../../bin/main/env/Paths.js";
-import { deleteChatSessionById } from "../../bin/services/chat/runtime/ChatSessionDelete.js";
+} from "../../bin/main/city/runtime/console/env/Paths.js";
+import { deleteChatSessionById } from "../../bin/services/chat@/city/runtime/console/ChatSessionDelete.js";
 import {
   readChatMetaBySessionId,
   resolveOrCreateSessionIdByChatTarget,
-} from "../../bin/services/chat/runtime/ChatMetaStore.js";
+} from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
 
 function createRuntime(rootPath) {
   const cleared = [];

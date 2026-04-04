@@ -8,11 +8,11 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ChatQueueWorker } from "../../bin/services/chat/runtime/ChatQueueWorker.js";
+import { ChatQueueWorker } from "../../bin/services/chat@/city/runtime/console/ChatQueueWorker.js";
 import {
   clearChatQueueLane,
   enqueueChatQueue,
-} from "../../bin/services/chat/runtime/ChatQueue.js";
+} from "../../bin/services/chat@/city/runtime/console/ChatQueue.js";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

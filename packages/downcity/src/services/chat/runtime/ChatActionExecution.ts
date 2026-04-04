@@ -8,8 +8,8 @@
  */
 
 import path from "node:path";
-import type { JsonObject } from "@/types/Json.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { JsonObject } from "@/shared/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   ChatDeleteActionPayload,
   ChatHistoryActionPayload,
@@ -18,7 +18,7 @@ import type {
   ChatReactActionPayload,
   ChatSendActionPayload,
   ChatSessionActionPayload,
-} from "@/types/ChatService.js";
+} from "@/shared/types/ChatService.js";
 import type { ChatHistoryEventV1 } from "@services/chat/types/ChatHistory.js";
 import type { ChatListItemV1 } from "@services/chat/types/ChatCommand.js";
 import {

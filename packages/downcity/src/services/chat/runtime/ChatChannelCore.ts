@@ -7,11 +7,11 @@
  * - 目标是让 chat channel 子模块共享同一套最小公共基元。
  */
 
-import { ConsoleStore } from "@/utils/store/index.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { StoredChannelAccount } from "@/types/Store.js";
+import { ConsoleStore } from "@/shared/utils/store/index.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { StoredChannelAccount } from "@/shared/types/Store.js";
 import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";
-import type { ChatChannelState } from "@/types/ChatRuntime.js";
+import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 
 const CHAT_CHANNEL_NAMES: ChatChannelName[] = ["telegram", "feishu", "qq"];
 

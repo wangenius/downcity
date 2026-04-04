@@ -7,15 +7,15 @@
  * - skills overview 文本通过 `plugin.system` 注入，不再依赖 service.system。
  */
 
-import type { Plugin } from "@/types/Plugin.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
+import type { Plugin } from "@/shared/types/Plugin.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import { readFileSync } from "node:fs";
 import type {
   SkillPluginFindPayload,
   SkillPluginInstallPayload,
   SkillPluginLookupPayload,
-} from "@/types/SkillPlugin.js";
-import { SKILL_PLUGIN_ACTIONS } from "@/types/SkillPlugin.js";
+} from "@/shared/types/SkillPlugin.js";
+import { SKILL_PLUGIN_ACTIONS } from "@/shared/types/SkillPlugin.js";
 import {
   DEFAULT_SKILL_PLUGIN_CONFIG,
   readSkillPluginConfig,

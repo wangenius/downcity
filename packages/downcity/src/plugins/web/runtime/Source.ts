@@ -11,12 +11,12 @@ import os from "node:os";
 import fsp from "node:fs/promises";
 import { execa } from "execa";
 import fse from "fs-extra";
-import type { JsonObject } from "@/types/Json.js";
-import type { PluginCommandContext } from "@/types/Plugin.js";
+import type { JsonObject } from "@/shared/types/Json.js";
+import type { PluginCommandContext } from "@/shared/types/Plugin.js";
 import type {
   WebPluginDependencyCheckResult,
   WebPluginInstallInput,
-} from "@/types/WebPlugin.js";
+} from "@/shared/types/WebPlugin.js";
 import { readWebPluginConfig, writeWebPluginConfig } from "@/plugins/web/runtime/Config.js";
 import { readFileSync } from "node:fs";
 

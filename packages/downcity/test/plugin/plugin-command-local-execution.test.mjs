@@ -15,7 +15,7 @@ import test from "node:test";
 import fs from "fs-extra";
 
 const execFileAsync = promisify(execFile);
-const CLI_ENTRY = path.resolve(process.cwd(), "bin/main/commands/Index.js");
+const CLI_ENTRY = path.resolve(process.cwd(), "bin/city/modules/cli/Index.js");
 
 function createBaseConfig() {
   return {

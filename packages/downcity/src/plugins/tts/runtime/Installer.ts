@@ -11,7 +11,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import fsExtra from "fs-extra";
-import type { TtsModelCatalogItem, TtsModelId } from "@/types/Tts.js";
+import type { TtsModelCatalogItem, TtsModelId } from "@/shared/types/Tts.js";
 
 const HUGGINGFACE_HOST = "https://huggingface.co";
 const TTS_INSTALL_MANIFEST = "downcity.tts.install.json";

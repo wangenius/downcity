@@ -7,7 +7,7 @@
  * - 回发失败只记录日志，不影响 task run 自身状态。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type { ShipTaskDefinitionV1 } from "@services/task/types/Task.js";
 
 function resolveTaskFinalText(params: {

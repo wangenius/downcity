@@ -7,8 +7,8 @@
  * - auth plugin 只负责统一暴露扩展点 / action 边界，不改变底层存储模型。
  */
 
-import type { Plugin } from "@/types/Plugin.js";
-import type { JsonValue } from "@/types/Json.js";
+import type { Plugin } from "@/shared/types/Plugin.js";
+import type { JsonValue } from "@/shared/types/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import {
   AUTH_ACTIONS,
@@ -18,7 +18,7 @@ import {
   type ChatAuthorizationConfig,
   type ChatAuthorizationEvaluateInput,
   type ChatAuthorizationSnapshot,
-} from "@/types/AuthPlugin.js";
+} from "@/shared/types/AuthPlugin.js";
 import {
   readChatAuthorizationConfig,
   setChatAuthorizationUserRole,

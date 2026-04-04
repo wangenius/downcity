@@ -10,13 +10,13 @@ import fs from "fs-extra";
 import yaml from "js-yaml";
 import path from "path";
 import type { Dirent, Stats } from "node:fs";
-import type { DowncityConfig } from "@/main/env/Config.js";
+import type { DowncityConfig } from "@/city/runtime/env/Config.js";
 import { readSkillPluginConfig } from "../Config.js";
 import { parseFrontMatter } from "./Frontmatter.js";
 import { getClaudeSkillSearchRoots } from "./Paths.js";
 import { isSubpath } from "./Utils.js";
-import type { ClaudeSkill } from "@/types/ClaudeSkill.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
+import type { ClaudeSkill } from "@/shared/types/ClaudeSkill.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 
 /**
  * 扫描并发现 Claude Code-compatible skills。

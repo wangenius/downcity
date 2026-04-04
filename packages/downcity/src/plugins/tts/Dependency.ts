@@ -8,13 +8,13 @@
 
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { PluginCommandContext } from "@/types/Plugin.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { PluginCommandContext } from "@/shared/types/Plugin.js";
 import type {
   TtsInstallInput,
   TtsPluginConfig,
-} from "@/types/TtsPlugin.js";
-import type { TtsModelId } from "@/types/Tts.js";
+} from "@/shared/types/TtsPlugin.js";
+import type { TtsModelId } from "@/shared/types/Tts.js";
 import {
   getTtsModelCatalogItem,
   resolveTtsModelId,

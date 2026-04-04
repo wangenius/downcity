@@ -11,7 +11,7 @@ import fs from "fs-extra";
 import path from "path";
 import type {
   FeishuMessagePayloadType,
-} from "@/types/FeishuChannel.js";
+} from "@/shared/types/FeishuChannel.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
 
 /**

@@ -11,17 +11,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { ChatQueueWorker } from "../../bin/services/chat/runtime/ChatQueueWorker.js";
+import { ChatQueueWorker } from "../../bin/services/chat@/city/runtime/console/ChatQueueWorker.js";
 import {
   clearChatQueueLane,
   enqueueChatQueue,
-} from "../../bin/services/chat/runtime/ChatQueue.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+} from "../../bin/services/chat@/city/runtime/console/ChatQueue.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
+} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 

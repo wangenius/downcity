@@ -13,8 +13,8 @@ import type {
   ChatAuthorizationObservedUser,
   ChatAuthorizationSnapshot,
   ChatAuthorizationStateFile,
-} from "@/types/AuthPlugin.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+} from "@/shared/types/AuthPlugin.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 

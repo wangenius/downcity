@@ -6,10 +6,10 @@
  * - 只有当用户显式改动时，才把 `plugins.web` 持久化到项目配置。
  */
 
-import type { JsonObject } from "@/types/Json.js";
-import type { PluginCommandContext } from "@/types/Plugin.js";
-import type { ResolvedWebPluginConfig, WebPluginConfig } from "@/types/WebPlugin.js";
-import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/types/WebPlugin.js";
+import type { JsonObject } from "@/shared/types/Json.js";
+import type { PluginCommandContext } from "@/shared/types/Plugin.js";
+import type { ResolvedWebPluginConfig, WebPluginConfig } from "@/shared/types/WebPlugin.js";
+import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/shared/types/WebPlugin.js";
 
 function toJsonObject(input: Record<string, unknown> | null | undefined): JsonObject {
   const out: JsonObject = {};

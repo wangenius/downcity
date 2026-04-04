@@ -6,12 +6,12 @@
  * - task 定义变更后的 scheduler reload 通过回调注入，避免执行层依赖具体 service 实现。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   TaskCronRegisterResult,
   TaskListActionPayload,
   TaskSchedulerReloadResult,
-} from "@/types/TaskService.js";
+} from "@/shared/types/TaskService.js";
 import type {
   TaskCreateRequest,
   TaskDeleteRequest,
@@ -55,7 +55,7 @@ export type TaskSchedulerReloadPort = (params: {
 /**
  * 启动后的 task cron runtime 统计结果。
  */
-export type { TaskCronRegisterResult } from "@/types/TaskService.js";
+export type { TaskCronRegisterResult } from "@/shared/types/TaskService.js";
 
 /**
  * 任务定义变更后重载 scheduler。

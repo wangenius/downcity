@@ -4,19 +4,19 @@
  * 关键点（中文）
  * - 这里专门负责 QQ Gateway WebSocket、心跳、自愈重连与状态持有。
  * - 鉴权 / HTTP 探活 / 发送重试已经拆到旁路模块，当前文件只保留运行时编排。
- * - QQBot 不再直接维护底层 ws/token 细节，只保留渠道编排职责。
+ * - QQBot 不再直接维护底层 ws/utils/token 细节，只保留渠道编排职责。
  */
 
 import WebSocket, { type RawData } from "ws";
-import type { Logger } from "@utils/logger/Logger.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type {
   QQEventCaptureConfig,
   QQGatewayPayload,
   QqDispatchHandler,
   QqGatewayRuntimeStatus,
-} from "@/types/QqChannel.js";
-import { EventType, OpCode } from "@/types/QqChannel.js";
+} from "@/shared/types/QqChannel.js";
+import { EventType, OpCode } from "@/shared/types/QqChannel.js";
 import { captureQqWsPayload } from "./QQEventCapture.js";
 import {
   fetchQqAccessToken,

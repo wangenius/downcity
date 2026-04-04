@@ -13,7 +13,7 @@ import type {
   ShipTaskRunProgressV1,
   ShipTaskRunTriggerV1,
 } from "@services/task/types/Task.js";
-import type { RunProgressSnapshot } from "@/types/TaskRunner.js";
+import type { RunProgressSnapshot } from "@/shared/types/TaskRunner.js";
 
 /**
  * 把相对路径渲染为 markdown 行内链接文本。

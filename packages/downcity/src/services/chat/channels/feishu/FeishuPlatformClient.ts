@@ -8,13 +8,13 @@
  */
 
 import * as Lark from "@larksuiteoapi/node-sdk";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   FeishuConfig,
   FeishuDownloadedAttachment,
   FeishuMessageEvent,
   FeishuMessagePayloadType,
-} from "@/types/FeishuChannel.js";
+} from "@/shared/types/FeishuChannel.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
 import type { FeishuIncomingAttachmentDescriptor } from "@services/chat/types/FeishuInboundAttachment.js";

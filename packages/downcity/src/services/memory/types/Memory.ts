@@ -6,7 +6,7 @@
  * - 字段注释完整，供 CLI/API/运行时统一复用。
  */
 
-import type { JsonValue } from "@/types/Json.js";
+import type { JsonValue } from "@/shared/types/Json.js";
 
 /**
  * 记忆来源类型。

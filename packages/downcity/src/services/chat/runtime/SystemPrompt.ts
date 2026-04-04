@@ -7,9 +7,9 @@
  * - 统一从 request context + ChatMetaStore 读取当前 chat 元信息。
  */
 
-import { getRequestContext } from "@sessions/RequestContext.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ChatEnvironmentPromptInput } from "@/types/ChatPromptContext.js";
+import { getRequestContext } from "@session/RequestContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ChatEnvironmentPromptInput } from "@/shared/types/ChatPromptContext.js";
 import { readChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 
 function normalizePromptValue(value: unknown, fallback: string): string {

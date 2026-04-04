@@ -2,19 +2,19 @@
  * ChatQueueWorker：chat service 侧队列执行器。
  *
  * 关键点（中文）
- * - 消费 services/chat 的队列模块
+ * - 消费 services/utils/chat 的队列模块
  * - 通过 RequestContext（ALS）透传 sessionId
  * - 支持 step 边界合并（同 lane 新消息可插入当前 run）
  */
 
-import type { Logger } from "@utils/logger/Logger.js";
-import type { SessionRunResult } from "@/types/SessionRun.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { SessionRunResult } from "@/shared/types/SessionRun.js";
 import type {
   SessionUserMessageV1,
-} from "@/types/SessionMessage.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ChatQueueWorkerConfig } from "@/types/ChatQueueWorker.js";
-import type { JsonObject } from "@/types/Json.js";
+} from "@/shared/types/SessionMessage.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ChatQueueWorkerConfig } from "@/shared/types/ChatQueueWorker.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import {
   getSharedChatQueueStore,
@@ -216,7 +216,7 @@ export class ChatQueueWorker {
    * 在单次执行期间维持“正在输入”心跳。
    *
    * 关键点（中文）
-   * - 通过 services/chat 的 dispatcher 发送动作（不经过 main bindings）
+   * - 通过 services/utils/chat 的 dispatcher 发送动作（不经过 main bindings）
    * - 先发送一次，再按固定间隔续发
    * - 发送失败不影响主执行流程（best-effort）
    */
@@ -392,7 +392,7 @@ export class ChatQueueWorker {
     // 关键点（中文）：
     // - 若 step 文本已经单独回发，则保持当前行为，不再重复发送最终 merged assistant。
     // - 若本轮没有任何 step 回发，则必须把最终 assistant 文本补发到 chat channel，
-    //   否则会出现“context message 已写入，但 chat history/实际渠道没有回复”的断链。
+    //   否则会出现“context message 已写入，但 chat history/utils/实际渠道没有回复”的断链。
     if (assistantStepDispatched || hasPersistedAssistantSteps(result.assistantMessage)) {
       return;
     }

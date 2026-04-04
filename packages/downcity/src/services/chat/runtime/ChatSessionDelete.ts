@@ -10,7 +10,7 @@
 
 import fs from "fs-extra";
 import path from "node:path";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { removeChatMetaBySessionId } from "@services/chat/runtime/ChatMetaStore.js";
 

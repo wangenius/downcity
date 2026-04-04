@@ -6,7 +6,7 @@
  * - 目录只保留 Console/UI 需要的稳定元数据，不暴露底层实现细节。
  */
 
-import type { TtsModelCatalogItem, TtsModelId } from "@/types/Tts.js";
+import type { TtsModelCatalogItem, TtsModelId } from "@/shared/types/Tts.js";
 
 /**
  * 内置 TTS 模型目录。

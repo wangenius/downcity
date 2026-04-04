@@ -9,17 +9,17 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { execa } from "execa";
-import type { AgentAuthRuntime } from "@/types/AgentHost.js";
-import type { SessionRunResult } from "@/types/SessionRun.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { AgentAuthRuntime } from "@/shared/types/AgentHost.js";
+import type { SessionRunResult } from "@/shared/types/SessionRun.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type {
   ChatSendOutputPick,
   ScriptExecutionResult,
   TaskResultValidation,
   TaskSessionRuntime,
   UserSimulatorDecision,
-} from "@/types/TaskRunner.js";
-import { withRequestContext } from "@sessions/RequestContext.js";
+} from "@/shared/types/TaskRunner.js";
+import { withRequestContext } from "@session/RequestContext.js";
 import { appendTaskRoundUserMessage } from "./TaskRunnerSession.js";
 
 /**

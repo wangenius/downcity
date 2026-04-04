@@ -7,8 +7,8 @@
  * - 本模块不处理 downcity.json 写入，也不负责 action 输入输出包装。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ChatChannelState } from "@/types/ChatRuntime.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import type { ChatChannelName } from "@services/chat/types/ChannelStatus.js";
 import { createTelegramBot } from "@services/chat/channels/telegram/Bot.js";
 import { createFeishuBot } from "@services/chat/channels/feishu/Feishu.js";

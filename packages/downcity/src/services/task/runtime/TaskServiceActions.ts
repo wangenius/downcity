@@ -7,8 +7,8 @@
  */
 
 import type { Command } from "commander";
-import type { ServiceActions } from "@/types/Service.js";
-import type { TaskListActionPayload } from "@/types/TaskService.js";
+import type { ServiceActions } from "@/shared/types/Service.js";
+import type { TaskListActionPayload } from "@/shared/types/TaskService.js";
 import type {
   TaskCreateRequest,
   TaskDeleteRequest,

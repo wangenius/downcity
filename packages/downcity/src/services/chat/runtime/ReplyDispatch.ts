@@ -6,9 +6,9 @@
  * - 仅服务 agent 执行生命周期，不覆盖手动 `chat send`。
  */
 
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ChatReplyDispatchInput, ChatReplyEffectInput } from "@/types/ChatPlugin.js";
-import type { JsonValue } from "@/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ChatReplyDispatchInput, ChatReplyEffectInput } from "@/shared/types/ChatPlugin.js";
+import type { JsonValue } from "@/shared/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";

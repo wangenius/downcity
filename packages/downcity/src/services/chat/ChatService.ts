@@ -8,11 +8,11 @@
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
  */
 
-import type { AgentState } from "@/types/AgentState.js";
+import type { AgentState } from "@/shared/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
-import type { ServiceActions } from "@/types/Service.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { ChatChannelState } from "@/types/ChatRuntime.js";
+import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import {
   createChatChannelState,
   startChatChannels,

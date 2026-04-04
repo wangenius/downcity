@@ -6,7 +6,7 @@
  * - core 不负责也不感知 skill/memory 业务状态
  */
 
-import type { ClaudeSkill } from "@/types/ClaudeSkill.js";
+import type { ClaudeSkill } from "@/shared/types/ClaudeSkill.js";
 import type {
   SessionSkillStateInternal,
   SessionSkillStateSnapshot,

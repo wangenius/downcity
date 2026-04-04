@@ -2,13 +2,13 @@
  * AgentState / ExecutionContext 公共入口桥接测试（node:test）。
  *
  * 关键点（中文）
- * - `@agent/AgentState` 应成为新的统一状态入口。
+ * - `city/runtime/agent/AgentState` 应成为新的统一状态入口。
  * - `ExecutionContext` 应直接从共享 AgentState 读取 model 与 session 能力。
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getExecutionContext, setAgentState } from "../../bin/agent/AgentState.js";
+import { getExecutionContext, setAgentState } from "../../bin/city/runtime/agent/AgentState.js";
 
 function createLoggerStub() {
   return {

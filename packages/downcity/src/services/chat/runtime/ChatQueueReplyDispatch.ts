@@ -2,12 +2,12 @@
  * ChatQueueReplyDispatch：chat queue worker 的回复分发模块。
  *
  * 关键点（中文）
- * - 收敛 direct/fallback 两类 channel 回发逻辑。
+ * - 收敛 direct/utils/fallback 两类 channel 回发逻辑。
  * - ChatQueueWorker 主类只保留“何时分发”的决策，不再承载具体发消息细节。
  */
 
-import type { Logger } from "@utils/logger/Logger.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import { sendActionByChatKey } from "./ChatkeySend.js";
 import { sendChatTextByChatKey } from "../Action.js";

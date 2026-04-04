@@ -8,14 +8,14 @@
 
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { PluginCommandContext } from "@/types/Plugin.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { PluginCommandContext } from "@/shared/types/Plugin.js";
 import type {
   VoicePluginConfig,
   VoiceTranscriberConfig,
   VoiceTranscriberInstallInput,
   VoiceTranscriberHandle,
-} from "@/types/VoicePlugin.js";
+} from "@/shared/types/VoicePlugin.js";
 import { transcribeVoiceAudio } from "@/plugins/voice/runtime/Transcriber.js";
 import {
   VOICE_MODEL_CATALOG,
@@ -31,7 +31,7 @@ import {
   resolveVoiceStrategyByModel,
 } from "@/plugins/voice/runtime/DependencyInstaller.js";
 import { resolveVoiceModelsRootDir } from "@/plugins/voice/runtime/Paths.js";
-import type { VoiceModelId } from "@/types/Voice.js";
+import type { VoiceModelId } from "@/shared/types/Voice.js";
 
 const execFileAsync = promisify(execFileCb);
 

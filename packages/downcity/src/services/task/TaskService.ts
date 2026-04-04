@@ -7,14 +7,14 @@
  * - 当前文件只保留实例骨架与 lifecycle，不再依赖旧的模块级 `taskService` 单例。
  */
 
-import type { AgentState } from "@/types/AgentState.js";
+import type { AgentState } from "@/shared/types/AgentState.js";
 import { BaseService } from "@services/BaseService.js";
-import type { ServiceActions } from "@/types/Service.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
+import type { ServiceActions } from "@/shared/types/Service.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
 import type {
   TaskCronRegisterResult,
   TaskSchedulerReloadResult,
-} from "@/types/TaskService.js";
+} from "@/shared/types/TaskService.js";
 import { TaskCronTriggerEngine } from "@services/task/runtime/CronTrigger.js";
 import { registerTaskCronJobs } from "@services/task/Scheduler.js";
 import {

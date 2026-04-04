@@ -7,9 +7,9 @@
  */
 
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { Logger } from "@utils/logger/Logger.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import {
   resolveSessionIdByChatTarget,
   resolveOrCreateSessionIdByChatTarget,
@@ -51,7 +51,7 @@ export interface ChannelSessionTargetParams {
    */
   chatType?: string;
   /**
-   * 可选 thread/topic id。
+   * 可选 thread/utils/topic id。
    */
   messageThreadId?: number;
 }

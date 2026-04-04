@@ -13,7 +13,7 @@ import path from "node:path";
 import test from "node:test";
 import { withRequestContext } from "../../bin/sessions/RequestContext.js";
 import { ChatService } from "../../bin/services/chat/ChatService.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
 
 function createRuntime(rootPath) {
   return {

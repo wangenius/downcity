@@ -5,7 +5,7 @@ import type {
   QqInboundAttachmentKind,
   QqRawInboundAttachment,
 } from "@services/chat/types/QqVoice.js";
-import type { Logger } from "@utils/logger/Logger.js";
+import type { Logger } from "@shared/utils/logger/Logger.js";
 
 /**
  * QQ 入站附件候选字段（宽松结构）。
@@ -239,7 +239,7 @@ function dedupeAttachments(items: QqIncomingAttachment[]): QqIncomingAttachment[
  *
  * 关键点（中文）
  * - 同时兼容数组字段、单对象字段、以及 JSON 字符串字段。
- * - 返回值已做去重，可直接用于后续下载/转写流程。
+ * - 返回值已做去重，可直接用于后续下载/utils/转写流程。
  */
 export function extractQqIncomingAttachments(
   payload: QqVoiceMessagePayload,

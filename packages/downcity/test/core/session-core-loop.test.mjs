@@ -11,7 +11,7 @@ import test from "node:test";
 import {
   evaluateSessionLoopDecision,
   shouldContinueForTailMergedUserMessages,
-} from "../../bin/sessions/runtime/SessionCoreLoop.js";
+} from "../../bin/sessions@/city/runtime/console/SessionCoreLoop.js";
 
 test("evaluateSessionLoopDecision prefers incomplete recovery over other branches", () => {
   const decision = evaluateSessionLoopDecision({

@@ -6,7 +6,7 @@
  * - 这些逻辑与 lane 调度主流程正交，拆出后让 ChatQueueWorker 更聚焦。
  */
 
-import type { ChatQueueWorkerConfig } from "@/types/ChatQueueWorker.js";
+import type { ChatQueueWorkerConfig } from "@/shared/types/ChatQueueWorker.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import type { ChatQueueStorePort } from "./ChatQueueStore.js";
 

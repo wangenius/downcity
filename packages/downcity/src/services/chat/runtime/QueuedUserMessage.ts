@@ -7,7 +7,7 @@
  * - 供 chat 入站执行与其他复用入口共用，避免重复实现。
  */
 
-import type { QueuedUserInfoInput } from "@/types/ChatPromptContext.js";
+import type { QueuedUserInfoInput } from "@/shared/types/ChatPromptContext.js";
 
 function normalizeInfoValue(value: unknown): string {
   const text = String(value ?? "").replace(/\r?\n/g, " ").trim();

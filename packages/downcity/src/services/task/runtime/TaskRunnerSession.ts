@@ -8,22 +8,22 @@
  */
 
 import path from "node:path";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { SessionRunResult } from "@/types/SessionRun.js";
-import type { TaskSessionRuntime } from "@/types/TaskRunner.js";
-import { SessionCore } from "@sessions/SessionCore.js";
-import { drainDeferredPersistedUserMessages } from "@sessions/RequestContext.js";
-import { AcpSessionRuntime } from "@sessions/acp/AcpSessionRuntime.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { SessionRunResult } from "@/shared/types/SessionRun.js";
+import type { TaskSessionRuntime } from "@/shared/types/TaskRunner.js";
+import { SessionCore } from "@session/SessionCore.js";
+import { drainDeferredPersistedUserMessages } from "@session/RequestContext.js";
+import { AcpSessionRuntime } from "@session/acp/AcpSessionRuntime.js";
 import {
   readEnabledSessionAgentConfig,
   resolveAcpLaunchConfig,
-} from "@sessions/acp/AcpSessionSupport.js";
-import { FilePersistor } from "@sessions/runtime/FilePersistor.js";
-import { SummaryCompactor } from "@sessions/runtime/SummaryCompactor.js";
-import { RuntimeOrchestrator } from "@sessions/runtime/RuntimeOrchestrator.js";
-import { PromptSystem } from "@sessions/prompts/system/PromptSystem.js";
-import { shellTools } from "@sessions/tools/shell/Tool.js";
-import type { SessionRuntimeLike } from "@/types/SessionRuntime.js";
+} from "@session/acp/AcpSessionSupport.js";
+import { FilePersistor } from "@session/runtime/FilePersistor.js";
+import { SummaryCompactor } from "@session/runtime/SummaryCompactor.js";
+import { RuntimeOrchestrator } from "@session/runtime/RuntimeOrchestrator.js";
+import { PromptSystem } from "@session/prompts/system/PromptSystem.js";
+import { shellTools } from "@session/tools/shell/Tool.js";
+import type { SessionRuntimeLike } from "@/shared/types/SessionRuntime.js";
 
 /**
  * 把 task round 的 user query 落盘到对应 run context。

@@ -6,7 +6,7 @@
  * - 判定统一走“用户角色 + 权限集合”，群聊只看发言用户自身权限。
  */
 
-import type { DowncityConfig } from "@/types/DowncityConfig.js";
+import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,
@@ -15,8 +15,8 @@ import type {
   ChatAuthorizationPermission,
   ChatAuthorizationRole,
   ChatChannelAuthorizationConfig,
-} from "@/types/AuthPlugin.js";
-import { createDefaultChatAuthorizationRoles } from "@/types/AuthPlugin.js";
+} from "@/shared/types/AuthPlugin.js";
+import { createDefaultChatAuthorizationRoles } from "@/shared/types/AuthPlugin.js";
 import { readChatAuthorizationConfigSync } from "@/plugins/auth/runtime/AuthorizationConfig.js";
 
 function normalizeText(value: unknown): string | undefined {

@@ -12,11 +12,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { Hono } from "hono";
-import { AuthService } from "../../bin/main/auth/AuthService.js";
-import { AuthStore } from "../../bin/main/auth/AuthStore.js";
-import { INTERNAL_RUNTIME_AUTH_ENV_KEY } from "../../bin/main/auth/InternalRuntimeAuth.js";
-import { createRouteAuthGuardMiddleware } from "../../bin/main/auth/RoutePolicy.js";
-import { hashPassword } from "../../bin/main/auth/PasswordHasher.js";
+import { AuthService } from "../../bin/city/runtime/auth/AuthService.js";
+import { AuthStore } from "../../bin/city/runtime/auth/AuthStore.js";
+import { INTERNAL_RUNTIME_AUTH_ENV_KEY } from "../../bin/city/runtime/auth/InternalRuntimeAuth.js";
+import { createRouteAuthGuardMiddleware } from "../../bin/city/runtime/auth/RoutePolicy.js";
+import { hashPassword } from "../../bin/city/runtime/auth/PasswordHasher.js";
 
 function createTestHarness() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-auth-policy-"));

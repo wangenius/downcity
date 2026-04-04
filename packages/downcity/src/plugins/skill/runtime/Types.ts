@@ -1,4 +1,4 @@
-import type { ClaudeSkill } from "@/types/ClaudeSkill.js";
+import type { ClaudeSkill } from "@/shared/types/ClaudeSkill.js";
 
 /**
  * Session skills state 对外快照。

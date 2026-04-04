@@ -12,12 +12,12 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { ChatService } from "../../bin/services/chat/ChatService.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
+} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 const CHAT_KEY = "ctx_service_action_schedule";

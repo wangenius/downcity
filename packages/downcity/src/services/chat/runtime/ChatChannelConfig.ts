@@ -9,15 +9,15 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonObject, JsonValue } from "@/types/Json.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { StoredChannelAccount } from "@/types/Store.js";
+import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { StoredChannelAccount } from "@/shared/types/Store.js";
 import type {
   ChatChannelName,
   ChatChannelStateSnapshot,
 } from "@services/chat/types/ChannelStatus.js";
 import type { ChatChannelConfigurationField } from "@services/chat/types/ChannelConfiguration.js";
-import type { ChatChannelState } from "@/types/ChatRuntime.js";
+import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import {
   getChatChannelConfiguration,
   listChatChannelConfigurations,

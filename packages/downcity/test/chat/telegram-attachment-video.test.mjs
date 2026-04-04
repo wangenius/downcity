@@ -14,7 +14,7 @@ import {
   parseTelegramAttachments,
 } from "../../bin/services/chat/channels/telegram/Shared.js";
 import { TelegramApiClient } from "../../bin/services/chat/channels/telegram/ApiClient.js";
-import { parseDirectDispatchAssistantText } from "../../bin/services/chat/runtime/DirectDispatchParser.js";
+import { parseDirectDispatchAssistantText } from "../../bin/services/chat@/city/runtime/console/DirectDispatchParser.js";
 
 test("parseTelegramAttachments supports video type", () => {
   const parsed = parseTelegramAttachments(

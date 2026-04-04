@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { discoverProviderModels } from "../../bin/main/commands/ModelSupport.js";
+import { discoverProviderModels } from "../../bin/city/modules/cli/ModelSupport.js";
 
 function resolveRequestUrl(input) {
   if (typeof input === "string") return input;

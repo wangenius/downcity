@@ -32,11 +32,11 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
-import type { ExecutionContext } from "@/types/ExecutionContext.js";
-import type { JsonObject } from "@/types/Json.js";
+import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
-import type { QQConfig, QQMessageData } from "@/types/QqChannel.js";
-import { EventType } from "@/types/QqChannel.js";
+import type { QQConfig, QQMessageData } from "@/shared/types/QqChannel.js";
+import { EventType } from "@/shared/types/QqChannel.js";
 
 /**
  * QQ 平台适配器。

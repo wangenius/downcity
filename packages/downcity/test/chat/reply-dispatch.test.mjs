@@ -11,7 +11,7 @@ import test from "node:test";
 import {
   emitChatReplyEffect,
   prepareChatReplyText,
-} from "../../bin/services/chat/runtime/ReplyDispatch.js";
+} from "../../bin/services/chat@/city/runtime/console/ReplyDispatch.js";
 
 test("prepareChatReplyText returns pipeline-transformed text", async () => {
   const text = await prepareChatReplyText({

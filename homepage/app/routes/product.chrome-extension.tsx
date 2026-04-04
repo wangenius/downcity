@@ -27,7 +27,7 @@ const PAGE = {
     ],
     factsTitle: "事实对齐",
     facts: [
-      "源码目录：chrome-extension/",
+      "源码目录：products/chrome-extension/",
       "技术形态：Chrome Extension Manifest V3",
       "交互能力：选区消息按钮 + Cmd/Ctrl + U（页面内） + 极简 popup（输入 / 发送 / 本页历史 / 设置）",
     ],
@@ -58,7 +58,7 @@ const PAGE = {
     ],
     factsTitle: "Facts",
     facts: [
-      "Source directory: chrome-extension/",
+      "Source directory: products/chrome-extension/",
       "Technical form: Chrome Extension Manifest V3",
       "Interaction capability: selection message button + Cmd/Ctrl + U inline + minimal popup (input / send / page history / settings)",
     ],

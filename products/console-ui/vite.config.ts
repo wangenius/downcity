@@ -37,7 +37,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../packages/downcity/public",
+    outDir: "../../packages/downcity/public",
     emptyOutDir: true,
     sourcemap: false,
     rollupOptions: {

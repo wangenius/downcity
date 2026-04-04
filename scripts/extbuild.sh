@@ -3,8 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-EXT_PACKAGE_JSON="$ROOT_DIR/chrome-extension/package.json"
-EXT_MANIFEST_JSON="$ROOT_DIR/chrome-extension/public/manifest.json"
+EXT_PACKAGE_JSON="$ROOT_DIR/products/chrome-extension/package.json"
+EXT_MANIFEST_JSON="$ROOT_DIR/products/chrome-extension/public/manifest.json"
 
 node --input-type=module - "$EXT_PACKAGE_JSON" "$EXT_MANIFEST_JSON" <<'NODE'
 import fs from 'node:fs';
@@ -50,11 +50,11 @@ NODE
 # 关键点（中文）：
 # 1) 该脚本对应 extension 的统一 build 入口：先自动提升 patch 版本，再执行类型检查与打包。
 # 2) 真正构建命令只放在这个脚本里，package.json 仅做脚本转发。
-cd "$ROOT_DIR/chrome-extension"
+cd "$ROOT_DIR/products/chrome-extension"
 npx tsc --noEmit
 npx vite build
 
-node --input-type=module - "$ROOT_DIR/chrome-extension/dist/content-script.js" <<'NODE'
+node --input-type=module - "$ROOT_DIR/products/chrome-extension/dist/content-script.js" <<'NODE'
 import fs from 'node:fs';
 
 const bundleFile = process.argv[2];

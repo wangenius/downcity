@@ -1,9 +1,9 @@
 packages:
-  - console-ui
+  - products/console-ui
   - homepage
   - packages/downcity
   - packages/downcity-ui
-  - chrome-extension
+  - products/chrome-extension
   - examples/*
 
 onlyBuiltDependencies:

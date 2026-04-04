@@ -4,9 +4,9 @@
   "version": "0.2.50",
   "type": "module",
   "scripts": {
-    "dev": "bash ../scripts/extdev.sh",
-    "build": "bash ../scripts/extbuild.sh",
-    "build:release": "bash ../scripts/extbuild.sh"
+    "dev": "bash ../../scripts/extdev.sh",
+    "build": "bash ../../scripts/extbuild.sh",
+    "build:release": "bash ../../scripts/extbuild.sh"
   },
   "dependencies": {
     "react": "^18.3.1",

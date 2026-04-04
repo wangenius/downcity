@@ -26,7 +26,7 @@
 ## 目录结构
 
 ```txt
-chrome-extension/
+products/chrome-extension/
 ├─ public/
 │  └─ manifest.json
 ├─ src/
@@ -61,12 +61,12 @@ chrome-extension/
 ## 本地开发
 
 ```bash
-cd chrome-extension
+cd products/chrome-extension
 npm install
 npm run dev
 ```
 
-`npm run dev` 会持续构建到 `chrome-extension/dist`，其中会同时产出：
+`npm run dev` 会持续构建到 `products/chrome-extension/dist`，其中会同时产出：
 
 - Extension Popup 页面
 - options 页面
@@ -94,7 +94,7 @@ npm run build:extension
 1. 打开 `chrome://extensions`
 2. 打开右上角 `开发者模式`
 3. 点击 `加载已解压的扩展程序`
-4. 选择 `chrome-extension/dist` 目录
+4. 选择 `products/chrome-extension/dist` 目录
 
 ## 使用说明
 

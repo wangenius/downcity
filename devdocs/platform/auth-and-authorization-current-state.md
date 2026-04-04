@@ -210,10 +210,10 @@ console-ui 现在已经不再是假定“控制面天然可信”。
 
 位置：
 
-- `console-ui/src/lib/dashboard-api.ts`
-- `console-ui/src/hooks/useConsoleDashboard.ts`
-- `console-ui/src/hooks/dashboard/useDashboardRefresh.ts`
-- `console-ui/src/components/dashboard/AuthLoginCard.tsx`
+- `products/console-ui/src/lib/dashboard-api.ts`
+- `products/console-ui/src/hooks/useConsoleDashboard.ts`
+- `products/console-ui/src/hooks/dashboard/useDashboardRefresh.ts`
+- `products/console-ui/src/components/dashboard/AuthLoginCard.tsx`
 
 ---
 

@@ -402,11 +402,11 @@ V1 默认角色：
 
 ### 7.3 客户端调用侧
 
-1. [console-ui/src/lib/dashboard-api.ts](/Users/wangenius/Documents/github/downcity/console-ui/src/lib/dashboard-api.ts)
-2. [chrome-extension/src/services/http.ts](/Users/wangenius/Documents/github/downcity/chrome-extension/src/services/http.ts)
-3. [chrome-extension/src/services/storage.ts](/Users/wangenius/Documents/github/downcity/chrome-extension/src/services/storage.ts)
-4. [chrome-extension/src/types/extension.ts](/Users/wangenius/Documents/github/downcity/chrome-extension/src/types/extension.ts)
-5. [chrome-extension/src/options/App.tsx](/Users/wangenius/Documents/github/downcity/chrome-extension/src/options/App.tsx)
+1. [products/console-ui/src/lib/dashboard-api.ts](/Users/wangenius/Documents/github/downcity/products/console-ui/src/lib/dashboard-api.ts)
+2. [products/chrome-extension/src/services/http.ts](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/services/http.ts)
+3. [products/chrome-extension/src/services/storage.ts](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/services/storage.ts)
+4. [products/chrome-extension/src/types/extension.ts](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/types/extension.ts)
+5. [products/chrome-extension/src/options/App.tsx](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/options/App.tsx)
 
 ### 7.4 CLI
 

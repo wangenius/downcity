@@ -3,7 +3,7 @@
 当前仓库包含两层与 Console UI 相关的实现：
 
 - packages/downcity/：CLI、console daemon、agent runtime、API 网关。
-- console-ui/：独立前端包（Vite + React），构建输出到 packages/downcity/public。
+- products/console-ui/：独立前端包（Vite + React），构建输出到 packages/downcity/public。
 
 设计目标：
 
@@ -15,7 +15,7 @@
 
 开发环境
 
-1. 在 console-ui/ 开发 React（vite dev 热更新）。
+1. 在 products/console-ui/ 开发 React（vite dev 热更新）。
 2. API 仍走 console ui 网关（或 Vite proxy 到网关），请求 /api/*。
 3. 目标是快速迭代 UI，不依赖每次打包 package。
 
@@ -34,10 +34,10 @@
 
 # 2.1 前端包
 
-- console-ui/index.html：前端入口模板。
-- console-ui/src/main.tsx：React 启动入口。
-- console-ui/src/App.tsx：页面主组件（当前为最小可运行版本）。
-- console-ui/vite.config.ts：构建配置，outDir 指向 ../packages/downcity/public。
+- products/console-ui/index.html：前端入口模板。
+- products/console-ui/src/main.tsx：React 启动入口。
+- products/console-ui/src/App.tsx：页面主组件（当前为最小可运行版本）。
+- products/console-ui/vite.config.ts：构建配置，outDir 指向 ../../packages/downcity/public。
 
 # 2.2 后端网关
 

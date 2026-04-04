@@ -12,13 +12,13 @@ const PAGE = {
         id: "console-ui",
         title: "Console UI",
         desc: "在浏览器里统一管理 Agent、上下文、任务、模型和渠道状态。",
-        source: "console-ui/",
+        source: "products/console-ui/",
       },
       {
         id: "chrome-extension",
         title: "Chrome Extension",
         desc: "在任意网页一键把内容投递给 Agent，减少复制粘贴和切换成本。",
-        source: "chrome-extension/",
+        source: "products/chrome-extension/",
       },
       {
         id: "sdk",
@@ -35,8 +35,8 @@ const PAGE = {
     ],
     factsTitle: "产品事实",
     facts: [
-      "Console UI：独立前端包，目录为 console-ui/。",
-      "Chrome Extension：Manifest V3 插件，目录为 chrome-extension/。",
+      "Console UI：独立前端包，目录为 products/console-ui/。",
+      "Chrome Extension：Manifest V3 插件，目录为 products/chrome-extension/。",
       "Downcity SDK：核心 runtime 与命令入口位于 packages/downcity/。",
       "Downcity UI SDK：React + Tailwind 组件包目录为 packages/downcity-ui/。",
     ],
@@ -51,13 +51,13 @@ const PAGE = {
         id: "console-ui",
         title: "Console UI",
         desc: "Manage agents, contexts, tasks, models, and channels from one browser workspace.",
-        source: "console-ui/",
+        source: "products/console-ui/",
       },
       {
         id: "chrome-extension",
         title: "Chrome Extension",
         desc: "Send web content to your agent directly from any page with minimal context switching.",
-        source: "chrome-extension/",
+        source: "products/chrome-extension/",
       },
       {
         id: "sdk",
@@ -74,8 +74,8 @@ const PAGE = {
     ],
     factsTitle: "Product Facts",
     facts: [
-      "Console UI is a dedicated frontend package under console-ui/.",
-      "Chrome Extension is a Manifest V3 extension under chrome-extension/.",
+      "Console UI is a dedicated frontend package under products/console-ui/.",
+      "Chrome Extension is a Manifest V3 extension under products/chrome-extension/.",
       "Downcity SDK core runtime and command entry are in packages/downcity/.",
       "Downcity UI SDK is the React + Tailwind component package under packages/downcity-ui/.",
     ],

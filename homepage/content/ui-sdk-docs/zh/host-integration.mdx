@@ -63,8 +63,8 @@ console-ui
 
 - `packages/downcity/src/console/ui/ConsoleUIGateway.ts`
 - `packages/downcity/src/types/ConsoleUI.ts`
-- `console-ui/src/lib/dashboard-api.ts`
-- `console-ui/src/hooks/useConsoleDashboard.ts`
+- `products/console-ui/src/lib/dashboard-api.ts`
+- `products/console-ui/src/hooks/useConsoleDashboard.ts`
 
 这说明正确方向已经不是“组件直连主包源码”，而是：
 
@@ -278,4 +278,3 @@ function AgentWorkbenchCardContainer(props: { agentId: string }) {
 - 通过稳定的 `snapshot + intent` 契约连接两者
 
 如果后面你要继续推进，我建议下一步直接做 `AgentWorkbenchCard + AgentInspectorSheet` 这一组，这是最贴近当前 `downcity` 运行时场景的一套组件。
-

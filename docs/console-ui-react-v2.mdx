@@ -37,7 +37,7 @@
 ```text
 downcity/
 ├─ packages/downcity/                         # 现有 CLI/console/agent runtime
-├─ console-ui/                      # 新：Vite + React 应用
+├─ products/console-ui/             # 新：Vite + React 应用
 │  ├─ src/
 │  ├─ public/
 │  ├─ index.html
@@ -72,7 +72,7 @@ downcity/
 city console ui start 时：
 
 1. 启动 ConsoleUIGateway。
-2. Gateway 从约定路径读取 console-ui/dist：index.htmlassets/*
+2. Gateway 从约定路径读取 products/console-ui/dist：index.htmlassets/*
 3. 浏览器访问 UI 端口时，返回 React 构建产物。
 4. React 前端通过 /api/*（同域）调用当前已有接口。
 
@@ -115,7 +115,7 @@ city console ui start 时：
 # 7.1 ConsoleUIGateway
 
 - 移除对 packages/downcity/public 的硬编码依赖。
-- 改为读取配置化路径（默认 ./console-ui/dist）。
+- 改为读取配置化路径（默认 ./products/console-ui/dist）。
 - 支持 SPA fallback（任意前端路由返回 index.html）。
 
 # 7.2 CLI 命令
@@ -142,7 +142,7 @@ city console ui start 时：
 # 8.2 生产构建
 
 1. pnpm -w --filter console-ui build
-2. 产物落地到 console-ui/dist
+2. 产物落地到 products/console-ui/dist
 3. city console ui start 直接托管该目录
 
 ---
@@ -153,7 +153,7 @@ city console ui start 时：
 
 - 新建 console-ui 与 console-ui-kit 包。
 - 建立 workspace、tsconfig、lint/build 脚手架。
-- Gateway 支持读取 console-ui/dist。
+- Gateway 支持读取 products/console-ui/dist。
 
 # Phase 2：功能平移（2-4 天）
 
@@ -197,7 +197,7 @@ city console ui start 时：
 
 1. 新建 console-ui（Vite + React + TS）。
 2. 新建 packages/console-ui-kit（Button/Panel/Badge 三个最小组件）。
-3. 改 ConsoleUIGateway：静态目录改指向 console-ui/dist。
+3. 改 ConsoleUIGateway：静态目录改指向 products/console-ui/dist。
 4. 命令维持 city console ui start|stop|status 不变。
 
 这样 1-2 天内就能把“架构方向”定住，后续迭代只在 React 包里推进。

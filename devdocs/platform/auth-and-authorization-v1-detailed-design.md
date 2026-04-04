@@ -733,20 +733,20 @@ packages/downcity/src/main/auth/
 
 1. `executeConsoleUiShellCommand` 需要 `shell.execute`
 
-## 8.7 `console-ui/src/lib/dashboard-api.ts`
+## 8.7 `products/console-ui/src/lib/dashboard-api.ts`
 
 改造：
 
 1. 统一附加 Bearer Token
 2. 支持 `401` 时跳转登录态处理
 
-## 8.8 `chrome-extension/src/services/storage.ts`
+## 8.8 `products/chrome-extension/src/services/storage.ts`
 
 改造：
 
 1. 增加 `accessToken`
 
-## 8.9 `chrome-extension/src/services/http.ts`
+## 8.9 `products/chrome-extension/src/services/http.ts`
 
 改造：
 

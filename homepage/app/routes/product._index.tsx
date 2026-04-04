@@ -15,13 +15,13 @@ const PAGE = {
         id: "console-ui",
         title: "Console UI",
         desc: "浏览器里的总控面板，用来观察多 Agent 的上下文、任务和状态。",
-        source: "console-ui/",
+        source: "products/console-ui/",
       },
       {
         id: "chrome-extension",
         title: "Chrome Extension",
         desc: "把网页内容直接投递给 Agent，缩短内容采集与执行之间的距离。",
-        source: "chrome-extension/",
+        source: "products/chrome-extension/",
       },
       {
         id: "sdk",
@@ -38,8 +38,8 @@ const PAGE = {
     ],
     factsTitle: "产品事实",
     facts: [
-      "Console UI 是独立前端包，目录为 console-ui/。",
-      "Chrome Extension 基于 Manifest V3，目录为 chrome-extension/。",
+      "Console UI 是独立前端包，目录为 products/console-ui/。",
+      "Chrome Extension 基于 Manifest V3，目录为 products/chrome-extension/。",
       "SDK 的核心 runtime 与命令入口位于 packages/downcity/。",
       "UI SDK 当前以 console-ui-kit 方向沉淀组件能力。",
     ],
@@ -54,13 +54,13 @@ const PAGE = {
         id: "console-ui",
         title: "Console UI",
         desc: "A browser control room for observing multi-agent context, task flow, and state.",
-        source: "console-ui/",
+        source: "products/console-ui/",
       },
       {
         id: "chrome-extension",
         title: "Chrome Extension",
         desc: "Send web content straight into an agent so collection and execution stay close together.",
-        source: "chrome-extension/",
+        source: "products/chrome-extension/",
       },
       {
         id: "sdk",
@@ -77,8 +77,8 @@ const PAGE = {
     ],
     factsTitle: "Product Facts",
     facts: [
-      "Console UI is a dedicated frontend package in console-ui/.",
-      "Chrome Extension is a Manifest V3 extension in chrome-extension/.",
+      "Console UI is a dedicated frontend package in products/console-ui/.",
+      "Chrome Extension is a Manifest V3 extension in products/chrome-extension/.",
       "The core runtime and command entry live in packages/downcity/.",
       "UI SDK direction is currently documented as console-ui-kit extraction.",
     ],

@@ -40,7 +40,7 @@ Console UI 把明文 token 存在浏览器本地存储里。
 
 位置：
 
-- `console-ui/src/lib/dashboard-api.ts`
+- `products/console-ui/src/lib/dashboard-api.ts`
 
 规则：
 

@@ -499,11 +499,11 @@ sequenceDiagram
 16. [packages/downcity/src/main/commands/IndexAgentCommand.ts](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/commands/IndexAgentCommand.ts)
 17. [packages/downcity/src/main/commands/Run.ts](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/commands/Run.ts)
 18. [packages/downcity/src/main/commands/UI.ts](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/commands/UI.ts)
-19. [console-ui/src/lib/dashboard-api.ts](/Users/wangenius/Documents/github/downcity/console-ui/src/lib/dashboard-api.ts)
-20. [chrome-extension/src/services/http.ts](/Users/wangenius/Documents/github/downcity/chrome-extension/src/services/http.ts)
-21. [chrome-extension/src/services/storage.ts](/Users/wangenius/Documents/github/downcity/chrome-extension/src/services/storage.ts)
-22. [chrome-extension/src/types/extension.ts](/Users/wangenius/Documents/github/downcity/chrome-extension/src/types/extension.ts)
-23. [chrome-extension/src/options/App.tsx](/Users/wangenius/Documents/github/downcity/chrome-extension/src/options/App.tsx)
+19. [products/console-ui/src/lib/dashboard-api.ts](/Users/wangenius/Documents/github/downcity/products/console-ui/src/lib/dashboard-api.ts)
+20. [products/chrome-extension/src/services/http.ts](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/services/http.ts)
+21. [products/chrome-extension/src/services/storage.ts](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/services/storage.ts)
+22. [products/chrome-extension/src/types/extension.ts](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/types/extension.ts)
+23. [products/chrome-extension/src/options/App.tsx](/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/options/App.tsx)
 
 ### 11.4 计划新增命令
 

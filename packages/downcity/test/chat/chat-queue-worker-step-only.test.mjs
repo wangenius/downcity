@@ -171,6 +171,162 @@ test("ChatQueueWorker only dispatches step text when assistant steps already exi
   assert.deepEqual(sentTexts, ["step-visible-text"]);
 });
 
+test("ChatQueueWorker dispatches step text through channel path when direct step send cannot deliver", { concurrency: false }, async (t) => {
+  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-chat-step-fallback-"));
+  const laneKey = `telegram-chat-step-fallback-${Date.now()}`;
+  const previous = getChatSender(TELEGRAM_CHANNEL);
+  const sentPayloads = [];
+  const context = {
+    rootPath,
+    env: {},
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
+    config: {
+      services: {
+        chat: {},
+      },
+    },
+    plugins: {
+      async pipeline(_pointName, value) {
+        return value;
+      },
+      async effect() {},
+    },
+    session: {
+      get(sessionId) {
+        return {
+          sessionId,
+          async run(params) {
+            if (typeof params.onAssistantStepCallback === "function") {
+              await params.onAssistantStepCallback({
+                text: "step-visible-text",
+                stepIndex: 1,
+              });
+            }
+            return {
+              success: true,
+              assistantMessage: {
+                id: "a:test:final",
+                role: "assistant",
+                metadata: {
+                  v: 1,
+                  ts: Date.now(),
+                  sessionId,
+                },
+                parts: [{ type: "text", text: "final-should-not-send" }],
+              },
+            };
+          },
+          async appendUserMessage() {},
+          async appendAssistantMessage() {},
+          clearExecutor() {},
+          getExecutor() {
+            return null;
+          },
+          getHistoryComposer() {
+            return null;
+          },
+          afterSessionUpdatedAsync() {
+            return Promise.resolve();
+          },
+          isExecuting() {
+            return false;
+          },
+        };
+      },
+    },
+    logger: {
+      warn() {},
+    },
+  };
+
+  clearChatQueueLane(laneKey);
+  registerChatSender(TELEGRAM_CHANNEL, {
+    async sendText(payload) {
+      sentPayloads.push(payload);
+      if (payload.replyToMessage === true && payload.messageId === "3101") {
+        return { success: true };
+      }
+      return { success: false, error: "step direct send requires reply context" };
+    },
+  });
+
+  const worker = new ChatQueueWorker({
+    logger: {
+      info() {},
+      warn() {},
+      error() {},
+      debug() {},
+    },
+    context,
+    config: {
+      maxConcurrency: 1,
+      mergeDebounceMs: 0,
+      mergeMaxWaitMs: 0,
+    },
+  });
+
+  t.after(async () => {
+    worker.stop();
+    clearChatQueueLane(laneKey);
+    if (previous) {
+      registerChatSender(TELEGRAM_CHANNEL, previous);
+    } else {
+      unregisterChatSender(TELEGRAM_CHANNEL);
+    }
+    await fs.rm(rootPath, { recursive: true, force: true });
+  });
+
+  await upsertChatMetaBySessionId({
+    context,
+    sessionId: laneKey,
+    channel: TELEGRAM_CHANNEL,
+    chatId: "step-fallback-chat",
+  });
+
+  worker.start();
+  enqueueChatQueue({
+    kind: "exec",
+    channel: TELEGRAM_CHANNEL,
+    targetId: "step-fallback-chat",
+    sessionId: laneKey,
+    text: "run once",
+    messageId: "3101",
+  });
+
+  await waitFor(() =>
+    sentPayloads.some((payload) => String(payload.text || "") === "step-visible-text" && payload.replyToMessage === true),
+  );
+  await sleep(120);
+
+  assert.deepEqual(
+    sentPayloads.map((payload) => ({
+      text: String(payload.text || ""),
+      replyToMessage: payload.replyToMessage === true,
+      messageId: String(payload.messageId || ""),
+    })),
+    [
+      {
+        text: "step-visible-text",
+        replyToMessage: false,
+        messageId: "",
+      },
+      {
+        text: "step-visible-text",
+        replyToMessage: true,
+        messageId: "3101",
+      },
+    ],
+  );
+});
+
 test("ChatQueueWorker dispatches final assistant text when no assistant step was emitted", { concurrency: false }, async (t) => {
   const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-chat-final-send-"));
   const laneKey = `telegram-chat-final-send-${Date.now()}`;

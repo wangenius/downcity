@@ -10,6 +10,7 @@ import type { LanguageModel, Tool } from "ai";
 import type { Logger } from "@shared/utils/logger/Logger.js";
 import { LocalSessionCore } from "@session/executors/local/LocalSessionCore.js";
 import { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
+import { SessionExecutionComposer } from "@session/composer/execution/SessionExecutionComposer.js";
 import { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 import { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
 import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
@@ -45,6 +46,15 @@ type LocalSessionExecutorOptions = {
    * 获取当前可用工具集合。
    */
   getTools: () => Record<string, Tool>;
+
+  /**
+   * 可选自定义 execution composer。
+   *
+   * 关键点（中文）
+   * - 允许 chat/task 等上层在实例化 Session 时注入专用 composer。
+   * - 未提供时回退到默认 `LocalSessionExecutionComposer`。
+   */
+  executionComposer?: SessionExecutionComposer;
 };
 
 /**
@@ -60,10 +70,12 @@ export class LocalSessionExecutor {
       historyComposer: options.historyComposer,
       compactionComposer: options.compactionComposer,
       systemComposer: options.systemComposer,
-      executionComposer: new LocalSessionExecutionComposer({
-        sessionId: options.historyComposer.sessionId,
-        getTools: options.getTools,
-      }),
+      executionComposer:
+        options.executionComposer ||
+        new LocalSessionExecutionComposer({
+          sessionId: options.historyComposer.sessionId,
+          getTools: options.getTools,
+        }),
     });
   }
 

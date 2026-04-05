@@ -21,6 +21,7 @@ import {
   getConsoleRootDirPath,
 } from "@/main/city/runtime/CityPaths.js";
 import { ConsoleStore } from "@shared/utils/store/index.js";
+import { emitCliBlock, emitCliList } from "./CliReporter.js";
 
 type InitProviderChoice = { title: string; value: LlmProviderType };
 
@@ -119,11 +120,17 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   const baseUrl = String(response.baseUrl || "").trim();
 
   if (!apiKey) {
-    console.log("❌ API Key is required");
+    emitCliBlock({
+      tone: "error",
+      title: "API key is required",
+    });
     return;
   }
   if (!modelName) {
-    console.log("❌ model name is required");
+    emitCliBlock({
+      tone: "error",
+      title: "Model name is required",
+    });
     return;
   }
 
@@ -151,8 +158,35 @@ export async function consoleInitCommand(options?: { force?: boolean }): Promise
   } finally {
     modelStore.close();
   }
-  console.log("✅ Saved console global settings into ~/.downcity/downcity.db (encrypted)");
-  console.log("✅ Initialized ~/.downcity/downcity.db model store");
+  emitCliBlock({
+    tone: "success",
+    title: "Console initialized",
+    summary: providerType,
+    facts: [
+      {
+        label: "Model",
+        value: modelName,
+      },
+      ...(baseUrl
+        ? [
+            {
+              label: "Base URL",
+              value: baseUrl,
+            },
+          ]
+        : []),
+    ],
+    note: "配置已写入 ~/.downcity/downcity.db。",
+  });
+  emitCliList({
+    tone: "accent",
+    title: "Created",
+    items: [
+      { title: "encrypted console settings" },
+      { title: "global model store" },
+      { title: "downcity schema" },
+    ],
+  });
 
   // 关键点（中文）：skills 仅使用 `~/.agents/skills`，不做 built-in / claude 自动同步。
 }

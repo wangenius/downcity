@@ -27,6 +27,7 @@ import type {
   ConsoleRuntimeMeta,
   ConsoleRuntimeStatus,
 } from "@/shared/types/Console.js";
+import { emitCliBlock } from "./CliReporter.js";
 
 const DEFAULT_CONSOLE_HOST = "127.0.0.1";
 const DEFAULT_CONSOLE_PORT = 5315;
@@ -265,8 +266,18 @@ export async function runConsoleRuntimeCommand(
   await gateway.start({ host, port });
 
   const visibleHost = normalizeHost(host);
-  console.log(`🌐 Console started: http://${visibleHost}:${port}`);
-  console.log("📌 单个 Console 实例可切换查看多个已运行 agent。");
+  emitCliBlock({
+    tone: "success",
+    title: "Console started",
+    summary: "foreground",
+    facts: [
+      {
+        label: "URL",
+        value: `http://${visibleHost}:${port}`,
+      },
+    ],
+    note: "单个 Console 实例可切换查看多个已运行 agent。",
+  });
 
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`\nReceived ${signal}, stopping console...`);
@@ -297,10 +308,18 @@ export async function startConsoleCommand(params: {
 
   const status = await getConsoleRuntimeStatus();
   if (status.running) {
-    console.log("ℹ️  Console is already running");
-    console.log(`   pid: ${status.pid}`);
-    if (status.url) console.log(`   url: ${status.url}`);
-    console.log(`   log: ${status.logPath}`);
+    emitCliBlock({
+      tone: "info",
+      title: "Console already running",
+      facts: status.url
+        ? [
+            {
+              label: "URL",
+              value: status.url,
+            },
+          ]
+        : [],
+    });
     return;
   }
 
@@ -309,10 +328,16 @@ export async function startConsoleCommand(params: {
     includeUi: true,
   });
   for (const item of sweep.stopped) {
-    console.log(`⚠️  cleaned orphan Console process: pid=${item.pid}`);
+    emitCliBlock({
+      tone: "warning",
+      title: "Orphan Console process cleaned",
+    });
   }
   for (const item of sweep.alive) {
-    console.log(`⚠️  orphan Console process is still alive: pid=${item.pid}`);
+    emitCliBlock({
+      tone: "warning",
+      title: "Orphan Console process still alive",
+    });
   }
 
   const host = String(params.options?.host || DEFAULT_CONSOLE_HOST).trim() || DEFAULT_CONSOLE_HOST;
@@ -369,10 +394,16 @@ export async function startConsoleCommand(params: {
     );
   }
 
-  console.log("✅ Console started");
-  console.log(`   pid: ${child.pid}`);
-  console.log(`   url: http://${normalizeHost(host)}:${port}`);
-  console.log(`   log: ${logPath}`);
+  emitCliBlock({
+    tone: "success",
+    title: "Console started",
+    facts: [
+      {
+        label: "URL",
+        value: `http://${normalizeHost(host)}:${port}`,
+      },
+    ],
+  });
 }
 
 /**
@@ -405,20 +436,23 @@ export async function stopConsoleCommand(params?: {
     });
     if (sweep.stopped.length > 0 || sweep.alive.length > 0) {
       for (const item of sweep.stopped) {
-        console.log(`✅ orphan Console stopped`);
-        console.log(`   pid: ${item.pid}`);
+        emitCliBlock({
+          tone: "success",
+          title: "Orphan Console stopped",
+        });
       }
       for (const item of sweep.alive) {
-        console.log("⚠️  orphan Console may still be running");
-        console.log(`   pid: ${item.pid}`);
+        emitCliBlock({
+          tone: "warning",
+          title: "Orphan Console may still be running",
+        });
       }
-      console.log(`   pidFile: ${status.pidPath}`);
-      console.log(`   log: ${status.logPath}`);
       return;
     }
-    console.log("ℹ️  Console is not running");
-    console.log(`   pidFile: ${status.pidPath}`);
-    console.log(`   log: ${status.logPath}`);
+    emitCliBlock({
+      tone: "info",
+      title: "Console not running",
+    });
     return;
   }
 
@@ -441,13 +475,10 @@ export async function stopConsoleCommand(params?: {
 
   await cleanupConsoleStateFiles();
 
-  if (isCityProcessAlive(pid)) {
-    console.log("⚠️  Console may still be running");
-    console.log(`   pid: ${pid}`);
-  } else {
-    console.log("✅ Console stopped");
-    console.log(`   pid: ${pid}`);
-  }
-  console.log(`   pidFile: ${getConsolePidPath()}`);
-  console.log(`   log: ${getConsoleLogPath()}`);
+  emitCliBlock({
+    tone: isCityProcessAlive(pid) ? "warning" : "success",
+    title: isCityProcessAlive(pid)
+      ? "Console may still be running"
+      : "Console stopped",
+  });
 }

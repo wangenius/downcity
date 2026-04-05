@@ -9,6 +9,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
+import { emitCliBlock, emitCliList } from "./CliReporter.js";
 
 /**
  * alias 命令参数。
@@ -60,7 +61,14 @@ export async function aliasCommand(options: AliasOptions = {}): Promise<void> {
   const aliasLines = [`alias city="downcity"`];
 
   if (options.print) {
-    console.log(aliasLines.join("\n"));
+    emitCliBlock({
+      tone: "info",
+      title: "Alias preview",
+      facts: aliasLines.map((line) => ({
+        label: "line",
+        value: line,
+      })),
+    });
     return;
   }
 
@@ -91,16 +99,40 @@ export async function aliasCommand(options: AliasOptions = {}): Promise<void> {
   }
 
   if (options.dryRun) {
-    console.log("🔎 dry-run: will update");
+    emitCliBlock({
+      tone: "info",
+      title: "Alias update preview",
+      summary: "dry run",
+    });
   } else {
-    console.log("✅ alias written");
+    emitCliBlock({
+      tone: "success",
+      title: "Alias written",
+    });
   }
-
-  for (const p of changedFiles) console.log(`- ${p}`);
-  for (const p of skippedFiles) console.log(`- (skip) ${p}`);
-
-  console.log("\n要在当前终端会话生效，请手动刷新：");
-  if (targets.includes("zsh")) console.log(`- source ${path.join(home, ".zshrc")}`);
-  if (targets.includes("bash")) console.log(`- source ${path.join(home, ".bashrc")}`);
-  console.log('- 或重新打开一个终端');
+  emitCliList({
+    tone: "accent",
+    title: "Updated",
+    items: changedFiles.map((item) => ({ title: item })),
+  });
+  if (skippedFiles.length > 0) {
+    emitCliList({
+      tone: "info",
+      title: "Skipped",
+      items: skippedFiles.map((item) => ({ title: item })),
+    });
+  }
+  emitCliList({
+    tone: "accent",
+    title: "Refresh shell",
+    items: [
+      ...(targets.includes("zsh")
+        ? [{ title: `source ${path.join(home, ".zshrc")}` }]
+        : []),
+      ...(targets.includes("bash")
+        ? [{ title: `source ${path.join(home, ".bashrc")}` }]
+        : []),
+      { title: "或重新打开一个终端" },
+    ],
+  });
 }

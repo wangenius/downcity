@@ -10,7 +10,6 @@
 import path from "path";
 import fs from "fs";
 import { logger as defaultLogger } from "@shared/utils/logger/Logger.js";
-import { Session } from "@session/Session.js";
 import { LocalSessionExecutor } from "@session/executors/local/LocalSessionExecutor.js";
 import { createModel } from "@/main/city/model/CreateModel.js";
 import {
@@ -30,6 +29,8 @@ import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jso
 import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 import { AcpSessionExecutor } from "@session/executors/acp/AcpSessionExecutor.js";
+import { ChatSession } from "@services/chat/runtime/ChatSession.js";
+import { ChatSessionExecutionComposer } from "@services/chat/runtime/ChatSessionExecutionComposer.js";
 import {
   readEnabledSessionAgentConfig,
   resolveAcpLaunchConfig,
@@ -257,8 +258,8 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     profile: "chat",
   });
 
-  const sessionsById = new Map<string, Session>();
-  const getSession = (sessionId: string): Session => {
+  const sessionsById = new Map<string, ChatSession>();
+  const getSession = (sessionId: string): ChatSession => {
     const key = String(sessionId || "").trim();
     if (!key) {
       throw new Error("AgentRuntime.getSession requires a non-empty sessionId");
@@ -266,26 +267,38 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     const existing = sessionsById.get(key);
     if (existing) return existing;
 
-    const created = new Session({
+    const historyComposer = createSessionHistoryComposer(rootPath, key);
+    let created!: ChatSession;
+    const executionComposer = new ChatSessionExecutionComposer({
       sessionId: key,
-      createHistoryComposer: () => createSessionHistoryComposer(rootPath, key),
-      createExecutor: (historyComposer: SessionHistoryComposer) =>
+      getTools: () => shellTools,
+      getTurnState: () => created.getTurnState(),
+    });
+    created = new ChatSession({
+      sessionId: key,
+      historyComposer,
+      executionComposer,
+      createExecutor: (
+        sessionHistoryComposer: SessionHistoryComposer,
+        chatExecutionComposer: ChatSessionExecutionComposer,
+      ) =>
         sessionAgent
           ? new AcpSessionExecutor({
               rootPath,
               sessionId: key,
               logger: defaultLogger,
-              historyComposer,
+              historyComposer: sessionHistoryComposer,
               systemComposer,
               launch: resolveAcpLaunchConfig(sessionAgent),
             })
           : new LocalSessionExecutor({
               model: model as NonNullable<typeof model>,
               logger: defaultLogger,
-              historyComposer,
+              historyComposer: sessionHistoryComposer,
               compactionComposer,
               systemComposer,
               getTools: () => shellTools,
+              executionComposer: chatExecutionComposer,
             }),
     });
     sessionsById.set(key, created);

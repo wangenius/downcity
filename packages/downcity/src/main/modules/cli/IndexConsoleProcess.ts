@@ -39,10 +39,12 @@ import { startCommand } from "./Start.js";
 import type { StartOptions } from "@/shared/types/Start.js";
 import {
   injectAgentContext,
+  resolveAgentName,
   sleep,
 } from "./IndexSupport.js";
 import { stopConsoleCommand } from "./Console.js";
 import { ensureConsoleAuthBootstrap } from "./ConsoleAuthBootstrap.js";
+import { emitCliBlock, emitCliList } from "./CliReporter.js";
 
 /**
  * 启动 city runtime 后台进程。
@@ -56,8 +58,10 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
 
   const existingPid = await readCityPid();
   if (existingPid && isCityProcessAlive(existingPid)) {
-    console.log("ℹ️  city runtime is already running");
-    console.log(`   pid: ${existingPid}`);
+    emitCliBlock({
+      tone: "info",
+      title: "City runtime already running",
+    });
     await ensureConsoleAuthBootstrap();
     return;
   }
@@ -70,10 +74,16 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
     includeConsole: true,
   });
   for (const item of sweep.stopped) {
-    console.log(`⚠️  cleaned orphan city runtime process: pid=${item.pid}`);
+    emitCliBlock({
+      tone: "warning",
+      title: "Orphan city runtime cleaned",
+    });
   }
   for (const item of sweep.alive) {
-    console.log(`⚠️  orphan city runtime process is still alive: pid=${item.pid}`);
+    emitCliBlock({
+      tone: "warning",
+      title: "Orphan city runtime still alive",
+    });
   }
 
   const logFd = fs.openSync(logPath, "a");
@@ -94,9 +104,10 @@ export async function startCityRuntimeCommand(cliPath: string): Promise<void> {
 
   await fs.writeFile(pidPath, String(child.pid), "utf-8");
 
-  console.log("✅ city runtime started");
-  console.log(`   pid: ${child.pid}`);
-  console.log(`   log: ${logPath}`);
+  emitCliBlock({
+    tone: "success",
+    title: "City runtime started",
+  });
 
   await ensureConsoleAuthBootstrap();
 }
@@ -156,21 +167,52 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
 
   const views = await resolveRunningConsoleAgents();
   if (views.length > 0) {
-    console.log(`Stopping ${views.length} console agents...`);
+    const stoppedItems: Array<{
+      tone: "success" | "info" | "error";
+      title: string;
+      facts: Array<{ label: string; value: string }>;
+    }> = [];
     for (const item of views) {
       try {
         const result = await stopDaemonProcess({ projectRoot: item.projectRoot });
-        if (result.stopped) {
-          console.log(`✅ stopped: ${item.projectRoot} (pid=${item.daemonPid})`);
-        } else {
-          console.log(`ℹ️  already stopped: ${item.projectRoot}`);
-        }
+        stoppedItems.push({
+          tone: result.stopped ? "success" : "info",
+          title: resolveAgentName(item.projectRoot),
+          facts: [
+            {
+              label: "Project",
+              value: item.projectRoot,
+            },
+            {
+              label: "Status",
+              value: result.stopped ? "stopped" : "already stopped",
+            },
+          ],
+        });
         await markConsoleAgentStopped(item.projectRoot);
       } catch (error) {
-        console.log(`❌ stop failed: ${item.projectRoot}`);
-        console.log(`   error: ${String(error)}`);
+        stoppedItems.push({
+          tone: "error",
+          title: resolveAgentName(item.projectRoot),
+          facts: [
+            {
+              label: "Project",
+              value: item.projectRoot,
+            },
+            {
+              label: "Error",
+              value: String(error),
+            },
+          ],
+        });
       }
     }
+    emitCliList({
+      tone: "accent",
+      title: "Managed agents",
+      summary: `stopping · ${views.length} item${views.length > 1 ? "s" : ""}`,
+      items: stoppedItems,
+    });
   }
 
   const sweepOrphans = async (): Promise<void> => {
@@ -181,31 +223,35 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
       timeoutMs,
     });
     for (const item of orphanSweep.stopped) {
-      console.log("✅ orphan process stopped");
-      console.log(`   pid: ${item.pid}`);
-      console.log(`   command: ${item.command}`);
+      emitCliBlock({
+        tone: "success",
+        title: "Orphan process stopped",
+      });
     }
     for (const item of orphanSweep.alive) {
-      console.log("⚠️  orphan process may still be running");
-      console.log(`   pid: ${item.pid}`);
-      console.log(`   command: ${item.command}`);
+      emitCliBlock({
+        tone: "warning",
+        title: "Orphan process may still be running",
+      });
     }
   };
 
   const consolePid = await readCityPid();
   if (!consolePid) {
-    console.log("ℹ️  city runtime is not running");
-    console.log(`   pidFile: ${pidPath}`);
-    console.log(`   log: ${logPath}`);
+    emitCliBlock({
+      tone: "info",
+      title: "City runtime not running",
+    });
     await sweepOrphans();
     return;
   }
 
   if (!isCityProcessAlive(consolePid)) {
     await fs.remove(pidPath);
-    console.log("⚠️  Stale city runtime pid file detected; cleaned up");
-    console.log(`   pidFile: ${pidPath}`);
-    console.log(`   log: ${logPath}`);
+    emitCliBlock({
+      tone: "warning",
+      title: "Stale city runtime state cleaned",
+    });
     await sweepOrphans();
     return;
   }
@@ -229,15 +275,12 @@ export async function stopCityRuntimeCommand(params?: { timeoutMs?: number }): P
 
   await fs.remove(pidPath);
 
-  if (isCityProcessAlive(consolePid)) {
-    console.log("⚠️  city runtime may still be running");
-    console.log(`   pid: ${consolePid}`);
-  } else {
-    console.log("✅ city runtime stopped");
-    console.log(`   pid: ${consolePid}`);
-  }
-  console.log(`   pidFile: ${pidPath}`);
-  console.log(`   log: ${logPath}`);
+  emitCliBlock({
+    tone: isCityProcessAlive(consolePid) ? "warning" : "success",
+    title: isCityProcessAlive(consolePid)
+      ? "City runtime may still be running"
+      : "City runtime stopped",
+  });
 
   await sweepOrphans();
 }
@@ -286,7 +329,11 @@ export async function restartManagedConsoleAgents(cliPath: string): Promise<void
     return;
   }
 
-  console.log(`Restarting ${runningAgents.length} managed agents...`);
+  emitCliBlock({
+    tone: "accent",
+    title: "Managed agents",
+    summary: `restarting · ${runningAgents.length} item${runningAgents.length > 1 ? "s" : ""}`,
+  });
   for (const item of runningAgents) {
     try {
       await startCommand(
@@ -294,8 +341,21 @@ export async function restartManagedConsoleAgents(cliPath: string): Promise<void
         restartOptionsMap.get(item.projectRoot) || {},
       );
     } catch (error) {
-      console.log(`❌ restart failed: ${item.projectRoot}`);
-      console.log(`   error: ${String(error)}`);
+      emitCliBlock({
+        tone: "error",
+        title: "Managed agent restart failed",
+        summary: resolveAgentName(item.projectRoot),
+        facts: [
+          {
+            label: "Project",
+            value: item.projectRoot,
+          },
+          {
+            label: "Error",
+            value: String(error),
+          },
+        ],
+      });
     }
   }
 }

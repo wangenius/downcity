@@ -10,6 +10,7 @@
 import prompts from "prompts";
 import { AuthService } from "@/main/modules/http/auth/AuthService.js";
 import { writeCliAuthState } from "@/main/modules/http/auth/CliAuthStateStore.js";
+import { emitCliBlock } from "./CliReporter.js";
 
 const DEFAULT_CONSOLE_ADMIN_USERNAME = "admin";
 const DEFAULT_CONSOLE_ADMIN_DISPLAY_NAME = "Admin";
@@ -61,14 +62,28 @@ export async function ensureConsoleAuthBootstrap(
       // 关键点（中文）：CLI 登录态写入失败不应阻塞统一账户初始化。
     }
 
-    console.log("✅ Unified auth admin initialized");
-    console.log(`   username: ${DEFAULT_CONSOLE_ADMIN_USERNAME}`);
-    if (password === DEFAULT_CONSOLE_ADMIN_PASSWORD) {
-      console.log(`   password: ${DEFAULT_CONSOLE_ADMIN_PASSWORD}`);
-    } else {
-      console.log("   password: 使用你刚刚输入的密码");
-    }
-    console.log("   login: 使用该密码登录 Console");
+    emitCliBlock({
+      tone: "success",
+      title: "Console auth initialized",
+      summary: "admin",
+      facts: [
+        {
+          label: "Username",
+          value: DEFAULT_CONSOLE_ADMIN_USERNAME,
+        },
+        {
+          label: "Password",
+          value:
+            password === DEFAULT_CONSOLE_ADMIN_PASSWORD
+              ? DEFAULT_CONSOLE_ADMIN_PASSWORD
+              : "使用你刚刚输入的密码",
+        },
+        {
+          label: "Login",
+          value: "使用该密码登录 Console",
+        },
+      ],
+    });
   } finally {
     if (ownsAuthService) authService.close();
   }

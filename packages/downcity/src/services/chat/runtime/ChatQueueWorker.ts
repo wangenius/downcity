@@ -261,6 +261,43 @@ export class ChatQueueWorker {
     };
   }
 
+  /**
+   * 发送 step 文本到 chat。
+   *
+   * 关键点（中文）
+   * - step 必须在当前回调阶段真正送达，不能依赖 run 结束后的 final 兜底。
+   * - 先尝试 direct 路径，保留 frontmatter / reaction 等语义。
+   * - 若 direct 未送达，则立刻回退到普通 channel 文本发送。
+   */
+  private async dispatchAssistantStepMessage(params: {
+    sessionId: string;
+    text: string;
+    messageId?: string;
+  }): Promise<boolean> {
+    const stepText = String(params.text || "").trim();
+    if (!stepText) return false;
+
+    const dispatchedDirectly = await dispatchAssistantTextDirect({
+      logger: this.logger,
+      context: this.context,
+      sessionId: params.sessionId,
+      assistantText: stepText,
+      phase: "step",
+    });
+    if (dispatchedDirectly) {
+      return true;
+    }
+
+    return await dispatchTextToChannel({
+      logger: this.logger,
+      context: this.context,
+      sessionId: params.sessionId,
+      text: stepText,
+      messageId: params.messageId,
+      phase: "step",
+    });
+  }
+
   private async processOne(laneKey: string, first: ChatQueueItem): Promise<void> {
     if (first.kind === "control") {
       this.handleControl(first);
@@ -318,14 +355,14 @@ export class ChatQueueWorker {
     }): Promise<void> => {
       const stepText = String(params.text || "").trim();
       if (!stepText) return;
-      assistantStepDispatched = true;
-      await dispatchAssistantTextDirect({
-        logger: this.logger,
-        context: this.context,
+      const dispatched = await this.dispatchAssistantStepMessage({
         sessionId: runItem.sessionId,
-        assistantText: stepText,
-        phase: "step",
+        text: stepText,
+        messageId: runItem.messageId,
       });
+      if (dispatched) {
+        assistantStepDispatched = true;
+      }
     };
 
     const typing = this.startTypingHeartbeat(runItem);

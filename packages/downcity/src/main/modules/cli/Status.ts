@@ -9,17 +9,12 @@ import path from "path";
 import fs from "fs-extra";
 import {
   diagnoseDaemonStaleReasons,
-  getDaemonLogPath,
   isProcessAlive,
   readDaemonMeta,
   readDaemonPid,
 } from "@/main/city/daemon/Manager.js";
 import { getProfileMdPath, getDowncityJsonPath } from "@/main/city/env/Paths.js";
-import {
-  printPanel,
-  renderKeyValueLines,
-  type StatusTone,
-} from "@/shared/utils/cli/PrettyStatus.js";
+import { emitCliBlock } from "./CliReporter.js";
 
 /**
  * daemon 状态查询入口。
@@ -41,68 +36,81 @@ export async function statusCommand(cwd: string = "."): Promise<void> {
   }
 
   const pid = await readDaemonPid(projectRoot);
-  const logPath = getDaemonLogPath(projectRoot);
-
-  const rows: Array<[string, string]> = [
-    ["project", projectRoot],
-    ["log", logPath],
-  ];
-  let tone: StatusTone = "neutral";
 
   if (pid && isProcessAlive(pid)) {
     const meta = await readDaemonMeta(projectRoot);
 
-    tone = "success";
-    rows.push(["state", "running"]);
-    rows.push(["pid", String(pid)]);
-    if (meta?.startedAt) {
-      rows.push(["started_at", meta.startedAt]);
-    }
-    if (missingInitFiles.length > 0) {
-      // 关键点（中文）：运行中但初始化文件不完整时仍给出告警，便于排查异常目录变更。
-      rows.push(["warning", `missing init files: ${missingInitFiles.join(", ")}`]);
-    }
-    printPanel({
-      title: "city agent status",
-      tone,
-      lines: renderKeyValueLines(rows),
+    emitCliBlock({
+      tone: "success",
+      title: "Agent status",
+      summary: "running",
+      facts: [
+        ["project", projectRoot],
+        ...(meta?.startedAt ? [["started at", meta.startedAt]] : []),
+        ...(missingInitFiles.length > 0
+          ? [["warning", `missing init files: ${missingInitFiles.join(", ")}`]]
+          : []),
+      ].map(([label, value]) => ({ label, value })),
     });
     return;
   }
 
   if (pid) {
-    tone = "warning";
-    rows.push(["state", "stale"]);
-    rows.push(["stale_pid", String(pid)]);
     const reasons = await diagnoseDaemonStaleReasons(projectRoot, pid);
-    rows.push(["stale_reason", reasons.map((item) => item.message).join("; ")]);
-    rows.push(["fix", `city agent doctor ${projectRoot} --fix`]);
-    printPanel({
-      title: "city agent status",
-      tone,
-      lines: renderKeyValueLines(rows),
+    emitCliBlock({
+      tone: "warning",
+      title: "Agent status",
+      summary: "stale",
+      facts: [
+        {
+          label: "project",
+          value: projectRoot,
+        },
+        {
+          label: "reason",
+          value: reasons.map((item) => item.message).join("; "),
+        },
+        {
+          label: "fix",
+          value: `city agent doctor ${projectRoot} --fix`,
+        },
+      ],
     });
     return;
   }
 
   if (missingInitFiles.length > 0) {
-    tone = "error";
-    rows.push(["state", "not_initialized"]);
-    rows.push(["missing", missingInitFiles.join(", ")]);
-    rows.push(["fix", 'run "city agent create" first']);
-    printPanel({
-      title: "city agent status",
-      tone,
-      lines: renderKeyValueLines(rows),
+    emitCliBlock({
+      tone: "error",
+      title: "Agent status",
+      summary: "not initialized",
+      facts: [
+        {
+          label: "project",
+          value: projectRoot,
+        },
+        {
+          label: "missing",
+          value: missingInitFiles.join(", "),
+        },
+        {
+          label: "fix",
+          value: 'run "city agent create" first',
+        },
+      ],
     });
     return;
   }
 
-  tone = "info";
-  rows.push(["state", "stopped"]);
-  printPanel({
-    title: "city agent status",
-    tone,
-    lines: renderKeyValueLines(rows),
+  emitCliBlock({
+    tone: "info",
+    title: "Agent status",
+    summary: "stopped",
+    facts: [
+      {
+        label: "project",
+        value: projectRoot,
+      },
+    ],
   });
 }

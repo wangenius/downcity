@@ -24,9 +24,9 @@ type SessionOptions = {
   sessionId: string;
 
   /**
-   * 创建当前 session 对应的 history Composer。
+   * 当前 session 对应的 history Composer。
    */
-  createHistoryComposer: () => SessionHistoryComposer;
+  historyComposer: SessionHistoryComposer;
 
   /**
    * 创建当前 session 对应的执行器。
@@ -48,11 +48,10 @@ export class Session {
    */
   readonly sessionId: string;
 
-  private readonly createHistoryComposer: SessionOptions["createHistoryComposer"];
+  private readonly historyComposer: SessionHistoryComposer;
   private readonly createExecutor: SessionOptions["createExecutor"];
   private readonly historyWriter: SessionHistoryWriter;
 
-  private historyComposer: SessionHistoryComposer | null = null;
   private executor: SessionExecutor | null = null;
   private executing = false;
 
@@ -63,7 +62,7 @@ export class Session {
     }
 
     this.sessionId = sessionId;
-    this.createHistoryComposer = options.createHistoryComposer;
+    this.historyComposer = options.historyComposer;
     this.createExecutor = options.createExecutor;
     this.historyWriter = new SessionHistoryWriter({
       sessionId,
@@ -83,10 +82,7 @@ export class Session {
    * 获取当前 session 的 history Composer。
    */
   getHistoryComposer(): SessionHistoryComposer {
-    if (this.historyComposer) return this.historyComposer;
-    const created = this.createHistoryComposer();
-    this.historyComposer = created;
-    return created;
+    return this.historyComposer;
   }
 
   /**
@@ -150,10 +146,18 @@ export class Session {
    */
   async run(params: {
     query: string;
-    sessionRunScope?: Omit<SessionRunScope, "sessionId">;
+    onStepCallback?: SessionRunScope["onStepCallback"];
+    onAssistantStepCallback?: SessionRunScope["onAssistantStepCallback"];
   }): Promise<SessionRunResult> {
     const query = String(params.query || "").trim();
-    const sessionRunScope = params.sessionRunScope || {};
+    const sessionRunScope: Omit<SessionRunScope, "sessionId"> = {
+      ...(typeof params.onStepCallback === "function"
+        ? { onStepCallback: params.onStepCallback }
+        : {}),
+      ...(typeof params.onAssistantStepCallback === "function"
+        ? { onAssistantStepCallback: params.onAssistantStepCallback }
+        : {}),
+    };
     let persistedAssistantStepCount = 0;
     const providedOnAssistantStepCallback =
       sessionRunScope.onAssistantStepCallback;

@@ -15,6 +15,8 @@ import { buildRunArgsFromOptions } from "@/main/city/daemon/CliArgs.js";
 import { startDaemonProcess, stopDaemonProcess } from "@/main/city/daemon/Manager.js";
 import type { StartOptions } from "@/shared/types/Start.js";
 import { ensureRuntimeExecutionBindingReady } from "@/main/city/daemon/ProjectSetup.js";
+import { emitCliBlock } from "./CliReporter.js";
+import { resolveAgentName } from "./IndexSupport.js";
 
 /**
  * restart 命令执行流程。
@@ -53,15 +55,23 @@ export async function restartCommand(
   try {
     await stopDaemonProcess({ projectRoot });
     const args = await buildRunArgsFromOptions(projectRoot, options || {});
-    const { pid, logPath } = await startDaemonProcess({
+    await startDaemonProcess({
       projectRoot,
       cliPath,
       args,
     });
 
-    console.log("✅ Downcity daemon restarted");
-    console.log(`   pid: ${pid}`);
-    console.log(`   log: ${logPath}`);
+    emitCliBlock({
+      tone: "success",
+      title: "Agent daemon restarted",
+      summary: resolveAgentName(projectRoot),
+      facts: [
+        {
+          label: "Project",
+          value: projectRoot,
+        },
+      ],
+    });
   } catch (error) {
     console.error("❌ Failed to restart daemon:", error);
     process.exit(1);

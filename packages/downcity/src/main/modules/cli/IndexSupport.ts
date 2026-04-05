@@ -8,6 +8,7 @@
 
 import { readFileSync, existsSync } from "fs";
 import { basename, join, resolve } from "path";
+import { emitCliHeader, resetCliSectionFlow } from "./CliReporter.js";
 
 /**
  * 在关键运行命令执行前打印当前 city 版本。
@@ -27,7 +28,8 @@ export function createVersionBanner<TArgs extends unknown[]>(
       return (arg as { json?: unknown }).json === true;
     });
     if (!hasJsonMode) {
-      console.log(`city version: ${version}`);
+      resetCliSectionFlow();
+      emitCliHeader(version);
     }
     await action(...args);
   };

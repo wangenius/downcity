@@ -20,6 +20,8 @@ import { buildRunArgsFromOptions } from "@/main/city/daemon/CliArgs.js";
 import type { StartOptions } from "@/shared/types/Start.js";
 import { isCityRunning } from "@/main/city/runtime/CityRuntime.js";
 import { ensureRuntimeExecutionBindingReady } from "@/main/city/daemon/ProjectSetup.js";
+import { emitCliBlock } from "./CliReporter.js";
+import { resolveAgentName } from "./IndexSupport.js";
 
 /**
  * daemon 启动入口。
@@ -65,15 +67,23 @@ export async function startCommand(
   const args = await buildRunArgsFromOptions(projectRoot, options || {});
 
   try {
-    const { pid, logPath } = await startDaemonProcess({
+    const { logPath: _logPath } = await startDaemonProcess({
       projectRoot,
       cliPath,
       args,
     });
 
-    console.log("✅ Downcity daemon started");
-    console.log(`   pid: ${pid}`);
-    console.log(`   log: ${logPath}`);
+    emitCliBlock({
+      tone: "success",
+      title: "Agent daemon started",
+      summary: resolveAgentName(projectRoot),
+      facts: [
+        {
+          label: "Project",
+          value: projectRoot,
+        },
+      ],
+    });
   } catch (error) {
     console.error("❌ Failed to start daemon:", error);
     process.exit(1);

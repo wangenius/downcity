@@ -1,8 +1,8 @@
 /**
- * Session 懒加载缓存测试（node:test）。
+ * Session 执行器重建测试（node:test）。
  *
  * 关键点（中文）
- * - history Composer 在单个 Session 实例内只创建一次。
+ * - Session 持有固定的 history Composer 实例。
  * - clearExecutor 只清 executor，不清 history Composer。
  */
 
@@ -11,19 +11,15 @@ import test from "node:test";
 import { Session } from "../../bin/session/Session.js";
 
 test("Session recreates executor without recreating history composer after clearExecutor", () => {
-  const createdHistoryComposers = [];
   const createdExecutors = [];
+  const historyComposer = {
+    sessionId: "chat-a",
+    tag: "history-composer:1",
+  };
 
   const session = new Session({
     sessionId: "chat-a",
-    createHistoryComposer() {
-      const historyComposer = {
-        sessionId: "chat-a",
-        tag: `history-composer:${createdHistoryComposers.length + 1}`,
-      };
-      createdHistoryComposers.push(historyComposer);
-      return historyComposer;
-    },
+    historyComposer,
     createExecutor(historyComposer) {
       const runtime = {
         historyComposer,
@@ -45,6 +41,5 @@ test("Session recreates executor without recreating history composer after clear
   assert.equal(firstHistoryComposer, secondHistoryComposer);
   assert.notEqual(firstRuntime, secondRuntime);
   assert.equal(secondRuntime.historyComposer, firstHistoryComposer);
-  assert.equal(createdHistoryComposers.length, 1);
   assert.equal(createdExecutors.length, 2);
 });

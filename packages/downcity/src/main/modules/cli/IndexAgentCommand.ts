@@ -14,10 +14,10 @@ import { startCommand } from "./Start.js";
 import { statusCommand } from "./Status.js";
 import type { StartOptions } from "@/shared/types/Start.js";
 import { createVersionBanner, injectAgentContext, parseBoolean, parsePort } from "./IndexSupport.js";
+import { emitCliBlock } from "./CliReporter.js";
 import {
   cleanupStaleDaemonFiles,
   diagnoseDaemonStaleReasons,
-  getDaemonLogPath,
   isProcessAlive as isDaemonProcessAlive,
   readDaemonPid,
 } from "@/main/city/daemon/Manager.js";
@@ -103,32 +103,74 @@ export function registerAgentCommands(
         const pid = await readDaemonPid(projectRoot);
 
         if (!pid) {
-          console.log("✅ No daemon pid file found");
-          console.log(`   project: ${projectRoot}`);
+          emitCliBlock({
+            tone: "success",
+            title: "No daemon state found",
+            facts: [
+              {
+                label: "Project",
+                value: projectRoot,
+              },
+            ],
+          });
           return;
         }
 
         if (isDaemonProcessAlive(pid)) {
-          console.log("✅ Daemon process is alive");
-          console.log(`   project: ${projectRoot}`);
-          console.log(`   pid: ${pid}`);
+          emitCliBlock({
+            tone: "success",
+            title: "Daemon process is alive",
+            facts: [
+              {
+                label: "Project",
+                value: projectRoot,
+              },
+            ],
+          });
           return;
         }
 
-        console.log("⚠️  Stale daemon state detected");
-        console.log(`   project: ${projectRoot}`);
-        console.log(`   stalePid: ${pid}`);
         const staleReasons = await diagnoseDaemonStaleReasons(projectRoot, pid);
-        console.log(`   reason: ${staleReasons.map((item) => item.message).join("; ")}`);
-        console.log(`   log: ${getDaemonLogPath(projectRoot)}`);
+        emitCliBlock({
+          tone: "warning",
+          title: "Stale daemon state detected",
+          facts: [
+            {
+              label: "Project",
+              value: projectRoot,
+            },
+            {
+              label: "Reason",
+              value: staleReasons.map((item) => item.message).join("; "),
+            },
+          ],
+        });
 
         if (options.fix !== true) {
-          console.log("   Run `city agent doctor <path> --fix` to clean stale pid/meta.");
+          emitCliBlock({
+            tone: "info",
+            title: "Suggested fix",
+            facts: [
+              {
+                label: "Command",
+                value: "city agent doctor <path> --fix",
+              },
+            ],
+          });
           return;
         }
 
         await cleanupStaleDaemonFiles(projectRoot);
-        console.log("✅ Cleaned stale daemon pid/meta files");
+        emitCliBlock({
+          tone: "success",
+          title: "Cleaned stale daemon state",
+          facts: [
+            {
+              label: "Project",
+              value: projectRoot,
+            },
+          ],
+        });
       },
     ));
 

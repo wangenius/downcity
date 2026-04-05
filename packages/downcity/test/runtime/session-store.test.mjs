@@ -10,6 +10,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Session } from "../../bin/session/Session.js";
+import { getSessionRunScope } from "../../bin/session/SessionRunScope.js";
+import { ChatSession } from "../../bin/services/chat/runtime/ChatSession.js";
 
 function createHistoryComposerStub() {
   const appended = [];
@@ -44,9 +46,7 @@ test("Session tracks execution state and persists messages through the single in
 
   const session = new Session({
     sessionId: "chat-1",
-    createHistoryComposer() {
-      return historyComposer;
-    },
+    historyComposer,
     createExecutor() {
       return {
         async run() {
@@ -89,4 +89,98 @@ test("Session tracks execution state and persists messages through the single in
   assert.equal(session.isExecuting(), false);
   assert.equal(historyComposer.appended.length, 2);
   assert.deepEqual(afterUpdates, ["chat-1", "chat-1"]);
+});
+
+test("Session forwards top-level step callbacks to the runtime scope", async () => {
+  const receivedSteps = [];
+  const historyComposer = createHistoryComposerStub();
+
+  const session = new Session({
+    sessionId: "chat-1",
+    historyComposer,
+    createExecutor() {
+      return {
+        async run() {
+          const callback = getSessionRunScope()?.onAssistantStepCallback;
+          if (typeof callback === "function") {
+            await callback({
+              text: "step-visible-text",
+              stepIndex: 1,
+            });
+          }
+          return {
+            success: true,
+            assistantMessage: {
+              role: "assistant",
+              text: "done",
+              metadata: {
+                v: 1,
+                ts: Date.now(),
+                sessionId: "chat-1",
+              },
+            },
+          };
+        },
+      };
+    },
+  });
+
+  await session.run({
+    query: "run once",
+    async onAssistantStepCallback(step) {
+      receivedSteps.push(step);
+    },
+  });
+
+  assert.equal(typeof receivedSteps[0], "object");
+});
+
+test("ChatSession keeps the injected composer instance and still uses standard run", async () => {
+  const receivedSteps = [];
+  const historyComposer = createHistoryComposerStub();
+  const injectedComposer = {
+    name: "chat_execution_composer",
+  };
+
+  const session = new ChatSession({
+    sessionId: "chat-1",
+    historyComposer,
+    executionComposer: injectedComposer,
+    createExecutor(_historyComposer, executionComposer) {
+      assert.equal(executionComposer, injectedComposer);
+      return {
+        async run() {
+          const callback = getSessionRunScope()?.onAssistantStepCallback;
+          if (typeof callback === "function") {
+            await callback({
+              text: "step-visible-text",
+              stepIndex: 1,
+            });
+          }
+          return {
+            success: true,
+            assistantMessage: {
+              role: "assistant",
+              text: "done",
+              metadata: {
+                v: 1,
+                ts: Date.now(),
+                sessionId: "chat-1",
+              },
+            },
+          };
+        },
+      };
+    },
+  });
+
+  assert.equal(session.executionComposer, injectedComposer);
+  await session.run({
+    query: "run once",
+    async onAssistantStepCallback(step) {
+      receivedSteps.push(step);
+    },
+  });
+
+  assert.equal(typeof receivedSteps[0], "object");
 });

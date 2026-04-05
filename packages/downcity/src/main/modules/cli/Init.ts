@@ -22,6 +22,7 @@ import {
 import type { AgentProjectChannel } from "@/shared/types/AgentProject.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
 import type { SessionAgentType } from "@/shared/types/SessionAgent.js";
+import { emitCliBlock, emitCliList } from "./CliReporter.js";
 
 type InitPromptResponse = {
   name?: string;
@@ -49,7 +50,16 @@ export async function initCommand(
     normalizeDefaultAgentName(projectBaseName) || projectBaseName;
   let allowOverwrite = Boolean(options.force);
 
-  console.log(`🚀 Initializing Downcity project: ${projectRoot}`);
+  emitCliBlock({
+    tone: "accent",
+    title: "Initializing agent project",
+    facts: [
+      {
+        label: "Project",
+        value: projectRoot,
+      },
+    ],
+  });
 
   // Check if core initialization files already exist
   const existingProfileMd = fs.existsSync(getProfileMdPath(projectRoot));
@@ -70,7 +80,10 @@ export async function initCommand(
       })) as { overwrite?: boolean };
 
       if (!confirmResponse.overwrite) {
-        console.log("❌ Initialization cancelled");
+        emitCliBlock({
+          tone: "info",
+          title: "Initialization cancelled",
+        });
         return;
       }
       allowOverwrite = true;
@@ -160,53 +173,123 @@ export async function initCommand(
     forceOverwriteShipJson: allowOverwrite,
   });
 
+  const createdItems: string[] = [];
+  const skippedItems: string[] = [];
   if (!existingProfileMd && initResult.createdFiles.includes("PROFILE.md")) {
-    console.log("✅ Created PROFILE.md");
+    createdItems.push("PROFILE.md");
   } else if (existingProfileMd) {
-    console.log("⏭️  Skipped existing PROFILE.md");
+    skippedItems.push("PROFILE.md");
   }
   if (!existingSoulMd && initResult.createdFiles.includes("SOUL.md")) {
-    console.log("✅ Created SOUL.md");
+    createdItems.push("SOUL.md");
   } else if (existingSoulMd) {
-    console.log("⏭️  Skipped existing SOUL.md");
+    skippedItems.push("SOUL.md");
   }
+  createdItems.push("downcity.json", ".downcity/", "downcity.schema.json");
+  skippedItems.push(".env", ".env.example");
 
-  console.log("✅ Created downcity.json");
-  console.log("⏭️  Skipped .env (no new entries)");
-  console.log("⏭️  Skipped .env.example (no new entries)");
-  console.log("✅ Created .downcity/ directory structure");
-  console.log("✅ Created downcity.schema.json");
-
-  console.log("\n🎉 Initialization complete!\n");
+  emitCliBlock({
+    tone: "success",
+    title: "Initialization complete",
+    summary: agentName,
+  });
+  emitCliList({
+    tone: "accent",
+    title: "Created",
+    items: createdItems.map((item) => ({ title: item })),
+  });
+  emitCliList({
+    tone: "info",
+    title: "Skipped",
+    items: skippedItems.map((item) => ({ title: item })),
+  });
   if (primaryModelId) {
-    console.log(`📦 Agent execution.modelId: ${primaryModelId}`);
-    console.log("🌐 Model pool source: ~/.downcity/downcity.db (console global)\n");
+    emitCliBlock({
+      tone: "info",
+      title: "Execution",
+      summary: "model",
+      facts: [
+        {
+          label: "Model ID",
+          value: primaryModelId,
+        },
+        {
+          label: "Source",
+          value: "~/.downcity/downcity.db",
+        },
+      ],
+    });
   }
   if (sessionAgentType) {
-    console.log(`🤖 ACP agent: ${sessionAgentType}`);
-    console.log("🔌 Runtime path: ACP coding agent session\n");
+    emitCliBlock({
+      tone: "info",
+      title: "Execution",
+      summary: "acp",
+      facts: [
+        {
+          label: "Agent",
+          value: sessionAgentType,
+        },
+        {
+          label: "Runtime",
+          value: "ACP coding agent session",
+        },
+      ],
+    });
   }
 
+  const channelItems: Array<{ title: string; facts: Array<{ label: string; value: string }> }> = [];
   if (selectedChannels.includes("feishu")) {
-    console.log("📱 Feishu chat channel enabled");
-    console.log(
-      "   Please bind services.chat.channels.feishu.channelAccountId to a channel account in Console",
-    );
-    console.log("   Manage credentials in Global / Channel Accounts\n");
+    channelItems.push({
+      title: "feishu",
+      facts: [
+        {
+          label: "Bind",
+          value: "services.chat.channels.feishu.channelAccountId",
+        },
+        {
+          label: "Manage",
+          value: "Console > Global / Channel Accounts",
+        },
+      ],
+    });
   }
   if (selectedChannels.includes("telegram")) {
-    console.log("📱 Telegram chat channel enabled");
-    console.log(
-      "   Please bind services.chat.channels.telegram.channelAccountId to a channel account in Console",
-    );
-    console.log("   Manage credentials in Global / Channel Accounts\n");
+    channelItems.push({
+      title: "telegram",
+      facts: [
+        {
+          label: "Bind",
+          value: "services.chat.channels.telegram.channelAccountId",
+        },
+        {
+          label: "Manage",
+          value: "Console > Global / Channel Accounts",
+        },
+      ],
+    });
   }
   if (selectedChannels.includes("qq")) {
-    console.log("📱 QQ chat channel enabled");
-    console.log(
-      "   Please bind services.chat.channels.qq.channelAccountId to a channel account in Console",
-    );
-    console.log("   Manage credentials in Global / Channel Accounts\n");
+    channelItems.push({
+      title: "qq",
+      facts: [
+        {
+          label: "Bind",
+          value: "services.chat.channels.qq.channelAccountId",
+        },
+        {
+          label: "Manage",
+          value: "Console > Global / Channel Accounts",
+        },
+      ],
+    });
+  }
+  if (channelItems.length > 0) {
+    emitCliList({
+      tone: "accent",
+      title: "Channels",
+      items: channelItems,
+    });
   }
 
   const nextSteps: string[] = [
@@ -239,12 +322,16 @@ export async function initCommand(
   }
   nextSteps.push('Run "city agent start" to start the agent');
 
-  console.log("Next steps:");
-  for (const [idx, line] of nextSteps.entries()) {
-    console.log(`  ${idx + 1}. ${line}`);
-  }
-  console.log("");
-  console.log(
-    "💡 Tip: agent 现在可以绑定 console 模型池，也可以把 session 切到 ACP coding agent。\n",
-  );
+  emitCliList({
+    tone: "accent",
+    title: "Next steps",
+    items: nextSteps.map((line, idx) => ({
+      title: `${idx + 1}. ${line}`,
+    })),
+  });
+  emitCliBlock({
+    tone: "info",
+    title: "Tip",
+    note: "agent 现在可以绑定 console 模型池，也可以把 session 切到 ACP coding agent。",
+  });
 }

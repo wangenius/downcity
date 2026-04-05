@@ -2,14 +2,14 @@
  * Dashboard 会话路由。
  *
  * 关键点（中文）
- * - 聚合 sessions/messages/archives/system-prompt/execute 相关接口。
+ * - 聚合 dashboard 会话消息、归档、system prompt 与执行相关接口。
  * - 仅负责编排请求与响应；消息读取、时间线映射、执行拼装复用 helper。
  */
 
 import type { SystemModelMessage } from "ai";
 import fs from "fs-extra";
 import { dirname } from "path";
-import { resolveSessionSystemMessages } from "@session/prompts/system/SystemDomain.js";
+import { resolveSessionSystemMessages } from "@session/composer/system/default/SystemDomain.js";
 import {
   getDowncityChatHistoryPath,
   getDowncitySessionMessagesArchiveDirPath,
@@ -20,7 +20,7 @@ import type { DashboardSessionExecuteRequestBody } from "@/shared/types/Dashboar
 import type { DashboardRouteRegistrationParams } from "@/shared/types/DashboardRoutes.js";
 import {
   decodeMaybe,
-  listSessionSummaries,
+  listDashboardSessionSummaries,
   loadSessionMessagesFromFile,
   toLimit,
   toUiMessageTimeline,
@@ -92,14 +92,14 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const limit = toLimit(c.req.query("limit"));
-      const executingSessionIds = new Set(
-        runtime.sessionStore.listExecutingSessionIds(),
+      const executingSessionIds = new Set<string>(
+        runtime.listExecutingSessionIds(),
       );
-      const sessions = await listSessionSummaries({
+      const sessions = await listDashboardSessionSummaries({
         projectRoot: runtime.rootPath,
-        executionContext: params.getExecutionContext(),
+        executionContext: params.getAgentContext(),
         limit,
         executingSessionIds,
       });
@@ -131,7 +131,7 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions/:sessionId/messages", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const limit = toLimit(c.req.query("limit"), 200);
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
@@ -157,7 +157,7 @@ export function registerDashboardSessionRoutes(
 
   app.delete("/api/dashboard/sessions/:sessionId/messages", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
@@ -167,7 +167,7 @@ export function registerDashboardSessionRoutes(
       const messagesDirPath = dirname(messagesPath);
       await fs.remove(messagesDirPath);
       // 关键点（中文）：清理消息文件后，同步清掉内存中的 session runtime，避免旧上下文继续运行。
-      runtime.sessionStore.clearRuntime(sessionId);
+      runtime.getSession(sessionId).clearExecutor();
 
       return c.json({
         success: true,
@@ -181,7 +181,7 @@ export function registerDashboardSessionRoutes(
 
   app.delete("/api/dashboard/sessions/:sessionId/chat-history", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
         return c.json({ success: false, error: "Missing sessionId" }, 400);
@@ -202,7 +202,7 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions/:sessionId/archives", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const limit = toLimit(c.req.query("limit"), 100);
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       if (!sessionId) {
@@ -285,7 +285,7 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/sessions/:sessionId/archives/:archiveId", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       const archiveId = decodeMaybe(String(c.req.param("archiveId") || "").trim());
       if (!sessionId) {
@@ -341,17 +341,16 @@ export function registerDashboardSessionRoutes(
 
   app.get("/api/dashboard/system-prompt", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const sessionId =
         decodeMaybe(String(c.req.query("sessionId") || "").trim()) ||
         CONSOLEUI_SESSION_ID;
       const systemMessages = await resolveSessionSystemMessages({
         projectRoot: runtime.rootPath,
         sessionId,
-        requestId: `ui-system-preview-${Date.now()}`,
         profile: "chat",
         staticSystemPrompts: runtime.systems,
-        context: params.getExecutionContext(),
+        context: params.getAgentContext(),
       });
       return c.json({
         success: true,
@@ -365,7 +364,7 @@ export function registerDashboardSessionRoutes(
 
   app.post("/api/dashboard/sessions/:sessionId/execute", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const sessionId = decodeMaybe(String(c.req.param("sessionId") || "").trim());
       const body = (await c.req.json().catch(() => ({}))) as Partial<DashboardSessionExecuteRequestBody>;
       const instructions = String(body.instructions || "").trim();
@@ -378,7 +377,7 @@ export function registerDashboardSessionRoutes(
 
       const result = await executeBySessionId({
         agentState: runtime,
-        executionContext: params.getExecutionContext(),
+        executionContext: params.getAgentContext(),
         sessionId,
         instructions,
         attachments: Array.isArray(body.attachments) ? body.attachments : undefined,

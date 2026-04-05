@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getClaudeSkillSearchRoots } from "../../bin/plugins/skill@/city/runtime/console/Paths.js";
+import { getClaudeSkillSearchRoots } from "../../bin/plugins/skill/runtime/Paths.js";
 
 test("skill plugin paths include configured plugin roots", () => {
   const roots = getClaudeSkillSearchRoots("/tmp/demo-agent", {
@@ -16,7 +16,6 @@ test("skill plugin paths include configured plugin roots", () => {
     version: "1.0.0",
     plugins: {
       skill: {
-        enabled: true,
         paths: [".agents/skills", ".local/skills"],
         allowExternalPaths: false,
       },

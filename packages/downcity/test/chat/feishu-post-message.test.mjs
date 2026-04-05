@@ -23,6 +23,12 @@ function buildRuntime(rootPath) {
   return {
     rootPath,
     env: {},
+    paths: {
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     logger: {
       warn() {},
       info() {},

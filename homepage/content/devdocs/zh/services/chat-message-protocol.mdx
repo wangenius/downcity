@@ -1,0 +1,81 @@
+---
+title: Chat 消息协议
+description: 说明当前聊天发送与入站附件的统一协议，以及正文、参数、附件如何被解析成有序片段
+---
+
+# Chat 消息协议
+
+当前聊天链路已经收敛成一套统一协议。
+
+## 核心结论
+
+现在只有一套消息协议：
+
+- frontmatter metadata：表示 `chat send` 参数
+- `<file ...>...</file>`：表示附件
+- `react`：只在 direct 模式额外支持
+
+也就是说，附件协议统一为 `<file>`。
+
+## 当前行为补充
+
+有两个现在很重要的行为：
+
+1. 出站消息会先被解析成有序 `segments[]`
+2. 正文和附件会按它们在原消息中的真实出现顺序发送
+
+所以现在不再是“正文固定先发、附件固定后发”。
+
+## 发送协议图
+
+```mermaid
+flowchart TD
+    A["消息文本输入"] --> B["统一协议解析<br/>frontmatter + file"]
+    B --> C["正文 bodyText"]
+    B --> D["发送参数<br/>chatKey / delay / time / reply / messageId"]
+    B --> E["附件 files[]"]
+    B --> E2["有序片段 segments[]"]
+
+    D --> F["sendChatTextByChatKey"]
+    E2 --> F
+
+    F --> H{"目标 channel"}
+    H --> I["Telegram<br/>按 segments 实际顺序发送"]
+    H --> J["Feishu<br/>按 segments 实际顺序发送"]
+    H --> K["QQ<br/>按当前能力决定支持范围"]
+```
+
+## 两条入口
+
+```mermaid
+flowchart LR
+    A["direct assistant 输出"] --> B["DirectDispatchParser"]
+    C["city chat send<br/>text / stdin / text-file"] --> D["命令入口解析正文协议"]
+
+    B --> E["统一发送参数 + 规范化正文"]
+    D --> E
+
+    E --> F["发送层"]
+    F --> G["channel dispatcher"]
+```
+
+## 入站到模型
+
+入站附件也统一注入成 `<file>`，这样模型看到的协议和它输出时使用的协议保持一致。
+
+```mermaid
+flowchart TD
+    A["Telegram / Feishu / QQ 收到用户附件"] --> B["下载到缓存目录"]
+    B --> C["转成 file 协议"]
+    C --> D["build inbound text"]
+    D --> E["Agent / 模型"]
+    C --> E2["图片 / PDF<br/>best-effort 注入 file parts"]
+    E2 --> E
+    E --> F["模型仍用同样协议回包"]
+```
+
+## 这套协议解决了什么
+
+- 正文、参数、附件不再分裂成多套入口
+- 入站和出站可以共用同一套语义
+- 多模态附件既有文本协议兜底，也能尽量走更强的 file parts

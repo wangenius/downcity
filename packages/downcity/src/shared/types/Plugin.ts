@@ -15,9 +15,9 @@ import type {
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
 import type {
-  ExecutionContext,
+  AgentContext,
   StructuredConfig,
-} from "@/shared/types/ExecutionContext.js";
+} from "@/types/agent/AgentContext.js";
 import type { Logger } from "@shared/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
@@ -28,7 +28,7 @@ import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
  * 关键点（中文）
  * - 这里表达的是“CLI 命令执行 plugin 时真正需要的最小上下文”。
  * - plugin 命令不应依赖 session、service invoke、agent runtime 等长期宿主对象。
- * - agent runtime 在需要复用 action 时，直接传入自身更完整的 ExecutionContext 即可。
+ * - agent runtime 在需要复用 action 时，直接传入自身更完整的 AgentContext 即可。
  */
 export interface PluginCommandContext {
   /**
@@ -258,7 +258,7 @@ export type PluginPipelineHook<
   /**
    * 当前执行上下文。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 当前值。
    */
@@ -276,7 +276,7 @@ export type PluginPipelineHook<
  * - 不返回结果；若需阻断流程，直接抛错。
  */
 export type PluginGuardHook<TValue extends JsonValue = JsonValue> = (params: {
-  context: ExecutionContext;
+  context: AgentContext;
   value: TValue;
   plugin: string;
 }) => Promise<void> | void;
@@ -285,7 +285,7 @@ export type PluginGuardHook<TValue extends JsonValue = JsonValue> = (params: {
  * Plugin effect 处理器。
  */
 export type PluginEffectHook<TValue extends JsonValue = JsonValue> = (params: {
-  context: ExecutionContext;
+  context: AgentContext;
   value: TValue;
   plugin: string;
 }) => Promise<void> | void;
@@ -297,7 +297,7 @@ export type PluginResolveHook<
   TInput extends JsonValue = JsonValue,
   TOutput extends JsonValue = JsonValue,
 > = (params: {
-  context: ExecutionContext;
+  context: AgentContext;
   value: TInput;
   plugin: string;
 }) => Promise<TOutput> | TOutput;
@@ -584,7 +584,7 @@ export interface Plugin {
   /**
    * Plugin system 文本构建器（可选）。
    */
-  system?: (context: ExecutionContext) => string | Promise<string>;
+  system?: (context: AgentContext) => string | Promise<string>;
   /**
    * Plugin 可用性检查器（可选）。
    */

@@ -11,7 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import fs from "fs-extra";
-import { ConsoleStore } from "../../bin/utils/store/index.js";
+import { ConsoleStore } from "../../bin/shared/utils/store/index.js";
 import { ShellService } from "../../bin/services/shell/ShellService.js";
 
 function createRuntimeStub(rootPath) {
@@ -35,12 +35,40 @@ function createRuntimeStub(rootPath) {
       },
     },
     env: {},
+    globalEnv: {},
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     systems: [],
     context: {},
     invoke: {},
     services: {},
     plugins: {},
   };
+}
+
+async function waitForShellCompletion(service, runtime, shellId, afterVersion, fromCursor) {
+  const deadline = Date.now() + 2_000;
+  let currentVersion = afterVersion;
+  let currentCursor = fromCursor;
+  let latest = null;
+
+  while (Date.now() < deadline) {
+    latest = await service.wait(runtime, {
+      shellId,
+      afterVersion: currentVersion,
+      fromCursor: currentCursor,
+      timeoutMs: 400,
+      maxOutputTokens: 200,
+    });
+    currentVersion = latest.shell.version;
+    currentCursor = latest.chunk.endCursor;
+    if (latest.shell.status === "completed") {
+      return latest;
+    }
+  }
+
+  return latest;
 }
 
 test("shell service can start and wait for a long-running shell session", async () => {
@@ -62,15 +90,20 @@ test("shell service can start and wait for a long-running shell session", async 
     assert.equal(started.chunk.startCursor, 0);
     assert.match(started.chunk.output, /hello/);
 
-    const waited = await service.wait(runtime, {
-      shellId: started.shell.shellId,
-      afterVersion: started.shell.version,
-      fromCursor: started.chunk.endCursor,
-      timeoutMs: 1500,
-      maxOutputTokens: 200,
-    });
+    const waited = await waitForShellCompletion(
+      service,
+      runtime,
+      started.shell.shellId,
+      started.shell.version,
+      started.chunk.endCursor,
+    );
 
-    assert.match(waited.chunk.output, /world/);
+    const combinedOutput = [started.chunk.output, waited.chunk.output]
+      .filter(Boolean)
+      .join("\n");
+    assert.match(combinedOutput, /hello/);
+    assert.match(combinedOutput, /world/);
+    assert.ok(waited);
     assert.equal(waited.shell.status, "completed");
     assert.equal(waited.shell.exitCode, 0);
 
@@ -130,6 +163,7 @@ test("shell service injects console global env and lets agent env override confl
       key: "GLOBAL_ONLY",
       value: "global-only",
     });
+    runtime.globalEnv = store.getGlobalEnvMapSync();
 
     const executed = await service.exec(runtime, {
       cmd: "printf '%s|%s|%s' \"$GLOBAL_ONLY\" \"$AGENT_ONLY\" \"$SHARED_KEY\"",

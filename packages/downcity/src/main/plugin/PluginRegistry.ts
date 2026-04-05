@@ -6,7 +6,7 @@
  * - Plugin 自身不维护独立状态机；可用性由 enabled 配置与 plugin 自定义 availability 决定。
  */
 
-import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import type { HookRegistry } from "@/main/plugin/HookRegistry.js";
 import type {
   Plugin,
@@ -14,10 +14,10 @@ import type {
   PluginAvailability,
   PluginView,
 } from "@/shared/types/Plugin.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 
-type ContextResolver = () => ExecutionContext;
+type ContextResolver = () => AgentContext;
 
 /**
  * PluginRegistry：plugin 注册与调度实现。
@@ -165,10 +165,7 @@ export class PluginRegistry {
     }
 
     const context = this.contextResolver();
-    const enabled = isPluginEnabledInConfig({
-      plugin,
-      config: context.config,
-    });
+    const enabled = isPluginEnabled({ plugin });
 
     if (!enabled) {
       return {
@@ -220,10 +217,7 @@ export class PluginRegistry {
     }
 
     const context = this.contextResolver();
-    const enabled = isPluginEnabledInConfig({
-      plugin,
-      config: context.config,
-    });
+    const enabled = isPluginEnabled({ plugin });
     if (!enabled && action.allowWhenDisabled !== true) {
       return {
         success: false,

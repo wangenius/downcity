@@ -16,7 +16,7 @@ import {
   normalizeTaskWhen,
   resolveTaskWhenCronExpression,
   resolveTaskWhenOneShotMs,
-} from "../../bin/services/task@/city/runtime/console/Model.js";
+} from "../../bin/services/task/runtime/Model.js";
 
 test("normalizeTaskWhen rejects ISO datetime without explicit timezone", () => {
   const result = normalizeTaskWhen("2026-03-08T10:30:00");

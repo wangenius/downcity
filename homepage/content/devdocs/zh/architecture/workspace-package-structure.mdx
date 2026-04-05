@@ -1,0 +1,142 @@
+---
+title: 工作区与 Package 结构
+description: 当前 workspace、products、packages、homepage 与 scripts 的真实目录边界、依赖关系与构建流向
+---
+
+# 工作区与 Package 结构
+
+这页只回答一个问题：
+
+- 现在这个仓库里的 package / product / site 分层到底是什么，彼此怎么连起来
+
+## 先给结论
+
+- `packages/` 放可复用、可发布、偏基础设施的 package
+- `products/` 放用户直接使用的产品形态
+- `homepage/` 放官网与用户文档站
+- `scripts/` 放仓库级构建、发布、辅助脚本
+- `<root>/docs` 与 `<root>/devdocs` 是历史沉淀区，持续维护面已经转到 `homepage/content/devdocs`
+
+## 当前 workspace 组成
+
+当前 `pnpm-workspace.yaml` 纳入的工作区有：
+
+- `products/console`
+- `products/chrome-extension`
+- `packages/downcity`
+- `packages/downcity-ui`
+- `homepage`
+
+也就是说，当前仓库不是“只有 `packages/` 才是 package”，而是：
+
+- `packages/` 负责基础能力
+- `products/` 负责真实产品
+- `homepage/` 负责内容站点
+
+## 根目录树
+
+```text
+downcity/
+├─ package.json
+├─ pnpm-workspace.yaml
+├─ products/
+│  ├─ console/
+│  └─ chrome-extension/
+├─ packages/
+│  ├─ downcity/
+│  └─ downcity-ui/
+├─ homepage/
+├─ scripts/
+├─ docs/
+├─ devdocs/
+└─ types/
+```
+
+## 职责图
+
+```mermaid
+flowchart TD
+    Root["Root Workspace"] --> Products["products/"]
+    Root --> Packages["packages/"]
+    Root --> Homepage["homepage/"]
+    Root --> Scripts["scripts/"]
+
+    Products --> Console["products/console<br/>浏览器 Console 产品"]
+    Products --> Extension["products/chrome-extension<br/>浏览器扩展产品"]
+
+    Packages --> Runtime["packages/downcity<br/>Runtime + CLI"]
+    Packages --> UI["packages/downcity-ui<br/>UI SDK"]
+
+    Homepage --> Site["官网、用户文档、开发文档"]
+    Scripts --> Build["build / publish / extbuild / extdev"]
+```
+
+## 当前几个核心工作区
+
+| 目录 | package 名 | 定位 | 主要产物 |
+| --- | --- | --- | --- |
+| `packages/downcity` | `downcity` | 核心 runtime、CLI、server、gateway | `bin/`、`public/` |
+| `packages/downcity-ui` | `@downcity/ui` | React UI SDK | `dist/` |
+| `products/console` | `@downcity/console-ui` | 浏览器 Console 前端 | 直接输出到 `packages/downcity/public/` |
+| `products/chrome-extension` | `downcity-chrome-extension` | 浏览器扩展 | `dist/` |
+| `homepage` | `downcity-homepage` | 官网、用户文档、开发文档 | `build/` |
+
+这里最容易误解的一点是：
+
+- `products/console` 的源码在 `products/console/`
+- 但它的生产构建产物不保存在自己目录，而是直接写入 `packages/downcity/public/`
+
+## 依赖关系图
+
+```mermaid
+flowchart LR
+    UI["packages/downcity-ui<br/>@downcity/ui"]
+    Console["products/console<br/>@downcity/console-ui"]
+    Homepage["homepage<br/>downcity-homepage"]
+    Runtime["packages/downcity<br/>downcity"]
+    Extension["products/chrome-extension<br/>downcity-chrome-extension"]
+
+    UI --> Console
+    UI --> Homepage
+    Console --> Runtime
+    Extension --> Runtime
+```
+
+## 构建流向图
+
+```mermaid
+flowchart TD
+    ConsoleSrc["products/console"] -- vite build --> ConsolePublic["packages/downcity/public"]
+    RuntimeSrc["packages/downcity"] -- tsc --> RuntimeBin["packages/downcity/bin"]
+    UISrc["packages/downcity-ui"] -- tsup --> UIDist["packages/downcity-ui/dist"]
+    ExtensionSrc["products/chrome-extension"] -- vite build --> ExtensionDist["products/chrome-extension/dist"]
+    HomepageSrc["homepage"] -- react-router build --> HomepageBuild["homepage/build"]
+```
+
+## 根脚本怎样编排这些工作区
+
+```mermaid
+flowchart TD
+    RootPkg["root package.json"] --> BuildAll["npm run build"]
+    RootPkg --> BuildDowncity["npm run build:downcity"]
+    RootPkg --> BuildHomepage["npm run build:homepage"]
+    RootPkg --> BuildExtension["npm run build:extension"]
+    RootPkg --> DevConsole["npm run dev:console / npm run console"]
+
+    BuildAll --> UIBuild["packages/downcity-ui"]
+    BuildAll --> HomepageBuild["homepage"]
+    BuildAll --> ConsoleBuild["products/console"]
+    BuildAll --> RuntimeBuild["packages/downcity"]
+
+    BuildDowncity --> ConsoleBuild
+    BuildDowncity --> RuntimeBuild
+
+    BuildExtension --> ExtensionBuild["products/chrome-extension"]
+    DevConsole --> ConsoleDev["products/console vite dev"]
+```
+
+## 一句话理解当前结构
+
+如果只记一句话：
+
+> `packages/` 放能力底座，`products/` 放真正交付给用户的产品，`homepage/` 放官网与文档，而 `packages/downcity` 是最终 runtime 交付中心。

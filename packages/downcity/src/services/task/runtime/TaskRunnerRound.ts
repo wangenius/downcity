@@ -10,16 +10,16 @@ import path from "node:path";
 import fs from "fs-extra";
 import { execa } from "execa";
 import type { AgentAuthRuntime } from "@/shared/types/AgentHost.js";
-import type { SessionRunResult } from "@/shared/types/SessionRun.js";
+import type { SessionRunResult } from "@/types/session/SessionRun.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type {
   ChatSendOutputPick,
   ScriptExecutionResult,
   TaskResultValidation,
-  TaskSessionRuntime,
+  TaskSessionRuntimePort,
   UserSimulatorDecision,
-} from "@/shared/types/TaskRunner.js";
-import { withRequestContext } from "@session/RequestContext.js";
+} from "@/types/task/TaskRunner.js";
+import { withSessionRunScope } from "@session/SessionRunScope.js";
 import { appendTaskRoundUserMessage } from "./TaskRunnerSession.js";
 
 /**
@@ -218,7 +218,7 @@ export function buildUserSimulatorQuery(params: {
  * 执行一轮 agent.run。
  */
 export async function runAgentRound(params: {
-  taskSessionRuntime: TaskSessionRuntime;
+  taskSessionRuntime: TaskSessionRuntimePort;
   sessionId: string;
   taskId: string;
   query: string;
@@ -238,12 +238,12 @@ export async function runAgentRound(params: {
     // ignore
   }
 
-  const result = await withRequestContext(
+  const result = await withSessionRunScope(
     {
       sessionId: params.sessionId,
     },
     () =>
-      params.taskSessionRuntime.getRuntime(params.sessionId).run({
+      params.taskSessionRuntime.getExecutor(params.sessionId).run({
         query: params.query,
       }),
   );
@@ -280,7 +280,7 @@ export async function runScriptTask(params: {
   const scriptAbs = path.join(params.runDirAbs, "task-script.sh");
   await fs.writeFile(scriptAbs, body.endsWith("\n") ? body : `${body}\n`, "utf-8");
 
-  const execResult = await withRequestContext(
+  const execResult = await withSessionRunScope(
     { sessionId: params.sessionId },
     () => {
       const childEnv: NodeJS.ProcessEnv = {

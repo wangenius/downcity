@@ -1,6 +1,6 @@
 ---
 title: Runtime / Service / Plugin 逻辑
-description: 按当前代码重新梳理 AgentState、Session、Service、Plugin 的职责边界、调用关系与启动顺序
+description: 按当前代码重新梳理 AgentRuntime、Session、Service、Plugin 的职责边界、调用关系与启动顺序
 ---
 
 # Runtime / Service / Plugin 逻辑
@@ -11,7 +11,7 @@ description: 按当前代码重新梳理 AgentState、Session、Service、Plugin
 
 先给结论：
 
-- `AgentState` 是单项目 runtime 中心
+- `AgentRuntime` 是单项目 runtime 中心
 - `service` 是主业务流程拥有者
 - `plugin` 是增强单元
 
@@ -24,7 +24,7 @@ description: 按当前代码重新梳理 AgentState、Session、Service、Plugin
 ## 一句话模型
 
 ```text
-AgentState 管理这个项目怎么跑
+AgentRuntime 管理这个项目怎么跑
 service 决定主流程怎么走
 plugin 决定某个节点怎么增强
 ```
@@ -75,7 +75,7 @@ flowchart LR
 
 当前 runtime 的中心对象是：
 
-- `AgentState`
+- `AgentRuntime`
 
 它持有：
 
@@ -83,11 +83,11 @@ flowchart LR
 - `env`
 - `systems`
 - `model`
-- `sessionStore`
+- `sessionFacade`
 - `services`
 - `pluginRegistry`
 
-也就是说，当前 runtime 的主概念已经稳定收敛到 `AgentState`。
+也就是说，当前 runtime 的主概念已经稳定收敛到 `AgentRuntime`。
 
 ## agent 启动顺序
 
@@ -99,11 +99,11 @@ flowchart TD
   B --> C["维护 registry / model store / gateway"]
 
   D["city agent start"] --> E["校验 console 与项目状态"]
-  E --> F["初始化 AgentState"]
+  E --> F["初始化 AgentRuntime"]
   F --> G["读取 downcity.json / .env / global env"]
   G --> H["创建 LanguageModel"]
-  H --> I["创建 SessionRuntimeStore"]
-  I --> J["创建 SessionStore"]
+  H --> I["创建 SessionExecutorRegistry"]
+  I --> J["创建 SessionFacade"]
   J --> K["创建 PluginRegistry"]
   K --> L["注册 auth / skill / voice"]
   L --> M["创建 chat / task / memory / shell services"]
@@ -128,9 +128,9 @@ flowchart TD
 
 `city agent start` 会先做前置校验，然后启动某个项目自己的 agent 进程。
 
-这里的关键不是“当前终端执行了哪个命令”，而是“当前项目是否被装配成了一个完整的 `AgentState`”。
+这里的关键不是“当前终端执行了哪个命令”，而是“当前项目是否被装配成了一个完整的 `AgentRuntime`”。
 
-#### 第三步：初始化 `AgentState`
+#### 第三步：初始化 `AgentRuntime`
 
 这一步会做：
 
@@ -158,7 +158,7 @@ flowchart TD
 
 当前 service 真正拿到的是：
 
-- `ExecutionContext`
+- `AgentContext`
 
 这个上下文里主要有：
 
@@ -171,7 +171,7 @@ flowchart TD
 
 所以现在更准确的说法是：
 
-- runtime 通过 `ExecutionContext` 给 service 和 plugin 暴露统一能力面
+- runtime 通过 `AgentContext` 给 service 和 plugin 暴露统一能力面
 
 ## service 的职责
 
@@ -221,10 +221,10 @@ hook 语义统一是：
 ```mermaid
 sequenceDiagram
   participant In as 外部输入
-  participant Agent as AgentState
+  participant Agent as AgentRuntime
   participant Service as Service
-  participant Session as SessionStore
-  participant Core as SessionCore
+  participant Session as SessionFacade
+  participant Core as SessionEngine
   participant Plugin as PluginRegistry
 
   In->>Agent: CLI / HTTP / Chat / Task

@@ -8,7 +8,7 @@
  */
 
 import * as Lark from "@larksuiteoapi/node-sdk";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   FeishuConfig,
   FeishuDownloadedAttachment,
@@ -39,7 +39,7 @@ export interface FeishuPlatformClientOptions {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 飞书渠道配置。
    */
@@ -54,9 +54,9 @@ export interface FeishuPlatformClientOptions {
  * 飞书平台 client。
  */
 export class FeishuPlatformClient {
-  private readonly context: ExecutionContext;
+  private readonly context: AgentContext;
   private readonly rootPath: string;
-  private readonly logger: ExecutionContext["logger"];
+  private readonly logger: AgentContext["logger"];
   private readonly appId: string;
   private readonly appSecret: string;
   private readonly domain?: string;
@@ -85,7 +85,7 @@ export class FeishuPlatformClient {
   /**
    * 获取 runtime 快照。
    */
-  getRuntimeStatus(): {
+  getExecutorStatus(): {
     running: boolean;
     linkState: "connected" | "disconnected" | "unknown";
     statusText: string;

@@ -9,7 +9,7 @@
 
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 
 /**
@@ -134,7 +134,7 @@ export type ServiceAction<
     /**
      * 当前统一执行上下文。
      */
-    context: ExecutionContext;
+    context: AgentContext;
     /**
      * 当前 action 的结构化输入。
      */
@@ -168,11 +168,11 @@ export interface ServiceLifecycle {
   /**
    * service 启动钩子。
    */
-  start?(context: ExecutionContext): Promise<void> | void;
+  start?(context: AgentContext): Promise<void> | void;
   /**
    * service 停止钩子。
    */
-  stop?(context: ExecutionContext): Promise<void> | void;
+  stop?(context: AgentContext): Promise<void> | void;
   /**
    * 非 action 命令分发钩子。
    */
@@ -180,7 +180,7 @@ export interface ServiceLifecycle {
     /**
      * 当前统一执行上下文。
      */
-    context: ExecutionContext;
+    context: AgentContext;
     /**
      * 当前命令名称。
      */
@@ -215,7 +215,7 @@ export interface Service {
   /**
    * service 级 system 文本构建器。
    */
-  system?: (context: ExecutionContext) => string | Promise<string>;
+  system?: (context: AgentContext) => string | Promise<string>;
   /**
    * service 生命周期钩子集合。
    */

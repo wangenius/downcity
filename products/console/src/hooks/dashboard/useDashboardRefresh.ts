@@ -81,6 +81,7 @@ export function useDashboardRefresh(params: {
   refreshAgents: (
     preferredAgentId?: string,
   ) => Promise<{ nextAgentId: string; list: UiAgentOption[] }>;
+  refreshGlobalPlugins: () => Promise<UiPluginRuntimeItem[] | void>;
   refreshPlugins: (agentId: string) => Promise<UiPluginRuntimeItem[] | void>;
   refreshModel: (agentId: string) => Promise<void>;
   refreshModelPool: () => Promise<void>;
@@ -116,6 +117,7 @@ export function useDashboardRefresh(params: {
           params.setSelectedAgentId("");
           params.clearPanelDataForNoAgent();
           await Promise.allSettled([
+            params.refreshGlobalPlugins(),
             params.refreshPlugins(""),
             params.refreshModel(""),
             params.refreshModelPool(),
@@ -134,6 +136,7 @@ export function useDashboardRefresh(params: {
           // 关键点（中文）：未运行 agent 仅展示静态配置与全局数据，不再打 runtime 接口。
           params.clearPanelDataForNoAgent();
           await Promise.allSettled([
+            params.refreshGlobalPlugins(),
             params.refreshPlugins(""),
             params.refreshModel(nextAgentId),
             params.refreshModelPool(),
@@ -153,6 +156,7 @@ export function useDashboardRefresh(params: {
         ]);
 
         await Promise.all([
+          params.refreshGlobalPlugins(),
           params.refreshAuthorization(nextAgentId),
           params.refreshPlugins(nextAgentId),
           params.refreshOverview(nextAgentId),
@@ -220,6 +224,7 @@ export function useDashboardRefresh(params: {
           params.clearPanelDataForNoAgent();
           params.setSelectedAgentId("");
           await Promise.allSettled([
+            params.refreshGlobalPlugins(),
             params.refreshPlugins(""),
             params.refreshModel(""),
             params.refreshModelPool(),

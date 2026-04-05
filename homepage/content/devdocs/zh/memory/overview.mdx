@@ -32,7 +32,7 @@ description: 用最直白的方式说明 Downcity 为什么需要 Memory、Memor
 
 ### 第三句：Memory 不是另一个主执行体
 
-- Downcity 当前真正的执行主轴是 `SessionStore -> SessionCore`
+- Downcity 当前真正的执行主轴是 `SessionFacade -> SessionEngine`
 - Memory 的正确位置是一个长期状态系统，由 `memory service` 承载
 
 ## 为什么一定要有 Memory
@@ -127,8 +127,8 @@ Memory 是从历史里筛出来、以后还要继续用的部分。
 
 主循环仍然是：
 
-- `SessionStore` 收到输入
-- `SessionCore` 推进当前执行
+- `SessionFacade` 收到输入
+- `SessionEngine` 推进当前执行
 
 Memory 主要改变：
 

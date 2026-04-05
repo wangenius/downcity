@@ -30,13 +30,13 @@ city config <subcommand>
 
 插件相关配置请改为：
 
-- `plugins.*` 同时管理插件行为与插件自己的依赖配置
+- `plugins.*` 只管理当前 agent 的插件参数
+- plugin 启停请使用 `city <plugin> on/off`
 
 示例：
 
 ```bash
 city config get plugins.asr
-city config set plugins.asr.enabled true
 city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 

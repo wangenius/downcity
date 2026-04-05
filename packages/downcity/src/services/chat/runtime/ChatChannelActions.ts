@@ -8,7 +8,7 @@
  */
 
 import { ConsoleStore } from "@/shared/utils/store/index.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import type {
   ChatCloseActionPayload,
@@ -42,7 +42,7 @@ import {
  */
 export async function executeChatStatusAction(params: {
   state: ChatChannelState;
-  context: ExecutionContext;
+  context: AgentContext;
   payload: ChatStatusActionPayload;
 }) {
   const channels = resolveTargetChannels(params.payload.channel);
@@ -62,7 +62,7 @@ export async function executeChatStatusAction(params: {
  */
 export async function executeChatTestAction(params: {
   state: ChatChannelState;
-  context: ExecutionContext;
+  context: AgentContext;
   payload: ChatTestActionPayload;
 }) {
   const channels = resolveTargetChannels(params.payload.channel);
@@ -116,7 +116,7 @@ export async function executeChatTestAction(params: {
  */
 export async function executeChatReconnectAction(params: {
   state: ChatChannelState;
-  context: ExecutionContext;
+  context: AgentContext;
   payload: ChatReconnectActionPayload;
 }) {
   const targets = resolveTargetChannels(params.payload.channel);
@@ -159,7 +159,7 @@ export async function executeChatReconnectAction(params: {
  */
 export async function executeChatOpenAction(params: {
   state: ChatChannelState;
-  context: ExecutionContext;
+  context: AgentContext;
   payload: ChatOpenActionPayload;
 }) {
   const targets = resolveTargetChannels(params.payload.channel);
@@ -194,7 +194,7 @@ export async function executeChatOpenAction(params: {
  */
 export async function executeChatCloseAction(params: {
   state: ChatChannelState;
-  context: ExecutionContext;
+  context: AgentContext;
   payload: ChatCloseActionPayload;
 }) {
   const targets = resolveTargetChannels(params.payload.channel);
@@ -222,7 +222,7 @@ export async function executeChatCloseAction(params: {
  * 执行 `chat.configuration` action。
  */
 export async function executeChatConfigurationAction(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   payload: ChatConfigurationActionPayload;
 }) {
   void params.context;
@@ -245,7 +245,7 @@ export async function executeChatConfigurationAction(params: {
  */
 export async function executeChatConfigureAction(params: {
   state: ChatChannelState;
-  context: ExecutionContext;
+  context: AgentContext;
   payload: ChatConfigureActionPayload;
 }) {
   const channel = params.payload.channel;

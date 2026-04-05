@@ -8,7 +8,7 @@
  */
 
 import type { JsonValue } from "@/shared/types/Json.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ServiceCommandScheduleInput } from "@/shared/types/ServiceSchedule.js";
 import type {
   ServiceStateControlAction,
@@ -50,7 +50,7 @@ export async function invokeServiceAction(params: {
   service: BaseService;
   actionName: string;
   payload?: JsonValue;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<ServiceActionResult<JsonValue>> {
   const action = resolveServiceAction(params.service, params.actionName);
   if (!action) {
@@ -95,7 +95,7 @@ async function scheduleServiceAction(params: {
   payload?: JsonValue;
   schedule: JsonValue | ServiceCommandScheduleInput;
   recordSnapshot: ServiceStateSnapshot;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<ServiceCommandResult & { service?: ServiceStateSnapshot }> {
   try {
     const scheduleInput = params.schedule as Partial<ServiceCommandScheduleInput>;
@@ -145,7 +145,7 @@ export async function runServiceCommand(params: {
   command: string;
   payload?: JsonValue;
   schedule?: JsonValue | ServiceCommandScheduleInput;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<ServiceCommandResult & { service?: ServiceStateSnapshot }> {
   const service = resolveServiceByName(params.serviceName);
   if (!service) {

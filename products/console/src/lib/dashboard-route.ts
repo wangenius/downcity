@@ -87,6 +87,7 @@ export function toDashboardPath(
   if (view === "globalPlugins") return "/global/plugins"
   if (view === "agentOverview") return `/${encodeURIComponent(agentSegment)}/overview`
   if (view === "agentAuthorization") return `/${encodeURIComponent(agentSegment)}/authorization`
+  if (view === "agentPlugins") return `/${encodeURIComponent(agentSegment)}/plugins`
   if (view === "agentSkills") return `/${encodeURIComponent(agentSegment)}/skills`
   if (view === "agentServices") return `/${encodeURIComponent(agentSegment)}/services`
   if (view === "agentCommand") return `/${encodeURIComponent(agentSegment)}/command`
@@ -142,6 +143,7 @@ export function parseDashboardPath(pathnameInput: string): DashboardRouteState {
     if (agentSegment) {
       if (second === "overview") return { view: "agentOverview", agentSegment }
       if (second === "authorization") return { view: "agentAuthorization", agentSegment }
+      if (second === "plugins") return { view: "agentPlugins", agentSegment }
       if (second === "skills") return { view: "agentSkills", agentSegment }
       if (second === "services") return { view: "agentServices", agentSegment }
       if (second === "command") return { view: "agentCommand", agentSegment }

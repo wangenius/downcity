@@ -12,18 +12,27 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { sendChatTextByChatKey } from "../../bin/services/chat/Action.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
+} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
 import { FeishuBot } from "../../bin/services/chat/channels/feishu/Feishu.js";
 
 function buildRuntime(rootPath) {
   return {
     rootPath,
     env: {},
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     logger: {
       warn() {},
       info() {},

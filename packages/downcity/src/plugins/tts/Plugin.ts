@@ -8,7 +8,13 @@
 
 import type { Plugin } from "@/shared/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { TtsInstallInput, TtsSynthesizeInput } from "@/shared/types/TtsPlugin.js";
+import type {
+  TtsInstallInput,
+  TtsPluginConfig,
+  TtsSynthesizeInput,
+} from "@/shared/types/TtsPlugin.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
+import { setCityPluginEnabled } from "@/main/plugin/Lifecycle.js";
 import {
   checkTtsSynthesizer,
   installTtsSynthesizer,
@@ -93,7 +99,6 @@ export const ttsPlugin: Plugin = {
     plugin: "tts",
     scope: "project",
     defaultValue: {
-      enabled: false,
       provider: "local",
       modelId: "qwen3-tts-0.6b",
       format: "wav",
@@ -127,12 +132,11 @@ export const ttsPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    const config = readTtsPluginConfig(context);
-    if (config.enabled !== true) {
+    if (!isPluginEnabled({ plugin: ttsPlugin })) {
       return {
         enabled: false,
         available: false,
-        reasons: ["tts plugin disabled"],
+        reasons: ["tts plugin disabled in city config"],
       };
     }
     const dependencyStatus = await checkTtsSynthesizer(context);
@@ -267,13 +271,16 @@ export const ttsPlugin: Plugin = {
     configure: {
       allowWhenDisabled: true,
       execute: async ({ context, payload }) => {
+        const payloadObject =
+          payload && typeof payload === "object" && !Array.isArray(payload)
+            ? (payload as Partial<TtsPluginConfig> & Record<string, unknown>)
+            : {};
+        const { enabled: _ignoredEnabled, ...patch } = payloadObject;
         const current = readTtsPluginConfig(context);
         const next = {
           ...current,
-          ...(payload && typeof payload === "object" && !Array.isArray(payload)
-            ? payload
-            : {}),
-        };
+          ...(patch as Partial<TtsPluginConfig>),
+        } satisfies TtsPluginConfig;
         await writeTtsPluginConfig({
           context,
           value: next,
@@ -327,14 +334,7 @@ export const ttsPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
-        const nextConfig = {
-          ...readTtsPluginConfig(context),
-          enabled: true,
-        };
-        await writeTtsPluginConfig({
-          context,
-          value: nextConfig,
-        });
+        setCityPluginEnabled("tts", true);
         if ((payload as { install?: unknown }).install !== false) {
           const installResult = await installTtsSynthesizer({
             context,
@@ -354,7 +354,7 @@ export const ttsPlugin: Plugin = {
         return {
           success: true,
           data: {
-            plugin: toJsonObject(readTtsPluginConfig(context)) || {},
+            plugin: toJsonObject(readTtsPluginConfig(context) as Record<string, unknown>) || {},
           },
         };
       },
@@ -367,18 +367,11 @@ export const ttsPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        const nextConfig = {
-          ...readTtsPluginConfig(context),
-          enabled: false,
-        };
-        await writeTtsPluginConfig({
-          context,
-          value: nextConfig,
-        });
+        setCityPluginEnabled("tts", false);
         return {
           success: true,
           data: {
-            plugin: toJsonObject(nextConfig) || {},
+            plugin: toJsonObject(readTtsPluginConfig(context) as Record<string, unknown>) || {},
           },
         };
       },
@@ -491,14 +484,14 @@ export const ttsPlugin: Plugin = {
             outputPath: result.outputPath,
             fileTag: result.fileTag,
             bytes: result.bytes,
+            ...(result.stderrSummary ? { stderr: result.stderrSummary } : {}),
           },
         };
       },
     },
   },
   system(context) {
-    const config = readTtsPluginConfig(context);
-    if (config.enabled !== true) {
+    if (!isPluginEnabled({ plugin: ttsPlugin })) {
       return "";
     }
     return [
@@ -510,6 +503,7 @@ export const ttsPlugin: Plugin = {
       "3. Optionally override synthesis parameters with `--voice`, `--language`, `--format`, `--speed`, and `--output`.",
       "Use the `tts.synthesize` action when the user asks to generate spoken audio or a reusable audio file tag.",
       "A successful synthesis returns a local output path and a reusable `<file type=\"audio\">...</file>` tag for downstream sending.",
+      "If the Python runner prints non-fatal stderr, the command still succeeds and returns that stderr summary as extra context.",
       "Example: `city tts synthesize \"你好，欢迎来到 Downcity\" --format wav`",
     ].join("\n");
   },

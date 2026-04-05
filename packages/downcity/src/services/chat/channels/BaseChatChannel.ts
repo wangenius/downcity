@@ -15,7 +15,7 @@ import type {
   ChatDispatcher,
 } from "@services/chat/types/ChatDispatcher.js";
 import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { deleteChatSessionById } from "@services/chat/runtime/ChatSessionDelete.js";
 import {
@@ -123,13 +123,13 @@ export type IncomingAuthorizationResult = {
  */
 export abstract class BaseChatChannel {
   readonly channel: ChatDispatchChannel;
-  protected readonly context: ExecutionContext;
+  protected readonly context: AgentContext;
   protected readonly rootPath: string;
   protected readonly logger: Logger;
 
   protected constructor(params: {
     channel: ChatDispatchChannel;
-    context: ExecutionContext;
+    context: AgentContext;
   }) {
     this.channel = params.channel;
     this.context = params.context;

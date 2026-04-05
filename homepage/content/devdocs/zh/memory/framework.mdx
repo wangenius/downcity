@@ -17,7 +17,7 @@ description: 从当前 packages/downcity 的真实主轴出发，说明 Memory S
 
 ### 1. 主模型是在 runtime 启动时统一创建的
 
-当前主模型实例在 agent 初始化阶段创建，并挂在 `AgentState.model` 上。
+当前主模型实例在 agent 初始化阶段创建，并挂在 `AgentRuntime.model` 上。
 
 这意味着：
 
@@ -28,9 +28,9 @@ description: 从当前 packages/downcity 的真实主轴出发，说明 Memory S
 
 当前真正的执行主轴是：
 
-- `SessionStore`
-- `SessionRuntimeStore`
-- `SessionCore`
+- `SessionFacade`
+- `SessionExecutorRegistry`
+- `SessionEngine`
 
 它们围绕 `sessionId` 组织每次执行。
 
@@ -46,7 +46,7 @@ task runtime 可以创建自己的 task session。
 
 - service 生命周期
 - service action 调用
-- 通过 `ExecutionContext` 注入能力
+- 通过 `AgentContext` 注入能力
 
 所以 Memory 在 package 里的正确宿主，应当首先是：
 
@@ -65,9 +65,9 @@ task runtime 可以创建自己的 task session。
 
 ```mermaid
 flowchart TD
-  AST["AgentState<br/>创建共享 model"]
-  ECTX["ExecutionContext<br/>统一注入 session / invoke / plugins"]
-  SESS["SessionStore"]
+  AST["AgentRuntime<br/>创建共享 model"]
+  ECTX["AgentContext<br/>统一注入 session / invoke / plugins"]
+  SESS["SessionFacade"]
   MS["memory service"]
   MA["memoryAgent<br/>maintenance role"]
   CORE["Memory Core<br/>Scratchpad / Journal / Canon"]

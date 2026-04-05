@@ -130,7 +130,7 @@ export class QQGatewayClient {
   /**
    * 获取网关状态快照。
    */
-  getRuntimeStatus(): QqGatewayRuntimeStatus {
+  getExecutorStatus(): QqGatewayRuntimeStatus {
     const readyState = typeof this.ws?.readyState === "number" ? this.ws.readyState : null;
     return buildQqGatewayRuntimeStatus({
       isRunning: this.isRunning,
@@ -159,7 +159,7 @@ export class QQGatewayClient {
       useSandbox: this.useSandbox,
       apiBase: this.getApiBase(),
       getAuthToken: () => this.getAuthToken(),
-      getRuntimeStatus: () => this.getRuntimeStatus(),
+      getExecutorStatus: () => this.getExecutorStatus(),
       requestReconnect: (reason, delayMs) => {
         this.requestReconnect(reason, delayMs);
       },

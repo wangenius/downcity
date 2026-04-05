@@ -3,11 +3,11 @@
  *
  * 关键点（中文）
  * - chat 语义（chatKey 与 sessionId 映射）统一收口在本模块
- * - 通过 RequestContext（ALS）读取当前请求上下文
+ * - 通过 SessionRunScope（ALS）读取当前请求上下文
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
-import { requestContext } from "@session/RequestContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
+import { getSessionRunScope } from "@session/SessionRunScope.js";
 import {
   sendActionByChatKey,
   sendTextByChatKey,
@@ -51,15 +51,15 @@ function readEnvNumber(name: string): number | undefined {
  *
  * 优先级（中文）
  * 1) 显式参数
- * 2) RequestContext（ALS）
+ * 2) SessionRunScope（ALS）
  * 3) 环境变量回退
  */
 export function resolveChatSessionSnapshot(input?: {
   sessionId?: string;
   chatKey?: string;
-  context?: ExecutionContext;
+  context?: AgentContext;
 }): ChatSessionSnapshot {
-  const requestCtx = requestContext.getStore();
+  const requestCtx = getSessionRunScope();
 
   const explicitSessionId = String(input?.sessionId || "").trim();
   const explicitChatKey = String(input?.chatKey || "").trim();
@@ -82,11 +82,6 @@ export function resolveChatSessionSnapshot(input?: {
     readEnvString("DC_CTX_ACTOR_ID") ||
     readEnvString("DC_CTX_USER_ID");
   const messageId = readEnvString("DC_CTX_MESSAGE_ID");
-  const requestId =
-    (typeof requestCtx?.requestId === "string" && requestCtx.requestId.trim()
-      ? requestCtx.requestId.trim()
-      : readEnvString("DC_CTX_REQUEST_ID")) || undefined;
-
   const sessionId =
     explicitSessionId ||
     requestSessionId ||
@@ -107,7 +102,6 @@ export function resolveChatSessionSnapshot(input?: {
     chatType,
     userId,
     messageId,
-    requestId,
   };
 
   return snapshot;
@@ -132,7 +126,7 @@ export function mapSessionIdToChatKey(sessionId?: string): string | undefined {
 export function resolveSessionId(input?: {
   sessionId?: string;
   chatKey?: string;
-  context?: ExecutionContext;
+  context?: AgentContext;
 }): string | undefined {
   const snapshot = resolveChatSessionSnapshot({
     sessionId: input?.sessionId,
@@ -149,7 +143,7 @@ export function resolveSessionId(input?: {
 export function resolveChatKey(input?: {
   chatKey?: string;
   sessionId?: string;
-  context?: ExecutionContext;
+  context?: AgentContext;
 }): string | undefined {
   const snapshot = resolveChatSessionSnapshot({
     chatKey: input?.chatKey,
@@ -170,7 +164,7 @@ export function resolveChatKey(input?: {
  */
 function resolveReplyMessageIdForChatSend(params: {
   chatKey: string;
-  context: ExecutionContext;
+  context: AgentContext;
   replyToMessage: boolean;
   explicitMessageId?: string;
 }): string | undefined {
@@ -265,7 +259,7 @@ async function waitBeforeSend(params: {
  * - 返回统一结构，便于上层链路做可观测与错误汇总。
  */
 export async function sendChatTextByChatKey(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   chatKey: string;
   text: string;
   delayMs?: number;
@@ -367,7 +361,7 @@ export async function sendChatTextByChatKey(params: {
  * - 动作分发与文本发送复用同一 chatKey 解析与 channel dispatcher。
  */
 export async function sendChatActionByChatKey(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   chatKey: string;
   action: ChatDispatchAction;
   messageId?: string;
@@ -406,7 +400,7 @@ export async function sendChatActionByChatKey(params: {
  * - sessionId -> chatKey 映射关系只在 chat service 内部维护。
  */
 export async function sendChatTextBySessionId(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
   text: string;
   delayMs?: number;
@@ -449,7 +443,7 @@ export async function sendChatTextBySessionId(params: {
  * - 删除包含：路由映射 + chat 审计目录 + session 目录 + 渠道状态清理。
  */
 export async function deleteChatByChatKey(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   chatKey?: string;
   sessionId?: string;
 }): Promise<ChatDeleteResponse> {

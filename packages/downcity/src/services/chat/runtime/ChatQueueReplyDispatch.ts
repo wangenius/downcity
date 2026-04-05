@@ -7,7 +7,7 @@
  */
 
 import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import { parseDirectDispatchAssistantText } from "./DirectDispatchParser.js";
 import { sendActionByChatKey } from "./ChatkeySend.js";
 import { sendChatTextByChatKey } from "../Action.js";
@@ -22,7 +22,7 @@ import {
  */
 export async function dispatchAssistantTextDirect(params: {
   logger: Logger;
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
   assistantText: string;
   phase?: "step" | "final" | "error";
@@ -123,7 +123,7 @@ export async function dispatchAssistantTextDirect(params: {
  */
 export async function dispatchTextToChannel(params: {
   logger: Logger;
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
   text: string;
   messageId?: string;

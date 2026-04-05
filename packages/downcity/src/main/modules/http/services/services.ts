@@ -15,7 +15,7 @@ import {
   runServiceCommand,
 } from "@/main/service/Manager.js";
 import type { ServiceStateControlAction } from "@/main/service/Manager.js";
-import { getExecutionContext } from "@/main/agent/AgentState.js";
+import { getAgentContext } from "@/main/agent/AgentRuntime.js";
 
 /**
  * Service 路由。
@@ -50,7 +50,7 @@ servicesRouter.post("/api/services/control", async (c) => {
   const result = await controlServiceState({
     serviceName,
     action: action as ServiceStateControlAction,
-    context: getExecutionContext(),
+    context: getAgentContext(),
   });
   return c.json(result, result.success ? 200 : 400);
 });
@@ -76,7 +76,7 @@ servicesRouter.post("/api/services/command", async (c) => {
     command,
     payload: body?.payload,
     schedule,
-    context: getExecutionContext(),
+    context: getAgentContext(),
   });
   return c.json(result, result.success ? 200 : 400);
 });
@@ -89,6 +89,6 @@ servicesRouter.post("/api/services/command", async (c) => {
  */
 export function ensureServiceActionRoutesRegistered(): void {
   if (serviceActionRoutesRegistered) return;
-  registerAllServicesForServer(servicesRouter, getExecutionContext());
+  registerAllServicesForServer(servicesRouter, getAgentContext());
   serviceActionRoutesRegistered = true;
 }

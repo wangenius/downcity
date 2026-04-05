@@ -1,6 +1,6 @@
 ---
 title: Runtime, Services, and Plugins
-description: Reframes the current package around AgentState, session execution, services, and plugins
+description: Reframes the current package around AgentRuntime, session execution, services, and plugins
 ---
 
 # Runtime, Services, and Plugins
@@ -11,7 +11,7 @@ This page has one goal:
 
 ## Short Version
 
-- `AgentState` is the single-project runtime center
+- `AgentRuntime` is the single-project runtime center
 - services own business workflows
 - plugins extend those workflows without owning them
 
@@ -62,7 +62,7 @@ flowchart LR
 
 The runtime center is now:
 
-- `AgentState`
+- `AgentRuntime`
 
 It owns:
 
@@ -70,7 +70,7 @@ It owns:
 - `env`
 - `systems`
 - `model`
-- `sessionStore`
+- `sessionFacade`
 - `services`
 - `pluginRegistry`
 
@@ -78,8 +78,8 @@ So the real mental model is:
 
 ```text
 console manages many agents
-each agent runtime is centered on AgentState
-AgentState then holds session, services, and plugins
+each agent runtime is centered on AgentRuntime
+AgentRuntime then holds session, services, and plugins
 ```
 
 ## Startup Order
@@ -90,11 +90,11 @@ flowchart TD
   B --> C["maintain registry / model store / gateway"]
 
   D["city agent start"] --> E["validate console and project state"]
-  E --> F["initialize AgentState"]
+  E --> F["initialize AgentRuntime"]
   F --> G["load downcity.json / .env / global env"]
   G --> H["create LanguageModel"]
-  H --> I["create SessionRuntimeStore"]
-  I --> J["create SessionStore"]
+  H --> I["create SessionExecutorRegistry"]
+  I --> J["create SessionFacade"]
   J --> K["create PluginRegistry"]
   K --> L["register auth / skill / voice"]
   L --> M["create chat / task / memory / shell services"]
@@ -108,7 +108,7 @@ Services do not own process orchestration.
 
 They receive:
 
-- `ExecutionContext`
+- `AgentContext`
 
 That context exposes the main runtime surface:
 
@@ -121,7 +121,7 @@ That context exposes the main runtime surface:
 
 So a better description is:
 
-- the runtime injects a unified execution surface through `ExecutionContext`
+- the runtime injects a unified execution surface through `AgentContext`
 
 ## Service Boundary
 
@@ -183,10 +183,10 @@ The `chat` service currently defines and uses:
 ```mermaid
 sequenceDiagram
   participant In as External Input
-  participant Agent as AgentState
+  participant Agent as AgentRuntime
   participant Service as Service
-  participant Session as SessionStore
-  participant Core as SessionCore
+  participant Session as SessionFacade
+  participant Core as SessionEngine
   participant Plugin as PluginRegistry
 
   In->>Agent: CLI / HTTP / Chat / Task
@@ -202,5 +202,5 @@ sequenceDiagram
 ## In One Sentence
 
 ```text
-The current package is centered on AgentState, uses SessionStore as the execution axis, lets services own workflows, and uses plugins only as extensions.
+The current package is centered on AgentRuntime, uses SessionFacade as the execution axis, lets services own workflows, and uses plugins only as extensions.
 ```

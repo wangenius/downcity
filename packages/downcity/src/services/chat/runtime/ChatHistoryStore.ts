@@ -10,7 +10,7 @@
 import fs from "fs-extra";
 import path from "node:path";
 import { generateId } from "@shared/utils/Id.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import type {
@@ -131,7 +131,7 @@ function isChatHistoryEventV1(value: unknown): value is ChatHistoryEventV1 {
  * - 调用方应在入队前调用，以满足“先审计后执行”链路。
  */
 export async function appendInboundChatHistory(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
@@ -176,7 +176,7 @@ export async function appendInboundChatHistory(params: {
  * - 该函数只做落盘，不影响实际发送链路。
  */
 export async function appendOutboundChatHistory(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
@@ -219,7 +219,7 @@ export async function appendOutboundChatHistory(params: {
  * - 仅做文件读取与过滤，不涉及任何业务 side-effect。
  */
 export async function readChatHistory(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
   limit?: number;
   direction?: ChatHistoryDirection | "all";

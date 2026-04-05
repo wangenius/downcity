@@ -7,14 +7,14 @@
  * - Manager.ts 只作为门面导出，真正逻辑在这里分层实现。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   ServiceStateControlAction,
   ServiceStateControlResult,
   ServiceStateRecord,
   ServiceStateSnapshot,
 } from "@/shared/types/ServiceState.js";
-import { getAgentState } from "@/main/agent/RuntimeState.js";
+import { getAgentRuntime } from "@/main/agent/AgentRuntimeState.js";
 import {
   getRegisteredStaticServiceInstances,
   listRegisteredServices,
@@ -36,7 +36,7 @@ function nowMs(): number {
  */
 export function listServiceInstances(): BaseService[] {
   try {
-    const agent = getAgentState();
+    const agent = getAgentRuntime();
     if (agent.services.size > 0) {
       return [...agent.services.values()];
     }
@@ -172,7 +172,7 @@ export function isServiceRunning(serviceName: string): boolean {
 
 async function startServiceInternal(
   service: BaseService,
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<ServiceStateControlResult> {
   const record = ensureServiceStateRecord(service);
   try {
@@ -202,7 +202,7 @@ async function startServiceInternal(
 
 async function stopServiceInternal(
   service: BaseService,
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<ServiceStateControlResult> {
   const record = ensureServiceStateRecord(service);
   try {
@@ -236,7 +236,7 @@ async function stopServiceInternal(
 export async function controlServiceState(params: {
   serviceName: string;
   action: ServiceStateControlAction;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<ServiceStateControlResult> {
   const service = resolveServiceByName(params.serviceName);
   if (!service) {
@@ -271,7 +271,7 @@ export async function controlServiceState(params: {
  * 启动全部 service。
  */
 export async function startAllServices(
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<{
   success: boolean;
   results: ServiceStateControlResult[];
@@ -295,7 +295,7 @@ export async function startAllServices(
 /**
  * 停止全部 service。
  */
-export async function stopAllServices(context: ExecutionContext): Promise<{
+export async function stopAllServices(context: AgentContext): Promise<{
   success: boolean;
   results: ServiceStateControlResult[];
 }> {

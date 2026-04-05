@@ -1,6 +1,6 @@
 ---
 title: Console Registration, Execution Context, and Shell Flow
-description: Explains console registry writes, how execution context connects services and plugins, and how shell injects environment
+description: Explains console registry writes, how the execution context surface connects services and plugins, and how shell injects environment
 ---
 
 # Console Registration, Execution Context, and Shell Flow
@@ -14,7 +14,7 @@ description: Explains console registry writes, how execution context connects se
 ## 2. Execution Context Flow
 
 - one agent process binds to one `rootPath`
-- the agent assembles an `ExecutionContext`
+- the agent assembles an execution context surface
 - the execution context exposes `session`, `invoke`, and `plugins`
 - plugins register `pipeline`, `guard`, `effect`, and `resolve` handlers
 - services trigger those points during their main path
@@ -38,7 +38,7 @@ flowchart TD
   D --> E["console registry"]
 
   F["city service or city plugin"] --> G["agent API"]
-  G --> H["ExecutionContext"]
+  G --> H["execution context"]
   H --> I["service main path"]
   I --> J["plugin point dispatch"]
 

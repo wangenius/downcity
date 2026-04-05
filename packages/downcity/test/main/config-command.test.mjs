@@ -1,9 +1,9 @@
 /**
- * config / console model 命令测试（node:test）。
+ * config / model 命令测试（node:test）。
  *
  * 覆盖点（中文）
- * - 验证 `console config get/set/unset` 对 downcity.json 的通用读写行为。
- * - 验证 `console model add/update/remove/use` 的非交互脚本化能力。
+ * - 验证 `config get/set/unset` 对 downcity.json 的通用读写行为。
+ * - 验证 `model add/update/remove/use` 的非交互脚本化能力。
  * - 验证 provider 被 model 引用时的删除保护。
  */
 
@@ -16,7 +16,7 @@ import test from "node:test";
 import fs from "fs-extra";
 
 const execFileAsync = promisify(execFile);
-const CLI_ENTRY = path.resolve(process.cwd(), "bin/city/modules/cli/Index.js");
+const CLI_ENTRY = path.resolve(process.cwd(), "bin/main/modules/cli/Index.js");
 
 function createBaseConfig() {
   return {
@@ -80,7 +80,6 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   });
 
   const setResult = await runCliJson([
-    "console",
     "config",
     "set",
     "services.chat.queue.maxConcurrency",
@@ -92,7 +91,6 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   assert.equal(setResult.value, 4);
 
   const getResult = await runCliJson([
-    "console",
     "config",
     "get",
     "services.chat.queue.maxConcurrency",
@@ -103,7 +101,6 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   assert.equal(getResult.value, 4);
 
   const unsetResult = await runCliJson([
-    "console",
     "config",
     "unset",
     "services.chat.queue.maxConcurrency",
@@ -116,7 +113,7 @@ test("config get/set/unset updates nested downcity.json path", async (t) => {
   assert.equal(saved.services.chat.queue.maxConcurrency, undefined);
 });
 
-test("console model commands manage provider/model lifecycle and project binding", async (t) => {
+test("model commands manage provider/model lifecycle and project binding", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-model-project-"));
   const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-model-home-"));
   const cliEnv = { HOME: tempHome };
@@ -130,7 +127,6 @@ test("console model commands manage provider/model lifecycle and project binding
   });
 
   const addProvider = await runCliJson([
-    "console",
     "model",
     "add",
     "provider",
@@ -144,7 +140,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(addProvider.providerId, "openai_main");
 
   const addModel = await runCliJson([
-    "console",
     "model",
     "add",
     "model",
@@ -161,7 +156,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(addModel.model.providerId, "openai_main");
 
   const useModel = await runCliJson([
-    "console",
     "model",
     "use",
     "fast",
@@ -172,7 +166,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(useModel.nextPrimary, "fast");
 
   const removeRefProvider = await runCliExpectFailure([
-    "console",
     "model",
     "remove",
     "provider",
@@ -181,7 +174,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.match(String(removeRefProvider.error), /referenced by models/i);
 
   const updateModel = await runCliJson([
-    "console",
     "model",
     "update",
     "model",
@@ -195,7 +187,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(updateModel.model.temperature, undefined);
 
   const getProvider = await runCliJson([
-    "console",
     "model",
     "get",
     "provider",
@@ -205,7 +196,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(getProvider.providerId, "openai_main");
 
   const getModel = await runCliJson([
-    "console",
     "model",
     "get",
     "model",
@@ -215,7 +205,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(getModel.model.id, "fast");
 
   const removeModel = await runCliJson([
-    "console",
     "model",
     "remove",
     "model",
@@ -224,7 +213,6 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(removeModel.success, true);
 
   const removeProvider = await runCliJson([
-    "console",
     "model",
     "remove",
     "provider",
@@ -237,7 +225,7 @@ test("console model commands manage provider/model lifecycle and project binding
   assert.equal(saved.execution.modelId, "fast");
 });
 
-test("console model add model preset supports both moonshot-cn and moonshot-ai providers", async (t) => {
+test("model add model preset supports both moonshot-cn and moonshot-ai providers", async (t) => {
   const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-kimi-home-"));
   const cliEnv = { HOME: tempHome };
 
@@ -246,7 +234,6 @@ test("console model add model preset supports both moonshot-cn and moonshot-ai p
   });
 
   const addCnProvider = await runCliJson([
-    "console",
     "model",
     "add",
     "provider",
@@ -259,7 +246,6 @@ test("console model add model preset supports both moonshot-cn and moonshot-ai p
   assert.equal(addCnProvider.success, true);
 
   const addAiProvider = await runCliJson([
-    "console",
     "model",
     "add",
     "provider",
@@ -272,7 +258,6 @@ test("console model add model preset supports both moonshot-cn and moonshot-ai p
   assert.equal(addAiProvider.success, true);
 
   const addCnModel = await runCliJson([
-    "console",
     "model",
     "add",
     "model",
@@ -286,7 +271,6 @@ test("console model add model preset supports both moonshot-cn and moonshot-ai p
   assert.equal(addCnModel.model.name, "kimi-k2.5");
 
   const addAiModel = await runCliJson([
-    "console",
     "model",
     "add",
     "model",
@@ -300,7 +284,7 @@ test("console model add model preset supports both moonshot-cn and moonshot-ai p
   assert.equal(addAiModel.model.name, "kimi-k2.5");
 });
 
-test("console model add model preset supports kimi-code provider", async (t) => {
+test("model add model preset supports kimi-code provider", async (t) => {
   const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "city-config-kimi-code-home-"));
   const cliEnv = { HOME: tempHome };
 
@@ -309,7 +293,6 @@ test("console model add model preset supports kimi-code provider", async (t) => 
   });
 
   const addProvider = await runCliJson([
-    "console",
     "model",
     "add",
     "provider",
@@ -322,7 +305,6 @@ test("console model add model preset supports kimi-code provider", async (t) => 
   assert.equal(addProvider.success, true);
 
   const addModel = await runCliJson([
-    "console",
     "model",
     "add",
     "model",

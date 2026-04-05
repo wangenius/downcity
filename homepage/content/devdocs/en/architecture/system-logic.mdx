@@ -67,14 +67,14 @@ Agent is the single-project execution plane. It:
 
 - loads the current project config
 - exposes the project HTTP runtime
-- owns `AgentState`
+- owns `AgentRuntime`
 - drives session, services, and plugins
 
 ## The Runtime Center
 
 The runtime center is:
 
-- `AgentState`
+- `AgentRuntime`
 
 It owns:
 
@@ -82,7 +82,7 @@ It owns:
 - `env`
 - `systems`
 - `model`
-- `sessionStore`
+- `sessionFacade`
 - `services`
 - `pluginRegistry`
 
@@ -90,8 +90,8 @@ So the most accurate high-level sentence is:
 
 ```text
 console manages many agents
-each agent runtime is centered on AgentState
-AgentState then owns session, services, and plugins
+each agent runtime is centered on AgentRuntime
+AgentRuntime then owns session, services, and plugins
 ```
 
 ## Why split session, service, and plugin
@@ -109,11 +109,11 @@ Session answers:
 
 The real objects here are:
 
-- `SessionStore`
-- `SessionRuntimeStore`
-- `SessionRuntime`
-- `SessionCore`
-- `FilePersistor`
+- `SessionFacade`
+- `SessionExecutorRegistry`
+- `LocalSessionExecutor`
+- `SessionEngine`
+- `JsonlSessionHistoryStore`
 
 ### Service
 
@@ -158,11 +158,11 @@ flowchart TD
   B --> C["maintain registry / model store / gateway"]
 
   D["city agent start"] --> E["validate console and project state"]
-  E --> F["initialize AgentState"]
+  E --> F["initialize AgentRuntime"]
   F --> G["load downcity.json / .env / global env"]
   G --> H["create LanguageModel"]
-  H --> I["create SessionRuntimeStore"]
-  I --> J["create SessionStore"]
+  H --> I["create SessionExecutorRegistry"]
+  I --> J["create SessionFacade"]
   J --> K["create PluginRegistry"]
   K --> L["register auth / skill / voice"]
   L --> M["create chat / task / memory / shell services"]
@@ -179,8 +179,8 @@ flowchart TD
   SERVICE --> SID["choose sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> CORE["SessionCore"]
-  CORE --> MODEL["model / tools / prompt / persistor / compaction"]
+  RUN --> CORE["SessionEngine"]
+  CORE --> MODEL["model / tools / prompt / history store / compaction"]
   MODEL --> RES["assistant result"]
   RES --> SERVICE
   SERVICE --> OUT["reply / artifacts / side effects"]
@@ -203,15 +203,15 @@ These point names belong to the service. Plugins only implement some of them.
 
 ## Core Objects in Code
 
-- `AgentState`: single-project runtime center
-- `ExecutionContext`: unified runtime surface
-- `SessionStore`: session facade
-- `SessionCore`: execution kernel
+- `AgentRuntime`: single-project runtime center
+- `AgentContext`: unified runtime surface
+- `SessionFacade`: session facade
+- `SessionEngine`: execution kernel
 - `PluginRegistry`: plugin registration and dispatch
 - `BaseService`: service instance base class
 
 ## In One Sentence
 
 ```text
-The current system logic is: console manages many agents, each agent runtime is centered on AgentState, and session, services, and plugins all hang off that runtime in clearly separated roles.
+The current system logic is: console manages many agents, each agent runtime is centered on AgentRuntime, and session, services, and plugins all hang off that runtime in clearly separated roles.
 ```

@@ -157,7 +157,7 @@ export function getDowncitySessionMessagesPath(cwd: string, sessionId: string): 
   return path.join(getDowncitySessionMessagesDirPath(cwd, sessionId), "messages.jsonl");
 }
 
-export function getDowncitySessionMessagesMetaPath(cwd: string, sessionId: string): string {
+export function getDowncitySessionHistoryMetaPath(cwd: string, sessionId: string): string {
   return path.join(getDowncitySessionMessagesDirPath(cwd, sessionId), "meta.json");
 }
 

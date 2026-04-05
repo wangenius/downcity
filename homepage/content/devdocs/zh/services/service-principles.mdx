@@ -1,6 +1,6 @@
 ---
 title: Service 原理
-description: 解释当前 Downcity 里 service 的角色、边界、生命周期，以及它和 AgentState、session、plugin 的关系
+description: 解释当前 Downcity 里 service 的角色、边界、生命周期，以及它和 AgentRuntime、session、plugin 的关系
 ---
 
 # Service 原理
@@ -25,7 +25,7 @@ description: 解释当前 Downcity 里 service 的角色、边界、生命周期
 ## 一句话模型
 
 ```text
-AgentState 负责这个项目怎么跑
+AgentRuntime 负责这个项目怎么跑
 service 负责某类业务流程怎么走
 plugin 负责在流程节点做增强
 ```
@@ -62,7 +62,7 @@ service 自己不维护整套运行时。
 
 真正持有当前项目长期运行状态的是：
 
-- `AgentState`
+- `AgentRuntime`
 
 它负责维护：
 
@@ -70,13 +70,13 @@ service 自己不维护整套运行时。
 - `logger`
 - `env`
 - `model`
-- `SessionStore`
+- `SessionFacade`
 - `PluginRegistry`
 - `services`
 
 service 拿到的是统一注入的：
 
-- `ExecutionContext`
+- `AgentContext`
 
 它主要暴露：
 
@@ -92,9 +92,9 @@ service 拿到的是统一注入的：
 ```mermaid
 flowchart LR
   subgraph Agent["Agent Runtime"]
-    A1["AgentState"]
-    A2["ExecutionContext"]
-    A3["SessionStore"]
+    A1["AgentRuntime"]
+    A2["AgentContext"]
+    A3["SessionFacade"]
     A4["PluginRegistry"]
   end
 

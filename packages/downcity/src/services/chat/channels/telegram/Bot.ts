@@ -35,7 +35,7 @@ import {
   buildChatInboundText,
 } from "@services/chat/runtime/InboundAugment.js";
 import { renderChatMessageFileTag } from "@services/chat/runtime/ChatMessageMarkup.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import {
@@ -60,7 +60,7 @@ export class TelegramBot extends BaseChatChannel {
   private readonly botToken: string;
   private readonly platform: TelegramPlatformClient;
 
-  constructor(context: ExecutionContext, botToken: string) {
+  constructor(context: AgentContext, botToken: string) {
     super({ channel: "telegram", context });
     this.botToken = botToken;
     this.platform = new TelegramPlatformClient({
@@ -131,13 +131,13 @@ export class TelegramBot extends BaseChatChannel {
   /**
    * 读取 runtime 快照。
    */
-  getRuntimeStatus(): {
+  getExecutorStatus(): {
     running: boolean;
     linkState: "connected" | "disconnected" | "unknown";
     statusText: string;
     detail: Record<string, string | number | boolean | null>;
   } {
-    return this.platform.getRuntimeStatus();
+    return this.platform.getExecutorStatus();
   }
 
   /**
@@ -639,7 +639,7 @@ export class TelegramBot extends BaseChatChannel {
  */
 export function createTelegramBot(
   config: TelegramConfig,
-  context: ExecutionContext,
+  context: AgentContext,
 ): TelegramBot | null {
   if (!config.enabled || !config.botToken || config.botToken === "${}") {
     return null;

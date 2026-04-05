@@ -8,10 +8,10 @@
  * - action 注册表已经拆到独立模块，当前文件只保留实例骨架。
  */
 
-import type { AgentState } from "@/shared/types/AgentState.js";
+import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
 import { BaseService } from "@services/BaseService.js";
 import type { ServiceActions } from "@/shared/types/Service.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ChatChannelState } from "@/shared/types/ChatRuntime.js";
 import {
   createChatChannelState,
@@ -58,7 +58,7 @@ export class ChatService extends BaseService {
   /**
    * 当前 service 的 system 文本构建器。
    */
-  readonly system = async (context: ExecutionContext): Promise<string> => {
+  readonly system = async (context: AgentContext): Promise<string> => {
     return await buildChatServiceSystem(context);
   };
 
@@ -70,7 +70,7 @@ export class ChatService extends BaseService {
   /**
    * 启动当前实例的 queue worker。
    */
-  private startQueueWorker(context: ExecutionContext): void {
+  private startQueueWorker(context: AgentContext): void {
     if (this.queueWorker) return;
     const worker = new ChatQueueWorker({
       logger: context.logger,
@@ -92,7 +92,7 @@ export class ChatService extends BaseService {
     worker.stop();
   }
 
-  constructor(agent: AgentState | null) {
+  constructor(agent: AgentRuntime | null) {
     super(agent);
     this.actions = createChatServiceActions({
       channelState: this.channelState,

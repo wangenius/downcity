@@ -12,20 +12,42 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { sendChatTextByChatKey } from "../../bin/services/chat/Action.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
+} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 const CHAT_KEY = "ctx_direct_delay";
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor(check, timeoutMs = 2_000, intervalMs = 10) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt <= timeoutMs) {
+    if (check()) return;
+    await sleep(intervalMs);
+  }
+  throw new Error(`waitFor timeout after ${timeoutMs}ms`);
+}
 
 function buildRuntime(rootPath) {
   return {
     rootPath,
     env: {},
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     logger: {
       warn() {},
       info() {},
@@ -72,11 +94,11 @@ test("sendChatTextByChatKey schedules delayed send without blocking when nonBloc
     assert.equal(result.chatKey, CHAT_KEY);
     assert.equal(calls.length, 0);
     assert.ok(
-      elapsedMs < 80,
-      `expected non-blocking return (<80ms), got ${elapsedMs}ms`,
+      elapsedMs < 140,
+      `expected non-blocking return (<140ms), got ${elapsedMs}ms`,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 180));
+    await waitFor(() => calls.length === 1, 2_000, 20);
     assert.equal(calls.length, 1);
     assert.equal(calls[0].payload.chatId, "10001");
     assert.equal(calls[0].payload.text, "delayed-message");

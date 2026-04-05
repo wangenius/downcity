@@ -5,6 +5,8 @@
     "service-design-logic",
     "system-map",
     "chat-design",
+    "chat-message-protocol",
+    "chat-queue-and-merging",
     "task-design",
     "memory-design"
   ]

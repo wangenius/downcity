@@ -13,6 +13,8 @@ import type { VoicePluginConfig } from "@/shared/types/VoicePlugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { AgentPluginConfigRuntime } from "@/shared/types/AgentHost.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
+import { setCityPluginEnabled } from "@/main/plugin/Lifecycle.js";
 import {
   listVoiceModels,
   resolveVoicePluginModelId,
@@ -94,7 +96,6 @@ function readVoicePluginConfig(runtime: {
       ? (current as VoicePluginConfig)
       : {};
   return {
-    enabled: normalized.enabled === true,
     injectPrompt:
       typeof normalized.injectPrompt === "boolean"
         ? normalized.injectPrompt
@@ -135,7 +136,11 @@ async function writeVoicePluginConfig(params: {
   if (!params.agentState.config.plugins) {
     params.agentState.config.plugins = {};
   }
-  params.agentState.config.plugins.asr = (toJsonObject(params.value) || {}) as JsonObject;
+  const next: Record<string, unknown> = {
+    ...(params.value as Record<string, unknown>),
+  };
+  delete next.enabled;
+  params.agentState.config.plugins.asr = (toJsonObject(next) || {}) as JsonObject;
   await params.agentState.pluginConfig.persistProjectPlugins(
     params.agentState.config.plugins as Record<string, JsonObject>,
   );
@@ -153,7 +158,6 @@ export const asrPlugin: Plugin = {
     plugin: "asr",
     scope: "project",
     defaultValue: {
-      enabled: false,
       injectPrompt: true,
       augmentMessage: true,
       provider: "local",
@@ -182,12 +186,11 @@ export const asrPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    const config = readVoicePluginConfig(context);
-    if (config.enabled !== true) {
+    if (!isPluginEnabled({ plugin: asrPlugin })) {
       return {
         enabled: false,
         available: false,
-        reasons: ["asr plugin disabled"],
+        reasons: ["asr plugin disabled in city config"],
       };
     }
     const dependencyStatus = await checkVoiceTranscriber(context);
@@ -324,13 +327,16 @@ export const asrPlugin: Plugin = {
     configure: {
       allowWhenDisabled: true,
       execute: async ({ context, payload }) => {
+        const payloadObject =
+          payload && typeof payload === "object" && !Array.isArray(payload)
+            ? (payload as Partial<VoicePluginConfig> & Record<string, unknown>)
+            : {};
+        const { enabled: _ignoredEnabled, ...patch } = payloadObject;
         const current = readVoicePluginConfig(context);
         const next = {
           ...current,
-          ...(payload && typeof payload === "object" && !Array.isArray(payload)
-            ? payload
-            : {}),
-        };
+          ...(patch as Partial<VoicePluginConfig>),
+        } satisfies VoicePluginConfig;
         await writeVoicePluginConfig({
           agentState: context,
           value: next,
@@ -384,9 +390,9 @@ export const asrPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
+        setCityPluginEnabled("asr", true);
         const nextConfig = {
           ...readVoicePluginConfig(context),
-          enabled: true,
           injectPrompt:
             typeof (payload as { injectPrompt?: unknown }).injectPrompt === "boolean"
               ? ((payload as { injectPrompt?: boolean }).injectPrompt as boolean)
@@ -433,18 +439,11 @@ export const asrPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        const nextConfig = {
-          ...readVoicePluginConfig(context),
-          enabled: false,
-        };
-        await writeVoicePluginConfig({
-          agentState: context,
-          value: nextConfig,
-        });
+        setCityPluginEnabled("asr", false);
         return {
           success: true,
           data: {
-            plugin: toJsonObject(nextConfig) || {},
+            plugin: toJsonObject(readVoicePluginConfig(context) as Record<string, unknown>) || {},
           },
         };
       },
@@ -588,7 +587,7 @@ export const asrPlugin: Plugin = {
   },
   system(context) {
     const config = readVoicePluginConfig(context);
-    if (config.enabled !== true || config.injectPrompt !== true) {
+    if (!isPluginEnabled({ plugin: asrPlugin }) || config.injectPrompt !== true) {
       return "";
     }
     return [

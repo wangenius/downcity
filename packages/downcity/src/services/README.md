@@ -11,7 +11,7 @@
    - 维护 service 的静态注册清单。
 2. `main/registries/ServiceClassRegistry.ts`
    - 负责把静态 service 定义实例化为 `BaseService` 子类。
-3. `agent/AgentState.ts`
+3. `agent/AgentRuntime.ts`
    - agent 持有当前运行中的 service 实例集合。
 4. `main/service/Manager.ts`
    - 统一做 service lifecycle、action 调度、CLI/API 桥接。
@@ -73,11 +73,11 @@
 4. `shell/`
    - 负责 shell session 生命周期与命令执行。
    - `ShellService.ts` 持有实例级 shell session 状态。
-   - `runtime/SessionStore.ts` 负责公开 action 编排。
-   - `runtime/SessionStoreSupport.ts` 负责持久化、waiter 与 session 查找等共享运行时细节。
-   - `sessions/tools/shell/Tool.ts` 作为 session tool facade，只做协议适配。
-   - `sessions/tools/shell/ToolSchemas.ts` 负责 shell tool schema。
-   - `sessions/tools/shell/ToolSupport.ts` 负责 runtime bridge 与响应整理。
+   - `runtime/ShellActionRuntime.ts` 负责公开 action 编排。
+   - `runtime/ShellActionRuntimeSupport.ts` 负责持久化、waiter 与 session 查找等共享运行时细节。
+   - `session/tools/shell/ShellToolDefinition.ts` 作为 session tool facade，只做协议适配。
+   - `session/tools/shell/ShellToolSchemas.ts` 负责 shell tool schema。
+   - `session/tools/shell/ShellToolBridge.ts` 负责 runtime bridge 与响应整理。
 
 ## 统一服务模式
 
@@ -94,7 +94,7 @@
 
 ## 边界约束
 
-1. service 通过 `ExecutionContext` 读取运行时能力。
+1. service 通过 `AgentContext` 读取运行时能力。
 2. service 的实例状态应归属于 service instance，而不是模块级单例。
 3. plugin 只能作为被动扩展，不替代 service 主流程。
-4. service 间协作优先通过 `ExecutionContext.invoke`，而不是隐式全局状态。
+4. service 间协作优先通过 `AgentContext.invoke`，而不是隐式全局状态。

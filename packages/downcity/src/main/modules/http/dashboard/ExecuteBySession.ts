@@ -6,11 +6,11 @@
  * - 非 chat session 保留原有直接执行语义。
  */
 
-import type { AgentState } from "@/main/agent/AgentState.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentRuntime } from "@/main/agent/AgentRuntime.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { DashboardSessionExecuteAttachmentInput } from "@/shared/types/DashboardSessionExecute.js";
-import { drainDeferredPersistedUserMessages } from "@session/RequestContext.js";
+import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import { resolveChatQueueStore } from "@services/chat/runtime/ChatQueue.js";
 import { resolveDispatchTargetByChatKey } from "@services/chat/runtime/ChatkeySend.js";
 import { appendExecIngress } from "@services/chat/runtime/ChatIngressStore.js";
@@ -29,8 +29,8 @@ import { buildExecuteInputText } from "./Helpers.js";
  * - 否则按普通 session 同步执行。
  */
 export async function executeBySessionId(params: {
-  agentState: AgentState;
-  executionContext: ExecutionContext;
+  agentState: AgentRuntime;
+  executionContext: AgentContext;
   sessionId: string;
   instructions: string;
   attachments?: DashboardSessionExecuteAttachmentInput[];
@@ -107,13 +107,12 @@ export async function executeBySessionId(params: {
     };
   }
 
-  await params.agentState.sessionStore.appendUserMessage({
-    sessionId,
+  const session = params.agentState.getSession(sessionId);
+  await session.appendUserMessage({
     text: executeInput,
   });
 
-  const result = await params.agentState.sessionStore.run({
-    sessionId,
+  const result = await session.run({
     query: executeInput,
   });
 
@@ -123,8 +122,7 @@ export async function executeBySessionId(params: {
       result.assistantMessage,
     );
     if (messageForPersistence) {
-      await params.agentState.sessionStore.appendAssistantMessage({
-        sessionId,
+      await session.appendAssistantMessage({
         message: messageForPersistence,
         fallbackText: userVisible,
         extra: {
@@ -137,8 +135,7 @@ export async function executeBySessionId(params: {
       sessionId,
     );
     for (const message of deferredInjectedMessages) {
-      await params.agentState.sessionStore.appendUserMessage({
-        sessionId,
+      await session.appendUserMessage({
         message,
       });
     }

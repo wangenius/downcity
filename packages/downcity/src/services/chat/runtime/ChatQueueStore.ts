@@ -7,7 +7,7 @@
  * - 旧的 `ChatQueue.ts` 会保留共享门面，逐步迁移到显式实例注入。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   ChatQueueEnqueueParams,
   ChatQueueEnqueueResult,
@@ -58,7 +58,7 @@ export interface ChatQueueStorePort {
  *
  * 关键点（中文）
  * - 迁移阶段仍保留一份共享实例，避免一次性改动所有旧入口。
- * - 新代码应优先通过 `ExecutionContext.agent` 解析显式 queue store。
+ * - 新代码应优先通过 `AgentContext.agent` 解析显式 queue store。
  */
 /**
  * Chat queue 实例级存储。
@@ -174,7 +174,7 @@ export function getSharedChatQueueStore(): ChatQueueStore {
  * - 新路径优先读取 `runtime.agent.services.chat.queueStore`。
  * - 迁移阶段若拿不到，则回退到共享 queue store，保证旧入口可继续工作。
  */
-export function resolveChatQueueStore(runtime?: ExecutionContext): ChatQueueStorePort {
+export function resolveChatQueueStore(runtime?: AgentContext): ChatQueueStorePort {
   const chatService = runtime?.agent?.services?.get?.("chat") as
     | { queueStore?: ChatQueueStorePort }
     | undefined;

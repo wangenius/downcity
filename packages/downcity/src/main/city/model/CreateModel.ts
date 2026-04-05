@@ -26,7 +26,6 @@ import { readProjectPrimaryModelId } from "@/main/agent/project/ProjectExecution
 
 type ModelLogContext = {
   sessionId?: string;
-  requestId?: string;
 };
 
 function buildResponsesUrl(baseUrl?: string): string {
@@ -150,7 +149,7 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
  */
 export async function createModel(input: {
   config: DowncityConfig;
-  getRequestContext?: () => ModelLogContext | undefined;
+  getSessionRunScope?: () => ModelLogContext | undefined;
   store?: ConsoleStore;
 }): Promise<LanguageModel> {
   const logger = getLogger();
@@ -229,7 +228,7 @@ export async function createModel(input: {
   const loggingFetch = createLlmLoggingFetch({
     logger,
     enabled: logLlmMessages,
-    getRequestContext: input.getRequestContext,
+    getSessionRunScope: input.getSessionRunScope,
   });
 
   if (providerType === "anthropic") {

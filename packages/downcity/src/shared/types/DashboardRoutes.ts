@@ -7,8 +7,8 @@
  */
 
 import type { Hono } from "hono";
-import type { AgentState } from "@/shared/types/AgentState.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 
 /**
  * Dashboard 路由注册入参。
@@ -22,10 +22,10 @@ export interface DashboardRouteRegistrationParams {
   /**
    * 读取当前 agent 状态。
    */
-  getAgentState: () => AgentState;
+  getAgentRuntime: () => AgentRuntime;
 
   /**
    * 读取当前统一执行上下文。
    */
-  getExecutionContext: () => ExecutionContext;
+  getAgentContext: () => AgentContext;
 }

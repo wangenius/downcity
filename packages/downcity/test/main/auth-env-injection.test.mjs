@@ -14,9 +14,9 @@ import test from "node:test";
 import {
   resolveCliAuthToken,
   writeCliAuthState,
-} from "../../bin/city/runtime/auth/CliAuthStateStore.js";
-import { buildShellContextEnv } from "../../bin/sessions/tools/shell/ShellHelpers.js";
-import { applyInternalAgentAuthEnv } from "../../bin/city/runtime/auth/AuthEnv.js";
+} from "../../bin/main/modules/http/auth/CliAuthStateStore.js";
+import { buildShellContextEnv } from "../../bin/session/tools/shell/ShellToolFormatting.js";
+import { applyInternalAgentAuthEnv } from "../../bin/main/modules/http/auth/AuthEnv.js";
 
 function createConsoleRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-auth-env-"));

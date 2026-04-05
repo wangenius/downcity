@@ -8,11 +8,11 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ChatQueueWorker } from "../../bin/services/chat@/city/runtime/console/ChatQueueWorker.js";
+import { ChatQueueWorker } from "../../bin/services/chat/runtime/ChatQueueWorker.js";
 import {
   clearChatQueueLane,
   enqueueChatQueue,
-} from "../../bin/services/chat@/city/runtime/console/ChatQueue.js";
+} from "../../bin/services/chat/runtime/ChatQueue.js";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,25 +46,42 @@ function createWorkerHarness(queueConfig) {
         },
       },
       session: {
-        async run(params) {
-          runCalls.push({
-            sessionId: params.sessionId,
-            query: params.query,
-            ts: Date.now(),
-          });
+        get(sessionId) {
           return {
-            success: true,
-            assistantMessage: null,
+            sessionId,
+            async run(params) {
+              runCalls.push({
+                sessionId,
+                query: params.query,
+                ts: Date.now(),
+              });
+              return {
+                success: true,
+                assistantMessage: null,
+              };
+            },
+            async appendUserMessage(params) {
+              appendedUserMessages.push({
+                sessionId,
+                text: params.text,
+              });
+            },
+            async appendAssistantMessage() {},
+            clearExecutor() {},
+            getExecutor() {
+              return null;
+            },
+            getHistoryComposer() {
+              return null;
+            },
+            afterSessionUpdatedAsync() {
+              return Promise.resolve();
+            },
+            isExecuting() {
+              return false;
+            },
           };
         },
-        async appendUserMessage(params) {
-          appendedUserMessages.push({
-            sessionId: params.sessionId,
-            text: params.text,
-          });
-        },
-        async appendAssistantMessage() {},
-        clearRuntime() {},
       },
       logger: {
         warn() {},
@@ -97,8 +114,8 @@ test("ChatQueueWorker batches consecutive inbound messages into one run by debou
 
   const { worker, runCalls, appendedUserMessages } = createWorkerHarness({
     maxConcurrency: 1,
-    mergeDebounceMs: 100,
-    mergeMaxWaitMs: 600,
+    mergeDebounceMs: 200,
+    mergeMaxWaitMs: 800,
   });
   worker.start();
   t.after(() => {
@@ -111,16 +128,16 @@ test("ChatQueueWorker batches consecutive inbound messages into one run by debou
   const firstEnqueueAt = Date.now();
 
   enqueueExec({ laneKey, text: firstText, messageId: "1001" });
-  await sleep(30);
+  await sleep(10);
   enqueueExec({ laneKey, text: secondText, messageId: "1002" });
 
   await waitFor(() => runCalls.length >= 1);
-  await sleep(220);
+  await sleep(320);
 
   assert.equal(runCalls.length, 1);
   assert.equal(runCalls[0].query, secondText);
   assert.ok(
-    runCalls[0].ts - firstEnqueueAt >= 70,
+    runCalls[0].ts - firstEnqueueAt >= 120,
     "run should wait for burst debounce before start",
   );
   assert.deepEqual(

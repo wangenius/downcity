@@ -119,6 +119,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
   const [services, setServices] = useState<UiServiceItem[]>([]);
   const [skills, setSkills] = useState<UiSkillSummaryItem[]>([]);
   const [plugins, setPlugins] = useState<UiPluginRuntimeItem[]>([]);
+  const [agentPlugins, setAgentPlugins] = useState<UiPluginRuntimeItem[]>([]);
   const [chatChannels, setChatChannels] = useState<UiChatChannelStatus[]>([]);
   const [sessions, setSessions] = useState<UiSessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState("");
@@ -320,6 +321,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setAuthorization(null);
     setServices([]);
     setSkills([]);
+    setAgentPlugins([]);
     // 关键点（中文）：plugins 作为全局页信息，保留上次快照，避免无 agent 时整块消失。
     setChatChannels([]);
     setSessions([]);
@@ -375,13 +377,23 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [requestJson],
   );
 
+  const refreshGlobalPlugins = useCallback(
+    async () => {
+      const nextPlugins = await queryPlugins(requestJson);
+      setPlugins(nextPlugins);
+      return nextPlugins;
+    },
+    [requestJson],
+  );
+
   const refreshPlugins = useCallback(
     async (agentId: string) => {
       if (!agentId) {
+        setAgentPlugins([]);
         return;
       }
       const nextPlugins = await queryPlugins(requestJson, agentId);
-      setPlugins(nextPlugins);
+      setAgentPlugins(nextPlugins);
       return nextPlugins;
     },
     [requestJson],
@@ -597,6 +609,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setPrompt,
     clearPanelDataForNoAgent,
     refreshAgents,
+    refreshGlobalPlugins,
     refreshPlugins,
     refreshModel,
     refreshModelPool,
@@ -649,10 +662,32 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         payload,
         selectedAgentId,
         refreshPlugins,
+        scope: "agent",
         showToast,
       });
     },
     [refreshPlugins, requestJson, selectedAgentId, showToast],
+  );
+
+  const runGlobalPluginAction = useCallback(
+    async (
+      pluginName: string,
+      actionName: string,
+      payload?: Record<string, unknown>,
+    ) => {
+      return runPluginActionMutation({
+        requestJson,
+        pluginName,
+        actionName,
+        payload,
+        selectedAgentId,
+        refreshPlugins,
+        refreshGlobalPlugins,
+        scope: "global",
+        showToast,
+      });
+    },
+    [refreshGlobalPlugins, refreshPlugins, requestJson, selectedAgentId, showToast],
   );
 
   const runChatChannelAction = useCallback(
@@ -1040,7 +1075,8 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     latestIssuedAccessToken,
     services,
     skills,
-    plugins,
+        plugins,
+        agentPlugins,
     chatChannels,
     sessions,
     selectedSessionId,
@@ -1091,6 +1127,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshConfigStatus,
     refreshLocalChat,
     controlService,
+    runGlobalPluginAction,
     runPluginAction,
     runChatChannelAction,
     configureChatChannel,

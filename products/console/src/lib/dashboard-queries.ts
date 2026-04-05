@@ -241,9 +241,8 @@ export async function waitConsoleAgentReady(params: {
 
 export async function queryPlugins(
   requestJson: RequestJson,
-  agentId: string,
+  agentId?: string,
 ): Promise<UiPluginRuntimeItem[]> {
-  if (!agentId) return [];
   const data = await requestJson<UiPluginsResponse>(dashboardApiRoutes.uiPlugins(agentId));
   const list = Array.isArray(data.plugins) ? data.plugins : [];
   return normalizePluginRuntimeItems(list);

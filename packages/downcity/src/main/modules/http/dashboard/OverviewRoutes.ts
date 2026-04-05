@@ -11,7 +11,7 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { listServiceStates } from "@/main/service/Manager.js";
 import { listTaskDefinitions } from "@services/task/Action.js";
-import { listSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
+import { listDashboardSessionSummaries, readRecentLogs, toLimit } from "./Helpers.js";
 import type { DashboardRouteRegistrationParams } from "@/shared/types/DashboardRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,14 +42,14 @@ export function registerDashboardOverviewRoutes(
 
   app.get("/api/dashboard/overview", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const sessionLimit = toLimit(
         c.req.query("sessionLimit") || c.req.query("contextLimit"),
         20,
       );
-      const sessions = await listSessionSummaries({
+      const sessions = await listDashboardSessionSummaries({
         projectRoot: runtime.rootPath,
-        executionContext: params.getExecutionContext(),
+        executionContext: params.getAgentContext(),
         limit: sessionLimit,
       });
       const services = listServiceStates();

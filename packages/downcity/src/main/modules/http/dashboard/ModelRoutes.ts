@@ -21,7 +21,7 @@ export function registerDashboardModelRoutes(
 
   app.get("/api/dashboard/model", async (c) => {
     try {
-      const agentState = params.getAgentState();
+      const agentState = params.getAgentRuntime();
       const agentPrimaryModelId = String(agentState.config.execution?.type === "model" ? agentState.config.execution.modelId || "" : "").trim();
       const store = new ConsoleStore();
       const models = store.listModels();
@@ -62,7 +62,7 @@ export function registerDashboardModelRoutes(
 
   app.post("/api/dashboard/model/switch", async (c) => {
     try {
-      const agentState = params.getAgentState();
+      const agentState = params.getAgentRuntime();
       const body = (await c.req.json().catch(() => ({}))) as {
         primaryModelId?: string;
       };

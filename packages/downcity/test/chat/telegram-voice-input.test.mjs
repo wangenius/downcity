@@ -11,8 +11,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { buildChatInboundText } from "../../bin/services/chat@/city/runtime/console/InboundAugment.js";
-import { CHAT_PLUGIN_POINTS } from "../../bin/services/chat@/city/runtime/console/PluginPoints.js";
+import { buildChatInboundText } from "../../bin/services/chat/runtime/InboundAugment.js";
+import { CHAT_PLUGIN_POINTS } from "../../bin/services/chat/runtime/PluginPoints.js";
 import { asrPlugin } from "../../bin/plugins/asr/Plugin.js";
 
 test("asr plugin pipeline augments inbound sections for telegram attachments", async () => {

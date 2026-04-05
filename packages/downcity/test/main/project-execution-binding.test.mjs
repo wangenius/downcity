@@ -11,8 +11,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import fs from "fs-extra";
-import { loadDowncityConfig } from "../../bin/main/city/runtime/console/env/Config.js";
-import { initializeAgentProject } from "../../bin/main/city/runtime/console/project/AgentInitializer.js";
+import { loadDowncityConfig } from "../../bin/main/city/env/Config.js";
+import { initializeAgentProject } from "../../bin/main/agent/project/AgentInitializer.js";
 
 test("loadDowncityConfig accepts execution.acp without model execution", async () => {
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-acp-config-"));

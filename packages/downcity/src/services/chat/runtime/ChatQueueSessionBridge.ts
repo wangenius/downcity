@@ -7,11 +7,11 @@
  * - 这样可以把“队列消费”与“session 持久化/补写”边界拆清楚。
  */
 
-import { drainDeferredPersistedUserMessages } from "@session/RequestContext.js";
+import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
 import type { JsonObject } from "@/shared/types/Json.js";
-import type { SessionRunResult } from "@/shared/types/SessionRun.js";
-import type { SessionUserMessageV1 } from "@/shared/types/SessionMessage.js";
-import type { SessionPort } from "@/shared/types/ExecutionContext.js";
+import type { SessionRunResult } from "@/types/session/SessionRun.js";
+import type { SessionUserMessageV1 } from "@/types/session/SessionMessages.js";
+import type { SessionPort } from "@/types/agent/AgentContext.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
 import { resolveAssistantMessageForPersistence } from "./UserVisibleText.js";
 
@@ -46,7 +46,6 @@ export async function appendChatIngressMessageIfNeeded(params: {
   if (!shouldAppendChatIngressMessage(params.item)) return;
   if (params.item.sessionPersisted === true) return;
   await params.session.appendUserMessage({
-    sessionId: params.item.sessionId,
     text: params.item.text,
     extra: buildChatIngressExtra(params.item),
   });
@@ -81,11 +80,9 @@ export function toMergedStepUserMessage(
  */
 export async function appendChatRunErrorMessage(params: {
   session: SessionPort;
-  sessionId: string;
   text: string;
 }): Promise<void> {
   await params.session.appendAssistantMessage({
-    sessionId: params.sessionId,
     fallbackText: params.text,
     extra: {
       note: "chat_queue_worker_run_failed",
@@ -98,7 +95,7 @@ export async function appendChatRunErrorMessage(params: {
  *
  * 关键点（中文）
  * - 若 assistant step 已经持久化，则这里不再重复补写最终 assistant。
- * - RequestContext 中延后缓存的 user messages 也在这里统一补写。
+ * - SessionRunScope 中延后缓存的 user messages 也在这里统一补写。
  */
 export async function persistChatRunResult(params: {
   session: SessionPort;
@@ -110,7 +107,6 @@ export async function persistChatRunResult(params: {
   );
   if (messageForPersistence) {
     await params.session.appendAssistantMessage({
-      sessionId: params.sessionId,
       message: messageForPersistence,
     });
   }
@@ -120,7 +116,6 @@ export async function persistChatRunResult(params: {
   );
   for (const message of deferredInjectedMessages) {
     await params.session.appendUserMessage({
-      sessionId: params.sessionId,
       message,
     });
   }

@@ -9,7 +9,7 @@
 
 import type { Context as HonoContext, Hono } from "hono";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ServiceCommandScheduleInput } from "@/shared/types/ServiceSchedule.js";
 import type { BaseService } from "@services/BaseService.js";
 import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
@@ -217,7 +217,7 @@ function registerServiceActionApiRoute(params: {
   service: BaseService;
   actionName: string;
   action: ServiceAction<JsonValue, JsonValue>;
-  context: ExecutionContext;
+  context: AgentContext;
 }): void {
   const api = params.action.api;
   if (!api) return;
@@ -287,7 +287,7 @@ function registerServiceActionApiRoute(params: {
  */
 export function registerAllServicesForServer(
   app: Hono,
-  context: ExecutionContext,
+  context: AgentContext,
 ): void {
   for (const service of listServiceInstances()) {
     ensureServiceStateRecord(service);

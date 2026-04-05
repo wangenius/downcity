@@ -12,9 +12,9 @@
 - `Json.ts`
   - 定义 `JsonPrimitive`、`JsonValue`、`JsonObject`。
   - 作为跨模块传输结构化数据时的统一约束（配置、日志 details、服务 payload 等）。
-- `ExecutionContext.ts`
-  - 定义 `ExecutionContext`、`StructuredConfig`。
-  - `ExecutionContext` 是 service / runtime plugin 共用的最小执行上下文。
+- `AgentContext.ts`
+  - 定义 `AgentContext`、`StructuredConfig`。
+  - `AgentContext` 是 service / runtime plugin 共用的最小执行上下文。
   - 用于承载路径、配置、环境与日志这些稳定底座能力。
 - `Plugin.ts`
   - 定义 `Plugin`、`PluginAction`、`PluginPort` 等。

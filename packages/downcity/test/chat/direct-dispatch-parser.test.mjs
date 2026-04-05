@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseDirectDispatchAssistantText } from "../../bin/services/chat@/city/runtime/console/DirectDispatchParser.js";
+import { parseDirectDispatchAssistantText } from "../../bin/services/chat/runtime/DirectDispatchParser.js";
 
 test("parseDirectDispatchAssistantText aligns frontmatter with chat send options", () => {
   const plan = parseDirectDispatchAssistantText({

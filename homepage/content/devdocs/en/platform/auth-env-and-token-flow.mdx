@@ -20,9 +20,9 @@ Core implementation entry points:
 - `packages/downcity/src/main/auth/AgentTokenService.ts`
 - `packages/downcity/src/main/commands/Run.ts`
 - `packages/downcity/src/main/daemon/Manager.ts`
-- `packages/downcity/src/services/shell/runtime/SessionStoreSupport.ts`
-- `packages/downcity/src/sessions/tools/shell/ShellHelpers.ts`
-- `packages/downcity/src/sessions/acp/AcpSessionRuntime.ts`
+- `packages/downcity/src/services/shell/runtime/ShellActionRuntimeSupport.ts`
+- `packages/downcity/src/session/tools/shell/ShellToolFormatting.ts`
+- `packages/downcity/src/session/execution/acp/AcpSessionExecutor.ts`
 
 ## One-paragraph summary
 
@@ -187,8 +187,8 @@ They now do one thing only:
 
 Implemented in:
 
-- `SessionStoreSupport.ts`
-- `ShellHelpers.ts`
+- `ShellActionRuntimeSupport.ts`
+- `ShellToolFormatting.ts`
 
 ### ACP subprocess
 
@@ -205,7 +205,7 @@ Downcity builds that child env from:
 
 Implemented in:
 
-- `AcpSessionRuntime.ts`
+- `AcpSessionExecutor.ts`
 
 ### Script task subprocess
 
@@ -343,9 +343,9 @@ Those usually fail in business-layer validation instead.
 
 - `Run.ts`
 - `Manager.ts`
-- `SessionStoreSupport.ts`
-- `ShellHelpers.ts`
-- `AcpSessionRuntime.ts`
+- `ShellActionRuntimeSupport.ts`
+- `ShellToolFormatting.ts`
+- `AcpSessionExecutor.ts`
 - `TaskRunnerRound.ts`
 
 ### Auth output layer

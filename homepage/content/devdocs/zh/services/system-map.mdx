@@ -1,6 +1,6 @@
 ---
 title: Service 总关系图
-description: 用当前代码中的真实对象，解释 AgentState、Session、Service、Plugin 之间的职责边界和调用方向
+description: 用当前代码中的真实对象，解释 AgentRuntime、Session、Service、Plugin 之间的职责边界和调用方向
 ---
 
 # Service 总关系图
@@ -9,7 +9,7 @@ description: 用当前代码中的真实对象，解释 AgentState、Session、S
 
 先给结论：
 
-- `AgentState` 是能力底座
+- `AgentRuntime` 是能力底座
 - `session` 是执行主轴
 - `service` 是业务流程编排层
 - `plugin` 是流程节点增强层
@@ -17,7 +17,7 @@ description: 用当前代码中的真实对象，解释 AgentState、Session、S
 一句话：
 
 ```text
-AgentState 提供能力底座
+AgentRuntime 提供能力底座
 session 承载执行主轴
 service 组织业务主流程
 plugin 在特定节点增强流程
@@ -28,9 +28,9 @@ plugin 在特定节点增强流程
 ```mermaid
 flowchart LR
   subgraph AGENT["Agent Runtime"]
-    A1["AgentState"]
-    A2["ExecutionContext"]
-    A3["SessionStore"]
+    A1["AgentRuntime"]
+    A2["AgentContext"]
+    A3["SessionFacade"]
     A4["PluginRegistry"]
     A5["Service Instances"]
   end
@@ -39,7 +39,7 @@ flowchart LR
     S1["sessionId"]
     S2["append message"]
     S3["session.run"]
-    S4["SessionCore"]
+    S4["SessionEngine"]
     S5["assistant result"]
   end
 
@@ -89,7 +89,7 @@ flowchart LR
 
 这张图表达了四个事实：
 
-1. 当前能力底座是 `AgentState`
+1. 当前能力底座是 `AgentRuntime`
 2. 执行主轴是 `sessionId -> session.run`
 3. service 组织业务主流程
 4. plugin 只增强，不拥有主流程
@@ -107,9 +107,9 @@ flowchart LR
 
 这一层真正持有：
 
-- `AgentState`
-- `ExecutionContext`
-- `SessionStore`
+- `AgentRuntime`
+- `AgentContext`
+- `SessionFacade`
 - `PluginRegistry`
 - per-agent `services`
 
@@ -160,7 +160,7 @@ flowchart TD
   SERVICE --> SID["归到 sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> CORE["SessionCore"]
+  RUN --> CORE["SessionEngine"]
   CORE --> RES["assistant result"]
   RES --> SERVICE
   SERVICE --> OUT["业务出口"]

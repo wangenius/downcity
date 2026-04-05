@@ -75,14 +75,6 @@ export type SkillPluginLookupPayload = {
  */
 export interface SkillPluginConfig {
   /**
-   * 是否启用 skill plugin。
-   *
-   * 说明（中文）
-   * - 控制 `plugin.system` 与其他 plugin 执行链路是否参与运行。
-   * - 默认值由 plugin 自身声明。
-   */
-  enabled?: boolean;
-  /**
    * 额外的 skill 扫描根目录。
    *
    * 说明（中文）
@@ -104,10 +96,6 @@ export interface SkillPluginConfig {
  * 归一化后的 skill plugin 配置。
  */
 export interface ResolvedSkillPluginConfig {
-  /**
-   * skill plugin 的最终启用态。
-   */
-  enabled: boolean;
   /**
    * 最终生效的额外 skill 扫描根目录。
    */

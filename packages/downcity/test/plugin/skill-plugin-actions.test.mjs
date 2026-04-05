@@ -15,7 +15,10 @@ import { listSkills } from "../../bin/plugins/skill/Action.js";
 
 test("skill plugin action helper lists skills from plugin config roots", () => {
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-skill-plugin-action-"));
+  const consoleRoot = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-skill-plugin-console-"));
   const skillRoot = path.join(projectRoot, ".local", "skills", "demo-skill");
+  const previousConsoleRoot = process.env.DC_CONSOLE_ROOT;
+  process.env.DC_CONSOLE_ROOT = consoleRoot;
   fs.mkdirSync(skillRoot, { recursive: true });
   fs.writeFileSync(
     path.join(projectRoot, "downcity.json"),
@@ -28,7 +31,6 @@ test("skill plugin action helper lists skills from plugin config roots", () => {
       },
       plugins: {
         skill: {
-          enabled: true,
           paths: [".local/skills"],
           allowExternalPaths: false,
         },
@@ -55,6 +57,9 @@ description: local demo skill
     assert.notEqual(target, undefined);
     assert.equal(target?.name, "Demo Skill");
   } finally {
+    if (previousConsoleRoot === undefined) delete process.env.DC_CONSOLE_ROOT;
+    else process.env.DC_CONSOLE_ROOT = previousConsoleRoot;
+    fs.rmSync(consoleRoot, { recursive: true, force: true });
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });

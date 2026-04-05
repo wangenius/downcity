@@ -11,7 +11,7 @@ description: Explains the current main, agent, sessions, services, plugins, type
 
 - `main/` owns entry assembly
 - `agent/` owns the single-project runtime center
-- `sessions/` owns the execution axis
+- `session/` owns the execution axis
 - `services/` own workflows
 - `plugins/` own extensions
 
@@ -21,7 +21,7 @@ description: Explains the current main, agent, sessions, services, plugins, type
 flowchart TD
   ROOT["packages/downcity/src"] --> MAIN["main/"]
   ROOT --> AGENT["agent/"]
-  ROOT --> SESSIONS["sessions/"]
+  ROOT --> SESSION["session/"]
   ROOT --> SERVICES["services/"]
   ROOT --> PLUGINS["plugins/"]
   ROOT --> TYPES["types/"]
@@ -102,9 +102,9 @@ This is the single-project runtime center.
 
 The most important object here is:
 
-- `AgentState`
+- `AgentRuntime`
 
-`AgentState` holds:
+`AgentRuntime` holds:
 
 - `cwd`
 - `rootPath`
@@ -112,27 +112,27 @@ The most important object here is:
 - `env`
 - `systems`
 - `model`
-- `sessionStore`
+- `sessionFacade`
 - `services`
 - `pluginRegistry`
 
-### `AgentState.ts`
+### `AgentRuntime.ts`
 
 Owns:
 
 - project runtime initialization
 - config, env, and static system loading
 - model creation
-- `SessionRuntimeStore` and `SessionStore` creation
+- `SessionExecutorRegistry` and `SessionFacade` creation
 - plugin registry creation
 - per-agent service creation
 - prompt hot reload
 
-### `ExecutionContext.ts`
+### `AgentContext.ts`
 
 Owns:
 
-- the unified execution surface derived from `AgentState`
+- the unified execution surface derived from `AgentRuntime`
 
 It exposes:
 
@@ -143,36 +143,36 @@ It exposes:
 - `invoke`
 - `plugins`
 
-## 3. `sessions/`
+## 3. `session/`
 
 This is the execution axis.
 
-### `SessionStore`
+### `SessionFacade`
 
 The agent-owned session facade.
 
 It exposes:
 
-- `getRuntime`
-- `getPersistor`
+- `getExecutor`
+- `getHistoryStore`
 - `run`
 - `appendUserMessage`
 - `appendAssistantMessage`
 
-### `SessionRuntimeStore`
+### `SessionExecutorRegistry`
 
 Owns:
 
 - runtime caching by `sessionId`
-- runtime to persistor creation linkage
+- runtime to history store creation linkage
 
-### `SessionRuntime`
+### `LocalSessionExecutor`
 
 Owns:
 
 - runtime assembly for a single runnable session
 
-### `SessionCore`
+### `SessionEngine`
 
 This is the execution kernel.
 
@@ -260,7 +260,7 @@ This is the cross-layer contract center.
 It matters because:
 
 - dashboard and APIs depend on it
-- `AgentState`, `ExecutionContext`, `Service`, and `Plugin` depend on it
+- `AgentRuntime`, `AgentContext`, `Service`, and `Plugin` depend on it
 - session and runtime result types depend on it
 
 ## 7. `utils/`
@@ -277,11 +277,11 @@ This is where shared infrastructure lives:
 ## Suggested Reading Order
 
 1. `src/main/index.ts`
-2. `src/agent/AgentState.ts`
-3. `src/agent/ExecutionContext.ts`
-4. `src/sessions/SessionStore.ts`
-5. `src/sessions/SessionRuntimeStore.ts`
-6. `src/sessions/SessionCore.ts`
+2. `src/agent/AgentRuntime.ts`
+3. `src/agent/AgentContext.ts`
+4. `src/session/SessionFacade.ts`
+5. `src/session/execution/SessionExecutorRegistry.ts`
+6. `src/session/execution/local/SessionEngine.ts`
 7. `src/main/service/Services.ts`
 8. `src/main/registries/ServiceClassRegistry.ts`
 9. `src/services/chat/ChatService.ts`

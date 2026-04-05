@@ -14,7 +14,7 @@ import { buildFeishuReplyContext } from "../../bin/services/chat/channels/feishu
 import {
   buildReplyContextExtra,
   buildReplyContextInstruction,
-} from "../../bin/services/chat@/city/runtime/console/ReplyContextFormatter.js";
+} from "../../bin/services/chat/runtime/ReplyContextFormatter.js";
 
 test("extractTelegramReplyContext keeps replied text and explicit quote", () => {
   const replyContext = extractTelegramReplyContext({

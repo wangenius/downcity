@@ -1,5 +1,5 @@
 /**
- * SessionCore loop 决策测试（node:test）。
+ * LocalSessionCore loop 决策测试（node:test）。
  *
  * 关键点（中文）
  * - 文本续跑、tool call 续跑、不完整响应恢复三者的优先级需要稳定。
@@ -11,7 +11,7 @@ import test from "node:test";
 import {
   evaluateSessionLoopDecision,
   shouldContinueForTailMergedUserMessages,
-} from "../../bin/sessions@/city/runtime/console/SessionCoreLoop.js";
+} from "../../bin/session/executors/local/SessionLoopDecision.js";
 
 test("evaluateSessionLoopDecision prefers incomplete recovery over other branches", () => {
   const decision = evaluateSessionLoopDecision({

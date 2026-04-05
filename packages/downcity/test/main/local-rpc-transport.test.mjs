@@ -11,15 +11,15 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import fs from "fs-extra";
-import { startLocalRpcServer } from "../../bin/main/localrpc/Server.js";
-import { callLocalServer } from "../../bin/main/localrpc/Client.js";
+import { startLocalRpcServer } from "../../bin/main/modules/rpc/Server.js";
+import { callLocalServer } from "../../bin/main/modules/rpc/Client.js";
 import {
   callAgentTransport,
   isAgentTransportUnavailableError,
   resolveAgentTransportErrorMessage,
-} from "../../bin/main/localrpc/Transport.js";
+} from "../../bin/main/modules/rpc/Transport.js";
 
-function createExecutionContext(rootPath) {
+function createAgentContext(rootPath) {
   return {
     rootPath,
     plugins: {
@@ -63,11 +63,24 @@ function createExecutionContext(rootPath) {
   };
 }
 
-test("local rpc server should answer service list over IPC", async () => {
+async function startLocalRpcServerOrSkip(t, projectRoot) {
+  try {
+    return await startLocalRpcServer({
+      context: createAgentContext(projectRoot),
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "EPERM") {
+      t.skip("sandbox does not permit local unix socket listen");
+      return null;
+    }
+    throw error;
+  }
+}
+
+test("local rpc server should answer service list over IPC", async (t) => {
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
-  const server = await startLocalRpcServer({
-    context: createExecutionContext(projectRoot),
-  });
+  const server = await startLocalRpcServerOrSkip(t, projectRoot);
+  if (!server) return;
   try {
     const result = await callLocalServer({
       projectRoot,
@@ -83,11 +96,10 @@ test("local rpc server should answer service list over IPC", async () => {
   }
 });
 
-test("local rpc server should return structured error for unknown route", async () => {
+test("local rpc server should return structured error for unknown route", async (t) => {
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
-  const server = await startLocalRpcServer({
-    context: createExecutionContext(projectRoot),
-  });
+  const server = await startLocalRpcServerOrSkip(t, projectRoot);
+  if (!server) return;
   try {
     const result = await callLocalServer({
       projectRoot,
@@ -147,11 +159,10 @@ test("transport unavailable helper should fold local IPC ENOENT into agent-unava
   );
 });
 
-test("local rpc server should answer plugin list over IPC", async () => {
+test("local rpc server should answer plugin list over IPC", async (t) => {
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
-  const server = await startLocalRpcServer({
-    context: createExecutionContext(projectRoot),
-  });
+  const server = await startLocalRpcServerOrSkip(t, projectRoot);
+  if (!server) return;
   try {
     const result = await callLocalServer({
       projectRoot,
@@ -168,11 +179,10 @@ test("local rpc server should answer plugin list over IPC", async () => {
   }
 });
 
-test("local rpc server should answer plugin availability over IPC", async () => {
+test("local rpc server should answer plugin availability over IPC", async (t) => {
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
-  const server = await startLocalRpcServer({
-    context: createExecutionContext(projectRoot),
-  });
+  const server = await startLocalRpcServerOrSkip(t, projectRoot);
+  if (!server) return;
   try {
     const result = await callLocalServer({
       projectRoot,
@@ -192,11 +202,10 @@ test("local rpc server should answer plugin availability over IPC", async () => 
   }
 });
 
-test("local rpc server should answer plugin action over IPC", async () => {
+test("local rpc server should answer plugin action over IPC", async (t) => {
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
-  const server = await startLocalRpcServer({
-    context: createExecutionContext(projectRoot),
-  });
+  const server = await startLocalRpcServerOrSkip(t, projectRoot);
+  if (!server) return;
   try {
     const result = await callLocalServer({
       projectRoot,

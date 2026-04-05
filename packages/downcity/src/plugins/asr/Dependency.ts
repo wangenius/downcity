@@ -106,7 +106,11 @@ function toJsonObject(input: Record<string, unknown> | null | undefined): JsonOb
 export function readVoiceTranscriberConfig(
   context: PluginCommandContext,
 ): VoiceTranscriberConfig {
-  const current = readVoicePluginRecord(context);
+  const { enabled: _ignoredEnabled, ...current } = readVoicePluginRecord(
+    context,
+  ) as Record<string, unknown> & {
+    enabled?: boolean;
+  };
   return {
     provider: "local",
     ...(current as VoiceTranscriberConfig),
@@ -124,10 +128,13 @@ export async function writeVoiceTranscriberConfig(params: {
     params.context.config.plugins = {};
   }
   const current = readVoicePluginRecord(params.context);
-  const next = {
+  const next: Record<string, unknown> & {
+    enabled?: boolean;
+  } = {
     ...current,
     ...params.value,
   };
+  delete next.enabled;
   params.context.config.plugins.asr = toJsonObject(next);
   await params.context.pluginConfig.persistProjectPlugins(params.context.config.plugins);
   return params.context.config.plugins.asr as VoicePluginConfig;

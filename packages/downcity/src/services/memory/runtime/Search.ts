@@ -6,7 +6,7 @@
  * - 检索前确保索引同步（dirty 时自动补齐）。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   MemorySearchPayload,
   MemorySearchResponse,
@@ -26,7 +26,7 @@ function clampNumber(value: number, min: number, max: number): number {
  * 执行检索。
  */
 export async function searchMemory(
-  context: ExecutionContext,
+  context: AgentContext,
   state: MemoryRuntimeState,
   payload: MemorySearchPayload,
 ): Promise<MemorySearchResponse> {

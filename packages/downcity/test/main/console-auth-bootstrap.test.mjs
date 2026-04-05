@@ -11,8 +11,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { AuthService } from "../../bin/city/runtime/auth/AuthService.js";
-import { ensureConsoleAuthBootstrap } from "../../bin/city/modules/cli/ConsoleAuthBootstrap.js";
+import { AuthService } from "../../bin/main/modules/http/auth/AuthService.js";
+import { ensureConsoleAuthBootstrap } from "../../bin/main/modules/cli/ConsoleAuthBootstrap.js";
 
 function createAuthService() {
   const dbPath = path.join(

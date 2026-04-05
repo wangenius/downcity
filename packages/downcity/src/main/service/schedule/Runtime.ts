@@ -6,7 +6,7 @@
  * - runtime 重启时会把遗留 `running` 任务回退成 `pending`，然后继续补执行。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import { ServiceScheduleStore } from "./Store.js";
 import { runDueScheduledJobs } from "./Executor.js";
 
@@ -16,7 +16,7 @@ type ServiceScheduleRuntimeState = {
   timer: NodeJS.Timeout | null;
   ticking: boolean;
   store: ServiceScheduleStore;
-  context: ExecutionContext;
+  context: AgentContext;
 };
 
 let runtimeState: ServiceScheduleRuntimeState | null = null;
@@ -25,7 +25,7 @@ let runtimeState: ServiceScheduleRuntimeState | null = null;
  * 启动持久化调度 runtime。
  */
 export async function startServiceScheduleRuntime(
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<void> {
   if (runtimeState) return;
 

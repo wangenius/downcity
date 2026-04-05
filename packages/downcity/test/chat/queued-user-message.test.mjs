@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildQueuedUserMessageWithInfo } from "../../bin/services/chat@/city/runtime/console/QueuedUserMessage.js";
+import { buildQueuedUserMessageWithInfo } from "../../bin/services/chat/runtime/QueuedUserMessage.js";
 
 test("buildQueuedUserMessageWithInfo keeps only user and request info fields", () => {
   const text = buildQueuedUserMessageWithInfo({

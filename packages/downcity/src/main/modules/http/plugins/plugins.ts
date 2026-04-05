@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono";
-import { getExecutionContext } from "@/main/agent/AgentState.js";
+import { getAgentContext } from "@/main/agent/AgentRuntime.js";
 
 /**
  * Plugin 路由。
@@ -18,7 +18,7 @@ export const pluginsRouter = new Hono();
 pluginsRouter.get("/api/plugins/list", (c) => {
   return c.json({
     success: true,
-    plugins: getExecutionContext().plugins.list(),
+    plugins: getAgentContext().plugins.list(),
   });
 });
 
@@ -31,7 +31,7 @@ pluginsRouter.post("/api/plugins/availability", async (c) => {
   }
 
   const availability =
-    await getExecutionContext().plugins.availability(pluginName);
+    await getAgentContext().plugins.availability(pluginName);
   return c.json({
     success: true,
     pluginName,
@@ -51,7 +51,7 @@ pluginsRouter.post("/api/plugins/action", async (c) => {
     return c.json({ success: false, error: "actionName is required" }, 400);
   }
 
-  const result = await getExecutionContext().plugins.runAction({
+  const result = await getAgentContext().plugins.runAction({
     plugin: pluginName,
     action: actionName,
     payload: body?.payload,

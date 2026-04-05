@@ -6,7 +6,7 @@
  * - 最终拼装顺序固定为：attachmentText -> pluginSections -> bodyText。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ChatInboundAugmentInput } from "@/shared/types/ChatPlugin.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import { CHAT_PLUGIN_POINTS } from "@services/chat/runtime/PluginPoints.js";
@@ -20,7 +20,7 @@ function normalizeText(value: string | undefined): string | undefined {
  * 执行 chat 入站增强 pipeline。
  */
 export async function augmentChatInboundInput(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   input: ChatInboundAugmentInput;
 }): Promise<ChatInboundAugmentInput> {
   const normalized: ChatInboundAugmentInput = {

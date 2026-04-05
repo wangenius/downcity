@@ -2,6 +2,9 @@
   "title": "Console UI",
   "pages": [
     "architecture",
-    "dataflow-and-ia"
+    "build-and-runtime",
+    "react-architecture-v2",
+    "dataflow-and-ia",
+    "ia-redesign"
   ]
 }

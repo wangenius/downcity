@@ -9,7 +9,7 @@ description: Manage the built-in TTS plugin and generate audio files from text
 
 ## What it manages
 
-- plugin behavior such as enable/disable
+- city-level plugin enable/disable
 - default speech model / voice / output format
 - one-off text-to-speech generation
 
@@ -62,6 +62,7 @@ city tts synthesize "This is a TTS test"
 
 - Returns the local output file path
 - Also returns a reusable `<file type="audio">...</file>` tag for downstream sending
+- If the Python runner prints non-fatal `stderr`, the command still succeeds and includes a short `stderr` summary
 
 ## Notes
 
@@ -69,4 +70,5 @@ city tts synthesize "This is a TTS test"
 - `city tts ...` runs locally against the current project by default, so you do not need to start `city agent` first.
 - When the plugin is enabled and its dependency is available, the agent sees this capability through the system prompt and can call `city tts synthesize ...` directly.
 - It generates a local audio file and returns a reusable `<file type="audio">...</file>` tag for downstream sending.
-- Configuration is persisted to project `downcity.json` under `plugins.tts`.
+- Non-fatal Python runner `stderr` does not fail synthesis as long as the audio file is generated successfully.
+- Agent-local TTS parameters are persisted to project `downcity.json` under `plugins.tts`.

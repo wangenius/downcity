@@ -33,7 +33,7 @@ async function createAgentProjectFixture() {
 async function runCityCommand(args, cwd) {
   const { stdout } = await execFile(
     process.execPath,
-    ["bin/city/modules/cli/Index.js", ...args],
+    ["bin/main/modules/cli/Index.js", ...args],
     {
       cwd,
       env: {

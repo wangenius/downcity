@@ -13,7 +13,7 @@ export {
   resolveUiMessagePreview,
   toUiMessageTimeline,
 } from "./MessageTimeline.js";
-export { listSessionSummaries } from "./SessionStore.js";
+export { listDashboardSessionSummaries } from "./SessionSummaryStore.js";
 export {
   TASK_RUN_DIR_REGEX,
   listTaskRuns,

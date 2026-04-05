@@ -16,6 +16,8 @@ import { webPlugin } from "../../bin/plugins/web/Plugin.js";
 import { PLUGINS } from "../../bin/main/plugin/Plugins.js";
 import { registerAllPluginsForCli } from "../../bin/main/plugin/PluginCommand.js";
 
+process.env.DC_CONSOLE_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-test-console-web-"));
+
 function createLogger() {
   return {
     info() {},
@@ -135,7 +137,6 @@ test("web plugin configure action writes provider config into plugins.web", asyn
   const result = await webPlugin.actions.configure.execute({
     context: runtime,
     payload: {
-      enabled: true,
       provider: "agent-browser",
       injectPrompt: false,
       browserCommand: "node",
@@ -145,7 +146,7 @@ test("web plugin configure action writes provider config into plugins.web", asyn
   });
 
   assert.equal(result.success, true);
-  assert.equal(runtime.config.plugins.web.enabled, true);
+  assert.equal("enabled" in runtime.config.plugins.web, false);
   assert.equal(runtime.config.plugins.web.provider, "agent-browser");
   assert.equal(runtime.config.plugins.web.injectPrompt, false);
   assert.equal(runtime.config.plugins.web.browserCommand, "node");

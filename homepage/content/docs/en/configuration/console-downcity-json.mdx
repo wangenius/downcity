@@ -52,7 +52,7 @@ Key behavior:
 2. `.env` remains agent-local and does not mutate global `process.env`.
 3. `downcity.json` stores channel binding (`channelAccountId`) instead of plaintext secrets.
 4. Bot credentials are resolved from `channel_accounts`.
-5. Plugin config is read from project `downcity.json`.
+5. Plugin parameters are read from project `downcity.json`, while plugin enable/disable belongs to Console global state.
 
 ## Common operations
 
@@ -62,11 +62,18 @@ Initialize Console (writes into `downcity.db`):
 city init
 ```
 
-Read/update project plugin config:
+Read/update project plugin parameters:
 
 ```bash
 city config get plugins.asr
-city config set plugins.asr.enabled true
+city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
+```
+
+Toggle city-level plugin lifecycle:
+
+```bash
+city asr on
+city asr off
 ```
 
 Manage model pool:

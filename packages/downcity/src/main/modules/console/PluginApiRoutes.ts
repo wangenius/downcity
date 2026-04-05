@@ -9,16 +9,19 @@
 
 import type { Hono } from "hono";
 import {
-  buildStaticPluginAvailability,
   findBuiltinPlugin,
   listStaticPluginViews,
 } from "@/main/plugin/Catalog.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
+import { setCityPluginEnabled } from "@/main/plugin/Lifecycle.js";
 import type { ConsoleAgentOption } from "@/shared/types/Console.js";
 import type {
+  PluginActionResult,
   PluginAvailability,
   PluginSetupDefinition,
   PluginView,
 } from "@/shared/types/Plugin.js";
+import type { JsonValue } from "@/shared/types/Json.js";
 
 type PluginActionConfigItem = {
   name: string;
@@ -85,6 +88,14 @@ function buildPluginActionConfig(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function buildGlobalPluginActionConfig(
+  plugin: ReturnType<typeof findBuiltinPlugin>,
+): PluginActionConfigItem[] {
+  return buildPluginActionConfig(plugin).filter((item) =>
+    item.name === "on" || item.name === "off",
+  );
+}
+
 function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[]; setup?: PluginSetupDefinition }> {
   return new Map(
     listStaticPluginViews().map((view) => [
@@ -99,7 +110,44 @@ function buildPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[]
   );
 }
 
-function buildStaticPluginPayload(params?: {
+function buildGlobalPluginConfigMap(): Map<string, { actions: PluginActionConfigItem[] }> {
+  return new Map(
+    listStaticPluginViews().map((view) => [
+      view.name,
+      {
+        actions: buildGlobalPluginActionConfig(findBuiltinPlugin(view.name)),
+      },
+    ] as const),
+  );
+}
+
+function buildGlobalPluginPayload(): PluginUiResponse {
+  const configMap = buildGlobalPluginConfigMap();
+  return {
+    success: true,
+    runtimeConnected: false,
+    plugins: listStaticPluginViews().map((view) => ({
+      ...view,
+      availability: {
+        enabled: isPluginEnabled({
+          plugin: findBuiltinPlugin(view.name) || {
+            name: view.name,
+            title: view.title,
+            description: view.description,
+            actions: {},
+          },
+        }),
+        available: true,
+        reasons: [],
+      },
+      config: {
+        actions: configMap.get(view.name)?.actions || [],
+      },
+    })),
+  };
+}
+
+function buildAgentPluginPayload(params?: {
   projectRoot?: string;
   runtimeError?: string;
   runtimeConnected?: boolean;
@@ -112,11 +160,20 @@ function buildStaticPluginPayload(params?: {
     ...(reason ? { runtimeError: reason } : {}),
     plugins: listStaticPluginViews().map((view) => ({
       ...view,
-      availability: buildStaticPluginAvailability({
-        pluginName: view.name,
-        projectRoot: params?.projectRoot,
-        agentError: reason,
-      }),
+      availability: {
+        enabled: isPluginEnabled({
+          plugin: findBuiltinPlugin(view.name) || {
+            name: view.name,
+            title: view.title,
+            description: view.description,
+            actions: {},
+          },
+        }),
+        available: false,
+        reasons: reason
+          ? [`Agent server unavailable: ${reason}`]
+          : ["Static catalog view only. Agent-side availability is not loaded."],
+      },
       config: configMap.get(view.name) || {
         actions: [],
       },
@@ -225,6 +282,47 @@ async function buildRuntimePluginPayload(
   };
 }
 
+function runGlobalPluginAction(input: {
+  pluginName: string;
+  actionName: string;
+}): PluginActionResult<JsonValue> {
+  const pluginName = String(input.pluginName || "").trim();
+  const actionName = String(input.actionName || "").trim();
+  const plugin = findBuiltinPlugin(pluginName);
+  if (!plugin) {
+    return {
+      success: false,
+      error: `Unknown plugin: ${pluginName}`,
+      message: `Unknown plugin: ${pluginName}`,
+    };
+  }
+  if (actionName !== "on" && actionName !== "off") {
+    return {
+      success: false,
+      error: `Unsupported global plugin action: ${actionName}`,
+      message: `Unsupported global plugin action: ${actionName}`,
+    };
+  }
+
+  if (plugin.name === "auth") {
+    return {
+      success: false,
+      error: `Plugin "${plugin.name}" cannot be disabled globally`,
+      message: `Plugin "${plugin.name}" cannot be disabled globally`,
+    };
+  }
+
+  setCityPluginEnabled(plugin.name, actionName === "on");
+  return {
+    success: true,
+    message: `Plugin "${plugin.name}" ${actionName === "on" ? "enabled" : "disabled"} in city config`,
+    data: {
+      pluginName: plugin.name,
+      enabled: actionName === "on",
+    },
+  };
+}
+
 /**
  * 注册 Plugin 管理 API 路由。
  */
@@ -249,10 +347,13 @@ export function registerConsolePluginRoutes(params: {
   app.get("/api/ui/plugins", async (c) => {
     try {
       const requestedAgentId = params.readRequestedAgentId(c.req.raw);
+      if (!requestedAgentId) {
+        return c.json(buildGlobalPluginPayload());
+      }
       const selectedAgent = await params.resolveSelectedAgent(requestedAgentId);
       if (!selectedAgent || !selectedAgent.baseUrl) {
         return c.json(
-          buildStaticPluginPayload({
+          buildAgentPluginPayload({
             projectRoot: selectedAgent?.projectRoot,
             runtimeConnected: false,
             runtimeError: "No running agent selected.",
@@ -269,13 +370,49 @@ export function registerConsolePluginRoutes(params: {
         );
       } catch (runtimeError) {
         return c.json(
-          buildStaticPluginPayload({
+          buildAgentPluginPayload({
             projectRoot: selectedAgent.projectRoot,
             runtimeConnected: false,
             runtimeError: getErrorMessage(runtimeError),
           }),
         );
       }
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: getErrorMessage(error),
+        },
+        500,
+      );
+    }
+  });
+
+  app.post("/api/ui/plugins/action", async (c) => {
+    try {
+      const body = await c.req.json().catch(() => null);
+      const pluginName = String(body?.pluginName || "").trim();
+      const actionName = String(body?.actionName || "").trim();
+
+      if (!pluginName) {
+        return c.json({ success: false, error: "pluginName is required" }, 400);
+      }
+      if (!actionName) {
+        return c.json({ success: false, error: "actionName is required" }, 400);
+      }
+
+      const result = runGlobalPluginAction({
+        pluginName,
+        actionName,
+      });
+      return c.json(
+        {
+          ...result,
+          pluginName,
+          actionName,
+        },
+        result.success ? 200 : 400,
+      );
     } catch (error) {
       return c.json(
         {

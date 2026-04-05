@@ -3,16 +3,16 @@
  *
  * 关键点（中文）
  * - 消费 services / chat 的队列模块
- * - 通过 RequestContext（ALS）透传 sessionId
+ * - 通过 SessionRunScope（ALS）透传 sessionId
  * - 支持 step 边界合并（同 lane 新消息可插入当前 run）
  */
 
 import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { SessionRunResult } from "@/shared/types/SessionRun.js";
+import type { SessionRunResult } from "@/types/session/SessionRun.js";
 import type {
   SessionUserMessageV1,
-} from "@/shared/types/SessionMessage.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+} from "@/types/session/SessionMessages.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ChatQueueWorkerConfig } from "@/shared/types/ChatQueueWorker.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatQueueItem } from "@services/chat/types/ChatQueue.js";
@@ -52,7 +52,7 @@ type LaneState = {
 
 export class ChatQueueWorker {
   private readonly logger: Logger;
-  private readonly context: ExecutionContext;
+  private readonly context: AgentContext;
   private readonly config: ChatQueueWorkerConfig;
   private readonly queueStore: ChatQueueStorePort;
 
@@ -65,7 +65,7 @@ export class ChatQueueWorker {
 
   constructor(params: {
     logger: Logger;
-    context: ExecutionContext;
+    context: AgentContext;
     queueStore?: ChatQueueStorePort;
     config?: Partial<ChatQueueWorkerConfig>;
   }) {
@@ -171,7 +171,7 @@ export class ChatQueueWorker {
     const sessionKey = String(sessionId || "").trim();
     if (!sessionKey) return;
     try {
-      const runtime = this.context.session.getRuntime(sessionKey);
+      const runtime = this.context.session.get(sessionKey).getExecutor();
       if (typeof runtime.requestCancelCurrentTurn !== "function") return;
       await runtime.requestCancelCurrentTurn();
     } catch {
@@ -196,7 +196,7 @@ export class ChatQueueWorker {
   private async appendSessionMessageIfNeeded(item: ChatQueueItem): Promise<void> {
     if (!this.shouldAppendSessionMessage(item)) return;
     await appendChatIngressMessageIfNeeded({
-      session: this.requireContext(),
+      session: this.requireContext(item.sessionId),
       item,
     });
   }
@@ -205,7 +205,7 @@ export class ChatQueueWorker {
     const control = item.control;
     if (!control) return false;
     if (control.type === "clear") {
-      this.requireContext().clearRuntime(item.sessionId);
+      this.requireContext(item.sessionId).clearExecutor();
       this.queueStore.clear(item.sessionId);
       return true;
     }
@@ -272,7 +272,7 @@ export class ChatQueueWorker {
       return;
     }
 
-    const serviceContext = this.requireContext();
+    const serviceContext = this.requireContext(first.sessionId);
     let runItem = first;
 
     let clearRequested = false;
@@ -332,7 +332,6 @@ export class ChatQueueWorker {
     let result: SessionRunResult;
     try {
       result = await serviceContext.run({
-        sessionId: runItem.sessionId,
         query: runItem.text,
         onStepCallback,
         onAssistantStepCallback,
@@ -347,7 +346,6 @@ export class ChatQueueWorker {
       try {
         await appendChatRunErrorMessage({
           session: serviceContext,
-          sessionId: runItem.sessionId,
           text: channelErrorText,
         });
       } catch {
@@ -368,7 +366,7 @@ export class ChatQueueWorker {
     }
 
     if (clearRequested) {
-      serviceContext.clearRuntime(runItem.sessionId);
+      serviceContext.clearExecutor();
       this.queueStore.clear(runItem.sessionId);
     }
 
@@ -429,7 +427,7 @@ export class ChatQueueWorker {
    * 关键点（中文）
    * - 在使用点显式校验，避免隐藏依赖来源。
    */
-  private requireContext() {
-    return this.context.session;
+  private requireContext(sessionId: string) {
+    return this.context.session.get(sessionId);
   }
 }

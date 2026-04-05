@@ -20,9 +20,9 @@ description: 解释 DC_AUTH_TOKEN、DC_AGENT_TOKEN、CLI token 解析优先级�
 - `packages/downcity/src/main/auth/AgentTokenService.ts`
 - `packages/downcity/src/main/commands/Run.ts`
 - `packages/downcity/src/main/daemon/Manager.ts`
-- `packages/downcity/src/services/shell/runtime/SessionStoreSupport.ts`
-- `packages/downcity/src/sessions/tools/shell/ShellHelpers.ts`
-- `packages/downcity/src/sessions/acp/AcpSessionRuntime.ts`
+- `packages/downcity/src/services/shell/runtime/ShellActionRuntimeSupport.ts`
+- `packages/downcity/src/session/tools/shell/ShellToolFormatting.ts`
+- `packages/downcity/src/session/execution/acp/AcpSessionExecutor.ts`
 
 ## 一句话结论
 
@@ -191,8 +191,8 @@ sequenceDiagram
 
 对应位置：
 
-- `SessionStoreSupport.ts`
-- `ShellHelpers.ts`
+- `ShellActionRuntimeSupport.ts`
+- `ShellToolFormatting.ts`
 
 ### ACP 子进程
 
@@ -207,7 +207,7 @@ Downcity 在拉起 ACP 子进程时会：
 
 对应位置：
 
-- `AcpSessionRuntime.ts`
+- `AcpSessionExecutor.ts`
 
 ### Script task 子进程
 
@@ -345,9 +345,9 @@ flowchart LR
 
 - `Run.ts`
 - `Manager.ts`
-- `SessionStoreSupport.ts`
-- `ShellHelpers.ts`
-- `AcpSessionRuntime.ts`
+- `ShellActionRuntimeSupport.ts`
+- `ShellToolFormatting.ts`
+- `AcpSessionExecutor.ts`
 - `TaskRunnerRound.ts`
 
 ### Auth 输出层

@@ -12,17 +12,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { ChatQueueWorker } from "../../bin/services/chat@/city/runtime/console/ChatQueueWorker.js";
+import { ChatQueueWorker } from "../../bin/services/chat/runtime/ChatQueueWorker.js";
 import {
   clearChatQueueLane,
   enqueueChatQueue,
-} from "../../bin/services/chat@/city/runtime/console/ChatQueue.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
+} from "../../bin/services/chat/runtime/ChatQueue.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
+} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 
@@ -50,6 +50,14 @@ test("ChatQueueWorker cancels ACP turn immediately when a newer queued message a
   let cancelCallCount = 0;
   const context = {
     rootPath,
+    paths: {
+      getDowncityChannelDirPath() {
+        return path.join(rootPath, ".downcity", "channel");
+      },
+      getDowncityChannelMetaPath() {
+        return path.join(rootPath, ".downcity", "channel", "meta.json");
+      },
+    },
     env: {},
     config: {
       services: {
@@ -63,51 +71,65 @@ test("ChatQueueWorker cancels ACP turn immediately when a newer queued message a
       async effect() {},
     },
     session: {
-      getRuntime() {
-        return runtime;
-      },
-      async run(params) {
-        runCount += 1;
-        if (runCount === 1) {
-          await waitFor(() => cancelRequested === true);
-          return {
-            success: true,
-            assistantMessage: {
-              id: "a:test:cancelled",
-              role: "assistant",
-              metadata: {
-                v: 1,
-                ts: Date.now(),
-                sessionId: params.sessionId,
-                extra: {
-                  stopReason: "cancelled",
-                },
-              },
-              parts: [{ type: "text", text: "should-not-send" }],
-            },
-          };
-        }
+      get(sessionId) {
         return {
-          success: true,
-          assistantMessage: {
-            id: "a:test:final",
-            role: "assistant",
-            metadata: {
-              v: 1,
-              ts: Date.now(),
-              sessionId: params.sessionId,
-            },
-            parts: [{ type: "text", text: "latest-visible-text" }],
+          sessionId,
+          getExecutor() {
+            return runtime;
+          },
+          async run(params) {
+            runCount += 1;
+            if (runCount === 1) {
+              await waitFor(() => cancelRequested === true);
+              return {
+                success: true,
+                assistantMessage: {
+                  id: "a:test:cancelled",
+                  role: "assistant",
+                  metadata: {
+                    v: 1,
+                    ts: Date.now(),
+                    sessionId,
+                    extra: {
+                      stopReason: "cancelled",
+                    },
+                  },
+                  parts: [{ type: "text", text: "should-not-send" }],
+                },
+              };
+            }
+            return {
+              success: true,
+              assistantMessage: {
+                id: "a:test:final",
+                role: "assistant",
+                metadata: {
+                  v: 1,
+                  ts: Date.now(),
+                  sessionId,
+                },
+                parts: [{ type: "text", text: "latest-visible-text" }],
+              },
+            };
+          },
+          async appendUserMessage() {},
+          async appendAssistantMessage(params) {
+            persistedAssistantTexts.push(
+              String(params?.message?.parts?.[0]?.text || params?.fallbackText || ""),
+            );
+          },
+          clearExecutor() {},
+          getHistoryComposer() {
+            return null;
+          },
+          afterSessionUpdatedAsync() {
+            return Promise.resolve();
+          },
+          isExecuting() {
+            return false;
           },
         };
       },
-      async appendUserMessage() {},
-      async appendAssistantMessage(params) {
-        persistedAssistantTexts.push(
-          String(params?.message?.parts?.[0]?.text || params?.fallbackText || ""),
-        );
-      },
-      clearRuntime() {},
     },
     logger: {
       warn() {},

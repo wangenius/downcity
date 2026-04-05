@@ -7,7 +7,7 @@
  * - 底层数据落在 `.downcity/channel/meta.json`，由 ChannelContextStore 统一维护
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { ChatMetaV1 } from "@services/chat/types/ChatMeta.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import {
@@ -30,7 +30,7 @@ function normalizeChatId(chatId: string): string {
  * 读取指定 sessionId 的 chat meta。
  */
 export async function readChatMetaBySessionId(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
 }): Promise<ChatMetaV1 | null> {
   const sessionId = normalizeSessionId(params.sessionId);
@@ -59,7 +59,7 @@ export async function readChatMetaBySessionId(params: {
  * 更新指定 sessionId 的 chat meta（全量覆盖最近快照）。
  */
 export async function upsertChatMetaBySessionId(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
   channel: ChatDispatchChannel;
   chatId: string;
@@ -93,7 +93,7 @@ export async function upsertChatMetaBySessionId(params: {
  * 通过渠道目标查找已有 sessionId。
  */
 export async function resolveSessionIdByChatTarget(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   channel: ChatDispatchChannel;
   chatId: string;
   targetType?: string;
@@ -116,7 +116,7 @@ export async function resolveSessionIdByChatTarget(params: {
  * 通过渠道目标解析或创建 sessionId。
  */
 export async function resolveOrCreateSessionIdByChatTarget(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   channel: ChatDispatchChannel;
   chatId: string;
   targetType?: string;
@@ -143,7 +143,7 @@ export async function resolveOrCreateSessionIdByChatTarget(params: {
  * - 若同一 target 重新收到入站消息，会创建新的 sessionId。
  */
 export async function removeChatMetaBySessionId(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   sessionId: string;
 }): Promise<{
   removed: boolean;

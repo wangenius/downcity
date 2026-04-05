@@ -2,8 +2,11 @@
   "title": "Memory",
   "pages": [
     "overview",
+    "concepts",
     "philosophy",
+    "architecture",
     "framework",
+    "selection",
     "memory-agent",
     "v3-design"
   ]

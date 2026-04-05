@@ -11,17 +11,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { ChatQueueWorker } from "../../bin/services/chat@/city/runtime/console/ChatQueueWorker.js";
+import { ChatQueueWorker } from "../../bin/services/chat/runtime/ChatQueueWorker.js";
 import {
   clearChatQueueLane,
   enqueueChatQueue,
-} from "../../bin/services/chat@/city/runtime/console/ChatQueue.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
+} from "../../bin/services/chat/runtime/ChatQueue.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
+} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 
@@ -46,6 +46,15 @@ test("ChatQueueWorker only dispatches step text when assistant steps already exi
   const context = {
     rootPath,
     env: {},
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     config: {
       services: {
         chat: {},
@@ -58,30 +67,47 @@ test("ChatQueueWorker only dispatches step text when assistant steps already exi
       async effect() {},
     },
     session: {
-      async run(params) {
-        if (typeof params.onAssistantStepCallback === "function") {
-          await params.onAssistantStepCallback({
-            text: "step-visible-text",
-            stepIndex: 1,
-          });
-        }
+      get(sessionId) {
         return {
-          success: true,
-          assistantMessage: {
-            id: "a:test:final",
-            role: "assistant",
-            metadata: {
-              v: 1,
-              ts: Date.now(),
-              sessionId: params.sessionId,
-            },
-            parts: [{ type: "text", text: "final-should-not-send" }],
+          sessionId,
+          async run(params) {
+            if (typeof params.onAssistantStepCallback === "function") {
+              await params.onAssistantStepCallback({
+                text: "step-visible-text",
+                stepIndex: 1,
+              });
+            }
+            return {
+              success: true,
+              assistantMessage: {
+                id: "a:test:final",
+                role: "assistant",
+                metadata: {
+                  v: 1,
+                  ts: Date.now(),
+                  sessionId,
+                },
+                parts: [{ type: "text", text: "final-should-not-send" }],
+              },
+            };
+          },
+          async appendUserMessage() {},
+          async appendAssistantMessage() {},
+          clearExecutor() {},
+          getExecutor() {
+            return null;
+          },
+          getHistoryComposer() {
+            return null;
+          },
+          afterSessionUpdatedAsync() {
+            return Promise.resolve();
+          },
+          isExecuting() {
+            return false;
           },
         };
       },
-      async appendUserMessage() {},
-      async appendAssistantMessage() {},
-      clearRuntime() {},
     },
     logger: {
       warn() {},
@@ -154,6 +180,15 @@ test("ChatQueueWorker dispatches final assistant text when no assistant step was
   const context = {
     rootPath,
     env: {},
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     config: {
       services: {
         chat: {},
@@ -166,26 +201,43 @@ test("ChatQueueWorker dispatches final assistant text when no assistant step was
       async effect() {},
     },
     session: {
-      async run(params) {
+      get(sessionId) {
         return {
-          success: true,
-          assistantMessage: {
-            id: "a:test:final-only",
-            role: "assistant",
-            metadata: {
-              v: 1,
-              ts: Date.now(),
-              sessionId: params.sessionId,
-            },
-            parts: [{ type: "text", text: "final-visible-text" }],
+          sessionId,
+          async run() {
+            return {
+              success: true,
+              assistantMessage: {
+                id: "a:test:final-only",
+                role: "assistant",
+                metadata: {
+                  v: 1,
+                  ts: Date.now(),
+                  sessionId,
+                },
+                parts: [{ type: "text", text: "final-visible-text" }],
+              },
+            };
+          },
+          async appendUserMessage() {},
+          async appendAssistantMessage(params) {
+            appendedAssistantTexts.push(String(params?.message?.parts?.[0]?.text || params?.fallbackText || ""));
+          },
+          clearExecutor() {},
+          getExecutor() {
+            return null;
+          },
+          getHistoryComposer() {
+            return null;
+          },
+          afterSessionUpdatedAsync() {
+            return Promise.resolve();
+          },
+          isExecuting() {
+            return false;
           },
         };
       },
-      async appendUserMessage() {},
-      async appendAssistantMessage(params) {
-        appendedAssistantTexts.push(String(params?.message?.parts?.[0]?.text || params?.fallbackText || ""));
-      },
-      clearRuntime() {},
     },
     logger: {
       warn() {},

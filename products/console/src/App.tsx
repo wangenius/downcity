@@ -79,6 +79,7 @@ export function App() {
     services,
     skills,
     plugins,
+    agentPlugins,
     chatChannels,
     sessions,
     selectedSessionId,
@@ -113,6 +114,7 @@ export function App() {
     refreshSkills,
     refreshSessionArchives,
     controlService,
+    runGlobalPluginAction,
     runPluginAction,
     runChatChannelAction,
     configureChatChannel,
@@ -717,7 +719,20 @@ export function App() {
         return (
           <section>
             <PluginsSection
+              scope="global"
               plugins={plugins}
+              formatTime={uiHelpers.formatTime}
+              statusBadgeVariant={uiHelpers.statusBadgeVariant}
+              onRunAction={(name, action, payload) => runGlobalPluginAction(name, action, payload)}
+            />
+          </section>
+        )
+      case "agentPlugins":
+        return (
+          <section>
+            <PluginsSection
+              scope="agent"
+              plugins={agentPlugins}
               hasRunningAgent={selectedAgent?.running === true}
               selectedAgentName={String(selectedAgent?.name || "").trim()}
               formatTime={uiHelpers.formatTime}

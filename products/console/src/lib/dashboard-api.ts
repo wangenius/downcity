@@ -198,8 +198,11 @@ export const dashboardApiRoutes = {
       : "/api/ui/agents",
   uiAgentRuntimeStatus: (agentId: string) =>
     `/api/ui/agents/runtime-status?agent=${encodeURIComponent(agentId)}`,
-  uiPlugins: (agentId: string) =>
-    `/api/ui/plugins?agent=${encodeURIComponent(agentId)}`,
+  uiPlugins: (agentId?: string) =>
+    agentId
+      ? `/api/ui/plugins?agent=${encodeURIComponent(agentId)}`
+      : "/api/ui/plugins",
+  uiPluginsAction: () => "/api/ui/plugins/action",
   uiModel: (agentId?: string) =>
     agentId
       ? `/api/ui/model?agent=${encodeURIComponent(agentId)}`

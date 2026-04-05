@@ -12,11 +12,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { Hono } from "hono";
-import { AuthService } from "../../bin/city/runtime/auth/AuthService.js";
-import { AuthStore } from "../../bin/city/runtime/auth/AuthStore.js";
-import { INTERNAL_RUNTIME_AUTH_ENV_KEY } from "../../bin/city/runtime/auth/InternalRuntimeAuth.js";
-import { createRouteAuthGuardMiddleware } from "../../bin/city/runtime/auth/RoutePolicy.js";
-import { hashPassword } from "../../bin/city/runtime/auth/PasswordHasher.js";
+import { AuthService } from "../../bin/main/modules/http/auth/AuthService.js";
+import { AuthStore } from "../../bin/main/modules/http/auth/AuthStore.js";
+import { createRouteAuthGuardMiddleware } from "../../bin/main/modules/http/auth/RoutePolicy.js";
+import { hashPassword } from "../../bin/main/modules/http/auth/PasswordHasher.js";
 
 function createTestHarness() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-auth-policy-"));
@@ -122,21 +121,23 @@ test("route policy allows read permission and blocks missing write permission", 
   }
 });
 
-test("route policy allows runtime internal bearer token after bootstrap", async () => {
+test("route policy allows agent-issued bearer token after bootstrap", async () => {
   const { app, authService, cleanup } = createTestHarness();
-  const previousInternalToken = process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY];
-  process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY] = "dci_test_internal";
   try {
-    authService.bootstrapAdmin({
+    const bootstrap = authService.bootstrapAdmin({
       username: "admin",
       password: "pass-123456",
       tokenName: "bootstrap",
     });
+    const agentToken = authService.createToken(
+      authService.authenticateBearerHeader(`Bearer ${bootstrap.token.token}`),
+      { name: "agent-runtime" },
+    );
 
     const response = await app.request("/api/services/control", {
       method: "POST",
       headers: {
-        Authorization: "Bearer dci_test_internal",
+        Authorization: `Bearer ${agentToken.token}`,
       },
     });
     const body = await response.json();
@@ -144,8 +145,6 @@ test("route policy allows runtime internal bearer token after bootstrap", async 
     assert.equal(response.status, 200);
     assert.equal(body.success, true);
   } finally {
-    if (previousInternalToken === undefined) delete process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY];
-    else process.env[INTERNAL_RUNTIME_AUTH_ENV_KEY] = previousInternalToken;
     cleanup();
   }
 });

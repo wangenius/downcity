@@ -42,8 +42,6 @@ export type ShellSessionSnapshot = {
   shellId: string;
   /** 发起该 shell 的 chat/context 标识；不存在时表示非聊天上下文触发。 */
   ownerContextId?: string;
-  /** 发起该 shell 的请求标识，便于排查一次具体 run。 */
-  ownerRequestId?: string;
   /** 原始命令字符串。 */
   cmd: string;
   /** 命令执行工作目录（绝对路径）。 */
@@ -96,7 +94,7 @@ export type ShellStartRequest = {
   inlineWaitMs?: number;
   /** 单次读取输出返回给模型的 token 上限。 */
   maxOutputTokens?: number;
-  /** 显式指定 owner sessionId；为空时优先从 RequestContext 推断。 */
+  /** 显式指定 owner sessionId；为空时优先从 SessionRunScope 推断。 */
   ownerContextId?: string;
   /** 是否在 shell 结束后自动回投主 chat agent。 */
   autoNotifyOnExit?: boolean;
@@ -136,7 +134,7 @@ export type ShellQueryRequest = {
   shellId?: string;
   /** 命令关键字；用于在当前 context 下查找最近匹配会话。 */
   cmd?: string;
-  /** 指定 owner sessionId；为空时优先从 RequestContext 推断。 */
+  /** 指定 owner sessionId；为空时优先从 SessionRunScope 推断。 */
   ownerContextId?: string;
   /** 是否允许匹配已结束会话。 */
   includeCompleted?: boolean;

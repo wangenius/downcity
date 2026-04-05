@@ -9,7 +9,7 @@ description: Manage the built-in ASR plugin and its transcription config
 
 ## What it manages
 
-- plugin behavior such as enable/disable
+- city-level plugin enable/disable
 - ASR transcription config
 - active transcription model
 - local audio transcription
@@ -32,10 +32,10 @@ city asr transcribe ./demo.ogg
 
 ## Notes
 
-- `city asr on` enables the plugin and optionally prepares its transcription dependency in one step.
+- `city asr on` updates city-level plugin lifecycle and can optionally prepare its transcription dependency in one step.
 - The Console UI `Plugins -> asr` card also includes a repair workbench, so you can inspect status, download/install dependencies, switch the active model, and fill in Python or model-path settings without leaving the UI.
 - The asr plugin attaches to chat-defined voice extension points, so Telegram and QQ voice messages can be transcribed and merged into inbound content.
-- Configuration is persisted to project `downcity.json` under `plugins.asr`.
+- Agent-local ASR parameters are persisted to project `downcity.json` under `plugins.asr`.
 
 ## Related
 

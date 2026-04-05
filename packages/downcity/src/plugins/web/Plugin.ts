@@ -11,6 +11,8 @@ import type { Plugin } from "@/shared/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { WebPluginConfig, WebPluginInstallInput } from "@/shared/types/WebPlugin.js";
 import { WEB_PLUGIN_DEFAULT_REPOSITORY_URL } from "@/shared/types/WebPlugin.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
+import { setCityPluginEnabled } from "@/main/plugin/Lifecycle.js";
 import {
   doctorWebPluginDependency,
   inspectWebPluginDependency,
@@ -107,7 +109,6 @@ export const webPlugin: Plugin = {
     plugin: "web",
     scope: "project",
     defaultValue: {
-      enabled: true,
       provider: "web-access",
       injectPrompt: true,
       repositoryUrl: WEB_PLUGIN_DEFAULT_REPOSITORY_URL,
@@ -148,12 +149,11 @@ export const webPlugin: Plugin = {
     statusAction: "status",
   },
   async availability(context) {
-    const config = readWebPluginConfig(context);
-    if (!config.enabled) {
+    if (!isPluginEnabled({ plugin: webPlugin })) {
       return {
         enabled: false,
         available: false,
-        reasons: ["web plugin disabled"],
+        reasons: ["web plugin disabled in city config"],
       };
     }
     const dependency = await inspectWebPluginDependency(context);
@@ -233,12 +233,15 @@ export const webPlugin: Plugin = {
     configure: {
       allowWhenDisabled: true,
       execute: async ({ context, payload }) => {
+        const payloadObject =
+          payload && typeof payload === "object" && !Array.isArray(payload)
+            ? (payload as Record<string, unknown>)
+            : {};
+        const { enabled: _ignoredEnabled, enable: _ignoredEnable, ...patch } =
+          payloadObject;
         const nextConfig = await writeWebPluginConfig({
           context,
-          value:
-            payload && typeof payload === "object" && !Array.isArray(payload)
-              ? (payload as Partial<WebPluginConfig>)
-              : {},
+          value: patch as Partial<WebPluginConfig>,
         });
         return {
           success: true,
@@ -259,7 +262,6 @@ export const webPlugin: Plugin = {
             .option("--version <version>", "记录来源版本")
             .option("--browser-command <command>", "agent-browser 命令名")
             .option("--scope <scope>", "安装位置：user 或 project")
-            .option("--enable", "启用 plugin", true)
             .option("--no-inject-prompt", "关闭 provider 提示词注入");
         },
         mapInput({ opts }): JsonValue {
@@ -279,7 +281,6 @@ export const webPlugin: Plugin = {
             ...(getInstallScopeOpt(opts, "scope")
               ? { installScope: getInstallScopeOpt(opts, "scope") }
               : {}),
-            enable: getBooleanOpt(opts, "enable", true),
             injectPrompt: getBooleanOpt(opts, "injectPrompt", true),
           } as JsonObject;
         },
@@ -330,6 +331,7 @@ export const webPlugin: Plugin = {
         },
       },
       execute: async ({ context, payload }) => {
+        setCityPluginEnabled("web", true);
         const providerRaw = String((payload as { provider?: unknown }).provider || "").trim();
         const provider =
           providerRaw === "web-access" || providerRaw === "agent-browser"
@@ -339,7 +341,6 @@ export const webPlugin: Plugin = {
           context,
           value: {
             ...readWebPluginConfig(context),
-            enabled: true,
             ...(provider ? { provider } : {}),
             injectPrompt:
               typeof (payload as { injectPrompt?: unknown }).injectPrompt === "boolean"
@@ -372,17 +373,13 @@ export const webPlugin: Plugin = {
         },
       },
       execute: async ({ context }) => {
-        const nextConfig = await writeWebPluginConfig({
-          context,
-          value: {
-            ...readWebPluginConfig(context),
-            enabled: false,
-          },
-        });
+        setCityPluginEnabled("web", false);
         return {
           success: true,
           data: {
-            plugin: toJsonObject(nextConfig as unknown as Record<string, unknown>),
+            plugin: toJsonObject(
+              readWebPluginConfig(context) as unknown as Record<string, unknown>,
+            ),
           },
         };
       },
@@ -470,7 +467,7 @@ export const webPlugin: Plugin = {
   },
   system(context) {
     const config = readWebPluginConfig(context);
-    if (!config.enabled || !config.injectPrompt) {
+    if (!isPluginEnabled({ plugin: webPlugin }) || !config.injectPrompt) {
       return "";
     }
     const providerPrompt =

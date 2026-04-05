@@ -129,11 +129,11 @@ task 在执行时会创建：
 
 `task` 依然依赖宿主 runtime，但方式和 `chat` 不完全一样。
 
-`chat` 更多是通过现成的 `ExecutionContext.session.run()` 进入宿主执行链。  
+`chat` 更多是通过现成的 `AgentContext.session.run()` 进入宿主执行链。  
 `task` 在 run 阶段则会额外创建一个 task 专用 agent runtime：
 
 - 单独的 task session runtime
-- 单独的 `Persistor`
+- 单独的 `SessionHistoryStore`
 - 单独的 run 目录
 - 独立的 task profile system
 
@@ -148,7 +148,7 @@ task 的 `Runner` 会创建一个最小 task agent runtime。
 
 它主要负责：
 
-- 给执行器 agent 提供独立 persistor
+- 给执行器 agent 提供独立 history store
 - 把消息写到 run 目录下的 `messages.jsonl`
 - 使用 `task` profile 组装 prompt system
 - 在需要 review 时，再额外创建 user simulator agent

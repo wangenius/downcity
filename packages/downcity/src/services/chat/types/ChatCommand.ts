@@ -15,7 +15,6 @@ export type ChatSessionSnapshot = {
   chatType?: string;
   userId?: string;
   messageId?: string;
-  requestId?: string;
 };
 
 export type ChatSendRequest = {

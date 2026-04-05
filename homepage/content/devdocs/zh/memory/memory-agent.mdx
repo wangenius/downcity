@@ -29,7 +29,7 @@ memoryAgent 到底是什么，它到底怎么工作？
 
 主执行主轴仍然是：
 
-- `SessionStore -> SessionCore`
+- `SessionFacade -> SessionEngine`
 
 ### 它不是一个必须长期常驻对话的角色
 
@@ -68,7 +68,7 @@ flowchart LR
   MS["memory service"]
   MA["memoryAgent"]
   CORE["Scratchpad / Journal / Canon"]
-  MODEL["AgentState.model"]
+  MODEL["AgentRuntime.model"]
 
   S --> MS
   MS --> CORE

@@ -6,7 +6,7 @@
  * - definition: `./.downcity/task/<taskId>/task.md`
  * - run dir: `./.downcity/task/<taskId>/<timestamp>/`
  *
- * 同时定义“task run sessionId”格式，用于把 Agent 的 sessionStore 映射到 run 目录：
+ * 同时定义“task run sessionId”格式，用于把 Agent 的 sessionFacade 映射到 run 目录：
  * - `task-run:<taskId>:<timestamp>`
  */
 

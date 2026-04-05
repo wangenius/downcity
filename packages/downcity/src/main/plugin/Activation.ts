@@ -2,34 +2,21 @@
  * Plugin 激活判定工具。
  *
  * 关键点（中文）
- * - 统一收敛“某个 plugin 在当前项目配置下是否启用”的规则。
- * - 控制面静态 catalog、执行链路 availability 与 hook 执行都复用这套逻辑。
+ * - 统一收敛“某个 plugin 在当前 city 配置下是否启用”的规则。
+ * - plugin 启用态属于 city 级生命周期配置，不再来自 agent `downcity.json`。
  */
 
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { Plugin } from "@/shared/types/Plugin.js";
+import { isCityPluginEnabled } from "@/main/plugin/Lifecycle.js";
 
 /**
- * 从 plugin 默认配置中读取默认 enabled 值。
+ * 读取当前 city 配置下的 plugin 启用态。
  */
-export function getPluginDefaultEnabled(plugin: Plugin): boolean {
-  const candidate = plugin.config?.defaultValue?.enabled;
-  if (typeof candidate === "boolean") return candidate;
-  return true;
-}
-
-/**
- * 读取当前项目配置下的 plugin 启用态。
- */
-export function isPluginEnabledInConfig(params: {
+export function isPluginEnabled(params: {
   plugin: Plugin;
-  config?: DowncityConfig | null;
 }): boolean {
-  const pluginConfig = params.config?.plugins?.[params.plugin.name];
-  if (pluginConfig && typeof pluginConfig === "object" && !Array.isArray(pluginConfig)) {
-    const explicitEnabled = (pluginConfig as { enabled?: unknown }).enabled;
-    if (typeof explicitEnabled === "boolean") return explicitEnabled;
-    return getPluginDefaultEnabled(params.plugin);
-  }
-  return getPluginDefaultEnabled(params.plugin);
+  const pluginName = String(params.plugin.name || "").trim();
+  if (!pluginName) return false;
+  if (pluginName === "auth") return true;
+  return isCityPluginEnabled(pluginName);
 }

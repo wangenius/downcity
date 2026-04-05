@@ -6,14 +6,14 @@
  * - 仅注入“如何使用 memory service action”的规则。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import { isMemoryEnabled } from "./Store.js";
 
 /**
  * 构建 memory service 的 system 文本。
  */
 export async function buildMemoryServiceSystemText(
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<string> {
   const enabled = isMemoryEnabled(context);
   if (!enabled) {

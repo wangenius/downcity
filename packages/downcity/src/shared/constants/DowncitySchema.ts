@@ -158,7 +158,6 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
           type: "object",
           additionalProperties: true,
           properties: {
-            enabled: { type: "boolean" },
             injectPrompt: { type: "boolean" },
             augmentMessage: { type: "boolean" },
             provider: { type: "string", enum: ["local", "command"] },
@@ -196,7 +195,6 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
           type: "object",
           additionalProperties: true,
           properties: {
-            enabled: { type: "boolean" },
             provider: {
               type: "string",
               enum: ["local"],

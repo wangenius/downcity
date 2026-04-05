@@ -8,7 +8,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   MemoryGetPayload,
   MemoryGetResponse,
@@ -39,7 +39,7 @@ function isWithin(parentPath: string, childPath: string): boolean {
 }
 
 function resolveStoreTargetPath(
-  context: ExecutionContext,
+  context: AgentContext,
   target: MemorySourceType,
   sessionId?: string,
 ): { absPath: string; relPath: string } {
@@ -84,7 +84,7 @@ function formatEntry(content: string): string {
  * 显式写入 memory。
  */
 export async function storeMemory(
-  context: ExecutionContext,
+  context: AgentContext,
   state: MemoryRuntimeState,
   payload: MemoryStorePayload,
 ): Promise<MemoryStoreResponse> {
@@ -112,7 +112,7 @@ export async function storeMemory(
   };
 }
 
-function resolveAllowedReadPath(context: ExecutionContext, relPath: string): string {
+function resolveAllowedReadPath(context: AgentContext, relPath: string): string {
   const normalized = relPath.replace(/\\/g, "/").replace(/^\/+/, "").trim();
   if (!normalized) {
     throw new Error("path is required");
@@ -136,7 +136,7 @@ function resolveAllowedReadPath(context: ExecutionContext, relPath: string): str
  * 读取指定记忆文件（支持行区间）。
  */
 export async function getMemory(
-  context: ExecutionContext,
+  context: AgentContext,
   payload: MemoryGetPayload,
 ): Promise<MemoryGetResponse> {
   const requestedPath = String(payload.path || "").trim();

@@ -10,7 +10,7 @@
 import path from "node:path";
 import { logger as defaultLogger } from "@shared/utils/logger/Logger.js";
 import { loadAgentEnvSnapshot, loadDowncityConfig, loadGlobalEnvFromStore } from "@/main/city/env/Config.js";
-import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import { findBuiltinPlugin, listStaticPluginViews } from "@/main/plugin/Catalog.js";
 import {
   createAgentAuthRuntime,
@@ -80,10 +80,7 @@ export async function getLocalPluginAvailability(
     return await plugin.availability(context);
   }
 
-  const enabled = isPluginEnabledInConfig({
-    plugin,
-    config: context.config,
-  });
+  const enabled = isPluginEnabled({ plugin });
   if (!enabled) {
     return {
       enabled: false,
@@ -136,10 +133,7 @@ export async function runLocalPluginAction(params: {
   }
 
   const context = createLocalPluginCommandContext(params.projectRoot);
-  const enabled = isPluginEnabledInConfig({
-    plugin,
-    config: context.config,
-  });
+  const enabled = isPluginEnabled({ plugin });
   if (!enabled && action.allowWhenDisabled !== true) {
     return {
       success: false,

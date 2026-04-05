@@ -1,56 +1,50 @@
 /**
- * SessionRuntimeStore / SessionPersistorStore 拆分测试（node:test）。
+ * Session 懒加载缓存测试（node:test）。
  *
  * 关键点（中文）
- * - runtime 缓存与 persistor 缓存应该是两个独立职责。
- * - 清理 runtime 时，不应顺带清理 persistor。
- * - 新的主入口名称应该是 `SessionRuntimeStore`。
+ * - history Composer 在单个 Session 实例内只创建一次。
+ * - clearExecutor 只清 executor，不清 history Composer。
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SessionPersistorStore } from "../../bin/sessions@/city/runtime/console/SessionPersistorStore.js";
-import { SessionRuntimeStore } from "../../bin/sessions/SessionRuntimeStore.js";
+import { Session } from "../../bin/session/Session.js";
 
-test("SessionRuntimeStore recreates runtime without recreating persistor after clearRuntime", () => {
-  const createdPersistors = [];
-  const createdRuntimes = [];
+test("Session recreates executor without recreating history composer after clearExecutor", () => {
+  const createdHistoryComposers = [];
+  const createdExecutors = [];
 
-  const persistorStore = new SessionPersistorStore({
-    createPersistor(sessionId) {
-      const persistor = {
-        sessionId,
-        tag: `persistor:${createdPersistors.length + 1}`,
+  const session = new Session({
+    sessionId: "chat-a",
+    createHistoryComposer() {
+      const historyComposer = {
+        sessionId: "chat-a",
+        tag: `history-composer:${createdHistoryComposers.length + 1}`,
       };
-      createdPersistors.push(persistor);
-      return persistor;
+      createdHistoryComposers.push(historyComposer);
+      return historyComposer;
     },
-  });
-
-  const runtimeStore = new SessionRuntimeStore({
-    persistorStore,
-    createRuntime({ sessionId, persistor }) {
+    createExecutor(historyComposer) {
       const runtime = {
-        sessionId,
-        persistor,
-        tag: `runtime:${createdRuntimes.length + 1}`,
+        historyComposer,
+        tag: `runtime:${createdExecutors.length + 1}`,
       };
-      createdRuntimes.push(runtime);
+      createdExecutors.push(runtime);
       return runtime;
     },
   });
 
-  const firstPersistor = runtimeStore.getPersistor("chat-a");
-  const firstRuntime = runtimeStore.getRuntime("chat-a");
+  const firstHistoryComposer = session.getHistoryComposer();
+  const firstRuntime = session.getExecutor();
 
-  runtimeStore.clearRuntime("chat-a");
+  session.clearExecutor();
 
-  const secondPersistor = runtimeStore.getPersistor("chat-a");
-  const secondRuntime = runtimeStore.getRuntime("chat-a");
+  const secondHistoryComposer = session.getHistoryComposer();
+  const secondRuntime = session.getExecutor();
 
-  assert.equal(firstPersistor, secondPersistor);
+  assert.equal(firstHistoryComposer, secondHistoryComposer);
   assert.notEqual(firstRuntime, secondRuntime);
-  assert.equal(secondRuntime.persistor, firstPersistor);
-  assert.equal(createdPersistors.length, 1);
-  assert.equal(createdRuntimes.length, 2);
+  assert.equal(secondRuntime.historyComposer, firstHistoryComposer);
+  assert.equal(createdHistoryComposers.length, 1);
+  assert.equal(createdExecutors.length, 2);
 });

@@ -7,9 +7,9 @@ description: 按当前 packages/downcity 的真实目录和运行时对象，解
 
 `packages/downcity/` 是当前 runtime 内核。理解它最有效的方式，不是记旧目录名，而是先抓住几个真实中心对象：
 
-- `AgentState`
-- `ExecutionContext`
-- `SessionStore`
+- `AgentRuntime`
+- `AgentContext`
+- `SessionFacade`
 - `PluginRegistry`
 - `Service` instances
 
@@ -18,7 +18,7 @@ description: 按当前 packages/downcity 的真实目录和运行时对象，解
 ```text
 main 负责入口和装配
 agent 负责单项目运行时中心
-sessions 负责执行主轴
+session 负责执行主轴
 services 负责主业务流程
 plugins 负责增强
 ```
@@ -29,7 +29,7 @@ plugins 负责增强
 flowchart TD
   ROOT["packages/downcity/src"] --> MAIN["main/"]
   ROOT --> AGENT["agent/"]
-  ROOT --> SESSIONS["sessions/"]
+  ROOT --> SESSION["session/"]
   ROOT --> SERVICES["services/"]
   ROOT --> PLUGINS["plugins/"]
   ROOT --> TYPES["types/"]
@@ -109,9 +109,9 @@ flowchart TD
 
 当前最重要的对象不是旧命名 `host runtime`，而是：
 
-- `AgentState`
+- `AgentRuntime`
 
-`AgentState` 持有当前 agent 的长期运行状态：
+`AgentRuntime` 持有当前 agent 的长期运行状态：
 
 - `cwd`
 - `rootPath`
@@ -119,32 +119,32 @@ flowchart TD
 - `env`
 - `systems`
 - `model`
-- `sessionStore`
+- `sessionFacade`
 - `services`
 - `pluginRegistry`
 
-### `AgentState.ts`
+### `AgentRuntime.ts`
 
 负责：
 
 - 初始化项目级运行时
 - 读取 config / env / systems
 - 创建 model
-- 创建 `SessionRuntimeStore` 与 `SessionStore`
+- 创建 `SessionExecutorRegistry` 与 `SessionFacade`
 - 创建 plugin registry
 - 创建 per-agent service instances
 - 启动 prompt 热更新
 
-### `ExecutionContext.ts`
+### `AgentContext.ts`
 
 负责：
 
-- 从 `AgentState` 派生统一执行上下文
+- 从 `AgentRuntime` 派生统一执行上下文
 - 为 service 和 plugin 提供统一能力面
 
 当前 service / plugin 拿到的是统一的：
 
-- `ExecutionContext`
+- `AgentContext`
 
 它里面主要有：
 
@@ -155,7 +155,7 @@ flowchart TD
 - `invoke`
 - `plugins`
 
-## 3. `sessions/`
+## 3. `session/`
 
 这是当前执行主轴层。
 
@@ -167,33 +167,33 @@ session 是真正承接模型执行、消息持久化、compact、tools 和 run 
 
 ### 关键对象
 
-#### `SessionStore`
+#### `SessionFacade`
 
 这是 agent 持有的统一会话门面。
 
 负责：
 
-- `getRuntime`
-- `getPersistor`
+- `getExecutor`
+- `getHistoryStore`
 - `run`
 - `appendUserMessage`
 - `appendAssistantMessage`
 - 会话执行状态管理
 
-#### `SessionRuntimeStore`
+#### `SessionExecutorRegistry`
 
 负责：
 
-- 按 `sessionId` 缓存 `SessionRuntime`
-- 管理 runtime 与 persistor 的创建关系
+- 按 `sessionId` 缓存 `LocalSessionExecutor`
+- 管理 runtime 与 history store 的创建关系
 
-#### `SessionRuntime`
+#### `LocalSessionExecutor`
 
 负责：
 
-- 把 `model / persistor / compactor / prompter / tools` 装配成一个可运行 session
+- 把 `model / history store / compactor / prompter / tools` 装配成一个可运行 session
 
-#### `SessionCore`
+#### `SessionEngine`
 
 这是执行内核。
 
@@ -290,8 +290,8 @@ session 是真正承接模型执行、消息持久化、compact、tools 和 run 
 
 当前非常关键，因为：
 
-- `AgentState`
-- `ExecutionContext`
+- `AgentRuntime`
+- `AgentContext`
 - `Service`
 - `Plugin`
 - `SessionRun`
@@ -320,11 +320,11 @@ session 是真正承接模型执行、消息持久化、compact、tools 和 run 
 第一次读 package，建议按这条线：
 
 1. `src/main/index.ts`
-2. `src/agent/AgentState.ts`
-3. `src/agent/ExecutionContext.ts`
-4. `src/sessions/SessionStore.ts`
-5. `src/sessions/SessionRuntimeStore.ts`
-6. `src/sessions/SessionCore.ts`
+2. `src/agent/AgentRuntime.ts`
+3. `src/agent/AgentContext.ts`
+4. `src/session/SessionFacade.ts`
+5. `src/session/execution/SessionExecutorRegistry.ts`
+6. `src/session/execution/local/SessionEngine.ts`
 7. `src/main/service/Services.ts`
 8. `src/main/registries/ServiceClassRegistry.ts`
 9. `src/services/chat/ChatService.ts`

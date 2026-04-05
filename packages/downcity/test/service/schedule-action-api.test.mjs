@@ -21,12 +21,12 @@ import {
   stopServiceScheduleRuntime,
 } from "../../bin/main/service/schedule/Runtime.js";
 import { ServiceScheduleStore } from "../../bin/main/service/schedule/Store.js";
-import { upsertChatMetaBySessionId } from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
+import { upsertChatMetaBySessionId } from "../../bin/services/chat/runtime/ChatMetaStore.js";
 import {
   getChatSender,
   registerChatSender,
   unregisterChatSender,
-} from "../../bin/services/chat@/city/runtime/console/ChatSendRegistry.js";
+} from "../../bin/services/chat/runtime/ChatSendRegistry.js";
 
 const TELEGRAM_CHANNEL = "telegram";
 const CHAT_KEY = "ctx_schedule_api_test";
@@ -36,6 +36,17 @@ function buildRuntime(rootPath) {
     rootPath,
     env: {},
     config: {},
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+      getDowncitySessionDirPath: (sessionId) =>
+        path.join(rootPath, ".downcity/session", sessionId),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     logger: {
       warn() {},
       info() {},

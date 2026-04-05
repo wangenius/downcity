@@ -1,0 +1,78 @@
+---
+title: Memory 选型
+description: 解释 Downcity 不应该怎么做 Memory，以及更适合的 Memory 选型方向
+---
+
+# Memory 选型
+
+这页直接回答选型问题。
+
+## Downcity 不应该选什么
+
+### 不要把全部 history 直接当 memory
+
+问题：
+
+1. 成本线性上涨
+2. 噪音越来越多
+3. 模型会被低价值旧信息污染
+
+### 不要把 memory 做成纯向量黑盒
+
+问题：
+
+1. 可解释性弱
+2. 很难人工修正
+3. 对稳定偏好、规则、身份信息不优雅
+
+### 不要让 memory service 直接接管主对话
+
+问题：
+
+1. 链路太重
+2. 职责会和 LocalSessionExecutor 打架
+3. 很容易把执行系统误做成记忆系统驱动的一切
+
+## Downcity 更适合什么
+
+最适合的方向是：
+
+```text
+分层 memory + session 主轴 + contextualization 组装
+```
+
+## 选型结论
+
+### A. 主实体：Session
+
+理由：
+
+1. 它稳定
+2. 它和用户交互直接对应
+3. 它天然能承载 history、working memory、execution state
+
+### B. 事实源：Session History
+
+理由：
+
+1. 原始
+2. 可审计
+3. 可回放
+
+### C. 长期状态：Memory
+
+推荐至少三层：
+
+1. `working`
+2. `daily`
+3. `long-term`
+
+### D. 输入构造：Contextualization
+
+Context 不是存储层，而是构造层。
+
+推荐理解公式：
+
+```text
+Context = 当前输入 + 最近 history + 选中 memory + 当前系统约束
+```

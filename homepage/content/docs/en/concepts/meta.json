@@ -2,6 +2,7 @@
   "title": "Core Concepts",
   "pages": [
     "architecture",
+    "project-logic-overview",
     "logic-map",
     "port-and-instance-lifecycle",
     "invocation-routing-and-isolation",

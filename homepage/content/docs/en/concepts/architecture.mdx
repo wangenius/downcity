@@ -40,7 +40,7 @@ That means:
 2. **Agent Layer**
 - one project maps to one agent process
 - loads project config and model
-- owns the `SessionStore`, service instances, and plugin registry
+- owns the session facade, service instances, and plugin registry
 - persists project-local runtime traces into `.downcity/`
 
 3. **Execution Context Layer**
@@ -69,7 +69,7 @@ That means:
 flowchart TD
   C["Console"] --> A["Agent"]
   A --> EC["Execution Context"]
-  A --> SR["Session Store"]
+  A --> SR["Session Facade"]
   SR --> S["Session"]
   EC --> SV["Services"]
   EC --> PL["Plugins"]

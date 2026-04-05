@@ -14,20 +14,36 @@ import fs from "fs-extra";
 import {
   getDowncityChatSessionDirPath,
   getDowncitySessionDirPath,
-} from "../../bin/main/city/runtime/console/env/Paths.js";
-import { deleteChatSessionById } from "../../bin/services/chat@/city/runtime/console/ChatSessionDelete.js";
+} from "../../bin/main/city/env/Paths.js";
+import { deleteChatSessionById } from "../../bin/services/chat/runtime/ChatSessionDelete.js";
 import {
   readChatMetaBySessionId,
   resolveOrCreateSessionIdByChatTarget,
-} from "../../bin/services/chat@/city/runtime/console/ChatMetaStore.js";
+} from "../../bin/services/chat/runtime/ChatMetaStore.js";
 
 function createRuntime(rootPath) {
   const cleared = [];
   const runtime = {
     rootPath,
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+      getDowncitySessionDirPath: (sessionId) =>
+        path.join(rootPath, ".downcity/session", sessionId),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     session: {
-      clearRuntime(sessionId) {
-        cleared.push(String(sessionId || ""));
+      get(sessionId) {
+        return {
+          sessionId,
+          clearExecutor() {
+            cleared.push(String(sessionId || ""));
+          },
+        };
       },
     },
   };

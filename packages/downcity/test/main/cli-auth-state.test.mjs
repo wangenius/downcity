@@ -11,15 +11,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { AuthService } from "../../bin/city/runtime/auth/AuthService.js";
+import { AuthService } from "../../bin/main/modules/http/auth/AuthService.js";
 import {
   clearCliAuthState,
   readCliAuthState,
   resolveCliAuthToken,
   writeCliAuthState,
-} from "../../bin/city/runtime/auth/CliAuthStateStore.js";
-import { ensureConsoleAuthBootstrap } from "../../bin/city/modules/cli/ConsoleAuthBootstrap.js";
-import { callServer } from "../../bin/main/city/runtime/console/daemon/Client.js";
+} from "../../bin/main/modules/http/auth/CliAuthStateStore.js";
+import { ensureConsoleAuthBootstrap } from "../../bin/main/modules/cli/ConsoleAuthBootstrap.js";
+import { callServer } from "../../bin/main/city/daemon/Client.js";
 
 function createConsoleRoot() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-cli-auth-"));

@@ -10,6 +10,7 @@
 import type { Plugin } from "@/shared/types/Plugin.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import { readFileSync } from "node:fs";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import type {
   SkillPluginFindPayload,
   SkillPluginInstallPayload,
@@ -125,13 +126,12 @@ export const skillPlugin: Plugin = {
       ...DEFAULT_SKILL_PLUGIN_CONFIG,
     },
   },
-  availability(context) {
-    const config = readSkillPluginConfig(context.config);
-    if (!config.enabled) {
+  availability() {
+    if (!isPluginEnabled({ plugin: skillPlugin })) {
       return {
         enabled: false,
         available: false,
-        reasons: ["skill plugin disabled"],
+        reasons: ["skill plugin disabled in city config"],
       };
     }
     return {

@@ -12,7 +12,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import type { FSWatcher } from "node:fs";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   MemoryDefaults,
   MemorySourceType,
@@ -188,7 +188,7 @@ export async function listMemorySourceFiles(
 /**
  * 判断 Memory 功能是否启用（默认 true）。
  */
-export function isMemoryEnabled(context: ExecutionContext): boolean {
+export function isMemoryEnabled(context: AgentContext): boolean {
   const enabled = context.config?.context?.memory?.enabled;
   return enabled !== false;
 }
@@ -201,7 +201,7 @@ export function isMemoryEnabled(context: ExecutionContext): boolean {
  * - 不再按 rootPath 落到模块级 Map，避免 service 实例之间共享状态。
  */
 export function createMemoryRuntimeState(
-  context: ExecutionContext,
+  context: AgentContext,
 ): MemoryRuntimeState {
   return {
     rootPath: context.rootPath,
@@ -219,7 +219,7 @@ export function createMemoryRuntimeState(
  * 标记 dirty 并触发 debounce 同步。
  */
 export function markMemoryDirty(
-  context: ExecutionContext,
+  context: AgentContext,
   state: MemoryRuntimeState,
   reason: string,
 ): void {
@@ -237,7 +237,7 @@ export function markMemoryDirty(
 }
 
 function registerWatcher(
-  context: ExecutionContext,
+  context: AgentContext,
   state: MemoryRuntimeState,
   watchPath: string,
 ): void {
@@ -266,7 +266,7 @@ function registerWatcher(
  * 启动 memory 运行时（watcher + interval）。
  */
 export async function startMemoryRuntime(
-  context: ExecutionContext,
+  context: AgentContext,
   state: MemoryRuntimeState,
 ): Promise<void> {
   state.enabled = isMemoryEnabled(context);
@@ -327,7 +327,7 @@ export async function stopMemoryRuntime(
  * 确保索引已同步。
  */
 export async function ensureMemoryIndexed(
-  context: ExecutionContext,
+  context: AgentContext,
   state: MemoryRuntimeState,
   params?: { force?: boolean; reason?: string },
 ): Promise<MemoryIndexSyncResult | null> {

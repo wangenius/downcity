@@ -32,7 +32,7 @@ import type { DowncityConfig } from "@/main/city/env/Config.js";
 import {
   DEFAULT_PROFILE_MD_TEMPLATE,
   DEFAULT_SOUL_MD_TEMPLATE,
-} from "@session/prompts/common/InitPrompts.js";
+} from "@session/composer/system/default/InitPrompts.js";
 import { renderTemplateVariables } from "@/shared/utils/Template.js";
 import { ensureDir, saveJson } from "@/shared/utils/storage/index.js";
 import { ConsoleStore } from "@/shared/utils/store/index.js";

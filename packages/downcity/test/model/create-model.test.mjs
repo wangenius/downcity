@@ -13,8 +13,8 @@ import path from "node:path";
 import test from "node:test";
 import fs from "fs-extra";
 import { generateText } from "ai";
-import { createModel } from "../../bin/main/city/runtime/console/model/CreateModel.js";
-import { ConsoleStore } from "../../bin/utils/store/index.js";
+import { createModel } from "../../bin/main/city/model/CreateModel.js";
+import { ConsoleStore } from "../../bin/shared/utils/store/index.js";
 
 function createAgentConfig(primaryModelId) {
   return {

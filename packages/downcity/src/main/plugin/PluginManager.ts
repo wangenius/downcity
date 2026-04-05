@@ -4,15 +4,16 @@
  * 关键点（中文）
  * - `main/plugin/*` 是 plugin 的管理层，不是具体 plugin 实现层。
  * - plugin hook / resolve / system 注入所依赖的注册与调度统一收口到这里。
- * - agent 不直接持有 plugin 注册表；agent 只是通过 ExecutionContext 调用统一 plugin manager。
+ * - PluginManager 属于 city runtime，不直接反向依赖 agent AgentContext 单例。
+ * - agent 只是通过 AgentContext 调用统一 plugin manager。
  * - 具体 plugin 实现位于 `src/plugins/*`，CLI plugin 命令则直接走本地命令执行器。
  */
 
-import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import { HookRegistry } from "@/main/plugin/HookRegistry.js";
 import { PluginRegistry } from "@/main/plugin/PluginRegistry.js";
 import { registerBuiltinPlugins } from "@/main/plugin/Plugins.js";
-import { getExecutionContext } from "@/main/agent/ExecutionContext.js";
+import { getPluginRuntimeContextResolver } from "@/main/city/runtime/PluginRuntime.js";
 
 let pluginManager: PluginRegistry | null = null;
 
@@ -22,21 +23,21 @@ let pluginManager: PluginRegistry | null = null;
 export function initializePluginManager(): PluginRegistry {
   if (pluginManager) return pluginManager;
 
+  const contextResolver = getPluginRuntimeContextResolver();
   let pluginRegistryRef: PluginRegistry | null = null;
   const hookRegistry = new HookRegistry({
-    contextResolver: () => getExecutionContext(),
+    contextResolver,
     pluginEnabledChecker: (pluginName, context) => {
       const plugin = pluginRegistryRef?.get(pluginName);
       if (!plugin) return false;
-      return isPluginEnabledInConfig({
+      return isPluginEnabled({
         plugin,
-        config: context.config,
       });
     },
   });
 
   const registry = new PluginRegistry({
-    contextResolver: () => getExecutionContext(),
+    contextResolver,
     hookRegistry,
   });
   pluginRegistryRef = registry;

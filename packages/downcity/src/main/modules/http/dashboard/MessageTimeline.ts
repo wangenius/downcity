@@ -16,7 +16,7 @@ import {
 import type {
   SessionMessageV1,
   SessionMetadataV1,
-} from "@/shared/types/SessionMessage.js";
+} from "@/types/session/SessionMessages.js";
 import { pickLastSuccessfulChatSendText } from "@services/chat/runtime/UserVisibleText.js";
 import { extractToolCallsFromUiMessage } from "@services/chat/runtime/UIMessageTransformer.js";
 import type { DashboardTimelineEvent, DashboardTimelineRole } from "@/shared/types/DashboardData.js";

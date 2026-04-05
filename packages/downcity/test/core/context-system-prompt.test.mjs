@@ -11,13 +11,12 @@ import test from "node:test";
 import {
   DEFAULT_SHIP_PROMPTS,
   buildContextSystemPrompt,
-} from "../../bin/sessions/prompts/System.js";
+} from "../../bin/session/composer/system/default/SystemDomain.js";
 
 test("buildContextSystemPrompt returns empty text for chat mode", () => {
   const prompt = buildContextSystemPrompt({
     projectRoot: "/tmp/demo",
     contextId: "telegram-chat--123",
-    requestId: "req-1",
     mode: "chat",
   });
   assert.equal(prompt, "");
@@ -27,7 +26,6 @@ test("buildContextSystemPrompt keeps runtime context and task rules for task mod
   const prompt = buildContextSystemPrompt({
     projectRoot: "/tmp/demo",
     contextId: "task-run--123",
-    requestId: "req-2",
     mode: "task",
   });
   assert.equal(prompt.includes("Task runtime context:"), true);

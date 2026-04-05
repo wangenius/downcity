@@ -155,9 +155,13 @@ function getTtsPythonCompatibilityReason(params: {
  * 读取 TTS Plugin 配置。
  */
 export function readTtsPluginConfig(context: PluginCommandContext): TtsPluginConfig {
-  const current = readTtsPluginRecord(context);
+  const { enabled: _ignoredEnabled, ...current } = readTtsPluginRecord(context) as Record<
+    string,
+    unknown
+  > & {
+    enabled?: boolean;
+  };
   return {
-    enabled: current.enabled === true,
     provider: "local",
     ...(typeof current.modelId === "string" ? { modelId: current.modelId } : {}),
     ...(typeof current.modelsDir === "string" ? { modelsDir: current.modelsDir } : {}),
@@ -190,7 +194,11 @@ export async function writeTtsPluginConfig(params: {
   if (!params.context.config.plugins) {
     params.context.config.plugins = {};
   }
-  params.context.config.plugins.tts = toJsonObject(params.value);
+  const next: Record<string, unknown> = {
+    ...(params.value as Record<string, unknown>),
+  };
+  delete next.enabled;
+  params.context.config.plugins.tts = toJsonObject(next);
   await params.context.pluginConfig.persistProjectPlugins(params.context.config.plugins);
   return params.context.config.plugins.tts as TtsPluginConfig;
 }
@@ -419,7 +427,6 @@ export async function installTtsSynthesizer(params: {
     context,
     value: {
       ...config,
-      enabled: true,
       provider: "local",
       modelId: activeModelId,
       modelsDir: modelsRootDir,

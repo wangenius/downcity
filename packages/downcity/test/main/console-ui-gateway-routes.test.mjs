@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
-import { registerConsoleGatewayRoutes } from "../../bin/main/ui/ConsoleGatewayRoutes.js";
+import { registerConsoleGatewayRoutes } from "../../bin/main/modules/console/ConsoleGatewayRoutes.js";
 
 function buildHandlers(overrides = {}) {
   return {

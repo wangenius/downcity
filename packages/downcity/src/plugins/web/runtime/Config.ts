@@ -49,9 +49,12 @@ function readWebPluginRecord(context: PluginCommandContext): Record<string, unkn
 export function readWebPluginConfig(
   context: PluginCommandContext,
 ): ResolvedWebPluginConfig {
-  const current = readWebPluginRecord(context) as WebPluginConfig;
+  const { enabled: _ignoredEnabled, ...current } = readWebPluginRecord(
+    context,
+  ) as WebPluginConfig & {
+    enabled?: boolean;
+  };
   return {
-    enabled: typeof current.enabled === "boolean" ? current.enabled : true,
     provider:
       current.provider === "agent-browser" || current.provider === "web-access"
         ? current.provider
@@ -87,10 +90,13 @@ export async function writeWebPluginConfig(params: {
     params.context.config.plugins = {};
   }
   const current = readWebPluginConfig(params.context);
-  const next: WebPluginConfig = {
+  const next: WebPluginConfig & {
+    enabled?: boolean;
+  } = {
     ...current,
     ...params.value,
   };
+  delete next.enabled;
   params.context.config.plugins.web = toJsonObject(
     next as unknown as Record<string, unknown>,
   );

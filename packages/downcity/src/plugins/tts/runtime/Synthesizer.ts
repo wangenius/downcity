@@ -132,6 +132,24 @@ function pickUnexpectedPythonStderr(value: string): string {
   return lines.length > 0 ? lines[lines.length - 1] : "";
 }
 
+/**
+ * 归一化 Python stderr 摘要。
+ *
+ * 关键点（中文）
+ * - 某些 runner 会把非致命提示打印到 stderr。
+ * - 这里保留最后一条真正有意义的内容，供上层作为说明返回。
+ */
+function normalizePythonStderrSummary(value: string): string | undefined {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return undefined;
+  }
+  return lines[lines.length - 1];
+}
+
 function detectLanguageHint(input: string): "zh" | "en" {
   return /[\u3400-\u9fff]/u.test(input) ? "zh" : "en";
 }
@@ -193,7 +211,12 @@ async function runPythonInline(params: {
   script: string;
   args: string[];
   timeoutMs: number;
-}): Promise<void> {
+}): Promise<{
+  /**
+   * Python runner stderr 摘要（可选）。
+   */
+  stderrSummary?: string;
+}> {
   let stdout = "";
   let stderr = "";
   try {
@@ -223,9 +246,9 @@ async function runPythonInline(params: {
     throw new Error(`python runner failed: ${String(errorLike.message || error)}`);
   }
   const err = pickUnexpectedPythonStderr(stderr);
-  if (err) {
-    throw new Error(`python runner stderr: ${err}`);
-  }
+  return {
+    stderrSummary: err || normalizePythonStderrSummary(stderr),
+  };
 }
 
 const KOKORO_INLINE_SCRIPT = [
@@ -289,7 +312,12 @@ async function runKokoroSynthesizer(params: {
   outputPath: string;
   speed: number;
   timeoutMs: number;
-}): Promise<void> {
+}): Promise<{
+  /**
+   * Python runner stderr 摘要（可选）。
+   */
+  stderrSummary?: string;
+}> {
   const voicePath = resolveKokoroVoicePath({
     modelDir: params.modelDir,
     voice: params.voice,
@@ -297,7 +325,7 @@ async function runKokoroSynthesizer(params: {
   });
   const configPath = path.join(params.modelDir, "config.json");
   const modelPath = path.join(params.modelDir, "kokoro-v1_0.pth");
-  await runPythonInline({
+  return runPythonInline({
     pythonBin: params.pythonBin,
     script: KOKORO_INLINE_SCRIPT,
     args: [
@@ -322,8 +350,13 @@ async function runQwen3Synthesizer(params: {
   outputPath: string;
   speed: number;
   timeoutMs: number;
-}): Promise<void> {
-  await runPythonInline({
+}): Promise<{
+  /**
+   * Python runner stderr 摘要（可选）。
+   */
+  stderrSummary?: string;
+}> {
+  return runPythonInline({
     pythonBin: params.pythonBin,
     script: QWEN3_INLINE_SCRIPT,
     args: [
@@ -367,6 +400,10 @@ export async function synthesizeSpeechFile(params: {
    * 文件字节数。
    */
   bytes: number;
+  /**
+   * Python runner stderr 摘要（可选）。
+   */
+  stderrSummary?: string;
 }> {
   const text = normalizeText(params.input.text);
   if (!text) {
@@ -407,29 +444,28 @@ export async function synthesizeSpeechFile(params: {
   });
 
   await fs.ensureDir(path.dirname(output.absPath));
-  if (model.family === "kokoro") {
-    await runKokoroSynthesizer({
-      pythonBin,
-      modelDir,
-      text,
-      voice: params.input.voice || params.config.voice,
-      language,
-      outputPath: output.absPath,
-      speed,
-      timeoutMs,
-    });
-  } else {
-    await runQwen3Synthesizer({
-      pythonBin,
-      modelDir,
-      text,
-      voice: params.input.voice || params.config.voice,
-      language,
-      outputPath: output.absPath,
-      speed,
-      timeoutMs,
-    });
-  }
+  const runResult =
+    model.family === "kokoro"
+      ? await runKokoroSynthesizer({
+        pythonBin,
+        modelDir,
+        text,
+        voice: params.input.voice || params.config.voice,
+        language,
+        outputPath: output.absPath,
+        speed,
+        timeoutMs,
+      })
+      : await runQwen3Synthesizer({
+        pythonBin,
+        modelDir,
+        text,
+        voice: params.input.voice || params.config.voice,
+        language,
+        outputPath: output.absPath,
+        speed,
+        timeoutMs,
+      });
 
   const stats = await fs.stat(output.absPath);
   return {
@@ -439,5 +475,6 @@ export async function synthesizeSpeechFile(params: {
       path: output.relativePath,
     }),
     bytes: stats.size,
+    ...(runResult.stderrSummary ? { stderrSummary: runResult.stderrSummary } : {}),
   };
 }

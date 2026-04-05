@@ -11,7 +11,7 @@ import { Hono } from "hono";
 import fs from "fs-extra";
 import path from "path";
 import { getDowncityPublicDirPath } from "@/main/city/env/Paths.js";
-import { getAgentState } from "@/main/agent/AgentState.js";
+import { getAgentRuntime } from "@/main/agent/AgentRuntime.js";
 
 /**
  * 静态资源路由。
@@ -19,7 +19,7 @@ import { getAgentState } from "@/main/agent/AgentState.js";
 export const staticRouter = new Hono();
 
 staticRouter.get("/", async (c) => {
-  const indexPath = path.join(getAgentState().rootPath, "public", "index.html");
+  const indexPath = path.join(getAgentRuntime().rootPath, "public", "index.html");
   if (await fs.pathExists(indexPath)) {
     const content = await fs.readFile(indexPath, "utf-8");
     return c.body(content, 200, {
@@ -31,7 +31,7 @@ staticRouter.get("/", async (c) => {
 });
 
 staticRouter.get("/styles.css", async (c) => {
-  const cssPath = path.join(getAgentState().rootPath, "public", "styles.css");
+  const cssPath = path.join(getAgentRuntime().rootPath, "public", "styles.css");
   if (await fs.pathExists(cssPath)) {
     const content = await fs.readFile(cssPath, "utf-8");
     return c.body(content, 200, {
@@ -43,7 +43,7 @@ staticRouter.get("/styles.css", async (c) => {
 });
 
 staticRouter.get("/app.js", async (c) => {
-  const jsPath = path.join(getAgentState().rootPath, "public", "app.js");
+  const jsPath = path.join(getAgentRuntime().rootPath, "public", "app.js");
   if (await fs.pathExists(jsPath)) {
     const content = await fs.readFile(jsPath, "utf-8");
     return c.body(content, 200, {
@@ -55,7 +55,7 @@ staticRouter.get("/app.js", async (c) => {
 });
 
 staticRouter.get("/downcity/public/*", async (c) => {
-  const root = getDowncityPublicDirPath(getAgentState().rootPath);
+  const root = getDowncityPublicDirPath(getAgentRuntime().rootPath);
   const prefix = "/downcity/public/";
   const requestPath = c.req.path;
   const rel = requestPath.startsWith(prefix)

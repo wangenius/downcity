@@ -7,7 +7,6 @@ import type { JsonObject } from "@/shared/types/Json.js";
 
 export type LlmLogContext = {
   sessionId?: string;
-  requestId?: string;
 };
 
 export function createLlmLoggingFetch(args: {
@@ -16,13 +15,13 @@ export function createLlmLoggingFetch(args: {
   };
   enabled: boolean;
   maxChars?: number;
-  getRequestContext?: () => LlmLogContext | undefined;
+  getSessionRunScope?: () => LlmLogContext | undefined;
 }): ProviderFetch {
   const baseFetch: ProviderFetch = globalThis.fetch.bind(globalThis);
   const maxChars = args.maxChars ?? 99999999;
 
   return async (input, init) => {
-    const ctx = args.getRequestContext?.();
+    const ctx = args.getSessionRunScope?.();
     let parsedRequest:
       | ReturnType<typeof parseFetchRequestForLog>
       | null = null;
@@ -35,13 +34,11 @@ export function createLlmLoggingFetch(args: {
 
         if (parsedRequest) {
           const sessionId = ctx?.sessionId;
-          const requestId = ctx?.requestId;
           const message = String(parsedRequest.requestText || "").trim();
 
           await args.logger.log("info", message.slice(0, maxChars), {
             ...parsedRequest.meta,
             ...(sessionId ? { sessionId } : {}),
-            ...(requestId ? { requestId } : {}),
           });
         }
       } catch {
@@ -61,7 +58,6 @@ export function createLlmLoggingFetch(args: {
             ...(parsedRequest?.url ? { url: parsedRequest.url } : {}),
             ...(parsedRequest?.method ? { method: parsedRequest.method } : {}),
             ...(ctx?.sessionId ? { sessionId: ctx.sessionId } : {}),
-            ...(ctx?.requestId ? { requestId: ctx.requestId } : {}),
           });
         } catch {
           // ignore
@@ -84,7 +80,6 @@ export function createLlmLoggingFetch(args: {
             {
               ...parsedResponse.meta,
               ...(ctx?.sessionId ? { sessionId: ctx.sessionId } : {}),
-              ...(ctx?.requestId ? { requestId: ctx.requestId } : {}),
             },
           );
         } catch {

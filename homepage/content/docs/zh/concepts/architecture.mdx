@@ -40,7 +40,7 @@ description: Downcity 的核心分层：console、agent、execution context、se
 2. **Agent 层**
 - 一个项目对应一个 agent 进程
 - 负责加载项目配置和 model
-- 持有 `SessionStore`、service instances 与 plugin registry
+- 持有 session facade、service instances 与 plugin registry
 - 持续把本项目运行痕迹写进 `.downcity/`
 
 3. **Execution Context 层**
@@ -69,7 +69,7 @@ description: Downcity 的核心分层：console、agent、execution context、se
 flowchart TD
   C["Console"] --> A["Agent"]
   A --> EC["Execution Context"]
-  A --> SR["Session Store"]
+  A --> SR["Session Facade"]
   SR --> S["Session"]
   EC --> SV["Services"]
   EC --> PL["Plugins"]

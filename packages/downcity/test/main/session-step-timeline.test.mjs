@@ -8,13 +8,12 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildAssistantStepTimelineMessages } from "../../bin/sessions@/city/runtime/console/AssistantStepTimeline.js";
-import { resolveAssistantMessageForPersistence } from "../../bin/services/chat@/city/runtime/console/UserVisibleText.js";
+import { buildSessionStepEventMessages } from "../../bin/session/messages/SessionStepEventMapper.js";
+import { resolveAssistantMessageForPersistence } from "../../bin/services/chat/runtime/UserVisibleText.js";
 
-test("buildAssistantStepTimelineMessages persists text, tool call, and tool result in order", () => {
-  const messages = buildAssistantStepTimelineMessages({
+test("buildSessionStepEventMessages persists text, tool call, and tool result in order", () => {
+  const messages = buildSessionStepEventMessages({
     sessionId: "consoleui-chat-main",
-    requestId: "req-1",
     stepIndex: 1,
     text: "最终总结",
     stepResult: {
@@ -46,8 +45,8 @@ test("buildAssistantStepTimelineMessages persists text, tool call, and tool resu
   assert.deepEqual(messages[2].parts[0].result, { items: ["downcity"] });
 });
 
-test("buildAssistantStepTimelineMessages keeps text-only step minimal", () => {
-  const messages = buildAssistantStepTimelineMessages({
+test("buildSessionStepEventMessages keeps text-only step minimal", () => {
+  const messages = buildSessionStepEventMessages({
     sessionId: "consoleui-chat-main",
     stepIndex: 2,
     text: "只有文本",

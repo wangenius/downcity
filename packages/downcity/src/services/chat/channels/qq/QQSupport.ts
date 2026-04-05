@@ -7,7 +7,7 @@
  */
 
 import { buildChatInboundText, augmentChatInboundInput } from "@services/chat/runtime/InboundAugment.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { QQMessageData, QQReadyUser } from "@/shared/types/QqChannel.js";
 import type { QqIncomingAttachment } from "@services/chat/types/QqVoice.js";
@@ -52,7 +52,7 @@ export interface BuildQqInboundInstructionsParams {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 项目根目录。
    */

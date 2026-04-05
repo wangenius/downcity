@@ -2,6 +2,7 @@
   "title": "核心原理",
   "pages": [
     "architecture",
+    "project-logic-overview",
     "logic-map",
     "port-and-instance-lifecycle",
     "invocation-routing-and-isolation",

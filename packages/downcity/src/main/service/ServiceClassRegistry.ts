@@ -7,7 +7,7 @@
  * - CLI / 只读场景也复用这里构造无宿主实例，避免维护第二套静态 definition。
  */
 
-import type { AgentState } from "@/shared/types/AgentState.js";
+import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
 import { SERVICE_CLASSES } from "@/main/service/Services.js";
 import { BaseService } from "@services/BaseService.js";
 import type { Service } from "@/shared/types/Service.js";
@@ -15,8 +15,8 @@ import type { Service } from "@/shared/types/Service.js";
 let staticServiceInstances: Map<string, BaseService> | null = null;
 
 function createServiceInstance(
-  ServiceClass: new (agent: AgentState | null) => BaseService,
-  agent: AgentState | null,
+  ServiceClass: new (agent: AgentRuntime | null) => BaseService,
+  agent: AgentRuntime | null,
 ): BaseService {
   return new ServiceClass(agent);
 }
@@ -43,7 +43,7 @@ export function listRegisteredServices(): Service[] {
  * 返回无宿主静态 service 实例集合。
  *
  * 关键点（中文）
- * - 主要用于未初始化 AgentState 的测试/只读场景。
+ * - 主要用于未初始化 AgentRuntime 的测试/只读场景。
  * - 需要保持实例稳定，避免 start/status/command 分别拿到不同 null-agent 实例。
  */
 export function getRegisteredStaticServiceInstances(): Map<string, BaseService> {
@@ -60,7 +60,7 @@ export function getRegisteredStaticServiceInstances(): Map<string, BaseService> 
  * - 允许传入 null，仅用于无需真实 agent 的测试/只读装配场景。
  */
 export function createRegisteredServiceInstances(
-  agent: AgentState | null,
+  agent: AgentRuntime | null,
 ): Map<string, BaseService> {
   if (agent === null && staticServiceInstances) {
     return staticServiceInstances;

@@ -103,7 +103,7 @@ export interface TestQqGatewayConnectionParams {
   /**
    * 读取当前 runtime 状态的回调。
    */
-  getRuntimeStatus: () => QqGatewayRuntimeStatus;
+  getExecutorStatus: () => QqGatewayRuntimeStatus;
   /**
    * 当探活发现异常时触发重连的回调。
    */
@@ -254,7 +254,7 @@ export async function testQqGatewayConnection(
     }
 
     if (response.ok && (code === 0 || code === undefined)) {
-      const runtime = params.getRuntimeStatus();
+      const runtime = params.getExecutorStatus();
       if (runtime.linkState !== "connected") {
         if (runtime.statusText === "heartbeat_timeout") {
           params.requestReconnect("test_detected_heartbeat_timeout", 0);

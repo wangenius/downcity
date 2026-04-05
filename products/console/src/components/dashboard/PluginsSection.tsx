@@ -48,19 +48,11 @@ type SetupDraftState = Record<string, SetupDraftValue>
 
 type SetupOptionsState = Record<string, UiPluginSetupFieldOption[]>
 
-export interface PluginsSectionProps {
+type PluginsSectionBaseProps = {
   /**
    * plugin 列表。
    */
   plugins: UiPluginRuntimeItem[]
-  /**
-   * 当前是否存在运行中的 agent。
-   */
-  hasRunningAgent: boolean
-  /**
-   * 当前选中 agent 的展示名。
-   */
-  selectedAgentName?: string
   /**
    * 时间格式化（保留签名，供上层兼容）。
    */
@@ -78,6 +70,28 @@ export interface PluginsSectionProps {
     payload?: Record<string, unknown>,
   ) => Promise<UiPluginActionExecutionResult>
 }
+
+export type PluginsSectionProps =
+  | (PluginsSectionBaseProps & {
+      /**
+       * 页面作用域。
+       */
+      scope: "global"
+    })
+  | (PluginsSectionBaseProps & {
+      /**
+       * 页面作用域。
+       */
+      scope: "agent"
+      /**
+       * 当前是否存在运行中的 agent。
+       */
+      hasRunningAgent: boolean
+      /**
+       * 当前选中 agent 的展示名。
+       */
+      selectedAgentName?: string
+    })
 
 function hasAction(actionItems: UiPluginActionItem[], actionName: string): boolean {
   return actionItems.some((item) => String(item.name || "").trim() === actionName)
@@ -238,7 +252,9 @@ function getPrimaryActionLabel(mode: UiPluginSetupDefinition["mode"], needsAtten
 }
 
 export function PluginsSection(props: PluginsSectionProps) {
-  const { plugins, hasRunningAgent, selectedAgentName, onRunAction } = props
+  const { scope, plugins, onRunAction } = props
+  const hasRunningAgent = scope === "agent" ? props.hasRunningAgent : false
+  const selectedAgentName = scope === "agent" ? props.selectedAgentName : undefined
   const confirm = useConfirmDialog()
   const [search, setSearch] = React.useState("")
   const [pendingActions, setPendingActions] = React.useState<Record<string, PendingActionKind | null>>({})
@@ -433,28 +449,12 @@ export function PluginsSection(props: PluginsSectionProps) {
     const setup = installerPlugin.config.setup
     const draft = setupDrafts[pluginName] || {}
     const payload = buildSetupPayload(setup, draft)
-    const actionItems = Array.isArray(installerPlugin.config?.actions)
-      ? installerPlugin.config.actions
-      : []
-    const enabled = getSnapshotEnabled(installerPlugin)
-    const setupActionName =
-      !enabled && setup.mode === "install-configure" && hasAction(actionItems, "on")
-        ? "on"
-        : setup.primaryAction
-    const result = await executeAction(pluginName, "setup", setupActionName, {
-      ...payload,
-      ...(setupActionName === "on" ? { install: true } : {}),
-    })
+    const setupActionName = setup.primaryAction
+    const result = await executeAction(pluginName, "setup", setupActionName, payload)
     if (!result?.logs?.length) {
       setSetupLogs((current) => ({
         ...current,
         [pluginName]: [result?.success ? "操作完成" : result?.message || "操作失败"],
-      }))
-    }
-    if (result?.success && setupActionName === "on") {
-      setEnabledOverrides((current) => ({
-        ...current,
-        [pluginName]: true,
       }))
     }
     if (setup.statusAction) {
@@ -481,7 +481,7 @@ export function PluginsSection(props: PluginsSectionProps) {
           </div>
         }
       >
-        {!hasRunningAgent && filtered.length === 0 ? (
+        {scope === "agent" && !hasRunningAgent && filtered.length === 0 ? (
           <div className="rounded-[18px] border border-border/70 bg-secondary/45 px-4 py-6 text-sm text-muted-foreground">
             {selectedAgentName
               ? `${selectedAgentName} 当前未运行，Console UI 无法读取 runtime plugins。先启动 agent 再查看。`
@@ -568,7 +568,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1 lg:justify-end">
-                      {setup ? (
+                      {scope === "agent" && setup ? (
                         <ToolAction
                           icon={<Settings2Icon className="size-3.5" />}
                           label={snapshotMode === "attention" ? "修复" : "配置"}
@@ -578,7 +578,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                         />
                       ) : null}
 
-                      {canRunStatus ? (
+                      {scope === "agent" && canRunStatus ? (
                         <ToolAction
                           icon={<RefreshCcwIcon className="size-3.5" />}
                           label="同步"
@@ -590,7 +590,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                         />
                       ) : null}
 
-                      {canToggle ? (
+                      {scope === "global" && canToggle ? (
                         <ToolAction
                           icon={<PowerIcon className="size-3.5" />}
                           label={effectiveEnabled ? "停用" : "启用"}
@@ -689,7 +689,7 @@ export function PluginsSection(props: PluginsSectionProps) {
                           </div>
                         </div>
 
-                        {canRunDoctor ? (
+                        {scope === "agent" && canRunDoctor ? (
                           <div className="flex items-start">
                             <Button
                               type="button"

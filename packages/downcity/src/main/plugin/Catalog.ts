@@ -8,14 +8,12 @@
  */
 
 import { PLUGINS } from "@/main/plugin/Plugins.js";
-import { loadDowncityConfig } from "@/main/city/env/Config.js";
-import { isPluginEnabledInConfig } from "@/main/plugin/Activation.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import type {
   Plugin,
   PluginAvailability,
   PluginView,
 } from "@/shared/types/Plugin.js";
-import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 
 /**
  * 将 Plugin 定义转换成静态概览视图。
@@ -78,27 +76,16 @@ export function findStaticPluginView(
   return plugin ? toStaticPluginView(plugin) : null;
 }
 
-function getProjectPluginConfig(projectRoot?: string): DowncityConfig["plugins"] | null {
-  const root = String(projectRoot || "").trim();
-  if (!root) return null;
-  try {
-    return loadDowncityConfig(root).plugins || null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * 构建静态 plugin 可用性视图。
  *
  * 关键点（中文）
- * - 这里表达的是“控制面视角下可见的配置事实”，不是执行链路中的最终可用性。
- * - `enabled` 尽量对齐项目 `downcity.json.plugins.*`。
+ * - 这里表达的是“控制面视角下可见的 city 配置事实”，不是执行链路中的最终可用性。
+ * - `enabled` 只对齐 city 级 plugin lifecycle，不再读取 agent 项目配置。
  * - `available` 仅在无需执行上下文即可明确判断为 false 时返回 false；否则静态层视为可用。
  */
 export function buildStaticPluginAvailability(params: {
   pluginName: string;
-  projectRoot?: string;
   agentError?: string;
 }): PluginAvailability {
   const plugin = findBuiltinPlugin(params.pluginName);
@@ -110,17 +97,13 @@ export function buildStaticPluginAvailability(params: {
     };
   }
 
-  const pluginConfigMap = getProjectPluginConfig(params.projectRoot);
-  const enabled = isPluginEnabledInConfig({
-    plugin,
-    config: pluginConfigMap ? ({ plugins: pluginConfigMap } as DowncityConfig) : null,
-  });
+  const enabled = isPluginEnabled({ plugin });
 
   if (!enabled) {
     return {
       enabled: false,
       available: false,
-      reasons: [`Plugin "${plugin.name}" is disabled in project config.`],
+      reasons: [`Plugin "${plugin.name}" is disabled in city config.`],
     };
   }
 

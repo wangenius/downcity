@@ -12,8 +12,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { ttsPlugin } from "../../bin/plugins/tts/Plugin.js";
-import { resolveDefaultTtsVenvPythonBin } from "../../bin/plugins/tts@/city/runtime/console/DependencyInstaller.js";
-import { synthesizeSpeechFile } from "../../bin/plugins/tts@/city/runtime/console/Synthesizer.js";
+import { resolveDefaultTtsVenvPythonBin } from "../../bin/plugins/tts/runtime/DependencyInstaller.js";
+import { synthesizeSpeechFile } from "../../bin/plugins/tts/runtime/Synthesizer.js";
+
+process.env.DC_CONSOLE_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-test-console-tts-"));
 
 function createLogger() {
   return {
@@ -84,7 +86,6 @@ function createRuntime() {
         },
         plugins: {
           tts: {
-            enabled: false,
             format: "wav",
           },
         },
@@ -177,7 +178,7 @@ test("tts plugin install action writes local model config when model already exi
   });
 
   assert.equal(result.success, true);
-  assert.equal(runtime.config.plugins.tts.enabled, true);
+  assert.equal("enabled" in runtime.config.plugins.tts, false);
   assert.equal(runtime.config.plugins.tts.modelId, "qwen3-tts-0.6b");
   assert.equal(runtime.config.plugins.tts.modelsDir, modelsDir);
   assert.equal(runtime.config.plugins.tts.pythonBin, resolveDefaultTtsVenvPythonBin());
@@ -189,9 +190,6 @@ test("tts plugin install action writes local model config when model already exi
 test("tts plugin system prompt is injected only when plugin is enabled", async () => {
   const { runtime } = createRuntime();
 
-  assert.equal(await ttsPlugin.system(runtime), "");
-
-  runtime.config.plugins.tts.enabled = true;
   const prompt = await ttsPlugin.system(runtime);
   assert.match(prompt, /# TTS Plugin/);
   assert.match(prompt, /tts\.synthesize/);
@@ -221,7 +219,6 @@ test("tts synthesize ignores known qwen warnings from stderr when output file ex
   const result = await synthesizeSpeechFile({
     context: runtime,
     config: {
-      enabled: true,
       format: "wav",
       modelId: "qwen3-tts-0.6b",
       modelsDir,
@@ -236,4 +233,45 @@ test("tts synthesize ignores known qwen warnings from stderr when output file ex
   assert.equal(result.outputPath, ".downcity/out/warning-ok.wav");
   assert.equal(fs.existsSync(path.join(rootPath, result.outputPath)), true);
   assert.equal(result.bytes > 0, true);
+  assert.match(String(result.stderrSummary || ""), /open-end generation/);
+});
+
+test("tts synthesize keeps succeeding when python runner prints unexpected stderr but file exists", async () => {
+  const { runtime, rootPath } = createRuntime();
+  const fakePythonBin = path.join(rootPath, "fake-python-stderr.mjs");
+  const modelsDir = path.join(rootPath, ".models", "tts");
+  const modelDir = path.join(modelsDir, "qwen3-tts-0.6b");
+  fs.mkdirSync(modelDir, { recursive: true });
+  fs.writeFileSync(
+    fakePythonBin,
+    [
+      "#!/usr/bin/env node",
+      "import fs from 'node:fs';",
+      "const outputPath = process.argv[8];",
+      "process.stderr.write('path variables.\\n');",
+      "fs.writeFileSync(outputPath, 'RIFFfakewav');",
+      "process.stdout.write(`${outputPath}\\n`);",
+    ].join("\n"),
+    "utf-8",
+  );
+  fs.chmodSync(fakePythonBin, 0o755);
+
+  const result = await synthesizeSpeechFile({
+    context: runtime,
+    config: {
+      format: "wav",
+      modelId: "qwen3-tts-0.6b",
+      modelsDir,
+      pythonBin: fakePythonBin,
+    },
+    input: {
+      text: "hello from city",
+      output: ".downcity/out/stderr-ok.wav",
+    },
+  });
+
+  assert.equal(result.outputPath, ".downcity/out/stderr-ok.wav");
+  assert.equal(fs.existsSync(path.join(rootPath, result.outputPath)), true);
+  assert.equal(result.bytes > 0, true);
+  assert.equal(result.stderrSummary, "path variables.");
 });

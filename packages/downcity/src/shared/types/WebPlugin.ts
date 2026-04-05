@@ -33,10 +33,6 @@ export interface WebPluginConfig {
    */
   [key: string]: JsonValue | undefined;
   /**
-   * 是否启用 web plugin。
-   */
-  enabled?: boolean;
-  /**
    * 当前使用的 provider。
    */
   provider?: WebPluginProvider;
@@ -66,10 +62,6 @@ export interface WebPluginConfig {
  * 归一化后的 web plugin 配置。
  */
 export interface ResolvedWebPluginConfig {
-  /**
-   * 最终启用态。
-   */
-  enabled: boolean;
   /**
    * 当前 provider。
    */
@@ -104,10 +96,6 @@ export interface WebPluginInstallInput {
    * provider。
    */
   provider?: WebPluginProvider;
-  /**
-   * 是否启用 plugin。
-   */
-  enable?: boolean;
   /**
    * 是否注入 prompt。
    */

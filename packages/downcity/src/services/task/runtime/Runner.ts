@@ -3,16 +3,16 @@
  *
  * 职责（中文）
  * - 创建 run 目录（timestamp）。
- * - 以“干净历史”调用当前 runtime 的 SessionCore（逻辑与正常 chat 一致）。
+ * - 以“干净历史”调用当前 runtime 的 LocalSessionCore（逻辑与正常 chat 一致）。
  * - 协调 script / agent 两类执行主链。
  * - 把最终产物写入 run 目录的具体格式委托给 `TaskRunArtifacts.ts`。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   DialogueRoundRecord,
   UserSimulatorDecision,
-} from "@/shared/types/TaskRunner.js";
+} from "@/types/task/TaskRunner.js";
 import type {
   ShipTaskKind,
   ShipTaskRunExecutionStatusV1,
@@ -29,7 +29,7 @@ import { ensureRunDir, readTask } from "./Store.js";
 import { createRunProgressWriter, serializeDebugSnapshot, summarizeText } from "./TaskRunnerProgress.js";
 import {
   appendTaskAssistantMessage,
-  createTaskSessionRuntime,
+  createTaskSessionRuntimePort,
 } from "./TaskRunnerSession.js";
 import {
   buildExecutorRoundQuery,
@@ -58,7 +58,7 @@ const DEFAULT_SINGLE_ROUND = 1;
  * 3) 产物落盘（messages.jsonl / output.md / result.md / error.md / run.json）。
  */
 export async function runTaskNow(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   taskId: string;
   trigger: ShipTaskRunTriggerV1;
   executionId?: string;
@@ -131,7 +131,7 @@ export async function runTaskNow(params: {
 
   const runSessionId = createTaskRunSessionId(task.taskId, timestamp);
   const userSimulatorSessionId = `task-user-sim:${task.taskId}:${timestamp}`;
-  const taskSessionRuntime = createTaskSessionRuntime({
+  const taskSessionRuntime = createTaskSessionRuntimePort({
     context,
     runDirAbs,
     runSessionId,

@@ -15,7 +15,7 @@ import {
   prepareChatEnqueue,
 } from "@services/chat/runtime/EnqueueDispatch.js";
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { IncomingChatMessage } from "./BaseChatChannel.js";
 import {
@@ -33,7 +33,7 @@ export interface EnqueueAuditChannelMessageParams {
   /**
    * 当前 execution runtime。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 当前渠道。
    */
@@ -67,7 +67,7 @@ export interface EnqueueExecChannelMessageParams {
   /**
    * 当前 execution runtime。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 当前渠道。
    */

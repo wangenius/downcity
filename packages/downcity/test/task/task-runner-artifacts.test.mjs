@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createTaskDefinition } from "../../bin/services/task/Action.js";
-import { runTaskNow } from "../../bin/services/task@/city/runtime/console/Runner.js";
+import { runTaskNow } from "../../bin/services/task/runtime/Runner.js";
 
 function createRuntime(rootPath) {
   return {
@@ -20,6 +20,17 @@ function createRuntime(rootPath) {
     rootPath,
     env: {},
     config: {},
+    paths: {
+      getDowncityChannelDirPath: () => path.join(rootPath, ".downcity/channel"),
+      getDowncityChannelMetaPath: () =>
+        path.join(rootPath, ".downcity/channel/meta.json"),
+      getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
+      getDowncitySessionDirPath: (sessionId) =>
+        path.join(rootPath, ".downcity/session", sessionId),
+    },
+    auth: {
+      applyInternalAgentAuthEnv() {},
+    },
     systems: [],
     logger: {
       warn() {},

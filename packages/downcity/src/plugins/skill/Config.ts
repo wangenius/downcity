@@ -16,7 +16,6 @@ import type {
  * skill plugin 默认配置。
  */
 export const DEFAULT_SKILL_PLUGIN_CONFIG: ResolvedSkillPluginConfig = {
-  enabled: true,
   paths: [".agents/skills"],
   allowExternalPaths: false,
 };
@@ -40,10 +39,6 @@ export function readSkillPluginConfig(
     : [];
 
   return {
-    enabled:
-      typeof skillConfig?.enabled === "boolean"
-        ? skillConfig.enabled
-        : DEFAULT_SKILL_PLUGIN_CONFIG.enabled,
     paths:
       normalizedPaths.length > 0
         ? normalizedPaths

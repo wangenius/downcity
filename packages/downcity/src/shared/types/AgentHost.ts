@@ -2,7 +2,7 @@
  * Agent 宿主能力类型定义。
  *
  * 关键点（中文）
- * - 这里统一描述由 main 装配、再挂入 AgentState 的宿主能力。
+ * - 这里统一描述由 main 装配、再挂入 AgentRuntime 的宿主能力。
  * - services / sessions / plugins 只能消费这些稳定能力，不应直接依赖 `main/*` 实现。
  * - 当前先收敛路径、认证、plugin 配置持久化三类高频能力。
  */

@@ -14,7 +14,7 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { ParsedFeishuAttachmentCommand } from "@services/chat/types/FeishuAttachment.js";
@@ -68,7 +68,7 @@ export class FeishuBot extends BaseChatChannel {
   > = new Map();
 
   constructor(
-    context: ExecutionContext,
+    context: AgentContext,
     appId: string,
     appSecret: string,
     domain: string | undefined,
@@ -153,13 +153,13 @@ export class FeishuBot extends BaseChatChannel {
   /**
    * 读取 Feishu runtime 快照。
    */
-  getRuntimeStatus(): {
+  getExecutorStatus(): {
     running: boolean;
     linkState: "connected" | "disconnected" | "unknown";
     statusText: string;
     detail: Record<string, string | number | boolean | null>;
   } {
-    const runtime = this.platform.getRuntimeStatus();
+    const runtime = this.platform.getExecutorStatus();
     return {
       ...runtime,
       detail: {
@@ -620,7 +620,7 @@ Available commands:
  */
 export async function createFeishuBot(
   config: FeishuConfig,
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<FeishuBot | null> {
   if (!config.enabled || !config.appId || !config.appSecret) {
     return null;

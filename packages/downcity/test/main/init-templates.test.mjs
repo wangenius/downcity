@@ -8,8 +8,8 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_PROFILE_MD_TEMPLATE } from "../../bin/sessions/prompts/common/InitPrompts.js";
-import { renderTemplateVariables } from "../../bin/utils/Template.js";
+import { DEFAULT_PROFILE_MD_TEMPLATE } from "../../bin/session/composer/system/default/InitPrompts.js";
+import { renderTemplateVariables } from "../../bin/shared/utils/Template.js";
 
 test("renderTemplateVariables replaces agent_name placeholder", () => {
   const rendered = renderTemplateVariables(DEFAULT_PROFILE_MD_TEMPLATE, {

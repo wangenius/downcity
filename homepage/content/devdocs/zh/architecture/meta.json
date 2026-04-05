@@ -2,6 +2,7 @@
   "title": "架构",
   "pages": [
     "overview",
-    "system-logic"
+    "system-logic",
+    "workspace-package-structure"
   ]
 }

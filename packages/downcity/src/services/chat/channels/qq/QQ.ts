@@ -32,7 +32,7 @@ import type {
   ChannelChatKeyParams,
   ChannelSendTextParams,
 } from "@services/chat/channels/BaseChatChannel.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { ChatChannelTestResult } from "@services/chat/types/ChannelStatus.js";
 import type { QQConfig, QQMessageData } from "@/shared/types/QqChannel.js";
@@ -52,7 +52,7 @@ export class QQBot extends BaseChatChannel {
   private botDisplayName = "";
 
   constructor(
-    context: ExecutionContext,
+    context: AgentContext,
     appId: string,
     appSecret: string,
     useSandbox: boolean = false,
@@ -116,13 +116,13 @@ export class QQBot extends BaseChatChannel {
   /**
    * 读取 QQ 状态快照。
    */
-  getRuntimeStatus(): {
+  getExecutorStatus(): {
     running: boolean;
     linkState: "connected" | "disconnected" | "unknown";
     statusText: string;
     detail: Record<string, string | number | boolean | null>;
   } {
-    const runtime = this.gateway.getRuntimeStatus();
+    const runtime = this.gateway.getExecutorStatus();
     return {
       ...runtime,
       detail: {
@@ -614,7 +614,7 @@ export class QQBot extends BaseChatChannel {
  */
 export async function createQQBot(
   config: QQConfig,
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<QQBot | null> {
   if (!config.enabled || !config.appId || !config.appSecret) {
     return null;

@@ -9,7 +9,7 @@
 import fs from "fs-extra";
 import net, { type Server } from "node:net";
 import path from "node:path";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/shared/types/LocalRpc.js";
 import type {
@@ -77,7 +77,7 @@ function createErrorResponse(
 async function handleServiceControl(params: {
   requestId: string;
   body: JsonValue | undefined;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<LocalRpcResponse> {
   const body = isObjectRecord(params.body) ? params.body : {};
   const serviceName = String(body.serviceName || "").trim();
@@ -101,7 +101,7 @@ async function handleServiceControl(params: {
 async function handleServiceCommand(params: {
   requestId: string;
   body: JsonValue | undefined;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<LocalRpcResponse> {
   const body = isObjectRecord(params.body) ? params.body : {};
   const serviceName = String(body.serviceName || "").trim();
@@ -129,7 +129,7 @@ async function handleServiceCommand(params: {
 async function handlePluginAvailability(params: {
   requestId: string;
   body: JsonValue | undefined;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<LocalRpcResponse> {
   const body = isObjectRecord(params.body) ? params.body : {};
   const pluginName = String(body.pluginName || "").trim();
@@ -148,7 +148,7 @@ async function handlePluginAvailability(params: {
 async function handlePluginAction(params: {
   requestId: string;
   body: JsonValue | undefined;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<LocalRpcResponse> {
   const body = isObjectRecord(params.body) ? params.body : {};
   const pluginName = String(body.pluginName || "").trim();
@@ -181,7 +181,7 @@ async function handlePluginAction(params: {
 
 async function dispatchRequest(params: {
   request: LocalRpcRequest;
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<LocalRpcResponse> {
   const { request } = params;
   if (request.method === "GET" && request.path === "/api/services/list") {
@@ -248,7 +248,7 @@ function writeResponse(socket: net.Socket, response: LocalRpcResponse): void {
   socket.end(`${JSON.stringify(response)}\n`);
 }
 
-function bindConnectionHandler(server: Server, context: ExecutionContext): void {
+function bindConnectionHandler(server: Server, context: AgentContext): void {
   server.on("connection", (socket) => {
     let buffered = "";
     socket.setEncoding("utf8");
@@ -282,7 +282,7 @@ function bindConnectionHandler(server: Server, context: ExecutionContext): void 
  * 启动本地 RPC server。
  */
 export async function startLocalRpcServer(params: {
-  context: ExecutionContext;
+  context: AgentContext;
 }): Promise<LocalRpcServerHandle> {
   const endpoint = getLocalRpcEndpoint(params.context.rootPath);
   await ensureEndpointReady(endpoint);

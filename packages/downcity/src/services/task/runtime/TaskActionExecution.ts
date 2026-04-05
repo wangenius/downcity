@@ -6,7 +6,7 @@
  * - task 定义变更后的 scheduler reload 通过回调注入，避免执行层依赖具体 service 实现。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   TaskCronRegisterResult,
   TaskListActionPayload,
@@ -41,7 +41,7 @@ export type TaskSchedulerReloadPort = (params: {
   /**
    * 当前执行上下文。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 触发本次 reload 的变更动作。
    */
@@ -65,10 +65,10 @@ export type { TaskCronRegisterResult } from "@/shared/types/TaskService.js";
  * - 重载失败不阻断主操作，仅记录 warning 供排查。
  */
 export async function reloadTaskSchedulerAfterMutation(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   action: "create" | "update" | "delete" | "status";
   title: string;
-  reloadScheduler: (context: ExecutionContext) => Promise<TaskCronRegisterResult>;
+  reloadScheduler: (context: AgentContext) => Promise<TaskCronRegisterResult>;
 }): Promise<TaskSchedulerReloadResult> {
   try {
     const result = await params.reloadScheduler(params.context);
@@ -107,7 +107,7 @@ export async function reloadTaskSchedulerAfterMutation(params: {
  * 执行 `task.list` action。
  */
 export async function executeTaskListAction(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   payload: TaskListActionPayload;
 }) {
   return {
@@ -123,7 +123,7 @@ export async function executeTaskListAction(params: {
  * 执行 `task.create` action。
  */
 export async function executeTaskCreateAction(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   payload: TaskCreateRequest;
   reloadSchedulerAfterMutation: TaskSchedulerReloadPort;
 }) {
@@ -156,7 +156,7 @@ export async function executeTaskCreateAction(params: {
  * 执行 `task.run` action。
  */
 export async function executeTaskRunAction(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   payload: TaskRunRequest;
 }) {
   const result = await runTaskDefinition({
@@ -180,7 +180,7 @@ export async function executeTaskRunAction(params: {
  * 执行 `task.delete` action。
  */
 export async function executeTaskDeleteAction(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   payload: TaskDeleteRequest;
   reloadSchedulerAfterMutation: TaskSchedulerReloadPort;
 }) {
@@ -213,7 +213,7 @@ export async function executeTaskDeleteAction(params: {
  * 执行 `task.update` action。
  */
 export async function executeTaskUpdateAction(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   payload: TaskUpdateRequest;
   reloadSchedulerAfterMutation: TaskSchedulerReloadPort;
 }) {
@@ -246,7 +246,7 @@ export async function executeTaskUpdateAction(params: {
  * 执行 `task.status` action。
  */
 export async function executeTaskStatusAction(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   payload: TaskSetStatusRequest;
   reloadSchedulerAfterMutation: TaskSchedulerReloadPort;
 }) {

@@ -1,0 +1,76 @@
+---
+title: Memory 架构
+description: 说明当前 Memory 应该挂在哪里、谁驱动它、它和 Session 主轴是什么关系
+---
+
+# Memory 架构
+
+这页回答的是实现问题：
+
+- Memory 在当前系统里应该挂在哪里
+- 谁驱动它
+- 它和 Session 主轴是什么关系
+
+## 总体原则
+
+1. Agent 负责执行与决策
+2. Memory service 负责 memory 的读写、索引、整理
+3. Context 不是独立存储体，而是一次构造结果
+4. Session 是运行时主轴
+
+## 理想结构
+
+```mermaid
+flowchart TB
+  U["User / Channel"]
+  SA["LocalSessionExecutor"]
+  HS["History Store"]
+  MS["Memory Service"]
+  CA["Contextualization"]
+  LLM["LLM"]
+
+  U --> SA
+  SA --> HS
+  SA --> CA
+  CA --> MS
+  CA --> LLM
+  LLM --> SA
+  SA --> HS
+  SA --> MS
+```
+
+## 这张图该怎么读
+
+### LocalSessionExecutor 是前台执行者
+
+它负责：
+
+1. 接收用户输入
+2. 追加 history
+3. 发起 contextualization
+4. 调用 LLM
+5. 写回 assistant message
+6. 必要时触发 memory 写入
+
+也就是说：
+
+- LocalSessionExecutor 不拥有 Memory
+- 但它负责驱动 Memory
+
+### Memory service 是后台治理者
+
+更适合承接这些能力：
+
+- `store`
+- `search`
+- `get`
+- `index / flush / status`
+
+所以 Memory service 是一个状态治理服务，不是主对话执行体。
+
+## 当前最稳的架构判断
+
+- `memory service` 是宿主
+- `Session` 是使用者
+- `memoryAgent` 是 service 内部的维护角色
+- `LLM` 是被借用的整理能力，不是 Memory 的宿主

@@ -169,9 +169,14 @@ export interface UseConsoleDashboardResult {
   skills: UiSkillSummaryItem[];
 
   /**
-   * plugin 状态列表。
+   * city 级 plugin 状态列表。
    */
   plugins: UiPluginRuntimeItem[];
+
+  /**
+   * 当前 agent 的 plugin 状态列表。
+   */
+  agentPlugins: UiPluginRuntimeItem[];
 
   /**
    * chat 渠道状态列表。
@@ -473,7 +478,16 @@ export interface UseConsoleDashboardResult {
   controlService: (serviceName: string, action: string) => Promise<void>;
 
   /**
-   * 运行 plugin action。
+   * 运行 city 级 plugin action。
+   */
+  runGlobalPluginAction: (
+    pluginName: string,
+    actionName: string,
+    payload?: Record<string, unknown>,
+  ) => Promise<UiPluginActionExecutionResult>;
+
+  /**
+   * 运行 agent 级 plugin action。
    */
   runPluginAction: (
     pluginName: string,

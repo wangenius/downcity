@@ -8,7 +8,7 @@
 
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 import { isTextUIPart } from "ai";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   MemoryFlushPayload,
   MemoryFlushResponse,
@@ -43,7 +43,7 @@ function extractReadableLine(message: {
  * 把当前会话最近消息刷写到 daily 记忆。
  */
 export async function flushMemory(
-  context: ExecutionContext,
+  context: AgentContext,
   state: MemoryRuntimeState,
   payload: MemoryFlushPayload,
 ): Promise<MemoryFlushResponse> {
@@ -54,10 +54,10 @@ export async function flushMemory(
   const maxMessages = Number.isFinite(payload.maxMessages)
     ? Math.max(1, Math.floor(payload.maxMessages as number))
     : 30;
-  const persistor = context.session.getPersistor(sessionId);
-  const total = await persistor.size();
+  const historyComposer = context.session.get(sessionId).getHistoryComposer();
+  const total = await historyComposer.size();
   const start = Math.max(0, total - maxMessages);
-  const messages = await persistor.slice(start, total);
+  const messages = await historyComposer.slice(start, total);
   const lines = messages
     .map((msg) => extractReadableLine(msg))
     .filter((line) => line.length > 0);

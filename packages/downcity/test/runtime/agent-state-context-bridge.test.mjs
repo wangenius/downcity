@@ -1,14 +1,14 @@
 /**
- * AgentState / ExecutionContext 公共入口桥接测试（node:test）。
+ * AgentRuntime / AgentContext 公共入口桥接测试（node:test）。
  *
  * 关键点（中文）
- * - `city/runtime/agent/AgentState` 应成为新的统一状态入口。
- * - `ExecutionContext` 应直接从共享 AgentState 读取 model 与 session 能力。
+ * - `AgentRuntime` 应成为新的统一状态入口。
+ * - `AgentContext` 应直接从共享 AgentRuntime 读取 model 与 session 能力。
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getExecutionContext, setAgentState } from "../../bin/city/runtime/agent/AgentState.js";
+import { getAgentContext, setAgentRuntime } from "../../bin/main/agent/AgentRuntime.js";
 
 function createLoggerStub() {
   return {
@@ -21,10 +21,38 @@ function createLoggerStub() {
   };
 }
 
-test("AgentState public entry exposes shared execution context with model", () => {
+function createSessionStub() {
+  return {
+    sessionId: "chat-1",
+    getExecutor() {
+      return null;
+    },
+    getHistoryComposer() {
+      return null;
+    },
+    run() {
+      throw new Error("unused");
+    },
+    clearExecutor() {},
+    afterSessionUpdatedAsync() {
+      return Promise.resolve();
+    },
+    appendUserMessage() {
+      return Promise.resolve(null);
+    },
+    appendAssistantMessage() {
+      return Promise.resolve(null);
+    },
+    isExecuting() {
+      return false;
+    },
+  };
+}
+
+test("AgentRuntime public entry exposes shared agent context with model", () => {
   const model = { provider: "test-model" };
 
-  setAgentState({
+  setAgentRuntime({
     cwd: ".",
     rootPath: "/tmp/downcity-agent-state-bridge",
     logger: createLoggerStub(),
@@ -39,31 +67,19 @@ test("AgentState public entry exposes shared execution context with model", () =
     env: {},
     systems: ["system-a"],
     model,
-    sessionStore: {
-      getRuntime() {
-        return null;
-      },
-      getPersistor() {
-        return null;
-      },
-      run() {
-        throw new Error("unused");
-      },
-      clearRuntime() {},
-      afterSessionUpdatedAsync() {
-        return Promise.resolve();
-      },
-      appendUserMessage() {
-        return Promise.resolve(null);
-      },
-      appendAssistantMessage() {
-        return Promise.resolve(null);
-      },
+    getSession() {
+      return createSessionStub();
+    },
+    listExecutingSessionIds() {
+      return [];
+    },
+    getExecutingSessionCount() {
+      return 0;
     },
     services: new Map(),
   });
 
-  const context = getExecutionContext();
+  const context = getAgentContext();
 
   assert.equal(context.rootPath, "/tmp/downcity-agent-state-bridge");
   assert.equal(context.session.model, model);
@@ -71,8 +87,8 @@ test("AgentState public entry exposes shared execution context with model", () =
   assert.deepEqual(context.systems, ["system-a"]);
 });
 
-test("AgentState public entry exposes session context without model in ACP mode", () => {
-  setAgentState({
+test("AgentRuntime public entry exposes session context without model in ACP mode", () => {
+  setAgentRuntime({
     cwd: ".",
     rootPath: "/tmp/downcity-agent-state-acp",
     logger: createLoggerStub(),
@@ -88,31 +104,19 @@ test("AgentState public entry exposes session context without model in ACP mode"
     },
     env: {},
     systems: ["system-a"],
-    sessionStore: {
-      getRuntime() {
-        return null;
-      },
-      getPersistor() {
-        return null;
-      },
-      run() {
-        throw new Error("unused");
-      },
-      clearRuntime() {},
-      afterSessionUpdatedAsync() {
-        return Promise.resolve();
-      },
-      appendUserMessage() {
-        return Promise.resolve(null);
-      },
-      appendAssistantMessage() {
-        return Promise.resolve(null);
-      },
+    getSession() {
+      return createSessionStub();
+    },
+    listExecutingSessionIds() {
+      return [];
+    },
+    getExecutingSessionCount() {
+      return 0;
     },
     services: new Map(),
   });
 
-  const context = getExecutionContext();
+  const context = getAgentContext();
 
   assert.equal(context.rootPath, "/tmp/downcity-agent-state-acp");
   assert.equal(context.session.model, undefined);

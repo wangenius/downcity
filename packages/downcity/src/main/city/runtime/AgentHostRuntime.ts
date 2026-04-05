@@ -1,8 +1,8 @@
 /**
- * AgentHostRuntime：装配 AgentState 宿主能力。
+ * AgentHostRuntime：装配 AgentRuntime 宿主能力。
  *
  * 关键点（中文）
- * - `main/agent/*` 负责创建这些宿主能力对象，再注入到 AgentState。
+ * - `main/agent/*` 负责创建这些宿主能力对象，再注入到 AgentRuntime。
  * - services / session / plugins 只消费这些对象，不再直接 import `main/*`。
  * - 当前先收敛路径、认证、plugin 配置持久化三类能力。
  */

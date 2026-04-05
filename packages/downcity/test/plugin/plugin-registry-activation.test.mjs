@@ -13,7 +13,15 @@ import path from "node:path";
 import test from "node:test";
 import { HookRegistry } from "../../bin/main/plugin/HookRegistry.js";
 import { PluginRegistry } from "../../bin/main/plugin/PluginRegistry.js";
-import { isPluginEnabledInConfig } from "../../bin/main/plugin/Activation.js";
+import { isPluginEnabled } from "../../bin/main/plugin/Activation.js";
+import {
+  setCityPluginEnabled,
+  writeCityPluginLifecycleConfig,
+} from "../../bin/main/plugin/Lifecycle.js";
+
+process.env.DC_CONSOLE_ROOT = fs.mkdtempSync(
+  path.join(os.tmpdir(), "downcity-test-console-plugin-registry-"),
+);
 
 function createRuntime(config = {}) {
   const rootPath = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-plugin-registry-"));
@@ -89,10 +97,7 @@ function createRegistry(runtime) {
     pluginEnabledChecker: (pluginName, context) => {
       const plugin = pluginRegistry.get(pluginName);
       if (!plugin) return false;
-      return isPluginEnabledInConfig({
-        plugin,
-        config: context.config,
-      });
+      return isPluginEnabled({ plugin });
     },
   });
   const pluginRegistry = new PluginRegistry({
@@ -109,18 +114,18 @@ function createRegistry(runtime) {
 }
 
 test("plugin registry blocks actions for disabled plugins", async () => {
+  writeCityPluginLifecycleConfig({});
   const runtime = createRuntime();
   const { pluginRegistry } = createRegistry(runtime);
 
   pluginRegistry.register({
-    name: "demo",
+    name: "demo-disabled",
     title: "Demo",
     description: "demo plugin",
     config: {
-      plugin: "demo",
+      plugin: "demo-disabled",
       scope: "project",
       defaultValue: {
-        enabled: false,
       },
     },
     actions: {
@@ -136,9 +141,10 @@ test("plugin registry blocks actions for disabled plugins", async () => {
       },
     },
   });
+  setCityPluginEnabled("demo-disabled", false);
 
   const result = await pluginRegistry.runAction({
-    plugin: "demo",
+    plugin: "demo-disabled",
     action: "ping",
   });
 
@@ -147,24 +153,18 @@ test("plugin registry blocks actions for disabled plugins", async () => {
 });
 
 test("plugin registry still allows actions for enabled plugins", async () => {
-  const runtime = createRuntime({
-    plugins: {
-      demo: {
-        enabled: true,
-      },
-    },
-  });
+  writeCityPluginLifecycleConfig({});
+  const runtime = createRuntime();
   const { pluginRegistry } = createRegistry(runtime);
 
   pluginRegistry.register({
-    name: "demo",
+    name: "demo-enabled",
     title: "Demo",
     description: "demo plugin",
     config: {
-      plugin: "demo",
+      plugin: "demo-enabled",
       scope: "project",
       defaultValue: {
-        enabled: false,
       },
     },
     actions: {
@@ -180,9 +180,10 @@ test("plugin registry still allows actions for enabled plugins", async () => {
       },
     },
   });
+  setCityPluginEnabled("demo-enabled", true);
 
   const result = await pluginRegistry.runAction({
-    plugin: "demo",
+    plugin: "demo-enabled",
     action: "ping",
   });
 
@@ -191,18 +192,18 @@ test("plugin registry still allows actions for enabled plugins", async () => {
 });
 
 test("plugin registry allows opted-in setup actions for disabled plugins", async () => {
+  writeCityPluginLifecycleConfig({});
   const runtime = createRuntime();
   const { pluginRegistry } = createRegistry(runtime);
 
   pluginRegistry.register({
-    name: "demo",
+    name: "demo-setup-disabled",
     title: "Demo",
     description: "demo plugin",
     config: {
-      plugin: "demo",
+      plugin: "demo-setup-disabled",
       scope: "project",
       defaultValue: {
-        enabled: false,
       },
     },
     actions: {
@@ -219,9 +220,10 @@ test("plugin registry allows opted-in setup actions for disabled plugins", async
       },
     },
   });
+  setCityPluginEnabled("demo-setup-disabled", false);
 
   const result = await pluginRegistry.runAction({
-    plugin: "demo",
+    plugin: "demo-setup-disabled",
     action: "on",
   });
 

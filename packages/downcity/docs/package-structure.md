@@ -365,9 +365,9 @@ Agent 远程访问模块。
 
 负责：
 
-- `AgentState`
-- `ExecutionContext`
-- `RuntimeState`
+- `AgentRuntime`
+- `AgentContext`
+- `AgentRuntimeState`
 - agent 宿主能力注入
 - `project/` 初始化与 execution binding
 
@@ -536,7 +536,7 @@ sequenceDiagram
 
   U->>CLI: city agent start
   CLI->>City: 确认 city 后台已运行
-  CLI->>Agent: 初始化 AgentState / project / env / model
+  CLI->>Agent: 初始化 AgentRuntime / project / env / model
   CLI->>HTTP: 启动 Agent HTTP Server
   CLI->>RPC: 启动 Local RPC
   CLI->>SVC: 启动 services
@@ -554,7 +554,7 @@ sequenceDiagram
 
   B->>C: 打开 Console 页面
   C->>H: 代理 /api/dashboard/*
-  H->>A: 获取 AgentState / ExecutionContext
+  H->>A: 获取 AgentRuntime / AgentContext
   A->>S: 查询 session / task / model / service 状态
   S-->>A: 返回运行数据
   A-->>H: 返回 JSON

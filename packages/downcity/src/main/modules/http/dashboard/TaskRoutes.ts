@@ -67,7 +67,7 @@ export function registerDashboardTaskRoutes(
 
   app.get("/api/dashboard/tasks", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const status = toOptionalString(c.req.query("status"));
       const result = await listTaskDefinitions({
         projectRoot: runtime.rootPath,
@@ -112,7 +112,7 @@ export function registerDashboardTaskRoutes(
           title,
           ...(reason ? { reason } : {}),
         },
-        context: params.getExecutionContext(),
+        context: params.getAgentContext(),
       });
       return c.json(result, result.success ? 200 : 400);
     } catch (error) {
@@ -141,7 +141,7 @@ export function registerDashboardTaskRoutes(
           title,
           status,
         },
-        context: params.getExecutionContext(),
+        context: params.getAgentContext(),
       });
       if (!result.success) {
         return c.json(
@@ -175,7 +175,7 @@ export function registerDashboardTaskRoutes(
         payload: {
           title,
         },
-        context: params.getExecutionContext(),
+        context: params.getAgentContext(),
       });
       if (!result.success) {
         return c.json({ success: false, error: result.message || "task delete failed" }, 400);
@@ -195,7 +195,7 @@ export function registerDashboardTaskRoutes(
 
   app.delete("/api/dashboard/tasks/:title/runs/:timestamp", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const title = decodeMaybe(String(c.req.param("title") || "").trim());
       const timestamp = String(c.req.param("timestamp") || "").trim();
       if (!title) {
@@ -244,7 +244,7 @@ export function registerDashboardTaskRoutes(
 
   app.delete("/api/dashboard/tasks/:title/runs", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const title = decodeMaybe(String(c.req.param("title") || "").trim());
       if (!title) {
         return c.json({ success: false, error: "Invalid title" }, 400);
@@ -309,7 +309,7 @@ export function registerDashboardTaskRoutes(
 
   app.get("/api/dashboard/tasks/:title/runs", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const title = decodeMaybe(String(c.req.param("title") || "").trim());
       if (!title) {
         return c.json({ success: false, error: "Invalid title" }, 400);
@@ -329,7 +329,7 @@ export function registerDashboardTaskRoutes(
 
   app.get("/api/dashboard/tasks/:title/runs/:timestamp", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const title = decodeMaybe(String(c.req.param("title") || "").trim());
       const timestamp = String(c.req.param("timestamp") || "").trim();
       if (!title) {
@@ -355,7 +355,7 @@ export function registerDashboardTaskRoutes(
 
   app.get("/api/dashboard/logs", async (c) => {
     try {
-      const runtime = params.getAgentState();
+      const runtime = params.getAgentRuntime();
       const limit = toLimit(c.req.query("limit"), 200);
       const logs = await readRecentLogs({
         projectRoot: runtime.rootPath,

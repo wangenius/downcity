@@ -8,8 +8,8 @@
  */
 
 import { Hono } from "hono";
-import { drainDeferredPersistedUserMessages } from "@session/RequestContext.js";
-import { getAgentState } from "@/main/agent/AgentState.js";
+import { drainDeferredPersistedUserMessages } from "@session/SessionRunScope.js";
+import { getAgentRuntime } from "@/main/agent/AgentRuntime.js";
 import {
   pickLastSuccessfulChatSendText,
   resolveAssistantMessageForPersistence,
@@ -75,14 +75,13 @@ executeRouter.post("/api/execute", async (c) => {
 
   try {
     const sessionId = `api:chat:${chatId}`;
-    const agentState = getAgentState();
-    await agentState.sessionStore.appendUserMessage({
-      sessionId,
+    const agentState = getAgentRuntime();
+    const session = agentState.getSession(sessionId);
+    await session.appendUserMessage({
       text: String(instructions),
     });
 
-    const result = await agentState.sessionStore.run({
-      sessionId,
+    const result = await session.run({
       query: String(instructions),
     });
 
@@ -92,8 +91,7 @@ executeRouter.post("/api/execute", async (c) => {
         result.assistantMessage,
       );
       if (messageForPersistence) {
-        await agentState.sessionStore.appendAssistantMessage({
-          sessionId,
+        await session.appendAssistantMessage({
           message: messageForPersistence,
           fallbackText: userVisible,
           extra: {
@@ -107,8 +105,7 @@ executeRouter.post("/api/execute", async (c) => {
         sessionId,
       );
       for (const message of deferredInjectedMessages) {
-        await agentState.sessionStore.appendUserMessage({
-          sessionId,
+        await session.appendUserMessage({
           message,
         });
       }

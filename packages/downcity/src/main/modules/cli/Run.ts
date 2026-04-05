@@ -23,11 +23,11 @@ import { startLocalRpcServer } from "@/main/modules/rpc/Server.js";
 const TOKEN_ROTATION_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 import {
-  getExecutionContext,
-  getAgentState,
-  initAgentState,
+  getAgentContext,
+  getAgentRuntime,
+  initAgentRuntime,
   stopAgentHotReload,
-} from "@/main/agent/AgentState.js";
+} from "@/main/agent/AgentRuntime.js";
 import type { StartOptions } from "@/shared/types/Start.js";
 import { logger } from "@shared/utils/logger/Logger.js";
 import {
@@ -54,7 +54,7 @@ export async function runCommand(
   options: StartOptions,
 ): Promise<void> {
   // 初始化加载（进程级单例状态：root / config / logger / chat / agents 等）
-  await initAgentState(cwd);
+  await initAgentRuntime(cwd);
   // 端口解析（中文）：允许 number / string；空值返回 undefined 以便走配置回退链。
   const parsePort = (
     value: string | number | undefined,
@@ -100,7 +100,7 @@ export async function runCommand(
     host,
   });
   const localRpc = await startLocalRpcServer({
-    context: getExecutionContext(),
+    context: getAgentContext(),
   });
 
   // 处理进程信号
@@ -124,7 +124,7 @@ export async function runCommand(
 
     // 停止全部 service
     try {
-      await stopAllServices(getExecutionContext());
+      await stopAllServices(getAgentContext());
     } catch {
       // ignore
     }
@@ -146,7 +146,7 @@ export async function runCommand(
   // 启动全部 service（含 task cron 等模块内生命周期逻辑）
   // 调度策略（中文）：单服务失败不阻断主服务启动，仅记录日志。
   try {
-    const lifecycle = await startAllServices(getExecutionContext());
+    const lifecycle = await startAllServices(getAgentContext());
     for (const item of lifecycle.results) {
       if (item.success) continue;
       logger.error(
@@ -158,7 +158,7 @@ export async function runCommand(
   }
 
   try {
-    await startServiceScheduleRuntime(getExecutionContext());
+    await startServiceScheduleRuntime(getAgentContext());
   } catch (e) {
     logger.error(`Service schedule runtime bootstrap failed: ${String(e)}`);
   }

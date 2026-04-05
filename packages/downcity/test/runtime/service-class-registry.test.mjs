@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { BaseService } from "../../bin/services/BaseService.js";
-import { createRegisteredServiceInstances } from "../../bin/main/registries/ServiceClassRegistry.js";
+import { createRegisteredServiceInstances } from "../../bin/main/service/ServiceClassRegistry.js";
 
 function createAgentStub(rootPath) {
   return {
@@ -32,7 +32,15 @@ function createAgentStub(rootPath) {
     },
     env: {},
     systems: [],
-    sessionStore: {},
+    getSession() {
+      return {};
+    },
+    listExecutingSessionIds() {
+      return [];
+    },
+    getExecutingSessionCount() {
+      return 0;
+    },
   };
 }
 

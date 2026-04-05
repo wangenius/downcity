@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseFetchRequestForLog } from "../../bin/utils/logger/Format.js";
+import { parseFetchRequestForLog } from "../../bin/shared/utils/logger/Format.js";
 
 test("parseFetchRequestForLog formats messages with compact role labels", () => {
   const payload = {

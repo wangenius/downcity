@@ -218,8 +218,6 @@ export async function installWebPluginDependency(params: {
   const nextConfig = await writeWebPluginConfig({
     context: params.context,
     value: {
-      enabled:
-        typeof params.input?.enable === "boolean" ? params.input.enable : true,
       provider,
       injectPrompt:
         typeof params.input?.injectPrompt === "boolean"
@@ -244,7 +242,6 @@ export async function installWebPluginDependency(params: {
     success: true,
     message: "web provider installed and configured",
     details: toJsonObject({
-      enabled: nextConfig.enabled,
       provider: nextConfig.provider,
       injectPrompt: nextConfig.injectPrompt,
       repositoryUrl: nextConfig.repositoryUrl,

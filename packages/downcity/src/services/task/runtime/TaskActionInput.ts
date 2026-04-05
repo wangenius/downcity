@@ -6,7 +6,7 @@
  * - 参数校验尽量前置到输入层，避免进入执行层后才发现字段非法。
  */
 
-import { resolveSessionId } from "@session/SessionId.js";
+import { resolveSessionId } from "@session/ids/resolveSessionId.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import type { ServiceActionCommandInput } from "@/shared/types/Service.js";
 import type { ShipTaskKind, ShipTaskStatus } from "@services/task/types/Task.js";

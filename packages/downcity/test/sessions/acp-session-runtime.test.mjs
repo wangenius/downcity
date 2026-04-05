@@ -12,14 +12,27 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { AcpSessionRuntime } from "../../bin/sessions/acp/AcpSessionRuntime.js";
-import { getRequestContext, withRequestContext } from "../../bin/sessions/RequestContext.js";
+import { AcpSessionExecutor } from "../../bin/session/executors/acp/AcpSessionExecutor.js";
+import { getSessionRunScope, withSessionRunScope } from "../../bin/session/SessionRunScope.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const fixturePath = path.resolve(__dirname, "../fixtures/acp-agent-fixture.mjs");
 const consoleRoot = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-acp-console-"));
 process.env.DC_CONSOLE_ROOT = consoleRoot;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor(check, timeoutMs = 2_000, intervalMs = 10) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt <= timeoutMs) {
+    if (await check()) return;
+    await sleep(intervalMs);
+  }
+  throw new Error(`waitFor timeout after ${timeoutMs}ms`);
+}
 
 function createLogger() {
   return {
@@ -32,7 +45,7 @@ function createLogger() {
   };
 }
 
-function createPersistor(historyTexts = []) {
+function createHistoryComposer(historyTexts = []) {
   return {
     async list() {
       return historyTexts.map((text, index) => ({
@@ -61,7 +74,7 @@ function createPersistor(historyTexts = []) {
   };
 }
 
-function createPrompter(systemText = "System prompt") {
+function createSystemComposer(systemText = "System prompt") {
   return {
     async resolve() {
       return [
@@ -75,12 +88,12 @@ function createPrompter(systemText = "System prompt") {
 }
 
 function createRuntime(params = {}) {
-  return new AcpSessionRuntime({
+  return new AcpSessionExecutor({
     rootPath: process.cwd(),
     sessionId: "test-session",
     logger: createLogger(),
-    persistor: createPersistor(params.historyTexts || []),
-    prompter: createPrompter(params.systemText),
+    historyComposer: createHistoryComposer(params.historyTexts || []),
+    systemComposer: createSystemComposer(params.systemText),
     launch: {
       type: "kimi",
       command: process.execPath,
@@ -90,7 +103,7 @@ function createRuntime(params = {}) {
   });
 }
 
-test("AcpSessionRuntime: first prompt bootstraps system and history", async () => {
+test("AcpSessionExecutor: first prompt bootstraps system and history", async () => {
   const runtime = createRuntime({
     historyTexts: ["old user", "old assistant"],
   });
@@ -105,7 +118,7 @@ test("AcpSessionRuntime: first prompt bootstraps system and history", async () =
   }
 });
 
-test("AcpSessionRuntime: later prompt reuses remote session without bootstrap wrapper", async () => {
+test("AcpSessionExecutor: later prompt reuses remote session without bootstrap wrapper", async () => {
   const runtime = createRuntime({
     historyTexts: ["old user", "old assistant"],
   });
@@ -123,7 +136,7 @@ test("AcpSessionRuntime: later prompt reuses remote session without bootstrap wr
   }
 });
 
-test("AcpSessionRuntime: auto-selects allow_once for permission requests", async () => {
+test("AcpSessionExecutor: auto-selects allow_once for permission requests", async () => {
   const runtime = createRuntime();
   try {
     const result = await runtime.run({
@@ -136,17 +149,16 @@ test("AcpSessionRuntime: auto-selects allow_once for permission requests", async
   }
 });
 
-test("AcpSessionRuntime: injects requestId for prompter when request context is missing", async () => {
-  const runtime = new AcpSessionRuntime({
+test("AcpSessionExecutor: injects sessionId for prompt resolver when request context is missing", async () => {
+  const runtime = new AcpSessionExecutor({
     rootPath: process.cwd(),
     sessionId: "test-session",
     logger: createLogger(),
-    persistor: createPersistor(),
-    prompter: {
+    historyComposer: createHistoryComposer(),
+    systemComposer: {
       async resolve() {
-        const ctx = getRequestContext();
+        const ctx = getSessionRunScope();
         assert.equal(String(ctx?.sessionId || "").trim(), "test-session");
-        assert.ok(String(ctx?.requestId || "").trim().length > 0);
         return [
           {
             role: "system",
@@ -173,13 +185,12 @@ test("AcpSessionRuntime: injects requestId for prompter when request context is 
   }
 });
 
-test("AcpSessionRuntime: emits assistant progress callbacks while prompt is streaming", async () => {
+test("AcpSessionExecutor: emits assistant progress callbacks while prompt is streaming", async () => {
   const runtime = createRuntime();
   const steps = [];
   try {
-    const result = await withRequestContext({
+    const result = await withSessionRunScope({
       sessionId: "test-session",
-      requestId: "req_progress",
       onAssistantStepCallback: async (input) => {
         steps.push({
           text: String(input.text || ""),
@@ -204,7 +215,7 @@ test("AcpSessionRuntime: emits assistant progress callbacks while prompt is stre
   }
 });
 
-test("AcpSessionRuntime: accepts final response before ACP process exits normally", async () => {
+test("AcpSessionExecutor: accepts final response before ACP process exits normally", async () => {
   const runtime = createRuntime();
   try {
     const result = await runtime.run({
@@ -218,13 +229,12 @@ test("AcpSessionRuntime: accepts final response before ACP process exits normall
   }
 });
 
-test("AcpSessionRuntime: maps Claude ACP tool_call_update into tool results", async () => {
+test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", async () => {
   const runtime = createRuntime();
   const steps = [];
   try {
-    const result = await withRequestContext({
+    const result = await withSessionRunScope({
       sessionId: "test-session",
-      requestId: "req_toolcall",
       onAssistantStepCallback: async (input) => {
         steps.push({
           text: String(input.text || ""),
@@ -288,20 +298,146 @@ test("AcpSessionRuntime: maps Claude ACP tool_call_update into tool results", as
   }
 });
 
-test("AcpSessionRuntime: cancels the current prompt turn when requested", async () => {
+test("AcpSessionExecutor: cancels the current prompt turn when requested", async () => {
   const runtime = createRuntime();
   try {
     const runPromise = runtime.run({
       query: "cancel runtime test",
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    assert.equal(await runtime.requestCancelCurrentTurn?.(), true);
+    let cancelIssued = false;
+    await waitFor(async () => {
+      cancelIssued = (await runtime.requestCancelCurrentTurn?.()) === true;
+      return cancelIssued;
+    });
+    assert.equal(cancelIssued, true);
 
     const result = await runPromise;
     assert.equal(result.success, true);
     assert.equal(result.assistantMessage.parts[0].text, "等待取消前的部分输出");
     assert.equal(result.assistantMessage.metadata.extra.stopReason, "cancelled");
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionExecutor: cancellation without text still returns cancelled and keeps remote session", async () => {
+  const runtime = createRuntime({
+    historyTexts: ["old user", "old assistant"],
+  });
+  try {
+    const runPromise = runtime.run({
+      query: "cancel empty runtime test",
+    });
+    let cancelIssued = false;
+    await waitFor(async () => {
+      cancelIssued = (await runtime.requestCancelCurrentTurn?.()) === true;
+      return cancelIssued;
+    });
+    assert.equal(cancelIssued, true);
+
+    const cancelled = await runPromise;
+    assert.equal(cancelled.success, true);
+    assert.equal(cancelled.assistantMessage.parts[0].text, "");
+    assert.equal(cancelled.assistantMessage.metadata.extra.stopReason, "cancelled");
+
+    const next = await runtime.run({
+      query: "follow up after reset test",
+    });
+    assert.equal(next.success, true);
+    assert.equal(next.assistantMessage.parts[0].text, "RESET_NOT_BOOTSTRAPPED");
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionExecutor: RPC internal error disposes stale remote session before next run", async () => {
+  const runtime = createRuntime({
+    historyTexts: ["old user", "old assistant"],
+  });
+  try {
+    await assert.rejects(
+      () =>
+        runtime.run({
+          query: "rpc error turn test",
+        }),
+      /Internal error \(code=-32603\)/,
+    );
+
+    const next = await runtime.run({
+      query: "follow up after reset test",
+    });
+    assert.equal(next.success, true);
+    assert.equal(next.assistantMessage.parts[0].text, "RESET_BOOTSTRAP_OK");
+  } finally {
+    await runtime.dispose();
+  }
+});
+
+test("AcpSessionExecutor: defers cancel until pending tool call returns tool result", async () => {
+  const runtime = createRuntime();
+  const steps = [];
+  try {
+    const runPromise = withSessionRunScope({
+      sessionId: "test-session",
+      onAssistantStepCallback: async (input) => {
+        steps.push({
+          text: String(input.text || ""),
+          stepIndex: input.stepIndex,
+          stepResult: input.stepResult,
+        });
+      },
+    }, async () => {
+      return await runtime.run({
+        query: "cancel after tool result test",
+      });
+    });
+
+    await waitFor(() => steps.length >= 2);
+    assert.equal(await runtime.requestCancelCurrentTurn?.(), true);
+
+    const result = await runPromise;
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.metadata.extra.stopReason, "cancelled");
+    assert.equal(result.assistantMessage.parts[0].text, "先发一段前置文本。");
+    assert.deepEqual(steps, [
+      {
+        text: "先发一段前置文本。",
+        stepIndex: 1,
+        stepResult: undefined,
+      },
+      {
+        text: "",
+        stepIndex: 2,
+        stepResult: {
+          toolCalls: [
+            {
+              toolCallId: "call_cancel_after_result",
+              toolName: "search_tweets",
+              input: {
+                query: "AI artificial intelligence",
+              },
+              status: "pending",
+            },
+          ],
+        },
+      },
+      {
+        text: "",
+        stepIndex: 3,
+        stepResult: {
+          toolResults: [
+            {
+              toolCallId: "call_cancel_after_result",
+              toolName: "search_tweets",
+              result: {
+                items: ["tweet-1", "tweet-2"],
+              },
+              status: "completed",
+            },
+          ],
+        },
+      },
+    ]);
   } finally {
     await runtime.dispose();
   }

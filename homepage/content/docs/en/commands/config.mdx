@@ -30,13 +30,13 @@ city config <subcommand>
 
 For plugin configuration, edit:
 
-- `plugins.*` for plugin behavior and plugin-owned dependency config
+- `plugins.*` for agent-local plugin parameters only
+- use `city <plugin> on/off` for plugin lifecycle
 
 Examples:
 
 ```bash
 city config get plugins.asr
-city config set plugins.asr.enabled true
 city config set plugins.asr.modelId '\"SenseVoiceSmall\"'
 ```
 

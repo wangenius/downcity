@@ -8,7 +8,7 @@
 
 import type { ChatDispatchChannel } from "@services/chat/types/ChatDispatcher.js";
 import type { Logger } from "@shared/utils/logger/Logger.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
 import {
   resolveSessionIdByChatTarget,
@@ -37,7 +37,7 @@ export interface ChannelSessionTargetParams {
   /**
    * 当前 execution runtime。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 当前渠道。
    */
@@ -63,7 +63,7 @@ export interface ChannelChatMetaParams {
   /**
    * 当前 execution runtime。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 当前渠道。
    */
@@ -109,7 +109,7 @@ export interface ChannelInboundHistoryParams {
   /**
    * 当前 execution runtime。
    */
-  context: ExecutionContext;
+  context: AgentContext;
   /**
    * 日志器。
    */

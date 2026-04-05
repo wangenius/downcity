@@ -13,7 +13,7 @@ import { promisify } from "node:util";
 import test from "node:test";
 
 const execFileAsync = promisify(execFile);
-const CLI_ENTRY = path.resolve(process.cwd(), "bin/city/modules/cli/Index.js");
+const CLI_ENTRY = path.resolve(process.cwd(), "bin/main/modules/cli/Index.js");
 
 async function runHelp(args) {
   const { stdout, stderr } = await execFileAsync(process.execPath, [CLI_ENTRY, ...args], {

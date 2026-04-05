@@ -7,7 +7,7 @@
  * - 这样也能避开 `task -> runner -> prompt system -> service class registry` 的循环依赖。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import { buildChatServiceSystem } from "@services/chat/runtime/ChatServiceSystem.js";
 import { buildMemoryServiceSystemText } from "@services/memory/runtime/SystemProvider.js";
 import { TASK_SERVICE_PROMPT } from "@services/task/runtime/TaskServiceSystem.js";
@@ -23,7 +23,7 @@ export type ServiceSystemProvider = {
   /**
    * 生成该 service system 文本的函数。
    */
-  system: (context: ExecutionContext) => Promise<string> | string;
+  system: (context: AgentContext) => Promise<string> | string;
 };
 
 /**

@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildConsoleWorkloadBlockPayload,
-} from "../../bin/main/ui/gateway/GatewaySupport.js";
+} from "../../bin/main/modules/console/gateway/GatewaySupport.js";
 
 test("buildConsoleWorkloadBlockPayload includes contexts and tasks in detail", () => {
   const payload = buildConsoleWorkloadBlockPayload("restart", {

@@ -11,8 +11,8 @@ import test from "node:test";
 import {
   buildChatMessageText,
   parseChatMessageMarkup,
-} from "../../bin/services/chat@/city/runtime/console/ChatMessageMarkup.js";
-import { parseChatSendOptionsFromMetadata } from "../../bin/services/chat@/city/runtime/console/ChatSendMetadata.js";
+} from "../../bin/services/chat/runtime/ChatMessageMarkup.js";
+import { parseChatSendOptionsFromMetadata } from "../../bin/services/chat/runtime/ChatSendMetadata.js";
 
 test("parseChatMessageMarkup extracts frontmatter and file tags", () => {
   const parsed = parseChatMessageMarkup(`---

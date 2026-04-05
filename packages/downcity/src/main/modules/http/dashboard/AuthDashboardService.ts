@@ -7,7 +7,7 @@
  * - 这样调用方不需要知道 plugin action 名称，也不需要依赖 `plugins/auth/*` 目录。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type { AuthDashboardPayload } from "@/shared/types/AuthDashboard.js";
 import type {
@@ -40,7 +40,7 @@ function readSnapshot(value: unknown): ChatAuthorizationSnapshot {
  * 读取 auth plugin 快照。
  */
 async function readAuthorizationSnapshotViaPlugin(
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<ChatAuthorizationSnapshot> {
   const result = await context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
@@ -56,7 +56,7 @@ async function readAuthorizationSnapshotViaPlugin(
  * 读取 auth plugin 配置。
  */
 async function readAuthorizationConfigViaPlugin(
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<ChatAuthorizationConfig> {
   const result = await context.plugins.runAction({
     plugin: AUTH_PLUGIN_NAME,
@@ -72,7 +72,7 @@ async function readAuthorizationConfigViaPlugin(
  * 通过 auth plugin 覆盖写入授权配置。
  */
 async function writeAuthorizationConfigViaPlugin(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   config: ChatAuthorizationConfig;
 }): Promise<ChatAuthorizationConfig> {
   const result = await params.context.plugins.runAction({
@@ -92,7 +92,7 @@ async function writeAuthorizationConfigViaPlugin(params: {
  * 通过 auth plugin 设置用户角色。
  */
 async function setAuthorizationUserRoleViaPlugin(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   channel: string;
   userId: string;
   roleId: string;
@@ -116,7 +116,7 @@ async function setAuthorizationUserRoleViaPlugin(params: {
  * 读取 authorization 页面所需的完整数据。
  */
 export async function readAuthDashboardPayload(
-  context: ExecutionContext,
+  context: AgentContext,
 ): Promise<AuthDashboardPayload> {
   const [config, snapshot] = await Promise.all([
     readAuthorizationConfigViaPlugin(context),
@@ -134,7 +134,7 @@ export async function readAuthDashboardPayload(
  * 覆盖写入授权配置，并返回最新 dashboard payload。
  */
 export async function writeAuthDashboardConfig(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   config: ChatAuthorizationConfig;
 }): Promise<AuthDashboardPayload> {
   await writeAuthorizationConfigViaPlugin({
@@ -148,7 +148,7 @@ export async function writeAuthDashboardConfig(params: {
  * 设置用户角色，并返回最新 dashboard payload。
  */
 export async function setAuthDashboardUserRole(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   input: AuthSetUserRolePayload;
 }): Promise<AuthDashboardPayload> {
   await setAuthorizationUserRoleViaPlugin({

@@ -14,7 +14,7 @@ description: 基于当前 shell 和 task 的真实协议，说明为什么默认
 - 默认方案应该是 **会话级隔离容器**
 - `shell` 的执行边界应按 **shell session** 切
 - `task` 的执行边界应按 **task run** 切
-- `AgentState`、`SessionStore`、`Memory`、`Chat` 等宿主 runtime 状态不应该放进沙箱
+- `AgentRuntime`、`SessionFacade`、`Memory`、`Chat` 等宿主 runtime 状态不应该放进沙箱
 - 高安全场景可以再加 `microVM` backend，但不应该作为默认执行后端
 
 一句话：
@@ -64,12 +64,12 @@ description: 基于当前 shell 和 task 的真实协议，说明为什么默认
 
 ## 为什么不是“整个 agent runtime 进沙箱”
 
-也不应该把整个 `AgentState` 都塞进容器或 VM。
+也不应该把整个 `AgentRuntime` 都塞进容器或 VM。
 
 原因很简单：
 
-- `AgentState` 是宿主 runtime 中心
-- `SessionStore` 是统一执行主轴
+- `AgentRuntime` 是宿主 runtime 中心
+- `SessionFacade` 是统一执行主轴
 - `Chat`、`Memory`、`PluginRegistry`、日志与审计都依赖宿主长期状态
 
 如果把这些都搬进沙箱，会带来几个直接问题：
@@ -82,7 +82,7 @@ description: 基于当前 shell 和 task 的真实协议，说明为什么默认
 所以更合理的分层是：
 
 ```text
-宿主侧保留 AgentState / Session / Chat / Memory / Logs
+宿主侧保留 AgentRuntime / Session / Chat / Memory / Logs
 沙箱侧只承接 shell 或 task 的实际执行
 ```
 
@@ -157,9 +157,9 @@ description: 基于当前 shell 和 task 的真实协议，说明为什么默认
 
 宿主侧继续负责：
 
-- `AgentState`
-- `ExecutionContext`
-- `SessionStore`
+- `AgentRuntime`
+- `AgentContext`
+- `SessionFacade`
 - `ChatService`
 - `MemoryService`
 - `ShellService` 的协议和状态编排
@@ -413,7 +413,7 @@ microVM 应该是可选强化模式，而不是默认执行形态。
 
 真正变化的应该是：
 
-- `SessionStore.ts` 内部不再直接 `spawn`
+- `SessionFacade.ts` 内部不再直接 `spawn`
 - 改为调 `SandboxExecutor`
 
 ## 建议的实施顺序

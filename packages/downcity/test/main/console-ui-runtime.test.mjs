@@ -11,12 +11,12 @@ import test from "node:test";
 import {
   findReusableConsoleProcess,
   parseConsoleProcessCommand,
-} from "../../bin/city/modules/cli/UI.js";
-import { isDowncityCliCommand } from "../../bin/city/runtime/console/ProcessSweep.js";
+} from "../../bin/main/modules/cli/Console.js";
+import { isDowncityCliCommand } from "../../bin/main/city/runtime/ProcessSweep.js";
 
 test("parseConsoleProcessCommand extracts host and port from console ui run command", () => {
   const result = parseConsoleProcessCommand(
-    "/opt/homebrew/bin/node /tmp/Index.js console ui run --host 127.0.0.1 --port 5315",
+    "/opt/homebrew/bin/node /tmp/Index.js console run --host 127.0.0.1 --port 5315",
   );
 
   assert.deepEqual(result, {
@@ -31,12 +31,12 @@ test("findReusableConsoleProcess reuses detached ui process with matching normal
       {
         pid: 20001,
         command:
-          "/opt/homebrew/bin/node /tmp/Index.js console ui run --host 0.0.0.0 --port 5315",
+          "/opt/homebrew/bin/node /tmp/Index.js console run --host 0.0.0.0 --port 5315",
       },
       {
         pid: 20002,
         command:
-          "/opt/homebrew/bin/node /tmp/Index.js console ui run --host 127.0.0.1 --port 5415",
+          "/opt/homebrew/bin/node /tmp/Index.js console run --host 127.0.0.1 --port 5415",
       },
     ],
     {
@@ -55,7 +55,7 @@ test("findReusableConsoleProcess reuses detached ui process with matching normal
 test("isDowncityCliCommand accepts console build output path", () => {
   assert.equal(
     isDowncityCliCommand(
-      "/opt/homebrew/bin/node /Users/demo/packages/downcity/bin/console/commands/Index.js console ui run --host 127.0.0.1 --port 5315",
+      "/opt/homebrew/bin/node /Users/demo/packages/downcity/bin/main/modules/cli/Index.js console run --host 127.0.0.1 --port 5315",
     ),
     true,
   );

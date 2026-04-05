@@ -71,14 +71,14 @@ Agent 是单项目执行面，负责：
 
 - 加载当前项目配置
 - 提供当前项目的 HTTP runtime
-- 持有 `AgentState`
+- 持有 `AgentRuntime`
 - 驱动 session、services、plugins
 
 ## 当前真正的运行时中心
 
 当前代码里，最重要的中心对象是：
 
-- `AgentState`
+- `AgentRuntime`
 
 它不是旧文档里那种泛化的 “host runtime” 概念，而是实际存在的运行时对象。
 
@@ -88,7 +88,7 @@ Agent 是单项目执行面，负责：
 - `env`
 - `systems`
 - `model`
-- `sessionStore`
+- `sessionFacade`
 - `services`
 - `pluginRegistry`
 
@@ -96,8 +96,8 @@ Agent 是单项目执行面，负责：
 
 ```text
 console 管多个 agent
-agent 用 AgentState 持有当前项目运行时
-AgentState 再挂 session / services / plugins
+agent 用 AgentRuntime 持有当前项目运行时
+AgentRuntime 再挂 session / services / plugins
 ```
 
 ## 业务层为什么要分 session / service / plugin
@@ -115,11 +115,11 @@ Session 回答：
 
 Session 的真实对象包括：
 
-- `SessionStore`
-- `SessionRuntimeStore`
-- `SessionRuntime`
-- `SessionCore`
-- `FilePersistor`
+- `SessionFacade`
+- `SessionExecutorRegistry`
+- `LocalSessionExecutor`
+- `SessionEngine`
+- `JsonlSessionHistoryStore`
 
 ### Service
 
@@ -164,11 +164,11 @@ flowchart TD
   B --> C["维护 registry / model store / gateway"]
 
   D["city agent start"] --> E["校验 console 与项目状态"]
-  E --> F["初始化 AgentState"]
+  E --> F["初始化 AgentRuntime"]
   F --> G["读取 downcity.json / .env / global env"]
   G --> H["创建 LanguageModel"]
-  H --> I["创建 SessionRuntimeStore"]
-  I --> J["创建 SessionStore"]
+  H --> I["创建 SessionExecutorRegistry"]
+  I --> J["创建 SessionFacade"]
   J --> K["创建 PluginRegistry"]
   K --> L["注册 auth / skill / voice"]
   L --> M["创建 chat / task / memory / shell services"]
@@ -185,8 +185,8 @@ flowchart TD
   SERVICE --> SID["确定 sessionId"]
   SID --> APPEND["append message"]
   APPEND --> RUN["session.run"]
-  RUN --> CORE["SessionCore"]
-  CORE --> MODEL["model / tools / prompt / persistor / compact"]
+  RUN --> CORE["SessionEngine"]
+  CORE --> MODEL["model / tools / prompt / history store / compact"]
   MODEL --> RES["assistant result"]
   RES --> SERVICE
   SERVICE --> OUT["回复 / run artifact / side effects"]
@@ -214,15 +214,15 @@ flowchart TD
 
 ## 当前代码中的核心对象
 
-- `AgentState`：单项目 runtime 中心
-- `ExecutionContext`：统一能力面
-- `SessionStore`：统一会话门面
-- `SessionCore`：模型执行内核
+- `AgentRuntime`：单项目 runtime 中心
+- `AgentContext`：统一能力面
+- `SessionFacade`：统一会话门面
+- `SessionEngine`：模型执行内核
 - `PluginRegistry`：plugin 注册与调度
 - `BaseService`：service 实例基类
 
 ## 一句话总结
 
 ```text
-Downcity 当前的真实系统逻辑，是 console 管多个 agent，agent 用 AgentState 持有 session、services、plugins，再通过统一 session 内核承接 chat、task、api 等多入口执行。
+Downcity 当前的真实系统逻辑，是 console 管多个 agent，agent 用 AgentRuntime 持有 session、services、plugins，再通过统一 session 内核承接 chat、task、api 等多入口执行。
 ```

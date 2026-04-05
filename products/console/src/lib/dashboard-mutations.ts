@@ -70,15 +70,22 @@ export async function runPluginActionMutation(params: {
   payload?: Record<string, unknown>;
   selectedAgentId: string;
   refreshPlugins: (agentId: string) => Promise<UiPluginRuntimeItem[] | void>;
+  refreshGlobalPlugins?: () => Promise<UiPluginRuntimeItem[] | void>;
+  scope?: "agent" | "global";
   showToast: ShowToast;
 }): Promise<UiPluginActionExecutionResult> {
   try {
     const authState = readConsoleAuthState();
+    const scope = params.scope === "global" ? "global" : "agent";
+    const path =
+      scope === "global"
+        ? dashboardApiRoutes.uiPluginsAction()
+        : withConsoleAgent(
+            dashboardApiRoutes.pluginsAction(),
+            params.selectedAgentId,
+          );
     const response = await fetch(
-      withConsoleAgent(
-        dashboardApiRoutes.pluginsAction(),
-        params.selectedAgentId,
-      ),
+      path,
       {
         method: "POST",
         headers: {
@@ -109,7 +116,10 @@ export async function runPluginActionMutation(params: {
       params.actionName === "install" ||
       params.actionName === "configure" ||
       params.actionName === "use";
-    if (shouldRefreshPlugins && params.selectedAgentId) {
+    if (shouldRefreshPlugins && scope === "global" && params.refreshGlobalPlugins) {
+      void params.refreshGlobalPlugins().catch(() => undefined);
+    }
+    if (shouldRefreshPlugins && scope === "agent" && params.selectedAgentId) {
       void params.refreshPlugins(params.selectedAgentId).catch(() => undefined);
     }
     params.showToast(

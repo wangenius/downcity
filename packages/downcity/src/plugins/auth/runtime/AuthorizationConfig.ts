@@ -6,7 +6,7 @@
  * - 授权核心模型为 role / permission / binding。
  */
 
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type {
   ChatAuthorizationConfig,
   ChatAuthorizationChannel,
@@ -196,7 +196,7 @@ export function readChatAuthorizationConfigSync(projectRoot: string): ChatAuthor
  * 读取当前 agent 的授权配置。
  */
 export function readChatAuthorizationConfig(
-  contextOrProjectRoot: Pick<ExecutionContext, "rootPath"> | string,
+  contextOrProjectRoot: Pick<AgentContext, "rootPath"> | string,
 ): ChatAuthorizationConfig {
   const projectRoot =
     typeof contextOrProjectRoot === "string"
@@ -209,7 +209,7 @@ export function readChatAuthorizationConfig(
  * 覆盖写入整份授权配置。
  */
 export async function writeChatAuthorizationConfig(params: {
-  context: Pick<ExecutionContext, "rootPath">;
+  context: Pick<AgentContext, "rootPath">;
   nextConfig: ChatAuthorizationConfig;
 }): Promise<void> {
   await writeAuthorizationConfigToStore({
@@ -232,7 +232,7 @@ export function listChatAuthorizationRoles(params: {
  * 设置用户角色。
  */
 export async function setChatAuthorizationUserRole(params: {
-  context: Pick<ExecutionContext, "rootPath">;
+  context: Pick<AgentContext, "rootPath">;
   channel: ChatAuthorizationChannel;
   userId: string;
   roleId: string;

@@ -12,8 +12,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { Hono } from "hono";
-import { registerAuthRoutes } from "../../bin/city/runtime/auth/AuthRoutes.js";
-import { AuthService } from "../../bin/city/runtime/auth/AuthService.js";
+import { registerAuthRoutes } from "../../bin/main/modules/http/auth/AuthRoutes.js";
+import { AuthService } from "../../bin/main/modules/http/auth/AuthService.js";
 
 function createIsolatedApp() {
   const dbPath = path.join(

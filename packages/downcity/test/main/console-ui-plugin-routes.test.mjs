@@ -7,9 +7,16 @@
  */
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import { Hono } from "hono";
-import { registerConsolePluginRoutes } from "../../bin/main/ui/PluginApiRoutes.js";
+import { registerConsolePluginRoutes } from "../../bin/main/modules/console/PluginApiRoutes.js";
+
+process.env.DC_CONSOLE_ROOT = fs.mkdtempSync(
+  path.join(os.tmpdir(), "downcity-test-console-ui-plugin-routes-"),
+);
 
 test("ui plugins route forwards bearer token to runtime list and availability requests", async () => {
   const app = new Hono();
@@ -105,4 +112,78 @@ test("ui plugins route forwards bearer token to runtime list and availability re
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("ui plugins route without agent returns city-level plugin catalog", async () => {
+  const app = new Hono();
+  let resolveCalled = false;
+
+  registerConsolePluginRoutes({
+    app,
+    readRequestedAgentId() {
+      return "";
+    },
+    async resolveSelectedAgent() {
+      resolveCalled = true;
+      return null;
+    },
+  });
+
+  const response = await app.request("/api/ui/plugins");
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.success, true);
+  assert.equal(body.runtimeConnected, false);
+  assert.equal(Array.isArray(body.plugins), true);
+  assert.equal(body.plugins.every((item) => item?.availability?.enabled === true), true);
+  assert.equal(body.plugins.every((item) => item?.availability?.available === true), true);
+  assert.equal(resolveCalled, false);
+});
+
+test("ui global plugin action toggles city lifecycle without agent", async () => {
+  const app = new Hono();
+
+  registerConsolePluginRoutes({
+    app,
+    readRequestedAgentId() {
+      return "";
+    },
+    async resolveSelectedAgent() {
+      return null;
+    },
+  });
+
+  const offResponse = await app.request("/api/ui/plugins/action", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      pluginName: "asr",
+      actionName: "off",
+    }),
+  });
+  const offBody = await offResponse.json();
+  assert.equal(offResponse.status, 200);
+  assert.equal(offBody.success, true);
+
+  const listResponse = await app.request("/api/ui/plugins");
+  const listBody = await listResponse.json();
+  const asrItem = listBody.plugins.find((item) => item?.name === "asr");
+  assert.equal(asrItem?.availability?.enabled, false);
+
+  const onResponse = await app.request("/api/ui/plugins/action", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      pluginName: "asr",
+      actionName: "on",
+    }),
+  });
+  const onBody = await onResponse.json();
+  assert.equal(onResponse.status, 200);
+  assert.equal(onBody.success, true);
 });

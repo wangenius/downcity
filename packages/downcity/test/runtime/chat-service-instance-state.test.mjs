@@ -71,22 +71,30 @@ function createRuntimeStub(rootPath) {
     env: {},
     systems: [],
     session: {
-      async run() {
+      get(sessionId) {
         return {
-          success: true,
+          sessionId,
+          async run() {
+            return {
+              success: true,
+            };
+          },
+          async appendUserMessage() {},
+          async appendAssistantMessage() {},
+          afterSessionUpdatedAsync() {
+            return Promise.resolve();
+          },
+          clearExecutor() {},
+          getExecutor() {
+            return null;
+          },
+          getHistoryComposer() {
+            return null;
+          },
+          isExecuting() {
+            return false;
+          },
         };
-      },
-      async appendUserMessage() {},
-      async appendAssistantMessage() {},
-      afterSessionUpdatedAsync() {
-        return Promise.resolve();
-      },
-      clearRuntime() {},
-      getRuntime() {
-        return null;
-      },
-      getPersistor() {
-        return null;
       },
       model: null,
     },

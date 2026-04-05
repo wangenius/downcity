@@ -55,20 +55,20 @@ flowchart LR
   end
 
   subgraph Agent["Agent Runtime"]
-    A1["AgentState"]
-    A2["ExecutionContext"]
+    A1["AgentRuntime"]
+    A2["AgentContext"]
     A3["Services"]
     A4["PluginRegistry"]
     A5["HTTP Server"]
   end
 
   subgraph Session["Session Axis"]
-    S1["SessionStore"]
-    S2["SessionRuntimeStore"]
-    S3["SessionRuntime"]
-    S4["SessionCore"]
-    S5["Persistor / messages.jsonl"]
-    S6["RequestContext"]
+    S1["SessionFacade"]
+    S2["SessionExecutorRegistry"]
+    S3["LocalSessionExecutor"]
+    S4["SessionEngine"]
+    S5["SessionHistoryStore / messages.jsonl"]
+    S6["SessionRunScope"]
   end
 
   Console --> Agent
@@ -104,7 +104,7 @@ flowchart LR
 
 它不负责：
 
-- 持有某个项目的 `SessionStore`
+- 持有某个项目的 `SessionFacade`
 - 持有某个 session 的消息事实源
 - 直接运行某个 session 的模型推理
 
@@ -116,8 +116,8 @@ flowchart LR
 
 - 加载当前项目的 `downcity.json`
 - 加载 env 和 system prompts
-- 初始化 `AgentState`
-- 创建 `SessionStore`
+- 初始化 `AgentRuntime`
+- 创建 `SessionFacade`
 - 创建 service 用的 model
 - 注册 plugins
 - 创建 per-agent services
@@ -129,12 +129,12 @@ flowchart LR
 当前代码里，session runtime 更准确地指：
 
 - 以 `sessionId` 为键
-- 以 `SessionStore` 为入口
-- 由 `SessionRuntimeStore / SessionRuntime / SessionCore / Persistor / RequestContext / Model` 共同组成的一组执行机制
+- 以 `SessionFacade` 为入口
+- 由 `SessionExecutorRegistry / LocalSessionExecutor / SessionEngine / SessionHistoryStore / SessionRunScope / Model` 共同组成的一组执行机制
 
 所以后面讨论 session runtime 时，更准确的说法应该是：
 
-- `SessionStore` 及其下游执行链
+- `SessionFacade` 及其下游执行链
 
 ## 启动链路：console 和 session 怎么串起来
 
@@ -166,11 +166,11 @@ flowchart LR
 
 在 agent 进程内部，会做这些事：
 
-- 创建 `AgentState`
+- 创建 `AgentRuntime`
 - 创建 model
-- 创建 `SessionRuntimeStore`
-- 创建 `SessionStore`
-- 绑定 tools、persistor、prompt system
+- 创建 `SessionExecutorRegistry`
+- 创建 `SessionFacade`
+- 绑定 tools、history store、prompt system
 - 创建 services 与 plugins
 
 直到这一步完成之后，当前项目才真正拥有可执行的 session runtime。
@@ -184,10 +184,10 @@ flowchart TD
   D --> E["检查项目文件和模型绑定"]
   E --> F["拉起 agent daemon 或 foreground process"]
   F --> G["agent runtime 加载 config env systems"]
-  G --> H["初始化 AgentState"]
+  G --> H["初始化 AgentRuntime"]
   H --> I["创建 model"]
-  I --> J["创建 SessionRuntimeStore"]
-  J --> K["创建 SessionStore"]
+  I --> J["创建 SessionExecutorRegistry"]
+  J --> K["创建 SessionFacade"]
   K --> L["创建 services / plugins"]
   L --> M["services 围绕 session 开始工作"]
 ```
@@ -207,8 +207,8 @@ flowchart TD
 ```mermaid
 flowchart LR
   C["Console Runtime"] --> D["Agent Runtime"]
-  D --> A["AgentState"]
-  A --> S["SessionStore"]
+  D --> A["AgentRuntime"]
+  A --> S["SessionFacade"]
   S --> R["many sessionId runtimes"]
 ```
 
@@ -235,5 +235,5 @@ console 不拥有 session，但它并不是完全看不见 session。
 ## 一句话总结
 
 ```text
-console runtime 负责控制和观测 agent，agent runtime 用 AgentState 持有 SessionStore，session runtime 则是 agent 内部围绕 sessionId 组织起来的执行主轴。
+console runtime 负责控制和观测 agent，agent runtime 用 AgentRuntime 持有 SessionFacade，session runtime 则是 agent 内部围绕 sessionId 组织起来的执行主轴。
 ```

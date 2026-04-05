@@ -17,7 +17,13 @@ function buildRuntime(rootPath) {
   return {
     rootPath,
     env: {},
-    config: {},
+    config: {
+      context: {
+        memory: {
+          enabled: false,
+        },
+      },
+    },
     logger: {
       warn() {},
       info() {},

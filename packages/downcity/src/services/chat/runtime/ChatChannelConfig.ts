@@ -10,7 +10,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonObject, JsonValue } from "@/shared/types/Json.js";
-import type { ExecutionContext } from "@/shared/types/ExecutionContext.js";
+import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { StoredChannelAccount } from "@/shared/types/Store.js";
 import type {
   ChatChannelName,
@@ -41,7 +41,7 @@ function toJsonObject(input: unknown): JsonObject {
  * - 字段命名尽量贴近 `downcity.json`，便于前端直接映射编辑。
  */
 export function buildChatChannelConfigSummary(
-  context: ExecutionContext,
+  context: AgentContext,
   channel: ChatChannelName,
   accountInput?: StoredChannelAccount | null,
 ): Record<string, string | number | boolean | null> {
@@ -78,7 +78,7 @@ export function buildChatChannelConfigSummary(
  */
 export function getChatChannelStatus(
   state: ChatChannelState,
-  context: ExecutionContext,
+  context: AgentContext,
   channel: ChatChannelName,
 ): ChatChannelStateSnapshot {
   const channels = context.config.services?.chat?.channels || {};
@@ -86,7 +86,7 @@ export function getChatChannelStatus(
   const channelAccount = resolveChannelAccount(context, channel);
   const configured = isChannelAccountConfigured(channel, channelAccount);
 
-  const runtime = getChatChannelBot(state, channel)?.getRuntimeStatus();
+  const runtime = getChatChannelBot(state, channel)?.getExecutorStatus();
   const linkState = !enabled
     ? "disconnected"
     : !configured
@@ -117,7 +117,7 @@ export function getChatChannelStatus(
  * 更新内存配置与 downcity.json 中的 channel enabled 状态。
  */
 export async function setChatChannelEnabled(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   channel: ChatChannelName;
   enabled: boolean;
 }): Promise<void> {
@@ -274,7 +274,7 @@ function applyChannelPatch(
  * 更新单个 channel 配置（内存 + downcity.json）。
  */
 export async function setChatChannelConfig(params: {
-  context: ExecutionContext;
+  context: AgentContext;
   channel: ChatChannelName;
   patch: Record<string, string | number | boolean | null>;
 }): Promise<void> {

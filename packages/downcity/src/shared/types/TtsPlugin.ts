@@ -18,10 +18,6 @@ export interface TtsPluginConfig {
    */
   [key: string]: JsonValue | undefined;
   /**
-   * 是否启用 TTS Plugin。
-   */
-  enabled?: boolean;
-  /**
    * 语音合成 provider 类型。
    *
    * 说明（中文）

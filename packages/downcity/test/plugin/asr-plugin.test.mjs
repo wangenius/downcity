@@ -17,6 +17,8 @@ import { asrPlugin } from "../../bin/plugins/asr/Plugin.js";
 import { PLUGINS } from "../../bin/main/plugin/Plugins.js";
 import { registerAllPluginsForCli } from "../../bin/main/plugin/PluginCommand.js";
 
+process.env.DC_CONSOLE_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-test-console-asr-"));
+
 function createLogger() {
   return {
     info() {},
@@ -135,7 +137,6 @@ test("asr plugin configure action writes plugin config into plugins.asr", async 
   const result = await asrPlugin.actions.configure.execute({
     context: runtime,
     payload: {
-      enabled: true,
       injectPrompt: false,
     },
     pluginName: "asr",
@@ -143,7 +144,7 @@ test("asr plugin configure action writes plugin config into plugins.asr", async 
   });
 
   assert.equal(result.success, true);
-  assert.equal(runtime.config.plugins.asr.enabled, true);
+  assert.equal("enabled" in runtime.config.plugins.asr, false);
   assert.equal(runtime.config.plugins.asr.injectPrompt, false);
   assert.equal(runtime.config.plugins.voice, undefined);
 });
@@ -153,9 +154,7 @@ test("asr plugin status action returns plugin and transcriber snapshots", async 
 
   await asrPlugin.actions.configure.execute({
     context: runtime,
-    payload: {
-      enabled: true,
-    },
+    payload: {},
     pluginName: "asr",
     actionName: "configure",
   });
@@ -168,7 +167,7 @@ test("asr plugin status action returns plugin and transcriber snapshots", async 
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.data.plugin.enabled, true);
+  assert.equal("enabled" in result.data.plugin, false);
   assert.equal(result.data.transcriber.provider, "command");
 });
 

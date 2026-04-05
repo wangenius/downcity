@@ -17,10 +17,6 @@ export interface VoicePluginConfig {
    */
   [key: string]: JsonValue | undefined;
   /**
-   * 是否启用 ASR Plugin。
-   */
-  enabled?: boolean;
-  /**
    * 是否把转写结果注入 system/prompt 行为链。
    */
   injectPrompt?: boolean;

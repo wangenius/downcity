@@ -40,6 +40,17 @@ function createHistoryComposerStub() {
   };
 }
 
+function createDeferred() {
+  let resolve;
+  const promise = new Promise((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return {
+    promise,
+    resolve,
+  };
+}
+
 test("Session tracks execution state and persists messages through the single instance", async () => {
   const afterUpdates = [];
   const historyComposer = createHistoryComposerStub();
@@ -135,8 +146,53 @@ test("Session forwards top-level step callbacks to the runtime scope", async () 
   assert.equal(typeof receivedSteps[0], "object");
 });
 
-test("ChatSession keeps the injected composer instance and still uses standard run", async () => {
+test("Session rejects concurrent run attempts on the same instance", async () => {
+  const historyComposer = createHistoryComposerStub();
+  const runDeferred = createDeferred();
+
+  const session = new Session({
+    sessionId: "chat-1",
+    historyComposer,
+    createExecutor() {
+      return {
+        async run() {
+          await runDeferred.promise;
+          return {
+            success: true,
+            assistantMessage: {
+              role: "assistant",
+              text: "done",
+              metadata: {
+                v: 1,
+                ts: Date.now(),
+                sessionId: "chat-1",
+              },
+            },
+          };
+        },
+      };
+    },
+  });
+
+  const firstRun = session.run({
+    query: "run once",
+  });
+
+  await assert.rejects(
+    () =>
+      session.run({
+        query: "run twice",
+      }),
+    /Session\.run does not support concurrent execution/,
+  );
+
+  runDeferred.resolve();
+  await firstRun;
+});
+
+test("ChatSession keeps the injected composer instance and forwards standard run callbacks", async () => {
   const receivedSteps = [];
+  const mergedMessages = [];
   const historyComposer = createHistoryComposerStub();
   const injectedComposer = {
     name: "chat_execution_composer",
@@ -150,6 +206,10 @@ test("ChatSession keeps the injected composer instance and still uses standard r
       assert.equal(executionComposer, injectedComposer);
       return {
         async run() {
+          const onStepCallback = getSessionRunScope()?.onStepCallback;
+          if (typeof onStepCallback === "function") {
+            mergedMessages.push(...(await onStepCallback()));
+          }
           const callback = getSessionRunScope()?.onAssistantStepCallback;
           if (typeof callback === "function") {
             await callback({
@@ -177,10 +237,25 @@ test("ChatSession keeps the injected composer instance and still uses standard r
   assert.equal(session.executionComposer, injectedComposer);
   await session.run({
     query: "run once",
+    async onStepCallback() {
+      return [
+        {
+          role: "user",
+          parts: [{ type: "text", text: "queued-step-text" }],
+          metadata: {
+            v: 1,
+            ts: Date.now(),
+            sessionId: "chat-1",
+          },
+        },
+      ];
+    },
     async onAssistantStepCallback(step) {
       receivedSteps.push(step);
     },
   });
 
   assert.equal(typeof receivedSteps[0], "object");
+  assert.equal(mergedMessages.length, 1);
+  assert.equal(mergedMessages[0].parts[0].text, "queued-step-text");
 });

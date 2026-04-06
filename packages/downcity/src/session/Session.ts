@@ -149,6 +149,11 @@ export class Session {
     onStepCallback?: SessionRunScope["onStepCallback"];
     onAssistantStepCallback?: SessionRunScope["onAssistantStepCallback"];
   }): Promise<SessionRunResult> {
+    if (this.executing) {
+      // 关键点（中文）：同一个 Session 实例只允许一个活跃 run，
+      // 否则 step 回调、scope 与执行器状态都会互相污染。
+      throw new Error("Session.run does not support concurrent execution");
+    }
     const query = String(params.query || "").trim();
     const sessionRunScope: Omit<SessionRunScope, "sessionId"> = {
       ...(typeof params.onStepCallback === "function"
@@ -162,7 +167,7 @@ export class Session {
     const providedOnAssistantStepCallback =
       sessionRunScope.onAssistantStepCallback;
 
-      const wrappedOnAssistantStepCallback = async (step: {
+    const wrappedOnAssistantStepCallback = async (step: {
       text: string;
       stepIndex: number;
       stepResult?: unknown;

@@ -115,6 +115,7 @@ export class ChatSession extends Session {
     try {
       return await super.run({
         query: params.query,
+        onStepCallback: params.onStepCallback,
         onAssistantStepCallback: this.forwardAssistantStep,
       });
     } finally {

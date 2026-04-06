@@ -75,6 +75,8 @@ Start the agent (default: background daemon):
 city agent start
 ```
 
+If you run this outside an initialized agent directory, Downcity can let you pick from registered agents interactively.
+
 Use foreground mode when you want logs in the current terminal:
 
 ```bash
@@ -84,8 +86,9 @@ city agent start --foreground
 ## 7. Verify agent state
 
 ```bash
+city agent list
 city agent status
-city agents
+city agent list --running
 ```
 
 Notes:

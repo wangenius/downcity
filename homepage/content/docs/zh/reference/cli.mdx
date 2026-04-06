@@ -20,11 +20,11 @@ CLI 文档按“单命令页面 + 命令组”组织。
   - [`city stop`](/zh/docs/commands/stop)
   - [`city restart`](/zh/docs/commands/restart)
   - [`city status`](/zh/docs/commands/status)
-  - [`city agents`](/zh/docs/commands/agents)
 - 固定模块命令：
   - [`city console`](/zh/docs/commands/console/console)
   - [`city agent`](/zh/docs/commands/agent/agent)
   - [`city agent create`](/zh/docs/commands/agent/create)
+  - [`city agent list`](/zh/docs/commands/agent/list)
   - [`city config`](/zh/docs/commands/config)
   - [`city model`](/zh/docs/commands/model)
   - [`city keys`](/zh/docs/commands/keys)
@@ -47,10 +47,13 @@ CLI 文档按“单命令页面 + 命令组”组织。
 - `city stop`：先停止 Console，再停止 city runtime 与托管 agent
 - `city restart`：重启 city runtime，恢复之前运行中的 agent，再重启 Console
 - `city agent create`：初始化项目运行文件
+- `city agent list`：查看已登记 agent，也可加 `--running` 只看正在运行的项目
 - `city agent start`：启动项目 agent daemon
 - `city console`：管理 Console 模块本身
-- `city service ...`：运维核心 service 域与工作流
-- `city plugin ...`：运维 plugin 的 action 与状态
+- `city service ...`：查看静态 service catalog，或使用高级定向 service 控制
+- `city plugin ...`：查看静态 plugin catalog，或使用高级定向 plugin action 路由
+- `city chat/task/memory ...`：日常面向 agent 的 service 运行态命令
+- `city web/skill/asr/tts ...`：日常面向 agent 的 plugin 命令
 - `city web ...`：运维内置 web plugin
 - `city asr ...`：运维内置 asr plugin
 - `city tts ...`：运维内置 tts plugin

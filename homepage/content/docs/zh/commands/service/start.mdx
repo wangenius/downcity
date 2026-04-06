@@ -1,11 +1,13 @@
 ---
 title: city service start
-description: 启动单个 service
+description: 面向指定 agent 目标的高级 service 启动命令
 ---
 
 # `city service start`
 
-启动目标 agent 下的指定 service。
+为指定 agent 目标启动某个 service。
+
+日常使用更推荐直接走具体命令根，例如 `city memory start` 或 `city task start`。
 
 ## 用法
 
@@ -17,6 +19,7 @@ city service start <serviceName> [--agent <name> | --path <path>] [--host <host>
 
 ```bash
 city service start task --agent my-agent
+city memory start --path /abs/path/to/agent
 ```
 
 ## 相关命令
@@ -40,6 +43,6 @@ $ city service start task
 $ city service start task --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"city agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city agent list\" to inspect names."
 }
 ```

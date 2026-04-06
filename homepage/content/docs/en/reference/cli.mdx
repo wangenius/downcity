@@ -20,11 +20,11 @@ CLI docs are organized by command pages and command groups.
   - [`city stop`](/en/docs/commands/stop)
   - [`city restart`](/en/docs/commands/restart)
   - [`city status`](/en/docs/commands/status)
-  - [`city agents`](/en/docs/commands/agents)
 - Fixed module commands:
   - [`city console`](/en/docs/commands/console/console)
   - [`city agent`](/en/docs/commands/agent/agent)
   - [`city agent create`](/en/docs/commands/agent/create)
+  - [`city agent list`](/en/docs/commands/agent/list)
   - [`city config`](/en/docs/commands/config)
   - [`city model`](/en/docs/commands/model)
   - [`city keys`](/en/docs/commands/keys)
@@ -47,10 +47,13 @@ CLI docs are organized by command pages and command groups.
 - `city stop`: stop Console, then stop city runtime and managed agents
 - `city restart`: restart city runtime, restore managed agents, then restart Console
 - `city agent create`: initialize project runtime files
+- `city agent list`: inspect registered agents, or use `--running` for active ones only
 - `city agent start`: start project agent daemon
 - `city console`: manage the Console module itself
-- `city service ...`: operate service domains and workflows
-- `city plugin ...`: operate plugin actions and status
+- `city service ...`: inspect the static service catalog, or use advanced targeted service control
+- `city plugin ...`: inspect the static plugin catalog, or use advanced targeted plugin action routing
+- `city chat/task/memory ...`: normal agent-facing service runtime commands
+- `city web/skill/asr/tts ...`: normal agent-facing plugin commands
 - `city web ...`: operate the built-in web plugin
 - `city asr ...`: operate the built-in ASR plugin
 - `city tts ...`: operate the built-in TTS plugin

@@ -1,18 +1,24 @@
 ---
 title: city service
-description: 管理 service 状态与 command 转发
+description: 查看全局 service catalog，并使用高级 service 定向命令
 ---
 
 # `city service`
 
-管理 service 运行状态，并转发 service command。
+`city service` 是 service 的 console 级 catalog 入口。
+
+适合用来：
+
+- 查看当前注册了哪些 service
+- 查看某个 service 的静态能力面
+- 在少数高级场景下，对指定 agent 做 lifecycle 或 command 转发
 
 ## 命令层级
 
 - 一级命令：`city service`
-- 动作命令：`city chat` / `city task` / `city memory`
+- 具体 service 命令：`city chat` / `city task` / `city memory`
 
-上述动作命令都属于 service 体系，不是一级命令。
+这些具体命令才是日常面向 agent 的运行态入口。
 
 ## 用法
 
@@ -62,22 +68,22 @@ city service <subcommand>
 
 ## 说明
 
-`city service` 必须绑定 agent 项目路径。
+- `city service list` 和 `city service status` 是静态的 console 级 catalog 视图。
+- 它们不依赖 `--path`、`--agent`，也不要求 agent 已运行。
+- `city service start/stop/restart/command` 才是面向具体 agent 的高级定向命令。
+- 日常运行态操作，更推荐直接使用具体命令根：
+  - `city chat ...`
+  - `city task ...`
+  - `city memory ...`
+- 如果你需要在 `city service start/stop/restart/command` 中显式指定目标，再传 `--agent <name>` 或 `--path <path>`。
 
-- 可显式传 `--path <agentProjectPath>`
-- 或传 `--agent <agentName>`，从 console registry 解析
-- 不传时默认使用当前目录 `.`
-- 解析后的路径必须已登记在 console registry
-- 该路径必须包含 `downcity.json` 与 `PROFILE.md`
-
-在 agent shell 内执行时，若未显式传 `--agent` 且 `--path` 使用默认值，会先使用注入的 `DC_AGENT_NAME` 走 registry 解析；默认 `.` 也会优先解析为注入的 `DC_AGENT_PATH`。
-
-若同时传入，`--agent` 优先。
-
-需要先启动 agent：
+典型流程：
 
 ```bash
-city agent start
+city service list
+city service status memory
+city memory status
+city memory restart
 ```
 
 ## 相关动作命令
@@ -92,14 +98,18 @@ city agent start
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city service
-city version: 1.0.0
-Usage: city service [options] [command]
-Commands:
-  list
-  status <serviceName>
-  start <serviceName>
-  stop <serviceName>
-  restart <serviceName>
-  command <serviceName> <command>
+$ city service list --json
+{
+  "success": true,
+  "count": 4,
+  "services": [
+    {
+      "name": "chat",
+      "scope": "agent",
+      "supportsLifecycle": true,
+      "supportsCommand": true,
+      "actions": ["close", "configuration", "configure", "context", "delete", "history", "info", "list", "open", "react", "reconnect", "send", "status", "test"]
+    }
+  ]
+}
 ```

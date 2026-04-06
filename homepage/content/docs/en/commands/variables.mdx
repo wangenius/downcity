@@ -23,22 +23,25 @@ Commands like `city chat`, `city task`, `city memory`, `city skill`, `city asr`,
 | Command Group | Required Environment | Optional Environment | Notes |
 | --- | --- | --- | --- |
 | `city init` | Writable `~/.downcity/` | Pre-set `LLM_API_KEY` (can be used as default init input) | Writes `~/.downcity/downcity.db` (sensitive fields encrypted) |
-| `city start/stop/restart/status/agents` | Writable `~/.downcity/console/` | None | Manages global console process and registry |
+| `city start/stop/restart/status` | Writable `~/.downcity/console/` | None | Manages global console process and registry |
 | `city console` | Console is running; browser can reach UI port | `--host`, `--port` | Single UI instance can switch across multiple running agents |
 | `city agent create` | Writable target directory | None | Generates `downcity.json`, `PROFILE.md`, `.downcity/` |
 | `city agent start` | Console is running; project has `downcity.json` + `PROFILE.md` | `--host` | Agent port is always allocated by console and then registered into console registry |
 | `city agent restart/status/doctor` | Target agent is registered in console registry | None | Operates through registry resolution, not arbitrary path only |
 | `city config ...` | Valid `downcity.json` exists under target path | `--path` | Reads/writes project config; does not call agent API |
 | `city config alias` | Writable `~/.zshrc` or `~/.bashrc` | `--shell zsh|bash` | Only writes shell alias |
-| `city service ...` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Uses local IPC by default; `--agent` overrides `--path` |
-| `city plugin ...` | Project has `downcity.json` | `--agent`, `--path` | Executes locally against the selected project; `--agent` overrides `--path` |
+| `city service list/status` | None | `--json` | Static console-level service catalog; does not resolve any agent |
+| `city service start/stop/restart/command` | Target agent is running; project is registered; project has `downcity.json` + `PROFILE.md` | `--agent`, `--path`, `--host`, `--port` | Advanced targeting form; prefer `city <service> ...` for daily usage |
+| `city plugin list/status` | None | `--json` | Static console-level plugin catalog; does not resolve any agent |
+| `city plugin action ...` | Project has `downcity.json` | `--agent`, `--path` | Advanced targeting form; prefer `city <plugin> ...` for daily usage |
 | `city <service> <action>` (e.g. `city chat ...`) | Target agent is running | `--path`, `--host`, `--port` | Forwarded through local IPC by default; explicit remote mode uses `/api/services/command` |
 | `city <plugin> <action>` (e.g. `city asr ...`) | Project has `downcity.json` | `--path` | Executes locally against the selected project |
 
 Additional notes:
 
-- Local `city service`, `city task`, `city chat`, and similar runtime commands use local IPC by default instead of HTTP.
-- Local `city plugin` and `city <plugin> <action>` commands read the selected project and execute directly in the CLI process.
+- `city service list/status` and `city plugin list/status` are static console catalog reads.
+- Local `city service start/stop/restart/command`, `city task`, `city chat`, and similar runtime commands use local IPC by default instead of HTTP.
+- Local `city plugin action` and `city <plugin> <action>` commands read the selected project and execute directly in the CLI process.
 - A call only enters remote HTTP mode when you explicitly pass `--host` or `--port`.
 - In remote HTTP mode, token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN` > local CLI auth state stored in console secure storage.
 - `sessionId` and `chatKey` are execution context, not authentication tokens.
@@ -153,7 +156,7 @@ For agent-internal remote HTTP calls, the first suspect is usually the `DC_AGENT
 
 ## 3) `city service` target agent resolution order
 
-For `city service list/status/start/stop/restart/command`:
+For `city service start/stop/restart/command`:
 
 1. explicit `--agent <name>` (highest priority)
 2. if `--agent` omitted and `--path` is default `.`, try `DC_AGENT_NAME` first
@@ -204,18 +207,19 @@ Normalization rule:
 
 ## 6) Recommended usage
 
-For multi-agent workflows, prefer explicit target:
+For multi-agent workflows, prefer explicit target on advanced commands:
 
 ```bash
-city service list --agent my-agent
+city service restart task --agent my-agent
 # or
-city service list --path /abs/path/to/agent
+city service restart task --path /abs/path/to/agent
 ```
 
-Inside agent shell, default form is usually enough:
+For catalog inspection, no target is required:
 
 ```bash
 city service list
+city plugin list
 ```
 
 ## Example Output (Based on Current Implementation)
@@ -223,9 +227,10 @@ city service list
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city service list --agent <agentName>
+$ city service list --json
 {
   "success": true,
+  "count": 4,
   "services": []
 }
 ```

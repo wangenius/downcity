@@ -1,53 +1,48 @@
 ---
 title: city service list
-description: List all service states for a target agent
+description: List the static global service catalog
 ---
 
 # `city service list`
 
-List states of all services under a target agent.
+List all registered services from the console-level catalog.
 
 ## Usage
 
 ```bash
-city service list [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service list [--json]
 ```
 
-## Key options
+## Output
 
-- `--agent <name>`: resolve target by agent name (highest priority)
-- `--path <path>`: resolve target by project path (default `.`)
-- `--host <host>` / `--port <port>`: override API endpoint resolution
-
-## Behavior
-
-- Target path must be registered in console registry.
-- When both are passed, `--agent` takes precedence over `--path`.
+- `name`: service id
+- `scope`: current scope, now `agent`
+- `supportsLifecycle`: whether the service exposes lifecycle control
+- `supportsCommand`: whether the service exposes actions or custom commands
+- `actions`: statically registered action names
 
 ## Related commands
 
 - [`city service status`](/en/docs/commands/service/status)
-- [`city service start`](/en/docs/commands/service/start)
+- [`city memory`](/en/docs/commands/service/memory)
 
 ## Example Output (Based on Current Implementation)
 
 The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
 
 ```text
-$ city service list --agent <agentName>
+$ city service list --json
 {
   "success": true,
+  "count": 4,
   "services": [
-    {"name": "chat", "state": "running"},
-    {"name": "task", "state": "running"}
+    {
+      "name": "chat",
+      "scope": "agent",
+      "supportsLifecycle": true,
+      "supportsCommand": true,
+      "actions": ["close", "configuration", "configure", "context", "delete", "history", "info", "list", "open", "react", "reconnect", "send", "status", "test"]
+    }
   ]
-}
-```
-
-```text
-$ city service list --agent missing-agent
-{
-  "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"city agents\" to inspect names."
 }
 ```

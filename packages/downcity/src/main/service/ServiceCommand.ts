@@ -13,9 +13,11 @@ import type { ServiceCommandScheduleInput } from "@/shared/types/ServiceSchedule
 import type { Service, ServiceAction } from "@/shared/types/Service.js";
 import { listRegisteredServices } from "@/main/service/ServiceClassRegistry.js";
 import type { ServiceCommandResponse } from "@/shared/types/Services.js";
+import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
 import { callAgentTransport, resolveAgentTransportErrorMessage } from "@/main/modules/rpc/Transport.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import { parsePortOption } from "@shared/utils/cli/Checker.js";
+import { runServiceControlCommand } from "@/main/modules/cli/ServiceCommandRemote.js";
 import { parseScheduledRunAtMsOrThrow } from "./schedule/Time.js";
 
 const CHAT_SERVICE_HELP_TEXT = [
@@ -319,11 +321,83 @@ function registerServiceActionCommand(params: {
   });
 }
 
+function hasServiceSubcommand(command: Command, name: string): boolean {
+  return command.commands.some((item) => item.name() === name);
+}
+
+function attachServiceLifecycleOptions(command: Command): Command {
+  return command
+    .option("--path <path>", "项目根目录（默认当前目录）", ".")
+    .option("--host <host>", "Server host（覆盖自动解析）")
+    .option("--port <port>", "Server port（覆盖自动解析）", parsePortOption)
+    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要；默认本地走 IPC）")
+    .option("--json [enabled]", "以 JSON 输出", true);
+}
+
+function registerServiceLifecycleCommands(params: {
+  program: Command;
+  service: Service;
+}): void {
+  if (!params.service.lifecycle?.start && !params.service.lifecycle?.stop) {
+    return;
+  }
+
+  const serviceCommand =
+    params.program.commands.find((item) => item.name() === params.service.name) ||
+    params.program
+      .command(params.service.name)
+      .description(`${params.service.name} service actions`)
+      .helpOption("--help", "display help for command");
+
+  const lifecycleCommands = [
+    {
+      name: "start",
+      description: `启动 ${params.service.name} service`,
+      action: "start" as const,
+    },
+    {
+      name: "stop",
+      description: `停止 ${params.service.name} service`,
+      action: "stop" as const,
+    },
+    {
+      name: "restart",
+      description: `重启 ${params.service.name} service`,
+      action: "restart" as const,
+    },
+    {
+      name: "status",
+      description: `查看 ${params.service.name} service 运行状态`,
+      action: "status" as const,
+    },
+  ];
+
+  for (const item of lifecycleCommands) {
+    if (hasServiceSubcommand(serviceCommand, item.name)) {
+      continue;
+    }
+
+    attachServiceLifecycleOptions(
+      serviceCommand
+        .command(item.name)
+        .description(item.description)
+        .helpOption("--help", "display help for command"),
+    ).action(async (options: ServiceCliBaseOptions) => {
+      await runServiceControlCommand({
+        serviceName: params.service.name,
+        action: item.action,
+        options,
+      });
+    });
+  }
+}
+
 /**
  * 注册所有 service actions 的 CLI 命令。
  */
 export function registerAllServicesForCli(program: Command): void {
-  for (const service of listRegisteredServices()) {
+  const services = listRegisteredServices();
+  for (const service of services) {
     for (const [actionName, action] of Object.entries(service.actions)) {
       registerServiceActionCommand({
         program,
@@ -332,5 +406,11 @@ export function registerAllServicesForCli(program: Command): void {
         action,
       });
     }
+  }
+  for (const service of services) {
+    registerServiceLifecycleCommands({
+      program,
+      service,
+    });
   }
 }

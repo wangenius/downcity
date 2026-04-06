@@ -1,53 +1,48 @@
 ---
 title: city service list
-description: 列出当前 agent 的全部 service 运行状态
+description: 列出全局静态 service catalog
 ---
 
 # `city service list`
 
-列出目标 agent 下所有 service 的状态。
+列出 console 级已注册 service 的静态目录。
 
 ## 用法
 
 ```bash
-city service list [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service list [--json]
 ```
 
-## 关键参数
+## 输出字段
 
-- `--agent <name>`：按 agent 名称解析目标（优先级最高）
-- `--path <path>`：按项目路径解析目标（默认 `.`）
-- `--host <host>` / `--port <port>`：覆盖 API 地址解析
-
-## 行为说明
-
-- 目标路径必须存在于 console registry。
-- 同时传 `--agent` 和 `--path` 时，优先使用 `--agent`。
+- `name`：service 标识
+- `scope`：当前作用域，目前为 `agent`
+- `supportsLifecycle`：是否支持 lifecycle 控制
+- `supportsCommand`：是否暴露 action 或自定义 command
+- `actions`：静态注册的 action 名称
 
 ## 相关命令
 
 - [`city service status`](/zh/docs/commands/service/status)
-- [`city service start`](/zh/docs/commands/service/start)
+- [`city memory`](/zh/docs/commands/service/memory)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city service list --agent <agentName>
+$ city service list --json
 {
   "success": true,
+  "count": 4,
   "services": [
-    {"name": "chat", "state": "running"},
-    {"name": "task", "state": "running"}
+    {
+      "name": "chat",
+      "scope": "agent",
+      "supportsLifecycle": true,
+      "supportsCommand": true,
+      "actions": ["close", "configuration", "configure", "context", "delete", "history", "info", "list", "open", "react", "reconnect", "send", "status", "test"]
+    }
   ]
-}
-```
-
-```text
-$ city service list --agent missing-agent
-{
-  "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"city agents\" to inspect names."
 }
 ```

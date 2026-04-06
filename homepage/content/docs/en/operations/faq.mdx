@@ -31,8 +31,10 @@ city config get model.primary
 ## How can I check agent state?
 
 ```bash
+city agent list --running
 city service list
 city plugin list
+city memory status
 ```
 
 ## I see `deprecated eslint@8` and deprecated subdependencies during install. Is this critical?

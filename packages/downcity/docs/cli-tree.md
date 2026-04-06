@@ -24,15 +24,13 @@
 | `stop` | 固定注册 | 停止 Console、city runtime 与受管 agent | [`IndexConsoleCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexConsoleCommand.ts) |
 | `restart` | 固定注册 | 重启 city runtime 并恢复受管 agent，再拉起 Console | [`IndexConsoleCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexConsoleCommand.ts) |
 | `status` | 固定注册 | 查看 city runtime / Console / managed agents 状态 | [`IndexConsoleCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexConsoleCommand.ts) |
-| `agents` | 固定注册 | 查看当前托管的 agent daemon 列表 | [`IndexConsoleCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexConsoleCommand.ts) |
-| `run` | 固定注册 | 内部命令，运行 city runtime 常驻进程 | [`IndexConsoleCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexConsoleCommand.ts) |
 | `console` | 固定注册 | 管理 Console 模块进程 | [`IndexConsoleCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexConsoleCommand.ts) |
 | `config` | 固定注册 | 管理项目 `downcity.json` 和 alias | [`Config.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Config.ts) |
 | `model` | 固定注册 | 管理 city 全局模型池 | [`Model.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Model.ts) |
 | `agent` | 固定注册 | 管理 Agent 项目和 agent daemon | [`IndexAgentCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexAgentCommand.ts) |
-| `keys` | 固定注册 | 列出 Console Env 中已配置的 key 名称 | [`Keys.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Keys.ts) |
-| `service` | 固定注册 | Service 管理命令 | [`Services.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Services.ts) |
-| `plugin` | 固定注册 | Plugin 管理命令 | [`Plugins.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Plugins.ts) |
+| `keys` | 固定注册 | 管理 Console Env key（list/set/delete） | [`Keys.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Keys.ts) |
+| `service` | 固定注册 | 查看静态 service catalog，并提供高级 agent 定向入口 | [`Services.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Services.ts) |
+| `plugin` | 固定注册 | 查看静态 plugin catalog，并提供高级 action 入口 | [`Plugins.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Plugins.ts) |
 | `chat` | 动态注册 | chat service actions | [`ServiceCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/service/ServiceCommand.ts) |
 | `task` | 动态注册 | task service actions | [`ServiceCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/service/ServiceCommand.ts) |
 | `memory` | 动态注册 | memory service actions | [`ServiceCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/service/ServiceCommand.ts) |
@@ -61,8 +59,6 @@ city start [-a|--all|--console]
 city stop
 city restart
 city status
-city agents [--json]
-city run
 city console [start|stop|restart|status|run]
 ```
 
@@ -71,13 +67,14 @@ city console [start|stop|restart|status|run]
 - `city start` 只启动 city runtime
 - `city start -a` / `city start --console` 同时启动 city runtime 和 Console
 - `city console start` 只启动 Console，但要求 city runtime 已经启动
-- `city run` 与 `city console run` 都是内部命令，不面向普通用户
+- `city run` 与 `city console run` 都是内部命令，不在公开 help 中展示
 
 ### 3.2 agent
 
 来源：
 
 - 命令装配：[`IndexAgentCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexAgentCommand.ts)
+- 选择与列表：[`AgentSelection.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/AgentSelection.ts)
 - 项目初始化：[`Init.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Init.ts)
 - daemon 启动：[`Start.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Start.ts)
 - 前台运行：[`Run.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Run.ts)
@@ -88,6 +85,7 @@ city console [start|stop|restart|status|run]
 
 ```text
 city agent create [path]
+city agent list [--running] [--json]
 city agent start [path] [--foreground]
 city agent status [path]
 city agent doctor [path] [--fix]
@@ -143,7 +141,9 @@ city model test
 子树：
 
 ```text
-city keys [--scope global|agent|all] [--agent <agentId>] [--json]
+city keys list [--scope global|agent|all] [--agent <agentId>] [--json]
+city keys set <key> <value> [--scope global|agent] [--agent <agentId>] [--description <text>] [--json]
+city keys delete <key> [--scope global|agent] [--agent <agentId>] [--json]
 ```
 
 ### 3.6 service
@@ -166,6 +166,13 @@ city service command <serviceName> <command>
 city service schedule ...
 ```
 
+说明：
+
+- `city service list/status` 是 console 级静态 catalog 视图
+- 不依赖 agent、`--path`、`--agent`
+- `city service start/stop/restart/command` 是高级定向入口
+- 日常运行态操作更推荐直接使用 `city chat` / `city task` / `city memory`
+
 ### 3.7 plugin
 
 来源：
@@ -179,6 +186,13 @@ city plugin list
 city plugin status <pluginName>
 city plugin action <pluginName> <actionName>
 ```
+
+说明：
+
+- `city plugin list/status` 是 console 级静态 catalog 视图
+- 不依赖 agent、`--path`、`--agent`
+- `city plugin action` 是高级入口，真正执行时依赖具体 agent 项目
+- 日常 plugin 操作更推荐直接使用 `city web` / `city skill` / `city asr` / `city tts`
 
 ## 4. 动态注册命令树
 

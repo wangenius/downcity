@@ -1,11 +1,13 @@
 ---
 title: city service restart
-description: 重启单个 service
+description: 面向指定 agent 目标的高级 service 重启命令
 ---
 
 # `city service restart`
 
-重启目标 agent 下的指定 service。
+为指定 agent 目标重启某个 service。
+
+日常使用更推荐直接走具体命令根，例如 `city chat restart` 或 `city memory restart`。
 
 ## 用法
 
@@ -17,6 +19,7 @@ city service restart <serviceName> [--agent <name> | --path <path>] [--host <hos
 
 ```bash
 city service restart chat --agent my-agent
+city chat restart --path /abs/path/to/agent
 ```
 
 ## 相关命令

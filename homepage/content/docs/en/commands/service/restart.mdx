@@ -1,11 +1,13 @@
 ---
 title: city service restart
-description: Restart a single service
+description: Advanced command to restart a service for a specific agent target
 ---
 
 # `city service restart`
 
-Restart a single service under a target agent.
+Restart a service for a specific agent target.
+
+Prefer concrete roots like `city chat restart` or `city memory restart` for day-to-day use.
 
 ## Usage
 
@@ -17,6 +19,7 @@ city service restart <serviceName> [--agent <name> | --path <path>] [--host <hos
 
 ```bash
 city service restart chat --agent my-agent
+city chat restart --path /abs/path/to/agent
 ```
 
 ## Related commands

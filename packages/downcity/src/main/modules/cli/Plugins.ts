@@ -2,21 +2,20 @@
  * `city plugin` 命令组。
  *
  * 关键点（中文）
- * - 为新的插件体系提供通用管理入口。
- * - 当前阶段支持 list / status / action 三类本地命令。
+ * - `city plugin` 提供 console 侧静态 plugin catalog 入口。
+ * - `list/status` 不依赖 agent，只展示内建 plugin 定义与 city 配置事实。
+ * - `action` 仍保留为高级入口，真正执行时依赖具体 agent 项目。
  */
 
 import path from "node:path";
 import fs from "node:fs";
 import type { Command } from "commander";
 import {
+  buildStaticPluginAvailability,
   findStaticPluginView,
+  listStaticPluginViews,
 } from "@/main/plugin/Catalog.js";
-import {
-  getLocalPluginAvailability,
-  listLocalPlugins,
-  runLocalPluginAction,
-} from "@/main/plugin/LocalExecution.js";
+import { runLocalPluginAction } from "@/main/plugin/LocalExecution.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import { getDowncityJsonPath } from "@/main/city/env/Paths.js";
@@ -76,7 +75,7 @@ async function resolveProjectRootByAgentName(agentName: string): Promise<{
 
   if (matchedRoots.length === 0) {
     return {
-      error: `Agent not found in console registry: ${agentName}. Run "city agents" to inspect names.`,
+      error: `Agent not found in console registry: ${agentName}. Run "city agent list" to inspect names.`,
     };
   }
   if (matchedRoots.length > 1) {
@@ -118,93 +117,48 @@ function parseCommandPayload(raw?: string): JsonValue | undefined {
   }
 }
 
-function printStaticPluginListFallback(params: {
-  projectRoot?: string;
-  asJson?: boolean;
-  title: string;
-  reason: string;
-}): void {
-  printResult({
-    asJson: params.asJson,
-    success: true,
-    title: params.title,
-    payload: {
-      plugins: [],
-      message: params.reason,
-    },
-  });
+function buildSafeStaticPluginAvailability(pluginName: string): {
+  enabled: boolean;
+  available: boolean;
+  reasons: string[];
+} {
+  try {
+    const availability = buildStaticPluginAvailability({
+      pluginName,
+    });
+    const normalizedReasons = availability.reasons.map((reason) => {
+      const text = String(reason || "");
+      if (
+        text.includes("readonly")
+        || text.includes("Static availability inspection failed")
+      ) {
+        return "Static catalog view only. Console plugin availability could not be resolved in the current environment.";
+      }
+      return text;
+    });
+    return {
+      ...availability,
+      reasons: normalizedReasons,
+    };
+  } catch (error) {
+    const message = String(error || "");
+    return {
+      enabled: false,
+      available: false,
+      reasons: [
+        message.includes("readonly")
+          ? "Static catalog view only. Console plugin config is not writable in the current environment."
+          : "Static catalog view only. Console plugin availability could not be resolved.",
+      ],
+    };
+  }
 }
 
-function printStaticPluginStatusFallback(params: {
-  pluginName: string;
-  projectRoot?: string;
-  asJson?: boolean;
-  title: string;
-  reason: string;
-}): void {
-  const plugin = findStaticPluginView(params.pluginName);
-  if (!plugin) {
-    printResult({
-      asJson: params.asJson,
-      success: false,
-      title: params.title,
-      payload: {
-        error: `Unknown plugin: ${params.pluginName}`,
-      },
-    });
-    return;
-  }
-
-  printResult({
-    asJson: params.asJson,
-    success: true,
-    title: params.title,
-      payload: {
-        plugin,
-        availability: {
-          enabled: false,
-          available: false,
-          reasons: [params.reason],
-        },
-        message: params.reason,
-      },
-    });
-}
-
-async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void> {
-  const resolved = await resolvePluginProjectRoot(options);
-  if (!resolved.projectRoot) {
-    printStaticPluginListFallback({
-      projectRoot: undefined,
-      asJson: options.json,
-      title: "plugins listed (static catalog)",
-      reason:
-        resolved.error ||
-        "Agent project path is not resolved. Showing console-side plugin catalog only.",
-    });
-    return;
-  }
-
-  const pathError = validatePluginProjectRoot(resolved.projectRoot);
-  if (pathError) {
-    printStaticPluginListFallback({
-      projectRoot: resolved.projectRoot,
-      asJson: options.json,
-      title: "plugins listed (static catalog)",
-      reason: `${pathError} Showing console-side plugin catalog only.`,
-    });
-    return;
-  }
-
-  const plugins = await Promise.all(
-    listLocalPlugins().map(async (plugin) => ({
-      ...plugin,
-      availability: await getLocalPluginAvailability(
-        resolved.projectRoot as string,
-        plugin.name,
-      ),
-    })),
-  );
+async function runPluginListCommand(options: { json?: boolean }): Promise<void> {
+  const plugins = listStaticPluginViews().map((plugin) => ({
+    ...plugin,
+    availability: buildSafeStaticPluginAvailability(plugin.name),
+  }));
   printResult({
     asJson: options.json,
     success: true,
@@ -217,34 +171,8 @@ async function runPluginListCommand(options: PluginCliBaseOptions): Promise<void
 
 async function runPluginAvailabilityCommand(params: {
   pluginName: string;
-  options: PluginCliBaseOptions;
+  options: { json?: boolean };
 }): Promise<void> {
-  const resolved = await resolvePluginProjectRoot(params.options);
-  if (!resolved.projectRoot) {
-    printStaticPluginStatusFallback({
-      pluginName: params.pluginName,
-      projectRoot: undefined,
-      asJson: params.options.json,
-      title: "plugin status (static catalog)",
-      reason:
-        resolved.error ||
-        "Agent project path is not resolved. Showing console-side plugin metadata only.",
-    });
-    return;
-  }
-
-  const pathError = validatePluginProjectRoot(resolved.projectRoot);
-  if (pathError) {
-    printStaticPluginStatusFallback({
-      pluginName: params.pluginName,
-      projectRoot: resolved.projectRoot,
-      asJson: params.options.json,
-      title: "plugin status (static catalog)",
-      reason: `${pathError} Showing console-side plugin metadata only.`,
-    });
-    return;
-  }
-
   const plugin = findStaticPluginView(params.pluginName);
   if (!plugin) {
     printResult({
@@ -258,10 +186,6 @@ async function runPluginAvailabilityCommand(params: {
     return;
   }
 
-  const availability = await getLocalPluginAvailability(
-    resolved.projectRoot,
-    params.pluginName,
-  );
   printResult({
     asJson: params.options.json,
     success: true,
@@ -269,7 +193,7 @@ async function runPluginAvailabilityCommand(params: {
     payload: {
       pluginName: params.pluginName,
       plugin,
-      availability,
+      availability: buildSafeStaticPluginAvailability(params.pluginName),
     },
   });
 }
@@ -333,26 +257,22 @@ async function runPluginActionCommand(params: {
 export function registerPluginsCommand(program: Command): void {
   const plugin = program
     .command("plugin")
-    .description("Plugin 管理命令")
+    .description("查看 plugin catalog，并提供高级 action 入口")
     .helpOption("--help", "display help for command");
 
   plugin
     .command("list")
-    .description("列出全部已注册 plugin")
-    .option("--path <path>", "agent 项目路径（默认当前目录）", ".")
-    .option("--agent <name>", "agent 名称（从 console registry 解析）")
+    .description("列出全部已注册 plugin 的静态信息")
     .option("--json [enabled]", "以 JSON 输出", true)
-    .action(async (opts: PluginCliBaseOptions) => {
+    .action(async (opts: { json?: boolean }) => {
       await runPluginListCommand(opts);
     });
 
   plugin
     .command("status <pluginName>")
-    .description("查看单个 plugin 可用性")
-    .option("--path <path>", "agent 项目路径（默认当前目录）", ".")
-    .option("--agent <name>", "agent 名称（从 console registry 解析）")
+    .description("查看单个 plugin 的静态信息")
     .option("--json [enabled]", "以 JSON 输出", true)
-    .action(async (pluginName: string, opts: PluginCliBaseOptions) => {
+    .action(async (pluginName: string, opts: { json?: boolean }) => {
       await runPluginAvailabilityCommand({
         pluginName,
         options: opts,

@@ -5,7 +5,7 @@ description: 使用 start/restart 管理当前目录或指定目录的 Agent 进
 
 # `city agent`
 
-管理 Agent 的启动和重启。
+管理 Agent 生命周期和 registry 相关操作。
 
 ## 命令层级
 
@@ -20,6 +20,7 @@ city agent <subcommand>
 ## 子命令
 
 - `create`：创建/初始化 agent 项目
+- `list`：列出已登记的 agent 项目
 - `start`：启动 agent
 - `status`：查看 agent 状态
 - `doctor`：诊断状态文件，并可修复僵尸 pid/meta
@@ -28,6 +29,7 @@ city agent <subcommand>
 ## 子命令文档
 
 - [`city agent create`](/zh/docs/commands/agent/create)
+- [`city agent list`](/zh/docs/commands/agent/list)
 - [`city agent start`](/zh/docs/commands/agent/start)
 - [`city agent status`](/zh/docs/commands/agent/status)
 - [`city agent restart`](/zh/docs/commands/agent/restart)
@@ -56,6 +58,7 @@ city version: 1.0.0
 Usage: city agent [options] [command]
 Commands:
   create [path]
+  list
   start [path]
   status [path]
   doctor [path]

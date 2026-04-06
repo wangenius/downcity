@@ -1,46 +1,44 @@
 ---
 title: city service status
-description: 查看单个 service 的运行状态
+description: 查看单个 service 的静态能力状态
 ---
 
 # `city service status`
 
-查看目标 agent 下某个 service 的状态。
+查看某个 service 在静态 catalog 中的能力信息。
 
 ## 用法
 
 ```bash
-city service status <serviceName> [--agent <name> | --path <path>] [--host <host>] [--port <port>]
+city service status <serviceName> [--json]
 ```
 
 ## 示例
 
 ```bash
-city service status chat --agent my-agent
-city service status memory --path /abs/path/to/agent
+city service status chat
+city service status memory --json
 ```
 
 ## 相关命令
 
 - [`city service list`](/zh/docs/commands/service/list)
-- [`city service restart`](/zh/docs/commands/service/restart)
+- [`city memory status`](/zh/docs/commands/service/memory)
 
 ## 示例输出（基于当前实现）
 
 以下示例直接对齐 `packages/downcity/src` 当前命令实现（含默认输出模式与字段结构），示例值使用占位符表示。
 
 ```text
-$ city service status task
+$ city service status task --json
 {
   "success": true,
-  "service": "task"
-}
-```
-
-```text
-$ city service status task --path /invalid/path
-{
-  "success": false,
-  "error": "Agent is not registered in console registry: /invalid/path. Run \"city agents\" to inspect registered agents."
+  "service": {
+    "name": "task",
+    "scope": "agent",
+    "supportsLifecycle": true,
+    "supportsCommand": true,
+    "actions": ["create", "delete", "disable", "enable", "list", "run", "status", "update"]
+  }
 }
 ```

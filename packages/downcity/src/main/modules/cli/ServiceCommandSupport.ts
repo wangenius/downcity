@@ -122,7 +122,7 @@ export async function resolveProjectRootByAgentName(agentName: string): Promise<
 
   if (matchedRoots.length === 0) {
     return {
-      error: `Agent not found in console registry: ${agentName}. Run "city agents" to inspect names.`,
+      error: `Agent not found in console registry: ${agentName}. Run "city agent list" to inspect names.`,
     };
   }
   if (matchedRoots.length > 1) {
@@ -170,7 +170,7 @@ export async function resolveServiceProjectRoot(options: ServiceCliBaseOptions):
     return {
       error:
         `Agent is not registered in console registry: ${projectRoot}. ` +
-        `Run "city agents" to inspect registered agents.`,
+        `Run "city agent list" to inspect registered agents.`,
     };
   }
   return { projectRoot };

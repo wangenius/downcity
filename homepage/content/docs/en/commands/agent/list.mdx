@@ -1,0 +1,41 @@
+---
+title: city agent list
+description: List agent projects registered in city
+---
+
+# `city agent list`
+
+List agent projects already registered in the city registry.
+
+## Usage
+
+```bash
+city agent list
+city agent list --running
+```
+
+## Behavior
+
+- Shows registered agent projects from the city registry.
+- `--running` filters the list to currently active agent daemons only.
+- Displays both running and stopped entries.
+- Helps you see which agents are available for interactive `city agent start`.
+
+## Related commands
+
+- [`city agent start`](/en/docs/commands/agent/start)
+- [`city agent status`](/en/docs/commands/agent/status)
+
+## Example Output
+
+```text
+downcity v1.0.437
+
+Agents                                           2 registered
+  lucas_whitman
+    project   /Users/you/Documents/bots/lucas_whitman
+    status    running
+  research_lab
+    project   /Users/you/Documents/bots/research_lab
+    status    stopped
+```

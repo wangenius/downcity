@@ -21,7 +21,9 @@ city agent start [path] [options]
 ## Behavior
 
 - Checks console process before start.
-- `path` defaults to current directory `.`
+- If `path` is provided, that directory is used directly.
+- If `path` is omitted and current directory is already an initialized agent project, current directory is used.
+- If `path` is omitted and current directory is not an agent project, the CLI opens an interactive selector from registered agents.
 - Agent port is always auto-assigned by console.
 - Project `downcity.json.start.host/port` is not required for daemon startup.
 - With `--foreground`, runs in current terminal; otherwise runs in background mode.
@@ -30,23 +32,23 @@ city agent start [path] [options]
 ## Related commands
 
 - [`city agent restart`](/en/docs/commands/agent/restart)
+- [`city agent list`](/en/docs/commands/agent/list)
 - [`city agent status`](/en/docs/commands/agent/status)
 - [`city start`](/en/docs/commands/start)
 
-## Example Output (Based on Current Implementation)
-
-The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
+## Example Output
 
 ```text
 $ city agent start .
-city version: 1.0.0
-✅ Downcity daemon started
-   pid: <pid>
-   log: <daemonLogPath>
+downcity v1.0.437
+
+Agent daemon started                            lucas_whitman
+  project   /Users/you/Documents/bots/lucas_whitman
 ```
 
 ```text
 $ city agent start .
-city version: 1.0.0
+downcity v1.0.437
+
 ❌ console is not running. Please run `city start` first.
 ```

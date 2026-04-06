@@ -31,8 +31,10 @@ city config get model.primary
 ## 如何查看当前服务状态？
 
 ```bash
+city agent list --running
 city service list
 city plugin list
+city memory status
 ```
 
 ## 安装依赖时看到 `deprecated eslint@8` 和一堆子依赖告警怎么办？

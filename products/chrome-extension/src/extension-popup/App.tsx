@@ -52,7 +52,15 @@ import {
   shortenUrl,
   type ExtensionPopupToastMessage,
 } from "./helpers";
+import {
+  PopupChevronLeftIcon,
+  PopupChevronRightIcon,
+  PopupSettingsSlidersIcon,
+} from "./PopupIcons";
 import { ExtensionPopupSelect } from "./ExtensionPopupSelect";
+
+const POPUP_HEADER_ICON_BUTTON_CLASS_NAME =
+  "inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-border bg-surface text-foreground/72 shadow-soft outline-none transition hover:-translate-y-[1px] hover:border-border-strong hover:bg-muted hover:text-foreground focus:border-border-strong focus:bg-muted disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-40";
 
 export function ExtensionPopupApp() {
   const toastTimerRef = useRef<number | null>(null);
@@ -550,36 +558,43 @@ export function ExtensionPopupApp() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        {/* 头部操作区改成统一控制面板式按钮，提升 icon 识别度和点击感。 */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-[14px] border border-border bg-surface p-1 shadow-soft">
+            <button
+              type="button"
+              className={POPUP_HEADER_ICON_BUTTON_CLASS_NAME}
+              onClick={() => cycleAgent(-1)}
+              disabled={agents.length < 2 || isLoadingAgents}
+              aria-label="上一个 Agent"
+              title="上一个 Agent"
+            >
+              <PopupChevronLeftIcon />
+            </button>
+            <button
+              type="button"
+              className={POPUP_HEADER_ICON_BUTTON_CLASS_NAME}
+              onClick={() => cycleAgent(1)}
+              disabled={agents.length < 2 || isLoadingAgents}
+              aria-label="下一个 Agent"
+              title="下一个 Agent"
+            >
+              <PopupChevronRightIcon />
+            </button>
+          </div>
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[18px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => cycleAgent(-1)}
-            disabled={agents.length < 2 || isLoadingAgents}
-            aria-label="上一个 Agent"
+            className={[
+              POPUP_HEADER_ICON_BUTTON_CLASS_NAME,
+              "rounded-[14px] bg-[color-mix(in_srgb,var(--surface)_78%,var(--background)_22%)]",
+            ].join(" ")}
+            onClick={openSettingsPage}
+            aria-label="打开设置"
+            title="设置"
           >
-            ‹
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[18px] text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => cycleAgent(1)}
-            disabled={agents.length < 2 || isLoadingAgents}
-            aria-label="下一个 Agent"
-          >
-            ›
+            <PopupSettingsSlidersIcon />
           </button>
         </div>
-
-        <button
-          type="button"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[16px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          onClick={openSettingsPage}
-          aria-label="打开设置"
-          title="设置"
-        >
-          ⚙
-        </button>
       </header>
 
       {authInitializing ? (

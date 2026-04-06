@@ -1,0 +1,41 @@
+---
+title: city agent list
+description: 列出已登记到 city 的 agent 项目
+---
+
+# `city agent list`
+
+列出已经登记到 city registry 的 agent 项目。
+
+## 用法
+
+```bash
+city agent list
+city agent list --running
+```
+
+## 行为说明
+
+- 展示 city registry 中已登记的 agent 项目。
+- `--running` 只保留当前仍在运行的 agent daemon。
+- 同时展示运行中和已停止的记录。
+- 方便在交互式 `city agent start` 之前先确认有哪些 agent 可选。
+
+## 相关命令
+
+- [`city agent start`](/zh/docs/commands/agent/start)
+- [`city agent status`](/zh/docs/commands/agent/status)
+
+## 示例输出
+
+```text
+downcity v1.0.437
+
+Agents                                           2 registered
+  lucas_whitman
+    project   /Users/you/Documents/bots/lucas_whitman
+    status    running
+  research_lab
+    project   /Users/you/Documents/bots/research_lab
+    status    stopped
+```

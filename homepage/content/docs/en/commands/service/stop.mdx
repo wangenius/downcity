@@ -1,11 +1,13 @@
 ---
 title: city service stop
-description: Stop a single service
+description: Advanced command to stop a service for a specific agent target
 ---
 
 # `city service stop`
 
-Stop a single service under a target agent.
+Stop a service for a specific agent target.
+
+Prefer concrete roots like `city memory stop` or `city task stop` for day-to-day use.
 
 ## Usage
 
@@ -17,6 +19,7 @@ city service stop <serviceName> [--agent <name> | --path <path>] [--host <host>]
 
 ```bash
 city service stop task --agent my-agent
+city memory stop --path /abs/path/to/agent
 ```
 
 ## Related commands
@@ -40,6 +43,6 @@ $ city service stop task
 $ city service stop task --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"city agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city agent list\" to inspect names."
 }
 ```

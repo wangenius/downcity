@@ -7,6 +7,8 @@ description: Forward custom action commands to a service
 
 Forward any action command to a target service.
 
+This is the advanced fallback form. Prefer concrete roots like `city task ...`, `city memory ...`, and `city chat ...` when they already expose the action you need.
+
 ## Usage
 
 ```bash
@@ -43,6 +45,7 @@ city service command chat send --payload '{"chatKey":"ctx_xxx","text":"later"}' 
 - [`city service`](/en/docs/commands/service/service)
 - [`city task`](/en/docs/commands/service/task)
 - [`city memory`](/en/docs/commands/service/memory)
+- [`city chat`](/en/docs/commands/service/chat)
 
 ## Example Output (Based on Current Implementation)
 
@@ -64,6 +67,6 @@ $ city service command task list --payload '{"status":"enabled"}' --agent <agent
 $ city service command task list --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"city agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city agent list\" to inspect names."
 }
 ```

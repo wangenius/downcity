@@ -1,0 +1,44 @@
+---
+title: city keys
+description: Manage Console Env keys with list, set, and delete operations
+---
+
+# `city keys`
+
+`city keys` manages Console Env entries.
+
+## Usage
+
+```bash
+city keys list [--scope global|agent|all] [--agent <agentId>] [--json]
+city keys set <key> <value> [--scope global|agent] [--agent <agentId>] [--description <text>] [--json]
+city keys delete <key> [--scope global|agent] [--agent <agentId>] [--json]
+```
+
+## Behavior
+
+- `list` shows configured key names and metadata.
+- `set` creates or updates a key.
+- `delete` removes a key.
+- Values are stored encrypted in the Console store.
+- `list` never returns secret values.
+- If `--agent <agentId>` is provided, scope becomes `agent` automatically.
+
+## Related commands
+
+- [`city agent list`](/en/docs/commands/agent/list)
+- [`city console`](/en/docs/commands/console/console)
+- [`Environment Variables`](/en/docs/commands/variables)
+
+## Example Output
+
+```text
+$ city keys list --scope all
+Keys                                               2 configured
+  OPENAI_API_KEY
+    scope         global
+    description   Shared OpenAI key
+  TELEGRAM_BOT_TOKEN
+    scope         agent
+    agent         /Users/you/Documents/bots/lucas_whitman
+```

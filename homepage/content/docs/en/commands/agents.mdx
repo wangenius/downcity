@@ -1,60 +1,14 @@
 ---
 title: city agents
-description: List managed agents (running + historical)
+description: Replaced by city agent list --running
 ---
 
 # `city agents`
 
-List managed agents including running and historical entries.
+This command is no longer part of the public command tree.
 
-## Usage
+Use [`city agent list`](/en/docs/commands/agent/list) instead.
 
 ```bash
-city agents [--json]
-```
-
-## Behavior
-
-- Lists currently running managed agents.
-- Historical entries are preserved in registry (`status=stopped`).
-- `--json` outputs machine-readable result.
-
-> In Console UI, `Global Agents` can start an agent directly from history.
-
-## Related commands
-
-- [`city console`](/en/docs/commands/console/console)
-- [`city status`](/en/docs/commands/status)
-- [`city agent`](/en/docs/commands/agent/agent)
-
-## Example Output (Based on Current Implementation)
-
-The examples below are aligned with current command implementations in `packages/downcity/src` (including default output mode and field structure). Placeholder values are used for environment-specific fields.
-
-```text
-$ city agents --json
-{
-  "success": true,
-  "count": 2,
-  "agents": [
-    {
-      "projectRoot": "<projectRootA>",
-      "daemonPid": 12345,
-      "running": true,
-      "startedAt": "<iso>",
-      "updatedAt": "<iso>",
-      "logPath": "<logPathA>"
-    }
-  ]
-}
-```
-
-```text
-$ city agents
-city version: 1.0.0
-┌──────────────────────────────────────┐
-│ INFO managed agents                  │
-│   agents   : 0                       │
-│   detail   : no running agent daemon │
-└──────────────────────────────────────┘
+city agent list --running
 ```

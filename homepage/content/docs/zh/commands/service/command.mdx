@@ -7,6 +7,8 @@ description: 转发 service 自定义动作命令
 
 把任意动作转发给指定 service。
 
+这是高级兜底形式。若具体命令根已经暴露所需动作，更推荐直接使用 `city task ...`、`city memory ...`、`city chat ...`。
+
 ## 用法
 
 ```bash
@@ -43,6 +45,7 @@ city service command chat send --payload '{"chatKey":"ctx_xxx","text":"later"}' 
 - [`city service`](/zh/docs/commands/service/service)
 - [`city task`](/zh/docs/commands/service/task)
 - [`city memory`](/zh/docs/commands/service/memory)
+- [`city chat`](/zh/docs/commands/service/chat)
 
 ## 示例输出（基于当前实现）
 
@@ -64,6 +67,6 @@ $ city service command task list --payload '{"status":"enabled"}' --agent <agent
 $ city service command task list --agent missing-agent
 {
   "success": false,
-  "error": "Agent not found in console registry: missing-agent. Run \"city agents\" to inspect names."
+  "error": "Agent not found in console registry: missing-agent. Run \"city agent list\" to inspect names."
 }
 ```

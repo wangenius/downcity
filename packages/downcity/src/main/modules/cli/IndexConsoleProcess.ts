@@ -410,7 +410,7 @@ async function resolveRegisteredAgentProjectRoot(
 
   console.error("❌ agent is not registered in console registry");
   console.error(`   project: ${projectRoot}`);
-  console.error("   fix: start agent first (`city agent start <path>`) or run `city agents`");
+  console.error("   fix: start agent first (`city agent start <path>`) or run `city agent list`");
   return null;
 }
 

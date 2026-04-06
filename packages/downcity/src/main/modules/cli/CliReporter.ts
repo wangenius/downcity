@@ -19,8 +19,8 @@ import type {
 
 const FACT_LABEL_MIN_WIDTH = 8;
 const HEADLINE_WIDTH = 60;
-const SECTION_DIVIDER = "─".repeat(HEADLINE_WIDTH);
 let cliSectionPrinted = false;
+let cliPreviousSectionCompact = false;
 
 /**
  * CLI 语气对应的视觉调色板。
@@ -31,13 +31,9 @@ type CliTonePalette = {
    */
   title: (text: string) => string;
   /**
-   * 当前语气的状态文本颜色。
+   * 当前语气的状态颜色。
    */
-  statusText: (text: string) => string;
-  /**
-   * 当前语气的状态背景颜色。
-   */
-  statusBackground: (text: string) => string;
+  status: (text: string) => string;
 };
 
 /**
@@ -64,33 +60,28 @@ function resolveTonePalette(
     case "success":
       return {
         title: palette.bold,
-        statusText: palette.black,
-        statusBackground: palette.bgGreen,
+        status: palette.green,
       };
     case "warning":
       return {
         title: palette.bold,
-        statusText: palette.black,
-        statusBackground: palette.bgYellow,
+        status: palette.yellow,
       };
     case "error":
       return {
         title: palette.bold,
-        statusText: palette.white,
-        statusBackground: palette.bgRed,
+        status: palette.red,
       };
     case "accent":
       return {
         title: palette.bold,
-        statusText: palette.black,
-        statusBackground: palette.bgCyan,
+        status: palette.cyan,
       };
     case "info":
     default:
       return {
         title: palette.bold,
-        statusText: palette.white,
-        statusBackground: palette.bgBlue,
+        status: palette.blue,
       };
   }
 }
@@ -146,18 +137,12 @@ function formatHeadingLine(params: {
   if (!params.summary) {
     return title;
   }
-  const plainSummary = String(params.summary).toUpperCase();
-  const statusChip = palette.bold(
-    `[${plainSummary}]`,
-  );
-  const coloredChip = tonePalette.statusBackground(
-    tonePalette.statusText(statusChip),
-  );
+  const plainSummary = String(params.summary || "").trim().toLowerCase();
   const spacing = Math.max(
     2,
-    HEADLINE_WIDTH - params.title.length - statusChip.length,
+    HEADLINE_WIDTH - params.title.length - plainSummary.length,
   );
-  return `${title}${" ".repeat(spacing)}${coloredChip}`;
+  return `${title}${" ".repeat(spacing)}${tonePalette.status(plainSummary)}`;
 }
 
 /**
@@ -270,6 +255,7 @@ export function formatCliList(
  */
 export function resetCliSectionFlow(): void {
   cliSectionPrinted = false;
+  cliPreviousSectionCompact = false;
 }
 
 /**
@@ -279,12 +265,27 @@ export function resetCliSectionFlow(): void {
  * - 第二个 section 起会自动插入一个空行，拉开模块层级。
  * - 只负责打印节奏，不参与格式拼装。
  */
-function emitCliSection(text: string): void {
-  if (cliSectionPrinted) {
-    console.log(SECTION_DIVIDER);
+function emitCliSection(text: string, compact: boolean): void {
+  if (cliSectionPrinted && !(cliPreviousSectionCompact && compact)) {
+    console.log("");
   }
   console.log(text);
   cliSectionPrinted = true;
+  cliPreviousSectionCompact = compact;
+}
+
+/**
+ * 判断 block 是否属于紧凑步骤行。
+ */
+function isCompactCliBlock(block: CliReportBlock): boolean {
+  return (!block.facts || block.facts.length === 0) && !block.note;
+}
+
+/**
+ * 判断 list 是否属于紧凑列表。
+ */
+function isCompactCliList(list: CliReportList): boolean {
+  return list.items.every((item) => !item.facts || item.facts.length === 0);
 }
 
 /**
@@ -294,7 +295,7 @@ export function emitCliHeader(
   version: string,
   options?: CliRenderOptions,
 ): void {
-  emitCliSection(formatCliHeader(version, options));
+  emitCliSection(formatCliHeader(version, options), false);
 }
 
 /**
@@ -304,7 +305,7 @@ export function emitCliBlock(
   block: CliReportBlock,
   options?: CliRenderOptions,
 ): void {
-  emitCliSection(formatCliBlock(block, options));
+  emitCliSection(formatCliBlock(block, options), isCompactCliBlock(block));
 }
 
 /**
@@ -314,7 +315,7 @@ export function emitCliList(
   list: CliReportList,
   options?: CliRenderOptions,
 ): void {
-  emitCliSection(formatCliList(list, options));
+  emitCliSection(formatCliList(list, options), isCompactCliList(list));
 }
 
 /**
@@ -325,5 +326,5 @@ export function formatCliHeader(
   options?: CliRenderOptions,
 ): string {
   const palette = resolveChalk(options);
-  return `${palette.bold("downcity")}  ${palette.dim(`v${version}`)}`;
+  return `${palette.bold("downcity")} ${palette.dim(`v${version}`)}`;
 }

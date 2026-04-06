@@ -390,7 +390,7 @@ export interface ConsoleAgentRegistryV1 {
 }
 
 /**
- * `city agents` 输出用的运行态视图。
+ * `city agent list --running` 输出可复用的运行态视图。
  */
 export interface ConsoleAgentProcessView {
   /**

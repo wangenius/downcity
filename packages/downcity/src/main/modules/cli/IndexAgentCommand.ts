@@ -7,6 +7,10 @@
  */
 
 import type { Command, Option } from "commander";
+import {
+  emitRegisteredAgentListWithOptions,
+  resolveCliAgentStartProjectRoot,
+} from "./AgentSelection.js";
 import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
 import { runCommand } from "./Run.js";
@@ -45,7 +49,7 @@ export function registerAgentCommands(
 ): void {
   const agent = program
     .command("agent")
-    .description("管理 Agent：创建/启停/重启")
+    .description("管理 Agent：创建/列出/启停/重启")
     .helpOption("--help", "display help for command");
 
   agent
@@ -58,6 +62,22 @@ export function registerAgentCommands(
     }));
 
   agent
+    .command("list")
+    .description("列出已登记到 city 的 Agent 项目")
+    .option("--running [enabled]", "仅列出当前运行中的 Agent", parseBoolean)
+    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
+    .helpOption("--help", "display help for command")
+    .action(createVersionBanner(
+      context.version,
+      async (options: { running?: boolean; json?: boolean }) => {
+        await emitRegisteredAgentListWithOptions({
+          runningOnly: options.running === true,
+          asJson: options.json === true,
+        });
+      },
+    ));
+
+  agent
     .command("start [path]")
     .description("启动 Agent 进程（后台/前台）")
     .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
@@ -67,13 +87,16 @@ export function registerAgentCommands(
     .action(
       createVersionBanner(
         context.version,
-        async (cwd: string = ".", options: StartOptions & { foreground?: boolean }) => {
-          const prepared = await prepareForegroundAgent(cwd, options);
+        async (cwd: string | undefined, options: StartOptions & { foreground?: boolean }) => {
+          const projectRoot = await resolveCliAgentStartProjectRoot(cwd);
+          if (!projectRoot) process.exit(1);
+
+          const prepared = await prepareForegroundAgent(projectRoot, options);
           if (prepared.shouldForeground) {
-            await runCommand(cwd, prepared.options);
+            await runCommand(prepared.projectRoot, prepared.options);
             return;
           }
-          await startCommand(cwd, prepared.options);
+          await startCommand(prepared.projectRoot, prepared.options);
         },
       ),
     );

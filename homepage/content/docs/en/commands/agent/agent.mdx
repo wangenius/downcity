@@ -5,7 +5,7 @@ description: Manage the agent process in the current directory or a target direc
 
 # `city agent`
 
-Manage agent start/restart.
+Manage agent lifecycle and registry-aware operations.
 
 ## Command hierarchy
 
@@ -20,6 +20,7 @@ city agent <subcommand>
 ## Subcommands
 
 - `create`: create/initialize an agent project
+- `list`: list registered agent projects
 - `start`: start the agent
 - `status`: show agent status
 - `doctor`: diagnose state files and optionally fix stale pid/meta
@@ -28,6 +29,7 @@ city agent <subcommand>
 ## Subcommand docs
 
 - [`city agent create`](/en/docs/commands/agent/create)
+- [`city agent list`](/en/docs/commands/agent/list)
 - [`city agent start`](/en/docs/commands/agent/start)
 - [`city agent status`](/en/docs/commands/agent/status)
 - [`city agent restart`](/en/docs/commands/agent/restart)
@@ -56,6 +58,7 @@ city version: 1.0.0
 Usage: city agent [options] [command]
 Commands:
   create [path]
+  list
   start [path]
   status [path]
   doctor [path]

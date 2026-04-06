@@ -1,6 +1,6 @@
 ---
 title: city plugin
-description: Inspect plugin availability and dispatch plugin actions
+description: Inspect the global plugin catalog and use advanced plugin action routing
 ---
 
 # `city plugin`
@@ -10,7 +10,7 @@ description: Inspect plugin availability and dispatch plugin actions
 Use it when you want to:
 
 - inspect which plugins are registered
-- inspect a plugin's static enabled state and agent-side availability
+- inspect a plugin's static enabled state and capability surface
 - dispatch a plugin action without using the plugin's short alias
 
 ## Common examples
@@ -23,13 +23,11 @@ city plugin action asr status
 
 ## Notes
 
-- `city plugin list`, `city plugin status`, and `city plugin action ...` read the current project and execute locally in the CLI process.
-- These commands do not require `city agent start`.
-- `--path` selects the target project directly. `--agent` resolves the project path from the console registry when you prefer using the agent name.
-- Plugin config is stored in project `downcity.json` under `plugins.*`.
-- `plugins.<name>.enabled` controls whether a plugin enters the real execution path. When disabled, its hooks and `plugin.system` injection are skipped.
-- Disabled plugins also have their explicit `plugin action` calls rejected by the registry instead of executing the action body.
-- If `plugins.<name>` exists but does not explicitly set `enabled`, the agent falls back to the plugin's own default instead of forcing it to `true`.
+- `city plugin list` and `city plugin status` are static console-level catalog views.
+- They do not require `--path`, `--agent`, or a running agent.
+- `city plugin action ...` is the advanced execution form and still targets a specific agent project.
+- For day-to-day usage, prefer concrete plugin roots such as `city web ...`, `city skill ...`, `city asr ...`, and `city tts ...`.
+- Plugin enablement is now a city-level fact. Static status does not read agent `downcity.json`.
 
 ## Related
 

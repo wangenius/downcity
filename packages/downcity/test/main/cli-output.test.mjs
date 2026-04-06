@@ -21,7 +21,7 @@ import {
 test("formatCliHeader renders a compact branded banner", () => {
   const output = formatCliHeader("1.0.431", { color: false });
 
-  assert.equal(output, "downcity  v1.0.431");
+  assert.equal(output, "downcity v1.0.431");
 });
 
 test("formatCliBlock aligns facts under a single visual block", () => {
@@ -39,7 +39,7 @@ test("formatCliBlock aligns facts under a single visual block", () => {
   );
 
   assert.equal(output, [
-    "Console started                                      [READY]",
+    "Console started                                        ready",
     "  url       http://127.0.0.1:5315",
     "  note      单个 Console 实例可切换查看多个已运行 agent。",
   ].join("\n"));
@@ -68,7 +68,7 @@ test("formatCliList renders grouped agent items with nested facts", () => {
   );
 
   assert.equal(output, [
-    "Managed agents                         [RESTARTING · 1 ITEM]",
+    "Managed agents                           restarting · 1 item",
     "  lucas_whitman",
     "    project   /Users/wangenius/Documents/bots/lucas_whitman",
   ].join("\n"));
@@ -87,7 +87,7 @@ test("formatCliReporter emits ansi color when enabled", () => {
   assert.match(output, /\u001b\[/);
 });
 
-test("emitCli* inserts blank lines between sections", () => {
+test("emitCli* inserts spacing between sections", () => {
   const captured = [];
   const originalLog = console.log;
   console.log = (...args) => {
@@ -119,10 +119,9 @@ test("emitCli* inserts blank lines between sections", () => {
   }
 
   assert.deepEqual(captured, [
-    "downcity  v1.0.431",
-    "────────────────────────────────────────────────────────────",
-    "Console started                                      [READY]",
-    "────────────────────────────────────────────────────────────",
-    "Managed agents                         [RESTARTING · 1 ITEM]\n  lucas_whitman",
+    "downcity v1.0.431",
+    "",
+    "Console started                                        ready",
+    "Managed agents                           restarting · 1 item\n  lucas_whitman",
   ]);
 });

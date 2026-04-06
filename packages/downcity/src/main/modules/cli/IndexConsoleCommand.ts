@@ -21,12 +21,10 @@ import { parseBoolean, parsePort, createVersionBanner } from "./IndexSupport.js"
 import {
   consoleStatusCommand,
   printConsoleStatusPanel,
-  printRunningConsoleAgents,
 } from "./IndexConsoleStatus.js";
 import {
   prepareForegroundAgent,
   ensureRegisteredAgentProjectRoot,
-  resolveRunningConsoleAgents,
   restartCityRuntimeCommand,
   runCityRuntimeCommand,
   startCityRuntimeCommand,
@@ -107,35 +105,7 @@ export function registerConsoleCommands(
     }));
 
   program
-    .command("agents")
-    .description("打印 city 当前托管的活跃 agent daemon 状态")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .helpOption("--help", "display help for command")
-    .action(createVersionBanner(context.version, async (
-      _options: { json?: boolean },
-      command: Command,
-    ) => {
-      const options = command.opts<{ json?: boolean }>();
-      const views = await resolveRunningConsoleAgents();
-      if (options?.json) {
-        globalThis.console.log(
-          JSON.stringify(
-            {
-              success: true,
-              count: views.length,
-              agents: views,
-            },
-            null,
-            2,
-          ),
-        );
-        return;
-      }
-      printRunningConsoleAgents(views);
-    }));
-
-  program
-    .command("run")
+    .command("run", { hidden: true })
     .description("internal city runtime")
     .action(runCityRuntimeCommand);
 

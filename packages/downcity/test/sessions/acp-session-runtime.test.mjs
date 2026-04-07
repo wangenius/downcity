@@ -229,6 +229,23 @@ test("AcpSessionExecutor: accepts final response before ACP process exits normal
   }
 });
 
+test("AcpSessionExecutor: does not inherit DC_AGENT_TOKEN into ACP child env", async () => {
+  const previousAgentToken = process.env.DC_AGENT_TOKEN;
+  process.env.DC_AGENT_TOKEN = "dc_agent_should_not_leak";
+  const runtime = createRuntime();
+  try {
+    const result = await runtime.run({
+      query: "env token test",
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.assistantMessage.parts[0].text, "TOKEN_ABSENT");
+  } finally {
+    await runtime.dispose();
+    if (previousAgentToken === undefined) delete process.env.DC_AGENT_TOKEN;
+    else process.env.DC_AGENT_TOKEN = previousAgentToken;
+  }
+});
+
 test("AcpSessionExecutor: maps Claude ACP tool_call_update into tool results", async () => {
   const runtime = createRuntime();
   const steps = [];

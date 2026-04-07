@@ -159,7 +159,6 @@ export function createAgentContext(input: AgentRuntime): AgentContext {
     globalEnv: input.globalEnv,
     systems: input.systems,
     paths: input.paths,
-    auth: input.auth,
     pluginConfig: input.pluginConfig,
     session: buildSessionPort(input),
     invoke: serviceInvokePort,

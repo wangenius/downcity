@@ -30,9 +30,6 @@ function buildRuntime(rootPath) {
         path.join(rootPath, ".downcity/channel/meta.json"),
       getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
     },
-    auth: {
-      applyInternalAgentAuthEnv() {},
-    },
     logger: {
       warn() {},
       info() {},

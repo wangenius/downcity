@@ -13,7 +13,6 @@ import { loadAgentEnvSnapshot, loadDowncityConfig, loadGlobalEnvFromStore } from
 import { isPluginEnabled } from "@/main/plugin/Activation.js";
 import { findBuiltinPlugin, listStaticPluginViews } from "@/main/plugin/Catalog.js";
 import {
-  createAgentAuthRuntime,
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
 } from "@/main/city/runtime/AgentHostRuntime.js";
@@ -47,7 +46,6 @@ export function createLocalPluginCommandContext(projectRoot: string): PluginComm
     env,
     globalEnv,
     paths: createAgentPathRuntime(rootPath),
-    auth: createAgentAuthRuntime(),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
   };
 }

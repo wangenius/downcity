@@ -121,7 +121,7 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
   }'
 ```
 
-## `DC_AUTH_TOKEN` and `DC_AGENT_TOKEN`
+## `DC_AUTH_TOKEN`
 
 Main rule first:
 
@@ -132,31 +132,29 @@ For direct API usage, the important rule is:
 
 - external calls always authenticate through `Authorization: Bearer <token>`
 
-Inside the CLI/runtime, you may still see two env vars:
+Inside the CLI/runtime, the only auth env var most users need is:
 
 | Variable | Intended For | Purpose |
 | --- | --- | --- |
 | `DC_AUTH_TOKEN` | users, scripts, CI | explicitly choose which token a CLI/API invocation should use |
-| `DC_AGENT_TOKEN` | Downcity agent runtime | automatically propagate auth when an agent explicitly makes a remote HTTP call |
 
 Only explicit remote HTTP calls use this resolution order:
 
 1. `--token`
 2. `DC_AUTH_TOKEN`
-3. `DC_AGENT_TOKEN`
 
 So:
 
 - `DC_AUTH_TOKEN` is the explicit override
-- `DC_AGENT_TOKEN` is internal propagation
-- both end up as the same Bearer header on the actual HTTP request
+- local IPC calls do not need a token
+- explicit remote HTTP calls normalize `DC_AUTH_TOKEN` into the Bearer header
 
 If you see `Missing bearer token`:
 
 - do not start by suspecting `sessionId`
 - first confirm that the invocation is actually using remote HTTP
 - then check whether the current process has any valid token source
-- if the error happens inside an agent/Bash/ACP subprocess making a remote HTTP call, inspect `DC_AGENT_TOKEN` inheritance first
+- if this happens inside an agent/Bash/ACP subprocess, first check whether the call should be local IPC instead of remote HTTP
 
 ## Current scope
 

@@ -27,7 +27,7 @@ import {
   loadAgentEnvSnapshot,
   loadGlobalEnvFromStore,
 } from "@/main/city/env/Config.js";
-import { applyInternalAgentAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
+import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type { ResolvedAcpLaunchConfig } from "./AcpLaunchConfig.js";
 
 type JsonRpcId = number;
@@ -302,10 +302,7 @@ export class AcpSessionExecutor implements SessionExecutor {
       ...agentEnv,
       ...this.launch.env,
     };
-    applyInternalAgentAuthEnv({
-      targetEnv: childEnv,
-      sourceEnv: process.env,
-    });
+    stripInvocationAuthEnv(childEnv);
     const child = spawn(this.launch.command, this.launch.args, {
       cwd: this.rootPath,
       env: childEnv,

@@ -26,9 +26,6 @@ function buildRuntime(rootPath) {
     paths: {
       getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
     },
-    auth: {
-      applyInternalAgentAuthEnv() {},
-    },
     logger: {
       warn() {},
       info() {},

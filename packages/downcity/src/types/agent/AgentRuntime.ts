@@ -11,7 +11,6 @@ import type { LanguageModel } from "ai";
 import type { Logger } from "@shared/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type {
-  AgentAuthRuntime,
   AgentPathRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
@@ -54,10 +53,6 @@ export interface AgentRuntimeBase {
    * 当前 agent 可见的路径能力集合。
    */
   paths: AgentPathRuntime;
-  /**
-   * 当前 agent 可见的认证能力集合。
-   */
-  auth: AgentAuthRuntime;
   /**
    * 当前 agent 可见的 plugin 配置持久化能力集合。
    */

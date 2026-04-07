@@ -64,29 +64,6 @@ export interface AgentPathRuntime {
 }
 
 /**
- * Agent 认证能力集合。
- */
-export interface AgentAuthRuntime {
-  /**
-   * 为 agent 内部子进程应用统一认证环境。
-   */
-  applyInternalAgentAuthEnv(params: {
-    /**
-     * 待写入的目标环境变量集合。
-     */
-    targetEnv: NodeJS.ProcessEnv;
-    /**
-     * 可选来源环境变量集合。
-     */
-    sourceEnv?: NodeJS.ProcessEnv;
-    /**
-     * 可选显式 token。
-     */
-    token?: string;
-  }): void;
-}
-
-/**
  * Plugin 配置持久化能力集合。
  */
 export interface AgentPluginConfigRuntime {

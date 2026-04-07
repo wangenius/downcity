@@ -52,9 +52,6 @@ test("ChatQueueWorker only dispatches step text when assistant steps already exi
         path.join(rootPath, ".downcity/channel/meta.json"),
       getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
     },
-    auth: {
-      applyInternalAgentAuthEnv() {},
-    },
     config: {
       services: {
         chat: {},
@@ -184,9 +181,6 @@ test("ChatQueueWorker dispatches step text through channel path when direct step
       getDowncityChannelMetaPath: () =>
         path.join(rootPath, ".downcity/channel/meta.json"),
       getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
-    },
-    auth: {
-      applyInternalAgentAuthEnv() {},
     },
     config: {
       services: {
@@ -341,9 +335,6 @@ test("ChatQueueWorker dispatches final assistant text when no assistant step was
       getDowncityChannelMetaPath: () =>
         path.join(rootPath, ".downcity/channel/meta.json"),
       getCacheDirPath: () => path.join(rootPath, ".downcity/.cache"),
-    },
-    auth: {
-      applyInternalAgentAuthEnv() {},
     },
     config: {
       services: {

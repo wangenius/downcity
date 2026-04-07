@@ -4,12 +4,8 @@
  * 关键点（中文）
  * - `main/agent/*` 负责创建这些宿主能力对象，再注入到 AgentRuntime。
  * - services / session / plugins 只消费这些对象，不再直接 import `main/*`。
- * - 当前先收敛路径、认证、plugin 配置持久化三类能力。
+ * - 当前先收敛路径与 plugin 配置持久化两类宿主能力。
  */
-
-import {
-  applyInternalAgentAuthEnv,
-} from "@/main/modules/http/auth/AuthEnv.js";
 import {
   getCacheDirPath,
   getDowncityChannelDirPath,
@@ -25,7 +21,6 @@ import {
 } from "@/main/city/env/Paths.js";
 import { persistProjectPluginConfig } from "@/main/plugin/ProjectConfigStore.js";
 import type {
-  AgentAuthRuntime,
   AgentPathRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
@@ -49,15 +44,6 @@ export function createAgentPathRuntime(projectRoot: string): AgentPathRuntime {
     getDowncityMemoryDailyPath: (date) => getDowncityMemoryDailyPath(rootPath, date),
     getDowncitySessionRootDirPath: () => getDowncitySessionRootDirPath(rootPath),
     getDowncitySessionDirPath: (sessionId) => getDowncitySessionDirPath(rootPath, sessionId),
-  };
-}
-
-/**
- * 创建认证能力集合。
- */
-export function createAgentAuthRuntime(): AgentAuthRuntime {
-  return {
-    applyInternalAgentAuthEnv,
   };
 }
 

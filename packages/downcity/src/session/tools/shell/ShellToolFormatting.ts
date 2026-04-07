@@ -6,7 +6,7 @@
  * - 这里仅保留当前仍被 tool 与测试复用的最小能力：命令安全校验与 env 注入。
  */
 
-import { applyInternalAgentAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
+import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import { getSessionRunScope } from "@session/SessionRunScope.js";
 
 function setEnvString(
@@ -65,6 +65,7 @@ export function validateChatSendCommand(cmd: string): string | null {
  * 关键点（中文）
  * - 当前仍用于 shell tool/service 与相关测试。
  * - 优先级：显式注入 > 当前请求上下文变量 > 宿主进程环境。
+ * - 默认剥离 Bearer Token，避免通用 shell 隐式走本地 HTTP。
  */
 export function buildShellContextEnv(
   injected?: Record<string, string>,
@@ -76,11 +77,7 @@ export function buildShellContextEnv(
   setEnvString(env, "DC_SESSION_ID", contextCtx?.sessionId);
   setEnvString(env, "DC_CTX_SERVER_HOST", process.env.DC_SERVER_HOST);
   setEnvString(env, "DC_CTX_SERVER_PORT", process.env.DC_SERVER_PORT);
-
-  applyInternalAgentAuthEnv({
-    targetEnv: env,
-    sourceEnv: process.env,
-  });
+  stripInvocationAuthEnv(env);
 
   return env;
 }

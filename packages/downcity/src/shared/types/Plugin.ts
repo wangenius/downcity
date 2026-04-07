@@ -10,7 +10,6 @@
 import type { Command } from "commander";
 import type { Context as HonoContext } from "hono";
 import type {
-  AgentAuthRuntime,
   AgentPathRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
@@ -59,10 +58,6 @@ export interface PluginCommandContext {
    * 当前可见的路径能力集合。
    */
   paths: AgentPathRuntime;
-  /**
-   * 当前可见的认证能力集合。
-   */
-  auth: AgentAuthRuntime;
   /**
    * 当前可见的 plugin 配置持久化能力集合。
    */

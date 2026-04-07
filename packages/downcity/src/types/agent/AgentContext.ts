@@ -11,7 +11,6 @@ import type { LanguageModel } from "ai";
 import type { Logger } from "@shared/utils/logger/Logger.js";
 import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
 import type {
-  AgentAuthRuntime,
   AgentPathRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
@@ -347,10 +346,6 @@ export interface AgentContext {
    * 当前可见的路径能力集合。
    */
   paths: AgentPathRuntime;
-  /**
-   * 当前可见的认证能力集合。
-   */
-  auth: AgentAuthRuntime;
   /**
    * 当前可见的 plugin 配置持久化能力集合。
    */

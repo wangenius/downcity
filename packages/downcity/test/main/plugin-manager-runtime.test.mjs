@@ -47,9 +47,6 @@ function createContext(config) {
     paths: {
       projectRoot: "/tmp/downcity-plugin-runtime",
     },
-    auth: {
-      applyInternalAgentAuthEnv() {},
-    },
     pluginConfig: {
       async persistProjectPlugins() {
         return "";
@@ -134,9 +131,6 @@ function createContext(config) {
       systems: [],
       paths: {
         projectRoot: "/tmp/downcity-plugin-runtime",
-      },
-      auth: {
-        applyInternalAgentAuthEnv() {},
       },
       pluginConfig: {
         async persistProjectPlugins() {

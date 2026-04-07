@@ -194,6 +194,21 @@ rl.on("line", (line) => {
         return;
       }
 
+      if (promptText.includes("env token test")) {
+        sendTextUpdate(
+          sessionId,
+          process.env.DC_AGENT_TOKEN ? "TOKEN_PRESENT" : "TOKEN_ABSENT",
+        );
+        send({
+          jsonrpc: "2.0",
+          id: msg.id,
+          result: {
+            stopReason: "end_turn",
+          },
+        });
+        return;
+      }
+
       if (promptText.includes("tool call stream test")) {
         sendTextUpdate(sessionId, "正在分析项目结构...");
         sendToolCallUpdate(sessionId, {

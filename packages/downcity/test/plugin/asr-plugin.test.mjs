@@ -49,9 +49,6 @@ function createHost(rootPath) {
       getDowncitySessionDirPath: (sessionId) =>
         path.join(rootPath, ".downcity", "session", sessionId),
     },
-    auth: {
-      applyInternalAgentAuthEnv() {},
-    },
     pluginConfig: {
       async persistProjectPlugins() {
         return path.join(rootPath, "downcity.json");

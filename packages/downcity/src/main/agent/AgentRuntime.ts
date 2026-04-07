@@ -58,7 +58,6 @@ import {
   setPluginRuntimeContextResolver,
 } from "@/main/city/runtime/PluginRuntime.js";
 import {
-  createAgentAuthRuntime,
   createAgentPathRuntime,
   createAgentPluginConfigRuntime,
 } from "@/main/city/runtime/AgentHostRuntime.js";
@@ -216,7 +215,6 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     globalEnv,
     systems: [],
     paths: createAgentPathRuntime(rootPath),
-    auth: createAgentAuthRuntime(),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
   });
 
@@ -230,7 +228,6 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     globalEnv,
     systems,
     paths: createAgentPathRuntime(rootPath),
-    auth: createAgentAuthRuntime(),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
   });
 
@@ -314,7 +311,6 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
     globalEnv,
     systems,
     paths: createAgentPathRuntime(rootPath),
-    auth: createAgentAuthRuntime(),
     pluginConfig: createAgentPluginConfigRuntime(rootPath),
     model,
     getSession,

@@ -43,47 +43,25 @@ Additional notes:
 - Local `city service start/stop/restart/command`, `city task`, `city chat`, and similar runtime commands use local IPC by default instead of HTTP.
 - Local `city plugin action` and `city <plugin> <action>` commands read the selected project and execute directly in the CLI process.
 - A call only enters remote HTTP mode when you explicitly pass `--host` or `--port`.
-- In remote HTTP mode, token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN`.
+- In remote HTTP mode, token resolution order is: `--token` > `DC_AUTH_TOKEN`.
 - `sessionId` and `chatKey` are execution context, not authentication tokens.
 
-## 1.1) `DC_AUTH_TOKEN` vs `DC_AGENT_TOKEN`
+## 1.1) `DC_AUTH_TOKEN`
 
 The most important rule first:
 
-- For most users, you do not need to care about either variable for normal local `city ...` usage.
+- For most users, you do not need to care about auth env vars for normal local `city ...` usage.
 
 That is because local calls now use IPC by default. These variables only matter when a call is explicitly made through remote HTTP.
-
-Both variables are related to Bearer auth, but they serve different roles.
 
 | Variable | Primary Purpose | Who Sets It | Typical Use |
 | --- | --- | --- | --- |
 | `DC_AUTH_TOKEN` | explicit user override for a CLI/API call | user, script, CI | you want this specific `city ...` invocation to authenticate as a specific token |
-| `DC_AGENT_TOKEN` | internal agent runtime propagation | Downcity runtime | an agent, Bash tool, or ACP subprocess explicitly makes a remote HTTP call |
-
-Think of them as two layers:
-
-- `DC_AUTH_TOKEN` is the user override layer
-- `DC_AGENT_TOKEN` is the internal agent propagation layer
 
 Recommended rule:
 
 - When you explicitly make a remote HTTP call from your terminal, CI, or a script, prefer `--token` or `DC_AUTH_TOKEN`
-- When an agent explicitly makes a remote HTTP call internally, runtime can inject `DC_AGENT_TOKEN`
 - Do not treat `sessionId` or `chatKey` as auth tokens; they only define execution context
-
-### Why internal propagation does not use `DC_AUTH_TOKEN`
-
-Because `DC_AUTH_TOKEN` should clearly mean explicit user override:
-
-- if a user passes `--token` or sets `DC_AUTH_TOKEN`, that choice should always win
-- internal agent propagation should stay separate from that explicit override channel
-
-So the current model is:
-
-- `DC_AGENT_TOKEN` is the canonical internal propagation variable
-- `DC_AUTH_TOKEN` is reserved for explicit user override
-- the CLI resolves the final Bearer token using one shared priority order before it makes the HTTP request
 
 ### Unified priority order
 
@@ -91,13 +69,12 @@ When a `city ...` invocation is explicitly using remote HTTP, the final auth res
 
 1. explicit `--token`
 2. `DC_AUTH_TOKEN`
-3. `DC_AGENT_TOKEN`
 
 That means:
 
 - `--token` always overrides everything else
-- `DC_AUTH_TOKEN` overrides auto-injected `DC_AGENT_TOKEN`
-- agent-internal remote HTTP invocations fall back to `DC_AGENT_TOKEN`
+- `DC_AUTH_TOKEN` is the only env-level auth source used for remote HTTP
+- without either one, explicit remote HTTP calls fail with `Missing bearer token`
 
 ### Common mistakes
 
@@ -105,10 +82,10 @@ That means:
   Not valid. `sessionId` only decides where execution belongs.
 - Mistake 2: assuming local `city task` or `city chat` always needs a token first
   Not true anymore. Normal local calls now use IPC and do not need a Bearer token.
-- Mistake 3: exporting `DC_AUTH_TOKEN` manually inside every agent tool call
-  Usually unnecessary. Only explicit remote HTTP paths need a token; runtime can inject `DC_AGENT_TOKEN` when needed.
-- Mistake 4: treating `DC_AGENT_TOKEN` as a long-lived integration token for external scripts
-  Not recommended. External integrations should use explicit Bearer tokens through `DC_AUTH_TOKEN` or `--token`.
+- Mistake 3: assuming agent shell/script subprocesses automatically inherit a usable token
+  Not anymore. Generic subprocesses do not inherit Bearer tokens by default; if you intentionally call remote HTTP, pass a token explicitly.
+- Mistake 4: treating local IPC commands and remote HTTP commands as the same auth model
+  They are different. Local defaults to IPC; only explicit remote HTTP uses `DC_AUTH_TOKEN`.
 
 ### How to read `Missing bearer token`
 
@@ -125,9 +102,7 @@ check in this order:
 
 1. did you pass `--token`
 2. is `DC_AUTH_TOKEN` set in the current shell
-3. if this is inside an agent/Bash tool/ACP subprocess, did the process inherit `DC_AGENT_TOKEN`
-
-For agent-internal remote HTTP calls, the first suspect is usually the `DC_AGENT_TOKEN` injection chain, not the task/session parameters.
+3. does this invocation actually need remote HTTP, or should it be using local IPC instead
 
 ## 2) Context env requirements for common commands
 
@@ -143,7 +118,7 @@ For agent-internal remote HTTP calls, the first suspect is usually the `DC_AGENT
 - You can pass `--session-id` explicitly
 - Or first fallback to `DC_SESSION_ID`
 - Local calls use IPC by default and do not need a Bearer token
-- Only explicit remote HTTP calls resolve auth through `--token` / `DC_AUTH_TOKEN` / `DC_AGENT_TOKEN`
+- Only explicit remote HTTP calls resolve auth through `--token` / `DC_AUTH_TOKEN`
 
 ### Chat channel credentials
 

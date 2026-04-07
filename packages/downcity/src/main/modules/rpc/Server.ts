@@ -3,15 +3,17 @@
  *
  * 关键点（中文）
  * - 只服务本地受信任进程，不暴露 HTTP 协议。
- * - 当前第一阶段只实现 service 相关路径，后续可逐步扩展到 plugin 等本地命令。
+ * - 这里承接本机 CLI 访问 agent runtime 的 IPC 路由，并与 HTTP 能力保持语义一致。
  */
 
 import fs from "fs-extra";
 import net, { type Server } from "node:net";
 import path from "node:path";
+import type { AgentRuntime } from "@/types/agent/AgentRuntime.js";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
 import type { JsonValue } from "@/shared/types/Json.js";
 import type { LocalRpcRequest, LocalRpcResponse, LocalRpcServerHandle } from "@/shared/types/LocalRpc.js";
+import type { DashboardSessionExecuteRequestBody } from "@/shared/types/DashboardSessionExecute.js";
 import type {
   PluginActionResponse,
   PluginAvailabilityResponse,
@@ -25,6 +27,7 @@ import type {
 } from "@/shared/types/Services.js";
 import { listServiceStates, controlServiceState } from "@/main/service/ServiceStateController.js";
 import { runServiceCommand } from "@/main/service/ServiceActionRunner.js";
+import { executeBySessionId } from "@/main/modules/http/dashboard/ExecuteBySession.js";
 import { getLocalRpcEndpoint } from "./Paths.js";
 
 async function isSocketEndpointActive(endpoint: string): Promise<boolean> {
@@ -179,9 +182,68 @@ async function handlePluginAction(params: {
   );
 }
 
+function matchDashboardSessionExecutePath(pathname: string): string | null {
+  const match = /^\/api\/dashboard\/sessions\/([^/]+)\/execute$/.exec(
+    String(pathname || "").trim(),
+  );
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1] || "").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+async function handleDashboardSessionExecute(params: {
+  requestId: string;
+  body: JsonValue | undefined;
+  context: AgentContext;
+  runtime?: AgentRuntime;
+  sessionId: string;
+}): Promise<LocalRpcResponse> {
+  if (!params.runtime) {
+    return createErrorResponse(
+      params.requestId,
+      500,
+      "Local RPC dashboard execute requires agent runtime",
+    );
+  }
+  const body = isObjectRecord(params.body) ? params.body : {};
+  const instructions = String(body.instructions || "").trim();
+  const attachments = Array.isArray(body.attachments)
+    ? (body.attachments as DashboardSessionExecuteRequestBody["attachments"])
+    : undefined;
+  if (!params.sessionId) {
+    return createErrorResponse(params.requestId, 400, "sessionId is required");
+  }
+  if (!instructions) {
+    return createErrorResponse(params.requestId, 400, "instructions are required");
+  }
+  try {
+    const result = await executeBySessionId({
+      agentState: params.runtime,
+      executionContext: params.context,
+      sessionId: params.sessionId,
+      instructions,
+      attachments,
+    });
+    return createSuccessResponse(
+      params.requestId,
+      {
+        success: true,
+        sessionId: params.sessionId,
+        result,
+      } as unknown as JsonValue,
+    );
+  } catch (error) {
+    return createErrorResponse(params.requestId, 500, String(error));
+  }
+}
+
 async function dispatchRequest(params: {
   request: LocalRpcRequest;
   context: AgentContext;
+  runtime?: AgentRuntime;
 }): Promise<LocalRpcResponse> {
   const { request } = params;
   if (request.method === "GET" && request.path === "/api/services/list") {
@@ -226,6 +288,19 @@ async function dispatchRequest(params: {
       context: params.context,
     });
   }
+  const dashboardSessionId =
+    request.method === "POST"
+      ? matchDashboardSessionExecutePath(request.path)
+      : null;
+  if (dashboardSessionId) {
+    return await handleDashboardSessionExecute({
+      requestId: request.requestId,
+      body: request.body,
+      context: params.context,
+      runtime: params.runtime,
+      sessionId: dashboardSessionId,
+    });
+  }
   return createErrorResponse(
     request.requestId,
     404,
@@ -248,7 +323,12 @@ function writeResponse(socket: net.Socket, response: LocalRpcResponse): void {
   socket.end(`${JSON.stringify(response)}\n`);
 }
 
-function bindConnectionHandler(server: Server, context: AgentContext): void {
+function bindConnectionHandler(params: {
+  server: Server;
+  context: AgentContext;
+  runtime?: AgentRuntime;
+}): void {
+  const { server, context, runtime } = params;
   server.on("connection", (socket) => {
     let buffered = "";
     socket.setEncoding("utf8");
@@ -266,6 +346,7 @@ function bindConnectionHandler(server: Server, context: AgentContext): void {
         const response = await dispatchRequest({
           request,
           context,
+          runtime,
         });
         writeResponse(socket, response);
       } catch (error) {
@@ -283,12 +364,17 @@ function bindConnectionHandler(server: Server, context: AgentContext): void {
  */
 export async function startLocalRpcServer(params: {
   context: AgentContext;
+  runtime?: AgentRuntime;
 }): Promise<LocalRpcServerHandle> {
   const endpoint = getLocalRpcEndpoint(params.context.rootPath);
   await ensureEndpointReady(endpoint);
 
   const server = net.createServer();
-  bindConnectionHandler(server, params.context);
+  bindConnectionHandler({
+    server,
+    context: params.context,
+    runtime: params.runtime,
+  });
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);

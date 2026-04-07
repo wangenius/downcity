@@ -6,7 +6,11 @@
  * - 这样远程 HTTP 鉴权始终是显式行为，不会出现本地“兜底复用”。
  */
 
-import { formatBearerHeaderValue, resolveInvocationToken } from "./AuthEnv.js";
+import {
+  CLI_AUTH_TOKEN_ENV_KEY,
+  formatBearerHeaderValue,
+  resolveInvocationToken,
+} from "./AuthEnv.js";
 
 /**
  * Bearer Token 解析参数。
@@ -24,7 +28,6 @@ export interface CliAuthStateStoreOptions {
  * 优先级（中文）
  * 1. 显式传入 token
  * 2. 环境变量 `DC_AUTH_TOKEN`
- * 3. 环境变量 `DC_AGENT_TOKEN`（Agent 专用 token）
  */
 export function resolveCliAuthToken(params: {
   explicitToken?: string;
@@ -33,7 +36,9 @@ export function resolveCliAuthToken(params: {
 } = {}): string | undefined {
   return resolveInvocationToken({
     explicitToken: params.explicitToken,
-    env: params.env,
+    env: {
+      [CLI_AUTH_TOKEN_ENV_KEY]: params.env?.[CLI_AUTH_TOKEN_ENV_KEY],
+    },
   });
 }
 

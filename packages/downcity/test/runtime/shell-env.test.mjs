@@ -46,7 +46,7 @@ test("buildShellContextEnv applies injected env and preserves request context va
     assert.equal(env.DC_SESSION_ID, "ctx-1");
     assert.equal(env.DC_CTX_SERVER_HOST, "127.0.0.1");
     assert.equal(env.DC_CTX_SERVER_PORT, "5314");
-    assert.equal(env.DC_AGENT_TOKEN, "dci_test_internal");
+    assert.equal(env.DC_AGENT_TOKEN, undefined);
   } finally {
     if (previousSharedKey === undefined) delete process.env.SHARED_KEY;
     else process.env.SHARED_KEY = previousSharedKey;

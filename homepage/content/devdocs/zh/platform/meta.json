@@ -2,7 +2,6 @@
   "title": "平台",
   "pages": [
     "authorization-and-plugin-drafts",
-    "auth-env-and-token-flow",
     "unified-auth-architecture",
     "unified-auth-v1-implementation",
     "unified-auth-v1-detailed-design",

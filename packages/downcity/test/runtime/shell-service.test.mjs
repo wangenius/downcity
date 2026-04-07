@@ -36,9 +36,6 @@ function createRuntimeStub(rootPath) {
     },
     env: {},
     globalEnv: {},
-    auth: {
-      applyInternalAgentAuthEnv() {},
-    },
     systems: [],
     context: {},
     invoke: {},

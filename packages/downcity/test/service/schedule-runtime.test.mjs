@@ -43,9 +43,6 @@ function buildRuntime(rootPath) {
       getDowncitySessionDirPath: (sessionId) =>
         path.join(rootPath, ".downcity/session", sessionId),
     },
-    auth: {
-      applyInternalAgentAuthEnv() {},
-    },
     logger: {
       warn() {},
       info() {},

@@ -27,8 +27,6 @@ import {
   markConsoleAgentStopped,
   upsertConsoleAgentEntry,
 } from "@/main/city/runtime/CityRegistry.js";
-import { applyInternalAgentAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
-import { ensureAgentToken } from "@/main/modules/http/auth/AgentTokenService.js";
 
 /**
  * 异步睡眠工具。
@@ -239,17 +237,10 @@ export const startDaemonProcess = async (params: {
   const logPath = getDaemonLogPath(projectRoot);
   const logFd = fs.openSync(logPath, "a");
 
-  // 为当前 Agent 签发专用 token
-  const agentToken = ensureAgentToken(projectRoot);
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
     DOWNCITY_DAEMON: "1",
   };
-  applyInternalAgentAuthEnv({
-    targetEnv: childEnv,
-    sourceEnv: process.env,
-    token: agentToken.token,
-  });
 
   // 关键注释：daemon 进程必须 detached + unref 才能在父进程退出后继续运行。
   const child = spawn(process.execPath, [cliPath, ...args], {

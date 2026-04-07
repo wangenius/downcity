@@ -27,6 +27,7 @@ import {
   getDowncitySessionRootDirPath,
   getDowncityJsonPath,
 } from "@/main/city/env/Paths.js";
+import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type { ConsoleAgentOption } from "@/shared/types/Console.js";
 import type { AgentProjectInitializationResult } from "@/shared/types/AgentProject.js";
 import type {
@@ -151,7 +152,6 @@ export async function executeConsoleShellCommand(params: {
   command: string;
   cwd: string;
   timeoutMs: number;
-  authToken?: string;
 }): Promise<{
   command: string;
   cwd: string;
@@ -168,13 +168,14 @@ export async function executeConsoleShellCommand(params: {
   const startedAt = Date.now();
 
   return await new Promise((resolve, reject) => {
+    const childEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      FORCE_COLOR: "0",
+    };
+    stripInvocationAuthEnv(childEnv);
     const child = spawn("/bin/zsh", ["-lc", command], {
       cwd,
-      env: {
-        ...process.env,
-        FORCE_COLOR: "0",
-        ...(params.authToken ? { DC_AGENT_TOKEN: params.authToken } : {}),
-      },
+      env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],
     });
     const MAX_OUTPUT_BYTES = 200_000;

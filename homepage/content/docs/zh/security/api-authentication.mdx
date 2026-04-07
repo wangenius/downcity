@@ -121,7 +121,7 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
   }'
 ```
 
-## `DC_AUTH_TOKEN` 与 `DC_AGENT_TOKEN`
+## `DC_AUTH_TOKEN`
 
 先说结论：
 
@@ -132,31 +132,29 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
 
 - 对外调用统一使用 `Authorization: Bearer <token>`
 
-但在 CLI/runtime 里，会看到两个环境变量：
+但在 CLI/runtime 里，真正需要关心的环境变量只有一个：
 
 | 变量 | 面向谁 | 作用 |
 | --- | --- | --- |
 | `DC_AUTH_TOKEN` | 用户、脚本、CI | 显式指定“这次 CLI/API 调用用哪个 token” |
-| `DC_AGENT_TOKEN` | Downcity agent runtime | agent 内部显式发起远程 HTTP 调用时自动传播身份 |
 
 只有显式远程 HTTP 调用时，CLI 才会进入下面的 token 解析顺序：
 
 1. `--token`
 2. `DC_AUTH_TOKEN`
-3. `DC_AGENT_TOKEN`
 
 所以：
 
 - `DC_AUTH_TOKEN` 是显式覆盖
-- `DC_AGENT_TOKEN` 是内部传播
-- 两者最终都会归一化为 Bearer Token 请求头
+- 本地默认 IPC 不需要 token
+- 显式远程 HTTP 最终会把 `DC_AUTH_TOKEN` 归一化为 Bearer Token 请求头
 
 如果你看到 `Missing bearer token`：
 
 - 不要先怀疑 `sessionId`
 - 先确认这次是不是显式远程 HTTP 调用
 - 再检查当前进程有没有可用 token 来源
-- 如果是在 agent/Bash/ACP 子进程里发起的远程 HTTP 调用，再重点检查 `DC_AGENT_TOKEN` 是否被正确继承
+- 如果是在 agent/Bash/ACP 子进程里，先确认你是不是本来就不该走 HTTP，而应该直接走本地 IPC
 
 ## 当前边界
 

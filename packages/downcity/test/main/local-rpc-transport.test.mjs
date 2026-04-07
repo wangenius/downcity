@@ -22,6 +22,11 @@ import {
 function createAgentContext(rootPath) {
   return {
     rootPath,
+    paths: {
+      getDowncityChannelMetaPath() {
+        return path.join(rootPath, ".downcity", "channel", "meta.json");
+      },
+    },
     plugins: {
       list() {
         return [
@@ -63,10 +68,52 @@ function createAgentContext(rootPath) {
   };
 }
 
-async function startLocalRpcServerOrSkip(t, projectRoot) {
+function createAgentRuntime(rootPath) {
+  const session = {
+    async appendUserMessage() {},
+    async run({ query }) {
+      return {
+        success: true,
+        assistantMessage: {
+          role: "assistant",
+          content: [
+            {
+              type: "text",
+              text: `echo:${String(query || "").trim()}`,
+            },
+          ],
+        },
+      };
+    },
+    async appendAssistantMessage() {},
+    clearExecutor() {},
+  };
+  return {
+    rootPath,
+    logger: {
+      info() {},
+      warn() {},
+      error() {},
+      debug() {},
+    },
+    getSession() {
+      return session;
+    },
+    listExecutingSessionIds() {
+      return [];
+    },
+    getExecutingSessionCount() {
+      return 0;
+    },
+    services: new Map(),
+  };
+}
+
+async function startLocalRpcServerOrSkip(t, projectRoot, options = {}) {
   try {
     return await startLocalRpcServer({
       context: createAgentContext(projectRoot),
+      ...options,
     });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "EPERM") {
@@ -224,6 +271,32 @@ test("local rpc server should answer plugin action over IPC", async (t) => {
     assert.equal(result.data?.pluginName, "test-plugin");
     assert.equal(result.data?.actionName, "echo");
     assert.deepEqual(result.data?.data, { value: 1 });
+  } finally {
+    await server.stop();
+    await fs.remove(projectRoot);
+  }
+});
+
+test("local rpc server should execute dashboard session requests over IPC", async (t) => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
+  const server = await startLocalRpcServerOrSkip(t, projectRoot, {
+    runtime: createAgentRuntime(projectRoot),
+  });
+  if (!server) return;
+  try {
+    const result = await callLocalServer({
+      projectRoot,
+      path: "/api/dashboard/sessions/consoleui-chat-main/execute",
+      method: "POST",
+      body: {
+        instructions: "hello",
+      },
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.data?.success, true);
+    assert.equal(result.data?.sessionId, "consoleui-chat-main");
+    assert.equal(result.data?.result?.queued, false);
   } finally {
     await server.stop();
     await fs.remove(projectRoot);

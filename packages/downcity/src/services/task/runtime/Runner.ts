@@ -167,7 +167,6 @@ export async function runTaskNow(params: {
         runDirAbs,
         sessionId: task.frontmatter.sessionId,
         scriptBody: task.body,
-        auth: context.auth,
       });
       outputText = scriptResult.outputText;
       await runProgress.update({

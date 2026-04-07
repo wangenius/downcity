@@ -9,6 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import type { AgentContext } from "@/types/agent/AgentContext.js";
+import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type {
   ShellServiceState,
   ShellSessionRuntimeState,
@@ -154,11 +155,7 @@ export function buildShellEnv(context: AgentContext): NodeJS.ProcessEnv {
   if (sessionId) env.DC_SESSION_ID = sessionId;
   if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
   if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;
-
-  context.auth.applyInternalAgentAuthEnv({
-    targetEnv: env,
-    sourceEnv: process.env,
-  });
+  stripInvocationAuthEnv(env);
 
   return env;
 }

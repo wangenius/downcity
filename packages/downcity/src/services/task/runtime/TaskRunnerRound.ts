@@ -9,7 +9,7 @@
 import path from "node:path";
 import fs from "fs-extra";
 import { execa } from "execa";
-import type { AgentAuthRuntime } from "@/shared/types/AgentHost.js";
+import { stripInvocationAuthEnv } from "@/main/modules/http/auth/AuthEnv.js";
 import type { SessionRunResult } from "@/types/session/SessionRun.js";
 import type { JsonObject } from "@/shared/types/Json.js";
 import type {
@@ -272,7 +272,6 @@ export async function runScriptTask(params: {
   runDirAbs: string;
   sessionId: string;
   scriptBody: string;
-  auth: AgentAuthRuntime;
 }): Promise<ScriptExecutionResult> {
   const body = String(params.scriptBody || "");
   if (!body.trim()) throw new Error("script task body cannot be empty");
@@ -287,10 +286,7 @@ export async function runScriptTask(params: {
         ...process.env,
         DC_SESSION_ID: params.sessionId,
       };
-      params.auth.applyInternalAgentAuthEnv({
-        targetEnv: childEnv,
-        sourceEnv: process.env,
-      });
+      stripInvocationAuthEnv(childEnv);
       return execa("sh", [scriptAbs], {
         cwd: params.runDirAbs,
         reject: true,

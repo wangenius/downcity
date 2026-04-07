@@ -14,7 +14,6 @@ import type {
 } from "@/types/agent/AgentRuntime.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type {
-  AgentAuthRuntime,
   AgentPathRuntime,
   AgentPluginConfigRuntime,
 } from "@/shared/types/AgentHost.js";
@@ -38,10 +37,6 @@ const EMPTY_PATHS: AgentPathRuntime = {
   getDowncitySessionDirPath: (sessionId) => `.downcity/session/${sessionId}`,
 };
 
-const EMPTY_AUTH: AgentAuthRuntime = {
-  applyInternalAgentAuthEnv() {},
-};
-
 const EMPTY_PLUGIN_CONFIG: AgentPluginConfigRuntime = {
   async persistProjectPlugins() {
     return "";
@@ -62,7 +57,6 @@ function normalizeReadyState(input: AgentRuntime): AgentRuntime {
     globalEnv: input.globalEnv,
     systems: input.systems,
     paths: input.paths || EMPTY_PATHS,
-    auth: input.auth || EMPTY_AUTH,
     pluginConfig: input.pluginConfig || EMPTY_PLUGIN_CONFIG,
     model: input.model,
     getSession: input.getSession,

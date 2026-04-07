@@ -56,13 +56,14 @@ If you see:
 - `Invalid bearer token`
 - `Permission denied`
 
-that usually means unified auth is enabled in Console, but the extension is not logged in yet, or the local login state has expired.
+that usually means unified auth is enabled in Console, but the extension does not have a valid token yet.
 
 Fix it by:
 
 1. opening the extension settings page
-2. logging in again with your Console username and password
-3. clicking `Refresh Agent`
+2. running `city token create my-token` in the local terminal
+3. pasting the token into extension settings
+4. clicking `Refresh Agent`
 
 ## 5. No Available Chat
 

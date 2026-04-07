@@ -22,18 +22,18 @@ function readHelp(args) {
 test("root help hides internal and redundant commands", () => {
   const output = readHelp(["--help"]);
 
-  assert.match(output, /\n  auth\s+/);
+  assert.match(output, /\n  token\s+/);
   assert.match(output, /\n  env\s+/);
   assert.doesNotMatch(output, /\n  agents \[options\]/);
   assert.doesNotMatch(output, /\n  run\s+/);
 });
 
-test("auth help exposes token management subcommands", () => {
-  const output = readHelp(["auth", "token", "--help"]);
+test("token help exposes token management subcommands", () => {
+  const output = readHelp(["token", "--help"]);
 
   assert.match(output, /\n  list \[options\]/);
-  assert.match(output, /\n  create \[options\] <name>/);
-  assert.match(output, /\n  revoke \[options\] <tokenId>/);
+  assert.match(output, /\n  create \[options\] \[name\]/);
+  assert.match(output, /\n  delete \[options\] \[tokenId\]/);
 });
 
 test("env help exposes list set delete subcommands", () => {

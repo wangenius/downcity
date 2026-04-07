@@ -1,9 +1,9 @@
 /**
- * auth token CLI 命令测试（node:test）。
+ * token CLI 命令测试（node:test）。
  *
  * 关键点（中文）
  * - 锁定 token 管理只能由本机 CLI 执行。
- * - 覆盖 list/create/revoke 三个最小管理动作。
+ * - 覆盖 list/create/delete 三个最小管理动作。
  */
 
 import assert from "node:assert/strict";
@@ -37,7 +37,7 @@ async function runCliJson(args, options = {}) {
   return JSON.parse(stdout);
 }
 
-test("auth token command manages local access tokens", async (t) => {
+test("token command manages local access tokens", async (t) => {
   const consoleRoot = await fs.mkdtemp(path.join(os.tmpdir(), "city-auth-command-"));
   t.after(async () => {
     await fs.remove(consoleRoot);
@@ -48,11 +48,9 @@ test("auth token command manages local access tokens", async (t) => {
   };
 
   const created = await runCliJson([
-    "auth",
     "token",
     "create",
     "console-ui",
-    "--activate",
     "--json",
   ], { env: cliEnv });
   assert.equal(created.success, true);
@@ -61,7 +59,6 @@ test("auth token command manages local access tokens", async (t) => {
   assert.equal(created.token.token.startsWith("dc_"), true);
 
   const listed = await runCliJson([
-    "auth",
     "token",
     "list",
     "--json",
@@ -71,14 +68,12 @@ test("auth token command manages local access tokens", async (t) => {
   assert.equal(listed.tokens.length, 1);
   assert.equal(listed.tokens[0].name, "console-ui");
 
-  const revoked = await runCliJson([
-    "auth",
+  const deleted = await runCliJson([
     "token",
-    "revoke",
+    "delete",
     listed.tokens[0].id,
     "--json",
   ], { env: cliEnv });
-  assert.equal(revoked.success, true);
-  assert.equal(revoked.token.id, listed.tokens[0].id);
-  assert.equal(typeof revoked.token.revokedAt, "string");
+  assert.equal(deleted.success, true);
+  assert.equal(deleted.tokenId, listed.tokens[0].id);
 });

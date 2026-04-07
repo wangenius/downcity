@@ -23,10 +23,6 @@ export interface AuthTokenSummary {
    */
   expiresAt?: string;
   /**
-   * 吊销时间（可选）。
-   */
-  revokedAt?: string;
-  /**
    * 最近使用时间（可选）。
    */
   lastUsedAt?: string;
@@ -49,4 +45,3 @@ export interface AuthIssuedToken extends AuthTokenSummary {
    */
   token: string;
 }
-

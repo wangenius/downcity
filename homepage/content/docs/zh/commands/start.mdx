@@ -8,7 +8,7 @@ description: 后台启动 city runtime
 后台启动 city runtime。
 
 启动时会初始化 city runtime 的 registry 和进程状态。
-如果当前还没有任何本机 token，启动过程会自动初始化一个 `console-bootstrap` token，并把它写入当前机器的 CLI 鉴权状态。
+如果当前还没有任何本机 token，启动过程会自动初始化一个 `console-bootstrap` token，并在启动日志里显示一次明文 token。
 
 如果你希望一并启动 Console，请使用 `city start --console` 或 `city start -a`。
 
@@ -44,8 +44,9 @@ city version: 1.0.0
    log: <consoleLogPath>
 ✅ Console token initialized
    subject: local-cli
-   token: console-bootstrap
-   use: Console UI / Extension 请粘贴 Bearer Token
+   name: console-bootstrap
+   token: dc_xxx
+   next: 把上面的 Bearer Token 粘贴到 Console UI / Extension
 ```
 
 ```text

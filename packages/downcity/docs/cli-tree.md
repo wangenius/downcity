@@ -308,8 +308,23 @@ city memory flush
 说明：
 
 - 只有声明了 `action.command` 的 plugin action 才会暴露为 CLI 子命令
-- 当前根帮助里可见的是 `skill`、`web`、`asr`、`tts`
-- `auth` 是内建 plugin，但当前没有暴露出可见根命令
+- 当前根帮助里可见的是 `token`、`skill`、`web`、`asr`、`tts`
+- `auth` 仍然是内建 plugin，但用户可见的 token 管理入口已经改成 `city token`
+
+#### token
+
+来源：
+
+- 命令实现：[`Token.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Token.ts)
+
+当前可见二级命令：
+
+```text
+city token
+city token list
+city token create [name]
+city token delete [tokenId]
+```
 
 #### skill
 

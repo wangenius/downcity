@@ -969,7 +969,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           return
         }
 
-        if (authStatus.requireLogin && !hasToken) {
+        if (authStatus.requireToken && !hasToken) {
           if (disposed) return
           setAuthBootstrapRequired(false)
           setAuthRequired(true)

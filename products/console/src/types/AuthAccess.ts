@@ -56,11 +56,6 @@ export interface UiAuthAccessTokenSummary {
   expiresAt?: string
 
   /**
-   * 吊销时间。
-   */
-  revokedAt?: string
-
-  /**
    * 最近使用时间。
    */
   lastUsedAt?: string

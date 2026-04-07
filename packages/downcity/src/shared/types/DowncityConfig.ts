@@ -198,6 +198,9 @@ export interface DowncityConfig {
      * - 仅保留总开关，避免复杂配置负担
      */
     memory?: {
+      /**
+       * 是否启用 memory service。
+       */
       enabled?: boolean;
     };
   };

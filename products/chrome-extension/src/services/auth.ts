@@ -33,7 +33,7 @@ export interface ConsoleExtensionAuthStatusResponse {
   /**
    * 当前是否需要提供 Bearer Token。
    */
-  requireLogin: boolean;
+  requireToken: boolean;
 }
 
 /**
@@ -130,7 +130,7 @@ export async function fetchConsoleAuthStatus(params?: {
   return {
     success: true,
     initialized: payload.initialized === true,
-    requireLogin: payload.requireLogin === true,
+    requireToken: payload.requireToken === true,
   };
 }
 

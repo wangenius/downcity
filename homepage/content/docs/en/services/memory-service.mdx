@@ -13,21 +13,18 @@ description: Memory indexing, search, read, store, and flush service
 - Search and read memory entries
 - Store explicit memory records
 - Flush conversation window into daily memory
-- Automatically recall relevant memory in the local session execution path
-- Automatically capture each completed local turn into session-level working memory
+- Inject memory service usage rules for the agent
 
-## Automatic integration
+## Integration model
 
-When you use the default local session executor, `memory` participates automatically in each turn:
+`memory` is an independent service and is not embedded into the local session execution core.
 
-- Before execution: run a recall for the current user request and inject a small memory pack into context
-- After execution: write the current turn into `.downcity/session/<sessionId>/memory/working.md`
-- After execution: append a lightweight daily journal entry into `.downcity/memory/daily/<date>.md`
-- After execution: when the turn clearly expresses a stable preference or rule, also write it into `.downcity/memory/MEMORY.md`
-- Before writing `longterm`, a simple dedupe check runs to avoid appending the same long-lived rule repeatedly
-- Current longterm candidates are normalized into a more stable Canon-style statement and classified as `preference / fact / decision / rule`
+- The system prompt injects a small stable longterm memory pack from `MEMORY.md` plus rules for using the memory service
+- Injected memory only uses stable Canon text, with dedupe, item limits, and truncation for prompt stability
+- When the agent needs more memory, it should call `memory.search`, `memory.get`, and `memory.store` itself
+- There is no automatic per-turn recall / capture inside the session executor
 
-Use `city memory` when you want to inspect or manage memory manually.
+Use `city memory` when you want to inspect or manage memory directly.
 
 ## Runtime operations
 

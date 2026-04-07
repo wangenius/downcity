@@ -179,39 +179,6 @@ export function getDowncitySessionMessagesArchivePath(
   );
 }
 
-export function getDowncitySessionMemoryDirPath(cwd: string, sessionId: string): string {
-  return path.join(getDowncitySessionDirPath(cwd, sessionId), "memory");
-}
-
-export function getDowncitySessionMemoryPrimaryPath(
-  cwd: string,
-  sessionId: string,
-): string {
-  return path.join(getDowncitySessionMemoryDirPath(cwd, sessionId), "Primary.md");
-}
-
-export function getDowncitySessionMemoryBackupDirPath(
-  cwd: string,
-  sessionId: string,
-): string {
-  return path.join(getDowncitySessionMemoryDirPath(cwd, sessionId), "backup");
-}
-
-export function getDowncitySessionMemoryBackupPath(
-  cwd: string,
-  sessionId: string,
-  timestamp: number,
-): string {
-  return path.join(
-    getDowncitySessionMemoryBackupDirPath(cwd, sessionId),
-    `Primary-${timestamp}.md`,
-  );
-}
-
-export function getDowncitySessionMemoryMetaPath(cwd: string, sessionId: string): string {
-  return path.join(getDowncitySessionMemoryDirPath(cwd, sessionId), ".meta.json");
-}
-
 export function getDowncityPublicDirPath(cwd: string): string {
   return path.join(getDowncityDirPath(cwd), "public");
 }

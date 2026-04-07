@@ -43,7 +43,7 @@ Additional notes:
 - Local `city service start/stop/restart/command`, `city task`, `city chat`, and similar runtime commands use local IPC by default instead of HTTP.
 - Local `city plugin action` and `city <plugin> <action>` commands read the selected project and execute directly in the CLI process.
 - A call only enters remote HTTP mode when you explicitly pass `--host` or `--port`.
-- In remote HTTP mode, token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN` > local CLI auth state stored in console secure storage.
+- In remote HTTP mode, token resolution order is: `--token` > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN`.
 - `sessionId` and `chatKey` are execution context, not authentication tokens.
 
 ## 1.1) `DC_AUTH_TOKEN` vs `DC_AGENT_TOKEN`
@@ -92,14 +92,12 @@ When a `city ...` invocation is explicitly using remote HTTP, the final auth res
 1. explicit `--token`
 2. `DC_AUTH_TOKEN`
 3. `DC_AGENT_TOKEN`
-4. current local CLI token state
 
 That means:
 
 - `--token` always overrides everything else
 - `DC_AUTH_TOKEN` overrides auto-injected `DC_AGENT_TOKEN`
 - agent-internal remote HTTP invocations fall back to `DC_AGENT_TOKEN`
-- non-agent remote invocations can still fall back to current local CLI token state
 
 ### Common mistakes
 
@@ -128,7 +126,6 @@ check in this order:
 1. did you pass `--token`
 2. is `DC_AUTH_TOKEN` set in the current shell
 3. if this is inside an agent/Bash tool/ACP subprocess, did the process inherit `DC_AGENT_TOKEN`
-4. if none of the above apply, is local CLI auth state available on this machine
 
 For agent-internal remote HTTP calls, the first suspect is usually the `DC_AGENT_TOKEN` injection chain, not the task/session parameters.
 
@@ -146,7 +143,7 @@ For agent-internal remote HTTP calls, the first suspect is usually the `DC_AGENT
 - You can pass `--session-id` explicitly
 - Or first fallback to `DC_SESSION_ID`
 - Local calls use IPC by default and do not need a Bearer token
-- Only explicit remote HTTP calls resolve auth through `--token` / `DC_AUTH_TOKEN` / `DC_AGENT_TOKEN` / local CLI auth state
+- Only explicit remote HTTP calls resolve auth through `--token` / `DC_AUTH_TOKEN` / `DC_AGENT_TOKEN`
 
 ### Chat channel credentials
 

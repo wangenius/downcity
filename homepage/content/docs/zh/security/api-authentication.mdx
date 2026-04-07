@@ -18,7 +18,6 @@ Downcity 现在只保留一种对外认证模型：
 - `GET /api/auth/me`
 - `GET /api/auth/token/list`
 - `POST /api/auth/token/create`
-- `POST /api/auth/token/revoke`
 - `POST /api/auth/token/delete`
 
 ## 第一次使用
@@ -29,7 +28,7 @@ Downcity 现在只保留一种对外认证模型：
 city start --console
 ```
 
-首次启动时，Downcity 会自动初始化一个本机 token，并把它写入当前机器的 CLI 鉴权状态。启动日志里会看到类似输出：
+首次启动时，Downcity 会自动初始化一个本机 token，并在启动日志里显示一次明文 token。启动日志里会看到类似输出：
 
 ```text
 $ city start --console
@@ -43,21 +42,28 @@ city version: 1.0.0
    log: <consoleLogPath>
 ✅ Console token initialized
    subject: local-cli
-   token: console-bootstrap
-   use: Console UI / Extension 请粘贴 Bearer Token
+   name: console-bootstrap
+   token: dc_xxx
+   next: 把上面的 Bearer Token 粘贴到 Console UI / Extension
 ```
 
 如果你想手动签发 token，可以直接在本机终端执行：
 
 ```bash
-city auth token create console-ui --activate
+city token create my-token
 ```
 
-常见约定是：
+这里的名称只是便于你自己识别和管理，不代表不同权限或不同渠道类型。
 
-- Console UI 使用 `console-ui`
-- Chrome Extension 使用 `chrome-extension`
-- 其他脚本按用途自定义名称
+如果你想直接走交互模式，也可以执行：
+
+```bash
+city token
+```
+
+交互式模式会继续引导你：
+
+- 创建完成后直接复制刚签发的 token
 
 ## 用 Token 调用接口
 
@@ -75,25 +81,19 @@ curl http://127.0.0.1:3000/api/auth/me \
 列出当前机器已签发的 token：
 
 ```bash
-city auth token list
+city token list
 ```
 
 创建一个新的 token：
 
 ```bash
-city auth token create chrome-extension
+city token create my-token
 ```
 
-创建并立即设为当前 CLI 默认 token：
+删除 token：
 
 ```bash
-city auth token create console-ui --activate
-```
-
-吊销 token：
-
-```bash
-city auth token revoke <tokenId>
+city token delete <tokenId>
 ```
 
 如果你更习惯直接调用 HTTP，也可以继续用 Bearer Token 管理 token：
@@ -113,7 +113,7 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/create \
 ```
 
 ```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
+curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer dc_xxx' \
   -d '{
@@ -144,7 +144,6 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
 1. `--token`
 2. `DC_AUTH_TOKEN`
 3. `DC_AGENT_TOKEN`
-4. 本机 CLI 当前 token 状态
 
 所以：
 

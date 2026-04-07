@@ -1,9 +1,9 @@
 /**
- * LocalSessionCore memory 接入测试（node:test）。
+ * LocalSessionCore 与 memory 解耦测试（node:test）。
  *
  * 关键点（中文）
- * - recall 应在本轮 system 组装阶段注入少量相关记忆。
- * - capture 应在本轮完成后把当前问答交给 memory runtime。
+ * - LocalSessionCore 只消费 systemComposer，不直接注入 memory。
+ * - session 执行内核不应承载 memory service 的 recall / capture 逻辑。
  */
 
 import assert from "node:assert/strict";
@@ -21,7 +21,7 @@ function createLoggerStub() {
   };
 }
 
-function createCore(params = {}) {
+function createCore() {
   const historyComposer = {
     sessionId: "chat-memory-1",
     async prepare() {
@@ -79,69 +79,23 @@ function createCore(params = {}) {
         return [{ role: "system", content: "基础 system" }];
       },
     },
-    ...(params.memoryRuntime ? { memoryRuntime: params.memoryRuntime } : {}),
   });
 
   return { core, historyComposer };
 }
 
-test("prepareExecuteInput injects recalled memory into system messages", async () => {
-  const { core } = createCore({
-    memoryRuntime: {
-      async recall() {
-        return {
-          items: [
-            {
-              path: ".downcity/memory/MEMORY.md",
-              citation: ".downcity/memory/MEMORY.md#L1-L4",
-              snippet: "用户偏好简洁的发布说明。",
-              score: 0.92,
-              source: "longterm",
-            },
-          ],
-        };
-      },
-      async capture() {},
-    },
-  });
+test("prepareExecuteInput only uses systemComposer output", async () => {
+  const { core } = createCore();
 
   const prepared = await core.prepareExecuteInput("发布说明怎么写");
 
-  assert.equal(prepared.system.length, 2);
-  assert.match(String(prepared.system[1]?.content || ""), /历史记忆/);
-  assert.match(String(prepared.system[1]?.content || ""), /用户偏好简洁的发布说明/);
-  assert.match(String(prepared.system[1]?.content || ""), /MEMORY\.md#L1-L4/);
+  assert.equal(prepared.system.length, 1);
+  assert.equal(String(prepared.system[0]?.content || ""), "基础 system");
 });
 
-test("captureTurnMemory forwards current turn to memory runtime", async () => {
-  let captured = null;
-  const { core } = createCore({
-    memoryRuntime: {
-      async recall() {
-        return { items: [] };
-      },
-      async capture(input) {
-        captured = input;
-      },
-    },
-  });
+test("LocalSessionCore does not expose memory-specific helpers", () => {
+  const { core } = createCore();
 
-  await core.captureTurnMemory({
-    query: "给我写一版发布说明",
-    assistantMessage: {
-      role: "assistant",
-      parts: [{ type: "text", text: "这是简洁版本的发布说明。" }],
-      metadata: {
-        v: 1,
-        ts: Date.now(),
-        sessionId: "chat-memory-1",
-      },
-    },
-  });
-
-  assert.deepEqual(captured, {
-    sessionId: "chat-memory-1",
-    query: "给我写一版发布说明",
-    assistantText: "这是简洁版本的发布说明。",
-  });
+  assert.equal(typeof core.recallMemorySystemMessage, "undefined");
+  assert.equal(typeof core.captureTurnMemory, "undefined");
 });

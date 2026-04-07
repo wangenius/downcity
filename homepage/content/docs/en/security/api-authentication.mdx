@@ -18,7 +18,6 @@ The currently exposed endpoints are:
 - `GET /api/auth/me`
 - `GET /api/auth/token/list`
 - `POST /api/auth/token/create`
-- `POST /api/auth/token/revoke`
 - `POST /api/auth/token/delete`
 
 ## First-time setup
@@ -29,7 +28,7 @@ If you start Console through:
 city start --console
 ```
 
-the first startup automatically creates a local token and writes it into the local CLI auth state for this machine. The startup output looks like this:
+the first startup automatically creates a local token and prints the plain token once in the startup output. The startup output looks like this:
 
 ```text
 $ city start --console
@@ -43,21 +42,28 @@ city version: 1.0.0
    log: <consoleLogPath>
 ✅ Console token initialized
    subject: local-cli
-   token: console-bootstrap
-   use: Console UI / Extension 请粘贴 Bearer Token
+   name: console-bootstrap
+   token: dc_xxx
+   next: paste the Bearer Token above into Console UI / Extension
 ```
 
 If you want to mint tokens manually, run:
 
 ```bash
-city auth token create console-ui --activate
+city token create my-token
 ```
 
-Typical names are:
+The name is only for your own identification and management. It does not represent a different token type or channel scope.
 
-- `console-ui` for Console UI
-- `chrome-extension` for the Chrome extension
-- custom names for scripts and local tooling
+If you prefer an interactive flow, you can also run:
+
+```bash
+city token
+```
+
+The interactive flow then helps you:
+
+- copy the newly issued token immediately
 
 ## Use the token
 
@@ -75,25 +81,19 @@ If the token is valid, the endpoint returns the current subject, roles, and perm
 List tokens on the current machine:
 
 ```bash
-city auth token list
+city token list
 ```
 
 Create a new token:
 
 ```bash
-city auth token create chrome-extension
+city token create my-token
 ```
 
-Create a new token and set it as the current CLI token immediately:
+Delete a token:
 
 ```bash
-city auth token create console-ui --activate
-```
-
-Revoke a token:
-
-```bash
-city auth token revoke <tokenId>
+city token delete <tokenId>
 ```
 
 You can also manage tokens through HTTP with an existing Bearer token:
@@ -113,7 +113,7 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/create \
 ```
 
 ```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
+curl -X POST http://127.0.0.1:3000/api/auth/token/delete \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer dc_xxx' \
   -d '{
@@ -144,7 +144,6 @@ Only explicit remote HTTP calls use this resolution order:
 1. `--token`
 2. `DC_AUTH_TOKEN`
 3. `DC_AGENT_TOKEN`
-4. current local CLI token state
 
 So:
 

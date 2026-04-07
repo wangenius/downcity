@@ -43,8 +43,16 @@ If your Console UI is elsewhere, open the extension settings page. The page is s
 If you do not have a token yet, create one in the local terminal first:
 
 ```bash
-city auth token create chrome-extension
+city token create my-token
 ```
+
+If you prefer the interactive flow, run:
+
+```bash
+city token
+```
+
+The flow can copy the newly issued token right away.
 
 Then paste the returned value into `Access Token`.
 

@@ -43,8 +43,16 @@ npm run build:extension
 如果你还没有 token，先在本机终端执行：
 
 ```bash
-city auth token create chrome-extension
+city token create my-token
 ```
+
+如果你更喜欢交互式流程，也可以直接执行：
+
+```bash
+city token
+```
+
+创建完成后可直接复制 token。
 
 然后把返回的 token 粘贴到扩展设置页的 `Access Token`。
 

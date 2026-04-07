@@ -33,7 +33,7 @@ export function registerAuthRoutes(params: {
     return c.json({
       success: true,
       initialized,
-      requireLogin: initialized,
+      requireToken: initialized,
     });
   });
 
@@ -66,21 +66,6 @@ export function registerAuthRoutes(params: {
           name: String(body.name || ""),
           expiresAt: typeof body.expiresAt === "string" ? body.expiresAt : undefined,
         }),
-      });
-    } catch (error) {
-      return toErrorResponse(c, error);
-    }
-  });
-
-  protectedRouter.post("/token/revoke", requireAuth, async (c) => {
-    try {
-      const principal = getAuthPrincipal(c);
-      const body = (await c.req.json().catch(() => ({}))) as {
-        tokenId?: string;
-      };
-      return c.json({
-        success: true,
-        token: authService.revokeToken(principal, String(body.tokenId || "")),
       });
     } catch (error) {
       return toErrorResponse(c, error);

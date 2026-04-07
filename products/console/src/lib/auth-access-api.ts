@@ -11,7 +11,6 @@ import type {
   UiAuthAccessIssuedToken,
   UiAuthAccessMeResponse,
   UiAuthAccessTokenListResponse,
-  UiAuthAccessTokenSummary,
 } from "@/types/AuthAccess"
 
 type RequestJson = <T>(
@@ -53,25 +52,6 @@ export async function createAuthAccessToken(params: {
     {
       method: "POST",
       body: JSON.stringify(params.input),
-    },
-  )
-  return data.token
-}
-
-/**
- * 吊销当前管理员 token。
- */
-export async function revokeAuthAccessToken(params: {
-  requestJson: RequestJson
-  tokenId: string
-}): Promise<UiAuthAccessTokenSummary> {
-  const data = await params.requestJson<{ token: UiAuthAccessTokenSummary }>(
-    dashboardApiRoutes.authTokenRevoke(),
-    {
-      method: "POST",
-      body: JSON.stringify({
-        tokenId: params.tokenId,
-      }),
     },
   )
   return data.token

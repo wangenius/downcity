@@ -114,6 +114,7 @@ export class AuthService {
     if (!user) return [];
     return this.store
       .listTokensByUserId(user.id)
+      .filter((item) => !item.revokedAt)
       .map((item) => this.store.toTokenSummary(item));
   }
 
@@ -142,28 +143,6 @@ export class AuthService {
       }),
     });
     return issued.token;
-  }
-
-  /**
-   * 吊销本机 CLI 主体下的 token。
-   */
-  revokeLocalCliToken(tokenIdInput: string): AuthTokenSummary {
-    const user = this.requireLocalCliUser();
-    const record = this.requireLocalCliTokenRecord(tokenIdInput, user.id);
-    const revoked = this.store.revokeToken(record.id);
-    if (!revoked) throw new AuthError("Token not found", 404);
-    this.store.insertAuditLog({
-      actorUserId: user.id,
-      resourceType: "auth_token",
-      resourceId: revoked.id,
-      action: "token_revoke",
-      result: "success",
-      metaJson: JSON.stringify({
-        name: revoked.name,
-        source: "local-cli",
-      }),
-    });
-    return this.store.toTokenSummary(revoked);
   }
 
   /**
@@ -260,31 +239,8 @@ export class AuthService {
   listTokens(principal: AuthPrincipal): AuthTokenSummary[] {
     return this.store
       .listTokensByUserId(principal.userId)
+      .filter((item) => !item.revokedAt)
       .map((item) => this.store.toTokenSummary(item));
-  }
-
-  /**
-   * 吊销当前用户的 token。
-   */
-  revokeToken(principal: AuthPrincipal, tokenIdInput: string): AuthTokenSummary {
-    const tokenId = String(tokenIdInput || "").trim();
-    if (!tokenId) throw new AuthError("tokenId is required", 400);
-    const record = this.store.getTokenById(tokenId);
-    if (!record || record.userId !== principal.userId) {
-      throw new AuthError("Token not found", 404);
-    }
-    const revoked = this.store.revokeToken(record.id);
-    if (!revoked) throw new AuthError("Token not found", 404);
-    this.store.insertAuditLog({
-      actorUserId: principal.userId,
-      actorTokenId: principal.tokenId,
-      resourceType: "auth_token",
-      resourceId: revoked.id,
-      action: "token_revoke",
-      result: "success",
-      metaJson: JSON.stringify({ name: revoked.name }),
-    });
-    return this.store.toTokenSummary(revoked);
   }
 
   /**

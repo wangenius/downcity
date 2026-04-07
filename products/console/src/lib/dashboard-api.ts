@@ -62,7 +62,7 @@ export interface ConsoleAuthStatusResponse {
   /**
    * 当前 console-ui 是否应强制进入 Bearer Token 输入流程。
    */
-  requireLogin: boolean
+  requireToken: boolean
 }
 
 /**
@@ -189,7 +189,6 @@ export const dashboardApiRoutes = {
   authMe: () => "/api/auth/me",
   authTokenList: () => "/api/auth/token/list",
   authTokenCreate: () => "/api/auth/token/create",
-  authTokenRevoke: () => "/api/auth/token/revoke",
   authTokenDelete: () => "/api/auth/token/delete",
   uiAgents: (agentId?: string) =>
     agentId

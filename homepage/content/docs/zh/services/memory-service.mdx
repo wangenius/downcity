@@ -13,21 +13,18 @@ description: memory 索引、检索、读取、写入与刷写 service
 - 记忆检索与按文件读取
 - 显式写入 memory
 - 把会话窗口刷写到 daily memory
-- 在本地 session 执行链里自动召回相关记忆
-- 在本地 session 执行结束后自动写入 session 级 working memory
+- 向 agent 注入 memory service 的使用规则
 
-## 自动接入
+## 接入方式
 
-当你使用默认本地 session 执行器时，`memory` 会自动参与一轮执行：
+`memory` 是独立 service，不直接耦合本地 session 执行内核。
 
-- 执行前：按当前用户请求做一次 recall，并把少量相关记忆注入本轮上下文
-- 执行后：把当前轮问答写入 `.downcity/session/<sessionId>/memory/working.md`
-- 执行后：追加一条轻量 daily journal 到 `.downcity/memory/daily/<date>.md`
-- 执行后：如果检测到明显的长期偏好 / 规则表达，再额外写入 `.downcity/memory/MEMORY.md`
-- 写入 `longterm` 前会先做一次简单去重，避免同一条长期规则不断重复追加
-- 当前 longterm 候选会被整理成更稳定的 Canon 表述，并区分 `preference / fact / decision / rule`
+- system prompt 会注入一小段来自 `MEMORY.md` 的稳定长期记忆，并附带 memory service 的使用规则
+- 注入内容只取长期稳定的 Canon 文本，会去重、限量，并裁剪过长条目
+- agent 需要额外记忆时，自行调用 `memory.search`、`memory.get`、`memory.store`
+- 不会在每轮 session 执行时自动做 recall / capture
 
-如果你需要手动排查或管理记忆，仍然使用 `city memory` 命令。
+如果你需要检索、读取、写入或刷写记忆，使用 `city memory` 命令。
 
 ## 运行态操作
 

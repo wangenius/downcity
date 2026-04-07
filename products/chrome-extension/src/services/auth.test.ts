@@ -40,7 +40,7 @@ test("fetchConsoleAuthStatus reads public auth status from console", async () =>
     Response.json({
       success: true,
       initialized: true,
-      requireLogin: true,
+      requireToken: true,
     });
 
   try {
@@ -50,7 +50,7 @@ test("fetchConsoleAuthStatus reads public auth status from console", async () =>
     assert.deepEqual(result, {
       success: true,
       initialized: true,
-      requireLogin: true,
+      requireToken: true,
     });
   } finally {
     globalThis.fetch = originalFetch;

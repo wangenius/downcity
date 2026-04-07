@@ -5,10 +5,10 @@
  * - `city start` 首次启动时，如果还没有本机 CLI access token，这里负责初始化首个 token。
  * - 新模型不再要求用户名密码登录，也不再做交互式密码提示。
  * - 一旦本机 token 已存在，本模块直接跳过，不会重复打断启动流程。
+ * - 启动流程不再写入任何本机默认 token 状态，只显示一次明文 token。
  */
 
 import { AuthService } from "@/main/modules/http/auth/AuthService.js";
-import { writeCliAuthState } from "@/main/modules/http/auth/CliAuthStateStore.js";
 import { emitCliBlock } from "./CliReporter.js";
 
 const DEFAULT_CONSOLE_BOOTSTRAP_TOKEN_NAME = "console-bootstrap";
@@ -41,15 +41,6 @@ export async function ensureConsoleAuthBootstrap(
     const payload = authService.ensureLocalCliAccess({
       tokenName: DEFAULT_CONSOLE_BOOTSTRAP_TOKEN_NAME,
     });
-    try {
-      writeCliAuthState({
-        token: payload.token.token,
-        username: payload.user.username,
-        source: "bootstrap",
-      });
-    } catch {
-      // 关键点（中文）：CLI 登录态写入失败不应阻塞统一账户初始化。
-    }
 
     emitCliBlock({
       tone: "success",
@@ -61,14 +52,19 @@ export async function ensureConsoleAuthBootstrap(
           value: payload.user.username,
         },
         {
-          label: "Token",
+          label: "Name",
           value: payload.token.name,
         },
         {
-          label: "Use",
-          value: "Console UI / Extension 请粘贴 Bearer Token",
+          label: "Token",
+          value: payload.token.token,
+        },
+        {
+          label: "Next",
+          value: "把上面的 Bearer Token 粘贴到 Console UI / Extension",
         },
       ],
+      note: "明文 token 只会在本次初始化时显示一次。",
     });
   } finally {
     if (ownsAuthService) authService.close();

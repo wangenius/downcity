@@ -26,6 +26,8 @@ test("Options App groups server and auth above agent and channel selection", () 
   assert.match(source, />\s*IP \/ Host\s*</u);
   assert.match(source, />\s*Port\s*</u);
   assert.match(source, />\s*Access Token\s*</u);
+  assert.match(source, /city token create my-token/u);
+  assert.match(source, /city token/u);
   assert.doesNotMatch(source, />\s*Connection\s*</u);
   assert.doesNotMatch(source, />\s*Server \/ Auth\s*</u);
 });

@@ -2,89 +2,55 @@
  * Auth 环境变量注入测试。
  *
  * 关键点（中文）
- * - 统一 token 解析优先级：显式 token > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN` > 本地 CLI 登录态。
+ * - 统一 token 解析优先级：显式 token > `DC_AUTH_TOKEN` > `DC_AGENT_TOKEN`。
  * - shell/tool 子进程只传播 `DC_AGENT_TOKEN`，不再自动合成 `DC_AUTH_TOKEN`。
  */
 
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import test from "node:test";
 import {
   resolveCliAuthToken,
-  writeCliAuthState,
 } from "../../bin/main/modules/http/auth/CliAuthStateStore.js";
 import { buildShellContextEnv } from "../../bin/session/tools/shell/ShellToolFormatting.js";
 import { applyInternalAgentAuthEnv } from "../../bin/main/modules/http/auth/AuthEnv.js";
 
-function createConsoleRoot() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "downcity-auth-env-"));
-  const dbPath = path.join(root, "downcity.db");
-  return {
-    root,
-    dbPath,
-    cleanup() {
-      fs.rmSync(root, { recursive: true, force: true });
-    },
-  };
-}
-
-test("resolveCliAuthToken follows explicit > DC_AUTH_TOKEN > DC_AGENT_TOKEN > stored state", () => {
-  const { dbPath, cleanup } = createConsoleRoot();
-  try {
-    writeCliAuthState(
-      {
-        token: "dc_stored",
-        username: "admin",
-        source: "manual",
+test("resolveCliAuthToken follows explicit > DC_AUTH_TOKEN > DC_AGENT_TOKEN", () => {
+  assert.equal(
+    resolveCliAuthToken({
+      explicitToken: "dc_explicit",
+      env: {
+        DC_AUTH_TOKEN: "dc_auth",
+        DC_AGENT_TOKEN: "dc_agent",
       },
-      { dbPath },
-    );
+    }),
+    "dc_explicit",
+  );
 
-    assert.equal(
-      resolveCliAuthToken({
-        explicitToken: "dc_explicit",
-        env: {
-          DC_AUTH_TOKEN: "dc_auth",
-          DC_AGENT_TOKEN: "dc_agent",
-        },
-        dbPath,
-      }),
-      "dc_explicit",
-    );
+  assert.equal(
+    resolveCliAuthToken({
+      env: {
+        DC_AUTH_TOKEN: "dc_auth",
+        DC_AGENT_TOKEN: "dc_agent",
+      },
+    }),
+    "dc_auth",
+  );
 
-    assert.equal(
-      resolveCliAuthToken({
-        env: {
-          DC_AUTH_TOKEN: "dc_auth",
-          DC_AGENT_TOKEN: "dc_agent",
-        },
-        dbPath,
-      }),
-      "dc_auth",
-    );
+  assert.equal(
+    resolveCliAuthToken({
+      env: {
+        DC_AGENT_TOKEN: "dc_agent",
+      },
+    }),
+    "dc_agent",
+  );
 
-    assert.equal(
-      resolveCliAuthToken({
-        env: {
-          DC_AGENT_TOKEN: "dc_agent",
-        },
-        dbPath,
-      }),
-      "dc_agent",
-    );
-
-    assert.equal(
-      resolveCliAuthToken({
-        env: {},
-        dbPath,
-      }),
-      "dc_stored",
-    );
-  } finally {
-    cleanup();
-  }
+  assert.equal(
+    resolveCliAuthToken({
+      env: {},
+    }),
+    undefined,
+  );
 });
 
 test("buildShellContextEnv keeps DC_AGENT_TOKEN and does not synthesize DC_AUTH_TOKEN", () => {

@@ -39,12 +39,10 @@ city memory flush --session-id telegram-chat-123 --time "2026-03-25T23:00:00+08:
 ## 说明
 
 - Memory 默认开启（零配置）。如需关闭：`context.memory.enabled=false`。
-- 默认本地 session 执行链会自动做 recall / capture；`city memory` 主要用于手动检索、写入、重建与排查。
-- 当前自动 capture 规则：
-- 每轮成功执行后都会写 `working` 与 `daily`
-- 当用户输入里出现明显的长期偏好 / 规则信号（例如“记住”“以后”“默认”）时，会额外写 `longterm`
-- `longterm` 写入前会先检查 `MEMORY.md`，相同内容不会重复追加
-- 当前 `longterm` 会做一层确定性整理，归一为 `preference / fact / decision / rule` 之一
+- `memory` 是独立 service，不直接耦合 session 执行链。
+- system prompt 只会注入一小段 `MEMORY.md` 的稳定长期记忆，以及 memory service 的使用规则。
+- 这段注入内容会做去重、限量与长度裁剪，不会把整份 memory 文件直接塞进 prompt。
+- agent 需要更多记忆时，应主动调用 `memory.search`、`memory.get`、`memory.store`。
 - 所有 memory action 也支持通用 `--delay` / `--time` one-shot 调度。
 - 更详细说明见 [`Service Action 定时执行`](/zh/docs/commands/service/scheduling)。
 - 先启动 agent：

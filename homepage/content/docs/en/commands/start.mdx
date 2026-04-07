@@ -8,7 +8,7 @@ description: Start city runtime in background mode
 Start city runtime in background mode.
 
 Startup initializes the city runtime registry and process state.
-If no local token exists yet, startup automatically creates a `console-bootstrap` token and writes it into the local CLI auth state for this machine.
+If no local token exists yet, startup automatically creates a `console-bootstrap` token and prints the plain token once in startup output.
 
 If you also want to start Console in one step, use `city start --console` or `city start -a`.
 
@@ -44,8 +44,9 @@ city version: 1.0.0
    log: <consoleLogPath>
 ✅ Console token initialized
    subject: local-cli
-   token: console-bootstrap
-   use: Console UI / Extension 请粘贴 Bearer Token
+   name: console-bootstrap
+   token: dc_xxx
+   next: paste the Bearer Token above into Console UI / Extension
 ```
 
 ```text

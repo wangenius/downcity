@@ -110,7 +110,7 @@ test("auth status stays public and reflects local CLI bootstrap state", async ()
     assert.equal(before.status, 200);
     assert.equal(beforeBody.success, true);
     assert.equal(beforeBody.initialized, false);
-    assert.equal(beforeBody.requireLogin, false);
+    assert.equal(beforeBody.requireToken, false);
 
     ensureLocalCliToken(authService);
 
@@ -120,13 +120,13 @@ test("auth status stays public and reflects local CLI bootstrap state", async ()
     assert.equal(after.status, 200);
     assert.equal(afterBody.success, true);
     assert.equal(afterBody.initialized, true);
-    assert.equal(afterBody.requireLogin, true);
+    assert.equal(afterBody.requireToken, true);
   } finally {
     cleanup();
   }
 });
 
-test("token create list and revoke follow authenticated lifecycle", async () => {
+test("token create list and delete follow authenticated lifecycle", async () => {
   const { app, authService, cleanup } = createIsolatedApp();
   try {
     const bootstrapToken = ensureLocalCliToken(authService).token.token;
@@ -160,35 +160,33 @@ test("token create list and revoke follow authenticated lifecycle", async () => 
     assert.equal(Array.isArray(listBody.tokens), true);
     assert.equal(listBody.tokens.length, 2);
 
-    const revokeTarget = listBody.tokens.find((item) => item.name === "chrome-extension");
-    assert.equal(Boolean(revokeTarget?.id), true);
+    const deleteTarget = listBody.tokens.find((item) => item.name === "chrome-extension");
+    assert.equal(Boolean(deleteTarget?.id), true);
 
-    const revokeResponse = await app.request("/api/auth/token/revoke", {
+    const deleteResponse = await app.request("/api/auth/token/delete", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         Authorization: `Bearer ${bootstrapToken}`,
       },
       body: JSON.stringify({
-        tokenId: revokeTarget.id,
+        tokenId: deleteTarget.id,
       }),
     });
-    const revokeBody = await revokeResponse.json();
+    const deleteBody = await deleteResponse.json();
 
-    assert.equal(revokeResponse.status, 200);
-    assert.equal(revokeBody.success, true);
-    assert.equal(revokeBody.token.id, revokeTarget.id);
-    assert.equal(typeof revokeBody.token.revokedAt, "string");
+    assert.equal(deleteResponse.status, 200);
+    assert.equal(deleteBody.success, true);
 
-    const revokedMe = await app.request("/api/auth/me", {
+    const deletedMe = await app.request("/api/auth/me", {
       headers: {
         Authorization: `Bearer ${createBody.token.token}`,
       },
     });
-    const revokedMeBody = await revokedMe.json();
+    const deletedMeBody = await deletedMe.json();
 
-    assert.equal(revokedMe.status, 401);
-    assert.equal(revokedMeBody.success, false);
+    assert.equal(deletedMe.status, 401);
+    assert.equal(deletedMeBody.success, false);
   } finally {
     cleanup();
   }

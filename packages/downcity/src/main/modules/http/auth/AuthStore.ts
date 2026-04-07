@@ -524,7 +524,6 @@ export class AuthStore {
       id: record.id,
       name: record.name,
       expiresAt: record.expiresAt,
-      revokedAt: record.revokedAt,
       lastUsedAt: record.lastUsedAt,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,

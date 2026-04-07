@@ -305,7 +305,7 @@ export function ExtensionPopupApp() {
           const authStatus = await fetchConsoleAuthStatus({
             consoleBaseUrl: endpoint.baseUrl,
           });
-          const needsLogin = authStatus.requireLogin === true;
+          const needsLogin = authStatus.requireToken === true;
           setAuthRequired(needsLogin && !nextAuthToken);
           if (needsLogin && !nextAuthToken) {
             setStatus({

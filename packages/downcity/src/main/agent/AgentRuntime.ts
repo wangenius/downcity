@@ -27,7 +27,6 @@ import { getSessionRunScope } from "@session/SessionRunScope.js";
 import { JsonlSessionHistoryComposer } from "@session/composer/history/jsonl/JsonlSessionHistoryComposer.js";
 import { JsonlSessionCompactionComposer } from "@session/composer/compaction/jsonl/JsonlSessionCompactionComposer.js";
 import { DefaultSessionSystemComposer } from "@session/composer/system/default/DefaultSessionSystemComposer.js";
-import { createLocalSessionMemoryRuntime } from "@session/executors/local/SessionMemoryRuntime.js";
 import type { SessionHistoryComposer } from "@session/composer/history/SessionHistoryComposer.js";
 import { AcpSessionExecutor } from "@session/executors/acp/AcpSessionExecutor.js";
 import { ChatSession } from "@services/chat/runtime/ChatSession.js";
@@ -298,9 +297,6 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
               historyComposer: sessionHistoryComposer,
               compactionComposer,
               systemComposer,
-              memoryRuntime: createLocalSessionMemoryRuntime({
-                getContext: () => getAgentContext(),
-              }),
               getTools: () => shellTools,
               executionComposer: chatExecutionComposer,
             }),

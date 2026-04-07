@@ -184,7 +184,7 @@ export function createRouteAuthGuardMiddleware(
       await next();
       return;
     }
-    if (!authService.hasUsers()) {
+    if (!authService.hasLocalCliAccess()) {
       await next();
       return;
     }

@@ -2,7 +2,7 @@
  * `city model create` 交互命令。
  *
  * 关键点（中文）
- * - `create` 是 model 命令组里唯一保留交互式体验的入口。
+ * - `create` 是 model 命令组里“直接进入创建流程”的快捷入口。
  * - provider 创建后可立即测试并批量导入发现到的远端模型。
  */
 
@@ -22,7 +22,13 @@ import {
   parsePositiveIntegerOption,
 } from "./ModelCommandShared.js";
 
-async function runInteractiveCreate(options: { json?: boolean }): Promise<void> {
+/**
+ * 运行 `city model create` 交互流程。
+ *
+ * 关键点（中文）
+ * - 既供 `city model create` 直接调用，也供裸 `city model` manager 复用。
+ */
+export async function runInteractiveModelCreateFlow(options: { json?: boolean }): Promise<void> {
   const asJson = options.json !== false;
   let store: ConsoleStore | null = null;
   try {
@@ -283,10 +289,10 @@ async function runInteractiveModelCreate(
 export function registerModelCreateCommand(model: Command): void {
   model
     .command("create")
-    .description("交互式创建 provider 或 model（唯一交互命令）")
+    .description("直接进入创建 provider 或 model 的交互流程")
     .option("--json [enabled]", "以 JSON 输出", parseBooleanOption, true)
     .helpOption("--help", "display help for command")
     .action(async (options: { json?: boolean }) => {
-      await runInteractiveCreate(options);
+      await runInteractiveModelCreateFlow(options);
     });
 }

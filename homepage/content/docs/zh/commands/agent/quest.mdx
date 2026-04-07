@@ -1,0 +1,46 @@
+---
+title: city agent quest
+description: 通过和 Console 相同的主会话向指定 agent 发送一轮消息
+---
+
+# `city agent quest`
+
+通过 Console 主会话向指定 agent 发送一轮消息。
+
+该命令默认复用和 Console UI 相同的会话：`consoleui-chat-main`。
+
+## 用法
+
+```bash
+city agent quest --to <agentName> <message...>
+```
+
+## 常用参数
+
+- `-t, --to <name>`：目标 agent 名称，从 console registry 解析
+- `--host <host>` / `--port <port>`：强制走远程 HTTP transport
+- `--token <token>`：远程 HTTP 模式下显式传入 Bearer token
+- `--json [enabled]`：输出结构化 JSON，而不是直接打印回复文本
+
+## 行为说明
+
+- 目标 agent 必须已经处于运行中状态。
+- 命令按 agent 名称解析目标，不依赖当前目录。
+- 消息会进入该 agent 的 Console 主会话，因此后续 `quest` 会继续复用同一段上下文。
+- 默认文本模式下，CLI 直接打印 agent 回复。
+- `--json` 模式下，CLI 返回 session 元信息与原始执行结果。
+
+## 相关命令
+
+- [`city agent list`](/zh/docs/commands/agent/list)
+- [`city agent start`](/zh/docs/commands/agent/start)
+- [`city agent status`](/zh/docs/commands/agent/status)
+
+## 示例输出
+
+```text
+$ city agent quest --to lucas_whitman "总结一下今天做了什么"
+downcity v1.0.437
+
+今天你完成了 CLI catalog 重构、同步了 service/plugin 文档，并验证了命令树测试。
+```

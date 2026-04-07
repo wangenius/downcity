@@ -1,8 +1,8 @@
 /**
- * `city keys` 命令树。
+ * `city env` 命令树。
  *
  * 关键点（中文）
- * - `keys` 是 Console Env 的资源命令，支持 list/set/delete。
+ * - `env` 是 Console Env 的资源命令，支持 list/set/delete。
  * - 默认不输出任何 secret value；只在显式 set 时写入值。
  * - global / agent 两层 env 共用统一 store，但 CLI 语义仍保持清晰。
  */
@@ -14,12 +14,12 @@ import { emitCliBlock, emitCliList } from "./CliReporter.js";
 import { parseBoolean } from "./IndexSupport.js";
 
 /**
- * keys 子命令的 scope 类型。
+ * env 子命令的 scope 类型。
  */
 type KeysScope = StoredEnvScope | "all";
 
 /**
- * 规范化 keys scope。
+ * 规范化 env scope。
  */
 function normalizeKeysScope(value: string | undefined, options?: {
   /**
@@ -122,7 +122,7 @@ async function listKeysEntries(params: {
 }
 
 /**
- * 输出 keys 列表。
+ * 输出 env 列表。
  */
 async function emitKeysList(params: {
   /**
@@ -164,7 +164,7 @@ async function emitKeysList(params: {
   if (entries.length === 0) {
     emitCliBlock({
       tone: "info",
-      title: "Keys",
+      title: "Env",
       summary: "0 configured",
       note: "No Console Env entry matched the current filter.",
     });
@@ -173,7 +173,7 @@ async function emitKeysList(params: {
 
   emitCliList({
     tone: "accent",
-    title: "Keys",
+    title: "Env",
     summary: `${entries.length} configured`,
     items: entries.map((item) => ({
       tone: "info",
@@ -351,15 +351,15 @@ function deleteKeyEntry(params: {
 }
 
 /**
- * 注册 `city keys` 命令组。
+ * 注册 `city env` 命令组。
  */
-export function registerKeysCommand(program: Command): void {
-  const keys = program
-    .command("keys")
+export function registerEnvCommand(program: Command): void {
+  const env = program
+    .command("env")
     .description("管理 Console Env 中的 key")
     .helpOption("--help", "display help for command");
 
-  keys
+  env
     .command("list")
     .description("列出 Console Env 中已配置的 key")
     .option("--scope <scope>", "按作用域过滤：global|agent|all", "global")
@@ -379,7 +379,7 @@ export function registerKeysCommand(program: Command): void {
       });
     });
 
-  keys
+  env
     .command("set <key> <value>")
     .description("新增或更新 Console Env 中的 key")
     .option("--scope <scope>", "写入作用域：global|agent", "global")
@@ -398,7 +398,7 @@ export function registerKeysCommand(program: Command): void {
         allowAll: false,
       });
       if (resolved.scope === "all") {
-        throw new Error("keys set does not support scope=all");
+        throw new Error("env set does not support scope=all");
       }
 
       await setKeyEntry({
@@ -411,7 +411,7 @@ export function registerKeysCommand(program: Command): void {
       });
     });
 
-  keys
+  env
     .command("delete <key>")
     .description("删除 Console Env 中的 key")
     .option("--scope <scope>", "删除作用域：global|agent", "global")
@@ -428,7 +428,7 @@ export function registerKeysCommand(program: Command): void {
         allowAll: false,
       });
       if (resolved.scope === "all") {
-        throw new Error("keys delete does not support scope=all");
+        throw new Error("env delete does not support scope=all");
       }
 
       deleteKeyEntry({
@@ -439,12 +439,12 @@ export function registerKeysCommand(program: Command): void {
       });
     });
 
-  keys.action(async () => {
+  env.action(async () => {
     await emitKeysList({
       scope: "global",
     });
   });
 
-  keys.showHelpAfterError();
-  keys.showSuggestionAfterError();
+  env.showHelpAfterError();
+  env.showSuggestionAfterError();
 }

@@ -92,14 +92,14 @@ When a `city ...` invocation is explicitly using remote HTTP, the final auth res
 1. explicit `--token`
 2. `DC_AUTH_TOKEN`
 3. `DC_AGENT_TOKEN`
-4. local CLI auth state
+4. current local CLI token state
 
 That means:
 
 - `--token` always overrides everything else
 - `DC_AUTH_TOKEN` overrides auto-injected `DC_AGENT_TOKEN`
 - agent-internal remote HTTP invocations fall back to `DC_AGENT_TOKEN`
-- non-agent remote invocations can still fall back to local CLI auth state
+- non-agent remote invocations can still fall back to current local CLI token state
 
 ### Common mistakes
 

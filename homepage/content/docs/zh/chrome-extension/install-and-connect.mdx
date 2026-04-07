@@ -35,16 +35,20 @@ npm run build:extension
 - Host: `127.0.0.1`
 - Port: `5315`
 
-如果你的 Console UI 不在默认地址，打开扩展设置页修改：
+如果你的 Console UI 不在默认地址，打开扩展设置页。设置页分成两块：
 
-- Console Host
-- Console Port
-- 默认 Agent
-- 默认 Channel Chat
+- 上半区 `Server / Auth`：填写 Console Host、Port，并粘贴 Bearer Token
+- 下半区 `Agent / Channel`：连接成功后，再选择默认 Agent 和默认 Channel Chat
 
-如果 Console 已经完成统一账户初始化，扩展设置页会先要求你登录 Console 账户。
+如果你还没有 token，先在本机终端执行：
 
-登录成功后，扩展会自动保存本地登录态，并在后续请求里附加 `Authorization: Bearer ...`。
+```bash
+city auth token create chrome-extension
+```
+
+然后把返回的 token 粘贴到扩展设置页的 `Access Token`。
+
+保存 Token 后，扩展会自动在后续请求里附加 `Authorization: Bearer ...`。
 
 ## Agent 和 Chat 怎么选
 

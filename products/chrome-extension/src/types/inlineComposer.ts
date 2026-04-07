@@ -78,7 +78,7 @@ export interface InlineComposerRouteSettings
     "consoleHost" | "consolePort" | "agentId" | "chatKey"
   > {
   /**
-   * 当前本地登录态里的 Bearer Token。
+   * 当前本地鉴权状态里的 Bearer Token。
    */
   authToken: string;
 }

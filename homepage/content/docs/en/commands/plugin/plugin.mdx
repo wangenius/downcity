@@ -11,11 +11,13 @@ Use it when you want to:
 
 - inspect which plugins are registered
 - inspect a plugin's static enabled state and capability surface
+- enable or disable plugin lifecycle globally in city config
 - dispatch a plugin action without using the plugin's short alias
 
 ## Common examples
 
 ```bash
+city plugin
 city plugin list
 city plugin status asr
 city plugin action asr status
@@ -23,8 +25,16 @@ city plugin action asr status
 
 ## Notes
 
+- Running bare `city plugin` in an interactive terminal opens a plugin manager.
+- The interactive manager supports:
+  - status
+  - global enable
+  - global disable
+- `city plugin status` also supports interactive selection when `pluginName` is omitted.
 - `city plugin list` and `city plugin status` are static console-level catalog views.
 - They do not require `--path`, `--agent`, or a running agent.
+- `city plugin list` renders a human-readable table by default; add `--json` for scripts.
+- Global enable/disable also works without agent context because plugin lifecycle is stored at city scope.
 - `city plugin action ...` is the advanced execution form and still targets a specific agent project.
 - For day-to-day usage, prefer concrete plugin roots such as `city web ...`, `city skill ...`, `city asr ...`, and `city tts ...`.
 - Plugin enablement is now a city-level fact. Static status does not read agent `downcity.json`.

@@ -10,9 +10,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildAuthHeaders,
+  decorateAuthErrorText,
   fetchConsoleAuthStatus,
   isAuthErrorMessage,
-  loginConsole,
+  normalizeAuthToken,
   shouldUseBeaconTransport,
 } from "./auth";
 
@@ -56,36 +57,20 @@ test("fetchConsoleAuthStatus reads public auth status from console", async () =>
   }
 });
 
-test("loginConsole returns normalized local auth state after login", async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
-    Response.json({
-      success: true,
-      user: {
-        username: "alice",
-      },
-      token: {
-        token: "Bearer dc_login_token",
-      },
-    });
-
-  try {
-    const result = await loginConsole({
-      consoleBaseUrl: "http://127.0.0.1:5315",
-      username: "alice",
-      password: "secret",
-    });
-    assert.deepEqual(result, {
-      token: "dc_login_token",
-      username: "alice",
-    });
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+test("normalizeAuthToken accepts raw token and bearer-prefixed token", () => {
+  assert.equal(normalizeAuthToken("dc_login_token"), "dc_login_token");
+  assert.equal(normalizeAuthToken("Bearer dc_login_token"), "dc_login_token");
 });
 
 test("isAuthErrorMessage detects auth failures", () => {
   assert.equal(isAuthErrorMessage("Missing bearer token"), true);
   assert.equal(isAuthErrorMessage("Permission denied"), true);
   assert.equal(isAuthErrorMessage("network timeout"), false);
+});
+
+test("decorateAuthErrorText points users to token input", () => {
+  assert.equal(
+    decorateAuthErrorText("Missing bearer token"),
+    "Missing bearer token。请在扩展设置页填写 Bearer Token。",
+  );
 });

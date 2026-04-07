@@ -9,8 +9,9 @@ Dedicated model management command group for language models only.
 
 ## Design Rules
 
-- `create` is the only interactive command.
-- All others (`list/pause/update/test`) are non-interactive for automation.
+- Bare `city model` opens an interactive manager in a TTY.
+- `create` remains a direct shortcut into the create flow.
+- Script subcommands (`list/pause/update/test/...`) remain available for automation.
 - Provider `apiKey` is stored in `~/.downcity/downcity.db` and encrypted on write.
 - Kimi now has two explicit provider types: `moonshot-cn` and `moonshot-ai`.
 - Kimi Code can use a dedicated provider type: `kimi-code`.
@@ -18,6 +19,9 @@ Dedicated model management command group for language models only.
 ## Usage
 
 ```bash
+# Interactive manager
+city model
+
 # Interactive create (choose provider or model)
 city model create
 
@@ -58,9 +62,15 @@ city model test provider <providerId>
 city model test model <modelId>
 ```
 
+## Interactive Manager
+
+- `city model` is the human-first entrypoint for the global model pool.
+- It lets you browse providers and models, test connectivity, pause/resume models, bind a model to a project, and jump into the create flow.
+- In non-interactive environments, `city model` falls back to normal help output.
+
 ## create Behavior
 
-- Supports creating either `provider` or `model`.
+- `create` is the direct shortcut for creating either a `provider` or a `model`.
 - After provider creation, you can immediately run connectivity test.
 - For providers with model discovery support, remote model list can be fetched and auto-added in batch.
 

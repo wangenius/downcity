@@ -2,7 +2,7 @@
  * CLI 认证状态与自动鉴权测试。
  *
  * 关键点（中文）
- * - CLI 应把 bootstrap token 写入本地加密存储，后续命令自动复用。
+ * - CLI 应把本机 bootstrap token 写入本地加密存储，后续命令自动复用。
  * - `callServer()` 应按 `显式 token > DC_AUTH_TOKEN > 本地存储` 注入 Bearer Token。
  */
 
@@ -33,7 +33,7 @@ function createConsoleRoot() {
   };
 }
 
-test("ensureConsoleAuthBootstrap persists bootstrap token for CLI reuse", async () => {
+test("ensureConsoleAuthBootstrap persists local bootstrap token for CLI reuse", async () => {
   const { root, dbPath, cleanup } = createConsoleRoot();
   const previousRoot = process.env.DC_CONSOLE_ROOT;
   process.env.DC_CONSOLE_ROOT = root;
@@ -41,12 +41,14 @@ test("ensureConsoleAuthBootstrap persists bootstrap token for CLI reuse", async 
   try {
     await ensureConsoleAuthBootstrap({
       authService,
-      readPassword: async () => "downcity",
+      readPassword: async () => {
+        throw new Error("should not prompt");
+      },
     });
 
     const state = readCliAuthState({ dbPath });
     assert.ok(state?.token);
-    assert.equal(state?.username, "admin");
+    assert.equal(state?.username, "local-cli");
     assert.equal(state?.source, "bootstrap");
   } finally {
     authService.close();
@@ -62,7 +64,7 @@ test("resolveCliAuthToken uses explicit token before env and stored state", () =
     writeCliAuthState(
       {
         token: "dc_stored",
-        username: "admin",
+        username: "local-cli",
         source: "manual",
       },
       { dbPath },

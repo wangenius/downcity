@@ -187,7 +187,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     setAuthUsername("")
     setAuthRequired(true)
     setAuthErrorMessage("")
-    setTopbarStatus("需要登录")
+    setTopbarStatus("需要 Bearer Token")
     setTopbarError(false)
   }, [])
 
@@ -217,7 +217,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     latestIssuedAccessToken,
     clearLatestIssuedAccessToken,
     refreshAccess,
-    updateAccessPassword,
     createAccessToken,
     deleteAccessToken,
   } = useDashboardAccess({
@@ -226,72 +225,27 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     showToast,
   })
 
-  const login = useCallback(
-    async (input: { username: string; password: string; displayName?: string }) => {
+  const submitAuthToken = useCallback(
+    async (input: { token: string }) => {
       setAuthSubmitting(true)
       setAuthErrorMessage("")
       try {
-        const response = await requestConsoleApiJson<{
-          user?: { username?: string }
-          token?: { token?: string }
-        }>({
-          path: "/api/auth/login",
-          selectedAgentId: "",
-          options: {
-            method: "POST",
-            body: JSON.stringify({
-              ...input,
-              tokenName: "console-ui",
-            }),
-          },
-        })
-        const token = String(response?.token?.token || "").trim()
-        const username = String(response?.user?.username || input.username || "").trim()
-        if (!token) throw new Error("登录成功但未返回 token")
-        writeConsoleAuthState({
-          token,
-          ...(username ? { username } : {}),
-        })
-        setAuthInitializing(false)
-        setAuthBootstrapRequired(false)
-        setIsAuthenticated(true)
-        setAuthUsername(username)
-        setAuthRequired(false)
-        await refreshDashboardRef.current?.()
-      } catch (error) {
-        setAuthErrorMessage(getErrorMessage(error))
-        throw error
-      } finally {
-        setAuthSubmitting(false)
-      }
-    },
-    [],
-  )
+        const rawToken = String(input.token || "").trim()
+        if (!rawToken) throw new Error("请先输入 Bearer Token")
 
-  const bootstrapAdmin = useCallback(
-    async (input: { username: string; password: string; displayName?: string }) => {
-      setAuthSubmitting(true)
-      setAuthErrorMessage("")
-      try {
         const response = await requestConsoleApiJson<{
           user?: { username?: string }
-          token?: { token?: string }
         }>({
-          path: "/api/auth/bootstrap-admin",
+          path: dashboardApiRoutes.authMe(),
           selectedAgentId: "",
           options: {
-            method: "POST",
-            body: JSON.stringify({
-              username: input.username,
-              password: input.password,
-              displayName: input.displayName,
-              tokenName: "console-ui",
-            }),
+            headers: {
+              Authorization: /^Bearer\s+/i.test(rawToken) ? rawToken : `Bearer ${rawToken}`,
+            },
           },
         })
-        const token = String(response?.token?.token || "").trim()
-        const username = String(response?.user?.username || input.username || "").trim()
-        if (!token) throw new Error("初始化成功但未返回 token")
+        const token = rawToken.replace(/^Bearer\s+/i, "").trim()
+        const username = String(response?.user?.username || "").trim()
         writeConsoleAuthState({
           token,
           ...(username ? { username } : {}),
@@ -303,6 +257,10 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
         setAuthRequired(false)
         await refreshDashboardRef.current?.()
       } catch (error) {
+        clearConsoleAuthState()
+        setIsAuthenticated(false)
+        setAuthUsername("")
+        setAuthRequired(true)
         setAuthErrorMessage(getErrorMessage(error))
         throw error
       } finally {
@@ -1006,7 +964,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           setAuthBootstrapRequired(true)
           setAuthRequired(true)
           setAuthInitializing(false)
-          setTopbarStatus("需要初始化管理员")
+          setTopbarStatus("需要先创建 Token")
           setTopbarError(false)
           return
         }
@@ -1016,18 +974,18 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
           setAuthBootstrapRequired(false)
           setAuthRequired(true)
           setAuthInitializing(false)
-          setTopbarStatus("需要登录")
+          setTopbarStatus("需要 Bearer Token")
           setTopbarError(false)
           return
         }
       } catch {
-        // 关键点（中文）：状态探测失败时也不允许直接进入 dashboard，改为停在登录入口页。
+        // 关键点（中文）：状态探测失败时也不允许直接进入 dashboard，改为停在 token 入口页。
       }
 
       if (disposed) return
       setAuthBootstrapRequired(false)
       setAuthRequired(true)
-      setTopbarStatus("需要登录")
+      setTopbarStatus("需要 Bearer Token")
       setTopbarError(false)
       setAuthInitializing(false)
     }
@@ -1134,7 +1092,6 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     saveAuthorizationConfig,
     runAuthorizationAction,
     clearLatestIssuedAccessToken,
-    updateAccessPassword,
     createAccessToken,
     deleteAccessToken,
     runSkillFind,
@@ -1185,8 +1142,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
       formatTime,
       statusBadgeVariant,
     },
-    login,
-    bootstrapAdmin,
+    submitAuthToken,
     logout,
   };
 }

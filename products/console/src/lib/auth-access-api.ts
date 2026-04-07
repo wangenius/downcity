@@ -2,7 +2,7 @@
  * Console UI Access 工作台 API。
  *
  * 关键点（中文）
- * - 只面向当前管理员自己，不再提供多用户管理请求。
+ * - 只面向当前 token 主体自己，不再提供用户名密码管理请求。
  * - Access 页所有请求统一从这里发起，避免散落在 hook 中。
  */
 
@@ -12,7 +12,6 @@ import type {
   UiAuthAccessMeResponse,
   UiAuthAccessTokenListResponse,
   UiAuthAccessTokenSummary,
-  UiAuthAccessUser,
 } from "@/types/AuthAccess"
 
 type RequestJson = <T>(
@@ -94,24 +93,4 @@ export async function deleteAuthAccessToken(params: {
       }),
     },
   )
-}
-
-/**
- * 修改当前管理员密码。
- */
-export async function updateAuthAccessPassword(params: {
-  requestJson: RequestJson
-  input: {
-    currentPassword: string
-    nextPassword: string
-  }
-}): Promise<UiAuthAccessUser> {
-  const data = await params.requestJson<{ user: UiAuthAccessUser }>(
-    dashboardApiRoutes.authPasswordUpdate(),
-    {
-      method: "POST",
-      body: JSON.stringify(params.input),
-    },
-  )
-  return data.user
 }

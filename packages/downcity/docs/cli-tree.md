@@ -28,7 +28,7 @@
 | `config` | 固定注册 | 管理项目 `downcity.json` 和 alias | [`Config.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Config.ts) |
 | `model` | 固定注册 | 管理 city 全局模型池 | [`Model.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Model.ts) |
 | `agent` | 固定注册 | 管理 Agent 项目和 agent daemon | [`IndexAgentCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/IndexAgentCommand.ts) |
-| `keys` | 固定注册 | 管理 Console Env key（list/set/delete） | [`Keys.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Keys.ts) |
+| `env` | 固定注册 | 管理 Console Env 条目（list/set/delete） | [`Env.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Env.ts) |
 | `service` | 固定注册 | 查看静态 service catalog，并提供高级 agent 定向入口 | [`Services.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Services.ts) |
 | `plugin` | 固定注册 | 查看静态 plugin catalog，并提供高级 action 入口 | [`Plugins.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Plugins.ts) |
 | `chat` | 动态注册 | chat service actions | [`ServiceCommand.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/service/ServiceCommand.ts) |
@@ -87,6 +87,8 @@ city console [start|stop|restart|status|run]
 city agent create [path]
 city agent list [--running] [--json]
 city agent start [path] [--foreground]
+city agent chat [--to <name>]
+city agent quest --to <name> <instructions...>
 city agent status [path]
 city agent doctor [path] [--fix]
 city agent restart [path]
@@ -132,7 +134,7 @@ city model update
 city model test
 ```
 
-### 3.5 keys
+### 3.5 env
 
 来源：
 
@@ -141,9 +143,9 @@ city model test
 子树：
 
 ```text
-city keys list [--scope global|agent|all] [--agent <agentId>] [--json]
-city keys set <key> <value> [--scope global|agent] [--agent <agentId>] [--description <text>] [--json]
-city keys delete <key> [--scope global|agent] [--agent <agentId>] [--json]
+city env list [--scope global|agent|all] [--agent <agentId>] [--json]
+city env set <key> <value> [--scope global|agent] [--agent <agentId>] [--description <text>] [--json]
+city env delete <key> [--scope global|agent] [--agent <agentId>] [--json]
 ```
 
 ### 3.6 service
@@ -392,7 +394,7 @@ city tts synthesize <text>
    - 由 [`Index.ts`](/Users/wangenius/Documents/github/downcity/packages/downcity/src/main/modules/cli/Index.ts) 和 `src/main/modules/cli/*` 显式注册
 
 2. 固定模块命令
-   - `agent / config / model / service / plugin / keys / console`
+   - `agent / config / model / service / plugin / env / console`
 
 3. 动态 action 命令
    - 来自 `service` / `plugin` 的注册表

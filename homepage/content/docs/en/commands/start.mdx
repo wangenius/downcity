@@ -8,7 +8,7 @@ description: Start city runtime in background mode
 Start city runtime in background mode.
 
 Startup initializes the city runtime registry and process state.
-If unified auth has no users yet, startup prompts you to set the first admin password. Leaving it empty falls back to `downcity`, and the username is fixed as `admin`.
+If no local token exists yet, startup automatically creates a `console-bootstrap` token and writes it into the local CLI auth state for this machine.
 
 If you also want to start Console in one step, use `city start --console` or `city start -a`.
 
@@ -42,11 +42,10 @@ city version: 1.0.0
    pid: <consolePid>
    url: http://127.0.0.1:5315
    log: <consoleLogPath>
-? Set Console admin password (leave blank for downcity): ********
-✅ Unified auth admin initialized
-   username: admin
-   password: use the password you just entered
-   login: use this password to sign in to Console UI
+✅ Console token initialized
+   subject: local-cli
+   token: console-bootstrap
+   use: Console UI / Extension 请粘贴 Bearer Token
 ```
 
 ```text

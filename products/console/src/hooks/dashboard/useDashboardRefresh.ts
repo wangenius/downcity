@@ -241,7 +241,7 @@ export function useDashboardRefresh(params: {
         if (isUnauthorizedError(error)) {
           params.setAuthRequired(true);
           params.setTopbarError(true);
-          params.setTopbarStatus("需要登录");
+          params.setTopbarStatus("需要 Bearer Token");
           return;
         }
 

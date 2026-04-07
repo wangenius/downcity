@@ -23,7 +23,6 @@ import {
   ShieldCheckIcon,
   LogOutIcon,
   UserIcon,
-  LockIcon,
 } from "lucide-react"
 import type { UiAgentOption, UiChatChannelStatus, UiSessionSummary, UiTaskItem } from "@/types/Dashboard"
 import type { UiAuthAccessUser, UiAuthAccessTokenSummary } from "@/types/AuthAccess"
@@ -46,8 +45,6 @@ import { listPrimaryPagesByScope } from "@/lib/dashboard-navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@downcity/ui"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@downcity/ui"
-import { Input, Label } from "@downcity/ui"
 
 export type { DashboardView }
 
@@ -148,10 +145,6 @@ export interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
    * 退出登录回调。
    */
   onLogout?: () => void
-  /**
-   * 修改密码回调。
-   */
-  onUpdatePassword?: (input: { currentPassword: string; nextPassword: string }) => Promise<void>
 }
 
 type SidebarMode = "agent-list" | "agent-detail"
@@ -294,24 +287,6 @@ export function AppSidebar({
   const [collapsedChatChannels, setCollapsedChatChannels] = React.useState<Record<string, boolean>>({})
   const previousSidebarModeRef = React.useRef<SidebarMode>(sidebarMode)
 
-  // Password change dialog state
-  const [passwordDialogOpen, setPasswordDialogOpen] = React.useState(false)
-  const [currentPassword, setCurrentPassword] = React.useState("")
-  const [nextPassword, setNextPassword] = React.useState("")
-  const [savingPassword, setSavingPassword] = React.useState(false)
-
-  const handleUpdatePassword = React.useCallback(async () => {
-    if (!props.onUpdatePassword) return
-    try {
-      setSavingPassword(true)
-      await props.onUpdatePassword({ currentPassword, nextPassword })
-      setCurrentPassword("")
-      setNextPassword("")
-      setPasswordDialogOpen(false)
-    } finally {
-      setSavingPassword(false)
-    }
-  }, [currentPassword, nextPassword, props.onUpdatePassword])
   const isGlobalAgentOverviewRoute = React.useMemo(() => {
     if (activeView !== "globalOverview") return false
     const parts = routePathname.split("/").filter(Boolean)
@@ -791,77 +766,18 @@ export function AppSidebar({
           </PopoverTrigger>
           <PopoverContent side="top" align="start" className="w-48 p-1.5">
             <div className="space-y-0.5">
-              {props.onUpdatePassword ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPasswordDialogOpen(true)
-                  }}
-                  className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-[13px] text-sidebar-foreground/82 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-                >
-                  <LockIcon className="size-4" />
-                  <span>修改密码</span>
-                </button>
-              ) : null}
               <button
                 type="button"
                 onClick={props.onLogout}
                 className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-[13px] text-sidebar-foreground/82 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
               >
                 <LogOutIcon className="size-4" />
-                <span>退出登录</span>
+                <span>清除 Token</span>
               </button>
             </div>
           </PopoverContent>
         </Popover>
       </SidebarFooter>
-
-      {/* Password Change Dialog */}
-      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent className="w-[min(92vw,400px)]">
-          <DialogHeader>
-            <DialogTitle>修改密码</DialogTitle>
-            <DialogDescription>修改管理员登录密码</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 px-4 py-2">
-            <div className="space-y-2">
-              <Label className="text-xs">当前密码</Label>
-              <Input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="输入当前密码"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">新密码</Label>
-              <Input
-                type="password"
-                value={nextPassword}
-                onChange={(e) => setNextPassword(e.target.value)}
-                placeholder="输入新密码"
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPasswordDialogOpen(false)}
-            >
-              取消
-            </Button>
-            <Button
-              size="sm"
-              disabled={!currentPassword.trim() || !nextPassword.trim() || savingPassword}
-              onClick={() => void handleUpdatePassword()}
-            >
-              {savingPassword && <Loader2Icon className="mr-2 size-4 animate-spin" />}
-              更新
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Sidebar>
   )
 }

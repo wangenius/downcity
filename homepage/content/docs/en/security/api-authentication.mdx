@@ -1,60 +1,65 @@
 ---
 title: API Authentication
-description: Bootstrap the first admin, sign in, and use Bearer tokens against Downcity APIs
+description: Mint Bearer tokens from the local CLI and use them against Downcity APIs
 ---
 
 # API Authentication
 
-Unified Auth V1 adds the core auth endpoints for Downcity.
-The current model is intentionally simple: one admin account, admin password rotation, and multiple Bearer tokens.
+Downcity now uses a single external auth model:
 
-- `POST /api/auth/bootstrap-admin`
-- `POST /api/auth/login`
+- no username/password sign-in
+- no browser session layer
+- all external auth goes through Bearer tokens
+- tokens are managed by the local CLI on the same machine
+
+The currently exposed endpoints are:
+
+- `GET /api/auth/status`
 - `GET /api/auth/me`
-- `POST /api/auth/password/update`
 - `GET /api/auth/token/list`
 - `POST /api/auth/token/create`
 - `POST /api/auth/token/revoke`
+- `POST /api/auth/token/delete`
 
-## First admin bootstrap
+## First-time setup
 
-If the console database does not have any user yet, bootstrap the first admin:
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/bootstrap-admin \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "username": "admin",
-    "password": "pass-123456",
-    "displayName": "Admin",
-    "tokenName": "bootstrap"
-  }'
-```
-
-The response returns:
-
-- the user summary
-- a one-time plaintext Bearer token
-
-The plaintext token is only returned at issuance time.
-If you initialize auth through `city start` or `city start`, the CLI prompts for the first admin password and falls back to `downcity` when left blank. If you call `bootstrap-admin` directly, the password is exactly the `password` you submit.
-
-## Sign in
-
-After bootstrap, create more tokens through login:
+If you start Console through:
 
 ```bash
-curl -X POST http://127.0.0.1:3000/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "username": "admin",
-    "password": "the password you set during bootstrap-admin"
-  }'
+city start --console
 ```
 
-`tokenName` is optional for raw API callers. Console UI sets its own internal default and does not ask the user to provide one.
+the first startup automatically creates a local token and writes it into the local CLI auth state for this machine. The startup output looks like this:
 
-## Use the Bearer token
+```text
+$ city start --console
+city version: 1.0.0
+✅ city runtime started
+   pid: <runtimePid>
+   log: <cityRuntimeLogPath>
+✅ Console started
+   pid: <consolePid>
+   url: http://127.0.0.1:5315
+   log: <consoleLogPath>
+✅ Console token initialized
+   subject: local-cli
+   token: console-bootstrap
+   use: Console UI / Extension 请粘贴 Bearer Token
+```
+
+If you want to mint tokens manually, run:
+
+```bash
+city auth token create console-ui --activate
+```
+
+Typical names are:
+
+- `console-ui` for Console UI
+- `chrome-extension` for the Chrome extension
+- custom names for scripts and local tooling
+
+## Use the token
 
 Send the token through the `Authorization` header:
 
@@ -63,61 +68,40 @@ curl http://127.0.0.1:3000/api/auth/me \
   -H 'Authorization: Bearer dc_xxx'
 ```
 
-If the token is valid, the endpoint returns the current user, roles, and permissions.
+If the token is valid, the endpoint returns the current subject, roles, and permissions.
 
-## `DC_AUTH_TOKEN` and `DC_AGENT_TOKEN`
+## Manage tokens with CLI
 
-Start with the main rule:
+List tokens on the current machine:
 
-- Only external HTTP calls need a Bearer token
-- Local `city service`, `city plugin`, `city task`, `city chat`, and similar commands now use IPC by default, so they do not need a token first
+```bash
+city auth token list
+```
 
-For direct API users, the key idea is simple:
+Create a new token:
 
-- external calls always authenticate through `Authorization: Bearer <token>`
+```bash
+city auth token create chrome-extension
+```
 
-Inside the CLI/runtime, you may still see two env vars:
+Create a new token and set it as the current CLI token immediately:
 
-| Variable | Intended For | Purpose |
-| --- | --- | --- |
-| `DC_AUTH_TOKEN` | users, scripts, CI | explicitly choose which token this CLI/API invocation should use |
-| `DC_AGENT_TOKEN` | Downcity agent runtime | automatically propagate auth when an agent explicitly makes a remote HTTP call |
+```bash
+city auth token create console-ui --activate
+```
 
-Recommended mental model:
+Revoke a token:
 
-- if you are a human user or an external script, prefer `--token` or `DC_AUTH_TOKEN`
-- if an agent explicitly makes a remote HTTP call internally, runtime can inject `DC_AGENT_TOKEN`
+```bash
+city auth token revoke <tokenId>
+```
 
-The CLI only uses the following token resolution order for explicit remote HTTP calls:
-
-1. `--token`
-2. `DC_AUTH_TOKEN`
-3. `DC_AGENT_TOKEN`
-4. local CLI auth state
-
-So:
-
-- `DC_AUTH_TOKEN` is explicit override
-- `DC_AGENT_TOKEN` is internal propagation
-- both eventually become the same Bearer header on the actual HTTP request
-
-If you see `Missing bearer token`:
-
-- do not start by suspecting `sessionId`
-- first confirm that this invocation is actually using remote HTTP
-- then check whether the current process has any valid token source
-- if the error happens inside an agent/Bash/ACP subprocess making a remote HTTP call, inspect the `DC_AGENT_TOKEN` inheritance path first
-
-## Manage tokens
-
-List tokens:
+You can also manage tokens through HTTP with an existing Bearer token:
 
 ```bash
 curl http://127.0.0.1:3000/api/auth/token/list \
   -H 'Authorization: Bearer dc_xxx'
 ```
-
-Create a token:
 
 ```bash
 curl -X POST http://127.0.0.1:3000/api/auth/token/create \
@@ -128,8 +112,6 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/create \
   }'
 ```
 
-Revoke a token:
-
 ```bash
 curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
   -H 'Content-Type: application/json' \
@@ -139,33 +121,52 @@ curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
   }'
 ```
 
-## Rotate the admin password
+## `DC_AUTH_TOKEN` and `DC_AGENT_TOKEN`
 
-The control plane now keeps only one username/password account: the admin.
+Main rule first:
 
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/password/update \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "currentPassword": "old-pass",
-    "nextPassword": "new-pass"
-  }'
-```
+- only external HTTP calls need a Bearer token
+- local `city service`, `city plugin`, `city task`, `city chat`, and similar commands use IPC by default and do not need a token first
 
-Notes:
+For direct API usage, the important rule is:
 
-- Rotating the password does not automatically revoke existing tokens
-- Other integrations continue to authenticate with Bearer tokens directly
-- Plaintext tokens are still returned only once, at issuance time
+- external calls always authenticate through `Authorization: Bearer <token>`
+
+Inside the CLI/runtime, you may still see two env vars:
+
+| Variable | Intended For | Purpose |
+| --- | --- | --- |
+| `DC_AUTH_TOKEN` | users, scripts, CI | explicitly choose which token a CLI/API invocation should use |
+| `DC_AGENT_TOKEN` | Downcity agent runtime | automatically propagate auth when an agent explicitly makes a remote HTTP call |
+
+Only explicit remote HTTP calls use this resolution order:
+
+1. `--token`
+2. `DC_AUTH_TOKEN`
+3. `DC_AGENT_TOKEN`
+4. current local CLI token state
+
+So:
+
+- `DC_AUTH_TOKEN` is the explicit override
+- `DC_AGENT_TOKEN` is internal propagation
+- both end up as the same Bearer header on the actual HTTP request
+
+If you see `Missing bearer token`:
+
+- do not start by suspecting `sessionId`
+- first confirm that the invocation is actually using remote HTTP
+- then check whether the current process has any valid token source
+- if the error happens inside an agent/Bash/ACP subprocess making a remote HTTP call, inspect `DC_AGENT_TOKEN` inheritance first
 
 ## Current scope
 
-This rollout covers the V1 auth backbone:
+The current model is intentionally token-only:
 
-- unified user / role / permission / token / audit tables
-- Bearer token issuance and validation
-- admin password rotation
-- current-admin token management endpoints
+- username/password login removed
+- `bootstrap-admin` removed
+- `login` removed
+- `password/update` removed
+- Console UI, Chrome extension, and external scripts all use explicitly minted Bearer tokens
 
-Later iterations will move more control-plane APIs behind the same Bearer auth layer.
+Future integrations will stay on this Bearer token model instead of reintroducing a separate login session layer.

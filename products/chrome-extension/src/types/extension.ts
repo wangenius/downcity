@@ -47,7 +47,7 @@ export interface ExtensionSettings {
 }
 
 /**
- * 扩展本地登录态。
+ * 扩展本地鉴权状态。
  */
 export interface ExtensionAuthState {
   /**
@@ -56,7 +56,7 @@ export interface ExtensionAuthState {
   token: string;
 
   /**
-   * 当前登录用户名。
+   * 当前主体名。
    */
   username?: string;
 }

@@ -79,7 +79,7 @@ export interface UseConsoleDashboardResult {
   authInitializing: boolean;
 
   /**
-   * 当前是否需要先初始化首个管理员。
+   * 当前是否需要先在本机 CLI 创建首个 token。
    */
   authBootstrapRequired: boolean;
 
@@ -89,22 +89,22 @@ export interface UseConsoleDashboardResult {
   isAuthenticated: boolean;
 
   /**
-   * 当前登录用户名。
+   * 当前 Bearer Token 对应的主体名。
    */
   authUsername: string;
 
   /**
-   * 当前是否需要登录。
+   * 当前是否需要提供 Bearer Token。
    */
   authRequired: boolean;
 
   /**
-   * 当前是否正在登录。
+   * 当前是否正在提交 Token。
    */
   authSubmitting: boolean;
 
   /**
-   * 当前登录错误文案。
+   * 当前 Token 验证错误文案。
    */
   authErrorMessage: string;
 
@@ -450,14 +450,6 @@ export interface UseConsoleDashboardResult {
   clearLatestIssuedAccessToken: () => void;
 
   /**
-   * 更新当前管理员密码。
-   */
-  updateAccessPassword: (input: {
-    currentPassword: string;
-    nextPassword: string;
-  }) => Promise<void>;
-
-  /**
    * 为当前管理员签发 token。
    */
   createAccessToken: (input: {
@@ -792,21 +784,12 @@ export interface UseConsoleDashboardResult {
   };
 
   /**
-   * 登录 Console UI。
+   * 提交 Bearer Token 并进入 Console UI。
    */
-  login: (input: { username: string; password: string; displayName?: string }) => Promise<void>;
+  submitAuthToken: (input: { token: string }) => Promise<void>;
 
   /**
-   * 初始化首个管理员并直接进入 Console UI。
-   */
-  bootstrapAdmin: (input: {
-    username: string;
-    password: string;
-    displayName?: string;
-  }) => Promise<void>;
-
-  /**
-   * 退出当前登录态。
+   * 清除当前本地 token 状态。
    */
   logout: () => void;
 }

@@ -56,13 +56,14 @@ npm run build:extension
 - `Invalid bearer token`
 - `Permission denied`
 
-通常说明 Console 已开启统一鉴权，但扩展还没有登录，或者本地登录态已经失效。
+通常说明 Console 已开启统一鉴权，但扩展还没有填写 token，或者 token 已失效。
 
 处理方式：
 
 1. 打开扩展设置页
-2. 使用 Console 用户名和密码重新登录
-3. 登录后点击 `刷新 Agent`
+2. 在本机终端执行 `city auth token create chrome-extension`
+3. 把 token 粘贴到扩展设置页
+4. 保存后点击 `刷新 Agent`
 
 ## 5. 没有可用 Chat
 

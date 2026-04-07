@@ -2,8 +2,8 @@
  * Extension Popup 头部操作按钮测试。
  *
  * 关键点（中文）：
- * - 头部操作按钮必须使用统一的 SVG icon button，而不是依赖字符图标。
- * - 这样可以稳定控制视觉尺寸、描边粗细和 hover 反馈，避免 popup 中图标显小且风格松散。
+ * - 用户明确否定 icon 方案后，头部操作区应回到纯文字按钮。
+ * - 纯文字控件要避免依赖额外图标模块，保证界面更克制、可读性更直接。
  */
 
 import assert from "node:assert/strict";
@@ -15,14 +15,12 @@ const APP_FILE_PATH =
 const ICON_FILE_PATH =
   "/Users/wangenius/Documents/github/downcity/products/chrome-extension/src/extension-popup/PopupIcons.tsx";
 
-test("ExtensionPopupApp uses dedicated SVG icons instead of tiny text glyphs", () => {
+test("ExtensionPopupApp uses text-only controls for header actions", () => {
   const appSource = readFileSync(APP_FILE_PATH, "utf8");
 
-  assert.doesNotMatch(appSource, />\s*‹\s*</u);
-  assert.doesNotMatch(appSource, />\s*›\s*</u);
-  assert.doesNotMatch(appSource, />\s*⚙\s*</u);
-
-  assert.equal(existsSync(ICON_FILE_PATH), true);
-  const iconSource = readFileSync(ICON_FILE_PATH, "utf8");
-  assert.match(iconSource, /<svg[\s\S]*viewBox=/u);
+  assert.doesNotMatch(appSource, /from\s+"\.\/PopupIcons"/u);
+  assert.match(appSource, />\s*上一位\s*</u);
+  assert.match(appSource, />\s*下一位\s*</u);
+  assert.match(appSource, />\s*设置\s*</u);
+  assert.equal(existsSync(ICON_FILE_PATH), false);
 });

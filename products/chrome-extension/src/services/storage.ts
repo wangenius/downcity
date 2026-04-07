@@ -22,7 +22,7 @@ const DEFAULT_CONSOLE_HOST = "127.0.0.1";
 const DEFAULT_CONSOLE_PORT = 5315;
 
 /**
- * 默认登录态。
+ * 默认鉴权状态。
  */
 export const DEFAULT_AUTH_STATE: ExtensionAuthState = {
   token: "",
@@ -246,10 +246,10 @@ function normalizeAuthState(
 }
 
 /**
- * 加载扩展登录态。
+ * 加载扩展鉴权状态。
  *
  * 关键点（中文）：
- * - 登录态单独放在 `chrome.storage.local`，避免 sync 同步敏感 token。
+ * - 鉴权状态单独放在 `chrome.storage.local`，避免 sync 同步敏感 token。
  * - 兼容旧版本误存到 settings 里的 `authToken` 字段。
  */
 export async function loadAuthState(): Promise<ExtensionAuthState> {
@@ -290,7 +290,7 @@ export async function loadAuthState(): Promise<ExtensionAuthState> {
 }
 
 /**
- * 保存扩展登录态。
+ * 保存扩展鉴权状态。
  */
 export async function saveAuthState(authState: ExtensionAuthState): Promise<void> {
   const normalized = normalizeAuthState(authState);
@@ -307,7 +307,7 @@ export async function saveAuthState(authState: ExtensionAuthState): Promise<void
 }
 
 /**
- * 清理扩展登录态。
+ * 清理扩展鉴权状态。
  */
 export async function clearAuthState(): Promise<void> {
   await new Promise<void>((resolve, reject) => {

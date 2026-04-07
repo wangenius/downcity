@@ -1,9 +1,9 @@
 /**
- * Console 启动期统一账户初始化测试。
+ * Console 启动期 token 初始化测试。
  *
  * 关键点（中文）
- * - 首次启动时，如果还没有统一账户用户，应自动初始化首个管理员。
- * - 未输入密码时应回落到默认密码 `downcity`。
+ * - 首次启动时，如果还没有本机 CLI 管理主体，应自动生成本机 access token。
+ * - 新模型不再提示密码，也不再依赖用户名密码登录。
  */
 
 import assert from "node:assert/strict";
@@ -29,34 +29,37 @@ function createAuthService() {
   };
 }
 
-test("ensureConsoleAuthBootstrap creates default admin with fallback password", async () => {
+test("ensureConsoleAuthBootstrap creates local CLI access token without password prompt", async () => {
   const { authService, cleanup } = createAuthService();
   try {
+    let prompted = false;
     await ensureConsoleAuthBootstrap({
       authService,
-      readPassword: async () => "",
+      readPassword: async () => {
+        prompted = true;
+        return "should-not-be-used";
+      },
     });
 
-    const login = authService.login({
-      username: "admin",
-      password: "downcity",
-    });
+    const tokens = authService.listLocalCliTokens();
+    assert.equal(prompted, false);
+    assert.equal(tokens.length, 1);
+    assert.equal(tokens[0].name, "console-bootstrap");
 
-    assert.equal(login.user.username, "admin");
-    assert.equal(login.user.roles.includes("admin"), true);
-    assert.equal(login.token.token.startsWith("dc_"), true);
+    const principal = authService.authenticateBearerHeader(`Bearer ${authService.ensureLocalCliAccess({
+      tokenName: "extra-test-token",
+    }).token.token}`);
+    assert.equal(principal.username, "local-cli");
+    assert.equal(principal.roles.includes("admin"), true);
   } finally {
     cleanup();
   }
 });
 
-test("ensureConsoleAuthBootstrap skips when admin already exists", async () => {
+test("ensureConsoleAuthBootstrap skips when local CLI access is already initialized", async () => {
   const { authService, cleanup } = createAuthService();
   try {
-    authService.bootstrapAdmin({
-      username: "admin",
-      password: "custom-pass",
-      displayName: "Admin",
+    authService.ensureLocalCliAccess({
       tokenName: "bootstrap",
     });
 
@@ -67,11 +70,9 @@ test("ensureConsoleAuthBootstrap skips when admin already exists", async () => {
       },
     });
 
-    const login = authService.login({
-      username: "admin",
-      password: "custom-pass",
-    });
-    assert.equal(login.user.username, "admin");
+    const tokens = authService.listLocalCliTokens();
+    assert.equal(tokens.length, 1);
+    assert.equal(tokens[0].name, "bootstrap");
   } finally {
     cleanup();
   }

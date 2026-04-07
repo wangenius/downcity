@@ -25,9 +25,11 @@ CLI 文档按“单命令页面 + 命令组”组织。
   - [`city agent`](/zh/docs/commands/agent/agent)
   - [`city agent create`](/zh/docs/commands/agent/create)
   - [`city agent list`](/zh/docs/commands/agent/list)
+  - [`city agent chat`](/zh/docs/commands/agent/chat)
+  - [`city agent quest`](/zh/docs/commands/agent/quest)
   - [`city config`](/zh/docs/commands/config)
   - [`city model`](/zh/docs/commands/model)
-  - [`city keys`](/zh/docs/commands/keys)
+  - [`city env`](/zh/docs/commands/env)
   - [`city service`](/zh/docs/commands/service/service)
   - [`city plugin`](/zh/docs/commands/plugin/plugin)
 - 动态 action 命令：
@@ -49,6 +51,8 @@ CLI 文档按“单命令页面 + 命令组”组织。
 - `city agent create`：初始化项目运行文件
 - `city agent list`：查看已登记 agent，也可加 `--running` 只看正在运行的项目
 - `city agent start`：启动项目 agent daemon
+- `city agent chat`：在终端中与 agent 做持续对话
+- `city agent quest`：向 agent 的 Console 主会话发送一轮 prompt
 - `city console`：管理 Console 模块本身
 - `city service ...`：查看静态 service catalog，或使用高级定向 service 控制
 - `city plugin ...`：查看静态 plugin catalog，或使用高级定向 plugin action 路由
@@ -57,7 +61,8 @@ CLI 文档按“单命令页面 + 命令组”组织。
 - `city web ...`：运维内置 web plugin
 - `city asr ...`：运维内置 asr plugin
 - `city tts ...`：运维内置 tts plugin
-- `city model ...`：管理运行时模型配置
+- `city model`：在 TTY 中打开交互式全局模型管理器
+- `city model ...`：管理运行时模型配置与自动化脚本入口
 
 ## 保持最新
 

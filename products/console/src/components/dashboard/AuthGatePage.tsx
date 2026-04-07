@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 未登录时不再覆盖 dashboard，而是直接进入独立入口页。
- * - 统一承载"鉴权检查中 / 初始化管理员 / 登录"三种状态，避免首屏闪烁与状态混淆。
+ * - 统一承载"鉴权检查中 / 本机初始化提示 / Token 输入"三种状态，避免首屏闪烁与状态混淆。
  */
 
 import * as React from "react"
@@ -17,40 +17,34 @@ export interface AuthGatePageProps {
   checking: boolean
 
   /**
-   * 当前是否需要先初始化首个管理员。
+   * 当前是否需要先在本机 CLI 创建首个 token。
    */
   bootstrapRequired: boolean
 
   /**
-   * 当前是否正在提交登录表单。
+   * 当前是否正在提交 token 表单。
    */
   submitting: boolean
 
   /**
-   * 当前登录错误文案。
+   * 当前 token 错误文案。
    */
   errorMessage: string
 
   /**
-   * 提交登录回调。
+   * 提交 token 回调。
    */
-  onSubmit: (input: { username: string; password: string; displayName?: string }) => Promise<void>
+  onSubmit: (input: { token: string }) => Promise<void>
 }
 
 export function AuthGatePage(props: AuthGatePageProps) {
   const { checking, bootstrapRequired, submitting, errorMessage, onSubmit } = props
-  const [username, setUsername] = React.useState("admin")
-  const [password, setPassword] = React.useState("")
-  const [displayName, setDisplayName] = React.useState("Admin")
+  const [token, setToken] = React.useState("")
 
   const handleSubmit = React.useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    await onSubmit({
-      username,
-      password,
-      ...(bootstrapRequired ? { displayName } : {}),
-    })
-  }, [bootstrapRequired, displayName, onSubmit, password, username])
+    await onSubmit({ token })
+  }, [onSubmit, token])
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-secondary/30 px-4">
@@ -58,14 +52,14 @@ export function AuthGatePage(props: AuthGatePageProps) {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-base font-medium text-foreground">
-            {checking ? "检查中" : bootstrapRequired ? "初始化" : "登录"}
+            {checking ? "检查中" : bootstrapRequired ? "先创建 Token" : "输入 Token"}
           </h1>
           <p className="mt-1 text-xs text-muted-foreground">
             {checking
               ? "验证访问权限..."
               : bootstrapRequired
-                ? "创建管理员账户"
-                : "Console UI"}
+                ? "请先在本机终端执行 city auth token create"
+                : "Console UI Bearer Token"}
           </p>
         </div>
 
@@ -76,50 +70,23 @@ export function AuthGatePage(props: AuthGatePageProps) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Username */}
             <div className="space-y-1.5">
-              <label htmlFor="username" className="text-xs text-muted-foreground">
-                用户名
+              <label htmlFor="token" className="text-xs text-muted-foreground">
+                Bearer Token
               </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="h-9 w-full rounded-[11px] border border-input bg-transparent px-3 text-sm outline-none transition-colors focus:border-ring"
+              <textarea
+                id="token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                className="min-h-[108px] w-full rounded-[11px] border border-input bg-transparent px-3 py-2 text-sm outline-none transition-colors focus:border-ring"
                 disabled={submitting}
+                placeholder="支持直接粘贴 Bearer xxx 或纯 token"
               />
             </div>
 
-            {/* Password */}
-            <div className="space-y-1.5">
-              <label htmlFor="password" className="text-xs text-muted-foreground">
-                密码
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-9 w-full rounded-[11px] border border-input bg-transparent px-3 text-sm outline-none transition-colors focus:border-ring"
-                disabled={submitting}
-              />
-            </div>
-
-            {/* Display Name (bootstrap only) */}
             {bootstrapRequired && (
-              <div className="space-y-1.5">
-                <label htmlFor="displayName" className="text-xs text-muted-foreground">
-                  显示名称
-                </label>
-                <input
-                  id="displayName"
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="h-9 w-full rounded-[11px] border border-input bg-transparent px-3 text-sm outline-none transition-colors focus:border-ring"
-                  disabled={submitting}
-                />
+              <div className="rounded-[11px] bg-secondary/70 px-3 py-2 text-xs text-muted-foreground">
+                先在当前机器的终端执行 `city auth token create console-ui`，拿到 token 后再粘贴到这里。
               </div>
             )}
 
@@ -134,17 +101,15 @@ export function AuthGatePage(props: AuthGatePageProps) {
             <Button
               type="submit"
               className="w-full"
-              disabled={submitting || !username.trim() || !password.trim()}
+              disabled={submitting || !token.trim()}
             >
               {submitting ? (
                 <>
                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                  {bootstrapRequired ? "初始化中..." : "登录中..."}
+                  验证中...
                 </>
-              ) : bootstrapRequired ? (
-                "初始化"
               ) : (
-                "登录"
+                "进入 Console"
               )}
             </Button>
           </form>

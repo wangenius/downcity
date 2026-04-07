@@ -72,6 +72,11 @@ export interface SessionRunInput {
  */
 export interface SessionExecuteInput {
   /**
+   * 当前轮用户查询文本。
+   */
+  query: string;
+
+  /**
    * 当前轮 system messages。
    */
   system: SessionSystemMessage[];

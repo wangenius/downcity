@@ -15,6 +15,7 @@ import { SessionHistoryComposer } from "@session/composer/history/SessionHistory
 import { SessionSystemComposer } from "@session/composer/system/SessionSystemComposer.js";
 import { LocalSessionExecutionComposer } from "@session/composer/execution/LocalSessionExecutionComposer.js";
 import type { SessionRunResult, SessionRunInput } from "@/types/session/SessionRun.js";
+import type { SessionMemoryRuntime } from "@/types/session/SessionMemory.js";
 
 type LocalSessionExecutorOptions = {
   /**
@@ -55,6 +56,11 @@ type LocalSessionExecutorOptions = {
    * - 未提供时回退到默认 `LocalSessionExecutionComposer`。
    */
   executionComposer?: SessionExecutionComposer;
+
+  /**
+   * 可选 memory 运行时端口。
+   */
+  memoryRuntime?: SessionMemoryRuntime;
 };
 
 /**
@@ -70,6 +76,9 @@ export class LocalSessionExecutor {
       historyComposer: options.historyComposer,
       compactionComposer: options.compactionComposer,
       systemComposer: options.systemComposer,
+      ...(options.memoryRuntime
+        ? { memoryRuntime: options.memoryRuntime }
+        : {}),
       executionComposer:
         options.executionComposer ||
         new LocalSessionExecutionComposer({

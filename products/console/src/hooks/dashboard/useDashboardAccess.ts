@@ -2,8 +2,8 @@
  * Console UI Access 工作台 Hook。
  *
  * 关键点（中文）
- * - 当前模型只服务单管理员账户，不再维护多用户目录。
- * - Access 页只负责两件事：修改当前管理员密码、管理当前管理员 token。
+ * - 当前模型只服务本机 token 主体，不再维护用户名密码登录流。
+ * - Access 页只负责查看当前主体与管理 token。
  */
 
 import { useCallback, useEffect, useState } from "react"
@@ -12,7 +12,6 @@ import {
   queryAuthAccessMe,
   queryAuthAccessTokens,
   deleteAuthAccessToken,
-  updateAuthAccessPassword,
 } from "@/lib/auth-access-api"
 import { getErrorMessage } from "./shared"
 import type {
@@ -30,12 +29,12 @@ type RequestJson = <T>(
 
 export interface UseDashboardAccessResult {
   /**
-   * 当前管理员摘要。
+   * 当前主体摘要。
    */
   accessUser: UiAuthAccessUser | null
 
   /**
-   * 当前管理员 token 列表。
+   * 当前主体 token 列表。
    */
   accessTokens: UiAuthAccessTokenSummary[]
 
@@ -55,17 +54,9 @@ export interface UseDashboardAccessResult {
   clearLatestIssuedAccessToken: () => void
 
   /**
-   * 刷新当前管理员与 token 状态。
+   * 刷新当前主体与 token 状态。
    */
   refreshAccess: () => Promise<void>
-
-  /**
-   * 修改当前管理员密码。
-   */
-  updateAccessPassword: (input: {
-    currentPassword: string
-    nextPassword: string
-  }) => Promise<void>
 
   /**
    * 签发新 token。
@@ -112,18 +103,6 @@ export function useDashboardAccess(params: {
       setAccessLoading(false)
     }
   }, [enabled, requestJson])
-
-  const updateAccessPassword = useCallback(async (input: {
-    currentPassword: string
-    nextPassword: string
-  }) => {
-    const user = await updateAuthAccessPassword({
-      requestJson,
-      input,
-    })
-    setAccessUser(user)
-    showToast("管理员密码已更新", "success")
-  }, [requestJson, showToast])
 
   const createAccessToken = useCallback(async (input: {
     name: string
@@ -172,7 +151,6 @@ export function useDashboardAccess(params: {
     latestIssuedAccessToken,
     clearLatestIssuedAccessToken,
     refreshAccess,
-    updateAccessPassword,
     createAccessToken,
     deleteAccessToken,
   }

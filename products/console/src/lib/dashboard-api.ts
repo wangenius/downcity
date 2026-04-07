@@ -60,7 +60,7 @@ export interface ConsoleAuthStatusResponse {
   initialized: boolean
 
   /**
-   * 当前 console-ui 是否应强制进入登录流程。
+   * 当前 console-ui 是否应强制进入 Bearer Token 输入流程。
    */
   requireLogin: boolean
 }
@@ -191,7 +191,6 @@ export const dashboardApiRoutes = {
   authTokenCreate: () => "/api/auth/token/create",
   authTokenRevoke: () => "/api/auth/token/revoke",
   authTokenDelete: () => "/api/auth/token/delete",
-  authPasswordUpdate: () => "/api/auth/password/update",
   uiAgents: (agentId?: string) =>
     agentId
       ? `/api/ui/agents?agent=${encodeURIComponent(agentId)}`

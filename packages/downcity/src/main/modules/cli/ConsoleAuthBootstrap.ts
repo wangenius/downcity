@@ -1,20 +1,17 @@
 /**
- * Console 启动阶段的统一账户初始化辅助。
+ * Console 启动阶段的本机 token 初始化辅助。
  *
  * 关键点（中文）
- * - `city start` 首次启动时，如果还没有统一账户用户，这里负责初始化首个管理员。
- * - CLI 只让用户设置密码；用户名固定为 `admin`，默认密码为 `downcity`。
- * - 一旦统一账户已存在，本模块直接跳过，不会重复打断启动流程。
+ * - `city start` 首次启动时，如果还没有本机 CLI access token，这里负责初始化首个 token。
+ * - 新模型不再要求用户名密码登录，也不再做交互式密码提示。
+ * - 一旦本机 token 已存在，本模块直接跳过，不会重复打断启动流程。
  */
 
-import prompts from "prompts";
 import { AuthService } from "@/main/modules/http/auth/AuthService.js";
 import { writeCliAuthState } from "@/main/modules/http/auth/CliAuthStateStore.js";
 import { emitCliBlock } from "./CliReporter.js";
 
-const DEFAULT_CONSOLE_ADMIN_USERNAME = "admin";
-const DEFAULT_CONSOLE_ADMIN_DISPLAY_NAME = "Admin";
-const DEFAULT_CONSOLE_ADMIN_PASSWORD = "downcity";
+const DEFAULT_CONSOLE_BOOTSTRAP_TOKEN_NAME = "console-bootstrap";
 
 /**
  * Console 启动期统一账户初始化参数。
@@ -25,14 +22,11 @@ export interface EnsureConsoleAuthBootstrapOptions {
    */
   authService?: AuthService;
 
-  /**
-   * 可选注入密码读取器，便于测试替换交互逻辑。
-   */
   readPassword?: () => Promise<string>;
 }
 
 /**
- * 确保 console 级统一账户至少存在一个管理员。
+ * 确保 console 级至少存在一个本机 access token。
  */
 export async function ensureConsoleAuthBootstrap(
   options: EnsureConsoleAuthBootstrapOptions = {},
@@ -40,17 +34,12 @@ export async function ensureConsoleAuthBootstrap(
   const authService = options.authService || new AuthService();
   const ownsAuthService = !options.authService;
   try {
-    if (authService.hasUsers()) {
+    if (authService.hasLocalCliAccess()) {
       return;
     }
 
-    const rawPassword = await (options.readPassword || promptConsoleAdminPassword)();
-    const password = String(rawPassword || "").trim() || DEFAULT_CONSOLE_ADMIN_PASSWORD;
-    const payload = authService.bootstrapAdmin({
-      username: DEFAULT_CONSOLE_ADMIN_USERNAME,
-      password,
-      displayName: DEFAULT_CONSOLE_ADMIN_DISPLAY_NAME,
-      tokenName: "console-bootstrap",
+    const payload = authService.ensureLocalCliAccess({
+      tokenName: DEFAULT_CONSOLE_BOOTSTRAP_TOKEN_NAME,
     });
     try {
       writeCliAuthState({
@@ -64,48 +53,24 @@ export async function ensureConsoleAuthBootstrap(
 
     emitCliBlock({
       tone: "success",
-      title: "Console auth initialized",
-      summary: "admin",
+      title: "Console token initialized",
+      summary: payload.user.username,
       facts: [
         {
-          label: "Username",
-          value: DEFAULT_CONSOLE_ADMIN_USERNAME,
+          label: "Subject",
+          value: payload.user.username,
         },
         {
-          label: "Password",
-          value:
-            password === DEFAULT_CONSOLE_ADMIN_PASSWORD
-              ? DEFAULT_CONSOLE_ADMIN_PASSWORD
-              : "使用你刚刚输入的密码",
+          label: "Token",
+          value: payload.token.name,
         },
         {
-          label: "Login",
-          value: "使用该密码登录 Console",
+          label: "Use",
+          value: "Console UI / Extension 请粘贴 Bearer Token",
         },
       ],
     });
   } finally {
     if (ownsAuthService) authService.close();
   }
-}
-
-/**
- * 首次启动时读取 console 管理员密码。
- */
-async function promptConsoleAdminPassword(): Promise<string> {
-  if (!process.stdin.isTTY) {
-    return DEFAULT_CONSOLE_ADMIN_PASSWORD;
-  }
-
-  const response = (await prompts({
-    type: "password",
-    name: "password",
-    message: "设置 Console 管理员密码（留空默认 downcity）",
-    initial: DEFAULT_CONSOLE_ADMIN_PASSWORD,
-  })) as {
-    password?: string;
-  };
-
-  const password = String(response.password || "").trim();
-  return password || DEFAULT_CONSOLE_ADMIN_PASSWORD;
 }

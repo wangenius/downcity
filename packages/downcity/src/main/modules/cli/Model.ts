@@ -7,6 +7,7 @@
  */
 
 import type { Command } from "commander";
+import { runInteractiveModelManager } from "./ModelManager.js";
 import { registerModelCreateCommand } from "./ModelCreateCommand.js";
 import { registerModelManageCommands } from "./ModelManageCommand.js";
 import { registerModelReadCommands } from "./ModelReadCommand.js";
@@ -18,7 +19,14 @@ export function registerModelCommand(program: Command): void {
   const model = program
     .command("model")
     .description("管理 city 全局语言模型池（provider/model）")
-    .helpOption("--help", "display help for command");
+    .helpOption("--help", "display help for command")
+    .action(async () => {
+      if (process.stdin.isTTY === true && process.stdout.isTTY === true) {
+        await runInteractiveModelManager();
+        return;
+      }
+      model.outputHelp();
+    });
 
   registerModelCreateCommand(model);
   registerModelReadCommands(model);

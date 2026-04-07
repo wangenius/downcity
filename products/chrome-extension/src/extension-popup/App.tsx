@@ -52,15 +52,10 @@ import {
   shortenUrl,
   type ExtensionPopupToastMessage,
 } from "./helpers";
-import {
-  PopupChevronLeftIcon,
-  PopupChevronRightIcon,
-  PopupSettingsSlidersIcon,
-} from "./PopupIcons";
 import { ExtensionPopupSelect } from "./ExtensionPopupSelect";
 
-const POPUP_HEADER_ICON_BUTTON_CLASS_NAME =
-  "inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-border bg-surface text-foreground/72 shadow-soft outline-none transition hover:-translate-y-[1px] hover:border-border-strong hover:bg-muted hover:text-foreground focus:border-border-strong focus:bg-muted disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-40";
+const POPUP_HEADER_TEXT_BUTTON_CLASS_NAME =
+  "inline-flex h-9 items-center justify-center rounded-[10px] border border-transparent px-3 text-[11px] font-medium tracking-[0.02em] text-foreground/72 outline-none transition hover:bg-background hover:text-foreground focus:bg-background focus:text-foreground disabled:cursor-not-allowed disabled:opacity-40";
 
 export function ExtensionPopupApp() {
   const toastTimerRef = useRef<number | null>(null);
@@ -170,7 +165,7 @@ export function ExtensionPopupApp() {
         setAuthRequired(true);
         setStatus({
           type: "error",
-          text: "需要登录 Console，请打开设置页完成登录。",
+          text: "需要 Bearer Token，请打开设置页填写 token。",
         });
         return;
       }
@@ -249,7 +244,7 @@ export function ExtensionPopupApp() {
           setAuthRequired(true);
           setStatus({
             type: "error",
-            text: "需要登录 Console，请打开设置页完成登录。",
+            text: "需要 Bearer Token，请打开设置页填写 token。",
           });
           return;
         }
@@ -315,7 +310,7 @@ export function ExtensionPopupApp() {
           if (needsLogin && !nextAuthToken) {
             setStatus({
               type: "error",
-              text: "需要登录 Console，请打开设置页完成登录。",
+              text: "需要 Bearer Token，请打开设置页填写 token。",
             });
           } else {
             await refreshAgents({
@@ -558,56 +553,56 @@ export function ExtensionPopupApp() {
           </div>
         </div>
 
-        {/* 头部操作区改成统一控制面板式按钮，提升 icon 识别度和点击感。 */}
+        {/* 头部操作区改成纯文字控制条，减少装饰感，让信息更直接。 */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-[14px] border border-border bg-surface p-1 shadow-soft">
+          <div className="flex items-center gap-1 rounded-[14px] border border-border bg-muted/80 p-1 shadow-soft">
             <button
               type="button"
-              className={POPUP_HEADER_ICON_BUTTON_CLASS_NAME}
+              className={POPUP_HEADER_TEXT_BUTTON_CLASS_NAME}
               onClick={() => cycleAgent(-1)}
               disabled={agents.length < 2 || isLoadingAgents}
               aria-label="上一个 Agent"
               title="上一个 Agent"
             >
-              <PopupChevronLeftIcon />
+              上一位
             </button>
             <button
               type="button"
-              className={POPUP_HEADER_ICON_BUTTON_CLASS_NAME}
+              className={POPUP_HEADER_TEXT_BUTTON_CLASS_NAME}
               onClick={() => cycleAgent(1)}
               disabled={agents.length < 2 || isLoadingAgents}
               aria-label="下一个 Agent"
               title="下一个 Agent"
             >
-              <PopupChevronRightIcon />
+              下一位
             </button>
           </div>
           <button
             type="button"
             className={[
-              POPUP_HEADER_ICON_BUTTON_CLASS_NAME,
-              "rounded-[14px] bg-[color-mix(in_srgb,var(--surface)_78%,var(--background)_22%)]",
+              POPUP_HEADER_TEXT_BUTTON_CLASS_NAME,
+              "border-border bg-surface px-3.5 text-foreground shadow-soft hover:border-border-strong hover:bg-muted focus:border-border-strong focus:bg-muted",
             ].join(" ")}
             onClick={openSettingsPage}
             aria-label="打开设置"
             title="设置"
           >
-            <PopupSettingsSlidersIcon />
+            设置
           </button>
         </div>
       </header>
 
       {authInitializing ? (
         <div className="mb-4 rounded-lg border border-border bg-muted px-3 py-3 text-[12px] text-muted-foreground">
-          正在检查 Console 登录状态...
+          正在检查 Console Token 状态...
         </div>
       ) : authRequired ? (
         <div className="mb-4 rounded-lg border border-border bg-muted px-3 py-3">
           <div className="text-[12px] font-medium text-foreground">
-            需要先登录 Console
+            需要先提供 Console Token
           </div>
           <div className="mt-1 text-[11px] leading-[1.5] text-muted-foreground">
-            当前 Console 已开启统一鉴权。请先在设置页登录，再回来发送页面内容。
+            当前 Console 已开启统一鉴权。请先在设置页填写 Bearer Token，再回来发送页面内容。
           </div>
           <div className="mt-3">
             <button
@@ -615,7 +610,7 @@ export function ExtensionPopupApp() {
               className="inline-flex min-h-10 items-center justify-center rounded-lg bg-foreground px-4 text-[12px] font-medium text-background transition hover:bg-foreground/90"
               onClick={openSettingsPage}
             >
-              打开设置页登录
+              打开设置页填写 Token
             </button>
           </div>
         </div>

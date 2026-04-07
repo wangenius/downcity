@@ -13,6 +13,21 @@ description: Memory indexing, search, read, store, and flush service
 - Search and read memory entries
 - Store explicit memory records
 - Flush conversation window into daily memory
+- Automatically recall relevant memory in the local session execution path
+- Automatically capture each completed local turn into session-level working memory
+
+## Automatic integration
+
+When you use the default local session executor, `memory` participates automatically in each turn:
+
+- Before execution: run a recall for the current user request and inject a small memory pack into context
+- After execution: write the current turn into `.downcity/session/<sessionId>/memory/working.md`
+- After execution: append a lightweight daily journal entry into `.downcity/memory/daily/<date>.md`
+- After execution: when the turn clearly expresses a stable preference or rule, also write it into `.downcity/memory/MEMORY.md`
+- Before writing `longterm`, a simple dedupe check runs to avoid appending the same long-lived rule repeatedly
+- Current longterm candidates are normalized into a more stable Canon-style statement and classified as `preference / fact / decision / rule`
+
+Use `city memory` when you want to inspect or manage memory manually.
 
 ## Runtime operations
 

@@ -39,6 +39,12 @@ city memory flush --session-id telegram-chat-123 --time "2026-03-25T23:00:00+08:
 ## Notes
 
 - Memory is enabled by default (zero config). Disable only when needed: `context.memory.enabled=false`.
+- The default local session execution path already does automatic recall / capture; `city memory` is mainly for manual search, store, rebuild, and debugging.
+- Current automatic capture rules:
+- Every successful local turn writes `working` and `daily`
+- If the user message clearly expresses a stable preference or long-lived rule (for example: "remember", "default", "from now on"), it also writes `longterm`
+- Before writing `longterm`, the runtime checks `MEMORY.md` and skips duplicate entries
+- Current `longterm` entries also go through a deterministic normalization step and are classified as `preference / fact / decision / rule`
 - All memory actions also support common one-shot scheduling via `--delay` / `--time`.
 - For detailed behavior, see [`Service Action Scheduling`](/en/docs/commands/service/scheduling).
 - Start the agent first:
@@ -56,8 +62,9 @@ $ city memory search "release decision"
 {
   "success": true,
   "data": {
-    "success": true,
-    "hits": []
+    "backend": "builtin",
+    "mode": "fts",
+    "results": []
   }
 }
 ```
@@ -67,7 +74,9 @@ $ city memory flush --session-id <sessionId> --max-messages 40
 {
   "success": true,
   "data": {
-    "success": true
+    "path": ".downcity/memory/daily/2026-04-07.md",
+    "messageCount": 12,
+    "writtenChars": 864
   }
 }
 ```

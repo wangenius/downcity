@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 锁定用户可见命令树，避免内部命令再次泄漏到顶层 help。
- * - 锁定 `keys` 已经升级为标准资源子命令，而不是单个扁平命令。
+ * - 锁定 `env` 已经升级为标准资源子命令，而不是单个扁平命令。
  */
 
 import assert from "node:assert/strict";
@@ -22,13 +22,22 @@ function readHelp(args) {
 test("root help hides internal and redundant commands", () => {
   const output = readHelp(["--help"]);
 
-  assert.match(output, /\n  keys\s+/);
+  assert.match(output, /\n  auth\s+/);
+  assert.match(output, /\n  env\s+/);
   assert.doesNotMatch(output, /\n  agents \[options\]/);
   assert.doesNotMatch(output, /\n  run\s+/);
 });
 
-test("keys help exposes list set delete subcommands", () => {
-  const output = readHelp(["keys", "--help"]);
+test("auth help exposes token management subcommands", () => {
+  const output = readHelp(["auth", "token", "--help"]);
+
+  assert.match(output, /\n  list \[options\]/);
+  assert.match(output, /\n  create \[options\] <name>/);
+  assert.match(output, /\n  revoke \[options\] <tokenId>/);
+});
+
+test("env help exposes list set delete subcommands", () => {
+  const output = readHelp(["env", "--help"]);
 
   assert.match(output, /\n  list \[options\]/);
   assert.match(output, /\n  set \[options\] <key> <value>/);
@@ -41,14 +50,36 @@ test("agent list help exposes running filter", () => {
   assert.match(output, /--running \[enabled\]/);
 });
 
+test("agent quest help exposes target option", () => {
+  const output = readHelp(["agent", "quest", "--help"]);
+
+  assert.match(output, /--to <name>/);
+});
+
+test("agent chat help exposes optional target selection", () => {
+  const output = readHelp(["agent", "chat", "--help"]);
+
+  assert.match(output, /--to <name>/);
+});
+
+test("model help keeps interactive and scriptable entrypoints", () => {
+  const output = readHelp(["model", "--help"]);
+
+  assert.match(output, /\n  create \[options\]/);
+  assert.match(output, /\n  list \[options\]/);
+  assert.match(output, /\n  pause \[options\] <modelId>/);
+});
+
 test("service and plugin root help are static catalog views", () => {
   const serviceListOutput = readHelp(["service", "list", "--help"]);
   const pluginListOutput = readHelp(["plugin", "list", "--help"]);
+  const pluginStatusOutput = readHelp(["plugin", "status", "--help"]);
 
   assert.doesNotMatch(serviceListOutput, /--path <path>/);
   assert.doesNotMatch(serviceListOutput, /--agent <name>/);
   assert.doesNotMatch(pluginListOutput, /--path <path>/);
   assert.doesNotMatch(pluginListOutput, /--agent <name>/);
+  assert.match(pluginStatusOutput, /status \[options\] \[pluginName\]/);
 });
 
 test("concrete service roots expose lifecycle commands when supported", () => {

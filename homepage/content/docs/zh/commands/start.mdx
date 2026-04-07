@@ -8,7 +8,7 @@ description: 后台启动 city runtime
 后台启动 city runtime。
 
 启动时会初始化 city runtime 的 registry 和进程状态。
-如果当前还没有任何统一账户用户，启动过程会提示设置首个管理员密码；留空时默认使用 `downcity`，用户名固定为 `admin`。
+如果当前还没有任何本机 token，启动过程会自动初始化一个 `console-bootstrap` token，并把它写入当前机器的 CLI 鉴权状态。
 
 如果你希望一并启动 Console，请使用 `city start --console` 或 `city start -a`。
 
@@ -42,11 +42,10 @@ city version: 1.0.0
    pid: <consolePid>
    url: http://127.0.0.1:5315
    log: <consoleLogPath>
-? 设置 Console 管理员密码（留空默认 downcity）: ********
-✅ Unified auth admin initialized
-   username: admin
-   password: 使用你刚刚输入的密码
-   login: 使用该密码登录 Console UI
+✅ Console token initialized
+   subject: local-cli
+   token: console-bootstrap
+   use: Console UI / Extension 请粘贴 Bearer Token
 ```
 
 ```text

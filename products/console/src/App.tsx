@@ -123,7 +123,6 @@ export function App() {
     saveAuthorizationConfig,
     runAuthorizationAction,
     clearLatestIssuedAccessToken,
-    updateAccessPassword,
     createAccessToken,
     deleteAccessToken,
     runSkillFind,
@@ -168,8 +167,7 @@ export function App() {
     executeAgentCommand,
     constants,
     uiHelpers,
-    login,
-    bootstrapAdmin,
+    submitAuthToken,
     logout,
   } = useConsoleDashboard()
 
@@ -901,7 +899,7 @@ export function App() {
         bootstrapRequired={authBootstrapRequired}
         submitting={authSubmitting}
         errorMessage={authErrorMessage}
-        onSubmit={authBootstrapRequired ? bootstrapAdmin : login}
+        onSubmit={submitAuthToken}
       />
     ) : (
       <SidebarProvider
@@ -975,7 +973,6 @@ export function App() {
           user={accessUser}
           tokens={accessTokens}
           onLogout={logout}
-          onUpdatePassword={(input) => updateAccessPassword(input)}
           variant="sidebar"
         />
         <SidebarInset>

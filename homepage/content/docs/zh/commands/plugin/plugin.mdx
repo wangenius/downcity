@@ -11,11 +11,13 @@ description: 查看全局 plugin catalog，并使用高级 plugin action 路由
 
 - 查看当前注册了哪些 plugin
 - 检查某个 plugin 的静态启用态与能力面
+- 在 city 全局配置里启用或关闭 plugin lifecycle
 - 不使用短命令别名时，显式调用某个 plugin action
 
 ## 常用示例
 
 ```bash
+city plugin
 city plugin list
 city plugin status asr
 city plugin action asr status
@@ -23,8 +25,16 @@ city plugin action asr status
 
 ## 说明
 
+- 在交互式终端里直接运行 `city plugin`，会进入 plugin 管理器。
+- 交互式管理器支持：
+  - 查看状态
+  - 全局启用
+  - 全局关闭
+- `city plugin status` 在省略 `pluginName` 时也支持交互式选择。
 - `city plugin list` 和 `city plugin status` 是静态的 console 级 catalog 视图。
 - 它们不依赖 `--path`、`--agent`，也不要求 agent 已运行。
+- `city plugin list` 默认输出人类可读表格；脚本场景再加 `--json`。
+- 全局启用/关闭同样不依赖 agent，因为 plugin lifecycle 本身就存放在 city 级配置里。
 - `city plugin action ...` 仍然是高级执行入口，真正执行时依赖具体 agent 项目。
 - 日常使用更推荐直接使用具体 plugin 根命令，例如 `city web ...`、`city skill ...`、`city asr ...`、`city tts ...`。
 - plugin 启用态现在属于 city 级事实；静态状态页不再读取 agent `downcity.json`。

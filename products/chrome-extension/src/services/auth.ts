@@ -6,7 +6,6 @@
  * - 避免 popup / options / inline composer 各自维护一套鉴权细节。
  */
 
-import type { ExtensionAuthState } from "../types/extension";
 import { resolveConsoleBaseUrl } from "./consoleBase";
 
 /**
@@ -14,7 +13,7 @@ import { resolveConsoleBaseUrl } from "./consoleBase";
  */
 export interface ExtensionAuthOptions {
   /**
-   * 当前用户登录后拿到的 Bearer Token 明文。
+   * 当前配置的 Bearer Token 明文。
    */
   authToken?: string;
 }
@@ -28,11 +27,11 @@ export interface ConsoleExtensionAuthStatusResponse {
    */
   success: boolean;
   /**
-   * 是否已经初始化统一账户。
+   * 是否已经完成本机 token 初始化。
    */
   initialized: boolean;
   /**
-   * 当前是否需要登录。
+   * 当前是否需要提供 Bearer Token。
    */
   requireLogin: boolean;
 }
@@ -136,65 +135,13 @@ export async function fetchConsoleAuthStatus(params?: {
 }
 
 /**
- * 登录 Console 并返回本地登录态。
- */
-export async function loginConsole(params: {
-  /**
-   * Console 基础地址。
-   */
-  consoleBaseUrl?: string;
-  /**
-   * 用户名。
-   */
-  username: string;
-  /**
-   * 密码。
-   */
-  password: string;
-}): Promise<ExtensionAuthState> {
-  const response = await fetch(
-    `${resolveConsoleBaseUrl(params.consoleBaseUrl)}/api/auth/login`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: String(params.username || "").trim(),
-        password: String(params.password || ""),
-        tokenName: "chrome-extension",
-      }),
-    },
-  );
-  const payload = (await response.json().catch(() => ({}))) as {
-    success?: boolean;
-    error?: unknown;
-    message?: unknown;
-    user?: { username?: unknown };
-    token?: { token?: unknown };
-  };
-  if (!response.ok || payload.success === false) {
-    throw new Error(String(payload.error || payload.message || "登录失败"));
-  }
-  const token = normalizeAuthToken(payload.token?.token);
-  const username = String(payload.user?.username || params.username || "").trim();
-  if (!token) {
-    throw new Error("登录成功但未返回 token");
-  }
-  return {
-    token,
-    ...(username ? { username } : {}),
-  };
-}
-
-/**
  * 为鉴权错误补充可操作提示。
  */
 export function decorateAuthErrorText(input: unknown): string {
   const message = String(input || "").trim();
   if (!message) return "未知错误";
   if (isAuthErrorMessage(message)) {
-    return `${message}。请在扩展设置页登录 Console 账户。`;
+    return `${message}。请在扩展设置页填写 Bearer Token。`;
   }
   return message;
 }

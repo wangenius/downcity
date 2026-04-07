@@ -21,7 +21,7 @@ function decorateAuthErrorText(input: unknown): string {
   const message = String(input || "").trim();
   if (!message) return "未知错误";
   if (isAuthErrorMessage(message)) {
-    return `${message}。请在扩展设置页登录 Console 账户。`;
+    return `${message}。请在扩展设置页填写 Bearer Token。`;
   }
   return message;
 }

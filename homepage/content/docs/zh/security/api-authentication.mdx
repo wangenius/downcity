@@ -1,61 +1,65 @@
 ---
 title: API 认证
-description: 如何初始化管理员、登录并使用 Bearer Token 调用 Downcity API
+description: 如何通过本机 CLI 签发 Bearer Token，并用它访问 Downcity API
 ---
 
 # API 认证
 
-从统一账户 V1 开始，Downcity 提供一组基础认证接口，用来初始化唯一管理员、登录、修改管理员密码，以及管理访问 token。
+Downcity 现在只保留一种对外认证模型：
+
+- 不再提供用户名 + 密码登录
+- 不再提供浏览器 session
+- 统一使用 Bearer Token
+- token 只由本机终端里的 CLI 管理
 
 当前已经落地的接口是：
 
-- `POST /api/auth/bootstrap-admin`
-- `POST /api/auth/login`
+- `GET /api/auth/status`
 - `GET /api/auth/me`
-- `POST /api/auth/password/update`
 - `GET /api/auth/token/list`
 - `POST /api/auth/token/create`
 - `POST /api/auth/token/revoke`
+- `POST /api/auth/token/delete`
 
 ## 第一次使用
 
-如果当前 console 数据库里还没有任何用户，可以先初始化第一个管理员：
+如果你执行：
 
 ```bash
-curl -X POST http://127.0.0.1:3000/api/auth/bootstrap-admin \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "username": "admin",
-    "password": "pass-123456",
-    "displayName": "Admin",
-    "tokenName": "bootstrap"
-  }'
+city start --console
 ```
 
-成功后会返回：
+首次启动时，Downcity 会自动初始化一个本机 token，并把它写入当前机器的 CLI 鉴权状态。启动日志里会看到类似输出：
 
-- 用户信息
-- 一次性明文 Bearer Token
+```text
+$ city start --console
+city version: 1.0.0
+✅ city runtime started
+   pid: <runtimePid>
+   log: <cityRuntimeLogPath>
+✅ Console started
+   pid: <consolePid>
+   url: http://127.0.0.1:5315
+   log: <consoleLogPath>
+✅ Console token initialized
+   subject: local-cli
+   token: console-bootstrap
+   use: Console UI / Extension 请粘贴 Bearer Token
+```
 
-注意：明文 token 只会在签发时返回一次，后续列表接口不会再返回。
-如果你是通过 CLI 首次执行 `city start` / `city start` 完成初始化，CLI 会提示你设置管理员密码；留空时默认使用 `downcity`。如果你是直接调用 `bootstrap-admin` API，则密码完全以你提交的 `password` 为准。
-
-## 登录
-
-管理员初始化完成后，后续通过登录获取新的 Bearer Token：
+如果你想手动签发 token，可以直接在本机终端执行：
 
 ```bash
-curl -X POST http://127.0.0.1:3000/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "username": "admin",
-    "password": "你在 bootstrap-admin 时设置的密码"
-  }'
+city auth token create console-ui --activate
 ```
 
-`tokenName` 对 API 调用方是可选字段；Console UI 会在内部固定成自己的默认值，不要求用户填写。
+常见约定是：
 
-## 带 Token 调用接口
+- Console UI 使用 `console-ui`
+- Chrome Extension 使用 `chrome-extension`
+- 其他脚本按用途自定义名称
+
+## 用 Token 调用接口
 
 拿到 token 后，统一放进 `Authorization` 头：
 
@@ -64,18 +68,69 @@ curl http://127.0.0.1:3000/api/auth/me \
   -H 'Authorization: Bearer dc_xxx'
 ```
 
-如果 token 有效，接口会返回当前用户、角色和权限。
+如果 token 有效，接口会返回当前主体、角色和权限。
+
+## 用 CLI 管理 Token
+
+列出当前机器已签发的 token：
+
+```bash
+city auth token list
+```
+
+创建一个新的 token：
+
+```bash
+city auth token create chrome-extension
+```
+
+创建并立即设为当前 CLI 默认 token：
+
+```bash
+city auth token create console-ui --activate
+```
+
+吊销 token：
+
+```bash
+city auth token revoke <tokenId>
+```
+
+如果你更习惯直接调用 HTTP，也可以继续用 Bearer Token 管理 token：
+
+```bash
+curl http://127.0.0.1:3000/api/auth/token/list \
+  -H 'Authorization: Bearer dc_xxx'
+```
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/token/create \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "name": "chrome-extension"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer dc_xxx' \
+  -d '{
+    "tokenId": "token_record_id"
+  }'
+```
 
 ## `DC_AUTH_TOKEN` 与 `DC_AGENT_TOKEN`
 
 先说结论：
 
 - 只有对外 HTTP 调用才需要 Bearer Token
-- 本地 `city service`、`city plugin`、`city task`、`city chat` 默认已经改成 IPC，不需要先拿 token
+- 本地 `city service`、`city plugin`、`city task`、`city chat` 默认已经走 IPC，不需要先拿 token
 
 对于直接调用 API 的用户，只需要记住一条：
 
-- 对外调用统一使用 Bearer Token，本质都落到 `Authorization: Bearer <token>`
+- 对外调用统一使用 `Authorization: Bearer <token>`
 
 但在 CLI/runtime 里，会看到两个环境变量：
 
@@ -84,17 +139,12 @@ curl http://127.0.0.1:3000/api/auth/me \
 | `DC_AUTH_TOKEN` | 用户、脚本、CI | 显式指定“这次 CLI/API 调用用哪个 token” |
 | `DC_AGENT_TOKEN` | Downcity agent runtime | agent 内部显式发起远程 HTTP 调用时自动传播身份 |
 
-推荐理解方式：
-
-- 如果你是人或外部脚本，优先用 `--token` 或 `DC_AUTH_TOKEN`
-- 如果是 agent 内部显式发起 HTTP 调用，通常由 runtime 自动注入 `DC_AGENT_TOKEN`
-
 只有显式远程 HTTP 调用时，CLI 才会进入下面的 token 解析顺序：
 
 1. `--token`
 2. `DC_AUTH_TOKEN`
 3. `DC_AGENT_TOKEN`
-4. 本地 CLI 登录态
+4. 本机 CLI 当前 token 状态
 
 所以：
 
@@ -109,64 +159,14 @@ curl http://127.0.0.1:3000/api/auth/me \
 - 再检查当前进程有没有可用 token 来源
 - 如果是在 agent/Bash/ACP 子进程里发起的远程 HTTP 调用，再重点检查 `DC_AGENT_TOKEN` 是否被正确继承
 
-## 管理 Token
-
-查看当前用户的 token 列表：
-
-```bash
-curl http://127.0.0.1:3000/api/auth/token/list \
-  -H 'Authorization: Bearer dc_xxx'
-```
-
-创建一个新的 token：
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/create \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "name": "chrome-extension"
-  }'
-```
-
-吊销 token：
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/token/revoke \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "tokenId": "token_record_id"
-  }'
-```
-
-## 修改管理员密码
-
-当前模型只保留一个管理员账户；控制面中的用户名密码登录只对这个管理员开放。
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/auth/password/update \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer dc_xxx' \
-  -d '{
-    "currentPassword": "old-pass",
-    "nextPassword": "new-pass"
-  }'
-```
-
-注意：
-
-- 修改密码不会自动吊销已存在 token
-- 其他接入方如果已经拿到 token，仍然继续通过 Bearer Token 访问
-- 明文 token 依旧只会在签发当次返回一次，后续列表里只能看到摘要信息
-
 ## 当前边界
 
-这次落地的是统一账户 V1 的认证主干：
+当前模型就是 token-only：
 
-- 已有统一用户表、角色表、权限表、token 表、审计日志表
-- 已有 Bearer Token 签发与校验
-- 已有单管理员密码更新接口
-- 已有当前管理员 token 管理接口
+- 已移除用户名 + 密码登录
+- 已移除 `bootstrap-admin`
+- 已移除 `login`
+- 已移除 `password/update`
+- Console UI、Chrome Extension、外部脚本统一使用显式签发的 Bearer Token
 
-后续版本会继续把更多控制面接口切到统一 Bearer 鉴权。
+后续如果增加新的接入面，也会继续沿用这套 Bearer Token 模型，而不是再引入单独的登录 session。

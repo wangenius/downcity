@@ -9,8 +9,9 @@ description: 独立管理 console 全局语言模型（provider/model）
 
 ## 设计约束
 
-- `create` 是唯一交互式命令。
-- 其他命令（`list/pause/update/test`）都是非交互，适合脚本化。
+- 裸 `city model` 在 TTY 中会进入交互式 manager。
+- `create` 仍然保留为直接进入创建流程的快捷入口。
+- 其他子命令（`list/pause/update/test/...`）继续保持脚本友好。
 - provider 的 `apiKey` 存储在 `~/.downcity/downcity.db`，写入时自动加密。
 - Kimi 现已拆分为两个 provider type：`moonshot-cn` 与 `moonshot-ai`。
 - Kimi Code 可使用独立 provider type：`kimi-code`。
@@ -18,6 +19,9 @@ description: 独立管理 console 全局语言模型（provider/model）
 ## 用法
 
 ```bash
+# 交互式 manager
+city model
+
 # 交互式创建（选择创建 provider 或 model）
 city model create
 
@@ -58,9 +62,15 @@ city model test provider <providerId>
 city model test model <modelId>
 ```
 
+## 交互式 manager
+
+- `city model` 是面向人的全局模型池入口。
+- 可以直接浏览 provider 与 model、测试连通性、暂停/恢复模型、把模型绑定到项目，并可随时跳转到创建流程。
+- 在非交互环境中，裸 `city model` 会回退到普通 help 输出。
+
 ## create 行为
 
-- 可选创建 `provider` 或 `model`。
+- `create` 是直接进入创建 `provider` 或 `model` 的快捷命令。
 - 创建 provider 后可立即测试连通性。
 - 对支持模型发现的 provider，会尝试拉取远端模型列表并支持多选自动添加。
 

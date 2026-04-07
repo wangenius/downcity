@@ -2,17 +2,20 @@
  * 统一账户服务层。
  *
  * 关键点（中文）
- * - 该模块承接 bootstrap、login、token 校验等业务语义。
+ * - 该模块承接本机 token 初始化、token 校验与 token 管理等业务语义。
  * - 路由层只调用这里，不直接碰数据库与密码哈希细节。
  */
 
 import type { AuthIssuedToken, AuthTokenSummary } from "@/shared/types/auth/AuthToken.js";
-import type { AuthPrincipal, AuthUser } from "@/shared/types/auth/AuthTypes.js";
+import type { AuthPrincipal, AuthTokenRecord, AuthUser } from "@/shared/types/auth/AuthTypes.js";
 import { optionalTrimmedText } from "@/shared/utils/store/StoreShared.js";
 import { AuthError } from "./AuthError.js";
 import { AuthStore, type AuthStoreOptions } from "./AuthStore.js";
-import { hashPassword, verifyPassword } from "./PasswordHasher.js";
 import { extractBearerToken, generateAccessToken, hashAccessToken } from "./TokenService.js";
+
+const LOCAL_CLI_USERNAME = "local-cli";
+const LOCAL_CLI_DISPLAY_NAME = "Local CLI";
+const LOCAL_CLI_PASSWORD_HASH = "[token-only-local-cli]";
 
 /**
  * AuthService 构造参数。
@@ -75,94 +78,113 @@ export class AuthService {
   }
 
   /**
-   * 判断当前是否已存在统一账户用户。
+   * 判断当前是否已经存在可用的本机 CLI access token。
    */
-  hasUsers(): boolean {
-    return this.store.countUsers() > 0;
+  hasLocalCliAccess(): boolean {
+    const user = this.store.findUserByUsername(LOCAL_CLI_USERNAME);
+    if (!user) return false;
+    return this.store
+      .listTokensByUserId(user.id)
+      .some((item) => this.isTokenActive(item));
   }
 
   /**
-   * 初始化首个管理员。
+   * 确保存在本机 CLI 主体，并为其签发新的 access token。
    */
-  bootstrapAdmin(input: {
-    username: string;
-    password: string;
-    displayName?: string;
-    tokenName?: string;
+  ensureLocalCliAccess(input: {
+    tokenName: string;
+    expiresAt?: string;
   }): { user: AuthCurrentUserPayload; token: AuthIssuedToken } {
-    if (this.store.countUsers() > 0) {
-      throw new AuthError("Admin bootstrap is already completed", 409);
-    }
-    const username = this.requireUsername(input.username);
-    const password = this.requirePassword(input.password);
-    this.store.ensureDefaultCatalog();
-    const user = this.store.createUser({
-      username,
-      passwordHash: hashPassword(password),
-      displayName: input.displayName,
-      status: "active",
+    const token = this.createLocalCliToken({
+      name: input.tokenName,
+      expiresAt: input.expiresAt,
     });
-    this.store.assignRoleToUser({
-      userId: user.id,
-      roleName: "admin",
-    });
-    const issued = this.issueTokenForUser({
-      user,
-      tokenName: input.tokenName || "bootstrap-admin",
-    });
-    this.store.insertAuditLog({
-      actorUserId: user.id,
-      actorTokenId: issued.record.id,
-      resourceType: "auth_user",
-      resourceId: user.id,
-      action: "bootstrap_admin",
-      result: "success",
-      metaJson: JSON.stringify({ username }),
-    });
+    const user = this.requireLocalCliUser();
     return {
       user: this.toUserPayload(user),
-      token: issued.token,
+      token,
     };
   }
 
   /**
-   * 用户登录并签发新 token。
+   * 读取本机 CLI 主体的 token 列表。
    */
-  login(input: {
-    username: string;
-    password: string;
-    tokenName?: string;
-  }): { user: AuthCurrentUserPayload; token: AuthIssuedToken } {
-    const username = this.requireUsername(input.username);
-    const password = this.requirePassword(input.password);
-    const user = this.store.findUserByUsername(username);
-    if (!user || !verifyPassword(password, user.passwordHash)) {
-      this.store.insertAuditLog({
-        resourceType: "auth_user",
-        action: "login",
-        result: "invalid_credentials",
-        metaJson: JSON.stringify({ username }),
-      });
-      throw new AuthError("Invalid username or password", 401);
-    }
-    this.ensureUserActive(user);
+  listLocalCliTokens(): AuthTokenSummary[] {
+    const user = this.store.findUserByUsername(LOCAL_CLI_USERNAME);
+    if (!user) return [];
+    return this.store
+      .listTokensByUserId(user.id)
+      .map((item) => this.store.toTokenSummary(item));
+  }
+
+  /**
+   * 为本机 CLI 主体签发新的 access token。
+   */
+  createLocalCliToken(input: {
+    name: string;
+    expiresAt?: string;
+  }): AuthIssuedToken {
+    const user = this.ensureLocalCliUser();
     const issued = this.issueTokenForUser({
       user,
-      tokenName: input.tokenName || "login",
+      tokenName: input.name,
+      expiresAt: input.expiresAt,
     });
     this.store.insertAuditLog({
       actorUserId: user.id,
-      actorTokenId: issued.record.id,
-      resourceType: "auth_user",
-      resourceId: user.id,
-      action: "login",
+      resourceType: "auth_token",
+      resourceId: issued.record.id,
+      action: "token_create",
       result: "success",
-      metaJson: JSON.stringify({ username }),
+      metaJson: JSON.stringify({
+        name: issued.record.name,
+        source: "local-cli",
+      }),
     });
-    return {
-      user: this.toUserPayload(user),
-      token: issued.token,
-    };
+    return issued.token;
+  }
+
+  /**
+   * 吊销本机 CLI 主体下的 token。
+   */
+  revokeLocalCliToken(tokenIdInput: string): AuthTokenSummary {
+    const user = this.requireLocalCliUser();
+    const record = this.requireLocalCliTokenRecord(tokenIdInput, user.id);
+    const revoked = this.store.revokeToken(record.id);
+    if (!revoked) throw new AuthError("Token not found", 404);
+    this.store.insertAuditLog({
+      actorUserId: user.id,
+      resourceType: "auth_token",
+      resourceId: revoked.id,
+      action: "token_revoke",
+      result: "success",
+      metaJson: JSON.stringify({
+        name: revoked.name,
+        source: "local-cli",
+      }),
+    });
+    return this.store.toTokenSummary(revoked);
+  }
+
+  /**
+   * 删除本机 CLI 主体下的 token。
+   */
+  deleteLocalCliToken(tokenIdInput: string): void {
+    const user = this.requireLocalCliUser();
+    const record = this.requireLocalCliTokenRecord(tokenIdInput, user.id);
+    const deleted = this.store.deleteToken(record.id);
+    if (!deleted) throw new AuthError("Token not found", 404);
+    this.store.insertAuditLog({
+      actorUserId: user.id,
+      resourceType: "auth_token",
+      resourceId: record.id,
+      action: "token_delete",
+      result: "success",
+      metaJson: JSON.stringify({
+        name: record.name,
+        source: "local-cli",
+      }),
+    });
   }
 
   /**
@@ -207,44 +229,7 @@ export class AuthService {
   }
 
   /**
-   * 修改当前管理员密码。
-   */
-  updatePassword(principal: AuthPrincipal, input: {
-    currentPassword: string;
-    nextPassword: string;
-  }): AuthCurrentUserPayload {
-    const user = this.requireUser(principal.userId);
-    const currentPassword = this.requirePassword(input.currentPassword);
-    const nextPassword = this.requirePassword(input.nextPassword);
-    if (!verifyPassword(currentPassword, user.passwordHash)) {
-      this.store.insertAuditLog({
-        actorUserId: principal.userId,
-        actorTokenId: principal.tokenId,
-        resourceType: "auth_user",
-        resourceId: principal.userId,
-        action: "password_update",
-        result: "invalid_credentials",
-      });
-      throw new AuthError("Invalid current password", 401);
-    }
-    const updated = this.store.updateUserPasswordHash({
-      userId: principal.userId,
-      passwordHash: hashPassword(nextPassword),
-    });
-    if (!updated) throw new AuthError("User not found", 404);
-    this.store.insertAuditLog({
-      actorUserId: principal.userId,
-      actorTokenId: principal.tokenId,
-      resourceType: "auth_user",
-      resourceId: principal.userId,
-      action: "password_update",
-      result: "success",
-    });
-    return this.toUserPayload(updated);
-  }
-
-  /**
-   * 为当前用户创建新的 token。
+   * 为当前 Bearer 调用主体创建新的 token。
    */
   createToken(principal: AuthPrincipal, input: {
     name: string;
@@ -349,16 +334,30 @@ export class AuthService {
     }
   }
 
-  private requireUsername(value: string): string {
-    const username = String(value || "").trim();
-    if (!username) throw new AuthError("username is required", 400);
-    return username;
+  private isTokenActive(record: Pick<AuthTokenRecord, "revokedAt" | "expiresAt">): boolean {
+    if (record.revokedAt) return false;
+    if (!record.expiresAt) return true;
+    return new Date(record.expiresAt).getTime() > Date.now();
   }
 
-  private requirePassword(value: string): string {
-    const password = String(value || "");
-    if (!password.trim()) throw new AuthError("password is required", 400);
-    return password;
+  private ensureLocalCliUser(): AuthUser {
+    this.store.ensureDefaultCatalog();
+    const existing = this.store.findUserByUsername(LOCAL_CLI_USERNAME);
+    if (existing) {
+      this.ensureUserActive(existing);
+      return existing;
+    }
+    const user = this.store.createUser({
+      username: LOCAL_CLI_USERNAME,
+      passwordHash: LOCAL_CLI_PASSWORD_HASH,
+      displayName: LOCAL_CLI_DISPLAY_NAME,
+      status: "active",
+    });
+    this.store.assignRoleToUser({
+      userId: user.id,
+      roleName: "admin",
+    });
+    return user;
   }
 
   private requireTokenName(value: string): string {
@@ -378,6 +377,26 @@ export class AuthService {
     const user = this.store.getUserById(userId);
     if (!user) throw new AuthError("User not found", 404);
     return user;
+  }
+
+  private requireLocalCliUser(): AuthUser {
+    const user = this.store.findUserByUsername(LOCAL_CLI_USERNAME);
+    if (!user) throw new AuthError("Local CLI access is not initialized", 404);
+    this.ensureUserActive(user);
+    return user;
+  }
+
+  private requireLocalCliTokenRecord(
+    tokenIdInput: string,
+    expectedUserId: string,
+  ): AuthTokenRecord {
+    const tokenId = String(tokenIdInput || "").trim();
+    if (!tokenId) throw new AuthError("tokenId is required", 400);
+    const record = this.store.getTokenById(tokenId);
+    if (!record || record.userId !== expectedUserId) {
+      throw new AuthError("Token not found", 404);
+    }
+    return record;
   }
 
   private toUserPayload(user: AuthUser): AuthCurrentUserPayload {

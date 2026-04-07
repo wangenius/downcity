@@ -18,6 +18,7 @@ import {
   streamText,
   type LanguageModel,
   type ModelMessage,
+  type SystemModelMessage,
 } from "ai";
 import type { Logger } from "@shared/utils/logger/Logger.js";
 import { SessionCompactionComposer } from "@session/composer/compaction/SessionCompactionComposer.js";
@@ -54,6 +55,11 @@ import type {
 } from "@/types/session/SessionRun.js";
 import type { SessionMessageV1 } from "@/types/session/SessionMessages.js";
 import type { JsonObject } from "@/shared/types/Json.js";
+import type { SessionMemoryRuntime } from "@/types/session/SessionMemory.js";
+import {
+  buildMemoryRecallSystemMessage,
+  extractAssistantText,
+} from "@session/executors/local/SessionMemoryRuntime.js";
 
 /**
  * 可压缩错误的最大重试次数。
@@ -81,6 +87,9 @@ type LocalSessionCoreOptions = {
 
   /** 当前轮 system 解析器。 */
   systemComposer: SessionSystemComposer;
+
+  /** 可选 memory 运行时端口。 */
+  memoryRuntime?: SessionMemoryRuntime;
 };
 
 /**
@@ -104,6 +113,9 @@ export class LocalSessionCore {
 
   /** system 解析器：用于解析 system messages。 */
   private readonly systemComposer: SessionSystemComposer;
+
+  /** memory 运行时：用于 recall / capture。 */
+  private readonly memoryRuntime?: SessionMemoryRuntime;
 
   /** 运行互斥锁：防止同一个 LocalSessionCore 实例并发 run。 */
   private isRunning = false;
@@ -132,6 +144,9 @@ export class LocalSessionCore {
 
     // 注入 system 解析器。
     this.systemComposer = options.systemComposer;
+
+    // 注入 memory 运行时。
+    this.memoryRuntime = options.memoryRuntime;
   }
 
   /**
@@ -247,7 +262,11 @@ export class LocalSessionCore {
     const tools = runContext.tools;
 
     // 解析本轮 system messages。
-    const system = await this.systemComposer.resolve();
+    const baseSystem = await this.systemComposer.resolve();
+    const memorySystemMessage = await this.recallMemorySystemMessage(query);
+    const system = memorySystemMessage
+      ? [...baseSystem, memorySystemMessage]
+      : baseSystem;
 
     try {
       // 只有在重试场景下才记录额外 compacting 日志。
@@ -279,6 +298,7 @@ export class LocalSessionCore {
 
     // 返回最终可执行输入。
     return {
+      query,
       system,
       messages,
       tools,
@@ -607,6 +627,12 @@ export class LocalSessionCore {
         totalToolResultCount,
       });
 
+      // 把本轮成功问答写入 session 级 working memory（best-effort）。
+      await this.captureTurnMemory({
+        query: input.query,
+        assistantMessage: finalMessage,
+      });
+
       // 返回成功结果。
       return {
         success: true,
@@ -703,6 +729,66 @@ export class LocalSessionCore {
     return this.executionComposer.buildFallbackAssistantMessage(
       assistantText || "Execution completed",
     );
+  }
+
+  /**
+   * 召回当前请求相关的少量记忆，并转换为 system message。
+   */
+  private async recallMemorySystemMessage(
+    query: string,
+  ): Promise<SystemModelMessage | null> {
+    if (!this.memoryRuntime) return null;
+    const sessionId = String(this.historyComposer.sessionId || "").trim();
+    if (!sessionId) return null;
+    try {
+      const recall = await this.memoryRuntime.recall({
+        sessionId,
+        query,
+      });
+      return buildMemoryRecallSystemMessage({
+        query,
+        recall,
+      });
+    } catch (error) {
+      await this.logger.log("warn", "[memory] recall failed", {
+        sessionId,
+        query,
+        error: String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * 把当前轮问答写入 memory runtime（best-effort）。
+   */
+  private async captureTurnMemory(params: {
+    /**
+     * 当前轮用户查询。
+     */
+    query: string;
+    /**
+     * 当前轮最终 assistant 消息。
+     */
+    assistantMessage: SessionMessageV1;
+  }): Promise<void> {
+    if (!this.memoryRuntime) return;
+    const sessionId = String(this.historyComposer.sessionId || "").trim();
+    if (!sessionId) return;
+    const assistantText = extractAssistantText(params.assistantMessage);
+    if (!assistantText) return;
+    try {
+      await this.memoryRuntime.capture({
+        sessionId,
+        query: String(params.query || "").trim(),
+        assistantText,
+      });
+    } catch (error) {
+      await this.logger.log("warn", "[memory] capture failed", {
+        sessionId,
+        error: String(error),
+      });
+    }
   }
 
   /**

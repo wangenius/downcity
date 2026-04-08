@@ -29,12 +29,12 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
       properties: {
         type: {
           type: "string",
-          enum: ["model", "acp"],
+          enum: ["api", "acp", "local"],
         },
         modelId: {
           type: "string",
           description:
-            "模型执行模式下绑定的 console 全局模型 ID。",
+            "API 执行模式下绑定的 console 全局模型 ID。",
         },
         agent: {
           type: "object",
@@ -56,13 +56,18 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
           },
           required: ["type"],
         },
+        local: {
+          type: "null",
+          description:
+            "本地执行模式不再从 execution.local 读取配置；请改为使用 plugins.lmp。",
+        },
       },
       required: ["type"],
       allOf: [
         {
           if: {
             properties: {
-              type: { const: "model" },
+              type: { const: "api" },
             },
           },
           then: {
@@ -78,6 +83,14 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
           then: {
             required: ["agent"],
           },
+        },
+        {
+          if: {
+            properties: {
+              type: { const: "local" },
+            },
+          },
+          then: true,
         },
       ],
     },
@@ -219,6 +232,44 @@ export const DOWNCITY_JSON_SCHEMA: JsonObject = {
               items: {
                 type: "string",
                 enum: ["qwen3-tts-0.6b", "kokoro-82m", "qwen3-tts-1.7b"],
+              },
+            },
+          },
+        },
+        lmp: {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            provider: {
+              type: "string",
+              enum: ["llama"],
+            },
+            model: {
+              type: "string",
+              description:
+                "当前激活的本地模型文件名或绝对路径；相对路径默认相对 plugins.lmp.modelsDir。",
+            },
+            modelsDir: {
+              type: "string",
+              description: "本地模型目录，默认 ~/.models。",
+            },
+            command: {
+              type: "string",
+              description: "llama-server 可执行命令，默认 llama-server。",
+            },
+            args: {
+              type: "array",
+              items: { type: "string" },
+            },
+            host: { type: "string" },
+            port: { type: "integer", minimum: 1, maximum: 65535 },
+            contextSize: { type: "integer", minimum: 512, maximum: 1048576 },
+            gpuLayers: { type: "integer", minimum: -1, maximum: 65535 },
+            autoStart: { type: "boolean" },
+            installedModels: {
+              type: "array",
+              items: {
+                type: "string",
               },
             },
           },

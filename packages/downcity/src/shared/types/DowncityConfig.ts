@@ -126,9 +126,10 @@ export interface DowncityConfig {
    * 项目执行绑定配置。
    *
    * 关键点（中文）
-   * - 项目只声明一条执行路径：`model` 或 `acp`。
-   * - `model` 模式绑定 console 全局模型池中的模型 ID。
+   * - 项目只声明一条执行路径：`api`、`acp` 或 `local`。
+   * - `api` 模式绑定 console 全局模型池中的模型 ID。
    * - `acp` 模式直接启动本地 ACP coding agent。
+   * - `local` 模式只选择本地执行器，模型与 llama 参数由 `plugins.lmp` 提供。
    */
   execution?: ExecutionBindingConfig;
   /**

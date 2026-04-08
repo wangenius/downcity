@@ -229,6 +229,33 @@ test("AcpSessionExecutor: accepts final response before ACP process exits normal
   }
 });
 
+test("AcpSessionExecutor: missing ACP command rejects run instead of crashing process", async () => {
+  const runtime = new AcpSessionExecutor({
+    rootPath: process.cwd(),
+    sessionId: "test-session",
+    logger: createLogger(),
+    historyComposer: createHistoryComposer(),
+    systemComposer: createSystemComposer(),
+    launch: {
+      type: "kimi",
+      command: "__downcity_missing_kimi__",
+      args: ["acp"],
+      env: {},
+    },
+  });
+  try {
+    await assert.rejects(
+      () =>
+        runtime.run({
+          query: "hello",
+        }),
+      /spawn __downcity_missing_kimi__ ENOENT/,
+    );
+  } finally {
+    await runtime.dispose();
+  }
+});
+
 test("AcpSessionExecutor: does not inherit DC_AGENT_TOKEN into ACP child env", async () => {
   const previousAgentToken = process.env.DC_AGENT_TOKEN;
   process.env.DC_AGENT_TOKEN = "dc_agent_should_not_leak";

@@ -206,13 +206,13 @@ export function setProjectPrimaryModel(projectRoot: string, modelId: string): {
     throw new Error(`Invalid downcity.json: expected object (${shipJsonPath})`);
   }
   const previousPrimary =
-    String(raw.execution?.type === "model" ? raw.execution.modelId || "" : "").trim();
+    String(raw.execution?.type === "api" ? raw.execution.modelId || "" : "").trim();
   const nextPrimary = String(modelId || "").trim();
   if (!nextPrimary) throw new Error("modelId cannot be empty");
   const nextConfig: DowncityConfig = {
     ...(raw as DowncityConfig),
     execution: {
-      type: "model",
+      type: "api",
       modelId: nextPrimary,
     },
   };

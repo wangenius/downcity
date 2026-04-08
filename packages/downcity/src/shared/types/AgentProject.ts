@@ -10,6 +10,7 @@ import type {
   ExecutionBindingConfig,
   ExecutionBindingMode,
 } from "@/shared/types/ExecutionBinding.js";
+import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { SessionAgentType } from "@/shared/types/SessionAgent.js";
 
 /**
@@ -42,6 +43,15 @@ export interface AgentProjectInitializationInput {
    * - `acp`：绑定 ACP coding agent。
    */
   execution: ExecutionBindingConfig;
+
+  /**
+   * 需要一并写入项目的 plugin 配置补丁。
+   *
+   * 说明（中文）
+   * - 典型场景：`execution.type = "local"` 时同步写入 `plugins.lmp`。
+   * - 这里只承载初始化时的最小配置，不负责 city 级 plugin lifecycle。
+   */
+  plugins?: DowncityConfig["plugins"];
 
   /**
    * 需要启用的 chat channels。

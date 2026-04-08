@@ -26,7 +26,7 @@ description: downcity.json 中用户最常用字段与注意事项
 
 ## 注意事项
 
-1. 项目现在必须声明 `execution`，执行模式只有两种：`model` 或 `acp`。
+1. 项目现在必须声明 `execution`，执行模式有三种：`api`、`acp`、`local`。
 2. `execution.type="acp"` 可把 session 执行切到 ACP coding agent，目前只支持 `codex`、`claude`、`kimi`。
 3. `start.host/start.port` 会影响 CLI 的默认路由目标。
 4. 项目层统一在 `downcity.json` 中维护 `services` 与 `plugins`。
@@ -38,8 +38,21 @@ description: downcity.json 中用户最常用字段与注意事项
 ```json
 {
   "execution": {
-    "type": "model",
+    "type": "api",
     "modelId": "default"
+  }
+}
+```
+
+如果你希望项目直接使用 `~/.models/` 里的 GGUF：
+
+```json
+{
+  "execution": {
+    "type": "local",
+    "local": {
+      "model": "gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+    }
   }
 }
 ```
@@ -81,7 +94,8 @@ description: downcity.json 中用户最常用字段与注意事项
 当前边界：
 
 - `execution.type="acp"` 只影响 session/chat/task 这条执行链。
-- `execution.type="model"` 时，`execution.modelId` 必须能在 console 模型池中找到。
+- `execution.type="api"` 时，`execution.modelId` 必须能在 console 模型池中找到。
+- `execution.type="local"` 时，本地模型与 llama 参数从 `plugins.lmp` 读取，默认目录是 `~/.models`，并要求本机安装 `llama-server`。
 
 ## 常用命令
 

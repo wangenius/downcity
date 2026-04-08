@@ -379,7 +379,7 @@ export class ModelPoolService {
       config: {
         name: "console-model-test",
         version: "1.0.0",
-        execution: { type: "model", modelId: id },
+        execution: { type: "api", modelId: id },
       },
     });
     const result = await generateText({

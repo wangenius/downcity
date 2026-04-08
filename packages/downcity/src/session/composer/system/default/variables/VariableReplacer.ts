@@ -15,7 +15,7 @@ import { renderTemplateVariables } from "@/shared/utils/Template.js";
  *
  * 关键点（中文）
  * - `full`：完整替换（包含时间/地点等上下文动态变量）。
- * - `stable`：仅保留稳定替换，易变变量统一替换为稳定文本，提升缓存命中率。
+ * - `stable`：仅保留稳定替换；但 `current_year` 属于低频年度变量，仍保留真实值。
  */
 export type PromptVariableMode = "full" | "stable";
 
@@ -43,6 +43,20 @@ function getCurrentTimeString(timezone: string): string {
   }
 }
 
+/**
+ * 获取当前年份字符串（指定时区）。
+ */
+function getCurrentYearString(timezone: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+    }).format(new Date());
+  } catch {
+    return String(new Date().getUTCFullYear());
+  }
+}
+
 async function buildPromptVariables(options?: {
   /**
    * 项目路径（用于 `project_path/project_root`）。
@@ -61,9 +75,12 @@ async function buildPromptVariables(options?: {
 }): Promise<PromptVariables> {
   const mode = options?.mode === "stable" ? "stable" : "full";
   const projectPath = String(options?.projectPath || "").trim() || process.cwd();
+  const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const safeLocalTimezone = String(localTimezone || "").trim() || "UTC";
   if (mode === "stable") {
     return {
       currentTime: "[See runtime clock tail message]",
+      currentYear: getCurrentYearString(safeLocalTimezone),
       location: "[See runtime clock tail message]",
       projectPath,
       projectRoot: projectPath,
@@ -75,6 +92,7 @@ async function buildPromptVariables(options?: {
   const sessionId = String(options?.sessionId || "").trim() || "unknown";
   return {
     currentTime: getCurrentTimeString(geo.timezone),
+    currentYear: getCurrentYearString(geo.timezone),
     location: geo.location,
     projectPath,
     projectRoot: projectPath,
@@ -87,6 +105,7 @@ async function buildPromptVariables(options?: {
  *
  * 当前支持（中文）
  * - `{{current_time}}`
+ * - `{{current_year}}`
  * - `{{location}}`
  * - `{{project_path}}`
  * - `{{project_root}}`
@@ -115,6 +134,7 @@ export async function replaceVariablesInPrompts(
   const variables = await buildPromptVariables(options);
   return renderTemplateVariables(prompt, {
     current_time: variables.currentTime,
+    current_year: variables.currentYear,
     location: variables.location,
     project_path: variables.projectPath,
     project_root: variables.projectRoot,

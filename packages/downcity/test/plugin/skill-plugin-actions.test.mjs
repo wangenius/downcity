@@ -26,7 +26,7 @@ test("skill plugin action helper lists skills from plugin config roots", () => {
       name: "demo-agent",
       version: "1.0.0",
       execution: {
-        type: "model",
+        type: "api",
         modelId: "default",
       },
       plugins: {

@@ -9,7 +9,7 @@ export const DEFAULT_DOWNCITY_JSON: DowncityConfig = {
     host: "0.0.0.0",
   },
   execution: {
-    type: "model",
+    type: "api",
     modelId: "default",
   },
   context: {

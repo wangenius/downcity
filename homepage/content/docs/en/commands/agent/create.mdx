@@ -17,8 +17,9 @@ city agent create [path]
 
 - `path` (optional): project path. Defaults to current directory.
 - The interactive default `Agent name` is derived from the directory name and replaces `_`/`-` with spaces (default only; you can edit it).
-- The interactive flow now lets you choose an execution mode directly: `Global Model Pool`, `Kimi ACP`, `Claude ACP`, or `Codex ACP`.
+- The interactive flow now lets you choose an execution mode directly: `API Model Pool`, `Local llama (~/.models)`, `Kimi ACP`, `Claude ACP`, or `Codex ACP`.
 - Created projects now write unified `downcity.json.execution` instead of splitting config across `model.primary` and `session.agent`.
+- When you choose Local mode, the selected GGUF file is stored in `plugins.lmp.model`, and later local-model management goes through `city lmp ...`.
 
 ## Options
 
@@ -49,4 +50,12 @@ city version: 1.0.0
 ✅ Created downcity.schema.json
 ```
 
-If you choose ACP mode, initialization can proceed even when the console model pool is empty.
+If you choose ACP or Local mode, initialization can proceed even when the console model pool is empty.
+
+Common follow-up commands for Local mode:
+
+```bash
+city lmp status
+city lmp models
+city lmp use <gguf-file>
+```

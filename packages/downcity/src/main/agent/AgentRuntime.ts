@@ -62,6 +62,7 @@ import {
   createAgentPluginConfigRuntime,
 } from "@/main/city/runtime/AgentHostRuntime.js";
 import { updateAgentRuntimeConfig } from "@/main/agent/AgentRuntimeState.js";
+import { readProjectExecutionBinding } from "@/main/agent/project/ProjectExecutionBinding.js";
 
 export type { AgentRuntimeBase, AgentRuntime } from "@/main/agent/AgentRuntimeState.js";
 export {
@@ -232,13 +233,15 @@ export async function initAgentRuntime(cwd: string): Promise<void> {
   });
 
   const sessionAgent = readEnabledSessionAgentConfig(config);
+  const execution = readProjectExecutionBinding(config);
   const primaryModelId = readProjectPrimaryModelId(config);
   const model =
-    sessionAgent || !primaryModelId
+    sessionAgent || !execution || execution.type === "acp"
       ? undefined
       : await createModel({
           config,
           getSessionRunScope: getSessionRunScope,
+          projectRoot: rootPath,
         });
 
   const compactionComposer = new JsonlSessionCompactionComposer({

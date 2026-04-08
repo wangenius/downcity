@@ -209,7 +209,14 @@ async function buildAgentOption(
     daemonPid: running ? daemonPid || undefined : undefined,
     logPath: running ? getDaemonLogPath(projectRoot) : undefined,
     chatProfiles,
-    executionMode: String(ship?.execution?.type || "").trim() === "acp" ? "acp" : String(ship?.execution?.type || "").trim() === "model" ? "model" : undefined,
+    executionMode:
+      String(ship?.execution?.type || "").trim() === "acp"
+        ? "acp"
+        : String(ship?.execution?.type || "").trim() === "api"
+          ? "api"
+          : String(ship?.execution?.type || "").trim() === "local"
+            ? "local"
+            : undefined,
     modelId: String(ship?.execution?.modelId || "").trim() || undefined,
     agentType: String(ship?.execution?.agent?.type || "").trim() || undefined,
   };
@@ -346,7 +353,7 @@ export async function inspectConsoleAgentDirectory(
     running: matched?.running === true,
     displayName,
     executionMode:
-      (executionMode === "model" || executionMode === "acp"
+      (executionMode === "api" || executionMode === "acp" || executionMode === "local"
         ? executionMode
         : matched?.executionMode) || undefined,
     modelId: modelId || matched?.modelId || undefined,

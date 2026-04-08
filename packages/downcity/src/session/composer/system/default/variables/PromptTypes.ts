@@ -7,21 +7,27 @@
  */
 
 export interface PromptGeoContext {
+  /** 公网 IP；当外部服务不可用时回退为 `unknown`。 */
   ip: string;
+  /** 地理解析后的地点描述，用于提示模型当前大致位置。 */
   location: string;
+  /** IANA 时区标识，例如 `Asia/Shanghai`。 */
   timezone: string;
+  /** 地理上下文来源。 */
   source: "ipapi" | "ipwhois" | "local";
 }
 
 export interface PromptVariables {
-  /** 当前时间（含时区）。 */
+  /** 当前时间字符串，包含日期、时分秒与时区信息。 */
   currentTime: string;
-  /** 地理位置描述。 */
+  /** 当前年份字符串，用于显式提示“现在是几几年”。 */
+  currentYear: string;
+  /** 当前地理位置描述。 */
   location: string;
-  /** 项目路径。 */
+  /** 当前项目路径。 */
   projectPath: string;
-  /** 项目根路径。 */
+  /** 当前项目根路径。 */
   projectRoot: string;
-  /** 会话标识。 */
+  /** 当前会话标识。 */
   sessionId: string;
 }

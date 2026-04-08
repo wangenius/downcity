@@ -91,10 +91,13 @@ export interface ConsoleAgentOption {
   /**
    * 当前 agent 的执行模式。
    */
-  executionMode?: "model" | "acp";
+  executionMode?: "api" | "acp" | "local";
 
   /**
    * 当前 agent 的 `downcity.json.execution.modelId`。
+   *
+   * 说明（中文）
+   * - 仅当 `executionMode=api` 时有值。
    */
   modelId?: string;
 
@@ -171,7 +174,7 @@ export interface ConsoleAgentDirectoryInspection {
   /**
    * 当前读取到的执行模式（若存在）。
    */
-  executionMode?: "model" | "acp";
+  executionMode?: "api" | "acp" | "local";
 
   /**
    * 当前读取到的主模型 ID（若存在）。

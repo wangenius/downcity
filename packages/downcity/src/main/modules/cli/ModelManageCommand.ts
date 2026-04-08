@@ -495,7 +495,7 @@ function registerTestCommands(model: Command): void {
           config: {
             name: "console-model-test",
             version: "1.0.0",
-            execution: { type: "model", modelId: id },
+            execution: { type: "api", modelId: id },
           },
         });
         const prompt = String(options.prompt || "").trim() || "Reply with exactly: OK";

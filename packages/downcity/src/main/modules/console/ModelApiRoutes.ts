@@ -107,7 +107,7 @@ export function registerConsoleModelRoutes(params: {
 
       const agentShip = (await fs.readJson(shipJsonPath)) as ShipJsonLike;
       agentShip.execution = {
-        type: "model",
+        type: "api",
         modelId: nextPrimaryModelId,
       };
       await fs.writeJson(shipJsonPath, agentShip, { spaces: 2 });

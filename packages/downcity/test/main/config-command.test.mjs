@@ -221,7 +221,7 @@ test("model commands manage provider/model lifecycle and project binding", async
   assert.equal(removeProvider.success, true);
 
   const saved = await fs.readJson(path.join(tempRoot, "downcity.json"));
-  assert.equal(saved.execution.type, "model");
+  assert.equal(saved.execution.type, "api");
   assert.equal(saved.execution.modelId, "fast");
 });
 

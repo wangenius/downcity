@@ -3,7 +3,8 @@
  *
  * 设计目标（中文，关键点）
  * - 这是“核心能力”，不应该依赖 server/RuntimeContext（避免隐式初始化时序）。
- * - 运行时按 `execution.type=model` 绑定的模型 ID，从 console 全局 `llm.models` / `llm.providers` 解析最终模型。
+ * - `execution.type=api` 时，从 console 全局 `llm.models` / `llm.providers` 解析最终模型。
+ * - `execution.type=local` 时，读取 `plugins.lmp` 并通过 LMP plugin 管理本地 llama server。
  * - Agent、Memory extractor 等都可以复用同一套模型构造逻辑。
  */
 
@@ -22,7 +23,11 @@ import { getLogger } from "@shared/utils/logger/Logger.js";
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
 import { ConsoleStore } from "@shared/utils/store/index.js";
-import { readProjectPrimaryModelId } from "@/main/agent/project/ProjectExecutionBinding.js";
+import { readProjectExecutionBinding } from "@/main/agent/project/ProjectExecutionBinding.js";
+import { isPluginEnabled } from "@/main/plugin/Activation.js";
+import { lmpPlugin } from "@/plugins/lmp/Plugin.js";
+import { resolveLmpRuntimeConfig } from "@/plugins/lmp/runtime/Config.js";
+import { ensureLmpLocalServer } from "@/plugins/lmp/runtime/Server.js";
 
 type ModelLogContext = {
   sessionId?: string;
@@ -142,23 +147,73 @@ function normalizeProviderType(value: unknown): LlmProviderType | null {
  * 创建 LanguageModel 实例。
  *
  * 解析策略（中文）
- * 1) 读取 `execution.modelId`，定位 console 全局 `llm.models[modelId]`。
- * 2) 由模型配置中的 `provider` 字段定位 `llm.providers[providerKey]`。
- * 3) 解析 model/baseUrl/apiKey（支持 `${ENV}` 占位符）。
+ * 1) 读取 `execution`，判断当前是 `api` 还是 `local`。
+ * 2) `api`：定位 console 全局 `llm.models[modelId]` 与 `llm.providers[providerKey]`。
+ * 3) `local`：解析 `~/.models` 下的 GGUF 文件并确保本地 llama server 已启动。
  * 4) 创建带日志拦截的 fetch，并按 provider type 分发到 SDK 工厂。
  */
 export async function createModel(input: {
   config: DowncityConfig;
   getSessionRunScope?: () => ModelLogContext | undefined;
   store?: ConsoleStore;
+  projectRoot?: string;
 }): Promise<LanguageModel> {
   const logger = getLogger();
-
-  const primaryModelId = readProjectPrimaryModelId(input.config);
-  if (!primaryModelId) {
-    await logger.log("warn", "No agent execution.modelId configured");
-    throw Error("No agent execution.modelId configured");
+  const execution = readProjectExecutionBinding(input.config);
+  if (!execution) {
+    await logger.log("warn", "No agent execution configured");
+    throw Error("No agent execution configured");
   }
+
+  // 日志策略（中文）：默认开启 LLM 请求日志；可通过 llm.logMessages 关闭。
+  const configLog = input.config.llm?.logMessages;
+  const logLlmMessages = typeof configLog === "boolean" ? configLog : true;
+  const loggingFetch = createLlmLoggingFetch({
+    logger,
+    enabled: logLlmMessages,
+    getSessionRunScope: input.getSessionRunScope,
+  });
+
+  if (execution.type === "local") {
+    if (!isPluginEnabled({ plugin: lmpPlugin })) {
+      await logger.log("warn", "LMP plugin is disabled while execution.type=local");
+      throw Error('LMP plugin is disabled. Enable it with "city plugin action lmp on".');
+    }
+    const resolvedLocal = resolveLmpRuntimeConfig({
+      projectRoot: input.projectRoot || process.cwd(),
+      config: input.config,
+    });
+    const localServer = await ensureLmpLocalServer({
+      config: resolvedLocal,
+      logger,
+    });
+    await logger.log(
+      "info",
+      `[main] local model name=${localServer.modelName} file=${resolvedLocal.modelPath} baseUrl=${localServer.baseUrl}`,
+      {
+        kind: "llm_model_ready",
+        executionType: "local",
+        model: localServer.modelName,
+        modelPath: resolvedLocal.modelPath,
+        baseUrl: localServer.baseUrl,
+        logMessages: logLlmMessages,
+      },
+    );
+    const localProvider = createOpenAICompatible({
+      name: "local-llama",
+      baseURL: localServer.baseUrl,
+      apiKey: "downcity-local",
+      fetch: loggingFetch as typeof fetch,
+    });
+    return localProvider(localServer.modelName);
+  }
+
+  if (execution.type !== "api") {
+    await logger.log("warn", `Unsupported agent execution for createModel: ${execution.type}`);
+    throw Error(`Unsupported agent execution for createModel: ${execution.type}`);
+  }
+
+  const primaryModelId = execution.modelId;
 
   const store = input.store || new ConsoleStore();
   const resolved = await store.getResolvedModel(primaryModelId);
@@ -206,10 +261,6 @@ export async function createModel(input: {
     throw Error("No API Key configured, will use simulation mode");
   }
 
-  // 日志策略（中文）：默认开启 LLM 请求日志；可通过 llm.logMessages 关闭。
-  const configLog = input.config.llm?.logMessages;
-  const logLlmMessages = typeof configLog === "boolean" ? configLog : true;
-
   // 关键点（中文）：启动阶段只打印一次当前生效模型状态，便于快速确认路由是否正确。
   await logger.log(
     "info",
@@ -224,12 +275,6 @@ export async function createModel(input: {
       logMessages: logLlmMessages,
     },
   );
-
-  const loggingFetch = createLlmLoggingFetch({
-    logger,
-    enabled: logLlmMessages,
-    getSessionRunScope: input.getSessionRunScope,
-  });
 
   if (providerType === "anthropic") {
     const anthropicProvider = createAnthropic({

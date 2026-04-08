@@ -3,7 +3,7 @@
  *
  * 关键点（中文）
  * - 测试对象是 `bin` 编译产物，确保运行时代码可执行。
- * - 当前模型解析基于 `execution.modelId + ConsoleStore(SQLite)`。
+ * - API 模型解析基于 `execution.modelId + ConsoleStore(SQLite)`。
  * - 使用 mock fetch 避免网络依赖，稳定验证模型调用链路。
  */
 
@@ -21,7 +21,7 @@ function createAgentConfig(primaryModelId) {
     name: "test-agent",
     version: "1.0.0",
     execution: {
-      type: "model",
+      type: "api",
       modelId: primaryModelId,
     },
     llm: {

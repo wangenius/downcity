@@ -26,7 +26,9 @@ Model config is now split into two layers:
 }
 ```
 
-If you use the console-global model pool, set `execution.type = "model"` and make sure `execution.modelId` exists in `~/.downcity/downcity.db`.
+If you use the console-global model pool, set `execution.type = "api"` and make sure `execution.modelId` exists in `~/.downcity/downcity.db`.
+
+If you use local llama / GGUF, set `execution.type = "local"` and declare the model file in `plugins.lmp.model`. When `plugins.lmp.modelsDir` is omitted, Downcity reads from `~/.models`.
 
 If you use an ACP coding agent, set `execution.type = "acp"` and declare `execution.agent.type` as `kimi`, `claude`, or `codex`.
 
@@ -52,9 +54,10 @@ city model get provider openai_main
 When an agent starts:
 
 1. Check whether the project declares `execution`
-2. If `execution.type = "model"`, resolve the model in the SQLite models table by id
+2. If `execution.type = "api"`, resolve the model in the SQLite models table by id
 3. Resolve provider in the SQLite providers table by providerId
-4. If `execution.type = "acp"`, launch the corresponding ACP agent
+4. If `execution.type = "local"`, read `plugins.lmp`, resolve the local GGUF file, and start/reuse a llama.cpp server
+5. If `execution.type = "acp"`, launch the corresponding ACP agent
 
 `execution` must be valid, otherwise startup fails fast.
 
@@ -135,10 +138,43 @@ You can override the launcher:
 }
 ```
 
+## Local Execution Mode
+
+Example:
+
+```json
+{
+  "execution": {
+    "type": "local"
+  },
+  "plugins": {
+    "lmp": {
+      "model": "gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+    }
+  }
+}
+```
+
+Useful optional fields:
+
+- `plugins.lmp.modelsDir`: local model directory, default `~/.models`
+- `plugins.lmp.command`: launcher command, default `llama-server`
+- `plugins.lmp.contextSize`: context window, default `8192`
+- `plugins.lmp.autoStart`: whether Downcity should auto-start `llama-server`, default `true`
+
 Current limitations:
 
 - `execution.type="acp"` only changes the session/chat/task execution path.
-- In model mode, `execution.modelId` is required.
+- `execution.type="api"` requires `execution.modelId`.
+- `execution.type="local"` requires `plugins.lmp.model` and a working `llama-server` installation.
+
+Preferred local-model management commands:
+
+```bash
+city lmp status
+city lmp models
+city lmp use gemma-4-E4B-it-UD-Q4_K_XL.gguf
+```
 
 ## Related docs
 

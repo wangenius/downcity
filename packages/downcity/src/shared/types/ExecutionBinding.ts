@@ -2,9 +2,10 @@
  * 项目执行绑定类型定义。
  *
  * 关键点（中文）
- * - 项目运行入口只允许两类执行模式：`model` 或 `acp`。
- * - `model` 模式仅保存 console 全局模型池中的模型 ID。
- * - `acp` 模式仅保存 ACP coding agent 所需的最小启动配置。
+ * - 项目运行入口只允许三类执行模式：`api`、`acp`、`local`。
+ * - `api` 模式只保存 console 全局模型池中的模型 ID。
+ * - `acp` 模式只保存 ACP coding agent 所需的最小启动配置。
+ * - `local` 模式只表达“走本地执行器”，具体模型与 llama 配置改由 `plugins.lmp` 管理。
  * - 该类型是项目 `downcity.json` 中唯一的执行配置来源。
  */
 
@@ -13,7 +14,7 @@ import type { SessionAgentType } from "@/shared/types/SessionAgent.js";
 /**
  * 支持的执行模式。
  */
-export type ExecutionBindingMode = "model" | "acp";
+export type ExecutionBindingMode = "api" | "acp" | "local";
 
 /**
  * ACP agent 启动配置。
@@ -57,13 +58,13 @@ export interface AcpExecutionAgentConfig {
 }
 
 /**
- * 基于 console 模型池的执行配置。
+ * 基于 console 模型池的 API 执行配置。
  */
-export interface ModelExecutionBindingConfig {
+export interface ApiExecutionBindingConfig {
   /**
    * 执行模式类型。
    */
-  type: "model";
+  type: "api";
 
   /**
    * console 全局模型池中的模型 ID。
@@ -73,6 +74,16 @@ export interface ModelExecutionBindingConfig {
    * - 例如：`default`、`fast`、`quality`。
    */
   modelId: string;
+}
+
+/**
+ * 基于本地 llama 模型文件的执行配置。
+ */
+export interface LocalExecutionBindingConfig {
+  /**
+   * 执行模式类型。
+   */
+  type: "local";
 }
 
 /**
@@ -94,5 +105,6 @@ export interface AcpExecutionBindingConfig {
  * 项目执行绑定联合类型。
  */
 export type ExecutionBindingConfig =
-  | ModelExecutionBindingConfig
-  | AcpExecutionBindingConfig;
+  | ApiExecutionBindingConfig
+  | AcpExecutionBindingConfig
+  | LocalExecutionBindingConfig;

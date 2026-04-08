@@ -26,7 +26,7 @@ description: Most-used project-level fields and practical cautions
 
 ## Cautions
 
-1. A project now must declare `execution`, and the mode is either `model` or `acp`.
+1. A project now must declare `execution`, and the mode is `api`, `acp`, or `local`.
 2. `execution.type="acp"` switches session execution to an ACP coding agent. Current supported values are `codex`, `claude`, and `kimi`.
 3. `start.host/start.port` affects default CLI routing.
 4. Keep project-level config in `downcity.json`, including `services` and `plugins`.
@@ -38,8 +38,21 @@ If you want to use the console-global model pool:
 ```json
 {
   "execution": {
-    "type": "model",
+    "type": "api",
     "modelId": "default"
+  }
+}
+```
+
+If you want the project to use a GGUF file from `~/.models` directly:
+
+```json
+{
+  "execution": {
+    "type": "local",
+    "local": {
+      "model": "gemma-4-E4B-it-UD-Q4_K_XL.gguf"
+    }
   }
 }
 ```
@@ -81,7 +94,8 @@ Override the launch command when your local installation differs:
 Current scope:
 
 - `execution.type="acp"` only changes the session/chat/task execution path.
-- `execution.type="model"` requires `execution.modelId` to exist in the console model pool.
+- `execution.type="api"` requires `execution.modelId` to exist in the console model pool.
+- `execution.type="local"` reads local-model and llama settings from `plugins.lmp`, defaults to `~/.models`, and requires a working `llama-server`.
 
 ## Common commands
 

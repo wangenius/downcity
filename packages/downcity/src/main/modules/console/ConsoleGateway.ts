@@ -334,10 +334,11 @@ export class ConsoleGateway {
   private async updateAgentExecution(projectRoot: string, input: {
     executionMode?: unknown;
     modelId?: unknown;
+    localModel?: unknown;
     agentType?: unknown;
   }): Promise<{
     projectRoot: string;
-    executionMode: "model" | "acp";
+    executionMode: "api" | "acp" | "local";
     modelId?: string;
     agentType?: "codex" | "claude" | "kimi";
   }> {
@@ -345,6 +346,7 @@ export class ConsoleGateway {
       projectRoot,
       executionMode: input.executionMode,
       modelId: input.modelId,
+      localModel: input.localModel,
       agentType: input.agentType,
     });
   }

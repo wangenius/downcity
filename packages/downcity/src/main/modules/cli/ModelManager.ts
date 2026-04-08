@@ -474,7 +474,7 @@ async function testModelCall(modelId: string): Promise<void> {
     config: {
       name: "console-model-test",
       version: "1.0.0",
-      execution: { type: "model", modelId },
+      execution: { type: "api", modelId },
     },
   });
   const result = await generateText({

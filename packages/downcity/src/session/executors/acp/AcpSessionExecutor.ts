@@ -329,9 +329,57 @@ export class AcpSessionExecutor implements SessionExecutor {
         text,
       });
     });
+    await new Promise<void>((resolve, reject) => {
+      const onSpawn = () => {
+        child.off("error", onSpawnError);
+        child.on("error", onRuntimeError);
+        resolve();
+      };
+      const onSpawnError = (error: Error) => {
+        child.off("spawn", onSpawn);
+        void this.handleChildError(child, error);
+        reject(error);
+      };
+      const onRuntimeError = (error: Error) => {
+        void this.handleChildError(child, error);
+      };
+      child.once("spawn", onSpawn);
+      child.once("error", onSpawnError);
+    });
     child.on("close", (code, signal) => {
       void this.handleChildClose(child, code, signal);
     });
+  }
+
+  /**
+   * 处理 ACP 子进程错误。
+   *
+   * 关键点（中文）
+   * - `spawn ENOENT` 这类错误如果不监听，会直接变成未处理事件并打崩整个 agent 进程。
+   * - 这里必须把错误收敛为当前 session run 的普通失败，并重置 executor 状态，允许后续重试。
+   */
+  private async handleChildError(
+    child: ChildProcessWithoutNullStreams,
+    error: Error,
+  ): Promise<void> {
+    await this.logger.log("warn", "[acp] child_error", {
+      sessionId: this.sessionId,
+      type: this.launch.type,
+      error: String(error),
+    });
+    if (this.child !== child) return;
+
+    for (const pending of this.pendingById.values()) {
+      pending.reject(error);
+    }
+    this.pendingById.clear();
+    this.pendingPermissionRequests.length = 0;
+    this.stdoutReader?.close();
+    this.stdoutReader = null;
+    this.child = null;
+    this.initialized = false;
+    this.remoteSessionId = null;
+    this.bootstrapped = false;
   }
 
   /**

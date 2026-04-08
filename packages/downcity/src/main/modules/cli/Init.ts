@@ -11,8 +11,10 @@
  */
 
 import path from "path";
+import os from "os";
 import prompts from "prompts";
 import fs from "fs-extra";
+import fg from "fast-glob";
 import { getProfileMdPath, getDowncityJsonPath, getSoulMdPath } from "@/main/city/env/Paths.js";
 import {
   initializeAgentProject,
@@ -28,8 +30,21 @@ type InitPromptResponse = {
   name?: string;
   executionTarget?: string;
   primaryModelId?: string;
+  localModel?: string;
   channels?: string[];
 };
+
+async function listLocalLlamaModelChoices(): Promise<Array<{ title: string; value: string }>> {
+  const modelsRoot = path.join(os.homedir(), ".models");
+  const matches = await fg(["*.gguf", "**/*.gguf"], {
+    cwd: modelsRoot,
+    onlyFiles: true,
+  }).catch(() => []);
+  return matches.slice(0, 100).map((item) => ({
+    title: item,
+    value: item,
+  }));
+}
 
 /**
  * init 命令入口。
@@ -67,6 +82,7 @@ export async function initCommand(
   const existingShipJson = fs.existsSync(getDowncityJsonPath(projectRoot));
   const consoleModelChoices = await listConsoleModelChoices();
   const consoleModelIds = consoleModelChoices.map((item) => item.value);
+  const localModelChoices = await listLocalLlamaModelChoices();
 
   // 关键点（中文）：已存在的 PROFILE.md 永远不覆盖，只在 downcity.json 已存在时询问覆盖。
   if (existingShipJson) {
@@ -104,7 +120,8 @@ export async function initCommand(
       name: "executionTarget",
       message: "Select execution mode",
       choices: [
-        { title: "Global Model Pool", value: "model" },
+        { title: "API Model Pool", value: "api" },
+        { title: "Local llama (~/.models)", value: "local" },
         { title: "Kimi ACP", value: "kimi" },
         { title: "Claude ACP", value: "claude" },
         { title: "Codex ACP", value: "codex" },
@@ -112,10 +129,25 @@ export async function initCommand(
       initial: consoleModelIds.length > 0 ? 0 : 1,
     },
     {
-      type: (prev: string) => prev === "model" ? "select" : null,
+      type: (prev: string) => prev === "api" ? "select" : null,
       name: "primaryModelId",
       message: "Select primary model (from console model pool)",
       choices: consoleModelChoices,
+      initial: 0,
+    },
+    {
+      type: (prev: string) =>
+        prev === "local"
+          ? localModelChoices.length > 0
+            ? "select"
+            : "text"
+          : null,
+      name: "localModel",
+      message:
+        localModelChoices.length > 0
+          ? "Select local GGUF model (from ~/.models)"
+          : "Enter local GGUF model file name or absolute path",
+      choices: localModelChoices,
       initial: 0,
     },
     {
@@ -135,33 +167,41 @@ export async function initCommand(
   const agentName =
     String(response.name || "").trim() || defaultAgentName;
   const executionTarget = String(response.executionTarget || "").trim();
-  if (executionTarget === "model" && consoleModelIds.length === 0) {
+  if (executionTarget === "api" && consoleModelIds.length === 0) {
     console.error("❌ Console model pool is empty.");
-    console.error("   Please configure at least one model before using model mode:");
+    console.error("   Please configure at least one model before using api mode:");
     console.error("   1) city model create");
-    console.error("   2) or choose an ACP session agent during init");
+    console.error("   2) or choose a local / ACP executor during init");
     process.exit(1);
   }
   const primaryModelId =
-    executionTarget === "model"
+    executionTarget === "api"
       ? String(response.primaryModelId || "").trim() || "default"
       : "";
+  const localModel =
+    executionTarget === "local"
+      ? String(response.localModel || "").trim()
+      : "";
   const sessionAgentType =
-    executionTarget && executionTarget !== "model"
+    executionTarget && executionTarget !== "api" && executionTarget !== "local"
       ? executionTarget as SessionAgentType
       : undefined;
   const execution: ExecutionBindingConfig =
     primaryModelId
       ? {
-          type: "model",
+          type: "api",
           modelId: primaryModelId,
         }
-      : {
+      : localModel
+        ? {
+            type: "local",
+          }
+        : {
           type: "acp",
           agent: {
             type: sessionAgentType || "kimi",
           },
-        };
+          };
   const selectedChannels = Array.isArray(response.channels)
     ? (response.channels as AgentProjectChannel[])
     : [];
@@ -169,6 +209,16 @@ export async function initCommand(
     projectRoot,
     agentName,
     execution,
+    ...(localModel
+      ? {
+          plugins: {
+            lmp: {
+              provider: "llama",
+              model: localModel,
+            },
+          },
+        }
+      : {}),
     channels: selectedChannels,
     forceOverwriteShipJson: allowOverwrite,
   });
@@ -207,7 +257,7 @@ export async function initCommand(
     emitCliBlock({
       tone: "info",
       title: "Execution",
-      summary: "model",
+      summary: "api",
       facts: [
         {
           label: "Model ID",
@@ -216,6 +266,27 @@ export async function initCommand(
         {
           label: "Source",
           value: "~/.downcity/downcity.db",
+        },
+      ],
+    });
+  }
+  if (localModel) {
+    emitCliBlock({
+      tone: "info",
+      title: "Execution",
+      summary: "local",
+      facts: [
+        {
+          label: "Runtime",
+          value: "llama.cpp",
+        },
+        {
+          label: "Model",
+          value: localModel,
+        },
+        {
+          label: "Source",
+          value: "~/.models",
         },
       ],
     });
@@ -298,8 +369,13 @@ export async function initCommand(
     "Edit downcity.json.execution to adjust execution target",
   ];
   if (primaryModelId) {
-    nextSteps.push("Edit downcity.json.execution.modelId (bind to console model id)");
+    nextSteps.push("Edit downcity.json.execution.modelId (bind to console API model id)");
     nextSteps.push('Use "city model ..." to manage global model pool');
+  }
+  if (localModel) {
+    nextSteps.push("Put GGUF models under ~/.models or update plugins.lmp.model");
+    nextSteps.push("Ensure llama-server from llama.cpp is installed and available in PATH");
+    nextSteps.push('Use "city lmp status", "city lmp models", and "city lmp use <model>" to manage local models');
   }
   if (sessionAgentType) {
     nextSteps.push(`Ensure the local ACP command for "${sessionAgentType}" is installed and runnable`);
@@ -332,6 +408,6 @@ export async function initCommand(
   emitCliBlock({
     tone: "info",
     title: "Tip",
-    note: "agent 现在可以绑定 console 模型池，也可以把 session 切到 ACP coding agent。",
+    note: "agent 现在可以绑定 API 模型池、切到本地 llama，或切到 ACP coding agent。",
   });
 }

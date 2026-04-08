@@ -22,7 +22,7 @@ export function registerDashboardModelRoutes(
   app.get("/api/dashboard/model", async (c) => {
     try {
       const agentState = params.getAgentRuntime();
-      const agentPrimaryModelId = String(agentState.config.execution?.type === "model" ? agentState.config.execution.modelId || "" : "").trim();
+      const agentPrimaryModelId = String(agentState.config.execution?.type === "api" ? agentState.config.execution.modelId || "" : "").trim();
       const store = new ConsoleStore();
       const models = store.listModels();
       const providers = await store.listProviders();
@@ -84,10 +84,10 @@ export function registerDashboardModelRoutes(
       const agentShip = (await fs.readJson(shipJsonPath)) as {
         execution?: { type?: string; modelId?: string };
       };
-      agentShip.execution = { type: "model", modelId: nextPrimaryModelId };
+      agentShip.execution = { type: "api", modelId: nextPrimaryModelId };
       await fs.writeJson(shipJsonPath, agentShip, { spaces: 2 });
 
-      agentState.config.execution = { type: "model", modelId: nextPrimaryModelId };
+      agentState.config.execution = { type: "api", modelId: nextPrimaryModelId };
 
       return c.json({
         success: true,

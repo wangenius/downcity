@@ -65,7 +65,7 @@ function writeConfig(projectRoot, injectPrompt) {
         name: "demo-agent",
         version: "1.0.0",
         execution: {
-          type: "model",
+          type: "api",
           modelId: "demo-model",
         },
         plugins: {
@@ -97,7 +97,7 @@ test("refreshAgentProjectConfig updates runtime plugin config after downcity.jso
         name: "demo-agent",
         version: "1.0.0",
         execution: {
-          type: "model",
+          type: "api",
           modelId: "demo-model",
         },
         plugins: {

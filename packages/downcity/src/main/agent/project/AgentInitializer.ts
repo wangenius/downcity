@@ -43,6 +43,7 @@ import type {
 } from "@/shared/types/AgentProject.js";
 import { assertProjectExecutionTarget } from "@/main/agent/project/ProjectExecutionBinding.js";
 import type { ExecutionBindingConfig } from "@/shared/types/ExecutionBinding.js";
+import { readLmpPluginConfig } from "@/plugins/lmp/runtime/Config.js";
 
 /**
  * Console 模型选项。
@@ -180,9 +181,9 @@ async function appendMissingEnvEntries(params: {
 }
 
 /**
- * 校验主模型可用。
+ * 校验 API 主模型可用。
  */
-function assertPrimaryModelReady(primaryModelId: string): void {
+function assertApiPrimaryModelReady(primaryModelId: string): void {
   const normalizedModelId = String(primaryModelId || "").trim();
   if (!normalizedModelId) {
     throw new Error("execution.modelId is required");
@@ -236,12 +237,16 @@ export async function initializeAgentProject(
   const execution = input.execution as ExecutionBindingConfig;
   const executionMode = String(execution?.type || "").trim();
   const primaryModelId =
-    executionMode === "model"
+    executionMode === "api"
       ? String((execution as ExecutionBindingConfig & { modelId?: string }).modelId || "").trim()
       : "";
   const sessionAgentType =
     executionMode === "acp"
       ? String((execution as ExecutionBindingConfig & { agent?: { type?: string } }).agent?.type || "").trim()
+      : "";
+  const lmpModel =
+    executionMode === "local"
+      ? String(readLmpPluginConfig({ plugins: input.plugins }).model || "").trim()
       : "";
   const channels = normalizeChannels(input.channels);
   const dotEnvPath = path.join(projectRoot, ".env");
@@ -259,7 +264,10 @@ export async function initializeAgentProject(
     if (consoleModelChoices.length === 0) {
       throw new Error("Console model pool is empty. Please configure at least one model first.");
     }
-    assertPrimaryModelReady(primaryModelId);
+    assertApiPrimaryModelReady(primaryModelId);
+  }
+  if (executionMode === "local" && !lmpModel) {
+    throw new Error('Local execution requires plugins.lmp.model');
   }
 
   await ensureDir(projectRoot);
@@ -321,6 +329,7 @@ export async function initializeAgentProject(
         paths: [".agents/skills"],
         allowExternalPaths: false,
       },
+      ...(input.plugins || {}),
     },
     ...(Object.keys(channelsConfig).length > 0
       ? {

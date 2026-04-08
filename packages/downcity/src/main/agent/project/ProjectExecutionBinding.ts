@@ -2,7 +2,8 @@
  * ProjectExecutionBinding：项目执行绑定解析与校验。
  *
  * 关键点（中文）
- * - 项目只允许一条执行路径：`execution.type = "model" | "acp"`。
+ * - 项目只允许一条执行路径：`execution.type = "api" | "acp" | "local"`。
+ * - `local` 只表达执行模式，具体模型配置收敛到 `plugins.lmp`。
  * - 所有 create / start / runtime / UI 读写都通过这里统一解析。
  * - 避免执行模式判断散落在多个模块中。
  */
@@ -10,11 +11,12 @@
 import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import type {
   AcpExecutionBindingConfig,
+  ApiExecutionBindingConfig,
   ExecutionBindingConfig,
   ExecutionBindingMode,
-  ModelExecutionBindingConfig,
 } from "@/shared/types/ExecutionBinding.js";
 import type { SessionAgentType } from "@/shared/types/SessionAgent.js";
+import { readLmpPluginConfig } from "@/plugins/lmp/runtime/Config.js";
 
 /**
  * 读取项目执行绑定。
@@ -24,11 +26,11 @@ export function readProjectExecutionBinding(
 ): ExecutionBindingConfig | null {
   const execution = config.execution;
   if (!execution || typeof execution !== "object") return null;
-  if (execution.type === "model") {
-    const modelId = String((execution as ModelExecutionBindingConfig).modelId || "").trim();
+  if (execution.type === "api") {
+    const modelId = String((execution as ApiExecutionBindingConfig).modelId || "").trim();
     if (!modelId) return null;
     return {
-      type: "model",
+      type: "api",
       modelId,
     };
   }
@@ -58,6 +60,11 @@ export function readProjectExecutionBinding(
       },
     };
   }
+  if (execution.type === "local") {
+    return {
+      type: "local",
+    };
+  }
   return null;
 }
 
@@ -75,7 +82,16 @@ export function readProjectExecutionMode(
  */
 export function readProjectPrimaryModelId(config: DowncityConfig): string {
   const execution = readProjectExecutionBinding(config);
-  return execution?.type === "model" ? execution.modelId : "";
+  return execution?.type === "api" ? execution.modelId : "";
+}
+
+/**
+ * 读取项目绑定的本地 llama 模型名或路径。
+ */
+export function readProjectLocalModel(config: DowncityConfig): string {
+  const execution = readProjectExecutionBinding(config);
+  if (execution?.type !== "local") return "";
+  return String(readLmpPluginConfig(config).model || "").trim();
 }
 
 /**
@@ -101,6 +117,6 @@ export function hasProjectExecutionTarget(config: DowncityConfig): boolean {
 export function assertProjectExecutionTarget(config: DowncityConfig): void {
   if (hasProjectExecutionTarget(config)) return;
   throw new Error(
-    'Invalid downcity.json: "execution" is required and must be either { "type": "model", "modelId": "..." } or { "type": "acp", "agent": { "type": "codex|claude|kimi" } }',
+    'Invalid downcity.json: "execution" is required and must be either { "type": "api", "modelId": "..." }, { "type": "acp", "agent": { "type": "codex|claude|kimi" } }, or { "type": "local" } with plugins.lmp.model configured',
   );
 }

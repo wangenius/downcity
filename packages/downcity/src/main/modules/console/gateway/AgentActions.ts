@@ -38,6 +38,7 @@ import type { SessionAgentType } from "@/shared/types/SessionAgent.js";
 function resolveExecutionInput(params: {
   executionMode?: unknown;
   modelId?: unknown;
+  localModel?: unknown;
   agentType?: unknown;
 }): ExecutionBindingConfig {
   const executionMode = String(params.executionMode || "").trim();
@@ -53,12 +54,21 @@ function resolveExecutionInput(params: {
       },
     };
   }
+  if (executionMode === "local") {
+    const localModel = String(params.localModel || "").trim();
+    if (!localModel) {
+      throw new Error("Local execution requires localModel");
+    }
+    return {
+      type: "local",
+    };
+  }
   const modelId = String(params.modelId || "").trim();
   if (!modelId) {
-    throw new Error("Model execution requires modelId");
+    throw new Error("API execution requires modelId");
   }
   return {
-    type: "model",
+    type: "api",
     modelId,
   };
 }
@@ -71,6 +81,7 @@ export async function initializeConsoleAgentProject(params: {
   agentName?: unknown;
   executionMode?: unknown;
   modelId?: unknown;
+  localModel?: unknown;
   agentType?: unknown;
   forceOverwriteShipJson?: unknown;
 }): Promise<AgentProjectInitializationResult> {
@@ -80,8 +91,19 @@ export async function initializeConsoleAgentProject(params: {
     execution: resolveExecutionInput({
       executionMode: params.executionMode,
       modelId: params.modelId,
+      localModel: params.localModel,
       agentType: params.agentType,
     }),
+    ...(String(params.executionMode || "").trim() === "local"
+      ? {
+          plugins: {
+            lmp: {
+              provider: "llama",
+              model: String(params.localModel || "").trim(),
+            },
+          },
+        }
+      : {}),
     forceOverwriteShipJson: params.forceOverwriteShipJson === true,
   });
 }
@@ -93,10 +115,11 @@ export async function updateConsoleAgentExecution(params: {
   projectRoot: string;
   executionMode?: unknown;
   modelId?: unknown;
+  localModel?: unknown;
   agentType?: unknown;
 }): Promise<{
   projectRoot: string;
-  executionMode: "model" | "acp";
+  executionMode: "api" | "acp" | "local";
   modelId?: string;
   agentType?: SessionAgentType;
 }> {
@@ -109,14 +132,31 @@ export async function updateConsoleAgentExecution(params: {
   const execution = resolveExecutionInput({
     executionMode: params.executionMode,
     modelId: params.modelId,
+    localModel: params.localModel,
     agentType: params.agentType,
   });
   ship.execution = execution;
+  if (execution.type === "local") {
+    const pluginMap =
+      ship.plugins && typeof ship.plugins === "object" && !Array.isArray(ship.plugins)
+        ? (ship.plugins as Record<string, unknown>)
+        : {};
+    const currentLmp =
+      pluginMap.lmp && typeof pluginMap.lmp === "object" && !Array.isArray(pluginMap.lmp)
+        ? (pluginMap.lmp as Record<string, unknown>)
+        : {};
+    pluginMap.lmp = {
+      ...currentLmp,
+      provider: "llama",
+      model: String(params.localModel || "").trim(),
+    };
+    ship.plugins = pluginMap;
+  }
   await fs.writeJson(shipJsonPath, ship, { spaces: 2 });
   return {
     projectRoot,
     executionMode: execution.type,
-    ...(execution.type === "model" ? { modelId: execution.modelId } : {}),
+    ...(execution.type === "api" ? { modelId: execution.modelId } : {}),
     ...(execution.type === "acp" ? { agentType: execution.agent.type } : {}),
   };
 }

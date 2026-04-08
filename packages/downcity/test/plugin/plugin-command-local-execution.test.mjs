@@ -22,7 +22,7 @@ function createBaseConfig() {
     name: "plugin-local-exec-test",
     version: "1.0.0",
     execution: {
-      type: "model",
+      type: "api",
       modelId: "default",
     },
     plugins: {

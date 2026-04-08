@@ -35,6 +35,7 @@ export interface ConsoleGatewayRouteHandlers {
     agentName?: unknown;
     executionMode?: unknown;
     modelId?: unknown;
+    localModel?: unknown;
     agentType?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult>;
@@ -45,6 +46,7 @@ export interface ConsoleGatewayRouteHandlers {
       agentName?: unknown;
       executionMode?: unknown;
       modelId?: unknown;
+      localModel?: unknown;
       agentType?: unknown;
       forceOverwriteShipJson?: unknown;
     };
@@ -60,10 +62,11 @@ export interface ConsoleGatewayRouteHandlers {
   updateAgentExecution(projectRoot: string, input: {
     executionMode?: unknown;
     modelId?: unknown;
+    localModel?: unknown;
     agentType?: unknown;
   }): Promise<{
     projectRoot: string;
-    executionMode: "model" | "acp";
+    executionMode: "api" | "acp" | "local";
     modelId?: string;
     agentType?: "codex" | "claude" | "kimi";
   }>;

@@ -35,6 +35,15 @@ export type DaemonJsonApiCallParams = {
   path: string;
   method?: DaemonHttpMethod;
   body?: JsonValue;
+  /**
+   * 单次调用超时（毫秒）。
+   *
+   * 说明（中文）
+   * - 仅本地 IPC transport 当前会消费该参数。
+   * - 用于 `session execute`、`service command` 这类可能持续几十秒的请求，
+   *   避免被默认短超时误判成“Agent server 未启动”。
+   */
+  timeoutMs?: number;
   host?: string;
   port?: number;
   authToken?: string;

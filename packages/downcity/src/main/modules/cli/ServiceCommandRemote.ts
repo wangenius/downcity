@@ -6,7 +6,7 @@
  * - 这里不负责命令注册，只负责 transport 调用与结果输出。
  */
 
-import { callAgentTransport, resolveAgentTransportErrorMessage } from "@/main/modules/rpc/Transport.js";
+import { callAgentTransport } from "@/main/modules/rpc/Transport.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import type {
   ServiceCliBaseOptions,
@@ -20,6 +20,8 @@ import {
   resolveServiceProjectRoot,
   validateAgentProjectRoot,
 } from "./ServiceCommandSupport.js";
+
+const SERVICE_COMMAND_TIMEOUT_MS = 120_000;
 
 /**
  * 执行 `service list`。
@@ -76,12 +78,9 @@ export async function runServiceListCommand(options: ServiceCliBaseOptions): Pro
     asJson: options.json,
     success: false,
     title: "service list failed",
-      payload: {
-        error: resolveAgentTransportErrorMessage({
-          error: remote.error,
-          fallback: "Service list requires an active Agent server. Start via `city agent start` first.",
-        }),
-      },
+    payload: {
+      error: remote.error || "Unknown error",
+    },
   });
 }
 
@@ -148,12 +147,9 @@ export async function runServiceControlCommand(params: {
     asJson: params.options.json,
     success: false,
     title: `service ${params.action} failed`,
-      payload: {
-        error: resolveAgentTransportErrorMessage({
-          error: remote.error,
-          fallback: `Service ${params.action} requires an active Agent server. Start via \`city agent start\` first.`,
-        }),
-      },
+    payload: {
+      error: remote.error || "Unknown error",
+    },
   });
 }
 
@@ -195,6 +191,7 @@ export async function runServiceCommandBridge(params: {
     projectRoot,
     path: "/api/services/command",
     method: "POST",
+    timeoutMs: SERVICE_COMMAND_TIMEOUT_MS,
     host: params.options.host,
     port: params.options.port,
     authToken: params.options.token,
@@ -226,11 +223,8 @@ export async function runServiceCommandBridge(params: {
     asJson: params.options.json,
     success: false,
     title: "service command failed",
-      payload: {
-        error: resolveAgentTransportErrorMessage({
-          error: remote.error,
-          fallback: "Service command requires an active Agent server. Start via `city agent start` first.",
-        }),
-      },
+    payload: {
+      error: remote.error || "Unknown error",
+    },
   });
 }

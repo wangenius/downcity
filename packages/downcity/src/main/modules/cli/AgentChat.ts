@@ -2,17 +2,40 @@
  * `city agent chat` 命令实现。
  *
  * 关键点（中文）
- * - 通过终端持续循环向指定 agent 的 Console 主会话发送消息。
- * - 省略 `--to` 时，可在交互式终端里从运行中的 agent 中选择。
- * - 该命令只做最小 REPL：输入一行，发送一轮，打印一轮回复。
+ * - 统一覆盖交互式持续对话与一次性消息模式，不再保留独立 `quest` 命令。
+ * - 目标 agent 始终按 console registry 名称解析，不依赖当前工作目录。
+ * - 默认复用 Console UI 主会话：`consoleui-chat-main`。
  */
 
 import { createInterface } from "node:readline/promises";
 import prompts from "prompts";
+import { callAgentTransport } from "@/main/modules/rpc/Transport.js";
 import { emitCliBlock } from "./CliReporter.js";
-import { executeAgentQuest } from "./AgentQuest.js";
+import { printResult } from "@shared/utils/cli/CliOutput.js";
+import {
+  resolveProjectRootByAgentName,
+  validateAgentProjectRoot,
+} from "./ServiceCommandSupport.js";
 import { listRegisteredAgentsForCli } from "./AgentSelection.js";
-import type { AgentChatCliOptions } from "@/types/cli/AgentChat.js";
+import type {
+  AgentChatCliOptions,
+  AgentChatExecutionOutcome,
+  AgentChatExecuteResponse,
+  AgentChatTransportOptions,
+} from "@/types/cli/AgentChat.js";
+import { AGENT_CHAT_DEFAULT_SESSION_ID } from "@/types/cli/AgentChat.js";
+
+const AGENT_CHAT_EXECUTE_TIMEOUT_MS = 120_000;
+
+function normalizeChatMessage(input: string): string {
+  return String(input || "").trim();
+}
+
+function isChatSuccess(payload: AgentChatExecuteResponse | undefined): boolean {
+  if (!payload || payload.success !== true) return false;
+  if (payload.result?.success === false) return false;
+  return true;
+}
 
 async function resolveChatTargetAgentName(inputName?: string): Promise<string | null> {
   const explicit = String(inputName || "").trim();
@@ -74,25 +97,190 @@ function printAssistantReply(replyText: string): void {
   console.log(`\n${text}\n`);
 }
 
+function printQueuedResult(params: {
+  agentName: string;
+  payload: AgentChatExecuteResponse;
+}): void {
+  emitCliBlock({
+    tone: "info",
+    title: "Turn queued",
+    facts: [
+      {
+        label: "agent",
+        value: params.agentName,
+      },
+      ...(params.payload.result?.queueItemId
+        ? [
+            {
+              label: "queue item",
+              value: params.payload.result.queueItemId,
+            },
+          ]
+        : []),
+    ],
+  });
+}
+
 /**
- * 启动终端持续对话。
+ * 向目标 agent 的 Console 主会话发送一轮消息。
  */
-export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    emitCliBlock({
-      tone: "error",
-      title: "Interactive terminal required",
-      note: "Use this command in a local terminal with TTY support.",
+export async function executeAgentChatTurn(params: {
+  agentName: string;
+  message: string;
+  transport?: AgentChatTransportOptions;
+}): Promise<AgentChatExecutionOutcome> {
+  const agentName = String(params.agentName || "").trim();
+  const message = normalizeChatMessage(params.message);
+  const sessionId = AGENT_CHAT_DEFAULT_SESSION_ID;
+
+  if (!agentName) {
+    return {
+      agentName: "",
+      sessionId,
+      success: false,
+      error: "Missing target agent name.",
+    };
+  }
+
+  if (!message) {
+    return {
+      agentName,
+      sessionId,
+      success: false,
+      error: "Chat message is required.",
+    };
+  }
+
+  const resolved = await resolveProjectRootByAgentName(agentName);
+  if (!resolved.projectRoot) {
+    return {
+      agentName,
+      sessionId,
+      success: false,
+      error: resolved.error || "Failed to resolve agent project path",
+    };
+  }
+
+  const pathError = validateAgentProjectRoot(resolved.projectRoot);
+  if (pathError) {
+    return {
+      agentName,
+      projectRoot: resolved.projectRoot,
+      sessionId,
+      success: false,
+      error: pathError,
+    };
+  }
+
+  const remote = await callAgentTransport<AgentChatExecuteResponse>({
+    projectRoot: resolved.projectRoot,
+    path: `/api/dashboard/sessions/${encodeURIComponent(sessionId)}/execute`,
+    method: "POST",
+    timeoutMs: AGENT_CHAT_EXECUTE_TIMEOUT_MS,
+    host: params.transport?.host,
+    port: params.transport?.port,
+    authToken: params.transport?.token,
+    body: {
+      instructions: message,
+    },
+  });
+
+  if (!remote.success || !remote.data) {
+    return {
+      agentName,
+      projectRoot: resolved.projectRoot,
+      sessionId,
+      success: false,
+      error: remote.error || "Unknown error",
+    };
+  }
+
+  return {
+    agentName,
+    projectRoot: resolved.projectRoot,
+    sessionId: String(remote.data.sessionId || sessionId),
+    success: isChatSuccess(remote.data),
+    payload: remote.data,
+    ...(isChatSuccess(remote.data)
+      ? {}
+      : {
+          error:
+            String(remote.data.result?.error || remote.data.error || "").trim() ||
+            "Unknown error",
+        }),
+  };
+}
+
+async function runOneShotChat(params: {
+  agentName: string;
+  message: string;
+  options: AgentChatCliOptions;
+}): Promise<void> {
+  const outcome = await executeAgentChatTurn({
+    agentName: params.agentName,
+    message: params.message,
+    transport: {
+      host: params.options.host,
+      port: params.options.port,
+      token: params.options.token,
+    },
+  });
+
+  if (params.options.json === true) {
+    printResult({
+      asJson: true,
+      success: outcome.success,
+      title: "agent chat",
+      payload: {
+        agent: params.agentName,
+        ...(outcome.projectRoot ? { projectRoot: outcome.projectRoot } : {}),
+        sessionId: outcome.sessionId,
+        ...(outcome.payload?.result ? { result: outcome.payload.result } : {}),
+        ...(outcome.error ? { error: outcome.error } : {}),
+      },
     });
     return;
   }
 
-  const agentName = await resolveChatTargetAgentName(options.to);
-  if (!agentName) return;
+  if (!outcome.success || !outcome.payload) {
+    emitCliBlock({
+      tone: "error",
+      title: "Agent chat failed",
+      facts: [
+        {
+          label: "agent",
+          value: params.agentName,
+        },
+        {
+          label: "error",
+          value: outcome.error || "Unknown error",
+        },
+      ],
+    });
+    return;
+  }
 
+  if (outcome.payload.result?.queued === true) {
+    printQueuedResult({
+      agentName: params.agentName,
+      payload: outcome.payload,
+    });
+    return;
+  }
+
+  printAssistantReply(String(outcome.payload.result?.userVisible || ""));
+}
+
+/**
+ * 启动交互式持续对话。
+ */
+async function runInteractiveChat(params: {
+  agentName: string;
+  options: AgentChatCliOptions;
+}): Promise<void> {
   emitCliBlock({
     tone: "info",
-    title: `Agent chat · ${agentName}`,
+    title: `Agent chat · ${params.agentName}`,
     note: "Shared session: consoleui-chat-main · Type /exit to quit.",
   });
 
@@ -104,22 +292,18 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
 
   try {
     while (true) {
-      const line = await rl.question(`${agentName}> `);
-      const text = String(line || "").trim();
-      if (!text) {
-        continue;
-      }
-      if (text === "/exit" || text === "/quit") {
-        break;
-      }
+      const line = await rl.question(`${params.agentName}> `);
+      const text = normalizeChatMessage(line);
+      if (!text) continue;
+      if (text === "/exit" || text === "/quit") break;
 
-      const outcome = await executeAgentQuest({
-        agentName,
-        instructions: text,
+      const outcome = await executeAgentChatTurn({
+        agentName: params.agentName,
+        message: text,
         transport: {
-          host: options.host,
-          port: options.port,
-          token: options.token,
+          host: params.options.host,
+          port: params.options.port,
+          token: params.options.token,
         },
       });
 
@@ -130,7 +314,7 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
           facts: [
             {
               label: "agent",
-              value: agentName,
+              value: params.agentName,
             },
             {
               label: "error",
@@ -142,23 +326,9 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
       }
 
       if (outcome.payload.result?.queued === true) {
-        emitCliBlock({
-          tone: "info",
-          title: "Turn queued",
-          facts: [
-            {
-              label: "agent",
-              value: agentName,
-            },
-            ...(outcome.payload.result.queueItemId
-              ? [
-                  {
-                    label: "queue item",
-                    value: outcome.payload.result.queueItemId,
-                  },
-                ]
-              : []),
-          ],
+        printQueuedResult({
+          agentName: params.agentName,
+          payload: outcome.payload,
         });
         continue;
       }
@@ -168,4 +338,45 @@ export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
   } finally {
     rl.close();
   }
+}
+
+/**
+ * `city agent chat` 统一入口。
+ */
+export async function chatCommand(options: AgentChatCliOptions): Promise<void> {
+  const agentName = await resolveChatTargetAgentName(options.to);
+  if (!agentName) return;
+
+  const oneShotMessage = normalizeChatMessage(String(options.message || ""));
+  if (oneShotMessage) {
+    await runOneShotChat({
+      agentName,
+      message: oneShotMessage,
+      options,
+    });
+    return;
+  }
+
+  if (options.json === true) {
+    emitCliBlock({
+      tone: "error",
+      title: "JSON mode requires --message",
+      note: "Use `city agent chat --message <text> --json` for one-shot structured output.",
+    });
+    return;
+  }
+
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    emitCliBlock({
+      tone: "error",
+      title: "Interactive terminal required",
+      note: "Use this command in a local terminal with TTY support, or pass `--message` for one-shot mode.",
+    });
+    return;
+  }
+
+  await runInteractiveChat({
+    agentName,
+    options,
+  });
 }

@@ -31,6 +31,12 @@ export async function callLocalServer<T>(
 ): Promise<DaemonJsonApiCallResult<T>> {
   const endpoint = getLocalRpcEndpoint(params.projectRoot);
   const request = toLocalRpcRequest(params);
+  const timeoutMs =
+    typeof params.timeoutMs === "number" &&
+    Number.isFinite(params.timeoutMs) &&
+    params.timeoutMs > 0
+      ? Math.floor(params.timeoutMs)
+      : LOCAL_RPC_TIMEOUT_MS;
 
   return await new Promise<DaemonJsonApiCallResult<T>>((resolve) => {
     const socket = net.createConnection(endpoint);
@@ -45,7 +51,7 @@ export async function callLocalServer<T>(
     };
 
     socket.setEncoding("utf8");
-    socket.setTimeout(LOCAL_RPC_TIMEOUT_MS);
+    socket.setTimeout(timeoutMs);
 
     socket.on("connect", () => {
       socket.write(`${JSON.stringify(request)}\n`);
@@ -82,7 +88,7 @@ export async function callLocalServer<T>(
     socket.on("timeout", () => {
       finish({
         success: false,
-        error: `Local RPC timed out after ${LOCAL_RPC_TIMEOUT_MS}ms (${endpoint})`,
+        error: `Local RPC timed out after ${timeoutMs}ms (${endpoint})`,
       });
     });
 

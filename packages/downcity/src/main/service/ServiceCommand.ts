@@ -14,7 +14,7 @@ import type { Service, ServiceAction } from "@/shared/types/Service.js";
 import { listRegisteredServices } from "@/main/service/ServiceClassRegistry.js";
 import type { ServiceCommandResponse } from "@/shared/types/Services.js";
 import type { ServiceCliBaseOptions } from "@/shared/types/Services.js";
-import { callAgentTransport, resolveAgentTransportErrorMessage } from "@/main/modules/rpc/Transport.js";
+import { callAgentTransport } from "@/main/modules/rpc/Transport.js";
 import { printResult } from "@shared/utils/cli/CliOutput.js";
 import { parsePortOption } from "@shared/utils/cli/Checker.js";
 import { runServiceControlCommand } from "@/main/modules/cli/ServiceCommandRemote.js";
@@ -311,13 +311,10 @@ function registerServiceActionCommand(params: {
       asJson: bridgeOptions.json,
       success: false,
       title: `${params.service.name}.${params.actionName} failed`,
-        payload: {
-          error: resolveAgentTransportErrorMessage({
-            error: remote.error,
-            fallback: "Service action requires an active Agent server. Start via `city agent start` first.",
-          }),
-        },
-      });
+      payload: {
+        error: remote.error || "Unknown error",
+      },
+    });
   });
 }
 

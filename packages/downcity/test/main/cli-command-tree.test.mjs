@@ -50,16 +50,12 @@ test("agent list help exposes running filter", () => {
   assert.match(output, /--running \[enabled\]/);
 });
 
-test("agent quest help exposes target option", () => {
-  const output = readHelp(["agent", "quest", "--help"]);
-
-  assert.match(output, /--to <name>/);
-});
-
-test("agent chat help exposes optional target selection", () => {
+test("agent chat help exposes interactive and one-shot options", () => {
   const output = readHelp(["agent", "chat", "--help"]);
 
   assert.match(output, /--to <name>/);
+  assert.match(output, /--message <text>/);
+  assert.match(output, /--json \[enabled\]/);
 });
 
 test("model help keeps interactive and scriptable entrypoints", () => {

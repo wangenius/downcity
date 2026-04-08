@@ -181,3 +181,25 @@ test("shell service injects console global env and lets agent env override confl
     await fs.remove(consoleHome);
   }
 });
+
+test("shell service injects current agent identity env for nested city CLI calls", async () => {
+  const rootPath = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-shell-agent-env-"));
+  const runtime = createRuntimeStub(rootPath);
+  const service = new ShellService(null);
+
+  try {
+    const executed = await service.exec(runtime, {
+      cmd: "printf '%s|%s' \"$DC_AGENT_PATH\" \"$DC_AGENT_NAME\"",
+      shell: "/bin/bash",
+      login: false,
+      timeoutMs: 5000,
+      maxOutputTokens: 200,
+    });
+
+    assert.equal(executed.shell.status, "completed");
+    assert.equal(executed.shell.exitCode, 0);
+    assert.equal(executed.chunk.output, `${rootPath}|${path.basename(rootPath)}`);
+  } finally {
+    await fs.remove(rootPath);
+  }
+});

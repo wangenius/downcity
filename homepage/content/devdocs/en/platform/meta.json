@@ -1,10 +1,6 @@
 {
   "title": "Platform",
   "pages": [
-    "authorization-and-plugin-drafts",
-    "unified-auth-architecture",
-    "unified-auth-v1-implementation",
-    "unified-auth-v1-detailed-design",
-    "unified-auth-current-state"
+    "authorization-and-plugin-drafts"
   ]
 }

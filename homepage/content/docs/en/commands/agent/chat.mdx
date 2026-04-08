@@ -1,11 +1,11 @@
 ---
 title: city agent chat
-description: Open a persistent terminal chat with a selected agent
+description: Chat with a selected agent in interactive or one-shot mode
 ---
 
 # `city agent chat`
 
-Open a persistent terminal chat with a target agent.
+Chat with a target agent from the terminal.
 
 This command reuses the same main session as Console UI: `consoleui-chat-main`.
 
@@ -13,17 +13,21 @@ This command reuses the same main session as Console UI: `consoleui-chat-main`.
 
 ```bash
 city agent chat [--to <agentName>]
+city agent chat [--to <agentName>] --message <text> [--json]
 ```
 
 ## Key options
 
 - `-t, --to <name>`: target agent name; if omitted, the CLI opens an interactive picker from running agents
+- `-m, --message <text>`: send one message and exit instead of entering the REPL
+- `--json`: print structured output for one-shot mode
 - `--host <host>` / `--port <port>`: force remote HTTP transport
 - `--token <token>`: explicit Bearer token for remote HTTP mode
 
 ## Behavior
 
-- Requires an interactive terminal.
+- Defaults to interactive terminal chat when `--message` is omitted.
+- One-shot mode works without entering the REPL.
 - Requires the target agent to be running.
 - Keeps sending every line into the same shared Console main session.
 - Type `/exit` or `/quit` to leave the chat loop.
@@ -31,10 +35,9 @@ city agent chat [--to <agentName>]
 ## Related commands
 
 - [`city agent list`](/en/docs/commands/agent/list)
-- [`city agent quest`](/en/docs/commands/agent/quest)
 - [`city agent start`](/en/docs/commands/agent/start)
 
-## Example
+## Examples
 
 ```text
 $ city agent chat --to lucas_whitman
@@ -45,4 +48,8 @@ INFO Agent chat · lucas_whitman
 lucas_whitman> summarize today's work
 
 Today you completed the plugin interactive CLI redesign and validated the updated command tree.
+```
+
+```bash
+$ city agent chat --to lucas_whitman --message "summarize today's work" --json
 ```

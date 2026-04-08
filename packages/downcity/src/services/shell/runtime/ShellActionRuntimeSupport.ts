@@ -152,6 +152,16 @@ export function buildShellEnv(context: AgentContext): NodeJS.ProcessEnv {
 
   const request = getSessionRunScope();
   const sessionId = String(request?.sessionId || "").trim();
+  const agentPath = String(context.rootPath || "").trim();
+  const configuredAgentName = String(context.config?.name || "").trim();
+  const agentName = configuredAgentName || (agentPath ? path.basename(agentPath) : "");
+
+  // 关键点（中文）
+  // - agent 自己在 shell 里执行 `city <service> ...` 时，也需要显式知道“当前 agent 是谁”。
+  // - 否则 service CLI 会退回到当前终端 cwd / registry 猜测，在多 agent 或外部工作目录下
+  //   很容易把请求发到错误项目，最终误报 “Agent server 没启动”。
+  if (agentPath) env.DC_AGENT_PATH = agentPath;
+  if (agentName) env.DC_AGENT_NAME = agentName;
   if (sessionId) env.DC_SESSION_ID = sessionId;
   if (process.env.DC_SERVER_HOST) env.DC_CTX_SERVER_HOST = process.env.DC_SERVER_HOST;
   if (process.env.DC_SERVER_PORT) env.DC_CTX_SERVER_PORT = process.env.DC_SERVER_PORT;

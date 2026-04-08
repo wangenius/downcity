@@ -12,7 +12,6 @@ import {
   resolveCliAgentStartProjectRoot,
 } from "./AgentSelection.js";
 import { chatCommand } from "./AgentChat.js";
-import { questCommand } from "./AgentQuest.js";
 import { initCommand } from "./Init.js";
 import { restartCommand } from "./Restart.js";
 import { runCommand } from "./Run.js";
@@ -105,8 +104,10 @@ export function registerAgentCommands(
 
   agent
     .command("chat")
-    .description("在终端中与指定 Agent 持续对话")
+    .description("在终端中与指定 Agent 对话（交互式或一次性）")
     .option("-t, --to <name>", "目标 agent 名称（省略时交互选择）")
+    .option("-m, --message <text>", "一次性发送一轮消息并退出")
+    .option("--json [enabled]", "一次性模式下以 JSON 输出", parseBoolean)
     .option("--host <host>", "Server host（覆盖自动解析）")
     .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
     .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要）")
@@ -116,40 +117,14 @@ export function registerAgentCommands(
       async (
         options: {
           to?: string;
+          message?: string;
+          json?: boolean;
           host?: string;
           port?: number;
           token?: string;
         },
       ) => {
         await chatCommand(options);
-      },
-    ));
-
-  agent
-    .command("quest <instructions...>")
-    .description("向指定 Agent 的 Console 主会话发送一轮消息")
-    .requiredOption("-t, --to <name>", "目标 agent 名称（从 console registry 解析）")
-    .option("--host <host>", "Server host（覆盖自动解析）")
-    .addOption(new context.hiddenPortOption("--port <port>").argParser(parsePort).hideHelp())
-    .option("--token <token>", "覆盖 Bearer Token（仅远程 HTTP 调用需要）")
-    .option("--json [enabled]", "以 JSON 输出", parseBoolean)
-    .helpOption("--help", "display help for command")
-    .action(createVersionBanner(
-      context.version,
-      async (
-        instructions: string[],
-        options: {
-          to: string;
-          host?: string;
-          port?: number;
-          token?: string;
-          json?: boolean;
-        },
-      ) => {
-        await questCommand({
-          instructions,
-          options,
-        });
       },
     ));
 

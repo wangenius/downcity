@@ -2,7 +2,7 @@
  * agent 命令行为测试（node:test）。
  *
  * 关键点（中文）
- * - 锁定 `city agent` 的命令树，确保 `list`、`chat`、`quest` 成为稳定的一等命令。
+ * - 锁定 `city agent` 的命令树，确保 `chat` 同时覆盖交互式与一次性消息入口。
  * - 锁定 `agent start` 在未传路径时的目标选择规则，避免交互逻辑反复漂移。
  */
 
@@ -12,7 +12,7 @@ import { Command, Option } from "commander";
 import { registerAgentCommands } from "../../bin/main/modules/cli/IndexAgentCommand.js";
 import { resolveCliAgentStartTargetDecision } from "../../bin/main/modules/cli/AgentSelection.js";
 
-test("registerAgentCommands exposes agent list chat and quest commands", () => {
+test("registerAgentCommands exposes agent list and chat commands", () => {
   const program = new Command();
 
   registerAgentCommands(program, {
@@ -26,16 +26,14 @@ test("registerAgentCommands exposes agent list chat and quest commands", () => {
   const subcommandNames = agentCommand.commands.map((command) => command.name());
   assert.deepEqual(
     subcommandNames,
-    ["create", "list", "start", "chat", "quest", "status", "doctor", "restart"],
+    ["create", "list", "start", "chat", "status", "doctor", "restart"],
   );
 
   const chatCommand = agentCommand.commands.find((command) => command.name() === "chat");
   assert.ok(chatCommand, "chat command should be registered");
   assert.equal(chatCommand.options.some((option) => option.long === "--to"), true);
-
-  const questCommand = agentCommand.commands.find((command) => command.name() === "quest");
-  assert.ok(questCommand, "quest command should be registered");
-  assert.equal(questCommand.options.some((option) => option.long === "--to"), true);
+  assert.equal(chatCommand.options.some((option) => option.long === "--message"), true);
+  assert.equal(chatCommand.options.some((option) => option.long === "--json"), true);
 });
 
 test("resolveCliAgentStartTargetDecision prefers interactive selection when cwd is not initialized", () => {

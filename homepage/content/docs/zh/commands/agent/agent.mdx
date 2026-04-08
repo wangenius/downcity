@@ -22,8 +22,7 @@ city agent <subcommand>
 - `create`：创建/初始化 agent 项目
 - `list`：列出已登记的 agent 项目
 - `start`：启动 agent
-- `chat`：在终端中与 agent 持续对话
-- `quest`：向 agent 的 Console 主会话发送一轮消息
+- `chat`：在终端中与 agent 对话，支持交互式和一次性模式
 - `status`：查看 agent 状态
 - `doctor`：诊断状态文件，并可修复僵尸 pid/meta
 - `restart`：重启 agent
@@ -34,7 +33,6 @@ city agent <subcommand>
 - [`city agent list`](/zh/docs/commands/agent/list)
 - [`city agent start`](/zh/docs/commands/agent/start)
 - [`city agent chat`](/zh/docs/commands/agent/chat)
-- [`city agent quest`](/zh/docs/commands/agent/quest)
 - [`city agent status`](/zh/docs/commands/agent/status)
 - [`city agent restart`](/zh/docs/commands/agent/restart)
 - [`city agent doctor`](/zh/docs/commands/agent/doctor)
@@ -65,7 +63,6 @@ Commands:
   list
   start [path]
   chat
-  quest <instructions...>
   status [path]
   doctor [path]
   restart [path]

@@ -15,8 +15,6 @@ import { startLocalRpcServer } from "../../bin/main/modules/rpc/Server.js";
 import { callLocalServer } from "../../bin/main/modules/rpc/Client.js";
 import {
   callAgentTransport,
-  isAgentTransportUnavailableError,
-  resolveAgentTransportErrorMessage,
 } from "../../bin/main/modules/rpc/Transport.js";
 
 function createAgentContext(rootPath) {
@@ -68,10 +66,15 @@ function createAgentContext(rootPath) {
   };
 }
 
-function createAgentRuntime(rootPath) {
+function createAgentRuntime(rootPath, options = {}) {
+  const runDelayMs =
+    typeof options.runDelayMs === "number" ? options.runDelayMs : 0;
   const session = {
     async appendUserMessage() {},
     async run({ query }) {
+      if (runDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, runDelayMs));
+      }
       return {
         success: true,
         assistantMessage: {
@@ -193,17 +196,75 @@ test("callAgentTransport should use HTTP only when host or port is explicitly pr
   }
 });
 
-test("transport unavailable helper should fold local IPC ENOENT into agent-unavailable state", () => {
-  const error =
-    "Local RPC unavailable at /tmp/downcity.sock: Error: connect ENOENT /tmp/downcity.sock";
-  assert.equal(isAgentTransportUnavailableError(error), true);
-  assert.equal(
-    resolveAgentTransportErrorMessage({
-      error,
-      fallback: "Service action requires an active Agent server. Start via `city agent start` first.",
-    }),
-    "Service action requires an active Agent server. Start via `city agent start` first.",
-  );
+test("local rpc endpoint should remain stable when TMPDIR changes", async (t) => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
+  const originalTmpDir = process.env.TMPDIR;
+  const serverTmpDir = "/tmp/dc-rpc-a";
+  const clientTmpDir = "/tmp/dc-rpc-b";
+
+  await fs.ensureDir(serverTmpDir);
+  await fs.ensureDir(clientTmpDir);
+
+  process.env.TMPDIR = serverTmpDir;
+  const server = await startLocalRpcServerOrSkip(t, projectRoot);
+  if (!server) {
+    if (originalTmpDir === undefined) {
+      delete process.env.TMPDIR;
+    } else {
+      process.env.TMPDIR = originalTmpDir;
+    }
+    await fs.remove(serverTmpDir);
+    await fs.remove(clientTmpDir);
+    await fs.remove(projectRoot);
+    return;
+  }
+
+  try {
+    process.env.TMPDIR = clientTmpDir;
+    const result = await callLocalServer({
+      projectRoot,
+      path: "/api/services/list",
+      method: "GET",
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(Array.isArray(result.data?.services), true);
+  } finally {
+    if (originalTmpDir === undefined) {
+      delete process.env.TMPDIR;
+    } else {
+      process.env.TMPDIR = originalTmpDir;
+    }
+    await server.stop();
+    await fs.remove(serverTmpDir);
+    await fs.remove(clientTmpDir);
+    await fs.remove(projectRoot);
+  }
+});
+
+test("local rpc client should honor per-request timeout override", async (t) => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "downcity-local-rpc-"));
+  const server = await startLocalRpcServerOrSkip(t, projectRoot, {
+    runtime: createAgentRuntime(projectRoot, { runDelayMs: 150 }),
+  });
+  if (!server) return;
+  try {
+    const result = await callLocalServer({
+      projectRoot,
+      path: "/api/dashboard/sessions/consoleui-chat-main/execute",
+      method: "POST",
+      body: {
+        instructions: "hello",
+      },
+      timeoutMs: 50,
+    });
+
+    assert.equal(result.success, false);
+    assert.match(String(result.error || ""), /Local RPC timed out after 50ms/);
+  } finally {
+    await server.stop();
+    await fs.remove(projectRoot);
+  }
 });
 
 test("local rpc server should answer plugin list over IPC", async (t) => {

@@ -1,11 +1,11 @@
 ---
 title: city agent chat
-description: 在终端中与选定 agent 做持续性对话
+description: 在终端中与选定 agent 对话，支持交互式和一次性模式
 ---
 
 # `city agent chat`
 
-在终端中与指定 agent 做持续性对话。
+在终端中与指定 agent 对话。
 
 该命令默认复用和 Console UI 相同的主会话：`consoleui-chat-main`。
 
@@ -13,17 +13,21 @@ description: 在终端中与选定 agent 做持续性对话
 
 ```bash
 city agent chat [--to <agentName>]
+city agent chat [--to <agentName>] --message <text> [--json]
 ```
 
 ## 常用参数
 
 - `-t, --to <name>`：目标 agent 名称；省略时会从当前运行中的 agent 里交互选择
+- `-m, --message <text>`：发送一轮消息后直接退出，不进入 REPL
+- `--json`：一次性模式下输出结构化结果
 - `--host <host>` / `--port <port>`：强制走远程 HTTP transport
 - `--token <token>`：远程 HTTP 模式下显式传入 Bearer token
 
 ## 行为说明
 
-- 需要在交互式终端中运行。
+- 默认在未传 `--message` 时进入交互式持续对话。
+- 一次性模式不会进入 REPL。
 - 目标 agent 必须已经处于运行中。
 - 终端里输入的每一行都会进入同一个共享 Console 主会话。
 - 输入 `/exit` 或 `/quit` 退出持续对话。
@@ -31,7 +35,6 @@ city agent chat [--to <agentName>]
 ## 相关命令
 
 - [`city agent list`](/zh/docs/commands/agent/list)
-- [`city agent quest`](/zh/docs/commands/agent/quest)
 - [`city agent start`](/zh/docs/commands/agent/start)
 
 ## 示例
@@ -45,4 +48,8 @@ INFO Agent chat · lucas_whitman
 lucas_whitman> 总结一下今天做了什么
 
 今天你完成了 plugin 交互式 CLI 重构，并验证了更新后的命令树。
+```
+
+```bash
+$ city agent chat --to lucas_whitman --message "总结一下今天做了什么" --json
 ```

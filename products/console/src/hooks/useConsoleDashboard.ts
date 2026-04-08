@@ -26,6 +26,7 @@ import {
   queryGlobalEnv,
   queryLocalMessages,
   queryLogs,
+  queryLocalModels,
   queryModel,
   queryModelPool,
   queryOverview,
@@ -648,6 +649,13 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     [refreshGlobalPlugins, refreshPlugins, requestJson, selectedAgentId, showToast],
   );
 
+  const loadLocalModels = useCallback(
+    async (projectRoot?: string) => {
+      return queryLocalModels(requestJson, projectRoot);
+    },
+    [requestJson],
+  );
+
   const runChatChannelAction = useCallback(
     async (action: "test" | "reconnect" | "open" | "close", channel: string) => {
       await runChatChannelActionMutation({
@@ -1071,6 +1079,7 @@ export function useConsoleDashboard(): UseConsoleDashboardResult {
     refreshAccess,
     refreshChatChannels,
     refreshPlugins,
+    loadLocalModels,
     refreshSkills,
     refreshSessions,
     refreshChannelHistory,

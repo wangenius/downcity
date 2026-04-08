@@ -2,13 +2,17 @@
  * Options 设置页。
  *
  * 关键点（中文）：
- * - 只保留扩展运行必需设置：Console 地址、默认 Agent、默认 Channel Chat。
+ * - 只保留扩展运行必需设置：Console 地址、Inline Composer 默认模型、默认 Agent/Chat。
  * - 请求流必须稳定，避免 effect/callback 互相依赖导致无限刷新。
  * - 只有初始化、手动刷新、切换 Agent 时才重新拉取数据。
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type { ChatKeyOption, ConsoleUiAgentOption } from "../types/api";
+import type {
+  ChatKeyOption,
+  ConsoleModelOption,
+  ConsoleUiAgentOption,
+} from "../types/api";
 import type { ExtensionSettings } from "../types/extension";
 import {
   fetchConsoleAuthStatus,
@@ -18,6 +22,7 @@ import {
 import {
   fetchAgents,
   fetchChatKeyOptions,
+  fetchModelOptions,
 } from "../services/downcityApi";
 import { resolveAgentId, resolveChatKey, resolveLinkedChannels } from "../services/chatRouting";
 import { buildConsoleBaseUrl, parsePortInput } from "../services/consoleBase";
@@ -41,9 +46,11 @@ export function App() {
   );
   const [agents, setAgents] = useState<ConsoleUiAgentOption[]>([]);
   const [chatOptions, setChatOptions] = useState<ChatKeyOption[]>([]);
+  const [models, setModels] = useState<ConsoleModelOption[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [authInitializing, setAuthInitializing] = useState(true);
   const [authRequired, setAuthRequired] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -73,6 +80,18 @@ export function App() {
         description: item.subtitle,
       })),
     [chatOptions],
+  );
+
+  const modelSelectOptions = useMemo<ExtensionSelectOption[]>(
+    () =>
+      models.map((item) => ({
+        value: item.id,
+        label: item.id,
+        description: item.providerType
+          ? `${item.name} · ${item.providerType}`
+          : item.name,
+      })),
+    [models],
   );
 
   const hasSavedToken = Boolean(normalizeAuthToken(authToken));
@@ -239,11 +258,74 @@ export function App() {
     return true;
   }
 
+  async function loadModels(params: {
+    host: string;
+    port: string;
+    authToken: string;
+    preferredModelId: string;
+  }): Promise<string> {
+    const port = parsePortInput(params.port);
+    if (!port) {
+      setStatus({ type: "error", text: "端口范围应为 1-65535" });
+      return "";
+    }
+
+    const consoleBaseUrl = buildConsoleBaseUrl({
+      host: params.host,
+      port,
+    });
+
+    setIsLoadingModels(true);
+    try {
+      const nextModels = await fetchModelOptions({
+        consoleBaseUrl,
+        authToken: params.authToken,
+      });
+      const preferredModelId = String(params.preferredModelId || "").trim();
+      const nextModelId = nextModels.some((item) => item.id === preferredModelId)
+        ? preferredModelId
+        : nextModels[0]?.id || "";
+
+      setModels(nextModels);
+      setSettings((prev) => ({
+        ...prev,
+        modelId: nextModelId,
+      }));
+      return nextModelId;
+    } catch (error) {
+      const errorText = readErrorText(error);
+      if (isAuthErrorMessage(errorText)) {
+        await clearAuthState().catch(() => undefined);
+        setAuthRequired(true);
+        setIsAuthenticated(false);
+        setAuthToken("");
+        setAuthUsername("");
+        setModels([]);
+        setSettings((prev) => ({ ...prev, modelId: "" }));
+        setStatus({
+          type: "error",
+          text: "Token 已失效，请重新填写 Bearer Token。",
+        });
+        return "";
+      }
+      setModels([]);
+      setSettings((prev) => ({ ...prev, modelId: "" }));
+      setStatus({
+        type: "error",
+        text: `加载模型失败：${errorText}`,
+      });
+      return "";
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }
+
   async function refreshAuthAndAgents(params: {
     host: string;
     port: string;
     preferredAgentId: string;
     preferredChatKey: string;
+    preferredModelId: string;
   }): Promise<void> {
     const port = parsePortInput(params.port);
     if (!port) {
@@ -275,6 +357,7 @@ export function App() {
         setAuthTokenInput("");
         setAgents([]);
         setChatOptions([]);
+        setModels([]);
         setStatus({
           type: "idle",
           text: "Console 已开启统一鉴权，请先填写 Bearer Token。",
@@ -284,13 +367,21 @@ export function App() {
 
       setAuthRequired(false);
       setIsAuthenticated(Boolean(token));
-      void (await loadAgents({
-        host: params.host,
-        port: String(port),
-        authToken: token,
-        preferredAgentId: params.preferredAgentId,
-        preferredChatKey: params.preferredChatKey,
-      }));
+      await Promise.all([
+        loadAgents({
+          host: params.host,
+          port: String(port),
+          authToken: token,
+          preferredAgentId: params.preferredAgentId,
+          preferredChatKey: params.preferredChatKey,
+        }),
+        loadModels({
+          host: params.host,
+          port: String(port),
+          authToken: token,
+          preferredModelId: params.preferredModelId,
+        }),
+      ]);
     } catch (error) {
       setStatus({
         type: "error",
@@ -319,6 +410,7 @@ export function App() {
           port: String(loaded.consolePort),
           preferredAgentId: loaded.agentId,
           preferredChatKey: loaded.chatKey,
+          preferredModelId: loaded.modelId,
         });
       } catch (error) {
         if (!mounted) return;
@@ -360,6 +452,7 @@ export function App() {
       port: String(port),
       preferredAgentId: settings.agentId,
       preferredChatKey: settings.chatKey,
+      preferredModelId: settings.modelId,
     });
   }
 
@@ -393,6 +486,7 @@ export function App() {
       consolePort: port,
       agentId: String(settings.agentId || "").trim(),
       chatKey: String(settings.chatKey || "").trim(),
+      modelId: String(settings.modelId || "").trim(),
     };
 
     setIsSaving(true);
@@ -436,6 +530,7 @@ export function App() {
       port: consolePortInput,
       preferredAgentId: settings.agentId,
       preferredChatKey: settings.chatKey,
+      preferredModelId: settings.modelId,
     });
   }
 
@@ -449,7 +544,7 @@ export function App() {
           Chrome Extension Settings
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          先连接 Console 并完成鉴权，再选择默认 Agent 与 Channel Chat。
+          先连接 Console 并完成鉴权，再选择 Inline Composer 默认模型与默认投递目标。
         </p>
       </header>
 
@@ -551,6 +646,41 @@ export function App() {
               </label>
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="rounded-[18px] border border-border bg-surface p-5">
+        <div className="grid min-w-0 gap-5">
+          <div>
+            <h2 className="text-lg font-medium tracking-[-0.02em] text-foreground">
+              Inline Composer
+            </h2>
+          </div>
+
+          <ExtensionPopupSelect
+            label="Default Model"
+            value={settings.modelId}
+            placeholder={
+              isLoadingModels
+                ? "加载模型中..."
+                : modelSelectOptions.length > 0
+                  ? "请选择默认模型"
+                  : "暂无可用模型"
+            }
+            options={modelSelectOptions}
+            onChange={(value) =>
+              setSettings((prev) => ({
+                ...prev,
+                modelId: value,
+              }))
+            }
+            disabled={
+              authInitializing ||
+              authRequired ||
+              isLoadingModels ||
+              modelSelectOptions.length === 0
+            }
+          />
         </div>
       </section>
 

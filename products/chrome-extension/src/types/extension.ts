@@ -7,6 +7,11 @@
  */
 
 /**
+ * Inline Composer 的发送模式。
+ */
+export type InlineComposerMode = "agent" | "model";
+
+/**
  * 插件设置。
  */
 export interface ExtensionSettings {
@@ -29,6 +34,16 @@ export interface ExtensionSettings {
    * 结果回传目标 chatKey（来自可选列表）。
    */
   chatKey: string;
+
+  /**
+   * 默认直答模型 id（来自 `/api/ui/model/pool`）。
+   */
+  modelId: string;
+
+  /**
+   * Inline Composer 默认采用的发送模式。
+   */
+  inlineMode: InlineComposerMode;
 
   /**
    * 用户补充任务说明。

@@ -30,6 +30,7 @@ import type {
   UiConfigStatusResponse,
   UiEnvListResponse,
   UiLocalMessagesResponse,
+  UiLocalModelsResponse,
   UiLogsResponse,
   UiModelPoolResponse,
   UiModelResponse,
@@ -246,6 +247,22 @@ export async function queryPlugins(
   const data = await requestJson<UiPluginsResponse>(dashboardApiRoutes.uiPlugins(agentId));
   const list = Array.isArray(data.plugins) ? data.plugins : [];
   return normalizePluginRuntimeItems(list);
+}
+
+export async function queryLocalModels(
+  requestJson: RequestJson,
+  projectRoot?: string,
+): Promise<string[]> {
+  const data = await requestJson<UiLocalModelsResponse>(
+    dashboardApiRoutes.uiLocalModels(),
+    {
+      method: "POST",
+      body: JSON.stringify(projectRoot ? { projectRoot } : {}),
+    },
+  );
+  return Array.isArray(data.models)
+    ? data.models.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
 }
 
 export async function queryChatChannels(

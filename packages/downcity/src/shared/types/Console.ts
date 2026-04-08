@@ -102,6 +102,14 @@ export interface ConsoleAgentOption {
   modelId?: string;
 
   /**
+   * 当前 agent 的 `downcity.json.plugins.lmp.model`。
+   *
+   * 说明（中文）
+   * - 仅当 `executionMode=local` 时有值。
+   */
+  localModel?: string;
+
+  /**
    * 当前 agent 的 `downcity.json.execution.agent.type`。
    */
   agentType?: string;
@@ -130,6 +138,26 @@ export interface ConsoleAgentsResponse {
    * 当前选中的 agent id（无可用 agent 时为空字符串）。
    */
   selectedAgentId: string;
+}
+
+/**
+ * 本地 GGUF 模型列表响应。
+ */
+export interface ConsoleLocalModelsResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * 实际扫描使用的模型目录。
+   */
+  modelsDir: string;
+
+  /**
+   * 当前发现的本地模型文件列表。
+   */
+  models: string[];
 }
 
 /**
@@ -180,6 +208,11 @@ export interface ConsoleAgentDirectoryInspection {
    * 当前读取到的主模型 ID（若存在）。
    */
   modelId?: string;
+
+  /**
+   * 当前读取到的本地模型文件名（若存在）。
+   */
+  localModel?: string;
 
   /**
    * 当前读取到的 ACP agent 类型（若存在）。

@@ -75,7 +75,7 @@ export interface PageContentSnapshot {
 export interface InlineComposerRouteSettings
   extends Pick<
     ExtensionSettings,
-    "consoleHost" | "consolePort" | "agentId" | "chatKey"
+    "consoleHost" | "consolePort" | "agentId" | "chatKey" | "modelId" | "inlineMode"
   > {
   /**
    * 当前本地鉴权状态里的 Bearer Token。
@@ -288,6 +288,11 @@ export interface MountedInlineComposerUi {
   routeTrigger: HTMLButtonElement;
 
   /**
+   * 模式切换按钮。
+   */
+  modeToggle: HTMLButtonElement;
+
+  /**
    * 路由面板。
    */
   routePanel: HTMLDivElement;
@@ -321,6 +326,11 @@ export interface MountedInlineComposerUi {
    * toast 容器。
    */
   toast: HTMLDivElement;
+
+  /**
+   * 直答结果容器。
+   */
+  result: HTMLDivElement;
 }
 
 /**
@@ -441,4 +451,9 @@ export interface InlineComposerState {
    * Toast 定时器 id。
    */
   toastTimerId: number | null;
+
+  /**
+   * 最近一次直答结果。
+   */
+  replyText: string;
 }

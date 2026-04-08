@@ -359,6 +359,11 @@ export interface UseConsoleDashboardResult {
   refreshPlugins: (agentId: string) => Promise<UiPluginRuntimeItem[] | void>;
 
   /**
+   * 读取本地 GGUF 模型列表。
+   */
+  loadLocalModels: (projectRoot?: string) => Promise<string[]>;
+
+  /**
    * 刷新 skills 列表。
    */
   refreshSkills: (agentId: string) => Promise<void>;
@@ -582,8 +587,9 @@ export interface UseConsoleDashboardResult {
    */
   updateAgentExecution: (input: {
     agentId: string;
-    executionMode: "model" | "acp";
+    executionMode: "api" | "acp" | "local";
     modelId?: string;
+    localModel?: string;
     agentType?: string;
   }) => Promise<void>;
 

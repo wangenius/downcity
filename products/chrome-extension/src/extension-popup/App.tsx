@@ -3,7 +3,7 @@
  *
  * 关键点（中文）：
  * - 只保留极简发送主链路：Agent 切换、Ask 输入、发送按钮。
- * - Chat 不在扩展弹窗中显式展示，始终自动使用当前 Agent 的首个可用会话。
+ * - Popup 负责 Agent 投递，不承接页内即时直答。
  * - 展示当前页面发送历史，并提供设置入口跳转到 options 页面。
  */
 
@@ -428,7 +428,6 @@ export function ExtensionPopupApp() {
 
         setStatus({ type: "loading", text: "正在提取页面正文..." });
         const markdownSnapshot = await buildPageMarkdownSnapshot(tab);
-
         setStatus({ type: "loading", text: "正在上传 Markdown 附件..." });
         const accepted = dispatchAgentTask({
           consoleBaseUrl: activeConsoleBaseUrl,

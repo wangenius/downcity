@@ -55,8 +55,9 @@ export function useDashboardResourceActions(params: {
   switchModelForAgent: (agentId: string, primaryModelId: string) => Promise<void>;
   updateAgentExecution: (input: {
     agentId: string;
-    executionMode: "model" | "acp";
+    executionMode: "api" | "acp" | "local";
     modelId?: string;
+    localModel?: string;
     agentType?: string;
   }) => Promise<void>;
   startAgentFromHistory: (
@@ -235,8 +236,9 @@ export function useDashboardResourceActions(params: {
   const updateAgentExecution = useCallback(
     async (input: {
       agentId: string;
-      executionMode: "model" | "acp";
+      executionMode: "api" | "acp" | "local";
       modelId?: string;
+      localModel?: string;
       agentType?: string;
     }) => {
       await updateAgentExecutionMutation({
@@ -244,6 +246,7 @@ export function useDashboardResourceActions(params: {
         agentId: input.agentId,
         executionMode: input.executionMode,
         modelId: input.modelId,
+        localModel: input.localModel,
         agentType: input.agentType,
         selectedAgentId: params.selectedAgentId,
         refreshDashboard: params.refreshDashboard,

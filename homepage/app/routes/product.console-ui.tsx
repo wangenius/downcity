@@ -16,7 +16,7 @@ const PAGE = {
       },
       {
         title: "模型与配置可统一管理",
-        description: "在 Console UI 里统一管理模型与常用配置，还能直接完成本地 ASR / TTS 插件的安装与启用。",
+        description: "在 Console UI 里统一管理模型与常用配置，Local executor 也可以直接从已安装 GGUF 列表里选择本地模型。",
       },
     ],
     scenesTitle: "典型场景",
@@ -47,7 +47,7 @@ const PAGE = {
       },
       {
         title: "Centralized model and config control",
-        description: "Manage model settings from Console UI and install local ASR / TTS plugins without leaving the dashboard.",
+        description: "Manage model settings from Console UI, including choosing a Local executor model directly from installed GGUF files.",
       },
     ],
     scenesTitle: "Typical Scenarios",

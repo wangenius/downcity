@@ -50,6 +50,10 @@ export interface GlobalOverviewSectionProps {
    */
   onInspectAgentDirectory: (projectRoot: string) => Promise<UiAgentDirectoryInspection | null>
   /**
+   * 读取可用的本地 GGUF 模型列表。
+   */
+  onLoadLocalModels: (projectRoot?: string) => Promise<string[]>
+  /**
    * 启动 agent。
    */
   onStartAgent: (agentId: string) => void
@@ -58,8 +62,9 @@ export interface GlobalOverviewSectionProps {
    */
   onStartAgentWithInitialization: (agentId: string, input: {
     agentName?: string
-    executionMode: "model" | "acp"
+    executionMode: "api" | "acp" | "local"
     modelId?: string
+    localModel?: string
     agentType?: string
   }) => void
   /**
@@ -81,6 +86,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
     configStatus,
     onPickAgentDirectory,
     onInspectAgentDirectory,
+    onLoadLocalModels,
     onStartAgent,
     onStartAgentWithInitialization,
     onRestartAgent,
@@ -199,6 +205,7 @@ export function GlobalOverviewSection(props: GlobalOverviewSectionProps) {
           modelPoolItems={modelPoolItems}
           onPickAgentDirectory={onPickAgentDirectory}
           onInspectAgentDirectory={onInspectAgentDirectory}
+          onLoadLocalModels={onLoadLocalModels}
           onStartAgent={onStartAgent}
           onStartAgentWithInitialization={onStartAgentWithInitialization}
           onRestartAgent={onRestartAgent}

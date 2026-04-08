@@ -19,6 +19,7 @@ import {
   buildConsoleConfigStatusResponse,
   buildConsoleModelResponse,
   inspectConsoleAgentDirectory,
+  listConsoleLocalModels,
   listKnownConsoleAgents,
   readConsoleConfigFileStatus,
   readRequestedConsoleAgentId,
@@ -46,6 +47,7 @@ import type {
   ConsoleConfigFileStatusItem,
   ConsoleConfigStatusResponse,
   ConsoleAgentDirectoryInspection,
+  ConsoleLocalModelsResponse,
 } from "@/shared/types/Console.js";
 import type { AgentProjectInitializationResult } from "@/shared/types/AgentProject.js";
 import { AuthService } from "@/main/modules/http/auth/AuthService.js";
@@ -142,6 +144,7 @@ export class ConsoleGateway {
         updateAgentExecution: (projectRoot, input) => this.updateAgentExecution(projectRoot, input),
         pickDirectoryPath: () => this.pickDirectoryPath(),
         inspectAgentDirectory: (projectRoot) => this.inspectAgentDirectory(projectRoot),
+        listLocalModels: (projectRoot) => this.listLocalModels(projectRoot),
         inspectAgentRestartSafety: (projectRoot) => this.inspectAgentRestartSafety(projectRoot),
         restartAgentByProjectRoot: (projectRoot) => this.restartAgentByProjectRoot(projectRoot),
         stopAgentByProjectRoot: (projectRoot) => this.stopAgentByProjectRoot(projectRoot),
@@ -266,6 +269,15 @@ export class ConsoleGateway {
   }
 
   /**
+   * 列出可直接用于 local executor 的本地 GGUF 模型。
+   */
+  private async listLocalModels(
+    projectRoot?: string,
+  ): Promise<ConsoleLocalModelsResponse> {
+    return listConsoleLocalModels(projectRoot);
+  }
+
+  /**
    * 在 agent 项目目录中执行 shell 命令。
    *
    * 关键点（中文）
@@ -293,6 +305,7 @@ export class ConsoleGateway {
     agentName?: unknown;
     executionMode?: unknown;
     modelId?: unknown;
+    localModel?: unknown;
     agentType?: unknown;
     forceOverwriteShipJson?: unknown;
   }): Promise<AgentProjectInitializationResult> {
@@ -301,6 +314,7 @@ export class ConsoleGateway {
       agentName: initialization.agentName,
       executionMode: initialization.executionMode,
       modelId: initialization.modelId,
+      localModel: initialization.localModel,
       agentType: initialization.agentType,
       forceOverwriteShipJson: initialization.forceOverwriteShipJson,
     });
@@ -312,6 +326,7 @@ export class ConsoleGateway {
       agentName?: unknown;
       executionMode?: unknown;
       modelId?: unknown;
+      localModel?: unknown;
       agentType?: unknown;
       forceOverwriteShipJson?: unknown;
     };

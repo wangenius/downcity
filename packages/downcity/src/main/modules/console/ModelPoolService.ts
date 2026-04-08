@@ -9,6 +9,10 @@
 
 import { generateText } from "ai";
 import type { LlmProviderType } from "@/shared/types/LlmConfig.js";
+import type {
+  ConsoleModelInferenceInput,
+  ConsoleModelInferenceResult,
+} from "@/shared/types/ModelInference.js";
 import { ConsoleStore } from "@/shared/utils/store/index.js";
 import { createModel } from "@/main/city/model/CreateModel.js";
 import { discoverProviderModels } from "@/main/modules/cli/ModelSupport.js";
@@ -61,6 +65,22 @@ function parseOptionalPositiveInteger(input: unknown): number | undefined {
     throw new Error(`Invalid positive integer: ${String(input)}`);
   }
   return num;
+}
+
+function buildInferencePrompt(input: ConsoleModelInferenceInput): string {
+  const prompt = String(input.prompt || "").trim();
+  const pageContext = String(input.pageContext || "").trim();
+  if (!pageContext) return prompt;
+
+  return [
+    prompt,
+    "",
+    "以下是补充页面上下文（Markdown）：",
+    "",
+    "```markdown",
+    pageContext,
+    "```",
+  ].join("\n").trim();
 }
 
 /**
@@ -389,6 +409,43 @@ export class ModelPoolService {
     return {
       modelId: id,
       prompt: actualPrompt,
+      text: result.text,
+    };
+  }
+
+  /**
+   * 使用指定模型执行一次轻量直推理。
+   */
+  async inferWithModel(
+    input: ConsoleModelInferenceInput,
+  ): Promise<ConsoleModelInferenceResult> {
+    const modelId = String(input.modelId || "").trim();
+    if (!modelId) throw new Error("modelId cannot be empty");
+
+    const prompt = String(input.prompt || "").trim();
+    if (!prompt) throw new Error("prompt cannot be empty");
+
+    const system = String(input.system || "").trim();
+    const model = await createModel({
+      config: {
+        name: "console-model-infer",
+        version: "1.0.0",
+        execution: { type: "api", modelId },
+      },
+    });
+    const result = await generateText({
+      model,
+      ...(system ? { system } : {}),
+      prompt: buildInferencePrompt({
+        ...input,
+        modelId,
+        prompt,
+      }),
+    });
+
+    return {
+      modelId,
+      prompt,
       text: result.text,
     };
   }

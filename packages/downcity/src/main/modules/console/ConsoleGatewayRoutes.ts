@@ -18,6 +18,7 @@ import type {
   ConsoleAgentsResponse,
   ConsoleConfigFileStatusItem,
   ConsoleConfigStatusResponse,
+  ConsoleLocalModelsResponse,
 } from "@/shared/types/Console.js";
 import type { AgentProjectInitializationResult } from "@/shared/types/AgentProject.js";
 import { buildConsoleWorkloadBlockPayload } from "@/main/modules/console/gateway/GatewaySupport.js";
@@ -74,6 +75,8 @@ export interface ConsoleGatewayRouteHandlers {
   pickDirectoryPath(): Promise<string>;
   /** 探测 agent 目录状态。 */
   inspectAgentDirectory(projectRoot: string): Promise<ConsoleAgentDirectoryInspection>;
+  /** 列出本地 GGUF 模型。 */
+  listLocalModels(projectRoot?: string): Promise<ConsoleLocalModelsResponse>;
   /** 检查 agent 停止/重启安全性。 */
   inspectAgentRestartSafety(projectRoot: string): Promise<{
     activeContexts: string[];
@@ -180,6 +183,7 @@ export function registerConsoleGatewayRoutes(params: {
           agentName?: unknown;
           executionMode?: unknown;
           modelId?: unknown;
+          localModel?: unknown;
           agentType?: unknown;
           forceOverwriteShipJson?: unknown;
         };
@@ -205,6 +209,7 @@ export function registerConsoleGatewayRoutes(params: {
         agentName?: unknown;
         executionMode?: unknown;
         modelId?: unknown;
+        localModel?: unknown;
         agentType?: unknown;
         autoStart?: unknown;
         forceOverwriteShipJson?: unknown;
@@ -217,6 +222,7 @@ export function registerConsoleGatewayRoutes(params: {
         agentName: body.agentName,
         executionMode: body.executionMode,
         modelId: body.modelId,
+        localModel: body.localModel,
         agentType: body.agentType,
         forceOverwriteShipJson: body.forceOverwriteShipJson,
       });
@@ -263,6 +269,20 @@ export function registerConsoleGatewayRoutes(params: {
     }
   });
 
+  app.post("/api/ui/local-models", async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as {
+        projectRoot?: unknown;
+        agentId?: unknown;
+      };
+      const rawProject = String(body.projectRoot || body.agentId || "").trim();
+      const payload = await handlers.listLocalModels(rawProject || undefined);
+      return c.json(payload);
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
   app.post("/api/ui/agents/execution", async (c) => {
     try {
       const body = (await c.req.json().catch(() => ({}))) as {
@@ -270,6 +290,7 @@ export function registerConsoleGatewayRoutes(params: {
         projectRoot?: unknown;
         executionMode?: unknown;
         modelId?: unknown;
+        localModel?: unknown;
         agentType?: unknown;
       };
       const rawProject = String(body.projectRoot || body.agentId || "").trim();
@@ -279,6 +300,7 @@ export function registerConsoleGatewayRoutes(params: {
       const payload = await handlers.updateAgentExecution(rawProject, {
         executionMode: body.executionMode,
         modelId: body.modelId,
+        localModel: body.localModel,
         agentType: body.agentType,
       });
       return c.json({

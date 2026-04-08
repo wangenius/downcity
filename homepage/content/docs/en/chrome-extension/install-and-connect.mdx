@@ -35,10 +35,11 @@ The default extension target is:
 - Host: `127.0.0.1`
 - Port: `5315`
 
-If your Console UI is elsewhere, open the extension settings page. The page is split into two parts:
+If your Console UI is elsewhere, open the extension settings page. The page is split into three parts:
 
-- `Server / Auth`: set Console Host and Port, then paste a Bearer token
-- `Agent / Channel`: after the connection succeeds, choose the default Agent and default Channel Chat
+- `Connect Console`: set Console Host and Port, then paste a Bearer token
+- `Inline Composer`: choose the default model used when the page-level composer is in model-reply mode
+- `Agent / Channel`: choose the default Agent and default Channel Chat used by the popup
 
 If you do not have a token yet, create one in the local terminal first:
 
@@ -57,6 +58,15 @@ The flow can copy the newly issued token right away.
 Then paste the returned value into `Access Token`.
 
 After token save succeeds, the extension will attach `Authorization: Bearer ...` to later requests automatically.
+
+## What the Inline Composer Model Is For
+
+The inline composer supports two modes:
+
+- `Agent Dispatch`: uses the default Agent / Channel Chat path
+- `Model Reply`: uses this default model for page-context answers
+
+If you switch to `Model Reply` and no model is selected there, the inline composer will ask you to go back to settings and finish that configuration first.
 
 ## How Agent and Chat Selection Works
 

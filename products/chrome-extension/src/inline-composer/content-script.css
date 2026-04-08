@@ -179,6 +179,20 @@
   overflow: hidden;
 }
 
+.dc-result {
+  margin-top: 8px;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--dc-line);
+  border-radius: 10px;
+  background: var(--dc-muted-surface);
+  padding: 9px 10px;
+  color: var(--dc-fg);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .dc-route-section {
   border-bottom: 1px solid var(--dc-line-soft);
 }
@@ -212,7 +226,7 @@
 .dc-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 6px;
   margin-top: 5px;
 }
@@ -242,6 +256,41 @@
   color: #7f1d1d;
 }
 
+.dc-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--dc-line);
+  border-radius: 999px;
+  background: var(--dc-bg);
+  color: var(--dc-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.dc-mode-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dc-mode-btn:hover:enabled {
+  background: var(--dc-muted-surface);
+  color: var(--dc-fg);
+}
+
+.dc-mode-btn[data-mode="model"] {
+  border-color: var(--dc-primary-ring);
+  color: var(--dc-fg);
+  background: var(--dc-primary-soft);
+}
+
+.dc-mode-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .dc-send-btn {
   display: inline-flex;
   align-items: center;
@@ -257,6 +306,7 @@
     transform 0.12s ease,
     background 0.12s ease,
     box-shadow 0.12s ease;
+  margin-left: auto;
 }
 
 .dc-send-btn svg {

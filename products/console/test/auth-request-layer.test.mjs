@@ -55,7 +55,7 @@ test("console ui should render a standalone auth gate page when login is require
 
   assert.match(appSource, /AuthGatePage/)
   assert.match(appSource, /authInitializing\s*\|\|\s*!isAuthenticated/)
-  assert.match(pageSource, /初始化管理员/)
+  assert.match(pageSource, /先创建 Token/)
   assert.match(pageSource, /未登录时不再覆盖 dashboard，而是直接进入独立入口页/)
   assert.doesNotMatch(appSource, /访客模式/)
 })

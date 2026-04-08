@@ -53,11 +53,15 @@ export interface UiAgentOption {
   /**
    * 当前 agent 的执行模式。
    */
-  executionMode?: "model" | "acp";
+  executionMode?: "api" | "acp" | "local";
   /**
    * 当前 agent 的 `downcity.json.execution.modelId`。
    */
   modelId?: string;
+  /**
+   * 当前 agent 的 `downcity.json.plugins.lmp.model`。
+   */
+  localModel?: string;
   /**
    * 当前 agent 的 `downcity.json.execution.agent.type`。
    */
@@ -96,11 +100,15 @@ export interface UiAgentInitializationInput {
   /**
    * 执行模式。
    */
-  executionMode: "model" | "acp";
+  executionMode: "api" | "acp" | "local";
   /**
-   * 模型执行模式下的模型 ID。
+   * API 执行模式下的模型 ID。
    */
   modelId?: string;
+  /**
+   * Local 执行模式下的 GGUF 文件名。
+   */
+  localModel?: string;
   /**
    * ACP 执行模式下的 agent 类型。
    */
@@ -152,11 +160,15 @@ export interface UiAgentDirectoryInspection {
   /**
    * 当前读取到的执行模式。
    */
-  executionMode?: "model" | "acp";
+  executionMode?: "api" | "acp" | "local";
   /**
    * 当前读取到的主模型 ID。
    */
   modelId?: string;
+  /**
+   * 当前读取到的本地模型文件名。
+   */
+  localModel?: string;
   /**
    * 当前读取到的 ACP agent 类型。
    */
@@ -191,6 +203,28 @@ export interface UiAgentsResponse {
    * 附加消息。
    */
   message?: string;
+}
+
+/**
+ * 本地 GGUF 模型列表响应。
+ */
+export interface UiLocalModelsResponse {
+  /**
+   * 请求是否成功。
+   */
+  success?: boolean;
+  /**
+   * 实际扫描使用的模型目录。
+   */
+  modelsDir?: string;
+  /**
+   * 当前发现的本地模型文件列表。
+   */
+  models?: string[];
+  /**
+   * 错误信息。
+   */
+  error?: string;
 }
 
 /**

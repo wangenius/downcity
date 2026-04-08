@@ -35,10 +35,11 @@ npm run build:extension
 - Host: `127.0.0.1`
 - Port: `5315`
 
-如果你的 Console UI 不在默认地址，打开扩展设置页。设置页分成两块：
+如果你的 Console UI 不在默认地址，打开扩展设置页。设置页分成三块：
 
-- 上半区 `Server / Auth`：填写 Console Host、Port，并粘贴 Bearer Token
-- 下半区 `Agent / Channel`：连接成功后，再选择默认 Agent 和默认 Channel Chat
+- `Connect Console`：填写 Console Host、Port，并粘贴 Bearer Token
+- `Inline Composer`：选择页内输入框用于“模型直答”的默认模型
+- `Agent / Channel`：选择 Popup 默认投递的 Agent 和默认 Channel Chat
 
 如果你还没有 token，先在本机终端执行：
 
@@ -57,6 +58,15 @@ city token
 然后把返回的 token 粘贴到扩展设置页的 `Access Token`。
 
 保存 Token 后，扩展会自动在后续请求里附加 `Authorization: Bearer ...`。
+
+## Inline Composer 默认模型有什么用
+
+页内输入框支持两种模式：
+
+- `Agent 投递`：沿用默认 Agent / Channel Chat
+- `模型直答`：调用这里选定的默认模型
+
+如果你切到 `模型直答`，但这里没有选中模型，Inline Composer 会提示你先回设置页补齐配置。
 
 ## Agent 和 Chat 怎么选
 

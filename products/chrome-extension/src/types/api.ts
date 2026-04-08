@@ -207,6 +207,111 @@ export interface ChatKeyOption {
 }
 
 /**
+ * Console 模型池中的单个 model 条目。
+ */
+export interface ConsoleModelOption {
+  /**
+   * 模型池唯一 id。
+   */
+  id: string;
+
+  /**
+   * 模型展示名（通常是 provider 原始 model name）。
+   */
+  name: string;
+
+  /**
+   * 关联 provider id。
+   */
+  providerId: string;
+
+  /**
+   * provider 类型。
+   */
+  providerType?: string;
+
+  /**
+   * 当前是否暂停。
+   */
+  isPaused?: boolean;
+}
+
+/**
+ * `/api/ui/model/pool` 响应体。
+ */
+export interface ConsoleModelPoolResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * 模型列表。
+   */
+  models?: ConsoleModelOption[];
+
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
+ * `/api/ui/model/infer` 请求体。
+ */
+export interface ConsoleModelInferRequestBody {
+  /**
+   * 目标模型池 modelId。
+   */
+  modelId: string;
+
+  /**
+   * 用户问题。
+   */
+  prompt: string;
+
+  /**
+   * 可选系统提示。
+   */
+  system?: string;
+
+  /**
+   * 可选页面 Markdown 上下文。
+   */
+  pageContext?: string;
+}
+
+/**
+ * `/api/ui/model/infer` 响应体。
+ */
+export interface ConsoleModelInferResponse {
+  /**
+   * 请求是否成功。
+   */
+  success: boolean;
+
+  /**
+   * 本次调用的模型池 modelId。
+   */
+  modelId: string;
+
+  /**
+   * 归一化后的用户问题。
+   */
+  prompt: string;
+
+  /**
+   * 模型回复正文。
+   */
+  text: string;
+
+  /**
+   * 错误信息。
+   */
+  error?: string;
+}
+
+/**
  * `/api/dashboard/sessions/:sessionId/execute` 请求体。
  */
 export type TuiContextExecuteAttachmentType =

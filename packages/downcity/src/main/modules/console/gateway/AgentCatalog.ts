@@ -31,16 +31,38 @@ import type {
   ConsoleConfigFileStatusItem,
   ConsoleConfigStatusResponse,
   ConsoleAgentDirectoryInspection,
+  ConsoleLocalModelsResponse,
 } from "@/shared/types/Console.js";
 import type {
   ConsoleChatChannelStatus,
   ConsoleDaemonMeta,
   ConsoleShipJson,
 } from "@/shared/types/ConsoleGateway.js";
+import type { DowncityConfig } from "@/shared/types/DowncityConfig.js";
 import { ConsoleStore } from "@shared/utils/store/index.js";
+import {
+  listLocalGgufModels,
+  resolveLmpModelsDir,
+} from "@/plugins/lmp/runtime/Config.js";
 
 const DEFAULT_RUNTIME_PORT = 5314;
 const DEFAULT_RUNTIME_HOST = "127.0.0.1";
+
+function readShipLocalModel(ship: ConsoleShipJson | null | undefined): string {
+  const shipRecord =
+    ship && typeof ship === "object" && !Array.isArray(ship)
+      ? (ship as Record<string, unknown>)
+      : null;
+  const pluginMap =
+    shipRecord?.plugins && typeof shipRecord.plugins === "object" && !Array.isArray(shipRecord.plugins)
+      ? (shipRecord.plugins as Record<string, unknown>)
+      : null;
+  const lmp =
+    pluginMap?.lmp && typeof pluginMap.lmp === "object" && !Array.isArray(pluginMap.lmp)
+      ? (pluginMap.lmp as Record<string, unknown>)
+      : null;
+  return String(lmp?.model || "").trim();
+}
 
 /**
  * 从请求中读取当前指向的 agent id。
@@ -218,6 +240,7 @@ async function buildAgentOption(
             ? "local"
             : undefined,
     modelId: String(ship?.execution?.modelId || "").trim() || undefined,
+    localModel: readShipLocalModel(ship) || undefined,
     agentType: String(ship?.execution?.agent?.type || "").trim() || undefined,
   };
 }
@@ -329,6 +352,7 @@ export async function inspectConsoleAgentDirectory(
   let displayName = basename(normalizedRoot);
   let executionMode = "";
   let modelId = "";
+  let localModel = "";
   let agentType = "";
   if (hasShipJson) {
     try {
@@ -336,6 +360,7 @@ export async function inspectConsoleAgentDirectory(
       displayName = String(ship?.name || "").trim() || displayName;
       executionMode = String(ship?.execution?.type || "").trim();
       modelId = String(ship?.execution?.modelId || "").trim();
+      localModel = readShipLocalModel(ship);
       agentType = String(ship?.execution?.agent?.type || "").trim();
     } catch {
       // ignore parse failures
@@ -357,7 +382,59 @@ export async function inspectConsoleAgentDirectory(
         ? executionMode
         : matched?.executionMode) || undefined,
     modelId: modelId || matched?.modelId || undefined,
+    localModel: localModel || matched?.localModel || undefined,
     agentType: agentType || matched?.agentType || undefined,
+  };
+}
+
+/**
+ * 读取 Console 可选的本地 GGUF 模型列表。
+ *
+ * 关键点（中文）
+ * - 如果项目已存在 `downcity.json`，优先尊重 `plugins.lmp.modelsDir`。
+ * - 若项目未初始化，则回退到默认 `~/.models`，保证首次创建 agent 时也能直接选择。
+ */
+export async function listConsoleLocalModels(
+  projectRoot?: string,
+): Promise<ConsoleLocalModelsResponse> {
+  const normalizedRoot = path.resolve(String(projectRoot || "").trim() || ".");
+  const shipPath = getDowncityJsonPath(normalizedRoot);
+  let config: DowncityConfig = {
+    name: "Console Local Models",
+    version: "1.0.0",
+    plugins: {
+      lmp: {
+        provider: "llama",
+        modelsDir: "~/.models",
+      },
+    },
+  };
+
+  if (await fs.pathExists(shipPath)) {
+    try {
+      const ship = (await fs.readJson(shipPath)) as DowncityConfig;
+      if (ship && typeof ship === "object" && !Array.isArray(ship)) {
+        config = ship;
+      }
+    } catch {
+      // ignore parse failures and keep default fallback
+    }
+  }
+
+  const modelsDir = resolveLmpModelsDir({
+    projectRoot: normalizedRoot,
+    config,
+  });
+  const models = await listLocalGgufModels({
+    projectRoot: normalizedRoot,
+    config,
+    modelsDir,
+  });
+
+  return {
+    success: true,
+    modelsDir,
+    models,
   };
 }
 

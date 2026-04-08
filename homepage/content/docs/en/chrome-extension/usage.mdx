@@ -29,13 +29,20 @@ Press `Cmd/Ctrl + U` to open the inline composer.
 
 If no text is selected, the extension falls back to full-page mode.
 
+The inline composer reads the current selection or page body and supports two paths:
+
+- `Agent Dispatch`: keeps the original Agent + Channel Chat delivery flow
+- `Model Reply`: calls the default model from settings and renders the answer on the page
+
+The footer keeps the original `Agent / Channel` route button, and adds a separate icon-only mode button for switching between the two modes. The extension remembers your last choice.
+
 ## Keyboard Shortcuts
 
 - `Cmd/Ctrl + U`: open the inline composer
 - `Cmd/Ctrl + Enter`: send
 - `Esc`: close the inline composer
 
-If a slash panel or route panel is open, `Esc` closes those first.
+If the slash panel is open, `Esc` closes it first.
 
 ## What Happens During Send
 

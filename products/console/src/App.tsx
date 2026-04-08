@@ -143,6 +143,7 @@ export function App() {
     switchModelForAgent,
     updateAgentExecution,
     startAgentFromHistory,
+    loadLocalModels,
     pickAgentDirectory,
     inspectAgentDirectory,
     restartAgentFromHistory,
@@ -446,12 +447,14 @@ export function App() {
           agent={selectedAgent}
           model={model}
           onStart={(agentId) => startAgentFromHistory(agentId)}
+          onLoadLocalModels={(projectRoot) => loadLocalModels(projectRoot)}
           onUpdateExecution={(input) => {
             if (!selectedAgentId) return
             void updateAgentExecution({
               agentId: selectedAgentId,
               executionMode: input.executionMode,
               modelId: input.modelId,
+              localModel: input.localModel,
               agentType: input.agentType,
             })
           }}
@@ -470,12 +473,14 @@ export function App() {
           consoleUiSessionId={constants.CONSOLEUI_SESSION_ID}
           configStatus={configStatus}
           model={model}
+          onLoadLocalModels={(projectRoot) => loadLocalModels(projectRoot)}
           onUpdateExecution={(input) => {
             if (!selectedAgentId) return
             void updateAgentExecution({
               agentId: selectedAgentId,
               executionMode: input.executionMode,
               modelId: input.modelId,
+              localModel: input.localModel,
               agentType: input.agentType,
             })
           }}
@@ -530,6 +535,7 @@ export function App() {
               configStatus={configStatus}
               onPickAgentDirectory={() => pickAgentDirectory()}
               onInspectAgentDirectory={(projectRoot) => inspectAgentDirectory(projectRoot)}
+              onLoadLocalModels={(projectRoot) => loadLocalModels(projectRoot)}
               onStartAgent={(agentId) => startAgentFromHistory(agentId)}
               onStartAgentWithInitialization={(agentId, options) =>
                 startAgentFromHistory(agentId, {
@@ -539,6 +545,7 @@ export function App() {
                     agentName: options.agentName,
                     executionMode: options.executionMode,
                     modelId: options.modelId,
+                    localModel: options.localModel,
                     agentType: options.agentType,
                   },
                 })}
@@ -653,6 +660,7 @@ export function App() {
               configStatus={configStatus}
               onPickAgentDirectory={() => pickAgentDirectory()}
               onInspectAgentDirectory={(projectRoot) => inspectAgentDirectory(projectRoot)}
+              onLoadLocalModels={(projectRoot) => loadLocalModels(projectRoot)}
               onStartAgent={(agentId) => startAgentFromHistory(agentId)}
               onStartAgentWithInitialization={(agentId, options) =>
                 startAgentFromHistory(agentId, {
@@ -662,6 +670,7 @@ export function App() {
                     agentName: options.agentName,
                     executionMode: options.executionMode,
                     modelId: options.modelId,
+                    localModel: options.localModel,
                     agentType: options.agentType,
                   },
                 })}

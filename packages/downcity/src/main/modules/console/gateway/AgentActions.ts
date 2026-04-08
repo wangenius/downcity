@@ -281,13 +281,14 @@ export async function startConsoleAgentByProjectRoot(params: {
   projectRoot: string;
   cliPath: string;
   initializeIfNeeded?: boolean;
-  initialization?: {
-    agentName?: unknown;
-    executionMode?: unknown;
-    modelId?: unknown;
-    agentType?: unknown;
-    forceOverwriteShipJson?: unknown;
-  };
+    initialization?: {
+      agentName?: unknown;
+      executionMode?: unknown;
+      modelId?: unknown;
+      localModel?: unknown;
+      agentType?: unknown;
+      forceOverwriteShipJson?: unknown;
+    };
 }): Promise<{
   success: boolean;
   projectRoot: string;
@@ -322,8 +323,19 @@ export async function startConsoleAgentByProjectRoot(params: {
       execution: resolveExecutionInput({
         executionMode: params.initialization?.executionMode,
         modelId: params.initialization?.modelId,
+        localModel: params.initialization?.localModel,
         agentType: params.initialization?.agentType,
       }),
+      ...(String(params.initialization?.executionMode || "").trim() === "local"
+        ? {
+            plugins: {
+              lmp: {
+                provider: "llama",
+                model: String(params.initialization?.localModel || "").trim(),
+              },
+            },
+          }
+        : {}),
       forceOverwriteShipJson: params.initialization?.forceOverwriteShipJson === true,
     });
   } else {

@@ -480,8 +480,9 @@ export async function switchModelForAgentMutation(params: {
 export async function updateAgentExecutionMutation(params: {
   requestJson: RequestJson;
   agentId: string;
-  executionMode: "model" | "acp";
+  executionMode: "api" | "acp" | "local";
   modelId?: string;
+  localModel?: string;
   agentType?: string;
   selectedAgentId: string;
   refreshDashboard: (preferredAgentId?: string) => Promise<void>;
@@ -498,6 +499,7 @@ export async function updateAgentExecutionMutation(params: {
           projectRoot: targetAgentId,
           executionMode: params.executionMode,
           modelId: params.modelId,
+          localModel: params.localModel,
           agentType: params.agentType,
         }),
       },
@@ -535,6 +537,7 @@ export async function startAgentFromHistoryMutation(params: {
                 agentName: params.options.initialization.agentName,
                 executionMode: params.options.initialization.executionMode,
                 modelId: params.options.initialization.modelId,
+                localModel: params.options.initialization.localModel,
                 agentType: params.options.initialization.agentType,
               }
             : undefined,
@@ -586,6 +589,7 @@ export async function createAgentMutation(params: {
         agentName: params.input.agentName,
         executionMode: params.input.executionMode,
         modelId: params.input.modelId,
+        localModel: params.input.localModel,
         agentType: params.input.agentType,
         autoStart: params.input.autoStart !== false,
       }),

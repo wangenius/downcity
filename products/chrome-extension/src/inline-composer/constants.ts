@@ -72,4 +72,6 @@ export const DEFAULT_ROUTE_SETTINGS: InlineComposerRouteSettings = {
   authToken: "",
   agentId: "",
   chatKey: "",
+  modelId: "",
+  inlineMode: "agent",
 };

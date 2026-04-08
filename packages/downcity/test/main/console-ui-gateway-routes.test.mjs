@@ -23,7 +23,7 @@ function buildHandlers(overrides = {}) {
       return {
         projectRoot,
         agentName: String(initialization?.agentName || "Test Agent"),
-        executionMode: String(initialization?.executionMode || "model"),
+        executionMode: String(initialization?.executionMode || "api"),
         modelId: String(initialization?.modelId || "model.test"),
         channels: [],
         createdFiles: ["PROFILE.md", "downcity.json"],
@@ -33,7 +33,7 @@ function buildHandlers(overrides = {}) {
     async updateAgentExecution(projectRoot, input) {
       return {
         projectRoot,
-        executionMode: String(input?.executionMode || "model"),
+        executionMode: String(input?.executionMode || "api"),
         modelId: String(input?.modelId || "model.test"),
       };
     },
@@ -50,6 +50,13 @@ function buildHandlers(overrides = {}) {
     },
     async inspectAgentDirectory() {
       return { exists: true, initialized: true, profileExists: true, shipExists: true };
+    },
+    async listLocalModels() {
+      return {
+        success: true,
+        modelsDir: "/Users/test/.models",
+        models: ["gemma.gguf"],
+      };
     },
     async inspectAgentRestartSafety() {
       return { activeContexts: [], activeTasks: [] };
@@ -119,7 +126,7 @@ test("create route initializes without starting when autoStart is false", async 
         return {
           projectRoot,
           agentName: "Alpha",
-          executionMode: "model",
+          executionMode: "api",
           modelId: "model.alpha",
           channels: [],
           createdFiles: ["PROFILE.md", "downcity.json"],
@@ -146,7 +153,7 @@ test("create route initializes without starting when autoStart is false", async 
     body: JSON.stringify({
       projectRoot: "/tmp/agent-alpha",
       agentName: "Alpha",
-      executionMode: "model",
+      executionMode: "api",
       modelId: "model.alpha",
       autoStart: false,
     }),
@@ -162,13 +169,14 @@ test("create route initializes without starting when autoStart is false", async 
     {
       type: "initialize",
       projectRoot: "/tmp/agent-alpha",
-      initialization: {
-        agentName: "Alpha",
-        executionMode: "model",
-        modelId: "model.alpha",
-        agentType: undefined,
-        forceOverwriteShipJson: undefined,
-      },
+        initialization: {
+          agentName: "Alpha",
+          executionMode: "api",
+          modelId: "model.alpha",
+          localModel: undefined,
+          agentType: undefined,
+          forceOverwriteShipJson: undefined,
+        },
     },
   ]);
 });
@@ -184,7 +192,7 @@ test("create route starts agent after initialization when autoStart is enabled",
         return {
           projectRoot,
           agentName: "Beta",
-          executionMode: "model",
+          executionMode: "api",
           modelId: "model.beta",
           channels: [],
           createdFiles: ["PROFILE.md", "downcity.json"],
@@ -212,7 +220,7 @@ test("create route starts agent after initialization when autoStart is enabled",
     body: JSON.stringify({
       projectRoot: "/tmp/agent-beta",
       agentName: "Beta",
-      executionMode: "model",
+      executionMode: "api",
       modelId: "model.beta",
     }),
   });
@@ -238,8 +246,8 @@ test("create route forwards ACP agentType during initialization", async () => {
         return {
           projectRoot,
           agentName: "Kimi Agent",
-          executionMode: "acp",
-          agentType: "kimi",
+        executionMode: "acp",
+        agentType: "kimi",
           channels: [],
           createdFiles: ["PROFILE.md", "downcity.json"],
           skippedFiles: [],
@@ -274,6 +282,7 @@ test("create route forwards ACP agentType during initialization", async () => {
         agentName: "Kimi Agent",
         executionMode: "acp",
         modelId: undefined,
+        localModel: undefined,
         agentType: "kimi",
         forceOverwriteShipJson: undefined,
       },
@@ -322,8 +331,144 @@ test("execution route forwards unified execution payload", async () => {
       input: {
         executionMode: "acp",
         modelId: undefined,
+        localModel: undefined,
         agentType: "codex",
       },
     },
   ]);
+});
+
+test("create route forwards localModel during initialization", async () => {
+  const app = new Hono();
+  const calls = [];
+  registerConsoleGatewayRoutes({
+    app,
+    handlers: buildHandlers({
+      async initializeAgentProject(projectRoot, initialization) {
+        calls.push({ type: "initialize", projectRoot, initialization });
+        return {
+          projectRoot,
+          agentName: "Local Agent",
+          executionMode: "local",
+          channels: [],
+          createdFiles: ["PROFILE.md", "downcity.json"],
+          skippedFiles: [],
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/ui/agents/create", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      projectRoot: "/tmp/agent-local",
+      agentName: "Local Agent",
+      executionMode: "local",
+      localModel: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+      autoStart: false,
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.started, false);
+  assert.deepEqual(calls, [
+    {
+      type: "initialize",
+      projectRoot: "/tmp/agent-local",
+      initialization: {
+        agentName: "Local Agent",
+        executionMode: "local",
+        modelId: undefined,
+        localModel: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+        agentType: undefined,
+        forceOverwriteShipJson: undefined,
+      },
+    },
+  ]);
+});
+
+test("execution route forwards localModel for local runtime", async () => {
+  const app = new Hono();
+  const calls = [];
+  registerConsoleGatewayRoutes({
+    app,
+    handlers: buildHandlers({
+      async updateAgentExecution(projectRoot, input) {
+        calls.push({ projectRoot, input });
+        return {
+          projectRoot,
+          executionMode: "local",
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/ui/agents/execution", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      projectRoot: "/tmp/agent-local",
+      executionMode: "local",
+      localModel: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.executionMode, "local");
+  assert.equal(body.restartRequired, true);
+  assert.deepEqual(calls, [
+    {
+      projectRoot: "/tmp/agent-local",
+      input: {
+        executionMode: "local",
+        modelId: undefined,
+        localModel: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+        agentType: undefined,
+      },
+    },
+  ]);
+});
+
+test("local-models route returns available gguf list", async () => {
+  const app = new Hono();
+  const calls = [];
+  registerConsoleGatewayRoutes({
+    app,
+    handlers: buildHandlers({
+      async listLocalModels(projectRoot) {
+        calls.push(projectRoot);
+        return {
+          success: true,
+          modelsDir: "/Users/test/.models",
+          models: ["gemma-4-E4B-it-UD-Q4_K_XL.gguf", "qwen.gguf"],
+        };
+      },
+    }),
+  });
+
+  const response = await app.request("/api/ui/local-models", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      projectRoot: "/tmp/agent-local",
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.modelsDir, "/Users/test/.models");
+  assert.deepEqual(body.models, ["gemma-4-E4B-it-UD-Q4_K_XL.gguf", "qwen.gguf"]);
+  assert.deepEqual(calls, ["/tmp/agent-local"]);
 });

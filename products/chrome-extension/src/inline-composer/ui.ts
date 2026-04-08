@@ -2,17 +2,17 @@
  * Inline Composer UI。
  *
  * 关键点（中文）：
- * - 负责选区按钮、输入面板、路由面板与快捷键交互。
- * - 与页面提取、路由投递解耦，便于后续继续拆分和测试。
+ * - 负责选区按钮、输入面板、页内直答结果区与快捷键交互。
+ * - Inline Composer 同时支持 Agent 投递与模型直答，两条链路都在页内完成。
  */
 
 import type {
   AskHistoryCommand,
-  InlineComposerRouteSettings,
   InlineComposerState,
   MountedInlineComposerUi,
   SelectionRectSnapshot,
 } from "../types/inlineComposer";
+import type { InlineComposerMode } from "../types/extension";
 import {
   COMPOSER_MAX_WIDTH,
   COMPOSER_MIN_WIDTH,
@@ -34,6 +34,7 @@ import {
   isEditableTarget,
 } from "./pageContext";
 import {
+  inferInlineComposerModel,
   loadAskHistoryCommands,
   loadRouteSettings,
   resolveRouteInfo,
@@ -45,6 +46,8 @@ import {
 } from "./route";
 
 const DEFAULT_INPUT_PLACEHOLDER = "Ask for follow-up changes";
+const DEFAULT_MODEL_SYSTEM_PROMPT =
+  "你是 Downcity Inline Composer 的网页阅读助手。请优先基于给定页面上下文直接回答，输出简洁、明确、可执行。";
 
 function createInitialState(): InlineComposerState {
   return {
@@ -71,6 +74,7 @@ function createInitialState(): InlineComposerState {
     activeChatKey: "",
     routeRefreshSeq: 0,
     toastTimerId: null,
+    replyText: "",
   };
 }
 
@@ -102,10 +106,11 @@ function mountUi(): MountedInlineComposerUi {
         <div id="dcSlash" class="dc-slash dc-hidden" hidden></div>
         <textarea id="dcInput" class="dc-input" rows="3" placeholder="Ask for follow-up changes"></textarea>
         <div class="dc-footer">
-          <button id="dcRouteTrigger" class="dc-route-trigger" type="button" aria-label="选择 Agent 和 Chat">
+          <button id="dcRouteTrigger" class="dc-route-trigger" type="button" aria-label="选择 Agent 和 Channel">
             <img class="dc-agent-icon" src="${TRIGGER_ICON_URL}" alt="" aria-hidden="true" />
             <div id="dcAgentTag" class="dc-agent-tag">Agent</div>
           </button>
+          <button id="dcModeToggle" class="dc-mode-btn" type="button" aria-label="切换发送模式"></button>
           <button id="dcSendBtn" class="dc-send-btn" type="button" aria-label="发送">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 18V6"></path>
@@ -113,6 +118,7 @@ function mountUi(): MountedInlineComposerUi {
             </svg>
           </button>
         </div>
+        <div id="dcResult" class="dc-result dc-hidden" hidden></div>
         <div id="dcRoutePanel" class="dc-route-panel dc-hidden" hidden>
           <div class="dc-route-section">
             <div class="dc-route-title">Agent</div>
@@ -148,6 +154,10 @@ function mountUi(): MountedInlineComposerUi {
       shadow.getElementById("dcRouteTrigger"),
       "dcRouteTrigger",
     ),
+    modeToggle: mustElement<HTMLButtonElement>(
+      shadow.getElementById("dcModeToggle"),
+      "dcModeToggle",
+    ),
     routePanel: mustElement<HTMLDivElement>(
       shadow.getElementById("dcRoutePanel"),
       "dcRoutePanel",
@@ -158,6 +168,7 @@ function mountUi(): MountedInlineComposerUi {
     sendBtn: mustElement<HTMLButtonElement>(shadow.getElementById("dcSendBtn"), "dcSendBtn"),
     slash: mustElement<HTMLDivElement>(shadow.getElementById("dcSlash"), "dcSlash"),
     toast: mustElement<HTMLDivElement>(shadow.getElementById("dcToast"), "dcToast"),
+    result: mustElement<HTMLDivElement>(shadow.getElementById("dcResult"), "dcResult"),
   };
 }
 
@@ -367,6 +378,38 @@ export function bootstrapInlineComposer(): void {
     }
   }
 
+  function normalizeInlineModeValue(value: unknown): InlineComposerMode {
+    return String(value || "").trim() === "model" ? "model" : "agent";
+  }
+
+  function renderModeToggle(): void {
+    const mode = normalizeInlineModeValue(state.lastSettings.inlineMode);
+    ui.modeToggle.disabled = state.isSending;
+    ui.modeToggle.dataset.mode = mode;
+    ui.modeToggle.title =
+      mode === "model"
+        ? "当前模式：模型直答。点击切换到 Agent 投递"
+        : "当前模式：Agent 投递。点击切换到模型直答";
+    ui.modeToggle.setAttribute(
+      "aria-label",
+      mode === "model" ? "当前模式：模型直答" : "当前模式：Agent 投递",
+    );
+    ui.modeToggle.innerHTML =
+      mode === "model"
+        ? `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3L13.9 8.1L19 10L13.9 11.9L12 17L10.1 11.9L5 10L10.1 8.1L12 3Z"></path>
+              <path d="M18 16L18.8 18.2L21 19L18.8 19.8L18 22L17.2 19.8L15 19L17.2 18.2L18 16Z"></path>
+            </svg>
+          `
+        : `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 12H20"></path>
+              <path d="M14 6L20 12L14 18"></path>
+            </svg>
+          `;
+  }
+
   function renderAgentTag(): void {
     const selectedChat =
       state.routeChats.find((item) => item.chatKey === state.activeChatKey) || null;
@@ -378,6 +421,20 @@ export function bootstrapInlineComposer(): void {
     ui.routeTrigger.dataset.state = state.routeErrorText ? "error" : "default";
     ui.agentTag.title = text;
     ui.sendBtn.disabled = state.isSending;
+  }
+
+  function renderReplyResult(): void {
+    const text = String(state.replyText || "").trim();
+    if (!text) {
+      setNodeHidden(ui.result, true);
+      ui.result.textContent = "";
+      return;
+    }
+    ui.result.textContent = text;
+    setNodeHidden(ui.result, false);
+    queueMicrotask(() => {
+      placeComposer(state.selectionRect || state.hoverSelectionRect);
+    });
   }
 
   function placeTrigger(rect: DOMRect | null): void {
@@ -440,7 +497,7 @@ export function bootstrapInlineComposer(): void {
       renderSelectionOverlay();
       setRoutePanelOpen(false);
       renderAgentTag();
-      renderRoutePanel();
+      renderReplyResult();
       setInputPlaceholder("idle");
       queueMicrotask(() => {
         placeComposer(state.selectionRect || state.hoverSelectionRect);
@@ -458,11 +515,13 @@ export function bootstrapInlineComposer(): void {
     hideSlashMenu();
     setRoutePanelOpen(false);
     hideSelectionOverlay();
+    state.replyText = "";
+    renderReplyResult();
     setInputPlaceholder("idle");
   }
 
   async function refreshRouteState(
-    preferredSettings?: Partial<InlineComposerRouteSettings>,
+    preferredSettings?: Partial<typeof state.lastSettings>,
   ): Promise<void> {
     const requestSeq = state.routeRefreshSeq + 1;
     state.routeRefreshSeq = requestSeq;
@@ -482,7 +541,7 @@ export function bootstrapInlineComposer(): void {
       state.activeChatKey = routeInfo.targetChatKey;
       state.agentTagText = toAgentOptionLabel(routeInfo.targetAgent);
 
-      const nextSettings: InlineComposerRouteSettings = {
+      const nextSettings = {
         ...state.lastSettings,
         agentId: routeInfo.targetAgent.id,
         chatKey: routeInfo.targetChatKey,
@@ -554,11 +613,16 @@ export function bootstrapInlineComposer(): void {
     state.selectionText = normalizeText(selectionText, MAX_SELECTION_TEXT_CHARS);
     state.selectionRect = rect || state.hoverSelectionRect || null;
     state.selectionRects = rects;
+    state.replyText = "";
     setOpen(true);
     ui.input.value = "";
     ui.input.setSelectionRange(0, 0);
 
-    void refreshRouteState();
+    void refreshRouteState({
+      ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
+      ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
+    });
+
     void refreshAskHistoryCommands()
       .then(() => {
         updateSlashMenuFromInput();
@@ -699,6 +763,7 @@ export function bootstrapInlineComposer(): void {
     state.isSending = isSending;
     ui.input.disabled = isSending;
     renderRoutePanel();
+    renderModeToggle();
     ui.sendBtn.disabled = isSending;
     if (isSending) {
       hideSlashMenu();
@@ -713,21 +778,6 @@ export function bootstrapInlineComposer(): void {
 
   async function submit(): Promise<void> {
     if (state.isSending) return;
-    if (
-      state.isRouteLoading ||
-      state.routeErrorText ||
-      !state.activeAgentId ||
-      !state.activeChatKey
-    ) {
-      await refreshRouteState({
-        ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
-        ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
-      });
-      if (state.routeErrorText || !state.activeAgentId || !state.activeChatKey) {
-        showToast("error", state.routeErrorText || "当前没有可用 Agent 或 Chat，请先检查设置");
-        return;
-      }
-    }
 
     const taskPrompt = normalizeText(ui.input.value, MAX_PROMPT_CHARS);
     if (!taskPrompt) {
@@ -749,8 +799,88 @@ export function bootstrapInlineComposer(): void {
 
     try {
       setSendingState(true);
+      const latestSettings = await loadRouteSettings();
+      state.lastSettings = {
+        ...latestSettings,
+        ...state.lastSettings,
+        // 关键点（中文）：提交前始终刷新本地 token，避免 content script 持有旧缓存。
+        authToken: latestSettings.authToken,
+        consoleHost: latestSettings.consoleHost,
+        consolePort: latestSettings.consolePort,
+        modelId: latestSettings.modelId || state.lastSettings.modelId,
+      };
+      renderModeToggle();
       const pageMeta = getSafePageMeta();
-      const result = await sendPageContextToAgent(
+      const contextTitle = sourceType === "selection"
+        ? `选区引用 · ${pageMeta.title}`
+        : `页面全文快照 · ${pageMeta.title}`;
+      const imageCount = sourceType === "page" ? pageSnapshot.images.length : 0;
+      const pageContext = [
+        `# ${contextTitle}`,
+        "",
+        `> Source: ${pageMeta.url}`,
+        `> Language: ${pageMeta.lang}`,
+        `> Scope: ${sourceType === "selection" ? "Selection" : "Full Page"}`,
+        imageCount > 0 ? `> Images: ${imageCount}` : "",
+        "",
+        "## 正文",
+        "",
+        "```text",
+        contentText,
+        "```",
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+      const inlineMode = normalizeInlineModeValue(state.lastSettings.inlineMode);
+
+      if (inlineMode === "model") {
+        const modelId = normalizeText(state.lastSettings.modelId, 240);
+        if (!modelId) {
+          state.routeErrorText = "请先在设置页选择默认模型";
+          renderAgentTag();
+          showToast("error", state.routeErrorText);
+          return;
+        }
+
+        const result = await inferInlineComposerModel({
+          consoleHost: state.lastSettings.consoleHost,
+          consolePort: state.lastSettings.consolePort,
+          authToken: state.lastSettings.authToken,
+          modelId,
+          prompt: taskPrompt,
+          system: DEFAULT_MODEL_SYSTEM_PROMPT,
+          pageContext,
+        });
+
+        state.replyText = normalizeText(result.text, 12_000);
+        state.routeErrorText = "";
+        state.agentTagText = `直答 · ${modelId}`;
+        renderReplyResult();
+        renderAgentTag();
+        await refreshAskHistoryCommands().catch(() => {});
+        showToast("success", "直答完成");
+        ui.input.focus();
+        return;
+      }
+
+      if (
+        state.isRouteLoading ||
+        state.routeErrorText ||
+        !state.activeAgentId ||
+        !state.activeChatKey
+      ) {
+        await refreshRouteState({
+          ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
+          ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
+        });
+        if (state.routeErrorText || !state.activeAgentId || !state.activeChatKey) {
+          showToast("error", state.routeErrorText || "当前没有可用 Agent 或 Chat，请先检查设置");
+          return;
+        }
+      }
+
+      const dispatched = await sendPageContextToAgent(
         {
           pageTitle: pageMeta.title,
           pageUrl: pageMeta.url,
@@ -760,14 +890,14 @@ export function bootstrapInlineComposer(): void {
           sourceType,
           taskPrompt,
         },
-        {
-          ...state.lastSettings,
-          agentId: state.activeAgentId,
-          chatKey: state.activeChatKey,
-        },
+        state.lastSettings,
       );
 
-      state.agentTagText = result.agentLabel;
+      state.replyText = "";
+      state.routeErrorText = "";
+      state.agentTagText = `投递 · ${dispatched.agentLabel}`;
+      renderReplyResult();
+      renderAgentTag();
       await refreshAskHistoryCommands().catch(() => {});
       const selectedChat =
         state.routeChats.find((item) => item.chatKey === state.activeChatKey) || null;
@@ -791,11 +921,14 @@ export function bootstrapInlineComposer(): void {
       state.lastSettings = { ...DEFAULT_ROUTE_SETTINGS, ...settings };
       state.activeAgentId = settings.agentId || "";
       state.activeChatKey = settings.chatKey || "";
+      renderModeToggle();
       renderRoutePanel();
       renderAgentTag();
+      return refreshRouteState();
     })
     .catch(() => {
       state.lastSettings = { ...DEFAULT_ROUTE_SETTINGS };
+      renderModeToggle();
       renderRoutePanel();
       renderAgentTag();
     });
@@ -822,6 +955,21 @@ export function bootstrapInlineComposer(): void {
       ...(state.activeAgentId ? { agentId: state.activeAgentId } : {}),
       ...(state.activeChatKey ? { chatKey: state.activeChatKey } : {}),
     });
+  });
+
+  ui.modeToggle.addEventListener("click", () => {
+    if (ui.modeToggle.disabled) return;
+    const nextMode: InlineComposerMode =
+      normalizeInlineModeValue(state.lastSettings.inlineMode) === "model" ? "agent" : "model";
+    state.lastSettings = {
+      ...state.lastSettings,
+      inlineMode: nextMode,
+    };
+    state.replyText = "";
+    renderReplyResult();
+    renderModeToggle();
+    void saveRouteSettings(state.lastSettings).catch(() => undefined);
+    showToast("success", nextMode === "model" ? "已切换到模型直答" : "已切换到 Agent 投递");
   });
 
   ui.input.addEventListener("input", () => {

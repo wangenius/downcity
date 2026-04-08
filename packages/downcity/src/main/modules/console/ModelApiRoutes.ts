@@ -11,6 +11,10 @@ import fs from "fs-extra";
 import { getDowncityJsonPath } from "@/main/city/env/Paths.js";
 import { ConsoleStore } from "@/shared/utils/store/index.js";
 import type { ConsoleAgentOption } from "@/shared/types/Console.js";
+import type {
+  ConsoleModelInferenceInput,
+  ConsoleModelInferenceService,
+} from "@/shared/types/ModelInference.js";
 import { ModelPoolService } from "@/main/modules/console/ModelPoolService.js";
 
 type ShipJsonLike = {
@@ -42,8 +46,20 @@ export function registerConsoleModelRoutes(params: {
       }>;
     };
   }>;
+  modelPoolService?: ConsoleModelInferenceService & Pick<
+    ModelPoolService,
+    | "listPool"
+    | "upsertProvider"
+    | "removeProvider"
+    | "testProvider"
+    | "discoverProvider"
+    | "upsertModel"
+    | "removeModel"
+    | "setModelPaused"
+    | "testModel"
+  >;
 }): void {
-  const modelPoolService = new ModelPoolService();
+  const modelPoolService = params.modelPoolService || new ModelPoolService();
   const { app, readRequestedAgentId, resolveSelectedAgent, buildModelResponse } = params;
 
   app.get("/api/ui/model", async (c) => {
@@ -130,6 +146,31 @@ export function registerConsoleModelRoutes(params: {
         success: true,
         ...payload,
       });
+    } catch (error) {
+      return c.json({ success: false, error: String(error) }, 500);
+    }
+  });
+
+  app.post("/api/ui/model/infer", async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as Partial<ConsoleModelInferenceInput>;
+      const modelId = String(body.modelId || "").trim();
+      if (!modelId) {
+        return c.json({ success: false, error: "Missing modelId" }, 400);
+      }
+
+      const prompt = String(body.prompt || "").trim();
+      if (!prompt) {
+        return c.json({ success: false, error: "Missing prompt" }, 400);
+      }
+
+      const payload = await modelPoolService.inferWithModel({
+        modelId,
+        prompt,
+        system: String(body.system || "").trim(),
+        pageContext: String(body.pageContext || "").trim(),
+      });
+      return c.json({ success: true, ...payload });
     } catch (error) {
       return c.json({ success: false, error: String(error) }, 500);
     }

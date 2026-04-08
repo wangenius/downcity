@@ -81,11 +81,16 @@ export interface SummaryCardsProps {
    */
   model: UiModelSummary | null
   /**
+   * 读取可选的本地 GGUF 模型列表。
+   */
+  onLoadLocalModels: (projectRoot?: string) => Promise<string[]>
+  /**
    * 更新当前 agent 的 execution。
    */
   onUpdateExecution: (input: {
-    executionMode: "model" | "acp"
+    executionMode: "api" | "acp" | "local"
     modelId?: string
+    localModel?: string
     agentType?: string
   }) => void
   /**
@@ -184,25 +189,66 @@ function ServiceActionIcon(props: { action: string }) {
   return <SquareIcon className="size-3.5" />
 }
 
-type SummaryExecutionChoice = "model" | "kimi" | "claude" | "codex"
+type SummaryExecutionType = "api" | "local" | "acp"
+type SummaryAcpType = "kimi" | "claude" | "codex"
 
 /**
  * 关键点（中文）：overview 主区直接使用统一 execution 选项，避免把 ACP 编辑分散到别处。
  */
-function deriveExecutionChoice(input: {
-  executionMode?: "model" | "acp"
+function deriveExecutionState(input: {
+  executionMode?: "api" | "acp" | "local"
   agentType?: string
-}): SummaryExecutionChoice {
-  if (input.executionMode === "model" || !input.executionMode) return "model"
-  const agentType = String(input.agentType || "").trim()
-  if (agentType === "kimi" || agentType === "claude" || agentType === "codex") {
-    return agentType
+}): {
+  executionType: SummaryExecutionType
+  agentType: SummaryAcpType
+} {
+  if (input.executionMode === "api" || !input.executionMode) {
+    return {
+      executionType: "api",
+      agentType: "kimi",
+    }
   }
-  return "kimi"
+  if (input.executionMode === "local") {
+    return {
+      executionType: "local",
+      agentType: "kimi",
+    }
+  }
+  const agentType = String(input.agentType || "").trim()
+  if (agentType === "claude" || agentType === "codex") {
+    return {
+      executionType: "acp",
+      agentType,
+    }
+  }
+  return {
+    executionType: "acp",
+    agentType: "kimi",
+  }
 }
 
-function readExecutionBadge(choice: SummaryExecutionChoice): string {
-  return choice === "model" ? "model" : `acp ${choice}`
+function readExecutionBadge(input: {
+  executionType: SummaryExecutionType
+  agentType: SummaryAcpType
+}): string {
+  if (input.executionType === "api") return "api"
+  if (input.executionType === "local") return "local"
+  return `acp ${input.agentType}`
+}
+
+function buildLocalModelChoices(
+  options: string[],
+  selected?: string,
+): string[] {
+  const values = new Set<string>()
+  const preferred = String(selected || "").trim()
+  if (preferred) values.add(preferred)
+  for (const item of options) {
+    const normalized = String(item || "").trim()
+    if (!normalized) continue
+    values.add(normalized)
+  }
+  return Array.from(values)
 }
 
 export function SummaryCards(props: SummaryCardsProps) {
@@ -217,6 +263,7 @@ export function SummaryCards(props: SummaryCardsProps) {
     consoleUiSessionId,
     configStatus,
     model,
+    onLoadLocalModels,
     onUpdateExecution,
     onStartAgent,
     onRestartAgent,
@@ -254,12 +301,17 @@ export function SummaryCards(props: SummaryCardsProps) {
   ).trim()
   const fallbackModelId = String(availableModels[0]?.id || "").trim()
   const resolvedModelId = currentModelId || fallbackModelId
-  const currentExecutionChoice = deriveExecutionChoice({
+  const currentLocalModel = String(selectedAgent?.localModel || "").trim()
+  const currentExecutionState = deriveExecutionState({
     executionMode: selectedAgent?.executionMode,
     agentType: selectedAgent?.agentType,
   })
   const [targetModelId, setTargetModelId] = React.useState(resolvedModelId)
-  const [targetExecutionChoice, setTargetExecutionChoice] = React.useState<SummaryExecutionChoice>(currentExecutionChoice)
+  const [targetLocalModel, setTargetLocalModel] = React.useState(currentLocalModel)
+  const [targetExecutionType, setTargetExecutionType] = React.useState<SummaryExecutionType>(currentExecutionState.executionType)
+  const [targetAgentType, setTargetAgentType] = React.useState<SummaryAcpType>(currentExecutionState.agentType)
+  const [localModelOptions, setLocalModelOptions] = React.useState<string[]>([])
+  const [loadingLocalModels, setLoadingLocalModels] = React.useState(false)
   const [pendingAgentAction, setPendingAgentAction] = React.useState<"" | "start" | "restart" | "stop">("")
   const [pendingServiceActions, setPendingServiceActions] = React.useState<Record<string, boolean>>({})
 
@@ -268,8 +320,38 @@ export function SummaryCards(props: SummaryCardsProps) {
   }, [resolvedModelId])
 
   React.useEffect(() => {
-    setTargetExecutionChoice(currentExecutionChoice)
-  }, [currentExecutionChoice])
+    setTargetExecutionType(currentExecutionState.executionType)
+    setTargetAgentType(currentExecutionState.agentType)
+  }, [currentExecutionState])
+
+  React.useEffect(() => {
+    setTargetLocalModel(currentLocalModel)
+  }, [currentLocalModel])
+
+  React.useEffect(() => {
+    if (!selectedAgent) return
+    let cancelled = false
+    void (async () => {
+      try {
+        setLoadingLocalModels(true)
+        const models = await onLoadLocalModels(selectedAgent.projectRoot || selectedAgent.id)
+        if (cancelled) return
+        setLocalModelOptions(models)
+      } finally {
+        if (!cancelled) {
+          setLoadingLocalModels(false)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [onLoadLocalModels, selectedAgent])
+
+  const availableLocalModelOptions = React.useMemo(
+    () => buildLocalModelChoices(localModelOptions, targetLocalModel || currentLocalModel),
+    [currentLocalModel, localModelOptions, targetLocalModel],
+  )
 
   const isServiceActionPending = React.useCallback(
     (key: string) => Boolean(pendingServiceActions[key]),
@@ -493,7 +575,7 @@ export function SummaryCards(props: SummaryCardsProps) {
         title="Execution"
         actions={
           <>
-            <SurfaceTag>{readExecutionBadge(currentExecutionChoice)}</SurfaceTag>
+            <SurfaceTag>{readExecutionBadge(currentExecutionState)}</SurfaceTag>
             <SurfaceTag>{`available ${availableModels.length}`}</SurfaceTag>
           </>
         }
@@ -512,65 +594,60 @@ export function SummaryCards(props: SummaryCardsProps) {
                   }
                 >
                   <span className="truncate">
-                    {targetExecutionChoice === "model" ? "Model" : `ACP · ${targetExecutionChoice}`}
+                    {targetExecutionType === "api"
+                      ? "API"
+                      : targetExecutionType === "local"
+                        ? "Local"
+                        : "ACP"}
                   </span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="max-h-72 min-w-[20rem]">
                   <DropdownMenuItem
-                    disabled={!resolvedModelId}
                     onClick={() => {
+                      setTargetExecutionType("api")
                       if (!resolvedModelId) return
-                      setTargetExecutionChoice("model")
                       setTargetModelId(resolvedModelId)
-                      if (currentExecutionChoice === "model" && resolvedModelId === currentModelId) return
+                      if (currentExecutionState.executionType === "api" && resolvedModelId === currentModelId) return
                       onUpdateExecution({
-                        executionMode: "model",
+                        executionMode: "api",
                         modelId: resolvedModelId,
                       })
                     }}
                   >
-                    {resolvedModelId ? `Model · ${resolvedModelId}` : "Model · 无可用模型"}
+                    API
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
-                      setTargetExecutionChoice("kimi")
-                      if (currentExecutionChoice === "kimi") return
+                      setTargetExecutionType("local")
+                      const nextLocalModel = String(targetLocalModel || currentLocalModel || availableLocalModelOptions[0] || "").trim()
+                      if (!nextLocalModel) return
+                      if (currentExecutionState.executionType === "local" && nextLocalModel === currentLocalModel) return
                       onUpdateExecution({
-                        executionMode: "acp",
-                        agentType: "kimi",
+                        executionMode: "local",
+                        localModel: nextLocalModel,
                       })
                     }}
                   >
-                    ACP · Kimi
+                    Local
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
-                      setTargetExecutionChoice("claude")
-                      if (currentExecutionChoice === "claude") return
+                      setTargetExecutionType("acp")
+                      setTargetAgentType(currentExecutionState.agentType)
+                      const nextAgentType = currentExecutionState.agentType || "kimi"
+                      if (currentExecutionState.executionType === "acp" && currentExecutionState.agentType === nextAgentType) return
                       onUpdateExecution({
                         executionMode: "acp",
-                        agentType: "claude",
+                        agentType: nextAgentType,
                       })
                     }}
                   >
-                    ACP · Claude
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setTargetExecutionChoice("codex")
-                      if (currentExecutionChoice === "codex") return
-                      onUpdateExecution({
-                        executionMode: "acp",
-                        agentType: "codex",
-                      })
-                    }}
-                  >
-                    ACP · Codex
+                    ACP
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            {targetExecutionChoice === "model" ? (
+            {targetExecutionType === "api" ? (
               <div className="mt-3 grid gap-3 md:grid-cols-1">
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -599,11 +676,11 @@ export function SummaryCards(props: SummaryCardsProps) {
                             onClick={() => {
                               const nextModelId = String(modelId || "").trim()
                               setTargetModelId(nextModelId)
-                              if (!nextModelId || (currentExecutionChoice === "model" && nextModelId === currentModelId)) {
+                              if (!nextModelId || (currentExecutionState.executionType === "api" && nextModelId === currentModelId)) {
                                 return
                               }
                               onUpdateExecution({
-                                executionMode: "model",
+                                executionMode: "api",
                                 modelId: nextModelId,
                               })
                             }}
@@ -613,6 +690,80 @@ export function SummaryCards(props: SummaryCardsProps) {
                         )
                       })
                     )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : targetExecutionType === "local" ? (
+              <div className="mt-3 flex items-center gap-2">
+                <select
+                  value={targetLocalModel}
+                  className="flex h-9 flex-1 rounded-[12px] border border-input bg-background px-3 font-mono text-[12px] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(event) => setTargetLocalModel(event.target.value)}
+                  disabled={loadingLocalModels || availableLocalModelOptions.length === 0}
+                >
+                  {availableLocalModelOptions.length === 0 ? (
+                    <option value="">
+                      {loadingLocalModels ? "正在读取本地模型" : "没有发现本地 GGUF 模型"}
+                    </option>
+                  ) : null}
+                  {availableLocalModelOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 rounded-[12px] bg-background px-3 text-xs"
+                  disabled={!String(targetLocalModel || "").trim() || loadingLocalModels}
+                  onClick={() => {
+                    const nextLocalModel = String(targetLocalModel || "").trim()
+                    if (!nextLocalModel) return
+                    if (currentExecutionState.executionType === "local" && nextLocalModel === currentLocalModel) return
+                    onUpdateExecution({
+                      executionMode: "local",
+                      localModel: nextLocalModel,
+                    })
+                  }}
+                >
+                  应用
+                </Button>
+              </div>
+            ) : targetExecutionType === "acp" ? (
+              <div className="mt-3 grid gap-3 md:grid-cols-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 justify-start rounded-[12px] bg-background px-3 text-left text-sm font-medium"
+                      />
+                    }
+                  >
+                    <span className="truncate">
+                      {`ACP · ${targetAgentType}`}
+                    </span>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="max-h-72 min-w-[20rem]">
+                    {(["kimi", "claude", "codex"] as const).map((agentType) => (
+                      <DropdownMenuItem
+                        key={agentType}
+                        onClick={() => {
+                          setTargetAgentType(agentType)
+                          if (currentExecutionState.executionType === "acp" && currentExecutionState.agentType === agentType) {
+                            return
+                          }
+                          onUpdateExecution({
+                            executionMode: "acp",
+                            agentType,
+                          })
+                        }}
+                      >
+                        {`ACP · ${agentType}`}
+                      </DropdownMenuItem>
+                    ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

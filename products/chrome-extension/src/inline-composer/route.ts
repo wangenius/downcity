@@ -7,6 +7,7 @@
  */
 
 import type {
+  ConsoleModelInferResponse,
   ConsoleUiAgentOption,
   ConsoleUiAgentsResponse,
   TuiContextExecuteRequestBody,
@@ -194,6 +195,8 @@ async function loadStoredRouteSnapshot(): Promise<{
   consolePort: number;
   agentId: string;
   chatKey: string;
+  modelId: string;
+  inlineMode: "agent" | "model";
   legacyAuthToken: string;
 }> {
   const stored = await storageGet("sync", [SETTINGS_STORAGE_KEY]);
@@ -206,6 +209,8 @@ async function loadStoredRouteSnapshot(): Promise<{
     consolePort: legacy?.consolePort || normalizePort(value.consolePort),
     agentId: normalizeText(value.agentId, 240),
     chatKey: normalizeText(value.chatKey, 300),
+    modelId: normalizeText(value.modelId, 240),
+    inlineMode: String(value.inlineMode || "").trim() === "model" ? "model" : "agent",
     legacyAuthToken: normalizeAuthToken(value.authToken).slice(0, 4096),
   };
 }
@@ -222,6 +227,8 @@ async function saveStoredRouteSnapshot(settings: InlineComposerRouteSettings): P
       consolePort: normalizePort(settings.consolePort),
       agentId: normalizeText(settings.agentId, 240),
       chatKey: normalizeText(settings.chatKey, 300),
+      modelId: normalizeText(settings.modelId, 240),
+      inlineMode: settings.inlineMode === "model" ? "model" : "agent",
     },
   });
 }
@@ -383,6 +390,38 @@ export async function loadRouteSettings(): Promise<InlineComposerRouteSettings> 
     authToken: normalizeText(authToken, 4096),
     agentId: normalizeText(loaded.agentId, 240),
     chatKey: normalizeText(loaded.chatKey, 300),
+    modelId: normalizeText(loaded.modelId, 240),
+    inlineMode: loaded.inlineMode === "model" ? "model" : "agent",
+  };
+}
+
+/**
+ * 解析 Inline Composer 当前应使用的最终设置。
+ *
+ * 关键点（中文）：
+ * - `authToken` 必须始终以 `chrome.storage.local` 中的最新值为准。
+ * - 允许调用方覆盖 Agent / Chat / mode 等瞬时 UI 选择，但不允许用旧 token 覆盖新 token。
+ */
+async function resolveEffectiveRouteSettings(
+  inputSettings?: Partial<InlineComposerRouteSettings>,
+): Promise<InlineComposerRouteSettings> {
+  const loaded = await loadRouteSettings();
+  const preferred = inputSettings || {};
+
+  return {
+    ...DEFAULT_ROUTE_SETTINGS,
+    ...loaded,
+    ...preferred,
+    consoleHost: normalizeText(preferred.consoleHost, 100) || loaded.consoleHost,
+    consolePort:
+      typeof preferred.consolePort === "number" && Number.isFinite(preferred.consolePort)
+        ? Math.trunc(preferred.consolePort)
+        : loaded.consolePort,
+    agentId: normalizeText(preferred.agentId, 240) || loaded.agentId,
+    chatKey: normalizeText(preferred.chatKey, 300) || loaded.chatKey,
+    modelId: normalizeText(preferred.modelId, 240) || loaded.modelId,
+    inlineMode: preferred.inlineMode === "model" ? "model" : loaded.inlineMode,
+    authToken: loaded.authToken,
   };
 }
 
@@ -393,6 +432,46 @@ export async function saveRouteSettings(
   settings: InlineComposerRouteSettings,
 ): Promise<void> {
   await saveStoredRouteSnapshot(settings);
+}
+
+/**
+ * Inline Composer 直接调用模型直答。
+ */
+export async function inferInlineComposerModel(params: {
+  consoleHost: string;
+  consolePort: number;
+  authToken: string;
+  modelId: string;
+  prompt: string;
+  system?: string;
+  pageContext?: string;
+}): Promise<ConsoleModelInferResponse> {
+  const baseUrl = buildConsoleBaseUrl({
+    host: params.consoleHost,
+    port: params.consolePort,
+  });
+  const payload = await requestJson<ConsoleModelInferResponse>(
+    `${baseUrl}/api/ui/model/infer`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        modelId: normalizeText(params.modelId, 240),
+        prompt: normalizeText(params.prompt, MAX_PROMPT_CHARS),
+        system: normalizeText(params.system, 2000),
+        pageContext: String(params.pageContext || "").trim(),
+      }),
+    },
+    {
+      authToken: params.authToken,
+    },
+  );
+  if (payload.success !== true) {
+    throw new Error(payload.error || "模型回复失败");
+  }
+  return payload;
 }
 
 /**
@@ -613,12 +692,7 @@ function buildInstructions(params: {
 export async function resolveRouteInfo(
   inputSettings?: Partial<InlineComposerRouteSettings>,
 ): Promise<RouteInfo> {
-  const loaded = await loadRouteSettings();
-  const settings: InlineComposerRouteSettings = {
-    ...DEFAULT_ROUTE_SETTINGS,
-    ...loaded,
-    ...(inputSettings || {}),
-  };
+  const settings = await resolveEffectiveRouteSettings(inputSettings);
   const baseUrl = buildConsoleBaseUrl({
     host: settings.consoleHost,
     port: settings.consolePort,
